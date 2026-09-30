@@ -47,6 +47,8 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
   | _, _, .bind e rest => ⟨rest.alsBlock.1, .bind e rest.alsBlock.2⟩
   | _, _, .bindAxiom a args he hw hg hd hgd rest =>
       ⟨rest.alsBlock.1, .bindAxiom a args he hw hg hd hgd rest.alsBlock.2⟩
+  | _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest =>
+      ⟨rest.alsBlock.1, .bindAxiomElse a args he hr hw hg hd hgd err rest.alsBlock.2⟩
 
 /-- The residue of a running frame: what is left to do. `ende` is a plain
     end block; `dann b k` runs the block `b` first, then `k`; `schrumpf`
@@ -128,6 +130,13 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
       split
       · rw [Endblock.execBlock_alsBlock O passes R rest]
         cases execEnd O passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlock, execEnd]
+      split
+      · rw [Endblock.execBlock_alsBlock O passes R rest]
+        cases execEnd O passes R rest _ _ <;> rfl
+      · cases execEnd O passes R err _ _ <;> rfl
       · rfl
 
 /-- A residue that waits for a callee's answer (`wartet`/`wartetSonst`):
@@ -2082,6 +2091,121 @@ inductive RufSchrittG (P : Programm D) (O : Orakel D) (passes : Nat) :
             ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
              ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ,
               .dann rest (.schrumpf k)⟩⟩,
+            σ₂.spur, (M.faeden f).log⟩,
+         M.lauf ++ rufEigenG f neu, M.start⟩
+
+  /-- A fallible foreign call (C-free lane, 2026-09-30) answers a value: the rest runs with it. -/
+  | dannBindAxiomElseOk
+      (M : RufMaschineG D) (f : Faden)
+      (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty)
+      (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
+      (hr : 0 < D.agruende a)
+      (hw : ∀ t, D.aschreibt a t = true → (vertragVon D (M.faeden f).kopf.f).schreibt t = true)
+      (hg : ∀ g, D.agschreibt a g = true → (vertragVon D (M.faeden f).kopf.f).gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (err : Endblock D (vertragVon D (M.faeden f).kopf.f) l (.grund (D.agruende a) :: Γ) Λ)
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) l (τ :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ')
+      (ρ : Env D Γ)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨l, Γ, Λ, ρ, .dann (.bindAxiomElse a args he hr hw hg hd hgd err rest) k⟩)
+      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ args.orte)
+      (σ₂ : World D) (v : ErgVal D (D.aerg a))
+      (hax : axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) = (σ₂, some (Sum.inl v)))
+      (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
+      RufSchrittG P O passes M f
+        ⟨σ₂.speicher,
+         rufUpdateG M.faeden f
+           ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+             ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ, .dann rest (.schrumpf k)⟩⟩,
+            σ₂.spur, (M.faeden f).log⟩,
+         M.lauf ++ rufEigenG f neu, M.start⟩
+  /-- It answers a reason: the `else` block runs with it bound, in block position (as `rueckGrund` for a call). -/
+  | dannBindAxiomElseGrund
+      (M : RufMaschineG D) (f : Faden)
+      (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res D)) (τ : Ty)
+      (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
+      (hr : 0 < D.agruende a)
+      (hw : ∀ t, D.aschreibt a t = true → (vertragVon D (M.faeden f).kopf.f).schreibt t = true)
+      (hg : ∀ g, D.agschreibt a g = true → (vertragVon D (M.faeden f).kopf.f).gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (err : Endblock D (vertragVon D (M.faeden f).kopf.f) l (.grund (D.agruende a) :: Γ) Λ)
+      (rest : Block D (vertragVon D (M.faeden f).kopf.f) l (τ :: Γ) Λ Λ')
+      (k : GRest D (vertragVon D (M.faeden f).kopf.f) l Γ Λ')
+      (ρ : Env D Γ)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨l, Γ, Λ, ρ, .dann (.bindAxiomElse a args he hr hw hg hd hgd err rest) k⟩)
+      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ args.orte)
+      (σ₂ : World D) (r : Fin (D.agruende a))
+      (hax : axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) = (σ₂, some (Sum.inr r)))
+      (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
+      RufSchrittG P O passes M f
+        ⟨σ₂.speicher,
+         rufUpdateG M.faeden f
+           ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+             ⟨l, .grund (D.agruende a) :: Γ, Λ, (Env.cons (τ := .grund (D.agruende a)) r ρ), .dann err.alsBlock.2 (.abbruch (.schrumpf k))⟩⟩,
+            σ₂.spur, (M.faeden f).log⟩,
+         M.lauf ++ rufEigenG f neu, M.start⟩
+  /-- The same at the top level of a body: a value. -/
+  | endeBindAxiomElseOk
+      (M : RufMaschineG D) (f : Faden)
+      (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty)
+      (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
+      (hr : 0 < D.agruende a)
+      (hw : ∀ t, D.aschreibt a t = true → (vertragVon D (M.faeden f).kopf.f).schreibt t = true)
+      (hg : ∀ g, D.agschreibt a g = true → (vertragVon D (M.faeden f).kopf.f).gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (err : Endblock D (vertragVon D (M.faeden f).kopf.f) l (.grund (D.agruende a) :: Γ) Λ)
+      (rest : Endblock D (vertragVon D (M.faeden f).kopf.f) l (τ :: Γ) Λ)
+      (ρ : Env D Γ)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨l, Γ, Λ, ρ, .ende (.bindAxiomElse a args he hr hw hg hd hgd err rest)⟩)
+      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ args.orte)
+      (σ₂ : World D) (v : ErgVal D (D.aerg a))
+      (hax : axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) = (σ₂, some (Sum.inl v)))
+      (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
+      RufSchrittG P O passes M f
+        ⟨σ₂.speicher,
+         rufUpdateG M.faeden f
+           ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+             ⟨l, τ :: Γ, Λ, .cons (ergWert he v) ρ, .ende rest⟩⟩,
+            σ₂.spur, (M.faeden f).log⟩,
+         M.lauf ++ rufEigenG f neu, M.start⟩
+  /-- The same at the top level of a body: a reason. -/
+  | endeBindAxiomElseGrund
+      (M : RufMaschineG D) (f : Faden)
+      (l : Bool) (Γ : Ctx) (Λ : List (Res D)) (τ : Ty)
+      (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
+      (hr : 0 < D.agruende a)
+      (hw : ∀ t, D.aschreibt a t = true → (vertragVon D (M.faeden f).kopf.f).schreibt t = true)
+      (hg : ∀ g, D.agschreibt a g = true → (vertragVon D (M.faeden f).kopf.f).gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (err : Endblock D (vertragVon D (M.faeden f).kopf.f) l (.grund (D.agruende a) :: Γ) Λ)
+      (rest : Endblock D (vertragVon D (M.faeden f).kopf.f) l (τ :: Γ) Λ)
+      (ρ : Env D Γ)
+      (hhead : (M.faeden f).kopf.rest =
+        ⟨l, Γ, Λ, ρ, .ende (.bindAxiomElse a args he hr hw hg hd hgd err rest)⟩)
+      (σ₁ : World D) (hs₁ : σ₁ = (M.weltVon f).lese Λ args.orte)
+      (σ₂ : World D) (r : Fin (D.agruende a))
+      (hax : axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) = (σ₂, some (Sum.inr r)))
+      (neu : List (Ereignis D)) (hneu : σ₂.spur = neu ++ (M.faeden f).spur)
+      (hΛ : HeldIn Λ (offen (M.faeden f).spur)) :
+      RufSchrittG P O passes M f
+        ⟨σ₂.speicher,
+         rufUpdateG M.faeden f
+           ⟨(M.faeden f).stapel,
+            ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0,
+             ⟨l, .grund (D.agruende a) :: Γ, Λ, (Env.cons (τ := .grund (D.agruende a)) r ρ), .ende err⟩⟩,
             σ₂.spur, (M.faeden f).log⟩,
          M.lauf ++ rufEigenG f neu, M.start⟩
 

@@ -1155,6 +1155,7 @@ def spiegelB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd .. => false
   | .bindCallElse _ _ _ _ _ err rest => spiegelE err && spiegelB rest
   | .bindAxiom .. => false
+  | .bindAxiomElse .. => false
   | .regLies _ _ rest => spiegelB rest
   | .regLiesElse _ _ _ sonst rest => spiegelE sonst && spiegelB rest
   | .awaits _ _ _ _ rest => spiegelB rest
@@ -1185,6 +1186,7 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => spiegelS s && spiegelE rest
   | .bind _ rest => spiegelE rest
   | .bindAxiom .. => false
+  | .bindAxiomElse .. => false
 end
 
 mutual
@@ -1322,6 +1324,7 @@ def zusatzB {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd .. => 0
   | .bindCallElse _ _ _ _ _ err rest => 3 + zusatzSonst err + zusatzB rest
   | .bindAxiom .. => 0
+  | .bindAxiomElse .. => 0
   | .regLies _ _ rest => zusatzB rest
   | .regLiesElse _ _ z sonst rest => 2 + kostenExpr z + zusatzSonst sonst + zusatzB rest
   | .awaits _ _ _ _ rest => 1 + zusatzB rest
@@ -1352,6 +1355,7 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => entfZ s + zusatzS s + zusatzE rest
   | .bind _ rest => zusatzE rest
   | .bindAxiom .. => 0
+  | .bindAxiomElse .. => 0
 
 /-- The remainder of an `else` branch run as a block (`kostenSonst`). -/
 def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
@@ -1363,6 +1367,7 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => zusatzS s + zusatzSonst rest
   | .bind _ rest => 1 + zusatzSonst rest
   | .bindAxiom .. => 0
+  | .bindAxiomElse .. => 0
 end
 
 mutual
@@ -1446,6 +1451,7 @@ theorem spiegel_block (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h2 := spiegel_block c pa rest h.2
       simp only [kostenBlock, kostenKB, zusatzB]; omega
   | .bindAxiom .., h => by simp [spiegelB] at h
+  | .bindAxiomElse .., h => by simp [spiegelB] at h
   | .regLies _ _ rest, h => by
       have h1 := spiegel_block c pa rest h
       simp only [kostenBlock, kostenKB, zusatzB]; omega
@@ -1524,6 +1530,7 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
       have h1 := spiegel_end c pa rest h
       simp only [kostenEnd, kostenKE, zusatzE]; omega
   | .bindAxiom .., h => by simp [spiegelE] at h
+  | .bindAxiomElse .., h => by simp [spiegelE] at h
 
 theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} :
@@ -1542,6 +1549,7 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
   | .bindAxiom .., h => by simp [spiegelE] at h
+  | .bindAxiomElse .., h => by simp [spiegelE] at h
 end
 
 /-- **TARGET 3 over a frame.** For a body in the mirrored forms, the own

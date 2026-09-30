@@ -667,6 +667,33 @@ def axiomAntwort (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
   let (σ', roh) := O.wirkt a σ ρ
   (σ', einpassenErg O.zeiger (D.aerg a) roh)
 
+/-- **The raw word of a FALLIBLE foreign body** (C-free lane, 2026-09-30): the pair
+    "value or reason" packed as a `tagged` value is (`summePasst`) -- the case number in the low
+    digit, base `n + 1`: case `0` carries the value (held against the declared answer type by
+    `einpassenErg`), case `i + 1` is the reason `i`. The emitted stub forms that pair from the
+    kernel's word (the `errors` map: listed `-errno` to its reason, an in-range value to case 0,
+    anything else to the hardware outcome); that correspondence is the template `tor.fehlbar`
+    (SchablonenOhneLibc.lean). -/
+def sonstPasst (z : Int → Option D.Fn) (e : Option Ty) (n : Nat) (roh : Int) :
+    Option (ErgVal D e ⊕ Fin n) :=
+  let k : Int := (n : Int) + 1
+  let tag : Int := roh % k
+  if tag = 0 then (einpassenErg z e (roh / k)).map Sum.inl
+  else if h : 0 < tag ∧ tag ≤ n then some (Sum.inr ⟨(tag - 1).toNat, by omega⟩)
+  else none
+
+/-- The answer of a fallible axiom: the world it leaves (as `axiomAntwort`) and the decoded
+    pair. -/
+def axiomAntwortSonst (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    World D × Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a)) :=
+  let (σ', roh) := O.wirkt a σ ρ
+  (σ', sonstPasst O.zeiger (D.aerg a) (D.agruende a) roh)
+
+/-- The world a fallible axiom leaves is the world the oracle's effect leaves -- the same as
+    `axiomAntwort`'s, so every frame lemma about the one is one about the other. -/
+theorem axiomAntwortSonst_fst (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    (axiomAntwortSonst O a σ ρ).1 = (axiomAntwort O a σ ρ).1 := rfl
+
 mutual
 
 def execStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → World D → Env D Γ → Ausgang V l Γ
@@ -794,6 +821,12 @@ def execBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l Γ Λ 
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some v) => (execBlock rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some (Sum.inl v)) => (execBlock rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf.zuAusgang
+      | (_, Option.none) => .hardware (.annahme a)
   | .regLies r _ rest, σ, ρ =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
@@ -867,6 +900,12 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
       let σ := σ.lese Λ args.orte
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some v) => (execEnd rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ =>
+      let σ := σ.lese Λ args.orte
+      match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some (Sum.inl v)) => (execEnd rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (σ', Option.some (Sum.inr r)) => (execEnd err σ' (.cons r ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
 
 def execArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :

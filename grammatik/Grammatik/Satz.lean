@@ -645,6 +645,7 @@ theorem Block.held_mono : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ 
   | .bindCall f _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
   | .bindCallInd _ _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
   | .bindCallElse f _ _ _ _ _ rest, L, h => held_nachSig _ _ L (rest.held_mono L h)
+  | .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, L, h => rest.held_mono L h
 
 theorem Arms.held_mono : (a : Arms D V l Γ Λ Λ' cs) → ∀ L, Res.held L ∈ Λ' → Res.held L ∈ Λ
   | .nil, L, h => h
@@ -692,6 +693,7 @@ theorem Block.held_iff : (b : Block D V l Γ Λ Λ') → ∀ L, Res.held L ∈ �
   | .bindCall f _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
   | .bindCallInd _ _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
   | .bindCallElse f _ _ _ _ _ rest, L => (rest.held_iff L).trans (held_nachSig_iff _ _ L)
+  | .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, L => rest.held_iff L
 
 theorem Arms.held_iff : (a : Arms D V l Γ Λ Λ' cs) → ∀ L, Res.held L ∈ Λ' ↔ Res.held L ∈ Λ
   | .nil, _ => Iff.rfl
@@ -1128,6 +1130,7 @@ def Block.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (c : Int) :
   | .bindCallInd _ _ _ _ _ rest => rest.ueberBoden c
   | .bindCallElse _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ueberBoden c
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | .regLies _ _ rest => rest.ueberBoden c
   | .regLiesElse _ _ _ sonst rest => sonst.ueberBoden c && rest.ueberBoden c
   | .awaits _ _ _ _ rest => rest.ueberBoden c
@@ -1144,6 +1147,7 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
   | .cons s rest => s.ueberBoden c && rest.ueberBoden c
   | .bind _ rest => rest.ueberBoden c
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ueberBoden c
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ueberBoden c && rest.ueberBoden c
   | _ => true
 
 def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
@@ -1421,6 +1425,21 @@ theorem block_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         have g1 := hl.trans (Gut.weiter hw hg h1)
         exact g1.trans ((block_gutB bo hbV rest σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
       · simp [Ausgang.welt] at h
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execBlock] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
+      have h1 := axiomAntwort_gut O hO a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldB hh).heldIn
+      rw [← axiomAntwortSonst_fst] at h1
+      split at h
+      · rename_i σ1 v ha
+        rw [ha] at h1
+        have g1 := hl.trans (Gut.weiter hw hg h1)
+        exact g1.trans ((block_gutB bo hbV rest σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
+      · rename_i σ1 r ha
+        rw [ha] at h1
+        have g1 := hl.trans (Gut.weiter hw hg h1)
+        exact g1.trans ((end_gutB bo hbV err σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf.zuAusgang σ' h)
+      · simp [Ausgang.welt] at h
   | .regLies r _ rest, σ, ρ, hbo, hh, σ', h => by
       simp only [execBlock] at h
       split at h
@@ -1523,6 +1542,21 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         rw [ha] at h1
         have g1 := hl.trans (Gut.weiter hw hg h1)
         exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
+      · simp [EndAusgang.welt] at h
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
+      have h1 := axiomAntwort_gut O hO a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldB hh).heldIn
+      rw [← axiomAntwortSonst_fst] at h1
+      split at h
+      · rename_i σ1 v ha
+        rw [ha] at h1
+        have g1 := hl.trans (Gut.weiter hw hg h1)
+        exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
+      · rename_i σ1 r ha
+        rw [ha] at h1
+        have g1 := hl.trans (Gut.weiter hw hg h1)
+        exact g1.trans ((end_gutB bo hbV err σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
       · simp [EndAusgang.welt] at h
 
 theorem arms_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :

@@ -510,6 +510,22 @@ theorem block_treu :
         have g1 := hl.trans (Treu.weiter hw hg h1)
         exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
       · simp [Ausgang.welt] at h
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, σ', h => by
+      simp only [execBlock] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+      rw [← axiomAntwortSonst_fst] at h1
+      split at h
+      · rename_i σ1 v ha
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hw hg h1)
+        exact g1.trans ((block_treu rest σ1 _).schrumpf σ' h)
+      · rename_i σ1 r ha
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hw hg h1)
+        exact g1.trans ((end_treu err σ1 _).schrumpf.zuAusgang σ' h)
+      · simp [Ausgang.welt] at h
   | .regLies r _ rest, σ, ρ, σ', h => by
       simp only [execBlock] at h
       split at h
@@ -611,6 +627,22 @@ theorem end_treu :
         rw [ha] at h1
         have g1 := hl.trans (Treu.weiter hw hg h1)
         exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
+      · simp [EndAusgang.welt] at h
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+      rw [← axiomAntwortSonst_fst] at h1
+      split at h
+      · rename_i σ1 v ha
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hw hg h1)
+        exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
+      · rename_i σ1 r ha
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hw hg h1)
+        exact g1.trans ((end_treu err σ1 _).schrumpf σ' h)
       · simp [EndAusgang.welt] at h
 
 theorem arms_treu :

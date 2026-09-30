@@ -167,6 +167,12 @@ structure Deklaration where
   aerg : Ax → Option Ty
   aschreibt : Ax → Tab → Bool
   agschreibt : Ax → Glob → Bool
+  /-- `-> T or R` at a foreign body (a fallible `syscall` gate): the number of reasons of its
+      channel (C-free lane, 2026-09-30). The machine's raw answer then carries the channel
+      PACKED like a `tagged` value (`summePasst`): case `0` is the value, case `i + 1` the
+      reason `i` (`axiomAntwortSonst`, Semantik.lean). Default: no channel -- every
+      declaration written before this field is the declaration of before. -/
+  agruende : Ax → Nat := fun _ => 0
   /-- `device … { reg R : T @off class K }` -/
   Reg : Type
   rtyp : Reg → Ty
@@ -544,6 +550,17 @@ inductive Block : Bool → Ctx → List (Res D) → List (Res D) → Type where
       (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
       (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
       (rest : Block l (τ :: Γ) Λ Λ') : Block l Γ Λ Λ'
+  /-- `let x = g(…) else (e) { … }` over a FALLIBLE foreign body (C-free lane, 2026-09-30):
+      the answer is a value (`rest`) or a reason of the channel (`err`, an end block that does
+      not fall off) -- `bindCallElse`'s shape over `D.agruende` instead of a signature. -/
+  | bindAxiomElse (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
+      (hr : 0 < D.agruende a)
+      (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+      (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (err : Endblock l (.grund (D.agruende a) :: Γ) Λ)
+      (rest : Block l (τ :: Γ) Λ Λ') : Block l Γ Λ Λ'
   /-- `let x = R;` -- eine Registerlesung, lesbar nach Klasse; `requires … else` (B26) ist die
       Form `regLiesElse`. -/
   | regLies (r : D.Reg) (hk : (D.rklasse r).lesbar = true) (rest : Block l (D.rtyp r :: Γ) Λ Λ') :
@@ -597,6 +614,16 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
       (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
       (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (rest : Endblock l (τ :: Γ) Λ) : Endblock l Γ Λ
+  /-- `Block.bindAxiomElse` with an end-block rest: a fallible foreign call at the top level
+      of a body (C-free lane, 2026-09-30). -/
+  | bindAxiomElse (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
+      (hr : 0 < D.agruende a)
+      (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+      (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (err : Endblock l (.grund (D.agruende a) :: Γ) Λ)
       (rest : Endblock l (τ :: Γ) Λ) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where

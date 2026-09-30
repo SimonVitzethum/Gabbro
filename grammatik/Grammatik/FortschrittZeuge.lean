@@ -30,6 +30,7 @@ def Block.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
     Block D V l Γ Λ Λ' → Bool
   | .cons s _ => s.istBlatt
   | .bindAxiom .. => true
+  | .bindAxiomElse .. => true
   | .regLies .. => true
   | .regLiesElse .. => true
   | .awaits .. => true
@@ -43,6 +44,7 @@ def GRest.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       match e with
       | .cons s _ => s.istBlatt
       | .bindAxiom .. => true
+      | .bindAxiomElse .. => true
       | _ => false
   | .dann b _ => b.kannHalten
   | _ => false

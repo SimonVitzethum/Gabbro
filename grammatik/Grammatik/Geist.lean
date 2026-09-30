@@ -126,6 +126,8 @@ def g001 {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ args _ _ _ err rest =>
       orteOk (D := D) args.orte && g001End err && g001 rest
   | .bindAxiom _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001 rest
+  | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
+      orteOk (D := D) args.orte && g001End err && g001 rest
   | .regLies _ _ rest => g001 rest
   | .regLiesElse _ _ zusage sonst rest =>
       orteOk (D := D) zusage.orte && g001End sonst && g001 rest
@@ -154,6 +156,8 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
   | _, _, _, .cons s rest => g001Stmt s && g001End rest
   | _, _, _, .bind e rest => orteOk (D := D) e.orte && g001End rest
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001End rest
+  | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
+      orteOk (D := D) args.orte && g001End err && g001End rest
 
 /-- The G001 check over case arms. -/
 def g001Arms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -474,6 +478,19 @@ theorem g001_korrekt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       rcases ho' with ho' | ho'
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
       · exact g001_korrekt rest h1.2 o ho'
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest =>
+      intro h ho
+      have h0 : (orteOk (D := D) args.orte && g001End err && g001 rest) = true := h
+      have ho' : o ∈ args.orte ∨ o ∈ Extraktion.endblockOrte err ∨ o ∈ Extraktion.blockOrte rest := by
+        simpa [Extraktion.blockOrte] using ho
+      have h1 : ((orteOk (D := D) args.orte && g001End err) = true) ∧ ((g001 rest) = true) :=
+        Bool.and_eq_true_iff.mp h0
+      have h2 : ((orteOk (D := D) args.orte) = true) ∧ ((g001End err) = true) :=
+        Bool.and_eq_true_iff.mp h1.1
+      rcases ho' with ho' | ho' | ho'
+      · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
+      · exact g001End_korrekt err h2.2 o ho'
+      · exact g001_korrekt rest h1.2 o ho'
   | .regLies r hk rest =>
       intro h ho
       have h0 : (g001 rest) = true := h
@@ -711,6 +728,19 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
         Bool.and_eq_true_iff.mp h0
       rcases ho' with ho' | ho'
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
+      · exact g001End_korrekt rest h1.2 o ho'
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest =>
+      intro h ho
+      have h0 : (orteOk (D := D) args.orte && g001End err && g001End rest) = true := h
+      have ho' : o ∈ args.orte ∨ o ∈ Extraktion.endblockOrte err ∨ o ∈ Extraktion.endblockOrte rest := by
+        simpa [Extraktion.endblockOrte] using ho
+      have h1 : ((orteOk (D := D) args.orte && g001End err) = true) ∧ ((g001End rest) = true) :=
+        Bool.and_eq_true_iff.mp h0
+      have h2 : ((orteOk (D := D) args.orte) = true) ∧ ((g001End err) = true) :=
+        Bool.and_eq_true_iff.mp h1.1
+      rcases ho' with ho' | ho' | ho'
+      · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h2.1 o ho')
+      · exact g001End_korrekt err h2.2 o ho'
       · exact g001End_korrekt rest h1.2 o ho'
 
 termination_by structural b

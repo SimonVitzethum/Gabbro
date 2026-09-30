@@ -132,6 +132,7 @@ def blockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse f _ _ _ _ err rest =>
       f :: endblockKanten err ++ blockKanten rest
   | .bindAxiom _ _ _ _ _ _ _ rest => blockKanten rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockKanten err ++ blockKanten rest
   | .regLies _ _ rest => blockKanten rest
   | .regLiesElse _ _ _ sonst rest =>
       endblockKanten sonst ++ blockKanten rest
@@ -157,6 +158,7 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => stmtKanten s ++ endblockKanten rest
   | .bind _ rest => endblockKanten rest
   | .bindAxiom _ _ _ _ _ _ _ rest => endblockKanten rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockKanten err ++ endblockKanten rest
 
 /-- Die direkten Rufe der Fallunterscheidung. -/
 def armsKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -855,6 +857,7 @@ def blockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallElse _ args _ _ _ err rest =>
       args.orte ++ endblockOrte err ++ blockOrte rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ blockOrte rest
+  | .bindAxiomElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ blockOrte rest
   | .regLies _ _ rest => blockOrte rest
   | .regLiesElse _ _ zusage sonst rest =>
       zusage.orte ++ endblockOrte sonst ++ blockOrte rest
@@ -880,6 +883,7 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => stmtOrte s ++ endblockOrte rest
   | .bind e rest => e.orte ++ endblockOrte rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrte rest
+  | .bindAxiomElse _ args _ _ _ _ _ _ err rest => args.orte ++ endblockOrte err ++ endblockOrte rest
 
 /-- Die gelesenen Orte der Fallunterscheidung. -/
 def armsOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -2522,6 +2526,7 @@ def blockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .bindCallElse _ _ _ _ _ err rest =>
       endblockAtome tabs globs err ++ blockAtome tabs globs rest
   | .bindAxiom _ _ _ _ _ _ _ rest => blockAtome tabs globs rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockAtome tabs globs err ++ blockAtome tabs globs rest
   | .regLies _ _ rest => blockAtome tabs globs rest
   | .regLiesElse _ _ _ sonst rest =>
       endblockAtome tabs globs sonst ++ blockAtome tabs globs rest
@@ -2549,6 +2554,7 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .cons s rest => stmtAtome tabs globs s ++ endblockAtome tabs globs rest
   | .bind _ rest => endblockAtome tabs globs rest
   | .bindAxiom _ _ _ _ _ _ _ rest => endblockAtome tabs globs rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => endblockAtome tabs globs err ++ endblockAtome tabs globs rest
 
 /-- The atoms of a case split: every arm may run. -/
 def armsAtome (tabs : List D.Tab) (globs : List D.Glob)

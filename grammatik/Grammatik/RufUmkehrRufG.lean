@@ -61,6 +61,7 @@ def Block.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd .. => false
   | .bindCallElse .. => false
   | .bindAxiom .. => false
+  | .bindAxiomElse .. => false
   | .regLies .. => false
   | .regLiesElse .. => false
   | .awaits .. => false
@@ -81,6 +82,7 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => s.kOk && rest.kOk
   | .bind _ rest => rest.kOk
   | .bindAxiom .. => false
+  | .bindAxiomElse .. => false
 
 def Arms.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -575,6 +577,7 @@ theorem blockSGK : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCallInd .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, _, _, .bindCallElse .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, _, _, .bindAxiom .., _, ho => by simp [Block.kOk] at ho
+  | _, _, _, _, _, .bindAxiomElse .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, _, _, .regLies .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, _, _, .regLiesElse .., _, ho => by simp [Block.kOk] at ho
   | _, _, _, _, _, .awaits .., _, ho => by simp [Block.kOk] at ho
@@ -935,6 +938,7 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bind _ rest => by
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
   | _, _, .bindAxiom .. => rfl
+  | _, _, .bindAxiomElse .. => rfl
 
 /-- A covered end block run as a block is a covered block. -/
 theorem EndR.alsBlock {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop} :
@@ -1643,6 +1647,10 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (semK_gleitNarrowElse O passes R e lo hi sonst rest k _ _ hn)
   | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | rueckGrund _ _ _ hhead => widerlegeK hhead
   | rueckConsGrund _ _ _ _ hhead => widerlegeK hhead
   | dannRetGrund _ _ _ _ _ hhead => widerlegeK hhead

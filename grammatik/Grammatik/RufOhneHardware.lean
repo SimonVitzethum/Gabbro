@@ -91,6 +91,7 @@ def Block.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd _ _ _ _ _ rest => rest.hardwareFrei
   | .bindCallElse _ _ _ _ _ err rest => err.hardwareFrei && rest.hardwareFrei
   | .bindAxiom .. => false
+  | .bindAxiomElse .. => false
   | .regLies .. => false
   | .regLiesElse .. => false
   | .awaits .. => false
@@ -111,6 +112,7 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => s.hardwareFrei && rest.hardwareFrei
   | .bind _ rest => rest.hardwareFrei
   | .bindAxiom .. => false
+  | .bindAxiomElse .. => false
 
 def Arms.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -349,6 +351,7 @@ theorem Block.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ
         cases he
         exact hR _ _ _ _ heq
   | .bindAxiom .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
+  | .bindAxiomElse .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
   | .regLies .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
   | .regLiesElse .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
   | .awaits .., h, _, _, _, _ => by simp [Block.hardwareFrei] at h
@@ -418,6 +421,7 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       simp only [execEnd] at he
       exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
   | .bindAxiom .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
+  | .bindAxiomElse .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
 
 theorem Arms.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

@@ -264,8 +264,16 @@ theorem axiom_offen' {O : Orakel D} (hO : GutO O) (a : D.Ax) (σ : World D)
   subst e
   exact (hO a σ ρ).2.1
 
+/-- The same for a FALLIBLE axiom (C-free lane, 2026-09-30): its world is `axiomAntwort`'s. -/
+theorem axiomSonst_offen' {O : Orakel D} (hO : GutO O) (a : D.Ax) (σ : World D)
+    (ρ : Env D (D.aparams a)) (σ₂ : World D) (x : Option (ErgVal D (D.aerg a) ⊕ Fin (D.agruende a)))
+    (hax : axiomAntwortSonst O a σ ρ = (σ₂, x)) : offen σ₂.spur = offen σ.spur :=
+  axiom_offen' hO a σ ρ σ₂ (axiomAntwort O a σ ρ).2
+    (Prod.ext (show (axiomAntwort O a σ ρ).1 = σ₂ from congrArg Prod.fst hax) rfl)
+
 /-- A push: the caller frame goes onto the stack, the callee frame (no
     release marker yet) becomes the head; the held locks are kept. -/
+
 theorem haeltInvG_push {z : RufFadenG D} (h : HaeltInvG z) (caller callee : RufRahmenG D)
     (spur' : List (Ereignis D)) (log' : List (RufEreignisF D))
     (hcf : caller.f = z.kopf.f)
@@ -365,6 +373,7 @@ macro "ho_tac" : tactic => `(tactic|
      | (rw [hs₁, offen_lese]; exact hK)
      | (rw [hs₂, offen_schreibGlob, hs₁, offen_lese]; exact hK)
      | (rw [axiom_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hK)
+     | (rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hK)
      | (rw [hs₁, offen_lese, e]; exact hK)
      | (rw [e]; exact hK)))
 
@@ -916,6 +925,36 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     have hh := heldIn_von hhead hh0
     refine haeltInvG_kopf h (by ho_tac) (by fr_tac) ⟨hk.1, GRest.kette_top k hk.2, hk.2⟩ ?_
     rw [axiom_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hh
+  | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu
+      hneu hΛ =>
+    simp only [rufUpdateG_self]
+    have hk := kette_von hhead hk0
+    have hh := heldIn_von hhead hh0
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) ⟨hk.1, GRest.kette_top k hk.2, hk.2⟩ ?_
+    rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hh
+  | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax
+      neu hneu hΛ =>
+    simp only [rufUpdateG_self]
+    have hk := kette_von hhead hk0
+    have hh := heldIn_von hhead hh0
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac)
+      (kette_abbruch _ hk.1 (.schrumpf k) ⟨GRest.kette_top k hk.2, hk.2⟩
+        (fun L hL => (Block.held_iff rest L).mp hL)) ?_
+    rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hh
+  | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu
+      hΛ =>
+    simp only [rufUpdateG_self]
+    have hk := kette_von hhead hk0
+    have hh := heldIn_von hhead hh0
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk ?_
+    rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hh
+  | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu
+      hneu hΛ =>
+    simp only [rufUpdateG_self]
+    have hk := kette_von hhead hk0
+    have hh := heldIn_von hhead hh0
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk ?_
+    rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hh
 
 /-- The start machine satisfies the invariant: the start trace holds the
     signature locks, the entry residue names them. -/

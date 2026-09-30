@@ -2504,6 +2504,7 @@ theorem blockOkR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · cases hex
       · cases hex
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
   | _, _, _, _, _, .regLies r hk rest, hb => by
       intro log σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.regLies_inv
@@ -2967,6 +2968,7 @@ theorem blockAbbR : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       subst h0
       cases hl
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
   | _, _, _, _, _, .regLies r hk rest, hb => by
       intro hl log σ σ' ρ ρ' w hex M k hZ hΛ hA
       have hr := hb.regLies_inv
@@ -3256,6 +3258,7 @@ theorem blockKeinR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .bindCallInd .., hb => by cases hb
   | _, _, _, _, .bindCallElse .., hb => absurd hb.bindCallElse_inv.2.2.2.1 (by decide)
   | _, _, _, _, .bindAxiom .., hb => by cases hb
+  | _, _, _, _, .bindAxiomElse .., hb => by cases hb
   | _, _, _, _, .regLies r hk rest, hb => by
       intro σ ρ
       have hr := hb.regLies_inv
@@ -4135,6 +4138,7 @@ theorem blockRetR : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
       · simp [Ausgang.ende?] at hex
       · simp [Ausgang.ende?] at hex
   | _, _, _, _, .bindAxiom .., hb => by cases hb
+  | _, _, _, _, .bindAxiomElse .., hb => by cases hb
   | _, _, _, _, .regLies r hk rest, hb => by
       intro log σ ρ E hpe hex M k hZ hΛ hA
       have hr := hb.regLies_inv
@@ -5289,6 +5293,10 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg

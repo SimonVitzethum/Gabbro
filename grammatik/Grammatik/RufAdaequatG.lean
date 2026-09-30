@@ -1668,6 +1668,7 @@ theorem blockOk : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCallInd .., hb => by cases hb
   | _, _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
   | _, _, _, _, _, .regLies r hk rest, hb => by
       intro σ σ' ρ ρ' hex M k hZ hΛ hA
       have hr := hb.regLies_inv
@@ -1976,6 +1977,7 @@ theorem blockKein : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .bindCallInd .., hb => by cases hb
   | _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, .bindAxiom .., hb => by cases hb
+  | _, _, _, _, .bindAxiomElse .., hb => by cases hb
   | _, _, _, _, .regLies r hk rest, hb => by
       intro σ σ' ρ v hex
       have hr := hb.regLies_inv
@@ -2200,6 +2202,7 @@ theorem endeConsRet {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 
 -- `hnw` is used at the returns; `blockRet` and the arm recursions reach it
 -- only through `stmtRet`/`endRet`, which the linter does not count as a use.
+set_option maxHeartbeats 800000 in
 set_option linter.unusedSectionVars false in
 mutual
 
@@ -2374,6 +2377,7 @@ theorem blockRet : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, .bindCallInd .., hb => by cases hb
   | _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, .bindAxiom .., hb => by cases hb
+  | _, _, _, _, .bindAxiomElse .., hb => by cases hb
   | _, _, _, _, .regLies r hk rest, hb => by
       intro σ σ' ρ v hex M k hZ hΛ hA
       have hr := hb.regLies_inv
@@ -2764,6 +2768,7 @@ theorem blockG_ohneRuf {V : Vertrag D} {A : D.Lock → Prop} :
   | _, _, _, _, _, .bindCallInd .., hb => by cases hb
   | _, _, _, _, _, .bindCallElse .., hb => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb => by cases hb
+  | _, _, _, _, _, .bindAxiomElse .., hb => by cases hb
   | _, _, _, _, _, .regLies _ _ rest, hb => .regLies _ _ _ (blockG_ohneRuf rest hb.regLies_inv)
   | _, _, _, _, _, .regLiesElse _ _ _ sonst rest, hb =>
       .regLiesElse _ _ _ _ _ (endG_ohneRuf sonst hb.regLiesElse_inv.2.2.1)
@@ -3109,6 +3114,7 @@ def Block.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
   | .bindCallInd _ _ _ _ _ rest => rest.ohneOrakel
   | .bindCallElse _ _ _ _ _ err rest => err.ohneOrakel && rest.ohneOrakel
   | .bindAxiom .. => false
+  | .bindAxiomElse .. => false
   | .regLies .. => false
   | .regLiesElse .. => false
   | .awaits .. => false
@@ -3125,6 +3131,7 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
   | .cons s rest => s.ohneOrakel && rest.ohneOrakel
   | .bind _ rest => rest.ohneOrakel
   | .bindAxiom .. => false
+  | .bindAxiomElse .. => false
   | _ => true
 
 def Arms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -3498,6 +3505,7 @@ theorem blockSG : ∀ {mr l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
   | _, _, _, _, _, .bindCallInd .., hb, _ => by cases hb
   | _, _, _, _, _, .bindCallElse .., hb, _ => by cases hb
   | _, _, _, _, _, .bindAxiom .., hb, _ => by cases hb
+  | _, _, _, _, _, .bindAxiomElse .., hb, _ => by cases hb
   | _, _, _, _, _, .regLies .., _, ho => by simp [Block.ohneOrakel] at ho
   | _, _, _, _, _, .regLiesElse .., _, ho => by simp [Block.ohneOrakel] at ho
   | _, _, _, _, _, .awaits .., _, ho => by simp [Block.ohneOrakel] at ho
@@ -4015,6 +4023,7 @@ theorem Endblock.ohneOrakel_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
         Endblock.ohneOrakel_alsBlock rest]
   | _, _, .bindAxiom .. => rfl
+  | _, _, .bindAxiomElse .. => rfl
 
 /-- A covered end block run as a block is a covered block. -/
 theorem EndG.alsBlock {V : Vertrag D} {A : D.Lock → Prop} :
@@ -4590,6 +4599,10 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (sem_gleitNarrowElse O passes e lo hi sonst rest k _ _ hn)
   | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | endeBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | rueckGrund _ _ _ hhead => widerlege hhead
   | rueckConsGrund _ _ _ _ hhead => widerlege hhead
@@ -4858,6 +4871,10 @@ theorem trav_ende_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg
@@ -4949,6 +4966,10 @@ theorem trav_dann_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg
@@ -5044,6 +5065,10 @@ theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg
@@ -5214,6 +5239,10 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | dannBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | dannBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseOk _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
+  | endeBindAxiomElseGrund _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => kopfweg
   | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg

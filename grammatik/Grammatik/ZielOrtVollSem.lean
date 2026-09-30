@@ -408,6 +408,7 @@ theorem Block.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
   | .bindCallInd .., h => by simp [Block.kOk] at h
   | .bindCallElse .., h => by simp [Block.kOk] at h
   | .bindAxiom .., h => by simp [Block.kOk] at h
+  | .bindAxiomElse .., h => by simp [Block.kOk] at h
   | .regLies .., h => by simp [Block.kOk] at h
   | .regLiesElse .., h => by simp [Block.kOk] at h
   | .awaits .., h => by simp [Block.kOk] at h
@@ -446,6 +447,7 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       simp only [Endblock.kOk, Endblock.vOk] at h ⊢
       exact Endblock.vOk_of_kOk rest h
   | .bindAxiom .., h => by simp [Endblock.kOk] at h
+  | .bindAxiomElse .., h => by simp [Endblock.kOk] at h
 
 theorem Arms.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

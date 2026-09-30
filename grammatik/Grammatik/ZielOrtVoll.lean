@@ -1242,6 +1242,7 @@ theorem Block.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd .., h, _, _ => by simp [Block.kOk] at h
   | .bindCallElse .., h, _, _ => by simp [Block.kOk] at h
   | .bindAxiom .., h, _, _ => by simp [Block.kOk] at h
+  | .bindAxiomElse .., h, _, _ => by simp [Block.kOk] at h
   | .regLies .., h, _, _ => by simp [Block.kOk] at h
   | .regLiesElse .., h, _, _ => by simp [Block.kOk] at h
   | .awaits .., h, _, _ => by simp [Block.kOk] at h
@@ -1281,6 +1282,7 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.kOk] at h
       simp only [execEnd, Endblock.orakel_kOk rest h]
   | .bindAxiom .., h, _, _ => by simp [Endblock.kOk] at h
+  | .bindAxiomElse .., h, _, _ => by simp [Endblock.kOk] at h
 
 theorem Arms.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     {cs : List (Option (Int × Int))} → (arms : Arms D V l Γ Λ Λ' cs) → arms.kOk = true →
