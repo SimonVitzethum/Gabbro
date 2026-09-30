@@ -127,6 +127,7 @@ def Block.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (K :
   | .bindCall _ _ _ _ _ rest => rest.gOk K Rg
   | .bindCallInd (n := n) _ _ _ _ _ rest => K n && rest.gOk K Rg
   | .bindCallElse _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.gOk K Rg
   | .regLies r _ rest => Rg r && rest.gOk K Rg
   | .regLiesElse r _ _ sonst rest => Rg r && (sonst.gOk K Rg && rest.gOk K Rg)
@@ -148,6 +149,7 @@ def Endblock.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .cons s rest => s.gOk K Rg && rest.gOk K Rg
   | .bind _ rest => rest.gOk K Rg
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.gOk K Rg
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.gOk K Rg && rest.gOk K Rg
 
 def Arms.gOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (K : Nat → Bool) (Rg : D.Reg → Bool) :
@@ -173,6 +175,8 @@ theorem Endblock.gOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) (Rg 
   | _, _, .bind _ rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
+  | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.gOk, Endblock.gOk, Endblock.gOk_alsBlock K Rg rest]
 
 /-! ### The registers a body reads -/
@@ -201,6 +205,7 @@ def Block.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCall _ _ _ _ _ rest => rest.regs
   | .bindCallInd _ _ _ _ _ rest => rest.regs
   | .bindCallElse _ _ _ _ _ err rest => err.regs ++ rest.regs
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.regs ++ rest.regs
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.regs
   | .regLies r _ rest => r :: rest.regs
   | .regLiesElse r _ _ sonst rest => r :: (sonst.regs ++ rest.regs)
@@ -222,6 +227,7 @@ def Endblock.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => s.regs ++ rest.regs
   | .bind _ rest => rest.regs
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.regs
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.regs ++ rest.regs
 
 def Arms.regs {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List D.Reg
@@ -320,6 +326,10 @@ theorem Block.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
       exact ⟨Endblock.gOk_mono err h.1 (fun r h' => hr r (Or.inl h')),
         Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h, hr => by
+      simp only [Block.gOk, Block.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
+      exact ⟨Endblock.gOk_mono err h.1 (fun r h' => hr r (Or.inl h')),
+        Block.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
   | .bindAxiom _ _ _ _ _ _ _ rest, h, hr => by
       simp only [Block.gOk, Block.regs] at h hr ⊢
       exact Block.gOk_mono rest h hr
@@ -377,6 +387,10 @@ theorem Endblock.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | .bindAxiom _ _ _ _ _ _ _ rest, h, hr => by
       simp only [Endblock.gOk, Endblock.regs] at h hr ⊢
       exact Endblock.gOk_mono rest h hr
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h, hr => by
+      simp only [Endblock.gOk, Endblock.regs, Bool.and_eq_true, List.mem_append] at h hr ⊢
+      exact ⟨Endblock.gOk_mono err h.1 (fun r h' => hr r (Or.inl h')),
+        Endblock.gOk_mono rest h.2 (fun r h' => hr r (Or.inr h'))⟩
 
 theorem Arms.gOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -729,6 +743,12 @@ theorem Block.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (R
       have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
       simp only [Block.gOk, Block.regs, he.1, hr.1, he.2, hr.2, Bool.and_self, List.append_nil,
         and_self]
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
+      simp only [Block.vOk, Bool.and_eq_true] at h
+      have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.1
+      have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Block.gOk_of_vOk rest h.2
+      simp only [Block.gOk, Block.regs, he.1, hr.1, he.2, hr.2, Bool.and_self, List.append_nil,
+        and_self]
   | .bindAxiom _ _ _ _ _ _ _ rest, h => by
       simp only [Block.vOk] at h
       exact Block.gOk_of_vOk rest h
@@ -784,6 +804,12 @@ theorem Endblock.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
   | .bindAxiom _ _ _ _ _ _ _ rest, h => by
       simp only [Endblock.vOk] at h
       exact Endblock.gOk_of_vOk rest h
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
+      simp only [Endblock.vOk, Bool.and_eq_true] at h
+      have he : err.gOk K Rg = true ∧ err.regs = [] := Endblock.gOk_of_vOk err h.1
+      have hr : rest.gOk K Rg = true ∧ rest.regs = [] := Endblock.gOk_of_vOk rest h.2
+      simp only [Endblock.gOk, Endblock.regs, he.1, hr.1, he.2, hr.2, Bool.and_self, List.append_nil,
+        and_self]
 
 theorem Arms.gOk_of_vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
