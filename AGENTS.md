@@ -147,15 +147,19 @@ README §5 says exactly this; keep it that way.
   stack. New handwritten C needs a reason why Gabbro cannot do it.
   **Zero C keeps every guarantee** (Simon, 2026-09-30): code moved from C into Gabbro is checked
   like user code, with no relaxed mode; system and kernel calls are user logic (`syscall`/`extern`
-  items in Gabbro source), the compiler and checker know no operating system; new emitter
+  items in Gabbro source, contracts declared there, not assumptions), nothing knows an operating system; new emitter
   templates are allowed only machine-checked in the template register (`gabbro schablonen
   --tor`), each premise bound to the pass that establishes it.
 - **Everything new is modelled in Lean before it is merged** (Simon, 2026-09-30): every new
   construct, runtime primitive, template or binding form gets its machine-G semantics and checker
   side with `gabbro_ziel` still proved (a reviewed `Spec.lean` diff if the statement moves), the
   Lean front end and exporter, GabbroV's `Body` model with the bridge simulation, and a C
-  correspondence lemma or proved template for every new emitted form; OS/hardware behaviour as a
-  named assumption. Without its Lean part a feature stays unmerged (`NEEDS LEAN`).
+  correspondence lemma or proved template for every new emitted form. Without its Lean part a
+  feature stays unmerged (`NEEDS LEAN`).
+- **The operating system is user logic, never an assumption, and nothing is OS-specific**
+  (Simon, 2026-09-30): a system or kernel call is a generic call whose contract the program or
+  its binding library declares in Gabbro; the Lean model, the compiler, the checker and the
+  templates know no operating system. Only hardware behaviour is a named assumption.
 - **Floats are in scope** (IEEE model done). Probabilistic statements are OUT of scope for now.
   **Dynamic data structures are IN scope** (Simon, 2026-09-28): structures that grow without a
   static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).
