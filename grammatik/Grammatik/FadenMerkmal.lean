@@ -85,6 +85,7 @@ def mB (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallInd (n := n) _ _ _ _ _ rest => A.ind n && mB A rest
   | .bindCallElse g _ _ _ _ err rest => A.ruf g && mE A err && mB A rest
   | .bindAxiom _ _ _ _ _ _ _ rest => mB A rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => mE A err && mB A rest
   | .regLies _ _ rest => mB A rest
   | .regLiesElse _ _ _ sonst rest => mE A sonst && mB A rest
   | .awaits _ _ _ _ rest => mB A rest
@@ -115,6 +116,7 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .cons s rest => mS A s && mE A rest
   | .bind _ rest => mE A rest
   | .bindAxiom _ _ _ _ _ _ _ rest => mE A rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => mE A err && mE A rest
 end
 
 /-- **The residue predicate**: every block, end block and loop body still to
@@ -157,6 +159,8 @@ theorem mB_alsBlock (A : Merkmal D) :
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
 
 theorem mB_armWahlG (A : Merkmal D) {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -373,6 +377,10 @@ theorem schrittMerk {P : Programm D} {O : Orakel D} {pa : Nat} {M M' : RufMaschi
     rw [hcaller]; dsimp only
     simp only [GRest.mR, mB_alsBlock]
     exact fun h => ⟨h.1, abbruch_iff err restb, h.2.2⟩
+  | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax
+      neu hneu hΛ =>
+    kopfM
+    exact ⟨hok.1.1, abbruch_iff err rest, hok.2⟩
   | _ =>
     kopfM
     all_goals simp_all

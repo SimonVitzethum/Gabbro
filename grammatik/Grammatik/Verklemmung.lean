@@ -256,10 +256,46 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       dsimp only; rw [rufUpdateG_self]
       rw [hhead] at hK
       exact hK
+  | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+    · simp only [rufUpdateG_self]
+      rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
+    · intro K hK
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hK
+      exact hK
+  | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+    refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+    · simp only [rufUpdateG_self]
+      rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
+    · intro K hK
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hK
+      exact hK
   | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
     refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
     · simp only [rufUpdateG_self]
       rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
+    · intro K hK
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hK
+      exact hK
+  | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+    · simp only [rufUpdateG_self]
+      rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
+    · intro K hK
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hK
+      exact hK
+  | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+    refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+    · simp only [rufUpdateG_self]
+      rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
       exact lese_offen _ _ _
     · intro K hK
       dsimp only; rw [rufUpdateG_self]

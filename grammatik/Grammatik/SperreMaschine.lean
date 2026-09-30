@@ -406,10 +406,30 @@ theorem freigabe_schrittG (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
       refine Or.inl (hgross ?_)
       rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
       exact lese_offen _ _ _
+  | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ _ σ₁ hs₁ σ₂ v hax =>
+      simp only [rufUpdateG_self]
+      refine Or.inl (hgross ?_)
+      rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
+  | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ _ σ₁ hs₁ σ₂ r hax =>
+      simp only [rufUpdateG_self]
+      refine Or.inl (hgross ?_)
+      rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
   | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ _ σ₁ hs₁ σ₂ v hax =>
       simp only [rufUpdateG_self]
       refine Or.inl (hgross ?_)
       rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
+  | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ _ σ₁ hs₁ σ₂ v hax =>
+      simp only [rufUpdateG_self]
+      refine Or.inl (hgross ?_)
+      rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
+  | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ _ σ₁ hs₁ σ₂ r hax =>
+      simp only [rufUpdateG_self]
+      refine Or.inl (hgross ?_)
+      rw [axiomSonst_offen' hO _ _ _ _ _ hax, hs₁]
       exact lese_offen _ _ _
   | _ =>
       subst_vars

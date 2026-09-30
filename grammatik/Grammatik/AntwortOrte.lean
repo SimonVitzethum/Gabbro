@@ -62,6 +62,7 @@ def Block.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindCallInd _ _ _ _ _ rest => rest.ants
   | .bindCallElse _ _ _ _ _ err rest => err.ants ++ rest.ants
   | .bindAxiom a _ _ _ _ _ _ rest => .inl a :: rest.ants
+  | .bindAxiomElse a _ _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
   | .regLies r _ rest => .inr r :: rest.ants
   | .regLiesElse r _ _ sonst rest => .inr r :: (sonst.ants ++ rest.ants)
   | .awaits _ _ _ _ rest => rest.ants
@@ -82,6 +83,7 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => s.ants ++ rest.ants
   | .bind _ rest => rest.ants
   | .bindAxiom a _ _ _ _ _ _ rest => .inl a :: rest.ants
+  | .bindAxiomElse a _ _ _ _ _ _ _ err rest => .inl a :: (err.ants ++ rest.ants)
 
 def Arms.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List (D.Ax ⊕ D.Reg)
@@ -124,6 +126,8 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bindAxiom a _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
+  | _, _, .bindAxiomElse a _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
 
 /-! ## 2. What a residue still reaches -/

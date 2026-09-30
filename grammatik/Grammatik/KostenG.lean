@@ -191,6 +191,8 @@ def kostenBlock (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindCallElse g args _ _ _ err rest =>
       2 + kostenArgs args + c g + max (kostenSonst c pa err + 2) (kostenBlock c pa rest + 1)
   | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenBlock c pa rest
+  | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
+      4 + kostenArgs args + kostenSonst c pa err + kostenBlock c pa rest
   | .regLies _ _ rest => 2 + kostenBlock c pa rest
   | .regLiesElse _ _ zusage sonst rest =>
       2 + kostenExpr zusage + max (kostenSonst c pa sonst + 1) (kostenBlock c pa rest + 1)
@@ -225,6 +227,8 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .cons s rest => entfZ s + kostenStmt c pa s + kostenEnd c pa rest
   | .bind e rest => 1 + kostenExpr e + kostenEnd c pa rest
   | .bindAxiom _ args _ _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
+  | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
+      1 + kostenArgs args + kostenEnd c pa err + kostenEnd c pa rest
 
 /-- The steps of an `else` branch: the end block run in BLOCK position
     (`Endblock.alsBlock`, since 2026-09-13), where a `leave`/`next` in it
@@ -240,6 +244,8 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .cons s rest => kostenStmt c pa s + kostenSonst c pa rest
   | .bind e rest => 2 + kostenExpr e + kostenSonst c pa rest
   | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
+  | .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
+      4 + kostenArgs args + kostenSonst c pa err + kostenSonst c pa rest
 end
 
 /-! ## 2. Which callees a body names -/
@@ -289,6 +295,7 @@ def rufeB (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallInd _ _ _ _ _ _ => false
   | .bindCallElse g _ _ _ _ err rest => Z g && rufeE Z err && rufeB Z rest
   | .bindAxiom _ _ _ _ _ _ _ rest => rufeB Z rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z err && rufeB Z rest
   | .regLies _ _ rest => rufeB Z rest
   | .regLiesElse _ _ _ sonst rest => rufeE Z sonst && rufeB Z rest
   | .awaits _ _ _ _ rest => rufeB Z rest
@@ -319,6 +326,7 @@ def rufeE (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .cons s rest => rufeS Z s && rufeE Z rest
   | .bind _ rest => rufeE Z rest
   | .bindAxiom _ _ _ _ _ _ _ rest => rufeE Z rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => rufeE Z err && rufeE Z rest
 end
 
 /-- The callees of a residue: those of every block, end block and loop body
@@ -413,6 +421,8 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bindAxiom _ args _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
 
 /-- An end block run as a block names the callees the end block names. -/
 theorem rufeB_alsBlock (Z : D.Fn → Bool) :
@@ -427,6 +437,8 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) :
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+  | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
 
 end Positiv
@@ -1241,6 +1253,7 @@ def kostenKB (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .bindCallElse g args _ _ _ err rest =>
       1 + kostenArgs args + c g + kostenKE c err + kostenKB c rest
   | .bindAxiom _ _ _ _ _ _ _ rest => kostenKB c rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKB c rest
   -- `Let x = R`: `1 +` one load
   | .regLies _ _ rest => 2 + kostenKB c rest
   -- `LetSonst` over a place: `1 + 1 + block(sonst)`; the predicate is not read (F4)
@@ -1279,6 +1292,7 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .cons s rest => kostenKS c s + kostenKE c rest
   | .bind e rest => 1 + kostenExpr e + kostenKE c rest
   | .bindAxiom _ _ _ _ _ _ _ rest => kostenKE c rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kostenKE c err + kostenKE c rest
 end
 
 mutual
@@ -1763,6 +1777,7 @@ def fremdBlock (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .bindCallInd _ _ _ _ _ rest => fremdBlock fa pa rest
   | .bindCallElse _ _ _ _ _ err rest => fremdEnd fa pa err + fremdBlock fa pa rest
   | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdBlock fa pa rest
+  | .bindAxiomElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdBlock fa pa rest
   | .regLies _ _ rest => fremdBlock fa pa rest
   | .regLiesElse _ _ _ sonst rest => fremdEnd fa pa sonst + fremdBlock fa pa rest
   | .awaits _ _ _ _ rest => fremdBlock fa pa rest
@@ -1793,6 +1808,7 @@ def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .cons s rest => fremdStmt fa pa s + fremdEnd fa pa rest
   | .bind _ rest => fremdEnd fa pa rest
   | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdEnd fa pa rest
+  | .bindAxiomElse a _ _ _ _ _ _ _ err rest => fa a + fremdEnd fa pa err + fremdEnd fa pa rest
 end
 
 /-- The §1 cost plus the declared foreign cost, per statement form. -/
