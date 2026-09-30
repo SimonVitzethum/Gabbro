@@ -100,10 +100,11 @@ done
 # `sysconf`), and one declared foreign function brings the PROGRAM's own libc
 # call, which is the reference the criterion above has to NOT count.
 #
-# `laufzeit/faden.c` is linked in although this probe starts no `start`
-# expression: it is a hosted runtime file, so it belongs in the measured set, and
-# its contribution to the symbol stage is 0 by construction (raw syscalls, see
-# `rohruf_pruefe`).
+# Since 2026-09-30 (C-free lane) there is no hosted runtime FILE left: the arena,
+# lock and thread runtimes are text the generated driver writes (templates
+# `arena.dyn`, `sperre.ticket`, `faden.laufzeit`), and the binding is Gabbro
+# (`linux.gab`, emitted into the unit). The runtime whose OS calls this
+# instrument measures is therefore the DRIVER's own half.
 QUELLE="$W/messung/proben/os-bindung/os-probe.gab"
 FREMD="$W/messung/proben/os-bindung/melde.c"
 # **The binding, since K8's first slice** (2026-09-28): the probe declares an
@@ -114,7 +115,6 @@ FREMD="$W/messung/proben/os-bindung/melde.c"
 # which is why `mmap`, `mprotect` and `sysconf` left the intersection below by
 # the same move that made the runtime call them through declared names.
 BINDUNG_GAB="$W/bibliothek/linux/linux.gab"
-BINDUNG_C="$W/bibliothek/linux/linux.c"
 EINHEIT="osprobe"
 
 # **What the run must print**, and every line is a statement about the tree and
@@ -221,7 +221,6 @@ done
 [ -f "$QUELLE" ] || nicht_gelaufen "no probe source at $QUELLE"
 [ -f "$FREMD" ]  || nicht_gelaufen "no probe C body at $FREMD"
 [ -f "$BINDUNG_GAB" ] || nicht_gelaufen "no binding declarations at $BINDUNG_GAB"
-[ -f "$BINDUNG_C" ]   || nicht_gelaufen "no binding bodies at $BINDUNG_C"
 
 # **Which binary, and is it younger than the sources it claims to be?** One
 # register, one file (`instrumente/binaer.sh`).
@@ -277,7 +276,7 @@ bauen() {   # $1 = work dir, $2 = gift
     # tree is never written to by an instrument.
     # Since 2026-09-30 (C-free lane) the arena runtime is no file here: the generated
     # driver writes it (template `arena.dyn`), so what is copied is the thread runtime.
-    cp "$W/laufzeit/bindung.h" "$W/laufzeit/faden.c" "$W/laufzeit/faden.h" "$arb/laufzeit/"
+    :
     {
         echo "-- written by instrumente/pruefe-os-bindung.sh"
         echo "compiler cc -std=c11 -O0 -Wall -Wextra -Werror"
@@ -300,16 +299,16 @@ bauen() {   # $1 = work dir, $2 = gift
     if [ "$gift" = 7 ]; then
         # The tree is never written to: the mutation is on a COPY, and its result
         # is checked rather than its intent.
-        sed 's|^extern fn gabbro_os_faden_start(f : u64, koerper : u64) -> u32$|extern fn gabbro_os_faden_start(f : u64) -> u32|' \
+        sed 's|^pub fn gabbro_os_klon_flaggen() -> u64$|pub fn gabbro_os_klon_flaggen(gift : u64) -> u64|' \
             "$BINDUNG_GAB" > "$arb/linux-gift.gab"
-        if ! grep -q '^extern fn gabbro_os_faden_start(f : u64) -> u32$' "$arb/linux-gift.gab"; then
+        if ! grep -q '^pub fn gabbro_os_klon_flaggen(gift : u64) -> u64$' "$arb/linux-gift.gab"; then
             echo "HARNESS: gift 7 does not apply -- the declaration was not narrowed"
             return 0
         fi
     fi
     if ! timeout "$FRIST" "$GABBRO" build "$arb/manifest" > "$arb/bau.log" 2>&1; then
         if [ "$gift" = 7 ]; then
-            if grep -q 'is bound with 1 parameter(s) and the runtime calls it with 2' "$arb/bau.log"; then
+            if grep -q 'is bound with 1 parameter(s) and the runtime calls it with 0' "$arb/bau.log"; then
                 echo "HARNESS: gift 7 -- the build refused the wrong arity by name"
             else
                 echo "HARNESS: gift 7 does not measure -- the build failed for another reason"
@@ -353,7 +352,7 @@ bauen() {   # $1 = work dir, $2 = gift
         fi
         sed -i 's|^int main(void)$|extern int getpid(void);\n\nint main(void)|' \
             "$bau/$EINHEIT.treiber.c"
-        sed -i 's|^    uint32_t rc;$|    uint32_t rc;\n    (void)getpid();|' \
+        sed -i 's|^    int rc;$|    int rc;\n    (void)getpid();|' \
             "$bau/$EINHEIT.treiber.c"
         grep -q '(void)getpid();' "$bau/$EINHEIT.treiber.c" || {
             echo "HARNESS: gift 1 does not apply -- the call was not inserted"
@@ -371,19 +370,17 @@ bauen() {   # $1 = work dir, $2 = gift
             "$bau/$EINHEIT.treiber.c"
     fi
     if [ "$gift" = 2 ]; then
-        # A raw `syscall` instruction in the copy of the thread runtime: an OS
-        # call the symbol stage CANNOT SEE, which is the whole reason the third
-        # stage counts sites. Until K8's third slice `faden.c` issued three of
-        # its own and this gift added a fourth; the file issues none now, so the
-        # gift plants the first -- the mutation is the same and the mark it
-        # breaks is 0 instead of 3.
-        if ! grep -q '^void gabbro_faden_warte(uint32_t \*wort)$' "$arb/laufzeit/faden.c"; then
-            echo "HARNESS: gift 2 does not apply -- no \`gabbro_faden_warte\` in faden.c"
+        # A raw `syscall` instruction in the runtime half of the driver: an OS call the
+        # symbol stage CANNOT SEE, which is the whole reason the third stage counts sites.
+        # Since the C-free lane (2026-09-30) the runtime half IS the driver's text, so the
+        # gift plants it there, beside the lock primitives.
+        if ! grep -q '^int main(void)$' "$bau/$EINHEIT.treiber.c"; then
+            echo "HARNESS: gift 2 does not apply -- no \`main\` in the driver"
             return 0
         fi
-        sed -i 's|^void gabbro_faden_warte(uint32_t \*wort)$|static long gabbro_gift_ruf(void)\n{\n    long r;\n    __asm__ __volatile__("syscall" : "=a"(r) : "a"(39L) : "rcx", "r11", "memory");\n    return r;\n}\n\nvoid gabbro_faden_warte(uint32_t *wort)|' \
-            "$arb/laufzeit/faden.c"
-        if [ "$(grep -c '"syscall"' "$arb/laufzeit/faden.c")" = 0 ]; then
+        sed -i 's|^int main(void)$|static long gabbro_gift_ruf(void)\n{\n    long r;\n    __asm__ __volatile__("syscall" : "=a"(r) : "a"(39L) : "rcx", "r11", "memory");\n    return r;\n}\n\nint main(void)|' \
+            "$bau/$EINHEIT.treiber.c"
+        if [ "$(grep -c '"syscall"' "$bau/$EINHEIT.treiber.c")" = 0 ]; then
             echo "HARNESS: gift 2 does not apply -- the site was not inserted"
             return 0
         fi
@@ -399,16 +396,6 @@ bauen() {   # $1 = work dir, $2 = gift
         head -20 "$arb/cc1.log" >&2
         return 0
     fi
-    # The hosted runtime: the bounded heap and the threads. `-w` on the mutated
-    # copy only, because gift 2's helper is deliberately unused.
-    local rtflags="$cflags"
-    [ "$gift" = 2 ] && rtflags="-std=c11 -O0 -w"
-    if ! timeout "$FRIST" cc $rtflags -I "$arb/laufzeit" \
-            -c -o "$bau/faden.o" "$arb/laufzeit/faden.c" 2> "$arb/cc2.log"; then
-        echo "HARNESS: the hosted runtime did not compile"
-        head -20 "$arb/cc2.log" >&2
-        return 0
-    fi
     # The PROGRAM's own C body, compiled on its own -- which is what makes its
     # `printf` the program's and not the runtime's in the measurement.
     if ! timeout "$FRIST" cc $cflags -c -o "$bau/fremd.o" "$FREMD" 2> "$arb/cc3.log"; then
@@ -416,19 +403,8 @@ bauen() {   # $1 = work dir, $2 = gift
         head -20 "$arb/cc3.log" >&2
         return 0
     fi
-    # **The binding is the program's too, and compiled as its own object** -- which is
-    # the whole reason the measurement can tell its `mmap` from a runtime one. It reads
-    # the runtime's interface (`-I "$arb/laufzeit"`) because that header is what holds
-    # its six definitions against the declarations the runtime calls.
-    if ! timeout "$FRIST" cc $cflags -pthread -I "$arb/laufzeit" \
-            -c -o "$bau/bindung.o" "$BINDUNG_C" 2> "$arb/cc4.log"; then
-        echo "HARNESS: the program's binding did not compile"
-        head -20 "$arb/cc4.log" >&2
-        return 0
-    fi
-    if ! timeout "$FRIST" cc -pthread -o "$bau/probe" \
-            "$bau/treiber.o" "$bau/faden.o" "$bau/fremd.o" \
-            "$bau/bindung.o" 2> "$arb/ld.log"; then
+    if ! timeout "$FRIST" cc -o "$bau/probe" \
+            "$bau/treiber.o" "$bau/fremd.o" 2> "$arb/ld.log"; then
         echo "HARNESS: the linker refused the probe"
         head -20 "$arb/ld.log" >&2
         return 0
@@ -450,7 +426,7 @@ symbole_pruefe() {   # $1 = work dir
     local arb="$1" bau="$1/bau" n
     [ -x "$bau/probe" ] || { echo "HARNESS: OS symbols NOT MEASURED -- no binary"; return 0; }
     nm -u "$bau/probe" | awk '{print $2}' | sed 's/@.*//' | sort -u > "$arb/bin.txt"
-    nm -u "$bau/treiber.o" "$bau/faden.o" \
+    nm -u "$bau/treiber.o" \
         | awk '/^ +U/{print $2}' | sed 's/@.*//' | sort -u > "$arb/rt.txt"
     comm -12 "$arb/bin.txt" "$arb/rt.txt" | grep -Ev "$OSSYM_TOOLKETTE" > "$arb/fest.txt"
     n="$(grep -c '' "$arb/fest.txt" | tr -d ' ')"
@@ -472,11 +448,13 @@ symbole_pruefe() {   # $1 = work dir
 # -- stage 3: the raw system calls `nm` cannot see -----------------------------
 rohruf_pruefe() {   # $1 = work dir
     local arb="$1" n
-    n="$(grep -c -H '"syscall' "$arb/laufzeit/faden.c" 2>/dev/null \
+    # The runtime half: the driver's own text (the emitted unit and its binding are
+    # `#include`d, not pasted, so their gates -- the PROGRAM's -- do not count here).
+    n="$(grep -c -H '"syscall' "$arb/bau/$EINHEIT.treiber.c" 2>/dev/null \
         | awk -F: '{s+=$2} END {print s+0}')"
     if [ "$n" -gt "$MARKE_ROHRUF" ]; then
         echo "HARNESS: raw syscalls FAILED -- the hosted runtime issues $n, the mark is $MARKE_ROHRUF"
-        grep -n '"syscall' "$arb/laufzeit/faden.c" 2>/dev/null \
+        grep -n '"syscall' "$arb/bau/$EINHEIT.treiber.c" 2>/dev/null \
             | sed "s|$arb/||" | sed 's/^/    raw: /' | head -10
         return 0
     fi
@@ -641,21 +619,20 @@ einmal() {   # $1 = work dir, $2 = gift  -- every stage runs, none aborts the ne
         for f in "$W"/laufzeit/*.c "$W"/laufzeit/*.h; do
             [ -f "$f" ] && cp "$f" "$arb/gehostet/"
         done
-        if ! grep -q '^void gabbro_faden_warte(uint32_t \*wort)$' "$arb/gehostet/faden.c"; then
-            echo "HARNESS: gift 8 does not apply -- no \`gabbro_faden_warte\` in faden.c"
+        # Since the C-free lane (2026-09-30) `laufzeit/` holds no hosted C file at all; the
+        # gift plants one -- a runtime file nothing links, which is the blind spot the stage
+        # exists for.
+        printf '%s\n' '#include <unistd.h>' 'void gabbro_gift_os(void) { (void)getpid(); }' \
+            > "$arb/gehostet/gift.c"
+        if ! grep -q 'getpid()' "$arb/gehostet/gift.c"; then
+            echo "HARNESS: gift 8 does not apply -- the call was not inserted"
         else
-            sed -i 's|^void gabbro_faden_warte(uint32_t \*wort)$|static void gabbro_gift_os(void) { (void)getpid(); }\n\nvoid gabbro_faden_warte(uint32_t *wort)|' \
-                "$arb/gehostet/faden.c"
-            if ! grep -q 'getpid()' "$arb/gehostet/faden.c"; then
-                echo "HARNESS: gift 8 does not apply -- the call was not inserted"
+            local ng
+            ng="$(metall_os_funde "$arb/gehostet" | grep -c '' | tr -d ' ')"
+            if [ "$ng" != 0 ]; then
+                echo "HARNESS: hosted sources FAILED -- $ng OS call(s) stand in laufzeit/ itself"
             else
-                local ng
-                ng="$(metall_os_funde "$arb/gehostet" | grep -c '' | tr -d ' ')"
-                if [ "$ng" != 0 ]; then
-                    echo "HARNESS: hosted sources FAILED -- $ng OS call(s) stand in laufzeit/ itself"
-                else
-                    echo "HARNESS: hosted sources ok (nothing found -- and the gift was supposed to plant something)"
-                fi
+                echo "HARNESS: hosted sources ok (nothing found -- and the gift was supposed to plant something)"
             fi
         fi
     else
@@ -691,7 +668,7 @@ if [ -z "$GIFT" ]; then
     echo "== What the hosted runtime takes from the operating system =="
     echo "   probe       $QUELLE"
     echo "   own C       $FREMD"
-    echo "   runtime     laufzeit/faden.c + the generated $EINHEIT.treiber.c (with the arena runtime)"
+    echo "   runtime     the generated $EINHEIT.treiber.c (arena, lock and thread runtimes)"
     mkdir -p "$ARB/lauf"
     einmal "$ARB/lauf" "" > "$ARB/lauf/aus.txt"
     grep -E "HARNESS:|^    " "$ARB/lauf/aus.txt" | sed 's/^/   /'

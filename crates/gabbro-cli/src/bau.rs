@@ -35,6 +35,12 @@ pub fn arena_laufzeit() -> &'static str {
     treiber::ARENA_LAUFZEIT
 }
 
+/// The thread runtime the hosted driver writes, behind the binding's head
+/// (`treiber::BINDUNG_KOPF` + `treiber::FADEN_LAUFZEIT`), for `gabbro runtime threads`.
+pub fn faden_laufzeit() -> String {
+    format!("{}{}", treiber::BINDUNG_KOPF, treiber::FADEN_LAUFZEIT)
+}
+
 /// What a unit becomes. **`object` compiles, `program` links** -- and the difference is not a
 /// language question, which is why it stands in the manifest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -575,6 +581,26 @@ fn sammle(
                         },
                     });
             }
+            // **A system-call gate, for the binding rule** (C-free lane, 2026-09-30): the thread
+            // runtime calls the TRAMPOLINE of the program's stack gate, so the gate is a name
+            // the binding must supply like a function. Its C shape is fixed by the emitter.
+            ItemArt::Syscall(sc) => {
+                funktionen
+                    .entry(sc.name.text.clone())
+                    .or_default()
+                    .push(FunktionsForm {
+                        parameter: sc.parameter.len(),
+                        liefert: sc.ergebnis.is_some()
+                            && !matches!(sc.ergebnis, Some(gabbro_syntax::ast::TypExpr::Never(_))),
+                        spec: false,
+                        datei: datei.to_string(),
+                        modul: if pfad.is_empty() {
+                            String::from("(top level)")
+                        } else {
+                            pfad.to_string()
+                        },
+                    });
+            }
             // **Every other function, for the driver.** A `concurrent` member
             // resolves to one of these by short name (C has one namespace, as
             // above); the parameter count decides whether the driver can call
@@ -894,7 +920,7 @@ fn modulregel(
 /// | what the unit uses | what the hosted runtime will call | where |
 /// |---|---|---|
 /// | an `arena` | `gabbro_os_reserve` (answers a region), `gabbro_os_commit` (a region's page and a length), `gabbro_os_seitengroesse` | the arena runtime the generated driver writes (template `arena.dyn`; `laufzeit/arena_dyn.c` until 2026-09-30), at load and at every `grow` |
-/// | a `concurrent` root | `gabbro_os_faden_start`, `_warte` | the generated driver's `main` |
+/// | a `concurrent` root | `gabbro_os_reserve`, `_commit`, `_seitengroesse` (the stacks), the stack gate `gabbro_os_klon_tor`, `gabbro_os_klon_flaggen`, `gabbro_os_faden_ende`, `gabbro_os_warte_wort` | the thread runtime the generated driver writes (template `faden.laufzeit`) |
 /// | a `concurrent` root AND a `lock` | `gabbro_os_nachgeben` | the driver's ticket lock (template `sperre.ticket`), every 64 spins of a waiter |
 /// | any of those | `gabbro_os_melden`, `gabbro_os_ende` | the fail-stops of both files |
 ///
@@ -981,18 +1007,20 @@ fn bindungsregel_gehostet(
     if treiber {
         let weil = "this unit declares a `concurrent` set, which the generated driver runs as \
                     threads";
-        gefordert.push(BindungsZeile {
-            name: "gabbro_os_faden_start",
-            parameter: 2,
-            liefert: true,
-            weil,
-        });
-        gefordert.push(BindungsZeile {
-            name: "gabbro_os_faden_warte",
-            parameter: 1,
-            liefert: true,
-            weil,
-        });
+        // Since 2026-09-30 (C-free lane) the driver writes the thread runtime itself (template
+        // `faden.laufzeit`): a stack region with a guard page, the program's stack gate's
+        // trampoline, the thread end and the word wait -- all the program's.
+        for (name, parameter, liefert) in [
+            ("gabbro_os_reserve", 1, true),
+            ("gabbro_os_commit", 2, true),
+            ("gabbro_os_seitengroesse", 0, true),
+            ("gabbro_os_klon_tor", 4, true),
+            ("gabbro_os_klon_flaggen", 0, true),
+            ("gabbro_os_faden_ende", 0, false),
+            ("gabbro_os_warte_wort", 2, false),
+        ] {
+            gefordert.push(BindungsZeile { name, parameter, liefert, weil });
+        }
     }
     bindung_pruefe(&gefordert, funktionen, &GEHOSTET_ZIEL)
 }
@@ -1086,8 +1114,8 @@ const MODUL_ZIEL: BindungsZiel = BindungsZiel {
 const GEHOSTET_ZIEL: BindungsZiel = BindungsZiel {
     art: "hosted unit",
     laufzeit: "the hosted runtime",
-    kopf: "laufzeit/bindung.h",
-    bibliothek: "`bibliothek/linux/linux.gab` and `bibliothek/linux/linux.c`",
+    kopf: "the generated driver's binding head (`treiber.rs::BINDUNG_KOPF`)",
+    bibliothek: "`bibliothek/linux/linux.gab`",
     sonst: "the linker's -- \"undefined reference to `{}`\"",
 };
 
@@ -2549,23 +2577,12 @@ fn handgeschrieben(
     }
     // A `metal` line makes the unit's product the bare-metal image, which links none of the
     // hosted runtime.
-    if e.art != Art::Modul && manifest.metall.is_none() {
-        let laufzeit = PathBuf::from("laufzeit");
-        let mut dazu: Vec<&str> = Vec::new();
-        if plan.is_some_and(|p| p.hat_gehostet()) {
-            dazu.extend(["faden.c", "faden.h", "bindung.h"]);
-        }
-        // A dynamic arena brings no handwritten file any more: its runtime is the generated
-        // driver's (`treiber::ARENA_LAUFZEIT`, template `arena.dyn`).
-        if !arenen.is_empty() {
-            dazu.extend(["bindung.h"]);
-        }
-        dazu.sort();
-        dazu.dedup();
-        for f in dazu {
-            aus.push(("hosted-runtime", laufzeit.join(f)));
-        }
-    }
+    // A hosted product brings no handwritten runtime file since 2026-09-30 (C-free lane):
+    // the thread, lock and arena runtimes are the generated driver's text (templates
+    // `faden.laufzeit`, `sperre.ticket`, `arena.dyn`), and `laufzeit/bindung.h`,
+    // `faden.c`, `faden.h` are gone. `plan` and `arenen` are still read above for the
+    // module and bare-metal runtimes.
+    let _ = arenen;
     aus
 }
 

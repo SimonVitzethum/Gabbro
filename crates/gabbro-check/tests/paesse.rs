@@ -587,7 +587,9 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // `CTicket.lean` proves, entered with its proof cited in one commit.
     // **16 -> 17 on 2026-09-30 (C-free lane, the page return):** `region.leeren`, the helper's
     // page arithmetic, entered and proved in one commit (`SchablonenArena.lean` §2).
-    assert_eq!(bewiesen(), 17);
+    // **17 -> 19 on 2026-09-30 (C-free lane, hosted threads):** `tor.trampolin` and
+    // `faden.laufzeit`, entered and proved in one commit (`SchablonenFaden.lean`).
+    assert_eq!(bewiesen(), 19);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

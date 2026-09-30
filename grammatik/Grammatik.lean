@@ -185,6 +185,7 @@ import Grammatik.SchablonenT5
 import Grammatik.SchablonenT5Sem
 import Grammatik.SchablonenOhneLibc
 import Grammatik.SchablonenArena
+import Grammatik.SchablonenFaden
 import Grammatik.ZeugnisStmt104
 import Grammatik.ZeugnisIdent
 import Grammatik.ZeugnisStmt104b

@@ -876,7 +876,6 @@ impl fn fuellen() -> u32 effects { writes Puffer } costs <= 1024 ops {
         .join("..")
         .join("..");
     let bindung_gab = wurzel.join("bibliothek").join("linux").join("linux.gab");
-    let bindung_c = wurzel.join("bibliothek").join("linux").join("linux.c");
     let laufzeit = wurzel.join("laufzeit");
     assert!(bindung_gab.is_file(), "the binding this rule points at exists");
 
@@ -886,7 +885,6 @@ impl fn fuellen() -> u32 effects { writes Puffer } costs <= 1024 ops {
         let mut dateien = format!("  {}\n", d.join("u.gab").display());
         if mit_bindung {
             dateien.push_str(&format!("  {}\n", bindung_gab.display()));
-            dateien.push_str(&format!("  {}\n", bindung_c.display()));
         }
         let manifest = format!(
             "compiler cc -std=c11 -I {inc}\nout {aus}\nunit gabbro_probe object\n{dateien}",
@@ -905,14 +903,19 @@ impl fn fuellen() -> u32 effects { writes Puffer } costs <= 1024 ops {
     assert!(aus.contains("bibliothek/linux"), "with the file that supplies it:\n{aus}");
     assert!(aus.contains("`arena`"), "and with what makes the unit need it:\n{aus}");
 
-    // **The positive twin, and it compiles the bodies too.** A rule that only ever refused
-    // would be met by a library nobody can build: the `.c` of the binding is an ordinary file
-    // of the unit since K8, and the build turns it into an object beside the unit's own.
+    // **The positive twin.** A rule that only ever refused would be met by a library nobody
+    // can build. Since 2026-09-30 (C-free lane) the binding is Gabbro and part of the unit:
+    // no foreign object is compiled beside it, its bodies are in the unit's own C.
     let (d, aus, fehler, code) = baue("arena_mit_bindung", true);
     assert_eq!(code, 0, "the same unit with the binding builds:\n{aus}\n{fehler}");
     assert!(
-        d.join("bau").join("gabbro_probe.fremd0.o").is_file(),
-        "and the binding's bodies are an object of this build:\n{aus}"
+        !d.join("bau").join("gabbro_probe.fremd0.o").exists(),
+        "and there is no C of the binding left to compile:\n{aus}"
+    );
+    let einheit = std::fs::read_to_string(d.join("bau").join("gabbro_probe.c")).expect("emitted C");
+    assert!(
+        einheit.contains("uint8_t * gabbro_os_reserve(uint64_t bytes) {"),
+        "the binding's reservation is emitted Gabbro:\n{einheit}"
     );
 }
 
@@ -939,7 +942,6 @@ impl fn fuellen() -> u32 effects { writes Puffer } costs <= 1024 ops {
 fn eine_gehostete_einheit_ohne_bindung_faellt_je_nach_dem_was_sie_benutzt() {
     let wurzel = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..");
     let bindung_gab = wurzel.join("bibliothek").join("linux").join("linux.gab");
-    let bindung_c = wurzel.join("bibliothek").join("linux").join("linux.c");
     let laufzeit = wurzel.join("laufzeit");
 
     // A lock alone, and no declared start: this unit owns no driver.
@@ -962,7 +964,6 @@ pub impl fn zaehle() effects { reads T.slots, writes T.slots, locks L } costs <=
         let mut dateien = format!("  {}\n", d.join("u.gab").display());
         if mit_bindung {
             dateien.push_str(&format!("  {}\n", bindung_gab.display()));
-            dateien.push_str(&format!("  {}\n", bindung_c.display()));
         }
         let manifest = format!(
             "compiler cc -std=c11 -I {inc}\nout {aus}\nunit gabbro_probe object\n{dateien}",
@@ -992,7 +993,7 @@ pub impl fn zaehle() effects { reads T.slots, writes T.slots, locks L } costs <=
     assert_eq!(code, 0, "the same unit with the binding builds:\n{aus}\n{fehler}");
     let treiber = std::fs::read_to_string(d.join("bau").join("gabbro_probe.treiber.c"))
         .expect("the driver was written");
-    for name in ["gabbro_os_faden_start", "gabbro_os_nachgeben", "gabbro_os_melden"] {
+    for name in ["gabbro_faden_start", "gabbro_os_nachgeben", "gabbro_os_melden"] {
         assert!(treiber.contains(name), "the driver calls `{name}`:\n{treiber}");
     }
     // Comment lines are dropped first: the driver's own prose names `pthread_mutex_t` to say
@@ -1049,7 +1050,7 @@ impl fn fuellen() -> u32 effects { writes Puffer } costs <= 1024 ops {
         aus.contains("gabbro_os_reserve") && aus.contains("parameter"),
         "by name and by shape:\n{aus}"
     );
-    assert!(aus.contains("laufzeit/bindung.h"), "against the header it is held to:\n{aus}");
+    assert!(aus.contains("BINDUNG_KOPF"), "against the head it is held to:\n{aus}");
 }
 
 /// **A process without a C library: no C file, no undefined symbol, and the watchdog is Gabbro**

@@ -86,39 +86,21 @@ fn concurrent_kurz(datei: &str, quelle: &str) -> BTreeMap<String, usize> {
 /// never after. The argument text ends at the paren that CLOSES the call,
 /// counted rather than searched for, because the casts bring parentheses.
 fn faden_start_menge(treiber_c: &str) -> BTreeMap<String, usize> {
+    // Since 2026-09-30 (C-free lane) the hosted driver starts its roots the bare-metal way,
+    // `gabbro_faden_start(<root>, …)`, and the thread runtime above them declares the same
+    // name -- so the count starts at the ROOTS marker, and the root is the FIRST argument.
+    let ab = treiber_c.find("/* -- ROOTS:").unwrap_or(treiber_c.len());
     let mut menge = BTreeMap::new();
-    let mut rest = treiber_c;
-    while let Some(i) = rest.find("gabbro_os_faden_start(") {
-        let nach = &rest[i + "gabbro_os_faden_start(".len()..];
-        let mut tiefe = 1usize;
-        let mut ende = nach.len();
-        for (j, c) in nach.char_indices() {
-            match c {
-                '(' => tiefe += 1,
-                ')' => {
-                    tiefe -= 1;
-                    if tiefe == 0 {
-                        ende = j;
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-        let mut letzter = String::new();
-        let mut lauf = String::new();
-        for c in nach[..ende].chars().chain(std::iter::once(' ')) {
-            if c.is_ascii_alphanumeric() || c == '_' {
-                lauf.push(c);
-            } else {
-                if lauf.chars().next().is_some_and(|d| d.is_ascii_alphabetic() || d == '_') {
-                    letzter = lauf.clone();
-                }
-                lauf.clear();
-            }
-        }
-        if !letzter.is_empty() {
-            *menge.entry(letzter).or_insert(0) += 1;
+    let mut rest = &treiber_c[ab..];
+    while let Some(i) = rest.find("gabbro_faden_start(") {
+        let nach = &rest[i + "gabbro_faden_start(".len()..];
+        let name: String = nach
+            .trim_start()
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+            .collect();
+        if !name.is_empty() {
+            *menge.entry(name).or_insert(0) += 1;
         }
         rest = nach;
     }
@@ -213,9 +195,8 @@ fn behauptung_haelt(zeile: &str) -> bool {
 /// defines them, and `bibliothek/linux/` is the pair a program takes off the shelf.
 fn bindungszeilen() -> String {
     format!(
-        "\x20   {}\n\x20   {}\n",
+        "\x20   {}\n",
         wurzel().join("bibliothek/linux/linux.gab").display(),
-        wurzel().join("bibliothek/linux/linux.c").display(),
     )
 }
 
@@ -226,7 +207,7 @@ fn manifest_schreiben(arbeit: &std::path::Path) -> PathBuf {
     std::fs::write(
         &manifest,
         format!(
-            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread -I {inc}\n\
+            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror -I {inc}\n\
              out {aus}\n\
              unit treiber124 object\n\
              \x20   {gab}\n{bindung}",
@@ -323,7 +304,6 @@ fn cc_und_lauf(treiber_c_pfad: &std::path::Path, einheits_dir: &std::path::Path,
             "-Wall",
             "-Wextra",
             "-Werror",
-            "-pthread",
             "-I",
             &einheits_dir.to_string_lossy(),
             "-I",
@@ -332,7 +312,6 @@ fn cc_und_lauf(treiber_c_pfad: &std::path::Path, einheits_dir: &std::path::Path,
             "-o",
             &binary.to_string_lossy(),
             &treiber_c_pfad.to_string_lossy(),
-            &wurzel().join("bibliothek/linux/linux.c").to_string_lossy(),
         ])
         .output()
         .expect("cc runs");
@@ -455,7 +434,7 @@ fn pool_zweimal_deklariert_laeuft_zweifach() {
     std::fs::write(
         &manifest,
         format!(
-            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread -I {inc}\n\
+            "compiler cc -std=c11 -O0 -Wall -Wextra -Werror -I {inc}\n\
              out {aus}\n\
              unit pool object\n\
              \x20   {gab}\n{bindung}",

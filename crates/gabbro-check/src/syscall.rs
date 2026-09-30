@@ -102,7 +102,14 @@ fn buffer_bound(baum: &Programm, modul: &str, s: &SyscallDecl, absagen: &mut Abs
             &z.ziel,
             TypExpr::Int(i) if matches!(i.wort, gabbro_syntax::kw::Kw::U8 | gabbro_syntax::kw::Kw::I8)
         );
-        let gebunden = atome.iter().any(|a| {
+        // **A constant clause binds too** (C-free lane, 2026-09-30): `requires 4 <= lenof(w)`
+        // for an object of fixed size the kernel reads or writes whole (a futex word, a join
+        // word). `N463` decides constant clauses at every call since 2026-09-30, so the clause
+        // ties the kernel's bytes to the caller's object exactly as a length parameter does.
+        let konstant = crate::rahmenlaenge::ausdehnungen(&s.requires).iter().any(|a| {
+            a.zeiger == p.name.text && a.namen.is_empty() && a.k >= 1
+        });
+        let gebunden = konstant || atome.iter().any(|a| {
             a.pointer == p.name.text
                 && s.parameter.iter().any(|q| {
                     q.name.text == a.length

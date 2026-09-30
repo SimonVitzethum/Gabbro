@@ -77,7 +77,7 @@ fi
 QUELLE="$W/messung/proben/nebenlaeufig/sperre-rueckgabe.gab"
 HAND="$W/messung/proben/nebenlaeufig/sperre-rueckgabe-hand.c"
 TREIBER="$W/messung/proben/nebenlaeufig/treiber.c"
-FADEN="$W/laufzeit/faden.c"
+FADEN="$ARB/faden_laufzeit.c"   # generated below (template `faden.laufzeit`, C-free lane)
 # What the SOURCE says the answer is: K = 64 reads of the value 7 each, summed
 # under the lock, and 64*2 + 64 + 1 = 193 acquisitions (the reader takes it twice
 # per round, the writer once, and `lauf` once after the join).
@@ -105,6 +105,10 @@ command -v cc > /dev/null 2>&1 || nicht_gelaufen "no cc on this machine"
 # `instrumente/binaer.sh` -- the trap it stands against bit this instrument first.
 . "$(dirname "$0")/binaer.sh"
 GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
+# **The thread runtime and the binding are generated, not copied** (C-free lane,
+# 2026-09-30): `laufzeit/faden.c` and `bibliothek/linux/linux.c` are gone.
+"$GABBRO" runtime threads > "$ARB/faden_laufzeit.c" || nicht_gelaufen "gabbro runtime threads failed"
+"$GABBRO" emit "$W/bibliothek/linux/linux.gab" > "$ARB/linux_bind.c" || nicht_gelaufen "the binding does not emit"
 
 # -- the mutations (`--gift`) --------------------------------------------------
 #
@@ -181,7 +185,7 @@ baue() {   # $1 = arb, $2 = seite (emit|hand), $3 = opt, $4 = gift
     # this one it is a redefinition and `-Werror` ends the run.*
     if ! cc -std=c11 "-$opt" -Wall -Wextra -Werror "-DGABBRO_BREMSE=${BREMSE}u" \
             -I"$arb" -I"$W/laufzeit" -pthread -o "$arb/$seite-$opt" \
-            "$arb/$seite-treiber.c" "$W/bibliothek/linux/linux.c" 2> "$arb/cc.err"; then
+            "$arb/$seite-treiber.c" "$ARB/linux_bind.c" 2> "$arb/cc.err"; then
         echo "RED: $seite at -$opt did not compile"
         head -12 "$arb/cc.err" | sed 's/^/    /'
         return 1

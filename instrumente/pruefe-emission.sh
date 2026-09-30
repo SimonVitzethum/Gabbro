@@ -315,6 +315,10 @@ bindung_c_erzeugen() {
     [ -s "$ARB/linux_bind.c" ] && return 0
     cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit "$W/bibliothek/linux/linux.gab" \
         > "$ARB/linux_bind.c" || { echo "ABBRUCH: bibliothek/linux/linux.gab does not emit"; exit 1; }
+    # The thread runtime a `start` driver includes (`@FADEN@`): the text the hosted driver
+    # writes (template `faden.laufzeit`), since `laufzeit/faden.c` is gone (C-free lane).
+    cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- runtime threads \
+        > "$ARB/faden_laufzeit.c" || { echo "ABBRUCH: gabbro runtime threads failed"; exit 1; }
 }
 
 lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6 Zeugnis
@@ -374,12 +378,12 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     # redefinition and `-Werror` ends the run.* A driver without the placeholder
     # gets neither, so 49 of the 50 links are byte-for-byte the ones they were.
     printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name.c/" \
-        | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-treiber.c"
+        | sed "s|@FADEN@|$ARB/faden_laufzeit.c|" > "$ARB/$name-treiber.c"
     local bindung=""
     # Since 2026-09-30 (C-free lane) half of the binding is GABBRO (`linux.gab`: the report
     # channel, the stop, the storage), emitted once into `$ARB/linux_bind.c` below; the C half
     # still calls `gabbro_os_ende`, so both travel together.
-    case "$treiber" in *"@FADEN@"*) bindung_c_erzeugen; bindung="$W/bibliothek/linux/linux.c $ARB/linux_bind.c" ;; esac
+    case "$treiber" in *"@FADEN@"*) bindung_c_erzeugen; bindung="$ARB/linux_bind.c" ;; esac
     # **NO `-pthread` on these lines, and the reason is measured.** It expands to
     # `-D_REENTRANT`, under which glibc's `features.h` sets `_POSIX_C_SOURCE` to
     # `199506L` -- and `bibliothek/linux/linux.c`, which the 158 driver
@@ -538,7 +542,7 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     # gift driver of a `start` program would not build -- and a mutation that
     # already fails at compile time proves nothing about the run (R14).
     printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name-gift.c/" \
-        | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-gifttreiber.c"
+        | sed "s|@FADEN@|$ARB/faden_laufzeit.c|" > "$ARB/$name-gifttreiber.c"
     cc -std=c11 -w -I"$ARB" -I"$W/laufzeit" -o "$ARB/$name-giftprobe" "$ARB/$name-gifttreiber.c" $bindung
     # **Ein verfaelschtes Erzeugnis darf NICHT ENDEN, und bis 2026-08-20 hing der Waechter
     # dann fuer immer.**
@@ -2612,7 +2616,6 @@ lauf "beispiel123" "$W/beispiele/123-const-matrix.gab" "$TREIBER123" "1 2 3 4" \
 # and the binding's storage and report calls are GABBRO (`bibliothek/linux/linux.gab`,
 # emitted into `linux_bind.c`). Both stand AFTER the emitted unit, whose prelude declares the
 # descriptor they work on.
-cp "$W/laufzeit/bindung.h" "$W/bibliothek/linux/linux.c" "$ARB/"
 cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- runtime arena > "$ARB/arena_laufzeit.c"
 bindung_c_erzeugen
 TREIBER158='#include <stdio.h>

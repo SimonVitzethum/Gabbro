@@ -693,9 +693,13 @@ fn main() -> std::process::ExitCode {
                 print!("{}", bau::arena_laufzeit());
                 std::process::ExitCode::SUCCESS
             }
+            Some("faden") | Some("threads") => {
+                print!("{}", bau::faden_laufzeit());
+                std::process::ExitCode::SUCCESS
+            }
             _ => {
                 // 1 and not 2: the command is known, its argument is not.
-                eprintln!("gabbro runtime: one of `arena`");
+                eprintln!("gabbro runtime: one of `arena`, `threads`");
                 std::process::ExitCode::from(1)
             }
         },
@@ -916,9 +920,10 @@ fn hilfe() {
                                     the generator templates: the third counting column.
                                     `--gate` FALLS while a proved template has a premise
                                     no pass establishes (tooth 3)
-  gabbro runtime|laufzeit arena
-                                    the arena runtime the hosted driver writes (template
-                                    `arena.dyn`), for a harness that builds its own driver
+  gabbro runtime|laufzeit arena|threads
+                                    the arena runtime (template `arena.dyn`) or the thread
+                                    runtime with the binding's head (`faden.laufzeit`) the
+                                    hosted driver writes, for a harness with its own driver
   gabbro k-condition|k-bedingung <file.gab>…
                                     per carrier: are ALL write sites generated? (measurement 2)
   gabbro costs|kosten <file.gab>…   the cost report per routine

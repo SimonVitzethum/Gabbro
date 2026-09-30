@@ -48,7 +48,7 @@ TOOLCHAIN = {
 # Scenario tables. Each is (name, manifest body). `{W}` is this tree, `{OUT}` the build dir.
 # The kernel build tree is named by the environment, never baked in.
 KBUILD = os.environ.get("KBUILD", "/lib/modules/%s/build" % os.uname().release)
-BINDUNG_LINUX = "  {W}/bibliothek/linux/linux.gab\n  {W}/bibliothek/linux/linux.c\n"
+BINDUNG_LINUX = "  {W}/bibliothek/linux/linux.gab\n"
 BINDUNG_KMOD = "  {W}/bibliothek/linux-kmod/linux-kmod.gab\n  {W}/bibliothek/linux-kmod/linux-kmod.c\n"
 CC = "compiler cc -std=c11 -O0 -Wall -Wextra -Werror\nout {OUT}\n"
 

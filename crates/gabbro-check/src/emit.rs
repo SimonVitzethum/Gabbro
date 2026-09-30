@@ -9821,6 +9821,101 @@ fn syscall_stumpf(
         }
     }
     b2.push_str("}\n");
+    // **The TRAMPOLINE of a stack gate** (C-free lane, 2026-09-30; template `tor.trampolin`).
+    //
+    // A gate that claims a stack starts a second thread on the handed stack. From GABBRO it is
+    // called only in the checked triple (`N572`: every call hands to a `child` region), which
+    // the inline trap lowers. The generated DRIVER starts its declared roots through this entry
+    // instead -- C only, never a Gabbro item: the same `syscall` with the same registers, and
+    // in the child (`rax == 0`) the stack aligned, the ROOT called and then the program's
+    // `-> never` thread end, both handed BY NAME at the driver's call site in two registers the
+    // gate neither binds nor destroys (so they survive the call into the child, whose
+    // registers are the parent's). The child never leaves the `asm`; the parent gets the raw
+    // answer. No code address is read from memory: the two are C function designators, the
+    // one proof obligation `start_trampolin` (`SchablonenArena.lean` §3) states.
+    if s.stapel.len() == 1 {
+        let mut belegt: Vec<String> = Vec::new();
+        for (r, _) in &s.regs_in {
+            belegt.push(r.text.clone());
+        }
+        for r in s.regs_out.iter().chain(s.clobbers.iter()) {
+            belegt.push(r.text.clone());
+        }
+        for f in fest_zerstoert {
+            belegt.push(f.trim_matches('"').to_string());
+        }
+        let frei: Vec<&str> = ["r12", "r13", "r14", "r15", "rbx"]
+            .into_iter()
+            .filter(|r| !belegt.iter().any(|b| b == r))
+            .collect();
+        if frei.len() < 2 {
+            syscall_code(
+                absagen,
+                "C187",
+                s.name.span,
+                &format!(
+                    "`syscall {n}` claims a stack and leaves fewer than two callee-saved \
+                     registers untouched -- the trampoline hands the child its root and its end \
+                     in two registers the gate neither binds nor destroys, and there are none"
+                ),
+            );
+            return;
+        }
+        let (rk, re) = (frei[0], frei[1]);
+        let tliste = if params.is_empty() {
+            "void (*_kind)(void), void (*_ende)(void)".to_string()
+        } else {
+            format!("{}, void (*_kind)(void), void (*_ende)(void)", params.join(", "))
+        };
+        aus.push_str(&format!(
+            "int64_t {n}_trampolin({tliste}) __attribute__((unused));\n"
+        ));
+        let mut t = format!(
+            "\n/* The trampoline of `syscall {n}` (template `tor.trampolin`): the child calls\n\
+             \x20* `_kind` on the handed stack, then `_ende`, and never leaves; the parent gets\n\
+             \x20* the raw answer. C only -- a Gabbro call of this gate is the checked triple. */\n\
+             int64_t {n}_trampolin({tliste}) {{\n"
+        );
+        for (reg, param) in &s.regs_in {
+            t.push_str(&format!(
+                "    register uint64_t _sys_{} __asm__(\"{}\") = (uint64_t){};\n",
+                reg.text, reg.text, param.text
+            ));
+        }
+        t.push_str(&format!(
+            "    register void (*_sys_kind)(void) __asm__(\"{rk}\") = _kind;\n\
+             \x20   register void (*_sys_ende)(void) __asm__(\"{re}\") = _ende;\n\
+             \x20   register int64_t _sys_rax __asm__(\"rax\") = (int64_t){nummer}u;\n"
+        ));
+        let mut ein: Vec<String> =
+            s.regs_in.iter().map(|(r, _)| format!("\"r\" (_sys_{})", r.text)).collect();
+        ein.push("\"r\" (_sys_kind)".to_string());
+        ein.push("\"r\" (_sys_ende)".to_string());
+        let mut zerst: Vec<String> = s.clobbers.iter().map(|c| format!("\"{}\"", c.text)).collect();
+        for fest in fest_zerstoert {
+            if !zerst.iter().any(|c| c == fest) {
+                zerst.push(fest.to_string());
+            }
+        }
+        t.push_str(&format!(
+            "    __asm__ __volatile__(\n\
+             \x20       \"{befehl}\\n\\t\"\n\
+             \x20       \"testq %%rax, %%rax\\n\\t\"\n\
+             \x20       \"jnz 1f\\n\\t\"\n\
+             \x20       \"andq $-16, %%rsp\\n\\t\"\n\
+             \x20       \"call *%%{rk}\\n\\t\"\n\
+             \x20       \"call *%%{re}\\n\\t\"\n\
+             \x20       \"ud2\\n\"\n\
+             \x20       \"1:\\n\\t\"\n\
+             \x20       : \"+a\" (_sys_rax)\n\
+             \x20       : {}\n\
+             \x20       : {});\n\
+             \x20   return _sys_rax;\n}}\n",
+            ein.join(", "),
+            zerst.join(", ")
+        ));
+        b2.push_str(&t);
+    }
 }
 
 /// Die Namen in einem Praedikat -- ein `until` liest ebenso wie ein Rumpf.

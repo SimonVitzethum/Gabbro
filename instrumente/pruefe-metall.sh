@@ -228,8 +228,8 @@ boot_einheit() {  # boot_einheit NAME SOURCE OBSERVATION_FILE
     # a hosted driver that called unbound names is exactly what the rule refuses
     # (`bau.rs::bindungsregel_gehostet`). The two lines cost one unused object and keep the
     # refusal honest; the bare-metal image below links none of it.
-    printf 'compiler cc -std=c11 -O0 -Wall -Wextra -Werror -pthread -I %s\nout %s\nunit einheit object\n    %s\n    %s\n    %s\n' \
-        "$W/laufzeit" "$out" "$2" "$W/bibliothek/linux/linux.gab" "$W/bibliothek/linux/linux.c" > "$d/bau"
+    printf 'compiler cc -std=c11 -O0 -Wall -Wextra -Werror -I %s\nout %s\nunit einheit object\n    %s\n    %s\n' \
+        "$W/laufzeit" "$out" "$2" "$W/bibliothek/linux/linux.gab" > "$d/bau"
     if ! G build "$d/bau" > "$d/bau.log" 2>&1; then
         echo "  $1: gabbro build FAILED"; sed 's/^/      /' "$d/bau.log" | head -10; exit 1
     fi
@@ -739,18 +739,22 @@ int main(void)
     return 0;
 }
 WETT
-    sed -i "s|@FADEN@|$W/laufzeit/faden.c|" "$ARB/wettlauf/w.c"
+    # The thread runtime is generated since the C-free lane (template `faden.laufzeit`),
+    # and the binding is Gabbro, emitted into a unit of its own.
+    G runtime threads > "$ARB/wettlauf/faden_laufzeit.c"
+    G emit "$W/bibliothek/linux/linux.gab" > "$ARB/wettlauf/linux_bind.c"
+    sed -i "s|@FADEN@|$ARB/wettlauf/faden_laufzeit.c|" "$ARB/wettlauf/w.c"
     # **The binding is a SECOND translation unit and not an `#include`** (TODO
     # section 0e K8): `laufzeit/faden.c` calls `gabbro_os_klon` now, and
     # `bibliothek/linux/linux.c` sets `_POSIX_C_SOURCE` -- which only works
     # before any header, i.e. at the top of a unit of its own. *Measured: pasted
     # into this one it is a redefinition and `-Werror` ends the probe.*
-    cc -std=c11 -O2 -Wall -Wextra -Werror -I"$W/laufzeit" -pthread \
-        -o "$ARB/wettlauf/w" "$ARB/wettlauf/w.c" "$W/bibliothek/linux/linux.c"
+    cc -std=c11 -O2 -Wall -Wextra -Werror -I"$W/laufzeit" \
+        -o "$ARB/wettlauf/w" "$ARB/wettlauf/w.c" "$ARB/wettlauf/linux_bind.c"
     if [ "$(timeout 60 "$ARB/wettlauf/w" || true)" = "durch" ]; then
-        echo "  hosted join (faden.c): ok (200000 start/join rounds on one stack)"
+        echo "  hosted join (faden.laufzeit): ok (200000 start/join rounds on one stack)"
     else
-        echo "  hosted join (faden.c): FAILED -- the join lost a thread's end"; BEFUND=1
+        echo "  hosted join (faden.laufzeit): FAILED -- the join lost a thread's end"; BEFUND=1
     fi
 else
     echo "  hosted join (faden.c): NOT RUN -- not Linux x86_64"

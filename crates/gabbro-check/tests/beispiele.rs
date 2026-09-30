@@ -64,7 +64,7 @@ fn absagen_von(pfad: &Path) -> (Vec<(&'static str, Stufe)>, String, String) {
     // **Lane O-1: `C185` (the refused `child` block, `beispiele/gift/1112`)
     // joins them for the same reason.**
     if quelle.starts_with("-- erwartet: C001")
-        || ["C180", "C181", "C182", "C183", "C184", "C185", "C186"]
+        || ["C180", "C181", "C182", "C183", "C184", "C185", "C186", "C187"]
             .iter()
             .any(|c| quelle.starts_with(&format!("-- erwartet: {c}")))
     {

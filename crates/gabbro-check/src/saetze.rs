@@ -4358,7 +4358,7 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "syscall.stub",
-        kennungen: &["C180", "C181", "C182", "C183", "C184", "C186"],
+        kennungen: &["C180", "C181", "C182", "C183", "C184", "C186", "C187"],
         aussage: "A checked `syscall` lowers to one C function: every parameter in its \
                   declared in-register, the number in `rax`, the `syscall` instruction \
                   as extended inline `__asm__` with the declared clobbers plus `memory`, \
@@ -4376,7 +4376,10 @@ pub const PHASEN: &[Satz] = &[
                   refuse, and the refusal must reach the program's `else`), and a number -- \
                   and every result bound -- that folds at translation time (`C184`). A \
                   region's word is handed over as the address after the sign leg, and the \
-                  word zero is the hardware outcome (the proved template `tor.region`).",
+                  word zero is the hardware outcome (the proved template `tor.region`). A gate \
+                  that claims a stack also gets a C-only trampoline (template `tor.trampolin`), \
+                  which needs two callee-saved registers the gate neither binds nor destroys \
+                  (`C187` when there are none).",
         vorbehalt: "A template rule, and nothing else. It says nothing about whether the \
                     kernel keeps the contract it decodes against -- that is the named \
                     assumption behind the stub (`Erhaltung.lean`: `syscallStub`), handed \
@@ -4395,7 +4398,7 @@ pub const PHASEN: &[Satz] = &[
                     `linux_read_contract`, each with its own probe).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes `850`/`851`/`852`/`853`/`854` on \
-                      `C180`/`C181`/`C182`/`C183`/`C184`, and `1383` on `C186` -- each \
+                      `C180`/`C181`/`C182`/`C183`/`C184`, `1383` on `C186`, `1389` on `C187` -- each \
                       checker-clean, each refused by exactly its code; beispiele/183 runs a \
                       region answer (a page from the kernel, a store through it, `write`); beispiele/74 runs the value path \
                       (a `write(1, \"ok\\n\", 3)` returns 3), beispiele/90 the `EBADF` path.",

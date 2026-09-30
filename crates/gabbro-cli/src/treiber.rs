@@ -6,7 +6,7 @@
 //! thread per declared start, join all, and the lock primitives the emitter
 //! only declares. The generated file is a build artefact, pinned per unit: the
 //! probe compares the `concurrent { ... }` occurrences of the sources against
-//! the `gabbro_os_faden_start` sites of the driver, BY COUNT (a multiset since
+//! the `gabbro_faden_start` sites of the driver, BY COUNT (a multiset since
 //! fix lane F4): a root added, dropped or started a different number of times
 //! without regenerating fails loudly.
 //!
@@ -100,7 +100,7 @@ pub struct MetallZusatz {
 /// with unchanged sources would otherwise leave a stale driver behind a
 /// valid record. Bump this on every template change; `bau.rs` mixes it into
 /// the fingerprint of every unit that owns a driver.
-pub const GENERATOR_KENNUNG: &str = "treiber-gen-8";
+pub const GENERATOR_KENNUNG: &str = "treiber-gen-9";
 
 /// **The unit's dynamic arenas, reserved before the first root runs** (server lane,
 /// 2026-09-28, TODO section 0e K8).
@@ -241,6 +241,74 @@ bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n)\n\
     return true;\n\
 }\n";
 
+/// **The program's binding as the generated driver calls it** (C-free lane, 2026-09-30): the
+/// report codes and the prototypes that were `laufzeit/bindung.h`, which is gone -- every name
+/// here is a GABBRO function of the binding (`bibliothek/linux/linux.gab`), and the C compiler
+/// holds each prototype against the emitted definition in the same translation unit.
+pub const BINDUNG_KOPF: &str = "\
+#include <stdint.h>\n\
+#include <stdbool.h>\n\
+#define GABBRO_OS_M_DESKRIPTOR 1u\n\
+#define GABBRO_OS_M_SPANNE     2u\n\
+#define GABBRO_OS_M_RESERVE    3u\n\
+#define GABBRO_OS_M_BODEN      4u\n\
+#define GABBRO_OS_M_UEBER_MAX  5u\n\
+#define GABBRO_OS_M_SEITE      6u\n\
+#define GABBRO_OS_M_START      7u\n\
+#define GABBRO_OS_M_WARTE      8u\n\
+#define GABBRO_OS_ENDE_ABBRUCH 134u\n\
+void gabbro_os_melden(uint32_t code, uint64_t a, uint64_t b);\n\
+void gabbro_os_ende(uint32_t code);\n\
+uint8_t *gabbro_os_reserve(uint64_t bytes);\n\
+uint32_t gabbro_os_commit(uint8_t *stelle, uint64_t bytes);\n\
+uint64_t gabbro_os_seitengroesse(void);\n\
+void gabbro_os_nachgeben(void);\n";
+
+/// **The hosted thread runtime, written by the generator** (C-free lane, 2026-09-30; template
+/// `faden.laufzeit`).
+///
+/// `laufzeit/faden.c` and the binding's pthread and raw-`clone` C are gone. A thread is started
+/// through the TRAMPOLINE the emitter writes for the program's stack gate
+/// (`gabbro_os_klon_tor`, template `tor.trampolin`): the `clone` in the parent, and in the
+/// child the root on the handed stack, then the program's `-> never` thread end. The root and
+/// the end are C function DESIGNATORS at every call site of `gabbro_faden_start` (the driver
+/// and the emitted `start` statement name them), so no code address is ever read from data.
+/// The join word is written by the kernel at both ends (the gate's contract); the wait loop
+/// trusts the word and nothing else (`faden_warte_korrekt`, `SchablonenArena.lean` §3). The
+/// interface (`gabbro_faden_start`/`_warte`) is the one the bare-metal runtime implements too.
+pub const FADEN_LAUFZEIT: &str = "\
+/* -- The thread runtime (template `faden.laufzeit`). Generated; every OS call is the\n\
+ *    program's (the stack gate's trampoline, the thread end, the word wait). */\n\
+uint64_t gabbro_os_klon_flaggen(void);\n\
+int64_t gabbro_os_klon_tor_trampolin(uint64_t flaggen, uint64_t spitze, uint8_t *eltern, uint8_t *kind, void (*_kind)(void), void (*_ende)(void));\n\
+_Noreturn void gabbro_os_faden_ende(void);\n\
+void gabbro_os_warte_wort(uint8_t *wort, uint32_t erwartet);\n\
+int gabbro_faden_start(void (*fn)(void), void *spitze, uint32_t *wort);\n\
+void gabbro_faden_warte(uint32_t *wort);\n\
+int gabbro_faden_start(void (*fn)(void), void *spitze, uint32_t *wort)\n\
+{\n\
+    int64_t r;\n\
+    if (fn == 0 || spitze == 0 || wort == 0 || ((uintptr_t)spitze & 15u) != 0u) {\n\
+        return 22;\n\
+    }\n\
+    r = gabbro_os_klon_tor_trampolin(gabbro_os_klon_flaggen(), (uint64_t)(uintptr_t)spitze,\n\
+                                     (uint8_t *)wort, (uint8_t *)wort, fn, gabbro_os_faden_ende);\n\
+    if (r < 0) {\n\
+        return r < -4095 ? 12 : (int)-r;\n\
+    }\n\
+    return 0;\n\
+}\n\
+void gabbro_faden_warte(uint32_t *wort)\n\
+{\n\
+    for (;;) {\n\
+        uint32_t v = __atomic_load_n(wort, __ATOMIC_ACQUIRE);\n\
+        if (v == 0u) {\n\
+            return;\n\
+        }\n\
+        gabbro_os_warte_wort((uint8_t *)wort, v);\n\
+    }\n\
+}\n\n";
+
 /// **The hosted lock, written by the generator** (C-free lane, 2026-09-30; template
 /// `sperre.ticket`).
 ///
@@ -336,7 +404,7 @@ pub fn gueltiger_c_name(s: &str) -> bool {
 /// `wurzeln` are the resolved roots in declaration order, ONE ENTRY PER
 /// OCCURRENCE (fix lane F4: `concurrent { f, f }` is two starts, and the
 /// accepted pool-safe duplicate must get two threads); the generator writes
-/// one `gabbro_os_faden_start` per entry.
+/// one `gabbro_faden_start` per entry.
 /// `sperren` the locks to define. `nachlauf` is optional
 /// unit-specific observation C after the join loop (the 124 invariant
 /// checks); the plain build passes `None`, so the artefact carries the
@@ -363,15 +431,15 @@ pub fn erzeuge(
          * emitted no caller and no `main`; this file starts exactly the declared\n \
          * roots, one thread per occurrence, and joins them. Regenerate after every\n \
          * change to the unit's `concurrent` sets or locks: the pin probe compares\n \
-         * the source sets against the `gabbro_os_faden_start` sites below and fails\n \
+         * the source sets against the `gabbro_faden_start` sites below and fails\n \
          * a stale file.\n \
          *\n \
          * EVERY OPERATING-SYSTEM CALL IN HERE IS THE PROGRAM'S (TODO section 0e K8).\n \
-         * This file names no POSIX function: threads, locks and the words of a\n \
-         * failure go through `laufzeit/bindung.h`, which declares them and defines\n \
-         * none, and the program supplies the bodies --\n \
-         * `bibliothek/linux/linux.gab` plus its `.c` is the binding it may take off\n \
-         * the shelf. A unit that binds none is refused before this file is written.\n \
+         * This file names no POSIX function and no system call: threads, locks and\n \
+         * the words of a failure go through the names of the binding head below,\n \
+         * which the program defines in Gabbro -- `bibliothek/linux/linux.gab` is the\n \
+         * binding it may take off the shelf. A unit that binds none is refused\n \
+         * before this file is written.\n \
          *\n \
          * BUILD (from the tree root; `<ausgabe>` is the manifest's `out` dir):\n \
          *\n \
@@ -379,12 +447,14 @@ pub fn erzeuge(
          *      -DEINHEIT_INCLUDE='\"<einheit>.c\"' -c \\\n \
          *      -o <ausgabe>/<einheit>.treiber.o <ausgabe>/<einheit>.treiber.c\n \
          *\n \
-         * and link it against `laufzeit/arena_dyn.c`, `laufzeit/faden.c` and the\n \
-         * program's own C bodies (its binding among them).\n \
+         * and link it against the program's own C bodies, if it has any. The binding\n \
+         * (`bibliothek/linux/linux.gab`) is Gabbro and part of the unit; the arena,\n \
+         * lock and thread runtimes are written into this file (templates `arena.dyn`,\n \
+         * `sperre.ticket`, `faden.laufzeit`).\n \
          */\n",
     );
     aus.push_str("\n/* -- The names this driver calls and does not define ------------------- */\n\n");
-    aus.push_str("#include \"bindung.h\"\n");
+    aus.push_str(BINDUNG_KOPF);
     aus.push_str("\n/* -- The emitted unit -------------------------------------------------- */\n\n");
     aus.push_str("#include EINHEIT_INCLUDE\n");
     // The arena runtime is the generator's since the C-free lane's second slice (template
@@ -414,17 +484,19 @@ pub fn erzeuge(
             ));
         }
     }
+    aus.push_str(FADEN_LAUFZEIT);
     aus.push_str("/* -- ROOTS: the declared starts of this unit.\n");
-    aus.push_str(" *\n * ONE BLOB PER OCCURRENCE, and the ROOT'S OWN NAME at the call site: the\n");
-    aus.push_str(" * binding takes `void (*)(void)`, which is the shape the emitter writes, so\n");
-    aus.push_str(" * no adapter stands between them and the pin probe reads the root directly.\n");
-    aus.push_str(" * A root declared twice (a pool) gets two blobs and two start sites.\n */\n");
+    aus.push_str(" *\n * ONE STACK AND ONE JOIN WORD PER OCCURRENCE, and the ROOT'S OWN NAME at the\n");
+    aus.push_str(" * call site -- the shape of the bare-metal driver, so one scanner reads both.\n");
+    aus.push_str(" * Each stack is a region of the program's binding with its lowest page left\n");
+    aus.push_str(" * unwritable (a guard: an overflow faults instead of writing a neighbour).\n */\n");
     aus.push_str("/* N_WURZELN counts the declared starts, one per occurrence -- the probe checks it\n * against the number of members the source's `concurrent` sets name. */\n");
     aus.push_str(&format!("#define N_WURZELN {}\n", wurzeln.len()));
-    aus.push_str("static uint64_t faden[N_WURZELN][GABBRO_OS_FADEN_WORTE];\n");
+    aus.push_str("#define GABBRO_STAPEL 8388608u\n");
+    aus.push_str("static uint32_t wort[N_WURZELN > 0 ? N_WURZELN : 1];\n");
     aus.push_str("\n/* -- main: start exactly the roots, join them. ---------------------------- */\n\nint main(void)\n{\n");
     if !wurzeln.is_empty() {
-        aus.push_str("    uint32_t rc;\n");
+        aus.push_str("    uint64_t seite = gabbro_os_seitengroesse();\n    uint8_t *st;\n    int rc;\n");
     }
     arenen_reservieren(&mut aus);
     aus.push('\n');
@@ -434,27 +506,23 @@ pub fn erzeuge(
     // so "join covers exactly the spawned set" holds on the error path too.
     for (i, w) in wurzeln.iter().enumerate() {
         let c = &w.c_name;
-        let einsammeln = if i == 0 {
-            String::new()
-        } else {
-            format!(
-                "        for (int j = 0; j < {i}; j++) {{\n\
-                 \x20           (void)gabbro_os_faden_warte((uint64_t)(uintptr_t)faden[j]);\n        }}\n"
-            )
-        };
+        let einsammeln: String = (0..i)
+            .map(|j| format!("        gabbro_faden_warte(&wort[{j}]);\n"))
+            .collect();
         aus.push_str(&format!(
-            "    rc = gabbro_os_faden_start((uint64_t)(uintptr_t)faden[{i}], (uint64_t)(uintptr_t){c});\n\
+            "    st = gabbro_os_reserve(seite + GABBRO_STAPEL);\n\
+             \x20   rc = (int)gabbro_os_commit(st + seite, GABBRO_STAPEL);\n\
+             \x20   if (rc == 0) {{\n\
+             \x20       rc = gabbro_faden_start({c}, st + seite + GABBRO_STAPEL, &wort[{i}]);\n\
+             \x20   }}\n\
              \x20   if (rc != 0) {{\n\
-             \x20       gabbro_os_melden(GABBRO_OS_M_START, {i}, rc);\n{einsammeln}\
+             \x20       gabbro_os_melden(GABBRO_OS_M_START, {i}, (uint64_t)rc);\n{einsammeln}\
              \x20       return 2;\n    }}\n"
         ));
     }
-    aus.push_str(
-        "    for (int i = 0; i < N_WURZELN; i++) {\n\
-         \x20       rc = gabbro_os_faden_warte((uint64_t)(uintptr_t)faden[i]);\n\
-         \x20       if (rc != 0) {\n            gabbro_os_melden(GABBRO_OS_M_WARTE, (uint64_t)i, rc);\n\
-         \x20           return 2;\n        }\n    }\n",
-    );
+    for i in 0..wurzeln.len() {
+        aus.push_str(&format!("    gabbro_faden_warte(&wort[{i}]);\n"));
+    }
     if let Some(code) = nachlauf {
         aus.push_str("\n    /* -- Unit-specific observation (test half, not runtime). -- */\n");
         aus.push_str(code);
@@ -698,77 +766,15 @@ pub fn metall_pin_pruefe(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> R
 }
 
 /// The roots of a hosted driver C file, COUNTED: the root named at every
-/// `gabbro_os_faden_start` call site, with the number of sites that name it (a
-/// pool routine started twice has two sites).
-///
-/// **The LAST identifier of the argument text is the root**, and that is exact
-/// rather than lucky: the call the generator writes is
-/// `gabbro_os_faden_start((uint64_t)(uintptr_t)faden[i], (uint64_t)(uintptr_t)<root>)`,
-/// so the only names after the second comma are the cast's own -- and they
-/// stand BEFORE the root, never after it. The argument text ends at the paren
-/// that closes the call, which is COUNTED and not searched for: the casts carry
-/// parentheses of their own.
-///
-/// Read with a plain scanner and not a C parser, for the reason it always was:
-/// [`erzeuge`] is the only writer of the files this reads.
-///
-/// *Until K8's second slice this scanner read `pthread_create(` and the
-/// `faden_<root>` adapter beside it. The adapter went with the POSIX signature
-/// into `bibliothek/linux/linux.c`, so the root's own name stands at the call
-/// site now -- the shape the BARE-METAL driver already had
-/// ([`metall_start_zaehlung`]).*
+/// `gabbro_faden_start` call site below the ROOTS marker, with the number of sites that
+/// name it (a pool routine started twice has two sites). Read with a plain scanner and
+/// not a C parser: [`erzeuge`] is the only writer of the files this reads.
 pub fn faden_start_zaehlung(treiber_c: &str) -> BTreeMap<String, usize> {
-    let mut zaehlung = BTreeMap::new();
-    let mut rest = treiber_c;
-    while let Some(i) = rest.find("gabbro_os_faden_start(") {
-        let nach = &rest[i + "gabbro_os_faden_start(".len()..];
-        let mut tiefe = 1usize;
-        let mut ende = nach.len();
-        for (j, c) in nach.char_indices() {
-            match c {
-                '(' => tiefe += 1,
-                ')' => {
-                    tiefe -= 1;
-                    if tiefe == 0 {
-                        ende = j;
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-        if let Some(name) = letzter_bezeichner(&nach[..ende]) {
-            *zaehlung.entry(name).or_insert(0) += 1;
-        }
-        rest = nach;
-    }
-    zaehlung
-}
-
-/// The last C identifier in a piece of text (`[A-Za-z_][A-Za-z0-9_]*`), if
-/// there is one. A run that starts with a digit is a number and not a name.
-fn letzter_bezeichner(text: &str) -> Option<String> {
-    let mut gefunden: Option<String> = None;
-    let mut lauf = String::new();
-    let schliesse = |lauf: &mut String, gefunden: &mut Option<String>| {
-        if lauf
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
-        {
-            *gefunden = Some(lauf.clone());
-        }
-        lauf.clear();
-    };
-    for c in text.chars() {
-        if c.is_ascii_alphanumeric() || c == '_' {
-            lauf.push(c);
-        } else {
-            schliesse(&mut lauf, &mut gefunden);
-        }
-    }
-    schliesse(&mut lauf, &mut gefunden);
-    gefunden
+    // **Since 2026-09-30 (C-free lane) the hosted driver has the bare-metal shape**:
+    // `gabbro_faden_start(<root>, …)`, the root FIRST. The thread runtime written above the
+    // roots declares and defines the same name, so the count starts at the ROOTS marker.
+    let ab = treiber_c.find("/* -- ROOTS:").unwrap_or(treiber_c.len());
+    metall_start_zaehlung(&treiber_c[ab..])
 }
 
 /// The declared starts of the sources as a multiset: short C name to the
@@ -919,7 +925,8 @@ mod treiber_tests {
             // nothing. The bound names ARE there.
             for name in [
                 "gabbro_os_nachgeben", "gabbro_ticket_nimm", "gabbro_ticket_gib",
-                "gabbro_os_faden_start", "gabbro_os_faden_warte", "gabbro_os_melden",
+                "gabbro_faden_start", "gabbro_faden_warte", "gabbro_os_melden",
+                "gabbro_os_klon_tor_trampolin", "gabbro_os_faden_ende",
             ] {
                 assert!(code.contains(name), "the {welcher} driver calls `{name}`");
             }
@@ -938,7 +945,7 @@ mod treiber_tests {
             Sperre { name: "B".to_string(), geteilt: true, maskiert: false },
         ];
         let c = erzeuge("zwei", &wurzeln, &sperren, None);
-        let erster_start = c.find("gabbro_os_faden_start(").expect("the driver starts a root");
+        let erster_start = c.find("/* -- ROOTS:").and_then(|ab| c[ab..].find("gabbro_faden_start(").map(|i| ab + i)).expect("the driver starts a root");
         for n in ["A", "B"] {
             let decl = c
                 .find(&format!("static gabbro_ticket sperre_{n};"))
@@ -995,7 +1002,7 @@ mod treiber_tests {
     }
 
     /// **A pool routine named twice gets two threads** (fix lane F4, review G06
-    /// F5). Two `gabbro_os_faden_start` sites, two blobs, `N_WURZELN 2` -- and a
+    /// F5). Two `gabbro_faden_start` sites, two blobs, `N_WURZELN 2` -- and a
     /// driver that starts it once fails the multiset pin, which the set pin
     /// before this lane let pass.
     #[test]
@@ -1007,7 +1014,7 @@ mod treiber_tests {
         let (_, sperren) = beispiel();
         let c = erzeuge("pool", &[w.clone(), w.clone()], &sperren, None);
         assert_eq!(
-            c.matches("(uint64_t)(uintptr_t)arbeiter)").count(),
+            c.matches("gabbro_faden_start(arbeiter,").count(),
             2,
             "two thread starts name the root itself:\n{c}"
         );
@@ -1082,7 +1089,7 @@ mod treiber_tests {
                 .map(|i| {
                     let nach = &c[i..];
                     i + nach
-                        .find("gabbro_os_faden_start(")
+                        .find("gabbro_faden_start(")
                         .or_else(|| nach.find("gabbro_faden_start("))
                         .expect("the driver starts something")
                 })

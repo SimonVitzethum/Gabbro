@@ -163,6 +163,8 @@ pub const RATSCHE: &[&str] = &[
     "arena.dyn",
     "sperre.ticket",
     "region.leeren",
+    "tor.trampolin",
+    "faden.laufzeit",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -373,6 +375,60 @@ pub const SCHABLONEN: &[Schablone] = &[
         ],
         fundstelle: "grammatik/Grammatik/SchablonenArena.lean §2; crates/gabbro-check/src/emit.rs \
                      (`REGION_LEEREN`); bibliothek/linux/linux.gab; instrumente/pruefe-seiten-zurueck.sh",
+    },
+    // **Entered 2026-09-30 by the C-free lane (hosted threads without pthread), PROVED**: the
+    // C-only trampoline of a stack gate, and the thread runtime the hosted driver writes.
+    Schablone {
+        name: "tor.trampolin",
+        haengt_an: &[],
+        konstrukt: "syscall g(…) … stack r (the C-only entry `g_trampolin(…, kind, ende)`)",
+        pflicht: "For every gate that claims a stack the emitter writes a C-only entry: the \
+                  gate's instruction with its registers, and in the child (`rax == 0`) `andq \
+                  $-16, %rsp`, a call of the root, a call of the end, `ud2`; the parent gets \
+                  the raw answer. Root and end are C function DESIGNATORS at every call site \
+                  (the generated thread runtime names them), carried in two callee-saved \
+                  registers the gate neither binds nor destroys. **Machine-checked as an \
+                  ABSTRACT CORE** (`Grammatik/SchablonenFaden.lean` §1): the child calls the \
+                  root and then the end, each entered with `rsp + 8` 16-aligned and inside the \
+                  24 bytes below the handed top, and reaches `ud2` only if the end returns \
+                  (`trampolin_kind`); a gate that destroyed the two registers would send the \
+                  child to 0 (`trampolin_ohne_bewahrung`); the parent gets the kernel's word \
+                  (`trampolin_eltern`). No Gabbro code reaches this entry: a Gabbro call of a \
+                  stack gate is the checked `child` triple (`N572`).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "two callee-saved registers are neither bound, nor the answer, nor destroyed by the gate", durch: Some("`emit.rs::syscall_stumpf` (the free-register choice; fewer than two is `C187`)"), braeuchte: None },
+            Voraussetzung { was: "the kernel preserves every register the gate does not list as destroyed, starts the child on the handed top with `rax == 0`", durch: Some("the gate's declared contract (`clobbers`, `stack r`, the assumption; `linux.gab`: `linux_os_clone_vertrag`), user logic, premise (c)"), braeuchte: None },
+            Voraussetzung { was: "the thread end never returns", durch: Some("its declaration `-> never` (`gabbro_os_faden_ende`) and `S009`, checked like any user code"), braeuchte: None },
+            Voraussetzung { was: "the root and the end are functions, not numbers", durch: Some("the only callers are generated C (`faden.laufzeit`, the driver, the `start` lowering) that name them as designators; no Gabbro item can reach the entry (`N572`)"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenFaden.lean §1; crates/gabbro-check/src/emit.rs \
+                     (`syscall_stumpf`, the trampoline)",
+    },
+    Schablone {
+        name: "faden.laufzeit",
+        haengt_an: &["tor.trampolin", "arena.dyn"],
+        konstrukt: "concurrent { … } under the hosted driver, and `start { f, … };` (the \
+                    thread runtime `treiber.rs::FADEN_LAUFZEIT`)",
+        pflicht: "`gabbro_faden_start(root, top, &word)` refuses a null or unaligned top, and \
+                  starts the root through the program's stack gate's trampoline with the join \
+                  word as the kernel's parent and child word; `gabbro_faden_warte(&word)` loops \
+                  until the word reads 0, waiting through the program's word wait in between. \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenFaden.lean` \
+                  §2): over every prefix of the gate contract's trace that holds the id, a word \
+                  reading 0 means the thread's END is in it (`faden_warte_korrekt`) -- the \
+                  join returns only after the root's last step; without the id stored before \
+                  the child runs it would return before the thread started \
+                  (`faden_warte_ohne_eltern`). The driver's stacks are regions of the \
+                  binding with the lowest page left unwritable.",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the kernel stores the id before the child runs and 0 after it ended", durch: Some("the stack gate's declared contract (`linux.gab`: `linux_os_clone_vertrag`, flags from `gabbro_os_klon_flaggen`), user logic, premise (c)"), braeuchte: None },
+            Voraussetzung { was: "the waiter starts after the start returned", durch: Some("the template's order: every `gabbro_faden_warte` stands after its `gabbro_faden_start` (the driver's `main`, the `start` lowering in `emit.rs`)"), braeuchte: None },
+            Voraussetzung { was: "the stack is deep enough for the root", durch: Some("NOT CLAIMED by the goal statement (stack depth); the guard page below each driver stack turns an overflow into a fault"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenFaden.lean §2; crates/gabbro-cli/src/treiber.rs \
+                     (`FADEN_LAUFZEIT`, `erzeuge`); instrumente/pruefe-os-bindung.sh",
     },
     Schablone {
         name: "restrict.alleinzugriff",

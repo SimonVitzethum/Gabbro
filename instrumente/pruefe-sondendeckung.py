@@ -225,6 +225,10 @@ MARK_WAISEN = 1
 # **32 -> 33 on 2026-09-30** (C-free lane, hosted locks): `sonde_os_sched_yield`, the gate
 # of the ticket lock's hand-over in `bibliothek/linux/linux.gab`.
 # **33 -> 34 on 2026-09-30** (C-free lane, the page return): `sonde_os_madvise`.
+# **34 stays 34 on 2026-09-30** (C-free lane, hosted threads): `sonde_os_bindung`,
+# `sonde_os_faden`, `sonde_os_klon` left with the C bodies they named (`linux.c` is gone);
+# `sonde_os_clone`, `sonde_os_exit`, `sonde_os_futex` came with the three gates that replace
+# them. Measured with the guardian's own `sammle`/`sondennamen`: 34.
 MARK_AUSSEN = 34
 
 # **Construction sites of `Klasse::Falsifizierbar` in `manifest.rs`.** Five on 2026-09-04: the

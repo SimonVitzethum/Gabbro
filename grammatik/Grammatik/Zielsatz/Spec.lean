@@ -690,6 +690,12 @@
     of the program's own gates -- user logic in its source, the kind premise (c) already names
     for every gate. What a green build says about a unit with an arena does not move: the arena
     is still, in this statement, a table of `M` slots in the declared initial memory.
+  * THE SAME DAY, THREADS AND LOCKS (still comment only). The hosted driver writes the lock
+    (the ticket lock `CTicket.lean` proves, template `sperre.ticket`) and the thread runtime
+    (`faden.laufzeit`, starting each declared root through the trampoline of the program's stack
+    gate, `tor.trampolin`); `laufzeit/faden.c`, `laufzeit/bindung.h` and
+    `bibliothek/linux/linux.c` are gone. (d) `Laufzeit.start` names the new split below; no
+    definition moves.
   -- END arena runtime block --
 
   WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
@@ -930,7 +936,12 @@
     the statement covers every assignment running some of the declared starts this way, and
     (since fix lane F10) any number of threads running a routine the program declares at
     least twice (a worker pool; the runtime's own start runs one thread per occurrence).
-    Thread creation is the runtime's (the emitted `main`/boot code), not user logic. The
+    Thread creation is the runtime's (the emitted `main`/boot code), not user logic -- HOSTED,
+    since 2026-09-30 (C-free lane, header block "arena runtime"), the generated driver's thread
+    runtime (template `faden.laufzeit`) through the trampoline of the PROGRAM's stack gate
+    (`tor.trampolin`; `SchablonenFaden.lean` proves the mechanics: root then end on the handed
+    stack, the join returning only after the thread's end); what stays assumed is that gate's
+    contract, user logic like every gate's. The
     machine runs `E.P.mitRuhe`, whose `some f` IS `f` of `E.P`: every checker fact transfers
     (`akzeptiertSpec_mitRuhe`, `akzeptiert_mitRuhe`) and every function behaves as in `E.P`
     (MitRuheSemantik.lean).

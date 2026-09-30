@@ -1,107 +1,47 @@
--- **`bibliothek/linux` -- the POSIX primitives a HOSTED Gabbro program binds,
--- as ordinary user code** (server lane, TODO section 0e K8, 2026-09-28).
+-- **`bibliothek/linux` -- the operating-system calls a HOSTED Gabbro program
+-- binds, as ordinary Gabbro** (server lane 2026-09-28, TODO section 0e K8;
+-- written in Gabbro by the C-free lane, 2026-09-30).
 --
--- WHAT THIS IS. Simon's binding constraint (2026-09-27) is *"API calls are
--- always user-made"*, and on 2026-09-28 he drew it for the runtimes too: *"an
--- die Hardware ist OK, OS nicht, das muss selbst gemacht werden"*. So a Gabbro
--- program reaches an operating system only through items IT declares -- with
--- their ABI, their effects, their costs and the assumption their bodies keep --
--- and that now holds for the runtime beside it as well.
+-- WHAT THIS IS. Simon's rules: *"API calls are always user-made"*, and since
+-- 2026-09-30 *no handwritten C in a finished Gabbro binary*. A Gabbro program
+-- reaches Linux only through the `syscall` gates declared here -- raw system
+-- calls with their registers, their errno tables and the assumption each keeps --
+-- and every function the generated runtimes call is a Gabbro function over them,
+-- checked like any user code. There is no C file beside this one any more, and
+-- no C library: `linux.c`, `laufzeit/bindung.h` and `laufzeit/faden.c` are gone.
 --
--- `bibliothek/linux-kmod` is the same file for the Linux KERNEL MODULE target,
--- and it was written first (K7). This one is its hosted twin, deliberately in
--- the same order and with the same three rules, so that the two can be read
--- against each other. **A different operating system gets a different pair of
--- files here, not a different Gabbro.**
+-- WHAT CALLS WHAT. The generated hosted driver writes the arena runtime
+-- (template `arena.dyn`), the lock (`sperre.ticket`) and the thread runtime
+-- (`faden.laufzeit`); the emitted helper of `reset X at i count n;` writes the
+-- page return (`region.leeren`). They call, by name:
 --
--- WHAT IT COVERS TODAY, and the boundary is measured rather than asserted.
--- `instrumente/pruefe-os-bindung.sh` reads what the hosted runtime still pulls
--- out of the OS -- `nm -u` over a built binary, intersected with the runtime's
--- own objects, so the program's own calls do not count -- and its mark is the
--- worklist. This file binds the whole of the BOUNDED HEAP
--- (`laufzeit/arena_dyn.c`): the reservation, the commit, the page size, and the
--- two halves of a fail-stop; and, since the second slice, the whole of the
--- GENERATED DRIVER (`<unit>.treiber.c`): its threads, its locks, and the words
--- of its two error paths. **The symbol mark is 0 with these eleven bound** --
--- the hosted runtime names no operating-system function of its own any more.
--- What is left is the raw `clone`/`futex` of `laufzeit/faden.c`, which leaves
--- no symbol at all and is counted as SITES by the instrument's second stage
--- (`MARKE_ROHRUF`).
+--   the report channel and the stop   gabbro_os_melden, gabbro_os_ende
+--   the storage                       gabbro_os_reserve, gabbro_os_commit,
+--                                     gabbro_os_seitengroesse
+--   the page return                   gabbro_os_seiten_zurueck
+--   the lock's hand-over              gabbro_os_nachgeben
+--   the threads                       gabbro_os_klon_tor (a stack gate: its
+--                                     trampoline), gabbro_os_klon_flaggen,
+--                                     gabbro_os_faden_ende, gabbro_os_warte_wort
 --
--- WHAT A PROGRAM DOES WITH IT. Two lines in the manifest of a unit that
--- declares an `arena`, a `lock` or a `concurrent` set:
+-- WHAT A PROGRAM DOES WITH IT. One line in the manifest of a unit that declares
+-- an `arena`, a `lock` or a `concurrent` set:
 --
 --     unit driver program
 --       my-program.gab
---       bibliothek/linux/linux.gab   -- these declarations
---       bibliothek/linux/linux.c     -- their bodies
+--       bibliothek/linux/linux.gab
 --
--- and `gabbro build` REFUSES a hosted unit that names neither, with the missing
--- declaration and the file that supplies it (`crates/gabbro-cli/src/bau.rs`,
--- `bindungsregel_gehostet`). *Never a silent default* -- and never a link error
--- either, which is what the refusal buys: the linker's word would be
--- `gabbro_os_reserve undefined`, about a name the program never wrote.
+-- and `gabbro build` REFUSES a hosted unit that does not bind what its runtime
+-- calls (`crates/gabbro-cli/src/bau.rs`, `bindungsregel_gehostet`) -- never a
+-- silent default, and never a link error about a name the program never wrote.
+-- **A different operating system gets a different file here, not a different
+-- Gabbro**: nothing in the compiler, the checker or the templates knows Linux.
 --
--- **The demand grows with the use, per thing the unit has**: an `arena` asks for
--- the three storage calls, a `lock` for the three lock calls, a `concurrent` set
--- for the two thread calls, and any of the three for the report channel. A unit
--- with none of them is refused nothing, because the runtime beside it calls
--- nothing.
---
--- **WHY THERE IS NO `use` LINE**, the same answer as the module binding's:
--- nothing in a program CALLS these items, the runtime does. A `use` would name
--- an item the program never mentions again -- ceremony documenting a dependency
--- the manifest already carries. What makes the declarations load-bearing is the
--- pair of checks around them: `gabbro build` refuses a unit that lacks them, and
--- the C compiler holds each one against `laufzeit/bindung.h` inside the
--- runtime's own translation unit, so a wrong type is a build error.
---
--- WHY EVERY ADDRESS IS A `u64`. Gabbro has no pointer type -- the same reason a
--- system-call binding passes registers (Opus agent L, OFFEN O31). The
--- reservation's base crosses as a number and the two sides cast: the runtime
--- with `(uint64_t)(uintptr_t)`, the bodies in `linux.c` back again. Both halves
--- stand beside each other so that neither can drift.
---
--- WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each one is the
--- primitive's OWN work once it runs. **Waiting is not in it, and neither is the
--- kernel's**: a `mmap` of 32 GiB of `PROT_NONE` walks page tables the program
--- cannot count, and waiting bounds are NOT CLAIMED anyway
--- (`grammatik/Grammatik/Zielsatz/Spec.lean`, the header's list). The numbers
--- below are therefore the same kind of statement as the module binding's -- a
--- declared bound on the call itself, which is what a `costs` clause is about.
+-- WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each is the primitive's
+-- own work once it runs. **Waiting is not in it**: a `futex` wait or a `mmap` of
+-- 32 GiB of `PROT_NONE` is kernel work the program cannot count, and waiting
+-- bounds are NOT CLAIMED (`grammatik/Grammatik/Zielsatz/Spec.lean`).
 module linux::hosted {
-
--- **The ABI and the behaviour of all six bodies, as one named assumption.** One
--- and not six, because it is one fact about one file: `bibliothek/linux/linux.c`
--- is compiled into the program's own build, with the program's own flags,
--- against the C library of the machine it is built for.
-assume os_bindung_abi
-    "Every body in `bibliothek/linux/linux.c` keeps the x86_64 SysV convention of its declaration here, answers 0 exactly where the declaration says a refusal is 0, and `gabbro_os_ende` never returns."
-    falsifier sonde_os_bindung;
-
--- **What the thread and lock bodies keep, and it is the whole of what the goal
--- theorem asks of the environment under assumption (d).** A POSIX mutex is a
--- mutual-exclusion lock and `pthread_join` returns after the root's last step;
--- the Lean statement's `Laufzeit` says exactly that about the declared starts
--- and the lock moves, and nothing here re-proves it. It is named apart from the
--- ABI because a binding could keep every calling convention and still hand back
--- a RECURSIVE mutex or a `pthread_create` that ran the body on the calling
--- thread -- both of which type-check, link, and break race freedom in silence.
-assume os_bindung_faden
-    "`gabbro_os_faden_start` runs its root ONCE on a thread of its own and answers non-zero if it did not start; `gabbro_os_faden_warte` returns only after that root's last step."
-    falsifier sonde_os_faden;
-
--- **The three promises the run-time `start` rests on, and their ORDER is the
--- whole of it.** `laufzeit/faden.c` is a LOOP over a join word and nothing else;
--- every step it takes is a reading of this assumption. It is named apart from
--- the pair above because the primitive is a different one -- a raw `clone` and
--- not a `pthread_create` -- and because the middle clause is what was once
--- false: until 2026-09-26 the id was stored AFTER the thread started, a thread
--- that ended first had it cleared before the store, and the join waited forever
--- on a dead one (200000 rounds hung before round 20000).
-assume os_bindung_klon
-    "`gabbro_os_klon` stores a NONZERO value into the word at `wort` before its new thread can run and clears that word to 0 once the thread has ended, never the other way round; the clear happens-before what a waiter reads; and the root is called with `spitze` as its stack top, ending the THREAD and not the process when it returns."
-    falsifier sonde_os_klon;
 
 -- **The reservation reads as zero, and that is its own assumption** -- because
 -- the bounded heap does NOT scrub. `laufzeit/arena_dyn.c` commits lazily and
@@ -432,38 +372,109 @@ pub fn gabbro_os_nachgeben()
     let r = linux_os_sched_yield();
 }
 
--- -- the generated driver's threads -------------------------------------------
+-- -- threads (in Gabbro since 2026-09-30, C-free lane) ------------------------
 --
--- `start` takes the blob and the address of the root and answers 0 or an error;
--- `warte` joins it. The body owns the whole lifecycle, which is why a FAILED
--- start must leave a blob the driver may still wait on: the driver's error path
--- joins everything it started before the failure, and a blob that never
--- completed would hang the program instead of ending it with status 2.
-extern fn gabbro_os_faden_start(f : u64, koerper : u64) -> u32
-    effects { pure } costs <= 100000 ops;
-
-extern fn gabbro_os_faden_warte(f : u64) -> u32
-    effects { pure } costs <= 100000 ops;
-
--- -- the run-time `start`, which is a different thread ------------------------
+-- Every thread a hosted Gabbro program runs -- a declared root started by the
+-- generated driver, a root of a run-time `start { f };` -- is started by the
+-- generated thread runtime (template `faden.laufzeit`) through the TRAMPOLINE of
+-- the stack gate below (template `tor.trampolin`): the `clone` in the parent,
+-- and in the child the root on the handed stack and then `gabbro_os_faden_ende`.
+-- The root and the end are handed by NAME from generated C; no Gabbro code can
+-- call this gate outside the checked `child` triple (`N572`), so no Gabbro code
+-- starts a thread the concurrency rules do not see.
 --
--- A declared `concurrent` member is started once by the driver, before the
--- program runs; a `start { f };` STATEMENT is executed by a running Gabbro
--- function, on a stack the EMITTER laid out as a static region of the unit. So
--- these two take a stack top and a join word where the pair above takes a blob
--- the runtime owns (`laufzeit/bindung.h` says why).
---
--- **This is where the raw system call lives**, and it is the last one: `clone`
--- (56) on the handed stack, the thread's own `exit` (60) when the root returns,
--- and `futex` (202) for the wait. They leave no undefined symbol at all, which
--- is why `instrumente/pruefe-os-bindung.sh` counts SITES for them
--- (`MARKE_ROHRUF`) and not names -- a runtime that had hidden its Linux
--- dependency in assembly would pass a symbol stage untouched. The mark is 0 in
--- `laufzeit/` since these two bodies exist.
-extern fn gabbro_os_klon(koerper : u64, spitze : u64, wort : u64) -> u32
-    effects { pure } costs <= 100000 ops;
+-- The join word is written by the KERNEL: its id before the child runs
+-- (CLONE_PARENT_SETTID, `eltern`), 0 and a futex wake when the thread has ended
+-- (CLONE_CHILD_CLEARTID, `kind`) -- the order is the whole of the join, and it
+-- is the gate's contract.
+pub reason LinuxKlonFehler {
+    Perm = 1 "the thread is not permitted"
+    Again = 11 "too many threads, or a resource limit"
+    Nomem = 12 "no memory for the thread"
+    Inval = 22 "an argument the kernel refuses"
+    exhaustive
+}
 
-extern fn gabbro_os_wort_warte(wort : u64, erwartet : u32)
-    effects { pure } costs <= 100000 ops;
+assume linux_os_clone_vertrag
+    "The Linux x86_64 `clone` (number 56) with the flags `gabbro_os_klon_flaggen` answers starts ONE thread of the process whose rsp is the address `spitze` and whose other registers are the caller's except rax, stores its id into the 4-byte word at `eltern` before that thread runs, answers the id (> 0) in the caller and 0 in the new thread, and stores 0 into the 4-byte word at `kind` and wakes its futex waiters once that thread has ended; or -errno from the listed table; it destroys only rcx and r11."
+    falsifier sonde_os_clone;
+
+assume linux_os_exit_vertrag
+    "The Linux x86_64 `exit` (number 60) ends the calling THREAD, not the process, and never returns to it."
+    falsifier sonde_os_exit;
+
+assume linux_os_futex_vertrag
+    "The Linux x86_64 `futex` (number 202) with op 0 (FUTEX_WAIT) and no timeout returns at once when the 4-byte word at `wort` differs from `erwartet`, else sleeps until a wake on that word or a signal; it changes no memory and destroys only rcx and r11."
+    falsifier sonde_os_futex;
+
+syscall gabbro_os_klon_tor(flaggen : u64, spitze : u64, eltern : ptr<normal, rw> u8, kind : ptr<normal, rw> u8) -> u64 or LinuxKlonFehler
+    abi linux arch x86_64 number 56
+    regs in { rdi = flaggen, rsi = spitze, rdx = eltern, r10 = kind }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { EPERM => Perm, EAGAIN => Again, ENOMEM => Nomem, EINVAL => Inval }
+    requires 4 <= lenof(eltern) && 4 <= lenof(kind)
+    effects { writes eltern, writes kind }
+    costs <= 100000 ops
+    assume linux_os_clone_vertrag falsifier sonde_os_clone;
+
+syscall linux_os_exit(code : u64) -> never
+    abi linux arch x86_64 number 60
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_os_exit_vertrag falsifier sonde_os_exit;
+
+pub reason LinuxFutexFehler {
+    Intr = 4 "interrupted by a signal"
+    Again = 11 "the word no longer holds the expected value"
+    Fault = 14 "the word is outside the process"
+    Inval = 22 "an argument the kernel refuses"
+    Timedout = 110 "the wait timed out"
+    exhaustive
+}
+
+syscall linux_os_futex(wort : ptr<normal, rw> u8, op : u64, erwartet : u64, frist : u64) -> u64 or LinuxFutexFehler
+    abi linux arch x86_64 number 202
+    regs in { rdi = wort, rsi = op, rdx = erwartet, r10 = frist }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EINTR => Intr, EAGAIN => Again, EFAULT => Fault, EINVAL => Inval, ETIMEDOUT => Timedout }
+    requires 4 <= lenof(wort)
+    effects { reads wort }
+    costs <= 100000 ops
+    assume linux_os_futex_vertrag falsifier sonde_os_futex;
+
+-- CLONE_VM | FS | FILES | SIGHAND | THREAD | SYSVSEM | PARENT_SETTID | CHILD_CLEARTID:
+-- one thread of this process, sharing everything, with the join word written by
+-- the kernel at both ends.
+pub fn gabbro_os_klon_flaggen() -> u64
+    effects { pure }
+    costs <= 4 ops
+{
+    return 3477248;
+}
+
+-- The end of a thread whose root has returned: the thread, not the process.
+pub fn gabbro_os_faden_ende() -> never
+    effects { diverges }
+    costs <= 16 ops
+{
+    linux_os_exit(0);
+}
+
+-- One wait on the join word while it still holds `erwartet`; any answer is
+-- fine -- the runtime's loop re-reads the word and trusts only it.
+pub fn gabbro_os_warte_wort(wort : ptr<normal, rw> u8, erwartet : u32)
+    requires 4 <= lenof(wort)
+    effects { reads wort }
+    costs <= 100016 ops
+{
+    let r = linux_os_futex(wort, 0, erwartet, 0) else (e) { return; }
+}
 
 }
