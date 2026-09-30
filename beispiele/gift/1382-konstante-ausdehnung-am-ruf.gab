@@ -1,0 +1,28 @@
+-- erwartet: N463
+-- **A constant extent clause is DECIDED at the call.**
+--
+-- `lies` needs two bytes (`2 <= lenof(p)`) and reads `p[1]` under it (`N571` accepts the
+-- index on the strength of the clause). Before 2026-09-30 `N463` read only the bare form
+-- `x <= lenof(p)`, so a constant clause bound no caller: `KURZ` holds one byte and was
+-- passed without a word. Since `N571` trusts the clause inside the callee, the clause is
+-- held HERE.
+module gift::konstante_ausdehnung_am_ruf {
+
+static mut KURZ : [u8; 1] = 0;
+
+impl fn lies(p : ptr<normal, r> u8) -> u8
+    requires 2 <= lenof(p)
+    effects { reads p }
+    costs <= 8 ops
+{
+    return p[1];
+}
+
+impl fn ruf() -> u8
+    effects { reads KURZ }
+    costs <= 20 ops
+{
+    return lies(KURZ);
+}
+
+}

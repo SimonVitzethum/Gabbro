@@ -7,7 +7,8 @@
 -- Against the unchanged tree the checker stays silent (`0 errors`) and the
 -- emitter lowers it to `p += 1`. The rule this probe pairs with (p03) refuses
 -- both spellings at the emission site by name (`C001`); this file pins the
--- second one. The twin `p[1]` is the admitted index form and stays silent.
+-- second one. (Its twin `p[1]` stood here until 2026-09-30: an index through a pointer
+-- the body REASSIGNS is refused by the checker since then, `N571`, so it left this probe.)
 --
 -- Measured 2026-09-11 against the unchanged checker+emitter: falls with
 -- nothing -- red until the rule lands, green with it (integrator reconciles).
@@ -19,7 +20,6 @@ impl fn weiter(p : ptr<user, rw> Text)
     effects { writes p }
     costs <= 8 ops
 {
-    p[1].n = 2;
     p += 1;
 }
 

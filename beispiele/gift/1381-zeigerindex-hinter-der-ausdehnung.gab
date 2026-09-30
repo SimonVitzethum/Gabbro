@@ -1,0 +1,17 @@
+-- erwartet: N571
+-- **An extent is stated, and the index lies behind it.**
+--
+-- `requires 1 <= lenof(buf)` says ONE byte is there; `buf[5]` reads the sixth. The clause
+-- is the whole of what the body knows about `buf`, so the index is held against it --
+-- measured clean before 2026-09-30, like `1380`.
+module gift::zeigerindex_hinter_der_ausdehnung {
+
+impl fn lies(buf : ptr<normal, r> u8) -> u8
+    requires 1 <= lenof(buf)
+    effects { reads buf }
+    costs <= 10 ops
+{
+    return buf[5];
+}
+
+}

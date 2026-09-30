@@ -16,6 +16,7 @@ module gift::pointer_arith_plus_refused {
 type Text = { n : u32, };
 
 impl fn weiter(p : ptr<user, rw> Text)
+    requires 2 <= lenof(p)
     effects { writes p }
     costs <= 8 ops
 {

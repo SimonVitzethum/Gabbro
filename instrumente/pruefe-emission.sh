@@ -3814,11 +3814,7 @@ fi
 # whole unit). Their poison twins (`gift/1369` `M101`, `gift/1370` `M135`) are refused by the CHECKER and write no C, so
 # `MARKE_EMIT_G` is untouched; wall 9 adds no refusal (what changed is WHICH comparison is emitted), and its negative half is
 # pinned in `crates/gabbro-check/tests/rechenwerk.rs` (`die_untere_pruefung_folgt_der_eigenen_deklaration_nicht_dem_namen_der_einheit`).
-MARKE_EMIT=152
-# **151 -> 152 on 2026-09-30 (server lane, M-ALLTAG C).** `175-puffer-gibt-seiten-zurueck` emits: a zero-initialised
-# `static mut` buffer with `aligned 4096` and the range give-back `reset RING at 4096 count 4096;`, lowered to the
-# helper `gabbro_region_leeren` (spliced only into a unit that calls it). Two drivers run it (`beispiel175`,
-# `beispiel175-gebunden`). Its poison twins (gifts 1371-1374) are refused by the checker and write no C.
+MARKE_EMIT=153
 # **148 -> 150 on 2026-09-30 (C-free lane, C1).** Two emitting examples: `172-prozess-ohne-libc` (a process with its own
 # `write` gate, no libc) and `173-abbruch-ohne-libc` (a `-> never` gate over `exit_group` as the watchdog). Measured on the
 # committed tree: 150 emitting files in `beispiele/`.
@@ -3826,6 +3822,13 @@ MARKE_EMIT=152
 # `-> never` gate, the first CERTIFIED program that calls the kernel. Its emission needed one repair: an infallible
 # gate with a value no longer takes the channel's `_wert` out-parameter (`emit.rs::syscall_stumpf`), whose call was
 # a C error (`too few arguments`). No poison twin: the repair adds no refusal.
+# **151 -> 152 on 2026-09-30 (C-free lane, `N571`, OFFEN O36).** `180-zeigerindex-in-der-ausdehnung` emits:
+# the pointer-index shapes the checker now holds against the extent a function's `requires` names. Its poison
+# twins (`gift/1380`-`1382`) are refused by the CHECKER.
+# **152 -> 153 on 2026-09-30 (server lane, M-ALLTAG C; after the C-free lane took 172-174 and 180).** `175-puffer-gibt-seiten-zurueck` emits: a zero-initialised
+# `static mut` buffer with `aligned 4096` and the range give-back `reset RING at 4096 count 4096;`, lowered to the
+# helper `gabbro_region_leeren` (spliced only into a unit that calls it). Two drivers run it (`beispiel175`,
+# `beispiel175-gebunden`). Its poison twins (gifts 1371-1374) are refused by the checker and write no C.
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.
