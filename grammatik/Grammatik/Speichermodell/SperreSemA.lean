@@ -205,6 +205,13 @@ theorem Endblock.execBlockHA_alsBlock :
       simp only [Endblock.alsBlock, execBlockHA, execEndHA]
       rw [Endblock.execBlockHA_alsBlock rest]
       cases execEndHA S O U A passes R rest _ _ <;> rfl
+  | _, _, .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
+      simp only [Endblock.alsBlock, execBlockHA, execEndHA]
+      split
+      · rw [Endblock.execBlockHA_alsBlock rest]
+        cases execEndHA S O U A passes R rest _ _ <;> rfl
+      · rfl
+  | _, _, .nie x, _, ρ => (ρ.get x).elim
 
 /-- Past `abbruch`, an end outcome continues as without it. -/
 theorem weiterHA_abbruch_zu {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk) (eo : EndAusgang V l Γ) :

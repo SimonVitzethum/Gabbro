@@ -220,6 +220,42 @@ theorem schritt_delta (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
       rcases List.mem_append.mp hm with hm | hm
       · rcases axiomSpur_mem hm with ⟨_, _, _, e⟩ | ⟨_, _, _, e⟩ <;> cases e
       · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
+  | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      simp only [rufUpdateG_self]
+      left
+      subst hs₁
+      have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
+        (Args.orte_darf args) hΛ
+      have hh1 : HeldIn Λ ((M.weltVon f).lese Λ args.orte).haelt := hl.heldIn hΛ
+      have ha := axiomAntwort_gut O hO a ((M.weltVon f).lese Λ args.orte)
+        (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
+        hd hgd hh1
+      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
+        have := congrArg Prod.fst hax
+        simp only [axiomAntwort] at this
+        exact this.symm
+      have hgt : ∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t →
+          L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
+        fun t hwr L hL => hh1 L (hd t hwr _ hL)
+      have hgg : ∀ g, D.agschreibt a g = true → ∀ L, Sum.inl L ∈ D.gbraucht g →
+          L ∈ ((M.weltVon f).lese Λ args.orte).haelt :=
+        fun g hwr L hL => hh1 L (hgd g hwr _ hL)
+      obtain ⟨_, _, hcond⟩ := hO a ((M.weltVon f).lese Λ args.orte)
+        (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)
+      obtain ⟨tabs, globs, Λe, _, _, _, _, _, _, hspur⟩ := hcond hgt hgg
+      have hB : Brav (M.weltVon f) σ₂ := by
+        have := hl.2.trans ha.2
+        simp only [axiomAntwort] at this
+        rw [e2]
+        exact this
+      refine zugriffsDelta_brav hB
+        (axiomSpur tabs globs a Λe ((M.weltVon f).lese Λ args.orte).haelt ++
+          leseEv (M.weltVon f) Λ args.orte) (by rw [e2, hspur, List.append_assoc]; rfl) ?_
+      intro L h hm
+      rcases List.mem_append.mp hm with hm | hm
+      · rcases axiomSpur_mem hm with ⟨_, _, _, e⟩ | ⟨_, _, _, e⟩ <;> cases e
+      · exact kein_nimmt (leseEv_zugriff _ _ _) L h hm
   | _ =>
       simp only [rufUpdateG_self]
       subst_vars

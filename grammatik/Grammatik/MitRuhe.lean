@@ -598,6 +598,11 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
   | _, _, _, .next h => .next h
   | _, _, _, .cons s rest => .cons (ruS s) (ruEnd rest)
   | _, _, _, .bind e rest => .bind (ruE e) (ruEnd rest)
+  | _, _, _, .bindAxiom a args he hw hg hd hgd rest =>
+      .bindAxiom (V := vertragR V) a (ruA args)
+        (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hw hg
+        (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) (ruEnd rest)
+  | _, _, _, .nie x => .nie (varR x)
 
 /-- Arms, translated (the arm scope `ArmCtx` is split on the case). -/
 def ruArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →

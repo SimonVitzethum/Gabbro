@@ -80,6 +80,8 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next .. => false
   | .cons s rest => s.kOk && rest.kOk
   | .bind _ rest => rest.kOk
+  | .bindAxiom .. => false
+  | .nie _ => true
 
 def Arms.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -933,6 +935,8 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
   | _, _, .bind _ rest => by
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
+  | _, _, .bindAxiom .. => rfl
+  | _, _, .nie _ => rfl
 
 /-- A covered end block run as a block is a covered block. -/
 theorem EndR.alsBlock {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop} :
@@ -1475,6 +1479,7 @@ theorem schrittErhaltK {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannForever _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | ewigWeiter _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | ewigFort _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
+  | endeBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlegeK hhead
   | rufDann l2 Γ2 Λ2 Λ2' Λ2'' g args hp hr rest k ρ2 hhead hΛ s0 hs0 rho hrho neu hneu =>
     rw [hR] at hhead
     cases hhead

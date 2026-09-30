@@ -4231,6 +4231,7 @@ theorem armWahlG_ohne' {V : Vertrag D} {l : Bool} {Γ : Ctx}
   rw [hw] at h0
   exact h0
 
+set_option maxHeartbeats 800000 in
 set_option linter.unusedSimpArgs false in
 theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock → Prop}
     {M M' : RufMaschineG D} {f : Faden} (hs : RufSchrittG P O passes M f M')
@@ -4590,6 +4591,7 @@ theorem schrittErhalt {P : Programm D} {O : Orakel D} {passes : Nat} {A : D.Lock
     rw [weltVon_upd]
     exact REnde.gleich_of_eq (sem_gleitNarrowElse O passes e lo hi sonst rest k _ _ hn)
   | dannBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
+  | endeBindAxiom _ _ _ _ _ _ _ _ _ _ _ _ _ hhead => widerlege hhead
   | rueckGrund _ _ _ hhead => widerlege hhead
   | rueckConsGrund _ _ _ _ hhead => widerlege hhead
   | dannRetGrund _ _ _ _ _ hhead => widerlege hhead
@@ -4857,6 +4859,7 @@ theorem trav_ende_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg
   | dannRetGrund _ _ _ _ _ hhead => kopfweg
@@ -4947,6 +4950,7 @@ theorem trav_dann_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg
   | dannRetGrund _ _ _ _ _ hhead => kopfweg
@@ -5041,6 +5045,7 @@ theorem trav_falsch_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg
   | dannRetGrund _ _ _ _ _ hhead => kopfweg
@@ -5210,6 +5215,7 @@ theorem ret_leer_schritt {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg
   | dannRetGrund _ _ _ _ _ hhead => kopfweg

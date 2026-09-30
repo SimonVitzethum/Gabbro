@@ -224,6 +224,8 @@ def kostenEnd (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .next _ => 1
   | .cons s rest => entfZ s + kostenStmt c pa s + kostenEnd c pa rest
   | .bind e rest => 1 + kostenExpr e + kostenEnd c pa rest
+  | .bindAxiom _ args _ _ _ _ _ rest => 1 + kostenArgs args + kostenEnd c pa rest
+  | .nie _ => 1
 
 /-- The steps of an `else` branch: the end block run in BLOCK position
     (`Endblock.alsBlock`, since 2026-09-13), where a `leave`/`next` in it
@@ -238,6 +240,8 @@ def kostenSonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : C
   | .next _ => 2
   | .cons s rest => kostenStmt c pa s + kostenSonst c pa rest
   | .bind e rest => 2 + kostenExpr e + kostenSonst c pa rest
+  | .bindAxiom _ args _ _ _ _ _ rest => 2 + kostenArgs args + kostenSonst c pa rest
+  | .nie _ => 1
 end
 
 /-! ## 2. Which callees a body names -/
@@ -316,6 +320,8 @@ def rufeE (Z : D.Fn → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .next _ => true
   | .cons s rest => rufeS Z s && rufeE Z rest
   | .bind _ rest => rufeE Z rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => rufeE Z rest
+  | .nie _ => true
 end
 
 /-- The callees of a residue: those of every block, end block and loop body
@@ -408,6 +414,9 @@ theorem kostenBlock_alsBlock :
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .bindAxiom _ args _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, kostenBlock, kostenSonst, kostenBlock_alsBlock rest]
+  | _, _, .nie _ => rfl
 
 /-- An end block run as a block names the callees the end block names. -/
 theorem rufeB_alsBlock (Z : D.Fn → Bool) :
@@ -421,6 +430,9 @@ theorem rufeB_alsBlock (Z : D.Fn → Bool) :
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+  | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, rufeB, rufeE, rufeB_alsBlock Z rest]
+  | _, _, .nie _ => rfl
 
 end Positiv
 
@@ -1177,6 +1189,8 @@ def spiegelE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => true
   | .cons s rest => spiegelS s && spiegelE rest
   | .bind _ rest => spiegelE rest
+  | .bindAxiom .. => false
+  | .nie _ => true
 end
 
 mutual
@@ -1268,6 +1282,8 @@ def kostenKE (c : D.Fn → Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .next _ => 0
   | .cons s rest => kostenKS c s + kostenKE c rest
   | .bind e rest => 1 + kostenExpr e + kostenKE c rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => kostenKE c rest
+  | .nie _ => 0
 end
 
 mutual
@@ -1342,6 +1358,8 @@ def zusatzE {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => 1
   | .cons s rest => entfZ s + zusatzS s + zusatzE rest
   | .bind _ rest => zusatzE rest
+  | .bindAxiom .. => 0
+  | .nie _ => 1
 
 /-- The remainder of an `else` branch run as a block (`kostenSonst`). -/
 def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
@@ -1352,6 +1370,8 @@ def zusatzSonst {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => 2
   | .cons s rest => zusatzS s + zusatzSonst rest
   | .bind _ rest => 1 + zusatzSonst rest
+  | .bindAxiom .. => 0
+  | .nie _ => 1
 end
 
 mutual
@@ -1512,6 +1532,8 @@ theorem spiegel_end (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ
   | .bind _ rest, h => by
       have h1 := spiegel_end c pa rest h
       simp only [kostenEnd, kostenKE, zusatzE]; omega
+  | .bindAxiom .., h => by simp [spiegelE] at h
+  | .nie _, _ => by simp only [kostenEnd, kostenKE, zusatzE]; omega
 
 theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ : List (Res D)} :
@@ -1529,6 +1551,8 @@ theorem spiegel_sonst (c : D.Fn → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {
   | .bind _ rest, h => by
       have h1 := spiegel_sonst c pa rest h
       simp only [kostenSonst, kostenKE, zusatzSonst]; omega
+  | .bindAxiom .., h => by simp [spiegelE] at h
+  | .nie _, _ => by simp only [kostenSonst, kostenKE, zusatzSonst]; omega
 end
 
 /-- **TARGET 3 over a frame.** For a body in the mirrored forms, the own
@@ -1771,6 +1795,8 @@ def fremdEnd (fa : D.Ax → Nat) (pa : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx
   | .next _ => 0
   | .cons s rest => fremdStmt fa pa s + fremdEnd fa pa rest
   | .bind _ rest => fremdEnd fa pa rest
+  | .bindAxiom a _ _ _ _ _ _ rest => fa a + fremdEnd fa pa rest
+  | .nie _ => 0
 end
 
 /-- The §1 cost plus the declared foreign cost, per statement form. -/

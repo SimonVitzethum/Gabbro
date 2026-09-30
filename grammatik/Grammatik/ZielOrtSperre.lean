@@ -576,6 +576,31 @@ theorem akteurS (hO : GutO O) (hRL : RegLokal O) (hQ : AxVertragO Q O) (hlok : A
       (execBlockH S O' U passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ) = _
     simp only [execBlockH, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv]
     rfl
+  | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    have e2 : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+      have := congrArg Prod.fst hax
+      simp only [axiomAntwort] at this
+      exact this.symm
+    have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
+      have := congrArg Prod.snd hax
+      simp only [axiomAntwort] at this
+      exact this
+    have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+    rw [← e2] at hfr
+    subst hs₁
+    refine ⟨fadenS_ax hF hhead (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur
+      (fun _ => Iff.rfl) a args
+      (fun hok => ⟨hok.1, by simpa [endblockOrteP] using (teil_append hok.2).2⟩)
+      (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
+        (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
+      hfr (fun _ => rfl) hlok (fun w hw' => by rw [e2]; exact hQ a _ _ w hw')
+      (fun O' R U σ hz hwk => ?_), hL⟩
+    apply ZErgG.folgt_of_eq
+    show zErgG (execEndH S O' U passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ) = _
+    simp only [execEndH, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv]
+    rw [zErgG_schrumpf]
+    rfl
   -- pushes
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     subst hs0 hrho

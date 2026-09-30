@@ -563,6 +563,29 @@ theorem akteurV (hO : GutO O) (hK : ∀ f, KoerperGutV P passes f)
     show weiterZ O' passes R k (execBlock O' passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ) = _
     simp only [execBlock, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv]
     rfl
+  | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    simp only [RufMaschineG.weltVon, rufUpdateG_self]
+    have e2 : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+      have := congrArg Prod.fst hax
+      simp only [axiomAntwort] at this
+      exact this.symm
+    have hv : einpassenErg O.zeiger (D.aerg a) (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).2 = some v := by
+      have := congrArg Prod.snd hax
+      simp only [axiomAntwort] at this
+      exact this
+    have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+    rw [← e2] at hfr
+    subst hs₁
+    refine ⟨fadenV_ax e0 hF hhead (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur a args
+      (fun hok => ⟨hok.1, by simpa [endblockOrteP] using (teil_append hok.2).2⟩)
+      (σ₂, (O.wirkt a ((M.weltVon u).lese Λ args.orte)
+        (evalArgs ((M.weltVon u).lese Λ args.orte) args ((M.weltVon u).lese Λ args.orte) ρ)).2)
+      hfr (fun O' R σ hz hwk => ?_), hL⟩
+    apply ZErg.folgt_of_eq
+    show zErg (execEnd O' passes R (.bindAxiom a args he hw hg hd hgd rest) σ ρ) = _
+    simp only [execEnd, axiomAntwort, hwk, (show O'.zeiger = O.zeiger from hz), hv]
+    rw [zErg_schrumpf]
+    rfl
   -- pushes
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     subst hs0 hrho
@@ -1257,6 +1280,8 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bind _ rest, h, σ, ρ => by
       simp only [Endblock.kOk] at h
       simp only [execEnd, Endblock.orakel_kOk rest h]
+  | .bindAxiom .., h, _, _ => by simp [Endblock.kOk] at h
+  | .nie x, _, _, ρ => (ρ.get x).elim
 
 theorem Arms.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     {cs : List (Option (Int × Int))} → (arms : Arms D V l Γ Λ Λ' cs) → arms.kOk = true →

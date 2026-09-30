@@ -488,6 +488,12 @@ theorem rufSchrittG_haeltInv {P : Programm D} {O : Orakel D} {passes : Nat} (hO 
     have hh := heldIn_von hhead hh0
     refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk ?_
     rw [hs₁, offen_lese]; exact hh
+  | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    simp only [rufUpdateG_self]
+    have hk := kette_von hhead hk0
+    have hh := heldIn_von hhead hh0
+    refine haeltInvG_kopf h (by ho_tac) (by fr_tac) hk ?_
+    rw [axiom_offen' hO _ _ _ _ _ hax, hs₁, offen_lese]; exact hh
   | dannBind l Γ Λ Λ' Λ'' τ e rest k ρ hhead σ₁ hs₁ neu hneu hΛ =>
     simp only [rufUpdateG_self]
     have hk := kette_von hhead hk0

@@ -200,6 +200,8 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .next _ => []
   | .cons s rest => stmtOrteP P s ++ endblockOrteP P rest
   | .bind e rest => e.orte ++ endblockOrteP P rest
+  | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrteP P rest
+  | .nie _ => []
 
 def armsOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -227,6 +229,9 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .bindAxiom _ args _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
+  | _, _, .nie _ => rfl
 
 /-- The carriers of the table and group invariants `f` owes at its return
     (`schuldet`: `f` writes one of their carriers; `rufAt` checks exactly
@@ -413,6 +418,11 @@ theorem offen_schrittG (hO : GutO O) {M M' : RufMaschineG D} {f : Faden}
       refine Or.inl ?_
       rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
       exact lese_offen _ _ _
+  | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ _ σ₁ hs₁ σ₂ v hax =>
+      simp only [rufUpdateG_self]
+      refine Or.inl ?_
+      rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
   | _ =>
       subst_vars
       simp only [rufUpdateG_self]
@@ -584,6 +594,49 @@ theorem schritt_traeger (hO : GutO O) {M M' : RufMaschineG D} {u : Faden}
           · simp only [World.storeGlob, dif_neg hgx]
             rfl
   | dannBindAxiom l Γ Λ Λ' τ a args he hw hg hd hgd rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      have e : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
+        have := congrArg Prod.fst hax
+        simp only [axiomAntwort] at this
+        exact this.symm
+      have hfr := (hO a σ₁ (evalArgs σ₁ args σ₁ ρ)).1
+      rw [← e] at hfr
+      cases c with
+      | inl t =>
+          show σ₂.slots t = M.speicher.slots t
+          have ha : D.aschreibt a t = false := by
+            cases hat : D.aschreibt a t with
+            | false => rfl
+            | true =>
+                exfalso
+                rcases hc with ⟨L, hB, hfrei⟩ | hW
+                · have hmem : Res.held L ∈ Λ := by
+                    have := hd t hat _ hB
+                    simpa [Res.von] using this
+                  exact hfrei (hΛ L hmem)
+                · have : TraegerSchreibt (M.faeden u).kopf.f (.inl t) = true := hw t hat
+                  rw [hW] at this
+                  exact Bool.false_ne_true this
+          funext k fld
+          rw [hfr.1 t ha k fld, hs₁]
+          rfl
+      | inr x =>
+          show σ₂.globs x = M.speicher.globs x
+          have ha : D.agschreibt a x = false := by
+            cases hax' : D.agschreibt a x with
+            | false => rfl
+            | true =>
+                exfalso
+                rcases hc with ⟨L, hB, hfrei⟩ | hW
+                · have hmem : Res.held L ∈ Λ := by
+                    have := hgd x hax' _ hB
+                    simpa [Res.von] using this
+                  exact hfrei (hΛ L hmem)
+                · have : TraegerSchreibt (M.faeden u).kopf.f (.inr x) = true := hg x hax'
+                  rw [hW] at this
+                  exact Bool.false_ne_true this
+          rw [hfr.2 x ha, hs₁]
+          rfl
+  | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       have e : σ₂ = (O.wirkt a σ₁ (evalArgs σ₁ args σ₁ ρ)).1 := by
         have := congrArg Prod.fst hax
         simp only [axiomAntwort] at this

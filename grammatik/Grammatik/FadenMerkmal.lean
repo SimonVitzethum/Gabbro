@@ -114,6 +114,8 @@ def mE (A : Merkmal D) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .next _ => true
   | .cons s rest => mS A s && mE A rest
   | .bind _ rest => mE A rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => mE A rest
+  | .nie _ => true
 end
 
 /-- **The residue predicate**: every block, end block and loop body still to
@@ -155,6 +157,9 @@ theorem mB_alsBlock (A : Merkmal D) :
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, mB, mE, mB_alsBlock A rest]
+  | _, _, .nie _ => rfl
 
 theorem mB_armWahlG (A : Merkmal D) {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),

@@ -5289,6 +5289,7 @@ theorem wartet_steht {P : Programm D} {O : Orakel D} {passes : Nat}
   | dannGleitNarrowOk _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannGleitNarrowElse _ _ _ _ _ _ _ _ _ _ _ _ _ hhead _ hs₁ => kopfweg
   | dannBindAxiom _ _ _ _ _ _ _ _ hw _ _ _ _ _ _ hhead _ hs₁ => kopfweg
+  | endeBindAxiom _ _ _ _ _ _ _ hw _ _ _ _ _ hhead _ hs₁ => kopfweg
   | rueckGrund _ _ _ hhead => kopfweg
   | rueckConsGrund _ _ _ _ hhead => kopfweg
   | dannRetGrund _ _ _ _ _ hhead => kopfweg
