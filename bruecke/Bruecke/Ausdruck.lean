@@ -269,6 +269,7 @@ theorem lowSideVal_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     (β : Gabbro.Body.Binding) (hW : WRel u σ w) (hL : LRel fn 0 ρ β) :
     Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf (.int ls.weit.1 ls.weit.2) (eval σ₀ ls.term σ ρ)) := by
   cases sd with
+  | add _ _ | sub _ _ | mul _ _ | conv _ _ _ | band _ _ | bor _ _ | bxor _ _ => simp [ensSide, sideExpr] at hb
   | lit n =>
     simp only [lowSideVal] at h; cases h
     simp only [sideExpr] at hb; cases hb
@@ -327,6 +328,7 @@ theorem Vor.trans {a b c : Acc} (h1 : Vor a b) (h2 : Vor b c) : Vor a c := by
 theorem ensSide_vor {fn : UFn} {a a' : Acc} {sd : USide} {x : Gabbro.Body.Expr}
     (h : ensSide u fn a sd = some (x, a')) : Vor a a' := by
   cases sd with
+  | add _ _ | sub _ _ | mul _ _ | conv _ _ _ | band _ _ | bor _ _ | bxor _ _ => simp [ensSide, sideExpr] at h
   | alt b f ix =>
     simp only [ensSide] at h
     cases hp : slotPlace u fn (.alt b f ix) with
@@ -434,6 +436,7 @@ theorem lowSideEns_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     (hW : WRel u σ w) (hB : EnsBind fn er ρ s₀ A β) :
     Gabbro.Body.eval ⟨w, β⟩ x = some (valOf (.int ls.weit.1 ls.weit.2) (eval σ₀ ls.term σ ρ)) := by
   cases sd with
+  | add _ _ | sub _ _ | mul _ _ | conv _ _ _ | band _ _ | bor _ _ | bxor _ _ => simp [ensSide, sideExpr] at hb
   | lit n =>
     simp only [lowSideEns] at h; cases h
     simp only [ensSide, sideExpr, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hb
@@ -639,6 +642,7 @@ theorem ensSide_zuwachs {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     (hW₀ : WRel u σ₀ s₀.world) (hL₀ : LRel fn (if er.isSome then 1 else 0) ρ s₀.local') :
     Zuwachs s₀ er a a' := by
   cases sd with
+  | add _ _ | sub _ _ | mul _ _ | conv _ _ _ | band _ _ | bor _ _ | bxor _ _ => simp [ensSide, sideExpr] at hb
   | alt b f ix =>
     simp only [lowSideEns] at h
     simp only [ensSide] at hb

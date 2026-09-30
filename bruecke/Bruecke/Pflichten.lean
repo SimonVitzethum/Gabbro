@@ -70,6 +70,9 @@ def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .tab t fld i => slotPlace u f (.tab t fld i)
   | .alt .. => none
   | .erg => none
+  -- Arithmetic, conversions and bit operations (P2 walls 1-2) have no bridge form yet: REFUSED by name, so `zuBody`/`postU` are `none`
+  -- and the duty is false, never a weaker one. Lifting this is the S3 widening (NEEDS OPUS list).
+  | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. => none
 
 /-- An `ensures` side, numbering the `old(..)` reads met so far: the term, the reads in order,
     whether `result` occurs. -/

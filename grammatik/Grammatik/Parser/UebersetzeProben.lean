@@ -83,6 +83,54 @@ def schreibt1 : String :=
   "module m { table T count 2 { slot { v : u32 in 0 .. 9, } } impl fn w(i : index into T) { T.slots[i].v = 1; } }"
 theorem schreibt1_refused : stufe schreibt1 = "lower: write without right" := by decide +kernel
 
+/-! ## Wall 2: conversions `T(e)`, limit words `T::max`/`T::min`, named constants, `& | ^` -/
+
+/-- WITNESS (`beispiele/73`, shortened): a conversion whose operand fits the target type. -/
+def konv1 : String :=
+  "module m { impl fn w(a : u32 in 0 .. 100) -> u16 { return u13(a); } }"
+theorem konv1_ok : stufe konv1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: the operand's range (0 .. 9000) does not fit `u13` (0 .. 8191). The conversion
+    is a widening and never truncates, so the lowering refuses instead of widening silently. -/
+def konv1_eng : String :=
+  "module m { impl fn w(a : u32 in 0 .. 9000) -> u16 { return u13(a); } }"
+theorem konv1_eng_refused : stufe konv1_eng = "lower: conversion outside target range" := by decide +kernel
+
+/-- WITNESS: a limit word of a sugared width and of a signed built-in width (a negative number). -/
+def grenz1 : String :=
+  "module m { impl fn g() -> u64 { return u13::max; } impl fn h() -> i8 { return i8::min; } }"
+theorem grenz1_ok : stufe grenz1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: `u13::max` is 8191, which does not fit a `u8` result. -/
+def grenz1_eng : String :=
+  "module m { impl fn g() -> u8 { return u13::max; } }"
+theorem grenz1_eng_refused : stufe grenz1_eng = "lower: value outside range" := by decide +kernel
+
+/-- WITNESS: a named constant is inlined at its use. -/
+def konst1 : String :=
+  "module m { const K : u32 = 7; impl fn f() -> u8 { return K; } }"
+theorem konst1_ok : stufe konst1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: a name that is neither a parameter nor a constant. -/
+def konst1_fremd : String :=
+  "module m { impl fn f() -> u8 { return L; } }"
+theorem konst1_fremd_refused : stufe konst1_fremd = "elab: Name unbekannt: L" := by decide +kernel
+
+/-- WITNESS (`beispiele/69`): `|` of two conversions, `^` with a limit word (`beispiele/62`), `&`. -/
+def bit1 : String :=
+  "module m { impl fn k(a : u32, b : u32) -> u64 { return u64(a) | u64(b); } impl fn i(w : u32) -> u32 { return w ^ u32::max; } impl fn m(a : u8, b : u8) -> u8 { return a & b; } }"
+theorem bit1_ok : stufe bit1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: a bit operation over a signed range (M137 allows non-negative ranges only). -/
+def bit1_vorz : String :=
+  "module m { impl fn m(a : i32, b : i32) -> i32 { return a & b; } }"
+theorem bit1_vorz_refused : stufe bit1_vorz = "lower: bit operation over a negative range" := by decide +kernel
+
+/-- PLANTED DEFECT: a call to something that is not a type word keeps its old refusal. -/
+def ruf1 : String :=
+  "module m { impl fn f(a : u32 in 0 .. 5) -> u8 { return foo(a); } }"
+theorem ruf1_refused : stufe ruf1 = "elab: Wert ohne G-Form" := by decide +kernel
+
 #print axioms add1_ok
 #print axioms schreibt1_refused
 

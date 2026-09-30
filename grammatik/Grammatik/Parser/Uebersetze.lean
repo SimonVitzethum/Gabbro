@@ -61,6 +61,13 @@ inductive USide
   | add : USide → USide → USide
   | sub : USide → USide → USide
   | mul : USide → USide → USide
+  /-- An integer conversion `T(e)` to the target range `lo .. hi` of the type `T`: the widening
+      `Expr.weiter`. The lowering checks that the operand's range fits (as M1 does). -/
+  | conv : Int → Int → USide → USide
+  /-- `&`, `|`, `^` over non-negative ranges (M137): `Expr.band`/`bor`/`bxor`. -/
+  | band : USide → USide → USide
+  | bor : USide → USide → USide
+  | bxor : USide → USide → USide
   deriving DecidableEq, Repr
 
 /-- One `ensures` predicate: a comparison, truth values, or a
@@ -140,6 +147,10 @@ structure UCtx where
   gehalten : List String
   ergebnis : Option (Int × Int)
   fname : String
+  /-- The unit's type aliases: `T(e)` and `T::max` name a type. -/
+  aliase : List (String × (Int × Int))
+  /-- The unit's `const N : T = v;` -- inlined as a number at every use (`tr_typed`). -/
+  konst : List (String × Int)
 
 /-- One elaborated function: parameters with their `Ty`,
     the optional result range, the held lock names, the written
@@ -486,15 +497,57 @@ def uZugriff (ctx : UCtx) : SExpr →
                 | .ok ix => .ok (.tabelle b, tb.name, f, ix)
   | _ => .error "Platz ohne G-Form"
 
+/-- A limit word `T::max` / `T::min` of a type word (an alias or a built-in width), as its number
+    (the `grenzwort` of `tr_typed`: it travels as a literal). -/
+def uGrenzwort (ctx : UCtx) : SExpr → Option Int
+  | .feld (.variable t) f =>
+    match uTypName ctx.aliase t with
+    | .ok (lo, hi) =>
+      if strEq f "max" then some hi
+      else if strEq f "min" then some lo
+      else none
+    | .error _ => none
+  | _ => none
+
+/-- The arithmetic layer shared by body values and `ensures` sides: `+ - *`, `& | ^` and the
+    integer conversion `T(e)`; every other form is a LEAF, handled by `blatt`. -/
+def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Except String USide
+  | .bin op a b =>
+    if strEq op "+" || strEq op "-" || strEq op "*" || strEq op "&" || strEq op "|" || strEq op "^" then
+      match uRechne ctx blatt a with
+      | .error e => .error e
+      | .ok x =>
+        match uRechne ctx blatt b with
+        | .error e => .error e
+        | .ok y =>
+          if strEq op "+" then .ok (.add x y)
+          else if strEq op "-" then .ok (.sub x y)
+          else if strEq op "*" then .ok (.mul x y)
+          else if strEq op "&" then .ok (.band x y)
+          else if strEq op "|" then .ok (.bor x y)
+          else .ok (.bxor x y)
+    else blatt (.bin op a b)
+  | .ruf f [a] =>
+    match uTypName ctx.aliase f with
+    | .ok (lo, hi) =>
+      match uRechne ctx blatt a with
+      | .error e => .error e
+      | .ok x => .ok (.conv lo hi x)
+    | .error _ => blatt (.ruf f [a])
+  | e => blatt e
+
 /-- One side of an `ensures` comparison (the `tr_side` of
-    `lean_g.rs`): literals, numeric parameters, slot reads,
-    `old` and `result` travel; a pointer parameter in a
+    `lean_g.rs`): literals, numeric parameters, named constants, limit words, slot reads,
+    `old` and `result` travel, with the arithmetic layer of `uRechne`; a pointer parameter in a
     comparison and everything else are explicit errors. -/
-def uSeite (ctx : UCtx) : SExpr → Except String USide
+def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
   | .lit v => .ok (.lit (Int.ofNat v))
   | .variable p =>
     match uParamNr ctx p with
-    | .error e => .error e
+    | .error _ =>
+      match ctx.konst.find? (fun k => strEq k.1 p) with
+      | .some k => .ok (.lit k.2)
+      | .none => .error ("Name unbekannt: " ++ p)
     | .ok j =>
       match uArtBei ctx.parten j with
       | .ok (.ptr _ _) => .error "Zeiger im Vergleich ohne G-Form"
@@ -510,10 +563,16 @@ def uSeite (ctx : UCtx) : SExpr → Except String USide
     | .ok (.durch b, _, f, ix) => .ok (.alt b f ix)
     | .ok (.tabelle b, _, f, ix) => .ok (.alt b f ix)
   | e =>
-    match uZugriff ctx e with
-    | .error _ => .error "Vergleichsseite ohne G-Form"
-    | .ok (.durch b, _, f, ix) => .ok (.slot b f ix)
-    | .ok (.tabelle b, _, f, ix) => .ok (.tab b f ix)
+    match uGrenzwort ctx e with
+    | .some v => .ok (.lit v)
+    | .none =>
+      match uZugriff ctx e with
+      | .error _ => .error "Vergleichsseite ohne G-Form"
+      | .ok (.durch b, _, f, ix) => .ok (.slot b f ix)
+      | .ok (.tabelle b, _, f, ix) => .ok (.tab b f ix)
+
+def uSeite (ctx : UCtx) : SExpr → Except String USide :=
+  uRechne ctx (uSeiteBlatt ctx)
 
 /-- A comparison operator with G form (`==`, `!=`, `<`, `<=`,
     `>`, `>=`; G folds all but `lt`/`le`/`eq`). -/
@@ -559,37 +618,34 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
   | .falsch => .ok .falsch
   | _ => .error "Ensures-Klausel ohne G-Form"
 
-/-- A value in a body: a literal, a numeric parameter or a
-    slot read (the `tr_value` of `lean_g.rs` at
-    `in_ensures := false`: `result` and `old` have no G form
-    here). -/
-def uWertBody (ctx : UCtx) : SExpr → Except String USide
+/-- A leaf of a body value: a literal, a numeric parameter, a named constant, a limit word or a
+    slot read. -/
+def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
   | .lit v => .ok (.lit (Int.ofNat v))
   | .variable p =>
     match uParamNr ctx p with
-    | .error e => .error e
+    | .error _ =>
+      match ctx.konst.find? (fun k => strEq k.1 p) with
+      | .some k => .ok (.lit k.2)
+      | .none => .error ("Name unbekannt: " ++ p)
     | .ok j =>
       match uArtBei ctx.parten j with
       | .ok (.ptr _ _) => .error "Zeiger als Wert ohne G-Form"
       | .ok _ => .ok (.param p)
       | .error e => .error e
-  | .bin op a b =>
-    if strEq op "+" || strEq op "-" || strEq op "*" then
-      match uWertBody ctx a with
-      | .error e => .error e
-      | .ok x =>
-        match uWertBody ctx b with
-        | .error e => .error e
-        | .ok y =>
-          if strEq op "+" then .ok (.add x y)
-          else if strEq op "-" then .ok (.sub x y)
-          else .ok (.mul x y)
-    else .error "Wert ohne G-Form"
   | e =>
-    match uZugriff ctx e with
-    | .error _ => .error "Wert ohne G-Form"
-    | .ok (.durch b, _, f, ix) => .ok (.slot b f ix)
-    | .ok (.tabelle b, _, f, ix) => .ok (.tab b f ix)
+    match uGrenzwort ctx e with
+    | .some v => .ok (.lit v)
+    | .none =>
+      match uZugriff ctx e with
+      | .error _ => .error "Wert ohne G-Form"
+      | .ok (.durch b, _, f, ix) => .ok (.slot b f ix)
+      | .ok (.tabelle b, _, f, ix) => .ok (.tab b f ix)
+
+/-- A value in a body (the `tr_value` of `lean_g.rs` at `in_ensures := false`: `result` and
+    `old` have no G form here), with the arithmetic layer of `uRechne`. -/
+def uWertBody (ctx : UCtx) : SExpr → Except String USide :=
+  uRechne ctx (uWertBlatt ctx)
 
 /-- Sequence: the first error wins (like the exporter's
     straight-line `?`). -/
@@ -944,12 +1000,13 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
     | _ => .error "Funktionsrumpf ohne G-Form"
 
 /-- The context of a function from its head. -/
-def uCtxVon (tabs : List UTab) (locks : List ULock) (kopf : UFnKopf)
+def uCtxVon (aliase : List (String × (Int × Int))) (konst : List (String × Int))
+    (tabs : List UTab) (locks : List ULock) (kopf : UFnKopf)
     (fname : String) : UCtx :=
   { pnamen := kopf.pnamen, parten := kopf.parten,
     ptypen := kopf.ptypen, tabellen := tabs, sperren := locks,
     gehalten := kopf.gehalten, ergebnis := kopf.ergebnis,
-    fname }
+    fname, aliase, konst }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/
@@ -960,7 +1017,7 @@ def elabUFunktion (consts : List (String × Int))
   match elabKopf consts aliase tabs locks sig with
   | .error e => .error e
   | .ok (kopf, schreibt) =>
-    let ctx := uCtxVon tabs locks kopf sig.name
+    let ctx := uCtxVon aliase consts tabs locks kopf sig.name
     match elabFn ctx koepfe sig.klauseln koerper with
     | .error e => .error e
     | .ok (sichert, saetze, r) =>
@@ -1132,7 +1189,8 @@ def lowerSeiteEin (tabs : List UTab) (pnamen : List String)
                   G104_referenz.GKontoFeld.stand i
                   G104_referenz.gDarf_einzahlen_Konto }
   | .erg => .error "result im Rumpf ohne G-Form"
-  | .add .. | .sub .. | .mul .. => .error "Arithmetik ohne G-Form in der 104-Uebersetzung"
+  | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. =>
+    .error "Arithmetik ohne G-Form in der 104-Uebersetzung"
 /-- One comparison in `einzahlen` (the `tr_cmp` of `lean_g.rs`;
     G folds all but `lt`/`le`/`eq`). -/
 def lowerVglEin (tabs : List UTab) (pnamen : List String)
@@ -1511,7 +1569,8 @@ def lowerSeiteEnsLies (tabs : List UTab) (pnamen : List String)
     match ergebnis with
     | .some (0, 100) => .ok { weit := (0, 100), term := Expr.var Var.hier }
     | _ => .error "Ergebnisweite fremd"
-  | .add .. | .sub .. | .mul .. => .error "Arithmetik ohne G-Form in der 104-Uebersetzung"
+  | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. =>
+    .error "Arithmetik ohne G-Form in der 104-Uebersetzung"
 where
   lowerIdxEnsLies : UIdx →
     Except String

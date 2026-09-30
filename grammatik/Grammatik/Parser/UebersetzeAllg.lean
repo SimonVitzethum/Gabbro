@@ -418,6 +418,68 @@ def LowSide.times {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : Low
                   (imax (x.weit.2 * y.weit.1) (x.weit.2 * y.weit.2))),
     term := Expr.mul x.term y.term }
 
+/-- The integer conversion `T(e)`: the widening `Expr.weiter` to the target range, when the
+    operand's range fits (as M1 decides it); otherwise the lowering REFUSES. -/
+def LowSide.conv {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (lo hi : Int)
+    (x : LowSide u Γ Λ) : Except String (LowSide u Γ Λ) :=
+  if h1 : lo ≤ x.weit.1 then
+    if h2 : x.weit.2 ≤ hi then .ok { weit := (lo, hi), term := Expr.weiter h1 h2 x.term }
+    else .error "conversion outside target range"
+  else .error "conversion outside target range"
+
+/-- `a & b` over non-negative ranges (M137): `Expr.band`, range `0 .. hi(a)`. -/
+def LowSide.und {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if h0 : 0 ≤ x.weit.1 then
+    if h0' : 0 ≤ y.weit.1 then
+      .ok { weit := (0, x.weit.2), term := Expr.band h0 h0' x.term y.term }
+    else .error "bit operation over a negative range"
+  else .error "bit operation over a negative range"
+
+/-- The number of bits that holds every value up to `m`: `m < 2 ^ bitsFuer m`. -/
+def bitsFuer (m : Int) : Nat := Nat.log2 m.toNat + 1
+
+/-- `a | b` over non-negative ranges: `Expr.bor` at the smallest width holding both. The
+    result range `0 .. 2^w - 1` contains every value of the bitwise or whatever the width, so the
+    narrowest one is sound. -/
+def LowSide.oder {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if h0 : 0 ≤ x.weit.1 then
+    if h0' : 0 ≤ y.weit.1 then
+      if hw1 : x.weit.2 < (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) then
+        if hw2 : y.weit.2 < (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) then
+          .ok { weit := (0, (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) - 1),
+                term := Expr.bor (bitsFuer (imax x.weit.2 y.weit.2)) h0 h0' hw1 hw2 x.term y.term }
+        else .error "bit operation outside its width"
+      else .error "bit operation outside its width"
+    else .error "bit operation over a negative range"
+  else .error "bit operation over a negative range"
+
+/-- `a ^ b` over non-negative ranges: `Expr.bxor`, like `oder`. -/
+def LowSide.xoder {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    Except String (LowSide u Γ Λ) :=
+  if h0 : 0 ≤ x.weit.1 then
+    if h0' : 0 ≤ y.weit.1 then
+      if hw1 : x.weit.2 < (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) then
+        if hw2 : y.weit.2 < (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) then
+          .ok { weit := (0, (2 : Int) ^ bitsFuer (imax x.weit.2 y.weit.2) - 1),
+                term := Expr.bxor (bitsFuer (imax x.weit.2 y.weit.2)) h0 h0' hw1 hw2 x.term y.term }
+        else .error "bit operation outside its width"
+      else .error "bit operation outside its width"
+    else .error "bit operation over a negative range"
+  else .error "bit operation over a negative range"
+
+/-- Two lowered operands into one lowered result (the first error wins). -/
+def lowZwei {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))}
+    (f : LowSide u Γ Λ → LowSide u Γ Λ → Except String (LowSide u Γ Λ))
+    (a b : Except String (LowSide u Γ Λ)) : Except String (LowSide u Γ Λ) :=
+  match a with
+  | .error e => .error e
+  | .ok x =>
+    match b with
+    | .error e => .error e
+    | .ok y => f x y
+
 /-- The table a basis names: a pointer parameter's target, or a
     table (for `old`, where both spellings travel). -/
 def lowBasisTab (u : UProg) (fn : UFn) (b : String) :
@@ -577,6 +639,13 @@ def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       match lowSideVal u Γ Λ fn b with
       | .error e => .error e
       | .ok y => .ok (LowSide.times x y)
+  | .conv lo hi a =>
+    match lowSideVal u Γ Λ fn a with
+    | .error e => .error e
+    | .ok x => LowSide.conv lo hi x
+  | .band a b => lowZwei LowSide.und (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
+  | .bor a b => lowZwei LowSide.oder (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
+  | .bxor a b => lowZwei LowSide.xoder (lowSideVal u Γ Λ fn a) (lowSideVal u Γ Λ fn b)
   | _ => .error "side in body without G form"
 
 /-- A comparison side in `ensures`: literals, numeric parameters,
@@ -614,6 +683,13 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
       match lowSideEns u Γ Λ fn er b with
       | .error e => .error e
       | .ok y => .ok (LowSide.times x y)
+  | .conv lo hi a =>
+    match lowSideEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok x => LowSide.conv lo hi x
+  | .band a b => lowZwei LowSide.und (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .bor a b => lowZwei LowSide.oder (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
+  | .bxor a b => lowZwei LowSide.xoder (lowSideEns u Γ Λ fn er a) (lowSideEns u Γ Λ fn er b)
   | .erg =>
     match er with
     | some (a, b) =>
