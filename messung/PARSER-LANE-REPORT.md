@@ -1,7 +1,7 @@
 # Parser lane -- report (running; `~/claude-lane/AUFTRAG-P.md`, tree `~/gabbro-v`, branch `lane/parser`)
 
 **Where it stands (2026-09-30, session 2):** sieve (a) **10 of 148** (was 2 of 146; 104, 108, 130, 69, 73, 16, 15, 62, 93, 109);
-**chain count 5, closed bridge 5, end to end 5** (was 2, 2, 2). The trust path of the GabbroV bridge is a
+**chain count 5, closed bridge 5, end to end 5** (was 2, 2, 2; the corpus is 151 files after the merge of the C-free lane, so the denominators read `of 151` from the last measurement, 2026-09-30, after the merge of `55a18e2d`). The trust path of the GabbroV bridge is a
 GENERIC theorem over every source text (P6); the program-specific `Cert104` printer is gone from `crates/`.
 P5, the four numbers: `LEAN_NUM_THREADS=3 python3 instrumente/zaehle-kette.py --lean --allow-stale` ->
 `sieve totals (a) 10 ... (e) 5`, `CHAIN COUNT 5 of 148`; `python3 instrumente/zaehle-bruecke.py --binary
