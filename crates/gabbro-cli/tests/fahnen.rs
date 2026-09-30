@@ -225,6 +225,18 @@ const FAHNEN: &[Fahne] = &[
         lebendig: &["prove", "--model", "/nonexistent-model", DATEI],
     },
     Fahne {
+        erstname: "--source",
+        zweitname: "--quelle",
+        // the template pinned to the source text: a bridge folder that does not exist is a SETUP
+        // refusal (exit 3), never an empty template
+        lebendig: &["prove", "--template", "--source", "--bridge", "/nonexistent-bridge", DATEI],
+    },
+    Fahne {
+        erstname: "--bridge",
+        zweitname: "--bruecke",
+        lebendig: &["prove", "--template", "--source", "--bridge", "/nonexistent-bridge", DATEI],
+    },
+    Fahne {
         // `fn` is the keyword in Gabbro AND in Rust; it is not a word of either natural
         // language, and there is nothing to translate.
         erstname: "--fn",

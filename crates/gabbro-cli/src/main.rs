@@ -952,8 +952,9 @@ fn hilfe() {
                                      the Lean duties of each unit against `Proofs/<Unit>.lean`:
                                      GREEN, OWED (what a person still proves), RED, SETUP;
                                      `--template` prints the file a person starts from;
-                                     `--template --source [--bridge <dir>]` prints it PINNED
-                                     TO THE SOURCE TEXT, with the duties computed by the Lean
+                                     `--template --source|--quelle [--bridge|--bruecke <dir>]`
+                                     prints it PINNED TO THE SOURCE TEXT, with the duties
+                                     computed by the Lean
                                      front end (`bruecke/Bruecke/Vorlage.lean`), nothing
                                      printed by this program is trusted; a text the Lean
                                      front end refuses comes back as a `-- REFUSED` comment
