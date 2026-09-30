@@ -3473,7 +3473,13 @@ while IFS= read -r q; do
     esac
     umgekehrt=0
     [ "$(head -1 "$q")" = "-- erwartet: cc" ] && umgekehrt=1
-    if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" 2> "$ARB/regelerr"; then
+    # **A freestanding process names its entry `_Noreturn void main`** (C-free lane): a
+    # `nolibc` program's `main` is `-> never`, and a HOSTED compile refuses that spelling
+    # (`-Wmain`). The unit says so itself on its first line -- `-- uebersetzt: freistehend`
+    # -- and only then is `-ffreestanding` added, for both compiler families alike.
+    frei=""
+    [ "$(head -1 "$q")" = "-- uebersetzt: freistehend" ] && frei="-ffreestanding"
+    if cc -std=c11 -Wall -Wextra -Werror $frei -c -o /dev/null "$ARB/regel.c" 2> "$ARB/regelerr"; then
         if [ "$umgekehrt" = "1" ]; then
             echo "  PROBE BEISST NICHT MEHR: $d sagt \`-- erwartet: cc\`, und cc nimmt das C an."
             echo "        Entweder ist der Erzeugerfehler geheilt -- dann gehoert die Probe fort --"
@@ -3485,7 +3491,7 @@ while IFS= read -r q; do
             # measure the flags and not the family (the census above says the extra switches
             # yield nothing a reader would act on).
             if [ "$HAT_CLANG" = "1" ]; then
-                if clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" \
+                if clang -std=c11 -Wall -Wextra -Werror $frei -c -o /dev/null "$ARB/regel.c" \
                         2> "$ARB/clangerr"; then
                     n_clang_ok=$((n_clang_ok + 1))
                 else
@@ -3493,7 +3499,7 @@ while IFS= read -r q; do
                     echo "        Das ist kein Stilbefund: die Familien lesen denselben Text, und"
                     echo "        eine Meldung, die nur eine von beiden kennt, hat der Erzeuger"
                     echo "        trotzdem verdient. Nachsehen mit:"
-                    echo "        ./target/debug/gabbro emit $d | clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null -"
+                    echo "        ./target/debug/gabbro emit $d | clang -std=c11 -Wall -Wextra -Werror $frei -c -o /dev/null -"
                     head -3 "$ARB/clangerr" | sed 's/^/      /'
                     schlecht=1
                 fi
@@ -3512,7 +3518,7 @@ while IFS= read -r q; do
         # The marker says `cc` and this branch keeps its verdict, so clang does not colour
         # the single file -- the COUNT does, one mark below, and it is debt.
         if [ "$HAT_CLANG" = "1" ] \
-           && clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" 2>/dev/null
+           && clang -std=c11 -Wall -Wextra -Werror $frei -c -o /dev/null "$ARB/regel.c" 2>/dev/null
         then
             n_umg_nur_cc=$((n_umg_nur_cc + 1)); umg_nur_cc="$umg_nur_cc $d"
         fi

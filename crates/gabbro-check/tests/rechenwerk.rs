@@ -9872,3 +9872,29 @@ impl fn kanal(w : u64 in 0 .. 100) -> u64 or F ensures result <= 2048 effects { 
 {{ let m = kanal(1) else (e) {{ return 0; }} return m; }} }}");
     assert_eq!(codes(&q4), Vec::<String>::new(), "an unannotated let … else binds the callee's answer, as before");
 }
+
+/// **The `else` of a `narrow` may end in a `-> never` function inside a `module`** (C-free lane).
+///
+/// `endet_immer` looked the callee up by its bare name, and the keys are qualified, so inside a
+/// `module` block the exit routine of a program was never found and the branch was refused
+/// (`M105`) as one that returns. The twin below, whose `else` returns nothing and calls a
+/// function that does come back, still falls.
+#[test]
+fn der_else_eines_narrow_endet_in_einer_nie_funktion_im_modul() {
+    fn codes(quelle: &str) -> Vec<String> {
+        let (baum, mut a) = gabbro_syntax::lies("p.gab", quelle);
+        gabbro_check::pruefe(&baum, &mut a);
+        a.absagen.iter().map(|x| x.code.to_string()).collect()
+    }
+    let kopf = "module t {\n\
+        fn ende() -> never effects { diverges } costs <= 10 ops { ende(); }\n\
+        fn weiter() -> u64 effects { pure } costs <= 2 ops { return 0; }\n";
+    let gut = codes(&format!(
+        "{kopf}fn f(x : u64) -> u64 effects {{ pure }} costs <= 20 ops {{ narrow x to 0 .. 9 else {{ ende(); }} return x; }} }}"
+    ));
+    assert!(!gut.iter().any(|c| c == "M105"), "a `-> never` call ends the branch: {gut:?}");
+    let schlecht = codes(&format!(
+        "{kopf}fn f(x : u64) -> u64 effects {{ pure }} costs <= 20 ops {{ narrow x to 0 .. 9 else {{ weiter(); }} return x; }} }}"
+    ));
+    assert!(schlecht.iter().any(|c| c == "M105"), "a returning call does not: {schlecht:?}");
+}

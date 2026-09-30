@@ -1088,7 +1088,7 @@ fn ein_prozess_ohne_libc_hat_keine_fremden_symbole_und_der_abbruch_ist_gabbro() 
     .expect("example 173");
     let a = quelle.find("pub fn main()").expect("main");
     let unit = format!(
-        "{}pub fn main() -> i32 in 0 .. 1\n    effects {{ diverges }}\n{{\n    haengt();\n    return 0;\n}}\n\n}}\n",
+        "{}pub fn main() -> never\n    effects {{ diverges }}\n{{\n    haengt();\n}}\n\n}}\n",
         &quelle[..a]
     );
     std::fs::write(d.join("u.gab"), unit).expect("unit");
@@ -1103,4 +1103,28 @@ fn ein_prozess_ohne_libc_hat_keine_fremden_symbole_und_der_abbruch_ist_gabbro() 
     assert_eq!(code, 0, "the calling program builds:\n{aus}\n{fehler}");
     let r = Command::new(d.join("bau").join("u")).output().expect("runs");
     assert_eq!(r.status.code(), Some(134), "the `-> never` gate ends the process with the code it was given");
+}
+
+/// **Under `nolibc` the entry must be `-> never`** (C-free lane): the generated `_start` knows no
+/// system call, so a `main` that returns has nowhere to return to. The refusal is the build's,
+/// and its positive twin is example 172.
+#[test]
+fn ein_prozess_ohne_libc_verlangt_einen_eintritt_der_nie_zurueckkehrt() {
+    let d = kratz("nolibc-main-kehrt-zurueck");
+    std::fs::write(
+        d.join("u.gab"),
+        "module m {\npub fn main() -> i32 in 0 .. 1\n    effects { pure }\n{\n    return 0;\n}\n\n}\n",
+    )
+    .expect("unit");
+    let manifest = format!(
+        "compiler cc -std=c11 -O0 -ffreestanding -fno-stack-protector -fno-pie -Wall -Wextra -Werror\n\
+         out {}\nnolibc\nunit u program\n  {}\n",
+        d.join("bau").display(),
+        d.join("u.gab").display()
+    );
+    std::fs::write(d.join("m.bau"), manifest).expect("manifest");
+    let (aus, fehler, _code) = lauf(&["build", d.join("m.bau").to_str().expect("utf8")]);
+    let alles = format!("{aus}{fehler}");
+    assert!(alles.contains("does not end in `-> never`"), "refused with its reason:\n{alles}");
+    assert!(!d.join("bau").join("u").exists(), "no binary is written");
 }

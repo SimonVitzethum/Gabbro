@@ -90,7 +90,7 @@ pub struct Manifest {
     pub kmod: Option<(String, String)>,
     /// `nolibc` (C-free lane, C1): the `program` units of this manifest are Linux x86_64
     /// processes WITHOUT a C library -- linked `-nostdlib -static`, entered by a generated
-    /// `_start` that calls `main` and ends the process with its answer. Every operating-system
+    /// `_start` that calls `main`, which is `-> never` and ends the process itself. Every operating-system
     /// call the program makes is then its own `syscall` item, and a name it leaves to libc is
     /// the linker's refusal.
     pub ohne_libc: bool,
@@ -338,6 +338,8 @@ struct Eintritt {
     modul: String,
     oeffentlich: bool,
     parameter: usize,
+    /// declared `-> never`
+    nie: bool,
 }
 
 /// **What a unit declares for the driver, and what the driver needs.**
@@ -550,6 +552,7 @@ fn sammle(
                     },
                     oeffentlich: f.oeffentlich,
                     parameter: f.parameter.len(),
+                    nie: matches!(f.ergebnis, Some(gabbro_syntax::ast::TypExpr::Never(_))),
                 });
                 funktionen
                     .entry(f.name.text.clone())
@@ -690,7 +693,7 @@ fn sammle(
 /// > the identifier was the deviation.** *What it costs, named: no `-- erwartet: CODE` poison
 /// > probe can name this rule -- and that convention does not reach here anyway, because it
 /// > is for `.gab` files the checker reads and these probes are `.bau` manifests.*
-fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
+fn eintrittsregel(art: Art, ohne_libc: bool, eintritte: &[Eintritt]) -> Option<String> {
     let ort = |e: &Eintritt| format!("`{}::{EINTRITT}` in {}", e.modul, e.datei);
     match art {
         Art::Programm => match eintritte.len() {
@@ -719,6 +722,15 @@ fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
                          type for the second",
                         ort(e),
                         e.parameter
+                    ));
+                }
+                if ohne_libc && !e.nie {
+                    return Some(format!(
+                        "{} does not end in `-> never` -- under `nolibc` the generated `_start` \
+                         only calls the entry and knows no way to end the process\n\
+                         \x20        = the program ends itself through its own `-> never` \
+                         `syscall` gate; declare `pub fn {EINTRITT}() -> never`",
+                        ort(e)
                     ));
                 }
                 None
@@ -1739,7 +1751,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         for name in &reihenfolge {
             let e = manifest.einheiten.iter().find(|x| &x.name == name).expect("named");
             println!("  unit {name} ({} file(s))", e.dateien.len());
-            if let Some(befund) = eintrittsregel(e.art, &eintritte_je_einheit[name]) {
+            if let Some(befund) = eintrittsregel(e.art, manifest.ohne_libc, &eintritte_je_einheit[name]) {
                 befunde += 1;
                 println!("  REFUSED  {name}: {befund}");
             }
@@ -1902,7 +1914,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         // **The entry rule runs BEFORE the C is written.** A `program` without an entry translates
         // cleanly, compiles cleanly and dies at the linker -- so a rule that ran afterwards
         // would say the same thing `ld` says, only later.
-        if let Some(befund) = eintrittsregel(e.art, &eintritte_je_einheit[name]) {
+        if let Some(befund) = eintrittsregel(e.art, manifest.ohne_libc, &eintritte_je_einheit[name]) {
             abgesagt += 1;
             println!("REFUSED  {name}: {befund}");
             continue;
@@ -2555,17 +2567,16 @@ fn handgeschrieben(
 
 /// **The process entry of a `nolibc` program, written by the build** (C-free lane, C1).
 ///
-/// The kernel starts a Linux x86_64 process with `rsp` 16-aligned and pointing at `argc`, and
+/// The kernel starts an x86_64 process with `rsp` 16-aligned and pointing at `argc`, and
 /// no return address under it. A C function expects `rsp + 8` to be 16-aligned at entry, so
-/// the stub aligns, calls the program's `main` -- which the entry rule
-/// (`eintrittsregel`) already holds to be one public nullary function -- and hands its answer
-/// to `exit_group`. This is the only place the process protocol is spelled, and it is
-/// generated: a program that wants a different exit code calls its own `exit_group` gate
-/// first, and one that must never return declares `main` as `-> never`.
+/// the stub aligns and calls the program's `main` -- which the entry rule (`eintrittsregel`)
+/// holds to be one public nullary function declared `-> never`. **The stub knows no system
+/// call**: the program ends itself through its own `syscall` gate, so no operating system's
+/// number is spelled in this tree.
 fn prozess_start(eintritt: &str) -> String {
     format!(
         "/* Generated by the Gabbro build (`nolibc`) -- the process entry. Do not edit. */\n\
-         extern int {eintritt}(void);\n\
+         extern void {eintritt}(void);\n\
          \n\
          __attribute__((naked, noreturn)) void _start(void)\n\
          {{\n\
@@ -2573,9 +2584,6 @@ fn prozess_start(eintritt: &str) -> String {
          \x20       \"xor %ebp, %ebp\\n\"\n\
          \x20       \"and $-16, %rsp\\n\"\n\
          \x20       \"call {eintritt}\\n\"\n\
-         \x20       \"mov %eax, %edi\\n\"\n\
-         \x20       \"mov $231, %eax\\n\"\n\
-         \x20       \"syscall\\n\"\n\
          \x20       \"ud2\\n\");\n\
          }}\n"
     )
