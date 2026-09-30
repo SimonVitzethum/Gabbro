@@ -163,6 +163,7 @@ import Grammatik.Parser.Anweisung
 import Grammatik.Parser.Element
 import Grammatik.Parser.AnweisungProben
 import Grammatik.Parser.UebersetzeProben
+import Grammatik.Parser.UebersetzeProben2
 import Grammatik.Parser.AusdruckProben
 import Grammatik.CFormenW
 import Grammatik.CFormenWZeuge

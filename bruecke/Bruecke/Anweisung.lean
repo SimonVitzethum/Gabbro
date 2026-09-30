@@ -17,6 +17,22 @@ open Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 variable {u : UProg}
 
+/-- The function-level views of the `Λ`-general readers (`Λ := resOf u c`). -/
+def lowCallArgOne (u : UProg) (c : Fin u.fns.length) (k : UParamArt) (t : Ty) (a : UArg) :
+    Except String (Expr (declOf u) (ctxOf u c) (resOf u c) t) :=
+  lowCallArgOneL u c (resOf u c) k t a
+
+def lowCallArgsAux (u : UProg) (c : Fin u.fns.length) (ks : List UParamArt) (ts : List Ty)
+    (as : List UArg) : Except String (Args (declOf u) (ctxOf u c) (resOf u c) ts) :=
+  lowCallArgsAuxL u c (resOf u c) ks ts as
+
+def castNachStmt (u : UProg) (caller callee : Fin u.fns.length)
+    (s : Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
+      (resOf u caller) (nach (declOf u) callee (resOf u caller))) :
+    Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
+      (resOf u caller) (resOf u caller) :=
+  castNachStmtL u caller callee (resOf u caller) s
+
 /-! ## 1. The writes: the lowering's casts are the constructors -/
 
 theorem assignDurchStmt_eq (Γ : Ctx) (Λ : List (Res (declOf u)))
@@ -61,7 +77,7 @@ theorem lowAssignDurch_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx}
         .running ⟨Gabbro.Body.store s.world (.slot cn k fld) val, s.local'⟩) ∧
       WRel u σ₁ (Gabbro.Body.store s.world (.slot cn k fld) val) ∧
       (fnAt u c).schreibt.any (· == cn) = true := by
-  unfold lowAssignDurch at h
+  unfold lowAssignDurch lowAssignDurchL at h
   split at h
   · cases h
   · rename_i j hj
@@ -131,7 +147,7 @@ theorem lowAssignTab_sim (c : Fin u.fns.length) {b fname : String} {ix : UIdx} {
         .running ⟨Gabbro.Body.store s.world (.slot cn k fld) val, s.local'⟩) ∧
       WRel u σ₁ (Gabbro.Body.store s.world (.slot cn k fld) val) ∧
       (fnAt u c).schreibt.any (· == cn) = true := by
-  unfold lowAssignTab at h
+  unfold lowAssignTab lowAssignTabL at h
   split at h
   · cases h
   · rename_i t ht
@@ -189,8 +205,8 @@ theorem execStmt_heq {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ
 theorem castNachStmt_heq (caller callee : Fin u.fns.length)
     (s : Stmt (declOf u) (verOf u caller) false (ctxOf u caller)
       (resOf u caller) (nach (declOf u) callee (resOf u caller))) :
-    HEq (castNachStmt u caller callee s) s := by
-  unfold castNachStmt; exact mp_heq _ _
+    HEq (castNachStmtL u caller callee (resOf u caller) s) s := by
+  unfold castNachStmtL; exact mp_heq _ _
 
 /-- The Body values of a G environment, in order. -/
 def envVals {D : Deklaration} : {Γ : Ctx} → Env D Γ → List Gabbro.Body.Value
@@ -247,7 +263,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
   | var p =>
     simp only [argExpr, Option.some.injEq] at hb
     subst hb
-    simp only [lowCallArgOne] at h
+    simp only [lowCallArgOne, lowCallArgOneL] at h
     split at h
     · split at h
       · split at h
@@ -294,7 +310,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
           have hab := lrel_ptr c hL q.1 jq hpos tn tw (by rw [hjq]; simp [htq])
           simp only [Gabbro.Body.eval, hab]
         · cases hq
-      simp only [lowCallArgOne] at h
+      simp only [lowCallArgOne, lowCallArgOneL] at h
       split at h
       · repeat' split at h
         all_goals first | (cases h; exact goal) | cases h
@@ -303,7 +319,7 @@ theorem lowCallArgOne_sim (c : Fin u.fns.length) {k : UParamArt} {τ : Ty} {a : 
       · cases h
   | wert sd =>
     simp only [argExpr] at hb
-    simp only [lowCallArgOne] at h
+    simp only [lowCallArgOne, lowCallArgOneL] at h
     split at h
     · cases h
     · split at h
@@ -349,7 +365,7 @@ theorem lowCallArgsAux_sim (c : Fin u.fns.length)
       lowCallArgsAux u c ks ts as = .ok a → argsExpr u (fnAt u c) as = some es →
       Gabbro.Body.evalAll s es = some (envVals (evalArgs σ₀ a σ ρ))
   | [], ts, as, a, es, h, hb => by
-      simp only [lowCallArgsAux] at h
+      simp only [lowCallArgsAux, lowCallArgsAuxL] at h
       split at h
       · cases h
         simp only [argsExpr, Option.some.injEq] at hb
@@ -357,7 +373,7 @@ theorem lowCallArgsAux_sim (c : Fin u.fns.length)
         rfl
       · cases h
   | k :: ks, ts, as, a, es, h, hb => by
-      simp only [lowCallArgsAux] at h
+      simp only [lowCallArgsAux, lowCallArgsAuxL] at h
       split at h
       · rename_i t ts' x as'
         split at h
@@ -507,7 +523,7 @@ theorem lowCall_sim (c : Fin u.fns.length) {cname : String} {args : List UArg}
         (∃ e, R callee σr envA = .logik e ∧ execStmt O passes R g σ ρ = .logik e) ∨
         (∃ e, R callee σr envA = .hardware e ∧ execStmt O passes R g σ ρ = .hardware e)) ∧
       (∀ t, writesAt u (fnAt u callee) t = true → writesAt u (fnAt u c) t = true) := by
-  unfold lowCall at h
+  unfold lowCall lowCallL at h
   split at h
   · cases h
   · rename_i callee hcallee
@@ -552,5 +568,40 @@ theorem lowCall_sim (c : Fin u.fns.length) {cname : String} {args : List UArg}
           · cases h
         · cases h
       · cases h
+
+/-- A statement the bridge accepts is not a `locks` marker (the bridge refuses them by name). -/
+theorem stmtBody_nomark (f : UFn) (st : UStmt) (h : (stmtBody u f st).isSome = true) :
+    ∀ g, st ≠ UStmt.sperrtAuf g := by
+  intro g e
+  subst e
+  simp [stmtBody] at h
+
+/-- The cons step of the body reader for a statement that opens no `locks` block. -/
+theorem lowBody_cons (c : Fin u.fns.length) (r : URet) (s : UStmt) (ss : List UStmt)
+    (h : ∀ g, s ≠ UStmt.sperrtAuf g) :
+    lowBody u c (s :: ss) r =
+      (match lowStmt u c s with
+       | .error e => .error e
+       | .ok st =>
+         match lowBody u c ss r with
+         | .error e => .error e
+         | .ok e => .ok (Endblock.cons st e)) := by
+  cases s with
+  | sperrtAuf g => exact absurd rfl (h g)
+  | _ => rfl
+
+theorem stmtsBody_isSome {f : UFn} {ss : List UStmt} {bs : List Gabbro.Body.Stmt}
+    (h : stmtsBody u f ss = some bs) : ∀ st ∈ ss, (stmtBody u f st).isSome = true := by
+  induction ss generalizing bs with
+  | nil => intro st hm; exact absurd hm List.not_mem_nil
+  | cons s ss ih =>
+    intro st hm
+    simp only [stmtsBody] at h
+    split at h
+    · rename_i x xs hx hxs
+      rcases List.mem_cons.mp hm with rfl | hm
+      · rw [hx]; rfl
+      · exact ih hxs st hm
+    · cases h
 
 end Gabbro.Bruecke

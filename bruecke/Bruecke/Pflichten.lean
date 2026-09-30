@@ -190,7 +190,7 @@ def stmtBody (u : UProg) (f : UFn) : UStmt → Option Stmt
       | some t, some ve => some (.assign t (idxExpr i) fld ve)
       | _, _ => none
   | .assignTab t fld i v => (sideExpr u f v).map (fun ve => .assign t (idxExpr i) fld ve)
-  | .assignB .. | .assignTabB .. => none
+  | .assignB .. | .assignTabB .. | .sperrtAuf _ | .sperrtZu => none
   | .call g as =>
       match fnSuch u g, argsExpr u f as with
       | some gf, some es => some (.call g (gf.params.map (·.1)) es (preExpr gf))
