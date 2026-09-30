@@ -5044,6 +5044,53 @@ pub const PHASEN: &[Satz] = &[
         fundstelle: "crates/gabbro-check/src/arena.rs (`N466`, the `Alloc` \
                      walk, `dynamisch`); dokumente/PLAN-DYNAMISCH.md §4",
     },
+    // --- server lane, 2026-09-30: M-ALLTAG C, the range give-back -----------------
+    Satz {
+        name: "region.leeren",
+        kennungen: &["N569"],
+        aussage: "`reset X at i count n;` names a `static` array of known length: \
+                  `N569` refuses any other carrier (a local, a table, an arena, a \
+                  scalar), because only a static array is a run of bytes at a fixed \
+                  address the range can be taken back from. The range itself is held \
+                  against the length like an index (`M103`, at the END of the \
+                  range), the statement is a store to the array (`writes X`), and \
+                  afterwards the elements of the range read as zero.",
+        vorbehalt: "The zero is the guarantee; the page return is the program's \
+                    binding (`gabbro_os_leeren`, weak): a unit that binds nothing \
+                    still gets its zeroes from the emitted loop, and never the page \
+                    return. `lean-g` refuses the statement by name (`LG005`): the \
+                    exporter has no model of a released page. Tables and arenas are \
+                    not covered: an arena slot is write-once, so a give-back has \
+                    nothing to say there.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1371 (`-- erwartet: N569`: a table named as the \
+                      carrier); beispiele/gift/1372 (`-- erwartet: M103`: a range \
+                      that reaches past the array); beispiele/gift/1373 (`-- \
+                      erwartet: E005`: the store without `writes X`); \
+                      beispiele/172 (clean, emits; the driver `beispiel172` runs it); \
+                      `instrumente/pruefe-seiten-zurueck.sh` (the pages of a \
+                      released ring leave the resident set, and the poison build \
+                      that skips the release does not).",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`reset_platz`); \
+                     crates/gabbro-check/src/emit.rs (`REGION_LEEREN`)",
+    },
+    Satz {
+        name: "static.ausrichtung",
+        kennungen: &["N570"],
+        aussage: "`aligned N` on a `static` names a translation-time power of two \
+                  between 1 and 65536: `N570` refuses any other alignment, because \
+                  the emitted `__attribute__((aligned(N)))` takes nothing else and \
+                  the page arithmetic of a buffer whose pages are given back rests \
+                  on an alignment the translation can read.",
+        vorbehalt: "The alignment is a PLACEMENT, like `section`: `lean-g` refuses a \
+                    static that carries one (`LG001`), and the model has no address to \
+                    align.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1374 (`-- erwartet: N570`: `aligned 3000`); \
+                      beispiele/172 (`aligned 4096`, clean, emits, runs).",
+        fundstelle: "crates/gabbro-check/src/m1.rs (the static-declaration walk); \
+                     crates/gabbro-check/src/emit.rs (`abschnitt_attribut`)",
+    },
     // --- lane 264, 2026-09-26: arenas under concurrency (OFFEN O20) ------------
     //
     // **Two new refusal codes, each the shape no existing code says.**

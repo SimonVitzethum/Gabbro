@@ -193,6 +193,12 @@ impl<'a> Sammler<'a> {
                     d.gebraucht.insert(q);
                 }
             }
+            StmtArt::ResetSlot(r) => {
+                self.rufe_in_expr(&r.index, &modul, d);
+                self.orte_in_expr(&r.index, d, lokal);
+                self.rufe_in_expr(&r.menge, &modul, d);
+                self.orte_in_expr(&r.menge, d, lokal);
+            }
             StmtArt::Grow(g) => {
                 self.rufe_in_expr(&g.mehr, &modul, d);
                 self.orte_in_expr(&g.mehr, d, lokal);

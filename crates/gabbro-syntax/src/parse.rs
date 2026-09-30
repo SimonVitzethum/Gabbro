@@ -1042,6 +1042,11 @@ impl<'a> Parser<'a> {
         let typ = self.typeexpr()?;
         self.erwarte_z(Z::Gleich)?;
         let wert = self.expr()?;
+        let ausrichtung = if self.friss_kw(Kw::Aligned) {
+            Some(self.expr()?)
+        } else {
+            None
+        };
         let section = if self.friss_kw(Kw::Section) {
             Some(self.erwarte_text()?)
         } else {
@@ -1054,6 +1059,7 @@ impl<'a> Parser<'a> {
             name,
             typ,
             wert,
+            ausrichtung,
             section,
         })
     }
@@ -3751,8 +3757,17 @@ impl<'a> Parser<'a> {
             Art::Wort(Kw::Reset) => {
                 self.pos += 1;
                 let tisch = self.erwarte_ident()?;
-                self.erwarte_z(Z::Semi)?;
-                StmtArt::ResetArena(tisch)
+                if self.ist_kw(Kw::At) {
+                    self.pos += 1;
+                    let index = self.expr()?;
+                    self.erwarte_kw(Kw::Count)?;
+                    let menge = self.expr()?;
+                    self.erwarte_z(Z::Semi)?;
+                    StmtArt::ResetSlot(ResetSlotStmt { tisch, index, menge })
+                } else {
+                    self.erwarte_z(Z::Semi)?;
+                    StmtArt::ResetArena(tisch)
+                }
             }
             // **Lane 257 (wave D): `grow A by n else { … };`.**
             //

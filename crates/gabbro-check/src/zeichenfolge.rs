@@ -973,6 +973,13 @@ fn anweisung(s: &Stmt, z: &mut Zustand, lage: &Lage, absagen: &mut gabbro_syntax
             toete_schreibziele(s, z);
             z.binde(&a.name.text, Eintrag::Fremd { natuerlich: false });
         }
+        StmtArt::ResetSlot(r) => {
+            ausdruck(&r.index, z, lage, absagen);
+            wert_ohne_kette(&r.index, z, lage, absagen);
+            ausdruck(&r.menge, z, lage, absagen);
+            wert_ohne_kette(&r.menge, z, lage, absagen);
+            toete_schreibziele(s, z);
+        }
         StmtArt::Grow(g) => {
             ausdruck(&g.mehr, z, lage, absagen);
             wert_ohne_kette(&g.mehr, z, lage, absagen);

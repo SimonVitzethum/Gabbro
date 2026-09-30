@@ -469,6 +469,10 @@ fn stand_liest(s: &Stmt, aus: &mut Vec<Ort>) {
         StmtArt::Alloc(a) => orte_aus_expr(&a.wert, aus),
         // **Lane 257:** the commit amount is read like any bound value.
         StmtArt::Grow(g) => orte_aus_expr(&g.mehr, aus),
+        StmtArt::ResetSlot(r) => {
+            orte_aus_expr(&r.index, aus);
+            orte_aus_expr(&r.menge, aus);
+        }
         StmtArt::Return(Some(x)) => orte_aus_expr(x, aus),
         StmtArt::Ruf(r) => {
             for a in &r.argumente {
@@ -690,6 +694,9 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                         }
                         StmtArt::ResetArena(t) => {
                             schreiber.insert(t.text.clone());
+                        }
+                        StmtArt::ResetSlot(r) => {
+                            schreiber.insert(r.tisch.text.clone());
                         }
                         // **Lane 257:** committing slots writes the arena.
                         StmtArt::Grow(g) => {

@@ -1174,6 +1174,10 @@ fn scan_block(b: &Block, acc: &mut Scan) {
                 scan_expr(&g.mehr, acc);
                 scan_block(&g.sonst, acc);
             }
+            StmtArt::ResetSlot(r) => {
+                scan_expr(&r.index, acc);
+                scan_expr(&r.menge, acc);
+            }
             StmtArt::Narrow(_) => {}
             StmtArt::Start(_) => acc.startet = true,
             _ => {}
@@ -1315,6 +1319,7 @@ fn carrier_not_covered(d: &FnDecl, model: &Model) -> Result<(), Refusal> {
             | StmtArt::Ruf(_)
             | StmtArt::LibraryCall(_)
             | StmtArt::ResetArena(_)
+            | StmtArt::ResetSlot(_)
             | StmtArt::Grow(_)
             | StmtArt::Child(_)
             | StmtArt::Start(_) => {}
@@ -1868,6 +1873,12 @@ fn read_static(s: &StatischDecl, scope: &Scope) -> Result<GlobModel, Refusal> {
         return Err(refuse(
             "LG001",
             format!("static {} carries a `section`, which is a PLACEMENT and has no `Glob` form", s.name.text),
+        ));
+    }
+    if s.ausrichtung.is_some() {
+        return Err(refuse(
+            "LG001",
+            format!("static {} carries `aligned`, which is a PLACEMENT and has no `Glob` form", s.name.text),
         ));
     }
     let Some(ty) = g_ty(&s.typ, scope) else {
@@ -4193,6 +4204,11 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
         // `ArenaForm` the model builds is the static pair (table of `hi`
         // slots beside the `used` counter). Refused by name, never
         // skipped, until the dynamic form lands.
+        // **M-ALLTAG C:** `reset X at i count n;` zeroes a range of a static array
+        // and returns its pages; the exporter has no model of a released page, so
+        // the statement is refused by name, never skipped.
+        StmtArt::ResetSlot(r) => Err(refuse("LG005", format!("`reset {} at .. count` in {fname} has no G form: \
+            the range give-back is runtime storage management this exporter does not model", r.tisch.text))),
         StmtArt::Grow(g) => Err(refuse("LG005", format!("`grow` out of arena {} in {fname} has no G form: \
             the committed prefix below the ceiling is checker flow, and this exporter builds the static \
             `ArenaForm` of `hi` slots", g.tisch.text))),
@@ -4609,6 +4625,11 @@ fn foot_block(b: &Block, model: &Model, params: &[(String, ParamTy)], acc: &mut 
             // carrier of its own in the static `ArenaForm`. (The statement
             // itself is refused by name above; this walk only feeds the
             // `writes` accounting.)
+            // (Refused by name above; this walk only feeds the `writes` accounting.)
+            StmtArt::ResetSlot(r) => {
+                foot_expr(&r.index, model, params, acc);
+                foot_expr(&r.menge, model, params, acc);
+            }
             StmtArt::Grow(g) => {
                 if let Some(a) = model.arenas.iter().find(|a| a.name == g.tisch.text) {
                     foot_push(acc, model.tables.len() + a.glob);

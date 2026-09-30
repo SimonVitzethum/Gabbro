@@ -101,7 +101,7 @@ The other way is an SMT solver: annotations plus Z3 (Verus, Dafny do that well).
 not, for two reasons.
 
 **A refusal is better than a timeout.** Where a solver gets slow, a grammar says which
-construct it will not carry and why, by name. The compiler ships **470 diagnostics** and no
+construct it will not carry and why, by name. The compiler ships **472 diagnostics** and no
 search procedure.
 
 **A template falls once, not per program.** Every carried construct turns into one generator
@@ -208,13 +208,13 @@ fresh date were last fully measured on the date beside them.
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 470 diagnostics · `gabbro paesse` |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 472 diagnostics · `gabbro paesse` |
 | **Grammar** | **187 EBNF rules**, closed and reachable | vocabulary covers every terminal, 242 / 242 |
 | **Pass register** | **198 sentences over 12 passes — 190 measured, 2 ARGUED, 6 CONJECTURED, 0 proved**, claiming 419 diagnostic codes. *A written sentence is not a proved one* | `gabbro paesse --je-satz` |
 | **Proof templates** | **21, of which 10 are machine-checked**; all **15** Isabelle theories also exist in Lean (`grammatik/Grammatik/Isabelle/`, checked by every build); new proofs go to Lean only | Isabelle2025-2, [`beweise/`](beweise/) |
-| **Corpus** | 143 clean examples, 828 poison files *(file counts 2026-09-28; 942 tests counted 2026-09-14, lane 177)* | `cargo test --no-fail-fast` |
+| **Corpus** | 149 clean examples, 838 poison files *(file counts 2026-09-30; 942 tests counted 2026-09-14, lane 177)* | `cargo test --no-fail-fast` |
 | **Emission** | **250 of 250 units emit and compile** under `cc -std=c11 -Wall -Wextra -Werror`, at `-O0` and `-O2`, with the same result; 37 are also executed against a handwritten version *(run 2026-09-14)* | `./instrumente/pruefe-emission.sh` |
-| **Guardians** | 55, *(count 2026-09-29; 52 on 2026-09-28, plus the GabbroV lane's `pruefe-beweis-tor.sh`, `pruefe-sperre-beweis.sh` and `pruefe-vorlagen.sh`)* each with deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
+| **Guardians** | 56, *(count 2026-09-30, plus the server lane's `pruefe-seiten-zurueck.sh`; 55 on 2026-09-29; 52 on 2026-09-28, plus the GabbroV lane's `pruefe-beweis-tor.sh`, `pruefe-sperre-beweis.sh` and `pruefe-vorlagen.sh`)* each with deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
 | **Mutation** | **386 of 413 anchors hold**, and a run catches 375 of 376 valid mutations *(measured 2026-09-14)* | `./instrumente/mutiere-pruefer.py` |
 | **Blind spots** | **73 blind · 175 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindstellen` |
 | **Usability** | 7.5 % of the teaching corpus and 12.7 % of real code **may fall** — split derivable / redundant / load-bearing | `gabbro zeremonie` |

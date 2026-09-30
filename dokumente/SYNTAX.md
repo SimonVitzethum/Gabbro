@@ -324,7 +324,8 @@ constwert  = constexpr | arraylit ;
    and the emitter writes one multi-dimensional `static const` array. *)
 arraylit   = "[" [ ( arraylit | expr ) { "," ( arraylit | expr ) } [ "," ] ] "]" ;
 staticdecl = [ "pub" ] "static" [ "mut" ] ident ":" typeexpr "=" expr
-             [ "section" string ] [ "shared" ] ";"                  (* CHANGED «SG-21» *) ;
+             [ "aligned" expr ] [ "section" string ] [ "shared" ] ";"
+                                              (* CHANGED «SG-21»; `aligned`: M-ALLTAG C, N570 *) ;
 ```
 
 **Attributes and Lean.** Everything in this section is **declaration-level**: it fixes the
@@ -926,7 +927,7 @@ allocstmt  = "let" [ "mut" ] ident [ ":" typeexpr ] "=" "alloc" ident "(" expr "
    The `else` runs when the arena is full; it is owed exactly when the static allocation
    count since the last reset may exceed the reservation (`N212`). A bare `alloc` stays an
    ordinary expression -- only a name followed by `(` gives the word its meaning. *)
-resetstmt  = "reset" ident ";" ;                                (* «E4», §9.1 *)
+resetstmt  = "reset" ident [ "at" expr "count" expr ] ";" ;      (* «E4», §9.1; the range form: M-ALLTAG C *)
 (* A fresh generation of the named arena: the used counter goes back to zero, and every
    index bound before is stale afterwards (`N211`). `reset = 1;` stays an assignment --
    the head word decides, like at every other keyword statement. *)
@@ -1467,6 +1468,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | `table T count N { slot { f : τ } }` | a carrier with `N` slots; every access carries `i : index into T` and the guards of `T` | `D.Tab`, `D.count`, `D.Feld`, `D.typ`, `D.braucht` |
 | `arena A capacity lo .. hi of T` | a monotone region: `lo` the reservation, `hi` the hard bound (`0 <= lo <= hi`, both constants — `N210`); `A[i]` reads `T`, `alloc` stores it, `reset` starts a fresh generation | `Arena k g`, `ArenaIdx g n`, `Marke g` (`grammatik/Grammatik/Arena.lean`); theorems `alloc_innerhalb_reserve`, `keine_fragmentierung`, `reset_used`. **In the SYNTAX since 2026-09-15**: `ArenaForm D` (`ArenaZucker.lean`) — a table of `count = hi` slots beside a global `used` counter, which is what the emitter writes |
 | `arena A capacity lo .. hi max M of T` | the dynamic form (lane 257): address reserved for `M` slots, storage committed up to `hi` (`0 <= lo <= hi <= M`, all three constants — `N210`) | the static `ArenaForm` of `hi` slots beside `used` is exactly the committed-prefix behavior, so the static lowering is sound where no `grow` stands; the dynamic form is future work, not a second model |
+| `reset X at i count n;` | (M-ALLTAG C) gives `n` elements of the zero-initialised `static mut` array `X` back, from element `i`: they read as zero afterwards, and whole pages of the range go back to the operating system through the program's own `gabbro_os_leeren` (weak: unbound, the emitted loop still zeroes). `N569` refuses any other carrier; the END of the range is held against the length (`M103`); it is a store (`writes X`) | none: `lean-g` refuses the statement by name (`LG005`) — the exporter has no model of a released page |
 | `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (`N426` refuses the uncountable amount and the past-ceiling request, branch or no branch; `N213` the undeclared arena) | no constructor yet: the committed prefix is checker flow, and the emitter and the G exporter refuse the statement by name until the dynamic arm lands |
 | `owner m` | `marke m ∈ Λ` at every access — **refused as `D026` until the producer stands**: a declared `linear` mark (`D265`), exactly one foreign minter executed once (`D266`/`D268`), every access holding it (`D267`); the first mark is minted once and travels by handoff (`kbedingung.rs::eigner`, poison `gift/694`, producers `beispiele/114`/`115`, poisons `gift/932`-`935`) | `D.eigner`, `D.braucht` (`.inr (m, s)`) — **the one construction that makes memory safety a matter of Λ**: no owner, no access; one mint, one execution, no second owner |
 | `backed k` | `narrow i to 0 ..< k` before the access — SUGAR over `narrow` | `Block.narrow` |

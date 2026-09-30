@@ -302,6 +302,7 @@ fn tafel_anweisungen(baum: &Programm, t: &mut Tafel) {
             // **«E4»:** the monotone allocation and the generation reset.
             StmtArt::Alloc(_) => "alloc",
             StmtArt::ResetArena(_) => "arena reset",
+            StmtArt::ResetSlot(_) => "range reset",
             // **Lane 257:** the commit request.
             StmtArt::Grow(_) => "grow",
             StmtArt::Schleife(sch) => match sch.as_ref() {

@@ -1,0 +1,13 @@
+-- The probe program of `instrumente/pruefe-seiten-zurueck.sh` (M-ALLTAG C).
+--
+-- One mebibyte of fixed buffer, and the one statement that gives it all back.
+-- The driver writes the buffer, measures the resident set, calls `freigeben`,
+-- measures again -- and reads the buffer to see the zeroes.
+module probe::seiten_zurueck {
+static mut RING : [u8; 1048576] = 0;
+
+impl fn freigeben() -> u32 effects { writes RING } costs <= 1100000 ops {
+    reset RING at 0 count 1048576;
+    return 0;
+}
+}

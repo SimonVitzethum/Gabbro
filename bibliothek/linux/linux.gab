@@ -112,7 +112,7 @@ assume os_bindung_klon
 -- program reading another run's bytes, with every other line of this file
 -- unchanged.*
 assume os_bindung_null
-    "The bytes `gabbro_os_reserve` answers, and every byte `gabbro_os_commit` makes writable, read as zero until the program writes them."
+    "The bytes `gabbro_os_reserve` answers, and every byte `gabbro_os_commit` makes writable, read as zero until the program writes them; a range `gabbro_os_leeren` answered 0 for stays mapped and writable and reads as zero until the program writes it again."
     falsifier sonde_os_null;
 
 -- -- the report channel and the stop -----------------------------------------
@@ -147,6 +147,15 @@ extern fn gabbro_os_commit(basis : u64, versatz : u64, bytes : u64) -> u32
 
 extern fn gabbro_os_seitengroesse() -> u64
     effects { pure } costs <= 4096 ops;
+
+-- `leeren` is the way back (M-ALLTAG C): the bytes at `addr` read as zero
+-- afterwards and the whole pages inside them went back to the system; answers
+-- 0 when it kept that promise. The range stays mapped and writable
+-- (`os_bindung_null` names the promise). Only a unit that writes
+-- `reset X at i count n;` gains from it; a unit that does not bind it gets the
+-- same zeroes from the emitted loop, without the page return.
+extern fn gabbro_os_leeren(addr : u64, bytes : u64) -> u32
+    effects { pure } costs <= 100000 ops;
 
 -- -- the generated driver's locks ---------------------------------------------
 --

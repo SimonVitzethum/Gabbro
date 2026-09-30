@@ -2510,7 +2510,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // program-logic body model, so both statements lower to no term.
         // **Lane 257:** the commit request is the third such statement --
         // the committed prefix lives in the checker's flow, not here.
-        StmtArt::Alloc(_) | StmtArt::ResetArena(_) | StmtArt::Grow(_) => Err(LeanReason::Expression),
+        StmtArt::Alloc(_) | StmtArt::ResetArena(_) | StmtArt::ResetSlot(_) | StmtArt::Grow(_) => Err(LeanReason::Expression),
         // **Lane 253:** a statement-level `start` has no term in this
         // channel either -- the starts live in the declaration, and the
         // statement-level join rule is handoff, not built here.

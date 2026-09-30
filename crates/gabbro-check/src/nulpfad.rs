@@ -503,6 +503,12 @@ impl<'a> Walker<'a> {
                     self.buffers.remove(&a.name.text);
                     self.walk_opt(&a.sonst);
                 }
+                StmtArt::ResetSlot(r) => {
+                    self.check_calls_in_expr(&r.index);
+                    self.kill_for_expr(&r.index);
+                    self.check_calls_in_expr(&r.menge);
+                    self.kill_for_expr(&r.menge);
+                }
                 StmtArt::Grow(g) => {
                     self.check_calls_in_expr(&g.mehr);
                     self.walk(&g.sonst, true);

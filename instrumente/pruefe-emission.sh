@@ -2639,6 +2639,36 @@ int main(void) {
 lauf "beispiel158-else" "$W/beispiele/158-arena-commit.gab" "$TREIBER158X" "1" \
      's/return 1;/return 9;/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+# -- `172`: M-ALLTAG C, `reset X at i count n;` gives a range of a static buffer back --
+#
+# Two runs of the same source. The bare one links NO binding: the emitted helper's
+# loop zeroes the range (the guarantee), and no page goes anywhere. The bound one
+# includes `bibliothek/linux/linux.c`, whose `gabbro_os_leeren` returns the whole
+# pages -- same answer, fewer resident pages, which
+# `instrumente/pruefe-seiten-zurueck.sh` measures.
+TREIBER172='#include <stdio.h>
+#include "@ERZEUGT@"
+int main(void) {
+    printf("%u\n", geben());
+    return 0;
+}
+'
+#    Erwartet: 7 -- RING[100] = 7 survives, RING[5000] = 9 lies in the given-back half and reads 0
+# **The gift stores 8 below the range** (`= 7` -> `= 8`): the survivor moves, the sum is 8.
+lauf "beispiel172" "$W/beispiele/172-puffer-gibt-seiten-zurueck.gab" "$TREIBER172" "7" \
+     's/RING\[100\] = 7/RING[100] = 8/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
+TREIBER172B='#include <stdio.h>
+#include "linux.c"
+#include "@ERZEUGT@"
+int main(void) {
+    printf("%u\n", geben());
+    return 0;
+}
+'
+lauf "beispiel172-gebunden" "$W/beispiele/172-puffer-gibt-seiten-zurueck.gab" "$TREIBER172B" "7" \
+     's/RING\[100\] = 7/RING[100] = 8/' \
+     "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 TREIBER153='#include <stdio.h>
 #include "@ERZEUGT@"
 int main(void) {

@@ -1138,6 +1138,11 @@ fn zugriff_stmt(s: &Stmt, z: &mut Kindzugriff) {
         StmtArt::ResetArena(t) => {
             z.namen.insert(t.text.clone());
         }
+        StmtArt::ResetSlot(r) => {
+            z.namen.insert(r.tisch.text.clone());
+            zugriff_expr(&r.index, z);
+            zugriff_expr(&r.menge, z);
+        }
         // **`grow` is walked** -- the amount AND the failure continuation (review G11 F3:
         // the emission walker skips the whole statement).
         StmtArt::Grow(g) => {

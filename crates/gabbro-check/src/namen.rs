@@ -574,6 +574,7 @@ pub(crate) fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
             | StmtArt::Ruf(_)
             | StmtArt::LibraryCall(_)
             | StmtArt::ResetArena(_)
+            | StmtArt::ResetSlot(_)
             // **Lane 257:** `grow` binds no name either; the `sonst`
             // locals are collected through `unterbloecke` below.
             | StmtArt::Grow(_) => {}
@@ -741,6 +742,11 @@ fn rumpf_falten(
             }
             StmtArt::ResetArena(i) => {
                 fakten.fremd.push((format!("arena {}", i.text), s.span));
+            }
+            StmtArt::ResetSlot(r) => {
+                fakten.fremd.push((format!("static {}", r.tisch.text), s.span));
+                knoten_ausdruck(&r.index, atomare, rein, fakten);
+                knoten_ausdruck(&r.menge, atomare, rein, fakten);
             }
             // **Lane 257:** the commit names its arena, evaluates its
             // amount, and may run the failure continuation instead.

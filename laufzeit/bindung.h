@@ -119,6 +119,15 @@ uint64_t gabbro_os_reserve(uint64_t bytes);
 uint32_t gabbro_os_commit(uint64_t basis, uint64_t versatz, uint64_t bytes);
 uint64_t gabbro_os_seitengroesse(void);
 
+/* `leeren` is the way back (M-ALLTAG C, `reset X at i count n;`): afterwards
+ * the `bytes` at `addr` READ AS ZERO, and the whole pages inside the range may
+ * have gone back to the system. It answers 0 when it kept that promise. The
+ * range stays mapped and writable. NOTHING in `laufzeit/` calls it: the emitted
+ * unit declares it WEAK, so a program that writes no `reset ... at` binds
+ * nothing, and one that binds nothing still gets its zeroes from the emitted
+ * loop (without the page return). */
+uint32_t gabbro_os_leeren(uint64_t addr, uint64_t bytes);
+
 /* -- the locks --------------------------------------------------------------
  *
  * One blob per `lock`, owned by the generated driver, initialised once before

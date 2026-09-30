@@ -1124,6 +1124,23 @@ impl<'a> Rechner<'a> {
             ),
             // **«E4»:** resetting the counter is one primitive.
             StmtArt::ResetArena(_) => Kosten::Zahl(1),
+            // **M-ALLTAG C: `reset X at i count n;` costs one primitive per
+            // element.** The emitted helper falls back to a byte loop when the
+            // program binds no page return (or the binding refuses), and that
+            // loop is `n` iterations -- so the bound counts `n`, and a count
+            // that is no translation-time constant has no bound at all (`K003`
+            // territory: the pass stops computing and says so).
+            StmtArt::ResetSlot(r) => match self.u.konst_wert(self.modul, &r.menge) {
+                Some(n) if n >= 0 => Kosten::Zahl(1)
+                    .plus(Kosten::Zahl(n))
+                    .plus(self.ausdruck(&r.index, lokal)),
+                _ => Kosten::Unbekannt(
+                    "`reset ... count n` with a count that is no constant: the fallback \
+                     loop is as long as the count, so no bound is promised"
+                        .to_string(),
+                    Some(r.menge.span),
+                ),
+            },
             // **Lane 257:** the commit request is one primitive plus the
             // amount plus the failure continuation -- the `Alloc`-shaped
             // arm (`PLAN-DYNAMISCH.md` §4 handoff): the amount expression

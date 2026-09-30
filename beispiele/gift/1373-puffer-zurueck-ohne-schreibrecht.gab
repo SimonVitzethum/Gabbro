@@ -1,0 +1,11 @@
+-- erwartet: E005
+-- M-ALLTAG C: giving a range back is a STORE to the array, so it owes
+-- `writes X` in the effects like any assignment to it.
+module beispiel::puffer_ohne_recht {
+static mut RING : [u8; 8192] = 0;
+
+impl fn f() -> u32 effects { pure } costs <= 5000 ops {
+    reset RING at 0 count 4096;
+    return 0;
+}
+}

@@ -911,6 +911,7 @@ pub fn unterbloecke(s: &Stmt) -> Vec<&Block> {
         | StmtArt::Ruf(_)
         // **«E4»:** `reset` carries no block and no expression.
         | StmtArt::ResetArena(_)
+        | StmtArt::ResetSlot(_)
         // **Lane 253:** `start` names roots, never blocks or expressions --
         // resolution is the checker's business (`W003`), not this walk's.
         | StmtArt::Start(_)
@@ -931,6 +932,8 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
         // **Lane 257:** the commit amount is evaluated like any bound
         // value; the arena name is a declaration, not an expression.
         StmtArt::Grow(g) => vec![&g.mehr],
+        // **M-ALLTAG C:** the slot index is evaluated like any bound value.
+        StmtArt::ResetSlot(r) => vec![&r.index, &r.menge],
         StmtArt::Zuweisung(z) => vec![&z.wert],
         StmtArt::Return(e) => e.iter().collect(),
         StmtArt::Publish(p) => vec![&p.wert],
@@ -969,6 +972,7 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
         | StmtArt::ResetArena(_)
+        | StmtArt::ResetSlot(_)
         | StmtArt::AwaitLoad(_) => Vec::new(),
     }
 }
@@ -1034,6 +1038,7 @@ pub fn eigene_praedikate(s: &Stmt) -> Vec<&Pred> {
         StmtArt::Let(_)
         | StmtArt::Alloc(_)
         | StmtArt::ResetArena(_)
+        | StmtArt::ResetSlot(_)
         // **Lane 257:** `grow` carries an amount, not a predicate.
         | StmtArt::Grow(_)
         // **Lane O-1:** `child` carries a block, not a predicate.
@@ -1540,7 +1545,7 @@ pub fn endet_immer(b: &Block, divergent: &[String]) -> bool {
         // `reset` moves a counter and nothing else.
         // **Lane 257:** same shape -- the main path continues past the
         // commit request, whatever the failure continuation does.
-        StmtArt::Alloc(_) | StmtArt::ResetArena(_) | StmtArt::Grow(_) => false,
+        StmtArt::Alloc(_) | StmtArt::ResetArena(_) | StmtArt::ResetSlot(_) | StmtArt::Grow(_) => false,
         // **A `traverse` and a `retry` fall through; a `forever` without an exit does
         // not.** The exit is `leave <mark>` and nothing else -- `StmtArt::Leave` always
         // carries a mark, so an unnamed `forever` can be left by nothing at all.

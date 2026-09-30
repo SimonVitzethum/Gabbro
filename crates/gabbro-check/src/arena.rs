@@ -1107,6 +1107,7 @@ impl<'a> Laeufer<'a> {
             StmtArt::Alloc(a) => self.alloc(a, s.span),
             StmtArt::ResetArena(tisch) => self.reset(tisch),
             StmtArt::Grow(g) => self.grow(g, s.span),
+            StmtArt::ResetSlot(r) => self.reset_platz(r),
             StmtArt::Let(l) => {
                 self.orte_in_expr(&l.wert);
                 // A copy of a tracked index keeps its tracking (fix lane F2):
@@ -1491,6 +1492,13 @@ impl<'a> Laeufer<'a> {
     /// before the request, with nothing committed (PLAN §4), and its state
     /// joins only when it falls through. `grow` moves no generation and
     /// binds no index.
+    /// **M-ALLTAG C: `reset X at i count n;`** gives elements of a STATIC
+    /// array back, not of an arena: nothing about any arena moves here. The
+    /// operands are ordinary expressions, so calls inside them are seen.
+    fn reset_platz(&mut self, r: &ResetSlotStmt) {
+        self.orte_in_expr(&r.index);
+        self.orte_in_expr(&r.menge);
+    }
     fn grow(&mut self, g: &GrowStmt, span: Span) {
         self.orte_in_expr(&g.mehr);
         let Some(q) = self.u.nennt_arena(&self.modul, &g.tisch.text) else {
