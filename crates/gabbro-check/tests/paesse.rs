@@ -579,7 +579,10 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // **13 -> 14 on 2026-09-30 (C-free lane, the region gate):** `tor.region`, the stub of a
     // gate that hands over a byte region, entered and proved in one commit
     // (`SchablonenOhneLibc.lean` §4) -- never carried unproved.
-    assert_eq!(bewiesen(), 14);
+    // **14 -> 15 on 2026-09-30 (C-free lane, the hosted arena runtime):** `arena.dyn`, the
+    // runtime the generated driver writes in place of `laufzeit/arena_dyn.c`, entered and proved
+    // in one commit (`SchablonenArena.lean`) -- never carried unproved.
+    assert_eq!(bewiesen(), 15);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

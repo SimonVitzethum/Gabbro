@@ -216,7 +216,13 @@ MARK_WAISEN = 1
 # probe does not`, and the closing line). So it measures nothing, and a mark nobody reads
 # drifts. The three are NOT repaired here -- they are older than K7 and belong to a lane of
 # their own -- but they are named in the report.
-MARK_AUSSEN = 28
+# **28 -> 32 on 2026-09-30** (C-free lane, the hosted arena runtime): `sonde_os_mmap`,
+# `sonde_os_mprotect`, `sonde_os_write`, `sonde_os_exit_group` -- the four gates
+# `bibliothek/linux/linux.gab` declares since its storage and report calls became Gabbro
+# (one assumption per gate, each with its own probe name; `N024` refuses one probe for two).
+# Measured with the guardian's own `sammle`/`sondennamen` (it still aborts in its speech
+# test, so it does not print the number itself): 28 on `9b537fbb`, 32 here.
+MARK_AUSSEN = 32
 
 # **Construction sites of `Klasse::Falsifizierbar` in `manifest.rs`.** Five on 2026-09-04: the
 # two GENERATED entries, the conversion out of the AST, and the two display arms. Only a

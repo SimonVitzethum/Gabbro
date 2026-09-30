@@ -275,6 +275,17 @@ generated driver, lock through the chain). Reviewers from 321.
   raw `syscall` items (no libc; a freestanding hosted Linux target), what remains in C/asm listed
   with its reason (a wall per piece). Instrument first: count handwritten C/asm linked into each
   built binary per target (from the build's file list), so every step is measured.
+  - [x] C0, the instrument: `instrumente/zaehle-c.py` (with `--sprech`, `--baue`).
+  - [x] A process without libc (`nolibc`, examples 172-174), gates in the model (`D.Ax`,
+    `bindAxiom`, `bindAxiomElse`), templates `tor.nie`, `start.nolibc`, `tor.fehlbar` proved.
+  - [x] Memory from outside as a REGION (Simon's decision 1): `tor.region`, example 183.
+  - [x] The hosted arena runtime: `laufzeit/arena_dyn.c` gone, the generated driver writes it
+    (template `arena.dyn`, proved), and the binding's storage and report calls are Gabbro
+    (`linux.gab`). Hosted C0 1174 -> 818 lines, 7 -> 5 files (`zaehle-c.py`, 2026-09-30).
+  - [ ] Hosted locks without pthread (the ticket lock of `CTicket.lean` in the driver, a yield
+    gate in the binding), threads without pthread (the `child` lowering as a proved template),
+    the page return (`gabbro_os_leeren`) in Gabbro; then `bindung.h`, `faden.c`, `linux.c` go.
+  - [ ] The kernel-module target (C2) and bare metal (C3).
 
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics
 and windows — is to be written in Gabbro itself**, not as `extern` with a named assumption. The

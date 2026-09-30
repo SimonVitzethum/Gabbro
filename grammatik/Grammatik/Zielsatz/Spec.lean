@@ -670,6 +670,28 @@
     kind, premise or conclusion moves.
   -- END end-block gate block --
 
+  -- BEGIN arena runtime block (C-free lane, 2026-09-30) --
+  WHAT CHANGED ON 2026-09-30 (C-FREE LANE: THE HOSTED ARENA RUNTIME IS GENERATED, AND ITS STORAGE
+  IS THE PROGRAM'S BINDING), AND WHY. COMMENT ONLY: no definition, premise or conclusion moves.
+  * THE GAP. `laufzeit/arena_dyn.c` was handwritten C behind premise (d) `Laufzeit.reserve` and
+    `Laufzeit.commit`; it handed the binding addresses as NUMBERS and computed the page ranges
+    itself. Simon's rule of 2026-09-30 is no handwritten C in a finished binary, and no number
+    ever becomes a pointer in the language.
+  * THE CHANGE. The hosted driver WRITES that runtime (`crates/gabbro-cli/src/treiber.rs`,
+    `ARENA_LAUFZEIT`), a template in the register (`arena.dyn`) whose arithmetic is proved in
+    `Grammatik/SchablonenArena.lean`: the reserved span covers every slot on whole pages with no
+    64-bit wrap (`arena_spanne_passt`), and every commit range covers the new slots, lies on pages
+    and inside the span (`arena_commit_bereich`). The storage calls are GABBRO functions of the
+    program's binding (`bibliothek/linux/linux.gab`: `gabbro_os_reserve` answers a REGION through
+    a region gate -- template `tor.region` -- and `gabbro_os_commit` takes one under `requires
+    bytes <= lenof(stelle)`), checked like any user code.
+  * WHAT (d) SAYS NOW (the two entries below, reworded): the reservation and the commit are the
+    PROGRAM's calls under the proved template, and what remains assumed is exactly the contract
+    of the program's own gates -- user logic in its source, the kind premise (c) already names
+    for every gate. What a green build says about a unit with an arena does not move: the arena
+    is still, in this statement, a table of `M` slots in the declared initial memory.
+  -- END arena runtime block --
+
   WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
   DIFF of this file; the text of `GabbroZiel` and of `Ziel` is unchanged:
   * The Rust checker admits a symmetric worker pool, `concurrent { w, w }`, when `w` is
@@ -869,34 +891,39 @@
     `E.sp0` (initialized data and zeroed storage of the emitted C). A toolchain/loader fact;
     that `E.sp0` meets the lock invariants and start `requires` is the USER's `StartPflicht`.
   * (d) `Laufzeit.reserve` -- THE RESERVATION OF A DYNAMIC ARENA (server lane, 2026-09-28;
-    the wording is PLAN-DYNAMISCH section 9's, inserted here unchanged): the loader reserves
-    the virtual range for every dynamic arena's ceiling `M` BEFORE any start runs; a failed
-    reservation refuses the LOAD, it never starts a program with a smaller range. **No new
-    premise and no new field**: an arena is, in this statement, a table of `M` slots in the
-    declared initial memory (the sugar of ArenaZucker.lean, the dynamic form in ArenaDyn.lean
-    section `Form`), so a load that cannot provide that range establishes no `E.sp0` at all
-    and `Laufzeit.lader` is FALSE of it -- the theorem then says nothing about that run, which
-    is the honest answer and not a weaker one. The text stands here because `lader` reads as a
-    fact about initialised data, while for a `max`-carrying unit it is also a fact about
-    ADDRESS SPACE: hosted, `mmap(PROT_NONE)` over `M` with lazy `mprotect`
-    (`laufzeit/arena_dyn.c`); on metal, the carved region of (M10); in a Linux kernel module,
-    one `vzalloc` region per arena with a budget over it (`laufzeit/kmodul/arena.c`). What is
-    NOT claimed: that the reservation succeeds -- refuse-on-load is a refusal, not a leg.
+    the wording is PLAN-DYNAMISCH section 9's; reworded by the C-free lane 2026-09-30, header
+    block "arena runtime"): the virtual range for every dynamic arena's ceiling `M` is reserved
+    BEFORE any start runs; a failed reservation refuses the LOAD, it never starts a program with
+    a smaller range. **No new premise and no new field**: an arena is, in this statement, a table
+    of `M` slots in the declared initial memory (the sugar of ArenaZucker.lean, the dynamic form
+    in ArenaDyn.lean section `Form`), so a load that cannot provide that range establishes no
+    `E.sp0` at all and `Laufzeit.lader` is FALSE of it -- the theorem then says nothing about
+    that run, which is the honest answer and not a weaker one. HOSTED, the reservation is no
+    longer a runtime file: the generated driver's arena runtime (template `arena.dyn`, arithmetic
+    proved in SchablonenArena.lean) asks the PROGRAM's binding for a region of the whole span
+    (`gabbro_os_reserve`, a Gabbro function over a region gate, template `tor.region`), and what
+    is assumed is that gate's declared contract -- user logic in the program's source. On metal,
+    the carved region of (M10); in a Linux kernel module, one allocation per arena with a budget
+    over it (`laufzeit/kmodul/arena.c`). What is NOT claimed: that the reservation succeeds --
+    refuse-on-load is a refusal, not a leg.
   * (d) `Laufzeit.commit` -- THE COMMIT SERVICE (server lane, 2026-09-28; wording from
-    PLAN-DYNAMISCH section 9): every `grow` the checker admits either COMMITS its slots before
-    the next statement runs or takes its `else` branch; a commit that reports success names
-    readable and writable storage; commit latency is bounded by the runtime's DECLARED
-    per-slot cost (`ArenaDyn.growKosten` reads that number as DATA from (c)'s latency entry --
-    it is read, never justified). In the model there is no third outcome, and that is proved
-    rather than assumed: the form is `Block.narrow` of `committed + n` into `0 .. M` with one
-    store (`dynGrow_commit`, with the frame -- the used counter and every slot stay put), and
-    past the ceiling there is no branch at all (`dynGrowListe_scheitert`). So the assumption
-    is about the C RUNTIME alone: a commit that fails BELOW the ceiling must reach the
-    program's `else` or fail-stop, and must never report success over storage that faults on
-    first touch. It belongs to the class the NOT CLAIMED line "the C and the hardware" already
-    covers, and is named here because a dynamic arena is the one form whose storage arrives
-    AFTER the load. **Also comment only:** no definition of this file changes, `Laufzeit` has
-    the three fields it had, and every proof of the tree is untouched.
+    PLAN-DYNAMISCH section 9; reworded by the C-free lane 2026-09-30): every `grow` the checker
+    admits either COMMITS its slots before the next statement runs or takes its `else` branch; a
+    commit that reports success names readable and writable storage; commit latency is bounded
+    by the runtime's DECLARED per-slot cost (`ArenaDyn.growKosten` reads that number as DATA from
+    (c)'s latency entry -- it is read, never justified). In the model there is no third outcome,
+    and that is proved rather than assumed: the form is `Block.narrow` of `committed + n` into
+    `0 .. M` with one store (`dynGrow_commit`, with the frame -- the used counter and every slot
+    stay put), and past the ceiling there is no branch at all (`dynGrowListe_scheitert`). HOSTED,
+    the page range a commit covers is the generated template's and proved to cover the new
+    slots inside the reserved span (`arena_commit_bereich`); the commit itself is the program's
+    binding (`gabbro_os_commit`, a Gabbro function over its own gate), so what stays assumed is
+    that gate's contract: a commit that fails BELOW the ceiling reaches the program's `else`, and
+    success is never reported over storage that faults on first touch. It belongs to the class
+    the NOT CLAIMED line "the C and the hardware" already covers, and is named here because a
+    dynamic arena is the one form whose storage arrives AFTER the load. **Also comment only:** no
+    definition of this file changes, `Laufzeit` has the three fields it had, and every proof of
+    the tree is untouched.
   * (d) `Laufzeit.start`/`.einmal` -- the runtime starts exactly the declared starts, each on
     its own thread with its declared arguments, and the idle root `none` (MitRuhe.lean: body
     `return`, empty signature, no lock, no reason, writes nothing) on every other thread;
@@ -1005,7 +1032,7 @@
       lock taken inside a masked section spins with IF = 0 without yielding (OFFEN O32 (10)).
     - (M10) THE ARENA BUDGET: a dynamic arena's reserve is a static region carved at load
       (refusal = load refusal), and `grow` commits against a fixed budget; an exhausted budget
-      answers the program's `else` -- the same answer the hosted `mmap` refusal gives, so the
+      answers the program's `else` -- the same answer a refused hosted commit gives, so the
       arena leg is unchanged; what the budget IS, is the image's configuration.
     TARGETS (OFFEN O31): a gate written `via V` is filled by the parser from the ACTIVE
     target's binding before any check, so premise (c) names the assumption THAT binding

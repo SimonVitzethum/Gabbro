@@ -160,6 +160,7 @@ pub const RATSCHE: &[&str] = &[
     "start.nolibc",
     "tor.fehlbar",
     "tor.region",
+    "arena.dyn",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -278,6 +279,39 @@ pub const SCHABLONEN: &[Schablone] = &[
         fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §4; grammatik/Grammatik/Syscall.lean \
                      (`dekodiere`); crates/gabbro-check/src/emit.rs (`Antwort::Region`); \
                      crates/gabbro-check/src/m1.rs (`ergebnis_ausdehnung`); beispiele/183",
+    },
+    // **Entered 2026-09-30 by the C-free lane (the hosted arena runtime), PROVED in the same
+    // commit**: `laufzeit/arena_dyn.c` became text the generated driver writes.
+    Schablone {
+        name: "arena.dyn",
+        haengt_an: &["tor.region"],
+        konstrukt: "arena … max M (the hosted arena runtime the generated driver writes: \
+                    `gabbro_arena_reserve`, `gabbro_arena_grow`)",
+        pflicht: "The generated arena runtime reserves, at load, one region of the span \
+                  `ceil(max * elem / page) * page` from the program's binding and, at every \
+                  `grow` below the ceiling, commits the page range from `floor(committed * \
+                  elem / page) * page` to `ceil((committed + n) * elem / page) * page`. \
+                  **Machine-checked** (`Grammatik/SchablonenArena.lean`): the span covers every \
+                  slot, is whole pages, and no `uint64_t` intermediate wraps for 32-bit `max`, \
+                  `elem` and a page of at most `2^32` (`arena_spanne_passt`); the commit range \
+                  covers every byte of the new slots, starts and ends on a page and lies inside \
+                  the span, so `ende - start <= spanne - start` -- the binding's `requires bytes \
+                  <= lenof(stelle)` at the one call the template makes (`arena_commit_bereich`); \
+                  the committed prefix only grows (`arena_commit_monoton`); witness on the \
+                  os-probe's arena (`arena_zeuge`), boundary `arena_ueber_der_decke`. **NOT \
+                  proved: that the binding keeps its contract** (a fresh region of the span; a \
+                  commit answering 0 makes the range writable) -- the program's own gates, user \
+                  logic, premise (c); in the goal statement the arena stays a table of `M` slots \
+                  (premise (d), `Laufzeit.reserve`/`.commit`, reworded 2026-09-30).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "`max` and `elem` are 32-bit and `elem > 0`, `floor_hi <= max`, `max > 0`", durch: Some("the descriptor the emitter writes (`emit.rs`, `ARENA_DYN_PRELUDE`: `uint32_t` fields from the declaration's ceiling and element size), and the template's own descriptor check, which fail-stops before any arithmetic"), braeuchte: None },
+            Voraussetzung { was: "the page is `0 < seite <= 2^32`", durch: Some("the template's own test of the binding's answer (`gabbro_arena_seite`: any other answer fail-stops before it is used)"), braeuchte: None },
+            Voraussetzung { was: "a `grow` stays under the ceiling (`committed + n <= max`)", durch: Some("`N426` (the whole run's committed upper bound against `max`) statically, and the template's own test before any commit, which fail-stops past it"), braeuchte: None },
+            Voraussetzung { was: "the binding answers a region of at least the span and commits a range it is given", durch: Some("the program's binding in Gabbro (`bibliothek/linux/linux.gab`: `gabbro_os_reserve` over a region gate with `ensures len <= lenof(result)`, `gabbro_os_commit` under `requires bytes <= lenof(stelle)`), whose gates' contracts are user logic, premise (c); `bau.rs::bindungsregel_gehostet` refuses a unit with an arena and no such binding"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenArena.lean; crates/gabbro-cli/src/treiber.rs \
+                     (`ARENA_LAUFZEIT`); bibliothek/linux/linux.gab; instrumente/pruefe-os-bindung.sh",
     },
     Schablone {
         name: "restrict.alleinzugriff",

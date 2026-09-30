@@ -275,8 +275,9 @@ bauen() {   # $1 = work dir, $2 = gift
     mkdir -p "$bau" "$arb/laufzeit"
     # The runtime sources are COPIED, because gifts 2 and 3 mutate them and the
     # tree is never written to by an instrument.
-    cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" "$W/laufzeit/bindung.h" \
-       "$W/laufzeit/faden.c" "$W/laufzeit/faden.h" "$arb/laufzeit/"
+    # Since 2026-09-30 (C-free lane) the arena runtime is no file here: the generated
+    # driver writes it (template `arena.dyn`), so what is copied is the thread runtime.
+    cp "$W/laufzeit/bindung.h" "$W/laufzeit/faden.c" "$W/laufzeit/faden.h" "$arb/laufzeit/"
     {
         echo "-- written by instrumente/pruefe-os-bindung.sh"
         echo "compiler cc -std=c11 -O0 -Wall -Wextra -Werror"
@@ -403,9 +404,7 @@ bauen() {   # $1 = work dir, $2 = gift
     local rtflags="$cflags"
     [ "$gift" = 2 ] && rtflags="-std=c11 -O0 -w"
     if ! timeout "$FRIST" cc $rtflags -I "$arb/laufzeit" \
-            -c -o "$bau/arena_dyn.o" "$arb/laufzeit/arena_dyn.c" 2> "$arb/cc2.log" \
-       || ! timeout "$FRIST" cc $rtflags -I "$arb/laufzeit" \
-            -c -o "$bau/faden.o" "$arb/laufzeit/faden.c" 2>> "$arb/cc2.log"; then
+            -c -o "$bau/faden.o" "$arb/laufzeit/faden.c" 2> "$arb/cc2.log"; then
         echo "HARNESS: the hosted runtime did not compile"
         head -20 "$arb/cc2.log" >&2
         return 0
@@ -428,7 +427,7 @@ bauen() {   # $1 = work dir, $2 = gift
         return 0
     fi
     if ! timeout "$FRIST" cc -pthread -o "$bau/probe" \
-            "$bau/treiber.o" "$bau/arena_dyn.o" "$bau/faden.o" "$bau/fremd.o" \
+            "$bau/treiber.o" "$bau/faden.o" "$bau/fremd.o" \
             "$bau/bindung.o" 2> "$arb/ld.log"; then
         echo "HARNESS: the linker refused the probe"
         head -20 "$arb/ld.log" >&2
@@ -451,7 +450,7 @@ symbole_pruefe() {   # $1 = work dir
     local arb="$1" bau="$1/bau" n
     [ -x "$bau/probe" ] || { echo "HARNESS: OS symbols NOT MEASURED -- no binary"; return 0; }
     nm -u "$bau/probe" | awk '{print $2}' | sed 's/@.*//' | sort -u > "$arb/bin.txt"
-    nm -u "$bau/treiber.o" "$bau/arena_dyn.o" "$bau/faden.o" \
+    nm -u "$bau/treiber.o" "$bau/faden.o" \
         | awk '/^ +U/{print $2}' | sed 's/@.*//' | sort -u > "$arb/rt.txt"
     comm -12 "$arb/bin.txt" "$arb/rt.txt" | grep -Ev "$OSSYM_TOOLKETTE" > "$arb/fest.txt"
     n="$(grep -c '' "$arb/fest.txt" | tr -d ' ')"
@@ -473,11 +472,11 @@ symbole_pruefe() {   # $1 = work dir
 # -- stage 3: the raw system calls `nm` cannot see -----------------------------
 rohruf_pruefe() {   # $1 = work dir
     local arb="$1" n
-    n="$(grep -c '"syscall' "$arb/laufzeit/faden.c" "$arb/laufzeit/arena_dyn.c" 2>/dev/null \
+    n="$(grep -c -H '"syscall' "$arb/laufzeit/faden.c" 2>/dev/null \
         | awk -F: '{s+=$2} END {print s+0}')"
     if [ "$n" -gt "$MARKE_ROHRUF" ]; then
         echo "HARNESS: raw syscalls FAILED -- the hosted runtime issues $n, the mark is $MARKE_ROHRUF"
-        grep -n '"syscall' "$arb/laufzeit/faden.c" "$arb/laufzeit/arena_dyn.c" 2>/dev/null \
+        grep -n '"syscall' "$arb/laufzeit/faden.c" 2>/dev/null \
             | sed "s|$arb/||" | sed 's/^/    raw: /' | head -10
         return 0
     fi
@@ -692,7 +691,7 @@ if [ -z "$GIFT" ]; then
     echo "== What the hosted runtime takes from the operating system =="
     echo "   probe       $QUELLE"
     echo "   own C       $FREMD"
-    echo "   runtime     laufzeit/{arena_dyn.c,faden.c} + the generated $EINHEIT.treiber.c"
+    echo "   runtime     laufzeit/faden.c + the generated $EINHEIT.treiber.c (with the arena runtime)"
     mkdir -p "$ARB/lauf"
     einmal "$ARB/lauf" "" > "$ARB/lauf/aus.txt"
     grep -E "HARNESS:|^    " "$ARB/lauf/aus.txt" | sed 's/^/   /'

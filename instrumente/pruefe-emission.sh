@@ -310,6 +310,13 @@ absenkung_messen() {
     fi
 }
 
+# The Gabbro half of the hosted binding, emitted once per run (C-free lane, 2026-09-30).
+bindung_c_erzeugen() {
+    [ -s "$ARB/linux_bind.c" ] && return 0
+    cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- emit "$W/bibliothek/linux/linux.gab" \
+        > "$ARB/linux_bind.c" || { echo "ABBRUCH: bibliothek/linux/linux.gab does not emit"; exit 1; }
+}
+
 lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6 Zeugnis
     local name="$1" quelle="$2" treiber="$3" erwartet="$4" gift="$5" zeugnis="$6"
     local c="$ARB/$name.c"
@@ -369,7 +376,10 @@ lauf_kern() {     # $1 Name  $2 Quelle  $3 Treiber  $4 Erwartet  $5 Gift-sed  $6
     printf '%s' "$treiber" | sed "s/@ERZEUGT@/$name.c/" \
         | sed "s|@FADEN@|$W/laufzeit/faden.c|" > "$ARB/$name-treiber.c"
     local bindung=""
-    case "$treiber" in *"@FADEN@"*) bindung="$W/bibliothek/linux/linux.c" ;; esac
+    # Since 2026-09-30 (C-free lane) half of the binding is GABBRO (`linux.gab`: the report
+    # channel, the stop, the storage), emitted once into `$ARB/linux_bind.c` below; the C half
+    # still calls `gabbro_os_ende`, so both travel together.
+    case "$treiber" in *"@FADEN@"*) bindung_c_erzeugen; bindung="$W/bibliothek/linux/linux.c $ARB/linux_bind.c" ;; esac
     # **NO `-pthread` on these lines, and the reason is measured.** It expands to
     # `-D_REENTRANT`, under which glibc's `features.h` sets `_POSIX_C_SOURCE` to
     # `199506L` -- and `bibliothek/linux/linux.c`, which the 158 driver
@@ -2597,12 +2607,18 @@ lauf "beispiel123" "$W/beispiele/123-const-matrix.gab" "$TREIBER123" "1 2 3 4" \
 # `bibliothek/linux/linux.c` is the usual POSIX set. A driver that took the runtime and
 # not the binding would not link, which is the refusal `bau.rs::bindungsregel_gehostet`
 # turns into a sentence at build time.
-cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" "$W/laufzeit/bindung.h" \
-   "$W/bibliothek/linux/linux.c" "$ARB/"
+# **Since 2026-09-30 (C-free lane) no handwritten runtime file is copied here**: the arena
+# runtime is the text the hosted driver writes (`gabbro runtime arena`, template `arena.dyn`),
+# and the binding's storage and report calls are GABBRO (`bibliothek/linux/linux.gab`,
+# emitted into `linux_bind.c`). Both stand AFTER the emitted unit, whose prelude declares the
+# descriptor they work on.
+cp "$W/laufzeit/bindung.h" "$W/bibliothek/linux/linux.c" "$ARB/"
+cargo run -q --manifest-path "$W/Cargo.toml" --bin gabbro -- runtime arena > "$ARB/arena_laufzeit.c"
+bindung_c_erzeugen
 TREIBER158='#include <stdio.h>
-#include "arena_dyn.c"
-#include "linux.c"
 #include "@ERZEUGT@"
+#include "arena_laufzeit.c"
+#include "linux_bind.c"
 int main(void) {
     gabbro_arena_reserve(&Vorrat_desc);
     printf("%u\n", fuellen());
@@ -2661,6 +2677,7 @@ lauf "beispiel175" "$W/beispiele/175-puffer-gibt-seiten-zurueck.gab" "$TREIBER17
 TREIBER175B='#include <stdio.h>
 #include "linux.c"
 #include "@ERZEUGT@"
+#include "linux_bind.c"
 int main(void) {
     printf("%u\n", geben());
     return 0;

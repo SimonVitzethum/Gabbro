@@ -66,9 +66,9 @@ CC="${CC:-cc}"
 treiber() {
     cat <<EOF
 #include <stdio.h>
-#include "arena_dyn.c"
-#include "linux.c"
 #include "$1"
+#include "arena_laufzeit.c"
+#include "linux_bind.c"
 $2
 int main(void) {
     gabbro_arena_reserve(&Puffer_desc);
@@ -85,8 +85,11 @@ EOF
 # shelf exactly as a program would. *The measured claim of this instrument does not move
 # for it:* what is timed and sized is the EMITTED C and the binary, and the binding is the
 # same file in both twins.
-cp "$W/laufzeit/arena_dyn.c" "$W/laufzeit/arena_dyn.h" "$W/laufzeit/bindung.h" \
-   "$W/bibliothek/linux/linux.c" "$ARB/" || exit 2
+# **Since 2026-09-30 (C-free lane) neither is a handwritten file**: the runtime is the text
+# the hosted driver writes (`gabbro runtime arena`, template `arena.dyn`) and the binding's
+# storage and report calls are Gabbro (`bibliothek/linux/linux.gab`), emitted beside it.
+"$GABBRO" runtime arena > "$ARB/arena_laufzeit.c" || exit 2
+"$GABBRO" emit "$W/bibliothek/linux/linux.gab" > "$ARB/linux_bind.c" || exit 2
 
 # -- one twin: emit, time, compile, measure -----------------------------------
 mess() {   # $1 = tag, $2 = source, $3 = extra driver text

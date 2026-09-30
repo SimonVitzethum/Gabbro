@@ -422,7 +422,7 @@ theorem region_zugriff_grenze :
   subst hs
   left; decide
 
-/-! ### The witness: `mmap`'s table (`ENOMEM = 12`, `EINVAL = 22`), one word of each kind,
+/-! ### The witness: a mapping gate's table (`ENOMEM = 12`, `EINVAL = 22`), one word of each kind,
     and a 4096-byte region beside a live one -/
 
 def regionTab : FehlerTabelle (Fin 2) := [(12, 0), (22, 1)]

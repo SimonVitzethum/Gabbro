@@ -685,6 +685,20 @@ fn main() -> std::process::ExitCode {
         // `--tor` faellt, solange eine haengt. Es ist ausdruecklich KEIN Vorgabeverhalten:
         // ein Werkzeug, das jeden Tag rot ist, wird nicht gelesen -- die tägliche Wache ist
         // die Ratsche in `pruefe-schablonen.py`, und **dieses Tor ist das ZIEL.**
+        // **The generated runtime texts, for a harness that builds its own driver** (C-free
+        // lane, 2026-09-30): `gabbro runtime arena` prints the arena runtime the hosted driver
+        // writes (template `arena.dyn`) -- the same bytes, so a harness cannot drift from it.
+        "runtime" | "laufzeit" => match rest.first().map(|s| s.as_str()) {
+            Some("arena") => {
+                print!("{}", bau::arena_laufzeit());
+                std::process::ExitCode::SUCCESS
+            }
+            _ => {
+                // 1 and not 2: the command is known, its argument is not.
+                eprintln!("gabbro runtime: one of `arena`");
+                std::process::ExitCode::from(1)
+            }
+        },
         "templates" | "schablonen" => {
             print!("{}", gabbro_check::schablonen::zeige());
             if rest.iter().any(|x| x == "--gate" || x == "--tor") {
@@ -774,6 +788,7 @@ const COMMAND_NAMES: &[&str] = &[
     "ceremony", "zeremonie",
     "gabbrov",
     "templates", "schablonen",
+    "runtime", "laufzeit",
     "passes", "paesse",
     "check", "pruefe",
     "link", "verbinde",
@@ -901,6 +916,9 @@ fn hilfe() {
                                     the generator templates: the third counting column.
                                     `--gate` FALLS while a proved template has a premise
                                     no pass establishes (tooth 3)
+  gabbro runtime|laufzeit arena
+                                    the arena runtime the hosted driver writes (template
+                                    `arena.dyn`), for a harness that builds its own driver
   gabbro k-condition|k-bedingung <file.gab>…
                                     per carrier: are ALL write sites generated? (measurement 2)
   gabbro costs|kosten <file.gab>…   the cost report per routine

@@ -848,10 +848,10 @@ entry uhr via irq arch x86_64 {
 ///
 /// SIMON DREW THE LINE FOR THE RUNTIMES on 2026-09-28: *"an die Hardware ist OK, OS nicht, das
 /// muss selbst gemacht werden."* `laufzeit/arena_dyn.c` was the first hosted file to move: it
-/// asked `mmap` for the reservation, `mprotect` for every commit and `sysconf` for the page
-/// size, and printed its fail-stops itself. Those six names are declarations now
-/// (`laufzeit/bindung.h`) and the PROGRAM defines them --
-/// `bibliothek/linux/linux.gab` plus its `.c` is the binding it may take off the shelf.
+/// asked the C library for the reservation, every commit and the page size, and printed its
+/// fail-stops itself. Those names are the PROGRAM's now -- and since 2026-09-30 (C-free lane)
+/// `bibliothek/linux/linux.gab` defines them in Gabbro over its own gates, while the arena
+/// runtime that calls them is written by the generated driver (template `arena.dyn`).
 ///
 /// **Why a test and not only the instrument.** `instrumente/pruefe-os-bindung.sh` measures
 /// what a BUILT binary still pulls out of the OS; a unit whose binding is missing has no
@@ -1066,7 +1066,7 @@ fn ein_prozess_ohne_libc_hat_keine_fremden_symbole_und_der_abbruch_ist_gabbro() 
     for (manifest, bin, erwartet) in [
         ("beispiele/172-prozess-ohne-libc.bau", "target/bau-ohne-libc/prozess", "Hallo\n"),
         ("beispiele/173-abbruch-ohne-libc.bau", "target/bau-abbruch-ohne-libc/abbruch", ""),
-        // Example 183: the memory it writes through comes from a REGION gate (`mmap`), and
+        // Example 183: the memory it writes through comes from a REGION gate (a kernel page), and
         // the page reaches `write` under the gate's extent -- still nothing imported.
         ("beispiele/183-region-vom-tor.bau", "target/bau-region-vom-tor/region", "OK\n"),
     ] {

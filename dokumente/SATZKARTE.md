@@ -4739,3 +4739,27 @@ constants and parameters the body leaves alone; `N571` and `N463` (the bare form
 `requires` clause. Gifts `1383`-`1387`, example `183` (built `nolibc`, runs, imports nothing).
 **Not claimed** (OFFEN O37): machine G has no byte pointers, so 183 stays `UNCERTIFIED` (first `LG003`, the gate's `ensures`; behind it `LG002`);
 nothing releases a region; a Gabbro body cannot pass an extent on.
+
+## 64. The hosted arena runtime as a generated template: `arena.dyn` (C-free lane, 2026-09-30)
+
+**The gap.** `laufzeit/arena_dyn.c` was handwritten C behind premise (d) `Laufzeit.reserve` /
+`.commit`, handing the binding addresses as numbers. The generated hosted driver writes that
+runtime now (`treiber.rs`, `ARENA_LAUFZEIT`; `gabbro runtime arena` prints the same bytes for a
+harness), and the binding's storage and report calls are Gabbro (`bibliothek/linux/linux.gab`:
+`gabbro_os_reserve` over a region gate, `gabbro_os_commit` over a protection gate under
+`requires bytes <= lenof(stelle)`, `gabbro_os_melden` over a write gate and constant tables,
+`gabbro_os_ende` over an exit gate, `-> never`).
+
+| Lean name | File | What it says |
+|---|---|---|
+| `aufrunden`, `abrunden`, `spanne`, `commitStart`, `commitEnde` | SchablonenArena | the template's arithmetic, as the C writes it |
+| **`arena_spanne_passt`** | SchablonenArena | the span covers every slot, is whole pages, and no `uint64_t` intermediate wraps (32-bit `max`/`elem`, page at most `2^32`) |
+| **`arena_commit_bereich`** | SchablonenArena | a commit range covers the new slots, lies on pages and inside the span -- the binding's `requires` at the template's call |
+| `arena_commit_monoton`, `arena_ueber_der_decke` | SchablonenArena | the prefix only grows; one slot past the ceiling needs a byte past an exact span |
+| `arena_zeuge` | SchablonenArena | WITNESS on the os-probe's arena (8-byte slots, ceiling 65536, grown by 1024) |
+
+`Zielsatz/Spec.lean`: comment only, header block "arena runtime"; (d) `Laufzeit.reserve` and
+`.commit` reworded (the storage is the program's binding under the proved template; no definition,
+premise or conclusion moves). Measured: `pruefe-os-bindung.sh` GREEN and all 8 harness gifts
+caught; `miss-arena-decke.sh` GREEN (10 MiB and 32 GiB ceilings, same binary); `pruefe-osfrei.py`
+0 tokens (3 before, the Spec's own). Hosted C0 1174 -> 818 lines.

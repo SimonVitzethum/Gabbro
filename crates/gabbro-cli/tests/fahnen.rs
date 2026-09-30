@@ -341,6 +341,7 @@ const UNTERBEFEHLE: &[&[&str]] = &[
     &["corr-lean"],
     &["ceremony", "zeremonie"],
     &["templates", "schablonen"],
+    &["runtime", "laufzeit"],
     &["passes", "paesse"],
     &["gabbrov"],
     &["--help", "help", "--hilfe", "-h", "hilfe"],

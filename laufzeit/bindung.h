@@ -108,15 +108,18 @@ void gabbro_os_ende(uint32_t code);
 
 /* -- the bounded heap's storage --------------------------------------------
  *
- * `reserve` answers the base of `bytes` of RESERVED-BUT-NOT-COMMITTED address
- * space, or 0; `commit` makes `[versatz, versatz + bytes)` of it readable and
- * writable and answers 0 on success; `seitengroesse` is the granularity the
- * runtime rounds its commits to. Nothing here scrubs: the reservation reads as
- * zero until written, which is a property of the mapping the binding chose and
- * is named in `bibliothek/linux/linux.gab` as such.
+ * Since 2026-09-30 (C-free lane) these are GABBRO functions of the binding,
+ * over region gates, and the arena runtime that calls them is the generated
+ * driver's (template `arena.dyn`). `reserve` answers a REGION of `bytes` of
+ * reserved-but-not-committed address space and never 0 -- a refusal ends the
+ * process inside it; `commit` makes the `bytes` from `stelle` on readable and
+ * writable and answers 0 on success (`requires bytes <= lenof(stelle)`);
+ * `seitengroesse` is the granularity the runtime rounds its commits to. The
+ * reservation reads as zero until written, a property of the mapping the
+ * binding chose and named in `bibliothek/linux/linux.gab` as such.
  */
-uint64_t gabbro_os_reserve(uint64_t bytes);
-uint32_t gabbro_os_commit(uint64_t basis, uint64_t versatz, uint64_t bytes);
+uint8_t *gabbro_os_reserve(uint64_t bytes);
+uint32_t gabbro_os_commit(uint8_t *stelle, uint64_t bytes);
 uint64_t gabbro_os_seitengroesse(void);
 
 /* `leeren` is the way back (M-ALLTAG C, `reset X at i count n;`): afterwards

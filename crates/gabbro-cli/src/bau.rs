@@ -29,6 +29,12 @@ use std::path::{Path, PathBuf};
 #[path = "treiber.rs"]
 mod treiber;
 
+/// The arena runtime the hosted driver writes (`treiber::ARENA_LAUFZEIT`), for `gabbro runtime
+/// arena`.
+pub fn arena_laufzeit() -> &'static str {
+    treiber::ARENA_LAUFZEIT
+}
+
 /// What a unit becomes. **`object` compiles, `program` links** -- and the difference is not a
 /// language question, which is why it stands in the manifest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -887,7 +893,7 @@ fn modulregel(
 ///
 /// | what the unit uses | what the hosted runtime will call | where |
 /// |---|---|---|
-/// | an `arena` | `gabbro_os_reserve`, `gabbro_os_commit`, `gabbro_os_seitengroesse` | `arena_dyn.c`, at load and at every `grow` |
+/// | an `arena` | `gabbro_os_reserve` (answers a region), `gabbro_os_commit` (a region's page and a length), `gabbro_os_seitengroesse` | the arena runtime the generated driver writes (template `arena.dyn`; `laufzeit/arena_dyn.c` until 2026-09-30), at load and at every `grow` |
 /// | a `concurrent` root | `gabbro_os_faden_start`, `_warte` | the generated driver's `main` |
 /// | a `concurrent` root AND a `lock` | `gabbro_os_sperre_init`, `_nimm`, `_gib` | the same driver, at start and at every acquire |
 /// | any of those | `gabbro_os_melden`, `gabbro_os_ende` | the fail-stops of both files |
@@ -959,7 +965,7 @@ fn bindungsregel_gehostet(
         let weil = "this unit declares an `arena`, whose storage the runtime asks the program for";
         for (name, parameter, liefert) in [
             ("gabbro_os_reserve", 1, true),
-            ("gabbro_os_commit", 3, true),
+            ("gabbro_os_commit", 2, true),
             ("gabbro_os_seitengroesse", 0, true),
         ] {
             gefordert.push(BindungsZeile { name, parameter, liefert, weil });
@@ -2553,8 +2559,10 @@ fn handgeschrieben(
         if plan.is_some_and(|p| p.hat_gehostet()) {
             dazu.extend(["faden.c", "faden.h", "bindung.h"]);
         }
+        // A dynamic arena brings no handwritten file any more: its runtime is the generated
+        // driver's (`treiber::ARENA_LAUFZEIT`, template `arena.dyn`).
         if !arenen.is_empty() {
-            dazu.extend(["arena_dyn.c", "arena_dyn.h", "bindung.h"]);
+            dazu.extend(["bindung.h"]);
         }
         dazu.sort();
         dazu.dedup();

@@ -115,38 +115,263 @@ assume os_bindung_null
     "The bytes `gabbro_os_reserve` answers, and every byte `gabbro_os_commit` makes writable, read as zero until the program writes them; a range `gabbro_os_leeren` answered 0 for stays mapped and writable and reads as zero until the program writes it again."
     falsifier sonde_os_null;
 
+-- -- the system calls this binding makes, as GABBRO gates (C-free lane, 2026-09-30) ----
+--
+-- Until 2026-09-30 the bodies below were C in `linux.c`, over glibc's `mmap`,
+-- `mprotect`, `sysconf`, `fprintf` and `_exit`. They are Gabbro now, checked
+-- like any user code, and what reaches the kernel is these four gates -- raw
+-- system calls under x86_64 Linux's convention, each with the contract it keeps
+-- as a named assumption. Their names carry `linux_os_` because the binding is
+-- compiled into the PROGRAM's translation unit, and a program may declare a
+-- `write` of its own.
+pub reason LinuxSpeicherFehler {
+    Perm = 1 "the operation is not permitted"
+    Again = 11 "the memory is locked or the kernel is out of a resource"
+    Nomem = 12 "no memory, or the range is not mapped"
+    Acces = 13 "the protection is not allowed on this mapping"
+    Inval = 22 "an argument the kernel refuses"
+    Overflow = 75 "the range does not fit the address space"
+    exhaustive
+}
+
+pub reason LinuxSchreibFehler {
+    Perm = 1 "the write is not permitted"
+    Intr = 4 "interrupted before anything was written"
+    Io = 5 "an input/output error"
+    BadFd = 9 "the file descriptor is not open for writing"
+    Again = 11 "the descriptor is non-blocking and the write would block"
+    Fault = 14 "the buffer is outside the process"
+    Inval = 22 "the descriptor refuses writes"
+    Fbig = 27 "the file would grow past its limit"
+    NoSpc = 28 "no space left on the device"
+    Pipe = 32 "the reading end is closed"
+    exhaustive
+}
+
+assume linux_os_mmap_vertrag
+    "The Linux x86_64 `mmap` (number 9) with `fd` = -1 and flags MAP_PRIVATE | MAP_ANONYMOUS answers the base of at least `len` bytes of fresh address space, shared with no other mapping of the process, whose bytes read as zero once made readable; or -errno from the listed table; it destroys only rcx and r11."
+    falsifier sonde_os_mmap;
+
+assume linux_os_mprotect_vertrag
+    "The Linux x86_64 `mprotect` (number 10) over a page-aligned range of a private anonymous mapping makes those bytes readable and writable when `prot` is 3 and answers 0, or -errno from the listed table; it changes no byte and destroys only rcx and r11."
+    falsifier sonde_os_mprotect;
+
+assume linux_os_write_vertrag
+    "The Linux x86_64 `write` (number 1) reads at most `len` bytes from `buf`, answers the count written or -errno from the listed table, and destroys only rcx and r11."
+    falsifier sonde_os_write;
+
+assume linux_os_exit_group_vertrag
+    "The Linux x86_64 `exit_group` (number 231) ends every thread of the process with status `code & 255` and never returns to its caller."
+    falsifier sonde_os_exit_group;
+
+syscall linux_os_mmap(addr : u64, len : u64, prot : u64, flags : u64, fd : u64, off : u64) -> ptr<normal, rw> u8 or LinuxSpeicherFehler
+    abi linux arch x86_64 number 9
+    regs in { rdi = addr, rsi = len, rdx = prot, r10 = flags, r8 = fd, r9 = off }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EPERM => Perm, EAGAIN => Again, ENOMEM => Nomem, EACCES => Acces, EINVAL => Inval, EOVERFLOW => Overflow }
+    ensures len <= lenof(result)
+    effects { pure }
+    costs <= 100000 ops
+    assume linux_os_mmap_vertrag falsifier sonde_os_mmap;
+
+syscall linux_os_mprotect(addr : ptr<normal, rw> u8, len : u64, prot : u64) -> u64 or LinuxSpeicherFehler
+    abi linux arch x86_64 number 10
+    regs in { rdi = addr, rsi = len, rdx = prot }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EPERM => Perm, EAGAIN => Again, ENOMEM => Nomem, EACCES => Acces, EINVAL => Inval, EOVERFLOW => Overflow }
+    requires len <= lenof(addr)
+    effects { pure }
+    costs <= 100000 ops
+    assume linux_os_mprotect_vertrag falsifier sonde_os_mprotect;
+
+syscall linux_os_write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or LinuxSchreibFehler
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EPERM => Perm, EINTR => Intr, EIO => Io, EBADF => BadFd, EAGAIN => Again, EFAULT => Fault, EINVAL => Inval, EFBIG => Fbig, ENOSPC => NoSpc, EPIPE => Pipe }
+    requires len <= lenof(buf)
+    effects { reads buf }
+    costs <= 64 ops
+    assume linux_os_write_vertrag falsifier sonde_os_write;
+
+syscall linux_os_exit_group(code : u64) -> never
+    abi linux arch x86_64 number 231
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_os_exit_group_vertrag falsifier sonde_os_exit_group;
+
 -- -- the report channel and the stop -----------------------------------------
 --
 -- The runtime has no words of its own, because printing is an OS call. A
 -- fail-stop travels as a CODE and two numbers (`laufzeit/bindung.h` lists the
--- six codes) and this binding's body carries one sentence per code.
---
--- `gabbro_os_ende` NEVER RETURNS, and Gabbro has no way to say so -- so the
--- runtime writes every call site as if it might and keeps a fail-closed line
--- behind it. The assumption above is where the promise lives instead.
-extern fn gabbro_os_melden(code : u32, a : u64, b : u64)
-    effects { pure } costs <= 4096 ops;
+-- codes), and this binding writes one sentence per code to the error channel,
+-- then the two numbers in decimal -- one `write` per piece, over constant
+-- tables, so nothing here is shared writable state and no two threads that
+-- report at once can race on it.
+pub const LINUX_T_KOPF : [u8; 23] = [103, 97, 98, 98, 114, 111, 58, 32, 114, 117, 110, 116, 105, 109, 101, 32, 114, 101, 112, 111, 114, 116, 32];
+pub const LINUX_T_DESKRIPTOR : [u8; 46] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 101, 115, 101, 114, 118, 101, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 98, 97, 100, 32, 100, 101, 115, 99, 114, 105, 112, 116, 111, 114, 32];
+pub const LINUX_T_SPANNE : [u8; 50] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 101, 115, 101, 114, 118, 101, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 116, 104, 101, 32, 115, 112, 97, 110, 32, 111, 118, 101, 114, 102, 108, 111, 119, 115, 32];
+pub const LINUX_T_RESERVE : [u8; 46] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 101, 115, 101, 114, 118, 101, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 99, 97, 110, 110, 111, 116, 32, 114, 101, 115, 101, 114, 118, 101, 32];
+pub const LINUX_T_BODEN : [u8; 55] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 101, 115, 101, 114, 118, 101, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 99, 97, 110, 110, 111, 116, 32, 99, 111, 109, 109, 105, 116, 32, 116, 104, 101, 32, 102, 108, 111, 111, 114, 32];
+pub const LINUX_T_UEBER_MAX : [u8; 45] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 103, 114, 111, 119, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 112, 97, 115, 116, 32, 116, 104, 101, 32, 99, 101, 105, 108, 105, 110, 103, 32];
+pub const LINUX_T_SEITE : [u8; 55] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 117, 110, 116, 105, 109, 101, 58, 32, 116, 104, 101, 32, 112, 97, 103, 101, 32, 115, 105, 122, 101, 32, 105, 115, 32, 110, 111, 116, 32, 97, 110, 115, 119, 101, 114, 97, 98, 108, 101, 32];
+pub const LINUX_T_START : [u8; 39] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 32, 100, 101, 99, 108, 97, 114, 101, 100, 32, 115, 116, 97, 114, 116, 32, 100, 105, 100, 32, 110, 111, 116, 32, 115, 116, 97, 114, 116, 32];
+pub const LINUX_T_WARTE : [u8; 38] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 32, 115, 116, 97, 114, 116, 101, 100, 32, 114, 111, 111, 116, 32, 119, 97, 115, 32, 110, 111, 116, 32, 106, 111, 105, 110, 101, 100, 32];
+pub const LINUX_T_AUF : [u8; 1] = [40];
+pub const LINUX_T_KOMMA : [u8; 2] = [44, 32];
+pub const LINUX_T_ZU : [u8; 2] = [41, 10];
+pub const LINUX_Z0 : [u8; 1] = [48];
+pub const LINUX_Z1 : [u8; 1] = [49];
+pub const LINUX_Z2 : [u8; 1] = [50];
+pub const LINUX_Z3 : [u8; 1] = [51];
+pub const LINUX_Z4 : [u8; 1] = [52];
+pub const LINUX_Z5 : [u8; 1] = [53];
+pub const LINUX_Z6 : [u8; 1] = [54];
+pub const LINUX_Z7 : [u8; 1] = [55];
+pub const LINUX_Z8 : [u8; 1] = [56];
+pub const LINUX_Z9 : [u8; 1] = [57];
 
-extern fn gabbro_os_ende(code : u32)
-    effects { pure } costs <= 4096 ops;
+fn linux_os_ziffer(d : u64 in 0 .. 9)
+    effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 200 ops
+{
+    if d == 0 {
+        let n = linux_os_write(2, LINUX_Z0, 1) else (e) { return; }
+    } else if d == 1 {
+        let n = linux_os_write(2, LINUX_Z1, 1) else (e) { return; }
+    } else if d == 2 {
+        let n = linux_os_write(2, LINUX_Z2, 1) else (e) { return; }
+    } else if d == 3 {
+        let n = linux_os_write(2, LINUX_Z3, 1) else (e) { return; }
+    } else if d == 4 {
+        let n = linux_os_write(2, LINUX_Z4, 1) else (e) { return; }
+    } else if d == 5 {
+        let n = linux_os_write(2, LINUX_Z5, 1) else (e) { return; }
+    } else if d == 6 {
+        let n = linux_os_write(2, LINUX_Z6, 1) else (e) { return; }
+    } else if d == 7 {
+        let n = linux_os_write(2, LINUX_Z7, 1) else (e) { return; }
+    } else if d == 8 {
+        let n = linux_os_write(2, LINUX_Z8, 1) else (e) { return; }
+    } else if d == 9 {
+        let n = linux_os_write(2, LINUX_Z9, 1) else (e) { return; }
+    }
+}
+
+-- The decimal digits of `v`, most significant first, no leading zeros.
+fn linux_os_zahl(v : u64)
+    effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 8000 ops
+{
+    let mut stelle : u64 = 10000000000000000000;
+    let mut begonnen : bool = false;
+    retry stellen until stelle == 0
+        bounded 6000 ops
+        on_exceeded gabbro_os_haengt
+        effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    {
+        narrow stelle to 1 .. 10000000000000000000 else { return; }
+        let d = (v / stelle) % 10;
+        if d != 0 || begonnen || stelle == 1 {
+            linux_os_ziffer(d);
+            begonnen = true;
+        }
+        stelle = stelle / 10;
+    }
+}
+
+pub fn gabbro_os_melden(code : u32, a : u64, b : u64)
+    effects { reads LINUX_T_KOPF, reads LINUX_T_DESKRIPTOR, reads LINUX_T_SPANNE, reads LINUX_T_RESERVE, reads LINUX_T_BODEN, reads LINUX_T_UEBER_MAX, reads LINUX_T_SEITE, reads LINUX_T_START, reads LINUX_T_WARTE, reads LINUX_T_AUF, reads LINUX_T_KOMMA, reads LINUX_T_ZU, reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 20000 ops
+{
+    if code == 1 {
+        let n1 = linux_os_write(2, LINUX_T_DESKRIPTOR, 46) else (e) { return; }
+    } else if code == 2 {
+        let n2 = linux_os_write(2, LINUX_T_SPANNE, 50) else (e) { return; }
+    } else if code == 3 {
+        let n3 = linux_os_write(2, LINUX_T_RESERVE, 46) else (e) { return; }
+    } else if code == 4 {
+        let n4 = linux_os_write(2, LINUX_T_BODEN, 55) else (e) { return; }
+    } else if code == 5 {
+        let n5 = linux_os_write(2, LINUX_T_UEBER_MAX, 45) else (e) { return; }
+    } else if code == 6 {
+        let n6 = linux_os_write(2, LINUX_T_SEITE, 55) else (e) { return; }
+    } else if code == 7 {
+        let n7 = linux_os_write(2, LINUX_T_START, 39) else (e) { return; }
+    } else if code == 8 {
+        let n8 = linux_os_write(2, LINUX_T_WARTE, 38) else (e) { return; }
+    } else {
+        let n9 = linux_os_write(2, LINUX_T_KOPF, 23) else (e) { return; }
+    }
+    let n10 = linux_os_write(2, LINUX_T_AUF, 1) else (e) { return; }
+    linux_os_zahl(a);
+    let n11 = linux_os_write(2, LINUX_T_KOMMA, 2) else (e) { return; }
+    linux_os_zahl(b);
+    let n12 = linux_os_write(2, LINUX_T_ZU, 2) else (e) { return; }
+}
+
+-- `gabbro_os_ende` NEVER RETURNS, and since 2026-09-30 Gabbro says so: it is a
+-- `-> never` function over the `exit_group` gate.
+pub fn gabbro_os_ende(code : u32) -> never
+    effects { diverges }
+    costs <= 16 ops
+{
+    linux_os_exit_group(code);
+}
+
+-- The stop of a bounded loop that ran past its bound -- which the bound's own
+-- check says cannot happen; `abort()`'s status, without `abort()`.
+fn gabbro_os_haengt() -> never
+    effects { diverges }
+    costs <= 16 ops
+{
+    linux_os_exit_group(134);
+}
 
 -- -- the bounded heap's storage ----------------------------------------------
 --
--- `reserve` answers the base of `bytes` of reserved-but-not-committed address
--- space or 0; `commit` makes a page-aligned range of it readable and writable
--- and answers 0 on success; `seitengroesse` is the granularity the runtime
--- rounds to. A bounded heap needs no more than these three from an operating
--- system: the ceiling, the committed prefix and refuse-on-full are the
--- runtime's arithmetic (`laufzeit/arena_dyn.c`), and the binding never decides
--- where a page begins.
-extern fn gabbro_os_reserve(bytes : u64) -> u64
-    effects { pure } costs <= 100000 ops;
+-- `reserve` answers a REGION of `bytes` of reserved-but-not-committed address
+-- space (`PROT_NONE`), and never 0: a refused reservation ends the process here,
+-- because at load no program runs that could take an `else`. `commit` makes the
+-- `bytes` from `stelle` on readable and writable and answers 0 on success.
+-- `seitengroesse` is the granularity the runtime rounds to -- x86_64 Linux's
+-- base page, a fact about this binding's target. The ceiling, the committed
+-- prefix and refuse-on-full are the runtime's arithmetic (the generated arena
+-- runtime, template `arena.dyn`), and the binding never decides where a page
+-- begins.
+pub fn gabbro_os_reserve(bytes : u64) -> ptr<normal, rw> u8
+    effects { diverges, reads LINUX_T_KOPF, reads LINUX_T_DESKRIPTOR, reads LINUX_T_SPANNE, reads LINUX_T_RESERVE, reads LINUX_T_BODEN, reads LINUX_T_UEBER_MAX, reads LINUX_T_SEITE, reads LINUX_T_START, reads LINUX_T_WARTE, reads LINUX_T_AUF, reads LINUX_T_KOMMA, reads LINUX_T_ZU, reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 200000 ops
+{
+    let r = linux_os_mmap(0, bytes, 0, 34, 18446744073709551615, 0) else (e) {
+        gabbro_os_melden(3, bytes, 0);
+        gabbro_os_ende(3);
+    }
+    return r;
+}
 
-extern fn gabbro_os_commit(basis : u64, versatz : u64, bytes : u64) -> u32
-    effects { pure } costs <= 100000 ops;
+pub fn gabbro_os_commit(stelle : ptr<normal, rw> u8, bytes : u64) -> u32
+    requires bytes <= lenof(stelle)
+    effects { pure }
+    costs <= 100016 ops
+{
+    let x = linux_os_mprotect(stelle, bytes, 3) else (e) { return 1; }
+    return 0;
+}
 
-extern fn gabbro_os_seitengroesse() -> u64
-    effects { pure } costs <= 4096 ops;
+pub fn gabbro_os_seitengroesse() -> u64
+    effects { pure }
+    costs <= 4 ops
+{
+    return 4096;
+}
 
 -- `leeren` is the way back (M-ALLTAG C): the bytes at `addr` read as zero
 -- afterwards and the whole pages inside them went back to the system; answers

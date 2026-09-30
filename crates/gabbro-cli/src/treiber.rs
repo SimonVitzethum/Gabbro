@@ -100,7 +100,7 @@ pub struct MetallZusatz {
 /// with unchanged sources would otherwise leave a stale driver behind a
 /// valid record. Bump this on every template change; `bau.rs` mixes it into
 /// the fingerprint of every unit that owns a driver.
-pub const GENERATOR_KENNUNG: &str = "treiber-gen-6";
+pub const GENERATOR_KENNUNG: &str = "treiber-gen-7";
 
 /// **The unit's dynamic arenas, reserved before the first root runs** (server lane,
 /// 2026-09-28, TODO section 0e K8).
@@ -145,6 +145,101 @@ fn arenen_reservieren(aus: &mut String) {
          #endif\n",
     );
 }
+
+/// **The hosted runtime of a dynamic arena, written by the generator** (C-free lane,
+/// 2026-09-30; the template `arena.dyn`).
+///
+/// Until this text, `laufzeit/arena_dyn.c` was handwritten C that reserved the address range
+/// of every arena's ceiling at load and made the committed prefix writable at every `grow`,
+/// handing the binding its addresses as NUMBERS. Now the generator writes it, and the binding
+/// answers and takes REGIONS: `gabbro_os_reserve` is a Gabbro function over a region gate
+/// (`tor.region`) that never answers 0 -- a refused reservation ends the process inside it,
+/// since at load no program runs that could take an `else` -- and `gabbro_os_commit` takes the
+/// region's page and its length under `requires bytes <= lenof(stelle)`.
+///
+/// **Every line of arithmetic here is the template's, and it is proved**
+/// (`grammatik/Grammatik/SchablonenArena.lean`): the span covers every slot and is whole pages
+/// with no 64-bit wrap (`arena_spanne_passt`, for a page of at most `2^32` -- any other page
+/// answer fail-stops below), and the range a `grow` commits covers the new slots, lies on
+/// pages and inside the span (`arena_commit_bereich`), so the binding's `requires` holds at
+/// the one call the template makes. The descriptor is the emitted unit's
+/// (`ARENA_DYN_PRELUDE` in `emit.rs`), which is why this text stands AFTER the unit's
+/// `#include`. No operating system is named: the three names it calls are the program's.
+pub const ARENA_LAUFZEIT: &str = "\
+/* -- The runtime of the unit's dynamic arenas (template `arena.dyn`, proved in\n\
+ *    grammatik/Grammatik/SchablonenArena.lean). Generated; the binding is the program's. */\n\
+#ifndef GABBRO_OS_M_DESKRIPTOR\n\
+#define GABBRO_OS_M_DESKRIPTOR 1u\n\
+#define GABBRO_OS_M_BODEN      4u\n\
+#define GABBRO_OS_M_UEBER_MAX  5u\n\
+#define GABBRO_OS_M_SEITE      6u\n\
+#define GABBRO_OS_ENDE_ABBRUCH 134u\n\
+#endif\n\
+#define GABBRO_ARENA_EXIT_RESERVE 3u\n\
+void gabbro_os_melden(uint32_t code, uint64_t a, uint64_t b);\n\
+void gabbro_os_ende(uint32_t code);\n\
+uint8_t *gabbro_os_reserve(uint64_t bytes);\n\
+uint32_t gabbro_os_commit(uint8_t *stelle, uint64_t bytes);\n\
+uint64_t gabbro_os_seitengroesse(void);\n\
+\n\
+static uint64_t gabbro_arena_seite(void)\n\
+{\n\
+    uint64_t s = gabbro_os_seitengroesse();\n\
+    if (s == 0u || s > 4294967296u) {\n\
+        gabbro_os_melden(GABBRO_OS_M_SEITE, s, 0u);\n\
+        gabbro_os_ende(GABBRO_OS_ENDE_ABBRUCH);\n\
+    }\n\
+    return s;\n\
+}\n\
+\n\
+void gabbro_arena_reserve(gabbro_arena_desc *d)\n\
+{\n\
+    uint64_t seite, spanne;\n\
+    if (d == 0 || d->base != 0 || d->max == 0u || d->elem == 0u || d->floor_hi > d->max) {\n\
+        gabbro_os_melden(GABBRO_OS_M_DESKRIPTOR, d ? d->max : 0u, d ? d->floor_hi : 0u);\n\
+        gabbro_os_ende(GABBRO_ARENA_EXIT_RESERVE);\n\
+        return;\n\
+    }\n\
+    seite = gabbro_arena_seite();\n\
+    /* `arena_spanne_passt`: every slot, whole pages, no wrap. */\n\
+    spanne = ((uint64_t)d->max * (uint64_t)d->elem + seite - 1u) / seite * seite;\n\
+    d->base = gabbro_os_reserve(spanne);\n\
+    d->used = 0u;\n\
+    d->committed = 0u;\n\
+    if (d->floor_hi > 0u && !gabbro_arena_grow(d, d->floor_hi)) {\n\
+        gabbro_os_melden(GABBRO_OS_M_BODEN, d->floor_hi, 0u);\n\
+        gabbro_os_ende(GABBRO_ARENA_EXIT_RESERVE);\n\
+        return;\n\
+    }\n\
+}\n\
+\n\
+bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n)\n\
+{\n\
+    uint64_t neu, seite, start, ende;\n\
+    if (d == 0 || d->base == 0) {\n\
+        return false;\n\
+    }\n\
+    if (n == 0u) {\n\
+        return true;\n\
+    }\n\
+    neu = (uint64_t)d->committed + (uint64_t)n;\n\
+    if (neu > d->max) {\n\
+        /* Past the ceiling there is no commit, only the stop (`N426` holds it statically). */\n\
+        gabbro_os_melden(GABBRO_OS_M_UEBER_MAX, neu, d->max);\n\
+        gabbro_os_ende(GABBRO_OS_ENDE_ABBRUCH);\n\
+        return false;\n\
+    }\n\
+    seite = gabbro_arena_seite();\n\
+    /* `arena_commit_bereich`: whole pages, covering the new slots, inside the span. */\n\
+    start = (uint64_t)d->committed * (uint64_t)d->elem / seite * seite;\n\
+    ende = (neu * (uint64_t)d->elem + seite - 1u) / seite * seite;\n\
+    if (gabbro_os_commit((uint8_t *)d->base + start, ende - start) != 0u) {\n\
+        /* The platform refused below the ceiling: `committed` unchanged, `else` runs. */\n\
+        return false;\n\
+    }\n\
+    d->committed = (uint32_t)neu;\n\
+    return true;\n\
+}\n";
 
 /// True for `[A-Za-z_][A-Za-z0-9_]*` (ASCII only: a Gabbro name that reaches
 /// C is ASCII; anything else cannot name a C function and is refused before
@@ -249,6 +344,11 @@ pub fn erzeuge(
     aus.push_str("#include \"bindung.h\"\n");
     aus.push_str("\n/* -- The emitted unit -------------------------------------------------- */\n\n");
     aus.push_str("#include EINHEIT_INCLUDE\n");
+    // The arena runtime is the generator's since the C-free lane's second slice (template
+    // `arena.dyn`); a unit without a dynamic arena defines no `GABBRO_ARENEN` and gets none.
+    aus.push_str("\n#ifdef GABBRO_ARENEN\n");
+    aus.push_str(ARENA_LAUFZEIT);
+    aus.push_str("#endif\n");
     aus.push_str("\n/* -- Lock primitives: the emitter declares them, the runtime defines them.\n");
     aus.push_str(" *\n * WHY HERE. A lock is a runtime object (a mutex on hosted POSIX, the ticket\n");
     aus.push_str(" * lock of NICHTINTERFERENZ.md section 10 on bare metal), never program\n");
@@ -947,7 +1047,7 @@ mod treiber_tests {
                 c.contains("gabbro_arena_reserve(arenen[a]);"),
                 "the {welcher} driver reserves every arena of the list:\n{c}"
             );
-            let reserve = c.find("gabbro_arena_reserve").expect("the call stands");
+            let reserve = c.find("gabbro_arena_reserve(arenen[a]);").expect("the call stands");
             let erster_start = c
                 .rfind("int main(void)")
                 .or_else(|| c.rfind("int gabbro_metall_haupt(void)"))
@@ -971,10 +1071,13 @@ mod treiber_tests {
                 })
                 .filter(|z| z.contains("GABBRO_ARENEN"))
                 .count();
+            // The hosted driver guards a third time: the arena runtime it writes (template
+            // `arena.dyn`, C-free lane 2026-09-30) stands only in a driver whose unit has arenas.
+            let soll = if welcher == "hosted" { 3 } else { 2 };
             assert_eq!(
-                im_code, 2,
-                "the {welcher} driver names the list twice in code -- the guard and the \
-                 initialiser -- and carries no copy of it:\n{c}"
+                im_code, soll,
+                "the {welcher} driver names the list in code only as guards and the \
+                 initialiser, and carries no copy of it:\n{c}"
             );
         }
     }

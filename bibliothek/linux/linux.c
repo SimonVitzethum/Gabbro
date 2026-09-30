@@ -56,115 +56,14 @@ extern int madvise(void *addr, size_t length, int advice);
  * against what the program declared in Gabbro. */
 #include "bindung.h"
 
-/* -- the report channel ---------------------------------------------------- */
+/* -- moved to Gabbro (C-free lane, 2026-09-30) ------------------------------ */
 /*
- * One sentence per code. The runtime hands over a number because printing is an
- * OS call; the WORDS are the program's, and this is where they stand. The
- * sentences are the ones `arena_dyn.c` printed itself until K8 -- kept to the
- * letter, so that a corpus reading a fail-stop's text reads the same text.
- *
- * A code this binding does not know is still reported: a silent drop would make
- * a fail-stop look like an ordinary end.
+ * `gabbro_os_melden`, `gabbro_os_ende`, `gabbro_os_reserve`, `gabbro_os_commit` and
+ * `gabbro_os_seitengroesse` are GABBRO functions in `linux.gab` now, over raw system-call
+ * gates (`mmap`, `mprotect`, `write`, `exit_group`) -- no glibc, and checked like any user
+ * code. What stays below is what still waits for its Gabbro form: the page return, the
+ * locks and the threads.
  */
-void gabbro_os_melden(uint32_t code, uint64_t a, uint64_t b)
-{
-    switch (code) {
-    case GABBRO_OS_M_DESKRIPTOR:
-        fprintf(stderr,
-                "gabbro: arena reserve refused: bad descriptor "
-                "(max=%llu floor=%llu)\n",
-                (unsigned long long)a, (unsigned long long)b);
-        break;
-    case GABBRO_OS_M_SPANNE:
-        fprintf(stderr,
-                "gabbro: arena reserve refused: max=%llu elem=%llu "
-                "overflows size_t\n",
-                (unsigned long long)a, (unsigned long long)b);
-        break;
-    case GABBRO_OS_M_RESERVE:
-        fprintf(stderr,
-                "gabbro: arena reserve refused: cannot reserve %llu slots "
-                "(%llu bytes)\n",
-                (unsigned long long)a, (unsigned long long)b);
-        break;
-    case GABBRO_OS_M_BODEN:
-        fprintf(stderr,
-                "gabbro: arena reserve refused: cannot commit floor %llu\n",
-                (unsigned long long)a);
-        break;
-    case GABBRO_OS_M_UEBER_MAX:
-        fprintf(stderr,
-                "gabbro: arena grow refused: %llu committed past max %llu\n",
-                (unsigned long long)a, (unsigned long long)b);
-        break;
-    case GABBRO_OS_M_SEITE:
-        fprintf(stderr,
-                "gabbro: arena runtime: the page size is not answerable (%llu)\n",
-                (unsigned long long)a);
-        break;
-    case GABBRO_OS_M_START:
-        fprintf(stderr,
-                "gabbro: declared start %llu did not start (error %llu)\n",
-                (unsigned long long)a, (unsigned long long)b);
-        break;
-    case GABBRO_OS_M_WARTE:
-        fprintf(stderr,
-                "gabbro: declared start %llu was not joined (error %llu)\n",
-                (unsigned long long)a, (unsigned long long)b);
-        break;
-    default:
-        fprintf(stderr, "gabbro: runtime fail-stop, code %u (%llu, %llu)\n",
-                (unsigned)code, (unsigned long long)a, (unsigned long long)b);
-        break;
-    }
-}
-
-/*
- * **This never returns**, and the declaration in `linux.gab` cannot say so --
- * the runtime therefore writes a fail-closed line behind every call site
- * (`laufzeit/bindung.h`). `GABBRO_OS_ENDE_ABBRUCH` is where the runtime called
- * `abort()`: `_exit` with the status a shell reports for `SIGABRT` keeps the
- * number a corpus reads and drops the core dump, which is noise in a test run
- * and not a diagnosis anybody used.
- */
-void gabbro_os_ende(uint32_t code)
-{
-    fflush(NULL);
-    _exit((int)code);
-}
-
-/* -- the bounded heap's storage -------------------------------------------- */
-
-uint64_t gabbro_os_reserve(uint64_t bytes)
-{
-    void *base;
-
-    if (bytes == 0 || (uint64_t)(size_t)bytes != bytes) {
-        return 0;
-    }
-    base = mmap(NULL, (size_t)bytes, PROT_NONE,
-                MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (base == MAP_FAILED) {
-        return 0;
-    }
-    return (uint64_t)(uintptr_t)base;
-}
-
-uint32_t gabbro_os_commit(uint64_t basis, uint64_t versatz, uint64_t bytes)
-{
-    if (basis == 0 || bytes == 0) {
-        return 1;
-    }
-    if (mprotect((void *)(uintptr_t)(basis + versatz), (size_t)bytes,
-                 PROT_READ | PROT_WRITE) != 0) {
-        /* The platform refused the commit below the ceiling. The runtime
-         * leaves `committed` where it was and the program takes the `else` it
-         * wrote beside its `grow`; see `arena_dyn.c` for when this branch is
-         * reachable at all (strict overcommit accounting, and there alone). */
-        return 1;
-    }
-    return 0;
-}
 
 uint32_t gabbro_os_leeren(uint64_t addr, uint64_t bytes)
 {
@@ -195,14 +94,6 @@ uint32_t gabbro_os_leeren(uint64_t addr, uint64_t bytes)
     return 0;
 }
 
-uint64_t gabbro_os_seitengroesse(void)
-{
-    long s = sysconf(_SC_PAGESIZE);
-
-    /* 0 is the refusal, and the runtime fail-stops on it rather than guessing:
-     * a wrong granularity would make every commit a partial one. */
-    return s > 0 ? (uint64_t)s : 0;
-}
 
 /* -- the generated driver's locks ------------------------------------------ */
 /*
@@ -242,7 +133,10 @@ static pthread_mutex_t *sperre(uint64_t s)
 static void sperre_stop(const char *was, int rc)
 {
     fprintf(stderr, "gabbro: %s: %d\n", was, rc);
-    gabbro_os_ende(GABBRO_OS_ENDE_ABBRUCH);
+    /* `_exit` and not `gabbro_os_ende`: that one is GABBRO now (`linux.gab`), and this C rest
+     * stays a translation unit of its own until it is gone (C-free lane, 2026-09-30). */
+    fflush(NULL);
+    _exit((int)GABBRO_OS_ENDE_ABBRUCH);
 }
 
 void gabbro_os_sperre_init(uint64_t s)

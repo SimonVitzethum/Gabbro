@@ -4397,7 +4397,7 @@ pub const PHASEN: &[Satz] = &[
         gemessen_an: "beispiele/gift: probes `850`/`851`/`852`/`853`/`854` on \
                       `C180`/`C181`/`C182`/`C183`/`C184`, and `1383` on `C186` -- each \
                       checker-clean, each refused by exactly its code; beispiele/183 runs a \
-                      region answer (`mmap`, a store through it, `write`); beispiele/74 runs the value path \
+                      region answer (a page from the kernel, a store through it, `write`); beispiele/74 runs the value path \
                       (a `write(1, \"ok\\n\", 3)` returns 3), beispiele/90 the `EBADF` path.",
         fundstelle: "crates/gabbro-check/src/emit.rs (`syscall_stumpf`); \
                      dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Erhaltung.lean",

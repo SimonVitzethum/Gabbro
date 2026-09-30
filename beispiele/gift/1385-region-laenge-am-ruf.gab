@@ -17,9 +17,9 @@ pub reason SchreibFehler {
     exhaustive
 }
 
-assume linux_mmap
-    "The Linux x86_64 `mmap` with `fd` = -1 and flags MAP_PRIVATE | MAP_ANONYMOUS answers the base of at least `len` fresh bytes, readable and writable, reading as zero and shared with no other mapping, or -errno; it destroys only rcx and r11."
-    falsifier sonde_mmap;
+assume linux_seiten_holen
+    "The Linux x86_64 anonymous-mapping call (number 9) with `fd` = -1 and the flags private and anonymous (34) answers the base of at least `len` fresh bytes, readable and writable, reading as zero and shared with no other mapping, or -errno; it destroys only rcx and r11."
+    falsifier sonde_seiten_holen;
 
 assume linux_write
     "The Linux x86_64 `write` reads exactly `len` bytes from `buf`, answers the count written or -errno, and destroys only rcx and r11."
@@ -29,7 +29,7 @@ assume linux_exit_group
     "The Linux x86_64 `exit_group` ends every thread of the process with status `code & 255` and never returns to its caller."
     falsifier sonde_exit_group;
 
-syscall mmap(addr : u64, len : u64, prot : u64, flags : u64, fd : u64, off : u64) -> ptr<normal, rw> u8 or MapFehler
+syscall seiten_holen(addr : u64, len : u64, prot : u64, flags : u64, fd : u64, off : u64) -> ptr<normal, rw> u8 or MapFehler
     abi linux arch x86_64 number 9
     regs in { rdi = addr, rsi = len, rdx = prot, r10 = flags, r8 = fd, r9 = off }
     regs out { rax }
@@ -38,7 +38,7 @@ syscall mmap(addr : u64, len : u64, prot : u64, flags : u64, fd : u64, off : u64
     ensures len <= lenof(result)
     effects { pure }
     costs <= 8 ops
-    assume linux_mmap falsifier sonde_mmap;
+    assume linux_seiten_holen falsifier sonde_seiten_holen;
 
 syscall write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or SchreibFehler
     abi linux arch x86_64 number 1
@@ -70,7 +70,7 @@ pub fn main() -> never
     effects { diverges }
     costs   <= 400 ops
 {
-    let seite = mmap(0, SEITE, LESEN_SCHREIBEN, PRIVAT_ANONYM, KEINE_DATEI, 0) else (e) {
+    let seite = seiten_holen(0, SEITE, LESEN_SCHREIBEN, PRIVAT_ANONYM, KEINE_DATEI, 0) else (e) {
         exit_group(2);
     }
     seite[0] = 79;       -- O

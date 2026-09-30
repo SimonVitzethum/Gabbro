@@ -45,6 +45,7 @@ const PAARE: &[(&str, &str)] = &[
     ("certificate", "zeugnis"),
     ("ceremony", "zeremonie"),
     ("templates", "schablonen"),
+    ("runtime", "laufzeit"),
     ("passes", "paesse"),
     ("counterexample", "gegenbeispiel"),
     ("link", "verbinde"),
