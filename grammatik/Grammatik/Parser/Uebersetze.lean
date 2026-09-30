@@ -299,6 +299,116 @@ def uTypName (aliase : List (String × (Int × Int))) (a : String) : Except Stri
     | .some (_, r) => .ok r
     | .none => .error e
 
+/-! ## Compile-time constants
+
+    `const N : T = e;` where `e` is an expression over literals, earlier constants, `+ - * / % & | ^ << >>`,
+    a limit word `T::max`/`T::min` and calls of `const fn`s (a single trailing `return e`). The value is
+    computed in EXACT integers and travels as a number, like every constant (`tr_typed`). Because the
+    emitted C evaluates the same expression in the declared type, EVERY intermediate value must lie in the
+    range of that type -- an overflow is the checker's `M104`, and the elaborator refuses instead of
+    guessing a wrap. Anything else (an array constant, a call of a non-const function, a value outside
+    its type) makes the constant UNKNOWN: a use of it is then an error ("Name unbekannt"). -/
+
+/-- A `const fn` for the evaluator: parameter names with their ranges, the result range and the
+    returned expression. -/
+structure UKonstFn where
+  name : String
+  params : List (String × (Int × Int))
+  erg : Int × Int
+  rumpf : SExpr
+
+/-- The range of a declared parameter/result type of a `const fn`: a builtin word or a literal range. -/
+def uKonstBereich : STyp → Option (Int × Int)
+  | .atom a => (uTypName [] a).toOption
+  | .bereich _ (.lit lo) (.lit hi) false => some (Int.ofNat lo, Int.ofNat hi)
+  | _ => none
+
+/-- The `const fn`s of a unit that the evaluator can run. -/
+def uKonstFns : List SItemTief → List UKonstFn
+  | [] => []
+  | .funktionT { art := "const", name, params, ergebnis := some r, fehler := .none, klauseln := _ }
+      (.block [] (.some (.ret (.some e)))) :: rest =>
+    match uKonstBereich r, params.mapM (fun (n, ty) => (uKonstBereich ty).map (fun b => (n, b))) with
+    | some rb, some ps => { name, params := ps, erg := rb, rumpf := e } :: uKonstFns rest
+    | _, _ => uKonstFns rest
+  | _ :: rest => uKonstFns rest
+
+/-- The values of a call bound to the parameters, each inside its parameter's range. -/
+def uKonstBinde : List (String × (Int × Int)) → List Int → Option (List (String × Int))
+  | [], [] => some []
+  | (n, (pl, ph)) :: ps, v :: vs =>
+    if pl ≤ v ∧ v ≤ ph then (uKonstBinde ps vs).map (fun r => (n, v) :: r) else none
+  | _, _ => none
+
+/-- The constant value of an expression, or `none`: every value stays in `lo .. hi`. Structural in the
+    FUEL (so that the kernel can run it: a well-founded definition here made every probe run away). -/
+def uKonstWert (lo hi : Int) (fns : List UKonstFn) (env : List (String × Int)) :
+    Nat → SExpr → Option Int
+  | 0, _ => none
+  | f + 1, e =>
+    let ok : Int → Option Int := fun v => if lo ≤ v ∧ v ≤ hi then some v else none
+    match e with
+    | .lit n => ok (Int.ofNat n)
+    | .variable x =>
+      match env.find? (fun q => strEq q.1 x) with
+      | some q => ok q.2
+      | none => none
+    | .feld (.variable ty) m =>
+      match uTypName [] ty with
+      | .ok (l, h) =>
+        if strEq m "max" then ok h else if strEq m "min" then ok l else none
+      | .error _ => none
+    | .bin op a b =>
+      match uKonstWert lo hi fns env f a, uKonstWert lo hi fns env f b with
+      | some x, some y =>
+        if strEq op "+" then ok (x + y)
+        else if strEq op "-" then ok (x - y)
+        else if strEq op "*" then ok (x * y)
+        else if strEq op "/" then (if 0 < y then ok (x / y) else none)
+        else if strEq op "%" then (if 0 < y then ok (x % y) else none)
+        else if strEq op "&" then
+          (if 0 ≤ x ∧ 0 ≤ y then ok (Int.ofNat (x.toNat &&& y.toNat)) else none)
+        else if strEq op "|" then
+          (if 0 ≤ x ∧ 0 ≤ y then ok (Int.ofNat (x.toNat ||| y.toNat)) else none)
+        else if strEq op "^" then
+          (if 0 ≤ x ∧ 0 ≤ y then ok (Int.ofNat (x.toNat ^^^ y.toNat)) else none)
+        else if strEq op "<<" then
+          (if 0 ≤ x ∧ 0 ≤ y ∧ y < 64 then ok (x * 2 ^ y.toNat) else none)
+        else if strEq op ">>" then
+          (if 0 ≤ x ∧ 0 ≤ y ∧ y < 64 then ok (x / 2 ^ y.toNat) else none)
+        else none
+      | _, _ => none
+    | .ruf g args =>
+      match fns.find? (fun k => strEq k.name g) with
+      | none => none
+      | some k =>
+        match args.mapM (fun a => uKonstWert lo hi fns env f a) with
+        | none => none
+        | some vals =>
+          match uKonstBinde k.params vals with
+          | none => none
+          | some binds =>
+            match uKonstWert k.erg.1 k.erg.2 fns binds f k.rumpf with
+            | some v => ok v
+            | none => none
+    | _ => none
+
+/-- The constant scope of a unit: in source order, each constant may use the ones before it. A literal
+    keeps the old rule (any declared type); any other expression needs a builtin-word type and the
+    evaluator above. -/
+def uConstsRech (fns : List UKonstFn) : List SItemTief → List (String × Int) → List (String × Int)
+  | [], acc => acc
+  | .konstT n _ (.einzeln (.lit v)) :: rest, acc =>
+    uConstsRech fns rest (acc ++ [(n, Int.ofNat v)])
+  | .konstT n (.atom w) (.einzeln e) :: rest, acc =>
+    match uTypName [] w with
+    | .ok (lo, hi) =>
+      match uKonstWert lo hi fns acc 64 e with
+      | some v => uConstsRech fns rest (acc ++ [(n, v)])
+      | none => uConstsRech fns rest acc
+    | .error _ => uConstsRech fns rest acc
+  | _ :: rest, acc => uConstsRech fns rest acc
+
 /-- A table by name: its number (position, what `ptr` names)
     and its slot count (what `index` names). -/
 def uTabNrAux : List UTab → Nat → String → Except String (Nat × Int)
@@ -1150,7 +1260,7 @@ def uRestFehler : List SItemTief → Except String Unit
 def elabU : List SItemTief → Except String UProg
   | items =>
     let ms := uMembers items
-    let consts := uConsts ms
+    let consts := uConstsRech (uKonstFns ms) ms []
     let aliase := uAliase ms
     match uRestFehler ms with
     | .error e => .error e
@@ -1166,7 +1276,7 @@ def elabU : List SItemTief → Except String UProg
         | .error e => .error e
         | .ok locks =>
           let fnItems := ms.filterMap (fun
-            | .funktionT sig koerper => some (sig, koerper)
+            | .funktionT sig koerper => if strEq sig.art "const" then none else some (sig, koerper)
             | _ => none)
           match uSeq (fnItems.map (fun (s, _) =>
             elabKopf consts aliase tabs locks s)) with

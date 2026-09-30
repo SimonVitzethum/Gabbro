@@ -210,6 +210,34 @@ def bnot_vorzeichen : String :=
 theorem bnot_vorzeichen_refused :
     stufe bnot_vorzeichen = "elab: Komplement ohne bekannte Breite ohne G-Form" := by decide +kernel
 
+/-! ## Wall 5: compile-time constants -- expressions and `const fn` calls -/
+
+/-- WITNESS (`beispiele/93`, shortened): a constant computed from earlier constants with `+ - * ^ >>`. -/
+def konst_ausdruck : String :=
+  "module m { const A : u32 = 6 * 7; const B : u32 = A + 2 * (A ^ 3) - (A >> 1); impl fn f() -> u32 { return B; } }"
+theorem konst_ausdruck_ok : stufe konst_ausdruck = "OK" := by decide +kernel
+
+/-- WITNESS: a constant computed by a `const fn` call (arguments checked against the parameter's range). -/
+def konst_fn : String :=
+  "module m { const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 { return n + n; } const C : u32 = doppelt(21); impl fn f() -> u32 { return C; } }"
+theorem konst_fn_ok : stufe konst_fn = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: an intermediate value outside the declared type (`200 + 100` in a `u8`): the emitted C
+    would wrap, the exact value would not -- the constant is UNKNOWN, so its use is refused. -/
+def konst_ueberlauf : String :=
+  "module m { const X : u8 = 200 + 100; impl fn f() -> u8 { return X; } }"
+theorem konst_ueberlauf_refused : stufe konst_ueberlauf = "elab: Name unbekannt: X" := by decide +kernel
+
+/-- PLANTED DEFECT: a negative intermediate in an unsigned constant. -/
+def konst_negativ : String :=
+  "module m { const Y : u32 = 3 - 5; impl fn f() -> u32 { return Y; } }"
+theorem konst_negativ_refused : stufe konst_negativ = "elab: Name unbekannt: Y" := by decide +kernel
+
+/-- PLANTED DEFECT: an argument outside the `const fn` parameter's range. -/
+def konst_argument : String :=
+  "module m { const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 { return n + n; } const C : u32 = doppelt(2000); impl fn f() -> u32 { return C; } }"
+theorem konst_argument_refused : stufe konst_argument = "elab: Name unbekannt: C" := by decide +kernel
+
 #print axioms add1_ok
 #print axioms schreibt1_refused
 
