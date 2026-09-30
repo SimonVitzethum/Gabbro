@@ -136,6 +136,15 @@ README §5 says exactly this; keep it that way.
   source rather than trusted from a Rust print. Per-program Lean files are witnesses only, off
   the trust path. Known violation to remove: `corrlean.rs`'s `Cert104` section (rows only for
   functions named `einzahlen`/`lies`).
+- **No handwritten C in a finished Gabbro binary, as far as possible** (Simon, 2026-09-30).
+  Runtimes (`laufzeit/`), binding libraries (`bibliothek/`) and program support code are
+  written in Gabbro; OS access goes through Gabbro `syscall` items (raw system calls, no libc
+  wrapper), hardware access through Gabbro's register/port forms. Handwritten C or assembly
+  stays only where Gabbro cannot express the thing (e.g. a process or thread entry before any
+  stack exists), each such piece with its written reason, booked as a wall, and counted. The C
+  that the emitter WRITES from Gabbro is not meant by this rule. Measured 2026-09-30: ~5,100
+  lines of handwritten C/asm/headers in `laufzeit/` + `bibliothek/`, plus 117 in the network
+  stack. New handwritten C needs a reason why Gabbro cannot do it.
 - **Floats are in scope** (IEEE model done). Probabilistic statements are OUT of scope for now.
   **Dynamic data structures are IN scope** (Simon, 2026-09-28): structures that grow without a
   static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).

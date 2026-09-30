@@ -267,6 +267,15 @@ generated driver, lock through the chain). Reviewers from 321.
 
 # 0b. The standard library, native in Gabbro  ⟨A⟩
 
+- [ ] **Handwritten C out of every Gabbro binary, as far as possible** (Simon, 2026-09-30).
+  Measured 2026-09-30: `laufzeit/` + `bibliothek/` carry ~5,100 lines of handwritten C, asm and
+  headers (largest: `metall/kern.c` 997, `bibliothek/linux/linux.c` 536, `metall/start.S` 427,
+  `metall/metall.h` 372, `kmodul/kmodul.c` 267, `bibliothek/linux-kmod/linux-kmod.c` 265), and the
+  hosted binaries link glibc. Target: runtimes and binding libraries in Gabbro, OS access by
+  raw `syscall` items (no libc; a freestanding hosted Linux target), what remains in C/asm listed
+  with its reason (a wall per piece). Instrument first: count handwritten C/asm linked into each
+  built binary per target (from the build's file list), so every step is measured.
+
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics
 and windows — is to be written in Gabbro itself**, not as `extern` with a named assumption. The
 plan is `dokumente/PLAN-STDLIB.md`; what stands here is the work.*
