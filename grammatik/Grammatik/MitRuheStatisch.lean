@@ -200,6 +200,8 @@ theorem ruB_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
         ((orteP_vorΛ _ _ _).trans (ruB_orteP P rest))
   | _, _, _, _, .bindAxiom _ args _ _ _ _ _ rest =>
       kongr₂ (· ++ ·) (ruA_orte args) (ruB_orteP P rest)
+  | _, _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruA_orte args) (ruEnd_orteP P err)) (ruB_orteP P rest)
   | _, _, _, _, .regLies _ _ rest => ruB_orteP P rest
   | _, _, _, _, .regLiesElse _ _ zusage sonst rest =>
       kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruE_orte zusage) (ruEnd_orteP P sonst))
@@ -229,6 +231,8 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .bind e rest => kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P rest)
   | _, _, _, .bindAxiom _ args _ _ _ _ _ rest =>
       kongr₂ (· ++ ·) (ruA_orte args) (ruEnd_orteP P rest)
+  | _, _, _, .bindAxiomElse _ args _ _ _ _ _ _ err rest =>
+      kongr₂ (· ++ ·) (kongr₂ (· ++ ·) (ruA_orte args) (ruEnd_orteP P err)) (ruEnd_orteP P rest)
 
 theorem ruArms_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -292,6 +296,7 @@ theorem ruB_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res
       kongr₂ (· ++ ·) ((regs_umΛ _ _).trans (ruEnd_regs err))
         ((regs_vorΛ _ _).trans (ruB_regs rest))
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruB_regs rest
+  | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kongr₂ (· ++ ·) (ruEnd_regs err) (ruB_regs rest)
   | _, _, _, _, .regLies r _ rest => congrArg (r :: ·) (ruB_regs rest)
   | _, _, _, _, .regLiesElse r _ _ sonst rest =>
       congrArg (r :: ·) (kongr₂ (· ++ ·) (ruEnd_regs sonst) (ruB_regs rest))
@@ -314,6 +319,7 @@ theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_regs s) (ruEnd_regs rest)
   | _, _, _, .bind _ rest => ruEnd_regs rest
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_regs rest
+  | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => kongr₂ (· ++ ·) (ruEnd_regs err) (ruEnd_regs rest)
 
 theorem ruArms_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -381,6 +387,8 @@ theorem ruB_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {
       kongr₂ (· && ·) ((gOk_umΛ _ _ _ _).trans (ruEnd_gOk K Rg err))
         ((gOk_vorΛ _ _ _ _).trans (ruB_gOk K Rg rest))
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruB_gOk K Rg rest
+  | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
+      kongr₂ (· && ·) (ruEnd_gOk K Rg err) (ruB_gOk K Rg rest)
   | _, _, _, _, .regLies r _ rest => congrArg (Rg r && ·) (ruB_gOk K Rg rest)
   | _, _, _, _, .regLiesElse r _ _ sonst rest =>
       congrArg (Rg r && ·) (kongr₂ (· && ·) (ruEnd_gOk K Rg sonst) (ruB_gOk K Rg rest))
@@ -405,6 +413,8 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
   | _, _, _, .cons s rest => kongr₂ (· && ·) (ruS_gOk K Rg s) (ruEnd_gOk K Rg rest)
   | _, _, _, .bind _ rest => ruEnd_gOk K Rg rest
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_gOk K Rg rest
+  | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
+      kongr₂ (· && ·) (ruEnd_gOk K Rg err) (ruEnd_gOk K Rg rest)
 
 theorem ruArms_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
@@ -475,6 +485,8 @@ theorem ruB_mB (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ct
       kongr₂ (fun x y => A.ruf (some g) && x && y) ((mE_umΛ _ _ _).trans (ruEnd_mE A err))
         ((mB_vorΛ _ _ _).trans (ruB_mB A rest))
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruB_mB A rest
+  | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
+      kongr₂ (· && ·) (ruEnd_mE A err) (ruB_mB A rest)
   | _, _, _, _, .regLies _ _ rest => ruB_mB A rest
   | _, _, _, _, .regLiesElse _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_mE A sonst) (ruB_mB A rest)
@@ -497,6 +509,8 @@ theorem ruEnd_mE (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : 
   | _, _, _, .cons s rest => kongr₂ (· && ·) (ruS_mS A s) (ruEnd_mE A rest)
   | _, _, _, .bind _ rest => ruEnd_mE A rest
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_mE A rest
+  | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest =>
+      kongr₂ (· && ·) (ruEnd_mE A err) (ruEnd_mE A rest)
 
 theorem ruArms_mArms (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -576,6 +590,9 @@ theorem mB_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
       simp only [mB, Bool.and_eq_true] at h ⊢
       exact ⟨⟨hle.1 g h.1.1, mE_mono hle err h.1.2⟩, mB_mono hle rest h.2⟩
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h => mB_mono hle rest h
+  | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
+      simp only [mB, Bool.and_eq_true] at h ⊢
+      exact ⟨mE_mono hle err h.1, mB_mono hle rest h.2⟩
   | _, _, _, _, .regLies _ _ rest, h => mB_mono hle rest h
   | _, _, _, _, .regLiesElse _ _ _ sonst rest, h => by
       simp only [mB, Bool.and_eq_true] at h ⊢; exact ⟨mE_mono hle sonst h.1, mB_mono hle rest h.2⟩
@@ -601,6 +618,9 @@ theorem mE_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
       simp only [mE, Bool.and_eq_true] at h ⊢; exact ⟨mS_mono hle s h.1, mE_mono hle rest h.2⟩
   | _, _, _, .bind _ rest, h => mE_mono hle rest h
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h => mE_mono hle rest h
+  | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h => by
+      simp only [mE, Bool.and_eq_true] at h ⊢
+      exact ⟨mE_mono hle err h.1, mE_mono hle rest h.2⟩
 
 theorem mArms_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -690,6 +710,9 @@ theorem mB_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D
       simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
       exact ⟨⟨⟨h.1.1, h'.1.1⟩, mE_und err h.1.2 h'.1.2⟩, mB_und rest h.2 h'.2⟩
   | _, _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h, h' => mB_und rest h h'
+  | _, _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h, h' => by
+      simp only [mB, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mE_und err h.1 h'.1, mB_und rest h.2 h'.2⟩
   | _, _, _, _, .regLies _ _ rest, h, h' => mB_und rest h h'
   | _, _, _, _, .regLiesElse _ _ _ sonst rest, h, h' => by
       simp only [mB, Bool.and_eq_true] at h h' ⊢
@@ -720,6 +743,9 @@ theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       exact ⟨mS_und s h.1 h'.1, mE_und rest h.2 h'.2⟩
   | _, _, _, .bind _ rest, h, h' => mE_und rest h h'
   | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h, h' => mE_und rest h h'
+  | _, _, _, .bindAxiomElse _ _ _ _ _ _ _ _ err rest, h, h' => by
+      simp only [mE, mUnd, Bool.and_eq_true] at h h' ⊢
+      exact ⟨mE_und err h.1 h'.1, mE_und rest h.2 h'.2⟩
 
 theorem mArms_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),

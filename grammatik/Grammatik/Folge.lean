@@ -122,6 +122,7 @@ def fB {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (e w : Bool) : Block D V l 
   | .bindCallElse g _ _ _ _ err rest =>
       (!Φ.ruf g || w) && fE e false err && fB e (Φ.vor g) rest
   | .bindAxiom _ _ _ _ _ _ _ rest => fB e w rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => fE e false err && fB e w rest
   | .regLies _ _ rest => fB e w rest
   | .regLiesElse _ _ _ sonst rest => fE e false sonst && fB e w rest
   | .awaits _ _ _ _ rest => fB e w rest
@@ -153,6 +154,7 @@ def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l �
   | .cons s rest => fS e w s && fE e (fNach Φ w s) rest
   | .bind _ rest => fE e w rest
   | .bindAxiom _ _ _ _ _ _ _ rest => fE e w rest
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => fE e false err && fE e w rest
 
 end
 
