@@ -126,6 +126,9 @@ theorem ruB_fB (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ
         fB Φ.mitRuhe e (Φ.vor g) (Block.vorΛ _ (ruB rest))) = _
       rw [fE_umΛ, fB_vorΛ, ruEnd_fE Φ e _ err, ruB_fB Φ e _ rest]; rfl
   | _, _, _, _, e, w, .bindAxiom _ _ _ _ _ _ _ rest => ruB_fB Φ e w rest
+  | _, _, _, _, e, w, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
+      show (fE Φ.mitRuhe e false (ruEnd err) && fB Φ.mitRuhe e w (ruB rest)) = _
+      rw [ruEnd_fE Φ e _ err, ruB_fB Φ e _ rest]; rfl
   | _, _, _, _, e, w, .regLies _ _ rest => ruB_fB Φ e w rest
   | _, _, _, _, e, w, .regLiesElse _ _ _ sonst rest =>
       kongr₂ (· && ·) (ruEnd_fE Φ e false sonst) (ruB_fB Φ e w rest)
@@ -153,6 +156,9 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
       rw [ruS_fS Φ e w s, ruS_fNach Φ w s, ruEnd_fE Φ e _ rest]
   | _, _, _, e, w, .bind _ rest => ruEnd_fE Φ e w rest
   | _, _, _, e, w, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, e, w, .bindAxiomElse _ _ _ _ _ _ _ _ err rest => by
+      show (fE Φ.mitRuhe e false (ruEnd err) && fE Φ.mitRuhe e w (ruEnd rest)) = _
+      rw [ruEnd_fE Φ e _ err, ruEnd_fE Φ e _ rest]; rfl
 
 theorem ruArms_fArms (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (e : Bool)

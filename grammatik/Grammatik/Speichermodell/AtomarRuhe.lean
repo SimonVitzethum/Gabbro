@@ -354,6 +354,20 @@ theorem execBlockHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : Lis
               simp only [Option.map]
               rw [ergWert_ru he]
               exact AusRelRu.schrumpf (execBlockHA_ru rest σ' (Env.cons (ergWert he v) ρ))
+  | _, _, Λ, _, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
+      simp only [ruB, execBlockHA]
+      erw [ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwortSonst_ruG hO]
+      cases axiomAntwortSonst O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · exact Or.inl rfl
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply]
+            rw [ergWert_ru he]
+            exact AusRelRu.schrumpf (execBlockHA_ru rest σ' (Env.cons (ergWert he v) ρ))
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            exact EndRel.zuAusgang (EndRel.schrumpf
+              (execEndHA_ru err σ' (Env.cons (τ := .grund (D.agruende a)) r ρ)))
   | _, _, _, _, .regLies r hk rest, σ, ρ => by
       simp only [ruB, execBlockHA]
       rw [hO.regLies, einpassen_ru O.zeiger O'.zeiger hO.zeiger]
@@ -495,6 +509,19 @@ theorem execEndHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res
               simp only [Option.map]
               rw [ergWert_ru he]
               exact EndRel.schrumpf (execEndHA_ru rest σ' (Env.cons (ergWert he v) ρ))
+  | _, _, Λ, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
+      simp only [ruEnd, execEndHA]
+      erw [ruA_orte, leseA_worldR hA, evalArgs_ru, axiomAntwortSonst_ruG hO]
+      cases axiomAntwortSonst O a (leseA A σ Λ args.orte)
+        (evalArgs (leseA A σ Λ args.orte) args (leseA A σ Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · exact Or.inl rfl
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply]
+            rw [ergWert_ru he]
+            exact EndRel.schrumpf (execEndHA_ru rest σ' (Env.cons (ergWert he v) ρ))
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            exact EndRel.schrumpf (execEndHA_ru err σ' (Env.cons (τ := .grund (D.agruende a)) r ρ))
 
 theorem execArmsHA_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))
