@@ -3784,10 +3784,14 @@ fi
 # whole unit). Their poison twins (`gift/1369` `M101`, `gift/1370` `M135`) are refused by the CHECKER and write no C, so
 # `MARKE_EMIT_G` is untouched; wall 9 adds no refusal (what changed is WHICH comparison is emitted), and its negative half is
 # pinned in `crates/gabbro-check/tests/rechenwerk.rs` (`die_untere_pruefung_folgt_der_eigenen_deklaration_nicht_dem_namen_der_einheit`).
-MARKE_EMIT=150
+MARKE_EMIT=151
 # **148 -> 150 on 2026-09-30 (C-free lane, C1).** Two emitting examples: `172-prozess-ohne-libc` (a process with its own
 # `write` gate, no libc) and `173-abbruch-ohne-libc` (a `-> never` gate over `exit_group` as the watchdog). Measured on the
 # committed tree: 150 emitting files in `beispiele/`.
+# **150 -> 151 on 2026-09-30 (C-free lane, the Lean debt).** `174-tor-im-modell` emits: a value gate `getpid` and a
+# `-> never` gate, the first CERTIFIED program that calls the kernel. Its emission needed one repair: an infallible
+# gate with a value no longer takes the channel's `_wert` out-parameter (`emit.rs::syscall_stumpf`), whose call was
+# a C error (`too few arguments`). No poison twin: the repair adds no refusal.
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.

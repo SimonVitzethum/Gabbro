@@ -67,7 +67,7 @@ list -- the work list is `TODO.md`. Update a figure here when its command moves.
 
 ## Schablonen im Register / Schablonen, die unbewiesen dastehen
 
-      Das Schablonenregister führt **21 Einträge**, **11 davon unbewiesen** (`gabbro
+      Das Schablonenregister führt **23 Einträge**, **11 davon unbewiesen** (`gabbro
 
 ## Zellen der Tafel insgesamt
 

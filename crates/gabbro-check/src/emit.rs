@@ -9572,7 +9572,14 @@ fn syscall_stumpf(
         }
     };
     let mut liste = params.clone();
-    if let Some(c) = &wert_ctyp {
+    // **The out-parameter belongs to the CHANNEL, not to the value** (C-free
+    // lane, 2026-09-30). Only `bool f(T *_wert, R *_grund)` hands the value
+    // through `_wert`; a gate without `or R` returns it (`return (T)_sys_rax;`
+    // below), and its call site is a plain `T x = f(…);`. Before, an
+    // infallible gate with a value got BOTH, and every call of it was a C
+    // error (`too few arguments`) -- no corpus program had one (measured:
+    // `beispiele/174` was the first).
+    if let (Some(c), Some(_)) = (&wert_ctyp, &grundtyp) {
         liste.push(format!("{c} *_wert"));
     }
     if let Some(g) = &grundtyp {
@@ -9736,7 +9743,7 @@ fn syscall_stumpf(
                 b2.push_str(&hardware("    "));
                 b2.push_str("    }\n");
             }
-            if hat_wert {
+            if hat_wert && grundtyp.is_some() {
                 b2.push_str(&format!("    *_wert = ({ctyp})_sys_rax;\n"));
             }
         }
