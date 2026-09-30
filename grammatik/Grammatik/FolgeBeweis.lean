@@ -73,6 +73,8 @@ theorem fB_mono {l : Bool} {Γ : Ctx} :
       exact ⟨⟨h.1.1.imp id hw, h.1.2⟩, h.2⟩
   | _, _, e, .bindAxiom _ _ _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
+  | _, _, e, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w, w', hw, h => by
+      simp only [fB, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fB_mono e rest _ _ hw h.2⟩
   | _, _, e, .regLies _ _ rest, w, w', hw, h => by
       simp only [fB] at h ⊢; exact fB_mono e rest _ _ hw h
   | _, _, e, .regLiesElse _ _ _ sonst rest, w, w', hw, h => by
@@ -113,6 +115,8 @@ theorem fE_mono {l : Bool} :
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
   | _, _, e, .bindAxiom _ _ _ _ _ _ _ rest, w, w', hw, h => by
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
+  | _, _, e, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w, w', hw, h => by
+      simp only [fE, Bool.and_eq_true] at h ⊢; exact ⟨h.1, fE_mono e rest _ _ hw h.2⟩
 
 /-- The residue predicate is monotone in the armed bit. -/
 theorem fR_mono (e : Bool) :
@@ -153,6 +157,8 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
   | _, _, .bind _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .bindAxiomElse _ _ _ _ _ _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
 
 theorem fB_armWahlG (e : Bool) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -468,6 +474,14 @@ theorem folgeInvG_schritt (hΦ : FolgeOk P Φ) {M M' : RufMaschineG D} {f : Fade
   | dannGleitNarrowElse =>
     kopfF
     exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
+  | dannBindAxiomElseGrund =>
+    kopfF
+    first
+      | exact ⟨fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1, hk.2⟩
+      | exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1.1
+  | endeBindAxiomElseGrund =>
+    kopfF
+    exact fE_mono Φ _ _ false w (fun h => absurd h Bool.false_ne_true) hk.1
   | _ =>
     kopfF
     all_goals (simp_all [fB_von_false, fR_von_false]; done)

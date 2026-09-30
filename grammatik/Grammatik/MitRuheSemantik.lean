@@ -515,6 +515,34 @@ theorem axiomAntwort_ru (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.
       (worldR (axiomAntwort O a σ ρ).1, (axiomAntwort O a σ ρ).2.map (ergR (D.aerg a))) :=
   axiomAntwort_ruG (orakelRu_mitRuhe O) a σ ρ
 
+/-- The packed answer of a fallible axiom decodes in `D.mitRuhe` as in `D` (C-free lane,
+    2026-09-30): the value half through `einpassenErg_ru`, the reason half unchanged. -/
+theorem sonstPasst_ru (z : Int → Option D.Fn) (z' : Int → Option D.mitRuhe.Fn)
+    (hz : ∀ k, (z' k).bind id = z k) (e : Option Ty) (n : Nat) (roh : Int) :
+    sonstPasst (D := D.mitRuhe) z' (e.map tyR) n roh =
+      (sonstPasst (D := D) z e n roh).map (Sum.map (ergR e) id) := by
+  unfold sonstPasst
+  dsimp only
+  split
+  · rw [einpassenErg_ru z z' hz e]
+    cases einpassenErg z e _ <;> rfl
+  · split <;> rfl
+
+theorem axiomAntwortSonst_ruG {O : Orakel D} {O' : Orakel D.mitRuhe} (hO : OrakelRu O O')
+    (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    axiomAntwortSonst O' a (worldR σ) (envR ρ) =
+      (worldR (axiomAntwortSonst O a σ ρ).1,
+        (axiomAntwortSonst O a σ ρ).2.map (Sum.map (ergR (D.aerg a)) id)) := by
+  unfold axiomAntwortSonst
+  rw [hO.wirkt]
+  exact congrArg _ (sonstPasst_ru O.zeiger O'.zeiger hO.zeiger (D.aerg a) (D.agruende a) _)
+
+theorem axiomAntwortSonst_ru (O : Orakel D) (a : D.Ax) (σ : World D) (ρ : Env D (D.aparams a)) :
+    axiomAntwortSonst O.mitRuhe a (worldR σ) (envR ρ) =
+      (worldR (axiomAntwortSonst O a σ ρ).1,
+        (axiomAntwortSonst O a σ ρ).2.map (Sum.map (ergR (D.aerg a)) id)) :=
+  axiomAntwortSonst_ruG (orakelRu_mitRuhe O) a σ ρ
+
 theorem regLies_mitRuhe (O : Orakel D) (r : D.Reg) (σ : World D) :
     O.mitRuhe.regLies r (worldR σ) = O.regLies r σ := by
   show O.regLies r (worldZ (worldR σ)) = _
@@ -975,6 +1003,21 @@ theorem execBlock_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List 
               simp only [Option.map]
               rw [ergWert_ru he, ← ausR_schrumpf, ← execBlock_ru rest σ' (Env.cons _ ρ)]
               rfl
+  | _, _, Λ, _, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
+      simp only [ruB, execBlock]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
+      cases axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · rfl
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply]
+            rw [ergWert_ru he, ← ausR_schrumpf, ← execBlock_ru rest σ' (Env.cons _ ρ)]
+            rfl
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            exact (congrArg (fun a => EndAusgang.zuAusgang (EndAusgang.schrumpf a))
+              (execEnd_ru err σ' (Env.cons (τ := .grund (D.agruende a)) r ρ))).trans
+              ((congrArg EndAusgang.zuAusgang (endR_schrumpf _)).trans (endR_zuAusgang _))
   | _, _, _, _, .regLies r hk rest, σ, ρ => by
       simp only [ruB, execBlock]
       rw [regLies_mitRuhe, einpassen_ru O.zeiger O.mitRuhe.zeiger (zeiger_mitRuhe O)]
@@ -1118,6 +1161,20 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
               simp only [Option.map]
               rw [ergWert_ru he, ← endR_schrumpf, ← execEnd_ru rest σ' (Env.cons _ ρ)]
               rfl
+  | _, _, Λ, .bindAxiomElse a args he hr hw hg hd hgd err rest, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwortSonst_ru]
+      cases axiomAntwortSonst O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          rcases w with _ | v | r
+          · rfl
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply]
+            rw [ergWert_ru he, ← endR_schrumpf, ← execEnd_ru rest σ' (Env.cons _ ρ)]
+            rfl
+          · dsimp only [Option.map, Sum.map, Sum.elim, Function.comp_apply, id]
+            rw [← endR_schrumpf, ← execEnd_ru err σ' (Env.cons (τ := .grund (D.agruende a)) r ρ)]
+            rfl
 
 theorem execArms_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))

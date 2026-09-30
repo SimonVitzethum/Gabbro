@@ -212,6 +212,17 @@ theorem axiomAntwort_rel (O : Orakel D) {T : D.Tab ⊕ D.Glob → Bool} {AxT : D
   simp only [axiomAntwort]
   exact ⟨by rw [e1], e2⟩
 
+/-- The same for a fallible axiom (C-free lane, 2026-09-30): the raw answer is the same, so is
+    its decoding. -/
+theorem axiomAntwortSonst_rel (O : Orakel D) {T : D.Tab ⊕ D.Glob → Bool} {AxT : D.Ax → Bool}
+    (hO : OrakelTreu T AxT O) {a : D.Ax} (ha : AxT a = true) {σ τ : World D} (h : WRel T σ τ)
+    (x : Env D (D.aparams a)) :
+    (axiomAntwortSonst O a σ x).2 = (axiomAntwortSonst O a τ x).2 ∧
+      WRel T (axiomAntwortSonst O a σ x).1 (axiomAntwortSonst O a τ x).1 := by
+  obtain ⟨e1, e2⟩ := hO a ha σ τ x h
+  simp only [axiomAntwortSonst]
+  exact ⟨by rw [e1], e2⟩
+
 /-! ## 3. Two outcomes of the same shape -/
 
 /-- Two outcomes of a statement run in two related worlds: the same

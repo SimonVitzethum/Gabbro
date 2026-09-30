@@ -375,6 +375,25 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       cases r1 with
       | none => exact KRel.none_l _
       | some v => exact KRel.lokal _ _ _ _ _ e2.1 e2.2
+  | bindAxiomElse a args he' hr hw hg hd hgd err rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      have h1 := hW.lese Λ args.orte
+      obtain ⟨e1, e2⟩ := axiomAntwortSonst_rel O hO (hAx a he.1.1.1) h1
+        (evalArgs ((sp₂.welt spur).lese Λ args.orte) args ((sp₂.welt spur).lese Λ args.orte) ρ)
+      simp only [kEnde]
+      rw [h1.evalArgs args (alle_von hST he.1.1.2) ρ]
+      revert e1 e2
+      generalize axiomAntwortSonst O a ((sp₁.welt spur).lese Λ args.orte) _ = p₁
+      generalize axiomAntwortSonst O a ((sp₂.welt spur).lese Λ args.orte) _ = p₂
+      rintro e1 e2
+      obtain ⟨w1, r1⟩ := p₁
+      obtain ⟨w2, r2⟩ := p₂
+      simp only at e1 e2 ⊢
+      subst e1
+      rcases r1 with _ | v | r
+      · exact KRel.none_l _
+      · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
+      · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
   | ret e _ =>
       simp only [nE] at he
       simp only [kEnde]
@@ -437,6 +456,25 @@ theorem kDann_rel (hO : OrakelTreu T AxT O) (hRL : RegLokal O) (hsp : SpeicherGl
       cases r1 with
       | none => exact KRel.none_l _
       | some v => exact KRel.lokal _ _ _ _ _ e2.1 e2.2
+  | bindAxiomElse a args he' hr hw hg hd hgd err rest =>
+      simp only [nB, Bool.and_eq_true] at hb
+      have h1 := hW.lese Λ args.orte
+      obtain ⟨e1, e2⟩ := axiomAntwortSonst_rel O hO (hAx a hb.1.1.1) h1
+        (evalArgs ((sp₂.welt spur).lese Λ args.orte) args ((sp₂.welt spur).lese Λ args.orte) ρ)
+      simp only [kDann]
+      rw [h1.evalArgs args (alle_von hST hb.1.1.2) ρ]
+      revert e1 e2
+      generalize axiomAntwortSonst O a ((sp₁.welt spur).lese Λ args.orte) _ = p₁
+      generalize axiomAntwortSonst O a ((sp₂.welt spur).lese Λ args.orte) _ = p₂
+      rintro e1 e2
+      obtain ⟨w1, r1⟩ := p₁
+      obtain ⟨w2, r2⟩ := p₂
+      simp only at e1 e2 ⊢
+      subst e1
+      rcases r1 with _ | v | r
+      · exact KRel.none_l _
+      · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
+      · exact KRel.lokal _ _ _ _ _ e2.1 e2.2
   | regLies r hk' rest =>
       simp only [nB, Bool.and_eq_true] at hb
       simp only [kDann]
