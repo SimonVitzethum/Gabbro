@@ -132,6 +132,10 @@ def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
       match ensExpr u f a x with
       | some (xe, a1) => some (.un .not xe, a1)
       | none => none
+  -- A `bool` slot read has no bridge form yet (Body's shapes know numbers only): REFUSED by name,
+  -- so `postU` is `none` and the duty is false, never weaker. (A unit with a bool field or a bool
+  -- result is refused up front by `stimmigB`'s `keinBoolB`.)
+  | .slotB .. | .tabB .. => none
 
 /-! ## 2. Shapes, the precondition, the frame -/
 
@@ -186,6 +190,7 @@ def stmtBody (u : UProg) (f : UFn) : UStmt → Option Stmt
       | some t, some ve => some (.assign t (idxExpr i) fld ve)
       | _, _ => none
   | .assignTab t fld i v => (sideExpr u f v).map (fun ve => .assign t (idxExpr i) fld ve)
+  | .assignB .. | .assignTabB .. => none
   | .call g as =>
       match fnSuch u g, argsExpr u f as with
       | some gf, some es => some (.call g (gf.params.map (·.1)) es (preExpr gf))
@@ -206,6 +211,7 @@ def zuBody (u : UProg) (f : UFn) : Option (List Stmt) :=
       match f.rueck with
       | .keine => some ss
       | .wert v => (sideExpr u f v).map (fun e => ss ++ [Stmt.ret (some e)])
+      | .bool _ => none
 
 /-! ## 4. The postcondition -/
 

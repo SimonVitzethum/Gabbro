@@ -79,6 +79,10 @@ inductive UEns
   | und : UEns → UEns → UEns
   | oder : UEns → UEns → UEns
   | nicht : UEns → UEns
+  /-- A `bool` slot read through a pointer parameter / at a table (`p.slots[i].f`, `T.slots[i].f`):
+      the truth value itself, not a number. -/
+  | slotB : String → String → UIdx → UEns
+  | tabB : String → String → UIdx → UEns
   deriving DecidableEq, Repr
 
 /-- A call argument: a pointer variable passed through
@@ -97,6 +101,9 @@ inductive UArg
 inductive UStmt
   | assign : String → String → UIdx → USide → UStmt
   | assignTab : String → String → UIdx → USide → UStmt
+  /-- The same two writes into a `bool` field: the right side is a truth value. -/
+  | assignB : String → String → UIdx → UEns → UStmt
+  | assignTabB : String → String → UIdx → UEns → UStmt
   | call : String → List UArg → UStmt
   deriving DecidableEq, Repr
 
@@ -105,6 +112,8 @@ inductive UStmt
 inductive URet
   | keine : URet
   | wert : USide → URet
+  /-- A `bool` result: a truth value. -/
+  | bool : UEns → URet
   deriving DecidableEq, Repr
 
 /-- One elaborated table: slot count and one integer range per
@@ -113,6 +122,10 @@ structure UTab where
   name : String
   count : Int
   felder : List (String × (Int × Int))
+  /-- The names of the `bool` fields. A bool field keeps its place in `felder` (with the
+      placeholder range `0 .. 1`, so every field index is the position it always was); its
+      TYPE is `Ty.bool`, and it is never read or written as a number. -/
+  bools : List String := []
   deriving DecidableEq, Repr
 
 /-- One elaborated lock: rank and the guarded table names (the
@@ -146,6 +159,7 @@ structure UCtx where
   sperren : List ULock
   gehalten : List String
   ergebnis : Option (Int × Int)
+  ergBool : Bool := false
   fname : String
   /-- The unit's type aliases: `T(e)` and `T::max` name a type. -/
   aliase : List (String × (Int × Int))
@@ -161,12 +175,18 @@ structure UFn where
   params : List (String × Ty)
   parten : List UParamArt
   ergebnis : Option (Int × Int)
+  /-- The result is `bool` (then `ergebnis` is `none`). -/
+  ergBool : Bool := false
   held : List String
   schreibt : List String
   sichert : List UEns
   saetze : List UStmt
   rueck : URet
   deriving DecidableEq, Repr
+
+/-- The result type of an elaborated function: `bool`, an integer range, or none. -/
+def UFn.ergTy (f : UFn) : Option Ty :=
+  if f.ergBool then some Ty.bool else f.ergebnis.map fun r => .int r.1 r.2
 
 /-- The elaborated program: tables, locks, functions. -/
 structure UProg where
@@ -332,19 +352,24 @@ def uAnzahl (consts : List (String × Int)) : SExpr → Except String Int
   | .variable c => uSuch "Konstante" consts c
   | _ => .error "Anzahl ohne G-Form"
 
-/-- One slot field: no bit position, no `offset_into`, no
-    `where`, neither `reserved` nor `by ops` (all without G
-    form, like the refused arms of `read_table`). -/
-def uFeld (aliase : List (String × (Int × Int))) : SFeld → Except String (String × (Int × Int))
+/-- One slot field: no bit position, no `offset_into`, no `where`, no `reserved` (all without G
+    form, like the refused arms of `read_table`). `by ops` is a writer discipline the CHECKER holds
+    and has no meaning in the model -- the exporter reads the field as written (`lean_g.rs`) -- so it
+    travels. A `bool` field is recorded as such (the second component). -/
+def uFeld (aliase : List (String × (Int × Int))) :
+    SFeld → Except String ((String × (Int × Int)) × Bool)
   | { fname, ftyp, pos := .none, bezug := .none, wo := .none,
-      reserviert := false, byOps := false } =>
-    match uFeldTyp aliase ftyp with
-    | .ok r => .ok (fname, r)
-    | .error e => .error e
+      reserviert := false, byOps := _ } =>
+    match ftyp with
+    | .atom "bool" => .ok ((fname, (0, 1)), true)
+    | _ =>
+      match uFeldTyp aliase ftyp with
+      | .ok r => .ok ((fname, r), false)
+      | .error e => .error e
   | _ => .error "Slotfeld ohne G-Form"
 
 def uFelder : List (String × (Int × Int)) → List SFeld →
-    Except String (List (String × (Int × Int)))
+    Except String (List ((String × (Int × Int)) × Bool))
   | _, [] => .error "Tabelle ohne Felder"
   | aliase, f :: rest =>
     match uFeld aliase f with
@@ -366,7 +391,9 @@ def uTabelle (consts : List (String × Int))
     | .ok c =>
       match uFelder aliase fds with
       | .error e => .error e
-      | .ok fs => .ok { name := n, count := c, felder := fs }
+      | .ok fs =>
+        .ok { name := n, count := c, felder := fs.map (·.1),
+              bools := (fs.filter (·.2)).map (·.1.1) }
   | _ => .error "Tabelle ohne G-Form"
 
 /-- A `protects` carrier by table or by field name (the guard
@@ -497,6 +524,12 @@ def uZugriff (ctx : UCtx) : SExpr →
                 | .ok ix => .ok (.tabelle b, tb.name, f, ix)
   | _ => .error "Platz ohne G-Form"
 
+/-- The field `f` of the table `tb` is a `bool` field. -/
+def uBoolFeld (ctx : UCtx) (tb f : String) : Bool :=
+  match ctx.tabellen.find? (fun x => strEq x.name tb) with
+  | .some x => x.bools.any (fun g => strEq g f)
+  | .none => false
+
 /-- A limit word `T::max` / `T::min` of a type word (an alias or a built-in width), as its number
     (the `grenzwort` of `tr_typed`: it travels as a literal). -/
 def uGrenzwort (ctx : UCtx) : SExpr → Option Int
@@ -568,8 +601,10 @@ def uSeiteBlatt (ctx : UCtx) : SExpr → Except String USide
     | .none =>
       match uZugriff ctx e with
       | .error _ => .error "Vergleichsseite ohne G-Form"
-      | .ok (.durch b, _, f, ix) => .ok (.slot b f ix)
-      | .ok (.tabelle b, _, f, ix) => .ok (.tab b f ix)
+      | .ok (.durch b, tb, f, ix) =>
+        if uBoolFeld ctx tb f then .error "Bool-Feld als Zahl ohne G-Form" else .ok (.slot b f ix)
+      | .ok (.tabelle b, tb, f, ix) =>
+        if uBoolFeld ctx tb f then .error "Bool-Feld als Zahl ohne G-Form" else .ok (.tab b f ix)
 
 def uSeite (ctx : UCtx) : SExpr → Except String USide :=
   uRechne ctx (uSeiteBlatt ctx)
@@ -616,7 +651,34 @@ def uSichert (ctx : UCtx) : SExpr → Except String UEns
     | .ok a => .ok (.nicht a)
   | .wahr => .ok .wahr
   | .falsch => .ok .falsch
-  | _ => .error "Ensures-Klausel ohne G-Form"
+  | e =>
+    match uZugriff ctx e with
+    | .error _ => .error "Ensures-Klausel ohne G-Form"
+    | .ok (.durch b, tb, f, ix) =>
+      if uBoolFeld ctx tb f then .ok (.slotB b f ix) else .error "Ensures-Klausel ohne G-Form"
+    | .ok (.tabelle b, tb, f, ix) =>
+      if uBoolFeld ctx tb f then .ok (.tabB b f ix) else .error "Ensures-Klausel ohne G-Form"
+
+/-- `old(..)` or `result` inside a side. -/
+def seiteAltErg : USide → Bool
+  | .alt .. | .erg => true
+  | .add a b | .sub a b | .mul a b | .band a b | .bor a b | .bxor a b => seiteAltErg a || seiteAltErg b
+  | .conv _ _ a => seiteAltErg a
+  | _ => false
+
+/-- `old(..)` or `result` inside a predicate. -/
+def ensAltErg : UEns → Bool
+  | .cmp _ a b => seiteAltErg a || seiteAltErg b
+  | .und a b | .oder a b => ensAltErg a || ensAltErg b
+  | .nicht a => ensAltErg a
+  | _ => false
+
+/-- A truth value in a BODY (a returned or stored `bool`): the predicate forms of an `ensures`,
+    without `old` and `result`. -/
+def uBool (ctx : UCtx) (e : SExpr) : Except String UEns :=
+  match uSichert { ctx with ergebnis := none, ergBool := false } e with
+  | .error x => .error x
+  | .ok v => if ensAltErg v then .error "old/result im Rumpf ohne G-Form" else .ok v
 
 /-- A leaf of a body value: a literal, a numeric parameter, a named constant, a limit word or a
     slot read. -/
@@ -639,8 +701,10 @@ def uWertBlatt (ctx : UCtx) : SExpr → Except String USide
     | .none =>
       match uZugriff ctx e with
       | .error _ => .error "Wert ohne G-Form"
-      | .ok (.durch b, _, f, ix) => .ok (.slot b f ix)
-      | .ok (.tabelle b, _, f, ix) => .ok (.tab b f ix)
+      | .ok (.durch b, tb, f, ix) =>
+        if uBoolFeld ctx tb f then .error "Bool-Feld als Zahl ohne G-Form" else .ok (.slot b f ix)
+      | .ok (.tabelle b, tb, f, ix) =>
+        if uBoolFeld ctx tb f then .error "Bool-Feld als Zahl ohne G-Form" else .ok (.tab b f ix)
 
 /-- A value in a body (the `tr_value` of `lean_g.rs` at `in_ensures := false`: `result` and
     `old` have no G form here), with the arithmetic layer of `uRechne`. -/
@@ -666,6 +730,7 @@ structure UFnKopf where
   parten : List UParamArt
   ptypen : List Ty
   ergebnis : Option (Int × Int)
+  ergBool : Bool := false
   gehalten : List String
 
 /-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
@@ -870,6 +935,8 @@ def elabKopf (_consts : List (String × Int))
                 let schreibt := uEindeutig eff.schreibt
                 match ergebnis with
                 | .none => .ok (kopf, schreibt)
+                | .some (.atom "bool") =>
+                  .ok ({ kopf with ergBool := true }, schreibt)
                 | .some t =>
                   match uErgBereich aliase t with
                   | .error e => .error e
@@ -931,20 +998,30 @@ def uAnw (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
   | .zuweis ziel "=" wert =>
     match uZugriff ctx ziel with
     | .error e => .error e
-    | .ok (.durch b, _, f, ix) =>
+    | .ok (.durch b, tb, f, ix) =>
       match uStelle ctx.pnamen b with
       | .error e => .error e
       | .ok j =>
         match uArtBei ctx.parten j with
         | .ok (.ptr _ true) =>
-          match uWertBody ctx wert with
-          | .error e => .error e
-          | .ok v => .ok (.assign b f ix v)
+          if uBoolFeld ctx tb f then
+            match uBool ctx wert with
+            | .error e => .error e
+            | .ok v => .ok (.assignB b f ix v)
+          else
+            match uWertBody ctx wert with
+            | .error e => .error e
+            | .ok v => .ok (.assign b f ix v)
         | _ => .error "Schreiben durch Lesezeiger ohne G-Form"
-    | .ok (.tabelle b, _, f, ix) =>
-      match uWertBody ctx wert with
-      | .error e => .error e
-      | .ok v => .ok (.assignTab b f ix v)
+    | .ok (.tabelle b, tb, f, ix) =>
+      if uBoolFeld ctx tb f then
+        match uBool ctx wert with
+        | .error e => .error e
+        | .ok v => .ok (.assignTabB b f ix v)
+      else
+        match uWertBody ctx wert with
+        | .error e => .error e
+        | .ok v => .ok (.assignTab b f ix v)
   | .ruf c args =>
     match koepfe.find? (fun k => strEq k.name c) with
     | .none => .error ("Ruf unbekannt: " ++ c)
@@ -967,12 +1044,17 @@ def uEnde (ctx : UCtx) : Option SEnde → Except String URet
   | .none =>
     match ctx.ergebnis with
     | .some _ => .error "Funktion mit Ergebnis faellt durch"
-    | .none => .ok .keine
+    | .none => if ctx.ergBool then .error "Funktion mit Ergebnis faellt durch" else .ok .keine
   | .some (.ret .none) =>
     match ctx.ergebnis with
     | .some _ => .error "Rueckgabe ohne Wert mit Ergebnis"
-    | .none => .ok .keine
+    | .none => if ctx.ergBool then .error "Rueckgabe ohne Wert mit Ergebnis" else .ok .keine
   | .some (.ret (.some v)) =>
+    if ctx.ergBool then
+      match uBool ctx v with
+      | .error e => .error e
+      | .ok b => .ok (.bool b)
+    else
     match ctx.ergebnis with
     | .none => .error "Rueckgabe mit Wert ohne Ergebnis"
     | .some _ =>
@@ -1005,7 +1087,7 @@ def uCtxVon (aliase : List (String × (Int × Int))) (konst : List (String × In
     (fname : String) : UCtx :=
   { pnamen := kopf.pnamen, parten := kopf.parten,
     ptypen := kopf.ptypen, tabellen := tabs, sperren := locks,
-    gehalten := kopf.gehalten, ergebnis := kopf.ergebnis,
+    gehalten := kopf.gehalten, ergebnis := kopf.ergebnis, ergBool := kopf.ergBool,
     fname, aliase, konst }
 
 /-- One whole function: head (pass one) plus contracts and
@@ -1024,7 +1106,7 @@ def elabUFunktion (consts : List (String × Int))
       .ok { name := sig.name,
             params := kopf.pnamen.zip kopf.ptypen,
             parten := kopf.parten,
-            ergebnis := kopf.ergebnis, held := kopf.gehalten,
+            ergebnis := kopf.ergebnis, ergBool := kopf.ergBool, held := kopf.gehalten,
             schreibt, sichert, saetze, rueck := r }
 
 /-- Items outside the fragment: everything but constants,
@@ -1235,6 +1317,7 @@ def lowerSichertEin (tabs : List UTab) (pnamen : List String)
     match lowerSichertEin tabs pnamen ptypen a with
     | .error e => .error e
     | .ok x => .ok (Expr.nicht x)
+  | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
 
 /-- The `ensures` conjunction in `einzahlen` (empty is `.wahr`,
     like the exporter's conjunction). -/
@@ -1353,6 +1436,7 @@ def lowerNachLies (tabs : List UTab) (pnamen : List String)
       (Endblock G104_referenz.gD (vertragVon G104_referenz.gD G104_referenz.g_einzahlen) false UCtxEin
         (nach G104_referenz.gD G104_referenz.g_lies ULEin))
   | [], .keine => .ok (.ret .keine (List.Perm.refl _))
+  | [], .bool _ => .error "Rueckgabe mit Wahrheitswert ohne Ergebnis"
   | [], .wert _ => .error "Rueckgabe mit Wert ohne Ergebnis"
   | .assign b f ix v :: rest, r =>
     match lowerAssignEin tabs pnamen ptypen b f ix v with
@@ -1368,6 +1452,7 @@ def lowerNachLies (tabs : List UTab) (pnamen : List String)
       match lowerNachLies tabs pnamen ptypen rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ => .error "bool write without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "Ruf nach Ruf ohne G-Form"
 
 /-- The body of `einzahlen`: straight-line writes, at most
@@ -1376,6 +1461,7 @@ def lowerNachLies (tabs : List UTab) (pnamen : List String)
 def lowerSaetzeEin (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) : List UStmt → URet → Except String UKoerpEin
   | [], .keine => .ok (.ret .keine (List.Perm.refl _))
+  | [], .bool _ => .error "Rueckgabe mit Wahrheitswert ohne Ergebnis"
   | [], .wert _ => .error "Rueckgabe mit Wert ohne Ergebnis"
   | .assign b f ix v :: rest, r =>
     match lowerAssignEin tabs pnamen ptypen b f ix v with
@@ -1399,6 +1485,7 @@ def lowerSaetzeEin (tabs : List UTab) (pnamen : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ => .error "bool write without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "Ruf ohne G-Form"
 
 /-! ## Lowering `lies` -/
@@ -1628,6 +1715,7 @@ def lowerSichertLies (tabs : List UTab) (pnamen : List String)
     match lowerSichertLies tabs pnamen ptypen ergebnis a with
     | .error e => .error e
     | .ok x => .ok (Expr.nicht x)
+  | .slotB .. | .tabB .. => .error "bool place without G form in the 104 lowering"
 
 def lowerSichertListeLies (tabs : List UTab) (pnamen : List String)
     (ptypen : List Ty) (ergebnis : Option (Int × Int)) :
@@ -2019,6 +2107,10 @@ def beqUSide : USide → USide → Bool
   | .alt a f x, .alt b g y =>
     strEq a b && strEq f g && beqUIdx x y
   | .erg, .erg => true
+  | .add a b, .add c d | .sub a b, .sub c d | .mul a b, .mul c d
+  | .band a b, .band c d | .bor a b, .bor c d | .bxor a b, .bxor c d =>
+    beqUSide a c && beqUSide b d
+  | .conv l h a, .conv l' h' b => l == l' && h == h' && beqUSide a b
   | _, _ => false
 
 def beqUEns : UEns → UEns → Bool
@@ -2029,6 +2121,8 @@ def beqUEns : UEns → UEns → Bool
   | .und a b, .und c d => beqUEns a c && beqUEns b d
   | .oder a b, .oder c d => beqUEns a c && beqUEns b d
   | .nicht a, .nicht b => beqUEns a b
+  | .slotB a f x, .slotB b g y | .tabB a f x, .tabB b g y =>
+    strEq a b && strEq f g && beqUIdx x y
   | _, _ => false
 
 def beqUEnsList : List UEns → List UEns → Bool
@@ -2052,6 +2146,8 @@ def beqUStmt : UStmt → UStmt → Bool
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t
   | .assignTab a f x s, .assignTab b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUSide s t
+  | .assignB a f x s, .assignB b g y t | .assignTabB a f x s, .assignTabB b g y t =>
+    strEq a b && strEq f g && beqUIdx x y && beqUEns s t
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
   | _, _ => false
 
@@ -2063,6 +2159,7 @@ def beqUStmtList : List UStmt → List UStmt → Bool
 def beqURet : URet → URet → Bool
   | .keine, .keine => true
   | .wert a, .wert b => beqUSide a b
+  | .bool a, .bool b => beqUEns a b
   | _, _ => false
 
 def beqUParamArt : UParamArt → UParamArt → Bool
@@ -2105,7 +2202,7 @@ def beqOptWeite : Option (Int × Int) → Option (Int × Int) → Bool
 
 def beqUTab : UTab → UTab → Bool
   | a, b => strEq a.name b.name && a.count == b.count &&
-    beqFeldList a.felder b.felder
+    beqFeldList a.felder b.felder && beqStrList a.bools b.bools
 
 def beqUTabList : List UTab → List UTab → Bool
   | [], [] => true
@@ -2125,7 +2222,7 @@ def beqUFn : UFn → UFn → Bool
   | a, b => strEq a.name b.name &&
     beqTyParamList a.params b.params &&
     beqUParamArtList a.parten b.parten &&
-    beqOptWeite a.ergebnis b.ergebnis &&
+    beqOptWeite a.ergebnis b.ergebnis && a.ergBool == b.ergBool &&
     beqStrList a.held b.held && beqStrList a.schreibt b.schreibt &&
     beqUEnsList a.sichert b.sichert &&
     beqUStmtList a.saetze b.saetze && beqURet a.rueck b.rueck
@@ -2165,7 +2262,7 @@ def uAnzahl104 (u : UProg) : Int :=
 
 def uWeite104 (u : UProg) : Int × Int :=
   match u.tabellen with
-  | [{ name := _, count := _, felder := [(_, w)] }] => w
+  | [{ name := _, count := _, felder := [(_, w)], bools := _ }] => w
   | _ => (-1, -1)
 
 def uRang104 (u : UProg) : Int :=

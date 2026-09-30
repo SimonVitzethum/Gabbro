@@ -48,8 +48,13 @@ def postB (u : UProg) (fn : UFn) : Bool := fn.sichert.all fun e => (ensExpr u fn
 def schreibtB (u : UProg) (fn : UFn) : Bool :=
   fn.schreibt.all fun w => u.tabellen.any (·.name == w)
 
+/-- No `bool` field and no `bool` result: the bridge speaks about numbers only (Body's shapes are
+    `intIn`), so a unit with a truth-valued place is REFUSED here, by name, and `Pflichten` is false. -/
+def keinBoolB (u : UProg) : Bool :=
+  u.tabellen.all (fun t => t.bools.isEmpty) && u.fns.all (fun f => !f.ergBool)
+
 def stimmigB (u : UProg) : Bool :=
-  tabB u && u.fns.all fun fn =>
+  keinBoolB u && tabB u && u.fns.all fun fn =>
     artB fn && namenB fn && freiB fn && oldsB u fn && postB u fn && schreibtB u fn
 
 theorem oldName_mem : ∀ i, oldName i ∈ oldNamen := by
@@ -118,14 +123,24 @@ theorem schreibtB_ok {fn : UFn} (h : schreibtB u fn = true) :
   exact ⟨⟨i, hi⟩, by simpa [tabAt] using hxw⟩
 
 /-- **The name conditions, decided.** -/
+theorem keinBoolB_ok (h : keinBoolB u = true) :
+    (∀ t : Fin u.tabellen.length, (tabAt u t).bools = []) ∧ (∀ c : Fin u.fns.length, (fnAt u c).ergBool = false) := by
+  simp only [keinBoolB, Bool.and_eq_true] at h
+  obtain ⟨h1, h2⟩ := h
+  refine ⟨fun t => ?_, fun c => ?_⟩
+  · have := List.all_eq_true.mp h1 (tabAt u t) (List.get_mem _ _)
+    exact List.isEmpty_iff.mp this
+  · have := List.all_eq_true.mp h2 (fnAt u c) (List.get_mem _ _)
+    simpa using this
+
 theorem stimmig_of (h : stimmigB u = true) : Stimmig u := by
   simp only [stimmigB, Bool.and_eq_true] at h
-  obtain ⟨ht, hf⟩ := h
+  obtain ⟨⟨hk, ht⟩, hf⟩ := h
   have hc : ∀ c : Fin u.fns.length, (artB (fnAt u c) && namenB (fnAt u c) && freiB (fnAt u c) &&
       oldsB u (fnAt u c) && postB u (fnAt u c) && schreibtB u (fnAt u c)) = true :=
     fun c => List.all_eq_true.mp hf _ (List.get_mem _ _)
   simp only [Bool.and_eq_true] at hc
-  exact ⟨tabB_ok ht, fun c => artB_ok (hc c).1.1.1.1.1, fun c => (of_decide_eq_true (hc c).1.1.1.1.2 : ((fnAt u c).params.map (·.1)).Nodup),
+  exact ⟨(keinBoolB_ok hk).1, (keinBoolB_ok hk).2, tabB_ok ht, fun c => artB_ok (hc c).1.1.1.1.1, fun c => (of_decide_eq_true (hc c).1.1.1.1.2 : ((fnAt u c).params.map (·.1)).Nodup),
     fun c => freiB_ok (hc c).1.1.1.2, fun c => oldsB_ok (hc c).1.1.2, fun c => postB_ok (hc c).1.2,
     fun c => schreibtB_ok (hc c).2⟩
 

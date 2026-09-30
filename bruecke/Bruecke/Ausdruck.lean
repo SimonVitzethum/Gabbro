@@ -174,7 +174,7 @@ theorem lowDurch_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : Na
                 rw [lowIdx_sim hi σ₀ σ ρ w β hL]
                 simp only
                 rw [wrel_lies hW _ ⟨num, hlt⟩ (hT _) fname fh hfh]
-                rw [valOf_eval_heq (typAt_of u ⟨num, hlt⟩ fh.idx fh.weit fh.hit).symm _ _
+                rw [valOf_eval_heq fh.hint.symm _ _
                   (durchTerm_heq Γ Λ num wr hlt fh v i hG) σ₀ σ ρ]
                 rfl
               · cases h
@@ -205,7 +205,7 @@ theorem lowTabRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : 
           rw [lowIdx_sim hi σ₀ σ ρ w β hL]
           simp only
           rw [wrel_lies hW _ t ht fname fh hfh]
-          rw [valOf_eval_heq (typAt_of u t fh.idx fh.weit fh.hit).symm _ _
+          rw [valOf_eval_heq fh.hint.symm _ _
             (slotTerm_heq Γ Λ t fh i hG) σ₀ σ ρ]
           rfl
         · cases h
@@ -256,7 +256,7 @@ theorem lowAltRead_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {sh : 
           rw [lowIdx_sim hi σ₀ σ ρ w₀ β hL]
           simp only
           rw [wrel_lies hW _ t hct fname fh hfh]
-          rw [valOf_eval_heq (typAt_of u t fh.idx fh.weit fh.hit).symm _ _
+          rw [valOf_eval_heq fh.hint.symm _ _
             (altTerm_heq Γ Λ t fh i hG) σ₀ σ ρ]
           rfl
         · cases h

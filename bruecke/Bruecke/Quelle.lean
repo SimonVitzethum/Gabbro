@@ -68,11 +68,15 @@ def nullSp (u : UProg) (h : nullB u = true) : Speicher (declOf u) where
   slots := fun t _ f => by
     show Wert (declOf u) (typAt u t f)
     unfold typAt
-    cases hw : fieldRangeO u t f with
-    | none => exact (⟨0, Int.le_refl _, Int.le_refl _⟩ : Zahl 0 0)
-    | some w =>
-      have := null_bereich h t f w hw
-      exact (⟨0, this.1, this.2⟩ : Zahl w.1 w.2)
+    by_cases hbf : boolFeldAt u t f = true
+    · rw [if_pos hbf]
+      exact (false : Bool)
+    · rw [if_neg hbf]
+      cases hw : fieldRangeO u t f with
+      | none => exact (⟨0, Int.le_refl _, Int.le_refl _⟩ : Zahl 0 0)
+      | some w =>
+        have := null_bereich h t f w hw
+        exact (⟨0, this.1, this.2⟩ : Zahl w.1 w.2)
   globs := fun g => nomatch g
 
 /-- The unit of a source the front end accepts: the parsed program, no lock invariant, the
