@@ -972,7 +972,6 @@ pub fn eigene_ausdruecke(s: &Stmt) -> Vec<&Expr> {
         | StmtArt::Leave(_)
         | StmtArt::Next(_)
         | StmtArt::ResetArena(_)
-        | StmtArt::ResetSlot(_)
         | StmtArt::AwaitLoad(_) => Vec::new(),
     }
 }

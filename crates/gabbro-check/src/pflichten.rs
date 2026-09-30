@@ -836,7 +836,6 @@ fn schleifeninvarianten(b: &Block, n: &mut usize, funktion: &str, aus: &mut Vec<
             | StmtArt::Narrow(_)
             | StmtArt::ResetArena(_)
             | StmtArt::ResetSlot(_)
-        | StmtArt::ResetSlot(_)
             // **Lane 253:** `start` carries no block for the walk above.
             | StmtArt::Start(_)
             | StmtArt::Leave(_)
