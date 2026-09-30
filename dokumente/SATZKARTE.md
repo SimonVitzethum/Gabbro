@@ -4690,3 +4690,28 @@ Two step functions answered `none` for it and had to learn it (`Nichtinterferenz
 **What is NOT claimed:** a `-> never` call that ENDS an `else` which must not fall off, and a
 fallible gate (`or R`) anywhere -- both still refused by name (LG004, LG007). The bridge to GabbroV
 (`bruecke/`) builds unchanged; the new form is outside its fragment, as every gate is.
+
+## 62. The reason channel of a foreign body: `bindAxiomElse` and the template `tor.fehlbar` (C-free lane, 2026-09-30)
+
+**The gap.** A fallible `syscall` gate (`-> T or R`) answers a value or a reason, and `D.Ax` had no
+channel for the reason (`aerg : Option Ty`); the exporter refused every unit with such a gate
+(LG007) -- among them every OS call of the network stack.
+
+| Lean name | File | What it says |
+|---|---|---|
+| `Deklaration.agruende` | Syntax | the channel's reason count of a foreign body; default `fun _ => 0`, so every declaration of before is unchanged |
+| `Block.bindAxiomElse`, `Endblock.bindAxiomElse` | Syntax | `bindCallElse`'s shape over a foreign body: the value binds and `rest` runs, or the reason binds and `err` (an end block) runs |
+| `sonstPasst`, `axiomAntwortSonst`, `axiomAntwortSonst_fst` | Semantik | the raw word carries the pair packed like a `tagged` value (`summePasst`'s convention: case 0 the value, case `i + 1` reason `i`); the world is `axiomAntwort`'s, so every frame lemma carries over |
+| `dann/endeBindAxiomElseOk/Grund` | RufMaschineG | four machine rules; the reason case runs `err` in block position (`.dann err.alsBlock.2 (.abbruch (.schrumpf k))`, as `rueckGrund` for a call) or as the end block (`.ende err`) |
+| `KopfHalt`/`RestHalt` (one arm each) | Zielsatz/Spec | the stop `hardware` where the word decodes to neither value nor reason; reviewed in the header block "end-block gate" (second slice). The answer class always holds the reasons, so no `nieZurueck` case and no new `antwortenB` clause |
+| `fort_dann`/`fort_ende` (arms) | Fortschritt | progress: such a head steps (value or reason) or stands at the named `hardware` stop |
+| `sonstPasst_ru`, `axiomAntwortSonst_ruG` | MitRuheSemantik | the idle-root translation keeps the channel (`D.mitRuhe.agruende := D.agruende` -- a defaulted field would have dropped it silently) |
+| `axiomAntwortSonst_rel` | Nichtinterferenz/Lokal | noninterference: related worlds decode to the same outcome |
+| **`tor_fehlbar`** (+ `_wert`, `_grund`, `_zeuge`) | SchablonenOhneLibc §3 | THE TEMPLATE: for every kernel word and every errno table, the stub's decoding (`dekodiere`, Syscall.lean), packed (`packe`), is decoded by G exactly so -- value, reason, or the hardware stop. Row `tor.fehlbar` in `schablonen.rs`, every premise bound |
+| arms in ~55 files | ZielOrt*, Rennfrei*, KostenG, SperreSem, AtomarSem, MitRuhe*, Folge*, ... | every property of blocks and end blocks carried through the new constructors; the replay proofs of the `Ziel` legs (`ZielOrtVoll`, `-Ax`, `-Geraet`, `-Rahmen`, `-Sperre`, `AtomarAkteur`) gained real cases, since the fragment predicates (`vOk`, `gOk`, `rOk`) admit the form |
+| `beispiele/182` | Zertifikat/G182_fallible_gate | WITNESS: a certified program with a fallible gate called at the top level |
+
+**Measured after the slice:** the five corpus programs that stopped at LG007 (74, 90, 149, 163, 164)
+now stop at their next wall, LG003 (a gate `requires`). **Not claimed:** an `else` that returns or
+matches the reason itself (`return e;`, `match e { … }`) -- an end block has no case split over a
+reason yet -- and a fallible gate whose answer is not an integer range; both refused by name.

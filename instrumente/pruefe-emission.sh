@@ -3816,7 +3816,9 @@ fi
 # pinned in `crates/gabbro-check/tests/rechenwerk.rs` (`die_untere_pruefung_folgt_der_eigenen_deklaration_nicht_dem_namen_der_einheit`).
 # 153 -> 154 on 2026-09-30 (C-free lane): example 181 (`gate-at-top-level`, a gate bound at the top level of a body and a
 # unit body ending in a `-> never` gate -- certified with `Endblock.bindAxiom`) emits like 174.
-MARKE_EMIT=154
+# 154 -> 155 on 2026-09-30 (C-free lane, second Lean slice): example 182 (`fallible-gate`, a `-> T or R` gate with its
+# errno table, certified with `Endblock.bindAxiomElse`) emits its stub like 74 and 90.
+MARKE_EMIT=155
 # **148 -> 150 on 2026-09-30 (C-free lane, C1).** Two emitting examples: `172-prozess-ohne-libc` (a process with its own
 # `write` gate, no libc) and `173-abbruch-ohne-libc` (a `-> never` gate over `exit_group` as the watchdog). Measured on the
 # committed tree: 150 emitting files in `beispiele/`.
