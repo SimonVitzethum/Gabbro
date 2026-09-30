@@ -111,7 +111,6 @@ def Endblock.hardwareFrei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => s.hardwareFrei && rest.hardwareFrei
   | .bind _ rest => rest.hardwareFrei
   | .bindAxiom .. => false
-  | .nie _ => true
 
 def Arms.hardwareFrei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -419,7 +418,6 @@ theorem Endblock.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ
       simp only [execEnd] at he
       exact Endblock.hardwareFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_hardware he)
   | .bindAxiom .., h, _, _, _, _ => by simp [Endblock.hardwareFrei] at h
-  | .nie x, _, _, ρ, _, _ => (ρ.get x).elim
 
 theorem Arms.hardwareFrei_ok (hR : OhneHardware R) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

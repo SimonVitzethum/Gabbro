@@ -598,11 +598,6 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
       (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
       (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
       (rest : Endblock l (τ :: Γ) Λ) : Endblock l Γ Λ
-  /-- The end behind a `-> never` answer: a variable of type `never` is in scope, so no run
-      reaches this point (`Val .never` is empty). It is what stands after
-      `Endblock.bindAxiom` of a `-> never` gate at the end of a body or an `else` -- the C
-      writes nothing there either (`_Noreturn`, `__builtin_unreachable`). -/
-  | nie (x : Var Γ .never) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where
   | nil : Arms l Γ Λ Λ []

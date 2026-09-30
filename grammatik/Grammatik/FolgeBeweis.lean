@@ -111,6 +111,8 @@ theorem fE_mono {l : Bool} :
       · cases s <;> simp_all [fNach]
   | _, _, e, .bind _ rest, w, w', hw, h => by
       simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
+  | _, _, e, .bindAxiom _ _ _ _ _ _ _ rest, w, w', hw, h => by
+      simp only [fE] at h ⊢; exact fE_mono e rest _ _ hw h
 
 /-- The residue predicate is monotone in the armed bit. -/
 theorem fR_mono (e : Bool) :
@@ -149,6 +151,8 @@ theorem fB_alsBlock (e : Bool) {l : Bool} :
   | _, _, .cons s rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
   | _, _, .bind _ rest, w => by
+      simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
+  | _, _, .bindAxiom _ _ _ _ _ _ _ rest, w => by
       simp only [Endblock.alsBlock, fB, fE, fB_alsBlock e rest]
 
 theorem fB_armWahlG (e : Bool) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :

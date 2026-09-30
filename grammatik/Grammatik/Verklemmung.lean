@@ -256,6 +256,15 @@ theorem schrittRang (hO : GutO O) {P : Programm D} {pa : Nat} {M M' : RufMaschin
       dsimp only; rw [rufUpdateG_self]
       rw [hhead] at hK
       exact hK
+  | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+    refine Or.inl ⟨by simp only [rufUpdateG_self], by simp only [rufUpdateG_self], Or.inl ⟨?_, ?_⟩⟩
+    · simp only [rufUpdateG_self]
+      rw [axiom_offen' hO _ _ _ _ _ hax, hs₁]
+      exact lese_offen _ _ _
+    · intro K hK
+      dsimp only; rw [rufUpdateG_self]
+      rw [hhead] at hK
+      exact hK
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
     rangB g, ⟨(M.faeden f).kopf.f, (M.faeden f).kopf.rho, (M.faeden f).kopf.s0, ⟨l, Γ, nach D g Λ, ρ, .ende rest⟩⟩
   | rufDann l Γ Λ Λ' Λ'' g args hp hr rest k ρ hhead hΛ s0 hs0 rho hrho neu hneu =>
@@ -996,6 +1005,9 @@ theorem mE_boden {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       exact ⟨mS_boden s fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden],
         mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]⟩
   | .bind _ rest, h => by
+      simp only [mE]
+      exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
+  | .bindAxiom _ _ _ _ _ _ _ rest, h => by
       simp only [mE]
       exact mE_boden rest fun c hc => by have := h c hc; simp_all [Endblock.ueberBoden]
 

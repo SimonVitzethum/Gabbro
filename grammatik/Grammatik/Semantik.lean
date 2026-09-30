@@ -868,7 +868,6 @@ def execEnd {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ →
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some v) => (execEnd rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
-  | .nie x, _, ρ => (ρ.get x).elim
 
 def execArms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ

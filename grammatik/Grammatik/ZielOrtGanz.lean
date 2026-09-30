@@ -310,7 +310,6 @@ def Endblock.logikFrei {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
   | .cons s rest => s.logikFrei && rest.logikFrei
   | .bind _ rest => rest.logikFrei
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.logikFrei
-  | .nie _ => true
 
 end
 
@@ -579,7 +578,6 @@ theorem Endblock.logikFrei_ok (hR : OhneLogik R) {l : Bool} {Γ : Ctx} {Λ : Lis
       split at he
       · exact Endblock.logikFrei_ok hR rest h _ _ _ (EndAusgang.schrumpf_logik he)
       · cases he
-  | .nie x, _, _, ρ, _, _ => (ρ.get x).elim
 
 end
 

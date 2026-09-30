@@ -528,7 +528,6 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
         cases ov with
         | none => exact Or.inl rfl
         | some v => exact (Endblock.kongruent hR rest _ _).schrumpf
-  | .nie x, _, ρ => (ρ.get x).elim
 
 theorem Arms.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :

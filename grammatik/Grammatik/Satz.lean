@@ -1524,7 +1524,6 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
         have g1 := hl.trans (Gut.weiter hw hg h1)
         exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
       · simp [EndAusgang.welt] at h
-  | .nie x, _, ρ, _, _, _, _ => (ρ.get x).elim
 
 theorem arms_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

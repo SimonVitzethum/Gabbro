@@ -201,7 +201,6 @@ def endblockOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .cons s rest => stmtOrteP P s ++ endblockOrteP P rest
   | .bind e rest => e.orte ++ endblockOrteP P rest
   | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrteP P rest
-  | .nie _ => []
 
 def armsOrteP (P : Programm D) {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -231,7 +230,6 @@ theorem blockOrteP_alsBlock (P : Programm D) {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
   | _, _, .bindAxiom _ args _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, blockOrteP, endblockOrteP, blockOrteP_alsBlock P rest]
-  | _, _, .nie _ => rfl
 
 /-- The carriers of the table and group invariants `f` owes at its return
     (`schuldet`: `f` writes one of their carriers; `rufAt` checks exactly

@@ -639,6 +639,27 @@
     `ZielX.keinKernHalt` is `KernHaltEA`, this leg over GA runs, `kernHaltEA_aus`.)
   -- END handler block --
 
+  -- BEGIN end-block gate block (C-free lane, 2026-09-30) --
+  WHAT CHANGED ON 2026-09-30 (C-FREE LANE: A FOREIGN CALL AT THE TOP LEVEL OF A BODY), AND WHY.
+  * THE GAP. A body is an `Endblock`, and `Endblock` had no binder for a foreign call: the answer
+    of an axiom could be bound only inside a nested `Block` (`Block.bindAxiom`). Every `syscall`
+    gate of the corpus and of the network stack is called at the top level of a body, and the
+    last call of a `-> never` process entry (`exit_group(...)`) ends a body -- the exporter
+    refused all of them (LG004).
+  * THE MODEL. One new `Endblock` constructor (Syntax.lean): `bindAxiom`, with the premises of
+    `Block.bindAxiom` and an end-block rest. Its semantics (`execEnd`) is that of the block
+    form; the machine gains ONE rule, `endeBindAxiom` (`dannBindAxiom` with the rest in `ende`
+    position). A `-> never` call that ENDS a value-returning end block still has no form (its
+    rest would be a dead end with no value to return) and stays refused by name.
+  * THE DIFF (below, `RestHalt`): two arms, the SAME stops `KopfHalt` names at
+    `Block.bindAxiom`, now at `.ende (.bindAxiom ..)` -- `hardware` (the answer is outside its
+    answerable type) and `nieZurueck` (the axiom's declared result is `never`). No stop KIND is
+    added, no premise and no conclusion moves; the definition names the same stop at the second
+    place it can stand. Without the two arms the statement would be FALSE for such a program
+    (a thread standing there could neither step nor be named), so the goal theorem forces
+    them.
+  -- END end-block gate block --
+
   WHAT CHANGED ON 2026-09-22 (FIX LANE F10, review G06 F1, OFFEN O18), AND WHY -- a REVIEWED
   DIFF of this file; the text of `GabbroZiel` and of `Ziel` is unchanged:
   * The Rust checker admits a symmetric worker pool, `concurrent { w, w }`, when `w` is
@@ -1743,6 +1764,11 @@ def RestHalt (O : Orakel D) (passes : Nat) {V : Vertrag D} {l : Bool} {Γ : Ctx}
   | .budget, .ewig _ 0 _ _ _ => True
   | .hardware, .ende (.cons s _) =>
       s.istBlatt = true ∧ ∃ h, execStmt O passes keinRuf s σ ρ = .hardware h
+  | .hardware, @GRest.ende _ _ _ _ Λ (.bindAxiom a args ..) =>
+      (axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)).2 = none ∧
+      ¬ AntwortLeer D (D.aerg a)
+  | .nieZurueck, .ende (.bindAxiom a ..) => D.aerg a = some .never
   | k, .dann b _ => KopfHalt O passes σ ρ k b
   | _, _ => False
 

@@ -82,7 +82,6 @@ def Endblock.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => s.ants ++ rest.ants
   | .bind _ rest => rest.ants
   | .bindAxiom a _ _ _ _ _ _ rest => .inl a :: rest.ants
-  | .nie _ => []
 
 def Arms.ants {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → List (D.Ax ⊕ D.Reg)
@@ -126,7 +125,6 @@ theorem ants_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
   | _, _, .bindAxiom a _ _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.ants, Endblock.ants, ants_alsBlock rest]
-  | _, _, .nie _ => rfl
 
 /-! ## 2. What a residue still reaches -/
 

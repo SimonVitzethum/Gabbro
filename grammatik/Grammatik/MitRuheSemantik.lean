@@ -1106,6 +1106,18 @@ theorem execEnd_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
       simp only [ruEnd, execEnd]
       rw [ruE_orte, lese_worldR, eval_ru, ← endR_schrumpf, ← execEnd_ru rest _ _]
       rfl
+  | _, _, Λ, .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
+      simp only [ruEnd, execEnd]
+      erw [ruA_orte, lese_worldR, evalArgs_ru, axiomAntwort_ru]
+      cases axiomAntwort O a (σ.lese Λ args.orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ' w =>
+          cases w with
+          | none => rfl
+          | some v =>
+              simp only [Option.map]
+              rw [ergWert_ru he, ← endR_schrumpf, ← execEnd_ru rest σ' (Env.cons _ ρ)]
+              rfl
 
 theorem execArms_ru {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs))

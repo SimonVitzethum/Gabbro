@@ -612,7 +612,6 @@ theorem end_treu :
         have g1 := hl.trans (Treu.weiter hw hg h1)
         exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
       · simp [EndAusgang.welt] at h
-  | .nie x, _, ρ, _, _ => (ρ.get x).elim
 
 theorem arms_treu :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

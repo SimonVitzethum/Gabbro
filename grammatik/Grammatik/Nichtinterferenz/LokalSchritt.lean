@@ -357,6 +357,24 @@ theorem kEnde_rel (hO : OrakelTreu T AxT O) (hsp : SpeicherGleich T sp₁ sp₂)
       simp only [kEnde]
       rw [(hW.lese Λ e.orte).eval e (alle_von hST he.1) ρ]
       exact KRel.lokal _ _ _ _ _ rfl hsp
+  | bindAxiom a args he' hw hg hd hgd rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      have h1 := hW.lese Λ args.orte
+      obtain ⟨e1, e2⟩ := axiomAntwort_rel O hO (hAx a he.1.1) h1
+        (evalArgs ((sp₂.welt spur).lese Λ args.orte) args ((sp₂.welt spur).lese Λ args.orte) ρ)
+      simp only [kEnde]
+      rw [h1.evalArgs args (alle_von hST he.1.2) ρ]
+      revert e1 e2
+      generalize axiomAntwort O a ((sp₁.welt spur).lese Λ args.orte) _ = p₁
+      generalize axiomAntwort O a ((sp₂.welt spur).lese Λ args.orte) _ = p₂
+      rintro e1 e2
+      obtain ⟨w1, r1⟩ := p₁
+      obtain ⟨w2, r2⟩ := p₂
+      simp only at e1 e2 ⊢
+      subst e1
+      cases r1 with
+      | none => exact KRel.none_l _
+      | some v => exact KRel.lokal _ _ _ _ _ e2.1 e2.2
   | ret e _ =>
       simp only [nE] at he
       simp only [kEnde]

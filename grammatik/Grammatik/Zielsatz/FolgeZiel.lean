@@ -152,6 +152,7 @@ theorem ruEnd_fE (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ 
         (fS Φ e w s && fE Φ e (fNach Φ w s) rest)
       rw [ruS_fS Φ e w s, ruS_fNach Φ w s, ruEnd_fE Φ e _ rest]
   | _, _, _, e, w, .bind _ rest => ruEnd_fE Φ e w rest
+  | _, _, _, e, w, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_fE Φ e w rest
 
 theorem ruArms_fArms (Φ : Folge D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (e : Bool)

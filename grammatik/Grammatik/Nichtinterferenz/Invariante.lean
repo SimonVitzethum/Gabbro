@@ -32,6 +32,8 @@ theorem nB_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
   | _, _, .bind e rest => by
       simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
+  | _, _, .bindAxiom a args he hw hg hd hgd rest => by
+      simp only [Endblock.alsBlock, nB, nE, nB_alsBlock rest]
 
 theorem nB_armWahlG {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     ∀ {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)),
@@ -370,6 +372,12 @@ theorem kEnde_ok {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
       simp only [nE, Bool.and_eq_true] at he
       try simp only [kEnde]
       exact KErgOk.lokal hst _ _ _ (by first | exact he.2 | (simp only [GRest.nR]; exact he.2)) _ _
+  | bindAxiom a args he' hw hg hd hgd rest =>
+      simp only [nE, Bool.and_eq_true] at he
+      try simp only [kEnde]
+      split
+      · exact KErgOk.lokal hst _ _ _ (by first | exact he.2 | (simp only [GRest.nR]; exact he.2)) _ _
+      · exact KErgOk.none
   | ret e _ => exact kPop_ok hst f _ _
   | retGrund r _ => exact kPopGrund_ok hst f _ _ r
   | leave _ => exact KErgOk.none

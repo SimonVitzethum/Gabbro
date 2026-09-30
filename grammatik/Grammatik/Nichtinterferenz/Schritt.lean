@@ -237,6 +237,11 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
   | _, _, Λ, ρ, .bind e rest =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
       kLokal st f rho (.cons (eval σ₁ e σ₁ ρ) ρ) (.ende rest) σ₁.spur sp
+  | _, _, Λ, ρ, .bindAxiom a args he _ _ _ _ rest =>
+      let σ₁ := (sp.welt spur).lese Λ args.orte
+      match axiomAntwort O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
+      | (σ₂, some v) => kLokal st f rho (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur σ₂.speicher
+      | (_, none) => none
   | _, _, Λ, ρ, .ret e _ =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
       kPop st f σ₁ (evalErg σ₁ e σ₁ ρ)

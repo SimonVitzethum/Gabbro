@@ -4213,10 +4213,12 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             // blocks have; conversions are pure and bind anywhere.
             if let ExprArt::Ruf(r) = &l.wert.art {
                 if is_value_call(r, model) {
-                    if endblock {
+                    // A gate binds at the top level too (`Endblock.bindAxiom`, C-free
+                    // lane 2026-09-30); a function call still only through `Block.bindCall`.
+                    if endblock && gate_of(r, model, fns).is_none() {
                         return Err(refuse("LG004", format!("`let` of a call in {fname} has no G form at the top level")));
                     }
-                    return tr_let_call(l, r, ctx, model, scope, fns, fname, out, rest, cont);
+                    return tr_let_call(l, r, ctx, model, scope, fns, fname, out, rest, cont, endblock);
                 }
             }
             let (eterm, vty) = tr_typed(&l.wert, ctx, model, scope, fname, out)?;
@@ -4418,10 +4420,12 @@ fn tr_gate_args(r: &Ruf, gi: usize, ctx: &Ctx, model: &Model, scope: &Scope, fna
 ///   and the rest is unreachable in G as in the C: the head stops there
 ///   (`HaltArt.nieZurueck`, the emitter's `_Noreturn`).
 ///
-/// **At the top level of a body the second form is refused by name** -- a
-/// body is an `Endblock`, and `Endblock` has no `bindAxiom` (the same reason
-/// every `let` of a call is refused there). *This is the wall the `-> never`
-/// gate meets most: `else { exit_group(1); }` is an `Endblock` too.*
+/// **At the top level of a body it is `Endblock.bindAxiom`** (since
+/// 2026-09-30; machine rule `endeBindAxiom`, the stops at it named in
+/// `Zielsatz/Spec.lean`'s `RestHalt`). One shape stays refused by name: a
+/// `-> never` call that ENDS an `else` which must not fall off
+/// (`else { exit_group(1); }`) -- behind the call the end block needs a rest,
+/// and the source wrote none.
 #[allow(clippy::too_many_arguments)]
 fn tr_gate_stmt(r: &Ruf, gi: usize, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out, rest: &[Stmt], cont: String, endblock: bool) -> Result<String, Refusal> {
     let gate = &model.gates[gi];
@@ -4432,16 +4436,17 @@ fn tr_gate_stmt(r: &Ruf, gi: usize, ctx: &mut Ctx, model: &Model, scope: &Scope,
             Ok(format!("(.cons {call} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
         }
         erg => {
-            if endblock {
-                let was = if matches!(erg, GateErg::Nie) {
-                    "the `-> never` gate"
-                } else {
-                    "the gate"
-                };
+            // At the top level (`Endblock.bindAxiom`) the rest is an end block. Behind
+            // a `-> never` answer it is dead; it must still be a term, and the only
+            // honest one is the end the source has there anyway: the implicit return
+            // of a body without a result (`cont`). An `else` that must not fall off
+            // has no such end (`cont` is empty), and a dead `return` with an invented
+            // value would put into the term what neither the source nor the C has.
+            if endblock && matches!(erg, GateErg::Nie) && rest.is_empty() && cont.is_empty() {
                 return Err(refuse("LG004", format!(
-                    "call of {was} {} in {fname} stands in an `Endblock` (the top level of a body, or \
-                     an `else` that must not fall off): only `Block.bindAxiom` calls an axiom with an \
-                     answer, and `Endblock` has no such constructor", gate.name)));
+                    "call of the `-> never` gate {} in {fname} ends an `else` that must not fall \
+                     off: `Endblock.bindAxiom` needs an end-block rest, and behind a `never` \
+                     answer there is none the source wrote", gate.name)));
             }
             let ty = match erg {
                 GateErg::Wert(ty) => ty.clone(),
@@ -4449,7 +4454,7 @@ fn tr_gate_stmt(r: &Ruf, gi: usize, ctx: &mut Ctx, model: &Model, scope: &Scope,
             };
             *ctx = ctx.push(String::new(), ty, NameKind::Let);
             Ok(format!("(.bindAxiom {} {args} rfl {AX_BEWEISE} {})",
-                gate_ctor(model, gi), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, false)?))
+                gate_ctor(model, gi), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
         }
     }
 }
@@ -4490,7 +4495,8 @@ fn check_annotation(computed: &VTy, annotated: &VTy, model: &Model, fname: &str,
 }
 
 /// A block-valued `let x = f()`: `Block.bindCall`. Only blocks have it.
-fn tr_let_call(l: &LetStmt, r: &Ruf, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out, rest: &[Stmt], cont: String) -> Result<String, Refusal> {
+#[allow(clippy::too_many_arguments)]
+fn tr_let_call(l: &LetStmt, r: &Ruf, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out, rest: &[Stmt], cont: String, endblock: bool) -> Result<String, Refusal> {
     let Some(path) = r.path() else {
         return Err(refuse("LG004", format!("indirect call in {fname} has no G form")));
     };
@@ -4511,8 +4517,10 @@ fn tr_let_call(l: &LetStmt, r: &Ruf, ctx: &mut Ctx, model: &Model, scope: &Scope
         }
         let args = tr_gate_args(r, gi, ctx, model, scope, fname, out)?;
         *ctx = ctx.push(l.name.text.clone(), rt, NameKind::Let);
+        // `Block.bindAxiom`, or at the top level `Endblock.bindAxiom`: the same
+        // constructor name, resolved by the expected type.
         return Ok(format!("(.bindAxiom {} {args} rfl {AX_BEWEISE} {})",
-            gate_ctor(model, gi), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, false)?));
+            gate_ctor(model, gi), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?));
     }
     let Some(callee) = fns.iter().find(|f| f.name == last.text) else {
         return Err(refuse("LG005", format!("call in {fname} names unknown function {}", last.text)));

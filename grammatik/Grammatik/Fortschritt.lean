@@ -102,6 +102,8 @@ theorem Endblock.alsBlock_terminal {l : Bool} :
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest, Bool.or_true]
   | _, _, .bind _ rest => by
       simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
+  | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
+      simp only [Endblock.alsBlock, Block.terminal, Endblock.alsBlock_terminal rest]
 
 /-- The residue takes an abrupt exit (`leave`/`next`): a loop shim behind
     `dann`/`schrumpf`/`frei`/`abbruch` layers. -/
@@ -652,7 +654,8 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
     {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (ρ : Env D Γ)
     (e : Endblock D (vertragVon D (M.faeden t).kopf.f) l Γ Λ)
     (hx : (M.faeden t).kopf.rest = ⟨l, Γ, Λ, ρ, .ende e⟩) (hl : l = false)
-    (hΛ : HeldIn Λ (offen (M.faeden t).spur)) : FortFaden P O passes M t := by
+    (hΛ : HeldIn Λ (offen (M.faeden t).spur)) (hAnt : e.ants.all (stelleC D) = true) :
+    FortFaden P O passes M t := by
   cases e with
   | ret e hp =>
       cases hst : (M.faeden t).stapel with
@@ -669,6 +672,35 @@ theorem fort_ende (hO : GutO O) {M : RufMaschineG D} {t : Faden}
   | leave h => exact absurd (hl.symm.trans h) Bool.false_ne_true
   | next h => exact absurd (hl.symm.trans h) Bool.false_ne_true
   | bind e rest => exact fort_schritt (w_endeBind rfl e rest ρ hx hΛ)
+  | bindAxiom a args he hw hg hd hgd rest =>
+      rcases hax : axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
+          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ) with
+        ⟨σ₂, _ | v⟩
+      · by_cases hleer : AntwortLeer D (D.aerg a)
+        · simp only [Endblock.ants, List.all_cons, Bool.and_eq_true] at hAnt
+          exact fort_nie ⟨l, Γ, Λ, ρ, _, hx,
+            (stelleC_iff.mp hAnt.1).resolve_right fun h => h hleer⟩
+        refine fort_hw ⟨l, Γ, Λ, ρ, _, hx, ?_, hleer⟩
+        show (axiomAntwort O a ((M.weltVon t).lese Λ args.orte)
+          (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte) ρ)).2
+            = none
+        rw [hax]
+      · have hσ : (O.wirkt a ((M.weltVon t).lese Λ args.orte)
+            (evalArgs ((M.weltVon t).lese Λ args.orte) args ((M.weltVon t).lese Λ args.orte)
+              ρ)).1 = σ₂ := by
+          have := congrArg Prod.fst hax
+          simpa [axiomAntwort] using this
+        have hh : HeldIn Λ ((M.weltVon t).lese Λ args.orte).haelt := by
+          show HeldIn Λ (offen _)
+          rw [(Erw.lese (M.weltVon t) Λ args.orte).offen]
+          exact hΛ
+        have herw := (Erw.lese (M.weltVon t) Λ args.orte).trans
+          (axiom_erw hO a _ (evalArgs ((M.weltVon t).lese Λ args.orte) args
+            ((M.weltVon t).lese Λ args.orte) ρ) hd hgd hh)
+        rw [hσ] at herw
+        obtain ⟨neu, hneu, -⟩ := herw
+        exact fort_schritt' ⟨_, RufSchrittG.endeBindAxiom M t l Γ Λ _ a args he hw hg hd hgd rest
+          ρ hx _ rfl σ₂ v hax neu hneu hΛ⟩
   | cons s rest =>
       by_cases hbl : s.istBlatt = true ∧ s.istAbschluss = false
       · rcases blatt_fall hO passes s hbl.1 hbl.2 (M.weltVon t) ρ hΛ with
@@ -902,7 +934,7 @@ theorem fortschritt_faden (hO : GutO O) {w0 : D.Fn} {M : RufMaschineG D} {t : Fa
   cases r with
   | ende e =>
       have hl : l = false := by simpa [GRest.fOk] using hk
-      exact fort_ende hO hkt hP ρ e hx hl hΛ
+      exact fort_ende hO hkt hP ρ e hx hl hΛ hA
   | dann b k =>
       have hn : k.nimmtAb = true := by
         revert hk

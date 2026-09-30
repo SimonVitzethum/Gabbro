@@ -227,6 +227,8 @@ theorem ruEnd_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_orteP P s) (ruEnd_orteP P rest)
   | _, _, _, .bind e rest => kongr₂ (· ++ ·) (ruE_orte e) (ruEnd_orteP P rest)
+  | _, _, _, .bindAxiom _ args _ _ _ _ _ rest =>
+      kongr₂ (· ++ ·) (ruA_orte args) (ruEnd_orteP P rest)
 
 theorem ruArms_orteP (P : Programm D) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -311,6 +313,7 @@ theorem ruEnd_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· ++ ·) (ruS_regs s) (ruEnd_regs rest)
   | _, _, _, .bind _ rest => ruEnd_regs rest
+  | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_regs rest
 
 theorem ruArms_regs {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -401,6 +404,7 @@ theorem ruEnd_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· && ·) (ruS_gOk K Rg s) (ruEnd_gOk K Rg rest)
   | _, _, _, .bind _ rest => ruEnd_gOk K Rg rest
+  | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_gOk K Rg rest
 
 theorem ruArms_gOk (K : Nat → Bool) (Rg : D.Reg → Bool) {V : Vertrag D} : ∀ {l : Bool}
     {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
@@ -492,6 +496,7 @@ theorem ruEnd_mE (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : 
   | _, _, _, .next _ => rfl
   | _, _, _, .cons s rest => kongr₂ (· && ·) (ruS_mS A s) (ruEnd_mE A rest)
   | _, _, _, .bind _ rest => ruEnd_mE A rest
+  | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => ruEnd_mE A rest
 
 theorem ruArms_mArms (A : Merkmal D.mitRuhe) {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -595,6 +600,7 @@ theorem mE_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ
   | _, _, _, .cons s rest, h => by
       simp only [mE, Bool.and_eq_true] at h ⊢; exact ⟨mS_mono hle s h.1, mE_mono hle rest h.2⟩
   | _, _, _, .bind _ rest, h => mE_mono hle rest h
+  | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h => mE_mono hle rest h
 
 theorem mArms_mono (hle : MLe A A') {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),
@@ -713,6 +719,7 @@ theorem mE_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       simp only [mE, Bool.and_eq_true] at h h' ⊢
       exact ⟨mS_und s h.1 h'.1, mE_und rest h.2 h'.2⟩
   | _, _, _, .bind _ rest, h, h' => mE_und rest h h'
+  | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest, h, h' => mE_und rest h h'
 
 theorem mArms_und {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} (arms : Arms D V l Γ Λ Λ' cs),

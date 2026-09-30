@@ -96,7 +96,6 @@ def Endblock.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (K : 
   | .cons s rest => s.vOk K && rest.vOk K
   | .bind _ rest => rest.vOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.vOk K
-  | .nie _ => true
 
 def Arms.vOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (K : Nat → Bool) : Arms D V l Γ Λ Λ' cs → Bool
@@ -122,7 +121,6 @@ theorem Endblock.vOk_alsBlock {V : Vertrag D} {l : Bool} (K : Nat → Bool) :
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
   | _, _, .bindAxiom _ _ _ _ _ _ _ rest => by
       simp only [Endblock.alsBlock, Block.vOk, Endblock.vOk, Endblock.vOk_alsBlock K rest]
-  | _, _, .nie _ => rfl
 
 /-- The candidates of an indirect call through a pointer of signature `n`
     -- every function of that signature -- have their contract carriers in
@@ -318,7 +316,6 @@ theorem Endblock.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res 
   | .bindAxiom _ _ _ _ _ _ _ rest, h => by
       simp only [Endblock.vOk] at h ⊢
       exact Endblock.vOk_mono rest h
-  | .nie _, _ => rfl
 
 theorem Arms.vOk_mono {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -449,7 +446,6 @@ theorem Endblock.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Re
       simp only [Endblock.kOk, Endblock.vOk] at h ⊢
       exact Endblock.vOk_of_kOk rest h
   | .bindAxiom .., h => by simp [Endblock.kOk] at h
-  | .nie _, _ => rfl
 
 theorem Arms.vOk_of_kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

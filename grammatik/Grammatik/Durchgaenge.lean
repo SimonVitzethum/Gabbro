@@ -232,6 +232,9 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bind e rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig] at h
       simp only [execEndH, Endblock.execH_passes rest h]
+  | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig] at h
+      simp only [execEndH, Endblock.execH_passes rest h]
 
 theorem Arms.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

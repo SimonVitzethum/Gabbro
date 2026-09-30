@@ -83,6 +83,7 @@ def nE (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l :
   | .next _ => true
   | .cons s rest => nS S Ax s && nE S Ax rest
   | .bind e rest => e.orte.all S && nE S Ax rest
+  | .bindAxiom a args _ _ _ _ _ rest => Ax a && args.orte.all S && nE S Ax rest
 
 def nA (S : D.Tab ⊕ D.Glob → Bool) (Ax : D.Ax → Bool) {V : Vertrag D} {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool

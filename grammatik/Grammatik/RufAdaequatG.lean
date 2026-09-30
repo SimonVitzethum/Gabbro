@@ -4015,7 +4015,6 @@ theorem Endblock.ohneOrakel_alsBlock {V : Vertrag D} {l : Bool} :
       simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
         Endblock.ohneOrakel_alsBlock rest]
   | _, _, .bindAxiom .. => rfl
-  | _, _, .nie _ => rfl
 
 /-- A covered end block run as a block is a covered block. -/
 theorem EndG.alsBlock {V : Vertrag D} {A : D.Lock → Prop} :

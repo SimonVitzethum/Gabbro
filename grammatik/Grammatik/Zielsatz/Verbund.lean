@@ -112,6 +112,7 @@ theorem endblockOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ :
   | _, _, _, .cons s rest => by
       simp only [endblockOrteP, stmtOrteP_mitRumpf s, endblockOrteP_mitRumpf rest]
   | _, _, _, .bind _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
+  | _, _, _, .bindAxiom _ _ _ _ _ _ _ rest => by simp only [endblockOrteP, endblockOrteP_mitRumpf rest]
 
 theorem armsOrteP_mitRumpf {V : Vertrag D} : ∀ {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (a : Arms D V l Γ Λ Λ' cs),

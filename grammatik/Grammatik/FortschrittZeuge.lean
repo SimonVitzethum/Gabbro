@@ -42,6 +42,7 @@ def GRest.kannHalten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .ende e =>
       match e with
       | .cons s _ => s.istBlatt
+      | .bindAxiom .. => true
       | _ => false
   | .dann b _ => b.kannHalten
   | _ => false
@@ -61,6 +62,7 @@ theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {
           cases k
           · exact h.1
           all_goals exact absurd h (by simp [Zielsatz.RestHalt])
+      | bindAxiom => rfl
       | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt])
   | dann b k' =>
       cases b with

@@ -84,7 +84,6 @@ def Endblock.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : L
   | .cons s rest => s.rOk K && rest.rOk K
   | .bind _ rest => rest.rOk K
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.rOk K
-  | .nie _ => true
 
 def Arms.rOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} (K : Nat → Bool) : Arms D V l Γ Λ Λ' cs → Bool

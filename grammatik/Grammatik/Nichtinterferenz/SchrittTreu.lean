@@ -501,5 +501,12 @@ theorem schrittK_von (P : Programm D) (O : Orakel D) (passes : Nat)
       simp only [RufMaschineG.weltVon] at hax
       rw [hax]
       rfl
+  | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      kstart
+      subst hs₁
+      simp only [kr, kEnde]
+      simp only [RufMaschineG.weltVon] at hax
+      rw [hax]
+      rfl
 
 end Gabbro.Grammatik

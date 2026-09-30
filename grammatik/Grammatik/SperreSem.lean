@@ -385,7 +385,6 @@ def execEndH {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some v) => (execEndH rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
-  | .nie x, _, ρ => (ρ.get x).elim
 
 def execArmsH {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
     Arms D V l Γ Λ Λ' cs → Wert D (.sum cs) → World D → Env D Γ → Ausgang V l Γ
@@ -518,7 +517,6 @@ theorem Endblock.execH_leer {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
   | .bindAxiom a args he hw hg hd hgd rest, σ, ρ => by
       simp only [execEndH, execEnd, Endblock.execH_leer rest] <;> rfl
-  | .nie x, _, ρ => (ρ.get x).elim
 
 theorem Arms.execH_leer {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -742,7 +740,6 @@ theorem Endblock.execH_ohne {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
       simp only [Endblock.ohneLocks] at h
       simp only [execEndH, execEnd, Endblock.execH_ohne rest h] <;> rfl
-  | .nie x, _, _, ρ => (ρ.get x).elim
 
 theorem Arms.execH_ohne {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :
@@ -1097,7 +1094,6 @@ theorem Endblock.execBlockH_alsBlock :
       · rw [Endblock.execBlockH_alsBlock rest]
         cases execEndH S O U passes R rest _ _ <;> rfl
       · rfl
-  | _, _, .nie x, _, ρ => (ρ.get x).elim
 
 /-- Past `abbruch`, an end outcome continues as without it. -/
 theorem weiterH_abbruch_zu {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk) (eo : EndAusgang V l Γ) :

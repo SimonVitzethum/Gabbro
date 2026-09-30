@@ -211,7 +211,6 @@ theorem Endblock.execBlockHA_alsBlock :
       · rw [Endblock.execBlockHA_alsBlock rest]
         cases execEndHA S O U A passes R rest _ _ <;> rfl
       · rfl
-  | _, _, .nie x, _, ρ => (ρ.get x).elim
 
 /-- Past `abbruch`, an end outcome continues as without it. -/
 theorem weiterHA_abbruch_zu {Λ Λk : List (Res D)} (k : GRest D V l Γ Λk) (eo : EndAusgang V l Γ) :

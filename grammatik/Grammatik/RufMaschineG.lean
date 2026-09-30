@@ -47,7 +47,6 @@ def Endblock.alsBlock {V : Vertrag D} {l : Bool} : {Γ : Ctx} → {Λ : List (Re
   | _, _, .bind e rest => ⟨rest.alsBlock.1, .bind e rest.alsBlock.2⟩
   | _, _, .bindAxiom a args he hw hg hd hgd rest =>
       ⟨rest.alsBlock.1, .bindAxiom a args he hw hg hd hgd rest.alsBlock.2⟩
-  | _, Λ, .nie _ => ⟨Λ, .nil⟩
 
 /-- The residue of a running frame: what is left to do. `ende` is a plain
     end block; `dann b k` runs the block `b` first, then `k`; `schrumpf`
@@ -130,7 +129,6 @@ theorem Endblock.execBlock_alsBlock (O : Orakel D) (passes : Nat)
       · rw [Endblock.execBlock_alsBlock O passes R rest]
         cases execEnd O passes R rest _ _ <;> rfl
       · rfl
-  | _, _, .nie x, _, ρ => (ρ.get x).elim
 
 /-- A residue that waits for a callee's answer (`wartet`/`wartetSonst`):
     only a BINDING pop may resume it. -/

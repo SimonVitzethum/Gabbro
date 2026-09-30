@@ -1281,7 +1281,6 @@ theorem Endblock.orakel_kOk {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       simp only [Endblock.kOk] at h
       simp only [execEnd, Endblock.orakel_kOk rest h]
   | .bindAxiom .., h, _, _ => by simp [Endblock.kOk] at h
-  | .nie x, _, _, ρ => (ρ.get x).elim
 
 theorem Arms.orakel_kOk {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
     {cs : List (Option (Int × Int))} → (arms : Arms D V l Γ Λ Λ' cs) → arms.kOk = true →

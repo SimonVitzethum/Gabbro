@@ -81,7 +81,6 @@ def Endblock.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .cons s rest => s.kOk && rest.kOk
   | .bind _ rest => rest.kOk
   | .bindAxiom .. => false
-  | .nie _ => true
 
 def Arms.kOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} : Arms D V l Γ Λ Λ' cs → Bool
@@ -936,7 +935,6 @@ theorem Endblock.kOk_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bind _ rest => by
       simp only [Endblock.alsBlock, Block.kOk, Endblock.kOk, Endblock.kOk_alsBlock rest]
   | _, _, .bindAxiom .. => rfl
-  | _, _, .nie _ => rfl
 
 /-- A covered end block run as a block is a covered block. -/
 theorem EndR.alsBlock {V : Vertrag D} {A : D.Lock → Prop} {C : D.Fn → Prop} :

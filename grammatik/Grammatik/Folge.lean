@@ -152,6 +152,7 @@ def fE {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (e w : Bool) : Endblock D V l �
   | .next _ => true
   | .cons s rest => fS e w s && fE e (fNach Φ w s) rest
   | .bind _ rest => fE e w rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => fE e w rest
 
 end
 
