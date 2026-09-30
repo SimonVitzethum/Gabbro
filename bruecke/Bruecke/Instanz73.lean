@@ -220,7 +220,39 @@ theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
     ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=
   nutzer_aus_quelle pflichten h
 
+/-! CHAIN-GENERIC beispiele/73-sugar-widths.gab kette_73
+
+    P4: the closed translation-validation chain of `beispiele/73-sugar-widths`, assembled by the GENERIC `ketteAllg`
+    (`Quelle.lean`): no tables, so the emitter's layout is empty; premise (b) is `nutzer_aus_quelle`.
+    The instance adds WITNESS data only: the checker's Bool (a computation) and the certificate literal
+    `gabbro corr-lean` prints, checked by `korrOk` (its `weiter` arm accepts the explicit conversion
+    `(T)(e)` since 2026-09-30). -/
+
+def P73 : Gabbro.Grammatik.Programm (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u) :=
+  ((lowerAllg u).toOption.get low_ok).1
+
+theorem ht : u.tabellen = [] := rfl
+
+/-- Pasted from `gabbro corr-lean beispiele/73-sugar-widths.gab`, generic section. -/
+def zert73 : KCert (declOf u) :=
+  [{ params := [(0, .int false .w8)], locals := [], rows := [GRow.ret (some ((.int false .w8), (.var 0)))], vm := [0], pp := [], ks := [] },
+   { params := [(0, .int false .w16)], locals := [], rows := [GRow.ret (some ((.int false .w16), (.var 0)))], vm := [0], pp := [], ks := [] },
+   { params := [(0, .int false .w32)], locals := [], rows := [GRow.ret (some ((.int false .w16), (.cast CIT.u16 (.var 0))))], vm := [0], pp := [], ks := [] },
+   { params := [], locals := [], rows := [GRow.ret (some ((.int false .w64), (.lit 8191)))], vm := [], pp := [], ks := [] },
+   { params := [(0, .int true .w64)], locals := [], rows := [GRow.ret (some ((.int true .w64), (.var 0)))], vm := [0], pp := [], ks := [] },
+   { params := [(0, .int false .w64)], locals := [], rows := [GRow.ret (some ((.int false .w64), (.var 0)))], vm := [0], pp := [], ks := [] }]
+
+theorem akz73 : akzeptiert_pruefer.akzeptiert (einheitAllg u P73 (pflichten_null pflichten uebersetzt))
+    (aufzFn u).1 (aufzLock u).1 (aufzTraegerLeer u ht).1 = true := by decide
+
+theorem zert73_ok : korrOk (emitLayLeer u ht) fnNr zert73 P73 (aufzFn u).1 = true := by decide
+
+/-- **THE CLOSED CHAIN OF `beispiele/73-sugar-widths`**: source text, checker Bool, GabbroV's duties, the
+    correspondence to the C -- every field a theorem. -/
+def kette_73 : Kette quelle := ketteAllg pflichten uebersetzt ht zert73 akz73 zert73_ok
+
 #print axioms pflichten
 #print axioms nutzer
+#print axioms kette_73
 
 end Gabbro.Bruecke.I73

@@ -464,6 +464,36 @@ impl fn setze(b : u32)
         assert!(text.contains("params := [(0, .int false .w32)]"), "setze params: {text}");
     }
 
+    /// The forms of beispiele/69 and 73: an integer conversion `T(e)` (the explicit `(T)(e)` of the
+    /// C text), `|` over two conversions, a sugared width's storage word, and a limit word (a literal).
+    #[test]
+    fn generic_certifies_conversions_bit_operations_and_limit_words() {
+        let src = "module probe::konv {\n\
+            impl fn k(a : u32, b : u32) -> u64 effects { pure } costs <= 5 ops { return u64(a) | u64(b); }\n\
+            impl fn w(a : u32 in 0 .. 100) -> u16 effects { pure } costs <= 4 ops { return u13(a); }\n\
+            impl fn g() -> u64 effects { pure } costs <= 2 ops { return u13::max; }\n\
+            }\n";
+        let text = kzeige(&parse(src), "probe.gab");
+        assert!(text.contains("(.bin .bor CIT.u64 (.cast CIT.u64 (.var 0)) (.cast CIT.u64 (.var 1)))"), "{text}");
+        assert!(text.contains("(.cast CIT.u16 (.var 0))"), "a sugared width rounds up to its storage word: {text}");
+        assert!(text.contains("(.lit 8191)"), "a limit word travels as its number: {text}");
+        assert!(text.contains("pasteable as KCert"), "no refusal expected: {text}");
+    }
+
+    /// PLANTED DEFECT of the widening: a call that is NOT a type word, and an operator the family
+    /// does not have (`/`), keep their refusal by name -- the arms did not turn into a catch-all.
+    #[test]
+    fn generic_still_refuses_a_foreign_call_and_a_division() {
+        let src = "module probe::rest {\n\
+            impl fn a(x : u32 in 0 .. 5) -> u32 effects { pure } costs <= 2 ops { return foo(x); }\n\
+            impl fn b(x : u32 in 0 .. 5, y : u32 in 1 .. 5) -> u32 effects { pure } costs <= 2 ops { return x / y; }\n\
+            }\n";
+        let text = kzeige(&parse(src), "probe.gab");
+        assert!(text.contains("-- KREFUSAL: function `a`"), "{text}");
+        assert!(text.contains("-- KREFUSAL: function `b`"), "{text}");
+        assert!(!text.contains("pasteable as KCert"), "no literal with a refusal: {text}");
+    }
+
     #[test]
     fn generic_refuses_a_refused_body_by_name() {
         let src = MINI.replace("    lies(k, i);", "    lies(k, i);\n    g = 1;");
@@ -838,6 +868,56 @@ fn width_of_typ(um: &Umgebung, t: &TypExpr) -> Option<IntW> {
     }
 }
 
+/// The storage width of a type NAME used as a conversion target (`u64(a)`, `u13(a)`, an alias): a
+/// bare integer word by its width, a sugared width by the storage word the emitter rounds it up to
+/// (`u13` -> `u16`), an alias by its body.
+fn width_of_typname(um: &Umgebung, name: &str) -> Option<IntW> {
+    use gabbro_syntax::kw::Kw;
+    if let Some(kw) = Kw::suche(name) {
+        return if kw.ist_intty() { intw_of_wort(&kw) } else { None };
+    }
+    if let Some(kw) = gabbro_syntax::zucker_speicher(name) {
+        return intw_of_wort(&kw);
+    }
+    for td in um.typen.iter() {
+        if td.name.text == name {
+            return width_of_typ(um, td.rumpf.as_ref()?);
+        }
+    }
+    None
+}
+
+/// A conversion `T(e)`: a one-segment call with one argument whose name is an integer type.
+fn konversion<'e>(um: &Umgebung, e: &'e Expr) -> Option<(IntW, &'e Expr)> {
+    let ExprArt::Ruf(r) = &e.art else { return None };
+    if !r.marken.is_empty() || r.argumente.len() != 1 {
+        return None;
+    }
+    let path = r.path()?;
+    if path.teile.len() != 1 {
+        return None;
+    }
+    let w = width_of_typname(um, &path.teile[0].text)?;
+    Some((w, &r.argumente[0]))
+}
+
+/// A limit word `T::max` / `T::min` (a bare or sugared width): its number, which travels as a literal.
+fn grenzzahl(o: &Ort) -> Option<i128> {
+    if let Some((_, _, wert)) = crate::umgebung::grenzwort(o) {
+        return Some(wert);
+    }
+    if o.suffixe.len() != 1 {
+        return None;
+    }
+    let OrtSuffix::Feld(f) = &o.suffixe[0] else { return None };
+    let (lo, hi) = gabbro_syntax::zucker_bereich(&o.basis.text)?;
+    match f.text.as_str() {
+        "max" => Some(hi),
+        "min" => Some(lo),
+        _ => None,
+    }
+}
+
 /// The integer width of a slot field type.
 fn field_intw(um: &Umgebung, tabelle: &str, feld: &str) -> Option<IntW> {
     let t = um.tabellen.iter().find(|t| t.name.text == tabelle)?;
@@ -856,6 +936,8 @@ fn width_of_expr(sc: &GScope, um: &Umgebung, e: &Expr) -> Option<IntW> {
         ExprArt::Zahl(_) | ExprArt::Gleitkomma { .. } => None,
         ExprArt::Wahr | ExprArt::Falsch => Some(IntW { sgn: false, w: "w8" }),
         ExprArt::Ort(o) if o.suffixe.is_empty() => sc.width(&o.basis.text),
+        ExprArt::Ort(o) if grenzzahl(o).is_some() => None,
+        ExprArt::Ruf(_) => konversion(um, e).map(|(w, _)| w),
         ExprArt::Ort(o) => match gslot(o, sc) {
             Some((_, tab, _, feld)) => field_intw(um, &tab, &feld),
             None => match gnamed(o, sc, um) {
@@ -867,6 +949,11 @@ fn width_of_expr(sc: &GScope, um: &Umgebung, e: &Expr) -> Option<IntW> {
             use BinOp::*;
             match op {
                 Plus | Minus | Mal => match (width_of_expr(sc, um, a), width_of_expr(sc, um, b)) {
+                    (Some(x), Some(y)) => Some(IntW::uac(x, y)),
+                    (Some(x), None) | (None, Some(x)) => Some(IntW::uac(x, x.promote())),
+                    (None, None) => None,
+                },
+                BitUnd | BitOder | BitXor => match (width_of_expr(sc, um, a), width_of_expr(sc, um, b)) {
                     (Some(x), Some(y)) => Some(IntW::uac(x, y)),
                     (Some(x), None) | (None, Some(x)) => Some(IntW::uac(x, x.promote())),
                     (None, None) => None,
@@ -949,6 +1036,14 @@ fn gcx(sc: &GScope, um: &Umgebung, e: &Expr, benutzt: &mut [bool]) -> Result<Str
                 o.text()
             )),
         },
+        ExprArt::Ort(o) if grenzzahl(o).is_some() => Ok(format!(".lit {}", grenzzahl(o).unwrap_or(0))),
+        ExprArt::Ruf(_) => match konversion(um, e) {
+            Some((w, inner)) => {
+                let ci = gcx(sc, um, inner, &mut *benutzt)?;
+                Ok(format!(".cast {} ({ci})", w.cit()))
+            }
+            None => Err(format!("{}: no expression row (the Lean family is lit/var/+,-,*/cmp/slot)", expr_name(e))),
+        },
         ExprArt::Ort(o) => match gslot(o, sc) {
             Some((kp, tab, idx, feld)) => {
                 let index = gcx(sc, um, idx, &mut *benutzt)?;
@@ -1000,13 +1095,16 @@ fn gcx(sc: &GScope, um: &Umgebung, e: &Expr, benutzt: &mut [bool]) -> Result<Str
                 Plus => (".add", false),
                 Minus => (".sub", false),
                 Mal => (".mul", false),
+                BitUnd => (".band", false),
+                BitOder => (".bor", false),
+                BitXor => (".bxor", false),
                 Gleich => (".eq", true),
                 Kleiner => (".lt", true),
                 KleinerGleich => (".le", true),
                 Groesser => (".gt", true),
                 _ => {
                     return Err(format!(
-                        "binary {op:?}: only +, -, * and ==, <, <=, > have rows"
+                        "binary {op:?}: only +, -, *, &, |, ^ and ==, <, <=, > have rows"
                     ))
                 }
             };

@@ -155,7 +155,34 @@ theorem nutzer {u' : UProg} {P : Gabbro.Grammatik.Programm (declOf u')}
     ∃ hn : nullB u' = true, Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u' P hn) :=
   nutzer_aus_quelle pflichten h
 
+/-! CHAIN-GENERIC beispiele/69-integer-conversion.gab kette_69
+
+    P4: the closed translation-validation chain of `beispiele/69-integer-conversion`, assembled by the GENERIC `ketteAllg`
+    (`Quelle.lean`): no tables, so the emitter's layout is empty; premise (b) is `nutzer_aus_quelle`.
+    The instance adds WITNESS data only: the checker's Bool (a computation) and the certificate literal
+    `gabbro corr-lean` prints, checked by `korrOk` (its `weiter` arm accepts the explicit conversion
+    `(T)(e)` since 2026-09-30). -/
+
+def P69 : Gabbro.Grammatik.Programm (Gabbro.Grammatik.Parser.UebersetzeAllg.declOf u) :=
+  ((lowerAllg u).toOption.get low_ok).1
+
+theorem ht : u.tabellen = [] := rfl
+
+/-- Pasted from `gabbro corr-lean beispiele/69-integer-conversion.gab`, generic section. -/
+def zert69 : KCert (declOf u) :=
+  [{ params := [(0, .int false .w32), (1, .int false .w32)], locals := [], rows := [GRow.ret (some ((.int false .w64), (.bin .bor CIT.u64 (.cast CIT.u64 (.var 0)) (.cast CIT.u64 (.var 1)))))], vm := [0, 1], pp := [], ks := [] }]
+
+theorem akz69 : akzeptiert_pruefer.akzeptiert (einheitAllg u P69 (pflichten_null pflichten uebersetzt))
+    (aufzFn u).1 (aufzLock u).1 (aufzTraegerLeer u ht).1 = true := by decide
+
+theorem zert69_ok : korrOk (emitLayLeer u ht) fnNr zert69 P69 (aufzFn u).1 = true := by decide
+
+/-- **THE CLOSED CHAIN OF `beispiele/69-integer-conversion`**: source text, checker Bool, GabbroV's duties, the
+    correspondence to the C -- every field a theorem. -/
+def kette_69 : Kette quelle := ketteAllg pflichten uebersetzt ht zert69 akz69 zert69_ok
+
 #print axioms pflichten
 #print axioms nutzer
+#print axioms kette_69
 
 end Gabbro.Bruecke.I69
