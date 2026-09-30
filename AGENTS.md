@@ -130,6 +130,12 @@ README §5 says exactly this; keep it that way.
   memory safety, race freedom, contracts, costs, lock discipline — to make a wall go green.
   Walls that only yield by weakening are recorded as findings (208's vacuity pins, 203's
   recorded blockage of 07 and 125). Reviewers reject bypasses, no matter how green the build.
+- **Guarantees come from generic theorems only** (Simon, 2026-09-30): nothing in the compiler,
+  checker or printers exists for particular programs, and GabbroV is to be proved right for EVERY
+  program (theorems over every source text), with its statements computed in Lean from the
+  source rather than trusted from a Rust print. Per-program Lean files are witnesses only, off
+  the trust path. Known violation to remove: `corrlean.rs`'s `Cert104` section (rows only for
+  functions named `einzahlen`/`lies`).
 - **Floats are in scope** (IEEE model done). Probabilistic statements are OUT of scope for now.
   **Dynamic data structures are IN scope** (Simon, 2026-09-28): structures that grow without a
   static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).
