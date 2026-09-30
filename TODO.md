@@ -374,7 +374,7 @@ tree refuses everywhere else.*
 |---|---|
 | chain count 2 of 111 | **2 of 129** (`zaehle-kette.py --lean`, 2026-09-26); sieves (a) 2, (b) 15, (c) 15, (d) 55, (e) 2 (2026-09-16; sieve denominators move with the corpus) |
 | T2, the re-checker: designed, not built | **built** — `korrOk` (`KorrespondenzAllg.lean`), 23 expression arms plus the block structure (`if`, `let` of a call, `traverse`), sound with a planted defect per arm |
-| 11 of 21 templates are an abstract core | unchanged since 2026-09-16 (then counted 16; `gabbro schablonen` now reads 21 entries, 10 machine-checked), and still the honest state of T5 |
+| 11 of 23 templates are an abstract core | unchanged since 2026-09-16 (then counted 16; `gabbro schablonen` now reads 23 entries, 12 machine-checked -- the two added 2026-09-30 by the C-free lane are proved: `tor.nie` over the real block semantics, `start.nolibc` as an abstract core), and still the honest state of T5 |
 | the concurrent half not begun | **begun and closed for ONE program**: `schlusssatz_124`, every SC run of the emitted C simulated in G, race freedom PROVED from the model's rather than assumed; the generic concurrent case is untouched |
 | no pass proved individually | unchanged. 198 sentences, 190 measured, 0 proved — and that is the gap between "the checker is measured" and "the checker is proved" |
 | Caprock: fragments only | unchanged. Six areas written out, 10 of 10 units error-free, nothing compiled into a kernel |

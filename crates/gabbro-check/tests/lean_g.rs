@@ -250,7 +250,6 @@ fn refuses_tagged_and_linear_types() {
 fn every_item_kind_refuses_with_a_reason() {
     for (zeile, wort, grund) in [
         ("device D(basis : u64) at mmio {\n    reg R : u32 @0x00 class r\n}\n", "device D", "D.Reg"),
-        ("assume a \"the device answers\" falsifier probe_a;\n", "assume a", "D.Annahme"),
         ("group G over { T, T } {\n    invariant nichtnull cost O(n) runs offline :\n        \
           forall k in slots of T : T.slots[k].v == 0;\n}\n", "group G", "D.Inv"),
         ("use andere::stelle::Pa;\n", "use", "unit boundary"),
@@ -375,13 +374,14 @@ fn refuses_child_carrying_gate_by_name() {
     assert!(w.message.contains("child"), "must name the statement: {w}");
     assert!(w.message.contains("f"), "must name the entry function: {w}");
     assert!(w.message.contains("D.klon"), "must name the pair it would fill: {w}");
-    // A gate without `stack` keeps the old foreign-body refusal, by name.
+    // A gate without `stack` is a `D.Ax` since 2026-09-30 (C-free lane) -- this one
+    // is still refused, by name, for its `kernel` pairing, which has no G form.
     let schlicht = tor.replace("stack rsi\n", "");
     let w = refuse_of(&einheit(&format!(
         "{schlicht}impl fn f() -> u64 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n"
     )));
     assert_eq!(w.code, "LG001", "{w}");
-    assert!(w.message.contains("D.Ax"), "a plain gate keeps the Ax shape: {w}");
+    assert!(w.message.contains("tor") && w.message.contains("kernel"), "names the pairing: {w}");
 }
 
 /// **A scalar `static` IS a `Glob`** (2026-09-15): the declaration carries
@@ -1919,4 +1919,78 @@ fn const_fn_called_at_run_time_stays_refused() {
         }\n";
     let r = refuse_of(q);
     assert!(r.message.contains("doppelt"), "the refusal names the const fn: {r}");
+}
+
+/// The gate part of the snippets below: an `assume`, a value gate and a
+/// `-> never` gate, all infallible (C-free lane, 2026-09-30).
+const TORE: &str = "assume k_pid \"the kernel answers the pid\" falsifier probe_pid;\n\
+    assume k_ende \"the kernel ends the process\" falsifier probe_ende;\n\
+    syscall getpid() -> u64 in 1 .. 4194304 abi linux arch x86_64 number 39 \
+      regs in { } regs out { rax } clobbers { rcx, r11 } errors { } effects { pure } \
+      costs <= 8 ops assume k_pid falsifier probe_pid;\n\
+    syscall exit_group(code : u64) -> never abi linux arch x86_64 number 231 \
+      regs in { rdi = code } regs out { rax } clobbers { rcx, r11 } errors { } \
+      effects { diverges } costs <= 8 ops assume k_ende falsifier probe_ende;\n";
+
+/// **A `syscall` gate travels as `D.Ax`, an `assume` as `D.Annahme`** (C-free
+/// lane, 2026-09-30): the value gate binds in a block (`Block.bindAxiom`), the
+/// `-> never` gate stops there (`some .never`), and the certified corpus file
+/// `beispiele/174` exports the same way.
+#[test]
+fn exports_syscall_gates_as_axioms() {
+    let rumpf = format!("{TORE}\
+        impl fn f(i : index into T) effects {{ writes T.slots, locks L }} costs <= 40 ops {{\n\
+            locks L {{ let p = getpid(); T.slots[i].v = 1; }}\n\
+        }}\n\
+        impl fn g(b : bool) effects {{ diverges }} costs <= 20 ops {{ if b {{ exit_group(1); }} }}\n");
+    let text = export("lean_g", &tree(&einheit(&rumpf))).expect("infallible gates export");
+    for teil in [
+        "Ax := GAx",
+        "aerg := fun | .getpid => some ((.int 1 4194304)) | .exit_group => some .never",
+        "aschreibt := fun _ _ => false",
+        "Annahme := GAnn",
+        "a10 := GAnn.a10",
+        "(.bindAxiom GAx.getpid .nil rfl",
+        "(.bindAxiom GAx.exit_group (.cons",
+    ] {
+        assert!(text.contains(teil), "the export must contain {teil:?}: {text}");
+    }
+    let datei = export_file("174-tor-im-modell.gab");
+    assert!(datei.contains("(.bindAxiom GAx.exit_group"), "{datei}");
+}
+
+/// **Every gate shape with no G form refuses BY NAME** -- the reason channel
+/// (LG007), a precondition or postcondition (LG003), a write (LG001), and a
+/// gate with an answer at the top level of a body (LG004: `Endblock` has no
+/// `bindAxiom`). A unit WITHOUT a gate or an assumption keeps `Ax := Empty`.
+#[test]
+fn refuses_gate_shapes_without_a_form() {
+    let kopf = "reason E { Weg = 9 \"gone\" exhaustive }\n\
+        assume k \"the kernel keeps it\" falsifier probe_k;\n";
+    let gate = |kopf_rest: &str, rest: &str| format!(
+        "{kopf}syscall s(x : u64) -> u64{kopf_rest} abi linux arch x86_64 number 1 \
+         regs in {{ rdi = x }} regs out {{ rax }} clobbers {{ rcx, r11 }} errors {{ {} }} {rest} \
+         effects {{ pure }} costs <= 8 ops assume k falsifier probe_k;\n",
+        if kopf_rest.is_empty() { "" } else { "EBADF => Weg" });
+    for (quelle, code, wort) in [
+        (gate(" or E", ""), "LG007", "no reason channel"),
+        (gate("", "requires x <= 3"), "LG003", "no precondition"),
+        (gate("", "ensures result <= 3"), "LG003", "`ensures`"),
+    ] {
+        let w = refuse_of(&einheit(&format!(
+            "{quelle}impl fn f() -> u32 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n")));
+        assert_eq!(w.code, code, "{quelle}: {w}");
+        assert!(w.message.contains(wort), "{w}");
+    }
+    let oben = refuse_of(&einheit(&format!("{TORE}\
+        impl fn h() -> never effects {{ diverges }} costs <= 20 ops {{ exit_group(0); }}\n\
+        impl fn f() -> u32 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n")));
+    assert!(oben.code == "LG002" || oben.code == "LG004", "{oben}");
+    let oben = refuse_of(&einheit(&format!("{TORE}\
+        impl fn h(b : bool) effects {{ diverges }} costs <= 20 ops {{ exit_group(0); }}\n")));
+    assert_eq!(oben.code, "LG004", "{oben}");
+    assert!(oben.message.contains("`Endblock` has no such constructor"), "{oben}");
+    let ohne = export("lean_g", &tree(&einheit(
+        "impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n"))).expect("exports");
+    assert!(ohne.contains("Ax := Empty") && ohne.contains("Annahme := Unit"), "{ohne}");
 }

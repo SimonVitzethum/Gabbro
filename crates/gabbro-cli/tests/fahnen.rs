@@ -159,6 +159,11 @@ const FAHNEN: &[Fahne] = &[
     },
     // --- English from the start, no pair ------------------------------------------------
     Fahne {
+        erstname: "--c-liste",
+        zweitname: "",
+        lebendig: &[],
+    },
+    Fahne {
         erstname: "--with",
         zweitname: "",
         lebendig: &[],

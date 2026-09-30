@@ -88,6 +88,12 @@ pub struct Manifest {
     /// a path baked into this tree would be a fact about one machine, and a kernel
     /// version baked in would be a fact about one kernel.
     pub kmod: Option<(String, String)>,
+    /// `nolibc` (C-free lane, C1): the `program` units of this manifest are Linux x86_64
+    /// processes WITHOUT a C library -- linked `-nostdlib -static`, entered by a generated
+    /// `_start` that calls `main`, which is `-> never` and ends the process itself. Every operating-system
+    /// call the program makes is then its own `syscall` item, and a name it leaves to libc is
+    /// the linker's refusal.
+    pub ohne_libc: bool,
 }
 
 /// **FNV-1a, 64 bit, by hand.**
@@ -128,6 +134,7 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
     let mut einheiten: Vec<Einheit> = Vec::new();
     let mut metall: Option<String> = None;
     let mut kmod: Option<(String, String)> = None;
+    let mut ohne_libc = false;
     for (nr, roh) in text.lines().enumerate() {
         let nr = nr + 1;
         let ohne_kommentar = match roh.find("--") {
@@ -178,6 +185,12 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
                     ));
                 }
                 kmod = Some((worte[1].to_string(), worte[2].to_string()));
+            }
+            "nolibc" => {
+                if worte.len() != 1 {
+                    return Err(format!("{}:{nr}: `nolibc` takes no argument", pfad.display()));
+                }
+                ohne_libc = true;
             }
             "metal" => {
                 if worte.len() != 2 {
@@ -245,7 +258,7 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
             andere => {
                 return Err(format!(
                     "{}:{nr}: `{andere}` is no manifest word -- `compiler`, `out`, `metal`, \
-                     `kmod`, `unit`, or an INDENTED file path",
+                     `kmod`, `nolibc`, `unit`, or an INDENTED file path",
                     pfad.display()
                 ));
             }
@@ -284,7 +297,27 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
             pfad.display()
         ));
     }
-    Ok(Manifest { compiler, ausgabe, einheiten, metall, kmod })
+    // **`nolibc` is a statement about hosted programs**, and the flag that makes it true of
+    // the emitted C is the manifest's own: without `-ffreestanding` the compiler may turn a
+    // loop into `memset` or a `printf` into `puts`, and the linker's word would be a name
+    // the program never wrote.
+    if ohne_libc {
+        if kmod.is_some() || metall.is_some() {
+            return Err(format!(
+                "{}: `nolibc` stands beside a `kmod` or `metal` line -- those products have no \
+                 C library either way, and one manifest is one kind of product",
+                pfad.display()
+            ));
+        }
+        if !compiler.iter().any(|w| w == "-ffreestanding") {
+            return Err(format!(
+                "{}: `nolibc` needs `-ffreestanding` on the `compiler` line -- without it the \
+                 compiler may call `memset`/`memcpy`/`puts` on its own",
+                pfad.display()
+            ));
+        }
+    }
+    Ok(Manifest { compiler, ausgabe, einheiten, metall, kmod, ohne_libc })
 }
 
 /// **The name the linker looks for, and this is the only place in the tree that spells it.**
@@ -305,6 +338,8 @@ struct Eintritt {
     modul: String,
     oeffentlich: bool,
     parameter: usize,
+    /// declared `-> never`
+    nie: bool,
 }
 
 /// **What a unit declares for the driver, and what the driver needs.**
@@ -517,6 +552,7 @@ fn sammle(
                     },
                     oeffentlich: f.oeffentlich,
                     parameter: f.parameter.len(),
+                    nie: matches!(f.ergebnis, Some(gabbro_syntax::ast::TypExpr::Never(_))),
                 });
                 funktionen
                     .entry(f.name.text.clone())
@@ -657,7 +693,7 @@ fn sammle(
 /// > the identifier was the deviation.** *What it costs, named: no `-- erwartet: CODE` poison
 /// > probe can name this rule -- and that convention does not reach here anyway, because it
 /// > is for `.gab` files the checker reads and these probes are `.bau` manifests.*
-fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
+fn eintrittsregel(art: Art, ohne_libc: bool, eintritte: &[Eintritt]) -> Option<String> {
     let ort = |e: &Eintritt| format!("`{}::{EINTRITT}` in {}", e.modul, e.datei);
     match art {
         Art::Programm => match eintritte.len() {
@@ -686,6 +722,15 @@ fn eintrittsregel(art: Art, eintritte: &[Eintritt]) -> Option<String> {
                          type for the second",
                         ort(e),
                         e.parameter
+                    ));
+                }
+                if ohne_libc && !e.nie {
+                    return Some(format!(
+                        "{} does not end in `-> never` -- under `nolibc` the generated `_start` \
+                         only calls the entry and knows no way to end the process\n\
+                         \x20        = the program ends itself through its own `-> never` \
+                         `syscall` gate; declare `pub fn {EINTRITT}() -> never`",
+                        ort(e)
                     ));
                 }
                 None
@@ -1489,7 +1534,7 @@ enum Ergebnis {
 
 pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     let pruefbau = argumente.iter().any(|a| a == "--testbuild");
-    let trocken = argumente.iter().any(|a| a == "--dry-run" || a == "--trocken");
+    let trocken = argumente.iter().any(|a| a == "--dry-run" || a == "--trocken" || a == "--c-liste");
     let pfade: Vec<&String> = argumente.iter().filter(|a| !a.starts_with("--")).collect();
     // **`gabbro build a.gab b.gab …` -- source files, not a manifest** (Opus F, OFFEN O28).
     // Without a manifest there is no compiler line and no output directory, so nothing is
@@ -1706,7 +1751,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         for name in &reihenfolge {
             let e = manifest.einheiten.iter().find(|x| &x.name == name).expect("named");
             println!("  unit {name} ({} file(s))", e.dateien.len());
-            if let Some(befund) = eintrittsregel(e.art, &eintritte_je_einheit[name]) {
+            if let Some(befund) = eintrittsregel(e.art, manifest.ohne_libc, &eintritte_je_einheit[name]) {
                 befunde += 1;
                 println!("  REFUSED  {name}: {befund}");
             }
@@ -1781,6 +1826,39 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 }
             }
         }
+        // **The handwritten C this plan puts into its products** (C-free lane, C0), one line
+        // per file -- `c-file <unit> <origin> <lines> <path>`. It is read here, out of the
+        // same lists the build compiles from (`fremde`, `koepfe`, `METALL_QUELLEN`,
+        // `KMOD_QUELLEN`, the driver plan), so `instrumente/zaehle-c.py` counts what the
+        // build uses and no second guess of it (`W7`).
+        if argumente.iter().any(|a| a == "--c-liste") {
+            for name in &reihenfolge {
+                let e = manifest.einheiten.iter().find(|x| &x.name == name).expect("named");
+                let plan = match treiberregel(
+                    &treiber_funde_je_einheit[name],
+                    &treiber_sperren_je_einheit[name],
+                    &funktionen_je_einheit[name],
+                    &metall_je_einheit[name],
+                    e.art,
+                ) {
+                    Ok(p) => p,
+                    Err(_) => None,
+                };
+                for (herkunft, pfad) in handgeschrieben(
+                    &manifest,
+                    e,
+                    &fremde_je_einheit[name],
+                    &koepfe_je_einheit[name],
+                    plan.as_ref(),
+                    &arenen_je_einheit[name],
+                ) {
+                    let zeilen = std::fs::read(&pfad)
+                        .map(|b| b.iter().filter(|&&c| c == b'\n').count())
+                        .unwrap_or(0);
+                    println!("c-file {name} {herkunft} {zeilen} {}", pfad.display());
+                }
+            }
+        }
         println!("  {} computed edge(s) between units", kanten.len());
         for (a, b) in &kanten {
             println!("    {a} -> {b}");
@@ -1836,7 +1914,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         // **The entry rule runs BEFORE the C is written.** A `program` without an entry translates
         // cleanly, compiles cleanly and dies at the linker -- so a rule that ran afterwards
         // would say the same thing `ld` says, only later.
-        if let Some(befund) = eintrittsregel(e.art, &eintritte_je_einheit[name]) {
+        if let Some(befund) = eintrittsregel(e.art, manifest.ohne_libc, &eintritte_je_einheit[name]) {
             abgesagt += 1;
             println!("REFUSED  {name}: {befund}");
             continue;
@@ -2327,6 +2405,33 @@ fn baue_einheit(
         for o in &fremd_objekte {
             binde.arg(o);
         }
+        // **`nolibc`: a process without a C library** (C-free lane, C1). The entry is a
+        // generated `_start`, compiled with the manifest's own compiler line, and the link
+        // takes no startup file, no library and nothing dynamic.
+        if manifest.ohne_libc {
+            let start_c = PathBuf::from(&manifest.ausgabe).join(format!("{}.start.c", e.name));
+            let start_o = PathBuf::from(&manifest.ausgabe).join(format!("{}.start.o", e.name));
+            if let Err(err) = std::fs::write(&start_c, prozess_start(EINTRITT)) {
+                return Ergebnis::Abgesagt(format!("{}: {err}", start_c.display()));
+            }
+            let mut ruf = std::process::Command::new(&manifest.compiler[0]);
+            ruf.args(&manifest.compiler[1..]);
+            ruf.arg("-c").arg("-o").arg(&start_o).arg(&start_c);
+            match ruf.output() {
+                Ok(a) if a.status.success() => {}
+                Ok(a) => {
+                    eprint!("{}", String::from_utf8_lossy(&a.stderr));
+                    return Ergebnis::Abgesagt(format!(
+                        "{} refused the generated process entry",
+                        manifest.compiler[0]
+                    ));
+                }
+                Err(err) => {
+                    return Ergebnis::Abgesagt(format!("{} did not run: {err}", manifest.compiler[0]))
+                }
+            }
+            binde.arg(&start_o).arg("-nostdlib").arg("-static").arg("-Wl,-e,_start");
+        }
         for u in &unten.namen {
             binde.arg(PathBuf::from(&manifest.ausgabe).join(format!("{u}.o")));
         }
@@ -2404,6 +2509,85 @@ const METALL_QUELLEN: [&str; 7] = [
     "include/math.h",
     "include/string.h",
 ];
+
+/// **Every handwritten file a unit's products contain** as `(origin, path)` (C-free lane,
+/// C0): the unit's own foreign `.c`/`.h`, the module runtime a `kmod` line names, the
+/// bare-metal runtime a `metal` line names when the unit owns a bare-metal driver, and the
+/// hosted runtime the generated driver's header tells the user to link (`arena_dyn.c` for an
+/// `arena`, `faden.c` for a `concurrent` set, `bindung.h` for either). `.ld` linker scripts
+/// are not C and are left out; the emitted C and the generated drivers are Gabbro's own
+/// output and are not listed.
+fn handgeschrieben(
+    manifest: &Manifest,
+    e: &Einheit,
+    fremde: &[String],
+    koepfe: &[String],
+    plan: Option<&TreiberPlan>,
+    arenen: &[String],
+) -> Vec<(&'static str, PathBuf)> {
+    let mut aus: Vec<(&'static str, PathBuf)> = Vec::new();
+    for f in fremde.iter().chain(koepfe.iter()) {
+        aus.push(("unit", PathBuf::from(f)));
+    }
+    if e.art == Art::Modul {
+        if let Some((dir, _)) = &manifest.kmod {
+            for f in KMOD_QUELLEN {
+                aus.push(("kmod-runtime", PathBuf::from(dir).join(f)));
+            }
+            // `kmod_modul_binden` copies the shared arena header beside them.
+            aus.push(("kmod-runtime", PathBuf::from(dir).join("../arena_dyn.h")));
+        }
+    }
+    if plan.is_some_and(|p| p.hat_metall()) {
+        if let Some(dir) = &manifest.metall {
+            for f in METALL_QUELLEN.iter().filter(|f| !f.ends_with(".ld")) {
+                aus.push(("metal-runtime", PathBuf::from(dir).join(f)));
+            }
+        }
+    }
+    // A `metal` line makes the unit's product the bare-metal image, which links none of the
+    // hosted runtime.
+    if e.art != Art::Modul && manifest.metall.is_none() {
+        let laufzeit = PathBuf::from("laufzeit");
+        let mut dazu: Vec<&str> = Vec::new();
+        if plan.is_some_and(|p| p.hat_gehostet()) {
+            dazu.extend(["faden.c", "faden.h", "bindung.h"]);
+        }
+        if !arenen.is_empty() {
+            dazu.extend(["arena_dyn.c", "arena_dyn.h", "bindung.h"]);
+        }
+        dazu.sort();
+        dazu.dedup();
+        for f in dazu {
+            aus.push(("hosted-runtime", laufzeit.join(f)));
+        }
+    }
+    aus
+}
+
+/// **The process entry of a `nolibc` program, written by the build** (C-free lane, C1).
+///
+/// The kernel starts an x86_64 process with `rsp` 16-aligned and pointing at `argc`, and
+/// no return address under it. A C function expects `rsp + 8` to be 16-aligned at entry, so
+/// the stub aligns and calls the program's `main` -- which the entry rule (`eintrittsregel`)
+/// holds to be one public nullary function declared `-> never`. **The stub knows no system
+/// call**: the program ends itself through its own `syscall` gate, so no operating system's
+/// number is spelled in this tree.
+fn prozess_start(eintritt: &str) -> String {
+    format!(
+        "/* Generated by the Gabbro build (`nolibc`) -- the process entry. Do not edit. */\n\
+         extern void {eintritt}(void);\n\
+         \n\
+         __attribute__((naked, noreturn)) void _start(void)\n\
+         {{\n\
+         \x20   __asm__ volatile (\n\
+         \x20       \"xor %ebp, %ebp\\n\"\n\
+         \x20       \"and $-16, %rsp\\n\"\n\
+         \x20       \"call {eintritt}\\n\"\n\
+         \x20       \"ud2\\n\");\n\
+         }}\n"
+    )
+}
 
 /// The flag word of the bare-metal image -- the same as `instrumente/pruefe-metall.sh`'s:
 /// freestanding, no red zone (the timer and the entries push onto the running stack), no

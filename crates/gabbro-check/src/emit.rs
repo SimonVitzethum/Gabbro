@@ -9333,10 +9333,27 @@ fn syscall_stumpf(
     // -- one line of honesty instead of a check against the wrong bound.
     enum Antwort {
         Leer,
+        /// `-> never`: the call ends the process (`exit_group`) -- a `_Noreturn` stub with no
+        /// answer to decode, and the C compiler is told so.
+        Nie,
         Ganz { ctyp: String, unter: Option<i128>, ober: Option<i128> },
     }
     let antwort = match &s.ergebnis {
         None => Antwort::Leer,
+        Some(TypExpr::Never(_)) => {
+            if s.fehler.is_some() {
+                weigere(
+                    absagen,
+                    s.name.span,
+                    &format!(
+                        "`syscall {n}` is `-> never` and names an `or R` channel -- a call that \
+                         does not come back has no error to decode"
+                    ),
+                );
+                return;
+            }
+            Antwort::Nie
+        }
         Some(TypExpr::Int(i)) => {
             let Some(c) = ctyp(&s.ergebnis.clone().unwrap(), u) else {
                 weigere(absagen, s.name.span, "return type");
@@ -9542,7 +9559,7 @@ fn syscall_stumpf(
     let grundtyp: Option<String> = s.fehler.as_ref().map(|r| r.text.clone());
     let wert_ctyp: Option<String> = match &antwort {
         Antwort::Ganz { ctyp, .. } => Some(ctyp.clone()),
-        Antwort::Leer => None,
+        Antwort::Leer | Antwort::Nie => None,
     };
     let hat_wert = wert_ctyp.is_some();
     let rueck = if grundtyp.is_some() {
@@ -9551,10 +9568,18 @@ fn syscall_stumpf(
         match &antwort {
             Antwort::Ganz { ctyp, .. } => ctyp.clone(),
             Antwort::Leer => "void".to_string(),
+            Antwort::Nie => "_Noreturn void".to_string(),
         }
     };
     let mut liste = params.clone();
-    if let Some(c) = &wert_ctyp {
+    // **The out-parameter belongs to the CHANNEL, not to the value** (C-free
+    // lane, 2026-09-30). Only `bool f(T *_wert, R *_grund)` hands the value
+    // through `_wert`; a gate without `or R` returns it (`return (T)_sys_rax;`
+    // below), and its call site is a plain `T x = f(…);`. Before, an
+    // infallible gate with a value got BOTH, and every call of it was a C
+    // error (`too few arguments`) -- no corpus program had one (measured:
+    // `beispiele/174` was the first).
+    if let (Some(c), Some(_)) = (&wert_ctyp, &grundtyp) {
         liste.push(format!("{c} *_wert"));
     }
     if let Some(g) = &grundtyp {
@@ -9670,6 +9695,12 @@ fn syscall_stumpf(
     let liest_roh = !arme.is_empty() || grundtyp.is_some() || hat_wert;
     if !liest_roh {
         b2.push_str("    (void)_sys_rax;\n");
+        if matches!(antwort, Antwort::Nie) {
+            b2.push_str(
+                "    /* `-> never`: under the named assumption the kernel does not come back. */\n\
+                 #if defined(__GNUC__)\n    __builtin_unreachable();\n#endif\n",
+            );
+        }
     } else {
         b2.push_str("    if (_sys_rax < 0) {\n");
         b2.push_str("        if (_sys_rax < -4095) {\n");
@@ -9712,7 +9743,7 @@ fn syscall_stumpf(
                 b2.push_str(&hardware("    "));
                 b2.push_str("    }\n");
             }
-            if hat_wert {
+            if hat_wert && grundtyp.is_some() {
                 b2.push_str(&format!("    *_wert = ({ctyp})_sys_rax;\n"));
             }
         }

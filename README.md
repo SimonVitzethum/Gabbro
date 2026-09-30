@@ -181,7 +181,7 @@ about devices and the scheduler — as premises *inside* the theorem, not prose 
 | **T1 — Model certificates** | `P` satisfies the typing and safety rules, per constructor | all 40 expression and all 50 statement constructors carried in Lean; Rust prints statement certificates for 47 of 253 bodies |
 | **T4 — Semantics of the emitted C** | what the generated C means: memory model, integer semantics, UB list, one lemma per form | 48 of 73 emitted forms have their lemma; a guardian goes red the moment the emitter produces a form without one |
 | **T2 — Correspondence re-checker** | *this* C program consists of exactly those correspondences | built as `korrOk` (`KorrespondenzAllg.lean`): 23 expression arms plus block structure, each with a planted-defect check; wiring it per program is open |
-| **T5 — Proof templates** | each recurring obligation gets a soundness theorem over the real semantics | 10 of 21 machine-checked (`gabbro schablonen`); the rest is still an abstract core |
+| **T5 — Proof templates** | each recurring obligation gets a soundness theorem over the real semantics | 12 of 23 machine-checked (`gabbro schablonen`); the rest is still an abstract core |
 
 ### The concurrent half: model done, C chain open
 
@@ -211,7 +211,7 @@ fresh date were last fully measured on the date beside them.
 | **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 470 diagnostics · `gabbro paesse` |
 | **Grammar** | **187 EBNF rules**, closed and reachable | vocabulary covers every terminal, 242 / 242 |
 | **Pass register** | **198 sentences over 12 passes — 190 measured, 2 ARGUED, 6 CONJECTURED, 0 proved**, claiming 419 diagnostic codes. *A written sentence is not a proved one* | `gabbro paesse --je-satz` |
-| **Proof templates** | **21, of which 10 are machine-checked**; all **15** Isabelle theories also exist in Lean (`grammatik/Grammatik/Isabelle/`, checked by every build); new proofs go to Lean only | Isabelle2025-2, [`beweise/`](beweise/) |
+| **Proof templates** | **23, of which 12 are machine-checked**; all **15** Isabelle theories also exist in Lean (`grammatik/Grammatik/Isabelle/`, checked by every build); new proofs go to Lean only | Isabelle2025-2, [`beweise/`](beweise/) |
 | **Corpus** | 143 clean examples, 828 poison files *(file counts 2026-09-28; 942 tests counted 2026-09-14, lane 177)* | `cargo test --no-fail-fast` |
 | **Emission** | **250 of 250 units emit and compile** under `cc -std=c11 -Wall -Wextra -Werror`, at `-O0` and `-O2`, with the same result; 37 are also executed against a handwritten version *(run 2026-09-14)* | `./instrumente/pruefe-emission.sh` |
 | **Guardians** | 55, *(count 2026-09-29; 52 on 2026-09-28, plus the GabbroV lane's `pruefe-beweis-tor.sh`, `pruefe-sperre-beweis.sh` and `pruefe-vorlagen.sh`)* each with deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |

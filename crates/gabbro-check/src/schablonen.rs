@@ -156,12 +156,63 @@ pub const RATSCHE: &[&str] = &[
     "gruppe.sperrabdruck",
     "option.sonderwert",
     "restrict.alleinzugriff",
+    "tor.nie",
+    "start.nolibc",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
 /// nicht je Aufrufstelle. Ein neues Konstrukt mit erzeugter Form **gehoert hierher, bevor es
 /// in die Grammatik kommt**.
 pub const SCHABLONEN: &[Schablone] = &[
+    // **Entered 2026-09-30 by the C-free lane, PROVED in the same commit** -- the rule
+    // "new templates are allowed, but must be proved" (AGENTS.md §3) for the two pieces a
+    // program without a C library needs from the emitter and the build.
+    Schablone {
+        name: "tor.nie",
+        haengt_an: &[],
+        konstrukt: "syscall g(…) -> never (the `_Noreturn` stub and its call)",
+        pflicht: "A call of a gate declared `-> never` never runs what stands behind it: the \
+                  emitter writes `static _Noreturn void g(…)`, the `syscall` instruction and \
+                  `__builtin_unreachable()`, and the call site continues with nothing. \
+                  **Machine-checked over the real block semantics** \
+                  (`nie_tor_kehrt_nicht_zurueck`, `Grammatik/SchablonenOhneLibc.lean`): an \
+                  axiom whose declared answer is `never` ends the block at that axiom under \
+                  EVERY oracle -- no raw word decodes as `never` -- and its head is the goal \
+                  theorem's NAMED stop `nieZurueck` (`nie_tor_halt_benannt`). Witness on the \
+                  certified program `beispiele/174` (`nie_tor_zeuge`). **NOT proved: that \
+                  the kernel does not come back** -- that is the gate's own declared contract \
+                  (user logic in the program's source), which the C compiler is handed through \
+                  `__builtin_unreachable()`.",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the gate is declared `-> never`, so its `D.Ax` answers `some .never`", durch: Some("the parse of the declaration, carried by `lean_g.rs::read_gate` (`GateErg::Nie`) and by `emit.rs::syscall_stumpf` (`Antwort::Nie`) from the same field; a `-> never` routine that returns falls at `S009`"), braeuchte: None },
+            Voraussetzung { was: "the kernel does not come back from the call (what `__builtin_unreachable()` hands the C compiler)", durch: Some("the gate's declared contract -- `assume … falsifier …` or a `kernel` pairing, without which the gate does not parse (`parse.rs`); user logic in the program's source, premise (c) of the goal"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §1; beispiele/173, 174; \
+                     crates/gabbro-check/src/emit.rs (`Antwort::Nie`)",
+    },
+    Schablone {
+        name: "start.nolibc",
+        haengt_an: &["tor.nie"],
+        konstrukt: "nolibc (the generated process entry `_start`)",
+        pflicht: "The build's `_start` (`xor %ebp,%ebp; and $-16,%rsp; call main; ud2`) \
+                  enters `main` with `rsp + 8` 16-aligned (the SysV x86_64 entry condition), \
+                  writes the return address strictly BELOW the kernel's stack pointer (argc, \
+                  argv and envp stay intact), and never executes its `ud2`. **Machine-checked \
+                  as an ABSTRACT CORE** (`start_nolibc`, `Grammatik/SchablonenOhneLibc.lean` \
+                  §2) over a model of the three instructions -- machine G has no process \
+                  entry; the loader and the thread start are the runtime premise (d), \
+                  `Laufzeit`. The stub knows no system call: the program ends itself through \
+                  its own `-> never` gate (`tor.nie`).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the unit has exactly ONE entry, a public nullary `main`", durch: Some("`bau.rs::eintrittsregel` (`Art::Programm`: none, two, private, with parameters -- each refused by name)"), braeuchte: None },
+            Voraussetzung { was: "`main` does not return (else the `ud2` would run)", durch: Some("`bau.rs::eintrittsregel` under `nolibc` (`main` must be `-> never`) and `S009` (a `-> never` body that returns or falls off its end), `schleifen.rs::nie_rueckkehr`"), braeuchte: None },
+            Voraussetzung { was: "the kernel hands a stack of at least 16 bytes", durch: Some("the loader: the runtime premise (d) of the goal (`Laufzeit.lader`), the named assumption every hosted unit already runs under"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §2; crates/gabbro-cli/src/bau.rs \
+                     (`prozess_start`, `eintrittsregel`); beispiele/172, 173",
+    },
     Schablone {
         name: "restrict.alleinzugriff",
         haengt_an: &[],
