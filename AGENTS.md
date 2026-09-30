@@ -160,6 +160,10 @@ README §5 says exactly this; keep it that way.
   (Simon, 2026-09-30): a system or kernel call is a generic call whose contract the program or
   its binding library declares in Gabbro; the Lean model, the compiler, the checker and the
   templates know no operating system. Only hardware behaviour is a named assumption.
+- **Memory from outside comes as a REGION, never from a number** (Simon, 2026-09-30): a
+  `syscall`/`extern` item may answer a region of declared extent whose contract (user logic) says
+  it is fresh and disjoint; Lean models it as one generic form. No int->ptr or int->fn-ptr
+  conversion enters the language; thread start is a proved template.
 - **Floats are in scope** (IEEE model done). Probabilistic statements are OUT of scope for now.
   **Dynamic data structures are IN scope** (Simon, 2026-09-28): structures that grow without a
   static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).
