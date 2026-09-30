@@ -268,8 +268,7 @@ theorem lowSideVal_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     (σ₀ σ : World (declOf u)) (ρ : Env (declOf u) Γ) (w : Gabbro.Body.World)
     (β : Gabbro.Body.Binding) (hW : WRel u σ w) (hL : LRel fn 0 ρ β) :
     Gabbro.Body.eval ⟨w, β⟩ eB = some (valOf (.int ls.weit.1 ls.weit.2) (eval σ₀ ls.term σ ρ)) := by
-  cases sd with
-  | add _ _ | sub _ _ | mul _ _ | conv _ _ _ | band _ _ | bor _ _ | bxor _ _ => simp [ensSide, sideExpr] at hb
+  induction sd generalizing ls eB with
   | lit n =>
     simp only [lowSideVal] at h; cases h
     simp only [sideExpr] at hb; cases hb
@@ -292,6 +291,233 @@ theorem lowSideVal_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn}
     exact lowTabRead_sim h σ₀ σ ρ w β hW hL
   | alt b f ix => simp only [lowSideVal] at h; cases h
   | erg => simp only [lowSideVal] at h; cases h
+  | add x y ihx ihy =>
+    simp only [lowSideVal] at h
+    cases hx : lowSideVal u Γ Λ fn x with
+    | error e => simp [hx] at h
+    | ok lx =>
+      cases hy : lowSideVal u Γ Λ fn y with
+      | error e => simp [hx, hy] at h
+      | ok ly =>
+        simp only [hx, hy, Except.ok.injEq] at h
+        subst h
+        cases hsx : sideExpr u fn x with
+        | none => simp [sideExpr, hsx, binE] at hb
+        | some ex =>
+          cases hsy : sideExpr u fn y with
+          | none => simp [sideExpr, hsx, hsy, binE] at hb
+          | some ey =>
+            simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+            subst hb
+            have h1 := ihx hx hsx
+            have h2 := ihy hy hsy
+            show Gabbro.Body.eval ⟨w, β⟩ (.bin .add ex ey) = _
+            rw [show Gabbro.Body.eval ⟨w, β⟩ (.bin .add ex ey) =
+              (match Gabbro.Body.eval ⟨w, β⟩ ex, Gabbro.Body.eval ⟨w, β⟩ ey with
+                | some x, some y => Gabbro.Body.binop .add x y
+                | _, _ => none) from rfl]
+            rw [h1, h2]
+            rfl
+  | sub x y ihx ihy =>
+    simp only [lowSideVal] at h
+    cases hx : lowSideVal u Γ Λ fn x with
+    | error e => simp [hx] at h
+    | ok lx =>
+      cases hy : lowSideVal u Γ Λ fn y with
+      | error e => simp [hx, hy] at h
+      | ok ly =>
+        simp only [hx, hy, Except.ok.injEq] at h
+        subst h
+        cases hsx : sideExpr u fn x with
+        | none => simp [sideExpr, hsx, binE] at hb
+        | some ex =>
+          cases hsy : sideExpr u fn y with
+          | none => simp [sideExpr, hsx, hsy, binE] at hb
+          | some ey =>
+            simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+            subst hb
+            have h1 := ihx hx hsx
+            have h2 := ihy hy hsy
+            show Gabbro.Body.eval ⟨w, β⟩ (.bin .sub ex ey) = _
+            rw [show Gabbro.Body.eval ⟨w, β⟩ (.bin .sub ex ey) =
+              (match Gabbro.Body.eval ⟨w, β⟩ ex, Gabbro.Body.eval ⟨w, β⟩ ey with
+                | some x, some y => Gabbro.Body.binop .sub x y
+                | _, _ => none) from rfl]
+            rw [h1, h2]
+            rfl
+  | mul x y ihx ihy =>
+    simp only [lowSideVal] at h
+    cases hx : lowSideVal u Γ Λ fn x with
+    | error e => simp [hx] at h
+    | ok lx =>
+      cases hy : lowSideVal u Γ Λ fn y with
+      | error e => simp [hx, hy] at h
+      | ok ly =>
+        simp only [hx, hy, Except.ok.injEq] at h
+        subst h
+        cases hsx : sideExpr u fn x with
+        | none => simp [sideExpr, hsx, binE] at hb
+        | some ex =>
+          cases hsy : sideExpr u fn y with
+          | none => simp [sideExpr, hsx, hsy, binE] at hb
+          | some ey =>
+            simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+            subst hb
+            have h1 := ihx hx hsx
+            have h2 := ihy hy hsy
+            show Gabbro.Body.eval ⟨w, β⟩ (.bin .mul ex ey) = _
+            rw [show Gabbro.Body.eval ⟨w, β⟩ (.bin .mul ex ey) =
+              (match Gabbro.Body.eval ⟨w, β⟩ ex, Gabbro.Body.eval ⟨w, β⟩ ey with
+                | some x, some y => Gabbro.Body.binop .mul x y
+                | _, _ => none) from rfl]
+            rw [h1, h2]
+            rfl
+  | conv lo hi x ihx =>
+    simp only [lowSideVal] at h
+    cases hx : lowSideVal u Γ Λ fn x with
+    | error e => simp [hx] at h
+    | ok lx =>
+      simp only [hx] at h
+      unfold LowSide.conv at h
+      split at h
+      · rename_i h1
+        split at h
+        · rename_i h2
+          cases h
+          have hb' : sideExpr u fn x = some eB := hb
+          rw [ihx hx hb']
+          rfl
+        · cases h
+      · cases h
+  | band x y ihx ihy =>
+    simp only [lowSideVal, lowZwei] at h
+    cases hx : lowSideVal u Γ Λ fn x with
+    | error e => simp [hx] at h
+    | ok lx =>
+      cases hy : lowSideVal u Γ Λ fn y with
+      | error e => simp [hx, hy] at h
+      | ok ly =>
+        simp only [hx, hy] at h
+        unfold LowSide.und at h
+        split at h
+        · rename_i h0
+          split at h
+          · rename_i h0'
+            cases h
+            cases hsx : sideExpr u fn x with
+            | none => simp [sideExpr, hsx, binE] at hb
+            | some ex =>
+              cases hsy : sideExpr u fn y with
+              | none => simp [sideExpr, hsx, hsy, binE] at hb
+              | some ey =>
+                simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+                subst hb
+                have h1 := ihx hx hsx
+                have h2 := ihy hy hsy
+                have ha : 0 ≤ (eval σ₀ lx.term σ ρ : Zahl lx.weit.1 lx.weit.2).n :=
+                  Int.le_trans h0 (eval σ₀ lx.term σ ρ : Zahl lx.weit.1 lx.weit.2).lo_le
+                have hb0 : 0 ≤ (eval σ₀ ly.term σ ρ : Zahl ly.weit.1 ly.weit.2).n :=
+                  Int.le_trans h0' (eval σ₀ ly.term σ ρ : Zahl ly.weit.1 ly.weit.2).lo_le
+                show Gabbro.Body.eval ⟨w, β⟩ (.bin .band ex ey) = _
+                rw [show Gabbro.Body.eval ⟨w, β⟩ (.bin .band ex ey) =
+                  (match Gabbro.Body.eval ⟨w, β⟩ ex, Gabbro.Body.eval ⟨w, β⟩ ey with
+                    | some x, some y => Gabbro.Body.binop .band x y
+                    | _, _ => none) from rfl]
+                rw [h1, h2]
+                simp only [valOf_int, Gabbro.Body.binop, Gabbro.Body.bits, if_pos (And.intro ha hb0)]
+                rfl
+          · cases h
+        · cases h
+  | bor x y ihx ihy =>
+    simp only [lowSideVal, lowZwei] at h
+    cases hx : lowSideVal u Γ Λ fn x with
+    | error e => simp [hx] at h
+    | ok lx =>
+      cases hy : lowSideVal u Γ Λ fn y with
+      | error e => simp [hx, hy] at h
+      | ok ly =>
+        simp only [hx, hy] at h
+        unfold LowSide.oder at h
+        split at h
+        · rename_i h0
+          split at h
+          · rename_i h0'
+            split at h
+            · rename_i hw1
+              split at h
+              · rename_i hw2
+                cases h
+                cases hsx : sideExpr u fn x with
+                | none => simp [sideExpr, hsx, binE] at hb
+                | some ex =>
+                  cases hsy : sideExpr u fn y with
+                  | none => simp [sideExpr, hsx, hsy, binE] at hb
+                  | some ey =>
+                    simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+                    subst hb
+                    have h1 := ihx hx hsx
+                    have h2 := ihy hy hsy
+                    have ha : 0 ≤ (eval σ₀ lx.term σ ρ : Zahl lx.weit.1 lx.weit.2).n :=
+                      Int.le_trans h0 (eval σ₀ lx.term σ ρ : Zahl lx.weit.1 lx.weit.2).lo_le
+                    have hb0 : 0 ≤ (eval σ₀ ly.term σ ρ : Zahl ly.weit.1 ly.weit.2).n :=
+                      Int.le_trans h0' (eval σ₀ ly.term σ ρ : Zahl ly.weit.1 ly.weit.2).lo_le
+                    show Gabbro.Body.eval ⟨w, β⟩ (.bin .bor ex ey) = _
+                    rw [show Gabbro.Body.eval ⟨w, β⟩ (.bin .bor ex ey) =
+                      (match Gabbro.Body.eval ⟨w, β⟩ ex, Gabbro.Body.eval ⟨w, β⟩ ey with
+                        | some x, some y => Gabbro.Body.binop .bor x y
+                        | _, _ => none) from rfl]
+                    rw [h1, h2]
+                    simp only [valOf_int, Gabbro.Body.binop, Gabbro.Body.bits, if_pos (And.intro ha hb0)]
+                    rfl
+              · cases h
+            · cases h
+          · cases h
+        · cases h
+  | bxor x y ihx ihy =>
+    simp only [lowSideVal, lowZwei] at h
+    cases hx : lowSideVal u Γ Λ fn x with
+    | error e => simp [hx] at h
+    | ok lx =>
+      cases hy : lowSideVal u Γ Λ fn y with
+      | error e => simp [hx, hy] at h
+      | ok ly =>
+        simp only [hx, hy] at h
+        unfold LowSide.xoder at h
+        split at h
+        · rename_i h0
+          split at h
+          · rename_i h0'
+            split at h
+            · rename_i hw1
+              split at h
+              · rename_i hw2
+                cases h
+                cases hsx : sideExpr u fn x with
+                | none => simp [sideExpr, hsx, binE] at hb
+                | some ex =>
+                  cases hsy : sideExpr u fn y with
+                  | none => simp [sideExpr, hsx, hsy, binE] at hb
+                  | some ey =>
+                    simp only [sideExpr, hsx, hsy, binE, Option.some.injEq] at hb
+                    subst hb
+                    have h1 := ihx hx hsx
+                    have h2 := ihy hy hsy
+                    have ha : 0 ≤ (eval σ₀ lx.term σ ρ : Zahl lx.weit.1 lx.weit.2).n :=
+                      Int.le_trans h0 (eval σ₀ lx.term σ ρ : Zahl lx.weit.1 lx.weit.2).lo_le
+                    have hb0 : 0 ≤ (eval σ₀ ly.term σ ρ : Zahl ly.weit.1 ly.weit.2).n :=
+                      Int.le_trans h0' (eval σ₀ ly.term σ ρ : Zahl ly.weit.1 ly.weit.2).lo_le
+                    show Gabbro.Body.eval ⟨w, β⟩ (.bin .bxor ex ey) = _
+                    rw [show Gabbro.Body.eval ⟨w, β⟩ (.bin .bxor ex ey) =
+                      (match Gabbro.Body.eval ⟨w, β⟩ ex, Gabbro.Body.eval ⟨w, β⟩ ey with
+                        | some x, some y => Gabbro.Body.binop .bxor x y
+                        | _, _ => none) from rfl]
+                    rw [h1, h2]
+                    simp only [valOf_int, Gabbro.Body.binop, Gabbro.Body.bits, if_pos (And.intro ha hb0)]
+                    rfl
+              · cases h
+            · cases h
+          · cases h
+        · cases h
 
 /-- A value fitted into a target range (`lowWertAt`) keeps its number. -/
 theorem lowWertAt_sim {Γ : Ctx} {Λ : List (Res (declOf u))} {fn : UFn} {lo hi : Int}

@@ -951,7 +951,12 @@ fn hilfe() {
   gabbro prove|beweise [--template|--vorlage] [--model|--modell <dir>] <file.gab>…
                                      the Lean duties of each unit against `Proofs/<Unit>.lean`:
                                      GREEN, OWED (what a person still proves), RED, SETUP;
-                                     `--template` prints the file a person starts from
+                                     `--template` prints the file a person starts from;
+                                     `--template --source [--bridge <dir>]` prints it PINNED
+                                     TO THE SOURCE TEXT, with the duties computed by the Lean
+                                     front end (`bruecke/Bruecke/Vorlage.lean`), nothing
+                                     printed by this program is trusted; a text the Lean
+                                     front end refuses comes back as a `-- REFUSED` comment
   gabbro gabbrov pruefe --manifest <file> --spec <file>
                                      every manifest obligation line against the
                                      specification: passed / refuted / undecided.
@@ -979,9 +984,9 @@ fn hilfe() {
   gabbro certificate|zeugnis <file.gab>…
                                     what the translation RESTS ON: assumptions, templates
                                     with proof state, foreign bodies, `asm` lines
-  gabbro corr-lean   <file.gab>…    the correspondence certificate as a Lean term (T2
-                                    minimal, 104 forms only): rows, map, layout; every
-                                    other form is a `-- REFUSAL:` line, never a drop
+  gabbro corr-lean   <file.gab>…    the correspondence certificate as a Lean term:
+                                    rows, map, layout; every form without a row is a
+                                    `-- REFUSAL:` line, never a drop
   gabbro ceremony|zeremonie [--per-site | --table] <file.gab>…
                                     every clause and annotation, in three columns --
                                     derivable / redundant / load-bearing. The CALIBRATION
@@ -1257,7 +1262,10 @@ fn befehl_gegenbeispiel(rest: &[String]) -> std::process::ExitCode {
 /// `gabbro prove|beweise [--template|--vorlage] [--model|--modell <dir>] <file.gab>…`
 fn befehl_beweise(rest: &[String]) -> std::process::ExitCode {
     let vorlage = rest.iter().any(|a| a == "--template" || a == "--vorlage");
+    // `--source|--quelle`: the template PINNED TO THE SOURCE TEXT, its duties computed by Lean.
+    let aus_quelle = rest.iter().any(|a| a == "--source" || a == "--quelle");
     let modell = rest.iter().position(|a| a == "--model" || a == "--modell").and_then(|i| rest.get(i + 1).cloned());
+    let bruecke = rest.iter().position(|a| a == "--bridge" || a == "--bruecke").and_then(|i| rest.get(i + 1).cloned());
     let mut dateien = Vec::new();
     let mut skip = false;
     for a in rest {
@@ -1266,8 +1274,8 @@ fn befehl_beweise(rest: &[String]) -> std::process::ExitCode {
             continue;
         }
         match a.as_str() {
-            "--template" | "--vorlage" => {}
-            "--model" | "--modell" => skip = true,
+            "--template" | "--vorlage" | "--source" | "--quelle" => {}
+            "--model" | "--modell" | "--bridge" | "--bruecke" => skip = true,
             _ => dateien.push(a.clone()),
         }
     }
@@ -1288,6 +1296,16 @@ fn befehl_beweise(rest: &[String]) -> std::process::ExitCode {
             eprint!("{}", absagen.zeige(&quelle));
             eprintln!("gabbro prove: {datei} has errors -- no duties");
             schlecht = schlecht.max(1);
+            continue;
+        }
+        if aus_quelle {
+            match gabbro_check::beweis::vorlage_quelle(&quelle, datei, bruecke.as_deref()) {
+                Ok(text) => print!("{text}"),
+                Err(e) => {
+                    eprintln!("gabbro prove: {e}");
+                    schlecht = schlecht.max(3);
+                }
+            }
             continue;
         }
         if vorlage {

@@ -21,7 +21,7 @@ roots = ["Gabbro.Body"]
 [[lean_lib]]
 name = "Duty"
 srcDir = "../programmlogik"
-roots = ["Duty.Duty104Referenz", "Duty.Duty108DisjointStartLocks"]
+roots = ["Duty.Duty104Referenz", "Duty.Duty108DisjointStartLocks", "Duty.Duty130DerivedContractPure", "Duty.Duty69IntegerConversion", "Duty.Duty73SugarWidths"]
 
 [[lean_lib]]
 name = "Bruecke"

@@ -4640,3 +4640,25 @@ proof. *Widening the parser to skip a directive it cannot evaluate would be unso
 the parser ignores may rename anything below it* -- so the list went to the build instead
 (`bau.rs::sperrenliste`, the register the other two drivers already read). The emitted C of the
 whole corpus is byte-unchanged.
+
+## 60. Premise (b) for EVERY source text: the duties are computed in Lean (parser lane, 2026-09-30, P6)
+
+**The principle** (Simon, 2026-09-30): nothing in the compiler or the checker is there for particular
+programs; GabbroV is proved always right by GENERIC theorems over every source text. This section is
+that statement for premise (b) of the goal theorem, in `bruecke/Bruecke/Quelle.lean` (Mathlib-free, on
+`grammatik`'s toolchain; `bruecke/Bruecke/Vorlage.lean` writes the template).
+
+| Lean name | File | What it says |
+|---|---|---|
+| `uOf`, `nullB`, `nullSp`, `einheitAllg` | Quelle | the elaborated program of a text; the zero memory exists (`nullB`); the unit built from the front end's output (no lock invariant, trivial axiom ensures, no declared start) |
+| **`Pflichten src`** | Quelle | THE STATEMENT, computed: `uOf src = some u`, the shape checks (`nullB`, `stimmigB`, `rangB`) and `meetsU` of every function. Nothing printed by Rust is in it |
+| `lower_of_uebersetze`, `uOf_eq` | Quelle | the lowering is the last stage of `uebersetzeAllg`; the parse of a text is its `uOf` |
+| **`nutzer_aus_quelle`**, `nutzerA_aus_quelle` | Quelle | `Pflichten src → uebersetzeAllg src = .ok ⟨u, P, fs⟩ → ∃ hn, NutzerPflicht (einheitAllg u P hn)` -- **over every `src`**; the atomic-rely twin. Axioms `propext`, `Classical.choice`, `Quot.sound` |
+| `pflichten_104`, `pflichten_108`, `nutzer_generisch` | Instanz104/108 | WITNESSES (non-degeneracy): `Pflichten` holds on two real programs, with GabbroV's own duty proofs |
+| `vorlage` | Vorlage | `gabbro prove --template --source`: the person's file pinned to the text, the duties as the computed statement, the stage outputs as hints the kernel checks |
+
+**What is NOT claimed:** the fragment premises -- no lock invariants, no axiom ensures, no declared
+starts, no atomics, `requires` lowered to `true`, the `ensures` forms `== < <=` with `and/or/not`,
+zero initial memory, no arithmetic in the bridge (refused by name: `sideExpr` is `none`). Each is a
+construct the Lean front end REFUSES by name; the plan to lift each is `STAND-P.md` /
+`messung/PARSER-LANE-REPORT.md`.
