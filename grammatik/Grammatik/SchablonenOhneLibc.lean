@@ -282,6 +282,183 @@ theorem tor_fehlbar_zeuge (D : Deklaration) (z : Int → Option D.Fn) :
 
 end Fehlbar
 
+/-! ## 4. `tor.region` -- the stub of a gate that hands over a REGION
+
+  Simon's decision 1 (2026-09-30): memory from outside comes as a region, never from a number.
+  A `syscall` answering `ptr<normal, …> u8 or R` gets the stub `emit.rs::syscall_stumpf`
+  writes for `Antwort::Region`: the sign leg of `tor.fehlbar` unchanged (a listed `-errno` is
+  its reason, an unlisted one or a word past the `-4095` fence the hardware stop), then the
+  word ZERO is the hardware stop too, and every other word is handed over as the address
+  `(uint8_t *)(uintptr_t)raw`. No expression of the language turns a number into a pointer
+  (`M140`); this stub is the one place a word becomes one, and this section is its proof.
+
+  What the section proves, and what it does not:
+
+  * `tor_region`: the stub, statement by statement, IS the generic decoding `dekodiere` of
+    Syscall.lean over the value range `1 .. 2^63 - 1` -- the same function `tor.fehlbar` is
+    proved over, so the reason channel of a region gate decodes exactly like every other
+    fallible gate's;
+  * `tor_region_adresse`, `tor_region_fehler_kein_zeiger`: the address handed over is the
+    kernel's word itself and never zero, and no error word ever becomes an address;
+  * `region_zugriff`: the ONE generic form "a foreign routine hands over a new region" --
+    the gate's contract (user logic: `ensures n <= lenof(result)` plus the fresh/disjoint
+    sentence of its assumption) -- and what `N571` makes of it: an index `i` with
+    `i + 1 <= n` (the checker's `passt(i, 1, clause)`) lies inside the region and inside no
+    other region live at the call.
+  * NOT proved: that the kernel keeps the contract (the gate's assumption, premise (c)); and
+    machine G has no byte pointers (`lean_g.rs` refuses the pointer target by name, LG002),
+    so a program with a region answer is outside the certified register exactly like every
+    `ptr<…> u8` program before it (OFFEN O37).
+-/
+
+section Region
+
+/-- The emitted region stub, statement by statement (`emit.rs`, `Antwort::Region`): the
+    `-4095` fence, the errno comparisons in table order, the zero test, the address. -/
+def regionStumpf {Grund : Type} [DecidableEq Grund] (tab : FehlerTabelle Grund) (roh : Int) :
+    SysAntwort Nat Grund :=
+  if roh < 0 then
+    if roh < -4095 then .unerwartet roh
+    else match fehlerSuche tab (-roh).toNat with
+      | some r => .grund r
+      | none => .unerwartet roh
+  else if roh = 0 then .unerwartet roh
+  else .ok roh.toNat
+
+/-- The largest word the kernel's `int64_t` answer can hold. -/
+def wortMax : Int := 2 ^ 63 - 1
+
+/-- The generic decoding over the address range, with the value leg read as an address. -/
+def alsAdresse {Grund : Type} : SysAntwort { x : Int // 1 ≤ x ∧ x ≤ wortMax } Grund →
+    SysAntwort Nat Grund
+  | .ok v => .ok v.1.toNat
+  | .grund r => .grund r
+  | .unerwartet u => .unerwartet u
+
+/-- **Soundness of `tor.region`.** For EVERY word the `int64_t` register can hold and every
+    errno table, the emitted stub decides exactly as the generic decoding `dekodiere` over the
+    range `1 .. 2^63 - 1` -- the decoding `tor.fehlbar` is proved against machine G's reason
+    channel. -/
+theorem tor_region {Grund : Type} [DecidableEq Grund] (tab : FehlerTabelle Grund) (roh : Int)
+    (hwort : roh ≤ wortMax) :
+    regionStumpf tab roh = alsAdresse (dekodiere tab 1 wortMax roh) := by
+  unfold regionStumpf dekodiere
+  by_cases hneg : roh < 0
+  · rw [if_pos hneg, dif_pos hneg]
+    by_cases hz : roh < -4095
+    · rw [if_pos hz, dif_neg (by omega)]; rfl
+    · rw [if_neg hz, dif_pos (by omega)]
+      cases fehlerSuche tab (-roh).toNat <;> rfl
+  · rw [if_neg hneg, dif_neg hneg]
+    by_cases h0 : roh = 0
+    · rw [if_pos h0, dif_neg (by omega)]; rfl
+    · rw [if_neg h0, dif_pos (by omega)]; rfl
+
+/-- The address handed over is the kernel's word itself, and never zero. -/
+theorem tor_region_adresse {Grund : Type} [DecidableEq Grund] (tab : FehlerTabelle Grund)
+    (roh : Int) (a : Nat) (h : regionStumpf tab roh = .ok a) : (a : Int) = roh ∧ 1 ≤ a := by
+  unfold regionStumpf at h
+  by_cases hneg : roh < 0
+  · rw [if_pos hneg] at h
+    by_cases hz : roh < -4095
+    · rw [if_pos hz] at h; cases h
+    · rw [if_neg hz] at h
+      cases hs : fehlerSuche tab (-roh).toNat <;> rw [hs] at h <;> cases h
+  · rw [if_neg hneg] at h
+    by_cases h0 : roh = 0
+    · rw [if_pos h0] at h; cases h
+    · rw [if_neg h0] at h
+      cases h
+      omega
+
+/-- No error word becomes an address: a negative word is a reason or the stop. -/
+theorem tor_region_fehler_kein_zeiger {Grund : Type} [DecidableEq Grund]
+    (tab : FehlerTabelle Grund) (roh : Int) (hneg : roh < 0) (a : Nat) :
+    regionStumpf tab roh ≠ .ok a := by
+  intro h
+  have := (tor_region_adresse tab roh a h).1
+  omega
+
+/-- A region: a base address and the number of bytes it reaches. -/
+structure Region where
+  basis : Nat
+  laenge : Nat
+  deriving DecidableEq, Repr
+
+/-- The byte at address `a` lies in the region. -/
+def Region.enthaelt (r : Region) (a : Nat) : Prop := r.basis ≤ a ∧ a < r.basis + r.laenge
+
+/-- Two regions share no byte. -/
+def Region.disjunkt (r s : Region) : Prop :=
+  r.basis + r.laenge ≤ s.basis ∨ s.basis + s.laenge ≤ r.basis
+
+/-- **The ONE generic form: a foreign routine hands over a new region.** The gate's contract,
+    user logic in the program's source: the answer reaches at least `n` bytes
+    (`ensures n <= lenof(result)`) and shares no byte with any region live at the call (the
+    fresh/disjoint sentence of its assumption). No operating system in it. -/
+def RegionVertrag (lebend : List Region) (n : Nat) (r : Region) : Prop :=
+  n ≤ r.laenge ∧ ∀ s ∈ lebend, r.disjunkt s
+
+/-- **What `N571` makes of the contract.** An index `i` the checker admits through the bound
+    name (`i + 1 <= n`, `passt(i, 1, clause)` in `m1.rs`) addresses a byte inside the handed-over
+    region, and a byte of NO other region live at the call -- the store `r[i] = v` the emitter
+    writes touches the new memory and nothing else. -/
+theorem region_zugriff (lebend : List Region) (n : Nat) (r : Region)
+    (h : RegionVertrag lebend n r) (i : Nat) (hi : i + 1 ≤ n) :
+    r.enthaelt (r.basis + i) ∧ ∀ s ∈ lebend, ¬ s.enthaelt (r.basis + i) := by
+  obtain ⟨hn, hd⟩ := h
+  refine ⟨⟨by omega, by omega⟩, ?_⟩
+  intro s hs ⟨h1, h2⟩
+  rcases hd s hs with h3 | h3 <;> omega
+
+/-- The premise `hi` is not decoration: the byte just past the extent may belong to the next
+    region -- a region of 4096 bytes at 4096 and one right behind it at 8192. -/
+theorem region_zugriff_grenze :
+    RegionVertrag [⟨8192, 4096⟩] 4096 ⟨4096, 4096⟩ ∧
+    (⟨8192, 4096⟩ : Region).enthaelt (4096 + 4096) := by
+  refine ⟨⟨Nat.le_refl _, ?_⟩, ⟨Nat.le_refl _, by decide⟩⟩
+  intro s hs
+  simp only [List.mem_singleton] at hs
+  subst hs
+  left; decide
+
+/-! ### The witness: `mmap`'s table (`ENOMEM = 12`, `EINVAL = 22`), one word of each kind,
+    and a 4096-byte region beside a live one -/
+
+def regionTab : FehlerTabelle (Fin 2) := [(12, 0), (22, 1)]
+
+/-- **Witness for `tor_region`, `tor_region_adresse`, `tor_region_fehler_kein_zeiger` and
+    `region_zugriff`**, ALL premises jointly: the word `0x7f0000000000` is that address, `-12`
+    is reason `0`, `0` and `-13` (an errno the table does not admit) are the stop; and the byte
+    at index 4095 of a 4096-byte region at `0x7f0000000000` lies inside it and outside a live
+    region just below it. -/
+theorem tor_region_zeuge :
+    regionStumpf regionTab 0x7f0000000000 = .ok 0x7f0000000000 ∧
+    regionStumpf regionTab (-12) = .grund 0 ∧
+    regionStumpf regionTab 0 = .unerwartet 0 ∧
+    regionStumpf regionTab (-13) = .unerwartet (-13) ∧
+    regionStumpf regionTab 0x7f0000000000 =
+      alsAdresse (dekodiere regionTab 1 wortMax 0x7f0000000000) ∧
+    ((0x7f0000000000 : Nat) : Int) = 0x7f0000000000 ∧ 1 ≤ (0x7f0000000000 : Nat) ∧
+    regionStumpf regionTab (-12) ≠ .ok 0 ∧
+    ((⟨0x7f0000000000, 4096⟩ : Region).enthaelt (0x7f0000000000 + 4095) ∧
+      ∀ s ∈ [(⟨0x7effffff0000, 0x10000⟩ : Region)],
+        ¬ s.enthaelt (0x7f0000000000 + 4095)) := by
+  have hv : RegionVertrag [⟨0x7effffff0000, 0x10000⟩] 4096 ⟨0x7f0000000000, 4096⟩ := by
+    refine ⟨Nat.le_refl _, ?_⟩
+    intro s hs
+    simp only [List.mem_singleton] at hs
+    subst hs
+    right; decide
+  exact ⟨by decide, by decide, by decide, by decide,
+    tor_region regionTab _ (by decide),
+    (tor_region_adresse regionTab 0x7f0000000000 0x7f0000000000 (by decide)).1,
+    (tor_region_adresse regionTab 0x7f0000000000 0x7f0000000000 (by decide)).2,
+    tor_region_fehler_kein_zeiger regionTab (-12) (by decide) 0,
+    region_zugriff _ 4096 _ hv 4095 (by decide)⟩
+
+end Region
+
 end OhneLibc
 
 end Gabbro.Grammatik
@@ -293,3 +470,7 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.OhneLibc.start_nolibc_zeuge
 #print axioms Gabbro.Grammatik.OhneLibc.tor_fehlbar
 #print axioms Gabbro.Grammatik.OhneLibc.tor_fehlbar_zeuge
+#print axioms Gabbro.Grammatik.OhneLibc.tor_region
+#print axioms Gabbro.Grammatik.OhneLibc.tor_region_adresse
+#print axioms Gabbro.Grammatik.OhneLibc.region_zugriff
+#print axioms Gabbro.Grammatik.OhneLibc.tor_region_zeuge

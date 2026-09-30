@@ -372,6 +372,23 @@ pub fn zugewiesene_namen(b: &Block, aus: &mut std::collections::HashSet<String>)
     }
 }
 
+/// How often the body BINDS each name (`let`, `let … else` with its reason, `alloc`, `await`,
+/// an `exchange` binder, a `traverse` variable, a `match` binder), through every nested block
+/// -- a region's extent holds at an index only through a name bound exactly once (`N571`).
+pub fn bindungen_zaehlen(b: &Block, aus: &mut std::collections::HashMap<String, usize>) {
+    for s in &b.anweisungen {
+        let mut einzeln = std::collections::HashSet::new();
+        let nur = Block { anweisungen: vec![s.clone()], span: b.span };
+        crate::namen::bindungen_sammeln_flach(&nur, &mut einzeln);
+        for n in einzeln {
+            *aus.entry(n).or_insert(0) += 1;
+        }
+        for k in crate::unterbloecke(s) {
+            bindungen_zaehlen(k, aus);
+        }
+    }
+}
+
 /// **Every upper bound a contract states over a sum: `namen + k <= K`** (`N463`/`N571`,
 /// C-free lane, 2026-09-30) -- `off + n <= 16384` beside a 16384-element array. Read through
 /// conjunctions only; the right side is a `+`-sum too, whose names the reader folds.

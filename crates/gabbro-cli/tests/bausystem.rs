@@ -1066,6 +1066,9 @@ fn ein_prozess_ohne_libc_hat_keine_fremden_symbole_und_der_abbruch_ist_gabbro() 
     for (manifest, bin, erwartet) in [
         ("beispiele/172-prozess-ohne-libc.bau", "target/bau-ohne-libc/prozess", "Hallo\n"),
         ("beispiele/173-abbruch-ohne-libc.bau", "target/bau-abbruch-ohne-libc/abbruch", ""),
+        // Example 183: the memory it writes through comes from a REGION gate (`mmap`), and
+        // the page reaches `write` under the gate's extent -- still nothing imported.
+        ("beispiele/183-region-vom-tor.bau", "target/bau-region-vom-tor/region", "OK\n"),
     ] {
         let (aus, fehler, code) = lauf(&["build", manifest]);
         assert_eq!(code, 0, "{manifest} builds:\n{aus}\n{fehler}");

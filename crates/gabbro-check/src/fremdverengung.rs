@@ -223,6 +223,10 @@ pub enum Wirkung {
     Bereich { vorher: String, nachher: String },
     /// Eine Beziehung zweier Stellen wurde als Tatsache angelegt (`Fakt::Beziehung`).
     Beziehung,
+    /// **The extent of an answered region** (C-free lane, 2026-09-30): a foreign body's
+    /// `ensures n <= lenof(result)` became the extent `N571` holds the bound name's indices
+    /// against -- an assumption about foreign code like the two above, booked the same way.
+    Ausdehnung,
 }
 
 impl Wirkung {
@@ -230,6 +234,7 @@ impl Wirkung {
         match self {
             Wirkung::Bereich { .. } => "range",
             Wirkung::Beziehung => "relation",
+            Wirkung::Ausdehnung => "extent",
         }
     }
 }

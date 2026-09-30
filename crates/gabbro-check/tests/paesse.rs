@@ -576,7 +576,10 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // **12 -> 13 on 2026-09-30 (C-free lane, second Lean slice):** `tor.fehlbar`, the stub of a
     // fallible gate, entered and proved in one commit (`SchablonenOhneLibc.lean` §3) -- again
     // never carried unproved, so the live surface and the unproved count stay.
-    assert_eq!(bewiesen(), 13);
+    // **13 -> 14 on 2026-09-30 (C-free lane, the region gate):** `tor.region`, the stub of a
+    // gate that hands over a byte region, entered and proved in one commit
+    // (`SchablonenOhneLibc.lean` §4) -- never carried unproved.
+    assert_eq!(bewiesen(), 14);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

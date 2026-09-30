@@ -1,0 +1,8 @@
+-- The manifest of example 183: a process without a C library whose memory comes from a
+-- region gate (C-free lane, the region gate).
+compiler cc -std=c11 -O0 -ffreestanding -fno-stack-protector -fno-pie -Wall -Wextra -Werror
+out      target/bau-region-vom-tor
+nolibc
+
+unit region program
+    beispiele/183-region-vom-tor.gab

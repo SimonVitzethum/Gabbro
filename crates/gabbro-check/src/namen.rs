@@ -521,6 +521,16 @@ struct PrimFakten {
 /// thread-local, not program memory -- but only where the name IS bound here.
 /// Runs first so a use never meets a binder collected later in source order.
 pub(crate) fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
+    bindungen_sammeln_flach(b, lokal);
+    for s in &b.anweisungen {
+        for u in crate::unterbloecke(s) {
+            bindungen_sammeln(u, lokal);
+        }
+    }
+}
+
+/// The names the statements of `b` bind THEMSELVES -- not those of their nested blocks.
+pub(crate) fn bindungen_sammeln_flach(b: &Block, lokal: &mut HashSet<String>) {
     for s in &b.anweisungen {
         match &s.art {
             StmtArt::Let(l) => {
@@ -578,9 +588,6 @@ pub(crate) fn bindungen_sammeln(b: &Block, lokal: &mut HashSet<String>) {
             // **Lane 257:** `grow` binds no name either; the `sonst`
             // locals are collected through `unterbloecke` below.
             | StmtArt::Grow(_) => {}
-        }
-        for u in crate::unterbloecke(s) {
-            bindungen_sammeln(u, lokal);
         }
     }
 }

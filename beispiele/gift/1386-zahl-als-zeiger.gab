@@ -1,0 +1,85 @@
+-- erwartet: M140
+-- **No number becomes a pointer.**
+--
+-- Simon's decision 1 (2026-09-30): memory from outside comes as a region, never from a
+-- number, and no int->ptr conversion enters the language. A binding of a pointer type to an
+-- integer falls at `M140`; the only place a word becomes an address is the proved stub of a
+-- region gate (`tor.region`).
+module gift::zahl_als_zeiger {
+
+pub reason MapFehler {
+    Nomem = 12 "no memory for the mapping"
+    Inval = 22 "an argument the kernel refuses"
+    exhaustive
+}
+
+pub reason SchreibFehler {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_mmap
+    "The Linux x86_64 `mmap` with `fd` = -1 and flags MAP_PRIVATE | MAP_ANONYMOUS answers the base of at least `len` fresh bytes, readable and writable, reading as zero and shared with no other mapping, or -errno; it destroys only rcx and r11."
+    falsifier sonde_mmap;
+
+assume linux_write
+    "The Linux x86_64 `write` reads exactly `len` bytes from `buf`, answers the count written or -errno, and destroys only rcx and r11."
+    falsifier sonde_write;
+
+assume linux_exit_group
+    "The Linux x86_64 `exit_group` ends every thread of the process with status `code & 255` and never returns to its caller."
+    falsifier sonde_exit_group;
+
+syscall mmap(addr : u64, len : u64, prot : u64, flags : u64, fd : u64, off : u64) -> ptr<normal, rw> u8 or MapFehler
+    abi linux arch x86_64 number 9
+    regs in { rdi = addr, rsi = len, rdx = prot, r10 = flags, r8 = fd, r9 = off }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { ENOMEM => Nomem, EINVAL => Inval }
+    ensures len <= lenof(result)
+    effects { pure }
+    costs <= 8 ops
+    assume linux_mmap falsifier sonde_mmap;
+
+syscall write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or SchreibFehler
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd }
+    requires len <= lenof(buf)
+    effects { reads buf }
+    costs <= 8 ops
+    assume linux_write falsifier sonde_write;
+
+syscall exit_group(code : u64) -> never
+    abi linux arch x86_64 number 231
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_exit_group falsifier sonde_exit_group;
+
+pub const SEITE : u64 = 4096;
+pub const LESEN_SCHREIBEN : u64 = 3;
+pub const PRIVAT_ANONYM : u64 = 34;
+pub const KEINE_DATEI : u64 = 0xFFFFFFFFFFFFFFFF;
+
+pub fn main() -> never
+    effects { diverges }
+    costs   <= 400 ops
+{
+    let seite = mmap(0, SEITE, LESEN_SCHREIBEN, PRIVAT_ANONYM, KEINE_DATEI, 0) else (e) {
+        exit_group(2);
+    }
+    let falsch : ptr<normal, rw> u8 = 4096;
+    seite[1] = 75;       -- K
+    seite[2] = 10;       -- newline
+    seite[4095] = 1;     -- the last byte the extent covers
+    let n = write(1, seite, 3) else (f) { exit_group(3); }
+    exit_group(0);
+}
+
+}

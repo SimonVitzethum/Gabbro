@@ -4358,7 +4358,7 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "syscall.stub",
-        kennungen: &["C180", "C181", "C182", "C183", "C184"],
+        kennungen: &["C180", "C181", "C182", "C183", "C184", "C186"],
         aussage: "A checked `syscall` lowers to one C function: every parameter in its \
                   declared in-register, the number in `rax`, the `syscall` instruction \
                   as extended inline `__asm__` with the declared clobbers plus `memory`, \
@@ -4371,8 +4371,12 @@ pub const PHASEN: &[Satz] = &[
                   Linux x86_64 `syscall` ABI or the bare-metal `int $0x80` ABI (`abi \
                   metal`, O31: nothing but memory destroyed) and no other (`C182`), an \
                   integer answer with a \
-                  checkable range (`C183`), and a number -- and every result bound -- \
-                  that folds at translation time (`C184`).",
+                  checkable range or a byte region `ptr<normal, …> u8` (`C183`), a region \
+                  only with its `or R` channel (`C186`: a gate that hands over memory can \
+                  refuse, and the refusal must reach the program's `else`), and a number -- \
+                  and every result bound -- that folds at translation time (`C184`). A \
+                  region's word is handed over as the address after the sign leg, and the \
+                  word zero is the hardware outcome (the proved template `tor.region`).",
         vorbehalt: "A template rule, and nothing else. It says nothing about whether the \
                     kernel keeps the contract it decodes against -- that is the named \
                     assumption behind the stub (`Erhaltung.lean`: `syscallStub`), handed \
@@ -4391,8 +4395,9 @@ pub const PHASEN: &[Satz] = &[
                     `linux_read_contract`, each with its own probe).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: probes `850`/`851`/`852`/`853`/`854` on \
-                      `C180`/`C181`/`C182`/`C183`/`C184` -- each checker-clean, each \
-                      refused by exactly its code; beispiele/74 runs the value path \
+                      `C180`/`C181`/`C182`/`C183`/`C184`, and `1383` on `C186` -- each \
+                      checker-clean, each refused by exactly its code; beispiele/183 runs a \
+                      region answer (`mmap`, a store through it, `write`); beispiele/74 runs the value path \
                       (a `write(1, \"ok\\n\", 3)` returns 3), beispiele/90 the `EBADF` path.",
         fundstelle: "crates/gabbro-check/src/emit.rs (`syscall_stumpf`); \
                      dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Erhaltung.lean",
@@ -4413,7 +4418,15 @@ pub const PHASEN: &[Satz] = &[
                   is tested before every pass, so its negation holds at the top of the body. \
                   Every other index is refused. The clause itself is decided at every call \
                   (`N463`, widened the same day to every non-bare form, by the same reading, \
-                  with the contract's own upper bounds such as `off + n <= 16384` as cover).",
+                  with the contract's own upper bounds such as `off + n <= 16384` as cover). \
+                  **A REGION answer carries its extent too** (C-free lane, 2026-09-30, Simon's \
+                  decision 1): the `ensures C <= lenof(result)` of a gate or `extern fn` \
+                  WITHOUT a Gabbro body -- user logic, booked in the foreign-contract report as \
+                  an `extent` -- becomes the clause over the name a `let … else` binds its \
+                  answer to, with the call's arguments substituted, if that name is bound once \
+                  in the body and never assigned and the arguments name only constants and \
+                  parameters the body leaves alone. The same clause covers the name at every \
+                  call's length clause, the bare form included.",
         vorbehalt: "The acceptance is a sound, incomplete reading: an index the extent does \
                     bound, but only through a path join, a subtraction, a product of names or \
                     an `ensures` that says nothing relative to the extent, is refused \
@@ -4421,7 +4434,13 @@ pub const PHASEN: &[Satz] = &[
                     binding carries it). An index through a pointer TO A FIXED-LENGTH ARRAY \
                     is `M103`'s, not this rule's. A pointer the body reassigns, and a local \
                     or global pointer, has no entry clause, so every index through it is \
-                    refused.",
+                    refused -- except a region answer as above. The extent of a region is \
+                    the gate's DECLARED contract, never checked against the kernel: a false \
+                    `ensures` is a fault in the user's logic like any contract. A gate with \
+                    a Gabbro body gives its answer no extent (its `ensures` over \
+                    `lenof(result)` would be a promise machine G cannot state -- byte \
+                    pointers have no G form, OFFEN O37), and nothing releases a region: a \
+                    gate that unmaps memory has no way to say so (OFFEN O37).",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift: `1380` (`buf[i] = 1` with no extent -- measured CLEAN \
                       and lowered to a plain C store before 2026-09-30), `1381` (`buf[5]` \
@@ -4430,7 +4449,10 @@ pub const PHASEN: &[Satz] = &[
                       beispiele/180 (all five accepted shapes), /168, /169 (whose `retry` \
                       loop needed the `until` fact). Corpus effect measured: 7 files met the \
                       rule, the four gifts among them repaired with the clause they lacked \
-                      (`764`, `784`-`786`), `765` lost its `p[1]` twin (it reassigns `p`).",
+                      (`764`, `784`-`786`), `765` lost its `p[1]` twin (it reassigns `p`). \
+                      The region answer: `1384` (an index past the gate's extent), `1385` (a \
+                      length past it at a call), `1386` (`M140`: no number becomes a pointer), `1387` (the name bound twice: no extent); \
+                      beispiele/183 maps a page, writes through it and hands it to `write`.",
         fundstelle: "crates/gabbro-check/src/m1.rs (`zeigerindex_pruefen`, `extent_at_call`); \
                      crates/gabbro-check/src/rahmenlaenge.rs (`ausdehnungen`, \
                      `zugewiesene_namen`)",

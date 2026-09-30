@@ -9355,6 +9355,13 @@ fn syscall_stumpf(
         /// answer to decode, and the C compiler is told so.
         Nie,
         Ganz { ctyp: String, unter: Option<i128>, ober: Option<i128> },
+        /// `-> ptr<normal, …> u8 or R`: the gate hands over a REGION (Simon's decision 1,
+        /// 2026-09-30) -- the kernel's word is its base address. The proved template
+        /// `tor.region` (`Grammatik/SchablonenOhneLibc.lean` §4): a listed `-errno` is its
+        /// reason, a word at or below zero or past the `-4095` fence is the hardware stop, and
+        /// every other word is the address -- never a number the program could compute (no
+        /// int->ptr conversion enters the language; only this stub turns a word into one).
+        Region { ctyp: String },
     }
     let antwort = match &s.ergebnis {
         None => Antwort::Leer,
@@ -9459,6 +9466,34 @@ fn syscall_stumpf(
                 }
             }
             Antwort::Ganz { ctyp: c, unter, ober }
+        }
+        Some(t @ TypExpr::Zeiger(z))
+            if matches!(z.raum, Raum::Normal)
+                && matches!(&z.ziel, TypExpr::Int(i) if i.bereich.is_none()
+                    && matches!(i.wort, gabbro_syntax::kw::Kw::U8)) =>
+        {
+            // **A region needs its channel** (`C186`): the kernel's error words are
+            // negative, and without an `or R` the stub would have nowhere to send them but
+            // the hardware stop -- a gate that can refuse and declares it cannot is a
+            // contract no program should have to rely on for its memory.
+            if s.fehler.is_none() {
+                syscall_code(
+                    absagen,
+                    "C186",
+                    s.name.span,
+                    &format!(
+                        "`syscall {n}` answers a region with no `or R` channel -- a gate that \
+                         hands over memory can refuse, and its refusal must reach the program's \
+                         `else`, not the hardware stop"
+                    ),
+                );
+                return;
+            }
+            let Some(c) = ctyp(t, u) else {
+                weigere(absagen, s.name.span, "return type");
+                return;
+            };
+            Antwort::Region { ctyp: c }
         }
         Some(_) => {
             syscall_code(
@@ -9576,7 +9611,7 @@ fn syscall_stumpf(
     // of `messung/fragmente/F01.gab`).
     let grundtyp: Option<String> = s.fehler.as_ref().map(|r| r.text.clone());
     let wert_ctyp: Option<String> = match &antwort {
-        Antwort::Ganz { ctyp, .. } => Some(ctyp.clone()),
+        Antwort::Ganz { ctyp, .. } | Antwort::Region { ctyp } => Some(ctyp.clone()),
         Antwort::Leer | Antwort::Nie => None,
     };
     let hat_wert = wert_ctyp.is_some();
@@ -9584,7 +9619,7 @@ fn syscall_stumpf(
         "bool".to_string()
     } else {
         match &antwort {
-            Antwort::Ganz { ctyp, .. } => ctyp.clone(),
+            Antwort::Ganz { ctyp, .. } | Antwort::Region { ctyp } => ctyp.clone(),
             Antwort::Leer => "void".to_string(),
             Antwort::Nie => "_Noreturn void".to_string(),
         }
@@ -9764,6 +9799,15 @@ fn syscall_stumpf(
             if hat_wert && grundtyp.is_some() {
                 b2.push_str(&format!("    *_wert = ({ctyp})_sys_rax;\n"));
             }
+        }
+        if let Antwort::Region { ctyp } = &antwort {
+            // **`tor.region`: the word zero is no region.** The sign leg above has sent every
+            // negative word to its reason or the stop; what is left is a base address, and a
+            // base at zero is outside every contract a region gate can state.
+            b2.push_str("    if (_sys_rax == 0) {\n");
+            b2.push_str(&hardware("    "));
+            b2.push_str("    }\n");
+            b2.push_str(&format!("    *_wert = ({ctyp})(uintptr_t)_sys_rax;\n"));
         }
         if grundtyp.is_some() {
             b2.push_str("    return true;\n");

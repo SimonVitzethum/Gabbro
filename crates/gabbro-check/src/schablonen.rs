@@ -159,6 +159,7 @@ pub const RATSCHE: &[&str] = &[
     "tor.nie",
     "start.nolibc",
     "tor.fehlbar",
+    "tor.region",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -242,6 +243,41 @@ pub const SCHABLONEN: &[Schablone] = &[
         ],
         fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §3; grammatik/Grammatik/Syscall.lean \
                      (`dekodiere`); crates/gabbro-check/src/emit.rs (`syscall_stumpf`)",
+    },
+    // **Entered 2026-09-30 by the C-free lane (the region gate, Simon's decision 1), PROVED in
+    // the same commit**: memory from outside comes as a region, never from a number, and the
+    // stub is the one place a word becomes an address.
+    Schablone {
+        name: "tor.region",
+        haengt_an: &["tor.fehlbar"],
+        konstrukt: "syscall g(…) -> ptr<normal, …> u8 or R (the stub hands over a REGION)",
+        pflicht: "The stub of a gate that answers a byte region decodes the kernel's word \
+                  exactly as the generic decoding `dekodiere` over the range `1 .. 2^63 - 1`: \
+                  a listed `-errno` to its reason, an unlisted one, a word past the `-4095` \
+                  fence and the word ZERO to the point it hands to `__builtin_unreachable()`, \
+                  and every other word to the address `(uint8_t *)(uintptr_t)raw`. \
+                  **Machine-checked for EVERY word and every errno table** (`tor_region`, \
+                  `Grammatik/SchablonenOhneLibc.lean` §4) -- the decoding `tor.fehlbar` is \
+                  proved against machine G's reason channel; the address is the kernel's word \
+                  itself and never zero (`tor_region_adresse`), and no error word becomes an \
+                  address (`tor_region_fehler_kein_zeiger`). The generic form of the gate's \
+                  contract, `RegionVertrag` (the answer reaches `n` bytes and shares none with \
+                  a region live at the call), and what `N571` makes of it: an index `i` with \
+                  `i + 1 <= n` lies inside the new region and inside no other \
+                  (`region_zugriff`; witness `tor_region_zeuge`). **NOT proved: that the \
+                  kernel keeps the contract** (the gate's assumption, premise (c)); and \
+                  machine G has no byte pointers, so a program with a region answer stays \
+                  outside the certified register by name (`LG002`, OFFEN O37).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the answer is a byte region `ptr<normal, …> u8` and the gate declares an `or R` channel", durch: Some("`emit.rs::syscall_stumpf` (`Antwort::Region`: another pointer answer stays `C183`, a region without a channel is `C186`)"), braeuchte: None },
+            Voraussetzung { was: "the errno table the stub compares maps each listed errno to one case of `R`, first entry wins", durch: Some("`emit.rs::syscall_stumpf`'s error-map rules, shared with `tor.fehlbar` (`dekodiere`'s `FehlerTabelle`)"), braeuchte: None },
+            Voraussetzung { was: "every index through the bound answer satisfies `i + 1 <= n` for the extent `n` of the gate's `ensures n <= lenof(result)`", durch: Some("`N571` (`m1.rs::zeigerindex_pruefen`) over the clause `let … else` books for a name bound once and never assigned, and `N463` at every call the region is passed to"), braeuchte: None },
+            Voraussetzung { was: "the kernel answers a listed errno or a fresh region of at least `n` bytes, disjoint from every live one (else the stub's `__builtin_unreachable()`)", durch: Some("the gate's declared contract -- `ensures … <= lenof(result)` plus `assume … falsifier …` (`parse.rs`); user logic in the program's source, premise (c) of the goal"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §4; grammatik/Grammatik/Syscall.lean \
+                     (`dekodiere`); crates/gabbro-check/src/emit.rs (`Antwort::Region`); \
+                     crates/gabbro-check/src/m1.rs (`ergebnis_ausdehnung`); beispiele/183",
     },
     Schablone {
         name: "restrict.alleinzugriff",

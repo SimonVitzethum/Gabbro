@@ -333,6 +333,8 @@ fn lauf(baum: &Programm, absagen: &mut Absagen) -> (Zaehlung, Vec<Stelle>, Vec<Z
         caller_params: std::collections::HashSet::new(),
         caller_bounds: Vec::new(),
         ausdehnungen: Vec::new(),
+        ergebnis_ausdehnung: Vec::new(),
+        einmal_gebunden: std::collections::HashSet::new(),
         feste_params: std::collections::HashSet::new(),
         aktuell_args: Vec::new(),
         ruf_umfeld: Umfeld::default(),
@@ -1020,6 +1022,15 @@ struct Pruefer<'a> {
     /// The current function's upper bounds over sums (`off + n <= 16384`) as pairs
     /// `(left, right)` of linear forms over parameters it never reassigns.
     obergrenzen: Vec<(Linear, Linear)>,
+    /// **The region a foreign body hands over** (C-free lane, 2026-09-30, Simon's decision 1):
+    /// the extent clauses `n <= lenof(result)` of the LAST resolved call's `ensures`, in the
+    /// caller's terms -- set by `ruf_aufgeloest` for a callee without a Gabbro body, read and
+    /// cleared by the `let … else` that binds the answer.
+    ergebnis_ausdehnung: Vec<Linear>,
+    /// The body's names bound exactly ONCE and never assigned (`let`, not parameters): a region
+    /// bound to such a name is the same value at every mention, so its extent clause holds at
+    /// every index through it.
+    einmal_gebunden: std::collections::HashSet<String>,
 }
 
 /// Die Bindungen und Fakten eines Blocks. Ein Block erbt beide und gibt keins zurueck.
@@ -1245,6 +1256,21 @@ impl<'a> Pruefer<'a> {
                         .map(|p| p.name.text.clone())
                         .filter(|n| !gebunden.contains(n))
                         .collect();
+                    {
+                        let mut zaehlung = std::collections::HashMap::new();
+                        crate::rahmenlaenge::bindungen_zaehlen(b, &mut zaehlung);
+                        let mut zugewiesen = std::collections::HashSet::new();
+                        crate::rahmenlaenge::zugewiesene_namen(b, &mut zugewiesen);
+                        self.einmal_gebunden = zaehlung
+                            .into_iter()
+                            .filter(|(n, k)| {
+                                *k == 1
+                                    && !zugewiesen.contains(n)
+                                    && !f.parameter.iter().any(|p| &p.name.text == n)
+                            })
+                            .map(|(n, _)| n)
+                            .collect();
+                    }
                     self.caller_bounds = crate::rahmenlaenge::bounds(&f.requires);
                     let params: Vec<&str> = f.parameter.iter().map(|p| p.name.text.as_str()).collect();
                     let mut zugewiesen = std::collections::HashSet::new();
@@ -1306,6 +1332,8 @@ impl<'a> Pruefer<'a> {
                     self.ausdehnungen.clear();
                     self.obergrenzen.clear();
                     self.feste_params.clear();
+                    self.einmal_gebunden.clear();
+                    self.ergebnis_ausdehnung.clear();
                 }
             }
             // **Und der `can_fail`-Rumpf einer Probe** (2026-08-20).
@@ -1632,6 +1660,7 @@ impl<'a> Pruefer<'a> {
                 // that carries no option (a device register behind `requires … else`) keeps
                 // its own type, and an unreadable place still answers `Unbekannt`: *unknown
                 // falls loud*, as everywhere else here.
+                self.ergebnis_ausdehnung.clear();
                 let t = match &l.quelle {
                     LetQuelle::Ruf(r) => self.ruf(r, lage),
                     LetQuelle::Ort(o) => {
@@ -1674,6 +1703,23 @@ impl<'a> Pruefer<'a> {
                     }
                 }
                 lage.lokal.insert(l.name.text.clone(), ziel.unwrap_or(t));
+                // **A region answer carries its extent** (C-free lane, 2026-09-30, Simon's
+                // decision 1). The foreign body's `ensures n <= lenof(result)` -- user logic,
+                // booked in the foreign-contract report -- becomes a clause over the bound
+                // name, exactly like a `requires` clause over a parameter: only for a name
+                // bound once and never assigned (so every mention is this answer), and only
+                // over names that are still the values the call was given.
+                let answer_extents = std::mem::take(&mut self.ergebnis_ausdehnung);
+                if matches!(l.quelle, LetQuelle::Ruf(_))
+                    && self.einmal_gebunden.contains(&l.name.text)
+                {
+                    for form in answer_extents {
+                        if form.namen.iter().all(|n| self.feste_params.contains(n)) {
+                            self.ausdehnungen.push(Klausel { zeiger: l.name.text.clone(), form });
+                            self.feste_params.insert(l.name.text.clone());
+                        }
+                    }
+                }
                 let pfade = l.als_ruf().map(rufnamen_im_ruf).unwrap_or_default();
                 self.rufe_toeten_fakten(&pfade, lage);
                 // **V4 -- like `let`** (spec §1): a fallible call's return taint is
@@ -4415,6 +4461,49 @@ impl<'a> Pruefer<'a> {
         self.requires_pruefen(ziel, "M115", &sig, &argtypen);
         self.transfer_bound_at_call(ziel, args, argtypen, sig);
         self.extent_at_call(ziel, args, argtypen, sig);
+        // The extent of an answered region, in the caller's terms (read by `let … else`).
+        self.ergebnis_ausdehnung.clear();
+        if !sig.rumpf_da && matches!(sig.ergebnis, Some(Typ::Zeiger(_))) {
+            let params: Vec<&str> = sig.parameter.iter().map(|(n, _)| n.as_str()).collect();
+            let ziel_modul = self
+                .u
+                .funktion_modul(&self.modul, ziel)
+                .or_else(|| ziel.rsplit_once("::").map(|(m, _)| m.to_string()));
+            let mut module: Vec<&str> = Vec::new();
+            if let Some(m) = &ziel_modul {
+                module.push(m.as_str());
+            }
+            module.push(self.modul.as_str());
+            for (a, form) in self.klauseln(&sig.ensures, &params, &module) {
+                if a.zeiger != "result" {
+                    continue;
+                }
+                let Some(f) = form else { continue };
+                let mut l = Some(Linear { namen: Vec::new(), k: f.k });
+                for n in &f.namen {
+                    l = l.and_then(|mut l| {
+                        let ix = params.iter().position(|p| p == n)?;
+                        let arg = self.aktuell_args.get(ix).cloned().flatten()?;
+                        l.namen.extend(arg.namen);
+                        l.k = l.k.checked_add(arg.k)?;
+                        Some(l)
+                    });
+                }
+                if let Some(l) = l {
+                    self.fremd.push(Stelle {
+                        rufer: self.rufer.clone(),
+                        gerufener: ziel.to_string(),
+                        span,
+                        klausel: format!(
+                            "{} <= lenof(result)",
+                            a.namen.iter().cloned().chain(std::iter::once(a.k.to_string())).collect::<Vec<_>>().join(" + ")
+                        ),
+                        wirkung: Wirkung::Ausdehnung,
+                    });
+                    self.ergebnis_ausdehnung.push(l);
+                }
+            }
+        }
         let roh = sig.ergebnis.clone().unwrap_or(Typ::Unbekannt);
         let v = crate::fremdverengung::bereich_aus_ensures(&roh, &sig.ensures);
         // **Und hier wird die Annahme GEBUCHT statt still zu wirken (2026-08-21).**
@@ -5174,6 +5263,28 @@ impl<'a> Pruefer<'a> {
                 Typ::Zeiger(_) => {
                     let q = args.get(ip).and_then(crate::rahmenlaenge::bare_name);
                     let y = args.get(ix).and_then(crate::rahmenlaenge::bare_name);
+                    // **A clause the caller's pointer already carries covers the length**
+                    // (C-free lane, 2026-09-30): a parameter under its `requires`, or a region
+                    // answer under its gate's `ensures` -- the length argument as a linear
+                    // form must fit under one of them (`passt`), exactly as `extent_at_call`
+                    // decides the non-bare forms.
+                    let bedarf = self.aktuell_args.get(ix).cloned().flatten().and_then(|mut l| {
+                        if atom.strict {
+                            l.k = l.k.checked_add(1)?;
+                        }
+                        Some(l)
+                    });
+                    let gedeckt = q.is_some_and(|q| {
+                        self.feste_params.contains(q)
+                            && bedarf.as_ref().is_some_and(|b| {
+                                self.ausdehnungen
+                                    .iter()
+                                    .any(|c| c.zeiger == q && passt(b, 0, &c.form, &self.ruf_umfeld))
+                            })
+                    });
+                    if gedeckt {
+                        None
+                    } else {
                     match (q, y) {
                         (Some(q), Some(y))
                             if self.feste_params.contains(q)
@@ -5203,6 +5314,7 @@ impl<'a> Pruefer<'a> {
                              beside its own length parameter under the same clause, answers",
                             atom.pointer
                         )),
+                    }
                     }
                 }
                 _ => None,
@@ -8475,13 +8587,19 @@ impl<'a> Pruefer<'a> {
             return;
         }
         let warum = if !self.feste_params.contains(p) {
-            format!("`{p}` is not a parameter the body leaves alone, so no entry clause speaks about it")
+            format!(
+                "`{p}` is neither a parameter the body leaves alone nor a region answer bound \
+                 once, so no clause speaks about it"
+            )
         } else if !self.ausdehnungen.iter().any(|a| a.zeiger == p) {
             format!("the function's `requires` names no extent of `{p}` (`n <= lenof({p})`)")
         } else if !nicht_negativ {
             "the index is not shown to be non-negative".to_string()
         } else {
-            format!("the index is not shown below any extent the `requires` names for `{p}`")
+            format!(
+                "the index is not shown below any extent the `requires` (or the answering \
+                 gate's `ensures`) names for `{p}`"
+            )
         };
         self.absagen.schiebe(
             Absage::fehler("N571", idx.span, format!("the index through the pointer `{p}` is not shown inside what `{p}` reaches -- {warum}"))
