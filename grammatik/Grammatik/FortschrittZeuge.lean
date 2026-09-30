@@ -65,6 +65,7 @@ theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {
           · exact h.1
           all_goals exact absurd h (by simp [Zielsatz.RestHalt])
       | bindAxiom => rfl
+      | bindAxiomElse => rfl
       | _ => cases k <;> exact absurd h (by simp [Zielsatz.RestHalt])
   | dann b k' =>
       cases b with
@@ -73,6 +74,7 @@ theorem restHalt_kann {O : Orakel D} {passes : Nat} {V : Vertrag D} {l : Bool} {
           · exact h.1
           all_goals exact absurd h (by simp [Zielsatz.RestHalt, Zielsatz.KopfHalt])
       | bindAxiom => rfl
+      | bindAxiomElse => rfl
       | regLies => rfl
       | regLiesElse => rfl
       | awaits => rfl
