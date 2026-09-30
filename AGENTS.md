@@ -145,6 +145,11 @@ README §5 says exactly this; keep it that way.
   that the emitter WRITES from Gabbro is not meant by this rule. Measured 2026-09-30: ~5,100
   lines of handwritten C/asm/headers in `laufzeit/` + `bibliothek/`, plus 117 in the network
   stack. New handwritten C needs a reason why Gabbro cannot do it.
+  **Zero C keeps every guarantee** (Simon, 2026-09-30): code moved from C into Gabbro is checked
+  like user code, with no relaxed mode; system and kernel calls are user logic (`syscall`/`extern`
+  items in Gabbro source), the compiler and checker know no operating system; new emitter
+  templates are allowed only machine-checked in the template register (`gabbro schablonen
+  --tor`), each premise bound to the pass that establishes it.
 - **Floats are in scope** (IEEE model done). Probabilistic statements are OUT of scope for now.
   **Dynamic data structures are IN scope** (Simon, 2026-09-28): structures that grow without a
   static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).
@@ -170,7 +175,12 @@ Since 2026-09-29 TWO lanes run there, each with one agent and its own clone: the
 lane (`~/Gabbro` + `~/gabbro-netz/`, runner `lauf.sh`, Claude Sonnet 5.5) and, after the GabbroV
 lane finished (`FERTIG-V`), the GabbroV-bridge lane (`~/gabbro-v`, runner `lauf-b.sh`, owner of
 `programmlogik/`, `lean.rs` and `beweis.rs`; task `dokumente/AUFTRAG-GABBROV-VERIFIKATION.md`) on
-Claude Sonnet 5.5 except stage S3, the simulation theorem, on Claude Opus 5.5. It builds and tests in its own tree, merges into master only with
+Claude Sonnet 5.5 except stage S3, the simulation theorem, on Claude Opus 5.5.
+Since 2026-09-30 the GabbroV-bridge lane is done (`FERTIG-B`) and a PARSER lane works in
+`~/gabbro-v` (`lauf-p.sh`, sieve (a), generic proofs only). A third lane, the C-free lane, also runs on the
+server since 2026-09-30 (`~/gabbro-c`, runner `lauf-c.sh`, Sonnet 5.5; goal: no handwritten C and
+no libc in the network stack's binaries, then in every Gabbro binary), owner of `laufzeit/`,
+`bibliothek/linux/` and `bibliothek/linux-kmod/`. It builds and tests in its own tree, merges into master only with
 `cargo test --no-fail-fast` green, pulls before it pushes, and never force-pushes. Runner and
 task files: `~/claude-lane/` on that machine (`lauf.sh`, `AUFTRAG-*.md`, `STAND.md`, `logs/`).
 Nothing on that machine is loaded into its running kernel: kernel modules are tested in QEMU.
