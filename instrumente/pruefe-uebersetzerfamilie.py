@@ -196,9 +196,18 @@ def emittiert(q, ziel):
     return True
 
 
-def uebersetzt(werkzeug, c):
+# **The first line `-- uebersetzt: freistehend` asks for `-ffreestanding`** -- exactly what stage 9
+# of `pruefe-emission.sh` reads (C-free lane): a `nolibc` program's entry is `_Noreturn void
+# main(void)`, which a HOSTED compile refuses (`-Wmain`) and a freestanding one does not. Until
+# 2026-09-30 this tool compiled 172, 173 and 183 hosted and booked them as "both refuse" -- a
+# second register over stage 9's reading that had drifted from it (W7).
+FREISTEHEND = "-- uebersetzt: freistehend"
+
+
+def uebersetzt(werkzeug, c, frei=False):
     """`(ok, erste Meldungszeile)`. `LC_ALL=C`, weil die Meldung GELESEN wird (W16)."""
-    r = subprocess.run([werkzeug] + FLAGGEN + ["-o", "/dev/null", str(c)],
+    zusatz = ["-ffreestanding"] if frei else []
+    r = subprocess.run([werkzeug] + FLAGGEN + zusatz + ["-o", "/dev/null", str(c)],
                        capture_output=True, text=True, timeout=FRIST,
                        env={"LC_ALL": "C", "PATH": "/usr/bin:/bin"})
     zeilen = [z for z in (r.stderr or "").splitlines() if z.strip()]
@@ -248,8 +257,9 @@ def main():
                 continue
             n_emit += 1
             rel = str(q.relative_to(W))
-            ok_a, m_a = uebersetzt(a, c)
-            ok_b, m_b = uebersetzt(b, c)
+            frei = q.read_text(encoding="utf-8", errors="replace").splitlines()[:1] == [FREISTEHEND]
+            ok_a, m_a = uebersetzt(a, c, frei)
+            ok_b, m_b = uebersetzt(b, c, frei)
             if q.read_text(encoding="utf-8", errors="replace").splitlines()[:1] == [UMGEKEHRT]:
                 umgekehrt.append((rel, ok_a, ok_b))
                 continue

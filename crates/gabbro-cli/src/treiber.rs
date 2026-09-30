@@ -314,8 +314,8 @@ void gabbro_faden_warte(uint32_t *wort)\n\
 ///
 /// Until this text a hosted lock was a `pthread_mutex_t` in a blob of words, initialised in
 /// `main` and taken through the binding's C. Now it is the ticket lock `CTicket.lean` proves --
-/// the four instructions of its model, word for word (`zieht`: the relaxed `fetch_add`;
-/// `dreht`/`tritt`: the acquire spin; `gibt`: the release store) -- which the bare-metal image
+/// the four instructions of its model, word for word (the relaxed `fetch_add` that draws a
+/// ticket, the acquire spin, the release store) -- which the bare-metal image
 /// has run since Opus agent I (`laufzeit/metall/metall.h`). Mutual exclusion is
 /// `ticket_ausschluss`; every step refines `sperrAbstrakt` (`ticketLP_sperrAbstrakt`). The one
 /// thing added to the spin is a hand-over: every 64 passes the waiter calls the program's

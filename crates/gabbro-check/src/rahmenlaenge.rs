@@ -381,7 +381,8 @@ pub fn bindungen_zaehlen(b: &Block, aus: &mut std::collections::HashMap<String, 
         let nur = Block { anweisungen: vec![s.clone()], span: b.span };
         crate::namen::bindungen_sammeln_flach(&nur, &mut einzeln);
         for n in einzeln {
-            *aus.entry(n).or_insert(0) += 1;
+            let zahl = aus.entry(n).or_insert(0);
+            *zahl += 1;
         }
         for k in crate::unterbloecke(s) {
             bindungen_zaehlen(k, aus);
