@@ -1,0 +1,78 @@
+-- 181 -- **A system-call gate at the top level of a body: certified.**
+--
+-- A body is an `Endblock` in machine G, and until 2026-09-30 an `Endblock` had no
+-- binder for a foreign call: `beispiele/174` had to call its gates inside a lock
+-- section or an `if`, and every gate call of the network stack -- all of them at
+-- the top level of a body -- stood outside the model (LG004).
+--
+-- Since the C-free lane's Lean slice of that day, `Endblock.bindAxiom` carries a
+-- gate call whose rest is an end block (`grammatik/Grammatik/Syntax.lean`), the
+-- machine runs it with the rule `endeBindAxiom` (`RufMaschineG.lean`), and the
+-- goal statement names the two stops that can stand there, the same ones it names
+-- at `Block.bindAxiom` (`Zielsatz/Spec.lean`, `RestHalt`; header block
+-- "end-block gate"). This unit is CERTIFIED (`grammatik/Grammatik/Zertifikat/`).
+--
+-- The two shapes:
+-- * `merke` binds the answer of `getpid` at the top level and uses it under a lock;
+-- * `ende` ends in a `-> never` gate. Behind the call stands the implicit return of
+--   a body without a result -- dead in G (the stop `nieZurueck`) as in the C
+--   (`_Noreturn`).
+--
+-- What still does not travel, each refused by name (`crates/gabbro-check/src/lean_g.rs`):
+-- a fallible gate (`or R`, LG007), a gate `requires`/`ensures` (LG003), a gate that
+-- writes (LG001), and a `-> never` call that ends an `else` which must not fall off
+-- (LG004 -- behind it the end block would need a rest the source never wrote).
+module beispiel::gate_at_top_level {
+
+assume linux_getpid
+    "The Linux x86_64 `getpid` answers the calling process's id, in 1 .. 4194304, and destroys only rcx and r11."
+    falsifier sonde_getpid;
+
+assume linux_exit_group
+    "The Linux x86_64 `exit_group` ends every thread of the process with status `code & 255` and never returns to its caller."
+    falsifier sonde_exit_group;
+
+syscall getpid() -> u64 in 1 .. 4194304
+    abi linux arch x86_64 number 39
+    regs in { }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_getpid falsifier sonde_getpid;
+
+syscall exit_group(code : u64) -> never
+    abi linux arch x86_64 number 231
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_exit_group falsifier sonde_exit_group;
+
+table Protokoll count 4 {
+    slot { pid : u64 in 0 .. 4194304, }
+}
+
+lock Schutz protects { Protokoll } rank 1;
+
+impl fn merke(i : index into Protokoll)
+    effects { writes Protokoll.slots, locks Schutz }
+    costs   <= 40 ops
+{
+    let p = getpid();
+    locks Schutz {
+        Protokoll.slots[i].pid = p;
+    }
+}
+
+impl fn ende()
+    effects { diverges }
+    costs   <= 20 ops
+{
+    exit_group(1);
+}
+
+}

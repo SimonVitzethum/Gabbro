@@ -1959,10 +1959,36 @@ fn exports_syscall_gates_as_axioms() {
     assert!(datei.contains("(.bindAxiom GAx.exit_group"), "{datei}");
 }
 
+/// **A gate at the top level of a body is `Endblock.bindAxiom`** (C-free lane,
+/// 2026-09-30; machine rule `endeBindAxiom`, its stops named in `Spec.lean`'s
+/// `RestHalt`): a value gate binds at the top level, and a `-> never` gate that
+/// ends a body without a result is followed by the body's own implicit return
+/// -- the end the source has there, dead in G as in the C. The certified corpus
+/// file `beispiele/181` exports the same way.
+#[test]
+fn exports_top_level_gates_as_end_block_binders() {
+    let rumpf = format!("{TORE}\
+        impl fn f(i : index into T) effects {{ writes T.slots, locks L }} costs <= 40 ops {{\n\
+            let p = getpid();\n\
+            locks L {{ T.slots[i].v = 1; }}\n\
+        }}\n\
+        impl fn g() effects {{ diverges }} costs <= 20 ops {{ exit_group(1); }}\n");
+    let text = export("lean_g", &tree(&einheit(&rumpf))).expect("top-level gates export");
+    for teil in [
+        "(.bindAxiom GAx.getpid .nil rfl",
+        "(.bindAxiom GAx.exit_group (.cons",
+        "(fun _ h => nomatch h) (.ret .keine (List.Perm.refl _)))",
+    ] {
+        assert!(text.contains(teil), "the export must contain {teil:?}: {text}");
+    }
+    let datei = export_file("181-gate-at-top-level.gab");
+    assert!(datei.contains("(.bindAxiom GAx.getpid .nil rfl"), "{datei}");
+}
+
 /// **Every gate shape with no G form refuses BY NAME** -- the reason channel
-/// (LG007), a precondition or postcondition (LG003), a write (LG001), and a
-/// gate with an answer at the top level of a body (LG004: `Endblock` has no
-/// `bindAxiom`). A unit WITHOUT a gate or an assumption keeps `Ax := Empty`.
+/// (LG007), a precondition or postcondition (LG003), a write (LG001). A unit
+/// WITHOUT a gate or an assumption keeps `Ax := Empty`. (A gate with an answer
+/// at the top level of a body travels since `Endblock.bindAxiom`, below.)
 #[test]
 fn refuses_gate_shapes_without_a_form() {
     let kopf = "reason E { Weg = 9 \"gone\" exhaustive }\n\
@@ -1986,10 +2012,6 @@ fn refuses_gate_shapes_without_a_form() {
         impl fn h() -> never effects {{ diverges }} costs <= 20 ops {{ exit_group(0); }}\n\
         impl fn f() -> u32 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n")));
     assert!(oben.code == "LG002" || oben.code == "LG004", "{oben}");
-    let oben = refuse_of(&einheit(&format!("{TORE}\
-        impl fn h(b : bool) effects {{ diverges }} costs <= 20 ops {{ exit_group(0); }}\n")));
-    assert_eq!(oben.code, "LG004", "{oben}");
-    assert!(oben.message.contains("`Endblock` has no such constructor"), "{oben}");
     let ohne = export("lean_g", &tree(&einheit(
         "impl fn f() -> u32 effects { pure } costs <= 1 ops { return 1; }\n"))).expect("exports");
     assert!(ohne.contains("Ax := Empty") && ohne.contains("Annahme := Unit"), "{ohne}");
