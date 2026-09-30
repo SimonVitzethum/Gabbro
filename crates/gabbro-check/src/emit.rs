@@ -9333,10 +9333,27 @@ fn syscall_stumpf(
     // -- one line of honesty instead of a check against the wrong bound.
     enum Antwort {
         Leer,
+        /// `-> never`: the call ends the process (`exit_group`) -- a `_Noreturn` stub with no
+        /// answer to decode, and the C compiler is told so.
+        Nie,
         Ganz { ctyp: String, unter: Option<i128>, ober: Option<i128> },
     }
     let antwort = match &s.ergebnis {
         None => Antwort::Leer,
+        Some(TypExpr::Never(_)) => {
+            if s.fehler.is_some() {
+                weigere(
+                    absagen,
+                    s.name.span,
+                    &format!(
+                        "`syscall {n}` is `-> never` and names an `or R` channel -- a call that \
+                         does not come back has no error to decode"
+                    ),
+                );
+                return;
+            }
+            Antwort::Nie
+        }
         Some(TypExpr::Int(i)) => {
             let Some(c) = ctyp(&s.ergebnis.clone().unwrap(), u) else {
                 weigere(absagen, s.name.span, "return type");
@@ -9542,7 +9559,7 @@ fn syscall_stumpf(
     let grundtyp: Option<String> = s.fehler.as_ref().map(|r| r.text.clone());
     let wert_ctyp: Option<String> = match &antwort {
         Antwort::Ganz { ctyp, .. } => Some(ctyp.clone()),
-        Antwort::Leer => None,
+        Antwort::Leer | Antwort::Nie => None,
     };
     let hat_wert = wert_ctyp.is_some();
     let rueck = if grundtyp.is_some() {
@@ -9551,6 +9568,7 @@ fn syscall_stumpf(
         match &antwort {
             Antwort::Ganz { ctyp, .. } => ctyp.clone(),
             Antwort::Leer => "void".to_string(),
+            Antwort::Nie => "_Noreturn void".to_string(),
         }
     };
     let mut liste = params.clone();
@@ -9670,6 +9688,12 @@ fn syscall_stumpf(
     let liest_roh = !arme.is_empty() || grundtyp.is_some() || hat_wert;
     if !liest_roh {
         b2.push_str("    (void)_sys_rax;\n");
+        if matches!(antwort, Antwort::Nie) {
+            b2.push_str(
+                "    /* `-> never`: under the named assumption the kernel does not come back. */\n\
+                 #if defined(__GNUC__)\n    __builtin_unreachable();\n#endif\n",
+            );
+        }
     } else {
         b2.push_str("    if (_sys_rax < 0) {\n");
         b2.push_str("        if (_sys_rax < -4095) {\n");

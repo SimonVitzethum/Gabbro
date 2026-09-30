@@ -52,10 +52,15 @@ BINDUNG_LINUX = "  {W}/bibliothek/linux/linux.gab\n  {W}/bibliothek/linux/linux.
 BINDUNG_KMOD = "  {W}/bibliothek/linux-kmod/linux-kmod.gab\n  {W}/bibliothek/linux-kmod/linux-kmod.c\n"
 CC = "compiler cc -std=c11 -O0 -Wall -Wextra -Werror\nout {OUT}\n"
 
+NOLIBC = ("compiler cc -std=c11 -O0 -ffreestanding -fno-stack-protector -fno-pie -Wall -Wextra -Werror\n"
+          "out {OUT}\nnolibc\n")
+
 SZENARIEN = {
     "hosted": [
         ("druckt", CC + "unit hallo program\n  {W}/beispiele/63-druckt.gab\n", "hallo"),
         ("puffer", CC + "unit puffer program\n  {W}/beispiele/64-writes-a-whole-buffer.gab\n", "puffer"),
+        ("prozess172", NOLIBC + "unit prozess program\n  {W}/beispiele/172-prozess-ohne-libc.gab\n", "prozess"),
+        ("abbruch173", NOLIBC + "unit abbruch program\n  {W}/beispiele/173-abbruch-ohne-libc.gab\n", "abbruch"),
         ("osprobe", CC.replace("-Werror", "-Werror -I {W}/laufzeit") +
          "unit osprobe object\n  {W}/messung/proben/os-bindung/os-probe.gab\n" + BINDUNG_LINUX +
          "  {W}/messung/proben/os-bindung/melde.c\n", "osprobe"),

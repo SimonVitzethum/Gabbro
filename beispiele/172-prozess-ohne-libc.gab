@@ -35,7 +35,7 @@ pub const KAP : u32 = 16;
 
 pub static mut PUFFER : [u8; KAP] = 0;
 
-pub fn main() -> u32 in 0 .. 1
+pub fn main() -> i32 in 0 .. 1
     effects { reads PUFFER, writes PUFFER }
     costs   <= 200 ops
 {
