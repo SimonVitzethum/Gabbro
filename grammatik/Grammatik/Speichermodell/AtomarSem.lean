@@ -216,6 +216,12 @@ def execBlockHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some v) => (execBlockHA rest σ' (.cons (ergWert he v) ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ =>
+      let σ := leseA A σ Λ args.orte
+      match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some (Sum.inl v)) => (execBlockHA rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (σ', Option.some (Sum.inr r)) => (execEndHA err σ' (.cons r ρ)).schrumpf.zuAusgang
+      | (_, Option.none) => .hardware (.annahme a)
   | .regLies r _ rest, σ, ρ =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r σ) with
       | Option.some v =>
@@ -290,6 +296,12 @@ def execEndHA {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       let σ := leseA A σ Λ args.orte
       match axiomAntwort O a σ (evalArgs σ args σ ρ) with
       | (σ', Option.some v) => (execEndHA rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (_, Option.none) => .hardware (.annahme a)
+  | .bindAxiomElse a args he _ _ _ _ _ err rest, σ, ρ =>
+      let σ := leseA A σ Λ args.orte
+      match axiomAntwortSonst O a σ (evalArgs σ args σ ρ) with
+      | (σ', Option.some (Sum.inl v)) => (execEndHA rest σ' (.cons (ergWert he v) ρ)).schrumpf
+      | (σ', Option.some (Sum.inr r)) => (execEndHA err σ' (.cons r ρ)).schrumpf
       | (_, Option.none) => .hardware (.annahme a)
 
 def execArmsHA {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
@@ -456,6 +468,12 @@ theorem Block.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have h1 : ∀ x ∈ args.orte, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
       simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2] <;> (try rfl)
+  | .bindAxiomElse a args he _ _ _ _ _ err rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ args.orte, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
+      have h2 : ∀ x ∈ blockOrteP P rest, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
+      have h3 : ∀ x ∈ endblockOrteP P err, ¬ T x := fun x h => hT x (by simp [blockOrteP, h])
+      simp only [execBlockHA, execBlockH, leseA_frei hA h1, Block.execHA_frei rest h2,
+        Endblock.execHA_frei err h3] <;> (try rfl)
   | .regLies r _ rest, hT, σ, ρ => by
       simp only [execBlockHA, execBlockH, Block.execHA_frei rest hT] <;> (try rfl)
   | .regLiesElse r _ zusage sonst rest, hT, σ, ρ => by
@@ -526,6 +544,12 @@ theorem Endblock.execHA_frei {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
       have h1 : ∀ x ∈ args.orte, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
       have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
       simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2] <;> (try rfl)
+  | .bindAxiomElse a args he _ _ _ _ _ err rest, hT, σ, ρ => by
+      have h1 : ∀ x ∈ args.orte, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h2 : ∀ x ∈ endblockOrteP P rest, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      have h3 : ∀ x ∈ endblockOrteP P err, ¬ T x := fun x h => hT x (by simp [endblockOrteP, h])
+      simp only [execEndHA, execEndH, leseA_frei hA h1, Endblock.execHA_frei rest h2,
+        Endblock.execHA_frei err h3] <;> (try rfl)
 
 theorem Arms.execHA_frei {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

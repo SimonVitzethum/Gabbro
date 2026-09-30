@@ -183,6 +183,7 @@ theorem valR_valZ : ∀ (τ : Ty) (v : Val (Option D.Fn) (sigM D) (tyR τ)), val
   aerg := fun a => (D.aerg a).map tyR
   aschreibt := D.aschreibt
   agschreibt := D.agschreibt
+  agruende := D.agruende
   Reg := D.Reg
   rtyp := fun r => tyR (D.rtyp r)
   rklasse := D.rklasse
@@ -576,6 +577,10 @@ def ruB {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} 
       .bindAxiom (V := vertragR V) a (ruA args)
         (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hw hg
         (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) (ruB rest)
+  | _, _, _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest =>
+      .bindAxiomElse (V := vertragR V) a (ruA args)
+        (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hr hw hg
+        (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) (ruEnd err) (ruB rest)
   | _, _, _, _, .regLies r hk rest => .regLies r hk (ruB rest)
   | _, _, _, _, .regLiesElse r hk zusage sonst rest =>
       .regLiesElse r hk (ruE zusage) (ruEnd sonst) (ruB rest)
@@ -602,6 +607,10 @@ def ruEnd {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} �
       .bindAxiom (V := vertragR V) a (ruA args)
         (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hw hg
         (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) (ruEnd rest)
+  | _, _, _, .bindAxiomElse a args he hr hw hg hd hgd err rest =>
+      .bindAxiomElse (V := vertragR V) a (ruA args)
+        (by show Option.map tyR (D.aerg a) = _; rw [he]; rfl) hr hw hg
+        (fun t ht => darfR (hd t ht)) (fun g hg' => gdarfR (hgd g hg')) (ruEnd err) (ruEnd rest)
 
 /-- Arms, translated (the arm scope `ArmCtx` is split on the case). -/
 def ruArms {V : Vertrag D} : {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} →
