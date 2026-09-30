@@ -1,0 +1,37 @@
+-- erwartet: N572
+-- **A stack-gate call with no `child` region falls.**
+--
+-- A gate that claims a stack (`stack rsi`) starts a second thread at the call, on the handed
+-- stack. `N450` held every `child` region to a call that dominates it; nothing held every call
+-- to a region, and this body checked clean -- its stub was the plain one, whose `ret` the child
+-- then takes on the handed stack, into a frame that is not its own (C-free lane, 2026-09-30).
+module gift::stapeltor_ohne_kind {
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+syscall roher_start(art : u64, stapel : u64) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { NSTACK => KeinStapel }
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+extern fn ausgang(code : u64) -> never effects { diverges } costs <= 1 ops;
+impl fn starter(art : u64, stapel : u64) -> u64
+    effects { pure }
+    costs <= 200 ops
+{
+    let v = roher_start(art, stapel) else (e) { return 999; }
+    return v;
+}
+}

@@ -4567,7 +4567,7 @@ pub const PHASEN: &[Satz] = &[
     },
     Satz {
         name: "klon.uebergabe",
-        kennungen: &["N446", "N447", "N448", "N449", "N450", "C185"],
+        kennungen: &["N446", "N447", "N448", "N449", "N450", "N572", "C185"],
         aussage: "A clone handoff holds its checked shape: the `stack` clause names \
                   the handed-stack register AS a stack -- bound in `regs in`, kept \
                   out of `clobbers` and out of `regs out` (`N446`) -- claimed once \
@@ -4578,7 +4578,10 @@ pub const PHASEN: &[Satz] = &[
                   `N449`) and runs behind a call of a gate claiming a stack that \
                   DOMINATES it -- stands before it on every path of the same body -- \
                   with one call handing to one region (`N450`, per region since fix \
-                  lane F3; it was unit-wide). The \
+                  lane F3; it was unit-wide) -- and every call hands to one: a \
+                  stack-gate call with no region behind it falls (`N572`, C-free \
+                  lane 2026-09-30; before it, such a call checked clean and the child \
+                  returned through the plain stub on the handed stack). The \
                   gate's number, registers and error map stay user-made in the \
                   declaration (the bm5 shape precedent); the stack switch itself \
                   is the stub's business and the runtime's assumption. Outside \
@@ -4616,7 +4619,7 @@ pub const PHASEN: &[Satz] = &[
                     out best-effort beside the refusal, so the refusal changes \
                     no `cc` verdict.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift: `1107` (`-- erwartet: N446 allein`: an unbound \
+        gemessen_an: "beispiele/gift: `1388` (`N572`: a stack-gate call with no region), `1107` (`-- erwartet: N446 allein`: an unbound \
                       handed register), `1108` (`N447 allein`: stack-ness twice), \
                       `1109` (`N448 allein`: a `return` out of the path), `1110` \
                       (`N449 allein`: a falling path), `1111` (`N450 allein`: a path \

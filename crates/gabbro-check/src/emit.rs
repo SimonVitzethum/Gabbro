@@ -9095,9 +9095,14 @@ fn kind_tor_falle(
     eingaben.push("\"r\" (_sys_rax)".to_string());
     aus.push_str(&format!("{e1}__asm__ goto (\n"));
     aus.push_str(&format!("{e1}    \"{}\\n\\t\"\n", tor.befehl));
-    aus.push_str(&format!("{e1}    \"movq %%rax, %[roh]\\n\\t\"\n"));
+    // **The store comes AFTER the branch** (C-free lane, 2026-09-30, OFFEN O38): the child
+    // shares the address space and runs on the handed stack, so a store before `jz` was the
+    // CHILD writing 0 into the parent's slot (a race the parent could lose -- reading 0 and
+    // entering the region itself) or, rsp-relative, past the top of its own stack. Only the
+    // parent, which falls through, writes the answer.
     aus.push_str(&format!("{e1}    \"testq %%rax, %%rax\\n\\t\"\n"));
     aus.push_str(&format!("{e1}    \"jz %l[{label}]\\n\\t\"\n", label = tor.label));
+    aus.push_str(&format!("{e1}    \"movq %%rax, %[roh]\\n\\t\"\n"));
     aus.push_str(&format!(
         "{e1}    : : [roh] \"m\" (gabbro_roh_{lo}), {}\n",
         eingaben.join(", ")

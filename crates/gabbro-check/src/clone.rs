@@ -26,6 +26,7 @@
 //! | `N452` | the child path reads no caller parameter (or loop/match binder) it was not handed | gifts 1115, 1116 |
 //! | `N456` | the child holds nothing the parent holds: no `child` inside `locks`/`observes`/`breaking` or under a signature `requires Held` (fix lane F3) | gifts 1141, 1142 |
 //! | `N457` | the child is a thread for race freedom: every carrier its path touches that anyone writes is guarded, atomic or per-core (in `fusswache2.rs`, fix lane F3) | gifts 1143, 1144, 1145 |
+//! | `N572` | every stack-gate call hands to a region -- a call with no `child` behind it falls (C-free lane, 2026-09-30) | gift 1388 |
 //! | `C185` | the `child` block has no lowering in the stub template and is refused by name (in `emit.rs`, beside the best-effort block) | gift 1112 |
 //!
 //! What is NOT checked here is the link the machine keeps: that the child
@@ -101,6 +102,36 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
                 // and one call hands to at most one region.
                 let mut genommen: HashSet<gabbro_syntax::span::Span> = HashSet::new();
                 torpfade(&f.name.text, b, &stapeltore, None, &mut genommen, absagen, true);
+                // **`N572` -- the other direction: every stack-gate call hands to a region**
+                // (C-free lane, 2026-09-30). `N450` held each region to a call; nothing held
+                // each call to a region, and a call with none was emitted through the plain
+                // stub -- whose `ret` the CHILD then takes on the handed stack, into a frame
+                // that is not its own (measured: 0 errors, and the stub written out).
+                let mut rufe: Vec<gabbro_syntax::span::Span> = Vec::new();
+                stapelrufe(b, &stapeltore, &mut rufe);
+                for ruf in rufe {
+                    if !genommen.contains(&ruf) {
+                        absagen.schiebe(
+                            Absage::fehler(
+                                "N572",
+                                ruf,
+                                format!(
+                                    "`{}` calls a `stack` gate and hands the child no region -- \
+                                     the child would come back from the call on the handed \
+                                     stack, into a frame that is not its own",
+                                    f.name.text
+                                ),
+                            )
+                            .mit_notiz(
+                                "a call through a gate that claims a stack starts a second \
+                                 thread at the call; that thread must run a `child` region the \
+                                 call dominates (`let v = g(…) else (e) { … } if v == 0 { child \
+                                 { … } }`), which never returns (`N448`/`N449`) -- a call with \
+                                 no region has nothing for the child to run",
+                            ),
+                        );
+                    }
+                }
                 // **Fix lane F3 (review G11 F2): `N456`, the child holds nothing.**
                 let mut sig: Vec<String> = Vec::new();
                 for p in &f.requires {
@@ -299,6 +330,19 @@ fn ruft_stapeltor(s: &Stmt, tore: &HashSet<String>) -> bool {
         // The region hands nothing to itself.
         StmtArt::Child(_) => false,
         _ => crate::eigene_ausdruecke(s).into_iter().any(in_expr),
+    }
+}
+
+/// Every statement of a body (sub-blocks and regions included) that itself calls a stack
+/// gate -- the call sites `N572` holds to a region.
+fn stapelrufe(b: &Block, tore: &HashSet<String>, aus: &mut Vec<gabbro_syntax::span::Span>) {
+    for s in &b.anweisungen {
+        if ruft_stapeltor(s, tore) {
+            aus.push(s.span);
+        }
+        for k in crate::unterbloecke(s) {
+            stapelrufe(k, tore, aus);
+        }
     }
 }
 
