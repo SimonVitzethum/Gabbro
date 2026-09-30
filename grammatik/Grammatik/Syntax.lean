@@ -589,6 +589,20 @@ inductive Endblock : Bool → Ctx → List (Res D) → Type where
   | next (h : l = true) : Endblock l Γ Λ
   | cons (s : Stmt l Γ Λ Λ') (rest : Endblock l Γ Λ') : Endblock l Γ Λ
   | bind (e : Expr D Γ Λ τ) (rest : Endblock l (τ :: Γ) Λ) : Endblock l Γ Λ
+  /-- `let x = g(…);` of a FOREIGN body at the top level of a body (or in an `else` that
+      must not fall off): `Block.bindAxiom` with an end-block rest (C-free lane,
+      2026-09-30). The same premises; the rest is where the body ends. -/
+  | bindAxiom (a : D.Ax) (args : Args D Γ Λ (D.aparams a)) (he : D.aerg a = some τ)
+      (hw : ∀ t, D.aschreibt a t = true → V.schreibt t = true)
+      (hg : ∀ g, D.agschreibt a g = true → V.gschreibt g = true)
+      (hd : ∀ t, D.aschreibt a t = true → darf D t Λ)
+      (hgd : ∀ g, D.agschreibt a g = true → gdarf D g Λ)
+      (rest : Endblock l (τ :: Γ) Λ) : Endblock l Γ Λ
+  /-- The end behind a `-> never` answer: a variable of type `never` is in scope, so no run
+      reaches this point (`Val .never` is empty). It is what stands after
+      `Endblock.bindAxiom` of a `-> never` gate at the end of a body or an `else` -- the C
+      writes nothing there either (`_Noreturn`, `__builtin_unreachable`). -/
+  | nie (x : Var Γ .never) : Endblock l Γ Λ
 
 inductive Arms : Bool → Ctx → List (Res D) → List (Res D) → List (Option (Int × Int)) → Type where
   | nil : Arms l Γ Λ Λ []

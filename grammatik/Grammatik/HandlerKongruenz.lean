@@ -520,6 +520,15 @@ theorem Endblock.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx
   | .bind e rest, σ, ρ => by
       simp only [execEnd]
       exact (Endblock.kongruent hR rest _ _).schrumpf
+  | .bindAxiom a args he hp hw hL hg rest, σ, ρ => by
+      simp only [execEnd]
+      cases hx : axiomAntwort O a (σ.lese Λ args.orte)
+          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+      | mk σ2 ov =>
+        cases ov with
+        | none => exact Or.inl rfl
+        | some v => exact (Endblock.kongruent hR rest _ _).schrumpf
+  | .nie x, _, ρ => (ρ.get x).elim
 
 theorem Arms.kongruent (hR : HandlerUnter Er R₁ R₂) {l : Bool} {Γ : Ctx}
     {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :

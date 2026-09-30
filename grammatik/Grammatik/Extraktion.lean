@@ -156,6 +156,8 @@ def endblockKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => []
   | .cons s rest => stmtKanten s ++ endblockKanten rest
   | .bind _ rest => endblockKanten rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => endblockKanten rest
+  | .nie _ => []
 
 /-- Die direkten Rufe der Fallunterscheidung. -/
 def armsKanten {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -878,6 +880,8 @@ def endblockOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .next _ => []
   | .cons s rest => stmtOrte s ++ endblockOrte rest
   | .bind e rest => e.orte ++ endblockOrte rest
+  | .bindAxiom _ args _ _ _ _ _ rest => args.orte ++ endblockOrte rest
+  | .nie _ => []
 
 /-- Die gelesenen Orte der Fallunterscheidung. -/
 def armsOrte {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -2546,6 +2550,8 @@ def endblockAtome (tabs : List D.Tab) (globs : List D.Glob)
   | .next _ => []
   | .cons s rest => stmtAtome tabs globs s ++ endblockAtome tabs globs rest
   | .bind _ rest => endblockAtome tabs globs rest
+  | .bindAxiom _ _ _ _ _ _ _ rest => endblockAtome tabs globs rest
+  | .nie _ => []
 
 /-- The atoms of a case split: every arm may run. -/
 def armsAtome (tabs : List D.Tab) (globs : List D.Glob)

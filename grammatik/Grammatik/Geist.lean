@@ -153,6 +153,8 @@ def g001End : {l : Bool} → {Γ : Ctx} → {Λ : List (Res D)} →
   | _, _, _, .next _ => true
   | _, _, _, .cons s rest => g001Stmt s && g001End rest
   | _, _, _, .bind e rest => orteOk (D := D) e.orte && g001End rest
+  | _, _, _, .bindAxiom _ args _ _ _ _ _ rest => orteOk (D := D) args.orte && g001End rest
+  | _, _, _, .nie _ => true
 
 /-- The G001 check over case arms. -/
 def g001Arms {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -701,6 +703,20 @@ theorem g001End_korrekt {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
       rcases ho' with ho' | ho'
       · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
       · exact g001End_korrekt rest h1.2 o ho'
+  | .bindAxiom a args he hw hg hd hgd rest =>
+      intro h ho
+      have h0 : (orteOk (D := D) args.orte && g001End rest) = true := h
+      have ho' : o ∈ args.orte ∨ o ∈ Extraktion.endblockOrte rest := by
+        simpa [Extraktion.endblockOrte] using ho
+      have h1 : ((orteOk (D := D) args.orte) = true) ∧ ((g001End rest) = true) :=
+        Bool.and_eq_true_iff.mp h0
+      rcases ho' with ho' | ho'
+      · exact nge_of_eq_false (orteOk_korrekt (D := D) _ h1.1 o ho')
+      · exact g001End_korrekt rest h1.2 o ho'
+  | .nie _ =>
+      intro h ho
+      have ho' : o ∈ ([] : List (D.Tab ⊕ D.Glob)) := by simpa [Extraktion.endblockOrte] using ho
+      exact (List.not_mem_nil ho').elim
 
 termination_by structural b
 

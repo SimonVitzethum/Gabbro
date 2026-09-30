@@ -1143,6 +1143,7 @@ def Endblock.ueberBoden {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (c : Int) :
     Endblock D V l Γ Λ → Bool
   | .cons s rest => s.ueberBoden c && rest.ueberBoden c
   | .bind _ rest => rest.ueberBoden c
+  | .bindAxiom _ _ _ _ _ _ _ rest => rest.ueberBoden c
   | _ => true
 
 def Arms.ueberBoden {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))}
@@ -1513,6 +1514,17 @@ theorem end_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
   | .bind e rest, σ, ρ, hbo, hh, σ', h => by
       have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ e.orte_darf hh.heldIn
       exact (GutEnd.vor hl (end_gutB bo hbV rest _ _ (by boden_tac) (hl.heldB hh))).schrumpf σ' h
+  | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, hbo, hh, σ', h => by
+      simp only [execEnd] at h
+      have hl := gut_lese (W := V.schreibt) (G := V.gschreibt) σ Λ _ args.orte_darf hh.heldIn
+      split at h
+      · rename_i σ1 v ha
+        have h1 := axiomAntwort_gut O hO a (σ.lese Λ args.orte) (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) hd hgd (hl.heldB hh).heldIn
+        rw [ha] at h1
+        have g1 := hl.trans (Gut.weiter hw hg h1)
+        exact g1.trans ((end_gutB bo hbV rest σ1 _ (by boden_tac) (g1.heldB hh)).schrumpf σ' h)
+      · simp [EndAusgang.welt] at h
+  | .nie x, _, ρ, _, _, _, _ => (ρ.get x).elim
 
 theorem arms_gutB (bo : Option Int) (hbV : BodenUnter bo V.boden) :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

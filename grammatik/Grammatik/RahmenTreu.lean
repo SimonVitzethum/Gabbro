@@ -601,6 +601,18 @@ theorem end_treu :
   | .bind e rest, σ, ρ, σ', h => by
       have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ e.orte
       exact (TreuEnd.vor hl (end_treu rest _ _)).schrumpf σ' h
+  | .bindAxiom a args he hw hg hd hgd rest, σ, ρ, σ', h => by
+      simp only [execEnd] at h
+      have hl := treu_lese (W := V.schreibt) (G := V.gschreibt) σ Λ args.orte
+      split at h
+      · rename_i σ1 v ha
+        have h1 := axiomAntwort_treu O hO a (σ.lese Λ args.orte)
+          (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ)
+        rw [ha] at h1
+        have g1 := hl.trans (Treu.weiter hw hg h1)
+        exact g1.trans ((end_treu rest σ1 _).schrumpf σ' h)
+      · simp [EndAusgang.welt] at h
+  | .nie x, _, ρ, _, _ => (ρ.get x).elim
 
 theorem arms_treu :
     ∀ (arms : Arms D V l Γ Λ Λ' cs) (v : Wert D (.sum cs)) (σ : World D) (ρ : Env D Γ),

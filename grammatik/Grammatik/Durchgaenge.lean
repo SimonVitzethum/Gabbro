@@ -86,6 +86,7 @@ def Block.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
 def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .cons s rest => s.ohneEwig && rest.ohneEwig
   | .bind _ rest => rest.ohneEwig
+  | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneEwig
   | _ => true
 
 def Arms.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :

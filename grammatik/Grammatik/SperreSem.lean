@@ -579,6 +579,7 @@ def Block.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l 
 def Endblock.ohneLocks {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l Γ Λ → Bool
   | .cons s rest => s.ohneLocks && rest.ohneLocks
   | .bind _ rest => rest.ohneLocks
+  | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneLocks
   | _ => true
 
 def Arms.ohneLocks {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :

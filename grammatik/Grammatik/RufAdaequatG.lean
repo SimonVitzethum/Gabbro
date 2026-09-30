@@ -3124,6 +3124,7 @@ def Endblock.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)
     Endblock D V l Γ Λ → Bool
   | .cons s rest => s.ohneOrakel && rest.ohneOrakel
   | .bind _ rest => rest.ohneOrakel
+  | .bindAxiom .. => false
   | _ => true
 
 def Arms.ohneOrakel {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
@@ -4013,6 +4014,8 @@ theorem Endblock.ohneOrakel_alsBlock {V : Vertrag D} {l : Bool} :
   | _, _, .bind _ rest => by
       simp only [Endblock.alsBlock, Block.ohneOrakel, Endblock.ohneOrakel,
         Endblock.ohneOrakel_alsBlock rest]
+  | _, _, .bindAxiom .. => rfl
+  | _, _, .nie _ => rfl
 
 /-- A covered end block run as a block is a covered block. -/
 theorem EndG.alsBlock {V : Vertrag D} {A : D.Lock → Prop} :
