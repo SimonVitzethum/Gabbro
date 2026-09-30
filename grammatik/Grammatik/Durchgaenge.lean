@@ -72,6 +72,7 @@ def Block.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} : Block D V l �
   | .bindCallInd _ _ _ _ _ rest => rest.ohneEwig
   | .bindCallElse _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneEwig
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | .regLies _ _ rest => rest.ohneEwig
   | .regLiesElse _ _ _ sonst rest => sonst.ohneEwig && rest.ohneEwig
   | .awaits _ _ _ _ rest => rest.ohneEwig
@@ -87,6 +88,7 @@ def Endblock.ohneEwig {l : Bool} {Γ : Ctx} {Λ : List (Res D)} : Endblock D V l
   | .cons s rest => s.ohneEwig && rest.ohneEwig
   | .bind _ rest => rest.ohneEwig
   | .bindAxiom _ _ _ _ _ _ _ rest => rest.ohneEwig
+  | .bindAxiomElse _ _ _ _ _ _ _ _ err rest => err.ohneEwig && rest.ohneEwig
   | _ => true
 
 def Arms.ohneEwig {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {cs : List (Option (Int × Int))} :
@@ -188,6 +190,9 @@ theorem Block.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
       simp only [Block.ohneEwig] at h
       simp only [execBlockH, Block.execH_passes rest h]
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
+      simp only [Block.ohneEwig, Bool.and_eq_true] at h
+      simp only [execBlockH, Block.execH_passes rest h.2, Endblock.execH_passes err h.1]
   | .regLies r hk rest, h, σ, ρ => by
       simp only [Block.ohneEwig] at h
       simp only [execBlockH, Block.execH_passes rest h]
@@ -235,6 +240,9 @@ theorem Endblock.execH_passes {l : Bool} {Γ : Ctx} {Λ : List (Res D)} :
   | .bindAxiom a args he hw hg hd hgd rest, h, σ, ρ => by
       simp only [Endblock.ohneEwig] at h
       simp only [execEndH, Endblock.execH_passes rest h]
+  | .bindAxiomElse a args he hr hw hg hd hgd err rest, h, σ, ρ => by
+      simp only [Endblock.ohneEwig, Bool.and_eq_true] at h
+      simp only [execEndH, Endblock.execH_passes rest h.2, Endblock.execH_passes err h.1]
 
 theorem Arms.execH_passes {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
     {cs : List (Option (Int × Int))} :

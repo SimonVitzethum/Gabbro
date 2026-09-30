@@ -682,6 +682,44 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
       refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1)⟩
       rw [e2, hX, List.append_assoc]
       rfl
+  | dannBindAxiomElseOk l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      simp only [rufUpdateG_self]
+      rw [hhead] at hC
+      simp only [GRest.oR, blockOrteP, List.all_append, Bool.and_eq_true] at hC
+      subst hs₁
+      have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
+        (Args.orte_darf args) hΛ
+      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
+        have := congrArg Prod.fst hax
+        simp only [axiomAntwortSonst] at this
+        exact this.symm
+      obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
+        ((M.weltVon f).lese Λ args.orte)
+        (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
+        (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
+      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1.1)⟩
+      rw [e2, hX, List.append_assoc]
+      rfl
+  | dannBindAxiomElseGrund l Γ Λ Λ' τ a args he hr hw hg hd hgd err rest k ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+      simp only [rufUpdateG_self]
+      rw [hhead] at hC
+      simp only [GRest.oR, blockOrteP, List.all_append, Bool.and_eq_true] at hC
+      subst hs₁
+      have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
+        (Args.orte_darf args) hΛ
+      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
+        have := congrArg Prod.fst hax
+        simp only [axiomAntwortSonst] at this
+        exact this.symm
+      obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
+        ((M.weltVon f).lese Λ args.orte)
+        (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
+        (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
+      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1.1)⟩
+      rw [e2, hX, List.append_assoc]
+      rfl
   | endeBindAxiom l Γ Λ τ a args he hw hg hd hgd rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
       simp only [rufUpdateG_self]
       rw [hhead] at hC
@@ -699,6 +737,44 @@ theorem schritt_ev {P : Programm D} {O : Orakel D} {passes : Nat} (hO : GutO O)
         (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
         (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
       refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1)⟩
+      rw [e2, hX, List.append_assoc]
+      rfl
+  | endeBindAxiomElseOk l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ v hax neu hneu hΛ =>
+      simp only [rufUpdateG_self]
+      rw [hhead] at hC
+      simp only [GRest.oR, endblockOrteP, List.all_append, Bool.and_eq_true] at hC
+      subst hs₁
+      have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
+        (Args.orte_darf args) hΛ
+      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
+        have := congrArg Prod.fst hax
+        simp only [axiomAntwortSonst] at this
+        exact this.symm
+      obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
+        ((M.weltVon f).lese Λ args.orte)
+        (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
+        (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
+      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1)⟩
+      rw [e2, hX, List.append_assoc]
+      rfl
+  | endeBindAxiomElseGrund l Γ Λ τ a args he hr hw hg hd hgd err rest ρ hhead σ₁ hs₁ σ₂ r hax neu hneu hΛ =>
+      simp only [rufUpdateG_self]
+      rw [hhead] at hC
+      simp only [GRest.oR, endblockOrteP, List.all_append, Bool.and_eq_true] at hC
+      subst hs₁
+      have hl := gut_lese (W := fun _ => true) (G := fun _ => true) (M.weltVon f) Λ _
+        (Args.orte_darf args) hΛ
+      have e2 : σ₂ = (O.wirkt a ((M.weltVon f).lese Λ args.orte)
+          (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ)).1 := by
+        have := congrArg Prod.fst hax
+        simp only [axiomAntwortSonst] at this
+        exact this.symm
+      obtain ⟨X, hX, hok⟩ := axiom_ev (C := C) (W := TraegerSchreibt (M.faeden f).kopf.f) O hO a
+        ((M.weltVon f).lese Λ args.orte)
+        (evalArgs ((M.weltVon f).lese Λ args.orte) args ((M.weltVon f).lese Λ args.orte) ρ) hd hgd
+        (hl.heldIn hΛ) (fun t ht => hw t ht) (fun g hgg => hg g hgg)
+      refine ⟨X ++ leseEv (M.weltVon f) Λ args.orte, ?_, evOk_append hok (evOk_lese _ _ hC.1.1)⟩
       rw [e2, hX, List.append_assoc]
       rfl
   | ruf l Γ Λ g args hp hr rest ρ hhead hΛ s0 hs0 rho hrho neu hneu =>

@@ -242,6 +242,13 @@ def kEnde (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       match axiomAntwort O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
       | (σ₂, some v) => kLokal st f rho (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur σ₂.speicher
       | (_, none) => none
+  | _, _, Λ, ρ, .bindAxiomElse a args he _ _ _ _ _ err rest =>
+      let σ₁ := (sp.welt spur).lese Λ args.orte
+      match axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
+      | (σ₂, some (Sum.inl v)) => kLokal st f rho (.cons (ergWert he v) ρ) (.ende rest) σ₂.spur σ₂.speicher
+      | (σ₂, some (Sum.inr r)) =>
+          kLokal st f rho (Env.cons (τ := .grund (D.agruende a)) r ρ) (.ende err) σ₂.spur σ₂.speicher
+      | (_, none) => none
   | _, _, Λ, ρ, .ret e _ =>
       let σ₁ := (sp.welt spur).lese Λ e.orte
       kPop st f σ₁ (evalErg σ₁ e σ₁ ρ)
@@ -271,6 +278,15 @@ def kDann (P : Programm D) (O : Orakel D) (passes : Nat) (st : List (KRahmen D))
       match axiomAntwort O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
       | (σ₂, some v) => kLokal st f rho (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur
           σ₂.speicher
+      | (_, none) => none
+  | _, _, Λ, _, ρ, .bindAxiomElse a args he _ _ _ _ _ err rest, k =>
+      let σ₁ := (sp.welt spur).lese Λ args.orte
+      match axiomAntwortSonst O a σ₁ (evalArgs σ₁ args σ₁ ρ) with
+      | (σ₂, some (Sum.inl v)) =>
+          kLokal st f rho (.cons (ergWert he v) ρ) (.dann rest (.schrumpf k)) σ₂.spur σ₂.speicher
+      | (σ₂, some (Sum.inr r)) =>
+          kLokal st f rho (Env.cons (τ := .grund (D.agruende a)) r ρ)
+            (.dann err.alsBlock.2 (.abbruch (.schrumpf k))) σ₂.spur σ₂.speicher
       | (_, none) => none
   | _, _, _, _, ρ, .regLies r _ rest, k =>
       match einpassen O.zeiger (D.rtyp r) (O.regLies r (sp.welt spur)) with
