@@ -14,14 +14,14 @@
 #
 # THE RECIPE:
 #   1. `gabbro emit` the unit;
-#   2. build the module against the host's kernel headers: the emitted C, the
-#      program's OWN foreign bodies, `laufzeit/kmodul/kmodul.c` (the driver,
-#      not generated -- the unit's names arrive as -D macros),
-#      `laufzeit/kmodul/arena.c` (the bounded heap) and
-#      `laufzeit/kmodul/sperre.h` over the generated `sperren.h` (the locks: a
-#      `masks irqs` lock becomes `raw_spin_lock_irqsave`);
-#   3. boot QEMU, `insmod` with a PROVISION smaller than the program's declared
-#      ceiling, `rmmod`, and hold the kernel log against the expected lines.
+#   2. build the module against the host's kernel headers (`gabbro build`): the
+#      emitted C, the program's OWN foreign bodies and its binding, and the
+#      module driver the build WRITES (C-free lane, C2: the loader's two entry
+#      points, the arena pools of the manifest's PROVISION -- smaller than the
+#      program's declared ceiling for `halde` -- the lock primitives over the
+#      binding, one thread per root; no handwritten runtime file);
+#   3. boot QEMU, `insmod`, `rmmod`, and hold the kernel log against the
+#      expected lines.
 #
 # WHAT MAKES A GREEN RUN A MEASUREMENT -- the Sprechprobe (speech test) of this
 # instrument:
@@ -71,44 +71,42 @@ done
 # fired at all, WITHOUT WHICH `landed=0` measures nothing. Both are checked.
 #
 # `atomar` -- `messung/proben/kmodul/atomar-faeden.gab` declares TWO CONCURRENT
-# ROOTS and four atomics. `gabbro build` writes the roots into `wurzeln.h` and
-# the module runtime starts one `kthread` per root, joining both before the
+# ROOTS and four atomics. `gabbro build` writes the roots into the module driver,
+# which starts one kernel thread per root through the binding, joining both before the
 # unload function reports. The four numbers the run must show are exact and each
 # one is a different row of the mapping: a saturating counter bumped 256 times
-# by each root (the bounded CAS loop -> `try_cmpxchg_relaxed`, answer 512), how
-# often the release/acquire flag was seen set (`smp_store_release` /
-# `smp_load_acquire`; > 0, or the run measured nothing), how often it was seen
+# by each root (the bounded CAS loop, answer 512), how often the release/acquire
+# flag was seen set (> 0, or the run measured nothing), how often it was seen
 # set over a payload that was still 0 (must be 0), and a bit word each root ORs
-# its own bit into (one `atomic_fetch_or_explicit` -> the fully ordered
-# `try_cmpxchg`, answer 3).
+# its own bit into (one `atomic_fetch_or_explicit`, answer 3). Since the C-free
+# lane's C2 every form is the compiler's C11 builtin (the generated
+# `<stdatomic.h>`), not a kernel macro.
 #
 # **A green run of this probe does not measure the BARRIERS**, and the file says
 # so: on x86 acquire and release are free, so no run here could tell a correct
 # mapping from one that dropped them. That is what the mapping stage below is
 # for -- it expands every (form, ordering) pair and holds it against the
-# primitive the row requires, and gift 8 is a deliberately too-weak mapping.
+# builtin and the ordering the row requires, and gift 8 drops an ordering.
 #
 # **The arenas, the locks and the roots are NOT named here.** The emitted unit
 # carries its own arena list (`#define GABBRO_ARENEN`, emitter) and `gabbro build`
-# writes the lock list and the root list beside it (`sperren.h`, `wurzeln.h`, out
-# of the same walk the hosted and the bare-metal driver read) -- a harness that
+# writes the locks and the roots into the module driver (out of the same walk the
+# hosted and the bare-metal driver read) -- a harness that
 # repeated any of them would be a second register over one fact, and the one
 # nobody reads is the one that drifts (`W7`).
 PROBEN="halde takt atomar"
 
-probe_waehle() {   # $1 = probe name; sets QUELLE FREMD MODUL INIT EXIT PARAM ERWARTET FRIST
+probe_waehle() {   # $1 = probe name; sets QUELLE FREMD MODUL INIT EXIT VORRAT ERWARTET FRIST
     # **Every per-probe variable is cleared first.** Without this line `TICKS_MIN`
     # survived from one probe into the next and `halde` -- which has no timer --
     # was RED for a tick count it never claimed to have. *A selector that only
     # ever sets is a selector that carries the last probe's answer.*
     unset TICKS_MIN GESEHEN_MIN ABBILDUNG
-    QUELLE=""; FREMD=""; MODUL=""; INIT=""; EXIT=""; PARAM=""; ERWARTET=""; FRIST=600
+    QUELLE=""; FREMD=""; MODUL=""; INIT=""; EXIT=""; VORRAT=""; ERWARTET=""; FRIST=600
     # **The BINDING, as manifest file lines** (K7, session 6). Every kernel function the
-    # module runtime calls is declared by the program and defined in the program's own C
-    # (`laufzeit/kmodul/bindung.h` is the interface); `bibliothek/linux-kmod` is the binding
-    # a program takes off the shelf, and these are the lines that name it. A probe that
-    # declares an `atomic` names the memory model too -- the runtime's `<stdatomic.h>`
-    # refuses `_Atomic` and the program's table replaces it.
+    # module driver calls is declared by the program and defined in the program's own C;
+    # `bibliothek/linux-kmod` is the binding a program takes off the shelf, and these are
+    # the lines that name it.
     BINDUNG="$W/bibliothek/linux-kmod/linux-kmod.gab
 $W/bibliothek/linux-kmod/linux-kmod.c"
     # What the RUNTIME still takes from the kernel, per probe. **0 since K7 landed**
@@ -125,7 +123,9 @@ $W/bibliothek/linux-kmod/linux-kmod.c"
             MODUL=gabbro_halde
             INIT=laden
             EXIT=entladen
-            PARAM="vorrat_kib=24"
+            # The PROVISION is the manifest's word since the C-free lane's C2 (a static
+            # pool per arena in the generated driver; no `module_param` any more).
+            VORRAT=24576
             # The kernel lines the run must show, in this order. `k=2 v=33` is
             # the read-back (11 + 22 through the arena), `k=3 v=3` is the THIRD
             # grow refusing.
@@ -140,7 +140,6 @@ gabbro-halde: k=9 v=0"
             MODUL=gabbro_takt
             INIT=laden
             EXIT=entladen
-            PARAM=""
             # A run of this probe finishes in about five seconds; the poison run
             # that takes the lock UNMASKED does not finish at all (the timer body
             # waits for the core it interrupted). 45 s is far past the first and
@@ -159,7 +158,6 @@ gabbro-takt: k=9 v=0"
             MODUL=gabbro_atomar
             INIT=laden
             EXIT=entladen
-            PARAM=""
             # Two vCPUs, so the two declared roots really run at the same time.
             # With one, a lost update in the CAS loop would need a preemption to
             # show at all -- the answer would be 512 either way and the run would
@@ -183,48 +181,39 @@ gabbro-atomar: k=9 v=0"
             # And the mapping itself is checked where the module was BUILT: the
             # rows are expanded and held against the primitives they require.
             ABBILDUNG=1
-            # The memory model of an `atomic` is the PROGRAM's too (K7): the runtime's
-            # `<stdatomic.h>` refuses `_Atomic`, and this table maps the emitter's nine
-            # call forms onto the kernel's primitives. It lands in `inc/stdatomic.h` of
-            # the build directory, which is what the mapping stage below reads.
-            BINDUNG="$BINDUNG
-$W/bibliothek/linux-kmod/stdatomic.h"
+            # The memory model of an `atomic` is the COMPILER's C11 builtins since the C-free
+            # lane's C2: `gabbro build` writes `inc/stdatomic.h` (`treiber::KMOD_STDATOMIC`),
+            # which is what the mapping stage below reads. No binding line for it.
             ;;
         *) echo "pruefe-kernelmodul.sh: no such probe '$1'" >&2; exit 2 ;;
     esac
 }
 
-# -- the mapping, measured by EXPANDING it (server lane, TODO section 0e K6) ---
+# -- the mapping, measured by EXPANDING it (server lane, TODO section 0e K6; the
+#    builtin mapping since the C-free lane's C2) ---------------------------------
 #
-# THE PROBLEM THIS SOLVES. `atomic` in a kernel module is lowered by
-# `laufzeit/kmodul/include/stdatomic.h`: one row per (call form, ordering), each
-# row at least as strong as the C11 operation it replaces. A row that was
-# quietly too weak -- acquire as `READ_ONCE`, release as `WRITE_ONCE` -- would
-# compile, load, run and answer every expected number, BECAUSE THIS IS x86:
-# acquire and release are free there, and the barriers the mapping owes a
-# weak-memory architecture leave no trace in a green run on this machine.
-# *A measurement that cannot fail is not a measurement* (`W1`).
+# THE PROBLEM THIS SOLVES. `atomic` in a kernel module is lowered by the generated
+# `inc/stdatomic.h`: each of the emitter's nine C11 call forms onto the compiler's
+# `__atomic` builtin of the same operation, the ORDERING passed through. A header
+# that quietly dropped an ordering -- acquire lowered as relaxed -- would compile,
+# load, run and answer every expected number, BECAUSE THIS IS x86: acquire and
+# release are free there, and the barriers a weak-memory architecture is owed
+# leave no trace in a green run on this machine. *A measurement that cannot fail
+# is not a measurement* (`W1`).
 #
 # So the mapping is measured where it can fail: in the PREPROCESSOR. Each row is
-# expanded on its own line and held against the primitive it must use. The
-# expansion is of the header IN THE BUILD DIRECTORY -- the copy the `.ko` was
-# actually built from -- so this is not a reading of the tree but of the
-# artefact, and gift 8 (a deliberately too-weak mapping) is caught here.
-#
-# The kernel's own headers are STUBBED OUT, empty, and that is what makes the
-# check readable: `READ_ONCE` and `smp_load_acquire` then stay as tokens instead
-# of expanding into inline assembly. What is measured is which primitive the row
-# selects, which is exactly the claim the named assumption (M11) rests on.
+# expanded on its own line and held against the builtin it must use AND the
+# ordering(s) it must hand over. The expansion is of the header IN THE BUILD
+# DIRECTORY -- the copy the `.ko` was actually built from -- so this is a reading
+# of the artefact and not of the tree, and gift 8 (an ordering dropped) is
+# caught here.
 #
 # The table below is a SPECIFICATION and the header is its implementation, so
 # the two are not a second register over one fact: this is the shape of a poison
 # probe, not of a duplicated list.
 abbildung_pruefe() {   # $1 = the module build dir (its `inc/` holds stdatomic.h)
     local kdir="$1" arb="$1/abbildung" befunde=0 zeile marke muss text
-    rm -rf "$arb"; mkdir -p "$arb/stubs/linux"
-    : > "$arb/stubs/linux/compiler.h"
-    : > "$arb/stubs/linux/atomic.h"
-    : > "$arb/stubs/linux/types.h"
+    rm -rf "$arb"; mkdir -p "$arb"
     cat > "$arb/rows.c" <<'EOF'
 #include <stdatomic.h>
 _Atomic unsigned int A;
@@ -242,15 +231,31 @@ Z10 atomic_fetch_or_explicit(&A, 1u, memory_order_relaxed);
 Z11 atomic_compare_exchange_weak_explicit(&A, &A, 1u, memory_order_relaxed, memory_order_relaxed);
 Z12 atomic_compare_exchange_strong_explicit(&A, &A, 1u, memory_order_release, memory_order_acquire);
 Z13 atomic_compare_exchange_weak_explicit(&A, &A, 1u, memory_order_seq_cst, memory_order_seq_cst);
+Z14 atomic_fetch_sub_explicit(&A, 1u, memory_order_release);
+Z15 atomic_fetch_and_explicit(&A, 1u, memory_order_acquire);
+Z16 atomic_fetch_xor_explicit(&A, 1u, memory_order_seq_cst);
 }
 EOF
-    if ! cc -E -P -nostdinc -I "$arb/stubs" -I "$kdir/inc" "$arb/rows.c" \
+    if ! cc -E -P -nostdinc -I "$kdir/inc" "$arb/rows.c" \
             > "$arb/rows.i" 2> "$arb/rows.err"; then
         echo "HARNESS: mapping FAILED -- the header did not preprocess"
         sed 's/^/    /' "$arb/rows.err" | head -5
         return 0
     fi
-    # marker | what the row MUST select | the row in words
+    # And the header must COMPILE with the kernel's own compiler over the rows (a builtin
+    # the compiler cannot inline would be a call to a library the kernel does not have).
+    sed 's/^Z[0-9]* //' "$arb/rows.c" > "$arb/rows-cc.c"
+    if ! cc -c -std=gnu11 -O2 -nostdinc -I "$kdir/inc" "$arb/rows-cc.c" -o "$arb/rows.o" \
+            2> "$arb/rows-cc.err"; then
+        echo "HARNESS: mapping FAILED -- the rows did not compile"
+        sed 's/^/    /' "$arb/rows-cc.err" | head -5
+        return 0
+    fi
+    if nm -u "$arb/rows.o" | grep -q .; then
+        echo "HARNESS: mapping FAILED -- the rows call a library: $(nm -u "$arb/rows.o" | awk '{print $2}' | tr '\n' ' ')"
+        return 0
+    fi
+    # marker | what the row MUST expand to (builtin and ordering) | the row in words
     while IFS='|' read -r marke muss was; do
         [ -z "$marke" ] && continue
         # One source line expands to one output line -- a macro expansion never
@@ -262,26 +267,37 @@ EOF
             continue
         fi
         if ! printf '%s' "$text" | grep -qE "$muss"; then
-            echo "HARNESS: mapping FAILED -- $was does not select $muss"
+            echo "HARNESS: mapping FAILED -- $was does not expand to $muss"
             befunde=$((befunde+1))
         fi
     done <<'EOF'
-Z01|READ_ONCE|load relaxed
-Z02|smp_load_acquire|load acquire
-Z03|smp_mb.*smp_load_acquire.*smp_mb|load seq_cst
-Z04|WRITE_ONCE|store relaxed
-Z05|smp_store_release|store release
-Z06|smp_mb.*smp_store_mb|store seq_cst
-Z07|try_cmpxchg_relaxed|fetch_add relaxed
-Z08|try_cmpxchg[^_]|fetch_add acq_rel (the unsuffixed, fully ordered form)
-Z09|smp_mb.*try_cmpxchg[^_].*smp_mb|fetch_add seq_cst
-Z10|try_cmpxchg_relaxed|fetch_or relaxed
-Z11|try_cmpxchg_relaxed|compare-exchange (relaxed, relaxed)
-Z12|try_cmpxchg_release.*smp_mb|compare-exchange (release, acquire) with its failure fence
-Z13|smp_mb.*try_cmpxchg[^_].*smp_mb|compare-exchange (seq_cst, seq_cst)
+Z01|__atomic_load *\([^;]*\(memory_order_relaxed\)\)|load relaxed
+Z02|__atomic_load *\([^;]*\(memory_order_acquire\)\)|load acquire
+Z03|__atomic_load *\([^;]*\(memory_order_seq_cst\)\)|load seq_cst
+Z04|__atomic_store *\([^;]*\(memory_order_relaxed\)\)|store relaxed
+Z05|__atomic_store *\([^;]*\(memory_order_release\)\)|store release
+Z06|__atomic_store *\([^;]*\(memory_order_seq_cst\)\)|store seq_cst
+Z07|__atomic_fetch_add *\(.*\(memory_order_relaxed\)\)|fetch_add relaxed
+Z08|__atomic_fetch_add *\(.*\(memory_order_acq_rel\)\)|fetch_add acq_rel
+Z09|__atomic_fetch_add *\(.*\(memory_order_seq_cst\)\)|fetch_add seq_cst
+Z10|__atomic_fetch_or *\(.*\(memory_order_relaxed\)\)|fetch_or relaxed
+Z11|__atomic_compare_exchange *\(.*, *1, *\(memory_order_relaxed\), *\(memory_order_relaxed\)\)|compare-exchange weak (relaxed, relaxed)
+Z12|__atomic_compare_exchange *\(.*, *0, *\(memory_order_release\), *\(memory_order_acquire\)\)|compare-exchange strong (release, acquire)
+Z13|__atomic_compare_exchange *\(.*, *1, *\(memory_order_seq_cst\), *\(memory_order_seq_cst\)\)|compare-exchange weak (seq_cst, seq_cst)
+Z14|__atomic_fetch_sub *\(.*\(memory_order_release\)\)|fetch_sub release
+Z15|__atomic_fetch_and *\(.*\(memory_order_acquire\)\)|fetch_and acquire
+Z16|__atomic_fetch_xor *\(.*\(memory_order_seq_cst\)\)|fetch_xor seq_cst
 EOF
+    # And the enumeration the orderings stand for: each C11 name IS the compiler's constant.
+    for o in RELAXED ACQUIRE RELEASE ACQ_REL SEQ_CST; do
+        local klein; klein="$(printf '%s' "$o" | tr 'A-Z' 'a-z')"
+        grep -q "memory_order_$klein = __ATOMIC_$o" "$kdir/inc/stdatomic.h" || {
+            echo "HARNESS: mapping FAILED -- memory_order_$klein is not __ATOMIC_$o"
+            befunde=$((befunde+1))
+        }
+    done
     if [ "$befunde" = 0 ]; then
-        echo "HARNESS: mapping ok (13 rows expanded and held against their primitive)"
+        echo "HARNESS: mapping ok (16 rows expanded and held against their builtin and ordering)"
     fi
 }
 
@@ -340,7 +356,7 @@ symbole_pruefe() {   # $1 = module build dir, $2 = module name, $3 = the mark
     local kdir="$1" modul="$2" marke="$3" arb="$1/ksym" n
     mkdir -p "$arb"
     nm -u "$kdir/$modul.ko" 2>/dev/null | awk '{print $2}' | sort -u > "$arb/ko.txt"
-    nm -u "$kdir/gabbro_kmodul.o" "$kdir/gabbro_arena.o" 2>/dev/null \
+    nm -u "$kdir/gabbro_kmodul.o" 2>/dev/null \
         | awk '/^ +U/{print $2}' | sort -u > "$arb/rt.txt"
     comm -12 "$arb/ko.txt" "$arb/rt.txt" | grep -Ev "$KSYM_TOOLKETTE" > "$arb/fest.txt"
     n="$(wc -l < "$arb/fest.txt" | tr -d ' ')"
@@ -389,7 +405,7 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #
 #   1 the expected read-back value moves (33 -> 34): does the run really read
 #     the kernel log, or does it only look at insmod's exit code?
-#   2 the provision is raised past the third grow (24 -> 64 KiB): the refusal
+#   2 the manifest's provision is raised past the third grow (24 -> 64 KiB): the refusal
 #     line `k=3 v=3` must then be MISSING -- does the run notice a line that
 #     did not come, or only lines that did?
 #   3 the module's unload line is dropped from the expectation's check by
@@ -401,15 +417,15 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #     the runtime set its load error and returned false, the program's `else`
 #     ran, the unit answered 0, and `module_init` -- which read the load error
 #     only BEFORE calling the unit -- let the module in. A fail-stop that does
-#     not reach the loader is not a fail-stop. `laufzeit/kmodul/kmodul.c` now
-#     reads it again after the unit's init, and the gift is caught at
+#     not reach the loader is not a fail-stop. The load function (now the generated
+#     driver, template `modul.lebenslauf`) reads it again after the unit's init, and the gift is caught at
 #     `insmod` as well as in the log.
 #
 # The `takt` probe's three (K3, and 5 is the one that is about the LOWERING and
 # not about the harness):
 #
-#   5 the generated lock list (`sperren.h`) is edited from `F(TAKT, MASKED)` to
-#     `F(TAKT, PLAIN)` and the module re-made with the `Kbuild` the build wrote:
+#   5 the generated driver's masked `TAKT` pair is edited into the plain one and
+#     the module re-made with the `Kbuild` the build wrote:
 #     the lock then takes `raw_spin_lock` instead of `raw_spin_lock_irqsave`, the
 #     hardirq timer body lands inside a critical section on the core that holds
 #     it, and waits for that core. *The run does not finish* -- exactly what the
@@ -427,8 +443,8 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 # and not about the harness):
 #
 #   8 the ATOMIC MAPPING is made deliberately too weak in the copy the module
-#     was built from (`inc/stdatomic.h`): acquire becomes `READ_ONCE` and
-#     release becomes `WRITE_ONCE`. **On x86 the run would still answer every
+#     was built from (`inc/stdatomic.h`): the load and the store drop the
+#     ordering they are handed for relaxed. **On x86 the run would still answer every
 #     expected number** -- acquire and release are free there -- so a harness
 #     that only booted the module would call this green, and the barriers a
 #     weak-memory architecture is owed would be gone in silence. It is caught by
@@ -488,8 +504,8 @@ lauf_einmal() {   # $1 = gift number or "", $2 = work dir, $3 = probe
     # and the two calls the kernel makes.
     mkdir -p "$arb"
     # **Gift 12 takes the BINDING away**, and nothing else: the unit still declares its
-    # arena, its lock or its roots, and the module runtime still calls the twelve names of
-    # `laufzeit/kmodul/bindung.h`. `gabbro build` must refuse it BEFORE a byte of C is
+    # arena, its lock or its roots, and the module runtime still calls the binding names of
+    # the generated module driver. `gabbro build` must refuse it BEFORE a byte of C is
     # written -- which is the half of K7 no measurement over a built `.ko` could give,
     # because a unit whose binding is missing has no `.ko` to measure.
     local bindung="$BINDUNG"
@@ -498,7 +514,14 @@ lauf_einmal() {   # $1 = gift number or "", $2 = work dir, $3 = probe
         echo "-- written by instrumente/pruefe-kernelmodul.sh"
         echo "compiler cc -std=c11 -Wall -Wextra -Werror"
         echo "out $arb/bau"
-        echo "kmod $W/laufzeit/kmodul $KBUILD"
+        # The loader's two entry symbols and the licence are the MANIFEST's words (C-free
+        # lane, C2): the build writes the module runtime and names no kernel symbol itself.
+        echo "kmod $KBUILD init_module cleanup_module"
+        echo "note .modinfo license=Dual MIT/GPL"
+        echo "note .modinfo description=a Gabbro unit as a Linux kernel module"
+        local vorrat="$VORRAT"
+        [ "$gift" = 2 ] && vorrat=65536
+        [ -n "$vorrat" ] && echo "provision $vorrat"
         echo "unit $MODUL module $INIT $EXIT"
         echo "  $QUELLE"
         echo "  $FREMD"
@@ -546,16 +569,19 @@ lauf_einmal() {   # $1 = gift number or "", $2 = work dir, $3 = probe
         #     timer never fires and the run measures nothing.
         local kdir="$arb/bau/$MODUL.kmod"
         if [ "$gift" = 5 ]; then
-            # The lock list is a GENERATED file beside the emitted C (`sperren.h`, written by
-            # `gabbro build` out of the same walk the other two drivers read). *It stood in
-            # `einheit.c` for one afternoon, and when it moved this mutation stopped applying
-            # and the gift read NOT CAUGHT -- a gift that does not apply looks exactly like a
-            # pass, and here the instrument said so itself.*
-            grep -q 'F(TAKT, MASKED)' "$kdir/sperren.h" || {
-                echo "HARNESS: gift 5 does not apply -- no F(TAKT, MASKED) in sperren.h"
+            # The lock primitives are GENERATED text of the driver (`gabbro_kmodul.c`,
+            # written by `gabbro build`, C-free lane C2). *They stood in a generated
+            # `sperren.h` before, and in `einheit.c` for one afternoon before that; each move
+            # made this mutation stop applying, and a gift that does not apply looks exactly
+            # like a pass -- so it says so itself.* The masked pair becomes the plain one.
+            local kd="$kdir/gabbro_kmodul.c"
+            grep -q 'uint64_t f = gabbro_kern_sperre_nimm_maskiert(gabbro_sperre_TAKT);' "$kd" \
+                && grep -q 'gabbro_kern_sperre_gib_maskiert(gabbro_sperre_TAKT, f);' "$kd" || {
+                echo "HARNESS: gift 5 does not apply -- no masked TAKT pair in gabbro_kmodul.c"
                 return 0
             }
-            sed -i 's/F(TAKT, MASKED)/F(TAKT, PLAIN)/' "$kdir/sperren.h"
+            sed -i 's/uint64_t f = gabbro_kern_sperre_nimm_maskiert(gabbro_sperre_TAKT);/uint64_t f = 0; gabbro_kern_sperre_nimm(gabbro_sperre_TAKT);/' "$kd"
+            sed -i 's/gabbro_kern_sperre_gib_maskiert(gabbro_sperre_TAKT, f);/(void)f; gabbro_kern_sperre_gib(gabbro_sperre_TAKT);/' "$kd"
         else
             sed -i 's/GABBRO_TAKT_NS 50000ull/GABBRO_TAKT_NS 50000000000ull/' "$kdir/gabbro_fremd0.c"
         fi
@@ -574,21 +600,18 @@ lauf_einmal() {   # $1 = gift number or "", $2 = work dir, $3 = probe
         #   9 a plain access replaces one of the nine calls in the emitted C.
         local kdir="$arb/bau/$MODUL.kmod"
         if [ "$gift" = 8 ]; then
-            # **The two rows are matched WHOLE and by fixed string**, and both
-            # before and after. A looser pattern (`smp_load_acquire(P)`) also
-            # stands in the seq_cst row, so the "did it apply?" question would
-            # have answered NO over a mutation that had applied perfectly --
-            # and a gift that does not apply is reported as such below, never
-            # as a catch.
-            local zeile_a='    ({ GABBRO_KMOD_ATOMAR_TYP(P); smp_load_acquire(P); })'
-            local zeile_r='    ({ GABBRO_KMOD_ATOMAR_TYP(P); smp_store_release(P, (V)); })'
+            # **The two rows are matched WHOLE and by fixed string**, before and after:
+            # the load and the store DROP the ordering they are handed and use relaxed.
+            # On x86 the run still answers every number; the mapping stage must say no.
+            local zeile_a='__atomic_load(__gabbro_p, &__gabbro_w, (O));'
+            local zeile_r='__atomic_store(__gabbro_p, &__gabbro_w, (O));'
             local h="$kdir/inc/stdatomic.h"
             grep -Fq "$zeile_a" "$h" && grep -Fq "$zeile_r" "$h" || {
-                echo "HARNESS: gift 8 does not apply -- the acquire/release rows are not where it looks"
+                echo "HARNESS: gift 8 does not apply -- the load/store rows are not where it looks"
                 return 0
             }
-            sed -i 's/({ GABBRO_KMOD_ATOMAR_TYP(P); smp_load_acquire(P); })/({ GABBRO_KMOD_ATOMAR_TYP(P); READ_ONCE(*(P)); })/' "$h"
-            sed -i 's/({ GABBRO_KMOD_ATOMAR_TYP(P); smp_store_release(P, (V)); })/({ GABBRO_KMOD_ATOMAR_TYP(P); WRITE_ONCE(*(P), (V)); })/' "$h"
+            sed -i 's/__atomic_load(__gabbro_p, &__gabbro_w, (O));/__atomic_load(__gabbro_p, \&__gabbro_w, __ATOMIC_RELAXED);/' "$h"
+            sed -i 's/__atomic_store(__gabbro_p, &__gabbro_w, (O));/__atomic_store(__gabbro_p, \&__gabbro_w, __ATOMIC_RELAXED);/' "$h"
             if grep -Fq "$zeile_a" "$h" || grep -Fq "$zeile_r" "$h"; then
                 echo "HARNESS: gift 8 does not apply -- a row did not change"
                 return 0
@@ -614,17 +637,16 @@ lauf_einmal() {   # $1 = gift number or "", $2 = work dir, $3 = probe
         # on the runtime copy inside the build directory, re-made with the `Kbuild`
         # the build wrote, so it carries no second copy of the recipe.
         local kdir="$arb/bau/$MODUL.kmod"
-        # *The anchor moved once already:* until K7 this looked for
-        # `#include <linux/printk.h>`, which the runtime dropped when its
-        # reporting became the program's -- and the gift then read DOES NOT
-        # APPLY, which is the shape session 4 and 5 both paid for. The anchor is
-        # now the include the runtime cannot lose: `-EINVAL` is its load verdict.
-        grep -q '#include <linux/errno.h>' "$kdir/gabbro_kmodul.c" || {
-            echo "HARNESS: gift 11 does not apply -- no errno include in gabbro_kmodul.c"
+        # *The anchor moved twice already:* until K7 this looked for
+        # `#include <linux/printk.h>`, until the C-free lane's C2 for
+        # `#include <linux/errno.h>` -- the generated driver includes no kernel header at
+        # all. The anchor is now the unit's own include, which the driver cannot lose.
+        grep -q '#include "einheit.c"' "$kdir/gabbro_kmodul.c" || {
+            echo "HARNESS: gift 11 does not apply -- no include of the unit in gabbro_kmodul.c"
             return 0
         }
-        sed -i 's|#include <linux/errno.h>|#include <linux/errno.h>\n#include <linux/delay.h>|' "$kdir/gabbro_kmodul.c"
-        sed -i 's|    (void)GABBRO_KMOD_EXIT();|    msleep(0);\n    (void)GABBRO_KMOD_EXIT();|' "$kdir/gabbro_kmodul.c"
+        sed -i 's|#include "einheit.c"|#include "einheit.c"\nextern void msleep(unsigned int);|' "$kdir/gabbro_kmodul.c"
+        sed -i "s|    (void)$EXIT();|    msleep(0);\n    (void)$EXIT();|" "$kdir/gabbro_kmodul.c"
         grep -q 'msleep(0);' "$kdir/gabbro_kmodul.c" || {
             echo "HARNESS: gift 11 does not apply -- the exit function is not where it looks"
             return 0
@@ -657,7 +679,6 @@ lauf_einmal() {   # $1 = gift number or "", $2 = work dir, $3 = probe
         fi
     fi
 
-    [ "$gift" = 2 ] && PARAM="vorrat_kib=64"
     [ "$gift" = 3 ] && rmmod_zeile="echo \"HARNESS: rmmod ok\""
 
     rm -rf "$arb/initrd"
@@ -670,7 +691,7 @@ lauf_einmal() {   # $1 = gift number or "", $2 = work dir, $3 = probe
 /bin/busybox mount -t proc none /proc
 /bin/busybox mount -t sysfs none /sys
 echo "HARNESS: begin"
-/bin/busybox insmod /$MODUL.ko $PARAM && echo "HARNESS: insmod ok" || echo "HARNESS: insmod FAILED"
+/bin/busybox insmod /$MODUL.ko && echo "HARNESS: insmod ok" || echo "HARNESS: insmod FAILED"
 $rmmod_zeile
 /bin/busybox dmesg | /bin/busybox grep -E "gabbro|Oops|BUG:|WARNING:"
 echo "HARNESS: end"
@@ -793,7 +814,7 @@ if [ -z "$GIFT" ]; then
         echo "-- probe $p: $MODUL"
         echo "   source      $QUELLE"
         echo "   own C       $FREMD"
-        [ -n "$PARAM" ] && echo "   insmod      $PARAM (the program's ceiling is max 4096 slots)"
+        [ -n "$VORRAT" ] && echo "   provision   $VORRAT bytes (the program's ceiling is max 4096 slots)"
         mkdir -p "$ARB/$p"
         lauf_einmal "" "$ARB/$p" "$p" > "$ARB/$p/aus.txt"
         grep -E "HARNESS:|gabbro" "$ARB/$p/aus.txt" | sed 's/^/   /'
@@ -809,8 +830,8 @@ if [ -z "$GIFT" ]; then
         echo "                 taking the same lock, and 0 arrivals on a holding core."
         echo "GREEN: atomar -- two DECLARED roots as kthreads, a counter that answers 512"
         echo "                 exactly, a release/acquire flag seen set, a payload never"
-        echo "                 stale, two bits ORed to 3; and the mapping's 13 rows expanded"
-        echo "                 and held against their kernel primitive."
+        echo "                 stale, two bits ORed to 3; and the mapping's 16 rows expanded"
+        echo "                 and held against their builtin and ordering."
         exit 0
     fi
     echo "RED: $gesamt_fehler finding(s)."

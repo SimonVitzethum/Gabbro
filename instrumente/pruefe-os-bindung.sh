@@ -491,7 +491,7 @@ metall_os_funde() {   # $1 = directory; prints `file:line:name` per finding
 # So this stage reads the SOURCE of every file in `laufzeit/` itself, with the
 # same scanner and the same name list the bare-metal stage uses -- one function,
 # two trees, because a second copy of the check would measure the copy (`W7`).
-# `laufzeit/metall/` and `laufzeit/kmodul/` are NOT in it: each has a stage of
+# `laufzeit/metall/` (and the module target, whose runtime the build writes) are NOT in it: each has a stage of
 # its own (this file's fourth, and `pruefe-kernelmodul.sh`'s `symbole_pruefe`),
 # and a name counted twice reads like two findings.
 #

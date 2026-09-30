@@ -909,8 +909,9 @@
     proved in SchablonenArena.lean) asks the PROGRAM's binding for a region of the whole span
     (`gabbro_os_reserve`, a Gabbro function over a region gate, template `tor.region`), and what
     is assumed is that gate's declared contract -- user logic in the program's source. On metal,
-    the carved region of (M10); in a Linux kernel module, one allocation per arena with a budget
-    over it (`laufzeit/kmodul/arena.c`). What is NOT claimed: that the reservation succeeds --
+    the carved region of (M10); in a Linux kernel module, a static pool of the manifest's
+    `provision` per arena with the span cut at it (the driver the build writes, template
+    `arena.modul`, arithmetic proved in SchablonenModul.lean). What is NOT claimed: that the reservation succeeds --
     refuse-on-load is a refusal, not a leg.
   * (d) `Laufzeit.commit` -- THE COMMIT SERVICE (server lane, 2026-09-28; wording from
     PLAN-DYNAMISCH section 9; reworded by the C-free lane 2026-09-30): every `grow` the checker
@@ -1052,55 +1053,42 @@
     and the link statement (`GabbroZielVerbund`, same `Q`) is held by `N568`: two linked
     units call ONE kernel.
   -- END bare-metal entries and targets --
-  -- BEGIN Linux kernel module: the atomic lowering (server lane, 2026-09-28, TODO 0e K6) --
-    COMMENT ONLY: no definition, no premise and no leg of this file changes. It names ONE
-    assumption of a THIRD runtime, the loadable Linux kernel module (`laufzeit/kmodul/`), and
-    it is a REFINEMENT OF (2) of the five memory-model assumptions above -- not a new leg and
-    not a weakening of one. (2) reads "the C compiler and the hardware implement C11 atomics
-    and the orders as specified". Inside a kernel object there is no C11 implementation to
-    lean on: the kernel is built `-nostdinc`, `<stdatomic.h>` is not the toolchain's, and the
-    kernel has a memory model of its own (LKMM: `READ_ONCE`/`WRITE_ONCE`, `smp_*`, the
-    `cmpxchg` family). So what (2) assumes on that target is this, and it is named rather
-    than implied:
-    - (M11) THE KERNEL PRIMITIVES ARE AT LEAST AS STRONG: every row of
-      `bibliothek/linux-kmod/stdatomic.h` -- the ONE place the emitter's nine C11 call forms
-      become kernel primitives -- provides at least the ordering the C11 operation it replaces
-      provides. (*The table stood in `laufzeit/kmodul/include/stdatomic.h` until 2026-09-28,
-      when K7 moved it into the program's own files: the assumption is about the ROWS and not
-      about the file they stand in, and the rows did not change. The runtime's
-      `<stdatomic.h>` is a refusal now, so a module that binds no table does not compile.*) Per ordering, and named so that a weak-memory port can be CHECKED against it
-      rather than trusted: a relaxed load/store is `READ_ONCE`/`WRITE_ONCE` (single-copy
-      atomicity for an aligned scalar of 1, 2, 4 or 8 bytes; no ordering either way, which is
-      what relaxed asks); an acquire load is `smp_load_acquire` and a release store
-      `smp_store_release` (the kernel's own acquire/release, on every architecture); an SC
-      load or store is that with a full `smp_mb()` on both sides (the leading/trailing-fence
-      mapping); a read-modify-write is a `try_cmpxchg` loop with the matching suffix, and
-      `acq_rel`/`seq_cst` take the UNSUFFIXED, fully ordered form, which is stronger than
-      asked and never weaker. **The one place the obvious mapping would be WEAKER is the
-      failure path of a compare-exchange**: C11 gives it an ordering of its own (the emitter
-      writes `acquire`), and in LKMM a failed `cmpxchg` implies no ordering at all, not even
-      in the fully ordered form -- so that path carries its own `smp_mb()`.
-      WHAT IS ASSUMED AND WHAT IS MEASURED. Assumed: that the kernel's primitives mean what
-      `Documentation/atomic_t.txt` and `memory-barriers.txt` say, i.e. that LKMM refines the
-      orders W over-approximates. That is a statement about Linux, not about Gabbro, and no
-      Lean proof of it is claimed (Simon, 2026-09-28: a named assumption, not an LKMM
-      refinement proof). Measured, and both of these are what keep the assumption from being
-      a wish: (i) every access to an atomic in the emitted C goes through one of the nine
-      call forms, over the whole corpus, at token level
-      (`instrumente/pruefe-atomar-zugriffe.py`) -- because `_Atomic` becomes `volatile` here,
-      so a plain access would be UNORDERED where C11 makes it seq_cst; (ii) each row of the
-      mapping is expanded by the preprocessor and held against the primitive it must select
-      (`instrumente/pruefe-kernelmodul.sh`, and its gift 8 is a deliberately too-weak
-      mapping). Neither is an argument about LKMM; together they are the argument that the
-      assumption is about the rows that are actually built.
+  -- BEGIN Linux kernel module: the atomic lowering (server lane, 2026-09-28, TODO 0e K6;
+     revised by the C-free lane's C2, 2026-09-30) --
+    COMMENT ONLY: no definition, no premise and no leg of this file changes. It names what
+    assumption (2) of the five memory-model assumptions above -- "the C compiler and the
+    hardware implement C11 atomics and the orders as specified" -- means inside a THIRD
+    runtime, the loadable Linux kernel module, whose build is `-nostdinc` and so has no
+    `<stdatomic.h>` of the toolchain's:
+    - (M11) THE MODULE BUILD USES THE COMPILER'S OWN C11 ATOMICS: the `<stdatomic.h>` the build
+      writes for a `module` unit (`crates/gabbro-cli/src/treiber.rs`, `KMOD_STDATOMIC`) maps
+      each of the emitter's nine C11 call forms onto the compiler builtin of the same operation
+      (`__atomic_load`, `__atomic_store`, `__atomic_fetch_*`, `__atomic_compare_exchange`) and
+      hands the C11 ordering through unchanged -- the builtins a hosted `<stdatomic.h>` expands
+      to. So (2) is assumed of the same compiler on this target as on a hosted one, and of
+      nothing beyond it: the kernel's own memory model (LKMM) is neither used nor assumed,
+      because a Gabbro `atomic` is shared only among the unit's own threads and never with
+      kernel code. (*Until 2026-09-30 (M11) named a handwritten table onto the LKMM macros
+      (`READ_ONCE`, `smp_load_acquire`, the `try_cmpxchg` family) and assumed that LKMM refines
+      the C11 orders; the table left with the module runtime's other handwritten C, and that
+      assumption with it -- a smaller assumption, not a larger one.*) `_Atomic` is a real C11
+      qualifier on this target again, so a plain access to an atomic object would be
+      sequentially consistent rather than unordered. A builtin the compiler cannot inline is
+      an undefined symbol at the kernel build's `modpost`: a refused build, never a silent
+      library call.
+      MEASURED, and these keep the assumption about the header that is actually built: (i)
+      every access to an atomic in the emitted C goes through one of the nine call forms, over
+      the whole corpus, at token level (`instrumente/pruefe-atomar-zugriffe.py`); (ii) each
+      (form, ordering) pair is expanded by the preprocessor from the header in the module's
+      build directory and held against its builtin AND the ordering it hands over, and the rows
+      compile with no library call (`instrumente/pruefe-kernelmodul.sh`, whose gift 8 drops an
+      ordering).
       NOT CLAIMED on this runtime, in addition to the list below: a floating-point `atomic`
-      (refused, `bau.rs::modulregel` and a `_Generic` in the header: kernel code may not use
-      the FPU without `kernel_fpu_begin`); a read-modify-write on an atomic whose width the
-      target's native `try_cmpxchg` does not cover (refused by a `_Static_assert`); per-CPU
-      cells as the kernel's per-cpu accessors (`accumulates … per cpu N` lowers to an ordinary
-      array with relaxed accesses -- correct, not per-cpu-optimised); and that any run on
-      x86 could FALSIFY a missing barrier (it cannot -- x86 gives acquire and release away,
-      which is why (ii) above is static and not a run).
+      (refused, `bau.rs::modulregel`: kernel code may not use the FPU without
+      `kernel_fpu_begin`); per-CPU cells as the kernel's per-cpu accessors (`accumulates … per
+      cpu N` lowers to an ordinary array with relaxed accesses -- correct, not per-cpu-
+      optimised); and that any run on x86 could FALSIFY a dropped ordering (it cannot -- x86
+      gives acquire and release away, which is why (ii) above is static and not a run).
   -- END Linux kernel module --
   * THE PERMITTED STOPS (`HaltArt`, in the conclusion `FortschrittG`): not premises, but
     the places where the theorem reports instead of claiming more. Each with why it is not

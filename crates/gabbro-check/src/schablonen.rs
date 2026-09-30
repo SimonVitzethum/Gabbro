@@ -166,6 +166,8 @@ pub const RATSCHE: &[&str] = &[
     "tor.trampolin",
     "faden.laufzeit",
     "tor.kind",
+    "arena.modul",
+    "modul.lebenslauf",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -435,6 +437,70 @@ pub const SCHABLONEN: &[Schablone] = &[
         ],
         fundstelle: "grammatik/Grammatik/SchablonenFaden.lean §2; crates/gabbro-cli/src/treiber.rs \
                      (`FADEN_LAUFZEIT`, `erzeuge`); instrumente/pruefe-os-bindung.sh",
+    },
+    // **Entered 2026-09-30 by the C-free lane (C2, the kernel-module runtime), PROVED in the
+    // same commit**: `laufzeit/kmodul/{kmodul.c,arena.c,sperre.h,bindung.h}` became text the
+    // build writes (`treiber.rs::erzeuge_kmod`).
+    Schablone {
+        name: "arena.modul",
+        haengt_an: &[],
+        konstrukt: "arena … max M in a `module` unit (the module driver's arena runtime: \
+                    `gabbro_modul_reserve`, `gabbro_arena_grow` over a static pool of the \
+                    manifest's `provision`)",
+        pflicht: "Each dynamic arena's storage is a static pool of `V` bytes (the manifest's \
+                  `provision`), the span is `min(max * elem, V)`, a reservation whose floor the \
+                  span cannot hold refuses the LOAD, a `grow` past the ceiling is a fail-stop \
+                  the load function reads back, and one past the span answers `false` with \
+                  `committed` unchanged. **Machine-checked as an ABSTRACT CORE** \
+                  (`Grammatik/SchablonenModul.lean` §1): a successful reservation establishes \
+                  and every `grow` keeps `committed <= max` and `committed * elem <= span <= V` \
+                  (`arena_modul_inv_reserve`, `arena_modul_inv_grow`), so every slot the unit \
+                  can reach lies inside its pool (`arena_modul_slot_im_lager`); no 64-bit \
+                  product wraps (`arena_modul_kein_ueberlauf`); the committed prefix only grows \
+                  (`arena_modul_monoton`); a grow past the ceiling is the stop \
+                  (`arena_modul_ueber_der_decke`); witness on the `halde` probe \
+                  (`arena_modul_zeuge`: two grows committed, the third refused below the \
+                  ceiling). **NOT proved: that the loader zeroes the pool** (it is `.bss` of the \
+                  module), the platform's side of premise (d) `Laufzeit.reserve`.",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "`max` and `elem` are 32-bit, `elem > 0`, `floor_hi <= max`, `max > 0`", durch: Some("the descriptor the emitter writes (`emit.rs`, `ARENA_DYN_PRELUDE`: `uint32_t` fields from the declaration), and the template's own descriptor check, which refuses the load before any arithmetic"), braeuchte: None },
+            Voraussetzung { was: "the pool has `V` bytes, a positive multiple of the page", durch: Some("the manifest's `provision` (`bau.rs::lies_manifest` refuses any other number) and the build's refusal of a `module` with an arena and no provision (`bau.rs::bindungsregel`); the pool is a static array of exactly that size"), braeuchte: None },
+            Voraussetzung { was: "a `grow` stays under the ceiling (`committed + n <= max`)", durch: Some("`N426` statically, and the template's own test before any commit, which fail-stops past it -- the load function reads the stop back (`modul.lebenslauf`)"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenModul.lean §1; crates/gabbro-cli/src/treiber.rs \
+                     (`KMOD_ARENA`); instrumente/pruefe-kernelmodul.sh (probe `halde`, gifts 2, 4)",
+    },
+    Schablone {
+        name: "modul.lebenslauf",
+        haengt_an: &["arena.modul"],
+        konstrukt: "unit … module <init> <exit> (the loader's two entry points the module \
+                    driver writes: `kmod <kbuild> <load> <unload>`)",
+        pflicht: "The load binds every arena's pool (a refusal refuses the load), initialises \
+                  every lock, calls the unit's init, refuses on a non-zero answer or a fail-stop \
+                  during it, then hands one thread per declared root to the binding -- and if \
+                  one start fails, waits for every root and refuses. The unload waits for every \
+                  root, then calls the unit's exit. **Machine-checked as an ABSTRACT CORE** \
+                  (`Grammatik/SchablonenModul.lean` §2): a load that answers 0 ran bind, lock, \
+                  init, start in that order with every outcome good (`laden_erfolg`); the init \
+                  runs only after every arena is bound (`laden_init_erst_nach_bindung`); the \
+                  load never calls the exit (`laden_ruft_kein_exit`); roots start only after an \
+                  init that answered 0 without a stop (`laden_start_nach_init`); a refused load \
+                  waits for every root it started (`laden_verweigert_wartet`); the unload waits \
+                  for every root before the exit (`entladen_wartet_vor_exit`); witnesses on the \
+                  three probes and gift 4. **NOT proved: that the binding keeps its contract** \
+                  (a started thread runs the root; a failed start completes at once; the lock \
+                  operations take and give the lock) -- the program's declarations, user logic, \
+                  premise (c).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the unit's init and exit exist, take nothing, and the init answers the load verdict", durch: Some("`bau.rs::modulregel` (the manifest's two names against the unit's declarations: declared, nullary, answering)"), braeuchte: None },
+            Voraussetzung { was: "every lock and root the driver lists is the unit's", durch: Some("the driver plan (`bau.rs::treiberregel`, `TreiberPlan::sperren`/`wurzeln`) out of the same walk the hosted and bare-metal drivers read"), braeuchte: None },
+            Voraussetzung { was: "the binding defines every name the driver calls, with the arity and result it calls them with", durch: Some("`bau.rs::bindungsregel` before any C is written, and the C compiler over the driver's prototypes against the emitted declarations in one translation unit"), braeuchte: None },
+            Voraussetzung { was: "a started thread runs its root once and a failed start leaves the blob in a state the wait returns from", durch: Some("the program's binding (`bibliothek/linux-kmod`: `gabbro_kern_faden_start`/`_warte`), whose declared contract is user logic, premise (c)"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenModul.lean §2; crates/gabbro-cli/src/treiber.rs \
+                     (`erzeuge_kmod`); instrumente/pruefe-kernelmodul.sh (three probes, 12 gifts)",
     },
     // **Entered 2026-09-30 by the C-free lane (OFFEN O38), PROVED**: the lowering of the
     // gate+guard+`child` triple, which lane 260 wrote as a jump into the parent's function.

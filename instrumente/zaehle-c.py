@@ -52,6 +52,10 @@ KBUILD = os.environ.get("KBUILD", "/lib/modules/%s/build" % os.uname().release)
 BINDUNG_LINUX = "  {W}/bibliothek/linux/linux.gab\n"
 BINDUNG_KMOD = "  {W}/bibliothek/linux-kmod/linux-kmod.gab\n  {W}/bibliothek/linux-kmod/linux-kmod.c\n"
 CC = "compiler cc -std=c11 -O0 -Wall -Wextra -Werror\nout {OUT}\n"
+# The module product's words (C-free lane, C2): the kernel build tree, the loader's two entry
+# symbols and the licence -- the runtime itself is the build's generated text.
+KMOD = ("kmod " + KBUILD + " init_module cleanup_module\n"
+        "note .modinfo license=Dual MIT/GPL\n")
 
 NOLIBC = ("compiler cc -std=c11 -O0 -ffreestanding -fno-stack-protector -fno-pie -Wall -Wextra -Werror\n"
           "out {OUT}\nnolibc\n")
@@ -67,12 +71,15 @@ SZENARIEN = {
          "osprobe"),
     ],
     "kmod": [
-        ("halde", CC + "kmod {W}/laufzeit/kmodul " + KBUILD + "\nunit gabbro_halde module laden entladen\n"
+        ("halde", CC + KMOD + "provision 24576\nunit gabbro_halde module laden entladen\n"
          "  {W}/messung/proben/kmodul/halde-treiber.gab\n  {W}/messung/proben/kmodul/melde.c\n" + BINDUNG_KMOD,
          "gabbro_halde"),
-        ("takt", CC + "kmod {W}/laufzeit/kmodul " + KBUILD + "\nunit gabbro_takt module laden entladen\n"
+        ("takt", CC + KMOD + "unit gabbro_takt module laden entladen\n"
          "  {W}/messung/proben/kmodul/sperre-takt.gab\n  {W}/messung/proben/kmodul/takt.c\n" + BINDUNG_KMOD,
          "gabbro_takt"),
+        ("atomar", CC + KMOD + "unit gabbro_atomar module laden entladen\n"
+         "  {W}/messung/proben/kmodul/atomar-faeden.gab\n  {W}/messung/proben/kmodul/atomar.c\n" + BINDUNG_KMOD,
+         "gabbro_atomar"),
     ],
     "metal": [
         ("pool157", CC + "metal {W}/laufzeit/metall\nunit einheit object\n  {W}/beispiele/157-worker-pool.gab\n",

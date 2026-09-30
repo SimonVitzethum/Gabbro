@@ -327,3 +327,49 @@ substance and one sentence of it moves"*. It landed the same day. What happened,
 5. `#print axioms gabbro_ziel` is still `[propext, Classical.choice, Quot.sound]` (measured,
    session 6, `~/claude-lane/logs/lake-s6.log`: 356 jobs, and 12 `#print axioms` lines all
    standard).
+
+# Part IV — (M11) names the compiler's C11 atomics, not the kernel's LKMM (C-free lane, C2)
+
+*Written 2026-09-30 by the C-free lane, session 11, beside the work it reviews.*
+
+## 15. What moved
+
+| | |
+|---|---|
+| the table | `bibliothek/linux-kmod/stdatomic.h` (273 handwritten lines onto `READ_ONCE`, `smp_load_acquire`, `smp_store_release`, `smp_mb`, the `try_cmpxchg` family) is **deleted** |
+| what replaces it | `<stdatomic.h>` WRITTEN BY THE BUILD for every `module` unit (`crates/gabbro-cli/src/treiber.rs`, `KMOD_STDATOMIC`): each of the emitter's nine C11 call forms onto the GCC builtin of the same operation, the ordering passed through; `memory_order_*` are the compiler's `__ATOMIC_*` constants. The same builtins a hosted `<stdatomic.h>` expands to |
+| `_Atomic` | a real C11 qualifier again (the table had made it `volatile`) |
+| the door | `bau.rs::bindungsregel` no longer requires a `stdatomic.h` among a module's files; a program may still name one, which replaces the generated header |
+| `Spec.lean` | **comment only**, inside the (M11) block and one sentence of (d) `Laufzeit.reserve` (the module arena is the generated driver's static pool): `git diff --stat -- grammatik/Grammatik/Zielsatz/Spec.lean` = 38 insertions, 50 deletions, no definition, no premise, no leg |
+
+## 16. Why this is not a weakening
+
+1. **The assumption gets smaller.** Before: (2) "the compiler and the hardware implement C11
+   atomics" was refined, for the module target, into "the kernel's LKMM primitives provide at
+   least the C11 orders" -- a claim about Linux's memory model, named and not proved. Now the
+   module target assumes (2) of the same compiler that builds a hosted Gabbro program, and
+   nothing about LKMM. A Gabbro `atomic` is shared among the unit's own threads only (the
+   kernel's code never reads it), so the kernel's memory model has nothing to add.
+2. **The measurement is kept, retargeted.** `instrumente/pruefe-kernelmodul.sh` still expands
+   every (form, ordering) pair -- now 16 rows, three more than before (`fetch_sub`,
+   `fetch_and`, `fetch_xor`) -- from the header in the module's BUILD DIRECTORY and holds each
+   against its builtin AND the ordering it hands over; it also compiles the rows and refuses
+   any library call (a builtin the compiler cannot inline). Gift 8 now drops the ordering of
+   the load and the store rows; **caught by the mapping stage alone** (measured,
+   `kratz/c/s11/kmod-gifte.log`). `instrumente/pruefe-atomar-zugriffe.py` (every access through
+   the nine forms) is unchanged and green on the `atomar` probe.
+3. **What would have made it a weakening, and was not done:** an empty `<stdatomic.h>` with
+   `_Atomic` defined away (plain, unordered accesses), or a mapping that picks orderings per
+   row (the old table's shape) without a check. The generated header picks nothing; it hands
+   the emitter's ordering to the compiler.
+4. **Run, not only read:** the `atomar` probe (two roots as kthreads, a saturating CAS
+   counter, a release/acquire flag over a payload, a fetch-or) answers 512 / 256 / 0 / 3 in
+   QEMU with the builtin mapping (`kratz/c/s11/kmod-neu.log`), as it did with the LKMM table.
+
+## 17. What a reviewer should check (Part IV)
+
+1. `git diff -- grammatik/Grammatik/Zielsatz/Spec.lean` touches only the header comment.
+2. `treiber.rs::KMOD_STDATOMIC` passes `(O)`/`(S)`/`(F)` through in every row and defines
+   each `memory_order_x` as `__ATOMIC_X`.
+3. `instrumente/pruefe-kernelmodul.sh --gift 8` is caught by the mapping stage.
+4. `#print axioms gabbro_ziel` is still `[propext, Classical.choice, Quot.sound]`.

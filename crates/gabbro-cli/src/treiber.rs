@@ -100,7 +100,7 @@ pub struct MetallZusatz {
 /// with unchanged sources would otherwise leave a stale driver behind a
 /// valid record. Bump this on every template change; `bau.rs` mixes it into
 /// the fingerprint of every unit that owns a driver.
-pub const GENERATOR_KENNUNG: &str = "treiber-gen-9";
+pub const GENERATOR_KENNUNG: &str = "treiber-gen-10";
 
 /// **The unit's dynamic arenas, reserved before the first root runs** (server lane,
 /// 2026-09-28, TODO section 0e K8).
@@ -834,11 +834,430 @@ pub fn pin_pruefe(quelle: &BTreeMap<String, usize>, treiber_c: &str) -> Result<u
     }
 }
 
+/// **What the generated MODULE driver needs to know** (C-free lane, C2, 2026-09-30).
+///
+/// Until this driver, a `module` unit was built around `laufzeit/kmodul/kmodul.c`, `arena.c`,
+/// `sperre.h`, `bindung.h` and five type shims -- handwritten C, 850 lines, compiled into every
+/// `.ko`. Now `gabbro build` writes that text from this plan, the way it writes the hosted and
+/// the bare-metal drivers, and every piece of logic in it is a proved template
+/// (`grammatik/Grammatik/SchablonenModul.lean`: `modul.lebenslauf`, `arena.modul`).
+///
+/// **NO NAME OF THE KERNEL IS IN HERE.** The two symbols the module loader calls and the notes
+/// it reads (the licence) come from the MANIFEST, which is the program's text; every call below
+/// the unit goes to the program's binding (`gabbro_kern_*`). So the build knows how to lay out
+/// a loadable unit and nothing about which kernel loads it.
+pub struct KmodPlan<'a> {
+    /// The loader's load symbol (`kmod <kbuild> <load> <unload>`), defined by the driver.
+    pub laden: &'a str,
+    /// The loader's unload symbol.
+    pub entladen: &'a str,
+    /// The unit's own init function (C name), answering `uint32_t`: 0 loads.
+    pub init: &'a str,
+    /// The unit's own exit function (C name).
+    pub exit: &'a str,
+    /// `provision <bytes>`: the static storage of EACH dynamic arena. `None` when the manifest
+    /// names none; the build refuses a `module` unit with an arena and no provision before
+    /// generation, so the driver never guesses a size.
+    pub vorrat: Option<u64>,
+    /// `note <section> <text>`: one read-only string per line, placed in its section and kept.
+    pub notizen: &'a [(String, String)],
+    pub sperren: &'a [Sperre],
+    pub wurzeln: &'a [Wurzel],
+}
+
+/// The report codes the module driver hands the program's binding. **Closed and numbered
+/// here**, and the binding carries one sentence per code (`bibliothek/linux-kmod`). The gaps
+/// (2, 4, 5, 7) are the codes of the old runtime's `vzalloc` reservation, which a static pool
+/// no longer has; they stay unused rather than renumbered, so a binding written against the
+/// old list reads no sentence under a wrong number.
+pub const KMOD_MELDECODES: &str = "\
+#define GABBRO_KERN_M_DESKRIPTOR    1u\n\
+#define GABBRO_KERN_M_BODEN         3u\n\
+#define GABBRO_KERN_M_UEBER_MAX     6u\n\
+#define GABBRO_KERN_M_LADEN_ANTWORT 8u\n\
+#define GABBRO_KERN_M_LADEN_STOPP   9u\n\
+#define GABBRO_KERN_M_LADEN_FADEN  10u\n";
+
+/// **The module arena runtime** (template `arena.modul`, `SchablonenModul.lean` §1).
+///
+/// A kernel module has no lazy commit and no process to end, so the storage of every dynamic
+/// arena is a STATIC pool of the manifest's provision, zeroed by the loader like every `.bss`,
+/// and the arithmetic is: span = min(ceiling, provision); the committed floor must fit the
+/// span (else the LOAD is refused -- never a unit started with a smaller range); a `grow`
+/// past the ceiling is a fail-stop the load function reads back; a `grow` past the span
+/// answers `false` and the program's `else` runs (refuse-on-full below the ceiling). The
+/// proved invariant is `committed * elem <= span <= provision`: every slot the unit can reach
+/// lies inside its pool.
+pub const KMOD_ARENA: &str = "\
+/* -- The module arena runtime (template `arena.modul`). Each arena's storage is a static\n\
+ *    pool of the provision; the loader zeroes it. No allocation, no kernel call. */\n\
+#ifdef GABBRO_ARENEN\n\
+static gabbro_arena_desc *const gabbro_modul_arenen[] = { GABBRO_ARENEN };\n\
+#define GABBRO_MODUL_N_ARENEN (sizeof gabbro_modul_arenen / sizeof gabbro_modul_arenen[0])\n\
+static uint8_t gabbro_modul_lager[GABBRO_MODUL_N_ARENEN][GABBRO_MODUL_VORRAT]\n\
+    __attribute__((aligned(4096)));\n\
+static uint32_t gabbro_modul_stopp;\n\
+static uint64_t gabbro_modul_spanne(const gabbro_arena_desc *d)\n\
+{\n\
+    uint64_t decke = (uint64_t)d->max * (uint64_t)d->elem;\n\
+    return decke < (uint64_t)GABBRO_MODUL_VORRAT ? decke : (uint64_t)GABBRO_MODUL_VORRAT;\n\
+}\n\
+static uint32_t gabbro_modul_reserve(gabbro_arena_desc *d, uint8_t *lager)\n\
+{\n\
+    if (d == 0 || d->base != 0 || d->max == 0u || d->elem == 0u || d->floor_hi > d->max) {\n\
+        gabbro_kern_melden(GABBRO_KERN_M_DESKRIPTOR, d ? d->max : 0u, d ? d->floor_hi : 0u);\n\
+        return GABBRO_KERN_M_DESKRIPTOR;\n\
+    }\n\
+    if ((uint64_t)d->floor_hi * (uint64_t)d->elem > gabbro_modul_spanne(d)) {\n\
+        gabbro_kern_melden(GABBRO_KERN_M_BODEN, d->floor_hi, (uint64_t)GABBRO_MODUL_VORRAT);\n\
+        return GABBRO_KERN_M_BODEN;\n\
+    }\n\
+    d->base = lager;\n\
+    d->used = 0u;\n\
+    d->committed = d->floor_hi;\n\
+    return 0u;\n\
+}\n\
+bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n)\n\
+{\n\
+    uint64_t neu;\n\
+    if (d == 0 || d->base == 0) {\n\
+        return false;\n\
+    }\n\
+    if (n == 0u) {\n\
+        return true;\n\
+    }\n\
+    neu = (uint64_t)d->committed + (uint64_t)n;\n\
+    if (neu > d->max) {\n\
+        /* Past the ceiling: a fail-stop (`N426` holds it statically); the load reads it. */\n\
+        gabbro_kern_melden(GABBRO_KERN_M_UEBER_MAX, neu, d->max);\n\
+        gabbro_modul_stopp = GABBRO_KERN_M_UEBER_MAX;\n\
+        return false;\n\
+    }\n\
+    if (neu * (uint64_t)d->elem > gabbro_modul_spanne(d)) {\n\
+        /* Past the provision, below the ceiling: `committed` unchanged, the `else` runs. */\n\
+        return false;\n\
+    }\n\
+    d->committed = (uint32_t)neu;\n\
+    return true;\n\
+}\n\
+#endif\n";
+
+/// **`<stdatomic.h>` for a build without a C library: the COMPILER's C11 atomics** (C-free lane,
+/// C2). The emitter writes nine call forms (`atomic_load_explicit`, `atomic_store_explicit`,
+/// five `atomic_fetch_*_explicit`, the weak and the strong compare-exchange) with the C11
+/// orderings; each is mapped onto the GCC builtin that implements exactly that operation with
+/// exactly that ordering -- the same builtins a hosted build's own `<stdatomic.h>` expands to.
+/// So a module unit's atomics mean what they mean hosted: C11 as the compiler implements it,
+/// the trust the hosted target already names ("the C and the hardware"). The ORDERING is passed
+/// through untouched -- no row chooses a primitive -- and `instrumente/pruefe-kernelmodul.sh`
+/// expands every (form, ordering) pair and holds it against that (its gift 8 drops one).
+/// Until the C-free lane's C2 this was `bibliothek/linux-kmod/stdatomic.h`, 273 handwritten
+/// lines mapping the forms onto the Linux kernel's own memory-model macros (named assumption
+/// (M11) of `Zielsatz/Spec.lean`, revised with this change); a `_Atomic` object is a real
+/// C11 atomic again, so a plain access to one is sequentially consistent rather than
+/// unordered. A floating-point `atomic` stays refused for a module (`bau.rs::modulregel`).
+pub const KMOD_STDATOMIC: &str = "\
+typedef enum {
+    memory_order_relaxed = __ATOMIC_RELAXED,
+    memory_order_consume = __ATOMIC_CONSUME,
+    memory_order_acquire = __ATOMIC_ACQUIRE,
+    memory_order_release = __ATOMIC_RELEASE,
+    memory_order_acq_rel = __ATOMIC_ACQ_REL,
+    memory_order_seq_cst = __ATOMIC_SEQ_CST
+} memory_order;
+#define atomic_load_explicit(P, O) __extension__ ({ __auto_type __gabbro_p = (P); \\
+    __typeof__((void)0, *__gabbro_p) __gabbro_w; __atomic_load(__gabbro_p, &__gabbro_w, (O)); \\
+    __gabbro_w; })
+#define atomic_store_explicit(P, V, O) __extension__ ({ __auto_type __gabbro_p = (P); \\
+    __typeof__((void)0, *__gabbro_p) __gabbro_w = (V); __atomic_store(__gabbro_p, &__gabbro_w, (O)); })
+#define atomic_fetch_add_explicit(P, V, O) __atomic_fetch_add((P), (V), (O))
+#define atomic_fetch_sub_explicit(P, V, O) __atomic_fetch_sub((P), (V), (O))
+#define atomic_fetch_or_explicit(P, V, O) __atomic_fetch_or((P), (V), (O))
+#define atomic_fetch_and_explicit(P, V, O) __atomic_fetch_and((P), (V), (O))
+#define atomic_fetch_xor_explicit(P, V, O) __atomic_fetch_xor((P), (V), (O))
+#define atomic_compare_exchange_weak_explicit(P, E, D, S, F) __extension__ ({ \\
+    __auto_type __gabbro_p = (P); __typeof__((void)0, *__gabbro_p) __gabbro_d = (D); \\
+    __atomic_compare_exchange(__gabbro_p, (E), &__gabbro_d, 1, (S), (F)); })
+#define atomic_compare_exchange_strong_explicit(P, E, D, S, F) __extension__ ({ \\
+    __auto_type __gabbro_p = (P); __typeof__((void)0, *__gabbro_p) __gabbro_d = (D); \\
+    __atomic_compare_exchange(__gabbro_p, (E), &__gabbro_d, 0, (S), (F)); })
+";
+
+/// **The three header names the emitted unit asks for, written for a build without a C
+/// library** (`-nostdinc`, the kernel's own build). Every line maps a name C defines onto a
+/// type or a builtin the COMPILER predefines (`__UINT64_TYPE__`, `__SIZE_TYPE__`,
+/// `__builtin_isfinite`, the `__atomic` builtins); none names a kernel type, so these files
+/// hold for any freestanding build of the same compiler.
+pub fn kmod_koepfe() -> Vec<(&'static str, String)> {
+    let kopf = |name: &str, rumpf: &str| {
+        let waechter = format!("GABBRO_FREI_{}_H", name.trim_end_matches(".h").to_uppercase());
+        format!(
+            "/* GENERATED by `gabbro build` -- <{name}> for a build without a C library: the\n\
+             \x20* compiler's own predefined types and builtins, no kernel type. Do not edit. */\n\
+             #ifndef {waechter}\n#define {waechter}\n{rumpf}#endif\n"
+        )
+    };
+    let mut ints = String::new();
+    for b in [8, 16, 32, 64] {
+        ints.push_str(&format!(
+            "typedef __INT{b}_TYPE__ int{b}_t;\ntypedef __UINT{b}_TYPE__ uint{b}_t;\n\
+             #define INT{b}_MAX __INT{b}_MAX__\n#define INT{b}_MIN (-INT{b}_MAX - 1)\n\
+             #define UINT{b}_MAX __UINT{b}_MAX__\n"
+        ));
+    }
+    ints.push_str(
+        "typedef __INTPTR_TYPE__ intptr_t;\ntypedef __UINTPTR_TYPE__ uintptr_t;\n\
+         #define UINTPTR_MAX __UINTPTR_MAX__\n#define SIZE_MAX __SIZE_MAX__\n",
+    );
+    vec![
+        ("stdint.h", kopf("stdint.h", &ints)),
+        (
+            "stddef.h",
+            kopf(
+                "stddef.h",
+                "typedef __SIZE_TYPE__ size_t;\ntypedef __PTRDIFF_TYPE__ ptrdiff_t;\n\
+                 #define NULL ((void *)0)\n#define offsetof(t, m) __builtin_offsetof(t, m)\n",
+            ),
+        ),
+        (
+            "stdbool.h",
+            kopf("stdbool.h", "#define bool _Bool\n#define true 1\n#define false 0\n"),
+        ),
+        ("math.h", kopf("math.h", "#define isfinite(x) __builtin_isfinite(x)\n")),
+        ("stdatomic.h", kopf("stdatomic.h", KMOD_STDATOMIC)),
+    ]
+}
+
+/// A section name or a note text as the build writes it into C: printable ASCII only, no
+/// quote and no backslash (`emit.rs::abschnitt_attribut` gives the reason for the section
+/// half: the name travels on into an unquoted assembler directive). `None` when it passes.
+pub fn notiz_fehler(abschnitt: &str, text: &str) -> Option<String> {
+    let name_gut = !abschnitt.is_empty()
+        && abschnitt.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-' | '$'));
+    if !name_gut {
+        return Some(format!(
+            "`{abschnitt}` is no section name -- letters, digits and `. _ - $` only"
+        ));
+    }
+    if let Some(c) = text.chars().find(|c| !(c.is_ascii_graphic() || *c == ' ') || *c == '"' || *c == '\\') {
+        return Some(format!(
+            "the note `{text}` holds `{}` -- printable ASCII without `\"` and `\\` only, because \
+             it is written into a C string as it stands",
+            c.escape_debug()
+        ));
+    }
+    None
+}
+
+/// **Render the driver of a `module` unit** (C-free lane, C2; templates `modul.lebenslauf`,
+/// `arena.modul`). The emitted unit is INCLUDED (so its `static` init/exit and roots are
+/// nameable), and everything it leaves undefined is defined here: the arena runtime, the lock
+/// primitives, one kernel thread per declared root through the binding, and the loader's two
+/// entry points in the order the lifecycle template proves:
+///
+/// * load: every arena's pool bound (a refusal refuses the LOAD), every lock initialised,
+///   the unit's init; a non-zero answer or a fail-stop during it refuses the load and the
+///   unit's exit is NOT called; then one thread per root -- a root that did not start makes
+///   the load wait for the ones that did, and refuse;
+/// * unload: every root has RETURNED, then the unit's exit.
+///
+/// Deterministic: same plan, same bytes.
+pub fn erzeuge_kmod(einheit: &str, plan: &KmodPlan) -> String {
+    let mut aus = String::new();
+    aus.push_str(&format!(
+        "/* GENERATED by `gabbro build` ({GENERATOR_KENNUNG}) -- the driver of the `module` unit\n\
+         \x20* `{einheit}`. Do not edit. Templates `modul.lebenslauf` and `arena.modul`\n\
+         \x20* (grammatik/Grammatik/SchablonenModul.lean). No kernel header and no kernel name:\n\
+         \x20* the loader's two entry points and the notes are the manifest's, every call below\n\
+         \x20* the unit is the program's binding (`gabbro_kern_*`). */\n\
+         #include \"einheit.c\"\n\n"
+    ));
+    aus.push_str(KMOD_MELDECODES);
+    aus.push_str(
+        "void gabbro_kern_melden(uint32_t code, uint64_t a, uint64_t b);\n\
+         int32_t gabbro_kern_verweigert(uint32_t code);\n\n",
+    );
+    for (i, (abschnitt, text)) in plan.notizen.iter().enumerate() {
+        aus.push_str(&format!(
+            "static const char gabbro_notiz_{i}[] __attribute__((section(\"{abschnitt}\"), used, \
+             aligned(1))) = \"{text}\";\n"
+        ));
+    }
+    if !plan.notizen.is_empty() {
+        aus.push('\n');
+    }
+    aus.push_str("#ifdef GABBRO_ARENEN\n");
+    match plan.vorrat {
+        Some(v) => aus.push_str(&format!("#define GABBRO_MODUL_VORRAT {v}ull\n")),
+        None => aus.push_str(
+            "#error \"this unit declares an arena and its manifest names no `provision`\"\n",
+        ),
+    }
+    aus.push_str("#endif\n");
+    aus.push_str(KMOD_ARENA);
+    aus.push('\n');
+
+    // -- the locks (the emitter declares `L_nimm`/`L_gib`; the primitive is the binding's) --
+    let mut sperren: Vec<&Sperre> = plan.sperren.iter().collect();
+    sperren.sort_by(|a, b| a.name.cmp(&b.name));
+    if !sperren.is_empty() {
+        aus.push_str(
+            "/* -- The lock primitives. The storage is this file's (a zeroed blob per lock), the\n\
+             \x20*    operations are the program's binding; `gabbro_halter_L` records the core that\n\
+             \x20*    holds `L` (-1: nobody), for a probe's interrupt body to read. */\n\
+             void gabbro_kern_sperre_init(uint8_t *s);\n\
+             uint32_t gabbro_kern_kernnummer(void);\n",
+        );
+        if sperren.iter().any(|s| !s.maskiert) {
+            aus.push_str(
+                "void gabbro_kern_sperre_nimm(uint8_t *s);\nvoid gabbro_kern_sperre_gib(uint8_t *s);\n",
+            );
+        }
+        if sperren.iter().any(|s| s.maskiert) {
+            aus.push_str(
+                "uint64_t gabbro_kern_sperre_nimm_maskiert(uint8_t *s);\n\
+                 void gabbro_kern_sperre_gib_maskiert(uint8_t *s, uint64_t flaggen);\n",
+            );
+        }
+        for s in &sperren {
+            let l = &s.name;
+            aus.push_str(&format!(
+                "static uint8_t gabbro_sperre_{l}[256] __attribute__((aligned(64)));\n\
+                 int gabbro_halter_{l} = -1;\n"
+            ));
+            if s.maskiert {
+                aus.push_str(&format!(
+                    "static uint64_t gabbro_sperre_flaggen_{l};\n\
+                     void {l}_nimm(void)\n{{\n\
+                     \x20   uint64_t f = gabbro_kern_sperre_nimm_maskiert(gabbro_sperre_{l});\n\
+                     \x20   gabbro_sperre_flaggen_{l} = f;\n\
+                     \x20   __atomic_store_n(&gabbro_halter_{l}, (int)gabbro_kern_kernnummer(), __ATOMIC_RELAXED);\n\
+                     }}\n\
+                     void {l}_gib(void)\n{{\n\
+                     \x20   uint64_t f = gabbro_sperre_flaggen_{l};\n\
+                     \x20   __atomic_store_n(&gabbro_halter_{l}, -1, __ATOMIC_RELAXED);\n\
+                     \x20   gabbro_kern_sperre_gib_maskiert(gabbro_sperre_{l}, f);\n\
+                     }}\n"
+                ));
+            } else {
+                aus.push_str(&format!(
+                    "void {l}_nimm(void)\n{{\n\
+                     \x20   gabbro_kern_sperre_nimm(gabbro_sperre_{l});\n\
+                     \x20   __atomic_store_n(&gabbro_halter_{l}, (int)gabbro_kern_kernnummer(), __ATOMIC_RELAXED);\n\
+                     }}\n\
+                     void {l}_gib(void)\n{{\n\
+                     \x20   __atomic_store_n(&gabbro_halter_{l}, -1, __ATOMIC_RELAXED);\n\
+                     \x20   gabbro_kern_sperre_gib(gabbro_sperre_{l});\n\
+                     }}\n"
+                ));
+            }
+            if s.geteilt {
+                // Readers exclude each other too: the shared pair takes the same lock.
+                aus.push_str(&format!(
+                    "void {l}_nimm_geteilt(void) {{ {l}_nimm(); }}\n\
+                     void {l}_gib_geteilt(void) {{ {l}_gib(); }}\n"
+                ));
+            }
+        }
+        aus.push('\n');
+    }
+
+    // -- the roots, one kernel thread each, through the binding --
+    let mut wurzeln: Vec<&str> = plan.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
+    wurzeln.sort_unstable();
+    if !wurzeln.is_empty() {
+        aus.push_str(
+            "/* -- The roots: one thread each, started and awaited by the program's binding. A\n\
+             \x20*    start that fails leaves its blob in a state the wait returns from at once. */\n\
+             uint32_t gabbro_kern_faden_start(uint64_t f, uint64_t koerper);\n\
+             void gabbro_kern_faden_warte(uint64_t f);\n",
+        );
+        for w in &wurzeln {
+            aus.push_str(&format!(
+                "static unsigned long gabbro_faden_lager_{w}[32];\n\
+                 static int gabbro_faden_{w}(void *unbenutzt)\n{{\n\
+                 \x20   (void)unbenutzt;\n\
+                 \x20   {w}();\n\
+                 \x20   return 0;\n\
+                 }}\n"
+            ));
+        }
+        aus.push('\n');
+    }
+
+    // -- the lifecycle (template `modul.lebenslauf`) --
+    aus.push_str(&format!("int {}(void);\nvoid {}(void);\n", plan.laden, plan.entladen));
+    aus.push_str(&format!("int {}(void)\n{{\n    uint32_t antwort;\n", plan.laden));
+    aus.push_str(
+        "#ifdef GABBRO_ARENEN\n\
+         \x20   {\n\
+         \x20       unsigned a;\n\
+         \x20       for (a = 0; a < (unsigned)GABBRO_MODUL_N_ARENEN; a++) {\n\
+         \x20           uint32_t c = gabbro_modul_reserve(gabbro_modul_arenen[a], gabbro_modul_lager[a]);\n\
+         \x20           if (c != 0u) {\n\
+         \x20               return gabbro_kern_verweigert(c);\n\
+         \x20           }\n\
+         \x20       }\n\
+         \x20   }\n\
+         #endif\n",
+    );
+    for s in &sperren {
+        aus.push_str(&format!("    gabbro_kern_sperre_init(gabbro_sperre_{});\n", s.name));
+    }
+    aus.push_str(&format!(
+        "    antwort = {}();\n\
+         \x20   if (antwort != 0u) {{\n\
+         \x20       gabbro_kern_melden(GABBRO_KERN_M_LADEN_ANTWORT, antwort, 0u);\n\
+         \x20       return gabbro_kern_verweigert(GABBRO_KERN_M_LADEN_ANTWORT);\n\
+         \x20   }}\n",
+        plan.init
+    ));
+    aus.push_str(
+        "#ifdef GABBRO_ARENEN\n\
+         \x20   if (gabbro_modul_stopp != 0u) {\n\
+         \x20       gabbro_kern_melden(GABBRO_KERN_M_LADEN_STOPP, gabbro_modul_stopp, 0u);\n\
+         \x20       return gabbro_kern_verweigert(GABBRO_KERN_M_LADEN_STOPP);\n\
+         \x20   }\n\
+         #endif\n",
+    );
+    if !wurzeln.is_empty() {
+        aus.push_str("    {\n        uint32_t fehler = 0u, f;\n");
+        for w in &wurzeln {
+            aus.push_str(&format!(
+                "        f = gabbro_kern_faden_start((uint64_t)(uintptr_t)gabbro_faden_lager_{w},\n\
+                 \x20                                   (uint64_t)(uintptr_t)&gabbro_faden_{w});\n\
+                 \x20       if (f != 0u) {{\n\
+                 \x20           gabbro_kern_melden(GABBRO_KERN_M_LADEN_FADEN, f, 0u);\n\
+                 \x20           fehler = f;\n\
+                 \x20       }}\n"
+            ));
+        }
+        aus.push_str("        if (fehler != 0u) {\n");
+        for w in &wurzeln {
+            aus.push_str(&format!(
+                "            gabbro_kern_faden_warte((uint64_t)(uintptr_t)gabbro_faden_lager_{w});\n"
+            ));
+        }
+        aus.push_str(
+            "            return gabbro_kern_verweigert(GABBRO_KERN_M_LADEN_FADEN);\n        }\n    }\n",
+        );
+    }
+    aus.push_str("    return 0;\n}\n\n");
+    aus.push_str(&format!("void {}(void)\n{{\n", plan.entladen));
+    for w in &wurzeln {
+        aus.push_str(&format!(
+            "    gabbro_kern_faden_warte((uint64_t)(uintptr_t)gabbro_faden_lager_{w});\n"
+        ));
+    }
+    aus.push_str(&format!("    (void){}();\n}}\n", plan.exit));
+    aus
+}
+
 #[cfg(test)]
 mod treiber_tests {
     use super::{
-        erzeuge, erzeuge_metall, gueltiger_c_name, metall_pin_pruefe, pin_pruefe, vorkommen,
-        Sperre, Wurzel,
+        erzeuge, erzeuge_kmod, erzeuge_metall, gueltiger_c_name, kmod_koepfe, metall_pin_pruefe,
+        notiz_fehler, pin_pruefe, vorkommen, KmodPlan, Sperre, Wurzel,
     };
     use std::collections::BTreeMap;
 
@@ -1228,5 +1647,76 @@ mod treiber_tests {
         assert!(setze < start, "entries are in the IDT before the first root runs");
         assert_eq!(metall_pin_pruefe(&menge(&["hauptA", "hauptB"]), &c), Ok(2));
         assert_eq!(c, erzeuge_metall_voll("e", &wurzeln, &sperren, &zusatz, None), "deterministic");
+    }
+
+    /// **The module driver names no kernel function and carries every piece its plan asks
+    /// for** (C-free lane, C2): the loader's two symbols and the notes come from the plan, the
+    /// arena pool from the provision, the masked pair only for a `masks irqs` lock, and one
+    /// thread per root -- and the text is the same twice.
+    #[test]
+    fn der_modultreiber_nennt_keinen_kern_und_traegt_seinen_plan() {
+        let sperren = vec![
+            Sperre { name: "TAKT".to_string(), geteilt: false, maskiert: true },
+            Sperre { name: "RING".to_string(), geteilt: true, maskiert: false },
+        ];
+        let wurzeln = vec![Wurzel { c_name: "eins".to_string(), gab_path: "m::eins".to_string() }];
+        let notizen = vec![(".modinfo".to_string(), "license=MIT".to_string())];
+        let plan = KmodPlan {
+            laden: "lade_mich",
+            entladen: "entlade_mich",
+            init: "laden",
+            exit: "entladen",
+            vorrat: Some(8192),
+            notizen: &notizen,
+            sperren: &sperren,
+            wurzeln: &wurzeln,
+        };
+        let c = erzeuge_kmod("probe", &plan);
+        assert_eq!(c, erzeuge_kmod("probe", &plan), "deterministic");
+        for muss in [
+            "int lade_mich(void)",
+            "void entlade_mich(void)",
+            "antwort = laden();",
+            "(void)entladen();",
+            "#define GABBRO_MODUL_VORRAT 8192ull",
+            "section(\".modinfo\"), used",
+            "= \"license=MIT\";",
+            "gabbro_kern_sperre_nimm_maskiert(gabbro_sperre_TAKT)",
+            "gabbro_kern_sperre_nimm(gabbro_sperre_RING)",
+            "void RING_nimm_geteilt(void)",
+            "gabbro_faden_eins",
+            "bool gabbro_arena_grow(",
+        ] {
+            assert!(c.contains(muss), "missing `{muss}`:\n{c}");
+        }
+        assert!(!c.contains("TAKT_nimm_geteilt"), "no shared pair for an unshared lock");
+        for kern in ["linux", "module_init", "vzalloc", "printk", "kthread", "#include <"] {
+            assert!(!c.contains(kern), "the driver names `{kern}`:\n{c}");
+        }
+        // Without a provision an arena unit does not compile, and says why.
+        let ohne = erzeuge_kmod("probe", &KmodPlan { vorrat: None, ..plan });
+        assert!(ohne.contains("#error \"this unit declares an arena and its manifest names no `provision`\""));
+    }
+
+    #[test]
+    fn die_koepfe_nennen_nur_den_uebersetzer() {
+        let koepfe = kmod_koepfe();
+        let namen: Vec<&str> = koepfe.iter().map(|(n, _)| *n).collect();
+        assert_eq!(namen, ["stdint.h", "stddef.h", "stdbool.h", "math.h", "stdatomic.h"]);
+        for (n, text) in &koepfe {
+            assert!(!text.contains("#include"), "{n} includes something:\n{text}");
+            assert!(!text.contains("linux"), "{n} names linux:\n{text}");
+        }
+        assert!(koepfe[4].1.contains("memory_order_acquire = __ATOMIC_ACQUIRE"));
+    }
+
+    #[test]
+    fn eine_notiz_ist_druckbar_und_ihr_abschnitt_ein_name() {
+        assert_eq!(notiz_fehler(".modinfo", "license=Dual MIT/GPL"), None);
+        assert!(notiz_fehler(".mod info", "x").is_some());
+        assert!(notiz_fehler("", "x").is_some());
+        assert!(notiz_fehler(".modinfo", "a\"b").is_some());
+        assert!(notiz_fehler(".modinfo", "a\\b").is_some());
+        assert!(notiz_fehler(".modinfo", "a\tb").is_some());
     }
 }

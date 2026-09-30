@@ -49,7 +49,7 @@ pub enum Art {
     Programm,
     /// `module <init> <exit>` (server lane, TODO section 0e K4): the unit becomes a
     /// LOADABLE LINUX KERNEL MODULE, built by `make -C <kernel build dir>` out of the
-    /// emitted C, the module runtime (`laufzeit/kmodul/`) and the unit's own foreign C
+    /// emitted C, the generated module driver and the unit's own foreign C
     /// bodies. The two names are the unit's functions that `module_init` and
     /// `module_exit` call.
     ///
@@ -94,18 +94,33 @@ pub struct Manifest {
     /// (`laufzeit/metall`). With it, every unit that owns a bare-metal driver is
     /// also LINKED into `<unit>.metall.elf` by the build.
     pub metall: Option<String>,
-    /// `kmod <runtime dir> <kernel build dir>` (server lane, TODO section 0e K4):
-    /// the module runtime (`laufzeit/kmodul`) and the kernel's own build tree
-    /// (`/lib/modules/<release>/build`). **Both are named, neither is guessed** --
-    /// a path baked into this tree would be a fact about one machine, and a kernel
-    /// version baked in would be a fact about one kernel.
-    pub kmod: Option<(String, String)>,
+    /// `kmod <kernel build dir> <load symbol> <unload symbol>` (server lane, TODO section 0e
+    /// K4; C-free lane, C2): the kernel's own build tree (`/lib/modules/<release>/build`) and
+    /// the two symbols its module loader calls. **All three are named, none is guessed** -- a
+    /// path baked into this tree would be a fact about one machine, and a loader's entry names
+    /// baked into the build would be a fact about one kernel. The module RUNTIME is no longer
+    /// a directory: the build writes it (`treiber::erzeuge_kmod`).
+    pub kmod: Option<KmodZeile>,
+    /// `provision <bytes>` (C-free lane, C2): the static storage of each dynamic arena of a
+    /// `module` unit -- the deployment's word, a multiple of 4096.
+    pub vorrat: Option<u64>,
+    /// `note <section> <text>` (C-free lane, C2): a read-only string the product carries in a
+    /// named section (a kernel module's licence is `note .modinfo license=…`).
+    pub notizen: Vec<(String, String)>,
     /// `nolibc` (C-free lane, C1): the `program` units of this manifest are Linux x86_64
     /// processes WITHOUT a C library -- linked `-nostdlib -static`, entered by a generated
     /// `_start` that calls `main`, which is `-> never` and ends the process itself. Every operating-system
     /// call the program makes is then its own `syscall` item, and a name it leaves to libc is
     /// the linker's refusal.
     pub ohne_libc: bool,
+}
+
+/// The `kmod` line: the kernel build tree and the loader's two entry symbols.
+#[derive(Debug, Clone)]
+pub struct KmodZeile {
+    pub kernbau: String,
+    pub laden: String,
+    pub entladen: String,
 }
 
 /// **FNV-1a, 64 bit, by hand.**
@@ -145,7 +160,9 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
     let mut ausgabe = String::new();
     let mut einheiten: Vec<Einheit> = Vec::new();
     let mut metall: Option<String> = None;
-    let mut kmod: Option<(String, String)> = None;
+    let mut kmod: Option<KmodZeile> = None;
+    let mut vorrat: Option<u64> = None;
+    let mut notizen: Vec<(String, String)> = Vec::new();
     let mut ohne_libc = false;
     for (nr, roh) in text.lines().enumerate() {
         let nr = nr + 1;
@@ -188,15 +205,66 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
                 ausgabe = worte[1].to_string();
             }
             "kmod" => {
-                if worte.len() != 3 {
+                if worte.len() != 4 {
                     return Err(format!(
-                        "{}:{nr}: `kmod` takes exactly two paths (the module runtime, \
-                         `laufzeit/kmodul`, and the kernel build tree, \
-                         `/lib/modules/<release>/build`)",
+                        "{}:{nr}: `kmod <kernel build dir> <load symbol> <unload symbol>` -- {} \
+                         word(s) found. The module runtime is written by the build since the \
+                         C-free lane's C2 (no runtime directory); the two symbols are the ones \
+                         the kernel's module loader calls (for Linux `init_module \
+                         cleanup_module`)",
+                        pfad.display(),
+                        worte.len()
+                    ));
+                }
+                for sym in [worte[2], worte[3]] {
+                    if !treiber::gueltiger_c_name(sym) {
+                        return Err(format!(
+                            "{}:{nr}: `{sym}` is no C symbol -- the loader's entry points are \
+                             defined by the generated driver under exactly this name",
+                            pfad.display()
+                        ));
+                    }
+                }
+                if worte[2] == worte[3] {
+                    return Err(format!(
+                        "{}:{nr}: the load and the unload symbol are both `{}` -- one C name \
+                         cannot be two functions",
+                        pfad.display(),
+                        worte[2]
+                    ));
+                }
+                kmod = Some(KmodZeile {
+                    kernbau: worte[1].to_string(),
+                    laden: worte[2].to_string(),
+                    entladen: worte[3].to_string(),
+                });
+            }
+            "provision" => {
+                let zahl = if worte.len() == 2 { worte[1].parse::<u64>().ok() } else { None };
+                match zahl {
+                    Some(v) if v > 0 && v % 4096 == 0 => vorrat = Some(v),
+                    _ => {
+                        return Err(format!(
+                            "{}:{nr}: `provision <bytes>` takes one positive multiple of 4096 \
+                             -- the static storage of each dynamic arena of the module, whole \
+                             pages so that every arena's pool starts on one",
+                            pfad.display()
+                        ))
+                    }
+                }
+            }
+            "note" => {
+                if worte.len() < 3 {
+                    return Err(format!(
+                        "{}:{nr}: `note <section> <text>` -- a section and a text",
                         pfad.display()
                     ));
                 }
-                kmod = Some((worte[1].to_string(), worte[2].to_string()));
+                let text = worte[2..].join(" ");
+                if let Some(grund) = treiber::notiz_fehler(worte[1], &text) {
+                    return Err(format!("{}:{nr}: {grund}", pfad.display()));
+                }
+                notizen.push((worte[1].to_string(), text));
             }
             "nolibc" => {
                 if worte.len() != 1 {
@@ -270,7 +338,7 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
             andere => {
                 return Err(format!(
                     "{}:{nr}: `{andere}` is no manifest word -- `compiler`, `out`, `metal`, \
-                     `kmod`, `nolibc`, `unit`, or an INDENTED file path",
+                     `kmod`, `provision`, `note`, `nolibc`, `unit`, or an INDENTED file path",
                     pfad.display()
                 ));
             }
@@ -297,8 +365,8 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
     // build cannot make, the second names two paths nothing reads.
     if einheiten.iter().any(|e| e.art == Art::Modul) && kmod.is_none() {
         return Err(format!(
-            "{}: a `module` unit stands here and no `kmod <runtime dir> <kernel build dir>` \
-             line -- the build has neither the module runtime nor a kernel to build against",
+            "{}: a `module` unit stands here and no `kmod <kernel build dir> <load symbol> \
+             <unload symbol>` line -- the build has no kernel to build against",
             pfad.display()
         ));
     }
@@ -329,7 +397,16 @@ pub fn lies_manifest(pfad: &Path) -> Result<Manifest, String> {
             ));
         }
     }
-    Ok(Manifest { compiler, ausgabe, einheiten, metall, kmod, ohne_libc })
+    // **`provision` and `note` are words of a MODULE product** -- anywhere else nothing reads
+    // them, and a word nothing reads is a claim nobody keeps.
+    if kmod.is_none() && (vorrat.is_some() || !notizen.is_empty()) {
+        return Err(format!(
+            "{}: a `provision` or `note` line stands here and no `kmod` line -- only the \
+             module product reads them",
+            pfad.display()
+        ));
+    }
+    Ok(Manifest { compiler, ausgabe, einheiten, metall, kmod, vorrat, notizen, ohne_libc })
 }
 
 /// **The name the linker looks for, and this is the only place in the tree that spells it.**
@@ -414,7 +491,7 @@ struct EintrittFund {
 ///
 /// The type entered this record on the day the blanket refusal went. While EVERY atomic was
 /// refused, a place to point at was the whole of what the rule needed; now that all but one
-/// shape is lowered (`laufzeit/kmodul/include/stdatomic.h`), the rule has to tell the shapes
+/// shape is lowered (the generated `<stdatomic.h>`), the rule has to tell the shapes
 /// apart, and the one it still refuses is the floating-point one.
 #[derive(Debug, Clone)]
 struct AtomarFund {
@@ -852,7 +929,7 @@ fn eintrittsregel(
 /// | it answers a value | `module_init` has no verdict, and a refused load looks like a good one |
 ///
 /// *The third is the one that matters most:* the load verdict is how a Gabbro module refuses
-/// to be loaded (`laufzeit/kmodul/kmodul.c`), and a `void` init would make every load succeed.
+/// to be loaded (the generated module driver), and a `void` init would make every load succeed.
 ///
 /// **And one refusal that is not about the two calls at all** (server lane, session 3, and
 /// NARROWED in session 5): a unit that declares a FLOATING-POINT `atomic` is no kernel module.
@@ -876,16 +953,17 @@ fn modulregel(
     arenen: &[String],
     sperren: &[TreiberSperre],
     wurzeln: &[TreiberFund],
+    vorrat: Option<u64>,
 ) -> Option<String> {
     if e.art != Art::Modul {
         return None;
     }
     // **A FLOATING-POINT `atomic` has no kernel-module lowering, and this is where that is
-    // said.** The other shapes do since K6: `laufzeit/kmodul/include/stdatomic.h` maps the
+    // said.** The other shapes do since K6 (since the C-free lane's C2 the generated
+    // `<stdatomic.h>` over the compiler's C11 builtins; before, a table that mapped the
     // emitter's nine call forms onto `READ_ONCE`/`WRITE_ONCE`, `smp_load_acquire`/
-    // `smp_store_release` and the `try_cmpxchg` family, each row at least as strong as the
-    // C11 operation it replaces, and the relation between the two models is the named
-    // assumption (M11) of `Zielsatz/Spec.lean`.
+    // `smp_store_release` and the `try_cmpxchg` family); the named assumption is (M11) of
+    // `Zielsatz/Spec.lean`.
     //
     // A float is the one shape no barrier repairs: kernel code may not touch the FPU without
     // `kernel_fpu_begin`/`_end`, and nothing declares them -- a lowering that quietly used
@@ -900,11 +978,10 @@ fn modulregel(
              \x20        = kernel code may not use the FPU without `kernel_fpu_begin`/`_end`, \
              which nothing declares, and a lowering that used SSE registers would corrupt the \
              userspace task that happens to be scheduled\n\
-             \x20        = the integer and `bool` shapes ARE lowered since 2026-09-28 \
-             (`laufzeit/kmodul/include/stdatomic.h`, named assumption (M11) of \
+             \x20        = the integer and `bool` shapes ARE lowered (the generated \
+             `<stdatomic.h>` over the compiler's C11 builtins, named assumption (M11) of \
              `Zielsatz/Spec.lean`); this is the remainder, not the rule\n\
-             \x20        = without this rule the refusal is \
-             `laufzeit/kmodul/include/stdatomic.h`'s, in a `make` log",
+             \x20        = without this rule the refusal is the kernel build's, in a `make` log",
             a.name, a.modul, a.datei
         ));
     }
@@ -940,7 +1017,7 @@ fn modulregel(
             e.modul_init
         ));
     }
-    bindungsregel(e, funktionen, atomare, arenen, sperren, wurzeln)
+    bindungsregel(e, funktionen, atomare, arenen, sperren, wurzeln, vorrat)
 }
 
 /// **What a HOSTED unit must bind, per thing it uses** (server lane, 2026-09-28, TODO
@@ -1064,7 +1141,7 @@ fn bindungsregel_gehostet(
 /// **One row of the binding: a name the module runtime calls, and what makes it call it**
 /// (server lane, 2026-09-28, TODO section 0e K7).
 ///
-/// The table below is held against `laufzeit/kmodul/bindung.h` by the comment in each row and
+/// The table below is held against the generated module driver's calls by the comment in each row and
 /// by the C compiler at every module build -- a name here that the runtime does not call
 /// would be ceremony, and a call the runtime makes without a row here would be a kernel
 /// function nobody declared, which is the whole thing K7 closes.
@@ -1083,7 +1160,7 @@ struct BindungsZeile {
 /// RUNTIME was the exception. `laufzeit/kmodul/` called twelve kernel functions no program had
 /// declared (`dokumente/OFFEN.md` O35, measured by the stage `symbole_pruefe` of
 /// `instrumente/pruefe-kernelmodul.sh`). They are declarations now
-/// (`laufzeit/kmodul/bindung.h`) and the PROGRAM defines them --
+/// (the generated driver's prototypes since the C-free lane's C2) and the PROGRAM defines them --
 /// `bibliothek/linux-kmod/linux-kmod.gab` plus its `.c` is the binding a program may take off
 /// the shelf.
 ///
@@ -1096,20 +1173,15 @@ struct BindungsZeile {
 ///
 /// | what the unit uses | what the runtime will call | where |
 /// |---|---|---|
-/// | anything (it is a module) | `gabbro_kern_melden` | every load refusal: printing is a kernel call |
-/// | an `arena` | `gabbro_kern_reserve`, `_freigeben`, `_vorrat` | `arena.c` |
-/// | any `lock` | `gabbro_kern_sperre_init`, `gabbro_kern_kernnummer` | `sperre.h`, at load and at every acquire |
-/// | a PLAIN `lock` | `gabbro_kern_sperre_nimm`, `_gib` | `sperre.h` |
-/// | a `masks irqs` `lock` | `gabbro_kern_sperre_nimm_maskiert`, `_gib_maskiert` | `sperre.h` |
-/// | a `concurrent` root | `gabbro_kern_faden_start`, `_warte` | `kmodul.c` |
-/// | an `atomic` | a `stdatomic.h` among the unit's files | the emitted prelude's `#include` |
+/// | anything (it is a module) | `gabbro_kern_melden`, `gabbro_kern_verweigert` | every load refusal: printing is a kernel call, and the loader's answer is the kernel's errno |
+/// | an `arena` | nothing -- a `provision <bytes>` line in the manifest | the generated driver's static pool (`arena.modul`) |
+/// | any `lock` | `gabbro_kern_sperre_init`, `gabbro_kern_kernnummer` | the generated driver, at load and at every acquire |
+/// | a PLAIN `lock` | `gabbro_kern_sperre_nimm`, `_gib` | the generated driver |
+/// | a `masks irqs` `lock` | `gabbro_kern_sperre_nimm_maskiert`, `_gib_maskiert` | the generated driver |
+/// | a `concurrent` root | `gabbro_kern_faden_start`, `_warte` | the generated driver |
 ///
-/// **The last row is not a function and is here anyway**, because it is the same question one
-/// step lower: the memory model of an `atomic` is macros (`READ_ONCE`, `smp_load_acquire`,
-/// `try_cmpxchg`) and leaves no symbol, so the symbol stage cannot see it at all. The table
-/// itself is the program's (`bibliothek/linux-kmod/stdatomic.h`); the runtime's own
-/// `<stdatomic.h>` refuses `_Atomic` outright, so an unbound module fails to compile rather
-/// than compiling into unordered accesses. *This rule is the door before that one.*
+/// An `atomic` needs no binding since the C-free lane's C2: the generated `<stdatomic.h>` maps
+/// the emitter's C11 call forms onto the compiler's own `__atomic` builtins.
 ///
 /// A unit may of course write its own bodies instead of the library's -- the check is that the
 /// DECLARATION stands, with its arity and its result, not that a particular file was named.
@@ -1141,8 +1213,8 @@ struct BindungsZiel {
 
 const MODUL_ZIEL: BindungsZiel = BindungsZiel {
     art: "`module`",
-    laufzeit: "the module runtime",
-    kopf: "laufzeit/kmodul/bindung.h",
+    laufzeit: "the generated module driver",
+    kopf: "the generated module driver (`treiber.rs::erzeuge_kmod`)",
     bibliothek: "`bibliothek/linux-kmod/linux-kmod.gab` and `bibliothek/linux-kmod/linux-kmod.c`",
     sonst: "`modpost`'s -- \"{} undefined\", in a `make` log",
 };
@@ -1218,6 +1290,7 @@ fn bindungsregel(
     arenen: &[String],
     sperren: &[TreiberSperre],
     wurzeln: &[TreiberFund],
+    vorrat: Option<u64>,
 ) -> Option<String> {
     const MELDEN: BindungsZeile = BindungsZeile {
         name: "gabbro_kern_melden",
@@ -1225,17 +1298,23 @@ fn bindungsregel(
         liefert: false,
         weil: "this is a `module`, and the runtime refuses a load in words the program owns",
     };
-    let mut gefordert: Vec<BindungsZeile> = vec![MELDEN];
-    if !arenen.is_empty() {
-        let weil = "this unit declares an `arena`, whose storage the runtime asks the \
-                    program for";
-        for (name, parameter, liefert) in [
-            ("gabbro_kern_reserve", 1, true),
-            ("gabbro_kern_freigeben", 1, false),
-            ("gabbro_kern_vorrat", 0, true),
-        ] {
-            gefordert.push(BindungsZeile { name, parameter, liefert, weil });
-        }
+    const VERWEIGERT: BindungsZeile = BindungsZeile {
+        name: "gabbro_kern_verweigert",
+        parameter: 1,
+        liefert: true,
+        weil: "this is a `module`, and the answer that refuses a load is the program's",
+    };
+    let mut gefordert: Vec<BindungsZeile> = vec![MELDEN, VERWEIGERT];
+    // **An arena asks the binding for nothing since the C-free lane's C2**: its storage is a
+    // static pool of the manifest's `provision` in the generated driver. The provision itself
+    // is required here, before a byte of C is written.
+    if let (Some(a), None) = (arenen.first(), vorrat) {
+        return Some(format!(
+            "this `module` declares the arena `{a}` and its manifest names no `provision \
+             <bytes>`\n\
+             \x20        = the storage of every arena of a kernel module is a static pool of that \
+             size, and the build does not guess one"
+        ));
     }
     if !sperren.is_empty() {
         let weil = "this unit declares a `lock`, whose primitive the emitter only declares";
@@ -1254,12 +1333,18 @@ fn bindungsregel(
         if sperren.iter().any(|s| s.maskiert) {
             let weil = "this unit declares a `masks irqs` `lock`, and the masking is the \
                         binding's (`kern_bindung_maskiert`)";
-            for name in [
-                "gabbro_kern_sperre_nimm_maskiert",
-                "gabbro_kern_sperre_gib_maskiert",
-            ] {
-                gefordert.push(BindungsZeile { name, parameter: 1, liefert: false, weil });
-            }
+            gefordert.push(BindungsZeile {
+                name: "gabbro_kern_sperre_nimm_maskiert",
+                parameter: 1,
+                liefert: true,
+                weil,
+            });
+            gefordert.push(BindungsZeile {
+                name: "gabbro_kern_sperre_gib_maskiert",
+                parameter: 2,
+                liefert: false,
+                weil,
+            });
         }
     }
     if !wurzeln.is_empty() {
@@ -1281,27 +1366,12 @@ fn bindungsregel(
     if let Some(befund) = bindung_pruefe(&gefordert, funktionen, &MODUL_ZIEL) {
         return Some(befund);
     }
-    // **The memory model of an `atomic`, which is a FILE and not a function.** See the table
-    // in this function's own documentation for why it is checked here and not by the symbol
-    // stage: macros leave no symbol.
-    if let Some(a) = atomare.first() {
-        if !e.dateien.iter().any(|d| {
-            Path::new(d).file_name().is_some_and(|f| f == "stdatomic.h")
-        }) {
-            return Some(format!(
-                "this `module` declares the atomic `{}` ({} in {}) and names no \
-                 `stdatomic.h` -- the memory model of an `atomic` is the program's\n\
-                 \x20        = the kernel has a memory model of its own and is built \
-                 `-nostdinc`; `bibliothek/linux-kmod/stdatomic.h` maps the emitter's nine C11 \
-                 call forms onto it (named assumption (M11) of `Zielsatz/Spec.lean`), and a \
-                 different kernel gets a different table\n\
-                 \x20        = add that file to this unit, or write your own\n\
-                 \x20        = without this rule the refusal is the kernel build's, over an \
-                 undefined `_Atomic` (`laufzeit/kmodul/include/stdatomic.h`)",
-                a.name, a.modul, a.datei
-            ));
-        }
-    }
+    // **The memory model of an `atomic` asks for no file since the C-free lane's C2**: the
+    // generated `<stdatomic.h>` maps the emitter's nine C11 call forms onto the compiler's own
+    // `__atomic` builtins, exactly what a hosted build's header does (`treiber::KMOD_STDATOMIC`,
+    // named assumption (M11) of `Zielsatz/Spec.lean`). A unit may still name a `stdatomic.h`
+    // of its own, which then replaces the generated one.
+    let _ = (e, atomare);
     None
 }
 
@@ -1315,7 +1385,7 @@ struct TreiberPlan {
     /// **The art decides WHICH driver the roots become** (server lane, 2026-09-28, TODO
     /// section 0e K6). A root is a root in all three worlds; what differs is who starts it
     /// -- a pthread in `laufzeit/start.c`, a core on bare metal, a `kthread` in
-    /// `laufzeit/kmodul/kmodul.c`. Without this field a `module` unit with a `concurrent`
+    /// generated module driver (`treiber.rs::erzeuge_kmod`). Without this field a `module` unit with a `concurrent`
     /// set had a hosted pthread driver written beside its `.ko`: a file for a world it is
     /// not in.
     art: Art,
@@ -1672,7 +1742,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
     let mut metall_je_einheit: BTreeMap<String, MetallFunde> = BTreeMap::new();
     let mut atomare_je_einheit: BTreeMap<String, Vec<AtomarFund>> = BTreeMap::new();
     // **Every `arena` a unit declares** (server lane, TODO section 0e K7): the binding rule
-    // asks whether the unit needs the reservation primitives of `laufzeit/kmodul/bindung.h`.
+    // asks whether the unit needs a `provision` (the module driver's static arena pool).
     let mut arenen_je_einheit: BTreeMap<String, Vec<String>> = BTreeMap::new();
     // **A unit's own C bodies** (server lane, TODO section 0e K4): the `.c` files a
     // `module` unit names beside its `.gab` sources. They are the bodies of the `extern fn`
@@ -1715,9 +1785,8 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             // **A `.h` file of a module unit is a header the PROGRAM supplies** (server
             // lane, 2026-09-28, TODO section 0e K7). It is copied into the module's include
             // directory AFTER the runtime's own shims and therefore in place of one of the
-            // same name -- which is the mechanism by which a program binds the memory model
-            // of an `atomic`: `laufzeit/kmodul/include/stdatomic.h` refuses `_Atomic`, and
-            // `bibliothek/linux-kmod/stdatomic.h` is the table that replaces it.
+            // same name (since the C-free lane's C2 the generated headers are the floor: a
+            // program may replace one, e.g. with a memory-model table of its own).
             //
             // *Why a file line and not a new manifest word.* The file list is already the
             // place a unit says which files are its own, and the `.c` branch above is the
@@ -1838,6 +1907,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                     &arenen_je_einheit[name],
                     &treiber_sperren_je_einheit[name],
                     &treiber_funde_je_einheit[name],
+                    manifest.vorrat,
                 )
             {
                 befunde += 1;
@@ -1899,8 +1969,8 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         }
         // **The handwritten C this plan puts into its products** (C-free lane, C0), one line
         // per file -- `c-file <unit> <origin> <lines> <path>`. It is read here, out of the
-        // same lists the build compiles from (`fremde`, `koepfe`, `METALL_QUELLEN`,
-        // `KMOD_QUELLEN`, the driver plan), so `instrumente/zaehle-c.py` counts what the
+        // same lists the build compiles from (`fremde`, `koepfe`, `METALL_QUELLEN`, the
+        // driver plan), so `instrumente/zaehle-c.py` counts what the
         // build uses and no second guess of it (`W7`).
         if argumente.iter().any(|a| a == "--c-liste") {
             for name in &reihenfolge {
@@ -2023,6 +2093,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             &arenen_je_einheit[name],
             &treiber_sperren_je_einheit[name],
             &treiber_funde_je_einheit[name],
+            manifest.vorrat,
         ) {
             abgesagt += 1;
             println!("REFUSED  {name} (module): {befund}");
@@ -2275,19 +2346,24 @@ fn baue_einheit(
             .collect(),
         _ => Vec::new(),
     };
-    // **The same for the module runtime, and until 2026-09-28 it did nothing.**
-    // `KMOD_QUELLEN` was written beside the metal list and read by nobody -- `cargo build`
-    // said so (`constant KMOD_QUELLEN is never used`) and the effect was that a changed
-    // `kmodul.c` left a stale `.ko` standing as up to date. The list gained `sperre.h`
-    // with the lock primitives (K3), which made the hole load-bearing: a module whose
-    // locks changed would not have been rebuilt.
+    // **The module product: its driver is GENERATED since the C-free lane's C2**, so what
+    // moves it is the generator's version and the manifest's module words (the loader's
+    // symbols, the provision, the notes) -- all of them go into the fingerprint.
+    let mut modul_text = String::new();
     if e.art == Art::Modul {
-        if let Some((dir, _)) = &manifest.kmod {
-            for f in KMOD_QUELLEN {
-                laufzeit_bytes.push(std::fs::read(PathBuf::from(dir).join(f)).unwrap_or_default());
-            }
+        if let Some(k) = &manifest.kmod {
+            modul_text = format!(
+                "{}|{}|{}|{:?}|{:?}|{}",
+                treiber::GENERATOR_KENNUNG,
+                k.laden,
+                k.entladen,
+                manifest.vorrat,
+                manifest.notizen,
+                k.kernbau
+            );
         }
     }
+    laufzeit_bytes.push(modul_text.into_bytes());
     // **And the unit's OWN foreign files** (server lane, session 6, TODO section 0e K7).
     // Until K7 neither the `.c` bodies nor -- there were none -- the headers entered the
     // fingerprint, so a program that changed its own kernel call kept a stale `.ko`
@@ -2553,15 +2629,13 @@ fn baue_einheit(
     // exactly what `instrumente/pruefe-kernelmodul.sh` did in shell until today, and now in
     // ONE place (`W7`).
     if e.art == Art::Modul {
-        if let Some((laufzeit, kernbau)) = &manifest.kmod {
+        if let Some(kmod) = &manifest.kmod {
             let sperren: &[treiber::Sperre] =
                 treiber_plan.map_or(&[], |p| p.sperren.as_slice());
             let wurzeln: &[treiber::Wurzel] =
                 treiber_plan.map_or(&[], |p| p.wurzeln.as_slice());
             if let Err(grund) =
-                kmod_modul_binden(
-                    manifest, laufzeit, kernbau, e, fremde, koepfe, sperren, wurzeln,
-                )
+                kmod_modul_binden(manifest, kmod, e, fremde, koepfe, sperren, wurzeln)
             {
                 return Ergebnis::Abgesagt(grund);
             }
@@ -2591,13 +2665,13 @@ const METALL_QUELLEN: [&str; 7] = [
 /// **Every handwritten file a unit's products contain** as `(origin, path)` (C-free lane,
 /// C0): the unit's own foreign `.c`/`.h`, the module runtime a `kmod` line names, the
 /// bare-metal runtime a `metal` line names when the unit owns a bare-metal driver, and the
-/// hosted runtime the generated driver's header tells the user to link (`arena_dyn.c` for an
-/// `arena`, `faden.c` for a `concurrent` set, `bindung.h` for either). `.ld` linker scripts
-/// are not C and are left out; the emitted C and the generated drivers are Gabbro's own
-/// output and are not listed.
+/// hosted runtime the generated driver's header tells the user to link (none since the C-free
+/// lane's C1), and the module runtime (none since its C2). `.ld` linker scripts are not C and
+/// are left out; the emitted C and the generated drivers are Gabbro's own output and are not
+/// listed.
 fn handgeschrieben(
     manifest: &Manifest,
-    e: &Einheit,
+    _e: &Einheit,
     fremde: &[String],
     koepfe: &[String],
     plan: Option<&TreiberPlan>,
@@ -2607,15 +2681,9 @@ fn handgeschrieben(
     for f in fremde.iter().chain(koepfe.iter()) {
         aus.push(("unit", PathBuf::from(f)));
     }
-    if e.art == Art::Modul {
-        if let Some((dir, _)) = &manifest.kmod {
-            for f in KMOD_QUELLEN {
-                aus.push(("kmod-runtime", PathBuf::from(dir).join(f)));
-            }
-            // `kmod_modul_binden` copies the shared arena header beside them.
-            aus.push(("kmod-runtime", PathBuf::from(dir).join("../arena_dyn.h")));
-        }
-    }
+    // A `module` product brings no handwritten runtime file since the C-free lane's C2: the
+    // driver, the arena runtime, the lock primitives and the type headers are the build's
+    // generated text (`treiber::erzeuge_kmod`, `treiber::kmod_koepfe`).
     if plan.is_some_and(|p| p.hat_metall()) {
         if let Some(dir) = &manifest.metall {
             for f in METALL_QUELLEN.iter().filter(|f| !f.ends_with(".ld")) {
@@ -2756,123 +2824,28 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
     Ok(())
 }
 
-/// The module runtime's files, relative to the `kmod` runtime directory. Their bytes are
-/// part of the module's fingerprint -- a changed `kmodul.c` rebuilds the `.ko`.
-///
-/// **`sperre.h` joined the list on 2026-09-28** (the lock primitives, TODO section 0e K3), and
-/// on the same day the list was READ for the first time: `cargo build` had been saying
-/// `constant KMOD_QUELLEN is never used` since it was written, so a changed `kmodul.c` left a
-/// stale `.ko` standing as up to date.
-///
-/// **`include/stdatomic.h` joined it the same week** (K6): it stopped being a refusal and
-/// became the ATOMIC LOWERING, so a changed ordering row has to rebuild the module the same
-/// way a changed lock primitive does. **It is a refusal again since K7** and the ordering
-/// rows are the PROGRAM's (`bibliothek/linux-kmod/stdatomic.h`) -- so they travel in the
-/// unit's own file bytes now, beside its `.c` bodies, and the entry here covers only the
-/// door. `bindung.h` joined in the same step: it is the interface the runtime calls through,
-/// and a changed declaration is a changed module.
-const KMOD_QUELLEN: [&str; 7] = [
-    "kmodul.c",
-    "arena.c",
-    "kmodul.h",
-    "sperre.h",
-    "bindung.h",
-    "include/stdint.h",
-    "include/stdatomic.h",
-];
-
-/// **The generated `sperren.h`: one `F(name, kind)` per `lock`, in name order.**
-///
-/// The list `laufzeit/kmodul/kmodul.c` expands to define the primitives the emitter only
-/// declares. The four kinds are the four `METALL_SPERRE*` macros the bare-metal driver picks
-/// between, out of the same [`treiber::Sperre`] list -- one register, three flavours.
-///
-/// Sorted by name and not by declaration order: the header is a build artefact compared for
-/// staleness, and two orders over one list would rebuild the module for nothing. A driver
-/// defines each primitive once, so the order is not a fact about the program.
-fn sperrenliste(sperren: &[treiber::Sperre]) -> String {
-    let mut aus = String::new();
-    aus.push_str(
-        "/* GENERATED by `gabbro build` -- the locks of this unit (server lane, TODO 0e K3).\n\
- * Do not edit. `laufzeit/kmodul/kmodul.c` expands it through `sperre.h`; the kind is the\n\
- * program's word, not the driver's: MASKED is `masks irqs`, which every runtime flavour\n\
- * keeps in its own way (here `raw_spin_lock_irqsave`). */\n",
-    );
-    if sperren.is_empty() {
-        aus.push_str("/* This unit declares no `lock`, so no primitive is needed. */\n");
-        return aus;
-    }
-    let mut sortiert: Vec<&treiber::Sperre> = sperren.iter().collect();
-    sortiert.sort_by(|a, b| a.name.cmp(&b.name));
-    let eintraege: Vec<String> = sortiert
-        .iter()
-        .map(|l| {
-            let art = match (l.maskiert, l.geteilt) {
-                (true, true) => "MASKED_SHARED",
-                (true, false) => "MASKED",
-                (false, true) => "SHARED",
-                (false, false) => "PLAIN",
-            };
-            format!("F({}, {art})", l.name)
-        })
-        .collect();
-    aus.push_str(&format!("#define GABBRO_SPERREN(F) {}\n", eintraege.join(" ")));
-    aus
-}
-
-/// **The generated `wurzeln.h`: one `F(name)` per root of the `concurrent` set**
-/// (server lane, 2026-09-28, TODO section 0e K6).
-///
-/// The module's twin of [`sperrenliste`], and it exists for the same reason: `kmodul.c` is
-/// not generated, so what is unit-specific reaches it as a macro list out of the ONE walk the
-/// other two driver flavours read (`W7`). The hosted driver starts these roots as pthreads
-/// and the bare-metal one as cores; here they become `kthread`s, started after the unit's
-/// load function answers 0 and joined before its unload function runs.
-///
-/// Sorted by name, and for the same reason the lock list is: the header is a build artefact
-/// compared for staleness, and the start order of a `concurrent` set is not a fact about the
-/// program (the roots are concurrent -- that is what the word says).
-fn wurzelliste(wurzeln: &[treiber::Wurzel]) -> String {
-    let mut aus = String::new();
-    aus.push_str(
-        "/* GENERATED by `gabbro build` -- the concurrent roots of this unit (server lane,\n\
- * TODO 0e K6). Do not edit. `laufzeit/kmodul/kmodul.c` expands it into one kthread per\n\
- * root: started when the load function has answered 0, joined before the unload function\n\
- * runs. A root that never returns therefore hangs `rmmod` -- the same contract the hosted\n\
- * driver's join has. */\n",
-    );
-    if wurzeln.is_empty() {
-        aus.push_str("/* This unit declares no `concurrent` root, so no thread is started. */\n");
-        return aus;
-    }
-    let mut namen: Vec<&str> = wurzeln.iter().map(|w| w.c_name.as_str()).collect();
-    namen.sort_unstable();
-    let eintraege: Vec<String> = namen.iter().map(|n| format!("F({n})")).collect();
-    aus.push_str(&format!("#define GABBRO_WURZELN(F) {}\n", eintraege.join(" ")));
-    aus
-}
-
-/// **Build `<unit>.ko` with the kernel's own build system** (server lane, TODO section 0e K4).
+/// **Build `<unit>.ko` with the kernel's own build system** (server lane, TODO section 0e K4;
+/// the runtime generated since the C-free lane's C2).
 ///
 /// The recipe, and every step is a named refusal:
 ///
 ///  1. a build directory of its own under `out/` (`<unit>.kmod/`), because `make M=<dir>`
 ///     writes a dozen files beside the sources and none of them belong next to the emitted C;
-///  2. the runtime, the emitted unit and the unit's own C bodies copied in FLAT -- the
-///     includes are then flat too, which is why `arena.c`'s one `../arena_dyn.h` is rewritten;
-///  3. a `Kbuild` naming the objects and the three `-D`s the runtime reads (the arenas are
-///     NOT among them: the emitted unit carries `GABBRO_ARENEN` itself);
+///  2. the emitted unit and the unit's own C bodies copied in FLAT, the generated driver
+///     (`treiber::erzeuge_kmod`) and the generated type headers (`treiber::kmod_koepfe`)
+///     written beside them -- then the unit's own headers over those;
+///  3. a `Kbuild` naming the objects;
 ///  4. `make -C <kernel build dir> M=<dir> modules`;
 ///  5. the `.ko` moved beside the other artefacts as `<unit>.ko`.
 ///
-/// **Nothing about Linux is decided here.** The module's name is the unit's, its init and exit
-/// are the functions the manifest named, its kernel calls are the `extern fn` items the program
-/// declared, and their bodies are the `.c` files the manifest named. A different kernel gets a
-/// different `kmod` line and not a different Gabbro.
+/// **Nothing about a particular kernel is decided here.** The module's name is the unit's, its
+/// init and exit are the functions the manifest named, the loader's two entry symbols and the
+/// notes are the manifest's words, its kernel calls are the program's binding, and their bodies
+/// are the files the manifest named. A different kernel gets a different manifest and binding,
+/// not a different Gabbro.
 fn kmod_modul_binden(
     manifest: &Manifest,
-    laufzeit: &str,
-    kernbau: &str,
+    kmod: &KmodZeile,
     e: &Einheit,
     fremde: &[String],
     koepfe: &[String],
@@ -2881,8 +2854,7 @@ fn kmod_modul_binden(
 ) -> Result<(), String> {
     let aus = PathBuf::from(&manifest.ausgabe);
     let bau = aus.join(format!("{}.kmod", e.name));
-    let laufzeit = PathBuf::from(laufzeit);
-    let kernbau = PathBuf::from(kernbau);
+    let kernbau = PathBuf::from(&kmod.kernbau);
     if !kernbau.is_dir() {
         return Err(format!(
             "kernel module: `{}` is no directory -- the `kmod` line names the kernel build \
@@ -2891,13 +2863,9 @@ fn kmod_modul_binden(
             kernbau.display()
         ));
     }
-    if !laufzeit.join("kmodul.c").is_file() {
-        return Err(format!(
-            "kernel module: `{}` holds no `kmodul.c` -- the `kmod` line names the module \
-             runtime (`laufzeit/kmodul`)",
-            laufzeit.display()
-        ));
-    }
+    // A fresh directory: a runtime file of an older build (`kmodul.h`, `sperre.h`, ...) left
+    // standing here would be compiled by nobody and read by a reader as part of the product.
+    let _ = std::fs::remove_dir_all(&bau);
     std::fs::create_dir_all(bau.join("inc"))
         .map_err(|err| format!("kernel module: {}: {err}", bau.display()))?;
     let kopiere = |von: PathBuf, nach: PathBuf| -> Result<(), String> {
@@ -2905,46 +2873,26 @@ fn kmod_modul_binden(
             .map(|_| ())
             .map_err(|err| format!("kernel module: {} -> {}: {err}", von.display(), nach.display()))
     };
-    kopiere(laufzeit.join("kmodul.c"), bau.join("gabbro_kmodul.c"))?;
-    kopiere(laufzeit.join("kmodul.h"), bau.join("kmodul.h"))?;
-    // The lock primitives (server lane, TODO section 0e K3). Copied
-    // unconditionally like `kmodul.h`: `kmodul.c` includes it only where the
-    // unit wrote `GABBRO_SPERREN`, and a build that decided per unit which
-    // headers to copy would be a second register over the same `#ifdef`.
-    kopiere(laufzeit.join("sperre.h"), bau.join("sperre.h"))?;
-    // **The interface between the runtime and the program's binding** (server lane,
-    // 2026-09-28, TODO section 0e K7). Twelve declarations and no definition: the runtime
-    // calls them, the PROGRAM defines them, and the kernel's own names stand in the
-    // program's C alone. It is copied beside `kmodul.c` AND is what the program's own body
-    // includes -- so the two halves of every one of the twelve meet in one directory, and
-    // the C compiler holds them against each other.
-    kopiere(laufzeit.join("bindung.h"), bau.join("bindung.h"))?;
-    kopiere(laufzeit.join("../arena_dyn.h"), bau.join("arena_dyn.h"))?;
-    // The runtime's arena half sits beside a header one level up in the tree and FLAT here.
-    let arena = std::fs::read_to_string(laufzeit.join("arena.c"))
-        .map_err(|err| format!("kernel module: {}/arena.c: {err}", laufzeit.display()))?;
-    std::fs::write(bau.join("gabbro_arena.c"), arena.replace("\"../arena_dyn.h\"", "\"arena_dyn.h\""))
-        .map_err(|err| format!("kernel module: {}: {err}", bau.display()))?;
-    let inc = laufzeit.join("include");
-    let eintraege = std::fs::read_dir(&inc)
-        .map_err(|err| format!("kernel module: {}: {err}", inc.display()))?;
-    for x in eintraege {
-        let x = x.map_err(|err| format!("kernel module: {}: {err}", inc.display()))?;
-        let ziel = bau.join("inc").join(x.file_name());
-        kopiere(x.path(), ziel)?;
+    let schreibe = |nach: PathBuf, text: &str| -> Result<(), String> {
+        std::fs::write(&nach, text).map_err(|err| format!("kernel module: {}: {err}", nach.display()))
+    };
+    let plan = treiber::KmodPlan {
+        laden: &kmod.laden,
+        entladen: &kmod.entladen,
+        init: &e.modul_init,
+        exit: &e.modul_exit,
+        vorrat: manifest.vorrat,
+        notizen: &manifest.notizen,
+        sperren,
+        wurzeln,
+    };
+    schreibe(bau.join("gabbro_kmodul.c"), &treiber::erzeuge_kmod(&e.name, &plan))?;
+    for (name, text) in treiber::kmod_koepfe() {
+        schreibe(bau.join("inc").join(name), &text)?;
     }
-    // **And the unit's OWN headers, after the runtime's and therefore in place of them**
-    // (server lane, 2026-09-28, TODO section 0e K7). This is the whole mechanism by which a
-    // program binds something that is not a function: `laufzeit/kmodul/include/stdatomic.h`
-    // refuses `_Atomic` outright, and a unit that declares an `atomic` names
-    // `bibliothek/linux-kmod/stdatomic.h` -- the table that maps the emitter's nine C11 call
-    // forms onto the kernel's memory model -- which lands here and is what the module is
-    // built from.
-    //
-    // *The overwrite is the point and not an accident*, so the order is fixed and stated:
-    // the runtime's shims are the floor, the program's files are the answer. A `module` unit
-    // with an `atomic` and no `stdatomic.h` is refused one door earlier
-    // (`bindungsregel`), so the floor is never silently the answer.
+    // **And the unit's OWN headers, after the generated ones and therefore in place of them**
+    // (server lane, 2026-09-28, TODO section 0e K7): a header the program names replaces the
+    // generated one of the same name.
     for k in koepfe {
         let name = Path::new(k)
             .file_name()
@@ -2952,40 +2900,7 @@ fn kmod_modul_binden(
         kopiere(PathBuf::from(k), bau.join("inc").join(name))?;
     }
     kopiere(aus.join(format!("{}.c", e.name)), bau.join("einheit.c"))?;
-    // **The unit's LOCKS, as the one line the module runtime expands** (server lane,
-    // 2026-09-28, TODO section 0e K3).
-    //
-    // The emitter DECLARES `L_nimm`/`L_gib` per `lock` and defines neither: the primitive is
-    // trust base, not product (`emit.rs`, `ItemArt::Lock`). Every driver flavour therefore
-    // supplies them, and two of the three are GENERATED from exactly the list below -- the
-    // hosted driver and the bare-metal one, both out of `treiber.rs` and both out of
-    // `TreiberPlan::sperren`. `laufzeit/kmodul/kmodul.c` is NOT generated, so it needs the
-    // list as text, and **this is the SAME register, not a second one** (`W7`): the three
-    // facts (name, shared pair, `masks irqs`) come from the one `ItemArt::Lock` walk in
-    // `sammle`. *Measured 2026-09-28: without this file a `module` unit with one `lock` did
-    // not link at all --* `ERROR: modpost: "TAKT_nimm" ... undefined!`, over a unit the
-    // checker had passed without a word.
-    //
-    // WHY NOT IN THE EMITTED C, where the arena list stands (`GABBRO_ARENEN`). Because the
-    // emitted C is PINNED, byte for byte, in the translation-validation chain
-    // (`grammatik/Grammatik/CText104.lean`), and the Lean `CParser` reads preprocessor lines
-    // with a CLOSED grammar: `#include <x.h>` and an integer `#define`, nothing else. A
-    // function-like `#define GABBRO_SPERREN(F) …` makes `parseC` answer `none`, and
-    // `a2_104 : parseC ctext104 = some (kFuns zert104)` stops being `rfl`. *Measured the same
-    // day, in that order: the list went into the emitter first, and the chain's own pin said
-    // no.* Widening the parser to skip a directive it cannot evaluate would be the wrong
-    // repair -- a macro the parser ignores may rename anything below it -- so the list stays
-    // out of the artefact the chain reads. The arena list is a different case only by luck:
-    // no chain-pinned unit declares an arena.
-    std::fs::write(bau.join("sperren.h"), sperrenliste(sperren))
-        .map_err(|err| format!("kernel module: {}/sperren.h: {err}", bau.display()))?;
-    // **And the unit's ROOTS, the same way** (server lane, TODO section 0e K6): one
-    // `F(name)` per member of the `concurrent` set, out of the same walk, expanded by
-    // `kmodul.c` into one `kthread` each. Before this the roots of a `module` unit had a
-    // hosted pthread driver written for them -- a file for a world the `.ko` is not in.
-    std::fs::write(bau.join("wurzeln.h"), wurzelliste(wurzeln))
-        .map_err(|err| format!("kernel module: {}/wurzeln.h: {err}", bau.display()))?;
-    let mut objekte = vec!["gabbro_kmodul.o".to_string(), "gabbro_arena.o".to_string()];
+    let mut objekte = vec!["gabbro_kmodul.o".to_string()];
     for (i, f) in fremde.iter().enumerate() {
         kopiere(PathBuf::from(f), bau.join(format!("gabbro_fremd{i}.c")))?;
         objekte.push(format!("gabbro_fremd{i}.o"));
@@ -2993,17 +2908,11 @@ fn kmod_modul_binden(
     let kbuild = format!(
         "obj-m := {name}.o\n\
          {name}-y := {objekte}\n\
-         ccflags-y := -I$(src) -I$(src)/inc \\\n\
-         \x20 -DGABBRO_EINHEIT_INCLUDE='\"einheit.c\"' \\\n\
-         \x20 -DGABBRO_KMOD_INIT={init} -DGABBRO_KMOD_EXIT={exit} \\\n\
-         \x20 -Wno-unused-function\n",
+         ccflags-y := -I$(src) -I$(src)/inc -Wno-unused-function\n",
         name = e.name,
         objekte = objekte.join(" "),
-        init = e.modul_init,
-        exit = e.modul_exit,
     );
-    std::fs::write(bau.join("Kbuild"), kbuild)
-        .map_err(|err| format!("kernel module: {}/Kbuild: {err}", bau.display()))?;
+    schreibe(bau.join("Kbuild"), &kbuild)?;
     let bau_abs = std::fs::canonicalize(&bau)
         .map_err(|err| format!("kernel module: {}: {err}", bau.display()))?;
     let mut c = std::process::Command::new("make");
@@ -3031,91 +2940,7 @@ fn kmod_modul_binden(
     Ok(())
 }
 
-/// **The generated lock list of a kernel module** (server lane, TODO section 0e K3).
-///
-/// The whole of what a module driver reads to define the primitives the emitter declares, so
-/// every kind has a probe: a dropped entry is an undefined reference at `modpost` and a wrong
-/// kind is a `masks irqs` promise the C does not keep. The end-to-end run is
-/// `instrumente/pruefe-kernelmodul.sh` probe `takt`.
-#[cfg(test)]
-mod sperrenliste_tests {
-    use super::sperrenliste;
-    use super::treiber::Sperre;
 
-    fn s(name: &str, geteilt: bool, maskiert: bool) -> Sperre {
-        Sperre { name: name.to_string(), geteilt, maskiert }
-    }
-
-    #[test]
-    fn die_vier_arten_stehen_je_mit_ihrem_wort() {
-        let aus = sperrenliste(&[
-            s("A", false, false),
-            s("B", true, false),
-            s("C", false, true),
-            s("D", true, true),
-        ]);
-        assert!(aus.contains("F(A, PLAIN)"), "{aus}");
-        assert!(aus.contains("F(B, SHARED)"), "{aus}");
-        assert!(aus.contains("F(C, MASKED)"), "{aus}");
-        assert!(aus.contains("F(D, MASKED_SHARED)"), "{aus}");
-    }
-
-    /// One `#define`, one line: a `\\`-continuation would have to survive every tool that
-    /// copies this header, and it buys nothing.
-    #[test]
-    fn die_liste_ist_eine_zeile_und_nach_namen_sortiert() {
-        let aus = sperrenliste(&[s("ZWEI", false, true), s("EINS", false, false)]);
-        let zeile = aus
-            .lines()
-            .find(|z| z.starts_with("#define GABBRO_SPERREN"))
-            .expect("one define line");
-        assert_eq!(zeile, "#define GABBRO_SPERREN(F) F(EINS, PLAIN) F(ZWEI, MASKED)", "{aus}");
-        assert!(!aus.contains('\\'), "no continuation:\n{aus}");
-    }
-
-    /// **A unit without a lock defines NOTHING**, and that is load-bearing: `kmodul.c` decides
-    /// on `#ifdef GABBRO_SPERREN` whether to pull in the kernel's spinlock headers at all.
-    #[test]
-    fn ohne_sperre_kein_define() {
-        let aus = sperrenliste(&[]);
-        assert!(!aus.contains("#define"), "a lockless unit got a macro:\n{aus}");
-        assert!(aus.contains("no `lock`"), "and says why:\n{aus}");
-    }
-}
-
-#[cfg(test)]
-mod wurzelliste_tests {
-    use super::treiber::Wurzel;
-    use super::wurzelliste;
-
-    fn w(name: &str) -> Wurzel {
-        Wurzel { c_name: name.to_string(), gab_path: name.to_string() }
-    }
-
-    /// One line, name order, no continuation -- the same shape the lock list has, and for the
-    /// same reason: the header is compared for staleness, so two orders over one list would
-    /// rebuild the module for nothing.
-    #[test]
-    fn die_liste_ist_eine_zeile_und_nach_namen_sortiert() {
-        let aus = wurzelliste(&[w("zweiter"), w("erster")]);
-        let zeile = aus
-            .lines()
-            .find(|z| z.starts_with("#define GABBRO_WURZELN"))
-            .expect("one define line");
-        assert_eq!(zeile, "#define GABBRO_WURZELN(F) F(erster) F(zweiter)", "{aus}");
-        assert!(!aus.contains('\\'), "no continuation:\n{aus}");
-    }
-
-    /// **A unit without a `concurrent` set defines NOTHING**, and that is load-bearing:
-    /// `kmodul.c` decides on `#ifdef GABBRO_WURZELN` whether to pull in `linux/kthread.h`
-    /// and whether its unload waits for anything at all.
-    #[test]
-    fn ohne_wurzel_kein_define() {
-        let aus = wurzelliste(&[]);
-        assert!(!aus.contains("#define"), "a rootless unit got a macro:\n{aus}");
-        assert!(aus.contains("no `concurrent` root"), "and says why:\n{aus}");
-    }
-}
 
 #[cfg(test)]
 mod treiberregel_tests {

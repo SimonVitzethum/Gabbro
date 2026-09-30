@@ -9,7 +9,7 @@
 # still ordered, and nobody had to ask.
 #
 # The kernel-module target (K6) takes that safety net away.
-# `laufzeit/kmodul/include/stdatomic.h` maps the emitter's nine C11 call forms
+# Until the C-free lane's C2 a handwritten table mapped the emitter's nine C11 call forms
 # onto the kernel's own primitives and `_Atomic` itself to `volatile` -- because
 # the kernel has no C11 atomics and `atomic_t` is not a type a Gabbro
 # declaration can become. From that moment a plain access would compile
@@ -200,7 +200,7 @@ def pruefe_datei(pfad, text):
         formzahl[f] = formzahl.get(f, 0) + 1
     # **A tenth form would be a finding of its own.** `atomic_exchange_explicit`
     # or `atomic_thread_fence` in an emitted file means the mapping in
-    # `laufzeit/kmodul/include/stdatomic.h` is incomplete, and an incomplete
+    # the generated module `<stdatomic.h>` (`treiber.rs::KMOD_STDATOMIC`) is incomplete, and an incomplete
     # mapping is an undefined name at the kernel build -- loud, but only if
     # somebody builds a module out of that unit. Here it is loud always.
     for m in re.finditer(r"\batomic_[A-Za-z0-9_]*\b", t):

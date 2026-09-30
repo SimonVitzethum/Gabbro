@@ -298,7 +298,19 @@ generated driver, lock through the chain). Reviewers from 321.
     63/64, which bind the C library by their own `extern fn` (their libc-free twins are 172/173).
   - [ ] A hosted `nolibc` DRIVER (its `main` returns into the C runtime's start code:
     `__libc_start_main`, the toolchain's names only).
-  - [ ] The kernel-module target (C2) and bare metal (C3).
+  - [x] C2, slice 1 -- the kernel-module RUNTIME generated: `laufzeit/kmodul/` (driver,
+    `vzalloc` arena, lock macros, `bindung.h`, type shims) and the LKMM table
+    `bibliothek/linux-kmod/stdatomic.h` deleted; `gabbro build` writes the module driver
+    (templates `arena.modul`, `modul.lebenslauf`, proved, `SchablonenModul.lean`), the type
+    headers and a C11-builtin `<stdatomic.h>` ((M11) revised, comment only); the loader's entry
+    symbols, the licence and the arena `provision` are manifest words. kmod C0 (three probes)
+    1659 -> 399 lines, runtime share 0 (`zaehle-c.py`); `pruefe-kernelmodul.sh` GREEN, 12 of 12
+    gifts caught.
+  - [ ] C2, slice 2 -- the binding `bibliothek/linux-kmod/linux-kmod.c` in Gabbro (a variadic
+    `extern fn` for `_printk`; `_raw_spin_*` as externs over the lock blob; the kernel thread
+    start as a checked form like hosted `N572`), and the probes' own C (`melde.c`, `atomar.c`;
+    `takt.c`'s hrtimer is the probe's interrupt source).
+  - [ ] Bare metal (C3).
 
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics
 and windows — is to be written in Gabbro itself**, not as `extern` with a named assumption. The

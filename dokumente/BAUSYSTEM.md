@@ -104,12 +104,19 @@ unit lager program
 | eingerückte Pfade | die Dateien der Einheit — 473 Gegenbeispiele gegen jede Konvention |
 | `metal <dir>` | the bare-metal runtime (`laufzeit/metall`). With it the build links `<unit>.metall.elf` itself (Opus agent J) |
 | `nolibc` | a process WITHOUT a C library (C-free lane, 2026-09-30): the build writes the entry `_start` (template `start.nolibc`) and links `-nostdlib -static`; the `compiler` line must say `-ffreestanding` (and `-fno-stack-protector`, whose runtime is libc's). The entry knows no system call: it calls the unit's `gabbro_os_anfang()` first when the unit defines it (no C constructor runs without libc), then `main`; a `main` that is not `-> never` must answer its status, which the entry hands to the unit's `gabbro_os_ende(code)` -- a `-> never` function of the program's binding. A unit that offers neither end is refused before any C (`bau.rs::eintrittsregel`) |
-| `kmod <runtime dir> <kernel build dir>` | the module runtime (`laufzeit/kmodul`) and the kernel's own build tree (`/lib/modules/<release>/build`). **Both are named, neither is guessed**: a path baked in here would be a fact about one machine, a kernel version a fact about one kernel (server lane, 2026-09-28) |
+| `kmod <kernel build dir> <load symbol> <unload symbol>` | the kernel's own build tree (`/lib/modules/<release>/build`) and the two symbols its module loader calls (for Linux `init_module cleanup_module`). **All three are named, none is guessed**: a path baked in here would be a fact about one machine, an entry name a fact about one kernel (server lane, 2026-09-28; since the C-free lane's C2, 2026-09-30, the module RUNTIME is no directory any more -- the build writes it) |
+| `provision <bytes>` | the static storage of each dynamic arena of a `module` unit, a positive multiple of 4096 (C-free lane, C2). Required when a module unit declares an arena; the span of an arena is `min(max * elem, provision)`, a `grow` past it answers `false` (refuse-on-full below the ceiling) |
+| `note <section> <text>` | a read-only string the module carries in a named section, e.g. `note .modinfo license=Dual MIT/GPL` (C-free lane, C2). Printable ASCII without `"` and `\`; the section name is letters, digits and `. _ - $` |
 
 **The third art: `unit <name> module <init> <exit>`** (server lane, 2026-09-28, TODO §0e K4).
-The unit becomes a loadable Linux kernel module: `gabbro build` writes the `Kbuild`, copies the
-runtime and the emitted C beside it, and calls `make -C <kernel build dir> M=<dir> modules`. The
-artefact is `<unit>.ko`.
+The unit becomes a loadable Linux kernel module: `gabbro build` writes the `Kbuild`, the module
+DRIVER (`treiber.rs::erzeuge_kmod`: the loader's two entry points, the arena pools, the lock
+primitives, one thread per root; templates `modul.lebenslauf` and `arena.modul`, proved in
+`grammatik/Grammatik/SchablonenModul.lean`) and the C type headers the kernel's `-nostdinc`
+build lacks (generated from the compiler's predefined types; `<stdatomic.h>` over its C11
+builtins), copies the emitted C beside them, and calls `make -C <kernel build dir> M=<dir>
+modules`. The artefact is `<unit>.ko`. **No handwritten C of Gabbro's is in it** (C-free lane,
+C2): the kernel calls are the program's binding (`bibliothek/linux-kmod`).
 
 * **Why the two calls stand in the MANIFEST and not in the source.** A Linux module is entered
   by a call, not by a vector, so `entry … vector V` — the interrupt form — is the wrong word for
@@ -125,8 +132,9 @@ artefact is `<unit>.ko`.
   *what the program calls, the program declares*, and nothing about Linux enters this tree
   (`TODO.md` §-1). Outside a module unit a `.c` file is refused, because a hosted program with
   a foreign body is a gap of its own and naming it would be a promise the build does not keep.
-* **The arenas are NOT in the manifest.** The emitted unit carries `#define GABBRO_ARENEN` —
-  the emitter knows which descriptors it wrote — and the runtime reserves exactly that list.
+* **The arenas are NOT in the manifest** (only their storage size, `provision`). The emitted
+  unit carries `#define GABBRO_ARENEN` — the emitter knows which descriptors it wrote — and the
+  driver binds exactly that list, one static pool each.
   A manifest that repeated it would be the second register over one fact (`W7`), and the one
   nobody reads is the one that drifts.
 * Measured where it can only be measured: `instrumente/pruefe-kernelmodul.sh` builds the probe

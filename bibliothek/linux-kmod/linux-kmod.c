@@ -1,11 +1,11 @@
-/* bibliothek/linux-kmod/linux-kmod.c -- THE BODIES of the twelve primitives
+/* bibliothek/linux-kmod/linux-kmod.c -- THE BODIES of the primitives
  * `linux-kmod.gab` declares (server lane, TODO section 0e K7, 2026-09-28).
  *
  * **THIS FILE IS THE ONE PLACE A LINUX KERNEL FUNCTION IS NAMED**, and it is a
  * file of the PROGRAM: a manifest lists it, the module's own build compiles it,
  * and whoever wants a different kernel writes a different one. The Gabbro tree
  * around it names none of these functions -- not the checker, not the emitter,
- * not the module runtime (`laufzeit/kmodul/bindung.h` declares what the runtime
+ * not the module driver the build writes (it declares what it
  * calls and defines nothing). That is Simon's binding constraint, 2026-09-27:
  * *"API calls are always user-made."*
  *
@@ -33,9 +33,7 @@
  * Stronger than asked, never weaker.
  */
 
-#include <linux/module.h>
-#include <linux/moduleparam.h>
-#include <linux/vmalloc.h>
+#include <linux/errno.h>
 #include <linux/printk.h>
 #include <linux/spinlock.h>
 #include <linux/smp.h>
@@ -44,10 +42,28 @@
 #include <linux/err.h>
 #include <linux/string.h>
 
-/* The interface, so that every definition below is held against the
- * declaration the runtime calls -- and, through the emitted unit's prototypes,
- * against what the program declared in Gabbro. */
-#include "bindung.h"
+/* The report codes of the generated module driver (`treiber.rs`,
+ * `KMOD_MELDECODES`) and the thread blob it hands over. The driver and the
+ * emitted unit carry the prototypes of every function below, so the C compiler
+ * holds each definition against them in the driver's translation unit. */
+#define GABBRO_KERN_M_DESKRIPTOR    1u
+#define GABBRO_KERN_M_BODEN         3u
+#define GABBRO_KERN_M_UEBER_MAX     6u
+#define GABBRO_KERN_M_LADEN_ANTWORT 8u
+#define GABBRO_KERN_M_LADEN_STOPP   9u
+#define GABBRO_KERN_M_LADEN_FADEN  10u
+#define GABBRO_KERN_FADEN_WORTE 32
+
+void gabbro_kern_melden(uint32_t code, uint64_t a, uint64_t b);
+int32_t gabbro_kern_verweigert(uint32_t code);
+void gabbro_kern_sperre_init(uint8_t *s);
+void gabbro_kern_sperre_nimm(uint8_t *s);
+void gabbro_kern_sperre_gib(uint8_t *s);
+uint64_t gabbro_kern_sperre_nimm_maskiert(uint8_t *s);
+void gabbro_kern_sperre_gib_maskiert(uint8_t *s, uint64_t flaggen);
+uint32_t gabbro_kern_kernnummer(void);
+uint32_t gabbro_kern_faden_start(uint64_t f, uint64_t koerper);
+void gabbro_kern_faden_warte(uint64_t f);
 
 /* -- the report channel ---------------------------------------------------- */
 /*
@@ -63,26 +79,12 @@ void gabbro_kern_melden(uint32_t code, uint64_t a, uint64_t b)
         pr_err("gabbro: arena reserve refused: bad descriptor (max=%llu, floor=%llu)\n",
                a, b);
         break;
-    case GABBRO_KERN_M_ZU_VIELE:
-        pr_err("gabbro: arena reserve refused: more arenas (%llu) than this runtime maps (%llu)\n",
-               a, b);
-        break;
     case GABBRO_KERN_M_BODEN:
-        pr_err("gabbro: arena reserve refused: the provision (%llu bytes) cannot hold the committed floor (%llu slots)\n",
+        pr_err("gabbro: arena refused: the provision (%llu bytes) cannot hold the committed floor (%llu slots)\n",
                b, a);
-        break;
-    case GABBRO_KERN_M_SPANNE:
-        pr_err("gabbro: arena reserve refused: the span does not fit size_t (max=%llu, elem=%llu)\n",
-               a, b);
-        break;
-    case GABBRO_KERN_M_RESERVE:
-        pr_err("gabbro: arena reserve refused: vzalloc of %llu byte(s) failed\n", a);
         break;
     case GABBRO_KERN_M_UEBER_MAX:
         pr_err("gabbro: arena grow past max (%llu > %llu) -- fail-stop\n", a, b);
-        break;
-    case GABBRO_KERN_M_LADEN_ARENA:
-        pr_err("gabbro: load refused -- a reservation failed (%llu)\n", a);
         break;
     case GABBRO_KERN_M_LADEN_ANTWORT:
         pr_err("gabbro: load refused -- the unit answered %llu\n", a);
@@ -100,40 +102,15 @@ void gabbro_kern_melden(uint32_t code, uint64_t a, uint64_t b)
     }
 }
 
-/* -- the arena's storage --------------------------------------------------- */
+/* -- the load verdict ------------------------------------------------------ */
 /*
- * `vzalloc` and not `vmalloc`: the runtime's contract with the program is that a
- * reservation is ZEROED (`laufzeit/arena_dyn.h`).
- *
- * The provision is a module parameter -- `insmod <module>.ko vorrat_kib=24` --
- * and the default is small ON PURPOSE, so that a program's refuse-on-full path
- * is exercised rather than assumed. *The ceiling stays the program's `max`; this
- * is only the storage behind it.*
+ * What the kernel's loader is answered when the generated driver refuses a
+ * load: a negative errno of THIS kernel. A reservation that cannot hold its
+ * floor is a lack of memory; everything else is an invalid module state.
  */
-static unsigned int vorrat_kib = 16;
-module_param(vorrat_kib, uint, 0444);
-MODULE_PARM_DESC(vorrat_kib,
-    "per-arena commit provision in KiB (the ceiling is the program's `max`)");
-
-uint64_t gabbro_kern_reserve(uint64_t bytes)
+int32_t gabbro_kern_verweigert(uint32_t code)
 {
-    void *p;
-
-    if (bytes == 0 || bytes > (uint64_t)(~(size_t)0)) {
-        return 0;
-    }
-    p = vzalloc((size_t)bytes);
-    return (uint64_t)(uintptr_t)p;
-}
-
-void gabbro_kern_freigeben(uint64_t basis)
-{
-    vfree((void *)(uintptr_t)basis);
-}
-
-uint64_t gabbro_kern_vorrat(void)
-{
-    return (uint64_t)vorrat_kib * 1024ull;
+    return code == GABBRO_KERN_M_BODEN ? -ENOMEM : -EINVAL;
 }
 
 /* -- the locks ------------------------------------------------------------- */
@@ -144,53 +121,42 @@ uint64_t gabbro_kern_vorrat(void)
  * carries no flags argument, because the emitter's `L_nimm`/`L_gib` take none
  * and nothing may travel on their stack.
  */
-struct gabbro_kern_sperre {
-    raw_spinlock_t s;
-    unsigned long flaggen;
-};
+_Static_assert(sizeof(raw_spinlock_t) <= 256,
+               "this kernel's raw_spinlock_t does not fit the driver's 256-byte lock blob");
+_Static_assert(__alignof__(raw_spinlock_t) <= 64,
+               "this kernel's raw_spinlock_t wants more alignment than the driver's lock blob has");
 
-_Static_assert(sizeof(struct gabbro_kern_sperre)
-                   <= GABBRO_KERN_SPERRE_WORTE * sizeof(unsigned long),
-               "this kernel's raw_spinlock_t does not fit the runtime's lock blob "
-               "-- raise GABBRO_KERN_SPERRE_WORTE in laufzeit/kmodul/bindung.h");
-_Static_assert(__alignof__(struct gabbro_kern_sperre) <= __alignof__(unsigned long),
-               "this kernel's raw_spinlock_t wants more alignment than the runtime's "
-               "lock blob has");
-
-static struct gabbro_kern_sperre *sperre(uint64_t s)
+static raw_spinlock_t *sperre(uint8_t *s)
 {
-    return (struct gabbro_kern_sperre *)(uintptr_t)s;
+    return (raw_spinlock_t *)(void *)s;
 }
 
-void gabbro_kern_sperre_init(uint64_t s)
+void gabbro_kern_sperre_init(uint8_t *s)
 {
-    memset(sperre(s), 0, sizeof(struct gabbro_kern_sperre));
-    raw_spin_lock_init(&sperre(s)->s);
+    raw_spin_lock_init(sperre(s));
 }
 
-void gabbro_kern_sperre_nimm(uint64_t s)
+void gabbro_kern_sperre_nimm(uint8_t *s)
 {
-    raw_spin_lock(&sperre(s)->s);
+    raw_spin_lock(sperre(s));
 }
 
-void gabbro_kern_sperre_gib(uint64_t s)
+void gabbro_kern_sperre_gib(uint8_t *s)
 {
-    raw_spin_unlock(&sperre(s)->s);
+    raw_spin_unlock(sperre(s));
 }
 
-void gabbro_kern_sperre_nimm_maskiert(uint64_t s)
+uint64_t gabbro_kern_sperre_nimm_maskiert(uint8_t *s)
 {
     unsigned long f;
 
-    raw_spin_lock_irqsave(&sperre(s)->s, f);
-    sperre(s)->flaggen = f;
+    raw_spin_lock_irqsave(sperre(s), f);
+    return (uint64_t)f;
 }
 
-void gabbro_kern_sperre_gib_maskiert(uint64_t s)
+void gabbro_kern_sperre_gib_maskiert(uint8_t *s, uint64_t flaggen)
 {
-    unsigned long f = sperre(s)->flaggen;
-
-    raw_spin_unlock_irqrestore(&sperre(s)->s, f);
+    raw_spin_unlock_irqrestore(sperre(s), (unsigned long)flaggen);
 }
 
 uint32_t gabbro_kern_kernnummer(void)
@@ -210,7 +176,7 @@ uint32_t gabbro_kern_kernnummer(void)
  * A start that FAILS completes at once, which is what the runtime relies on:
  * its load refusal waits for every root it tried to start, and a blob that
  * never completed would hang `insmod` instead of refusing it
- * (`laufzeit/kmodul/bindung.h`).
+ * (the generated module driver, `treiber.rs::erzeuge_kmod`).
  */
 struct gabbro_kern_faden {
     struct completion fertig;
@@ -221,7 +187,7 @@ struct gabbro_kern_faden {
 _Static_assert(sizeof(struct gabbro_kern_faden)
                    <= GABBRO_KERN_FADEN_WORTE * sizeof(unsigned long),
                "this kernel's struct completion does not fit the runtime's thread blob "
-               "-- raise GABBRO_KERN_FADEN_WORTE in laufzeit/kmodul/bindung.h");
+               "-- raise the thread blob in the generated driver (treiber.rs)");
 _Static_assert(__alignof__(struct gabbro_kern_faden) <= __alignof__(unsigned long),
                "this kernel's struct completion wants more alignment than the runtime's "
                "thread blob has");

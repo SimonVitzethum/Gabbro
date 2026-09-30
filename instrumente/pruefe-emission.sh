@@ -2770,9 +2770,11 @@ grep -E '^GREEN|^   OVERLAP' "$ARB/zwilling.log" | sed 's/^/   /'
 # `_Atomic` object even a plain access is an atomic operation (implicitly seq_cst), so
 # the emitter's claim -- "every access is one of the nine calls" -- never had to be
 # checked. The module target takes that net away:
-# `laufzeit/kmodul/include/stdatomic.h` maps the nine calls onto the kernel's own
+# until the C-free lane's C2 a handwritten table mapped the nine calls onto the kernel's own
 # primitives and `_Atomic` to `volatile`, and from there a plain access would compile
-# silently into an UNORDERED one.
+# silently into an UNORDERED one. (Since C2 the build writes `<stdatomic.h>` over the
+# compiler's C11 builtins and `_Atomic` stays real; the check stays as the premise that the
+# nine forms are all the generated header has to cover.)
 #
 # It is called from here for the same reason 22b is: a differential measurement that
 # runs somewhere else is one nobody runs. The check is token level and not line level,
@@ -4178,7 +4180,7 @@ MARKE_EMIT_P=1      # `programmlogik/` -- beispiel/lager.gab; `betrieb.gab` sagt
 MARKE_EMIT_L=1      # `laufzeit/` -- sperre.gab; `start.c` ist C und keine `.gab`
 # **And a fifth, on 2026-09-28: `bibliothek/`** (server lane, TODO 0e K7). Booked at 1 --
 # `bibliothek/linux-kmod/linux-kmod.gab`, the twelve kernel primitives a Gabbro kernel module
-# binds (`laufzeit/kmodul/bindung.h` is the interface, which belongs to the runtime; the
+# binds (the generated module driver calls them since the C-free lane's C2; the
 # kernel's own names stand in `linux-kmod.c` and nowhere else). The `.c` and the `.h` beside
 # it are not Gabbro and do not count here. *The file emits a C with not one body in it --
 # twelve prototypes -- and that is exactly what belongs measured: a binding that stops

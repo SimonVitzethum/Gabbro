@@ -243,6 +243,46 @@ fn n506_extern_klausel_ueber_den_falschen_zeiger_zaehlt_nicht() {
 }
 
 #[test]
+fn n506_extern_konstante_klausel_bindet_ein_festes_objekt() {
+    // C-free lane, 2026-09-30 (`N464`'s twin): a lock blob of fixed size beside an integer
+    // parameter is bound by a CONSTANT clause; without any clause it still falls, and a
+    // clause over another pointer does not count.
+    let blob = |req: &str| {
+        format!(
+            "extern fn gib(s : ptr<normal, rw> u8, flaggen : u64)
+    {req}
+    effects {{ writes s }}
+    costs <= 16 ops;"
+        )
+    };
+    sauber(&[&blob("requires 256 <= lenof(s)")]);
+    faellt(&[&blob("requires flaggen <= 64")], "N506");
+    faellt(&[&blob("requires 0 <= lenof(s)")], "N506");
+}
+
+#[test]
+fn n506_konstante_klausel_haelt_den_rufer_n463() {
+    // The call half: a 64-byte array handed to a 256-byte clause falls at `N463`.
+    faellt(
+        &[
+            "extern fn gib(s : ptr<normal, rw> u8, flaggen : u64)
+    requires 256 <= lenof(s)
+    effects { writes s }
+    costs <= 16 ops;",
+            "static mut KLEIN : [u8; 64] = 0;
+pub fn main() -> i32 in 0 .. 1
+    effects { writes KLEIN }
+    costs <= 200 ops
+{
+    gib(KLEIN, 0);
+    return 0;
+}",
+        ],
+        "N463",
+    );
+}
+
+#[test]
 fn n506_extern_ohne_laengenparameter_bleibt_still() {
     // One object, not a transfer: no integer parameter beside the pointer, so
     // no length the caller could set past it and no clause that could tie one

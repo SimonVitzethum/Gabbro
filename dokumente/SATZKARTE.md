@@ -4830,3 +4830,33 @@ moves the handed value out of the stack register, aligns the handed stack and CA
 Measured on hosted Linux with a real `clone` (`kratz/c/s10/kind`): a triple whose region reads the
 handed top and ends the process with 42 exits 42 at `-O0` and `-O2`. `tests/klon_faden.rs` pins the
 new shape (no `asm goto`, no label, one call, one region function).
+
+## 68. The kernel-module runtime as generated text: `arena.modul` and `modul.lebenslauf` (C-free lane, 2026-09-30, C2)
+
+**The gap.** Every `.ko` a `module` unit became carried `laufzeit/kmodul/` -- `kmodul.c` (the
+loader's entry points), `arena.c` (a `vzalloc` per arena with a `module_param` budget),
+`sperre.h`, `bindung.h`, five type shims -- and, with an `atomic`, the 273-line LKMM table
+`bibliothek/linux-kmod/stdatomic.h`. Now `gabbro build` writes the module driver itself
+(`treiber.rs::erzeuge_kmod`): the arena storage is a static pool of the manifest's `provision`, the
+loader's two entry symbols and the licence note are MANIFEST words (`kmod <kbuild> <load>
+<unload>`, `note .modinfo license=…`), the type headers and `<stdatomic.h>` are generated from the
+compiler's own predefined types and C11 builtins. No kernel header and no kernel name in the
+driver; every kernel call below the unit is the program's binding.
+
+| Lean name | File | What it says |
+|---|---|---|
+| `spanne`, `reserve`, `grow`, `Inv` | SchablonenModul §1 | the pool arithmetic of `KMOD_ARENA` |
+| **`arena_modul_inv_reserve`**, **`arena_modul_inv_grow`** | SchablonenModul §1 | a reservation establishes and every grow keeps `committed <= max`, `committed * elem <= span <= V` |
+| **`arena_modul_slot_im_lager`** | SchablonenModul §1 | every reachable slot lies inside the static pool |
+| `arena_modul_kein_ueberlauf`, `arena_modul_monoton`, `arena_modul_ueber_der_decke` | SchablonenModul §1 | no 64-bit wrap; the prefix only grows; past the ceiling is the stop |
+| `arena_modul_zeuge` | SchablonenModul §1 | WITNESS: the `halde` probe, two grows committed, the third refused below the ceiling |
+| `bindeAlle`, `laden`, `entladen` | SchablonenModul §2 | the two entry points' order |
+| **`laden_erfolg`**, `laden_init_erst_nach_bindung`, `laden_ruft_kein_exit`, `laden_start_nach_init`, **`laden_verweigert_wartet`**, `entladen_wartet_vor_exit` | SchablonenModul §2 | bind, lock, init, start; the init only after every arena; never the exit on load; roots only after a good init; a refused load waits for every root it started; the unload waits before the exit |
+| `lebenslauf_zeuge_*` | SchablonenModul §2 | WITNESSES: the three probes, gift 4's stop, a refused reservation |
+
+`Zielsatz/Spec.lean`: comment only -- (M11) now names the compiler's C11 atomics instead of the
+LKMM table (review: `messung/SERVER-0E-SPEC-DIFF.md` Part IV), and (d) `Laufzeit.reserve` names
+the static pool. Measured: `instrumente/pruefe-kernelmodul.sh` GREEN on all three probes (halde:
+refuse-on-full at the provision; takt: `landed=0` over 38 ticks; atomar: 512/256/0/3), 12 of 12
+gifts caught; `instrumente/zaehle-c.py` kmod runtime share 1344 -> 0 lines (what stays is the
+binding's `linux-kmod.c` and the probes' own C).

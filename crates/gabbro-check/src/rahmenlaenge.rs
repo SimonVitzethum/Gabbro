@@ -150,7 +150,8 @@ pub fn caller_carries(rufer: &[LengthBound], y: &str, q: &str, strikt: bool) -> 
 /// The rule is `buffer_bound`'s twin at the other foreign shape: a parameter that points
 /// at numbers (`u8`/`i8` pointee -- the callee counts bytes, `lenof` counts elements) beside
 /// an integer parameter that can serve as its length is a buffer, and the declaration
-/// carries `requires x <= lenof(p)` (or `<`) over one of its integer parameters. A lone
+/// carries `requires x <= lenof(p)` (or `<`) over one of its integer parameters, or a
+/// constant clause `k <= lenof(p)` for an object of fixed size (C-free lane). A lone
 /// object pointer with no length beside it (`beispiele/22`'s `melde_roh`) is one object,
 /// not a transfer, and is not held. Pointers at records, tables or other non-number types
 /// are one object, not a buffer, and stay with the frame rules they always had -- exactly
@@ -204,7 +205,14 @@ fn buffer_bound_extern(baum: &Programm, modul: &str, f: &FnDecl, absagen: &mut A
             &z.ziel,
             TypExpr::Int(i) if matches!(i.wort, gabbro_syntax::kw::Kw::U8 | gabbro_syntax::kw::Kw::I8)
         );
-        let is_bound = atoms.iter().any(|a| {
+        // **A constant clause binds too** (C-free lane, 2026-09-30, `N464`'s twin): `requires
+        // 256 <= lenof(s)` for an object of fixed size the foreign code reads or writes whole
+        // (a lock blob). `N463` decides constant clauses at every call, so the clause ties the
+        // callee's bytes to the caller's object exactly as a length parameter does.
+        let konstant = ausdehnungen(&f.requires)
+            .iter()
+            .any(|a| a.zeiger == p.name.text && a.namen.is_empty() && a.k >= 1);
+        let is_bound = konstant || atoms.iter().any(|a| {
             a.pointer == p.name.text
                 && f.parameter.iter().any(|q| {
                     q.name.text == a.length

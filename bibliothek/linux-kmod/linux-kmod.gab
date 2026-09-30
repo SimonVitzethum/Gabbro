@@ -22,7 +22,7 @@
 --
 -- **A different kernel gets a different file, not a different Gabbro.** That is
 -- the whole point of the arrangement, and it is why the twelve names below are
--- the RUNTIME's interface (`laufzeit/kmodul/bindung.h`) and the kernel's own
+-- the interface the generated module driver calls and the kernel's own
 -- names appear only in `linux-kmod.c`. A port to a BSD, to a different Linux
 -- version whose exported surface differs, or to a kernel that has no
 -- `vmalloc`, is a new pair of files here and nothing else.
@@ -44,22 +44,22 @@
 -- have read as bound.
 --
 -- **WHY THERE IS NO `use` LINE.** Nothing in a program CALLS these items; the
--- runtime does. A `use linux::kmod::gabbro_kern_reserve;` in the driver would
+-- runtime does. A `use linux::kmod::gabbro_kern_melden;` in the driver would
 -- name an item the driver never mentions again -- ceremony that documents a
 -- dependency the manifest already carries, and the kind of decoration this
 -- folder rejects work for. What makes the declarations load-bearing instead is
 -- the pair of checks around them: `gabbro build` refuses a module that lacks
--- them, and the C compiler holds each one against `bindung.h` inside the
+-- them, and the C compiler holds each one against the generated driver's prototypes inside the
 -- runtime's own translation unit (the emitted prototypes and the runtime's
 -- declarations meet in `gabbro_kmodul.c`, so a wrong type is a build error and
 -- not a wrong call).
 --
--- WHY EVERY ADDRESS IS A `u64`. Gabbro has no pointer type -- the same reason a
--- system-call binding passes registers (Opus agent L, OFFEN O31). A
--- reservation's base, a lock's storage and a root's body therefore cross as
--- numbers, and the two sides cast: the runtime with `(uint64_t)(uintptr_t)`,
--- the bodies in `linux-kmod.c` back again. Both halves stand beside each other
--- so that neither can drift.
+-- ADDRESSES. A lock's storage crosses as a REGION (`ptr<normal, rw> u8` under a
+-- constant clause `256 <= lenof(s)`: the generated driver's blob) since the
+-- C-free lane's C2; the thread pair still passes the root's wrapper and its blob
+-- as `u64` numbers, cast back in `linux-kmod.c` -- the one place a number still
+-- becomes an address, and the next wall of this file (a Gabbro thread start is a
+-- proved template on hosted Linux; the kernel's needs its own).
 --
 -- WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each one is the
 -- primitive's OWN work -- the instructions between entry and return once it
@@ -72,8 +72,8 @@
 -- whoever held it, and that is where the checker looks.
 module linux::kmod {
 
--- **The ABI and the behaviour of all twelve bodies, as one named assumption.**
--- One and not twelve, because it is one fact about one file: `linux-kmod.c` is
+-- **The ABI and the behaviour of all the bodies, as one named assumption.**
+-- One and not one per body, because it is one fact about one file: `linux-kmod.c` is
 -- compiled by the kernel's own build, with the kernel's own flags, against the
 -- kernel whose headers are in the manifest's `kmod` line.
 assume kern_bindung_abi
@@ -98,47 +98,51 @@ assume kern_bindung_maskiert
 --
 -- The runtime has no words of its own inside a kernel module, because printing
 -- is a kernel call. A refusal travels as a CODE and two numbers
--- (`laufzeit/kmodul/bindung.h` lists the ten codes) and this binding's body
+-- (`crates/gabbro-cli/src/treiber.rs`, `KMOD_MELDECODES`, lists the codes) and this binding's body
 -- carries one sentence per code.
 extern fn gabbro_kern_melden(code : u32, a : u64, b : u64)
     effects { pure } costs <= 512 ops;
 
--- -- the arena's storage -----------------------------------------------------
+-- -- the load verdict ------------------------------------------------------
 --
--- `reserve` answers the base of `bytes` ZEROED bytes or 0; `freigeben` gives one
--- back; `vorrat` is the module's provision in bytes. A bounded heap needs no
--- more than these three from a kernel: the ceiling, the committed prefix and
--- refuse-on-full are the runtime's arithmetic (`laufzeit/kmodul/arena.c`).
-extern fn gabbro_kern_reserve(bytes : u64) -> u64
-    effects { pure } costs <= 100000 ops;
-
-extern fn gabbro_kern_freigeben(basis : u64)
-    effects { pure } costs <= 100000 ops;
-
-extern fn gabbro_kern_vorrat() -> u64
+-- The generated module driver refuses a load with the code of what went wrong
+-- (the list in `crates/gabbro-cli/src/treiber.rs`, `KMOD_MELDECODES`); what the
+-- kernel's loader is ANSWERED for it is this binding's word -- a negative errno
+-- of the kernel it is written for.
+extern fn gabbro_kern_verweigert(code : u32) -> i32
     effects { pure } costs <= 32 ops;
+
+-- An arena needs nothing from the kernel since the C-free lane's C2: its storage
+-- is a static pool of the manifest's `provision`, zeroed by the module loader
+-- like all of the module's `.bss`.
 
 -- -- the locks ---------------------------------------------------------------
 --
--- The runtime owns the STORAGE (a blob of words per `lock`, sized by
--- `GABBRO_KERN_SPERRE_WORTE` in `bindung.h`) and these are the OPERATIONS over
--- it. The masked pair is a separate pair of NAMES and not a flag, so that a
+-- The generated driver owns the STORAGE (a zeroed 256-byte blob per `lock`)
+-- and these are the OPERATIONS over it. The masked pair is a separate pair of NAMES and not a flag, so that a
 -- program can bind a different primitive for the promise `masks irqs` makes --
 -- and so that `kern_bindung_maskiert` above has something to be about.
-extern fn gabbro_kern_sperre_init(s : u64)
-    effects { pure } costs <= 512 ops;
+extern fn gabbro_kern_sperre_init(s : ptr<normal, rw> u8)
+    requires 256 <= lenof(s)
+    effects { writes s } costs <= 512 ops;
 
-extern fn gabbro_kern_sperre_nimm(s : u64)
-    effects { pure } costs <= 512 ops;
+extern fn gabbro_kern_sperre_nimm(s : ptr<normal, rw> u8)
+    requires 256 <= lenof(s)
+    effects { writes s } costs <= 512 ops;
 
-extern fn gabbro_kern_sperre_gib(s : u64)
-    effects { pure } costs <= 512 ops;
+extern fn gabbro_kern_sperre_gib(s : ptr<normal, rw> u8)
+    requires 256 <= lenof(s)
+    effects { writes s } costs <= 512 ops;
 
-extern fn gabbro_kern_sperre_nimm_maskiert(s : u64)
-    effects { pure } costs <= 512 ops;
+-- The masked pair hands the saved interrupt state OUT and takes it back IN: the
+-- generated driver keeps it beside the lock, written and read by the holder only.
+extern fn gabbro_kern_sperre_nimm_maskiert(s : ptr<normal, rw> u8) -> u64
+    requires 256 <= lenof(s)
+    effects { writes s } costs <= 512 ops;
 
-extern fn gabbro_kern_sperre_gib_maskiert(s : u64)
-    effects { pure } costs <= 512 ops;
+extern fn gabbro_kern_sperre_gib_maskiert(s : ptr<normal, rw> u8, flaggen : u64)
+    requires 256 <= lenof(s)
+    effects { writes s } costs <= 512 ops;
 
 -- Which core is running. The runtime records it as the lock's HOLDER, so that a
 -- probe's own interrupt body can report whether it ever landed on a core that
