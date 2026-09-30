@@ -377,7 +377,7 @@ pub const EINORDNUNG: &[Posten] = &[
     },
     // **M-ALLTAG C:** `reset X at i count n;` -- a checked range and the
     // emitted helper behind it. The zero is the guarantee; the page return
-    // is the program's own binding (`gabbro_os_leeren`, weak).
+    // is the program's own binding (`gabbro_os_seiten_zurueck`, weak).
     Posten {
         konstrukt: "range reset",
         traegt: Traegt::Direkt,
@@ -385,7 +385,8 @@ pub const EINORDNUNG: &[Posten] = &[
                 `n <= len && i <= len - n` -- the bytes read as zero whatever \
                 the binding does (the helper's loop is the fallback), and the \
                 pages go back to the system only where the program binds \
-                `gabbro_os_leeren`",
+                `gabbro_os_seiten_zurueck` (the helper's page arithmetic is the \
+                proved template `region.leeren`)",
     },
     // **Lane 259 (wave D, emitter arm):** the commit request -- a call on
     // the runtime in the checked-`alloc` brace shape, with the written

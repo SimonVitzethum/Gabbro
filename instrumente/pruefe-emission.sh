@@ -2675,7 +2675,6 @@ lauf "beispiel175" "$W/beispiele/175-puffer-gibt-seiten-zurueck.gab" "$TREIBER17
      's/RING\[100\] = 7/RING[100] = 8/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 TREIBER175B='#include <stdio.h>
-#include "linux.c"
 #include "@ERZEUGT@"
 #include "linux_bind.c"
 int main(void) {

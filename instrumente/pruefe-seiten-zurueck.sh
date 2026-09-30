@@ -5,7 +5,8 @@
 # THE CLAIM. A fixed buffer that was busy and is idle stops being resident: the
 # range reads as zero AND the resident set (`/proc/self/statm`) falls by the
 # pages of the range. Both halves are measured, on the emitted C, with the
-# program's own binding (`bibliothek/linux/linux.c`, `gabbro_os_leeren`).
+# program's own binding (`bibliothek/linux/linux.gab`, `gabbro_os_seiten_zurueck` in Gabbro
+# since 2026-09-30, C-free lane; the helper hands it the whole pages, template `region.leeren`).
 #
 #   1. bound  : after the give-back the buffer is all zero and RSS fell by at
 #               least 3/4 of the mebibyte (the ragged ends and the rest of the
@@ -28,13 +29,14 @@ trap 'rm -rf "$T"' EXIT
 fail=0
 "$G" emit "$W/messung/proben/seiten-zurueck/ring.gab" > "$T/ring.c" 2> "$T/emit.err" || {
     echo "RED: emit failed"; cat "$T/emit.err"; exit 1; }
-cp "$W/laufzeit/bindung.h" "$W/bibliothek/linux/linux.c" "$T/"
+"$G" emit "$W/bibliothek/linux/linux.gab" > "$T/linux_bind.c" 2> "$T/emit2.err" || {
+    echo "RED: the binding did not emit"; cat "$T/emit2.err"; exit 1; }
 cat > "$T/treiber.c" <<'CEOF'
 #include <stdio.h>
 #include <string.h>
 #include "ring.c"
 #ifdef MIT_BINDUNG
-#include "linux.c"
+#include "linux_bind.c"
 #endif
 static long rss_kib(void)
 {

@@ -100,7 +100,7 @@ pub struct MetallZusatz {
 /// with unchanged sources would otherwise leave a stale driver behind a
 /// valid record. Bump this on every template change; `bau.rs` mixes it into
 /// the fingerprint of every unit that owns a driver.
-pub const GENERATOR_KENNUNG: &str = "treiber-gen-7";
+pub const GENERATOR_KENNUNG: &str = "treiber-gen-8";
 
 /// **The unit's dynamic arenas, reserved before the first root runs** (server lane,
 /// 2026-09-28, TODO section 0e K8).
@@ -241,6 +241,49 @@ bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n)\n\
     return true;\n\
 }\n";
 
+/// **The hosted lock, written by the generator** (C-free lane, 2026-09-30; template
+/// `sperre.ticket`).
+///
+/// Until this text a hosted lock was a `pthread_mutex_t` in a blob of words, initialised in
+/// `main` and taken through the binding's C. Now it is the ticket lock `CTicket.lean` proves --
+/// the four instructions of its model, word for word (`zieht`: the relaxed `fetch_add`;
+/// `dreht`/`tritt`: the acquire spin; `gibt`: the release store) -- which the bare-metal image
+/// has run since Opus agent I (`laufzeit/metall/metall.h`). Mutual exclusion is
+/// `ticket_ausschluss`; every step refines `sperrAbstrakt` (`ticketLP_sperrAbstrakt`). The one
+/// thing added to the spin is a hand-over: every 64 passes the waiter calls the program's
+/// `gabbro_os_nachgeben` (a Gabbro function over the kernel's yield gate), because with more
+/// threads than cores the ticket served next may belong to a thread that is not running. A
+/// yield changes no word of the lock and no program memory -- a stutter of `dreht`
+/// (`schrittT_proj`: a spin is a stutter). A zero-initialised `static` is a free lock, so there
+/// is no initialiser and nothing to call before the first root. No operating system and no
+/// instruction set is named here.
+pub const SPERRE_TICKET: &str = "\
+/* -- Lock primitives: the ticket lock of CTicket.lean (template `sperre.ticket`). The emitter\n\
+ *    declares `L_nimm`/`L_gib`; this file defines them; the only call out is the program's\n\
+ *    yield (`gabbro_os_nachgeben`). A zero `static` is a free lock. */\n\
+#include <stdatomic.h>\n\
+typedef struct {\n\
+    _Atomic uint32_t naechste;\n\
+    _Atomic uint32_t jetzt;\n\
+} gabbro_ticket;\n\
+void gabbro_os_nachgeben(void);\n\
+static void gabbro_ticket_nimm(gabbro_ticket *t)\n\
+{\n\
+    uint32_t my = atomic_fetch_add_explicit(&t->naechste, 1u, memory_order_relaxed);\n\
+    uint32_t n = 0u;\n\
+    while (atomic_load_explicit(&t->jetzt, memory_order_acquire) != my) {\n\
+        if (++n == 64u) {\n\
+            n = 0u;\n\
+            gabbro_os_nachgeben();\n\
+        }\n\
+    }\n\
+}\n\
+static void gabbro_ticket_gib(gabbro_ticket *t)\n\
+{\n\
+    uint32_t n = atomic_load_explicit(&t->jetzt, memory_order_relaxed);\n\
+    atomic_store_explicit(&t->jetzt, (uint32_t)(n + 1u), memory_order_release);\n\
+}\n\n";
+
 /// True for `[A-Za-z_][A-Za-z0-9_]*` (ASCII only: a Gabbro name that reaches
 /// C is ASCII; anything else cannot name a C function and is refused before
 /// generation, never truncated into one).
@@ -349,33 +392,25 @@ pub fn erzeuge(
     aus.push_str("\n#ifdef GABBRO_ARENEN\n");
     aus.push_str(ARENA_LAUFZEIT);
     aus.push_str("#endif\n");
-    aus.push_str("\n/* -- Lock primitives: the emitter declares them, the runtime defines them.\n");
-    aus.push_str(" *\n * WHY HERE. A lock is a runtime object (a mutex on hosted POSIX, the ticket\n");
-    aus.push_str(" * lock of NICHTINTERFERENZ.md section 10 on bare metal), never program\n");
-    aus.push_str(" * text. The name on each side is the contract between them, checked by\n");
-    aus.push_str(" * `cc`: a misspelt name is an undefined reference, not a silent default.\n");
-    aus.push_str(" *\n * THE STORAGE IS HERE AND THE OPERATIONS ARE THE PROGRAM'S. A\n");
-    aus.push_str(" * `pthread_mutex_t` is the C library's type, so the blob below is words and\n");
-    aus.push_str(" * the binding asserts that its own struct fits (`GABBRO_OS_SPERRE_WORTE`).\n");
-    aus.push_str(" * It is initialised in `main`, before any root runs -- a static initialiser\n");
-    aus.push_str(" * would have to name the library's macro, which is the thing that moved.\n */\n");
     let mut sortiert: Vec<&Sperre> = sperren.iter().collect();
     sortiert.sort_by(|a, b| a.name.cmp(&b.name));
+    if !sortiert.is_empty() {
+        aus.push_str(SPERRE_TICKET);
+    }
     for s in &sortiert {
         let n = &s.name;
         aus.push_str(&format!(
-            "static uint64_t sperre_{n}[GABBRO_OS_SPERRE_WORTE];\n\n\
-             void {n}_nimm(void)\n{{\n    gabbro_os_sperre_nimm((uint64_t)(uintptr_t)sperre_{n});\n}}\n\n\
-             void {n}_gib(void)\n{{\n    gabbro_os_sperre_gib((uint64_t)(uintptr_t)sperre_{n});\n}}\n\n"
+            "static gabbro_ticket sperre_{n};\n\n\
+             void {n}_nimm(void)\n{{\n    gabbro_ticket_nimm(&sperre_{n});\n}}\n\n\
+             void {n}_gib(void)\n{{\n    gabbro_ticket_gib(&sperre_{n});\n}}\n\n"
         ));
         if s.geteilt {
             // **The shared pair is the same object taken the same way**, which is what
             // the emitter asks for today: `L_nimm_geteilt` is a second NAME and not a
-            // second primitive. A binding row that told them apart would describe a
-            // reader/writer lock nothing calls (`laufzeit/bindung.h` says why).
+            // second primitive.
             aus.push_str(&format!(
-                "void {n}_nimm_geteilt(void)\n{{\n    gabbro_os_sperre_nimm((uint64_t)(uintptr_t)sperre_{n});\n}}\n\n\
-                 void {n}_gib_geteilt(void)\n{{\n    gabbro_os_sperre_gib((uint64_t)(uintptr_t)sperre_{n});\n}}\n\n"
+                "void {n}_nimm_geteilt(void)\n{{\n    gabbro_ticket_nimm(&sperre_{n});\n}}\n\n\
+                 void {n}_gib_geteilt(void)\n{{\n    gabbro_ticket_gib(&sperre_{n});\n}}\n\n"
             ));
         }
     }
@@ -390,15 +425,6 @@ pub fn erzeuge(
     aus.push_str("\n/* -- main: start exactly the roots, join them. ---------------------------- */\n\nint main(void)\n{\n");
     if !wurzeln.is_empty() {
         aus.push_str("    uint32_t rc;\n");
-    }
-    if !sortiert.is_empty() {
-        aus.push_str("\n    /* -- The unit's locks, initialised before the first root runs. */\n");
-        for s in &sortiert {
-            aus.push_str(&format!(
-                "    gabbro_os_sperre_init((uint64_t)(uintptr_t)sperre_{});\n",
-                s.name
-            ));
-        }
     }
     arenen_reservieren(&mut aus);
     aus.push('\n');
@@ -892,7 +918,7 @@ mod treiber_tests {
             // And the positive half: a green over a file that called nothing would say
             // nothing. The bound names ARE there.
             for name in [
-                "gabbro_os_sperre_init", "gabbro_os_sperre_nimm", "gabbro_os_sperre_gib",
+                "gabbro_os_nachgeben", "gabbro_ticket_nimm", "gabbro_ticket_gib",
                 "gabbro_os_faden_start", "gabbro_os_faden_warte", "gabbro_os_melden",
             ] {
                 assert!(code.contains(name), "the {welcher} driver calls `{name}`");
@@ -900,9 +926,10 @@ mod treiber_tests {
         }
     }
 
-    /// **Every lock is initialised before the first root starts.** The blob is words until
-    /// somebody makes it a mutex, and a root that took an uninitialised one would be a race
-    /// the whole lock discipline rests on not having.
+    /// **Every lock is FREE before the first root starts, and needs no call for it** (C-free
+    /// lane, 2026-09-30): the ticket lock is a zero `static` (`naechste == jetzt == 0`, the
+    /// free state of `CTicket.lean`), so a root can never meet an uninitialised one -- the
+    /// race the old `pthread_mutex_init` in `main` existed to prevent cannot be written.
     #[test]
     fn jede_sperre_ist_vor_dem_ersten_start_gesetzt() {
         let (wurzeln, _) = beispiel();
@@ -913,11 +940,12 @@ mod treiber_tests {
         let c = erzeuge("zwei", &wurzeln, &sperren, None);
         let erster_start = c.find("gabbro_os_faden_start(").expect("the driver starts a root");
         for n in ["A", "B"] {
-            let init = c
-                .find(&format!("gabbro_os_sperre_init((uint64_t)(uintptr_t)sperre_{n})"))
-                .unwrap_or_else(|| panic!("lock {n} is initialised:\n{c}"));
-            assert!(init < erster_start, "lock {n} is initialised before the first start");
+            let decl = c
+                .find(&format!("static gabbro_ticket sperre_{n};"))
+                .unwrap_or_else(|| panic!("lock {n} is a zero static:\n{c}"));
+            assert!(decl < erster_start, "lock {n} stands before the first start");
         }
+        assert!(!c.contains("sperre_init"), "and nothing initialises it:\n{c}");
     }
 
     /// **A shared lock earns its shared pair, beside the exclusive one.**

@@ -88,7 +88,7 @@ assume os_bindung_abi
 -- a RECURSIVE mutex or a `pthread_create` that ran the body on the calling
 -- thread -- both of which type-check, link, and break race freedom in silence.
 assume os_bindung_faden
-    "`gabbro_os_sperre_nimm`/`_gib` are mutual exclusion over the blob they are given -- at most one thread holds it and a release is visible to the next holder; `gabbro_os_faden_start` runs its root ONCE on a thread of its own and answers non-zero if it did not start; `gabbro_os_faden_warte` returns only after that root's last step."
+    "`gabbro_os_faden_start` runs its root ONCE on a thread of its own and answers non-zero if it did not start; `gabbro_os_faden_warte` returns only after that root's last step."
     falsifier sonde_os_faden;
 
 -- **The three promises the run-time `start` rests on, and their ORDER is the
@@ -112,7 +112,7 @@ assume os_bindung_klon
 -- program reading another run's bytes, with every other line of this file
 -- unchanged.*
 assume os_bindung_null
-    "The bytes `gabbro_os_reserve` answers, and every byte `gabbro_os_commit` makes writable, read as zero until the program writes them; a range `gabbro_os_leeren` answered 0 for stays mapped and writable and reads as zero until the program writes it again."
+    "The bytes `gabbro_os_reserve` answers, and every byte `gabbro_os_commit` makes writable, read as zero until the program writes them; a page range `gabbro_os_seiten_zurueck` answered 0 for stays mapped and writable and reads as zero until the program writes it again."
     falsifier sonde_os_null;
 
 -- -- the system calls this binding makes, as GABBRO gates (C-free lane, 2026-09-30) ----
@@ -373,35 +373,64 @@ pub fn gabbro_os_seitengroesse() -> u64
     return 4096;
 }
 
--- `leeren` is the way back (M-ALLTAG C): the bytes at `addr` read as zero
--- afterwards and the whole pages inside them went back to the system; answers
--- 0 when it kept that promise. The range stays mapped and writable
--- (`os_bindung_null` names the promise). Only a unit that writes
--- `reset X at i count n;` gains from it; a unit that does not bind it gets the
--- same zeroes from the emitted loop, without the page return.
-extern fn gabbro_os_leeren(addr : u64, bytes : u64) -> u32
-    effects { pure } costs <= 100000 ops;
+-- The page return (M-ALLTAG C; in Gabbro since 2026-09-30, C-free lane). The
+-- emitted helper of `reset X at i count n;` clears the edges of the range itself
+-- and hands over only the WHOLE PAGES inside it, as a region -- the helper, not
+-- this binding, decides where a page begins (template `region.leeren`). The
+-- pages read as zero afterwards (`MADV_DONTNEED` on private anonymous memory);
+-- an answer other than 0 makes the helper clear them by hand.
+assume linux_os_madvise_vertrag
+    "The Linux x86_64 `madvise` (number 28) with advice 4 (MADV_DONTNEED) over whole pages of private anonymous memory of the process releases them, keeps them mapped and writable, and they read as zero until written again; it answers 0 or -errno from the listed table and destroys only rcx and r11."
+    falsifier sonde_os_madvise;
+
+syscall linux_os_madvise(addr : ptr<normal, rw> u8, len : u64, advice : u64) -> u64 or LinuxSpeicherFehler
+    abi linux arch x86_64 number 28
+    regs in { rdi = addr, rsi = len, rdx = advice }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EPERM => Perm, EAGAIN => Again, ENOMEM => Nomem, EACCES => Acces, EINVAL => Inval, EOVERFLOW => Overflow }
+    requires len <= lenof(addr)
+    effects { writes addr }
+    costs <= 100000 ops
+    assume linux_os_madvise_vertrag falsifier sonde_os_madvise;
+
+pub fn gabbro_os_seiten_zurueck(stelle : ptr<normal, rw> u8, bytes : u64) -> u32
+    requires bytes <= lenof(stelle)
+    effects { writes stelle }
+    costs <= 100016 ops
+{
+    let x = linux_os_madvise(stelle, bytes, 4) else (e) { return 1; }
+    return 0;
+}
 
 -- -- the generated driver's locks ---------------------------------------------
 --
--- One blob per `lock`, owned by `<unit>.treiber.c` and passed as a number. The
--- driver takes and releases; the binding decides with WHAT, and fail-stops
--- itself if the primitive refuses -- there is no `else` at a lock the driver
--- must hold, and the words are on this side anyway.
---
--- **The `costs` is the primitive's own work and NOT the wait.** `held <= N ops`
--- is the Gabbro clause that bounds a critical section, and waiting bounds are
--- NOT CLAIMED (`grammatik/Grammatik/Zielsatz/Spec.lean`, the header's list). A
--- number here that pretended to cover contention would be the one kind of cost
--- clause this language refuses to write.
-extern fn gabbro_os_sperre_init(s : u64)
-    effects { pure } costs <= 4096 ops;
+-- Since 2026-09-30 (C-free lane) a lock is the generated driver's ticket lock
+-- (template `sperre.ticket`, proved in `CTicket.lean`) and no call of this
+-- binding at all -- except the hand-over in its spin: a waiter gives its core
+-- away every 64 passes, because with more threads than cores the ticket served
+-- next may belong to a thread that is not running. The yield changes no word of
+-- the lock and no program memory.
+assume linux_os_sched_yield_vertrag
+    "The Linux x86_64 `sched_yield` (number 24) may give the calling thread's core to another runnable thread, changes no memory of the process, answers 0, and destroys only rcx and r11."
+    falsifier sonde_os_sched_yield;
 
-extern fn gabbro_os_sperre_nimm(s : u64)
-    effects { pure } costs <= 4096 ops;
+syscall linux_os_sched_yield() -> u64
+    abi linux arch x86_64 number 24
+    regs in { }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 64 ops
+    assume linux_os_sched_yield_vertrag falsifier sonde_os_sched_yield;
 
-extern fn gabbro_os_sperre_gib(s : u64)
-    effects { pure } costs <= 4096 ops;
+pub fn gabbro_os_nachgeben()
+    effects { pure }
+    costs <= 80 ops
+{
+    let r = linux_os_sched_yield();
+}
 
 -- -- the generated driver's threads -------------------------------------------
 --

@@ -4763,3 +4763,28 @@ harness), and the binding's storage and report calls are Gabbro (`bibliothek/lin
 premise or conclusion moves). Measured: `pruefe-os-bindung.sh` GREEN and all 8 harness gifts
 caught; `miss-arena-decke.sh` GREEN (10 MiB and 32 GiB ceilings, same binary); `pruefe-osfrei.py`
 0 tokens (3 before, the Spec's own). Hosted C0 1174 -> 818 lines.
+
+## 65. Hosted locks and the page return without C: `sperre.ticket`, `region.leeren` (C-free lane, 2026-09-30)
+
+**Locks.** The hosted driver writes the ticket lock `CTicket.lean` proves (SATZKARTE §32) in place
+of the binding's `pthread_mutex_t`: `treiber.rs::SPERRE_TICKET`, the four instructions word for word,
+a zero `static` as the free lock (no initialiser any more), and every 64 spins the program's yield
+(`gabbro_os_nachgeben`, a Gabbro function over a `pure` gate) -- a stutter of `dreht`. Register row
+`sperre.ticket` cites `ticket_ausschluss`, `erreichbarT_exklusiv`, `ticket_fifo`,
+`ticketLP_sperrAbstrakt`, `schrittT_proj`, `ticket_frame`; the 2^32-ticket premise is bound to the
+thread count. The hand drivers `laufzeit/start.c`, `start_pool.c` (pthread-era originals of the
+generated driver) are deleted.
+
+**The page return.** `reset X at i count n;`'s emitted helper computes the whole pages itself and
+hands them to the program's `gabbro_os_seiten_zurueck(stelle, bytes)` (Gabbro, over a `madvise`
+gate) as a region:
+
+| Lean name | File | What it says |
+|---|---|---|
+| `leerenVon`, `leerenBis` | SchablonenArena §2 | the helper's offsets of the whole pages |
+| **`leeren_teilung`** | SchablonenArena §2 | edges and pages cover the range exactly, the pages fit the rest (the binding's `requires`), both ends on a page |
+| `leeren_zeuge`, `leeren_ohne_seite` | SchablonenArena §2 | WITNESS (10000 bytes from 5000); a range inside one page has no whole page |
+
+Measured: `pruefe-seiten-zurueck.sh` GREEN (RSS 2504 -> 1608 KiB bound, stays unbound, poison
+caught -- the numbers of the C binding it replaces); `pruefe-os-bindung.sh` GREEN with the ticket
+lock, gifts 1-8 caught. Hosted C0 818 -> 687 lines.

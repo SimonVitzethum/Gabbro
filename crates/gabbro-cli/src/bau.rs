@@ -895,7 +895,7 @@ fn modulregel(
 /// |---|---|---|
 /// | an `arena` | `gabbro_os_reserve` (answers a region), `gabbro_os_commit` (a region's page and a length), `gabbro_os_seitengroesse` | the arena runtime the generated driver writes (template `arena.dyn`; `laufzeit/arena_dyn.c` until 2026-09-30), at load and at every `grow` |
 /// | a `concurrent` root | `gabbro_os_faden_start`, `_warte` | the generated driver's `main` |
-/// | a `concurrent` root AND a `lock` | `gabbro_os_sperre_init`, `_nimm`, `_gib` | the same driver, at start and at every acquire |
+/// | a `concurrent` root AND a `lock` | `gabbro_os_nachgeben` | the driver's ticket lock (template `sperre.ticket`), every 64 spins of a waiter |
 /// | any of those | `gabbro_os_melden`, `gabbro_os_ende` | the fail-stops of both files |
 ///
 /// **Why the lock row hangs off the ROOTS and not off the lock**, and it is the one shape
@@ -972,15 +972,11 @@ fn bindungsregel_gehostet(
         }
     }
     if treiber && !sperren.is_empty() {
-        let weil = "this unit declares a `lock` and a `concurrent` set, so its generated \
-                    driver defines the primitive the emitter only declares";
-        for name in [
-            "gabbro_os_sperre_init",
-            "gabbro_os_sperre_nimm",
-            "gabbro_os_sperre_gib",
-        ] {
-            gefordert.push(BindungsZeile { name, parameter: 1, liefert: false, weil });
-        }
+        // Since 2026-09-30 (C-free lane) the lock is the generated ticket lock (template
+        // `sperre.ticket`); what it asks of the program is only the hand-over in its spin.
+        let weil = "this unit declares a `lock` and a `concurrent` set, and the generated \
+                    driver's ticket lock hands its core over while it waits";
+        gefordert.push(BindungsZeile { name: "gabbro_os_nachgeben", parameter: 0, liefert: false, weil });
     }
     if treiber {
         let weil = "this unit declares a `concurrent` set, which the generated driver runs as \

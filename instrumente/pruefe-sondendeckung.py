@@ -222,7 +222,10 @@ MARK_WAISEN = 1
 # (one assumption per gate, each with its own probe name; `N024` refuses one probe for two).
 # Measured with the guardian's own `sammle`/`sondennamen` (it still aborts in its speech
 # test, so it does not print the number itself): 28 on `9b537fbb`, 32 here.
-MARK_AUSSEN = 32
+# **32 -> 33 on 2026-09-30** (C-free lane, hosted locks): `sonde_os_sched_yield`, the gate
+# of the ticket lock's hand-over in `bibliothek/linux/linux.gab`.
+# **33 -> 34 on 2026-09-30** (C-free lane, the page return): `sonde_os_madvise`.
+MARK_AUSSEN = 34
 
 # **Construction sites of `Klasse::Falsifizierbar` in `manifest.rs`.** Five on 2026-09-04: the
 # two GENERATED entries, the conversion out of the AST, and the two display arms. Only a

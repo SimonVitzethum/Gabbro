@@ -582,7 +582,12 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // **14 -> 15 on 2026-09-30 (C-free lane, the hosted arena runtime):** `arena.dyn`, the
     // runtime the generated driver writes in place of `laufzeit/arena_dyn.c`, entered and proved
     // in one commit (`SchablonenArena.lean`) -- never carried unproved.
-    assert_eq!(bewiesen(), 15);
+    // **15 -> 16 on 2026-09-30 (C-free lane, hosted locks):** `sperre.ticket`, the ticket lock
+    // the hosted driver writes in place of the binding's pthread mutex -- the C shape
+    // `CTicket.lean` proves, entered with its proof cited in one commit.
+    // **16 -> 17 on 2026-09-30 (C-free lane, the page return):** `region.leeren`, the helper's
+    // page arithmetic, entered and proved in one commit (`SchablonenArena.lean` §2).
+    assert_eq!(bewiesen(), 17);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

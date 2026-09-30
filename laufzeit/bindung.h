@@ -122,45 +122,18 @@ uint8_t *gabbro_os_reserve(uint64_t bytes);
 uint32_t gabbro_os_commit(uint8_t *stelle, uint64_t bytes);
 uint64_t gabbro_os_seitengroesse(void);
 
-/* `leeren` is the way back (M-ALLTAG C, `reset X at i count n;`): afterwards
- * the `bytes` at `addr` READ AS ZERO, and the whole pages inside the range may
- * have gone back to the system. It answers 0 when it kept that promise. The
- * range stays mapped and writable. NOTHING in `laufzeit/` calls it: the emitted
- * unit declares it WEAK, so a program that writes no `reset ... at` binds
- * nothing, and one that binds nothing still gets its zeroes from the emitted
- * loop (without the page return). */
-uint32_t gabbro_os_leeren(uint64_t addr, uint64_t bytes);
+/* The page return of `reset X at i count n;` (M-ALLTAG C) is the emitted helper's
+ * business since 2026-09-30 (template `region.leeren`): it hands the binding's GABBRO
+ * `gabbro_os_seiten_zurueck` the whole pages inside the range as a region, and declares
+ * it weak itself. NOTHING in `laufzeit/` calls it. */
 
 /* -- the locks --------------------------------------------------------------
  *
- * One blob per `lock`, owned by the generated driver, initialised once before
- * any root runs, and passed as a number to every operation. A
- * `pthread_mutex_t` is the C library's TYPE and its size is the library's
- * business, so it cannot stand in this file: what stands here is a blob of
- * words wide enough for one, and the program's body asserts that its own struct
- * fits (`_Static_assert`, in `bibliothek/linux/linux.c`, against the library it
- * is being built against). *A blob too small is a loud build error and never a
- * silent overrun* -- the same arrangement `laufzeit/kmodul/bindung.h` has for a
- * `raw_spinlock_t`.
- *
- * WHY THERE IS NO SEPARATE `geteilt` PAIR, and why that is not a gap. A shared
- * (`geteilt`) lock is the same object taken the same way today: the emitter
- * declares `L_nimm_geteilt`/`L_gib_geteilt` and the driver defines them over
- * this one pair. A binding that told the two apart would be describing a
- * reader/writer primitive the emitter does not yet ask for, and a row nobody
- * calls is ceremony (`W7`). The module binding makes the same choice for the
- * same reason; the MASKED pair is separate there because `masks irqs` is a
- * promise about the environment, and hosted POSIX has no interrupts to mask.
- *
- * AN ACQUIRE THAT FAILS DOES NOT RETURN A CODE, and that is deliberate: the
- * driver has no `else` to take at a lock it must hold, so the fail-stop belongs
- * on the side that has words. `bibliothek/linux/linux.c` reports and ends.
+ * Since 2026-09-30 (C-free lane) a lock is the generated driver's ticket lock
+ * (template `sperre.ticket`, `CTicket.lean`); the one call it makes out is the
+ * program's hand-over in the spin, a Gabbro function in `linux.gab`.
  */
-#define GABBRO_OS_SPERRE_WORTE 16
-
-void gabbro_os_sperre_init(uint64_t s);
-void gabbro_os_sperre_nimm(uint64_t s);
-void gabbro_os_sperre_gib(uint64_t s);
+void gabbro_os_nachgeben(void);
 
 /* -- the declared starts as threads -----------------------------------------
  *

@@ -43,13 +43,6 @@
 #include <pthread.h>
 #include <sys/mman.h>
 
-/* The page return of `gabbro_os_leeren`. `madvise` is glibc's, declared under a feature
- * macro a driver that includes <stdio.h> before this file has already ruled out; the
- * binding names what it calls itself rather than depend on the includer's order. */
-extern int madvise(void *addr, size_t length, int advice);
-#ifndef MADV_DONTNEED
-#define MADV_DONTNEED 4 /* the Linux value */
-#endif
 
 /* The interface, so that every definition below is held against the
  * declaration the runtime calls -- and, through the emitted unit's prototypes,
@@ -61,112 +54,15 @@ extern int madvise(void *addr, size_t length, int advice);
  * `gabbro_os_melden`, `gabbro_os_ende`, `gabbro_os_reserve`, `gabbro_os_commit` and
  * `gabbro_os_seitengroesse` are GABBRO functions in `linux.gab` now, over raw system-call
  * gates (`mmap`, `mprotect`, `write`, `exit_group`) -- no glibc, and checked like any user
- * code. What stays below is what still waits for its Gabbro form: the page return, the
- * locks and the threads.
+ * code, and so are the lock's yield and the page return since the same day. What stays
+ * below is what still waits for its Gabbro form: the threads.
  */
 
-uint32_t gabbro_os_leeren(uint64_t addr, uint64_t bytes)
-{
-    long s = sysconf(_SC_PAGESIZE);
-    uint64_t seite, ganz_von, ganz_bis;
-    unsigned char *p = (unsigned char *)(uintptr_t)addr;
-
-    if (addr == 0 || s <= 0) {
-        return 1;
-    }
-    seite = (uint64_t)s;
-    ganz_von = (addr + seite - 1) / seite * seite;
-    ganz_bis = (addr + bytes) / seite * seite;
-    if (ganz_von >= ganz_bis) {
-        /* No whole page inside: nothing to give back, only zeroes to write. */
-        memset(p, 0, (size_t)bytes);
-        return 0;
-    }
-    /* The ragged ends are cleared by hand; MADV_DONTNEED drops the whole pages
-     * between them, and the next touch of an anonymous private page reads zero. */
-    memset(p, 0, (size_t)(ganz_von - addr));
-    memset((void *)(uintptr_t)ganz_bis, 0, (size_t)(addr + bytes - ganz_bis));
-    if (madvise((void *)(uintptr_t)ganz_von, (size_t)(ganz_bis - ganz_von),
-                MADV_DONTNEED) != 0) {
-        /* The pages stay; clear them by hand so the promise still holds. */
-        memset((void *)(uintptr_t)ganz_von, 0, (size_t)(ganz_bis - ganz_von));
-    }
-    return 0;
-}
 
 
-/* -- the generated driver's locks ------------------------------------------ */
-/*
- * WHY THE C LIBRARY'S TYPE LIVES ON THIS SIDE. A `pthread_mutex_t` is as much
- * the library's as `pthread_mutex_lock` is, and its size is the library's
- * business -- it differs between glibc and musl and between word sizes. So the
- * driver hands over a blob of words and this file lays the library's own type
- * into it, with a `_Static_assert` held against the very library the program is
- * being built against. *A blob too small is a loud build error and never a
- * silent overrun.*
- *
- * DEFAULT ATTRIBUTES, AND THAT IS THE POINT. A NORMAL mutex, not a recursive
- * one: a recursive mutex would let one thread take a Gabbro `lock` twice and
- * pass, which is exactly the rank discipline the checker enforces -- the
- * assumption `os_bindung_faden` of `linux.gab` is where that promise is named.
- */
-_Static_assert(sizeof(pthread_mutex_t)
-                   <= GABBRO_OS_SPERRE_WORTE * sizeof(uint64_t),
-               "this C library's pthread_mutex_t does not fit the runtime's lock blob "
-               "-- raise GABBRO_OS_SPERRE_WORTE in laufzeit/bindung.h");
-_Static_assert(_Alignof(pthread_mutex_t) <= _Alignof(uint64_t),
-               "this C library's pthread_mutex_t wants more alignment than the runtime's "
-               "lock blob has");
-
-static pthread_mutex_t *sperre(uint64_t s)
-{
-    return (pthread_mutex_t *)(uintptr_t)s;
-}
-
-/*
- * **A lock operation that fails ends the program**, and the three of them do it
- * here rather than answering a code. The driver has no `else` at a lock it must
- * hold: a `L_nimm` that returned without the lock would run a critical section
- * unprotected, which is the one outcome worse than stopping. The words are on
- * this side anyway.
- */
-static void sperre_stop(const char *was, int rc)
-{
-    fprintf(stderr, "gabbro: %s: %d\n", was, rc);
-    /* `_exit` and not `gabbro_os_ende`: that one is GABBRO now (`linux.gab`), and this C rest
-     * stays a translation unit of its own until it is gone (C-free lane, 2026-09-30). */
-    fflush(NULL);
-    _exit((int)GABBRO_OS_ENDE_ABBRUCH);
-}
-
-void gabbro_os_sperre_init(uint64_t s)
-{
-    int rc;
-
-    memset(sperre(s), 0, sizeof(pthread_mutex_t));
-    rc = pthread_mutex_init(sperre(s), NULL);
-    if (rc != 0) {
-        sperre_stop("lock init", rc);
-    }
-}
-
-void gabbro_os_sperre_nimm(uint64_t s)
-{
-    int rc = pthread_mutex_lock(sperre(s));
-
-    if (rc != 0) {
-        sperre_stop("lock acquire", rc);
-    }
-}
-
-void gabbro_os_sperre_gib(uint64_t s)
-{
-    int rc = pthread_mutex_unlock(sperre(s));
-
-    if (rc != 0) {
-        sperre_stop("lock release", rc);
-    }
-}
+/* -- the generated driver's locks: GONE (C-free lane, 2026-09-30) ------------ */
+/* A lock is the generated driver's ticket lock now (template `sperre.ticket`); its one call
+ * out, the yield, is Gabbro (`gabbro_os_nachgeben` in `linux.gab`). */
 
 /* -- the generated driver's threads ---------------------------------------- */
 /*

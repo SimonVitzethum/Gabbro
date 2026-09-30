@@ -282,9 +282,12 @@ generated driver, lock through the chain). Reviewers from 321.
   - [x] The hosted arena runtime: `laufzeit/arena_dyn.c` gone, the generated driver writes it
     (template `arena.dyn`, proved), and the binding's storage and report calls are Gabbro
     (`linux.gab`). Hosted C0 1174 -> 818 lines, 7 -> 5 files (`zaehle-c.py`, 2026-09-30).
-  - [ ] Hosted locks without pthread (the ticket lock of `CTicket.lean` in the driver, a yield
-    gate in the binding), threads without pthread (the `child` lowering as a proved template),
-    the page return (`gabbro_os_leeren`) in Gabbro; then `bindung.h`, `faden.c`, `linux.c` go.
+  - [x] Hosted locks without pthread: the ticket lock of `CTicket.lean` in the generated driver
+    (template `sperre.ticket`), its yield a Gabbro gate; the hand drivers `laufzeit/start.c`,
+    `start_pool.c` deleted. The page return in Gabbro (template `region.leeren`, the helper
+    computes the pages, `madvise` is a gate). Hosted C0 818 -> 687 lines (`zaehle-c.py`).
+  - [ ] Threads without pthread (the `child`/`stack` lowering as a proved template, `C185`);
+    then `bindung.h`, `faden.c`, `linux.c` go; the os-probe's own `melde.c`.
   - [ ] The kernel-module target (C2) and bare metal (C3).
 
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics

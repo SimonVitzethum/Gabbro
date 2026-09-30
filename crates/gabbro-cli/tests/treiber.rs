@@ -6,9 +6,9 @@
 //! thread per declared start, join all, and the lock primitives. What is
 //! held here:
 //!
-//! * the hand driver `laufzeit/start.c` still holds its pin (the probe lane
-//!   202 described -- source set against declared-start set);
-//! * the GENERATED driver holds the same pin, over the same sources;
+//! * the GENERATED driver holds the pin (the probe lane 202 described -- source set
+//!   against declared-start set); the hand driver `laufzeit/start.c` it was once held
+//!   beside is gone since 2026-09-30 (C-free lane);
 //!
 //! **Since TODO section 0e K8 neither driver names a POSIX function**: both
 //! call `gabbro_os_faden_start` with the root's own name, so ONE scanner reads
@@ -208,24 +208,6 @@ fn behauptung_haelt(zeile: &str) -> bool {
     a == b && teile[2] == "privA=7" && teile[3] == "privA=7" && teile[4] == "privB=5"
 }
 
-/// **The hand driver's pin still holds.** This is lane 202's mechanical pin,
-/// kept green: the `concurrent { ... }` set of 124 against the
-/// `pthread_create` set of `laufzeit/start.c`, counted by `N_WURZELN`.
-#[test]
-fn pin_haelt_fuer_handtreiber_start_c() {
-    let quelle = std::fs::read_to_string(wurzel().join("beispiele/124-two-threads-private.gab"))
-        .expect("124 readable");
-    let treiber = std::fs::read_to_string(wurzel().join("laufzeit/start.c"))
-        .expect("start.c readable");
-    let menge = concurrent_kurz("124-two-threads-private.gab", &quelle);
-    assert_eq!(
-        menge.iter().map(|(n, k)| (n.as_str(), *k)).collect::<Vec<_>>(),
-        [("hauptA", 1), ("hauptB", 1)],
-        "the source declares exactly its two roots, once each"
-    );
-    assert_eq!(pin_pruefe(&menge, &treiber), Ok(2), "the hand pin holds");
-}
-
 /// **The two manifest lines every hosted unit carries since K8's second slice**, and the
 /// `-I` its bodies need: the driver calls `gabbro_os_faden_start` and friends, the program
 /// defines them, and `bibliothek/linux/` is the pair a program takes off the shelf.
@@ -331,7 +313,7 @@ fn cc_und_lauf(treiber_c_pfad: &std::path::Path, einheits_dir: &std::path::Path,
     // no shell single quotes (the documented build line quotes for the
     // shell; `Command` does not need it).
     // **The binding is linked beside the driver** (K8's second slice): the driver calls
-    // `gabbro_os_faden_start`, `gabbro_os_sperre_nimm` and `gabbro_os_melden` and defines
+    // `gabbro_os_faden_start`, `gabbro_os_nachgeben` and `gabbro_os_melden` and defines
     // none of them. It is linked into the HAND run too, where nothing calls it -- an unused
     // object costs a link and keeps one recipe instead of two (`W7`).
     let cc = Command::new("cc")
@@ -411,30 +393,11 @@ fn lauf_124_durch_erzeugten_treiber() {
         );
     }
 
-    // **The hand file over the SAME emitted C answers the same shape** -- and
-    // since K8 it carries the IDENTICAL observation text, appended at its own
-    // `NACHLAUF` marker. Before that the block stood inside `laufzeit/start.c`;
-    // what a run prints is the test's business and printing is an
-    // operating-system call, so it moved here and the two artefacts now differ
-    // in the runtime half alone.
-    let hand = std::fs::read_to_string(wurzel().join("laufzeit/start.c"))
-        .expect("the hand driver is on disk");
-    assert_eq!(hand.matches(marke).count(), 1, "the hand driver carries the marker once");
-    let hand_c = arbeit.join("lauf-hand.c");
-    std::fs::write(
-        &hand_c,
-        format!(
-            "#include <stdio.h>\n{}",
-            hand.replace(marke, &format!("{marke}\n{BEOBACHTUNG_124}"))
-        ),
-    )
-    .expect("hand driver writable");
-    let (stdout, code) = cc_und_lauf(&hand_c, &out, "treiber124.c", "lauf-hand");
-    assert_eq!(code, 0, "the hand run exits 0");
-    assert!(
-        behauptung_haelt(stdout.trim()),
-        "hand and generated runs behave alike:\n{stdout}"
-    );
+    // **The hand driver `laufzeit/start.c` is gone** (C-free lane, 2026-09-30): it was the
+    // pthread-era original this generated driver was held against, and its locks were the
+    // binding's mutex. The generated driver now carries the proved ticket lock (template
+    // `sperre.ticket`), and the run above -- five times, invariant and privates exact -- is
+    // the whole of what the comparison ever measured about the RUNTIME half.
 }
 
 /// A pool-safe routine declared twice (lane 245): the checker accepts it, and

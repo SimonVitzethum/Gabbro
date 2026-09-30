@@ -15178,30 +15178,57 @@ bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n);\n\
 void gabbro_arena_release(gabbro_arena_desc *d, uint32_t i);\n\
 #endif\n";
 
-/// **The helper behind `reset X at i count n;`** (M-ALLTAG C).
+/// **The helper behind `reset X at i count n;`** (M-ALLTAG C; the page arithmetic moved here
+/// from the binding on 2026-09-30, C-free lane -- template `region.leeren`).
 ///
-/// The zero is the guarantee and the byte loop is what carries it; the page
-/// return is an optimisation that only the PROGRAM's binding can make
-/// (`gabbro_os_leeren`, declared WEAK so a unit that binds nothing still gets
-/// its zeroes -- from the loop, without the page return). *A binding that
-/// answers 0 has promised the range reads as zero afterwards* (assumption
-/// `os_bindung_null` in `bibliothek/linux/linux.gab`); any other answer falls
-/// back to the loop.
+/// The zero is the guarantee and the byte loops carry it; the page return is an optimisation
+/// only the PROGRAM's binding can make, and both of its calls are declared WEAK, so a unit that
+/// binds nothing still gets its zeroes. What the binding is handed is a REGION: the whole pages
+/// inside the range, as a pointer and a length -- the helper, not the binding, decides where a
+/// page begins (`gabbro_os_seiten_zurueck(stelle, bytes)`, a Gabbro function under `requires
+/// bytes <= lenof(stelle)`). **The arithmetic is proved** (`Grammatik/SchablonenArena.lean` §2,
+/// `leeren_teilung`): the edge loops and the returned pages cover the range exactly, the pages
+/// lie inside it and start on a page. *A binding that answers 0 has promised the pages read as
+/// zero afterwards* (the assumption of its gate); any other answer clears them by hand.
 const REGION_LEEREN: &str = "\
-/* Range give-back (`reset X at i count n;`): the bytes read as zero afterwards; whole\n\
- * pages go back to the system when the program binds `gabbro_os_leeren`. */\n\
-extern uint32_t gabbro_os_leeren(uint64_t addr, uint64_t bytes) __attribute__((weak));\n\
+/* Range give-back (`reset X at i count n;`, template `region.leeren`): the bytes read as zero\n\
+ * afterwards; the whole pages inside go back to the system when the program binds\n\
+ * `gabbro_os_seiten_zurueck` and `gabbro_os_seitengroesse`. */\n\
+extern uint64_t gabbro_os_seitengroesse(void) __attribute__((weak));\n\
+extern uint32_t gabbro_os_seiten_zurueck(uint8_t *stelle, uint64_t bytes) __attribute__((weak));\n\
 static void gabbro_region_leeren(void *p, uint64_t bytes) __attribute__((unused));\n\
 #pragma GCC diagnostic push\n\
 #pragma GCC diagnostic ignored \"-Waddress\"\n\
 static void gabbro_region_leeren(void *p, uint64_t bytes) {\n\
     unsigned char *b = (unsigned char *)p;\n\
-    uint64_t k;\n\
+    uint64_t k, seite, a, von, bis;\n\
     if (bytes == 0u) {\n\
         return;\n\
     }\n\
-    if (gabbro_os_leeren != 0 && gabbro_os_leeren((uint64_t)(uintptr_t)p, bytes) == 0u) {\n\
-        return;\n\
+    if (gabbro_os_seitengroesse != 0 && gabbro_os_seiten_zurueck != 0) {\n\
+        seite = gabbro_os_seitengroesse();\n\
+        a = (uint64_t)(uintptr_t)p;\n\
+        if (seite != 0u && seite <= 4294967296u && bytes <= UINT64_MAX - seite\n\
+                && a <= UINT64_MAX - seite - bytes) {\n\
+            /* `leeren_teilung`: [0, von) and [bis, bytes) are the edges, [von, bis) whole pages. */\n\
+            von = (a + seite - 1u) / seite * seite - a;\n\
+            bis = (a + bytes) / seite * seite - a;\n\
+            if (von < bis) {\n\
+                for (k = 0u; k < von; k++) {\n\
+                    b[k] = 0u;\n\
+                }\n\
+                for (k = bis; k < bytes; k++) {\n\
+                    b[k] = 0u;\n\
+                }\n\
+                if (gabbro_os_seiten_zurueck(b + von, bis - von) == 0u) {\n\
+                    return;\n\
+                }\n\
+                for (k = von; k < bis; k++) {\n\
+                    b[k] = 0u;\n\
+                }\n\
+                return;\n\
+            }\n\
+        }\n\
     }\n\
     for (k = 0u; k < bytes; k++) {\n\
         b[k] = 0u;\n\

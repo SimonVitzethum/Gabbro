@@ -234,7 +234,12 @@ while IFS= read -r q; do
         # helper declares it WEAK and, unbound, zeroes by hand. A weak undefined reference links (`ld`
         # resolves it to zero), so there is nothing for the target to supply: counted with the runtime's
         # own names, and only when the unit really has the helper.
-        if [ "$s" = "gabbro_os_leeren" ] && grep -q "gabbro_region_leeren" "$e/einheit.c"; then
+        # Since 2026-09-30 (C-free lane) the helper computes the pages itself and its two weak
+        # names are `gabbro_os_seitengroesse` and `gabbro_os_seiten_zurueck` (template
+        # `region.leeren`); `gabbro_os_leeren` is kept for a tree emitted before that.
+        if { [ "$s" = "gabbro_os_leeren" ] || [ "$s" = "gabbro_os_seiten_zurueck" ] \
+                || [ "$s" = "gabbro_os_seitengroesse" ]; } \
+                && grep -q "gabbro_region_leeren" "$e/einheit.c"; then
             n_kl_rt=$((n_kl_rt + 1)); continue
         fi
         if grep -qE "^[[:space:]]*(pub[[:space:]]+)?extern[[:space:]]+fn[[:space:]]+$s[[:space:]]*\(" "$q"; then
@@ -427,9 +432,7 @@ echo "  the shape at check time, N561 -- a unit listed here was emitted without 
 printf '%b\n' "$bindung_liste" | sed '/^$/d'
 echo "  HOSTED runtime files, each with its bare-metal counterpart:"
 echo "    laufzeit/faden.c       the program's binding      -> laufzeit/metall/kern.c (gabbro_faden_*)"
-echo "    laufzeit/start.c       the program's binding      -> <unit>.metall.c (gabbro build)"
-echo "    laufzeit/start_pool.c  the program's binding      -> <unit>.metall.c (gabbro build)"
-echo "    laufzeit/arena_dyn.c   the program's binding      -> laufzeit/metall/arena.c"
+echo "    <unit>.treiber.c arena runtime (template arena.dyn) -> laufzeit/metall/arena.c"
 echo "    <unit>.treiber.c       the program's binding      -> <unit>.metall.c (generated)"
 echo "  NONE of them names an OS function since TODO section 0e K8, and none issues a raw"
 echo "  system call: they call the names of laufzeit/bindung.h, which the PROGRAM defines"

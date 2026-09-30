@@ -5119,7 +5119,9 @@ pub const PHASEN: &[Satz] = &[
                   range), the statement is a store to the array (`writes X`), and \
                   afterwards the elements of the range read as zero.",
         vorbehalt: "The zero is the guarantee; the page return is the program's \
-                    binding (`gabbro_os_leeren`, weak): a unit that binds nothing \
+                    binding (`gabbro_os_seiten_zurueck` and `gabbro_os_seitengroesse`, \
+                    weak; since 2026-09-30 the helper hands over only the whole pages, \
+                    as a region -- template `region.leeren`): a unit that binds nothing \
                     still gets its zeroes from the emitted loop, and never the page \
                     return. `lean-g` refuses the statement by name (`LG005`): the \
                     exporter has no model of a released page. Tables and arenas are \

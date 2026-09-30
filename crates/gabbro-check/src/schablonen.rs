@@ -161,6 +161,8 @@ pub const RATSCHE: &[&str] = &[
     "tor.fehlbar",
     "tor.region",
     "arena.dyn",
+    "sperre.ticket",
+    "region.leeren",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -312,6 +314,65 @@ pub const SCHABLONEN: &[Schablone] = &[
         ],
         fundstelle: "grammatik/Grammatik/SchablonenArena.lean; crates/gabbro-cli/src/treiber.rs \
                      (`ARENA_LAUFZEIT`); bibliothek/linux/linux.gab; instrumente/pruefe-os-bindung.sh",
+    },
+    // **Entered 2026-09-30 by the C-free lane (hosted locks without pthread), PROVED**: the
+    // hosted driver writes the ticket lock `CTicket.lean` has proved since SATZKARTE §32 (and
+    // the bare-metal image has run since Opus agent I) in place of the binding's mutex.
+    Schablone {
+        name: "sperre.ticket",
+        haengt_an: &[],
+        konstrukt: "lock L … under a hosted `concurrent` set (`L_nimm`/`L_gib` in the \
+                    generated driver, `treiber.rs::SPERRE_TICKET`)",
+        pflicht: "The generated `L_nimm`/`L_gib` are the ticket lock over two 32-bit counters, \
+                  the four instructions of `CTicket.lean` word for word (`zieht`: a relaxed \
+                  `fetch_add`; `dreht`/`tritt`: the acquire spin; `gibt`: the release store). \
+                  **Machine-checked** (`Grammatik/CTicket.lean`): mutual exclusion on every \
+                  reachable state (`ticket_ausschluss`, `erreichbarT_exklusiv`), FIFO \
+                  (`ticket_fifo`), every step a `sperrAbstrakt` step (`ticketLP_sperrAbstrakt` \
+                  -- the clause `LaufzeitC.sperre`), a spin a stutter of the program \
+                  (`schrittT_proj`), and no program memory touched (`ticket_frame`). The one \
+                  addition, the program's yield every 64 spins, is a stutter too: it changes no \
+                  lock word and no program memory (the binding's `gabbro_os_nachgeben` is \
+                  `effects { pure }`). Findings named, not patched: the release checks nothing \
+                  (`gib_ohne_wache`), and the concrete lock reveals the arrival order \
+                  (`ticket_mehr_als_frei`). **NOT modelled:** 2^32 outstanding tickets on one \
+                  lock (the counters wrap).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "`L_gib` is called only by the holder of `L` (the release checks nothing)", durch: Some("the checker's lock discipline: `locks L { … }` is the only form that takes a lock, and the emitter pairs every `L_nimm` with its `L_gib` (`H006` and the lock rules of `geteilt.rs`)"), braeuchte: None },
+            Voraussetzung { was: "a zero `static` is the free lock (`naechste == jetzt`)", durch: Some("the template itself: `static gabbro_ticket sperre_L;` is zero-initialised by the C loader, the free state of `CTicket.lean`'s initial configuration"), braeuchte: None },
+            Voraussetzung { was: "the yield changes no program memory", durch: Some("the binding's declared contract: `gabbro_os_nachgeben` is `effects { pure }` over a gate with `effects { pure }` (`linux.gab`), checked like any user code; the kernel's side is the gate's assumption, premise (c)"), braeuchte: None },
+            Voraussetzung { was: "fewer than 2^32 tickets outstanding on one lock (the counters are compared equal, and wrap)", durch: Some("the thread count: a thread draws one ticket per `L_nimm` and spins until it is served, so the outstanding tickets never exceed the live threads -- the driver starts exactly its declared starts (`N_WURZELN`, `treiber.rs::erzeuge`, held by the pin probe), and a run-time `start` starts only declared, pool-checked roots (`N458`-`N462`); both are counts of declarations, far below 2^32"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/CTicket.lean; crates/gabbro-cli/src/treiber.rs \
+                     (`SPERRE_TICKET`); laufzeit/metall/metall.h (the same lock on bare metal)",
+    },
+    // **Entered 2026-09-30 by the C-free lane (the page return in Gabbro), PROVED**: the
+    // helper of `reset X at i count n;` computes the whole pages itself and hands them over as
+    // a region.
+    Schablone {
+        name: "region.leeren",
+        haengt_an: &["tor.region"],
+        konstrukt: "reset X at i count n (the emitted helper `gabbro_region_leeren`)",
+        pflicht: "The helper clears `bytes` from `p`: with a bound page size `s` it clears the \
+                  edges `[0, von)` and `[bis, bytes)` itself, hands the whole pages `[von, bis)` \
+                  to the program's `gabbro_os_seiten_zurueck(p + von, bis - von)`, and clears \
+                  them by hand when that answers other than 0; without a binding, or when no \
+                  whole page lies inside, it clears every byte. **Machine-checked** \
+                  (`Grammatik/SchablonenArena.lean` §2, `leeren_teilung`): the three pieces \
+                  cover the range exactly, the pages fit the rest of the range (`bis - von <= \
+                  bytes - von`, the binding's `requires`), and they start and end on a page; \
+                  witness `leeren_zeuge`, boundary `leeren_ohne_seite`. **NOT proved:** that the \
+                  kernel's page return reads as zero (the gate's assumption, premise (c)); and \
+                  the statement stays outside machine G (`LG005`, the Satz `region.leeren`).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "`p .. p + bytes` is the range of a static array the statement names", durch: Some("`N569` (a static array of known length) and `M103` at the end of the range; the emitter's trap `n <= len && i <= len - n` before the call"), braeuchte: None },
+            Voraussetzung { was: "the page is `0 < s <= 2^32` and `a + bytes + s` does not wrap", durch: Some("the helper's own test before any arithmetic; any other answer takes the byte loop"), braeuchte: None },
+            Voraussetzung { was: "the binding's answer 0 means the pages read as zero", durch: Some("the binding's declared contract (`linux.gab`: `gabbro_os_seiten_zurueck` over a gate with its assumption), user logic, premise (c); a unit that binds nothing gets the byte loop (both calls are weak)"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenArena.lean §2; crates/gabbro-check/src/emit.rs \
+                     (`REGION_LEEREN`); bibliothek/linux/linux.gab; instrumente/pruefe-seiten-zurueck.sh",
     },
     Schablone {
         name: "restrict.alleinzugriff",

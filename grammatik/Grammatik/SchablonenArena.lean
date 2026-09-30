@@ -161,6 +161,56 @@ theorem arena_zeuge :
    arena_commit_bereich 8 65536 8 1024 4096 (by decide) (by decide),
    arena_commit_monoton 8 8 1024 4096 1031 (by decide) (by decide)⟩
 
+/-! ## 2. `region.leeren` -- the page return of `reset X at i count n;`
+
+  The emitted helper (`emit.rs`, `REGION_LEEREN`) clears a range of `bytes` at address `a`: the
+  whole pages inside it go to the program's binding (`gabbro_os_seiten_zurueck(stelle, n)`, a
+  Gabbro function under `requires n <= lenof(stelle)`), the edges it clears itself, and a
+  refused page return is cleared by hand. The helper computes, over offsets from `a`,
+  `von = aufrunden a s - a` and `bis = abrunden (a + bytes) s - a`, and hands over `[von, bis)`
+  only when `von < bis`. `leeren_teilung` is what that needs: the three pieces cover the range
+  exactly, the handed pages lie inside it -- so `bis - von <= bytes - von`, the binding's
+  `requires` for `stelle = p + von`, whose extent is the rest of the range -- and they start and
+  end on a page. -/
+
+/-- Offsets of the whole pages inside `[a, a + bytes)`. -/
+def leerenVon (a s : Nat) : Nat := aufrunden a s - a
+def leerenBis (a bytes s : Nat) : Nat := abrunden (a + bytes) s - a
+
+/-- **Soundness of `region.leeren`'s arithmetic.** For a page `s > 0` and a range whose whole
+    pages are non-empty (`von < bis`, the helper's own test): `von <= bis <= bytes` (the edges
+    and the pages cover `[0, bytes)` in three consecutive pieces), the handed pages fit the rest
+    of the range (`bis - von <= bytes - von`), and `a + von`, `a + bis` are page boundaries. -/
+theorem leeren_teilung (a bytes s : Nat) (hs : 0 < s)
+    (hlt : leerenVon a s < leerenBis a bytes s) :
+    leerenVon a s ≤ leerenBis a bytes s ∧ leerenBis a bytes s ≤ bytes ∧
+    leerenBis a bytes s - leerenVon a s ≤ bytes - leerenVon a s ∧
+    (a + leerenVon a s) % s = 0 ∧ (a + leerenBis a bytes s) % s = 0 := by
+  have h1 := le_aufrunden a s hs
+  have h2 := abrunden_le (a + bytes) s
+  have h3 := aufrunden_teilbar a s
+  have h4 := abrunden_teilbar (a + bytes) s
+  unfold leerenVon leerenBis at *
+  have e1 : a + (aufrunden a s - a) = aufrunden a s := by omega
+  have hb : a ≤ abrunden (a + bytes) s := by omega
+  have e2 : a + (abrunden (a + bytes) s - a) = abrunden (a + bytes) s := by omega
+  refine ⟨by omega, by omega, by omega, ?_, ?_⟩
+  · rw [e1]; exact h3
+  · rw [e2]; exact h4
+
+/-- **Witness** (all premises jointly): 10000 bytes from address 5000 on 4096-byte pages -- the
+    edges are 3192 and 1808 bytes, one whole page (8192 .. 12288) goes back. -/
+theorem leeren_zeuge :
+    leerenVon 5000 4096 = 3192 ∧ leerenBis 5000 10000 4096 = 7288 ∧
+    (leerenVon 5000 4096 ≤ leerenBis 5000 10000 4096 ∧ leerenBis 5000 10000 4096 ≤ 10000 ∧
+      leerenBis 5000 10000 4096 - leerenVon 5000 4096 ≤ 10000 - leerenVon 5000 4096 ∧
+      (5000 + leerenVon 5000 4096) % 4096 = 0 ∧ (5000 + leerenBis 5000 10000 4096) % 4096 = 0) :=
+  ⟨by decide, by decide, leeren_teilung 5000 10000 4096 (by decide) (by decide)⟩
+
+/-- The helper's test is not decoration: a range inside one page has no whole page
+    (`von >= bis`), and handing `[von, bis)` over there would be a negative length. -/
+theorem leeren_ohne_seite : ¬ leerenVon 5000 4096 < leerenBis 5000 100 4096 := by decide
+
 end ArenaLaufzeit
 
 end Gabbro.Grammatik
@@ -169,3 +219,5 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.arena_commit_bereich
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.arena_commit_monoton
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.arena_zeuge
+#print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_teilung
+#print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_zeuge

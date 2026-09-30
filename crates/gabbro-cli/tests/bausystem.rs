@@ -992,7 +992,7 @@ pub impl fn zaehle() effects { reads T.slots, writes T.slots, locks L } costs <=
     assert_eq!(code, 0, "the same unit with the binding builds:\n{aus}\n{fehler}");
     let treiber = std::fs::read_to_string(d.join("bau").join("gabbro_probe.treiber.c"))
         .expect("the driver was written");
-    for name in ["gabbro_os_faden_start", "gabbro_os_sperre_init", "gabbro_os_melden"] {
+    for name in ["gabbro_os_faden_start", "gabbro_os_nachgeben", "gabbro_os_melden"] {
         assert!(treiber.contains(name), "the driver calls `{name}`:\n{treiber}");
     }
     // Comment lines are dropped first: the driver's own prose names `pthread_mutex_t` to say
