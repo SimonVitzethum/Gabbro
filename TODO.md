@@ -267,6 +267,15 @@ generated driver, lock through the chain). Reviewers from 321.
 
 # 0b. The standard library, native in Gabbro  ⟨A⟩
 
+- [ ] **Handwritten C out of every Gabbro binary, as far as possible** (Simon, 2026-09-30).
+  Measured 2026-09-30: `laufzeit/` + `bibliothek/` carry ~5,100 lines of handwritten C, asm and
+  headers (largest: `metall/kern.c` 997, `bibliothek/linux/linux.c` 536, `metall/start.S` 427,
+  `metall/metall.h` 372, `kmodul/kmodul.c` 267, `bibliothek/linux-kmod/linux-kmod.c` 265), and the
+  hosted binaries link glibc. Target: runtimes and binding libraries in Gabbro, OS access by
+  raw `syscall` items (no libc; a freestanding hosted Linux target), what remains in C/asm listed
+  with its reason (a wall per piece). Instrument first: count handwritten C/asm linked into each
+  built binary per target (from the build's file list), so every step is measured.
+
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics
 and windows — is to be written in Gabbro itself**, not as `extern` with a named assumption. The
 plan is `dokumente/PLAN-STDLIB.md`; what stands here is the work.*
@@ -365,7 +374,7 @@ tree refuses everywhere else.*
 |---|---|
 | chain count 2 of 111 | **2 of 129** (`zaehle-kette.py --lean`, 2026-09-26); sieves (a) 2, (b) 15, (c) 15, (d) 55, (e) 2 (2026-09-16; sieve denominators move with the corpus) |
 | T2, the re-checker: designed, not built | **built** — `korrOk` (`KorrespondenzAllg.lean`), 23 expression arms plus the block structure (`if`, `let` of a call, `traverse`), sound with a planted defect per arm |
-| 11 of 21 templates are an abstract core | unchanged since 2026-09-16 (then counted 16; `gabbro schablonen` now reads 21 entries, 10 machine-checked), and still the honest state of T5 |
+| 11 of 23 templates are an abstract core | unchanged since 2026-09-16 (then counted 16; `gabbro schablonen` now reads 23 entries, 12 machine-checked -- the two added 2026-09-30 by the C-free lane are proved: `tor.nie` over the real block semantics, `start.nolibc` as an abstract core), and still the honest state of T5 |
 | the concurrent half not begun | **begun and closed for ONE program**: `schlusssatz_124`, every SC run of the emitted C simulated in G, race freedom PROVED from the model's rather than assumed; the generic concurrent case is untouched |
 | no pass proved individually | unchanged. 198 sentences, 190 measured, 0 proved — and that is the gap between "the checker is measured" and "the checker is proved" |
 | Caprock: fragments only | unchanged. Six areas written out, 10 of 10 units error-free, nothing compiled into a kernel |
@@ -803,11 +812,23 @@ lines per code line, `messung/GABBROV-PROOF-RATIO.md`). What is open, in the ord
 
 **Stage (a) — single-threaded, generic** (`Schlusssatz.lean`, `KorrespondenzAllg.lean`; plan §6).
 
-- [ ] **Sieve (a), the elaborator** — lane 199 measured 2026-09-17: 89 of 111 programs
-  stopped there (69 an item without a G form, 12 a unit without a table, 7 `bool`, 1
-  `requires`). Re-measure against today's corpus (129 programs).
-- [ ] **Sieve (a), the Lean parser** — lane 200 measured 2026-09-17: 20 programs stopped
-  there, 10 of them at `reserved head forall`. Re-measure against today's corpus.
+- [ ] **Sieve (a), the elaborator and the Lean parser** -- re-measured 2026-09-30 (parser lane,
+  `messung/PARSER-LANE-REPORT.md`, `python3 instrumente/zaehle-kette.py --lean`): **passes 10 of 148**
+  (104, 108, 130, 69, 73, 16, 15, 62, 93, 109); the others stop at `elab` 99 (81 an item kind without a G form -- `static`
+  42 programs, `proto` 20, `atomic` 19, `assume` 11, `device` 10 --, 10 `Typ unbekannt: bool`, ...) and
+  `parse` 40 (`wanted (` 11, `reserved head forall` 10, `wanted ;` 5 -- lock invariants --, ...).
+  Walls done: 1 (units without tables, `+ - *`, built-in widths, omitted `effects`), 2 (conversions
+  `T(e)`, `T::max`, named consts, `& | ^`), 3 (`bool`), 4 (`own`, `~p` over declared widths) and 5
+  (compile-time constants), 6 (`locks` blocks) and 7 (`entry` roots as declared starts). **Next:** `let` (the parser drops the annotation: keep it), `if`, `locks`,
+  `requires`, lock invariants (119, 124, 157), `static`/`atomic`.
+- [x] **Chains and bridges for the sieve-(a) units (P4)**: chain count 2 -> **5**, closed bridge 2 -> **5**,
+  end to end 2 -> **5** (`beispiele/130`, `69`, `73` through the generic `ketteAllg` and
+  `nutzer_aus_quelle`, `bruecke/Bruecke/Quelle.lean`). The chain of a unit WITH tables still needs a
+  per-program `EmitLay`: derive it generically from `UTab` (open).
+- [ ] **P6, the generic C-chain side**: `Kette` for units with tables from the source alone (`EmitLay`, the
+  certificate from `corr-lean` as data), and the fragment premises of `nutzer_aus_quelle` (lock
+  invariants, axiom ensures, declared starts, atomics, `requires`, arithmetic inside `ensures`), each
+  removed construct by construct.
 - [ ] **`korrOk` arms** for `if`, `traverse`, compound assignment, globals, `let` of a call, and
   arithmetic. Each is one arm over an existing lemma. Measure each by the chain count it moves.
 - [ ] **Discharge the "no model error" condition** of part 4 from the model judgement, instead

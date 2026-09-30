@@ -4,6 +4,7 @@ import Grammatik.Kette104
 import Grammatik.Kette104Satz
 import Bruecke.Start
 import Bruecke.Atomar
+import Bruecke.Quelle
 import Duty.Duty104Referenz
 
 /-! BRIDGE-INSTANCE beispiele/104-referenz.gab Bruecke.Instanz104
@@ -83,6 +84,21 @@ theorem meets_alle : ∀ c : Fin u.fns.length, ∃ body, zuBody u (fnAt u c) = s
 theorem stimmig : Stimmig u := stimmig_of (by decide)
 
 theorem rang : Rang u (rangAuto u) := rang_of (by decide)
+
+/-! GENERIC-WITNESS beispiele/104-referenz.gab pflichten_104
+
+    P6: the same bridge through the GENERIC theorem over every source (`Quelle.lean`). The
+    statement `Pflichten src104real` is COMPUTED from the pinned text; this file only supplies a
+    witness (the elaborated program, checked against the text by `verankert`'s theorem) and the
+    duty proofs of GabbroV. -/
+
+theorem pflichten_104 : Pflichten Gabbro.Grammatik.Parser.UebersetzeAllg2.src104real :=
+  ⟨u, uOf_eq Gabbro.Grammatik.Kette104.uebersetzt4, by decide, by decide, by decide, meets_alle⟩
+
+/-- Premise (b) for the unit the GENERIC construction builds from the text. -/
+theorem nutzer_generisch : ∃ hn : nullB u = true,
+    Gabbro.Grammatik.Zielsatz.NutzerPflicht (einheitAllg u Gabbro.Grammatik.Kette104.P4 hn) :=
+  nutzer_aus_quelle pflichten_104 Gabbro.Grammatik.Kette104.uebersetzt4
 
 /-- **THE CLOSED BRIDGE OF 104**: premise (b) of the goal theorem, from GabbroV's duty proofs. -/
 theorem nutzer_bruecke : Gabbro.Grammatik.Zielsatz.NutzerPflicht Gabbro.Grammatik.Kette104.E4 :=

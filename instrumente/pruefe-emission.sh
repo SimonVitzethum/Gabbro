@@ -2639,14 +2639,14 @@ int main(void) {
 lauf "beispiel158-else" "$W/beispiele/158-arena-commit.gab" "$TREIBER158X" "1" \
      's/return 1;/return 9;/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 7 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
-# -- `172`: M-ALLTAG C, `reset X at i count n;` gives a range of a static buffer back --
+# -- `175`: M-ALLTAG C, `reset X at i count n;` gives a range of a static buffer back --
 #
 # Two runs of the same source. The bare one links NO binding: the emitted helper's
 # loop zeroes the range (the guarantee), and no page goes anywhere. The bound one
 # includes `bibliothek/linux/linux.c`, whose `gabbro_os_leeren` returns the whole
 # pages -- same answer, fewer resident pages, which
 # `instrumente/pruefe-seiten-zurueck.sh` measures.
-TREIBER172='#include <stdio.h>
+TREIBER175='#include <stdio.h>
 #include "@ERZEUGT@"
 int main(void) {
     printf("%u\n", geben());
@@ -2655,10 +2655,10 @@ int main(void) {
 '
 #    Erwartet: 7 -- RING[100] = 7 survives, RING[5000] = 9 lies in the given-back half and reads 0
 # **The gift stores 8 below the range** (`= 7` -> `= 8`): the survivor moves, the sum is 8.
-lauf "beispiel172" "$W/beispiele/172-puffer-gibt-seiten-zurueck.gab" "$TREIBER172" "7" \
+lauf "beispiel175" "$W/beispiele/175-puffer-gibt-seiten-zurueck.gab" "$TREIBER175" "7" \
      's/RING\[100\] = 7/RING[100] = 8/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
-TREIBER172B='#include <stdio.h>
+TREIBER175B='#include <stdio.h>
 #include "linux.c"
 #include "@ERZEUGT@"
 int main(void) {
@@ -2666,7 +2666,7 @@ int main(void) {
     return 0;
 }
 '
-lauf "beispiel172-gebunden" "$W/beispiele/172-puffer-gibt-seiten-zurueck.gab" "$TREIBER172B" "7" \
+lauf "beispiel175-gebunden" "$W/beispiele/175-puffer-gibt-seiten-zurueck.gab" "$TREIBER175B" "7" \
      's/RING\[100\] = 7/RING[100] = 8/' \
      "0 assumptions (0 of them NOT FALSIFIABLE, 0 UNCOVERED -- named a probe that does not exist as a program), 0 templates (0 of them UNPROVED), 6 direct forms, 0 foreign bodies (0 state their duty), 0 narrowings from foreign contracts"
 TREIBER153='#include <stdio.h>
@@ -3503,7 +3503,13 @@ while IFS= read -r q; do
     esac
     umgekehrt=0
     [ "$(head -1 "$q")" = "-- erwartet: cc" ] && umgekehrt=1
-    if cc -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" 2> "$ARB/regelerr"; then
+    # **A freestanding process names its entry `_Noreturn void main`** (C-free lane): a
+    # `nolibc` program's `main` is `-> never`, and a HOSTED compile refuses that spelling
+    # (`-Wmain`). The unit says so itself on its first line -- `-- uebersetzt: freistehend`
+    # -- and only then is `-ffreestanding` added, for both compiler families alike.
+    frei=""
+    [ "$(head -1 "$q")" = "-- uebersetzt: freistehend" ] && frei="-ffreestanding"
+    if cc -std=c11 -Wall -Wextra -Werror $frei -c -o /dev/null "$ARB/regel.c" 2> "$ARB/regelerr"; then
         if [ "$umgekehrt" = "1" ]; then
             echo "  PROBE BEISST NICHT MEHR: $d sagt \`-- erwartet: cc\`, und cc nimmt das C an."
             echo "        Entweder ist der Erzeugerfehler geheilt -- dann gehoert die Probe fort --"
@@ -3515,7 +3521,7 @@ while IFS= read -r q; do
             # measure the flags and not the family (the census above says the extra switches
             # yield nothing a reader would act on).
             if [ "$HAT_CLANG" = "1" ]; then
-                if clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" \
+                if clang -std=c11 -Wall -Wextra -Werror $frei -c -o /dev/null "$ARB/regel.c" \
                         2> "$ARB/clangerr"; then
                     n_clang_ok=$((n_clang_ok + 1))
                 else
@@ -3523,7 +3529,7 @@ while IFS= read -r q; do
                     echo "        Das ist kein Stilbefund: die Familien lesen denselben Text, und"
                     echo "        eine Meldung, die nur eine von beiden kennt, hat der Erzeuger"
                     echo "        trotzdem verdient. Nachsehen mit:"
-                    echo "        ./target/debug/gabbro emit $d | clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null -"
+                    echo "        ./target/debug/gabbro emit $d | clang -std=c11 -Wall -Wextra -Werror $frei -c -o /dev/null -"
                     head -3 "$ARB/clangerr" | sed 's/^/      /'
                     schlecht=1
                 fi
@@ -3542,7 +3548,7 @@ while IFS= read -r q; do
         # The marker says `cc` and this branch keeps its verdict, so clang does not colour
         # the single file -- the COUNT does, one mark below, and it is debt.
         if [ "$HAT_CLANG" = "1" ] \
-           && clang -std=c11 -Wall -Wextra -Werror -c -o /dev/null "$ARB/regel.c" 2>/dev/null
+           && clang -std=c11 -Wall -Wextra -Werror $frei -c -o /dev/null "$ARB/regel.c" 2>/dev/null
         then
             n_umg_nur_cc=$((n_umg_nur_cc + 1)); umg_nur_cc="$umg_nur_cc $d"
         fi
@@ -3808,7 +3814,18 @@ fi
 # whole unit). Their poison twins (`gift/1369` `M101`, `gift/1370` `M135`) are refused by the CHECKER and write no C, so
 # `MARKE_EMIT_G` is untouched; wall 9 adds no refusal (what changed is WHICH comparison is emitted), and its negative half is
 # pinned in `crates/gabbro-check/tests/rechenwerk.rs` (`die_untere_pruefung_folgt_der_eigenen_deklaration_nicht_dem_namen_der_einheit`).
-MARKE_EMIT=148
+MARKE_EMIT=152
+# **151 -> 152 on 2026-09-30 (server lane, M-ALLTAG C).** `175-puffer-gibt-seiten-zurueck` emits: a zero-initialised
+# `static mut` buffer with `aligned 4096` and the range give-back `reset RING at 4096 count 4096;`, lowered to the
+# helper `gabbro_region_leeren` (spliced only into a unit that calls it). Two drivers run it (`beispiel175`,
+# `beispiel175-gebunden`). Its poison twins (gifts 1371-1374) are refused by the checker and write no C.
+# **148 -> 150 on 2026-09-30 (C-free lane, C1).** Two emitting examples: `172-prozess-ohne-libc` (a process with its own
+# `write` gate, no libc) and `173-abbruch-ohne-libc` (a `-> never` gate over `exit_group` as the watchdog). Measured on the
+# committed tree: 150 emitting files in `beispiele/`.
+# **150 -> 151 on 2026-09-30 (C-free lane, the Lean debt).** `174-tor-im-modell` emits: a value gate `getpid` and a
+# `-> never` gate, the first CERTIFIED program that calls the kernel. Its emission needed one repair: an infallible
+# gate with a value no longer takes the channel's `_wert` out-parameter (`emit.rs::syscall_stumpf`), whose call was
+# a C error (`too few arguments`). No poison twin: the repair adds no refusal.
 # **117 -> 123 on 2026-09-17 (merge of lanes 236/237/226).** Six emitting demos came with
 # them (147/148 FTP ALG, 149/150 fd gates, 151/152 word-pool discipline); the lanes measured
 # the delta and left the counter alone, as the rule demands. Re-measured by the merger.

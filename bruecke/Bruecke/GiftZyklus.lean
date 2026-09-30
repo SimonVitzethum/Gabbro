@@ -225,11 +225,11 @@ theorem rz_respektiert : RespektiertRahmen PZ RZ := by
     rw [hs]
     have hW := wrel_enc uZ σ (fun _ => .int 0)
     refine (post_iff gesenktZ gI (stimmigZ.art gI) stimmigZ.tab (stimmigZ.frei gI) (stimmigZ.olds gI)
-      (stimmigZ.post gI) σ σ ρ v (eintritt uZ gI σ ρ) (eintritt uZ gI σ ρ) hW
+      (stimmigZ.post gI) (stimmigZ.boolErg gI) stimmigZ.boolTab σ σ ρ v (eintritt uZ gI σ ρ) (eintritt uZ gI σ ρ) hW
       (eintritt_lrel gI σ ρ) hW).mp ?_
     have hv := platz hW 0
     rw [h7] at hv
-    have hwf := wf_of_wrel uZ hW
+    have hwf := wf_of_wrel uZ stimmigZ.boolTab hW
     simp [postU, ensList, ensClause, ensExpr, ensSide, sideExpr, slotPlace, opOf, idxExpr, clauseProp,
       clauseAux, chain, andAll, resultClause, fnAt, gI, uZ, Gabbro.Body.eval, Gabbro.Body.binop,
       eintritt] at hv ⊢
@@ -250,7 +250,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   intro hK
   obtain ⟨b0, hb0, hPb⟩ := gesenktZ.rumpf fI
   change lowBody uZ fI [.call "g" []] .keine = .ok b0 at hb0
-  simp only [lowBody] at hb0
+  rw [lowBody_cons fI .keine (.call "g" []) [] (fun g => by simp)] at hb0
   split at hb0
   · cases hb0
   · rename_i gst hgst
@@ -281,7 +281,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
         cases hR'
         have hrun : execEnd O0 0 RZ (Endblock.cons gst rest) σ7 ρ₀ = execEnd O0 0 RZ rest σr ρ₀ := by
           simp only [execEnd, hex]
-        obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI hrest (rfl : endBody uZ (fnAt uZ fI) .keine = some [])
+        obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEnd uZ fI .keine = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .keine = some [])
           (stimmigZ.art fI) stimmigZ.tab O0 0 RZ σr ρ₀ _ (wrel_slots uZ hsl hW0) hL0
         have hX := execEnd_heq (V := verOf uZ fI) O0 0 RZ (ctxParams_eq uZ fI).symm
           (anfangRes_eq uZ fI).symm (PZ.rumpf fI) (Endblock.cons gst rest) hPb σ7 .nil ρ₀ HEq.rfl
@@ -291,7 +291,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
         let s1 : Gabbro.Body.State := ⟨enc uZ σ'' (fun _ => .int 0), (eintritt uZ fI σ7 .nil).local'⟩
         have hW1 : WRel uZ σ'' s1.world := wrel_enc uZ σ'' _
         have hpost := (post_iff gesenktZ fI (stimmigZ.art fI) stimmigZ.tab (stimmigZ.frei fI)
-          (stimmigZ.olds fI) (stimmigZ.post fI) σ7 σ'' .nil v'' _ s1 hW0
+          (stimmigZ.olds fI) (stimmigZ.post fI) (stimmigZ.boolErg fI) stimmigZ.boolTab σ7 σ'' .nil v'' _ s1 hW0
           (eintritt_lrel fI σ7 .nil) hW1).mpr hens
         have h1 := platz hW1 1
         have h0 : ((σ''.slots tT 1 vF : Zahl 0 10)).n = 0 := by rw [hsl'', hsl]; rfl

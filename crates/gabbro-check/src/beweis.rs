@@ -463,6 +463,83 @@ pub fn pruefe(baum: &Programm, datei: &str, modell: &Path) -> Result<Befund, Str
     Ok(befund)
 }
 
+/// **The bridge folder** (`bruecke/lakefile.toml`): `genannt` if given, else found by walking up
+/// from the unit's file.
+pub fn bruecke_finden(datei: &str, genannt: Option<&str>) -> Option<PathBuf> {
+    if let Some(m) = genannt {
+        let p = PathBuf::from(m);
+        return if p.join("lakefile.toml").is_file() { Some(p) } else { None };
+    }
+    let mut dir = Path::new(datei).canonicalize().ok()?;
+    dir.pop();
+    loop {
+        let kandidat = dir.join("bruecke");
+        if kandidat.join("Bruecke/Vorlage.lean").is_file() {
+            return Some(kandidat);
+        }
+        if !dir.pop() {
+            return None;
+        }
+    }
+}
+
+/// A Lean string literal for `s`: quotes, backslashes and control characters escaped, everything
+/// else (UTF-8 included) verbatim -- the text a person's file pins must be the file's bytes.
+fn lean_literal(s: &str) -> String {
+    let mut o = String::with_capacity(s.len() + 2);
+    o.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => o.push_str("\\\""),
+            '\\' => o.push_str("\\\\"),
+            '\n' => o.push_str("\\n"),
+            '\r' => o.push_str("\\r"),
+            '\t' => o.push_str("\\t"),
+            c if (c as u32) < 0x20 || c as u32 == 0x7f => o.push_str(&format!("\\x{:02x}", c as u32)),
+            c => o.push(c),
+        }
+    }
+    o.push('"');
+    o
+}
+
+/// **The template pinned to the SOURCE TEXT** (`gabbro prove --template --source`): the file a
+/// person starts from when the duties are to be stated by Lean and not by this program. Nothing
+/// of the statement is written here -- `Bruecke/Vorlage.lean` (`vorlage`) runs the Lean front end
+/// over the text and prints the pinned source, the stage hints and the computed duties; this
+/// function only hands it the text and returns what it printed. A text the Lean front end
+/// refuses comes back as a `-- REFUSED …` comment naming the stage, never as duties.
+pub fn vorlage_quelle(quelle: &str, datei: &str, bruecke: Option<&str>) -> Result<String, String> {
+    let b = bruecke_finden(datei, bruecke)
+        .ok_or("no bridge folder (`bruecke/Bruecke/Vorlage.lean`) above the file -- name one with `--bridge <dir>`")?;
+    let lake = lake_binaer().ok_or("no `lake` (set $LAKE, or install elan)")?;
+    let gebaut = Command::new(&lake)
+        .args(["build", "Bruecke.Vorlage"])
+        .current_dir(&b)
+        .output()
+        .map_err(|e| format!("`lake build Bruecke.Vorlage` could not run: {e}"))?;
+    if !gebaut.status.success() {
+        let text = String::from_utf8_lossy(&gebaut.stderr).to_string() + &String::from_utf8_lossy(&gebaut.stdout);
+        return Err(format!("the BRIDGE does not build -- nothing written:\n{}", text.lines().take(6).collect::<Vec<_>>().join("\n")));
+    }
+    let name = crate::lean::module_name(datei);
+    let treiber = std::env::temp_dir().join(format!("gabbro-vorlage-{}.lean", std::process::id()));
+    let inhalt = format!(
+        "import Bruecke.Vorlage\n#eval IO.println (Gabbro.Bruecke.vorlage {} {})\n",
+        lean_literal(&name),
+        lean_literal(quelle)
+    );
+    std::fs::write(&treiber, inhalt).map_err(|e| format!("driver not writable: {e}"))?;
+    let lauf = Command::new(&lake).args(["env", "lean"]).arg(&treiber).current_dir(&b).output();
+    let _ = std::fs::remove_file(&treiber);
+    let lauf = lauf.map_err(|e| format!("lean could not run: {e}"))?;
+    if !lauf.status.success() {
+        let text = String::from_utf8_lossy(&lauf.stdout).to_string() + &String::from_utf8_lossy(&lauf.stderr);
+        return Err(format!("the template writer failed:\n{}", text.lines().take(8).collect::<Vec<_>>().join("\n")));
+    }
+    Ok(String::from_utf8_lossy(&lauf.stdout).to_string())
+}
+
 /// **A template for the person's file**: one theorem per statement, each with a `sorry`
 /// to start from.
 pub fn vorlage(baum: &Programm, datei: &str) -> String {

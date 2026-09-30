@@ -2,7 +2,7 @@
 -- M-ALLTAG C: `aligned 3000` on a `static` is no power of two. C's `aligned(N)` attribute takes
 -- nothing else, and the page arithmetic of a buffer whose pages are given back
 -- (`reset X at i count n;`) rests on the alignment being one it can read.
--- Positive twin: `beispiele/172`, which writes `aligned 4096`.
+-- Positive twin: `beispiele/175`, which writes `aligned 4096`.
 module beispiel::static_ausrichtung_schlecht {
 static mut RING : [u8; 8192] = 0 aligned 3000;
 

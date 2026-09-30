@@ -42,7 +42,12 @@ sys,re,collections
 # WRITTEN by `gabbro prove`/`pflichten --lean` from the `.gab`, and `_pruefung/` is the
 # measurement bench. A second register over the same thing is the class that folder is
 # written against -- so none of it is repository content.
-programmlogik/Duty/
+programmlogik/Duty/*
+# EXCEPT the duty files the bridge (`bruecke/lakefile.toml`, lib `Duty`) imports: a fresh clone must
+# build, so those are tracked, and `instrumente/zaehle-bruecke.py` guards that each equals the
+# printer's output byte for byte (and that every root of that lib is tracked).
+!programmlogik/Duty/Duty104Referenz.lean
+!programmlogik/Duty/Duty108DisjointStartLocks.lean
 programmlogik/_pruefung/
 
 # Local assistant output (NLnet guide draft, README copy): not part of the repo (Simon, 2026-09-26)

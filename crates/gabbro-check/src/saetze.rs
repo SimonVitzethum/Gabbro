@@ -5067,7 +5067,7 @@ pub const PHASEN: &[Satz] = &[
                       carrier); beispiele/gift/1372 (`-- erwartet: M103`: a range \
                       that reaches past the array); beispiele/gift/1373 (`-- \
                       erwartet: E005`: the store without `writes X`); \
-                      beispiele/172 (clean, emits; the driver `beispiel172` runs it); \
+                      beispiele/175 (clean, emits; the driver `beispiel175` runs it); \
                       `instrumente/pruefe-seiten-zurueck.sh` (the pages of a \
                       released ring leave the resident set, and the poison build \
                       that skips the release does not).",
@@ -5087,7 +5087,7 @@ pub const PHASEN: &[Satz] = &[
                     align.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/1374 (`-- erwartet: N570`: `aligned 3000`); \
-                      beispiele/172 (`aligned 4096`, clean, emits, runs).",
+                      beispiele/175 (`aligned 4096`, clean, emits, runs).",
         fundstelle: "crates/gabbro-check/src/m1.rs (the static-declaration walk); \
                      crates/gabbro-check/src/emit.rs (`abschnitt_attribut`)",
     },

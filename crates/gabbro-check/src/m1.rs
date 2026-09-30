@@ -2439,15 +2439,13 @@ impl<'a> Pruefer<'a> {
                 // on that answer (divergence, `S002`) all resolve by name. *Answering `false`
                 // here is the safe direction: a body that does not obviously end must still
                 // end properly, and the rule that says so keeps firing.*
-                let name = r
-                    .path()
-                    .and_then(|p| p.teile.last())
-                    .map(|i| i.text.as_str())
-                    .unwrap_or_default();
-                matches!(
-                    self.u.funktionen.get(name).and_then(|s| s.ergebnis.clone()),
-                    Some(Typ::Nie)
-                )
+                // **Resolved module-aware, like every other call** (`u.funktion`): the keys of
+                // `funktionen` are QUALIFIED, so a lookup by the bare last name never hit a
+                // `-> never` function inside a `module` block -- the `else` of a `narrow` that
+                // ended in the program's own exit routine was refused as one that returns.
+                r.path()
+                    .and_then(|p| self.u.funktion(&self.modul, p))
+                    .is_some_and(|s| matches!(s.ergebnis, Some(Typ::Nie)))
             }
             StmtArt::Wenn(w) => {
                 w.sonst.as_ref().is_some_and(|s| self.endet_immer(s))

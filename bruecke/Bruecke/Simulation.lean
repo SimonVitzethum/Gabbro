@@ -200,7 +200,7 @@ theorem lauf_P {P : Programm (declOf u)} {fs : List (declOf u).Fn}
   have hB := tabEnv_gut hg ρP hP
   obtain ⟨s'', h1, h2, h3⟩ := hrun (tabEnv A ρP) (tabEnv_treu hk ρP)
     (fun n gf hgf => (hB n gf hgf).2)
-  have hwf : wfU u (eintritt u c σ ρ) := wf_of_wrel u hW0
+  have hwf : wfU u (eintritt u c σ ρ) := wf_of_wrel u S.boolTab hW0
   have hpre := preExpr_wahr (fnAt u c) ρ (eintritt u c σ ρ).local' (eintritt u c σ ρ).world
     (S.namen c) (params_eq u c) hL
   have hm := hmeets (tabEnv A ρP) (eintritt u c σ ρ) hwf hpre
@@ -212,7 +212,7 @@ theorem lauf_P {P : Programm (declOf u)} {fs : List (declOf u).Fn}
   rw [h1] at hs'
   cases hs'
   rw [h2] at hpost
-  exact (post_iff G c (S.art c) S.tab (S.frei c) (S.olds c) (S.post c) σ σ' ρ v _ _
+  exact (post_iff G c (S.art c) S.tab (S.frei c) (S.olds c) (S.post c) (S.boolErg c) S.boolTab σ σ' ρ v _ _
     hW0 hL h3).mp hpost
 
 /-- **THE SIMULATION THEOREM (S3).** For a unit the Lean parser lowers, with a ranked call graph

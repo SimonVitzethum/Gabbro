@@ -1,7 +1,7 @@
 -- erwartet: M103
 -- M-ALLTAG C: the range `4096 .. 4096 + 4097` reaches one element past the
 -- 8192-element array. The END of the range is held against the length the way
--- a single index is (positive twin: `beispiele/172`, which ends exactly at 8192).
+-- a single index is (positive twin: `beispiele/175`, which ends exactly at 8192).
 module beispiel::puffer_ueber_das_ende {
 static mut RING : [u8; 8192] = 0;
 

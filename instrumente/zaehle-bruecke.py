@@ -32,6 +32,14 @@ Two levels, both counted over `beispiele/*.gab`, and NEITHER counts unless Lean 
   def is a closed chain AND a closed bridge for the program.
   Its planted defects: `./instrumente/mutiere-bruecke.py --s3`.
 
+  GENERIC INSTANCE (P6, 2026-09-30). `BRIDGE-GENERIC <program.gab> <theorem>`: the instance is a
+  witness of the GENERIC theorem over every source (`Bruecke/Quelle.lean`, `nutzer_aus_quelle`) and
+  counts as a closed bridge when (1) its `-- SRC-BEGIN quelle` block IS the program's file byte for
+  byte, (2) the module builds and (3) the build prints `#print axioms <theorem>` as exactly the
+  standard three. Nothing printed by Rust is trusted there, so there is no duty-file comparison.
+  `CHAIN-GENERIC <program.gab> <def>`: the same rule for a closed chain assembled by the generic
+  `ketteAllg` (`Kette quelle`); it counts under END TO END (the chain's premise (b) IS the bridge).
+
 A COUNTER, not a guard: exit 0 once it measured, 2 (ABBRUCH) when it measured nothing (no binary,
 a binary older than the sources, a failing speech test). `--nicht-lean` skips the build (a present
 instance then reads "Lean not re-run" and counts as NOT closed).
@@ -51,6 +59,8 @@ MARKE_I = re.compile(r"BRIDGE-INSTANCE\s+(\S+\.gab)\s+([\w.]+)")
 MARKE_C = re.compile(r"BRIDGE-CLOSED\s+(\S+\.gab)\s+(\w+)")
 MARKE_A = re.compile(r"BRIDGE-ATOMIC\s+(\S+\.gab)\s+(\w+)")
 MARKE_K = re.compile(r"BRIDGE-CHAIN\s+(\S+\.gab)\s+(\w+)")
+MARKE_G = re.compile(r"BRIDGE-GENERIC\s+(\S+\.gab)\s+(\w+)")
+MARKE_GK = re.compile(r"CHAIN-GENERIC\s+(\S+\.gab)\s+(\w+)")
 QUELLE = re.compile(r"uebersetzeAllg\s+(?:[\w.]*\.)?(\w+)\s*=")
 STANDARD = "[propext, Classical.choice, Quot.sound]"
 LEAN_FRIST = 1800
@@ -135,12 +145,55 @@ def eingeloest(t, marke, programm, satz, modul, lean):
                        programm, modul, satz, lean)
 
 
+def generisch(t, programm, modul, satz, lean):
+    """A GENERIC instance: the pinned source block is the file, the module builds, and the build
+    prints `#print axioms <satz>` as exactly the standard three."""
+    quelle = ZK.block_text(t, "quelle")
+    if quelle is None:
+        return False, "no readable `-- SRC-BEGIN quelle` block"
+    if quelle != (W / programm).read_text(encoding="utf-8"):
+        return False, "the pinned source differs from the file (stale paste)"
+    if not lean:
+        return False, "Lean not re-run"
+    ok, out = lake(modul)
+    if not ok:
+        return False, "`lake build %s` is red" % modul
+    zeile = re.search(r"'([\w.]*\.)?" + re.escape(satz) + r"' depends on axioms: (\[[^\]]*\])", out)
+    if not zeile:
+        return False, "no `#print axioms %s` in the build output (not measured)" % satz
+    if zeile.group(2) != STANDARD:
+        return False, "`%s` depends on %s, not the standard three" % (satz, zeile.group(2))
+    return True, "`%s` (axioms standard)" % satz
+
+
+def duty_wurzeln_verfolgt():
+    """P0 guard: every root of the `Duty` lib in `bruecke/lakefile.toml` is a TRACKED file, or a
+    fresh clone fails with `bad import`. Returns the list of untracked roots."""
+    t = (BR / "lakefile.toml").read_text(encoding="utf-8")
+    m = re.search(r'name = "Duty".*?roots = \[([^\]]*)\]', t, re.S)
+    if not m:
+        return ["(no `Duty` lib found in lakefile.toml)"]
+    fehlt = []
+    for w in re.findall(r'"([\w.]+)"', m.group(1)):
+        rel = "programmlogik/" + w.replace(".", "/") + ".lean"
+        r = subprocess.run(["git", "ls-files", "--error-unmatch", rel], cwd=W, capture_output=True)
+        if r.returncode != 0:
+            fehlt.append(rel)
+    return fehlt
+
+
 def selbsttest():
     """The readers refuse what they should: a marker without an anchor, and a stale pin."""
     ok = MARKE_I.search("-- BRIDGE-INSTANCE beispiele/x.gab Bruecke.X") is not None
     ok = ok and QUELLE.search("uebersetzeAllg Foo.src104real = .ok") is not None
     ok = ok and QUELLE.search("nothing") is None
     ok = ok and ZK.string_def({}, "nope") is None
+    ok = ok and MARKE_G.search("/-! BRIDGE-GENERIC beispiele/x.gab nutzer") is not None
+    ok = ok and MARKE_GK.search("/-! CHAIN-GENERIC beispiele/x.gab kette_x") is not None
+    # a pinned block is read piece by piece, and a stale pin is a different text
+    block = '-- SRC-BEGIN quelle\ndef zeilen : List (List Char) :=\n  ["ab\\n".toList,\n   "c".toList]\n-- SRC-END quelle\n'
+    ok = ok and ZK.block_text(block, "quelle") == "ab\nc"
+    ok = ok and ZK.block_text("nothing", "quelle") is None
     return ok
 
 
@@ -152,6 +205,10 @@ def main():
     a = ap.parse_args()
     if not selbsttest():
         print("ABBRUCH: the speech test fell -- this run measures nothing")
+        return 2
+    fehlt = duty_wurzeln_verfolgt()
+    if fehlt:
+        print("ABBRUCH: bridge duty files not tracked (a fresh clone would not build): %s" % ", ".join(fehlt))
         return 2
     binary = pathlib.Path(a.binary)
     if not binary.exists():
@@ -168,6 +225,7 @@ def main():
         return 2
     texte = ZK.lean_texte()
     inst, schluss, atom, kette = {}, {}, {}, {}
+    gen, genk = {}, {}
     for p in sorted((BR / "Bruecke").glob("Instanz*.lean")):
         t = p.read_text(encoding="utf-8")
         modul = "Bruecke." + p.stem
@@ -179,6 +237,10 @@ def main():
             atom[pathlib.Path(m.group(1)).name] = (m.group(1), modul, t, m.group(2))
         for m in MARKE_K.finditer(t):
             kette[pathlib.Path(m.group(1)).name] = (m.group(1), modul, t, m.group(2))
+        for m in MARKE_G.finditer(t):
+            gen[pathlib.Path(m.group(1)).name] = (m.group(1), modul, t, m.group(2))
+        for m in MARKE_GK.finditer(t):
+            genk[pathlib.Path(m.group(1)).name] = (m.group(1), modul, t, m.group(2))
     lean = not a.nicht_lean
     n_stmt = n_zu = n_at = n_ke = 0
     for p in programme:
@@ -209,12 +271,28 @@ def main():
                     n_ke += ok3
         else:
             print("        bridge: open (no BRIDGE-CLOSED marker: the simulation theorem is not instantiated)")
+    n_gb = n_gk = 0
+    for p in programme:
+        g = gen.get(p.name)
+        if not g:
+            continue
+        ok, d = generisch(g[2], g[0], g[1], g[3], lean)
+        print("  [%s] %s: generic bridge: %s" % ("G" if ok else "-", p.name, d))
+        n_gb += ok
+        k = genk.get(p.name)
+        if k and ok:
+            ok2, d2 = generisch(k[2], k[0], k[1], k[3], lean)
+            print("        generic chain: %s: %s" % ("CLOSED" if ok2 else "open", d2))
+            n_gk += ok2
     n = len(programme)
     print("== BRIDGE COUNT: %d of %d programs have their duty statements checked against the Lean "
           "computation (S1+S2); %d of %d have a CLOSED bridge (S3) (unmeasured counts as not passed) =="
           % (n_stmt, n, n_zu, n))
+    print("== GENERIC BRIDGE: %d of %d programs have premise (b) from the generic theorem over their "
+          "pinned source (`nutzer_aus_quelle`) (unmeasured counts as not passed) ==" % (n_gb, n))
     print("== ATOMIC RELY: %d of %d closed bridges carry NutzerPflichtA (S4) ==" % (n_at, n_zu))
-    print("== END TO END: %d of %d programs have a closed chain AND a closed bridge (S6) ==" % (n_ke, n))
+    print("== END TO END: %d of %d programs have a closed chain AND a closed bridge (S6); "
+          "%d of them through the generic `ketteAllg` ==" % (n_ke + n_gk, n, n_gk))
     return 0
 
 

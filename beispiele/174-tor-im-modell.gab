@@ -1,0 +1,77 @@
+-- 174 -- **A system-call gate in the model: the first certified program that calls
+-- the kernel.**
+--
+-- A `syscall` gate is a foreign body, and machine G has had the form for it from
+-- the start: `D.Ax` with its parameters and its answer, called by `Stmt.axiomCall`
+-- or `Block.bindAxiom`, answered by the oracle (`axiomAntwort`), and what the answer
+-- may be is premise (c) of the goal theorem. Until 2026-09-30 the exporter wrote
+-- `Ax := Empty` and refused every unit with a gate (LG001); now a gate travels, and
+-- this unit is CERTIFIED (`grammatik/Grammatik/Zertifikat/`, `gP_gabbro`).
+--
+-- The two gates are the two shapes that travel:
+-- * `getpid` answers a VALUE, bound in a block (`Block.bindAxiom`, under the lock);
+-- * `exit_group` answers `never`: in G the call is the named stop `nieZurueck`, and
+--   nothing behind it runs -- the emitter writes `_Noreturn` on the same promise.
+--
+-- What does NOT travel yet, each refused by name (`crates/gabbro-check/src/lean_g.rs`,
+-- `read_gate`): a fallible gate (`or R`, LG007 -- `D.Ax` has no reason channel), a
+-- gate `requires`/`ensures` (LG003), a gate that writes (LG001), and a gate with an
+-- answer called at the TOP level of a body or in an `else` that must not fall off
+-- (LG004 -- `Endblock` has no `bindAxiom`). That is why `exit_group` stands inside an
+-- `if` here, and why `beispiele/172`/`173` are still UNCERTIFIED.
+module beispiel::tor_im_modell {
+
+assume linux_getpid
+    "The Linux x86_64 `getpid` answers the calling process's id, in 1 .. 4194304, and destroys only rcx and r11."
+    falsifier sonde_getpid;
+
+assume linux_exit_group
+    "The Linux x86_64 `exit_group` ends every thread of the process with status `code & 255` and never returns to its caller."
+    falsifier sonde_exit_group;
+
+syscall getpid() -> u64 in 1 .. 4194304
+    abi linux arch x86_64 number 39
+    regs in { }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_getpid falsifier sonde_getpid;
+
+syscall exit_group(code : u64) -> never
+    abi linux arch x86_64 number 231
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_exit_group falsifier sonde_exit_group;
+
+table Protokoll count 4 {
+    slot { pid : u64 in 0 .. 4194304, }
+}
+
+lock Schutz protects { Protokoll } rank 1;
+
+impl fn merke(i : index into Protokoll)
+    effects { writes Protokoll.slots, locks Schutz }
+    costs   <= 40 ops
+{
+    locks Schutz {
+        let p = getpid();
+        Protokoll.slots[i].pid = p;
+    }
+}
+
+impl fn ende_wenn(fehler : bool)
+    effects { diverges }
+    costs   <= 20 ops
+{
+    if fehler {
+        exit_group(1);
+    }
+}
+
+}

@@ -96,6 +96,9 @@ def RahmenAlle (u : UProg) (ρB : Gabbro.Body.Env) : Prop :=
 
 /-- The per-unit conditions the bridge rests on (each decided per unit, `stimmigB`). -/
 structure Stimmig (u : UProg) : Prop where
+  /-- No `bool` field and no `bool` result (`keinBoolB`): the bridge speaks about numbers only. -/
+  boolTab : ∀ t : Fin u.tabellen.length, (tabAt u t).bools = []
+  boolErg : ∀ c : Fin u.fns.length, (fnAt u c).ergBool = false
   tab : TabEindeutig u
   art : ∀ c : Fin u.fns.length, ArtStimmt (fnAt u c)
   namen : ∀ c : Fin u.fns.length, NamenEindeutig (fnAt u c)
@@ -133,7 +136,7 @@ theorem eintrag_gut {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u)
   · intro _
     have hens := hRR.1 callee σr envA (reqAmEintritt_wahr G callee σr envA) σ' v hR
     exact (post_iff G callee (S.art callee) S.tab (S.frei callee) (S.olds callee) (S.post callee)
-      σr σ' envA v t _ hWt hLt (wrel_bump w (wrel_enc u σ' t.world))).mpr hens
+      (S.boolErg callee) S.boolTab σr σ' envA v t _ hWt hLt (wrel_bump w (wrel_enc u σ' t.world))).mpr hens
   · intro p hp
     have hgp : p ≠ geistOrt w := by
       intro e; subst e; apply hp; simp [geistOrt, Gabbro.Body.Place.carrier, hw]
@@ -213,7 +216,7 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
       refine ⟨[], by simp, by simp [Oben], List.Pairwise.nil, fun ρB _ _ =>
         ⟨s, (hB ρB).1, (hB ρB).2, wrel_slots u hsl hW⟩⟩
   | st :: ss, b0, bs, hlow, hbs, σ, ρ, s, hW, hL => by
-      simp only [lowBody] at hlow
+      rw [lowBody_cons c r st ss (stmtBody_nomark _ st (stmtsBody_isSome hbs st List.mem_cons_self))] at hlow
       split at hlow
       · cases hlow
       · rename_i gst hgst
@@ -265,6 +268,10 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
               obtain ⟨σ₁, cn, k, fld, v', hex, hstep, hW₁, _⟩ :=
                 lowAssignTab_sim c hgst hx (S.art c) S.tab O passes R σ ρ s hW hL
               exact schreib σ₁ cn k fld v' hex hstep hW₁
+            | assignB _ _ _ _ => simp [stmtBody] at hx
+            | assignTabB _ _ _ _ => simp [stmtBody] at hx
+            | sperrtAuf _ => simp [stmtBody] at hx
+            | sperrtZu => simp [stmtBody] at hx
             | call cname args =>
               obtain ⟨callee, σr, envA, hname, hfs, hsl, hstep, hLt, _, hcases, _⟩ :=
                 lowCall_sim c hgst hx (S.art c) S.tab S.namen O passes R σ ρ s hW hL

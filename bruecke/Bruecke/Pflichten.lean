@@ -61,8 +61,15 @@ def slotPlace (u : UProg) (f : UFn) : USide → Option Expr
   | .alt p fld i => (ptrTab u f p).map (fun t => .place t (idxExpr i) fld)
   | _ => none
 
+/-- Two operands under one Body operator (both must have a Body form). -/
+def binE (op : BinOp) : Option Expr → Option Expr → Option Expr
+  | some x, some y => some (.bin op x y)
+  | _, _ => none
+
 /-- A side outside an `ensures` (a call argument, a returned value, an assigned value): no
-    `alt`, no `erg`. -/
+    `alt`, no `erg`. Integer arithmetic and the bit operations are Body's `bin` (`binop`: exact
+    integers, the masks over non-negative operands); an integer conversion `T(e)` is a WIDENING, so
+    it leaves the number alone and reads as its operand (P2 wall 2). -/
 def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .lit n => some (.lit (.int n))
   | .param p => some (.name p)
@@ -70,6 +77,13 @@ def sideExpr (u : UProg) (f : UFn) : USide → Option Expr
   | .tab t fld i => slotPlace u f (.tab t fld i)
   | .alt .. => none
   | .erg => none
+  | .add a b => binE .add (sideExpr u f a) (sideExpr u f b)
+  | .sub a b => binE .sub (sideExpr u f a) (sideExpr u f b)
+  | .mul a b => binE .mul (sideExpr u f a) (sideExpr u f b)
+  | .conv _ _ a => sideExpr u f a
+  | .band a b => binE .band (sideExpr u f a) (sideExpr u f b)
+  | .bor a b => binE .bor (sideExpr u f a) (sideExpr u f b)
+  | .bxor a b => binE .bxor (sideExpr u f a) (sideExpr u f b)
 
 /-- An `ensures` side, numbering the `old(..)` reads met so far: the term, the reads in order,
     whether `result` occurs. -/
@@ -81,6 +95,10 @@ def ensSide (u : UProg) (f : UFn) (a : Acc) : USide → Option (Expr × Acc)
   | .alt p fld i =>
       (slotPlace u f (.alt p fld i)).map (fun pl => (.name (oldName a.olds.length), { a with olds := a.olds ++ [pl] }))
   | .erg => some (.name "result", { a with result := true })
+  -- Arithmetic INSIDE an `ensures` side has no bridge form yet (the `old`/`result` numbering would
+  -- have to thread through the operands): REFUSED by name, so `postU` is `none` and the duty is
+  -- false, never a weaker one.
+  | .add .. | .sub .. | .mul .. | .conv .. | .band .. | .bor .. | .bxor .. => none
   | s => (sideExpr u f s).map (fun e => (e, a))
 
 def opOf : String → Option BinOp
@@ -114,6 +132,10 @@ def ensExpr (u : UProg) (f : UFn) (a : Acc) : UEns → Option (Expr × Acc)
       match ensExpr u f a x with
       | some (xe, a1) => some (.un .not xe, a1)
       | none => none
+  -- A `bool` slot read has no bridge form yet (Body's shapes know numbers only): REFUSED by name,
+  -- so `postU` is `none` and the duty is false, never weaker. (A unit with a bool field or a bool
+  -- result is refused up front by `stimmigB`'s `keinBoolB`.)
+  | .slotB .. | .tabB .. => none
 
 /-! ## 2. Shapes, the precondition, the frame -/
 
@@ -168,6 +190,7 @@ def stmtBody (u : UProg) (f : UFn) : UStmt → Option Stmt
       | some t, some ve => some (.assign t (idxExpr i) fld ve)
       | _, _ => none
   | .assignTab t fld i v => (sideExpr u f v).map (fun ve => .assign t (idxExpr i) fld ve)
+  | .assignB .. | .assignTabB .. | .sperrtAuf _ | .sperrtZu => none
   | .call g as =>
       match fnSuch u g, argsExpr u f as with
       | some gf, some es => some (.call g (gf.params.map (·.1)) es (preExpr gf))
@@ -188,6 +211,7 @@ def zuBody (u : UProg) (f : UFn) : Option (List Stmt) :=
       match f.rueck with
       | .keine => some ss
       | .wert v => (sideExpr u f v).map (fun e => ss ++ [Stmt.ret (some e)])
+      | .bool _ => none
 
 /-! ## 4. The postcondition -/
 

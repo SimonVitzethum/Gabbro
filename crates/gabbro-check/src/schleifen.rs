@@ -202,6 +202,14 @@ fn divergierende(baum: &Programm) -> Vec<String> {
                 aus.push(f.name.text.clone());
             }
         }
+        // **A `syscall` gate declared `-> never` does not come back either** (C-free lane, C1):
+        // `exit_group` is the one call whose contract says the process ends, and a
+        // `-> never` routine that ends in it ends in a call to a diverging name.
+        if let ItemArt::Syscall(s) = &item.art {
+            if matches!(&s.ergebnis, Some(TypExpr::Never(_))) {
+                aus.push(s.name.text.clone());
+            }
+        }
     });
     aus
 }

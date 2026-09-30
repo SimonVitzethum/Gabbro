@@ -116,6 +116,21 @@
 //!   the named `reason` declaration. A bare call of such a function has no
 //!   form (its `hr` needs `gruende = 0`); only `let x = f() else (e) { … }`
 //!   travels (`Block.bindCallElse`).
+//! * `syscall g(…) -> T` -- **a foreign body, `D.Ax`** (C-free lane,
+//!   2026-09-30): `aparams` are its parameters, `aerg` its answer (`none`,
+//!   an integer range or `bool`, or `some .never` for `-> never` -- the call
+//!   does not return, the named stop `nieZurueck`), and it writes nothing. A
+//!   call without an answer is `Stmt.axiomCall`; one with an answer is
+//!   `Block.bindAxiom`, and at the top level of a body (an `Endblock`) that
+//!   form does not exist, so it is refused by name (LG004). A fallible gate
+//!   (`or R`, LG007), a gate `requires`/`ensures` (LG003), a gate write or a
+//!   `kernel` pairing (LG001) and a `stack` handoff (`D.klon`, LG001) are
+//!   refused by name. The ABI half (`abi`, `number`, registers, `errors`,
+//!   `syscall V;`, `target`) and the gate's `assume … falsifier …` have NO
+//!   FORM: they are the C-side stub's. `E.Q` stays `fun _ _ _ => true`.
+//! * `assume a "…" falsifier s;` -- a `D.Annahme` constructor beside the
+//!   memory model's `a10` (a NAME: `forever`/`retires`, which consume one,
+//!   are not built)
 //! * `const NAME = N` (inlined at every use) and `type NAME = u32 in lo..hi`
 //!   / `lo..<hi` (resolved at every use, the exclusive bound as `lo..hi-1`);
 //!   an `opaque` alias travels as its range -- `opaque` is a rule about a
@@ -191,8 +206,8 @@
 //! initialiser; every global at the initialiser its `static` DOES name)
 //! and the declared starts `gE.starts` (the `concurrent` members, then the
 //! `entry`/`boot` dispatch roots; every start is parameterless, its
-//! argument list `.nil`), as `def gE : Einheit gD` (no axiom exists, so
-//! `Q` is `fun _ _ _ => true`). Since 2026-09-26 (Opus agent A, OFFEN O22)
+//! argument list `.nil`), as `def gE : Einheit gD` (no gate `ensures`
+//! travels, so `Q` is `fun _ _ _ => true`). Since 2026-09-26 (Opus agent A, OFFEN O22)
 //! also the run-time roots `gE.gestartet`: every root of a `start { … };`
 //! statement, parameterless, printed only where one exists
 //! (`check_gestartet`); the statement itself leaves no G term -- its spawn and
@@ -290,6 +305,10 @@ pub(crate) enum VTy {
     /// it as a `Fin`. They are carried here so a refusal can spell them, and
     /// so two tagged types with the same shape stay two types.
     Sum { name: String, cases: Vec<(String, Option<(i128, i128)>)> },
+    /// `Ty.never` -- the answer of a `-> never` gate, pushed unnamed behind
+    /// its `Block.bindAxiom` (C-free lane, 2026-09-30). No expression has
+    /// this type, and nothing ever reads it.
+    Nie,
 }
 
 /// The `List (Option (Int × Int))` a `Ty.sum` is indexed by, as Lean spells
@@ -320,6 +339,7 @@ impl VTy {
             }
             VTy::Grund { n } => format!("(.grund {n})"),
             VTy::Sum { cases, .. } => format!("(.sum {})", sum_list(cases)),
+            VTy::Nie => ".never".to_string(),
         }
     }
 
@@ -379,6 +399,36 @@ pub(crate) struct Model {
     /// run-time call of one names no exported function and is refused by name
     /// (`LG005`). Named in the NO FORM ledger when the unit has any.
     konst_fns: Vec<String>,
+    /// **The foreign bodies: every `syscall` gate is one `D.Ax`** (C-free
+    /// lane, 2026-09-30). `aparams` are its parameters, `aerg` its answer
+    /// (`-> never` is `some .never`: the call does not return, the named stop
+    /// `nieZurueck`), and it writes no carrier (`aschreibt`/`agschreibt`
+    /// false -- a gate that declares a write is refused by name). Read AFTER
+    /// the walk, like the locks, because a parameter may name a table
+    /// declared below the gate.
+    pub(crate) gates: Vec<GateModel>,
+    /// `assume a "…" falsifier s;` -- the named assumptions, as the
+    /// constructors of `D.Annahme` beside the memory model's `a10`. No
+    /// exported statement consumes one (`Stmt.forever`/`Stmt.retires` are
+    /// not built), so each travels as a NAME only; its text and its probe
+    /// have no form.
+    pub(crate) annahmen: Vec<String>,
+}
+
+/// One `syscall` gate as `D.Ax`: its parameters and its answer.
+pub(crate) struct GateModel {
+    pub(crate) name: String,
+    pub(crate) params: Vec<(String, ParamTy)>,
+    pub(crate) erg: GateErg,
+}
+
+/// The answer of a gate: nothing, a value, or `never` (the call does not
+/// return -- `D.aerg a = some .never`, the stop `HaltArt.nieZurueck`).
+#[derive(Clone)]
+pub(crate) enum GateErg {
+    Keine,
+    Wert(VTy),
+    Nie,
 }
 
 /// One slot field: its G type and, for integers, the storage width the
@@ -801,7 +851,7 @@ fn build_scope(scope: &mut Scope, items: &[Item]) -> Result<(), Refusal> {
 /// Every item of the unit, through modules. Anything without a G form is
 /// refused here, so nothing below ever sees it.
 fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
-    let mut model = Model { tables: vec![], globs: vec![], arenas: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], unterbricht: vec![], reasons: std::collections::HashMap::new(), konst_fns: vec![] };
+    let mut model = Model { tables: vec![], globs: vec![], arenas: vec![], locks: vec![], fns: vec![], concurrent: vec![], wurzeln: vec![], unterbricht: vec![], reasons: std::collections::HashMap::new(), konst_fns: vec![], gates: vec![], annahmen: vec![] };
     let mut scope = Scope::default();
     falte_konstanten(&mut scope, tree);
     // Pass one: constants, type aliases and `tagged` types.
@@ -814,13 +864,13 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
     // was a latent ordering hazard, with globals it fires (`110`, `125` both
     // happen to declare the `static` first, others need not). The lock
     // declarations are collected here and resolved once every carrier is in.
-    fn walk<'a>(model: &mut Model, scope: &Scope, items: &'a [Item], sperren: &mut Vec<&'a LockDecl>) -> Result<(), Refusal> {
+    fn walk<'a>(model: &mut Model, scope: &Scope, items: &'a [Item], sperren: &mut Vec<&'a LockDecl>, tore: &mut Vec<&'a SyscallDecl>) -> Result<(), Refusal> {
         for item in items {
             if item.when.is_some() {
                 return Err(refuse("LG001", "`when` on an item has no G form".to_string()));
             }
             match &item.art {
-                ItemArt::Modul(m) => walk(model, scope, &m.items, sperren)?,
+                ItemArt::Modul(m) => walk(model, scope, &m.items, sperren, tore)?,
                 // **A record is a `Tab` with `count 1`** (`Syntax.lean`
                 // §1/§9). Built HERE and not in `build_scope`, because a
                 // table lives in the model and a scope holds only values;
@@ -924,6 +974,26 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                         ),
                     ));
                 }
+                // **A gate without `stack` is a foreign body, `D.Ax`** (C-free
+                // lane, 2026-09-30): read after the walk (`read_gate`), where
+                // every table a parameter may name is in the model.
+                ItemArt::Syscall(s) => tore.push(s),
+                // `syscall V;` and `target …` fill the ABI half of the gates
+                // that name them (`via V`): the number, the register map, the
+                // errno convention, the named assumption. All of it is the
+                // C-side stub's (NO FORM in G, named in the header); the gate
+                // itself travels above.
+                ItemArt::SysVar(_) | ItemArt::Ziel(_) => {}
+                // **A named assumption is a `D.Annahme` constructor** (C-free
+                // lane, 2026-09-30). Nothing exported consumes it, so it
+                // travels as its name; `a10` is taken by the memory model.
+                ItemArt::Assume(a) => {
+                    if a.name.text == "a10" {
+                        return Err(refuse("LG005", "assume a10 names the memory model's own \
+                            assumption `D.a10`".to_string()));
+                    }
+                    model.annahmen.push(a.name.text.clone());
+                }
                 // **Every remaining item kind has its OWN arm**, and each
                 // says what the specification would carry it as and what is
                 // missing. *A catch-all that happens to fire is not a refusal
@@ -936,9 +1006,6 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                     let grund: &str = match other {
                         ItemArt::Device(_) => "a device is `D.Reg` with `rtyp`/`rklasse`/`spiegel`/`rzusage`, \
                             and its accesses are `Block.regLies`/`Stmt.regSchreib`; this exporter builds no `Reg`",
-                        ItemArt::Assume(_) => "a named assumption is `D.Annahme`, which the specification \
-                            consumes only at `Stmt.forever` and `Stmt.retires`; this exporter builds no `Annahme` \
-                            and exports neither statement",
                         ItemArt::Format(_) => "a `format` is a `Tab` with `count 1` whose `where` clauses are \
                             `Block.pruefung` (Syntax.lean §9); this exporter builds no such table",
                         ItemArt::Gruppe(_) => "a `group` is a `D.Inv` over more than one carrier (Syntax.lean §11); \
@@ -947,9 +1014,10 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                             (Syntax.lean §11); this exporter generates none",
                         ItemArt::State(_) => "a `state` declaration fills `D.erlaubt`, and its assignments are \
                             `Stmt.uebergang`; this exporter writes `erlaubt := fun _ _ _ _ => false`",
-                        ItemArt::Axiom(_) | ItemArt::Entrust(_) | ItemArt::Syscall(_) =>
+                        ItemArt::Axiom(_) | ItemArt::Entrust(_) =>
                             "a foreign body is `D.Ax` with `aparams`/`aerg`/`aschreibt`, called through \
-                            `Stmt.axiomCall`/`Block.bindAxiom`; this exporter writes `Ax := Empty`",
+                            `Stmt.axiomCall`/`Block.bindAxiom`; this exporter builds an `Ax` only for a \
+                            `syscall` gate",
                         ItemArt::Check(_) => "a `check` produces a `Duty` mark consumed by `gates` (Syntax.lean §13); \
                             this exporter writes `Marke := Empty`",
                         ItemArt::Rcu(_) => "an RCU domain is a `D.Lock` whose `observes` is `Stmt.locks`; \
@@ -973,10 +1041,15 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
         Ok(())
     }
     let mut sperren: Vec<&LockDecl> = Vec::new();
-    walk(&mut model, &scope, &tree.items, &mut sperren)?;
+    let mut tore: Vec<&SyscallDecl> = Vec::new();
+    walk(&mut model, &scope, &tree.items, &mut sperren, &mut tore)?;
     for l in sperren {
         let lm = read_lock(l, &model)?;
         model.locks.push(lm);
+    }
+    for s in tore {
+        let g = read_gate(s, &model, &scope)?;
+        model.gates.push(g);
     }
     // A unit without tables travels with `Tab := Empty` (pure computation
     // over parameters); a unit without functions has no program at all.
@@ -2042,6 +2115,80 @@ fn read_atomic(a: &AtomicDecl, scope: &Scope) -> Result<GlobModel, Refusal> {
 /// 255 -- the field is in the specification and names no G behaviour, so
 /// the word travels instead of refusing); the shared-hold branch
 /// (`shared held <= …`) still has no G form.
+/// **A `syscall` gate as `D.Ax`** (C-free lane, 2026-09-30).
+///
+/// What travels: the parameters (`aparams`, the same `Ty` forms a function
+/// parameter takes) and the answer (`aerg`: `none`, an integer range or
+/// `bool`, or `some .never` for `-> never`). The call is `Stmt.axiomCall`
+/// (no answer) or `Block.bindAxiom`, and the oracle answers it
+/// (`axiomAntwort`); what the answer may be is premise (c) of the goal
+/// (`HardwareAnnahmen O E.Q`), with `E.Q` true -- no gate `ensures` travels.
+///
+/// **Refused by name, each with the field it would need:**
+/// * `or R` -- `D.Ax` has no reason channel (`aerg : Option Ty`, no
+///   `gruende`, no `Block.bindAxiomElse`), so the errno decoding of a
+///   fallible gate has nothing to land in (LG007);
+/// * `requires` -- `D.Ax` carries no precondition, and a clause dropped here
+///   would be a duty nobody states (LG003);
+/// * `ensures` -- `AxEns` reads the world and the answer, not the arguments,
+///   and this exporter writes `Q := fun _ _ _ => true` (LG003);
+/// * a `writes` effect -- `aschreibt`/`agschreibt` are written `false`
+///   (LG001);
+/// * a `kernel` pairing -- the pairing with a Gabbro kernel entry has no G
+///   form (LG001).
+///
+/// What is dropped and named in the header: the ABI (`abi`, `arch`,
+/// `number`, the register map, `clobbers`, `errors { }`), the gate's
+/// `assume … falsifier …`, `reads` and `costs` -- the C-side stub's half,
+/// which the emitter writes from them.
+fn read_gate(s: &SyscallDecl, model: &Model, scope: &Scope) -> Result<GateModel, Refusal> {
+    let name = &s.name.text;
+    if s.fehler.is_some() {
+        return Err(refuse("LG007", format!(
+            "syscall gate {name} is fallible (`or R`): `D.Ax` has no reason channel -- `aerg` is an \
+             `Option Ty`, there is no `agruende` and no `Block.bindAxiomElse` -- so the errno \
+             decoding has nothing to land in")));
+    }
+    if !s.requires.is_empty() {
+        return Err(refuse("LG003", format!(
+            "syscall gate {name} has a `requires`: `D.Ax` carries no precondition, and a clause \
+             dropped here would be a duty nobody states")));
+    }
+    if !s.ensures.is_empty() {
+        return Err(refuse("LG003", format!(
+            "syscall gate {name} has an `ensures`: `AxEns` reads the world and the answer, not the \
+             arguments, and this exporter writes `Q := fun _ _ _ => true`")));
+    }
+    if matches!(s.paarung, SyscallPaarung::Kernel { .. }) {
+        return Err(refuse("LG001", format!(
+            "syscall gate {name} is paired with a Gabbro kernel entry (`kernel …`): the pairing has \
+             no G form")));
+    }
+    for w in &s.effects.liste {
+        match &w.art {
+            WirkungArt::Liest(_) | WirkungArt::Rein | WirkungArt::Divergiert => {}
+            other => return Err(refuse("LG001", format!(
+                "syscall gate {name} declares `{}`: this exporter writes `aschreibt`/`agschreibt` \
+                 false for every gate, so a gate's write has no G form here", other.text()))),
+        }
+    }
+    let fname = format!("the gate {name}");
+    let mut params = Vec::new();
+    for p in &s.parameter {
+        params.push((p.name.text.clone(), param_ty(&p.typ, model, scope, &fname)?));
+    }
+    let erg = match &s.ergebnis {
+        None => GateErg::Keine,
+        Some(TypExpr::Never(_)) => GateErg::Nie,
+        Some(t) => match g_ty(t, scope) {
+            Some(ty @ (VTy::Int { .. } | VTy::Bool)) => GateErg::Wert(ty),
+            _ => return Err(refuse("LG002", format!(
+                "the answer of syscall gate {name} has no integer-range or bool form"))),
+        },
+    };
+    Ok(GateModel { name: name.clone(), params, erg })
+}
+
 fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
     if l.geteilte_haltezeit.is_some() {
         return Err(refuse("LG001", format!("lock {} carries a shared hold with no G counterpart", l.name.text)));
@@ -4042,6 +4189,9 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             let Some(last) = path.teile.last() else {
                 return Err(refuse("LG004", format!("call in {fname} has no G form")));
             };
+            if let Some(gi) = gate_of(r, model, fns) {
+                return tr_gate_stmt(r, gi, ctx, model, scope, fns, fname, out, rest, cont, endblock);
+            }
             let Some(callee) = fns.iter().find(|f| f.name == last.text) else {
                 return Err(refuse("LG005", format!("call in {fname} names unknown function {}", last.text)));
             };
@@ -4238,6 +4388,88 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
     }
 }
 
+/// The four frame proofs of a gate call (`hw`, `hg`, `hd`, `hgd` of
+/// `Stmt.axiomCall`/`Block.bindAxiom`): every gate writes nothing
+/// (`aschreibt`/`agschreibt` are `fun _ _ => false`, `read_gate` refuses a
+/// declared write), so each premise `… = true` is absurd.
+const AX_BEWEISE: &str = "(fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)";
+
+fn gate_ctor(model: &Model, gi: usize) -> String {
+    format!("GAx.{}", model.gates[gi].name)
+}
+
+/// The gate a direct call names: its last segment is a gate and no exported
+/// function carries the same name (a function shadows nothing here -- the
+/// checker's name pass has already refused two items of one name).
+fn gate_of(r: &Ruf, model: &Model, fns: &[CheckedFn]) -> Option<usize> {
+    if !r.marken.is_empty() {
+        return None;
+    }
+    let last = r.path()?.teile.last()?;
+    if fns.iter().any(|f| f.name == last.text) {
+        return None;
+    }
+    model.gates.iter().position(|g| g.name == last.text)
+}
+
+/// The argument tuple of a gate call, against the gate's parameters.
+fn tr_gate_args(r: &Ruf, gi: usize, ctx: &Ctx, model: &Model, scope: &Scope, fname: &str, out: &mut Out) -> Result<String, Refusal> {
+    let gate = &model.gates[gi];
+    if r.argumente.len() != gate.params.len() {
+        return Err(refuse("LG004", format!("call of the gate {} in {fname} has the wrong arity", gate.name)));
+    }
+    let mut term = ".nil".to_string();
+    for (a, (_, pty)) in r.argumente.iter().zip(gate.params.iter()).rev() {
+        let ta = tr_arg(a, pty, ctx, model, scope, fname, out)?;
+        term = format!("(.cons {ta} {term})");
+    }
+    Ok(term)
+}
+
+/// **A gate called as a statement** (C-free lane, 2026-09-30).
+///
+/// * No answer: `Stmt.axiomCall`, anywhere a statement stands.
+/// * An answer (a value, or `never`): `Block.bindAxiom`, whose rest runs with
+///   the answer pushed and unnamed. For `-> never` that answer has no value,
+///   and the rest is unreachable in G as in the C: the head stops there
+///   (`HaltArt.nieZurueck`, the emitter's `_Noreturn`).
+///
+/// **At the top level of a body the second form is refused by name** -- a
+/// body is an `Endblock`, and `Endblock` has no `bindAxiom` (the same reason
+/// every `let` of a call is refused there). *This is the wall the `-> never`
+/// gate meets most: `else { exit_group(1); }` is an `Endblock` too.*
+#[allow(clippy::too_many_arguments)]
+fn tr_gate_stmt(r: &Ruf, gi: usize, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out, rest: &[Stmt], cont: String, endblock: bool) -> Result<String, Refusal> {
+    let gate = &model.gates[gi];
+    let args = tr_gate_args(r, gi, ctx, model, scope, fname, out)?;
+    match &gate.erg {
+        GateErg::Keine => {
+            let call = format!("(.axiomCall {} {args} rfl {AX_BEWEISE})", gate_ctor(model, gi));
+            Ok(format!("(.cons {call} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
+        }
+        erg => {
+            if endblock {
+                let was = if matches!(erg, GateErg::Nie) {
+                    "the `-> never` gate"
+                } else {
+                    "the gate"
+                };
+                return Err(refuse("LG004", format!(
+                    "call of {was} {} in {fname} stands in an `Endblock` (the top level of a body, or \
+                     an `else` that must not fall off): only `Block.bindAxiom` calls an axiom with an \
+                     answer, and `Endblock` has no such constructor", gate.name)));
+            }
+            let ty = match erg {
+                GateErg::Wert(ty) => ty.clone(),
+                _ => VTy::Nie,
+            };
+            *ctx = ctx.push(String::new(), ty, NameKind::Let);
+            Ok(format!("(.bindAxiom {} {args} rfl {AX_BEWEISE} {})",
+                gate_ctor(model, gi), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, false)?))
+        }
+    }
+}
+
 /// Whether a call in value position goes to a declared function (a
 /// conversion -- a call naming a type -- is pure and binds anywhere).
 fn is_value_call(r: &Ruf, model: &Model) -> bool {
@@ -4251,6 +4483,7 @@ fn is_value_call(r: &Ruf, model: &Model) -> bool {
         return false;
     }
     model.fns.iter().any(|f| f.name == path.teile[0].text)
+        || model.gates.iter().any(|g| g.name == path.teile[0].text)
 }
 
 /// The computed type against a `let` annotation: the annotation stands
@@ -4278,6 +4511,25 @@ fn tr_let_call(l: &LetStmt, r: &Ruf, ctx: &mut Ctx, model: &Model, scope: &Scope
         return Err(refuse("LG004", format!("indirect call in {fname} has no G form")));
     };
     let last = path.teile.last().expect("single segment");
+    if let Some(gi) = gate_of(r, model, fns) {
+        let gate = &model.gates[gi];
+        let rt = match &gate.erg {
+            GateErg::Wert(ty) => ty.clone(),
+            GateErg::Nie => return Err(refuse("LG004", format!(
+                "`let {}` in {fname} binds the answer of the `-> never` gate {}, which has none",
+                l.name.text, gate.name))),
+            GateErg::Keine => return Err(refuse("LG004", format!(
+                "call of the gate {} in {fname} answers nothing to bind", gate.name))),
+        };
+        if let Some(ann) = &l.typ {
+            let aty = annot_ty(ann, model, scope, fname)?;
+            check_annotation(&rt, &aty, model, fname, &l.name.text)?;
+        }
+        let args = tr_gate_args(r, gi, ctx, model, scope, fname, out)?;
+        *ctx = ctx.push(l.name.text.clone(), rt, NameKind::Let);
+        return Ok(format!("(.bindAxiom {} {args} rfl {AX_BEWEISE} {})",
+            gate_ctor(model, gi), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, false)?));
+    }
     let Some(callee) = fns.iter().find(|f| f.name == last.text) else {
         return Err(refuse("LG005", format!("call in {fname} names unknown function {}", last.text)));
     };
@@ -4840,7 +5092,21 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("-- `.nil`); `entry`/`boot` (the vector, the registers, the steps:\n");
     out.push_str("-- NO FORM; only the dispatch root travels, as a declared start\n");
     out.push_str("-- where exportable, and a thrown `entry` -- one carrying a `via` path -- as\n");
-    out.push_str("-- `gP.unterbricht`).\n--\n");
+    out.push_str("-- `gP.unterbricht`).\n");
+    // Only where a gate or an assumption travels, so every other export
+    // stays byte-identical (C-free lane, 2026-09-30).
+    if !model.gates.is_empty() {
+        out.push_str("-- A `syscall` gate travels as `D.Ax` (parameters, answer; it\n");
+        out.push_str("-- writes nothing); NO FORM: its ABI (`abi`, `arch`, `number`, the\n");
+        out.push_str("-- register map, `clobbers`, `errors`, `syscall V;` and `target`\n");
+        out.push_str("-- blocks) and its `assume … falsifier …` -- the C-side stub's half;\n");
+        out.push_str("-- what the answer may be is premise (c), `HardwareAnnahmen O gE.Q`.\n");
+    }
+    if !model.annahmen.is_empty() {
+        out.push_str("-- An `assume` travels as a `D.Annahme` constructor (a NAME: no\n");
+        out.push_str("-- exported statement consumes it); its text and probe: NO FORM.\n");
+    }
+    out.push_str("--\n");
     for (ti, t) in model.tables.iter().enumerate() {
         out.push_str(&format!("-- table {ti}: {} (count {})", t.name, t.count));
         for f in &t.fields {
@@ -4898,6 +5164,15 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         }
         out.push_str(")\n");
     }
+    for (gi, g) in model.gates.iter().enumerate() {
+        let e = match &g.erg {
+            GateErg::Keine => "nothing".to_string(),
+            GateErg::Nie => "never".to_string(),
+            GateErg::Wert(VTy::Int { lo, hi, .. }) => format!("{lo}..{hi}"),
+            GateErg::Wert(_) => "bool".to_string(),
+        };
+        out.push_str(&format!("-- gate {gi}: {} ({} parameters; answers {e})\n", g.name, g.params.len()));
+    }
     for (n, i) in startet.iter().enumerate() {
         out.push_str(&format!("-- start {n}: {}\n", fns[*i].name));
     }
@@ -4944,6 +5219,22 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         out.push_str("inductive GGlob where\n");
         for g in &model.globs {
             out.push_str(&format!("  | {}\n", g.name));
+        }
+        out.push_str("  deriving DecidableEq\n\n");
+    }
+    // The gates (`D.Ax`) and the named assumptions (`D.Annahme`), where the
+    // unit has any (C-free lane, 2026-09-30).
+    if !model.gates.is_empty() {
+        out.push_str("inductive GAx where\n");
+        for g in &model.gates {
+            out.push_str(&format!("  | {}\n", g.name));
+        }
+        out.push_str("  deriving DecidableEq\n\n");
+    }
+    if !model.annahmen.is_empty() {
+        out.push_str("inductive GAnn where\n  | a10\n");
+        for a in &model.annahmen {
+            out.push_str(&format!("  | {a}\n"));
         }
         out.push_str("  deriving DecidableEq\n\n");
     }
@@ -5148,18 +5439,49 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str("  Inv := Empty\n");
     out.push_str("  traeger := fun e => nomatch e\n");
     out.push_str("  invs := []\n");
-    out.push_str("  Ax := Empty\n");
-    out.push_str("  aparams := fun e => nomatch e\n");
-    out.push_str("  aerg := fun e => nomatch e\n");
-    out.push_str("  aschreibt := fun e => nomatch e\n");
-    out.push_str("  agschreibt := fun e => nomatch e\n");
+    // The foreign bodies (C-free lane, 2026-09-30): one `GAx` constructor
+    // per `syscall` gate. A unit without one keeps `Ax := Empty`, byte for
+    // byte as before.
+    if model.gates.is_empty() {
+        out.push_str("  Ax := Empty\n");
+        out.push_str("  aparams := fun e => nomatch e\n");
+        out.push_str("  aerg := fun e => nomatch e\n");
+        out.push_str("  aschreibt := fun e => nomatch e\n");
+        out.push_str("  agschreibt := fun e => nomatch e\n");
+    } else {
+        out.push_str("  Ax := GAx\n");
+        let parms: Vec<String> = model.gates.iter().map(|g| {
+            let ps: Vec<String> = g.params.iter().map(|(_, p)| ty_of(p, model)).collect();
+            format!("| .{} => [{}]", g.name, ps.join(", "))
+        }).collect();
+        out.push_str(&format!("  aparams := fun {}\n", parms.join(" ")));
+        let earms: Vec<String> = model.gates.iter().map(|g| {
+            let e = match &g.erg {
+                GateErg::Keine => "none".to_string(),
+                GateErg::Nie => "some .never".to_string(),
+                GateErg::Wert(ty) => format!("some ({})", ty.term(model)),
+            };
+            format!("| .{} => {e}", g.name)
+        }).collect();
+        out.push_str(&format!("  aerg := fun {}\n", earms.join(" ")));
+        out.push_str("  aschreibt := fun _ _ => false\n");
+        out.push_str("  agschreibt := fun _ _ => false\n");
+    }
     out.push_str("  Reg := Empty\n");
     out.push_str("  rtyp := fun e => nomatch e\n");
     out.push_str("  rklasse := fun e => nomatch e\n");
     out.push_str("  spiegel := fun e => nomatch e\n");
     out.push_str("  rzusage := fun e => nomatch e\n");
-    out.push_str("  Annahme := Unit\n");
-    out.push_str("  a10 := ()\n");
+    // The named assumptions (C-free lane, 2026-09-30): `GAnn` carries the
+    // memory model's `a10` and one constructor per `assume`. A unit without
+    // one keeps `Annahme := Unit`, byte for byte as before.
+    if model.annahmen.is_empty() {
+        out.push_str("  Annahme := Unit\n");
+        out.push_str("  a10 := ()\n");
+    } else {
+        out.push_str("  Annahme := GAnn\n");
+        out.push_str("  a10 := GAnn.a10\n");
+    }
     out.push_str("  geteilt_bewacht := fun t => by cases t <;> decide\n");
     out.push_str("  invarianten_gehalten := fun _ i => nomatch i\n");
     if model.globs.is_empty() {
@@ -5493,7 +5815,7 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     out.push_str(&format!("def gSp0 : Speicher gD :=\n  ⟨({slots}), ({globs})⟩\n\n"));
     // The program as ONE declaration (lane 198): the code with its
     // contracts (`gP`), the lock invariants (`gS`), the axioms' declared
-    // ensures (no axiom exists: `fun _ _ _ => true`, the `axWahr` shape),
+    // ensures (no gate `ensures` travels: `fun _ _ _ => true`, the `axWahr` shape),
     // the declared starts with their arguments (`gE.starts`: every start
     // is parameterless, its argument list `.nil`) and the declared initial
     // memory (`gSp0`) -- exactly the `Einheit` the goal theorem quantifies

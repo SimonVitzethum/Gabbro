@@ -1,0 +1,245 @@
+/-
+  File:      Grammatik/Parser/UebersetzeProben.lean
+  Subject:   Sieve (a), parser lane: witnesses and planted defects for the widenings of the
+             elaborator and the generic lowering.
+
+  Every probe runs the WHOLE pipeline `uebersetzeAllg` on a small source text and names the stage
+  where it stops (`stufe`). A WITNESS is a source that reaches `OK`; a PLANTED DEFECT is a source
+  one token away that must stop, at the stage and with the message the widening promises. A
+  widening whose defect also passes would be a widening that let something through.
+
+  The texts are short on purpose: the kernel decodes a `String` per proof (O13); the proofs are `decide +kernel`, because plain `decide`
+  (elaborator `whnf` first) needed ~9.5 GB for ONE probe (measured 2026-09-30) and `+kernel` 1 GB / 2 s; corpus
+  programs are pinned as characters in the chain instances, not here.
+
+  WALL 1 (2026-09-30): units WITHOUT a table; integer arithmetic (`+`, `-`, `*`) in values, with
+  the range of the result computed like `Expr.add`/`sub`/`mul` carry it; the built-in widths
+  `uN`/`iN`; an omitted `effects` (derived by the checker) read as the empty set.
+-/
+import Grammatik.Schlusssatz
+
+namespace Gabbro.Grammatik.Parser.UebersetzeProben
+
+open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
+open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
+
+set_option maxRecDepth 100000
+
+/-- The stage of `uebersetzeAllg` that stops a source (`OK` when none does). -/
+def stufe (s : String) : String :=
+  match lex s with
+  | .error _ => "lex"
+  | .ok toks =>
+    match parseTopTief toks with
+    | .error e => "parse: " ++ e
+    | .ok items =>
+      match elabU (pre108 items) with
+      | .error e => "elab: " ++ e
+      | .ok u =>
+        match lowerAllg u with
+        | .error e => "lower: " ++ e
+        | .ok _ => "OK"
+
+/-! ## Wall 1a: a unit with no table, arithmetic in a return -/
+
+/-- WITNESS (`beispiele/130`, shortened): sum of two bounded parameters, result range wide enough. -/
+def add1 : String :=
+  "module m { impl fn add(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 2000 { return a + b; } }"
+theorem add1_ok : stufe add1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: the same body against a result range one short of the sum's range (0 .. 1998).
+    The lowering must refuse it, not widen silently. -/
+def add1_eng : String :=
+  "module m { impl fn add(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u32 in 0 .. 1999 { return a + b; } }"
+theorem add1_eng_refused : stufe add1_eng = "lower: value outside range" := by decide +kernel
+
+/-- WITNESS: subtraction takes the range `lo1 - hi2 .. hi1 - lo2`, so `a - b` of two `0 .. 10`
+    parameters fits `i8` (`-10 .. 10`) and the built-in width name resolves. -/
+def sub1 : String :=
+  "module m { impl fn d(a : u32 in 0 .. 10, b : u32 in 0 .. 10) -> i8 { return a - b; } }"
+theorem sub1_ok : stufe sub1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: the same difference into an UNSIGNED result. The lower end is `-10`. -/
+def sub1_vorz : String :=
+  "module m { impl fn d(a : u32 in 0 .. 10, b : u32 in 0 .. 10) -> u8 { return a - b; } }"
+theorem sub1_vorz_refused : stufe sub1_vorz = "lower: value outside range" := by decide +kernel
+
+/-- WITNESS: a product, and a nested sum of it (`3 * a + b`). -/
+def mul1 : String :=
+  "module m { impl fn f(a : u32 in 0 .. 5, b : u32 in 0 .. 5) -> u8 in 0 .. 20 { return 3 * a + b; } }"
+theorem mul1_ok : stufe mul1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: division is not in the fragment; it must stop where it stopped before. -/
+def div1 : String :=
+  "module m { impl fn f(a : u32 in 0 .. 5, b : u32 in 1 .. 5) -> u8 in 0 .. 5 { return a / b; } }"
+theorem div1_refused : stufe div1 = "elab: Wert ohne G-Form" := by decide +kernel
+
+/-! ## Wall 1b: an omitted `effects` is read as the empty set -/
+
+/-- PLANTED DEFECT (the one that matters for this widening): a function with NO `effects` clause
+    that writes a table. The derived effects would name the write; the empty set must not let it
+    through, and the lowering is what stops it. -/
+def schreibt1 : String :=
+  "module m { table T count 2 { slot { v : u32 in 0 .. 9, } } impl fn w(i : index into T) { T.slots[i].v = 1; } }"
+theorem schreibt1_refused : stufe schreibt1 = "lower: write without right" := by decide +kernel
+
+/-! ## Wall 2: conversions `T(e)`, limit words `T::max`/`T::min`, named constants, `& | ^` -/
+
+/-- WITNESS (`beispiele/73`, shortened): a conversion whose operand fits the target type. -/
+def konv1 : String :=
+  "module m { impl fn w(a : u32 in 0 .. 100) -> u16 { return u13(a); } }"
+theorem konv1_ok : stufe konv1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: the operand's range (0 .. 9000) does not fit `u13` (0 .. 8191). The conversion
+    is a widening and never truncates, so the lowering refuses instead of widening silently. -/
+def konv1_eng : String :=
+  "module m { impl fn w(a : u32 in 0 .. 9000) -> u16 { return u13(a); } }"
+theorem konv1_eng_refused : stufe konv1_eng = "lower: conversion outside target range" := by decide +kernel
+
+/-- WITNESS: a limit word of a sugared width and of a signed built-in width (a negative number). -/
+def grenz1 : String :=
+  "module m { impl fn g() -> u64 { return u13::max; } impl fn h() -> i8 { return i8::min; } }"
+theorem grenz1_ok : stufe grenz1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: `u13::max` is 8191, which does not fit a `u8` result. -/
+def grenz1_eng : String :=
+  "module m { impl fn g() -> u8 { return u13::max; } }"
+theorem grenz1_eng_refused : stufe grenz1_eng = "lower: value outside range" := by decide +kernel
+
+/-- WITNESS: a named constant is inlined at its use. -/
+def konst1 : String :=
+  "module m { const K : u32 = 7; impl fn f() -> u8 { return K; } }"
+theorem konst1_ok : stufe konst1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: a name that is neither a parameter nor a constant. -/
+def konst1_fremd : String :=
+  "module m { impl fn f() -> u8 { return L; } }"
+theorem konst1_fremd_refused : stufe konst1_fremd = "elab: Name unbekannt: L" := by decide +kernel
+
+/-- WITNESS (`beispiele/69`): `|` of two conversions, `^` with a limit word (`beispiele/62`), `&`. -/
+def bit1 : String :=
+  "module m { impl fn k(a : u32, b : u32) -> u64 { return u64(a) | u64(b); } impl fn i(w : u32) -> u32 { return w ^ u32::max; } impl fn m(a : u8, b : u8) -> u8 { return a & b; } }"
+theorem bit1_ok : stufe bit1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: a bit operation over a signed range (M137 allows non-negative ranges only). -/
+def bit1_vorz : String :=
+  "module m { impl fn m(a : i32, b : i32) -> i32 { return a & b; } }"
+theorem bit1_vorz_refused : stufe bit1_vorz = "lower: bit operation over a negative range" := by decide +kernel
+
+/-- PLANTED DEFECT: a call to something that is not a type word keeps its old refusal. -/
+def ruf1 : String :=
+  "module m { impl fn f(a : u32 in 0 .. 5) -> u8 { return foo(a); } }"
+theorem ruf1_refused : stufe ruf1 = "elab: Wert ohne G-Form" := by decide +kernel
+
+/-! ## Wall 3: `bool` -- slots, results, truth values in the body, `by ops` -/
+
+/-- WITNESS (`beispiele/16`, `15`, shortened): a `bool` slot written with a literal through a pointer and
+    read back as the result. -/
+def bool1 : String :=
+  "module m { table T count 2 { slot { b : bool, } } impl fn set(t : ptr<normal, rw> T, i : index into T) effects { writes t.slots } { t.slots[i].b = true; } impl fn get(t : ptr<normal, r> T, i : index into T) -> bool effects { reads t.slots } { return t.slots[i].b; } }"
+theorem bool1_ok : stufe bool1 = "OK" := by decide +kernel
+
+/-- WITNESS (`beispiele/62`, shortened): a `bool` result computed from a comparison. -/
+def bool2 : String :=
+  "module m { impl fn le(x : u32 in 0 .. 9) -> bool { return x <= 5; } }"
+theorem bool2_ok : stufe bool2 = "OK" := by decide +kernel
+
+/-- WITNESS: `&&`, `||`, `!` and the literals over comparisons. -/
+def bool3 : String :=
+  "module m { impl fn f(x : u32 in 0 .. 9, y : u32 in 0 .. 9) -> bool { return x <= 5 && !(y == 3) || false; } }"
+theorem bool3_ok : stufe bool3 = "OK" := by decide +kernel
+
+/-- WITNESS: `by ops` is a writer discipline the CHECKER holds; the model reads the field as written. -/
+def byops1 : String :=
+  "module m { table T count 2 { slot { n : u32 in 0 .. 9 by ops, } } impl fn get(t : ptr<normal, r> T, i : index into T) -> u32 effects { reads t.slots } { return t.slots[i].n; } }"
+theorem byops1_ok : stufe byops1 = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: a NUMBER stored into a bool field. -/
+def bool_zahl : String :=
+  "module m { table T count 2 { slot { b : bool, } } impl fn set(t : ptr<normal, rw> T, i : index into T) effects { writes t.slots } { t.slots[i].b = 1; } }"
+theorem bool_zahl_refused : stufe bool_zahl = "elab: Ensures-Klausel ohne G-Form" := by decide +kernel
+
+/-- PLANTED DEFECT: a bool field read as a NUMBER. -/
+def bool_als_zahl : String :=
+  "module m { table T count 2 { slot { b : bool, } } impl fn get(t : ptr<normal, r> T, i : index into T) -> u32 effects { reads t.slots } { return t.slots[i].b; } }"
+theorem bool_als_zahl_refused : stufe bool_als_zahl = "elab: Bool-Feld als Zahl ohne G-Form" := by decide +kernel
+
+/-- PLANTED DEFECT: a truth value stored into a NUMBER field. -/
+def zahl_wahr : String :=
+  "module m { table T count 2 { slot { n : u32 in 0 .. 9, } } impl fn set(t : ptr<normal, rw> T, i : index into T) effects { writes t.slots } { t.slots[i].n = true; } }"
+theorem zahl_wahr_refused : stufe zahl_wahr = "elab: Wert ohne G-Form" := by decide +kernel
+
+/-- PLANTED DEFECT: a number returned where the result is `bool`, and a comparison returned where the
+    result is a number. -/
+def bool_res_zahl : String :=
+  "module m { impl fn f(x : u32 in 0 .. 9) -> bool { return x; } }"
+theorem bool_res_zahl_refused : stufe bool_res_zahl = "elab: Ensures-Klausel ohne G-Form" := by decide +kernel
+
+def zahl_res_bool : String :=
+  "module m { impl fn f(x : u32 in 0 .. 9) -> u32 { return x <= 5; } }"
+theorem zahl_res_bool_refused : stufe zahl_res_bool = "elab: Wert ohne G-Form" := by decide +kernel
+
+/-! ## Wall 4: `own` pointers and the complement `~p` over the declared storage width -/
+
+/-- WITNESS (`beispiele/15`, shortened): an `own` pointer is a read-write pointer in the model (the
+    exporter reads it the same way; ownership is the checker's business). -/
+def own1 : String :=
+  "module m { table T count 2 { slot { b : bool, } } impl fn u(r : ptr<normal, own> T, i : index into T) -> bool effects { reads r.slots, writes r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"
+theorem own1_ok : stufe own1 = "OK" := by decide +kernel
+
+/-- WITNESS (`beispiele/62`, `61`): `~p` is `p ^ (2^w - 1)` over the parameter's declared storage width. -/
+def bnot1 : String :=
+  "module m { impl fn f(m : u8) -> u8 { return ~m; } impl fn g(w : u8) -> bool { return (w ^ u8::max) == ~w; } }"
+theorem bnot1_ok : stufe bnot1 = "OK" := by decide +kernel
+
+/-- WITNESS: the width is the DECLARED word's, not the range's: `u8 in 0 .. 15` is stored in 8 bits, so
+    its complement is `255 - x` (`beispiele/61`, `hohes_nibble`), and `u16 in 0 .. 255` in 16. -/
+def bnot_schmal : String :=
+  "module m { impl fn f(x : u8 in 0 .. 15) -> u8 { return ~x; } impl fn k(w : u16 in 0 .. 255) -> u16 { return ~w; } }"
+theorem bnot_schmal_ok : stufe bnot_schmal = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: the complement of an EXPRESSION has no known width here -- it is refused, not
+    guessed from a range (a range would give `15 - x` for `0 .. 15`, where the C says `255 - x`). -/
+def bnot_ausdruck : String :=
+  "module m { impl fn f(x : u32) -> u32 { return ~(x + 1); } }"
+theorem bnot_ausdruck_refused : stufe bnot_ausdruck = "elab: Wert ohne G-Form" := by decide +kernel
+
+/-- PLANTED DEFECT: the complement of a signed parameter (its width has no unsigned reading). -/
+def bnot_vorzeichen : String :=
+  "module m { impl fn f(x : i32) -> i32 { return ~x; } }"
+theorem bnot_vorzeichen_refused :
+    stufe bnot_vorzeichen = "elab: Komplement ohne bekannte Breite ohne G-Form" := by decide +kernel
+
+/-! ## Wall 5: compile-time constants -- expressions and `const fn` calls -/
+
+/-- WITNESS (`beispiele/93`, shortened): a constant computed from earlier constants with `+ - * ^ >>`. -/
+def konst_ausdruck : String :=
+  "module m { const A : u32 = 6 * 7; const B : u32 = A + 2 * (A ^ 3) - (A >> 1); impl fn f() -> u32 { return B; } }"
+theorem konst_ausdruck_ok : stufe konst_ausdruck = "OK" := by decide +kernel
+
+/-- WITNESS: a constant computed by a `const fn` call (arguments checked against the parameter's range). -/
+def konst_fn : String :=
+  "module m { const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 { return n + n; } const C : u32 = doppelt(21); impl fn f() -> u32 { return C; } }"
+theorem konst_fn_ok : stufe konst_fn = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: an intermediate value outside the declared type (`200 + 100` in a `u8`): the emitted C
+    would wrap, the exact value would not -- the constant is UNKNOWN, so its use is refused. -/
+def konst_ueberlauf : String :=
+  "module m { const X : u8 = 200 + 100; impl fn f() -> u8 { return X; } }"
+theorem konst_ueberlauf_refused : stufe konst_ueberlauf = "elab: Name unbekannt: X" := by decide +kernel
+
+/-- PLANTED DEFECT: a negative intermediate in an unsigned constant. -/
+def konst_negativ : String :=
+  "module m { const Y : u32 = 3 - 5; impl fn f() -> u32 { return Y; } }"
+theorem konst_negativ_refused : stufe konst_negativ = "elab: Name unbekannt: Y" := by decide +kernel
+
+/-- PLANTED DEFECT: an argument outside the `const fn` parameter's range. -/
+def konst_argument : String :=
+  "module m { const fn doppelt(n : u32 in 0 .. 1000) -> u32 in 0 .. 2000 { return n + n; } const C : u32 = doppelt(2000); impl fn f() -> u32 { return C; } }"
+theorem konst_argument_refused : stufe konst_argument = "elab: Name unbekannt: C" := by decide +kernel
+
+#print axioms add1_ok
+#print axioms schreibt1_refused
+
+end Gabbro.Grammatik.Parser.UebersetzeProben
+

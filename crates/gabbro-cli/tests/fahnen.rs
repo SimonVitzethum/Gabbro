@@ -159,6 +159,11 @@ const FAHNEN: &[Fahne] = &[
     },
     // --- English from the start, no pair ------------------------------------------------
     Fahne {
+        erstname: "--c-liste",
+        zweitname: "",
+        lebendig: &[],
+    },
+    Fahne {
         erstname: "--with",
         zweitname: "",
         lebendig: &[],
@@ -223,6 +228,18 @@ const FAHNEN: &[Fahne] = &[
         // a model folder that does not exist is refused by name; without the flag the
         // folder is looked for above the file
         lebendig: &["prove", "--model", "/nonexistent-model", DATEI],
+    },
+    Fahne {
+        erstname: "--source",
+        zweitname: "--quelle",
+        // the template pinned to the source text: a bridge folder that does not exist is a SETUP
+        // refusal (exit 3), never an empty template
+        lebendig: &["prove", "--template", "--source", "--bridge", "/nonexistent-bridge", DATEI],
+    },
+    Fahne {
+        erstname: "--bridge",
+        zweitname: "--bruecke",
+        lebendig: &["prove", "--template", "--source", "--bridge", "/nonexistent-bridge", DATEI],
     },
     Fahne {
         // `fn` is the keyword in Gabbro AND in Rust; it is not a word of either natural

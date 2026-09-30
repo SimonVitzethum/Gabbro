@@ -39,8 +39,12 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
     (∃ cname ps es pre gf, bst = .call cname ps es pre ∧ fnSuch u cname = some gf ∧
       ∀ w ∈ gf.schreibt, w ∈ (fnAt u c).schreibt) := by
   cases st with
+  | assignB _ _ _ _ => simp [stmtBody] at hb
+  | assignTabB _ _ _ _ => simp [stmtBody] at hb
+  | sperrtAuf _ => simp [stmtBody] at hb
+  | sperrtZu => simp [stmtBody] at hb
   | assign b fname ix v =>
-    simp only [lowStmt, lowAssignDurch] at h
+    simp only [lowStmt, lowAssignDurch, lowAssignDurchL] at h
     split at h
     · cases h
     · rename_i j hj
@@ -63,7 +67,7 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
         · cases h
       · cases h
   | assignTab b fname ix v =>
-    simp only [lowStmt, lowAssignTab] at h
+    simp only [lowStmt, lowAssignTab, lowAssignTabL] at h
     split at h
     · cases h
     · rename_i t ht
@@ -83,7 +87,7 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
         rw [show (tabAt u t).name = b from hn] at hw'
         exact ⟨_, _, _, _, rfl, any_mem hw'⟩
   | call cname args =>
-    simp only [lowStmt, lowCall] at h
+    simp only [lowStmt, lowCall, lowCallL] at h
     split at h
     · cases h
     · rename_i callee hcallee
@@ -113,10 +117,11 @@ theorem stmt_statisch (S : Stimmig u) (c : Fin u.fns.length) (st : UStmt)
 
 theorem lowBody_stmts (c : Fin u.fns.length) (r : URet) : ∀ (ss : List UStmt)
     (b0 : Endblock (declOf u) (verOf u c) false (ctxOf u c) (resOf u c)),
+    (∀ st ∈ ss, (stmtBody u (fnAt u c) st).isSome = true) →
     lowBody u c ss r = .ok b0 → ∀ st ∈ ss, ∃ g, lowStmt u c st = .ok g
-  | [], _, _, st, hm => absurd hm List.not_mem_nil
-  | s :: ss, b0, h, st, hm => by
-      simp only [lowBody] at h
+  | [], _, _, _, st, hm => absurd hm List.not_mem_nil
+  | s :: ss, b0, hsome, h, st, hm => by
+      rw [lowBody_cons c r s ss (stmtBody_nomark _ s (hsome s List.mem_cons_self))] at h
       split at h
       · cases h
       · rename_i g hg
@@ -125,7 +130,7 @@ theorem lowBody_stmts (c : Fin u.fns.length) (r : URet) : ∀ (ss : List UStmt)
         · rename_i rest hrest
           rcases List.mem_cons.mp hm with rfl | hm
           · exact ⟨g, hg⟩
-          · exact lowBody_stmts c r ss rest hrest st hm
+          · exact lowBody_stmts c r ss rest (fun x hx => hsome x (List.mem_cons_of_mem _ hx)) hrest st hm
 
 theorem step_assign (ρ : Gabbro.Body.Env) (cn : String) (idx : Gabbro.Body.Expr) (fld : String)
     (ve : Gabbro.Body.Expr) (t : Gabbro.Body.State) :
@@ -202,6 +207,10 @@ theorem exec_rahmen (S : Stimmig u) (c : Fin u.fns.length) (ρ : Gabbro.Body.Env
             exact hcn
         · have hcall : ∃ args, UStmt.call cname args ∈ st :: ss := by
             cases st with
+            | assignB _ _ _ _ => simp [stmtBody] at hx
+            | assignTabB _ _ _ _ => simp [stmtBody] at hx
+            | sperrtAuf _ => simp [stmtBody] at hx
+            | sperrtZu => simp [stmtBody] at hx
             | call cn args =>
               simp only [stmtBody] at hx
               split at hx
@@ -289,6 +298,10 @@ theorem mem_calleesOf {f : UFn} {g : String} (h : g ∈ calleesOf f) :
     exact ⟨args, hst⟩
   | assign a b c d => simp at hg
   | assignTab a b c d => simp at hg
+  | assignB a b c d => simp at hg
+  | assignTabB a b c d => simp at hg
+  | sperrtAuf a => simp at hg
+  | sperrtZu => simp at hg
 
 theorem stmtsBody_mem {f : UFn} : ∀ {ss : List UStmt} {bs : List Gabbro.Body.Stmt},
     stmtsBody u f ss = some bs → ∀ st ∈ ss, ∃ x, stmtBody u f st = some x
@@ -370,6 +383,7 @@ theorem realisiert (S : Stimmig u)
               intro x hx
               cases hr : (fnAt u c).rueck with
               | keine => rw [hr] at heB; simp [endBody] at heB; subst heB; cases hx
+              | bool _ => rw [hr] at heB; simp [endBody] at heB
               | wert v =>
                 rw [hr] at heB
                 simp only [endBody] at heB
@@ -399,7 +413,7 @@ theorem realisiert (S : Stimmig u)
               · rw [hz, Option.getD_some]
                 split
                 · rename_i s' hs'
-                  exact exec_rahmen S c ρk eB heBr _ bs (lowBody_stmts c _ _ b0 hb0) hbs
+                  exact exec_rahmen S c ρk eB heBr _ bs (lowBody_stmts c _ _ b0 (stmtsBody_isSome hbs) hb0) hbs
                     (fun cn gf' hgf' hm => (hcallee cn gf' hgf' hm).2) t s' hs' p hp
                 · rfl
               · rfl

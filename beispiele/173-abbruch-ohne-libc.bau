@@ -1,0 +1,7 @@
+-- The manifest of a process whose watchdog is Gabbro (C-free lane): `nolibc`, no C file.
+compiler cc -std=c11 -O0 -ffreestanding -fno-stack-protector -fno-pie -Wall -Wextra -Werror
+out      target/bau-abbruch-ohne-libc
+nolibc
+
+unit abbruch program
+    beispiele/173-abbruch-ohne-libc.gab

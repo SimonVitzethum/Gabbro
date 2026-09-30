@@ -569,7 +569,11 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     );
     assert_eq!(ungedeckt(), 11);
     // **10 seit dem 2026-08-20** -- `restrict.alleinzugriff` ist in Isabelle und baut.
-    assert_eq!(bewiesen(), 10);
+    // **10 -> 12 on 2026-09-30 (C-free lane):** the two templates of a program without a C
+    // library (the `-> never` gate stub and the process entry), entered and
+    // proved in one commit (`grammatik/Grammatik/SchablonenOhneLibc.lean`). The live surface
+    // and the unproved count do not move: neither entry was ever carried unproved.
+    assert_eq!(bewiesen(), 12);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

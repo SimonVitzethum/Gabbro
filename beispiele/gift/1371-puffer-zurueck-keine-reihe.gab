@@ -1,7 +1,7 @@
 -- erwartet: N569
 -- M-ALLTAG C: `reset X at i count n;` names something that is no `static` array
 -- -- here a scalar. There is no run of bytes at a fixed address to give back
--- (positive twin: `beispiele/172`).
+-- (positive twin: `beispiele/175`).
 module beispiel::puffer_keine_reihe {
 static mut ZAEHLER : u64 = 0;
 

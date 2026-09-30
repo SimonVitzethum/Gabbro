@@ -283,8 +283,11 @@ theorem fieldHit_name (u : UProg) (t : Fin u.tabellen.length) (fld : String) (fh
   split at h
   · cases h
   · rename_i w hw
-    cases h
-    exact fieldAtPos_name _ _ _ hw
+    dsimp only at h
+    split at h
+    · cases h
+      exact fieldAtPos_name _ _ _ hw
+    · cases h
 
 /-! ## 4. Worlds, through the declaration's names -/
 
@@ -346,7 +349,7 @@ theorem enc_of_wrel {σ : World (declOf u)} {w : Gabbro.Body.World} (h : WRel u 
 /-- Every declared field holds a number in its recorded range. -/
 theorem valOf_feld (t : Fin u.tabellen.length) (fh : FieldHit u t) (x : Wert (declOf u) ((declOf u).typ t fh.idx)) :
     ∃ n, valOf ((declOf u).typ t fh.idx) x = .int n ∧ fh.weit.1 ≤ n ∧ n ≤ fh.weit.2 := by
-  have h : (declOf u).typ t fh.idx = .int fh.weit.1 fh.weit.2 := typAt_of u t fh.idx fh.weit fh.hit
+  have h : (declOf u).typ t fh.idx = .int fh.weit.1 fh.weit.2 := fh.hint
   revert x
   rw [h]
   intro x
@@ -432,6 +435,7 @@ theorem slotShape_tabIdx : ∀ (ts : List UTab) (c fld : String) (sh : Gabbro.Bo
         · simpa using hf
 
 theorem fieldHit_of (t : Fin u.tabellen.length) (fld : String) (w : Int × Int)
+    (hB : (tabAt u t).bools = [])
     (h : fieldAtPos (tabAt u t).felder fld = some w) : ∃ fh, fieldHit u t fld = .ok fh ∧ fh.weit = w := by
   unfold fieldHit
   split
@@ -439,10 +443,14 @@ theorem fieldHit_of (t : Fin u.tabellen.length) (fld : String) (w : Int × Int)
   · rename_i w' h'
     rw [h] at h'
     cases h'
+    have hnb : ∀ f : Fin (fieldCount u t), boolFeldAt u t f = false := by
+      intro f; unfold boolFeldAt; rw [hB]; cases (tabAt u t).felder[f.val]? <;> simp
+    rw [dif_pos (hnb _)]
     exact ⟨_, rfl, rfl⟩
 
 /-- **A related world is well-typed** (the duty file's `wellFormed`, hypothesis `U2`). -/
-theorem wf_of_wrel {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WRel u σ w) :
+theorem wf_of_wrel {σ : World (declOf u)} {w : Gabbro.Body.World}
+    (hB : ∀ t : Fin u.tabellen.length, (tabAt u t).bools = []) (hW : WRel u σ w) :
     Gabbro.Body.WF (shapeOfU u) w := by
   intro p sh hp
   cases p with
@@ -456,7 +464,7 @@ theorem wf_of_wrel {σ : World (declOf u)} {w : Gabbro.Body.World} (hW : WRel u 
       subst hf
       have hfa : fieldAtPos (tabAt u t).felder fld = some q.2 := by
         rw [fieldAtPos_find]; simp only [tabAt]; rw [hq]; rfl
-      obtain ⟨fh, hfh, hw⟩ := fieldHit_of u t fld q.2 hfa
+      obtain ⟨fh, hfh, hw⟩ := fieldHit_of u t fld q.2 (hB t) hfa
       rw [wrel_lies_k u hW c t ht fld fh hfh k]
       obtain ⟨n, hn, hlo, hhi⟩ := valOf_feld u t fh (σ.slots t k fh.idx)
       rw [hn, ← hw]
@@ -475,6 +483,10 @@ theorem mp_heq {α β : Sort _} (h : α = β) (a : α) : HEq (Eq.mp h a) a := by
 
 theorem mpr3id_heq {α β γ δ : Sort _} (h1 : α = β) (h2 : β = γ) (h3 : γ = δ) (x : δ) :
     HEq (Eq.mpr h1 (Eq.mpr h2 (Eq.mpr h3 (id x)))) x := by
+  subst h1; subst h2; subst h3; rfl
+
+theorem mpr3_heq {α β γ δ : Sort _} (h1 : α = β) (h2 : β = γ) (h3 : γ = δ) (x : δ) :
+    HEq (Eq.mpr h1 (Eq.mpr h2 (Eq.mpr h3 x))) x := by
   subst h1; subst h2; subst h3; rfl
 
 theorem mpr2_heq {α β γ : Sort _} (h1 : α = β) (h2 : β = γ) (x : γ) :

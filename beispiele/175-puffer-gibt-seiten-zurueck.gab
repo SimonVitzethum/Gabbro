@@ -1,4 +1,4 @@
--- 172 -- **A range of a static buffer given back reads as zero; the rest does not move.**
+-- 175 -- **A range of a static buffer given back reads as zero; the rest does not move.**
 --
 -- `reset X at i count n;` (server lane, M-ALLTAG C) is how a big fixed buffer
 -- stops being resident once its owner is done with it: the `n` elements from
@@ -14,7 +14,7 @@
 --
 -- Here: two bytes are stored, the upper half of the buffer is given back, the
 -- byte below survives and the byte inside reads zero. Executed result: 7
--- (the driver `beispiel172` in `instrumente/pruefe-emission.sh`).
+-- (the driver `beispiel175` in `instrumente/pruefe-emission.sh`).
 module beispiel::puffer_zurueck {
 static mut RING : [u8; 8192] = 0 aligned 4096;
 

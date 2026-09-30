@@ -119,10 +119,11 @@ where
   zuckerZahl : List Char → Bool
     | [] => false
     | ds =>
+      -- The number is read off the DIGITS: `String.ofList ds |>.toNat?` would make the kernel
+      -- decode a `String` (O13, measured 2026-09-30: `u13::max` in a probe took > 4 GB).
       ds.all istZiffer &&
-      match String.ofList ds |>.toNat? with
-      | some n => 1 ≤ n && n ≤ 64
-      | none => false
+      (let n := ds.foldl (fun a c => 10 * a + (c.toNat - 48)) 0
+       1 ≤ n && n ≤ 64)
 
 /-- One spelled operator of the `||` level. -/
 def opOder : List Token → Option (List Token)

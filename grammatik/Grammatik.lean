@@ -162,6 +162,8 @@ import Grammatik.Parser.Ausdruck
 import Grammatik.Parser.Anweisung
 import Grammatik.Parser.Element
 import Grammatik.Parser.AnweisungProben
+import Grammatik.Parser.UebersetzeProben
+import Grammatik.Parser.UebersetzeProben2
 import Grammatik.Parser.AusdruckProben
 import Grammatik.CFormenW
 import Grammatik.CFormenWZeuge
@@ -181,6 +183,7 @@ import Grammatik.ZielOrtEinfaden
 import Grammatik.ZielOrtEinfadenZeuge
 import Grammatik.SchablonenT5
 import Grammatik.SchablonenT5Sem
+import Grammatik.SchablonenOhneLibc
 import Grammatik.ZeugnisStmt104
 import Grammatik.ZeugnisIdent
 import Grammatik.ZeugnisStmt104b
