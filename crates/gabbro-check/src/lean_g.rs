@@ -420,6 +420,8 @@ pub(crate) struct GateModel {
     pub(crate) name: String,
     pub(crate) params: Vec<(String, ParamTy)>,
     pub(crate) erg: GateErg,
+    /// `-> T or R`: the case count of `R` (`D.agruende`), 0 without a channel.
+    pub(crate) gruende: usize,
 }
 
 /// The answer of a gate: nothing, a value, or `never` (the call does not
@@ -2143,12 +2145,15 @@ fn read_atomic(a: &AtomicDecl, scope: &Scope) -> Result<GlobModel, Refusal> {
 /// which the emitter writes from them.
 fn read_gate(s: &SyscallDecl, model: &Model, scope: &Scope) -> Result<GateModel, Refusal> {
     let name = &s.name.text;
-    if s.fehler.is_some() {
-        return Err(refuse("LG007", format!(
-            "syscall gate {name} is fallible (`or R`): `D.Ax` has no reason channel -- `aerg` is an \
-             `Option Ty`, there is no `agruende` and no `Block.bindAxiomElse` -- so the errno \
-             decoding has nothing to land in")));
-    }
+    // `or R` (since 2026-09-30): the channel is `D.agruende`, the call `bindAxiomElse`, the
+    // stub's decoding the proved template `tor.fehlbar` -- whose theorem is over an integer
+    // answer, so any other answer of a fallible gate stays refused by name.
+    let gruende = match &s.fehler {
+        None => 0,
+        Some(r) => *model.reasons.get(&r.text).ok_or_else(|| {
+            refuse("LG005", format!("syscall gate {name} names unknown reason {}", r.text))
+        })?,
+    };
     if !s.requires.is_empty() {
         return Err(refuse("LG003", format!(
             "syscall gate {name} has a `requires`: `D.Ax` carries no precondition, and a clause \
@@ -2186,7 +2191,12 @@ fn read_gate(s: &SyscallDecl, model: &Model, scope: &Scope) -> Result<GateModel,
                 "the answer of syscall gate {name} has no integer-range or bool form"))),
         },
     };
-    Ok(GateModel { name: name.clone(), params, erg })
+    if gruende > 0 && !matches!(erg, GateErg::Wert(VTy::Int { .. })) {
+        return Err(refuse("LG007", format!(
+            "syscall gate {name} is fallible (`or R`) with an answer that is not an integer range: \
+             the template of its stub (`tor.fehlbar`) is proved over an integer answer only")));
+    }
+    Ok(GateModel { name: name.clone(), params, erg, gruende })
 }
 
 fn read_lock(l: &LockDecl, model: &Model) -> Result<LockModel, Refusal> {
@@ -4264,10 +4274,13 @@ fn tr_rest(stmts: &[Stmt], ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[C
             Ok(format!("(.bind {ascribed} {})", tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
         }
         StmtArt::LetSonst(l) => {
-            if endblock {
+            // Over a gate it binds at the top level too (`Endblock.bindAxiomElse`, C-free
+            // lane 2026-09-30); over a function still only through `Block.bindCallElse`.
+            let ueber_tor = matches!(&l.quelle, LetQuelle::Ruf(r) if gate_of(r, model, fns).is_some());
+            if endblock && !ueber_tor {
                 return Err(refuse("LG004", format!("`let … else` in {fname} has no G form at the top level")));
             }
-            tr_let_else(l, ctx, model, scope, fns, fname, out, rest, cont)
+            tr_let_else(l, ctx, model, scope, fns, fname, out, rest, cont, endblock)
         }
         StmtArt::Return(e) => {
             // A `return` ends its sequence (a mid-sequence one has no form);
@@ -4627,13 +4640,17 @@ fn tr_alloc(al: &AllocStmt, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[
 /// A `let x = f() else (e) { … }`: `Block.bindCallElse`. The `else` branch
 /// must end in a `return` (an `Endblock`); a falling-off branch would
 /// continue after the `let`, for which no constructor exists.
-fn tr_let_else(l: &LetSonst, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out, rest: &[Stmt], cont: String) -> Result<String, Refusal> {
+#[allow(clippy::too_many_arguments)]
+fn tr_let_else(l: &LetSonst, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out, rest: &[Stmt], cont: String, endblock: bool) -> Result<String, Refusal> {
     let r = match &l.quelle {
         LetQuelle::Ruf(r) => r,
         LetQuelle::Ort(o) => {
             return Err(refuse("LG007", format!("`let … else` over {} in {fname} has no G form", o.text())));
         }
     };
+    if let Some(gi) = gate_of(r, model, fns) {
+        return tr_gate_else(l, r, gi, ctx, model, scope, fns, fname, out, rest, cont, endblock);
+    }
     let Some(path) = r.path() else {
         return Err(refuse("LG004", format!("indirect call in {fname} has no G form")));
     };
@@ -4667,6 +4684,39 @@ fn tr_let_else(l: &LetSonst, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &
     *ctx = ctx.push(l.name.text.clone(), rt, NameKind::Let);
     Ok(format!("(.bindCallElse g_{} {args} rfl {hp} (by decide) {err} {})",
         lean_fn(&callee.name), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, false)?))
+}
+
+/// **`let x = g(…) else (e) { … }` over a fallible gate: `bindAxiomElse`** (C-free lane,
+/// 2026-09-30) -- `Block.bindAxiomElse` in a block, `Endblock.bindAxiomElse` at the top level
+/// of a body; the reason channel is `D.agruende`, the stub's decoding the proved template
+/// `tor.fehlbar`. The `else` branch is an end block with the reason bound, and it must end in
+/// a `return` (a falling-off branch would continue behind the `let`, for which no form
+/// exists), like `bindCallElse`'s.
+#[allow(clippy::too_many_arguments)]
+fn tr_gate_else(l: &LetSonst, r: &Ruf, gi: usize, ctx: &mut Ctx, model: &Model, scope: &Scope, fns: &[CheckedFn], fname: &str, out: &mut Out, rest: &[Stmt], cont: String, endblock: bool) -> Result<String, Refusal> {
+    let gate = &model.gates[gi];
+    if gate.gruende == 0 {
+        return Err(refuse("LG007", format!("`let … else` of the gate {} in {fname} binds no reason", gate.name)));
+    }
+    let GateErg::Wert(rt) = &gate.erg else {
+        return Err(refuse("LG007", format!("`let … else` of the gate {} in {fname} binds no value", gate.name)));
+    };
+    let rt = rt.clone();
+    let Some((err_last, _)) = l.sonst.anweisungen.split_last() else {
+        return Err(refuse("LG007", format!("empty `else` in {fname} has no G form")));
+    };
+    let StmtArt::Return(_) = &err_last.art else {
+        return Err(refuse("LG007", format!("falling-off `else` in {fname} has no G form")));
+    };
+    if ctx.locks_open {
+        return Err(refuse("LG007", format!("`let … else` under `locks` in {fname} has no G form")));
+    }
+    let args = tr_gate_args(r, gi, ctx, model, scope, fname, out)?;
+    let mut err_ctx = ctx.push(l.fehlername.text.clone(), VTy::Grund { n: gate.gruende }, NameKind::Let);
+    let err = tr_rest(&l.sonst.anweisungen, &mut err_ctx, model, scope, fns, fname, out, String::new(), true)?;
+    *ctx = ctx.push(l.name.text.clone(), rt, NameKind::Let);
+    Ok(format!("(.bindAxiomElse {} {args} rfl (by decide) {AX_BEWEISE} {err} {})",
+        gate_ctor(model, gi), tr_rest(rest, ctx, model, scope, fns, fname, out, cont, endblock)?))
 }
 
 /// One block as a `Block` term: the statements consed onto `nil`.
@@ -5179,7 +5229,8 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
             GateErg::Wert(VTy::Int { lo, hi, .. }) => format!("{lo}..{hi}"),
             GateErg::Wert(_) => "bool".to_string(),
         };
-        out.push_str(&format!("-- gate {gi}: {} ({} parameters; answers {e})\n", g.name, g.params.len()));
+        let kanal = if g.gruende > 0 { format!(", or one of {} reasons", g.gruende) } else { String::new() };
+        out.push_str(&format!("-- gate {gi}: {} ({} parameters; answers {e}{kanal})\n", g.name, g.params.len()));
     }
     for (n, i) in startet.iter().enumerate() {
         out.push_str(&format!("-- start {n}: {}\n", fns[*i].name));
@@ -5474,6 +5525,13 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
         out.push_str(&format!("  aerg := fun {}\n", earms.join(" ")));
         out.push_str("  aschreibt := fun _ _ => false\n");
         out.push_str("  agschreibt := fun _ _ => false\n");
+        // The reason channel only where one exists: a unit without a fallible gate keeps
+        // the default (`fun _ => 0`), byte for byte as before.
+        if model.gates.iter().any(|g| g.gruende > 0) {
+            let garms: Vec<String> = model.gates.iter()
+                .map(|g| format!("| .{} => {}", g.name, g.gruende)).collect();
+            out.push_str(&format!("  agruende := fun {}\n", garms.join(" ")));
+        }
     }
     out.push_str("  Reg := Empty\n");
     out.push_str("  rtyp := fun e => nomatch e\n");

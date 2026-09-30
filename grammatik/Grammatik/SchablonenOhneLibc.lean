@@ -35,6 +35,7 @@
 -/
 
 import Grammatik.Zertifikat.G174_tor_im_modell
+import Grammatik.Syscall
 
 namespace Gabbro.Grammatik
 
@@ -175,6 +176,112 @@ theorem start_nolibc_zeuge :
     (startLauf 0x7ffc12345678 false).ud2 = false :=
   start_nolibc 0x7ffc12345678 (by decide) false rfl
 
+/-! ## 3. `tor.fehlbar` -- the stub of a fallible gate -/
+
+section Fehlbar
+
+variable {D : Deklaration}
+
+/-- The stub's outcome as the machine's ONE raw word: the pair packed like a `tagged` value
+    (case number in the low digit, base `n + 1`), the unreachable outcome as a word whose
+    value half lies outside the declared range. -/
+def packe (n : Nat) {lo hi : Int} : SysAntwort { x : Int // lo ≤ x ∧ x ≤ hi } (Fin n) → Int
+  | .ok v => v.1 * ((n : Int) + 1)
+  | .grund r => (r.1 : Int) + 1
+  | .unerwartet _ => (hi + 1) * ((n : Int) + 1)
+
+/-- What G does with a decoded answer of a fallible gate: the value (as the machine's `Zahl`),
+    the reason, or nothing (the hardware stop). -/
+def gAntwort {n : Nat} {lo hi : Int} : SysAntwort { x : Int // lo ≤ x ∧ x ≤ hi } (Fin n) →
+    Option (ErgVal D (some (.int lo hi)) ⊕ Fin n)
+  | .ok v => some (Sum.inl (⟨v.1, v.2.1, v.2.2⟩ : Zahl lo hi))
+  | .grund r => some (Sum.inr r)
+  | .unerwartet _ => none
+
+theorem packe_ok (z : Int → Option D.Fn) (n : Nat) {lo hi : Int}
+    (v : { x : Int // lo ≤ x ∧ x ≤ hi }) :
+    sonstPasst z (some (.int lo hi)) n (packe n (.ok v : SysAntwort _ (Fin n))) =
+      some (Sum.inl (⟨v.1, v.2.1, v.2.2⟩ : Zahl lo hi)) := by
+  obtain ⟨x, h1, h2⟩ := v
+  have hk : (0 : Int) < (n : Int) + 1 := by omega
+  have hm : x * ((n : Int) + 1) % ((n : Int) + 1) = 0 := Int.mul_emod_left _ _
+  have hd : x * ((n : Int) + 1) / ((n : Int) + 1) = x := Int.mul_ediv_cancel _ (by omega)
+  simp only [sonstPasst, packe, hm, if_true, hd, einpassenErg, einpassen, dif_pos (And.intro h1 h2)]
+  rfl
+
+theorem packe_grund (z : Int → Option D.Fn) (n : Nat) {lo hi : Int} (r : Fin n) :
+    sonstPasst z (some (.int lo hi)) n (packe (lo := lo) (hi := hi) n (.grund r)) =
+      some (Sum.inr r) := by
+  obtain ⟨i, hi'⟩ := r
+  have hm : ((i : Int) + 1) % ((n : Int) + 1) = (i : Int) + 1 :=
+    Int.emod_eq_of_lt (by omega) (by omega)
+  simp only [sonstPasst, packe, hm]
+  rw [if_neg (by omega), dif_pos (by omega)]
+  congr
+  simp
+
+theorem packe_unerwartet (z : Int → Option D.Fn) (n : Nat) {lo hi : Int} (u : Int) :
+    sonstPasst z (some (.int lo hi)) n (packe (lo := lo) (hi := hi) n (.unerwartet u)) = none := by
+  have hm : (hi + 1) * ((n : Int) + 1) % ((n : Int) + 1) = 0 := Int.mul_emod_left _ _
+  have hd : (hi + 1) * ((n : Int) + 1) / ((n : Int) + 1) = hi + 1 := Int.mul_ediv_cancel _ (by omega)
+  simp only [sonstPasst, packe, hm, if_true, hd, einpassenErg, einpassen]
+  rw [dif_neg (by omega)]
+  rfl
+
+/-- **Soundness of `tor.fehlbar`.** For EVERY kernel word `roh` and every errno table: the
+    outcome the emitted stub forms (`dekodiere`), packed into the machine's raw word, is
+    decoded by G exactly as the stub decoded it -- so the C and the model take the same branch
+    with the same value or reason, and the stub's `__builtin_unreachable()` is G's hardware
+    stop. -/
+theorem tor_fehlbar (z : Int → Option D.Fn) (n : Nat) (tab : FehlerTabelle (Fin n))
+    (lo hi roh : Int) :
+    sonstPasst z (some (.int lo hi)) n (packe n (dekodiere tab lo hi roh)) =
+      gAntwort (D := D) (dekodiere tab lo hi roh) := by
+  cases dekodiere tab lo hi roh with
+  | ok v => exact packe_ok z n v
+  | grund r => exact packe_grund z n r
+  | unerwartet u => exact packe_unerwartet z n u
+
+/-- The three legs of the stub, joined with `dekodiere`'s characterisation (Syscall.lean): an
+    in-range non-negative word is the value, a listed `-errno` its reason, and the rest the
+    hardware stop -- in G as in the C. -/
+theorem tor_fehlbar_wert (z : Int → Option D.Fn) (n : Nat) (tab : FehlerTabelle (Fin n))
+    (lo hi roh : Int) (hge : 0 ≤ roh) (hok : lo ≤ roh ∧ roh ≤ hi) :
+    sonstPasst z (some (.int lo hi)) n (packe n (dekodiere tab lo hi roh)) =
+      some (Sum.inl (⟨roh, hok.1, hok.2⟩ : Zahl lo hi)) := by
+  rw [dekodiere_ok_bereich tab lo hi roh hge hok]
+  exact packe_ok z n _
+
+theorem tor_fehlbar_grund (z : Int → Option D.Fn) (n : Nat) (tab : FehlerTabelle (Fin n))
+    (lo hi : Int) (e : Nat) (r : Fin n) (hfirst : ersterEintrag tab e r)
+    (hbereich : 1 ≤ (e : Int) ∧ (e : Int) ≤ 4095) :
+    sonstPasst z (some (.int lo hi)) n (packe n (dekodiere tab lo hi (-(e : Int)))) =
+      some (Sum.inr r) := by
+  rw [dekodiere_tabelle tab lo hi e r hfirst hbereich]
+  exact packe_grund z n r
+
+/-! ### The witness: a three-reason channel (`BadFd = 9`, `Interrupted = 4`, `WouldBlock = 11`),
+    a value range `0 .. 1024`, and one word of each kind -/
+
+def zeugeTab : FehlerTabelle (Fin 3) := [(9, 0), (4, 1), (11, 2)]
+
+/-- **Witness for `tor_fehlbar`, `tor_fehlbar_wert` and `tor_fehlbar_grund`**, ALL premises
+    jointly: the word `3` is the value `3`, the word `-4` (EINTR) is reason `1`, and the word
+    `-5` (an errno the table does not admit) is the hardware stop -- each by computation, in G
+    as the stub decodes it. -/
+theorem tor_fehlbar_zeuge (D : Deklaration) (z : Int → Option D.Fn) :
+    sonstPasst z (some (.int 0 1024)) 3 (packe 3 (dekodiere zeugeTab 0 1024 3)) =
+      some (Sum.inl (⟨3, by decide, by decide⟩ : Zahl 0 1024)) ∧
+    sonstPasst z (some (.int 0 1024)) 3 (packe 3 (dekodiere zeugeTab 0 1024 (-4))) =
+      some (Sum.inr 1) ∧
+    sonstPasst z (some (.int 0 1024)) 3 (packe 3 (dekodiere zeugeTab 0 1024 (-5))) = none :=
+  ⟨tor_fehlbar_wert z 3 zeugeTab 0 1024 3 (by decide) ⟨by decide, by decide⟩,
+    tor_fehlbar_grund z 3 zeugeTab 0 1024 4 1 ⟨[(9, 0)], [(11, 2)], rfl, by decide⟩
+      ⟨by decide, by decide⟩,
+    by rw [tor_fehlbar]; rfl⟩
+
+end Fehlbar
+
 end OhneLibc
 
 end Gabbro.Grammatik
@@ -184,3 +291,5 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.OhneLibc.nie_tor_zeuge
 #print axioms Gabbro.Grammatik.OhneLibc.start_nolibc
 #print axioms Gabbro.Grammatik.OhneLibc.start_nolibc_zeuge
+#print axioms Gabbro.Grammatik.OhneLibc.tor_fehlbar
+#print axioms Gabbro.Grammatik.OhneLibc.tor_fehlbar_zeuge

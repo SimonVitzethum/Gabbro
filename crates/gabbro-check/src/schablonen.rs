@@ -158,6 +158,7 @@ pub const RATSCHE: &[&str] = &[
     "restrict.alleinzugriff",
     "tor.nie",
     "start.nolibc",
+    "tor.fehlbar",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -212,6 +213,35 @@ pub const SCHABLONEN: &[Schablone] = &[
         ],
         fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §2; crates/gabbro-cli/src/bau.rs \
                      (`prozess_start`, `eintrittsregel`); beispiele/172, 173",
+    },
+    // **Entered 2026-09-30 by the C-free lane (second Lean slice), PROVED in the same commit**:
+    // the reason channel of a gate reached machine G (`Block`/`Endblock.bindAxiomElse`), and the
+    // stub that decodes the kernel's word into that channel is a template like `tor.nie`.
+    Schablone {
+        name: "tor.fehlbar",
+        haengt_an: &[],
+        konstrukt: "syscall g(…) -> T or R (the stub `bool g(…, T *_wert, R *_grund)` and its `let … else`)",
+        pflicht: "The stub of a fallible gate decodes the kernel's word exactly as machine G \
+                  decodes the raw answer of `bindAxiomElse`: an in-range value to the value, a \
+                  listed `-errno` to its reason, anything else to the point the stub hands to \
+                  `__builtin_unreachable()`. **Machine-checked for EVERY word and every errno \
+                  table** (`tor_fehlbar`, `Grammatik/SchablonenOhneLibc.lean` §3): the stub's \
+                  outcome (`dekodiere`, Syscall.lean), packed into the machine's word (`packe`, \
+                  the `tagged` convention of `summePasst`), decodes in G (`sonstPasst`) to the \
+                  same value, the same reason, or nothing -- and nothing is the goal theorem's \
+                  NAMED stop `hardware` at that head (`KopfHalt`/`RestHalt`). Legs \
+                  `tor_fehlbar_wert`, `tor_fehlbar_grund`; witness on a three-reason table \
+                  (`tor_fehlbar_zeuge`). **NOT proved: that the kernel answers inside the \
+                  contract** -- that is the gate's declared assumption (user logic in the \
+                  program's source, premise (c)).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the gate's `D.Ax` answers the declared range and carries the channel's reason count (`agruende`)", durch: Some("the parse of the declaration, read by `lean_g.rs::read_gate` (`GateModel.gruende`) and by `emit.rs::syscall_stumpf` (`Antwort::Ganz`, the `or R` channel) from the same fields"), braeuchte: None },
+            Voraussetzung { was: "the errno table the stub compares maps each listed errno to one case of `R`, first entry wins", durch: Some("`emit.rs::syscall_stumpf`'s error-map rules (an errno outside 1..4095, a name no case of `R` carries, a map without an `or R` channel -- each refused by name), which is `dekodiere`'s `FehlerTabelle`"), braeuchte: None },
+            Voraussetzung { was: "the kernel answers a listed errno or an in-range value (else the stub's `__builtin_unreachable()`)", durch: Some("the gate's declared contract -- `assume … falsifier …` or a `kernel` pairing (`parse.rs`); user logic in the program's source, premise (c) of the goal"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §3; grammatik/Grammatik/Syscall.lean \
+                     (`dekodiere`); crates/gabbro-check/src/emit.rs (`syscall_stumpf`)",
     },
     Schablone {
         name: "restrict.alleinzugriff",

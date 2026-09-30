@@ -25,6 +25,7 @@ import Grammatik.Zertifikat.G166_eintritt_irq_maskiert
 import Grammatik.Zertifikat.G16_by_ops_am_feld
 import Grammatik.Zertifikat.G174_tor_im_modell
 import Grammatik.Zertifikat.G181_gate_at_top_level
+import Grammatik.Zertifikat.G182_fallible_gate
 import Grammatik.Zertifikat.G219_unaeres_minus
 import Grammatik.Zertifikat.G34_markierter_wert
 import Grammatik.Zertifikat.G414_tabellenspeicher_heisst_so

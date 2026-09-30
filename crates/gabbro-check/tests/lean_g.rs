@@ -1959,6 +1959,47 @@ fn exports_syscall_gates_as_axioms() {
     assert!(datei.contains("(.bindAxiom GAx.exit_group"), "{datei}");
 }
 
+/// **A fallible gate (`-> T or R`) is `bindAxiomElse`** (C-free lane, 2026-09-30): the
+/// declaration carries the channel as `agruende`, a `let … else` over the gate binds the
+/// value or runs the `else` block with the reason -- at the top level `Endblock.bindAxiomElse`,
+/// in a block `Block.bindAxiomElse` -- and the stub's decoding is the proved template
+/// `tor.fehlbar`. The certified corpus file `beispiele/182` exports the same way. A fallible
+/// gate whose answer is not an integer range refuses by name (LG007).
+#[test]
+fn exports_fallible_gates_as_bind_axiom_else() {
+    let kopf = "reason E { Weg = 9 \"gone\" Halt = 4 \"stopped\" exhaustive }\n\
+        assume k \"the kernel keeps it\" falsifier probe_k;\n";
+    let tor = |antwort: &str| format!(
+        "{kopf}syscall s(x : u64) -> {antwort} or E abi linux arch x86_64 number 1 \
+         regs in {{ rdi = x }} regs out {{ rax }} clobbers {{ rcx, r11 }} \
+         errors {{ EBADF => Weg, EINTR => Halt }} effects {{ pure }} costs <= 8 ops \
+         assume k falsifier probe_k;\n");
+    let rumpf = format!("{}\
+        impl fn f(x : u64) -> u64 in 0 .. 99 effects {{ pure }} costs <= 40 ops {{\n\
+            let n = s(x) else (e) {{ return 99; }}\n\
+            return n;\n\
+        }}\n\
+        impl fn g(x : u64, b : bool) -> u64 in 0 .. 99 effects {{ pure }} costs <= 40 ops {{\n\
+            if b {{ let m = s(x) else (e) {{ return 98; }} return m; }}\n\
+            return 0;\n\
+        }}\n", tor("u64 in 0 .. 50"));
+    let text = export("lean_g", &tree(&einheit(&rumpf))).expect("a fallible gate exports");
+    for teil in [
+        "agruende := fun | .s => 2",
+        "(.bindAxiomElse GAx.s (.cons",
+        "rfl (by decide) (fun _ h => nomatch h)",
+    ] {
+        assert!(text.contains(teil), "the export must contain {teil:?}: {text}");
+    }
+    assert!(text.matches(".bindAxiomElse").count() >= 2, "both call sites: {text}");
+    let w = refuse_of(&einheit(&format!("{}\
+        impl fn f() -> u32 effects {{ pure }} costs <= 1 ops {{ return 1; }}\n", tor("bool"))));
+    assert_eq!(w.code, "LG007", "{w}");
+    assert!(w.message.contains("tor.fehlbar"), "{w}");
+    let datei = export_file("182-fallible-gate.gab");
+    assert!(datei.contains("(.bindAxiomElse GAx.write"), "{datei}");
+}
+
 /// **A gate at the top level of a body is `Endblock.bindAxiom`** (C-free lane,
 /// 2026-09-30; machine rule `endeBindAxiom`, its stops named in `Spec.lean`'s
 /// `RestHalt`): a value gate binds at the top level, and a `-> never` gate that
@@ -1985,8 +2026,8 @@ fn exports_top_level_gates_as_end_block_binders() {
     assert!(datei.contains("(.bindAxiom GAx.getpid .nil rfl"), "{datei}");
 }
 
-/// **Every gate shape with no G form refuses BY NAME** -- the reason channel
-/// (LG007), a precondition or postcondition (LG003), a write (LG001). A unit
+/// **Every gate shape with no G form refuses BY NAME** -- a precondition or
+/// postcondition (LG003), a write (LG001). A unit
 /// WITHOUT a gate or an assumption keeps `Ax := Empty`. (A gate with an answer
 /// at the top level of a body travels since `Endblock.bindAxiom`, below.)
 #[test]
@@ -1999,7 +2040,6 @@ fn refuses_gate_shapes_without_a_form() {
          effects {{ pure }} costs <= 8 ops assume k falsifier probe_k;\n",
         if kopf_rest.is_empty() { "" } else { "EBADF => Weg" });
     for (quelle, code, wort) in [
-        (gate(" or E", ""), "LG007", "no reason channel"),
         (gate("", "requires x <= 3"), "LG003", "no precondition"),
         (gate("", "ensures result <= 3"), "LG003", "`ensures`"),
     ] {

@@ -1,0 +1,55 @@
+-- 182 -- **A fallible system-call gate in the model: certified.**
+--
+-- A gate declared `-> T or R` answers a value or one reason of its channel. Until
+-- 2026-09-30 machine G had no reason channel at a foreign body, and the exporter
+-- refused every such unit (LG007). Since the C-free lane's second Lean slice of that
+-- day:
+-- * `D.agruende` counts the channel's reasons (a `Deklaration` field whose default 0
+--   leaves every declaration of before unchanged);
+-- * `Block.bindAxiomElse` / `Endblock.bindAxiomElse` bind the value or run the `else`
+--   block with the reason bound (the shape of `bindCallElse`), with four machine rules
+--   and the stop `hardware` named where the kernel's word decodes to neither
+--   (`Zielsatz/Spec.lean`, header block "end-block gate");
+-- * the stub the emitter writes -- `bool write(…, uint64_t *_wert, IoError *_grund)`,
+--   the errno table, `__builtin_unreachable()` for anything else -- is the PROVED
+--   template `tor.fehlbar` (`grammatik/Grammatik/SchablonenOhneLibc.lean` §3): its
+--   decoding, packed into the machine's word, is exactly G's decoding, for every word.
+--
+-- This unit is CERTIFIED (`grammatik/Grammatik/Zertifikat/`). The call stands at the
+-- top level of the body, and the `else` returns a constant.
+--
+-- Still refused by name (`crates/gabbro-check/src/lean_g.rs`): an `else` that returns
+-- or matches the REASON itself (`return e;`, `match e { … }` -- an end block has no
+-- case split over a reason yet), a gate `requires`/`ensures` (LG003), and a fallible
+-- gate whose answer is not an integer range.
+module beispiel::fallible_gate {
+
+reason IoError {
+    BadFd       = 9  "the file descriptor is not open"
+    Interrupted = 4  "the call was interrupted before anything was written"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write answers the count written, at most the length asked, or a listed errno."
+    falsifier sonde_write;
+
+syscall write(fd : u64, buf : u64, len : u64) -> u64 in 0 .. 1024 or IoError
+    abi linux arch x86_64 number 1
+    regs in { rdi = fd, rsi = buf, rdx = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { EBADF => BadFd, EINTR => Interrupted }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_write_contract falsifier sonde_write;
+
+impl fn schreibe(fd : u64, buf : u64, len : u64) -> u64 in 0 .. 2000
+    effects { pure }
+    costs <= 40 ops
+{
+    let n = write(fd, buf, len) else (e) { return 2000; }
+    return n;
+}
+
+}
