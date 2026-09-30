@@ -145,6 +145,11 @@ README §5 says exactly this; keep it that way.
   that the emitter WRITES from Gabbro is not meant by this rule. Measured 2026-09-30: ~5,100
   lines of handwritten C/asm/headers in `laufzeit/` + `bibliothek/`, plus 117 in the network
   stack. New handwritten C needs a reason why Gabbro cannot do it.
+  **Zero C keeps every guarantee** (Simon, 2026-09-30): code moved from C into Gabbro is checked
+  like user code, with no relaxed mode; system and kernel calls are user logic (`syscall`/`extern`
+  items in Gabbro source), the compiler and checker know no operating system; new emitter
+  templates are allowed only machine-checked in the template register (`gabbro schablonen
+  --tor`), each premise bound to the pass that establishes it.
 - **Floats are in scope** (IEEE model done). Probabilistic statements are OUT of scope for now.
   **Dynamic data structures are IN scope** (Simon, 2026-09-28): structures that grow without a
   static element bound, on heap regions with a declared ceiling and refuse-on-full (TODO §0e).
