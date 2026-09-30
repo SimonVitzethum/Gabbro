@@ -1132,3 +1132,73 @@ fn ein_prozess_ohne_libc_verlangt_einen_eintritt_der_nie_zurueckkehrt() {
     assert!(alles.contains("does not end in `-> never`"), "refused with its reason:\n{alles}");
     assert!(!d.join("bau").join("u").exists(), "no binary is written");
 }
+
+/// **The positive twin, since 2026-09-30 (C-free lane): a `main` that RETURNS its status ends
+/// through the program's own `gabbro_os_ende`, and `gabbro_os_anfang` runs before it.** Without a
+/// C library no constructor runs; the start hook is how a program says what must happen first.
+/// The generated `_start` still knows no system call (template `start.nolibc`,
+/// `start_nolibc_haken`). The run shows both: the hook set 40, `main` saw it and answered 42, the
+/// end handed 42 to the kernel -- and the binary imports nothing.
+#[test]
+fn ein_prozess_ohne_libc_endet_ueber_gabbro_os_ende_und_faengt_mit_dem_haken_an() {
+    let d = kratz("nolibc-main-mit-haken");
+    std::fs::write(d.join("u.gab"), NOLIBC_HAKEN).expect("unit");
+    let manifest = format!(
+        "compiler cc -std=c11 -O0 -ffreestanding -fno-stack-protector -fno-pie -Wall -Wextra -Werror\n\
+         out {}\nnolibc\nunit u program\n  {}\n",
+        d.join("bau").display(),
+        d.join("u.gab").display()
+    );
+    std::fs::write(d.join("m.bau"), manifest).expect("manifest");
+    let (aus, fehler, code) = lauf(&["build", d.join("m.bau").to_str().expect("utf8")]);
+    assert_eq!(code, 0, "the unit builds:\n{aus}\n{fehler}");
+    let lauf_aus = Command::new(d.join("bau").join("u")).output().expect("the binary runs");
+    assert_eq!(lauf_aus.status.code(), Some(42), "the hook ran first, and main's status reached the kernel");
+    let nm = Command::new("nm").arg("-u").arg(d.join("bau").join("u")).output().expect("nm runs");
+    assert_eq!(String::from_utf8_lossy(&nm.stdout).trim(), "", "and it imports nothing");
+}
+
+const NOLIBC_HAKEN: &str = r#"module t::ende {
+
+assume linux_exit_group
+    "The Linux x86_64 `exit_group` ends every thread of the process with status `code & 255` and never returns."
+    falsifier sonde_exit_group;
+
+syscall exit_group(code : u64) -> never
+    abi linux arch x86_64 number 231
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_exit_group falsifier sonde_exit_group;
+
+pub static mut ANGEFANGEN : u32 = 0;
+
+pub fn gabbro_os_anfang()
+    effects { writes ANGEFANGEN }
+    costs <= 4 ops
+{
+    ANGEFANGEN = 40;
+}
+
+pub fn gabbro_os_ende(code : u32) -> never
+    effects { diverges }
+    costs <= 16 ops
+{
+    exit_group(code);
+}
+
+pub fn main() -> u32 in 0 .. 100
+    effects { reads ANGEFANGEN }
+    costs <= 8 ops
+{
+    if ANGEFANGEN == 40 {
+        return 42;
+    }
+    return 7;
+}
+
+}
+"#;

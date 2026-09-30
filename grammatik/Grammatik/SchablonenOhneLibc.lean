@@ -176,6 +176,80 @@ theorem start_nolibc_zeuge :
     (startLauf 0x7ffc12345678 false).ud2 = false :=
   start_nolibc 0x7ffc12345678 (by decide) false rfl
 
+/-! ### The two hooks (C-free lane, 2026-09-30)
+
+  Without a C library no constructor runs and nobody ends the process after `main` returns. The
+  entry therefore calls the program's `gabbro_os_anfang()` first when the unit defines it, and --
+  when `main` RETURNS its status -- hands that status (`eax` -> `edi`) to the program's
+  `gabbro_os_ende(code)`, a `-> never` function of its binding. Both are names of the program; the
+  entry knows no system call. `start_nolibc_haken` is the widened soundness statement; the
+  hook-less entry of before is its case `anfang = ende = false` (`start_nolibc`). -/
+
+/-- The calls the widened stub makes, as `rsp` at each callee's first instruction in call order,
+    the status the end receives, and whether `ud2` runs. -/
+structure StartLaufH where
+  rufe : List Nat
+  status : Option Nat
+  ud2 : Bool
+
+def startLaufH (rsp : Nat) (anfang ende : Bool) (mainErgebnis : Option Nat)
+    (endeKehrtZurueck : Bool) : StartLaufH :=
+  let a := ausrichten rsp - 8
+  match mainErgebnis with
+  | none => { rufe := (if anfang then [a] else []) ++ [a], status := none, ud2 := false }
+  | some v =>
+    if ende then
+      { rufe := (if anfang then [a] else []) ++ [a, a], status := some (v % 4294967296),
+        ud2 := endeKehrtZurueck }
+    else
+      { rufe := (if anfang then [a] else []) ++ [a], status := none, ud2 := true }
+
+/-- **Soundness of the widened `start.nolibc`.** Premises: a kernel stack of at least 16 bytes
+    (runtime premise (d)); `main` either does not return (`none`) or the unit binds the end
+    (`hende`, the entry rule `bau.rs::eintrittsregel` with `nolibc_haken`), and the end does not
+    return (`hnie`, its `-> never` declaration and `S009`). Then every call -- the start hook,
+    `main`, the end -- is entered with `rsp + 8` 16-aligned and below the kernel's `rsp`; the end
+    receives exactly the low 32 bits of `main`'s answer; and `ud2` never runs. -/
+theorem start_nolibc_haken (rsp : Nat) (hrsp : 16 ≤ rsp) (anfang ende : Bool)
+    (mainErgebnis : Option Nat) (endeKehrtZurueck : Bool)
+    (hende : mainErgebnis.isSome = true → ende = true) (hnie : endeKehrtZurueck = false) :
+    (∀ r ∈ (startLaufH rsp anfang ende mainErgebnis endeKehrtZurueck).rufe,
+      (r + 8) % 16 = 0 ∧ r < rsp) ∧
+    (∀ v, mainErgebnis = some v →
+      (startLaufH rsp anfang ende mainErgebnis endeKehrtZurueck).status = some (v % 4294967296)) ∧
+    (startLaufH rsp anfang ende mainErgebnis endeKehrtZurueck).ud2 = false := by
+  have ha : ((ausrichten rsp - 8) + 8) % 16 = 0 ∧ ausrichten rsp - 8 < rsp := by
+    simp only [ausrichten]; omega
+  cases mainErgebnis with
+  | none =>
+    refine ⟨?_, ?_, rfl⟩
+    · intro r hr
+      cases anfang <;> simp [startLaufH] at hr <;> subst_vars <;> exact ha
+    · intro v h; exact nomatch h
+  | some v =>
+    have he : ende = true := hende rfl
+    subst he
+    refine ⟨?_, ?_, hnie⟩
+    · intro r hr
+      cases anfang <;> simp [startLaufH] at hr <;> subst_vars <;> exact ha
+    · intro w h
+      cases h
+      rfl
+
+/-- The end premise is not decoration: a `main` that returns with no end bound runs into `ud2`. -/
+theorem start_nolibc_ohne_ende (rsp v : Nat) :
+    (startLaufH rsp false false (some v) false).ud2 = true := rfl
+
+/-- **Witness** (all premises jointly): the stack pointer of `start_nolibc_zeuge`, both hooks, a
+    `main` answering 42 -- the end receives 42 and `ud2` does not run. -/
+theorem start_nolibc_haken_zeuge :
+    (∀ r ∈ (startLaufH 0x7ffc12345678 true true (some 42) false).rufe,
+      (r + 8) % 16 = 0 ∧ r < 0x7ffc12345678) ∧
+    (∀ v, some 42 = some v →
+      (startLaufH 0x7ffc12345678 true true (some 42) false).status = some (v % 4294967296)) ∧
+    (startLaufH 0x7ffc12345678 true true (some 42) false).ud2 = false :=
+  start_nolibc_haken 0x7ffc12345678 (by decide) true true (some 42) false (fun _ => rfl) rfl
+
 /-! ## 3. `tor.fehlbar` -- the stub of a fallible gate -/
 
 section Fehlbar
@@ -474,3 +548,5 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.OhneLibc.tor_region_adresse
 #print axioms Gabbro.Grammatik.OhneLibc.region_zugriff
 #print axioms Gabbro.Grammatik.OhneLibc.tor_region_zeuge
+#print axioms Gabbro.Grammatik.OhneLibc.start_nolibc_haken
+#print axioms Gabbro.Grammatik.OhneLibc.start_nolibc_haken_zeuge

@@ -202,19 +202,24 @@ pub const SCHABLONEN: &[Schablone] = &[
         name: "start.nolibc",
         haengt_an: &["tor.nie"],
         konstrukt: "nolibc (the generated process entry `_start`)",
-        pflicht: "The build's `_start` (`xor %ebp,%ebp; and $-16,%rsp; call main; ud2`) \
-                  enters `main` with `rsp + 8` 16-aligned (the SysV x86_64 entry condition), \
-                  writes the return address strictly BELOW the kernel's stack pointer (argc, \
-                  argv and envp stay intact), and never executes its `ud2`. **Machine-checked \
-                  as an ABSTRACT CORE** (`start_nolibc`, `Grammatik/SchablonenOhneLibc.lean` \
-                  §2) over a model of the three instructions -- machine G has no process \
-                  entry; the loader and the thread start are the runtime premise (d), \
-                  `Laufzeit`. The stub knows no system call: the program ends itself through \
-                  its own `-> never` gate (`tor.nie`).",
+        pflicht: "The build's `_start` (`xor %ebp,%ebp; and $-16,%rsp`; `call \
+                  gabbro_os_anfang` when the unit defines it; `call main`; when `main` returns \
+                  its status, `mov %eax,%edi; call gabbro_os_ende`; `ud2`) enters every callee \
+                  with `rsp + 8` 16-aligned (the SysV x86_64 entry condition), writes the \
+                  return addresses strictly BELOW the kernel's stack pointer (argc, argv and \
+                  envp stay intact), hands the end exactly the low 32 bits of `main`'s answer, \
+                  and never executes its `ud2`. **Machine-checked as an ABSTRACT CORE** \
+                  (`start_nolibc`, and since 2026-09-30 `start_nolibc_haken` with the two hooks, \
+                  `Grammatik/SchablonenOhneLibc.lean` §2) -- machine G has no process entry; \
+                  the loader and the thread start are the runtime premise (d), `Laufzeit`. The \
+                  stub knows no system call: the program ends itself, through its own `-> \
+                  never` gate (`tor.nie`) or its binding's `gabbro_os_ende`; and without a C \
+                  library no constructor runs, which is what the start hook replaces.",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
             Voraussetzung { was: "the unit has exactly ONE entry, a public nullary `main`", durch: Some("`bau.rs::eintrittsregel` (`Art::Programm`: none, two, private, with parameters -- each refused by name)"), braeuchte: None },
-            Voraussetzung { was: "`main` does not return (else the `ud2` would run)", durch: Some("`bau.rs::eintrittsregel` under `nolibc` (`main` must be `-> never`) and `S009` (a `-> never` body that returns or falls off its end), `schleifen.rs::nie_rueckkehr`"), braeuchte: None },
+            Voraussetzung { was: "`main` does not return, or returns its status and the unit binds `gabbro_os_ende(code)` (else the `ud2` would run)", durch: Some("`bau.rs::eintrittsregel` under `nolibc` with `nolibc_haken` (a `main` that is not `-> never` must answer a value and the unit must define the end in its exact shape) and `S009` (a `-> never` body that returns or falls off its end), `schleifen.rs::nie_rueckkehr`"), braeuchte: None },
+            Voraussetzung { was: "the end `gabbro_os_ende` does not return", durch: Some("the entry calls it only in its exact shape (`nolibc_haken`: one parameter, no value) -- a Gabbro function the program declares `-> never`, held by `S009`; a C body is refused beside `nolibc` (no foreign object links without the C library it would need)"), braeuchte: None },
             Voraussetzung { was: "the kernel hands a stack of at least 16 bytes", durch: Some("the loader: the runtime premise (d) of the goal (`Laufzeit.lader`), the named assumption every hosted unit already runs under"), braeuchte: None },
         ],
         fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §2; crates/gabbro-cli/src/bau.rs \

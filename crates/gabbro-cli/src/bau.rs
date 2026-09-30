@@ -352,6 +352,9 @@ struct Eintritt {
     parameter: usize,
     /// declared `-> never`
     nie: bool,
+    /// answers a value (not `-> never`, not nothing): its low 32 bits are the exit status a
+    /// `nolibc` entry hands to the program's `gabbro_os_ende` (C-free lane, 2026-09-30)
+    liefert: bool,
 }
 
 /// **What a unit declares for the driver, and what the driver needs.**
@@ -565,6 +568,8 @@ fn sammle(
                     oeffentlich: f.oeffentlich,
                     parameter: f.parameter.len(),
                     nie: matches!(f.ergebnis, Some(gabbro_syntax::ast::TypExpr::Never(_))),
+                    liefert: f.ergebnis.is_some()
+                        && !matches!(f.ergebnis, Some(gabbro_syntax::ast::TypExpr::Never(_))),
                 });
                 funktionen
                     .entry(f.name.text.clone())
@@ -725,7 +730,27 @@ fn sammle(
 /// > the identifier was the deviation.** *What it costs, named: no `-- erwartet: CODE` poison
 /// > probe can name this rule -- and that convention does not reach here anyway, because it
 /// > is for `.gab` files the checker reads and these probes are `.bau` manifests.*
-fn eintrittsregel(art: Art, ohne_libc: bool, eintritte: &[Eintritt]) -> Option<String> {
+/// **The two hooks a `nolibc` process entry calls, when the unit defines them** (C-free lane,
+/// 2026-09-30): `gabbro_os_anfang()` before `main` -- without a C library no constructor runs,
+/// so a program that must set something up before `main` says so by name -- and
+/// `gabbro_os_ende(code)` after a `main` that RETURNS its status. Both are names of the
+/// program's binding, like the ones the generated drivers call; the entry knows no system call.
+/// `(anfang, ende)`, each only in its exact shape (no parameter / one parameter, no value).
+fn nolibc_haken(funktionen: &BTreeMap<String, Vec<FunktionsForm>>) -> (bool, bool) {
+    let gestalt = |name: &str, parameter: usize| {
+        funktionen
+            .get(name)
+            .is_some_and(|fs| fs.iter().any(|f| f.parameter == parameter && !f.liefert && !f.spec))
+    };
+    (gestalt("gabbro_os_anfang", 0), gestalt("gabbro_os_ende", 1))
+}
+
+fn eintrittsregel(
+    art: Art,
+    ohne_libc: bool,
+    eintritte: &[Eintritt],
+    haken: (bool, bool),
+) -> Option<String> {
     let ort = |e: &Eintritt| format!("`{}::{EINTRITT}` in {}", e.modul, e.datei);
     match art {
         Art::Programm => match eintritte.len() {
@@ -756,13 +781,24 @@ fn eintrittsregel(art: Art, ohne_libc: bool, eintritte: &[Eintritt]) -> Option<S
                         e.parameter
                     ));
                 }
-                if ohne_libc && !e.nie {
+                // **Under `nolibc` the entry must END the process** -- itself (`-> never`), or
+                // by returning a status the generated `_start` hands to the program's own
+                // `gabbro_os_ende` (since 2026-09-30; template `start.nolibc`). A `main` that
+                // returns and nothing to hand its status to has no end at all.
+                if ohne_libc && !e.nie && !(e.liefert && haken.1) {
                     return Some(format!(
-                        "{} does not end in `-> never` -- under `nolibc` the generated `_start` \
-                         only calls the entry and knows no way to end the process\n\
-                         \x20        = the program ends itself through its own `-> never` \
-                         `syscall` gate; declare `pub fn {EINTRITT}() -> never`",
-                        ort(e)
+                        "{} does not end in `-> never`, and {} -- under `nolibc` the generated \
+                         `_start` knows no system call, so the process ends only through the \
+                         program itself\n\
+                         \x20        = declare `pub fn {EINTRITT}() -> never` and end through a \
+                         `-> never` gate, or return the status and bind `gabbro_os_ende(code)` \
+                         (a `-> never` function of the program's binding)",
+                        ort(e),
+                        if e.liefert {
+                            "the unit binds no `gabbro_os_ende(code)` to hand its status to"
+                        } else {
+                            "it returns no status"
+                        }
                     ));
                 }
                 None
@@ -1781,7 +1817,12 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         for name in &reihenfolge {
             let e = manifest.einheiten.iter().find(|x| &x.name == name).expect("named");
             println!("  unit {name} ({} file(s))", e.dateien.len());
-            if let Some(befund) = eintrittsregel(e.art, manifest.ohne_libc, &eintritte_je_einheit[name]) {
+            if let Some(befund) = eintrittsregel(
+                e.art,
+                manifest.ohne_libc,
+                &eintritte_je_einheit[name],
+                nolibc_haken(&funktionen_je_einheit[name]),
+            ) {
                 befunde += 1;
                 println!("  REFUSED  {name}: {befund}");
             }
@@ -1944,7 +1985,12 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
         // **The entry rule runs BEFORE the C is written.** A `program` without an entry translates
         // cleanly, compiles cleanly and dies at the linker -- so a rule that ran afterwards
         // would say the same thing `ld` says, only later.
-        if let Some(befund) = eintrittsregel(e.art, manifest.ohne_libc, &eintritte_je_einheit[name]) {
+        if let Some(befund) = eintrittsregel(
+            e.art,
+            manifest.ohne_libc,
+            &eintritte_je_einheit[name],
+            nolibc_haken(&funktionen_je_einheit[name]),
+        ) {
             abgesagt += 1;
             println!("REFUSED  {name}: {befund}");
             continue;
@@ -2008,6 +2054,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             bau,
             pruefbau,
             treiber_plan.as_ref(),
+            nolibc_haken(&funktionen_je_einheit[name]),
         ) {
             Ergebnis::Gebaut { gabi, abdruck } => {
                 gebaut += 1;
@@ -2194,6 +2241,7 @@ fn baue_einheit(
     bau: gabbro_check::gatter::Bau,
     pruefbau: bool,
     treiber_plan: Option<&TreiberPlan>,
+    haken: (bool, bool),
 ) -> Ergebnis {
     // **The fingerprint covers the content, the compiler line, the build mode -- and the
     // fingerprints of everything this unit rests on.**
@@ -2441,7 +2489,7 @@ fn baue_einheit(
         if manifest.ohne_libc {
             let start_c = PathBuf::from(&manifest.ausgabe).join(format!("{}.start.c", e.name));
             let start_o = PathBuf::from(&manifest.ausgabe).join(format!("{}.start.o", e.name));
-            if let Err(err) = std::fs::write(&start_c, prozess_start(EINTRITT)) {
+            if let Err(err) = std::fs::write(&start_c, prozess_start(EINTRITT, haken)) {
                 return Ergebnis::Abgesagt(format!("{}: {err}", start_c.display()));
             }
             let mut ruf = std::process::Command::new(&manifest.compiler[0]);
@@ -2594,17 +2642,38 @@ fn handgeschrieben(
 /// holds to be one public nullary function declared `-> never`. **The stub knows no system
 /// call**: the program ends itself through its own `syscall` gate, so no operating system's
 /// number is spelled in this tree.
-fn prozess_start(eintritt: &str) -> String {
+fn prozess_start(eintritt: &str, haken: (bool, bool)) -> String {
+    // `haken.0`: the unit defines `gabbro_os_anfang()` -- called first. `haken.1`: it defines
+    // `gabbro_os_ende(code)` -- the status `main` returns in `eax` goes to it in `edi`. With
+    // neither, the entry is the one of before (`main` is `-> never`). Every call is made at
+    // `rsp` 16-aligned before the `call`: the SysV entry condition (`start_nolibc`).
+    let (anfang_decl, anfang_ruf) = if haken.0 {
+        ("extern void gabbro_os_anfang(void);\n", "\x20       \"call gabbro_os_anfang\\n\"\n")
+    } else {
+        ("", "")
+    };
+    let (ende_decl, ende_ruf) = if haken.1 {
+        (
+            "extern void gabbro_os_ende(uint32_t code);\n",
+            "\x20       \"mov %eax, %edi\\n\"\n\x20       \"call gabbro_os_ende\\n\"\n",
+        )
+    } else {
+        ("", "")
+    };
     format!(
         "/* Generated by the Gabbro build (`nolibc`) -- the process entry. Do not edit. */\n\
+         #include <stdint.h>\n\
          extern void {eintritt}(void);\n\
+         {anfang_decl}{ende_decl}\
          \n\
          __attribute__((naked, noreturn)) void _start(void)\n\
          {{\n\
          \x20   __asm__ volatile (\n\
          \x20       \"xor %ebp, %ebp\\n\"\n\
          \x20       \"and $-16, %rsp\\n\"\n\
+         {anfang_ruf}\
          \x20       \"call {eintritt}\\n\"\n\
+         {ende_ruf}\
          \x20       \"ud2\\n\");\n\
          }}\n"
     )

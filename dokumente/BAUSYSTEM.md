@@ -103,6 +103,7 @@ unit lager program
 | `unit <name> <art>` | **welche Dateien eine Einheit bilden** — der eigentliche Linkschritt |
 | eingerückte Pfade | die Dateien der Einheit — 473 Gegenbeispiele gegen jede Konvention |
 | `metal <dir>` | the bare-metal runtime (`laufzeit/metall`). With it the build links `<unit>.metall.elf` itself (Opus agent J) |
+| `nolibc` | a process WITHOUT a C library (C-free lane, 2026-09-30): the build writes the entry `_start` (template `start.nolibc`) and links `-nostdlib -static`; the `compiler` line must say `-ffreestanding` (and `-fno-stack-protector`, whose runtime is libc's). The entry knows no system call: it calls the unit's `gabbro_os_anfang()` first when the unit defines it (no C constructor runs without libc), then `main`; a `main` that is not `-> never` must answer its status, which the entry hands to the unit's `gabbro_os_ende(code)` -- a `-> never` function of the program's binding. A unit that offers neither end is refused before any C (`bau.rs::eintrittsregel`) |
 | `kmod <runtime dir> <kernel build dir>` | the module runtime (`laufzeit/kmodul`) and the kernel's own build tree (`/lib/modules/<release>/build`). **Both are named, neither is guessed**: a path baked in here would be a fact about one machine, a kernel version a fact about one kernel (server lane, 2026-09-28) |
 
 **The third art: `unit <name> module <init> <exit>`** (server lane, 2026-09-28, TODO §0e K4).
