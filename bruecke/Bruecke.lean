@@ -18,3 +18,4 @@ import Bruecke.Vorlage
 import Bruecke.Instanz130
 import Bruecke.Instanz69
 import Bruecke.Instanz73
+import Bruecke.StartsProbe

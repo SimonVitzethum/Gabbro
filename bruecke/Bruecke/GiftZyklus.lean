@@ -250,7 +250,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
   intro hK
   obtain ⟨b0, hb0, hPb⟩ := gesenktZ.rumpf fI
   change lowBody uZ fI [.call "g" []] .keine = .ok b0 at hb0
-  simp only [lowBody] at hb0
+  rw [lowBody_cons fI .keine (.call "g" []) [] (fun g => by simp)] at hb0
   split at hb0
   · cases hb0
   · rename_i gst hgst
@@ -281,7 +281,7 @@ theorem nicht_koerperGutR : ¬ KoerperGutR PZ 0 fI := by
         cases hR'
         have hrun : execEnd O0 0 RZ (Endblock.cons gst rest) σ7 ρ₀ = execEnd O0 0 RZ rest σr ρ₀ := by
           simp only [execEnd, hex]
-        obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI hrest (rfl : endBody uZ (fnAt uZ fI) .keine = some [])
+        obtain ⟨σ'', v'', hend, hsl'', _⟩ := lowEnd_sim fI (show lowEnd uZ fI .keine = .ok rest from hrest) (rfl : endBody uZ (fnAt uZ fI) .keine = some [])
           (stimmigZ.art fI) stimmigZ.tab O0 0 RZ σr ρ₀ _ (wrel_slots uZ hsl hW0) hL0
         have hX := execEnd_heq (V := verOf uZ fI) O0 0 RZ (ctxParams_eq uZ fI).symm
           (anfangRes_eq uZ fI).symm (PZ.rumpf fI) (Endblock.cons gst rest) hPb σ7 .nil ρ₀ HEq.rfl

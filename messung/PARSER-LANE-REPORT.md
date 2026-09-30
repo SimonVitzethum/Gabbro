@@ -1,10 +1,10 @@
 # Parser lane -- report (running; `~/claude-lane/AUFTRAG-P.md`, tree `~/gabbro-v`, branch `lane/parser`)
 
-**Where it stands (2026-09-30, session 2):** sieve (a) **9 of 148** (was 2 of 146; 104, 108, 130, 69, 73, 16, 15, 62, 93);
-**chain count 5, closed bridge 5, end to end 5** (was 2, 2, 2). The trust path of the GabbroV bridge is a
+**Where it stands (2026-09-30, session 2):** sieve (a) **10 of 148** (was 2 of 146; 104, 108, 130, 69, 73, 16, 15, 62, 93, 109);
+**chain count 5, closed bridge 5, end to end 5** (was 2, 2, 2; the corpus is 151 files after the merge of the C-free lane, so the denominators read `of 151` from the last measurement, 2026-09-30, after the merge of `55a18e2d`). The trust path of the GabbroV bridge is a
 GENERIC theorem over every source text (P6); the program-specific `Cert104` printer is gone from `crates/`.
 P5, the four numbers: `LEAN_NUM_THREADS=3 python3 instrumente/zaehle-kette.py --lean --allow-stale` ->
-`sieve totals (a) 9 ... (e) 5`, `CHAIN COUNT 5 of 148`; `python3 instrumente/zaehle-bruecke.py --binary
+`sieve totals (a) 10 ... (e) 5`, `CHAIN COUNT 5 of 148`; `python3 instrumente/zaehle-bruecke.py --binary
 target/debug/gabbro --allow-stale` -> `BRIDGE COUNT 2 (legacy instances)`, `GENERIC BRIDGE 3` (5 closed in
 all), `END TO END 5 of 148 (3 through the generic ketteAllg)`.
 
@@ -141,6 +141,24 @@ By total programs the kinds rank: `static` 42, `proto` 20, `atomic` 19, `assume`
   | ^ << >>`, limit words and `const fn` calls, exact integers with EVERY intermediate value checked against the
   declared type; unknown constants make their uses errors. The evaluator is structural in a fuel: the first
   version (a `where` helper) was well-founded and every kernel probe ran away past 4 GB. Sieve (a) 8 -> 9 (93).
+* **Wall 6 -- `locks L { ... }`** : read by the elaborator as FLAT markers (`UStmt.sperrtAuf/sperrtZu`; nesting `UStmt`
+  would break the derived `DecidableEq`), lowered by a fuel-structural block reader (`lowSeqL`/`lowLocksL`, mutual on the
+  fuel) to `Stmt.locks` over `Block ... (held L :: Λ)`; the rank rule (`H006`) is the Bool `rangOkB` (sound:
+  `rangOkB_sound`), so a nested take of the same lock and a rank that does not grow are refused BY THE LOWERING. The
+  statement lowerers were generalised over the held list `Λ` (`lowAssignDurchL`, ..., wrappers keep the old names).
+  The bridge refuses markers by name (`stmtBody`), `lowBody_cons`/`stmtBody_nomark` carry the cons step. Six probes in
+  `Parser/UebersetzeProben2.lean` (2 witnesses, 4 planted defects/edge cases, all `decide +kernel`). No corpus program
+  moved by this wall alone (10, 13 need `locks shared`; 111, 125, 05 need other item kinds) -- it is the precondition of 109.
+* **Wall 7 -- `entry ... dispatch f;`** : the dispatch target is a THREAD ROOT (`UProg.wurzeln`, elaborator
+  `uWurzeln`; the bridge's `einheitAllg` puts them into `Einheit.starts` through `startsAllg`). Refused BY NAME: an entry
+  with a handler word (`via` -- the interrupt model `Programm.unterbricht` is not built by the front end), with a
+  run-time expression, dispatching to a function with parameters or to no function of the unit. `nutzer_aus_quelle`
+  needed no new proof: `bruecke_nutzer` already covers ANY start list (`startPflicht_wahr`, requires is trivially true).
+  Non-vacuity: `Bruecke/StartsProbe.lean` (`entry_ist_start`, `zwei_entries_zwei_starts`, `ohne_entry_kein_start`).
+  Sieve (a) 9 -> **10** (109). *Not claimed:* the hardware side of an entry (vector, registers, stack) is the checker's;
+  166 and 59 still stop (`masks irqs`, a nested `module`).
+  Measured cost: the kernel LEXES the probe text -- a 300-character source took 2.7-6 GB, so the entry probes use a
+  minimal module; the probe files are split (`UebersetzeProben2`) because the probes of one file share one memory budget.
 * **Legacy removed?** No -- `Parser/Uebersetze.lean` still holds the hand lowering of 104 (`lowerProg`, keyed to
   the names `Konto`/`einzahlen`/`lies`) because `Schlusssatz104.lean` (the first, by-hand theorem) is built on it.
   It is a per-program WITNESS off the trust path (the generic pipeline never calls it); removing it means

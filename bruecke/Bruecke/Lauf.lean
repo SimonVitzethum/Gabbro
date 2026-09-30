@@ -216,7 +216,7 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
       refine ⟨[], by simp, by simp [Oben], List.Pairwise.nil, fun ρB _ _ =>
         ⟨s, (hB ρB).1, (hB ρB).2, wrel_slots u hsl hW⟩⟩
   | st :: ss, b0, bs, hlow, hbs, σ, ρ, s, hW, hL => by
-      simp only [lowBody] at hlow
+      rw [lowBody_cons c r st ss (stmtBody_nomark _ st (stmtsBody_isSome hbs st List.mem_cons_self))] at hlow
       split at hlow
       · cases hlow
       · rename_i gst hgst
@@ -270,6 +270,8 @@ theorem lauf {P : Programm (declOf u)} (G : Gesenkt u P) (S : Stimmig u) (c : Fi
               exact schreib σ₁ cn k fld v' hex hstep hW₁
             | assignB _ _ _ _ => simp [stmtBody] at hx
             | assignTabB _ _ _ _ => simp [stmtBody] at hx
+            | sperrtAuf _ => simp [stmtBody] at hx
+            | sperrtZu => simp [stmtBody] at hx
             | call cname args =>
               obtain ⟨callee, σr, envA, hname, hfs, hsl, hstep, hLt, _, hcases, _⟩ :=
                 lowCall_sim c hgst hx (S.art c) S.tab S.namen O passes R σ ρ s hW hL

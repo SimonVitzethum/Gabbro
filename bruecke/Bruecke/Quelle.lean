@@ -79,13 +79,22 @@ def nullSp (u : UProg) (h : nullB u = true) : Speicher (declOf u) where
         exact (⟨0, this.1, this.2⟩ : Zahl w.1 w.2)
   globs := fun g => nomatch g
 
+/-- The declared thread roots of a unit: the dispatch targets of its `entry` items, each a
+    parameterless function (the front end refuses any other), started with the empty environment. -/
+def startsAllg (u : UProg) : List (Σ w : (declOf u).Fn, Env (declOf u) ((declOf u).params w)) :=
+  u.wurzeln.filterMap fun n =>
+    match fnIdx u.fns n with
+    | .error _ => none
+    | .ok i =>
+      if h : (declOf u).params i = [] then some ⟨i, by rw [h]; exact Env.nil⟩ else none
+
 /-- The unit of a source the front end accepts: the parsed program, no lock invariant, the
-    trivial axiom ensures, no declared start, the zero memory. -/
+    trivial axiom ensures, the starts of its `entry` items, the zero memory. -/
 def einheitAllg (u : UProg) (P : Programm (declOf u)) (h : nullB u = true) : Zielsatz.Einheit (declOf u) where
   P := P
   S := SperrInv.leer (declOf u)
   Q := axWahr (declOf u)
-  starts := []
+  starts := startsAllg u
   sp0 := nullSp u h
 
 /-- The duties of a source text: THE STATEMENT, computed. `u` is not a free parameter: `uOf src =

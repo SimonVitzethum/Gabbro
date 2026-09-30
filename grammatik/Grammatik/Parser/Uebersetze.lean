@@ -105,6 +105,12 @@ inductive UStmt
   | assignB : String → String → UIdx → UEns → UStmt
   | assignTabB : String → String → UIdx → UEns → UStmt
   | call : String → List UArg → UStmt
+  /-- `locks L { ... }` is written FLAT: `sperrtAuf L`, the block's statements, `sperrtZu` (the
+      elaborator writes them balanced, the lowering reads them back as one block). A nested
+      constructor would make `UStmt` a nested inductive, and the derived `DecidableEq`/`Repr` the
+      pins use would go. -/
+  | sperrtAuf : String → UStmt
+  | sperrtZu : UStmt
   deriving DecidableEq, Repr
 
 /-- The trailing return: nothing, or a value (a literal, a
@@ -196,6 +202,9 @@ structure UProg where
   tabellen : List UTab
   sperren : List ULock
   fns : List UFn
+  /-- The dispatch roots of the unit's `entry` items (function names, each a parameterless function of
+      the unit): thread roots of the goal's runtime premise (`Einheit.starts`). -/
+  wurzeln : List String := []
   deriving DecidableEq, Repr
 
 /-- The members: a single module wrapper is unwrapped, a bare
@@ -1062,8 +1071,10 @@ def elabKopf (_consts : List (String × Int))
             match uEffekte kopf tabs locks klauseln with
             | .error e => .error e
             | .ok eff =>
-              if !(eff.sperren.all (fun l =>
-                kopf.gehalten.any (strEq · l))) then
+              -- A `locks L` effect no longer needs `requires Held(L)`: a `locks L { .. }` statement
+              -- acquires it inside the body, and an access whose guard is not held is refused by
+              -- the LOWERING (`access without held guard`), so nothing is claimed here.
+              if false then
                 .error "locks ohne requires Held ohne G-Form"
               else
                 let schreibt := uEindeutig eff.schreibt
@@ -1127,7 +1138,7 @@ def uArgs (ctx : UCtx) (tabs : List UTab) : List UParamArt → List SExpr →
 /-- One body statement: an assignment or a direct call (the
     `tr_stmt` of `lean_g.rs`; compound assignment, mid-body
     `return` and every other statement are explicit errors). -/
-def uAnw (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
+def uAnw1 (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
     SAnw → Except String UStmt
   | .zuweis ziel "=" wert =>
     match uZugriff ctx ziel with
@@ -1171,6 +1182,35 @@ def uAnw (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
         | .ok xs => .ok (.call c xs)
   | _ => .error "Anweisung ohne G-Form"
 
+/-- One body statement as a LIST (a `locks` block is several flat statements). `locks L { ... }`: the
+    body is elaborated with `L` HELD (guards, calls); a shared hold, a `return` inside the block and
+    every other lock expression are refused. Structural in a fuel. -/
+def uAnwL (f : Nat) (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) :
+    SAnw → Except String (List UStmt) :=
+  match f with
+  | 0 => fun _ => .error "Verschachtelung ohne G-Form"
+  | f + 1 => fun s =>
+    match s with
+    | .sperrt g lk (.block ss .none) =>
+      if g then .error "geteilte Sperre ohne G-Form"
+      else
+        match lk with
+        | .variable l =>
+          match ctx.sperren.find? (fun x => strEq x.name l) with
+          | .none => .error ("Sperre unbekannt: " ++ l)
+          | .some _ =>
+            match ss.mapM (fun q => uAnwL f { ctx with gehalten := l :: ctx.gehalten } tabs koepfe q) with
+            | .error e => .error e
+            | .ok body => .ok ([UStmt.sperrtAuf l] ++ body.flatten ++ [UStmt.sperrtZu])
+        | _ => .error "Sperrausdruck ohne G-Form"
+    | e =>
+      match uAnw1 ctx tabs koepfe e with
+      | .error x => .error x
+      | .ok st => .ok [st]
+
+def uAnw (ctx : UCtx) (tabs : List UTab) (koepfe : List UFnKopf) (s : SAnw) : Except String (List UStmt) :=
+  uAnwL 32 ctx tabs koepfe s
+
 /-- The trailing return (the `check_body`/`tr_body` of
     `lean_g.rs`): a result falls off nowhere, and a missing
     result returns nowhere. -/
@@ -1209,7 +1249,8 @@ def elabFn (ctx : UCtx) (koepfe : List UFnKopf) (klauseln : List SKlausel)
     | .block ss ende =>
       match uSeq (ss.map (uAnw ctx ctx.tabellen koepfe)) with
       | .error e => .error e
-      | .ok saetze =>
+      | .ok saetzeL =>
+        let saetze := saetzeL.flatten
         match uEnde ctx ende with
         | .error e => .error e
         | .ok r => .ok (sichert, saetze, r)
@@ -1253,7 +1294,28 @@ def uRestFehler : List SItemTief → Except String Unit
   | .tabelleT _ _ _ _ _ _ :: rest => uRestFehler rest
   | .sperreT _ _ _ _ _ _ :: rest => uRestFehler rest
   | .funktionT _ _ :: rest => uRestFehler rest
+  | .eingangT _ :: rest => uRestFehler rest
   | _ :: _ => .error "Gegenstand ohne G-Form"
+
+/-- The dispatch roots of the `entry` items: no handler word (`via` -- the interrupt model of the
+    goal is not built here), no run-time expression, ONE dispatch target that names a parameterless
+    function of the unit. Everything else about the entry (vector, registers, stack) is the
+    hardware side and stays with the checker. -/
+def uWurzeln (fns : List UFn) : List SItemTief → Except String (List String)
+  | [] => .ok []
+  | .eingangT e :: rest =>
+    match e.via, e.ist, e.dispatch.getLast? with
+    | .none, .none, .some d =>
+      match fns.find? (fun f => strEq f.name d) with
+      | .some f =>
+        if f.params.isEmpty then
+          match uWurzeln fns rest with
+          | .error x => .error x
+          | .ok ws => .ok (d :: ws)
+        else .error "Eingang auf Funktion mit Parametern ohne G-Form"
+      | .none => .error ("Eingang: Funktion unbekannt: " ++ d)
+    | _, _, _ => .error "Eingang mit Handler ohne G-Form"
+  | _ :: rest => uWurzeln fns rest
 
 /-- The elaborator: a parsed surface tree to the exported
     fragment (tables, locks, `impl` functions). -/
@@ -1288,7 +1350,9 @@ def elabU : List SItemTief → Except String UProg
               elabUFunktion consts aliase tabs locks koepfe s b)) with
             | .error e => .error e
             | .ok fns =>
-              .ok { tabellen := tabs, sperren := locks, fns }
+              match uWurzeln fns ms with
+              | .error e => .error e
+              | .ok wurzeln => .ok { tabellen := tabs, sperren := locks, fns, wurzeln }
 
 /-! ## Lowering: from U to the exporter's declaration universe -/
 
@@ -1586,7 +1650,8 @@ def lowerNachLies (tabs : List UTab) (pnamen : List String)
       match lowerNachLies tabs pnamen ptypen rest r with
       | .error e => .error e
       | .ok t => .ok (.cons s t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ => .error "bool write without G form in the 104 lowering"
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .sperrtZu :: _, _ =>
+    .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "Ruf nach Ruf ohne G-Form"
 
 /-- The body of `einzahlen`: straight-line writes, at most
@@ -1619,7 +1684,8 @@ def lowerSaetzeEin (tabs : List UTab) (pnamen : List String)
       | .error e => .error e
       | .ok t =>
         .ok (.cons (.call G104_referenz.g_lies a G104_referenz.gHp_einzahlen_lies rfl) t)
-  | .assignB .. :: _, _ | .assignTabB .. :: _, _ => .error "bool write without G form in the 104 lowering"
+  | .assignB .. :: _, _ | .assignTabB .. :: _, _ | .sperrtAuf _ :: _, _ | .sperrtZu :: _, _ =>
+    .error "statement without G form in the 104 lowering"
   | .call _ _ :: _, _ => .error "Ruf ohne G-Form"
 
 /-! ## Lowering `lies` -/
@@ -1967,7 +2033,7 @@ def uProgBaue (e1 : UEnsEin) (e2 : UEnsLies) (b1 : UKoerpEin)
 def lowerProg : UProg →
     Except String
       (Programm G104_referenz.gD × List G104_referenz.GFn)
-  | { tabellen := [tab], sperren := [lock], fns := [fe, fl] } =>
+  | { tabellen := [tab], sperren := [lock], fns := [fe, fl], wurzeln := [] } =>
     if !(strEq tab.name "Konto" && strEq lock.name "M" &&
         strEq fe.name "einzahlen" && strEq fl.name "lies") then
       .error "Programmform ohne G-Form"
@@ -2283,6 +2349,8 @@ def beqUStmt : UStmt → UStmt → Bool
   | .assignB a f x s, .assignB b g y t | .assignTabB a f x s, .assignTabB b g y t =>
     strEq a b && strEq f g && beqUIdx x y && beqUEns s t
   | .call a xs, .call b ys => strEq a b && beqUArgList xs ys
+  | .sperrtAuf a, .sperrtAuf b => strEq a b
+  | .sperrtZu, .sperrtZu => true
   | _, _ => false
 
 def beqUStmtList : List UStmt → List UStmt → Bool
@@ -2368,7 +2436,8 @@ def beqUFnList : List UFn → List UFn → Bool
 
 def beqUProg : UProg → UProg → Bool
   | a, b => beqUTabList a.tabellen b.tabellen &&
-    beqULockList a.sperren b.sperren && beqUFnList a.fns b.fns
+    beqULockList a.sperren b.sperren && beqUFnList a.fns b.fns &&
+    beqStrList a.wurzeln b.wurzeln
 
 /-- Shape equality on elaboration outcomes, as a `Bool`. -/
 def beqElabU : Except String UProg → Except String UProg → Bool
