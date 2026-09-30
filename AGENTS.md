@@ -170,7 +170,11 @@ Since 2026-09-29 TWO lanes run there, each with one agent and its own clone: the
 lane (`~/Gabbro` + `~/gabbro-netz/`, runner `lauf.sh`, Claude Sonnet 5.5) and, after the GabbroV
 lane finished (`FERTIG-V`), the GabbroV-bridge lane (`~/gabbro-v`, runner `lauf-b.sh`, owner of
 `programmlogik/`, `lean.rs` and `beweis.rs`; task `dokumente/AUFTRAG-GABBROV-VERIFIKATION.md`) on
-Claude Sonnet 5.5 except stage S3, the simulation theorem, on Claude Opus 5.5. It builds and tests in its own tree, merges into master only with
+Claude Sonnet 5.5 except stage S3, the simulation theorem, on Claude Opus 5.5.
+Since 2026-09-30 the GabbroV-bridge lane is done (`FERTIG-B`) and a PARSER lane works in
+`~/gabbro-v` (`lauf-p.sh`, sieve (a), generic proofs only). A third lane runs LOCALLY on this laptop:
+the C-free lane (worktree `../gabbro-c-frei`, lane files `../gabbro-lane-c/`, runner `lauf-c.sh`,
+Sonnet 5.5), owner of `laufzeit/`, `bibliothek/linux/` and `bibliothek/linux-kmod/`. It builds and tests in its own tree, merges into master only with
 `cargo test --no-fail-fast` green, pulls before it pushes, and never force-pushes. Runner and
 task files: `~/claude-lane/` on that machine (`lauf.sh`, `AUFTRAG-*.md`, `STAND.md`, `logs/`).
 Nothing on that machine is loaded into its running kernel: kernel modules are tested in QEMU.
