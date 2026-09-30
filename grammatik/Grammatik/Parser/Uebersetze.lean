@@ -56,6 +56,11 @@ inductive USide
   | tab : String → String → UIdx → USide
   | alt : String → String → UIdx → USide
   | erg : USide
+  /-- Integer arithmetic (`+`, `-`, `*`): the range of the result is computed by the
+      lowering, exactly as `Expr.add`/`sub`/`mul` carry it in their type. -/
+  | add : USide → USide → USide
+  | sub : USide → USide → USide
+  | mul : USide → USide → USide
   deriving DecidableEq, Repr
 
 /-- One `ensures` predicate: a comparison, truth values, or a
@@ -190,6 +195,76 @@ def uSuch (was : String) (xs : List (String × α)) (n : String) : Except String
   | [] => .error (was ++ " unbekannt: " ++ n)
   | (m, v) :: rest => if strEq m n then .ok v else uSuch was rest n
 
+/-- The built-in integer types as ranges: `uN` is `0 .. 2^N - 1`, `iN` is `-2^(N-1) .. 2^(N-1) - 1`,
+    N = 1 .. 64 (the width sugar of the surface, `beispiele/73`). A literal table and not a
+    computation on names: the chain instances evaluate the elaborator in the kernel, and the
+    kernel must never decode a `String` (`Lexer.lean`, O13). A user `type` of the same name
+    comes FIRST (`uTypName`). -/
+def eingebauteInt : List (String × (Int × Int)) :=
+  [
+  ("u1", (0, 1)), ("u2", (0, 3)), ("u3", (0, 7)), ("u4", (0, 15)), ("u5", (0, 31)),
+  ("u6", (0, 63)), ("u7", (0, 127)), ("u8", (0, 255)), ("u9", (0, 511)), ("u10", (0, 1023)),
+  ("u11", (0, 2047)), ("u12", (0, 4095)), ("u13", (0, 8191)), ("u14", (0, 16383)),
+  ("u15", (0, 32767)), ("u16", (0, 65535)), ("u17", (0, 131071)), ("u18", (0, 262143)),
+  ("u19", (0, 524287)), ("u20", (0, 1048575)), ("u21", (0, 2097151)), ("u22", (0, 4194303)),
+  ("u23", (0, 8388607)), ("u24", (0, 16777215)), ("u25", (0, 33554431)), ("u26", (0, 67108863)),
+  ("u27", (0, 134217727)), ("u28", (0, 268435455)), ("u29", (0, 536870911)),
+  ("u30", (0, 1073741823)), ("u31", (0, 2147483647)), ("u32", (0, 4294967295)),
+  ("u33", (0, 8589934591)), ("u34", (0, 17179869183)), ("u35", (0, 34359738367)),
+  ("u36", (0, 68719476735)), ("u37", (0, 137438953471)), ("u38", (0, 274877906943)),
+  ("u39", (0, 549755813887)), ("u40", (0, 1099511627775)), ("u41", (0, 2199023255551)),
+  ("u42", (0, 4398046511103)), ("u43", (0, 8796093022207)), ("u44", (0, 17592186044415)),
+  ("u45", (0, 35184372088831)), ("u46", (0, 70368744177663)), ("u47", (0, 140737488355327)),
+  ("u48", (0, 281474976710655)), ("u49", (0, 562949953421311)), ("u50", (0, 1125899906842623)),
+  ("u51", (0, 2251799813685247)), ("u52", (0, 4503599627370495)), ("u53", (0, 9007199254740991)),
+  ("u54", (0, 18014398509481983)), ("u55", (0, 36028797018963967)),
+  ("u56", (0, 72057594037927935)), ("u57", (0, 144115188075855871)),
+  ("u58", (0, 288230376151711743)), ("u59", (0, 576460752303423487)),
+  ("u60", (0, 1152921504606846975)), ("u61", (0, 2305843009213693951)),
+  ("u62", (0, 4611686018427387903)), ("u63", (0, 9223372036854775807)),
+  ("u64", (0, 18446744073709551615)), ("i1", (-1, 0)), ("i2", (-2, 1)), ("i3", (-4, 3)),
+  ("i4", (-8, 7)), ("i5", (-16, 15)), ("i6", (-32, 31)), ("i7", (-64, 63)), ("i8", (-128, 127)),
+  ("i9", (-256, 255)), ("i10", (-512, 511)), ("i11", (-1024, 1023)), ("i12", (-2048, 2047)),
+  ("i13", (-4096, 4095)), ("i14", (-8192, 8191)), ("i15", (-16384, 16383)),
+  ("i16", (-32768, 32767)), ("i17", (-65536, 65535)), ("i18", (-131072, 131071)),
+  ("i19", (-262144, 262143)), ("i20", (-524288, 524287)), ("i21", (-1048576, 1048575)),
+  ("i22", (-2097152, 2097151)), ("i23", (-4194304, 4194303)), ("i24", (-8388608, 8388607)),
+  ("i25", (-16777216, 16777215)), ("i26", (-33554432, 33554431)), ("i27", (-67108864, 67108863)),
+  ("i28", (-134217728, 134217727)), ("i29", (-268435456, 268435455)),
+  ("i30", (-536870912, 536870911)), ("i31", (-1073741824, 1073741823)),
+  ("i32", (-2147483648, 2147483647)), ("i33", (-4294967296, 4294967295)),
+  ("i34", (-8589934592, 8589934591)), ("i35", (-17179869184, 17179869183)),
+  ("i36", (-34359738368, 34359738367)), ("i37", (-68719476736, 68719476735)),
+  ("i38", (-137438953472, 137438953471)), ("i39", (-274877906944, 274877906943)),
+  ("i40", (-549755813888, 549755813887)), ("i41", (-1099511627776, 1099511627775)),
+  ("i42", (-2199023255552, 2199023255551)), ("i43", (-4398046511104, 4398046511103)),
+  ("i44", (-8796093022208, 8796093022207)), ("i45", (-17592186044416, 17592186044415)),
+  ("i46", (-35184372088832, 35184372088831)), ("i47", (-70368744177664, 70368744177663)),
+  ("i48", (-140737488355328, 140737488355327)), ("i49", (-281474976710656, 281474976710655)),
+  ("i50", (-562949953421312, 562949953421311)), ("i51", (-1125899906842624, 1125899906842623)),
+  ("i52", (-2251799813685248, 2251799813685247)), ("i53", (-4503599627370496, 4503599627370495)),
+  ("i54", (-9007199254740992, 9007199254740991)),
+  ("i55", (-18014398509481984, 18014398509481983)),
+  ("i56", (-36028797018963968, 36028797018963967)),
+  ("i57", (-72057594037927936, 72057594037927935)),
+  ("i58", (-144115188075855872, 144115188075855871)),
+  ("i59", (-288230376151711744, 288230376151711743)),
+  ("i60", (-576460752303423488, 576460752303423487)),
+  ("i61", (-1152921504606846976, 1152921504606846975)),
+  ("i62", (-2305843009213693952, 2305843009213693951)),
+  ("i63", (-4611686018427387904, 4611686018427387903)),
+  ("i64", (-9223372036854775808, 9223372036854775807))
+  ]
+
+/-- A type name as a range: the unit's own aliases, then the built-in widths. -/
+def uTypName (aliase : List (String × (Int × Int))) (a : String) : Except String (Int × Int) :=
+  match uSuch "Typ" aliase a with
+  | .ok r => .ok r
+  | .error e =>
+    match eingebauteInt.find? (fun x => strEq x.1 a) with
+    | .some (_, r) => .ok r
+    | .none => .error e
+
 /-- A table by name: its number (position, what `ptr` names)
     and its slot count (what `index` names). -/
 def uTabNrAux : List UTab → Nat → String → Except String (Nat × Int)
@@ -208,7 +283,7 @@ def uTabNr (tabs : List UTab) (n : String) : Except String (Nat × Int) :=
     other shape are explicit errors. -/
 def uTyp (aliase : List (String × (Int × Int))) (tabs : List UTab) : STyp → Except String Ty
   | .atom a =>
-    match uSuch "Typ" aliase a with
+    match uTypName aliase a with
     | .ok (lo, hi) => .ok (.int lo hi)
     | .error e => .error e
   | .bereich _ (.lit lo) (.lit hi) false =>
@@ -234,7 +309,7 @@ def uTyp (aliase : List (String × (Int × Int))) (tabs : List UTab) : STyp → 
     `read_table`; `wrapping` and everything else are explicit
     errors). -/
 def uFeldTyp (aliase : List (String × (Int × Int))) : STyp → Except String (Int × Int)
-  | .atom a => uSuch "Typ" aliase a
+  | .atom a => uTypName aliase a
   | .bereich _ (.lit lo) (.lit hi) false =>
     .ok (Int.ofNat lo, Int.ofNat hi)
   | _ => .error "Feldtyp ohne G-Form"
@@ -498,6 +573,18 @@ def uWertBody (ctx : UCtx) : SExpr → Except String USide
       | .ok (.ptr _ _) => .error "Zeiger als Wert ohne G-Form"
       | .ok _ => .ok (.param p)
       | .error e => .error e
+  | .bin op a b =>
+    if strEq op "+" || strEq op "-" || strEq op "*" then
+      match uWertBody ctx a with
+      | .error e => .error e
+      | .ok x =>
+        match uWertBody ctx b with
+        | .error e => .error e
+        | .ok y =>
+          if strEq op "+" then .ok (.add x y)
+          else if strEq op "-" then .ok (.sub x y)
+          else .ok (.mul x y)
+    else .error "Wert ohne G-Form"
   | e =>
     match uZugriff ctx e with
     | .error _ => .error "Wert ohne G-Form"
@@ -552,7 +639,7 @@ def uParam (aliase : List (String × (Int × Int))) (tabs : List UTab) :
     result type). -/
 def uErgBereich (aliase : List (String × (Int × Int))) : STyp →
     Except String (Int × Int)
-  | .atom a => uSuch "Typ" aliase a
+  | .atom a => uTypName aliase a
   | .bereich _ (.lit lo) (.lit hi) false =>
     .ok (Int.ofNat lo, Int.ofNat hi)
   | _ => .error "Ergebnis ohne G-Form"
@@ -651,8 +738,10 @@ def uEffekte (kopf : UFnKopf) (tabs : List UTab) (locks : List ULock) :
     List SKlausel → Except String UEffekte
   | ks =>
     let es := uWirkungen ks
-    if es.isEmpty && !(uHatWirkung ks) then .error "Funktion ohne effects"
-    else uEffekteAux kopf tabs locks es
+    -- An omitted `effects` is DERIVED by the checker (lane 191); here it is read as the empty
+    -- set. That is never more permissive than the derived one: a body that writes a table or
+    -- takes a lock is refused by the lowering (`hw : V.schreibt t = true` has no proof).
+    uEffekteAux kopf tabs locks es
 where
   uWirkungen : List SKlausel → List SEffekt
     | [] => []
@@ -907,7 +996,6 @@ def elabU : List SItemTief → Except String UProg
         | .tabelleT _ _ _ _ _ _ => true | _ => false)
       match uSeq (tabItems.map (uTabelle consts aliase)) with
       | .error e => .error e
-      | .ok [] => .error "Einheit ohne Tabelle"
       | .ok tabs =>
         let lockItems := ms.filter (fun
           | .sperreT _ _ _ _ _ _ => true | _ => false)
@@ -1044,6 +1132,7 @@ def lowerSeiteEin (tabs : List UTab) (pnamen : List String)
                   G104_referenz.GKontoFeld.stand i
                   G104_referenz.gDarf_einzahlen_Konto }
   | .erg => .error "result im Rumpf ohne G-Form"
+  | .add .. | .sub .. | .mul .. => .error "Arithmetik ohne G-Form in der 104-Uebersetzung"
 /-- One comparison in `einzahlen` (the `tr_cmp` of `lean_g.rs`;
     G folds all but `lt`/`le`/`eq`). -/
 def lowerVglEin (tabs : List UTab) (pnamen : List String)
@@ -1422,6 +1511,7 @@ def lowerSeiteEnsLies (tabs : List UTab) (pnamen : List String)
     match ergebnis with
     | .some (0, 100) => .ok { weit := (0, 100), term := Expr.var Var.hier }
     | _ => .error "Ergebnisweite fremd"
+  | .add .. | .sub .. | .mul .. => .error "Arithmetik ohne G-Form in der 104-Uebersetzung"
 where
   lowerIdxEnsLies : UIdx →
     Except String

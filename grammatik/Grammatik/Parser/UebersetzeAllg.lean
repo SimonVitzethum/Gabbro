@@ -401,6 +401,23 @@ structure LowSide (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u))) where
   weit : Int × Int
   term : Expr (declOf u) Γ Λ (.int weit.1 weit.2)
 
+/-- Arithmetic on sided terms: the range is what `Expr.add`/`sub`/`mul` carry in their type. -/
+def LowSide.plus {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    LowSide u Γ Λ :=
+  { weit := (x.weit.1 + y.weit.1, x.weit.2 + y.weit.2), term := Expr.add x.term y.term }
+
+def LowSide.minus {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    LowSide u Γ Λ :=
+  { weit := (x.weit.1 - y.weit.2, x.weit.2 - y.weit.1), term := Expr.sub x.term y.term }
+
+def LowSide.times {u : UProg} {Γ : Ctx} {Λ : List (Res (declOf u))} (x y : LowSide u Γ Λ) :
+    LowSide u Γ Λ :=
+  { weit := (imin (imin (x.weit.1 * y.weit.1) (x.weit.1 * y.weit.2))
+                  (imin (x.weit.2 * y.weit.1) (x.weit.2 * y.weit.2)),
+             imax (imax (x.weit.1 * y.weit.1) (x.weit.1 * y.weit.2))
+                  (imax (x.weit.2 * y.weit.1) (x.weit.2 * y.weit.2))),
+    term := Expr.mul x.term y.term }
+
 /-- The table a basis names: a pointer parameter's target, or a
     table (for `old`, where both spellings travel). -/
 def lowBasisTab (u : UProg) (fn : UFn) (b : String) :
@@ -539,6 +556,27 @@ def lowSideVal (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
   | .param p => lowParamSide u Γ Λ fn 0 p
   | .slot b f ix => lowDurch u Γ Λ fn 0 b f ix
   | .tab b f ix => lowTabRead u Γ Λ fn 0 b f ix
+  | .add a b =>
+    match lowSideVal u Γ Λ fn a with
+    | .error e => .error e
+    | .ok x =>
+      match lowSideVal u Γ Λ fn b with
+      | .error e => .error e
+      | .ok y => .ok (LowSide.plus x y)
+  | .sub a b =>
+    match lowSideVal u Γ Λ fn a with
+    | .error e => .error e
+    | .ok x =>
+      match lowSideVal u Γ Λ fn b with
+      | .error e => .error e
+      | .ok y => .ok (LowSide.minus x y)
+  | .mul a b =>
+    match lowSideVal u Γ Λ fn a with
+    | .error e => .error e
+    | .ok x =>
+      match lowSideVal u Γ Λ fn b with
+      | .error e => .error e
+      | .ok y => .ok (LowSide.times x y)
   | _ => .error "side in body without G form"
 
 /-- A comparison side in `ensures`: literals, numeric parameters,
@@ -555,6 +593,27 @@ def lowSideEns (u : UProg) (Γ : Ctx) (Λ : List (Res (declOf u)))
     lowTabRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix
   | .alt b f ix =>
     lowAltRead u Γ Λ fn (if er.isSome then 1 else 0) b f ix
+  | .add a b =>
+    match lowSideEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok x =>
+      match lowSideEns u Γ Λ fn er b with
+      | .error e => .error e
+      | .ok y => .ok (LowSide.plus x y)
+  | .sub a b =>
+    match lowSideEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok x =>
+      match lowSideEns u Γ Λ fn er b with
+      | .error e => .error e
+      | .ok y => .ok (LowSide.minus x y)
+  | .mul a b =>
+    match lowSideEns u Γ Λ fn er a with
+    | .error e => .error e
+    | .ok x =>
+      match lowSideEns u Γ Λ fn er b with
+      | .error e => .error e
+      | .ok y => .ok (LowSide.times x y)
   | .erg =>
     match er with
     | some (a, b) =>
