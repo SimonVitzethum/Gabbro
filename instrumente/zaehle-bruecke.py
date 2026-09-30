@@ -135,6 +135,22 @@ def eingeloest(t, marke, programm, satz, modul, lean):
                        programm, modul, satz, lean)
 
 
+def duty_wurzeln_verfolgt():
+    """P0 guard: every root of the `Duty` lib in `bruecke/lakefile.toml` is a TRACKED file, or a
+    fresh clone fails with `bad import`. Returns the list of untracked roots."""
+    t = (BR / "lakefile.toml").read_text(encoding="utf-8")
+    m = re.search(r'name = "Duty".*?roots = \[([^\]]*)\]', t, re.S)
+    if not m:
+        return ["(no `Duty` lib found in lakefile.toml)"]
+    fehlt = []
+    for w in re.findall(r'"([\w.]+)"', m.group(1)):
+        rel = "programmlogik/" + w.replace(".", "/") + ".lean"
+        r = subprocess.run(["git", "ls-files", "--error-unmatch", rel], cwd=W, capture_output=True)
+        if r.returncode != 0:
+            fehlt.append(rel)
+    return fehlt
+
+
 def selbsttest():
     """The readers refuse what they should: a marker without an anchor, and a stale pin."""
     ok = MARKE_I.search("-- BRIDGE-INSTANCE beispiele/x.gab Bruecke.X") is not None
@@ -152,6 +168,10 @@ def main():
     a = ap.parse_args()
     if not selbsttest():
         print("ABBRUCH: the speech test fell -- this run measures nothing")
+        return 2
+    fehlt = duty_wurzeln_verfolgt()
+    if fehlt:
+        print("ABBRUCH: bridge duty files not tracked (a fresh clone would not build): %s" % ", ".join(fehlt))
         return 2
     binary = pathlib.Path(a.binary)
     if not binary.exists():
