@@ -161,6 +161,9 @@ structure UCtx where
   ergebnis : Option (Int × Int)
   ergBool : Bool := false
   fname : String
+  /-- The declared STORAGE width in bits of each parameter (`0` when it is not a bare unsigned word
+      `u8`/`u16`/`u32`/`u64`, optionally with a range): what `~p` reads. -/
+  pbreiten : List Nat := []
   /-- The unit's type aliases: `T(e)` and `T::max` name a type. -/
   aliase : List (String × (Int × Int))
   /-- The unit's `const N : T = v;` -- inlined as a number at every use (`tr_typed`). -/
@@ -325,7 +328,7 @@ def uTyp (aliase : List (String × (Int × Int))) (tabs : List UTab) : STyp → 
     | .error e => .error e
   | .ptr raum rechte (.atom t) =>
     if !strEq raum "normal" then .error "Adressraum ohne G-Form"
-    else if strEq rechte "rw" then
+    else if strEq rechte "rw" || strEq rechte "own" then
       match uTabNr tabs t with
       | .ok (num, _) => .ok (.ptr num true)
       | .error e => .error e
@@ -560,6 +563,17 @@ def uRechne (ctx : UCtx) (blatt : SExpr → Except String USide) : SExpr → Exc
           else if strEq op "|" then .ok (.bor x y)
           else .ok (.bxor x y)
     else blatt (.bin op a b)
+  | .un "~" (.variable p) =>
+    -- `~p` is `p ^ (2^w - 1)` over the parameter's declared STORAGE width `w` (what the checker reads);
+    -- for any other operand the width is not known here, so the form is refused.
+    match uParamNr ctx p with
+    | .error _ => blatt (.un "~" (.variable p))
+    | .ok j =>
+      match ctx.pbreiten[j]?, uArtBei ctx.parten j with
+      | .some w, .ok .int =>
+        if 0 < w then .ok (.bxor (.param p) (.lit ((2 : Int) ^ w - 1)))
+        else .error "Komplement ohne bekannte Breite ohne G-Form"
+      | _, _ => .error "Komplement ohne bekannte Breite ohne G-Form"
   | .ruf f [a] =>
     match uTypName ctx.aliase f with
     | .ok (lo, hi) =>
@@ -731,14 +745,23 @@ structure UFnKopf where
   ptypen : List Ty
   ergebnis : Option (Int × Int)
   ergBool : Bool := false
+  pbreiten : List Nat := []
   gehalten : List String
+
+/-- The storage width of a declared parameter type: a bare unsigned word, with or without a range
+    (`u8 in 0 .. 15` is stored in 8 bits); `0` for everything else. -/
+def uParamBreite : STyp → Nat
+  | .atom a | .bereich (.atom a) _ _ _ =>
+    if strEq a "u8" then 8 else if strEq a "u16" then 16
+    else if strEq a "u32" then 32 else if strEq a "u64" then 64 else 0
+  | _ => 0
 
 /-- A parameter with its kind (the `param_ty` of `lean_g.rs`). -/
 def uParam (aliase : List (String × (Int × Int))) (tabs : List UTab) :
     String × STyp → Except String (String × Ty × UParamArt)
   | (n, .ptr raum rechte (.atom t)) =>
     if !strEq raum "normal" then .error "Adressraum ohne G-Form"
-    else if strEq rechte "rw" then
+    else if strEq rechte "rw" || strEq rechte "own" then
       match uTabNr tabs t with
       | .error e => .error e
       | .ok (num, _) => .ok (n, .ptr num true, .ptr num true)
@@ -924,6 +947,7 @@ def elabKopf (_consts : List (String × Int))
           | .ok gehalten =>
             let kopf : UFnKopf :=
               { name, pnamen, parten, ptypen, ergebnis := .none,
+                pbreiten := params.map (fun p => uParamBreite p.2),
                 gehalten := uEindeutig gehalten }
             match uEffekte kopf tabs locks klauseln with
             | .error e => .error e
@@ -1088,7 +1112,7 @@ def uCtxVon (aliase : List (String × (Int × Int))) (konst : List (String × In
   { pnamen := kopf.pnamen, parten := kopf.parten,
     ptypen := kopf.ptypen, tabellen := tabs, sperren := locks,
     gehalten := kopf.gehalten, ergebnis := kopf.ergebnis, ergBool := kopf.ergBool,
-    fname, aliase, konst }
+    fname, pbreiten := kopf.pbreiten, aliase, konst }
 
 /-- One whole function: head (pass one) plus contracts and
     body (pass two). -/

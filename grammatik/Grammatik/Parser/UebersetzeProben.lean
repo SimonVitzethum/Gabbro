@@ -179,6 +179,37 @@ def zahl_res_bool : String :=
   "module m { impl fn f(x : u32 in 0 .. 9) -> u32 { return x <= 5; } }"
 theorem zahl_res_bool_refused : stufe zahl_res_bool = "elab: Wert ohne G-Form" := by decide +kernel
 
+/-! ## Wall 4: `own` pointers and the complement `~p` over the declared storage width -/
+
+/-- WITNESS (`beispiele/15`, shortened): an `own` pointer is a read-write pointer in the model (the
+    exporter reads it the same way; ownership is the checker's business). -/
+def own1 : String :=
+  "module m { table T count 2 { slot { b : bool, } } impl fn u(r : ptr<normal, own> T, i : index into T) -> bool effects { reads r.slots, writes r.slots } { r.slots[i].b = true; return r.slots[i].b; } }"
+theorem own1_ok : stufe own1 = "OK" := by decide +kernel
+
+/-- WITNESS (`beispiele/62`, `61`): `~p` is `p ^ (2^w - 1)` over the parameter's declared storage width. -/
+def bnot1 : String :=
+  "module m { impl fn f(m : u8) -> u8 { return ~m; } impl fn g(w : u8) -> bool { return (w ^ u8::max) == ~w; } }"
+theorem bnot1_ok : stufe bnot1 = "OK" := by decide +kernel
+
+/-- WITNESS: the width is the DECLARED word's, not the range's: `u8 in 0 .. 15` is stored in 8 bits, so
+    its complement is `255 - x` (`beispiele/61`, `hohes_nibble`), and `u16 in 0 .. 255` in 16. -/
+def bnot_schmal : String :=
+  "module m { impl fn f(x : u8 in 0 .. 15) -> u8 { return ~x; } impl fn k(w : u16 in 0 .. 255) -> u16 { return ~w; } }"
+theorem bnot_schmal_ok : stufe bnot_schmal = "OK" := by decide +kernel
+
+/-- PLANTED DEFECT: the complement of an EXPRESSION has no known width here -- it is refused, not
+    guessed from a range (a range would give `15 - x` for `0 .. 15`, where the C says `255 - x`). -/
+def bnot_ausdruck : String :=
+  "module m { impl fn f(x : u32) -> u32 { return ~(x + 1); } }"
+theorem bnot_ausdruck_refused : stufe bnot_ausdruck = "elab: Wert ohne G-Form" := by decide +kernel
+
+/-- PLANTED DEFECT: the complement of a signed parameter (its width has no unsigned reading). -/
+def bnot_vorzeichen : String :=
+  "module m { impl fn f(x : i32) -> i32 { return ~x; } }"
+theorem bnot_vorzeichen_refused :
+    stufe bnot_vorzeichen = "elab: Komplement ohne bekannte Breite ohne G-Form" := by decide +kernel
+
 #print axioms add1_ok
 #print axioms schreibt1_refused
 
