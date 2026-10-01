@@ -16,7 +16,9 @@
 **A systems language that carries the proof plumbing, so that verifying an operating system
 costs a fraction of what it costs today.** The current backend emits C11 plus inline assembly.
 The selected verification target is a direct x86-64 backend with Lean validation of the final
-machine bytes; that backend and validator are planned, not implemented. The compiler is safe
+machine bytes; the full backend and validator are not implemented. The Lean
+foundations are in progress; the [direct-compiler work and progress record](dokumente/DIREKTER-COMPILER.md)
+tracks the models, optimisation proofs, later Rust implementation and remaining closure. The compiler is safe
 Rust (`forbid(unsafe_code)`) with zero external dependencies.
 
 The point is not to have another language. The point is to write an operating system in it —

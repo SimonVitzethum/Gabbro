@@ -863,10 +863,13 @@ work order. See `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5 and
 `dokumente/AUFTRAG-UEBERSETZUNGSVALIDIERUNG.md`. The existing C backend stays in use until
 its replacement is implemented and checked; no new binary guarantee is claimed.
 
-**Wave A started:** at most 20 Opencode Go Muse Spark 1.3 Contributor agents, local-only.
-The first ten lanes (269–278) own isolated foundation/inventory files; see
-`dokumente/x86/WELLE-A.md`. **User priority: Lean first** (`dokumente/x86/LEAN-ZUERST.md`); Rust codec 280 is stopped with its draft preserved. Lean owners 272/279/282–288 model execution, byte decoding, integer/image/TSO/flags/IEEE/IR/invariant optimisation. Foundation lanes 270/271/273 are reviewed and merged locally; execution lane 272 and byte-codec/review lanes 279–281 form the next wave. No source-to-final-image chain is closed. Shared x86 syntax is `X86/Typen.lean`; no native backend or
-final-byte chain is claimed. The starter optimisation scope is recorded in that wave contract.
+**Central work/progress record:** [Direct compiler](dokumente/DIREKTER-COMPILER.md).
+The work is Lean first: actual x86 models, `-O3`-like and invariant-derived
+optimisation proofs, then Rust implementation and generic full source-to-final-byte
+translation validation. Isolated local Muse authors and independent exact-candidate
+reviewers share a maximum of 20 active model processes. Reviewed foundations and
+current tasks are recorded in that document; Rust codec 280 remains stopped with
+its draft retained. No complete source-to-final-image chain is closed.
 
 - [ ] **Scope from implementation:** inventory all source operations, emitter/runtime paths,
   widths, atomic orders, hardware forms and entry sequences; examples are witnesses only.

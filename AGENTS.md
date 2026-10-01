@@ -109,6 +109,16 @@ README §5 says exactly this; keep it that way.
 
 ## 3. Simon's standing instructions
 
+- **Direct compiler progress record** (Simon, 2026-10-01):
+  [`dokumente/DIREKTER-COMPILER.md`](dokumente/DIREKTER-COMPILER.md) is the central
+  record for the direct x86-64 compiler, `-O3`-like/invariant optimisation, Lean-first
+  modelling, later Rust implementation and full source-to-final-byte validation.
+  Update it with every substantive reviewed integration, finding, scope change and
+  measured milestone. Keep proved, running, refused and planned work distinct;
+  preserve the dated history and link committed author/reviewer evidence. Only
+  checked master is pushed. Lanes report progress to the coordinator and do not
+  edit this central document unless explicitly assigned.
+
 - **Push master without asking**, after checked merges. First grep the outgoing diff for keys.
   Never push red. Never force-push. No new branches on GitHub: lane branches stay
   local (`muse/NNN` never leaves this machine), Opus branches stay in their
