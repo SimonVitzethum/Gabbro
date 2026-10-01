@@ -320,6 +320,7 @@ source list is not wrong — it is uncheckable, and that is the more expensive s
 | File | Role |
 |---|---|
 | [`DIRECT-COMPILER.md`](DIRECT-COMPILER.md) | direct compiler, Lean-first optimisation/validation work and maintained progress |
+| [`DIRECT-COMPILER-DESIGN.md`](DIRECT-COMPILER-DESIGN.md) | planned x86 instruction forms, invariant optimisation and fast compilation/validation design |
 | [`dokumente/DESIGN.md`](dokumente/DESIGN.md) | design decisions and their reasons |
 | [`dokumente/TUTORIAL.md`](dokumente/TUTORIAL.md) | getting started and checked examples |
 | [`TODO.md`](TODO.md) | open items only, cut by the stages of the plan |

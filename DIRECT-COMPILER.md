@@ -6,6 +6,8 @@ reviewed integration, changed scope, proved obligation, rejection or measured
 milestone. Task files and committed reports contain the detailed evidence; this
 record must distinguish completed proofs from running work and planned work.
 
+The [detailed compiler design](DIRECT-COMPILER-DESIGN.md) specifies the planned instruction forms, invariant-derived optimisation rules, hardware scope and fast compilation/validation architecture. These are design requirements; the ledger below records implementation and proof status. <!-- x86-detailed-design -->
+
 ## Intended result
 
 Compile Gabbro directly to x86-64 machine bytes, including linking, relocations,
@@ -140,7 +142,7 @@ Last ledger refresh: **2026-10-01 10:11 UTC**. This is an operational snapshot, 
 | 312 | Checked target regions and allocation ceiling | Merged after review/checks | 316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-312.md) |
 | 317 | Single pilot instruction access extraction | Committed candidate; review/integration pending | 318: Agent working | [task](lanes/317.md) |
 | 319 | Byte-memory fetch decode and actual instruction step | Agent working | 320: scheduled | [task](lanes/319.md) |
-| 323 | Detailed instruction optimisation and fast compilation design | Committed candidate; review/integration pending | 324: Committed candidate; review/integration pending | [task](lanes/323.md) |
+| 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-323.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -241,6 +243,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `1c415d29` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:1c415d29989d42c49ccabc731831239e49499d96 -->
 - 2026-10-01: lane **312**, Checked target regions and allocation ceiling, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-312.md). <!-- x86-merged:312 -->
 - 2026-10-01: lane **316**, Independent review of 312, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-316.md). <!-- x86-merged:316 -->
+- 2026-10-01: lane **323**, Detailed instruction optimisation and fast compilation design, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-323.md). <!-- x86-merged:323 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
