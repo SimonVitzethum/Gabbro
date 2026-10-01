@@ -224,7 +224,7 @@ Last ledger refresh: **2026-10-01 16:04 UTC**. This is an operational snapshot, 
 | 432 | Continuous Lean proof reserve: RegionSeparation | Merged after review/checks | 480: Merged after review/checks | [report](messung/muse/MUSE-REPORT-432.md) |
 | 433 | Continuous Lean proof reserve: ObservationProjection | Merged after review/checks | 481: Merged after review/checks | [report](messung/muse/MUSE-REPORT-433.md) |
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Merged after review/checks | 482: Merged after review/checks | [report](messung/muse/MUSE-REPORT-434.md) |
-| 435 | Continuous Lean proof reserve: DecodingCoverage | Merged after review/checks | 483: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-435.md) |
+| 435 | Continuous Lean proof reserve: DecodingCoverage | Merged after review/checks | 483: Merged after review/checks | [report](messung/muse/MUSE-REPORT-435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
 | 542 | Next bridge wave N9: StackUnwind | Committed candidate; review/integration pending | 548: Committed candidate; review/integration pending | [task](lanes/542.md) |
 | 543 | Next bridge wave N16: DecodeFault | Committed candidate; review/integration pending | 549: Committed candidate; review/integration pending | [task](lanes/543.md) |
@@ -545,6 +545,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **349**, Practical-performance Lean wave C5: ValidatorSkeleton, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-349.md). <!-- x86-merged:349 -->
 - 2026-10-01: lane **387**, Independent exact-candidate review of 349 ValidatorSkeleton, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-387.md). <!-- x86-merged:387 -->
 - 2026-10-01: lane **435**, Continuous Lean proof reserve: DecodingCoverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-435.md). <!-- x86-merged:435 -->
+- 2026-10-01: lane **483**, Independent exact-candidate review of 435, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-483.md). <!-- x86-merged:483 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
