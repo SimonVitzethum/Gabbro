@@ -562,19 +562,172 @@ theorem fragmentLoad_passt_zeuge :
 
 #print axioms fragmentLoad_passt_zeuge
 
+/-! ## 5. Refusals: unsupported rules and profiles are rejected. -/
+
+/-- Rule admission: only `Stmt.assignSlot` belongs to the fragment.
+    Every other statement form is refused by decision (`false`). -/
+def regelOk {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    {Λ Λ' : List (Res D)} : Stmt D V l Γ Λ Λ' → Bool
+  | .assignSlot .. => true
+  | _ => false
+
+/-- The admitted rule shape: `s` is an `assignSlot`. Stated as a
+    classifier family rather than an equation, so every case stays
+    well-typed across the statement indices; consumers recover the
+    components by inversion. -/
+inductive IstAssignSlot {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)} : ∀ {Λ' : List (Res D)},
+    Stmt D V l Γ Λ Λ' → Prop where
+  | mk {t : D.Tab} {f : D.Feld t}
+    {i : Expr D Γ Λ (.index (D.count t))}
+    {e : Expr D Γ Λ (D.typ t f)}
+    {hw : V.schreibt t = true} {hL : darf D t Λ} :
+    IstAssignSlot (Stmt.assignSlot t f i e hw hL)
+
+/-- Every admitted rule is an `assignSlot`: all unsupported source rules
+    (pointer/global/byte writes, calls, locks, loops, gates, returns and
+    the rest) are rejected — proved by casing on the actual statement,
+    never by enumerating names. -/
+theorem regelOk_nur {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} {s : Stmt D V l Γ Λ Λ'}
+    (h : regelOk s = true) : IstAssignSlot s := by
+  cases s with
+  | assignSlot t f i e hw hL => exact .mk
+  | _ => simp [regelOk] at h
+
+/-- Witness that the only admitted rule is inhabited on a declaration
+    with a table its function writes. -/
+theorem regelOk_nur_zeuge :
+    ∃ (s : Stmt witD witV false [] [] []) (_ : regelOk s = true),
+      IstAssignSlot s ∧
+      witV.schreibt () = true := by
+  exact ⟨Stmt.assignSlot () () witI witE witHw witHL, rfl,
+    .mk, rfl⟩
+
+/-- Profile refusals: every non-`.int` type has no word representation.
+    (`bool`, over-wide and out-of-region refusals are pinned in
+    `SourceMemory`; globals are refused by `fragmentProfilOk` below.) -/
+theorem repOk_opt_verweigert : repOk (.opt 5) 4096 16 0 = false := by decide
+theorem repOk_summe_verweigert : repOk (.sum []) 4096 16 0 = false := by decide
+theorem repOk_grund_verweigert : repOk (.grund 2) 4096 16 0 = false := by decide
+theorem repOk_nie_verweigert : repOk .never 4096 16 0 = false := by decide
+theorem repOk_float_verweigert : repOk (.fl (0, 1) (0, 1)) 4096 16 0 = false := by decide
+theorem repOk_fnzeiger_verweigert : repOk (.fnptr 0) 4096 16 0 = false := by decide
+theorem repOk_zeiger_verweigert : repOk (.ptr 0 true) 4096 16 0 = false := by decide
+
+/-- Carrier admission: a table carrier is admitted exactly by `repOk`;
+    a global carrier is refused (globals have no `RepSlot`). -/
+def fragmentProfilOk {D : Deklaration} (c : D.Tab ⊕ D.Glob) (ty : Ty)
+    (base len off : Nat) : Bool :=
+  match c with
+  | .inl _ => repOk ty base len off
+  | .inr _ => false
+
+/-- Global carriers are refused on every profile. -/
+theorem fragmentProfil_global_verweigert {D : Deklaration} (g : D.Glob)
+    (ty : Ty) (base len off : Nat) :
+    fragmentProfilOk (D := D) (.inr g) ty base len off = false := by
+  rfl
+
+/-- The witness profile is admitted. -/
+theorem fragmentProfil_wit_ok :
+    fragmentProfilOk (D := witD) (.inl ()) (.int 0 100) 4096 16 0 = true := by
+  decide
+
+/-! ## 6. Byte grouping, width, alignment and slot ownership. -/
+
+/-- No wrap: an admitted slot address covers eight consecutive bytes.
+    Derived from the checked `repOk` region bounds, never assumed. -/
+theorem fragmentOhneUmbruch {lo hi : Int} {base len off : Nat}
+    (h : repOk (.int lo hi) base len off = true) :
+    OhneUmbruch (slotAddr base off) := by
+  obtain ⟨-, -, -, hWrap⟩ := repOk_klingt h
+  unfold OhneUmbruch slotAddr natAdresse
+  rw [BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (by omega : base + off < 2 ^ 64)]
+  omega
+
+/-- Checked alignment admission for one fragment word: the slot address
+    carries 8-alignment. The lowering admits only words passing this
+    guard alongside `repOk`; the refused case is proved below. -/
+def fragmentZielOk (base off : Nat) : Bool :=
+  ausgerichtet8 (slotAddr base off)
+
+/-- The witness slot address is aligned. -/
+theorem fragmentZiel_ok_zeuge : fragmentZielOk 4096 0 = true := by decide
+
+/-- A misaligned slot address is refused. -/
+theorem fragmentZiel_schief_verweigert : fragmentZielOk 4096 1 = false := by decide
+
+/-- Slot ownership witness: two admitted disjoint slots own disjoint
+    8-byte footprints (source side: `rep_fremd_tab`; target side here). -/
+theorem fragmentFussEigentum_zeuge :
+    Disjunkt (slotAddr 4096 0) (slotAddr 4104 0) :=
+  disjunkt_von_layout { tab := 0, basis := 4096, len := 8, ausr := 8 }
+    { tab := 1, basis := 4104, len := 8, ausr := 8 } 0 0
+    (by decide) (by decide) (by decide) (by decide) (by decide)
+
+#print axioms regelOk_nur
+#print axioms regelOk_nur_zeuge
+#print axioms repOk_opt_verweigert
+#print axioms repOk_summe_verweigert
+#print axioms repOk_grund_verweigert
+#print axioms repOk_nie_verweigert
+#print axioms repOk_float_verweigert
+#print axioms repOk_fnzeiger_verweigert
+#print axioms repOk_zeiger_verweigert
+#print axioms fragmentProfil_global_verweigert
+#print axioms fragmentProfil_wit_ok
+#print axioms fragmentOhneUmbruch
+#print axioms fragmentZiel_ok_zeuge
+#print axioms fragmentZiel_schief_verweigert
+#print axioms fragmentFussEigentum_zeuge
+
+/- CUTS:
+    - Fragment only: one `Stmt.assignSlot` step on one `.int lo hi` slot
+      (`0 <= lo`, `hi < 2 ^ 64` checked by `repOk`) stored as one
+      little-endian 8-byte word, with 8-aligned slot address
+      (`fragmentZielOk`) and no 64-bit wrap (`fragmentOhneUmbruch`).
+      Every other rule is refused (`regelOk_nur`); every non-`.int`
+      profile and every global carrier is refused (`repOk_*_verweigert`,
+      `fragmentProfil_global_verweigert`).
+    - Single-slot steps only: multi-slot statements (`schreibBytes`),
+      calls, lock open/close, loops, gates, registers, payloads and
+      reason channels are outside (refused by `regelOk`, not covered).
+    - No validator soundness: `repOk`/`fragmentProfilOk`/`fragmentZielOk`
+      are decided admission predicates; `valX86_sound` and the
+      source-to-final-bytes closing theorem stay OPEN.
+    - No concurrency claim beyond the per-step access list: footprints
+      are sequential byte footprints; per-access TSO refinement stays
+      with the TSO bridge (`BrueckenProfil`/`WortGuard` are the handoff
+      vocabulary, reused unchanged, never redefined here).
+    - No hardware claim: refusal is validator admission, never an
+      invented hardware fault. Only named silicon/device/time behaviour
+      is hardware; loader/binding logic stays user logic with contracts.
+    - No OS/loader assumption: layout bases are taken as checked numbers
+      against decided Bools; the loaded-image mapping contract is OPEN.
+    - No int->ptr conversion enters the language: slot addresses are
+      target-side `natAdresse` computations over accepted layout bases,
+      never source values cast to pointers.
+    - Consumer interface (OPEN until cited): the lowering/validator
+      consumes `fragmentListe`/`fragmentDelta_voll` (source enumeration),
+      `blattFragment_voll` (G completeness), `fragmentStore_passt` /
+      `fragmentLoad_passt` (realised footprint match) and admits only
+      findings with `regelOk`/`fragmentProfilOk`/`fragmentZielOk` true.
+-/
+
+#print axioms fragmentListe_schreibt
 #print axioms filterMap_leseEv
 #print axioms take_neuAppend
 #print axioms fragmentListe_invert
 #print axioms schreibG_zugriff
-
-/- CUTS:
-    - Skeleton only: enumeration plus write membership. The execStmt delta
-      equation, G completeness, target footprint match, refusals and the
-      joint witnesses are OPEN until the following increments land.
-    - No source-to-final-bytes claim; no concurrency claim beyond the
-      per-step access list; no hardware claim.
--/
-
-#print axioms fragmentListe_schreibt
+#print axioms fragmentDelta_voll
+#print axioms fragmentDelta_voll_zeuge
+#print axioms blattFragment_voll
+#print axioms blattFragment_voll_zeuge
+#print axioms fragmentStore_passt
+#print axioms fragmentStore_passt_zeuge
+#print axioms fragmentLoad_passt
+#print axioms fragmentLoad_passt_zeuge
 
 end Gabbro.Grammatik.X86
