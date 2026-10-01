@@ -129,7 +129,7 @@ Last ledger refresh: **2026-10-01 10:25 UTC**. This is an operational snapshot, 
 | 285 | Mathematical carry and signed-overflow characterisation | Merged after review/checks | 301: Merged after review/checks | [report](messung/muse/MUSE-REPORT-285.md) |
 | 286 | Width-aware IEEE target data and f32 bridge evidence | Merged after review/checks | 302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-286.md) |
 | 287 | One typed IR and source-linked lowering foundation | Agent working | 303: scheduled | [task](lanes/287.md) |
-| 288 | Invariant-derived optimisation on actual source semantics | Committed candidate; review/integration pending | 304: Committed candidate; review/integration pending | [task](lanes/288.md) |
+| 288 | Invariant-derived optimisation on actual source semantics | Merged after review/checks | 304: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-288.md) |
 | 289 | Disjoint byte-memory commutation | Merged after review/checks | 305: Merged after review/checks | [report](messung/muse/MUSE-REPORT-289.md) |
 | 290 | Packed integer lane model for future SIMD | Merged after review/checks | 306: Merged after review/checks | [report](messung/muse/MUSE-REPORT-290.md) |
 | 291 | Checked relocation arithmetic and byte patching | Merged after review/checks | 307: Merged after review/checks | [report](messung/muse/MUSE-REPORT-291.md) |
@@ -254,6 +254,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **325**, High runtime performance and feasible hardware-profile design revision, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-325.md). <!-- x86-merged:325 -->
 - 2026-10-01: lane **326**, Independent high-performance hardware-design revision review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-326.md). <!-- x86-merged:326 -->
 - 2026-10-01: publication batch checks passed for `c1527ce9`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **288**, Invariant-derived optimisation on actual source semantics, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-288.md). <!-- x86-merged:288 -->
+- 2026-10-01: checked master `2e19f7de` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:2e19f7de163e375eac258e13fac55868f4e9bcaa -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

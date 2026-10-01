@@ -384,3 +384,4 @@ import Grammatik.X86.AufrufOpt
 import Grammatik.X86.StaerkeReduktion
 import Grammatik.X86.Regionen
 import Grammatik.X86.Zugriffe
+import Grammatik.X86.InvariantenOpt
