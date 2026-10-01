@@ -196,7 +196,7 @@ Last ledger refresh: **2026-10-01 13:23 UTC**. This is an operational snapshot, 
 | 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Merged after review/checks | 484: Merged after review/checks | [report](messung/muse/MUSE-REPORT-404.md) |
 | 405 | Adversarial implementation audit: MEMORY-RANGES | Merged after review/checks | 485: Merged after review/checks | [report](messung/muse/MUSE-REPORT-405.md) |
 | 406 | Adversarial implementation audit: DECODE-BOUNDARY | Agent working | 486: scheduled | [task](lanes/406.md) |
-| 407 | Adversarial implementation audit: FINAL-IMAGE | Merged after review/checks | 487: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-407.md) |
+| 407 | Adversarial implementation audit: FINAL-IMAGE | Merged after review/checks | 487: Merged after review/checks | [report](messung/muse/MUSE-REPORT-407.md) |
 | 408 | Adversarial implementation audit: WEAK-MEMORY | Agent working | 488: scheduled | [task](lanes/408.md) |
 | 409 | Adversarial implementation audit: INVARIANT-LIFETIME | Agent working | 489: scheduled | [task](lanes/409.md) |
 | 410 | Adversarial implementation audit: CALL-ABI | Agent working | 490: scheduled | [task](lanes/410.md) |
@@ -428,6 +428,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: integration of candidate(s) [420] failed the local proof/build gate after independent review 468; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:468 -->
 - 2026-10-01: integration of candidate(s) [431] failed the local proof/build gate after independent review 479; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:479 -->
 - 2026-10-01: checked master `8fdcf779` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:8fdcf779323b0d72d9d6648def33a55fd59cf006 -->
+- 2026-10-01: lane **487**, Independent exact-candidate review of 407, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-487.md). <!-- x86-merged:487 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
