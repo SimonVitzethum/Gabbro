@@ -164,5 +164,14 @@ accept/refusal probes, and a memory-changing call-store witness --
 with rel8 selection, multi-branch relaxation, and all
 source/concurrency/hardware claims explicitly OPEN.
 
+## Re-check: pin unchanged, no new repairs
+
+Re-read of the currently pinned SNAPSHOT.json: head `78740d53`,
+base and file list unchanged. Fresh fetch of the lane branch shows
+its tip is still `78740d53` -- no new author commit exists since my
+last review. The verdict below therefore already binds the pinned
+snapshot; no finding changed, no re-probe needed, nothing further to
+repair. This section only records the re-check for the audit trail.
+
 CANDIDATE: 423 78740d53fa27c8ac5464ec6b1d1e277d8bd59798
 VERDICT: ACCEPT
