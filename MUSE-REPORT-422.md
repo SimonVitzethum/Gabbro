@@ -70,16 +70,22 @@ Every theorem premise is used. `#print axioms`: `[propext]` or none
 - `gabbro_ziel` axiom check: not run (blocked by the same environmental
   umbrella crash; no goal file touched).
 
-## Status / open
-Per HARD RULE 8 (never commit a red build) the tracked umbrella edit was
-REVERTED (`git checkout -- grammatik/Grammatik.lean`); this commit contains
-ONLY the report. The finished module remains UNCOMMITTED in this clone at
-`grammatik/Grammatik/X86/ReleaseAcquire.lean` (291 lines, probe-green).
-To land it when the machine is healthy: re-add the single line
-`import Grammatik.X86.ReleaseAcquire` after `import Grammatik.X86.AccessList`
-at the end of `grammatik/Grammatik.lean`, run `./lean-bau` to green, commit
-both. No rework of the module itself is needed; no finding against the task
-(the target statement stands as scoped in CUTS).
+## Status / open (UPDATE after resource repair)
+The earlier umbrella crash is RESOLVED by the diagnostic resource repair
+(16-GiB virtual address ceiling). Re-added the single umbrella import line,
+then measured:
+- `./lean-probe grammatik/Grammatik/X86/ReleaseAcquire.lean`: 0 errors,
+  exit 0, all 15 axiom lines standard (`propext` or none).
+- `./lean-bau`: **exit 0, 0 error lines, `Build completed successfully
+  (393 jobs)`**, including `Built Grammatik` with the new import.
+- `gabbro_ziel` axiom check via `./lean-probe` on a scratch file with
+  `#print axioms gabbro_ziel` (scratch removed afterwards):
+  `depends on axioms: [propext, Classical.choice, Quot.sound]` — the
+  standard three, unchanged.
+This commit therefore lands the module (`grammatik/Grammatik/X86/
+ReleaseAcquire.lean`, new), the additive umbrella import (one line at the
+end of `grammatik/Grammatik.lean`), and this updated report. Nothing
+remains open for lane 422; review/integration happen separately.
 
 ## Task feedback
 Nothing in the task text is believed wrong. One observation for the
