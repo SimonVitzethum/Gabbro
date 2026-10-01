@@ -142,20 +142,60 @@ pub fn lake_binaer() -> Option<PathBuf> {
 
 /// **The model, built.** `lake build Gabbro.Body` in the model folder -- cheap when nothing
 /// changed, and the only way to know the `.olean` matches the source.
+///
+/// A build that dies of resource starvation (see `ist_ressourcen_engpass`) is attempted again:
+/// under the parallel test run several Lean processes share one machine, and one of them can
+/// transiently fail to start a thread while its twin, seconds later, builds cleanly. The retry
+/// answers only that transient apparatus failure -- a model that does not build fails the same
+/// way after the last attempt, with the same message.
 fn modell_bauen(modell: &Path) -> Result<(), String> {
     let lake = lake_binaer().ok_or("no `lake` (set $LAKE, or install elan)")?;
-    let out = Command::new(&lake)
-        .arg("build")
-        .arg("Gabbro.Body")
-        .current_dir(modell)
-        .output()
-        .map_err(|e| format!("`lake build Gabbro.Body` could not run: {e}"))?;
-    if out.status.success() {
-        Ok(())
-    } else {
+    let mut versuch = 0u32;
+    loop {
+        versuch += 1;
+        let out = Command::new(&lake)
+            .arg("build")
+            .arg("Gabbro.Body")
+            .current_dir(modell)
+            .output()
+            .map_err(|e| format!("`lake build Gabbro.Body` could not run: {e}"))?;
+        if out.status.success() {
+            return Ok(());
+        }
         let text = String::from_utf8_lossy(&out.stderr).to_string() + &String::from_utf8_lossy(&out.stdout);
-        Err(format!("the MODEL does not build -- nothing measured:\n{}", text.lines().take(6).collect::<Vec<_>>().join("\n")))
+        if versuch < LEAN_VERSUCHE && ist_ressourcen_engpass(&text) {
+            std::thread::sleep(std::time::Duration::from_millis(LEAN_PAUSE_MS));
+            continue;
+        }
+        return Err(format!("the MODEL does not build -- nothing measured:\n{}", text.lines().take(6).collect::<Vec<_>>().join("\n")));
     }
+}
+
+/// How often a Lean run is attempted before its apparatus failure stands.
+const LEAN_VERSUCHE: u32 = 3;
+
+/// The pause between attempts -- long enough for a parallel sibling run to release its threads.
+const LEAN_PAUSE_MS: u64 = 5000;
+
+/// Whether a Lean run died of resource starvation rather than of the tree: the runtime saying
+/// it could not start a thread or hold its memory, instead of an error with a position.
+///
+/// Measured 2026-10-01 (lane 556): under the full parallel test run one `emit --proved` run
+/// died with `lean::exception: failed to create thread` (SETUP, exit 3) while the same command,
+/// seconds later, was GREEN (exit 0) -- and the alias-equality tests hold two such sequential
+/// runs byte-equal, so the transient apparatus failure read as an alias difference. Only these
+/// signatures retry; everything else -- in particular every error WITH a position -- fails the
+/// same way it always did, on the first attempt.
+fn ist_ressourcen_engpass(ausgabe: &str) -> bool {
+    let klein = ausgabe.to_lowercase();
+    [
+        "failed to create thread",
+        "cannot allocate memory",
+        "out of memory",
+        "resource temporarily unavailable",
+    ]
+    .iter()
+    .any(|m| klein.contains(m))
 }
 
 /// The lines of a Lean run that are errors -- `file:line:col: error: …` and the newer
@@ -213,15 +253,38 @@ fn statements_von(text: &str) -> Vec<String> {
 /// `~/gabbro-netz`: GREEN in 3 s, where a real run takes 6 min and leaves nine duties owed).
 /// The exit status is therefore part of the answer, not a detail.
 fn lean_lauf(lean: &Path, lean_path: &str, datei: &Path, olean: Option<&Path>, ort: &Path) -> Result<(String, bool), String> {
-    let mut cmd = Command::new(lean);
-    cmd.env("LEAN_PATH", lean_path);
-    cmd.current_dir(ort);
-    if let Some(o) = olean {
-        cmd.arg("-o").arg(o);
+    let mut versuch = 0u32;
+    loop {
+        versuch += 1;
+        let mut cmd = Command::new(lean);
+        cmd.env("LEAN_PATH", lean_path);
+        cmd.current_dir(ort);
+        if let Some(o) = olean {
+            cmd.arg("-o").arg(o);
+        }
+        cmd.arg(datei);
+        let out = match cmd.output() {
+            Ok(o) => o,
+            Err(e) => {
+                // The process never started (fork/EAGAIN under load): the same transient
+                // apparatus failure as a starved run, so the same bounded retry answers it.
+                if versuch < LEAN_VERSUCHE && ist_ressourcen_engpass(&e.to_string()) {
+                    std::thread::sleep(std::time::Duration::from_millis(LEAN_PAUSE_MS));
+                    continue;
+                }
+                return Err(format!("`lean` could not run: {e}"));
+            }
+        };
+        let paar = (String::from_utf8_lossy(&out.stdout).to_string() + &String::from_utf8_lossy(&out.stderr), out.status.success());
+        // A run that failed WITHOUT naming a position AND carries a starvation signature
+        // measured nothing about the tree -- and measured it transiently. Retry it; a run
+        // that names a position, or fails the same way to the last attempt, stands as before.
+        if !paar.1 && versuch < LEAN_VERSUCHE && fehlerzeilen(&paar.0).is_empty() && ist_ressourcen_engpass(&paar.0) {
+            std::thread::sleep(std::time::Duration::from_millis(LEAN_PAUSE_MS));
+            continue;
+        }
+        return Ok(paar);
     }
-    cmd.arg(datei);
-    let out = cmd.output().map_err(|e| format!("`lean` could not run: {e}"))?;
-    Ok((String::from_utf8_lossy(&out.stdout).to_string() + &String::from_utf8_lossy(&out.stderr), out.status.success()))
 }
 
 /// **A Lean run that failed without saying where** -- a non-zero exit and no error line with a
@@ -235,6 +298,84 @@ fn ohne_ort(ausgabe: &str, erfolg: bool) -> Option<String> {
     Some(format!("`lean` exited unsuccessfully and named no position -- nothing was measured:\n{}", kopf.join("\n")))
 }
 
+/// The pause between two looks at a held gate.
+const SPERRE_WARTE_MS: u64 = 1000;
+
+/// When a gate may be taken over: far above any real measurement (minutes, even the six-minute
+/// firewall unit of the server lane), far below a hang that would outlive the suite. Only a
+/// holder killed without releasing (SIGKILL) ever gets this old -- a slow holder renews below.
+const SPERRE_VERFALL_MS: u128 = 15 * 60 * 1000;
+
+/// A cross-process gate around the whole measurement (lane 556).
+///
+/// `gabbro prove` runs `lake build` plus up to three `lean` runs, each multi-threaded with a
+/// gigabyte heap. Under the parallel test run several such measurements share one machine, and
+/// the pile-up intermittently starves one of them (`lean::exception: failed to create thread`,
+/// SETUP) while its twin, seconds later, is GREEN -- which the alias-equality tests then read
+/// as an alias difference. A bounded retry (see `lean_lauf`) rides out a spike; it cannot ride
+/// out minutes of overlap, so the gate holds at most one measurement per model folder at a
+/// time and the peak load no longer depends on how many test binaries cargo starts.
+///
+/// Only `std`: the gate is a directory (creating one is atomic) holding `inhaber` with
+/// `<pid> <unix-ms>`. The verdict logic is untouched: the gate changes WHEN a measurement
+/// runs, never WHAT it says, and it prints nothing -- compared stderr stays byte-stable.
+struct MessSperre {
+    pfad: PathBuf,
+}
+
+impl Drop for MessSperre {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.pfad);
+    }
+}
+
+fn sperre_inhaber(sperre: &MessSperre) {
+    let jetzt = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let _ = std::fs::write(
+        sperre.pfad.join("inhaber"),
+        format!("{} {jetzt}\n", std::process::id()),
+    );
+}
+
+/// The age of a held gate: the holder's last renewal, else the gate's own age.
+fn sperre_alter(pfad: &Path) -> Option<std::time::Duration> {
+    let datei = pfad.join("inhaber");
+    let zeit = std::fs::metadata(&datei)
+        .and_then(|m| m.modified())
+        .or_else(|_| std::fs::metadata(pfad).and_then(|m| m.modified()))
+        .ok()?;
+    zeit.elapsed().ok()
+}
+
+/// Hold the model folder's measurement gate; waits while another measurement runs.
+fn mass_sperre_halten(aus_dir: &Path) -> Result<MessSperre, String> {
+    let pfad = aus_dir.join(".sperre.d");
+    loop {
+        match std::fs::create_dir(&pfad) {
+            Ok(()) => {
+                let sperre = MessSperre { pfad };
+                sperre_inhaber(&sperre);
+                return Ok(sperre);
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                // Old enough to be a dead holder, never a slow one (which renews below).
+                let verfallen = sperre_alter(&pfad)
+                    .map(|d| d.as_millis() > SPERRE_VERFALL_MS)
+                    .unwrap_or(false);
+                if verfallen {
+                    let _ = std::fs::remove_dir_all(&pfad);
+                    continue;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(SPERRE_WARTE_MS));
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+}
+
 /// **The measurement of one unit.** `Err` only where the SETUP is wrong (no Lean, no
 /// model); everything about the tree comes back as a `Befund`.
 pub fn pruefe(baum: &Programm, datei: &str, modell: &Path) -> Result<Befund, String> {
@@ -243,15 +384,18 @@ pub fn pruefe(baum: &Programm, datei: &str, modell: &Path) -> Result<Befund, Str
     // to it must mean the same thing there.
     let modell_abs = modell.canonicalize().map_err(|e| format!("the model folder {}: {e}", modell.display()))?;
     let modell: &Path = &modell_abs;
-    modell_bauen(modell)?;
-    let text = crate::lean::module(baum, datei);
-    let name = crate::lean::module_name(datei);
     let duty_dir = modell.join("Duty");
     let proofs_dir = modell.join("Proofs");
     let out_dir = modell.join(".lake/build/duty");
     std::fs::create_dir_all(&duty_dir).map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&proofs_dir).map_err(|e| e.to_string())?;
     std::fs::create_dir_all(out_dir.join("Duty")).map_err(|e| e.to_string())?;
+    // The gate first: everything below -- `lake build`, the three `lean` runs -- shares one
+    // machine with every other `gabbro prove` on it. Held to the end of this function.
+    let sperre = mass_sperre_halten(&out_dir)?;
+    modell_bauen(modell)?;
+    let text = crate::lean::module(baum, datei);
+    let name = crate::lean::module_name(datei);
     let duty = duty_dir.join(format!("{name}.lean"));
     std::fs::write(&duty, &text).map_err(|e| e.to_string())?;
     let lib = modell.join(".lake/build/lib/lean");
@@ -274,6 +418,7 @@ pub fn pruefe(baum: &Programm, datei: &str, modell: &Path) -> Result<Befund, Str
     // compiled the module. A run that exits cleanly and leaves none checked nothing.
     let _ = std::fs::remove_file(&olean);
     let (ausgabe, erfolg) = lean_lauf(&lean, &lib_s, &duty, Some(&olean), modell)?;
+    sperre_inhaber(&sperre);
     if let Some(m) = ohne_ort(&ausgabe, erfolg) {
         befund.stand = Stand::Aufbau;
         befund.meldung = m;
@@ -306,6 +451,7 @@ pub fn pruefe(baum: &Programm, datei: &str, modell: &Path) -> Result<Befund, Str
     if hat_beweise {
         std::fs::create_dir_all(out_dir.join("Proofs")).map_err(|e| e.to_string())?;
         let (ausgabe, erfolg) = lean_lauf(&lean, &lp, &beweisdatei, Some(&beweise_olean), modell)?;
+        sperre_inhaber(&sperre);
         if let Some(m) = ohne_ort(&ausgabe, erfolg) {
             befund.stand = Stand::Aufbau;
             befund.meldung = m;
@@ -603,4 +749,75 @@ pub fn vorlage(baum: &Programm, datei: &str) -> String {
         s.push('\n');
     }
     s
+}
+
+#[cfg(test)]
+mod ressourcen_engpass_tests {
+    use super::ist_ressourcen_engpass;
+
+    /// **The gate fires on starvation** -- the signature lane 556 measured under load.
+    #[test]
+    fn die_schranke_greift_bei_verhungern() {
+        assert!(ist_ressourcen_engpass(
+            "libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread"
+        ));
+        assert!(ist_ressourcen_engpass("lean: out of memory"));
+        assert!(ist_ressourcen_engpass("fork: Cannot allocate memory"));
+        assert!(ist_ressourcen_engpass("fork: Resource temporarily unavailable"));
+    }
+
+    /// **And stays silent on everything about the tree or the setup** -- a positioned error,
+    /// a missing toolchain, an empty output: none of them is retried.
+    #[test]
+    fn die_schranke_schweigt_bei_baum_und_aufbau() {
+        assert!(!ist_ressourcen_engpass("Duty16.lean:12:4: error: unknown identifier\n"));
+        assert!(!ist_ressourcen_engpass(
+            "error: no default toolchain configured. run `elan default stable`"
+        ));
+        assert!(!ist_ressourcen_engpass(""));
+        assert!(!ist_ressourcen_engpass(
+            "`lean` reported success and wrote no `x.olean` -- nothing was measured"
+        ));
+    }
+
+    /// **The gate holds one at a time** -- four threads through one gate never overlap in
+    /// the critical section.
+    #[test]
+    fn die_sperre_haelt_nur_eine_messung() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+        static ZAEHLER: AtomicUsize = AtomicUsize::new(0);
+        let nr = ZAEHLER.fetch_add(1, Ordering::SeqCst);
+        let basis = std::env::temp_dir().join(format!(
+            "gabbro-sperre-test-{}-{nr}",
+            std::process::id(),
+        ));
+        std::fs::create_dir_all(&basis).unwrap();
+        let drin: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
+        let verletzungen: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
+        let mut faeden = Vec::new();
+        for _ in 0..4 {
+            let b = basis.clone();
+            let drin = drin.clone();
+            let verletzungen = verletzungen.clone();
+            faeden.push(std::thread::spawn(move || {
+                for _ in 0..3 {
+                    let sperre = super::mass_sperre_halten(&b).unwrap();
+                    let vorher = drin.fetch_add(1, Ordering::SeqCst);
+                    if vorher != 0 {
+                        verletzungen.fetch_add(1, Ordering::SeqCst);
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    drin.fetch_sub(1, Ordering::SeqCst);
+                    drop(sperre);
+                }
+            }));
+        }
+        for f in faeden {
+            f.join().unwrap();
+        }
+        assert_eq!(verletzungen.load(Ordering::SeqCst), 0, "two measurements overlapped");
+        assert!(!basis.join(".sperre.d").exists(), "the gate is released");
+        let _ = std::fs::remove_dir_all(&basis);
+    }
 }
