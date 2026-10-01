@@ -118,10 +118,12 @@ usage-API state are implemented as specified and disclosed where limited.
 
 ## Verdict
 
-- Exact CANDIDATE: 620 `7d7c5e4d755e91b86dacf16721e83e2a0762367f`
-  (content verified byte-identical via base + `PATCH.diff`; hash binding from
-  `SNAPSHOT.json`)
-- VERDICT: ACCEPT
+CANDIDATE: 620 7d7c5e4d755e91b86dacf16721e83e2a0762367f
+
+Content verified byte-identical via base plus PATCH.diff; hash binding from
+SNAPSHOT.json.
+
+VERDICT: ACCEPT
 
 Report-only commit; no root controls touched, no provider called, no lane
 edits. Tools-only review: no Lean build claimed or needed (no `grammatik/`
