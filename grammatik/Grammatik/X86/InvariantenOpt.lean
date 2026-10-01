@@ -49,7 +49,6 @@ def isWahrAll : Expr D Γ Λ τ → Bool
   | .eq a b => litEqBool a b
   | .und a b => isWahrAll a && isWahrAll b
   | .oder a b => isWahrAll a || isWahrAll b
-  | .nicht a => !isWahrAll a
   | _ => false
 
 /-- What "the checker says true" means at ANY type: a true boolean value,
@@ -130,6 +129,55 @@ theorem litEqBool_sound {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1))
       have hdec : wahr? (eval σ₀ (.eq a b) σ ρ) = decide (x = y) := by
         simp only [eval, wahr?, e1, e2]
       rw [hdec]; exact h
+
+/-- Soundness of the checker over `eval`, at any type. There is NO `nicht`
+    arm in `isWahrAll` by design: from a negated check answering `false`
+    nothing follows without completeness (a true `eval` through a
+    non-literal shape answers `false`), and completeness is false.
+    The induction goes through `Expr.rec` (the type is mutual, with
+    `NutzlastExpr` discharged by the trivial motive); `ρ` is an explicit
+    induction-hypothesis argument because `Env` depends on the context. -/
+theorem isWahrAll_sound {τ : Ty} (e : Expr D Γ Λ τ) (σ₀ σ : World D) (ρ : Env D Γ)
+    (h : isWahrAll e = true) : holdsBool τ (eval σ₀ e σ ρ) := by
+  revert h
+  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  | le a b iha ihb =>
+    intro h
+    exact litLeBool_sound a b σ₀ σ ρ h
+  | eq a b iha ihb =>
+    intro h
+    exact litEqBool_sound a b σ₀ σ ρ h
+  | und a b iha ihb =>
+    intro h
+    cases ha : isWahrAll a with
+    | true =>
+      cases hb : isWahrAll b with
+      | true =>
+        have ha' : (eval σ₀ a σ ρ) = true := iha ρ ha
+        have hb' : (eval σ₀ b σ ρ) = true := ihb ρ hb
+        show wahr? (eval σ₀ (.und a b) σ ρ) = true
+        simp [eval, wahr?, ha', hb']
+      | false => simp_all [isWahrAll]
+    | false => simp_all [isWahrAll]
+  | oder a b iha ihb =>
+    intro h
+    cases ha : isWahrAll a with
+    | true =>
+      have ha' : (eval σ₀ a σ ρ) = true := iha ρ ha
+      show ((eval σ₀ a σ ρ) || (eval σ₀ b σ ρ)) = true
+      rw [ha']
+      rfl
+    | false =>
+      cases hb : isWahrAll b with
+      | true =>
+        have hb' : (eval σ₀ b σ ρ) = true := ihb ρ hb
+        show ((eval σ₀ a σ ρ) || (eval σ₀ b σ ρ)) = true
+        rw [hb']
+        exact Bool.or_true _
+      | false => simp_all [isWahrAll]
+  | keine => trivial
+  | zahl e ih => trivial
+  | _ => (intro h; simp_all [isWahrAll, holdsBool, eval]; try rfl)
 
 /- CUTS:
    Only the computable check exists so far. Open: its soundness over `eval`;
