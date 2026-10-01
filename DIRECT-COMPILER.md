@@ -156,14 +156,14 @@ Last ledger refresh: **2026-10-01 11:26 UTC**. This is an operational snapshot, 
 | 338 | Practical-performance Lean wave A4: ControlFlow | Merged after review/checks | 376: Merged after review/checks | [report](messung/muse/MUSE-REPORT-338.md) |
 | 339 | Practical-performance Lean wave A5: LockedOps | Merged after review/checks | 377: Merged after review/checks | [report](messung/muse/MUSE-REPORT-339.md) |
 | 340 | Practical-performance Lean wave A6: ScalarFloat | Agent working | 378: scheduled | [task](lanes/340.md) |
-| 341 | Practical-performance Lean wave B1: AccessList | Committed candidate; review/integration pending | 379: Committed candidate; review/integration pending | [task](lanes/341.md) |
+| 341 | Practical-performance Lean wave B1: AccessList | Merged after review/checks | 379: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-341.md) |
 | 342 | Practical-performance Lean wave B2: OverlapRefusal | Merged after review/checks | 380: Merged after review/checks | [report](messung/muse/MUSE-REPORT-342.md) |
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
 | 344 | Practical-performance Lean wave B4: FenceDrain | Committed candidate; review/integration pending | 382: Committed candidate; review/integration pending | [task](lanes/344.md) |
 | 345 | Practical-performance Lean wave C1: TableLayout | Committed candidate; review/integration pending | 383: Committed candidate; review/integration pending | [task](lanes/345.md) |
 | 346 | Practical-performance Lean wave C2: GateStub | Committed candidate; review/integration pending | 384: Agent working | [task](lanes/346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Committed candidate; review/integration pending | 385: Committed candidate; review/integration pending | [task](lanes/347.md) |
-| 348 | Practical-performance Lean wave C4: EntryState | Committed candidate; review/integration pending | 386: Agent working | [task](lanes/348.md) |
+| 348 | Practical-performance Lean wave C4: EntryState | Committed candidate; review/integration pending | 386: Committed candidate; review/integration pending | [task](lanes/348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Agent working | 388: scheduled | [task](lanes/350.md) |
 
@@ -316,6 +316,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **376**, Independent exact-candidate review of 338 ControlFlow, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-376.md). <!-- x86-merged:376 -->
 - 2026-10-01: lane **339**, Practical-performance Lean wave A5: LockedOps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-339.md). <!-- x86-merged:339 -->
 - 2026-10-01: lane **377**, Independent exact-candidate review of 339 LockedOps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-377.md). <!-- x86-merged:377 -->
+- 2026-10-01: lane **341**, Practical-performance Lean wave B1: AccessList, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-341.md). <!-- x86-merged:341 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
