@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 13:41 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -190,22 +190,22 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
-| 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: Agent working; integration gate rejected; repair/re-review required | [task](lanes/350.md) |
+| 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Merged after review/checks | 439: Merged after review/checks | [report](messung/muse/MUSE-REPORT-401.md) |
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Merged after review/checks | [report](messung/muse/MUSE-REPORT-402.md) |
 | 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Merged after review/checks | 484: Merged after review/checks | [report](messung/muse/MUSE-REPORT-404.md) |
 | 405 | Adversarial implementation audit: MEMORY-RANGES | Merged after review/checks | 485: Merged after review/checks | [report](messung/muse/MUSE-REPORT-405.md) |
-| 406 | Adversarial implementation audit: DECODE-BOUNDARY | Committed candidate; review/integration pending | 486: Agent working | [task](lanes/406.md) |
+| 406 | Adversarial implementation audit: DECODE-BOUNDARY | Committed candidate; review/integration pending | 486: Committed candidate; review/integration pending | [task](lanes/406.md) |
 | 407 | Adversarial implementation audit: FINAL-IMAGE | Merged after review/checks | 487: Merged after review/checks | [report](messung/muse/MUSE-REPORT-407.md) |
 | 408 | Adversarial implementation audit: WEAK-MEMORY | Merged after review/checks | 488: Merged after review/checks | [report](messung/muse/MUSE-REPORT-408.md) |
 | 409 | Adversarial implementation audit: INVARIANT-LIFETIME | Merged after review/checks | 489: Merged after review/checks | [report](messung/muse/MUSE-REPORT-409.md) |
 | 410 | Adversarial implementation audit: CALL-ABI | Merged after review/checks | 490: Merged after review/checks | [report](messung/muse/MUSE-REPORT-410.md) |
 | 411 | Adversarial implementation audit: DYNAMIC-REGIONS | Merged after review/checks | 491: Merged after review/checks | [report](messung/muse/MUSE-REPORT-411.md) |
 | 412 | Adversarial implementation audit: FLOAT-SIMD | Merged after review/checks | 492: Merged after review/checks | [report](messung/muse/MUSE-REPORT-412.md) |
-| 413 | Adversarial implementation audit: BUDGET-OBSERVATIONS | Agent working | 493: scheduled | [task](lanes/413.md) |
+| 413 | Adversarial implementation audit: BUDGET-OBSERVATIONS | Committed candidate; review/integration pending | 493: Agent working | [task](lanes/413.md) |
 | 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Agent working | 494: scheduled | [task](lanes/414.md) |
-| 415 | Adversarial implementation audit: END-TO-END-TRUST | Agent working | 495: scheduled | [task](lanes/415.md) |
-| 416 | Continuous Lean proof reserve: EffectiveAddress | Agent working | 464: scheduled | [task](lanes/416.md) |
+| 415 | Adversarial implementation audit: END-TO-END-TRUST | Committed candidate; review/integration pending | 495: Agent working | [task](lanes/415.md) |
+| 416 | Continuous Lean proof reserve: EffectiveAddress | Committed candidate; review/integration pending | 464: Agent working | [task](lanes/416.md) |
 | 417 | Continuous Lean proof reserve: ConditionalMove | Merged after review/checks | 465: Merged after review/checks | [report](messung/muse/MUSE-REPORT-417.md) |
 | 418 | Continuous Lean proof reserve: BitScan | Committed candidate; review/integration pending | 466: Incomplete; preserved; integration gate rejected; repair/re-review required | [task](lanes/418.md) |
 | 419 | Continuous Lean proof reserve: BitCount | Merged after review/checks | 467: Merged after review/checks | [report](messung/muse/MUSE-REPORT-419.md) |
@@ -217,13 +217,13 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 425 | Continuous Lean proof reserve: FloatExceptions | Merged after review/checks | 473: Merged after review/checks | [report](messung/muse/MUSE-REPORT-425.md) |
 | 426 | Continuous Lean proof reserve: VectorFootprints | Merged after review/checks | 474: Merged after review/checks | [report](messung/muse/MUSE-REPORT-426.md) |
 | 427 | Continuous Lean proof reserve: RegisterInterference | Agent working | 475: scheduled | [task](lanes/427.md) |
-| 428 | Continuous Lean proof reserve: ParallelMoves | Agent working | 476: scheduled | [task](lanes/428.md) |
+| 428 | Continuous Lean proof reserve: ParallelMoves | Committed candidate; review/integration pending | 476: Committed candidate; review/integration pending | [task](lanes/428.md) |
 | 429 | Continuous Lean proof reserve: CodeImmutability | Merged after review/checks | 477: Merged after review/checks | [report](messung/muse/MUSE-REPORT-429.md) |
 | 430 | Continuous Lean proof reserve: ValidationCache | Agent working | 478: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/430.md) |
 | 431 | Continuous Lean proof reserve: ValidationBudget | Merged after review/checks | 479: Merged after review/checks | [report](messung/muse/MUSE-REPORT-431.md) |
 | 432 | Continuous Lean proof reserve: RegionSeparation | Merged after review/checks | 480: Merged after review/checks | [report](messung/muse/MUSE-REPORT-432.md) |
-| 433 | Continuous Lean proof reserve: ObservationProjection | Committed candidate; review/integration pending | 481: Agent working; integration gate rejected; repair/re-review required | [task](lanes/433.md) |
-| 434 | Continuous Lean proof reserve: HardwareAssumptions | Committed candidate; review/integration pending | 482: Agent working | [task](lanes/434.md) |
+| 433 | Continuous Lean proof reserve: ObservationProjection | Committed candidate; review/integration pending | 481: Incomplete; preserved; integration gate rejected; repair/re-review required | [task](lanes/433.md) |
+| 434 | Continuous Lean proof reserve: HardwareAssumptions | Committed candidate; review/integration pending | 482: Committed candidate; review/integration pending | [task](lanes/434.md) |
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Agent working | 483: scheduled | [task](lanes/435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
 
@@ -462,6 +462,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **479**, Independent exact-candidate review of 431, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-479.md). <!-- x86-merged:479 -->
 - 2026-10-01: lane **432**, Continuous Lean proof reserve: RegionSeparation, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-432.md). <!-- x86-merged:432 -->
 - 2026-10-01: lane **480**, Independent exact-candidate review of 432, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-480.md). <!-- x86-merged:480 -->
+- 2026-10-01: publication batch checks passed for `0340e680`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
