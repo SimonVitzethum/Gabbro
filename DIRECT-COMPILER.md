@@ -210,7 +210,7 @@ Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, 
 | 418 | Continuous Lean proof reserve: BitScan | Merged after review/checks | 466: Merged after review/checks | [report](messung/muse/MUSE-REPORT-418.md) |
 | 419 | Continuous Lean proof reserve: BitCount | Merged after review/checks | 467: Merged after review/checks | [report](messung/muse/MUSE-REPORT-419.md) |
 | 420 | Continuous Lean proof reserve: ByteSwap | Merged after review/checks | 468: Merged after review/checks | [report](messung/muse/MUSE-REPORT-420.md) |
-| 421 | Continuous Lean proof reserve: WordAtomicity | Merged after review/checks | 469: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-421.md) |
+| 421 | Continuous Lean proof reserve: WordAtomicity | Merged after review/checks | 469: Merged after review/checks | [report](messung/muse/MUSE-REPORT-421.md) |
 | 422 | Continuous Lean proof reserve: ReleaseAcquire | Agent working | 470: scheduled | [task](lanes/422.md) |
 | 423 | Continuous Lean proof reserve: BranchLayout | Merged after review/checks | 471: Merged after review/checks | [report](messung/muse/MUSE-REPORT-423.md) |
 | 424 | Continuous Lean proof reserve: FeatureProfile | Agent working | 472: scheduled | [task](lanes/424.md) |
@@ -496,6 +496,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **418**, Continuous Lean proof reserve: BitScan, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-418.md). <!-- x86-merged:418 -->
 - 2026-10-01: lane **466**, Independent exact-candidate review of 418, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-466.md). <!-- x86-merged:466 -->
 - 2026-10-01: lane **421**, Continuous Lean proof reserve: WordAtomicity, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-421.md). <!-- x86-merged:421 -->
+- 2026-10-01: lane **469**, Independent exact-candidate review of 421, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-469.md). <!-- x86-merged:469 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
