@@ -156,6 +156,7 @@ fn modell_bauen(modell: &Path) -> Result<(), String> {
         let out = Command::new(&lake)
             .arg("build")
             .arg("Gabbro.Body")
+            .env(LAKE_WORKER_ENV.0, LAKE_WORKER_ENV.1)
             .current_dir(modell)
             .output()
             .map_err(|e| format!("`lake build Gabbro.Body` could not run: {e}"))?;
@@ -176,6 +177,31 @@ const LEAN_VERSUCHE: u32 = 3;
 
 /// The pause between attempts -- long enough for a parallel sibling run to release its threads.
 const LEAN_PAUSE_MS: u64 = 5000;
+
+/// **Deterministic native Lean resource bounds (lane 618).**
+///
+/// Every `lean` the measurement spawned ran unbounded: one process per Duty/Proofs/Gate
+/// run with the machine's core count as its thread pool and no heap ceiling. Under the
+/// parallel suite several such processes share one machine and one of them intermittently
+/// dies with `lean::exception: failed to create thread` (SETUP, exit 3) while its twin,
+/// seconds later, is GREEN -- which the alias-equality tests then read as an alias
+/// difference (reproduced 2026-10-01: `emit --proved` GREEN exit 0 vs `emit --mit-beweis`
+/// SETUP exit 3 on `beispiele/16-by-ops-am-feld.gab`). The per-model gate (lane 556)
+/// serialises WHEN measurements run; it cannot shrink any single run's thread demand,
+/// so one unbounded `lean` can still starve on a loaded machine.
+///
+/// The bound is the one the tree already uses for its own Lean builds:
+/// `grammatik/lakefile.toml` (`weakLeanArgs = ["-j2", "-M4096"]`) and `lean-probe`'s
+/// `lake env lean -j2 -M4096`. Bounds change resource use, never the verdict: they print
+/// nothing and alter no error position and no message, so compared stdout/stderr stay
+/// byte-stable and a persistent failure still reports exactly as before.
+const LEAN_BOUND_ARGS: [&str; 2] = ["-j2", "-M4096"];
+
+/// The worker bound for `lake build` runs of a measurement, set through the environment
+/// the repo's instruments already pass to `lake build` (`LEAN_NUM_THREADS`, see e.g.
+/// `instrumente/zaehle-kette.py`). Pinned, not inherited: two spellings of one command
+/// must meet the same scheduler under the same load.
+const LAKE_WORKER_ENV: (&str, &str) = ("LEAN_NUM_THREADS", "2");
 
 /// Whether a Lean run died of resource starvation rather than of the tree: the runtime saying
 /// it could not start a thread or hold its memory, instead of an error with a position.
@@ -258,7 +284,11 @@ fn lean_lauf(lean: &Path, lean_path: &str, datei: &Path, olean: Option<&Path>, o
         versuch += 1;
         let mut cmd = Command::new(lean);
         cmd.env("LEAN_PATH", lean_path);
+        cmd.env(LAKE_WORKER_ENV.0, LAKE_WORKER_ENV.1);
         cmd.current_dir(ort);
+        // Deterministic bounds (see `LEAN_BOUND_ARGS`): two workers, 4096 MiB heap.
+        // They print nothing, so measured stdout/stderr stay byte-stable.
+        cmd.args(LEAN_BOUND_ARGS);
         if let Some(o) = olean {
             cmd.arg("-o").arg(o);
         }
@@ -661,6 +691,7 @@ pub fn vorlage_quelle(quelle: &str, datei: &str, bruecke: Option<&str>) -> Resul
     let lake = lake_binaer().ok_or("no `lake` (set $LAKE, or install elan)")?;
     let gebaut = Command::new(&lake)
         .args(["build", "Bruecke.Vorlage"])
+        .env(LAKE_WORKER_ENV.0, LAKE_WORKER_ENV.1)
         .current_dir(&b)
         .output()
         .map_err(|e| format!("`lake build Bruecke.Vorlage` could not run: {e}"))?;
@@ -676,7 +707,13 @@ pub fn vorlage_quelle(quelle: &str, datei: &str, bruecke: Option<&str>) -> Resul
         lean_literal(quelle)
     );
     std::fs::write(&treiber, inhalt).map_err(|e| format!("driver not writable: {e}"))?;
-    let lauf = Command::new(&lake).args(["env", "lean"]).arg(&treiber).current_dir(&b).output();
+    let lauf = Command::new(&lake)
+        .args(["env", "lean"])
+        .args(LEAN_BOUND_ARGS)
+        .arg(&treiber)
+        .env(LAKE_WORKER_ENV.0, LAKE_WORKER_ENV.1)
+        .current_dir(&b)
+        .output();
     let _ = std::fs::remove_file(&treiber);
     let lauf = lauf.map_err(|e| format!("lean could not run: {e}"))?;
     if !lauf.status.success() {
@@ -778,6 +815,31 @@ mod ressourcen_engpass_tests {
         assert!(!ist_ressourcen_engpass(
             "`lean` reported success and wrote no `x.olean` -- nothing was measured"
         ));
+    }
+
+    /// **The bounds are the tree's own** -- two workers, 4096 MiB heap, the same pair
+    /// `grammatik/lakefile.toml` (`weakLeanArgs`) and `lean-probe` pass to Lean.
+    #[test]
+    fn die_schranken_sind_die_des_baums() {
+        assert_eq!(super::LEAN_BOUND_ARGS, ["-j2", "-M4096"]);
+        assert_eq!(super::LAKE_WORKER_ENV, ("LEAN_NUM_THREADS", "2"));
+    }
+
+    /// **The reproduced failure takes the apparatus path** -- the verbatim stderr of the
+    /// 2026-10-01 run (`emit --mit-beweis` on `beispiele/16-by-ops-am-feld.gab`): no
+    /// position, a starvation signature, and the positionless-exit mapping to SETUP.
+    /// A positioned error still takes the tree path, never the retry/gate path.
+    #[test]
+    fn der_kanal_meldet_den_gemessenen_aufbaufehler() {
+        let ausgabe = "libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread";
+        assert!(super::ist_ressourcen_engpass(ausgabe));
+        assert!(super::fehlerzeilen(ausgabe).is_empty());
+        assert!(super::ohne_ort(ausgabe, false).is_some());
+        assert!(super::ohne_ort(ausgabe, true).is_none());
+        let baum = "Duty16ByOpsAmFeld.lean:12:4: error: unknown identifier `x`";
+        assert!(!super::fehlerzeilen(baum).is_empty());
+        assert!(super::ohne_ort(baum, false).is_none());
+        assert!(!super::ist_ressourcen_engpass(baum));
     }
 
     /// **The gate holds one at a time** -- four threads through one gate never overlap in
