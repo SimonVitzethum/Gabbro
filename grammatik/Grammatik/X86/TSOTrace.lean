@@ -59,6 +59,83 @@ inductive SpurErreichbar (n0 : SpurKnoten) : SpurKnoten → Prop where
   | schritt {n n' : SpurKnoten} :
       SpurErreichbar n0 n → SpurSchritt n n' → SpurErreichbar n0 n'
 
+/-! ## Clock invariant: every used timestamp is below the clock -/
+
+/-- Every history timestamp and every view entry is strictly below the
+    next fresh timestamp. Issues keep it; flushes append exactly at the
+    old clock and advance by one, so nothing is ever reset. -/
+def SpurInv (n : SpurKnoten) : Prop :=
+  (∀ a m, m ∈ n.hist a → m.ts < n.frisch) ∧
+  (∀ c a, n.blick c a < n.frisch)
+
+/-- The start node satisfies the invariant: only timestamp 0 is used,
+    every view is 0, the clock is 1. -/
+theorem spurStart_inv (s : TSOZustand) : SpurInv (spurStart s) := by
+  refine ⟨?_, ?_⟩
+  · intro a m hm
+    simp only [spurStart] at hm
+    simp at hm
+    subst hm
+    show (0 : Nat) < 1
+    exact Nat.zero_lt_one
+  · intro c a
+    show (0 : Nat) < 1
+    exact Nat.zero_lt_one
+
+/-- One trace step preserves the invariant. The flush case splits the
+    grown history into old messages (below the old clock) and the one
+    new release message (exactly at the old clock); the writer view
+    joins the new timestamp while every other entry stays below. -/
+theorem spurSchritt_inv (n n' : SpurKnoten) (hs : SpurSchritt n n')
+    (hinv : SpurInv n) : SpurInv n' := by
+  obtain ⟨hhist, hblick⟩ := hinv
+  cases hs with
+  | issue c a v h hh hb hf =>
+    refine ⟨?_, ?_⟩
+    · intro x m hm
+      rw [hh] at hm
+      have hlt := hhist x m hm
+      omega
+    · intro d y
+      rw [hb]
+      have hlt := hblick d y
+      omega
+  | flush c e rest h he hh hb hf =>
+    refine ⟨?_, ?_⟩
+    · intro x m hm
+      have hx := congrFun hh x
+      rw [hx] at hm
+      by_cases ha : x = e.addr
+      · rw [if_pos ha] at hm
+        rcases List.mem_append.mp hm with hmold | hneu
+        · have hlt := hhist x m hmold
+          omega
+        · simp at hneu
+          subst hneu
+          have heq : (Speichermodell.nachricht
+            Speichermodell.Ordnung.freigabe (n.blick c) e.addr n.frisch
+              e.wert).ts = n.frisch := rfl
+          rw [heq]
+          omega
+      · rw [if_neg ha] at hm
+        have hlt := hhist x m hm
+        omega
+    · intro d y
+      have hd := congrFun hb d
+      rw [hd]
+      by_cases hc : d = c
+      · rw [if_pos hc]
+        by_cases hy : y = e.addr
+        · subst hy
+          rw [Speichermodell.Sicht.setze_selbst]
+          omega
+        · rw [Speichermodell.Sicht.setze_anders _ _ hy]
+          have hlt := hblick c y
+          omega
+      · rw [if_neg hc]
+        have hlt := hblick d y
+        omega
+
 /- CUTS:
     - So far only the node/step vocabulary; preservation, freshness,
       forwarding and the joint witness follow as increments.
