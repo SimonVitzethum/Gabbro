@@ -23,7 +23,7 @@ No Lean/Rust/emitter contact, ASCII only, no credentials.
 
 ## Re-review: repair of the previous REPAIR findings
 
-The previous review (candidate `8a549340`, VERDICT: REPAIR) found one defect
+The previous review (candidate `8a549340`, verdict: repair) found one defect
 with three measured consequences: `is_paused` treated `pool-paused.json`
 (explicit USER pause) and `coordinator-pause.json` (INTERNAL transient
 marker) identically. The new candidate repairs exactly this, confined to the
