@@ -253,7 +253,7 @@ Last ledger refresh: **2026-10-01 19:58 UTC**. This is an operational snapshot, 
 | 574 | Connection: Projected TSO loads to source W reads | Agent working | 592: scheduled | [task](lanes/574.md) |
 | 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
 | 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Merged after review/checks | [report](messung/muse/MUSE-REPORT-594.md) |
-| 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-595.md) |
+| 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Merged after review/checks | [report](messung/muse/MUSE-REPORT-595.md) |
 | 596 | Overnight: TSO history preservation across actual finite traces | Agent working | 608: scheduled | [task](lanes/596.md) |
 | 597 | Overnight: Selected SSE2 vector bytes to canonical XMM execution | Agent working | 609: scheduled | [task](lanes/597.md) |
 | 598 | Overnight: Checked validator to loaded fetched execution | Agent working | 610: scheduled | [task](lanes/598.md) |
@@ -612,6 +612,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **594**, Overnight: Architecture decision: existing source model versus additional SSA, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-594.md). <!-- x86-merged:594 -->
 - 2026-10-01: lane **606**, Independent overnight review of 594, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-606.md). <!-- x86-merged:606 -->
 - 2026-10-01: lane **595**, Overnight: Portable completion and workforce monitor, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-595.md). <!-- x86-merged:595 -->
+- 2026-10-01: lane **607**, Independent overnight review of 595, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-607.md). <!-- x86-merged:607 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
