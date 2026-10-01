@@ -214,8 +214,8 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 422 | Continuous Lean proof reserve: ReleaseAcquire | Committed candidate; review/integration pending | 470: scheduled | [task](lanes/422.md) |
 | 423 | Continuous Lean proof reserve: BranchLayout | Merged after review/checks | 471: Merged after review/checks | [report](messung/muse/MUSE-REPORT-423.md) |
 | 424 | Continuous Lean proof reserve: FeatureProfile | Committed candidate; review/integration pending | 472: scheduled | [task](lanes/424.md) |
-| 425 | Continuous Lean proof reserve: FloatExceptions | Committed candidate; review/integration pending | 473: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/425.md) |
-| 426 | Continuous Lean proof reserve: VectorFootprints | Committed candidate; review/integration pending | 474: Agent working; integration gate rejected; repair/re-review required | [task](lanes/426.md) |
+| 425 | Continuous Lean proof reserve: FloatExceptions | Merged after review/checks | 473: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-425.md) |
+| 426 | Continuous Lean proof reserve: VectorFootprints | Committed candidate; review/integration pending | 474: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/426.md) |
 | 427 | Continuous Lean proof reserve: RegisterInterference | Agent working | 475: scheduled | [task](lanes/427.md) |
 | 428 | Continuous Lean proof reserve: ParallelMoves | Agent working | 476: scheduled | [task](lanes/428.md) |
 | 429 | Continuous Lean proof reserve: CodeImmutability | Committed candidate; review/integration pending | 477: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/429.md) |
@@ -451,6 +451,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **467**, Independent exact-candidate review of 419, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-467.md). <!-- x86-merged:467 -->
 - 2026-10-01: lane **423**, Continuous Lean proof reserve: BranchLayout, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-423.md). <!-- x86-merged:423 -->
 - 2026-10-01: lane **471**, Independent exact-candidate review of 423, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-471.md). <!-- x86-merged:471 -->
+- 2026-10-01: lane **425**, Continuous Lean proof reserve: FloatExceptions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-425.md). <!-- x86-merged:425 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
