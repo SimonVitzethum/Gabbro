@@ -223,6 +223,249 @@ theorem abs64_rundgang (v : Wort) :
   simp only [hfun]
   rw [bytesWort_wortByte]
 
+/-! ## 4. Finite byte patching with range and disjointness checks. -/
+
+/-- Checked patch: replace `bs.length` bytes at file offset `off`.
+    `none` refuses an overrunning site, including an empty patch past
+    the end. This is helper arithmetic only: whether `off` is a
+    code-operand field or a declared data field is decided by the
+    checked image-plus-decoder proof, never by the caller. -/
+def patchAt : List Byte → Nat → List Byte → Option (List Byte)
+  | img, off, [] => if off ≤ img.length then some img else none
+  | [], _, _ :: _ => none
+  | _ :: rest, 0, y :: ys => (patchAt rest 0 ys).map (y :: ·)
+  | x :: rest, n + 1, b :: bs => (patchAt rest n (b :: bs)).map (x :: ·)
+
+/-- A successful patch lies inside the image: exact range premise. -/
+theorem patchAt_bereich (img : List Byte) (off : Nat) (bs : List Byte)
+    (out : List Byte) (h : patchAt img off bs = some out) :
+    off + bs.length ≤ img.length := by
+  induction img generalizing off bs out with
+  | nil =>
+    cases bs with
+    | nil =>
+      by_cases hc : off ≤ ([] : List Byte).length
+      · simp only [patchAt, if_pos hc] at h
+        cases h
+        simpa using hc
+      · simp only [patchAt, if_neg hc] at h
+        cases h
+    | cons b bs =>
+      simp only [patchAt] at h
+      cases h
+  | cons x rest ih =>
+    cases bs with
+    | nil =>
+      by_cases hc : off ≤ (x :: rest).length
+      · simp only [patchAt, if_pos hc] at h
+        cases h
+        simpa using hc
+      · simp only [patchAt, if_neg hc] at h
+        cases h
+    | cons y ys =>
+      cases off with
+      | zero =>
+        simp only [patchAt] at h
+        cases hres : patchAt rest 0 ys with
+        | none =>
+          simp only [hres, Option.map_none] at h
+          cases h
+        | some tail =>
+          simp only [hres, Option.map_some] at h
+          cases h
+          have hr := ih 0 ys tail hres
+          simp only [List.length_cons] at hr ⊢
+          omega
+      | succ n =>
+        simp only [patchAt] at h
+        cases hres : patchAt rest n (y :: ys) with
+        | none =>
+          simp only [hres, Option.map_none] at h
+          cases h
+        | some tail =>
+          simp only [hres, Option.map_some] at h
+          cases h
+          have hr := ih n (y :: ys) tail hres
+          simp only [List.length_cons] at hr ⊢
+          omega
+
+/-- A successful patch keeps the image length. -/
+theorem patchAt_laenge (img : List Byte) (off : Nat) (bs : List Byte)
+    (out : List Byte) (h : patchAt img off bs = some out) :
+    out.length = img.length := by
+  induction img generalizing off bs out with
+  | nil =>
+    cases bs with
+    | nil =>
+      by_cases hc : off ≤ ([] : List Byte).length
+      · simp only [patchAt, if_pos hc] at h
+        cases h
+        rfl
+      · simp only [patchAt, if_neg hc] at h
+        cases h
+    | cons b bs =>
+      simp only [patchAt] at h
+      cases h
+  | cons x rest ih =>
+    cases bs with
+    | nil =>
+      by_cases hc : off ≤ (x :: rest).length
+      · simp only [patchAt, if_pos hc] at h
+        cases h
+        rfl
+      · simp only [patchAt, if_neg hc] at h
+        cases h
+    | cons y ys =>
+      cases off with
+      | zero =>
+        simp only [patchAt] at h
+        cases hres : patchAt rest 0 ys with
+        | none =>
+          simp only [hres, Option.map_none] at h
+          cases h
+        | some tail =>
+          simp only [hres, Option.map_some] at h
+          cases h
+          have hr := ih 0 ys tail hres
+          simp only [List.length_cons, hr]
+      | succ n =>
+        simp only [patchAt] at h
+        cases hres : patchAt rest n (y :: ys) with
+        | none =>
+          simp only [hres, Option.map_none] at h
+          cases h
+        | some tail =>
+          simp only [hres, Option.map_some] at h
+          cases h
+          have hr := ih n (y :: ys) tail hres
+          simp only [List.length_cons, hr]
+
+/-- Patched site bytes are exactly the patch bytes. -/
+theorem patchAt_stelle (img : List Byte) (off : Nat) (bs : List Byte)
+    (out : List Byte) (h : patchAt img off bs = some out)
+    (k : Nat) (hk : k < bs.length) :
+    out[off + k]? = bs[k]? := by
+  induction img generalizing off bs out k with
+  | nil =>
+    cases bs with
+    | nil =>
+      by_cases hc : off ≤ ([] : List Byte).length
+      · simp only [patchAt, if_pos hc] at h
+        cases h
+        simp only [List.length_nil] at hk
+        omega
+      · simp only [patchAt, if_neg hc] at h
+        cases h
+    | cons b bs =>
+      simp only [patchAt] at h
+      cases h
+  | cons x rest ih =>
+    cases bs with
+    | nil =>
+      simp only [List.length_nil] at hk
+      omega
+    | cons y ys =>
+      cases off with
+      | zero =>
+        simp only [patchAt] at h
+        cases hres : patchAt rest 0 ys with
+        | none =>
+          simp only [hres, Option.map_none] at h
+          cases h
+        | some tail =>
+          simp only [hres, Option.map_some] at h
+          cases h
+          cases k with
+          | zero =>
+            simp only [Nat.zero_add, List.getElem?_cons_zero]
+          | succ k =>
+            simp only [Nat.zero_add, List.getElem?_cons_succ]
+            have hih := ih 0 ys tail hres k (by simpa using hk)
+            simpa only [Nat.zero_add] using hih
+      | succ n =>
+        simp only [patchAt] at h
+        cases hres : patchAt rest n (y :: ys) with
+        | none =>
+          simp only [hres, Option.map_none] at h
+          cases h
+        | some tail =>
+          simp only [hres, Option.map_some] at h
+          cases h
+          have e : n + 1 + k = (n + k) + 1 := by omega
+          rw [e]
+          simp only [List.getElem?_cons_succ]
+          exact ih n (y :: ys) tail hres k hk
+
+/-- Bytes outside the site keep their image bytes. -/
+theorem patchAt_rahmen (img : List Byte) (off : Nat) (bs : List Byte)
+    (out : List Byte) (h : patchAt img off bs = some out)
+    (i : Nat) (haussen : ∀ k, k < bs.length → i ≠ off + k) :
+    out[i]? = img[i]? := by
+  induction img generalizing off bs out i with
+  | nil =>
+    cases bs with
+    | nil =>
+      by_cases hc : off ≤ ([] : List Byte).length
+      · simp only [patchAt, if_pos hc] at h
+        cases h
+        rfl
+      · simp only [patchAt, if_neg hc] at h
+        cases h
+    | cons b bs =>
+      simp only [patchAt] at h
+      cases h
+  | cons x rest ih =>
+    cases bs with
+    | nil =>
+      by_cases hc : off ≤ (x :: rest).length
+      · simp only [patchAt, if_pos hc] at h
+        cases h
+        rfl
+      · simp only [patchAt, if_neg hc] at h
+        cases h
+    | cons y ys =>
+      cases off with
+      | zero =>
+        simp only [patchAt] at h
+        cases hres : patchAt rest 0 ys with
+        | none =>
+          simp only [hres, Option.map_none] at h
+          cases h
+        | some tail =>
+          simp only [hres, Option.map_some] at h
+          cases h
+          cases i with
+          | zero =>
+            have hlt : (0 : Nat) < (y :: ys).length := by simp
+            have hne := haussen 0 hlt
+            rw [Nat.add_zero] at hne
+            exact False.elim (absurd rfl hne)
+          | succ j =>
+            simp only [List.getElem?_cons_succ]
+            exact ih 0 ys tail hres j (fun k hk => by
+              have hkk : k + 1 < (y :: ys).length := by
+                rw [List.length_cons]
+                omega
+              have hne := haussen (k + 1) hkk
+              omega)
+      | succ n =>
+        simp only [patchAt] at h
+        cases hres : patchAt rest n (y :: ys) with
+        | none =>
+          simp only [hres, Option.map_none] at h
+          cases h
+        | some tail =>
+          simp only [hres, Option.map_some] at h
+          cases h
+          cases i with
+          | zero =>
+            simp only [List.getElem?_cons_zero]
+          | succ j =>
+            simp only [List.getElem?_cons_succ]
+            exact ih n (y :: ys) tail hres j (fun k hk hcontra => by
+              have hne := haussen k hk
+              omega)
+
 /- CUTS:
    rel32/abs64 arithmetic and byte patching only; decoder, image mapping,
    site admissibility, loader behaviour and source correspondence are open.
