@@ -45,6 +45,53 @@ theorem disjunkt_nicht_in_region (a b : Region)
   rw [decide_eq_false_iff_not]
   omega
 
+/-- FRESHNESS over two reservations: the second handed region is
+    disjoint from the first. Discharged through the cursor invariant,
+    never assumed. Every premise is used. -/
+theorem frisch_zwei_disjunkt (s s1 s2 : Reservierer)
+    (len1 ausr1 len2 ausr2 : Nat) (l1 w1 x1 l2 w2 x2 : Bool)
+    (r1 r2 : Region)
+    (h1 : reserviere s len1 ausr1 l1 w1 x1 = some (r1, s1))
+    (h2 : reserviere s1 len2 ausr2 l2 w2 x2 = some (r2, s2))
+    (hinv : alleUnten s) :
+    regionDisjunkt r1 r2 = true := by
+  have hinv1 : alleUnten s1 :=
+    reserviere_haelt_alleUnten s len1 ausr1 l1 w1 x1 r1 s1 h1 hinv
+  have hfr1 := reserviere_frisch s len1 ausr1 l1 w1 x1 r1 s1 h1
+  obtain ⟨-, -, hmem1⟩ := hfr1
+  have hd := reserviere_disjunkt_unten s1 len2 ausr2 l2 w2 x2 r2 s2
+    h2 hinv1 r1 hmem1
+  rw [regionDisjunkt_symm]
+  exact hd
+
+/-- A contained region meets the no-wrap bound: the third conjunct of
+    `innerhalb` is exactly `keinUmbruchR`. -/
+theorem innerhalb_keinUmbruch (v : Vorrat) (r : Region)
+    (h : innerhalb v r = true) : keinUmbruchR r = true := by
+  unfold innerhalb at h
+  unfold keinUmbruchR
+  rw [decide_eq_true_eq] at h ⊢
+  obtain ⟨-, -, hwrap⟩ := h
+  exact hwrap
+
+/-- VERDICT over two reservations: both handed regions are accepted by
+    `trennungOk` together. No-wrap comes from containment, disjointness
+    from freshness. Every premise is used. -/
+theorem frisch_zwei_verdikt (s s1 s2 : Reservierer)
+    (len1 ausr1 len2 ausr2 : Nat) (l1 w1 x1 l2 w2 x2 : Bool)
+    (r1 r2 : Region)
+    (h1 : reserviere s len1 ausr1 l1 w1 x1 = some (r1, s1))
+    (h2 : reserviere s1 len2 ausr2 l2 w2 x2 = some (r2, s2))
+    (hinv : alleUnten s) :
+    trennungOk [r1, r2] = true := by
+  have hd := frisch_zwei_disjunkt s s1 s2 len1 ausr1 len2 ausr2
+    l1 w1 x1 l2 w2 x2 r1 r2 h1 h2 hinv
+  have hw1 := innerhalb_keinUmbruch s.vorrat r1
+    (reserviere_innerhalb s len1 ausr1 l1 w1 x1 r1 s1 h1)
+  have hw2 := innerhalb_keinUmbruch s1.vorrat r2
+    (reserviere_innerhalb s1 len2 ausr2 l2 w2 x2 r2 s2 h2)
+  simp [trennungOk, alleOhneUmbruch, allePaareDisjunkt, hw1, hw2, hd]
+
 /- CUTS:
     - Skeleton only: no fresh/disjoint preservation is proved yet.
     - No source correspondence is claimed here.
