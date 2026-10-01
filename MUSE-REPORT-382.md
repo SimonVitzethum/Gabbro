@@ -62,9 +62,8 @@ No material findings. Minor observations, neither blocking:
 - `mfenceZulaessig` is a thin alias over `zaunBereit`; its content comes from
   the refusal theorem, which is proved — acceptable for the B4 local-half
   scope and honestly labelled.
-- BUILD-EVIDENCE pins the author commit only as short hash `75274830`; the
-  full hash was not supplied with the snapshot, so the CANDIDATE line below
-  carries the short hash as pinned.
+- Full author HEAD `75274830e649fed40d400aa7fa99b6c3936efef0` taken from
+  `.tmp/review/SNAPSHOT.json` (base `f737a6f0` matches this clone).
 
 ## Bounded claim
 
@@ -77,5 +76,5 @@ memory-changing local-only witness. Not covered: any source/target simulation
 timing/cost, devices, multi-byte atomicity, LOCK RMW — all correctly left OPEN
 in CUTS.
 
-CANDIDATE: 344 75274830
+CANDIDATE: 344 75274830e649fed40d400aa7fa99b6c3936efef0
 VERDICT: ACCEPT
