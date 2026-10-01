@@ -2,12 +2,16 @@
 
 - Branch verified: `muse/639` in `/home/simon/Dokumente/gabbro-muse/a639`. Owns ONLY this file. No source edits; working tree clean except this report.
 
-## CANDIDATE
+## Pinned candidate
 
-- CANDIDATE: 638 `f398ec6d8c18bf2f21fa9aa2f7eb88014fedea13` (base `47f447d075e63a5bf53747e25287051b991e9d8c`, per `.tmp/review/SNAPSHOT.json`; `clean: true`, files exactly the 4 owned paths).
+CANDIDATE: 638 f398ec6d8c18bf2f21fa9aa2f7eb88014fedea13
+
+- Pinned base `47f447d075e63a5bf53747e25287051b991e9d8c`, per `.tmp/review/SNAPSHOT.json`; `clean: true`, files exactly the 4 owned paths.
 - Inspected: `.tmp/review/author-638/PATCH.diff` (708 lines), `OWNER-TASK.md`, `MUSE-REPORT-638.md`, `BUILD-EVIDENCE.json`, `SNAPSHOT.json`, and the three candidate docs in full.
 
-## VERDICT: ACCEPT
+## Finding
+
+VERDICT: ACCEPT
 
 ## What was checked
 
