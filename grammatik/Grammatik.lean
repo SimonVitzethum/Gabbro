@@ -440,3 +440,4 @@ import Grammatik.X86.ShiftCodec
 import Grammatik.X86.RelocatedExecution
 import Grammatik.X86.LoadedExecution
 import Grammatik.X86.ControlCodec
+import Grammatik.X86.FlagDependencies
