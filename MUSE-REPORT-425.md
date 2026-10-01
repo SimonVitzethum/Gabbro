@@ -89,7 +89,29 @@ there too (all 13 axiom lines print, step `[397/398]`), and only the
 experiment bit-for-bit (same command `lean -j2 -M4096`, same crash,
 umbrella red even with my import removed).
 
-## Repair outcome
+## Second integration gate failure (identical signature)
+
+The gate failed again with a byte-identical log (only the step time
+differs: 4.6s vs 12s): my module target green in the main checkout,
+umbrella `Grammatik` dead on `failed to create thread`, exit 134.
+No new logical information; the diagnosis stands.
+
+## Olean-weight analysis (new quantitative evidence)
+
+Measured in this clone: `FloatExceptions.olean` 76,848 bytes vs
+`Gleitprofil.olean` 503,728 vs `Speicher.olean` 1,735,696. My module is
+~15% of the file it imports and ~4% of the memory model file, inside a
+~390-module import closure. Combined with the no-import control
+(umbrella crashes with zero bytes of my work in the closure), no
+content change on my side -- splitting, trimming decides, dropping
+`#print axioms` (which run at MY target's build, not the umbrella's) --
+can move a thread-creation resource crash. All `decide`s in my file are
+over tiny goals (single-word `BitVec` disequalities, small `Nat`
+bounds); the heavy kernel evaluations (`2^1074`-scale) live in the
+accepted `Gleitkomma`/`Gleitprofil` witnesses I reuse by `exact`, which
+cost nothing at use site.
+
+## Repair outcome (unchanged)
 
 Re-verified locally after the gate failure (nothing merged, tree still
 at `022cdf29`, clean):
