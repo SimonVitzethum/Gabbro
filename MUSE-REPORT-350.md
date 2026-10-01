@@ -109,3 +109,74 @@ at `nP`.
 - No TSO/flag/division/float/cost content was manufactured: the file makes no claim
   about target bytes at all, per the safety corrections (refusal Bool = admission,
   never a hardware fault).
+
+## Repair attempt after the failed integration gate (2026-10-01, ~15:00 CEST)
+
+### Gate evidence (from the merge log)
+
+- Integration `lake build` failed with exit 1; the only failing target was
+  `Grammatik.X86.AtomicPayload`:
+  `lean::exception: failed to create thread`, `Lean exited with code 134`.
+- All neighbouring targets built (the log shows the CostSummary theorems with standard
+  axioms); nothing in the log points at a type error or a failed proof in this module.
+
+### Local reproduction: the failure is content-independent
+
+Every check below ran in this clone (`/home/simon/Dokumente/gabbro-muse/a350`,
+branch `muse/350`):
+
+1. `./lean-probe grammatik/Grammatik/X86/AtomicPayload.lean` gives exit 134 with the same
+   `failed to create thread` and no error-location lines (crash, not a proof failure).
+2. `./lean-probe grammatik/Grammatik/X86/Regionen.lean` (an untouched master file, not
+   owned by this lane) gives exit 134 with the identical crash. Module content is not
+   the cause.
+3. A trivial file (`def hello : Nat := 42`) through the queued path
+   (`lean-slot bash -c "lake env lean <file>"`) gives exit 134 with the identical crash,
+   ending in `Aborted (core dumped)`.
+4. The same trivial file through the direct toolchain (`lake env lean <file>`, project
+   toolchain 4.33.1, no queue) gives RC=0, `does not depend on any axioms`.
+5. `lean --version` (4.34.1) and `lake env lean --version` (4.33.1) both work.
+6. Inside `lean-slot`, even `ulimit -u` reads fine (126697), so it is not the process
+   count rlimit; swap sat above 90% full at peak (9008/9011 MiB) and crashes persist
+   after it eased to ~4600/9011, so it is not only momentary RAM either.
+
+Bisection conclusion: the crash follows the `lean-slot` queue wrapper
+(`/home/simon/Dokumente/gabbro-muse/bin/lean-slot`, outside every lane clone), not any
+file content. A content-free file crashes under it and passes without it.
+
+### Module repair attempted, then reverted
+
+- Change tried: factored the two identical `by decide` evaluations of
+  `atomarFussB nP nFs NFn.hauptA (.inr NGlob.konfig) = true` (one each in
+  `atomarFussB_ok_zeuge` and `geteiltV_von_atomarFuss_zeuge`) into one shared lemma
+  `atomarFussB_nP`, halving that evaluation. Logically identical; no statement changed.
+- Verification of that change was IMPOSSIBLE: every `./lean-probe` and `./lean-bau` goes
+  through the broken slot and crashes even on trivial files.
+- Per HARD RULES 8 (never commit an unverified build) the change was REVERTED
+  (`git checkout -- grammatik/Grammatik/X86/AtomicPayload.lean`). This report commit
+  therefore leaves `AtomicPayload.lean` byte-identical to the reviewer-accepted state
+  (commit `67dd9fd1`); only this report changed.
+- The factoring can be re-applied in minutes once the slot works; it changes no
+  statement, so it needs a green build, not a new logical review.
+
+### What this means for the gate
+
+- No logical defect in the owned module is indicated by the evidence. Re-gating the
+  unchanged accepted content after the queue infrastructure recovers should pass.
+- Concrete blocker for the coordinator: the queued-Lean infrastructure on this machine
+  is broken under today's 40-lane load for ALL lanes (any lane's `./lean-probe` or
+  `./lean-bau` crashes the same way right now). The `lean-slot` layer needs repair, or
+  lane load needs to drop, before any Lean gate can pass. Each crash also dumps core;
+  at 40 lanes this accumulates.
+- A fresh independent review is still required for the changed commit (this report).
+  Reviewer 388: the Lean content is unchanged since your acceptance; what changed is
+  this report plus the environmental finding above.
+
+### Verification status of THIS commit
+
+- `./lean-probe` / `./lean-bau`: NOT RUNNABLE (slot crashes on all inputs, see above).
+- Last known green of the committed Lean content: `./lean-bau` exit 0, 0 error lines,
+  386 jobs, `Built Grammatik.X86.AtomicPayload` (this clone, before the gate; recorded
+  in the section above). The file is unchanged since.
+- `gabbro_ziel` axiom probe: not re-runnable now; last reading exactly
+  `[propext, Classical.choice, Quot.sound]` (unchanged file, unchanged result expected).
