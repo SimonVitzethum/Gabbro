@@ -482,6 +482,149 @@ theorem senkung_sub {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         (sub64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2
     rw [hdst2, hval2]
 
+/-- Shape-only fragment classification: literal, variable, or one
+    bounded ADD/SUB over lowered atoms (carrying the atom equations).
+    Inversion substitutes the expression; stuck indices never appear. -/
+inductive IstFrag {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register) (dst tmp : Register) :
+    ∀ {τ : Ty}, Expr D Γ Λ τ → List Befehl → Prop where
+  | lit (n : Int) : IstFrag abb dst tmp (.lit n) [Befehl.movImm64 dst (intWort n)]
+  | var {t : Ty} (x : Var Γ t) :
+      IstFrag abb dst tmp (.var x) [Befehl.movReg64 dst (abb _ x)]
+  | add {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1))
+      (b : Expr D Γ Λ (.int l2 h2)) (pa pb : List Befehl)
+      (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb) :
+      IstFrag abb dst tmp (.add a b) (pa ++ pb ++ [Befehl.addReg64 dst tmp])
+  | sub {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1))
+      (b : Expr D Γ Λ (.int l2 h2)) (pa pb : List Befehl)
+      (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb) :
+      IstFrag abb dst tmp (.sub a b) (pa ++ pb ++ [Befehl.subReg64 dst tmp])
+
+/-- Every successful fragment lowering is one of the four shapes. Proved
+    over a general index; the add/sub arms case-split the atom equations,
+    refusal arms close because the lowering reduces to `none`. -/
+theorem istFrag_von_senkFrag {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {τ : Ty} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (e : Expr D Γ Λ τ) (dst tmp : Register)
+    (prog : List Befehl) (h : senkFrag abb e dst tmp = some prog) :
+    IstFrag abb dst tmp e prog := by
+  cases e with
+  | lit n =>
+    simp only [senkFrag] at h
+    have hprog : prog = [Befehl.movImm64 dst (intWort n)] := Option.some_inj.mp h.symm
+    subst hprog
+    exact .lit n
+  | var x =>
+    simp only [senkFrag] at h
+    have hprog : prog = [Befehl.movReg64 dst (abb _ x)] := Option.some_inj.mp h.symm
+    subst hprog
+    exact .var x
+  | add a b =>
+    cases h1 : senkAtom abb a dst with
+    | some pa =>
+      cases h2 : senkAtom abb b tmp with
+      | some pb =>
+        simp only [senkFrag, h1, h2] at h
+        have hprog : prog = pa ++ pb ++ [Befehl.addReg64 dst tmp] :=
+          Option.some_inj.mp h.symm
+        subst hprog
+        exact .add a b pa pb h1 h2
+      | none => simp [senkFrag, h1, h2] at h
+    | none => simp [senkFrag, h1] at h
+  | sub a b =>
+    cases h1 : senkAtom abb a dst with
+    | some pa =>
+      cases h2 : senkAtom abb b tmp with
+      | some pb =>
+        simp only [senkFrag, h1, h2] at h
+        have hprog : prog = pa ++ pb ++ [Befehl.subReg64 dst tmp] :=
+          Option.some_inj.mp h.symm
+        subst hprog
+        exact .sub a b pa pb h1 h2
+      | none => simp [senkFrag, h1, h2] at h
+    | none => simp [senkFrag, h1] at h
+  | wahr => simp [senkFrag] at h
+  | falsch => simp [senkFrag] at h
+  | glob g hL => simp [senkFrag] at h
+  | slot t f i hL => simp [senkFrag] at h
+  | durch p t ht f i hL => simp [senkFrag] at h
+  | ptrOf t n ht rw => simp [senkFrag] at h
+  | fnref f n h => simp [senkFrag] at h
+  | altGlob g hL => simp [senkFrag] at h
+  | altSlot t f i hL => simp [senkFrag] at h
+  | weiter h1 h2 e => simp [senkFrag] at h
+  | neg a => simp [senkFrag] at h
+  | mul a b => simp [senkFrag] at h
+  | div h0 h1 a b => simp [senkFrag] at h
+  | rem h0 h1 a b => simp [senkFrag] at h
+  | sdiv hb a b => simp [senkFrag] at h
+  | srem hb a b => simp [senkFrag] at h
+  | leseBytes t f hf n i hlo hhi hL => simp [senkFrag] at h
+  | band h0 h0' a b => simp [senkFrag] at h
+  | bor w h0 h0' hw1 hw2 a b => simp [senkFrag] at h
+  | bxor w h0 h0' hw1 hw2 a b => simp [senkFrag] at h
+  | shl w hw1 hw2 h0 h0' a b => simp [senkFrag] at h
+  | shr w hw1 hw2 h0 h0' a b => simp [senkFrag] at h
+  | lt a b => simp [senkFrag] at h
+  | le a b => simp [senkFrag] at h
+  | eq a b => simp [senkFrag] at h
+  | fllt a b => simp [senkFrag] at h
+  | flle a b => simp [senkFrag] at h
+  | und a b => simp [senkFrag] at h
+  | oder a b => simp [senkFrag] at h
+  | nicht a => simp [senkFrag] at h
+  | none n => simp [senkFrag] at h
+  | some e => simp [senkFrag] at h
+  | istSome e => simp [senkFrag] at h
+  | fall cs i nutz => simp [senkFrag] at h
+  | grund n r => simp [senkFrag] at h
+  | forallSlots t body hL => simp [senkFrag] at h
+  | existsSlots t body hL => simp [senkFrag] at h
+  | reaches t f hf a b hL => simp [senkFrag] at h
+
+/-- GENERIC FRAGMENT CORRECTNESS: the lowered instruction list, run
+    through the existing `lauf` sequencer, puts the modular word of the
+    exact source value into the destination; memory is untouched, foreign
+    registers and the stack pointer are kept. The per-shape flags facts
+    live in the shape theorems (`senkAtom_korrekt_*`, `senkung_add/sub`). -/
+theorem senkung_korrekt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {lo hi : Int} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (e : Expr D Γ Λ (.int lo hi)) (dst tmp : Register)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hfr : Frisch abb dst tmp) (hrsp : dst ≠ Register.rsp ∧ tmp ≠ Register.rsp)
+    (hrenv : EnvRepr ρ s.register abb)
+    (prog : List Befehl) (hsenk : senkFrag abb e dst tmp = some prog) :
+    ∃ s', lauf (prog.map fun b => ⟨b, (encode b).length⟩) s = some s' ∧
+      s'.register dst = intWort (eval σ₀ e σ ρ).n ∧
+      s'.speicher = s.speicher ∧
+      (∀ q, q ≠ dst → q ≠ tmp → s'.register q = s.register q) ∧
+      s'.register Register.rsp = s.register Register.rsp := by
+  match istFrag_von_senkFrag abb e dst tmp prog hsenk with
+  | .lit n =>
+    have haa : senkAtom abb (Expr.lit (D := D) (Γ := Γ) (Λ := Λ) n) dst =
+        some [Befehl.movImm64 dst (intWort n)] := by
+      simp only [senkAtom]
+    obtain ⟨s', hrun, hval, hmem, hreg, hfl⟩ :=
+      senkAtom_korrekt_lit abb n dst ρ σ₀ σ s _ haa
+    exact ⟨s', hrun, hval, hmem, fun q hqd hqt => hreg q hqd,
+      hreg _ (Ne.symm hrsp.1)⟩
+  | .var x =>
+    have hab : senkAtom abb (Expr.var (D := D) (Γ := Γ) (Λ := Λ) x) dst =
+        some [Befehl.movReg64 dst (abb _ x)] := by
+      simp only [senkAtom]
+    obtain ⟨s', hrun, hval, hmem, hreg, hfl⟩ :=
+      senkAtom_korrekt_var abb x dst ρ σ₀ σ s hrenv _ hab
+    exact ⟨s', hrun, hval, hmem, fun q hqd hqt => hreg q hqd,
+      hreg _ (Ne.symm hrsp.1)⟩
+  | .add a b pa pb ha hb =>
+    obtain ⟨s', hrun, hval, hmem, hregs, hrsp', hflags⟩ :=
+      senkung_add abb a b dst tmp ρ σ₀ σ s hfr hrsp hrenv pa pb ha hb
+    exact ⟨s', hrun, hval, hmem, hregs, hrsp'⟩
+  | .sub a b pa pb ha hb =>
+    obtain ⟨s', hrun, hval, hmem, hregs, hrsp', hflags⟩ :=
+      senkung_sub abb a b dst tmp ρ σ₀ σ s hfr hrsp hrenv pa pb ha hb
+    exact ⟨s', hrun, hval, hmem, hregs, hrsp'⟩
+
 /- CUTS:
     Conversion homomorphism (`intWort_add/sub`), the signed roundtrip
     (`intWort_sint`), the lowering-correctness theorems, the overflow-bound
