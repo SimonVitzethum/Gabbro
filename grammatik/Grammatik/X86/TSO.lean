@@ -548,4 +548,75 @@ theorem tso_frisch_beispiel (a : Adresse) :
     subst hm
     decide
 
+/- CUTS:
+   - No aligned multi-byte single-copy atomicity: `paket_reisst` shows a
+     byte-wise flush tears a two-byte packet, so the silicon rule for
+     widths 2/4/8 (`paketAtomarMoeglich` is a predicate only, with its
+     alignment condition) has NO proved correspondence here; width 1 is
+     atomic by construction (`einzelbyte_atomar`).
+   - No LOCK RMW: `LockSchritt` is empty by construction
+     (`kein_lock_schritt`); the exchange/CAS lowering and any `rmw`-field
+     (`neu = wahl.ts + 1`) correspondence are OPEN wave-B bridge work.
+   - No source-to-target simulation: `tso_last_lesbar` and
+     `tso_frisch_beispiel` instantiate the EXISTING `Lesbar`/`Frisch` at
+     target bytes only; the cross-granularity refinement from byte TSO
+     accesses to carrier-granular W steps (`SchrittW` witnesses `wahl`/`neu`
+     per G-step access list, O-access of TSO-GX-BRUECKE.md section 5) is
+     NOT proved and NOT assumed.
+   - No per-access linearisation of G steps, no lowering map, no run
+     induction from x86 traces to W runs; `TSOErreichbar` is target-only.
+   - No fairness, progress or timing claim: spins, CAS retries, flush
+     liveness and cycle costs are out of scope; any `FortschrittG` or
+     `ZeitAbX` transfer is OPEN.
+   - No interrupt, device, MMIO or DMA model: handler-entry drains,
+     foreign-footprint sorting and the OBS-5 publication obligations of
+     TSO-GX-BRUECKE.md section 4.9 are OPEN.
+   - Fences only gate (`zaunBereit`): no fence instruction semantics
+     beyond the empty-own-buffer condition, and a local fence never drains
+     foreign buffers (`zaun_kein_fremd_drain`, `zaun_fremd_issue`,
+     `zaun_fremd_flush`).
+   - No source SC claim: `tso_store_buffering` exhibits the non-SC
+     outcome (both stale reads reachable); W/GX stay the source model.
+-/
+
+#print axioms pufferSetze_gleich
+#print axioms pufferSetze_anders
+#print axioms issue_erhaelt_berechtigungen
+#print axioms flush_erhaelt_berechtigungen
+#print axioms issue_anderer_kern
+#print axioms flush_anderer_kern
+#print axioms issue_kein_speicher
+#print axioms flush_schreibt_kopf
+#print axioms flush_rahmen
+#print axioms issue_verweigert
+#print axioms load_verweigert
+#print axioms flush_leer
+#print axioms neuestens_angehaengt
+#print axioms neuestens_angehaengt_anders
+#print axioms load_nach_issue
+#print axioms load_ohne_eintrag
+#print axioms issue_haengt_an
+#print axioms flush_entfernt_kopf
+#print axioms fifo_reihenfolge
+#print axioms zaunBereit_iff_leer
+#print axioms zaun_nach_flush
+#print axioms zaun_fremd_issue
+#print axioms zaun_fremd_flush
+#print axioms zaun_kein_fremd_drain
+#print axioms sbX_ne_sbY
+#print axioms sb_schritt1
+#print axioms sb_schritt2
+#print axioms sb_beide_laden_null
+#print axioms sb_flush_schritt
+#print axioms sb_flush_aendert_speicher
+#print axioms tso_store_buffering
+#print axioms paket_ein_byte
+#print axioms einzelbyte_atomar
+#print axioms paket_reisst
+#print axioms kein_lock_schritt
+#print axioms tsoEineHist_mem
+#print axioms tsoEineHist_lesbar
+#print axioms tso_last_lesbar
+#print axioms tso_frisch_beispiel
+
 end Gabbro.Grammatik.X86
