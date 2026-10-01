@@ -142,7 +142,7 @@ Last ledger refresh: **2026-10-01 10:11 UTC**. This is an operational snapshot, 
 | 312 | Checked target regions and allocation ceiling | Merged after review/checks | 316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-312.md) |
 | 317 | Single pilot instruction access extraction | Committed candidate; review/integration pending | 318: Agent working | [task](lanes/317.md) |
 | 319 | Byte-memory fetch decode and actual instruction step | Agent working | 320: scheduled | [task](lanes/319.md) |
-| 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-323.md) |
+| 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-323.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -244,6 +244,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **312**, Checked target regions and allocation ceiling, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-312.md). <!-- x86-merged:312 -->
 - 2026-10-01: lane **316**, Independent review of 312, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-316.md). <!-- x86-merged:316 -->
 - 2026-10-01: lane **323**, Detailed instruction optimisation and fast compilation design, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-323.md). <!-- x86-merged:323 -->
+- 2026-10-01: lane **324**, Independent detailed compiler design review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-324.md). <!-- x86-merged:324 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
