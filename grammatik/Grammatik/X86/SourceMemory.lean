@@ -103,7 +103,8 @@ def slotAddr (base off : Nat) : Adresse := natAdresse (base + off)
 def RepSlot {D : Deklaration} (t : D.Tab) (k : Int) (f : D.Feld t)
     (lo hi : Int) (hT : D.typ t f = .int lo hi)
     (a : Adresse) (m : Speicher) (σ : World D) : Prop :=
-  read64 m a = some (zahlWort (hT ▸ σ.slots t k f))
+  read64 m a = some (zahlWort
+    (cast (congrArg (Wert D) hT) (σ.slots t k f) : Wert D (.int lo hi)))
 
 /-- A source slot write lands at its own carrier: the exact operation
     `execStmt` performs for `.assignSlot` (see `execStmt_assignSlot`).
@@ -274,6 +275,88 @@ theorem disjunkt_von_layout (e1 e2 : TabLayout)
     omega
   intro i j hi hj he
   exact (disjunkt_von_intervallen _ _ hU1 hU2 hInt i j hi hj he).elim
+
+/-- MAIN STEP PRESERVATION: one actual source table-write step
+    (`Stmt.assignSlot` through `execStmt`) together with the matching
+    target word write preserves the representation at the written slot,
+    and the written bytes parse back to the source value. Every premise
+    is used: `hT` links the field type, `hOk` supplies the checked
+    range/width/region bounds, `i`/`e`/`hw`/`hL` are the executed
+    statement, `hLese`/`hk`/`hv` name the evaluated index and value,
+    `hExec` is the source step, `hTgt` + `hRd` give the target
+    read-back. The disjoint carriers are covered by `rep_fremd_tab`,
+    `rep_fremd_schluessel` and `rep_fremd_feld`. -/
+theorem rep_schritt_bleibt {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)}
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (t : D.Tab) (f : D.Feld t)
+    (lo hi : Int) (hT : D.typ t f = .int lo hi)
+    (base len off : Nat)
+    (hOk : repOk (D.typ t f) base len off = true)
+    (i : Expr D Γ Λ (.index (D.count t)))
+    (e : Expr D Γ Λ (D.typ t f))
+    (hw : V.schreibt t = true) (hL : darf D t Λ)
+    (σ : World D) (ρ : Env D Γ)
+    (σL : World D) (hLese : σL = σ.lese Λ (i.orte ++ e.orte))
+    (k : Int) (v : Zahl lo hi)
+    (hk : (eval σL i σL ρ).n = k)
+    (hv : (cast (congrArg (Wert D) hT) (eval σL e σL ρ) :
+      Wert D (.int lo hi)) = v)
+    (a : Adresse) (m m' : Speicher)
+    (σ' : World D) (ρ' : Env D Γ)
+    (hExec : execStmt O passes R (Stmt.assignSlot (l := l) t f i e hw hL) σ ρ =
+      .ok σ' ρ')
+    (hTgt : write64 m a (zahlWort v) = some m')
+    (hRd : lesbar8 m a = true) :
+    RepSlot t k f lo hi hT a m' σ' ∧
+      ∃ w, read64 m' a = some w ∧ wortZahl lo hi w = some v := by
+  rw [hT] at hOk
+  obtain ⟨hLo, hHi, -, -⟩ := repOk_klingt hOk
+  have hU : execStmt O passes R (Stmt.assignSlot (l := l) t f i e hw hL) σ ρ =
+      Ausgang.ok
+        ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+          (eval (σ.lese Λ (i.orte ++ e.orte)) i
+            (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+          (eval (σ.lese Λ (i.orte ++ e.orte)) e
+            (σ.lese Λ (i.orte ++ e.orte)) ρ)) ρ := by
+    simp only [execStmt]
+  rw [hU] at hExec
+  cases hExec
+  rw [← hLese]
+  have hHit := schreibSlot_hit σL t Λ (eval σL i σL ρ).n f
+    (eval σL e σL ρ)
+  rw [hk] at hHit
+  unfold RepSlot
+  rw [hk, hHit, hv]
+  exact ⟨read64_nach_write64 m m' a (zahlWort v) hTgt hRd,
+    ⟨_, read64_nach_write64 m m' a (zahlWort v) hTgt hRd,
+      zahlWort_wortZahl v hLo hHi⟩⟩
+
+/-- OUT-OF-RANGE REFUSAL: a range reaching `2 ^ 64` is refused by the
+    checked admission (the word mapping would wrap). -/
+theorem repOk_zu_gross_verweigert :
+    repOk (.int 0 (2 ^ 64)) 4096 16 0 = false := by
+  decide
+
+/-- WIDTH-MISMATCH REFUSAL: a `bool` field has no word representation. -/
+theorem repOk_bool_verweigert :
+    repOk .bool 4096 16 0 = false := by
+  decide
+
+/-- REGION REFUSAL: a slot past the entry extent is refused. -/
+theorem repOk_ausserhalb_verweigert :
+    repOk (.int 0 100) 4096 16 16 = false := by
+  decide
+
+/-- OVERLAP REFUSAL at region level: overlapping entries share bytes, so
+    the `hReg` premise of `disjunkt_von_layout` is refused for them. -/
+theorem region_ueberlapp_verweigert :
+    regionDisjunkt
+      (alsRegion { tab := 0, basis := 4096, len := 16, ausr := 8 })
+      (alsRegion { tab := 1, basis := 4104, len := 16, ausr := 8 }) =
+      false := by
+  decide
 
 /- CUTS:
     - The execStmt-facing main theorem, the refusals and the joint
