@@ -569,9 +569,234 @@ theorem call_ret_wiederhergestellt_zeuge :
     hok1, rfl, zeug_call_schreibt, zeugOben_lesbar, hstep1,
     zeug_call_liest, hstep2, hok2, rfl, hmem⟩
 
+/-! ## 7. Nested witness, refusal witnesses, layout witness. -/
+
+/-- Nested inner slot: one word below the post-call top. -/
+def zeugNobenP : Adresse :=
+  zeugSc1.register Register.rsp - BitVec.ofNat 64 8
+
+/-- Nested memory after the inner push of the caller's `rax` word. -/
+def zeugNmp : Speicher := { zeugMc with
+  bytes := writeBytes zeugMc zeugNobenP (zeugSc1.register Register.rax) }
+
+/-- Nested state after the inner `push rax` (length 1). -/
+def zeugNS2 : Zustand := schrittPush zeugSc1 Register.rsp
+  (ripNach zeugSc1.rip 1) zeugNobenP zeugNmp
+
+/-- Nested state after the inner `pop rbx` (length 1). -/
+def zeugNS3 : Zustand := schrittPopReg zeugNS2 Register.rsp Register.rbx
+  (ripNach zeugNS2.rip 1)
+  (zeugNS2.register Register.rsp + BitVec.ofNat 64 8)
+  (zeugSc1.register Register.rax)
+
+/-- Nested state after the outer `ret` (length 1). -/
+def zeugNS4 : Zustand := schrittRet zeugNS3 Register.rsp
+  (zeugNS3.register Register.rsp + BitVec.ofNat 64 8)
+  (ripNach zeugS.rip 5)
+
+/-- JOINT WITNESS (nested): every premise of nested restoration holds
+    jointly on a non-degenerate run: the outer call and the inner push
+    both store into disjoint slots, both reads come back, and the outer
+    store observably changes memory. -/
+theorem verschachtelt_wiederhergestellt_zeuge :
+    ∃ (s s1 s2 s3 s4 : Zustand) (disp : BitVec 32) (src dst : Register)
+      (dc dp dq dr : Decodiert) (mc mp : Speicher) (vp vr : Wort),
+      (laengeOk dc.laenge = true) ∧ (dc.befehl = .call32 disp) ∧
+      (write64 s.speicher (s.register Register.rsp - BitVec.ofNat 64 8)
+        (ripNach s.rip dc.laenge) = some mc) ∧
+      (lesbar8 s.speicher (s.register Register.rsp - BitVec.ofNat 64 8)
+        = true) ∧
+      (schritt dc s = some s1) ∧
+      (write64 s1.speicher (s1.register Register.rsp - BitVec.ofNat 64 8)
+        (s1.register src) = some mp) ∧
+      (lesbar8 s1.speicher (s1.register Register.rsp - BitVec.ofNat 64 8)
+        = true) ∧
+      (schritt dp s1 = some s2) ∧
+      (laengeOk dp.laenge = true) ∧ (dp.befehl = .push64 src) ∧
+      (read64 s2.speicher (s2.register Register.rsp) = some vp) ∧
+      (schritt dq s2 = some s3) ∧
+      (laengeOk dq.laenge = true) ∧ (dq.befehl = .pop64 dst) ∧
+      (dst ≠ Register.rsp) ∧
+      (read64 s3.speicher (s3.register Register.rsp) = some vr) ∧
+      (schritt dr s3 = some s4) ∧
+      (laengeOk dr.laenge = true) ∧ (dr.befehl = .ret) ∧
+      (Disjunkt (s.register Register.rsp - BitVec.ofNat 64 8)
+        (s1.register Register.rsp - BitVec.ofNat 64 8)) ∧
+      (s.speicher.bytes (s.register Register.rsp - BitVec.ofNat 64 8) ≠
+        mc.bytes (s.register Register.rsp - BitVec.ofNat 64 8)) := by
+  have hokc : laengeOk
+      (⟨Befehl.call32 (BitVec.ofNat 32 0), 5⟩ : Decodiert).laenge =
+      true := by
+    decide
+  have hokp : laengeOk
+      (⟨Befehl.push64 Register.rax, 1⟩ : Decodiert).laenge = true := by
+    decide
+  have hokq : laengeOk
+      (⟨Befehl.pop64 Register.rbx, 1⟩ : Decodiert).laenge = true := by
+    decide
+  have hokr : laengeOk (⟨Befehl.ret, 1⟩ : Decodiert).laenge = true := by
+    decide
+  have hdst : Register.rbx ≠ Register.rsp := by decide
+  have hstepc : schritt
+      (⟨Befehl.call32 (BitVec.ofNat 32 0), 5⟩ : Decodiert)
+      zeugS = some zeugSc1 :=
+    schritt_call32_erfolg _ _ _ _ hokc rfl zeug_call_schreibt
+  have hpermp : schreibbar8 zeugMc zeugNobenP = true := by decide
+  have hlesp : lesbar8 zeugMc zeugNobenP = true := by decide
+  have hwrp : write64 zeugMc zeugNobenP (zeugSc1.register Register.rax) =
+      some zeugNmp := by
+    unfold write64 zeugNmp
+    rw [if_pos hpermp]
+  have hstepp : schritt
+      (⟨Befehl.push64 Register.rax, 1⟩ : Decodiert)
+      zeugSc1 = some zeugNS2 :=
+    schritt_push64_erfolg _ _ _ _ hokp rfl hwrp
+  have hrdp : read64 zeugNS2.speicher (zeugNS2.register Register.rsp) =
+      some (zeugSc1.register Register.rax) := by
+    simp only [zeugNS2, schrittPush, regSet_gleich]
+    exact read64_nach_write64 zeugMc zeugNmp _ _ hwrp hlesp
+  have hstepq : schritt
+      (⟨Befehl.pop64 Register.rbx, 1⟩ : Decodiert)
+      zeugNS2 = some zeugNS3 :=
+    schritt_pop64_reg _ _ _ _ hokq rfl hdst hrdp
+  have hrdr : read64 zeugNS3.speicher (zeugNS3.register Register.rsp) =
+      some (ripNach zeugS.rip 5) := by
+    decide
+  have hstepr : schritt (⟨Befehl.ret, 1⟩ : Decodiert)
+      zeugNS3 = some zeugNS4 :=
+    schritt_ret_erfolg _ _ _ hokr rfl hrdr
+  have hdis : Disjunkt (zeugS.register Register.rsp - BitVec.ofNat 64 8)
+      (zeugSc1.register Register.rsp - BitVec.ofNat 64 8) := by
+    show Disjunkt (BitVec.ofNat 64 8184) (BitVec.ofNat 64 8176)
+    exact disjunkt_von_intervallen _ _
+      (by unfold OhneUmbruch; decide) (by unfold OhneUmbruch; decide)
+      (Or.inr (by decide))
+  have hmem : zeugSpeicherRW.bytes zeugOben ≠
+      zeugMc.bytes zeugOben := by
+    have hhit := writeBytesN_hit zeugSpeicherRW zeugOben
+      (ripNach zeugS.rip 5) 8 0 (by decide) (by decide)
+    rw [addrOff_null] at hhit
+    show BitVec.ofNat 8 0 ≠
+      writeBytes zeugSpeicherRW zeugOben (ripNach zeugS.rip 5) zeugOben
+    unfold writeBytes
+    rw [hhit]
+    decide
+  exact ⟨zeugS, zeugSc1, zeugNS2, zeugNS3, zeugNS4,
+    BitVec.ofNat 32 0, .rax, .rbx,
+    ⟨.call32 (BitVec.ofNat 32 0), 5⟩, ⟨.push64 .rax, 1⟩,
+    ⟨.pop64 .rbx, 1⟩, ⟨.ret, 1⟩, zeugMc, zeugNmp,
+    (zeugSc1.register Register.rax), (ripNach zeugS.rip 5),
+    hokc, rfl, zeug_call_schreibt, zeugOben_lesbar, hstepc,
+    hwrp, hlesp, hstepp, hokp, rfl, hrdp, hstepq, hokq, rfl,
+    hdst, hrdr, hstepr, hokr, rfl, hdis, hmem⟩
+
+/-- Return-refusal witness memory: a `ret` byte at 4096 (executable),
+    the stack word 12288 at 8192, and no execute permission at 12288. -/
+def zeugRetSpeicher : Speicher :=
+  { bytes := fun a =>
+      if a.toNat = 4096 then BitVec.ofNat 8 195
+      else if a.toNat = 8192 then BitVec.ofNat 8 0
+      else if a.toNat = 8193 then BitVec.ofNat 8 48
+      else BitVec.ofNat 8 0
+    lesbar := fun _ => true
+    schreibbar := fun _ => true
+    ausfuehrbar := fun a => decide (a.toNat = 4096) }
+
+/-- Return-refusal witness start: `ret` at 4096, stack top at 8192. -/
+def zeugRet : Zustand :=
+  { register := fun q =>
+      if q = Register.rsp then BitVec.ofNat 64 8192 else BitVec.ofNat 64 0
+    flags := zeugFlags
+    rip := BitVec.ofNat 64 4096
+    speicher := zeugRetSpeicher }
+
+/-- Return-refusal witness successor: control at 12288, top at 8200. -/
+def zeugRetS : Zustand := schrittRet zeugRet Register.rsp
+  (zeugRet.register Register.rsp + BitVec.ofNat 64 8)
+  (BitVec.ofNat 64 12288)
+
+/-- NEGATIVE WITNESS (non-executable return): a `ret` popping 12288
+    succeeds as a step, but the target is not executable, so the byte
+    step loudly refuses. -/
+theorem ret_ins_nicht_ausfuehrbar_verweigert_zeuge :
+    ∃ (s s' : Zustand) (ziel : Wort) (d : Decodiert),
+      (laengeOk d.laenge = true) ∧ (d.befehl = .ret) ∧
+      (read64 s.speicher (s.register Register.rsp) = some ziel) ∧
+      (schritt d s = some s') ∧
+      (s.speicher.ausfuehrbar ziel = false) ∧
+      (byteschritt s' = .verweigert) := by
+  have hok : laengeOk (⟨Befehl.ret, 1⟩ : Decodiert).laenge = true := by
+    decide
+  have hrd : read64 zeugRet.speicher (zeugRet.register Register.rsp) =
+      some (BitVec.ofNat 64 12288) := by
+    decide
+  have hstep : schritt (⟨Befehl.ret, 1⟩ : Decodiert)
+      zeugRet = some zeugRetS :=
+    schritt_ret_erfolg _ _ _ hok rfl hrd
+  have hexe : zeugRet.speicher.ausfuehrbar (BitVec.ofNat 64 12288) =
+      false := by
+    decide
+  exact ⟨zeugRet, zeugRetS, BitVec.ofNat 64 12288, ⟨.ret, 1⟩,
+    hok, rfl, hrd, hstep, hexe,
+    ret_ins_nicht_ausfuehrbar_verweigert _ _ _ _ hok rfl hrd hstep
+      hexe⟩
+
+/-- Guard-refusal witness memory: everything below 8192 is a
+    no-write guard; the stack top sits right above it. -/
+def zeugWacheSpeicher : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0
+    lesbar := fun _ => true
+    schreibbar := fun a => decide (8192 ≤ a.toNat)
+    ausfuehrbar := fun _ => false }
+
+/-- Guard-refusal witness start: top at 8192, `rax` holding 7. -/
+def zeugWache : Zustand :=
+  { register := fun q =>
+      if q = Register.rsp then BitVec.ofNat 64 8192
+      else if q = Register.rax then BitVec.ofNat 64 7
+      else BitVec.ofNat 64 0
+    flags := zeugFlags
+    rip := BitVec.ofNat 64 4096
+    speicher := zeugWacheSpeicher }
+
+/-- NEGATIVE WITNESS (guard store): pushing below a write-protected
+    guard loudly refuses the step. -/
+theorem wache_push_verweigert_zeuge :
+    ∃ (s : Zustand) (src : Register) (d : Decodiert),
+      (laengeOk d.laenge = true) ∧ (d.befehl = .push64 src) ∧
+      (schreibbar8 s.speicher
+        (s.register Register.rsp - BitVec.ofNat 64 8) = false) ∧
+      (schritt d s = none) := by
+  have hok : laengeOk
+      (⟨Befehl.push64 Register.rax, 1⟩ : Decodiert).laenge = true := by
+    decide
+  have hguard : schreibbar8 zeugWacheSpeicher
+      (zeugWache.register Register.rsp - BitVec.ofNat 64 8) =
+      false := by
+    decide
+  exact ⟨zeugWache, .rax, ⟨.push64 .rax, 1⟩, hok, rfl, hguard,
+    wache_push_verweigert _ _ _ hok rfl hguard⟩
+
+/-- LAYOUT WITNESS: a concrete fitting layout puts its callee-save
+    slots inside the frame. -/
+theorem belegung_gerettet_schranke_zeuge :
+    ∃ (b : Belegung) (r : Rahmen) (i : Nat),
+      (i < b.gerettet) ∧ (Belegung.passt b r = true) ∧
+        b.gerettetIdx i < r.schlitzZahl := by
+  refine ⟨{ spill := 1, gerettet := 2, stapelArgs := 1 },
+    { basis := 8192, tiefe := 32 }, 1, by decide, by decide, ?_⟩
+  exact belegung_gerettet_schranke _ _ _ (by decide) (by decide)
+
 /- CUTS:
-   - Nested/negative witnesses follow in the next commit.
-   - No new executor, decoder, source or OS claim (see header).
+   - No decoder, TSO bridge, source correspondence, ABI/loader, cost
+     transfer or final-image acceptance is proved here: this module
+     reuses the accepted pilot `schritt`, `Stapel` frame obligations,
+     `Regionen` permissions and `Byteschritt` fetch for frame-chain
+     preservation and guard refusal only. Alignment (`ausgerichtet16`,
+     `rsp8_runter_rauf`) never implies frame or guard validity
+     (`ausrichtung_ohne_rahmen`). Full source-to-final-bytes validation
+     remains OPEN. Interrupts, concurrency, callee-save/entry contracts
+     and external ABI byte correspondence stay OPEN (see `Stapel` CUTS).
 -/
 
 #print axioms rsp8_runter_rauf
@@ -591,5 +816,9 @@ theorem call_ret_wiederhergestellt_zeuge :
 #print axioms belegung_gerettet_schranke
 #print axioms push_pop_wiederhergestellt_zeuge
 #print axioms call_ret_wiederhergestellt_zeuge
+#print axioms verschachtelt_wiederhergestellt_zeuge
+#print axioms ret_ins_nicht_ausfuehrbar_verweigert_zeuge
+#print axioms wache_push_verweigert_zeuge
+#print axioms belegung_gerettet_schranke_zeuge
 
 end Gabbro.Grammatik.X86
