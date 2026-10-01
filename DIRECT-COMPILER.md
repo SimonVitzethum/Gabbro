@@ -104,7 +104,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 09:25 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 10:05 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -118,7 +118,7 @@ Last ledger refresh: **2026-10-01 09:25 UTC**. This is an operational snapshot, 
 | 276 | Final image ABI and loader contract | Merged after review/checks | Historical coordinator review; see report | [report](messung/muse/MUSE-REPORT-276.md) |
 | 277 | Generic source and user-duty bridge | Merged after review/checks | Historical coordinator review; see report | [report](messung/muse/MUSE-REPORT-277.md) |
 | 278 | Floating point and cost preservation | Merged after review/checks | 295: Merged after review/checks | [report](messung/muse/MUSE-REPORT-278.md) |
-| 279 | Pilot byte codec and generic round-trip | Committed candidate; review/integration pending | 297: Committed candidate; review/integration pending | [task](lanes/279.md) |
+| 279 | Pilot byte codec and generic round-trip | Merged after review/checks | 297: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-279.md) |
 | 280 | Pilot Rust encoder and decoder | Stopped: Lean first; draft retained | Historical coordinator review; see report | [task](lanes/280.md) |
 | 281 | Independent foundation and byte-contract review | Merged after review/checks | 295: Merged after review/checks | [report](messung/muse/MUSE-REPORT-281.md) |
 | 282 | Integer families beyond the pilot | Merged after review/checks | 298: Merged after review/checks | [report](messung/muse/MUSE-REPORT-282.md) |
@@ -129,17 +129,18 @@ Last ledger refresh: **2026-10-01 09:25 UTC**. This is an operational snapshot, 
 | 287 | One typed IR and source-linked lowering foundation | Agent working | 303: scheduled | [task](lanes/287.md) |
 | 288 | Invariant-derived optimisation on actual source semantics | Agent working | 304: scheduled | [task](lanes/288.md) |
 | 289 | Disjoint byte-memory commutation | Merged after review/checks | 305: Merged after review/checks | [report](messung/muse/MUSE-REPORT-289.md) |
-| 290 | Packed integer lane model for future SIMD | Committed candidate; review/integration pending | 306: scheduled | [task](lanes/290.md) |
-| 291 | Checked relocation arithmetic and byte patching | Committed candidate; review/integration pending | 307: Committed candidate; review/integration pending | [task](lanes/291.md) |
+| 290 | Packed integer lane model for future SIMD | Committed candidate; review/integration pending | 306: Committed candidate; review/integration pending | [task](lanes/290.md) |
+| 291 | Checked relocation arithmetic and byte patching | Committed candidate; review/integration pending | 307: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/291.md) |
 | 292 | Independent source and invariant trust-boundary review | Merged after review/checks | 308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-292.md) |
 | 293 | Independent concurrency granularity and target bridge review | Merged after review/checks | 308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-293.md) |
 | 294 | Independent optimiser and full-binary obligation review | Merged after review/checks | 308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-294.md) |
-| 309 | Stack frames and ABI memory obligations | Agent working | 313: scheduled | [task](lanes/309.md) |
-| 310 | Call-log obligations for source inlining | Agent working | 314: scheduled | [task](lanes/310.md) |
-| 311 | Range-justified integer strength reduction | Committed candidate; review/integration pending | 315: scheduled | [task](lanes/311.md) |
+| 309 | Stack frames and ABI memory obligations | Committed candidate; review/integration pending | 313: Committed candidate; review/integration pending | [task](lanes/309.md) |
+| 310 | Call-log obligations for source inlining | Committed candidate; review/integration pending | 314: Committed candidate; review/integration pending | [task](lanes/310.md) |
+| 311 | Range-justified integer strength reduction | Committed candidate; review/integration pending | 315: Committed candidate; review/integration pending | [task](lanes/311.md) |
 | 312 | Checked target regions and allocation ceiling | Committed candidate; review/integration pending | 316: Committed candidate; review/integration pending | [task](lanes/312.md) |
-| 317 | Single pilot instruction access extraction | Agent working | 318: scheduled | [task](lanes/317.md) |
+| 317 | Single pilot instruction access extraction | Committed candidate; review/integration pending | 318: scheduled | [task](lanes/317.md) |
 | 319 | Byte-memory fetch decode and actual instruction step | Waiting for accepted dependencies | 320: scheduled | [task](lanes/319.md) |
+| 323 | Detailed instruction optimisation and fast compilation design | Agent working | 324: Prepared | [task](lanes/323.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -221,6 +222,9 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
   and emission passed 338 translations, 53 comparisons and 2 reverse probes.
   The pin-only repair then passed the complete Lean rebuild and CTEXT guardian;
   Rust/emitter implementation is unchanged by that repair. ASan was not run.
+- 2026-10-01: lane **279**, Pilot byte codec and generic round-trip, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-279.md). <!-- x86-merged:279 -->
+- 2026-10-01: integration of candidate(s) [291] failed the local proof/build gate after independent review 307; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:307 -->
+- 2026-10-01: checked master `552f0ec8` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:552f0ec8a56a15661ba22c8b5d5016694d5793d7 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
