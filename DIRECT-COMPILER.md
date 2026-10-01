@@ -223,7 +223,7 @@ Last ledger refresh: **2026-10-01 13:42 UTC**. This is an operational snapshot, 
 | 431 | Continuous Lean proof reserve: ValidationBudget | Merged after review/checks | 479: Merged after review/checks | [report](messung/muse/MUSE-REPORT-431.md) |
 | 432 | Continuous Lean proof reserve: RegionSeparation | Merged after review/checks | 480: Merged after review/checks | [report](messung/muse/MUSE-REPORT-432.md) |
 | 433 | Continuous Lean proof reserve: ObservationProjection | Committed candidate; review/integration pending | 481: Incomplete; preserved; integration gate rejected; repair/re-review required | [task](lanes/433.md) |
-| 434 | Continuous Lean proof reserve: HardwareAssumptions | Committed candidate; review/integration pending | 482: Committed candidate; review/integration pending | [task](lanes/434.md) |
+| 434 | Continuous Lean proof reserve: HardwareAssumptions | Merged after review/checks | 482: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-434.md) |
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Agent working | 483: scheduled | [task](lanes/435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
 
@@ -470,6 +470,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **486**, Independent exact-candidate review of 406, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-486.md). <!-- x86-merged:486 -->
 - 2026-10-01: lane **428**, Continuous Lean proof reserve: ParallelMoves, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-428.md). <!-- x86-merged:428 -->
 - 2026-10-01: lane **476**, Independent exact-candidate review of 428, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-476.md). <!-- x86-merged:476 -->
+- 2026-10-01: lane **434**, Continuous Lean proof reserve: HardwareAssumptions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-434.md). <!-- x86-merged:434 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
