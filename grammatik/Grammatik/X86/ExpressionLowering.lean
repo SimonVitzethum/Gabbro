@@ -715,6 +715,191 @@ theorem senkung_ohne_ueberlauf_sub {D : Deklaration} {Γ : Ctx} {Λ : List (Res 
   rw [hval]
   exact intWort_sint _ (by omega) (by omega)
 
+/-! ## Witness: a table-carrying declaration, source evaluation, and
+    fetched-byte execution with a memory-changing surrounding run. -/
+
+/-- Witness declaration: one int-typed table (written by the single
+    function), no globals, no locks. Mirrors the `Profil.zeigeD` shape. -/
+def ZeugeD : Deklaration where
+  Tab := Unit
+  decTab := inferInstance
+  count := fun _ => 4
+  Feld := fun _ => Unit
+  decFeld := fun _ => inferInstance
+  typ := fun _ _ => .int 0 255
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some () | _ => none
+  Glob := Empty
+  decGlob := inferInstance
+  gtyp := fun e => nomatch e
+  nutzlast := fun e => nomatch e
+  atomar := fun e => nomatch e
+  geteilt := fun _ => false
+  ggeteilt := fun e => nomatch e
+  Lock := Empty
+  decLock := inferInstance
+  rang := fun e => nomatch e
+  maskiert := fun e => nomatch e
+  Marke := Empty
+  decMarke := inferInstance
+  stufen := fun e => nomatch e
+  braucht := fun _ => []
+  gbraucht := fun e => nomatch e
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 0
+  sigNr := fun _ =>
+    { params := []
+      erg := none
+      gruende := 0
+      haelt := []
+      schreibt := fun _ => true
+      gschreibt := fun e => nomatch e
+      konsumiert := []
+      produziert := [] }
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun e => nomatch e
+  invs := []
+  Ax := Empty
+  aparams := fun e => nomatch e
+  aerg := fun e => nomatch e
+  aschreibt := fun e => nomatch e
+  agschreibt := fun e => nomatch e
+  Reg := Empty
+  rtyp := fun e => nomatch e
+  rklasse := fun e => nomatch e
+  spiegel := fun e => nomatch e
+  rzusage := fun e => nomatch e
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun g => nomatch g
+
+/-- Witness context: one integer variable in `0 .. 100`. -/
+def ZeugeCtx : Ctx := [.int 0 100]
+
+/-- Witness atoms: the variable and the literal `12`. -/
+def ZeugeAtomA : Expr ZeugeD ZeugeCtx [] (.int 0 100) := .var .hier
+
+def ZeugeAtomB : Expr ZeugeD ZeugeCtx [] (.int 12 12) := .lit 12
+
+/-- Witness expression: `x + 12`, hence `12 .. 112`. -/
+def ZeugeAusdruck : Expr ZeugeD ZeugeCtx [] (.int 12 112) :=
+  .add (.var .hier) (.lit 12)
+
+/-- Witness environment: `x = 30`. -/
+def ZeugeUmgebung : Env ZeugeD ZeugeCtx :=
+  .cons ⟨30, by decide, by decide⟩ .nil
+
+/-- Witness world: all table bytes zero. -/
+def ZeugeWelt : World ZeugeD where
+  slots := fun _ _ _ => ⟨0, by decide, by decide⟩
+  globs := fun e => nomatch e
+  spur := []
+
+/-- SOURCE EVALUATION: `30 + 12 = 42` in the single source model. -/
+theorem zeuge_auswertung :
+    (eval ZeugeWelt ZeugeAusdruck ZeugeWelt ZeugeUmgebung).n = 42 := rfl
+
+/-- The single function writes the single table (non-degenerate program). -/
+theorem zeuge_schreibt : ∃ (f : ZeugeD.Fn) (t : ZeugeD.Tab),
+    (ZeugeD.signatur f).schreibt t = true :=
+  ⟨(), (), rfl⟩
+
+/-- Witness register assignment: the source variable lives in `r10`. -/
+def ZeugeAbb : ∀ (τ : Ty), Var ZeugeCtx τ → Register := fun _ _ => .r10
+
+/-- Witness register file: `r10` holds the source value 30, `rbx` the data
+    base 8192, everything else zero. -/
+def ZeugeReg : Register → Wort :=
+  fun q => if q = Register.r10 then intWort 30
+    else if q = Register.rbx then BitVec.ofNat 64 8192
+    else BitVec.ofNat 64 0
+
+/-- The witness expression lowers to exactly these three instructions. -/
+theorem zeuge_senkung :
+    senkFrag ZeugeAbb ZeugeAusdruck Register.rax Register.rcx =
+      [Befehl.movReg64 Register.rax Register.r10,
+       Befehl.movImm64 Register.rcx (intWort 12),
+       Befehl.addReg64 Register.rax Register.rcx] := rfl
+
+/-- Environment representation holds on the witness registers. -/
+theorem zeuge_umgebung : EnvRepr ZeugeUmgebung ZeugeReg ZeugeAbb := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+/-- Register freshness holds: no variable lives in `rax`/`rcx`. -/
+theorem zeuge_frisch : Frisch ZeugeAbb Register.rax Register.rcx := by
+  refine ⟨fun τ x => ⟨?_, ?_⟩, by decide⟩
+  · show Register.r10 ≠ Register.rax
+    decide
+  · show Register.r10 ≠ Register.rcx
+    decide
+
+/-- Witness program: the three lowered instructions plus a store of the
+    result through `rbx` (the memory-changing surrounding step). -/
+def ZeugeProg : List Befehl :=
+  [Befehl.movReg64 Register.rax Register.r10,
+   Befehl.movImm64 Register.rcx (intWort 12),
+   Befehl.addReg64 Register.rax Register.rcx,
+   Befehl.store64 Register.rbx Register.rax (BitVec.ofNat 32 0)]
+
+/-- Witness program bytes from the canonical encodings. -/
+def ZeugeBytes : List Byte := (ZeugeProg.map encode).flatten
+
+/-- Witness memory: program bytes at 4096 (executable), data cell at 8192
+    (readable/writable) -- the `Byteschritt` layout vocabulary reused. -/
+def ZeugeSpeicher : Speicher :=
+  { bytes := bytesAusProg ZeugeBytes 4096
+    lesbar := ketteDaten
+    schreibbar := ketteDaten
+    ausfuehrbar := ketteExec }
+
+/-- Witness start state: lowered code at 4096, data cell at 8192. -/
+def ZeugeStart : Zustand :=
+  { register := ZeugeReg
+    flags := witnessFlags
+    rip := BitVec.ofNat 64 4096
+    speicher := ZeugeSpeicher }
+
+/-- FETCHED-VALUE witness: three byte steps from actual memory put the
+    exact source value 42 into `rax`. -/
+theorem zeuge_bytes_wert :
+    ausgangReg Register.rax (laufBytes 3 ZeugeStart) = some (intWort 42) := by
+  decide
+
+/-- MEMORY-CHANGING surrounding run: the fourth fetched byte step stores
+    `rax` through `rbx`, observably changing the data cell from zero. -/
+theorem zeuge_bytes_speicher :
+    ausgangByte (BitVec.ofNat 64 8192) (laufBytes 4 ZeugeStart) =
+      some (natByte 42) ∧
+    ZeugeStart.speicher.bytes (BitVec.ofNat 64 8192) = BitVec.ofNat 8 0 := by
+  decide
+
+/-- The fetched run observably changes memory (non-degenerate run). -/
+theorem zeuge_lauf_aendert_speicher :
+    ∃ a : Adresse, ausgangByte a (laufBytes 4 ZeugeStart) ≠
+      some (ZeugeStart.speicher.bytes a) := by
+  refine ⟨BitVec.ofNat 64 8192, ?_⟩
+  rw [zeuge_bytes_speicher.1, zeuge_bytes_speicher.2]
+  decide
+
+/-- PLANTED FETCHED REFUSAL: forging the executed opcode byte (137 to 0)
+    admits no transition -- the changed byte governs the run. -/
+def ZeugeBytesFalsch : List Byte := ZeugeBytes.set 1 (natByte 0)
+
+def ZeugeStartFalsch : Zustand :=
+  { ZeugeStart with speicher :=
+    { ZeugeSpeicher with bytes := bytesAusProg ZeugeBytesFalsch 4096 } }
+
+theorem zeuge_byte_faelschung_verweigert :
+    ausgangRip (byteschritt ZeugeStartFalsch) = none := by
+  decide
+
 /- CUTS:
     Conversion homomorphism (`intWort_add/sub`), the signed roundtrip
     (`intWort_sint`), the lowering-correctness theorems, the overflow-bound
