@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 21:10 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 21:15 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -259,7 +259,7 @@ Last ledger refresh: **2026-10-01 21:10 UTC**. This is an operational snapshot, 
 | 598 | Overnight: Checked validator to loaded fetched execution | Merged after review/checks | 610: Merged after review/checks | [report](messung/muse/MUSE-REPORT-598.md) |
 | 599 | Overnight: Direct typed-source expression to pilot machine code | Merged after review/checks | 611: Merged after review/checks | [report](messung/muse/MUSE-REPORT-599.md) |
 | 600 | Overnight: Invariant-derived instruction selection with byte execution | Merged after review/checks | 612: Merged after review/checks | [report](messung/muse/MUSE-REPORT-600.md) |
-| 601 | Overnight: Flag dependencies across actual decoded control flow | Agent working | 613: scheduled | [task](lanes/601.md) |
+| 601 | Overnight: Flag dependencies across actual decoded control flow | Committed candidate; review/integration pending | 613: Committed candidate; review/integration pending | [task](lanes/601.md) |
 | 602 | Overnight: Code and relocation preservation under real data stores | Merged after review/checks | 614: Merged after review/checks | [report](messung/muse/MUSE-REPORT-602.md) |
 | 603 | Overnight: Whole-word grouping under actual trace exclusion | Agent working | 615: scheduled | [task](lanes/603.md) |
 | 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Merged after review/checks | [report](messung/muse/MUSE-REPORT-604.md) |
@@ -268,15 +268,15 @@ Last ledger refresh: **2026-10-01 21:10 UTC**. This is an operational snapshot, 
 | 620 | Automatic coordinator takeover on missing foreground heartbeat | Merged after review/checks | 621: Merged after review/checks | [report](messung/muse/MUSE-REPORT-620.md) |
 | 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Merged after review/checks | [report](messung/muse/MUSE-REPORT-622.md) |
 | 624 | Direct-source closure: FloatSourceObservations | Agent working | 625: scheduled | [task](lanes/624.md) |
-| 626 | Direct-source closure: FloatEntryState | Committed candidate; review/integration pending | 627: Agent working | [task](lanes/626.md) |
+| 626 | Direct-source closure: FloatEntryState | Committed candidate; review/integration pending | 627: Committed candidate; review/integration pending | [task](lanes/626.md) |
 | 628 | Direct-source closure: SourceAssignmentLowering | Agent working | 629: scheduled | [task](lanes/628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
-| 632 | Direct-source closure: SourceValidatorConnection | Agent working | 633: scheduled | [task](lanes/632.md) |
+| 632 | Direct-source closure: SourceValidatorConnection | Committed candidate; review/integration pending | 633: Agent working | [task](lanes/632.md) |
 | 634 | Direct-source closure: SourceCodeFrame | Committed candidate; review/integration pending | 635: Committed candidate; review/integration pending | [task](lanes/634.md) |
 | 636 | Required failover slot lifetime and safe role handback | Merged after review/checks | 637: Merged after review/checks | [report](messung/muse/MUSE-REPORT-636.md) |
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Merged after review/checks | 641: Merged after review/checks | [report](messung/muse/MUSE-REPORT-640.md) |
-| 642 | Recover preserved IR research draft from recorded edits after clone removal | Agent working | 643: scheduled | [task](lanes/642.md) |
+| 642 | Recover preserved IR research draft from recorded edits after clone removal | Committed candidate; review/integration pending | 643: Committed candidate; review/integration pending | [task](lanes/642.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -674,6 +674,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **637**, Independent deployment-scope failover review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-637.md). <!-- x86-merged:637 -->
 - 2026-10-01: lane **640**, Independent coordinator control-plane takeover and cleanup integration audit, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-640.md). <!-- x86-merged:640 -->
 - 2026-10-01: lane **641**, Independent exact review of 640, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-641.md). <!-- x86-merged:641 -->
+- 2026-10-01: publication batch checks passed for `5449d84f`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
