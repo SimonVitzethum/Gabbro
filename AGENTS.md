@@ -49,7 +49,7 @@ a remote build machine, this file wins for execution.*
 **What may be said:** "The goal theorem is proved over the model, with a witness and
 non-degeneracy." **What may NOT be said:** "Gabbro is verified." The checker inside the statement
 is the Lean Bool `Akzeptiert`, not the Rust checker, and the bridge to the C is only partly built.
-README §5 says exactly this; keep it that way.
+The [proof-status section](README.md#proved-and-not-proved) says exactly this; keep it that way.
 
 ## 2. The goal theorem — what a newcomer must know
 

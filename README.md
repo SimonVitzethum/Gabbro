@@ -1,358 +1,149 @@
 # Gabbro
 
-> **Already proven in Lean, not just proposed.** Gabbro is an actively developed systems
-> programming language with a Rust implementation and a machine-checked Lean 4 formalisation
-> of its core language model and safety properties: the goal theorem
-> (`gabbro_ziel : GabbroZiel`) is proved over the model, with a witness on a real two-thread
-> program. What that covers — and what it does not — is stated in §5.
+Gabbro is a systems programming language for writing verified operating
+systems — Caprock is the reason it exists — with a Rust implementation and a
+Lean 4 model of its core language and safety properties.
 
-> **The long-term usability goal is to make formally verified systems programming
-> approximately as accessible as writing ordinary low-level software in languages such as
-> Zig.** Users should not need a proof assistant for routine safety properties; the language
-> design and the verifier discharge those, leaving programmers with application logic,
-> explicit contracts, and named hardware assumptions. Verification does not become invisible —
-> its practical cost comes down to something close to conventional systems programming.
+> **Gabbro's goal: the user proves only their own logic and named hardware
+> assumptions; the language carries the rest — on a multicore kernel with DMA.**
 
-**A systems language that carries the proof plumbing, so that verifying an operating system
-costs a fraction of what it costs today.** The current backend emits C11 plus inline assembly.
-The selected verification target is a direct x86-64 backend with Lean validation of the final
-machine bytes; the full backend and validator are not implemented. The Lean
-foundations are in progress; the [direct-compiler work and progress record](DIRECT-COMPILER.md)
-tracks the models, optimisation proofs, later Rust implementation and remaining closure. The compiler is safe
-Rust (`forbid(unsafe_code)`) with zero external dependencies.
+Memory safety, race freedom, contracts where claimed — in concurrent runs too —
+and time are carried by the language and proved once over its model. Per
+program the user owes only what is explicit and named: the application logic
+(`LogikPflicht`, at every budget, against every value a shared atomic read may
+return) and the hardware assumptions (`HardwareAnnahmen`). OS, runtimes,
+thread startup and locks are never trusted or assumed — they are user/binding
+logic with checked contracts and implementations.
 
-The point is not to have another language. The point is to write an operating system in it —
-**Caprock** — and then verify that system cheaply.
+Proved today is narrower than the goal; exactly one place states it: the
+header of [`Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean). Where
+they disagree, the header wins. The honest sentence is **"the goal theorem is
+proved over the model, with a witness and non-degeneracy"** — not "Gabbro is
+verified" ([details](#proved-and-not-proved)).
 
-> **License: AGPL-3.0** ([LICENSE](LICENSE)) — what you write in Gabbro is not a derived work:
-> your program, the generated C and the binaries are yours, under any license you like.
-> **The condition applies only if you call the result formally verified or secure**: then the
-> generated files say which checker said so. Claim nothing and you owe nothing.
-> Details in [LICENSE-ADDENDUM.md](LICENSE-ADDENDUM.md).
+The working backend emits C11 plus inline assembly. The selected target is a
+direct x86-64 backend with Lean final-byte validation — `-O3`-like from
+invariants, fast including validation, for arbitrary OS and freestanding
+profiles. Lean X86 helpers exist but are not the complete hardware model;
+backend and validation are not implemented ([record](DIRECT-COMPILER.md)).
 
-> **How this repository is written — AI agents, and where the human stands.**
-> Implementation, checking and coordination are done by AI agents; the idea, the planning, the
-> priorities and the oversight rest with one human — Simon decides what counts as reached, what
-> is refused, and what gets merged. Every commit names its model (`Co-Authored-By`).
-> **Nothing counts as done because an agent said so:** every reported number is re-measured at
-> merge time, guardians run in both directions, and a claim bigger than its proof gets sent back.
+## Quick start
 
----
+Zero external dependencies — the three crates need `std` and each other only;
+**Rust 1.86 or newer** (`f64::next_up`/`next_down` stable there). **`cc` is
+needed at run time, not at build time** — only `gabbro build` calls it.
 
-## 0. Check the central claim yourself — two commands, five minutes
+```bash
+git clone https://github.com/SimonVitzethum/Gabbro && cd Gabbro
+cargo install --path crates/gabbro-cli     # `gabbro` into ~/.cargo/bin
+gabbro check beispiele/01-tabelle.gab
+gabbro build beispiele/172-prozess-ohne-libc.bau
+gabbro passes                              # what each pass does and does NOT do
+gabbro templates                           # the proof-template register
+gabbro obligations beispiele/*.gab         # what a HUMAN still owes — counted, not discharged
+cargo test --no-fail-fast                  # the test corpus
+./instrumente/abnahme.py                   # every guardian, one command, per-guardian verdict
+./instrumente/pruefe-emission.sh           # every emitted unit must compile
+./instrumente/mutiere-pruefer.py           # damage one rule at a time: 422 mutations, one anchor each
+isabelle build -d beweise -c Gabbro        # the machine-checked templates
+```
+`gabbro passes` also prints what each pass does **not** check — unchecked silence must never look green.
 
-**Everything below is a claim. This section is how you stop taking it on trust.** The one
-sentence this project stands on is proved in Lean 4 over a model of the language:
+## Proof check in two commands
+
+**Everything above is a claim — this is how you stop taking it on trust,** proved
+in Lean 4 over the language model (thread machine over GX, shared-atomic rely):
 
 ```bash
 git clone https://github.com/SimonVitzethum/Gabbro && cd Gabbro/grammatik
-lake build Grammatik.Zielsatz.Beweis Grammatik.Zielsatz.Proben Grammatik.Zielsatz.ProbenW1
+lake build Grammatik.Zielsatz.Beweis Grammatik.Zielsatz.Proben Grammatik.Zielsatz.ProbenW1 Grammatik.Zielsatz.BeweisAtomar
 lake env lean NachpruefungZiel.lean     # prints the axioms of every sentence named below
 ```
 
-**Measured, not estimated** (2026-09-15, 16 cores, from an empty build directory): the build is
-**4 min 33 s** wall clock (90 modules, peak **2,3 GB**); the check itself takes **0,16 s**.
-`elan`/`lake` come from [leanprover/elan](https://github.com/leanprover/elan); the toolchain
-(Lean 4.33.1) pins itself from `grammatik/lean-toolchain`. **No mathlib, no other dependency.**
-The full library (`lake build`, 249 modules incl. translation validation) takes **5 min 06 s**
-and peaks at **6,51 GB** — it fits on an ordinary laptop. (Before 2026-09-15 it needed
-25 minutes and 72 GB; cause and repair are in [`dokumente/OFFEN.md`](dokumente/OFFEN.md) O13.)
-
-What the second command prints, and what each line is worth:
+`elan`/`lake` come from [leanprover/elan](https://github.com/leanprover/elan); Lean
+4.33.1 pins itself from `grammatik/lean-toolchain` — **no mathlib, no other dependency.**
 
 | Printed line | What it means |
 |---|---|
-| `Zielsatz.gabbro_ziel depends on axioms: [propext, Classical.choice, Quot.sound]` | the goal theorem uses **only Lean's standard three** — no `sorryAx`, no axiom of ours. **A `sorryAx` here would mean it is not proved** |
-| `…gabbro_ziel_zeuge…` | a two-thread program that moves memory satisfies it, so the sentence is not empty |
-| `…probeA_widerlegt_gilt…`, `…probeD_…`, `…w1_abgelehnt…` | programs the checker **refuses** — a checker that accepts everything would make the theorem worthless |
-| `…schlusssatz…`, `…kette_104_zeuge…`, `…kette_108_zeuge…`, `…K124.schlusssatz_124…` | existing C-backend translation validation, source text → model → emitted C; no x86 byte validation (needs the full build, not the cheap check) |
+| `gabbro_ziel … [propext, Classical.choice, Quot.sound]` | only Lean's standard three — no `sorryAx`, no axiom of ours. **A `sorryAx` here would mean it is not proved** |
+| `…_zeuge` | a two-thread program that moves memory satisfies it, so the sentence is not empty |
+| `…probeA/D…`, `w1_abgelehnt` | programs the checker **refuses** — a checker that accepts everything would make the theorem worthless |
+| `schlusssatz…`, `kette_104/108…`, `K124…` | existing C-backend translation validation, source text → model → emitted C; no x86 byte validation |
 
-**What those lines do NOT say:** an axiom list proves a *proof* valid, not that the *statement*
-is the right one — that is a reading job. The statement is written to be read:
-[`grammatik/Grammatik/Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean), whose header
-carries the one assumption list and the NOT-CLAIMED list. The honest sentence is
-**"the goal theorem is proved over the model, with a witness and non-degeneracy"** — not
-"Gabbro is verified". The checker in the theorem is the **Lean** checker; the Rust tool is
-partly bridged to it by the existing C-backend translation validation (§5). The selected
-source-to-x86-byte chain has not been built.
+**What those lines do NOT say:** an axiom list proves a *proof* valid, not the
+*statement*. The three axioms prove no model fidelity and remove no premise:
+checked program, user logic, hardware assumptions, runtime stay owed.
 
----
+## How the guarantee is meant to work
 
-## 1. The problem
+The Rust checker and emitter will **not** be verified: the compiler is untrusted
+and shows its work — **every accepted program gets a Lean-checked certificate:**
 
-seL4 is the honest reference point: a verified microkernel at roughly **20 lines of proof per
-line of code** — single-core, no DMA.
+> **Lean accepts the certificate ⟹ (1)** the source parses to `P`, **(2)** `P`
+> satisfies the model, **(3)** every execution of the validated final image
+> refines `P` / GX — bytes, layout, relocations, entries, conventions.
 
-Most of such a proof is not the interesting part. It is **plumbing**: index bounds, overflow,
-aliasing, framing, lock order, data races, termination, phase, leafness, publication,
-refinement. The same eleven classes in every kernel ever written.
+The five pieces ([plan](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md) §§0–5):
+**T3** Lean parser (source → `P`; items in, generics and round-trip in flight);
+**T1** model certificates per constructor; **T4** x86 semantics and image
+decoding (planned — C semantics stay as backend evidence); **T2** final-byte
+correspondence validator (planned — `korrOk` is C-only); **T5** proof templates
+for runtime, entries, locks, recurring duties (register below). Concurrency
+reuses W / GX; the per-access x86-TSO bridge is open — a proved validator
+refuses bad output, still requiring the new validator and its proof.
 
-Gabbro's claim is that plumbing belongs to the **language**, not to the proof:
+## Status
 
-> **Gabbro's goal: the user proves only their own logic and named hardware assumptions; the
-> language carries the rest — on a multicore kernel with DMA.**
->
-> What is proved today is narrower, and it is stated in exactly one place: the header of
-> [`grammatik/Grammatik/Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean).
-> Where this README and that header disagree, the header wins.
-
-**Multicore and DMA are set, not optional.** The pairing (`publishes`/`awaits`) is load-bearing,
-and the `dma` space carries real statements — a statement against the most convenient of all
-simplifications.
-
-## 2. Why this is not a solver problem
-
-The other way is an SMT solver: annotations plus Z3 (Verus, Dafny do that well). Gabbro does
-not, for two reasons.
-
-**A refusal is better than a timeout.** Where a solver gets slow, a grammar says which
-construct it will not carry and why, by name. The compiler ships **472 diagnostics** and no
-search procedure.
-
-**A template falls once, not per program.** Every carried construct turns into one generator
-obligation — proved a single time, over the semantics — instead of one obligation per program.
-That amortisation is the whole economic argument, and it is measurable rather than rhetorical.
-
-Here is what a program looks like. A table whose writes are guarded by a linear token, with
-exactly one place in the world that can mint that token:
-
-```gabbro
-module beispiel::eigner_mit_erzeuger {
-
-table Plaetze count 8 owner Marke {
-    slot {
-        benutzt : bool,
-    }
-}
-
-linear ghost type Marke;
-
-extern fn erste() -> Marke effects { pure } costs <= 1 ops;
-extern fn lege_ab(m : Marke) effects { consumes m } costs <= 8 ops;
-
-impl fn schreibe(m : Marke, i : index into Plaetze)
-    effects { writes Plaetze.slots, consumes m }
-    costs   <= 32 ops
-{
-    Plaetze.slots[i].benutzt = true;
-    lege_ab(m);
-}
-
-impl fn runde(i : index into Plaetze)
-    effects { writes Plaetze.slots }
-    costs   <= 64 ops
-{
-    let m = erste();
-    schreibe(m, i);
-}
-
-}
-```
-
-No annotation on that program says "no data race" or "no double free". The declarations say who
-writes what, what it costs, and that the token moves exactly once — the rest follows from the
-grammar.
-
-## 3. How the proof works: the checker is not trusted
-
-The Rust checker and emitter — around 110 000 lines — will **not** be verified. Instead the
-compiler is treated as untrusted and made to show its work: **for every program it accepts, it
-emits a certificate, and Lean checks that certificate.** Today that holds for the programs
-listed CERTIFIED in
-[`grammatik/Grammatik/Zertifikat/REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt);
-every other accepted program is listed there by name as not claimed, and a test fails if one is
-neither. The closing theorem the design aims at:
-
-> **Lean accepts the certificate ⟹**
-> **(1)** the source text parses to a program `P`, and
-> **(2)** `P` satisfies the model — types, safety, lock order, and
-> **(3)** every execution of the validated final x86-64 image refines `P` / GX.
-
-The selected target checks executable bytes, data layout, relocations, entries and calling
-conventions. It does not stop at an instruction listing. See the
-[active translation-validation plan](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md) §§0–5.
-
-**The intended failure mode is one-way:** a proved validator refuses incorrect compiler output.
-That property still requires the new validator and its soundness proof. Today's model
-certificates alone do not establish binary correspondence.
-
-**Intended trust base:** the Lean kernel, reviewed semantic definitions and named hardware
-behaviour, including execution of the validated image. OS services, runtime routines, thread
-startup and locks remain user/binding logic with checked contracts and implementations.
-The current C backend still depends on its C compiler and the premises of its C-chain theorems.
-
-### The five pieces
-
-| | what it establishes | status |
-|---|---|---|
-| **T3 — Parser in Lean** | source text → `P`, so the certificate starts from the source | lexer, expressions, statements and items are in; generics and the print/parse round-trip are in flight |
-| **T1 — Model certificates** | `P` satisfies the typing and safety rules, per constructor | all 40 expression and all 50 statement constructors carried in Lean; Rust prints statement certificates for 47 of 253 bodies |
-| **T4 — x86-64 semantics and decoding** | selected instructions, byte-addressed memory, per-access TSO and decoding the executable image | planned; existing C semantics and their guardians remain evidence for the current C backend |
-| **T2 — Correspondence validator** | final bytes, layout and all executed code refine the source model | x86 validator planned; existing `korrOk` proves C-specific correspondence only |
-| **T5 — Proof templates** | runtime, entries, locks and recurring duties have generic target correspondence | 12 of 23 existing templates machine-checked (`gabbro schablonen`); their x86 implementation correspondence remains open |
-
-### The concurrent half: reuse the model, prove the x86 bridge
-
-Gabbro already has a concurrent W / GX model with weak-memory views and a rely for shared
-atomic reads. The current goal theorem carries its guarantees over that model. Reuse it as
-the source-side foundation and prove that every permitted per-access x86-TSO execution of the
-validated image refines W / GX. This bridge is open; the model theorem alone does not establish
-hardware correspondence. Whole instruction sequences cannot silently become atomic model steps.
-
-The bridge includes ordinary-access footprints, widths/alignment, store buffers, atomic orders,
-CAS, locks, start/join, interrupts and progress. MMIO and DMA need their declared hardware
-semantics. Existing C concurrency proofs with `DRFSC` / `LaufzeitC` premises remain C-specific.
-
-### Order of work
-
-1. Inventory source operations and all emitter/runtime paths; examples are witnesses.
-2. Fix the x86 instruction profile, byte-memory/TSO semantics and relation to W / GX.
-3. Build a generic source-to-final-bytes pilot while extending the Lean parser/GabbroV bridge.
-4. Prove atomic-order and concrete lock mappings early, including interleavings and progress.
-5. Extend floating point, regions, hardware entries, linking and proved performance profiles.
-6. Close the generic final-image theorem with concurrent witnesses and altered-byte refusals.
-
-## 4. Status
-
-Every figure carries the command that produced it; every one can be re-run. Figures without a
-fresh date were last fully measured on the date beside them.
+Measured snapshot 2026-10-01 — every figure carries its command; provenance and limits in [PROJECT-STATUS](dokumente/PROJECT-STATUS.md).
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 472 diagnostics · `gabbro paesse` |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 481 diagnostics · `gabbro passes` |
 | **Grammar** | **188 EBNF rules**, closed and reachable | vocabulary covers every terminal, 242 / 242 |
-| **Pass register** | **198 sentences over 12 passes — 190 measured, 2 ARGUED, 6 CONJECTURED, 0 proved**, claiming 419 diagnostic codes. *A written sentence is not a proved one* | `gabbro paesse --je-satz` |
-| **Proof templates** | **23, of which 12 are machine-checked**; all **15** Isabelle theories also exist in Lean (`grammatik/Grammatik/Isabelle/`, checked by every build); new proofs go to Lean only | Isabelle2025-2, [`beweise/`](beweise/) |
-| **Corpus** | 152 clean examples, 838 poison files *(file counts 2026-09-30; 942 tests counted 2026-09-14, lane 177)* | `cargo test --no-fail-fast` |
-| **Emission** | **250 of 250 units emit and compile** under `cc -std=c11 -Wall -Wextra -Werror`, at `-O0` and `-O2`, with the same result; 37 are also executed against a handwritten version *(run 2026-09-14)* | `./instrumente/pruefe-emission.sh` |
-| **Guardians** | 56, *(count 2026-09-30, plus the server lane's `pruefe-seiten-zurueck.sh`; 55 on 2026-09-29; 52 on 2026-09-28, plus the GabbroV lane's `pruefe-beweis-tor.sh`, `pruefe-sperre-beweis.sh` and `pruefe-vorlagen.sh`)* each with deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict | `./instrumente/abnahme.py` |
-| **Mutation** | **386 of 413 anchors hold**, and a run catches 375 of 376 valid mutations *(measured 2026-09-14)* | `./instrumente/mutiere-pruefer.py` |
-| **Blind spots** | **73 blind · 175 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindstellen` |
-| **Usability** | 7.5 % of the teaching corpus and 12.7 % of real code **may fall** — split derivable / redundant / load-bearing | `gabbro zeremonie` |
+| **Proof templates** | **34, of which 23 are machine-checked** | `gabbro templates` |
+| **Corpus** | 157 clean examples, 856 poison files | `cargo test --no-fail-fast` |
+| **Backend** | working C11 backend (`cc -std=c11 -Wall -Wextra -Werror`, `-O0` and `-O2`); every emitted unit is compiled, part executed against a handwritten twin | `./instrumente/pruefe-emission.sh` |
+| **Guardians** | 56, each with deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict; **75 of 89 instruments carry all five requirements** | `./instrumente/abnahme.py` |
+| **Blind spots** | **73 blind · 175 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindspots` |
+| **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites **may fall** — 2431 and 110 clause sites | `gabbro ceremony` |
 
-The 15 theories in [`beweise/`](beweise/) hold 3 512 lines of Isar — the amortisation argument
-as a *measurement*: the figure falls when a proved construct gets used, and rises when one gets
-proved ahead of use.
+The 15 theories in [`beweise/`](beweise/) hold 3512 lines of Isar (Isabelle2025-2); new proofs go to Lean only.
 
-## 5. What is not true yet
+## Proved and not proved
 
-This section exists because the alternative is that a reader has to find it out.
+- **Proved over the model:** `theorem gabbro_ziel : GabbroZiel`
+  ([statement](grammatik/Grammatik/Zielsatz/Spec.lean), proof
+  `Zielsatz/BeweisAtomar.lean`, tags `milestone-2026-09-15-gabbro-ziel` and
+  `-zielsatz-bestaetigt`), six review rounds; round 6: *"the goal with named
+  gaps — no unnamed gap found"*. The checker inside is the **Lean** checker.
+- The C-model chain is closed for five programs by one generic theorem
+  (concurrently one, under named premises); GabbroV derives premise (b) in Lean
+  from the source for five programs. These do not certify x86 binaries.
 
-- **No pass has been proved individually.** 198 written sentences, 190 of them *measured* —
-  a poison probe falls or a mutation is caught. That measures the implementation on checked
-  cases, never the rule, and never all cases.
-- **What IS proved is the goal theorem over the MODEL** — and only there. `theorem gabbro_ziel :
-  GabbroZiel` (statement
-  [`grammatik/Grammatik/Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean), proof
-  `Zielsatz/Beweis.lean`, tag `milestone-2026-09-15-gabbro-ziel`), with a witness on a
-  non-degenerate two-thread program. `#print axioms gabbro_ziel`: `propext`, `Classical.choice`,
-  `Quot.sound`. Six review rounds repaired P1–P3 (empty obligation, free parameters, payload
-  races), F1–F3 (float stop, global deadlock, stop classes), G1 (decoding of sums/floats/fn
-  pointers) and W1 (answers at empty types); round 6 found *"the goal with named gaps — no
-  unnamed gap found"* (tag `milestone-2026-09-15-zielsatz-bestaetigt`, SATZKARTE §22–§25).
-  - The checker in the statement is the **Lean** checker; the Rust checker's bridge to it and to
-    the binary is translation validation (T1–T5), and it is open.
-  - What may be said: *the goal theorem is proved over the model, with a witness and
-    non-degeneracy.* Not: *Gabbro is verified.*
-- **The existing C-model chain is closed for five programs, by ONE generic theorem** (`schlusssatz`,
-  single-threaded; `beispiele/104` and `108` by hand, `130`, `69` and `73` through the generic
-  `ketteAllg` over table-free units, `bruecke/Bruecke/Quelle.lean`). Every other program is open —
-  chain count 5 of 148 (`instrumente/zaehle-kette.py --lean`, 2026-09-30). Concurrent translation
-  validation of the C model (stage b) is closed for one program (`schlusssatz_124`) under its
-  named premises and open in general. These results do not certify x86 binaries. The selected
-  direct x86 backend and final-byte validation chain are not implemented.
-- **GabbroV's proofs reach the goal theorem for five programs, and for every source the Lean
-  front end accepts the statement is COMPUTED, not printed.** For a unit the Lean parser
-  elaborates (`beispiele/104`, `108`, `130`, `69`, `73`; 5 of 148, `instrumente/zaehle-bruecke.py`),
-  premise (b) is *derived* in Lean from GabbroV's duties (`bruecke/`,
-  `messung/GABBROV-BRUECKE-REPORT.md`, `messung/PARSER-LANE-REPORT.md`), so chain and bridge are
-  both closed end to end (5 of 148). The general statement is `nutzer_aus_quelle`
-  (`bruecke/Bruecke/Quelle.lean`, axioms standard): `Pflichten src` is computed in Lean from the
-  source text and `gabbro prove --template --source` writes a person's file from it. For every
-  other program (b) is still an assumption; units with a shared atomic are not bridged.
-- **Most accepted programs are not judged in Lean at all.** Of 199 accepted programs under
-  `beispiele/`, 23 have a generated certificate; the other 176 are refused by the exporter and
-  listed by name in
-  [`grammatik/Grammatik/Zertifikat/REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt).
-  Even a certified program rests on the unverified exporter and, outside the closed chains, on
-  the reading that the model is the C.
-- **The proof-to-code ratio has no measured value** — and a number without a source list does
-  not belong in a document.
-- **Caprock is not written in Gabbro yet.** Fragments are, with origin and verdict in
-  [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md). Full Caprock with a green run is the
-  acceptance criterion, and it is not close.
+Not proved, still open: no pass proved individually (sentences measured on
+checked cases, never the rule); complete Rust backend validation, final-byte
+validation and hardware/concurrency correspondence **OPEN**; the direct x86
+backend is not implemented — never call the compiler or a binary verified.
+Most accepted programs are not judged in Lean at all; the rest are refused by
+the exporter and listed by name as not claimed in
+[`REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt). Caprock is not
+written in Gabbro yet; fragments, with origin and verdict, in
+[`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md).
 
-## 6. Try it
+## Documents
 
-Zero external dependencies: the three crates depend on `std` and on each other, and on nothing
-else.
+- [DIRECT-COMPILER.md](DIRECT-COMPILER.md) — direct x86-64 compiler record ([design](DIRECT-COMPILER-DESIGN.md), [optimiser](grammatik/OPTIMIZER.md), [portability](dokumente/x86/TARGET-PORTABILITY.md))
+- [Tutorial](dokumente/TUTORIAL.md), [open items](TODO.md), [goal statement](grammatik/Grammatik/Zielsatz/Spec.lean), [provenance](dokumente/PROJECT-STATUS.md)
 
-```
-git clone https://github.com/SimonVitzethum/Gabbro
-cd Gabbro
-cargo install --path crates/gabbro-cli     # `gabbro` into ~/.cargo/bin
-gabbro check beispiele/01-tabelle.gab
-```
+> **How this repository is written — AI agents, and where the human stands.**
+> Agents do implementation, checking and coordination; Simon decides what counts
+> as reached, refused, merged. Every commit names its model (`Co-Authored-By`).
+> **Nothing counts because an agent said so:** numbers are re-measured at merge
+> time; a claim bigger than its proof gets sent back.
 
-**Rust 1.86 or newer** (`f64::next_up`/`next_down` became stable there).
-**`cc` is needed at run time, not at build time** — only `gabbro build` calls it.
-
-```
-cargo run --bin gabbro -- check beispiele/*.gab        # check files
-cargo run --bin gabbro -- passes                       # what each pass does and does NOT do
-cargo run --bin gabbro -- templates                    # the proof-template register
-cargo run --bin gabbro -- obligations beispiele/*.gab  # what a HUMAN still owes -- counted, not discharged
-cargo test --no-fail-fast                              # the test corpus
-./instrumente/abnahme.py                               # every guardian, one command, per-guardian verdict
-./instrumente/mutiere-pruefer.py                       # damage one rule at a time: 413 mutations, one anchor each
-./instrumente/pruefe-emission.sh                       # every emitted unit must compile
-isabelle build -d beweise -c Gabbro                    # the machine-checked templates
-```
-
-`gabbro passes` prints what each pass does **not** check. A tool that lets unchecked silence
-look like a green result is a false green.
-
-## 7. How to read this folder
-
-**Every number in these documents carries the command that produced it.** A number without a
-source list is not wrong — it is uncheckable, and that is the more expensive state.
-
-| File | Role |
-|---|---|
-| [`DIRECT-COMPILER.md`](DIRECT-COMPILER.md) | direct compiler, Lean-first optimisation/validation work and maintained progress |
-| [`DIRECT-COMPILER-DESIGN.md`](DIRECT-COMPILER-DESIGN.md) | planned x86 instruction forms, invariant optimisation and fast compilation/validation design |
-| [`grammatik/OPTIMIZER.md`](grammatik/OPTIMIZER.md) | complete planned Lean optimiser architecture, proofs, passes and contributor handoff |
-| [`dokumente/DESIGN.md`](dokumente/DESIGN.md) | design decisions and their reasons |
-| [`dokumente/TUTORIAL.md`](dokumente/TUTORIAL.md) | getting started and checked examples |
-| [`TODO.md`](TODO.md) | open items only, cut by the stages of the plan |
-| [`DONE.md`](dokumente/DONE.md) | finished items only — every entry carries its evidence |
-| [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | the language: mechanisms, declaration rules, pairing, entry, boot, induction |
-| [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) | the grammar, and what deliberately does not exist |
-| [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | the proof architecture — and the emitter's failure record, in full |
-| [`dokumente/PLAN.md`](dokumente/PLAN.md) | the way there: phases with two-sided gates |
-| [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md) | everything that was run |
-| [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md) | Caprock areas in Gabbro, with origin and verdict |
-| [`dokumente/HISTORIE.md`](dokumente/HISTORIE.md) | what was already wrong about this design, with the lesson |
-| [`dokumente/WERKZEUGKASTEN.md`](dokumente/WERKZEUGKASTEN.md) | working rules from our own mistakes, each with the damage it was paid for |
-
-Three sentences this folder keeps coming back to:
-
-> **A number without a source list does not belong in a document.**
-
-> **A rule with no mutation against it is not covered, it is undamageable.**
-
-> **Not refused is not confirmed.**
-
-## 8. Versions and language
-
-```
-0.0.1    now, the first tag
-0.1.0    beta
-1.0.0    alpha
-```
-
-*That names `1.0.0` "alpha" after `0.1.0` "beta" — the reverse of the usual order, and intended.*
-
-The working language of this repository is **English** — sources, documents, commit messages and
-diagnostics. Identifiers inside the example corpus are German and stay that way; they are data
-for the grammar, not prose.
+> **License: AGPL-3.0** ([LICENSE](LICENSE)) — what you write in Gabbro is not
+> a derived work: program, generated C and binaries are yours, under any
+> license. **The condition applies only if you call the result formally
+> verified or secure**: then the generated files say which checker said so.
+> Claim nothing and you owe nothing ([addendum](LICENSE-ADDENDUM.md)). Working
+> language is **English**; example identifiers stay German — grammar data.
