@@ -313,6 +313,43 @@ theorem spur_verlauf_waechst (n0 n : SpurKnoten)
     · intro a m hm
       exact spur_schritt_erhaelt _ _ step a m (hkeep_mid a m hm)
 
+/-- **FIFO issuance reaches the grown history.** After two issues from an
+    empty buffer and a flush, the OLDER value is both the canonical byte
+    and a history message at its actual value, while every previous
+    message is preserved. The buffer shape pins the flushed entry to
+    `⟨a, v⟩`, so the history equation `hh` is the flush constructor's
+    equation at the actual oldest entry. -/
+theorem spur_fifo_aelteste (s s1 s2 : TSOZustand) (n2 n3 : SpurKnoten)
+    (c : Nat) (a b : Adresse) (v w : Byte)
+    (h1 : issueByte s c a v = some s1)
+    (h2 : issueByte s1 c b w = some s2)
+    (hempty : s.puffer c = [])
+    (heq : n2.tso = s2)
+    (h : flushKern n2.tso c = some n3.tso)
+    (hh : n3.hist a = n2.hist a ++
+      [Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (n2.blick c) a n2.frisch v]) :
+    n3.tso.mem.bytes a = v ∧
+      (Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (n2.blick c) a n2.frisch v) ∈ n3.hist a ∧
+      ∀ m ∈ n2.hist a, m ∈ n3.hist a := by
+  have e1 := issue_haengt_an s s1 c a v h1
+  have e2 := issue_haengt_an s1 s2 c b w h2
+  rw [hempty] at e1
+  simp only [List.nil_append] at e1
+  have hbuf : n2.tso.puffer c = ⟨a, v⟩ :: [⟨b, w⟩] := by
+    rw [e1] at e2
+    rw [heq]
+    simpa using e2
+  refine ⟨flush_schreibt_kopf n2.tso n3.tso c h ⟨a, v⟩ [⟨b, w⟩] hbuf,
+    ?_, ?_⟩
+  · rw [hh]
+    refine List.mem_append.mpr (Or.inr ?_)
+    simp
+  · intro m hm
+    rw [hh]
+    exact List.mem_append.mpr (Or.inl hm)
+
 /- CUTS:
     - So far only the node/step vocabulary; preservation, freshness,
       forwarding and the joint witness follow as increments.
