@@ -308,6 +308,143 @@ theorem vecSub_allein (b : Breite) (x x' y y' : Vektor) (i : Nat)
     laneNat b (vecSub b x y) i = laneNat b (vecSub b x' y') i := by
   rw [laneNat_sub b x y i hi, laneNat_sub b x' y' i hi, hx, hy]
 
+/-- Low 64 bits of a packed word. -/
+def vLo (v : Vektor) : Wort := BitVec.ofNat 64 (v.toNat % 2 ^ 64)
+
+/-- High 64 bits of a packed word. -/
+def vHi (v : Vektor) : Wort := BitVec.ofNat 64 (v.toNat / 2 ^ 64)
+
+/-- Reassemble a packed word from its halves. -/
+def vecJoin (lo hi : Wort) : Vektor :=
+  BitVec.ofNat 128 (lo.toNat + hi.toNat * 2 ^ 64)
+
+/-- Splitting then rejoining is the identity. -/
+theorem vecJoin_split (v : Vektor) : vecJoin (vLo v) (vHi v) = v := by
+  have hlt := v.isLt
+  have hdiv : v.toNat / 2 ^ 64 < 2 ^ 64 := by
+    rw [Nat.div_lt_iff_lt_mul (by decide : 0 < 2 ^ 64)]
+    have hprod : (2 : Nat) ^ 64 * 2 ^ 64 = 2 ^ 128 := by rw [← Nat.pow_add]
+    rw [hprod]
+    exact hlt
+  apply BitVec.eq_of_toNat_eq
+  show (BitVec.ofNat 128 ((vLo v).toNat + (vHi v).toNat * 2 ^ 64)).toNat = v.toNat
+  unfold vLo vHi
+  rw [BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_mod,
+    Nat.mod_eq_of_lt hdiv, Nat.mul_comm _ (2 ^ 64),
+    Nat.mod_add_div, Nat.mod_eq_of_lt hlt]
+
+/-- Second chunk address: eight bytes past the base. -/
+def vecHiAddr (a : Adresse) : Adresse := addrOff a 8
+
+/-- No-wrap over both eight-byte chunks: sixteen bytes from the base. -/
+def OhneUmbruch16 (a : Adresse) : Prop := a.toNat + 16 ≤ 2 ^ 64
+
+/-- Machine address addition is Nat addition below the wrap bound. -/
+theorem addrOff_nat (a : Adresse) (i : Nat) (h : a.toNat + i < 2 ^ 64) :
+    (addrOff a i).toNat = a.toNat + i := by
+  unfold addrOff
+  have ha := a.isLt
+  have hi64 : i % 2 ^ 64 = i := Nat.mod_eq_of_lt (by omega)
+  rw [BitVec.toNat_add, BitVec.toNat_ofNat, hi64, Nat.mod_eq_of_lt (by omega)]
+
+/-- Footprint disjointness is symmetric. -/
+theorem Disjunkt_symm (a b : Adresse) (h : Disjunkt a b) : Disjunkt b a := by
+  intro i j hi hj he
+  exact h j i hj hi he.symm
+
+/-- The two eight-byte chunks of one vector access are disjoint. -/
+theorem vecChunks_disjoint (a : Adresse) (h : OhneUmbruch16 a) :
+    Disjunkt a (vecHiAddr a) := by
+  intro i j hi hj he
+  unfold OhneUmbruch16 at h
+  have e1 := addrOff_nat a i (by omega)
+  have e0 : (vecHiAddr a).toNat = a.toNat + 8 := addrOff_nat a 8 (by omega)
+  have e2 := addrOff_nat (vecHiAddr a) j (by omega)
+  have h2 := congrArg BitVec.toNat he
+  rw [e1, e2] at h2
+  omega
+
+/-- Store a packed word as two ordered canonical 64-bit chunks: the low
+    half first, then the high half eight bytes past the base. -/
+def vecWrite (m : Speicher) (a : Adresse) (v : Vektor) : Option Speicher :=
+  match write64 m a (vLo v) with
+  | none => none
+  | some m1 => write64 m1 (vecHiAddr a) (vHi v)
+
+/-- Load a packed word as two ordered canonical 64-bit chunks. -/
+def vecRead (m : Speicher) (a : Adresse) : Option Vektor :=
+  match read64 m a, read64 m (vecHiAddr a) with
+  | some lo, some hi => some (vecJoin lo hi)
+  | _, _ => none
+
+/-- A successful vector store preserves all permissions: only bytes change. -/
+theorem vecWrite_perm (m m1 m' : Speicher) (a : Adresse) (v : Vektor)
+    (h1 : write64 m a (vLo v) = some m1)
+    (h2 : write64 m1 (vecHiAddr a) (vHi v) = some m') :
+    m'.lesbar = m.lesbar ∧ m'.schreibbar = m.schreibbar ∧
+      m'.ausfuehrbar = m.ausfuehrbar := by
+  obtain ⟨a1, b1, c1⟩ := write64_erhaelt_berechtigungen m a (vLo v) m1 h1
+  obtain ⟨a2, b2, c2⟩ := write64_erhaelt_berechtigungen m1 (vecHiAddr a) (vHi v) m' h2
+  exact ⟨by rw [a2, a1], by rw [b2, b1], by rw [c2, c1]⟩
+
+/-- A refused low chunk refuses the whole vector store. -/
+theorem vecWrite_verweigert_lo (m : Speicher) (a : Adresse) (v : Vektor)
+    (h : schreibbar8 m a = false) : vecWrite m a v = none := by
+  unfold vecWrite
+  rw [write64_verweigert m a (vLo v) h]
+
+/-- A refused high chunk refuses the whole vector store after the low write. -/
+theorem vecWrite_verweigert_hi (m m1 : Speicher) (a : Adresse) (v : Vektor)
+    (h1 : write64 m a (vLo v) = some m1)
+    (h : schreibbar8 m1 (vecHiAddr a) = false) : vecWrite m a v = none := by
+  unfold vecWrite
+  rw [h1]
+  exact write64_verweigert m1 (vecHiAddr a) (vHi v) h
+
+/-- READ-AFTER-WRITE: two successful chunks read back as the packed word.
+    Needs readability at both chunks and no-wrap across both footprints. -/
+theorem vecRead_nach_write (m m1 m' : Speicher) (a : Adresse) (v : Vektor)
+    (h1 : write64 m a (vLo v) = some m1)
+    (h2 : write64 m1 (vecHiAddr a) (vHi v) = some m')
+    (hrd1 : lesbar8 m a = true) (hrd2 : lesbar8 m (vecHiAddr a) = true)
+    (hno : OhneUmbruch16 a) :
+    vecRead m' a = some v := by
+  have hle1 : lesbar8 m1 (vecHiAddr a) = true := by
+    have h := lesbar8_nach_schreiben m m1 a (vecHiAddr a) (vLo v) h1
+    rwa [hrd2] at h
+  have rhi := read64_nach_write64 m1 m' (vecHiAddr a) (vHi v) h2 hle1
+  have rlo : read64 m' a = some (vLo v) := by
+    have base := read64_nach_write64 m m1 a (vLo v) h1 hrd1
+    have hframe := read64_rahmen m1 m' (vecHiAddr a) a (vHi v) h2
+      (Disjunkt_symm a (vecHiAddr a) (vecChunks_disjoint a hno))
+    rw [hframe]
+    exact base
+  simp only [vecRead, rlo, rhi, vecJoin_split]
+
+/-- A vector store changes nothing outside its two footprints. -/
+theorem vecWrite_rahmen (m m1 m' : Speicher) (a x : Adresse) (v : Vektor)
+    (h1 : write64 m a (vLo v) = some m1)
+    (h2 : write64 m1 (vecHiAddr a) (vHi v) = some m')
+    (hau1 : ∀ k : Nat, k < 8 → x ≠ addrOff a k)
+    (hau2 : ∀ k : Nat, k < 8 → x ≠ addrOff (vecHiAddr a) k) :
+    m'.bytes x = m.bytes x := by
+  have e1 := write64_rahmen m m1 a x (vLo v) h1 hau1
+  have e2 := write64_rahmen m1 m' (vecHiAddr a) x (vHi v) h2 hau2
+  rw [e2, e1]
+
+/-- NO VECTOR ATOMICITY: after the first chunk, memory is observably mixed --
+    the low half already carries the new value while the high half still
+    carries the old bytes. A concurrent observer may see this state. -/
+theorem vecWrite_teilt (m m1 : Speicher) (a : Adresse) (v : Vektor)
+    (h1 : write64 m a (vLo v) = some m1)
+    (hrd1 : lesbar8 m a = true)
+    (hno : OhneUmbruch16 a) :
+    read64 m1 a = some (vLo v) ∧
+      read64 m1 (vecHiAddr a) = read64 m (vecHiAddr a) := by
+  refine ⟨read64_nach_write64 m m1 a (vLo v) h1 hrd1, ?_⟩
+  exact read64_rahmen m m1 a (vecHiAddr a) (vLo v) h1
+    (vecChunks_disjoint a hno)
+
 /- CUTS:
     Skeleton only: lane accessors, lane operations, memory carriage,
     correctness/no-carry theorems, witnesses and the SIMD refusal are open.
