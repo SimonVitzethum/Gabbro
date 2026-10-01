@@ -65,6 +65,65 @@ vectors 0x40/0x41, trampoline, BSS/stack sections), `kern.c` (existence).
 
 None. Prose contract only; CUTS block in the document states nothing is proved.
 
+## Review repairs (2026-10-01, coordinator review)
+
+Five findings, all fixed in `dokumente/x86/IMAGE-ABI.md`, no other file
+touched:
+
+1. File vs virtual addresses (§1 rewritten): the old `base + file offset +
+   addend` formula is gone. File ranges and virtual ranges are now related by
+   one checked per-section mapping (file containment, virtual nonwrap,
+   canonicality, `filesz <= memsz`, disjointness in both spaces, alignment);
+   relative displacements are computed from the actual virtual next-RIP.
+   Relocation kinds declare their operand field inside the decoded
+   instruction; a site in a matching field is the legal case. §4 and §15 now
+   refuse the same thing: sites with fields invalid for their kind (wrong
+   range/width, overlapping opcode bytes, between instructions, in data,
+   wrong section kind), never every instruction-interior site.
+2. Two-mode bias contract (§4 rewritten, no third case): mode F (pinned
+   absolute virtual addresses: hosted static, bare-metal 1 MiB identity,
+   module post kernel relocation pass) vs mode P (quantified `base` with
+   checked alignment/range/nonwrap/canonicality side conditions plus the
+   syntactic condition that no absolute site outside a bias-carrying
+   relocation depends on `base`; hosted PI only). No loader-only fixup exists
+   in either mode; an unlisted loader fixup breaks sec. 11 mapping equality.
+3. Software is never hardware (§11 rewritten, §12 extended, doc audited):
+   loader/kernel/page-table software correctness is checked by outputs
+   (bytes, mapping equality, entry predicates) or validated code, never booked
+   as a hardware assumption. Hardware assumptions are silicon-only (mapped-byte
+   execution per admitted profile, named device/timing behaviour). The
+   `os_bindung_*` family plus storage/page-return/clone-register premises are
+   marked as historical source-level gaps (kernel software behaviour taken as
+   premise), explicitly non-hardware, with replacement by checked binding
+   logic as the stated direction. Timing-bound mentions in §14 now say
+   silicon-only; the §8/§2/§5 clone/storage premises carry the sec. 12
+   qualifier.
+4. Proved vs open separated (§§5/9/10/17): abstract results (`CTicket.lean`
+   over `sperrAbstrakt`) and C-target machine-checked template instances are
+   named as what exists; x86-byte correspondence for EVERY template
+   (`tor.*`, `faden.*`, `arena.dyn`, `sperre.ticket`, `start.nolibc`, module
+   lifecycle) and for the LKMM mapping table is stated as unproved wave-B
+   work. LKMM "proved table" wording removed. Handwritten pieces: inventory
+   plus reason exempts nothing; executed body bytes need validation plus
+   refinement or the image is refused (OPEN). Interrupt paths need
+   source-correct save/call/restore refinement, not manifest rows (§5 entry
+   bullet now states the checked sequences).
+5. Loader domain scoping (§11, §15): the validated execution domain is the
+   image sections plus declared stacks/reserved ranges; the surrounding kernel
+   (module case) and loader mappings (hosted case) are outside it -- never
+   assumed safe, reachable only at listed external-call sites with three
+   cumulative obligations (checked declaration, proved x86 stub
+   correspondence, explicitly named software-side premise). The module does not
+   require the address space to hold only its text; any other escape from
+   validated bytes is refused.
+
+Repair-pass verification: `rg` audit over the doc -- no remaining
+`base + file offset` formula, no "instruction middle" refusal, no "proved
+template/LKMM" claim, no software booked as hardware; section references
+verified (`entries` = sec. 5, loader contract = sec. 11, gaps = sec. 17).
+Docs-only repair: no Lean/Rust change, so no `./lean-bau` / `./cargo-pruef`
+run (wave rules: file/claim checks, not gratuitous builds).
+
 ## What remains open / possible errors in the task
 
 - The doc generalises `metall.ld`'s fixed layout to hosted/PI/module image
