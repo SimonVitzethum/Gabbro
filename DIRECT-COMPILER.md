@@ -160,7 +160,7 @@ Last ledger refresh: **2026-10-01 11:37 UTC**. This is an operational snapshot, 
 | 342 | Practical-performance Lean wave B2: OverlapRefusal | Merged after review/checks | 380: Merged after review/checks | [report](messung/muse/MUSE-REPORT-342.md) |
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
 | 344 | Practical-performance Lean wave B4: FenceDrain | Committed candidate; review/integration pending | 382: Agent working | [task](lanes/344.md) |
-| 345 | Practical-performance Lean wave C1: TableLayout | Merged after review/checks | 383: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-345.md) |
+| 345 | Practical-performance Lean wave C1: TableLayout | Merged after review/checks | 383: Merged after review/checks | [report](messung/muse/MUSE-REPORT-345.md) |
 | 346 | Practical-performance Lean wave C2: GateStub | Agent working | 384: Committed candidate; review/integration pending | [task](lanes/346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Committed candidate; review/integration pending | 385: Agent working | [task](lanes/347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Committed candidate; review/integration pending | 386: Committed candidate; review/integration pending | [task](lanes/348.md) |
@@ -353,6 +353,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **341**, Practical-performance Lean wave B1: AccessList, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-341.md). <!-- x86-merged:341 -->
 - 2026-10-01: lane **379**, Independent exact-candidate review of 341 AccessList, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-379.md). <!-- x86-merged:379 -->
 - 2026-10-01: lane **345**, Practical-performance Lean wave C1: TableLayout, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-345.md). <!-- x86-merged:345 -->
+- 2026-10-01: lane **383**, Independent exact-candidate review of 345 TableLayout, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-383.md). <!-- x86-merged:383 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
