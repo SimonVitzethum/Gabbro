@@ -75,7 +75,7 @@ from earlier rounds is carried over unexamined.
   by the identical, independently reproducible crash in both clones, so I
   do not count this as forged or insufficient evidence.
 
-## Fresh re-verification of the NEW pinned files (this round)
+## Fresh re-verification of the NEW pinned files (round 3)
 
 1. Verified clone path and branch (`muse/477`); did not read any other clone.
 2. Read OWNER-TASK-429, MUSE-REPORT-429, BUILD-EVIDENCE.json and the full
@@ -144,6 +144,17 @@ from earlier rounds is carried over unexamined.
 ## Defects requiring repair
 
 None. No repair direction to give.
+
+## Round 4 (re-prompt on unchanged pin)
+
+The coordinator re-prompted for a fresh review, but the pinned snapshot is
+byte-identical to round 3: head `af29cbc4`, PATCH 464 lines with the same
+blob hashes (report `9d8e49fb`, umbrella `6e68b11c..9c5db7cf`, module
+`3f6d2b9f`), report 141 lines, evidence 132 lines. No author repair
+landed between round 3 and this prompt, so there is nothing new to inspect.
+I re-ran the queued `./lean-probe` on the pinned module file anyway:
+`0 error(s)`, all 11 `#print axioms` lines unchanged, staged file removed,
+clone clean. The verdict below stands as-is for this exact pin.
 
 ## Scope of acceptance
 
