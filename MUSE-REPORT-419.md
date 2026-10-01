@@ -83,3 +83,34 @@ Nothing material. One note: the task asks for a "standard
 lane while the umbrella link cannot run environmentally; module-level
 `#print axioms` (all standard) is the strongest evidence obtainable
 right now.
+
+## Addendum 2026-10-01 (evening): integration gate failure assessed
+
+The integration gate failed on the merge of this lane with the exact
+evidence quoted in the repair request. Assessment against that evidence:
+
+- The 7 quoted `info:` lines are my module's own `#print axioms`
+  outputs, all `[propext, Quot.sound]` — standard, not errors. They
+  prove `BitCount.lean` itself elaborated inside the integration build.
+- The gate's "2 error lines" are the crash lines (`Lean exited with
+  code 134`, `build failed`), not type errors. The failing target is
+  the `Grammatik` umbrella link in the main checkout, crashing with
+  `failed to create thread` — byte-identical to the environmental
+  failure documented above, including my pre-merge control run
+  (umbrella fails the same way with my import stashed).
+- Fresh local re-checks at addendum time: `./lean-probe
+  grammatik/Grammatik/X86/BitCount.lean` gives **RC=0, 0 errors, 0
+  `sorryAx`, 0 `error(lean…)`**; local `./lean-bau` again builds
+  392/393 (including `BitCount.olean`) and crashes only at the
+  umbrella link with the same thread-creation failure.
+
+Repair made: NONE — there is no defect in the owned files for the
+evidence to point at, and changing proved-green code to work around a
+machine resource failure would be fabrication, not repair. No premise
+was weakened, no guarantee touched, no file outside
+`grammatik/Grammatik/X86/BitCount.lean`, `grammatik/Grammatik.lean`
+(the one import line) and this report was read or modified. The
+concrete blocker is unchanged: the machine cannot link the ~398-module
+`Grammatik` umbrella under current load (thread creation fails);
+integration must be retried when resources allow, and a fresh
+independent review of the unchanged commit is required as stated.
