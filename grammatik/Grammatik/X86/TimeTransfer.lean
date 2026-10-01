@@ -109,6 +109,65 @@ theorem zeitTransfer_kosten_benannt (p : HardwareProfil)
         · exact ⟨c, hkd⟩
         · exact ih t' htl d hmem
 
+/-! ## Refusals.
+
+    The transfer admits no unbounded CAS retry behind a constant bound,
+    no waiting exclusion without exact source correspondence, no
+    CAS-spin exclusion at all, and no prefix whose head form the
+    profile refuses: each is a proved `false` / non-existence from the
+    accepted `kostenSummeOk` refusals and the aggregation equations.
+    Every premise below is used by its proof. -/
+
+/-- An unbounded retry site behind a claimed retry bound refuses
+    transfer admission (a CAS retry loop is unbounded). -/
+theorem zeitTransfer_verweigert_retry (s : CostSummary) (p : HardwareProfil)
+    (k : Nat)
+    (hRetry : s.retryBound = none)
+    (hExpand : s.expand .retryTry = some k) :
+    zeitTransferZulaessig s p = false := by
+  unfold zeitTransferZulaessig
+  have h := kostenSummeOk_verweigert_unbegrenzt s k hRetry hExpand
+  rw [h]
+  simp
+
+/-- A waiting exclusion without exact source correspondence refuses
+    transfer admission: machine waiting counts as excluded only where
+    it corresponds exactly to source-level non-firing. -/
+theorem zeitTransfer_verweigert_ohneQuelle (s : CostSummary)
+    (p : HardwareProfil) (e : Exclusion)
+    (hm : e ∈ s.exclusions)
+    (hq : e.sourceCorresponds = false) :
+    zeitTransferZulaessig s p = false := by
+  unfold zeitTransferZulaessig
+  have h := kostenSummeOk_verweigert_ohneQuelle s e hm hq
+  rw [h]
+  simp
+
+/-- A CAS-spin exclusion refuses transfer admission unconditionally:
+    a lowering-introduced spin has no source counterpart. -/
+theorem zeitTransfer_verweigert_spin (s : CostSummary) (p : HardwareProfil)
+    (e : Exclusion)
+    (hm : e ∈ s.exclusions)
+    (hSpin : e.kind = .casSpin) :
+    zeitTransferZulaessig s p = false := by
+  unfold zeitTransferZulaessig
+  have h := kostenSummeOk_verweigert_spin s e hm hSpin
+  rw [h]
+  simp
+
+/-- OBSTRUCTION: a prefix whose head form carries no named bound admits
+    no successful aggregation -- hence no transfer instance runs on it.
+    A retry/spin step the profile refuses cannot hide behind a
+    zero-cost premise; it stops the whole prefix. -/
+theorem zeitTransfer_verweigert_ohneKosten (p : HardwareProfil)
+    (d : Decodiert) (rest : List Decodiert)
+    (h : schrittKosten p d = none) :
+    ¬ ∃ t, laufKosten p (d :: rest) = some t := by
+  intro ⟨t, ht⟩
+  have hnone := laufKosten_kopf_verweigert p d rest h
+  rw [hnone] at ht
+  cases ht
+
 /- CUTS:
     - Skeleton only: transfer core, refusals and the joint witness follow.
     - No source/target scheduling or IR correspondence (`XCorr`); no
@@ -118,5 +177,9 @@ theorem zeitTransfer_kosten_benannt (p : HardwareProfil)
 #print axioms zeitTransferZulaessig_braucht_ok
 #print axioms zeitTransfer
 #print axioms zeitTransfer_kosten_benannt
+#print axioms zeitTransfer_verweigert_retry
+#print axioms zeitTransfer_verweigert_ohneQuelle
+#print axioms zeitTransfer_verweigert_spin
+#print axioms zeitTransfer_verweigert_ohneKosten
 
 end Gabbro.Grammatik.X86
