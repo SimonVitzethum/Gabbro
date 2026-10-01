@@ -222,11 +222,11 @@ Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, 
 | 430 | Continuous Lean proof reserve: ValidationCache | Merged after review/checks | 478: Merged after review/checks | [report](messung/muse/MUSE-REPORT-430.md) |
 | 431 | Continuous Lean proof reserve: ValidationBudget | Merged after review/checks | 479: Merged after review/checks | [report](messung/muse/MUSE-REPORT-431.md) |
 | 432 | Continuous Lean proof reserve: RegionSeparation | Merged after review/checks | 480: Merged after review/checks | [report](messung/muse/MUSE-REPORT-432.md) |
-| 433 | Continuous Lean proof reserve: ObservationProjection | Committed candidate; review/integration pending | 481: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/433.md) |
+| 433 | Continuous Lean proof reserve: ObservationProjection | Merged after review/checks | 481: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-433.md) |
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Merged after review/checks | 482: Merged after review/checks | [report](messung/muse/MUSE-REPORT-434.md) |
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Agent working | 483: scheduled | [task](lanes/435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
-| 542 | Next bridge wave N9: StackUnwind | Scheduled | 548: scheduled | [task](lanes/542.md) |
+| 542 | Next bridge wave N9: StackUnwind | Agent working | 548: scheduled | [task](lanes/542.md) |
 | 543 | Next bridge wave N16: DecodeFault | Scheduled | 549: scheduled | [task](lanes/543.md) |
 | 544 | Next bridge wave N18: RegionFresh | Waiting for accepted dependencies | 550: scheduled | [task](lanes/544.md) |
 | 545 | Next bridge wave N11: PayloadResidue | Waiting for accepted dependencies | 551: scheduled | [task](lanes/545.md) |
@@ -499,6 +499,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **469**, Independent exact-candidate review of 421, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-469.md). <!-- x86-merged:469 -->
 - 2026-10-01: lane **427**, Continuous Lean proof reserve: RegisterInterference, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-427.md). <!-- x86-merged:427 -->
 - 2026-10-01: lane **475**, Independent exact-candidate review of 427, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-475.md). <!-- x86-merged:475 -->
+- 2026-10-01: lane **433**, Continuous Lean proof reserve: ObservationProjection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-433.md). <!-- x86-merged:433 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
