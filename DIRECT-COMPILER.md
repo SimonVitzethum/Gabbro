@@ -201,7 +201,7 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 409 | Adversarial implementation audit: INVARIANT-LIFETIME | Merged after review/checks | 489: Merged after review/checks | [report](messung/muse/MUSE-REPORT-409.md) |
 | 410 | Adversarial implementation audit: CALL-ABI | Merged after review/checks | 490: Merged after review/checks | [report](messung/muse/MUSE-REPORT-410.md) |
 | 411 | Adversarial implementation audit: DYNAMIC-REGIONS | Merged after review/checks | 491: Merged after review/checks | [report](messung/muse/MUSE-REPORT-411.md) |
-| 412 | Adversarial implementation audit: FLOAT-SIMD | Merged after review/checks | 492: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-412.md) |
+| 412 | Adversarial implementation audit: FLOAT-SIMD | Merged after review/checks | 492: Merged after review/checks | [report](messung/muse/MUSE-REPORT-412.md) |
 | 413 | Adversarial implementation audit: BUDGET-OBSERVATIONS | Agent working | 493: scheduled | [task](lanes/413.md) |
 | 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Agent working | 494: scheduled | [task](lanes/414.md) |
 | 415 | Adversarial implementation audit: END-TO-END-TRUST | Agent working | 495: scheduled | [task](lanes/415.md) |
@@ -444,6 +444,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **411**, Adversarial implementation audit: DYNAMIC-REGIONS, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-411.md). <!-- x86-merged:411 -->
 - 2026-10-01: lane **491**, Independent exact-candidate review of 411, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-491.md). <!-- x86-merged:491 -->
 - 2026-10-01: lane **412**, Adversarial implementation audit: FLOAT-SIMD, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-412.md). <!-- x86-merged:412 -->
+- 2026-10-01: lane **492**, Independent exact-candidate review of 412, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-492.md). <!-- x86-merged:492 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
