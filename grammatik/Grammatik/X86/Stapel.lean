@@ -76,6 +76,79 @@ theorem spitze_ausgerichtet (r : Rahmen)
   rw [hN]
   omega
 
+/-! ## 2. Checked frame save/restore over the shared byte memory. -/
+
+/-- Checked word save into frame slot `idx`: refused outside the frame. -/
+def sichereWort (m : Speicher) (r : Rahmen) (idx : Nat)
+    (v : Wort) : Option Speicher :=
+  if idx < r.schlitzZahl then write64 m (r.schlitzAddr idx) v else none
+
+/-- Checked word load from frame slot `idx`: refused outside the frame. -/
+def ladeWort (m : Speicher) (r : Rahmen) (idx : Nat) : Option Wort :=
+  if idx < r.schlitzZahl then read64 m (r.schlitzAddr idx) else none
+
+/-- ROUND-TRIP: a saved word loads back through a readable slot. Needs
+    readability besides writability, since the permissions are independent. -/
+theorem sichere_lade_rundreise (m m' : Speicher) (r : Rahmen) (idx : Nat)
+    (v : Wort) (hb : idx < r.schlitzZahl)
+    (hwr : sichereWort m r idx v = some m')
+    (hrd : lesbar8 m (r.schlitzAddr idx) = true) :
+    ladeWort m' r idx = some v := by
+  unfold sichereWort at hwr
+  rw [if_pos hb] at hwr
+  unfold ladeWort
+  rw [if_pos hb]
+  exact read64_nach_write64 m m' (r.schlitzAddr idx) v hwr hrd
+
+/-- BOUNDS REFUSAL: a slot past the frame saves nothing. -/
+theorem sichereWort_ausserhalb (m : Speicher) (r : Rahmen) (idx : Nat)
+    (v : Wort) (h : r.schlitzZahl ≤ idx) :
+    sichereWort m r idx v = none := by
+  unfold sichereWort
+  rw [if_neg (Nat.not_lt.mpr h)]
+
+/-- PERMISSION REFUSAL: a write-protected slot saves nothing. -/
+theorem sichereWort_verweigert (m : Speicher) (r : Rahmen) (idx : Nat)
+    (v : Wort) (hb : idx < r.schlitzZahl)
+    (h : schreibbar8 m (r.schlitzAddr idx) = false) :
+    sichereWort m r idx v = none := by
+  unfold sichereWort
+  rw [if_pos hb]
+  exact write64_verweigert m (r.schlitzAddr idx) v h
+
+/-- A save preserves every permission: only bytes change. -/
+theorem sichereWort_erhaelt_berechtigungen (m m' : Speicher) (r : Rahmen)
+    (idx : Nat) (v : Wort) (hb : idx < r.schlitzZahl)
+    (hwr : sichereWort m r idx v = some m') :
+    m'.lesbar = m.lesbar ∧ m'.schreibbar = m.schreibbar ∧
+      m'.ausfuehrbar = m.ausfuehrbar := by
+  unfold sichereWort at hwr
+  rw [if_pos hb] at hwr
+  exact write64_erhaelt_berechtigungen m (r.schlitzAddr idx) v m' hwr
+
+/-- A save changes nothing outside its eight slot bytes. -/
+theorem sichereWort_rahmen (m m' : Speicher) (r : Rahmen) (idx : Nat)
+    (x : Adresse) (v : Wort) (hb : idx < r.schlitzZahl)
+    (hwr : sichereWort m r idx v = some m')
+    (haussen : ∀ k : Nat, k < 8 → x ≠ addrOff (r.schlitzAddr idx) k) :
+    m'.bytes x = m.bytes x := by
+  unfold sichereWort at hwr
+  rw [if_pos hb] at hwr
+  exact write64_rahmen m m' (r.schlitzAddr idx) x v hwr haussen
+
+/-- A load from a disjoint slot survives a save elsewhere. -/
+theorem ladeWort_rahmen (m m' : Speicher) (r : Rahmen) (idx j : Nat)
+    (v : Wort) (hb : idx < r.schlitzZahl) (hbj : j < r.schlitzZahl)
+    (hwr : sichereWort m r idx v = some m')
+    (hdis : Disjunkt (r.schlitzAddr idx) (r.schlitzAddr j)) :
+    ladeWort m' r j = ladeWort m r j := by
+  unfold sichereWort at hwr
+  rw [if_pos hb] at hwr
+  unfold ladeWort
+  rw [if_pos hbj, if_pos hbj]
+  exact read64_rahmen m m' (r.schlitzAddr idx) (r.schlitzAddr j) v
+    hwr hdis
+
 /- CUTS:
     - No instruction semantics, decoder, image mapping, TSO bridge, source
       correspondence, cost transfer or final-image acceptance is proved here.
