@@ -112,7 +112,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 12:20 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 12:30 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -171,7 +171,7 @@ Last ledger refresh: **2026-10-01 12:20 UTC**. This is an operational snapshot, 
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Agent working | 388: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Merged after review/checks | 439: Merged after review/checks | [report](messung/muse/MUSE-REPORT-401.md) |
-| 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Committed candidate; review/integration pending | 403: scheduled | [task](lanes/402.md) |
+| 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Committed candidate; review/integration pending | 403: Committed candidate; review/integration pending | [task](lanes/402.md) |
 | 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Scheduled | 484: scheduled | [task](lanes/404.md) |
 | 405 | Adversarial implementation audit: MEMORY-RANGES | Scheduled | 485: scheduled | [task](lanes/405.md) |
 | 406 | Adversarial implementation audit: DECODE-BOUNDARY | Scheduled | 486: scheduled | [task](lanes/406.md) |
@@ -185,7 +185,7 @@ Last ledger refresh: **2026-10-01 12:20 UTC**. This is an operational snapshot, 
 | 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Scheduled | 494: scheduled | [task](lanes/414.md) |
 | 415 | Adversarial implementation audit: END-TO-END-TRUST | Scheduled | 495: scheduled | [task](lanes/415.md) |
 | 416 | Continuous Lean proof reserve: EffectiveAddress | Agent working | 464: scheduled | [task](lanes/416.md) |
-| 417 | Continuous Lean proof reserve: ConditionalMove | Agent working | 465: scheduled | [task](lanes/417.md) |
+| 417 | Continuous Lean proof reserve: ConditionalMove | Committed candidate; review/integration pending | 465: Agent working | [task](lanes/417.md) |
 | 418 | Continuous Lean proof reserve: BitScan | Agent working | 466: scheduled | [task](lanes/418.md) |
 | 419 | Continuous Lean proof reserve: BitCount | Agent working | 467: scheduled | [task](lanes/419.md) |
 | 420 | Continuous Lean proof reserve: ByteSwap | Agent working | 468: scheduled | [task](lanes/420.md) |
@@ -372,6 +372,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: integration of candidate(s) [350] failed the local proof/build gate after independent review 388; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:388 -->
 - 2026-10-01: lane **439**, Independent exact-candidate review of 401, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-439.md). <!-- x86-merged:439 -->
 - 2026-10-01: publication batch checks passed for `5b98b78d`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: publication batch checks passed for `c937ebe4`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
