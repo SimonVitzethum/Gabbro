@@ -463,9 +463,109 @@ def witM : Speicher :=
 /-- The witness slot address: layout base 4096, offset 0. -/
 def witA : Adresse := slotAddr 4096 0
 
+/-- The witness field type. -/
+theorem witHT : witD.typ () () = .int 0 100 := rfl
+
+/-- The witness contract writes the table. -/
+theorem witHw : witV.schreibt () = true := rfl
+
+/-- The witness table needs no guards. -/
+theorem witHL : darf witD () [] :=
+  fun _ h => False.elim (List.not_mem_nil h)
+
+/-- The witness target memory after the word write. -/
+def witM' : Speicher :=
+  { witM with bytes := writeBytes witM witA (zahlWort witVal) }
+
+/-- JOINT WITNESS for `rep_schritt_bleibt`: every premise holds jointly
+    on the witness declaration — one table that the witness function
+    writes (`witD.schreibt`), a reached one-step run that changes the
+    source slot `0 → 42` and the mapped target bytes — and so does the
+    conclusion. Sums, floats, bools, globals and function pointers stay
+    outside the fragment (the planted `repOk_*_verweigert` refusals). -/
+theorem rep_schritt_bleibt_zeuge :
+    ∃ (σ' : World witD) (ρ' : Env witD []) (m' : Speicher),
+      repOk (witD.typ () ()) 4096 16 0 = true ∧
+      witD.schreibt () () = true ∧
+      (eval witSL witI witSL Env.nil).n = 0 ∧
+      (cast (congrArg (Wert witD) witHT)
+        (eval witSL witE witSL Env.nil) :
+        Wert witD (.int 0 100)) = witVal ∧
+      execStmt witO 0 witR
+        (Stmt.assignSlot (l := false) () () witI witE witHw witHL)
+        witSigma Env.nil = .ok σ' ρ' ∧
+      write64 witM witA (zahlWort witVal) = some m' ∧
+      lesbar8 witM witA = true ∧
+      RepSlot () 0 () 0 100 witHT witA m' σ' ∧
+      (∃ w, read64 m' witA = some w ∧ wortZahl 0 100 w = some witVal) ∧
+      (witSigma.slots () 0 ()).n = 0 ∧
+      (σ'.slots () 0 ()).n = 42 ∧
+      witM.bytes witA ≠ m'.bytes witA := by
+  have hOk : repOk (witD.typ () ()) 4096 16 0 = true := by decide
+  have hWr : witD.schreibt () () = true := rfl
+  have hk : (eval witSL witI witSL Env.nil).n = 0 := rfl
+  have hv : (cast (congrArg (Wert witD) witHT)
+      (eval witSL witE witSL Env.nil) : Wert witD (.int 0 100)) =
+      witVal := rfl
+  have hRd : lesbar8 witM witA = true := by decide
+  have hLese : witSL = witSigma.lese [] (witI.orte ++ witE.orte) := rfl
+  have hBefore : (witSigma.slots () 0 ()).n = 0 := rfl
+  have hExecFull : ∃ σ' ρ', execStmt witO 0 witR
+      (Stmt.assignSlot (l := false) () () witI witE witHw witHL)
+      witSigma Env.nil = .ok σ' ρ' := by
+    simp only [execStmt]
+    exact ⟨_, _, rfl⟩
+  obtain ⟨σ', ρ', hExec⟩ := hExecFull
+  have hTgt : write64 witM witA (zahlWort witVal) = some witM' := by
+    simp only [write64, witM']
+    rw [if_pos (by decide : schreibbar8 witM witA = true)]
+  have hMain := rep_schritt_bleibt witO 0 witR () () 0 100 witHT
+    4096 16 0 hOk witI witE witHw witHL witSigma Env.nil witSL hLese
+    0 witVal hk hv witA witM witM' σ' ρ' hExec hTgt hRd
+  have hByte : writeBytes witM witA (zahlWort witVal) witA =
+      wortByte (zahlWort witVal) 0 := by
+    have h := writeBytesN_hit witM witA (zahlWort witVal) 8 0
+      (by decide) (by decide)
+    rw [addrOff_null] at h
+    unfold writeBytes
+    exact h
+  have hBytes : witM.bytes witA ≠ witM'.bytes witA := by
+    show BitVec.ofNat 8 0 ≠ writeBytes witM witA (zahlWort witVal) witA
+    rw [hByte]
+    decide
+  refine ⟨σ', ρ', witM', hOk, hWr, hk, hv, hExec, hTgt, hRd, hMain.1,
+    hMain.2, hBefore, ?hAfter, hBytes⟩
+  case hAfter =>
+    cases hExec
+    rfl
+
 /- CUTS:
-    - The execStmt-facing main theorem, the refusals and the joint
-      witness are still to come.
+    - Bounded integer fragment only: one `.int lo hi` slot (with
+      `0 <= lo` and `hi < 2 ^ 64` checked by `repOk`) stored as one
+      little-endian 8-byte word. Sums, floats, bools, globals, statics,
+      arenas, atomics, gates and function pointers have no representation
+      (`repOk` refuses every non-`.int` type; the planted
+      `repOk_bool_verweigert` refusal pins it).
+    - Single-slot writes only: `rep_schritt_bleibt` covers one
+      `Stmt.assignSlot` step plus its matching `write64`; `rep_fremd_*`
+      cover all disjoint carriers across the same pair of steps.
+      Multi-slot statements (`schreibBytes`), calls, lock open/close,
+      loops and reason channels are outside.
+    - No validator soundness: `repOk`/`layoutOk` are decided admission
+      predicates; `valX86_sound` and the source-to-final-bytes closing
+      theorem stay OPEN (QUELLBRUECKE phase-B schema).
+    - No concurrency claim: footprints are sequential byte footprints;
+      per-access TSO refinement stays with the TSO bridge (the
+      `leseEreignisse`/`schreibEreignisse` hooks and `Disjunkt` are the
+      handoff vocabulary).
+    - No hardware claim: refusal is validator admission, never an
+      invented hardware fault. Only named silicon/device/time behaviour
+      is hardware; loader/binding logic stays user logic with contracts.
+    - No OS/loader assumption: layout bases are taken as checked numbers
+      against decided Bools; the loaded-image mapping contract is OPEN.
+    - No int->ptr conversion enters the language: slot addresses are
+      target-side `natAdresse` computations over accepted layout bases,
+      never source values cast to pointers.
 -/
 
 #print axioms zahlWort
@@ -473,5 +573,22 @@ def witA : Adresse := slotAddr 4096 0
 #print axioms zahlWort_wortZahl
 #print axioms repOk
 #print axioms repOk_klingt
+#print axioms feldOff
+#print axioms slotOff
+#print axioms slotAddr
+#print axioms schreibSlot_hit
+#print axioms schreibSlot_fremd_tab
+#print axioms schreibSlot_fremd_schluessel
+#print axioms schreibSlot_fremd_feld
+#print axioms rep_fremd_tab
+#print axioms rep_fremd_schluessel
+#print axioms rep_fremd_feld
+#print axioms disjunkt_von_layout
+#print axioms rep_schritt_bleibt
+#print axioms repOk_zu_gross_verweigert
+#print axioms repOk_bool_verweigert
+#print axioms repOk_ausserhalb_verweigert
+#print axioms region_ueberlapp_verweigert
+#print axioms rep_schritt_bleibt_zeuge
 
 end Gabbro.Grammatik.X86
