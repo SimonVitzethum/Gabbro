@@ -280,3 +280,11 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
   [reviewer 326](lanes/326.md) independently checks its exact candidate.
   No measured runtime or compiler speed, expanded ISA support or whole-binary proof
   is claimed.
+
+- 2026-10-01: latest scope priority: broad important practical performance, with
+  safety above marginal final improvements. The user’s approximate “last 10%” is
+  qualitative prioritisation, not reduced proof coverage or a measured performance
+  guarantee. [Author 327](lanes/327.md) clarifies essential and deferred instruction
+  families; [reviewer 328](lanes/328.md) checks the exact plan independently.
+  Full mandatory source/final-byte validation and fast accepted compilation remain
+  requirements; the full chain remains OPEN.
