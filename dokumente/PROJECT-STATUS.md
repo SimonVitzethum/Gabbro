@@ -48,6 +48,18 @@ section references), never re-typed measurements.
   are recorded there with their dates; the front page carries none, so a
   cold-cache number cannot pose as a property of the project.
 
+## Translation chain
+
+The C-backend evidence the front page does not print: one generic closing
+theorem (`schlusssatz`, source text → model → emitted C) with Lean-checked
+instances for five programs — 104 and 108 by hand, 130, 69 and 73 through the
+generic chain — plus a concurrent stage-b instance for one program (124) under
+its named premises. Scope is instrument-measured, not claimed:
+`instrumente/zaehle-kette.py --lean` prints the closed count beside each
+program's sieve verdict (5 of 157 CLOSED on 2026-10-01; the `Spec.lean`
+header records earlier counts with their dates). None of this certifies x86
+binaries; the direct-backend chain is open (see `DIRECT-COMPILER.md`).
+
 ## Known limits, as pointers
 
 - The checker inside the goal theorem is the Lean Bool `Akzeptiert`, not the

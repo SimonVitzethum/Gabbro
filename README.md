@@ -8,12 +8,12 @@ Lean 4 model of its core language and safety properties.
 > assumptions; the language carries the rest — on a multicore kernel with DMA.**
 
 Memory safety, race freedom, contracts where claimed — in concurrent runs too —
-and time are carried by the language and proved once over its model. Per
-program the user owes only what is explicit and named: the application logic
-(`LogikPflicht`, at every budget, against every value a shared atomic read may
-return) and the hardware assumptions (`HardwareAnnahmen`). OS, runtimes,
-thread startup and locks are never trusted or assumed — they are user/binding
-logic with checked contracts and implementations.
+and time are carried by the language and proved once over its model. Per program
+the user owes what is explicit and named: the logic (`NutzerPflichtA`: bodies at
+every budget and against every shared-atomic-read value, plus start duties) and
+the hardware assumptions (`HardwareAnnahmen`). The direction is OS-as-user-logic
+with declared contracts — but loader, runtime thread creation and foreign
+behaviour are still named assumed premises (c)/(d), their correspondence unproved.
 
 Proved today is narrower than the goal; exactly one place states it: the
 header of [`Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean). Where
@@ -68,7 +68,8 @@ lake env lean NachpruefungZiel.lean     # prints the axioms of every sentence na
 | `gabbro_ziel … [propext, Classical.choice, Quot.sound]` | only Lean's standard three — no `sorryAx`, no axiom of ours. **A `sorryAx` here would mean it is not proved** |
 | `…_zeuge` | a two-thread program that moves memory satisfies it, so the sentence is not empty |
 | `…probeA/D…`, `w1_abgelehnt` | programs the checker **refuses** — a checker that accepts everything would make the theorem worthless |
-| `schlusssatz…`, `kette_104/108…`, `K124…` | existing C-backend translation validation, source text → model → emitted C; no x86 byte validation |
+
+The C-backend translation evidence lives on the [provenance page](dokumente/PROJECT-STATUS.md#translation-chain) — the recipe above prints only the goal-theorem sentences.
 
 **What those lines do NOT say:** an axiom list proves a *proof* valid, not the
 *statement*. The three axioms prove no model fidelity and remove no premise:
@@ -103,7 +104,7 @@ Measured snapshot 2026-10-01 — every figure carries its command; provenance an
 | **Proof templates** | **34, of which 23 are machine-checked** | `gabbro templates` |
 | **Corpus** | 157 clean examples, 856 poison files | `cargo test --no-fail-fast` |
 | **Backend** | working C11 backend (`cc -std=c11 -Wall -Wextra -Werror`, `-O0` and `-O2`); every emitted unit is compiled, part executed against a handwritten twin | `./instrumente/pruefe-emission.sh` |
-| **Guardians** | 56, each with deadline, two-way speech test, red on abort, pinned locale, and work quantity beside the verdict; **75 of 89 instruments carry all five requirements** | `./instrumente/abnahme.py` |
+| **Guardians** | 56, each with deadline, two-way speech test, red on abort, pinned locale; **75 of 89 instruments carry the four static requirements** (work quantity is measured per run) | `./instrumente/abnahme.py` |
 | **Blind spots** | **73 blind · 175 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindspots` |
 | **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites **may fall** — 2431 and 110 clause sites | `gabbro ceremony` |
 

@@ -66,6 +66,43 @@ wording with the freshly measured anchor total (`damage one rule at a time:
 - No `cargo`/`lake` invoked directly; guardians ran directly per HARD RULES
   (their internal measuring subprocesses are the guardians' own).
 
+## Round 3 repairs (coordinator factual questions — all three real)
+
+**1. Intro overclaimed the proof boundary.** Rewrote the paragraph: duty is now
+`NutzerPflichtA` (bodies at every budget and against every shared-atomic-read
+value, plus start duties) instead of `LogikPflicht`; loader, runtime thread
+creation and foreign behaviour are named as still-assumed premises (c)/(d)
+with unproved correspondence; OS-as-user-logic is stated as the direction,
+not the present boundary. Same line count. Verified against `Spec.lean`
+header lines 18–21, 70–80, 865–898, 934–949.
+
+**2. `75 of 89 … all five requirements` was false.** The tool counts the four
+static requirements; work quantity (W17) is measured per run. README cell now
+reads `**75 of 89 instruments carry the four static requirements** (work
+quantity is measured per run)`. Plus the explicitly authorised narrow
+guardian edit (lane task line 32): the TWO README-side regexes in
+`instrumente/pruefe-zahlen.py` (lines 448, 455) now guard the truthful
+wording; commands, tool-side patterns, descriptions, captured figures
+(75, 89) and mismatch/missing-hit behaviour unchanged. Diff is exactly those
+two lines; no other checked file uses the wording (only dated history in
+`messung/WAECHTER-STUFE0.md`, which these entries do not read). The legacy
+`all five` wording stands nowhere in any guarded file, so nothing needed
+retention and no guard was deleted or masked.
+
+**3. Printed-line table described unprinted output.** Deleted the C-chain row;
+the table now describes only what `NachpruefungZiel.lean` prints. Chain
+evidence moved to `dokumente/PROJECT-STATUS.md#translation-chain` (generic
+theorem, instances 104/108 hand plus 130/69/73 generic, concurrent 124 under
+premises). Scope-figure note: the review quoted the header's recorded
+2-of-129, but the live instrument prints 5 of 157 CLOSED today (verified run,
+instances listed); per "no new numbers beyond what the instruments print" the
+page uses the live figure with its date.
+
+Re-ran after all three: `git diff --check` clean, README 150 lines,
+`pruefe-todo.py` README section clean with speech tests ok,
+`pruefe-zahlen.py` shows no instrument/ceremony README finding (only the
+pre-existing tool-side mutation entry). No Lean/cargo build (docs-only).
+
 ## Repair after independent review (lane 555, verdict REPAIR)
 
 The review found one blocking defect: the rewrite dropped numbered `## N.`
