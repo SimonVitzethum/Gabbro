@@ -426,3 +426,4 @@ import Grammatik.X86.DecodingCoverage
 import Grammatik.X86.StackUnwind
 import Grammatik.X86.DecodeFault
 import Grammatik.X86.RegionFresh
+import Grammatik.X86.PayloadResidue
