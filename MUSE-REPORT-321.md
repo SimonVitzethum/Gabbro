@@ -98,8 +98,8 @@ distinct, bounds independent ACCEPT to exact delivered claims, reuses
 cited historical measurements without promoting them, and claims no
 complete compiler or full source-to-binary proof.
 
-DOCUMENT-CANDIDATE: ea10465dd8060a4668db568ee3c9174e50b1868b
-VERDICT: ACCEPT
+DOCUMENT-CANDIDATE (historical, superseded 2026-10-01): ea10465dd8060a4668db568ee3c9174e50b1868b
+VERDICT (historical): ACCEPT
 
 ---
 
@@ -167,5 +167,79 @@ review; no source touched; task forbids gratuitous full builds).
 Remaining open work is unchanged from the initial review, minus the
 fresh publication checks which are now recorded fact.
 
-DOCUMENT-CANDIDATE: e0eb1416dd94fade99a0f9b4bfa7781c79619f93
+DOCUMENT-CANDIDATE (historical, superseded 2026-10-01): e0eb1416dd94fade99a0f9b4bfa7781c79619f93
+VERDICT (historical): ACCEPT
+
+---
+
+## Re-review 2: root DIRECT-COMPILER.md candidate with full publication batch (2026-10-01)
+
+Fresh independent exact-document review of the NEW scratch candidate
+`.tmp/FINAL-DOCUMENT.md` (the root `DIRECT-COMPILER.md` content; the old
+`dokumente/DIREKTER-COMPILER.md` path in this stale base is NOT the
+candidate) against `.tmp/FINAL-DOCUMENT-CANDIDATE.json`, the refreshed
+`.tmp/COORDINATOR-SNAPSHOT.json`, `.tmp/PUBLICATION-CHECKS.json` and
+`.tmp/PUBLICATION-AXIOMS.log`. No source or central file edited; owned
+file only: this report. New author-323/reviewer-324 design is pending and
+is not certified here.
+
+- Candidate identity: `git hash-object .tmp/FINAL-DOCUMENT.md` =
+  `d1c744e79582868c8eb8217a15af2bef8b826e86`, matching the candidate
+  JSON blob; JSON head `4a2767a907959ba2e3dfdc78e0a6c2239d571c0d`. Neither
+  object exists in this stale base (base `7c530647` predates the root
+  move and later merges), so post-base merges are verified via the
+  supplied snapshot metadata, not direct inspection; this limitation is
+  recorded below.
+- Root-move consistency: ledger evidence links are now root-relative
+  (`messung/muse/...`, `lanes/...`) and detailed references carry the
+  `dokumente/` prefix — internally consistent with a root-located
+  document. Architecture, optimisation, sequence, workflow and non-claim
+  sections are unchanged; the whole source-to-binary acceptance theorem
+  remains OPEN and ACCEPT stays bounded to exact delivered claims.
+- Ledger vs refreshed snapshot: all 42 `x86-merged:` markers in the
+  document equal the snapshot merged set exactly (machine-compared,
+  match). Every merged row reads "Merged after review/checks"; every
+  other row (312 candidate/316 working, 317 working/318 candidate, 319
+  working/320 scheduled per manifest `waiting_for_candidate`, 323
+  candidate/324 working per state `running`, 287/288 working, 280
+  stopped) matches the snapshot; nothing pending is claimed merged.
+- Lane 307 resolved: snapshot shows `merged`, `review_round 2` with a
+  retained round-1 `integration_failure` string. The document records
+  both halves explicitly — the round-1 gate rejection
+  (`x86-gate-rejection:307`, no failing candidate merged) and the
+  round-2 integration (`x86-merged:307`). Consistent, and more precise
+  than the raw snapshot field alone.
+- Publication batch for `ce698d8f`: checks JSON `checked_head` matches
+  the document's cited head; lean `exit_code 0` with `Build completed
+  successfully (381 jobs)` supports "complete local Lean checks"; rust
+  `1468 passed, 0 failed, 1 ignored` and emission `53 durchgestochen,
+  338 von 338, 2 reverse probes`, exit 0, match the repeated figures;
+  axioms log reports exactly `propext, Classical.choice, Quot.sound`;
+  "Full source-to-binary validation remains OPEN" keeps the boundary.
+  The document does not quote the new 381-job figure in the batch line —
+  accurate but less precise; suggestion, not a defect.
+- Notice-pin repair: 1570 + 1465 = 3035 bytes compared — internally
+  consistent; proof statements and negative witnesses stated unchanged;
+  evidence link is lane 322's report with snapshot `merged`. No wider
+  claim is built on it.
+- Lane 323/324: ledger and history claim only that a design is being
+  prepared and that no speed measurement or expanded instruction support
+  is claimed. Nothing unseen is certified.
+- Limits of this isolated review: the two `x86-published:` master hashes
+  (origin pushes) and the post-base merge commits/reports cannot be
+  resolved in this stale offline base; they are coordinator-operational
+  log entries re-verified by the merge gate (remote-ancestry check per
+  the workflow section). No proof-relevant claim depends on them alone:
+  every merged state is corroborated by the snapshot's exact-candidate
+  review mapping, and every measurement by the checks/axioms evidence.
+
+New definitions/theorems: none. `./lean-bau` not run (documentation
+review; no source touched; task forbids gratuitous full builds).
+
+Remaining open work: closing acceptance theorem; IR/lowering (287),
+invariant optimisation (288), regions/ceiling (312/316), access
+extraction (317/318), fetch/decode/step (319/320), design 323/324;
+Rust backend implementation after reviewed Lean models.
+
+DOCUMENT-CANDIDATE: d1c744e79582868c8eb8217a15af2bef8b826e86
 VERDICT: ACCEPT
