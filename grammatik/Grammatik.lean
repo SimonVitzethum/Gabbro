@@ -444,3 +444,4 @@ import Grammatik.X86.SourceMemory
 import Grammatik.X86.BridgeWrite
 import Grammatik.X86.InstructionSelection
 import Grammatik.X86.TSOTrace
+import Grammatik.X86.ImageStoreFrame

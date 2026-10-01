@@ -250,17 +250,17 @@ Last ledger refresh: **2026-10-01 20:24 UTC**. This is an operational snapshot, 
 | 571 | Connection: Entry state, image permissions and user binding duties | Merged after review/checks | 589: Merged after review/checks | [report](messung/muse/MUSE-REPORT-571.md) |
 | 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
 | 573 | Connection: Projected TSO stores to source W writes | Merged after review/checks | 591: Merged after review/checks | [report](messung/muse/MUSE-REPORT-573.md) |
-| 574 | Connection: Projected TSO loads to source W reads | Committed candidate; review/integration pending | 592: scheduled | [task](lanes/574.md) |
+| 574 | Connection: Projected TSO loads to source W reads | Committed candidate; review/integration pending | 592: Agent working | [task](lanes/574.md) |
 | 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
 | 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Merged after review/checks | [report](messung/muse/MUSE-REPORT-594.md) |
 | 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Merged after review/checks | [report](messung/muse/MUSE-REPORT-595.md) |
 | 596 | Overnight: TSO history preservation across actual finite traces | Merged after review/checks | 608: Merged after review/checks | [report](messung/muse/MUSE-REPORT-596.md) |
-| 597 | Overnight: Selected SSE2 vector bytes to canonical XMM execution | Agent working | 609: scheduled | [task](lanes/597.md) |
+| 597 | Overnight: Selected SSE2 vector bytes to canonical XMM execution | Committed candidate; review/integration pending | 609: Agent working | [task](lanes/597.md) |
 | 598 | Overnight: Checked validator to loaded fetched execution | Agent working | 610: scheduled | [task](lanes/598.md) |
 | 599 | Overnight: Direct typed-source expression to pilot machine code | Agent working | 611: scheduled | [task](lanes/599.md) |
 | 600 | Overnight: Invariant-derived instruction selection with byte execution | Merged after review/checks | 612: Merged after review/checks | [report](messung/muse/MUSE-REPORT-600.md) |
 | 601 | Overnight: Flag dependencies across actual decoded control flow | Agent working | 613: scheduled | [task](lanes/601.md) |
-| 602 | Overnight: Code and relocation preservation under real data stores | Committed candidate; review/integration pending | 614: Committed candidate; review/integration pending | [task](lanes/602.md) |
+| 602 | Overnight: Code and relocation preservation under real data stores | Merged after review/checks | 614: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-602.md) |
 | 603 | Overnight: Whole-word grouping under actual trace exclusion | Agent working | 615: scheduled | [task](lanes/603.md) |
 | 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Merged after review/checks | [report](messung/muse/MUSE-REPORT-604.md) |
 | 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Merged after review/checks | 617: Merged after review/checks | [report](messung/muse/MUSE-REPORT-605.md) |
@@ -638,6 +638,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **303**, Independent review of 287, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-303.md). <!-- x86-merged:303 -->
 - 2026-10-01: lane **596**, Overnight: TSO history preservation across actual finite traces, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-596.md). <!-- x86-merged:596 -->
 - 2026-10-01: lane **608**, Independent overnight review of 596, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-608.md). <!-- x86-merged:608 -->
+- 2026-10-01: lane **602**, Overnight: Code and relocation preservation under real data stores, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-602.md). <!-- x86-merged:602 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
