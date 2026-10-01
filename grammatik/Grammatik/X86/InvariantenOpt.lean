@@ -349,6 +349,43 @@ def wD : Deklaration where
   invarianten_gehalten := fun _ i => nomatch i
   ggeteilt_bewacht := fun e => nomatch e
 
+/-- The witness contract: writes the table, no result, no locks. -/
+def wV : Vertrag wD where
+  schreibt := fun _ => true
+  gschreibt := fun e => nomatch e
+  erg := none
+  gruende := 0
+  haelt := []
+  produziert := []
+
+/-- The checked condition: constantly true. -/
+def wCond : Expr wD [] [] .bool := .wahr
+
+/-- Index `0` into the one-slot table. -/
+def wIdx : Expr wD [] [] (.index (wD.count ())) := .lit 0
+
+/-- Value `5` in `0 .. 10`. -/
+def wVal : Expr wD [] [] (wD.typ () ()) :=
+  .weiter (by decide) (by decide) (.lit 5)
+
+/-- The writing body: one guarded slot store. -/
+def wRest : Block wD wV true [] [] [] :=
+  Block.cons (Stmt.assignSlot () () wIdx wVal rfl
+    (fun _ hw => False.elim (List.not_mem_nil hw))) Block.nil
+
+/-- The refused branch: `leave` (loop context, no proof burden). -/
+def wSonst : Endblock wD wV true [] [] := Endblock.leave rfl
+
+/-- The full checked block. -/
+def wFull : Block wD wV true [] [] [] :=
+  Block.pruefung wCond wSonst wRest
+
+/-- The initial world: slot reads `0`, empty trace. -/
+def wWorld0 : World wD where
+  slots := fun _ _ _ => ⟨0, by decide, by decide⟩
+  globs := fun e => nomatch e
+  spur := []
+
 /- CUTS:
    Only the computable check exists so far. Open: its soundness over `eval`;
    constant folding / `weiter` value lemmas; `pruefung`/`ite` elimination with
