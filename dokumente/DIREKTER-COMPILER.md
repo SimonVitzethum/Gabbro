@@ -154,7 +154,12 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
   not a full source-to-x86 validation result.
 - Each integrated Lean lane has its local merge build and goal-axiom gate. Detailed
   author/reviewer results are in the linked committed reports. Fresh whole-tree
-  checks for the publication containing this document are pending below.
+  checks for the implementation at `77e6f362` completed on 2026-10-01: full
+  Lean build **375 jobs, 0 errors**; Rust **1468 passed, 0 failed, 1 ignored**;
+  emission **338/338 translated, 53 end-to-end comparisons, 2 reverse probes**,
+  exit 0. ASan remains unavailable and was not counted as passing. The goal
+  axiom probe reports exactly `propext`, `Classical.choice`, `Quot.sound`.
+  Subsequent documentation/report-only commits do not change the checked code.
 - Push only checked master after required local checks, outgoing secret-pattern
   inspection and a remote-ancestry check. Never force-push or publish lane branches.
 
@@ -198,6 +203,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **302**, Independent review of 286, integrated after its applicable review and checks. Commit `0de7edc7`. [Evidence](../messung/muse/MUSE-REPORT-302.md). <!-- x86-merged:302 -->
 - 2026-10-01: lane **305**, Independent review of 289, integrated after its applicable review and checks. Commit `3cfe1cbd`. [Evidence](../messung/muse/MUSE-REPORT-305.md). <!-- x86-merged:305 -->
 - 2026-10-01: lane **308**, Independent counter-review of source concurrency and binary audits, integrated after its applicable review and checks. Commit `ddcc9f22`. [Evidence](../messung/muse/MUSE-REPORT-308.md). <!-- x86-merged:308 -->
+- 2026-10-01: fresh publication checks passed for implementation `77e6f362`: Lean (375 jobs), Rust (1468 passed), emission (338 translations/53 comparisons/2 reverse probes), and the standard goal axioms. ASan was not run.
 <!-- X86-HISTORY -->
 
 ## Detailed references
