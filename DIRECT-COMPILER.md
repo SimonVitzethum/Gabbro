@@ -267,7 +267,7 @@ Last ledger refresh: **2026-10-01 21:42 UTC**. This is an operational snapshot, 
 | 618 | Overnight: Resource-safe native Lean invocation for publication tests | Merged after review/checks | 619: Merged after review/checks | [report](messung/muse/MUSE-REPORT-618.md) |
 | 620 | Automatic coordinator takeover on missing foreground heartbeat | Merged after review/checks | 621: Merged after review/checks | [report](messung/muse/MUSE-REPORT-620.md) |
 | 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Merged after review/checks | [report](messung/muse/MUSE-REPORT-622.md) |
-| 624 | Direct-source closure: FloatSourceObservations | Merged after review/checks | 625: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-624.md) |
+| 624 | Direct-source closure: FloatSourceObservations | Merged after review/checks | 625: Merged after review/checks | [report](messung/muse/MUSE-REPORT-624.md) |
 | 626 | Direct-source closure: FloatEntryState | Merged after review/checks | 627: Merged after review/checks | [report](messung/muse/MUSE-REPORT-626.md) |
 | 628 | Direct-source closure: SourceAssignmentLowering | Merged after review/checks | 629: Merged after review/checks | [report](messung/muse/MUSE-REPORT-628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
@@ -697,6 +697,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `59519ab3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:59519ab3e7238e6ae16a0dba037aa06ff90cd1b1 -->
 - 2026-10-01: lane **615**, Independent overnight review of 603, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-615.md). <!-- x86-merged:615 -->
 - 2026-10-01: lane **624**, Direct-source closure: FloatSourceObservations, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-624.md). <!-- x86-merged:624 -->
+- 2026-10-01: lane **625**, Independent direct-source closure review of 624, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-625.md). <!-- x86-merged:625 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
