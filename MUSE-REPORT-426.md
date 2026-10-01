@@ -130,3 +130,27 @@ satisfiable; the only blocker met was the machine-level build flake above.
   send it back — the current log shows none.
 - No acceptance of any source/binary chain is claimed by this module;
   fresh independent review of the changed commit is expected.
+
+## Gate-repair round 3 (second identical gate failure, nothing merged)
+- New gate log is evidence-identical to round 2: same 7 visible
+  `#print axioms` lines (module compiled, standard axioms), same
+  umbrella crash `failed to create thread`, exit 134, at step 397/398
+  (4.5s vs 4.8s — same step, same fast crash, i.e. spawn failure, not a
+  timeout or elaboration error).
+- Fresh local evidence this round: `./lean-probe` again **0 errors**
+  (all 12 standard-axiom lines); `./lean-bau` again exit 1 with exactly
+  the same 2 crash lines and zero file errors — this time with
+  **9 GB free RAM** (vs 0 free in round 2), so plain free-memory
+  exhaustion does not explain it; the failure is thread *spawn*, not OOM
+  during elaboration. Skeleton-only control from round 2 already proved
+  independence from this lane's content.
+- Repair conclusion unchanged: no defect in the owned module exists to
+  repair, and no edit within owned files + HARD RULES can affect thread
+  spawning in the umbrella link step. Module kept byte-identical;
+  only this report section is new in the committed change.
+- BLOCKER RESTATED for the coordinator: the merge gate cannot pass ANY
+  lane while the umbrella `lean` step cannot spawn threads on the build
+  machine. Diagnose outside all lanes (thread/process limits, cgroup
+  pids.max, sandbox restrictions — not Lean source, not this module),
+  fix machine-side, then re-run the unchanged gate. A Lean *file* error
+  naming `VectorFootprints.lean` has never appeared in any log.
