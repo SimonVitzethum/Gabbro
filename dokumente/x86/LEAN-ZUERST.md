@@ -109,3 +109,15 @@ If an integration build or proof gate fails after an ACCEPT, the candidate
 remains unmerged. Its author receives the actual gate output for repair and
 a fresh independent review follows any changed commit. Semantic coordinator
 fallback requires a demonstrated inability of agents to resolve the finding.
+
+## First dependent coupling tasks
+
+317 owns the single target access-footprint extraction linked to the actual
+pilot instruction transitions; 318 independently reviews it. 319 couples
+permission-checked fetch from actual instruction memory to the existing byte
+decoder and instruction step; 320 independently reviews it. The coordinator
+starts each author only after its accepted dependencies are merged, and all
+model processes share the same 20-slot ceiling. This brings the scheduled
+Lean implementation owners to eighteen. These coupling lemmas still leave
+full source lowering, the W/GX refinement, runtime/ABI and optimisation/time
+closure open.
