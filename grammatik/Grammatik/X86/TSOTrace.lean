@@ -350,6 +350,147 @@ theorem spur_fifo_aelteste (s s1 s2 : TSOZustand) (n2 n3 : SpurKnoten)
     rw [hh]
     exact List.mem_append.mpr (Or.inl hm)
 
+/-! ## Joint two-core witness with non-degenerate timestamps -/
+
+/-- Witness nodes: two issues on different cores, then both flushes.
+    Histories/views/clocks follow the step equations definitionally. -/
+def spurW0 : SpurKnoten := spurStart sbStart
+
+def spurW1 : SpurKnoten :=
+  { tso := sbNach1, hist := spurW0.hist, blick := spurW0.blick,
+    frisch := spurW0.frisch }
+
+def spurW2 : SpurKnoten :=
+  { tso := sbNach2, hist := spurW1.hist, blick := spurW1.blick,
+    frisch := spurW1.frisch }
+
+def spurW3 : SpurKnoten :=
+  { tso := sbGespült
+    hist := fun x => if x = sbX then spurW2.hist x ++
+      [Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (spurW2.blick 0) sbX spurW2.frisch sbEins]
+      else spurW2.hist x
+    blick := fun d => if d = 0 then
+      (spurW2.blick 0).setze sbX spurW2.frisch else spurW2.blick d
+    frisch := spurW2.frisch + 1 }
+
+/-- Core 0's buffer at `spurW2` holds its own issued byte. -/
+theorem spurW2_puffer0 : spurW2.tso.puffer 0 = [⟨sbX, sbEins⟩] := by
+  show pufferSetze sbNach1.puffer 1 [⟨sbY, sbEins⟩] 0 = _
+  rw [pufferSetze_anders _ _ (by decide)]
+  show pufferSetze sbStart.puffer 0 [⟨sbX, sbEins⟩] 0 = _
+  exact pufferSetze_gleich _ _ _
+
+/-- First issue step: core 0 issues `sbX := 1`. -/
+theorem spurW_stufe1 : SpurSchritt spurW0 spurW1 :=
+  SpurSchritt.issue _ _ 0 sbX sbEins sb_schritt1 rfl rfl rfl
+
+/-- Second issue step: core 1 issues `sbY := 1`. -/
+theorem spurW_stufe2 : SpurSchritt spurW1 spurW2 :=
+  SpurSchritt.issue _ _ 1 sbY sbEins sb_schritt2 rfl rfl rfl
+
+/-- First flush step: core 0 publishes `sbX := 1` at clock 1. -/
+theorem spurW_stufe3 : SpurSchritt spurW2 spurW3 :=
+  SpurSchritt.flush _ _ 0 ⟨sbX, sbEins⟩ [] sb_flush_schritt
+    spurW2_puffer0 rfl rfl rfl
+
+/-- Core 1's buffer at `spurW3` still holds its issued byte. -/
+theorem spurW3_puffer1 : spurW3.tso.puffer 1 = [⟨sbY, sbEins⟩] := by
+  show pufferSetze sbNach2.puffer 0 [] 1 = _
+  rw [pufferSetze_anders _ _ (by decide)]
+  show pufferSetze sbNach1.puffer 1 [⟨sbY, sbEins⟩] 1 = _
+  exact pufferSetze_gleich _ _ _
+
+/-- The TSO state after core 1 flushes: exactly what the canonical
+    flush computes. -/
+def spurW4tso : TSOZustand :=
+  ⟨{ spurW3.tso.mem with
+      bytes := fun x =>
+        if x = sbY then sbEins else spurW3.tso.mem.bytes x },
+    pufferSetze spurW3.tso.puffer 1 []⟩
+
+/-- The flush of core 1 computes as claimed. -/
+theorem spurW_stufe4_tso : flushKern spurW3.tso 1 = some spurW4tso := by
+  unfold flushKern
+  rw [spurW3_puffer1]
+  rfl
+
+def spurW4 : SpurKnoten :=
+  { tso := spurW4tso
+    hist := fun x => if x = sbY then spurW3.hist x ++
+      [Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (spurW3.blick 1) sbY spurW3.frisch sbEins]
+      else spurW3.hist x
+    blick := fun d => if d = 1 then
+      (spurW3.blick 1).setze sbY spurW3.frisch else spurW3.blick d
+    frisch := spurW3.frisch + 1 }
+
+/-- Second flush step: core 1 publishes `sbY := 1` at clock 2. -/
+theorem spurW_stufe4 : SpurSchritt spurW3 spurW4 :=
+  SpurSchritt.flush _ _ 1 ⟨sbY, sbEins⟩ [] spurW_stufe4_tso
+    spurW3_puffer1 rfl rfl rfl
+
+/-- The four-step trace is reached from the start node. -/
+theorem spurW_erreichbar : SpurErreichbar spurW0 spurW4 :=
+  SpurErreichbar.schritt
+    (SpurErreichbar.schritt
+      (SpurErreichbar.schritt
+        (SpurErreichbar.schritt SpurErreichbar.start spurW_stufe1)
+        spurW_stufe2)
+      spurW_stufe3)
+    spurW_stufe4
+
+/-- The grown history at `sbX`: initial message plus the clock-1 flush. -/
+theorem spurW_histX : spurW4.hist sbX =
+    [⟨0, 0, Speichermodell.Sicht.null⟩,
+     Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+       (spurW2.blick 0) sbX spurW2.frisch sbEins] := by
+  have h4 : spurW4.hist sbX = spurW3.hist sbX := by
+    simp only [spurW4]
+    rw [if_neg sbX_ne_sbY]
+  have h3 : spurW3.hist sbX = spurW2.hist sbX ++
+      [Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (spurW2.blick 0) sbX spurW2.frisch sbEins] := by
+    show (if sbX = sbX then spurW2.hist sbX ++
+      [Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (spurW2.blick 0) sbX spurW2.frisch sbEins]
+      else spurW2.hist sbX) = _
+    rw [if_pos (rfl : sbX = sbX)]
+  rw [h4, h3]
+  rfl
+
+/-- The grown history at `sbY`: initial message plus the clock-2 flush. -/
+theorem spurW_histY : spurW4.hist sbY =
+    [⟨0, 0, Speichermodell.Sicht.null⟩,
+     Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+       (spurW3.blick 1) sbY spurW3.frisch sbEins] := by
+  have h4 : spurW4.hist sbY = spurW3.hist sbY ++
+      [Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (spurW3.blick 1) sbY spurW3.frisch sbEins] := by
+    show (if sbY = sbY then spurW3.hist sbY ++
+      [Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (spurW3.blick 1) sbY spurW3.frisch sbEins]
+      else spurW3.hist sbY) = _
+    rw [if_pos (rfl : sbY = sbY)]
+  rw [h4]
+  rfl
+
+/-- The clocks are non-degenerate: flushes stamped 1 and 2. -/
+theorem spurW_uhren : spurW2.frisch = 1 ∧ spurW3.frisch = 2 :=
+  ⟨rfl, rfl⟩
+
+/-- Both flushes observably change canonical memory. -/
+theorem spurW_speicher :
+    spurW0.tso.mem.bytes sbX ≠ spurW4.tso.mem.bytes sbX ∧
+      spurW0.tso.mem.bytes sbY ≠ spurW4.tso.mem.bytes sbY := by
+  constructor <;> decide
+
+/-- After both flushes each core reads back the flushed byte. -/
+theorem spurW_laden :
+    loadByte spurW4.tso 0 sbX = some sbEins ∧
+      loadByte spurW4.tso 1 sbY = some sbEins := by
+  constructor <;> decide
+
 /- CUTS:
     - So far only the node/step vocabulary; preservation, freshness,
       forwarding and the joint witness follow as increments.
