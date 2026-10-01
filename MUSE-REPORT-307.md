@@ -2,10 +2,18 @@
 
 Lane 307, independent candidate review. Reviewed ONLY the pinned snapshot
 `.tmp/review/author-291/` (SNAPSHOT.json: author 291, HEAD
-`4d1e4f6d5f2a42dbcf6da37f181cb704e6177993`, base
+`9730427b5f0c61187dd60bcda3e11baca8d33aa5`, base
 `f49581505cda367b97d4f3d89faa1b2f33413497`, clean true) and its
-BUILD-EVIDENCE.json tool log. No other clone read, no code or central file
-edited. This report is the only owned deliverable.
+BUILD-EVIDENCE.json tool log (34 entries, through the repair commit).
+No other clone read, no code or central file edited. This report is the
+only owned deliverable.
+
+This is a RE-REVIEW: a first verdict (ACCEPT) was given on the previous
+snapshot HEAD `4d1e4f6d5f2a42dbcf6da37f181cb704e6177993`. That verdict is
+stale. The author repaired an integration-gate failure (name collision,
+see below) in commit `9730427b`. Every previous finding was re-inspected
+against the NEW snapshot; only §0 changed, all other sections verified
+unchanged (identical declaration names, each shifted by exactly -6 lines).
 
 Owner task (OWNER-TASK.md): `grammatik/Grammatik/X86/Relokation.lean` —
 canonical address-relative rel32 calculation (target minus actual next-RIP),
@@ -21,36 +29,60 @@ OPEN/refused. No loader/linker assumption, no final-byte source claim.
 
 ## What was checked
 
-- Read the full snapshot file (675 lines): all definitions, theorem
-  statements AND proofs, CUTS block, `#print axioms` lines.
-- Read MUSE-REPORT-291.md and PATCH.diff (3 files: report, one additive
-  `import Grammatik.X86.Relokation` in `grammatik/Grammatik.lean`, the new
-  file). No Rust, no diagnostic/gift/example/CLI/MARKE numbers.
-- Read BUILD-EVIDENCE.json end to end (final `./lean-bau`: exit 0,
-  0 errors, 369 jobs; final `./lean-probe`: 0 errors with axiom output;
-  intermediate red iterations are normal development, not evidence against).
+- Read the full NEW snapshot file (669 lines, was 675): all definitions,
+  theorem statements AND proofs, CUTS block, `#print axioms` lines.
+- Read the updated MUSE-REPORT-291.md (114 lines, new § "Repair after
+  failed integration gate") and PATCH.diff (same 3 files: report, one
+  additive `import Grammatik.X86.Relokation` in `grammatik/Grammatik.lean`,
+  the file). No Rust, no diagnostic/gift/example/CLI/MARKE numbers.
+- Read BUILD-EVIDENCE.json end to end (34 entries): post-repair
+  `./lean-probe` 0 errors, post-repair `./lean-bau` exit 0 / 0 errors,
+  then commit `9730427b Lane 291 repair: drop duplicate RelArt, keep OPEN
+  marker` — matching the NEW snapshot HEAD. Diff stat of the repair:
+  Relokation.lean 30 changed lines, report +28. (The quoted merge-gate
+  failure line itself is not in the tool log, so the collision was
+  verified independently against source instead — see next point.)
+- Collision independently confirmed: this clone's
+  `grammatik/Grammatik/X86/Bild.lean` line 49 owns
+  `Gabbro.Grammatik.X86.RelArt` with the IDENTICAL constructor names
+  `codeOperand`/`datenFeld` the deleted helper inductive had. The gate
+  failure was real, and deleting the duplicate is the correct minimal fix.
 - Ran `./lean-probe .tmp/review/author-291/grammatik/Grammatik/X86/Relokation.lean`
-  independently: first line `== 0 error(s) in the COMPLETE output`, axiom
-  lines identical to the author's (every theorem: no axioms or subset of
-  `[propext, Quot.sound]`; no `Classical.choice`).
-- Grepped the snapshot for forbidden tactics (`sorry|admit|axiom|
-  native_decide|unsafe` as code): no hits (only `#print axioms` lines and
-  the English word "axiom" in a doc comment). No `Prop`-typed premise, no
-  `intro _` / `have _ :=`, no N-codes, MARKE, example or name-specific
-  rules anywhere in the file.
+  independently on the NEW snapshot: first line
+  `== 0 error(s) in the COMPLETE output`, axiom lines identical to the
+  author's (every theorem: no axioms or subset of `[propext, Quot.sound]`;
+  no `Classical.choice`; `relAnnahme_offen` now depends on no axioms).
+- Token-precise grep for forbidden tactics
+  (`sorry|admit|axiom|native_decide|unsafe`): zero hits — remaining
+  substring matches are English prose ("admits a site") and `#print
+  axioms` lines. No `Prop`-typed premise, no `intro _` / `have _ :=`,
+  no N-codes, MARKE, example or name-specific rules anywhere.
+- Name-overlap sweep (discharges the author's stated residual risk for the
+  current tree): every introduced name (`relAnnahmeEndgueltig`,
+  `relAnnahme_offen`, `tcNat`, all `rel32*`, `abs64*`, `patch*`,
+  `disjunktStellen`, all 14 `sonde_*`) grepped as declarations over this
+  clone's whole `grammatik/` (which already contains `Bild.lean`) — zero
+  collisions. No `inductive` declaration remains in the candidate.
 - Verified canonical reuse against this clone's sources: `wortByte`/
   `bytesWort`/`bytesWort_wortByte` are `Speicher.lean` (lines 18/36/309),
   `sext` is `Wort.lean` (line 60). Imports are exactly
-  `Typen`/`Speicher`/`Wort`. No second image/register/ISA model;
-  `RelArt` is an admissibility class, not a model.
+  `Typen`/`Speicher`/`Wort` — no new dependency on `Bild.lean`. No second
+  image/register/ISA model.
 
-## Claim-by-claim cross-check (all hold)
+## Claim-by-claim cross-check (all hold on the NEW snapshot)
 
-- Site admissibility: `RelArt` + `relAnnahmeEndgueltig` constantly `false`
-  + `relAnnahme_offen` proved by `cases` — honest by construction, refuses
-  final validation at helper level. Not a restated premise.
+- Site admissibility (CHANGED by the repair): the local `RelArt`
+  inductive is deleted; the OPEN marker is now the Bool flag
+  `relAnnahmeEndgueltig : Bool := false` with
+  `relAnnahme_offen : relAnnahmeEndgueltig = false := by rfl`. Same
+  documented meaning (doc comment + CUTS still name the two classes and
+  assign them to the image+decoder proof), no parallel type, no weakened
+  guarantee: helper-level acceptance still refuses every site. This is a
+  strict improvement — one vocabulary owner (`Bild.lean`) instead of two.
+  Not a restated premise (no premises at all).
 - rel32: `rel32Passt` exact signed-32 bounds; `rel32_rundgang` generic
   over all in-range `d`, both premises load-bearing in the `omega` closes.
+  Unchanged (line shift only).
 - Address equations: `rel32_adress_gleichung` needs no wrap premises
   (modular `ofNat` addition is wrap-consistent; author documents this as a
   finding after the linter caught dead premises — credible). Exact no-wrap
@@ -100,10 +132,13 @@ above was hand-verified correct against two's-complement/little-endian arithmeti
 The bounded delivered claim — checked relocation arithmetic and byte
 patching helpers with generic round-trip/range/frame/disjointness theorems,
 concrete probes, and complete relocation acceptance explicitly OPEN — is
-true. Actual needed checks green (independent `./lean-probe`: 0 errors,
-standard axioms), proof/witness gates hold, no material defect remains.
-ACCEPT does not mean whole-compiler or binary validation is complete; the
-file itself states that boundary.
+true on the NEW snapshot. The repair removes the evidenced `RelArt`
+duplicate (collision with `Bild.lean` confirmed in source), changes nothing
+else (declaration inventory identical minus the inductive, -6 lines), and
+re-verifies green (independent `./lean-probe`: 0 errors, standard axioms;
+author `./lean-bau`: exit 0). Proof/witness gates hold, no material defect
+remains. ACCEPT does not mean whole-compiler or binary validation is
+complete; the file itself states that boundary.
 
-CANDIDATE: 291 4d1e4f6d5f2a42dbcf6da37f181cb704e6177993
+CANDIDATE: 291 9730427b5f0c61187dd60bcda3e11baca8d33aa5
 VERDICT: ACCEPT
