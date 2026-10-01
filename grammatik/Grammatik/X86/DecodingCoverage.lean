@@ -217,6 +217,39 @@ theorem decodeMem_abdeckung (isLoad : Bool) (rBit bBit reg rm : Nat)
               exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl
                 ⟨rr, rb, v, Or.inr rfl, Or.inl rfl⟩)))))
 
+/-! ## 5. ModRM level: register-direct or disp32 memory, two outer bytes. -/
+
+/-- ModRM coverage: mod 3 reuses the register-direct level, mod 2 the memory
+    level; every other mode refuses. Two outer bytes (REX, opcode). -/
+theorem decodeModrm_abdeckung (rBit bBit op : Nat) (bs : List Byte)
+    (d : Decodiert) (rest' : List Byte)
+    (h : decodeModrm rBit bBit op bs = some (d, rest')) :
+    (∃ pre, bs = pre ++ rest' ∧ pre.length + 2 = d.laenge) ∧
+      laengeOk d.laenge = true ∧ decktAb d := by
+  cases bs with
+  | nil => simp [decodeModrm] at h
+  | cons m t =>
+    simp only [decodeModrm] at h
+    split at h
+    · have hsub := decodeRegReg_abdeckung op rBit bBit (byteNat m / 8 % 8)
+        (byteNat m % 8) t d rest' h
+      obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+      have hcons : (m :: pre).length = pre.length + 1 := rfl
+      refine ⟨⟨m :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
+    · split at h
+      · have hsub := decodeMem_abdeckung false rBit bBit (byteNat m / 8 % 8)
+          (byteNat m % 8) t d rest' h
+        obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+        have hcons : (m :: pre).length = pre.length + 1 := rfl
+        refine ⟨⟨m :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
+      · have hsub := decodeMem_abdeckung true rBit bBit (byteNat m / 8 % 8)
+          (byteNat m % 8) t d rest' h
+        obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+        have hcons : (m :: pre).length = pre.length + 1 := rfl
+        refine ⟨⟨m :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
+      · simp at h
+    · simp at h
+
 /- CUTS (skeleton):
     - The arbitrary-input length soundness, the per-form classification, the
       suffix/window congruence and the entry-byte bridge are not yet proved.
