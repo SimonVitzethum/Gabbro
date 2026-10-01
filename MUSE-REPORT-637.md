@@ -1,5 +1,9 @@
 # MUSE-REPORT-637: Independent exact review of candidate 636
 
+CANDIDATE: 636 8a54934026ebc5781f7395178726f127841de5a6
+
+VERDICT: REPAIR
+
 ## Scope
 
 Lane 637 reviews the exact pinned candidate 636 (`8a54934026ebc5781f7395178726f127841de5a6`,
