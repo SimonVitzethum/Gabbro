@@ -56,6 +56,19 @@ exit 0 plus a byte-identical umbrella thread-spawn abort, exit 134).
   unmodified master, still no owned defect, still no Lean change indicated.
   Verdict moves to the NEW HEAD; `519e6373` is now stale.
 
+## Third confirmation (HEAD `5c113423` unchanged)
+
+A further re-review was ordered; the pinned snapshot still points at
+`5c113423d32d6f2181d16f0ffecad7d291ddc686` with the identical file list,
+identical Lean blob `6dbea0d5`, identical module md5
+(`2d8cdd0d8fbd009920e56ea27eff64c3`), identical report blob `2d81b47a`
+and 35 evidence entries -- the re-export changed no byte. Fresh
+confirmation probe on the pinned file in this clone (staged then deleted,
+tree clean): `./lean-probe` gives
+`== 0 error(s) in the COMPLETE output; exit 0`, same standard axiom lines;
+`sorry` grep: 0 hits. No new finding; verdict re-affirmed on the same
+HEAD.
+
 ## Scope (original review, still valid)
 
 Reviewed the exact pinned candidate files from `.tmp/review/SNAPSHOT.json`
