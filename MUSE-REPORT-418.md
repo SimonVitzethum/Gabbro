@@ -95,6 +95,18 @@ host memory/thread pressure, is the only remedy on this evidence. This
 report change alters the commit hash, so a fresh independent review is
 required; the Lean content is byte-identical to the reviewed candidate.
 
+## Second repair turn (same gate failure, same evidence)
+
+The integration gate failed again with a byte-identical log: all 7
+`BitScan` probe axiom lines print in the merge build, then `[397/398]
+Building Grammatik` aborts with `failed to create thread` (exit 134).
+Local re-verification this turn: module probe green (`exit 0`),
+`./lean-bau` still red only at the umbrella target. No owned-file change
+exists that addresses a host-side thread-creation failure hitting the
+pristine tree identically; Lean content unchanged since the accepted
+candidate, only this report entry is new, so fresh review is required
+again. No acceptance of the full source/binary chain is claimed.
+
 ## What remains open (also in CUTS)
 
 - Full `./lean-bau` green + `gabbro_ziel` axiom gate: needs a machine-level
