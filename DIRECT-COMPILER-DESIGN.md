@@ -750,6 +750,33 @@ implementation claim). All new files English; central progress stays primary
 in [DIRECT-COMPILER.md](DIRECT-COMPILER.md) — this design is a plan, not a
 progress table.
 
+## 12. Target portability: one chain, arbitrary OS and freestanding profiles (PROPOSED summary)
+
+Full architecture: [TARGET-PORTABILITY](dokumente/x86/TARGET-PORTABILITY.md).
+One source model, one shared IR, one executor vocabulary and one validation
+chain serve every profile. Three separated concerns: hardware instruction
+profile (emittable forms with semantics, encodings, atomicity/tearing/fence
+and FP rows), declarative ABI/image/entry profile (calling convention, stack
+parameters, container description, relocations, entries, load-bias mode), and
+program-supplied environment bindings (Gabbro `syscall`/`extern` items, gate
+declarations, entry and runtime bodies with user-logic contracts). No
+Linux/POSIX/libc/ELF-only assumption in the semantic compiler, checker or
+optimiser; OS functionality lives in bindings, never as built-ins or hardware
+assumptions. Hosted and freestanding modes are specified there, with
+executable and relocatable outputs (ELF/PE-COFF/Mach-O/raw as planned
+examples, none implemented), stack/red-zone/shadow-space/callee-save/TLS/
+unwind rows where used, syscall-versus-extern bindings, pre-stack entries,
+interrupt/device/context state, and relocation/load-bias/final-mapping
+checks. Validation covers all reachable bytes plus the actual executed
+mapping; external OS/kernel contracts are user-logic obligations at actual
+calls — neither automatic trust nor a demand for unrelated kernel bytes — and
+unresolved obligations refuse. Per-profile gates (generic obligations,
+memory-changing witness, negative probes, budget/concurrency/FP
+compatibility, Rust tests), profile-covering cache keys, and validation on
+the fast path apply unchanged. All guarantees and the friend-reserved
+optimiser files are preserved. Nothing here claims any OS support or complete
+direct compilation already works.
+
 *CUTS: no Lean definition, lemma, checker Bool, decoder, validator,
 refinement, cost-transfer or acceptance theorem is proved here. Profile
 decisions are PROPOSED with prerequisites explicit. No runtime or compiler
