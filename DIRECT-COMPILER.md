@@ -270,7 +270,7 @@ Last ledger refresh: **2026-10-01 22:26 UTC**. This is an operational snapshot, 
 | 624 | Direct-source closure: FloatSourceObservations | Merged after review/checks | 625: Merged after review/checks | [report](messung/muse/MUSE-REPORT-624.md) |
 | 626 | Direct-source closure: FloatEntryState | Merged after review/checks | 627: Merged after review/checks | [report](messung/muse/MUSE-REPORT-626.md) |
 | 628 | Direct-source closure: SourceAssignmentLowering | Merged after review/checks | 629: Merged after review/checks | [report](messung/muse/MUSE-REPORT-628.md) |
-| 630 | Direct-source closure: SourceAccessCompleteness | Merged after review/checks | 631: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-630.md) |
+| 630 | Direct-source closure: SourceAccessCompleteness | Merged after review/checks | 631: Merged after review/checks | [report](messung/muse/MUSE-REPORT-630.md) |
 | 632 | Direct-source closure: SourceValidatorConnection | Merged after review/checks | 633: Merged after review/checks | [report](messung/muse/MUSE-REPORT-632.md) |
 | 634 | Direct-source closure: SourceCodeFrame | Merged after review/checks | 635: Merged after review/checks | [report](messung/muse/MUSE-REPORT-634.md) |
 | 636 | Required failover slot lifetime and safe role handback | Merged after review/checks | 637: Merged after review/checks | [report](messung/muse/MUSE-REPORT-636.md) |
@@ -701,6 +701,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `98ff68ff`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **630**, Direct-source closure: SourceAccessCompleteness, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-630.md). <!-- x86-merged:630 -->
 - 2026-10-01: checked master `66e6e9b0` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:66e6e9b0ecdb2c374206fd32d0c06f0886bcb412 -->
+- 2026-10-01: lane **631**, Independent direct-source closure review of 630, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-631.md). <!-- x86-merged:631 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
