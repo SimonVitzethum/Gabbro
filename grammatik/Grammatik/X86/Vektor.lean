@@ -445,11 +445,207 @@ theorem vecWrite_teilt (m m1 : Speicher) (a : Adresse) (v : Vektor)
   exact read64_rahmen m m1 a (vecHiAddr a) (vLo v) h1
     (vecChunks_disjoint a hno)
 
+/-- Boundary witness: lane 0 overflows (`0xFF + 1` wraps to zero) while
+    lane 1 adds independently (`5 + 7 = 12`): no carry crosses lanes. -/
+theorem vec_ueberlauf_ohne_uebertrag_b8 :
+    laneNat .b8 (vecAdd .b8
+      (vecMk .b8 (fun i => if i = 0 then 255 else if i = 1 then 5 else 0))
+      (vecMk .b8 (fun i => if i = 0 then 1 else if i = 1 then 7 else 0))) 0 = 0 ∧
+    laneNat .b8 (vecAdd .b8
+      (vecMk .b8 (fun i => if i = 0 then 255 else if i = 1 then 5 else 0))
+      (vecMk .b8 (fun i => if i = 0 then 1 else if i = 1 then 7 else 0))) 1 = 12 := by
+  decide
+
+/-- Boundary witness at 64-bit lanes: the low lane wraps
+    (`0xFFFF..FF + 1` to zero) while the high lane adds independently. -/
+theorem vec_ueberlauf_ohne_uebertrag_b64 :
+    laneNat .b64 (vecAdd .b64
+      (vecMk .b64 (fun i => if i = 0 then 18446744073709551615 else 3))
+      (vecMk .b64 (fun i => if i = 0 then 1 else 4))) 0 = 0 ∧
+    laneNat .b64 (vecAdd .b64
+      (vecMk .b64 (fun i => if i = 0 then 18446744073709551615 else 3))
+      (vecMk .b64 (fun i => if i = 0 then 1 else 4))) 1 = 7 := by
+  decide
+
+/-- Boundary witness for subtraction: lane 0 borrows and wraps (`0 - 1`
+    to `0xFF`) while lane 1 subtracts independently (`5 - 2 = 3`). -/
+theorem vec_borg_ohne_uebertrag_b8 :
+    laneNat .b8 (vecSub .b8
+      (vecMk .b8 (fun i => if i = 0 then 0 else if i = 1 then 5 else 0))
+      (vecMk .b8 (fun i => if i = 0 then 1 else if i = 1 then 2 else 0))) 0 = 255 ∧
+    laneNat .b8 (vecSub .b8
+      (vecMk .b8 (fun i => if i = 0 then 0 else if i = 1 then 5 else 0))
+      (vecMk .b8 (fun i => if i = 0 then 1 else if i = 1 then 2 else 0))) 1 = 3 := by
+  decide
+
+/-- Boundary witness for xor: lane 0 complements (`0xAA ^^^ 0x55 = 0xFF`)
+    while lane 1 cancels to zero. -/
+theorem vec_xor_spur_b8 :
+    laneNat .b8 (vecXor .b8
+      (vecMk .b8 (fun i => if i = 0 then 170 else if i = 1 then 240 else 0))
+      (vecMk .b8 (fun i => if i = 0 then 85 else if i = 1 then 240 else 0))) 0 = 255 ∧
+    laneNat .b8 (vecXor .b8
+      (vecMk .b8 (fun i => if i = 0 then 170 else if i = 1 then 240 else 0))
+      (vecMk .b8 (fun i => if i = 0 then 85 else if i = 1 then 240 else 0))) 1 = 0 := by
+  decide
+
+/-- Fully permissive memory with zeroed bytes. -/
+def vecZeugenSpeicher : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0
+    lesbar := fun _ => true
+    schreibbar := fun _ => true
+    ausfuehrbar := fun _ => false }
+
+/-- A nonzero packed word with distinct halves. -/
+def vecZeugenVektor : Vektor :=
+  BitVec.ofNat 128 0x100F0E0D0C0B0A090807060504030201
+
+/-- Memory after the low chunk of the witness write at address zero. -/
+def vecZeugenM1 : Speicher :=
+  { vecZeugenSpeicher with bytes := writeBytes vecZeugenSpeicher 0 (vLo vecZeugenVektor) }
+
+/-- Memory after both chunks of the witness write at address zero. -/
+def vecZeugenM2 : Speicher :=
+  { vecZeugenM1 with bytes := writeBytes vecZeugenM1 (vecHiAddr 0) (vHi vecZeugenVektor) }
+
+/-- A nonzero vector store goes through two ordered chunk writes, reads
+    back, and observably changes memory. -/
+theorem vecWrite_read_zeuge :
+    ∃ (m m' : Speicher) (a : Adresse) (v : Vektor),
+      v ≠ 0 ∧ vecWrite m a v = some m' ∧ read64 m' a = some (vLo v) ∧
+        vecRead m' a = some v ∧ m.bytes a ≠ m'.bytes a := by
+  have h1 : write64 vecZeugenSpeicher 0 (vLo vecZeugenVektor) = some vecZeugenM1 := by
+    unfold write64
+    have hc : schreibbar8 vecZeugenSpeicher 0 = true := rfl
+    rw [if_pos hc]
+    rfl
+  have h2 : write64 vecZeugenM1 (vecHiAddr 0) (vHi vecZeugenVektor) = some vecZeugenM2 := by
+    unfold write64
+    have hc : schreibbar8 vecZeugenM1 (vecHiAddr 0) = true := rfl
+    rw [if_pos hc]
+    rfl
+  have hw : vecWrite vecZeugenSpeicher 0 vecZeugenVektor = some vecZeugenM2 := by
+    unfold vecWrite
+    rw [h1]
+    exact h2
+  have hrd1 : lesbar8 vecZeugenSpeicher 0 = true := rfl
+  have hrd2 : lesbar8 vecZeugenSpeicher (vecHiAddr 0) = true := rfl
+  have hno : OhneUmbruch16 (0 : Adresse) := by
+    unfold OhneUmbruch16
+    decide
+  have hback := vecRead_nach_write vecZeugenSpeicher vecZeugenM1 vecZeugenM2 0
+    vecZeugenVektor h1 h2 hrd1 hrd2 hno
+  have hlo : read64 vecZeugenM2 0 = some (vLo vecZeugenVektor) := by
+    have base := read64_nach_write64 vecZeugenSpeicher vecZeugenM1 0
+      (vLo vecZeugenVektor) h1 hrd1
+    have hframe := read64_rahmen vecZeugenM1 vecZeugenM2 (vecHiAddr 0) 0
+      (vHi vecZeugenVektor) h2
+      (Disjunkt_symm 0 (vecHiAddr 0) (vecChunks_disjoint 0 hno))
+    rw [hframe]
+    exact base
+  have hhit : writeBytes vecZeugenSpeicher 0 (vLo vecZeugenVektor) 0 =
+      wortByte (vLo vecZeugenVektor) 0 := by
+    have h := writeBytesN_hit vecZeugenSpeicher 0 (vLo vecZeugenVektor) 8 0
+      (by decide) (by decide)
+    rwa [addrOff_null] at h
+  have hmiss : ∀ k : Nat, k < 8 → (0 : Adresse) ≠ addrOff (vecHiAddr 0) k := by
+    intro k hk hcon
+    have e : (addrOff (vecHiAddr 0) k).toNat = 8 + k := by
+      have e0 : (vecHiAddr (0 : Adresse)).toNat = 8 := by decide
+      have hkk : (vecHiAddr (0 : Adresse)).toNat + k < 2 ^ 64 := by omega
+      rw [addrOff_nat _ _ hkk, e0]
+    have z : (0 : Adresse).toNat = 0 := by decide
+    have hcon2 := congrArg BitVec.toNat hcon
+    rw [z, e] at hcon2
+    omega
+  have hframe : vecZeugenM2.bytes 0 = vecZeugenM1.bytes 0 :=
+    writeBytesN_miss vecZeugenM1 (vecHiAddr 0) (vHi vecZeugenVektor) 8 0 hmiss
+  have hchg : vecZeugenSpeicher.bytes 0 ≠ vecZeugenM2.bytes 0 := by
+    rw [hframe]
+    show BitVec.ofNat 8 0 ≠ vecZeugenM1.bytes 0
+    have e1 : vecZeugenM1.bytes 0 =
+        writeBytes vecZeugenSpeicher 0 (vLo vecZeugenVektor) 0 := rfl
+    rw [e1, hhit]
+    decide
+  exact ⟨vecZeugenSpeicher, vecZeugenM2, 0, vecZeugenVektor,
+    by decide, hw, hlo, hback, hchg⟩
+
+/-- SIMD admission: refused until a generic vector correspondence is proved
+    covering source correspondence, fault order (IR-VALIDIERUNG §3 item 9a),
+    visibility (9b), tearing (9c) and FP control status (9d), concurrent
+    observations, and budget transfer. Any admission must edit this
+    definition, so it cannot slip in silently. No FP SIMD exists here. -/
+def simdFreigabe : Bool := false
+
+/-- No SIMD transformation is admitted on this foundation. -/
+theorem simd_gesperrt : simdFreigabe = false := rfl
+
 /- CUTS:
-    Skeleton only: lane accessors, lane operations, memory carriage,
-    correctness/no-carry theorems, witnesses and the SIMD refusal are open.
+    Data/operation foundation only: packed 128-bit integer words over the
+    canonical `Wort`/`Breite` helpers (8/16/32/64 lanes), per-lane modular
+    add/sub/bitwise correctness with no inter-lane carry or borrow, and
+    memory carriage as two ordered permission-checked canonical 64-bit
+    chunk accesses with explicit refusal, read-back, frame and an
+    observably mixed intermediate state (no vector atomicity is claimed;
+    lane disjointness never implies atomicity or reordering of shared
+    operations).
+    NOT proved here and required before any SIMD optimisation is admitted:
+    source correspondence (lowering to `P`/`exec`), fault order across
+    lanes, visibility against concurrent observers, tearing correspondence
+    against the per-access TSO bridge table, FP control status (no FP lanes
+    are modelled), source call-log preservation (`FolgeG`), budget transfer
+    for the two chunk accesses, progress interaction, or decoder/ABI/image
+    validation. `simdFreigabe` stays `false` until all of it is proved.
+    No XMM register file is created and `Befehl` is untouched.
 -/
 
 #print axioms vecVal_succ
+#print axioms laneCount_bits
+#print axioms laneCount_pos
+#print axioms laneMod_pos
+#print axioms mask_and_eq_mod
+#print axioms trunc_nat
+#print axioms laneNat_lt
+#print axioms laneMod_gt_one
+#print axioms vecVal_lt
+#print axioms vecVal_proj
+#print axioms laneGet_mk
+#print axioms laneNat_add
+#print axioms laneNat_sub
+#print axioms laneNat_xor
+#print axioms laneNat_and
+#print axioms laneNat_or
+#print axioms laneMod_dvd
+#print axioms laneMod_le
+#print axioms laneNat_lt64
+#print axioms laneGet_toNat
+#print axioms addB_nat
+#print axioms subB_nat
+#print axioms xorB_nat
+#print axioms trunc_and_nat
+#print axioms trunc_or_nat
+#print axioms laneGet_add
+#print axioms laneGet_sub
+#print axioms laneGet_xor
+#print axioms laneGet_and
+#print axioms laneGet_or
+#print axioms vecAdd_allein
+#print axioms vecSub_allein
+#print axioms vecJoin_split
+#print axioms addrOff_nat
+#print axioms Disjunkt_symm
+#print axioms vecChunks_disjoint
+#print axioms vecWrite_perm
+#print axioms vecWrite_verweigert_lo
+#print axioms vecWrite_verweigert_hi
+#print axioms vecRead_nach_write
+#print axioms vecWrite_rahmen
+#print axioms vecWrite_teilt
+#print axioms vec_ueberlauf_ohne_uebertrag_b8
+#print axioms vec_ueberlauf_ohne_uebertrag_b64
+#print axioms vec_borg_ohne_uebertrag_b8
+#print axioms vec_xor_spur_b8
+#print axioms vecWrite_read_zeuge
+#print axioms simd_gesperrt
 
 end Gabbro.Grammatik.X86
