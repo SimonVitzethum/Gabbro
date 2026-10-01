@@ -422,4 +422,64 @@ theorem tso_store_buffering :
     sb_beide_laden_null.1, sb_beide_laden_null.2,
     sb_flush_schritt, sb_flush_aendert_speicher⟩
 
+/-! ## 9. Packets: byte granularity tears; LOCK is refused -/
+
+/-- Natural alignment: the byte address is divisible by `n`. -/
+def Ausgerichtet (a : Adresse) (n : Nat) : Prop := a.toNat % n = 0
+
+/-- When a multi-byte access WOULD be single-copy atomic on silicon:
+    width 1, 2, 4 or 8, naturally aligned. Width 1 holds here (one
+    entry, one flush); wider widths do NOT (see `paket_reisst`). -/
+def paketAtomarMoeglich (a : Adresse) (n : Nat) : Prop :=
+  (n = 1 ∨ n = 2 ∨ n = 4 ∨ n = 8) ∧ Ausgerichtet a n ∧ 0 < n
+
+/-- Width 1 is always a candidate packet. -/
+theorem paket_ein_byte (a : Adresse) :
+    paketAtomarMoeglich a 1 := by
+  refine ⟨Or.inl rfl, ?_, by decide⟩
+  unfold Ausgerichtet
+  exact Nat.mod_one _
+
+/-- A single-entry flush changes exactly one address: the byte access
+    is single-copy atomic by construction. -/
+theorem einzelbyte_atomar (s s' : TSOZustand) (c : Nat)
+    (h : flushKern s c = some s') (e : TSOEintrag)
+    (he : s.puffer c = [e]) (x : Adresse) :
+    s'.mem.bytes x = (if x = e.addr then e.wert else s.mem.bytes x) := by
+  by_cases hx : x = e.addr
+  · rw [if_pos hx, hx]
+    exact flush_schreibt_kopf s s' c h e [] he
+  · rw [if_neg hx]
+    exact flush_rahmen s s' c h e [] he x hx
+
+/-- **Tearing.** Two issued bytes flush one at a time: after the first
+    flush the first address is new while the second still reads the
+    pre-flush byte. No multi-byte atomicity is claimed at this layer,
+    even for aligned packets: that bridge is OPEN. -/
+theorem paket_reisst (s s1 s2 s3 : TSOZustand) (c : Nat)
+    (a b : Adresse) (v w : Byte)
+    (h1 : issueByte s c a v = some s1)
+    (h2 : issueByte s1 c b w = some s2)
+    (hempty : s.puffer c = [])
+    (h3 : flushKern s2 c = some s3) (hne : a ≠ b) :
+    s3.mem.bytes a = v ∧ s3.mem.bytes b = s2.mem.bytes b := by
+  have e1 := issue_haengt_an s s1 c a v h1
+  have e2 := issue_haengt_an s1 s2 c b w h2
+  rw [hempty] at e1
+  simp only [List.nil_append] at e1
+  rw [e1] at e2
+  have he : s2.puffer c = ⟨a, v⟩ :: [⟨b, w⟩] := e2
+  exact ⟨flush_schreibt_kopf s2 s3 c h3 ⟨a, v⟩ [⟨b, w⟩] he,
+    flush_rahmen s2 s3 c h3 ⟨a, v⟩ [⟨b, w⟩] he b (Ne.symm hne)⟩
+
+/-- LOCK-prefixed read-modify-write has NO transition in this model:
+    the inductive has no constructors, so no step is a LOCK step. -/
+inductive LockSchritt : TSOZustand → TSOZustand → Prop
+
+/-- Every LOCK claim is void inside this model. -/
+theorem kein_lock_schritt (s s' : TSOZustand) :
+    ¬ LockSchritt s s' := by
+  intro h
+  cases h
+
 end Gabbro.Grammatik.X86
