@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 13:41 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 13:42 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -190,7 +190,7 @@ Last ledger refresh: **2026-10-01 13:41 UTC**. This is an operational snapshot, 
 | 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
-| 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/350.md) |
+| 350 | Practical-performance Lean wave C6: AtomicPayload | Merged after review/checks | 388: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Merged after review/checks | 439: Merged after review/checks | [report](messung/muse/MUSE-REPORT-401.md) |
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Merged after review/checks | [report](messung/muse/MUSE-REPORT-402.md) |
 | 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Merged after review/checks | 484: Merged after review/checks | [report](messung/muse/MUSE-REPORT-404.md) |
@@ -216,7 +216,7 @@ Last ledger refresh: **2026-10-01 13:41 UTC**. This is an operational snapshot, 
 | 424 | Continuous Lean proof reserve: FeatureProfile | Committed candidate; review/integration pending | 472: scheduled | [task](lanes/424.md) |
 | 425 | Continuous Lean proof reserve: FloatExceptions | Merged after review/checks | 473: Merged after review/checks | [report](messung/muse/MUSE-REPORT-425.md) |
 | 426 | Continuous Lean proof reserve: VectorFootprints | Merged after review/checks | 474: Merged after review/checks | [report](messung/muse/MUSE-REPORT-426.md) |
-| 427 | Continuous Lean proof reserve: RegisterInterference | Agent working | 475: scheduled | [task](lanes/427.md) |
+| 427 | Continuous Lean proof reserve: RegisterInterference | Committed candidate; review/integration pending | 475: scheduled | [task](lanes/427.md) |
 | 428 | Continuous Lean proof reserve: ParallelMoves | Committed candidate; review/integration pending | 476: Committed candidate; review/integration pending | [task](lanes/428.md) |
 | 429 | Continuous Lean proof reserve: CodeImmutability | Merged after review/checks | 477: Merged after review/checks | [report](messung/muse/MUSE-REPORT-429.md) |
 | 430 | Continuous Lean proof reserve: ValidationCache | Agent working | 478: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/430.md) |
@@ -463,6 +463,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **432**, Continuous Lean proof reserve: RegionSeparation, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-432.md). <!-- x86-merged:432 -->
 - 2026-10-01: lane **480**, Independent exact-candidate review of 432, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-480.md). <!-- x86-merged:480 -->
 - 2026-10-01: publication batch checks passed for `0340e680`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **350**, Practical-performance Lean wave C6: AtomicPayload, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-350.md). <!-- x86-merged:350 -->
+- 2026-10-01: checked master `37754739` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:3775473977191c9601aed0e09d65ba0b93f5dd4a -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
