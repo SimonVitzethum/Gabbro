@@ -422,3 +422,4 @@ import Grammatik.X86.ScalarFloat
 import Grammatik.X86.FeatureProfile
 import Grammatik.X86.TimeTransfer
 import Grammatik.X86.ValidatorSkeleton
+import Grammatik.X86.DecodingCoverage
