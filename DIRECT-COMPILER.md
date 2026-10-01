@@ -272,7 +272,7 @@ Last ledger refresh: **2026-10-01 21:16 UTC**. This is an operational snapshot, 
 | 628 | Direct-source closure: SourceAssignmentLowering | Agent working | 629: scheduled | [task](lanes/628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
 | 632 | Direct-source closure: SourceValidatorConnection | Committed candidate; review/integration pending | 633: Agent working | [task](lanes/632.md) |
-| 634 | Direct-source closure: SourceCodeFrame | Merged after review/checks | 635: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-634.md) |
+| 634 | Direct-source closure: SourceCodeFrame | Merged after review/checks | 635: Merged after review/checks | [report](messung/muse/MUSE-REPORT-634.md) |
 | 636 | Required failover slot lifetime and safe role handback | Merged after review/checks | 637: Merged after review/checks | [report](messung/muse/MUSE-REPORT-636.md) |
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Merged after review/checks | 641: Merged after review/checks | [report](messung/muse/MUSE-REPORT-640.md) |
@@ -681,6 +681,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **626**, Direct-source closure: FloatEntryState, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-626.md). <!-- x86-merged:626 -->
 - 2026-10-01: lane **627**, Independent direct-source closure review of 626, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-627.md). <!-- x86-merged:627 -->
 - 2026-10-01: lane **634**, Direct-source closure: SourceCodeFrame, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-634.md). <!-- x86-merged:634 -->
+- 2026-10-01: lane **635**, Independent direct-source closure review of 634, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-635.md). <!-- x86-merged:635 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
