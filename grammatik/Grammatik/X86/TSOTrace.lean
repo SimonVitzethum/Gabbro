@@ -491,11 +491,124 @@ theorem spurW_laden :
       loadByte spurW4.tso 1 sbY = some sbEins := by
   constructor <;> decide
 
+/-- The clock-1 message is readable at core 0's joined view. -/
+theorem spurW_lesbarX : Speichermodell.Lesbar spurW4.hist (spurW4.blick 0)
+    sbX
+    (Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+      (spurW2.blick 0) sbX spurW2.frisch sbEins) := by
+  refine ⟨?_, ?_⟩
+  · rw [spurW_histX]
+    simp
+  · exact Nat.le_refl _
+
+/-- The clock-2 message is readable at core 1's joined view. -/
+theorem spurW_lesbarY : Speichermodell.Lesbar spurW4.hist (spurW4.blick 1)
+    sbY
+    (Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+      (spurW3.blick 1) sbY spurW3.frisch sbEins) := by
+  refine ⟨?_, ?_⟩
+  · rw [spurW_histY]
+    simp
+  · exact Nat.le_refl _
+
+/-- **JOINT WITNESS.** A reached two-core trace writes two actual bytes
+    and reads them back: both canonical bytes change, both release
+    messages are readable at their actual values and joined views, and
+    the two flush timestamps are distinct. Non-degenerate: two cores,
+    real buffered stores, two memory-changing flushes. A forwarded load
+    before its flush would return a value with no message yet
+    (`fremd_weiterleitung_unsichtbar` in `TSOHistory` shows the snapshot
+    half); the grown histories here carry only flushed values. -/
+theorem spur_zeuge_gelenk :
+    SpurErreichbar spurW0 spurW4 ∧
+    spurW0.tso.mem.bytes sbX ≠ spurW4.tso.mem.bytes sbX ∧
+    spurW0.tso.mem.bytes sbY ≠ spurW4.tso.mem.bytes sbY ∧
+    loadByte spurW4.tso 0 sbX = some sbEins ∧
+    loadByte spurW4.tso 1 sbY = some sbEins ∧
+    Speichermodell.Lesbar spurW4.hist (spurW4.blick 0) sbX
+      (Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (spurW2.blick 0) sbX spurW2.frisch sbEins) ∧
+    Speichermodell.Lesbar spurW4.hist (spurW4.blick 1) sbY
+      (Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (spurW3.blick 1) sbY spurW3.frisch sbEins) ∧
+    spurW2.frisch ≠ spurW3.frisch := by
+  refine ⟨spurW_erreichbar, spurW_speicher.1, spurW_speicher.2,
+    spurW_laden.1, spurW_laden.2, spurW_lesbarX, spurW_lesbarY, ?_⟩
+  rw [spurW_uhren.1, spurW_uhren.2]
+  decide
+
+/-! ## Stable consumer API for BridgeRead574 / BridgeWrite573 -/
+
+/-- Consumer history projection: the grown history of a trace node. -/
+def traceHist (n : SpurKnoten) :
+    Adresse → List (Speichermodell.Nachricht Adresse Byte) := n.hist
+
+/-- Consumer view projection: the per-core views of a trace node. -/
+def traceSicht (n : SpurKnoten) (c : Nat) :
+    Speichermodell.Sicht Adresse := n.blick c
+
+/-- Consumer clock: the next fresh timestamp of a trace node. -/
+def traceFrisch (n : SpurKnoten) : Nat := n.frisch
+
 /- CUTS:
-    - So far only the node/step vocabulary; preservation, freshness,
-      forwarding and the joint witness follow as increments.
-    - Byte granularity only: no typed-carrier W/GX mapping, no aligned
-      multi-byte atomicity, no LOCK RMW, no run induction to W runs.
+    - Address/Byte is an INTERMEDIATE layer only: no typed-carrier W/GX
+      mapping (carrier-granular histories, `GeteiltV`/`HavocA` atomic
+      environments), no aligned multi-byte single-copy atomicity
+      (`hist_zerreissen` in `TSOHistory` shows tearing at this layer),
+      no LOCK RMW.
+    - No per-access `SchrittW` (`wahl`/`neu`) construction, no G-step
+      access-list decomposition, no run induction from x86 traces to W
+      runs: consumers BridgeWrite573 and BridgeRead574 own that; this
+      module hands them `traceHist`, `traceSicht`, `traceFrisch` plus the
+      one-flush (`spur_ein_flush`), finite-trace (`spur_verlauf_waechst`),
+      FIFO (`spur_fifo_aelteste`), release-view (`spur_freigabe_sicht`)
+      and youngest-forwarding (`spur_weiterleitung_ist_jüngste`) facts.
+    - The clock discipline (0 initial, strictly increasing flush stamps)
+      is projection-local: no claim that source W timestamps coincide
+      with these.
+    - A forwarded own-buffer value has no message until its flush: the
+      snapshot half is the proved refusal
+      `fremd_weiterleitung_unsichtbar` in `TSOHistory`; the grown
+      history carries only flushed values by construction
+      (`spur_schritt_hist`).
+    - The accepted snapshot helper `histVon` is preserved unchanged as
+      bounded legacy evidence (`spurStart_legt_snapshot_vor`); this
+      module does not modify `TSOHistory`.
+    - No fairness, progress, timing or cycle-cost claim; no interrupt,
+      device, MMIO or DMA model; fences only gate (`zaunBereit` reused
+      from `TSO`).
+    - No new TSO executor: `SpurSchritt` projects every step onto
+      `issueByte`/`flushKern` equations; `TSOZustand`, `TSOSchritt`,
+      `sb*` witnesses and `paket_reisst` are reused unchanged.
 -/
+
+#print axioms spurStart_inv
+#print axioms spurSchritt_inv
+#print axioms spur_schritt_hist
+#print axioms spur_schritt_erhaelt
+#print axioms spurStart_legt_snapshot_vor
+#print axioms spur_flush_frisch_vor
+#print axioms spur_freigabe_sicht
+#print axioms spur_weiterleitung_ist_jüngste
+#print axioms spur_flush_schreibt
+#print axioms spur_ein_flush
+#print axioms spur_verlauf_waechst
+#print axioms spur_fifo_aelteste
+#print axioms spurW2_puffer0
+#print axioms spurW_stufe1
+#print axioms spurW_stufe2
+#print axioms spurW_stufe3
+#print axioms spurW3_puffer1
+#print axioms spurW_stufe4_tso
+#print axioms spurW_stufe4
+#print axioms spurW_erreichbar
+#print axioms spurW_histX
+#print axioms spurW_histY
+#print axioms spurW_uhren
+#print axioms spurW_speicher
+#print axioms spurW_laden
+#print axioms spurW_lesbarX
+#print axioms spurW_lesbarY
+#print axioms spur_zeuge_gelenk
 
 end Gabbro.Grammatik.X86
