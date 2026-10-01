@@ -100,3 +100,45 @@ Nothing. The "no quadratic-cost/millisecond claim without measurement"
 and "boundedness only where actually derived" constraints were followed:
 the only bounds proved are `ins.length ≤ fuel` / `es.length ≤ fuel`,
 derived by induction, with no time interpretation.
+
+## Integration-gate response (second turn, same day)
+
+Gate evidence: `RuntimeError: Lean merge build failed` with the umbrella
+`Grammatik` step crashing (`failed to create thread`, exit 134,
+397/398 in the main checkout). Decisive detail: **every
+`ValidationBudget.lean` line in the gate log is `info:`** — my module
+compiled green inside the integration build too (all 27 axiom lines
+printed, standard axioms). No error line references any owned file.
+
+Repair verdict after re-verification in my clone (branch `muse/431`,
+commit `c1a41a1a`, tree clean):
+
+- `./lean-probe grammatik/Grammatik/X86/ValidationBudget.lean` still
+  `== 0 error(s) ... exit 0`.
+- `./lean-bau` still `== exit 1; 2 error line(s) in the COMPLETE
+  output`, failing only at the umbrella step (392/393 here).
+- Mechanical gate rules re-checked on the owned files: no `sorry`,
+  `admit`, `axiom` declaration, `native_decide` or `unsafe` (grep-clean;
+  `#print axioms` lines are not declarations); umbrella diff is exactly
+  one additive import line; INHABITATION needs no `_zeuge` (no premise
+  quantifies over program syntax, no `ZEUGE:` target in the task);
+  `CUTS:` + per-theorem `#print axioms` present; English only.
+- Control experiment stands: umbrella crashes identically with my import
+  removed, and no `Grammatik.olean` ever existed in this clone.
+
+**No owned-file repair is indicated by the evidence, and none was
+made** (fabricating a change would only add review noise). The failing
+target is outside my owned files and fails identically without my
+module. Concrete blocker for the coordinator, not assumable away: the
+umbrella `Grammatik` olean build crashes the Lean worker at thread
+creation in both checkouts, repeatedly across load levels — needs
+infra-level action (rebuild in a quiet window, worker memory/thread
+budget, or an umbrella split decided at coordinator level). My module
+adds exactly one small olean to that closure and builds green on both
+sides of the gate.
+
+No acceptance of the full source/binary chain is claimed; the
+narrower-than-future statement of the first report section is unchanged.
+A fresh independent review of the changed commit is expected per the
+gate instruction; reviewers can reproduce the green module check with
+`./lean-probe grammatik/Grammatik/X86/ValidationBudget.lean`.
