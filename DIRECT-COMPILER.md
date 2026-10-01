@@ -104,7 +104,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 10:10 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 10:11 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -137,10 +137,10 @@ Last ledger refresh: **2026-10-01 10:10 UTC**. This is an operational snapshot, 
 | 309 | Stack frames and ABI memory obligations | Merged after review/checks | 313: Merged after review/checks | [report](messung/muse/MUSE-REPORT-309.md) |
 | 310 | Call-log obligations for source inlining | Merged after review/checks | 314: Merged after review/checks | [report](messung/muse/MUSE-REPORT-310.md) |
 | 311 | Range-justified integer strength reduction | Merged after review/checks | 315: Merged after review/checks | [report](messung/muse/MUSE-REPORT-311.md) |
-| 312 | Checked target regions and allocation ceiling | Committed candidate; review/integration pending | 316: Agent working | [task](lanes/312.md) |
-| 317 | Single pilot instruction access extraction | Agent working | 318: Committed candidate; review/integration pending | [task](lanes/317.md) |
+| 312 | Checked target regions and allocation ceiling | Merged after review/checks | 316: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-312.md) |
+| 317 | Single pilot instruction access extraction | Committed candidate; review/integration pending | 318: Agent working | [task](lanes/317.md) |
 | 319 | Byte-memory fetch decode and actual instruction step | Agent working | 320: scheduled | [task](lanes/319.md) |
-| 323 | Detailed instruction optimisation and fast compilation design | Committed candidate; review/integration pending | 324: Agent working | [task](lanes/323.md) |
+| 323 | Detailed instruction optimisation and fast compilation design | Committed candidate; review/integration pending | 324: Committed candidate; review/integration pending | [task](lanes/323.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -239,6 +239,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `ce698d8f`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **322**, Independent root cleanup and English filename review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-322.md). <!-- x86-merged:322 -->
 - 2026-10-01: checked master `1c415d29` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:1c415d29989d42c49ccabc731831239e49499d96 -->
+- 2026-10-01: lane **312**, Checked target regions and allocation ceiling, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-312.md). <!-- x86-merged:312 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

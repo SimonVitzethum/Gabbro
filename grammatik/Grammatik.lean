@@ -382,3 +382,4 @@ import Grammatik.X86.Relokation
 import Grammatik.X86.Stapel
 import Grammatik.X86.AufrufOpt
 import Grammatik.X86.StaerkeReduktion
+import Grammatik.X86.Regionen
