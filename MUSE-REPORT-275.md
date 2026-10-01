@@ -45,6 +45,66 @@ guards), `Budget.lean` (Op.cost/totalCost), `KorrespondenzAllg.lean`
 None (docs-only architecture task; no Lean file, no Rust code, no new source
 construct, diagnostic, probe, example or CLI switch; MARKE_EMIT untouched).
 
+## Review repairs (2026-10-01, second commit on this branch)
+
+The reviewer required five repairs in the owned document. All five are
+applied (second commit); no Lean/Rust changes, owned files only.
+
+1. **§2.4 was unsound (free initial graph, duty-only binding, assumed
+   refinement).** The theorem now quantifies over the FULL source-computed
+   unit `E` (`Kette.E` shape), requires `lowerOk(E, G0) = true` for the
+   initial graph (Lean-computed or Rust-proposed + proved lowering checker,
+   §1.3), per-step `check_C(Ci, G(i-1), Gi, E) = true` over the whole
+   optimisation sequence, and `layoutOk(Gn, B, Img) = true` for the final
+   decoded bytes/image (lane-276 binding). The refinement is proved via the
+   per-access bridge and the §3 lemmas, not assumed. The §5 closing-theorem
+   paragraph now names the same E-anchored chain.
+2. **CSE/memory motion ignored other threads' writes.** §3 item 3 rewritten:
+   load elimination/reordering now needs a validator-decided global
+   interleaving condition (exclusive ownership, held-lock stability checked
+   over ALL functions' effect exports, or immutability including
+   foreign/device writers); atomics/MMIO/volatile/foreign-observable memory
+   are ineligible without an exact per-access concurrent equivalence
+   theorem; disjoint local objects never license moving a shared access
+   across publication/fence/acquire/release/lock boundaries. The §2.2 token
+   check now states token-order is necessary but not sufficient; §3 items 2
+   and 7 and §7 item 2 updated to cite item 3 (this also fixed the wrong
+   cross-reference: item 8 is unrolling, not a motion rule).
+3. **SIMD lacked fault-order/visibility/tearing/FP-status obligations.**
+   §3 item 9 now carries all four as independently-refusing obligations plus
+   a CONDITIONAL REFUSAL: until the generic vector correspondence (lanes
+   274+278) is proved, only pure non-trapping integer lanes over proved
+   private-or-immutable memory pass, each citing the pending theorem.
+   §7 item 9 records the same refusal as a non-goal.
+4. **Cost treatment audited into three levels** (§1.2, §3 item 11, §5.1
+   `CostExport`, §6 example, §8 checklist): (a) source budget semantics
+   (re-summed, NOT x86 costing), (b) measured target work (opaque,
+   profitability only), (c) proved machine-work bound (OPEN obligation with
+   lane 278, cited not assumed — no closing theorem claims budget transfer
+   until it closes). Declining an optimisation never weakens a bound.
+5. **Inlining call-log/`FolgeG` + cross-references.** §3 item 4 now requires
+   explicit ghost call/return event reconstruction (direct AND indirect
+   calls, actual values incl. reason-channel outcome) with identical ghost
+   logs as the legality condition for a changed physical call count; §2.2
+   CFG-mapping bullet carries the ghost records; §8 checklist has the
+   corresponding item.
+
+### Proposals vs implemented facts vs open obligations
+
+- IMPLEMENTED FACTS (in this lane's scope): the wave-A vocabulary
+  (`Typen.lean`), the plan §§0–5, the `korrOk`/A2 precedents — all cited,
+  none modified. This lane's output is a reviewed specification, committed.
+- PROPOSALS (this document's content, to be judged in phase-B review):
+  SCFG shape, the A/B/C certificate interface, the `lowerOk`/`check_C`/
+  `layoutOk` checker shapes, the rule register, ghost events, the three
+  cost levels, file ownership.
+- OPEN OBLIGATIONS (explicit in the document's CUTS and §8, not claimed):
+  every Lean definition, rule lemma, checker Bool, refinement theorem,
+  lowering checker, per-access concurrent equivalence, vector
+  correspondence, ghost-event preservation proof, machine-work bound with
+  lane 278, and lane-276 image binding. A sibling-lane interface review
+  (274/276/277/278 seams) is still needed before phase B.
+
 ## Build/check outcome
 
 Docs-only task: no Lean or cargo run required by the wave rules (file/claim
