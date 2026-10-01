@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 15:54 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 16:04 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -234,6 +234,24 @@ Last ledger refresh: **2026-10-01 15:54 UTC**. This is an operational snapshot, 
 | 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Merged after review/checks | [report](messung/muse/MUSE-REPORT-547.md) |
 | 554 | Shorter clearer current English README | Merged after review/checks | 555: Merged after review/checks | [report](messung/muse/MUSE-REPORT-554.md) |
 | 556 | Repeated intermittent CLI alias test diagnosis | Merged after review/checks | 557: Merged after review/checks | [report](messung/muse/MUSE-REPORT-556.md) |
+| 558 | Connection: Connection plan and integration ownership | Scheduled | 576: scheduled | [task](lanes/558.md) |
+| 559 | Connection: Arbitrary-input pilot decoder soundness | Scheduled | 577: scheduled | [task](lanes/559.md) |
+| 560 | Connection: Loaded image to actual instruction fetch | Scheduled | 578: scheduled | [task](lanes/560.md) |
+| 561 | Connection: Relocated bytes to re-decoded instruction execution | Scheduled | 579: scheduled | [task](lanes/561.md) |
+| 562 | Connection: Narrow operations byte decoder and execution connection | Scheduled | 580: scheduled | [task](lanes/562.md) |
+| 563 | Connection: Multiply/divide byte decoder and execution connection | Scheduled | 581: scheduled | [task](lanes/563.md) |
+| 564 | Connection: Shift operations byte decoder and execution connection | Scheduled | 582: scheduled | [task](lanes/564.md) |
+| 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Scheduled | 583: scheduled | [task](lanes/565.md) |
+| 566 | Connection: Conditional forms bytes to accepted control execution | Scheduled | 584: scheduled | [task](lanes/566.md) |
+| 567 | Connection: Canonical byte-TSO history projection | Scheduled | 585: scheduled | [task](lanes/567.md) |
+| 568 | Connection: Executed pilot instruction to realised access footprint | Scheduled | 586: scheduled | [task](lanes/568.md) |
+| 569 | Connection: Fetched call/return to stack-frame proofs | Scheduled | 587: scheduled | [task](lanes/569.md) |
+| 570 | Connection: Source world/table values to target byte representation | Scheduled | 588: scheduled | [task](lanes/570.md) |
+| 571 | Connection: Entry state, image permissions and user binding duties | Scheduled | 589: scheduled | [task](lanes/571.md) |
+| 572 | Connection: Source budget-stop and target work connection | Scheduled | 590: scheduled | [task](lanes/572.md) |
+| 573 | Connection: Projected TSO stores to source W writes | Waiting for accepted dependencies | 591: scheduled | [task](lanes/573.md) |
+| 574 | Connection: Projected TSO loads to source W reads | Waiting for accepted dependencies | 592: scheduled | [task](lanes/574.md) |
+| 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -523,6 +541,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **555**, Independent exact-candidate README review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-555.md). <!-- x86-merged:555 -->
 - 2026-10-01: lane **556**, Repeated intermittent CLI alias test diagnosis, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-556.md). <!-- x86-merged:556 -->
 - 2026-10-01: lane **557**, Independent exact-candidate CLI alias repair review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-557.md). <!-- x86-merged:557 -->
+- 2026-10-01: Simon prioritised connecting the accepted model components. Registered source-linked IR continuation 287, connection owners 558-575 and independent reviewers 576-593, with a permanent global cap of 15 actual Muse processes. Initial work connects decoded bytes, loaded mappings, relocations, realised accesses, TSO histories and source-memory representation; W read/write and unified extension dispatch wait for accepted producer interfaces. Registration is not execution or proof closure. <!-- x86-connection-wave-558 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
