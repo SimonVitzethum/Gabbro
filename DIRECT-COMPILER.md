@@ -250,7 +250,7 @@ Last ledger refresh: **2026-10-01 20:31 UTC**. This is an operational snapshot, 
 | 571 | Connection: Entry state, image permissions and user binding duties | Merged after review/checks | 589: Merged after review/checks | [report](messung/muse/MUSE-REPORT-571.md) |
 | 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
 | 573 | Connection: Projected TSO stores to source W writes | Merged after review/checks | 591: Merged after review/checks | [report](messung/muse/MUSE-REPORT-573.md) |
-| 574 | Connection: Projected TSO loads to source W reads | Committed candidate; review/integration pending | 592: Committed candidate; review/integration pending | [task](lanes/574.md) |
+| 574 | Connection: Projected TSO loads to source W reads | Merged after review/checks | 592: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-574.md) |
 | 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
 | 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Merged after review/checks | [report](messung/muse/MUSE-REPORT-594.md) |
 | 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Merged after review/checks | [report](messung/muse/MUSE-REPORT-595.md) |
@@ -648,6 +648,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **614**, Independent overnight review of 602, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-614.md). <!-- x86-merged:614 -->
 - 2026-10-01: publication batch checks passed for `0455c60c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: checked master `3859c4af` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:3859c4afcc04dff7dcaf586bfa13584da59372a6 -->
+- 2026-10-01: lane **574**, Connection: Projected TSO loads to source W reads, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-574.md). <!-- x86-merged:574 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
