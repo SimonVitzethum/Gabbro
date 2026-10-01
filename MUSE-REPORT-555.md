@@ -1,13 +1,48 @@
 # MUSE-REPORT-555: Independent exact-candidate review of 554 (concise README)
 
 Lane 555, 2026-10-01. Clone `/home/simon/Dokumente/gabbro-muse/a555`, branch
-`muse/555` verified before any work. Owned file only: `MUSE-REPORT-555.md`
-(this file). No Lean, Rust, guardian, or docs source touched; working tree was
-clean before and after (`git status --short` empty, `git diff --check` clean).
+`muse/555` verified before any work (re-verified on re-review). Owned file
+only: `MUSE-REPORT-555.md` (this file). No Lean, Rust, guardian, or docs
+source touched; working tree was clean before and after (`git status --short`
+empty, `git diff --check` clean).
 
-CANDIDATE: 554 679e4868843560fdd80407fdd4deddd519621c8e
+CANDIDATE: 554 c910e94b42d9b06317a406aca0673466e759883a
 
-VERDICT: REPAIR
+VERDICT: ACCEPT
+
+## Re-review after author repair (new pinned HEAD)
+
+The previous verdict (REPAIR on `679e4868`, committed as `6d56709f`) found one
+blocking defect: the rewrite dropped numbered `## N.` sections, leaving the
+five out-of-scope `README §5` references dangling (`LICENSE-ADDENDUM.md:51`,
+`dokumente/DESIGN.md:124`, `dokumente/GABBRO-ATS-SPARK.md:12,156`,
+`dokumente/AUFTRAG-GABBROV-VERIFIKATION.md:110`). The author accepted without
+dispute and repaired in commit `c910e94b` ("numbered README sections so §5
+resolves again"), now the pinned HEAD of `.tmp/review/SNAPSHOT.json`
+(base `2185a17f`, same 4 files, `clean: true`).
+
+Independently re-verified on the NEW candidate text:
+
+- `## 5. Proved and not proved` exists (sections numbered 1–6, earlier
+  sections 1–4 per the lane requirement); all five external `README §5`
+  references resolve to the proof-boundary section again. GitHub anchor
+  `#5-proved-and-not-proved` is the correct slug; the internal README link
+  (line 22) and the `AGENTS.md` link (line 52) both point at it.
+- Repair diff is minimal: `PATCH.diff` touches only the 4 owned files
+  (`AGENTS.md`, `MUSE-REPORT-554.md`, `README.md`,
+  `dokumente/PROJECT-STATUS.md`); README still 149 lines (in the 100–150
+  band); all guarded figure wordings byte-identical to the reviewed version.
+- All 17 `readme_muster()` patterns re-matched against the new README text:
+  none missing. The 5 `pruefe-zahlen.py` README patterns re-matched: none
+  missing. Author's BUILD-EVIDENCE re-run claim (`pruefe-todo.py`: README
+  section still `Kennzahlentafel deckt sich mit dem Gegenstand`, speech
+  tests ok) is consistent with these pattern hits; heading renumbering
+  cannot move any guarded figure line.
+- No new claims, figures, links, or licence wording introduced by the repair;
+  nothing else in the candidate changed. Round-1 findings below therefore
+  stand unchanged, with the single blocking defect now closed.
+
+## Round-1 review (HEAD `679e4868`) — retained as history
 
 ## What was reviewed
 
