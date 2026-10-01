@@ -368,3 +368,4 @@ import Grammatik.Speichermodell.ZaehlerW
 
 import Grammatik.X86.Typen
 import Grammatik.X86.Wort
+import Grammatik.X86.Speicher
