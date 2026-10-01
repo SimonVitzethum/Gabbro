@@ -126,6 +126,15 @@ README §5 says exactly this; keep it that way.
   the one under active review.
 - **Delete worktrees and clones right after a merge.** That covers `.claude/worktrees/*`,
   the lane clones, and the `gabbro-opus-*` directories.
+- **Temporary Muse limit, authorised by Simon on 2026-10-01:** up to **40** concurrent
+  OpenCode Go Muse contributor processes today (Europe/Berlin), including reviewers,
+  organisers and merge owners. On later days the cap returns to **20**. Use isolated
+  clones, independent exact-candidate review and serial checked publication. An
+  increased cap is not a claim that all slots are already running.
+- **Proposed friend optimiser ownership:** `grammatik/Grammatik/X86/OptimizationRules.lean`
+  and `OptimizationWitnesses.lean` are reserved for the friend handoff. Muse lanes
+  do not edit these paths; reuse the one accepted IR and wait for its frozen interface.
+  The complete planned optimiser specification belongs in `grammatik/OPTIMIZER.md`.
 - **Opus agents: at most 2 at a time.** Simon said on 2026-09-14: "nutze 2 opus agenten".
   Muse lanes: as many as useful.
 - **Commit messages** go through `arbeitsprotokoll/.commitmsg` + `./commit.sh`. It commits STAGED
@@ -347,7 +356,7 @@ opus/…:opus/…` first.
 | Diagnostic codes | **N578** (highest issued: N577, C-free lane, 2026-10-01; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
 | Gift (poison-probe) numbers | **1398** (highest file: `beispiele/gift/1397`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
 | Example numbers | **185** (highest file: `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
-| Lane numbers | **329** workers (269–328 reserved for direct-x86 Lean-first implementation/review, 2026-10-01; 308 counter-reviews architecture audits); highest pre-wave lane: 268); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter is authoritative) |
+| Lane numbers | **335** workers (269–334 reserved for direct-x86 Lean-first implementation/review, 2026-10-01; 308 counter-reviews architecture audits); highest pre-wave lane: 268); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter is authoritative) |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
 crates/ | sort -u | tail`, `ls beispiele beispiele/gift`. **It was stale again**, and by more

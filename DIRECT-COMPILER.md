@@ -294,3 +294,12 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
   families; [reviewer 328](lanes/328.md) checks the exact plan independently.
   Full mandatory source/final-byte validation and fast accepted compilation remain
   requirements; the full chain remains OPEN.
+
+- 2026-10-01: user authorised up to 40 concurrent Muse processes today, including
+  organising and merge-owner agents, returning to 20 on later days. Author 329
+  prepares concrete dependency/ownership allocation; merge owner 330 performs the
+  actual local merge of independently reviewed design 327, followed by independent
+  merge review 333. Author 331 writes the complete planned optimiser specification
+  in `grammatik/OPTIMIZER.md`, reviewed by 334, with an isolated proposed friend
+  rule-library handoff. No friend work or 40 simultaneously active processes is
+  claimed. Source/final-byte validation remains mandatory and the full chain OPEN.
