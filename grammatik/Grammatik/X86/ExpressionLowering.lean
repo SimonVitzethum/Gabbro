@@ -21,14 +21,15 @@ import Grammatik.X86.Speicher
 import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
 import Grammatik.X86.Byteschritt
+import Grammatik.X86.ScalarFloat
 
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik
 
-/-- Modular integer-to-word conversion: `n mod 2^64` as a word.
-    Same shape as `ScalarFloat.intWort`; the signed reading is `sint`. -/
-def intWort (n : Int) : Wort := BitVec.ofNat 64 (n % (2 ^ 64 : Int)).toNat
+/- Modular integer-to-word conversion is `ScalarFloat.intWort` (reused,
+   not redefined: two's complement modulo `2^64`); the signed reading is
+   `FlagBeweis.sint`. -/
 
 /-- Explicit checkable environment representation: every integer variable
     of the context reads, in the pre-state register file, the modular word
@@ -169,7 +170,7 @@ theorem laengeOk_encode (b : Befehl) : laengeOk (encode b).length = true := by
   exact encode_len b
 
 /-- A single-instruction run is its step. -/
-theorem lauf_einzeln (d : Decodiert) (s : Zustand) :
+theorem lauf_einzeln_gleich (d : Decodiert) (s : Zustand) :
     lauf [d] s = schritt d s := by
   unfold lauf
   cases schritt d s <;> rfl
@@ -206,7 +207,7 @@ theorem senkAtom_korrekt_lit {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   subst hpa
   refine ⟨schrittRegister s (ripNach s.rip (encode (.movImm64 dst (intWort n))).length)
     s.flags dst (intWort n), ?_, ?_, ?_, ?_, ?_⟩
-  · simp only [List.map_cons, List.map_nil, lauf_einzeln]
+  · simp only [List.map_cons, List.map_nil, lauf_einzeln_gleich]
     exact schritt_movImm64 _ _ _ _ (laengeOk_encode _) rfl
   · exact regSet_gleich _ _ _
   · rfl
@@ -234,7 +235,7 @@ theorem senkAtom_korrekt_var {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   refine ⟨schrittRegister s
     (ripNach s.rip (encode (.movReg64 dst (abb _ x))).length)
     s.flags dst (s.register (abb _ x)), ?_, ?_, ?_, ?_, ?_⟩
-  · simp only [List.map_cons, List.map_nil, lauf_einzeln]
+  · simp only [List.map_cons, List.map_nil, lauf_einzeln_gleich]
     exact schritt_movReg64 _ _ _ _ (laengeOk_encode _) rfl
   · show regSet s.register dst (s.register (abb _ x)) dst =
       intWort (eval σ₀ (Expr.var (Λ := Λ) x) σ ρ).n
@@ -380,7 +381,7 @@ theorem senkung_add {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         (pb.map fun b => ⟨b, (encode b).length⟩)) s = some s2 := by
       rw [lauf_anhang _ _ _ _ hrun1]
       exact hrun2
-    rw [lauf_anhang _ _ _ _ h12, lauf_einzeln]
+    rw [lauf_anhang _ _ _ _ h12, lauf_einzeln_gleich]
     exact hadd
   · show regSet s2.register dst (add64 (s2.register dst) (s2.register tmp)).1 dst =
         intWort (eval σ₀ (Expr.add a b) σ ρ).n
@@ -458,7 +459,7 @@ theorem senkung_sub {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
         (pb.map fun b => ⟨b, (encode b).length⟩)) s = some s2 := by
       rw [lauf_anhang _ _ _ _ hrun1]
       exact hrun2
-    rw [lauf_anhang _ _ _ _ h12, lauf_einzeln]
+    rw [lauf_anhang _ _ _ _ h12, lauf_einzeln_gleich]
     exact hsub
   · show regSet s2.register dst (sub64 (s2.register dst) (s2.register tmp)).1 dst =
         intWort (eval σ₀ (Expr.sub a b) σ ρ).n
@@ -1156,10 +1157,52 @@ theorem istFrag_von_senkFrag_zeuge :
     zeuge_senkung
 
 /- CUTS:
-    Conversion homomorphism (`intWort_add/sub`), the signed roundtrip
-    (`intWort_sint`), the lowering-correctness theorems, the overflow-bound
-    theorem and the fetched-byte witness are not proved yet.
-    Unsupported expression forms refuse with `none` (two planted refusals).
+    Proved here, over the single source model (`Semantik.eval`) and the
+    canonical pilot machine (`Codec.encode`, `Ausfuehrung.schritt`,
+    `Byteschritt` fetch):
+    - modular conversion with add/sub homomorphism and the signed-64
+      roundtrip (`intWort_add/sub/sint`);
+    - atom and one-level ADD/SUB lowering with refusal outside the fragment
+      (`senkAtom/senkFrag`, shape lemmas, planted `mul`/nested refusals);
+    - shape inversion through `IstAtom`/`IstFrag` (inversion substitutes;
+      stuck carrier indices never appear);
+    - value/memory/register/rsp correctness (`senkAtom_korrekt_*`,
+      `senkung_add/sub/korrekt`), architectural flags per shape, and the
+      overflow bounds (`senkung_ohne_ueberlauf_add/sub`);
+    - a joint witness package: source `30 + 12 = 42`, three fetched byte
+      steps into `rax`, a fourth memory-changing store step, a forged-opcode
+      refusal, and one `_zeuge` per syntax-premise theorem.
+    NOT proved here, and not claimed:
+    - No deeper nesting, no other operators, widths, floats, memory operands,
+      calls or control flow: they refuse with `none` (this is the honest
+      boundary, not a silent gap).
+    - No generic flags-transfer for the fragment as a whole: flags are
+      pinned per shape (atoms preserve, add/sub set architectural flags).
+      Block lowering with liveness may relax `Frisch` to interference.
+    - No TSO bridge: the runs are sequential `lauf`/`laufBytes` folds; the
+      per-access target-to-W/GX simulation stays with its lanes.
+    - No whole-source or whole-binary theorem: this is one expression
+      fragment against one pilot machine, composed with (not replacing)
+      the accepted source model and canonical executor.
+    - No hardware claim: fetched bytes run over the model `Speicher`,
+      never silicon.
 -/
+
+#print axioms intWort_add
+#print axioms intWort_sub
+#print axioms intWort_sint
+#print axioms senkAtom_korrekt
+#print axioms senkung_add
+#print axioms senkung_sub
+#print axioms senkung_korrekt
+#print axioms senkung_ohne_ueberlauf_add
+#print axioms senkung_ohne_ueberlauf_sub
+#print axioms istAtom_von_senkAtom
+#print axioms istFrag_von_senkFrag
+#print axioms senkung_korrekt_zeuge
+#print axioms zeuge_auswertung
+#print axioms zeuge_bytes_wert
+#print axioms zeuge_bytes_speicher
+#print axioms zeuge_byte_faelschung_verweigert
 
 end Gabbro.Grammatik.X86
