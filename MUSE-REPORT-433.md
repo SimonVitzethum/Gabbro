@@ -120,6 +120,23 @@ this report) is ready for merge retry unchanged.
 A fresh independent review is required for the changed commit, as
 instructed. No acceptance of the full source/binary chain is claimed.
 
+## Second gate failure, identical evidence (no merge)
+
+The gate failed again with a byte-identical log: all fourteen axiom lines
+of `X86/ObservationProjection` print (owned module built cleanly in the
+integration build), then step 397/398 `Building Grammatik` dies with
+`failed to create thread`, exit 134. Local `./lean-probe` on the committed
+module re-run at this turn: **0 errors**, standard axioms only.
+
+No new repair is possible inside the owned files
+(`X86/ObservationProjection.lean`, umbrella import line, this report): the
+failing step elaborates the ~397-import umbrella in one process on the
+coordinator machine, and the clean-tree stash test already proved it fails
+without my change. Blocker unchanged: coordinator-side merge-build
+resources (retry at lower load, or more thread/memory headroom for the
+umbrella step). No Lean edit made; no full-chain acceptance claimed; fresh
+independent review required for this commit.
+
 ## Task remarks
 
 - Nothing in the task text appears wrong. One judgment call worth
