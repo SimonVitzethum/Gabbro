@@ -1,5 +1,12 @@
 # The goal theorem as ONE reviewable Lean statement -- plan
 
+> **Translation target update, 2026-10-01:** the goal theorem remains the source-side
+> foundation. Its target-side correspondence work now follows the
+> [direct x86-64 byte-validation plan](PLAN-UEBERSETZUNGSVALIDIERUNG.md), reusing W / GX and
+> proving the per-access x86-TSO bridge. C-level correspondence/linking tasks below describe
+> the previous route and current backend, not prerequisites for completing the new route.
+
+
 *Written 2026-09-14 at Simon's request. Why: Lean makes a PROOF unanswerable,
 not a STATEMENT. Both 2026-09-14 verdicts, and probes A and D before them, found theorems
 that were true and said the wrong thing. The remedy is not more theorems. It is one short

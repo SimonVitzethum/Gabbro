@@ -31,7 +31,10 @@ a remote build machine, this file wins for execution.*
    goal reached?"
 2. **Only if both say yes:** transfer everything into the checker (Rust `crates/gabbro-check`)
    and the emitter (`emit.rs`).
-3. **Then:** translation validation, i.e. the chain source → model → emitted C, checked in Lean.
+3. **Then:** translation validation, i.e. source → model → direct x86-64 machine bytes,
+   checked in Lean (selected target since Simon's decision, 2026-10-01). The current C11 backend
+   and its existing validation proofs remain legacy evidence; no direct x86 backend is yet
+   implemented. Reuse W / GX for concurrency and prove the per-access x86-TSO bridge.
 
 **Where this stands (2026-09-15):**
 
@@ -154,8 +157,10 @@ README §5 says exactly this; keep it that way.
   construct, runtime primitive, template or binding form gets its machine-G semantics and checker
   side with `gabbro_ziel` still proved (a reviewed `Spec.lean` diff if the statement moves), the
   Lean front end and exporter, GabbroV's `Body` model with the bridge simulation, and a C
-  correspondence lemma or proved template for every new emitted form. Without its Lean part a
-  feature stays unmerged (`NEEDS LEAN`).
+  correspondence lemma or proved template for every new emitted form of the current C backend.
+  For the selected direct x86 target, require the analogous correspondence through decoded final
+  machine bytes, including concurrency; a C lemma alone does not discharge it. Without its Lean
+  part a feature stays unmerged (`NEEDS LEAN`).
 - **The operating system is user logic, never an assumption, and nothing is OS-specific**
   (Simon, 2026-09-30): a system or kernel call is a generic call whose contract the program or
   its binding library declares in Gabbro; the Lean model, the compiler, the checker and the
@@ -425,13 +430,13 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 |---|---|
 | The goal statement | `grammatik/Grammatik/Zielsatz/Spec.lean` (review target), `Beweis.lean`, `Akzeptiert.lean`, `Proben*.lean`, `SpecProben.lean` |
 | Model | `RufMaschineG.lean` (machine G), `Semantik.lean` (`execEnd`, `rufAt`), `SperreBeweis.lean`, `Lebendigkeit.lean`, `Gleitkomma*.lean`, `EinpassenVoll.lean`, `AntwortOrte.lean`, `Nichtinterferenz/` |
-| Translation validation | `Schlusssatz104.lean` (first chain), `Schlusssatz.lean` + `KorrespondenzAllg.lean` (stage (a) generic, `korrOk`), `Kette104*.lean`, `Kette108.lean`, `CNebenlaeufig.lean` + `Schlusssatz124.lean` + `Korpus124.lean` (stage (b)), `CFormen*.lean`, `CSpeicher.lean`, `CSemantik.lean`, `Parser/` (T3) |
-| Plans | `dokumente/PLAN-ZIELSATZ.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-UEBERSETZUNGSVALIDIERUNG.md` (chain count, §6 stage (a), §7 stage (b)), `PLAN-EINFACHHEIT.md`, `NICHTINTERFERENZ.md`, `GLEITKOMMA.md` |
+| Translation validation | Active target: `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5 (source → final x86 bytes, W / GX reuse). Existing C proof record: `Schlusssatz104.lean` (first chain), `Schlusssatz.lean` + `KorrespondenzAllg.lean` (stage (a) generic, `korrOk`), `Kette104*.lean`, `Kette108.lean`, `CNebenlaeufig.lean` + `Schlusssatz124.lean` + `Korpus124.lean` (stage (b)), `CFormen*.lean`, `CSpeicher.lean`, `CSemantik.lean`, `Parser/` (T3) |
+| Plans | `dokumente/PLAN-ZIELSATZ.md` (§5 review questions, §8 extension rules, §9–§10 gaps), `PLAN-UEBERSETZUNGSVALIDIERUNG.md` (§§0–5 active x86 target, §§6–7 historical C record), `PLAN-EINFACHHEIT.md`, `NICHTINTERFERENZ.md`, `GLEITKOMMA.md` |
 | Theorem map | `dokumente/SATZKARTE.md` (§§13–27; new sections at the end, and renumber on a merge collision) |
 | Known absences | `dokumente/OFFEN.md` (O1–O14) |
 | Guardian-booked figures | `messung/KENNZAHLEN.md` (moved out of the old TODO.md; `pruefe-zahlen.py` reads it) |
 | Verdicts | `messung/URTEIL-*-2026-09-1*.md`; lane reports `messung/muse/MUSE-REPORT-NN.md` |
-| Instruments | `instrumente/zaehle-kette.py` (the chain count, the one headline metric of translation validation), `pruefe-cformen.py` (three states: lemma / assumption / uncovered), `pruefe-emission.sh`, `abnahme.py` (all guardians), `mutiere-pruefer.py` |
+| Instruments | `instrumente/zaehle-kette.py` (existing C-chain count; does not validate x86 bytes), `pruefe-cformen.py` (three states: lemma / assumption / uncovered), `pruefe-emission.sh`, `abnahme.py` (all guardians), `mutiere-pruefer.py` |
 | Rust tools | `gabbro lean-g` (exporter), `gabbro obligations --g`, `gabbro counterexample`, `gabbro corr-lean`, `gabbro certificate`, `gabbro pruefe --fix`, `gabbro abgeleitet`, `gabbro zeremonie`, `gabbro paesse` |
 
 ## 9. Pitfalls that cost real time (each happened)

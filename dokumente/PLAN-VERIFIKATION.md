@@ -1,5 +1,12 @@
 # Der Verifikationspfad als eigenständiges Werkzeug
 
+> **Target decision, 2026-10-01:** the selected translation-validation route is
+> [source → model → direct x86-64 machine bytes](PLAN-UEBERSETZUNGSVALIDIERUNG.md), with
+> per-access x86-TSO refinement to the existing W / GX concurrency model. C-specific plans,
+> assumptions and measurements below describe the previous route and current C backend;
+> they are not the active binary-validation assignment. The new backend/validator is planned.
+
+
 *Geschrieben am 2026-08-28. **Ausgeplant, teilgebaut** — Schritt V2 (`gabbro gabbrov pruefe`)
 ist seit 2026-09-10 gebaut (`GABBROV.md`); der Rest hieraus ist nicht ausgeführt.*
 

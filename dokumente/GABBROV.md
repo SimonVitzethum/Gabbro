@@ -1,5 +1,13 @@
 # GabbroV — the checker for the logic obligations
 
+> **Translation target, 2026-10-01:** GabbroV remains the source-logic proof component.
+> Reuse its source-computed duties and bridge in the
+> [direct x86-64 final-byte validation plan](PLAN-UEBERSETZUNGSVALIDIERUNG.md).
+> Its proofs do not establish machine-code correspondence on their own; the W / GX-to-hardware
+> bridge and final-image validator remain open. Earlier implementation/trust inventories below
+> are dated records, not the trust base of a completed binary proof.
+
+
 Status: draft. Quotations from `SPRACHE.md` and `PFLICHTEN.md` are sourced; everything else
 is a proposal.
 

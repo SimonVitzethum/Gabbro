@@ -1,177 +1,196 @@
-# Translation validation — the plan
+# Translation validation — direct x86-64 machine code
 
-*Written 2026-09-13. Simon decided that this comes AFTER the goal ("the user proves
-only their own logic plus hardware assumptions") is confirmed and carried into the checker and
-emitter. The inputs are measurements: `messung/VERIFIKATIONSAUFWAND-2026-09-12.md` (lane 127)
-and `messung/muse/MUSE-REPORT-128.md` (lane 128, the C-semantics probe).*
+*Decision 2026-10-01, Simon: replace C11 translation validation as the target with a direct
+x86-64 backend and validation of the final machine bytes. This is an architecture decision,
+not an implemented backend or a new proof. The running compiler still emits C11 plus inline
+assembly. §§6–7 retain the dated C-backend proof record; their local references describe the
+old plan, not the work order below. Existing C proofs and guardians remain regression evidence.*
 
 ## 0. What is proved at the end
 
-Take any program the checker accepts. Lean re-checks a certificate the checker printed for
-that program, and the check yields three results:
+The intended chain is:
 
-1. **Model judgement.** The program satisfies the model's judgement: typing, safety, and the
-   goal theorem's premise classes.
-2. **Parse fidelity.** The certificate describes the *source text*, not a Rust-side
-   rendering of it.
-3. **Emitter fidelity.** The emitted C refines the model's semantics, up to the named
-   assumptions: the C compiler, the hardware profile, and the driver for payloads.
+```
+source text -- Lean parser/elaborator --> model program P and obligations
+     |                                      |
+     +-- untrusted Rust backend --> final x86-64 image + certificate
+                                            |
+                              Lean decoding and validation
+                                            |
+                       generic refinement theorem to P / GX
+                                            |
+                              existing goal theorem
+```
 
-The Rust checker is never verified. It is untrusted, and a wrong checker can only refuse
-programs, never admit a wrong one. This is strategy A of lane 127.
+For EVERY source text and final image accepted by the validator, a generic Lean theorem must
+establish parse fidelity, the model judgement and correspondence of every admitted machine
+execution to the model. User logic duties are computed in Lean from the source and discharged
+through the existing GabbroV bridge. No function name, example number or handwritten per-program
+model may determine acceptance. Per-program proof instances are witnesses, not the trust path.
 
-**Direct verification of the Rust code is rejected.** Whether via Aeneas, Verus or a SPARK
-rewrite, it would take about 700k proof lines (about 20 person-years), and it would prove
-against a second copy of the model rather than against the Lean model.
+The validation input includes the actual executable bytes, data layout, entries and resolved
+relocations. A proof about an instruction listing alone is insufficient. The loaded executable
+mapping must match the validated image, including any relocation performed at load time; entry
+state and later control transfers must satisfy the validated calling and memory conventions.
+Unvalidated external code cannot enter a finished chain through a declaration alone.
 
-## 1. Components and measured sizes
+The Rust compiler, optimisers, register allocator and encoder stay untrusted. Their output may
+carry hints and certificates, but Lean reconstructs or checks every obligation through a proved
+checker. Once that checker is complete, incorrect output causes refusal. This property is a
+target; it is not a claim about today's compiler. No C compiler, assembler or linker correctness
+assumption belongs to the selected chain: any tools used to form the image have their final
+output checked.
 
-| # | Component | Lean lines | Basis |
-|---|---|---|---|
-| T1 | Certificate soundness per constructor, over all `Stmt`/`Block`/`Endblock` forms (today only `Expr`, via `zeugnis_sound`) | 5,000–8,000 | lane 127: about 40 constructors × 100–200 lines |
-| T2 | Correspondence rechecker (`corrcert`) plus rulings for the 30 open C forms of `Erhaltung.lean` | 4,000–6,000 | lane 127 |
-| T3 | **Parser in Lean.** The certificate starts from the source text, so Rust leaves the trusted base entirely. This replaces the unproved fidelity of the `lean.rs` export. | 3,000–5,000 | my estimate; SYNTAX.md has 167 EBNF rules |
-| T4 | **C semantics** of the emitted subset (64 forms), with a UB inventory, a memory model and per-form correspondence | 7,000 / 17,000 / 30,000 (low / mid / high) | lane 128 measured about 117 lines per easy form and extrapolated in three cost classes |
-| T5 | The remaining ghost-template library (about 16 of 20) | 2,000–3,000 | lane 127 |
-| **Σ** | | **≈ 21,000–52,000 (mid ≈ 35,000)** | |
+## 1. Components and present status
 
-*Status 2026-09-27, against the estimates above: T2 is built as `korrOk`
-(`KorrespondenzAllg.lean`, 23 expression arms plus block structure — the re-checker half of
-the T2 row); T5 reads 10 of 21 machine-checked (`gabbro schablonen`). The Lean-line
-estimates stand as priced; what moved is built-status, recorded per item in `TODO.md` §0d.*
+| Piece | Selected target | Reuse and present status |
+|---|---|---|
+| T3 | Lean source parser and elaborator compute P, layouts and duties | Existing front end and `bruecke/Bruecke/Quelle.lean`; incomplete coverage remains open |
+| T1 | Generic certificate soundness for typing, safety and goal premises | Existing certificate model and GabbroV bridge; extend by source construct |
+| T4 | Selected x86-64 instructions, byte decoder, byte-addressed memory and per-access x86-TSO semantics | New target; no completed x86 validation chain |
+| T2 | Sound validator from the final image to P / GX | New target; reuse correspondence architecture, not C-specific correctness conclusions |
+| T5 | Generic runtime, entry, lock, call and hardware templates bound to the target semantics | Reuse source duties and abstract proofs; concrete machine-code correspondence remains open |
 
-## 2. The binding constraint: the memory model (from lane 128)
+`CSpeicher`, `CSemantik`, `CParser`, `korrOk` and `CNebenlaeufig` describe the current C backend.
+They are retained and labelled as such. Their closed chains do not establish correspondence
+for a direct x86 image. Changing the target does not make an uncovered construct verified.
 
-Lane 128's memory `(table, index, field) → Int` carries exactly the five easy forms. Around
-24 of the 64 forms need something that model cannot express:
-- pointer arithmetic, dereference and address-of need an **aliasing model**;
-- `volatile`, `_Atomic` and memory ordering need **observations**;
-- `goto` needs **continuations**.
+## 2. Machine profile and instruction selection
 
-**Rule:** decide the memory model first, in one lane with a fixed design document, before any
-of the 24 hard forms. The alternative is rewriting every form semantics halfway through, which
-is what lane 128 warns against.
+Use 64-bit execution and a deliberately bounded instruction/encoding profile. Do not model
+16/32-bit execution modes, x87 or MMX unless a later requirement justifies a separate extension.
+Byte, 16-bit and 32-bit DATA operations remain necessary for the language's types and devices.
+Restrict accepted prefixes, addressing modes and operand combinations explicitly; unsupported
+encodings are refused. Variable-length x86 decoding remains part of the proof work.
 
-Candidate: a block-offset model in the style of CompCert, restricted to the objects the
-emitter actually creates (table arrays, a few globals, stack locals). Layout comes from the
-emitter's own declarations, and there is no general `malloc`, because Gabbro's arenas are
-static arrays.
+Select coverage from ALL source operations and backend emission paths, including runtime and
+hardware forms, not from instructions found in example binaries. Start with these candidate
+families and justify each exact form before admitting it:
 
-## 3. Order
+| Family | Candidate forms and obligation |
+|---|---|
+| Data and addresses | `mov`, width extensions, `lea`; prove widths, layout, bounds and address calculations |
+| Integers | addition/subtraction, multiply/divide, logic, shifts/rotates, carry operations where needed; preserve overflow, division and stop behaviour |
+| Control | compare/test, conditional branches, `setcc`/`cmovcc`, `jmp`, `call`, `ret`; track flags, entry targets, stack and ABI |
+| Atomics | ordinary accesses where justified, locked RMW such as `cmpxchg`/`xadd`, fences and `pause`; prove each source ordering and retry loop |
+| Floating point | scalar SSE/SSE2 for f32/f64; bind rounding, exceptions, NaNs and floating-point control state to the existing IEEE model |
+| Hardware and entries | only the port/register/system-call/interrupt forms required by the source inventory; prove wrappers and bind named hardware behaviour |
+| Optional performance extensions | SIMD and BMI profiles only with explicit availability and correspondence proofs |
 
-*Revised 2026-09-13 (evening) after an external review. The first version raised five pillars
-in parallel to 20-60 % each; the review's point, accepted: coverage is MULTIPLICATIVE -- the
-closing theorem holds only for programs that pass every sieve -- so the state is measured by
-closed chains, not by per-pillar percentages. Done before the revision: memory model
-(CSpeicher), T4 passes (i)-(iii) and the reason channel (48 of 73 emitted forms), T1 for all
-Expr/Stmt/Block/Endblock constructors, term identity on the Lean side, T3 lexer/parser through
-items, source-to-G on 104.*
+This is a small semantic core with proved extensions. There is no claim that the fewest possible
+instructions produce maximum performance. Useful native arithmetic, floating point and atomic
+operations avoid expensive software emulation; optimisation quality also depends on lowering,
+register allocation and the chosen processor profile.
 
-**The one metric: chain count.** How many of the corpus programs (`beispiele/*.gab`, 101 emitting
-on 2026-09-13, 129 tracked on 2026-09-26) pass the WHOLE chain: Lean parse of the source → elaboration to `P` → model
-certificate accepted → correspondence certificate of the emitted C accepted. It replaces the
-per-pillar numbers as the headline; the per-pillar numbers stay as diagnostics. **On 2026-09-13
-it is 0** (T2 does not exist yet). **On 2026-09-14 it is 1**: `beispiele/104`, theorem
-`schlusssatz_104` (§6.4). **On 2026-09-15 it is 2 of 111** (`beispiele/104` and `beispiele/108`,
-each a Lean-checked instance of the GENERIC closing theorem `schlusssatz` (§6); **2 of 129 on
-2026-09-26**, same two programs, grown corpus). A guardian prints
-it; since 2026-09-15 it counts a chain as closed only for a program with a Lean-checked instance
-of the generic theorem (`instrumente/zaehle-kette.py`).
+Instruction selection does not change the language's memory ceilings or termination policies.
+The planned opt-in unbounded region concerns Turing completeness in the abstract model;
+physical hardware has finite memory. It is not a reason to weaken existing guarantees.
 
-1. **Close ONE chain first: T2 minimal, for `beispiele/104`.** The correspondence certificate
-   (`corrcert.rs` print format) and its Lean rechecker, restricted to the forms 104's emitted C
-   actually uses -- nothing more. T2 is the only pillar that did not exist at all, and without it
-   no chain closes, not even for 104.
-2. **Closing theorem, stage (a): single-threaded, complete.** For a program with one active
-   thread (`ziel_ort_einfaden`'s class): `certificates check` ⟹ `source parses to P` ∧ `P
-   satisfies the model` ∧ `every run of the emitted C corresponds to a run of P` (the C semantics
-   is deterministic, `exec_det`, so "every" is available). Witness on 104. This is the first
-   point at which the chain count is 1.
-3. **Widen by forms, measured by the chain count.** Every further T1 certificate shape, T4
-   lemma, T5 template and T2 form is judged by how many corpus programs it moves over the line.
-4. **Closing theorem, stage (b): concurrent.** DRF-SC for the C11/hardware memory model, the
-   lock primitives' specification (acquire/release with happens-before) and thread creation by
-   the runtime enter as NAMED PREMISES of the theorem. The argument that makes the DRF-SC
-   premise applicable rather than merely plausible: `rennfrei_g_voll` proves the program data-race
-   free on G, which is exactly DRF-SC's hypothesis. The simulation G-run ↔ interleaved C-run is
-   research-sized (CompCertTSO, promising semantics); stage (a) does not wait for it. What is
-   realistic soon is the statement with the premises in the right place; the proof over it is a
-   separate, longer item. **Closed for ONE program on 2026-09-15** (§7: `schlusssatz_124`, the
-   simulation by blocks between synchronisation points, over every SC run of the emitted C of
-   `beispiele/124`); the generic part (semantics, premises, race transfer) is program-independent.
+## 3. Concurrency: reuse Gabbro's model, prove the hardware bridge
 
-**Three states in the C-form guardian.** `instrumente/pruefe-cformen.py` classifies every
-emitted form as (i) **lemma** (a correspondence lemma exists), (ii) **named assumption** (the
-form has no C meaning by construction and enters the theorem as a premise: inline asm, device
-register access = the hardware profile, syscall stubs = the kernel), or (iii) **without
-semantics** (red unless on the dated known-uncovered list). Two states would force the
-assumption forms either to stay red forever or to have the guardian switched off -- and a
-silenced guardian is the failure class this tree has booked three times.
+**Reuse the existing W / GX / thread model and `gabbro_ziel`.** W provides view-based weak
+memory; GX admits the shared-atomic read values covered by `NutzerPflichtA`. The current goal
+statement uses `PrueferX`, `NutzerPflichtA` and `ZielFX`. Existing race freedom, contract, lock,
+thread-lifecycle and progress proofs are the source-side foundation, not a second concurrency
+language to be rebuilt in x86 syntax.
 
-**What still has to be read by a human.** Strategy A shrinks the trusted base from the Rust
-tree to the Lean DEFINITIONS the kernel cannot judge: whether they say the right thing. That is
-the external-review target, and nothing else is: the machine G (`RufMaschineG.lean`, and the
-sequential `Semantik.lean` / `Maschine.lean`), the good-run predicates (`Gesittet` in
-`Wettlauf.lean`, `GutO`, `RegLokal`, `SperrInvOk`), the obligation (`KoerperGutS`), the goal
-predicate (`VertragAmOrtG`, `SperrInvG`), and the C semantics (`CSemantik.lean`,
-`CSpeicher.lean`, `CFormen.lean` core). Measured 2026-09-13: `grammatik/` contains no `sorry`
-outside comments (a plain `grep -w sorry` counts the many "no `sorry`" remarks -- that count is
-not a finding).
+Read `Speichermodell/Sicht.lean`, `MaschineW.lean`, `GXMaschine.lean`, `AtomarW.lean` and
+`Zielsatz/Spec.lean` (`SchwachX`, `ZielX`, `GabbroZiel`) before designing the bridge.
+`Zielsatz/BeweisAtomar.lean` proves the current goal. Abstract ticket-lock results in
+`CTicket.lean` may be reused; the concrete instruction sequence still needs its proof.
 
-**Not a risk any more once T3 stands:** the Rust side of term identity (differentially tested,
-53 match / 0 mismatch, not proved). With the certificate anchored at the source text through
-the Lean parser, a Rust print of the wrong term fails the check -- a refusal, not an admission.
+The missing theorem goes from **machine behaviour to allowed model behaviour**. Establish a
+relation from per-access x86-TSO executions of the validated image to W and then GX, or directly
+to GX with every required goal property preserved. Do not assume that the existing W model is
+already a proved model of x86. Equality of execution sets is unnecessary: every admitted
+hardware execution must be covered by the source model.
 
-## 4. Effort (Muse Spark 1.3 Contributor, measured rates)
+The bridge must account for:
 
-Rates come from waves 1–5. A lane task that survives review brings about 300 Lean lines, and
-rework adds a factor of 1.5–2 in runs. A run costs $0.25–0.50. For C-semantics lanes the
-rework is expected above 50%, since this is new formalisation with no precedent in the
-project.
+- Byte-addressed memory, object layout, widths, overlapping accesses, alignment, tearing and
+  the profile's atomicity guarantees; private stack and spill slots cannot create new races.
+- Store buffers, forwarding, coherence, acquire/release and locked RMW; successful and failed
+  compare-exchange have distinct effects. Derive lowering for every exposed memory order.
+  W abstracts `seq_cst` as release/acquire; that abstraction is not a proved total SC order.
+  Validate the promised source guarantees and document the abstraction's limits explicitly.
+- Every ordinary and atomic access and its footprint. An instruction sequence or source block
+  cannot be treated as indivisible merely because it represents one model operation. Grouping
+  needs a commutation or linearisation proof that covers actual interleavings.
+- Locks, retry loops, start/join, publication, interrupts and call boundaries. Prove the real
+  primitive's correspondence to `sperrAbstrakt`, including visibility and declared entry roots.
+- Finite and infinite executions. Internal machine steps may stutter only under a proved
+  progress argument; a spinning or diverging implementation cannot disappear in projection.
+  Preserve the model's declared costs with validated machine costs and named hardware bounds;
+  instruction counts alone are not execution-time bounds.
 
-| | lines | runs | API cost | wall clock (review-bound, 30–60 merges/day) |
-|---|---|---|---|---|
-| low | 21,000 | ≈ 110 | ≈ $30 | ≈ 4 days |
-| mid | 35,000 | ≈ 190 | ≈ $70 | ≈ 7 days |
-| high | 52,000 | ≈ 300 | ≈ $150 | ≈ 2 weeks |
+Ordinary coherent RAM uses the selected x86-TSO profile. MMIO, DMA, cache attributes and device
+observations require their own named hardware semantics; they cannot silently inherit ordinary
+RAM rules. An operating system, scheduler implementation or runtime routine is user/binding
+logic whose contracts and code must be covered, not a new hardware assumption.
 
-The costs of the Opus agent for the memory model are on the Claude account and not included.
+The old C theorem's `DRFSC` and `LaufzeitC` premises remain properties of that old theorem.
+They do not discharge the x86 bridge. The x86 plan must not postpone its memory design until
+a sequential instruction model is complete.
 
-## 5. What stays an assumption, by name
+## 4. Order, gates and measurement
 
-- **The C compiler.** It translates the emitted subset faithfully under the manifest's flags.
-  The FMA probe, the `_Static_assert` pins and the C-form census bound this assumption; they do
-  not discharge it. **Since 2026-09-15 its FRONT END is what is assumed, not a transcription:**
-  for the two closed chains the emitted TEXT is pinned in Lean and PARSED there (§6.6, A2
-  discharged), so what remains is "the compiler's front end reads this subset as `parseC`
-  does" -- a part of this entry, no longer an entry of its own.
-- **The hardware profile.** `Profil.lean`, keyed entries. **Since 2026-09-16 a SECOND
-  hardware profile stands beside it, for a certified unit that touches a DEVICE**
-  (`GerAnnahme`, KorrespondenzAllg.lean §1c): the register's window is declared `mmio` at the
-  emitter's offset and width (`fenster`); the address expression the certificate carries
-  evaluates to that cell (`adr` -- a THEOREM for the direct-base spelling `(volatile uint8_t
-  *)(uintptr_t)BASE + K`, an ASSUMPTION for the emitter's own `d->basis + K`, which says the
-  handle local carries the window's base); the declared Gabbro type fits the cell (`passt`);
-  **the C device oracle and Gabbro's `Orakel.regLies` answer the same machine** (`einig` --
-  this is `regLies_step`'s `hdev` and `pruefe-cformen.py`'s `stmt:reg-load` row, lifted from
-  one program point to the unit); and a raw word that DOES fit the declared type encodes back
-  to itself (`rund` -- a theorem for an integer register). Beside them, one clause of the
-  state relation: **the device windows the unit declares are MAPPED** (`EmitLay.devs`,
-  `corrW`'s third clause). *What a device chain claims is in §6.9, and what it does not claim
-  is in the same place.*
-- **The GPU driver**, for SPIR-V payloads (PLAN-ERWEITUNG.md §0b), once the GPU library exists.
-- **The Lean kernel.**
-- **The runtime, for noninterference** (`dokumente/NICHTINTERFERENZ.md` §10) -- the SAME list as
-  the lock primitives and thread creation of §3 item 4, not a second one: threads start only at
-  declared (labelled) roots; the scheduler chooses by a fixed timetable, or by a rule that reads
-  only the observer's view (`nichtinterferenz_planer`); a slot whose thread cannot step is left
-  idle, not given away; the lock primitive (a ticket lock) reveals nothing but held or free.
-  In Lean (since 2026-09-15, §7.4): `LaufzeitC` = `FadenStartC` (thread creation) and the lock
-  specification `sperrAbstrakt` (`sperrAbstrakt_nur_eigen`: nothing but held or free); the two
-  scheduler entries are premises of noninterference only.
-- **DRF-SC** (§7.4): `DRFSC`, ONE proposition, a hypothesis of `schlusssatz_124`: for a race-free C
-  program every real execution has the observation of an SC interleaving of synchronisation-free
-  blocks. Its hypothesis, race freedom, is PROVED from machine G (`rennfreiC_aus_sim`).
+1. **Freeze the semantic scope from source and emitter paths.** Record every reachable
+   operation, lowering, width and order, including generated entries and runtime helpers.
+   Examples are witnesses and tests, never the definition of the supported language.
+2. **Define the machine and memory relation first.** Specify decoding, byte memory,
+   per-access TSO, ownership/layout, private frames, entries and the relation to W / GX.
+   Review the definitions against the actual processor semantics and `Spec.lean`.
+3. **Implement a generic pilot through actual bytes.** Cover integer data, memory, control
+   and calls; include a decoder/validator rejection witness for altered bytes. All lemmas
+   quantify over arbitrary supported programs and layouts. A concrete witness demonstrates
+   non-degeneracy; no compiler or proof rule may depend on its spelling.
+4. **Close concurrent mappings early.** Establish ordinary-access, atomic-order and lock
+   mappings against W / GX with shared-memory witnesses and forbidden-outcome probes. Extend
+   the generic pilot without weakening guarantees or assuming blocks execute atomically.
+5. **Extend by semantic families.** Floating point, dynamic regions, hardware access,
+   entries, linking and optional performance profiles each need target semantics, validator
+   soundness and template correspondence before being admitted.
+6. **Close the generic final-image theorem.** Include source fidelity, duties, all executed
+   code, layout/relocations, calling conventions, concurrent refinement and cost transfer.
+   Review finite and infinite executions and state every remaining hardware premise.
+
+Keep the source parser/GabbroV work moving throughout these stages. Prove register allocation,
+spills and optimisations through checked correspondence certificates, rather than trusting the
+Rust passes or making a second model of the source language.
+
+**Measurement:** report supported semantic families and generic theorems, plus final-byte
+chains accepted by the proved validator. Corpus chain counts are coverage diagnostics, not a
+proof over all programs. As of this decision the direct x86 backend/validator is planned;
+there is no completed direct-x86 chain. `instrumente/zaehle-kette.py` still measures C chains
+and must not be relabelled as a binary validator. §§6–7 keep that older evidence separately.
+
+**Effort:** the former C-subset line, token, cost and schedule estimates do not price this
+route. A defensible estimate needs a measured generic pilot covering decoding, a memory access,
+an atomic/lock mapping and final-image binding. Instruction count alone misses the cost of
+layouts, flags, register allocation, concurrency, floating point and progress proofs.
+
+## 5. Trust and preservation requirements
+
+The intended logical trust base is the Lean kernel and its standard axioms, the reviewed
+source/machine/decoder definitions, and explicitly named hardware behaviour (including execution
+of the validated bytes and any required timing bounds). Definition adequacy needs human review;
+a kernel accepts a theorem about its definitions, not a claim that they match silicon.
+
+OS services, thread startup, locks, runtime code and foreign bindings remain user logic with
+checked contracts and implementation correspondence. Their proof duties cannot be replaced by
+an unchecked premise. Existing unsupported features remain refused by validation; source
+acceptance or a model certificate alone is not final-image acceptance.
+
+Preserve memory safety, race freedom, contracts, lock discipline, costs and all currently claimed
+goal legs. No `sorry`, `admit`, `native_decide` or new axiom. A reviewed `Spec.lean` diff is
+required if the goal statement must change; the target switch itself does not change it.
+Retain existing C emission/proof guardians as regressions while that backend is still in use.
+
+---
+
+**Historical C-backend validation record (§§6–7).** The following dated statements, measurements,
+assumptions and open C tasks are retained for audit and reuse. They are superseded as the target
+work order by §§0–5 above; none is evidence of a direct x86 machine-code chain.
 
 ## 6. Chain count: 2 -- beispiele/104 and beispiele/108, theorem schlusssatz (generic)
 

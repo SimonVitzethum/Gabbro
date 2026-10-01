@@ -1524,6 +1524,13 @@ Caprock rewrite, full translation validation).
 
 ## O30 — A Gabbro compiler written in Gabbro: Gabbro → IR → machine code, without C and without CompCert (Simon, 2026-09-26)
 
+**Target update, 2026-10-01:** direct x86-64 output and final-byte validation are now the
+selected [translation-validation route](PLAN-UEBERSETZUNGSVALIDIERUNG.md), initially with an
+untrusted Rust backend and the existing W / GX model for concurrency. Completing the old C
+chain is no longer its prerequisite, and CompCert is not required by that route. Writing the
+compiler itself in Gabbro remains a separate self-hosting goal; the bootstrap table below is
+the dated 2026-09-26 proposal, not the current backend assignment.
+
 Today the chain ends in C (`emit.rs`), and a C compiler is trusted (the `Spec.lean` header names
 "the C"). The plan: a compiler **written in Gabbro** that lowers Gabbro to its own intermediate
 representation and from there to machine code, with no C in between.

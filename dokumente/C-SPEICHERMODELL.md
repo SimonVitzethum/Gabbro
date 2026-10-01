@@ -1,5 +1,12 @@
 # The C memory model — measured inventory and design (plan step 1)
 
+> **Target decision, 2026-10-01:** the selected translation-validation route is
+> [source → model → direct x86-64 machine bytes](PLAN-UEBERSETZUNGSVALIDIERUNG.md), with
+> per-access x86-TSO refinement to the existing W / GX concurrency model. C-specific plans,
+> assumptions and measurements below describe the previous route and current C backend;
+> they are not the active binary-validation assignment. The new backend/validator is planned.
+
+
 *Written 2026-09-13. This is step 1 of `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §3: the memory
 model is decided before any of the hard C forms gets a semantics. The Lean core is
 `grammatik/Grammatik/CSpeicher.lean`; it supersedes the memory of `CSemantik.lean`

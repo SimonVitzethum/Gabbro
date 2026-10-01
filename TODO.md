@@ -17,9 +17,10 @@ two independent reviews in round 6 (tag `milestone-2026-09-15-zielsatz-bestaetig
 Simon's end sequence, the work now is:
 
 1. transfer into the checker and the emitter (§1);
-2. translation validation (§2), whose one headline metric is the **chain count**, from
-   `instrumente/zaehle-kette.py`. It stood at 1 of 101 on 2026-09-14, at 2 of 111 after
-   stage (a) (programs 104 and 108), and at 2 of 129 on 2026-09-26.
+2. translation validation (§2): **direct x86-64 output validated through final machine bytes**
+   (Simon's decision, 2026-10-01). The backend and validator are planned. The existing
+   `instrumente/zaehle-kette.py` counts C-model chains; its results remain historical C evidence,
+   not a measurement of machine-code validation.
 
 Each item names its owner (lane or agent) where one is running.
 
@@ -857,6 +858,40 @@ lines per code line, `messung/GABBROV-PROOF-RATIO.md`). What is open, in the ord
 
 # 2. Translation validation  ⟨D⟩
 
+**Active target, 2026-10-01: direct x86-64 bytes.** This replaces C11 validation as the
+work order. See `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5 and
+`dokumente/AUFTRAG-UEBERSETZUNGSVALIDIERUNG.md`. The existing C backend stays in use until
+its replacement is implemented and checked; no new binary guarantee is claimed.
+
+- [ ] **Scope from implementation:** inventory all source operations, emitter/runtime paths,
+  widths, atomic orders, hardware forms and entry sequences; examples are witnesses only.
+- [ ] **Machine profile and relation:** fixed encodings/decoder, byte-addressed memory,
+  per-access x86-TSO, layout/ownership, stack/ABI, flags/traps, MMIO/DMA distinction, W / GX
+  refinement. Review the definitions before widening instruction coverage.
+- [ ] **Source-side reuse:** extend the Lean parser/elaborator, source-computed model
+  certificates and GabbroV duties generically. Derive layout and `Einheit` from source;
+  retain the open arena, recursion-depth and shared-atomic/payload duties recorded below.
+- [ ] **Generic final-byte pilot:** integer data, memory, control and calls, with validated
+  relocations/entries and non-degenerate witnesses; reject planted byte/layout defects.
+- [ ] **Concurrent correspondence:** reuse W / GX and `gabbro_ziel`; prove every permitted
+  x86-TSO execution is model-covered. Ordinary-access footprints, widths/alignment, atomics,
+  CAS, locks and start/join need correspondence, not `DRFSC` or runtime assumptions.
+- [ ] **Optimisation and execution preservation:** validate register allocation, private
+  spills, flags and calls; preserve infinite executions/progress and declared costs with
+  named hardware timing bounds. No implicit atomicity of emitted instruction sequences.
+- [ ] **Generic extensions:** floating point, regions, runtime/entries, linking and
+  optional ISA profiles, each modelled/proved before admission. OS/binding code remains
+  user logic with contracts and implementation proofs.
+- [ ] **Closing theorem and measurement:** all final executable bytes and mappings bound
+  to the source/model; finite and infinite concurrent runs; generic witness and negative
+  probes. Add an x86-specific measured status without relabelling the C-chain counter.
+
+**Historical C-backend work and reusable source-model record.** The stage-(a)/(b), C-parser,
+C-form and C-linking checklists below are retained for audit, not scheduled as the selected
+validation route. Source/model gaps still apply and are included in the active work above.
+Earlier weak-memory estimates are superseded by their dated updates; no x86 bridge is proved
+by those updates.
+
 **Stage (a) — single-threaded, generic** (`Schlusssatz.lean`, `KorrespondenzAllg.lean`; plan §6).
 
 - [ ] **Sieve (a), the elaborator and the Lean parser** -- re-measured 2026-09-30 (parser lane,
@@ -990,7 +1025,9 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
   `awaits`, `exchange` and atomic arrays, and a concrete term discharging `ZaehltHoch`.
 - [ ] **Stage (b) keeps `DRFSC` as a premise** (`CNebenlaeufig.lean`): the C side is still
   SC-by-assumption; W is on G's side. Connecting them needs a per-access C semantics (§2 above).
-- [ ] **Per-architecture fence mappings** (x86-TSO vs ARM/POWER): not started; W is the C11 level.
+- [ ] **Hardware fence mappings:** not started. W is a source-side weak-memory abstraction;
+  its correspondence to x86-TSO is now an active target above. ARM/POWER are outside the selected
+  backend profile.
 - [x] **`N323` must demand memory orders** (`OFFEN.md` O26, Spec-diff verdict of Opus agent B,
   F2): an own lock primitive's take must be an acquire and its give a release; today `N323`
   checks atomicity and hold time only, and `Spec.lean` names the orders as assumption (3) of the
@@ -1009,10 +1046,11 @@ SB, CoRR) are Lean theorems. What is still open from the list above:
   `Lebendigkeit.lean`.
 - [ ] **The external human review** of the review package (PLAN-ZIELSATZ §5): the definitions
   the kernel cannot judge. That is the machine G, the good-run predicates, `KoerperGutS`, the
-  goal predicates, and the C semantics core.
+  goal predicates, and the selected x86 semantics/decoder. The C semantics remains a review
+  subject for the current backend.
 - [ ] **The final double verdict over the whole chain.** One Muse lane and one Opus agent,
-  independent, once stage (a) covers the corpus: "is the goal reached for the product, not only
-  the model?"
+  independent, once the generic final-byte chain covers the supported language: "is the goal
+  reached for the product, not only the model?"
 - [ ] **Keep README §5 true** after every merge that moves the chain count or a stage.
 
 # 4. Extensions and named gaps  ⟨D⟩

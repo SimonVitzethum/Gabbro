@@ -14,8 +14,10 @@
 > its practical cost comes down to something close to conventional systems programming.
 
 **A systems language that carries the proof plumbing, so that verifying an operating system
-costs a fraction of what it costs today.** One output: C11 plus inline assembly. The compiler
-is safe Rust (`forbid(unsafe_code)`) with zero external dependencies.
+costs a fraction of what it costs today.** The current backend emits C11 plus inline assembly.
+The selected verification target is a direct x86-64 backend with Lean validation of the final
+machine bytes; that backend and validator are planned, not implemented. The compiler is safe
+Rust (`forbid(unsafe_code)`) with zero external dependencies.
 
 The point is not to have another language. The point is to write an operating system in it —
 **Caprock** — and then verify that system cheaply.
@@ -61,7 +63,7 @@ What the second command prints, and what each line is worth:
 | `Zielsatz.gabbro_ziel depends on axioms: [propext, Classical.choice, Quot.sound]` | the goal theorem uses **only Lean's standard three** — no `sorryAx`, no axiom of ours. **A `sorryAx` here would mean it is not proved** |
 | `…gabbro_ziel_zeuge…` | a two-thread program that moves memory satisfies it, so the sentence is not empty |
 | `…probeA_widerlegt_gilt…`, `…probeD_…`, `…w1_abgelehnt…` | programs the checker **refuses** — a checker that accepts everything would make the theorem worthless |
-| `…schlusssatz…`, `…kette_104_zeuge…`, `…kette_108_zeuge…`, `…K124.schlusssatz_124…` | translation validation, source text → model → emitted C (needs the full build, not the cheap check) |
+| `…schlusssatz…`, `…kette_104_zeuge…`, `…kette_108_zeuge…`, `…K124.schlusssatz_124…` | existing C-backend translation validation, source text → model → emitted C; no x86 byte validation (needs the full build, not the cheap check) |
 
 **What those lines do NOT say:** an axiom list proves a *proof* valid, not that the *statement*
 is the right one — that is a reading job. The statement is written to be read:
@@ -69,7 +71,8 @@ is the right one — that is a reading job. The statement is written to be read:
 carries the one assumption list and the NOT-CLAIMED list. The honest sentence is
 **"the goal theorem is proved over the model, with a witness and non-degeneracy"** — not
 "Gabbro is verified". The checker in the theorem is the **Lean** checker; the Rust tool is
-bridged to it by translation validation, closed for three programs and open for the rest (§5).
+partly bridged to it by the existing C-backend translation validation (§5). The selected
+source-to-x86-byte chain has not been built.
 
 ---
 
@@ -161,17 +164,20 @@ neither. The closing theorem the design aims at:
 > **Lean accepts the certificate ⟹**
 > **(1)** the source text parses to a program `P`, and
 > **(2)** `P` satisfies the model — types, safety, lock order, and
-> **(3)** the emitted C refines `P`.
+> **(3)** every execution of the validated final x86-64 image refines `P` / GX.
 
-So every run of the C corresponds to a run of `P`.
+The selected target checks executable bytes, data layout, relocations, entries and calling
+conventions. It does not stop at an instruction listing. See the
+[active translation-validation plan](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md) §§0–5.
 
-**The failure mode is one-way.** A broken checker can only reject good programs. It can never
-let a bad program past. (The two real defects this project shipped both sat *in the emitter* —
-see [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md). Certificate checking is the structural answer
-to that class.)
+**The intended failure mode is one-way:** a proved validator refuses incorrect compiler output.
+That property still requires the new validator and its soundness proof. Today's model
+certificates alone do not establish binary correspondence.
 
-**Trust base:** the Lean kernel, the C compiler, the hardware profile, and named assumptions
-about devices and the scheduler — as premises *inside* the theorem, not prose beside it.
+**Intended trust base:** the Lean kernel, reviewed semantic definitions and named hardware
+behaviour, including execution of the validated image. OS services, runtime routines, thread
+startup and locks remain user/binding logic with checked contracts and implementations.
+The current C backend still depends on its C compiler and the premises of its C-chain theorems.
 
 ### The five pieces
 
@@ -179,27 +185,30 @@ about devices and the scheduler — as premises *inside* the theorem, not prose 
 |---|---|---|
 | **T3 — Parser in Lean** | source text → `P`, so the certificate starts from the source | lexer, expressions, statements and items are in; generics and the print/parse round-trip are in flight |
 | **T1 — Model certificates** | `P` satisfies the typing and safety rules, per constructor | all 40 expression and all 50 statement constructors carried in Lean; Rust prints statement certificates for 47 of 253 bodies |
-| **T4 — Semantics of the emitted C** | what the generated C means: memory model, integer semantics, UB list, one lemma per form | 48 of 73 emitted forms have their lemma; a guardian goes red the moment the emitter produces a form without one |
-| **T2 — Correspondence re-checker** | *this* C program consists of exactly those correspondences | built as `korrOk` (`KorrespondenzAllg.lean`): 23 expression arms plus block structure, each with a planted-defect check; wiring it per program is open |
-| **T5 — Proof templates** | each recurring obligation gets a soundness theorem over the real semantics | 12 of 23 machine-checked (`gabbro schablonen`); the rest is still an abstract core |
+| **T4 — x86-64 semantics and decoding** | selected instructions, byte-addressed memory, per-access TSO and decoding the executable image | planned; existing C semantics and their guardians remain evidence for the current C backend |
+| **T2 — Correspondence validator** | final bytes, layout and all executed code refine the source model | x86 validator planned; existing `korrOk` proves C-specific correspondence only |
+| **T5 — Proof templates** | runtime, entries, locks and recurring duties have generic target correspondence | 12 of 23 existing templates machine-checked (`gabbro schablonen`); their x86 implementation correspondence remains open |
 
-### The concurrent half: model done, C chain open
+### The concurrent half: reuse the model, prove the x86 bridge
 
-The model is concurrent, and since 2026-09-26 the emitted C is too (runtime `start` / `child`
-lowered to threads via our own raw `clone` + `futex`, no libc threading). DRF-SC is proved
-over a weak memory model for the fragment, under the named assumptions in the `Spec.lean`
-header. Open: the correspondence between a model run and a C run with interleaving — the
-largest single open piece.
+Gabbro already has a concurrent W / GX model with weak-memory views and a rely for shared
+atomic reads. The current goal theorem carries its guarantees over that model. Reuse it as
+the source-side foundation and prove that every permitted per-access x86-TSO execution of the
+validated image refines W / GX. This bridge is open; the model theorem alone does not establish
+hardware correspondence. Whole instruction sequences cannot silently become atomic model steps.
+
+The bridge includes ordinary-access footprints, widths/alignment, store buffers, atomic orders,
+CAS, locks, start/join, interrupts and progress. MMIO and DMA need their declared hardware
+semantics. Existing C concurrency proofs with `DRFSC` / `LaufzeitC` premises remain C-specific.
 
 ### Order of work
 
-1. Finish the parser: generics, round-trip.
-2. Close the C gaps — tagged unions, error-reason numbering, the most frequent uncovered forms.
-   Some will end as named assumptions: inline assembly and device reads have no C semantics.
-3. Wire T2 per program.
-4. Bind the remaining templates to the semantics.
-5. The concurrent half.
-6. The closing theorem with a witness on a real program, then on a program with real sharing.
+1. Inventory source operations and all emitter/runtime paths; examples are witnesses.
+2. Fix the x86 instruction profile, byte-memory/TSO semantics and relation to W / GX.
+3. Build a generic source-to-final-bytes pilot while extending the Lean parser/GabbroV bridge.
+4. Prove atomic-order and concrete lock mappings early, including interleavings and progress.
+5. Extend floating point, regions, hardware entries, linking and proved performance profiles.
+6. Close the generic final-image theorem with concurrent witnesses and altered-byte refusals.
 
 ## 4. Status
 
@@ -243,11 +252,13 @@ This section exists because the alternative is that a reader has to find it out.
     the binary is translation validation (T1–T5), and it is open.
   - What may be said: *the goal theorem is proved over the model, with a witness and
     non-degeneracy.* Not: *Gabbro is verified.*
-- **The chain is closed for five programs, by ONE generic theorem** (`schlusssatz`,
+- **The existing C-model chain is closed for five programs, by ONE generic theorem** (`schlusssatz`,
   single-threaded; `beispiele/104` and `108` by hand, `130`, `69` and `73` through the generic
   `ketteAllg` over table-free units, `bruecke/Bruecke/Quelle.lean`). Every other program is open —
   chain count 5 of 148 (`instrumente/zaehle-kette.py --lean`, 2026-09-30). Concurrent translation
-  validation (stage b) is closed for one program (`schlusssatz_124`) and open in general.
+  validation of the C model (stage b) is closed for one program (`schlusssatz_124`) under its
+  named premises and open in general. These results do not certify x86 binaries. The selected
+  direct x86 backend and final-byte validation chain are not implemented.
 - **GabbroV's proofs reach the goal theorem for five programs, and for every source the Lean
   front end accepts the statement is COMPUTED, not printed.** For a unit the Lean parser
   elaborates (`beispiele/104`, `108`, `130`, `69`, `73`; 5 of 148, `instrumente/zaehle-bruecke.py`),
