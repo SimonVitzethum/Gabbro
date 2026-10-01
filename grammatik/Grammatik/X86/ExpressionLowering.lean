@@ -1017,6 +1017,144 @@ theorem senkung_add_zeuge :
       zeuge_frisch ⟨by decide, by decide⟩ zeuge_umgebung _ _ rfl rfl
   exact ⟨s', hrun, hval⟩
 
+/-- Joint witness for `senkung_sub`, with its run conclusion. -/
+theorem senkung_sub_zeuge :
+    ∃ (ρ : Env ZeugeD ZeugeCtx) (σ₀ σ : World ZeugeD) (s : Zustand)
+      (pa pb : List Befehl),
+      Frisch ZeugeAbb Register.rax Register.rcx ∧
+      (Register.rax ≠ Register.rsp ∧ Register.rcx ≠ Register.rsp) ∧
+      EnvRepr ρ s.register ZeugeAbb ∧
+      senkAtom ZeugeAbb ZeugeAtomA Register.rax = some pa ∧
+      senkAtom ZeugeAbb ZeugeAtomB Register.rcx = some pb ∧
+      (∃ f t, (ZeugeD.signatur f).schreibt t = true) ∧
+      (∃ a : Adresse, ausgangByte a (laufBytes 4 ZeugeStart) ≠
+        some (ZeugeStart.speicher.bytes a)) ∧
+      ∃ s', lauf ((pa ++ pb ++ [Befehl.subReg64 Register.rax Register.rcx]).map
+          fun b => (⟨b, (encode b).length⟩ : Decodiert)) s = some s' ∧
+        s'.register Register.rax =
+          intWort (eval σ₀ (Expr.sub ZeugeAtomA ZeugeAtomB) σ ρ).n := by
+  refine ⟨ZeugeUmgebung, ZeugeWelt, ZeugeWelt, ZeugeStart,
+    [Befehl.movReg64 Register.rax Register.r10],
+    [Befehl.movImm64 Register.rcx (intWort 12)],
+    zeuge_frisch, ⟨by decide, by decide⟩, zeuge_umgebung, rfl, rfl,
+    zeuge_schreibt, zeuge_lauf_aendert_speicher, ?_⟩
+  obtain ⟨s', hrun, hval, hmem, hregs, hrsp', hflags⟩ :=
+    senkung_sub ZeugeAbb ZeugeAtomA ZeugeAtomB Register.rax Register.rcx
+      ZeugeUmgebung ZeugeWelt ZeugeWelt ZeugeStart
+      zeuge_frisch ⟨by decide, by decide⟩ zeuge_umgebung _ _ rfl rfl
+  exact ⟨s', hrun, hval⟩
+
+/-- Joint witness for `senkung_korrekt`, with its run conclusion. -/
+theorem senkung_korrekt_zeuge :
+    ∃ (ρ : Env ZeugeD ZeugeCtx) (σ₀ σ : World ZeugeD) (s : Zustand)
+      (prog : List Befehl),
+      Frisch ZeugeAbb Register.rax Register.rcx ∧
+      (Register.rax ≠ Register.rsp ∧ Register.rcx ≠ Register.rsp) ∧
+      EnvRepr ρ s.register ZeugeAbb ∧
+      senkFrag ZeugeAbb ZeugeAusdruck Register.rax Register.rcx = some prog ∧
+      (∃ f t, (ZeugeD.signatur f).schreibt t = true) ∧
+      (∃ a : Adresse, ausgangByte a (laufBytes 4 ZeugeStart) ≠
+        some (ZeugeStart.speicher.bytes a)) ∧
+      ∃ s', lauf (prog.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) s =
+          some s' ∧
+        s'.register Register.rax = intWort (eval σ₀ ZeugeAusdruck σ ρ).n := by
+  refine ⟨ZeugeUmgebung, ZeugeWelt, ZeugeWelt, ZeugeStart,
+    [Befehl.movReg64 Register.rax Register.r10,
+     Befehl.movImm64 Register.rcx (intWort 12),
+     Befehl.addReg64 Register.rax Register.rcx],
+    zeuge_frisch, ⟨by decide, by decide⟩, zeuge_umgebung, zeuge_senkung,
+    zeuge_schreibt, zeuge_lauf_aendert_speicher, ?_⟩
+  obtain ⟨s', hrun, hval, hmem, hregs, hrsp'⟩ :=
+    senkung_korrekt ZeugeAbb ZeugeAusdruck Register.rax Register.rcx
+      ZeugeUmgebung ZeugeWelt ZeugeWelt ZeugeStart
+      zeuge_frisch ⟨by decide, by decide⟩ zeuge_umgebung _ zeuge_senkung
+  exact ⟨s', hrun, hval⟩
+
+/-- Joint witness for `senkung_ohne_ueberlauf_add`, with ranges decided. -/
+theorem senkung_ohne_ueberlauf_add_zeuge :
+    ∃ (ρ : Env ZeugeD ZeugeCtx) (σ₀ σ : World ZeugeD) (s : Zustand)
+      (pa pb : List Befehl),
+      Frisch ZeugeAbb Register.rax Register.rcx ∧
+      EnvRepr ρ s.register ZeugeAbb ∧
+      senkAtom ZeugeAbb ZeugeAtomA Register.rax = some pa ∧
+      senkAtom ZeugeAbb ZeugeAtomB Register.rcx = some pb ∧
+      (∃ f t, (ZeugeD.signatur f).schreibt t = true) ∧
+      (∃ a : Adresse, ausgangByte a (laufBytes 4 ZeugeStart) ≠
+        some (ZeugeStart.speicher.bytes a)) ∧
+      ∃ s', lauf ((pa ++ pb ++ [Befehl.addReg64 Register.rax Register.rcx]).map
+          fun b => (⟨b, (encode b).length⟩ : Decodiert)) s = some s' ∧
+        sint (s'.register Register.rax) =
+          (eval σ₀ (Expr.add ZeugeAtomA ZeugeAtomB) σ ρ).n ∧
+        (add64 (intWort (eval σ₀ ZeugeAtomA σ ρ).n)
+          (intWort (eval σ₀ ZeugeAtomB σ ρ).n)).2.of = false := by
+  refine ⟨ZeugeUmgebung, ZeugeWelt, ZeugeWelt, ZeugeStart,
+    [Befehl.movReg64 Register.rax Register.r10],
+    [Befehl.movImm64 Register.rcx (intWort 12)],
+    zeuge_frisch, zeuge_umgebung, rfl, rfl,
+    zeuge_schreibt, zeuge_lauf_aendert_speicher, ?_⟩
+  obtain ⟨s', hrun, hsint, hof⟩ :=
+    senkung_ohne_ueberlauf_add ZeugeAbb ZeugeAtomA ZeugeAtomB Register.rax
+      Register.rcx ZeugeUmgebung ZeugeWelt ZeugeWelt ZeugeStart
+      zeuge_frisch ⟨by decide, by decide⟩ zeuge_umgebung _ _ rfl rfl
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  exact ⟨s', hrun, hsint, hof⟩
+
+/-- Joint witness for `senkung_ohne_ueberlauf_sub`, with ranges decided. -/
+theorem senkung_ohne_ueberlauf_sub_zeuge :
+    ∃ (ρ : Env ZeugeD ZeugeCtx) (σ₀ σ : World ZeugeD) (s : Zustand)
+      (pa pb : List Befehl),
+      Frisch ZeugeAbb Register.rax Register.rcx ∧
+      EnvRepr ρ s.register ZeugeAbb ∧
+      senkAtom ZeugeAbb ZeugeAtomA Register.rax = some pa ∧
+      senkAtom ZeugeAbb ZeugeAtomB Register.rcx = some pb ∧
+      (∃ f t, (ZeugeD.signatur f).schreibt t = true) ∧
+      (∃ a : Adresse, ausgangByte a (laufBytes 4 ZeugeStart) ≠
+        some (ZeugeStart.speicher.bytes a)) ∧
+      ∃ s', lauf ((pa ++ pb ++ [Befehl.subReg64 Register.rax Register.rcx]).map
+          fun b => (⟨b, (encode b).length⟩ : Decodiert)) s = some s' ∧
+        sint (s'.register Register.rax) =
+          (eval σ₀ (Expr.sub ZeugeAtomA ZeugeAtomB) σ ρ).n ∧
+        (sub64 (intWort (eval σ₀ ZeugeAtomA σ ρ).n)
+          (intWort (eval σ₀ ZeugeAtomB σ ρ).n)).2.of = false := by
+  refine ⟨ZeugeUmgebung, ZeugeWelt, ZeugeWelt, ZeugeStart,
+    [Befehl.movReg64 Register.rax Register.r10],
+    [Befehl.movImm64 Register.rcx (intWort 12)],
+    zeuge_frisch, zeuge_umgebung, rfl, rfl,
+    zeuge_schreibt, zeuge_lauf_aendert_speicher, ?_⟩
+  obtain ⟨s', hrun, hsint, hof⟩ :=
+    senkung_ohne_ueberlauf_sub ZeugeAbb ZeugeAtomA ZeugeAtomB Register.rax
+      Register.rcx ZeugeUmgebung ZeugeWelt ZeugeWelt ZeugeStart
+      zeuge_frisch ⟨by decide, by decide⟩ zeuge_umgebung _ _ rfl rfl
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  exact ⟨s', hrun, hsint, hof⟩
+
+/-- Joint witness for `istAtom_von_senkAtom`. -/
+theorem istAtom_von_senkAtom_zeuge :
+    ∃ (pa : List Befehl),
+      senkAtom ZeugeAbb ZeugeAtomA Register.rax = some pa ∧
+      (∃ f t, (ZeugeD.signatur f).schreibt t = true) ∧
+      (∃ a : Adresse, ausgangByte a (laufBytes 4 ZeugeStart) ≠
+        some (ZeugeStart.speicher.bytes a)) ∧
+      IstAtom ZeugeAtomA := by
+  refine ⟨[Befehl.movReg64 Register.rax Register.r10], rfl, zeuge_schreibt,
+    zeuge_lauf_aendert_speicher, ?_⟩
+  exact istAtom_von_senkAtom ZeugeAbb ZeugeAtomA Register.rax _ rfl
+
+/-- Joint witness for `istFrag_von_senkFrag`. -/
+theorem istFrag_von_senkFrag_zeuge :
+    ∃ (prog : List Befehl),
+      senkFrag ZeugeAbb ZeugeAusdruck Register.rax Register.rcx = some prog ∧
+      (∃ f t, (ZeugeD.signatur f).schreibt t = true) ∧
+      (∃ a : Adresse, ausgangByte a (laufBytes 4 ZeugeStart) ≠
+        some (ZeugeStart.speicher.bytes a)) ∧
+      IstFrag ZeugeAbb Register.rax Register.rcx ZeugeAusdruck prog := by
+  refine ⟨[Befehl.movReg64 Register.rax Register.r10,
+    Befehl.movImm64 Register.rcx (intWort 12),
+    Befehl.addReg64 Register.rax Register.rcx],
+    zeuge_senkung, zeuge_schreibt, zeuge_lauf_aendert_speicher, ?_⟩
+  exact istFrag_von_senkFrag ZeugeAbb ZeugeAusdruck Register.rax Register.rcx _
+    zeuge_senkung
+
 /- CUTS:
     Conversion homomorphism (`intWort_add/sub`), the signed roundtrip
     (`intWort_sint`), the lowering-correctness theorems, the overflow-bound
