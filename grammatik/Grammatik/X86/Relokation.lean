@@ -94,6 +94,66 @@ theorem rel32_rundgang (d : Int)
     · refine congrArg some ?_; omega
     · refine congrArg some ?_; omega
 
+/-! ## 2. Canonical next-RIP equation and checked displacement. -/
+
+/-- Canonical rel32 target equation over machine addresses: the loaded
+    target is the actual next-RIP plus the sign-extended displacement.
+    This is modular by construction, so it needs no wrap premises:
+    `hdef` fixes the displacement value and `hlo`/`hhi` drive the
+    two's-complement representative. (Finding: wrap-consistency holds
+    either way at machine level; the exact no-wrap premises live at
+    next-RIP formation in `rel32_next_rip` below.) -/
+theorem rel32_adress_gleichung (next ziel : Nat) (d : Int)
+    (hdef : (ziel : Int) = (next : Int) + d)
+    (hlo : -2147483648 ≤ d) (hhi : d < 2147483648) :
+    BitVec.ofNat 64 ziel =
+      BitVec.ofNat 64 next + BitVec.ofNat 64 (rel32Enc64 d) := by
+  apply BitVec.eq_of_toNat_eq
+  unfold rel32Enc64 tcNat
+  simp only [BitVec.toNat_add, BitVec.toNat_ofNat]
+  by_cases h : 0 ≤ d
+  · rw [if_pos h]; omega
+  · rw [if_neg h]; omega
+
+/-- Actual next-RIP formation: machine addition of instruction start and
+    decoded length reaches the Nat sum, under the exact no-wrap premise.
+    Each bound is load-bearing: it drops one `% 2 ^ 64`. -/
+theorem rel32_next_rip (rip len : Nat) (hrip : rip < 2 ^ 64)
+    (hlen : len < 2 ^ 64) (hnowrap : rip + len < 2 ^ 64) :
+    (BitVec.ofNat 64 rip + BitVec.ofNat 64 len).toNat = rip + len := by
+  rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt hrip, Nat.mod_eq_of_lt hlen,
+    Nat.mod_eq_of_lt hnowrap]
+
+/-- Checked displacement for a next-RIP/target pair: `none` refuses an
+    out-of-range target instead of wrapping it. `next` is the virtual
+    address immediately past the decoded instruction, never a file
+    offset; the target rule (instruction start or entry) is checked by
+    the image-plus-decoder proof, not here. -/
+def rel32Fuer (next ziel : Nat) : Option (List Byte) :=
+  if rel32Passt ((ziel : Int) - (next : Int)) then
+    some (rel32Bytes ((ziel : Int) - (next : Int)))
+  else none
+
+/-- An out-of-range target is refused, never wrapped. -/
+theorem rel32Fuer_verweigert (next ziel : Nat)
+    (h : rel32Passt ((ziel : Int) - (next : Int)) = false) :
+    rel32Fuer next ziel = none := by
+  unfold rel32Fuer
+  rw [if_neg (by rw [h]; exact Bool.false_ne_true)]
+
+/-- An in-range target patches to bytes that sign-extend back to the
+    exact target-minus-next-RIP displacement. -/
+theorem rel32Fuer_trifft (next ziel : Nat)
+    (h : rel32Passt ((ziel : Int) - (next : Int)) = true) :
+    ∃ bs : List Byte, rel32Fuer next ziel = some bs ∧
+      rel32DecOpt bs = some ((ziel : Int) - (next : Int)) := by
+  have hfit := of_decide_eq_true h
+  refine ⟨rel32Bytes ((ziel : Int) - (next : Int)), ?_, ?_⟩
+  · unfold rel32Fuer
+    rw [if_pos h]
+  · exact rel32_rundgang _ hfit.1 hfit.2
+
 /- CUTS:
    rel32/abs64 arithmetic and byte patching only; decoder, image mapping,
    site admissibility, loader behaviour and source correspondence are open.
