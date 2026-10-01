@@ -1,0 +1,31 @@
+# MUSE-REPORT-548: Independent exact-candidate review of 542 StackUnwind
+
+## Clone / branch check
+
+- Clone `/home/simon/Dokumente/gabbro-muse/a548`, branch `muse/548`: MATCH (verified via `git rev-parse --abbrev-ref HEAD` and `pwd`).
+- Review inputs: `.tmp/review/SNAPSHOT.json` (author 542, head `d5bf467d9ce38384b1d1aeab56a4a466e05a6ad9`, base `2a8400fe0c7e188bc8ec843da074b28e916b96ef`, files `MUSE-REPORT-542.md`, `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/StackUnwind.lean`, clean tree), `.tmp/review/author-542/` (OWNER-TASK.md, MUSE-REPORT-542.md, BUILD-EVIDENCE.json, PATCH.diff, staged `grammatik/` copy with the 824-line candidate file).
+- Note: candidate commit `d5bf467d` is NOT in this clone's history (review clone sits at `6bb576c5`); the exact PATCH and staged file copy were reviewed instead. `Grammatik.lean` delta is one additive import line (`import Grammatik.X86.StackUnwind`); no other existing file touched; no friend-reserved path touched.
+
+## What the candidate delivers (verified against the staged file)
+
+- New `grammatik/Grammatik/X86/StackUnwind.lean` (~824 lines): defs `KetteOk`, `rspImRahmen`, `Wache`, witness states/values; theorems `rsp8_runter_rauf`, `push_pop_wiederhergestellt`, `call_ret_wiederhergestellt`, `verschachtelt_wiederhergestellt`, `nicht_ausfuehrbar_verweigert`, `ret_ins_nicht_ausfuehrbar_verweigert`, `wache_schreibschutz`, `wache_push_verweigert`, `wache_call_verweigert`, `ausrichtung_ohne_rahmen`, `kette_ok_sonde`, `belegung_gerettet_schranke`, plus 6 joint `_zeuge` witnesses; `CUTS` block and `#print axioms` for every main theorem present.
+- All reused lemmas resolve to real accepted definitions in this clone with matching signatures (checked, not assumed): `schritt_push64_erfolg`, `schritt_pop64_reg`, `schritt_call32_erfolg`, `schritt_ret_erfolg`, `schritt_push64_verweigert`, `schritt_call32_verweigert` (Ausfuehrung.lean); `read64_nach_write64`, `read64_rahmen`, `write64_erhaelt_berechtigungen`, `write64_verweigert`, `disjunkt_von_intervallen`, `Disjunkt`, `OhneUmbruch`, `addrOff_null` (Speicher.lean); `geholt_nur_ausfuehrbar`, `byteschritt_verweigert_ohne_fetch` (Byteschritt.lean); `decode_nichts_leer` (Codec.lean); `initialisiere_ausmass_rechte` (Regionen.lean); `rahmenOk`, `ausgerichtet16`, `Belegung.passt`, `gerettetIdx`, `schlitzZahl` (Stapel.lean). No second IR, no new executor, no new decoder, no source/checker/emitter edit.
+- No `sorry`/`admit`/`axiom`/`native_decide`/`unsafe` (exact-token grep over the staged file: zero hits; the naive-substring hit on "admits" in a doc comment is a false positive). Every theorem premise is used by its proof (checked: nested theorem consumes all of hokc/hbc/hwrc/hlesc/hstepc/hwrp/hlesp/hstepp/hokp/hbp/hrdp/hstepq/hokq/hbq/hdst/hrdr/hstepr/hokr/hbr/hdis). No `forall rho/v` weakening, no conclusion-as-premise restatement (`belegung_gerettet_schranke` derives a genuine slot bound via `omega`), no discarded premises, no OS/kernel trust, no unsigned/signed/width conflation (pure 64-bit BitVec stack arithmetic).
+
+## Reproduced evidence (queued wrappers, staged-then-restored)
+
+- Staged the exact candidate file plus the additive umbrella import in this clone, ran `./lean-probe grammatik/Grammatik/X86/StackUnwind.lean`: `0 error(s)`, exit 0; every axiom line is a subset of `propext`/`Classical.choice`/`Quot.sound` (`wache_schreibschutz` carries `Classical.choice`; the rest `propext`+`Quot.sound` or axiom-free `decide` facts). Matches the author's final probe output in BUILD-EVIDENCE.json. Staged files removed afterwards; tree clean (`git status --short` empty) before this report commit.
+- Spot-checked witness arithmetic by hand: ret-refusal memory bytes (0 at 8192, 48 at 8193) decode little-endian to 12288 as claimed; `belegung_gerettet_schranke_zeuge` layout (spill 1 + gerettet 2 + args 1 <= 4 slots) fits; `kette_ok_sonde` frames satisfy `rahmenOk` (16-aligned bases, depth 32) with inner top 8192 <= outer base 8192; nested witness disjointness (8184 vs 8176) discharged via `disjunkt_von_intervallen` with both `OhneUmbruch` sides. All joint witnesses carry an observed zero-to-nonzero byte change on a reached multi-`schritt` run (non-degenerate; pilot analogue of the table-write rule, honestly disclosed in the author report).
+- Full `./lean-bau` NOT re-run by this reviewer (415-job build; review clone base differs from author base; probe over the staged exact file plus signature checks of unchanged deps is the meaningful reproduction). Author BUILD-EVIDENCE.json shows the final `./lean-bau` at `Build completed successfully (415 jobs)` with intermediate red probes repaired along the way (honest trail, ends green).
+
+## Precise CUTS / bounds of the accepted claim (all consistent with the in-file CUTS)
+
+1. `KetteOk`/`rspImRahmen` are vocabulary plus `decide` shape sondes only; NO theorem shows `KetteOk` preserved across actual steps. The proved run-preservation is rsp/rip restoration plus permission-map preservation (bytes-only stores). Frame-chain preservation in the full predicate sense stays OPEN.
+2. No `rsp16` preservation statement; `ausgerichtet16` appears only in the negative separation theorem (`ausrichtung_ohne_rahmen`). The nested witness runs at 16-aligned rsp but alignment preservation is not a proved conclusion.
+3. Guard-return refusal holds by subsumption (`Wache` forces `ausfuehrbar = false`, `ret_ins_nicht_ausfuehrbar_verweigert` refuses any such target); there is no dedicated `wache_ret` theorem instantiating it at a `Wache` region, and no `_zeuge` for `wache_call_verweigert` (push variant witnessed; call variant is the symmetric one-liner).
+4. No decoder/TSO/source/ABI/loader/cost/image claim; interrupts, concurrency, callee-save/entry contracts, external ABI byte correspondence OPEN. Full source-to-final-bytes validation OPEN.
+
+Nothing in 1-4 contradicts the N9 TARGET's checkable core (WITNESS+ nested call/return restoring rsp with a memory store: proved with joint memory-changing witness; WITNESS-: return to non-executable refused: proved with joint witness; guard store refusal: proved). The author report claims no more than this.
+
+CANDIDATE: 542 d5bf467d9ce38384b1d1aeab56a4a466e05a6ad9
+VERDICT: ACCEPT
