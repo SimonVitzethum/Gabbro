@@ -644,24 +644,24 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - [Source/invariant audit](dokumente/x86/REVIEW-QUELLE-INVARIANTEN.md), [concurrency audit](dokumente/x86/REVIEW-TSO.md) and [optimisation/binary audit](dokumente/x86/REVIEW-OPT-BINAER.md).
 
 - 2026-10-01: fast compilation is an explicit design priority, including mandatory
-  Lean validation. [Author 323](lanes/323.md) is preparing a separate root English
+  Lean validation. [Author 323](https://github.com/SimonVitzethum/Gabbro/blob/3c5e40ead05b017330bdba3dfd5a92db0537a3eb/lanes/323.md) is preparing a separate root English
   instruction, invariant-optimisation and compiler-speed design;
-  [reviewer 324](lanes/324.md) checks the exact committed candidate independently.
+  [reviewer 324](https://github.com/SimonVitzethum/Gabbro/blob/3c5e40ead05b017330bdba3dfd5a92db0537a3eb/lanes/324.md) checks the exact committed candidate independently.
   No speed measurement or expanded native instruction support is claimed.
 
 - 2026-10-01: the instruction and invariant design is integrated after independent
   review 324. The latest user priority is high runtime performance with a feasible
   complete selected architectural hardware model, alongside fast compilation and
-  full mandatory validation. [Author 325](lanes/325.md) revises the detailed design;
-  [reviewer 326](lanes/326.md) independently checks its exact candidate.
+  full mandatory validation. [Author 325](https://github.com/SimonVitzethum/Gabbro/blob/837eb6380926f9a33bc66e80cc0d7fc5566abe07/lanes/325.md) revises the detailed design;
+  [reviewer 326](https://github.com/SimonVitzethum/Gabbro/blob/837eb6380926f9a33bc66e80cc0d7fc5566abe07/lanes/326.md) independently checks its exact candidate.
   No measured runtime or compiler speed, expanded ISA support or whole-binary proof
   is claimed.
 
 - 2026-10-01: latest scope priority: broad important practical performance, with
   safety above marginal final improvements. The user’s approximate “last 10%” is
   qualitative prioritisation, not reduced proof coverage or a measured performance
-  guarantee. [Author 327](lanes/327.md) clarifies essential and deferred instruction
-  families; [reviewer 328](lanes/328.md) checks the exact plan independently.
+  guarantee. [Author 327](https://github.com/SimonVitzethum/Gabbro/blob/1ab5471a425f070de82d5be59046a3920ad871b3/lanes/327.md) clarifies essential and deferred instruction
+  families; [reviewer 328](https://github.com/SimonVitzethum/Gabbro/blob/1ab5471a425f070de82d5be59046a3920ad871b3/lanes/328.md) checks the exact plan independently.
   Full mandatory source/final-byte validation and fast accepted compilation remain
   requirements; the full chain remains OPEN.
 
