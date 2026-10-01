@@ -14,6 +14,12 @@ import Grammatik.X86.Bild
 
 namespace Gabbro.Grammatik.X86
 
+namespace ValidCache
+
+/- Own namespace for the lane-430 reuse certificate: every name below is
+   `Gabbro.Grammatik.X86.ValidCache.*`, so nothing here can collide with
+   sibling X86 modules (notably `TableLayout.eintragOk`). -/
+
 /-- Validation context: the address-width profile plus the load bias the
     checked bytes were validated under. Nothing else is compared. -/
 structure ValidKontext where
@@ -226,5 +232,7 @@ theorem zeugenWiederverwendung_angewandt :
 #print axioms zeugenMiss_bytes
 #print axioms zeugenMiss_kontext
 #print axioms zeugenWiederverwendung_angewandt
+
+end ValidCache
 
 end Gabbro.Grammatik.X86

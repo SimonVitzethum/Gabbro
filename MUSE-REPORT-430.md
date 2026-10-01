@@ -1,5 +1,29 @@
 # MUSE-REPORT-430: Sound validation-cache reuse certificate
 
+## Repair after integration-gate failure (2026-10-01, second commit)
+The independent review had accepted the candidate, but the integration gate
+failed: `import Grammatik.X86.ValidationCache failed, environment already
+contains 'Gabbro.Grammatik.X86.eintragOk' from Grammatik.X86.TableLayout`.
+A sibling lane defines a top-level `eintragOk` in the same `X86` namespace.
+
+Repair (owned files only, no guarantee weakened, no proof changed): the whole
+module body now lives in the sub-namespace `ValidCache`, so every provided
+name is `Gabbro.Grammatik.X86.ValidCache.*` (`eintragOk`, `cacheFind`,
+`eintragPasst`, `CacheEintrag`, `ValidKontext`, `Cache`, all theorems and
+witnesses). This also shields the generic `zeugen*` and `treffer_*` names.
+Definitions, statements and proofs are otherwise byte-identical to the
+reviewed version; only the namespace wrapper plus one comment-style fix
+(a `/--` doc comment cannot precede `namespace`) were added.
+
+Checks after repair:
+- `./lean-probe grammatik/Grammatik/X86/ValidationCache.lean`:
+  `== 0 error(s) in the COMPLETE output; exit 0`.
+- `./lean-bau`: `Build completed successfully (393 jobs).`
+- `#print axioms`: `[propext]` or none for all ten theorems.
+- `gabbro_ziel`: `[propext, Classical.choice, Quot.sound]` (unchanged).
+- A fresh independent review of the changed commit is still required; no
+  acceptance of the full source/binary chain is claimed here.
+
 ## Task
 New reusable module `grammatik/Grammatik/X86/ValidationCache.lean` plus one
 additive X86 import at the end of the umbrella: a small sound reuse
