@@ -532,15 +532,41 @@ before reporting current activity or publishing. The latest task is to **connect
 the existing Lean components**, with up to **15 productive Muse processes** and
 substantial delegation of implementation, independent review and organisation.
 
-**Latest steering, 2026-10-01: Simon explicitly paused this pool to continue
-with Glass Town. Do not resume Muse, dispatch, integration or publication
-automatically.** All 15 then-active lanes (287, 558–571) were stopped gracefully;
-their clones, source drafts, logs and recovered private session IDs remain.
-The measured managed model count after pausing is zero. Owners 572–575 and
-paired reviewers remain queued. Private `pool-paused.json` prevents worker
-restart; `pause-result.json` records the handoff. Resume requires Simon's
-instruction, then deliberate removal of the pause markers and inspection of
-preserved work. Glass Town can take over the committed tasks directly.
+**Latest steering, 2026-10-01: Simon resumed Muse coordination after Glass
+Town did not work and requested sustained overnight progress with up to 15
+productive models and completion monitoring.** The earlier pause is historical;
+do not restore it without a new user request. Before taking over, inspect live
+`inventory`, `overnight-monitor.json`, completion events and worker identities.
+Do not start a second coordinator. Actual active models, starting runners,
+waiting builds and queued dependencies are different counts.
+
+Connection wave558-575 has progressed: byte decoder soundness, narrow/muldiv/
+shift/control codecs, loaded-image/relocation execution and several access/entry/
+budget connections are integrated. SourceMemory570 is a committed candidate
+under review588; scalar FP codec565 and source-linked IR287 are still working
+in the last measured snapshot. Full typed-carrier TSO->W/GX and source-to-final-
+bytes validation remain OPEN. The publication suite again found a resource
+failure in the native Lean measurement path; owner618 and reviewer619 diagnose
+it without weakening tests or verifier verdicts.
+
+The overnight wave has owners594-605 and618 with independent reviewers606-617
+and619. Owner594 evaluates direct lowering from the existing typed source AST/
+GabbroV versus an additional SSA stage; an extra IR is not a requirement for
+correct source-to-binary validation. Preserve IR287 work, but do not freeze an
+unnecessary parallel source representation before this decision. Owner595 and
+reviewer607 produce the portable read-only completion monitor. Until accepted,
+the existing coordinator's bootstrap monitor records events and bounded
+interrupted-turn recovery. Monitor deployment must not create a second scheduler.
+
+`coordinator-events.jsonl` and `overnight-monitor.json` record completions,
+actual verified model PIDs, blockers, capacity gaps and worker liveness. The
+`monitor_report` action returns newly undelivered events to the orchestrator.
+Dispatch owns useful automatic backfill; watch owns checked serial integration
+and publication. Neither a completion notification nor a positive review may
+bypass the source build, axiom, test, emission or key-scan gate. The overnight
+monitor is bounded to 12 hours; author turns remain bounded and recoveries are
+limited. If the queue empties, organisation must supply substantive disjoint
+closure tasks; do not start filler to make the process count look busy.
 
 At the pause, master was `8596f83e`: ValidatorSkeleton349, DecodingCoverage435
 and StackUnwind542, DecodeFault543, RegionFresh544, PayloadResidue545,
