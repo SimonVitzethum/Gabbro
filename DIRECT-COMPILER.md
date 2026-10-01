@@ -159,7 +159,7 @@ Last ledger refresh: **2026-10-01 11:42 UTC**. This is an operational snapshot, 
 | 341 | Practical-performance Lean wave B1: AccessList | Merged after review/checks | 379: Merged after review/checks | [report](messung/muse/MUSE-REPORT-341.md) |
 | 342 | Practical-performance Lean wave B2: OverlapRefusal | Merged after review/checks | 380: Merged after review/checks | [report](messung/muse/MUSE-REPORT-342.md) |
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
-| 344 | Practical-performance Lean wave B4: FenceDrain | Committed candidate; review/integration pending | 382: Committed candidate; review/integration pending | [task](lanes/344.md) |
+| 344 | Practical-performance Lean wave B4: FenceDrain | Merged after review/checks | 382: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-344.md) |
 | 345 | Practical-performance Lean wave C1: TableLayout | Merged after review/checks | 383: Merged after review/checks | [report](messung/muse/MUSE-REPORT-345.md) |
 | 346 | Practical-performance Lean wave C2: GateStub | Scheduled | 384: Committed candidate; review/integration pending | [task](lanes/346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Committed candidate; review/integration pending | 385: Committed candidate; review/integration pending | [task](lanes/347.md) |
@@ -360,6 +360,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **335**, Practical-performance Lean wave A1: NarrowOps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-335.md). <!-- x86-merged:335 -->
 - 2026-10-01: checked master `62e4c2ce` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:62e4c2ce25460ebcc235ec2cb5564e29af9d9099 -->
 - 2026-10-01: lane **373**, Independent exact-candidate review of 335 NarrowOps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-373.md). <!-- x86-merged:373 -->
+- 2026-10-01: lane **344**, Practical-performance Lean wave B4: FenceDrain, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-344.md). <!-- x86-merged:344 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
