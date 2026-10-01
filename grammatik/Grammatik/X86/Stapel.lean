@@ -445,6 +445,77 @@ theorem sichereListe_rahmen_fremd (m m' : Speicher) (r : Rahmen) (ab : Nat)
       rw [hstep] at ihrest
       exact ihrest
 
+/-- WHOLE-REGION ROUND-TRIP: a saved word list loads back. Uses the frame
+    bound, the fit, the write and the readability of every slot. -/
+theorem sichereListe_ladeListe_rundreise (m m' : Speicher) (r : Rahmen)
+    (ab : Nat) (vs : List Wort)
+    (hle : r.spitzeNat ≤ 2 ^ 64)
+    (hfit : ∀ j, j < vs.length → ab + j < r.schlitzZahl)
+    (hwr : sichereListe m r ab vs = some m')
+    (hrd : ∀ j, j < vs.length → lesbar8 m (r.schlitzAddr (ab + j)) = true) :
+    ladeListe m' r ab vs.length = some vs := by
+  induction vs generalizing ab m m' with
+  | nil =>
+    cases hwr
+    rfl
+  | cons v ws ih =>
+    unfold sichereListe at hwr
+    cases hmw : sichereWort m r ab v with
+    | none =>
+      simp only [hmw] at hwr
+      cases hwr
+    | some m₁ =>
+      simp only [hmw] at hwr
+      have h0 : 0 < (v :: ws).length := by simp
+      have hb : ab < r.schlitzZahl := by
+        have h := hfit 0 h0
+        simpa using h
+      have hrd0 : lesbar8 m (r.schlitzAddr ab) = true := by
+        have h := hrd 0 h0
+        simpa using h
+      have hmw64 : write64 m (r.schlitzAddr ab) v = some m₁ := by
+        unfold sichereWort at hmw
+        rw [if_pos hb] at hmw
+        exact hmw
+      have hread1 : read64 m₁ (r.schlitzAddr ab) = some v :=
+        read64_nach_write64 m m₁ (r.schlitzAddr ab) v hmw64 hrd0
+      have hsep : ∀ j, j < ws.length → ab ≠ (ab + 1) + j :=
+        fun j _ => by omega
+      have hfit_tail : ∀ j, j < ws.length → (ab + 1) + j < r.schlitzZahl := by
+        intro j hj
+        have hj' : j + 1 < (v :: ws).length := by
+          simp only [List.length_cons] at hj ⊢
+          omega
+        have h := hfit (j + 1) hj'
+        omega
+      have hkeep : read64 m' (r.schlitzAddr ab) =
+          read64 m₁ (r.schlitzAddr ab) :=
+        sichereListe_rahmen_fremd m₁ m' r (ab + 1) ws ab hle hb
+          hfit_tail hsep hwr
+      have hread : read64 m' (r.schlitzAddr ab) = some v := by
+        rw [hkeep]
+        exact hread1
+      have hhead : ladeWort m' r ab = some v := by
+        unfold ladeWort
+        rw [if_pos hb]
+        exact hread
+      have hrd' : ∀ j, j < ws.length →
+          lesbar8 m₁ (r.schlitzAddr ((ab + 1) + j)) = true := by
+        intro j hj
+        have hj' : j + 1 < (v :: ws).length := by
+          simp only [List.length_cons] at hj ⊢
+          omega
+        have h2 := hrd (j + 1) hj'
+        have hperm := lesbar8_nach_schreiben m m₁ (r.schlitzAddr ab)
+          (r.schlitzAddr ((ab + 1) + j)) v hmw64
+        rw [hperm]
+        have heq : ab + (j + 1) = (ab + 1) + j := by omega
+        rw [heq] at h2
+        exact h2
+      have ihtail := ih m₁ m' (ab + 1) hfit_tail hwr hrd'
+      have hlen : (v :: ws).length = ws.length + 1 := rfl
+      simp only [hlen, ladeListe, hhead, ihtail]
+
 /- CUTS:
     - No instruction semantics, decoder, image mapping, TSO bridge, source
       correspondence, cost transfer or final-image acceptance is proved here.
