@@ -138,15 +138,15 @@ even where the C backend already emits working code.
 | `Tabelle` (slots, invariants, `ops`) | `tabelle` (~4194), `ops` (~4526: generated insert/remove/count fns), slot `ruecksetzwert` (~4473) | One C struct per table + storage array; `count = hi` slots; `used` global for arenas | Object layout + bounds obligation per access; `ops` helpers are generated code that must itself be validated (lane 276/277 templates T5). |
 | `Reason` (incl. `pub` since network wall 1) | reason enum emission; `verbundmarken`/`fall_belegt`/`varianten_*` | C enum + payload union where applicable | Tagged-value layout obligation; `or R` channel needs control-flow proof (two exits). |
 | `State` / transitions | `pruefkoerper`, no direct C state machine (proof device) | none | Source-duty obligation (T1); no direct machine code except through functions that read/write the carrier. |
-| `Device` (`at port/mmio/dma`, regs, banks, mirrors, transitions) | `geraet` (~4727), `portzugriff` (~5129), `geraetelesung` (~5178), `bank` (~5242), `ausdruck_geraet` (~5299), `uebergang` (~5470); `at port` requires `arch x86_64` in unit (~4815) | Port widths 8/16/32 only (`portbuchstaben` ~5084; no wider port form); `at mmio` lowered, `at dma` refused (needs barrier statement); bank = accessor functions over run-time base | Hardware-form profile OPEN (§2): only required port/mmio forms to be admitted, each with wrapper proof + named hardware semantics; DMA/MMIO need own semantics, never inherit RAM/TSO rules. No port/MMIO form exists in pilot. |
-| `Assume` / `Axiom` / `Check` | headers/assumption lists; `assume` as `D.Annahme` in exporter; no C | Named assumption text | Trust-base obligation (§5): assumptions are named hardware behaviour, never silent; checks are proof duties (T1). |
+| `Device` (`at port/mmio/dma`, regs, banks, mirrors, transitions) | `geraet` (~4727), `portzugriff` (~5129), `geraetelesung` (~5178), `bank` (~5242), `ausdruck_geraet` (~5299), `uebergang` (~5470); `at port` requires `arch x86_64` in unit (~4815) | Port widths 8/16/32 only (`portbuchstaben` ~5084; no wider port form); `at mmio` lowered, `at dma` refused (needs barrier statement); bank = accessor functions over run-time base | Hardware-form profile OPEN (§2): only required port/mmio forms to be admitted, each with a wrapper proof over checked contracts (user/binding logic) + named silicon/device-response semantics only; DMA/MMIO need own semantics, never inherit RAM/TSO rules. No port/MMIO form exists in pilot. |
+| `Assume` / `Axiom` / `Check` | headers/assumption lists; `assume` as `D.Annahme` in exporter; no C | Named hardware text (`arch`-gated, falsifier or reason per `ast.rs Assume`) | Trust-base obligation (§5): `assume`/`axiom` items carry named HARDWARE behaviour only (silicon/device/timing — never OS/kernel behaviour; see the historical gaps in §12 item 7); checks are proof duties (T1). |
 | `Atomic` (`AtomicDecl`, ordering word) | `atom_declarator` (~6797, `_Atomic T name` / arrays), `atom_refusal` (~6813), ordering pair table (~1318-1332: Release/Acquire->release/acquire pair, Seq->seq_cst, Relaxed/None->relaxed) | C11 `_Atomic` + `memory_order_*`; K11.2.3: `release/acquire/seq` on the checked fragment lower as stated, with unfalsifiable visibility note | Per-access TSO bridge OPEN (lane 274): every declared order needs lowering proof to lockedRMW/fence/ordinary-access; `seq_cst`-as-release/acquire abstraction is NOT a proved total order (plan §3). Pilot has no atomic form. |
 | `Lock` / `Rcu` / `Gruppe` / `Concurrent` / `Accumulates` / `Walk` | lock tables in `Namen`; `erzeuge*` lock words (ticket); `accumulates` fold refusal for strings; walk lowering via `baumsicht`/`vorfahren`/`nachfahren` | Ticket lock C (`SPERRE_TICKET`); rank order from `LockDecl` | Lock-template correspondence (`sperrAbstrakt`, ticket proof reuse + concrete sequence proof); RCU/group/walk need family extensions (plan §4 step 5). |
 | `Entry` (`vector`/`via`/`arch`/regs/stack/`pro_kern`/`dispatch`) | `bau.rs eintrittsregel` (~825); metal driver entry stubs; `hat_fehlercode` (`treiber.rs` ~81) | Vector const range; register pin names; stack symbol | Entry-calling-convention + fault-delivery obligation (T5 templates); no interrupt/IDT form in pilot; needs lane 276/277 image-entry contract. |
 | `Entrust` / `Boot` (steps `Ruf`/`Setzt`) | `bau.rs` boot/dispatch wiring; `metall_bild_binden` | Boot order = declared step order | Whole-image init obligation (lane 276): only validated bytes run before dispatch; `Setzt` needs width/layout proof. |
-| `Syscall` / `SysVar` / `Ziel` (gate + per-target binding) | `tor_inline_daten` (~8926), `kind_tor_falle` (~9148), `syscall_befehl` (~9276: ABI->trap table), `syscall_stumpf` (~9284: pinned `register __asm__("reg")` locals, `__asm__ volatile syscall`, `-4095` errno fence, `or R` decode, region answers C186, stack-gate trampoline C187, clone N572) | Register map per gate; trap per (abi,arch); errno fence at `-4095`; costs `1+n` | Syscall-wrapper proof per gate + named kernel assumption; trap/exception return not in pilot; stack-gate/child-region/trampoline needs control+memory proof (template `tor.*`, `faden.*`); region answers need extent proof (N571/N463). |
-| `Profil` / `ProfilBedarf` | manifest/profile checks in checker (`N217/N219`); no C | none | Assumption-binding obligation at link/accept time, not machine code. |
-| `Arena` (`capacity lo..hi`, element type) | `arena` (~4297: static table of `count=hi` + `used` global), `braucht_arena_dynamisch` (~15449), generated arena runtime (`ARENA_LAUFZEIT`, `KMOD_ARENA`, `provision` pool) | Static: `count=hi`; dynamic: reserve/commit below ceiling, `provision` bytes multiple of 4096, page-size query | Allocator-template proof + ceiling/OOM-branch proof (`else` always owed for `grow`); page-return (`region.leeren` via `madvise`) needs OS-binding proof; unbounded-region opt-in is explicitly out of the finite-image proof. |
+| `Syscall` / `SysVar` / `Ziel` (gate + per-target binding) | `tor_inline_daten` (~8926), `kind_tor_falle` (~9148), `syscall_befehl` (~9276: ABI->trap table), `syscall_stumpf` (~9284: pinned `register __asm__("reg")` locals, `__asm__ volatile syscall`, `-4095` errno fence, `or R` decode, region answers C186, stack-gate trampoline C187, clone N572) | Register map per gate; trap per (abi,arch); errno fence at `-4095`; costs `1+n` | Checked gate/binding contracts per gate (user logic: `requires`/`ensures`/`effects`/`costs`, total `errors` decode) + named silicon trap semantics only (what the trap instruction itself does); trap/exception return not in pilot; stack-gate/child-region/trampoline needs control+memory proof (template `tor.*`, `faden.*`); region answers need extent proof (N571/N463). |
+| `Profil` / `ProfilBedarf` | manifest/profile checks in checker (`N217/N219`); no C | none | Hardware-profile binding obligation at link/accept time (the profile references named hardware assumptions only), not machine code. |
+| `Arena` (`capacity lo..hi`, element type) | `arena` (~4297: static table of `count=hi` + `used` global), `braucht_arena_dynamisch` (~15449), generated arena runtime (`ARENA_LAUFZEIT`, `KMOD_ARENA`, `provision` pool) | Static: `count=hi`; dynamic: reserve/commit below ceiling, `provision` bytes multiple of 4096, page-size query | Allocator-template proof + ceiling/OOM-branch proof (`else` always owed for `grow`); page-return (`region.leeren` via the binding's `gabbro_os_leeren`) needs a checked binding-library contract (user logic — the mapping effect is kernel work covered by that contract, never an assumption); unbounded-region opt-in: finite image and unbounded runtime allocation are distinct (see §6). |
 
 ## 3. Types and widths
 
@@ -225,13 +225,20 @@ Covered above; summary for the proof planner:
   allocation with refuse-on-full; `reset` starts a generation and
   stales prior indices; `grow` commits below ceiling or runs
   `else`. Needs allocator-template proof + OOM-edge proof + cost
-  accounting. Unbounded-region opt-in (Turing-completeness note,
-  plan §2) is outside the finite-image theorem.
-- Page return (`ResetSlot` = `region.leeren`): zero-read +
-  whole-page return through the program's own `gabbro_os_leeren`
-  (`madvise`). Needs OS-binding proof; arena slots are
-  write-once so give-back does not apply there (measured reason,
-  kept).
+   accounting. Unbounded-region opt-in (plan §2: Turing completeness
+   in the abstract model; physical hardware stays finite) is NOT outside
+   validation: the finite code image (bytes, layout, entries) is validated
+   like any program, and what the opt-in changes is stated separately —
+   the static whole-program memory bound is lost for such a program
+   (every allocation may fail and must be handled), with memory/time
+   coverage following the declared contracts instead of a ceiling.
+ - Page return (`ResetSlot` = `region.leeren`): zero-read +
+   whole-page return through the program's own `gabbro_os_leeren`.
+   Needs a checked binding-library contract (user logic — the mapping
+   effect is kernel work covered by that contract, never an assumption);
+   arena slots are
+   write-once so give-back does not apply there (measured reason,
+   kept).
 - Strings (`string max N`, `Kette`, `gabbro_string_N`, string
   section): bounded copies with length-vs-max proof; section is
   image data with relocations.
@@ -297,8 +304,9 @@ declaration alone (plan §0/§5):
   loader actions (`metall_bild_binden`, `kmod_modul_binden`):
   image construction itself must satisfy the lane-276 contract
   (entries, relocations, loaded mapping = validated image).
-- `assume`/`axiom` bodies and `arch`-gated promises: named
-  assumptions, never code.
+- `assume`/`axiom` bodies and `arch`-gated promises: named HARDWARE
+  assumptions only (silicon/device/timing — never OS/kernel behaviour,
+  never code).
 
 ## 10. Devices, syscalls, interrupts, start/join, generated runtime
 
@@ -307,16 +315,21 @@ declaration alone (plan §0/§5):
   (lowered address access), `at dma` (refused: barrier choice is
   a memory-model statement), banks (accessor fns over run-time
   base; C driver calls them), transitions (proof device + emitted
-  step code), mirrors/params (checked maps). Each admitted
-  hardware form needs wrapper + named-semantics proof; MMIO/DMA/
-  cache/device observations get their own semantics, never silent
-  RAM inheritance (plan §3).
+   step code), mirrors/params (checked maps). Each admitted
+   hardware form needs a wrapper proof over checked contracts
+   (user/binding logic) + named silicon/device-response semantics
+   only; MMIO/DMA/
+   cache/device observations get their own semantics, never silent
+   RAM inheritance (plan §3).
 - Syscalls: per-gate number (constexpr, may name a const),
   `regs in/out`, `stack r` (handed stack, N446/N447, N572),
   `clobbers` (declared + `memory`/`rcx`/`r11` for the trap),
   `errors` total decode over `or R` with explicit errno numbers,
-  `requires`/`ensures`/`effects`/`costs` (missing costs = N322,
-  cost-opaque). `syscall_befehl` maps (abi,arch)->trap; current
+   `requires`/`ensures`/`effects`/`costs` (missing costs = N322,
+   cost-opaque) are checked gate/binding contracts — user logic, never
+   assumptions; only what the trap instruction itself does (register
+   effects incl. `rcx`/`r11`, privilege transition) is named silicon
+   trap semantics. `syscall_befehl` maps (abi,arch)->trap; current
   traps are raw `syscall` via `__asm__` (+ `goto` into region
   label for stack gates; `tor.kind` outlines the child region as
   `gabbro_kind_<nr>` -- no `asm goto` into the parent frame).
@@ -413,13 +426,38 @@ validator must keep refusing it until its family lands (§4 step 5):
 6. TSO/ABI/image/cost/float/time families have no pilot facts
    (lanes 271-278 own them). This inventory records the
    obligation; it does not discharge any of them.
+7. Historical OS-knowledge in code and bindings (existing gaps, not
+   intended architecture). The standing rule (plan §§3/5; AGENTS.md
+   §3) is: OS/kernel/scheduler/runtime/binding behaviour is user
+   logic with checked contracts, never an assumption; only
+   silicon/device/timing behaviour is a named assumption. Two
+   existing spots predate or stretch that rule and are recorded here
+   as gaps to close, not as architecture:
+   (a) `assume os_bindung_null` (`bibliothek/linux/linux.gab:54`,
+   falsifier `sonde_os_null`): the zero-read promise of the
+   binding's reserve/commit/page-return service is carried as a named
+   `assume` (the file's own comment calls it "its own assumption").
+   Intended: the mapping effect is covered by the binding library's
+   checked gate contracts (the `linux_os_*` gates below it already
+   are Gabbro, checked like user code), with no OS-behaviour
+   `assume`.
+   (b) Linux errno knowledge baked into the emitter:
+   `syscall_stumpf` hardcodes the `-4095..-1` decode fence
+   (`emit.rs` ~9220 `if (gabbro_roh_{lo} < -4095)`, ~9047/~9695
+   `(1..=4095)` maps, ~9834 "past the Linux `-4095` bound", ~9703
+   "the kernel's error"). Intended ("nothing knows an operating
+   system"): the decode is derived from each gate's declared
+   `errors` map, naming only the silicon trap semantics.
 
 ## 13. What this inventory does and does not claim
 
 It claims: every reachable emission path above was read off the
 implementation branches named, with widths/layouts/orders as the
 helpers compute them, and every unbounded/foreign path was named
-instead of hidden. It does not claim: any x86 correspondence,
+   instead of hidden. Attribution rule applied throughout:
+   OS/kernel/scheduler/runtime/binding behaviour is user logic with
+   checked contracts; only silicon/device/timing behaviour is a named
+   assumption (plan §§3/5). It does not claim: any x86 correspondence,
 any TSO/ABI/layout proof, any accepted byte chain, or any
 performance figure. There is no completed direct-x86 chain
 (plan §4 measurement); the two closed C chains remain legacy

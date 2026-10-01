@@ -46,6 +46,33 @@ as unbounded (§9). Reproducible method (§0 item 7) and six exhaustiveness gaps
 None. Docs-only lane: no Lean file, no Rust change, no diagnostic/gift/example
 numbers, MARKE_EMIT untouched.
 
+## Review fix (2026-10-01, coordinator finding)
+
+The reviewer was right: the Syscall row said "named kernel assumption",
+contradicting the standing rule (plan §§3/5; AGENTS.md §3) that OS/kernel
+calls are user logic, never assumptions.
+
+- Syscall row (§2) and syscalls bullet (§10) now say: checked gate/binding
+  contracts (requires/ensures/effects/costs, total `errors` decode) are user
+  logic; only what the trap instruction itself does (register effects incl.
+  `rcx`/`r11`, privilege transition) is named silicon trap semantics.
+- Audited every other "assumption" claim: Device row, Assume/Axiom/Check row,
+  Profil row, §9 foreign-code bullet and §13 now carry the hardware-only
+  distinction (silicon/device/timing; never OS/kernel behaviour).
+- Documented two HISTORICAL gaps as existing code, not architecture (§12
+  item 7, source-cited): (a) `assume os_bindung_null`
+  (`bibliothek/linux/linux.gab:54`, falsifier `sonde_os_null`) carries the
+  binding's zero-read promise as a named `assume`; (b) `syscall_stumpf`
+  hardcodes the Linux `-4095..-1` errno fence (`emit.rs` ~9220, ~9047/~9695,
+  ~9834, ~9703) — OS knowledge in the emitter.
+- Unbounded-region opt-in (§2 Arena row, §6): removed the "outside the
+  finite-image proof/theorem" claim. Finite code image (bytes/layout/entries)
+  is validated like any program; what the opt-in changes is stated
+  separately — the static whole-program memory bound is lost (every
+  allocation may fail and must be handled), memory/time coverage follows the
+  declared contracts instead of a ceiling.
+- No source feature or obligation dropped; only the owned inventory changed.
+
 ## Last full check outcome
 
 Docs-only task per wave rules: file/claim checks, no gratuitous cargo/Lean run
