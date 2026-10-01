@@ -252,8 +252,169 @@ theorem verschachtelt_wiederhergestellt
   · rw [e4mem, e3mem, e2mem, pp.1, e1mem, pc.1]
   · rw [e4mem, e3mem, e2mem, pp.2.1, e1mem, pc.2.1]
 
+/-! ## 3. Refusal: returns into non-executable memory. -/
+
+/-- FETCH REFUSAL WITHOUT EXECUTE: a state whose rip has no execute
+    permission fetches nothing, so the byte step loudly refuses. Fetch
+    consults execute permission only; data readability is irrelevant. -/
+theorem nicht_ausfuehrbar_verweigert (s : Zustand)
+    (h : s.speicher.ausfuehrbar s.rip = false) :
+    byteschritt s = .verweigert := by
+  have hg : geholt s = [] := by
+    have hlen : (geholt s).length = 0 := by
+      by_cases hc : (geholt s).length = 0
+      · exact hc
+      · have hpos : 0 < (geholt s).length := Nat.pos_of_ne_zero hc
+        have hx := geholt_nur_ausfuehrbar s 0 hpos
+        rw [addrOff_null] at hx
+        rw [hx] at h
+        exact Bool.noConfusion h
+    exact List.length_eq_zero_iff.mp hlen
+  have hf : fetchDekodiert s = none := by
+    simp only [fetchDekodiert, hg, decode_nichts_leer]
+  exact byteschritt_verweigert_ohne_fetch s hf
+
+/-- RETURN INTO NON-EXECUTABLE REFUSED: a successful `ret` whose popped
+    target has no execute permission admits no byte step: the machine
+    loudly refuses instead of fetching bytes as code there. Guard
+    regions carry `ausfuehrbar = false`, so returns into a guard refuse
+    here too. Every premise pins one guard of the return step or of the
+    refusal. -/
+theorem ret_ins_nicht_ausfuehrbar_verweigert (s s' : Zustand) (ziel : Wort)
+    (d : Decodiert)
+    (hok : laengeOk d.laenge = true)
+    (hb : d.befehl = .ret)
+    (hrd : read64 s.speicher (s.register Register.rsp) = some ziel)
+    (hstep : schritt d s = some s')
+    (hexe : s.speicher.ausfuehrbar ziel = false) :
+    byteschritt s' = .verweigert := by
+  rw [schritt_ret_erfolg d s ziel hok hb hrd] at hstep
+  have e : s' = schrittRet s Register.rsp
+      (s.register Register.rsp + BitVec.ofNat 64 8) ziel :=
+    (Option.some_inj.mp hstep).symm
+  have erip : s'.rip = ziel := by simp only [e, schrittRet]
+  have emem : s'.speicher = s.speicher := by simp only [e, schrittRet]
+  have hrip : s'.speicher.ausfuehrbar s'.rip = false := by
+    rw [emem, erip]
+    exact hexe
+  exact nicht_ausfuehrbar_verweigert s' hrip
+
+/-! ## 4. Guard pages: no-access regions refuse stack stores. -/
+
+/-- A guard region: declared extent with no access rights. Stack guards
+    refuse the push/call word store below the top; return guards carry
+    `ausfuehrbar = false` and refuse fetch via §3. -/
+def Wache (w : Region) : Bool :=
+  decide (0 < w.len ∧ w.lesbar = false ∧ w.schreibbar = false ∧
+    w.ausfuehrbar = false)
+
+/-- A write-denied initialised region answers no full write permission
+    at its base: the guard footprint is closed to word stores. Uses the
+    denial, the nonempty extent and the no-wrap bound. -/
+theorem wache_schreibschutz (m : Speicher) (r : Region)
+    (hw : r.schreibbar = false)
+    (hlen : 0 < r.len)
+    (hwrap : r.basis + 8 ≤ 2 ^ 64) :
+    schreibbar8 (initialisiere m r) (natAdresse r.basis) = false := by
+  have hbyte : (initialisiere m r).schreibbar
+      (addrOff (natAdresse r.basis) 0) = false := by
+    rw [addrOff_null]
+    have hto : (natAdresse r.basis).toNat = r.basis := by
+      unfold natAdresse
+      rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+    have hin : inRegion r (natAdresse r.basis).toNat = true := by
+      unfold inRegion
+      simp only [decide_eq_true_eq]
+      rw [hto]
+      omega
+    have hx := initialisiere_ausmass_rechte m r (natAdresse r.basis) hin
+    rw [hx.2.1, hw]
+  unfold schreibbar8
+  simp only [hbyte, Bool.false_and]
+
+/-- PUSH ONTO A GUARD REFUSED: if the eight bytes below the top are not
+    writable, the push step loudly refuses. Every premise pins one guard
+    of the step. -/
+theorem wache_push_verweigert (s : Zustand) (src : Register)
+    (d : Decodiert)
+    (hok : laengeOk d.laenge = true)
+    (hb : d.befehl = .push64 src)
+    (hguard : schreibbar8 s.speicher
+      (s.register Register.rsp - BitVec.ofNat 64 8) = false) :
+    schritt d s = none :=
+  schritt_push64_verweigert d s src hok hb
+    (write64_verweigert s.speicher _ _ hguard)
+
+/-- CALL ONTO A GUARD REFUSED: if the eight bytes below the top are not
+    writable, the call step loudly refuses instead of spilling the
+    return address into the guard. Every premise pins one guard. -/
+theorem wache_call_verweigert (s : Zustand) (disp : BitVec 32)
+    (d : Decodiert)
+    (hok : laengeOk d.laenge = true)
+    (hb : d.befehl = .call32 disp)
+    (hguard : schreibbar8 s.speicher
+      (s.register Register.rsp - BitVec.ofNat 64 8) = false) :
+    schritt d s = none :=
+  schritt_call32_verweigert d s disp hok hb
+    (write64_verweigert s.speicher _ _ hguard)
+
+/-! ## 5. Alignment is not validity; layout slots stay in frame. -/
+
+/-- Shared witness flags: nothing set. -/
+def zeugFlags : Flags :=
+  { cf := false, pf := true, af := some false, zf := false, sf := false,
+    of := false }
+
+/-- Shared witness memory: zeroed bytes, fully readable and writable,
+    never executable. -/
+def zeugSpeicherRW : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0
+    lesbar := fun _ => true
+    schreibbar := fun _ => true
+    ausfuehrbar := fun _ => false }
+
+/-- Shared witness registers: stack top at 8192, `rax` holding 42. -/
+def zeugReg42 : Register → Wort := fun q =>
+  if q = Register.rsp then BitVec.ofNat 64 8192
+  else if q = Register.rax then BitVec.ofNat 64 42
+  else BitVec.ofNat 64 0
+
+/-- Shared witness start state: code at 4096, stack top at 8192. -/
+def zeugS : Zustand :=
+  { register := zeugReg42, flags := zeugFlags,
+    rip := BitVec.ofNat 64 4096, speicher := zeugSpeicherRW }
+
+/-- ALIGNMENT IS NOT VALIDITY: a 16-aligned stack pointer far outside
+    the frame is aligned and still not in the frame. Arithmetic
+    alignment never substitutes for frame/guard validity. -/
+theorem ausrichtung_ohne_rahmen :
+    ausgerichtet16 (zeugS.register Register.rsp) = true ∧
+      rspImRahmen zeugS { basis := 0, tiefe := 16 } = false := by
+  decide
+
+/-- CHAIN WITNESS SHAPE: adjacent checked frames with the stack top at
+    their boundary satisfy the chain predicate, and the top counts as
+    inside the outer frame. -/
+theorem kette_ok_sonde :
+    KetteOk { basis := 8192, tiefe := 32 }
+      { basis := 8160, tiefe := 32 } = true ∧
+      rspImRahmen zeugS { basis := 8192, tiefe := 32 } = true := by
+  decide
+
+/-- CALLEE-SAVE SLOTS STAY IN FRAME: under a fitting layout, every
+    callee-save word index names a frame slot. Uses the layout fit and
+    the position; the conclusion is a slot bound, not a restatement. -/
+theorem belegung_gerettet_schranke (b : Belegung) (r : Rahmen) (i : Nat)
+    (hi : i < b.gerettet)
+    (hpasst : Belegung.passt b r = true) :
+    b.gerettetIdx i < r.schlitzZahl := by
+  unfold Belegung.passt Belegung.braucht Belegung.gerettetIdx
+    Rahmen.schlitzZahl at *
+  simp only [decide_eq_true_eq] at hpasst
+  omega
+
 /- CUTS:
-   - Chain/refusal theorems follow in later commits.
+   - Joint non-degenerate witnesses follow in the next commit.
    - No new executor, decoder, source or OS claim (see header).
 -/
 
@@ -263,5 +424,14 @@ theorem verschachtelt_wiederhergestellt
 #print axioms push_pop_wiederhergestellt
 #print axioms call_ret_wiederhergestellt
 #print axioms verschachtelt_wiederhergestellt
+#print axioms nicht_ausfuehrbar_verweigert
+#print axioms ret_ins_nicht_ausfuehrbar_verweigert
+#print axioms Wache
+#print axioms wache_schreibschutz
+#print axioms wache_push_verweigert
+#print axioms wache_call_verweigert
+#print axioms ausrichtung_ohne_rahmen
+#print axioms kette_ok_sonde
+#print axioms belegung_gerettet_schranke
 
 end Gabbro.Grammatik.X86
