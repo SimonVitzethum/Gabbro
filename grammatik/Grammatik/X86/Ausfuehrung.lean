@@ -50,12 +50,78 @@ def schritt (d : Decodiert) (s : Zustand) : Option Zustand :=
     | .movImm64 dst v => some (schrittRegister s nach s.flags dst v)
     | .movReg64 dst src =>
       some (schrittRegister s nach s.flags dst (s.register src))
-    | _ => none
+    | .addReg64 dst src =>
+      let r := add64 (s.register dst) (s.register src)
+      some (schrittRegister s nach r.2 dst r.1)
+    | .subReg64 dst src =>
+      let r := sub64 (s.register dst) (s.register src)
+      some (schrittRegister s nach r.2 dst r.1)
+    | .xorReg64 dst src =>
+      let r := xor64 (s.register dst) (s.register src)
+      some (schrittRegister s nach r.2 dst r.1)
+    | .cmpReg64 lhs rhs =>
+      let r := sub64 (s.register lhs) (s.register rhs)
+      some ({ s with rip := nach, flags := r.2 })
+    | .load64 dst base disp =>
+      match read64 s.speicher (effAddr s base disp) with
+      | some v => some (schrittRegister s nach s.flags dst v)
+      | none => none
+    | .store64 base src disp =>
+      match write64 s.speicher (effAddr s base disp) (s.register src) with
+      | some m => some ({ s with speicher := m, rip := nach })
+      | none => none
+    | .jump32 disp => some ({ s with rip := nach + dispWort disp })
+    | .jumpIf32 cond disp =>
+      some ({ s with rip := if bedingung cond s.flags then nach + dispWort disp
+        else nach })
+    | .push64 src =>
+      -- The pushed value is read BEFORE rsp moves, so `push rsp` stores
+      -- the old top, matching the architecture.
+      let v := s.register src
+      let stk := Register.rsp
+      let oben := s.register stk - BitVec.ofNat 64 8
+      match write64 s.speicher oben v with
+      | some m =>
+        let reg := regSet s.register stk oben
+        some ({ s with register := reg, speicher := m, rip := nach })
+      | none => none
+    | .pop64 dst =>
+      let stk := Register.rsp
+      match read64 s.speicher (s.register stk) with
+      | some v =>
+        -- A `pop rsp` destination takes the loaded value: the increment
+        -- is discarded, matching the architecture.
+        let weiter := s.register stk + BitVec.ofNat 64 8
+        some (if dst = stk then
+          let reg := regSet s.register stk v
+          ({ s with register := reg, rip := nach })
+        else
+          let reg := regSet (regSet s.register stk weiter) dst v
+          ({ s with register := reg, rip := nach }))
+      | none => none
+    | .call32 disp =>
+      let stk := Register.rsp
+      let oben := s.register stk - BitVec.ofNat 64 8
+      match write64 s.speicher oben nach with
+      | some m =>
+        let reg := regSet s.register stk oben
+        let ziel := nach + dispWort disp
+        some ({ s with register := reg, speicher := m, rip := ziel })
+      | none => none
+    | .ret =>
+      let stk := Register.rsp
+      match read64 s.speicher (s.register stk) with
+      | some ziel =>
+        let weiter := s.register stk + BitVec.ofNat 64 8
+        let reg := regSet s.register stk weiter
+        some ({ s with register := reg, rip := ziel })
+      | none => none
 
 /- CUTS:
-   Only the two MOV forms step so far; every other constructor is an explicit
-   refusal (`none`). No decoder, encoder, TSO bridge, source correspondence,
-   ABI/loader, cost transfer or final-image claim is proved here.
+   All pilot constructors step; step equations, frame facts, the reached
+   witness and the branch/call probes are still open. No decoder, encoder,
+   TSO bridge, source correspondence, ABI/loader, cost transfer or
+   final-image claim is proved here.
 -/
 
 #print axioms schritt
