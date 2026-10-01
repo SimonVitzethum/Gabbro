@@ -1,8 +1,7 @@
 # Gabbro
 
-Gabbro is a systems programming language for writing verified operating
-systems — Caprock is the reason it exists — with a Rust implementation and a
-Lean 4 model of its core language and safety properties.
+Gabbro is a systems programming language with a Rust compiler and a Lean 4
+model of its core language and safety properties.
 
 > **Gabbro's goal: the user proves only their own logic and named hardware
 > assumptions; the language carries the rest — on a multicore kernel with DMA.**
@@ -29,25 +28,27 @@ backend and validation are not implemented ([record](DIRECT-COMPILER.md)).
 
 ## 1. Quick start
 
-Zero external dependencies — the three crates need `std` and each other only;
-**Rust 1.86 or newer** (`f64::next_up`/`next_down` stable there). **`cc` is
-needed at run time, not at build time** — only `gabbro build` calls it.
+Install **Rust 1.86 or newer** and a **C11 compiler available as `cc`**.
+The Rust crates have no third-party dependencies. The current backend uses
+`cc` when building Gabbro programs; checking source does not require it.
+Ensure `~/.cargo/bin` is on your `PATH`.
 
 ```bash
-git clone https://github.com/SimonVitzethum/Gabbro && cd Gabbro
-cargo install --path crates/gabbro-cli     # `gabbro` into ~/.cargo/bin
-gabbro check beispiele/01-tabelle.gab
-gabbro build beispiele/172-prozess-ohne-libc.bau
-gabbro passes                              # what each pass does and does NOT do
-gabbro templates                           # the proof-template register
-gabbro obligations beispiele/*.gab         # what a HUMAN still owes — counted, not discharged
-cargo test --no-fail-fast                  # the test corpus
-./instrumente/abnahme.py                   # every guardian, one command, per-guardian verdict
-./instrumente/pruefe-emission.sh           # every emitted unit must compile
-./instrumente/mutiere-pruefer.py           # damage one rule at a time: 422 mutations, one anchor each
-isabelle build -d beweise -c Gabbro        # the machine-checked templates
+git clone https://github.com/SimonVitzethum/Gabbro
+cd Gabbro
+cargo install --path crates/gabbro-cli
+gabbro new hello
+gabbro check hello.gab
+gabbro build hello.bau
+./target/hello/hello
 ```
-`gabbro passes` also prints what each pass does **not** check — unchecked silence must never look green.
+
+The program prints `Hi`. `gabbro new` creates `hello.gab` (source) and
+`hello.bau` (build manifest). Open them alongside the [tutorial](dokumente/TUTORIAL.md)
+to learn the language.
+
+For checker coverage, run `gabbro passes`; for outstanding user obligations, run
+`gabbro obligations hello.gab`.
 
 ## 2. Proof check in two commands
 
@@ -108,7 +109,9 @@ Measured snapshot 2026-10-01 — every figure carries its command; provenance an
 | **Blind spots** | **73 blind · 175 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindspots` |
 | **Usability** | 312 of 2431 teaching sites and 14 of 110 real-code sites **may fall** — 2431 and 110 clause sites | `gabbro ceremony` |
 
-The 15 theories in [`beweise/`](beweise/) hold 3512 lines of Isar (Isabelle2025-2); new proofs go to Lean only.
+Mutation tests damage one rule at a time: 422 mutations, one anchor each
+(`./instrumente/mutiere-pruefer.py`). The 15 theories in [`beweise/`](beweise/)
+hold 3512 lines of Isar; new proofs go to Lean only.
 
 ## 5. Proved and not proved
 
@@ -127,9 +130,7 @@ validation and hardware/concurrency correspondence **OPEN**; the direct x86
 backend is not implemented — never call the compiler or a binary verified.
 Most accepted programs are not judged in Lean at all; the rest are refused by
 the exporter and listed by name as not claimed in
-[`REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt). Caprock is not
-written in Gabbro yet; fragments, with origin and verdict, in
-[`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md).
+[`REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt).
 
 ## 6. Documents
 
