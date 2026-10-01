@@ -429,3 +429,4 @@ import Grammatik.X86.RegionFresh
 import Grammatik.X86.PayloadResidue
 import Grammatik.X86.ContractSites
 import Grammatik.X86.DecoderSoundness
+import Grammatik.X86.BudgetExecution
