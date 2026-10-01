@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 14:10 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 14:11 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -211,7 +211,7 @@ Last ledger refresh: **2026-10-01 14:10 UTC**. This is an operational snapshot, 
 | 419 | Continuous Lean proof reserve: BitCount | Merged after review/checks | 467: Merged after review/checks | [report](messung/muse/MUSE-REPORT-419.md) |
 | 420 | Continuous Lean proof reserve: ByteSwap | Merged after review/checks | 468: Merged after review/checks | [report](messung/muse/MUSE-REPORT-420.md) |
 | 421 | Continuous Lean proof reserve: WordAtomicity | Merged after review/checks | 469: Merged after review/checks | [report](messung/muse/MUSE-REPORT-421.md) |
-| 422 | Continuous Lean proof reserve: ReleaseAcquire | Committed candidate; review/integration pending | 470: Committed candidate; review/integration pending | [task](lanes/422.md) |
+| 422 | Continuous Lean proof reserve: ReleaseAcquire | Merged after review/checks | 470: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-422.md) |
 | 423 | Continuous Lean proof reserve: BranchLayout | Merged after review/checks | 471: Merged after review/checks | [report](messung/muse/MUSE-REPORT-423.md) |
 | 424 | Continuous Lean proof reserve: FeatureProfile | Committed candidate; review/integration pending | 472: Agent working | [task](lanes/424.md) |
 | 425 | Continuous Lean proof reserve: FloatExceptions | Merged after review/checks | 473: Merged after review/checks | [report](messung/muse/MUSE-REPORT-425.md) |
@@ -506,6 +506,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `d3aa7fed` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d3aa7fed6ea1a9ee826f7ebf05d79413ce2d4883 -->
 - 2026-10-01: lane **384**, Independent exact-candidate review of 346 GateStub, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-384.md). <!-- x86-merged:384 -->
 - 2026-10-01: publication batch checks passed for `ee1071b8`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **422**, Continuous Lean proof reserve: ReleaseAcquire, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-422.md). <!-- x86-merged:422 -->
+- 2026-10-01: checked master `ad6c05f7` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:ad6c05f78d3f21150a592062feab2e6abf3412a7 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
