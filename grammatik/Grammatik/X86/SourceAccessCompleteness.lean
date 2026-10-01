@@ -22,6 +22,7 @@ import Grammatik.X86.Zugriffe
 import Grammatik.X86.AccessExecution
 import Grammatik.X86.LockedOps
 import Grammatik.X86.TableLayout
+import Grammatik.X86.BridgeRead
 
 namespace Gabbro.Grammatik.X86
 
@@ -182,6 +183,157 @@ theorem fragmentDelta_voll_zeuge :
 
 #print axioms fragmentDelta_voll
 #print axioms fragmentDelta_voll_zeuge
+
+/-! ## 3. G completeness: every carrier access of the fragment step is listed. -/
+
+/-- G-level completeness for the admitted fragment: for a fragment-shaped
+    source step (actual `Stmt.assignSlot` through `execStmt`) whose worlds
+    line up with the G thread endpoints and memories, the G access list
+    IS the enumeration; the write is recorded; every read is a footprint
+    carrier; every access is the written table or a footprint carrier; and
+    only the written table is ever written (slot ownership). The
+    changed-memory disjunct of `ZugriffG`/`SchreibG` is discharged for
+    every other carrier by the actual disjoint-slot frame: one slot write
+    leaves every other carrier alone (`schreibSlot_fremd_tab`, globs by
+    construction). Every premise is used: the source premises through the
+    executed step and the frame, the machine premises through the access
+    list and the memory links. -/
+theorem blattFragment_voll {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)}
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (t : D.Tab) (f : D.Feld t)
+    (i : Expr D Γ Λ (.index (D.count t)))
+    (e : Expr D Γ Λ (D.typ t f))
+    (hw : V.schreibt t = true) (hL : darf D t Λ)
+    (σ : World D) (ρ : Env D Γ)
+    (σ' : World D) (ρ' : Env D Γ)
+    (hExec : execStmt O passes R (Stmt.assignSlot (l := l) t f i e hw hL) σ ρ =
+      .ok σ' ρ')
+    (M M' : RufMaschineG D) (u : Faden)
+    (hM : (M.faeden u).spur = σ.spur)
+    (hM' : (M'.faeden u).spur = σ'.spur)
+    (hSpeicher : M.speicher = σ.speicher)
+    (hSpeicher' : M'.speicher = σ'.speicher) :
+    zugriffe M M' u = fragmentListe t (i.orte ++ e.orte) ∧
+      SchreibG M M' u (.inl t) ∧
+      (∀ c, LiestG M M' u c → c ∈ i.orte ++ e.orte) ∧
+      (∀ c, ZugriffG M M' u c → c = .inl t ∨ c ∈ i.orte ++ e.orte) ∧
+      (∀ c, SchreibG M M' u c → c = .inl t) := by
+  have hEq : zugriffe M M' u = fragmentListe t (i.orte ++ e.orte) := by
+    unfold zugriffe
+    rw [hM, hM']
+    exact fragmentDelta_voll O passes R t f i e hw hL σ ρ σ' ρ' hExec
+  have hTGstab : ∀ c : D.Tab ⊕ D.Glob, c ≠ .inl t →
+      TraegerGleich M'.speicher M.speicher c := by
+    intro c hne
+    rw [hSpeicher, hSpeicher']
+    have hU : execStmt O passes R (Stmt.assignSlot (l := l) t f i e hw hL) σ ρ =
+        Ausgang.ok
+          ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+            (eval (σ.lese Λ (i.orte ++ e.orte)) i
+              (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+            (eval (σ.lese Λ (i.orte ++ e.orte)) e
+              (σ.lese Λ (i.orte ++ e.orte)) ρ)) ρ := by
+      simp only [execStmt]
+    rw [hU] at hExec
+    cases hExec
+    cases c with
+    | inl t2 =>
+      have ht : t2 ≠ t := fun h => hne (congrArg Sum.inl h)
+      show ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ _ f _).speicher.slots
+        t2 = σ.speicher.slots t2
+      funext k2 f2
+      show ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ _ f _).slots t2 k2
+        f2 = σ.slots t2 k2 f2
+      exact schreibSlot_fremd_tab _ t Λ _ f _ t2 k2 f2 ht
+    | inr g =>
+      show ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ _ f _).speicher.globs
+        g = σ.speicher.globs g
+      rfl
+  have hSchreib : SchreibG M M' u (.inl t) := by
+    unfold SchreibG
+    rw [hEq]
+    exact Or.inl (fragmentListe_schreibt t _)
+  have hLiest : ∀ c, LiestG M M' u c → c ∈ i.orte ++ e.orte := by
+    intro c hc
+    unfold LiestG at hc
+    rw [hEq] at hc
+    have hinv := fragmentListe_invert t (i.orte ++ e.orte) c false hc
+    rcases hinv with ⟨hcon, -⟩ | ⟨-, ho⟩
+    · exact absurd hcon (by decide)
+    · exact ho
+  have hZugriff : ∀ c, ZugriffG M M' u c → c = .inl t ∨ c ∈ i.orte ++ e.orte := by
+    intro c hc
+    unfold ZugriffG at hc
+    rcases hc with ⟨w, hw⟩ | hTG
+    · rw [hEq] at hw
+      have hinv := fragmentListe_invert t (i.orte ++ e.orte) c w hw
+      rcases hinv with ⟨rfl, hct⟩ | ⟨rfl, ho⟩
+      · exact Or.inl hct
+      · exact Or.inr ho
+    · by_cases hct : c = .inl t
+      · exact Or.inl hct
+      · exact absurd (hTGstab c hct) hTG
+  refine ⟨hEq, hSchreib, hLiest, hZugriff, ?_⟩
+  intro c hc
+  unfold SchreibG at hc
+  rcases hc with hw | hTG
+  · rw [hEq] at hw
+    have hinv := fragmentListe_invert t (i.orte ++ e.orte) c true hw
+    rcases hinv with ⟨-, hct⟩ | ⟨hcon, -⟩
+    · exact hct
+    · exact absurd hcon (by decide)
+  · by_cases hct : c = .inl t
+    · exact hct
+    · exact absurd (hTGstab c hct) hTG
+
+#print axioms blattFragment_voll
+
+/-- JOINT WITNESS for `blattFragment_voll`: all machine and source
+    premises hold jointly on the witness declaration and the reached
+    two-state G frame over it — one table that the witness function
+    writes, a reached step changing the source slot `0 → 42` — and so do
+    the enumeration, the recorded write and the table-writer fact. -/
+theorem blattFragment_voll_zeuge :
+    ∃ (M M' : RufMaschineG witD) (u : Faden) (σ' : World witD)
+      (ρ' : Env witD []),
+      (M.faeden u).spur = witSigma.spur ∧
+      (M'.faeden u).spur = σ'.spur ∧
+      M.speicher = witSigma.speicher ∧
+      M'.speicher = σ'.speicher ∧
+      execStmt witO 0 witR
+        (Stmt.assignSlot (l := false) () () witI witE witHw witHL)
+        witSigma Env.nil = .ok σ' ρ' ∧
+      zugriffe M M' u = fragmentListe () (witI.orte ++ witE.orte) ∧
+      SchreibG M M' u (.inl ()) ∧
+      witD.schreibt () () = true ∧
+      (witSigma.slots () 0 ()).n = 0 ∧
+      (σ'.slots () 0 ()).n = 42 := by
+  have hExecFull : ∃ σ' ρ', execStmt witO 0 witR
+      (Stmt.assignSlot (l := false) () () witI witE witHw witHL)
+      witSigma Env.nil = .ok σ' ρ' := by
+    simp only [execStmt]
+    exact ⟨_, _, rfl⟩
+  obtain ⟨σ', ρ', hExec⟩ := hExecFull
+  have hM : (brueckenG.faeden 0).spur = witSigma.spur := rfl
+  have hS : (brueckenG : RufMaschineG witD).speicher = witSigma.speicher := rfl
+  have hMain := blattFragment_voll witO 0 witR () () witI witE witHw witHL
+    witSigma Env.nil σ' ρ' hExec brueckenG
+    ⟨σ'.speicher, fun _ => ⟨[], brueckenRahmen, σ'.spur, []⟩,
+      brueckenG.lauf, brueckenG.start⟩
+    0 hM rfl hS rfl
+  have hBefore : (witSigma.slots () 0 ()).n = 0 := rfl
+  have hAfter : (σ'.slots () 0 ()).n = 42 := by
+    cases hExec
+    rfl
+  exact ⟨brueckenG,
+    ⟨σ'.speicher, fun _ => ⟨[], brueckenRahmen, σ'.spur, []⟩,
+      brueckenG.lauf, brueckenG.start⟩,
+    0, σ', ρ', hM, rfl, hS, rfl, hExec, hMain.1,
+    hMain.2.1, rfl, hBefore, hAfter⟩
+
+#print axioms blattFragment_voll_zeuge
 
 #print axioms filterMap_leseEv
 #print axioms take_neuAppend
