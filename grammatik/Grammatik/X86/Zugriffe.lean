@@ -356,8 +356,8 @@ theorem zugriff_ret_liest (s s' : Zustand)
 /-! ## 6. Write forms: changed bytes lie in the extracted footprint. -/
 
 /-- `store` success: every changed byte lies in the extracted write
-    footprint, permissions are preserved, and the stored word is the
-    source register named by the extraction. -/
+    footprint, all three permission maps are preserved, and the stored
+    word is the source register named by the extraction. -/
 theorem erfolg_store64_im_fuss (s s' : Zustand)
     (base src : Register) (disp : BitVec 32) (m : Speicher)
     (dd : Decodiert)
@@ -368,10 +368,11 @@ theorem erfolg_store64_im_fuss (s s' : Zustand)
       x ∈ (zugriff dd s).schreiben) ∧
     s'.speicher.lesbar = s.speicher.lesbar ∧
     s'.speicher.schreibbar = s.speicher.schreibbar ∧
+    s'.speicher.ausfuehrbar = s.speicher.ausfuehrbar ∧
     (zugriff dd s).speicherWert = some (s.register src) := by
   rw [zugriff_store64 dd s base src disp h]
   simp only
-  refine ⟨?_, ?_, ?_, trivial⟩
+  refine ⟨?_, ?_, ?_, ?_, trivial⟩
   · intro x hx
     by_cases hm : x ∈ Fuss (effAddr s base disp)
     · exact hm
@@ -385,10 +386,12 @@ theorem erfolg_store64_im_fuss (s s' : Zustand)
       hok h hwr hstep).1
   · exact (schritt_store64_berechtigungen dd s s' base src disp m
       hok h hwr hstep).2.1
+  · exact (schritt_store64_berechtigungen dd s s' base src disp m
+      hok h hwr hstep).2.2
 
 /-- `push` success: every changed byte lies in the extracted write
-    footprint below the old top, permissions are preserved, and the
-    stored word is the source register read before the move. -/
+    footprint below the old top, all three permission maps are preserved,
+    and the stored word is the source register read before the move. -/
 theorem erfolg_push64_im_fuss (s s' : Zustand)
     (src : Register) (m : Speicher) (dd : Decodiert)
     (hok : laengeOk dd.laenge = true) (h : dd.befehl = .push64 src)
@@ -399,10 +402,11 @@ theorem erfolg_push64_im_fuss (s s' : Zustand)
       x ∈ (zugriff dd s).schreiben) ∧
     s'.speicher.lesbar = s.speicher.lesbar ∧
     s'.speicher.schreibbar = s.speicher.schreibbar ∧
+    s'.speicher.ausfuehrbar = s.speicher.ausfuehrbar ∧
     (zugriff dd s).speicherWert = some (s.register src) := by
   rw [zugriff_push64 dd s src h]
   simp only
-  refine ⟨?_, ?_, ?_, trivial⟩
+  refine ⟨?_, ?_, ?_, ?_, trivial⟩
   · intro x hx
     by_cases hm : x ∈ Fuss (stapelOben s)
     · exact hm
@@ -418,10 +422,12 @@ theorem erfolg_push64_im_fuss (s s' : Zustand)
       hok h hwr hstep).1
   · exact (schritt_push64_berechtigungen dd s s' src m
       hok h hwr hstep).2.1
+  · exact (schritt_push64_berechtigungen dd s s' src m
+      hok h hwr hstep).2.2
 
 /-- `call` success: every changed byte lies in the extracted write
-    footprint below the old top, permissions are preserved, and the
-    stored word is the ACTUAL next RIP named by the extraction. -/
+    footprint below the old top, all three permission maps are preserved,
+    and the stored word is the ACTUAL next RIP named by the extraction. -/
 theorem erfolg_call32_im_fuss (s s' : Zustand)
     (disp : BitVec 32) (m : Speicher) (dd : Decodiert)
     (hok : laengeOk dd.laenge = true) (h : dd.befehl = .call32 disp)
@@ -432,10 +438,11 @@ theorem erfolg_call32_im_fuss (s s' : Zustand)
       x ∈ (zugriff dd s).schreiben) ∧
     s'.speicher.lesbar = s.speicher.lesbar ∧
     s'.speicher.schreibbar = s.speicher.schreibbar ∧
+    s'.speicher.ausfuehrbar = s.speicher.ausfuehrbar ∧
     (zugriff dd s).speicherWert = some (ripNach s.rip dd.laenge) := by
   rw [zugriff_call32 dd s disp h]
   simp only
-  refine ⟨?_, ?_, ?_, trivial⟩
+  refine ⟨?_, ?_, ?_, ?_, trivial⟩
   · intro x hx
     by_cases hm : x ∈ Fuss (stapelOben s)
     · exact hm
@@ -451,6 +458,8 @@ theorem erfolg_call32_im_fuss (s s' : Zustand)
       hok h hwr hstep).1
   · exact (schritt_call32_berechtigungen dd s s' disp m
       hok h hwr hstep).2.1
+  · exact (schritt_call32_berechtigungen dd s s' disp m
+      hok h hwr hstep).2.2
 
 /-! ## 7. Refusal: bad length or failed permission is never a trace. -/
 

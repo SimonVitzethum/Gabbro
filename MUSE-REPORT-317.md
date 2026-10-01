@@ -44,8 +44,8 @@ Typen, or Rust edits.
   `zugriff_ret_liest` (extracted base address feeds the actual `read64`
   equation; destination/RIP holds the returned value).
 - Write agreement (3): `erfolg_store64_im_fuss`, `erfolg_push64_im_fuss`,
-  `erfolg_call32_im_fuss` (every changed byte in extracted footprint,
-  permissions preserved, stored word named).
+  `erfolg_call32_im_fuss` (every changed byte in extracted footprint, ALL
+  THREE permission maps preserved, stored word named).
 - Refusal (7): `zugriff_laenge_versagt_kein_erfolg`,
   `zugriff_load64_versagt_kein_erfolg`,
   `zugriff_store64_versagt_kein_erfolg`,
@@ -81,7 +81,13 @@ contract, progress, timing, ABI/loader, or whole-image claim.
 
 ## Task remarks
 
-Nothing in the task appeared wrong. Two implementation notes: (a) the
+REPAIR 318 (review of 9e97546f): the three write-agreement theorems
+proved only `lesbar`/`schreibbar` preservation while claiming "all
+permissions". Fixed: each now concludes `ausfuehrbar` preservation too
+via the `.2.2` projection of the cited `schritt_*_berechtigungen`
+lemmas; docstrings name all three maps. No other review finding.
+
+Nothing else in the task appeared wrong. Two implementation notes: (a) the
 extraction takes `Decodiert` (not bare `Befehl`) because CALL's stored
 word is the length-dependent next RIP; (b) this toolchain's struct
 syntax requires one-line `{ befehl := ..., laenge := ... }` literals
