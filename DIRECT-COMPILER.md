@@ -8,6 +8,8 @@ record must distinguish completed proofs from running work and planned work.
 
 The [detailed compiler design](DIRECT-COMPILER-DESIGN.md) specifies the planned instruction forms, invariant-derived optimisation rules, hardware scope and fast compilation/validation architecture. These are design requirements; the ledger below records implementation and proof status. <!-- x86-detailed-design -->
 
+The [complete planned Lean optimiser specification](grammatik/OPTIMIZER.md) describes the shared IR, optimisation rules, invariant/effect premises, certificates, cost/concurrency guarantees, fast compilation and the proposed friend contributor handoff. It is a specification; the implementation and full validation chain remain OPEN. <!-- x86-optimizer-design -->
+
 ## Intended result
 
 Compile Gabbro directly to x86-64 machine bytes, including linking, relocations,
@@ -106,7 +108,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 10:47 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 10:49 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -144,8 +146,8 @@ Last ledger refresh: **2026-10-01 10:47 UTC**. This is an operational snapshot, 
 | 319 | Byte-memory fetch decode and actual instruction step | Merged after review/checks | 320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-319.md) |
 | 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-323.md) |
 | 325 | High runtime performance and feasible hardware-profile design revision | Merged after review/checks | 326: Merged after review/checks | [report](messung/muse/MUSE-REPORT-325.md) |
-| 327 | Safety-first broad practical-performance design prioritisation | Merged after review/checks | Historical coordinator review; see report | [report](messung/muse/MUSE-REPORT-327.md) |
-| 329 | Muse organisation and dependency ownership plan | Committed candidate; review/integration pending | 332: Committed candidate; review/integration pending | [task](lanes/329.md) |
+| 327 | Safety-first broad practical-performance design prioritisation | Merged after review/checks | 328: Merged after review/checks | [report](messung/muse/MUSE-REPORT-327.md) |
+| 329 | Muse organisation and dependency ownership plan | Committed candidate; review/integration pending | 332: Agent working | [task](lanes/329.md) |
 | 330 | Muse merge-owner for independently approved safety-first design | Merged after review/checks | 333: Merged after review/checks | [report](messung/muse/MUSE-REPORT-330.md) |
 | 331 | Complete Lean optimiser specification and friend handoff | Merged after review/checks | 334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-331.md) |
 
@@ -276,6 +278,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **331**, Complete Lean optimiser specification and friend handoff, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-331.md). <!-- x86-merged:331 -->
 - 2026-10-01: lane **334**, Independent complete optimiser specification review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-334.md). <!-- x86-merged:334 -->
 - 2026-10-01: documentation-only publication at `95a4871f` retains the successful complete local Lean, Rust and emission checks at `ad1a6e2a`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
+- 2026-10-01: checked master `a52b229b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a52b229b1f6ccc38157a437594ddf3c4dc5756f1 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
