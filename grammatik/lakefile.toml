@@ -1,6 +1,9 @@
 name = "grammatik"
 version = "0.1.0"
 defaultTargets = ["Grammatik"]
+# Bound native compiler workers/heap after the measured Lean OOM.
+# Weak arguments preserve build traces; they change resource use, not proofs.
+weakLeanArgs = ["-j2", "-M4096"]
 
 # NO mathlib, and NO import of `programmlogik` or `passlogik`: this project is about the
 # GRAMMAR alone -- what the syntax admits and what a sentence of it means. Nothing here
