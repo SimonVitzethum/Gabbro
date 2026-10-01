@@ -125,6 +125,41 @@ theorem senkFrag_verweigert_tief {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)
         (Expr.lit (Γ := Γ) (Λ := Λ) 3))
       dst tmp = none := rfl
 
+/-- MODULAR HOMOMORPHISM (add): the word sum is the exact sum wrapped.
+    Overflow is therefore never silent in the statement: the main theorem
+    equates the register with `intWort` of the exact source value. -/
+theorem intWort_add (a b : Int) :
+    intWort a + intWort b = intWort (a + b) := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [intWort, BitVec.toNat_add, BitVec.toNat_ofNat]
+  omega
+
+/-- MODULAR HOMOMORPHISM (sub): the word difference is the exact one wrapped. -/
+theorem intWort_sub (a b : Int) :
+    intWort a - intWort b = intWort (a - b) := by
+  apply BitVec.eq_of_toNat_eq
+  simp only [intWort, BitVec.toNat_sub, BitVec.toNat_ofNat]
+  omega
+
+/-- SIGNED ROUNDTRIP: an in-range integer survives the modular conversion
+    with its signed reading intact. Out-of-range values wrap (honest
+    `bmod` behaviour); the overflow-bound theorem names when that happens. -/
+theorem intWort_sint (n : Int) (hlo : -(2 ^ 63 : Int) ≤ n) (hhi : n < 2 ^ 63) :
+    sint (intWort n) = n := by
+  unfold sint intWort
+  rw [BitVec.toInt_eq_toNat_bmod, BitVec.toNat_ofNat]
+  have hnn : 0 ≤ n % (2 ^ 64 : Int) := by omega
+  have hlt : (n % (2 ^ 64 : Int)).toNat < 2 ^ 64 := by omega
+  rw [Nat.mod_eq_of_lt hlt, Int.toNat_of_nonneg hnn]
+  by_cases hn : 0 ≤ n
+  · have hv : n % (2 ^ 64 : Int) = n := by omega
+    rw [hv]
+    exact Int.bmod_eq_of_le (by omega) (by omega)
+  · have hv : n % (2 ^ 64 : Int) = n + 2 ^ 64 := by omega
+    rw [hv]
+    have hb := bmod_high (n + 2 ^ 64) (by omega) (by omega)
+    omega
+
 /- CUTS:
     Conversion homomorphism (`intWort_add/sub`), the signed roundtrip
     (`intWort_sint`), the lowering-correctness theorems, the overflow-bound
