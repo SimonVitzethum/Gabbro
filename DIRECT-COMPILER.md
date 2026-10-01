@@ -248,7 +248,7 @@ Last ledger refresh: **2026-10-01 18:42 UTC**. This is an operational snapshot, 
 | 569 | Connection: Fetched call/return to stack-frame proofs | Agent working | 587: scheduled | [task](lanes/569.md) |
 | 570 | Connection: Source world/table values to target byte representation | Agent working | 588: scheduled | [task](lanes/570.md) |
 | 571 | Connection: Entry state, image permissions and user binding duties | Agent working | 589: scheduled | [task](lanes/571.md) |
-| 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-572.md) |
+| 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
 | 573 | Connection: Projected TSO stores to source W writes | Waiting for accepted dependencies | 591: scheduled | [task](lanes/573.md) |
 | 574 | Connection: Projected TSO loads to source W reads | Waiting for accepted dependencies | 592: scheduled | [task](lanes/574.md) |
 | 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
@@ -562,6 +562,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **559**, Connection: Arbitrary-input pilot decoder soundness, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-559.md). <!-- x86-merged:559 -->
 - 2026-10-01: lane **577**, Independent connection review of 559, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-577.md). <!-- x86-merged:577 -->
 - 2026-10-01: lane **572**, Connection: Source budget-stop and target work connection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-572.md). <!-- x86-merged:572 -->
+- 2026-10-01: lane **590**, Independent connection review of 572, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-590.md). <!-- x86-merged:590 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
