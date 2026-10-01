@@ -7,7 +7,7 @@
 
 ## Candidate under review
 
-- CANDIDATE: 596 `60ccda1aba792381359c89b62b5305a97973b789`
+CANDIDATE: 596 60ccda1aba792381359c89b62b5305a97973b789
 - Base: `0044c2585bdd2ebad67d8d7bd5c3a4db11b171eb`; pinned HEAD object verified present (`git cat-file -t` = commit, log tip matches report commit).
 - Files (diff vs base, exactly 3, +717/-0): `MUSE-REPORT-596.md`, `grammatik/Grammatik.lean` (one umbrella import line, appended at end), `grammatik/Grammatik/X86/TSOTrace.lean` (new, 614 lines).
 - Task source: `.tmp/review/author-596/OWNER-TASK.md` (Lane 596: TSO history preservation across actual finite traces). Report source: `.tmp/review/author-596/MUSE-REPORT-596.md`. Build log: `.tmp/review/author-596/BUILD-EVIDENCE.json` (incremental `lean-probe` history with honest intermediate failures, final `lean-probe` 0 errors, final `lean-bau` exit 0 / 0 error lines / 440 jobs).
@@ -50,4 +50,4 @@
 
 ## Verdict
 
-- VERDICT: ACCEPT
+VERDICT: ACCEPT
