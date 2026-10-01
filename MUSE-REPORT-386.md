@@ -79,5 +79,5 @@ validated byte sequences, no XMM file), no decoder/indirect-target
 certificates, no source correspondence, no TSO bridge, no cost transfer, no
 final-byte closure, shared-IR consumer pending. Bounded claim is truthful.
 
-CANDIDATE: 348 cd5c9899
+CANDIDATE: 348 cd5c9899f1786dbe359f3b96ba024deed897f70c
 VERDICT: ACCEPT
