@@ -36,6 +36,26 @@ Fresh substantive re-review performed on the NEW pinned files:
 Verdict below is pinned to the NEW HEAD. The old HEAD `ee5d6ffd` is stale
 and no longer approved.
 
+## Second re-review (HEAD `5c113423`)
+
+Snapshot now pins `5c113423d32d6f2181d16f0ffecad7d291ddc686`
+(was `519e6373`). Delta `519e6373` -> `5c113423` is again report-only:
+"Addendum 2: repeated identical gate failure" (commit message confirms
+"no Lean change"; BUILD-EVIDENCE entries 32-34 show a fresh module probe
+exit 0 plus a byte-identical umbrella thread-spawn abort, exit 134).
+
+- Lean content still byte-identical: new-file blob `6dbea0d5`, same
+  one-line umbrella import, same file list. No changed proof, no new or
+  weakened premise, no scope change. All prior findings stand.
+- Freshly reproduced in this clone on the NEW supplied file (md5
+  `2d8cdd0d8fbd009920e56ea27eff64c3`, staged then deleted, tree clean):
+  `./lean-probe` gives `== 0 error(s) in the COMPLETE output; exit 0`
+  with the same 17 standard axiom lines. Forbidden-keyword grep: zero hits.
+- Addendum 2 assessment is correct and consistent with the evidence: same
+  crash signature after all 17 module axiom lines print, same failure on
+  unmodified master, still no owned defect, still no Lean change indicated.
+  Verdict moves to the NEW HEAD; `519e6373` is now stale.
+
 ## Scope (original review, still valid)
 
 Reviewed the exact pinned candidate files from `.tmp/review/SNAPSHOT.json`
@@ -129,5 +149,5 @@ non-degenerate witnesses), with codec/source/hardware correspondence
 explicitly OPEN. Not full compiler closure; nothing in the candidate claims
 it.
 
-CANDIDATE: 417 519e6373b6548a0358c8727ed7495278174d3f25
+CANDIDATE: 417 5c113423d32d6f2181d16f0ffecad7d291ddc686
 VERDICT: ACCEPT
