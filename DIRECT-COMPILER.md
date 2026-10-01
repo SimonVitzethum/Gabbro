@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 19:04 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 19:13 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -238,9 +238,9 @@ Last ledger refresh: **2026-10-01 19:04 UTC**. This is an operational snapshot, 
 | 559 | Connection: Arbitrary-input pilot decoder soundness | Merged after review/checks | 577: Merged after review/checks | [report](messung/muse/MUSE-REPORT-559.md) |
 | 560 | Connection: Loaded image to actual instruction fetch | Agent working | 578: scheduled | [task](lanes/560.md) |
 | 561 | Connection: Relocated bytes to re-decoded instruction execution | Agent working | 579: scheduled | [task](lanes/561.md) |
-| 562 | Connection: Narrow operations byte decoder and execution connection | Agent working | 580: scheduled | [task](lanes/562.md) |
+| 562 | Connection: Narrow operations byte decoder and execution connection | Committed candidate; review/integration pending | 580: Committed candidate; review/integration pending | [task](lanes/562.md) |
 | 563 | Connection: Multiply/divide byte decoder and execution connection | Merged after review/checks | 581: Merged after review/checks | [report](messung/muse/MUSE-REPORT-563.md) |
-| 564 | Connection: Shift operations byte decoder and execution connection | Committed candidate; review/integration pending | 582: Agent working | [task](lanes/564.md) |
+| 564 | Connection: Shift operations byte decoder and execution connection | Committed candidate; review/integration pending | 582: Committed candidate; review/integration pending | [task](lanes/564.md) |
 | 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Agent working | 583: scheduled | [task](lanes/565.md) |
 | 566 | Connection: Conditional forms bytes to accepted control execution | Agent working | 584: scheduled | [task](lanes/566.md) |
 | 567 | Connection: Canonical byte-TSO history projection | Merged after review/checks | 585: Merged after review/checks | [report](messung/muse/MUSE-REPORT-567.md) |
@@ -577,6 +577,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **587**, Independent connection review of 569, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-587.md). <!-- x86-merged:587 -->
 - 2026-10-01: lane **571**, Connection: Entry state, image permissions and user binding duties, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-571.md). <!-- x86-merged:571 -->
 - 2026-10-01: lane **589**, Independent connection review of 571, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-589.md). <!-- x86-merged:589 -->
+- 2026-10-01: publication batch checks passed for `a529523d`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
