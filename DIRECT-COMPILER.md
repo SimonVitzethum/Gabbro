@@ -147,7 +147,7 @@ Last ledger refresh: **2026-10-01 10:49 UTC**. This is an operational snapshot, 
 | 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-323.md) |
 | 325 | High runtime performance and feasible hardware-profile design revision | Merged after review/checks | 326: Merged after review/checks | [report](messung/muse/MUSE-REPORT-325.md) |
 | 327 | Safety-first broad practical-performance design prioritisation | Merged after review/checks | 328: Merged after review/checks | [report](messung/muse/MUSE-REPORT-327.md) |
-| 329 | Muse organisation and dependency ownership plan | Merged after review/checks | 332: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-329.md) |
+| 329 | Muse organisation and dependency ownership plan | Merged after review/checks | 332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-329.md) |
 | 330 | Muse merge-owner for independently approved safety-first design | Merged after review/checks | 333: Merged after review/checks | [report](messung/muse/MUSE-REPORT-330.md) |
 | 331 | Complete Lean optimiser specification and friend handoff | Merged after review/checks | 334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-331.md) |
 
@@ -281,6 +281,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `a52b229b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a52b229b1f6ccc38157a437594ddf3c4dc5756f1 -->
 - 2026-10-01: lane **329**, Muse organisation and dependency ownership plan, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-329.md). <!-- x86-merged:329 -->
 - 2026-10-01: checked master `159269ed` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:159269ed9567fda9e3b0fadf303ddf238c4d0fe2 -->
+- 2026-10-01: lane **332**, Independent organisation and ownership plan review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-332.md). <!-- x86-merged:332 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
