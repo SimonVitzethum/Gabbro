@@ -85,6 +85,25 @@ theorem parseLe64_suffix (bs : List Byte) (v : Wort) (rest : List Byte)
                   cases Option.some_inj.mp h
                   exact ⟨b0, b1, b2, b3, b4, b5, b6, b7, rfl⟩
 
+/-- A successful 32-bit parse consumes four bytes. -/
+theorem parseLe32_len (bs : List Byte) (v : BitVec 32) (rest : List Byte)
+    (h : parseLe32 bs = some (v, rest)) :
+    bs.length = 4 + rest.length := by
+  obtain ⟨b0, b1, b2, b3, h4⟩ := parseLe32_suffix bs v rest h
+  rw [h4]
+  simp only [List.length_cons]
+  omega
+
+/-- A successful 64-bit parse consumes eight bytes. -/
+theorem parseLe64_len (bs : List Byte) (v : Wort) (rest : List Byte)
+    (h : parseLe64 bs = some (v, rest)) :
+    bs.length = 8 + rest.length := by
+  obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7, h8⟩ :=
+    parseLe64_suffix bs v rest h
+  rw [h8]
+  simp only [List.length_cons]
+  omega
+
 /-! ## 2. Coverage shape: every accepted pilot form, exact length. -/
 
 /-- Coverage shape: every accepted pilot form with its exact consumed length.
@@ -306,6 +325,180 @@ theorem decodeRex_abdeckung (rBit bBit : Nat) (bs : List Byte)
         have hcons : (op :: pre).length = pre.length + 1 := rfl
         refine ⟨⟨op :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
       · simp at h
+
+/-! ## 7. Top level: every successful decode carries its own length. -/
+
+/-- DECODER COVERAGE: every successful `decode` of an ARBITRARY byte list
+    consumes exactly its stated length, the length is valid (1..15), the
+    decoded form is one of the 14 pilot forms at its exact length, and the
+    input splits into the consumed prefix and the remaining suffix. Proved
+    from the decoder side only: no encoder round trip is used. -/
+theorem decode_abdeckung (bs : List Byte) (d : Decodiert) (rest : List Byte)
+    (h : decode bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length ∧ laengeOk d.laenge = true ∧ decktAb d ∧
+      ∃ pre, bs = pre ++ rest ∧ pre.length = d.laenge := by
+  cases bs with
+  | nil => simp [decode] at h
+  | cons b t =>
+    simp only [decode] at h
+    split at h
+    · have hcons : (b :: t).length = t.length + 1 := rfl
+      have heq : 1 + t.length = (b :: t).length := by omega
+      have hpre : ([b] : List Byte).length = 1 := rfl
+      cases h
+      exact ⟨heq, rfl, Or.inl ⟨rfl, rfl⟩, [b], rfl, hpre⟩
+    · cases hparse : parseLe32 t with
+      | none => simp [hparse] at h
+      | some pr =>
+        obtain ⟨v, mid⟩ := pr
+        simp only [hparse] at h
+        obtain ⟨c0, c1, c2, c3, h4⟩ := parseLe32_suffix t v mid hparse
+        have hlen := parseLe32_len t v mid hparse
+        have hcons : (b :: t).length = t.length + 1 := rfl
+        have heq : 5 + mid.length = (b :: t).length := by omega
+        have hpre : ([b, c0, c1, c2, c3] : List Byte).length = 5 := rfl
+        cases h
+        refine ⟨heq, rfl, ?_, [b, c0, c1, c2, c3], by simp [h4], hpre⟩
+        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inl ⟨v, Or.inr rfl, rfl⟩))))))
+    · cases hparse : parseLe32 t with
+      | none => simp [hparse] at h
+      | some pr =>
+        obtain ⟨v, mid⟩ := pr
+        simp only [hparse] at h
+        obtain ⟨c0, c1, c2, c3, h4⟩ := parseLe32_suffix t v mid hparse
+        have hlen := parseLe32_len t v mid hparse
+        have hcons : (b :: t).length = t.length + 1 := rfl
+        have heq : 5 + mid.length = (b :: t).length := by omega
+        have hpre : ([b, c0, c1, c2, c3] : List Byte).length = 5 := rfl
+        cases h
+        refine ⟨heq, rfl, ?_, [b, c0, c1, c2, c3], by simp [h4], hpre⟩
+        exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+          (Or.inl ⟨v, Or.inl rfl, rfl⟩))))))
+    · cases t with
+      | nil => simp at h
+      | cons b2 t2 =>
+        dsimp only at h
+        by_cases hcc : 128 ≤ byteNat b2 ∧ byteNat b2 < 144
+        · rw [if_pos hcc] at h
+          cases hcond : codeCond (byteNat b2 - 128) with
+          | none => simp [hcond] at h
+          | some cond =>
+            simp only [hcond] at h
+            cases hparse : parseLe32 t2 with
+            | none => simp [hparse] at h
+            | some pr =>
+              obtain ⟨v, mid⟩ := pr
+              simp only [hparse] at h
+              obtain ⟨c0, c1, c2, c3, h4⟩ :=
+                parseLe32_suffix t2 v mid hparse
+              have hlen := parseLe32_len t2 v mid hparse
+              have hcons : (b :: b2 :: t2).length = t2.length + 2 := rfl
+              have heq : 6 + mid.length = (b :: b2 :: t2).length := by omega
+              have hpre :
+                  ([b, b2, c0, c1, c2, c3] : List Byte).length = 6 := rfl
+              cases h
+              refine ⟨heq, rfl, ?_, [b, b2, c0, c1, c2, c3],
+                by simp [h4], hpre⟩
+              exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+                (Or.inr ⟨cond, v, rfl, rfl⟩))))))
+        · rw [if_neg hcc] at h
+          simp at h
+    · cases t with
+      | nil => simp at h
+      | cons b2 t2 =>
+        dsimp only at h
+        by_cases hpush : 80 ≤ byteNat b2 ∧ byteNat b2 < 88
+        · rw [if_pos hpush] at h
+          cases hreg : codeReg (byteNat b2 - 80 + 8) with
+          | none => simp [hreg] at h
+          | some r =>
+            simp only [hreg] at h
+            have hcons : (b :: b2 :: t2).length = t2.length + 2 := rfl
+            have heq : 2 + t2.length = (b :: b2 :: t2).length := by omega
+            have hpre : ([b, b2] : List Byte).length = 2 := rfl
+            cases h
+            refine ⟨heq, rfl, ?_, [b, b2], rfl, hpre⟩
+            exact Or.inr (Or.inl ⟨r, rfl, Or.inr rfl⟩)
+        · rw [if_neg hpush] at h
+          by_cases hpop : 88 ≤ byteNat b2 ∧ byteNat b2 < 96
+          · rw [if_pos hpop] at h
+            cases hreg : codeReg (byteNat b2 - 88 + 8) with
+            | none => simp [hreg] at h
+            | some r =>
+              simp only [hreg] at h
+              have hcons : (b :: b2 :: t2).length = t2.length + 2 := rfl
+              have heq : 2 + t2.length = (b :: b2 :: t2).length := by omega
+              have hpre : ([b, b2] : List Byte).length = 2 := rfl
+              cases h
+              refine ⟨heq, rfl, ?_, [b, b2], rfl, hpre⟩
+              exact Or.inr (Or.inr (Or.inl ⟨r, rfl, Or.inr rfl⟩))
+          · rw [if_neg hpop] at h
+            simp at h
+    · have hsub := decodeRex_abdeckung 0 0 t d rest h
+      obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+      have hcons : (b :: pre).length = pre.length + 1 := rfl
+      have hcons2 : (b :: t).length = t.length + 1 := rfl
+      have hblen : t.length = pre.length + rest.length := by
+        rw [hbs, List.length_append]
+      have heq : d.laenge + rest.length = (b :: t).length := by omega
+      have hpre : (b :: pre).length = d.laenge := by omega
+      exact ⟨heq, hok, hshape, b :: pre, by simp [hbs], hpre⟩
+    · have hsub := decodeRex_abdeckung 0 1 t d rest h
+      obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+      have hcons : (b :: pre).length = pre.length + 1 := rfl
+      have hcons2 : (b :: t).length = t.length + 1 := rfl
+      have hblen : t.length = pre.length + rest.length := by
+        rw [hbs, List.length_append]
+      have heq : d.laenge + rest.length = (b :: t).length := by omega
+      have hpre : (b :: pre).length = d.laenge := by omega
+      exact ⟨heq, hok, hshape, b :: pre, by simp [hbs], hpre⟩
+    · have hsub := decodeRex_abdeckung 1 0 t d rest h
+      obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+      have hcons : (b :: pre).length = pre.length + 1 := rfl
+      have hcons2 : (b :: t).length = t.length + 1 := rfl
+      have hblen : t.length = pre.length + rest.length := by
+        rw [hbs, List.length_append]
+      have heq : d.laenge + rest.length = (b :: t).length := by omega
+      have hpre : (b :: pre).length = d.laenge := by omega
+      exact ⟨heq, hok, hshape, b :: pre, by simp [hbs], hpre⟩
+    · have hsub := decodeRex_abdeckung 1 1 t d rest h
+      obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+      have hcons : (b :: pre).length = pre.length + 1 := rfl
+      have hcons2 : (b :: t).length = t.length + 1 := rfl
+      have hblen : t.length = pre.length + rest.length := by
+        rw [hbs, List.length_append]
+      have heq : d.laenge + rest.length = (b :: t).length := by omega
+      have hpre : (b :: pre).length = d.laenge := by omega
+      exact ⟨heq, hok, hshape, b :: pre, by simp [hbs], hpre⟩
+    · by_cases hpush : 80 ≤ byteNat b ∧ byteNat b < 88
+      · rw [if_pos hpush] at h
+        cases hreg : codeReg (byteNat b - 80) with
+        | none => simp [hreg] at h
+        | some r =>
+          simp only [hreg] at h
+          have hcons : (b :: t).length = t.length + 1 := rfl
+          have heq : 1 + t.length = (b :: t).length := by omega
+          have hpre : ([b] : List Byte).length = 1 := rfl
+          cases h
+          refine ⟨heq, rfl, ?_, [b], rfl, hpre⟩
+          exact Or.inr (Or.inl ⟨r, rfl, Or.inl rfl⟩)
+      · rw [if_neg hpush] at h
+        by_cases hpop : 88 ≤ byteNat b ∧ byteNat b < 96
+        · rw [if_pos hpop] at h
+          cases hreg : codeReg (byteNat b - 88) with
+          | none => simp [hreg] at h
+          | some r =>
+            simp only [hreg] at h
+            have hcons : (b :: t).length = t.length + 1 := rfl
+            have heq : 1 + t.length = (b :: t).length := by omega
+            have hpre : ([b] : List Byte).length = 1 := rfl
+            cases h
+            refine ⟨heq, rfl, ?_, [b], rfl, hpre⟩
+            exact Or.inr (Or.inr (Or.inl ⟨r, rfl, Or.inl rfl⟩))
+        · rw [if_neg hpop] at h
+          simp at h
+
 
 /- CUTS (skeleton):
     - The arbitrary-input length soundness, the per-form classification, the
