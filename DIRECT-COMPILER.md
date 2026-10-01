@@ -265,7 +265,7 @@ Last ledger refresh: **2026-10-01 20:31 UTC**. This is an operational snapshot, 
 | 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Merged after review/checks | [report](messung/muse/MUSE-REPORT-604.md) |
 | 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Merged after review/checks | 617: Merged after review/checks | [report](messung/muse/MUSE-REPORT-605.md) |
 | 618 | Overnight: Resource-safe native Lean invocation for publication tests | Merged after review/checks | 619: Merged after review/checks | [report](messung/muse/MUSE-REPORT-618.md) |
-| 620 | Automatic coordinator takeover on missing foreground heartbeat | Committed candidate; review/integration pending | 621: Committed candidate; review/integration pending | [task](lanes/620.md) |
+| 620 | Automatic coordinator takeover on missing foreground heartbeat | Merged after review/checks | 621: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-620.md) |
 | 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Merged after review/checks | [report](messung/muse/MUSE-REPORT-622.md) |
 | 624 | Direct-source closure: FloatSourceObservations | Agent working | 625: scheduled | [task](lanes/624.md) |
 | 626 | Direct-source closure: FloatEntryState | Scheduled | 627: scheduled | [task](lanes/626.md) |
@@ -652,6 +652,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **592**, Independent connection review of 574, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-592.md). <!-- x86-merged:592 -->
 - 2026-10-01: lane **597**, Overnight: Selected SSE2 vector bytes to canonical XMM execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-597.md). <!-- x86-merged:597 -->
 - 2026-10-01: lane **609**, Independent overnight review of 597, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-609.md). <!-- x86-merged:609 -->
+- 2026-10-01: lane **620**, Automatic coordinator takeover on missing foreground heartbeat, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-620.md). <!-- x86-merged:620 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
