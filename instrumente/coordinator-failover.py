@@ -137,12 +137,18 @@ def get_start_time(pid, proc_root):
 
 
 def is_paused(control_dir):
-    for name in ("pool-paused.json", "coordinator-pause.json"):
-        try:
-            if (Path(control_dir) / name).is_file():
-                return True, name
-        except OSError:
-            continue
+    """True only for the explicit USER pause (pool-paused.json).
+
+    coordinator-pause.json is an INTERNAL transient safe-boundary marker
+    (watcher registration or the supervisor's own request) and must never
+    block takeover, stop the role, or exit the supervisor. Only
+    pool-paused.json (user pause) pauses coverage.
+    """
+    try:
+        if (Path(control_dir) / "pool-paused.json").is_file():
+            return True, "pool-paused.json"
+    except OSError:
+        pass
     return False, None
 
 
@@ -504,6 +510,82 @@ def own_pause_path(control_dir):
     return Path(control_dir) / "coordinator-pause.json"
 
 
+INTERNAL_PAUSE_MAX_AGE_SECS = 600.0
+
+
+def internal_pause_doc(control_dir):
+    try:
+        return json.loads(own_pause_path(control_dir).read_text())
+    except (FileNotFoundError, ValueError, OSError):
+        return None
+
+
+def internal_pause_pid(doc):
+    try:
+        owner = str((doc or {}).get("owner", ""))
+    except (AttributeError, ValueError):
+        return None
+    if not owner.startswith("failover-"):
+        return None
+    try:
+        return int(owner.split("-", 1)[1])
+    except (ValueError, IndexError):
+        return None
+
+
+def internal_pause_age_secs(doc):
+    try:
+        ts = datetime.datetime.fromisoformat(
+            str((doc or {}).get("requested", "")))
+    except (ValueError, TypeError):
+        return float("inf")
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=datetime.timezone.utc)
+    return (datetime.datetime.now(datetime.timezone.utc) - ts
+            ).total_seconds()
+
+
+def cleanup_stale_internal_pause(control_dir,
+                                 max_age_secs=INTERNAL_PAUSE_MAX_AGE_SECS):
+    """Remove a leftover supervisor-owned internal marker, nothing else.
+
+    Only files owned by a dead failover pid or older than max_age_secs are
+    removed, and only when the owner is a failover supervisor
+    (owner failover-<pid>). Foreign registration markers are never touched
+    and never block coverage (is_paused ignores them by construction).
+    Returns True when no blocking leftover remains.
+    """
+    path = own_pause_path(control_dir)
+    try:
+        if not path.is_file():
+            return True
+    except OSError:
+        return False
+    doc = internal_pause_doc(control_dir)
+    if doc is None:
+        return True
+    pid = internal_pause_pid(doc)
+    if pid is None:
+        return True
+    try:
+        os.kill(pid, 0)
+        alive = True
+    except ProcessLookupError:
+        alive = False
+    except (PermissionError, OSError):
+        alive = True
+    age = internal_pause_age_secs(doc)
+    if (not alive) or age >= float(max_age_secs):
+        try:
+            if pid == os.getpid():
+                return True
+            path.unlink()
+        except OSError:
+            return False
+        return True
+    return True
+
+
 def ensure_own_pause(control_dir):
     """Request a watcher safe boundary via a supervisor-owned pause file."""
     path = own_pause_path(control_dir)
@@ -711,6 +793,12 @@ def run_supervise(args):
     timeout = float(args.timeout_seconds)
     turn_secs = float(args.turn_seconds)
     poll = max(float(args.poll_seconds), 0.05)
+    # A leftover internal marker from a dead supervisor must never block
+    # future coverage; foreign registration markers are left untouched.
+    try:
+        cleanup_stale_internal_pause(args.control_dir)
+    except OSError:
+        pass
     start = time.monotonic()
     child = None  # dict(proc|None, pid, turn_start, slot, slot_fh, role_fh,
     #                guardian_proc|None, guardian_pid|None, epoch)
@@ -825,6 +913,10 @@ def run_supervise(args):
                         pass
 
     while budget <= 0 or time.monotonic() - start < budget:
+        try:
+            cleanup_stale_internal_pause(args.control_dir)
+        except OSError:
+            pass
         with open(control / "orchestrator-lease.lock", "a") as guard:
             fcntl.flock(guard, fcntl.LOCK_EX)
             lease = read_lease(args.control_dir)
@@ -1031,6 +1123,7 @@ def run_supervise(args):
                     paused, pause_name = is_paused(args.control_dir)
             if child is None and paused:
                 dispatcher_restore()
+                remove_own_pause(args.control_dir)
                 write_status(args.control_dir, pid=os.getpid(),
                              status="paused_no_takeover", owner="codex",
                              foreground_heartbeat_age_seconds=round(age, 1),
@@ -1187,8 +1280,13 @@ def run_supervise(args):
         time.sleep(poll)
     # Budget end: exiting never stops a live fallback/group (its
     # inherited copies keep the slot/role); restore a held dispatcher so
-    # the pool resumes, and leave adoption to the next supervisor.
+    # the pool resumes, remove only our own internal request marker, and
+    # leave adoption to the next supervisor.
     dispatcher_restore()
+    try:
+        remove_own_pause(args.control_dir)
+    except OSError:
+        pass
     final_lease = read_lease(args.control_dir)
     write_status(args.control_dir, pid=os.getpid(), status="budget_done",
                  owner=final_lease.get("owner", "codex"),

@@ -747,5 +747,172 @@ class ClosureTest(unittest.TestCase):
             pass
 
 
+class PauseDistinctionTest(unittest.TestCase):
+    """Lane 636 repair (review 637): user pause vs internal marker.
+
+    Only pool-paused.json (explicit user pause) may block takeover, stop
+    the role, or exit the supervisor. coordinator-pause.json (internal
+    transient registration / own safe-boundary request) must never do any
+    of the three, and a leftover supervisor-owned marker must expire.
+    """
+
+    def setUp(self):
+        self.f = Fixture()
+
+    def tearDown(self):
+        try:
+            self.f.track_children_from_lease()
+            try:
+                gpid = self.f.read_lease().get("guardian_pid")
+            except (FileNotFoundError, ValueError, OSError):
+                gpid = None
+            if gpid:
+                try:
+                    os.killpg(int(gpid), signal.SIGKILL)
+                except (ProcessLookupError, PermissionError, OSError):
+                    pass
+                try:
+                    os.kill(int(gpid), signal.SIGKILL)
+                except (ProcessLookupError, PermissionError, OSError):
+                    pass
+        finally:
+            self.f.close()
+        self.f.reap()
+
+    def wait_for(self, pred, timeout=10.0):
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            try:
+                if pred():
+                    return True
+            except (FileNotFoundError, ValueError, OSError):
+                pass
+            time.sleep(0.05)
+        return False
+
+    def _start_fallback(self, budget=30.0):
+        self.f.stale_lease()
+        done = []
+        t = threading.Thread(target=lambda: done.append(
+            CF.run_supervise(self.f.args(budget=budget))), daemon=True)
+        t.start()
+        self.assertTrue(self.wait_for(
+            lambda: self.f.read_lease().get("owner") == "muse"))
+        pid = int(self.f.read_lease()["model_pid"])
+        self.f.children.append(pid)
+        return t, done, pid
+
+    def _stop_thread(self, t, done):
+        (self.f.control / "pool-paused.json").write_text('{"status":"x"}\n')
+        t.join(timeout=30)
+        self.assertFalse(t.is_alive())
+        self.assertEqual(done, [0])
+
+    def test_internal_marker_never_stops_live_role(self):
+        t, done, pid = self._start_fallback()
+        try:
+            (self.f.control / "coordinator-pause.json").write_text(
+                json.dumps({"owner": "register_tasks-999",
+                            "requested": "2026-01-01T00:00:00+00:00"}))
+            time.sleep(2.5)
+            os.kill(pid, 0)
+            self.assertEqual(self.f.read_lease().get("owner"), "muse")
+            self.assertNotIn("paused_by_coordinator-pause",
+                             self.f.read_status().get("note", ""))
+        finally:
+            try:
+                (self.f.control / "coordinator-pause.json").unlink()
+            except OSError:
+                pass
+            self._stop_thread(t, done)
+        with self.assertRaises(OSError):
+            os.kill(pid, 0)
+
+    def test_internal_marker_never_blocks_takeover(self):
+        (self.f.control / "coordinator-pause.json").write_text(
+            json.dumps({"owner": "register_tasks-999",
+                        "requested": "2026-01-01T00:00:00+00:00"}))
+        self.f.stale_lease()
+        rc = CF.run_supervise(self.f.args(budget=3.0))
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.f.read_lease().get("owner"), "muse")
+        self.assertGreaterEqual(
+            self.f.read_status()["bounded_turns_started"], 1)
+        self.f.track_children_from_lease()
+
+    def test_stale_own_pause_cleaned_and_never_blocks(self):
+        (self.f.control / "coordinator-pause.json").write_text(
+            json.dumps({"owner": "failover-99999999",
+                        "requested": "2020-01-01T00:00:00+00:00",
+                        "reason": "leftover from a dead supervisor"}))
+        self.f.stale_lease()
+        rc = CF.run_supervise(self.f.args(budget=3.0))
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.f.read_lease().get("owner"), "muse")
+        self.assertFalse(
+            (self.f.control / "coordinator-pause.json").is_file())
+        self.f.track_children_from_lease()
+
+    def test_foreign_marker_untouched_but_never_blocks(self):
+        marker = json.dumps({"owner": "register_tasks-999",
+                             "requested": "2026-01-01T00:00:00+00:00"})
+        (self.f.control / "coordinator-pause.json").write_text(marker)
+        self.f.stale_lease()
+        rc = CF.run_supervise(self.f.args(budget=3.0))
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.f.read_lease().get("owner"), "muse")
+        self.assertEqual(
+            (self.f.control / "coordinator-pause.json").read_text(), marker)
+        self.f.track_children_from_lease()
+        try:
+            (self.f.control / "coordinator-pause.json").unlink()
+        except OSError:
+            pass
+
+    def test_internal_marker_during_busy_watch_then_removed(self):
+        t, done, pid = self._start_fallback()
+        busy = open(self.f.control / "watch.lock", "a")
+        fcntl.flock(busy, fcntl.LOCK_EX)
+        try:
+            (self.f.control / "return-to-codex.json").write_text(
+                json.dumps({"requested": "test"}))
+            (self.f.control / "coordinator-pause.json").write_text(
+                json.dumps({"owner": "register_tasks-999",
+                            "requested": "2026-01-01T00:00:00+00:00"}))
+            time.sleep(2.0)
+            # Role survives: waiting at the safe boundary, not killed for
+            # the internal registration marker.
+            os.kill(pid, 0)
+            self.assertEqual(self.f.read_lease().get("owner"), "muse")
+            self.assertIn("waiting_for_safe_boundary",
+                          self.f.read_status().get("note", ""))
+            # Registration removes its marker; coverage continues.
+            (self.f.control / "coordinator-pause.json").unlink()
+            time.sleep(1.0)
+            os.kill(pid, 0)
+            self.assertEqual(self.f.read_lease().get("owner"), "muse")
+        finally:
+            fcntl.flock(busy, fcntl.LOCK_UN)
+            busy.close()
+        self.assertTrue(self.wait_for(
+            lambda: self.f.read_lease().get("owner") == "codex",
+            timeout=45.0))
+        self.assertIn("stopped_at_boundary_return_requested",
+                      self.f.read_status().get("note", ""))
+        with self.assertRaises(OSError):
+            os.kill(pid, 0)
+        self._stop_thread(t, done)
+
+    def test_user_pause_still_stops_live_role(self):
+        t, done, pid = self._start_fallback()
+        (self.f.control / "pool-paused.json").write_text('{"status":"x"}\n')
+        t.join(timeout=45)
+        self.assertFalse(t.is_alive())
+        self.assertEqual(done, [0])
+        with self.assertRaises(OSError):
+            os.kill(pid, 0)
+        self.assertEqual(self.f.read_lease().get("owner"), "codex")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

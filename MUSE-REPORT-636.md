@@ -43,7 +43,9 @@ fake binaries only, scratch under the clone `.tmp/`.
 
 `GUARDIAN_MARKER`, `proc_pgrp`, `group_members`, `wait_group_gone`,
 `guardian_code`, `spawn_guardian`, `guardian_alive`, `acquire_boundary`,
-`close_fhs`, `own_pause_path`, `ensure_own_pause`, `remove_own_pause`;
+`close_fhs`, `own_pause_path`, `ensure_own_pause`, `remove_own_pause`,
+`INTERNAL_PAUSE_MAX_AGE_SECS`, `internal_pause_doc`, `internal_pause_pid`,
+`internal_pause_age_secs`, `cleanup_stale_internal_pause`;
 extended `run_supervise` (dispatcher_held, guardian adoption, held-boundary
 stop, group-drain release, pass_fds launch); lease key `guardian_pid`;
 status key `dispatcher_held`; notes `adopted_live_fallback_slot_held`,
@@ -53,9 +55,10 @@ status key `dispatcher_held`; notes `adopted_live_fallback_slot_held`,
 ## Verification
 
 - `python3 -m py_compile` on both Python files: OK.
-- `python3 instrumente/tests/test_coordinator_failover.py`: **21 tests,
-  0 failures, 0 errors** (16 inherited + 5 new ClosureTest). Last full run
-  green; `git status` shows only the three owned paths plus this report.
+- `python3 instrumente/tests/test_coordinator_failover.py`: **27 tests,
+  0 failures, 0 errors** (16 inherited + 5 ClosureTest + 6 new
+  PauseDistinctionTest). Last full run green; `git status` shows only the
+  three owned paths plus this report.
 - New kernel-lock tests (real flock/processes, fixture scratch): slot
   survives supervisor exit with 14 remaining reservable and 16th refused;
   orphaned same-group strays keep the slot until all gone; busy action and
@@ -68,6 +71,35 @@ status key `dispatcher_held`; notes `adopted_live_fallback_slot_held`,
 - Tools-only lane: no `grammatik/` contact, no `./lean-bau` claim needed;
   no `cargo` runs (no Rust contact); `git diff --check` clean except
   pre-existing ResourceWarnings from un-reaped fixture Popen handles.
+
+## Repair for review 637 (pause distinction)
+
+Review 637 (REPAIR) reproduced three consequences of one defect: `is_paused`
+treated `pool-paused.json` (explicit USER pause) and `coordinator-pause.json`
+(INTERNAL transient registration / own safe-boundary request) identically,
+so a foreign internal marker killed the live role, ended coverage with no
+child, and a leftover own-pause from a dead pid blocked all future
+supervisors. The slot/guardian/boundary/dispatcher evidence stands
+uncontradicted; the repair is confined to pause handling:
+
+- `is_paused` now reports only the user pause (`pool-paused.json`); the
+  internal marker never blocks takeover, never stops the role, and never
+  exits the supervisor.
+- New `cleanup_stale_internal_pause` (called at startup, every poll, and
+  implicitly before any pause exit): removes only a supervisor-owned marker
+  (`owner: failover-<pid>`) whose pid is dead or whose age exceeds
+  `INTERNAL_PAUSE_MAX_AGE_SECS` (600 s). Foreign registration markers are
+  never touched and never pause coverage. Pause exit and budget exit now
+  call `remove_own_pause` so a clean shutdown leaves no marker behind;
+  SIGKILL leftovers are covered by the stale cleanup.
+- Doc `COORDINATOR-FAILOVER.md` Pause section rewritten to the user/internal
+  distinction with the ownership/expiry rule.
+- Six new kernel-lock `PauseDistinctionTest` tests: internal marker never
+  stops a live role; never blocks takeover; stale own-pause cleaned and
+  never blocks; foreign marker byte-identical afterwards but never blocks;
+  internal marker present during a busy watch then removed by registration
+  (role survives waiting, then stops via the return path, never via a
+  paused_by note); user pause still stops a live role safely.
 
 ## Findings
 

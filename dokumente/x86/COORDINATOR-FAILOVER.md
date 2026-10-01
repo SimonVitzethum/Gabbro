@@ -120,8 +120,17 @@ supervisor found the supervisor lock held.
   (zombies excluded, kernel `/proc` scan); an undrained group fails
   closed with the lease and locks kept instead of killing anything
   outside its own tree.
-- **Pause.** `<control>/pool-paused.json` or `coordinator-pause.json`
-  prevents any takeover and stops a live role at the next safe boundary.
+- **Pause (user only).** `<control>/pool-paused.json` is the explicit USER
+  pause: it prevents any takeover, stops a live role at the next safe
+  boundary, and exits an idle supervisor (`paused_no_takeover`).
+  `<control>/coordinator-pause.json` is INTERNAL and transient (watcher
+  registration or the supervisor's own safe-boundary request): it never
+  blocks takeover, never stops the role, and never exits the supervisor.
+  The supervisor's own request carries `owner: failover-<pid>` plus a
+  `requested` timestamp; startup, every poll, pause exit and budget exit
+  clean a leftover supervisor-owned marker whose pid is dead or whose age
+  exceeds 600 s. Foreign registration markers are never touched and never
+  pause coverage.
 - **Retry bounds.** Launch failures and turns that die within 60 s back off
   exponentially (5 s doubling, capped at 300 s) while staying responsive to
   pause/handback. No restart storm.
