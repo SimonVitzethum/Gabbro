@@ -218,7 +218,7 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 426 | Continuous Lean proof reserve: VectorFootprints | Merged after review/checks | 474: Merged after review/checks | [report](messung/muse/MUSE-REPORT-426.md) |
 | 427 | Continuous Lean proof reserve: RegisterInterference | Agent working | 475: scheduled | [task](lanes/427.md) |
 | 428 | Continuous Lean proof reserve: ParallelMoves | Agent working | 476: scheduled | [task](lanes/428.md) |
-| 429 | Continuous Lean proof reserve: CodeImmutability | Committed candidate; review/integration pending | 477: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/429.md) |
+| 429 | Continuous Lean proof reserve: CodeImmutability | Merged after review/checks | 477: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-429.md) |
 | 430 | Continuous Lean proof reserve: ValidationCache | Committed candidate; review/integration pending | 478: Committed candidate; review/integration pending | [task](lanes/430.md) |
 | 431 | Continuous Lean proof reserve: ValidationBudget | Committed candidate; review/integration pending | 479: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/431.md) |
 | 432 | Continuous Lean proof reserve: RegionSeparation | Committed candidate; review/integration pending | 480: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/432.md) |
@@ -455,6 +455,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **473**, Independent exact-candidate review of 425, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-473.md). <!-- x86-merged:473 -->
 - 2026-10-01: lane **426**, Continuous Lean proof reserve: VectorFootprints, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-426.md). <!-- x86-merged:426 -->
 - 2026-10-01: lane **474**, Independent exact-candidate review of 426, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-474.md). <!-- x86-merged:474 -->
+- 2026-10-01: lane **429**, Continuous Lean proof reserve: CodeImmutability, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-429.md). <!-- x86-merged:429 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
