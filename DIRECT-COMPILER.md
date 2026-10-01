@@ -106,7 +106,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 10:31 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 10:36 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -144,7 +144,7 @@ Last ledger refresh: **2026-10-01 10:31 UTC**. This is an operational snapshot, 
 | 319 | Byte-memory fetch decode and actual instruction step | Merged after review/checks | 320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-319.md) |
 | 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-323.md) |
 | 325 | High runtime performance and feasible hardware-profile design revision | Merged after review/checks | 326: Merged after review/checks | [report](messung/muse/MUSE-REPORT-325.md) |
-| 327 | Safety-first broad practical-performance design prioritisation | Committed candidate; review/integration pending | 328: Agent working | [task](lanes/327.md) |
+| 327 | Safety-first broad practical-performance design prioritisation | Committed candidate; review/integration pending | Historical coordinator review; see report | [task](lanes/327.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -262,6 +262,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **319**, Byte-memory fetch decode and actual instruction step, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-319.md). <!-- x86-merged:319 -->
 - 2026-10-01: checked master `82e7efb5` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:82e7efb53e7793269d110a320f130e0119f123a8 -->
 - 2026-10-01: lane **320**, Independent review of 319, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-320.md). <!-- x86-merged:320 -->
+- 2026-10-01: publication batch checks passed for `ad1a6e2a`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
