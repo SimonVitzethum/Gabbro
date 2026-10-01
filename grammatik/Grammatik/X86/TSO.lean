@@ -192,4 +192,118 @@ theorem flush_rahmen (s s' : TSOZustand) (c : Nat)
   cases h
   simp [hx]
 
+/-! ## 4. Explicit failure: refusals -/
+
+/-- A store without write permission is refused: memory cannot change. -/
+theorem issue_verweigert (s : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Byte) (h : s.mem.schreibbar a = false) :
+    issueByte s c a v = none := by
+  unfold issueByte
+  rw [if_neg (by rw [h]; exact Bool.false_ne_true)]
+
+/-- A load without read permission is refused. -/
+theorem load_verweigert (s : TSOZustand) (c : Nat) (a : Adresse)
+    (h : s.mem.lesbar a = false) :
+    loadByte s c a = none := by
+  unfold loadByte
+  rw [if_neg (by rw [h]; exact Bool.false_ne_true)]
+
+/-- Flushing an empty buffer is refused. -/
+theorem flush_leer (s : TSOZustand) (c : Nat)
+    (h : s.puffer c = []) :
+    flushKern s c = none := by
+  unfold flushKern
+  rw [h]
+
+/-! ## 5. Forwarding: the youngest own entry wins -/
+
+/-- Appending an entry for `a` makes it the youngest match. -/
+theorem neuestens_angehaengt (l : List TSOEintrag) (a : Adresse)
+    (v : Byte) :
+    neuestens (l ++ [⟨a, v⟩]) a = some v := by
+  induction l with
+  | nil =>
+    simp [neuestens]
+  | cons e rest ih =>
+    simp only [List.cons_append] at ⊢
+    unfold neuestens
+    rw [ih]
+
+/-- Appending an entry for another address changes nothing at `a`. -/
+theorem neuestens_angehaengt_anders (l : List TSOEintrag) (a : Adresse)
+    (e : TSOEintrag) (h : e.addr ≠ a) :
+    neuestens (l ++ [e]) a = neuestens l a := by
+  induction l with
+  | nil =>
+    simp [neuestens, h]
+  | cons f rest ih =>
+    simp only [List.cons_append] at ⊢
+    unfold neuestens
+    rw [ih]
+
+/-- A load after issuing the same address forwards the issued byte. -/
+theorem load_nach_issue (s s' : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Byte) (h : issueByte s c a v = some s')
+    (hrd : s.mem.lesbar a = true) :
+    loadByte s' c a = some v := by
+  unfold issueByte at h
+  by_cases hc : s.mem.schreibbar a = true
+  · rw [if_pos hc] at h
+    cases h
+    have hbuf : pufferSetze s.puffer c (s.puffer c ++ [⟨a, v⟩]) c
+        = s.puffer c ++ [⟨a, v⟩] := pufferSetze_gleich _ _ _
+    simp only [loadByte, hbuf, hrd, if_true, neuestens_angehaengt]
+  · rw [if_neg hc] at h
+    cases h
+
+/-- Without a pending entry the load reads canonical memory. -/
+theorem load_ohne_eintrag (s : TSOZustand) (c : Nat) (a : Adresse)
+    (hmiss : neuestens (s.puffer c) a = none)
+    (hrd : s.mem.lesbar a = true) :
+    loadByte s c a = some (s.mem.bytes a) := by
+  unfold loadByte
+  rw [if_pos hrd, hmiss]
+
+/-! ## 6. FIFO order: issue appends youngest-last, flush drops oldest-first -/
+
+/-- Issue appends exactly one entry at the young end. -/
+theorem issue_haengt_an (s s' : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Byte) (h : issueByte s c a v = some s') :
+    s'.puffer c = s.puffer c ++ [⟨a, v⟩] := by
+  unfold issueByte at h
+  by_cases hc : s.mem.schreibbar a = true
+  · rw [if_pos hc] at h
+    cases h
+    exact pufferSetze_gleich _ _ _
+  · rw [if_neg hc] at h
+    cases h
+
+/-- Flush drops exactly the oldest entry. -/
+theorem flush_entfernt_kopf (s s' : TSOZustand) (c : Nat)
+    (h : flushKern s c = some s') (e : TSOEintrag)
+    (rest : List TSOEintrag)
+    (he : s.puffer c = e :: rest) :
+    s'.puffer c = rest := by
+  unfold flushKern at h
+  rw [he] at h
+  cases h
+  exact pufferSetze_gleich _ _ _
+
+/-- An older entry flushes before a younger one: after issuing two stores,
+    the first flush writes the first address. -/
+theorem fifo_reihenfolge (s s1 s2 s3 : TSOZustand) (c : Nat)
+    (a b : Adresse) (v w : Byte)
+    (h1 : issueByte s c a v = some s1)
+    (h2 : issueByte s1 c b w = some s2)
+    (hempty : s.puffer c = [])
+    (h3 : flushKern s2 c = some s3) :
+    s3.mem.bytes a = v := by
+  have e1 := issue_haengt_an s s1 c a v h1
+  have e2 := issue_haengt_an s1 s2 c b w h2
+  rw [hempty] at e1
+  simp only [List.nil_append] at e1
+  rw [e1] at e2
+  have he : s2.puffer c = ⟨a, v⟩ :: [⟨b, w⟩] := e2
+  exact flush_schreibt_kopf s2 s3 c h3 ⟨a, v⟩ [⟨b, w⟩] he
+
 end Gabbro.Grammatik.X86
