@@ -65,7 +65,30 @@ No new executor; atomicity only via the accepted `lockSchritt` XADD shape under
 its declared guards; byte-wise installs tear; no W/GX refinement (`WortNachW`
 empty); no hardware/silicon, timing, decode, ABI, source, checker or goal claim.
 
-## Notes for review
+## Integration gate (post-review, merge day)
+- Independent review accepted the isolated candidate; the merge gate failed with
+  `RuntimeError: Lean merge build failed`, step `[397/398] Building Grammatik`,
+  `lean exited with code 134`, `failed to create thread` — the same umbrella
+  aggregation abort documented above, in the merge tree
+  (`/home/simon/Dokumente/Gabbro`), with zero error lines in
+  `Grammatik/X86/WordAtomicity.lean` (its `#print axioms` info lines are all
+  clean and standard).
+- Repair analysis: there is no defect in the owned module to repair. The cited
+  evidence contains no type error, no axiom violation, no name clash and no
+  witness gap attributable to lane 421. The failing job elaborates only the
+  import-all umbrella; the lane module itself built green inside the same gate
+  run. No owned file was changed for this; re-verified `./lean-probe
+  grammatik/Grammatik/X86/WordAtomicity.lean` = 0 errors, exit 0, and local
+  `./lean-bau` still stops only at the identical environmental umbrella abort.
+- Concrete blocker for the merge (outside lane scope): the umbrella job cannot
+  spawn threads under current machine contention (many concurrent lane `lean`
+  processes, swap pressure). It resolves only by easing machine load or by
+  coordinator-side build gating (serializing the umbrella step); a fresh
+  independent review of the changed commit is still required as instructed.
+- No acceptance of the full source/binary chain is claimed; the deliverable
+  remains the isolated, probe-green module plus this report.
+
+## Session notes (retained)
 - During the session the `decide`-based refusal witnesses were rewritten to apply
   the general refusal theorems, because `lockSchritt` equations over `TSOZustand`
   have no `DecidableEq` (function fields) — `rfl`/`decide` misuse corrected.
