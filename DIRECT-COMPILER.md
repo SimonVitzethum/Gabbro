@@ -275,6 +275,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `610d0cfb` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:610d0cfb20a6ff8064bb9186c3a109d9a0a72e80 -->
 - 2026-10-01: lane **331**, Complete Lean optimiser specification and friend handoff, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-331.md). <!-- x86-merged:331 -->
 - 2026-10-01: lane **334**, Independent complete optimiser specification review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-334.md). <!-- x86-merged:334 -->
+- 2026-10-01: documentation-only publication at `95a4871f` retains the successful complete local Lean, Rust and emission checks at `ad1a6e2a`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
