@@ -193,10 +193,10 @@ Last ledger refresh: **2026-10-01 13:18 UTC**. This is an operational snapshot, 
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Agent working | 388: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Merged after review/checks | 439: Merged after review/checks | [report](messung/muse/MUSE-REPORT-401.md) |
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Merged after review/checks | [report](messung/muse/MUSE-REPORT-402.md) |
-| 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Merged after review/checks | 484: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-404.md) |
+| 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Merged after review/checks | 484: Merged after review/checks | [report](messung/muse/MUSE-REPORT-404.md) |
 | 405 | Adversarial implementation audit: MEMORY-RANGES | Committed candidate; review/integration pending | 485: Agent working | [task](lanes/405.md) |
 | 406 | Adversarial implementation audit: DECODE-BOUNDARY | Agent working | 486: scheduled | [task](lanes/406.md) |
-| 407 | Adversarial implementation audit: FINAL-IMAGE | Scheduled | 487: scheduled | [task](lanes/407.md) |
+| 407 | Adversarial implementation audit: FINAL-IMAGE | Agent working | 487: scheduled | [task](lanes/407.md) |
 | 408 | Adversarial implementation audit: WEAK-MEMORY | Scheduled | 488: scheduled | [task](lanes/408.md) |
 | 409 | Adversarial implementation audit: INVARIANT-LIFETIME | Scheduled | 489: scheduled | [task](lanes/409.md) |
 | 410 | Adversarial implementation audit: CALL-ABI | Scheduled | 490: scheduled | [task](lanes/410.md) |
@@ -418,6 +418,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: integration of candidate(s) [432] failed the local proof/build gate after independent review 480; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:480 -->
 - 2026-10-01: integration of candidate(s) [433] failed the local proof/build gate after independent review 481; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:481 -->
 - 2026-10-01: checked master `2e14380b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:2e14380b71a8aa9b79a48a6c32a52969da72987e -->
+- 2026-10-01: lane **484**, Independent exact-candidate review of 404, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-484.md). <!-- x86-merged:484 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
