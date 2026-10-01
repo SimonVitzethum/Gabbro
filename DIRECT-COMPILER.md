@@ -260,3 +260,11 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
   instruction, invariant-optimisation and compiler-speed design;
   [reviewer 324](lanes/324.md) checks the exact committed candidate independently.
   No speed measurement or expanded native instruction support is claimed.
+
+- 2026-10-01: the instruction and invariant design is integrated after independent
+  review 324. The latest user priority is high runtime performance with a feasible
+  complete selected architectural hardware model, alongside fast compilation and
+  full mandatory validation. [Author 325](lanes/325.md) revises the detailed design;
+  [reviewer 326](lanes/326.md) independently checks its exact candidate.
+  No measured runtime or compiler speed, expanded ISA support or whole-binary proof
+  is claimed.
