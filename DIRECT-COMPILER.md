@@ -157,7 +157,7 @@ Last ledger refresh: **2026-10-01 11:22 UTC**. This is an operational snapshot, 
 | 339 | Practical-performance Lean wave A5: LockedOps | Committed candidate; review/integration pending | 377: Agent working | [task](lanes/339.md) |
 | 340 | Practical-performance Lean wave A6: ScalarFloat | Agent working | 378: scheduled | [task](lanes/340.md) |
 | 341 | Practical-performance Lean wave B1: AccessList | Committed candidate; review/integration pending | 379: Agent working | [task](lanes/341.md) |
-| 342 | Practical-performance Lean wave B2: OverlapRefusal | Merged after review/checks | 380: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-342.md) |
+| 342 | Practical-performance Lean wave B2: OverlapRefusal | Merged after review/checks | 380: Merged after review/checks | [report](messung/muse/MUSE-REPORT-342.md) |
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
 | 344 | Practical-performance Lean wave B4: FenceDrain | Committed candidate; review/integration pending | 382: Committed candidate; review/integration pending | [task](lanes/344.md) |
 | 345 | Practical-performance Lean wave C1: TableLayout | Committed candidate; review/integration pending | 383: Agent working | [task](lanes/345.md) |
@@ -305,6 +305,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `a8ba748c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **342**, Practical-performance Lean wave B2: OverlapRefusal, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-342.md). <!-- x86-merged:342 -->
 - 2026-10-01: checked master `b5267bd4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:b5267bd4e371bc56f7f1e4360de56e91b46c3397 -->
+- 2026-10-01: lane **380**, Independent exact-candidate review of 342 OverlapRefusal, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-380.md). <!-- x86-merged:380 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
