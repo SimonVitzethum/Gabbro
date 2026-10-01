@@ -35,6 +35,40 @@ theorem kein_fern_vertrag (P : Programm D) (f : D.Fn) :
   intro h
   cases h
 
+/-! ## 1. Entry application at an actual direct-call site.
+
+    A `Stmt.call` that runs clean through `execStmt` with the `rufAt`
+    handler carries a true `requires` over the ACTUAL argument environment
+    at the entry-side read world -- the exact check the ghost entry of
+    `AufrufOpt.geistPaar` re-emits. No parameter is quantified away. -/
+
+/-- ENTRY AT THE SITE: a successful direct call leaves `requires` true at
+    the actual arguments. Inverts the `execStmt` call arm (same case shape
+    as `execStmtH_call_fall`: `grund` is impossible by `hr`, `logik` and
+    `hardware` contradict the `.ok` outcome) and closes the `ok` case by
+    the reused `rufAt_ok_vorOk` -- nothing is reproved here. -/
+theorem callSite_vorOk (P : Programm D) (O : Orakel D) (passes fuel : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {f : D.Fn} {args : Args D Γ Λ (D.params f)}
+    {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
+    {σ : World D} {ρ : Env D Γ} {σ' : World D} {ρ' : Env D Γ}
+    (h : execStmt (V := V) O passes (rufAt P O passes fuel)
+      (Stmt.call (V := V) (l := l) f args hp hr) σ ρ = .ok σ' ρ') :
+    ReqAmEintritt P f
+      ((σ.lese Λ args.orte).lese (Signatur.anfang D (D.signatur f))
+        (P.requires f).orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) := by
+  cases hR : rufAt P O passes fuel f (σ.lese Λ args.orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) with
+  | ok σ1 v => exact rufAt_ok_vorOk P O passes fuel f _ _ _ _ hR
+  | grund σ1 r => exact (Fin.cast hr r).elim0
+  | logik e =>
+    simp only [execStmt, hR] at h
+    cases h
+  | hardware e =>
+    simp only [execStmt, hR] at h
+    cases h
+
 /- CUTS:
   - IR lowering closure is WAITING on lane 287: no SCFG/target bridge here.
   - Full skeleton lands in the next increments (§1 entry/return site facts,
@@ -42,5 +76,6 @@ theorem kein_fern_vertrag (P : Programm D) (f : D.Fn) :
 -/
 
 #print axioms kein_fern_vertrag
+#print axioms callSite_vorOk
 
 end Gabbro.Grammatik.X86
