@@ -1,13 +1,19 @@
-# MUSE-REPORT-469: Independent exact-candidate review of 421
+# MUSE-REPORT-469: Independent exact-candidate review of 421 (re-review of repaired HEAD)
 
 ## Clone / branch verification
 - Clone `/home/simon/Dokumente/gabbro-muse/a469`, branch `muse/469`: MATCH (verified via `git rev-parse` + `git branch --show-current`).
-- Candidate snapshot `.tmp/review/SNAPSHOT.json`: author 421, pinned HEAD `87f15ba98b807321e2ec2023058bcf86e460bd28`, base `0b3132b7bb8bf108b3fd1613c70bc0955051f130`, files `MUSE-REPORT-421.md`, `grammatik/Grammatik.lean` (one additive import), `grammatik/Grammatik/X86/WordAtomicity.lean` (new). `clean: true`.
-- Reviewed the exact supplied material: `author-421/OWNER-TASK.md`, `PATCH.diff`, `WordAtomicity.lean`, `MUSE-REPORT-421.md`, `BUILD-EVIDENCE.json`. No other clone read. No network, no push.
+- Current candidate snapshot `.tmp/review/SNAPSHOT.json`: author 421, pinned HEAD `a63537f969275113ea53ff2a021089de834e5265`, base `0b3132b7bb8bf108b3fd1613c70bc0955051f130`, files `MUSE-REPORT-421.md`, `grammatik/Grammatik.lean` (one additive import), `grammatik/Grammatik/X86/WordAtomicity.lean` (new). `clean: true`. (Previous review pinned `87f15ba98b807321e2ec2023058bcf86e460bd28`; this is a fresh substantive review of the NEW head, not an approval of the stale one.)
+- Reviewed the exact supplied material: `author-421/OWNER-TASK.md`, `PATCH.diff`, `WordAtomicity.lean`, `MUSE-REPORT-421.md`, `BUILD-EVIDENCE.json` (now 27 entries). No other clone read. No network, no push.
 
-## Reproduction in own clone
+## What changed between the two pinned heads (delta review)
+- `grammatik/Grammatik/X86/WordAtomicity.lean`: UNCHANGED (361 lines; re-read in full at the new snapshot — same header, same defs `WortGuard`/`WortBeobachtet`/`wortFern`/`wortRiss2`/`wortRiss2` states, same theorems and proofs section by section, same CUTS and `#print axioms`). All previous findings therefore carry over unchanged; no proof was weakened, no premise added or dropped, no conclusion altered.
+- `grammatik/Grammatik.lean`: UNCHANGED delta (same single additive `import Grammatik.X86.WordAtomicity` hunk, same base index `6e68b11c..5312fe19`).
+- `MUSE-REPORT-421.md`: extended 75 -> 98 lines with a new "Integration gate (post-review, merge day)" section. It reports the merge gate failing at the umbrella aggregation step (`[397/398] Building Grammatik`, exit 134, `failed to create thread`) with zero error lines in the lane module, attributes it to machine thread contention (environmental, outside lane scope), and re-verifies the module probe green without changing any Lean owned file.
+- `BUILD-EVIDENCE.json`: extended with 5 new entries documenting the re-verification on the old head (clean status, probe `0 errors exit 0`, `lean-bau` stopping at the same environmental umbrella abort) and the report-only commit `a63537f9` on top of `87f15ba9`. The new entries are consistent with the report's story; the merge-tree log itself (coordinator side, `/home/simon/Dokumente/Gabbro`) is not among the evidence entries and was not inspected (outside my clone, correctly so) — the merge-tree step numbers in the report are therefore taken as the author's record, not independently verified. This gap does not affect the verdict on the module, whose green state is evidenced both by the author's entries and by my own probe below.
+
+## Reproduction in own clone (fresh, against the NEW pinned content)
 - Staged ONLY the supplied candidate files temporarily (new `WordAtomicity.lean` + one additive umbrella import line), ran `./lean-probe grammatik/Grammatik/X86/WordAtomicity.lean`, then fully restored (candidate file deleted, `Grammatik.lean` restored from backup; `git status` clean before this report).
-- Probe result: `== 0 error(s) in the COMPLETE output; exit 0`. All `#print axioms` are subsets of `[propext, Quot.sound]` (several dependency-free); no `sorryAx`. Matches the author's claimed `0 errors, exit 0` exactly.
+- Probe result (this turn, exact new content): `== 0 error(s) in the COMPLETE output; exit 0`. All `#print axioms` are subsets of `[propext, Quot.sound]` (several dependency-free); no `sorryAx`. Matches the author's claimed `0 errors, exit 0` exactly.
 - Full `./lean-bau` not re-run: the author's BUILD-EVIDENCE.json already contains the relevant control experiment (pristine tree with the import stashed aborts identically at the umbrella `Grammatik.lean` olean step with `failed to create thread`, exit 134, under documented swap exhaustion), and the module-level green is established by the probe above, which elaborates the file with all its imports. Re-running a full contended build would add no signal.
 - `gabbro_ziel` impact: none by construction. The new file is a leaf imported only by the umbrella; nothing in `Zielsatz/` imports it and it imports nothing from `Zielsatz/`, so it is outside `gabbro_ziel`'s import closure. No checker, Spec, goal, Rust, emitter, or codec file touched. `OptimizationRules.lean`/`OptimizationWitnesses.lean` untouched.
 
@@ -26,5 +32,5 @@
 ## What remains open
 - Per the file's own CUTS: no W/GX refinement, no silicon/timing correspondence, no decode/ABI/entry coverage, no source lowering. The author's report states all of this plainly. Nothing in the task is silently dropped.
 
-CANDIDATE: 421 87f15ba98b807321e2ec2023058bcf86e460bd28
+CANDIDATE: 421 a63537f969275113ea53ff2a021089de834e5265
 VERDICT: ACCEPT
