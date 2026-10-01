@@ -150,7 +150,7 @@ Last ledger refresh: **2026-10-01 11:42 UTC**. This is an operational snapshot, 
 | 329 | Muse organisation and dependency ownership plan | Merged after review/checks | 332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-329.md) |
 | 330 | Muse merge-owner for independently approved safety-first design | Merged after review/checks | 333: Merged after review/checks | [report](messung/muse/MUSE-REPORT-330.md) |
 | 331 | Complete Lean optimiser specification and friend handoff | Merged after review/checks | 334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-331.md) |
-| 335 | Practical-performance Lean wave A1: NarrowOps | Committed candidate; review/integration pending | 373: Committed candidate; review/integration pending | [task](lanes/335.md) |
+| 335 | Practical-performance Lean wave A1: NarrowOps | Merged after review/checks | 373: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-335.md) |
 | 336 | Practical-performance Lean wave A2: MulDiv | Merged after review/checks | 374: Merged after review/checks | [report](messung/muse/MUSE-REPORT-336.md) |
 | 337 | Practical-performance Lean wave A3: ShiftLogic | Merged after review/checks | 375: Merged after review/checks | [report](messung/muse/MUSE-REPORT-337.md) |
 | 338 | Practical-performance Lean wave A4: ControlFlow | Merged after review/checks | 376: Merged after review/checks | [report](messung/muse/MUSE-REPORT-338.md) |
@@ -357,6 +357,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **348**, Practical-performance Lean wave C4: EntryState, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-348.md). <!-- x86-merged:348 -->
 - 2026-10-01: lane **386**, Independent exact-candidate review of 348 EntryState, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-386.md). <!-- x86-merged:386 -->
 - 2026-10-01: publication batch checks passed for `fd14b4e5`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **335**, Practical-performance Lean wave A1: NarrowOps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-335.md). <!-- x86-merged:335 -->
+- 2026-10-01: checked master `62e4c2ce` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:62e4c2ce25460ebcc235ec2cb5564e29af9d9099 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
