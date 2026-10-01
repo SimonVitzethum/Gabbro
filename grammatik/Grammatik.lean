@@ -373,3 +373,4 @@ import Grammatik.X86.TSO
 import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Bild
 import Grammatik.X86.SpeicherKommutation
+import Grammatik.X86.FlagBeweis
