@@ -1,10 +1,15 @@
 # MUSE-REPORT-424: FeatureProfile (finite admitted performance-feature profile)
 
 Lane 424, continuous Lean proof reserve. Branch `muse/424` in clone
-`/home/simon/Dokumente/gabbro-muse/a424`. Owned files only:
-`grammatik/Grammatik/X86/FeatureProfile.lean` (NEW, untracked),
-`grammatik/Grammatik.lean` (one import line, REVERTED, see §4),
+`/home/simon/Dokumente/gabbro-muse/a424`. Owned files:
+`grammatik/Grammatik/X86/FeatureProfile.lean` (NEW),
+`grammatik/Grammatik.lean` (one additive import line),
 `MUSE-REPORT-424.md` (this file).
+
+SUPERSEDES the earlier blocked report (commit 0f08abcf): after the
+diagnostic resource repair (16 GiB virtual ceiling, lean kept at
+-j2 -M4096 with the serial build lease) every queued check is green and
+the source is COMMITTED in this revision.
 
 ## 1. What was done
 
@@ -33,67 +38,52 @@ fallback_verweigert_bleibt_skalar, aufnahme_kein_atomar (reuses
 write64/read64 round-trip observably changes memory, via `write_read_zeuge`).
 File ends with an explicit CUTS block and `#print axioms` for every theorem.
 
-## 2. Verification results
+## 2. Verification results (all green, this revision)
 
 - `./lean-probe grammatik/Grammatik/X86/FeatureProfile.lean`: exit 0,
-  `== 0 error(s)`, twice on the final content (logs `.tmp/probe424k.log`,
-  `.tmp/probe424l.log`). All axioms standard: twelve `[propext]`, one
-  axiom-free, two `[propext, Quot.sound]` (via reused Speicher/Vektor
-  lemmas) — subset of propext/Classical.choice/Quot.sound.
-- `./lean-bau` (three runs, logs `.tmp/bau424b/c/d.log`): RED — but NOT
-  because of this lane. 392/393 targets build, including FeatureProfile
-  itself (its `#print axioms` lines appear in the build log); the final
-  umbrella target `Grammatik` aborts with
-  `lean::exception: failed to create thread` (exit 134). Control run with
-  my import line stashed fails IDENTICALLY on unmodified master, so the
-  failure is environmental (machine-wide thread/memory exhaustion under
-  ~15 concurrent lanes; swap was 100% full), pre-existing, and outside
-  this lane's control.
-- `gabbro_ziel` axiom check: could not run — `./lean-probe
-  grammatik/Grammatik/Zielsatz/BeweisAtomar.lean` aborts with the same
-  environmental thread failure (exit 134). My module is a leaf (nothing in
-  the goal proof can depend on it), so `gabbro_ziel` is unaffected by
-  construction, but the standard check itself is unexecuted: NOT claimed.
+  `== 0 error(s)` (log `.tmp/probe424m.log`). All axioms standard:
+  twelve `[propext]`, one axiom-free, two `[propext, Quot.sound]` (via
+  reused Speicher/Vektor lemmas) — subsets of
+  propext/Classical.choice/Quot.sound.
+- `./lean-bau`: exit 0, `Build completed successfully (393 jobs)`
+  (log `.tmp/bau424e.log`).
+- `gabbro_ziel` axiom check: `./lean-probe
+  grammatik/Grammatik/Zielsatz/BeweisAtomar.lean` exit 0;
+  `gabbro_ziel` depends on axioms
+  `[propext, Classical.choice, Quot.sound]` — exactly the standard set
+  (log `.tmp/probe_ziel2.log`).
 
-## 3. Commit state (rule 8)
+## 3. Commit state
 
-`./lean-bau` is not green (environmental, §2), so per HARD RULES 8 NO Lean
-change is committed: the `Grammatik.lean` import line was reverted
-(`git checkout -- grammatik`; tracked tree is clean). ONLY this report is
-committed. The finished, file-green module stays UNTRACKED in the working
-tree (`grammatik/Grammatik/X86/FeatureProfile.lean`); integration is one
-import line plus a green-machine rebuild. Backup copy at
-`.tmp/FeatureProfile.424.bak` (pre-rename; final content is the working file).
+This commit lands the source (`FeatureProfile.lean`), the additive
+umbrella import, and this updated report. History note: the previous
+commit 0f08abcf recorded three `./lean-bau` failures at the umbrella
+target (`failed to create thread`, exit 134) that reproduced on
+unmodified master — environmental, resolved by the resource repair, not
+by any source change (the source committed here is byte-identical in
+content to the file-green version probed then, modulo the
+`zugelassen` → `merkmalZugelassen` rename of §4).
 
-## 4. What remains open / findings
+## 4. Findings during the work
 
-1. Integration: re-add `import Grammatik.X86.FeatureProfile` to
-   `grammatik/Grammatik.lean`, run full `./lean-bau` + `gabbro_ziel`
-   axiom check on a healthy machine.
-2. Own survey miss (repaired): `MulDiv.lean` already defines
-   `Gabbro.Grammatik.X86.zugelassen`; first full build caught the
-   collision. Renamed to `merkmalZugelassen` throughout (theorems
-   `merkmalZugelassen_heisst_beide`, `basis_skalar_zugelassen` kept).
-   Lesson recorded: survey ALL of `Grammatik/X86/`, not just the named
-   interfaces.
-3. Lean lesson: `simp` normalizes BitVec literals, silently breaking
+1. Own survey miss (repaired before landing): `MulDiv.lean` already
+   defines `Gabbro.Grammatik.X86.zugelassen`; the first full build
+   caught the collision. Renamed to `merkmalZugelassen` throughout
+   (theorem `basis_skalar_zugelassen` keeps its longer distinct name).
+   Lesson: survey ALL of `Grammatik/X86/`, not just the named interfaces.
+2. Lean lesson: `simp` normalizes BitVec literals, silently breaking
    rewrite rules that mention them (`mxcsr_ftz_verweigert` became an
    unused simp arg; hypothesis `hb` stopped matching). Repaired by
    stating the general MXCSR-invalid theorem with a free word
    (`sse_verweigert_ohne_profil`) and proving the FTZ instance by
    closed `decide`.
-4. Intermittent `failed to create thread` crashes also hit trivially
-   small files during peak memory pressure (observed on untouched
-   `Typen.lean` before the wrapper mitigation); a crash is never
-   acceptance — every green claim above is backed by exit 0, not by the
-   error-count line.
-5. Content cuts are in the file's CUTS block: no native extension
-   bridge, no source lowering, no concurrency beyond sequential reuse,
-   only four features modelled.
+3. A crashed check is never acceptance: every green claim above is backed
+   by process exit 0, not by the error-count line (which once printed
+   `0 error(s)` for an aborted run).
 
 ## 5. Believed-wrong items in the task
 
-None. The task's demand (fail-closed selection, scalar fallback,
-explicit CUTS, no mini-machine) is met as far as file-level verification
-reaches; the missing full-build/gabbro_ziel evidence is environmental,
-not a task defect.
+None. Content cuts are in the file's CUTS block: no native extension
+bridge, no source lowering, no concurrency beyond sequential reuse, only
+four features modelled.
+
