@@ -354,4 +354,72 @@ theorem zaun_kein_fremd_drain :
   · decide
   · decide
 
+/-! ## 8. Store-buffering witness over real canonical bytes -/
+
+/-- The two witness addresses: bytes zero and one. -/
+def sbX : Adresse := 0
+def sbY : Adresse := 1
+
+/-- The witness byte: one. -/
+def sbEins : Byte := 1
+
+/-- Start: zeroed fully-permissive memory, all buffers empty. -/
+def sbStart : TSOZustand := ⟨zeugenSpeicher, fun _ => []⟩
+
+/-- After core 0 issues `sbX := 1`. -/
+def sbNach1 : TSOZustand :=
+  ⟨zeugenSpeicher, pufferSetze sbStart.puffer 0 [⟨sbX, sbEins⟩]⟩
+
+/-- After core 1 additionally issues `sbY := 1`. -/
+def sbNach2 : TSOZustand :=
+  ⟨sbNach1.mem, pufferSetze sbNach1.puffer 1 [⟨sbY, sbEins⟩]⟩
+
+/-- After core 0 flushes its oldest entry. -/
+def sbGespült : TSOZustand :=
+  ⟨{ sbNach2.mem with
+      bytes := fun x => if x = sbX then sbEins else sbNach2.mem.bytes x },
+    pufferSetze sbNach2.puffer 0 []⟩
+
+/-- The two addresses differ. -/
+theorem sbX_ne_sbY : sbX ≠ sbY := by
+  decide
+
+/-- First issue step computes as claimed. -/
+theorem sb_schritt1 : issueByte sbStart 0 sbX sbEins = some sbNach1 := by
+  rfl
+
+/-- Second issue step computes as claimed. -/
+theorem sb_schritt2 : issueByte sbNach1 1 sbY sbEins = some sbNach2 := by
+  rfl
+
+/-- Both cores load the stale zero: each read misses its own buffer and
+    sees canonical memory, which no flush has touched yet. -/
+theorem sb_beide_laden_null :
+    loadByte sbNach2 0 sbY = some 0 ∧ loadByte sbNach2 1 sbX = some 0 := by
+  refine ⟨by decide, by decide⟩
+
+/-- The flush step computes as claimed. -/
+theorem sb_flush_schritt : flushKern sbNach2 0 = some sbGespült := by
+  rfl
+
+/-- The flush observably changes canonical memory at `sbX`. -/
+theorem sb_flush_aendert_speicher :
+    sbNach2.mem.bytes sbX ≠ sbGespült.mem.bytes sbX := by
+  decide
+
+/-- **Store buffering, reached, memory-changing.** From the empty start,
+    two issue steps reach a state where both cores load `0` for the
+    other's address, and flushing core 0 observably changes the
+    canonical byte at `sbX`. -/
+theorem tso_store_buffering :
+    ∃ s0 s2 s3 : TSOZustand,
+      TSOErreichbar s0 s2 ∧
+      loadByte s2 0 sbY = some 0 ∧ loadByte s2 1 sbX = some 0 ∧
+      flushKern s2 0 = some s3 ∧ s2.mem.bytes sbX ≠ s3.mem.bytes sbX := by
+  exact ⟨sbStart, sbNach2, sbGespült,
+    .schritt (.schritt .start (.issue _ _ _ _ _ sb_schritt1))
+      (.issue _ _ _ _ _ sb_schritt2),
+    sb_beide_laden_null.1, sb_beide_laden_null.2,
+    sb_flush_schritt, sb_flush_aendert_speicher⟩
+
 end Gabbro.Grammatik.X86
