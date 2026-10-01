@@ -149,6 +149,63 @@ theorem ladeWort_rahmen (m m' : Speicher) (r : Rahmen) (idx j : Nat)
   exact read64_rahmen m m' (r.schlitzAddr idx) (r.schlitzAddr j) v
     hwr hdis
 
+/-! ## 3. Fresh and disjoint slots: no slot shares a byte with another. -/
+
+/-- Two slots of one frame are footprint-disjoint. Needs both bounds, the
+    inequality and the frame bound. -/
+theorem schlitz_disjunkt (r : Rahmen) (i j : Nat)
+    (hi : i < r.schlitzZahl) (hj : j < r.schlitzZahl)
+    (hne : i ≠ j) (hle : r.spitzeNat ≤ 2 ^ 64) :
+    Disjunkt (r.schlitzAddr i) (r.schlitzAddr j) := by
+  have hsi := schlitzNat_schranke r i hi
+  have hsj := schlitzNat_schranke r j hj
+  have hti := schlitz_toNat r i hle hi
+  have htj := schlitz_toNat r j hle hj
+  have hOi : OhneUmbruch (r.schlitzAddr i) := by
+    unfold OhneUmbruch
+    omega
+  have hOj : OhneUmbruch (r.schlitzAddr j) := by
+    unfold OhneUmbruch
+    omega
+  have hord : (r.schlitzAddr i).toNat + 8 ≤ (r.schlitzAddr j).toNat ∨
+      (r.schlitzAddr j).toNat + 8 ≤ (r.schlitzAddr i).toNat := by
+    rw [hti, htj]
+    unfold Rahmen.schlitzNat
+    by_cases hlt : i < j
+    · exact Or.inl (by omega)
+    · exact Or.inr (by omega)
+  exact disjunkt_von_intervallen _ _ hOi hOj hord
+
+/-- Two frames are separate: every slot pair is footprint-disjoint. -/
+def RahmenGetrennt (r₁ r₂ : Rahmen) : Prop :=
+  ∀ i j : Nat, i < r₁.schlitzZahl → j < r₂.schlitzZahl →
+    Disjunkt (r₁.schlitzAddr i) (r₂.schlitzAddr j)
+
+/-- Nat-interval separation gives frame separation: caller and callee
+    frames share no byte. Uses both bounds and the interval order. -/
+theorem rahmen_getrennt_von_intervallen (r₁ r₂ : Rahmen)
+    (hle₁ : r₁.spitzeNat ≤ 2 ^ 64) (hle₂ : r₂.spitzeNat ≤ 2 ^ 64)
+    (h : r₁.spitzeNat ≤ r₂.basis ∨ r₂.spitzeNat ≤ r₁.basis) :
+    RahmenGetrennt r₁ r₂ := by
+  intro i j hi hj
+  have hti := schlitz_toNat r₁ i hle₁ hi
+  have htj := schlitz_toNat r₂ j hle₂ hj
+  have hsi := schlitzNat_schranke r₁ i hi
+  have hsj := schlitzNat_schranke r₂ j hj
+  have hOi : OhneUmbruch (r₁.schlitzAddr i) := by
+    unfold OhneUmbruch
+    omega
+  have hOj : OhneUmbruch (r₂.schlitzAddr j) := by
+    unfold OhneUmbruch
+    omega
+  have hord : (r₁.schlitzAddr i).toNat + 8 ≤ (r₂.schlitzAddr j).toNat ∨
+      (r₂.schlitzAddr j).toNat + 8 ≤ (r₁.schlitzAddr i).toNat := by
+    rw [hti, htj]
+    unfold Rahmen.schlitzNat at hsi hsj ⊢
+    unfold Rahmen.spitzeNat at hsi hsj h
+    omega
+  exact disjunkt_von_intervallen _ _ hOi hOj hord
+
 /- CUTS:
     - No instruction semantics, decoder, image mapping, TSO bridge, source
       correspondence, cost transfer or final-image acceptance is proved here.
