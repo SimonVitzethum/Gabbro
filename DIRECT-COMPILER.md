@@ -221,7 +221,7 @@ Last ledger refresh: **2026-10-01 13:23 UTC**. This is an operational snapshot, 
 | 429 | Continuous Lean proof reserve: CodeImmutability | Committed candidate; review/integration pending | 477: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/429.md) |
 | 430 | Continuous Lean proof reserve: ValidationCache | Agent working | 478: scheduled | [task](lanes/430.md) |
 | 431 | Continuous Lean proof reserve: ValidationBudget | Agent working | 479: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/431.md) |
-| 432 | Continuous Lean proof reserve: RegionSeparation | Queued for a model slot | 480: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/432.md) |
+| 432 | Continuous Lean proof reserve: RegionSeparation | Agent working | 480: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/432.md) |
 | 433 | Continuous Lean proof reserve: ObservationProjection | Committed candidate; review/integration pending | 481: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/433.md) |
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Agent working | 482: scheduled | [task](lanes/434.md) |
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Agent working | 483: scheduled | [task](lanes/435.md) |
@@ -429,6 +429,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: integration of candidate(s) [431] failed the local proof/build gate after independent review 479; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:479 -->
 - 2026-10-01: checked master `8fdcf779` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:8fdcf779323b0d72d9d6648def33a55fd59cf006 -->
 - 2026-10-01: lane **487**, Independent exact-candidate review of 407, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-487.md). <!-- x86-merged:487 -->
+- 2026-10-01: documentation-only publication at `b5b8f099` retains the successful complete local Lean, Rust and emission checks at `c937ebe4`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
