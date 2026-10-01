@@ -69,6 +69,46 @@ theorem zeitTransfer (s : CostSummary) (p : HardwareProfil)
   have hmono : B * xs.length ≤ B * k := Nat.mul_le_mul_left B hle'
   omega
 
+/-! ## No hidden stutter.
+
+    A successful aggregation certifies every step of the prefix with a
+    named per-form cost: no executed step hides behind a zero-cost
+    premise, and a refused form admits no successful aggregation at all
+    (the obstruction below). Both facts reuse the accepted aggregation
+    equations, never a new cost model. -/
+
+/-- A successful cost aggregation names a cost for every prefix step:
+    aggregation success leaves no step unpriced. -/
+theorem zeitTransfer_kosten_benannt (p : HardwareProfil)
+    (xs : List Decodiert) (t : Nat)
+    (hCost : laufKosten p xs = some t) :
+    ∀ d ∈ xs, ∃ c, schrittKosten p d = some c := by
+  induction xs generalizing t with
+  | nil =>
+    intro d hd
+    rw [laufKosten_nil] at hCost
+    simp at hd
+  | cons hd tl ih =>
+    intro d hm
+    cases hkd : schrittKosten p hd with
+    | none =>
+      have hnone : laufKosten p (hd :: tl) = none :=
+        laufKosten_kopf_verweigert p hd tl hkd
+      rw [hnone] at hCost
+      cases hCost
+    | some c =>
+      cases htl : laufKosten p tl with
+      | none =>
+        have hnone : laufKosten p (hd :: tl) = none :=
+          laufKosten_rest_verweigert p hd tl c hkd htl
+        rw [hnone] at hCost
+        cases hCost
+      | some t' =>
+        rw [List.mem_cons] at hm
+        rcases hm with rfl | hmem
+        · exact ⟨c, hkd⟩
+        · exact ih t' htl d hmem
+
 /- CUTS:
     - Skeleton only: transfer core, refusals and the joint witness follow.
     - No source/target scheduling or IR correspondence (`XCorr`); no
@@ -77,5 +117,6 @@ theorem zeitTransfer (s : CostSummary) (p : HardwareProfil)
 
 #print axioms zeitTransferZulaessig_braucht_ok
 #print axioms zeitTransfer
+#print axioms zeitTransfer_kosten_benannt
 
 end Gabbro.Grammatik.X86
