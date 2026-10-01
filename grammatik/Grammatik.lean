@@ -367,3 +367,4 @@ import Grammatik.Zielsatz.AtomarZertifikatZeuge
 import Grammatik.Speichermodell.ZaehlerW
 
 import Grammatik.X86.Typen
+import Grammatik.X86.Speicher
