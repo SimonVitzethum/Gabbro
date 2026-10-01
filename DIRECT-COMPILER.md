@@ -269,7 +269,7 @@ Last ledger refresh: **2026-10-01 21:37 UTC**. This is an operational snapshot, 
 | 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Merged after review/checks | [report](messung/muse/MUSE-REPORT-622.md) |
 | 624 | Direct-source closure: FloatSourceObservations | Committed candidate; review/integration pending | 625: Agent working | [task](lanes/624.md) |
 | 626 | Direct-source closure: FloatEntryState | Merged after review/checks | 627: Merged after review/checks | [report](messung/muse/MUSE-REPORT-626.md) |
-| 628 | Direct-source closure: SourceAssignmentLowering | Merged after review/checks | 629: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-628.md) |
+| 628 | Direct-source closure: SourceAssignmentLowering | Merged after review/checks | 629: Merged after review/checks | [report](messung/muse/MUSE-REPORT-628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
 | 632 | Direct-source closure: SourceValidatorConnection | Merged after review/checks | 633: Merged after review/checks | [report](messung/muse/MUSE-REPORT-632.md) |
 | 634 | Direct-source closure: SourceCodeFrame | Merged after review/checks | 635: Merged after review/checks | [report](messung/muse/MUSE-REPORT-634.md) |
@@ -691,6 +691,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `81b7ea7e`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **628**, Direct-source closure: SourceAssignmentLowering, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-628.md). <!-- x86-merged:628 -->
 - 2026-10-01: checked master `838a1c22` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:838a1c220cfd11b76f55524f4f2ce229cac62651 -->
+- 2026-10-01: lane **629**, Independent direct-source closure review of 628, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-629.md). <!-- x86-merged:629 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
