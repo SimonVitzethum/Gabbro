@@ -134,7 +134,7 @@ Last ledger refresh: **2026-10-01 10:05 UTC**. This is an operational snapshot, 
 | 292 | Independent source and invariant trust-boundary review | Merged after review/checks | 308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-292.md) |
 | 293 | Independent concurrency granularity and target bridge review | Merged after review/checks | 308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-293.md) |
 | 294 | Independent optimiser and full-binary obligation review | Merged after review/checks | 308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-294.md) |
-| 309 | Stack frames and ABI memory obligations | Merged after review/checks | 313: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-309.md) |
+| 309 | Stack frames and ABI memory obligations | Merged after review/checks | 313: Merged after review/checks | [report](messung/muse/MUSE-REPORT-309.md) |
 | 310 | Call-log obligations for source inlining | Committed candidate; review/integration pending | 314: Committed candidate; review/integration pending | [task](lanes/310.md) |
 | 311 | Range-justified integer strength reduction | Committed candidate; review/integration pending | 315: Committed candidate; review/integration pending | [task](lanes/311.md) |
 | 312 | Checked target regions and allocation ceiling | Committed candidate; review/integration pending | 316: Committed candidate; review/integration pending | [task](lanes/312.md) |
@@ -231,6 +231,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **291**, Checked relocation arithmetic and byte patching, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-291.md). <!-- x86-merged:291 -->
 - 2026-10-01: lane **307**, Independent review of 291, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-307.md). <!-- x86-merged:307 -->
 - 2026-10-01: lane **309**, Stack frames and ABI memory obligations, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-309.md). <!-- x86-merged:309 -->
+- 2026-10-01: lane **313**, Independent review of 309, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-313.md). <!-- x86-merged:313 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
