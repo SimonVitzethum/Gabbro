@@ -155,7 +155,7 @@ Last ledger refresh: **2026-10-01 20:24 UTC**. This is an operational snapshot, 
 | 284 | Executable target TSO over real byte memory | Merged after review/checks | 300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-284.md) |
 | 285 | Mathematical carry and signed-overflow characterisation | Merged after review/checks | 301: Merged after review/checks | [report](messung/muse/MUSE-REPORT-285.md) |
 | 286 | Width-aware IEEE target data and f32 bridge evidence | Merged after review/checks | 302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-286.md) |
-| 287 | One typed IR and source-linked lowering foundation | Committed candidate; review/integration pending | 303: Committed candidate; review/integration pending | [task](lanes/287.md) |
+| 287 | One typed IR and source-linked lowering foundation | Merged after review/checks | 303: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-287.md) |
 | 288 | Invariant-derived optimisation on actual source semantics | Merged after review/checks | 304: Merged after review/checks | [report](messung/muse/MUSE-REPORT-288.md) |
 | 289 | Disjoint byte-memory commutation | Merged after review/checks | 305: Merged after review/checks | [report](messung/muse/MUSE-REPORT-289.md) |
 | 290 | Packed integer lane model for future SIMD | Merged after review/checks | 306: Merged after review/checks | [report](messung/muse/MUSE-REPORT-290.md) |
@@ -633,6 +633,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **622**, Remove only completed managed lane task markdown, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-622.md). <!-- x86-merged:622 -->
 - 2026-10-01: lane **623**, Independent lifecycle review of 622, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-623.md). <!-- x86-merged:623 -->
 - 2026-10-01: publication batch checks passed for `3c1ffa8c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **287**, One typed IR and source-linked lowering foundation, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-287.md). <!-- x86-merged:287 -->
+- 2026-10-01: checked master `5c7ad4cd` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:5c7ad4cddcfdb1a8bc33f85399ee3b7dcf277ec6 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
