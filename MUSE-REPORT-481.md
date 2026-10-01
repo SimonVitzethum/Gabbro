@@ -1,10 +1,10 @@
-# MUSE-REPORT-481: Independent exact-candidate review of 433 (re-review of repaired candidate)
+# MUSE-REPORT-481: Independent exact-candidate review of 433 (second re-review of repaired candidate)
 
-Clone verified: /home/simon/Dokumente/gabbro-muse/a481, branch muse/481. Owned deliverable is this report only. This is a fresh substantive re-review of the NEW pinned snapshot after author repairs; the previous verdict on `c1cc7b96` is superseded.
+Clone verified: /home/simon/Dokumente/gabbro-muse/a481, branch muse/481. Owned deliverable is this report only. This is a fresh substantive re-review of the NEW pinned snapshot after author repairs; the previous verdicts on `c1cc7b96` and `7f8781c6` are superseded.
 
 ## Candidate under review
 
-- Author lane 433, pinned HEAD `7f8781c61fee0a20ce84fee3d517d06dd3d52ac0`, base `fd14b4e5` (per `.tmp/review/SNAPSHOT.json`; HEAD not present in my clone, so review ran off the supplied `PATCH.diff` plus the supplied file copies, staged temporarily in my clone and restored afterwards).
+- Author lane 433, pinned HEAD `e708c266c7bece404de5054db76cc7320096f7c0`, base `fd14b4e5` (per `.tmp/review/SNAPSHOT.json`; HEAD not present in my clone, so review ran off the supplied `PATCH.diff` plus the supplied file copies, staged temporarily in my clone and restored afterwards).
 - Files: `MUSE-REPORT-433.md` (new), `grammatik/Grammatik.lean` (one additive import line), `grammatik/Grammatik/X86/ObservationProjection.lean` (new, 331 lines). No other files touched: no source/checker/goal/Rust/emitter/Typen/execution/codec changes, no friend paths.
 
 ## Reproduction in my clone (re-run against the new snapshot)
@@ -12,11 +12,15 @@ Clone verified: /home/simon/Dokumente/gabbro-muse/a481, branch muse/481. Owned d
 - Copied the supplied `ObservationProjection.lean` into `grammatik/Grammatik/X86/` and appended the umbrella import, then ran `./lean-probe grammatik/Grammatik/X86/ObservationProjection.lean`: **0 errors**. Axiom report matches the author's evidence exactly: `beobAusgang_verweigert`/`beobGleich_refl`/`V0_*` axiom-free; everything else depends only on `propext` and/or `Quot.sound` — subsets of the `gabbro_ziel` standard set, no new axioms.
 - Afterwards removed the staged files and restored the umbrella from backup; `git status` clean before writing this report.
 
-## What changed between `c1cc7b96` and `7f8781c6` (every previous finding re-inspected)
+## What changed between `7f8781c6` and `e708c266` (every previous finding re-inspected)
 
-- The new PATCH carries the new-file blob `9e643b30` for `ObservationProjection.lean` — the identical Git blob hash as the previously reviewed candidate — and the umbrella hunk is the same single additive import line. The supplied file copy is byte-identical to the PATCH body (verified by extraction and comparison). **Lean content is unchanged**; no proof was edited, weakened, or added.
-- The only delta is `MUSE-REPORT-433.md`: a new section "Repair pass after integration-gate failure" analysing the coordinator merge-build failure (`397/398 Building Grammatik`, `failed to create thread`, exit 134), noting the integration log printed all fourteen `#print axioms` lines (module elaborated successfully; only the single-process umbrella step failed), performing no Lean change, and naming the blocker as coordinator-side thread/memory headroom for the ~397-import umbrella elaboration with remedies outside the lane's owned files.
-- Assessment of the repair: correct handling. An environmental thread-spawn failure cannot be fixed by editing verified-green proofs, and editing them would only invalidate the isolated review. The author's claim that the module built cleanly inside the integration build (axiom lines printed) is consistent with the evidence. No new defect introduced, no previous finding left unaddressed — there were no open findings; the re-review confirms none have appeared.
+- The new PATCH carries the new-file blob `9e643b30` for `ObservationProjection.lean` — the identical Git blob hash as both previously reviewed candidates — and the umbrella hunk is the same single additive import line. The supplied file copy is byte-identical to the PATCH body (verified by extraction and comparison). **Lean content is unchanged**; no proof was edited, weakened, or added.
+- The only delta is `MUSE-REPORT-433.md`: a second added section "Second gate failure, identical evidence" recording another byte-identical coordinator gate failure (all fourteen axiom lines print, then step 397/398 dies with `failed to create thread`, exit 134), a local `./lean-probe` re-run at 0 errors, and no Lean edit. Build evidence grew from 20 to 22 entries corroborating the commit sequence (`c1cc7b96` -> `7f8781c6` -> `e708c266`).
+- Assessment: correct handling again. The blocker (coordinator-side merge-build resources for the ~397-import umbrella elaboration) is unchanged and outside the lane's owned files; editing verified-green proofs cannot fix it. No new defect introduced, no previous finding left unaddressed — there were no open findings across either prior review; this re-review confirms none have appeared.
+
+## Earlier delta `c1cc7b96` -> `7f8781c6` (kept for audit)
+
+- Lean blob `9e643b30` identical then as now; only delta was the first "Repair pass after integration-gate failure" report section. Assessment stands as written in the prior review.
 
 ## Correctness checks (against actual accepted models, not just green output)
 
@@ -39,5 +43,5 @@ None material. No repair direction to give.
 
 ACCEPT of the precisely delivered bounded claim: canonical target observation projection shape plus the pilot dead-register internal-move preservation fact with joint witness, memory-changing run, scratch-hidden probe, and negative observable-fault case. Not a claim of full compiler closure, and the report does not present it as one.
 
-CANDIDATE: 433 7f8781c61fee0a20ce84fee3d517d06dd3d52ac0
+CANDIDATE: 433 e708c266c7bece404de5054db76cc7320096f7c0
 VERDICT: ACCEPT
