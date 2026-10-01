@@ -422,13 +422,129 @@ theorem wit_step :
     World.merke, World.schreibSlot, World.storeSlot]
   decide
 
-/- CUTS:
-   Only the computable check exists so far. Open: its soundness over `eval`;
-   constant folding / `weiter` value lemmas; `pruefung`/`ite` elimination with
-   exact trace transfer; the invariant-scoped rule (rest/sight/lock-move only,
-   never inside a running writer or held section); the stability-gated
-   redundant-load rule; cost/ghost-budget, call-log (`Folge`), fault and
-   interleaving transfers; the non-degenerate table-writing witness.
+/-! ## 6. Joint-inhabitation witnesses (`_zeuge`) -/
+
+/-- Every premise of `alsLitOpt_lit`, jointly, on a literal. -/
+theorem alsLitOpt_lit_zeuge :
+    ∃ n : Int, ∃ hτ : (Ty.int 3 3 : Ty) = Ty.int n n,
+      hτ ▸ (@Expr.lit wD [] [] 3) = (@Expr.lit wD [] [] n) ∧ n = 3 :=
+  alsLitOpt_lit (D := wD) (Γ := []) (Λ := []) (e := @Expr.lit wD [] [] 3) (y := 3) rfl
+
+/-- Every premise of `eval_alsLit`, jointly. -/
+theorem eval_alsLit_zeuge :
+    (eval (σ₀ := wWorld0) (@Expr.lit wD [] [] 3) wWorld0 Env.nil).n = 3 :=
+  eval_alsLit (D := wD) (Γ := []) (Λ := []) (e := @Expr.lit wD [] [] 3) (x := 3)
+    (σ₀ := wWorld0) (σ := wWorld0) (ρ := Env.nil) rfl
+
+/-- Every premise of `litLeBool_sound`, jointly. -/
+theorem litLeBool_sound_zeuge :
+    wahr? (eval (σ₀ := wWorld0)
+      (@Expr.le wD [] [] 2 2 5 5 (@Expr.lit wD [] [] 2) (@Expr.lit wD [] [] 5))
+      wWorld0 Env.nil) = true :=
+  litLeBool_sound (a := @Expr.lit wD [] [] 2) (b := @Expr.lit wD [] [] 5)
+    (σ₀ := wWorld0) (σ := wWorld0) (ρ := Env.nil) rfl
+
+/-- Every premise of `litEqBool_sound`, jointly. -/
+theorem litEqBool_sound_zeuge :
+    wahr? (eval (σ₀ := wWorld0)
+      (@Expr.eq wD [] [] 4 4 4 4 (@Expr.lit wD [] [] 4) (@Expr.lit wD [] [] 4))
+      wWorld0 Env.nil) = true :=
+  litEqBool_sound (a := @Expr.lit wD [] [] 4) (b := @Expr.lit wD [] [] 4)
+    (σ₀ := wWorld0) (σ := wWorld0) (ρ := Env.nil) rfl
+
+/-- Every premise of `isWahrAll_sound`, jointly. -/
+theorem isWahrAll_sound_zeuge :
+    holdsBool Ty.bool (eval (σ₀ := wWorld0)
+      (@Expr.le wD [] [] 2 2 5 5 (@Expr.lit wD [] [] 2) (@Expr.lit wD [] [] 5))
+      wWorld0 Env.nil) :=
+  isWahrAll_sound
+    (e := @Expr.le wD [] [] 2 2 5 5 (@Expr.lit wD [] [] 2) (@Expr.lit wD [] [] 5))
+    (σ₀ := wWorld0) (σ := wWorld0) (ρ := Env.nil) rfl
+
+/-- Every premise of `eval_foldAddLit`, jointly. -/
+theorem eval_foldAddLit_zeuge :
+    eval (σ₀ := wWorld0) (foldAddLit (D := wD) (Γ := []) (Λ := []) 2 3) wWorld0 Env.nil =
+      eval (σ₀ := wWorld0)
+        (@Expr.add wD [] [] _ _ _ _ (@Expr.lit wD [] [] 2) (@Expr.lit wD [] [] 3))
+        wWorld0 Env.nil :=
+  eval_foldAddLit 2 3 wWorld0 wWorld0 Env.nil
+
+/-- Every premise of `eval_weiter_n`, jointly. -/
+theorem eval_weiter_n_zeuge :
+    (eval (σ₀ := wWorld0)
+      ((.weiter (show (0 : Int) ≤ 5 by decide) (show (5 : Int) ≤ 10 by decide)
+        (@Expr.lit wD [] [] 5) : Expr wD [] [] (.int 0 10)))
+      wWorld0 Env.nil).n =
+    (eval (σ₀ := wWorld0) (@Expr.lit wD [] [] 5) wWorld0 Env.nil).n :=
+  eval_weiter_n (h1 := by decide) (h2 := by decide) (e := @Expr.lit wD [] [] 5)
+    (σ₀ := wWorld0) (σ := wWorld0) (ρ := Env.nil)
+
+/-- Every premise of `exec_pruefung_wahr`, jointly, on the witness
+    program (which writes its table and changes memory: `wit_schreibt`,
+    `wit_step`). -/
+theorem exec_pruefung_wahr_zeuge :
+    execBlock wO 5 wR (Block.pruefung wCond wSonst wRest) wWorld0 Env.nil =
+      execBlock wO 5 wR wRest (wWorld0.lese [] wCond.orte) Env.nil :=
+  wit_elim
+
+/-- Every premise of `exec_ite_wahr`, jointly, on the witness program. -/
+theorem exec_ite_wahr_zeuge :
+    execStmt wO 5 wR (Stmt.ite wCond wRest wRest) wWorld0 Env.nil =
+      execBlock wO 5 wR wRest (wWorld0.lese [] wCond.orte) Env.nil :=
+  exec_ite_wahr wO 5 wR wCond wRest wRest wWorld0 Env.nil rfl
+
+/-- Every premise of `exec_pruefung_inv`, jointly, at the `ruhe` scope. -/
+theorem exec_pruefung_inv_zeuge :
+    execBlock wO 5 wR (Block.pruefung wCond wSonst wRest) wWorld0 Env.nil =
+      execBlock wO 5 wR wRest (wWorld0.lese [] wCond.orte) Env.nil :=
+  exec_pruefung_inv wO 5 wR wCond wSonst wRest wWorld0 Env.nil InvScope.ruhe rfl
+
+/-- Every premise of `slot_read_stabil`, jointly (same world twice: the
+    stability premise holds by `rfl`, the interesting case is a
+    separately discharged obligation). -/
+theorem slot_read_stabil_zeuge :
+    eval (σ₀ := wWorld0)
+      (Expr.slot (D := wD) (Γ := []) (Λ := []) () ()
+        wIdx (fun _ hw => False.elim (List.not_mem_nil hw)))
+      wWorld0 Env.nil =
+    eval (σ₀ := wWorld0)
+      (Expr.slot (D := wD) (Γ := []) (Λ := []) () ()
+        wIdx (fun _ hw => False.elim (List.not_mem_nil hw)))
+      wWorld0 Env.nil :=
+  slot_read_stabil (σ₀ := wWorld0) (σ := wWorld0) (σ' := wWorld0)
+    (ρ := Env.nil) (ρ' := Env.nil) rfl rfl
+
+/- CUTS (what is proved above vs. what stays open):
+   PROVED: the computable check `isWahrAll`/`isWahr` with `isWahrAll_sound`
+   over `eval` (no `nicht` arm: negation would need false completeness);
+   literal extractor inversion (`alsLitOpt_lit`, `eval_alsLit`) and the
+   literal-comparison bridges; constant folding (`foldAddLit`) and the
+   `weiter` value lemma; `pruefung`/`ite` elimination with exact trace
+   transfer (`exec_pruefung_wahr`, `exec_ite_wahr`); the scope-tagged
+   invariant elimination (`exec_pruefung_inv`); the stability-gated load
+   rule (`slot_read_stabil`); joint inhabitation on the table-writing
+   witness `wD` (`wit_*`, `*_zeuge`), including a memory-changing run.
+   OPEN, explicitly not claimed: multiplication folding (the four-corner
+   `imin`/`imax` range type needs range evidence, not definitional);
+   discharge of `InvScope` tags (needs the `invRuhe`/`invSicht`/
+   `sperrWechsel`/`sperrSicht` legs at the use site -- never inside a
+   running writer or held section); discharge of `slot_read_stabil`'s
+   stability premise (ownership / held-lock / immutability evidence);
+   cost/ghost-budget transfer (removing a check changes budget timing);
+   call-log (`Folge`) preservation across transformations that add or
+   remove calls (ours touch none); fault transfer beyond the refused
+   unreachable `else`; interleaving transfer under concurrency (single-
+   thread `exec` only); atomics, MMIO, foreign-observable memory (all
+   refused here); any source-to-bytes or concurrent/hardware claim.
 -/
+
+#print axioms isWahrAll_sound
+#print axioms eval_foldAddLit
+#print axioms eval_weiter_n
+#print axioms exec_pruefung_wahr
+#print axioms exec_ite_wahr
+#print axioms exec_pruefung_inv
+#print axioms slot_read_stabil
+#print axioms wit_step
 
 end Gabbro.Grammatik.X86.InvariantenOpt
