@@ -264,7 +264,7 @@ Last ledger refresh: **2026-10-01 20:13 UTC**. This is an operational snapshot, 
 | 603 | Overnight: Whole-word grouping under actual trace exclusion | Agent working | 615: scheduled | [task](lanes/603.md) |
 | 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Merged after review/checks | [report](messung/muse/MUSE-REPORT-604.md) |
 | 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Merged after review/checks | 617: Merged after review/checks | [report](messung/muse/MUSE-REPORT-605.md) |
-| 618 | Overnight: Resource-safe native Lean invocation for publication tests | Merged after review/checks | 619: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-618.md) |
+| 618 | Overnight: Resource-safe native Lean invocation for publication tests | Merged after review/checks | 619: Merged after review/checks | [report](messung/muse/MUSE-REPORT-618.md) |
 | 620 | Automatic coordinator takeover on missing foreground heartbeat | Agent working | 621: scheduled | [task](lanes/620.md) |
 | 622 | Remove only completed managed lane task markdown | Agent working | 623: scheduled | [task](lanes/622.md) |
 
@@ -623,6 +623,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: Simon authorised automatic OpenCode coordinator takeover after a missing foreground heartbeat and deletion of completed numeric lane task Markdown. Authors620/622 and exact reviewers621/623 are running/planned within the same15-slot cap. The reviewed monitor595/607 and direct typed-source lowering decision594/606 are integrated. Takeover is not armed before its independent review; reports/logs and Git task history remain audit evidence. Full final-byte validation remains OPEN. <!-- x86-automatic-coordination -->
 - 2026-10-01: lane **618**, Overnight: Resource-safe native Lean invocation for publication tests, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-618.md). <!-- x86-merged:618 -->
 - 2026-10-01: checked master `82447300` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:82447300f79ffa77fbe6a60fd6834356b066ac4a -->
+- 2026-10-01: lane **619**, Independent overnight review of 618, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-619.md). <!-- x86-merged:619 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
