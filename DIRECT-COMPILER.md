@@ -239,7 +239,7 @@ Last ledger refresh: **2026-10-01 19:04 UTC**. This is an operational snapshot, 
 | 560 | Connection: Loaded image to actual instruction fetch | Agent working | 578: scheduled | [task](lanes/560.md) |
 | 561 | Connection: Relocated bytes to re-decoded instruction execution | Agent working | 579: scheduled | [task](lanes/561.md) |
 | 562 | Connection: Narrow operations byte decoder and execution connection | Agent working | 580: scheduled | [task](lanes/562.md) |
-| 563 | Connection: Multiply/divide byte decoder and execution connection | Merged after review/checks | 581: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-563.md) |
+| 563 | Connection: Multiply/divide byte decoder and execution connection | Merged after review/checks | 581: Merged after review/checks | [report](messung/muse/MUSE-REPORT-563.md) |
 | 564 | Connection: Shift operations byte decoder and execution connection | Committed candidate; review/integration pending | 582: Agent working | [task](lanes/564.md) |
 | 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Agent working | 583: scheduled | [task](lanes/565.md) |
 | 566 | Connection: Conditional forms bytes to accepted control execution | Agent working | 584: scheduled | [task](lanes/566.md) |
@@ -570,6 +570,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `00aec74d`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **563**, Connection: Multiply/divide byte decoder and execution connection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-563.md). <!-- x86-merged:563 -->
 - 2026-10-01: checked master `c7108a5c` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:c7108a5c330c30703e1e8627a6b486d84d96a1fa -->
+- 2026-10-01: lane **581**, Independent connection review of 563, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-581.md). <!-- x86-merged:581 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
