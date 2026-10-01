@@ -268,7 +268,7 @@ Last ledger refresh: **2026-10-01 21:16 UTC**. This is an operational snapshot, 
 | 620 | Automatic coordinator takeover on missing foreground heartbeat | Merged after review/checks | 621: Merged after review/checks | [report](messung/muse/MUSE-REPORT-620.md) |
 | 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Merged after review/checks | [report](messung/muse/MUSE-REPORT-622.md) |
 | 624 | Direct-source closure: FloatSourceObservations | Agent working | 625: scheduled | [task](lanes/624.md) |
-| 626 | Direct-source closure: FloatEntryState | Merged after review/checks | 627: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-626.md) |
+| 626 | Direct-source closure: FloatEntryState | Merged after review/checks | 627: Merged after review/checks | [report](messung/muse/MUSE-REPORT-626.md) |
 | 628 | Direct-source closure: SourceAssignmentLowering | Agent working | 629: scheduled | [task](lanes/628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
 | 632 | Direct-source closure: SourceValidatorConnection | Committed candidate; review/integration pending | 633: Agent working | [task](lanes/632.md) |
@@ -679,6 +679,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `fdb25d45` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:fdb25d45055f17a921a63d925889ca18df46c4be -->
 - 2026-10-01: lane **613**, Independent overnight review of 601, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-613.md). <!-- x86-merged:613 -->
 - 2026-10-01: lane **626**, Direct-source closure: FloatEntryState, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-626.md). <!-- x86-merged:626 -->
+- 2026-10-01: lane **627**, Independent direct-source closure review of 626, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-627.md). <!-- x86-merged:627 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
