@@ -532,6 +532,23 @@ before reporting current activity or publishing. The latest task is to **connect
 the existing Lean components**, with up to **15 productive Muse processes** and
 substantial delegation of implementation, independent review and organisation.
 
+**Latest steering, 2026-10-01: Simon explicitly paused this pool to continue
+with Glass Town. Do not resume Muse, dispatch, integration or publication
+automatically.** All 15 then-active lanes (287, 558–571) were stopped gracefully;
+their clones, source drafts, logs and recovered private session IDs remain.
+The measured managed model count after pausing is zero. Owners 572–575 and
+paired reviewers remain queued. Private `pool-paused.json` prevents worker
+restart; `pause-result.json` records the handoff. Resume requires Simon's
+instruction, then deliberate removal of the pause markers and inspection of
+preserved work. Glass Town can take over the committed tasks directly.
+
+At the pause, master was `8596f83e`: ValidatorSkeleton349, DecodingCoverage435
+and StackUnwind542, DecodeFault543, RegionFresh544, PayloadResidue545,
+ContractSites546 had landed with their exact independent reviews. The X86
+directory now has 62 accepted modules. The publication wave's Lean build
+passed; its remaining checks were interrupted by the requested pause. This
+does **not** grant a successful full publication result or an upstream push.
+
 ### Current proof boundary and critical path
 
 - The accepted X86 directory currently contains 55 Lean modules, about 26,300
@@ -550,8 +567,8 @@ substantial delegation of implementation, independent review and organisation.
   `IR.lean` draft in its isolated clone. It is **not an accepted interface**.
   Resume this owner; do not make a competing IR. Reviewer 303 waits for a
   clean committed candidate and joint source/table-write witnesses.
-- ValidatorSkeleton owner 349 and reviewer 387 have a committed candidate and
-  exact ACCEPT review awaiting integration. Its `valX86` checks image mapping
+- ValidatorSkeleton owner 349 and reviewer 387 are now integrated. Its
+  `valX86` checks image mapping
   and decode coverage, not complete source refinement. `valX86_sound` and the
   source-to-final-loaded-byte closing theorem remain OPEN.
 - Actual loaded mapping, relocations followed by re-decoding, source-memory
@@ -609,7 +626,7 @@ after its owning coordinator update is finished.
 
 ### Connection wave ownership
 
-New connection owners 558–575 are being registered with paired reviewers
+New connection owners 558–575 are registered with paired reviewers
 576–593 (`reviewer = author + 18`). Their committed prompts are authoritative;
 registration and a target of 15 are not a claim that 15 models are running.
 
@@ -642,8 +659,8 @@ independent, and publication remains serial and checked.
   1471 tests and zero failures; **fresh integrated publication checks are still
   required**. The repair serialises measurements per model and retries only
   specific bounded resource failures; it does not weaken checker verdicts.
-- Accepted candidates 542–546 and reviewers 548–552 are also waiting for serial
-  integration. They cover StackUnwind, DecodeFault, RegionFresh, PayloadResidue
+- Accepted candidates 542–546 and reviewers 548–552 were integrated before
+  the pause. They cover StackUnwind, DecodeFault, RegionFresh, PayloadResidue
   and ContractSites. Read their actual CUTS before using them as foundations.
 - Heavy builds share a memory lease through the pool's `cargo-slot` and
   `lean-slot`. Native Lean retains two workers and a 4096-MiB heap budget;
