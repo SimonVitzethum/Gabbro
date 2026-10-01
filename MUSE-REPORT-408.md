@@ -39,6 +39,22 @@ No `./lean-bau` run: no Lean file was touched, so no build was needed.
 `./lean-probe .tmp/WEAK-PROBE.lean`: 0 errors in the complete output,
 exit 0.
 
+## Repair after independent review 488 (REPAIR verdict)
+
+Review 488 found the audit file truncated mid-F9 (a cut-off single write
+committed with the literal marker `...[truncated 2085 chars]`, no trailing
+newline): F10, F11, non-findings and CUTS were missing while this report
+claimed them delivered. Repaired by re-emitting the missing tail in small
+incremental edits: F9 task sentence completed (refusal posture kept,
+reviewed `Spec.lean` diff as fallback, decided by the simulation proof);
+F10 (word atomicity) and F11 (no DRF-SC) restored; explicit non-findings,
+prioritized task list, and CUTS restored. Verified: no `truncated` marker
+remains, file ends with a newline, all sections F1–F11 plus CUTS present.
+The F2 probe cases are quoted inline in the audit's CUTS (two `none`-by-
+`decide` negatives plus the empty-buffer positive control); probe source
+stays private in `.tmp/WEAK-PROBE.lean`. No Lean files touched; no new
+build owed beyond the earlier 0-error probe run.
+
 ## What remains open
 
 The audit itself is complete and committed. Its findings F1–F11 are bridge
