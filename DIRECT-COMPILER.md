@@ -226,6 +226,12 @@ Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, 
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Merged after review/checks | 482: Merged after review/checks | [report](messung/muse/MUSE-REPORT-434.md) |
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Agent working | 483: scheduled | [task](lanes/435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
+| 542 | Next bridge wave N9: StackUnwind | Scheduled | 548: scheduled | [task](lanes/542.md) |
+| 543 | Next bridge wave N16: DecodeFault | Scheduled | 549: scheduled | [task](lanes/543.md) |
+| 544 | Next bridge wave N18: RegionFresh | Waiting for accepted dependencies | 550: scheduled | [task](lanes/544.md) |
+| 545 | Next bridge wave N11: PayloadResidue | Waiting for accepted dependencies | 551: scheduled | [task](lanes/545.md) |
+| 546 | Next bridge wave N13: ContractSites | Scheduled | 552: scheduled | [task](lanes/546.md) |
+| 547 | Next bridge wave N17: TimeTransfer | Waiting for accepted dependencies | 553: scheduled | [task](lanes/547.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -485,6 +491,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **430**, Continuous Lean proof reserve: ValidationCache, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-430.md). <!-- x86-merged:430 -->
 - 2026-10-01: lane **478**, Independent exact-candidate review of 430, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-478.md). <!-- x86-merged:478 -->
 - 2026-10-01: publication batch checks passed for `6a659bf2`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: diagnosed repeated `failed to create thread` integration failures separately from proof errors. Forced umbrella compilation of inactive candidate 417 at `5c113423` passed with a 16-GiB virtual-address ceiling, unchanged native 4096-MiB heap budget, two workers and serial heavy builds; measured child peak resident memory 1950.1 MiB. This diagnostic is not review acceptance or root integration. Changed candidates still require fresh exact-commit independent review and all root publication checks. <!-- x86-resource-ceiling-recovery -->
+- 2026-10-01: checked master `a9cc2a1a` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a9cc2a1a1f6c62852f9ee5bf81eabe3c45e40a5d -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
