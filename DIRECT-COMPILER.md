@@ -171,7 +171,7 @@ Last ledger refresh: **2026-10-01 12:31 UTC**. This is an operational snapshot, 
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Agent working | 388: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Merged after review/checks | 439: Merged after review/checks | [report](messung/muse/MUSE-REPORT-401.md) |
-| 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-402.md) |
+| 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Merged after review/checks | [report](messung/muse/MUSE-REPORT-402.md) |
 | 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Scheduled | 484: scheduled | [task](lanes/404.md) |
 | 405 | Adversarial implementation audit: MEMORY-RANGES | Scheduled | 485: scheduled | [task](lanes/405.md) |
 | 406 | Adversarial implementation audit: DECODE-BOUNDARY | Scheduled | 486: scheduled | [task](lanes/406.md) |
@@ -376,6 +376,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **402**, Independent operating Muse scheduler audit and reproducible repair proposal, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-402.md). <!-- x86-merged:402 -->
 - 2026-10-01: integration of candidate(s) [346] failed the local proof/build gate after independent review 384; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:384 -->
 - 2026-10-01: checked master `023a1459` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:023a1459ba6ce3952a32d06171105f5fa2283cbb -->
+- 2026-10-01: lane **403**, Independent exact-candidate review of 402, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-403.md). <!-- x86-merged:403 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
