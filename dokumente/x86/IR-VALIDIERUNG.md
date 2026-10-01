@@ -432,12 +432,14 @@ condition.
    flags after the vector op must equal the scalar sequence's outcome
    (per-lane exceptions combined in lane order; masked-off lanes
    contribute nothing; no flag a scalar lane would not set).
-   CONDITIONAL REFUSAL: until the generic vector correspondence covering
-   (a)–(d) is proved (lanes 274+278), vectorising faulting, volatile,
-   atomic, MMIO or FP-trapping bodies is refused outright; the only
-   admissible remainder is pure non-trapping integer lanes over
-   validator-proved private-or-immutable memory with proved tail handling,
-   each certificate citing the pending theorem as an OPEN obligation.
+   CONDITIONAL REFUSAL: no SIMD transformation is admitted on the strength
+   of a pending theorem — a pending correspondence admits NOTHING. ALL SIMD
+   admission is conditional on an actually PROVED generic
+   vector-correspondence rule covering (a)–(d); until such a rule is proved,
+   every SIMD certificate is refused, including the easy candidate (pure
+   non-trapping integer lanes over validator-proved private-or-immutable
+   memory with proved tail handling), which is first in the proof queue
+   (prioritised) but accepted only after its proof closes.
    Prove: lane-wise equivalence (each lane = the scalar op at those
    operands, arbitrary values) + independence (disjoint footprints ⇒ any
    interleaving linearises lane by lane, under item 3's interleaving
@@ -468,9 +470,23 @@ condition.
       rechecked (layer C).
     - Costs (three levels, never mixed):
       (a) SOURCE BUDGET semantics: `Op.cost`/`totalCost` (`Budget.lean`) —
-      model-level stop/budget behaviour the goal theorem claims. Preserved
-      because no transformation adds, removes or reclasses a stop, and the
-      validator re-sums the declared costs (mismatch ⇒ refusal).
+      model-level stop/budget behaviour the goal theorem claims. Re-summing
+      declared costs does NOT by itself establish that budget-exhaustion
+      stops are preserved: removing an op advances the budget counter less
+      (an exhaustion stop fires later, or never), duplicating one advances
+      it more (an earlier stop) — counter-decrement TIMING changes even when
+      no stop is added, removed or reclassified. The phase-B proof must
+      therefore carry an explicit ghost source-budget accounting
+      correspondence: the transformed graph's execution maps to
+      source-budget consumption step by step (stuttering steps consume
+      explicitly; eliminated steps are accounted as zero-cost ghosts with
+      their exhaustion-stop displacement proved harmless; duplicated steps
+      with their earlier-stop displacement proved harmless) — or else keep
+      physical and source budget semantics strictly separate with a proved
+      transfer between them. Until that correspondence (or separation with
+      transfer) is proved, budget-exhaustion-stop preservation is an OPEN
+      obligation: no automatic "preserved because stops are untouched", and
+      no source guarantee is weakened to make the books balance.
       Re-summing (a) is NOT x86 runtime costing;
       (b) MEASURED TARGET WORK: instruction counts, cycle estimates,
       profiler data — untrusted Rust-side numbers guiding profitability
@@ -639,7 +655,11 @@ block b0:
 ```
 
 The validator re-decides domination/availability/widths, re-threads the
-token (identical), re-sums costs, and confirms no anchor, duty, atomic,
+token (identical), re-sums the declared costs as a mismatch check (level
+(a) bookkeeping — NOT a proof that budget-exhaustion stops are preserved:
+the removed copy op no longer decrements the counter, so exhaustion-stop
+timing is covered only by the ghost source-budget correspondence of §3
+item 11, an open obligation), and confirms no anchor, duty, atomic,
 lock, FP-mode or stop-class field moved. A wrong `subst` (e.g. replacing
 across a redefinition) fails the recomputed `avail` fact: refusal, not
 miscompilation.
@@ -682,10 +702,12 @@ miscompilation.
    second goal statement (`GabbroZielVerbund`) as its enclosing premise;
    this document covers single-unit certificates only. Linking interaction
    is lane 277/274 territory with the O28 obligations.
-9. **Vectorisation ahead of its correspondence.** Until the generic vector
-   correspondence of §3 item 9 (a)–(d) is proved, vectorising anything but
-   pure non-trapping integer lanes over proved private-or-immutable memory
-   is refused; each admitted certificate cites the pending theorem openly.
+9. **Vectorisation ahead of its correspondence.** Until a generic vector
+   correspondence rule for §3 item 9 (a)–(d) is actually proved, ALL SIMD
+   validation is refused — no transformation is admitted on a pending
+   theorem. The pure non-trapping integer candidate over proved
+   private-or-immutable memory is first in the proof queue, not accepted
+   ahead of it.
 
 ## 8. Review checklist for phase B (acceptance of this architecture)
 
@@ -711,11 +733,15 @@ miscompilation.
 - [ ] Spill-freshness commutation proved against the per-access TSO
       relation (lane 274), not against an abstract memory.
 - [ ] SIMD fault order, visibility, tearing and FP control status proved;
-      remainder cases covered; conditional refusal recorded until the
-      generic vector correspondence (lanes 274+278) closes.
+      remainder cases covered; total refusal of all SIMD validation until a
+      generic vector-correspondence rule (lanes 274+278) is actually proved
+      (easy candidate first in queue, accepted only after its proof).
 - [ ] Three cost levels separated in every certificate and proof: (a)
-      re-summed declared costs, (b) opaque measured work, (c) machine-work
-      bound OPEN with lane 278 — declining never weakens a bound.
+      re-summed declared costs as a mismatch check only, (b) opaque measured
+      work, (c) machine-work bound OPEN with lane 278 — plus the ghost
+      source-budget accounting correspondence (or proved separation with
+      transfer) for budget-exhaustion stops, OPEN; declining never weakens
+      a bound and no source guarantee is weakened to balance the books.
 - [ ] Stuttering/progress argument bounds every inserted straight-line
       sequence; no new back edge without a checked map.
 - [ ] `#print axioms` of the generic soundness theorem is the standard
@@ -730,7 +756,10 @@ machine-work bound (c) and no cost-transfer proof is given here. All are
 phase-B obligations with the owners in §5. Open until proved: the lowering
 checker, the per-access concurrent equivalence for eligible atomics, the
 generic vector correspondence (fault order, visibility, tearing, FP control
-status), the ghost-event call-log preservation, and lane 278's timing
-bounds. The pilot instruction subset stays `Typen.lean`'s `Befehl`; wider
+status — no SIMD admitted before it), the ghost-event call-log preservation,
+the ghost source-budget accounting correspondence (or proved
+physical/source separation with transfer) for budget-exhaustion stops, and
+lane 278's timing bounds. The pilot instruction subset stays
+`Typen.lean`'s `Befehl`; wider
 widths/forms, gather/scatter, fast-math and link-time optimisation remain
 refused until their lanes close.*

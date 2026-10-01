@@ -76,6 +76,8 @@ applied (second commit); no Lean/Rust changes, owned files only.
    274+278) is proved, only pure non-trapping integer lanes over proved
    private-or-immutable memory pass, each citing the pending theorem.
    §7 item 9 records the same refusal as a non-goal.
+   SUPERSEDED by the second review below: no SIMD is admitted on a pending
+   theorem at all, including this candidate.
 4. **Cost treatment audited into three levels** (§1.2, §3 item 11, §5.1
    `CostExport`, §6 example, §8 checklist): (a) source budget semantics
    (re-summed, NOT x86 costing), (b) measured target work (opaque,
@@ -89,6 +91,29 @@ applied (second commit); no Lean/Rust changes, owned files only.
    CFG-mapping bullet carries the ghost records; §8 checklist has the
    corresponding item.
 
+## Second review repairs (third commit on this branch)
+
+Two precise claim fixes; no Lean/Rust changes, owned files only.
+
+1. **No SIMD admission on a pending theorem (§3 item 9, §7 item 9, §8,
+   CUTS).** The previous "admissible remainder citing the pending theorem"
+   was wrong: a pending correspondence admits nothing. Now ALL SIMD
+   validation is refused until a generic vector-correspondence rule for
+   (a)–(d) is actually proved; the pure/private non-trapping integer
+   candidate is first in the proof queue (prioritised), accepted only after
+   its proof closes.
+2. **Budget-exhaustion stops need ghost accounting (§3 item 11(a), §6
+   example, §8, CUTS).** The previous "preserved because no transformation
+   adds/removes stops, validator re-sums" was wrong: removing an op fires a
+   later exhaustion stop later or never, duplicating one fires it earlier —
+   counter-decrement timing itself matters. Now the phase-B proof must carry
+   an explicit ghost source-budget accounting correspondence (eliminated
+   steps as accounted zero-cost ghosts, duplicated steps with earlier-stop
+   displacement proved harmless, stuttering steps consuming explicitly), or
+   keep physical/source budget semantics separate with a proved transfer.
+   Until then, exhaustion-stop preservation is OPEN; the §6 example notes
+   its re-sum is a mismatch check only; no source guarantee weakened.
+
 ### Proposals vs implemented facts vs open obligations
 
 - IMPLEMENTED FACTS (in this lane's scope): the wave-A vocabulary
@@ -101,9 +126,12 @@ applied (second commit); no Lean/Rust changes, owned files only.
 - OPEN OBLIGATIONS (explicit in the document's CUTS and §8, not claimed):
   every Lean definition, rule lemma, checker Bool, refinement theorem,
   lowering checker, per-access concurrent equivalence, vector
-  correspondence, ghost-event preservation proof, machine-work bound with
-  lane 278, and lane-276 image binding. A sibling-lane interface review
-  (274/276/277/278 seams) is still needed before phase B.
+  correspondence (no SIMD admitted before it), ghost-event preservation
+  proof, ghost source-budget accounting correspondence (or proved
+  physical/source separation with transfer) for budget-exhaustion stops,
+  machine-work bound with lane 278, and lane-276 image binding.
+  A sibling-lane interface review (274/276/277/278 seams) is still needed
+  before phase B.
 
 ## Build/check outcome
 
