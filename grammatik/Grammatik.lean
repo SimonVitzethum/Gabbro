@@ -400,3 +400,4 @@ import Grammatik.X86.FenceDrain
 import Grammatik.X86.CostSummary
 import Grammatik.X86.ByteSwap
 import Grammatik.X86.ConditionalMove
+import Grammatik.X86.BitCount
