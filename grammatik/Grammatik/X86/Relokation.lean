@@ -18,24 +18,18 @@ import Grammatik.X86.Wort
 
 namespace Gabbro.Grammatik.X86
 
-/-- Relocation site admissibility class from IMAGE-ABI sec. 4: a site is
-    either a code-operand field of one decoded instruction or a standalone
-    data field of a data-field kind. Deciding the class needs the checked
-    image plus the decoder proof; a caller-claimed instruction start or
-    relocation kind never decides it here. -/
-inductive RelArt where
-  | codeOperand
-  | datenFeld
-  deriving DecidableEq, Repr
+/-- Helper-level acceptance never decides final validation: site
+    admissibility (code-operand field versus standalone data field,
+    IMAGE-ABI sec. 4) needs the checked image plus the decoder proof,
+    so this flag stays `false` and no helper fact admits a site. (No
+    local inductive is declared for the two classes: the image-mapping
+    lane owns that vocabulary, and a second model of it here would
+    collide with it.) -/
+def relAnnahmeEndgueltig : Bool := false
 
-/-- Helper-level acceptance never decides final validation. -/
-def relAnnahmeEndgueltig : RelArt → Bool
-  | _ => false
-
-/-- No helper fact admits a site: admissibility stays with the checked
-    image-plus-decoder proof, and is explicitly OPEN here. -/
-theorem relAnnahme_offen (a : RelArt) : relAnnahmeEndgueltig a = false := by
-  cases a <;> rfl
+/-- No helper fact admits a site: complete relocation acceptance is
+    explicitly OPEN/refused here. -/
+theorem relAnnahme_offen : relAnnahmeEndgueltig = false := by rfl
 
 /-! ## 1. Signed-32 fit and two's-complement encoding. -/
 

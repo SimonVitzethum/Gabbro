@@ -84,3 +84,31 @@ per-instruction source correspondence, control-target and ABI checks,
 concurrency refinement, cost transfer. Complete relocation acceptance
 is explicitly OPEN/refused at helper level; no final-byte source claim
 is made.
+
+## Repair after failed integration gate (2026-10-01, second session)
+
+- Evidence: the merge build failed with
+  `import Grammatik.X86.Relokation failed, environment already contains
+  'Gabbro.Grammatik.X86.RelArt.datenFeld.elim' from Grammatik.X86.Bild`.
+  Lane 283 (`Bild.lean`, merged after this lane branched) owns an
+  image-level `RelArt` with the same constructor names; my helper-level
+  duplicate inductive collided with it. Nothing was merged.
+- Fix in owned `Relokation.lean` only: the local `RelArt` inductive
+  (with `codeOperand`/`datenFeld`) is deleted. The OPEN marker is now
+  the Bool flag `relAnnahmeEndgueltig := false` with
+  `relAnnahme_offen : relAnnahmeEndgueltig = false` (by `rfl`), same
+  documented meaning, no parallel type. No new dependency on
+  `Bild.lean` (it postdates this task; cross-lane imports are the
+  coordinator's ordering decision), no second model, no weakened
+  guarantee: complete relocation acceptance stays explicitly
+  OPEN/refused, and every other definition/theorem is byte-identical.
+- Re-verification: `./lean-probe` 0 errors, `./lean-bau`
+  `== exit 0; 0 error line(s) in the COMPLETE output`; `#print axioms`
+  unchanged (at most `propext`/`Quot.sound`); premises all used.
+- Residual risk, stated plainly: from this clone (branched before
+  `Bild.lean` existed) no further name overlap with `Bild.lean` can be
+  ruled out beyond the evidenced `RelArt` collision; all other names
+  introduced here are relocation/patch-specific (`rel32*`, `abs64*`,
+  `patch*`, `tcNat`, `disjunktStellen`, `sonde_*`). A fresh independent
+  review of the changed commit is required; full source/binary-chain
+  acceptance is not claimed.
