@@ -75,6 +75,27 @@ No theorem quantifies over program syntax, so HARD-RULES 13 needs no
   source-`bswap` correspondence, and any TSO/concurrency claim are
   explicitly CUT (file lists all of them).
 
+## Integration gate failure — analysis (2026-10-01, second turn)
+
+Gate evidence: the merge build in `/home/simon/Dokumente/Gabbro`
+reached `[397/398]`, printed all of this lane's `#print axioms` lines
+as `info` (no error in `ByteSwap.lean`), then failed ONLY at the
+final umbrella target with `failed to create thread`, exit 134.
+The "2 error lines" are the umbrella crash lines, not module errors.
+
+Local reproduction just now: `./lean-probe` on the module still
+`0 error(s), exit 0`; `./lean-bau` fails identically at the umbrella
+target. Combined with the earlier stash test (skeleton state crashes
+the same way), this proves the failure is OS thread exhaustion at
+the umbrella link-compile, independent of this lane's content. There
+is no module-side repair: any edit would only invalidate the
+accepted independent review without changing the outcome.
+
+Concrete blocker for the coordinator: free machine resources (or
+wait for load to drop) and re-run the merge build; nothing in
+`muse/420` needs to change. Module commit `16641be9` keeps its
+accepted review; this report commit touches the report only.
+
 ## Task feedback (the brief was followed throughout; nothing believed wrong)
 
 - The brief's "no invented 16-bit BSWAP" is load-bearing beyond
