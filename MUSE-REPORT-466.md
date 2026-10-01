@@ -112,7 +112,32 @@ witness, no native/source/timing closure) is exactly what is delivered.
   no defects, no hidden assumptions, no vacuity, no forged evidence,
   no duplicated IR, no safety weakening, bounded claim exactly delivered.
 
+## Second re-review (new pin 4a6b0415)
+
+- New pinned HEAD `4a6b0415f3322fc36ff539f1930316325db25c19`
+  (verified: fresh `git fetch <a418> muse/418` gives exactly this as
+  FETCH_HEAD; `.tmp/review/SNAPSHOT.json` pins the same hash).
+- Delta previous-head..new-head is exactly one commit
+  (`lane 418: second repair note, gate failure unchanged (no code
+  change)`), touching only `MUSE-REPORT-418.md` (+12 lines: a second
+  repair note restating the same gate failure with a byte-identical log).
+  `git diff` over `grammatik/` is empty, and the supplied
+  `.tmp/review/author-418` copy of `BitScan.lean` remains sha256-identical
+  to the committed file (`fb253d19…`, unchanged since the first review).
+  No proof changed; nothing new to re-inspect beyond identity.
+- The new note repeats the established evidence (7 probe axiom lines
+  print in the merge build, `[397/398] Building Grammatik` aborts with
+  `failed to create thread` / exit 134, local probe green, full bau red
+  only at the umbrella) and claims no new Lean result and no full-chain
+  acceptance. Consistent with all prior evidence and my own probes.
+- Fresh reproduction in my clone on the new pin: staged only the
+  supplied candidate file at its exact path, `./lean-probe` →
+  `== 0 error(s) in the COMPLETE output; exit 0` with the same
+  `[propext, Quot.sound]` axiom lines; staged file removed afterwards,
+  `git status` clean before committing this report.
+- All earlier findings stand unchanged.
+
 ## Verdict
 
-CANDIDATE: 418 eb137c770c3fae49c2157dfd15524f8524ed9da7
+CANDIDATE: 418 4a6b0415f3322fc36ff539f1930316325db25c19
 VERDICT: ACCEPT
