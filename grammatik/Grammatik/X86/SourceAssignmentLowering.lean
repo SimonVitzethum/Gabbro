@@ -233,17 +233,391 @@ theorem senkAssign_korrekt {D : Deklaration} {V : Vertrag D} {l : Bool}
     rw [hmap, lauf_anhang _ _ _ _ hrun1, lauf_einzeln_gleich]
     exact hstore
   refine ⟨_, hrun, hval1, rfl, hRep.1, hRep.2⟩
+/-! ## Witness: one table, one writing function, one step. -/
+
+/-- Witness signature: parameterless, no answer, writes the table. -/
+def witSig628 : Signatur Unit Empty Empty Empty :=
+  { params := [], erg := none, gruende := 0, haelt := [],
+    schreibt := fun _ => true, gschreibt := fun g => (nomatch g),
+    konsumiert := [], produziert := [], boden := none }
+
+/-- Witness declaration: one table with one `.int 12 100` field, one
+    parameterless function whose contract writes it, nothing else. -/
+def witD628 : Deklaration where
+  Tab := Unit
+  count := fun _ => 1
+  Feld := fun _ => Unit
+  typ := fun _ _ => .int 12 100
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some () | _ => none
+  Glob := Empty
+  gtyp := fun g => nomatch g
+  nutzlast := fun g => nomatch g
+  atomar := fun g => nomatch g
+  geteilt := fun _ => false
+  ggeteilt := fun g => nomatch g
+  Lock := Empty
+  rang := fun L => nomatch L
+  maskiert := fun L => nomatch L
+  Marke := Empty
+  stufen := fun m => nomatch m
+  braucht := fun _ => []
+  gbraucht := fun g => nomatch g
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 0
+  sigNr := fun _ => witSig628
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun i => nomatch i
+  invs := []
+  Ax := Empty
+  aparams := fun a => nomatch a
+  aerg := fun a => nomatch a
+  aschreibt := fun a => nomatch a
+  agschreibt := fun a => nomatch a
+  Reg := Empty
+  rtyp := fun r => nomatch r
+  rklasse := fun r => nomatch r
+  spiegel := fun r => nomatch r
+  rzusage := fun r => nomatch r
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun g => nomatch g
+
+/-- The witness contract: writes the table. -/
+def witV628 : Vertrag witD628 :=
+  { schreibt := fun _ => true
+    gschreibt := fun g => nomatch g
+    erg := none
+    gruende := 0
+    haelt := []
+    produziert := []
+    boden := none }
+
+/-- The witness oracle: no axioms, registers or globals to answer. -/
+def witO628 : Orakel witD628 where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r => nomatch r
+  sichtbar := fun g => nomatch g
+
+/-- The witness callee table: every call succeeds without moving memory. -/
+def witR628 : ∀ f : witD628.Fn, World witD628 →
+    Env witD628 (witD628.params f) → RufAusgang f :=
+  fun _ σ _ => .ok σ ()
+
+/-- Witness context: one integer variable in `0 .. 88`. -/
+def witCtx628 : Ctx := [.int 0 88]
+
+/-- The witness index: row 0 (in the statement context). -/
+def witI628 : Expr witD628 witCtx628 [] (.index (witD628.count ())) :=
+  Expr.lit 0
+
+/-- The witness value: `x + 12` with `x = 30`, hence `42` in `12 .. 100`.
+    The computed range is definitionally the field type, so the fragment
+    lowering sees the constructor-headed addition itself. -/
+def witE628 : Expr witD628 witCtx628 [] (.int 12 100) :=
+  .add (.var .hier) (.lit 12)
+
+/-- Witness environment: `x = 30`. -/
+def witEnv628 : Env witD628 witCtx628 :=
+  .cons ⟨30, by decide, by decide⟩ .nil
+
+/-- The witness world: the slot holds 12, no trace yet. -/
+def witSigma628 : World witD628 where
+  slots := fun t _ f => by cases t; cases f; exact ⟨12, by decide, by decide⟩
+  globs := fun g => nomatch g
+  spur := []
+
+/-- The witness field type. -/
+theorem witHT628 : witD628.typ () () = .int 12 100 := rfl
+
+/-- The witness contract writes the table. -/
+theorem witHw628 : witV628.schreibt () = true := rfl
+
+/-- The witness table needs no guards. -/
+theorem witHL628 : darf witD628 () [] :=
+  fun _ h => False.elim (List.not_mem_nil h)
+
+/-- The witness value at the target: 42. -/
+def witVal628 : Zahl 12 100 := ⟨42, by decide, by decide⟩
+
+/-- Admission holds on the witness layout. -/
+theorem witOk628 : repOk (witD628.typ () ()) 8192 16 0 = true := by
+  decide
+
+/-- The witness index evaluates to row 0. -/
+theorem witHk628 :
+    (eval witSigma628 witI628 witSigma628 witEnv628).n = 0 :=
+  rfl
+
+/-- The read world of the witness run (transported value places). -/
+def witSL628 : World witD628 :=
+  witSigma628.lese []
+    (witI628.orte ++
+      (cast (congrArg (Expr witD628 witCtx628 []) witHT628.symm)
+        witE628).orte)
+
+/-- The witness value evaluates to 42 in the single source model. -/
+theorem witHeval628 :
+    (eval witSL628 witE628 witSL628 witEnv628).n = witVal628.n :=
+  rfl
+
+/-- Witness register assignment: the source variable lives in `r10`. -/
+def witAbb628 : ∀ (τ : Ty), Var witCtx628 τ → Register :=
+  fun _ _ => .r10
+
+/-- Witness register file: `r10` holds the source value 30, `rbx` the
+    admitted slot base 8192, everything else zero. -/
+def witReg628 : Register → Wort :=
+  fun q => if q = Register.r10 then intWort 30
+    else if q = Register.rbx then natAdresse 8192
+    else BitVec.ofNat 64 0
+
+/-- The generated witness program: lowered addition plus the slot store. -/
+def witProg628 : List Befehl :=
+  [Befehl.movReg64 Register.rax Register.r10,
+   Befehl.movImm64 Register.rcx (intWort 12),
+   Befehl.addReg64 Register.rax Register.rcx,
+   Befehl.store64 Register.rbx Register.rax (BitVec.ofNat 32 0)]
+
+/-- Witness program bytes from the canonical encodings. -/
+def witBytes628 : List Byte := (witProg628.map encode).flatten
+
+/-- Witness memory: program bytes at 4096 (executable), data cell at 8192
+    (readable/writable) -- the `Byteschritt` layout vocabulary reused.
+    Code `[4096, 4128)` and data `[8192, 8200)` are disjoint. -/
+def witMem628 : Speicher :=
+  { bytes := bytesAusProg witBytes628 4096
+    lesbar := ketteDaten
+    schreibbar := ketteDaten
+    ausfuehrbar := ketteExec }
+
+/-- Witness start state. -/
+def witStart628 : Zustand :=
+  { register := witReg628
+    flags := witnessFlags
+    rip := BitVec.ofNat 64 4096
+    speicher := witMem628 }
+
+/-- The witness slot address: layout base 8192, offset 0. -/
+def witA628 : Adresse := slotAddr 8192 0
+
+/-- The witness target memory after the word write. -/
+def witM628' : Speicher :=
+  { witMem628 with bytes := writeBytes witMem628 witA628 (zahlWort witVal628) }
+
+/-- The witness expression lowers to the three pilot instructions. -/
+theorem witSenk628 :
+    senkFrag witAbb628 witE628 Register.rax Register.rcx =
+      some [Befehl.movReg64 Register.rax Register.r10,
+        Befehl.movImm64 Register.rcx (intWort 12),
+        Befehl.addReg64 Register.rax Register.rcx] := rfl
+
+/-- The lowered assignment is the generated program plus the store. -/
+theorem witSenkAssign628 :
+    senkAssign witAbb628 witE628 Register.rax Register.rcx
+      Register.rbx (BitVec.ofNat 32 0) = some witProg628 :=
+  senkAssign_ok witAbb628 witE628 _ _ _ _ _ witSenk628
+
+/-- Environment representation holds on the witness registers. -/
+theorem witUmgebung628 :
+    EnvRepr witEnv628 witStart628.register witAbb628 := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+/-- Register freshness holds: no variable lives in `rax`/`rcx`. -/
+theorem witFrisch628 : Frisch witAbb628 Register.rax Register.rcx := by
+  refine ⟨fun τ x => ⟨?_, ?_⟩, by decide⟩
+  · show Register.r10 ≠ Register.rax
+    decide
+  · show Register.r10 ≠ Register.rcx
+    decide
+
+/-- Neither working register is the stack pointer. -/
+theorem witHRsp628 :
+    Register.rax ≠ Register.rsp ∧ Register.rcx ≠ Register.rsp :=
+  ⟨by decide, by decide⟩
+
+/-- The slot base register is neither working register. -/
+theorem witHBasis628 :
+    Register.rbx ≠ Register.rax ∧ Register.rbx ≠ Register.rcx :=
+  ⟨by decide, by decide⟩
+
+/-- The base register holds the admitted slot address. -/
+theorem witHBaseR628 :
+    witStart628.register Register.rbx = slotAddr 8192 0 := by
+  decide
+
+/-- The target address is the admitted slot address. -/
+theorem witHa628 : witA628 = slotAddr 8192 0 := rfl
+
+/-- The target word write succeeds on the witness memory. -/
+theorem witHTgt628 :
+    write64 witMem628 witA628 (zahlWort witVal628) = some witM628' := by
+  simp only [write64, witM628']
+  rw [if_pos (by decide : schreibbar8 witMem628 witA628 = true)]
+
+/-- The witness slot is readable. -/
+theorem witHRd628 : lesbar8 witMem628 witA628 = true := by
+  decide
+
+/-- Code/data separation holds on the witness layout. -/
+theorem witRegionGetrennt628 :
+    regionDisjunkt
+      (alsRegion { tab := 0, basis := 4096, len := 32, ausr := 8 })
+      (alsRegion { tab := 1, basis := 8192, len := 16, ausr := 8 }) =
+      true := by
+  decide
+
+/-- FETCHED-VALUE witness: four byte steps from actual memory put the
+    exact source value 42 into `rax`. -/
+theorem witBytesWert628 :
+    ausgangReg Register.rax (laufBytes 4 witStart628) =
+      some (intWort 42) := by
+  decide
+
+/-- MEMORY-CHANGING fetched run: the fourth fetched byte step stores
+    `rax` through `rbx`, observably changing the data cell from zero. -/
+theorem witBytesSpeicher628 :
+    ausgangByte (natAdresse 8192) (laufBytes 4 witStart628) =
+      some (natByte 42) ∧
+    witStart628.speicher.bytes (natAdresse 8192) = BitVec.ofNat 8 0 := by
+  decide
+
+/-- The fetched run observably changes memory (non-degenerate run). -/
+theorem witLaufAendert628 :
+    ∃ a : Adresse, ausgangByte a (laufBytes 4 witStart628) ≠
+      some (witStart628.speicher.bytes a) := by
+  refine ⟨natAdresse 8192, ?_⟩
+  rw [witBytesSpeicher628.1, witBytesSpeicher628.2]
+  decide
+
+/-- Witness with the second executed opcode byte forged (137 to 0). -/
+def witBytesFalsch628 : List Byte := witBytes628.set 1 (natByte 0)
+
+def witStartFalsch628 : Zustand :=
+  { witStart628 with speicher := { witMem628 with bytes := bytesAusProg witBytesFalsch628 4096 } }
+
+/-- PLANTED FETCHED REFUSAL: forging the executed opcode byte admits no
+    transition -- the changed byte governs the run. -/
+theorem witByteFaelschung628 :
+    ausgangRip (byteschritt witStartFalsch628) = none := by
+  decide
+
+/-- JOINT WITNESS for `senkAssign_korrekt`: every premise holds jointly
+    on the witness declaration -- one table that the witness function
+    writes (`witD628.schreibt`), a reached one-step source run that
+    changes the slot `12 -> 42`, the generated lowered sequence with its
+    fetched-byte run that changes the mapped target bytes, and code/data
+    separation -- and so does the conclusion. Sums, floats, bools,
+    globals and function pointers stay outside the fragment (the planted
+    refusals above). -/
+theorem senkAssign_korrekt_zeuge :
+    ∃ (σ' : World witD628) (ρ' : Env witD628 witCtx628) (m' : Speicher)
+      (s' : Zustand),
+      repOk (witD628.typ () ()) 8192 16 0 = true ∧
+      witD628.schreibt () () = true ∧
+      (eval witSL628 witI628 witSL628 witEnv628).n = 0 ∧
+      (eval witSL628 witE628 witSL628 witEnv628).n = witVal628.n ∧
+      execStmt witO628 0 witR628
+        (Stmt.assignSlot (l := false) () () witI628
+          (cast (congrArg (Expr witD628 witCtx628 []) witHT628.symm)
+            witE628) witHw628 witHL628)
+        witSigma628 witEnv628 = .ok σ' ρ' ∧
+      senkFrag witAbb628 witE628 Register.rax Register.rcx =
+        some [Befehl.movReg64 Register.rax Register.r10,
+          Befehl.movImm64 Register.rcx (intWort 12),
+          Befehl.addReg64 Register.rax Register.rcx] ∧
+      senkAssign witAbb628 witE628 Register.rax Register.rcx
+        Register.rbx (BitVec.ofNat 32 0) = some witProg628 ∧
+      EnvRepr witEnv628 witStart628.register witAbb628 ∧
+      Frisch witAbb628 Register.rax Register.rcx ∧
+      (Register.rax ≠ Register.rsp ∧ Register.rcx ≠ Register.rsp) ∧
+      (Register.rbx ≠ Register.rax ∧ Register.rbx ≠ Register.rcx) ∧
+      witStart628.register Register.rbx = slotAddr 8192 0 ∧
+      witA628 = slotAddr 8192 0 ∧
+      write64 witStart628.speicher witA628 (zahlWort witVal628) =
+        some m' ∧
+      lesbar8 witStart628.speicher witA628 = true ∧
+      lauf (([Befehl.movReg64 Register.rax Register.r10,
+          Befehl.movImm64 Register.rcx (intWort 12),
+          Befehl.addReg64 Register.rax Register.rcx] ++
+          [Befehl.store64 Register.rbx Register.rax
+            (BitVec.ofNat 32 0)]).map
+        fun b => (⟨b, (encode b).length⟩ : Decodiert))
+        witStart628 = some s' ∧
+      s'.register Register.rax = intWort 42 ∧
+      s'.speicher = m' ∧
+      RepSlot () 0 () 12 100 witHT628 witA628 m' σ' ∧
+      (∃ w, read64 m' witA628 = some w ∧
+        wortZahl 12 100 w = some witVal628) ∧
+      (∃ a : Adresse, ausgangByte a (laufBytes 4 witStart628) ≠
+        some (witStart628.speicher.bytes a)) ∧
+      (witSigma628.slots () 0 ()).n = 12 ∧
+      (σ'.slots () 0 ()).n = 42 ∧
+      witStart628.speicher.bytes witA628 ≠ m'.bytes witA628 := by
+  have hExecW : ∃ σ' ρ', execStmt witO628 0 witR628
+      (Stmt.assignSlot (l := false) () () witI628
+        (cast (congrArg (Expr witD628 witCtx628 []) witHT628.symm)
+          witE628) witHw628 witHL628)
+      witSigma628 witEnv628 = .ok σ' ρ' := by
+    simp only [execStmt]
+    exact ⟨_, _, rfl⟩
+  obtain ⟨σ', ρ', hExec⟩ := hExecW
+  have hMain := senkAssign_korrekt witO628 0 witR628 () () 12 100
+    witHT628 8192 16 0 witOk628 witI628 witE628 witHw628 witHL628
+    witSigma628 witEnv628 witSL628 rfl 0 witVal628 witHk628 witHeval628
+    witAbb628 Register.rax Register.rcx Register.rbx
+    (BitVec.ofNat 32 0) rfl witFrisch628 witHRsp628 witHBasis628
+    witStart628 witM628' witHBaseR628 witA628 witHa628 witHTgt628
+    witHRd628 _ witSenk628 witUmgebung628 σ' ρ' hExec
+  obtain ⟨s2, hrunW, hvalW, hmemW, hRepW, hreadW⟩ := hMain
+  have hval42 : s2.register Register.rax = intWort 42 := by
+    rw [witHeval628] at hvalW
+    exact hvalW
+  have hBefore : (witSigma628.slots () 0 ()).n = 12 := rfl
+  have h0 : witStart628.speicher.bytes witA628 = BitVec.ofNat 8 0 := by
+    decide
+  have h1 : witM628'.bytes witA628 = wortByte (zahlWort witVal628) 0 := by
+    have h := writeBytesN_hit witMem628 witA628 (zahlWort witVal628) 8 0
+      (by decide) (by decide)
+    rw [addrOff_null] at h
+    show writeBytes witMem628 witA628 (zahlWort witVal628) witA628 = _
+    unfold writeBytes
+    exact h
+  have hBytes : witStart628.speicher.bytes witA628 ≠
+      witM628'.bytes witA628 := by
+    rw [h0, h1]
+    decide
+  refine ⟨σ', ρ', witM628', s2, witOk628, rfl, witHk628, witHeval628,
+    hExec, witSenk628, witSenkAssign628, witUmgebung628, witFrisch628,
+    witHRsp628, witHBasis628, witHBaseR628, witHa628, witHTgt628,
+    witHRd628, hrunW, hval42, hmemW, hRepW, hreadW, witLaufAendert628,
+    hBefore, ?hAfter, hBytes⟩
+  case hAfter =>
+    cases hExec
+    rfl
+
 /- CUTS:
      - Proved: value bridge, lowering shape, transport helpers,
        unsupported-expression/nesting refusals, negative-range and
-       code-alias region refusals, and the statement-level
-       correspondence `senkAssign_korrekt` (source `assignSlot` through
-       `execStmt` agrees with generated `lauf` plus `RepSlot` read-back).
-     - Joint non-degenerate `_zeuge` witness OPEN (next increment).
-     - Multi-step fetched-byte induction (`laufBytes` agreement for the
-       whole generated sequence) OPEN; single steps agree by
-       `kanonisch_schritt_ueberein`, concrete fetched witnesses by
-       `decide` (next increment).
+       code-alias region refusals, the statement-level correspondence
+       `senkAssign_korrekt` (source `assignSlot` through `execStmt`
+       agrees with generated `lauf` plus `RepSlot` read-back), and the
+       joint non-degenerate witness `senkAssign_korrekt_zeuge` (one
+       table its function writes; source slot `12 -> 42` and mapped
+       target bytes both change; fetched-byte run with value and
+       memory observations; forged-opcode fetched refusal).
+     - Multi-step fetched-byte induction (`laufBytes` agreement for an
+       ARBITRARY generated sequence) OPEN; single steps agree by
+       `kanonisch_schritt_ueberein`, the concrete generated bytes agree
+       by `decide` (`witBytesWert628`, `witBytesSpeicher628`).
      - Pilot integer fragment only: value must lower via `senkFrag`
        (lit/var/one add/sub over atoms); sums, FP, locks, calls, loops,
        globals, pointers and non-zero displacements outside.
@@ -261,5 +635,11 @@ theorem senkAssign_korrekt {D : Deklaration} {V : Vertrag D} {l : Bool}
 #print axioms evalTrans
 #print axioms paarCancel
 #print axioms senkAssign_korrekt
+#print axioms witSenkAssign628
+#print axioms witRegionGetrennt628
+#print axioms witBytesWert628
+#print axioms witBytesSpeicher628
+#print axioms witByteFaelschung628
+#print axioms senkAssign_korrekt_zeuge
 
 end Gabbro.Grammatik.X86
