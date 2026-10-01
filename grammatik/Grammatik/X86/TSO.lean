@@ -306,4 +306,52 @@ theorem fifo_reihenfolge (s s1 s2 s3 : TSOZustand) (c : Nat)
   have he : s2.puffer c = ⟨a, v⟩ :: [⟨b, w⟩] := e2
   exact flush_schreibt_kopf s2 s3 c h3 ⟨a, v⟩ [⟨b, w⟩] he
 
+/-! ## 7. Drain: fence readiness is local to the own buffer -/
+
+/-- The fence is ready exactly when the own buffer is empty. -/
+theorem zaunBereit_iff_leer (s : TSOZustand) (c : Nat) :
+    zaunBereit s c = true ↔ s.puffer c = [] := by
+  unfold zaunBereit
+  cases h : s.puffer c with
+  | nil =>
+    simp
+  | cons e rest =>
+    simp
+
+/-- Flushing the last entry makes the fence ready. -/
+theorem zaun_nach_flush (s s' : TSOZustand) (c : Nat)
+    (h : flushKern s c = some s') (e : TSOEintrag)
+    (he : s.puffer c = [e]) :
+    zaunBereit s' c = true := by
+  have hbuf := flush_entfernt_kopf s s' c h e [] he
+  rw [zaunBereit_iff_leer]
+  simpa using hbuf
+
+/-- Another core's issue never changes this core's fence readiness. -/
+theorem zaun_fremd_issue (s s' : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Byte) (h : issueByte s c a v = some s')
+    (d : Nat) (hd : d ≠ c) :
+    zaunBereit s' d = zaunBereit s d := by
+  have hbuf := issue_anderer_kern s s' c a v h hd
+  unfold zaunBereit
+  rw [hbuf]
+
+/-- Another core's flush never changes this core's fence readiness. -/
+theorem zaun_fremd_flush (s s' : TSOZustand) (c : Nat)
+    (h : flushKern s c = some s')
+    (d : Nat) (hd : d ≠ c) :
+    zaunBereit s' d = zaunBereit s d := by
+  have hbuf := flush_anderer_kern s s' c h hd
+  unfold zaunBereit
+  rw [hbuf]
+
+/-- A local fence drains NO foreign buffer: core 0 can be fence-ready
+    while core 1 still holds a pending store. -/
+theorem zaun_kein_fremd_drain :
+    ∃ s : TSOZustand, zaunBereit s 0 = true ∧ s.puffer 1 ≠ [] := by
+  refine ⟨⟨zeugenSpeicher,
+    fun d => if d = 1 then [⟨(0 : Adresse), BitVec.ofNat 8 1⟩] else []⟩, ?_, ?_⟩
+  · decide
+  · decide
+
 end Gabbro.Grammatik.X86
