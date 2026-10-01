@@ -302,14 +302,304 @@ theorem cvttPaket_gleitRoh (x : Gabbro.Grammatik.GFloat)
     | none => rfl
     | some v => rfl
 
+/-! ## 8. Witness: one float table, one writing contract, one step. -/
+
+/-- Witness signature: parameterless, no answer, writes the table. -/
+def fltWitSig : Gabbro.Grammatik.Signatur Unit Empty Empty Empty :=
+  { params := [], erg := none, gruende := 0, haelt := [],
+    schreibt := fun _ => true, gschreibt := fun g => (nomatch g),
+    konsumiert := [], produziert := [], boden := none }
+
+/-- Witness declaration: one table with one `.fl (0,1) (1,1)` field, one
+    parameterless function whose contract writes it, nothing else. -/
+def fltWitD : Gabbro.Grammatik.Deklaration where
+  Tab := Unit
+  count := fun _ => 1
+  Feld := fun _ => Unit
+  typ := fun _ _ => .fl (0, 1) (1, 1)
+  erlaubt := fun _ _ _ _ => true
+  tabNr := fun _ => some ()
+  Glob := Empty
+  gtyp := fun g => nomatch g
+  nutzlast := fun g => nomatch g
+  atomar := fun g => nomatch g
+  geteilt := fun _ => false
+  ggeteilt := fun g => nomatch g
+  Lock := Empty
+  rang := fun L => nomatch L
+  maskiert := fun L => nomatch L
+  Marke := Empty
+  stufen := fun m => nomatch m
+  braucht := fun _ => []
+  gbraucht := fun g => nomatch g
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 0
+  sigNr := fun _ => fltWitSig
+  eigner_nie_erzeugt := fun n t m s _ => nomatch m
+  Inv := Empty
+  traeger := fun i => nomatch i
+  invs := []
+  Ax := Empty
+  aparams := fun a => nomatch a
+  aerg := fun a => nomatch a
+  aschreibt := fun a => nomatch a
+  agschreibt := fun a => nomatch a
+  Reg := Empty
+  rtyp := fun r => nomatch r
+  rklasse := fun r => nomatch r
+  spiegel := fun r => nomatch r
+  rzusage := fun r => nomatch r
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun n i _ => nomatch i
+  ggeteilt_bewacht := fun g => nomatch g
+
+/-- The witness contract: writes the table. -/
+def fltWitV : Gabbro.Grammatik.Vertrag fltWitD :=
+  { schreibt := fun _ => true
+    gschreibt := fun g => nomatch g
+    erg := none
+    gruende := 0
+    haelt := []
+    produziert := []
+    boden := none }
+
+/-- The witness oracle: no axioms, registers or globals to answer. -/
+def fltWitO : Gabbro.Grammatik.Orakel fltWitD where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r => nomatch r
+  sichtbar := fun g => nomatch g
+
+/-- The witness callee table: every call succeeds without moving memory. -/
+def fltWitR : ∀ f : fltWitD.Fn, Gabbro.Grammatik.World fltWitD →
+    Gabbro.Grammatik.Env fltWitD (fltWitD.params f) →
+    Gabbro.Grammatik.RufAusgang f :=
+  fun _ σ _ => .ok σ ()
+
+/-- Minus zero in `0 .. 1`: finite and inside (decided actual operations). -/
+def minusGleit : Gabbro.Grammatik.Gleit (0, 1) (1, 1) :=
+  ⟨Gleitkomma.nullN Gleitkomma.f64, by decide, by decide, by decide⟩
+
+/-- Plus zero in `0 .. 1`: finite and inside (decided actual operations). -/
+def plusGleit : Gabbro.Grammatik.Gleit (0, 1) (1, 1) :=
+  ⟨Gleitkomma.nullP Gleitkomma.f64, by decide, by decide, by decide⟩
+
+/-- The witness world: the slot holds `-0`, no trace yet. -/
+def fltWitSigma : Gabbro.Grammatik.World fltWitD where
+  slots := fun t _ f => by cases t; cases f; exact minusGleit
+  globs := fun g => nomatch g
+  spur := []
+
+/-- The witness environment: the variable to write holds `+0`. -/
+def fltWitRho :
+    Gabbro.Grammatik.Env fltWitD [Gabbro.Grammatik.Ty.fl (0, 1) (1, 1)] :=
+  Gabbro.Grammatik.Env.cons plusGleit Gabbro.Grammatik.Env.nil
+
+/-- The witness index: row 0 (in the same context as the value). -/
+def fltWitI :
+    Gabbro.Grammatik.Expr fltWitD [Gabbro.Grammatik.Ty.fl (0, 1) (1, 1)] []
+      (Gabbro.Grammatik.Ty.index (fltWitD.count ())) :=
+  Gabbro.Grammatik.Expr.lit 0
+
+/-- The witness value expression: the variable holding `+0`. -/
+def fltWitE :
+    Gabbro.Grammatik.Expr fltWitD [Gabbro.Grammatik.Ty.fl (0, 1) (1, 1)] []
+      (fltWitD.typ () ()) :=
+  Gabbro.Grammatik.Expr.var Gabbro.Grammatik.Var.hier
+
+/-- The witness field type. -/
+theorem fltWitHT : fltWitD.typ () () = Gabbro.Grammatik.Ty.fl (0, 1) (1, 1) :=
+  rfl
+
+/-- The witness contract writes the table. -/
+theorem fltWitHw : fltWitV.schreibt () = true := rfl
+
+/-- The witness function writes the table. -/
+theorem fltWitSchreibt : fltWitD.schreibt () () = true := rfl
+
+/-- The witness table needs no guards. -/
+theorem fltWitHL : Gabbro.Grammatik.darf fltWitD () [] :=
+  fun _ h => False.elim (List.not_mem_nil h)
+
+/-! ## 9. Joint witness: one table write, memory-changing, observations agree. -/
+
+/-- JOINT WITNESS: the contract and the function write the one float table;
+    the reached one-step run changes the slot `-0 -> +0` (bit patterns
+    differ: `zuBits` disagrees); every covered source observation agrees on
+    the two values -- comparisons (`vergleichsGleich`), truncation
+    (`gleitRoh`), range-holding (`gleitPasst`). -/
+theorem null_beobachtung_zeuge :
+    ∃ (σ' : Gabbro.Grammatik.World fltWitD)
+      (ρ' : Gabbro.Grammatik.Env fltWitD
+        [Gabbro.Grammatik.Ty.fl (0, 1) (1, 1)]),
+      fltWitD.schreibt () () = true ∧
+      fltWitV.schreibt () = true ∧
+      Gabbro.Grammatik.execStmt fltWitO 0 fltWitR
+        (Gabbro.Grammatik.Stmt.assignSlot (l := false) () () fltWitI fltWitE
+          fltWitHw fltWitHL)
+        fltWitSigma fltWitRho = .ok σ' ρ' ∧
+      (fltWitSigma.slots () 0 ()).x = Gleitkomma.nullN Gleitkomma.f64 ∧
+      (σ'.slots () 0 ()).x = Gleitkomma.nullP Gleitkomma.f64 ∧
+      (fltWitSigma.slots () 0 ()).x ≠ (σ'.slots () 0 ()).x ∧
+      vergleichsGleich (fltWitSigma.slots () 0 ()).x (σ'.slots () 0 ()).x ∧
+      Gabbro.Grammatik.gleitRoh (fltWitSigma.slots () 0 ()).x =
+        Gabbro.Grammatik.gleitRoh (σ'.slots () 0 ()).x ∧
+      (Gabbro.Grammatik.gleitPasst (0, 1) (1, 1)
+        (fltWitSigma.slots () 0 ()).x).isSome =
+        (Gabbro.Grammatik.gleitPasst (0, 1) (1, 1)
+          (σ'.slots () 0 ()).x).isSome ∧
+      Gleitkomma.zuBits Gleitkomma.f64 (fltWitSigma.slots () 0 ()).x ≠
+        Gleitkomma.zuBits Gleitkomma.f64 (σ'.slots () 0 ()).x := by
+  have hExecFull : ∃ σ' ρ', Gabbro.Grammatik.execStmt fltWitO 0 fltWitR
+      (Gabbro.Grammatik.Stmt.assignSlot (l := false) () () fltWitI fltWitE
+        fltWitHw fltWitHL)
+      fltWitSigma fltWitRho = .ok σ' ρ' := by
+    simp only [Gabbro.Grammatik.execStmt]
+    exact ⟨_, _, rfl⟩
+  obtain ⟨σ', ρ', hExec⟩ := hExecFull
+  have hBefore : (fltWitSigma.slots () 0 ()).x =
+      Gleitkomma.nullN Gleitkomma.f64 := rfl
+  have hAfter : (σ'.slots () 0 ()).x =
+      Gleitkomma.nullP Gleitkomma.f64 := by
+    cases hExec
+    rfl
+  have hNe : (fltWitSigma.slots () 0 ()).x ≠ (σ'.slots () 0 ()).x := by
+    rw [hBefore, hAfter]
+    decide
+  have hVgl : vergleichsGleich (fltWitSigma.slots () 0 ()).x
+      (σ'.slots () 0 ()).x := by
+    rw [hBefore, hAfter]
+    exact null_vergleichsGleich
+  have hRoh : Gabbro.Grammatik.gleitRoh (fltWitSigma.slots () 0 ()).x =
+      Gabbro.Grammatik.gleitRoh (σ'.slots () 0 ()).x := by
+    rw [hBefore, hAfter]
+    exact null_roh_gleich
+  have hPasst : (Gabbro.Grammatik.gleitPasst (0, 1) (1, 1)
+        (fltWitSigma.slots () 0 ()).x).isSome =
+        (Gabbro.Grammatik.gleitPasst (0, 1) (1, 1)
+          (σ'.slots () 0 ()).x).isSome := by
+    rw [hBefore, hAfter]
+    exact null_passt_gleich (0, 1) (1, 1)
+  have hBits : Gleitkomma.zuBits Gleitkomma.f64
+        (fltWitSigma.slots () 0 ()).x ≠
+        Gleitkomma.zuBits Gleitkomma.f64 (σ'.slots () 0 ()).x := by
+    rw [hBefore, hAfter]
+    decide
+  exact ⟨σ', ρ', fltWitSchreibt, fltWitHw, hExec, hBefore, hAfter, hNe, hVgl,
+    hRoh, hPasst, hBits⟩
+
+/-! ## 10. Refusals: NaN and out-of-range answers never fit. -/
+
+/-- A NaN gate/oracle answer is refused at `einpassen` (`gleitWortPasst`
+    takes the same `none` branch through `gleitPasst`). -/
+theorem nan_passt_verweigert (lo hi : Int × Int) :
+    (Gabbro.Grammatik.gleitPasst lo hi
+      (Gleitkomma.nanQ Gleitkomma.f64)).isSome = false := by
+  have hfin :
+      Gabbro.Grammatik.gleitEndlich (Gleitkomma.nanQ Gleitkomma.f64) = false := by
+    decide
+  have hneg : ¬ (Gabbro.Grammatik.gleitEndlich
+        (Gleitkomma.nanQ Gleitkomma.f64) = true ∧
+      Gabbro.Grammatik.gleitLe (Gabbro.Grammatik.bruch lo)
+        (Gleitkomma.nanQ Gleitkomma.f64) = true ∧
+      Gabbro.Grammatik.gleitLe (Gleitkomma.nanQ Gleitkomma.f64)
+        (Gabbro.Grammatik.bruch hi) = true) := by
+    intro hcon
+    rw [hfin] at hcon
+    exact Bool.false_ne_true hcon.1
+  unfold Gabbro.Grammatik.gleitPasst
+  rw [dif_neg hneg]
+  rfl
+
+/-- A computed answer outside its declared range is refused at the same
+    branch (`5.0` against `0 .. 1`): range-holding observes the class. -/
+theorem bereich_passt_verweigert :
+    (Gabbro.Grammatik.gleitPasst (0, 1) (1, 1)
+      (Gabbro.Grammatik.gleitAusInt 5)).isSome = false := by
+  decide
+
+/-! ## 11. Inhabitation companions for the syntax-quantified `eval` pins. -/
+
+/-- Joint instance of `eval_fllt_ist_gleitLt` on the witness declaration. -/
+theorem eval_fllt_ist_gleitLt_zeuge :
+    Gabbro.Grammatik.eval fltWitSigma
+        (Gabbro.Grammatik.Expr.fllt fltWitE fltWitE) fltWitSigma fltWitRho =
+      Gabbro.Grammatik.gleitLt
+        (Gabbro.Grammatik.eval fltWitSigma fltWitE fltWitSigma fltWitRho).x
+        (Gabbro.Grammatik.eval fltWitSigma fltWitE fltWitSigma fltWitRho).x :=
+  eval_fllt_ist_gleitLt _ _ _ _ _
+
+/-- Joint instance of `eval_flle_ist_gleitLe` on the witness declaration. -/
+theorem eval_flle_ist_gleitLe_zeuge :
+    Gabbro.Grammatik.eval fltWitSigma
+        (Gabbro.Grammatik.Expr.flle fltWitE fltWitE) fltWitSigma fltWitRho =
+      Gabbro.Grammatik.gleitLe
+        (Gabbro.Grammatik.eval fltWitSigma fltWitE fltWitSigma fltWitRho).x
+        (Gabbro.Grammatik.eval fltWitSigma fltWitE fltWitSigma fltWitRho).x :=
+  eval_flle_ist_gleitLe _ _ _ _ _
+
+/-- Joint instance of `eval_eq_beobachtet_int` on the witness declaration. -/
+theorem eval_eq_beobachtet_int_zeuge :
+    Gabbro.Grammatik.eval fltWitSigma
+        (Gabbro.Grammatik.Expr.eq fltWitI fltWitI) fltWitSigma fltWitRho =
+      decide ((Gabbro.Grammatik.eval fltWitSigma fltWitI fltWitSigma fltWitRho).n =
+        (Gabbro.Grammatik.eval fltWitSigma fltWitI fltWitSigma fltWitRho).n) :=
+  eval_eq_beobachtet_int _ _ _ _ _
+
 /- CUTS:
-    - Skeleton only: comparison agreement is defined, one strict-equality
-      fact is proved. The `gleitRoh`/`gleitPasst` consequences, the NaN
-      corollary, the F-EQ exclusion pin, the target reuse hooks and the
-      joint table-write witness are still to come.
-    - Full source-to-final-loaded-bytes validation remains OPEN.
+    - Covered source operators, pinned to actual `eval`/`exec` arms:
+      `fllt`/`flle` (`gleitLt`/`gleitLe`), `gleitNarrow` and `gleit`
+      range-holding (`gleitPasst`), register-write truncation (`gleitRoh`).
+      Comparison agreement and all consequences are proved for the
+      inhabited model-equivalent finite pair `-0`/`+0`; range-holding
+      agreement is proved GENERICALLY from comparison agreement plus
+      finiteness (`vergleichsgleich_passt`, every range).
+    - F-EQ is EXCLUDED, not closed: `Expr.eq` takes only `.int` arguments
+      (`eval_eq_beobachtet_int`), so no model term equates two floats.
+      Refusing checker-accepted float `==`/`!=` is a tracked separate
+      prerequisite (closure P0); no checker file is touched here.
+    - Generic comparison-agreement-implies-truncation-agreement is NOT
+      proved: from `vergleichsGleich` alone, `gleitRoh` agreement needs
+      exact-value uniqueness, which is open. Proved for the inhabited
+      `-0`/`+0` pair (`null_roh_gleich`). This is an explicit obstruction,
+      not a hardware axiom.
+    - Payload equality is NEVER claimed: the target side preserves class
+      only (`fpRechne_klasse` stays the rule for computed values); the
+      word round-trip (`null_muster_rundweg`) and `ucomiFlags`/`cvttPaket`
+      hooks are reuse pins at word level, not decoded-byte steps. The
+      decoder (`Codec`) has no FP forms (audit finding, unchanged): no
+      byte sequence decodes to a float form today.
+    - The witness is a one-step `assignSlot` run (no calls, loops, locks,
+      atomics, gates): joint table-write plus memory-changing step with
+      agreeing observations and disagreeing bit patterns. sNaN-quieting
+      divergence stays conditional on the unreachable sNaN operand;
+      MXCSR/sticky flags have no source channel (no form reads them).
+    - Full source-to-final-loaded-bytes validation remains OPEN until a
+      generic closing proof is derived.
 -/
 
 #print axioms null_flt_still
+#print axioms null_vergleichsGleich
+#print axioms vergleichsgleich_passt
+#print axioms null_passt_gleich
+#print axioms null_roh_gleich
+#print axioms kein_gleit_nan
+#print axioms eval_fllt_ist_gleitLt
+#print axioms eval_flle_ist_gleitLe
+#print axioms eval_eq_beobachtet_int
+#print axioms null_wf
+#print axioms null_muster_rundweg
+#print axioms null_ucomi_gleich
+#print axioms cvttPaket_entfaltet
+#print axioms cvttPaket_gleitRoh
+#print axioms null_beobachtung_zeuge
+#print axioms nan_passt_verweigert
+#print axioms bereich_passt_verweigert
+#print axioms eval_fllt_ist_gleitLt_zeuge
+#print axioms eval_flle_ist_gleitLe_zeuge
+#print axioms eval_eq_beobachtet_int_zeuge
 
 end Gabbro.Grammatik.X86
