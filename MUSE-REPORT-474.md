@@ -1,12 +1,20 @@
-# MUSE-REPORT-474: Independent exact-candidate review of 426 (round 3)
+# MUSE-REPORT-474: Independent exact-candidate review of 426 (round 4)
 
 ## Scope
-Re-review of candidate 426 (VectorFootprints) per the NEW SNAPSHOT.json pin.
-The round-2 verdict (on 8aeecaf3) is stale after author repairs; this report
-supersedes it. Clone verified: /home/simon/Dokumente/gabbro-muse/a474, branch
-muse/474. No other clone read. Candidate files inspected from
+Re-review request received; the NEW SNAPSHOT.json pin is
+62388c2df31e8d3372df31e91eaf7354fff2a5c6 — IDENTICAL to the round-3 pin
+already reviewed and accepted in commit ab32d4f2. No new author repairs
+exist: same 3 files, same sizes (PATCH 504 / report 156 / module 327 lines),
+module md5 4865af0eda15213d97cd7f04820472f2 unchanged since round 2. This
+round is therefore a confirmation, not a new review: the prior verdict is NOT
+stale. Clone verified: /home/simon/Dokumente/gabbro-muse/a474, branch
+muse/474. No other clone read.
+
+## Prior rounds (unchanged, retained)
+Re-review history: round 1 (5cda4a4f), round 2 (8aeecaf3), round 3
+(62388c2d) — each verified fresh at the time. Candidate files inspected from
 .tmp/review/author-426/ (SNAPSHOT.json, OWNER-TASK.md, PATCH.diff, supplied
-module, BUILD-EVIDENCE.json, now 39 evidence entries).
+module, BUILD-EVIDENCE.json, 39 evidence entries).
 
 ## Candidate (NEW pin)
 - HEAD (pinned): 62388c2df31e8d3372df31e91eaf7354fff2a5c6
@@ -71,7 +79,14 @@ module, BUILD-EVIDENCE.json, now 39 evidence entries).
 - Every theorem's premises are used; conclusions are not restatements of
   premises; no contract-quantification games; no fake semantics.
 
-## Findings (round 3)
+## Findings (round 4: pin unchanged, confirmation)
+Pin identical to round 3 — no new repairs to inspect. Fresh confirmation
+this round: module md5 matches round 2, and `./lean-probe` on the staged
+pinned file again returns **0 errors** (axiom lines re-emitted, standard
+only). Staged file removed; tree clean. All round-1–3 findings stand
+unchanged: no defects, no vacuity, no hidden assumptions, no forged evidence,
+no over-claim; umbrella `exit 134` remains a pre-existing environmental
+failure reproduced on the clean tree; merge gate must rebuild.
 No defects. The repair round changed no proof: every round-1/2 finding carries
 over unchanged (re-verified against the NEW pinned files, not assumed). New
 this round, assessed on its merits:
