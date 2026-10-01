@@ -107,3 +107,16 @@ exhaustion (swap full, dozens of concurrent lanes) kills the one
 ~400-import umbrella elaboration; retry the gate when load dips. No
 claim is made about the full source/binary chain. Fresh independent
 review is required for the new commit (this report section).
+
+## Second gate failure: identical signature, verdict unchanged
+
+The gate was retried and failed byte-identically (`[397/398]
+Building Grammatik (9.3s)`, same thread-spawn crash, same exit 134;
+my module's prints again all emit inside that build). Fresh local
+queued check on the unchanged module: `./lean-probe
+grammatik/Grammatik/X86/BranchLayout.lean` gives `== 0 error(s),
+exit 0` with standard axioms. No owned content changed, so no
+content repair exists to make; the blocker remains the machine-wide
+thread exhaustion at the single umbrella elaboration step, and the
+gate should be retried when load dips. Fresh independent review is
+required for the new commit (this section only).
