@@ -79,7 +79,37 @@ classes (overflow/underflow/inexact/denormal), SSE/div-byte
 correspondence, decoder/cost/concurrency-TSO/final-image acceptance,
 hardware verification of MXCSR bit positions.
 
-## Task feedback
+## Integration gate failure (fresh evidence, no merge)
+
+The integration gate failed on the exact same umbrella crash, in the
+main checkout (`/home/simon/Dokumente/Gabbro`): my module target built
+there too (all 13 axiom lines print, step `[397/398]`), and only the
+`Grammatik` umbrella step died with the identical
+`failed to create thread` / exit 134. This matches the local control
+experiment bit-for-bit (same command `lean -j2 -M4096`, same crash,
+umbrella red even with my import removed).
+
+## Repair outcome
+
+Re-verified locally after the gate failure (nothing merged, tree still
+at `022cdf29`, clean):
+
+- `./lean-probe grammatik/Grammatik/X86/FloatExceptions.lean`: rc=0,
+  `== 0 error(s)`, zero `sorryAx`.
+- `./lean-bau`: module target cached green (olean fresh, no rebuild
+  errors); umbrella `Grammatik` crashes again environmentally
+  (`[392/393]`, exit 134, thread creation).
+- `git diff HEAD -- grammatik` is empty: no logical defect exists to
+  repair, so NO Lean content change was made. Deleting or weakening
+  theorems to "fix" a resource crash would be safety theater and change
+  nothing about thread creation in the umbrella link step.
+
+Concrete blocker for the integrator: the `Grammatik` umbrella link
+step needs a box state in which `lean -j2` can create threads; retry
+integration when parallel-lane load is lower. This lane's deliverable
+is unchanged and green at the module level. A fresh independent review
+of the changed commit (this report) is still required per the gate
+message; there is no new Lean content to review beyond `022cdf29`.
 
 Nothing in the task is wrong. Two observations: (1) `./lean-probe`'s
 first-line error count once printed `0 error(s)` while the run had
