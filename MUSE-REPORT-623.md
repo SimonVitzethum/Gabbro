@@ -11,7 +11,11 @@
 - `OWNER-TASK.md` in the snapshot is byte-identical to this clone's
   `lanes/622.md` (compared directly); the review ran against the exact task.
 
-## VERDICT: ACCEPT
+CANDIDATE: 622 5a88b0c58d9ada20421c4a7e37fc6bc33f30dc0d
+
+## Verdict
+
+VERDICT: ACCEPT
 
 The 622 candidate implements exactly its owned task with correct safety
 semantics and meaningful tests. No repair needed.
