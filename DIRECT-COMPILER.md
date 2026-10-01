@@ -163,7 +163,7 @@ Last ledger refresh: **2026-10-01 11:37 UTC**. This is an operational snapshot, 
 | 345 | Practical-performance Lean wave C1: TableLayout | Merged after review/checks | 383: Merged after review/checks | [report](messung/muse/MUSE-REPORT-345.md) |
 | 346 | Practical-performance Lean wave C2: GateStub | Agent working | 384: Committed candidate; review/integration pending | [task](lanes/346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Committed candidate; review/integration pending | 385: Agent working | [task](lanes/347.md) |
-| 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-348.md) |
+| 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: Incomplete; preserved | [task](lanes/350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Incomplete; preserved | 439: scheduled | [task](lanes/401.md) |
@@ -355,6 +355,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **345**, Practical-performance Lean wave C1: TableLayout, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-345.md). <!-- x86-merged:345 -->
 - 2026-10-01: lane **383**, Independent exact-candidate review of 345 TableLayout, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-383.md). <!-- x86-merged:383 -->
 - 2026-10-01: lane **348**, Practical-performance Lean wave C4: EntryState, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-348.md). <!-- x86-merged:348 -->
+- 2026-10-01: lane **386**, Independent exact-candidate review of 348 EntryState, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-386.md). <!-- x86-merged:386 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
