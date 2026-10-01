@@ -1,0 +1,36 @@
+# MUSE-REPORT-480: Independent exact-review of 432 (RegionSeparation)
+
+## Clone and snapshot verified
+- Clone `/home/simon/Dokumente/gabbro-muse/a480`, branch `muse/480`: match, STOP condition not triggered.
+- Snapshot `.tmp/review/SNAPSHOT.json`: single entry author 432, pinned HEAD `dd10d78f28d47c335beca87ea27e873a6ff94cc6`, base `fd14b4e5`, 3 files (`MUSE-REPORT-432.md`, `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/RegionSeparation.lean`), clean true.
+- Inspected: `author-432/OWNER-TASK.md`, `MUSE-REPORT-432.md`, `PATCH.diff` (627 added lines: report + 1 umbrella import line + 519-line new leaf), `BUILD-EVIDENCE.json` (19 queued commands), supplied file `author-432/grammatik/Grammatik/X86/RegionSeparation.lean`.
+
+## Scope check (PATCH vs task)
+- Author task allows ONLY the new module plus one additive X86 import at end of umbrella. PATCH does exactly that: one appended `import Grammatik.X86.RegionSeparation` line, no edits to Spec, checker, Rust, emitter, Typen, execution, codec, Bild, Regionen, Speicher, and no touch of friend paths `OptimizationRules.lean` / `OptimizationWitnesses.lean`. No other clone read.
+
+## Semantic review against accepted models in my clone
+- Reused vocabulary confirmed in my checkout: `Region`/`regionDisjunkt`/`natAdresse` (`Regionen.lean:21-52,223`), `OhneUmbruch`/`Disjunkt`/`disjunkt_von_intervallen`/`read64_rahmen`/`write64_rahmen`/`writeBytesN_hit`/`addrOff_null` (`Speicher.lean:160-193,346-373`), `virtReich`/`disjunktPaar`/`paarweise`/`wohlgeformt` (`Bild.lean:131-144,260-272`), `zeugenU_schreibt` (`TableLayout.lean:136-138`), `lauf`/`zeugeProg`/`zeugeZustand`/`zeuge_speicher_aendert_sich` (`Ausfuehrung.lean:741-789`). No behaviour invented, no shared IR/executor duplicated: file defines only checker Bools (`allePaareDisjunkt`, `keinUmbruchR`, `alleOhneUmbruch`, `trennungOk`, `abschnittAlsRegion`) plus soundness/frame/bridge theorems over those definitions.
+- `regionDisjunkt_symm` (`simp [regionDisjunkt, or_comm]`): correct.
+- `allePaareDisjunkt_mem` (verdict + membership + inequality implies disjoint): induction sound; `a ≠ b` guard correctly excludes the duplicate-value case rather than mis-claiming it. `List.all_eq_true` + symmetry use correct.
+- `alleOhneUmbruch_mem`, `trennungOk_paare`, `trennungOk_ohne`, `trennungMitglied_ohneUmbruch`: direct projections, sound.
+- `regionDisjunkt_fuss_disjunkt`: reduces region disjointness plus 8-byte containment to `disjunkt_von_intervallen` with explicit `OhneUmbruch` on both sides; `omega` closes Nat interval reasoning. No wrap hidden: addresses stay in Nat, wrap excluded by stated premises.
+- `trennung_schreibt_rahmen` / `trennung_schreibt_bytes`: thin correct consumers of `read64_rahmen` / `write64_rahmen`; every premise used (disjointness, containment, no-wrap, successful `write64`). Per-byte framing stated as byte sets; report and file explicitly disclaim multi-byte atomicity. No TSO overclaim.
+- `trennung_rahmen_mehrere` / `trennung_bytes_mehrere`: verdict-level frames via `trennungOk_paare` + `allePaareDisjunkt_mem`; all of `hsep/ha/hb/hne/hx/hy/hAx/hAy/hwr` used. The no-wrap leg of the verdict is not consumed by these two frames; that makes the verdict strictly stronger (refuses more) without weakening soundness. Not a defect.
+- `virtReich_regionDisjunkt`: bound arithmetic matches (`bias + vaddr`, `+ memLen`); `exact h` after unfolding is the right re-reading, validator stays decider.
+- `paarweise_virt_trennung`: proves only the pairwise leg (`allePaareDisjunkt`), not full `trennungOk`. Honest narrowing: wrap leg would need `wohlgeformt`/`virtuellOk`; author does not conjure it. Image witness `trennBild_trennung` claims only that leg. No loader/mapping/relocation/entry claim.
+- Witnesses: accepted triple (8192/8, 8200/8, 65536/16) touches at 8200 edge-disjoint, decided; overlap refusal `[8192,8200)` vs `[8196,8204)` and wrap refusal `2^64-4 + 8` plus whole-verdict refusal all decided. Positive store frame uses real `write64 42` at 8192, `trennLiest8200` pins the preserved read to `some 0` (not vacuous `none`), byte at 8200 unchanged and byte at 8192 observably changed through the generic lemmas. Image witnesses (`trennBild_wohlgeformt` under `.p48`, `trennBild_paar`) feed the generic bridge. Joint `trennung_zeuge` conjoins verdict + `zeugenU_schreibt` (table `konto` written by `setze`, non-degenerate) + `zeuge_speicher_aendert_sich.2.1` (reached run byte 42 at 8192) + real store frame. `trennung_rahmen_zeugen` / `trennung_bytes_zeugen` are verdict-level consumers with decided membership/inequality. Negative cases meaningful, execution memory-changing, joint premises non-degenerate.
+- No `sorry/admit/axiom/native_decide/unsafe` (grep clean in my probe copy); no `intro _` / `have _ :=`; no `Prop`-typed premise; no contract quantification away; no conclusion-restates-premise; no new semantics without memory effect; no number-to-pointer or freshness conjured (`natAdresse` probe-only, CUTS states capabilities come from checked `reserviere`); hardware faults vs profile refusals, OS contracts as user logic, fixed-width/flag/FP/immutability/budget/observation all left to owners per CUTS. No safety weakening.
+- CUTS block present and exact: no source lowering, no freshness, loader beyond bridge OPEN, sequential-only disjointness, no decoder/ABI/cost/progress/timing/whole-image claim, consumer named as shared-IR validator skeleton shape, alignment as target data.
+
+## Reproduction in my clone (queued wrappers, restored)
+- Staged only the supplied `RegionSeparation.lean` into `grammatik/Grammatik/X86/`, ran `./lean-probe grammatik/Grammatik/X86/RegionSeparation.lean`: first line `== 0 error(s) in the COMPLETE output; exit 0`. Axiom lines all standard subsets (`propext` with/without `Quot.sound`, decides axiom-free); none exceeds `propext, Classical.choice, Quot.sound`. Removed the staged file afterwards; `git status --short` clean before report.
+- Full `./lean-bau` not re-run here: author evidence already shows the module olean built (step 393/395) while the final umbrella link fails machine-wide with `failed to create thread` (exit 134), plus a stash control where the pristine umbrella fails identically and small-file probes stay green. That account is credible and honestly marked PENDING rather than claimed; the merge script rebuilds `grammatik/` before committing, so the gate re-checks. No forged benchmark/axiom evidence found; BUILD-EVIDENCE shows intermediate 2-error and 4-error probes on the way to green, consistent with real incremental work.
+
+## What remains open
+- Merge-gate full `./lean-bau` green plus `#print axioms gabbro_ziel` re-check when the machine is quiet. Nothing in this leaf touches the goal, so axiom drift is not expected, but it is unverified in this turn by environment, not by proof.
+
+## Anything believed wrong in the task
+- Nothing. The bounded scope (generic checker + soundness + frames + bridge + witnesses, correspondence OPEN) matches the missing piece the author names, and the delivered claim stays inside it without claiming closed source lowering, hardware, native expansion, final-byte validation, or speed.
+
+CANDIDATE: 432 dd10d78f28d47c335beca87ea27e873a6ff94cc6
+VERDICT: ACCEPT
