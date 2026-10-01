@@ -44,6 +44,34 @@ cargo/Lean run"). Baseline untouched — `git status` shows only the two
 new files (`dokumente/x86/QUELLBRUECKE.md`, this report). No Lean
 umbrella import added (no new Lean file exists to import).
 
+## Review repair (2026-10-01)
+
+The coordinator required four corrections before adopting the closing
+architecture; all are applied in `QUELLBRUECKE.md`, owned files only:
+
+1. No independent refinement premise in the delivered theorem. The
+   schema now has three named parts: generic `valX86_sound`
+   (`valX86 E bild = true → X86Verfeinerung E bild`, to be proved),
+   internal composition lemma `schluss_x86_aus_verfeinerung` (takes
+   `hR`, labelled INTERNAL, not the delivered claim), and delivered
+   `schluss_x86` (takes only `hV`, derives `hR` via `valX86_sound`).
+2. Full unit identity, not `E.P = P`. The schema takes
+   `hE : E = einheitAllg u P hn` (every field fixed by `src`); beyond
+   the fragment the rule is compute-or-prove-identity field by field,
+   with `valX86 E bild` binding the full unit. §1.2 cites where the
+   current frontend pins `S`/`Q`/starts/`sp0` to fragment defaults
+   (`einheitAllg`: `leer`/`axWahr`/`startsAllg`/`nullSp`,
+   `gestartet := []`) and books full-source unit coverage as open.
+3. Loader / layout / silicon split. Loaded-image mapping goes through
+   checked loader logic and `Laufzeit` (user/binding logic); layout
+   correctness is a decided computation; hardware premises cover only
+   silicon execution of validated bytes plus named timing bounds. OS /
+   runtime implementations are never hardware assumptions. Applied in
+   §§2, 4, 6, 7.
+4. Guarantee preservation stated explicitly. §4 obligations list every
+   transferred goal leg; §8 says the schema theorems are unimplemented
+   proposals and no weakening is admitted for coverage.
+
 ## What remains open
 
 - All of §3/§4 of the deliverable: tables/layouts, statics/globals,
@@ -51,10 +79,13 @@ umbrella import added (no new Lean file exists to import).
   recursion-depth machine bound, gate/syscall/foreign-body x86
   correspondence, linking validation, fragment-coverage sieve,
   entries/handlers/cores, floats/time/progress, optimisation
-  certificates.
-- The phase-B schema (`schluss_x86`) is a proposal: `X86BildLayout`,
-  `valX86`, and `X86Verfeinerung` do not exist yet and belong to lanes
-  272/273/274/276/278 plus the validator/refinement adapters of §7.
+  certificates; plus full-source unit computation (§§1.2, 4) and the
+  generic `valX86_sound` proof itself.
+- The phase-B schema (`schluss_x86`, `valX86_sound`,
+  `schluss_x86_aus_verfeinerung`) is a proposal: none of the three is
+  claimed proved; `valX86` and `X86Verfeinerung` do not exist yet and
+  belong to lanes 272/273/274/276/278 plus the validator/refinement
+  adapters of §7.
 - Per-program trust-path violations named in §5 (notably the
   `Cert104` per-name section in `corrlean.rs`) are booked for removal
   by the owners, not by this lane.

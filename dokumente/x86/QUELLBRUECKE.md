@@ -89,6 +89,19 @@ contains `0`; `null_bereich` is its soundness against `fieldRangeO`.
 A field whose range excludes `0` has no zero memory and is refused by
 name; no theorem here claims anything about such a unit.
 
+FRAGMENT DEFAULTS (current frontend state, `bruecke/Bruecke/Quelle.lean`
+`einheitAllg`): `S := SperrInv.leer` (no lock invariant — the exporter
+writes `Inv := Empty` and refuses `maintains` with `LG001`, so `invRuhe`/
+`invSicht` are vacuous on every certified program), `Q := axWahr` (no
+axiom duty), `starts := startsAllg u` (parameterless `entry` roots only,
+unknown names filtered), `sp0 := nullSp` (zero memory only), `gestartet
+:= []`. A unit with a lock invariant, a non-trivial axiom ensures, a
+non-zero initial memory, globals, arenas, or run-time-spawned roots is
+NOT computed by `einheitAllg`. Computing the full unit (every metadata
+field) from source, or checking and proving identity of every such field,
+is booked as open work (§3, items 1/2/4/6/7/9); until then only
+fragment-default units reach premise (b) from `Pflichten src`.
+
 Enumerations (needed by premise (a)): `aufzFn` (all functions),
 `aufzLock` (all locks), `aufzTraegerLeer` (no carriers — only valid
 with `ht : u.tabellen = []`) (`bruecke/Bruecke/Quelle.lean`).
@@ -217,9 +230,9 @@ Bridge theorems (`bruecke/Bruecke/Quelle.lean`, over
 | `uebersetzeAllg` + `declOf` + `lowerAllg` + `uOf` | yes | T3 parse fidelity is target-independent. The x86 validator takes the same `P` over the same `declOf u` from the same `src`; `uebersetzeAllg_von_zeichen` keeps its shape (character-pinned stages). No change needed except extending `elabU`/`lowerAllg` coverage as §3 closes (each extension needs its Lean model + checker side first, per standing rule). |
 | `Pflichten src`, `meetsU`/`zuBody`/`postU`/`preExpr` | yes | User-duty computation is machine-independent: bodies run by `exec`/`execEnd`, contracts over entry/exit worlds. The GabbroV bridge (`bruecke_nutzer`, duty files vs `zuBody` reference) is reused unchanged for the x86 chain; `nutzer_aus_quelle`/`nutzerA_aus_quelle` supply premise (b) for the same `E`. Extending `zuBody` coverage extends (b) without touching the x86 side. |
 | `nullB`/`nullSp`, `stimmigB`, `rangB`/`rangAuto` | yes | Decided Bools over the source; carried into any target chain unchanged. `rangB` (recursion rank over the computed call graph) already constrains the lowering the x86 validator must respect. |
-| `einheitAllg` (`S := leer`, `Q := axWahr`, `startsAllg`, `nullSp`) | yes, as the base case | The shape of `E` the x86 refinement starts from. Units with lock invariants, non-trivial axiom ensures, non-empty `gestartet`, or non-zero memories need the general `Kette`, not `ketteAllg` — see §3. |
-| `PrueferX` / `AkzeptiertSpecX`, `NutzerPflichtA`, `GabbroZiel` over GX, W/GX thread model | yes | The selected concurrency foundation (plan §3). The x86 work proves a per-access machine-to-W/GX refinement; it does not rebuild race freedom, contracts, locks, lifecycle, or progress. `Pruefer.alsX`, `nutzerPflichtA_of_akzeptiert`, `geteiltV_leer`, `fadenErreichbarX_of`, `zielF_of_X` carry the SC corollary. |
-| `HardwareAnnahmen`, `Laufzeit` | yes, with x86-specific instances | Form reused; content extended: validated entry state, loaded-image mapping incl. relocations, calling/memory conventions, per-access TSO behaviour, timing bounds become named hardware premises. OS/scheduler/runtime code stays user/binding logic with contracts, never a new hardware assumption. |
+| `einheitAllg` (`S := leer`, `Q := axWahr`, `startsAllg`, `nullSp`) | yes, as the base case only | The shape of `E` the x86 chain starts from — and ONLY that shape. It pins every metadata field to a fragment default (§1.2), so it cannot stand in for a general unit. Units with lock invariants, non-trivial axiom ensures, non-empty `gestartet`, globals, arenas, or non-zero memories need the general `Kette` plus a per-field source-identity proof — see §3. Full-source unit computation is open. |
+| `PrueferX` / `AkzeptiertSpecX`, `NutzerPflichtA`, `GabbroZiel` over GX, W/GX thread model | yes | The selected concurrency foundation (plan §3). The x86 work proves a per-access machine-to-W/GX refinement through the GENERIC validator soundness theorem (§4); it does not rebuild race freedom, contracts, locks, lifecycle, or progress. `Pruefer.alsX`, `nutzerPflichtA_of_akzeptiert`, `geteiltV_leer`, `fadenErreichbarX_of`, `zielF_of_X` carry the SC corollary. All named goal legs are preserved, never weakened (§4, obligations). |
+| `HardwareAnnahmen`, `Laufzeit` | yes, with a strict split | Form reused; content split three ways and never mixed: (i) LOADER/USER LOGIC — the loaded-image mapping (bytes to memory, relocations, entries) is CHECKED and PROVED through the loader and `Laufzeit` premises, i.e. user/binding logic with contracts, exactly like OS/scheduler/runtime code; (ii) LAYOUT RECORD — correctness of any supplied layout record is a DECIDED computation (`decide` against the image), never a premise about the world; (iii) HARDWARE — named silicon behaviour ONLY: execution of the validated bytes per the reviewed `X86` semantics and explicitly named timing bounds. OS/runtime implementations and layout-record correctness are never promoted to hardware assumptions. |
 | `Kette` structure (parse, unit, checker Bool, user proof, layout, certificate, check) | yes, as architecture | The x86 chain keeps the six-field shape; only the last two fields change kind (see §6). `schlusssatz` parts 1–3 and 5 are reused; parts 4/6 are re-proved against decoded bytes instead of C semantics. |
 | `korrOk` / `KCert` / `EmitLay` / `CallAt` / C lemmas (`ecorr_*`, `scorr_*`) | no (reuse architecture only) | C-specific correctness conclusions do not transfer. The validator needs a new sound check from the final image to P/GX (plan T2); C lemmas are regression evidence while the C backend is in use, not premises of any x86 chain. |
 
@@ -329,17 +342,40 @@ closed by trusting a Rust print or by a per-program file.
 
 ## 4. Generic closing schema for phase B (over EVERY source text/image)
 
-No premise is a Rust print. Each premise is a Lean computation or a
-proved statement; per-program instances are witnesses. `X86` below is
-the validated target vocabulary (`Typen.lean` + reviewed extensions);
-`Bild` is the final image (bytes, layout, entries, resolved
-relocations); `valX86` is the proved validator (plan T2 for x86).
+PROPOSAL ONLY — no theorem below is claimed proved; names are schema
+placeholders for phase-B files. No premise is a Rust print. Each premise
+is a Lean computation or a proved statement; per-program instances are
+witnesses. `X86` below is the validated target vocabulary (`Typen.lean`
++ reviewed extensions); `Bild` is the final image (bytes plus the
+layout/entries the validator checks, not trusts).
+
+REVIEW REPAIR (2026-10-01): the delivered closing theorem takes NO
+independent refinement premise. Assuming the desired simulation would
+not be translation validation. The per-access refinement is DERIVED
+inside the chain from validator acceptance via the GENERIC proved
+validator soundness theorem. A composition lemma that DOES take the
+refinement as a premise exists, but it is internal plumbing, labelled as
+such, and is not the delivered validator-closing theorem.
 
 ```
-theorem schluss_x86 {src : String} {bild : Bild}
+-- GENERIC validator soundness (to be proved once, over every unit/image):
+-- acceptance BY THE PROVED CHECKER yields the per-access refinement.
+theorem valX86_sound
+  (E : Zielsatz.Einheit D) (bild : Bild)
+  (hV : valX86 E bild = true)                         -- decided Bool, full unit
+  : X86Verfeinerung E bild                            -- per-access: every admitted
+                                                      --   x86-TSO execution of bild
+                                                      --   refines to W, hence GX
+
+-- INTERNAL composition lemma (labelled; not the delivered theorem):
+-- given the refinement, the goal theorem transfers to the image.
+theorem schluss_x86_aus_verfeinerung {src : String} {bild : Bild}
   (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn)
   (hU : uebersetzeAllg src = .ok ⟨u, P, fs⟩)          -- T3, computed
-  (E : Zielsatz.Einheit (declOf u)) (hE : E.P = P)    -- unit on the parser's code
+  (E : Zielsatz.Einheit (declOf u))
+  (hE : E = einheitAllg u P hn)                      -- FULL unit identity, not
+                                                      --   E.P = P alone (see below);
+                                                      --   hn from Pflichten
   (fsL : Zielsatz.Aufzaehlung (declOf u).Fn)
   (lsL : Zielsatz.Aufzaehlung (declOf u).Lock)
   (csL : Zielsatz.Aufzaehlung ((declOf u).Tab ⊕ (declOf u).Glob))
@@ -350,34 +386,84 @@ theorem schluss_x86 {src : String} {bild : Bild}
   (O : Zielsatz.Orakel (declOf u)) (hH : Zielsatz.HardwareAnnahmen O E.Q)
   (sp : Speicher (declOf u).mitRuhe)
   (init : Faden → Σ f, Env _ (_.params f))
-  (hL : Zielsatz.Laufzeit E sp init)                  -- (d), A4 shape
-  (lay : X86BildLayout (declOf u) bild)               -- validated layout: object
-                                                      --   extents, widths, alignments,
-                                                      --   spill/frame map, entries
-  (hV : valX86 lay bild P fsL.1 = true)               -- proved validator accepts
-                                                      --   the BYTES, incl. relocations
-  (hR : X86Verfeinerung lay bild P O)                 -- per-access refinement:
-                                                      --   every admitted x86-TSO
-                                                      --   execution of bild refines
-                                                      --   to W, hence GX
+  (hL : Zielsatz.Laufzeit E sp init)                  -- (d), loader shape
+  (hR : X86Verfeinerung E bild)                       -- INTERNAL-ONLY premise
   : ZielFX-on-every-X86-reachable-thread-machine E O sp init
+
+-- DELIVERED validator-closing theorem (the only public closing claim):
+-- the refinement is derived from hV via valX86_sound, never assumed.
+theorem schluss_x86 {src : String} {bild : Bild}
+  (u : UProg) (P : Programm (declOf u)) (fs : List (declOf u).Fn)
+  (hU : uebersetzeAllg src = .ok ⟨u, P, fs⟩)
+  (E : Zielsatz.Einheit (declOf u))
+  (hE : E = einheitAllg u P hn)                      -- full unit identity
+  (fsL : Zielsatz.Aufzaehlung (declOf u).Fn)
+  (lsL : Zielsatz.Aufzaehlung (declOf u).Lock)
+  (csL : Zielsatz.Aufzaehlung ((declOf u).Tab ⊕ (declOf u).Glob))
+  (C : Zielsatz.PrueferX)
+  (hA : C.akzeptiert E fsL.1 lsL.1 csL.1 = true)
+  (hN : Zielsatz.NutzerPflichtA E)
+  (O : Zielsatz.Orakel (declOf u)) (hH : Zielsatz.HardwareAnnahmen O E.Q)
+  (sp : Speicher (declOf u).mitRuhe)
+  (init : Faden → Σ f, Env _ (_.params f))
+  (hL : Zielsatz.Laufzeit E sp init)
+  (hV : valX86 E bild = true)                         -- proved validator accepts
+                                                      --   the BYTES against the FULL
+                                                      --   unit (code, starts,
+                                                      --   invariants, Q, memory,
+                                                      --   layouts, relocations)
+  : ZielFX-on-every-X86-reachable-thread-machine E O sp init
+  -- proof shape (obligation on phase B, not a claim):
+  -- have hR := valX86_sound E bild hV; exact schluss_x86_aus_verfeinerung … hR
 ```
 
-Obligations on the schema (what makes it a theorem, not a wish):
+Why `hE : E = einheitAllg u P hn` and not `E.P = P`: the program field
+alone does not pin the unit. `starts`, `S`, `Q`, `sp0` (and
+`gestartet`) would otherwise be free attacker-chosen metadata — a
+checker Bool and duties proved about one unit combined with bytes
+validated against another. The schema therefore computes the FULL unit
+from source (`einheitAllg`, with `hn : nullB u = true` from
+`Pflichten`), so every field is fixed by `src`. Beyond the
+fragment-default coverage of `einheitAllg` (§1.2), the generalisation is:
+compute every metadata field from source, or check each field against
+the image/unit and prove identity field by field — with `valX86`
+binding that full computed unit (`valX86 E bild`, never `valX86 P
+bild`). Full-source unit computation is open work (§§1.2, 3).
 
-- `X86Verfeinerung` is per-access: every ordinary/atomic access and its
-  footprint is mapped; no instruction sequence or source block is
-  treated as indivisible without a commutation/linearisation proof over
-  actual interleavings. Forbidden-outcome probes (store-buffer
-  forwarding, lost RMW, tearing at width boundaries) must fail closed.
-- `hR` lands in GX, so `gabbro_ziel` applies unchanged: race freedom,
-  contracts, locks, `SchwachX`, `ZeitAbX`, `KernHaltEA`,
-  `sperrWechsel`/`sperrSicht`, `FolgeG`, progress legs all transfer.
-  The schema does not restate any goal leg.
+Obligations on the schema (what will make it a theorem, not a wish):
+
+- `valX86_sound` is generic (over every `E`/`bild`) and per-access:
+  every ordinary/atomic access and its footprint is mapped; no
+  instruction sequence or source block is treated as indivisible without
+  a commutation/linearisation proof over actual interleavings.
+  Forbidden-outcome probes (store-buffer forwarding, lost RMW, tearing
+  at width boundaries) must fail closed.
+- The derived refinement lands in GX, so `gabbro_ziel` applies
+  unchanged. ALL named source guarantees are preserved, none weakened:
+  memory safety (`speicherSicher`), race freedom over non-atomic
+  carriers (`RennfreiBisGA`) plus the atomic rely, contracts at every
+  logged event (`vertrag`), lock invariants (`sperrInv`), owed
+  invariants at value and reason exits (`invRueck`, `invGrund`),
+  quiescent/observer and lock-move legs (`invRuhe`, `invSicht`,
+  `sperrWechsel`, `sperrSicht`), start/end legs (`startEnde`,
+  `keinStartGrund`, `keinLogikHalt`), no deadlock / no wait cycle
+  (`keineVerklemmung`, `keinZyklus`), same-core handler progress
+  (`keinKernHalt`/`KernHaltEA`), progress (`fortschritt`), time
+  (`zeit`/`ZeitAbX`), call-order leg (`folge`/`FolgeG`), thread-machine
+  legs (`schlafendUnberuehrt`, `schlafendFrei`, `joinFrei`,
+  `spawnSicht`), and the weak leg (`schwach`/`SchwachX`). The schema
+  restates no goal leg; it transfers all of them.
 - For the bridged fragment, (b) is discharged by `Pflichten src`
   (`nutzerA_aus_quelle`); outside it, (b) stays an explicit assumption
   — never a synthesised duty, never a weakened `getD False` read as a
   proof.
+- Loader vs silicon vs time (strict split, §2): the loaded-image mapping
+  (bytes to memory, relocations performed at load time, entry state,
+  calling/memory conventions) is established through CHECKED loader
+  logic and the `Laufzeit` premise — user/binding logic with contracts,
+  reviewable and refusable. Named hardware premises cover ONLY silicon
+  execution of the validated bytes and explicitly named timing bounds.
+  Instruction counts are not time bounds.
 - Finite and infinite executions: internal machine steps stutter only
   under a proved progress argument; costs transfer through validated
   machine costs + named hardware bounds.
@@ -433,12 +519,16 @@ and witnesses, never as premises of the x86 chain:
    the model program. Says nothing about an x86 image; its closed
    chains (104, 108) do not establish x86 correspondence.
 3. **Final-byte correspondence** — does not exist yet. Must say: the
-   validated bytes decode (length from decoding, never an emitter
-   annotation), execute per the proved `X86` semantics, refine per
-   access to W/GX, respect the validated layout/relocations/entries,
-   and cover the whole executable code. A proof about an instruction
-   listing alone is insufficient; the loaded mapping must match the
-   validated image.
+   proved checker accepts the BYTES against the FULL source-computed
+   unit (`valX86 E bild = true`, §4); the bytes decode (length from
+   decoding, never an emitter annotation), execute per the proved `X86`
+   semantics, refine per access to W/GX via the GENERIC `valX86_sound`
+   (never an assumed refinement premise in the delivered theorem),
+   respect the checked layout/relocations/entries, and cover the whole
+   executable code. A proof about an instruction listing alone is
+   insufficient; the loaded mapping must match the validated image —
+   established through checked loader logic (`Laufzeit`), not through a
+   hardware premise.
 
 Implementation status: (1) exists for the `zuBody` fragment (corpus 104
 and 108 closed; 176+ accepted programs UNCERTIFIED with first-refusal
@@ -458,16 +548,19 @@ coordinator owns central integration.
   `bruecke/Bruecke/Pflichten.lean` as reference; each extension carries
   its `*_zeuge` (joint, non-degenerate) and its GabbroV printer check.
   Atomic fragment first (unblocks §3.3 and the TSO bridge's duty side).
-- **Layout adapter (with lane 276):** computed `EmitLay`-analogue for
-  x86 images from `UProg` + validated image header: table/global
-  extents, widths, alignments, frame/spill maps, entry points. Purely
-  computed; Rust layout hints checked by `decide`.
-- **Validator adapter (with lanes 272/273/275):** `valX86` soundness
-  (`valX86 … = true →` per-access refinement instance), proved against
-  the canonical `X86` types and the actual step semantics — never
-  against the Rust mirror. The Rust mirror (`crates/gabbro-check/src/x86/`)
-  stays an unwired internal foundation until its Lean correspondence is
-  reviewed.
+- **Layout adapter (with lane 276):** computed layout for x86 images
+  from `UProg` + image bytes: table/global extents, widths, alignments,
+  frame/spill maps, entry points. Purely computed; any Rust layout hint
+  is checked by `decide` against the bytes. Layout-record correctness is
+  a decided computation — it is never a hardware assumption and never a
+  premise about the world.
+- **Validator adapter (with lanes 272/273/275):** the GENERIC
+  `valX86_sound (`valX86 E bild = true → X86Verfeinerung E bild`),
+  proved against the canonical `X86` types and the actual step semantics
+  — never against the Rust mirror. `valX86` binds the FULL
+  source-computed unit `E` (§4), not just `P`. The Rust mirror
+  (`crates/gabbro-check/src/x86/`) stays an unwired internal foundation
+  until its Lean correspondence is reviewed.
 - **Refinement adapter (with lane 274):** machine-to-W/GX per-access
   relation: byte memory, widths, overlap/tearing, store buffers,
   forwarding, coherence, acquire/release, locked RMW (success vs
@@ -491,18 +584,30 @@ coordinator owns central integration.
   against their defining files; the reuse/blocked table (§§2–3)
   distinguishes what feeds final-byte validation from what blocks it;
   the phase-B schema (§4) ties every premise to a proved checker, a
-  computed user duty, or named hardware behaviour; the exclusion list
-  (§5) keeps per-program artefacts off the trust path.
+  computed user duty, checked loader logic, or named silicon/timing
+  behaviour; the exclusion list (§5) keeps per-program artefacts off
+  the trust path.
 - May NOT be said: that any x86 chain is closed, that any existing
-  certificate validates bytes, that any per-program rule is generic, or
-  that the goal theorem covers a program the validator has not
-  accepted. No Lean file is added or changed by this lane; there is no
-  new theorem, no new axiom, and no green-build claim beyond the
-  untouched baseline.
+  certificate validates bytes, that any per-program rule is generic,
+  that the schema's `schluss_x86`/`valX86_sound` are proved (they are
+  unimplemented proposals — §4 names the theorems to be proved, and
+  this lane claims none of them), or that the goal theorem covers a
+  program the validator has not accepted. No Lean file is added or
+  changed by this lane; there is no new theorem, no new axiom, and no
+  green-build claim beyond the untouched baseline. Every named source
+  guarantee (§4 obligations) is preserved in the proposal; none is
+  weakened for coverage.
 
 *CUTS: docs-only lane. No Lean theorem proved; no decoder, execution,
 TSO-bridge, layout, validator, template, or cost correspondence
 established here. All file/claim checks are by reading the cited
 definitions; no `cargo`/`lake` run is owed by this task (baseline build
 untouched). Remaining gaps are §§3–4 and the per-lane deliverables of
-wave A (lanes 269–276, 278), none of which this document pre-empts.*
+wave A (lanes 269–276, 278), none of which this document pre-empts.
+Review repair 2026-10-01: §4 no longer takes an independent refinement
+premise in the delivered theorem (derived via generic `valX86_sound`;
+`hR` lives only in the labelled-internal composition lemma), the unit
+enters by full computed identity (`E = einheitAllg u P hn`, with
+fragment-default limits and full-source coverage cited in §1.2), and
+loader logic / layout record / silicon premises are strictly split (§§2,
+4, 7).*
