@@ -221,7 +221,7 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 429 | Continuous Lean proof reserve: CodeImmutability | Merged after review/checks | 477: Merged after review/checks | [report](messung/muse/MUSE-REPORT-429.md) |
 | 430 | Continuous Lean proof reserve: ValidationCache | Agent working | 478: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/430.md) |
 | 431 | Continuous Lean proof reserve: ValidationBudget | Merged after review/checks | 479: Merged after review/checks | [report](messung/muse/MUSE-REPORT-431.md) |
-| 432 | Continuous Lean proof reserve: RegionSeparation | Merged after review/checks | 480: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-432.md) |
+| 432 | Continuous Lean proof reserve: RegionSeparation | Merged after review/checks | 480: Merged after review/checks | [report](messung/muse/MUSE-REPORT-432.md) |
 | 433 | Continuous Lean proof reserve: ObservationProjection | Committed candidate; review/integration pending | 481: Agent working; integration gate rejected; repair/re-review required | [task](lanes/433.md) |
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Committed candidate; review/integration pending | 482: Agent working | [task](lanes/434.md) |
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Agent working | 483: scheduled | [task](lanes/435.md) |
@@ -461,6 +461,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: integration of candidate(s) [430] failed the local proof/build gate after independent review 478; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:478 -->
 - 2026-10-01: lane **479**, Independent exact-candidate review of 431, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-479.md). <!-- x86-merged:479 -->
 - 2026-10-01: lane **432**, Continuous Lean proof reserve: RegionSeparation, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-432.md). <!-- x86-merged:432 -->
+- 2026-10-01: lane **480**, Independent exact-candidate review of 432, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-480.md). <!-- x86-merged:480 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
