@@ -41,6 +41,21 @@ incompleteness (§2, counterexample B).** No blanket assumption "x86 is
 W/DRF-SC" is made anywhere in this design; store buffering refutes it (§2,
 counterexample A).
 
+### Status convention (review repair, 2026-10-01)
+
+- [PROVED] — a Lean theorem in the tree (with file:line). May be reused.
+- [REUSE] — an existing proved leg/theorem applied unchanged.
+- [PROPOSAL] — a design decision of this document (strategy, refinement
+  direction, linearisation points). Not proved.
+- [OPEN] — an unproved obligation. Some [OPEN] items are routine wave-B
+  work; three of them (OBS-5 in §4.9, liveness scope in §4.10, CAS cost
+  in §4.11) could, if they resist discharge, require a REVIEWED
+  `Spec.lean` diff — i.e. a statement change. This document does NOT
+  pre-conclude that no such change will be needed; §6.9 is corrected
+  accordingly. "No change to the goal statement" in the lane task means
+  this lane changes nothing; it does not mean the simulation proof will
+  need nothing.
+
 ## 1. What the REAL definitions say (checked, not from headers)
 
 ### 1.1 One G step is coarse and multi-access
@@ -249,17 +264,16 @@ BeweisAtomar.lean:222). For the TSO bridge this is the good direction:
   (`segZaehleX`, GXMaschine.lean:288) bounded by `kostenTief`, proved by
   `frame_schritte_beschraenktX` (GXMaschine.lean:344) — which holds
   *whatever the weak memory answers*. x86 instruction counts are a
-  TRANSFER on top: obligation O-time (§4.10): a per-G-rule worst-case x86
-  instruction bound (including CAS-retry bounds), composed with `ZeitAbX`.
+  TRANSFER on top: obligation O-time (§4.11): a per-G-rule worst-case x86
+  instruction bound (valid only with O-cas-cost shape (i) on the
+  program's paths), composed with `ZeitAbX`.
   Lane 278 owns timing; this document states the interface.
-- `fortschritt : FortschrittG` (Spec.lean:1828): G steps or named stops
-  (finished, waiting, flag, budget, hardware, `nieZurueck`). x86 spins
-  (ticket `dreht`, CAS retries, lowering loops) are finite stutter —
-  obligation O-stutter (§4.9): no infinite silent x86 trace without a G
-  step; needs a hardware fairness assumption (every flushed store becomes
-  visible; ticket draws are served in order — bounded waiting comes from
-  the ticket discipline, already proved: `ticket_ausschluss`,
-  CTicket.lean header).
+- `fortschritt : FortschrittG` (Spec.lean:1828): per-state enabledness —
+  finished, waiting, named-stopped (flag, budget, hardware,
+  `nieZurueck`), or able to step. No eventuality, no fairness in the
+  statement. x86 spins (ticket `dreht`, CAS retries, lowering loops) do
+  not threaten it; the binary-level need is enabledness preservation
+  (O-enable, §4.10), and no fairness assumption is invented (§4.10).
 - `keinKernHalt : KernHaltEA` (Spec.lean:2188): over GA runs with the
   hardware schedule `KernPlan` (Spec.lean:1858): handler entry only when
   unmasked + run-to-completion. Obligation O-irq (§4.7): map `cli`/`sti`
@@ -290,8 +304,9 @@ and flush timing is invisible (any flush order is some `Lesbar` choice
 sequence). Obligation O-tso-read: for each x86 load micro-event, the set
 of values TSO permits (own-buffer forward OR memory at flush state) is a
 subset of the `Lesbar` options at that access. Obligation O-tso-write:
-every x86 store eventually flushes; at flush time its timestamp is
-`Frisch` (strictly above the acting thread's pre-step view — holds because
+each OBSERVED x86 flush (finite traces only — no "eventually flushes"
+claim; liveness of flushing is not needed for any leg, §4.10) takes a
+`Frisch` timestamp (strictly above the acting thread's pre-step view — holds because
 views only grow, `sicht_waechst`, MaschineW.lean:269, and flush order
 respects per-core FIFO, so a monotone counter works). Same-core FIFO write
 order (TSO) is STRONGER than W (MaschineW.lean header: a write may take any
@@ -320,12 +335,12 @@ The emitter's fragment (Sicht.lean header): release/acquire declaration
 plain MOV covers relaxed AND release/acquire (TSO's ordering); `seq_cst`
 lowered to LOCK-prefixed op or MFENCE-bracketed MOV covers `seq_cst` and
 a fortiori W's `freigabe` modelling (§2.A). CAS loops: failed attempts are
-silent x86 steps (stutter, §4.9); the successful attempt is THE RMW access
+silent x86 steps (stutter for the safety legs, §4.10; cost §4.11); the successful attempt is THE RMW access
 of the access list; the update computation's input reads are ordinary
 accesses of the same G step (counterexample B shape — explicitly allowed).
-Obligation O-cas: each CAS loop either carries a static retry bound (then
-it feeds O-time) or relies on the fairness assumption (then it feeds
-O-stutter only, not O-time).
+CAS cost/divergence is obligation O-cas-cost (§4.11), which REPLACES the
+earlier O-cas wording: there is no "fairness assumption" alternative that
+keeps a constant bound — unbounded retries void the bound.
 
 ### 4.4 Release / acquire / seq-cst
 
@@ -375,8 +390,10 @@ boundary). Obligation O-spawn: the spawning thread's store buffer is
 drained before the child observes memory, and the child's initial views
 join the spawner's views at the spawn point (mirroring `vorSicht`'s lock
 join); join symmetrically. Without the drain, the child's first reads
-would be stale beyond any `Lesbar` option — the one place where TSO
-flushing MUST be constrained, not merely admitted.
+would be stale beyond any `Lesbar` option. [OPEN] The drain covers the
+spawner's buffer; visibility of OTHER cores' writes to the child is the
+same publication problem as OBS-5 (iii) (§4.9) — recorded there, not
+resolved here.
 
 ### 4.8 Interrupts
 
@@ -384,58 +401,145 @@ O-irq: (i) map the lowered interrupt masking to `D.maskiert` and the
   handler roots to `P.unterbricht` (`HandlerVon`, Spec.lean:1871);
 (ii) drain the interrupted thread's store buffer at handler entry (a
 handler is a new x86 observer; undrained stores would let it read older
-values than its W view permits); (iii) keep `KernPlan`
+values than its W view permits) — local drain only; visibility of other
+cores' writes to the handler falls under OBS-5 (§4.9); (iii) keep `KernPlan`
 run-to-completion as a NAMED hardware assumption — x86 does not guarantee
 it (higher-priority interrupts, NMIs, faults inside the handler);
 (iv) handler accesses to `Tg` carriers are recorded accesses of a GX step
 of the handler thread (they are ordinary steps, `FadenSchrittX.lauf`),
 while handler interaction with devices is foreign (assumption (5)).
 
-### 4.9 Unrecorded oracle accesses — the drain rule
+### 4.9 Unrecorded oracle accesses — open observation OBS-5 (review repair)
 
 Assumption (5) (Spec header): `Orakel.wirkt`, `axiomAntwort`, `O.regLies`,
 `O.sichtbar` read G's memory — the LAST write — wherever the step records
-nothing. On x86 these are: foreign calls (`extern`/syscall gates),
-device-register reads, and the `awaits` visibility check. Obligation
-O-drain: before every foreign call, every device read, and every point
-where `O.sichtbar` is evaluated, the acting core's store buffer is
-drained (MFENCE or equivalent), so "last write" coincides on both sides.
-If a foreign callee runs concurrently on another core (DMA-style), it is
-NOT covered — see §4.11. This is the second place (with O-spawn) where
-the bridge constrains flushing instead of admitting it.
+nothing (`ungelesen`, MaschineW.lean:160). On x86 these are: foreign calls
+(`extern`/syscall gates), device-register reads, and the `awaits`
+visibility check.
 
-### 4.10 Finite / infinite stuttering and progress
+[OPEN] OBS-5: a LOCAL drain (MFENCE on the acting core) is necessary but
+NOT sufficient, and "MFENCE everywhere" does not resolve assumption (5).
+A local fence makes the acting core's own buffered writes visible; it
+does NOT make every OTHER core's last issued write visible to the
+unrecorded reader. But assumption (5) demands the reader see G's memory —
+the last executed write, whichever thread executed it. The gap between
+"my buffer is drained" and "every core's last write is visible" is the
+open obligation. It decomposes into four proof needs, recorded here, not
+discharged:
 
-Silent x86 steps (no G-step counterpart): lowering expansion
-(one G rule → several instructions), ticket `dreht` spins, CAS-loop
-failures, spill traffic. Finite stutter is harmless for safety legs
-(`schwach` sees only access events; `rennfrei`/`sperrSicht` read access
-records). For `fortschritt` (Spec.lean:1828: every thread finished,
-waiting, named-stopped, or able to step) infinite silent traces must be
-excluded — obligation O-stutter: (i) every lowering-expansion sequence
-terminates (static bound — shared with O-time); (ii) ticket spins
-terminate by the ticket discipline + hardware fairness (bounded bypass:
-`ticket_ausschluss` gives exclusion; starvation-freedom is NOT proved —
-name the fairness assumption: every core makes progress and every flushed
-store becomes visible); (iii) CAS loops terminate under the same fairness
-or a static bound (O-cas). The named stops (`flagge`, `budget`,
-`hardware`, `nieZurueck`) need x86 counterparts: budget exhaustion is a
-G-level counter (unaffected); `hardware` stops (faults: #GP/#PF/divide
-errors) must be classified per emitted form — lane 272's witnesses plus
-lane 276's image contract feed this; a fault the binary takes where G
-has none is a gap, not a refinement.
+- (i) Footprint [PROVED facts, OPEN question]: `RegLokal`
+  (ZielOrtGeraetSem.lean:48) pins `regLies r` to the declared device
+  carriers `D.rtraeger r` and `sichtbar g` to `g` alone — those readers'
+  observable sets are bounded. But `Orakel.wirkt`'s READ footprint is NOT
+  bounded by the model: `RahmenO` (ZielOrtVollBeweis.lean:48) constrains
+  only what an axiom WRITES (declared frames), and `GutO`
+  (Satz.lean:967) constrains the trace shape and held locks, not which
+  carriers the foreign side reads. So which carriers a foreign call may
+  observe is an OPEN per-binding question (obligation O-foreign-foot):
+  for each `extern`/syscall gate, prove which carriers its result can
+  depend on — from the binding's contract and implementation, not from
+  the generic model.
+- (ii) Ownership [PROPOSAL, dischargeable]: where the observed carrier is
+  thread-local to the acting thread (`GetrenntK`) or protected by a lock
+  the acting thread holds with no concurrent writer possible, no other
+  core holds an unflushed write — local drain IS sufficient. This is the
+  only case MFENCE-before-the-call closes. The bridge must sort every
+  unrecorded-read site into this case or the next two; the sorting proof
+  is per lowering+binding.
+- (iii) Lock/publication chains [OPEN, proof required]: where the observed
+  carrier was written by another thread (e.g. published before unlock,
+  read by the foreign side after), visibility needs the RELEASER's writes
+  flushed — a TSO-level publication lemma. A LOCK-prefixed acquire on the
+  reader's core does NOT flush other cores' buffers; the argument must go
+  through coherence/flush ordering (or the x86 DRF-SC shape), and must be
+  PROVED for the exact lock template in use (cf. O-lock), not assumed.
+  Until proved, this is the load-bearing hole in reusing assumption (5)
+  for x86.
+- (iv) User/binding implementations [OPEN]: OS and binding calls are user
+  logic, never assumptions (AGENTS.md §3): the Gabbro-side syscall gates
+  and binding libraries that mediate sharing (e.g. thread-start, join
+  words, OS-published memory) must carry visibility in their CONTRACTS
+  (`ensures`), proved as user logic. Publication that the OS performs
+  (scheduler, clone, futex wake) lands here as the binding's proof
+  burden, not as a hardware assumption.
 
-### 4.11 Time
+Consequence [OPEN]: if any of (i)–(iv) cannot be discharged at
+lowering/binding level, assumption (5) as stated does not cover the x86
+target, and a REVIEWED `Spec.lean` diff (a narrowed assumption (5) plus
+the corresponding proof adjustments) would be required. Whether that is
+needed is decided by the simulation proof, not by this document. The
+DMA-style concurrent foreign writer stays excluded regardless (§4.12).
+
+O-spawn (§4.7) is the one instance of (iii) already identified: the
+spawning thread's buffer drained before the child observes + the child's
+initial views joining the spawner's — kept as a lowering constraint, now
+marked [OPEN] pending the publication lemma.
+
+### 4.10 Stuttering and progress — exact claim first (review repair)
+
+[REUSE] What `FortschrittG` (Spec.lean:1828) actually claims, verbatim in
+meaning: at a reached machine `M`, every thread `t` satisfies ONE
+disjunct — `FertigG M t` (finished), `WartetG M t` (waits for a lock or a
+publication), a NAMED stop (`HaltBenannt`: `.flagge`, `.budget`,
+`.hardware`, `.nieZurueck`), or `∃ M', RufSchrittG P O passes M t M'`
+(it CAN step). That is per-state ENABLEDNESS. It claims no eventuality:
+not that a thread will run, not that a spin terminates, not that a
+buffered store becomes visible. There is no scheduler and no fairness in
+its statement.
+
+Consequences for the bridge:
+
+- Spins and CAS retries do NOT threaten `fortschritt`: a thread whose G
+  state has an enabled step satisfies the existential no matter how many
+  silent x86 micro-steps (ticket `dreht`, CAS-loop failures, spill
+  traffic, lowering expansion) its lowering takes. The earlier draft's
+  O-stutter item (ii)–(iii) is WITHDRAWN as a `FortschrittG` need: no
+  termination proof for spins is required by any existing leg, and no
+  scheduler fairness or hardware buffer fairness may be invented to
+  transfer a stronger eventual-execution guarantee than the goal states.
+  Binary-level liveness beyond enabledness is NOT CLAIMED — consistent
+  with the Spec header (starvation freedom out of scope).
+- What `fortschritt` DOES need at the binary level is enabledness
+  preservation [OPEN, O-enable]: where G can step, the lowered machine
+  code at that state must not be stuck — i.e. no fault the source has
+  none of. The named stops need x86 counterparts: budget exhaustion is a
+  G-level counter (unaffected by lowering); `.hardware` stops (faults:
+  #GP/#PF/divide errors) must be classified per emitted form — lane 272's
+  witnesses plus lane 276's image contract feed this; a fault the binary
+  takes where G has none is a gap, not a refinement.
+- Silent steps remain harmless for the safety legs (`schwach` sees only
+  access events; `rennfrei`/`sperrSicht` read access records). Their COST
+  is a separate obligation and is NOT absorbed here — see §4.11.
+
+### 4.11 Time and the CAS divergence obligation (review repair)
 
 `ZeitAbX` bounds per-thread GX-step counts (`segZaehleX`) by
 `kostenTief`, independent of memory answers
-(`frame_schritte_beschraenktX`). The x86 transfer is multiplicative:
-obligation O-time: worst-case x86 dynamic-instruction count per G rule
-(including the CAS-retry bound from O-cas and spin bounds — or an
-explicit statement that spinning time is unbounded and excluded, matching
-`ZeitAb`'s existing weakness for waits: Spec header "`zeit` ... says
-nothing about waiting"). No cycle model is claimed here; lane 278 owns
-any cycle-level statement.
+(`frame_schritte_beschraenktX`) [REUSE]. A source exchange is ONE G step:
+constant model cost. Its x86 lowering as a CAS loop is UNBOUNDED in retry
+count. These two facts together force an explicit divergence/cost
+obligation — [OPEN] O-cas-cost: NO unbounded retry may vanish in
+stuttering while retaining a constant runtime bound. Two admissible
+shapes, per CAS site:
+
+- (i) Static retry bound `k` [PROPOSAL]: proved from the contention
+  structure (e.g. bounded competing threads on that location); the site
+  contributes factor `k` to the O-time transfer below.
+- (ii) Unbounded [OPEN]: the site is a DIVERGENCE source — x86 dynamic
+  steps per GX step unbounded. The O-time transfer is then VOID for any
+  program reaching it; this must be recorded per program (a refused
+  cost-bound claim), never silently absorbed into "finite stutter".
+  Single LOCK-prefixed fetch-RMW (`atomic_fetch_*`: one locked op, no
+  loop) has constant cost and is the preferred lowering wherever the
+  emitter uses it; the CAS-loop shape (release-on-success, acquire load —
+  Sicht.lean header) is where O-cas-cost bites.
+
+Obligation O-time [OPEN]: worst-case x86 dynamic-instruction count per G
+rule, valid only where every CAS site on the program's paths has shape
+(i) — plus an explicit statement that spinning/waiting time is unbounded
+and excluded, matching `ZeitAb`'s existing weakness for waits (Spec
+header: "`zeit` ... says nothing about waiting"). No cycle model is
+claimed here; lane 278 owns any cycle-level statement.
 
 ### 4.12 Ordinary WB memory vs MMIO / DMA
 
@@ -497,8 +601,9 @@ proposals, not reservations — no Lean file is added by this lane):
    recorded carriers (O-spill).
 8. L-run: induction over x86 runs → W runs from `RufStartW M0`
    (start state: empty buffers, single-message histories — matches
-   `RufStartW`, MaschineW.lean:77). Infinite-silent-trace exclusion
-   (O-stutter) for the progress-relevant reading.
+   `RufStartW`, MaschineW.lean:77). Unbounded silent sequences are NOT
+   excluded here (no leg needs it, §4.10); they are recorded per program
+   for O-cas-cost/O-time (§4.11).
 9. Instantiate `SchwachX` via `schwach_ist_gX` (AtomarW.lean:279) with
    `Tg := GeteiltV P ws` — needs O-checker-Tg (`hTA`), `FussSX` from (a),
    `KoerperGutSA` from (b) is NOT needed for `schwach` itself (only
@@ -506,11 +611,14 @@ proposals, not reservations — no Lean file is added by this lane):
    sentence.
 10. Legs: `rennfrei` via `RennfreiBisGA` (needs O-checker-race);
     `sperrWechsel`/`sperrSicht` via O-lock linearisation points;
-    `zeit` via `ZeitAbX` + O-time transfer; `fortschritt` via
-    `FortschrittG` + O-stutter (+ `fortschrittFX_aus`,
-    BeweisAtomar.lean:117, for the thread machine); `keinKernHalt` via
+    `zeit` via `ZeitAbX` + O-time transfer (valid only with O-cas-cost
+    shape (i) everywhere on the program's paths); `fortschritt` via
+    `FortschrittG` + O-enable (+ `fortschrittFX_aus`,
+    BeweisAtomar.lean:117, for the thread machine) — enabledness only,
+    no fairness; `keinKernHalt` via
     `KernHaltEA` + O-irq; `folge` free (`folgeG_erreichbarX`);
     contracts/invariants via `ziel_ort_atomar` once GX runs exist.
+    Unrecorded-read legs route through OBS-5 (§4.9).
 
 ## 6. Impossibilities and model mismatches (named, not hidden)
 
@@ -530,16 +638,24 @@ proposals, not reservations — no Lean file is added by this lane):
 6. MMIO/DMA/device memory is outside the bridge (O-mmio); mapping a `Tg`
    carrier there voids every leg silently — hence a lowering
    precondition, not a proof.
-7. Infinite stutter (livelock by CAS/spin non-termination) needs a
-   hardware fairness assumption; it cannot be proved from TSO alone.
-   Starvation freedom stays NOT CLAIMED (Spec header), consistent with
-   this.
-8. Unrecorded oracle/device reads need the drain rule (O-drain,
-   assumption (5)); without it the "last write" on x86 (buffered) and in
-   G diverge and `ungelesen` (MaschineW.lean:160) is unmappable.
-9. The goal statement is unchanged: `GabbroZiel` (Spec.lean:2283) and
-   `GabbroZielSC` (Spec.lean:2306, via `gabbro_ziel_sc_aus`,
-   BeweisAtomar.lean:470) stand as is; the bridge lands in `SchwachX`.
+7. No fairness assumption is invented or needed: `FortschrittG` is
+   enabledness, not eventuality (§4.10). Livelock-freedom of spins/CAS
+   beyond enabledness is NOT CLAIMED — consistent with the Spec header
+   (starvation freedom out of scope). What IS claimed and open is the
+   cost side: unbounded retries void constant runtime bounds (O-cas-cost,
+   §4.11).
+8. Unrecorded oracle/device reads route through OBS-5 (§4.9), not through
+   a drain rule: local MFENCE is insufficient (other cores' buffered
+   writes), and without discharge of (i)–(iv) the "last write" on x86
+   (buffered elsewhere) and in G diverge, leaving `ungelesen`
+   (MaschineW.lean:160) unmappable.
+9. The goal statement is NOT pre-concluded unchanged: the bridge TARGETS
+   the existing legs (`GabbroZiel`, Spec.lean:2283; `GabbroZielSC`,
+   Spec.lean:2306 via `gabbro_ziel_sc_aus`, BeweisAtomar.lean:470; the
+   landing zone is `SchwachX`), but whether the simulation proof goes
+   through without a REVIEWED `Spec.lean` diff is OPEN — candidates are
+   OBS-5 (assumption (5) scope), liveness scope (§4.10), and CAS cost
+   (§4.11). This lane changes no statement; the proof decides.
 
 ## CUTS
 
@@ -555,10 +671,13 @@ What this document does NOT prove (design only, no Lean added):
 - The per-rule access completeness (O-access, ~70 rules) is estimated as
   the largest single work item; `exchange_liest_schreibt` is the only
   existing instance of the pattern.
-- O-drain and O-spawn constrain the runtime/lowering (flush placement);
-  if the runtime cannot place them, the corresponding legs keep assumption
-  (5)/view-join as explicit named assumptions instead — the bridge then
-  documents, not discharges, them.
+- O-drain (as a "fence everywhere" rule) and O-spawn (as a pure flush
+  placement) are SUPERSEDED by OBS-5 (§4.9) and O-cas-cost (§4.11):
+  flush placement without the publication/footprint/binding proofs does
+  not discharge assumption (5), and unbounded retries must not vanish
+  into stuttering. Where the runtime cannot place a needed flush or
+  bound, the corresponding gap is recorded OPEN (possibly towards a
+  reviewed statement diff), not papered over.
 - All `#print axioms` obligations, witness obligations and review gates
   apply to wave-B Lean work, not to this document.
 

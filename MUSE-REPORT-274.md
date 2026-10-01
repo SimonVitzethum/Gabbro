@@ -76,3 +76,48 @@ HandlerVon, dannGleit).
 ## Commits
 
 - This report + `dokumente/x86/TSO-GX-BRUECKE.md`, one commit.
+
+## Review repair (2026-10-01, same branch, one more commit)
+
+Review finding: the bridge is a DESIGN, not a proved result; three
+places resolved open problems by assumption instead of recording them.
+Repaired only the two owned files (bridge doc + this report), with
+checked definitions:
+
+1. OBS-5 (§4.9, replaces the "drain rule" O-drain): a LOCAL MFENCE does
+   not make other cores' buffered writes visible, so it cannot discharge
+   assumption (5) (`Orakel.wirkt`/`axiomAntwort`/`O.regLies`/`O.sichtbar`
+   over G's memory, `ungelesen` MaschineW.lean:160). Decomposed into four
+   proof needs, recorded OPEN: (i) foreign READ footprint — `RahmenO`
+   (ZielOrtVollBeweis.lean:48) bounds only axiom WRITES, `GutO`
+   (Satz.lean:967) only trace shape/locks, so the observable set is a
+   per-binding question (O-foreign-foot); `RegLokal`
+   (ZielOrtGeraetSem.lean:48) bounds only `regLies`/`sichtbar`;
+   (ii) ownership (GetrenntK/held-lock: local drain sufficient — the
+   only case MFENCE closes); (iii) lock/publication chains need a proved
+   TSO-level publication lemma (a LOCK acquire does not flush other
+   cores' buffers); (iv) OS/binding visibility belongs in user-logic
+   contracts (`ensures`), per OS-is-user-logic. If (i)–(iv) resist
+   discharge, a reviewed `Spec.lean` diff may be needed — stated OPEN,
+   not pre-concluded. O-spawn (§4.7) and O-irq (ii) (§4.8) now point at
+   OBS-5 instead of claiming closure by local drain.
+2. `FortschrittG` (§4.10 rewritten from the exact def, Spec.lean:1828):
+   per-state enabledness (finished/waiting/named-stopped/able-to-step),
+   no eventuality, no scheduler, no fairness. Spins/CAS retries never
+   threatened it — the old O-stutter (ii)–(iii) fairness assumption is
+   WITHDRAWN. Binary-level need is enabledness preservation (O-enable:
+   no new faults); eventual execution is NOT CLAIMED (starvation out of
+   scope, consistent with the Spec header). No OS/runtime/fairness
+   assumption invented.
+3. CAS cost (§4.11, O-cas-cost): source exchange is one G step (constant
+   model cost); unbounded x86 CAS retries are a DIVERGENCE source —
+   O-time transfer void where shape (ii) occurs; static bound (i)
+   contributes its factor. No unbounded retry vanishes in stuttering
+   with a constant bound retained. Old O-cas wording replaced.
+4. Status convention ([PROVED]/[REUSE]/[PROPOSAL]/[OPEN]) added at §0;
+   §6.7–6.9 and CUTS corrected: no pre-conclusion that the statement
+   stays unchanged; candidates for a reviewed diff named (OBS-5,
+   liveness scope, CAS cost).
+5. Claim checks re-run by grep after every edit (all file:line cites
+   verified; `RennfreiVoll.lean:732/738` nimmt/gibt events confirmed).
+   No Lean/Rust touched: no `./lean-bau`/`./cargo-pruef` (docs-only).
