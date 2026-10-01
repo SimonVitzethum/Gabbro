@@ -180,3 +180,67 @@ file content. A content-free file crashes under it and passes without it.
   in the section above). The file is unchanged since.
 - `gabbro_ziel` axiom probe: not re-runnable now; last reading exactly
   `[propext, Classical.choice, Quot.sound]` (unchanged file, unchanged result expected).
+
+## Second gate failure: localized by bisection (2026-10-01, ~15:00-16:00 CEST)
+
+The gate failed again with the identical signature (`failed to create thread`,
+exit 134, this time after 5.0s with the full command line
+`lean -j2 -M4096 ... -o ...AtomicPayload.olean -i ... -c ...`).
+The `lean-slot` queue itself has recovered since (an untouched `Regionen.lean` probes
+green again, exit 0), so this round I bisected the module through `./lean-probe` with
+scratch files in `$TMPDIR` (all deleted afterwards; nothing outside the owned paths
+was touched). Result: about 25 probes, fully deterministic pattern.
+
+### Bisection evidence (each row: scratch file via `./lean-probe`, same 7 imports)
+
+- PASS: single `atomarFussB ... = true by decide` alone (the big
+  `vertragsFreiB`-over-program evaluation is survivable in isolation).
+- PASS: sections 1-3 together (both big decides plus the `w_nicht_sc` run witness).
+- PASS: section 4 (refusals) alone; section 5 (duty audit) alone.
+- PASS: every section-6 piece alone (`nichtatomar` theorem, `pD` plus its decide,
+  `pD` plus `nutzlast_braucht_restbeweis` plus its witness, `nichtatomar` plus its witness).
+- PASS: section-6 pieces combined without prints.
+- PASS: prints over olean-loaded constants in the same context (`Nat.add`,
+  `List.map`, `atomarB_iff`, `vertragsFreiB_ok`, even `n1_konfig_geteilt` which is
+  itself about `GeteiltV`).
+- CRASH: the verbatim file copy (reproduces the gate failure exactly).
+- CRASH: adding ANY `#print axioms` over a FRESHLY elaborated constant: the two
+  section-6 theorems, check-only and `GeteiltV`-only variants, `GetrenntR`-only and
+  `VertragsFrei`-only identities, a `GeteiltV` identity (`fun h => h`), even a fresh
+  `1 + 1 = 2` with an empty closure — in both the full and minimal fresh contexts.
+- CRASH: full file with factored single decide and decide-free `pD` transfer
+  (halving evaluations does not move the needle).
+
+### Decisive probe
+
+The verbatim committed content with ONLY the 8 `#print axioms` lines stripped
+(mechanical `grep -v`, namespace renamed, nothing else changed) gives
+`== 0 error(s) ... exit 0` through `./lean-probe` right now, under load.
+
+### Conclusion
+
+- Every definition elaborates and every proof (all 8 main theorems, all `_zeuge`
+  witnesses, all decides, the `pD` fixture, the `w_nicht_sc` run witnesses) checks
+  green NOW. There is no logical defect anywhere in the owned module.
+- What crashes, deterministically, is each `#print axioms` over a freshly elaborated
+  constant in this heavy import context (the whole goal/checker/witness closure).
+  Prints over olean-loaded constants pass in the same context, and fresh prints pass
+  in light contexts. Even a fresh `1 + 1 = 2` print crashes here, so NO statement- or
+  proof-level change (including removing all big evaluations) can fix it: the trigger
+  is independent of theorem content.
+- The same byte-identical file passed `./lean-probe` (0 errors) and the full
+  `./lean-bau` (386 jobs, exit 0) at lane time, so the threshold is load-dependent:
+  with `-j2 -M4096` on this machine under today's 40-lane load the print step
+  exhausts thread resources; quiet, it fits.
+- HARD RULES 6 mandates `#print axioms` for each main theorem in the file, so the
+  prints stay. No content repair exists for this failure mode; the module is
+  byte-identical to the reviewer-accepted commit `67dd9fd1`.
+- A fresh full `./lean-bau` was deliberately NOT re-run: it would only reproduce the
+  two gate crashes at high machine cost with zero new information (15 red probes plus
+  2 red gate logs already pin the failure to the print step; the logic itself is
+  proven green above).
+- Concrete ask for the coordinator: re-gate this unchanged content off-peak (it was
+  green before), and separately look at Lean 4.33 `#print axioms` thread usage under
+  `-j2 -M4096` next time the machine is this loaded. A fresh independent review of
+  this report commit is still required; reviewer 388: Lean content unchanged since
+  your acceptance.
