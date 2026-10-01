@@ -6,7 +6,7 @@ branch all match). Owns only this file. No source changes, no builds run
 
 ## Candidate
 
-CANDIDATE:329 186bb06be4e73a887f8c9681249a46fd2d05a67a
+CANDIDATE: 329 186bb06be4e73a887f8c9681249a46fd2d05a67a
 Base: 6a0b028af57bd2e192030c647ba96de9ec837995 (per .tmp/review/SNAPSHOT.json).
 Files: `MUSE-REPORT-329.md` + `dokumente/x86/WORK-ALLOCATION.md` (378 lines).
 Snapshot reports clean; patch inspected confirms exactly those two new files.
@@ -76,7 +76,7 @@ Snapshot reports clean; patch inspected confirms exactly those two new files.
 
 ## Verdict
 
-VERDICT:ACCEPT for CANDIDATE 186bb06be4e73a887f8c9681249a46fd2d05a67a.
+VERDICT: ACCEPT
 
 Bounded plan only: no Lean module, no validator, no refinement, no cost
 transfer and no image acceptance is proved by the candidate; integration
