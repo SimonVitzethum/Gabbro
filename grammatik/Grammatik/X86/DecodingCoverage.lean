@@ -250,6 +250,63 @@ theorem decodeModrm_abdeckung (rBit bBit op : Nat) (bs : List Byte)
       · simp at h
     · simp at h
 
+/-! ## 6. REX level: immediate-to-register or ModRM form, one outer byte. -/
+
+/-- REX coverage: the `movImm64` range reuses the 64-bit parse, the five
+    register and two memory opcodes reuse the ModRM level; anything else
+    refuses. One outer byte (the REX prefix). -/
+theorem decodeRex_abdeckung (rBit bBit : Nat) (bs : List Byte)
+    (d : Decodiert) (rest' : List Byte)
+    (h : decodeRex rBit bBit bs = some (d, rest')) :
+    (∃ pre, bs = pre ++ rest' ∧ pre.length + 1 = d.laenge) ∧
+      laengeOk d.laenge = true ∧ decktAb d := by
+  cases bs with
+  | nil => simp [decodeRex] at h
+  | cons op t =>
+    simp only [decodeRex] at h
+    split at h
+    · cases hc : codeReg (bBit * 8 + (byteNat op - 184)) with
+      | none => simp [hc] at h
+      | some dst =>
+        simp only [hc] at h
+        cases hparse : parseLe64 t with
+        | none => simp [hparse] at h
+        | some pr =>
+          obtain ⟨v, mid⟩ := pr
+          simp only [hparse] at h
+          obtain ⟨b0, b1, b2, b3, b4, b5, b6, b7, h8⟩ :=
+            parseLe64_suffix t v mid hparse
+          cases h
+          refine ⟨⟨[op, b0, b1, b2, b3, b4, b5, b6, b7], by simp [h8], rfl⟩,
+            rfl, ?_⟩
+          exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨dst, v, rfl, rfl⟩))))
+    · split at h
+      · have hsub := decodeModrm_abdeckung rBit bBit 137 t d rest' h
+        obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+        have hcons : (op :: pre).length = pre.length + 1 := rfl
+        refine ⟨⟨op :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
+      · have hsub := decodeModrm_abdeckung rBit bBit 1 t d rest' h
+        obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+        have hcons : (op :: pre).length = pre.length + 1 := rfl
+        refine ⟨⟨op :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
+      · have hsub := decodeModrm_abdeckung rBit bBit 41 t d rest' h
+        obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+        have hcons : (op :: pre).length = pre.length + 1 := rfl
+        refine ⟨⟨op :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
+      · have hsub := decodeModrm_abdeckung rBit bBit 49 t d rest' h
+        obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+        have hcons : (op :: pre).length = pre.length + 1 := rfl
+        refine ⟨⟨op :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
+      · have hsub := decodeModrm_abdeckung rBit bBit 57 t d rest' h
+        obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+        have hcons : (op :: pre).length = pre.length + 1 := rfl
+        refine ⟨⟨op :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
+      · have hsub := decodeModrm_abdeckung rBit bBit 139 t d rest' h
+        obtain ⟨⟨pre, hbs, hplen⟩, hok, hshape⟩ := hsub
+        have hcons : (op :: pre).length = pre.length + 1 := rfl
+        refine ⟨⟨op :: pre, by simp [hbs], by omega⟩, hok, hshape⟩
+      · simp at h
+
 /- CUTS (skeleton):
     - The arbitrary-input length soundness, the per-form classification, the
       suffix/window congruence and the entry-byte bridge are not yet proved.
