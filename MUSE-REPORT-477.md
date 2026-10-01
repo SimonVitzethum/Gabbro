@@ -5,17 +5,18 @@ Task: independently inspect the exact `.tmp/review/SNAPSHOT.json`, author-429
 task, PATCH, code/doc and actual build evidence for material semantic
 correctness against accepted models and trust boundaries.
 
-Round 1 reviewed `8528125f` (VERDICT: ACCEPT); the verdict is stale after
-author repairs, and this round freshly re-reviews the NEW pinned snapshot
-below. Nothing from round 1 is carried over unexamined.
+Round 1 reviewed `8528125f` (VERDICT: ACCEPT); round 2 reviewed `e309bdfa`
+(VERDICT: ACCEPT); both verdicts are stale after further author repairs,
+and this round freshly re-reviews the NEW pinned snapshot below. Nothing
+from earlier rounds is carried over unexamined.
 
 ## Candidate under review
 
 - Snapshot: author 429, base `0b3132b7`, head
-  `e309bdfa0b7da20439a6e1b45432b84a74bdefa4`, clean true.
+  `af29cbc4b2efafcad92bfab6c727a18e0dff24ad`, clean true.
 - Files: `MUSE-REPORT-429.md`, `grammatik/Grammatik.lean` (one additive
   import line), `grammatik/Grammatik/X86/CodeImmutability.lean` (new, ~300
-  lines). PATCH.diff (452 lines) matches exactly these three files.
+  lines). PATCH.diff (464 lines) matches exactly these three files.
 - Bounded claim: a successful `write64` whose 8-byte footprint is disjoint
   from the whole 15-byte fetch window at `rip` (`CodeFremd`) preserves the
   fetched bytes (`geholt`), the decode outcome (`fetchDekodiert`) and every
@@ -23,7 +24,32 @@ below. Nothing from round 1 is carried over unexamined.
   overlapping-store counterexample, and wrap/range correctness. Whole-source
   self-modifying-code refusal explicitly left separate (CUTS).
 
-## What changed between 8528125f and e309bdfa (verified, not assumed)
+## What changed between e309bdfa and af29cbc4 (verified, not assumed)
+
+- Git blob hashes inside the NEW PATCH.diff: `CodeImmutability.lean`
+  `3f6d2b9f` and `Grammatik.lean` `6e68b11c..9c5db7cf` are IDENTICAL to
+  rounds 1 and 2. No Lean byte moved; the repair commit `af29cbc4`
+  ("report second identical gate failure, module unchanged") touches only
+  `MUSE-REPORT-429.md` (report blob `276a51b7` -> `9d8e49fb`, 129 -> 141
+  lines: new section "Second identical gate failure", lines 124-134).
+- New BUILD-EVIDENCE entries (commands 112-131 in the evidence file):
+  post-commit `./lean-probe` still `0 error(s)` with unchanged axioms;
+  `git log` confirms the `af29cbc4` commit message and clean tree, with
+  `e309bdfa` and `8528125f` as its ancestors. These entries are consistent
+  with the unchanged-Lean claim.
+- The new report section states: the gate failed a second time with
+  byte-identical evidence (same step 397/398, same thread-spawn crash, exit
+  134, module axiom lines clean), the author re-examined owned files for
+  any defensive repair (olean load cost, proof-term size, import order)
+  and found none applicable, and the blocker stands. This adds no new
+  proof claim, no weakened guarantee, and no new acceptance. Assessment:
+  accurate, in-scope, and correctly scoped as a merger-side environment
+  blocker rather than a candidate defect. Same note as round 2: the
+  gate-run log itself is quoted in prose, not attached; corroborated by
+  the identical, independently reproducible crash in both clones, so not
+  counted as forged or insufficient evidence.
+
+## What changed between 8528125f and e309bdfa (round-2 record, kept)
 
 - Git blob hashes inside the NEW PATCH.diff: `CodeImmutability.lean`
   `3f6d2b9f` and `Grammatik.lean` `6e68b11c..9c5db7cf` are IDENTICAL to
@@ -62,17 +88,18 @@ below. Nothing from round 1 is carried over unexamined.
    `geholt_laenge_le`, `ketteStart`, `ketteReg`, `witnessFlags`
    (Byteschritt.lean); `natByte` (Codec.lean). All present, all accepted.
 4. Staged ONLY the NEW pinned candidate module file into my clone (umbrella
-   left untouched) and ran the queued `./lean-probe` on it. Result:
+   left untouched) and ran the queued `./lean-probe` on it. Result (this
+   round, re-run against the new pin):
    `== 0 error(s) in the COMPLETE output; exit 0`, with `#print axioms`
    for all 11 names exactly as the report states (`propext` and/or
    `Quot.sound`; `umbruch_alias` axiom-free; no `sorryAx`). Removed the
    staged file afterwards; clone is clean again.
-5. Textual hard-rule scan of the NEW pinned file: no `sorry`, `admit`,
-   `axiom` declaration, `native_decide`, `unsafe`, `intro _`, `have _ :=`,
-   or contract-quantifier games (round-2 scan: zero matches for the full
-   pattern set, including `^axiom `). Imports are the four accepted X86
-   modules only; friend-owned optimiser files, source checker, Spec, goal,
-   Rust, emitter, Typen and Codec untouched.
+5. Textual hard-rule scan of the NEW pinned file (re-run this round): no
+   `sorry`, `admit`, `axiom` declaration, `native_decide`, `unsafe`,
+   `intro _`, `have _ :=`, or contract-quantifier games (zero matches for
+   the full pattern set, including `^axiom `). Imports are the four
+   accepted X86 modules only; friend-owned optimiser files, source checker,
+   Spec, goal, Rust, emitter, Typen and Codec untouched.
 
 ## Semantic findings (all checked, none blocking)
 
@@ -127,5 +154,5 @@ axioms and the stated CUTS. It is not full compiler closure, not a
 whole-source self-modifying-code refusal, not a byte-step outcome claim,
 not concurrency/coherence, and not 1/2/4-byte stores.
 
-CANDIDATE: 429 e309bdfa0b7da20439a6e1b45432b84a74bdefa4
+CANDIDATE: 429 af29cbc4b2efafcad92bfab6c727a18e0dff24ad
 VERDICT: ACCEPT
