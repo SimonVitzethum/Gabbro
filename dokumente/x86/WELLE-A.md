@@ -64,3 +64,19 @@ Wave B depends on reviewed shared foundations: encoder/decoder and their round-t
 lowering and certificates, per-access TSO refinement, ABI/image construction, optimiser families
 and independent review. The limit is 20 active model processes including reviewers. Starting a
 lane or obtaining a green helper lemma does not close a binary validation chain.
+
+## Initial execution status
+
+The canonical vocabulary passed the full local Lean build (366 jobs, zero errors), committed
+as `09eed365`. Nine Go Contributor lanes are running (269–271 and 273–278); lane 272 waits
+for reviewed arithmetic/memory helpers. All nine checked their actual tool working directory,
+Git toplevel and branch against their own clone before resuming work.
+
+The launcher uses explicit `--dir` plus matching PWD; process cwd alone was insufficient for
+opencode in this environment. The first start was stopped before any lane commit, two partial
+owned Lean files were preserved into their correct clones, and master was restored unchanged.
+Every task now refuses an isolation mismatch before edits or branch changes. Continuations
+use explicit session IDs; they never continue the last session across parallel clones.
+
+Coordinator state: `.claude/muse-arbeit/x86/state/`; logs: local
+`/home/simon/Dokumente/gabbro-muse/logs/NN.log`. These are operational records, not proof verdicts.
