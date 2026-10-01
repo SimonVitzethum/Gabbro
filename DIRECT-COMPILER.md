@@ -230,7 +230,7 @@ Last ledger refresh: **2026-10-01 16:04 UTC**. This is an operational snapshot, 
 | 543 | Next bridge wave N16: DecodeFault | Merged after review/checks | 549: Merged after review/checks | [report](messung/muse/MUSE-REPORT-543.md) |
 | 544 | Next bridge wave N18: RegionFresh | Merged after review/checks | 550: Merged after review/checks | [report](messung/muse/MUSE-REPORT-544.md) |
 | 545 | Next bridge wave N11: PayloadResidue | Merged after review/checks | 551: Merged after review/checks | [report](messung/muse/MUSE-REPORT-545.md) |
-| 546 | Next bridge wave N13: ContractSites | Merged after review/checks | 552: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-546.md) |
+| 546 | Next bridge wave N13: ContractSites | Merged after review/checks | 552: Merged after review/checks | [report](messung/muse/MUSE-REPORT-546.md) |
 | 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Merged after review/checks | [report](messung/muse/MUSE-REPORT-547.md) |
 | 554 | Shorter clearer current English README | Merged after review/checks | 555: Merged after review/checks | [report](messung/muse/MUSE-REPORT-554.md) |
 | 556 | Repeated intermittent CLI alias test diagnosis | Merged after review/checks | 557: Merged after review/checks | [report](messung/muse/MUSE-REPORT-556.md) |
@@ -555,6 +555,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **545**, Next bridge wave N11: PayloadResidue, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-545.md). <!-- x86-merged:545 -->
 - 2026-10-01: lane **551**, Independent exact-candidate review of 545 PayloadResidue, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-551.md). <!-- x86-merged:551 -->
 - 2026-10-01: lane **546**, Next bridge wave N13: ContractSites, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-546.md). <!-- x86-merged:546 -->
+- 2026-10-01: lane **552**, Independent exact-candidate review of 546 ContractSites, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-552.md). <!-- x86-merged:552 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
