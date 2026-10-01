@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 20:38 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 20:43 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -271,7 +271,7 @@ Last ledger refresh: **2026-10-01 20:38 UTC**. This is an operational snapshot, 
 | 626 | Direct-source closure: FloatEntryState | Agent working | 627: scheduled | [task](lanes/626.md) |
 | 628 | Direct-source closure: SourceAssignmentLowering | Waiting for accepted dependencies | 629: scheduled | [task](lanes/628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
-| 632 | Direct-source closure: SourceValidatorConnection | Waiting for accepted dependencies | 633: scheduled | [task](lanes/632.md) |
+| 632 | Direct-source closure: SourceValidatorConnection | Agent working | 633: scheduled | [task](lanes/632.md) |
 | 634 | Direct-source closure: SourceCodeFrame | Agent working | 635: scheduled | [task](lanes/634.md) |
 | 636 | Required failover slot lifetime and safe role handback | Agent working | 637: scheduled | [task](lanes/636.md) |
 
@@ -659,6 +659,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **598**, Overnight: Checked validator to loaded fetched execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-598.md). <!-- x86-merged:598 -->
 - 2026-10-01: checked master `d0df3f69` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d0df3f69441aa3317c46bf6bc27e4419ba7dcc86 -->
 - 2026-10-01: lane **610**, Independent overnight review of 598, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-610.md). <!-- x86-merged:610 -->
+- 2026-10-01: publication batch checks passed for `7bf25826`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
