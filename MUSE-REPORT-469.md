@@ -31,5 +31,10 @@
 ## What remains open
 - Per the file's own CUTS: no W/GX refinement, no silicon/timing correspondence, no decode/ABI/entry coverage, no source lowering. The author's report states all of this plainly. Nothing in the task is silently dropped.
 
+## Re-review note 2026-10-01 (snapshot unchanged, still 7a95186d)
+- Evidence inspected this turn: current `SNAPSHOT.json` (head `7a95186d`, base `0b3132b7`, `clean: true`); full re-read of the 361-line `WordAtomicity.lean` at this snapshot; fresh `./lean-probe` of the staged candidate content in my clone: `0 error(s), exit 0`, axioms all subsets of `[propext, Quot.sound]`.
+- Substantive spot checks re-done against accepted models: `lockSchritt` (LockedOps.lean:57-70) gates buffer-empty, then read, then `ausgerichtet8`, then write — each of the three `lock_verweigert_*` refusal theorems targets exactly one gate (no vacuous `simp`); `paket_reisst` signature (TSO.lean:459) matches the `wort_fuss_reisst` application argument order; forbidden-token grep hits (2) are both English prose ("admit exactly this", "never admits"), not tactics; CUTS block present at line 309.
+- No full `./lean-bau` claim is made here: the umbrella aggregation abort under machine contention is infrastructure, not a theorem failure, and module-level green is established by the probe, which elaborates the file with all imports. Precise unresolved CUTS (unchanged): `WortNachW` empty (no W/GX refinement), no silicon/timing, no decode/ABI/entry, no source lowering — all explicitly disclaimed, none silently dropped. Verdict unchanged.
+
 CANDIDATE: 421 7a95186daef445bd350dbd4ef1f31e630edf2ac5
 VERDICT: ACCEPT
