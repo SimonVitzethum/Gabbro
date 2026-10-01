@@ -108,7 +108,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 11:22 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 11:26 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -151,18 +151,18 @@ Last ledger refresh: **2026-10-01 11:22 UTC**. This is an operational snapshot, 
 | 330 | Muse merge-owner for independently approved safety-first design | Merged after review/checks | 333: Merged after review/checks | [report](messung/muse/MUSE-REPORT-330.md) |
 | 331 | Complete Lean optimiser specification and friend handoff | Merged after review/checks | 334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-331.md) |
 | 335 | Practical-performance Lean wave A1: NarrowOps | Committed candidate; review/integration pending | 373: Agent working | [task](lanes/335.md) |
-| 336 | Practical-performance Lean wave A2: MulDiv | Committed candidate; review/integration pending | 374: Agent working | [task](lanes/336.md) |
-| 337 | Practical-performance Lean wave A3: ShiftLogic | Committed candidate; review/integration pending | 375: Agent working | [task](lanes/337.md) |
-| 338 | Practical-performance Lean wave A4: ControlFlow | Committed candidate; review/integration pending | 376: Agent working | [task](lanes/338.md) |
-| 339 | Practical-performance Lean wave A5: LockedOps | Committed candidate; review/integration pending | 377: Agent working | [task](lanes/339.md) |
+| 336 | Practical-performance Lean wave A2: MulDiv | Committed candidate; review/integration pending | 374: Committed candidate; review/integration pending | [task](lanes/336.md) |
+| 337 | Practical-performance Lean wave A3: ShiftLogic | Committed candidate; review/integration pending | 375: Committed candidate; review/integration pending | [task](lanes/337.md) |
+| 338 | Practical-performance Lean wave A4: ControlFlow | Committed candidate; review/integration pending | 376: Committed candidate; review/integration pending | [task](lanes/338.md) |
+| 339 | Practical-performance Lean wave A5: LockedOps | Committed candidate; review/integration pending | 377: Committed candidate; review/integration pending | [task](lanes/339.md) |
 | 340 | Practical-performance Lean wave A6: ScalarFloat | Agent working | 378: scheduled | [task](lanes/340.md) |
-| 341 | Practical-performance Lean wave B1: AccessList | Committed candidate; review/integration pending | 379: Agent working | [task](lanes/341.md) |
+| 341 | Practical-performance Lean wave B1: AccessList | Committed candidate; review/integration pending | 379: Committed candidate; review/integration pending | [task](lanes/341.md) |
 | 342 | Practical-performance Lean wave B2: OverlapRefusal | Merged after review/checks | 380: Merged after review/checks | [report](messung/muse/MUSE-REPORT-342.md) |
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
 | 344 | Practical-performance Lean wave B4: FenceDrain | Committed candidate; review/integration pending | 382: Committed candidate; review/integration pending | [task](lanes/344.md) |
-| 345 | Practical-performance Lean wave C1: TableLayout | Committed candidate; review/integration pending | 383: Agent working | [task](lanes/345.md) |
+| 345 | Practical-performance Lean wave C1: TableLayout | Committed candidate; review/integration pending | 383: Committed candidate; review/integration pending | [task](lanes/345.md) |
 | 346 | Practical-performance Lean wave C2: GateStub | Committed candidate; review/integration pending | 384: Agent working | [task](lanes/346.md) |
-| 347 | Practical-performance Lean wave C3: CostSummary | Committed candidate; review/integration pending | 385: Agent working | [task](lanes/347.md) |
+| 347 | Practical-performance Lean wave C3: CostSummary | Committed candidate; review/integration pending | 385: Committed candidate; review/integration pending | [task](lanes/347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Committed candidate; review/integration pending | 386: Agent working | [task](lanes/348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Agent working | 388: scheduled | [task](lanes/350.md) |
@@ -306,6 +306,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **342**, Practical-performance Lean wave B2: OverlapRefusal, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-342.md). <!-- x86-merged:342 -->
 - 2026-10-01: checked master `b5267bd4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:b5267bd4e371bc56f7f1e4360de56e91b46c3397 -->
 - 2026-10-01: lane **380**, Independent exact-candidate review of 342 OverlapRefusal, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-380.md). <!-- x86-merged:380 -->
+- 2026-10-01: publication batch checks passed for `1f533c8b`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
