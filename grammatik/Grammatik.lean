@@ -439,3 +439,4 @@ import Grammatik.X86.NarrowCodec
 import Grammatik.X86.ShiftCodec
 import Grammatik.X86.RelocatedExecution
 import Grammatik.X86.LoadedExecution
+import Grammatik.X86.ControlCodec
