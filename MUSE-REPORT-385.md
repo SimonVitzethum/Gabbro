@@ -63,5 +63,5 @@ tie, segment additivity, the counted leaf expansion with honest spill/fence
 counts, and the OPEN-stated (not derived) simulation obligation. Not a full
 compiler, validator, lowering, or hardware correspondence claim.
 
-CANDIDATE: 347 41306b43
+CANDIDATE: 347 41306b433305275667ac8fd7d91a4fc1e06d958f
 VERDICT: ACCEPT
