@@ -1,13 +1,22 @@
-# Muse report 316: independent review of candidate 312
+# Muse report 316: independent review of candidate 312 (re-review after repair)
 
-## Scope and snapshot
+## Scope and snapshot (RE-REVIEW, new pin)
 
-Reviewed ONLY the pinned snapshot `.tmp/review/author-312/` (no other
-clone, no code edits, no central-file changes):
+Reviewed ONLY the NEW pinned snapshot `.tmp/review/author-312/` (no
+other clone, no code edits, no central-file changes). The previous
+verdict (REPAIR on `946e107d`) is stale and superseded by this section.
 
 - `SNAPSHOT.json`: author 312, HEAD
-  `946e107dc0a43d2ff97f7ecda3c587721686ad8d`, base
+  `defda05ab2fdabb250ea7a9e5bcff109529e5bc0`, base
   `345627a46732923a03a5f792ff4050b7e3b7c837`, clean, files
+  `MUSE-REPORT-312.md`, `grammatik/Grammatik.lean`,
+  `grammatik/Grammatik/X86/Regionen.lean` (now 631 lines, +41 vs the
+  first snapshot: exactly the two required repairs, nothing else).
+- `PATCH.diff` is a full-file diff containing the repaired theorems;
+  `BUILD-EVIDENCE.json` appends the repair-pass trail (one red
+  intermediate probe at line 323, fixed; final probe 0 errors plus
+  `./lean-bau` 372 jobs success with `region_schreibLese_zeuge` at the
+  new line 629).
   `MUSE-REPORT-312.md`, `grammatik/Grammatik.lean`,
   `grammatik/Grammatik/X86/Regionen.lean`.
 - `PATCH.diff` confirms exactly that file set: one new Lean file
@@ -92,7 +101,38 @@ task: no gratuitous full builds for prose).
 - Fresh regions are capabilities, runtime/OS allocation is user logic,
   no new word/memory model: as required by the owner task.
 
-## Required findings (REPAIR)
+## Re-review of previous findings (new snapshot)
+
+F1 (unused `_hq`, old line 284) — RESOLVED as the preferred variant:
+`reserviere_disjunkt_unten` (new lines 281-299) now takes
+`(hinv : alleUnten s) (q : Region) (hq : q ∈ s.belegt)` and derives
+`have hunter := hinv q hq` (line 288), which the closing `omega`
+uses. Every premise is used (`h` via `reserviere_frisch` /
+`reserviere_ausmass`, `hinv`+`hq` via `hunter`). No underscore-silenced
+binder remains anywhere in the file (grep for `_hq`/`intro _`/`have _`
+empty). The statement is now about tracked regions, otherwise
+unchanged — no weakening.
+
+F2 (old-entries-only preservation) — RESOLVED by addition, not
+rewording: new helper `reserviere_belegt` (lines 313-331,
+`s'.belegt = r :: s.belegt`, premise `h` used throughout the case
+split) and new corollary `reserviere_haelt_alleUnten` (lines 335-350,
+conclusion `alleUnten s'`). The proof is the natural case split (new
+region ends exactly at the new cursor via `reserviere_frisch`, old
+entries via `reserviere_haelt_unten`); all premises used
+(`h` via `hfr`/`halt`/`hbel`, `hinv` via `halt`). The report's
+"cursor invariant preservation" claim now matches a proved theorem
+exactly, and the report's name list was updated with both new
+theorems (script-verified present, with `#print axioms` lines).
+
+Fresh independent checks on the NEW snapshot: `./lean-probe` gives
+`== 0 error(s)`; both new theorems depend only on
+`[propext, Quot.sound]`; banned-token grep empty; source-syntax grep
+(`Vertrag`/`Stmt`/`Endblock`/`ErgExpr`) empty, so still no `_zeuge`
+companion needed; claim boundaries/CUTS unchanged. No new defects
+found; the earlier non-blocking observations stand as notes.
+
+## Required findings (REPAIR — FIRST snapshot, now superseded)
 
 F1: Unused premise contradicts a hard gate and the report.
 File `grammatik/Grammatik/X86/Regionen.lean` line 284, theorem
@@ -149,5 +189,9 @@ new cursor" so the claim matches exactly what is proved.
 - No Lean file written by this review; no central file touched; only
   this report is owned and committed.
 
-CANDIDATE: 312 946e107dc0a43d2ff97f7ecda3c587721686ad8d
-VERDICT: REPAIR
+CANDIDATE: 312 defda05ab2fdabb250ea7a9e5bcff109529e5bc0
+VERDICT: ACCEPT
+
+Note: the ACCEPT above refers to the NEW pin `defda05a`. The stale
+first snapshot `946e107d` remains VERDICT: REPAIR (findings F1/F2 as
+documented); it must not be approved or merged.
