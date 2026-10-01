@@ -456,3 +456,4 @@ import Grammatik.X86.SourceValidatorConnection
 import Grammatik.X86.SourceAssignmentLowering
 import Grammatik.X86.WordAccessGrouping
 import Grammatik.X86.FloatSourceObservations
+import Grammatik.X86.SourceAccessCompleteness
