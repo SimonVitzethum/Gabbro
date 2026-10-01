@@ -358,6 +358,111 @@ theorem region_ueberlapp_verweigert :
       false := by
   decide
 
+/-! ## Witness: one table, one writing function, one step. -/
+
+/-- Witness signature: parameterless, no answer, writes the table. -/
+def witSig : Signatur Unit Empty Empty Empty :=
+  { params := [], erg := none, gruende := 0, haelt := [],
+    schreibt := fun _ => true, gschreibt := fun g => (nomatch g),
+    konsumiert := [], produziert := [], boden := none }
+
+/-- Witness declaration: one table with one `.int 0 100` field, one
+    parameterless function whose contract writes it, nothing else. -/
+def witD : Deklaration where
+  Tab := Unit
+  count := fun _ => 1
+  Feld := fun _ => Unit
+  typ := fun _ _ => .int 0 100
+  erlaubt := fun _ _ _ _ => true
+  tabNr := fun _ => some ()
+  Glob := Empty
+  gtyp := fun g => nomatch g
+  nutzlast := fun g => nomatch g
+  atomar := fun g => nomatch g
+  geteilt := fun _ => false
+  ggeteilt := fun g => nomatch g
+  Lock := Empty
+  rang := fun L => nomatch L
+  maskiert := fun L => nomatch L
+  Marke := Empty
+  stufen := fun m => nomatch m
+  braucht := fun _ => []
+  gbraucht := fun g => nomatch g
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 0
+  sigNr := fun _ => witSig
+  eigner_nie_erzeugt := fun n t m s _ => nomatch m
+  Inv := Empty
+  traeger := fun i => nomatch i
+  invs := []
+  Ax := Empty
+  aparams := fun a => nomatch a
+  aerg := fun a => nomatch a
+  aschreibt := fun a => nomatch a
+  agschreibt := fun a => nomatch a
+  Reg := Empty
+  rtyp := fun r => nomatch r
+  rklasse := fun r => nomatch r
+  spiegel := fun r => nomatch r
+  rzusage := fun r => nomatch r
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun n i _ => nomatch i
+  ggeteilt_bewacht := fun g => nomatch g
+
+/-- The witness contract: writes the table. -/
+def witV : Vertrag witD :=
+  { schreibt := fun _ => true
+    gschreibt := fun g => nomatch g
+    erg := none
+    gruende := 0
+    haelt := []
+    produziert := []
+    boden := none }
+
+/-- The witness oracle: no axioms, registers or globals to answer. -/
+def witO : Orakel witD where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r => nomatch r
+  sichtbar := fun g => nomatch g
+
+/-- The witness callee table: every call succeeds without moving memory. -/
+def witR : ∀ f : witD.Fn, World witD → Env witD (witD.params f) →
+    RufAusgang f :=
+  fun _ σ _ => .ok σ ()
+
+/-- The witness index: row 0. -/
+def witI : Expr witD [] [] (.index (witD.count ())) := Expr.lit 0
+
+/-- The witness value: 42 in `0 .. 100`. -/
+def witE : Expr witD [] [] (witD.typ () ()) :=
+  Expr.weiter (by decide) (by decide) (Expr.lit 42)
+
+/-- The witness world: every slot is 0, no trace yet. -/
+def witSigma : World witD where
+  slots := fun t _ f => by cases t; cases f; exact ⟨0, by decide, by decide⟩
+  globs := fun g => nomatch g
+  spur := []
+
+/-- The witness read world: the trace entries of the two reads. -/
+def witSL : World witD := witSigma.lese [] (witI.orte ++ witE.orte)
+
+/-- The witness value at the target: 42. -/
+def witVal : Zahl 0 100 := ⟨42, by decide, by decide⟩
+
+/-- The witness target memory: zero bytes, full R/W, never executable. -/
+def witM : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0
+    lesbar := fun _ => true
+    schreibbar := fun _ => true
+    ausfuehrbar := fun _ => false }
+
+/-- The witness slot address: layout base 4096, offset 0. -/
+def witA : Adresse := slotAddr 4096 0
+
 /- CUTS:
     - The execStmt-facing main theorem, the refusals and the joint
       witness are still to come.
