@@ -143,7 +143,7 @@ Last ledger refresh: **2026-10-01 10:20 UTC**. This is an operational snapshot, 
 | 317 | Single pilot instruction access extraction | Merged after review/checks | 318: Merged after review/checks | [report](messung/muse/MUSE-REPORT-317.md) |
 | 319 | Byte-memory fetch decode and actual instruction step | Agent working | 320: scheduled | [task](lanes/319.md) |
 | 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-323.md) |
-| 325 | High runtime performance and feasible hardware-profile design revision | Merged after review/checks | 326: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-325.md) |
+| 325 | High runtime performance and feasible hardware-profile design revision | Merged after review/checks | 326: Merged after review/checks | [report](messung/muse/MUSE-REPORT-325.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -252,6 +252,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **318**, Independent review of 317, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-318.md). <!-- x86-merged:318 -->
 - 2026-10-01: lane **321**, Independent central compiler document review, integrated after its applicable review and checks. Commit `55f533ac`. [Evidence](messung/muse/MUSE-REPORT-321.md). <!-- x86-merged:321 -->
 - 2026-10-01: lane **325**, High runtime performance and feasible hardware-profile design revision, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-325.md). <!-- x86-merged:325 -->
+- 2026-10-01: lane **326**, Independent high-performance hardware-design revision review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-326.md). <!-- x86-merged:326 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
