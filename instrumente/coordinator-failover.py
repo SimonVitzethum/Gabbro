@@ -273,6 +273,279 @@ def lock_slot(pool_dir, slot):
         return None
 
 
+GUARDIAN_MARKER = "gabbro-failover-slot-guardian"
+
+
+def proc_pgrp(proc_root, pid):
+    """Return the process-group id of pid, or None if gone/unreadable."""
+    try:
+        stat = Path(proc_root, str(int(pid)), "stat").read_text()
+    except (FileNotFoundError, NotADirectoryError, ValueError, OSError):
+        return None
+    try:
+        after = stat.rsplit(")", 1)[1].split()
+        return int(after[2])
+    except (IndexError, ValueError):
+        return None
+
+
+def group_members(pgid, proc_root, exclude=()):
+    """List live pids whose process group is pgid (kernel /proc scan).
+
+    Zombies and dead states never count as live members. Unreadable or
+    gone pids are skipped. Excluded pids (supervisor, guardian) are not
+    reported.
+    """
+    try:
+        want = int(pgid)
+    except (ValueError, TypeError):
+        return []
+    excluded = set()
+    for pid in exclude:
+        try:
+            excluded.add(int(pid))
+        except (ValueError, TypeError):
+            continue
+    members = []
+    try:
+        names = os.listdir(str(proc_root))
+    except OSError:
+        return []
+    for name in names:
+        if not name.isdigit():
+            continue
+        pid = int(name)
+        if pid in excluded:
+            continue
+        try:
+            stat = Path(proc_root, name, "stat").read_text()
+        except (FileNotFoundError, NotADirectoryError, OSError):
+            continue
+        try:
+            after = stat.rsplit(")", 1)[1].split()
+            state = after[0]
+            pgrp = int(after[2])
+        except (IndexError, ValueError):
+            continue
+        if state in ("Z", "X"):
+            continue
+        if pgrp == want:
+            members.append(pid)
+    return sorted(members)
+
+
+def wait_group_gone(pgid, proc_root, exclude=(), timeout=30.0,
+                    poll=0.2):
+    """True once no live member of pgid remains (excluding given pids)."""
+    deadline = time.monotonic() + max(float(timeout), 0.0)
+    while time.monotonic() < deadline:
+        if not group_members(pgid, proc_root, exclude=exclude):
+            return True
+        time.sleep(poll)
+    return not group_members(pgid, proc_root, exclude=exclude)
+
+
+def guardian_code():
+    """Python source for the slot-guardian child.
+
+    The guardian inherits the SAME locked slot/role file descriptions
+    via pass_fds, runs in its own session (never in the fallback group,
+    so killpg on the fallback never signals it) and exits only after the
+    fallback process group has no live member left. Any survivor holding
+    the inherited description keeps the kernel slot/role lock until then,
+    so a supervisor crash or budget exit cannot free the 15-slot
+    accounting while fallback tools still run.
+    """
+    return (
+        "import os,sys,time\n"
+        "from pathlib import Path\n"
+        "pgid=int(sys.argv[2]); root=sys.argv[3]\n"
+        "guard=int(sys.argv[4]) if len(sys.argv)>4 else 0\n"
+        "sup=int(sys.argv[5]) if len(sys.argv)>5 else 0\n"
+        "while True:\n"
+        " members=[]\n"
+        " try:\n"
+        "  names=os.listdir(root)\n"
+        " except OSError:\n"
+        "  break\n"
+        " for n in names:\n"
+        "  if not n.isdigit(): continue\n"
+        "  p=int(n)\n"
+        "  if p in (guard,sup,os.getpid()): continue\n"
+        "  try:\n"
+        "   s=Path(root,n,'stat').read_text()\n"
+        "  except OSError:\n"
+        "   continue\n"
+        "  try:\n"
+        "   a=s.rsplit(')',1)[1].split()\n"
+        "   st=a[0]; g=int(a[2])\n"
+        "  except (IndexError,ValueError):\n"
+        "   continue\n"
+        "  if st in ('Z','X'): continue\n"
+        "  if g==pgid: members.append(p)\n"
+        " if not members: break\n"
+        " time.sleep(1.0)\n"
+    )
+
+
+def spawn_guardian(pgid, proc_root, slot_fh, role_fh=None):
+    """Spawn the slot-guardian sharing the locked slot/role descriptions."""
+    import subprocess
+    marker = GUARDIAN_MARKER
+    fds = []
+    if slot_fh is not None:
+        fds.append(slot_fh.fileno())
+    if role_fh is not None and role_fh.fileno() not in fds:
+        fds.append(role_fh.fileno())
+    if not fds:
+        return None
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, "-c", guardian_code(), marker,
+             str(int(pgid)), str(proc_root),
+             str(os.getpid()), str(os.getpid())],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True, close_fds=False,
+            pass_fds=tuple(fds))
+    except Exception:
+        return None
+    return proc
+
+
+def guardian_alive(pid, proc_root, pgid=None):
+    """True while the guardian process itself is live (marker cmdline)."""
+    if pid is None:
+        return False
+    try:
+        pid_int = int(pid)
+    except (ValueError, TypeError):
+        return False
+    info = read_proc_parts(proc_root, pid_int)
+    if info is None:
+        return False
+    parts, state, _ = info
+    if state in ("Z", "X", "unknown"):
+        return False
+    blob = "\x00".join(parts)
+    if GUARDIAN_MARKER not in blob:
+        return False
+    if pgid is not None and str(int(pgid)) not in blob:
+        return False
+    return True
+
+
+def acquire_boundary(control_dir, timeout=60.0, poll=0.1):
+    """Hold safe-boundary locks across termination (never probe-release).
+
+    Acquires foreground-action.lock EX and then watch.lock EX, blocking
+    (with timeout) while an integration, tool run or watcher step holds
+    them. Both locks are HELD on success and must stay held through the
+    fallback signal/wait/group-drain; the caller releases them only after
+    the lease has been updated. Returns (action_fh, watch_fh) or
+    (None, None) on timeout. The lease lock must NOT be held while
+    calling this (foreground mutations take action EX then lease SH, so
+    holding lease EX here would deadlock); acquire boundary first, then
+    re-check the lease while holding all three.
+    """
+    deadline = time.monotonic() + max(float(timeout), 0.0)
+    action_path = Path(control_dir) / "foreground-action.lock"
+    watch_path = Path(control_dir) / "watch.lock"
+    try:
+        action_fh = open(action_path, "a")
+    except OSError:
+        return None, None
+    while True:
+        try:
+            fcntl.flock(action_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except (BlockingIOError, OSError):
+            if time.monotonic() >= deadline:
+                try:
+                    action_fh.close()
+                except OSError:
+                    pass
+                return None, None
+            time.sleep(poll)
+    try:
+        watch_fh = open(watch_path, "a")
+    except OSError:
+        try:
+            action_fh.close()
+        except OSError:
+            pass
+        return None, None
+    while True:
+        try:
+            fcntl.flock(watch_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return action_fh, watch_fh
+        except (BlockingIOError, OSError):
+            if time.monotonic() >= deadline:
+                for fh in (watch_fh, action_fh):
+                    try:
+                        fh.close()
+                    except OSError:
+                        pass
+                return None, None
+            time.sleep(poll)
+
+
+def close_fhs(*fhs):
+    for fh in fhs:
+        if fh is None:
+            continue
+        try:
+            fh.close()
+        except OSError:
+            pass
+
+
+def own_pause_path(control_dir):
+    return Path(control_dir) / "coordinator-pause.json"
+
+
+def ensure_own_pause(control_dir):
+    """Request a watcher safe boundary via a supervisor-owned pause file."""
+    path = own_pause_path(control_dir)
+    try:
+        if path.is_file():
+            try:
+                doc = json.loads(path.read_text())
+            except (ValueError, OSError):
+                doc = {}
+            if str(doc.get("owner", "")) == f"failover-{os.getpid()}":
+                return True
+            return False
+    except OSError:
+        return False
+    try:
+        atomic_write_json(path, {"owner": f"failover-{os.getpid()}",
+                                 "requested": now_iso(),
+                                 "reason": "failover requests watcher safe "
+                                           "boundary before role close"})
+    except OSError:
+        return False
+    return True
+
+
+def remove_own_pause(control_dir):
+    """Remove only the supervisor's own pause request, never another's."""
+    path = own_pause_path(control_dir)
+    try:
+        if not path.is_file():
+            return True
+        try:
+            doc = json.loads(path.read_text())
+        except (ValueError, OSError):
+            return False
+        if str(doc.get("owner", "")) != f"failover-{os.getpid()}":
+            return False
+        path.unlink()
+    except OSError:
+        return False
+    return True
+
+
 def coordinator_cmd(coordinator):
     if str(coordinator).endswith(".py"):
         return [sys.executable, str(coordinator)]
@@ -439,13 +712,35 @@ def run_supervise(args):
     turn_secs = float(args.turn_seconds)
     poll = max(float(args.poll_seconds), 0.05)
     start = time.monotonic()
-    child = None  # dict(proc|None, pid, turn_start, slot, slot_fh, role_fh, epoch)
+    child = None  # dict(proc|None, pid, turn_start, slot, slot_fh, role_fh,
+    #                guardian_proc|None, guardian_pid|None, epoch)
     started = 0
     failures = 0
     backoff = 5.0
     retry_at = 0.0
     last_exit = None
     note = "watching_foreground_heartbeat"
+    dispatcher_held = False
+
+    def dispatcher_stop_once():
+        nonlocal dispatcher_held
+        if dispatcher_held:
+            return
+        try:
+            coordinator_action(args.coordinator, "dispatch_stop")
+        except Exception:
+            pass
+        dispatcher_held = True
+
+    def dispatcher_restore():
+        nonlocal dispatcher_held
+        if not dispatcher_held:
+            return
+        try:
+            coordinator_action(args.coordinator, "dispatch_start")
+        except Exception:
+            pass
+        dispatcher_held = False
 
     def release_child_locks():
         if child is not None:
@@ -458,8 +753,23 @@ def run_supervise(args):
             child["slot_fh"] = None
             child["role_fh"] = None
 
+    def reap_guardian():
+        if child is not None:
+            gproc = child.get("guardian_proc")
+            child["guardian_proc"] = None
+            child["guardian_pid"] = None
+            if gproc is not None:
+                try:
+                    gproc.wait(timeout=0)
+                except Exception:
+                    pass
+
     # Crash/restart recovery: adopt an already-identified live fallback
-    # instead of starting a duplicate, and re-hold its slot lock.
+    # instead of starting a duplicate, and NEVER take a different slot
+    # while its group still lives. A slot that is still flock-held is
+    # recognised as held (lock_slot fails) and adopted as externally
+    # held; only a free recorded slot is re-held (pre-inheritance
+    # leases) to restore the cap, with a fresh guardian.
     with open(control / "orchestrator-lease.lock", "a") as guard:
         fcntl.flock(guard, fcntl.LOCK_EX)
         lease = read_lease(args.control_dir)
@@ -467,17 +777,52 @@ def run_supervise(args):
         if found is not None:
             slot = lease.get("slot")
             slot_fh = lock_slot(args.pool_dir, slot) if slot else None
+            slot_held_externally = False
+            if slot is not None and slot_fh is None:
+                # Still held by the fallback/guardian that inherited the
+                # same description via pass_fds: recognised, not best-effort
+                # released, and no different slot is taken.
+                slot_held_externally = True
             role_fh = open(control / "fallback-owner.lock", "a")
             try:
                 fcntl.flock(role_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except (BlockingIOError, OSError):
-                role_fh.close()
+                # Role still held by the inherited fallback/guardian copy.
+                try:
+                    role_fh.close()
+                except OSError:
+                    pass
                 role_fh = None
+            gpid = lease.get("guardian_pid")
+            g_alive = guardian_alive(gpid, args.proc_root,
+                                     lease.get("model_pid"))
             child = {"proc": None, "pid": found["pid"],
                      "turn_start": time.monotonic(),
                      "slot": slot, "slot_fh": slot_fh, "role_fh": role_fh,
+                     "guardian_proc": None,
+                     "guardian_pid": gpid if g_alive else None,
                      "epoch": str(lease.get("epoch", ""))}
-            note = "adopted_live_fallback"
+            if slot_held_externally:
+                note = "adopted_live_fallback_slot_held"
+            else:
+                note = "adopted_live_fallback"
+            if not g_alive and slot_fh is not None:
+                # Pre-inheritance lease re-held: attach a fresh guardian
+                # sharing the same description so the cap outlives us.
+                try:
+                    gproc = spawn_guardian(found["pid"], args.proc_root,
+                                           slot_fh, role_fh)
+                except Exception:
+                    gproc = None
+                if gproc is not None:
+                    child["guardian_proc"] = gproc
+                    child["guardian_pid"] = gproc.pid
+                    try:
+                        update_lease_locked(
+                            args.control_dir,
+                            guardian_pid=gproc.pid)
+                    except OSError:
+                        pass
 
     while budget <= 0 or time.monotonic() - start < budget:
         with open(control / "orchestrator-lease.lock", "a") as guard:
@@ -489,49 +834,76 @@ def run_supervise(args):
             alive = live_fallback(args, lease)
 
             if child is not None and alive is None:
-                # Our tracked fallback is gone (or its pid was reused by an
-                # unrelated process, which never counts as ours).
+                # Direct fallback gone (or pid reused by an unrelated
+                # process, which never counts). The role/slot stay held
+                # until EVERY live group member is gone: orphaned
+                # grandchildren keep the pgid alive and the inherited
+                # guardian copy keeps the kernel lock.
                 if child.get("proc") is not None:
                     try:
                         last_exit = child["proc"].wait(timeout=0)
                     except Exception:
                         last_exit = "gone"
-                quick = (time.monotonic() - child["turn_start"]) < 60.0
-                release_child_locks()
-                if want_return:
-                    update_lease_locked(
-                        args.control_dir, owner="codex",
-                        heartbeat=now_iso(), timeout_seconds=timeout,
-                        model_pid=None, returned_from_muse=True)
-                    try:
-                        (control / "return-to-codex.json").unlink()
-                    except OSError:
-                        pass
-                    note = "handed_back"
-                else:
-                    stale = (datetime.datetime.now(datetime.timezone.utc)
-                             - datetime.timedelta(seconds=timeout + 1))
-                    update_lease_locked(
-                        args.control_dir, owner="codex",
-                        heartbeat=stale.isoformat(),
-                        timeout_seconds=timeout, model_pid=None)
-                    note = "turn_ended"
-                child = None
-                if want_return or paused:
+                pgid = child["pid"]
+                strays = group_members(
+                    pgid, args.proc_root,
+                    exclude=(os.getpid(), child.get("guardian_pid") or -1))
+                if strays:
+                    # Keep slot/role: release nothing, hand back nothing.
+                    # If our copies were the only holders and are somehow
+                    # free, re-hold the recorded slot to cover the strays.
+                    if (child.get("slot_fh") is None and child.get("slot")
+                            is not None):
+                        cover = lock_slot(args.pool_dir, child.get("slot"))
+                        if cover is not None:
+                            child["slot_fh"] = cover
+                    note = (f"descendants_remain_{len(strays)}_"
+                            f"slot_held")
                     failures = 0
-                    backoff = 5.0
-                    retry_at = 0.0
-                elif quick:
-                    # A turn that dies at once is a launch failure, not a
-                    # completed turn: back off instead of restarting hot.
-                    failures += 1
-                    backoff = min(backoff * 2, MAX_BACKOFF_SECS)
-                    retry_at = time.monotonic() + backoff
-                    note = f"quick_exit_backing_off_{backoff:.0f}s"
+                    alive = None
+                    lease = read_lease(args.control_dir)
+                    age = heartbeat_age_secs(lease)
                 else:
-                    failures = 0
-                    backoff = 5.0
-                    retry_at = 0.0
+                    quick = (time.monotonic() - child["turn_start"]) < 60.0
+                    # Group fully drained: guardian exits on its own once
+                    # it observes the empty group; reap it, then release
+                    # our copies so the kernel lock frees only now.
+                    reap_guardian()
+                    release_child_locks()
+                    if want_return:
+                        update_lease_locked(
+                            args.control_dir, owner="codex",
+                            heartbeat=now_iso(), timeout_seconds=timeout,
+                            model_pid=None, guardian_pid=None,
+                            returned_from_muse=True)
+                        try:
+                            (control / "return-to-codex.json").unlink()
+                        except OSError:
+                            pass
+                        note = "handed_back"
+                    else:
+                        stale = (datetime.datetime.now(datetime.timezone.utc)
+                                 - datetime.timedelta(seconds=timeout + 1))
+                        update_lease_locked(
+                            args.control_dir, owner="codex",
+                            heartbeat=stale.isoformat(),
+                            timeout_seconds=timeout, model_pid=None,
+                            guardian_pid=None)
+                        note = "turn_ended"
+                    child = None
+                    if want_return or paused:
+                        failures = 0
+                        backoff = 5.0
+                        retry_at = 0.0
+                    elif quick:
+                        failures += 1
+                        backoff = min(backoff * 2, MAX_BACKOFF_SECS)
+                        retry_at = (time.monotonic() + backoff)
+                        note = f"quick_exit_backing_off_{backoff:.0f}s"
+                    else:
+                        failures = 0
+                        backoff = 5.0
+                        retry_at = 0.0
                 alive = None
                 lease = read_lease(args.control_dir)
                 age = heartbeat_age_secs(lease)
@@ -546,62 +918,119 @@ def run_supervise(args):
                 elif turn_age > turn_secs:
                     stop_reason = "turn_expired"
                 if stop_reason is not None:
-                    safe, why = safe_boundary(args.control_dir,
-                                              args.project_root)
-                    if safe:
-                        pid = child["pid"]
-                        if child.get("proc") is None and live_fallback(
-                                args, read_lease(args.control_dir)) is None:
-                            release_child_locks()
-                            child = None
-                            note = f"adopted_gone_{stop_reason}"
-                        else:
-                            lease_now = read_lease(args.control_dir)
-                            outcome = stop_own_child(
-                                pid, proc=child.get("proc"),
-                                proc_root=args.proc_root,
-                                opencode=args.opencode, model=args.model,
-                                start=lease_now.get("model_start_time"))
-                            last_exit = outcome
-                            release_child_locks()
-                            if want_return or paused:
-                                update_lease_locked(
-                                    args.control_dir, owner="codex",
-                                    heartbeat=now_iso(),
-                                    timeout_seconds=timeout, model_pid=None,
-                                    returned_from_muse=bool(want_return))
-                                if want_return:
-                                    try:
-                                        (control / "return-to-codex.json").unlink()
-                                    except OSError:
-                                        pass
-                                note = f"stopped_at_boundary_{stop_reason}"
-                            else:
-                                stale = (datetime.datetime.now(
-                                    datetime.timezone.utc)
-                                    - datetime.timedelta(
-                                        seconds=timeout + 1))
-                                update_lease_locked(
-                                    args.control_dir, owner="codex",
-                                    heartbeat=stale.isoformat(),
-                                    timeout_seconds=timeout,
-                                    model_pid=None,
-                                    last_exit=last_exit)
-                                note = f"stopped_at_boundary_{stop_reason}"
-                            child = None
-                            failures = 0
-                            backoff = 5.0
-                            retry_at = 0.0
-                    else:
-                        # Cooperative return: a clean tree alone is not
-                        # enough; wait for a genuinely safe action boundary
-                        # instead of killing an active integration.
-                        note = f"waiting_for_safe_boundary_{why}"
+                    # Safe boundary with locks HELD across termination,
+                    # never probe-and-release. Nonblocking acquire while
+                    # holding the lease lock (no deadlock: a holder keeps
+                    # making progress and we retry next poll after
+                    # releasing the lease). On success both locks stay
+                    # held through signal, group drain and lease update,
+                    # so no new action/integration can start mid-kill.
+                    if not git_clean(args.project_root):
+                        note = "waiting_for_safe_boundary_dirty_root"
                         failures = 0
+                    else:
+                        act_fh, wat_fh = acquire_boundary(
+                            args.control_dir, timeout=0.0)
+                        if act_fh is None:
+                            _safe, why = safe_boundary(
+                                args.control_dir, args.project_root)
+                            note = f"waiting_for_safe_boundary_{why}"
+                            failures = 0
+                            if why == "watch_busy":
+                                ensure_own_pause(args.control_dir)
+                        else:
+                            try:
+                                pid = child["pid"]
+                                if (child.get("proc") is None
+                                        and live_fallback(
+                                            args, read_lease(
+                                                args.control_dir)) is None
+                                        and not group_members(
+                                            pid, args.proc_root,
+                                            exclude=(os.getpid(),
+                                                     child.get(
+                                                         "guardian_pid")
+                                                     or -1))):
+                                    release_child_locks()
+                                    reap_guardian()
+                                    child = None
+                                    remove_own_pause(args.control_dir)
+                                    note = f"adopted_gone_{stop_reason}"
+                                else:
+                                    lease_now = read_lease(args.control_dir)
+                                    outcome = stop_own_child(
+                                        pid, proc=child.get("proc"),
+                                        proc_root=args.proc_root,
+                                        opencode=args.opencode,
+                                        model=args.model,
+                                        start=lease_now.get(
+                                            "model_start_time"))
+                                    last_exit = outcome
+                                    # Drain the whole group while still
+                                    # holding boundary + lease + slot/role:
+                                    # release role/slot only after every
+                                    # live descendant is gone.
+                                    drained = wait_group_gone(
+                                        pid, args.proc_root,
+                                        exclude=(os.getpid(),
+                                                 child.get("guardian_pid")
+                                                 or -1),
+                                        timeout=30.0)
+                                    if not drained:
+                                        note = ("descendants_remain_"
+                                                "fail_closed")
+                                        last_exit = (
+                                            f"{outcome};"
+                                            "group_not_drained")
+                                    else:
+                                        reap_guardian()
+                                        release_child_locks()
+                                        remove_own_pause(args.control_dir)
+                                        if want_return or paused:
+                                            update_lease_locked(
+                                                args.control_dir,
+                                                owner="codex",
+                                                heartbeat=now_iso(),
+                                                timeout_seconds=timeout,
+                                                model_pid=None,
+                                                guardian_pid=None,
+                                                returned_from_muse=bool(
+                                                    want_return))
+                                            if want_return:
+                                                try:
+                                                    (control /
+                                                     "return-to-codex.json"
+                                                     ).unlink()
+                                                except OSError:
+                                                    pass
+                                            note = (f"stopped_at_boundary_"
+                                                    f"{stop_reason}")
+                                        else:
+                                            stale = (datetime.datetime.now(
+                                                datetime.timezone.utc)
+                                                - datetime.timedelta(
+                                                    seconds=timeout + 1))
+                                            update_lease_locked(
+                                                args.control_dir,
+                                                owner="codex",
+                                                heartbeat=stale.isoformat(),
+                                                timeout_seconds=timeout,
+                                                model_pid=None,
+                                                guardian_pid=None,
+                                                last_exit=last_exit)
+                                            note = (f"stopped_at_boundary_"
+                                                    f"{stop_reason}")
+                                        child = None
+                                        failures = 0
+                                        backoff = 5.0
+                                        retry_at = 0.0
+                            finally:
+                                close_fhs(act_fh, wat_fh)
                     lease = read_lease(args.control_dir)
                     age = heartbeat_age_secs(lease)
                     paused, pause_name = is_paused(args.control_dir)
             if child is None and paused:
+                dispatcher_restore()
                 write_status(args.control_dir, pid=os.getpid(),
                              status="paused_no_takeover", owner="codex",
                              foreground_heartbeat_age_seconds=round(age, 1),
@@ -615,9 +1044,12 @@ def run_supervise(args):
                 if failures > 0 and time.monotonic() < retry_at:
                     note = f"backing_off_{max(retry_at - time.monotonic(), 0):.0f}s"
                 else:
-                    # Free one dispatcher slot for the role; contributors and
-                    # the user's own processes are never touched.
-                    coordinator_action(args.coordinator, "dispatch_stop")
+                    # Free one dispatcher slot for the role; contributors,
+                    # watchers and the user's own processes are never
+                    # touched. Stopped once, kept stopped while awaiting a
+                    # slot: no stop/start churn.
+                    if not dispatcher_held:
+                        dispatcher_stop_once()
                     role_fh = open(control / "fallback-owner.lock", "a")
                     try:
                         fcntl.flock(role_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -625,15 +1057,25 @@ def run_supervise(args):
                         role_fh.close()
                         role_fh = None
                         note = "role_held_by_other"
-                        coordinator_action(args.coordinator, "dispatch_start")
+                        failures += 1
+                        backoff = min(max(backoff, 5.0) * 2,
+                                      MAX_BACKOFF_SECS)
+                        retry_at = time.monotonic() + backoff
+                        dispatcher_restore()
                     else:
                         slot, slot_fh = reserve_slot(args.pool_dir)
                         if slot is None:
                             role_fh.close()
                             role_fh = None
-                            note = "slot_exhausted"
-                            coordinator_action(args.coordinator,
-                                               "dispatch_start")
+                            # All 15 slots occupied: KEEP the owned
+                            # dispatcher stopped (reserved next
+                            # completion), back off without churn, and
+                            # restore only on fresh foreground, explicit
+                            # pause, failed launch or successful handoff.
+                            note = "slot_exhausted_dispatcher_held"
+                            failures = 0
+                            backoff = 5.0
+                            retry_at = time.monotonic() + 30.0
                         else:
                             fresh = read_lease(args.control_dir)
                             fresh_age = heartbeat_age_secs(fresh)
@@ -645,8 +1087,7 @@ def run_supervise(args):
                                 slot_fh.close()
                                 role_fh.close()
                                 note = "fresh_heartbeat_before_launch"
-                                coordinator_action(args.coordinator,
-                                                   "dispatch_start")
+                                dispatcher_restore()
                             else:
                                 epoch = (datetime.datetime.now(
                                     datetime.timezone.utc).strftime(
@@ -655,13 +1096,21 @@ def run_supervise(args):
                                 log = open(control / "fallback-model.log", "a",
                                            buffering=1)
                                 try:
+                                    # Inherit the SAME locked slot/role
+                                    # descriptions into the model: the
+                                    # kernel lock then outlives a
+                                    # supervisor crash/budget exit while
+                                    # the fallback or its group remains.
                                     proc = subprocess.Popen(
                                         model_argv(args), cwd=str(
                                             args.project_root),
                                         env=model_env(args, epoch),
                                         stdin=subprocess.DEVNULL,
                                         stdout=log, stderr=subprocess.STDOUT,
-                                        start_new_session=True)
+                                        start_new_session=True,
+                                        close_fds=False,
+                                        pass_fds=(slot_fh.fileno(),
+                                                  role_fh.fileno()))
                                 except Exception:
                                     proc = None
                                 finally:
@@ -677,9 +1126,21 @@ def run_supervise(args):
                                                   MAX_BACKOFF_SECS)
                                     retry_at = (time.monotonic() + backoff)
                                     note = "launch_failed"
-                                    coordinator_action(
-                                        args.coordinator, "dispatch_start")
+                                    dispatcher_restore()
                                 else:
+                                    # Guardian shares the same
+                                    # descriptions in its own session so
+                                    # the slot/role stay held until ALL
+                                    # live group members are gone,
+                                    # including orphaned grandchildren
+                                    # the model runtime never inherits
+                                    # the fd to.
+                                    try:
+                                        gproc = spawn_guardian(
+                                            proc.pid, args.proc_root,
+                                            slot_fh, role_fh)
+                                    except Exception:
+                                        gproc = None
                                     started += 1
                                     failures = 0
                                     backoff = 5.0
@@ -693,17 +1154,22 @@ def run_supervise(args):
                                         slot=slot, epoch=epoch,
                                         claimed=now_iso(),
                                         timeout_seconds=timeout,
-                                        supervisor_pid=os.getpid())
+                                        supervisor_pid=os.getpid(),
+                                        guardian_pid=(gproc.pid
+                                                      if gproc is not None
+                                                      else None))
                                     child = {"proc": proc, "pid": proc.pid,
                                              "turn_start": time.monotonic(),
                                              "slot": slot, "slot_fh": slot_fh,
-                                             "role_fh": role_fh, "epoch": epoch}
+                                             "role_fh": role_fh,
+                                             "guardian_proc": gproc,
+                                             "guardian_pid": (
+                                                 gproc.pid
+                                                 if gproc is not None
+                                                 else None),
+                                             "epoch": epoch}
                                     note = "muse_coordinates"
-                                    try:
-                                        coordinator_action(
-                                            args.coordinator, "dispatch_start")
-                                    except Exception:
-                                        pass
+                                    dispatcher_restore()
                 lease = read_lease(args.control_dir)
 
         model_pid = child["pid"] if child is not None else None
@@ -716,8 +1182,13 @@ def run_supervise(args):
                      timeout_seconds=timeout, model_pid=model_pid, slot=slot,
                      bounded_turns_started=started,
                      consecutive_failures=failures, last_exit=last_exit,
-                     paused=paused, note=note)
+                     paused=paused, note=note,
+                     dispatcher_held=dispatcher_held)
         time.sleep(poll)
+    # Budget end: exiting never stops a live fallback/group (its
+    # inherited copies keep the slot/role); restore a held dispatcher so
+    # the pool resumes, and leave adoption to the next supervisor.
+    dispatcher_restore()
     final_lease = read_lease(args.control_dir)
     write_status(args.control_dir, pid=os.getpid(), status="budget_done",
                  owner=final_lease.get("owner", "codex"),
