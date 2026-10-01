@@ -85,3 +85,14 @@ candidate. Copies stay in each reviewer's private scratch; authors keep their
 owned clones. Transfer/integration is mechanical after the agent verdict and
 local merge checks. The coordinator resolves scheduling/build/import mechanics;
 semantic fallback is reserved for a demonstrated agent blockage.
+
+## Further independent Lean owners
+
+309 models actual stack-frame/ABI memory operations; 310 proves source-call-log
+reconstruction needed for inlining; 311 proves range-justified strength
+reductions against actual source semantics; 312 models checked target region
+allocation and ceilings. Their exact-candidate reviewers are 313–316.
+This schedules sixteen Lean implementation owners, three broad independent
+reviewers and one current completed-candidate reviewer (up to20 concurrent
+models). As authors finish, their review sessions replace them under the same
+20-process cap. No Rust codec work is resumed.
