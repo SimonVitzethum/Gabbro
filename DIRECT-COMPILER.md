@@ -243,7 +243,7 @@ Last ledger refresh: **2026-10-01 18:54 UTC**. This is an operational snapshot, 
 | 564 | Connection: Shift operations byte decoder and execution connection | Committed candidate; review/integration pending | 582: Agent working | [task](lanes/564.md) |
 | 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Agent working | 583: scheduled | [task](lanes/565.md) |
 | 566 | Connection: Conditional forms bytes to accepted control execution | Agent working | 584: scheduled | [task](lanes/566.md) |
-| 567 | Connection: Canonical byte-TSO history projection | Merged after review/checks | 585: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-567.md) |
+| 567 | Connection: Canonical byte-TSO history projection | Merged after review/checks | 585: Merged after review/checks | [report](messung/muse/MUSE-REPORT-567.md) |
 | 568 | Connection: Executed pilot instruction to realised access footprint | Committed candidate; review/integration pending | 586: Agent working | [task](lanes/568.md) |
 | 569 | Connection: Fetched call/return to stack-frame proofs | Agent working | 587: scheduled | [task](lanes/569.md) |
 | 570 | Connection: Source world/table values to target byte representation | Agent working | 588: scheduled | [task](lanes/570.md) |
@@ -566,6 +566,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `7f9fcb17`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **567**, Connection: Canonical byte-TSO history projection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-567.md). <!-- x86-merged:567 -->
 - 2026-10-01: checked master `2fbe1071` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:2fbe10718c4d8a98e09750635f1f00ed4cf133c8 -->
+- 2026-10-01: lane **585**, Independent connection review of 567, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-585.md). <!-- x86-merged:585 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
