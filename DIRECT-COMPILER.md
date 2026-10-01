@@ -209,7 +209,18 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
   unchanged licence addendum to root `LICENSE-ADDENDUM.md`. Updated readers,
   tutorial checks and generated licence-notice references. Archived unused local
   assistant output and duplicate proof work copies with their contents preserved.
-  Fresh checks after these path changes are required before publication.
+  Fresh Lean, Rust and emission checks after these path changes passed before publication.
+- 2026-10-01: independent cleanup reviewer 322 found two stale emitted-C notice
+  pins after the licence-file rename. Mechanically refreshed both pins against
+  the actual fresh emitter (1570/1465 bytes); proof statements and negative
+  witnesses remain unchanged. Full Lean rebuild passed (375 jobs, 0 errors);
+  the byte guardian passed all four speech probes and both actual pins
+  (3035 bytes compared).
+- 2026-10-01: user requested immediate master publication once Lean is green.
+  After root cleanup `4aad806a`, Rust passed 1468 tests (0 failures, 1 ignored)
+  and emission passed 338 translations, 53 comparisons and 2 reverse probes.
+  The pin-only repair then passed the complete Lean rebuild and CTEXT guardian;
+  Rust/emitter implementation is unchanged by that repair. ASan was not run.
 <!-- X86-HISTORY -->
 
 ## Detailed references
