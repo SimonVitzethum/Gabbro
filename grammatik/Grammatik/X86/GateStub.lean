@@ -323,7 +323,7 @@ inductive RohKlasse where
     against the `errors` map into its reason, an unlisted errno or an
     out-of-range non-negative value into the hardware outcome.
     The kernel-side meaning of the table is user logic and OPEN. -/
-def klassifiziere (tab : List (Nat × Nat)) (lo hi roh : Int) : RohKlasse :=
+def torKlassifiziere (tab : List (Nat × Nat)) (lo hi roh : Int) : RohKlasse :=
   if roh < 0 then
     if _ : 1 ≤ -roh ∧ -roh ≤ 4095 then
       match tab.find? (fun p => decide (p.1 = (-roh).toNat)) with
@@ -334,28 +334,28 @@ def klassifiziere (tab : List (Nat × Nat)) (lo hi roh : Int) : RohKlasse :=
   else .hardware
 
 /-- EBADF decodes through the witness table to reason 0. -/
-theorem klassifiziere_ebadf :
-    klassifiziere schreibTor.errors 0 8192 (-9) = .grund 0 := by
+theorem torKlassifiziere_ebadf :
+    torKlassifiziere schreibTor.errors 0 8192 (-9) = .grund 0 := by
   decide
 
 /-- An in-range value decodes to `ok`. -/
-theorem klassifiziere_ok :
-    klassifiziere schreibTor.errors 0 8192 5 = .ok := by
+theorem torKlassifiziere_ok :
+    torKlassifiziere schreibTor.errors 0 8192 5 = .ok := by
   decide
 
 /-- An unlisted errno decodes to the hardware outcome, never a reason. -/
-theorem klassifiziere_unbekannt :
-    klassifiziere schreibTor.errors 0 8192 (-22) = .hardware := by
+theorem torKlassifiziere_unbekannt :
+    torKlassifiziere schreibTor.errors 0 8192 (-22) = .hardware := by
   decide
 
 /-- An out-of-range non-negative value decodes to the hardware outcome. -/
-theorem klassifiziere_ausserhalb :
-    klassifiziere schreibTor.errors 0 8192 99999 = .hardware := by
+theorem torKlassifiziere_ausserhalb :
+    torKlassifiziere schreibTor.errors 0 8192 99999 = .hardware := by
   decide
 
 /-- Past the `-4095` fence no errno is read: raw `-5000` is hardware. -/
-theorem klassifiziere_zaun :
-    klassifiziere schreibTor.errors 0 8192 (-5000) = .hardware := by
+theorem torKlassifiziere_zaun :
+    torKlassifiziere schreibTor.errors 0 8192 (-5000) = .hardware := by
   decide
 
 /-! ## 7. Joint witness: admitted gate, stub shape, decode, memory change. -/
@@ -368,12 +368,12 @@ theorem torStub_zeuge :
     torOkB schreibTor = true ∧
     bindungErstelltB schreibTor zeugenMoves = true ∧
     stubEndsTrapB zeugenStub = true ∧
-    klassifiziere schreibTor.errors 0 8192 (-9) = .grund 0 ∧
+    torKlassifiziere schreibTor.errors 0 8192 (-9) = .grund 0 ∧
     (∃ (m m' : Speicher) (a : Adresse) (v : Wort),
       v ≠ 0 ∧ write64 m a v = some m' ∧ read64 m' a = some v ∧
         m.bytes a ≠ m'.bytes a) := by
   refine ⟨schreibTor_ok, zeugenMoves_ok, zeugenStub_trap,
-    klassifiziere_ebadf, write_read_zeuge⟩
+    torKlassifiziere_ebadf, write_read_zeuge⟩
 
 /- CUTS:
    - Caller side only (IMAGE-ABI section 7 caller half): decided
@@ -433,11 +433,11 @@ theorem torStub_zeuge :
 #print axioms zeugenMoves_ok
 #print axioms zeugenStub_trap
 #print axioms zeugenStub_prefix_dekodiert
-#print axioms klassifiziere_ebadf
-#print axioms klassifiziere_ok
-#print axioms klassifiziere_unbekannt
-#print axioms klassifiziere_ausserhalb
-#print axioms klassifiziere_zaun
+#print axioms torKlassifiziere_ebadf
+#print axioms torKlassifiziere_ok
+#print axioms torKlassifiziere_unbekannt
+#print axioms torKlassifiziere_ausserhalb
+#print axioms torKlassifiziere_zaun
 #print axioms torStub_zeuge
 
 end Gabbro.Grammatik.X86

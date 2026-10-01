@@ -32,9 +32,14 @@ tightened.
   checker's business).
 - Stub shape: `trapBytes` (`0F 05`, literal only), `trapBytes_pin`,
   `stubEndsTrapB`, `bindungErstelltB`, `zeugenMoves`, `zeugenStub`.
-- Decode: `RohKlasse` (`.ok` / `.grund errno` / `.hardware`), `klassifiziere`
+- Decode: `RohKlasse` (`.ok` / `.grund errno` / `.hardware`), `torKlassifiziere`
   (negative `-4095..-1` against the errors map, else range-checked ok, else
-  hardware outcome).
+  hardware outcome). Named `torKlassifiziere` (not `klassifiziere`) because
+  `Grammatik.X86.OverlapRefusal` on master already owns `klassifiziere`
+  (overlap classifier over address lists) — the integration gate failed on
+  exactly this duplicate; renamed mine, verified zero identifier overlap
+  against every top-level name of `OverlapRefusal.lean` and every other
+  master `X86/*.lean` module for all owned identifiers.
 
 ## Exact new theorems
 
@@ -52,9 +57,9 @@ tightened.
   `m140_zahl_erlaubt` (number at a non-pointer site not forged).
 - Stub: `zeugenMoves_ok`, `zeugenStub_trap`,
   `zeugenStub_prefix_dekodiert` (via canonical `roundtrip_movReg64`).
-- Decode: `klassifiziere_ebadf` (-9 → reason 0), `klassifiziere_ok`,
-  `klassifiziere_unbekannt` (-22 → hardware), `klassifiziere_ausserhalb`
-  (99999 → hardware), `klassifiziere_zaun` (-5000 → hardware).
+- Decode: `torKlassifiziere_ebadf` (-9 → reason 0), `torKlassifiziere_ok`,
+  `torKlassifiziere_unbekannt` (-22 → hardware), `torKlassifiziere_ausserhalb`
+  (99999 → hardware), `torKlassifiziere_zaun` (-5000 → hardware).
 - Joint: `torStub_zeuge` (admission + moves + trap suffix + EBADF decode +
   memory-change existential via canonical `write_read_zeuge`).
 
@@ -65,15 +70,45 @@ tightened.
   `[propext, Quot.sound]`); no `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`
   (only `admitted`/`admits` prose and `#print axioms` lines match the word
   grep); every premise used; no `Prop`-typed premise; no per-program rule.
-- `./lean-bau` last line: `Build completed successfully (386 jobs).`
-- Goal probe (`BeweisAtomar.lean`): `gabbro_ziel` still depends on exactly
-  `[propext, Classical.choice, Quot.sound]` — unchanged.
+- `./lean-bau` last line (previous commit, quiet machine):
+  `Build completed successfully (386 jobs).`
+- Goal probe (`BeweisAtomar.lean`, previous commit): `gabbro_ziel` still
+  depends on exactly `[propext, Classical.choice, Quot.sound]` — unchanged.
 - Post-recovery fix (this commit): C187 pool corrected from generic
   callee-saved (`rbx rbp r12-r15`) to the emitter-exact trampoline pool
   (`r12 r13 r14 r15 rbx`, `emit.rs::syscall_stumpf`, `belegt = regs_in +
   regs_out + clobbers + fest_zerstoert`); M140 generalised from a bare
   `(istZahl, benutztAlsZeiger)` pair to a site-indexed tagged-operand list.
   Both re-probed at 0 errors before commit.
+- Integration-gate repair (this commit): the gate failed with
+  `import Grammatik.X86.GateStub failed, environment already contains
+  'Gabbro.Grammatik.X86.klassifiziere' from Grammatik.X86.OverlapRefusal`.
+  My `klassifiziere` (+ 5 `klassifiziere_*` theorems) is renamed to
+  `torKlassifiziere` (`torKlassifiziere_*`); no semantics changed.
+  Verified: (a) `./lean-probe GateStub.lean` 0 errors after rename, axioms
+  unchanged; (b) read-only check of the master tree: zero identifier overlap
+  between my module's 24 top-level names and every top-level name in
+  master `X86/OverlapRefusal.lean` and all other master `X86/*.lean`
+  modules; (c) full-build output shows `GateStub.olean` rebuilding cleanly
+  under the new names.
+
+## CONCRETE BLOCKER (environmental, not content)
+
+- The final aggregate step (`[385/386] Building Grammatik`, also
+  `./lean-probe grammatik/Grammatik.lean` and the `BeweisAtomar` goal probe,
+  which passed 40 minutes earlier with zero tree change) currently crashes
+  on THIS machine with `libc++abi: terminating ... failed to create thread`
+  (exit 134) — 6 consecutive failures over ~50 minutes. 385/386 modules,
+  including the renamed `GateStub.olean`, build cleanly.
+- Proven independent of my change: `git stash` of both owned files
+  (pristine committed tree) crashes identically on the same step; `git stash
+  pop` restored the repair. The gate machine is unaffected (its log shows
+  lean elaborating normally — it reported the real `klassifiziere`
+  collision, which this commit removes).
+- This commit is therefore made with module-level green (`lean-probe`
+  0 errors) and an honestly red aggregate step. A fresh independent review
+  of the changed commit is still required; the reviewer should re-run
+  `./lean-bau` on a quieter machine or at the gate.
 
 ## What remains open (see CUTS)
 
