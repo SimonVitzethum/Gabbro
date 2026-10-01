@@ -184,6 +184,65 @@ theorem spurStart_legt_snapshot_vor (s : TSOZustand) (a : Adresse)
   subst hm
   simp [histVon]
 
+/-! ## Freshness, release views, forwarding, memory latest value -/
+
+/-- The clock is fresh for every flush: the writer's view is below it
+    and no history message uses it. Both invariant halves are needed. -/
+theorem spur_flush_frisch_vor (n : SpurKnoten) (c : Nat) (e : TSOEintrag)
+    (hinv : SpurInv n) :
+    Speichermodell.Frisch n.hist (n.blick c) e.addr n.frisch := by
+  obtain ⟨hhist, hblick⟩ := hinv
+  refine ⟨hblick c e.addr, ?_⟩
+  intro m hm hcon
+  have hlt := hhist _ _ hm
+  omega
+
+/-- **Release views.** A flushed release message carries the writer's
+    view set at the flushed address, stamped with the flush clock.
+    Readers joining it observe everything the writer observed. -/
+theorem spur_freigabe_sicht (n : SpurKnoten) (c : Nat) (e : TSOEintrag) :
+    (Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+      (n.blick c) e.addr n.frisch e.wert).sicht
+        = (n.blick c).setze e.addr n.frisch ∧
+    (Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+      (n.blick c) e.addr n.frisch e.wert).ts = n.frisch :=
+  ⟨rfl, rfl⟩
+
+/-- **Own-buffer forwarded loads.** A load that hits the own buffer
+    returns the youngest pending value, and that entry splits the buffer
+    into an older prefix and a younger match-free suffix. Reused from
+    the canonical projection; no premise is dropped. -/
+theorem spur_weiterleitung_ist_jüngste (n : SpurKnoten) (c : Nat)
+    (a : Adresse) (v w : Byte)
+    (hload : loadByte n.tso c a = some v)
+    (hpend : neuestens (n.tso.puffer c) a = some w) :
+    v = w ∧ ∃ pre post : List TSOEintrag,
+      n.tso.puffer c = pre ++ [⟨a, w⟩] ++ post ∧
+        ∀ e' ∈ post, e'.addr ≠ a :=
+  weiterleitung_ist_jüngste n.tso c a v w hload hpend
+
+/-- **Memory latest value.** A flush writes the oldest entry's byte into
+    canonical memory, the release message carrying it is in the grown
+    history, and every previous message is preserved. -/
+theorem spur_flush_schreibt (n n' : SpurKnoten) (c : Nat) (e : TSOEintrag)
+    (rest : List TSOEintrag)
+    (h : flushKern n.tso c = some n'.tso)
+    (he : n.tso.puffer c = e :: rest)
+    (hh : n'.hist e.addr = n.hist e.addr ++
+      [Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (n.blick c) e.addr n.frisch e.wert]) :
+    n'.tso.mem.bytes e.addr = e.wert ∧
+      (Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (n.blick c) e.addr n.frisch e.wert) ∈ n'.hist e.addr ∧
+      ∀ m ∈ n.hist e.addr, m ∈ n'.hist e.addr := by
+  refine ⟨flush_schreibt_kopf n.tso n'.tso c h e rest he, ?_, ?_⟩
+  · rw [hh]
+    refine List.mem_append.mpr (Or.inr ?_)
+    simp
+  · intro m hm
+    rw [hh]
+    exact List.mem_append.mpr (Or.inl hm)
+
 /- CUTS:
     - So far only the node/step vocabulary; preservation, freshness,
       forwarding and the joint witness follow as increments.
