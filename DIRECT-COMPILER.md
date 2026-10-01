@@ -130,7 +130,7 @@ Last ledger refresh: **2026-10-01 10:05 UTC**. This is an operational snapshot, 
 | 288 | Invariant-derived optimisation on actual source semantics | Agent working | 304: scheduled | [task](lanes/288.md) |
 | 289 | Disjoint byte-memory commutation | Merged after review/checks | 305: Merged after review/checks | [report](messung/muse/MUSE-REPORT-289.md) |
 | 290 | Packed integer lane model for future SIMD | Merged after review/checks | 306: Merged after review/checks | [report](messung/muse/MUSE-REPORT-290.md) |
-| 291 | Checked relocation arithmetic and byte patching | Merged after review/checks | 307: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-291.md) |
+| 291 | Checked relocation arithmetic and byte patching | Merged after review/checks | 307: Merged after review/checks | [report](messung/muse/MUSE-REPORT-291.md) |
 | 292 | Independent source and invariant trust-boundary review | Merged after review/checks | 308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-292.md) |
 | 293 | Independent concurrency granularity and target bridge review | Merged after review/checks | 308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-293.md) |
 | 294 | Independent optimiser and full-binary obligation review | Merged after review/checks | 308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-294.md) |
@@ -229,6 +229,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **290**, Packed integer lane model for future SIMD, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-290.md). <!-- x86-merged:290 -->
 - 2026-10-01: lane **306**, Independent review of 290, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-306.md). <!-- x86-merged:306 -->
 - 2026-10-01: lane **291**, Checked relocation arithmetic and byte patching, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-291.md). <!-- x86-merged:291 -->
+- 2026-10-01: lane **307**, Independent review of 291, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-307.md). <!-- x86-merged:307 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
