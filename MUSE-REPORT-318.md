@@ -122,7 +122,48 @@ No full `./lean-bau` run (gratuitous for a review; the author's
 `BUILD-EVIDENCE.json` final `./lean-bau` entry shows exit 0, 376 jobs,
 consistent with the report).
 
-## Verdict lines
+## Verdict lines (first review of 9e97546f, SUPERSEDED — see re-review below)
 
-CANDIDATE: 317 9e97546f46f9ec5706148c1e0da3b988b1125023
-VERDICT: REPAIR
+SUPERSEDED-CANDIDATE: 317 9e97546f46f9ec5706148c1e0da3b988b1125023
+SUPERSEDED-VERDICT: REPAIR
+
+## Re-review after repair (new pinned snapshot d426d184)
+
+New `SNAPSHOT.json`: author 317, HEAD
+`d426d184fd73c0f1ea9fdbb94fe0d0fd3b0b63ab`, same base, same three
+files, clean. `BUILD-EVIDENCE.json` extends the tool log with: repair
+diff of 2 files (27 insertions, 12 deletions), `./lean-probe` 0 errors,
+`./lean-bau` exit 0 / 376 jobs, repair commit `d426d184` matching the
+pinned HEAD, clean status. The author's report now carries an explicit
+"REPAIR 318" note.
+
+Inspected the changed proofs (new snapshot file, 696 lines, regions
+358-462): all three write-agreement theorems now conclude
+`s'.speicher.ausfuehrbar = s.speicher.ausfuehrbar`, each proved by the
+`.2.2` projection of the already-cited `schritt_*_berechtigungen` lemma
+with identical argument lists; `refine` tuples grew from 5 to 6 goals
+accordingly; all three docstrings now say "all three permission maps are
+preserved". `ausfuehrbar` occurs exactly 3 times (the new conjuncts). No
+banned tokens. All 58 definition/theorem names are unchanged; nothing
+outside the repaired trio and the report moved. `PATCH.diff` still touches
+only the three pinned files, with the `Grammatik.lean` hunk remaining the
+single additive umbrella import.
+
+Independent `./lean-probe` on the NEW snapshot file in this clone:
+`== 0 error(s) in the COMPLETE output`; `#print axioms` output identical
+in shape to the report (every theorem `[propext, Quot.sound]`, the two
+empty-inductive negations axiom-free), now including the strengthened
+trio. The single previous finding is closed exactly as specified; every
+cross-check from the first review still holds. No new finding, no
+remaining material defect.
+
+## Last build result (re-review)
+
+Independent `./lean-probe` on the new pinned snapshot file:
+`== 0 error(s) in the COMPLETE output` with the axiom lines quoted above.
+No full `./lean-bau` run (gratuitous for a review; the author's
+`BUILD-EVIDENCE.json` repair entries show `./lean-probe` 0 errors and
+`./lean-bau` exit 0, 376 jobs, consistent with the updated report).
+
+CANDIDATE: 317 d426d184fd73c0f1ea9fdbb94fe0d0fd3b0b63ab
+VERDICT: ACCEPT
