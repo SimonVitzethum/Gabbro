@@ -245,7 +245,7 @@ Last ledger refresh: **2026-10-01 19:04 UTC**. This is an operational snapshot, 
 | 566 | Connection: Conditional forms bytes to accepted control execution | Agent working | 584: scheduled | [task](lanes/566.md) |
 | 567 | Connection: Canonical byte-TSO history projection | Merged after review/checks | 585: Merged after review/checks | [report](messung/muse/MUSE-REPORT-567.md) |
 | 568 | Connection: Executed pilot instruction to realised access footprint | Merged after review/checks | 586: Merged after review/checks | [report](messung/muse/MUSE-REPORT-568.md) |
-| 569 | Connection: Fetched call/return to stack-frame proofs | Merged after review/checks | 587: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-569.md) |
+| 569 | Connection: Fetched call/return to stack-frame proofs | Merged after review/checks | 587: Merged after review/checks | [report](messung/muse/MUSE-REPORT-569.md) |
 | 570 | Connection: Source world/table values to target byte representation | Agent working | 588: scheduled | [task](lanes/570.md) |
 | 571 | Connection: Entry state, image permissions and user binding duties | Committed candidate; review/integration pending | 589: Committed candidate; review/integration pending | [task](lanes/571.md) |
 | 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
@@ -574,6 +574,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **568**, Connection: Executed pilot instruction to realised access footprint, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-568.md). <!-- x86-merged:568 -->
 - 2026-10-01: lane **586**, Independent connection review of 568, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-586.md). <!-- x86-merged:586 -->
 - 2026-10-01: lane **569**, Connection: Fetched call/return to stack-frame proofs, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-569.md). <!-- x86-merged:569 -->
+- 2026-10-01: lane **587**, Independent connection review of 569, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-587.md). <!-- x86-merged:587 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
