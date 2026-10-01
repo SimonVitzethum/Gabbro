@@ -93,4 +93,66 @@ theorem runde_null_rax (suffix : List Byte) :
         suffix) :=
   ⟨roundtrip _ _, roundtrip _ _⟩
 
+/-! ## 4. Executed-step observations: both choices zero the register. -/
+
+/-- Executed `movImm64 dst 0` zeroes `dst` through the canonical step. -/
+theorem schritt_null_mov (s : Zustand) (dst : Register) :
+    (schritt ⟨.movImm64 dst 0, 10⟩ s).map (fun s' => s'.register dst) =
+      some 0 := by
+  have h := schritt_movImm64 ⟨.movImm64 dst 0, 10⟩ s dst 0 rfl rfl
+  rw [h]
+  simp [schrittRegister, regSet]
+
+/-- Executed `xor dst dst` zeroes `dst` through the canonical step. -/
+theorem schritt_null_xor (s : Zustand) (dst : Register) :
+    (schritt ⟨.xorReg64 dst dst, 3⟩ s).map (fun s' => s'.register dst) =
+      some 0 := by
+  have h := schritt_xorReg64 ⟨.xorReg64 dst dst, 3⟩ s dst dst rfl rfl
+  rw [h]
+  have hz : (xor64 (s.register dst) (s.register dst)).1 = 0 :=
+    xor_selbst_null _
+  simp [schrittRegister, regSet, hz]
+
+/-- Value agreement: the two executed choices observe the same register. -/
+theorem schritt_null_gleich (s : Zustand) (dst : Register) :
+    (schritt ⟨.xorReg64 dst dst, 3⟩ s).map (fun s' => s'.register dst) =
+      (schritt ⟨.movImm64 dst 0, 10⟩ s).map
+        (fun s' => s'.register dst) := by
+  rw [schritt_null_xor, schritt_null_mov]
+
+/-! ## 5. Flag observations: the value agreement costs the flags. -/
+
+/-- `xor v v` sets ZF: the clobbering choice leaves a set zero flag. -/
+theorem xor_selbst_zf (v : Wort) : (xor64 v v).2.zf = true := by
+  simp [xor64, zfTest]
+
+/-- A following `je` diverges: under live flags (`zf = false`) the preserving
+    choice falls through while the clobbering choice would take the branch.
+    Missing flag liveness is therefore rejected, not ignored. -/
+theorem zweig_weicht_ab (s : Zustand) (dst : Register)
+    (hdead : s.flags.zf = false) :
+    bedingung .e s.flags = false ∧
+      bedingung .e (xor64 (s.register dst) (s.register dst)).2 = true := by
+  simp [bedingung, hdead, xor_selbst_zf]
+
+/-- The selector keeps `mov` under live flags. -/
+theorem waehleNull_le (dst : Register) :
+    waehleNull true dst = [.movImm64 dst 0] := rfl
+
+/-- The selector takes `xor` only under dead flags. -/
+theorem waehleNull_tot (dst : Register) :
+    waehleNull false dst = [.xorReg64 dst dst] := rfl
+
+/-- The checker refuses the clobbering choice under live flags. -/
+theorem wahlOk_verweigert_xor_le (dst : Register) :
+    wahlOk true [.xorReg64 dst dst] = false := rfl
+
+/-- The checker allows the preserving choice under live flags. -/
+theorem wahlOk_erlaubt_mov (dst : Register) :
+    wahlOk true [.movImm64 dst 0] = true := rfl
+
+/-- The checker allows the clobbering choice under dead flags. -/
+theorem wahlOk_erlaubt_tot (dst : Register) :
+    wahlOk false [.xorReg64 dst dst] = true := rfl
+
 end Gabbro.Grammatik.X86.Anweisungswahl
