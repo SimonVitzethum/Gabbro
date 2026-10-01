@@ -64,12 +64,35 @@ Theorems: `ausricht_monoton`, `ausricht_eins`,
 `initialisiere_rahmen_rechte`, `initialisiere_ausmass_rechte`,
 `initialisiere_ausmass_null`, `alleUnten_leer`,
 `reserviere_disjunkt_unten`, `reserviere_haelt_unten`,
+`reserviere_belegt`, `reserviere_haelt_alleUnten`,
 `natAdresse_addrs`, `inRegion_natAdresse`,
 `initialisiere_schreibbar8`, `initialisiere_lesbar8`,
 `freiReserviere_kann_scheitern`, `freiReserviere_leer_verweigert`,
 `freiReserviere_ausmass`, `freiReserviere_ohne_statik_gebunden`,
 `zeugenReserviere_erfolg`, `zeugenReserviere_voll`,
 `zeugenSchreibschutz_verweigert`, `region_schreibLese_zeuge`.
+
+## Repair pass after independent review 316 (VERDICT: REPAIR)
+
+Both required findings resolved without weakening any guarantee:
+
+- F1 (unused `_hq` premise in `reserviere_disjunkt_unten`, HARD RULE 3):
+  applied the preferred variant. The theorem now takes
+  `(hinv : alleUnten s) (q : Region) (hq : q ∈ s.belegt)` and derives
+  `hunter := hinv q hq` in the proof; every premise is used
+  (`h` via `reserviere_frisch`/`reserviere_ausmass`, `hinv`/`hq` via
+  `hunter`, all others in the calls and the goal). The statement is now
+  about tracked regions and is otherwise unchanged.
+- F2 (`reserviere_haelt_unten` covered old entries only): added the
+  corollary `reserviere_haelt_alleUnten : alleUnten s'` (new region ends
+  exactly at the new cursor via `reserviere_frisch`, old entries below
+  it via `reserviere_haelt_unten`), plus the small helper
+  `reserviere_belegt` (`s'.belegt = r :: s.belegt`). The report's
+  "cursor invariant preservation" claim now matches a proved theorem
+  exactly.
+
+No assumption invented, no source/binary chain claimed, CUTS unchanged
+(both fixes are inside the already-claimed allocator scope).
 
 ## Last build result
 

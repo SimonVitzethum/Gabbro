@@ -276,16 +276,16 @@ theorem alleUnten_leer (v : Vorrat) (n : Nat) :
   intro r hr
   simp at hr
 
-/-- A handed region is disjoint from every region below the old cursor,
-    so the cursor invariant is preserved by construction. -/
+/-- A handed region is disjoint from every tracked region: each of
+    them ends at or before the old cursor, hence before the new region. -/
 theorem reserviere_disjunkt_unten (s : Reservierer) (len ausr : Nat)
     (l w x : Bool) (r : Region) (s' : Reservierer)
     (h : reserviere s len ausr l w x = some (r, s'))
-    (q : Region) (_hq : q ∈ s.belegt)
-    (hunter : q.basis + q.len ≤ s.naechst) :
+    (hinv : alleUnten s) (q : Region) (hq : q ∈ s.belegt) :
     regionDisjunkt r q = true := by
   have hfr := reserviere_frisch s len ausr l w x r s' h
   obtain ⟨hge, -, -⟩ := hfr
+  have hunter := hinv q hq
   unfold regionDisjunkt
   simp only [decide_eq_true_eq]
   have hlen : 0 < r.len := by
@@ -309,6 +309,45 @@ theorem reserviere_haelt_unten (s : Reservierer) (len ausr : Nat)
   obtain ⟨hmono, -, -, -⟩ := hdeck
   have hq := hinv q hq
   omega
+
+/-- Success tracks the new region on top of the old list. -/
+theorem reserviere_belegt (s : Reservierer) (len ausr : Nat)
+    (l w x : Bool) (r : Region) (s' : Reservierer)
+    (h : reserviere s len ausr l w x = some (r, s')) :
+    s'.belegt = r :: s.belegt := by
+  unfold reserviere at h
+  by_cases hlen : len = 0
+  · simp [hlen] at h
+  · simp [hlen] at h
+    cases hau : ausricht s.naechst ausr with
+    | none => simp [hau] at h
+    | some start =>
+      simp [hau] at h
+      by_cases hc : start + len ≤ s.vorrat.lo + s.vorrat.umfang ∧
+          start + len ≤ 2 ^ 64 ∧ s.vorrat.lo ≤ start
+      · simp [hc] at h
+        obtain ⟨rfl, rfl⟩ := h
+        rfl
+      · simp [hc] at h
+
+/-- Success preserves the whole cursor invariant: the new region ends
+    exactly at the new cursor, the old entries stay below it. -/
+theorem reserviere_haelt_alleUnten (s : Reservierer) (len ausr : Nat)
+    (l w x : Bool) (r : Region) (s' : Reservierer)
+    (h : reserviere s len ausr l w x = some (r, s'))
+    (hinv : alleUnten s) : alleUnten s' := by
+  have hfr := reserviere_frisch s len ausr l w x r s' h
+  obtain ⟨-, hneu, -⟩ := hfr
+  have halt := reserviere_haelt_unten s len ausr l w x r s' h hinv
+  have hbel := reserviere_belegt s len ausr l w x r s' h
+  intro q hq
+  rw [hbel] at hq
+  have hmem : q = r ∨ q ∈ s.belegt := by simpa using hq
+  cases hmem with
+  | inl heq =>
+    subst heq
+    omega
+  | inr hm => exact halt q hm
 
 /-- Under no-wrap, machine address addition is `Nat` addition. -/
 theorem natAdresse_addrs (b i : Nat) (h : b + i < 2 ^ 64) :
@@ -574,6 +613,8 @@ theorem region_schreibLese_zeuge :
 #print axioms alleUnten_leer
 #print axioms reserviere_disjunkt_unten
 #print axioms reserviere_haelt_unten
+#print axioms reserviere_belegt
+#print axioms reserviere_haelt_alleUnten
 #print axioms natAdresse_addrs
 #print axioms inRegion_natAdresse
 #print axioms initialisiere_schreibbar8
