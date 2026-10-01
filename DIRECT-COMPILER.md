@@ -36,6 +36,27 @@ mapping and all reachable executed bodies. No rules for particular examples or
 function names. A mnemonic list, encode/decode round-trip, isolated helper or an
 assumed simulation relation does not establish this end condition.
 
+## Operating-system independence and freestanding targets
+
+Binding requirement (Simon, 2026-10-01): the direct x86-64 compiler must support
+extensible target profiles for arbitrary operating systems and freestanding
+environments. This is a target requirement, not a claim of implemented support.
+One source model, IR, optimiser and validation chain serve every profile.
+ABI, image format, entry convention and loaded mapping are explicit checked
+profile inputs; no Linux, POSIX, libc or ELF dependency is implicit. Environment
+services are Gabbro bindings with user-logic contracts and implementation proof
+obligations, never added hardware assumptions. New OS support requires its
+supported profile and bindings, not changes to language semantics.
+
+Freestanding output has no mandatory libc, host allocator, thread library or
+dynamic loader. The program supplies any required runtime, entry and hardware
+bindings; their reachable code and the actual final mapping remain within the
+validation obligations. The selected architecture remains x86-64; support for
+other instruction sets requires separate target models. Unsupported profiles,
+missing bindings or unresolved obligations are refused. Portability modelling,
+Rust implementation and complete final-byte validation remain OPEN. Detailed
+design is assigned to Muse author 540 and independent reviewer 541.
+
 ## Optimisation requirements
 
 The initial package targets an **`-O3`-like optimisation scope**:
@@ -92,7 +113,7 @@ Lean models; a whole source-to-final-byte acceptance theorem remains **OPEN**.
 ## Agent and review workflow
 
 Use local isolated OpenCode Go `opencode-go/muse-spark-1.3-contributor` authors and
-independent reviewers, with **at most 20 active model processes in total**. The
+independent reviewers, with **at most 15 active model processes in total**. The
 same cap includes repairs and reviews. Lean builds use the global queued wrappers.
 
 An independent reviewer receives a clean committed candidate snapshot pinned by
@@ -112,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 12:32 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 12:40 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -185,15 +206,15 @@ Last ledger refresh: **2026-10-01 12:32 UTC**. This is an operational snapshot, 
 | 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Scheduled | 494: scheduled | [task](lanes/414.md) |
 | 415 | Adversarial implementation audit: END-TO-END-TRUST | Scheduled | 495: scheduled | [task](lanes/415.md) |
 | 416 | Continuous Lean proof reserve: EffectiveAddress | Agent working | 464: scheduled | [task](lanes/416.md) |
-| 417 | Continuous Lean proof reserve: ConditionalMove | Queued for a model slot | 465: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/417.md) |
+| 417 | Continuous Lean proof reserve: ConditionalMove | Committed candidate; review/integration pending | 465: Agent working; integration gate rejected; repair/re-review required | [task](lanes/417.md) |
 | 418 | Continuous Lean proof reserve: BitScan | Agent working | 466: scheduled | [task](lanes/418.md) |
 | 419 | Continuous Lean proof reserve: BitCount | Agent working | 467: scheduled | [task](lanes/419.md) |
 | 420 | Continuous Lean proof reserve: ByteSwap | Agent working | 468: scheduled | [task](lanes/420.md) |
 | 421 | Continuous Lean proof reserve: WordAtomicity | Agent working | 469: scheduled | [task](lanes/421.md) |
-| 422 | Continuous Lean proof reserve: ReleaseAcquire | Agent working | 470: scheduled | [task](lanes/422.md) |
+| 422 | Continuous Lean proof reserve: ReleaseAcquire | Committed candidate; review/integration pending | 470: scheduled | [task](lanes/422.md) |
 | 423 | Continuous Lean proof reserve: BranchLayout | Agent working | 471: scheduled | [task](lanes/423.md) |
-| 424 | Continuous Lean proof reserve: FeatureProfile | Agent working | 472: scheduled | [task](lanes/424.md) |
-| 425 | Continuous Lean proof reserve: FloatExceptions | Committed candidate; review/integration pending | 473: scheduled | [task](lanes/425.md) |
+| 424 | Continuous Lean proof reserve: FeatureProfile | Committed candidate; review/integration pending | 472: scheduled | [task](lanes/424.md) |
+| 425 | Continuous Lean proof reserve: FloatExceptions | Committed candidate; review/integration pending | 473: Agent working | [task](lanes/425.md) |
 | 426 | Continuous Lean proof reserve: VectorFootprints | Agent working | 474: scheduled | [task](lanes/426.md) |
 | 427 | Continuous Lean proof reserve: RegisterInterference | Agent working | 475: scheduled | [task](lanes/427.md) |
 | 428 | Continuous Lean proof reserve: ParallelMoves | Agent working | 476: scheduled | [task](lanes/428.md) |
@@ -204,6 +225,7 @@ Last ledger refresh: **2026-10-01 12:32 UTC**. This is an operational snapshot, 
 | 433 | Continuous Lean proof reserve: ObservationProjection | Scheduled | 481: scheduled | [task](lanes/433.md) |
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Scheduled | 482: scheduled | [task](lanes/434.md) |
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Scheduled | 483: scheduled | [task](lanes/435.md) |
+| 540 | OS-independent and freestanding target architecture | Scheduled | 541: scheduled | [task](lanes/540.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -379,6 +401,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **403**, Independent exact-candidate review of 402, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-403.md). <!-- x86-merged:403 -->
 - 2026-10-01: integration of candidate(s) [417] failed the local proof/build gate after independent review 465; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:465 -->
 - 2026-10-01: documentation-only publication at `ebf950dc` retains the successful complete local Lean, Rust and emission checks at `c937ebe4`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
+- 2026-10-01: Simon requires extensible arbitrary-OS and freestanding x86-64 compilation through checked profiles and program bindings; complete support remains OPEN. Muse 540/541 own detailed design and independent review.
+- 2026-10-01: checked master `2c1b1813` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:2c1b1813b8658a0e2e960280153ce7bcdd0e6d9f -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

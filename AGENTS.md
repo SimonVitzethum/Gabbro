@@ -109,6 +109,16 @@ README §5 says exactly this; keep it that way.
 
 ## 3. Simon's standing instructions
 
+- **Target portability** (Simon, 2026-10-01): the direct x86-64 compiler must
+  support extensible profiles for arbitrary operating systems and freestanding
+  environments. Keep source semantics, IR, optimisation and validation generic;
+  describe ABI/image/entry requirements in checked profiles and implement
+  environment services in Gabbro bindings with user-logic proof obligations.
+  No implicit Linux/POSIX/libc/ELF dependency. Freestanding has no mandatory
+  host runtime or dynamic loader. Every selected profile retains complete
+  final-byte, entry, support-code and mapping validation. This is a requirement,
+  not a claim that these targets are implemented.
+
 - **Direct compiler progress record** (Simon, 2026-10-01):
   [`DIRECT-COMPILER.md`](DIRECT-COMPILER.md) is the central
   record for the direct x86-64 compiler, `-O3`-like/invariant optimisation, Lean-first
