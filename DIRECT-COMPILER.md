@@ -106,7 +106,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 10:36 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 10:43 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -145,6 +145,9 @@ Last ledger refresh: **2026-10-01 10:36 UTC**. This is an operational snapshot, 
 | 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-323.md) |
 | 325 | High runtime performance and feasible hardware-profile design revision | Merged after review/checks | 326: Merged after review/checks | [report](messung/muse/MUSE-REPORT-325.md) |
 | 327 | Safety-first broad practical-performance design prioritisation | Committed candidate; review/integration pending | Historical coordinator review; see report | [task](lanes/327.md) |
+| 329 | Muse organisation and dependency ownership plan | Agent working | 332: scheduled | [task](lanes/329.md) |
+| 330 | Muse merge-owner for independently approved safety-first design | Merged after review/checks | 333: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-330.md) |
+| 331 | Complete Lean optimiser specification and friend handoff | Agent working | 334: scheduled | [task](lanes/331.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -263,6 +266,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `82e7efb5` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:82e7efb53e7793269d110a320f130e0119f123a8 -->
 - 2026-10-01: lane **320**, Independent review of 319, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-320.md). <!-- x86-merged:320 -->
 - 2026-10-01: publication batch checks passed for `ad1a6e2a`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **330**, Muse merge-owner for independently approved safety-first design, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-330.md). <!-- x86-merged:330 -->
+- 2026-10-01: checked master `7b932d72` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:7b932d727443a5f62ad6716bc3362de78c3957bb -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
