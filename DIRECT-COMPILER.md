@@ -147,7 +147,7 @@ Last ledger refresh: **2026-10-01 10:47 UTC**. This is an operational snapshot, 
 | 327 | Safety-first broad practical-performance design prioritisation | Merged after review/checks | Historical coordinator review; see report | [report](messung/muse/MUSE-REPORT-327.md) |
 | 329 | Muse organisation and dependency ownership plan | Committed candidate; review/integration pending | 332: Committed candidate; review/integration pending | [task](lanes/329.md) |
 | 330 | Muse merge-owner for independently approved safety-first design | Merged after review/checks | 333: Merged after review/checks | [report](messung/muse/MUSE-REPORT-330.md) |
-| 331 | Complete Lean optimiser specification and friend handoff | Merged after review/checks | 334: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-331.md) |
+| 331 | Complete Lean optimiser specification and friend handoff | Merged after review/checks | 334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-331.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -274,6 +274,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **328**, Independent safety-first practical-performance scope review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-328.md). <!-- x86-merged:328 -->
 - 2026-10-01: checked master `610d0cfb` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:610d0cfb20a6ff8064bb9186c3a109d9a0a72e80 -->
 - 2026-10-01: lane **331**, Complete Lean optimiser specification and friend handoff, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-331.md). <!-- x86-merged:331 -->
+- 2026-10-01: lane **334**, Independent complete optimiser specification review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-334.md). <!-- x86-merged:334 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
