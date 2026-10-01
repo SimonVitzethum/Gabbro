@@ -208,7 +208,7 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 416 | Continuous Lean proof reserve: EffectiveAddress | Agent working | 464: scheduled | [task](lanes/416.md) |
 | 417 | Continuous Lean proof reserve: ConditionalMove | Merged after review/checks | 465: Merged after review/checks | [report](messung/muse/MUSE-REPORT-417.md) |
 | 418 | Continuous Lean proof reserve: BitScan | Committed candidate; review/integration pending | 466: Incomplete; preserved; integration gate rejected; repair/re-review required | [task](lanes/418.md) |
-| 419 | Continuous Lean proof reserve: BitCount | Merged after review/checks | 467: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-419.md) |
+| 419 | Continuous Lean proof reserve: BitCount | Merged after review/checks | 467: Merged after review/checks | [report](messung/muse/MUSE-REPORT-419.md) |
 | 420 | Continuous Lean proof reserve: ByteSwap | Merged after review/checks | 468: Merged after review/checks | [report](messung/muse/MUSE-REPORT-420.md) |
 | 421 | Continuous Lean proof reserve: WordAtomicity | Committed candidate; review/integration pending | 469: Incomplete; preserved; integration gate rejected; repair/re-review required | [task](lanes/421.md) |
 | 422 | Continuous Lean proof reserve: ReleaseAcquire | Committed candidate; review/integration pending | 470: scheduled | [task](lanes/422.md) |
@@ -448,6 +448,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **417**, Continuous Lean proof reserve: ConditionalMove, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-417.md). <!-- x86-merged:417 -->
 - 2026-10-01: lane **465**, Independent exact-candidate review of 417, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-465.md). <!-- x86-merged:465 -->
 - 2026-10-01: lane **419**, Continuous Lean proof reserve: BitCount, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-419.md). <!-- x86-merged:419 -->
+- 2026-10-01: lane **467**, Independent exact-candidate review of 419, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-467.md). <!-- x86-merged:467 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
