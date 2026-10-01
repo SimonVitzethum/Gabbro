@@ -227,7 +227,7 @@ Last ledger refresh: **2026-10-01 16:04 UTC**. This is an operational snapshot, 
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Merged after review/checks | 483: Merged after review/checks | [report](messung/muse/MUSE-REPORT-435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
 | 542 | Next bridge wave N9: StackUnwind | Merged after review/checks | 548: Merged after review/checks | [report](messung/muse/MUSE-REPORT-542.md) |
-| 543 | Next bridge wave N16: DecodeFault | Merged after review/checks | 549: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-543.md) |
+| 543 | Next bridge wave N16: DecodeFault | Merged after review/checks | 549: Merged after review/checks | [report](messung/muse/MUSE-REPORT-543.md) |
 | 544 | Next bridge wave N18: RegionFresh | Committed candidate; review/integration pending | 550: Committed candidate; review/integration pending | [task](lanes/544.md) |
 | 545 | Next bridge wave N11: PayloadResidue | Committed candidate; review/integration pending | 551: Committed candidate; review/integration pending | [task](lanes/545.md) |
 | 546 | Next bridge wave N13: ContractSites | Committed candidate; review/integration pending | 552: Committed candidate; review/integration pending | [task](lanes/546.md) |
@@ -549,6 +549,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **542**, Next bridge wave N9: StackUnwind, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-542.md). <!-- x86-merged:542 -->
 - 2026-10-01: lane **548**, Independent exact-candidate review of 542 StackUnwind, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-548.md). <!-- x86-merged:548 -->
 - 2026-10-01: lane **543**, Next bridge wave N16: DecodeFault, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-543.md). <!-- x86-merged:543 -->
+- 2026-10-01: lane **549**, Independent exact-candidate review of 543 DecodeFault, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-549.md). <!-- x86-merged:549 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
