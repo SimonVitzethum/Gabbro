@@ -1,5 +1,35 @@
 # MUSE-REPORT-467: Independent exact-candidate review of 419 (X86 BitCount)
 
+## Re-review of the NEWEST pinned candidate (2026-10-01, later evening)
+
+Previous verdict (on `7feee9d0`) is stale: the author added one more commit and this is a
+fresh substantive review of the NEWEST pinned snapshot. Lean code delta vs both previous
+reviews: NONE — `grammatik/Grammatik/X86/BitCount.lean` blob `ed9a15a4` and the
+`grammatik/Grammatik.lean` hunk (`6e68b11c..e9c9576f`, one import line) are byte-identical
+again (PATCH hunk mechanically compared: 473/473 lines identical). The only change in the new
+commit `5d41c247` is `MUSE-REPORT-419.md` +17 lines (Addendum 2): the integration gate failed
+a second time with byte-identical evidence (`[397/398] Building Grammatik`,
+`failed to create thread`, exit 134, the 7 standard `BitCount.lean` axiom lines).
+
+Addendum 2 assessment (checked against the newest `BUILD-EVIDENCE.json`, now 32 entries):
+the new evidence shows the probe crashing once with RC=134 (0 `sorryAx`) and passing on
+immediate retry with RC=0/0 errors/0 `sorryAx` on identical input, plus bau again at
+`[392/393] Building Grammatik` with the same thread-creation crash. Crash-then-pass within
+minutes on identical input corroborates load fluctuation rather than code, and the author
+again made NO code change — the correct call, same as before. No premise weakened, no
+guarantee touched, still exactly the three owned files. Both earlier notes carry over: (a)
+resolved well enough (module elaborates inside the integration build — its 7 axiom lines
+print there — only the umbrella link crashes); (b) `gabbro_ziel` re-check remains for the
+merge gate when resources allow.
+
+Fresh independent reproduction on the NEWEST pinned files (staged only the supplied
+`BitCount.lean` + the one import line, restored afterwards, tree verified clean):
+`./lean-probe grammatik/Grammatik/X86/BitCount.lean` → RC=0, `0 error(s)`, `sorryAx` count 0,
+`Unknown identifier|error(lean` count 0, every `depends on axioms` line within
+`[propext, Quot.sound]` or fewer. All prior checks (ownership, canonical reuse, premise use,
+non-vacuity, joint non-degenerate memory witness, no duplicated IR/executor, no safety
+weakening) carry over unchanged since the code is byte-identical.
+
 ## Re-review of the NEW pinned candidate (2026-10-01, evening)
 
 Previous verdict (on `2c524bb1`) is stale: the author repaired with a new commit and this is
@@ -39,7 +69,8 @@ IR/executor, no safety weakening) carry over unchanged since the code is byte-id
 - Clone `/home/simon/Dokumente/gabbro-muse/a467`, branch `muse/467`: MATCH (checked
   `git rev-parse --show-toplevel` and `git branch --show-current`). No other clone read.
 - Candidate base `0b3132b7bb8bf108b3fd1613c70bc0955051f130` is an ancestor of this tree; pinned
-  candidate HEADs (`2c524bb1` superseded, now `7feee9d0`) are not fetched here (no network),
+  candidate HEADs (`2c524bb1`, `7feee9d0` superseded, now `5d41c247`) are not fetched here
+  (no network), so the review used the exact supplied artefacts:
   so the review used the exact supplied artefacts: `.tmp/review/SNAPSHOT.json`, `author-419/OWNER-TASK.md`, `author-419/PATCH.diff`,
   `author-419/grammatik/Grammatik/X86/BitCount.lean`, `author-419/MUSE-REPORT-419.md`,
   `author-419/BUILD-EVIDENCE.json`.
@@ -122,5 +153,5 @@ ACCEPT covers ONLY the precisely delivered bounded claim above: pure fixed-width
 arithmetic + stated flag contract + feature-gated refusal + witnesses, with the listed cuts.
 No full compiler closure, no silicon/codec/source/cost/TSO claim is accepted.
 
-CANDIDATE: 419 7feee9d0fe40f03b63dcde91cbecb727b97aec04
+CANDIDATE: 419 5d41c247ed11f82be5d73114fb088b27e9e7c94a
 VERDICT: ACCEPT
