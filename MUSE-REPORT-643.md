@@ -4,13 +4,14 @@ Lane 643 (`muse/643`, model opencode-go/muse-spark-1.3-contributor).
 Task: report-only independent exact review of the lane-642 recovery
 parser/tool candidate; own only this file.
 
-## CANDIDATE / VERDICT
+## Verdict (machine-readable, one line each)
 
-- CANDIDATE: 642 fb126d505d5bd15598480a6071511c923d3d1991
-  (base 19b31567c91e1077c2232c5fb090c26164d52019 per supplied
-  `.tmp/review/SNAPSHOT.json`; BUILD-EVIDENCE pins the same short hash
-  `fb126d50` with the 4-file commit).
-- VERDICT: ACCEPT
+CANDIDATE: 642 fb126d505d5bd15598480a6071511c923d3d1991
+VERDICT: ACCEPT
+
+Pinned base per supplied `.tmp/review/SNAPSHOT.json` is
+19b31567c91e1077c2232c5fb090c26164d52019; BUILD-EVIDENCE pins the
+same short hash `fb126d50` with the 4-file commit.
 
 No unsupported desired-correctness premise, no weakened guarantee, no
 fake closure was found. The candidate delivers exactly what its report
