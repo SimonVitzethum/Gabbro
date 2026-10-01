@@ -52,3 +52,23 @@ At most 20 active Contributor model processes, including reviewers. Private
 clones/caches, checked isolation, one queued Lean build globally, root review
 before integration, standard goal axioms. Every uncovered form is explicit;
 no guarantee is weakened to turn a build green.
+
+## Additional parallel proof and review owners
+
+| Lane | Module/document | Task |
+|---|---|---|
+| 289 | `X86/SpeicherKommutation.lean` | Actual disjoint-store/frame commutation for future private spills |
+| 290 | `X86/Vektor.lean` | Packed integer lane arithmetic and actual memory carriage |
+| 291 | `X86/Relokation.lean` | Checked rel32/abs64 arithmetic and final-byte operand/data patching |
+| 292 | `REVIEW-QUELLE-INVARIANTEN.md` | Independent source-unit, duty and scoped-invariant audit |
+| 293 | `REVIEW-TSO.md` | Independent target-access granularity/concurrency/progress audit |
+| 294 | `REVIEW-OPT-BINAER.md` | Independent optimisation and full-binary closure audit |
+
+The initial Lean-first tranche has twelve Lean implementation owners (272,
+279, 282–291) and three independent review owners (292–294). Model processes
+are bounded to20 including any repair/review sessions; completed owners are
+rotated into dependent work after review. Direct source lowering, runtime/ABI,
+full W/GX simulation, complete instruction-family encoding and global
+optimiser/cost soundness remain required follow-up tasks, not implied by
+these foundations. Transfer/integration stays with the coordinator after
+independent findings are resolved and local checks pass.
