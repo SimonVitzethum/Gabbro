@@ -112,7 +112,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 12:31 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 12:32 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -185,7 +185,7 @@ Last ledger refresh: **2026-10-01 12:31 UTC**. This is an operational snapshot, 
 | 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Scheduled | 494: scheduled | [task](lanes/414.md) |
 | 415 | Adversarial implementation audit: END-TO-END-TRUST | Scheduled | 495: scheduled | [task](lanes/415.md) |
 | 416 | Continuous Lean proof reserve: EffectiveAddress | Agent working | 464: scheduled | [task](lanes/416.md) |
-| 417 | Continuous Lean proof reserve: ConditionalMove | Committed candidate; review/integration pending | 465: Committed candidate; review/integration pending | [task](lanes/417.md) |
+| 417 | Continuous Lean proof reserve: ConditionalMove | Queued for a model slot | 465: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/417.md) |
 | 418 | Continuous Lean proof reserve: BitScan | Agent working | 466: scheduled | [task](lanes/418.md) |
 | 419 | Continuous Lean proof reserve: BitCount | Agent working | 467: scheduled | [task](lanes/419.md) |
 | 420 | Continuous Lean proof reserve: ByteSwap | Agent working | 468: scheduled | [task](lanes/420.md) |
@@ -377,6 +377,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: integration of candidate(s) [346] failed the local proof/build gate after independent review 384; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:384 -->
 - 2026-10-01: checked master `023a1459` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:023a1459ba6ce3952a32d06171105f5fa2283cbb -->
 - 2026-10-01: lane **403**, Independent exact-candidate review of 402, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-403.md). <!-- x86-merged:403 -->
+- 2026-10-01: integration of candidate(s) [417] failed the local proof/build gate after independent review 465; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:465 -->
+- 2026-10-01: documentation-only publication at `ebf950dc` retains the successful complete local Lean, Rust and emission checks at `c937ebe4`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
