@@ -1,16 +1,28 @@
-# Direct compiler detailed design: generic source-to-final-bytes compilation with fast validation
+# Direct compiler detailed design: HIGH RUNTIME PERFORMANCE with a feasible selected hardware model, fast compilation and full validation
 
-*Lane 323, 2026-10-01. Status: PROPOSED design, not an implementation or a proof.
-Nothing here claims any source-to-x86 chain is closed. Central progress record:
-[DIRECT-COMPILER.md](DIRECT-COMPILER.md). All source-to-executed-final-binary
-claims remain OPEN.*
+*Lane 323 (design) revised by lane 325, 2026-10-01. Status: PROPOSED design,
+not an implementation or a proof. Nothing here claims any source-to-x86 chain
+is closed. Central progress record: [DIRECT-COMPILER.md](DIRECT-COMPILER.md).
+All source-to-executed-final-binary claims remain OPEN.*
+
+*Design priority, per user steering: the intended final compiler delivers HIGH
+RUNTIME PERFORMANCE of the produced binaries within a FEASIBLE COMPLETE
+SELECTED architectural hardware profile, while also compiling fast including
+the mandatory Lean validation. The 14-form pilot (§2) is proof bootstrapping
+only — never the final performance ceiling. No form is kept artificially
+small for easy proof; every added form carries its exact architectural effects
+and proof obligations. No universally maximal claim across every CPU and
+workload is made anywhere in this document.*
 
 ## 0. Reading guide and claim boundary
 
 This document is a plan. Every section marked PROPOSED needs Lean modelling,
 generic proofs and review before any Rust part is built. Existing helpers are
 bounded foundations, not implemented native compilation. No new mini-model is
-proposed; all names refer to the canonical vocabularies below.
+proposed; all names refer to the canonical vocabularies below. Performance
+sections (§§2B, 2C, 3A, 6, 7A, 10, 11) select among already-valid
+translations only: tuning data never weakens a proof obligation, never admits
+an unproved form, and never changes FP, concurrency or contract semantics.
 ## 1. Objective and trust chain (PROPOSED)
 
 The compiler accepts EVERY full source unit the Lean checker accepts and
@@ -23,7 +35,11 @@ Lean validator. Target quality is `-O3`-like scope (constant/copy propagation,
 DCE/CSE, selective inlining, register allocation with private spills, peephole
 selection, LICM, bounded unrolling, selective SIMD after its correspondence is
 proved) plus invariant-derived extras (redundant-check removal, strength
-reduction, alias separation, protected-load reuse at proved locations). No GCC
+reduction, alias separation, protected-load reuse at proved locations). Scope
+alone is not the performance story: §§2B–2C, 3A, 6 and 7A require the encoded
+bytes themselves to be efficient (compact immediates, short addresses, short
+branches, SIMD where the workload justifies it), chosen by measurement among
+valid translations. No GCC
 parity promise. Runtime, bindings and OS surfaces are user-logic bodies with
 checked contracts; only named silicon, device and timing behaviour are
 hardware assumptions ([Spec header](grammatik/Grammatik/Zielsatz/Spec.lean),
@@ -87,8 +103,9 @@ high-byte legacy forms (`ah/bh/…` refused). Conditions: 16 `Bedingung` codes
 `Speicher.bytes` with per-address R/W/X bits; loads/stores base+sign-extended
 disp32, mod=10 always, `rbp/r13` real bases (never RIP-relative). Fault model:
 permission-checked access (lane 271); flag model: `Flags` with
-`af : Option Bool` (undefined, not false); fault/flag preservation per form is
-lane-272 work, OPEN. Planned extended forms (widths, LOCK, fences, FP/SIMD,
+`af : Option Bool` (undefined, not false); fault/flag preservation per form
+and the per-form execution correspondence remain OPEN (lane 272 proved the
+pilot vocabulary and execution skeleton, not the chain correspondence). Planned extended forms (widths, LOCK, fences, FP/SIMD,
 indirect control — §§3–6) and bounded accepted helpers (`Wort.lean` modular
 ops, `Speicher.lean` LE access, width `Breite`) are NOT pilot vocabulary: a
 width helper or SIMD helper does not mean ISA support, and any byte outside
@@ -138,6 +155,67 @@ are unchanged: only named silicon/device/timing behaviour is a hardware
 assumption; OS, runtime, loader and binding bodies stay user logic with
 checked contracts; the goal statement and all guarantees stay unchanged.
 
+## 2B. Efficient encodings and address forms (PROPOSED — the performance floor)
+
+The pilot always emits the longest form (10-byte `movImm64`, disp32-only
+memory, rel32-only branches). High performance requires the compact forms
+below; each is PROPOSED until its encoder row, decoder acceptance, length
+function and correspondence lemma close (codec owner lane 279 pattern,
+execution owner lane 272 pattern). Width, register, flags, canonical-address
+and fault rules are explicit per row; everything here is planned, not current
+support — the decoder still refuses every non-canonical byte per §2.
+
+| Form | Compact encoding (PROPOSED) | Selection rule (validator-decided) | Obligations / status |
+|---|---|---|---|
+| MOV reg, imm32 (zero-extending) | no REX.W; B8+rd; imm32 LE (5 bytes) | value fits `u32` AND destination is a 64-bit reg whose upper half is dead-or-don't-care (upper 32 cleared architecturally) | upper-half zeroing is semantics, not truncation: width-exact lemma; imm64 kept where value needs it; OPEN |
+| MOV reg, sign-extended imm32 | REX.W; C7 /0; imm32 LE (7 bytes) | signed value fits `i32` | sign-extension identity per width; OPEN |
+| ADD/SUB/CMP/AND/OR/XOR with imm8 | REX.W; 83 /n; imm8 (4 bytes) | immediate fits signed 8 bits | sign-extension of imm8 + per-width flag identity; OPEN |
+| ADD/SUB/CMP with imm32 | REX.W; 81 /n or 05/2D/3D for rax; imm32 (6–7 bytes) | immediate needs more than imm8 | same as above; OPEN |
+| disp0 / disp8 / disp32 memory | mod=00 (no disp, except rbp/r13 base forces disp8=0), mod=01 + disp8, mod=10 + disp32 | smallest displacement that reaches the object; frame slots and small struct offsets normally take disp0/disp8 | canonical-address check per actual length; SIB only where base%8=4 or index present; OPEN |
+| base+index*scale+disp | SIB byte: scale 1/2/4/8, index != rsp, base + disp8/disp32 | array/aggregate lowering via LEA/address selection (§3A); scale proved from element width | index never `rsp` (architecturally no-index); scale/width agreement lemma; OPEN |
+| RIP-relative references | mod=00, r/m=101 (image/static data, read-only tables) | position-independent image data only; never for stack spills or `rbp/r13`-based locals | loader relocation + entry-predicate agreement ([IMAGE-ABI §§6,10](dokumente/x86/IMAGE-ABI.md)); OPEN |
+| short Jcc/JMP (rel8) | EB / 70+code + rel8 (2 bytes) | target within −128..+127 of the virtual next-RIP AND layout stability proved (see relaxation below) | target = next-RIP + sign-extend(disp), decoded-start check; OPEN |
+| XOR reg, reg (zero idiom) | 31 /r (2–3 bytes) | value is a fresh zero with no flag survivor | flags clobbered — needs flag-liveness proof at the site; OPEN |
+
+Branch and layout relaxation (bounded, compiler-speed safe): layout starts
+with every forward/short-uncertain branch in its WIDE form (rel32), resolves
+displacements from the virtual layout, then runs a BOUNDED number of
+compression rounds (fixed fuel: e.g. at most N rounds over the function, N a
+small constant in the proof schema): any branch whose displacement now fits
+rel8 AND whose compression cannot move another already-compressed branch out
+of range is narrowed. Rounds after fuel exhaustion keep the valid wide form —
+a valid wider form is always allowed when bounded optional compression is
+exhausted, so relaxation can never fail the build, only leave bytes longer.
+Every layout change (narrowing, displacement patch, relocation fixup) forces
+full image revalidation on the FINAL bytes: patched bytes are re-decoded
+(length, opcode, ModRM/SIB, target-decoded-start) and the validator decides
+`layoutOk` again — layout change without revalidation is refused. Backward
+branches are measured first (loop closings dominate); mixed short/long chains
+must converge under fuel, never iterate to a fixpoint without a bound.
+
+## 2C. Priority and tradeoff table (PROPOSED)
+
+Profiles are ordered by intended rollout; each profile models EXACTLY the
+forms its backend can emit, with all architecturally observable interactions
+(including async events where applicable: interrupts, other-core accesses,
+faults). Modelling/validation cost is one-off Lean work; runtime gain is
+measured per §10 after implementation; compilation work is recurring per
+build. Nothing here promises a number.
+
+| Profile | Contents | Modelling + validation cost | Expected measured gain | Compilation work |
+|---|---|---|---|---|
+| P-portable scalar | §§2B+3+3A integer profile: compact encodings, address forms, short branches, scalar select/alloc | medium: widths, flags, codec rows, layout relaxation, ABI proofs | large: removes the pilot's worst bloat (10-byte MOVs, disp32-only, rel32-only) | small: bounded relaxation, linear scan |
+| P-selected high-performance CPU | P-portable + tuned selection (§7A) + Tier 1/2 SIMD (§6) for a NAMED CPU profile (e.g. one measured x86-64 core) with CPUID-gated features | high: per-form correspondence, lane separation, CPUID/XCR0/context proofs | large on vector/memory-bound workloads; small elsewhere — measured, never assumed | medium: selection search bounded by fuel; fallback scalar route always available |
+| P-concurrency/device/interrupt (exact, only what the language needs) | LOCK/RMW, fences, entry/IRQ forms, port/device gates actually lowered from source constructs | high per form (TSO bridge, async interaction) | correctness-enabling, not a speedup: without it the concurrent/device program is refused | small: no search, direct lowering |
+| Deferred (optional, later) | AVX-512, FMA-as-fusion, BMI where no workload justifies it yet | highest | unknown until a workload shows it | — |
+
+Rule of the table: a profile is admitted only when its forms are modelled
+with all observable effects; a profile is TUNED only when measurement shows a
+gain on a representative workload (§11); tuning never revisits a proof. No
+claim is made that the Lean model matches physical silicon — the model is the
+checked contract the validator decides; silicon behaviour beyond the named
+assumptions is not proved.
+
 ## 3. PLANNED ISA table: minimal practical-performance profile (PROPOSED)
 
 Not Turing-completeness alone: the profile must compile ordinary integer
@@ -174,6 +252,41 @@ private spill slots disjoint with permissions checked, guard pages on thread
 stacks ([IMAGE-ABI §§5,8](dokumente/x86/IMAGE-ABI.md)). No integer-to-pointer
 or integer-to-function-pointer conversion enters the language (M140); code
 addresses travel as `entry fn` values under the N575–N577 discipline.
+
+## 3A. Scalar selection, allocation and address selection (PROPOSED)
+
+Instruction selection works on the SCFG ([IR-VALIDIERUNG §1](dokumente/x86/IR-VALIDIERUNG.md))
+bottom-up over matched tiles; every tile is a proved rule in the register
+(§7) and the validator re-decides its side conditions. Planned high-value
+tiles (each OPEN until its rule lemma closes):
+
+- Multiply/divide/shifts: 3-operand `IMUL r, r/m, imm8/imm32` for constant
+  multiplies with a proved range (strength reduction cites the §3 row, never a
+  bare pattern); `LEA` for `a + b*k + c` with `k` in {1,2,4,8} — pure, no
+  flags, no memory event — preferred over ADD/SHL sequences wherever the
+  address form already computes the value; shifts by imm/CL with per-width
+  count-masking semantics; `IDIV/DIV` never speculated, never hoisted above
+  its divisor check.
+- SETcc/CMOVcc where MEASURED suitable, never by default: a branchless form
+  wins only when the branch is unpredictable AND the operands are cheap AND
+  (for memory-source CMOV) the unselected side is proved fault-free — the
+  unselected memory operand may still fault architecturally, so register-only
+  CMOV comes first and memory-source CMOV stays refused until its generic
+  proof lands. SETcc materialises booleans without a branch; short
+  unpredictable selects are its first target.
+- Liveness-aware flags and copies: flag-producing compares are sunk to their
+  branch (no dead `CMP` kept alive across calls); copies are coalesced only
+  under recomputed avail + dominance (§7 example 1); the zero idiom
+  (`XOR reg, reg`) only with flag-liveness proof; callee-saved restores on
+  all paths, checked per call/return.
+- ABI/register allocation/address selection: linear-scan over live intervals
+  (recomputed liveness) as default; hot values stay in registers across the
+  loop, spill slots are fresh private frame slots (token-threaded,
+  disjointness + permissions checked); addressing mode chosen smallest-first
+  per §2B (disp0/disp8/disp32, base+index*scale+disp, RIP-relative for image
+  constants); call arguments use the ABI registers before stack slots.
+  Selection search is bounded by fuel; exhausted fuel keeps a valid simpler
+  tile, never a half-rewrite.
 
 ## 4. FP scalar baseline SSE2 binary64 (PROPOSED)
 
@@ -247,14 +360,26 @@ A fence is never removed on "race freedom alone": race freedom is about
 non-atomic carriers; fences order atomic/shared accesses, and only an exact
 per-access concurrent-equivalence theorem moves them.
 
-## 6. SIMD and performance tiers (PROPOSED)
+## 6. SIMD as a first-class high-performance milestone (PROPOSED)
 
-Default: scalar only. The packed-integer helper (`X86/Vektor.lean`, lane 290,
-candidate) is NOT validated vectorisation. Tiers, each gated separately:
+SIMD is not an optional extra of this design: it is the planned second
+performance engine beside scalar selection (§3A), handled as a milestone with
+its own gates, because memory-bound and data-parallel loops cannot reach high
+performance on scalar code alone. Default stays scalar: no vector instruction
+is emitted until its tier gate is proved; then vectorisation applies where
+measurement (§10) shows a gain, never everywhere. The packed-integer helper
+(`X86/Vektor.lean`, lane 290, candidate) is NOT validated vectorisation.
+FP contracts cannot be changed by any tier: FMA applies ONLY where the source
+semantics permits the exact fused operation (no fast-math fusion of separate
+`mul`+`add` nodes — §4 refusal stands); vector FP lanes carry the same
+per-lane MXCSR/rounding/NaN obligations as scalar. Tiers, each gated
+separately:
 
 - Tier 1 (starter, with O3 package): scalar SSE2 integer-adjacent work only —
-  no vector instructions. Performance comes from §§7–8 (folding, CSE, LICM,
-  allocation, layout), not lanes.
+  no vector instructions. Performance comes from §§2B, 3A, 7–8 (compact
+  encodings, selection, folding, CSE, LICM, allocation, layout), not lanes.
+  This tier alone must already beat the pilot's code size and cycle count on
+  scalar workloads — measured per §11, never assumed.
 - Tier 2 (PROPOSED, first vector candidate): selected SSE2 packed-integer XMM
   forms (e.g. PADDB/W/D/Q, PADDQ, PXOR, PAND/POR, PSLLQ/PSRLQ, MOVDQA/MOVDQU,
   128-bit loads/stores), element widths 8–64 with lane count × width = 128.
@@ -265,16 +390,24 @@ candidate) is NOT validated vectorisation. Tiers, each gated separately:
   preserved. Fault order (lane `i+1` never visible ahead of lane `i`),
   visibility order vs concurrent observers, tearing equivalence, per-lane
   FP-status identity where FP lanes exist — each independently refusing.
-- Tier 3 (PROPOSED, later, optional): AVX2 VEX/YMM (VPADDB/…256-bit,
+- Tier 3 (PROPOSED, first OPTIONAL selected-CPU profile): AVX2 VEX/YMM
+  (VPADDB/…256-bit,
   VEX scalar VADDSS/VADDSD zeroing upper lanes — architecturally stated
   because XMM sharing across calls makes it observable). Prerequisite:
-  CPUID AND enabled extended state (OSXSAVE + AVX bits, XCR0 XMM+YMM);
+  CPUID AND enabled extended state (OSXSAVE + AVX bits, XCR0 XMM+YMM)
+  proved as entry-established facts, re-checked per image;
   setup/context-switch save/restore is user/binding logic with contracts —
   no OS assumption. Upper-YMM state in the relation, entry-established,
-  call-preserved per proved ABI discipline.
-- Optional, feature-gated + proved only: BMI1/2 (ANDN, BLSI, PDEP/PEXT),
+  call-preserved per proved ABI discipline. AVX2 is selected per NAMED CPU
+  profile (§2C): the backend emits VEX forms only for that profile, and
+  only where the §7A model predicts a measured gain; everything else stays
+  SSE2 scalar/packed.
+- Optional, feature-gated + proved only when a real workload justifies the
+  modelling cost: BMI1/2 (ANDN, BLSI, PDEP/PEXT),
   POPCNT, TZCNT/LZCNT — each with CPUID premise and its own correspondence;
-  absent bit = refused encoding. AVX-512 deferred entirely; no
+  absent bit = refused encoding. AVX-512 and FMA-as-fusion deferred
+  entirely to a later explicit milestone — optional later work, neither
+  permanently excluded nor required for any program today; no
   maximal-performance universal promise is made.
 
 Excluded from the ordinary profile (refused, not silently dropped): 16/32-bit
@@ -343,6 +476,33 @@ Concrete generic examples (no program-name rules):
 5. Shared-load refusal: `lock L { v = *p }; …; use v` after unlock with
    another writer under `L` — reuse refused; needs continuous holding plus
    whole-unit writer discipline (CE-3).
+
+## 7A. Performance model and tuning data (PROPOSED — tuning only, never correctness)
+
+Correctness semantics (§§2–6) decide WHICH translations are valid; this
+section decides which valid translation to PREFER. The performance model is a
+compact, explicitly approximate tuning table, kept in a separate file from the
+semantics and never imported by any proof: it is NOT necessary to formally
+model any pipeline, cache hierarchy, branch predictor or transistor. A bad
+tune choice can only slow valid code — it can never change semantics, admit
+an unproved form, or weaken a check — because the validator decides the
+already-emitted bytes independently of how they were chosen.
+
+| Cost class | What is tabulated (per NAMED CPU profile) | Used for | Explicitly NOT a proof premise |
+|---|---|---|---|
+| Latency / throughput / port pressure | per-form latency, reciprocal throughput, dependency chains through registers/flags | tile choice (§3A), scheduling across independent chains | measured approximations; no cycle promise |
+| Register pressure | live-range weights, spill vs rematerialise tradeoffs | allocation decisions, unroll factor `k` | heuristic weights only |
+| Alignment / code size | alignment effects on loop heads and vector loads; byte cost of wide vs narrow forms (§2B) | layout, relaxation rounds, padding | no fixed timing promise |
+| Branch predictability | taken/untaken bias classes, loop-trip evidence | short-vs-near branch, unroll, branchless (§3A SETcc/CMOV) selection | static bias hints; mispredicts stay legal |
+| Microarchitecture traits | measured_decode/retire traits of the selected profile (e.g. fusion-friendly pairs, zero-idiom recognition) | peephole preferences among valid forms | observed traits, not modelled internals |
+
+Time guarantees stay entirely separate: they rest on named conservative
+hardware assumptions plus the proved work transfer of §9/[FLOAT-ZEIT §8](dokumente/x86/FLOAT-ZEIT.md),
+never on this table. Profile tune data ships with the compiler profile, is
+versioned with it (dependency hash per §8 covers the hardware profile), and a
+stale or wrong table degrades only speed: every image it selects still passes
+the same mandatory validation.
+
 ## 8. FAST compilation architecture (PROPOSED)
 
 Inspiration (not dependency): LLVM pass-manager discipline
@@ -431,9 +591,12 @@ kernel); the user-facing default ships only fully accepted images.
 
 ## 10. Measurement protocol (PROPOSED — numbers UNKNOWN)
 
-No speed is claimed: no milliseconds promised, no observed throughput cited.
+No speed is claimed: no milliseconds promised, no observed throughput cited,
+no fabricated speedup and no fixed total instruction count anywhere.
 First baseline is measured after the minimal lowering + validator close; the
-target curve is defined after that baseline.
+target curve is defined after that baseline. Runtime performance of the
+produced binaries is measured on the same workloads as compile speed — both
+matter, neither is asserted before measurement.
 
 - Dimensions: cold / warm / incremental full compilation + validation;
   latency p50/p95 over the workload mix; throughput (IR nodes/s, source
@@ -443,7 +606,15 @@ target curve is defined after that baseline.
 - Workloads: generic scalable GENERATED programs (nesting depth, function
   count, loop trip counts, table sizes swept parametrically) PLUS the actual
   emitter construct inventory ([EMITTER-INVENTAR](dokumente/x86/EMITTER-INVENTAR.md))
-  as coverage — corpus examples alone are not scope evidence.
+  as coverage — corpus examples alone are not scope evidence. The mix must
+  cover scalar integer, vector/packed (once Tier 2 lands), atomic/shared-memory
+  and memory-bound shapes (large tables, streaming loops): a profile tuned
+  only on scalar code has not earned its performance claim.
+- Codegen comparison baselines: the produced binaries are compared against
+  (i) the pilot lowering of the same source (bloat removed — must improve)
+  and (ii) a reference compiler's output on equivalent C, labelled MEASURED
+  ONLY after implementation. Baselines inform tuning; they never certify
+  anything and never appear as proof premises.
 - Change classes: body edit, contract edit, ABI/target-data edit, profile
   edit, layout-affecting edit; parallel scaling (1/2/4/8 workers) with
   determinism check (cold vs warm identical accepted semantics);
@@ -453,9 +624,13 @@ target curve is defined after that baseline.
 - Optimisation budgets benchmarked per knob (inline fuel, unroll `k`, pass
   caps, improvement fuel): quality (binary cycles/size) vs compile time
   curves; defaults picked from the knee, exposed as a FEW stable build
-  modes (e.g. `schnell` minimal-opt + full validation, `optimiert`
+  modes (e.g. `fast` minimal-opt + full validation, `tuned`
   full-package + full validation) with identical acceptance — no broad
-  user-facing flag API. No mode skips validation.
+  user-facing flag API. No mode skips validation. Full accepted-image
+  latency (backend + validator + kernel, per §9) is the reported compile
+  figure — never backend-only time — and safe incrementality (hash hit
+  skips work, never checking) is measured per change class with its
+  refusal probes.
 
 ## 11. Implementation sequence and acceptance gates (PROPOSED)
 
@@ -487,6 +662,19 @@ refusals, no `sorry/admit/axiom/native_decide/unsafe`.
    performance measurement per §10. Gate: §10 baseline published in
    [DIRECT-COMPILER.md](DIRECT-COMPILER.md).
 
+High-performance deliverable gates (each MEASURED, none promised in advance):
+compact encodings + address forms + short branches (§2B) land with a code-size
+and cycle comparison against the pilot lowering on the §10 mix (must improve
+scalar size/speed, else the selection rules not the proofs are repaired);
+scalar selection (§3A) lands with per-tile before/after measurements on hot
+shapes (LEA, 3-operand IMUL, SETcc/CMOV only where measured suitable);
+Tier 2 SIMD lands with vector-vs-scalar measurements on the memory-bound and
+data-parallel shapes plus tail/private/fault-order probes green; AVX2 lands
+only for its named CPU profile with CPUID/XCR0/context proofs AND a measured
+gain over SSE2 on that profile. No gate is passed by an arbitrary instruction
+count or a fixed timing promise — only by measured binaries on representative
+generic emitter-construct workloads with full accepted-image validation green.
+
 Open obligations (all OPEN until proved): every PROPOSED row of §§3–6; the
 f32 bridge; NaN non-observability; control-state establishes/preserves;
 per-access atomicity/tearing table; OBS-5 foreign-footprint/publication
@@ -502,5 +690,9 @@ progress table.
 *CUTS: no Lean definition, lemma, checker Bool, decoder, validator,
 refinement, cost-transfer or acceptance theorem is proved here. Profile
 decisions are PROPOSED with prerequisites explicit. No runtime or compiler
-speed was measured. Primary references are modelling targets, not evidence
-the Lean model matches hardware.*
+speed was measured — §§2B, 2C, 3A, 6, 7A, 10 and 11 state intended selection,
+tuning and measurement obligations, not observations. Primary references are
+modelling targets, not evidence the Lean model matches hardware. No
+universally maximal performance across CPUs/workloads is claimed; no fixed
+timing promise is made; no source, hardware or software assumption is
+weakened for speed.*
