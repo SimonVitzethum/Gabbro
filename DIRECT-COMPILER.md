@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 18:42 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 18:52 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -243,7 +243,7 @@ Last ledger refresh: **2026-10-01 18:42 UTC**. This is an operational snapshot, 
 | 564 | Connection: Shift operations byte decoder and execution connection | Agent working | 582: scheduled | [task](lanes/564.md) |
 | 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Agent working | 583: scheduled | [task](lanes/565.md) |
 | 566 | Connection: Conditional forms bytes to accepted control execution | Agent working | 584: scheduled | [task](lanes/566.md) |
-| 567 | Connection: Canonical byte-TSO history projection | Agent working | 585: scheduled | [task](lanes/567.md) |
+| 567 | Connection: Canonical byte-TSO history projection | Committed candidate; review/integration pending | 585: Agent working | [task](lanes/567.md) |
 | 568 | Connection: Executed pilot instruction to realised access footprint | Agent working | 586: scheduled | [task](lanes/568.md) |
 | 569 | Connection: Fetched call/return to stack-frame proofs | Agent working | 587: scheduled | [task](lanes/569.md) |
 | 570 | Connection: Source world/table values to target byte representation | Agent working | 588: scheduled | [task](lanes/570.md) |
@@ -563,6 +563,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **577**, Independent connection review of 559, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-577.md). <!-- x86-merged:577 -->
 - 2026-10-01: lane **572**, Connection: Source budget-stop and target work connection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-572.md). <!-- x86-merged:572 -->
 - 2026-10-01: lane **590**, Independent connection review of 572, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-590.md). <!-- x86-merged:590 -->
+- 2026-10-01: publication batch checks passed for `7f9fcb17`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
