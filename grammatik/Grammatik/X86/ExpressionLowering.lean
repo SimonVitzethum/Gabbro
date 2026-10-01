@@ -70,11 +70,11 @@ def senkFrag {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
   | .var x => some [.movReg64 dst (abb _ x)]
   | .add a b =>
     match senkAtom abb a dst, senkAtom abb b tmp with
-    | some pa, some pb => some (pa ++ pb ++ [.addReg64 dst tmp])
+    | some pa, some pb => some (pa ++ pb ++ [Befehl.addReg64 dst tmp])
     | _, _ => none
   | .sub a b =>
     match senkAtom abb a dst, senkAtom abb b tmp with
-    | some pa, some pb => some (pa ++ pb ++ [.subReg64 dst tmp])
+    | some pa, some pb => some (pa ++ pb ++ [Befehl.subReg64 dst tmp])
     | _, _ => none
   | _ => none
 
@@ -98,7 +98,7 @@ theorem senkFrag_add {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
     (dst tmp : Register) (pa pb : List Befehl)
     (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb) :
     senkFrag abb (Expr.add a b) dst tmp =
-      some (pa ++ pb ++ [.addReg64 dst tmp]) := by
+      some (pa ++ pb ++ [Befehl.addReg64 dst tmp]) := by
   simp only [senkFrag, ha, hb]
 
 /-- Shape: a bounded SUB over two lowered atoms. -/
@@ -108,7 +108,7 @@ theorem senkFrag_sub {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
     (dst tmp : Register) (pa pb : List Befehl)
     (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb) :
     senkFrag abb (Expr.sub a b) dst tmp =
-      some (pa ++ pb ++ [.subReg64 dst tmp]) := by
+      some (pa ++ pb ++ [Befehl.subReg64 dst tmp]) := by
   simp only [senkFrag, ha, hb]
 
 /-- PLANTED REFUSAL: multiplication is outside the fragment. -/
@@ -322,6 +322,165 @@ theorem senkAtom_korrekt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {lo hi
   match istAtom_von_senkAtom abb a dst pa ha with
   | .lit n => exact senkAtom_korrekt_lit abb n dst ρ σ₀ σ s pa ha
   | .var x => exact senkAtom_korrekt_var abb x dst ρ σ₀ σ s hrenv pa ha
+
+/-- FRAGMENT CORRECTNESS (add): the first atom evaluates into `dst`,
+    the second into `tmp`, the architectural add combines them. `Frisch`
+    keeps the second load from reading the first result; memory is untouched,
+    foreign registers and `rsp` are kept, flags are the architectural add
+    flags over the two exact source words. -/
+theorem senkung_add {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {l1 h1 l2 h2 : Int} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+    (dst tmp : Register)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hfr : Frisch abb dst tmp) (hrsp : dst ≠ Register.rsp ∧ tmp ≠ Register.rsp)
+    (hrenv : EnvRepr ρ s.register abb)
+    (pa pb : List Befehl)
+    (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb) :
+    ∃ s', lauf (((pa ++ pb) ++ [Befehl.addReg64 dst tmp]).map
+        fun b => ⟨b, (encode b).length⟩) s = some s' ∧
+      s'.register dst = intWort (eval σ₀ (Expr.add a b) σ ρ).n ∧
+      s'.speicher = s.speicher ∧
+      (∀ q, q ≠ dst → q ≠ tmp → s'.register q = s.register q) ∧
+      s'.register Register.rsp = s.register Register.rsp ∧
+      s'.flags =
+        (add64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2 := by
+  obtain ⟨hneu, hne⟩ := hfr
+  obtain ⟨hdst, htmp⟩ := hrsp
+  obtain ⟨s1, hrun1, hval1, hmem1, hreg1, hfl1⟩ :=
+    senkAtom_korrekt abb a dst ρ σ₀ σ s hrenv pa ha
+  have hrenv1 : EnvRepr ρ s1.register abb := by
+    intro lo' hi' x
+    have h1 := hneu _ x
+    rw [hreg1 _ h1.1]
+    exact hrenv lo' hi' x
+  obtain ⟨s2, hrun2, hval2, hmem2, hreg2, hfl2⟩ :=
+    senkAtom_korrekt abb b tmp ρ σ₀ σ s1 hrenv1 pb hb
+  have hdst2 : s2.register dst = intWort (eval σ₀ a σ ρ).n := by
+    rw [hreg2 dst hne]
+    exact hval1
+  have hlen : laengeOk (encode (Befehl.addReg64 dst tmp)).length = true :=
+    laengeOk_encode _
+  have hadd : schritt ⟨Befehl.addReg64 dst tmp, (encode (Befehl.addReg64 dst tmp)).length⟩ s2 =
+      some (schrittRegister s2 (ripNach s2.rip (encode (Befehl.addReg64 dst tmp)).length)
+        (add64 (s2.register dst) (s2.register tmp)).2 dst
+        (add64 (s2.register dst) (s2.register tmp)).1) :=
+    schritt_addReg64 _ _ _ _ hlen rfl
+  have hmap : ((pa ++ pb ++ [Befehl.addReg64 dst tmp]).map
+      fun b => (⟨b, (encode b).length⟩ : Decodiert)) =
+      (pa.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+      (pb.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+      [⟨Befehl.addReg64 dst tmp, (encode (Befehl.addReg64 dst tmp)).length⟩] := by
+    simp [List.map_append]
+  refine ⟨schrittRegister s2 (ripNach s2.rip (encode (Befehl.addReg64 dst tmp)).length)
+    (add64 (s2.register dst) (s2.register tmp)).2 dst
+    (add64 (s2.register dst) (s2.register tmp)).1, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hmap]
+    have h12 : lauf ((pa.map fun b => ⟨b, (encode b).length⟩) ++
+        (pb.map fun b => ⟨b, (encode b).length⟩)) s = some s2 := by
+      rw [lauf_anhang _ _ _ _ hrun1]
+      exact hrun2
+    rw [lauf_anhang _ _ _ _ h12, lauf_einzeln]
+    exact hadd
+  · show regSet s2.register dst (add64 (s2.register dst) (s2.register tmp)).1 dst =
+        intWort (eval σ₀ (Expr.add a b) σ ρ).n
+    rw [regSet_gleich, hdst2, hval2]
+    show intWort (eval σ₀ a σ ρ).n + intWort (eval σ₀ b σ ρ).n =
+      intWort (eval σ₀ (Expr.add a b) σ ρ).n
+    calc intWort (eval σ₀ a σ ρ).n + intWort (eval σ₀ b σ ρ).n
+        = intWort ((eval σ₀ a σ ρ).n + (eval σ₀ b σ ρ).n) := intWort_add _ _
+      _ = intWort (eval σ₀ (Expr.add a b) σ ρ).n := rfl
+  · show s2.speicher = s.speicher
+    rw [hmem2, hmem1]
+  · intro q hqd hqt
+    show regSet s2.register dst (add64 (s2.register dst) (s2.register tmp)).1 q =
+      s.register q
+    rw [regSet_fremd _ _ _ _ hqd, hreg2 q hqt, hreg1 q hqd]
+  · show regSet s2.register dst (add64 (s2.register dst) (s2.register tmp)).1
+        Register.rsp = s.register Register.rsp
+    rw [regSet_fremd _ _ _ _ (Ne.symm hdst), hreg2 _ (Ne.symm htmp),
+      hreg1 _ (Ne.symm hdst)]
+  · show (add64 (s2.register dst) (s2.register tmp)).2 =
+        (add64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2
+    rw [hdst2, hval2]
+
+/-- FRAGMENT CORRECTNESS (sub): mirror of the add case with the
+    architectural borrow flags. -/
+theorem senkung_sub {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {l1 h1 l2 h2 : Int} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+    (dst tmp : Register)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hfr : Frisch abb dst tmp) (hrsp : dst ≠ Register.rsp ∧ tmp ≠ Register.rsp)
+    (hrenv : EnvRepr ρ s.register abb)
+    (pa pb : List Befehl)
+    (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb) :
+    ∃ s', lauf (((pa ++ pb) ++ [Befehl.subReg64 dst tmp]).map
+        fun b => ⟨b, (encode b).length⟩) s = some s' ∧
+      s'.register dst = intWort (eval σ₀ (Expr.sub a b) σ ρ).n ∧
+      s'.speicher = s.speicher ∧
+      (∀ q, q ≠ dst → q ≠ tmp → s'.register q = s.register q) ∧
+      s'.register Register.rsp = s.register Register.rsp ∧
+      s'.flags =
+        (sub64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2 := by
+  obtain ⟨hneu, hne⟩ := hfr
+  obtain ⟨hdst, htmp⟩ := hrsp
+  obtain ⟨s1, hrun1, hval1, hmem1, hreg1, hfl1⟩ :=
+    senkAtom_korrekt abb a dst ρ σ₀ σ s hrenv pa ha
+  have hrenv1 : EnvRepr ρ s1.register abb := by
+    intro lo' hi' x
+    have h1 := hneu _ x
+    rw [hreg1 _ h1.1]
+    exact hrenv lo' hi' x
+  obtain ⟨s2, hrun2, hval2, hmem2, hreg2, hfl2⟩ :=
+    senkAtom_korrekt abb b tmp ρ σ₀ σ s1 hrenv1 pb hb
+  have hdst2 : s2.register dst = intWort (eval σ₀ a σ ρ).n := by
+    rw [hreg2 dst hne]
+    exact hval1
+  have hlen : laengeOk (encode (Befehl.subReg64 dst tmp)).length = true :=
+    laengeOk_encode _
+  have hsub : schritt ⟨Befehl.subReg64 dst tmp, (encode (Befehl.subReg64 dst tmp)).length⟩ s2 =
+      some (schrittRegister s2 (ripNach s2.rip (encode (Befehl.subReg64 dst tmp)).length)
+        (sub64 (s2.register dst) (s2.register tmp)).2 dst
+        (sub64 (s2.register dst) (s2.register tmp)).1) :=
+    schritt_subReg64 _ _ _ _ hlen rfl
+  have hmap : ((pa ++ pb ++ [Befehl.subReg64 dst tmp]).map
+      fun b => (⟨b, (encode b).length⟩ : Decodiert)) =
+      (pa.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+      (pb.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+      [⟨Befehl.subReg64 dst tmp, (encode (Befehl.subReg64 dst tmp)).length⟩] := by
+    simp [List.map_append]
+  refine ⟨schrittRegister s2 (ripNach s2.rip (encode (Befehl.subReg64 dst tmp)).length)
+    (sub64 (s2.register dst) (s2.register tmp)).2 dst
+    (sub64 (s2.register dst) (s2.register tmp)).1, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hmap]
+    have h12 : lauf ((pa.map fun b => ⟨b, (encode b).length⟩) ++
+        (pb.map fun b => ⟨b, (encode b).length⟩)) s = some s2 := by
+      rw [lauf_anhang _ _ _ _ hrun1]
+      exact hrun2
+    rw [lauf_anhang _ _ _ _ h12, lauf_einzeln]
+    exact hsub
+  · show regSet s2.register dst (sub64 (s2.register dst) (s2.register tmp)).1 dst =
+        intWort (eval σ₀ (Expr.sub a b) σ ρ).n
+    rw [regSet_gleich, hdst2, hval2]
+    show intWort (eval σ₀ a σ ρ).n - intWort (eval σ₀ b σ ρ).n =
+      intWort (eval σ₀ (Expr.sub a b) σ ρ).n
+    calc intWort (eval σ₀ a σ ρ).n - intWort (eval σ₀ b σ ρ).n
+        = intWort ((eval σ₀ a σ ρ).n - (eval σ₀ b σ ρ).n) := intWort_sub _ _
+      _ = intWort (eval σ₀ (Expr.sub a b) σ ρ).n := rfl
+  · show s2.speicher = s.speicher
+    rw [hmem2, hmem1]
+  · intro q hqd hqt
+    show regSet s2.register dst (sub64 (s2.register dst) (s2.register tmp)).1 q =
+      s.register q
+    rw [regSet_fremd _ _ _ _ hqd, hreg2 q hqt, hreg1 q hqd]
+  · show regSet s2.register dst (sub64 (s2.register dst) (s2.register tmp)).1
+        Register.rsp = s.register Register.rsp
+    rw [regSet_fremd _ _ _ _ (Ne.symm hdst), hreg2 _ (Ne.symm htmp),
+      hreg1 _ (Ne.symm hdst)]
+  · show (sub64 (s2.register dst) (s2.register tmp)).2 =
+        (sub64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2
+    rw [hdst2, hval2]
 
 /- CUTS:
     Conversion homomorphism (`intWort_add/sub`), the signed roundtrip
