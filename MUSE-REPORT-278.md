@@ -74,6 +74,27 @@ Also repaired in this pass: the transmitted file was truncated mid-§8.2
 (write-size cut); the complete tail (§8.2 finish, §§9 phase-B lemmas, 10
 blockers, 11 verification log) is now on disk and committed.
 
+## Schema repair (cost-summary soundness — third commit)
+
+Review found a material schema error in §8.1: the claimed soundness
+`segZaehleX run f ≤ summaryBound …` bounds SOURCE GX steps, so it never
+bounds lowered machine work. Rewritten: the soundness schema quantifies
+an actual target execution `xrun` with `XCorr run xrun` (decoder +
+per-access bridge + layout, other lanes) and bounds
+`targetWork (segment xrun f) ≤ expandBound summary (kostenTiefF …)` —
+target work, source steps and hardware cycles as three separate
+quantities. Waiting/spinning exclusions from `targetWork` require exact
+source correspondence proved per site (source-counterpartless spins,
+notably CAS retry, always count in full — the attempt bound cannot
+disappear). Source-budget accounting / exhaustion-stop simulation
+(`budget_simulation`) is booked as a separate OPEN schema; no runtime
+bound is claimed from re-summing. All unimplemented names
+(`XCorr`, `targetWork`, `expandBound`, `kostenSummeOk`,
+`budget_simulation`) marked schemas/OPEN; §7 retry wording, §9 lemma
+list, §10 blockers (new item 8) and §11 log aligned. Verified by re-read
+of the rewritten §8.1 and its referencing paragraphs; docs-only, no
+build.
+
 ## Exact names of new definitions/theorems
 
 None. Docs-only lane: no Lean file, no theorem, no code change. The

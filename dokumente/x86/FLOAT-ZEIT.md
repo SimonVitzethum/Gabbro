@@ -613,11 +613,12 @@ chosen processor profile are untrusted; certificates carry the proof):
   argument; (ii) work accounting — the certificate counts cost per attempt
   times a PROVED attempt bound, or claims no work/time bound for that
   site. An unbounded retry behind a constant per-op cost is unsound and
-  refused; mapping attempts onto `budget` exhaustion (with the `passes`
-  discipline explicit) is one way to earn a bound, not a `FortschrittG`
-  requirement. Expected-case cost is not a bound (§8 marks all such
-  bounds unproved). No fairness or OS premise is invented to bound
-  contention.
+  refused. Per-attempt cost times a proved attempt bound earns a WORK
+  bound; turning work into a stop/runtime claim (the machine stops
+  because the source budget exhausts) needs the separate
+  budget-simulation obligation (§8.1), not a `FortschrittG` argument.
+  Expected-case cost is not a bound (§8 marks all such bounds unproved).
+  No fairness or OS premise is invented to bound contention.
 - **Fences (`MFENCE`, locked ops, `pause`).** Cost counted (they are steps);
   they constrain ordering only as the TSO bridge proves (lane 274 owns the
   bridge — this lane books the float interaction: a fence placement may
@@ -647,25 +648,61 @@ and no fairness/OS assumption is invented to bound them.
 ### 8.1 Cost summary certificate (checked, generic)
 
 Proposed shape (phase B; names provisional, generic over every source
-text — no per-program rules):
+text — no per-program rules). All names below are SCHEMAS, unimplemented
+and OPEN; the schema error of the previous revision (bounding source
+`segZaehleX` and calling it machine work) is withdrawn.
+
+Three quantities, never conflated:
+
+- `srcSteps` — source GX steps of thread `f` while the frame is active
+  (`segZaehleX run f`), already bounded model-side by `kostenTiefF`
+  (`fremd_budget_erhalten`, §6.1). This bounds source steps only.
+- `targetWork` — explicit count of retired target instructions of the
+  validated image executed by `f`'s context in the corresponding segment
+  (schema `targetWork`, OPEN: defined with the target execution
+  semantics, counting retired instructions per context, minus
+  exactly-corresponding waiting — see below). This is the quantity the
+  certificate bounds.
+- `cycles` — hardware timing (§8.2). No relation to either count is
+  claimed here.
 
 - Per function, the untrusted backend emits a cost summary alongside the
-  image: for each source step class (leaf, branch, lock take/release,
-  call push/pop, `traverse` iteration, `retry` try, `forever` pass,
-  float op class, fence, spill slot access, retry-loop iteration), the
-  maximum number of validated target instructions (or, later, cycles)
-  the lowering may produce, plus the spill/fence multipliers actually
-  used and, for retry loops, a proved attempt bound — no constant absorbs
-  an unbounded retry; a site without a proved attempt bound carries no
-  work bound (§7).
-- Lean checks the summary against the source body (a `korrOk`-style Bool:
-  `kostenSummeOk EL summary P fs`) and proves soundness:
-  `segZaehleX run f ≤ summaryBound summary (kostenTiefF …)` on every GX
-  run while the frame is active — i.e. the summary is a validated
-  refinement of `kostenTiefF`, the `ZeitAb`/`ZeitAbX` right-hand side with
-  foreign costs on top.
-- Status: **proposed, not built, not proved** — the Bool, its soundness
-  theorem and the per-form maxima are phase-B work (§10).
+  image: per source step class (leaf, branch, lock take/release, call
+  push/pop, `traverse` iteration, `retry` try, `forever` pass, float op
+  class, fence, spill slot access, CAS-retry attempt) the maximum number
+  of validated target instructions one source step of that class expands
+  to, plus the spill/fence counts actually used and, for retry sites, a
+  proved attempt bound — no constant absorbs an unbounded retry; a site
+  without a proved attempt bound carries no work bound (§7).
+- Lean checks the summary against the source body (schema Bool
+  `kostenSummeOk EL summary P fs`, OPEN) and proves the soundness schema
+  (OPEN): if the check holds, then for every GX run `run`, every target
+  execution `xrun` with `XCorr run xrun` (the target refinement relation —
+  decoder + per-access bridge + layout, owned by the decoder/bridge
+  lanes, OPEN here), and every active frame segment of `f`,
+  `targetWork (segment xrun f) ≤ expandBound summary (kostenTiefF …)` —
+  i.e. the summary bounds lowered MACHINE work via the validated
+  expansion over the source budget, not source steps by re-summing.
+- Waiting/spinning exclusions need exact source correspondence, proved per
+  site in the certificate: machine waiting counts as excluded from
+  `targetWork` ONLY where it corresponds exactly to source-level
+  non-firing (`dannLocks` with the lock held elsewhere, `dannAwaits`
+  with an invisible payload — waiting is not steps in G either, §6.1). A
+  lowering-introduced spin with NO source counterpart (CAS retry loop,
+  backoff/`pause` loop) is never waiting-excluded: every attempt counts
+  in full, hence the attempt bound. The CAS retry bound cannot disappear
+  into an exclusion or a constant.
+- Source-budget accounting is a SEPARATE open obligation (schema
+  `budget_simulation`, OPEN): relating machine work to the model's
+  `passes`-budget consumption so that budget exhaustion on the machine
+  simulates the source `budget` stop. Re-summing the expansion over
+  `kostenTiefF` proves a work bound, never a runtime/stop claim — the
+  machine has no `passes` counter, and no runtime bound is claimed from
+  re-summing.
+- Status: **proposed, not built, not proved** — the Bool, the refinement
+  relation instance, `targetWork`, `expandBound`, the per-form maxima,
+  the per-site exclusion proofs, the attempt bounds and
+  `budget_simulation` are all phase-B work (§10).
 
 ### 8.2 Hardware-profile data (concrete, bounds unproved)
 
@@ -727,9 +764,13 @@ integration; this lane proposes.
   aligned 32/64-bit `MOVSS`/`MOVSD` vs non-atomicity of 128-bit packed
   accesses; spill-slot privateness (frame slots never change another
   thread's state).
-- Cost summary: `kostenSummeOk` Bool + soundness to `segZaehleX` as a
-  refinement of `kostenTiefF` — retry sites carry proved attempt bounds,
-  never a constant for the unbounded.
+- Cost summary (all schemas, OPEN): `kostenSummeOk` Bool + soundness
+  schema bounding `targetWork` of a corresponding `xrun` segment by
+  `expandBound` over `kostenTiefF` — retry sites carry proved attempt
+  bounds, never a constant for the unbounded; waiting exclusions carry
+  exact source correspondence per site; `budget_simulation` (machine work
+  to source-budget exhaustion) is a further separate schema, never a
+  re-summing corollary (§8.1).
 - Handlers/entries: XMM+MXCSR save/restore as binding-logic contracts;
   lazy XSAVE correspondence; entry-state + upper-YMM obligations (§5 AVX).
 - Witnesses: concrete operand/memory witnesses for every helper; a
@@ -754,6 +795,9 @@ integration; this lane proposes.
    re-verified against the Rust arms by name (first-pass finding, kept).
 6. **Timing.** No validated cycle bound; all §8.2 profile data unproved.
 7. **Pilot.** `X86/Typen.lean` has no float instruction (coordinator owns).
+8. **Budget simulation.** `XCorr`, `targetWork`, `expandBound` and
+   `budget_simulation` are unbuilt schemas; no runtime bound follows from
+   re-summing (§8.1).
 
 ## 11. Verification log
 
@@ -767,6 +811,7 @@ integration; this lane proposes.
 | `Gleit lo hi` gates NaN out (`Typen.lean:111-114`, `Semantik.lean:351-352`) | basis of the §4.3 lemma shape (lemma itself OPEN) |
 | Model NaN-bit propagation (`Gleitkomma.lean:226-237` add arms) | confirmed — hence the conditional permission |
 | Review findings 1–5 | each addressed in §§4.2.1/3/7, 4.1 table note, 4.3, 5, 6.4, 7, 8.1/8.2, 9, 10 |
+| Cost-summary schema repair | §8.1 soundness rewritten to `targetWork (segment xrun f) ≤ expandBound summary (kostenTiefF …)` over `XCorr`; source steps / machine work / cycles separated; exclusions need exact source correspondence; `budget_simulation` separate and OPEN |
 | Lean / cargo / emission runs | none — docs-only task, file/claim checks per wave rules |
 
 What this lane did NOT do: no Lean code, no build, no baseline
