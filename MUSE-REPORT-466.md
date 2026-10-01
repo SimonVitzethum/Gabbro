@@ -141,3 +141,29 @@ witness, no native/source/timing closure) is exactly what is delivered.
 
 CANDIDATE: 418 4a6b0415f3322fc36ff539f1930316325db25c19
 VERDICT: ACCEPT
+
+## Re-review note 2026-10-01 (pin unchanged, fresh evidence)
+
+- `.tmp/review/SNAPSHOT.json` still pins `4a6b0415`; fresh
+  `git fetch <a418> muse/418` gives the same hash as FETCH_HEAD and
+  `git diff` pin..FETCH_HEAD is empty: no author repair since the
+  accepted review. The supplied review copy of `BitScan.lean` is still
+  sha256 `fb253d19…`, identical to the committed file.
+- Fresh evidence inspected this turn in my own clone: staged only the
+  supplied candidate file at its exact path and ran `./lean-probe` →
+  `== 0 error(s) in the COMPLETE output; exit 0`, with `#print axioms`
+  `[propext, Quot.sound]` (strict subset of the `gabbro_ziel` standard
+  set); staged file removed afterwards. This is a module-level
+  elaboration check only, not a full-build claim: I do not accept from a
+  build alone, and the verdict below rests on the substantive semantic
+  review recorded above (canonical `trunc`/`Speicher` reuse, joint
+  range/bit/extremality inductions, `decide` boundary probes, real
+  `write64`/`read64` memory witness, no mini-machine, no vacuity).
+- Verdict unchanged: ACCEPT of exactly the bounded candidate above.
+- Precise unresolved CUTS (unchanged, merger-side): full-tree
+  `./lean-bau` green at the `Grammatik` umbrella target (environmental
+  `failed to create thread` / exit 134, pristine tree affected
+  identically) and the `gabbro_ziel` axiom re-check, both requiring a
+  healthy build host; no nonzero-operand totality (`trunc ≠ 0 → ∃ i`)
+  proved; ZF only; no `Befehl` wiring, decoder/image bytes, TSO bridge,
+  source lowering, cost transfer, or silicon verification.
