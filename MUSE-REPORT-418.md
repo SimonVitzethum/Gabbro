@@ -64,6 +64,37 @@ types, no `Befehl` form, no `schritt` change, no native-form claim.
   environmental failure (goal modules themselves replay green; the added
   file contributes no axioms).
 
+## Repair attempt after the integration gate failure (no merge)
+
+The integration gate failed with `RuntimeError: Lean merge build failed`.
+Its own log exonerates this lane's module and repeats the environmental
+failure:
+
+- In the merge build, `Grammatik/X86/BitScan.lean` elaborated **successfully**:
+  all 7 probe `#print axioms` lines printed
+  (`probe_bsf_eins` … `bitscan_speicher_zeuge`, each `[propext, Quot.sound]`).
+- The failure is again exactly one step: `[397/398] Building Grammatik`
+  (the ~400-import umbrella) with
+  `failed to create thread`, `Lean exited with code 134` — the same crash
+  the pristine umbrella (my import stashed) shows in this clone, and the
+  same crash lane 350 logged on an unrelated module.
+
+Local re-verification on this repair turn (no code change, nothing to
+repair): `./lean-probe grammatik/Grammatik/X86/BitScan.lean` →
+`== 0 error(s) …; exit 0`; `./lean-bau` → still red only at `Grammatik`
+with the identical thread-creation crash. The owned diff (new module + one
+additive import line, 460 KB olean that builds) cannot reduce the
+umbrella's import-loading cost, and rule 5 forbids restructuring the
+umbrella, so no owned-file change can address the gate failure.
+
+Concrete blocker for the merger/integration owner: the build host cannot
+elaborate the full `Grammatik` umbrella under current machine load
+(thread creation fails while loading ~400 oleans), independent of this
+lane's change. Retrying the merge build at a quieter moment, or relieving
+host memory/thread pressure, is the only remedy on this evidence. This
+report change alters the commit hash, so a fresh independent review is
+required; the Lean content is byte-identical to the reviewed candidate.
+
 ## What remains open (also in CUTS)
 
 - Full `./lean-bau` green + `gabbro_ziel` axiom gate: needs a machine-level
