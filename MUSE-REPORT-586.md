@@ -7,7 +7,7 @@
   `.tmp/review/author-568/MUSE-REPORT-568.md`, `.tmp/review/author-568/PATCH.diff`,
   `.tmp/review/author-568/BUILD-EVIDENCE.json`, and the exact candidate files under
   `.tmp/review/author-568/grammatik/`.
-- CANDIDATE: 568 540f620ce41633ea0adf346da8518949ae8e52d1
+CANDIDATE: 568 540f620ce41633ea0adf346da8518949ae8e52d1
 - The pinned HEAD object itself is not present in this clone (no network fetch
   permitted), so the hash was taken from `SNAPSHOT.json` as authoritative. File-level
   verification: the candidate `AccessExecution.lean` reviewed is byte-identical to the
@@ -94,4 +94,4 @@ W/GX per-access mapping is claimed or established. Consumer interface:
 None required. Merge note only: union the umbrella import with current master
 (`DecoderSoundness`, `BudgetExecution` lines) at integration time.
 
-- VERDICT: ACCEPT
+VERDICT: ACCEPT
