@@ -120,6 +120,48 @@ theorem rufAt_ok_gibt_ens (P : Programm D) (O : Orakel D)
     | true => rfl
     | false => exact absurd heq hc
 
+/-! ## 3. The inline obligation discharged at a successful call.
+
+    `AufrufOpt.InlinePflicht` carries `hp`/`hr` and states `vorOk`/`nachOk`
+    as fields. Here every field is DERIVED from one successful `rufAt`
+    outcome at depth `fuel + 1`: `vorOk` is the `hreq` gate, `nachOk` the
+    derived `RufEnsCheck` (§2) at the body-return world `σ1` (whose
+    ensures-read is exactly `sret`, so no trace-frame lemma is needed). -/
+
+/-- DISCHARGE: one successful call yields the full inline obligation with
+    the actual `rho`/worlds/result -- the duty the ghost pair re-emits. -/
+def inlinePflicht_aus_rufAt (P : Programm D) (O : Orakel D)
+    (passes : Nat)
+    (fuel : Nat) (caller g : D.Fn) (Λ : List (Res D))
+    (hp : RufPasst D (vertragVon D caller) (D.signatur g) Λ)
+    (hr : D.gruende g = 0)
+    (σ : World D) (ρ : Env D (D.params g))
+    (sread : World D)
+    (hread : sread = σ.lese (Signatur.anfang D (D.signatur g))
+      (P.requires g).orte)
+    (hreq : wahr? (eval sread (P.requires g) sread ρ) = true)
+    (σ1 : World D) (v : ErgVal D (D.erg g))
+    (hbody : execEnd (V := vertragVon D g) O passes (rufAt P O passes fuel)
+      (P.rumpf g) sread ρ = EndAusgang.zurueck σ1 v)
+    (sret : World D)
+    (hret : sret = σ1.lese (vertragVon D g).ende (P.ensures g).orte)
+    (sinv : World D)
+    (hsinv : sinv = (D.invs.filter (schuldet g)).foldl
+      (fun σ' i => σ'.lese (invSicht D i) (P.invariante i).orte) sret)
+    (hinv : D.invs.find? (fun i => schuldet g i &&
+      !wahr? (eval sinv (P.invariante i) sinv .nil)) = none)
+    (h : rufAt P O passes (fuel + 1) g σ ρ =
+      RufAusgang.ok (D := D) (f := g) sinv v) :
+    InlinePflicht P caller g Λ := by
+  have hens := (rufAt_ok_gibt_ens P O passes fuel g σ ρ sread hread hreq
+    σ1 v hbody sret hret sinv hsinv hinv sinv h).1
+  refine ⟨hp, hr, ρ, σ, σ1, v, ?_, ?_⟩
+  · rw [← hread]
+    exact hreq
+  · unfold RufEnsCheck at hens
+    rw [← hread, ← hret]
+    exact hens
+
 /- CUTS:
   - IR lowering closure is WAITING on lane 287: no SCFG/target bridge here.
   - Full skeleton lands in the next increments (§1 entry/return site facts,
@@ -129,5 +171,6 @@ theorem rufAt_ok_gibt_ens (P : Programm D) (O : Orakel D)
 #print axioms kein_fern_vertrag
 #print axioms callSite_vorOk
 #print axioms rufAt_ok_gibt_ens
+#print axioms inlinePflicht_aus_rufAt
 
 end Gabbro.Grammatik.X86
