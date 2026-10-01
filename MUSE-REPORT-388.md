@@ -1,8 +1,8 @@
 # MUSE-REPORT-388: Independent exact-candidate C6 review of 350 AtomicPayload
-# (second re-review of repaired candidate)
+# (third re-review; re-pinned snapshot, fresh green verification)
 
-Lane 388, branch `muse/388`. Owns ONLY this report. Both previous verdicts
-(on `67dd9fd1…` and `720c6d92…`) are SUPERSEDED by this re-review.
+Lane 388, branch `muse/388`. Owns ONLY this report. All previous verdicts are
+SUPERSEDED by this re-review.
 New pinned snapshot (`.tmp/review/SNAPSHOT.json`): author 350,
 HEAD `2edf3710a45dda5b1289bf94d18c5effb621e730`, files
 `MUSE-REPORT-350.md`, `grammatik/Grammatik.lean` (additive import),
@@ -84,6 +84,29 @@ differs; report §"Repair attempt" documents an integration-gate crash:
   lane through the queued path; per HARD RULES this is reported, not bypassed
   (no direct `lake`/`lean` calls made).
 
+## Third re-review: re-pinned snapshot with FRESH green verification (2edf3710)
+
+The re-pinned snapshot carries the SAME head `2edf3710…`; file hashes confirm
+no content change versus the last review (Lean file sha256 `b6ebdbcb…`, 354
+lines; report 246 lines; PATCH Lean section byte-identical to snapshot file,
+`diff` clean). The queue has recovered, so this time a full fresh execution
+on the exact NEW snapshot bytes was possible in THIS clone (staged privately,
+restored afterwards):
+
+- `./lean-probe grammatik/Grammatik/X86/AtomicPayload.lean`: **0 errors,
+  exit 0**, standard axioms (`atomarFussB_ok` / `geteiltV_von_atomarFuss`:
+  `[propext, Quot.sound]`, …).
+- Full `./lean-bau` with candidate staged: **green, `Build completed
+  successfully (393 jobs)`**, all 8 `#print axioms` within
+  `[propext, Classical.choice, Quot.sound]`.
+- The earlier load-dependent `#print axioms` crash (independently triangulated
+  in the previous review) no longer reproduces off-peak, confirming it was
+  environmental, not a candidate defect.
+
+All prior logical findings carry over unchanged (identical bytes: decided
+check + admission, refusals, duty audit, joint non-degenerate witnesses; the
+two minor doc notes persist and remain non-defects).
+
 ## Second re-review of the NEWEST pinned candidate (2edf3710)
 
 Author's delta since `720c6d92`: report-only again (MUSE-REPORT-350.md
@@ -118,7 +141,8 @@ ACCEPT covers only the precise bounded delivered obligations (decided
 footprint-membership check + admission, contract/payload refusals, duty-side
 audit with joint non-degenerate witnesses), not the full compiler/validator.
 Lean content is byte-identical to the previously accepted state; both deltas
-since are report-only (gate-failure evidence + print-step bisection, the
-latter independently reproduced here). Re-gating after load recovery is
-infrastructure business, not a new logical review. Changed author hash ->
+since were report-only (gate-failure evidence + print-step bisection, the
+latter independently reproduced here). This re-review additionally carries a
+FRESH green execution on the exact pinned bytes (probe 0 errors, full bau
+393 jobs), so no re-gating caveat remains. Changed author hash ->
 fresh review.
