@@ -179,6 +179,29 @@ theorem isWahrAll_sound {τ : Ty} (e : Expr D Γ Λ τ) (σ₀ σ : World D) (ρ
   | zahl e ih => trivial
   | _ => (intro h; simp_all [isWahrAll, holdsBool, eval]; try rfl)
 
+/-! ## 2. Pure integer rewrites: constant folding and widening values -/
+
+/-- Executable constant fold: `add (lit a) (lit b)` becomes `lit (a+b)`.
+    Both sides share the type `.int (a+b) (a+b)`; the machine-width result
+    is justified by the literal ranges, which is exactly the strength
+    reduction the task asks for in miniature. -/
+def foldAddLit (a b : Int) : Expr D Γ Λ (.int (a + b) (a + b)) :=
+  .lit (a + b)
+
+/-- The fold preserves `eval` against the actual source semantics. -/
+theorem eval_foldAddLit (a b : Int) (σ₀ σ : World D) (ρ : Env D Γ) :
+    eval σ₀ (foldAddLit (D := D) (Γ := Γ) (Λ := Λ) a b) σ ρ =
+      eval σ₀ (@Expr.add D Γ Λ _ _ _ _ (@Expr.lit D Γ Λ a) (@Expr.lit D Γ Λ b)) σ ρ :=
+  rfl
+
+/-- A `weiter` widening keeps the number: dropping a redundant widening
+    (whose range evidence the checker holds) changes no value. -/
+theorem eval_weiter_n {lo hi lo' hi' : Int} (h1 : lo' ≤ lo) (h2 : hi ≤ hi')
+    (e : Expr D Γ Λ (.int lo hi)) (σ₀ σ : World D) (ρ : Env D Γ) :
+    (eval σ₀ ((.weiter h1 h2 e : Expr D Γ Λ (.int lo' hi'))) σ ρ).n =
+      (eval σ₀ e σ ρ).n :=
+  rfl
+
 /- CUTS:
    Only the computable check exists so far. Open: its soundness over `eval`;
    constant folding / `weiter` value lemmas; `pruefung`/`ite` elimination with
