@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 20:48 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 20:59 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -273,9 +273,10 @@ Last ledger refresh: **2026-10-01 20:48 UTC**. This is an operational snapshot, 
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
 | 632 | Direct-source closure: SourceValidatorConnection | Agent working | 633: scheduled | [task](lanes/632.md) |
 | 634 | Direct-source closure: SourceCodeFrame | Agent working | 635: scheduled | [task](lanes/634.md) |
-| 636 | Required failover slot lifetime and safe role handback | Committed candidate; review/integration pending | 637: Agent working | [task](lanes/636.md) |
-| 638 | Align optimiser and compiler design with accepted direct-source lowering | Scheduled | 639: scheduled | [task](lanes/638.md) |
-| 640 | Independent coordinator control-plane takeover and cleanup integration audit | Scheduled | 641: scheduled | [task](lanes/640.md) |
+| 636 | Required failover slot lifetime and safe role handback | Agent working | 637: Committed candidate; review/integration pending | [task](lanes/636.md) |
+| 638 | Align optimiser and compiler design with accepted direct-source lowering | Agent working | 639: scheduled | [task](lanes/638.md) |
+| 640 | Independent coordinator control-plane takeover and cleanup integration audit | Agent working | 641: scheduled | [task](lanes/640.md) |
+| 642 | Recover preserved IR research draft from recorded edits after clone removal | Scheduled | 643: scheduled | [task](lanes/642.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
