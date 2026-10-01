@@ -39,6 +39,13 @@ Clone verified: /home/simon/Dokumente/gabbro-muse/a481, branch muse/481. Owned d
 
 None material. No repair direction to give.
 
+## Re-review note 2026-10-01 (snapshot unchanged, verdict confirmed)
+
+- Pinned snapshot re-read this turn: author 433, HEAD `e708c266c7bece404de5054db76cc7320096f7c0`, base `fd14b4e5` — identical to the previous review. Supplied module md5 `01766282fc709e9fa7ed8067d62e6ca7`, PATCH blobs `a4525507` / `a12bc413..d3dec851` / `9e643b30` all unchanged. No new candidate content to review.
+- Fresh evidence inspected this turn in my clone (staged temporarily, restored afterwards; clone ends clean): `./lean-probe grammatik/Grammatik/X86/ObservationProjection.lean` → **0 errors**, all 14 `#print axioms` lines standard (`propext`/`Quot.sound` subsets only); regex scan clean for `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`/`intro _`/`have _ :=`; main theorem textually confirmed to conclude `BeobGleich V s' t'` (successor states) from `BeobGleich V s t` plus step hypotheses — substantive preservation claim, not a restated premise.
+- No full `./lean-bau` claim is fabricated here: my clone sits on a different, newer base than the candidate base, so a local full build could not validate the candidate tree; the umbrella-step thread-spawn failure remains classified as infrastructure (thread creation, exit 134), not a theorem failure, per the documented clean-tree control — and the verdict does not rest on any build alone but on the module-level proof inspection above.
+- Precise unresolved CUTS (unchanged, from the candidate file): other pilot forms (`movReg64`, ALU, load/store, jumps, stack, call/ret); fault identity (one coarse `fehler`); run-level observation; source correspondence/contracts/call logs/I-O/budget/cost/time/full bridge. None is claimed by the candidate.
+
 ## Verdict
 
 ACCEPT of the precisely delivered bounded claim: canonical target observation projection shape plus the pilot dead-register internal-move preservation fact with joint witness, memory-changing run, scratch-hidden probe, and negative observable-fault case. Not a claim of full compiler closure, and the report does not present it as one.
