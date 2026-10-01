@@ -1,0 +1,499 @@
+# Final image ABI and loader contract
+
+*Lane 276, wave A, 2026-10-01. Status: contract specification, not an implementation
+or a proof. Nothing here claims a direct-x86 backend, ELF writer, decoder, or
+validator exists today. The running compiler still emits C11 plus inline assembly
+plus generated C drivers; the selected target is direct x86-64 machine bytes
+(`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` secs. 0-5). This document fixes what
+a future image backend must produce and what the Lean validator must check, so
+wave B can build against a frozen interface.*
+
+*Canonical ground: `grammatik/Grammatik/X86/Typen.lean` (`Gabbro.Grammatik.X86`).
+`Byte`/`Wort`/`Adresse` are `BitVec 8/64/64`. The 16 registers are in architectural
+encoding order. `Speicher` carries byte contents plus explicit
+read/write/execute permissions. `Befehl` is the pilot subset only; displacements
+are signed 32-bit; relative control flow is measured from the address AFTER the
+decoded instruction; instruction length belongs to validated decoding, never to an
+untrusted emitter annotation; loads/stores are base-register plus sign-extended
+displacement; `Flags.af = none` is undefined, not false. No lane invents a second
+register, instruction, byte-memory, or source-concurrency model.*
+
+## 1. Validated image representation (generic)
+
+A candidate final image is a tuple `(bytes, base, sections, relocs, entries)`,
+all inputs to the Lean validator, all reconstructed or checked by it:
+
+- `bytes`: the exact executable byte string that runs. Not an instruction
+  listing, not assembly text, not an object file with unresolved fixups.
+  Validation input includes these bytes; a proof about a mnemonic list alone is
+  insufficient (plan sec. 0-1, T2).
+- `base` (load bias): the address the image is validated at. Every absolute
+  address in the validation statement is `base + file offset + resolved
+  relocation addend`. The validator checks the image at one bias; loading at a
+  different bias without revalidation is refused.
+- `sections`: a finite list of disjoint, ordered extents
+  `(offset, vaddr, filesz, memsz, readable, writable, executable)` covering:
+  executable code, read-only data, writable data, and BSS (`filesz < memsz`,
+  the tail is defined zero). Sections are 4096-aligned in the address space.
+  The current bare-metal layout that this generalises is
+  `laufzeit/metall/metall.ld`: `ENTRY(_start)`, base 1 MiB, `.text`, `.rodata`,
+  `.data`, `.bss` each `ALIGN(4096)`, with `.eh_frame`/`.note`/`.comment`
+  discarded. A hosted image has the same section kinds; its base and alignment
+  come from the target binding, not from this document.
+- `relocs`: resolved relocations as data `(offset, kind, symbol, addend,
+  resolved_value)`. The validator checks the image AFTER resolution: the bytes
+  at each relocation site must equal the encoding of `resolved_value` under the
+  site's relocation kind, and the loader mapping below must apply the same
+  resolutions. There is no "relocation premise": an unchecked fixup is a
+  refusal, not an assumption.
+- `entries`: the machine entry vector (sec. 4). Every address the loader,
+  the kernel, or hardware can transfer control to without passing through
+  validated code is listed here, with its expected machine state.
+
+Decode boundaries are validated output, not emitter input: the Lean decoder
+walks `bytes` from each section start and each listed entry/branch target and
+produces `(address, Befehl, length)` triples (`Decodiert`: instruction plus
+length). Any byte not covered by exactly one instruction, data object, or
+explicit padding is refused. Overlapping decodings, ambiguous prefixes, and
+unsupported encodings are refused (plan sec. 2: restrict accepted prefixes,
+addressing modes, and operand combinations explicitly).
+
+## 2. Initial data and BSS
+
+- Initialised data (`.rodata`/`.data` contents, static initialisers, string
+  literals, jump tables the backend chose to emit as data) is part of `bytes`
+  and decoded as data at its declared addresses with its declared widths.
+  Widths, layout, and bounds follow the source layouts the Lean front end
+  computes (T3), not C `sizeof` facts.
+- BSS (`memsz` beyond `filesz`, `*(COMMON)`, zero-initialised `static mut`
+  arrays) is defined zero at load. The validator's initial-memory relation
+  states this; the loader contract (sec. 6) must establish it. The page-return
+  form (`region.leeren` over `gabbro_os_seiten_zurueck`, N569/N570) reads back
+  as zero by the binding's contract (`bibliothek/linux/linux.gab`, storage
+  assumption); that is user logic proved through the gate, not a loader axiom.
+- Dynamic arenas have no image bytes: the generated driver reserves their
+  ceiling range at startup (`gabbro_arena_reserve` over `gabbro_os_reserve`,
+  template `arena.dyn`) and commits pages per grow (`gabbro_os_commit`).
+  The image contract covers the driver code that does this; the reserved range
+  itself is fresh anonymous mapping, zero-filled, with the driver's checks
+  (`arena_spanne_passt`, `arena_commit_bereich`) as validator obligations.
+
+## 3. Section permissions
+
+Permissions are the `Speicher` fields `lesbar/schreibbar/ausfuehrbar` at every
+address, checked against `sections`:
+
+- code: readable + executable, never writable (W^X);
+- read-only data: readable, neither writable nor executable;
+- writable data: readable + writable, never executable;
+- BSS: readable + writable, never executable;
+- guard pages (lowest page of each thread stack, driver-owned): neither
+  readable, writable, nor executable; touching them faults by construction.
+
+Any executed byte must sit in an executable section; any store must target a
+writable address; any load must target a readable address. Permission is a
+validator decision over the image, not a fact the backend asserts. Self-modifying
+code, writable-executable mappings, and execution out of data sections are
+refused.
+
+## 4. Relocations and load bias
+
+- Supported relocation kinds are enumerated per image kind (hosted static,
+  hosted position-independent, bare-metal fixed at 1 MiB, kernel module
+  against the kernel build tree). Each kind states exactly which instruction
+  sites it may patch (which bytes, which width, which addend semantics).
+- A relocation into the middle of a validated instruction, a relocation whose
+  site is not instruction-aligned to its kind, a relocation targeting a
+  non-executable section for code or vice versa, and any unresolved or
+  loader-only fixup invisible to the validator are refused. The validator
+  re-decodes every patched site after applying `resolved_value`.
+- Load bias: the hosted static image is validated at its link bias; a
+  position-independent image is validated parametrically by stating `base` as a
+  variable with the alignment the target binding demands, and every absolute
+  site must be a listed relocation of a bias-carrying kind. The bare-metal
+  image has no bias parameter (`metall.ld`: loaded at 1 MiB, identity mapped).
+  The kernel module's bias is whatever the kernel loader chose; the module
+  image is validated after the kernel's relocation pass, against the loaded
+  addresses, never against the unlinked `.ko` bytes alone.
+
+## 5. Entries: every first instruction must be listed
+
+The validator admits control into the image only at listed entries, each with a
+checked entry-state predicate (register contents, stack pointer, permissions,
+interrupt state where applicable):
+
+- hosted `main`: the generated driver's `main` (`crates/gabbro-cli/src/
+  treiber.rs::erzeuge`, `treiber-gen-10`). C ABI entry, called by the C
+  runtime with `argc/argv/envp` per the hosted target binding; returns an exit
+  status to its caller. Under `nolibc` there is no C runtime: the generated
+  entry (`bau.rs::nolibc_haken`, template `start.nolibc`) calls the unit's
+  `gabbro_os_anfang()` first, runs `main`, and hands a returned status to the
+  unit's `gabbro_os_ende(code)`; a `nolibc main` must end `-> never` or through
+  `gabbro_os_ende` (build rule `eintrittsregel`), linked `-nostdlib -static`.
+- kernel module init/exit (`treiber.rs::erzeuge_kmod`, manifest `kmod
+  <kbuild> <load> <unload>`): the two loader-called symbols; init answers
+  non-`void` so a failed load refuses the load; floating-point gates are
+  refused in modules; atomics lower through the proved LKMM table, not the C11
+  builtins.
+- bare-metal `_start` (`laufzeit/metall/start.S`, `metall.ld ENTRY(_start)`):
+  entered by the Multiboot1 loader in 32-bit protected mode; builds identity
+  page tables for the low 4 GiB (2 MiB pages), jumps to 64-bit code, sets the
+  BSP stack (`boot_stapel_oben`), and calls `metall_bsp` (`kern.c`). The AP
+  trampoline (`tramp_anfang..tramp_ende`, copied to `0x8000` at run time) and
+  the BSP/AP stacks are image bytes or BSS covered by this contract.
+- thread roots: one thread per declared start occurrence, each entered through
+  `gabbro_faden_start(root, stack_top, join_word)` on a driver-owned stack
+  (hosted: 8 MiB region `seite + GABBRO_STAPEL` with the lowest page left
+  unwritable as guard; bare-metal: 64 KiB driver stacks round-robined from
+  core 1). Thread start is the proved template path (`faden.laufzeit` /
+  `faden.modul`, `tor.trampolin`, `tor.kind`): parent `clone`, child runs the
+  root on the handed stack, then the program's `-> never` thread end.
+  The stack-gate call hands a `child` region (`klon.uebergabe`, N572).
+- interrupt/hardware entries: emitted `entry NAME ... via idt` (or bare
+  `entry`), the per-entry three-instruction half (`METALL_EINTRITT`), the
+  common entry path, the LAPIC timer entry (vector `0x40`), and the wake entry
+  (`0x41`) in `start.S`. Declared `preserves` lists, error-code twins
+  (`hat_fehlercode`), and mask behaviour are entry-state obligations.
+- the clone child return: the trampoline's child path (`tor.trampolin`,
+  `tor.kind`: lowered triple region `gabbro_kind_<nr>(handed)`, no `asm goto`
+  into the parent frame) is a listed entry with the child's defined register
+  state (clone contract: rsp is `spitze`, other registers are the caller's
+  except rax, only rcx/r11 destroyed).
+
+Any machine transition whose target is not a decoded instruction boundary
+inside executable bytes, a validated data address for a data access, or a
+listed entry for an external transfer is a validator refusal.
+
+## 6. Direct and indirect control targets
+
+- Direct targets (`jump32`/`jumpIf32`/`call32` displacements from after the
+  instruction, per `Typen.lean`): the validator computes the absolute target
+  and requires it to be a decoded instruction start in executable bytes, or a
+  listed entry. A direct branch into the middle of an instruction, into data,
+  or off the image is refused.
+- Indirect targets (register/memory jumps, returns, function-pointer calls,
+  `entry fn` values as parameters (N575-N577), dispatch targets of hardware
+  entries): each must carry a validator-checked control-flow obligation --
+  either a proved jump-table/data-flow certificate the backend ships and Lean
+  re-checks (table bounds, entry alignment, target list all inside executable
+  bytes), or refusal. There is no fall-back "the linker got it right" premise.
+- Returns (`ret`, thread-end `-> never`, `gabbro_os_ende`, module exit) must
+  target a live caller frame the validator tracks (call-save discipline,
+  sec. 8) or a listed terminal state. A `ret` with no caller, or a fall-off
+  the end of a non-`never` function, is refused.
+
+## 7. ABI: arguments, results, aggregates, function pointers
+
+Two ABIs meet in every image; the validator checks both sides of each call:
+
+- Gabbro gate ABI (the `syscall` declaration, `syscall.rs` N063-N066):
+  in-registers pairwise distinct, out-register never clobbered, every
+  parameter bound to exactly one register, every named register an x86-64
+  general register, clobber list explicit. Buffer parameters (pointer at
+  numbers) carry `requires x <= lenof(p)` over bytes (N464/N506/N571 family:
+  index held against the extent the callee's `requires` names; fixed-size
+  buffers bound by constant clauses). The errno table, cost promise, and named
+  assumption (`assume`) are part of the gate; the stub the backend emits for
+  the gate is checked against the declaration (emitter code C186/C187 refuse
+  malformed stubs: region answer without its `or R` channel; stack gate
+  without trampoline registers).
+- C ABI at foreign boundaries (`extern fn`, `extern ...` variadic N573,
+  foreign bodies N574, `bindungsregel`/`bindungsregel_gehostet`): prototype,
+  outer binding name (no mangling), and arity are held against the callee's
+  header; a wrong arity links yet reads an unset register, so the check is in
+  the validator, not the linker. A foreign body takes no parameter whose type
+  carries a function pointer (N574); variadic markers stand only on `extern`
+  declarations (N573).
+- Aggregates: struct/record layout, field offsets, padding, and alignment are
+  the Lean front end's computation (T3 layouts), checked per access against
+  the image's data addresses and widths. `static.ausrichtung` (`aligned N`,
+  N570) constrains placement; `region.leeren` (N569) constrains the give-back
+  range. The C `_Static_assert` pins of the old backend have no standing in
+  the x86 chain: layout facts are Lean theorems or refusals.
+- Function pointers and `entry fn(…) -> R` (N575-N577): where such a value
+  stands, no Gabbro caller of a function taking one, and one whole hand-over
+  outside every loop. The validator tracks the value from its creation (named
+  function designator or gate answer) to each indirect call site; a pointer
+  forged from an integer is refused (M140: no number becomes a pointer; no
+  int-to-ptr or int-to-fn-ptr conversion enters the language).
+- Results: integer/pointer results in the gate's out-register(s) per the
+  declaration; fallible gates (`-> T or R`, `tor.fehlbar`, `bindAxiomElse`)
+  carry the reason channel, checked at the top-level binding site; region
+  answers (`tor.region`) carry the extent (`ensures … <= lenof(result)`) over
+  a name bound once. `-> never` gates and bodies (`bindAxiom`, `Endblock`
+  arms) never fall off; the validator requires a terminal transfer.
+
+## 8. Stack discipline, spills, and registers
+
+- Stack alignment: 16-byte alignment at every call boundary (System V AMD64
+  ABI requirement the backend must meet and the validator must state). The
+  entry predicates (sec. 5) include the alignment the loader/kernel guarantees;
+  every `call32` site must establish it for the callee; signal/interrupt
+  entries state the alignment they provide.
+- Red zone: the 128 bytes below rsp are usable by leaf functions only where
+  the target binding permits it. Any asynchronous entry that may land on a
+  thread stack (timer/interrupt entries, `start.S`) must either be proved to
+  respect the red zone at every interrupted point or the backend must compile
+  with the red zone disabled for units with such entries; the choice is
+  recorded per image and checked, not assumed. (Today's metal entries run on
+  the interrupted context's own stack; the declared per-CPU stack switch is
+  named open, OFFEN O32 residue.)
+- Spills: register allocation spills are ordinary validated stores/loads to
+  private frame slots. Spill slots are per-activation, never shared between
+  threads; the validator's footprint must show each spill address is
+  thread-private (stack or private frame), so spills cannot create new races
+  (plan sec. 3, first bullet). A spill of a value wider than its slot, a
+  spill slot overlapping a neighbour frame, or a callee clobbering a
+  caller-spilled register is refused.
+- Call-saved registers: the backend's convention (which registers survive a
+  call) is stated per image and checked at every call/return pair. The clone
+  trampoline's minimum (C187: a stack gate with fewer than two callee-saved
+  registers it neither binds nor destroys has no trampoline) is the shape of
+  this rule at gate entries; ordinary calls carry the analogous obligation.
+  The `clone` gate itself destroys only rcx and r11 (linux.gab contract);
+  any backend sequence relying on more is refused.
+
+## 9. Threads and interrupt entries
+
+- Thread creation is user logic: `gabbro_os_klon_tor` (stack gate over Linux
+  `clone` number 56, flags from `gabbro_os_klon_flaggen`), the futex word wait
+  (`gabbro_os_warte_wort`), thread end (`gabbro_os_faden_ende` / `exit`),
+  yield (`gabbro_os_nachgeben` over `sched_yield`), and the kernel-thread
+  triple (`kthread_create_on_node`, `wake_up_process`, `msleep`,
+  `linux-kmod.gab`) are Gabbro functions over gates with checked contracts.
+  Their machine-code correspondence is a template obligation each
+  (`tor.trampolin`, `tor.kind`, `faden.laufzeit`, `faden.modul`), not a
+  hardware assumption.
+- Join words, ticket locks (`sperre.ticket` / `METALL_SPERRE`, `CTicket.lean`),
+  and the `madvise` page return are likewise covered code with proved
+  templates; the validator checks the emitted sequences against them.
+- Interrupt entries (`start.S` timer/wake/common paths, IDT bindings,
+  `metall_eintritt_*`, core schedule `keinKernHalt` for declared handlers
+  under every core assignment) run with IF = 0 on the interrupted stack, save
+  the full general-register plus x87/SSE state, and call only the entry's
+  declared C half. Reentrancy, nesting, and same-core interrupt deadlock are
+  validator obligations; the named core schedule is target-binding data.
+
+## 10. Coverage: all executed code is validated code
+
+The validated image is the WHOLE executable that runs: the emitted unit, the
+generated driver, the binding's Gabbro code compiled in, and the runtime the
+image links. Concretely, for each product:
+
+- hosted program: emitted `<unit>.c` bodies + `<unit>.treiber.c`
+  (`BINDUNG_KOPF`, `ARENA_LAUFZEIT`, `SPERRE_TICKET`, `FADEN_LAUFZEIT`, roots,
+  `main`) + the compiled-in `linux.gab` binding (report/stop, reserve/commit/
+  page-size/page-return, yield, clone stack gate, write/exit_group) + the
+  `nolibc` entry hooks where applicable. No libc, no pthread, no handwritten
+  C remains on this path (`linux.c`, `bindung.h`, `faden.c/h`, `start.c`,
+  `start_pool.c`, `arena_dyn.c` all deleted; os-probe report in Gabbro).
+- kernel module: emitted bodies + `erzeuge_kmod` driver (init/exit,
+  `KMOD_ARENA`, `KMOD_MELDECODES`, `KMOD_STDATOMIC`, note/provision sections)
+  + `linux-kmod.gab` (`_printk`, `panic`, atomics mapping, thread
+  start/join-sleep) + the two thread helpers still in C today. Every `.c`
+  file a module build compiles is listed in the image manifest; unlisted C is
+  refused.
+- bare-metal image: emitted bodies + `<unit>.metall.c` + `laufzeit/metall/`
+  (`start.S`, `kern.c`, `arena.c`, `metall.h`, `metall.ld`) + the unit's
+  dispatch/entry halves. The handwritten pieces that remain are inventoried
+  with their reason: `start.S` (mode switch before any stack exists; page
+  tables; AP trampoline; entry save/restore paths Gabbro cannot express),
+  the three-instruction `METALL_EINTRITT` halves, and the timer/wake assembly.
+  Each keeps its written reason and stays counted; new handwritten C needs a
+  reason why Gabbro cannot do it (standing instruction).
+
+Anything the image executes that is not validated Gabbro code, a proved
+template instance, or an inventoried handwritten piece with a checked contract
+is refused. In particular: unvalidated external calls cannot enter through a
+declaration alone (plan sec. 0); a `foreign body` is refused unless its
+template correspondence is proved for the x86 target (a C lemma alone does not
+discharge it).
+
+## 11. Loader contract
+
+Let `I` be the checked image (bytes + sections + resolved relocs + entries at
+bias `base`) and `M` the loaded mapping the machine executes:
+
+- segments: every loadable section of `I` is mapped at `base + vaddr` with
+  exactly its checked bytes (BSS tail zero-filled), exactly its checked
+  permissions, and no other mapping is executable. Page granularity is stated:
+  leading/trailing partial pages keep the section's permissions for their
+  covered bytes; the loader must not widen executability to a neighbouring
+  section through a shared page.
+- relocations: the loader applies exactly the `relocs` the validator checked,
+  with the same values at the same sites; after loading, the bytes at each
+  site still decode as validated (re-decode obligation on the loaded mapping,
+  not only on the file).
+- entries and initial state: the loader transfers control only to a listed
+  entry, with that entry's predicate met (stack pointer, alignment, BSS zero,
+  arena reservations for the hosted driver before the first root runs,
+  single-threaded start shape A4: every thread but 0 idles in the runtime
+  root). Declared `concurrent` roots start exactly as generated
+  (`gabbro_faden_start` sites match the source sets; the pin probes check
+  this today, the validator checks it in the chain).
+- NO tool-correctness premise: no assumption that "the assembler/linker/loader/
+  C compiler/kernel did it right" appears in the chain. Where today a build
+  step is trusted (linking, `modpost`, kernel load, Multiboot1 entry, page-table
+  setup), the x86 chain either checks its output (bytes, mapping, entry state)
+  or books it as a named hardware assumption reviewed in `Spec.lean`'s header
+  list -- never as silent tool trust. OS services, schedulers, lock code, and
+  runtime routines are user/binding logic with contracts, not assumptions
+  (plan sec. 3, last paragraph; sec. 5, second paragraph).
+
+## 12. Target-binding data versus generic compiler mechanism
+
+The compiler is not Linux-specific and knows no operating system. What varies
+by target is DATA, read from `target … { … }` blocks and per-target gate
+bindings (`zielbindung.rs` N562-N567: one `syscall V;` declaration, `via V`
+at each gate, every target binds every used variable, one name is one ABI, no
+literal gate beside targets, inactive targets held to the gate's shape):
+
+- per-target data: gate numbers, register maps, clobber sets, errno tables,
+  cost promises, named assumptions (`os_bindung_*`, `os_bindung_faden`,
+  `os_bindung_klon`), entry shapes (`_start` vs `main` vs module init/exit),
+  section bases/alignments, stack sizes, page behaviour, availability of SIMD/
+  BMI profiles, interrupt wiring.
+- generic mechanism: decoding, permission checking, relocation checking, entry
+  predicates, call-save/stack/spill discipline, control-target obligations,
+  certificate soundness, refinement to P/GX, cost transfer. These are proved
+  once, parameterised by the target data above.
+
+A new target (another kernel, another loader, another interrupt controller)
+adds a binding library in Gabbro plus target data; it does not fork the
+validator, the decoder, or any proof.
+
+## 13. Minimal image-backend interface (interface only)
+
+No code below is claimed to exist. The first backend that writes bytes answers
+this interface; until it does, the interface is the review surface:
+
+- `write_image(unit, target_data) -> (bytes, sections, relocs, entries,
+  cert_hints)`: pure function of the checked unit (parser/elaborator output,
+  layouts, duties) plus the target data of sec. 12. It may carry hints and
+  certificates; the validator trusts none of them without re-checking.
+- the backend is untrusted: optimiser passes, register allocator, encoder,
+  and layout choices stay outside the trust base (plan sec. 0). Incorrect
+  output causes refusal once the checker is complete; that completeness is a
+  target, not today's claim.
+- the hosted path links with the system linker today; the metal path links
+  with `metall.ld`; the module path builds against the kernel tree. In the
+  x86 chain the LINKER is untrusted too: whatever it emits is re-read as
+  `bytes` and re-validated. A minimal ELF writer (or equivalent) that bypasses
+  the system linker is permitted as an implementation choice, not required by
+  this contract; if built, its output passes through the same validator with
+  no shortcut.
+
+## 14. Certificate checking obligations (generic)
+
+For every accepted image the Lean checker decides, statement by statement and
+access by access, that the bytes are the emitted form of the source program P
+(T2 sound validator; reuse the `korrOk` architecture, not its C conclusions):
+
+- source fidelity: Lean parser/elaborator compute P, layouts, and duties from
+  the source text (T3); no name, example number, or per-program model
+  determines acceptance; per-program instances are witnesses only.
+- per-instruction correspondence: each decoded instruction is the lowering of
+  a source operation at its place, with widths, bounds, overflow/division/stop
+  behaviour, and fault preservation proved per form admitted.
+- per-access memory correspondence: every load/store/RMW maps to a model
+  footprint with its width, alignment, and ordering; ordinary accesses,
+  atomics, fences, and `pause`/retry loops each carry their lowering proof;
+  no block executes atomically by declaration -- grouping needs a commutation
+  or linearisation proof over real interleavings.
+- duties: typing/safety certificates (T1), user-logic duties through the
+  GabbroV bridge (computed in Lean from the source), runtime/entry/lock/call/
+  hardware templates bound to the target semantics (T5), cost transfer with
+  validated machine costs and named hardware bounds.
+- concurrency: per-access x86-TSO executions refine to W then GX (or directly
+  to GX with every goal property preserved); the bridge covers byte memory,
+  widths, overlap, tearing, store buffers, forwarding, coherence,
+  acquire/release, locked RMW success/failure, locks, start/join,
+  publication, interrupts, call boundaries, finite and infinite executions
+  with proved stutter, and progress/cost preservation (plan sec. 3).
+
+## 15. Rejection cases (concrete, non-exhaustive)
+
+Each is a validator refusal with a witness shape; none is a new diagnostic
+code (wave A mints none) -- they pin the contract's teeth:
+
+- altered byte: flip one opcode byte in validated `.text`; the decoder
+  produces a different `Befehl`, a different length (shifting every following
+  boundary), or no instruction; correspondence fails at that address.
+- relocation into instruction middle: a relocation site that is not the
+  operand offset of its instruction kind; refused even if the pre-patch bytes
+  decoded cleanly.
+- wrong ABI: gate stub moves a parameter into a register the declaration does
+  not bind, clobbers the out-register, or answers the wrong width; call site
+  passes six integer arguments while the callee reads a seventh off the
+  stack; callee cleans a caller-cleaned stack or vice versa.
+- unchecked foreign body: an `extern fn` call site whose callee has no proved
+  x86 template correspondence; the declaration alone admits nothing.
+- forged pointer: integer-to-pointer or integer-to-function-pointer
+  conversion at any site (M140); `entry fn` value created anywhere but a
+ whole hand-over outside loops (N575-N577).
+- missing extent: pointer index with no `requires` extent naming it (N571);
+  length claim past the gate's region extent (N463/N506); double-bound name
+  carrying no extent.
+- entry violation: branch to a non-entry from outside the image; interrupt
+  firing into a function that disabled the red zone without declaring it;
+  thread started on a stack without a guard page where the image promises one.
+- permission violation: store to `.rodata`, execution from `.data`/BSS,
+  writable-executable mapping anywhere.
+- BSS/data mismatch: loaded BSS nonzero at entry; initialised data differing
+  from the validated bytes; loader-applied relocation differing from the
+  checked `resolved_value`.
+- unchecked tool output: image bytes that changed after validation (relink,
+  restrip, post-pass) without revalidation; loader mapping with an extra
+  executable segment the image does not list.
+
+## 16. Architectural hazards (must be addressed, not assumed away)
+
+- Variable-length decoding with overlapping candidates: boundaries are proved
+  from the bytes, never trusted from hints; data-in-code (jump tables,
+  constant pools) needs explicit data ranges so decoding stays disjoint.
+- Overlapping/unaligned accesses, tearing, and atomicity limits of the
+  admitted profile; private spill/frame slots proved disjoint from shared
+  footprints.
+- Store buffers, forwarding, and coherence: the TSO bridge is per access,
+  with `seq_cst`-as-release/acquire documented as an abstraction with limits,
+  not a proved total SC order.
+- MMIO, DMA, cache attributes, and device observations: separate named
+  hardware semantics; never inherit ordinary-RAM rules silently.
+- Floating point: SSE/SSE2 scalar only, with rounding, exceptions, NaNs,
+  and control state bound to the IEEE model (lane 278 owns the mapping);
+  kernel-module and interrupt paths that must not touch SSE state are
+  refused if their lowering does.
+- Timing and progress: instruction counts are not time bounds; spinning or
+  diverging implementations cannot vanish in projection; costs transfer only
+  through validated machine costs plus named hardware bounds.
+- Finite machine, unbounded-region programs: physical memory is finite; the
+  opt-in region without a ceiling loses the static whole-program bound by
+  design and must handle every allocation failure.
+
+## 17. Gaps and wave-B handoffs
+
+Not proved here; each names its owner:
+
+- Decoder and round-trip (encoder/decoder, length theorems): wave B,
+  needs pilot instruction semantics (lane 272) and memory model (lane 271).
+- Per-access TSO refinement to W/GX: lane 274 owns the bridge obligations;
+  this contract states what it must cover (sec. 14), not that it holds.
+- Source lowering and certificates: lanes 275/277 (SSA/certificate
+  architecture, source-computed duties, closing interface).
+- Machine semantics of each admitted form: lanes 270-272 (word/flags,
+  memory, execution witnesses).
+- Float/time mapping: lane 278.
+- Template correspondence for every runtime/binding sequence named in
+  sec. 10 (`arena.dyn`, `sperre.ticket`, `faden.laufzeit`, `faden.modul`,
+  `tor.trampolin`, `tor.kind`, `tor.region`, `tor.fehlbar`, `tor.nie`,
+  `start.nolibc`, module lifecycle): each needs its x86-byte instance;
+  the C-level proofs do not transfer silently.
+- The image writer itself: unbuilt; sec. 13 is its interface, not its
+  existence proof.
+
+*CUTS: no decoder, encoder, validator, refinement, cost-transfer, or
+final-image acceptance theorem is proved here. No new Lean file is added by
+this lane; the contract above is prose reviewed against the cited sources.
+Every machine-behaviour claim is tied to `Typen.lean` and the plan sections
+named beside it; anything beyond the pilot `Befehl` subset, beyond ordinary
+coherent RAM, or beyond the listed entries is an explicit gap in sec. 17.*
