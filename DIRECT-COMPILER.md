@@ -234,7 +234,7 @@ Last ledger refresh: **2026-10-01 18:23 UTC**. This is an operational snapshot, 
 | 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Merged after review/checks | [report](messung/muse/MUSE-REPORT-547.md) |
 | 554 | Shorter clearer current English README | Merged after review/checks | 555: Merged after review/checks | [report](messung/muse/MUSE-REPORT-554.md) |
 | 556 | Repeated intermittent CLI alias test diagnosis | Merged after review/checks | 557: Merged after review/checks | [report](messung/muse/MUSE-REPORT-556.md) |
-| 558 | Connection: Connection plan and integration ownership | Merged after review/checks | 576: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-558.md) |
+| 558 | Connection: Connection plan and integration ownership | Merged after review/checks | 576: Merged after review/checks | [report](messung/muse/MUSE-REPORT-558.md) |
 | 559 | Connection: Arbitrary-input pilot decoder soundness | Agent working | 577: scheduled | [task](lanes/559.md) |
 | 560 | Connection: Loaded image to actual instruction fetch | Agent working | 578: scheduled | [task](lanes/560.md) |
 | 561 | Connection: Relocated bytes to re-decoded instruction execution | Agent working | 579: scheduled | [task](lanes/561.md) |
@@ -558,6 +558,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **552**, Independent exact-candidate review of 546 ContractSites, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-552.md). <!-- x86-merged:552 -->
 - 2026-10-01: Simon requested an explicit pause for Glass Town handoff. All 15 active Muse lanes (287, 558-571), automatic backfill and serial integration/publication are paused. Clones, uncommitted drafts, private sessions, prompts and reports are preserved. ValidatorSkeleton349, DecodingCoverage435 and bridge helpers542-546 were integrated with independent reviews before the pause; the last Lean publication build passed, but unfinished Rust/emission publication checks were stopped and no successful full-wave push is claimed. See AGENTS.md section11 for takeover instructions. <!-- x86-glass-town-pause -->
 - 2026-10-01: lane **558**, Connection: Connection plan and integration ownership, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-558.md). <!-- x86-merged:558 -->
+- 2026-10-01: lane **576**, Independent connection review of 558, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-576.md). <!-- x86-merged:576 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
