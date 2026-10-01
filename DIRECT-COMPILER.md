@@ -106,7 +106,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 10:16 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 10:20 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -129,7 +129,7 @@ Last ledger refresh: **2026-10-01 10:16 UTC**. This is an operational snapshot, 
 | 285 | Mathematical carry and signed-overflow characterisation | Merged after review/checks | 301: Merged after review/checks | [report](messung/muse/MUSE-REPORT-285.md) |
 | 286 | Width-aware IEEE target data and f32 bridge evidence | Merged after review/checks | 302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-286.md) |
 | 287 | One typed IR and source-linked lowering foundation | Agent working | 303: scheduled | [task](lanes/287.md) |
-| 288 | Invariant-derived optimisation on actual source semantics | Agent working | 304: scheduled | [task](lanes/288.md) |
+| 288 | Invariant-derived optimisation on actual source semantics | Committed candidate; review/integration pending | 304: Agent working | [task](lanes/288.md) |
 | 289 | Disjoint byte-memory commutation | Merged after review/checks | 305: Merged after review/checks | [report](messung/muse/MUSE-REPORT-289.md) |
 | 290 | Packed integer lane model for future SIMD | Merged after review/checks | 306: Merged after review/checks | [report](messung/muse/MUSE-REPORT-290.md) |
 | 291 | Checked relocation arithmetic and byte patching | Merged after review/checks | 307: Merged after review/checks | [report](messung/muse/MUSE-REPORT-291.md) |
@@ -143,7 +143,7 @@ Last ledger refresh: **2026-10-01 10:16 UTC**. This is an operational snapshot, 
 | 317 | Single pilot instruction access extraction | Merged after review/checks | 318: Merged after review/checks | [report](messung/muse/MUSE-REPORT-317.md) |
 | 319 | Byte-memory fetch decode and actual instruction step | Agent working | 320: scheduled | [task](lanes/319.md) |
 | 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-323.md) |
-| 325 | High runtime performance and feasible hardware-profile design revision | Agent working | 326: scheduled | [task](lanes/325.md) |
+| 325 | High runtime performance and feasible hardware-profile design revision | Merged after review/checks | 326: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-325.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -250,6 +250,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **317**, Single pilot instruction access extraction, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-317.md). <!-- x86-merged:317 -->
 - 2026-10-01: checked master `785b8fc3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:785b8fc3337fbc086b19923b407d5adc9f2d1a5d -->
 - 2026-10-01: lane **318**, Independent review of 317, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-318.md). <!-- x86-merged:318 -->
+- 2026-10-01: lane **321**, Independent central compiler document review, integrated after its applicable review and checks. Commit `55f533ac`. [Evidence](messung/muse/MUSE-REPORT-321.md). <!-- x86-merged:321 -->
+- 2026-10-01: lane **325**, High runtime performance and feasible hardware-profile design revision, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-325.md). <!-- x86-merged:325 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
