@@ -305,8 +305,300 @@ theorem realisiert_ret_fuss (dd : Decodiert) (s s' : Zustand)
   have hzg := zugriff_ret dd s h
   refine ⟨hspec.2.2.2, by rw [hzg], by rw [hzg], _, hliest.1, hliest.2⟩
 
+/-! ## 4. Generic coverage: every realised pilot step respects its footprint. -/
+
+/-- Vacuous frame: identical memories change no byte inside any list. -/
+theorem frame_aus_speichergleich (s s' : Zustand) (z : Zugriff)
+    (hmem : s'.speicher = s.speicher) :
+    (∀ x, s'.speicher.bytes x ≠ s.speicher.bytes x → x ∈ z.schreiben) := by
+  intro x hx
+  rw [hmem] at hx
+  exact absurd rfl hx
+
+/-- GENERIC COVERAGE over all 14 pilot forms: a realised step changes no
+    byte outside its extracted write footprint, and both footprints are
+    either empty or one eight-byte `Fuss`. Pure and read forms change no
+    byte at all; write forms change only their eight pre-state addresses. -/
+theorem realisiert_fuss_abdeckung (dd : Decodiert) (s s' : Zustand)
+    (hok : laengeOk dd.laenge = true)
+    (hstep : istRealisiert dd s s') :
+    (∀ x, s'.speicher.bytes x ≠ s.speicher.bytes x →
+      x ∈ (zugriff dd s).schreiben) ∧
+    ((zugriff dd s).lesen = [] ∨ ∃ a, (zugriff dd s).lesen = Fuss a) ∧
+    ((zugriff dd s).schreiben = [] ∨ ∃ a, (zugriff dd s).schreiben = Fuss a) := by
+  match hb : dd.befehl with
+  | .movImm64 dst v =>
+    have hmem := schritt_movImm64_speicher dd s s' dst v hok hb hstep
+    have hzg := zugriff_movImm64 dd s dst v hb
+    exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+      Or.inl (by rw [hzg]), Or.inl (by rw [hzg])⟩
+  | .movReg64 dst src =>
+    have hmem := schritt_movReg64_speicher dd s s' dst src hok hb hstep
+    have hzg := zugriff_movReg64 dd s dst src hb
+    exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+      Or.inl (by rw [hzg]), Or.inl (by rw [hzg])⟩
+  | .addReg64 dst src =>
+    have hmem := schritt_addReg64_speicher dd s s' dst src hok hb hstep
+    have hzg := zugriff_addReg64 dd s dst src hb
+    exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+      Or.inl (by rw [hzg]), Or.inl (by rw [hzg])⟩
+  | .subReg64 dst src =>
+    have hmem := schritt_subReg64_speicher dd s s' dst src hok hb hstep
+    have hzg := zugriff_subReg64 dd s dst src hb
+    exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+      Or.inl (by rw [hzg]), Or.inl (by rw [hzg])⟩
+  | .xorReg64 dst src =>
+    have hmem := schritt_xorReg64_speicher dd s s' dst src hok hb hstep
+    have hzg := zugriff_xorReg64 dd s dst src hb
+    exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+      Or.inl (by rw [hzg]), Or.inl (by rw [hzg])⟩
+  | .cmpReg64 lhs rhs =>
+    have hmem := schritt_cmpReg64_speicher dd s s' lhs rhs hok hb hstep
+    have hzg := zugriff_cmpReg64 dd s lhs rhs hb
+    exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+      Or.inl (by rw [hzg]), Or.inl (by rw [hzg])⟩
+  | .load64 dst base disp =>
+    have hfuss := realisiert_load64_fuss dd s s' dst base disp hok hb hstep
+    exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hfuss.1,
+      Or.inr ⟨_, hfuss.2.1⟩, Or.inl hfuss.2.2.1⟩
+  | .store64 base src disp =>
+    have hfuss := realisiert_store64_fuss dd s s' base src disp hok hb hstep
+    have hzg := zugriff_store64 dd s base src disp hb
+    exact ⟨hfuss.1, Or.inl (by rw [hzg]), Or.inr ⟨_, hfuss.2.1⟩⟩
+  | .jump32 disp =>
+    have hmem := schritt_jump32_speicher dd s s' disp hok hb hstep
+    have hzg := zugriff_jump32 dd s disp hb
+    exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+      Or.inl (by rw [hzg]), Or.inl (by rw [hzg])⟩
+  | .jumpIf32 cond disp =>
+    match hc : bedingung cond s.flags with
+    | true =>
+      have hmem := schritt_jumpIf32_genommen_speicher dd s s' cond disp
+        hok hb hc hstep
+      have hzg := zugriff_jumpIf32 dd s cond disp hb
+      exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+        Or.inl (by rw [hzg]), Or.inl (by rw [hzg])⟩
+    | false =>
+      have hmem := schritt_jumpIf32_nicht_speicher dd s s' cond disp
+        hok hb hc hstep
+      have hzg := zugriff_jumpIf32 dd s cond disp hb
+      exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+        Or.inl (by rw [hzg]), Or.inl (by rw [hzg])⟩
+  | .push64 src =>
+    have hfuss := realisiert_push64_fuss dd s s' src hok hb hstep
+    have hzg := zugriff_push64 dd s src hb
+    exact ⟨hfuss.1, Or.inl (by rw [hzg]), Or.inr ⟨_, hfuss.2.1⟩⟩
+  | .pop64 dst =>
+    by_cases hdst : dst = Register.rsp
+    · subst hdst
+      unfold istRealisiert at hstep
+      match hrd : read64 s.speicher (s.register Register.rsp) with
+      | none =>
+        rw [schritt_pop64_verweigert dd s Register.rsp hok hb hrd] at hstep
+        cases hstep
+      | some v =>
+        have hmem := schritt_pop64_speicher dd s s' Register.rsp v
+          hok hb hrd hstep
+        have hzg := zugriff_pop64 dd s Register.rsp hb
+        exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hmem,
+          Or.inr ⟨_, by rw [hzg]⟩, Or.inl (by rw [hzg])⟩
+    · have hfuss := realisiert_pop64_fuss dd s s' dst hok hb hdst hstep
+      exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hfuss.1,
+        Or.inr ⟨_, hfuss.2.1⟩, Or.inl hfuss.2.2.1⟩
+  | .call32 disp =>
+    have hfuss := realisiert_call32_fuss dd s s' disp hok hb hstep
+    have hzg := zugriff_call32 dd s disp hb
+    exact ⟨hfuss.1, Or.inl (by rw [hzg]), Or.inr ⟨_, hfuss.2.1⟩⟩
+  | .ret =>
+    have hfuss := realisiert_ret_fuss dd s s' hok hb hstep
+    exact ⟨frame_aus_speichergleich s s' (zugriff dd s) hfuss.1,
+      Or.inr ⟨_, hfuss.2.1⟩, Or.inl hfuss.2.2.1⟩
+
+/-! ## 5. Alias shapes: base-is-source, stack-source, next-RIP. -/
+
+/-- BASE-IS-SOURCE ALIAS: a realised `store` whose base is its own source
+    evaluates footprint and stored word at the same pre-state register: the
+    address comes from the source value, and the stored word is that same
+    value. -/
+theorem realisiert_store_alias (dd : Decodiert) (s s' : Zustand)
+    (base src : Register) (disp : BitVec 32)
+    (hok : laengeOk dd.laenge = true) (h : dd.befehl = .store64 base src disp)
+    (hbase : base = src)
+    (hstep : istRealisiert dd s s') :
+    (zugriff dd s).schreiben = Fuss (s.register src + dispWort disp) ∧
+    (zugriff dd s).speicherWert = some (s.register base) ∧
+    (∀ x, s'.speicher.bytes x ≠ s.speicher.bytes x →
+      x ∈ (zugriff dd s).schreiben) := by
+  have hfuss := realisiert_store64_fuss dd s s' base src disp hok h hstep
+  have hzg := zugriff_store64 dd s base src disp h
+  refine ⟨by rw [hzg, ← hbase]; rfl, by rw [hzg, hbase], hfuss.1⟩
+
+/-- STACK-SOURCE (`push rsp`): a realised `push` of the stack pointer stores
+    the OLD top below itself: the stored word is the pre-state `rsp`, read
+    before the move. -/
+theorem realisiert_push_rsp (dd : Decodiert) (s s' : Zustand)
+    (src : Register)
+    (hok : laengeOk dd.laenge = true) (h : dd.befehl = .push64 src)
+    (hsrc : src = Register.rsp)
+    (hstep : istRealisiert dd s s') :
+    (zugriff dd s).schreiben = Fuss (stapelOben s) ∧
+    (zugriff dd s).speicherWert = some (s.register Register.rsp) ∧
+    (∀ x, s'.speicher.bytes x ≠ s.speicher.bytes x →
+      x ∈ (zugriff dd s).schreiben) := by
+  have hfuss := realisiert_push64_fuss dd s s' src hok h hstep
+  have hzg := zugriff_push64 dd s src h
+  refine ⟨by rw [hzg], by rw [hzg, hsrc], hfuss.1⟩
+
+/-! ## 6. Byte bridge: realised byte steps carry realised footprints. -/
+
+/-- BYTE-REALISED FOOTPRINT: a realised byte step fetched some instruction
+    whose realised footprint covers every changed byte. The footprint comes
+    from actual execution, never from a caller-supplied decoded value. -/
+theorem byte_realisiert_fuss (s s' : Zustand)
+    (h : byteRealisiert s s') :
+    ∃ d rest, fetchDekodiert s = some (d, rest) ∧ istRealisiert d s s' ∧
+      (∀ x, s'.speicher.bytes x ≠ s.speicher.bytes x →
+        x ∈ (zugriff d s).schreiben) := by
+  have hex := byte_aus_weiter s s' h
+  have hs1 := Classical.choose_spec hex
+  have hs2 := Classical.choose_spec hs1
+  have hok := realisiert_laenge_ok (Classical.choose hex) s s' hs2.2
+  have hab := realisiert_fuss_abdeckung (Classical.choose hex) s s' hok hs2.2
+  exact ⟨_, _, hs2.1, hs2.2, hab.1⟩
+
+/-- FETCHED-FROM-ACTUAL-BYTES: fetch plus `schritt` success is a realised
+    byte step, and the fetched instruction decodes the actual fetched
+    memory bytes at `rip`. -/
+theorem byte_realisiert_aus_bytes (s s' : Zustand) (d : Decodiert)
+    (rest : List Byte)
+    (hf : fetchDekodiert s = some (d, rest))
+    (hs : schritt d s = some s') :
+    byteRealisiert s s' ∧ decode (geholt s) = some (d, rest) := by
+  have hcorr := fetchDekodiert_entspricht s d rest hf
+  refine ⟨?_, hcorr.1⟩
+  unfold byteRealisiert
+  exact byteschritt_weiter s s' d rest hf hs
+
+/-! ## 7. Refusal: invalid length or failed fetch yields no realised trace. -/
+
+/-- A bad decode length admits no realised step for any footprint. -/
+theorem realisiert_versagt_laenge (dd : Decodiert) (s s' : Zustand)
+    (h : laengeOk dd.laenge = false)
+    (hstep : istRealisiert dd s s') : False :=
+  zugriff_laenge_versagt_kein_erfolg s s' dd h hstep
+
+/-- A failed fetch admits no realised byte step: without decode there is
+    no transition, hence no footprint. -/
+theorem byte_ohne_fetch_kein_realisiert (s s' : Zustand)
+    (hf : fetchDekodiert s = none) :
+    ¬ byteRealisiert s s' := by
+  intro h
+  have hex := byte_aus_weiter s s' h
+  have hs1 := Classical.choose_spec hex
+  have hs2 := Classical.choose_spec hs1
+  simp [hf] at hs2
+
+/-! ## 8. One word footprint is not one atomic TSO event. -/
+
+/-- A realised `store` footprint is eight byte addresses carrying one word,
+    and no extraction is one atomic multi-byte event: the byte set and the
+    hardware event are distinguished by construction (`AtomarZugriff` is
+    empty). The per-access W/GX mapping stays OPEN. -/
+theorem realisiert_store64_wort_kein_atom (dd : Decodiert) (s s' : Zustand)
+    (base src : Register) (disp : BitVec 32)
+    (hok : laengeOk dd.laenge = true) (h : dd.befehl = .store64 base src disp)
+    (hstep : istRealisiert dd s s') :
+    ¬ AtomarZugriff (zugriff dd s) ∧
+    (zugriff dd s).schreiben.length = 8 ∧
+    (zugriff dd s).speicherWert = some (s.register src) := by
+  have hfuss := realisiert_store64_fuss dd s s' base src disp hok h hstep
+  have hacht := zugriff_store64_acht s base src disp dd h
+  exact ⟨kein_atomarer_zugriff _, hacht, hfuss.2.2⟩
+
+/-! ## 9. Joint witness: a real reached memory-changing store step. -/
+
+/-- Witness decoded store: `store [rsp], rax` with a valid length. -/
+def zeugeStore : Decodiert :=
+  { befehl := Befehl.store64 Register.rsp Register.rax (BitVec.ofNat 32 0),
+    laenge := 4 }
+
+/-- Witness pre-state: `rax = 42` over the zeroed witness memory. -/
+def zeugeStoreVor : Zustand :=
+  { zeugeZustand with register := regSet zeugeReg Register.rax 42 }
+
+/-- The witness store step observably changes byte 8192 from zero to 42. -/
+theorem schritt_zeuge_speicher :
+    ((schritt zeugeStore zeugeStoreVor).map
+      (fun s' => s'.speicher.bytes (BitVec.ofNat 64 8192)) =
+      some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- JOINT WITNESS for the generic coverage: the store step is realised
+    (valid length, successful step), starts from zeroed memory and
+    observably changes byte 8192 to 42. All premises of
+    `realisiert_fuss_abdeckung` are instantiated jointly on this real
+    reached memory-changing execution. -/
+theorem realisiert_fuss_abdeckung_zeuge :
+    ∃ dd s s', laengeOk dd.laenge = true ∧ istRealisiert dd s s' ∧
+      s.speicher.bytes (BitVec.ofNat 64 8192) = BitVec.ofNat 8 0 ∧
+      s'.speicher.bytes (BitVec.ofNat 64 8192) = BitVec.ofNat 8 42 := by
+  match hs : schritt zeugeStore zeugeStoreVor with
+  | none =>
+    have h := schritt_zeuge_speicher
+    simp [hs] at h
+  | some s' =>
+    have hb : s'.speicher.bytes (BitVec.ofNat 64 8192) =
+        BitVec.ofNat 8 42 := by
+      have h := schritt_zeuge_speicher
+      simp only [hs, Option.map_some, Option.some.injEq] at h
+      exact h
+    exact ⟨zeugeStore, zeugeStoreVor, s', rfl, hs, rfl, hb⟩
+
+/-- PLANTED REFUSAL: the truncated jump has no byte transition. -/
+theorem byte_zeuge_verweigert :
+    byteschritt stumpfStart = .verweigert := by
+  match hb : byteschritt stumpfStart with
+  | .weiter s' =>
+    have h := praefix_abgeschnitten_verweigert
+    rw [hb] at h
+    have h2 : ausgangRip (ByteAusgang.weiter s') = some s'.rip := rfl
+    rw [h2] at h
+    cases h
+  | .verweigert => rfl
+
 /- CUTS:
-    - Skeleton only: realised predicates plus the length fact.
+    Proved here: `zugriff` connected to ACTUAL successful `schritt` and
+    `byteschritt` for all 14 pilot forms. Realised permission success is
+    derived from the step alone (§2: six `gefunden` lemmas); realised
+    footprints give frame, exact shape and stored word or read value from
+    `hstep` alone (§3: six `fuss` lemmas); the generic coverage theorem
+    (§4: `realisiert_fuss_abdeckung`) cases over all 14 forms; alias
+    shapes pin base-is-source and `push rsp` to pre-state evaluation (§5);
+    realised byte steps carry realised footprints of instructions decoded
+    from actual memory bytes (§6); bad length and failed fetch yield no
+    realised trace (§7); the eight-byte word footprint is distinguished
+    from one atomic TSO event by construction (§8); a joint
+    memory-changing store witness plus a planted byte refusal (§9).
+    NOT proved here, and not claimed:
+    - No source correspondence: nothing links Gabbro source, IR, checker
+      verdicts or contracts to these footprints; no entry, ABI, loader,
+      relocation, image-layout or cost claim.
+    - No W/GX simulation: per-access linearisation, TSO visibility, byte
+      order beyond little-endian `wortByte`, grouping and tearing stay
+      OPEN for the TSO-bridge lanes.
+    - No concurrency claim: `lauf`/`laufBytes` are sequential folds, and
+      `AblaufSpur` stays empty; LOCK/RMW/fence/narrow forms do not exist
+      in `Befehl` and are not admitted here.
+    - No termination claim: `verweigert` is the absence of a transition,
+      never normal program termination.
+    - `Classical.choice` is used only to name the witness of realised
+      read/write existence; all axioms stay within the standard goal set
+      (propext, Classical.choice, Quot.sound).
+    - Consumer interface: downstream lanes cite `realisiert_fuss_abdeckung`
+      (uniform frame plus empty-or-eight shape), `byte_realisiert_fuss`
+      (byte-step to footprint) and `realisiert_fuss_abdeckung_zeuge`
+      (joint witness); refusals cite `realisiert_versagt_laenge` and
+      `byte_ohne_fetch_kein_realisiert`.
 -/
 
 #print axioms realisiert_laenge_ok
@@ -323,5 +615,17 @@ theorem realisiert_ret_fuss (dd : Decodiert) (s s' : Zustand)
 #print axioms realisiert_load64_fuss
 #print axioms realisiert_pop64_fuss
 #print axioms realisiert_ret_fuss
+#print axioms frame_aus_speichergleich
+#print axioms realisiert_fuss_abdeckung
+#print axioms realisiert_store_alias
+#print axioms realisiert_push_rsp
+#print axioms byte_realisiert_fuss
+#print axioms byte_realisiert_aus_bytes
+#print axioms realisiert_versagt_laenge
+#print axioms byte_ohne_fetch_kein_realisiert
+#print axioms realisiert_store64_wort_kein_atom
+#print axioms schritt_zeuge_speicher
+#print axioms realisiert_fuss_abdeckung_zeuge
+#print axioms byte_zeuge_verweigert
 
 end Gabbro.Grammatik.X86
