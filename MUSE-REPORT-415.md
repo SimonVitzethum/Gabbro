@@ -14,12 +14,13 @@ closure inventory, deep audit of the three focus modules
 file/theorem/line evidence, consumer-gap analysis of the neighbouring
 accepted modules (`Zugriffe`, `TSO`, `Relokation`, `AccessList`,
 `OverlapRefusal`, `SpillPrivate`, `AufrufOpt`, `StaerkeReduktion`,
-`ControlFlow`, `LockedOps`), vacuity-risk audit, validator-input trust
-table, runtime/link/loader coverage audit, proof-vs-CUTS ledger, and a
-prioritized P0-P3 repair / missing-bridge list. The audit explicitly
-distinguishes correct-within-claim helpers from legitimately OPEN bridges
-and names the one finding that is phrased as a review finding rather than
-a defect (F3, the `Zugriffe` pilot-only footprint).
+`ControlFlow`, `LockedOps`, `MulDiv`, `ShiftLogic`), vacuity-risk audit,
+validator-input trust table, runtime/link/loader coverage, proof-vs-CUTS
+ledger, and a prioritized P0-P3 repair / missing-bridge list (§§0-9 plus
+appendices A-C). The audit explicitly distinguishes
+correct-within-claim helpers from legitimately OPEN bridges and names
+one review finding (F3, pilot-only `zugriff` footprints) rather than a
+defect.
 
 Read in full: `DIRECT-COMPILER.md`, `DIRECT-COMPILER-DESIGN.md` (§§1-7A
 relevant parts), `grammatik/OPTIMIZER.md` (§§1-10), `WORK-ALLOCATION.md`,
@@ -57,7 +58,13 @@ build note.
   no 287 IR, no TSO bridge, no budget/time transfer) — the audit's
   central, expected result.
 - Independent exact-candidate review of this audit (lane 495) happens
-  separately; root integration happens separately.
+  separately; root integration happens separately. Repair revision:
+  review 495 found the first-committed revision truncated mid-§3 (a
+  tool-write cutoff artifact); this revision restores §§4-9 and
+  appendices A-C unchanged in substance, all forward references
+  resolve, and the DIRECT-COMPILER citation no longer uses numbered
+  `§§` (that document's headers are unnumbered). Sections 0-3 needed
+  no rework — the reviewer verified every citation in them correct.
 - The prioritized work (§7 of the audit): P0 IR + validator skeleton +
   source-duty exports; P1 per-access bridge + O-align/O-access closure +
   patched-byte re-decode; P2 entries/ABI/loader/binding coverage + cost
