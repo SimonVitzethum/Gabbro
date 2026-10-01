@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 18:23 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 18:36 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -235,7 +235,7 @@ Last ledger refresh: **2026-10-01 18:23 UTC**. This is an operational snapshot, 
 | 554 | Shorter clearer current English README | Merged after review/checks | 555: Merged after review/checks | [report](messung/muse/MUSE-REPORT-554.md) |
 | 556 | Repeated intermittent CLI alias test diagnosis | Merged after review/checks | 557: Merged after review/checks | [report](messung/muse/MUSE-REPORT-556.md) |
 | 558 | Connection: Connection plan and integration ownership | Merged after review/checks | 576: Merged after review/checks | [report](messung/muse/MUSE-REPORT-558.md) |
-| 559 | Connection: Arbitrary-input pilot decoder soundness | Agent working | 577: scheduled | [task](lanes/559.md) |
+| 559 | Connection: Arbitrary-input pilot decoder soundness | Merged after review/checks | 577: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-559.md) |
 | 560 | Connection: Loaded image to actual instruction fetch | Agent working | 578: scheduled | [task](lanes/560.md) |
 | 561 | Connection: Relocated bytes to re-decoded instruction execution | Agent working | 579: scheduled | [task](lanes/561.md) |
 | 562 | Connection: Narrow operations byte decoder and execution connection | Agent working | 580: scheduled | [task](lanes/562.md) |
@@ -248,7 +248,7 @@ Last ledger refresh: **2026-10-01 18:23 UTC**. This is an operational snapshot, 
 | 569 | Connection: Fetched call/return to stack-frame proofs | Agent working | 587: scheduled | [task](lanes/569.md) |
 | 570 | Connection: Source world/table values to target byte representation | Agent working | 588: scheduled | [task](lanes/570.md) |
 | 571 | Connection: Entry state, image permissions and user binding duties | Agent working | 589: scheduled | [task](lanes/571.md) |
-| 572 | Connection: Source budget-stop and target work connection | Agent working | 590: scheduled | [task](lanes/572.md) |
+| 572 | Connection: Source budget-stop and target work connection | Committed candidate; review/integration pending | 590: Agent working | [task](lanes/572.md) |
 | 573 | Connection: Projected TSO stores to source W writes | Waiting for accepted dependencies | 591: scheduled | [task](lanes/573.md) |
 | 574 | Connection: Projected TSO loads to source W reads | Waiting for accepted dependencies | 592: scheduled | [task](lanes/574.md) |
 | 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
@@ -559,6 +559,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: Simon requested an explicit pause for Glass Town handoff. All 15 active Muse lanes (287, 558-571), automatic backfill and serial integration/publication are paused. Clones, uncommitted drafts, private sessions, prompts and reports are preserved. ValidatorSkeleton349, DecodingCoverage435 and bridge helpers542-546 were integrated with independent reviews before the pause; the last Lean publication build passed, but unfinished Rust/emission publication checks were stopped and no successful full-wave push is claimed. See AGENTS.md section11 for takeover instructions. <!-- x86-glass-town-pause -->
 - 2026-10-01: lane **558**, Connection: Connection plan and integration ownership, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-558.md). <!-- x86-merged:558 -->
 - 2026-10-01: lane **576**, Independent connection review of 558, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-576.md). <!-- x86-merged:576 -->
+- 2026-10-01: lane **559**, Connection: Arbitrary-input pilot decoder soundness, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-559.md). <!-- x86-merged:559 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
