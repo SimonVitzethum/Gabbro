@@ -466,11 +466,210 @@ theorem patchAt_rahmen (img : List Byte) (off : Nat) (bs : List Byte)
               have hne := haussen k hk
               omega)
 
+/-! ## 5. Disjoint double patches and relocation-shaped patching. -/
+
+/-- Two Nat-interval sites are disjoint: neither overlaps the other. -/
+def disjunktStellen (o1 l1 o2 l2 : Nat) : Prop :=
+  o1 + l1 ≤ o2 ∨ o2 + l2 ≤ o1
+
+instance (o1 l1 o2 l2 : Nat) :
+    Decidable (disjunktStellen o1 l1 o2 l2) := by
+  unfold disjunktStellen
+  infer_instance
+
+/-- Two patches in one step: overlapping sites are refused outright,
+    so a code-operand site can never silently clobber a neighbour. -/
+def patchZwei (img : List Byte) (o1 : Nat) (b1 : List Byte)
+    (o2 : Nat) (b2 : List Byte) : Option (List Byte) :=
+  if disjunktStellen o1 b1.length o2 b2.length then
+    match patchAt img o1 b1 with
+    | some m => patchAt m o2 b2
+    | none => none
+  else none
+
+/-- Overlapping sites are refused, never merged. -/
+theorem patchZwei_verweigert (img : List Byte) (o1 : Nat) (b1 : List Byte)
+    (o2 : Nat) (b2 : List Byte)
+    (h : ¬ disjunktStellen o1 b1.length o2 b2.length) :
+    patchZwei img o1 b1 o2 b2 = none := by
+  unfold patchZwei
+  rw [if_neg h]
+
+/-- The first site's bytes survive a disjoint second patch. -/
+theorem patchZwei_erhaelt_erste (img m out : List Byte)
+    (o1 : Nat) (b1 : List Byte) (o2 : Nat) (b2 : List Byte)
+    (h1 : patchAt img o1 b1 = some m)
+    (h2 : patchAt m o2 b2 = some out)
+    (hd : disjunktStellen o1 b1.length o2 b2.length)
+    (k : Nat) (hk : k < b1.length) :
+    out[o1 + k]? = b1[k]? := by
+  rcases hd with hd | hd
+  · have hne : ∀ j, j < b2.length → o1 + k ≠ o2 + j := by
+      intro j hj
+      omega
+    rw [patchAt_rahmen m o2 b2 out h2 _ hne,
+      patchAt_stelle img o1 b1 m h1 k hk]
+  · have hne : ∀ j, j < b2.length → o1 + k ≠ o2 + j := by
+      intro j hj
+      omega
+    rw [patchAt_rahmen m o2 b2 out h2 _ hne,
+      patchAt_stelle img o1 b1 m h1 k hk]
+
+/-- A rel32 displacement patches only through its fit check. -/
+def patchRel32 (img : List Byte) (off : Nat) (d : Int) : Option (List Byte) :=
+  if rel32Passt d then patchAt img off (rel32Bytes d) else none
+
+/-- A rel32 site is four bytes wide. -/
+theorem rel32Bytes_laenge (d : Int) : (rel32Bytes d).length = 4 := rfl
+
+/-- A patched rel32 site carries exactly the displacement bytes. -/
+theorem patchRel32_stelle (img : List Byte) (off : Nat) (d : Int)
+    (out : List Byte) (h : patchRel32 img off d = some out)
+    (k : Nat) (hk : k < 4) :
+    out[off + k]? = (rel32Bytes d)[k]? := by
+  unfold patchRel32 at h
+  split at h
+  · exact patchAt_stelle img off (rel32Bytes d) out h k
+      (by rwa [rel32Bytes_laenge])
+  · cases h
+
+/-- An absolute value patches at any in-range eight-byte site. -/
+def patchAbs64 (img : List Byte) (off : Nat) (v : Wort) :
+    Option (List Byte) :=
+  patchAt img off (abs64Bytes v)
+
+/-- An abs64 site is eight bytes wide. -/
+theorem abs64Bytes_laenge (v : Wort) : (abs64Bytes v).length = 8 := rfl
+
+/-- A patched abs64 site carries exactly the value bytes. -/
+theorem patchAbs64_stelle (img : List Byte) (off : Nat) (v : Wort)
+    (out : List Byte) (h : patchAbs64 img off v = some out)
+    (k : Nat) (hk : k < 8) :
+    out[off + k]? = (abs64Bytes v)[k]? := by
+  unfold patchAbs64 at h
+  exact patchAt_stelle img off (abs64Bytes v) out h k
+    (by rwa [abs64Bytes_laenge])
+
+/-! ## 6. Concrete probes: negative, boundaries, refusals, overlap. -/
+
+/-- Negative displacement `-5`: bytes `FB FF FF FF`. -/
+theorem sonde_rel32_negativ :
+    rel32Bytes (-5) = [0xFB, 0xFF, 0xFF, 0xFF] := by
+  decide
+
+/-- Negative displacements decode back. -/
+theorem sonde_rel32_negativ_rund :
+    rel32DecOpt (rel32Bytes (-5)) = some (-5) := by
+  decide
+
+/-- Canonical `sext` agrees with the encoding on `-5`. -/
+theorem sonde_sext_negativ :
+    sext .b32 (BitVec.ofNat 64 4294967291) = 0xFFFFFFFFFFFFFFFB := by
+  decide
+
+/-- Upper boundary `2 ^ 31 - 1`: bytes `FF FF FF 7F`, fits. -/
+theorem sonde_rel32_oben :
+    rel32Bytes 2147483647 = [0xFF, 0xFF, 0xFF, 0x7F] ∧
+    rel32Passt 2147483647 = true := by
+  decide
+
+/-- Lower boundary `-2 ^ 31`: bytes `00 00 00 80`, fits. -/
+theorem sonde_rel32_unten :
+    rel32Bytes (-2147483648) = [0x00, 0x00, 0x00, 0x80] ∧
+    rel32Passt (-2147483648) = true := by
+  decide
+
+/-- Just out of range both ways: fit refused. -/
+theorem sonde_rel32_ausserhalb :
+    rel32Passt 2147483648 = false ∧
+    rel32Passt (-2147483649) = false := by
+  decide
+
+/-- An out-of-range target patches to `none`, never to wrapped bytes. -/
+theorem sonde_rel32Fuer_verweigert :
+    rel32Fuer 0 2147483648 = none ∧
+    rel32Fuer 10 0 = some (rel32Bytes (-10)) := by
+  decide
+
+/-- The address equation on a real backward jump (`0x1005` to `0x1000`). -/
+theorem sonde_adress_gleichung :
+    BitVec.ofNat 64 4096 =
+      BitVec.ofNat 64 4101 + BitVec.ofNat 64 (rel32Enc64 (-5)) :=
+  rel32_adress_gleichung 4101 4096 (-5) (by decide) (by decide) (by decide)
+
+/-- Next-RIP formation on real addresses. -/
+theorem sonde_next_rip :
+    (BitVec.ofNat 64 4096 + BitVec.ofNat 64 5).toNat = 4101 :=
+  rel32_next_rip 4096 5 (by decide) (by decide) (by decide)
+
+/-- Absolute value bytes, little endian. -/
+theorem sonde_abs64_bytes :
+    abs64Bytes 0x0102030405060708 =
+      [0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01] := by
+  decide
+
+/-- Absolute values read back through the canonical split. -/
+theorem sonde_abs64_rund :
+    abs64Wort (abs64Bytes 0x0102030405060708) =
+      some 0x0102030405060708 :=
+  abs64_rundgang 0x0102030405060708
+
+/-- Overlapping sites are refused. -/
+theorem sonde_patchZwei_ueberlappung :
+    patchZwei [0, 0, 0, 0, 0, 0, 0, 0] 1 [0xAA, 0xBB] 2 [0xCC, 0xDD] =
+      none := by
+  decide
+
+/-- Disjoint sites patch to the exact combined bytes. -/
+theorem sonde_patchZwei_disjunkt :
+    patchZwei [0, 0, 0, 0, 0, 0, 0, 0] 0 [0xAA] 4 [0xBB] =
+      some [0xAA, 0, 0, 0, 0xBB, 0, 0, 0] := by
+  decide
+
+/-- An overrunning site is refused. -/
+theorem sonde_patchAt_ueberlauf :
+    patchAt [0, 0, 0] 2 [0xAA, 0xBB] = none := by
+  decide
+
 /- CUTS:
-   rel32/abs64 arithmetic and byte patching only; decoder, image mapping,
-   site admissibility, loader behaviour and source correspondence are open.
+   - Proved here: rel32 fit/encode/sign-extending-decode round-trip,
+     canonical next-RIP formation and target equation, checked
+     displacement with out-of-range refusal, abs64 values with
+     read-back, finite byte patching with range/length/site/frame
+     facts, disjoint double patches with overlap refusal, and concrete
+     negative/boundary/out-of-range/overlap probes.
+   - Explicitly OPEN (refused at helper level by `relAnnahme_offen`):
+     code-operand versus standalone-data site admissibility, which
+     needs the checked image plus the decoder proof (IMAGE-ABI sec. 4);
+     caller-claimed instruction starts and relocation kinds are never
+     trusted here.
+   - No loader or linker assumption: `relocs` handling, load bias,
+     entry states and mapping equality belong to the image validator.
+   - No final-byte source claim: per-instruction correspondence,
+     control-target obligations, ABI checks, concurrency refinement
+     and cost transfer are separate wave-B obligations.
+   - Finding: the modular target equation needs no wrap premises
+     (wrap-consistent by construction); exact no-wrap premises live
+     only at next-RIP formation (`rel32_next_rip`).
 -/
 
 #print axioms relAnnahme_offen
+#print axioms rel32_rundgang
+#print axioms rel32_adress_gleichung
+#print axioms rel32_next_rip
+#print axioms rel32Fuer_verweigert
+#print axioms rel32Fuer_trifft
+#print axioms abs64_rundgang
+#print axioms patchAt_bereich
+#print axioms patchAt_laenge
+#print axioms patchAt_stelle
+#print axioms patchAt_rahmen
+#print axioms patchZwei_verweigert
+#print axioms patchZwei_erhaelt_erste
+#print axioms patchRel32_stelle
+#print axioms patchAbs64_stelle
+#print axioms sonde_rel32_negativ
+#print axioms sonde_adress_gleichung
+#print axioms sonde_patchZwei_ueberlappung
 
 end Gabbro.Grammatik.X86
