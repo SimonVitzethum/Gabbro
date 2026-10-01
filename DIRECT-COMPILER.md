@@ -274,7 +274,7 @@ Last ledger refresh: **2026-10-01 21:04 UTC**. This is an operational snapshot, 
 | 632 | Direct-source closure: SourceValidatorConnection | Agent working | 633: scheduled | [task](lanes/632.md) |
 | 634 | Direct-source closure: SourceCodeFrame | Committed candidate; review/integration pending | 635: Agent working | [task](lanes/634.md) |
 | 636 | Required failover slot lifetime and safe role handback | Committed candidate; review/integration pending | 637: Agent working | [task](lanes/636.md) |
-| 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-638.md) |
+| 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Agent working | 641: scheduled | [task](lanes/640.md) |
 | 642 | Recover preserved IR research draft from recorded edits after clone removal | Agent working | 643: scheduled | [task](lanes/642.md) |
 
@@ -667,6 +667,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **599**, Overnight: Direct typed-source expression to pilot machine code, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-599.md). <!-- x86-merged:599 -->
 - 2026-10-01: lane **611**, Independent overnight review of 599, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-611.md). <!-- x86-merged:611 -->
 - 2026-10-01: lane **638**, Align optimiser and compiler design with accepted direct-source lowering, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-638.md). <!-- x86-merged:638 -->
+- 2026-10-01: lane **639**, Independent exact review of 638, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-639.md). <!-- x86-merged:639 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
