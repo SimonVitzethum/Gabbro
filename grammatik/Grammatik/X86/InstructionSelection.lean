@@ -53,4 +53,44 @@ def waehleInv (s : InvScope) (stabil : Bool) : Option (List Befehl) :=
   | .sicht => if stabil then some [] else none
   | .wechsel => if stabil then some [] else none
 
+/-! ## 2. Target value facts: what the chosen instructions compute. -/
+
+/-- `xor v v` is zero: the clobbering zeroing choice really zeroes. -/
+theorem xor_selbst_null (v : Wort) : (xor64 v v).1 = 0 := by
+  simp [xor64]
+
+/-- `add x 0` is `x`: the eliminated add is a value identity. -/
+theorem add_null_ident (x : Wort) : (add64 x 0).1 = x := by
+  simp [add64]
+
+/-! ## 3. Real byte sequences: the choices differ on the wire. -/
+
+/-- The preserving zeroing choice is 10 bytes, the clobbering one 3:
+    selection is a length claim, not just a value claim. -/
+theorem null_laengen (dst : Register) :
+    (encode (.movImm64 dst 0)).length = 10 ∧
+      (encode (.xorReg64 dst dst)).length = 3 := by
+  cases dst <;> decide
+
+/-- Pinned bytes of the clobbering zeroing of `rax`. -/
+theorem pin_xor_rax : encode (.xorReg64 .rax .rax) =
+    [natByte 72, natByte 49, natByte 192] := by
+  decide
+
+/-- Pinned bytes of the preserving zeroing of `rax`: 10 bytes. -/
+theorem pin_mov0_rax : encode (.movImm64 .rax 0) =
+    [natByte 72, natByte 184, natByte 0, natByte 0, natByte 0,
+     natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] := by
+  decide
+
+/-- Both pinned choices decode back to themselves (accepted round trip). -/
+theorem runde_null_rax (suffix : List Byte) :
+    decode (encode (.xorReg64 .rax .rax) ++ suffix) =
+      some (⟨.xorReg64 .rax .rax, (encode (.xorReg64 .rax .rax)).length⟩,
+        suffix) ∧
+    decode (encode (.movImm64 .rax 0) ++ suffix) =
+      some (⟨.movImm64 .rax 0, (encode (.movImm64 .rax 0)).length⟩,
+        suffix) :=
+  ⟨roundtrip _ _, roundtrip _ _⟩
+
 end Gabbro.Grammatik.X86.Anweisungswahl
