@@ -213,7 +213,7 @@ Last ledger refresh: **2026-10-01 14:25 UTC**. This is an operational snapshot, 
 | 421 | Continuous Lean proof reserve: WordAtomicity | Merged after review/checks | 469: Merged after review/checks | [report](messung/muse/MUSE-REPORT-421.md) |
 | 422 | Continuous Lean proof reserve: ReleaseAcquire | Merged after review/checks | 470: Merged after review/checks | [report](messung/muse/MUSE-REPORT-422.md) |
 | 423 | Continuous Lean proof reserve: BranchLayout | Merged after review/checks | 471: Merged after review/checks | [report](messung/muse/MUSE-REPORT-423.md) |
-| 424 | Continuous Lean proof reserve: FeatureProfile | Committed candidate; review/integration pending | 472: Committed candidate; review/integration pending | [task](lanes/424.md) |
+| 424 | Continuous Lean proof reserve: FeatureProfile | Merged after review/checks | 472: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-424.md) |
 | 425 | Continuous Lean proof reserve: FloatExceptions | Merged after review/checks | 473: Merged after review/checks | [report](messung/muse/MUSE-REPORT-425.md) |
 | 426 | Continuous Lean proof reserve: VectorFootprints | Merged after review/checks | 474: Merged after review/checks | [report](messung/muse/MUSE-REPORT-426.md) |
 | 427 | Continuous Lean proof reserve: RegisterInterference | Merged after review/checks | 475: Merged after review/checks | [report](messung/muse/MUSE-REPORT-427.md) |
@@ -514,6 +514,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **340**, Practical-performance Lean wave A6: ScalarFloat, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-340.md). <!-- x86-merged:340 -->
 - 2026-10-01: checked master `6845a8c3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:6845a8c3a841725562199b763485b4483307f576 -->
 - 2026-10-01: lane **378**, Independent exact-candidate review of 340 ScalarFloat, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-378.md). <!-- x86-merged:378 -->
+- 2026-10-01: lane **424**, Continuous Lean proof reserve: FeatureProfile, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-424.md). <!-- x86-merged:424 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
