@@ -386,6 +386,42 @@ def wWorld0 : World wD where
   globs := fun e => nomatch e
   spur := []
 
+/-- A concrete oracle (never consulted by the witness: no calls, no
+    registers, no globals). -/
+def wO : Orakel wD where
+  wirkt := fun e => nomatch e
+  regLies := fun e => nomatch e
+  regSchreib := fun e => nomatch e
+  sichtbar := fun e => nomatch e
+
+/-- A concrete call handler (never consulted: the witness makes no calls). -/
+def wR : ∀ f : wD.Fn, World wD → Env wD (wD.params f) → RufAusgang f :=
+  fun _ σ _ => .ok σ ()
+
+/-- Non-degeneracy (contract side): the witness contract writes a table. -/
+theorem wit_schreibt : wV.schreibt () = true :=
+  rfl
+
+/-- The checker fires on the witness condition, by computation. -/
+theorem wit_isWahr : isWahr wCond = true :=
+  rfl
+
+/-- The generic elimination, jointly inhabited on the witness program. -/
+theorem wit_elim :
+    execBlock wO 5 wR (Block.pruefung wCond wSonst wRest) wWorld0 Env.nil =
+      execBlock wO 5 wR wRest (wWorld0.lese [] wCond.orte) Env.nil :=
+  exec_pruefung_wahr wO 5 wR wCond wSonst wRest wWorld0 Env.nil rfl
+
+/-- The witness run writes: the slot reads `5` afterwards. This is the
+    reached run with a memory-changing step the gate requires. -/
+theorem wit_step :
+    match execBlock wO 5 wR wRest wWorld0 Env.nil with
+    | .ok σ' _ => (σ'.slots () 0 ()).n = 5
+    | _ => False := by
+  simp only [wRest, wIdx, wVal, execBlock, execStmt, eval, Expr.orte, World.lese,
+    World.merke, World.schreibSlot, World.storeSlot]
+  decide
+
 /- CUTS:
    Only the computable check exists so far. Open: its soundness over `eval`;
    constant folding / `weiter` value lemmas; `pruefung`/`ite` elimination with
