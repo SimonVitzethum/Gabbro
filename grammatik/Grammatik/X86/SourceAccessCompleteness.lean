@@ -465,6 +465,103 @@ theorem fragmentStore_passt_zeuge :
 
 #print axioms fragmentStore_passt_zeuge
 
+/-- A realised `load64` at a represented slot loads exactly the source
+    slot value: the loaded word parses back via `wortZahl`, the
+    destination holds it, and memory is unchanged (reads change no
+    byte). Consumes `realisiert_load64_gefunden` for the realised read
+    and `RepSlot` plus the roundtrip for the value link; the new
+    connection is `hAddr`. Every premise is used. -/
+theorem fragmentLoad_passt {D : Deklaration}
+    {t : D.Tab} {k : Int} {f : D.Feld t} {lo hi : Int}
+    {hT : D.typ t f = .int lo hi}
+    (v : Zahl lo hi)
+    {a : Adresse} {s s' : Zustand}
+    {σw : World D}
+    (hRep : RepSlot t k f lo hi hT a s.speicher σw)
+    (hLo : 0 ≤ lo) (hHi : hi < 2 ^ 64)
+    (hv : (cast (congrArg (Wert D) hT) (σw.slots t k f)) = v)
+    (dd : Decodiert) (dst baseR : Register) (disp : BitVec 32)
+    (hok : laengeOk dd.laenge = true)
+    (hbef : dd.befehl = .load64 dst baseR disp)
+    (hstep : schritt dd s = some s')
+    (hAddr : effAddr s baseR disp = a) :
+    ∃ w, read64 s.speicher a = some w ∧ wortZahl lo hi w = some v ∧
+      s'.register dst = w ∧ s'.speicher = s.speicher := by
+  have hRd := realisiert_load64_gefunden dd s s' dst baseR disp hok hbef hstep
+  obtain ⟨v', hread, hreg, hmem⟩ := hRd
+  rw [hAddr] at hread
+  unfold RepSlot at hRep
+  rw [hread] at hRep
+  simp only [Option.some.injEq] at hRep
+  rw [hv] at hRep
+  refine ⟨v', hread, ?_, hreg, hmem⟩
+  rw [hRep]
+  exact zahlWort_wortZahl v hLo hHi
+
+#print axioms fragmentLoad_passt
+
+/-- Witness decoded load: `rbx := [rax]` at the fragment slot address. -/
+def fragLoad : Decodiert :=
+  { befehl := Befehl.load64 Register.rbx Register.rax (BitVec.ofNat 32 0),
+    laenge := 4 }
+
+/-- Witness pre-state: `rax` at the slot base, `rbx` holding a sentinel. -/
+def fragLoadVor : Zustand :=
+  { register :=
+      regSet (regSet zeugeReg Register.rax (BitVec.ofNat 64 4096))
+        Register.rbx (BitVec.ofNat 64 7),
+    flags := zeugeFlags, rip := BitVec.ofNat 64 4096,
+    speicher := zeugeSpeicher }
+
+/-- JOINT WITNESS for `fragmentLoad_passt`: a represented slot holding
+    zero, a reached realised `load64` step at its address loading the
+    zero word into the destination (observably changing the register
+    from its sentinel), with memory unchanged — on a declaration with a
+    table its function writes. -/
+theorem fragmentLoad_passt_zeuge :
+    ∃ (s s' : Zustand),
+      RepSlot () (0 : Int) () 0 100 witHT witA s.speicher witSigma ∧
+      schritt fragLoad s = some s' ∧
+      fragLoad.befehl =
+        .load64 Register.rbx Register.rax (BitVec.ofNat 32 0) ∧
+      laengeOk fragLoad.laenge = true ∧
+      effAddr s Register.rax (BitVec.ofNat 32 0) = witA ∧
+      (∃ w, read64 s.speicher witA = some w ∧
+        wortZahl 0 100 w = some (⟨0, by decide, by decide⟩ : Zahl 0 100) ∧
+        s'.register Register.rbx = w ∧ s'.speicher = s.speicher) ∧
+      witD.schreibt () () = true ∧
+      s.register Register.rbx ≠ s'.register Register.rbx := by
+  have hRep : RepSlot () (0 : Int) () 0 100 witHT witA fragLoadVor.speicher
+      witSigma := by
+    unfold RepSlot
+    decide
+  have hbef : fragLoad.befehl =
+      .load64 Register.rbx Register.rax (BitVec.ofNat 32 0) := rfl
+  have hok : laengeOk fragLoad.laenge = true := rfl
+  have hAddr : effAddr fragLoadVor Register.rax (BitVec.ofNat 32 0) =
+      witA := by
+    decide
+  have hv : (cast (congrArg (Wert witD) witHT)
+      (witSigma.slots () (0 : Int) ())) =
+      (⟨0, by decide, by decide⟩ : Zahl 0 100) := rfl
+  have hdec : ((schritt fragLoad fragLoadVor).map
+      (fun s' => s'.register Register.rbx) =
+      some (BitVec.ofNat 64 0)) := by
+    decide
+  obtain ⟨sT, hstep, hval⟩ := Option.map_eq_some_iff.mp hdec
+  have hMain := fragmentLoad_passt (⟨0, by decide, by decide⟩ : Zahl 0 100)
+    hRep (by decide : (0 : Int) ≤ 0) (by decide) hv fragLoad
+    Register.rbx Register.rax (BitVec.ofNat 32 0) hok hbef hstep hAddr
+  have hval' : sT.register Register.rbx = BitVec.ofNat 64 0 := hval
+  have hchg : fragLoadVor.register Register.rbx ≠
+      sT.register Register.rbx := by
+    rw [show fragLoadVor.register Register.rbx = BitVec.ofNat 64 7 from
+      rfl, hval']
+    decide
+  exact ⟨fragLoadVor, sT, hRep, hstep, hbef, hok, hAddr, hMain, rfl, hchg⟩
+
+#print axioms fragmentLoad_passt_zeuge
+
 #print axioms filterMap_leseEv
 #print axioms take_neuAppend
 #print axioms fragmentListe_invert
