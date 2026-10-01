@@ -1,46 +1,80 @@
 # MUSE-REPORT-637: Independent exact review of candidate 636
 
-CANDIDATE: 636 8a54934026ebc5781f7395178726f127841de5a6
+CANDIDATE: 636 c17193125b0e3b10fc9fc94d13cdba147f6735c6
 
-VERDICT: REPAIR
+VERDICT: ACCEPT
 
 ## Scope
 
-Lane 637 reviews the exact pinned candidate 636 (`8a54934026ebc5781f7395178726f127841de5a6`,
-base `97cd0e9c`) from `.tmp/review/SNAPSHOT.json` with TASK/PATCH under
-`.tmp/review/author-636/`. Owned file only: `MUSE-REPORT-637.md`.
+Lane 637 reviews the exact pinned candidate 636
+(`c17193125b0e3b10fc9fc94d13cdba147f6735c6`, base `97cd0e9c`) from
+`.tmp/review/SNAPSHOT.json`. Owned file only: `MUSE-REPORT-637.md`.
 No source, Lean, checker, emitter, provider or live-control contact; all
 probes used fixture scratch and fake binaries. No real provider or live
 control files were touched.
 
 ## Candidate contents (verified exact)
 
-`git diff --name-only` of the pinned HEAD shows exactly the four owned paths:
-`MUSE-REPORT-636.md`, `dokumente/x86/COORDINATOR-FAILOVER.md`,
-`instrumente/coordinator-failover.py` (1210 lines),
-`instrumente/tests/test_coordinator_failover.py` (751 lines).
-The extracted candidate tree matches `.tmp/review/author-636/` byte for byte
-(`diff -q` clean on both Python files). No Lean/Rust/emitter contact, ASCII
-only, no credentials.
+`git diff` of the pinned HEAD against its base shows exactly the four owned
+paths: `MUSE-REPORT-636.md`, `dokumente/x86/COORDINATOR-FAILOVER.md`,
+`instrumente/coordinator-failover.py`,
+`instrumente/tests/test_coordinator_failover.py`.
+No Lean/Rust/emitter contact, ASCII only, no credentials.
 
-## Verification performed
+## Re-review: repair of the previous REPAIR findings
 
-- Candidate suite from the extracted tree:
+The previous review (candidate `8a549340`, VERDICT: REPAIR) found one defect
+with three measured consequences: `is_paused` treated `pool-paused.json`
+(explicit USER pause) and `coordinator-pause.json` (INTERNAL transient
+marker) identically. The new candidate repairs exactly this, confined to the
+owned paths (319 insertions, 13 deletions across the four files):
+
+- `is_paused` now reports only the user pause (`pool-paused.json`); the
+  internal marker never blocks takeover, never stops the role, never exits
+  the supervisor.
+- New `cleanup_stale_internal_pause` (with `INTERNAL_PAUSE_MAX_AGE_SECS`,
+  `internal_pause_doc/pid/age_secs`), called at startup and every poll:
+  removes only a supervisor-owned marker (`owner: failover-<pid>`) whose pid
+  is dead or whose age exceeds 600 s. Foreign registration markers are never
+  touched and never pause coverage.
+- Pause exit and budget exit now call `remove_own_pause`; SIGKILL leftovers
+  are covered by the stale cleanup.
+- Doc Pause section rewritten to the user/internal distinction.
+- Six new kernel-lock `PauseDistinctionTest` tests (live supervise threads,
+  real flock/processes, fixture scratch), each substantive: internal marker
+  never stops a live role; never blocks takeover; stale own-pause cleaned
+  and never blocks; foreign marker byte-identical afterwards but never
+  blocks; internal marker during busy watch then removed by registration;
+  user pause still stops a live role safely.
+
+## Verification performed on the NEW head
+
+- Candidate suite from the extracted tree
+  (`$TMPDIR/cand636b`, byte-identical to the pinned files):
   `python3 instrumente/tests/test_coordinator_failover.py`:
-  **21 tests, 0 failures, 0 errors** (16 inherited + 5 new `ClosureTest`),
-  real flock/processes, fixture scratch. Green.
-- Own reviewer probes (private scratch `$TMPDIR/probe637.py`,
-  `$TMPDIR/probe637b.py`, ignored, not committed) with live processes and
-  kernel flock:
-  - Control C (user pause): `pool-paused.json` + stale foreground + no child
-    exits `paused_no_takeover` with 0 turns. Correct per contract.
-  - Slot survival / 16th refusal, busy-action block, busy-watch owned pause,
-    full-pool single `dispatch_stop` without churn: covered green by the
-    candidate's own `ClosureTest` (re-ran, passing).
+  **27 tests, 0 failures, 0 errors** (16 inherited + 5 ClosureTest + 6 new
+  PauseDistinctionTest). Green.
+- Own reviewer probes re-run against the new tree (private scratch,
+  ignored, not committed) with live processes and kernel flock:
+  - Probe A (foreign internal marker + stale foreground + no child):
+    previously exited `paused_no_takeover` with 0 turns; now takes over
+    (`status=budget_done note=muse_coordinates turns=1 owner=muse`).
+    Fixed.
+  - Probe D (foreign internal marker + live child): previously
+    `stopped_at_boundary_paused_by_coordinator-pause.json` with the child
+    killed; now `owner=muse child_alive=True note=muse_coordinates`.
+    Fixed.
+  - Probe E (leftover own-pause from dead pid + stale foreground): previously
+    blocked every future supervisor; now stale marker cleaned and takeover
+    happens (`turns=1`). Fixed.
+  - Control C (real user pause `pool-paused.json`): still exits
+    `paused_no_takeover` with 0 turns. User-pause behavior preserved.
+  - Probe B (busy watch, no other stop reason): role survives, no spurious
+    handback, no leftover pause file. Unchanged.
 - No `./lean-bau` run: the candidate touches no `grammatik/` file, so no Lean
   build claim is needed and none is made.
 
-## What the candidate gets right
+## Standing evidence (unchallenged by the repair)
 
 Slot/role survival across supervisor crash via `pass_fds` inheritance plus a
 session-separated guardian, group-drain-gated release (`group_members`,
@@ -51,53 +85,15 @@ duplicate or a different slot, and dispatcher stopped once and kept stopped
 while awaiting a slot. The `guard_mutation_role` order (action EX, then
 lease SH) is respected by the supervisor's nonblocking boundary acquire, and
 `test_busy_action_blocks_kill_until_released` proves no kill across a busy
-integration.
+integration. The repair diff does not touch any of these paths except to add
+the pause-exit/budget-exit `remove_own_pause` calls and the additive stale
+cleanup; all 21 prior tests still pass unmodified.
 
-## Findings (all reproduced with live processes, not mocks)
+## Final assessment
 
-The supervisor does not distinguish the two pause files. `is_paused`
-(`coordinator-failover.py:139`) returns True for `pool-paused.json` (explicit
-USER pause) and `coordinator-pause.json` (INTERNAL transient safe-boundary
-marker) identically, and the document (`COORDINATOR-FAILOVER.md`, Pause
-section) records the conflation as intended behavior. Three consequences,
-each measured:
-
-1. **Internal marker kills the live role (probe D).** Live fallback, foreign
-   `coordinator-pause.json` (`owner: register_tasks-999`, no return request,
-   no user pause): within 2 s the supervisor reported
-   `stopped_at_boundary_paused_by_coordinator-pause.json`, lease back to
-   `codex`, child dead. The supervisor kills its own coordinator for a busy
-   registration marker.
-2. **Internal marker permanently ends coverage with no child (probe A).**
-   Stale foreground + foreign internal marker + no live child: supervisor
-   exits `rc=0 paused_no_takeover`, 0 turns. A transient registration marker
-   is treated as user shutdown; nothing restarts the supervisor, so takeover
-   coverage is lost.
-3. **Leftover own-pause file blocks all future supervisors (probe E).**
-   `ensure_own_pause` writes `owner: failover-<pid>`; the budget-exit path
-   never calls `remove_own_pause`, and `remove_own_pause` refuses foreign
-   owners while `ensure_own_pause` will not overwrite them. A leftover file
-   from a dead pid (SIGKILL/crash between ensure and remove) makes every
-   future supervisor exit `paused_no_takeover` with 0 turns. Nothing in the
-   protocol cleans it.
-
-## VERDICT: REPAIR
-
-The pause distinction is a deployment requirement of the lane-637 task, and
-probe-only safety for it is explicitly a repair trigger. Required repair,
-kept small and inside the candidate's owned paths:
-
-- Track which pause file is present; only `pool-paused.json` (user pause)
-  may block takeover, stop the role, or exit the supervisor.
-- `coordinator-pause.json` (internal, including the supervisor's own file)
-  must never be a stop reason, a takeover block, or an exit reason; exclude
-  the supervisor's own `failover-<pid>` file from the pause check.
-- Give the internal marker ownership/expiry handling (own pid liveness or
-  timestamp) so a leftover from a dead supervisor cannot permanently block
-  coverage, and add kernel-level tests for: internal marker present during a
-  busy watch action then removed by registration (role survives, coverage
-  continues), own-pause lifecycle across budget exit, and user pause still
-  preventing takeover and stopping the role safely.
-
-No source-guarantee weakening is involved; no finding contradicts the
-candidate's slot/guardian/boundary/dispatcher evidence, which stands.
+All three consequences from the previous REPAIR are fixed on the new HEAD and
+re-verified independently with live processes; the six new tests cover the
+required distinction (internal marker during busy watch then removed, user
+pause still preventing takeover and stopping the role safely); scope stays
+inside the four owned paths with no guarantee weakened. Deployment may
+proceed on candidate `c17193125b0e3b10fc9fc94d13cdba147f6735c6`.
