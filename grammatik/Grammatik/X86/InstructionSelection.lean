@@ -155,4 +155,166 @@ theorem wahlOk_erlaubt_mov (dst : Register) :
 theorem wahlOk_erlaubt_tot (dst : Register) :
     wahlOk false [.xorReg64 dst dst] = true := rfl
 
+/-! ## 6. Elimination rules: add-zero and self-move. -/
+
+/-- Executed `add dst src` with `src` holding zero keeps `dst`'s value. -/
+theorem schritt_addNull_wert (s : Zustand) (dst src : Register)
+    (h0 : s.register src = 0) :
+    (schritt ⟨.addReg64 dst src, 3⟩ s).map (fun s' => s'.register dst) =
+      some (s.register dst) := by
+  have h := schritt_addReg64 ⟨.addReg64 dst src, 3⟩ s dst src rfl rfl
+  rw [h]
+  have hz : (add64 (s.register dst) (s.register src)).1 = s.register dst := by
+    rw [h0]
+    exact add_null_ident _
+  simp [schrittRegister, regSet, hz]
+
+/-- Add-zero elimination preserves the value observation under dead flags. -/
+theorem waehleAddNull_tot (dst src : Register) :
+    waehleAddNull false dst src = [] := rfl
+
+/-- Add-zero is kept under live flags: the flags would change. -/
+theorem waehleAddNull_le (dst src : Register) :
+    waehleAddNull true dst src = [.addReg64 dst src] := rfl
+
+/-- Self-move elimination: `mov dst dst` is kept nowhere. -/
+theorem waehleSelbstMov_gleich (r : Register) :
+    waehleSelbstMov r r = [] := by
+  simp [waehleSelbstMov]
+
+/-- A move between two different registers is kept: the alias check fires. -/
+theorem waehleSelbstMov_fremd (dst src : Register) (h : dst ≠ src) :
+    waehleSelbstMov dst src = [.movReg64 dst src] := by
+  simp [waehleSelbstMov, h]
+
+/-- Executed self-move is a value identity through the canonical step. -/
+theorem schritt_selbstMov_ident (s : Zustand) (r : Register) :
+    (schritt ⟨.movReg64 r r, 3⟩ s).map (fun s' => s'.register r) =
+      some (s.register r) := by
+  have h := schritt_movReg64 ⟨.movReg64 r r, 3⟩ s r r rfl rfl
+  rw [h]
+  simp [schrittRegister, regSet]
+
+/-! ## 7. Source connection: a justified zero, never trusted metadata. -/
+
+/-- `add a b` with a COMPUTED literal zero (`alsLitOpt`, which producer and
+    checker both re-run) preserves the value against the real `eval`. -/
+theorem quelle_add_lit_null {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1))
+    (b : Expr D Γ Λ (.int l2 h2)) (σ₀ σ : World D) (ρ : Env D Γ)
+    (h : alsLitOpt b = some 0) :
+    (eval σ₀ (.add a b) σ ρ).n = (eval σ₀ a σ ρ).n := by
+  have hb : (eval σ₀ b σ ρ).n = 0 := eval_alsLit b 0 σ₀ σ ρ h
+  have hval : (eval σ₀ (.add a b) σ ρ).n =
+      (eval σ₀ a σ ρ).n + (eval σ₀ b σ ρ).n := rfl
+  rw [hval, hb, Int.add_zero]
+
+/-- Joint witness: the source fact on literals, the table-writing contract,
+    and the memory-changing run of the witness program, together. -/
+theorem quelle_add_lit_null_zeuge :
+    (eval (σ₀ := wWorld0)
+        (@Expr.add wD [] [] 3 3 0 0 (@Expr.lit wD [] [] 3)
+          (@Expr.lit wD [] [] 0))
+        wWorld0 Env.nil).n =
+      (eval (σ₀ := wWorld0) (@Expr.lit wD [] [] 3) wWorld0 Env.nil).n ∧
+    wV.schreibt () = true ∧
+    (match execBlock wO 5 wR wRest wWorld0 Env.nil with
+      | .ok σ' _ => (σ'.slots () 0 ()).n = 5
+      | _ => False) := by
+  refine ⟨quelle_add_lit_null _ _ _ _ _ rfl, wit_schreibt, wit_step⟩
+
+/-! ## 8. Invariant scope: an entry fact dies at the writer. -/
+
+/-- The example invariant: the witness slot still reads zero. -/
+def invBeispiel : Expr wD [] [] .bool :=
+  .eq (Expr.slot (D := wD) (Γ := []) (Λ := []) () ()
+    wIdx (fun _ hw => False.elim (List.not_mem_nil hw))) (.lit 0)
+
+/-- Entry holds: the slot reads zero at the start. -/
+theorem inv_am_eintritt :
+    wahr? (eval wWorld0 invBeispiel wWorld0 Env.nil) = true := by
+  decide
+
+/-- Site check: at any world whose slot reads five the invariant is false,
+    so an entry fact is unusable there without a fresh site guarantee. -/
+theorem inv_standort_falsch (σ' : World wD)
+    (hslot : (σ'.slots () 0 ()).n = 5) :
+    wahr? (eval σ' invBeispiel σ' Env.nil) = false := by
+  have hidx : (eval σ' wIdx σ' Env.nil).n = 0 := rfl
+  simp [invBeispiel, eval, wahr?, hidx, hslot]
+
+/-- The writer kills the entry fact on the actual witness run: after the
+    table-writing block the invariant is false, hence `waehleInv` with no
+    held stability refuses (`none`). -/
+theorem inv_nach_lauf_falsch :
+    match execBlock wO 5 wR wRest wWorld0 Env.nil with
+    | .ok σ' _ => wahr? (eval σ' invBeispiel σ' Env.nil) = false
+    | _ => True := by
+  cases h : execBlock wO 5 wR wRest wWorld0 Env.nil with
+  | ok σ' x =>
+    have hs : (σ'.slots () 0 ()).n = 5 := by
+      have hw := wit_step
+      rw [h] at hw
+      exact hw
+    exact inv_standort_falsch σ' hs
+  | zurueck σ' v => trivial
+  | grund σ' r => trivial
+  | leave h' σ' ρ => trivial
+  | next h' σ' ρ => trivial
+  | logik e => trivial
+  | hardware e => trivial
+
+/-- No held stability, no elimination: the ungated choice refuses. -/
+theorem waehleInv_verweigert (s : InvScope) :
+    waehleInv s false = none := by
+  cases s <;> rfl
+
+/-- Held stability eliminates, at every scope tag. -/
+theorem waehleInv_erlaubt (s : InvScope) :
+    waehleInv s true = some [] := by
+  cases s <;> rfl
+
+/- CUTS (what is proved above vs. what stays open):
+   PROVED: register-only selection functions (`waehleNull`, `waehleAddNull`,
+   `waehleSelbstMov`, `wahlOk`, `waehleInv`) over the pilot `Befehl`; value
+   facts (`xor_selbst_null`, `add_null_ident`); real byte comparison
+   (`null_laengen`: 10 vs 3, pinned `pin_xor_rax`/`pin_mov0_rax`, decode round
+   trips `runde_null_rax`); executed-step value observations
+   (`schritt_null_mov`, `schritt_null_xor`, `schritt_null_gleich`,
+   `schritt_addNull_wert`, `schritt_selbstMov_ident`); flag cost with a
+   diverging following branch (`xor_selbst_zf`, `zweig_weicht_ab`) and the
+   checker verdicts (`wahlOk_*`, `waehleNull_*`, `waehleAddNull_*`,
+   `waehleSelbstMov_*`); the source connection through a COMPUTED literal
+   zero (`quelle_add_lit_null` with joint table-writing, memory-changing
+   witness `quelle_add_lit_null_zeuge`); the entry-vs-site discipline
+   (`inv_am_eintritt`, `inv_standort_falsch`, `inv_nach_lauf_falsch` on the
+   actual witness run, `waehleInv_*` refusal without held stability).
+   OPEN, explicitly not claimed: multiply/shift strength at byte level (the
+   pilot has no `shl`/`imul` forms; the value facts stay source-level in
+   `StaerkeReduktion`); discharge of `InvScope` tags (needs the goal legs at
+   the use site); memory aliasing beyond register equality (no load/store
+   rule here); cost/budget transfer (shorter bytes change timing, unmodelled);
+   call-log (`Folge`) preservation; interleaving transfer under concurrency
+   (sequential `schritt`/`lauf` only); atomics, MMIO, narrow widths;
+   hardware correspondence (decoder/step are checked models, not silicon
+   proof); any claim beyond the 14 pilot forms.
+-/
+
+#print axioms xor_selbst_null
+#print axioms add_null_ident
+#print axioms null_laengen
+#print axioms runde_null_rax
+#print axioms schritt_null_gleich
+#print axioms xor_selbst_zf
+#print axioms zweig_weicht_ab
+#print axioms wahlOk_verweigert_xor_le
+#print axioms schritt_addNull_wert
+#print axioms schritt_selbstMov_ident
+#print axioms quelle_add_lit_null
+#print axioms quelle_add_lit_null_zeuge
+#print axioms inv_am_eintritt
+#print axioms inv_standort_falsch
+#print axioms inv_nach_lauf_falsch
+#print axioms waehleInv_verweigert
+
 end Gabbro.Grammatik.X86.Anweisungswahl
