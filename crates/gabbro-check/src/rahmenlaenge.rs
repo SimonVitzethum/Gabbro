@@ -23,6 +23,7 @@
 //! | `N464` | a `syscall` that takes a pointer at numbers (a buffer the kernel moves bytes through) points at BYTES (`u8`/`i8`) and carries a `requires x <= lenof(p)` over one of its integer parameters | `syscall.rs` (`buffer_bound`) |
 //! | `N506` | an `extern fn` that takes a pointer at numbers (a buffer the foreign code moves bytes through) points at BYTES (`u8`/`i8`) and carries a `requires x <= lenof(p)` over one of its integer parameters (lane 262, OFFEN O23) | `rahmenlaenge.rs` (`buffer_bound_extern`) |
 //! | `N573` | the variadic marker `...` of a parameter list stands only at an `extern fn`, behind at least one parameter, with integers and pointers behind it (C-free lane, C2) | `rahmenlaenge.rs` (`variadik`) |
+//! | `N574` | a foreign body (`extern`/`raw`/`prim`/`asm`, `syscall`) takes no parameter whose type carries a function pointer (C-free lane, C2, OFFEN O39) | `rahmenlaenge.rs` (`fremd_ohne_code`) |
 //!
 //! **What this reading is: strong, not `M115`'s.** `M115` refuses a precondition only where
 //! the argument's range EXCLUDES it and counts the rest as open obligations. `N463` refuses
@@ -163,13 +164,85 @@ pub fn caller_carries(rufer: &[LengthBound], y: &str, q: &str, strikt: bool) -> 
 /// (`N507` in `nulpfad.rs`).
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        if let ItemArt::Syscall(sc) = &item.art {
+            fremd_ohne_code(baum, modul, "syscall", &sc.name, &sc.parameter, absagen);
+            return;
+        }
         let ItemArt::Funktion(f) = &item.art else { return };
+        let fremd = matches!(f.klasse, Some(FnKlasse::Extern | FnKlasse::Raw | FnKlasse::Prim))
+            || matches!(f.rumpf, FnRumpf::Asm(_));
+        if fremd {
+            fremd_ohne_code(baum, modul, "foreign", &f.name, &f.parameter, absagen);
+        }
         variadik(baum, modul, f, absagen);
         if f.klasse != Some(FnKlasse::Extern) {
             return;
         }
         buffer_bound_extern(baum, modul, f, absagen);
     });
+}
+
+/// **`N574` -- a foreign body takes no CODE** (C-free lane, C2, 2026-09-30; OFFEN O39).
+///
+/// A function pointer handed to an `extern`/`raw`/`prim`/`asm` body or a `syscall` leaves every
+/// rule behind it: the foreign code may call it -- on this thread, so that the effects of the
+/// pointed-to function happen inside a callee whose `effects` do not name them, or on another
+/// thread the concurrency rules never see. Measured before this rule: `&arbeit` (which writes a
+/// `static mut`) passed to an `extern fn … effects { pure }` checked clean with one hint. The
+/// type of every parameter is held, through pointers, records, arrays and sums: none of it may
+/// be a `fn(…)`. No program in the corpus passes one (measured 2026-09-30). The generated
+/// drivers hand THEIR code to the program's binding by C designator, outside Gabbro source.
+fn fremd_ohne_code(
+    baum: &Programm,
+    modul: &str,
+    art: &str,
+    name: &Ident,
+    parameter: &[Parameter],
+    absagen: &mut Absagen,
+) {
+    fn traegt_code(t: &crate::typen::Typ, tiefe: u8) -> bool {
+        use crate::typen::Typ;
+        if tiefe == 0 {
+            return false;
+        }
+        match t {
+            Typ::FnPtr(_) => true,
+            Typ::Zeiger(z) => traegt_code(z, tiefe - 1),
+            Typ::Benannt { unter, .. } => traegt_code(unter, tiefe - 1),
+            Typ::Verbund(felder) => felder.iter().any(|(_, f)| traegt_code(f, tiefe - 1)),
+            Typ::Feld { element, .. } => traegt_code(element, tiefe - 1),
+            Typ::Summe { varianten, .. } => varianten
+                .iter()
+                .any(|(_, v)| v.as_ref().is_some_and(|v| traegt_code(v, tiefe - 1))),
+            _ => false,
+        }
+    }
+    let u = crate::umgebung::Umgebung::sammle(baum);
+    for p in parameter {
+        let mut syntaktisch = matches!(p.typ, TypExpr::FnZeiger(_));
+        if let TypExpr::Zeiger(z) = &p.typ {
+            syntaktisch |= matches!(z.ziel, TypExpr::FnZeiger(_));
+        }
+        if syntaktisch || traegt_code(&u.typ_von_ausdruck_decl(modul, &p.typ), 8) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N574",
+                    p.name.span,
+                    format!(
+                        "the {art} body `{}` takes `{}`, whose type carries a function pointer -- \
+                         what foreign code does with Gabbro code is outside every effect and \
+                         concurrency rule",
+                        name.text, p.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "the foreign code may call it on this thread (effects its declaration does \
+                     not name) or on another (a thread the concurrency rules never see); a \
+                     thread start is a checked form, never a code address handed out",
+                ),
+            );
+        }
+    }
 }
 
 /// **`N573` -- the variadic marker `...` of a parameter list** (C-free lane, C2, 2026-09-30).

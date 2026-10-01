@@ -1,0 +1,35 @@
+-- erwartet: N574
+-- **A foreign body takes no Gabbro code.**
+--
+-- `arbeit` writes a `static mut`; `starte` is declared `effects { pure }` and takes a pointer to
+-- it. What the foreign code does with that pointer is outside every rule: it may call it here
+-- (the write happens inside a callee whose `effects` do not name it) or on a new thread (a race
+-- the concurrency rules never see). Until 2026-09-30 this checked clean with one hint; refused
+-- by name since (C-free lane, C2, OFFEN O39).
+module gift::fremder_rumpf_nimmt_code {
+
+static mut ZAEHLER : u64 in 0 .. 100 = 0;
+
+fn arbeit(d : u64) -> i32 in 0 .. 1
+    effects { reads ZAEHLER, writes ZAEHLER }
+    costs <= 16 ops
+{
+    if ZAEHLER < 100 {
+        ZAEHLER = ZAEHLER + 1;
+    }
+    return 0;
+}
+
+extern fn starte(f : fn(d : u64) -> i32 in 0 .. 1 effects { reads ZAEHLER, writes ZAEHLER } costs <= 16 ops, d : u64) -> u32
+    effects { pure }
+    costs <= 64 ops;
+
+pub fn main() -> u32 in 0 .. 1
+    effects { pure }
+    costs <= 200 ops
+{
+    let r = starte(&arbeit, 0);
+    return 0;
+}
+
+}

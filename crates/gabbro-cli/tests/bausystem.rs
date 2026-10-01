@@ -420,33 +420,33 @@ fn die_modulworte_des_manifests() {
         kmod_lauf(marke, unit, KMOD_EINHEIT, kmodzeile)
     };
     let unit = "unit gabbro_probe module laden entladen";
-    let (_, fehler, code) = lauf_mit("alt", "kmod laufzeit/kmodul /lib/modules/x/build\n", unit);
+    let (_, fehler, code) = lauf_mit("mw_alt", "kmod laufzeit/kmodul /lib/modules/x/build\n", unit);
     assert_ne!(code, 0, "the old two-path form is refused");
     assert!(fehler.contains("written by the build"), "with the reason:\n{fehler}");
     let (_, fehler, code) =
-        lauf_mit("sym", "kmod /lib/modules/x/build init-module cleanup_module\n", unit);
+        lauf_mit("mw_sym", "kmod /lib/modules/x/build init-module cleanup_module\n", unit);
     assert_ne!(code, 0, "a symbol that is no C name is refused");
     assert!(fehler.contains("no C symbol"), "{fehler}");
-    let (_, fehler, code) = lauf_mit("gleich", "kmod /lib/modules/x/build a a\n", unit);
+    let (_, fehler, code) = lauf_mit("mw_gleich", "kmod /lib/modules/x/build a a\n", unit);
     assert_ne!(code, 0, "one symbol for both entries is refused");
     assert!(fehler.contains("both `a`"), "{fehler}");
     let k = "kmod /lib/modules/x/build init_module cleanup_module\n";
-    let (_, fehler, code) = lauf_mit("vorrat", &format!("{k}provision 5000\n"), unit);
+    let (_, fehler, code) = lauf_mit("mw_vorrat", &format!("{k}provision 5000\n"), unit);
     assert_ne!(code, 0, "a provision that is no multiple of 4096 is refused");
     assert!(fehler.contains("multiple of 4096"), "{fehler}");
-    let (_, fehler, code) = lauf_mit("notiz", &format!("{k}note .modinfo license=\"x\"\n"), unit);
+    let (_, fehler, code) = lauf_mit("mw_notiz", &format!("{k}note .modinfo license=\"x\"\n"), unit);
     assert_ne!(code, 0, "a note with a quote is refused");
     assert!(fehler.contains("printable ASCII"), "{fehler}");
-    let (_, fehler, code) = lauf_mit("abschnitt", &format!("{k}note mod,info license=x\n"), unit);
+    let (_, fehler, code) = lauf_mit("mw_abschnitt", &format!("{k}note mod,info license=x\n"), unit);
     assert_ne!(code, 0, "a section name with a comma is refused");
     assert!(fehler.contains("no section name"), "{fehler}");
     let (aus, fehler, code) = lauf_mit(
-        "gut",
+        "mw_gut",
         &format!("{k}provision 8192\nnote .modinfo license=Dual MIT/GPL\n"),
         unit,
     );
     assert_eq!(code, 0, "the full set of words is read:\n{aus}\n{fehler}");
-    let (_, fehler, code) = lauf_mit("ohne_modul", "provision 8192\n", "unit gabbro_probe object");
+    let (_, fehler, code) = lauf_mit("mw_ohne_modul", "provision 8192\n", "unit gabbro_probe object");
     assert_ne!(code, 0, "a provision without a module product is refused");
     assert!(fehler.contains("only the module product reads them"), "{fehler}");
 }

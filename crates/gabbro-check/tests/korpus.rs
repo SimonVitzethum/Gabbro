@@ -559,6 +559,11 @@ const BENANNT: &[&str] = &[
     // same reason `M126` is two entries up: in the full unit the names
     // resolve, in the excerpt they do not.
     "N004", "N067",
+    // 2026-09-30, C-free lane (C2, OFFEN O39): `N574` -- a foreign body takes no function
+    // pointer. `dokumente/FRAGMENTE.md`'s excerpt of Caprock's IPC fast path hands the
+    // scheduler vtable `SchedOps` to `extern fn block_current`/`switch_to`/`unblock`: foreign
+    // code holding Gabbro code, the very shape the rule refuses. CORRECT here.
+    "N574",
 ];
 
 #[test]

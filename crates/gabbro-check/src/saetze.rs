@@ -4508,6 +4508,30 @@ pub const PHASEN: &[Satz] = &[
                      (`buffer_bound`); dokumente/SYNTAX.md §12.1",
     },
     Satz {
+        name: "fremd.ohne_code",
+        kennungen: &["N574"],
+        aussage: "A foreign body -- an `extern`, `raw`, `prim` or `= asm` function, or a \
+                  `syscall` -- takes no parameter whose type carries a function pointer, \
+                  looked for through pointers, records, arrays and sums (`N574`). What the \
+                  foreign code does with Gabbro code is outside every rule: it may call it on \
+                  this thread (effects its declaration does not name) or on another (a thread \
+                  the concurrency rules never see).",
+        vorbehalt: "A NUMBER the foreign code turns into a code address is not a function \
+                    pointer type and is not held here: the kernel-module binding's thread \
+                    start takes the root's wrapper as a `u64` from the generated driver \
+                    (OFFEN O39, open). The generated drivers hand their own code to the \
+                    program's binding by C designator, outside Gabbro source.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1392 (`&f` of a writing function into a `pure` extern -- \
+                      clean with one hint before the rule), `1393` (a record of function \
+                      pointers behind a pointer); measured over every `.gab` of `beispiele/`, \
+                      `messung/`, `bibliothek/`, `laufzeit/`, `programmlogik/`: the only other \
+                      site is the excerpt `messung/fragmente/F03.gab` (a scheduler vtable \
+                      handed to `extern fn block_current`/`switch_to`, 6 sites) -- the shape \
+                      itself; `tests/rahmenlaenge.rs` (`n574_*`).",
+        fundstelle: "crates/gabbro-check/src/rahmenlaenge.rs (`fremd_ohne_code`)",
+    },
+    Satz {
         name: "extern.variadik",
         kennungen: &["N573"],
         aussage: "The marker `...` in a parameter list says that the foreign C symbol is \

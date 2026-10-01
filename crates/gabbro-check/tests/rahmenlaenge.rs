@@ -390,3 +390,47 @@ fn n573_marker_mit_fehlerkanal() {
         "N573",
     );
 }
+
+// ---- N574: a foreign body takes no code (C-free lane, C2, OFFEN O39) -------------------
+
+#[test]
+fn n574_extern_mit_funktionszeiger() {
+    faellt(
+        &["extern fn starte(f : fn(d : u64) -> u32 in 0 .. 1 effects { pure } costs <= 8 ops, d : u64) -> u32
+    effects { pure }
+    costs <= 64 ops;"],
+        "N574",
+    );
+}
+
+#[test]
+fn n574_verbund_mit_funktionszeiger_hinter_einem_zeiger() {
+    faellt(
+        &[
+            "type Ops = { weiter : fn(t : u32) -> u32 in 0 .. 1 effects { pure } costs <= 8 ops, };",
+            "extern fn plane(d : ptr<normal, r> Ops, t : u32) -> u32 effects { reads d } costs <= 16 ops;",
+        ],
+        "N574",
+    );
+}
+
+#[test]
+fn n574_gabbro_funktion_mit_funktionszeiger_ist_sauber() {
+    // The positive twin: a Gabbro body that takes a function pointer is checked like any
+    // indirect call (the type carries the contract) -- the rule is about FOREIGN code only.
+    // (This scaffold draws other codes about the indirect call; `N574` is not among them.)
+    let c = codes(&["fn rufe(f : fn(t : u32) -> u32 in 0 .. 1 effects { pure } costs <= 8 ops) -> u32 in 0 .. 1
+    effects { pure }
+    costs <= 16 ops
+{
+    let r = f(1);
+    return r;
+}"]);
+    assert!(!c.iter().any(|x| x == "N574"), "a Gabbro body may take code: {c:?}");
+}
+
+#[test]
+fn n574_extern_ohne_code_ist_sauber() {
+    sauber(&["type Paar = { a : u64, b : u64, };",
+        "extern fn nimm(p : ptr<normal, r> Paar) -> u64 effects { reads p } costs <= 8 ops;"]);
+}

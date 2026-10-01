@@ -1,0 +1,17 @@
+-- erwartet: N574
+-- **The same hole one level down: a record of function pointers behind a pointer.**
+--
+-- A table of operations (`messung/fragmente/F03.gab`'s `SchedOps`, the shape of a `dyn` vtable)
+-- handed to foreign code is code handed to foreign code. The rule looks through pointers,
+-- records, arrays and sums (C-free lane, C2, OFFEN O39).
+module gift::fremder_rumpf_nimmt_eine_tabelle_von_code {
+
+type Ops = {
+    weiter : fn(t : u32) -> u32 in 0 .. 1 effects { pure } costs <= 8 ops,
+};
+
+extern fn plane(d : ptr<normal, r> Ops, t : u32) -> u32
+    effects { reads d }
+    costs <= 16 ops;
+
+}
