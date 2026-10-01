@@ -104,3 +104,15 @@ that contract and the canonical types. The checked Lean decoder will remain
 the trust path; Rust remains unwired. At most 20 active Contributor model
 processes, including review and repair sessions. Independent reviews do not
 replace the later two complete-goal verdicts.
+
+## User steering: Lean first
+
+Simon requested complete Lean modelling before further Rust implementation,
+including the -O3-like package, invariant-derived extra optimisations and
+complete Gabbro-to-binary validation. See `LEAN-ZUERST.md` for owned modules
+and dependency order. Lane 280 is stopped with its unmerged draft preserved;
+272/279 continue, and 282–288 are Lean-only owners. The integrated foundation
+passed the full Rust suite (1468/0/1 ignored), full Lean (368 jobs), standard
+goal axiom check, and emission regression (338/338, 53 execution comparisons;
+ASan unavailable and not counted as passed). Those checks establish the
+foundation regression state, not a complete native validation chain.

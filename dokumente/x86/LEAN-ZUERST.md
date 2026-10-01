@@ -1,0 +1,54 @@
+# Lean first — complete source-to-binary model and optimisation
+
+Simon, 2026-10-01: model everything in Lean with agents first. The final
+objective remains generic full Gabbro source-to-actual-binary translation
+validation, with the -O3-like starter package and additional transformations
+justified by Gabbro guarantees. No program-specific acceptance rules.
+
+The unmerged Rust codec lane 280 is stopped; its draft and logs are preserved.
+No further Rust/native backend work is scheduled until the relevant Lean
+models and their generic proof interfaces are reviewed. Existing unwired Rust
+vocabulary stays as recorded historical groundwork; nothing uses it to admit
+a native binary.
+
+Active Lean owners:
+
+| Lane | Module | Concrete first deliverable |
+|---|---|---|
+| 272 | `X86/Ausfuehrung.lean` | Real canonical pilot instruction state transitions |
+| 279 | `X86/Codec.lean` | Actual byte decode/encode with generic round-trip and consumption |
+| 282 | `X86/Ganzzahl.lean` | Remaining integer arithmetic/division/shift families |
+| 283 | `X86/Bild.lean` | Decided file-to-virtual mapping and actual loaded byte memory |
+| 284 | `X86/TSO.lean` | Executable FIFO buffers/forwarding/flush over canonical memory |
+| 285 | `X86/FlagBeweis.lean` | Mathematical signed overflow and carry characterisation |
+| 286 | `X86/Gleitprofil.lean` | Width/control checks, IEEE bit facts and explicit f32 gap evidence |
+| 287 | `X86/IR.lean` | Single typed IR and actual source-linked lowering fragment |
+| 288 | `X86/InvariantenOpt.lean` | Source-semantic rewrite proofs using correctly scoped invariants |
+
+These bounded first tasks do not model or validate the full language yet.
+Next dependent work closes aligned atomic/LOCK accesses and TSO-to-W/GX;
+image decoding/control targets/relocations and ABI/entries; source-computed
+full units/duties; runtime/templates; target/source budget and machine-work
+transfer; and optimiser families. Constant/copy propagation, DCE/CSE,
+inlining, allocation/peepholes, LICM, unrolling and SIMD each require a
+generic checked rule and explicit preservation of faults, FP state, source
+call logs, memory observations, progress and all claimed bounds.
+
+Additional optimisation opportunities include proved range-check removal,
+strength reduction, ownership-based alias separation, stable protected loads
+and private-memory SIMD. Range/ownership/invariant evidence is source-computed
+and proved at the actual location. No assumption that an invariant holds
+inside a running writer or arbitrary held section; no inferred ensures; no
+local-only token argument for shared memory. Pending correspondence never
+admits an optimisation.
+
+The closing validator must bind the entire source-computed unit to decoded
+final bytes, loaded mapping, entries and every reachable executed body. A
+round-trip, a generic helper or a schematic simulation premise closes no
+source-to-binary chain. OS/runtime/binding logic is user logic; only silicon,
+device behaviour and named timing bounds belong to hardware assumptions.
+
+At most 20 active Contributor model processes, including reviewers. Private
+clones/caches, checked isolation, one queued Lean build globally, root review
+before integration, standard goal axioms. Every uncovered form is explicit;
+no guarantee is weakened to turn a build green.
