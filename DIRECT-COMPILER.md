@@ -141,7 +141,7 @@ Last ledger refresh: **2026-10-01 10:31 UTC**. This is an operational snapshot, 
 | 311 | Range-justified integer strength reduction | Merged after review/checks | 315: Merged after review/checks | [report](messung/muse/MUSE-REPORT-311.md) |
 | 312 | Checked target regions and allocation ceiling | Merged after review/checks | 316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-312.md) |
 | 317 | Single pilot instruction access extraction | Merged after review/checks | 318: Merged after review/checks | [report](messung/muse/MUSE-REPORT-317.md) |
-| 319 | Byte-memory fetch decode and actual instruction step | Merged after review/checks | 320: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-319.md) |
+| 319 | Byte-memory fetch decode and actual instruction step | Merged after review/checks | 320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-319.md) |
 | 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-323.md) |
 | 325 | High runtime performance and feasible hardware-profile design revision | Merged after review/checks | 326: Merged after review/checks | [report](messung/muse/MUSE-REPORT-325.md) |
 | 327 | Safety-first broad practical-performance design prioritisation | Committed candidate; review/integration pending | 328: Agent working | [task](lanes/327.md) |
@@ -261,6 +261,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `6c15db3a`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **319**, Byte-memory fetch decode and actual instruction step, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-319.md). <!-- x86-merged:319 -->
 - 2026-10-01: checked master `82e7efb5` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:82e7efb53e7793269d110a320f130e0119f123a8 -->
+- 2026-10-01: lane **320**, Independent review of 319, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-320.md). <!-- x86-merged:320 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
