@@ -6,9 +6,63 @@ only: `MUSE-REPORT-555.md` (this file). No Lean, Rust, guardian, or docs
 source touched; working tree was clean before and after (`git status --short`
 empty, `git diff --check` clean).
 
-CANDIDATE: 554 c910e94b42d9b06317a406aca0673466e759883a
+CANDIDATE: 554 9c8c9ceeac957e1b76b7f931c7e5564dc17fb49b
 
-VERDICT: REPAIR
+VERDICT: ACCEPT
+
+## Round 4: re-review of repaired candidate — all findings closed
+
+Re-reviewed the NEW pinned HEAD (`9c8c9cee`, base `2185a17f`, 5 files incl.
+`instrumente/pruefe-zahlen.py`, `clean: true`). The author repaired all three
+round-3 defects; each repair verified against the real definitions below.
+Method: full read of new README (150 lines), PROJECT-STATUS (75 lines),
+PATCH hunks, BUILD-EVIDENCE (11 entries); regex checks of every guardian
+pattern against the candidate texts; tree-level corroboration of the chain
+scope; `py_compile` of the edited guardian. No Lean/cargo builds run
+(review-only lane); heavy live instruments not re-run (see caveats).
+
+**1. Intro now states the boundary honestly.** Duty is `NutzerPflichtA`
+(bodies at every budget, every shared-atomic-read value, plus start duties);
+OS-as-user-logic is "the direction", while "loader, runtime thread creation
+and foreign behaviour are still named assumed premises (c)/(d), their
+correspondence unproved". Matches `Spec.lean` header 18–21 (duty),
+868–885 ((c) foreign code), 896–898 (loader), 934ff/949 (thread creation),
+70–80 (unproved correspondence). The `LogikPflicht` misattribution and the
+"never assumed / checked implementations" overclaims are gone.
+
+**2. Instrument sentence now truthful, guardian edit minimal and safe.**
+README cell: "**75 of 89 instruments carry the four static requirements**
+(work quantity is measured per run)". PATCH changes exactly the two
+README-side regexes (`pruefe-zahlen.py` hunk @@ -445,14 +445,14); commands,
+tool-side `vier STATISCHEN` patterns, descriptions, figures (75/89) and
+entry structure intact; edited file compiles; new patterns hit the new text
+(75, 89); legacy "all five" needed no retention — the only other occurrences
+are dated history in `messung/` files no entry reads, and no other
+`pruefe-zahlen.py` pattern depends on that wording.
+
+**3. Printed-line table now describes only printed output.** The
+`schlusssatz`/`kette_104/108`/K124 row is deleted from README; C evidence
+sits at `dokumente/PROJECT-STATUS.md#translation-chain` (anchor verified).
+Its content is tree-corroborated: CHAIN-INSTANCE markers for 104, 108;
+CHAIN-GENERIC for 130, 69, 73 (2 + 3 = 5 instances); population
+`beispiele/*.gab` = 157 files; concurrent-124 record exists
+(`Schlusssatz124`/`Korpus124` stage (b) per §8 register).
+
+**Kept from before:** `## 5. Proved and not proved` retained (all five
+external §5 references still resolve); 150 lines, in band; every local link
+resolves post-merge (the two PROJECT-STATUS misses are the new file itself);
+only the 5 owned files touched; AGENTS diff still one reference line.
+
+**Caveats (honest, non-blocking):** the "5 of 157 CLOSED on 2026-10-01"
+figure is the author's dated live `zaehle-kette.py --lean` figure —
+structurally corroborated (5 markers, 157 population) but not independently
+re-measured here; the merger re-measures all figures at merge time per
+policy. BUILD-EVIDENCE lists no explicit command lines for the claimed
+`pruefe-todo`/`pruefe-zahlen`/`zaehle-kette` re-runs; my independent
+pattern-level checks (all 17 `readme_muster` + all 5+2 README `zahlen`
+patterns hit with the recorded values) cover the README side of those
+claims. Pre-existing out-of-scope baseline findings (tool-side mutation
+entry, TODO/KENNZAHLEN staleness) unchanged and still not this lane's.
 
 ## Round 3: coordinator factual questions — three real defects, precise repairs
 
