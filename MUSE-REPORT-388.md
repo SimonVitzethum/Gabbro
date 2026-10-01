@@ -1,15 +1,15 @@
 # MUSE-REPORT-388: Independent exact-candidate C6 review of 350 AtomicPayload
-# (re-review of repaired candidate)
+# (second re-review of repaired candidate)
 
-Lane 388, branch `muse/388`. Owns ONLY this report. Previous verdict (on
-`67dd9fd1e6e00d9435a61a868308ef0f5192b156`) is SUPERSEDED by this re-review.
+Lane 388, branch `muse/388`. Owns ONLY this report. Both previous verdicts
+(on `67dd9fd1…` and `720c6d92…`) are SUPERSEDED by this re-review.
 New pinned snapshot (`.tmp/review/SNAPSHOT.json`): author 350,
-HEAD `720c6d92f786dc530e90ca5f15a0be037c8a680b`, files
+HEAD `2edf3710a45dda5b1289bf94d18c5effb621e730`, files
 `MUSE-REPORT-350.md`, `grammatik/Grammatik.lean` (additive import),
 `grammatik/Grammatik/X86/AtomicPayload.lean` (354 lines, namespace
-`Gabbro.Grammatik.X86.AtomicPayload`). Neither hash is in this clone (base
-drift: my clone ends at `AccessList`, snapshot base ends at `Byteschritt`);
-review was done against the exact new snapshot files under
+`Gabbro.Grammatik.X86.AtomicPayload`). No candidate hash is in this clone
+(base drift: my clone ends at `AccessList`, snapshot base ends at
+`Byteschritt`); review was done against the exact new snapshot files under
 `.tmp/review/author-350`, staged privately, then fully restored. Working tree
 is clean except this report.
 
@@ -84,15 +84,41 @@ differs; report §"Repair attempt" documents an integration-gate crash:
   lane through the queued path; per HARD RULES this is reported, not bypassed
   (no direct `lake`/`lean` calls made).
 
+## Second re-review of the NEWEST pinned candidate (2edf3710)
+
+Author's delta since `720c6d92`: report-only again (MUSE-REPORT-350.md
+182 → 246 lines; Lean file sha256 `b6ebdbcb…` IDENTICAL to the last review).
+The new report §"Second gate failure" bisects the crash to the `#print axioms`
+step (~25 scratch probes, all deleted afterwards per the report). Verified:
+
+- NEW `PATCH.diff` Lean section byte-identical to NEW snapshot file (`diff`
+  clean); only the 3 owned files in the diff; commit chain per BUILD-EVIDENCE
+  tail is `2edf3710` ("bisect the gate crash…") on `720c6d92`, report-only.
+- Independent triangulation in THIS clone (slot partially recovered):
+  (a) verbatim NEW snapshot bytes staged → `./lean-probe` exit 134
+  (`failed to create thread`); (b) untouched master `Regionen.lean` →
+  exit 0 with normal axiom output — crash is NOT machine-wide any more, it
+  follows this heavy module; (c) verbatim bytes with ONLY the 8 `#print axioms`
+  lines stripped (`grep -v`, 0 remaining) → **exit 0, 0 errors**.
+  This reproduces the author's decisive probe exactly: every definition,
+  proof, decide-evaluation, `pD` fixture and run witness elaborates green;
+  only `#print axioms` over freshly elaborated constants in this heavy import
+  closure crashes under load. No statement- or proof-level repair exists for
+  this failure mode; HARD RULES 6 mandates the prints, so they stay.
+- All prior logical findings carry over unchanged (same bytes as the accepted
+  state, modulo the two still-present minor doc notes). No new defect, no
+  weakened claim, no scope creep in the delta.
+
 ## Verdict
 
-CANDIDATE: 350 720c6d92f786dc530e90ca5f15a0be037c8a680b
+CANDIDATE: 350 2edf3710a45dda5b1289bf94d18c5effb621e730
 VERDICT: ACCEPT
 
 ACCEPT covers only the precise bounded delivered obligations (decided
 footprint-membership check + admission, contract/payload refusals, duty-side
 audit with joint non-degenerate witnesses), not the full compiler/validator.
-Lean content is byte-identical to the previously accepted state; the only
-change is the author's report (gate-failure evidence). Re-gating after queue
-recovery is infrastructure business, not a new logical review. Changed
-author hash -> fresh review.
+Lean content is byte-identical to the previously accepted state; both deltas
+since are report-only (gate-failure evidence + print-step bisection, the
+latter independently reproduced here). Re-gating after load recovery is
+infrastructure business, not a new logical review. Changed author hash ->
+fresh review.
