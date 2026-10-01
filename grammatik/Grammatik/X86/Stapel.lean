@@ -516,13 +516,158 @@ theorem sichereListe_ladeListe_rundreise (m m' : Speicher) (r : Rahmen)
       have hlen : (v :: ws).length = ws.length + 1 := rfl
       simp only [hlen, ladeListe, hhead, ihtail]
 
+/-! ## 7. Joint witness: a nonzero frame save that reads back. -/
+
+/-- Witness frame: base `0x2000`, four word slots. -/
+def rahmenZeuge : Rahmen := { basis := 0x2000, tiefe := 32 }
+
+/-- Witness memory: zeroed bytes, fully readable and writable. -/
+def speicherZeuge : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0
+    lesbar := fun _ => true
+    schreibbar := fun _ => true
+    ausfuehrbar := fun _ => false }
+
+/-- The witness frame is checked: nonzero depth, a multiple of 16, inside
+    64 bits, with a 16-aligned base. -/
+theorem rahmenZeuge_ok : rahmenOk rahmenZeuge = true := by
+  decide
+
+/-- The witness top is 16-aligned at the call boundary. -/
+theorem rahmenZeuge_ausgerichtet :
+    ausgerichtet16 rahmenZeuge.spitzeWort = true := by
+  decide
+
+/-- The witness frame holds four slots. -/
+theorem rahmenZeuge_schlitze : rahmenZeuge.schlitzZahl = 4 := by
+  decide
+
+/-- Witness slot 1 is readable for eight bytes. -/
+theorem zeuge_lesbar8 :
+    lesbar8 speicherZeuge (rahmenZeuge.schlitzAddr 1) = true := by
+  decide
+
+/-- Witness slot 1 is writable for eight bytes. -/
+theorem zeuge_schreibbar8 :
+    schreibbar8 speicherZeuge (rahmenZeuge.schlitzAddr 1) = true := by
+  decide
+
+/-- JOINT WITNESS: a nonzero frame save reads back and observably changes
+    memory (zero becomes `42` at slot 1). -/
+theorem rahmen_schreibLese_zeuge :
+    ∃ (m m' : Speicher) (r : Rahmen) (idx : Nat) (v : Wort),
+      v ≠ 0 ∧ r.schlitzZahl = 4 ∧ sichereWort m r idx v = some m' ∧
+        ladeWort m' r idx = some v ∧
+        m.bytes (r.schlitzAddr idx) ≠ m'.bytes (r.schlitzAddr idx) := by
+  have hwr : sichereWort speicherZeuge rahmenZeuge 1 42 =
+      some { speicherZeuge with
+        bytes := writeBytes speicherZeuge (rahmenZeuge.schlitzAddr 1) 42 } := by
+    unfold sichereWort
+    rw [if_pos (by decide : 1 < rahmenZeuge.schlitzZahl)]
+    unfold write64
+    rw [if_pos zeuge_schreibbar8]
+  refine ⟨speicherZeuge, _, rahmenZeuge, 1, 42, by decide,
+    rahmenZeuge_schlitze, hwr, ?_, ?_⟩
+  · exact sichere_lade_rundreise _ _ _ _ _ (by decide) hwr zeuge_lesbar8
+  · have hhit := writeBytesN_hit speicherZeuge (rahmenZeuge.schlitzAddr 1)
+      42 8 0 (by decide) (by decide)
+    rw [addrOff_null] at hhit
+    show BitVec.ofNat 8 0 ≠
+      writeBytes speicherZeuge (rahmenZeuge.schlitzAddr 1) 42
+        (rahmenZeuge.schlitzAddr 1)
+    unfold writeBytes
+    rw [hhit]
+    decide
+
+/-- Refusal probe: slot 4 of the four-slot witness saves nothing. -/
+theorem zeuge_ausserhalb_verweigert (v : Wort) :
+    sichereWort speicherZeuge rahmenZeuge 4 v = none :=
+  sichereWort_ausserhalb _ _ _ _ (by decide)
+
+/-- Refusal probe: an unaligned base is refused its frame check. -/
+theorem rahmen_unaligned_verweigert :
+    rahmenOk { basis := 0x2001, tiefe := 32 } = false := by
+  decide
+
+/-- List probe: two words save and load back through the witness frame,
+    through the generic region round-trip. -/
+theorem zeuge_liste_probe (m' : Speicher)
+    (hwr : sichereListe speicherZeuge rahmenZeuge 0 [11, 22] = some m') :
+    ladeListe m' rahmenZeuge 0 2 = some [11, 22] := by
+  have hle : rahmenZeuge.spitzeNat ≤ 2 ^ 64 := by decide
+  have hfit : ∀ j, j < [11, 22].length → 0 + j < rahmenZeuge.schlitzZahl := by
+    intro j hj
+    simp only [List.length_cons, List.length_nil] at hj
+    rw [rahmenZeuge_schlitze]
+    omega
+  have hrd : ∀ j, j < [11, 22].length →
+      lesbar8 speicherZeuge (rahmenZeuge.schlitzAddr (0 + j)) = true := by
+    intro j hj
+    simp only [List.length_cons, List.length_nil] at hj
+    by_cases h0 : j = 0
+    · subst h0
+      decide
+    · have h1 : j = 1 := by omega
+      subst h1
+      decide
+  exact sichereListe_ladeListe_rundreise _ _ _ _ _ hle hfit hwr hrd
+
 /- CUTS:
-    - No instruction semantics, decoder, image mapping, TSO bridge, source
-      correspondence, cost transfer or final-image acceptance is proved here.
+    - No instruction execution or decoder: `Decodiert.laenge`, `schritt`,
+      decoded boundaries, encoding round-trip and patched-site re-decoding
+      are never assumed and never proved here; helpers are consumed by later
+      execution/IR/ABI proof.
+    - No TSO bridge: every fact is sequential over one canonical `Speicher`;
+      per-access granularity, tearing, store buffers, forwarding, coherence
+      and the GX refinement stay with the TSO-bridge work.
+    - No source correspondence: nothing here claims the slots carry any
+      source value, contract or duty; no int-to-pointer conversion enters
+      (addresses are `BitVec.ofNat` of checked Nats, never of source ints).
+    - No assumed correct caller: every save/load states its bound and
+      permission checks and refuses loudly (`none`) instead of assuming
+      the caller laid the frame out right.
     - Callee-save/entry contracts and external ABI byte correspondence are
-      OPEN: this file states checked memory obligations only.
+      OPEN: this file states checked memory obligations only (slot layout,
+      disjointness, carriage round-trips); which registers survive a call
+      and what bytes a foreign stub needs are not proved here.
+    - No image mapping, loader, cost transfer or final-image acceptance.
     - No Linux-specific mechanism: no stack sizes, guard pages, clone flags
       or syscall numbers appear here.
 -/
+
+#print axioms schlitzNat_schranke
+#print axioms schlitz_toNat
+#print axioms spitze_ausgerichtet
+#print axioms sichere_lade_rundreise
+#print axioms sichereWort_ausserhalb
+#print axioms sichereWort_verweigert
+#print axioms sichereWort_erhaelt_berechtigungen
+#print axioms sichereWort_rahmen
+#print axioms ladeWort_rahmen
+#print axioms schlitz_disjunkt
+#print axioms rahmen_getrennt_von_intervallen
+#print axioms bereich_getrennt
+#print axioms spill_gerettet_getrennt
+#print axioms gerettet_stapel_getrennt
+#print axioms argReg_sonde_rdi
+#print axioms argReg_sonde_r9
+#print axioms argReg_verschieden
+#print axioms argReg_ab_sechs
+#print axioms argStapel_schranke
+#print axioms sichere_lade_ergebnis_rundreise
+#print axioms ergebnis_bleibt_vor_rahmen
+#print axioms sichereListe_leer
+#print axioms ladeListe_null
+#print axioms sichereListe_rahmen_fremd
+#print axioms sichereListe_ladeListe_rundreise
+#print axioms rahmenZeuge_ok
+#print axioms rahmenZeuge_ausgerichtet
+#print axioms rahmenZeuge_schlitze
+#print axioms zeuge_lesbar8
+#print axioms zeuge_schreibbar8
+#print axioms rahmen_schreibLese_zeuge
+#print axioms zeuge_ausserhalb_verweigert
+#print axioms rahmen_unaligned_verweigert
+#print axioms zeuge_liste_probe
 
 end Gabbro.Grammatik.X86
