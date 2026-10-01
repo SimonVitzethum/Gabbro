@@ -198,7 +198,7 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 406 | Adversarial implementation audit: DECODE-BOUNDARY | Committed candidate; review/integration pending | 486: Agent working | [task](lanes/406.md) |
 | 407 | Adversarial implementation audit: FINAL-IMAGE | Merged after review/checks | 487: Merged after review/checks | [report](messung/muse/MUSE-REPORT-407.md) |
 | 408 | Adversarial implementation audit: WEAK-MEMORY | Merged after review/checks | 488: Merged after review/checks | [report](messung/muse/MUSE-REPORT-408.md) |
-| 409 | Adversarial implementation audit: INVARIANT-LIFETIME | Committed candidate; review/integration pending | 489: Committed candidate; review/integration pending | [task](lanes/409.md) |
+| 409 | Adversarial implementation audit: INVARIANT-LIFETIME | Merged after review/checks | 489: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-409.md) |
 | 410 | Adversarial implementation audit: CALL-ABI | Committed candidate; review/integration pending | 490: Committed candidate; review/integration pending | [task](lanes/410.md) |
 | 411 | Adversarial implementation audit: DYNAMIC-REGIONS | Committed candidate; review/integration pending | 491: Committed candidate; review/integration pending | [task](lanes/411.md) |
 | 412 | Adversarial implementation audit: FLOAT-SIMD | Committed candidate; review/integration pending | 492: Committed candidate; review/integration pending | [task](lanes/412.md) |
@@ -437,6 +437,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **408**, Adversarial implementation audit: WEAK-MEMORY, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-408.md). <!-- x86-merged:408 -->
 - 2026-10-01: checked master `4af39ea6` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:4af39ea6dcd2badf345a669f5b8d4a5119644356 -->
 - 2026-10-01: lane **488**, Independent exact-candidate review of 408, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-488.md). <!-- x86-merged:488 -->
+- 2026-10-01: lane **409**, Adversarial implementation audit: INVARIANT-LIFETIME, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-409.md). <!-- x86-merged:409 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
