@@ -14,7 +14,7 @@ Diff against its own base is exactly three files, purely additive:
 No existing file touched otherwise; no executor, decoder, IR, source,
 checker, emitter, or friend-reserved optimiser change.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 ## What was checked
 
