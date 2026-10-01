@@ -150,8 +150,8 @@ Last ledger refresh: **2026-10-01 11:26 UTC**. This is an operational snapshot, 
 | 329 | Muse organisation and dependency ownership plan | Merged after review/checks | 332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-329.md) |
 | 330 | Muse merge-owner for independently approved safety-first design | Merged after review/checks | 333: Merged after review/checks | [report](messung/muse/MUSE-REPORT-330.md) |
 | 331 | Complete Lean optimiser specification and friend handoff | Merged after review/checks | 334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-331.md) |
-| 335 | Practical-performance Lean wave A1: NarrowOps | Committed candidate; review/integration pending | 373: Agent working | [task](lanes/335.md) |
-| 336 | Practical-performance Lean wave A2: MulDiv | Committed candidate; review/integration pending | 374: Committed candidate; review/integration pending | [task](lanes/336.md) |
+| 335 | Practical-performance Lean wave A1: NarrowOps | Committed candidate; review/integration pending | 373: Committed candidate; review/integration pending | [task](lanes/335.md) |
+| 336 | Practical-performance Lean wave A2: MulDiv | Merged after review/checks | 374: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-336.md) |
 | 337 | Practical-performance Lean wave A3: ShiftLogic | Committed candidate; review/integration pending | 375: Committed candidate; review/integration pending | [task](lanes/337.md) |
 | 338 | Practical-performance Lean wave A4: ControlFlow | Committed candidate; review/integration pending | 376: Committed candidate; review/integration pending | [task](lanes/338.md) |
 | 339 | Practical-performance Lean wave A5: LockedOps | Committed candidate; review/integration pending | 377: Committed candidate; review/integration pending | [task](lanes/339.md) |
@@ -307,6 +307,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `b5267bd4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:b5267bd4e371bc56f7f1e4360de56e91b46c3397 -->
 - 2026-10-01: lane **380**, Independent exact-candidate review of 342 OverlapRefusal, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-380.md). <!-- x86-merged:380 -->
 - 2026-10-01: publication batch checks passed for `1f533c8b`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **336**, Practical-performance Lean wave A2: MulDiv, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-336.md). <!-- x86-merged:336 -->
+- 2026-10-01: checked master `250d09c7` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:250d09c736c02db4ca3354f9dbdc1800dc7dc35d -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
