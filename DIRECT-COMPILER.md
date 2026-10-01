@@ -155,7 +155,7 @@ Last ledger refresh: **2026-10-01 16:04 UTC**. This is an operational snapshot, 
 | 284 | Executable target TSO over real byte memory | Merged after review/checks | 300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-284.md) |
 | 285 | Mathematical carry and signed-overflow characterisation | Merged after review/checks | 301: Merged after review/checks | [report](messung/muse/MUSE-REPORT-285.md) |
 | 286 | Width-aware IEEE target data and f32 bridge evidence | Merged after review/checks | 302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-286.md) |
-| 287 | One typed IR and source-linked lowering foundation | Incomplete; preserved | 303: scheduled | [task](lanes/287.md) |
+| 287 | One typed IR and source-linked lowering foundation | Agent working | 303: scheduled | [task](lanes/287.md) |
 | 288 | Invariant-derived optimisation on actual source semantics | Merged after review/checks | 304: Merged after review/checks | [report](messung/muse/MUSE-REPORT-288.md) |
 | 289 | Disjoint byte-memory commutation | Merged after review/checks | 305: Merged after review/checks | [report](messung/muse/MUSE-REPORT-289.md) |
 | 290 | Packed integer lane model for future SIMD | Merged after review/checks | 306: Merged after review/checks | [report](messung/muse/MUSE-REPORT-290.md) |
@@ -189,7 +189,7 @@ Last ledger refresh: **2026-10-01 16:04 UTC**. This is an operational snapshot, 
 | 346 | Practical-performance Lean wave C2: GateStub | Merged after review/checks | 384: Merged after review/checks | [report](messung/muse/MUSE-REPORT-346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
-| 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Committed candidate; review/integration pending | 387: Committed candidate; review/integration pending | [task](lanes/349.md) |
+| 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Merged after review/checks | 387: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-349.md) |
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Merged after review/checks | 388: Merged after review/checks | [report](messung/muse/MUSE-REPORT-350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Merged after review/checks | 439: Merged after review/checks | [report](messung/muse/MUSE-REPORT-401.md) |
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Merged after review/checks | [report](messung/muse/MUSE-REPORT-402.md) |
@@ -542,6 +542,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **556**, Repeated intermittent CLI alias test diagnosis, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-556.md). <!-- x86-merged:556 -->
 - 2026-10-01: lane **557**, Independent exact-candidate CLI alias repair review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-557.md). <!-- x86-merged:557 -->
 - 2026-10-01: Simon prioritised connecting the accepted model components. Registered source-linked IR continuation 287, connection owners 558-575 and independent reviewers 576-593, with a permanent global cap of 15 actual Muse processes. Initial work connects decoded bytes, loaded mappings, relocations, realised accesses, TSO histories and source-memory representation; W read/write and unified extension dispatch wait for accepted producer interfaces. Registration is not execution or proof closure. <!-- x86-connection-wave-558 -->
+- 2026-10-01: lane **349**, Practical-performance Lean wave C5: ValidatorSkeleton, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-349.md). <!-- x86-merged:349 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
