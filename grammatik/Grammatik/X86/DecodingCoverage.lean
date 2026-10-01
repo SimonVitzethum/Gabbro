@@ -500,6 +500,69 @@ theorem decode_abdeckung (bs : List Byte) (d : Decodiert) (rest : List Byte)
           simp at h
 
 
+/-! ## 8. Window congruence: take/drop split at the decoded length. -/
+
+/-- WINDOW CONGRUENCE: the remaining suffix is the drop at the decoded
+    length, and the taken prefix with the suffix is the whole input. -/
+theorem decode_fenster_kongruenz (bs : List Byte) (d : Decodiert)
+    (rest : List Byte) (h : decode bs = some (d, rest)) :
+    rest = bs.drop d.laenge ∧ bs.take d.laenge ++ rest = bs := by
+  obtain ⟨heq, _, _, ⟨pre, hbs, hplen⟩⟩ := decode_abdeckung bs d rest h
+  constructor
+  · rw [hbs, ← hplen, List.drop_left]
+  · rw [hbs, ← hplen, List.take_left]
+
+/-! ## 9. Fetch corollaries: the executable window from the decoder. -/
+
+/-- FETCH WINDOW CONGRUENCE: a successful fetch splits the fetched window
+    at the decoded length. Derived from the decoder side only, through the
+    existing fetch-to-decoder correspondence; no round trip is used. -/
+theorem fetch_fenster_kongruenz (s : Zustand) (d : Decodiert)
+    (rest : List Byte) (hf : fetchDekodiert s = some (d, rest)) :
+    rest = (geholt s).drop d.laenge ∧
+      (geholt s).take d.laenge ++ rest = geholt s := by
+  obtain ⟨hdec, _, _, _⟩ := fetchDekodiert_entspricht s d rest hf
+  exact decode_fenster_kongruenz (geholt s) d rest hdec
+
+/-- BYTE-STEP-FROM-DECODER: a successful fetch runs `schritt` on the
+    fetched instruction, the decoded form is covered at its exact length,
+    and the length equation holds for the fetched window. The executable
+    entry-byte relation derives from the actual decoder, not from placing
+    canonical encodings. -/
+theorem geholt_schritt_aus_decoder (s : Zustand) (d : Decodiert)
+    (rest : List Byte) (hf : fetchDekodiert s = some (d, rest)) :
+    (byteschritt s = match schritt d s with
+      | none => .verweigert
+      | some s' => .weiter s') ∧
+      decktAb d ∧ d.laenge + rest.length = (geholt s).length := by
+  obtain ⟨hdec, _, _, _⟩ := fetchDekodiert_entspricht s d rest hf
+  obtain ⟨heq, _, hshape, _⟩ := decode_abdeckung (geholt s) d rest hdec
+  refine ⟨?_, hshape, heq⟩
+  cases hsch : schritt d s with
+  | none =>
+    have hbyte := byteschritt_verweigert_ohne_schritt s d rest hf hsch
+    simp [hbyte]
+  | some s' =>
+    have hbyte := byteschritt_weiter s s' d rest hf hsch
+    simp [hbyte]
+
+/-! ## 10. Entry coverage: loaded-image entries from the decoder. -/
+
+/-- ENTRY COVERAGE: decoding the executable entry window of a loaded image
+    carries its own length (summing with the rest to the 15-byte cap), the
+    length is valid, the form is covered, and the window splits. -/
+theorem eintritt_abdeckung (bild : Bild) (bias e : Nat) (d : Decodiert)
+    (rest : List Byte) (h : eintrittDekodiert bild bias e = some (d, rest)) :
+    d.laenge + rest.length = fetchCap ∧ laengeOk d.laenge = true ∧ decktAb d ∧
+      ∃ pre, eintrittFenster bild bias e fetchCap = pre ++ rest ∧
+        pre.length = d.laenge := by
+  have hwin : (eintrittFenster bild bias e fetchCap).length = fetchCap := by
+    simp [eintrittFenster]
+  unfold eintrittDekodiert at h
+  obtain ⟨heq, hok, hshape, ⟨pre, hbs, hplen⟩⟩ :=
+    decode_abdeckung _ d rest h
+  exact ⟨by omega, hok, hshape, pre, hbs, hplen⟩
+
 /- CUTS (skeleton):
     - The arbitrary-input length soundness, the per-form classification, the
       suffix/window congruence and the entry-byte bridge are not yet proved.
