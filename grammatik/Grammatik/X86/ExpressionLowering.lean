@@ -625,6 +625,96 @@ theorem senkung_korrekt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
       senkung_sub abb a b dst tmp ρ σ₀ σ s hfr hrsp hrenv pa pb ha hb
     exact ⟨s', hrun, hval, hmem, hregs, hrsp'⟩
 
+/-- OVERFLOW BOUND (add): with operand and result ranges inside the
+    signed 64-bit window, the architectural overflow flag stays clear and
+    the signed reading of the destination is the exact source sum. Every
+    range premise is used: operands for the operand roundtrips, the result
+    for the result roundtrip and the flag. -/
+theorem senkung_ohne_ueberlauf_add {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {l1 h1 l2 h2 : Int} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+    (dst tmp : Register)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hfr : Frisch abb dst tmp) (hrsp : dst ≠ Register.rsp ∧ tmp ≠ Register.rsp)
+    (hrenv : EnvRepr ρ s.register abb)
+    (pa pb : List Befehl)
+    (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb)
+    (hop1 : -(2 ^ 63 : Int) ≤ l1) (hop1' : h1 < 2 ^ 63)
+    (hop2 : -(2 ^ 63 : Int) ≤ l2) (hop2' : h2 < 2 ^ 63)
+    (hlo : -(2 ^ 63 : Int) ≤ l1 + l2) (hhi : h1 + h2 < 2 ^ 63) :
+    ∃ s', lauf (((pa ++ pb) ++ [Befehl.addReg64 dst tmp]).map
+        fun b => (⟨b, (encode b).length⟩ : Decodiert)) s = some s' ∧
+      sint (s'.register dst) = (eval σ₀ (Expr.add a b) σ ρ).n ∧
+      (add64 (intWort (eval σ₀ a σ ρ).n)
+        (intWort (eval σ₀ b σ ρ).n)).2.of = false := by
+  obtain ⟨s', hrun, hval, hmem, hregs, hrsp', hflags⟩ :=
+    senkung_add abb a b dst tmp ρ σ₀ σ s hfr hrsp hrenv pa pb ha hb
+  have hva := (eval σ₀ a σ ρ).lo_le
+  have hva' := (eval σ₀ a σ ρ).le_hi
+  have hvb := (eval σ₀ b σ ρ).lo_le
+  have hvb' := (eval σ₀ b σ ρ).le_hi
+  have hsint_a : sint (intWort (eval σ₀ a σ ρ).n) = (eval σ₀ a σ ρ).n :=
+    intWort_sint _ (by omega) (by omega)
+  have hsint_b : sint (intWort (eval σ₀ b σ ρ).n) = (eval σ₀ b σ ρ).n :=
+    intWort_sint _ (by omega) (by omega)
+  have hof : (add64 (intWort (eval σ₀ a σ ρ).n)
+      (intWort (eval σ₀ b σ ρ).n)).2.of = false := by
+    cases hofEq : (add64 (intWort (eval σ₀ a σ ρ).n)
+        (intWort (eval σ₀ b σ ρ).n)).2.of with
+    | true =>
+      have hout := (add64_of_iff _ _).mp hofEq
+      rw [hsint_a, hsint_b] at hout
+      omega
+    | false => rfl
+  have hllo := (eval σ₀ (Expr.add a b) σ ρ).lo_le
+  have hhhi := (eval σ₀ (Expr.add a b) σ ρ).le_hi
+  refine ⟨s', hrun, ?_, hof⟩
+  rw [hval]
+  exact intWort_sint _ (by omega) (by omega)
+
+/-- OVERFLOW BOUND (sub): mirror with the architectural borrow side. -/
+theorem senkung_ohne_ueberlauf_sub {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {l1 h1 l2 h2 : Int} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+    (dst tmp : Register)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hfr : Frisch abb dst tmp) (hrsp : dst ≠ Register.rsp ∧ tmp ≠ Register.rsp)
+    (hrenv : EnvRepr ρ s.register abb)
+    (pa pb : List Befehl)
+    (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb)
+    (hop1 : -(2 ^ 63 : Int) ≤ l1) (hop1' : h1 < 2 ^ 63)
+    (hop2 : -(2 ^ 63 : Int) ≤ l2) (hop2' : h2 < 2 ^ 63)
+    (hlo : -(2 ^ 63 : Int) ≤ l1 - h2) (hhi : h1 - l2 < 2 ^ 63) :
+    ∃ s', lauf (((pa ++ pb) ++ [Befehl.subReg64 dst tmp]).map
+        fun b => (⟨b, (encode b).length⟩ : Decodiert)) s = some s' ∧
+      sint (s'.register dst) = (eval σ₀ (Expr.sub a b) σ ρ).n ∧
+      (sub64 (intWort (eval σ₀ a σ ρ).n)
+        (intWort (eval σ₀ b σ ρ).n)).2.of = false := by
+  obtain ⟨s', hrun, hval, hmem, hregs, hrsp', hflags⟩ :=
+    senkung_sub abb a b dst tmp ρ σ₀ σ s hfr hrsp hrenv pa pb ha hb
+  have hva := (eval σ₀ a σ ρ).lo_le
+  have hva' := (eval σ₀ a σ ρ).le_hi
+  have hvb := (eval σ₀ b σ ρ).lo_le
+  have hvb' := (eval σ₀ b σ ρ).le_hi
+  have hsint_a : sint (intWort (eval σ₀ a σ ρ).n) = (eval σ₀ a σ ρ).n :=
+    intWort_sint _ (by omega) (by omega)
+  have hsint_b : sint (intWort (eval σ₀ b σ ρ).n) = (eval σ₀ b σ ρ).n :=
+    intWort_sint _ (by omega) (by omega)
+  have hof : (sub64 (intWort (eval σ₀ a σ ρ).n)
+      (intWort (eval σ₀ b σ ρ).n)).2.of = false := by
+    cases hofEq : (sub64 (intWort (eval σ₀ a σ ρ).n)
+        (intWort (eval σ₀ b σ ρ).n)).2.of with
+    | true =>
+      have hout := (sub64_of_iff _ _).mp hofEq
+      rw [hsint_a, hsint_b] at hout
+      omega
+    | false => rfl
+  have hllo := (eval σ₀ (Expr.sub a b) σ ρ).lo_le
+  have hhhi := (eval σ₀ (Expr.sub a b) σ ρ).le_hi
+  refine ⟨s', hrun, ?_, hof⟩
+  rw [hval]
+  exact intWort_sint _ (by omega) (by omega)
+
 /- CUTS:
     Conversion homomorphism (`intWort_add/sub`), the signed roundtrip
     (`intWort_sint`), the lowering-correctness theorems, the overflow-bound
