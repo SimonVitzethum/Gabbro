@@ -435,3 +435,4 @@ import Grammatik.X86.TSOHistory
 import Grammatik.X86.MulDivCodec
 import Grammatik.X86.AccessExecution
 import Grammatik.X86.EntryExecution
+import Grammatik.X86.NarrowCodec
