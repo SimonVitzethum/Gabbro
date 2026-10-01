@@ -108,7 +108,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 11:36 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 11:37 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -160,25 +160,25 @@ Last ledger refresh: **2026-10-01 11:36 UTC**. This is an operational snapshot, 
 | 342 | Practical-performance Lean wave B2: OverlapRefusal | Merged after review/checks | 380: Merged after review/checks | [report](messung/muse/MUSE-REPORT-342.md) |
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
 | 344 | Practical-performance Lean wave B4: FenceDrain | Committed candidate; review/integration pending | 382: Agent working | [task](lanes/344.md) |
-| 345 | Practical-performance Lean wave C1: TableLayout | Committed candidate; review/integration pending | 383: Committed candidate; review/integration pending | [task](lanes/345.md) |
+| 345 | Practical-performance Lean wave C1: TableLayout | Merged after review/checks | 383: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-345.md) |
 | 346 | Practical-performance Lean wave C2: GateStub | Agent working | 384: Committed candidate; review/integration pending | [task](lanes/346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Committed candidate; review/integration pending | 385: Agent working | [task](lanes/347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Committed candidate; review/integration pending | 386: Committed candidate; review/integration pending | [task](lanes/348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
-| 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: Agent working | [task](lanes/350.md) |
+| 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: Incomplete; preserved | [task](lanes/350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Incomplete; preserved | 439: scheduled | [task](lanes/401.md) |
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Agent working | 403: scheduled | [task](lanes/402.md) |
 | 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Agent working | 484: scheduled | [task](lanes/404.md) |
-| 405 | Adversarial implementation audit: MEMORY-RANGES | Agent working | 485: scheduled | [task](lanes/405.md) |
+| 405 | Adversarial implementation audit: MEMORY-RANGES | Incomplete; preserved | 485: scheduled | [task](lanes/405.md) |
 | 406 | Adversarial implementation audit: DECODE-BOUNDARY | Agent working | 486: scheduled | [task](lanes/406.md) |
 | 407 | Adversarial implementation audit: FINAL-IMAGE | Agent working | 487: scheduled | [task](lanes/407.md) |
-| 408 | Adversarial implementation audit: WEAK-MEMORY | Agent working | 488: scheduled | [task](lanes/408.md) |
+| 408 | Adversarial implementation audit: WEAK-MEMORY | Incomplete; preserved | 488: scheduled | [task](lanes/408.md) |
 | 409 | Adversarial implementation audit: INVARIANT-LIFETIME | Agent working | 489: scheduled | [task](lanes/409.md) |
 | 410 | Adversarial implementation audit: CALL-ABI | Agent working | 490: scheduled | [task](lanes/410.md) |
 | 411 | Adversarial implementation audit: DYNAMIC-REGIONS | Agent working | 491: scheduled | [task](lanes/411.md) |
 | 412 | Adversarial implementation audit: FLOAT-SIMD | Agent working | 492: scheduled | [task](lanes/412.md) |
 | 413 | Adversarial implementation audit: BUDGET-OBSERVATIONS | Agent working | 493: scheduled | [task](lanes/413.md) |
-| 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Agent working | 494: scheduled | [task](lanes/414.md) |
+| 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Incomplete; preserved | 494: scheduled | [task](lanes/414.md) |
 | 415 | Adversarial implementation audit: END-TO-END-TRUST | Agent working | 495: scheduled | [task](lanes/415.md) |
 | 416 | Continuous Lean proof reserve: EffectiveAddress | Incomplete; preserved | 464: scheduled | [task](lanes/416.md) |
 | 417 | Continuous Lean proof reserve: ConditionalMove | Agent working | 465: scheduled | [task](lanes/417.md) |
@@ -192,14 +192,14 @@ Last ledger refresh: **2026-10-01 11:36 UTC**. This is an operational snapshot, 
 | 425 | Continuous Lean proof reserve: FloatExceptions | Agent working | 473: scheduled | [task](lanes/425.md) |
 | 426 | Continuous Lean proof reserve: VectorFootprints | Incomplete; preserved | 474: scheduled | [task](lanes/426.md) |
 | 427 | Continuous Lean proof reserve: RegisterInterference | Agent working | 475: scheduled | [task](lanes/427.md) |
-| 428 | Continuous Lean proof reserve: ParallelMoves | Agent working | 476: scheduled | [task](lanes/428.md) |
-| 429 | Continuous Lean proof reserve: CodeImmutability | Agent working | 477: scheduled | [task](lanes/429.md) |
-| 430 | Continuous Lean proof reserve: ValidationCache | Agent working | 478: scheduled | [task](lanes/430.md) |
-| 431 | Continuous Lean proof reserve: ValidationBudget | Scheduled | 479: scheduled | [task](lanes/431.md) |
+| 428 | Continuous Lean proof reserve: ParallelMoves | Incomplete; preserved | 476: scheduled | [task](lanes/428.md) |
+| 429 | Continuous Lean proof reserve: CodeImmutability | Incomplete; preserved | 477: scheduled | [task](lanes/429.md) |
+| 430 | Continuous Lean proof reserve: ValidationCache | Incomplete; preserved | 478: scheduled | [task](lanes/430.md) |
+| 431 | Continuous Lean proof reserve: ValidationBudget | Agent working | 479: scheduled | [task](lanes/431.md) |
 | 432 | Continuous Lean proof reserve: RegionSeparation | Scheduled | 480: scheduled | [task](lanes/432.md) |
 | 433 | Continuous Lean proof reserve: ObservationProjection | Scheduled | 481: scheduled | [task](lanes/433.md) |
-| 434 | Continuous Lean proof reserve: HardwareAssumptions | Scheduled | 482: scheduled | [task](lanes/434.md) |
-| 435 | Continuous Lean proof reserve: DecodingCoverage | Scheduled | 483: scheduled | [task](lanes/435.md) |
+| 434 | Continuous Lean proof reserve: HardwareAssumptions | Agent working | 482: scheduled | [task](lanes/434.md) |
+| 435 | Continuous Lean proof reserve: DecodingCoverage | Incomplete; preserved | 483: scheduled | [task](lanes/435.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -352,6 +352,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **377**, Independent exact-candidate review of 339 LockedOps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-377.md). <!-- x86-merged:377 -->
 - 2026-10-01: lane **341**, Practical-performance Lean wave B1: AccessList, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-341.md). <!-- x86-merged:341 -->
 - 2026-10-01: lane **379**, Independent exact-candidate review of 341 AccessList, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-379.md). <!-- x86-merged:379 -->
+- 2026-10-01: lane **345**, Practical-performance Lean wave C1: TableLayout, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-345.md). <!-- x86-merged:345 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
