@@ -365,3 +365,5 @@ import Grammatik.Zielsatz.FolgeZiel
 import Grammatik.Zielsatz.AtomarGoalZeuge
 import Grammatik.Zielsatz.AtomarZertifikatZeuge
 import Grammatik.Speichermodell.ZaehlerW
+
+import Grammatik.X86.Typen

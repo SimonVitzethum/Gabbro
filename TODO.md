@@ -863,6 +863,11 @@ work order. See `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5 and
 `dokumente/AUFTRAG-UEBERSETZUNGSVALIDIERUNG.md`. The existing C backend stays in use until
 its replacement is implemented and checked; no new binary guarantee is claimed.
 
+**Wave A started:** at most 20 Opencode Go Muse Spark 1.3 Contributor agents, local-only.
+The first ten lanes (269–278) own isolated foundation/inventory files; see
+`dokumente/x86/WELLE-A.md`. Shared x86 syntax is `X86/Typen.lean`; no native backend or
+final-byte chain is claimed. The starter optimisation scope is recorded in that wave contract.
+
 - [ ] **Scope from implementation:** inventory all source operations, emitter/runtime paths,
   widths, atomic orders, hardware forms and entry sequences; examples are witnesses only.
 - [ ] **Machine profile and relation:** fixed encodings/decoder, byte-addressed memory,
