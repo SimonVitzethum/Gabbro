@@ -106,7 +106,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 10:11 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 10:16 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -140,9 +140,10 @@ Last ledger refresh: **2026-10-01 10:11 UTC**. This is an operational snapshot, 
 | 310 | Call-log obligations for source inlining | Merged after review/checks | 314: Merged after review/checks | [report](messung/muse/MUSE-REPORT-310.md) |
 | 311 | Range-justified integer strength reduction | Merged after review/checks | 315: Merged after review/checks | [report](messung/muse/MUSE-REPORT-311.md) |
 | 312 | Checked target regions and allocation ceiling | Merged after review/checks | 316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-312.md) |
-| 317 | Single pilot instruction access extraction | Committed candidate; review/integration pending | 318: Agent working | [task](lanes/317.md) |
+| 317 | Single pilot instruction access extraction | Committed candidate; review/integration pending | 318: Committed candidate; review/integration pending | [task](lanes/317.md) |
 | 319 | Byte-memory fetch decode and actual instruction step | Agent working | 320: scheduled | [task](lanes/319.md) |
 | 323 | Detailed instruction optimisation and fast compilation design | Merged after review/checks | 324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-323.md) |
+| 325 | High runtime performance and feasible hardware-profile design revision | Agent working | 326: scheduled | [task](lanes/325.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -245,6 +246,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **316**, Independent review of 312, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-316.md). <!-- x86-merged:316 -->
 - 2026-10-01: lane **323**, Detailed instruction optimisation and fast compilation design, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-323.md). <!-- x86-merged:323 -->
 - 2026-10-01: lane **324**, Independent detailed compiler design review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-324.md). <!-- x86-merged:324 -->
+- 2026-10-01: publication batch checks passed for `fa7aef61`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
