@@ -118,7 +118,7 @@ Last ledger refresh: **2026-10-01 10:05 UTC**. This is an operational snapshot, 
 | 276 | Final image ABI and loader contract | Merged after review/checks | Historical coordinator review; see report | [report](messung/muse/MUSE-REPORT-276.md) |
 | 277 | Generic source and user-duty bridge | Merged after review/checks | Historical coordinator review; see report | [report](messung/muse/MUSE-REPORT-277.md) |
 | 278 | Floating point and cost preservation | Merged after review/checks | 295: Merged after review/checks | [report](messung/muse/MUSE-REPORT-278.md) |
-| 279 | Pilot byte codec and generic round-trip | Merged after review/checks | 297: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-279.md) |
+| 279 | Pilot byte codec and generic round-trip | Merged after review/checks | 297: Merged after review/checks | [report](messung/muse/MUSE-REPORT-279.md) |
 | 280 | Pilot Rust encoder and decoder | Stopped: Lean first; draft retained | Historical coordinator review; see report | [task](lanes/280.md) |
 | 281 | Independent foundation and byte-contract review | Merged after review/checks | 295: Merged after review/checks | [report](messung/muse/MUSE-REPORT-281.md) |
 | 282 | Integer families beyond the pilot | Merged after review/checks | 298: Merged after review/checks | [report](messung/muse/MUSE-REPORT-282.md) |
@@ -225,6 +225,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **279**, Pilot byte codec and generic round-trip, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-279.md). <!-- x86-merged:279 -->
 - 2026-10-01: integration of candidate(s) [291] failed the local proof/build gate after independent review 307; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:307 -->
 - 2026-10-01: checked master `552f0ec8` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:552f0ec8a56a15661ba22c8b5d5016694d5793d7 -->
+- 2026-10-01: lane **297**, Independent review of 279, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-297.md). <!-- x86-merged:297 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
