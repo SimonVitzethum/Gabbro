@@ -219,7 +219,7 @@ Last ledger refresh: **2026-10-01 13:49 UTC**. This is an operational snapshot, 
 | 427 | Continuous Lean proof reserve: RegisterInterference | Committed candidate; review/integration pending | 475: Agent working | [task](lanes/427.md) |
 | 428 | Continuous Lean proof reserve: ParallelMoves | Merged after review/checks | 476: Merged after review/checks | [report](messung/muse/MUSE-REPORT-428.md) |
 | 429 | Continuous Lean proof reserve: CodeImmutability | Merged after review/checks | 477: Merged after review/checks | [report](messung/muse/MUSE-REPORT-429.md) |
-| 430 | Continuous Lean proof reserve: ValidationCache | Merged after review/checks | 478: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-430.md) |
+| 430 | Continuous Lean proof reserve: ValidationCache | Merged after review/checks | 478: Merged after review/checks | [report](messung/muse/MUSE-REPORT-430.md) |
 | 431 | Continuous Lean proof reserve: ValidationBudget | Merged after review/checks | 479: Merged after review/checks | [report](messung/muse/MUSE-REPORT-431.md) |
 | 432 | Continuous Lean proof reserve: RegionSeparation | Merged after review/checks | 480: Merged after review/checks | [report](messung/muse/MUSE-REPORT-432.md) |
 | 433 | Continuous Lean proof reserve: ObservationProjection | Committed candidate; review/integration pending | 481: Incomplete; preserved; integration gate rejected; repair/re-review required | [task](lanes/433.md) |
@@ -483,6 +483,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **416**, Continuous Lean proof reserve: EffectiveAddress, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-416.md). <!-- x86-merged:416 -->
 - 2026-10-01: lane **464**, Independent exact-candidate review of 416, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-464.md). <!-- x86-merged:464 -->
 - 2026-10-01: lane **430**, Continuous Lean proof reserve: ValidationCache, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-430.md). <!-- x86-merged:430 -->
+- 2026-10-01: lane **478**, Independent exact-candidate review of 430, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-478.md). <!-- x86-merged:478 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
