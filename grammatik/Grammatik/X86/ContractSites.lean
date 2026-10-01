@@ -196,10 +196,186 @@ theorem ort_statt_allquantor :
       ¬ QEnsuresB miniContrP fTrue miniWelt :=
   ⟨mini_ens_am_ort, mini_qensures_falsch⟩
 
+/-! ## 5. Joint witnesses: actual values on a table-writing run.
+
+    `callSite_vorOk_zeuge` instantiates every premise of `callSite_vorOk`
+    jointly: the `execStmt` equation for the real `setze` call of `haupt`
+    holds by reduction, and the entry contract follows at the actual
+    argument environment. `rufAt_ok_gibt_ens_zeuge` does the same for
+    `rufAt_ok_gibt_ens` (plus the `InlinePflicht` discharge, the written
+    table and the `0 -> 5` memory change). `vertragStandort_lauf_zeuge`
+    replays the reached five-step machine run: the writing call, the
+    memory change and the entry contract co-occur with the order leg. -/
+
+/-- JOINT WITNESS (entry): the real `setze` call runs clean and its
+    `requires` holds at the actual arguments. -/
+theorem callSite_vorOk_zeuge :
+    ∃ (σ' : World eD) (ρ' : Env eD []) (sargs : World eD)
+      (rhoargs : Env eD (eD.params eSetze)),
+      sargs = (((eSp.welt []).lese [] []).lese []
+        ((.nil : Args eD [] [] (eD.params eSetze)).orte)) ∧
+      rhoargs = evalArgs sargs (.nil : Args eD [] [] (eD.params eSetze))
+        sargs .nil ∧
+      execStmt (V := vertragVon eD eHaupt) eO 0 (rufAt eP eO 0 1)
+        (Stmt.call (V := vertragVon eD eHaupt) (l := false) eSetze
+          (.nil : Args eD [] [] (eD.params eSetze)) eHpSetze rfl)
+        ((eSp.welt []).lese [] []) .nil = .ok σ' ρ' ∧
+      ReqAmEintritt eP eSetze
+        (sargs.lese (Signatur.anfang eD (eD.signatur eSetze))
+          (eP.requires eSetze).orte) rhoargs := by
+  have hexec : ∃ σ' ρ', execStmt (V := vertragVon eD eHaupt) eO 0
+      (rufAt eP eO 0 1)
+      (Stmt.call (V := vertragVon eD eHaupt) (l := false) eSetze
+        (.nil : Args eD [] [] (eD.params eSetze)) eHpSetze rfl)
+      ((eSp.welt []).lese [] []) .nil = .ok σ' ρ' := ⟨_, _, rfl⟩
+  obtain ⟨σ', ρ', hexec⟩ := hexec
+  exact ⟨σ', ρ', _, _, rfl, rfl, hexec, callSite_vorOk eP eO 0 1 hexec⟩
+
+/-- JOINT WITNESS (return + discharge): every premise of
+    `rufAt_ok_gibt_ens` holds jointly on the real `setze` call -- the
+    body outcome and the `.ok` outcome both by reduction -- hence the
+    `ensures` at the actual result, the written table, the `0 -> 5`
+    memory change and the discharged `InlinePflicht`. -/
+theorem rufAt_ok_gibt_ens_zeuge :
+    ∃ (sread σ1 sret sinv σ' : World eD) (v : ErgVal eD (eD.erg eSetze)),
+      sread = ((((eSp.welt []).lese [] []).lese
+        (Signatur.anfang eD (eD.signatur eSetze))
+        (eP.requires eSetze).orte)) ∧
+      wahr? (eval sread (eP.requires eSetze) sread .nil) = true ∧
+      execEnd (V := vertragVon eD eSetze) eO 0 (rufAt eP eO 0 0)
+        (eP.rumpf eSetze) sread .nil = EndAusgang.zurueck σ1 v ∧
+      sret = σ1.lese (vertragVon eD eSetze).ende (eP.ensures eSetze).orte ∧
+      sinv = (eD.invs.filter (schuldet eSetze)).foldl
+        (fun s i => s.lese (invSicht eD i) (eP.invariante i).orte) sret ∧
+      (eD.invs.find? (fun i => schuldet eSetze i &&
+        !wahr? (eval sinv (eP.invariante i) sinv .nil))) = none ∧
+      rufAt eP eO 0 1 eSetze ((eSp.welt []).lese [] []) .nil =
+        RufAusgang.ok σ' v ∧
+      RufEnsCheck eP eSetze sread sret .nil v ∧
+      (eD.signatur eSetze).schreibt () = true ∧
+      ((((eSp.welt []).lese [] []).slots () 0 ()).n = 0 ∧
+        (sret.slots () 0 ()).n = 5) ∧
+      Nonempty (InlinePflicht eP eHaupt eSetze []) := by
+  have hread0 : ((((eSp.welt []).lese [] []).lese
+      (Signatur.anfang eD (eD.signatur eSetze))
+      (eP.requires eSetze).orte)) =
+      ((eSp.welt []).lese [] []).lese
+        (Signatur.anfang eD (eD.signatur eSetze))
+        (eP.requires eSetze).orte := rfl
+  have hreq0 : wahr? (eval ((((eSp.welt []).lese [] []).lese
+      (Signatur.anfang eD (eD.signatur eSetze))
+      (eP.requires eSetze).orte)) (eP.requires eSetze)
+      ((((eSp.welt []).lese [] []).lese
+        (Signatur.anfang eD (eD.signatur eSetze))
+        (eP.requires eSetze).orte)) .nil) = true := by rfl
+  have hschr : (eD.signatur eSetze).schreibt () = true := rfl
+  have hsl0 : (((eSp.welt []).lese [] []).slots () 0 ()).n = 0 := rfl
+  have hok : ∃ σ1 v σ', execEnd (V := vertragVon eD eSetze) eO 0
+        (rufAt eP eO 0 0) (eP.rumpf eSetze)
+        ((((eSp.welt []).lese [] []).lese
+          (Signatur.anfang eD (eD.signatur eSetze))
+          (eP.requires eSetze).orte)) .nil =
+        EndAusgang.zurueck σ1 v ∧
+      rufAt eP eO 0 1 eSetze ((eSp.welt []).lese [] []) .nil =
+        RufAusgang.ok σ' v := by
+    refine ⟨_, _, _, rfl, rfl⟩
+  obtain ⟨σ1, v, σ', hbody, hok⟩ := hok
+  have hret0 : σ1.lese (vertragVon eD eSetze).ende
+      (eP.ensures eSetze).orte =
+      σ1.lese (vertragVon eD eSetze).ende (eP.ensures eSetze).orte := rfl
+  have hsinv0 : (eD.invs.filter (schuldet eSetze)).foldl
+      (fun s i => s.lese (invSicht eD i) (eP.invariante i).orte)
+        (σ1.lese (vertragVon eD eSetze).ende (eP.ensures eSetze).orte) =
+      (eD.invs.filter (schuldet eSetze)).foldl
+        (fun s i => s.lese (invSicht eD i) (eP.invariante i).orte)
+        (σ1.lese (vertragVon eD eSetze).ende
+          (eP.ensures eSetze).orte) := rfl
+  have hinv0 : (eD.invs.find? (fun i => schuldet eSetze i &&
+      !wahr? (eval ((eD.invs.filter (schuldet eSetze)).foldl
+        (fun s i => s.lese (invSicht eD i) (eP.invariante i).orte)
+        (σ1.lese (vertragVon eD eSetze).ende (eP.ensures eSetze).orte))
+        (eP.invariante i)
+        ((eD.invs.filter (schuldet eSetze)).foldl
+          (fun s i => s.lese (invSicht eD i) (eP.invariante i).orte)
+          (σ1.lese (vertragVon eD eSetze).ende
+            (eP.ensures eSetze).orte)) .nil))) = none := by rfl
+  have hens := rufAt_ok_gibt_ens eP eO 0 0 eSetze ((eSp.welt []).lese [] [])
+    .nil _ hread0 hreq0 _ _ hbody _ hret0 _ hsinv0 hinv0 _ hok
+  have hens1 : RufEnsCheck eP eSetze
+      ((((eSp.welt []).lese [] []).lese
+        (Signatur.anfang eD (eD.signatur eSetze))
+        (eP.requires eSetze).orte))
+      (σ1.lese (vertragVon eD eSetze).ende (eP.ensures eSetze).orte)
+      .nil v := hens.1
+  have hsl5 : ((σ1.lese (vertragVon eD eSetze).ende
+      (eP.ensures eSetze).orte).slots () 0 ()).n = 5 :=
+    of_decide_eq_true hens1
+  have hok_sinv : rufAt eP eO 0 1 eSetze ((eSp.welt []).lese [] []) .nil =
+      RufAusgang.ok ((eD.invs.filter (schuldet eSetze)).foldl
+        (fun s i => s.lese (invSicht eD i) (eP.invariante i).orte)
+        (σ1.lese (vertragVon eD eSetze).ende
+          (eP.ensures eSetze).orte)) v := by
+    rw [← hens.2]
+    exact hok
+  have hpfl : Nonempty (InlinePflicht eP eHaupt eSetze []) :=
+    ⟨inlinePflicht_aus_rufAt eP eO 0 0 eHaupt eSetze [] eHpSetze rfl
+      ((eSp.welt []).lese [] []) .nil _ hread0 hreq0 _ _ hbody _ hret0 _
+      hsinv0 hinv0 hok_sinv⟩
+  exact ⟨_, σ1, _, _, σ', v, hread0, hreq0, hbody, hret0, hsinv0, hinv0,
+    hok, hens1, hschr, ⟨hsl0, hsl5⟩, hpfl⟩
+
+/-- JOINT WITNESS (reached run): on a reached five-step machine run the
+    log holds the real ghost pair of `pruefe` over the return of `setze`,
+    the entry world carries the write (`0` at the start, `5` at entry),
+    the entry contract holds there by the certified leg, and the order
+    leg holds -- a table-writing, memory-changing, non-degenerate run. -/
+theorem vertragStandort_lauf_zeuge :
+    ∃ M : RufMaschineG eD,
+      RufErreichbarG eP eO 0 (RufStartG eP eSp eInit) M ∧
+      (eSp.slots () 0 ()).n = 0 ∧
+      (eD.signatur eSetze).schreibt () = true ∧
+      ∃ (rhoP : Env eD (eD.params ePruefe)) (wP bP : World eD)
+        (vP : ErgVal eD (eD.erg ePruefe))
+        (rhoS : Env eD (eD.params eSetze)) (vS : ErgVal eD (eD.erg eSetze))
+        (aS bS : World eD) (rest : List (RufEreignisF eD)),
+        (M.faeden 0).log = RufEreignisF.rueck ePruefe rhoP vP wP bP ::
+          RufEreignisF.eintritt ePruefe rhoP wP ::
+          RufEreignisF.rueck eSetze rhoS vS aS bS :: rest ∧
+        (wP.slots () 0 ()).n = 5 ∧
+        ReqAmEintritt eP ePruefe wP rhoP ∧
+        FolgeLog Φ50 (M.faeden 0).log := by
+  obtain ⟨M, hr, hsl0, hschr, rhoP, wP, bP, vP, rhoS, vS, aS, bS, rest,
+    hlog, hsl5, hgp, hpf, harm, hfol⟩ := geistRekon_zeuge
+  have hm : RufEreignisF.eintritt ePruefe rhoP wP ∈ (M.faeden 0).log := by
+    rw [hlog]
+    exact List.mem_cons_of_mem _ List.mem_cons_self
+  have hreq : ReqAmEintritt eP ePruefe wP rhoP :=
+    ((eP_zertifiziert M hr).1 0 _ hm).1 _ _ _ rfl
+  exact ⟨M, hr, hsl0, hschr, rhoP, wP, bP, vP, rhoS, vS, aS, bS, rest,
+    hlog, hsl5, hreq, hfol⟩
+
 /- CUTS:
   - IR lowering closure is WAITING on lane 287: no SCFG/target bridge here.
-  - Full skeleton lands in the next increments (§1 entry/return site facts,
-    §2 `InlinePflicht` discharge, §3 writer obstruction, §4 joint witness).
+    Everything proved is source-side (`execStmt`/`rufAt`/`RufEreignisF`/
+    `FolgeLog`); the lowering to the shared representation (QUELLBRUECKE,
+    phase B) is the named open dependency.
+  - `InlinePflicht.hp`/`hr` are CARRIED into `inlinePflicht_aus_rufAt`
+    (the same `RufPasst` and empty-channel proofs the call needed),
+    not discharged against the caller's footprint or lock floor.
+  - Indirect calls (`callInd`, `bindCallInd`) have no site form here:
+    `callSite_vorOk` covers direct `Stmt.call` only.
+  - Value-carrying call sites (`Block.bindCall`, whose `execBlock` arm
+    keeps the result) are not separately wrapped: the return half is
+    proved at the `rufAt` outcome (`rufAt_ok_gibt_ens`), which is what
+    both arms consult.
+  - The `FernVertrag` refusal is a stated inadmissible shape (empty
+    inductive); its force as "quantifying away is false, not weaker"
+    comes from `ort_statt_allquantor` on the inhabited mini contract.
+  - No executable source-body inline rewrite: there is no function
+    splicing a callee body at a call site, hence no body-splice
+    simulation against `rufAt` (same cut as `AufrufOpt`).
+  - Bounds/depth and budget timing are untouched (decreases/depth
+    discipline, cost model are separate obligations).
 -/
 
 #print axioms kein_fern_vertrag
@@ -209,5 +385,8 @@ theorem ort_statt_allquantor :
 #print axioms vertrag_bricht_nach_schreiber
 #print axioms pruefe_requires_falsch_am_start
 #print axioms ort_statt_allquantor
+#print axioms callSite_vorOk_zeuge
+#print axioms rufAt_ok_gibt_ens_zeuge
+#print axioms vertragStandort_lauf_zeuge
 
 end Gabbro.Grammatik.X86
