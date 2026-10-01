@@ -618,6 +618,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **605**, Overnight: Concurrency bridge integration and producer adequacy audit, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-605.md). <!-- x86-merged:605 -->
 - 2026-10-01: lane **617**, Independent overnight review of 605, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-617.md). <!-- x86-merged:617 -->
 - 2026-10-01: publication batch checks passed for `8bc6baf5`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: Simon authorised automatic OpenCode coordinator takeover after a missing foreground heartbeat and deletion of completed numeric lane task Markdown. Authors620/622 and exact reviewers621/623 are running/planned within the same15-slot cap. The reviewed monitor595/607 and direct typed-source lowering decision594/606 are integrated. Takeover is not armed before its independent review; reports/logs and Git task history remain audit evidence. Full final-byte validation remains OPEN. <!-- x86-automatic-coordination -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

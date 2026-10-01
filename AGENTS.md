@@ -253,8 +253,8 @@ Nothing on that machine is loaded into its running kernel: kernel modules are te
   `./lean-probe` — are the only build entry points a lane uses (permissions: no push and no
   network for lanes).
 - Lane prompts live in `lanes/NN.md` (compose with the HARD-RULES preamble), logs in
-  `logs/NN.log`; keep a copy of every lane file in `.claude/muse-arbeit/lanes5/` and
-  `.claude/muse-sicherung/`.
+  `logs/NN.log`; keep task copies while the lane is active or awaiting review.
+  Remove numeric lane task Markdown after final checked integration; preserve reports/logs and Git history.
 
 **Writing a lane:**
 
@@ -726,3 +726,42 @@ Update this handoff and `DIRECT-COMPILER.md` when its operational facts change.
 The next coordinator should be able to distinguish a running author, reviewed
 candidate, integrated theorem, green publication check and verified upstream
 push without relying on this conversation.
+
+
+### Automatic coordinator takeover and completed task cleanup
+
+Simon explicitly authorised an OpenCode coordinator to take over if the
+foreground Codex session no longer responds, including a usage-limit stop.
+The intended trigger is five minutes without a foreground heartbeat; it does
+not query or infer an API usage balance. The fallback consumes one of the
+same **15** model slots, leaving at most 14 contributor/reviewer models.
+Only foreground Codex records `root_heartbeat`; background monitoring must
+never keep that heartbeat alive. An exclusive owner lease and action lock
+prevent competing foreground coordinators. Returning Codex requests a safe
+handback before mutating root; dirty integrations and running publication
+actions must be preserved. Explicit user pause overrides takeover/backfill.
+
+Implementation belongs to author620 and independent reviewer621:
+`instrumente/coordinator-failover.py` with mock-provider, lock, pause,
+PID-identity and handback tests. The private prototype is not armed until
+this exact candidate is reviewed and integrated. Inspect live
+`.claude/muse-arbeit/x86/failover-status.json` and `orchestrator-lease.json`
+for the actual role/health; registration is not an operational takeover.
+Fallback source work stays delegated to isolated contributors; no direct
+push bypass is granted. Checked publication, goal axioms and exact independent
+reviews remain mandatory. Persist handoff notes in private `FALLBACK-HANDOFF.md`.
+
+Latest instruction: remove numeric lane task Markdown when work is finally
+over. Author622/reviewer623 own `instrumente/lane-cleanup.py` and adversarial
+fixtures. Delete only registered, completed, idle lane tasks after checked
+integration and after pending task consumers have their exact snapshots.
+Keep active, paused, incomplete, blocked, repair and review-waiting tasks.
+Preserve `lanes/VORSPANN.md`, reports/logs, all unmerged source, and Git task
+history. Run historical sweeps and future cleanup at serial clean boundaries;
+commit tracked removals and keep progress links pointing to surviving evidence.
+
+Architecture594/reviewer606 is accepted: use the existing typed Syntax/exec
+source as the reference and lower directly to checked machine blocks/bytes.
+A persistent SSA IR is not required. Preserve the unaccepted IR287 draft as
+design input; do not introduce another source interpreter on the trust path.
+Full generic source-to-final-loaded-byte validation remains **OPEN**.
