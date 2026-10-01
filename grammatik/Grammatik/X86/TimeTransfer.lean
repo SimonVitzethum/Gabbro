@@ -35,6 +35,40 @@ theorem zeitTransferZulaessig_braucht_ok (s : CostSummary) (p : HardwareProfil)
   simp at h
   exact h
 
+/-! ## Transfer core.
+
+    A finite target prefix `xs` (the same decoded list that `lauf`
+    executes) whose every step carries a named per-form cost of at most
+    `B`, and whose machine work is covered by the summary over the
+    source budget `src` (the `ZeitAb` right-hand side `kostenTief` at
+    the use site; `kostenTiefF` for foreign costs), is covered in target
+    time `t ≤ B * k` for every summary bound `k` of `src`. The two
+    bounds composed are independent facts -- the hardware per-step
+    bound over the executed prefix, the summary work coverage over the
+    source budget -- not one sum renamed. Units stay separate: `src`
+    counts source steps (the `Budget` ops side), `targetWork` counts
+    retired instructions, `t` counts named target time. -/
+
+/-- Transfer core: per-step hardware bound plus summary work coverage
+    give target-time coverage. All three premises are used: `hCost`
+    and `hb` feed `laufKosten_schranke`, `hWork` feeds the work side. -/
+theorem zeitTransfer (s : CostSummary) (p : HardwareProfil)
+    (xs : List Decodiert) (src B t : Nat)
+    (hCost : laufKosten p xs = some t)
+    (hb : ∀ d ∈ xs, ∃ c, schrittKosten p d = some c ∧ c ≤ B)
+    (hWork : ∀ k, expandBound s src = some k →
+      targetWork (xs.map (fun d => d.befehl)) ≤ k) :
+    ∀ k, expandBound s src = some k → t ≤ B * k := by
+  intro k hk
+  have hsch := laufKosten_schranke p xs B t hb hCost
+  have hle := hWork k hk
+  have htw : targetWork (List.map (fun d : Decodiert => d.befehl) xs)
+      = xs.length := by
+    simp [targetWork]
+  have hle' : xs.length ≤ k := by omega
+  have hmono : B * xs.length ≤ B * k := Nat.mul_le_mul_left B hle'
+  omega
+
 /- CUTS:
     - Skeleton only: transfer core, refusals and the joint witness follow.
     - No source/target scheduling or IR correspondence (`XCorr`); no
@@ -42,5 +76,6 @@ theorem zeitTransferZulaessig_braucht_ok (s : CostSummary) (p : HardwareProfil)
 -/
 
 #print axioms zeitTransferZulaessig_braucht_ok
+#print axioms zeitTransfer
 
 end Gabbro.Grammatik.X86
