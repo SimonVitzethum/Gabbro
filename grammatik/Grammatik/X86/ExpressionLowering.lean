@@ -47,10 +47,12 @@ def Frisch {Γ : Ctx} (abb : ∀ (τ : Ty), Var Γ τ → Register)
   (∀ (τ : Ty) (x : Var Γ τ), abb τ x ≠ dst ∧ abb τ x ≠ tmp) ∧ dst ≠ tmp
 
 /-- Atom lowering: literals and variables lower to one instruction;
-    every other integer form refuses with `none`. -/
-def senkAtom {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {lo hi : Int}
+    every other form refuses with `none`. Stated over a general `τ` so
+    that case analysis substitutes the index variable instead of stalling
+    on stuck carrier projections (`gtyp`, `typ`). -/
+def senkAtom {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (abb : ∀ (τ : Ty), Var Γ τ → Register)
-    (e : Expr D Γ Λ (.int lo hi)) (dst : Register) : Option (List Befehl) :=
+    (e : Expr D Γ Λ τ) (dst : Register) : Option (List Befehl) :=
   match e with
   | .lit n => some [.movImm64 dst (intWort n)]
   | .var x => some [.movReg64 dst (abb _ x)]
@@ -60,9 +62,9 @@ def senkAtom {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {lo hi : Int}
     atomic operands. Deeper nesting refuses (the atom lowering says `none`),
     as does every non-arithmetic form. No new IR is built: the result is a
     canonical `Befehl` list. -/
-def senkFrag {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {lo hi : Int}
+def senkFrag {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
     (abb : ∀ (τ : Ty), Var Γ τ → Register)
-    (e : Expr D Γ Λ (.int lo hi)) (dst tmp : Register) : Option (List Befehl) :=
+    (e : Expr D Γ Λ τ) (dst tmp : Register) : Option (List Befehl) :=
   match e with
   | .lit n => some [.movImm64 dst (intWort n)]
   | .var x => some [.movReg64 dst (abb _ x)]
@@ -242,6 +244,84 @@ theorem senkAtom_korrekt_var {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   · intro q hq
     exact regSet_fremd s.register dst q (s.register (abb _ x)) hq
   · rfl
+
+/-- Shape-only atom classification: a literal or a variable. An
+    inductive relation (rather than a match) so that inversion substitutes
+    the expression -- stuck carrier projections never appear as indices. -/
+inductive IstAtom {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
+    ∀ {τ : Ty}, Expr D Γ Λ τ → Prop where
+  | lit (n : Int) : IstAtom (.lit n)
+  | var {t : Ty} (x : Var Γ t) : IstAtom (.var x)
+
+/-- Every successful atom lowering is a literal or a variable. Proved over
+    a general index so every arm substitutes; refusal arms close because
+    the lowering reduces to `none`. -/
+theorem istAtom_von_senkAtom {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {τ : Ty} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (a : Expr D Γ Λ τ) (dst : Register)
+    (pa : List Befehl) (ha : senkAtom abb a dst = some pa) :
+    IstAtom a := by
+  cases a with
+  | lit n => exact .lit n
+  | var x => exact .var x
+  | wahr => simp [senkAtom] at ha
+  | falsch => simp [senkAtom] at ha
+  | glob g hL => simp [senkAtom] at ha
+  | slot t f i hL => simp [senkAtom] at ha
+  | durch p t ht f i hL => simp [senkAtom] at ha
+  | ptrOf t n ht rw => simp [senkAtom] at ha
+  | fnref f n h => simp [senkAtom] at ha
+  | altGlob g hL => simp [senkAtom] at ha
+  | altSlot t f i hL => simp [senkAtom] at ha
+  | weiter h1 h2 e => simp [senkAtom] at ha
+  | add a b => simp [senkAtom] at ha
+  | sub a b => simp [senkAtom] at ha
+  | neg a => simp [senkAtom] at ha
+  | mul a b => simp [senkAtom] at ha
+  | div h0 h1 a b => simp [senkAtom] at ha
+  | rem h0 h1 a b => simp [senkAtom] at ha
+  | sdiv hb a b => simp [senkAtom] at ha
+  | srem hb a b => simp [senkAtom] at ha
+  | leseBytes t f hf n i hlo hhi hL => simp [senkAtom] at ha
+  | band h0 h0' a b => simp [senkAtom] at ha
+  | bor w h0 h0' hw1 hw2 a b => simp [senkAtom] at ha
+  | bxor w h0 h0' hw1 hw2 a b => simp [senkAtom] at ha
+  | shl w hw1 hw2 h0 h0' a b => simp [senkAtom] at ha
+  | shr w hw1 hw2 h0 h0' a b => simp [senkAtom] at ha
+  | lt a b => simp [senkAtom] at ha
+  | le a b => simp [senkAtom] at ha
+  | eq a b => simp [senkAtom] at ha
+  | fllt a b => simp [senkAtom] at ha
+  | flle a b => simp [senkAtom] at ha
+  | und a b => simp [senkAtom] at ha
+  | oder a b => simp [senkAtom] at ha
+  | nicht a => simp [senkAtom] at ha
+  | none n => simp [senkAtom] at ha
+  | some e => simp [senkAtom] at ha
+  | istSome e => simp [senkAtom] at ha
+  | fall cs i nutz => simp [senkAtom] at ha
+  | grund n r => simp [senkAtom] at ha
+  | forallSlots t body hL => simp [senkAtom] at ha
+  | existsSlots t body hL => simp [senkAtom] at ha
+  | reaches t f hf a b hL => simp [senkAtom] at ha
+
+/-- ATOM CORRECTNESS (generic): a successful atom lowering is a literal
+    or a variable (everything else refuses); both shapes preserve
+    flags, memory and foreign registers. -/
+theorem senkAtom_korrekt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {lo hi : Int}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (a : Expr D Γ Λ (.int lo hi)) (dst : Register)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hrenv : EnvRepr ρ s.register abb)
+    (pa : List Befehl) (ha : senkAtom abb a dst = some pa) :
+    ∃ s', lauf (pa.map fun b => ⟨b, (encode b).length⟩) s = some s' ∧
+      s'.register dst = intWort (eval σ₀ a σ ρ).n ∧
+      s'.speicher = s.speicher ∧
+      (∀ q, q ≠ dst → s'.register q = s.register q) ∧
+      s'.flags = s.flags := by
+  match istAtom_von_senkAtom abb a dst pa ha with
+  | .lit n => exact senkAtom_korrekt_lit abb n dst ρ σ₀ σ s pa ha
+  | .var x => exact senkAtom_korrekt_var abb x dst ρ σ₀ σ s hrenv pa ha
 
 /- CUTS:
     Conversion homomorphism (`intWort_add/sub`), the signed roundtrip
