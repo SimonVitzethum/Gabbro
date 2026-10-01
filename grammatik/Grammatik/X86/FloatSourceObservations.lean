@@ -179,6 +179,129 @@ theorem kein_gleit_nan (lo hi : Int × Int) (v : Gabbro.Grammatik.Gleit lo hi) :
   rw [hcon] at he
   exact Bool.false_ne_true he
 
+/-! ## 6. F-EQ exclusion: model equality observes integers only. -/
+
+/-- `eval` of `fllt` IS the model strict comparison -- the covered operator,
+    pinned to its actual `eval` arm. -/
+theorem eval_fllt_ist_gleitLt {D : Gabbro.Grammatik.Deklaration}
+    {Γ : Gabbro.Grammatik.Ctx} {Λ : List (Gabbro.Grammatik.Res D)}
+    {l1 h1 l2 h2 : Int × Int} (σ₀ σ : Gabbro.Grammatik.World D)
+    (ρ : Gabbro.Grammatik.Env D Γ)
+    (a : Gabbro.Grammatik.Expr D Γ Λ (Gabbro.Grammatik.Ty.fl l1 h1))
+    (b : Gabbro.Grammatik.Expr D Γ Λ (Gabbro.Grammatik.Ty.fl l2 h2)) :
+    Gabbro.Grammatik.eval σ₀ (Gabbro.Grammatik.Expr.fllt a b) σ ρ =
+      Gabbro.Grammatik.gleitLt (Gabbro.Grammatik.eval σ₀ a σ ρ).x
+        (Gabbro.Grammatik.eval σ₀ b σ ρ).x := rfl
+
+/-- `eval` of `flle` IS the model non-strict comparison -- the covered operator. -/
+theorem eval_flle_ist_gleitLe {D : Gabbro.Grammatik.Deklaration}
+    {Γ : Gabbro.Grammatik.Ctx} {Λ : List (Gabbro.Grammatik.Res D)}
+    {l1 h1 l2 h2 : Int × Int} (σ₀ σ : Gabbro.Grammatik.World D)
+    (ρ : Gabbro.Grammatik.Env D Γ)
+    (a : Gabbro.Grammatik.Expr D Γ Λ (Gabbro.Grammatik.Ty.fl l1 h1))
+    (b : Gabbro.Grammatik.Expr D Γ Λ (Gabbro.Grammatik.Ty.fl l2 h2)) :
+    Gabbro.Grammatik.eval σ₀ (Gabbro.Grammatik.Expr.flle a b) σ ρ =
+      Gabbro.Grammatik.gleitLe (Gabbro.Grammatik.eval σ₀ a σ ρ).x
+        (Gabbro.Grammatik.eval σ₀ b σ ρ).x := rfl
+
+/-- `eval` of `eq` observes INTEGER values only (`decide` on `.n`): `Expr.eq`
+    takes `.int` arguments by construction, so no model term equates two
+    floats. Checker-accepted float `==`/`!=` (F-EQ) has no meaning here --
+    it stays a tracked separate prerequisite, explicitly outside this lemma. -/
+theorem eval_eq_beobachtet_int {D : Gabbro.Grammatik.Deklaration}
+    {Γ : Gabbro.Grammatik.Ctx} {Λ : List (Gabbro.Grammatik.Res D)}
+    {l1 h1 l2 h2 : Int} (σ₀ σ : Gabbro.Grammatik.World D)
+    (ρ : Gabbro.Grammatik.Env D Γ)
+    (a : Gabbro.Grammatik.Expr D Γ Λ (Gabbro.Grammatik.Ty.int l1 h1))
+    (b : Gabbro.Grammatik.Expr D Γ Λ (Gabbro.Grammatik.Ty.int l2 h2)) :
+    Gabbro.Grammatik.eval σ₀ (Gabbro.Grammatik.Expr.eq a b) σ ρ =
+      decide ((Gabbro.Grammatik.eval σ₀ a σ ρ).n =
+        (Gabbro.Grammatik.eval σ₀ b σ ρ).n) := rfl
+
+/-! ## 7. Target reuse hooks for the ScalarFloat decoder consumer. -/
+
+/-- The witness zero patterns are well-formed words. -/
+theorem null_wf :
+    Gleitkomma.wf Gleitkomma.f64 (Gleitkomma.nullN Gleitkomma.f64) ∧
+      Gleitkomma.wf Gleitkomma.f64 (Gleitkomma.nullP Gleitkomma.f64) := by
+  decide
+
+/-- Exact word round-trip of the witness zeros: the consumer transports
+    target words back to source values bit-exactly -- stronger than the
+    class-level `fpRechne_klasse`, which stays the rule for computed NaNs. -/
+theorem null_muster_rundweg :
+    bites64 (muster64 (Gleitkomma.nullN Gleitkomma.f64)) =
+        Gleitkomma.nullN Gleitkomma.f64 ∧
+      bites64 (muster64 (Gleitkomma.nullP Gleitkomma.f64)) =
+        Gleitkomma.nullP Gleitkomma.f64 := by
+  exact ⟨bites64_muster64 _ (by decide), bites64_muster64 _ (by decide)⟩
+
+/-- UCOMISD equal row on the witness pair: target flags report equality,
+    matching source `fle`-both-true (`null_fle_links`/`null_fle_rechts`). -/
+theorem null_ucomi_gleich :
+    ucomiFlags (Gleitkomma.nullN Gleitkomma.f64)
+      (Gleitkomma.nullP Gleitkomma.f64) =
+      ⟨false, false, some false, true, false, false⟩ := by
+  decide
+
+/-- CVTTSD2SI wrapper unfolded once, without the body `let`: a
+    klasse/wertExakt dispatch on the injected value. Proved by `rfl`, so the
+    main proof below never unfolds through the `let`. -/
+theorem cvttPaket_entfaltet (w : Wort) :
+    cvttPaket w =
+      (match Gleitkomma.klasse Gleitkomma.f64 (bites64 w) with
+      | .nan => 0
+      | .unendlich => 0
+      | _ =>
+        match Gleitkomma.wertExakt Gleitkomma.f64 (bites64 w) with
+        | Option.none => 0
+        | Option.some v =>
+          let t : Int :=
+            if 0 ≤ v.zweierExp then v.zaehler * ((2 ^ v.zweierExp.toNat : Nat) : Int)
+            else v.zaehler.tdiv ((2 ^ (-v.zweierExp).toNat : Nat) : Int)
+          if t < -(2 ^ 63 : Int) then -(2 ^ 63 : Int)
+          else if (2 ^ 63 - 1 : Int) < t then 2 ^ 63 - 1 else t) := rfl
+
+/-- CVTTSD2SI wrapper equals source truncation on finite well-formed values:
+    the decoder consumer reuses `gleitRoh` through `cvttPaket` instead of
+    reproving truncation. Payload equality is NOT claimed -- the model only
+    preserves class (`fpRechne_klasse`). -/
+theorem cvttPaket_gleitRoh (x : Gabbro.Grammatik.GFloat)
+    (hw : Gleitkomma.wf Gleitkomma.f64 x)
+    (hx : Gabbro.Grammatik.gleitEndlich x = true) :
+    cvttPaket (muster64 x) = Gabbro.Grammatik.gleitRoh x := by
+  have hr : bites64 (muster64 x) = x := bites64_muster64 x hw
+  rw [cvttPaket_entfaltet]
+  unfold Gabbro.Grammatik.gleitRoh
+  rw [hr]
+  cases hk : Gleitkomma.klasse Gleitkomma.f64 x with
+  | nan =>
+    cases he : Gleitkomma.wertExakt Gleitkomma.f64 x with
+    | none => rfl
+    | some v =>
+      unfold Gabbro.Grammatik.gleitEndlich at hx
+      rw [hk] at hx
+      exact (Bool.false_ne_true hx).elim
+  | unendlich =>
+    cases he : Gleitkomma.wertExakt Gleitkomma.f64 x with
+    | none => rfl
+    | some v =>
+      unfold Gabbro.Grammatik.gleitEndlich at hx
+      rw [hk] at hx
+      exact (Bool.false_ne_true hx).elim
+  | null =>
+    cases he : Gleitkomma.wertExakt Gleitkomma.f64 x with
+    | none => rfl
+    | some v => rfl
+  | subnormal =>
+    cases he : Gleitkomma.wertExakt Gleitkomma.f64 x with
+    | none => rfl
+    | some v => rfl
+  | normal =>
+    cases he : Gleitkomma.wertExakt Gleitkomma.f64 x with
+    | none => rfl
+    | some v => rfl
+
 /- CUTS:
     - Skeleton only: comparison agreement is defined, one strict-equality
       fact is proved. The `gleitRoh`/`gleitPasst` consequences, the NaN
