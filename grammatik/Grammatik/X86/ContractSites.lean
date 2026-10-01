@@ -162,6 +162,40 @@ def inlinePflicht_aus_rufAt (P : Programm D) (O : Orakel D)
     rw [← hread, ← hret]
     exact hens
 
+/-! ## 4. Obstruction: a contract used across an invalidating writer.
+
+    On the `eP` fixture `pruefe` requires `konto[0] == 5`. Any world whose
+    slot still reads `0` -- the start world, or any world a writer reset --
+    refuses the entry contract: the contract does NOT survive the writer.
+    The second half ties the inadmissible shape of §0 to an inhabited
+    contract: at their place the checks hold (`mini_ens_am_ort`), while the
+    quantified-away `ensures` is false (`mini_qensures_falsch`). -/
+
+/-- A writer that leaves `konto[0]` at `0` invalidates `pruefe`'s entry
+    contract: from the required slot value (`of_decide_eq_true`, the same
+    extraction `geistRekon_zeuge` uses) against the actual one. -/
+theorem vertrag_bricht_nach_schreiber (σ : World eD)
+    (hslot : (σ.slots () 0 ()).n = 0) :
+    ¬ ReqAmEintritt eP ePruefe σ .nil := by
+  intro hreq
+  have h5 : (σ.slots () 0 ()).n = 5 := of_decide_eq_true hreq
+  omega
+
+/-- At the start world (which left `konto[0]` at `0`) the entry contract
+    is already refused -- no call has established anything yet. -/
+theorem pruefe_requires_falsch_am_start :
+    ¬ ReqAmEintritt eP ePruefe (eSp.welt []) .nil :=
+  vertrag_bricht_nach_schreiber _ rfl
+
+/-- PLACE HOLDS, QUANTIFIED FAILS, on one inhabited contract: the return
+    check at its actual values (`mini_ens_am_ort`) with the quantified
+    `ensures` false on the same contract (`mini_qensures_falsch`). Hence a
+    use that quantifies the values away is not a weakening -- it is false. -/
+theorem ort_statt_allquantor :
+    EnsAmRueck miniContrP fTrue miniWelt miniWelt miniRho miniV ∧
+      ¬ QEnsuresB miniContrP fTrue miniWelt :=
+  ⟨mini_ens_am_ort, mini_qensures_falsch⟩
+
 /- CUTS:
   - IR lowering closure is WAITING on lane 287: no SCFG/target bridge here.
   - Full skeleton lands in the next increments (§1 entry/return site facts,
@@ -172,5 +206,8 @@ def inlinePflicht_aus_rufAt (P : Programm D) (O : Orakel D)
 #print axioms callSite_vorOk
 #print axioms rufAt_ok_gibt_ens
 #print axioms inlinePflicht_aus_rufAt
+#print axioms vertrag_bricht_nach_schreiber
+#print axioms pruefe_requires_falsch_am_start
+#print axioms ort_statt_allquantor
 
 end Gabbro.Grammatik.X86
