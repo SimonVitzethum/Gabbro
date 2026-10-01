@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 20:30 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 20:31 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -265,8 +265,14 @@ Last ledger refresh: **2026-10-01 20:30 UTC**. This is an operational snapshot, 
 | 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Merged after review/checks | [report](messung/muse/MUSE-REPORT-604.md) |
 | 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Merged after review/checks | 617: Merged after review/checks | [report](messung/muse/MUSE-REPORT-605.md) |
 | 618 | Overnight: Resource-safe native Lean invocation for publication tests | Merged after review/checks | 619: Merged after review/checks | [report](messung/muse/MUSE-REPORT-618.md) |
-| 620 | Automatic coordinator takeover on missing foreground heartbeat | Committed candidate; review/integration pending | 621: Agent working | [task](lanes/620.md) |
+| 620 | Automatic coordinator takeover on missing foreground heartbeat | Committed candidate; review/integration pending | 621: Committed candidate; review/integration pending | [task](lanes/620.md) |
 | 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Merged after review/checks | [report](messung/muse/MUSE-REPORT-622.md) |
+| 624 | Direct-source closure: FloatSourceObservations | Scheduled | 625: scheduled | [task](lanes/624.md) |
+| 626 | Direct-source closure: FloatEntryState | Scheduled | 627: scheduled | [task](lanes/626.md) |
+| 628 | Direct-source closure: SourceAssignmentLowering | Waiting for accepted dependencies | 629: scheduled | [task](lanes/628.md) |
+| 630 | Direct-source closure: SourceAccessCompleteness | Scheduled | 631: scheduled | [task](lanes/630.md) |
+| 632 | Direct-source closure: SourceValidatorConnection | Waiting for accepted dependencies | 633: scheduled | [task](lanes/632.md) |
+| 634 | Direct-source closure: SourceCodeFrame | Scheduled | 635: scheduled | [task](lanes/634.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -641,6 +647,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **602**, Overnight: Code and relocation preservation under real data stores, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-602.md). <!-- x86-merged:602 -->
 - 2026-10-01: lane **614**, Independent overnight review of 602, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-614.md). <!-- x86-merged:614 -->
 - 2026-10-01: publication batch checks passed for `0455c60c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: checked master `3859c4af` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:3859c4afcc04dff7dcaf586bfa13584da59372a6 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
