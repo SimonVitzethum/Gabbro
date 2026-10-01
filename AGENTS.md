@@ -135,6 +135,7 @@ README §5 says exactly this; keep it that way.
   and `OptimizationWitnesses.lean` are reserved for the friend handoff. Muse lanes
   do not edit these paths; reuse the one accepted IR and wait for its frozen interface.
   The complete planned optimiser specification belongs in `grammatik/OPTIMIZER.md`.
+- **Continuous Muse utilisation (Simon, 2026-10-01):** aim to keep 40 useful model processes active today, 20 afterwards, with automatic backfill from independent writing/review/repair/organisation tasks. Dispatch runs independently of serial integration/build/publication. Report actual live model PIDs separately from queued jobs, completed lanes and Python/build wrappers; never claim the limit is the running count. Preserve safety gates and record genuine dependency/provider/resource bottlenecks. The coordinator manages only its own lanes.
 - **Opus agents: at most 2 at a time.** Simon said on 2026-09-14: "nutze 2 opus agenten".
   Muse lanes: as many as useful.
 - **Commit messages** go through `arbeitsprotokoll/.commitmsg` + `./commit.sh`. It commits STAGED
@@ -356,7 +357,7 @@ opus/…:opus/…` first.
 | Diagnostic codes | **N578** (highest issued: N577, C-free lane, 2026-10-01; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
 | Gift (poison-probe) numbers | **1398** (highest file: `beispiele/gift/1397`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
 | Example numbers | **185** (highest file: `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
-| Lane numbers | **351** workers (269–350 reserved for direct-x86 Lean-first implementation/review, 2026-10-01; 308 counter-reviews architecture audits); highest pre-wave lane: 268); reviewers from **389** (373–388 reserved for the independently reviewed practical-performance wave) at least (372 is the highest named in the tree; the loop's own counter is authoritative) |
+| Lane numbers | **496** next free for the continuous direct-compiler pool (401–435 authors/organisation, 403/439/464–495 reviews reserved; earlier practical-performance 335–350/373–388 retained). Allocate unique IDs from the actual coordinator registry before launching. |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
 crates/ | sort -u | tail`, `ls beispiele beispiele/gift`. **It was stale again**, and by more
