@@ -207,7 +207,7 @@ Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, 
 | 415 | Adversarial implementation audit: END-TO-END-TRUST | Merged after review/checks | 495: Merged after review/checks | [report](messung/muse/MUSE-REPORT-415.md) |
 | 416 | Continuous Lean proof reserve: EffectiveAddress | Merged after review/checks | 464: Merged after review/checks | [report](messung/muse/MUSE-REPORT-416.md) |
 | 417 | Continuous Lean proof reserve: ConditionalMove | Merged after review/checks | 465: Merged after review/checks | [report](messung/muse/MUSE-REPORT-417.md) |
-| 418 | Continuous Lean proof reserve: BitScan | Committed candidate; review/integration pending | 466: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/418.md) |
+| 418 | Continuous Lean proof reserve: BitScan | Merged after review/checks | 466: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-418.md) |
 | 419 | Continuous Lean proof reserve: BitCount | Merged after review/checks | 467: Merged after review/checks | [report](messung/muse/MUSE-REPORT-419.md) |
 | 420 | Continuous Lean proof reserve: ByteSwap | Merged after review/checks | 468: Merged after review/checks | [report](messung/muse/MUSE-REPORT-420.md) |
 | 421 | Continuous Lean proof reserve: WordAtomicity | Committed candidate; review/integration pending | 469: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/421.md) |
@@ -493,6 +493,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `6a659bf2`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: diagnosed repeated `failed to create thread` integration failures separately from proof errors. Forced umbrella compilation of inactive candidate 417 at `5c113423` passed with a 16-GiB virtual-address ceiling, unchanged native 4096-MiB heap budget, two workers and serial heavy builds; measured child peak resident memory 1950.1 MiB. This diagnostic is not review acceptance or root integration. Changed candidates still require fresh exact-commit independent review and all root publication checks. <!-- x86-resource-ceiling-recovery -->
 - 2026-10-01: checked master `a9cc2a1a` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a9cc2a1a1f6c62852f9ee5bf81eabe3c45e40a5d -->
+- 2026-10-01: lane **418**, Continuous Lean proof reserve: BitScan, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-418.md). <!-- x86-merged:418 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

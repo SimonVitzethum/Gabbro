@@ -412,3 +412,4 @@ import Grammatik.X86.ParallelMoves
 import Grammatik.X86.HardwareAssumptions
 import Grammatik.X86.EffectiveAddress
 import Grammatik.X86.ValidationCache
+import Grammatik.X86.BitScan
