@@ -168,10 +168,89 @@ theorem zeitTransfer_verweigert_ohneKosten (p : HardwareProfil)
   rw [hnone] at ht
   cases ht
 
+/-! ## Joint witness on a non-degenerate source program.
+
+    The fixture program `eP` writes table `konto` (proved by `rfl`);
+    its reached run carries the entry world with slot `5` against a
+    start of `0` -- a real memory-changing source run, not an empty one.
+    Jointly with it: an admitted summary/profile pair, the target
+    prefix `zeugeProg` aggregating to time 7 AND executing to the
+    proved store-changing state (register and memory byte observably
+    moved from zero to 42), the transfer bound over unit source budget,
+    the ops-side exhibit in declared `Op` units (kept separate from
+    time units, never conflated), and the real source bound
+    `kostenTiefF` plugging into the schema. -/
+
+/-- JOINT WITNESS: admitted bounded memory-changing run with the
+    transfer bound, on a table-writing program. -/
+theorem zeitTransfer_zeuge :
+    ∃ (M : RufMaschineG eD) (rho : Env eD (eD.params ePruefe))
+      (w0 : World eD),
+    RufErreichbarG eP eO 0 (RufStartG eP eSp eInit) M ∧
+    (eSp.slots () 0 ()).n = 0 ∧
+    (eD.signatur eSetze).schreibt () = true ∧
+    RufEreignisF.eintritt ePruefe rho w0 ∈ (M.faeden 0).log ∧
+    ReqAmEintritt eP ePruefe w0 rho ∧
+    (w0.slots () 0 ()).n = 5 ∧
+    zeitTransferZulaessig blattSummary profilZeuge = true ∧
+    laufKosten profilZeuge zeugeProg = some 7 ∧
+    ((lauf zeugeProg zeugeZustand).map
+      (fun s => s.register Register.rbx) = some 42) ∧
+    ((lauf zeugeProg zeugeZustand).map
+      (fun s => s.speicher.bytes (BitVec.ofNat 64 8192))
+      = some (BitVec.ofNat 8 42)) ∧
+    (zeugeZustand.speicher.bytes (BitVec.ofNat 64 8192)
+      = BitVec.ofNat 8 0) ∧
+    (∀ k, expandBound blattSummary 1 = some k → 7 ≤ 3 * k) ∧
+    totalCost (klassenKosten blattSummary .leaf) = 3 ∧
+    ∃ k, expandBound blattSummary
+      (kostenTiefF eP (fun a : eD.Ax => nomatch a) 0 1 eSetze) = some k := by
+  obtain ⟨M, hr, h0, rho, w0, hm, hreq, h5⟩ := ziel_ort_einfaden_zeuge
+  have hAdm : zeitTransferZulaessig blattSummary profilZeuge = true := by
+    decide
+  have hCost : laufKosten profilZeuge zeugeProg = some 7 := by
+    decide
+  have hWork : ∀ k, expandBound blattSummary 1 = some k →
+      targetWork (zeugeProg.map (fun d => d.befehl)) ≤ k := by
+    intro k hk
+    rw [blattSummary_schranke] at hk
+    cases hk
+    decide
+  have hT := zeitTransfer blattSummary profilZeuge zeugeProg 1 3 7
+    hCost laufKosten_schranke_zeuge_hbound hWork
+  exact ⟨M, rho, w0, hr, h0, rfl, hm, hreq, h5, hAdm, hCost,
+    (zeuge_speicher_aendert_sich).1, (zeuge_speicher_aendert_sich).2.1,
+    (zeuge_speicher_aendert_sich).2.2, hT, blattKosten_drei,
+    expandBound_gilt _ _ blattSummary_beschraenkt⟩
+
 /- CUTS:
-    - Skeleton only: transfer core, refusals and the joint witness follow.
-    - No source/target scheduling or IR correspondence (`XCorr`); no
-      constant-time and no CAS-progress promise.
+    - Transfer fragment only: the core composes the accepted hardware
+      per-step bound with the accepted summary work coverage over the
+      same executed finite prefix. The summary maxima (`expand`) stay
+      backend-declared maxima checked by the admission Bool, not proved
+      lowering correspondences.
+    - No source/target scheduling or IR correspondence (`XCorr`):
+      which source step lowers to which target segment, and how
+      interleavings delay either side, is OPEN. The witness exhibits
+      unit source budget and the real `kostenTiefF` bound side by side;
+      real lowering multiplicities tying `kostenTiefF` steps to target
+      instructions are phase-B work.
+    - No hardware cycle claim: `t` counts named per-form bounds from
+      the selected profile, never measured silicon latencies; hardware
+      cycle bounds are DEFERRED. `ret` stays refused (`none`).
+    - No constant-time and no CAS-progress promise: the transfer bounds
+      admitted finite prefixes only; unbounded retries are refused,
+      never bounded.
+    - No waiting hidden: exclusions need exact source correspondence
+      (refused otherwise and for `casSpin` unconditionally); spill and
+      fence counts are added in full by `expandBound`.
+    - Units never conflated: source steps (`Budget` ops side), retired
+      instructions (`targetWork`) and named target time (`t`) are three
+      separate counts; the ops exhibit (`blattKosten_drei`) is evidence
+      of separation, not a conversion rate.
+    - No new target semantics: the one `Ausfuehrung.schritt` over the
+      14 pilot forms is reused untouched; no duplicated evaluator.
+    - No checker/source change: nothing is tightened to ease proof.
 -/
 
 #print axioms zeitTransferZulaessig_braucht_ok
@@ -181,5 +260,6 @@ theorem zeitTransfer_verweigert_ohneKosten (p : HardwareProfil)
 #print axioms zeitTransfer_verweigert_ohneQuelle
 #print axioms zeitTransfer_verweigert_spin
 #print axioms zeitTransfer_verweigert_ohneKosten
+#print axioms zeitTransfer_zeuge
 
 end Gabbro.Grammatik.X86
