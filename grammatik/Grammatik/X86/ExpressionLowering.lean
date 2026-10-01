@@ -160,6 +160,89 @@ theorem intWort_sint (n : Int) (hlo : -(2 ^ 63 : Int) ≤ n) (hhi : n < 2 ^ 63) 
     have hb := bmod_high (n + 2 ^ 64) (by omega) (by omega)
     omega
 
+/-- Every canonical encoding has a valid decode length. -/
+theorem laengeOk_encode (b : Befehl) : laengeOk (encode b).length = true := by
+  unfold laengeOk
+  simp only [decide_eq_true_eq]
+  exact encode_len b
+
+/-- A single-instruction run is its step. -/
+theorem lauf_einzeln (d : Decodiert) (s : Zustand) :
+    lauf [d] s = schritt d s := by
+  unfold lauf
+  cases schritt d s <;> rfl
+
+/-- Sequential runs compose over append: the existing `lauf` needs no
+    new interpreter to sequence lowered fragments. -/
+theorem lauf_anhang (p q : List Decodiert) (s s' : Zustand)
+    (h1 : lauf p s = some s') : lauf (p ++ q) s = lauf q s' := by
+  induction p generalizing s with
+  | nil => simp_all [lauf]
+  | cons d rest ih =>
+    simp only [List.cons_append, lauf] at h1 ⊢
+    cases h : schritt d s with
+    | none => simp [h] at h1
+    | some t =>
+      simp [h] at h1 ⊢
+      exact ih t h1
+
+/-- ATOM CORRECTNESS (literal): the immediate move puts the modular word
+    of the exact source value into the destination; memory, other
+    registers and flags are untouched. -/
+theorem senkAtom_korrekt_lit {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (n : Int) (dst : Register)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (pa : List Befehl) (hsenk : senkAtom abb (Expr.lit (Γ := Γ) (Λ := Λ) n) dst = some pa) :
+    ∃ s', lauf (pa.map fun b => ⟨b, (encode b).length⟩) s = some s' ∧
+      s'.register dst = intWort (eval σ₀ (Expr.lit (Γ := Γ) (Λ := Λ) n) σ ρ).n ∧
+      s'.speicher = s.speicher ∧
+      (∀ q, q ≠ dst → s'.register q = s.register q) ∧
+      s'.flags = s.flags := by
+  simp only [senkAtom] at hsenk
+  have hpa : pa = [.movImm64 dst (intWort n)] := Option.some_inj.mp hsenk.symm
+  subst hpa
+  refine ⟨schrittRegister s (ripNach s.rip (encode (.movImm64 dst (intWort n))).length)
+    s.flags dst (intWort n), ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [List.map_cons, List.map_nil, lauf_einzeln]
+    exact schritt_movImm64 _ _ _ _ (laengeOk_encode _) rfl
+  · exact regSet_gleich _ _ _
+  · rfl
+  · intro q hq
+    exact regSet_fremd s.register dst q (intWort n) hq
+  · rfl
+
+/-- ATOM CORRECTNESS (variable): the register move copies the represented
+    source value; the `EnvRepr` premise is what makes the read checkable. -/
+theorem senkAtom_korrekt_var {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    {lo hi : Int} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (x : Var Γ (.int lo hi)) (dst : Register)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hrenv : EnvRepr ρ s.register abb)
+    (pa : List Befehl) (hsenk : senkAtom abb (Expr.var (Λ := Λ) x) dst = some pa) :
+    ∃ s', lauf (pa.map fun b => ⟨b, (encode b).length⟩) s = some s' ∧
+      s'.register dst = intWort (eval σ₀ (Expr.var (Λ := Λ) x) σ ρ).n ∧
+      s'.speicher = s.speicher ∧
+      (∀ q, q ≠ dst → s'.register q = s.register q) ∧
+      s'.flags = s.flags := by
+  simp only [senkAtom] at hsenk
+  have hpa : pa = [.movReg64 dst (abb _ x)] := Option.some_inj.mp hsenk.symm
+  subst hpa
+  have hx := hrenv lo hi x
+  refine ⟨schrittRegister s
+    (ripNach s.rip (encode (.movReg64 dst (abb _ x))).length)
+    s.flags dst (s.register (abb _ x)), ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [List.map_cons, List.map_nil, lauf_einzeln]
+    exact schritt_movReg64 _ _ _ _ (laengeOk_encode _) rfl
+  · show regSet s.register dst (s.register (abb _ x)) dst =
+      intWort (eval σ₀ (Expr.var (Λ := Λ) x) σ ρ).n
+    rw [regSet_gleich]
+    exact hx
+  · rfl
+  · intro q hq
+    exact regSet_fremd s.register dst q (s.register (abb _ x)) hq
+  · rfl
+
 /- CUTS:
     Conversion homomorphism (`intWort_add/sub`), the signed roundtrip
     (`intWort_sint`), the lowering-correctness theorems, the overflow-bound
