@@ -71,7 +71,36 @@ One additive import line at end of `grammatik/Grammatik.lean`.
   turn for the same environmental reason (PENDING, not claimed; the merge
   script rebuilds `grammatik/` before committing, so master stays gated).
 
-## What remains open
+## Repair turn: integration-gate failure analysis (no merge)
+
+Integration evidence (exact log quoted in the repair request):
+- Lines `511-517` are MY module's `#print axioms` output, all standard
+  (`propext`, `Quot.sound`, or axiom-free). The module elaborated
+  successfully IN the integration environment too.
+- The failure is AFTER the module: step `[397/398] Building Grammatik`
+  (the umbrella link) dies with `failed to create thread`, exit 134.
+  Zero Lean errors in the complete output (`2 error line(s)` are the
+  libc++abi/exit lines).
+
+Fresh local verification this turn (clone/branch re-verified, work intact):
+- `./lean-probe grammatik/Grammatik/X86/RegionSeparation.lean`:
+  `0 error(s)`, axioms unchanged standard.
+- `./lean-bau` reproduces the gate exactly: module axioms print, umbrella
+  step fails with `failed to create thread`, `== exit 1; 2 error line(s)`.
+- Control experiment stands: pristine umbrella (my 1-line import stashed)
+  fails identically, so the block is content-independent and machine-wide.
+
+Repair performed: NONE in owned Lean files — there is no content defect to
+repair, and weakening anything to "fit" an environmental failure would
+violate the safety rules. No guarantee weakened, no file touched except
+this report. Concrete blocker (not assumed away): the queued full build's
+final umbrella-link step (`lean -j2 ... Grammatik.lean`) cannot spawn
+threads on this machine right now; this blocks EVERY lane's gate, including
+pristine master, until thread budget allows. Fresh independent review of the
+changed commit is still required; full source/binary-chain acceptance is
+NOT claimed.
+
+## What remains open (unchanged)
 - Full `./lean-bau` green + `#print axioms gabbro_ziel` re-check when the
   machine is quiet (merge gate will re-run both anyway).
 - CUTS in file: no source lowering, no freshness from numbers, no loader
