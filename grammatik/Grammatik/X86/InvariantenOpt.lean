@@ -234,6 +234,56 @@ theorem exec_ite_wahr {l : Bool} {Γ' : Ctx} {Λ'' Λ''' : List (Res D)}
     isWahrAll_sound c _ _ ρ h
   simp [execStmt, hc]
 
+/-! ## 4. Invariant scope discipline and stable-load redundancy -/
+
+/-- The admissible scopes for invariant-derived check elimination,
+    mirroring the goal legs. The tag records WHICH leg discharges the
+    truth evidence at the use site, and the elimination proof consumes it
+    by cases -- a use without a named scope does not typecheck.
+    - `ruhe`: the invariant holds at a rest state (`invRuhe`/`InvRuheG`).
+    - `sicht`: the invariant holds outside every writer of its carriers
+      (`invSicht`/`InvSichtG`).
+    - `wechsel`: the invariant is re-established across a lock move
+      (`sperrWechsel`/`sperrSicht`).
+    No constructor is dischargeable from inside a running writer or a
+    held section: that is the legs' statement, not assumed here. -/
+inductive InvScope : Type where
+  | ruhe
+  | sicht
+  | wechsel
+
+/-- Invariant-derived `pruefung` elimination: the exact transfer of
+    `exec_pruefung_wahr`, but the truth evidence is a program invariant
+    through a NAMED scope instead of the computable checker. Cost,
+    call-log, fault and interleaving transfers are the same separate
+    obligations as there; the scope discharge itself (which leg, at which
+    program point) belongs to the later certificate layer. -/
+theorem exec_pruefung_inv {l : Bool} {Γ' : Ctx} {Λ'' Λ''' : List (Res D)}
+    (inv : Expr D Γ' Λ'' .bool) (sonst : Endblock D V l Γ' Λ'')
+    (rest : Block D V l Γ' Λ'' Λ''') (σ : World D) (ρ : Env D Γ')
+    (s : InvScope)
+    (h : wahr? (eval (σ.lese Λ'' inv.orte) inv (σ.lese Λ'' inv.orte) ρ) = true) :
+    execBlock O passes R (Block.pruefung inv sonst rest) σ ρ =
+      execBlock O passes R rest (σ.lese Λ'' inv.orte) ρ := by
+  cases s <;> simp [execBlock, h]
+
+/-- A repeated read of the same slot returns the same value when the
+    index evaluates the same and the carrier is unchanged between the
+    reads. The stability premise is the EXPLICIT separate obligation,
+    discharged per instance by exclusive ownership, held-lock stability
+    or immutability -- never by thread-local token reasoning alone, never
+    across publication, fences or acquire/release edges, and never for
+    atomics, MMIO or foreign-observable memory. -/
+theorem slot_read_stabil {t : D.Tab} {f : D.Feld t}
+    {i : Expr D Γ Λ (.index (D.count t))} {hL : darf D t Λ}
+    {σ₀ σ σ' : World D} {ρ ρ' : Env D Γ}
+    (hidx : (eval σ₀ i σ' ρ').n = (eval σ₀ i σ ρ).n)
+    (hinhalt : σ'.slots t (eval σ₀ i σ ρ).n f = σ.slots t (eval σ₀ i σ ρ).n f) :
+    eval σ₀ (Expr.slot t f i hL) σ' ρ' = eval σ₀ (Expr.slot t f i hL) σ ρ := by
+  simp only [eval]
+  rw [hidx]
+  exact hinhalt
+
 /- CUTS:
    Only the computable check exists so far. Open: its soundness over `eval`;
    constant folding / `weiter` value lemmas; `pruefung`/`ite` elimination with
