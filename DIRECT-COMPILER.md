@@ -261,7 +261,7 @@ Last ledger refresh: **2026-10-01 21:42 UTC**. This is an operational snapshot, 
 | 600 | Overnight: Invariant-derived instruction selection with byte execution | Merged after review/checks | 612: Merged after review/checks | [report](messung/muse/MUSE-REPORT-600.md) |
 | 601 | Overnight: Flag dependencies across actual decoded control flow | Merged after review/checks | 613: Merged after review/checks | [report](messung/muse/MUSE-REPORT-601.md) |
 | 602 | Overnight: Code and relocation preservation under real data stores | Merged after review/checks | 614: Merged after review/checks | [report](messung/muse/MUSE-REPORT-602.md) |
-| 603 | Overnight: Whole-word grouping under actual trace exclusion | Committed candidate; review/integration pending | 615: Committed candidate; review/integration pending | [task](lanes/603.md) |
+| 603 | Overnight: Whole-word grouping under actual trace exclusion | Merged after review/checks | 615: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-603.md) |
 | 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Merged after review/checks | [report](messung/muse/MUSE-REPORT-604.md) |
 | 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Merged after review/checks | 617: Merged after review/checks | [report](messung/muse/MUSE-REPORT-605.md) |
 | 618 | Overnight: Resource-safe native Lean invocation for publication tests | Merged after review/checks | 619: Merged after review/checks | [report](messung/muse/MUSE-REPORT-618.md) |
@@ -693,6 +693,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `838a1c22` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:838a1c220cfd11b76f55524f4f2ce229cac62651 -->
 - 2026-10-01: lane **629**, Independent direct-source closure review of 628, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-629.md). <!-- x86-merged:629 -->
 - 2026-10-01: publication batch checks passed for `45331a32`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **603**, Overnight: Whole-word grouping under actual trace exclusion, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-603.md). <!-- x86-merged:603 -->
+- 2026-10-01: checked master `59519ab3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:59519ab3e7238e6ae16a0dba037aa06ff90cd1b1 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

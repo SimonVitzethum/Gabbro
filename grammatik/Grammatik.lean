@@ -454,3 +454,4 @@ import Grammatik.X86.FloatEntryState
 import Grammatik.X86.SourceCodeFrame
 import Grammatik.X86.SourceValidatorConnection
 import Grammatik.X86.SourceAssignmentLowering
+import Grammatik.X86.WordAccessGrouping
