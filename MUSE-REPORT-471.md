@@ -131,6 +131,28 @@ gate retry remains a merger/coordinator action blocked on machine
 load, correctly identified as such. No stale snapshot is approved:
 this verdict binds ONLY the new pin below.
 
+## Second re-review (new pin, report-only change again)
+
+New pinned SNAPSHOT.json head: `78740d53fa27c8ac5464ec6b1d1e277d8bd59798`
+(base unchanged). Verified: new commit on the fetched lane branch;
+`git diff` previous-pin..new-pin touches ONLY `MUSE-REPORT-423.md`
+(+13 lines); `grammatik/` diff is EMPTY. Supplied
+`.tmp/review/author-423/` files byte-identical to the new HEAD's blobs
+(checked via `git show` + `diff`). All earlier findings carry over.
+
+The added section ("Second gate failure: identical signature, verdict
+unchanged") reports a retried gate failing byte-identically (umbrella
+target crash, exit 134, module prints all emit inside that build) and
+a fresh local `./lean-probe` green (`0 error(s)`, standard axioms) on
+the unchanged module. Consistent with my own prior reproduction of the
+identical content; I did not re-run the probe on byte-identical
+content because it would add machine threads without new information.
+Side note: the gate log now shows `[397/398]` vs `[392/393]` earlier --
+the umbrella grew by ~5 targets because master moved forward, not
+because of candidate content. "No content repair" remains correct;
+the blocker is still machine-wide thread exhaustion at the single
+umbrella elaboration step. This verdict binds ONLY the new pin below.
+
 ## Bounded claim accepted
 
 Exact rel32 branch/call widths with displacement-independent length
@@ -142,5 +164,5 @@ accept/refusal probes, and a memory-changing call-store witness --
 with rel8 selection, multi-branch relaxation, and all
 source/concurrency/hardware claims explicitly OPEN.
 
-CANDIDATE: 423 37506069cd799dd5a3bad22a5ec4a8a3b03f7b6c
+CANDIDATE: 423 78740d53fa27c8ac5464ec6b1d1e277d8bd59798
 VERDICT: ACCEPT
