@@ -100,5 +100,51 @@ Nothing in the owner task or this review task appears wrong. No
 delegation, no Rust work, no source/Spec changes, no network. Only this
 report file is committed.
 
-CANDIDATE: 282 126cd7b4b1a48a80b78e815cc0a74138eaeafe87
-VERDICT: REPAIR
+## Re-review after repair (new pinned snapshot)
+
+New SNAPSHOT.json: author 282, HEAD
+2c33cac6eb41e2b197f68b10175bfa5cf0d203ce, same base dd02d912, clean.
+Commit message: "Lane 282 repair (review 298)". File grew 499 -> 584
+lines. Method repeated in full: read the whole new file, re-ran
+`./lean-probe` on the new snapshot copy (0 errors; every `#print
+axioms` standard, including all nine new names), re-grepped stale names
+(`TeilFehler`, unsuffixed `mulTrag_heisst`/`MulGueltig`,
+`mul_gueltig_existenz`, `mul_unbestimmt_unbeschraenkt`: gone; the only
+`schiebeZaehler .b64` hits left are the correctly b64-scoped lemmas),
+recomputed the repair values independently in python3. Canonical files
+still unchanged vs this HEAD, so the probe is faithful. Final build
+evidence entries: `./lean-bau` exit 0, 0 error lines, 369 jobs
+(one intermediate red probe from a stale `#print axioms mulTrag_heisst`
+during the rename, fixed before commit; final state green, reproduced).
+
+- R1 fixed and proved: `SchiebeGueltig` now takes `(b : Breite)`
+  (lines 172-178), both OF clauses mask with `schiebeZaehler b c`, SF is
+  `negB b s.ergebnis`; `schiebe_gueltig_existenz` follows the parameter
+  (lines 395-404). New `schiebe_schmal_sf_korrekt` (lines 409-412)
+  machine-proves the old failing value now demands `sf = true`.
+  Independent check: narrow mask of 33 is 1; `negB .b8 0xFF = true`.
+- R2 fixed: `TeilFehler` deleted; refusal causes now live in proved
+  theorems `divU_verweigerung_ursache` (285-292) and
+  `divS_verweigerung_ursache` (295-304), which together with the
+  pre-existing refusal directions form the full iff. Both use all
+  premises; proofs machine-checked.
+- R3 fixed: `mulTragU`/`MulGueltigU` renamed and doc-scoped to unsigned
+  MUL (lines 143-155); new `mulTragS` (370-373, sign-extension-fit rule),
+  `MulGueltigS`, existence/unconstrained theorems, and contrast probe
+  `probe_mul_trag_vorzeichen` (456-459, machine-checked). I validated the
+  signed rule independently on six value pairs (fit/no-carry, overflow,
+  negative fit, INT_MIN-adjacent `0x80 * 0xFF` carry, and a 64-bit
+  INT_MIN * -1 carry): all agree with the hardware sign-extension
+  criterion.
+- No new staleness: PATCH.diff still covers exactly the 3 pinned files,
+  umbrella import still additive-only; no source-syntax quantification,
+  still no _zeuge obligation; all new premises used; CUTS updated
+  honestly (unsigned/signed carry named, narrow-mask bullet corrected).
+- One harmless doc nit (not blocking): the report says `negB .b64` is
+  "definitionally" the old `sfTest`; the equality holds propositionally
+  via `trunc_b64`, which is all any proof needs. No change required.
+
+No material defect remains; the bounded delivered claim is true.
+
+CANDIDATE: 282 2c33cac6eb41e2b197f68b10175bfa5cf0d203ce
+VERDICT: ACCEPT
