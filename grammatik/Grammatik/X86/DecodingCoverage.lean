@@ -563,13 +563,194 @@ theorem eintritt_abdeckung (bild : Bild) (bias e : Nat) (d : Decodiert)
     decode_abdeckung _ d rest h
   exact ⟨by omega, hok, hshape, pre, hbs, hplen⟩
 
-/- CUTS (skeleton):
-    - The arbitrary-input length soundness, the per-form classification, the
-      suffix/window congruence and the entry-byte bridge are not yet proved.
-    - No hardware, source, TSO, concurrency or whole-image claim is made here.
+/-! ## 11. Fail-closed negatives: truncated, unknown, unsupported. -/
+
+/-- A truncated immediate refuses: seven immediate bytes, eight needed. -/
+theorem decode_nichts_imm_kurz :
+    decode [natByte 73, natByte 184, natByte 8, natByte 7, natByte 6,
+      natByte 5, natByte 4, natByte 3, natByte 2] = none := rfl
+
+/-- A ModRM access without its displacement refuses. -/
+theorem decode_nichts_speicher_ohne_versatz :
+    decode [natByte 72, natByte 139, natByte 141] = none := rfl
+
+/-- An unsupported opcode refuses (`0x06`: not a pilot form). -/
+theorem decode_nichts_opcode_falsch :
+    decode [natByte 6] = none := rfl
+
+/-- A mod=1 memory form is not canonical and refuses. -/
+theorem decode_nichts_modus_eins :
+    decode [natByte 72, natByte 137, natByte 69] = none := rfl
+
+/-- A two-byte branch without its displacement refuses. -/
+theorem decode_nichts_zweig_ohne_versatz :
+    decode [natByte 15, natByte 128] = none := rfl
+
+/-! ## 12. Joint witnesses: decoder, entry and fetch with memory change. -/
+
+/-- Decoder witness register file: the store value in `rax`, its target in
+    `rbx`, everything else zero. -/
+def dcReg : Register → Wort := fun q =>
+  if q = Register.rax then BitVec.ofNat 64 42
+  else if q = Register.rbx then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Decoder witness state over the shared zeroed witness memory. -/
+def dcStart : Zustand :=
+  { zeugeZustand with register := dcReg }
+
+/-- JOINT DECODER WITNESS: a store through `rbx` with a one-byte leftover
+    decodes to its exact form and length, and its `schritt` moves 42 into
+    actual memory (zero to 42 at the data address). -/
+theorem decode_abdeckung_zeuge :
+    ∃ (bs : List Byte) (d : Decodiert) (rest : List Byte) (s : Zustand),
+      decode bs = some (d, rest) ∧ d.laenge = 7 ∧ rest.length = 1 ∧
+      s.speicher.bytes (BitVec.ofNat 64 8192) = BitVec.ofNat 8 0 ∧
+      (schritt d s).map
+        (fun s' => s'.speicher.bytes (BitVec.ofNat 64 8192)) =
+        some (BitVec.ofNat 8 42) := by
+  refine ⟨[natByte 72, natByte 137, natByte 131, natByte 0, natByte 0,
+    natByte 0, natByte 0, natByte 195],
+    ⟨.store64 .rbx .rax 0, 7⟩, [natByte 195], dcStart,
+    by decide, rfl, rfl, rfl, by decide⟩
+
+/-- Entry witness code section: the store bytes, readable and executable. -/
+def dcEintrittCode : Abschnitt :=
+  { dateiOff := 0, dateiLen := 7, vaddr := 0x1000, memLen := 7,
+    lesbar := true, schreibbar := false, ausfuehrbar := true, ausr := 4096 }
+
+/-- Entry witness data section: eight zeroed bytes, readable and writable. -/
+def dcEintrittDaten : Abschnitt :=
+  { dateiOff := 7, dateiLen := 8, vaddr := 0x2000, memLen := 8,
+    lesbar := true, schreibbar := true, ausfuehrbar := false, ausr := 4096 }
+
+/-- Entry witness file: the store encoding followed by eight zero bytes. -/
+def dcEintrittDatei : List Byte :=
+  [natByte 72, natByte 137, natByte 131, natByte 0, natByte 0, natByte 0,
+    natByte 0] ++ List.replicate 8 (natByte 0)
+
+/-- Entry witness image: code plus data at fixed bias, entry in code. -/
+def dcEintrittBild : Bild :=
+  { datei := dcEintrittDatei
+    abschnitte := [dcEintrittCode, dcEintrittDaten]
+    reloks := []
+    eintraege := [0x1000]
+    modus := .fest }
+
+/-- Entry witness state: the loaded image with the store operands set. -/
+def dcEintrittStart : Zustand :=
+  { register := dcReg
+    flags := zeugeFlags
+    rip := BitVec.ofNat 64 0x1000
+    speicher := geladen dcEintrittBild 0 }
+
+/-- JOINT ENTRY WITNESS: the loaded image entry decodes to the exact store
+    form with an eight-byte rest, the state runs over loaded memory, and its
+    `schritt` moves 42 into the loaded data section. -/
+theorem eintritt_abdeckung_zeuge :
+    ∃ (bild : Bild) (bias e : Nat) (d : Decodiert) (rest : List Byte)
+      (s : Zustand),
+      eintrittDekodiert bild bias e = some (d, rest) ∧ d.laenge = 7 ∧
+      rest.length = 8 ∧ s.speicher = geladen bild bias ∧
+      s.rip = BitVec.ofNat 64 e ∧
+      s.speicher.bytes (BitVec.ofNat 64 0x2000) = BitVec.ofNat 8 0 ∧
+      (schritt d s).map
+        (fun s' => s'.speicher.bytes (BitVec.ofNat 64 0x2000)) =
+        some (BitVec.ofNat 8 42) := by
+  refine ⟨dcEintrittBild, 0, 0x1000, ⟨.store64 .rbx .rax 0, 7⟩,
+    List.replicate 8 (natByte 0), dcEintrittStart,
+    by decide, rfl, rfl, rfl, rfl, rfl, by decide⟩
+
+/-- Fetch witness program: the store encoding plus eight zero bytes. -/
+def dcAbholProg : List Byte :=
+  [natByte 72, natByte 137, natByte 131, natByte 0, natByte 0, natByte 0,
+    natByte 0] ++ List.replicate 8 (natByte 0)
+
+/-- Fetch witness bytes: the program inside its window, zero elsewhere
+    (the data address never reaches the program list). -/
+def dcAbholBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else if a.toNat < 4111 then
+    dcAbholProg.getD (a.toNat - 4096) (BitVec.ofNat 8 0)
+  else BitVec.ofNat 8 0
+
+/-- Fetch witness memory: the program executable over its 15 bytes, data
+    readable and writable everywhere. -/
+def dcAbholSpeicher : Speicher :=
+  { bytes := dcAbholBytes
+    lesbar := fun _ => true
+    schreibbar := fun _ => true
+    ausfuehrbar := fun a => decide (4096 ≤ a.toNat ∧ a.toNat < 4111) }
+
+/-- Fetch witness state: the store bytes at `rip`, its operands set. -/
+def dcAbholStart : Zustand :=
+  { register := dcReg
+    flags := zeugeFlags
+    rip := BitVec.ofNat 64 4096
+    speicher := dcAbholSpeicher }
+
+/-- JOINT FETCH WITNESS: fetching the actual store bytes from executable
+    memory decodes to the exact form and steps without refusal, moving 42
+    into actual memory. -/
+theorem geholt_schritt_aus_decoder_zeuge :
+    ∃ (s : Zustand) (d : Decodiert) (rest : List Byte),
+      fetchDekodiert s = some (d, rest) ∧ d.laenge = 7 ∧
+      ausgangByte (BitVec.ofNat 64 8192) (byteschritt s) =
+        some (BitVec.ofNat 8 42) ∧
+      s.speicher.bytes (BitVec.ofNat 64 8192) = BitVec.ofNat 8 0 := by
+  refine ⟨dcAbholStart, ⟨.store64 .rbx .rax 0, 7⟩,
+    List.replicate 8 (natByte 0), by decide, rfl, by decide, rfl⟩
+
+/- CUTS:
+    Proved here: arbitrary-input decoder length soundness from the decoder
+    side only (`decode_abdeckung`: the stated length is the consumed length,
+    valid within 1..15, the per-form exact-length classification over all 14
+    pilot forms, and the input split into consumed prefix plus suffix), the
+    take/drop window congruence (`decode_fenster_kongruenz`), the fetch
+    corollaries (`fetch_fenster_kongruenz`, `geholt_schritt_aus_decoder`:
+    byte-step agreement for arbitrary fetched bytes with coverage), the
+    loaded-image entry coverage (`eintritt_abdeckung`), five new fail-closed
+    refusals (truncated immediate, displacement-less access, unsupported
+    opcode, mod=1 form, displacement-less branch), and three joint concrete
+    witnesses with real memory-changing steps.
+    NOT proved here, and not claimed:
+    - No hardware correspondence: soundness is self-consistency of the pilot
+      decoder against BYTE-PILOT.md; correspondence to silicon is open.
+    - No complete x86 coverage: only the 14 canonical pilot forms carry a
+      theorem; other instructions, prefixes, addressing modes and operand
+      sizes are refused by construction and uncovered here.
+    - No source correspondence, no TSO or multi-byte-atomicity bridge (per
+      byte TSO is not multi-byte atomicity), no concurrency, and no
+      cost, ABI or relocation claim.
+    - No whole-image validation: entries decode one window each; image
+      coverage, control-flow validation and relocation re-decoding stay
+      with the closing validator (Bild's open items).
+    - No termination claim: refusal is the absence of a transition, never
+      a halt; budget stops are untouched.
+    - Fixed-width arithmetic details, flag undefinedness, FP control/NaNs
+      and observation channels beyond the byte projections are untouched.
 -/
 
-#print axioms eintrittFenster
-#print axioms eintrittDekodiert
+#print axioms parseLe32_suffix
+#print axioms parseLe32_len
+#print axioms parseLe64_suffix
+#print axioms parseLe64_len
+#print axioms decodeRegReg_abdeckung
+#print axioms decodeMem_abdeckung
+#print axioms decodeModrm_abdeckung
+#print axioms decodeRex_abdeckung
+#print axioms decode_abdeckung
+#print axioms decode_fenster_kongruenz
+#print axioms fetch_fenster_kongruenz
+#print axioms geholt_schritt_aus_decoder
+#print axioms eintritt_abdeckung
+#print axioms decode_nichts_imm_kurz
+#print axioms decode_nichts_speicher_ohne_versatz
+#print axioms decode_nichts_opcode_falsch
+#print axioms decode_nichts_modus_eins
+#print axioms decode_nichts_zweig_ohne_versatz
+#print axioms decode_abdeckung_zeuge
+#print axioms eintritt_abdeckung_zeuge
+#print axioms geholt_schritt_aus_decoder_zeuge
 
 end Gabbro.Grammatik.X86
