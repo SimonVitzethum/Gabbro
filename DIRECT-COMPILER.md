@@ -237,7 +237,7 @@ Last ledger refresh: **2026-10-01 19:24 UTC**. This is an operational snapshot, 
 | 558 | Connection: Connection plan and integration ownership | Merged after review/checks | 576: Merged after review/checks | [report](messung/muse/MUSE-REPORT-558.md) |
 | 559 | Connection: Arbitrary-input pilot decoder soundness | Merged after review/checks | 577: Merged after review/checks | [report](messung/muse/MUSE-REPORT-559.md) |
 | 560 | Connection: Loaded image to actual instruction fetch | Committed candidate; review/integration pending | 578: Agent working | [task](lanes/560.md) |
-| 561 | Connection: Relocated bytes to re-decoded instruction execution | Merged after review/checks | 579: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-561.md) |
+| 561 | Connection: Relocated bytes to re-decoded instruction execution | Merged after review/checks | 579: Merged after review/checks | [report](messung/muse/MUSE-REPORT-561.md) |
 | 562 | Connection: Narrow operations byte decoder and execution connection | Merged after review/checks | 580: Merged after review/checks | [report](messung/muse/MUSE-REPORT-562.md) |
 | 563 | Connection: Multiply/divide byte decoder and execution connection | Merged after review/checks | 581: Merged after review/checks | [report](messung/muse/MUSE-REPORT-563.md) |
 | 564 | Connection: Shift operations byte decoder and execution connection | Merged after review/checks | 582: Merged after review/checks | [report](messung/muse/MUSE-REPORT-564.md) |
@@ -586,6 +586,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `bcefc6ec`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **561**, Connection: Relocated bytes to re-decoded instruction execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-561.md). <!-- x86-merged:561 -->
 - 2026-10-01: checked master `ed644a73` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:ed644a7349150ff06fa6fccbd7cfbe79df3773bc -->
+- 2026-10-01: lane **579**, Independent connection review of 561, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-579.md). <!-- x86-merged:579 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
