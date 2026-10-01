@@ -1,7 +1,8 @@
 # MUSE-REPORT-625: Independent review of author 624 (FloatSourceObservations)
 
-CANDIDATE: 624 f9929e6208c0562194201b1beb159745c23306e0 (base e9b62edd3dd7c746ba178a436588a3ca4888cfda)
+CANDIDATE: 624 f9929e6208c0562194201b1beb159745c23306e0
 VERDICT: ACCEPT
+Base: e9b62edd3dd7c746ba178a436588a3ca4888cfda (per .tmp/review/SNAPSHOT.json).
 
 Reviewer lane 625, clone `/home/simon/Dokumente/gabbro-muse/a625`, branch `muse/625`.
 Owned file only: this report. No source, Spec, checker, or other-clone edits.
