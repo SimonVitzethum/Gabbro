@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 18:52 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 18:54 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -239,12 +239,12 @@ Last ledger refresh: **2026-10-01 18:52 UTC**. This is an operational snapshot, 
 | 560 | Connection: Loaded image to actual instruction fetch | Agent working | 578: scheduled | [task](lanes/560.md) |
 | 561 | Connection: Relocated bytes to re-decoded instruction execution | Agent working | 579: scheduled | [task](lanes/561.md) |
 | 562 | Connection: Narrow operations byte decoder and execution connection | Agent working | 580: scheduled | [task](lanes/562.md) |
-| 563 | Connection: Multiply/divide byte decoder and execution connection | Agent working | 581: scheduled | [task](lanes/563.md) |
-| 564 | Connection: Shift operations byte decoder and execution connection | Agent working | 582: scheduled | [task](lanes/564.md) |
+| 563 | Connection: Multiply/divide byte decoder and execution connection | Committed candidate; review/integration pending | 581: Agent working | [task](lanes/563.md) |
+| 564 | Connection: Shift operations byte decoder and execution connection | Committed candidate; review/integration pending | 582: Agent working | [task](lanes/564.md) |
 | 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Agent working | 583: scheduled | [task](lanes/565.md) |
 | 566 | Connection: Conditional forms bytes to accepted control execution | Agent working | 584: scheduled | [task](lanes/566.md) |
-| 567 | Connection: Canonical byte-TSO history projection | Committed candidate; review/integration pending | 585: Agent working | [task](lanes/567.md) |
-| 568 | Connection: Executed pilot instruction to realised access footprint | Agent working | 586: scheduled | [task](lanes/568.md) |
+| 567 | Connection: Canonical byte-TSO history projection | Merged after review/checks | 585: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-567.md) |
+| 568 | Connection: Executed pilot instruction to realised access footprint | Committed candidate; review/integration pending | 586: Agent working | [task](lanes/568.md) |
 | 569 | Connection: Fetched call/return to stack-frame proofs | Agent working | 587: scheduled | [task](lanes/569.md) |
 | 570 | Connection: Source world/table values to target byte representation | Agent working | 588: scheduled | [task](lanes/570.md) |
 | 571 | Connection: Entry state, image permissions and user binding duties | Agent working | 589: scheduled | [task](lanes/571.md) |
@@ -564,6 +564,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **572**, Connection: Source budget-stop and target work connection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-572.md). <!-- x86-merged:572 -->
 - 2026-10-01: lane **590**, Independent connection review of 572, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-590.md). <!-- x86-merged:590 -->
 - 2026-10-01: publication batch checks passed for `7f9fcb17`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **567**, Connection: Canonical byte-TSO history projection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-567.md). <!-- x86-merged:567 -->
+- 2026-10-01: checked master `2fbe1071` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:2fbe10718c4d8a98e09750635f1f00ed4cf133c8 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
