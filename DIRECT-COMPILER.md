@@ -212,7 +212,7 @@ Last ledger refresh: **2026-10-01 13:00 UTC**. This is an operational snapshot, 
 | 420 | Continuous Lean proof reserve: ByteSwap | Agent working | 468: scheduled | [task](lanes/420.md) |
 | 421 | Continuous Lean proof reserve: WordAtomicity | Committed candidate; review/integration pending | 469: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/421.md) |
 | 422 | Continuous Lean proof reserve: ReleaseAcquire | Committed candidate; review/integration pending | 470: scheduled | [task](lanes/422.md) |
-| 423 | Continuous Lean proof reserve: BranchLayout | Queued for a model slot | 471: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/423.md) |
+| 423 | Continuous Lean proof reserve: BranchLayout | Agent working | 471: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/423.md) |
 | 424 | Continuous Lean proof reserve: FeatureProfile | Committed candidate; review/integration pending | 472: scheduled | [task](lanes/424.md) |
 | 425 | Continuous Lean proof reserve: FloatExceptions | Committed candidate; review/integration pending | 473: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/425.md) |
 | 426 | Continuous Lean proof reserve: VectorFootprints | Committed candidate; review/integration pending | 474: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/426.md) |
@@ -412,6 +412,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: integration of candidate(s) [429] failed the local proof/build gate after independent review 477; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:477 -->
 - 2026-10-01: checked master `0a41ca0b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:0a41ca0bbf1802df2eb4deb37bff4294288de07c -->
 - 2026-10-01: lane **541**, Independent exact-candidate portability design review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-541.md). <!-- x86-merged:541 -->
+- 2026-10-01: documentation-only publication at `d040bc80` retains the successful complete local Lean, Rust and emission checks at `c937ebe4`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
