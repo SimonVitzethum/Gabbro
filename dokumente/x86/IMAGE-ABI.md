@@ -54,19 +54,31 @@ checked mapping defined here:
   become virtual addresses only through the section mapping above, and
   relocation values only through their kind's operand-field semantics below.
 - `relocs`: resolved relocations as data `(section, site_off, kind, symbol,
-  addend, resolved_value)`. Each relocation kind declares exactly which decoded
-  instruction and which operand field it may patch (byte range WITHIN the
-  instruction, width, addend semantics). A site normally lies inside an
-  instruction's operand -- that is the legal case, not a violation. Refused
-  are: a site whose field is invalid for its kind (wrong byte range inside the
-  instruction, overlapping opcode/ModR/M/prefix bytes, wrong width, a site
-  between instructions or inside data), a kind applied to the wrong section
-  (code fixup into data or vice versa), and any fixup the loader applies that
-  is not listed here. The validator maps the site to its virtual address,
-  checks the patched bytes equal the encoding of `resolved_value` under the
-  kind, then re-decodes the patched instruction and re-checks correspondence.
-  There is no "relocation premise" and no loader-only fixup: an unchecked
-  fixup is a refusal, not an assumption.
+  addend, resolved_value)`. Each relocation kind belongs to exactly one of two
+  admissibility classes and declares its site format (width, alignment, addend
+  semantics, allowed section kinds):
+  - code-operand sites: the site must match the kind's declared operand field
+    of one decoded instruction (byte range WITHIN the instruction, never
+    overlapping opcode/ModR/M/prefix bytes). A site inside a matching operand
+    field is the normal legal case, not a violation. The validator maps the
+    site to its virtual address, checks the patched bytes equal the encoding
+    of `resolved_value` under the kind, then re-decodes the patched
+    instruction and re-checks correspondence.
+  - data-field sites: standalone data words the kind defines (function-pointer
+    and static-address tables, explicit constant pools declared as data with
+    their widths). These are legitimate where the kind defines their width,
+    value rule, and target rule; each resolved value must satisfy the kind's
+    target rule (code pointers land on decoded instruction starts in
+    executable virtual bytes or listed entries; data pointers land on declared
+    data addresses with declared widths). Data relocations are NOT broadly
+    rejected for sitting "inside data" -- the check is class-specific.
+  Refused: a site matching neither class for its kind (wrong byte range,
+  wrong width or alignment, a code kind applied to a data field or vice
+  versa, a kind applied outside its declared section kinds, a site between
+  instructions that is neither a declared operand nor a declared data field),
+  a resolved value violating its kind's target rule, and any fixup the loader
+  applies that is not listed here. There is no "relocation premise" and no
+  loader-only fixup: an unchecked fixup is a refusal, not an assumption.
 - `entries`: the machine entry vector (sec. 5). Every address the loader,
   the kernel, or hardware can transfer control to without passing through
   validated code is listed here, with its expected machine state.
@@ -95,11 +107,11 @@ combinations explicitly).
   states this; the loader contract (sec. 11) must establish it. The page-return
   form (`region.leeren` over `gabbro_os_seiten_zurueck`, N569/N570) reads back
   as zero only under the gate's named assumption about kernel zero-fill
-  (`bibliothek/linux/linux.gab`, storage assumption): that assumption states
-  kernel SOFTWARE behaviour taken as a premise -- a historical source-level gap
-  (see sec. 12), not hardware and not a loader axiom. Replacing it with checked
-  binding logic is a wave-B obligation; until then it stays an explicitly named,
-  explicitly non-hardware premise.
+  (`bibliothek/linux/linux.gab`, storage assumption): a historical source-level
+  gap record (see sec. 12), not hardware and not a loader axiom. It qualifies
+  no final image: the zero-fill behaviour needs the supplied proved obligation
+  of sec. 11(c), and until supplied, images using the page-return path are
+  refused by final validation (OPEN).
 - Dynamic arenas have no image bytes: the generated driver reserves their
   ceiling range at startup (`gabbro_arena_reserve` over `gabbro_os_reserve`,
   template `arena.dyn`) and commits pages per grow (`gabbro_os_commit`).
@@ -146,24 +158,31 @@ is refused.
   checked, not assumed: the alignment the target binding demands; the range
   condition (for every section, `base + vaddr + memsz` wraps nothing, stays
   canonical, and all sections stay pairwise disjoint); canonicality of every
-  resulting address. Additionally, every absolute site in the image must be a
+  resulting address.   Additionally, every absolute site in the image must be a
   listed relocation of a bias-carrying kind -- no absolute address outside a
-  relocation's declared operand field may depend on `base`; the validator
-  decides this syntactically over the decoded image. Members: hosted
+  relocation's declared site (operand field or data field) may depend on
+  `base`; the validator decides this syntactically over the decoded image. Members: hosted
   position-independent images. The bare-metal image is never mode P; a kernel
   module is never validated pre-relocation (the unlinked `.ko` bytes alone
   prove nothing).
 
-Supported relocation kinds are enumerated per image kind and mode. Each kind
-states exactly which decoded instruction and which operand field it may patch
-(byte range within the instruction, width, addend semantics). A site inside a
-matching operand field is the normal legal case. Refused: a site whose field
-is invalid for its kind (wrong offset within the instruction, overlapping
-opcode/ModR/M/prefix bytes, wrong width), a site between instructions or
-inside data, a kind applied to the wrong section kind, and any unresolved or
-loader-only fixup invisible to the validator. The validator re-decodes every
-patched instruction after applying `resolved_value` and re-checks its
-correspondence; patched bytes that no longer decode, or decode to a different
+Supported relocation kinds are enumerated per image kind and mode, each in
+exactly one admissibility class. A code-operand kind states which decoded
+instruction and which operand field it may patch (byte range within the
+instruction, width, addend semantics); a site inside a matching operand field
+is the normal legal case. A data-field kind states the standalone data format
+it patches (table entry width and alignment, value and target rules); entries
+of function-pointer and static-address tables and explicitly declared constant
+pools are legitimate sites for such kinds -- sitting "inside data" is not
+itself a violation. Code-operand and data-field relocations have different
+checked admissibility: patched instructions are re-decoded with correspondence
+re-checked; patched data fields are checked for width, alignment, and the
+kind's target rule (code pointers to decoded instruction starts in executable
+virtual bytes or listed entries; data pointers to declared data addresses with
+declared widths). Refused: a site matching neither class for its kind, a
+resolved value violating its kind's target rule, a kind applied outside its
+declared section kinds, and any unresolved or loader-only fixup invisible to
+the validator. Patched bytes that no longer decode, or decode to a different
 form than the correspondence needs, are refused.
 
 ## 5. Entries: every first instruction must be listed
@@ -217,7 +236,8 @@ interrupt state where applicable):
 - the clone child return: the trampoline's child path (`tor.trampolin`,
   `tor.kind`: lowered triple region `gabbro_kind_<nr>(handed)`, no `asm goto`
   into the parent frame) is a listed entry with the child's defined register
-  state (named assumption about kernel software behaviour, see sec. 12: rsp is
+  state (kernel software behaviour per the gap record of sec. 12 -- no final
+  image is accepted on that premise alone, sec. 11(c) applies: rsp is
   `spitze`, other registers are the caller's except rax, only rcx/r11
   destroyed).
 
@@ -315,8 +335,9 @@ Two ABIs meet in every image; the validator checks both sides of each call:
   trampoline's minimum (C187: a stack gate with fewer than two callee-saved
   registers it neither binds nor destroys has no trampoline) is the shape of
   this rule at gate entries; ordinary calls carry the analogous obligation.
-  The `clone` gate's register behaviour (only rcx and r11 destroyed) is a named
-  assumption about kernel software behaviour (sec. 12), not silicon; any backend
+  The `clone` gate's register behaviour (only rcx and r11 destroyed) is a
+  historical source-level gap record (sec. 12), not silicon and not a premise
+  any final image is accepted on; any backend
   sequence relying on more than the declaration states is refused.
 
 ## 9. Threads and interrupt entries
@@ -337,7 +358,9 @@ Two ABIs meet in every image; the validator checks both sides of each call:
   template's x86-byte instance -- the actual emitted sequences the validator
   will see -- is an unproved wave-B obligation, and no C-level lemma
   discharges it. The kernel-side half of each gate (what the kernel does with
-  the call) rests on the named software-behaviour premises of sec. 12.
+  the call) is covered only by the gap records of sec. 12, which qualify
+  nothing: final validation admits it solely through the supplied proved
+  obligation of sec. 11(c), else the image is refused (OPEN).
 - Join words, ticket locks, and the `madvise` page return are covered code in
   the same sense: abstract proofs plus C-target template instances exist;
   x86-byte correspondence remains open (sec. 17).
@@ -419,12 +442,26 @@ gate/foreign-call sites.
   with the same values at the same virtual sites; after loading, the bytes at
   each site still decode as validated (re-decode obligation on the loaded
   mapping, not only on the file).
-- external-body obligations: each listed gate/foreign-call site leaving the
-  domain needs all three: (a) a checked declaration (gate register map and
+- external-body obligations: the intended chain permits USER LOGIC PROOF
+  OBLIGATIONS and named HARDWARE behaviour -- nothing else. There is no third
+  trust category, and software correctness renamed as an assumption is not
+  one. Each listed gate/foreign-call site leaving the domain needs all three:
+  (a) a checked declaration (gate register map and
   arity per N063-N066/`bindungsregel`, callee contract with `requires`/
   `ensures`, buffer extents); (b) a proved x86 template correspondence for the
-  caller-side stub sequence; (c) the kernel-side premise stated explicitly as
-  a named software-behaviour premise (sec. 12), never as hardware. A site
+  caller-side stub sequence; (c) a SUPPLIED, Lean-proved contract obligation
+  for the callee side at the ACTUAL call: the binding/kernel logic contract
+  (`requires`/`ensures`, effects and footprint, errno/reason mapping)
+  discharged in Lean at the actual arguments, results, and effects of this
+  call site, with the implementation/refinement boundary explicit (which
+  caller-side bytes are validated, where the callee logic takes over, and
+  what refinement relates the two). A gate name, an `assume` item, or any
+  named premise alone discharges NOTHING: the historical `os_bindung_*`-style
+  software premises (sec. 12) are gap records only and qualify no image for
+  acceptance. Where obligation (c) cannot currently be supplied and proved,
+  that path is recorded OPEN and the final validator refuses the image. The
+  proof and the contract are binding/user logic in Gabbro and Lean -- a
+  generic language compiler hardcodes no operating system and no Linux. A site
   missing any of the three is refused; unlisted foreign code is refused
   unconditionally.
 - entries and initial state: the loader transfers control only to a listed
@@ -463,13 +500,15 @@ literal gate beside targets, inactive targets held to the gate's shape):
   (`os_bindung_*`, `os_bindung_faden`, `os_bindung_klon`, storage/page-return
   assumptions in `linux.gab`): these state what the KERNEL's software does
   (clone/futex/mmap/madvise/join-word/zero-fill behaviour). They are
-  historical source-level gaps -- places where the current source proof takes
-  kernel software behaviour as a premise -- and this contract does NOT endorse
-  them as hardware or architecture. Hardware assumptions are silicon-only
-  (sec. 11). The direction of travel is replacement with checked binding
-  logic plus the explicit entry and external-body obligations of secs. 5 and
-  11; until replaced, each stays an explicitly named, explicitly non-hardware
-  premise under review, never a silent one.
+  historical source-level gaps and are documented as gaps ONLY: no final image
+  is accepted on their basis, and they do not satisfy obligation (c) of
+  sec. 11. Hardware assumptions are silicon-only
+  (sec. 11). The direction of travel is replacement with supplied, Lean-proved
+  binding/kernel logic contracts at actual arguments/results/effects plus the
+  explicit entry and external-body obligations of secs. 5 and
+  11; until supplied, images exercising those gates are refused by final
+  validation (OPEN). Source-level checker acceptance is a different chain with
+  a different claim and is unaffected by this statement.
 - generic mechanism: decoding, permission checking, relocation checking, entry
   predicates, call-save/stack/spill discipline, control-target obligations,
   certificate soundness, refinement to P/GX, cost transfer. These stay generic,
@@ -537,12 +576,14 @@ code (wave A mints none) -- they pin the contract's teeth:
 - altered byte: flip one opcode byte in validated `.text`; the decoder
   produces a different `Befehl`, a different length (shifting every following
   boundary), or no instruction; correspondence fails at that virtual address.
-- relocation with an invalid field: a site that does not match its kind's
-  declared operand field (wrong byte range inside the instruction, overlapping
-  opcode/ModR/M/prefix bytes, wrong width), a site between instructions or
-  inside data, or a kind applied to the wrong section kind; refused even if
-  the pre-patch bytes decoded cleanly. Sites inside a MATCHING operand field
-  are the normal legal case (sec. 4), not a violation.
+- relocation with an invalid site: a site matching neither admissibility
+  class for its kind -- neither a declared code-operand field (wrong byte
+  range inside the instruction, overlapping opcode/ModR/M/prefix bytes, wrong
+  width) nor a declared data field of a data-field kind (wrong width or
+  alignment, undeclared table format), a resolved value violating its kind's
+  target rule, or a kind applied outside its declared section kinds; refused
+  even if the pre-patch bytes decoded cleanly. Sites in a MATCHING operand
+  field and declared data-table entries are the legal cases (sec. 4).
 - wrong ABI: gate stub moves a parameter into a register the declaration does
   not bind, clobbers the out-register, or answers the wrong width; call site
   passes six integer arguments while the callee reads a seventh off the
@@ -616,9 +657,9 @@ Not proved here; each names its owner:
   remaining module C helpers): validation plus refinement per executed body;
   until then those paths stay OPEN and refuse the image (sec. 10).
 - Kernel-side gate premises (`os_bindung_*` family, storage/page-return
-  assumptions): replacement with checked binding logic plus explicit entry
-  and external-body obligations (sec. 12); until then explicitly named,
-  explicitly non-hardware premises.
+  assumptions): gap records only (sec. 12); replacement with supplied,
+  Lean-proved binding/kernel logic contracts per sec. 11(c), else the using
+  images stay OPEN and refused by final validation.
 - The image writer itself: unbuilt; sec. 13 is its interface, not its
   existence proof.
 

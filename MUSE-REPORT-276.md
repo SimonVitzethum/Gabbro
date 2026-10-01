@@ -113,7 +113,8 @@ touched:
    (module case) and loader mappings (hosted case) are outside it -- never
    assumed safe, reachable only at listed external-call sites with three
    cumulative obligations (checked declaration, proved x86 stub
-   correspondence, explicitly named software-side premise). The module does not
+   correspondence, and -- REPAIRED AGAIN below -- no longer a named
+   software-side premise). The module does not
    require the address space to hold only its text; any other escape from
    validated bytes is refused.
 
@@ -138,3 +139,43 @@ run (wave rules: file/claim checks, not gratuitous builds).
   lane, that was deliberately not done: a prose contract needs no `sorry`-free
   placeholder module, and an empty theorem file would add audit surface
   without content. Happy to add one on instruction.
+
+## Second review repairs (coordinator review, same day)
+
+Two findings; the first is a bypass the previous repair introduced, the second
+a wrongly broad refusal. Both fixed in `dokumente/x86/IMAGE-ABI.md`:
+
+1. No premise bypass in §11(c): the old obligation (c) ("kernel-side premise
+   stated explicitly as a named software-behaviour premise") admitted external
+   code on a renamed assumption -- a third trust category the intended chain
+   (user-logic proof obligations plus named silicon hardware, nothing else)
+   does not have. New (c): a SUPPLIED, Lean-proved contract obligation for the
+   callee side at the ACTUAL call -- requires/ensures, effects/footprint,
+   errno/reason mapping discharged in Lean at actual arguments, results, and
+   effects, with the implementation/refinement boundary explicit. A gate name,
+   an `assume` item, or any named premise alone discharges nothing. Where (c)
+   cannot be supplied, the path is OPEN and final validation refuses the
+   image. Consequences applied consistently: `os_bindung_*` premises are gap
+   records ONLY (§12 rewritten ending; §17 handoff rewritten) -- they qualify
+   no final image and do not satisfy (c); the §2 zero-fill, §5 clone-child,
+   §8 clone-register, and §9 kernel-side qualifiers now say gap record plus
+   "no final image accepted on that premise alone, sec. 11(c) applies".
+   Source-level checker acceptance is stated as a different chain with a
+   different claim, unaffected. The proof/contract side is binding/user logic
+   in Gabbro and Lean; the generic compiler hardcodes no OS and no Linux.
+2. Data relocations are legitimate (§1, §4, §15 fixed consistently): two
+   admissibility classes -- code-operand sites (declared operand field of one
+   decoded instruction; re-decode plus correspondence re-check) vs data-field
+   sites (standalone words of a kind-defined format: function-pointer and
+   static-address tables, declared constant pools; width/alignment/target-rule
+   checks; code pointers to decoded starts or listed entries, data pointers to
+   declared data). Sitting "inside data" is no longer a refusal ground; the
+   refusal is a site matching neither class, a target-rule violation, or a
+   kind outside its section kinds. §4 mode-P wording now says "operand field
+   or data field".
+
+Verification: `rg` audit -- no remaining "named software-side premise" as an
+acceptance basis (one historical mention in the repair note above, clearly
+marked superseded), no "inside data" refusal, no software-as-premise
+acceptance; §15 relocation bullet matches the §1/§4 two-class rule.
+Docs-only repair: no Lean/Rust change, no `./lean-bau` / `./cargo-pruef` run.
