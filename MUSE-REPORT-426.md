@@ -92,3 +92,41 @@ failure; the merge gate should rebuild (module is self-contained green).
 Nothing. The task's constraints (owned files, no invented mini-machine,
 explicit CUTS, witnesses with memory change + tail refusal) were all
 satisfiable; the only blocker met was the machine-level build flake above.
+
+## Gate-repair round (integration gate FAILED, nothing merged)
+- Gate evidence: the coordinator's merge-build log shows my module's
+  `#print axioms` lines emitted (file compiled as a dependency, standard
+  axioms) and then the umbrella `Grammatik` target crashing with
+  `libc++abi: ... failed to create thread`, `Lean exited with code 134`,
+  `build failed` — byte-identical signature to the 5 local failures
+  already recorded above (only the step index differs: 397/398 at the
+  gate vs 392/393 here, i.e. different tree file counts, same crash).
+- Repair analysis: there is NO proof-level defect to repair. The log
+  contains zero Lean file errors; every one of the 12 theorems elaborates
+  with standard axioms. The crash hits the umbrella link step, which only
+  imports already-built oleans (mine included) — no code in my owned
+  files executes there. Proven independent of this lane's content by the
+  skeleton-only control run (one import line + 60-line file crashes
+  identically). No edit within my owned files and HARD RULES (no build
+  flags, no other files, no direct lake/lean calls) can change this step's
+  thread creation. Deliberately NO churn applied to the accepted
+  candidate: re-proving or weakening green theorems would not move the
+  gate and would invalidate the independent review.
+- Fresh local evidence this round: `./lean-probe` on the unchanged module
+  again **0 errors** with all 12 standard-axiom lines; `./lean-bau` again
+  exit 1 with exactly the same 2 crash lines and zero file errors.
+  `git diff --name-only master..HEAD` = exactly the 3 owned files
+  (report, 1-line umbrella import, new module); goal/checker/Rust/emitter
+  untouched, so `gabbro_ziel` is unaffected by construction (its own
+  `#print axioms` re-check rides on the next green umbrella link, which
+  is the blocked step itself).
+- CONCRETE BLOCKER (not assumed away): OS thread creation fails inside
+  the umbrella `lean -j2 -M4096` step on the shared build machine
+  (up to 15 concurrent model processes plus queued builds; observed with
+  0 free RAM / swap pressure). Coordinator-side remedy, in order:
+  (1) retry the merge gate at low machine load; (2) if persistent, free
+  memory / serialize lane builds around the umbrella link; (3) only if a
+  future log shows a Lean *file* error naming `VectorFootprints.lean`,
+  send it back — the current log shows none.
+- No acceptance of any source/binary chain is claimed by this module;
+  fresh independent review of the changed commit is expected.
