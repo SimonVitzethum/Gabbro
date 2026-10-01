@@ -5,10 +5,18 @@ not an implementation or a proof. Nothing here claims any source-to-x86 chain
 is closed. Central progress record: [DIRECT-COMPILER.md](DIRECT-COMPILER.md).
 All source-to-executed-final-binary claims remain OPEN.*
 
-*Design priority, per user steering: the intended final compiler delivers HIGH
-RUNTIME PERFORMANCE of the produced binaries within a FEASIBLE COMPLETE
-SELECTED architectural hardware profile, while also compiling fast including
-the mandatory Lean validation. The 14-form pilot (§2) is proof bootstrapping
+*Design priority, per user steering (2026-10-01): the intended final compiler
+delivers HIGH PRACTICAL RUNTIME PERFORMANCE of the produced binaries within a
+FEASIBLE COMPLETE SELECTED architectural hardware profile, while also compiling
+fast including the mandatory Lean validation. Safety has priority over marginal
+final improvements: the user's "last 10%" is a qualitative prioritisation, not
+a number — no quantitative 90% guarantee is made, and no reduced proof coverage
+or weakened safety level follows from it. Completion means FULL proved
+validation and FULL safety of accepted source and final bytes for EVERY
+selected profile and EVERY source construct — never a 90% proof or 90% safety.
+User logics and contracts are unchanged (actual parameters and results, no
+inferred `ensures`, no refusal turned into a warning); named existing proof
+boundaries stay explicit. The 14-form pilot (§2) is proof bootstrapping
 only — never the final performance ceiling. No form is kept artificially
 small for easy proof; every added form carries its exact architectural effects
 and proof obligations. No universally maximal claim across every CPU and
@@ -103,9 +111,14 @@ high-byte legacy forms (`ah/bh/…` refused). Conditions: 16 `Bedingung` codes
 `Speicher.bytes` with per-address R/W/X bits; loads/stores base+sign-extended
 disp32, mod=10 always, `rbp/r13` real bases (never RIP-relative). Fault model:
 permission-checked access (lane 271); flag model: `Flags` with
-`af : Option Bool` (undefined, not false); fault/flag preservation per form
-and the per-form execution correspondence remain OPEN (lane 272 proved the
-pilot vocabulary and execution skeleton, not the chain correspondence). Planned extended forms (widths, LOCK, fences, FP/SIMD,
+`af : Option Bool` (undefined, not false); bounded abstract per-form step
+equations are PROVED (`Ausfuehrung.lean` `schritt`, lane 272) and the canonical
+codec round-trip is PROVED (`Codec.lean` `roundtrip`/`roundtrip_len_ok`, lane
+279) — these are bounded abstract helpers over the canonical vocabulary, not a
+chain correspondence. What remains OPEN is the physical-hardware and
+source correspondence: per-form execution correspondence against silicon
+behaviour, the per-access TSO bridge into W/GX, and the full source-to-final-
+bytes chain. Planned extended forms (widths, LOCK, fences, FP/SIMD,
 indirect control — §§3–6) and bounded accepted helpers (`Wort.lean` modular
 ops, `Speicher.lean` LE access, width `Breite`) are NOT pilot vocabulary: a
 width helper or SIMD helper does not mean ISA support, and any byte outside
@@ -215,6 +228,56 @@ gain on a representative workload (§11); tuning never revisits a proof. No
 claim is made that the Lean model matches physical silicon — the model is the
 checked contract the validator decides; silicon behaviour beyond the named
 assumptions is not proved.
+
+## 2D. Safety-first admission: essential scope, deferred scope, stop rule (PROPOSED)
+
+Safety outranks speed at every decision: weakening any memory-safety, race,
+contract, budget, lock-discipline or FP/concurrency guarantee for speed is a
+REJECTION, regardless of measurement. Essential scope below is implemented
+first and completely (modelled, proved, validated for every selected profile
+and source construct); deferred scope waits until the essentials are closed
+AND a genuine workload plus an affordable complete Lean rule exist. Deferred
+absence affects only code quality, never construct support: every accepted
+source construct keeps a certified translation at all times. The deferred
+categories are examples of postponed scope, not a new language, API, or
+implementation task. No universal performance figure and no exact time number
+is promised anywhere; the hard `-O3`-like plan of §7 stays an effort/quality
+goal, not equivalence with any external compiler's unsafe fast-math semantics.
+
+Admission test per proposed family or pass (all must hold, else deferred or
+refused): (1) a GENERIC source pattern needs it (emitter-construct driven, per
+[EMITTER-INVENTAR](dokumente/x86/EMITTER-INVENTAR.md), never per example or
+name); (2) observable equivalence is stated with the actual parameters,
+results, faults, flags, FP rounding, ordering and async interactions;
+(3) expected workload/runtime benefit AND compiler/check cost are named;
+(4) new architectural state, fault, concurrency, FP, context and
+enabled-state-gate obligations are listed; (5) generic widths/lane/footprint
+checker reuse is decided; (6) independent proof plus negative (refusal) cases
+exist; (7) the certified cheaper translation is retained until ALL required
+correspondence, cost and stop gates pass.
+
+| Scope | Families / passes | Inclusion rationale | Proof gate | Postponement reason (if deferred) |
+|---|---|---|---|---|
+| Essential | scalar arithmetic/bit shifts/multiply/divide/check lowering (§3); efficient immediates/address modes/short branches (§2B); robust fast allocation, invariant-safe optimisation, meaningful `-O3`-like scopes (§§7, 8) | everyday integer code quality; removes the pilot's worst bloat | per-width flag/fault identity, codec rows, layout `layoutOk` revalidation, generic rule lemmas | — (first) |
+| Essential | precise IEEE binary64 scalar baseline (§4) | source surface is binary64; wrong rounding is a wrong result | MXCSR/RNE control-state establishes/preserves, NaN/±0 witnesses, no-contraction/no-fast-math | — (first) |
+| Essential | concurrency + atomics/fences needed by the current language (§5) | concurrent/device programs are otherwise refused | per-access TSO→W→GX refinement, O-align/O-access, atomicity table | — (first) |
+| Essential | calls/ABI/runtime/entry/hardware forms driven by actual emitter scope (§§3, 6-exclusions, [IMAGE-ABI](dokumente/x86/IMAGE-ABI.md)) | all reachable final code must be covered or refused | entry predicates, spill privacy, template register instances | — (first) |
+| Essential | SIMD baseline: SSE2 selected integer/scalar-FP + AVX2 integer as optional CPU tier (§6 Tiers 1–3) | core practical performance goal on data-parallel/memory-bound loops | lane separation, atomicity/tearing table, CPUID/XCR0/context proofs, enabled-state gates, generic proof | stays only if its generic proof and gates close; else scalar remains |
+| Deferred | selected BMI / POPCNT / bit-scan, shuffle/permutation forms | narrow wins, real but small | per-form correspondence + CPUID-gated enabled state | only where measured benefit justifies semantic/certificate cost; common memory loops take the scalar/vector safe route first |
+| Deferred | AVX-512, matrix/AMX, APX, cryptography/SHA/AES accelerators | large modelling surface for specialised workloads | full per-form correspondence + context/state proofs | separate optional selected profiles AFTER genuine workload/semantic benefit AND affordable complete Lean rules; do not claim any of it could be emitted now |
+| Deferred | aggressive FP fusion (FMA-as-fusion), exotic gather/scatter/compress, cache hints / non-temporal stores / string specialisations | changes numerics or ordering | fused-rounding exactness proof; ordering proof for NT stores (no TSO shortcut); per-form fault/visibility rules | FMA changes FP rounding and cannot be justified as a free optimisation; NT stores change ordering and require actual proof; each waits for its own profile with benefit AND complete rules |
+
+Stop rule for diminishing returns: stop adding broad profile complexity or
+compile/validation latency when no demonstrated worthwhile benefit remains;
+keep source-construct support complete. Remaining performance tuning uses
+already proved translations and measured trait tables (§7A), never trusted
+correctness premises. Compiler-speed algorithms stay deterministic and
+bounded (optimisation/relaxation/linear-scan with fuel, valid analysis
+invalidation, safe incrementality, mandatory full validation); optional pass
+fuel exhaustion yields certified cheaper output, while required proof failure
+always refuses — never bypasses. Only selected architectural observable
+behaviours are modelled, never a full microarchitectural pipeline/cache;
+hardware time assumptions are named and cost transfer stays required (§9).
 
 ## 3. PLANNED ISA table: minimal practical-performance profile (PROPOSED)
 
