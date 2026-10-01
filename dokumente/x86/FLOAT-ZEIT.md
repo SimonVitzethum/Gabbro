@@ -27,8 +27,9 @@ Claimed:
   (§§1–3), each tied to its file and line.
 - (b) A per-form mapping from that surface onto scalar SSE/SSE2 machine
   forms, with one named obligation per machine fact the model reads but
-  never proves: rounding control, NaN class, signed zero, denormals,
-  traps, contraction/FMA, expression order, excess precision, fast-math
+  never proves: rounding control, NaN class (relaxation OPEN until
+  proved, §4.3), signed zero, denormals, traps plus reserved status
+  flags, contraction/FMA, expression order, excess precision, fast-math
   (§4). Later SIMD is admission-gated, never implicit (§5).
 - (c) A three-level separation for time — model steps, checker/certificate
   costs, hardware timing — with the exact Ziel conclusions quoted and
@@ -94,7 +95,10 @@ Emitter lowering today (`emit.rs`, `CFormenF.lean:8-22` header):
   unit — `gleitkomma_rundungsmodus_ist_rne` (probe `sonde_mxcsr_rne`) and
   `gleitkomma_x86_rechnet_mit_sse2` (probe `sonde_keine_ueberbreite`);
   profile key `fp_contract off` binds `-ffp-contract=off`
-  (`manifest.rs:538-547`, `PLAN-BITS.md` §5.2).
+  (`manifest.rs:538-547`, `PLAN-BITS.md` §5.2). Review repair: the
+  manifest's "GLOBAL state (MXCSR/FPCR)" wording is superseded for x86
+  by the per-execution-context reading with checked
+  establishes/preserves (§4.2.1/7).
 
 ---
 
@@ -197,9 +201,12 @@ today — each row below names the machine form AND the missing Lean piece.
 
 ### 4.1 Per-form mapping
 
+**Every `SS`/`float` half of the table below is refused pending the §4.3
+f32 bridge; only the `SD`/`double` halves carry a correspondence proposal.**
+
 | Model / source form | Machine form (proposal) | Correspondence obligation |
 |---|---|---|
-| `GleitOp.add` on f32 / f64 | `ADDSS` / `ADDSD` (xmm, xmm/m32/m64) | one source op = one instruction; RNE; class-level result equality incl. ±0 (no `-0 → +0` canonicalisation) |
+| `GleitOp.add` on f32 / f64 | `ADDSS` / `ADDSD` (xmm, xmm/m32/m64) | one source op = one instruction; RNE; class-level result equality incl. ±0 (no `-0 → +0` canonicalisation; payload per the §4.3 relaxation, OPEN until proved) |
 | `GleitOp.sub` | `SUBSS` / `SUBSD` | as above; `x - x = +0` must survive (no `x-x → +0` folding that also fires on `-0 - -0`, which must stay `+0` — equal here, but the fold must not drop the invalid flag on signalling inputs; simplest rule: no folding of float ops at all, §7) |
 | `GleitOp.mul` | `MULSS` / `MULSD` | as above; `0 * inf = NaN` (invalid flag) preserved — DCE/CSE must treat float ops as faulting (§7) |
 | `GleitOp.div` | `DIVSS` / `DIVSD` | as above; `0/0` NaN, `1/0` ±inf, `finite/inf` ±0 with xor signs |
@@ -223,23 +230,34 @@ syntactic refusal; the current pin status (measured 2026-09-14, C
 backend) is noted so phase B does not assume it carries over:
 
 1. **RNE mode.** Every `ADD/SUB/MUL/DIVSS/SD`, every conversion, computes
-   in round-to-nearest-ties-to-even. Machine fact: MXCSR bits 13–14 (RC)
-   `= 00`. Validator premise: `RC = 00` at every float instruction (read
-   from the validated image's MXCSR discipline, §8 profile). C pin today:
-   `sonde_mxcsr_rne` (MXCSR + x87 control word read + tie witnesses).
-   x86 gap: who may execute `LDMXCSR` (and the runtime entry value) —
-   unlisted writers are refused.
+   in round-to-nearest-ties-to-even. Machine fact (silicon): each
+   instruction rounds per the MXCSR value it executes under, bits 13–14
+   (RC) `= 00` required. MXCSR is architectural state per execution
+   context (logical CPU), NOT process-global: continuity across thread
+   context switches is established by software save/restore — user/binding
+   logic with contracts, never a hardware guarantee. The validator
+   obligation is checked establishes/preserves, not a bare stability
+   assumption: image entry ESTABLISHES the required MXCSR value (checked),
+   and every enumerated `LDMXCSR` site PRESERVES it (re-establishes the
+   required value or is refused); unlisted writers are refused. C pin
+   today: `sonde_mxcsr_rne` (MXCSR + x87 control word read + tie
+   witnesses) — reads one process value at probe time and proves nothing
+   about per-context continuity; the x86 mechanism replaces it.
 2. **SSE2, no x87 / no excess precision.** Machine fact: computation at
    the named width, single rounding. Validator: refuse all x87 encodings;
    refuse 80-bit temporaries; the `FLT_EVAL_METHOD == 0` static assert has
    no direct-x86 analogue — the property is proved per instruction form
    instead. C pin today: `sonde_keine_ueberbreite` + per-unit assert.
 3. **No contraction.** Each source-level op rounds separately: one
-   `Block.gleit` = exactly one scalar op instruction. Fused forms
-   (`VFMADD*SS/SD`, and any hidden micro-fusion the validator cannot see
-   — the latter is a hardware assumption, §8) are refused unless a
-   contracted source form with its own model/checker/certificate is
-   admitted (none exists today). Measured background: without `-mfma`
+   `Block.gleit` = exactly one scalar op instruction. Encoded fused forms
+   (`VFMADD*SS/SD`) are refused unless a contracted source form with its
+   own model/checker/certificate is admitted (none exists today).
+   Micro-op fusion or decomposition of separately encoded scalar
+   instructions inside the core does not change architecturally visible
+   rounding: only exact instruction-level semantics is modelled, and no
+   hidden-fusion premise is carried. What is refused is an *encoded*
+   fusion — an FMA opcode standing for two source ops. Measured
+   background: without `-mfma`
    the x86-64 baseline has no FMA; with `-mfma`/`-march=` both GCC and
    Clang contract, Clang even within one statement (`PLAN-BITS.md` §5).
    C pin today: build-time `sonde-fma.c` triple + `-ffp-contract=off`.
@@ -266,12 +284,16 @@ backend) is noted so phase B does not assume it carries over:
    `zeuge_subnormalAdd`, `zeuge_unterlaufNeg64`). C pin today: NOTHING
    (cheapest missing probe). x86 gap: validator premise + hardware-profile
    datum (§8) + a subnormal round-trip falsifier.
-7. **Mode stability.** Nobody changes MXCSR between operations (process-
-   global state). C pin today: NOT covered (probe reads at probe time).
-   x86 gap: the validated image's `LDMXCSR`/`STMXCSR` sites enumerated in
-   the certificate; libraries (user logic, with contracts) that write
-   MXCSR must restore RNE/FTZ/DAZ/masks or be refused; interrupt handlers
-   must save/restore MXCSR+XMM (§7 interrupts).
+7. **Control-state continuity (not a stability assumption).** There is
+   no bare "nobody changes MXCSR" premise: entry ESTABLISHES the required
+   value and every writer PRESERVES it, both validator-checked (item 1);
+   `STMXCSR` readers are enumerated alongside the writers (a reader makes
+   the value observable — the §4.2-traps status-flag reservation applies).
+   C pin today: NOT covered (probe reads at probe time). Software
+   save/restore across context switches (OS, runtime) is user/binding
+   logic with contracts; libraries that write MXCSR must re-establish
+   RNE/FTZ/DAZ/masks or be refused; interrupt handlers must save/restore
+   the MXCSR+XMM state they touch (§7 interrupts).
 
 Traps (no model outcome — hence a refusal, not a premise to tune):
 **all FP exception masks set** (MXCSR bits 7–12 IM/DM/ZM/OM/UM/PM `= 1`,
@@ -281,30 +303,63 @@ requires masked exceptions in the hardware profile and refuses images
 whose entry path unmasks them. Denormal-operand and inexact traps on
 newer CPUs (if exposed) fall under the same refusal.
 
+The MXCSR sticky status flags (IE/DE/ZE/OE/UE/PE, bits 0–5) are part of
+the machine state in the relation and are RESERVED, not matched: the
+correspondence either carries them as unobserved (no `STMXCSR` or other
+reader in the validated image observes them; handlers do not read them —
+proved per image) or matches them exactly. The concrete case is SNaN
+quieting: hardware raises invalid and returns QNaN where the model
+propagates input bits — bit identity is already relaxed (§4.3), and the
+raised flag is covered only by this reservation. A correspondence that
+ignores the sticky flags while a reader exists is false and refused.
+
 ### 4.3 Ordering obligations that survive lowering
 
-- **One source op, one rounding.** The model's "exact result, then round"
-  forbids double rounding. Two x86-specific double-rounding paths:
-  (i) compute in `double`, narrow to `float` for an `f32` node (the model
-  computes the `f32` node in binary64 — the width cut — so the lowering
-  must define the single-rounding point explicitly: either compute in
-  `float` throughout, or prove the `53 ≥ 2·24 + 2` innocuous-double-
-  rounding condition per node shape, cf. `emit.rs:17381-17390`; default
-  rule: compute in the node's width, conversions explicit
-  `CVTSD2SS`/`CVTSS2SD` at the boundary);
-  (ii) decimal literal via `double` for an `f32` literal (the `f`-suffix
-  rule becomes an encoding check).
+- **The f32 bridge is missing: binary32 validation is REFUSED until it
+  is proved.** The model computes every `Ty.fl` node in binary64
+  (`Typen.lean:79-82`); genuine `f32` arithmetic (single rounding at 24
+  bits) DIFFERS numerically from binary64-then-narrow in general — no
+  lowering convention ("compute in the node's width") and no
+  innocuous-double-rounding paragraph (`53 ≥ 2·24 + 2`, cf.
+  `emit.rs:17381-17390`) makes the binary64 correspondence true. Two ways
+  to close, both phase-B work with a reviewed statement diff where marked:
+  (a) a source-width model extension (the model computes `f32` nodes in
+  `f32`, the width threaded through `Ty.fl`/`GFloat` — a reviewed
+  `Spec.lean` diff, since the goal statement's float definitions move); or
+  (b) a proved representation/refinement for an explicitly defined
+  supported fragment (e.g. a characterised set of node shapes on which
+  binary64 evaluation followed by one `float` rounding provably equals
+  single-`f32` rounding — the double-rounding condition as a *proved
+  lemma over stated shapes*, not a paragraph). Until (a) or (b) is proved,
+  the validator refuses every `float` (`f32`) node at exactly this bridge;
+  `f64` nodes alone are validatable. The per-form table (§4.1) marks each
+  `SS`/`float` half accordingly: proposal only, no correspondence claimed.
+  The decimal-literal path is refused with the rest: the `f`-suffix rule
+  becomes an encoding check only after the bridge exists.
 - **Comparisons are total in the source, partial in silicon.**
   `fllt/flle` never see NaN (finite by type) — but the lowering still
   implements the NaN row (`false`) because `gleitPasst` admits only
   finite values while the *machine* words can carry NaN after a fault the
   model files as `logik bereich`. The `false`-on-NaN row is load-bearing
   for `fle`-based range gates.
-- **NaN payloads/quiet bit:** correspondence is class-level (nan vs not),
-  never payload-level. The model propagates input bits; hardware need not
-  (`GLEITKOMMA.md` §4 OUT). A certificate that pins a payload is refused
-  as over-specific; a test that distinguishes payloads is a harness probe,
-  not a corpus file.
+- **NaN payloads/quiet bit: relaxation only via proved
+  non-observability.** The claimed relation is class-level (nan vs not),
+  never payload-level — but this relaxation is OPEN until proved, not
+  asserted: phase B proves a non-observability lemma over
+  source-observable behaviour and goal contracts, namely (i) no NaN
+  inhabits `Gleit lo hi` (every value-producing form gates on
+  `gleitEndlich`/`gleitPasst`; NaN takes `logik bereich` or the `else`,
+  never a value), (ii) `flt/fle` answer `false` on any NaN operand, so a
+  payload never decides a branch. The model itself propagates input bits
+  (`add`: `| .nan, _ => a`), so the permission is conditional on the
+  current refusal of every bit-observing form (floats in memory read as
+  integers — refused/uncovered, §10 item 1); admitting such a form
+  re-opens the lemma. A certificate that pins a payload claims more than
+  the relation permits and is refused; a test that distinguishes payloads
+  is a harness probe, not a corpus file. The quiet-bit case (an SNaN input
+  quieted by hardware with the invalid flag raised) is covered jointly by
+  this lemma (bits) and the sticky-flag reservation (§4.2 traps): neither
+  half alone suffices.
 - **Signed zero is observable:** `+0 = -0` for `fle`, distinct results for
   `add/mul/div` per §6.3 table. Constant folding, CSE and spill/reload
   must be sign-exact (`-0` reloads as `-0`).
@@ -327,12 +382,17 @@ coordinator owns `Typen.lean`; this lane proposes, does not add),
   spill/reload across a lock or publication boundary needs its own
   linearisation or is refused).
 - **AVX/AVX2 (VEX-encoded scalar `VADDSS/VADDSD`, 256-bit packed).**
-  VEX scalar forms zero the upper lanes — the correspondence must state
-  the upper-lane effect (zeroing vs preserving) because caller/callee
-  XMM sharing across calls makes it observable; AVX–SSE transition
-  penalties are performance, not correctness, but missing `VZEROUPPER`
-  is a correctness-adjacent ABI fact the ABI doc owns
-  (`IMAGE-ABI.md`, lane 276).
+  Exact instruction-level semantics governs: VEX scalar forms zero the
+  upper lanes (architectural — stated in the correspondence because
+  caller/callee XMM sharing across calls makes it observable), legacy SSE
+  forms preserve them. AVX–SSE transition penalties are performance only.
+  `VZEROUPPER` placement carries NO correctness obligation absent a
+  specifically demonstrated ABI upper-lane contract — it is ordinarily
+  performance only and is not booked as a correctness premise here.
+  Explicit AVX state obligations: the upper YMM/XMM bits are part of the
+  machine state in the relation, established at entry and preserved across
+  calls per a proved ABI discipline (reference: `IMAGE-ABI.md`, lane
+  276); without that discipline AVX forms are refused.
 - **FMA (`VFMADD132/213/231SS/SD`).** Single rounding — *different* from
   `mul`+`add`. Admit only as its own source form (new `Block` former +
   model op + checker cost + certificate); **never as a peephole
@@ -456,9 +516,20 @@ today; §8 marks every such bound UNPROVED.**
 - `FortschrittG` needs no new stop kind for foreign edges (they are
   `blatt` steps) — and none for float ops either: every `Block.gleit*`
   head either steps (`w_gleit*`), takes the `else`, or is a user-logic
-  `bereich` refusal. A lowering that introduces a new machine-level stall
-  (e.g. a retry loop, §7) must prove it terminates or maps to an existing
-  named stop; it may not add a silent divergence.
+  `bereich` refusal. `FortschrittG` is ENABLEDNESS, not eventual progress
+  (revised lane-274 reading, adopted here): a thread that can step
+  satisfies it, however many steps occur — arbitrarily many enabled retry
+  iterations do not violate it, and even a forever-spinning retry loop
+  satisfies it. The exact source conclusion is preserved as stated; no
+  termination proof is demanded by `FortschrittG`. What a
+  lowering-introduced machine loop (e.g. a CAS retry, §7) DOES need is
+  separate: (i) finite-expansion correspondence — machine steps project
+  onto model steps, and stuttering/internal steps carry a proved progress
+  argument (they cannot vanish in projection); (ii) machine-work/time
+  bounds as their own obligations (§8.1) — unbounded retries cannot hide
+  behind a constant per-op cost. Divergence beyond enabledness is a matter
+  for those separate obligations, never smuggled into `FortschrittG` and
+  never discharged by an invented fairness/OS premise.
 
 ---
 
@@ -473,7 +544,8 @@ float code accordingly. Per family (lowering, register allocation and the
 chosen processor profile are untrusted; certificates carry the proof):
 
 - **Constant/copy propagation.** Into/through float code only if
-  bit-exact (incl. ±0 and NaN class) AND flag-identical (no new invalid,
+  bit-exact (incl. ±0; NaN class per the §4.3 relaxation, OPEN until
+  proved) AND flag-identical (no new invalid,
   no dropped overflow that changes a `bereich` outcome). Propagating a
   narrower/wider constant (`float` vs `double` bits) is a width change,
   refused. `bruch` constants are correctly-rounded literals — folding
@@ -534,11 +606,18 @@ chosen processor profile are untrusted; certificates carry the proof):
 - **Retry loops (atomics, `cmpxchg` lowering).** Success/failure have
   distinct effects; x86 `CMPXCHG` has no spurious failure — the lowering
   must not import LL/SC-style spurious-failure semantics. A retry loop is
-  a new machine-level loop with no source-level trip bound: its progress
-  needs either a proved termination measure or an explicit mapping onto
-  an existing named stop (`budget` exhaustion with the `passes` discipline
-  made explicit in the certificate). It may not silently diverge, and its
-  expected-case cost is not a bound (§8 marks all such bounds unproved).
+  a new machine-level loop with no source-level trip bound. Enabledness
+  (`FortschrittG`, §6.4) holds per iteration and needs nothing more; the
+  real obligations are separate: (i) finite expansion — each attempt
+  projects onto model behaviour, stuttering steps carry a progress
+  argument; (ii) work accounting — the certificate counts cost per attempt
+  times a PROVED attempt bound, or claims no work/time bound for that
+  site. An unbounded retry behind a constant per-op cost is unsound and
+  refused; mapping attempts onto `budget` exhaustion (with the `passes`
+  discipline explicit) is one way to earn a bound, not a `FortschrittG`
+  requirement. Expected-case cost is not a bound (§8 marks all such
+  bounds unproved). No fairness or OS premise is invented to bound
+  contention.
 - **Fences (`MFENCE`, locked ops, `pause`).** Cost counted (they are steps);
   they constrain ordering only as the TSO bridge proves (lane 274 owns the
   bridge — this lane books the float interaction: a fence placement may
@@ -552,12 +631,14 @@ chosen processor profile are untrusted; certificates carry the proof):
   violating §4.2(1,6,7). Lazy FPU/XSAVE state switching by the runtime is
   user/binding logic with contracts, not a hardware assumption.
 
-Progress transfer in one sentence: every machine loop the lowering
-introduces (retry, unrolled-tail fixup, spill-fill sequencing is straight-
-line) is either proved terminating with its cost in the certificate, or
-mapped to a named `HaltArt` stop the goal already lists; infinite
-executions are reviewed as infinite executions (§4 order item 6), never
-projected away by a finite-step simulation alone.
+Transfer obligations in one sentence: every machine loop the lowering
+introduces (retry, unrolled-tail fixup; spill-fill sequencing is
+straight-line) carries finite-expansion correspondence plus honest work
+accounting in the certificate (§8.1) — `FortschrittG` enabledness is
+preserved exactly as stated and demands no termination proof; infinite
+executions are reviewed as infinite executions (order item 6 of the
+validation plan), never projected away by a finite-step simulation alone,
+and no fairness/OS assumption is invented to bound them.
 
 ---
 
@@ -573,8 +654,10 @@ text — no per-program rules):
   call push/pop, `traverse` iteration, `retry` try, `forever` pass,
   float op class, fence, spill slot access, retry-loop iteration), the
   maximum number of validated target instructions (or, later, cycles)
-  the lowering may produce, plus the spill/fence/retry multipliers
-  actually used.
+  the lowering may produce, plus the spill/fence multipliers actually
+  used and, for retry loops, a proved attempt bound — no constant absorbs
+  an unbounded retry; a site without a proved attempt bound carries no
+  work bound (§7).
 - Lean checks the summary against the source body (a `korrOk`-style Bool:
   `kostenSummeOk EL summary P fs`) and proves soundness:
   `segZaehleX run f ≤ summaryBound summary (kostenTiefF …)` on every GX
@@ -594,10 +677,14 @@ time bounds **UNPROVED** — proposal only):
   §5 extensions admitted, with their availability bits named);
   microcode version if the platform exposes it (else the bound is
   explicitly microcode-conditional — still unproved).
-- FP control: MXCSR reset value at image entry; `RC = 00` (RNE),
-  `FTZ = 0`, `DAZ = 0`, all exception masks `= 1`; enumerated `LDMXCSR`
-  sites (§4.2.7); XMM save/restore discipline across calls/handlers
-  (reference: `IMAGE-ABI.md`, lane 276).
+- FP control: MXCSR value ESTABLISHED at image entry (checked,
+  §4.2.1); `RC = 00` (RNE), `FTZ = 0`, `DAZ = 0`, all exception masks
+  `= 1`; enumerated `LDMXCSR`/`STMXCSR` sites with checked preserves
+  (§4.2.1/7); sticky status flags reserved as unobserved-or-matched
+  (§4.2 traps); XMM + upper-YMM save/restore discipline across
+  calls/handlers (reference: `IMAGE-ABI.md`, lane 276). Per-context
+  reading throughout: entry/context-switch save/restore is binding logic,
+  silicon behaviour under the entry value is hardware.
 - Memory/timing: cache hierarchy, TLB, prefetcher and branch-predictor
   treatment — either modelled with a validated bound or explicitly
   excluded (with refusal of images that depend on the excluded case);
@@ -608,4 +695,80 @@ time bounds **UNPROVED** — proposal only):
   manifest assumptions (`gleitkomma_rundungsmodus_ist_rne`,
   `gleitkomma_x86_rechnet_mit_sse2`), the `FLT_EVAL_METHOD == 0` assert
   ancestry, the `fp_contract off` profile key (`ProfilSchluessel.
-...[truncated 3885 chars]
+  fpKontraktion = aus`, `Profil.lean:21-30`, witness
+  `zeugeKontraktionAus = 0`). For x86 the key binds validator refusal of
+  fused encodings, not a compiler flag.
+
+---
+
+## 9. Phase-B definitions/lemmas (generic, provisional names)
+
+All quantify over arbitrary supported programs/layouts; per-program
+instances are witnesses only. The coordinator owns `Typen.lean` central
+integration; this lane proposes.
+
+- Float machine state + per-op correspondence: `Befehl` constructors for
+  `ADD/SUB/MUL/DIVSD`, `UCOMISD`, `CVTSI2SD`, `CVTTSD2SI`, `MOVSD`
+  (`SS`/`float` constructors PROPOSED ONLY — refused pending the §4.3 f32
+  bridge); XMM file + MXCSR word with RC/FTZ/DAZ/mask projections AND
+  reserved sticky status flags; `float_op_corr` per `GleitOp` under the
+  x86 `gleitkomma_ieee` analogue + `wf` premises, f64 only;
+  `narrow_corr` for both `gleitNarrow` shapes; `roh_corr` for the
+  saturation wrapper; `nan_payload_unbeobachtbar` (payload relaxation from
+  source-observable non-observability — OPEN, §4.3) with the sticky-flag
+  reservation as joint premise.
+- Decoder refusals: x87, FMA, packed/AVX-unless-admitted encodings;
+  `LDMXCSR`/`STMXCSR` enumeration with unlisted writers refused.
+- Control-state chain: `establish_mxcsr_entry` (entry establishes the
+  required value, checked) + `preserve_ldmxcsr` (every enumerated writer
+  re-establishes it, checked) — per execution context, save/restore as
+  binding logic.
+- TSO float instances (with lane 274's bridge): single-copy atomicity of
+  aligned 32/64-bit `MOVSS`/`MOVSD` vs non-atomicity of 128-bit packed
+  accesses; spill-slot privateness (frame slots never change another
+  thread's state).
+- Cost summary: `kostenSummeOk` Bool + soundness to `segZaehleX` as a
+  refinement of `kostenTiefF` — retry sites carry proved attempt bounds,
+  never a constant for the unbounded.
+- Handlers/entries: XMM+MXCSR save/restore as binding-logic contracts;
+  lazy XSAVE correspondence; entry-state + upper-YMM obligations (§5 AVX).
+- Witnesses: concrete operand/memory witnesses for every helper; a
+  jointly inhabited non-degenerate source-program witness for every
+  source-syntax theorem (wave rules).
+
+## 10. Blockers (each OPEN)
+
+1. **f32 bridge — REFUSAL until proved.** Needs path (a) (source-width
+   model + reviewed `Spec.lean` diff) or (b) (proved fragment
+   refinement); until then every `float` node is refused (§4.3).
+2. **NaN relation.** `nan_payload_unbeobachtbar` + sticky-flag reservation
+   unproved; any bit-observing form re-opens the lemma (§4.3).
+3. **Control-state dynamics.** Checked establishes/preserves unbuilt;
+   FTZ/DAZ, fast-math and the writer/reader enumeration have no falsifier
+   (GLEITKOMMA.md §5 items 5–7).
+4. **Concurrency edges.** Per-access TSO float atomicity/tearing, fence
+   placement vs float observations, finite expansion of retries, spill
+   privateness — phase-B proofs. (`FortschrittG` enabledness is NOT the
+   gap; work bounds are.)
+5. **`kosten.rs` vs `kostenK`.** The gleit rows of the §11 reading were not
+   re-verified against the Rust arms by name (first-pass finding, kept).
+6. **Timing.** No validated cycle bound; all §8.2 profile data unproved.
+7. **Pilot.** `X86/Typen.lean` has no float instruction (coordinator owns).
+
+## 11. Verification log
+
+| Check | Result |
+|---|---|
+| Isolation (`pwd`, toplevel, `muse/278`) | pass, before any edit |
+| Owned files only (`FLOAT-ZEIT.md`, report) | pass — nothing else touched |
+| `X86/Typen.lean:53-68` — no float `Befehl` | confirmed by direct read |
+| `ZeitAb`/`ZeitAbX` statements + zeit-weak note (`Spec.lean:1894-1900, 2210-2215, 1233-1237`) | quoted exactly |
+| `FortschrittG` enabledness shape (`Spec.lean:1828-1831`) | disjuncts incl. `∃ M', RufSchrittG …` — enabledness, no liveness claim |
+| `Gleit lo hi` gates NaN out (`Typen.lean:111-114`, `Semantik.lean:351-352`) | basis of the §4.3 lemma shape (lemma itself OPEN) |
+| Model NaN-bit propagation (`Gleitkomma.lean:226-237` add arms) | confirmed — hence the conditional permission |
+| Review findings 1–5 | each addressed in §§4.2.1/3/7, 4.1 table note, 4.3, 5, 6.4, 7, 8.1/8.2, 9, 10 |
+| Lean / cargo / emission runs | none — docs-only task, file/claim checks per wave rules |
+
+What this lane did NOT do: no Lean code, no build, no baseline
+measurement; line numbers as-read at write time and may drift; every
+proof obligation above stays OPEN until phase B proves it.

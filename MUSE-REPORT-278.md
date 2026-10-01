@@ -32,6 +32,48 @@ blocks, fllt/flle), `X86/Typen.lean` (no float Befehl), `CFormenF.lean`
 (float prelude/lowering excerpts), `manifest.rs` (two float assumptions,
 fp_contract key), `kosten.rs` (op unit).
 
+## Repair pass (5 review findings — second commit)
+
+1. **MXCSR per-context.** Removed the inherited "process-global state"
+   wording: MXCSR is architectural state per execution context (logical
+   CPU); context-switch continuity is software save/restore (binding
+   logic), silicon behaviour under the entry value is hardware. Replaced
+   the bare stability assumption with checked establishes (entry) +
+   preserves (every enumerated `LDMXCSR` site); `STMXCSR` readers
+   enumerated; manifest "GLOBAL state" quote annotated as superseded
+   (§§4.2.1/7, 7, 8.2, 9, 10.3).
+2. **No speculative premises.** Deleted the "hidden micro-fusion"
+   hardware assumption (micro-op fusion of separately encoded scalars
+   cannot change architecturally visible rounding; only exact
+   instruction-level semantics is modelled) and the "correctness-adjacent
+   VZEROUPPER" claim (performance only absent a demonstrated ABI
+   upper-lane contract) — replaced with exact VEX semantics + explicit
+   AVX state obligations (§§4.2.3, 5).
+3. **f32 refusal.** Deleted the "compute in the node's width" default rule
+   and the innocuous-double-rounding paragraph as solutions: binary64
+   semantics vs genuine f32 arithmetic differ numerically. Until path (a)
+   (source-width model + reviewed Spec diff) or (b) (proved fragment
+   refinement) is proved, every `float` node is refused at exactly this
+   bridge; all `SS`/`float` table halves marked proposal-only (§§4.1 note,
+   4.3, 9, 10.1).
+4. **Enabledness (lane-274 reading).** `FortschrittG` preserved as pure
+   enabledness — arbitrarily many enabled retry iterations do not violate
+   it; no termination proof demanded. Retry obligations restated as
+   separate: finite expansion + honest work accounting (proved attempt
+   bound or no work bound; unbounded retry behind a constant refused). No
+   fairness/OS premise invented; no time guarantee weakened (§§6.4, 7, 8.1).
+5. **NaN audit.** Class-level relaxation made conditional on a named OPEN
+   lemma (`nan_payload_unbeobachtbar`: no NaN inhabits `Gleit lo hi`;
+   comparisons false on NaN; permission conditional on continued refusal
+   of bit-observing forms) plus an explicit sticky-status-flag reservation
+   (unobserved-or-matched; SNaN-quieting as the joint case). Payload-
+   pinning certificates refused (§§4.1 table, 4.2 traps, 4.3, 7, 8.2, 9,
+   10.2).
+
+Also repaired in this pass: the transmitted file was truncated mid-§8.2
+(write-size cut); the complete tail (§8.2 finish, §§9 phase-B lemmas, 10
+blockers, 11 verification log) is now on disk and committed.
+
 ## Exact names of new definitions/theorems
 
 None. Docs-only lane: no Lean file, no theorem, no code change. The
@@ -49,7 +91,14 @@ highest-risk claims were re-checked at write time — (i) pilot
 directly), (ii) `ZeitAb`/`ZeitAbX` statements and the
 "WEAK / says nothing about waiting" header note
 (`Spec.lean:1894-1900, 2210-2215, 1233-1237`) quoted exactly.
-Baseline build state unknown (not measured, left untouched).
+Repair-pass verification: full owned doc re-read after all edits
+(truncation confirmed repaired — §§9/10/11 present, file ends cleanly);
+each finding mapped to its edited paragraphs (§§4.2.1/3/7, 4.1 table
+note, 4.3, 5 AVX, 6.4, 7 retry + closing, 8.1 attempt bound, 8.2 FP
+control, 9 lemma list, 10 blockers, 11 log); cited model facts
+re-confirmed (`Gleitkomma.lean` nan-propagation arms,
+`Spec.lean:1828-1831` enabledness disjuncts, `Gleit lo hi` NaN
+exclusion). Baseline build state unknown (not measured, left untouched).
 
 ## What remains open
 
