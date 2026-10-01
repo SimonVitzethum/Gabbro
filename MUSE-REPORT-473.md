@@ -34,6 +34,15 @@ Candidate: author lane 425, snapshot `.tmp/review/SNAPSHOT.json` (NEW pinned hea
 
 None blocking.
 
+## Re-confirmation (same pinned head, fresh prompt)
+
+Re-prompted on the unchanged pinned snapshot (`506f5fb1...`; supplied
+Lean file md5 `52dea56356f10d5d42aff450f21af56f`, PATCH file list and
+Lean blob `096de3b2` identical to the reviewed state). Re-staged the
+pinned file verbatim and re-ran `./lean-probe`: `rc=0`,
+`== 0 error(s)`, 0 `sorryAx`, same 13 axiom lines. No content drift, no
+new findings; verdict below stands for this exact head.
+
 ## Files changed by this review
 
 - `MUSE-REPORT-473.md` only (this file). Candidate files were staged temporarily for the probe and fully removed before writing this report.
