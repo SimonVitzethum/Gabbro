@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 14:03 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -155,7 +155,7 @@ Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, 
 | 284 | Executable target TSO over real byte memory | Merged after review/checks | 300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-284.md) |
 | 285 | Mathematical carry and signed-overflow characterisation | Merged after review/checks | 301: Merged after review/checks | [report](messung/muse/MUSE-REPORT-285.md) |
 | 286 | Width-aware IEEE target data and f32 bridge evidence | Merged after review/checks | 302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-286.md) |
-| 287 | One typed IR and source-linked lowering foundation | Agent working | 303: scheduled | [task](lanes/287.md) |
+| 287 | One typed IR and source-linked lowering foundation | Incomplete; preserved | 303: scheduled | [task](lanes/287.md) |
 | 288 | Invariant-derived optimisation on actual source semantics | Merged after review/checks | 304: Merged after review/checks | [report](messung/muse/MUSE-REPORT-288.md) |
 | 289 | Disjoint byte-memory commutation | Merged after review/checks | 305: Merged after review/checks | [report](messung/muse/MUSE-REPORT-289.md) |
 | 290 | Packed integer lane model for future SIMD | Merged after review/checks | 306: Merged after review/checks | [report](messung/muse/MUSE-REPORT-290.md) |
@@ -180,13 +180,13 @@ Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, 
 | 337 | Practical-performance Lean wave A3: ShiftLogic | Merged after review/checks | 375: Merged after review/checks | [report](messung/muse/MUSE-REPORT-337.md) |
 | 338 | Practical-performance Lean wave A4: ControlFlow | Merged after review/checks | 376: Merged after review/checks | [report](messung/muse/MUSE-REPORT-338.md) |
 | 339 | Practical-performance Lean wave A5: LockedOps | Merged after review/checks | 377: Merged after review/checks | [report](messung/muse/MUSE-REPORT-339.md) |
-| 340 | Practical-performance Lean wave A6: ScalarFloat | Agent working | 378: scheduled | [task](lanes/340.md) |
+| 340 | Practical-performance Lean wave A6: ScalarFloat | Committed candidate; review/integration pending | 378: Agent working | [task](lanes/340.md) |
 | 341 | Practical-performance Lean wave B1: AccessList | Merged after review/checks | 379: Merged after review/checks | [report](messung/muse/MUSE-REPORT-341.md) |
 | 342 | Practical-performance Lean wave B2: OverlapRefusal | Merged after review/checks | 380: Merged after review/checks | [report](messung/muse/MUSE-REPORT-342.md) |
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
 | 344 | Practical-performance Lean wave B4: FenceDrain | Merged after review/checks | 382: Merged after review/checks | [report](messung/muse/MUSE-REPORT-344.md) |
 | 345 | Practical-performance Lean wave C1: TableLayout | Merged after review/checks | 383: Merged after review/checks | [report](messung/muse/MUSE-REPORT-345.md) |
-| 346 | Practical-performance Lean wave C2: GateStub | Committed candidate; review/integration pending | 384: Agent working; integration gate rejected; repair/re-review required | [task](lanes/346.md) |
+| 346 | Practical-performance Lean wave C2: GateStub | Committed candidate; review/integration pending | 384: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
@@ -211,9 +211,9 @@ Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, 
 | 419 | Continuous Lean proof reserve: BitCount | Merged after review/checks | 467: Merged after review/checks | [report](messung/muse/MUSE-REPORT-419.md) |
 | 420 | Continuous Lean proof reserve: ByteSwap | Merged after review/checks | 468: Merged after review/checks | [report](messung/muse/MUSE-REPORT-420.md) |
 | 421 | Continuous Lean proof reserve: WordAtomicity | Merged after review/checks | 469: Merged after review/checks | [report](messung/muse/MUSE-REPORT-421.md) |
-| 422 | Continuous Lean proof reserve: ReleaseAcquire | Agent working | 470: scheduled | [task](lanes/422.md) |
+| 422 | Continuous Lean proof reserve: ReleaseAcquire | Committed candidate; review/integration pending | 470: Agent working | [task](lanes/422.md) |
 | 423 | Continuous Lean proof reserve: BranchLayout | Merged after review/checks | 471: Merged after review/checks | [report](messung/muse/MUSE-REPORT-423.md) |
-| 424 | Continuous Lean proof reserve: FeatureProfile | Agent working | 472: scheduled | [task](lanes/424.md) |
+| 424 | Continuous Lean proof reserve: FeatureProfile | Committed candidate; review/integration pending | 472: Agent working | [task](lanes/424.md) |
 | 425 | Continuous Lean proof reserve: FloatExceptions | Merged after review/checks | 473: Merged after review/checks | [report](messung/muse/MUSE-REPORT-425.md) |
 | 426 | Continuous Lean proof reserve: VectorFootprints | Merged after review/checks | 474: Merged after review/checks | [report](messung/muse/MUSE-REPORT-426.md) |
 | 427 | Continuous Lean proof reserve: RegisterInterference | Merged after review/checks | 475: Merged after review/checks | [report](messung/muse/MUSE-REPORT-427.md) |
@@ -227,11 +227,11 @@ Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, 
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Agent working | 483: scheduled | [task](lanes/435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
 | 542 | Next bridge wave N9: StackUnwind | Agent working | 548: scheduled | [task](lanes/542.md) |
-| 543 | Next bridge wave N16: DecodeFault | Scheduled | 549: scheduled | [task](lanes/543.md) |
-| 544 | Next bridge wave N18: RegionFresh | Waiting for accepted dependencies | 550: scheduled | [task](lanes/544.md) |
-| 545 | Next bridge wave N11: PayloadResidue | Waiting for accepted dependencies | 551: scheduled | [task](lanes/545.md) |
-| 546 | Next bridge wave N13: ContractSites | Scheduled | 552: scheduled | [task](lanes/546.md) |
-| 547 | Next bridge wave N17: TimeTransfer | Waiting for accepted dependencies | 553: scheduled | [task](lanes/547.md) |
+| 543 | Next bridge wave N16: DecodeFault | Agent working | 549: scheduled | [task](lanes/543.md) |
+| 544 | Next bridge wave N18: RegionFresh | Agent working | 550: scheduled | [task](lanes/544.md) |
+| 545 | Next bridge wave N11: PayloadResidue | Agent working | 551: scheduled | [task](lanes/545.md) |
+| 546 | Next bridge wave N13: ContractSites | Agent working | 552: scheduled | [task](lanes/546.md) |
+| 547 | Next bridge wave N17: TimeTransfer | Agent working | 553: scheduled | [task](lanes/547.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -501,6 +501,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **475**, Independent exact-candidate review of 427, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-475.md). <!-- x86-merged:475 -->
 - 2026-10-01: lane **433**, Continuous Lean proof reserve: ObservationProjection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-433.md). <!-- x86-merged:433 -->
 - 2026-10-01: lane **481**, Independent exact-candidate review of 433, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-481.md). <!-- x86-merged:481 -->
+- 2026-10-01: publication batch checks passed for `3dce9fa2`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
