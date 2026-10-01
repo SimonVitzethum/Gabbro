@@ -3843,7 +3843,10 @@ fi
 # byte REGION through the proved stub `tor.region`, written through and handed to `write`) emits. Its poison twins
 # `gift/1384`-`1387` are refused by the CHECKER; `gift/1383` (`C186`, a region without its channel) is refused by the
 # EMITTER and writes no C, so `MARKE_EMIT_G` is untouched.
-MARKE_EMIT=156
+# 156 -> 157 on 2026-10-01 (C-free lane, C2 slice 3): example 184 (`code-vom-treiber`, an `entry fn` parameter handed
+# on once to a foreign start, the handle decoded in Gabbro) emits -- the first emitted function-pointer PARAMETER, whose
+# declarator the same commit repaired. Its poison twins `gift/1394`-`1397` are refused by the CHECKER.
+MARKE_EMIT=157
 # **148 -> 150 on 2026-09-30 (C-free lane, C1).** Two emitting examples: `172-prozess-ohne-libc` (a process with its own
 # `write` gate, no libc) and `173-abbruch-ohne-libc` (a `-> never` gate over `exit_group` as the watchdog). Measured on the
 # committed tree: 150 emitting files in `beispiele/`.

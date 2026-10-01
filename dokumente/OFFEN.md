@@ -1729,6 +1729,24 @@ closed by the checked `child` region and the proved trampoline `tor.trampolin`).
 |---|---|
 | **what holds today** | only the generated driver calls it in the corpus, and the checker does not look: the protection is convention, not a rule |
 | **CLOSED the same day: the typed half** | measuring this found the wider hole -- `&f` of a function that writes a `static mut`, passed to ANY `extern fn … effects { pure }`, checked clean with one hint. `N574` (`fremd.ohne_code`) refuses a function pointer anywhere in the type of a foreign body's parameter (`extern`/`raw`/`prim`/`asm`, `syscall`; through pointers, records, arrays, sums); gifts 1392, 1393. The only other site in the tree is the excerpt `messung/fragmente/F03.gab` (Caprock's scheduler vtable handed to `extern fn block_current`/`switch_to`) -- the shape itself, now 6 more errors there. What stays open is the NUMBER above, which no type marks as code |
-| **what closing it needs** | a checked kernel thread start: the root handed by NAME from the generated driver only (like hosted `faden.laufzeit`), the binding's start declared in a form no Gabbro call site may reach (the hosted stack gate is reachable only through `child`, `N572`), an `ERR_PTR` answer decoded like a gate's region answer (`tor.region`), and the join without `struct completion` (a word and the kernel's wait) -- then `linux-kmod.c` is gone |
+| **CLOSED 2026-10-01: the number** (C2 slice 3) | the type `entry fn(…) -> R` (`N575`-`N577`, `eintrittscode.rs`): code reaches a foreign body only as a parameter of that type, filled by generated C alone -- a Gabbro function taking one has no Gabbro caller (`N576`) and hands it on once, whole, outside every loop, to an `extern fn`'s parameter of the same signature (`N577`). `gabbro_kern_faden_start(lauf : entry fn(ptr<normal, rw> u8) -> i32, nummer : u32)` is Gabbro over `kthread_create_on_node` (variadic, `N573`) and `wake_up_process`, the `ERR_PTR` decoded in Gabbro, both foreign items private to the binding; the join is a word per root stored by the driver's wrapper after the root and awaited through `gabbro_kern_schlafe` over `msleep` (template `faden.modul`, proved, `SchablonenModul.lean` §3). No `struct completion`, no number becomes code. QEMU: `pruefe-kernelmodul.sh` GREEN on all three probes, `atomar` starting its two roots this way |
+| **what is still NOT closed in the thread start** | the instructions of the driver's wrapper after its store of 0 run in module text; an unload that frees the text in that window pulls it from under the thread. `struct completion` + `return` had the same window; `kthread_complete_and_exit` would close it and needs a kernel type. Named in `faden.modul`'s NOT proved |
 | **also C, and why** | `gabbro_kern_kernnummer`: one `%gs` load of the kernel's per-CPU DATA symbol `pcpu_hot`; Gabbro has no declaration of a foreign data object, and an `asm` naming it carries a symbol no declaration names (`pruefe-freistehend.sh` calls that UNCLASSIFIED) |
-| **measured** | `zaehle-c.py` kmod: 210 lines in 2 files -- `linux-kmod.c` (112, these two pieces) and the `takt` probe's own `takt.c` (98, its hardirq timer: `struct hrtimer` is a kernel layout) |
+| **measured** | `zaehle-c.py` kmod: 210 lines in 2 files before C2 slice 3 -- `linux-kmod.c` (112, these two pieces) and the `takt` probe's own `takt.c` (98, its hardirq timer: `struct hrtimer` is a kernel layout); after it `linux-kmod.c` holds the core number alone |
+
+## O40 — Two private functions of one name in two modules share one C name (recorded 2026-10-01, C-free lane)
+
+The emitter gives a function its BARE name in C (`static uint32_t f(void)` for a private one).
+Two modules that each define a private `f` therefore emit two definitions of one C symbol, and
+the C compiler refuses the unit (`redefinition of 'f'`). Measured with the release binary of
+`ffce2d5d` on a two-module file (`kratz/c/s12/kol/k.gab`): `gabbro emit` exits 0, `cc` fails.
+Found by the C-free stack script: the network stack's watchdog `lauf_haengt` is declared in
+`netz::bytes`, `netz::kanal` and `netz::relais`; as one C extern (`waechter.c`) that was one
+symbol, as three Gabbro functions it is three.
+
+| | |
+|---|---|
+| **what holds today** | it fails LOUD (a C error, never a wrong call): no silent hole, but a correct Gabbro program does not build |
+| **workaround** | distinct names per module (`C-FREI-FUER-NETZ.py` renames the watchdogs `<module>_lauf_haengt`) |
+| **what closing it needs** | module-qualified C names for private functions (every emitted call, prototype and template that names a function by its C name; the drivers and the template register read some of them), or a checker refusal at the second definition that names the clash before `cc` does |
+

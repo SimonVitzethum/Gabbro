@@ -312,8 +312,15 @@ generated driver, lock through the chain). Reviewers from 321.
     externs, the report, the load verdict and the lock operations as Gabbro functions; the
     probes `halde`/`atomar` report through `gabbro_kern_zeige`/`_halt` (`melde.c`, `atomar.c`
     deleted). kmod C0 399 -> 210 lines, 4 -> 2 files; `pruefe-kernelmodul.sh` GREEN, 12/12 gifts.
-  - [ ] C2, slice 3 -- the kernel thread start and the core number (OFFEN O39), and the `takt`
-    probe's hrtimer (`takt.c`).
+  - [x] C2, slice 3 -- the kernel thread start in Gabbro (OFFEN O39): `N575`-`N577`, the type
+    `entry fn(…) -> R` (code a generated driver hands in; gifts 1394-1397, example 184);
+    `gabbro_kern_faden_start` over `kthread_create_on_node`/`wake_up_process`, the join a word
+    per root and `msleep` (template `faden.modul`, proved, `SchablonenModul.lean` §3); the core
+    number and the holder record gone; `bibliothek/linux-kmod/linux-kmod.c` DELETED. kmod C0
+    210 -> 95 lines, 2 -> 1 file; `pruefe-kernelmodul.sh` GREEN (`takt` 49 ticks), 12/12 gifts.
+  - [ ] The `takt` probe's own hrtimer (`messung/proben/kmodul/takt.c`, 95 lines, the probe's
+    HARNESS): on kernel 6.8 the callback is a field of `struct hrtimer`; a question for Simon
+    whether a probe's harness counts for acceptance (STAND-C).
   - [ ] Bare metal (C3).
 
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics

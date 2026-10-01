@@ -1424,6 +1424,24 @@ fn check_fn(
     abgeleitet: &std::collections::BTreeMap<String, std::collections::BTreeSet<String>>,
 ) -> Result<CheckedFn, Refusal> {
     let d = &f.decl;
+    // **An `entry fn` parameter is code a generated driver hands in** (C-free lane, C2 slice
+    // 3; `N575`-`N577`): G has no code values, and the function is called by no Gabbro source
+    // (`N576`), so machine G never runs it. Refused BY NAME, before the class test answers
+    // for it with a sentence about something else.
+    if let Some(p) = d
+        .parameter
+        .iter()
+        .find(|p| crate::eintrittscode::eintrittstyp(&p.typ).is_some())
+    {
+        return Err(refuse(
+            "LG001",
+            format!(
+                "function {} takes `{}`, an `entry fn` -- code a generated driver hands in, and G \
+                 has no code values",
+                f.name, p.name.text
+            ),
+        ));
+    }
     if d.klasse != Some(FnKlasse::Impl) {
         return Err(refuse("LG001", format!("function {} is not `impl`", f.name)));
     }

@@ -40,7 +40,7 @@ exactly two error constructors — `logik` (a clause the writer wrote does not h
 
 | | second version | **this one** |
 |---|---|---|
-| defined EBNF rules | 132 | **187** measured (`pruefe-syntax.sh` EBNF branch: 187 defined, 0 open, 0 unreachable from `program`; 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
+| defined EBNF rules | 132 | **188** measured (`pruefe-syntax.sh` EBNF branch: 188 defined, 0 open, 0 unreachable from `program`; 187 before the C-free lane's `entryfn`, 182 before Opus agent L) — new since the second version: `endblock`, `endstmt`, `matcharm`, `stateassign`, `advstmt`, `countexpr`, `concurrentdecl` («SG-23»), `libcall`, `libregion` (lane E1); `syscalldecl`, `errmap`, `nonzero`, `uint` («SS-1», §12.1); `translatordecl` («E3», §7.2); `constwert`, `arraylit` (lane 111); `arena`, `allocstmt`, `resetstmt` («E4», §9.1); `growstmt` (lane 257, §9.1); `profiledecl`, `requiresprofile`, `profileentry` («E6», §12.2); `carrier` (lane 140, §10); `childstmt` (lane O-1, §12.1); `sysbind`, `syscontract`, `syspair`, `targetdecl`, `targetbind` (Opus agent L, §12.3); `entryfn` (C-free lane, C2 slice 3); lane 88 widened the operator arms inside the same three expression rules (`<<%`, `+%`, `-%`, `+%|` saturating, `*%`); nothing removed |
 | used but never defined | 0 | **0** (measured same run) |
 | vocabulary words | 221 | **242 table words + 4 Sonderformen** measured (`pruefe-wortschatz.py`: 242 EBNF terminals against 242 table words, both readings) — new words since the second version: `owner` («SG-9»), `deadline` («SG-22»), `concurrent` («SG-23»), `syscall` + `abi` + `number` + `errors` + `kernel` («SS-1», §12.1, checked since lane S5, emission refused as `C001` until S6), `library` + `payload` («E2», §7.1), `translator` + `for` («E3», §7.2), `arena` + `capacity` + `alloc` + `reset` («E4», §9.1), `grow` (lane 257, §9.1), `profile` + `rounding` + `fp_contract` + `memory_model` + `interrupt_routing` («E6», §12.2), `depends` (lane 140, §10), `target` (Opus agent L, OFFEN O31, §12.3) |
 | productions without an attribute reading | all | **0** — every production names its constructor or its sugar |
@@ -359,7 +359,8 @@ markorder  = "order" "{" identlist "}" ;
 (* «B37»: the stages of a linear mark, in ONE declaration. `order` stands before the `=`
    because it is not a body: an order says which steps are admissible on the value. *)
 typeexpr   = intty | floatty | boolty | nevertype | path | array | ptrty | structty | fnptr | variants
-            | indexty | stringty ;   (* lane 261 *)
+            | indexty | stringty     (* lane 261 *)
+            | entryfn ;              (* C-free lane, C2 slice 3 *)
 stringty   = stringkopf "max" int ;
 stringkopf = ident ;
 (* The word `string` -- contextual, NOT reserved (`parse.rs`): only `string`
@@ -427,6 +428,19 @@ fnptr      = "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] fncontract ;
    (`M128`/`M142`); the two implications are the user's logic (kind `C`). *)
 fncontract = [ "requires" predlist ] [ "ensures" predlist ]
              "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
+entryfn    = "entry" "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] ;
+(* NEW C-free lane, C2 slice 3 (2026-10-01; OFFEN O39): CODE handed in by generated C. No new
+   word -- `entry` heads an item at item level, and a type only before `fn`. The value is the
+   designator of a function a GENERATED driver wrote (in a kernel module, the wrapper around a
+   declared root, template `faden.modul`), and the type is the one shape in which code reaches
+   a foreign body (`N574` refuses every `fn(…)` there). It carries a C signature and NO
+   contract: no Gabbro code calls through it. Held by `eintrittscode.rs`: it stands only as the
+   own type of a parameter of an `extern fn` or a Gabbro function, with plain integers, `bool`
+   and `ptr<normal, …>` at plain integers, not behind `...` (`N575`); a Gabbro function that
+   takes one is called, taken or dispatched to by no Gabbro source (`N576`); inside it the
+   parameter is named once, as the whole argument of an `extern fn`'s `entry fn` parameter of
+   the same signature, outside every loop (`N577`). The exporter refuses such a function by
+   name (`LG001`): G has no code values, and nothing in Gabbro calls it. *)
 typelist   = typeexpr { "," typeexpr } ;
 params     = ident ":" typeexpr { "," ( ident ":" typeexpr | "..." ) } ;
 (* CHANGED C-free lane, C2 (2026-09-30): `...` once, behind at least one parameter, in the

@@ -329,9 +329,9 @@ opus/…:opus/…` first.
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N575** (highest issued: N574, C-free lane, 2026-09-30; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
-| Gift (poison-probe) numbers | **1394** (highest file: `beispiele/gift/1393`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
-| Example numbers | **184** (highest file: `beispiele/183`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
+| Diagnostic codes | **N578** (highest issued: N577, C-free lane, 2026-10-01; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
+| Gift (poison-probe) numbers | **1398** (highest file: `beispiele/gift/1397`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
+| Example numbers | **185** (highest file: `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
 | Lane numbers | **259** workers (highest used: 258); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter is authoritative) |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
@@ -408,6 +408,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | C-free lane, the kernel-module runtime generated (C2 slice 1, 2026-09-30) | **not reserved** | **nothing**: no code, no gift, no example. `laufzeit/kmodul/` and `bibliothek/linux-kmod/stdatomic.h` DELETED; `gabbro build` writes the module driver (`treiber.rs::erzeuge_kmod`, `kmod_koepfe`, `KMOD_STDATOMIC`), PROVED templates `arena.modul` and `modul.lebenslauf` (`SchablonenModul.lean`; register 31 -> 33 entries, 20 -> 22 machine-checked); manifest words `kmod <kbuild> <load> <unload>`, `provision <bytes>`, `note <section> <text>` (manifest refusals, no `Satz`); `N506` widened (a constant clause `k <= lenof(p)` binds a fixed-size object, `N464`'s twin); `Spec.lean` comment only ((M11): the compiler's C11 builtins instead of the LKMM table); `GENERATOR_KENNUNG` `treiber-gen-10`
 | C-free lane, the kernel-module binding in Gabbro (C2 slice 2, 2026-09-30) | **not reserved** | **N573** (`extern.variadik`: the variadic marker `...` of an `extern fn` parameter list), gifts **1390** (the marker at a Gabbro function), **1391** (a record behind it); no example (the positive side is `bibliothek/linux-kmod/linux-kmod.gab`: `_printk`, `panic`). `linux-kmod.c` keeps only the thread pair; `messung/proben/kmodul/melde.c`, `atomar.c` DELETED (the probes report through `gabbro_kern_zeige`/`_halt`). Also **N574** (`fremd.ohne_code`: a foreign body takes no parameter whose type carries a function pointer; OFFEN O39), gifts **1392**, **1393**
 
+| C-free lane, the kernel thread start in Gabbro (C2 slice 3, 2026-10-01, OFFEN O39) | **not reserved** | **N575**-**N577** (`eintritt.code`: the type `entry fn(…) -> R` -- where it stands, no Gabbro caller of a function taking one, one whole hand-over outside every loop), gifts **1394**-**1397**, example **184** (`code-vom-treiber`). `bibliothek/linux-kmod/linux-kmod.gab`'s thread start and join sleep are Gabbro (`kthread_create_on_node`, `wake_up_process`, `msleep`); `linux-kmod.c` keeps the core number only. PROVED template `faden.modul` (`SchablonenModul.lean` §3; register 33 -> 34 entries, 22 -> 23 machine-checked). Emitter repair: a function-pointer PARAMETER is written with its name inside the declarator (it was `T (*)(…) name`, a C error). OFFEN O40 (private functions of one name in two modules share a C name)
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);
   they are never handed to another topic. Next free is always above the highest number in use,

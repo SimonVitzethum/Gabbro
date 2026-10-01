@@ -219,6 +219,11 @@ fn fremd_ohne_code(
     }
     let u = crate::umgebung::Umgebung::sammle(baum);
     for p in parameter {
+        // `entry fn` -- code a generated driver handed in, held by `N575`-`N577`
+        // (`eintrittscode.rs`); every other function pointer stays refused here.
+        if crate::eintrittscode::eintrittstyp(&p.typ).is_some() {
+            continue;
+        }
         let mut syntaktisch = matches!(p.typ, TypExpr::FnZeiger(_));
         if let TypExpr::Zeiger(z) = &p.typ {
             syntaktisch |= matches!(z.ziel, TypExpr::FnZeiger(_));

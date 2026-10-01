@@ -4860,3 +4860,31 @@ the static pool. Measured: `instrumente/pruefe-kernelmodul.sh` GREEN on all thre
 refuse-on-full at the provision; takt: `landed=0` over 38 ticks; atomar: 512/256/0/3), 12 of 12
 gifts caught; `instrumente/zaehle-c.py` kmod runtime share 1344 -> 0 lines (what stays is the
 binding's `linux-kmod.c` and the probes' own C).
+
+## 69. Code a generated driver hands in: `entry fn`, and the kernel thread start without C (C-free lane, 2026-10-01, C2 slice 3, OFFEN O39)
+
+**The gap.** The kernel-module binding started a root's thread in C (`linux-kmod.c`): the generated
+driver handed the root wrapper's address as a `u64` to `gabbro_kern_faden_start`, and the C cast
+the number back to a function and joined it with a `struct completion`. Nothing kept a Gabbro
+caller from handing any two numbers (OFFEN O39). Now the binding is Gabbro: `gabbro_kern_faden_start(lauf
+: entry fn(ptr<normal, rw> u8) -> i32, nummer : u32)` over `kthread_create_on_node` (variadic,
+`N573`; its `ERR_PTR` decoded in Gabbro) and `wake_up_process`; the join is a word per root
+stored by the driver's wrapper after the root and awaited through `gabbro_kern_schlafe` over
+`msleep`. The type `entry fn(…) -> R` is the one shape in which code reaches a foreign body:
+values only from generated C (`N576`: a function taking one has no Gabbro caller), handed on once,
+whole, outside every loop (`N577`), standing only as a parameter's own type with a contract-free C
+signature (`N575`). The exporter refuses a function taking one by name (`LG001`: G has no code
+values). The binding's core number went too -- it fed only a holder record a probe read -- so
+`linux-kmod.c` is DELETED.
+
+| Lean name | File | What it says |
+|---|---|---|
+| `FEreignis`, `fwort`, `fSpur` | SchablonenModul §3 | the join word's events: 1 before the start, the start's answer, the root's steps, the wrapper's 0 (or the driver's after a failed start) |
+| **`faden_modul_warte_korrekt`** | SchablonenModul §3 | a wait that begins after the start and reads 0 saw the root's whole run, or a failed start and no step of the root |
+| `faden_modul_ohne_eins`, `faden_modul_null_zuerst` | SchablonenModul §3 | without the store of 1 (the word is a zeroed static) the wait returns before the root ran; with the 0 stored first it returns while steps remain |
+| `faden_modul_zeuge` | SchablonenModul §3 | WITNESS: a good start of five steps read at the end and midway, and a failed start |
+
+NOT proved: the wrapper's instructions after its store run in module text (the unload window the
+completion had too), and that the binding keeps `kern_faden_vertrag` (user logic, premise (c)).
+`Zielsatz/Spec.lean` unchanged: the goal's runtime premise (d) already says the declared starts
+run; what moved is who writes the start (the binding, in Gabbro) and the driver's join.

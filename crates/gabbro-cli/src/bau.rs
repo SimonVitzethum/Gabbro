@@ -1175,10 +1175,10 @@ struct BindungsZeile {
 /// |---|---|---|
 /// | anything (it is a module) | `gabbro_kern_melden`, `gabbro_kern_verweigert` | every load refusal: printing is a kernel call, and the loader's answer is the kernel's errno |
 /// | an `arena` | nothing -- a `provision <bytes>` line in the manifest | the generated driver's static pool (`arena.modul`) |
-/// | any `lock` | `gabbro_kern_sperre_init`, `gabbro_kern_kernnummer` | the generated driver, at load and at every acquire |
+/// | any `lock` | `gabbro_kern_sperre_init` | the generated driver, at load and at every acquire |
 /// | a PLAIN `lock` | `gabbro_kern_sperre_nimm`, `_gib` | the generated driver |
 /// | a `masks irqs` `lock` | `gabbro_kern_sperre_nimm_maskiert`, `_gib_maskiert` | the generated driver |
-/// | a `concurrent` root | `gabbro_kern_faden_start`, `_warte` | the generated driver |
+/// | a `concurrent` root | `gabbro_kern_faden_start` (an `entry fn` and the root's number), `gabbro_kern_schlafe` | the generated driver (template `faden.modul`) |
 ///
 /// An `atomic` needs no binding since the C-free lane's C2: the generated `<stdatomic.h>` maps
 /// the emitter's C11 call forms onto the compiler's own `__atomic` builtins.
@@ -1215,7 +1215,7 @@ const MODUL_ZIEL: BindungsZiel = BindungsZiel {
     art: "`module`",
     laufzeit: "the generated module driver",
     kopf: "the generated module driver (`treiber.rs::erzeuge_kmod`)",
-    bibliothek: "`bibliothek/linux-kmod/linux-kmod.gab` and `bibliothek/linux-kmod/linux-kmod.c`",
+    bibliothek: "`bibliothek/linux-kmod/linux-kmod.gab`",
     sonst: "`modpost`'s -- \"{} undefined\", in a `make` log",
 };
 
@@ -1318,12 +1318,12 @@ fn bindungsregel(
     }
     if !sperren.is_empty() {
         let weil = "this unit declares a `lock`, whose primitive the emitter only declares";
-        for (name, parameter, liefert) in [
-            ("gabbro_kern_sperre_init", 1, false),
-            ("gabbro_kern_kernnummer", 0, true),
-        ] {
-            gefordert.push(BindungsZeile { name, parameter, liefert, weil });
-        }
+        gefordert.push(BindungsZeile {
+            name: "gabbro_kern_sperre_init",
+            parameter: 1,
+            liefert: false,
+            weil,
+        });
         if sperren.iter().any(|s| !s.maskiert) {
             let weil = "this unit declares a `lock` without `masks irqs`";
             for name in ["gabbro_kern_sperre_nimm", "gabbro_kern_sperre_gib"] {
@@ -1357,8 +1357,8 @@ fn bindungsregel(
             weil,
         });
         gefordert.push(BindungsZeile {
-            name: "gabbro_kern_faden_warte",
-            parameter: 1,
+            name: "gabbro_kern_schlafe",
+            parameter: 0,
             liefert: false,
             weil,
         });

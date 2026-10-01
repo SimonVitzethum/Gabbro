@@ -1,6 +1,6 @@
 # C-FREI-REPORT -- no handwritten C in a finished Gabbro binary (C-free lane)
 
-*Interim state, 2026-09-30 (session 11, Opus 5.5). The assignment is `~/claude-lane/AUFTRAG-C.md`;
+*Interim state, 2026-10-01 (session 12, Opus 5.5). The assignment is `~/claude-lane/AUFTRAG-C.md`;
 the rule is AGENTS.md §3 (Simon, 2026-09-30). This file is rewritten at every milestone; the
 numbers carry the command that measured them.*
 
@@ -12,7 +12,7 @@ put into each finished product, per target.
 | target | 2026-09-30 morning | now | what is left |
 |---|---|---|---|
 | hosted | 1174 lines, 7 files | **0 lines, 0 files** | -- |
-| kmod | 1344 lines, 11 files (two probes; 1659 / 13 with the `atomar` probe the counter lists since C2) | **210 lines, 2 files; runtime share 0** | `bibliothek/linux-kmod/linux-kmod.c` (112: the kernel thread start and the core number, OFFEN O39) and the `takt` probe's hardirq timer `takt.c` (98) |
+| kmod | 1344 lines, 11 files (two probes; 1659 / 13 with the `atomar` probe the counter lists since C2) | **95 lines, 1 file; runtime and binding 0** | the `takt` probe's own hardirq timer `messung/proben/kmodul/takt.c` (95) -- its HARNESS, not product: on kernel 6.8 an hrtimer's callback is a field of `struct hrtimer` (a code address stored into a kernel layout) |
 | metal | 1962 lines, 6 files | 1962, 6 | C3 not started: `laufzeit/metall/*` |
 
 Hosted imports (`C0_ARBEIT=… python3 instrumente/zaehle-c.py --baue`, toolchain names removed):
@@ -38,7 +38,9 @@ OWN `extern fn` -- the documented point of those two examples; their libc-free t
 
 | the kernel-module binding in Gabbro (C2, slice 2) | (this merge) | `N573`: a variadic `extern fn` (`_printk`, `panic`), arguments behind `...` cast to their declared type; the report, the load verdict and the locks are Gabbro over `_printk`/`_raw_spin_*`; the probes report through `gabbro_kern_zeige`/`_halt` -- `melde.c`, `atomar.c` and all but two pieces of `linux-kmod.c` gone | -- |
 
-Template register (`gabbro schablonen`): 33 entries, 22 machine-checked; `--tor` still names the 6
+| the kernel thread start in Gabbro (C2, slice 3) | (this merge) | `N575`-`N577`: the type `entry fn(…) -> R` -- code a generated driver hands in, the one shape in which code reaches a foreign body; `gabbro_kern_faden_start` is Gabbro over `kthread_create_on_node`/`wake_up_process` (the `ERR_PTR` decoded in Gabbro), the join a word per root and `msleep`; the core number and the holder record (probe instrumentation in product code) gone -- `linux-kmod.c` DELETED; example 184, gifts 1394-1397; OFFEN O39 closed but for the probe's timer, O40 recorded | `faden.modul` |
+
+Template register (`gabbro schablonen`): 34 entries, 23 machine-checked; `--tor` still names the 6
 hanging premises it named before this lane (none of this lane's).
 
 ## Open, by name
@@ -47,9 +49,10 @@ hanging premises it named before this lane (none of this lane's).
   since session 8; the network lane has not reported its `tests/*.sh` on it. `N571` asked it for
   74 sites.
 * **Hosted**: a `nolibc` driver (`main` returns into the C runtime's start code).
-* **C2 slice 3** (kernel module, OFFEN O39): the kernel thread start as a checked form (today
-  an `extern fn` taking a code address as a number -- reachable from any Gabbro call site), the
-  core number (a foreign DATA symbol has no Gabbro declaration), the `takt` probe's hrtimer.
+* **Kernel module, the last 95 lines**: the `takt` probe's hrtimer (`takt.c`). Its callback is a
+  FIELD of `struct hrtimer` on kernel 6.8; code reaches a foreign body only as an `entry fn`
+  ARGUMENT. Kernels from 6.13 take it as an argument (`hrtimer_setup`). A question for Simon:
+  is a probe's own harness C inside acceptance 3 ("0 handwritten C lines in the .ko")?
 * **Probe finding:** `atomar`'s "flag seen > 0" is scheduling-dependent -- 1 of 5 runs this
   session saw the consumer finish before the producer's first store (`kratz/c/s11/kmod-b.log`). **C3** (bare metal): not started.
 * **Machine G has no byte pointers** (OFFEN O37): region programs stay UNCERTIFIED; nothing

@@ -3,9 +3,15 @@
  *
  * `sperre-takt.gab` declares three foreign functions and this is what it
  * promised, written by whoever wrote the program -- not by Gabbro. It is the
- * whole of what this probe knows about Linux: an `hrtimer` in HARDIRQ mode,
- * `pr_info`, and `smp_processor_id`. A different kernel gets a different file
- * here and the same `.gab`.
+ * whole of what this probe knows about Linux: an `hrtimer` in HARDIRQ mode and
+ * `pr_info`. A different kernel gets a different file here and the same `.gab`.
+ *
+ * WHY IT IS STILL C (C-free lane, C2 slice 3, 2026-10-01). It is the probe's
+ * HARNESS, not product: on this kernel (6.8) an hrtimer's callback is a FIELD of
+ * `struct hrtimer` (`hrtimer_init` + `timer.function = …`), a kernel layout and a
+ * code address stored into memory -- neither is a form Gabbro has (code reaches a
+ * foreign body only as an `entry fn` ARGUMENT, `N575`-`N577`). Kernels from 6.13
+ * take the callback as an argument (`hrtimer_setup`). Counted by `zaehle-c.py`.
  *
  * WHAT THE TIMER IS FOR. The probe measures that `lock … masks irqs` really
  * masks in a kernel module. For that something has to try to enter while the
@@ -14,18 +20,19 @@
  * takes the same lock. The thread side holds it across a 4096-slot traversal,
  * which is a window a 50 us timer lands in many times over.
  *
- * THE OBSERVATION, and why the green run is a measurement. Before it takes the
- * lock, the timer body reads `gabbro_halter_TAKT` -- the runtime's record of
- * which core holds `TAKT`, or -1 (`laufzeit/kmodul/sperre.h`). If that ever
- * equals its own core, an interrupt landed INSIDE a critical section on the
- * core that was holding it, which is the same-core deadlock the checker refuses
- * as `H102`. Two counters travel out through `pr_info`:
+ * THE OBSERVATION, and why the green run is a measurement. The probe runs on
+ * ONE core: the timer is armed there and the critical sections run there. An
+ * interrupt that landed INSIDE one would take `TAKT` while the core it
+ * interrupted holds it -- the same-core deadlock the checker refuses as `H102`
+ * -- and the run would never finish (the harness's gift 5 is exactly that).
+ * So a run that finishes says no tick landed inside, and `ticks` says how
+ * often the timer had the chance: a run with 0 ticks finishes too and has
+ * measured NOTHING -- the harness demands a minimum.
  *
- *   ticks    how often the timer fired at all. A run with 0 would report a
- *            clean `landed` and have measured NOTHING -- the harness checks it.
- *   landed   how often it fired on a core that was holding. With `masks irqs`
- *            this must be 0; without it the run does not finish, because the
- *            body then waits for the core it interrupted.
+ * (Until 2026-10-01 the timer body also compared the runtime's holder record
+ * `gabbro_halter_TAKT` with its own core and counted `landed`. On one core
+ * that count could only ever be 0 in a run that finished; the record and the
+ * core number behind it were the module runtime's last C, and went with it.)
  *
  * `hrtimer_forward_now` + `HRTIMER_RESTART` keeps it periodic; `_aus` cancels
  * it before the module's init returns, so nothing of this file outlives the
@@ -36,7 +43,6 @@
 #include <linux/printk.h>
 #include <linux/hrtimer.h>
 #include <linux/ktime.h>
-#include <linux/smp.h>
 #include <linux/types.h>
 #include <linux/compiler.h>
 
@@ -48,22 +54,16 @@ void gabbro_kmod_takt_aus(void);
  * `sperre-takt.gab`. `pub`, so it is not `static` in the emitted C. */
 void tick(void);
 
-/* The runtime's holder record for `TAKT` (`laufzeit/kmodul/sperre.h`). */
-extern int gabbro_halter_TAKT;
 
 #define GABBRO_TAKT_NS 50000ull
 
 static struct hrtimer gabbro_takt_uhr;
 static u64 gabbro_takt_ticks;
-static u64 gabbro_takt_landungen;
 static bool gabbro_takt_laeuft;
 
 static enum hrtimer_restart gabbro_takt_schlag(struct hrtimer *u)
 {
     gabbro_takt_ticks++;
-    if (READ_ONCE(gabbro_halter_TAKT) == smp_processor_id()) {
-        gabbro_takt_landungen++;
-    }
     tick();
     hrtimer_forward_now(u, ns_to_ktime(GABBRO_TAKT_NS));
     return HRTIMER_RESTART;
@@ -78,7 +78,6 @@ void gabbro_kmod_takt_melde(uint32_t schluessel, uint64_t wert)
 void gabbro_kmod_takt_an(void)
 {
     gabbro_takt_ticks = 0;
-    gabbro_takt_landungen = 0;
     hrtimer_init(&gabbro_takt_uhr, CLOCK_MONOTONIC, HRTIMER_MODE_REL_HARD);
     gabbro_takt_uhr.function = gabbro_takt_schlag;
     gabbro_takt_laeuft = true;
@@ -92,7 +91,5 @@ void gabbro_kmod_takt_aus(void)
         hrtimer_cancel(&gabbro_takt_uhr);
         gabbro_takt_laeuft = false;
     }
-    pr_info("gabbro-takt: ticks=%llu landed=%llu\n",
-            (unsigned long long)gabbro_takt_ticks,
-            (unsigned long long)gabbro_takt_landungen);
+    pr_info("gabbro-takt: ticks=%llu\n", (unsigned long long)gabbro_takt_ticks);
 }

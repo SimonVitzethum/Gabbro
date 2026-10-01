@@ -1103,10 +1103,8 @@ pub fn erzeuge_kmod(einheit: &str, plan: &KmodPlan) -> String {
     if !sperren.is_empty() {
         aus.push_str(
             "/* -- The lock primitives. The storage is this file's (a zeroed blob per lock), the\n\
-             \x20*    operations are the program's binding; `gabbro_halter_L` records the core that\n\
-             \x20*    holds `L` (-1: nobody), for a probe's interrupt body to read. */\n\
-             void gabbro_kern_sperre_init(uint8_t *s);\n\
-             uint32_t gabbro_kern_kernnummer(void);\n",
+             \x20*    operations are the program's binding. */\n\
+             void gabbro_kern_sperre_init(uint8_t *s);\n",
         );
         if sperren.iter().any(|s| !s.maskiert) {
             aus.push_str(
@@ -1122,8 +1120,7 @@ pub fn erzeuge_kmod(einheit: &str, plan: &KmodPlan) -> String {
         for s in &sperren {
             let l = &s.name;
             aus.push_str(&format!(
-                "static uint8_t gabbro_sperre_{l}[256] __attribute__((aligned(64)));\n\
-                 int gabbro_halter_{l} = -1;\n"
+                "static uint8_t gabbro_sperre_{l}[256] __attribute__((aligned(64)));\n"
             ));
             if s.maskiert {
                 aus.push_str(&format!(
@@ -1131,11 +1128,9 @@ pub fn erzeuge_kmod(einheit: &str, plan: &KmodPlan) -> String {
                      void {l}_nimm(void)\n{{\n\
                      \x20   uint64_t f = gabbro_kern_sperre_nimm_maskiert(gabbro_sperre_{l});\n\
                      \x20   gabbro_sperre_flaggen_{l} = f;\n\
-                     \x20   __atomic_store_n(&gabbro_halter_{l}, (int)gabbro_kern_kernnummer(), __ATOMIC_RELAXED);\n\
                      }}\n\
                      void {l}_gib(void)\n{{\n\
                      \x20   uint64_t f = gabbro_sperre_flaggen_{l};\n\
-                     \x20   __atomic_store_n(&gabbro_halter_{l}, -1, __ATOMIC_RELAXED);\n\
                      \x20   gabbro_kern_sperre_gib_maskiert(gabbro_sperre_{l}, f);\n\
                      }}\n"
                 ));
@@ -1143,10 +1138,8 @@ pub fn erzeuge_kmod(einheit: &str, plan: &KmodPlan) -> String {
                 aus.push_str(&format!(
                     "void {l}_nimm(void)\n{{\n\
                      \x20   gabbro_kern_sperre_nimm(gabbro_sperre_{l});\n\
-                     \x20   __atomic_store_n(&gabbro_halter_{l}, (int)gabbro_kern_kernnummer(), __ATOMIC_RELAXED);\n\
                      }}\n\
                      void {l}_gib(void)\n{{\n\
-                     \x20   __atomic_store_n(&gabbro_halter_{l}, -1, __ATOMIC_RELAXED);\n\
                      \x20   gabbro_kern_sperre_gib(gabbro_sperre_{l});\n\
                      }}\n"
                 ));
@@ -1162,22 +1155,32 @@ pub fn erzeuge_kmod(einheit: &str, plan: &KmodPlan) -> String {
         aus.push('\n');
     }
 
-    // -- the roots, one kernel thread each, through the binding --
+    // -- the roots, one kernel thread each, through the binding (template `faden.modul`) --
     let mut wurzeln: Vec<&str> = plan.wurzeln.iter().map(|w| w.c_name.as_str()).collect();
     wurzeln.sort_unstable();
     if !wurzeln.is_empty() {
         aus.push_str(
-            "/* -- The roots: one thread each, started and awaited by the program's binding. A\n\
-             \x20*    start that fails leaves its blob in a state the wait returns from at once. */\n\
-             uint32_t gabbro_kern_faden_start(uint64_t f, uint64_t koerper);\n\
-             void gabbro_kern_faden_warte(uint64_t f);\n",
+            "/* -- The roots (template `faden.modul`): one thread each, started by the program's\n\
+             \x20*    binding with the designator of a wrapper written here (an `entry fn`). The\n\
+             \x20*    wrapper stores 0 into the root's join word once the root has returned; the\n\
+             \x20*    word is 1 from just before the start, and a start that fails stores the 0\n\
+             \x20*    itself. The wait re-reads the word and sleeps through the binding between. */\n\
+             uint32_t gabbro_kern_faden_start(int32_t (*lauf)(uint8_t *), uint32_t nummer);\n\
+             void gabbro_kern_schlafe(void);\n\
+             static void gabbro_faden_warte(uint32_t *wort)\n\
+             {\n\
+             \x20   while (__atomic_load_n(wort, __ATOMIC_ACQUIRE) != 0u) {\n\
+             \x20       gabbro_kern_schlafe();\n\
+             \x20   }\n\
+             }\n",
         );
         for w in &wurzeln {
             aus.push_str(&format!(
-                "static unsigned long gabbro_faden_lager_{w}[32];\n\
-                 static int gabbro_faden_{w}(void *unbenutzt)\n{{\n\
+                "static uint32_t gabbro_faden_wort_{w};\n\
+                 static int32_t gabbro_faden_{w}(uint8_t *unbenutzt)\n{{\n\
                  \x20   (void)unbenutzt;\n\
                  \x20   {w}();\n\
+                 \x20   __atomic_store_n(&gabbro_faden_wort_{w}, 0u, __ATOMIC_RELEASE);\n\
                  \x20   return 0;\n\
                  }}\n"
             ));
@@ -1222,11 +1225,12 @@ pub fn erzeuge_kmod(einheit: &str, plan: &KmodPlan) -> String {
     );
     if !wurzeln.is_empty() {
         aus.push_str("    {\n        uint32_t fehler = 0u, f;\n");
-        for w in &wurzeln {
+        for (i, w) in wurzeln.iter().enumerate() {
             aus.push_str(&format!(
-                "        f = gabbro_kern_faden_start((uint64_t)(uintptr_t)gabbro_faden_lager_{w},\n\
-                 \x20                                   (uint64_t)(uintptr_t)&gabbro_faden_{w});\n\
+                "        __atomic_store_n(&gabbro_faden_wort_{w}, 1u, __ATOMIC_RELAXED);\n\
+                 \x20       f = gabbro_kern_faden_start(gabbro_faden_{w}, {i}u);\n\
                  \x20       if (f != 0u) {{\n\
+                 \x20           __atomic_store_n(&gabbro_faden_wort_{w}, 0u, __ATOMIC_RELEASE);\n\
                  \x20           gabbro_kern_melden(GABBRO_KERN_M_LADEN_FADEN, f, 0u);\n\
                  \x20           fehler = f;\n\
                  \x20       }}\n"
@@ -1234,9 +1238,7 @@ pub fn erzeuge_kmod(einheit: &str, plan: &KmodPlan) -> String {
         }
         aus.push_str("        if (fehler != 0u) {\n");
         for w in &wurzeln {
-            aus.push_str(&format!(
-                "            gabbro_kern_faden_warte((uint64_t)(uintptr_t)gabbro_faden_lager_{w});\n"
-            ));
+            aus.push_str(&format!("            gabbro_faden_warte(&gabbro_faden_wort_{w});\n"));
         }
         aus.push_str(
             "            return gabbro_kern_verweigert(GABBRO_KERN_M_LADEN_FADEN);\n        }\n    }\n",
@@ -1245,9 +1247,7 @@ pub fn erzeuge_kmod(einheit: &str, plan: &KmodPlan) -> String {
     aus.push_str("    return 0;\n}\n\n");
     aus.push_str(&format!("void {}(void)\n{{\n", plan.entladen));
     for w in &wurzeln {
-        aus.push_str(&format!(
-            "    gabbro_kern_faden_warte((uint64_t)(uintptr_t)gabbro_faden_lager_{w});\n"
-        ));
+        aus.push_str(&format!("    gabbro_faden_warte(&gabbro_faden_wort_{w});\n"));
     }
     aus.push_str(&format!("    (void){}();\n}}\n", plan.exit));
     aus

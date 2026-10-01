@@ -16,7 +16,14 @@
     init, the fail-stop read back, one thread per root; unload = every root awaited, then the
     unit's exit.
 
-  Both are ABSTRACT CORES like `arena.dyn` and `faden.laufzeit` (SchablonenArena.lean,
+  * `faden.modul` -- the roots as kernel threads (C2 slice 3, 2026-10-01): one join word per
+    root, 1 before the start, 0 from the wrapper after the root returned (or from the driver
+    after a failed start); the wait re-reads it and sleeps through the binding.
+    `faden_modul_warte_korrekt`: a wait that returns saw the root's whole run, or a start that
+    failed and no step of the root; `faden_modul_ohne_eins`, `faden_modul_null_zuerst`: the two
+    orders it rests on are not decoration.
+
+  All are ABSTRACT CORES like `arena.dyn` and `faden.laufzeit` (SchablonenArena.lean,
   SchablonenFaden.lean): machine G has the arena as a table of `max` slots (ArenaDyn.lean) and
   the declared starts as threads (premise (d) of the goal, Zielsatz/Spec.lean). What is proved
   here is the mechanics the templates add:
@@ -368,6 +375,114 @@ theorem lebenslauf_zeuge_stopp :
 theorem lebenslauf_zeuge_reserve :
     laden { arenen := [true, false, true], sperren := 2, antwort := 0, stopp := false,
             wurzeln := [true] } = ([Schritt.binde 0, Schritt.binde 1], false) := by decide
+
+/-! ## 3. `faden.modul` -- the roots as kernel threads, joined by a word
+
+  The driver (`treiber.rs::erzeuge_kmod`, C-free lane C2 slice 3) owns one 32-bit join word per
+  root, a zeroed static. Before the start it stores 1; it hands the designator of a wrapper to
+  the binding's `gabbro_kern_faden_start` (an `entry fn`, `N575`-`N577`); the wrapper runs the
+  root and THEN stores 0 (release). A start that fails stores the 0 itself. The wait re-reads
+  the word (acquire) and sleeps through the binding until it reads 0. -/
+
+/-- What happens to one root's join word, in the order it happens. -/
+inductive FEreignis where
+  | eins            -- the driver stores 1, before the start
+  | startGut        -- the binding answered 0: a thread will run the wrapper
+  | startFehl       -- the binding answered an errno: nothing runs
+  | lauf            -- a step of the root, on its thread
+  | ende            -- the wrapper's store of 0, after the root returned
+  | null            -- the driver's store of 0 after a failed start
+  deriving DecidableEq, Repr
+
+/-- The word after a prefix of events, from whatever it held (`w0`). -/
+def fwort (w0 : Nat) : List FEreignis → Nat
+  | [] => w0
+  | .eins :: r => fwort 1 r
+  | .ende :: r => fwort 0 r
+  | .null :: r => fwort 0 r
+  | _ :: r => fwort w0 r
+
+/-- **The two traces the template and the binding's contract allow.** A good start: 1, the
+    start, the root's steps, then the wrapper's 0. A failed start: 1, the refusal, the driver's
+    0 -- and no step of the root. -/
+def fSpur : Bool → Nat → List FEreignis
+  | true, k => .eins :: .startGut :: (List.replicate k .lauf ++ [.ende])
+  | false, _ => [.eins, .startFehl, .null]
+
+theorem fwort_replicate (w0 k : Nat) (r : List FEreignis) :
+    fwort w0 (List.replicate k .lauf ++ r) = fwort w0 r := by
+  induction k with
+  | zero => rfl
+  | succ k ih => simp only [List.replicate_succ, List.cons_append, fwort]; exact ih
+
+theorem ftake_vor_dem_ende (k m : Nat) (r : List FEreignis) (h : m ≤ k) :
+    (List.replicate k FEreignis.lauf ++ r).take m = List.replicate m FEreignis.lauf := by
+  induction k generalizing m with
+  | zero => simp at h; subst h; rfl
+  | succ k ih =>
+    cases m with
+    | zero => rfl
+    | succ m =>
+      simp only [List.replicate_succ, List.cons_append, List.take_succ_cons]
+      rw [ih m (by omega)]
+
+theorem ftake_alles (k m : Nat) (h : k < m) :
+    (List.replicate k FEreignis.lauf ++ [FEreignis.ende]).take m =
+      List.replicate k FEreignis.lauf ++ [FEreignis.ende] := by
+  apply List.take_of_length_le
+  simp; omega
+
+/-- **Soundness of the join (`faden_modul_warte_korrekt`).** The wait begins after the start
+    returned -- a prefix holding the store of 1 and the start's answer (`n ≥ 2`) -- and returns
+    only on reading 0. Then EITHER the root's whole run is in what it saw, its last step and the
+    wrapper's 0 included (a good start), OR the start failed and no step of the root exists.
+    Whatever the root's length and wherever the waiter looks. -/
+theorem faden_modul_warte_korrekt (gut : Bool) (k w0 n : Nat) (hn : 2 ≤ n)
+    (h0 : fwort w0 ((fSpur gut k).take n) = 0) :
+    (gut = true ∧ (fSpur gut k).take n = fSpur gut k) ∨
+      (gut = false ∧ FEreignis.lauf ∉ fSpur gut k) := by
+  cases gut with
+  | false => right; exact ⟨rfl, by simp [fSpur]⟩
+  | true =>
+    left
+    refine ⟨rfl, ?_⟩
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 2 := ⟨n - 2, by omega⟩
+    simp only [fSpur, List.take_succ_cons] at h0 ⊢
+    by_cases hm : m ≤ k
+    · exfalso
+      simp only [fwort] at h0
+      rw [ftake_vor_dem_ende k m _ hm] at h0
+      have e := fwort_replicate 1 m []
+      simp only [List.append_nil] at e
+      rw [e] at h0
+      simp [fwort] at h0
+    · rw [ftake_alles k m (by omega)]
+
+/-- The store of 1 is not decoration: the word is a ZEROED static, so without it a waiter that
+    looks right after a good start reads the old 0 and returns before the root ran a step --
+    the unload would then call the unit's exit beside a running root. -/
+theorem faden_modul_ohne_eins :
+    fwort 0 ([FEreignis.startGut, .lauf, .ende].take 1) = 0 ∧
+    FEreignis.lauf ∉ [FEreignis.startGut, .lauf, .ende].take 1 := by decide
+
+/-- And the wrapper's ORDER is not decoration: a wrapper that stored 0 before running the root
+    lets a waiter return while the root still has steps to run. -/
+theorem faden_modul_null_zuerst :
+    fwort 1 ([FEreignis.eins, .startGut, .ende, .lauf].take 3) = 0 ∧
+    [FEreignis.eins, .startGut, .ende, .lauf].take 3 ≠ [FEreignis.eins, .startGut, .ende, .lauf] :=
+  by decide
+
+/-- **Witness** (all premises jointly): the `atomar` probe's roots -- one good start whose root
+    runs five steps, read after everything (the word reads 0 and the whole run is in it) and
+    after four events (the word reads 1); and one failed start, read after the driver's 0. -/
+theorem faden_modul_zeuge :
+    fwort 0 ((fSpur true 5).take 8) = 0 ∧ (fSpur true 5).take 8 = fSpur true 5 ∧
+    fwort 0 ((fSpur true 5).take 4) = 1 ∧
+    fwort 0 ((fSpur false 0).take 3) = 0 ∧ FEreignis.lauf ∉ fSpur false 0 := by
+  refine ⟨by decide, ?_, by decide, by decide, by decide⟩
+  rcases faden_modul_warte_korrekt true 5 0 8 (by decide) (by decide) with ⟨-, h⟩ | ⟨h, -⟩
+  · exact h
+  · exact absurd h (by decide)
 
 end ModulLaufzeit
 

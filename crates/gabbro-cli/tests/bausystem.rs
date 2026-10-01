@@ -269,9 +269,8 @@ extern fn gabbro_kern_sperre_nimm(s : ptr<normal, rw> u8) requires 256 <= lenof(
 extern fn gabbro_kern_sperre_gib(s : ptr<normal, rw> u8) requires 256 <= lenof(s) effects { writes s } costs <= 8 ops;
 extern fn gabbro_kern_sperre_nimm_maskiert(s : ptr<normal, rw> u8) -> u64 requires 256 <= lenof(s) effects { writes s } costs <= 8 ops;
 extern fn gabbro_kern_sperre_gib_maskiert(s : ptr<normal, rw> u8, flaggen : u64) requires 256 <= lenof(s) effects { writes s } costs <= 8 ops;
-extern fn gabbro_kern_kernnummer() -> u32 effects { pure } costs <= 8 ops;
-extern fn gabbro_kern_faden_start(f : u64, koerper : u64) -> u32 effects { pure } costs <= 8 ops;
-extern fn gabbro_kern_faden_warte(f : u64) effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_faden_start(lauf : entry fn(ptr<normal, rw> u8) -> i32, nummer : u32) -> u32 effects { pure } costs <= 8 ops;
+extern fn gabbro_kern_schlafe() effects { pure } costs <= 8 ops;
 }
 ";
 
@@ -671,7 +670,6 @@ module bindung::kern {
 extern fn gabbro_kern_melden(code : u32, a : u64, b : u64) effects { pure } costs <= 8 ops;
 extern fn gabbro_kern_verweigert(code : u32) -> i32 effects { pure } costs <= 8 ops;
 extern fn gabbro_kern_sperre_init(s : ptr<normal, rw> u8) requires 256 <= lenof(s) effects { writes s } costs <= 8 ops;
-extern fn gabbro_kern_kernnummer() -> u32 effects { pure } costs <= 8 ops;
 extern fn gabbro_kern_sperre_nimm(s : ptr<normal, rw> u8) requires 256 <= lenof(s) effects { writes s } costs <= 8 ops;
 extern fn gabbro_kern_sperre_gib(s : ptr<normal, rw> u8) requires 256 <= lenof(s) effects { writes s } costs <= 8 ops;
 }

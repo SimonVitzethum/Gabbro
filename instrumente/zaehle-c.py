@@ -50,7 +50,7 @@ TOOLCHAIN = {
 # The kernel build tree is named by the environment, never baked in.
 KBUILD = os.environ.get("KBUILD", "/lib/modules/%s/build" % os.uname().release)
 BINDUNG_LINUX = "  {W}/bibliothek/linux/linux.gab\n"
-BINDUNG_KMOD = "  {W}/bibliothek/linux-kmod/linux-kmod.gab\n  {W}/bibliothek/linux-kmod/linux-kmod.c\n"
+BINDUNG_KMOD = "  {W}/bibliothek/linux-kmod/linux-kmod.gab\n"
 CC = "compiler cc -std=c11 -O0 -Wall -Wextra -Werror\nout {OUT}\n"
 # The module product's words (C-free lane, C2): the kernel build tree, the loader's two entry
 # symbols and the licence -- the runtime itself is the build's generated text.

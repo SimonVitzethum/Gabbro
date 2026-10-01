@@ -1408,6 +1408,11 @@ fn fnptr_traegt_seinen_vertrag(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
         crate::jeder_typausdruck_im_item(item, &mut |t| {
             let TypExpr::FnZeiger(f) = t else { return };
+            // An `entry fn` carries no contract by its own rule (`N575`): nothing calls
+            // through it in Gabbro source.
+            if f.eintritt.is_some() {
+                return;
+            }
             // **One rule, one refusal** -- the two missing clauses are two halves of
             // "this type carries no contract", not two rules. See `fnptr_passt` in `m1.rs`
             // for the same decision and `instrumente/pruefe-vergabe.py` for why it matters.

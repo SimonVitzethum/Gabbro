@@ -513,6 +513,15 @@ pub struct FnZeiger {
     /// `None` means the clause is missing. **That is an error too** (`N035`) -- otherwise an
     /// indirect call costs nothing, and `K001` computes with a number nobody promised.
     pub costs: Option<Expr>,
+    /// **`entry fn(…) -> R` -- CODE handed in by generated C, never formed in Gabbro** (C-free
+    /// lane, C2 slice 3, 2026-10-01; OFFEN O39). `Some` is the span of the word `entry`.
+    ///
+    /// The type of a parameter through which a GENERATED driver hands a function of its own
+    /// (a thread root's wrapper) to the program's binding, which hands it on to a foreign
+    /// body (the kernel's thread start). It carries a C signature and nothing else: no Gabbro
+    /// code calls through it, stores it or forms one, so a contract would be read by nobody.
+    /// Where it may stand and how it may be used are `N575`-`N577` (`eintrittscode.rs`).
+    pub eintritt: Option<Span>,
     pub span: Span,
 }
 

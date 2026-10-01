@@ -4517,10 +4517,10 @@ pub const PHASEN: &[Satz] = &[
                   this thread (effects its declaration does not name) or on another (a thread \
                   the concurrency rules never see).",
         vorbehalt: "A NUMBER the foreign code turns into a code address is not a function \
-                    pointer type and is not held here: the kernel-module binding's thread \
-                    start takes the root's wrapper as a `u64` from the generated driver \
-                    (OFFEN O39, open). The generated drivers hand their own code to the \
-                    program's binding by C designator, outside Gabbro source.",
+                    pointer type and is not held here; no binding in the tree takes one since \
+                    the kernel-module thread start became an `entry fn` (C2 slice 3, \
+                    `eintritt.code`). The one exception to this rule is that type: code a \
+                    generated driver hands in, held by `N575`-`N577`.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift/1392 (`&f` of a writing function into a `pure` extern -- \
                       clean with one hint before the rule), `1393` (a record of function \
@@ -4530,6 +4530,36 @@ pub const PHASEN: &[Satz] = &[
                       handed to `extern fn block_current`/`switch_to`, 6 sites) -- the shape \
                       itself; `tests/rahmenlaenge.rs` (`n574_*`).",
         fundstelle: "crates/gabbro-check/src/rahmenlaenge.rs (`fremd_ohne_code`)",
+    },
+    Satz {
+        name: "eintritt.code",
+        kennungen: &["N575", "N576", "N577"],
+        aussage: "Code reaches a foreign body only as an `entry fn(…) -> R` parameter, and \
+                  only code a generated driver wrote. The type stands only as the own type of \
+                  a parameter of an `extern fn` or of a Gabbro function with a body, with a \
+                  signature of plain integers, `bool` and pointers at plain integers and no \
+                  contract (`N575`); a Gabbro function that takes one is called, taken or \
+                  dispatched to by no Gabbro source (`N576`), so every value of the type is a \
+                  designator the generated driver handed in; and inside it the parameter is \
+                  named once, as the whole argument of an `extern fn` whose parameter at that \
+                  position has the same signature, outside every loop, while every argument at \
+                  such a position is such a parameter (`N577`). One driver call hands one root \
+                  to one foreign start; no Gabbro body calls through, stores, compares or hands \
+                  twice the code it was handed.",
+        vorbehalt: "Not claimed: that the foreign start runs the code once, on a new thread, \
+                    and that nothing of it runs after the driver's join returned -- that is \
+                    the binding's declared contract, user logic, premise (c). That the wrapped \
+                    root is a declared `concurrent` root is the driver's (template \
+                    `faden.modul`). The mention count of `N577` is fail-closed: a field or a \
+                    callee that shares the parameter's name counts as a mention.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1394 (`N575`: an `entry fn` bound by `let`), `1395` \
+                      (`N576`: a Gabbro call of the binding's start), `1396` (`N577`: the \
+                      parameter handed twice), `1397` (`N577`: handed inside a loop); the \
+                      clean side: beispiele/184 and `bibliothek/linux-kmod/linux-kmod.gab` \
+                      (`gabbro_kern_faden_start` over `kthread_create_on_node`), measured in \
+                      QEMU by `instrumente/pruefe-kernelmodul.sh` (probes `atomar`, `takt`).",
+        fundstelle: "crates/gabbro-check/src/eintrittscode.rs",
     },
     Satz {
         name: "extern.variadik",

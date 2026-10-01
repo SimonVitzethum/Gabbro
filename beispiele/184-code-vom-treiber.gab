@@ -1,0 +1,54 @@
+-- **Code reaches a foreign body only as an `entry fn` -- handed in by generated C.**
+--
+-- (C-free lane, C2 slice 3, 2026-10-01; OFFEN O39.) A kernel starts a thread by running a
+-- function it is handed. A Gabbro function handed out as an ordinary `fn(…)` pointer would leave
+-- every effect and concurrency rule behind (`N574`). The type `entry fn(…) -> R` is the one shape
+-- in which code may reach a foreign body, and its values exist only where a GENERATED driver put
+-- them: the driver writes a wrapper around a declared root and hands its designator to the
+-- program's binding, which hands it on.
+--
+-- What the checker holds here (`eintrittscode.rs`):
+--
+-- * `N575` -- the type stands as the own type of a parameter of the `extern fn` and of the
+--   Gabbro function, with a C signature of plain integers and pointers and no contract;
+-- * `N576` -- `starte` is called, taken and dispatched to by no Gabbro source: its caller is
+--   generated C (in a kernel module, the driver of template `faden.modul`);
+-- * `N577` -- inside `starte`, `lauf` is named once: as the whole argument of the foreign start's
+--   `entry fn` parameter of the same signature, outside every loop.
+--
+-- The foreign start answers a handle OR an error in one word (the top 4095 values of the word);
+-- `starte` decodes it in Gabbro and hands the handle on only to `fremd_wecken` -- both foreign
+-- items are private to this module, so no other Gabbro code can hand the foreign side a number
+-- it would read as a handle. The binding a kernel module really uses is
+-- `bibliothek/linux-kmod/linux-kmod.gab` (`gabbro_kern_faden_start` over
+-- `kthread_create_on_node`); this file knows no operating system.
+module beispiel::code_vom_treiber {
+
+assume fremd_faden_vertrag
+    "`fremd_start(lauf, n)` creates one stopped thread that, once woken by `fremd_wecken`, calls `lauf` exactly once and then ends, or answers a word at or above 2^64 - 4095 and creates none."
+    falsifier sonde_fremd_faden;
+
+extern fn fremd_start(lauf : entry fn(ptr<normal, rw> u8) -> i32, nummer : u64) -> u64
+    effects { pure } costs <= 10000 ops;
+
+extern fn fremd_wecken(griff : u64) -> i32
+    effects { pure } costs <= 1000 ops;
+
+-- 0, or the positive error code of a start that did not happen.
+pub fn starte(lauf : entry fn(ptr<normal, rw> u8) -> i32, nummer : u32) -> u32
+    effects { pure }
+    costs <= 11100 ops
+{
+    let griff = fremd_start(lauf, u64(nummer));
+    if griff >= 18446744073709547521 {
+        let fehler : u64 = 18446744073709551615 - griff;
+        narrow fehler to 0 .. 4094 else {
+            return 12;
+        }
+        return u32(fehler) + 1;
+    }
+    let w = fremd_wecken(griff);
+    return 0;
+}
+
+}

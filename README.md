@@ -209,7 +209,7 @@ fresh date were last fully measured on the date beside them.
 | | | |
 |---|---|---|
 | **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 472 diagnostics · `gabbro paesse` |
-| **Grammar** | **187 EBNF rules**, closed and reachable | vocabulary covers every terminal, 242 / 242 |
+| **Grammar** | **188 EBNF rules**, closed and reachable | vocabulary covers every terminal, 242 / 242 |
 | **Pass register** | **198 sentences over 12 passes — 190 measured, 2 ARGUED, 6 CONJECTURED, 0 proved**, claiming 419 diagnostic codes. *A written sentence is not a proved one* | `gabbro paesse --je-satz` |
 | **Proof templates** | **23, of which 12 are machine-checked**; all **15** Isabelle theories also exist in Lean (`grammatik/Grammatik/Isabelle/`, checked by every build); new proofs go to Lean only | Isabelle2025-2, [`beweise/`](beweise/) |
 | **Corpus** | 152 clean examples, 838 poison files *(file counts 2026-09-30; 942 tests counted 2026-09-14, lane 177)* | `cargo test --no-fail-fast` |

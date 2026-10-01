@@ -168,6 +168,7 @@ pub const RATSCHE: &[&str] = &[
     "tor.kind",
     "arena.modul",
     "modul.lebenslauf",
+    "faden.modul",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -473,7 +474,7 @@ pub const SCHABLONEN: &[Schablone] = &[
     },
     Schablone {
         name: "modul.lebenslauf",
-        haengt_an: &["arena.modul"],
+        haengt_an: &["arena.modul", "faden.modul"],
         konstrukt: "unit … module <init> <exit> (the loader's two entry points the module \
                     driver writes: `kmod <kbuild> <load> <unload>`)",
         pflicht: "The load binds every arena's pool (a refusal refuses the load), initialises \
@@ -497,10 +498,45 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the unit's init and exit exist, take nothing, and the init answers the load verdict", durch: Some("`bau.rs::modulregel` (the manifest's two names against the unit's declarations: declared, nullary, answering)"), braeuchte: None },
             Voraussetzung { was: "every lock and root the driver lists is the unit's", durch: Some("the driver plan (`bau.rs::treiberregel`, `TreiberPlan::sperren`/`wurzeln`) out of the same walk the hosted and bare-metal drivers read"), braeuchte: None },
             Voraussetzung { was: "the binding defines every name the driver calls, with the arity and result it calls them with", durch: Some("`bau.rs::bindungsregel` before any C is written, and the C compiler over the driver's prototypes against the emitted declarations in one translation unit"), braeuchte: None },
-            Voraussetzung { was: "a started thread runs its root once and a failed start leaves the blob in a state the wait returns from", durch: Some("the program's binding (`bibliothek/linux-kmod`: `gabbro_kern_faden_start`/`_warte`), whose declared contract is user logic, premise (c)"), braeuchte: None },
+            Voraussetzung { was: "a started thread runs its root once and a failed start leaves the join word in a state the wait returns from", durch: Some("template `faden.modul` (the word is 1 before the start, 0 from the wrapper after the root or from the driver after a failed start) over the program's binding (`bibliothek/linux-kmod`: `gabbro_kern_faden_start`), whose declared contract is user logic, premise (c)"), braeuchte: None },
         ],
         fundstelle: "grammatik/Grammatik/SchablonenModul.lean §2; crates/gabbro-cli/src/treiber.rs \
                      (`erzeuge_kmod`); instrumente/pruefe-kernelmodul.sh (three probes, 12 gifts)",
+    },
+    // **Entered 2026-10-01 by the C-free lane (C2 slice 3, OFFEN O39), PROVED in the same
+    // commit**: the module driver's thread start and join, in place of the binding's C
+    // (`struct completion`, a code address as a `u64`).
+    Schablone {
+        name: "faden.modul",
+        haengt_an: &[],
+        konstrukt: "concurrent { … } in a `module` unit (the module driver's root wrappers, \
+                    join words and wait: `treiber.rs::erzeuge_kmod`)",
+        pflicht: "Per root the driver owns a zeroed 32-bit join word and a wrapper \
+                  `int32_t gabbro_faden_<root>(uint8_t *)` that calls the root and THEN stores \
+                  0 (release). Before the start it stores 1 and hands the wrapper's designator \
+                  to the binding's `gabbro_kern_faden_start` as an `entry fn`; a start that \
+                  answers an errno makes the driver store the 0 itself. The wait re-reads the \
+                  word (acquire) and sleeps through `gabbro_kern_schlafe` until it reads 0. \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenModul.lean` \
+                  §3): a wait that begins after the start returned and reads 0 saw the root's \
+                  whole run with its last step, or a failed start and no step of the root \
+                  (`faden_modul_warte_korrekt`); without the store of 1 it would return before \
+                  the root ran (`faden_modul_ohne_eins`), and with the 0 stored first while \
+                  steps remain (`faden_modul_null_zuerst`); witness `faden_modul_zeuge`. \
+                  **NOT proved: the instructions of the wrapper after its store** (the \
+                  `return` runs in module text; an unload that frees the text between the \
+                  store and the return would pull it from under the thread -- the window \
+                  `struct completion` had too, and `kthread_complete_and_exit` closes only \
+                  with a kernel type), and that the binding keeps its contract.",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the code the binding hands to the kernel is the wrapper the driver wrote, once per start", durch: Some("`N575`-`N577` (`eintrittscode.rs`): an `entry fn` comes only from generated C, and the binding hands it on whole, once, outside every loop"), braeuchte: None },
+            Voraussetzung { was: "a good start runs the wrapper once on a new thread; a failed one runs nothing", durch: Some("the binding's declared contract (`linux-kmod.gab`: `kern_faden_vertrag`), user logic, premise (c)"), braeuchte: None },
+            Voraussetzung { was: "every wait stands after its start, and the word is 1 from before the start", durch: Some("the template's own order (`erzeuge_kmod`: the store of 1, the start, the waits in the refusal path and in the unload)"), braeuchte: None },
+            Voraussetzung { was: "each root of the driver is a declared `concurrent` root of the unit", durch: Some("the driver plan (`bau.rs::treiberregel`, `TreiberPlan::wurzeln`)"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenModul.lean §3; crates/gabbro-cli/src/treiber.rs \
+                     (`erzeuge_kmod`); instrumente/pruefe-kernelmodul.sh (probes `atomar`, `takt`)",
     },
     // **Entered 2026-09-30 by the C-free lane (OFFEN O38), PROVED**: the lowering of the
     // gate+guard+`child` triple, which lane 260 wrote as a jump into the parent's function.

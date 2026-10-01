@@ -14,18 +14,18 @@
 -- traversal of a 4096-slot table -- a critical section long enough that a timer
 -- firing every 50 us would land inside it many times over. Beside it the
 -- program's OWN C arms a kernel timer in HARDIRQ mode whose body calls `tick`
--- below, which takes the same lock. The timer body reads the runtime's
--- `gabbro_halter_TAKT` (the core that holds the lock, or -1) BEFORE it takes
--- the lock, and counts how often it landed on a core that was holding.
+-- below, which takes the same lock -- all on ONE core.
 --
---   masked   ticks > 0 and landed = 0 -- interrupts arrive, never inside
+--   masked   ticks > 0 and the run finishes -- interrupts arrive, never inside
 --   plain    the handler lands inside and then waits for the core it
 --            interrupted: the same-core deadlock `H102` refuses
 --            (`beispiele/gift/460`), and the harness's poison run hangs
 --
 -- `ticks > 0` is the half that makes the other half mean anything: a run in
--- which the timer never fired would report `landed=0` and have measured
--- nothing. The harness checks both.
+-- which the timer never fired would finish too and have measured nothing. The
+-- harness checks both. (Until 2026-10-01 the timer body also counted `landed`
+-- against the runtime's holder record; on one core that count could only be 0
+-- in a finished run, and the record went with the module runtime's last C.)
 --
 -- **Every call into the kernel is the PROGRAM's** (Simon, 2026-09-27). This
 -- unit names three foreign functions with their shape, effects, cost and the

@@ -591,7 +591,11 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // `faden.laufzeit`, entered and proved in one commit (`SchablonenFaden.lean`).
     // **19 -> 20 on 2026-09-30 (C-free lane, OFFEN O38):** `tor.kind`, the lowered `child`
     // triple with its region outlined, entered and proved in one commit.
-    assert_eq!(bewiesen(), 22);
+    // **20 -> 22 on 2026-09-30 (C-free lane, C2 slice 1):** `arena.modul`, `modul.lebenslauf`.
+    // **22 -> 23 on 2026-10-01 (C-free lane, C2 slice 3):** `faden.modul`, the module driver's
+    // thread start and join without `struct completion`, entered and proved in one commit
+    // (`SchablonenModul.lean` §3) -- never carried unproved.
+    assert_eq!(bewiesen(), 23);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

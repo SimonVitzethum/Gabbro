@@ -14,27 +14,25 @@
 -- expanded to `raw_spin_lock`, `raw_spin_lock_irqsave` and `smp_processor_id`
 -- -- twelve kernel names no program had ever declared. **This file is where
 -- those twelve now stand**, and it is a FILE OF A PROGRAM: a manifest names it
--- beside the program's own sources, the checker reads it like any other unit,
--- and the C bodies next door (`linux-kmod.c`) are compiled into the module as
--- the program's own foreign bodies. *It is a library in the sense a header file
+-- beside the program's own sources, and the checker reads it like any other unit.
+-- **Since the C-free lane's C2 (2026-09-30 / 2026-10-01) there is no C next to
+-- it**: every body is Gabbro, and the kernel's exported functions are `extern fn`
+-- declarations here, linked against the kernel itself. *It is a library in the sense a header file
 -- is one -- something you copy into your build and may edit -- and not in the
 -- sense a compiler built-in is one.*
 --
 -- **A different kernel gets a different file, not a different Gabbro.** That is
 -- the whole point of the arrangement, and it is why the twelve names below are
 -- the interface the generated module driver calls and the kernel's own
--- names appear only in `linux-kmod.c`. A port to a BSD, to a different Linux
+-- names appear only in this file. A port to a BSD, to a different Linux
 -- version whose exported surface differs, or to a kernel that has no
--- `vmalloc`, is a new pair of files here and nothing else.
+-- `vmalloc`, is a new file here and nothing else.
 --
--- WHAT A PROGRAM DOES WITH IT. Three lines in the manifest of a `module` unit:
+-- WHAT A PROGRAM DOES WITH IT. One line in the manifest of a `module` unit:
 --
 --     unit driver module laden entladen
 --       my-driver.gab
---       my-driver.c                          -- the program's own kernel calls
---       bibliothek/linux-kmod/linux-kmod.gab -- these declarations
---       bibliothek/linux-kmod/linux-kmod.c   -- their bodies
---       bibliothek/linux-kmod/stdatomic.h    -- only if it declares an `atomic`
+--       bibliothek/linux-kmod/linux-kmod.gab -- this binding
 --
 -- and `gabbro build` REFUSES a `module` unit that uses a lock, an arena, an
 -- atomic or a concurrent root without them, naming the missing declaration and
@@ -56,10 +54,9 @@
 --
 -- ADDRESSES. A lock's storage crosses as a REGION (`ptr<normal, rw> u8` under a
 -- constant clause `256 <= lenof(s)`: the generated driver's blob) since the
--- C-free lane's C2; the thread pair still passes the root's wrapper and its blob
--- as `u64` numbers, cast back in `linux-kmod.c` -- the one place a number still
--- becomes an address, and the next wall of this file (a Gabbro thread start is a
--- proved template on hosted Linux; the kernel's needs its own).
+-- C-free lane's C2; a root's code crosses as an `entry fn` -- the designator of
+-- the wrapper the driver wrote, handed on once to the kernel's thread start
+-- (`N575`-`N577`, C2 slice 3). No number becomes an address or code here.
 --
 -- WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each one is the
 -- primitive's OWN work -- the instructions between entry and return once it
@@ -72,12 +69,12 @@
 -- whoever held it, and that is where the checker looks.
 module linux::kmod {
 
--- **The ABI and the behaviour of all the bodies, as one named assumption.**
--- One and not one per body, because it is one fact about one file: `linux-kmod.c` is
--- compiled by the kernel's own build, with the kernel's own flags, against the
--- kernel whose headers are in the manifest's `kmod` line.
+-- **The ABI and the behaviour of the kernel's functions, as one named assumption.**
+-- One and not one per function, because it is one fact about one kernel: the
+-- `extern fn`s below are the exported functions of the kernel whose build tree is
+-- in the manifest's `kmod` line, and the module links against exactly that one.
 assume kern_bindung_abi
-    "Every body in `bibliothek/linux-kmod/linux-kmod.c` keeps the x86_64 SysV convention of its declaration here, answers 0 exactly where the declaration says a refusal is 0, and neither sleeps nor faults in a context the module runtime calls it from."
+    "Every kernel function this file declares keeps the x86_64 SysV convention of its declaration here, and neither sleeps nor faults in a context the module runtime calls it from (`msleep` only from a thread or from the loader, never with a lock held or interrupts masked)."
     falsifier sonde_kern_bindung;
 
 -- **The masking promise, named apart -- because a leg of the goal theorem rests
@@ -333,28 +330,71 @@ pub fn gabbro_kern_sperre_gib_maskiert(s : ptr<normal, rw> u8, flaggen : u64)
     _raw_spin_unlock_irqrestore(s, flaggen);
 }
 
--- Which core is running. The runtime records it as a lock's HOLDER, so that a
--- probe's own interrupt body can report whether it ever landed on a core that
--- was holding. **Its body is C** (`linux-kmod.c`, `raw_smp_processor_id()`): the
--- read is one `%gs`-relative load of the kernel's per-CPU `pcpu_hot`, a DATA
--- symbol, and Gabbro has no declaration of a foreign data object -- an `asm`
--- naming it would carry a symbol no declaration names (the freestanding stage
--- calls that UNCLASSIFIED, rightly). A wall, counted by `zaehle-c.py`.
-extern fn gabbro_kern_kernnummer() -> u32
-    effects { pure } costs <= 64 ops;
-
 -- -- the roots as kernel threads --------------------------------------------
 --
--- One thread per member of the unit's `concurrent` set. `start` takes the
--- runtime's blob and the ADDRESS OF THE ROOT'S WRAPPER and answers 0 or a
--- positive errno; `warte` returns once that wrapper has returned. A start that
--- FAILS must leave the blob in a state `warte` returns from at once -- the load
--- refusal in `kmodul.c` waits for every root it tried to start, and a blob that
--- never completed would hang `insmod` instead of refusing it.
-extern fn gabbro_kern_faden_start(f : u64, koerper : u64) -> u32
-    effects { pure } costs <= 100000 ops;
+-- One thread per member of the unit's `concurrent` set, started and joined by the
+-- generated driver (template `faden.modul`) -- and since the C-free lane's C2
+-- slice 3 the start is THIS Gabbro, not C. The driver hands the designator of a
+-- wrapper it wrote around the root as an `entry fn` (`N575`-`N577`): the one shape
+-- in which code reaches a foreign body. The wrapper runs the root and then stores
+-- 0 into the root's join word; the driver waits on that word, sleeping through
+-- `gabbro_kern_schlafe` in between. So no kernel type is in the driver's storage
+-- (no `struct completion`), and no number becomes code anywhere.
+--
+-- The answer of `kthread_create_on_node` is a task OR an `ERR_PTR` in one word:
+-- the top 4095 values of the word are `-errno`. It is decoded here, in Gabbro, and
+-- the task travels on only to `wake_up_process` -- both foreign items are PRIVATE
+-- to this module, so no other Gabbro code can hand the kernel a number it would
+-- read as a task.
+assume kern_faden_vertrag
+    "`kthread_create_on_node(threadfn, data, node, namefmt, n)` creates one stopped kernel thread that, once woken by `wake_up_process`, calls `threadfn(data)` exactly once and then ends, or answers a word at or above 2^64 - 4095 (`-errno`) and creates none; it reads `namefmt` only up to its first zero byte, which lies inside its 96 bytes. `msleep(ms)` sleeps at least `ms` milliseconds and changes no memory the module can see."
+    falsifier sonde_kern_faden;
 
-extern fn gabbro_kern_faden_warte(f : u64)
-    effects { pure } costs <= 100000 ops;
+extern fn kthread_create_on_node(threadfn : entry fn(ptr<normal, rw> u8) -> i32, daten : u64, knoten : i32, namefmt : ptr<normal, r> u8, ..., nummer : u64) -> u64
+    requires 96 <= lenof(namefmt)
+    effects { reads namefmt } costs <= 100000 ops;
+
+extern fn wake_up_process(aufgabe : u64) -> i32
+    effects { pure } costs <= 4096 ops;
+
+extern fn msleep(ms : u32)
+    effects { pure } costs <= 4096 ops;
+
+-- gabbro/%llu -- the thread's name, the root's number behind it
+pub const KERN_T_FADENNAME : [u8; 96] = [
+    103, 97, 98, 98, 114, 111, 47, 37, 108, 108, 117, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+-- Start one root's thread: 0, or the positive errno of a start that did not
+-- happen (then nothing runs, and the driver stores the join word itself).
+pub fn gabbro_kern_faden_start(lauf : entry fn(ptr<normal, rw> u8) -> i32, nummer : u32) -> u32
+    effects { reads KERN_T_FADENNAME }
+    costs <= 110000 ops
+{
+    let null : i32 = 0;
+    let t = kthread_create_on_node(lauf, 0, null - 1, KERN_T_FADENNAME, u64(nummer));
+    if t >= 18446744073709547521 {
+        let fehler : u64 = 18446744073709551615 - t;
+        narrow fehler to 0 .. 4094 else {
+            return 12;
+        }
+        return u32(fehler) + 1;
+    }
+    let w = wake_up_process(t);
+    return 0;
+}
+
+-- One wait step of the driver's join loop: the word is re-read by the driver.
+pub fn gabbro_kern_schlafe()
+    effects { pure }
+    costs <= 4100 ops
+{
+    msleep(1);
+}
 
 }

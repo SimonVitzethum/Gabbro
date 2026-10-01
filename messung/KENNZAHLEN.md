@@ -132,8 +132,8 @@ sofort: *kein neuer Absagecode ohne seinen Satz* (2026-08-21 gebaut; heute 198 S
 
 ## EBNF-Regeln / EBNF-Terminale
 
-      187 EBNF-Regeln und 242 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
+      188 EBNF-Regeln und 242 Terminale gegen die Wortschatztabelle — *er misst die Grammatik
 
 ## EBNF-Regeln (heute-Klammer) / EBNF-Terminale (heute-Klammer)
 
-| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 187 / 242) | taken out along with the entry |
+| **5** | **Stale numbers from P1**: 117 rules, 187 terminals (today 188 / 242) | taken out along with the entry |

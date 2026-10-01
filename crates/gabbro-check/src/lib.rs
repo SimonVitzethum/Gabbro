@@ -228,6 +228,7 @@ pub mod zeichenfolge;
 pub mod intmatch;
 // Fix lane F5 (review G04 F2/F3): `N463`/`N464` -- the transfer bound `x <= lenof(p)`.
 pub mod rahmenlaenge;
+pub mod eintrittscode;
 // Lane 262 (OFFEN O23): `N507` -- the NUL terminator where the program builds the buffer.
 pub mod nulpfad;
 
@@ -518,6 +519,7 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
         // same `requires x <= lenof(p)` clause `N464` demands at `syscall`
         // gates (`rahmenlaenge.rs`, OFFEN O23).
         z!("rahmenlaenge", rahmenlaenge::pass(baum, absagen));
+        z!("eintrittscode", eintrittscode::pass(baum, absagen));
         // **Lane 262, directly behind it.** The NUL-terminator discipline over
         // the buffers the program builds itself (`nulpfad.rs`, OFFEN O23).
         z!("nulpfad", nulpfad::pass(baum, absagen));
@@ -571,6 +573,9 @@ pub fn pruefe(baum: &Programm, absagen: &mut Absagen) -> Bericht {
     syscall::pass(baum, absagen);
     // **Lane 262, directly behind it** (see the timed pipeline above).
     rahmenlaenge::pass(baum, absagen);
+    // **C-free lane, C2 slice 3, directly behind it.** `N574`'s exception: the
+    // `entry fn` a generated driver hands in (`eintrittscode.rs`, `N575`-`N577`).
+    eintrittscode::pass(baum, absagen);
     // **Lane 262, directly behind it** (see the timed pipeline above).
     nulpfad::pass(baum, absagen);
     // **Lane O-1, directly behind it.** The handoff shape reads the gate

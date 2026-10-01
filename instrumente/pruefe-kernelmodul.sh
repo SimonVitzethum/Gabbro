@@ -66,9 +66,10 @@ done
 #
 # `takt` -- `messung/proben/kmodul/sperre-takt.gab` holds a `masks irqs` lock
 # across a 4096-slot traversal, 64 times over, while the program's own C runs a
-# 50 us hardirq timer whose body takes the same lock. `landed=0` says no
-# interrupt ever arrived on a core that was holding it; `ticks` says the timer
-# fired at all, WITHOUT WHICH `landed=0` measures nothing. Both are checked.
+# 50 us hardirq timer whose body takes the same lock, all on ONE core. A run that
+# FINISHES says no interrupt ever arrived inside a section (one that did would
+# wait for the core it interrupted -- gift 5); `ticks` says the timer fired at
+# all, WITHOUT WHICH a finished run measures nothing. Both are checked.
 #
 # `atomar` -- `messung/proben/kmodul/atomar-faeden.gab` declares TWO CONCURRENT
 # ROOTS and four atomics. `gabbro build` writes the roots into the module driver,
@@ -107,8 +108,7 @@ probe_waehle() {   # $1 = probe name; sets QUELLE FREMD MODUL INIT EXIT VORRAT E
     # module driver calls is declared by the program and defined in the program's own C;
     # `bibliothek/linux-kmod` is the binding a program takes off the shelf, and these are
     # the lines that name it.
-    BINDUNG="$W/bibliothek/linux-kmod/linux-kmod.gab
-$W/bibliothek/linux-kmod/linux-kmod.c"
+    BINDUNG="$W/bibliothek/linux-kmod/linux-kmod.gab"
     # What the RUNTIME still takes from the kernel, per probe. **0 since K7 landed**
     # (session 6), and it is a wall now and no longer a ratchet: the twelve names of the
     # worklist are the program's, so a single one back in the runtime is a finding.
@@ -147,10 +147,10 @@ gabbro-halde: k=9 v=0"
             # far short of an hour.
             FRIST=45
             ERWARTET="gabbro-takt: k=1 v=0
-landed=0
+gabbro-takt: ticks=
 gabbro-takt: k=9 v=0"
-            # A run whose timer never fired reports a clean `landed` and has
-            # measured nothing (`W1`): the verdict below demands this many ticks.
+            # A run whose timer never fired finishes too and has measured
+            # nothing (`W1`): the verdict below demands this many ticks.
             TICKS_MIN=5
             ;;
         atomar)
@@ -441,10 +441,12 @@ GABBRO="$(gabbro_binaer "$W")" || nicht_gelaufen "$GABBRO"
 #     it, GREEN would only say that nothing bad happened to be observed.
 #   6 the timer period is raised past the whole run (50 us -> 50 s) in the
 #     program's own C: the timer then never fires, `ticks=0`, and the run must be
-#     RED because it measured NOTHING -- a clean `landed=0` over zero
+#     RED because it measured NOTHING -- a finished run over zero
 #     opportunities is not a measurement (`W1`).
-#   7 the expected `landed=0` moves to `landed=1`: does the run read the kernel
-#     log, or only the exit codes? (The `halde` twin of this is gift 1.)
+#   7 the expected `k=9 v=0` (the unload's line) moves to `k=9 v=1`: does the run
+#     read the kernel log, or only the exit codes? (The `halde` twin of this is
+#     gift 1.) Until 2026-10-01 it moved `landed=0`, a count the probe no longer
+#     prints (C2 slice 3: on one core it could only be 0 in a run that finished).
 #
 # The `atomar` probe's three (K6, and 8 is the one that is about the LOWERING
 # and not about the harness):
@@ -722,7 +724,7 @@ beurteile() {   # $1 = output file, $2 = gift number or "", $3 = probe
     probe_waehle "$3"
     local erwartet="$ERWARTET"
     [ "$gift" = 1 ]  && erwartet="$(echo "$erwartet" | sed 's/v=33/v=34/')"
-    [ "$gift" = 7 ]  && erwartet="$(echo "$erwartet" | sed 's/landed=0/landed=1/')"
+    [ "$gift" = 7 ]  && erwartet="$(echo "$erwartet" | sed 's/gabbro-takt: k=9 v=0/gabbro-takt: k=9 v=1/')"
     [ "$gift" = 10 ] && erwartet="$(echo "$erwartet" | sed 's/k=2 v=512/k=2 v=513/')"
 
     grep -q "HARNESS: end" "$aus" || { echo "RED: the harness never reached its end (boot or QEMU)"; fehler=$((fehler+1)); }
@@ -748,17 +750,17 @@ $erwartet
 EOF
 
     # **Did the probe get the chance to measure anything?** For `takt` the answer
-    # is a number and not a line: `landed=0` over a run in which the timer never
+    # is a number and not a line: a finished run in which the timer never
     # fired says nothing at all (`W1` -- a run that measured nothing is not a run
     # that passed). Gift 6 is exactly this case.
     if [ -n "${TICKS_MIN:-}" ]; then
         local ticks
-        ticks="$(sed -n 's/.*gabbro-takt: ticks=\([0-9]*\) .*/\1/p' "$aus" | head -1)"
+        ticks="$(sed -n 's/.*gabbro-takt: ticks=\([0-9]*\).*/\1/p' "$aus" | head -1)"
         if [ -z "$ticks" ]; then
             echo "RED: no tick count in the kernel log -- the run reported no opportunities"
             fehler=$((fehler+1))
         elif [ "$ticks" -lt "$TICKS_MIN" ]; then
-            echo "RED: the hardirq timer fired $ticks time(s), fewer than $TICKS_MIN -- a clean landed= over that many opportunities is not a measurement"
+            echo "RED: the hardirq timer fired $ticks time(s), fewer than $TICKS_MIN -- a run that finished over that many opportunities is not a measurement"
             fehler=$((fehler+1))
         fi
     fi
@@ -838,7 +840,7 @@ if [ -z "$GIFT" ]; then
     if [ "$gesamt_fehler" = 0 ]; then
         echo "GREEN: halde  -- loaded, allocated, refused on full, reported, unloaded clean."
         echo "GREEN: takt   -- a masks-irqs lock held across a long section, a hardirq timer"
-        echo "                 taking the same lock, and 0 arrivals on a holding core."
+        echo "                 taking the same lock, fired and never landed inside (the run finished)."
         echo "GREEN: atomar -- two DECLARED roots as kthreads, a counter that answers 512"
         echo "                 exactly, a release/acquire flag seen set, a payload never"
         echo "                 stale, two bits ORed to 3; and the mapping's 16 rows expanded"

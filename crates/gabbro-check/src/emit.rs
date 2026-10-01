@@ -8166,6 +8166,15 @@ fn prototyp_kern(
         if ist_geist(&p.typ, u) {
             continue; // erased -- see above
         }
+        // A function pointer's name stands INSIDE its declarator (`int32_t (*lauf)(uint8_t *)`);
+        // `ctyp` spells the abstract one, which C reads as a type followed by a stray name.
+        if let TypExpr::FnZeiger(z) = &p.typ {
+            match fnzeiger_deklarator(z, &p.name.text, u) {
+                Some(d) => params.push(d),
+                None => return Err((p.name.span, "parameter type")),
+            }
+            continue;
+        }
         match ctyp(&p.typ, u) {
             Some(c) => {
                 let luecke = if c.ends_with('*') { "" } else { " " };

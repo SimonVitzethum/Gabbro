@@ -1,0 +1,26 @@
+-- erwartet: N575
+-- **An `entry fn` stands only as a parameter's own type.**
+--
+-- The type is code a generated driver handed in (C-free lane, C2 slice 3). A `let` of that type
+-- would be code that Gabbro source holds -- here bound from the parameter and handed on from
+-- the binding, which is the same code under a second name, and the next step is a store. The
+-- type stands as a parameter of an `extern fn` or of a Gabbro function, and nowhere else.
+module gift::eintritt_im_let {
+
+assume start_vertrag
+    "`fremd_start` runs `lauf` once on a new thread, or answers 1 and runs nothing."
+    falsifier sonde_start;
+
+extern fn fremd_start(lauf : entry fn(ptr<normal, rw> u8) -> i32) -> u32
+    effects { pure }
+    costs <= 1000 ops;
+
+pub fn starte(lauf : entry fn(ptr<normal, rw> u8) -> i32) -> u32
+    effects { pure }
+    costs <= 1100 ops
+{
+    let zweit : entry fn(ptr<normal, rw> u8) -> i32 = lauf;
+    return fremd_start(zweit);
+}
+
+}

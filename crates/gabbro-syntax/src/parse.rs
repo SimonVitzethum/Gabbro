@@ -1204,6 +1204,15 @@ impl<'a> Parser<'a> {
             }
             Art::Wort(Kw::Ptr) => Ok(TypExpr::Zeiger(Box::new(self.ptrty()?))),
             Art::Wort(Kw::Fn) => Ok(TypExpr::FnZeiger(Box::new(self.fnptr()?))),
+            // `entry fn(…) -> R` (C-free lane, C2 slice 3): code a generated driver hands in.
+            // No new word -- `entry` heads an item at item level and a type only here.
+            Art::Wort(Kw::Entry) if matches!(self.blick_n(1).art, Art::Wort(Kw::Fn)) => {
+                self.pos += 1;
+                let mut f = self.fnptr()?;
+                f.span = t.span.bis_zu(f.span);
+                f.eintritt = Some(t.span);
+                Ok(TypExpr::FnZeiger(Box::new(f)))
+            }
             Art::Wort(Kw::SelfWort) => {
                 self.pos += 1;
                 Ok(TypExpr::Pfad(Pfad {
@@ -1591,6 +1600,7 @@ impl<'a> Parser<'a> {
             ensures,
             effects,
             costs,
+            eintritt: None,
             span: anfang.bis_zu(self.vorheriger_span()),
         })
     }
