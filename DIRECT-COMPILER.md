@@ -323,3 +323,16 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
   in `grammatik/OPTIMIZER.md`, reviewed by 334, with an isolated proposed friend
   rule-library handoff. No friend work or 40 simultaneously active processes is
   claimed. Source/final-byte validation remains mandatory and the full chain OPEN.
+
+- 2026-10-01: the agent-organised next Lean wave is registered from the independently
+  reviewed [work allocation](dokumente/x86/WORK-ALLOCATION.md): authors 335–350
+  and paired reviewers 373–388, with 349 waiting for accepted layout/gate producers.
+  Shared source/target models and friend-owned optimisation paths remain protected;
+  no additional ISA support or full correspondence is claimed by task registration.
+  The global cap is 40 today including reviewers/organisers/merge owners.
+- 2026-10-01, 11:01 UTC: measured 11,223 integrated Lean lines in 20 x86 modules
+  over 2.93 wall hours from the first Lean model process: about 3.84 k lines/hour.
+  Counts include definitions, proofs, comments and documented cuts; unreviewed
+  drafts are excluded. Setup, reviews, repairs and queued checks are included.
+  This is not a benchmark of 40 simultaneously active agents or completed full
+  validation; the full source-to-binary chain remains OPEN.
