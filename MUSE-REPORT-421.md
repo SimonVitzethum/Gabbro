@@ -87,6 +87,10 @@ empty); no hardware/silicon, timing, decode, ABI, source, checker or goal claim.
   independent review of the changed commit is still required as instructed.
 - No acceptance of the full source/binary chain is claimed; the deliverable
   remains the isolated, probe-green module plus this report.
+- Repeat gate failure (same `[397/398]` abort, same zero module errors):
+  re-verified again — local `./lean-bau` still 392/393 green with only the
+  environmental umbrella abort. Still no owned-file repair applicable; blocker
+  unchanged and outside lane scope.
 
 ## Session notes (retained)
 - During the session the `decide`-based refusal witnesses were rewritten to apply
