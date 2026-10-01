@@ -255,7 +255,7 @@ Last ledger refresh: **2026-10-01 20:31 UTC**. This is an operational snapshot, 
 | 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Merged after review/checks | [report](messung/muse/MUSE-REPORT-594.md) |
 | 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Merged after review/checks | [report](messung/muse/MUSE-REPORT-595.md) |
 | 596 | Overnight: TSO history preservation across actual finite traces | Merged after review/checks | 608: Merged after review/checks | [report](messung/muse/MUSE-REPORT-596.md) |
-| 597 | Overnight: Selected SSE2 vector bytes to canonical XMM execution | Committed candidate; review/integration pending | 609: Committed candidate; review/integration pending | [task](lanes/597.md) |
+| 597 | Overnight: Selected SSE2 vector bytes to canonical XMM execution | Merged after review/checks | 609: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-597.md) |
 | 598 | Overnight: Checked validator to loaded fetched execution | Committed candidate; review/integration pending | 610: Agent working | [task](lanes/598.md) |
 | 599 | Overnight: Direct typed-source expression to pilot machine code | Agent working | 611: scheduled | [task](lanes/599.md) |
 | 600 | Overnight: Invariant-derived instruction selection with byte execution | Merged after review/checks | 612: Merged after review/checks | [report](messung/muse/MUSE-REPORT-600.md) |
@@ -267,7 +267,7 @@ Last ledger refresh: **2026-10-01 20:31 UTC**. This is an operational snapshot, 
 | 618 | Overnight: Resource-safe native Lean invocation for publication tests | Merged after review/checks | 619: Merged after review/checks | [report](messung/muse/MUSE-REPORT-618.md) |
 | 620 | Automatic coordinator takeover on missing foreground heartbeat | Committed candidate; review/integration pending | 621: Committed candidate; review/integration pending | [task](lanes/620.md) |
 | 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Merged after review/checks | [report](messung/muse/MUSE-REPORT-622.md) |
-| 624 | Direct-source closure: FloatSourceObservations | Scheduled | 625: scheduled | [task](lanes/624.md) |
+| 624 | Direct-source closure: FloatSourceObservations | Agent working | 625: scheduled | [task](lanes/624.md) |
 | 626 | Direct-source closure: FloatEntryState | Scheduled | 627: scheduled | [task](lanes/626.md) |
 | 628 | Direct-source closure: SourceAssignmentLowering | Waiting for accepted dependencies | 629: scheduled | [task](lanes/628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Scheduled | 631: scheduled | [task](lanes/630.md) |
@@ -650,6 +650,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `3859c4af` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:3859c4afcc04dff7dcaf586bfa13584da59372a6 -->
 - 2026-10-01: lane **574**, Connection: Projected TSO loads to source W reads, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-574.md). <!-- x86-merged:574 -->
 - 2026-10-01: lane **592**, Independent connection review of 574, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-592.md). <!-- x86-merged:592 -->
+- 2026-10-01: lane **597**, Overnight: Selected SSE2 vector bytes to canonical XMM execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-597.md). <!-- x86-merged:597 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
