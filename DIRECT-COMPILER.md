@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 16:08 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 18:23 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -155,7 +155,7 @@ Last ledger refresh: **2026-10-01 16:08 UTC**. This is an operational snapshot, 
 | 284 | Executable target TSO over real byte memory | Merged after review/checks | 300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-284.md) |
 | 285 | Mathematical carry and signed-overflow characterisation | Merged after review/checks | 301: Merged after review/checks | [report](messung/muse/MUSE-REPORT-285.md) |
 | 286 | Width-aware IEEE target data and f32 bridge evidence | Merged after review/checks | 302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-286.md) |
-| 287 | One typed IR and source-linked lowering foundation | Paused by Simon; work preserved | 303: scheduled | [task](lanes/287.md) |
+| 287 | One typed IR and source-linked lowering foundation | Agent working | 303: scheduled | [task](lanes/287.md) |
 | 288 | Invariant-derived optimisation on actual source semantics | Merged after review/checks | 304: Merged after review/checks | [report](messung/muse/MUSE-REPORT-288.md) |
 | 289 | Disjoint byte-memory commutation | Merged after review/checks | 305: Merged after review/checks | [report](messung/muse/MUSE-REPORT-289.md) |
 | 290 | Packed integer lane model for future SIMD | Merged after review/checks | 306: Merged after review/checks | [report](messung/muse/MUSE-REPORT-290.md) |
@@ -234,21 +234,21 @@ Last ledger refresh: **2026-10-01 16:08 UTC**. This is an operational snapshot, 
 | 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Merged after review/checks | [report](messung/muse/MUSE-REPORT-547.md) |
 | 554 | Shorter clearer current English README | Merged after review/checks | 555: Merged after review/checks | [report](messung/muse/MUSE-REPORT-554.md) |
 | 556 | Repeated intermittent CLI alias test diagnosis | Merged after review/checks | 557: Merged after review/checks | [report](messung/muse/MUSE-REPORT-556.md) |
-| 558 | Connection: Connection plan and integration ownership | Paused by Simon; work preserved | 576: scheduled | [task](lanes/558.md) |
-| 559 | Connection: Arbitrary-input pilot decoder soundness | Paused by Simon; work preserved | 577: scheduled | [task](lanes/559.md) |
-| 560 | Connection: Loaded image to actual instruction fetch | Paused by Simon; work preserved | 578: scheduled | [task](lanes/560.md) |
-| 561 | Connection: Relocated bytes to re-decoded instruction execution | Paused by Simon; work preserved | 579: scheduled | [task](lanes/561.md) |
-| 562 | Connection: Narrow operations byte decoder and execution connection | Paused by Simon; work preserved | 580: scheduled | [task](lanes/562.md) |
-| 563 | Connection: Multiply/divide byte decoder and execution connection | Paused by Simon; work preserved | 581: scheduled | [task](lanes/563.md) |
-| 564 | Connection: Shift operations byte decoder and execution connection | Paused by Simon; work preserved | 582: scheduled | [task](lanes/564.md) |
-| 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Paused by Simon; work preserved | 583: scheduled | [task](lanes/565.md) |
-| 566 | Connection: Conditional forms bytes to accepted control execution | Paused by Simon; work preserved | 584: scheduled | [task](lanes/566.md) |
-| 567 | Connection: Canonical byte-TSO history projection | Paused by Simon; work preserved | 585: scheduled | [task](lanes/567.md) |
-| 568 | Connection: Executed pilot instruction to realised access footprint | Paused by Simon; work preserved | 586: scheduled | [task](lanes/568.md) |
-| 569 | Connection: Fetched call/return to stack-frame proofs | Paused by Simon; work preserved | 587: scheduled | [task](lanes/569.md) |
-| 570 | Connection: Source world/table values to target byte representation | Paused by Simon; work preserved | 588: scheduled | [task](lanes/570.md) |
-| 571 | Connection: Entry state, image permissions and user binding duties | Paused by Simon; work preserved | 589: scheduled | [task](lanes/571.md) |
-| 572 | Connection: Source budget-stop and target work connection | Scheduled | 590: scheduled | [task](lanes/572.md) |
+| 558 | Connection: Connection plan and integration ownership | Merged after review/checks | 576: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-558.md) |
+| 559 | Connection: Arbitrary-input pilot decoder soundness | Agent working | 577: scheduled | [task](lanes/559.md) |
+| 560 | Connection: Loaded image to actual instruction fetch | Agent working | 578: scheduled | [task](lanes/560.md) |
+| 561 | Connection: Relocated bytes to re-decoded instruction execution | Agent working | 579: scheduled | [task](lanes/561.md) |
+| 562 | Connection: Narrow operations byte decoder and execution connection | Agent working | 580: scheduled | [task](lanes/562.md) |
+| 563 | Connection: Multiply/divide byte decoder and execution connection | Agent working | 581: scheduled | [task](lanes/563.md) |
+| 564 | Connection: Shift operations byte decoder and execution connection | Agent working | 582: scheduled | [task](lanes/564.md) |
+| 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Agent working | 583: scheduled | [task](lanes/565.md) |
+| 566 | Connection: Conditional forms bytes to accepted control execution | Agent working | 584: scheduled | [task](lanes/566.md) |
+| 567 | Connection: Canonical byte-TSO history projection | Agent working | 585: scheduled | [task](lanes/567.md) |
+| 568 | Connection: Executed pilot instruction to realised access footprint | Agent working | 586: scheduled | [task](lanes/568.md) |
+| 569 | Connection: Fetched call/return to stack-frame proofs | Agent working | 587: scheduled | [task](lanes/569.md) |
+| 570 | Connection: Source world/table values to target byte representation | Agent working | 588: scheduled | [task](lanes/570.md) |
+| 571 | Connection: Entry state, image permissions and user binding duties | Agent working | 589: scheduled | [task](lanes/571.md) |
+| 572 | Connection: Source budget-stop and target work connection | Agent working | 590: scheduled | [task](lanes/572.md) |
 | 573 | Connection: Projected TSO stores to source W writes | Waiting for accepted dependencies | 591: scheduled | [task](lanes/573.md) |
 | 574 | Connection: Projected TSO loads to source W reads | Waiting for accepted dependencies | 592: scheduled | [task](lanes/574.md) |
 | 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
@@ -557,6 +557,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **546**, Next bridge wave N13: ContractSites, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-546.md). <!-- x86-merged:546 -->
 - 2026-10-01: lane **552**, Independent exact-candidate review of 546 ContractSites, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-552.md). <!-- x86-merged:552 -->
 - 2026-10-01: Simon requested an explicit pause for Glass Town handoff. All 15 active Muse lanes (287, 558-571), automatic backfill and serial integration/publication are paused. Clones, uncommitted drafts, private sessions, prompts and reports are preserved. ValidatorSkeleton349, DecodingCoverage435 and bridge helpers542-546 were integrated with independent reviews before the pause; the last Lean publication build passed, but unfinished Rust/emission publication checks were stopped and no successful full-wave push is claimed. See AGENTS.md section11 for takeover instructions. <!-- x86-glass-town-pause -->
+- 2026-10-01: lane **558**, Connection: Connection plan and integration ownership, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-558.md). <!-- x86-merged:558 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
