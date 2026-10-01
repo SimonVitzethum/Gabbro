@@ -225,7 +225,7 @@ Last ledger refresh: **2026-10-01 13:00 UTC**. This is an operational snapshot, 
 | 433 | Continuous Lean proof reserve: ObservationProjection | Agent working | 481: scheduled | [task](lanes/433.md) |
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Scheduled | 482: scheduled | [task](lanes/434.md) |
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Scheduled | 483: scheduled | [task](lanes/435.md) |
-| 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-540.md) |
+| 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -411,6 +411,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: integration of candidate(s) [426] failed the local proof/build gate after independent review 474; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:474 -->
 - 2026-10-01: integration of candidate(s) [429] failed the local proof/build gate after independent review 477; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:477 -->
 - 2026-10-01: checked master `0a41ca0b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:0a41ca0bbf1802df2eb4deb37bff4294288de07c -->
+- 2026-10-01: lane **541**, Independent exact-candidate portability design review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-541.md). <!-- x86-merged:541 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
