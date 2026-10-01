@@ -284,6 +284,71 @@ theorem slot_read_stabil {t : D.Tab} {f : D.Feld t}
   rw [hidx]
   exact hinhalt
 
+/-! ## 5. Jointly inhabited witness: a table-writing program -/
+
+/-- A dummy signature (the witness runs a block directly, never a call). -/
+def wSig : Signatur Unit Empty Empty Empty where
+  params := []
+  erg := none
+  gruende := 0
+  haelt := []
+  schreibt := fun _ => false
+  gschreibt := fun e => nomatch e
+  konsumiert := []
+  produziert := []
+
+/-- The witness declaration: one private table `()` with one slot over
+    `0 .. 10`, no locks, no globals, no invariants. Private (not shared),
+    so the empty guard list is consistent (`geteilt_bewacht`). -/
+def wD : Deklaration where
+  Tab := Unit
+  decTab := inferInstance
+  count := fun _ => 1
+  Feld := fun _ => Unit
+  decFeld := fun _ => inferInstance
+  typ := fun _ _ => .int 0 10
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some () | _ => none
+  Glob := Empty
+  decGlob := inferInstance
+  gtyp := fun e => nomatch e
+  nutzlast := fun e => nomatch e
+  atomar := fun e => nomatch e
+  geteilt := fun _ => false
+  ggeteilt := fun e => nomatch e
+  Lock := Empty
+  decLock := inferInstance
+  rang := fun e => nomatch e
+  maskiert := fun e => nomatch e
+  Marke := Empty
+  decMarke := fun e => nomatch e
+  stufen := fun e => nomatch e
+  braucht := fun _ => []
+  gbraucht := fun e => nomatch e
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 0
+  sigNr := fun _ => wSig
+  eigner_nie_erzeugt := fun _ _ _ _ h => False.elim (List.not_mem_nil h)
+  Inv := Empty
+  traeger := fun e => nomatch e
+  invs := []
+  Ax := Empty
+  aparams := fun e => nomatch e
+  aerg := fun e => nomatch e
+  aschreibt := fun e => nomatch e
+  agschreibt := fun e => nomatch e
+  Reg := Empty
+  rtyp := fun e => nomatch e
+  rklasse := fun e => nomatch e
+  spiegel := fun e => nomatch e
+  rzusage := fun e => nomatch e
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun _ h => Bool.noConfusion h
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun e => nomatch e
+
 /- CUTS:
    Only the computable check exists so far. Open: its soundness over `eval`;
    constant folding / `weiter` value lemmas; `pruefung`/`ite` elimination with
