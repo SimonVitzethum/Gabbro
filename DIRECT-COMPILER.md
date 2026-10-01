@@ -238,7 +238,7 @@ Last ledger refresh: **2026-10-01 19:15 UTC**. This is an operational snapshot, 
 | 559 | Connection: Arbitrary-input pilot decoder soundness | Merged after review/checks | 577: Merged after review/checks | [report](messung/muse/MUSE-REPORT-559.md) |
 | 560 | Connection: Loaded image to actual instruction fetch | Agent working | 578: scheduled | [task](lanes/560.md) |
 | 561 | Connection: Relocated bytes to re-decoded instruction execution | Agent working | 579: scheduled | [task](lanes/561.md) |
-| 562 | Connection: Narrow operations byte decoder and execution connection | Merged after review/checks | 580: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-562.md) |
+| 562 | Connection: Narrow operations byte decoder and execution connection | Merged after review/checks | 580: Merged after review/checks | [report](messung/muse/MUSE-REPORT-562.md) |
 | 563 | Connection: Multiply/divide byte decoder and execution connection | Merged after review/checks | 581: Merged after review/checks | [report](messung/muse/MUSE-REPORT-563.md) |
 | 564 | Connection: Shift operations byte decoder and execution connection | Committed candidate; review/integration pending | 582: Committed candidate; review/integration pending | [task](lanes/564.md) |
 | 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Agent working | 583: scheduled | [task](lanes/565.md) |
@@ -580,6 +580,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `a529523d`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **562**, Connection: Narrow operations byte decoder and execution connection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-562.md). <!-- x86-merged:562 -->
 - 2026-10-01: checked master `bfbf0e09` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:bfbf0e09eb3fd799700114ba5cec06816985ae4c -->
+- 2026-10-01: lane **580**, Independent connection review of 562, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-580.md). <!-- x86-merged:580 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
