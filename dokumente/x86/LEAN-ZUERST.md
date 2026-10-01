@@ -72,3 +72,16 @@ full W/GX simulation, complete instruction-family encoding and global
 optimiser/cost soundness remain required follow-up tasks, not implied by
 these foundations. Transfer/integration stays with the coordinator after
 independent findings are resolved and local checks pass.
+
+## Independent exact-candidate reviews
+
+Simon requests substantive checks by agents first; coordinator review is a
+fallback when agents cannot resolve a finding. Lanes 295–307 review pinned
+committed snapshots independently from the authors: 295 reviews the completed
+float/time and foundation-review documents; 296–307 review respectively
+272, 279 and 282–291. Each report names the exact candidate commit and records
+ACCEPT or concrete REPAIR findings. A stale review cannot admit a changed
+candidate. Copies stay in each reviewer's private scratch; authors keep their
+owned clones. Transfer/integration is mechanical after the agent verdict and
+local merge checks. The coordinator resolves scheduling/build/import mechanics;
+semantic fallback is reserved for a demonstrated agent blockage.
