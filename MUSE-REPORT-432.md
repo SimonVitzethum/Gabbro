@@ -100,6 +100,15 @@ pristine master, until thread budget allows. Fresh independent review of the
 changed commit is still required; full source/binary-chain acceptance is
 NOT claimed.
 
+## Repair turn 2: identical gate evidence, identical result
+- Integration log byte-identical in all material lines (module axioms
+  511-517 standard; umbrella link `failed to create thread`, exit 134).
+- Fresh local checks: module probe `0 error(s)`; `./lean-bau` gives
+  `== exit 1; 2 error line(s)` with the same post-module umbrella failure.
+- Still no content defect: no owned Lean file changed this turn, no
+  guarantee weakened. Blocker unchanged (machine thread budget at the
+  umbrella-link step; pristine master affected identically).
+
 ## What remains open (unchanged)
 - Full `./lean-bau` green + `#print axioms gabbro_ziel` re-check when the
   machine is quiet (merge gate will re-run both anyway).
