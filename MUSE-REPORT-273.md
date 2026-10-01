@@ -55,12 +55,24 @@ Read before acting: `AGENTS.md`, `dokumente/x86/WELLE-A.md`,
 No new Lean theorems or definitions. No source diagnostic codes, no
 gift/example numbers, no CLI switch, no `MARKE_EMIT` touch.
 
+## Review repair (merge review, same session)
+
+Finding: `Speicher::lege_ab` with `false` left a previously granted
+permission intact (only `true` inserted, `false` was a no-op). Fix in
+`x86::typen`: each permission now exactly reflects the passed boolean
+(insert on `true`, remove on `false`), byte always replaced. No API or
+vocabulary change, no new precondition, no overwrite refusal. New
+regression test `ablegen_mit_false_entzieht_bestehende_rechte` maps a
+byte with all rights, replaces it with all `false` (rights revoked, new
+byte preserved), then replaces it again with mixed rights. The issue is
+fixed in behaviour, not hidden behind an assertion.
+
 ## Check outcomes (truthful last lines)
 
 - `./cargo-pruef`: `== exit 0; failing tests: 0` /
-  `== total: 1467 passed, 0 failed, 1 ignored`.
+  `== total: 1468 passed, 0 failed, 1 ignored`.
 - New tests in isolation (`./target/debug/deps/gabbro_check-<hash> x86`):
-  `10 passed; 0 failed` (9 in `typen::proben`, 1 in `x86::proben`).
+  `11 passed; 0 failed` (10 in `typen::proben`, 1 in `x86::proben`).
 - `./lean-bau`: `Build completed successfully (366 jobs).` (no Lean file
   touched; build confirms the untouched tree stays green).
 - Emission: unchanged by construction (only new unwired module + one

@@ -346,7 +346,8 @@ impl Speicher {
         self.bytes.get(&adresse).copied()
     }
 
-    /// Record one byte and its permissions.
+    /// Record one byte and set each permission to exactly the passed
+    /// boolean: `true` grants, `false` revokes (also over a previous entry).
     pub fn lege_ab(
         &mut self,
         adresse: Adresse,
@@ -358,12 +359,18 @@ impl Speicher {
         self.bytes.insert(adresse, byte);
         if lesbar {
             self.lesbar.insert(adresse);
+        } else {
+            self.lesbar.remove(&adresse);
         }
         if schreibbar {
             self.schreibbar.insert(adresse);
+        } else {
+            self.schreibbar.remove(&adresse);
         }
         if ausfuehrbar {
             self.ausfuehrbar.insert(adresse);
+        } else {
+            self.ausfuehrbar.remove(&adresse);
         }
     }
 
@@ -651,5 +658,32 @@ mod proben {
         assert!(z.speicher.ist_lesbar(0x4000));
         assert!(!z.speicher.ist_schreibbar(0x4000));
         assert!(z.speicher.ist_ausfuehrbar(0x4000));
+    }
+
+    #[test]
+    fn ablegen_mit_false_entzieht_bestehende_rechte() {
+        // Review regression: `lege_ab` with `false` must revoke, not keep,
+        // a previously granted permission at the same address.
+        let mut s = Speicher::leer();
+        s.lege_ab(0x5000, 0x90, true, true, true);
+        assert!(s.ist_lesbar(0x5000));
+        assert!(s.ist_schreibbar(0x5000));
+        assert!(s.ist_ausfuehrbar(0x5000));
+        // Replace the same byte with all rights revoked.
+        s.lege_ab(0x5000, 0xcc, false, false, false);
+        assert_eq!(
+            s.byte_an(0x5000),
+            Some(0xcc),
+            "the new byte is preserved while rights are revoked"
+        );
+        assert!(!s.ist_lesbar(0x5000));
+        assert!(!s.ist_schreibbar(0x5000));
+        assert!(!s.ist_ausfuehrbar(0x5000));
+        // Independent mixed rights on another replacement of the same byte.
+        s.lege_ab(0x5000, 0xeb, false, true, false);
+        assert_eq!(s.byte_an(0x5000), Some(0xeb));
+        assert!(!s.ist_lesbar(0x5000));
+        assert!(s.ist_schreibbar(0x5000));
+        assert!(!s.ist_ausfuehrbar(0x5000));
     }
 }
