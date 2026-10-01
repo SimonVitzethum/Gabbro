@@ -101,6 +101,38 @@ no discarded premise, no premise-free existential of a premise.
 - 32-bit narrow clearing (upper32 zeroing) is not modelled — only the
   64-bit register select is stated.
 
+## Addendum: integration gate failure (no merge) — evidence review
+
+The integration gate failed with the output quoted in the repair request.
+Reading that log exactly:
+
+- Steps `[397/398]` in the integration checkout print all 17 of this
+  lane's `#print axioms` lines (up to `cmov_store_verbraucher_zeuge`):
+  **this module elaborated cleanly in the integration build too.**
+- The failing step is the final umbrella `Grammatik.lean` import-all
+  compile, aborting with `failed to create thread`, exit 134 — the same
+  signature as measured locally (twice with, once without my change).
+
+Repair status: **no defect found in owned files; nothing repaired because
+nothing owned is broken.** Any edit (e.g. deleting the required `#print
+axioms` lines or shrinking already-green proofs) would be a fake fix: the
+crashing step loads ~398 modules and fails identically on unmodified
+master. Fresh local re-checks after the verdict:
+
+- `./lean-probe grammatik/Grammatik/X86/ConditionalMove.lean`:
+  `== 0 error(s) in the COMPLETE output; exit 0`, same 17 standard axiom
+  lines as before.
+- `./lean-bau`: again 392/393 green including this module, umbrella step
+  aborts identically (`failed to create thread`, exit 134).
+
+Concrete blocker for integration: machine resource exhaustion at the
+umbrella import-all step (`-j2` thread spawn aborts under concurrent-lane
+load; swap full). Resolution is operational, not a Lean change: re-run
+the merge build on a quiet machine (or raise the thread/memory headroom
+of the umbrella step in the unowned `lean-bau`/slot wrappers). A fresh
+independent review of the changed commit is still required as ordered;
+the Lean content is unchanged since `ee5d6ffd` except this report.
+
 ## Task feedback
 
 Nothing in the task as written is wrong. One note for future reserve
