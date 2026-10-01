@@ -1,9 +1,45 @@
 # MUSE-REPORT-465: Independent exact-candidate review of 417
 
-## Scope
+## Re-review of the repaired candidate (new HEAD)
+
+Pinned snapshot `.tmp/review/SNAPSHOT.json` now points at author-417 HEAD
+`519e6373b6548a0358c8727ed7495278174d3f25` (was `ee5d6ffd`).
+Fresh substantive re-review performed on the NEW pinned files:
+
+- The Lean content is byte-identical to the previously reviewed candidate:
+  new-file blob `6dbea0d5` (same git content hash as in the old PATCH), same
+  318 lines, same one-line umbrella import (`6e68b11c..dc673df7`, same hunk).
+  The delta `ee5d6ffd` -> `519e6373` is report-only: the author's addendum
+  on the integration-gate failure (commit message: "no Lean change").
+- Every previous finding re-inspected against the new files: no changed
+  proof, no new premise, no weakened conclusion, no new scope. All prior
+  checks (reused-name shapes, `Befehl` without cmov, premise use,
+  no-speculation discipline, no second IR, witness non-degeneracy, CUTS
+  honesty, additive-only diff) stand unchanged.
+- Freshly reproduced in this clone on the NEW supplied file (staged only
+  the candidate module, deleted afterwards, tree verified clean):
+  `./lean-probe` gives `== 0 error(s) in the COMPLETE output; exit 0`
+  with the same 17 standard axiom lines (`[propext]` / none for
+  value-framing-guarantee theorems, `[propext, Quot.sound]` for the store
+  consumer and all four witnesses). Forbidden-keyword grep: zero hits.
+- On the author's addendum (integration gate failed at the umbrella
+  import-all step, "nothing repaired because nothing owned is broken"): the
+  assessment is correct. The module elaborated cleanly in the integration
+  build too (all 17 axiom lines print at step [397/398]); the crash
+  signature (`failed to create thread`, exit 134) matches the author's
+  stash experiment proving pre-existing failure on unmodified master.
+  Declining to edit green proofs or delete required `#print axioms` lines
+  is the right call -- that would be a fake fix. Resolution is operational
+  (quiet-machine rebuild), not a Lean change. The addendum strengthens the
+  evidence record; it does not alter the bounded claim.
+
+Verdict below is pinned to the NEW HEAD. The old HEAD `ee5d6ffd` is stale
+and no longer approved.
+
+## Scope (original review, still valid)
 
 Reviewed the exact pinned candidate files from `.tmp/review/SNAPSHOT.json`
-(author 417, HEAD `ee5d6ffd86d2a4c9795888758054d682d3d71352`):
+(author 417, HEAD `519e6373b6548a0358c8727ed7495278174d3f25`):
 `MUSE-REPORT-417.md`, one-line additive import in `grammatik/Grammatik.lean`,
 and the new module `grammatik/Grammatik/X86/ConditionalMove.lean`
 (1 def + 17 theorems, 318 lines), against the owner task, the PATCH, and the
@@ -93,5 +129,5 @@ non-degenerate witnesses), with codec/source/hardware correspondence
 explicitly OPEN. Not full compiler closure; nothing in the candidate claims
 it.
 
-CANDIDATE: 417 ee5d6ffd86d2a4c9795888758054d682d3d71352
+CANDIDATE: 417 519e6373b6548a0358c8727ed7495278174d3f25
 VERDICT: ACCEPT
