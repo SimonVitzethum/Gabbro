@@ -482,4 +482,70 @@ theorem kein_lock_schritt (s s' : TSOZustand) :
   intro h
   cases h
 
+/-! ## 10. Link to the existing view model (`Sicht`) at byte granularity -/
+
+/-- Singleton byte history: `a` holds one message with value `v`. -/
+def tsoEineHist (a : Adresse) (v : Byte) :
+    Adresse → List (Speichermodell.Nachricht Adresse Byte) :=
+  fun x => if x = a then
+    [⟨1, v, Speichermodell.Sicht.null⟩]
+  else
+    [⟨0, 0, Speichermodell.Sicht.null⟩]
+
+/-- The singleton message is in the history at `a`. -/
+theorem tsoEineHist_mem (a : Adresse) (v : Byte) :
+    (⟨1, v, Speichermodell.Sicht.null⟩ :
+      Speichermodell.Nachricht Adresse Byte) ∈ tsoEineHist a v a := by
+  simp [tsoEineHist]
+
+/-- The singleton message is readable in the view model: it is present
+    and above the empty view. -/
+theorem tsoEineHist_lesbar (a : Adresse) (v : Byte) :
+    Speichermodell.Lesbar (tsoEineHist a v)
+      Speichermodell.Sicht.null a
+      ⟨1, v, Speichermodell.Sicht.null⟩ := by
+  refine ⟨tsoEineHist_mem a v, ?_⟩
+  exact Nat.zero_le 1
+
+/-- **Target-side view link.** Every byte a TSO load returns is a
+    `Lesbar` option of the existing `Sicht` model instantiated at
+    bytes: the TSO load options (own-buffer forward or canonical
+    memory) sit inside the view model's read options. This reuses
+    `Lesbar` as stated; it maps NO source carrier and proves NO
+    source-to-target simulation (see CUTS). -/
+theorem tso_last_lesbar (s : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Byte) (h : loadByte s c a = some v) :
+    ∃ hist : Adresse → List (Speichermodell.Nachricht Adresse Byte),
+      ∃ m, m ∈ hist a ∧ m.wert = v ∧
+        Speichermodell.Lesbar hist Speichermodell.Sicht.null a m := by
+  unfold loadByte at h
+  by_cases hrd : s.mem.lesbar a = true
+  · rw [if_pos hrd] at h
+    cases hne : neuestens (s.puffer c) a with
+    | none =>
+      simp only [hne, Option.some.injEq] at h
+      subst h
+      exact ⟨tsoEineHist a (s.mem.bytes a), _,
+        tsoEineHist_mem _ _, rfl, tsoEineHist_lesbar _ _⟩
+    | some w =>
+      simp only [hne, Option.some.injEq] at h
+      subst h
+      exact ⟨tsoEineHist a w, _,
+        tsoEineHist_mem _ _, rfl, tsoEineHist_lesbar _ _⟩
+  · rw [if_neg hrd] at h
+    cases h
+
+/-- Fresh timestamps exist at bytes: the `Frisch` shape an issue step
+    needs (strictly above the view, unused) is inhabited. -/
+theorem tso_frisch_beispiel (a : Adresse) :
+    ∃ hist : Adresse → List (Speichermodell.Nachricht Adresse Byte),
+      ∃ v, Speichermodell.Frisch hist v a 1 := by
+  refine ⟨fun _ => [⟨0, 0, Speichermodell.Sicht.null⟩],
+    Speichermodell.Sicht.null, ?_, ?_⟩
+  · exact Nat.zero_lt_one
+  · intro m hm
+    simp at hm
+    subst hm
+    decide
+
 end Gabbro.Grammatik.X86
