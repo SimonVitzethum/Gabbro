@@ -81,7 +81,7 @@ could change. Working tree is clean except this report.
   but the coordinator will want the repair loop, not this document, to
   carry that failure detail.
 
-## Remaining open work
+## Remaining open work (initial review)
 
 The whole source-to-final-byte acceptance theorem; IR/lowering (287),
 invariant optimisation (288), stack/ABI (309), call-log (310), strength
@@ -90,7 +90,7 @@ fetch/decode/step (319); pending reviews 297, 306, 307 (repair), 313-316,
 318, 320; Rust implementation after reviewed Lean models; fresh
 whole-tree checks for the publication containing this document.
 
-## Verdict
+## Verdict (initial review)
 
 The candidate document accurately describes the bounded work and progress
 at this base. It keeps planned, working, pending and merged states
@@ -99,4 +99,73 @@ cited historical measurements without promoting them, and claims no
 complete compiler or full source-to-binary proof.
 
 DOCUMENT-CANDIDATE: ea10465dd8060a4668db568ee3c9174e50b1868b
+VERDICT: ACCEPT
+
+---
+
+## Re-review: final document with publication check results (2026-10-01)
+
+Fresh independent exact-document review of the scratch candidate
+`.tmp/FINAL-DOCUMENT.md` against `.tmp/FINAL-DOCUMENT.diff`,
+`.tmp/FINAL-DOCUMENT-CANDIDATE.json`, `.tmp/PUBLICATION-CHECKS.json`,
+`.tmp/PUBLICATION-AXIOMS.log` and the refreshed
+`.tmp/COORDINATOR-SNAPSHOT.json`. No source or central file edited;
+owned file only: this report.
+
+- Candidate identity: `git hash-object .tmp/FINAL-DOCUMENT.md` =
+  `e0eb1416dd94fade99a0f9b4bfa7781c79619f93`, matching the candidate
+  JSON blob; JSON head `5adbed739ab76006ed1f69f1348c8b0e5a9b84a4`;
+  diff index line `ea10465d..e0eb1416` links old reviewed blob to new.
+- Diff scope: exactly two hunks. (1) The "Fresh whole-tree checks ...
+  pending below" bullet now records completed checks for implementation
+  `77e6f362`. (2) One append-only history line for the same. Ledger,
+  architecture, optimisation, sequence, workflow, non-claims and all
+  merged-history lines are byte-unchanged.
+- Measurement verification, claim by claim:
+  - Lean "375 jobs, 0 errors": checks JSON lean section reports
+    `exit_code 0`, `0 error line(s) in the COMPLETE output` and
+    `Build completed successfully (375 jobs)`. Exact match.
+  - Rust "1468 passed, 0 failed, 1 ignored": rust output reports
+    `failing tests: 0` and `total: 1468 passed, 0 failed, 1 ignored`.
+    Exact match.
+  - Emission "338/338 translated, 53 end-to-end comparisons,
+    2 reverse probes", exit 0: emission output reports `exit 0` and
+    `53 durchgestochen, 338 von 338 uebersetzen, 2 umgekehrte Probe(n)`.
+    Exact match.
+  - "ASan remains unavailable and was not counted as passing": emission
+    output states `ASan (Stufe 6b): NICHT GEFAHREN` and `Das ist keine
+    bestandene Probe`. Exact match.
+  - Goal axioms exactly `propext, Classical.choice, Quot.sound`:
+    `PUBLICATION-AXIOMS.log` line 3 reports exactly that triple for
+    `gabbro_ziel`. Exact match.
+  - "implementation at `77e6f362`": checks JSON `checked_head` is
+    `77e6f36296e83c9beb58ce9447415314a9f3ae0c`, an ancestor of this
+    base. Exact match.
+  - "Subsequent documentation/report-only commits do not change the
+    checked code": `git diff 77e6f362..HEAD` over `grammatik crates
+    instrumente laufzeit bibliothek beispiele` is empty; the delta is
+    only `AGENTS.md` (one reviewed link line), `lanes/321.md` and this
+    report. Verified.
+- Claim boundaries unchanged: the new bullet keeps the historical
+  paragraph above it intact, repeats no whole-chain claim, and the OPEN
+  acceptance theorem plus all CUTS/ACCEPT-bound language are untouched.
+  The lean log's per-theorem axiom lines cover only `X86/Gleitprofil`;
+  the document claims no wider axiom cleanliness. No duration is
+  claimed for the fresh checks (the JSON `wall_time_seconds` fields are
+  chunk-metadata placeholders, not measurements).
+- Refreshed snapshot vs unchanged ledger: 29 merged rows still correct;
+  306/307/313/314/315 now `running`, 309/310/311/312/316/317
+  `report_ready`, 319 still waiting. Every not-merged row still reads
+  candidate/working/waiting/scheduled — conservative lags only
+  (e.g. 309/310 still "Agent working"), no merged overclaim. The 307
+  integration failure from the earlier snapshot is now superseded by a
+  running repair; the 291 row's "pending" remains true.
+
+New definitions/theorems: none. `./lean-bau` not run (documentation
+review; no source touched; task forbids gratuitous full builds).
+
+Remaining open work is unchanged from the initial review, minus the
+fresh publication checks which are now recorded fact.
+
+DOCUMENT-CANDIDATE: e0eb1416dd94fade99a0f9b4bfa7781c79619f93
 VERDICT: ACCEPT
