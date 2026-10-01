@@ -243,6 +243,76 @@ theorem spur_flush_schreibt (n n' : SpurKnoten) (c : Nat) (e : TSOEintrag)
     rw [hh]
     exact List.mem_append.mpr (Or.inl hm)
 
+/-! ## One-flush and finite-trace extension -/
+
+/-- **Generic one-flush extension.** One trace step is either an issue
+    (history and clock unchanged) or a flush of the actual oldest entry:
+    its timestamp was fresh, its release message is readable in the grown
+    history at the writer's joined view, canonical memory holds the
+    flushed byte, the invariant is preserved, and no previous message is
+    lost. The flushed value comes from the buffer entry, never from a
+    desired conclusion. -/
+theorem spur_ein_flush (n n' : SpurKnoten) (hs : SpurSchritt n n')
+    (hinv : SpurInv n) :
+    (∃ c a v, issueByte n.tso c a v = some n'.tso ∧
+      n'.hist = n.hist ∧ n'.frisch = n.frisch) ∨
+    (∃ c e rest, flushKern n.tso c = some n'.tso ∧
+      n.tso.puffer c = e :: rest ∧
+      Speichermodell.Frisch n.hist (n.blick c) e.addr n.frisch ∧
+      Speichermodell.Lesbar n'.hist (n'.blick c) e.addr
+        (Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+          (n.blick c) e.addr n.frisch e.wert) ∧
+      n'.tso.mem.bytes e.addr = e.wert ∧
+      SpurInv n' ∧
+      ∀ x m, m ∈ n.hist x → m ∈ n'.hist x) := by
+  cases hs with
+  | issue c a v h hh hb hf =>
+    exact Or.inl ⟨c, a, v, h, hh, hf⟩
+  | flush c e rest h he hh hb hf =>
+    have hs' : SpurSchritt n n' :=
+      SpurSchritt.flush n n' c e rest h he hh hb hf
+    refine Or.inr ⟨c, e, rest, h, he, spur_flush_frisch_vor n c e hinv,
+      ?_, flush_schreibt_kopf _ _ _ h e rest he,
+      spurSchritt_inv n n' hs' hinv, ?_⟩
+    · have hfun := congrFun hh e.addr
+      have hcond : e.addr = e.addr := rfl
+      rw [if_pos hcond] at hfun
+      have hbv := congrFun hb c
+      have hcondc : c = c := rfl
+      rw [if_pos hcondc] at hbv
+      refine ⟨?_, ?_⟩
+      · rw [hfun]
+        refine List.mem_append.mpr (Or.inr ?_)
+        simp
+      · rw [hbv, Speichermodell.Sicht.setze_selbst]
+        exact Nat.le_refl _
+    · intro x m hm
+      exact spur_schritt_erhaelt n n' hs' x m hm
+
+/-- **Finite-trace extension.** Over every reached trace node the
+    invariant holds, the clock never moves backwards, and every message
+    of the start history is still present: timestamps are never reset
+    and histories only grow. -/
+theorem spur_verlauf_waechst (n0 n : SpurKnoten)
+    (hr : SpurErreichbar n0 n) (hinv0 : SpurInv n0) :
+    SpurInv n ∧ n0.frisch ≤ n.frisch ∧
+      ∀ a m, m ∈ n0.hist a → m ∈ n.hist a := by
+  induction hr with
+  | start =>
+    exact ⟨hinv0, Nat.le_refl _, fun a m hm => hm⟩
+  | schritt prev step ih =>
+    obtain ⟨hinv_mid, hle_mid, hkeep_mid⟩ := ih
+    refine ⟨spurSchritt_inv _ _ step hinv_mid, ?_, ?_⟩
+    · cases step with
+      | issue c a v h hh hb hf =>
+        rw [hf]
+        exact hle_mid
+      | flush c e rest h he hh hb hf =>
+        rw [hf]
+        omega
+    · intro a m hm
+      exact spur_schritt_erhaelt _ _ step a m (hkeep_mid a m hm)
+
 /- CUTS:
     - So far only the node/step vocabulary; preservation, freshness,
       forwarding and the joint witness follow as increments.
