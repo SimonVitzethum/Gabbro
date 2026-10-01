@@ -195,7 +195,7 @@ Last ledger refresh: **2026-10-01 13:42 UTC**. This is an operational snapshot, 
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Merged after review/checks | [report](messung/muse/MUSE-REPORT-402.md) |
 | 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Merged after review/checks | 484: Merged after review/checks | [report](messung/muse/MUSE-REPORT-404.md) |
 | 405 | Adversarial implementation audit: MEMORY-RANGES | Merged after review/checks | 485: Merged after review/checks | [report](messung/muse/MUSE-REPORT-405.md) |
-| 406 | Adversarial implementation audit: DECODE-BOUNDARY | Merged after review/checks | 486: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-406.md) |
+| 406 | Adversarial implementation audit: DECODE-BOUNDARY | Merged after review/checks | 486: Merged after review/checks | [report](messung/muse/MUSE-REPORT-406.md) |
 | 407 | Adversarial implementation audit: FINAL-IMAGE | Merged after review/checks | 487: Merged after review/checks | [report](messung/muse/MUSE-REPORT-407.md) |
 | 408 | Adversarial implementation audit: WEAK-MEMORY | Merged after review/checks | 488: Merged after review/checks | [report](messung/muse/MUSE-REPORT-408.md) |
 | 409 | Adversarial implementation audit: INVARIANT-LIFETIME | Merged after review/checks | 489: Merged after review/checks | [report](messung/muse/MUSE-REPORT-409.md) |
@@ -467,6 +467,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `37754739` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:3775473977191c9601aed0e09d65ba0b93f5dd4a -->
 - 2026-10-01: lane **388**, Independent exact-candidate review of 350 AtomicPayload, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-388.md). <!-- x86-merged:388 -->
 - 2026-10-01: lane **406**, Adversarial implementation audit: DECODE-BOUNDARY, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-406.md). <!-- x86-merged:406 -->
+- 2026-10-01: lane **486**, Independent exact-candidate review of 406, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-486.md). <!-- x86-merged:486 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
