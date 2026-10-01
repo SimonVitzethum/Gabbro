@@ -734,13 +734,136 @@ theorem schritt_ret_flags (d s s' ziel) (hok : laengeOk d.laenge = true)
   cases hstep
   rfl
 
+/-! ## Reached runs, a store-changing witness, and control probes. -/
+
+/-- A reached run: the decoded sequence applied in order; `none` is a
+    loud failure, never a silent halt. -/
+def lauf : List Decodiert → Zustand → Option Zustand
+  | [], s => some s
+  | d :: rest, s => match schritt d s with
+    | some s' => lauf rest s'
+    | none => none
+
+/-- Zeroed bytes for the witness memory. -/
+def zeugeBytes : Adresse → Byte := fun _ => BitVec.ofNat 8 0
+
+/-- Universal read permission for the witness memory. -/
+def zeugeWahr : Adresse → Bool := fun _ => true
+
+/-- No execute permission anywhere in the witness memory. -/
+def zeugeFalsch : Adresse → Bool := fun _ => false
+
+/-- Fully readable and writable witness memory with zeroed bytes. -/
+def zeugeSpeicher : Speicher :=
+  { bytes := zeugeBytes, lesbar := zeugeWahr, schreibbar := zeugeWahr, ausfuehrbar := zeugeFalsch }
+
+/-- Witness flags: nothing set. -/
+def zeugeFlags : Flags :=
+  { cf := false, pf := true, af := some false, zf := false, sf := false, of := false }
+
+/-- Witness flags with the zero flag set (an equal comparison just ran). -/
+def zeugeFlagsGleich : Flags :=
+  { cf := false, pf := true, af := some false, zf := true, sf := false, of := false }
+
+/-- Witness register file: everything zero, the stack top at 8192. -/
+def zeugeReg : Register → Wort := fun q => if q = Register.rsp then BitVec.ofNat 64 8192 else BitVec.ofNat 64 0
+
+/-- Witness start state: code at 4096, stack top at 8192. -/
+def zeugeZustand : Zustand :=
+  { register := zeugeReg, flags := zeugeFlags, rip := BitVec.ofNat 64 4096, speicher := zeugeSpeicher }
+
+/-- Witness start state with the zero flag set. -/
+def zeugeGleich : Zustand :=
+  { register := zeugeReg, flags := zeugeFlagsGleich, rip := BitVec.ofNat 64 4096, speicher := zeugeSpeicher }
+
+/-- Witness program: set rax to 42, store it through the stack pointer,
+    read it back into rbx. -/
+def zeugeProg : List Decodiert :=
+  [{ befehl := Befehl.movImm64 Register.rax 42, laenge := 3 }, { befehl := Befehl.store64 Register.rsp Register.rax (BitVec.ofNat 32 0), laenge := 4 }, { befehl := Befehl.load64 Register.rbx Register.rsp (BitVec.ofNat 32 0), laenge := 4 }]
+
+/-- The witness run reaches a state whose register holds the stored value
+    and whose memory byte observably changed from zero to 42: a real
+    store-changing reached instruction sequence. -/
+theorem zeuge_speicher_aendert_sich :
+    ((lauf zeugeProg zeugeZustand).map (fun s => s.register Register.rbx) = some 42) ∧ ((lauf zeugeProg zeugeZustand).map (fun s => s.speicher.bytes (BitVec.ofNat 64 8192)) = some (BitVec.ofNat 8 42)) ∧ (zeugeZustand.speicher.bytes (BitVec.ofNat 64 8192) = BitVec.ofNat 8 0) := by
+  decide
+
+/-- Branch probe: with the zero flag set, `je +16` leaves the post-decode
+    address 4098 for 4114. -/
+theorem probe_sprung_genommen :
+    ((schritt { befehl := Befehl.jumpIf32 Bedingung.e (BitVec.ofNat 32 16), laenge := 2 } zeugeGleich).map (fun s => s.rip) = some (BitVec.ofNat 64 4114)) := by
+  decide
+
+/-- Branch probe: with the zero flag clear, `je +16` falls through to 4098. -/
+theorem probe_sprung_nicht_genommen :
+    ((schritt { befehl := Befehl.jumpIf32 Bedingung.e (BitVec.ofNat 32 16), laenge := 2 } zeugeZustand).map (fun s => s.rip) = some (BitVec.ofNat 64 4098)) := by
+  decide
+
+/-- Call/return probe: `call +32` from 4096 stores 4101 below the old top
+    and jumps to 4133; `ret` pops 4101 back and restores the top to 8192. -/
+theorem probe_ruf_kehr :
+    (((schritt { befehl := Befehl.call32 (BitVec.ofNat 32 32), laenge := 5 } zeugeZustand).bind (schritt { befehl := Befehl.ret, laenge := 1 })).map (fun s => (s.rip, s.register Register.rsp)) = some (BitVec.ofNat 64 4101, BitVec.ofNat 64 8192)) := by
+  decide
+
+/-- Push-ordering probe: `push rsp` stores the OLD top 8192 at 8184. -/
+theorem probe_schub_liest_alt :
+    ((schritt { befehl := Befehl.push64 Register.rsp, laenge := 1 } zeugeZustand).bind (fun s => read64 s.speicher (BitVec.ofNat 64 8184)) = some (BitVec.ofNat 64 8192)) := by
+  decide
+
+/-- Witness stack memory: the word 7 sits at address 8184. -/
+def zeugeStapelSpeicher : Speicher :=
+  { bytes := writeBytes zeugeSpeicher (BitVec.ofNat 64 8184) 7, lesbar := zeugeWahr, schreibbar := zeugeWahr, ausfuehrbar := zeugeFalsch }
+
+/-- Witness register file with the stack top at 8184. -/
+def zeugeRegStapel : Register → Wort := fun q => if q = Register.rsp then BitVec.ofNat 64 8184 else BitVec.ofNat 64 0
+
+/-- Witness state standing on a stack whose top word is 7. -/
+def zeugeStapel : Zustand :=
+  { register := zeugeRegStapel, flags := zeugeFlags, rip := BitVec.ofNat 64 4096, speicher := zeugeStapelSpeicher }
+
+/-- Pop-ordering probe: `pop rsp` takes the loaded word 7, discarding the
+    increment to 8184+8. -/
+theorem probe_nimm_rsp_gewinnt :
+    ((schritt { befehl := Befehl.pop64 Register.rsp, laenge := 1 } zeugeStapel).map (fun s => s.register Register.rsp) = some (BitVec.ofNat 64 7)) := by
+  decide
+
 /- CUTS:
-   All pilot constructors step; step equations, frame facts, the reached
-   witness and the branch/call probes are still open. No decoder, encoder,
-   TSO bridge, source correspondence, ABI/loader, cost transfer or
-   final-image claim is proved here.
+   - Every pilot `Befehl` constructor steps through the shared Wort/Speicher
+     helpers, with one equation per form, frame facts, a store-changing
+     reached witness and branch/call/return probes. What is NOT here:
+   - No decoder or encoder: `Decodiert.laenge` is checked input data (1..15),
+     and `Befehl` values arrive constructed, not decoded from bytes.
+   - No TSO bridge: multi-byte accesses are sequential per-byte events from
+     lane 271; no atomicity or tearing claim under concurrency, and `lauf`
+     is a sequential fold, not a concurrent interleaving.
+   - No source correspondence: nothing here speaks about Gabbro source
+     ranges, faults beyond permission-checked `none`, contracts or costs.
+   - No ABI/loader, image layout, entry, relocation, timing, progress or
+     whole-executable acceptance claim.
+   - Narrow widths (8/16/32-bit operand forms) have no instruction forms;
+     only the 64-bit register/memory forms step.
+   - `Flags.af = none` after XOR is undefined, never false (from Wort.lean).
+   - The struct-update layout rule of this toolchain (no newline after a
+     field comma) is a parser fact the file works around, not a semantic one.
 -/
 
 #print axioms schritt
+#print axioms schritt_movImm64
+#print axioms schritt_addReg64
+#print axioms schritt_cmpReg64
+#print axioms schritt_load64_erfolg
+#print axioms schritt_store64_erfolg
+#print axioms schritt_jumpIf32_genommen
+#print axioms schritt_push64_erfolg
+#print axioms schritt_pop64_top
+#print axioms schritt_pop64_reg
+#print axioms schritt_call32_erfolg
+#print axioms schritt_ret_erfolg
+#print axioms zeuge_speicher_aendert_sich
+#print axioms probe_sprung_genommen
+#print axioms probe_sprung_nicht_genommen
+#print axioms probe_ruf_kehr
+#print axioms probe_schub_liest_alt
+#print axioms probe_nimm_rsp_gewinnt
 
 end Gabbro.Grammatik.X86
