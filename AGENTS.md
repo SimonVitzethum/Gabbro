@@ -126,16 +126,19 @@ README §5 says exactly this; keep it that way.
   the one under active review.
 - **Delete worktrees and clones right after a merge.** That covers `.claude/worktrees/*`,
   the lane clones, and the `gabbro-opus-*` directories.
-- **Temporary Muse limit, authorised by Simon on 2026-10-01:** up to **40** concurrent
-  OpenCode Go Muse contributor processes today (Europe/Berlin), including reviewers,
-  organisers and merge owners. On later days the cap returns to **20**. Use isolated
-  clones, independent exact-candidate review and serial checked publication. An
-  increased cap is not a claim that all slots are already running.
+- **Permanent Muse limit, latest Simon instruction on 2026-10-01:** at most
+  **15** concurrent managed OpenCode Go Muse model processes, including
+  authors, reviewers, organisers, integration owners and repair continuations.
+  This supersedes the earlier temporary 40/default 20 rule. Maintain useful
+  utilisation near 15 through automatic dependency-aware backfill; do not
+  create idle filler or duplicate work. Use isolated clones and per-lane
+  session databases, independent exact-candidate review and serial checked
+  publication. Never stop or modify the user's own OpenCode process.
 - **Proposed friend optimiser ownership:** `grammatik/Grammatik/X86/OptimizationRules.lean`
   and `OptimizationWitnesses.lean` are reserved for the friend handoff. Muse lanes
   do not edit these paths; reuse the one accepted IR and wait for its frozen interface.
   The complete planned optimiser specification belongs in `grammatik/OPTIMIZER.md`.
-- **Continuous Muse utilisation (Simon, 2026-10-01):** aim to keep 40 useful model processes active today, 20 afterwards, with automatic backfill from independent writing/review/repair/organisation tasks. Dispatch runs independently of serial integration/build/publication. Report actual live model PIDs separately from queued jobs, completed lanes and Python/build wrappers; never claim the limit is the running count. Preserve safety gates and record genuine dependency/provider/resource bottlenecks. The coordinator manages only its own lanes.
+- **Continuous Muse utilisation (Simon, 2026-10-01):** keep up to 15 useful models active permanently. Dispatch independently of serial integration/build/publication. Count actual live model PIDs separately from queues, completed lanes and Python/build wrappers. Preserve all safety gates and record genuine dependency/provider/resource bottlenecks. The coordinator manages only its own lanes.
 - **Opus agents: at most 2 at a time.** Simon said on 2026-09-14: "nutze 2 opus agenten".
   Muse lanes: as many as useful.
 - **Commit messages** go through `arbeitsprotokoll/.commitmsg` + `./commit.sh`. It commits STAGED

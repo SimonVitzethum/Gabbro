@@ -10,6 +10,10 @@ The [detailed compiler design](DIRECT-COMPILER-DESIGN.md) specifies the planned 
 
 The [complete planned Lean optimiser specification](grammatik/OPTIMIZER.md) describes the shared IR, optimisation rules, invariant/effect premises, certificates, cost/concurrency guarantees, fast compilation and the proposed friend contributor handoff. It is a specification; the implementation and full validation chain remain OPEN. <!-- x86-optimizer-design -->
 
+Current workforce policy: **at most 15 managed Muse model processes permanently**, including every reviewer and organising/repair role. This latest explicit instruction supersedes the earlier 20/40 plan. A separate dispatcher backfills useful independent work while integration, checks and publication stay serial. Each lane uses a private session database; actual model PID counts are recorded separately from queues and wrappers. Full source-to-binary validation remains OPEN.
+
+<!-- x86-workforce-policy-15 -->
+
 ## Intended result
 
 Compile Gabbro directly to x86-64 machine bytes, including linking, relocations,
@@ -108,7 +112,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 11:42 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 12:00 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -161,12 +165,12 @@ Last ledger refresh: **2026-10-01 11:42 UTC**. This is an operational snapshot, 
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
 | 344 | Practical-performance Lean wave B4: FenceDrain | Merged after review/checks | 382: Merged after review/checks | [report](messung/muse/MUSE-REPORT-344.md) |
 | 345 | Practical-performance Lean wave C1: TableLayout | Merged after review/checks | 383: Merged after review/checks | [report](messung/muse/MUSE-REPORT-345.md) |
-| 346 | Practical-performance Lean wave C2: GateStub | Scheduled | 384: Committed candidate; review/integration pending | [task](lanes/346.md) |
+| 346 | Practical-performance Lean wave C2: GateStub | Committed candidate; review/integration pending | 384: scheduled | [task](lanes/346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
-| 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: scheduled | [task](lanes/350.md) |
-| 401 | Continuous workforce organisation and next dependency-aware proof queue | Scheduled | 439: scheduled | [task](lanes/401.md) |
+| 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: Committed candidate; review/integration pending | [task](lanes/350.md) |
+| 401 | Continuous workforce organisation and next dependency-aware proof queue | Committed candidate; review/integration pending | 439: scheduled | [task](lanes/401.md) |
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Scheduled | 403: scheduled | [task](lanes/402.md) |
 | 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Scheduled | 484: scheduled | [task](lanes/404.md) |
 | 405 | Adversarial implementation audit: MEMORY-RANGES | Scheduled | 485: scheduled | [task](lanes/405.md) |
@@ -427,3 +431,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
   managed Muse model processes; completed lanes and build/Python wrappers are
   excluded. Target: 40 today, 20 afterwards, subject to real useful work and
   dependency/provider/local build availability. No new closure or speed claim.
+
+- 2026-10-01: latest user instruction replaces the temporary 40/default20 limit with permanent maximum15 across all managed Muse roles. Separate session databases were verified using the installed OpenCode database-path override. At 11:44 UTC the actual inventory measured15 live managed models; subsequent counts fluctuate with task completion and backfill. Earlier larger-cap figures are historical. Safety/review/publication gates retained.
+
+- 2026-10-01: after the reported OOM, kernel evidence identified a Lean process using about15 GiB RSS. Preserved interrupted lane clones, commits and private session databases. Expensive Lean/Rust operations now share a nested-safe lease, inherit an8-GiB virtual-memory ceiling and use two workers. Lean probes propagate nonzero exits, including resource failures; no failed check becomes acceptance. New model dispatch retains an8-GiB available-memory reserve. Complete integrated Lean build under the guard:397 jobs, zero errors. Fresh Rust/emission/goal gates still required before the next push.
