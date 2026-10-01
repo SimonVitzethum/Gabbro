@@ -206,6 +206,76 @@ theorem rahmen_getrennt_von_intervallen (r₁ r₂ : Rahmen)
     omega
   exact disjunkt_von_intervallen _ _ hOi hOj hord
 
+/-! ## 4. Frame layout: spills, callee-save words, stack arguments. -/
+
+/-- Frame layout: spill slots, callee-save slots, stack-passed argument words,
+    laid out back to back from the frame base. -/
+structure Belegung where
+  spill : Nat
+  gerettet : Nat
+  stapelArgs : Nat
+  deriving DecidableEq, Repr
+
+/-- Words the layout needs. -/
+def Belegung.braucht (b : Belegung) : Nat :=
+  b.spill + b.gerettet + b.stapelArgs
+
+/-- The layout fits the frame. -/
+def Belegung.passt (b : Belegung) (r : Rahmen) : Bool :=
+  decide (b.braucht * 8 ≤ r.tiefe)
+
+/-- Slot index of the `i`-th callee-save word. Spill words live at the
+    bare indices `i` below `b.spill`, so they need no offset function. -/
+def Belegung.gerettetIdx (b : Belegung) (i : Nat) : Nat := b.spill + i
+
+/-- Slot index of the `i`-th stack-passed argument word. -/
+def Belegung.stapelArgIdx (b : Belegung) (i : Nat) : Nat :=
+  b.spill + b.gerettet + i
+
+/-- Two index ranges that do not overlap name disjoint slots. The generic
+    shape behind spill/callee-save/argument separation. -/
+theorem bereich_getrennt (r : Rahmen) (a₁ e₁ a₂ e₂ i j : Nat)
+    (h₁ : a₁ ≤ i) (h₁' : i < e₁) (h₂ : a₂ ≤ j) (h₂' : j < e₂)
+    (hsep : e₁ ≤ a₂ ∨ e₂ ≤ a₁)
+    (hb₁ : e₁ ≤ r.schlitzZahl) (hb₂ : e₂ ≤ r.schlitzZahl)
+    (hle : r.spitzeNat ≤ 2 ^ 64) :
+    Disjunkt (r.schlitzAddr i) (r.schlitzAddr j) := by
+  have hbi : i < r.schlitzZahl := by omega
+  have hbj : j < r.schlitzZahl := by omega
+  have hne : i ≠ j := by omega
+  exact schlitz_disjunkt r i j hbi hbj hne hle
+
+/-- A spill slot shares no byte with a callee-save slot. -/
+theorem spill_gerettet_getrennt (b : Belegung) (r : Rahmen) (i j : Nat)
+    (hi : i < b.spill) (hj : j < b.gerettet)
+    (hpasst : b.braucht * 8 ≤ r.tiefe)
+    (hle : r.spitzeNat ≤ 2 ^ 64) :
+    Disjunkt (r.schlitzAddr i) (r.schlitzAddr (b.gerettetIdx j)) := by
+  unfold Belegung.gerettetIdx Belegung.braucht at *
+  have hb : b.spill + b.gerettet ≤ r.schlitzZahl := by
+    unfold Rahmen.schlitzZahl
+    omega
+  exact bereich_getrennt r 0 b.spill b.spill (b.spill + b.gerettet) i
+    (b.spill + j) (by omega) hi (by omega) (by omega) (Or.inl (by omega))
+    (by omega) hb hle
+
+/-- A callee-save slot shares no byte with a stack-argument slot. -/
+theorem gerettet_stapel_getrennt (b : Belegung) (r : Rahmen) (i j : Nat)
+    (hi : i < b.gerettet) (hj : j < b.stapelArgs)
+    (hpasst : b.braucht * 8 ≤ r.tiefe)
+    (hle : r.spitzeNat ≤ 2 ^ 64) :
+    Disjunkt (r.schlitzAddr (b.gerettetIdx i))
+      (r.schlitzAddr (b.stapelArgIdx j)) := by
+  unfold Belegung.gerettetIdx Belegung.stapelArgIdx Belegung.braucht at *
+  have hb : b.spill + b.gerettet + b.stapelArgs ≤ r.schlitzZahl := by
+    unfold Rahmen.schlitzZahl
+    omega
+  exact bereich_getrennt r b.spill (b.spill + b.gerettet)
+    (b.spill + b.gerettet) (b.spill + b.gerettet + b.stapelArgs)
+    (b.spill + i) (b.spill + b.gerettet + j)
+    (by omega) (by omega) (by omega) (by omega)
+    (Or.inl (by omega)) (by omega) hb hle
+
 /- CUTS:
     - No instruction semantics, decoder, image mapping, TSO bridge, source
       correspondence, cost transfer or final-image acceptance is proved here.
