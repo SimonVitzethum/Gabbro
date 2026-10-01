@@ -17,7 +17,7 @@
 costs a fraction of what it costs today.** The current backend emits C11 plus inline assembly.
 The selected verification target is a direct x86-64 backend with Lean validation of the final
 machine bytes; the full backend and validator are not implemented. The Lean
-foundations are in progress; the [direct-compiler work and progress record](dokumente/DIREKTER-COMPILER.md)
+foundations are in progress; the [direct-compiler work and progress record](DIRECT-COMPILER.md)
 tracks the models, optimisation proofs, later Rust implementation and remaining closure. The compiler is safe
 Rust (`forbid(unsafe_code)`) with zero external dependencies.
 
@@ -28,7 +28,7 @@ The point is not to have another language. The point is to write an operating sy
 > your program, the generated C and the binaries are yours, under any license you like.
 > **The condition applies only if you call the result formally verified or secure**: then the
 > generated files say which checker said so. Claim nothing and you owe nothing.
-> Details in [LIZENZ-ZUSATZ.md](LIZENZ-ZUSATZ.md).
+> Details in [LICENSE-ADDENDUM.md](LICENSE-ADDENDUM.md).
 
 > **How this repository is written — AI agents, and where the human stands.**
 > Implementation, checking and coordination are done by AI agents; the idea, the planning, the
@@ -319,8 +319,11 @@ source list is not wrong — it is uncheckable, and that is the more expensive s
 
 | File | Role |
 |---|---|
+| [`DIRECT-COMPILER.md`](DIRECT-COMPILER.md) | direct compiler, Lean-first optimisation/validation work and maintained progress |
+| [`dokumente/DESIGN.md`](dokumente/DESIGN.md) | design decisions and their reasons |
+| [`dokumente/TUTORIAL.md`](dokumente/TUTORIAL.md) | getting started and checked examples |
 | [`TODO.md`](TODO.md) | open items only, cut by the stages of the plan |
-| [`DONE.md`](DONE.md) | finished items only — every entry carries its evidence |
+| [`DONE.md`](dokumente/DONE.md) | finished items only — every entry carries its evidence |
 | [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) | the language: mechanisms, declaration rules, pairing, entry, boot, induction |
 | [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) | the grammar, and what deliberately does not exist |
 | [`dokumente/BEWEIS.md`](dokumente/BEWEIS.md) | the proof architecture — and the emitter's failure record, in full |

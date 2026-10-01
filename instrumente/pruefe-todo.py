@@ -281,7 +281,7 @@ def pruefe(text, zahlen, vollstaendig=False, done_text=None):
     #    Erledigtes, und jeder Eintrag traegt seinen Beleg (W7). Ein offener Haken dort ist
     #    derselbe Fehler wie ein `[x]` im TODO, nur spiegelverkehrt -- und er faellt
     #    niemandem auf, weil ihn niemand sucht.
-    d = WURZEL / "DONE.md"
+    d = WURZEL / "dokumente/DONE.md"
     if done_text is not None:
         dt = done_text
     elif d.is_file():

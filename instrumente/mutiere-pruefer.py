@@ -1201,7 +1201,7 @@ MUTATIONEN = [
         "code",
     ),
     Mutation(
-        # **Die Lizenzbedingung.** LIZENZ-ZUSATZ.md knuepft die zusaetzliche Erlaubnis an
+        # **Die Lizenzbedingung.** LICENSE-ADDENDUM.md knuepft die zusaetzliche Erlaubnis an
         # den Hinweis im erzeugten C. Eine Bedingung, die niemand prueft, ist eine Bitte.
         "erzeuger-ohne-lizenzhinweis",
         "emit.rs",

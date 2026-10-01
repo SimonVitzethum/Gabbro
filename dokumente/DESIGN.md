@@ -1,8 +1,8 @@
 # Design
 
 **The architecture of Gabbro, GabbroV and CaprockOS, in one place.** This document records
-decisions and their reasons. It is not a plan (that is [`TODO.md`](TODO.md)) and not a record of
-what was measured (that is [`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md)).
+decisions and their reasons. It is not a plan (that is [`TODO.md`](../TODO.md)) and not a record of
+what was measured (that is [`dokumente/MESSUNGEN.md`](MESSUNGEN.md)).
 
 Every statement carries its standing, because a design document that mixes the three is worth
 less than one that is shorter and honest:

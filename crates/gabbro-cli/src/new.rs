@@ -80,7 +80,7 @@ fn quelle(name: &str) -> String {
 -- out on its own, checked, built and run. They carry `(1)` to `(4)` below. Everything else is
 -- a comment, a body, or a line that stands because it teaches -- and says so.
 --
--- `TUTORIAL.md` is the reason each clause is there. This file is the shape.
+-- `dokumente/TUTORIAL.md` is the reason each clause is there. This file is the shape.
 
 -- **(1) `effects {{ … }}` is obligatory on EVERY function -- the `extern` ones included.**
 --
@@ -196,7 +196,7 @@ pub fn befehl(rest: &[String]) -> std::process::ExitCode {
          \n    gabbro check {gab}\n    gabbro costs {gab}\n    gabbro build {bau}\n    \
          ./target/{name}/{name}\n\
          \n\
-         `TUTORIAL.md` says why each clause is there."
+         `dokumente/TUTORIAL.md` says why each clause is there."
     );
     std::process::ExitCode::SUCCESS
 }

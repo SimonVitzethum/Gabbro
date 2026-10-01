@@ -32,7 +32,7 @@ fn wurzel() -> PathBuf {
 }
 
 fn tutorial() -> String {
-    std::fs::read_to_string(wurzel().join("TUTORIAL.md")).expect("TUTORIAL.md liegt da")
+    std::fs::read_to_string(wurzel().join("dokumente/TUTORIAL.md")).expect("the tutorial is present")
 }
 
 /// **Every complete unit in the tutorial checks.** Gate P2, over the file a newcomer reads
@@ -41,7 +41,7 @@ fn tutorial() -> String {
 fn jeder_block_des_tutorials_geht_durch() {
     let md = tutorial();
     let mut einheiten = 0;
-    for b in korpus::messe("TUTORIAL.md", &md) {
+    for b in korpus::messe("dokumente/TUTORIAL.md", &md) {
         if !b.vollstaendig {
             continue;
         }
@@ -155,7 +155,7 @@ fn das_letzte_beispiel_traegt_die_gerechnete_zahl() {
         .into_iter()
         .find(|b| b.text.contains("module tutorial::add_two"))
         .expect("section 8 carries the worked example");
-    let (baum, _) = gabbro_syntax::lies("TUTORIAL.md", &block.text);
+    let (baum, _) = gabbro_syntax::lies("dokumente/TUTORIAL.md", &block.text);
     let bericht = gabbro_check::kosten::bericht(&baum);
     let zeile = bericht
         .lines()

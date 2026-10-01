@@ -1,12 +1,12 @@
 # Gabbro — what is finished
 
-> **This file carries exclusively what is done.** What is open stands in [TODO.md](TODO.md),
-> what is refuted in [dokumente/HISTORIE.md](dokumente/HISTORIE.md), what is measured in
-> [dokumente/MESSUNGEN.md](dokumente/MESSUNGEN.md).
+> **This file carries exclusively what is done.** What is open stands in [TODO.md](../TODO.md),
+> what is refuted in [dokumente/HISTORIE.md](HISTORIE.md), what is measured in
+> [dokumente/MESSUNGEN.md](MESSUNGEN.md).
 >
 > **Every entry carries its evidence** — a file, a refusal code or a re-runnable command line.
 > *A done report without evidence is the same number without a source list that W7 stands
-> against* ([dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md)).
+> against* ([dokumente/WERKZEUGKASTEN.md](WERKZEUGKASTEN.md)).
 
 ---
 
@@ -14,13 +14,13 @@
 
 **«K3» produced 0 of 8, and `P002` fired in six of the eight excerpts on identifiers the Linux
 kernel itself wrote** — `node`, `old`, `next`, `progress`, `release`, `stack`, `index`
-([`messung/K3-BEFUND.md`](messung/K3-BEFUND.md) §3). A reader refusal stops the body parsing,
+([`messung/K3-BEFUND.md`](../messung/K3-BEFUND.md) §3). A reader refusal stops the body parsing,
 so the collision did not cost seven diagnostics: it hid every later one in six files. Two real
 defects were repaired on 2026-09-04 and the number did not move, *because the fragments that
 would have shown them were gated by this third one.*
 
 **The collision measured against foreign code, in both directions, before anything moved**
-([`messung/WORTSTELLUNG.md`](messung/WORTSTELLUNG.md) §1). 585 files — Linux `lib/*.c` (212),
+([`messung/WORTSTELLUNG.md`](../messung/WORTSTELLUNG.md) §1). 585 files — Linux `lib/*.c` (212),
 `kernel/`+`mm/` (234), Caprock (139) — and a declarator counts, not a use:
 
 | | |
@@ -99,7 +99,7 @@ heaviest colliding words are all load-bearing, and a vocabulary trimmed word by 
 collision is reported is a blacklist of names somebody has already been bitten by.*
 
 **And the third reading of «K3»**
-([`messung/K3-DRITTE-LESUNG-2026-09-05.md`](messung/K3-DRITTE-LESUNG-2026-09-05.md)) —
+([`messung/K3-DRITTE-LESUNG-2026-09-05.md`](../messung/K3-DRITTE-LESUNG-2026-09-05.md)) —
 `K3-BEFUND.md` stays untouched, 0 of 8 remains the honest first reading:
 
 | | first | third |
@@ -335,7 +335,7 @@ second program, `sonde_release_sichtbarkeit.c`, is named by **no `falsifier` lin
 ```
 
 On the model of `dokumente/UNFALSIFIZIERBAR.md` (`W7`: not a second register over one thing).
-[`dokumente/SONDENDECKUNG.md`](dokumente/SONDENDECKUNG.md) carries all 38 rows with the probe
+[`dokumente/SONDENDECKUNG.md`](SONDENDECKUNG.md) carries all 38 rows with the probe
 each one names and the class it falls in; **every column is a hard check** — no line numbers,
 because over 38 rows in 14 files a line column yields drift notices and not one finding.
 **Ten teeth, 19 speech tests**, and the sharp one is tooth 10: `SONDEN_MIT_PROGRAMM` must
@@ -356,7 +356,7 @@ nicht die Sorgfalt."* So the second branch was free, and `K100`'s open gate — 
 emptied.*
 
 **So the bar was written first**, against tree state `6a32f27` and before a single row was
-looked at one by one: [`dokumente/UNFALSIFIZIERBAR.md`](dokumente/UNFALSIFIZIERBAR.md), two
+looked at one by one: [`dokumente/UNFALSIFIZIERBAR.md`](UNFALSIFIZIERBAR.md), two
 criteria and four rejection rules, **each with a test a reader can apply and with what fails
 it**. The two that admit:
 
@@ -505,7 +505,7 @@ denominator rather than counting as clean (`W25`).
 Six emitter defects, each with a poison probe carrying `-- erwartet: cc` (checker silent,
 `cc` refuses — both directions): `gift/641` … `gift/646`. Full numbers, reproduction and the
 self-check against the four cases that were already lying in the tree:
-[`messung/ERZEUGERSWEEP.md`](messung/ERZEUGERSWEEP.md).
+[`messung/ERZEUGERSWEEP.md`](../messung/ERZEUGERSWEEP.md).
 
 > **The most expensive of the six is `D1`, and the reason is its LOCATION.** The two `walk`
 > templates of `instrumente/fuzze-grenzen.py` carry it at their own known-good baseline. That
@@ -547,7 +547,7 @@ falls through to what follows. A block answers on every path exactly when one of
 statements is a `return`; a nested one never repairs that. All six `update` bodies in the
 corpus end in a bare `return v;`, and `beispiele/05`, `41` and `42` lower byte-identically.
 
-Probe: [`beispiele/gift/658-an-update-body-that-falls-through.gab`](beispiele/gift/658-an-update-body-that-falls-through.gab),
+Probe: [`beispiele/gift/658-an-update-body-that-falls-through.gab`](../beispiele/gift/658-an-update-body-that-falls-through.gab),
 `-- erwartet: C001` · `crates/gabbro-check/src/emit.rs` · `cargo test --offline
 --no-fail-fast` 399 of 399.
 
@@ -1093,9 +1093,9 @@ each set by hand, built, and measured to kill exactly one probe of 234.
 The three words stood in the lexer, in the EBNF and in the vocabulary table; what was missing
 was the **generator** — and with `relabel` a condition that `insert` and `remove` do not need.
 Built on 2026-08-28: `insert`/`remove` in the morning
-([`messung/OPS-ERZEUGER.md`](messung/OPS-ERZEUGER.md)), the call form in the afternoon
-([`messung/OPS-RUFFORM.md`](messung/OPS-RUFFORM.md)), `relabel` with its condition in the
-evening ([`messung/OPS-RELABEL.md`](messung/OPS-RELABEL.md)).
+([`messung/OPS-ERZEUGER.md`](../messung/OPS-ERZEUGER.md)), the call form in the afternoon
+([`messung/OPS-RUFFORM.md`](../messung/OPS-RUFFORM.md)), `relabel` with its condition in the
+evening ([`messung/OPS-RELABEL.md`](../messung/OPS-RELABEL.md)).
 
 **And the condition is the message, not the generator.** `beweise/Table_Ops_Erhaltung.thy`
 carried only the counterexample (`umhaengen_faellt`), so the generator refused `relabel` — a
@@ -1105,7 +1105,7 @@ relinking falls on, `G-1`/`G-2` show that the old counterexample fails at exactl
 premise, and `D012` holds it at the call site — in a form that costs no new word
 (`!(t.slots[p] reaches t.slots[s] via elter)`).
 
-*The residue is named and stayed in [`TODO.md`](TODO.md):* the proof that the emitted C
+*The residue is named and stayed in [`TODO.md`](../TODO.md):* the proof that the emitted C
 bodies ARE the three model functions — the same gap `beweise/Table_Absenkung.thy` names in
 its own words.
 
@@ -1121,7 +1121,7 @@ its own words.
 *„An overriding assumption WITHOUT a `falsifier` is a refusal — not because the probe proves
 anything, but because it makes the claim refutable."* **Half of it was already closed:** the
 grammar forces either `falsifier <probe>` or `unfalsifiable "<reason>"`
-([`dokumente/SYNTAX.md`](dokumente/SYNTAX.md):1101), and the certificate's *list* has carried
+([`dokumente/SYNTAX.md`](SYNTAX.md):1101), and the certificate's *list* has carried
 the distinction all along. Open was only the **verdict line**, which threw both currencies
 into one pot. Since 2026-08-21:
 
@@ -1173,7 +1173,7 @@ caught.
 
 *Each came with a measured output and each leaves a poison probe behind. The list stays here
 as a record of what the closure cost; the details are in
-[`dokumente/MESSUNGEN.md`](dokumente/MESSUNGEN.md).*
+[`dokumente/MESSUNGEN.md`](MESSUNGEN.md).*
 
 | was open | closed as |
 |---|---|
@@ -1216,7 +1216,7 @@ as a stale figure** — and `pruefe-todo.py` cannot see it, because the prose is
 world that no longer exists.*
 
 
-### «K5» — **executed 2026-08-19, all five columns** ([`dokumente/PLAN.md`](dokumente/PLAN.md))
+### «K5» — **executed 2026-08-19, all five columns** ([`dokumente/PLAN.md`](PLAN.md))
 
 | column | built | evidence |
 |---|---|---|
@@ -1266,7 +1266,7 @@ nobody had marked as one.* With a `decreases`, `costs` is the promise of ONE pas
 ## The plumbing classes — **9 of 11** carried
 
 Newly collected 2026-08-15, **not reconstructed**, x86 only
-([dokumente/MESSUNGEN.md](dokumente/MESSUNGEN.md), *Neuerhebung*):
+([dokumente/MESSUNGEN.md](MESSUNGEN.md), *Neuerhebung*):
 
 | carried | by what |
 |---|---|
@@ -1362,7 +1362,7 @@ Newly collected 2026-08-15, **not reconstructed**, x86 only
 
 ## Grammar — the findings from P2
 
-**G1–G11 closed** ([dokumente/SYNTAX.md](dokumente/SYNTAX.md), `beispiele/11`, poison 43–45):
+**G1–G11 closed** ([dokumente/SYNTAX.md](SYNTAX.md), `beispiele/11`, poison 43–45):
 `atomicdecl publishes` · `axiom -> typeexpr requires` · the `->` ambiguity **in the
 grammar** · trailing comma · `u64::max` · `O`/`@version` as a named `Sonderform` ·
 `clobbers { }` empty · `count N` · `cast` disappears · the `forever` example · eight domains.
@@ -1393,7 +1393,7 @@ shut, and the third one expressly: *„the guardian measures something other tha
 that does NOT apply here, it measures exactly what it says."*
 
 **That sentence was the error.** It had been checked against the guardian's output and never
-against its subject. Full record: [`messung/AUFLOESUNG-BEZUGSGROESSE.md`](messung/AUFLOESUNG-BEZUGSGROESSE.md).
+against its subject. Full record: [`messung/AUFLOESUNG-BEZUGSGROESSE.md`](../messung/AUFLOESUNG-BEZUGSGROESSE.md).
 
 * `emit.rs` keeps its **own** namespace, `struct Namen`. **All 61 of its signatures take
   `u: &Namen`; not one takes an `Umgebung`.** `Namen` carries three fields named like
@@ -1499,7 +1499,7 @@ the line number.
 
 ## The working rules — ~~W1 to W12~~ **W1 to W24**
 
-Complete in [dokumente/WERKZEUGKASTEN.md](dokumente/WERKZEUGKASTEN.md). Each comes from a
+Complete in [dokumente/WERKZEUGKASTEN.md](WERKZEUGKASTEN.md). Each comes from a
 **paid-for error in this folder**, each names the damage.
 
 ---

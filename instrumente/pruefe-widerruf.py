@@ -276,7 +276,7 @@ WIDERRUFE = [
 # Welche Dateien der Waechter liest. TODO.md und DONE.md stehen mit drin: ein widerrufener
 # Satz ist dort genauso teuer, und `pruefe-todo.py` sieht diese Klasse nicht.
 DATEIEN = (sorted(W.glob("dokumente/*.md"))
-           + [W / "TODO.md", W / "DONE.md", W / "README.md"]
+           + [W / "TODO.md", W / "README.md", W / "DIRECT-COMPILER.md"]
            # **Und die Beispiele.** Ihre Kommentare sind Prosa, die gelesen wird wie ein
            # Dokument -- `22-bootstrecke.gab` traegt fuenf Zeilen Befundtext ueber `ensures`.
            # *Ein widerrufener Satz ist dort genauso teuer und faellt sonst niemandem auf.*

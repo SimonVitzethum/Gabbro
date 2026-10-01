@@ -3,7 +3,7 @@
 //! Until 2026-08-17 this surface did not exist. `mutiere-pruefer.py` reported it with **0
 //! mutations**, and *what has 0 mutations is not covered, it is undamageable*. Three things
 //! hung on it: the plumbing class *refinement*, the templates `table.absenkung` and
-//! `table.ops.erhaltung`, and the licence notice that `LIZENZ-ZUSATZ.md` demands in generated
+//! `table.ops.erhaltung`, and the licence notice that `LICENSE-ADDENDUM.md` demands in generated
 //! C while nothing wrote it.
 //!
 //! ## What this emitter is, and what it deliberately is not
@@ -884,7 +884,7 @@ fn ist_geist(t: &TypExpr, u: &Namen) -> bool {
 
 /// **The licence notice, and it is not decoration.**
 ///
-/// `LIZENZ-ZUSATZ.md` grants an additional permission under AGPL §7 -- *what you write in
+/// `LICENSE-ADDENDUM.md` grants an additional permission under AGPL §7 -- *what you write in
 /// Gabbro is not a derived work* -- and ties it to one condition: generated C carries this
 /// header. **The compiler writes it itself**, because a condition that depends on the user
 /// remembering it is not a condition.
@@ -896,7 +896,7 @@ pub const KOPF: &str = "\
  * Gabbro is AGPL-3.0 with an additional permission: this generated file and the program it
  * belongs to are NOT a derived work of Gabbro. You may remove this notice -- keeping it is a
  * condition only where the result is presented as formally verified or secure, because a proof
- * claim whose origin cannot be looked up is a claim nobody can check. See LIZENZ-ZUSATZ.md.
+ * claim whose origin cannot be looked up is a claim nobody can check. See LICENSE-ADDENDUM.md.
  */
 #include <stdint.h>
 #include <stdbool.h>

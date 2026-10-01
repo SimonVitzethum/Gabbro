@@ -51,7 +51,8 @@ programmlogik/Duty/*
 programmlogik/_pruefung/
 
 # Local assistant output (NLnet guide draft, README copy): not part of the repo (Simon, 2026-09-26)
-Claude outputs/
+# Root cleanup, 2026-10-01: preserved at
+# .claude/muse-arbeit/root-archive/assistant-output/, covered by .claude/ above.
 
 # **Das Arbeitsverzeichnis der QEMU-Instrumente** (2026-09-28, Serverbahn).
 # `pruefe-metall.sh` legt seine Bilder unter `.tmp/metall/` ab (`ARB="${1:-$W/.tmp/metall}"`),

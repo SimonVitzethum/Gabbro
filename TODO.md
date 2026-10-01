@@ -863,7 +863,7 @@ work order. See `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5 and
 `dokumente/AUFTRAG-UEBERSETZUNGSVALIDIERUNG.md`. The existing C backend stays in use until
 its replacement is implemented and checked; no new binary guarantee is claimed.
 
-**Central work/progress record:** [Direct compiler](dokumente/DIREKTER-COMPILER.md).
+**Central work/progress record:** [Direct compiler](DIRECT-COMPILER.md).
 The work is Lean first: actual x86 models, `-O3`-like and invariant-derived
 optimisation proofs, then Rust implementation and generic full source-to-final-byte
 translation validation. Isolated local Muse authors and independent exact-candidate

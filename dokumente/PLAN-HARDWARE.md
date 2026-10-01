@@ -2959,7 +2959,7 @@ build()   { cd "Gabbro-$pkgver"; cargo build --frozen --release --offline; }
 check()   { cd "Gabbro-$pkgver"; cargo test  --frozen --offline --no-fail-fast; }
 package() { install -Dm755 "Gabbro-$pkgver/target/release/gabbro" "$pkgdir/usr/bin/gabbro"
             install -Dm644 "Gabbro-$pkgver/LICENSE"          "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-            install -Dm644 "Gabbro-$pkgver/LIZENZ-ZUSATZ.md" "$pkgdir/usr/share/licenses/$pkgname/LIZENZ-ZUSATZ.md" }
+            install -Dm644 "Gabbro-$pkgver/LICENSE-ADDENDUM.md" "$pkgdir/usr/share/licenses/$pkgname/LICENSE-ADDENDUM.md" }
 ```
 
 * **`depends=('gcc')`, und das ist nachgeschlagen und nicht geraten:** `pacman -Qo
@@ -2968,7 +2968,7 @@ package() { install -Dm755 "Gabbro-$pkgver/target/release/gabbro" "$pkgdir/usr/b
   `costs`, `effects`, `obligations`, `certificate` und `lean` lesen und schreiben Dateien.
 * **`ldd` auf dem gebauten Programm: `libgcc_s`, `libc`, sonst nichts.** Kein `gcc-libs` von
   Hand — namcap zieht es aus genau dieser Liste.
-* **`LIZENZ-ZUSATZ.md` muss mit ins Paket.** `AGPL-3.0-only` steht in Archs
+* **`LICENSE-ADDENDUM.md` muss mit ins Paket.** `AGPL-3.0-only` steht in Archs
   `/usr/share/licenses/common`, die **Zusatzerlaubnis nach AGPL §7 aber nirgends** — und sie
   ist die Hälfte, die den Nutzer betrifft. *Ein Paket, das nur den SPDX-Ausdruck mitliefert,
   liefert die halbe Lizenz.*

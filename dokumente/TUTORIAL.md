@@ -1,7 +1,7 @@
 # Gabbro in one sitting
 
-**This is not a language reference.** [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) is the
-language and [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) is the grammar; both are complete
+**This is not a language reference.** [`dokumente/SPRACHE.md`](SPRACHE.md) is the
+language and [`dokumente/SYNTAX.md`](SYNTAX.md) is the grammar; both are complete
 and neither will teach you what to type first.
 
 This file answers one question:
@@ -483,7 +483,7 @@ error: [P002] `add` is a word of the vocabulary, not an identifier
 `walk` — all of them ordinary-looking words that a program wants for a function or a field.
 
 **There is no way to escape a keyword.** Pick another name; the table is in
-[`dokumente/SYNTAX.md`](dokumente/SYNTAX.md), and the refusal names the word it read.
+[`dokumente/SYNTAX.md`](SYNTAX.md), and the refusal names the word it read.
 
 ### And there is a second table, which is C's
 
@@ -501,7 +501,7 @@ error: [N041] `double` is a name C has already taken
 *This paragraph was written because `double` was the first name this tutorial reached for in
 section 4.* The measured table of 558 names — C keywords, the standard library, and what
 `cc -std=c11 -Wall -Wextra -Werror` reserves — is in
-[`messung/C-NAMEN.md`](messung/C-NAMEN.md).
+[`messung/C-NAMEN.md`](../messung/C-NAMEN.md).
 
 ---
 
@@ -509,10 +509,10 @@ section 4.* The measured table of 558 names — C keywords, the standard library
 
 | you want | read |
 |---|---|
-| the language, clause by clause | [`dokumente/SPRACHE.md`](dokumente/SPRACHE.md) |
-| the grammar, as a grammar | [`dokumente/SYNTAX.md`](dokumente/SYNTAX.md) |
+| the language, clause by clause | [`dokumente/SPRACHE.md`](SPRACHE.md) |
+| the grammar, as a grammar | [`dokumente/SYNTAX.md`](SYNTAX.md) |
 | what the checker checks, and what it does not | `gabbro passes --je-satz` |
-| what a build looked at and what it skipped | [`dokumente/BAUSYSTEM.md`](dokumente/BAUSYSTEM.md) |
+| what a build looked at and what it skipped | [`dokumente/BAUSYSTEM.md`](BAUSYSTEM.md) |
 | 142 worked programs | `beispiele/` — and `beispiele/gift/` is 827 programs that must FAIL |
 | what a translation rests on | `gabbro certificate <file.gab>` |
 | what a human still owes | `gabbro obligations <file.gab>` |

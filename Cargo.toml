@@ -26,7 +26,7 @@ edition = "2021"
 # Klauseln, die ZUSAGE hiessen und keinen Pass hatten.
 rust-version = "1.86"
 # **AGPL-3.0, nicht MIT/Apache.** Der Eintrag stand bis 2026-08-19 auf `MIT OR Apache-2.0`
-# und widersprach damit DREI Stellen: `LICENSE` (AGPL-3.0), `LIZENZ-ZUSATZ.md` (AGPL mit zwei
+# und widersprach damit DREI Stellen: `LICENSE` (AGPL-3.0), `LICENSE-ADDENDUM.md` (AGPL mit zwei
 # Zusaetzen) und dem Kopf jedes erzeugten C ("Gabbro is AGPL-3.0 with an additional
 # permission"). *Der Kopf des Erzeugnisses berief sich auf eine Lizenz, die das Manifest
 # bestritt* -- und das Manifest ist die Stelle, die `cargo`, `crates.io` und jeder

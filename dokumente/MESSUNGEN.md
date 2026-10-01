@@ -5099,7 +5099,7 @@ inheritance) and `indextyp-nennt-seine-tabelle-nicht` (the uncovered gap). **65 
 **0 mutations**, and *what has 0 mutations is not covered, it is undamageable*. It was the
 largest such surface in the folder, and three things hung on it: the plumbing class
 **refinement**, the templates `table.absenkung` and `table.ops.erhaltung`, and the **licence
-notice** that `LIZENZ-ZUSATZ.md` demands in generated C while nothing wrote it.
+notice** that `LICENSE-ADDENDUM.md` demands in generated C while nothing wrote it.
 
 ## The chain, and every link had to hold
 

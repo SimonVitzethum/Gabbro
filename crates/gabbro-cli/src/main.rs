@@ -872,7 +872,7 @@ fn hilfe() {
                                     They CHECK, BUILD and RUN as written -- the skeleton is
                                     the irreducible file measured out of `beispiele/63`, and
                                     every clause in it carries the reason it stands there.
-                                    Start here; `TUTORIAL.md` is the long form
+                                    Start here; `dokumente/TUTORIAL.md` is the long form
   gabbro check|pruefe [--with L.gabi]… [--unit] [--passes] [--fix] <file.gab>…
                                      read, parse and run the built passes. The \"not checked
                                      in this run\" register is SUMMARISED (count per state and
