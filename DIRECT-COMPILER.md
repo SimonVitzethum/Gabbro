@@ -219,8 +219,8 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 427 | Continuous Lean proof reserve: RegisterInterference | Agent working | 475: scheduled | [task](lanes/427.md) |
 | 428 | Continuous Lean proof reserve: ParallelMoves | Agent working | 476: scheduled | [task](lanes/428.md) |
 | 429 | Continuous Lean proof reserve: CodeImmutability | Merged after review/checks | 477: Merged after review/checks | [report](messung/muse/MUSE-REPORT-429.md) |
-| 430 | Continuous Lean proof reserve: ValidationCache | Committed candidate; review/integration pending | 478: Committed candidate; review/integration pending | [task](lanes/430.md) |
-| 431 | Continuous Lean proof reserve: ValidationBudget | Committed candidate; review/integration pending | 479: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/431.md) |
+| 430 | Continuous Lean proof reserve: ValidationCache | Agent working | 478: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/430.md) |
+| 431 | Continuous Lean proof reserve: ValidationBudget | Merged after review/checks | 479: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-431.md) |
 | 432 | Continuous Lean proof reserve: RegionSeparation | Committed candidate; review/integration pending | 480: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/432.md) |
 | 433 | Continuous Lean proof reserve: ObservationProjection | Committed candidate; review/integration pending | 481: Agent working; integration gate rejected; repair/re-review required | [task](lanes/433.md) |
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Committed candidate; review/integration pending | 482: Agent working | [task](lanes/434.md) |
@@ -457,6 +457,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **474**, Independent exact-candidate review of 426, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-474.md). <!-- x86-merged:474 -->
 - 2026-10-01: lane **429**, Continuous Lean proof reserve: CodeImmutability, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-429.md). <!-- x86-merged:429 -->
 - 2026-10-01: lane **477**, Independent exact-candidate review of 429, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-477.md). <!-- x86-merged:477 -->
+- 2026-10-01: lane **431**, Continuous Lean proof reserve: ValidationBudget, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-431.md). <!-- x86-merged:431 -->
+- 2026-10-01: integration of candidate(s) [430] failed the local proof/build gate after independent review 478; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:478 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
