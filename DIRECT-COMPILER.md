@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 14:57 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 14:59 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -232,7 +232,7 @@ Last ledger refresh: **2026-10-01 14:57 UTC**. This is an operational snapshot, 
 | 545 | Next bridge wave N11: PayloadResidue | Committed candidate; review/integration pending | 551: Committed candidate; review/integration pending | [task](lanes/545.md) |
 | 546 | Next bridge wave N13: ContractSites | Committed candidate; review/integration pending | 552: Committed candidate; review/integration pending | [task](lanes/546.md) |
 | 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Merged after review/checks | [report](messung/muse/MUSE-REPORT-547.md) |
-| 554 | Shorter clearer current English README | Merged after review/checks | 555: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-554.md) |
+| 554 | Shorter clearer current English README | Merged after review/checks | 555: Merged after review/checks | [report](messung/muse/MUSE-REPORT-554.md) |
 | 556 | Repeated intermittent CLI alias test diagnosis | Agent working | 557: scheduled | [task](lanes/556.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -520,6 +520,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **547**, Next bridge wave N17: TimeTransfer, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-547.md). <!-- x86-merged:547 -->
 - 2026-10-01: lane **553**, Independent exact-candidate review of 547 TimeTransfer, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-553.md). <!-- x86-merged:553 -->
 - 2026-10-01: lane **554**, Shorter clearer current English README, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-554.md). <!-- x86-merged:554 -->
+- 2026-10-01: lane **555**, Independent exact-candidate README review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-555.md). <!-- x86-merged:555 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
