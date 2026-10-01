@@ -71,7 +71,29 @@ should still see a green `./lean-bau` at merge time per the merge script.
 
 None blocking. No repair items.
 
-## Verdict
+## Re-review of the repaired candidate (second turn, same day)
+
+New pinned HEAD `676b45947ca08accdaa9ebcc6784972dbd20da01` (same base).
+`git diff old-head..new-head`: ONLY `MUSE-REPORT-431.md` (+42, integration-gate
+response section); `git diff` over `grammatik/` is EMPTY — the Lean module and
+the umbrella import are byte-identical to the previously accepted version.
+Supplied `.tmp/review/author-431` files verified byte-identical to the new
+HEAD (`git show` diff clean for both module and report).
+
+Fresh substantive check in my clone: staged the supplied module file, ran
+`./lean-probe` → `== 0 error(s) in the COMPLETE output; exit 0`
+(standard axioms on every line), then deleted it (`git status` clean).
+The author's 41-entry build evidence confirms the second-turn sequence:
+probe 0 errors, `./lean-bau` same umbrella-only failure, grep-clean,
+report-only commit. Previous findings stand unchanged; no new proofs to
+inspect since no proof changed.
+
+One unchecked nit (not a defect, no verdict impact): the new report section
+says "all 27 axiom lines" printed in the gate log — the module contains 28
+`#print axioms` lines. The gate log itself was not supplied, so I verified
+the green-module part via my own probe, not the line count.
+
+## Verdict (new pinned candidate)
 
 ACCEPT the precisely delivered bounded claim: fail-closed fuel-bounded
 decode/entry traversal facts over the canonical decoder and image check,
@@ -79,5 +101,5 @@ with derived count bounds, monotonicity, and concrete joint witnesses.
 Expressly NOT accepted: full source validation, whole-image closure, timing
 or cost claims, hardware claims — none of which the candidate makes.
 
-CANDIDATE: 431 c1a41a1a5590af310555057e74ce3da18dca8c28
+CANDIDATE: 431 676b45947ca08accdaa9ebcc6784972dbd20da01
 VERDICT: ACCEPT
