@@ -154,6 +154,75 @@ theorem rel32Fuer_trifft (next ziel : Nat)
     rw [if_pos h]
   · exact rel32_rundgang _ hfit.1 hfit.2
 
+/-! ## 3. Absolute 64-bit values. -/
+
+/-- The eight patched bytes of an absolute 64-bit relocation value,
+    little endian, through the canonical `wortByte`. -/
+def abs64Bytes (v : Wort) : List Byte :=
+  [wortByte v 0, wortByte v 1, wortByte v 2, wortByte v 3,
+   wortByte v 4, wortByte v 5, wortByte v 6, wortByte v 7]
+
+/-- Read-back of eight patched bytes through the canonical `bytesWort`;
+    `none` refuses a site of the wrong width. -/
+def abs64Wort : List Byte → Option Wort
+  | [b0, b1, b2, b3, b4, b5, b6, b7] =>
+    some (bytesWort fun i =>
+      match i with
+      | ⟨0, _⟩ => b0
+      | ⟨1, _⟩ => b1
+      | ⟨2, _⟩ => b2
+      | ⟨3, _⟩ => b3
+      | ⟨4, _⟩ => b4
+      | ⟨5, _⟩ => b5
+      | ⟨6, _⟩ => b6
+      | _ => b7)
+  | _ => none
+
+/-- Absolute values round-trip through the canonical byte split: the
+    proof is exactly `bytesWort_wortByte`, no second codec. -/
+theorem abs64_rundgang (v : Wort) :
+    abs64Wort (abs64Bytes v) = some v := by
+  have hfun : (fun i : Fin 8 =>
+      match i with
+      | ⟨0, _⟩ => wortByte v 0
+      | ⟨1, _⟩ => wortByte v 1
+      | ⟨2, _⟩ => wortByte v 2
+      | ⟨3, _⟩ => wortByte v 3
+      | ⟨4, _⟩ => wortByte v 4
+      | ⟨5, _⟩ => wortByte v 5
+      | ⟨6, _⟩ => wortByte v 6
+      | _ => wortByte v 7) = (fun i => wortByte v i.val) := by
+    funext i
+    cases i with
+    | mk val isLt =>
+      cases val with
+      | zero => rfl
+      | succ n1 =>
+        cases n1 with
+        | zero => rfl
+        | succ n2 =>
+          cases n2 with
+          | zero => rfl
+          | succ n3 =>
+            cases n3 with
+            | zero => rfl
+            | succ n4 =>
+              cases n4 with
+              | zero => rfl
+              | succ n5 =>
+                cases n5 with
+                | zero => rfl
+                | succ n6 =>
+                  cases n6 with
+                  | zero => rfl
+                  | succ n7 =>
+                    cases n7 with
+                    | zero => rfl
+                    | succ n8 => exact absurd isLt (by omega)
+  unfold abs64Wort abs64Bytes
+  simp only [hfun]
+  rw [bytesWort_wortByte]
+
 /- CUTS:
    rel32/abs64 arithmetic and byte patching only; decoder, image mapping,
    site admissibility, loader behaviour and source correspondence are open.
