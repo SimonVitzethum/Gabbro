@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 21:04 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 21:09 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -268,14 +268,14 @@ Last ledger refresh: **2026-10-01 21:04 UTC**. This is an operational snapshot, 
 | 620 | Automatic coordinator takeover on missing foreground heartbeat | Merged after review/checks | 621: Merged after review/checks | [report](messung/muse/MUSE-REPORT-620.md) |
 | 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Merged after review/checks | [report](messung/muse/MUSE-REPORT-622.md) |
 | 624 | Direct-source closure: FloatSourceObservations | Agent working | 625: scheduled | [task](lanes/624.md) |
-| 626 | Direct-source closure: FloatEntryState | Agent working | 627: scheduled | [task](lanes/626.md) |
-| 628 | Direct-source closure: SourceAssignmentLowering | Waiting for accepted dependencies | 629: scheduled | [task](lanes/628.md) |
+| 626 | Direct-source closure: FloatEntryState | Committed candidate; review/integration pending | 627: Agent working | [task](lanes/626.md) |
+| 628 | Direct-source closure: SourceAssignmentLowering | Agent working | 629: scheduled | [task](lanes/628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
 | 632 | Direct-source closure: SourceValidatorConnection | Agent working | 633: scheduled | [task](lanes/632.md) |
 | 634 | Direct-source closure: SourceCodeFrame | Committed candidate; review/integration pending | 635: Agent working | [task](lanes/634.md) |
-| 636 | Required failover slot lifetime and safe role handback | Committed candidate; review/integration pending | 637: Agent working | [task](lanes/636.md) |
+| 636 | Required failover slot lifetime and safe role handback | Committed candidate; review/integration pending | 637: Committed candidate; review/integration pending | [task](lanes/636.md) |
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
-| 640 | Independent coordinator control-plane takeover and cleanup integration audit | Agent working | 641: scheduled | [task](lanes/640.md) |
+| 640 | Independent coordinator control-plane takeover and cleanup integration audit | Committed candidate; review/integration pending | 641: Committed candidate; review/integration pending | [task](lanes/640.md) |
 | 642 | Recover preserved IR research draft from recorded edits after clone removal | Agent working | 643: scheduled | [task](lanes/642.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -668,6 +668,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **611**, Independent overnight review of 599, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-611.md). <!-- x86-merged:611 -->
 - 2026-10-01: lane **638**, Align optimiser and compiler design with accepted direct-source lowering, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-638.md). <!-- x86-merged:638 -->
 - 2026-10-01: lane **639**, Independent exact review of 638, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-639.md). <!-- x86-merged:639 -->
+- 2026-10-01: publication batch checks passed for `eb68896b`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
