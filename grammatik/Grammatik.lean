@@ -424,6 +424,7 @@ import Grammatik.X86.TimeTransfer
 import Grammatik.X86.ValidatorSkeleton
 import Grammatik.X86.DecodingCoverage
 import Grammatik.X86.StackUnwind
+import Grammatik.X86.StackExecution
 import Grammatik.X86.DecodeFault
 import Grammatik.X86.RegionFresh
 import Grammatik.X86.PayloadResidue
