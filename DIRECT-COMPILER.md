@@ -249,7 +249,7 @@ Last ledger refresh: **2026-10-01 20:19 UTC**. This is an operational snapshot, 
 | 570 | Connection: Source world/table values to target byte representation | Merged after review/checks | 588: Merged after review/checks | [report](messung/muse/MUSE-REPORT-570.md) |
 | 571 | Connection: Entry state, image permissions and user binding duties | Merged after review/checks | 589: Merged after review/checks | [report](messung/muse/MUSE-REPORT-571.md) |
 | 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
-| 573 | Connection: Projected TSO stores to source W writes | Merged after review/checks | 591: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-573.md) |
+| 573 | Connection: Projected TSO stores to source W writes | Merged after review/checks | 591: Merged after review/checks | [report](messung/muse/MUSE-REPORT-573.md) |
 | 574 | Connection: Projected TSO loads to source W reads | Agent working | 592: scheduled | [task](lanes/574.md) |
 | 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
 | 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Merged after review/checks | [report](messung/muse/MUSE-REPORT-594.md) |
@@ -260,7 +260,7 @@ Last ledger refresh: **2026-10-01 20:19 UTC**. This is an operational snapshot, 
 | 599 | Overnight: Direct typed-source expression to pilot machine code | Agent working | 611: scheduled | [task](lanes/599.md) |
 | 600 | Overnight: Invariant-derived instruction selection with byte execution | Committed candidate; review/integration pending | 612: Committed candidate; review/integration pending | [task](lanes/600.md) |
 | 601 | Overnight: Flag dependencies across actual decoded control flow | Agent working | 613: scheduled | [task](lanes/601.md) |
-| 602 | Overnight: Code and relocation preservation under real data stores | Agent working | 614: scheduled | [task](lanes/602.md) |
+| 602 | Overnight: Code and relocation preservation under real data stores | Committed candidate; review/integration pending | 614: scheduled | [task](lanes/602.md) |
 | 603 | Overnight: Whole-word grouping under actual trace exclusion | Agent working | 615: scheduled | [task](lanes/603.md) |
 | 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Merged after review/checks | [report](messung/muse/MUSE-REPORT-604.md) |
 | 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Merged after review/checks | 617: Merged after review/checks | [report](messung/muse/MUSE-REPORT-605.md) |
@@ -627,6 +627,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `de1b11ce`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **573**, Connection: Projected TSO stores to source W writes, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-573.md). <!-- x86-merged:573 -->
 - 2026-10-01: checked master `57b0f0cb` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:57b0f0cb34f3a0d33815e9a29523bb83b73bee9c -->
+- 2026-10-01: lane **591**, Independent connection review of 573, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-591.md). <!-- x86-merged:591 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
