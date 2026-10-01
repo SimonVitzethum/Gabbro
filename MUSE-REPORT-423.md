@@ -82,3 +82,28 @@ length stability + final-length-carrying certificates, and the
 decoder-probe and certificate level. One naming note: the design doc
 calls the future form "rel8"/"short Jcc/JMP" while the certificate
 calls it `kurz`; the report maps them explicitly.
+
+## Integration gate failure (post-acceptance review): no content repair
+
+The integration gate in `/home/simon/Dokumente/Gabbro` failed with
+the byte-identical signature: my module's 27 `#print axioms` lines
+all emit inside the integration build (it elaborates cleanly there),
+then the single umbrella target `Grammatik` dies with
+`lean::exception: failed to create thread`, exit 134. Two further
+local `./lean-bau` retries since show the same single-target crash,
+for 7 identical failures total (4 lane + 1 pristine-master control +
+1 integration + 1 retry), with zero content errors in any of them.
+
+Repair verdict: there is nothing to repair in the owned content, so
+nothing was changed in it. Reasons: (a) the umbrella step only loads
+already-built oleans, so my tactics cannot re-run or cost threads
+there; (b) my imports (`Typen`, `Speicher`, `Ausfuehrung`, `Codec`,
+`Relokation`) are all pre-existing umbrella members, so the closure
+is unchanged in kind and no cycle is possible; (c) pristine master
+crashes identically. Rewriting green proofs to dodge a
+`pthread_create` failure would be theater and would risk the verified
+content. Concrete blocker for the merger: machine-wide thread
+exhaustion (swap full, dozens of concurrent lanes) kills the one
+~400-import umbrella elaboration; retry the gate when load dips. No
+claim is made about the full source/binary chain. Fresh independent
+review is required for the new commit (this report section).
