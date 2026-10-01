@@ -81,11 +81,209 @@ theorem repOk_klingt {lo hi : Int} {base len off : Nat}
   simp only [decide_eq_true_eq] at h
   exact h
 
+/-- Byte offset of field `fi` inside one row: the accepted `typWeite`
+    (bool 1 byte, else one word) of every earlier field. -/
+def feldOff (tab : UTab) (fi : Nat) : Nat :=
+  (tab.felder.take fi).foldl
+    (fun acc p => acc + if tab.bools.contains p.1 then 1 else 8) 0
+
+/-- Byte offset of slot `(row, fi)` inside the table extent. -/
+def slotOff (tab : UTab) (row fi : Nat) : Nat :=
+  row * zeilenWeite tab + feldOff tab fi
+
+/-- Target address of the slot: layout base plus slot offset. -/
+def slotAddr (base off : Nat) : Adresse := natAdresse (base + off)
+
+/-- THE REPRESENTATION: the target 8-byte word at `a` is exactly the
+    source integer held in slot `(t, k, f)`. The stable producer/consumer
+    interface: the compiler (producer) establishes it per slot write, the
+    validator/TSO bridge (consumer) assumes only this equation plus the
+    checked `repOk`/`layoutOk` Bools. Sums, floats, bools, globals and
+    function pointers have no representation (explicit cuts). -/
+def RepSlot {D : Deklaration} (t : D.Tab) (k : Int) (f : D.Feld t)
+    (lo hi : Int) (hT : D.typ t f = .int lo hi)
+    (a : Adresse) (m : Speicher) (σ : World D) : Prop :=
+  read64 m a = some (zahlWort (hT ▸ σ.slots t k f))
+
+/-- A source slot write lands at its own carrier: the exact operation
+    `execStmt` performs for `.assignSlot` (see `execStmt_assignSlot`).
+    The `merke` bridge is `rfl` (trace entries touch only `spur`;
+    `Koernung.schreibSlot_slots_same` is the same fact). -/
+theorem schreibSlot_hit {D : Deklaration} (σ : World D) (t : D.Tab)
+    (Λ : List (Res D)) (k : Int) (f : D.Feld t)
+    (v : Wert D (D.typ t f)) :
+    (σ.schreibSlot t Λ k f v).slots t k f = v := by
+  have hss : (σ.schreibSlot t Λ k f v).slots t k f =
+      (σ.storeSlot t k f v).slots t k f := rfl
+  rw [hss]
+  simp [World.storeSlot]
+
+/-- A source slot write leaves a different table untouched. -/
+theorem schreibSlot_fremd_tab {D : Deklaration} (σ : World D) (t : D.Tab)
+    (Λ : List (Res D)) (k : Int) (f : D.Feld t)
+    (v : Wert D (D.typ t f))
+    (t2 : D.Tab) (k2 : Int) (f2 : D.Feld t2)
+    (ht : t2 ≠ t) :
+    (σ.schreibSlot t Λ k f v).slots t2 k2 f2 = σ.slots t2 k2 f2 := by
+  have hss : (σ.schreibSlot t Λ k f v).slots t2 k2 f2 =
+      (σ.storeSlot t k f v).slots t2 k2 f2 := rfl
+  rw [hss]
+  simp [World.storeSlot, ht]
+
+/-- A source slot write leaves a different row of the same table
+    untouched. -/
+theorem schreibSlot_fremd_schluessel {D : Deklaration} (σ : World D)
+    (t : D.Tab) (Λ : List (Res D)) (k : Int) (f : D.Feld t)
+    (v : Wert D (D.typ t f))
+    (k2 : Int) (f2 : D.Feld t)
+    (hk : k2 ≠ k) :
+    (σ.schreibSlot t Λ k f v).slots t k2 f2 = σ.slots t k2 f2 := by
+  have hss : (σ.schreibSlot t Λ k f v).slots t k2 f2 =
+      (σ.storeSlot t k f v).slots t k2 f2 := rfl
+  rw [hss]
+  simp [World.storeSlot, hk]
+
+/-- A source slot write leaves a different field of the same slot
+    untouched. -/
+theorem schreibSlot_fremd_feld {D : Deklaration} (σ : World D) (t : D.Tab)
+    (Λ : List (Res D)) (k : Int) (f : D.Feld t)
+    (v : Wert D (D.typ t f))
+    (k2 : Int) (f2 : D.Feld t)
+    (hk : k2 = k) (hf : f2 ≠ f) :
+    (σ.schreibSlot t Λ k f v).slots t k2 f2 = σ.slots t k2 f2 := by
+  subst hk
+  have hss : (σ.schreibSlot t Λ k2 f v).slots t k2 f2 =
+      (σ.storeSlot t k2 f v).slots t k2 f2 := rfl
+  rw [hss]
+  simp [World.storeSlot, hf]
+
+/-- DISJOINT PRESERVATION (other table): a source write to one carrier
+    and a target word write into a disjoint footprint preserve the
+    representation of every carrier of another table. Every premise is
+    used: `hSrc` + `ht` move the source side, `hRep2` is the carried
+    fact, `hTgt` + `hDis` move the target side. -/
+theorem rep_fremd_tab {D : Deklaration}
+    (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int) (f : D.Feld t)
+    (v : Wert D (D.typ t f))
+    (t2 : D.Tab) (k2 : Int) (f2 : D.Feld t2)
+    (lo2 hi2 : Int) (hT2 : D.typ t2 f2 = .int lo2 hi2)
+    (ht : t2 ≠ t)
+    (σL : World D) (hSrc : σL = σ.schreibSlot t Λ k f v)
+    (a1 a2 : Adresse) (m m' : Speicher) (w : Wort)
+    (hRep2 : RepSlot t2 k2 f2 lo2 hi2 hT2 a2 m σ)
+    (hTgt : write64 m a1 w = some m')
+    (hDis : Disjunkt a1 a2) :
+    RepSlot t2 k2 f2 lo2 hi2 hT2 a2 m' σL := by
+  unfold RepSlot at hRep2 ⊢
+  rw [hSrc, schreibSlot_fremd_tab σ t Λ k f v t2 k2 f2 ht,
+    read64_rahmen m m' a1 a2 w hTgt hDis]
+  exact hRep2
+
+/-- DISJOINT PRESERVATION (other row): the same, for another row of the
+    written table. -/
+theorem rep_fremd_schluessel {D : Deklaration}
+    (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int) (f : D.Feld t)
+    (v : Wert D (D.typ t f))
+    (k2 : Int) (f2 : D.Feld t)
+    (lo2 hi2 : Int) (hT2 : D.typ t f2 = .int lo2 hi2)
+    (hk : k2 ≠ k)
+    (σL : World D) (hSrc : σL = σ.schreibSlot t Λ k f v)
+    (a1 a2 : Adresse) (m m' : Speicher) (w : Wort)
+    (hRep2 : RepSlot t k2 f2 lo2 hi2 hT2 a2 m σ)
+    (hTgt : write64 m a1 w = some m')
+    (hDis : Disjunkt a1 a2) :
+    RepSlot t k2 f2 lo2 hi2 hT2 a2 m' σL := by
+  unfold RepSlot at hRep2 ⊢
+  rw [hSrc, schreibSlot_fremd_schluessel σ t Λ k f v k2 f2 hk,
+    read64_rahmen m m' a1 a2 w hTgt hDis]
+  exact hRep2
+
+/-- DISJOINT PRESERVATION (other field): the same, for another field of
+    the written slot. -/
+theorem rep_fremd_feld {D : Deklaration}
+    (σ : World D) (t : D.Tab) (Λ : List (Res D)) (k : Int) (f : D.Feld t)
+    (v : Wert D (D.typ t f))
+    (k2 : Int) (f2 : D.Feld t)
+    (lo2 hi2 : Int) (hT2 : D.typ t f2 = .int lo2 hi2)
+    (hk : k2 = k) (hf : f2 ≠ f)
+    (σL : World D) (hSrc : σL = σ.schreibSlot t Λ k f v)
+    (a1 a2 : Adresse) (m m' : Speicher) (w : Wort)
+    (hRep2 : RepSlot t k2 f2 lo2 hi2 hT2 a2 m σ)
+    (hTgt : write64 m a1 w = some m')
+    (hDis : Disjunkt a1 a2) :
+    RepSlot t k2 f2 lo2 hi2 hT2 a2 m' σL := by
+  unfold RepSlot at hRep2 ⊢
+  rw [hSrc, schreibSlot_fremd_feld σ t Λ k f v k2 f2 hk hf,
+    read64_rahmen m m' a1 a2 w hTgt hDis]
+  exact hRep2
+
+/-- LAYOUT DISJOINTNESS: two accepted disjoint layout entries give
+    disjoint 8-byte slot footprints. This feeds `rep_fremd_bleibt` from
+    the decided `layoutOk`/`repOk` checks instead of an assumed
+    disjointness: `hReg` orders the extents, `hLen1`/`hLen2` keep each
+    footprint inside its extent, `hWrap1`/`hWrap2` keep machine addition
+    Nat addition. -/
+theorem disjunkt_von_layout (e1 e2 : TabLayout)
+    (off1 off2 : Nat)
+    (hReg : regionDisjunkt (alsRegion e1) (alsRegion e2) = true)
+    (hLen1 : off1 + 8 ≤ e1.len) (hLen2 : off2 + 8 ≤ e2.len)
+    (hWrap1 : e1.basis + off1 + 8 ≤ 2 ^ 64)
+    (hWrap2 : e2.basis + off2 + 8 ≤ 2 ^ 64) :
+    Disjunkt (slotAddr e1.basis off1) (slotAddr e2.basis off2) := by
+  have g1 : ∀ i : Nat, i < 8 →
+      (addrOff (slotAddr e1.basis off1) i).toNat = e1.basis + off1 + i := by
+    intro i hi
+    have hlt : e1.basis + off1 + i < 2 ^ 64 := by omega
+    unfold slotAddr natAdresse addrOff
+    rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (by omega : e1.basis + off1 < 2 ^ 64),
+      Nat.mod_eq_of_lt (by omega : i < 2 ^ 64),
+      Nat.mod_eq_of_lt hlt]
+  have g2 : ∀ j : Nat, j < 8 →
+      (addrOff (slotAddr e2.basis off2) j).toNat = e2.basis + off2 + j := by
+    intro j hj
+    have hlt : e2.basis + off2 + j < 2 ^ 64 := by omega
+    unfold slotAddr natAdresse addrOff
+    rw [BitVec.toNat_add, BitVec.toNat_ofNat, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (by omega : e2.basis + off2 < 2 ^ 64),
+      Nat.mod_eq_of_lt (by omega : j < 2 ^ 64),
+      Nat.mod_eq_of_lt hlt]
+  have e1n : (slotAddr e1.basis off1).toNat = e1.basis + off1 := by
+    unfold slotAddr natAdresse
+    rw [BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (by omega : e1.basis + off1 < 2 ^ 64)]
+  have e2n : (slotAddr e2.basis off2).toNat = e2.basis + off2 := by
+    unfold slotAddr natAdresse
+    rw [BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (by omega : e2.basis + off2 < 2 ^ 64)]
+  have hU1 : OhneUmbruch (slotAddr e1.basis off1) := by
+    unfold OhneUmbruch
+    rw [e1n]; omega
+  have hU2 : OhneUmbruch (slotAddr e2.basis off2) := by
+    unfold OhneUmbruch
+    rw [e2n]; omega
+  have hReg' : e1.basis + e1.len ≤ e2.basis ∨
+      e2.basis + e2.len ≤ e1.basis := by
+    unfold regionDisjunkt alsRegion at hReg
+    exact of_decide_eq_true hReg
+  have hInt : (slotAddr e1.basis off1).toNat + 8 ≤
+        (slotAddr e2.basis off2).toNat ∨
+      (slotAddr e2.basis off2).toNat + 8 ≤
+        (slotAddr e1.basis off1).toNat := by
+    rw [e1n, e2n]
+    omega
+  intro i j hi hj he
+  exact (disjunkt_von_intervallen _ _ hU1 hU2 hInt i j hi hj he).elim
+
 /- CUTS:
-    - Representation predicate, preservation theorems, refusals and the
-      joint witness are still to come.
+    - The execStmt-facing main theorem, the refusals and the joint
+      witness are still to come.
 -/
 
 #print axioms zahlWort
+#print axioms wortZahl
+#print axioms zahlWort_wortZahl
+#print axioms repOk
+#print axioms repOk_klingt
 
 end Gabbro.Grammatik.X86
