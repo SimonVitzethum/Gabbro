@@ -216,7 +216,7 @@ Last ledger refresh: **2026-10-01 13:56 UTC**. This is an operational snapshot, 
 | 424 | Continuous Lean proof reserve: FeatureProfile | Agent working | 472: scheduled | [task](lanes/424.md) |
 | 425 | Continuous Lean proof reserve: FloatExceptions | Merged after review/checks | 473: Merged after review/checks | [report](messung/muse/MUSE-REPORT-425.md) |
 | 426 | Continuous Lean proof reserve: VectorFootprints | Merged after review/checks | 474: Merged after review/checks | [report](messung/muse/MUSE-REPORT-426.md) |
-| 427 | Continuous Lean proof reserve: RegisterInterference | Committed candidate; review/integration pending | 475: Committed candidate; review/integration pending | [task](lanes/427.md) |
+| 427 | Continuous Lean proof reserve: RegisterInterference | Merged after review/checks | 475: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-427.md) |
 | 428 | Continuous Lean proof reserve: ParallelMoves | Merged after review/checks | 476: Merged after review/checks | [report](messung/muse/MUSE-REPORT-428.md) |
 | 429 | Continuous Lean proof reserve: CodeImmutability | Merged after review/checks | 477: Merged after review/checks | [report](messung/muse/MUSE-REPORT-429.md) |
 | 430 | Continuous Lean proof reserve: ValidationCache | Merged after review/checks | 478: Merged after review/checks | [report](messung/muse/MUSE-REPORT-430.md) |
@@ -497,6 +497,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **466**, Independent exact-candidate review of 418, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-466.md). <!-- x86-merged:466 -->
 - 2026-10-01: lane **421**, Continuous Lean proof reserve: WordAtomicity, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-421.md). <!-- x86-merged:421 -->
 - 2026-10-01: lane **469**, Independent exact-candidate review of 421, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-469.md). <!-- x86-merged:469 -->
+- 2026-10-01: lane **427**, Continuous Lean proof reserve: RegisterInterference, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-427.md). <!-- x86-merged:427 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

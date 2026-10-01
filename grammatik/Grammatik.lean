@@ -414,3 +414,4 @@ import Grammatik.X86.EffectiveAddress
 import Grammatik.X86.ValidationCache
 import Grammatik.X86.BitScan
 import Grammatik.X86.WordAtomicity
+import Grammatik.X86.RegisterInterference
