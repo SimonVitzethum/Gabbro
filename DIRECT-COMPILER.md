@@ -162,7 +162,7 @@ Last ledger refresh: **2026-10-01 11:42 UTC**. This is an operational snapshot, 
 | 344 | Practical-performance Lean wave B4: FenceDrain | Merged after review/checks | 382: Merged after review/checks | [report](messung/muse/MUSE-REPORT-344.md) |
 | 345 | Practical-performance Lean wave C1: TableLayout | Merged after review/checks | 383: Merged after review/checks | [report](messung/muse/MUSE-REPORT-345.md) |
 | 346 | Practical-performance Lean wave C2: GateStub | Scheduled | 384: Committed candidate; review/integration pending | [task](lanes/346.md) |
-| 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-347.md) |
+| 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: scheduled | [task](lanes/350.md) |
@@ -363,6 +363,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **344**, Practical-performance Lean wave B4: FenceDrain, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-344.md). <!-- x86-merged:344 -->
 - 2026-10-01: lane **382**, Independent exact-candidate review of 344 FenceDrain, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-382.md). <!-- x86-merged:382 -->
 - 2026-10-01: lane **347**, Practical-performance Lean wave C3: CostSummary, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-347.md). <!-- x86-merged:347 -->
+- 2026-10-01: lane **385**, Independent exact-candidate review of 347 CostSummary, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-385.md). <!-- x86-merged:385 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
