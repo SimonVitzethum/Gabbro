@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 14:24 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 14:25 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -180,7 +180,7 @@ Last ledger refresh: **2026-10-01 14:24 UTC**. This is an operational snapshot, 
 | 337 | Practical-performance Lean wave A3: ShiftLogic | Merged after review/checks | 375: Merged after review/checks | [report](messung/muse/MUSE-REPORT-337.md) |
 | 338 | Practical-performance Lean wave A4: ControlFlow | Merged after review/checks | 376: Merged after review/checks | [report](messung/muse/MUSE-REPORT-338.md) |
 | 339 | Practical-performance Lean wave A5: LockedOps | Merged after review/checks | 377: Merged after review/checks | [report](messung/muse/MUSE-REPORT-339.md) |
-| 340 | Practical-performance Lean wave A6: ScalarFloat | Committed candidate; review/integration pending | 378: Committed candidate; review/integration pending | [task](lanes/340.md) |
+| 340 | Practical-performance Lean wave A6: ScalarFloat | Merged after review/checks | 378: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-340.md) |
 | 341 | Practical-performance Lean wave B1: AccessList | Merged after review/checks | 379: Merged after review/checks | [report](messung/muse/MUSE-REPORT-341.md) |
 | 342 | Practical-performance Lean wave B2: OverlapRefusal | Merged after review/checks | 380: Merged after review/checks | [report](messung/muse/MUSE-REPORT-342.md) |
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
@@ -511,6 +511,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `ad6c05f7` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:ad6c05f78d3f21150a592062feab2e6abf3412a7 -->
 - 2026-10-01: lane **470**, Independent exact-candidate review of 422, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-470.md). <!-- x86-merged:470 -->
 - 2026-10-01: publication batch checks passed for `ae0fa5b8`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **340**, Practical-performance Lean wave A6: ScalarFloat, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-340.md). <!-- x86-merged:340 -->
+- 2026-10-01: checked master `6845a8c3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:6845a8c3a841725562199b763485b4483307f576 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

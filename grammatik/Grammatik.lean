@@ -418,3 +418,4 @@ import Grammatik.X86.RegisterInterference
 import Grammatik.X86.ObservationProjection
 import Grammatik.X86.GateStub
 import Grammatik.X86.ReleaseAcquire
+import Grammatik.X86.ScalarFloat
