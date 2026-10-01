@@ -65,26 +65,25 @@ Content, mapped to the reviewer-approved direction:
 - Axiom probe via `./lean-probe` on scratch `.tmp/axiomprobe340.lean`:
   `'Gabbro.Grammatik.Zielsatz.gabbro_ziel' depends on axioms:
   [propext, Classical.choice, Quot.sound]` — unchanged.
-- `bash ./lean-bau`: 385/386 targets build, including
-  `Grammatik/X86/ScalarFloat.lean`; the final `Grammatik.lean`
-  aggregator target crashes with
-  `lean::exception: failed to create thread` (exit 134). Retried FIVE
-  times with waits (up to 30 min); per-module state is green, only the
-  import-all step dies.
-- Control test (stash-test): with the one-line `ScalarFloat` import
-  stashed (pristine tree), `./lean-bau` fails IDENTICALLY on the same
-  `Grammatik` target. The aggregator failure is environmental
-  (machine thread/memory contention under the lane cap), NOT caused by
-  this lane's change. Disk is fine (180G free).
-- Consequence per HARD RULE 8: the Lean files are NOT committed on a
-  red `./lean-bau`. This report is committed alone; the verified work
-  is preserved uncommitted in this clone:
-  `grammatik/Grammatik/X86/ScalarFloat.lean` (new file, per-file probe
-  green, exit 0, standard axioms) plus the one-line import
-  `import Grammatik.X86.ScalarFloat` at the end of
-  `grammatik/Grammatik.lean`. Recovery: re-add the import line,
-  re-run `./lean-probe` on the file and `./lean-bau` when the machine
-  allows, then commit through `./commit.sh`.
+- `bash ./lean-bau`: **green — `Build completed successfully
+  (386 jobs)`**, including `Grammatik/X86/ScalarFloat.lean` and the
+  final `Grammatik.lean` aggregator target. (Earlier this turn the
+  aggregator died five times with `failed to create thread`, once
+  reproduced on the pristine tree without this lane's change; after
+  the diagnostic resource repair — 16-GiB virtual address ceiling,
+  native Lean still `-j2 -M4096` under the serial build lease — the
+  full build passes with this lane's import included.)
+- Control test (stash-test, before the repair): with the one-line
+  `ScalarFloat` import stashed (pristine tree), `./lean-bau` failed
+  IDENTICALLY on the same `Grammatik` target, proving the earlier
+  failure environmental, not caused by this lane. Disk was fine
+  (180G free).
+- Consequence: the Lean files ARE committed in this commit alongside
+  this updated report — per-file probe green, full build green,
+  `gabbro_ziel` axioms unchanged. Owned paths in this commit:
+  `grammatik/Grammatik/X86/ScalarFloat.lean` (new),
+  `grammatik/Grammatik.lean` (one additive import line),
+  `MUSE-REPORT-340.md`.
 
 ## Semantic mismatches resolved against source (not invented)
 
