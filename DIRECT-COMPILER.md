@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 14:03 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 14:04 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -186,7 +186,7 @@ Last ledger refresh: **2026-10-01 14:03 UTC**. This is an operational snapshot, 
 | 343 | Practical-performance Lean wave B3: SpillPrivate | Merged after review/checks | 381: Merged after review/checks | [report](messung/muse/MUSE-REPORT-343.md) |
 | 344 | Practical-performance Lean wave B4: FenceDrain | Merged after review/checks | 382: Merged after review/checks | [report](messung/muse/MUSE-REPORT-344.md) |
 | 345 | Practical-performance Lean wave C1: TableLayout | Merged after review/checks | 383: Merged after review/checks | [report](messung/muse/MUSE-REPORT-345.md) |
-| 346 | Practical-performance Lean wave C2: GateStub | Committed candidate; review/integration pending | 384: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/346.md) |
+| 346 | Practical-performance Lean wave C2: GateStub | Merged after review/checks | 384: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
@@ -502,6 +502,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **433**, Continuous Lean proof reserve: ObservationProjection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-433.md). <!-- x86-merged:433 -->
 - 2026-10-01: lane **481**, Independent exact-candidate review of 433, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-481.md). <!-- x86-merged:481 -->
 - 2026-10-01: publication batch checks passed for `3dce9fa2`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **346**, Practical-performance Lean wave C2: GateStub, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-346.md). <!-- x86-merged:346 -->
+- 2026-10-01: checked master `d3aa7fed` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d3aa7fed6ea1a9ee826f7ebf05d79413ce2d4883 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
