@@ -335,6 +335,136 @@ theorem blattFragment_voll_zeuge :
 
 #print axioms blattFragment_voll_zeuge
 
+/-! ## 4. Target match: the admitted slot is one realised 8-byte footprint. -/
+
+/-- The admitted source write lands on exactly one realised target
+    footprint: for a guarded source step (admitted profile, evaluated
+    index/value, matching target word write) together with a realised
+    `store64` step whose effective address and source register match the
+    slot address and value, the extracted write footprint is the 8-byte
+    `Fuss` of the slot, eight bytes long, carrying the source value, which
+    parses back. This consumes (not restates) `rep_schritt_bleibt` for
+    the source/target value link and `realisiert_store64_fuss` for the
+    realised footprint; the new connection is `hAddr`/`hReg`/`hSlot`.
+    Every premise is used. -/
+theorem fragmentStore_passt {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ : List (Res D)}
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (t : D.Tab) (f : D.Feld t)
+    (lo hi : Int) (hT : D.typ t f = .int lo hi)
+    (base len off : Nat)
+    (hOk : repOk (D.typ t f) base len off = true)
+    (i : Expr D Γ Λ (.index (D.count t)))
+    (e : Expr D Γ Λ (D.typ t f))
+    (hw : V.schreibt t = true) (hL : darf D t Λ)
+    (σ : World D) (ρ : Env D Γ)
+    (σL : World D) (hLese : σL = σ.lese Λ (i.orte ++ e.orte))
+    (k : Int) (v : Zahl lo hi)
+    (hk : (eval σL i σL ρ).n = k)
+    (hv : (cast (congrArg (Wert D) hT) (eval σL e σL ρ) :
+      Wert D (.int lo hi)) = v)
+    (a : Adresse) (m m' : Speicher)
+    (σ' : World D) (ρ' : Env D Γ)
+    (hExec : execStmt O passes R (Stmt.assignSlot (l := l) t f i e hw hL) σ ρ =
+      .ok σ' ρ')
+    (hTgt : write64 m a (zahlWort v) = some m')
+    (hRd : lesbar8 m a = true)
+    (dd : Decodiert) (s s' : Zustand)
+    (baseR src : Register) (disp : BitVec 32)
+    (hok : laengeOk dd.laenge = true)
+    (hbef : dd.befehl = .store64 baseR src disp)
+    (hstep : schritt dd s = some s')
+    (hAddr : effAddr s baseR disp = slotAddr base off)
+    (hSlot : a = slotAddr base off)
+    (hReg : s.register src = zahlWort v) :
+    (zugriff dd s).schreiben = Fuss (slotAddr base off) ∧
+      (zugriff dd s).schreiben.length = 8 ∧
+      (zugriff dd s).speicherWert = some (zahlWort v) ∧
+      (∃ w, read64 m' (slotAddr base off) = some w ∧
+        wortZahl lo hi w = some v) := by
+  have hMain2 := (rep_schritt_bleibt O passes R t f lo hi hT base len off hOk
+    i e hw hL σ ρ σL hLese k v hk hv a m m' σ' ρ' hExec hTgt hRd).2
+  have hFuss := realisiert_store64_fuss dd s s' baseR src disp hok hbef hstep
+  have hAcht := zugriff_store64_acht s baseR src disp dd hbef
+  rw [hAddr] at hFuss
+  rw [hSlot] at hMain2
+  exact ⟨hFuss.2.1, hAcht, hFuss.2.2.trans (congrArg Option.some hReg),
+    hMain2⟩
+
+#print axioms fragmentStore_passt
+
+/-- Witness decoded store: `store [rsp], rax` at the fragment slot address. -/
+def fragStore : Decodiert :=
+  { befehl := Befehl.store64 Register.rsp Register.rax (BitVec.ofNat 32 0),
+    laenge := 4 }
+
+/-- Witness pre-state: `rsp` at the slot base, `rax` holding the source value. -/
+def fragStoreVor : Zustand :=
+  { register :=
+      regSet (regSet zeugeReg Register.rsp (BitVec.ofNat 64 4096))
+        Register.rax (zahlWort witVal),
+    flags := zeugeFlags, rip := BitVec.ofNat 64 4096,
+    speicher := zeugeSpeicher }
+
+/-- JOINT WITNESS for `fragmentStore_passt`: every source and target
+    premise holds jointly — the witness table written `0 → 42`, the
+    matching word write, and a reached realised `store64` step at the
+    slot address carrying the source value — and so do the footprint,
+    width, value and read-back conclusions with changed bytes on both
+    sides. -/
+theorem fragmentStore_passt_zeuge :
+    ∃ (σ' : World witD) (ρ' : Env witD []) (m' : Speicher)
+      (dd : Decodiert) (s sT : Zustand),
+      repOk (witD.typ () ()) 4096 16 0 = true ∧
+      execStmt witO 0 witR
+        (Stmt.assignSlot (l := false) () () witI witE witHw witHL)
+        witSigma Env.nil = .ok σ' ρ' ∧
+      write64 witM witA (zahlWort witVal) = some m' ∧
+      lesbar8 witM witA = true ∧
+      schritt dd s = some sT ∧
+      dd.befehl = .store64 Register.rsp Register.rax (BitVec.ofNat 32 0) ∧
+      laengeOk dd.laenge = true ∧
+      effAddr s Register.rsp (BitVec.ofNat 32 0) = slotAddr 4096 0 ∧
+      s.register Register.rax = zahlWort witVal ∧
+      (zugriff dd s).schreiben = Fuss (slotAddr 4096 0) ∧
+      (zugriff dd s).schreiben.length = 8 ∧
+      (zugriff dd s).speicherWert = some (zahlWort witVal) ∧
+      (∃ w, read64 m' (slotAddr 4096 0) = some w ∧
+        wortZahl 0 100 w = some witVal) ∧
+      (witSigma.slots () 0 ()).n = 0 ∧
+      (σ'.slots () 0 ()).n = 42 ∧
+      witM.bytes witA ≠ m'.bytes witA ∧
+      s.speicher.bytes witA ≠ sT.speicher.bytes witA := by
+  obtain ⟨σ', ρ', m', hOk, hWr, hk, hv, hExec, hTgt, hRd, hRep, hRt,
+    hBefore, hAfter, hBytes⟩ := rep_schritt_bleibt_zeuge
+  have hbef : fragStore.befehl =
+      .store64 Register.rsp Register.rax (BitVec.ofNat 32 0) := rfl
+  have hok : laengeOk fragStore.laenge = true := rfl
+  have hAddr : effAddr fragStoreVor Register.rsp (BitVec.ofNat 32 0) =
+      slotAddr 4096 0 := by
+    decide
+  have hSlot : witA = slotAddr 4096 0 := rfl
+  have hReg : fragStoreVor.register Register.rax = zahlWort witVal := rfl
+  have hLese : witSL = witSigma.lese [] (witI.orte ++ witE.orte) := rfl
+  have hdec : ((schritt fragStore fragStoreVor).map
+      (fun s' => s'.speicher.bytes witA) =
+      some (BitVec.ofNat 8 42)) := by
+    decide
+  obtain ⟨sT, hstep, hval⟩ := Option.map_eq_some_iff.mp hdec
+  have hMain := fragmentStore_passt witO 0 witR () () 0 100 witHT
+    4096 16 0 hOk witI witE witHw witHL witSigma Env.nil witSL hLese
+    0 witVal hk hv witA witM m' σ' ρ' hExec hTgt hRd fragStore
+    fragStoreVor sT Register.rsp Register.rax (BitVec.ofNat 32 0) hok hbef
+    hstep hAddr hSlot hReg
+  have hTa : sT.speicher.bytes witA = BitVec.ofNat 8 42 := hval
+  have hTo : fragStoreVor.speicher.bytes witA = BitVec.ofNat 8 0 := rfl
+  exact ⟨σ', ρ', m', fragStore, fragStoreVor, sT, hOk, hExec, hTgt, hRd,
+    hstep, hbef, hok, hAddr, hReg, hMain.1, hMain.2.1, hMain.2.2.1,
+    hMain.2.2.2, hBefore, hAfter, hBytes, by rw [hTo, hTa]; decide⟩
+
+#print axioms fragmentStore_passt_zeuge
+
 #print axioms filterMap_leseEv
 #print axioms take_neuAppend
 #print axioms fragmentListe_invert
