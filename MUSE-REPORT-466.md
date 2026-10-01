@@ -76,7 +76,43 @@ blocked a check, the report says so and names the control experiment.
 The bounded claim (zero-aware scan helpers + proofs + probes + memory
 witness, no native/source/timing closure) is exactly what is delivered.
 
+## Re-review of the repaired candidate (new pin)
+
+- New pinned HEAD `eb137c770c3fae49c2157dfd15524f8524ed9da7`
+  (verified: fresh `git fetch <a418> muse/418` gives exactly this as
+  FETCH_HEAD; `.tmp/review/SNAPSHOT.json` pins the same hash).
+- Delta old-head..new-head is exactly one commit
+  (`lane 418: report repair note after integration gate failure (no code
+  change)`), touching only `MUSE-REPORT-418.md` (+31 lines: the repair
+  section quoted below). `git diff` over `grammatik/` between the two
+  heads is empty, and the supplied `.tmp/review/author-418` copy of
+  `BitScan.lean` is sha256-identical to the new head's committed file
+  (`fb253d19…`). The Lean content is therefore byte-identical to what
+  the first review accepted; no proof changed, so there are no changed
+  proofs to re-inspect beyond confirming identity.
+- New report section claims: (a) the merge build elaborated
+  `BitScan.lean` successfully (all 7 probe `#print axioms` lines,
+  `[propext, Quot.sound]`); (b) the gate failed only at `[397/398]
+  Building Grammatik` with the same `failed to create thread` / exit 134;
+  (c) local probe re-verified green, full bau still red at the umbrella
+  only. These are consistent with the BUILD-EVIDENCE pattern from the
+  first review (green module runs interleaved with thread-creation
+  crashes) and with my own probes; the author draws no new Lean
+  conclusion from them and correctly notes rule 5 forbids restructuring
+  the umbrella, so no owned-file change could address the gate failure.
+  The blocker statement (retry merge at lower machine load) is addressed
+  to the merger/integration owner and makes no claim I need to verify
+  beyond plausibility.
+- Fresh reproduction in my clone on the new pin: staged only the
+  supplied candidate file at its exact path, `./lean-probe` →
+  `== 0 error(s) in the COMPLETE output; exit 0` with the same
+  `[propext, Quot.sound]` axiom lines; staged file removed afterwards,
+  `git status` clean before committing this report.
+- All findings of the first review (sections above) stand unchanged:
+  no defects, no hidden assumptions, no vacuity, no forged evidence,
+  no duplicated IR, no safety weakening, bounded claim exactly delivered.
+
 ## Verdict
 
-CANDIDATE: 418 b6c94f4702648c274f8bfb9c67a9795c6c58456f
+CANDIDATE: 418 eb137c770c3fae49c2157dfd15524f8524ed9da7
 VERDICT: ACCEPT
