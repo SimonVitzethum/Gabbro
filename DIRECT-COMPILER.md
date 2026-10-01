@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 19:48 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 19:58 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -249,11 +249,11 @@ Last ledger refresh: **2026-10-01 19:48 UTC**. This is an operational snapshot, 
 | 570 | Connection: Source world/table values to target byte representation | Merged after review/checks | 588: Merged after review/checks | [report](messung/muse/MUSE-REPORT-570.md) |
 | 571 | Connection: Entry state, image permissions and user binding duties | Merged after review/checks | 589: Merged after review/checks | [report](messung/muse/MUSE-REPORT-571.md) |
 | 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
-| 573 | Connection: Projected TSO stores to source W writes | Waiting for accepted dependencies | 591: scheduled | [task](lanes/573.md) |
-| 574 | Connection: Projected TSO loads to source W reads | Waiting for accepted dependencies | 592: scheduled | [task](lanes/574.md) |
+| 573 | Connection: Projected TSO stores to source W writes | Agent working | 591: scheduled | [task](lanes/573.md) |
+| 574 | Connection: Projected TSO loads to source W reads | Agent working | 592: scheduled | [task](lanes/574.md) |
 | 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
-| 594 | Overnight: Architecture decision: existing source model versus additional SSA | Agent working | 606: scheduled | [task](lanes/594.md) |
-| 595 | Overnight: Portable completion and workforce monitor | Agent working | 607: scheduled | [task](lanes/595.md) |
+| 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-594.md) |
+| 595 | Overnight: Portable completion and workforce monitor | Committed candidate; review/integration pending | 607: Committed candidate; review/integration pending | [task](lanes/595.md) |
 | 596 | Overnight: TSO history preservation across actual finite traces | Agent working | 608: scheduled | [task](lanes/596.md) |
 | 597 | Overnight: Selected SSE2 vector bytes to canonical XMM execution | Agent working | 609: scheduled | [task](lanes/597.md) |
 | 598 | Overnight: Checked validator to loaded fetched execution | Agent working | 610: scheduled | [task](lanes/598.md) |
@@ -262,9 +262,9 @@ Last ledger refresh: **2026-10-01 19:48 UTC**. This is an operational snapshot, 
 | 601 | Overnight: Flag dependencies across actual decoded control flow | Agent working | 613: scheduled | [task](lanes/601.md) |
 | 602 | Overnight: Code and relocation preservation under real data stores | Agent working | 614: scheduled | [task](lanes/602.md) |
 | 603 | Overnight: Whole-word grouping under actual trace exclusion | Agent working | 615: scheduled | [task](lanes/603.md) |
-| 604 | Overnight: Float payload and exception observability in real source | Agent working | 616: scheduled | [task](lanes/604.md) |
-| 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Agent working | 617: scheduled | [task](lanes/605.md) |
-| 618 | Overnight: Resource-safe native Lean invocation for publication tests | Queued for a model slot | 619: scheduled | [task](lanes/618.md) |
+| 604 | Overnight: Float payload and exception observability in real source | Committed candidate; review/integration pending | 616: Committed candidate; review/integration pending | [task](lanes/604.md) |
+| 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Committed candidate; review/integration pending | 617: Committed candidate; review/integration pending | [task](lanes/605.md) |
+| 618 | Overnight: Resource-safe native Lean invocation for publication tests | Agent working | 619: scheduled | [task](lanes/618.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -609,6 +609,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: Simon resumed Muse coordination after the Glass Town attempt and requested sustained overnight work near15 productive models with completion monitoring. Registered architecture/IR-reuse decision594, read-only monitor595, connection owners596-605 and independently reviewed native Lean resource repair618. Independent reviewers606-617/619 share the same cap. Existing source/decoder/TSO work continues; no extra SSA IR is presumed mandatory. Registration is not proof closure; full source-to-final-bytes validation remains OPEN. <!-- x86-overnight-594 -->
 - 2026-10-01: lane **570**, Connection: Source world/table values to target byte representation, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-570.md). <!-- x86-merged:570 -->
 - 2026-10-01: lane **588**, Independent connection review of 570, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-588.md). <!-- x86-merged:588 -->
+- 2026-10-01: lane **594**, Overnight: Architecture decision: existing source model versus additional SSA, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-594.md). <!-- x86-merged:594 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
