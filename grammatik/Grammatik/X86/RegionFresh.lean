@@ -92,6 +92,84 @@ theorem frisch_zwei_verdikt (s s1 s2 : Reservierer)
     (reserviere_innerhalb s1 len2 ausr2 l2 w2 x2 r2 s2 h2)
   simp [trennungOk, alleOhneUmbruch, allePaareDisjunkt, hw1, hw2, hd]
 
+/-- STORE FRAME over fresh regions: a successful 8-byte store inside
+    the first handed region preserves reads inside the second. The frame
+    runs through the separation lemma on the proved disjointness, over
+    the actual `write64` transition. Every premise is used. -/
+theorem frisch_schreibt_rahmen (s s1 s2 : Reservierer)
+    (len1 ausr1 len2 ausr2 : Nat) (l1 w1 x1 l2 w2 x2 : Bool)
+    (r1 r2 : Region)
+    (h1 : reserviere s len1 ausr1 l1 w1 x1 = some (r1, s1))
+    (h2 : reserviere s1 len2 ausr2 l2 w2 x2 = some (r2, s2))
+    (hinv : alleUnten s)
+    (m m' : Speicher) (x y : Adresse) (v : Wort)
+    (hx : r1.basis ≤ x.toNat ∧ x.toNat + 8 ≤ r1.basis + r1.len)
+    (hy : r2.basis ≤ y.toNat ∧ y.toNat + 8 ≤ r2.basis + r2.len)
+    (hAx : OhneUmbruch x) (hAy : OhneUmbruch y)
+    (hwr : write64 m x v = some m') :
+    read64 m' y = read64 m y := by
+  have hd := frisch_zwei_disjunkt s s1 s2 len1 ausr1 len2 ausr2
+    l1 w1 x1 l2 w2 x2 r1 r2 h1 h2 hinv
+  exact trennung_schreibt_rahmen m m' r1 r2 x y v hd hx hy hAx hAy hwr
+
+/-- INIT FRAME over fresh regions: initialising the second handed
+    region changes no byte inside the first. The interval fact turns
+    proved disjointness into the actual `initialisiere` frame condition.
+    Every premise is used. -/
+theorem frisch_init_rahmen (s s1 s2 : Reservierer)
+    (len1 ausr1 len2 ausr2 : Nat) (l1 w1 x1 l2 w2 x2 : Bool)
+    (r1 r2 : Region)
+    (h1 : reserviere s len1 ausr1 l1 w1 x1 = some (r1, s1))
+    (h2 : reserviere s1 len2 ausr2 l2 w2 x2 = some (r2, s2))
+    (hinv : alleUnten s)
+    (m : Speicher) (z : Adresse)
+    (hz : inRegion r1 z.toNat = true) :
+    (initialisiere m r2).bytes z = m.bytes z := by
+  have hd := frisch_zwei_disjunkt s s1 s2 len1 ausr1 len2 ausr2
+    l1 w1 x1 l2 w2 x2 r1 r2 h1 h2 hinv
+  have hframe := disjunkt_nicht_in_region r1 r2 hd z.toNat hz
+  exact initialisiere_rahmen_bytes m r2 z hframe
+
+/-- SOURCE BRIDGE: an accepted computed layout separates as regions.
+    Extent and ownership originate in the existing source/binding model
+    (`layoutFuer` over the source unit, read through `alsRegion`), never
+    from a number. Every premise is used. -/
+theorem layoutOk_trennung (es : List TabLayout)
+    (h : layoutOk es = true) :
+    allePaareDisjunkt (es.map alsRegion) = true := by
+  induction es with
+  | nil => rfl
+  | cons e rest ih =>
+    have hpaar : paarOk (e :: rest) = true := by
+      unfold layoutOk at h
+      rw [Bool.and_eq_true] at h
+      exact h.2
+    unfold paarOk at hpaar
+    rw [Bool.and_eq_true] at hpaar
+    obtain ⟨hhead, htail⟩ := hpaar
+    have hall : ((e :: rest).all eintragOk) = true := by
+      unfold layoutOk at h
+      rw [Bool.and_eq_true] at h
+      exact h.1
+    have hlay : layoutOk rest = true := by
+      unfold layoutOk
+      rw [Bool.and_eq_true]
+      refine ⟨?_, htail⟩
+      rw [List.all_eq_true]
+      intro y hy
+      rw [List.all_eq_true] at hall
+      exact hall y (List.mem_cons_of_mem _ hy)
+    rw [List.all_eq_true] at hhead
+    simp only [List.map_cons]
+    unfold allePaareDisjunkt
+    rw [Bool.and_eq_true]
+    refine ⟨?_, ih hlay⟩
+    rw [List.all_eq_true]
+    intro q hq
+    rw [List.mem_map] at hq
+    obtain ⟨t, ht, rfl⟩ := hq
+    exact hhead t ht
+
 /- CUTS:
     - Skeleton only: no fresh/disjoint preservation is proved yet.
     - No source correspondence is claimed here.
