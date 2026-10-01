@@ -2,8 +2,8 @@
 
 ## Clone and snapshot verified
 - Clone `/home/simon/Dokumente/gabbro-muse/a480`, branch `muse/480`: match, STOP condition not triggered.
-- Snapshot `.tmp/review/SNAPSHOT.json`: single entry author 432, pinned HEAD `dd10d78f28d47c335beca87ea27e873a6ff94cc6`, base `fd14b4e5`, 3 files (`MUSE-REPORT-432.md`, `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/RegionSeparation.lean`), clean true.
-- Inspected: `author-432/OWNER-TASK.md`, `MUSE-REPORT-432.md`, `PATCH.diff` (627 added lines: report + 1 umbrella import line + 519-line new leaf), `BUILD-EVIDENCE.json` (19 queued commands), supplied file `author-432/grammatik/Grammatik/X86/RegionSeparation.lean`.
+- Snapshot `.tmp/review/SNAPSHOT.json`: single entry author 432, pinned HEAD `5f5a682573e3ad905c5e6af59f5914d650cdb9eb`, base `fd14b4e5`, 3 files (`MUSE-REPORT-432.md`, `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/RegionSeparation.lean`), clean true. This supersedes the earlier pinned HEAD `dd10d78f28d47c335beca87ea27e873a6ff94cc6`; the verdict below is on the NEW hash only.
+- Inspected: `author-432/OWNER-TASK.md`, `MUSE-REPORT-432.md` (now 116 lines with a repair-turn section), `PATCH.diff` (656 lines: report + 1 umbrella import line + 519-line new leaf), `BUILD-EVIDENCE.json` (30 queued commands including the repair-turn gate analysis), supplied file `author-432/grammatik/Grammatik/X86/RegionSeparation.lean`.
 
 ## Scope check (PATCH vs task)
 - Author task allows ONLY the new module plus one additive X86 import at end of umbrella. PATCH does exactly that: one appended `import Grammatik.X86.RegionSeparation` line, no edits to Spec, checker, Rust, emitter, Typen, execution, codec, Bild, Regionen, Speicher, and no touch of friend paths `OptimizationRules.lean` / `OptimizationWitnesses.lean`. No other clone read.
@@ -26,11 +26,16 @@
 - Staged only the supplied `RegionSeparation.lean` into `grammatik/Grammatik/X86/`, ran `./lean-probe grammatik/Grammatik/X86/RegionSeparation.lean`: first line `== 0 error(s) in the COMPLETE output; exit 0`. Axiom lines all standard subsets (`propext` with/without `Quot.sound`, decides axiom-free); none exceeds `propext, Classical.choice, Quot.sound`. Removed the staged file afterwards; `git status --short` clean before report.
 - Full `./lean-bau` not re-run here: author evidence already shows the module olean built (step 393/395) while the final umbrella link fails machine-wide with `failed to create thread` (exit 134), plus a stash control where the pristine umbrella fails identically and small-file probes stay green. That account is credible and honestly marked PENDING rather than claimed; the merge script rebuilds `grammatik/` before committing, so the gate re-checks. No forged benchmark/axiom evidence found; BUILD-EVIDENCE shows intermediate 2-error and 4-error probes on the way to green, consistent with real incremental work.
 
+## Re-review of the NEW pinned hash (fresh substantive review)
+- Delta `dd10d78f` -> `5f5a6825`: Lean blob identical (`index 00000000..486c9e4c`, 519 lines, md5 `2de0b0f0b19a2d676df2f42925f9c17a` of the supplied file); umbrella hunk identical (single appended import); only `MUSE-REPORT-432.md` changed (repair-turn gate-failure analysis, no Lean edits). Every previous finding was re-inspected against the NEW files; no proof changed, so no finding changes.
+- Repair-turn claim verified: new BUILD-EVIDENCE entries show the owned module's axiom lines (511-517, all standard) printing inside the gate run before the umbrella link dies with `failed to create thread` (exit 134, `2 error line(s)` being the libc++abi/exit lines, zero Lean errors), plus fresh local `./lean-probe 0 error(s)` and `./lean-bau` reproducing the gate exactly, with the pristine-umbrella stash control still failing identically. The author correctly performed NO Lean repair (weakening a proof to fit an environmental thread failure would violate the safety rules) and correctly claims no full-chain acceptance. This is sound handling, not a defect.
+- Fresh reproduction in my clone on the NEW files: staged only the supplied `RegionSeparation.lean`, `./lean-probe` first line `== 0 error(s) in the COMPLETE output; exit 0`, all 32 `#print axioms` lines standard subsets of `propext, Classical.choice, Quot.sound`; forbidden grep (`sorry|admit|^axiom|native_decide|unsafe|intro _|have _ :=`) clean; CUTS present. Staged file removed afterwards; tree clean before this report commit.
+
 ## What remains open
 - Merge-gate full `./lean-bau` green plus `#print axioms gabbro_ziel` re-check when the machine is quiet. Nothing in this leaf touches the goal, so axiom drift is not expected, but it is unverified in this turn by environment, not by proof.
 
 ## Anything believed wrong in the task
 - Nothing. The bounded scope (generic checker + soundness + frames + bridge + witnesses, correspondence OPEN) matches the missing piece the author names, and the delivered claim stays inside it without claiming closed source lowering, hardware, native expansion, final-byte validation, or speed.
 
-CANDIDATE: 432 dd10d78f28d47c335beca87ea27e873a6ff94cc6
+CANDIDATE: 432 5f5a682573e3ad905c5e6af59f5914d650cdb9eb
 VERDICT: ACCEPT
