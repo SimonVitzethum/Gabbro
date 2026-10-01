@@ -100,6 +100,37 @@ evidence, no safety weakening. One trivial nit (not a defect): report
 says "~420 lines", file has 415. The `kurz` vs design-doc "rel8"
 naming note is mapped explicitly in the author report.
 
+## Re-review of repaired candidate (new pin required fresh review)
+
+New pinned SNAPSHOT.json head: `37506069cd799dd5a3bad22a5ec4a8a3b03f7b6c`
+(base unchanged). I verified: the new commit exists on the fetched
+lane branch; `git diff` old-head..new-head touches ONLY
+`MUSE-REPORT-423.md` (+25 lines); `grammatik/` diff is EMPTY. The
+supplied `.tmp/review/author-423/` files (`BranchLayout.lean`,
+`Grammatik.lean`, `MUSE-REPORT-423.md`) are byte-identical to the new
+HEAD's blobs (checked via `git show` + `diff`). All previous findings
+therefore carry over unchanged: the Lean content is exactly what I
+already probed green (`0 error(s)`, exit 0, standard axioms).
+
+The added report section ("Integration gate failure: no content
+repair") documents 3 further identical single-target umbrella crashes
+(4 lane + 1 pristine-master control + 1 integration + 1 retry = 7
+total, zero content errors in any) and argues nothing in the owned
+content can be repaired because there is no content defect. I checked
+each reason independently: (a) the umbrella target links already-built
+oleans -- consistent with my observation that the module elaborates
+standalone green; (b) all five module imports (`Typen`, `Speicher`,
+`Ausfuehrung`, `Codec`, `Relokation`) are pre-existing umbrella
+members in my clone's `Grammatik.lean` (lines 369-381), so the closure
+gains no new edge and no import cycle is possible; (c) the
+pristine-master control was already in the prior build evidence log,
+which I read in full. "No content repair" is the correct verdict, not
+an evasion: rewriting green proofs to dodge a `pthread_create`
+failure would change verified content for no reason. The integration
+gate retry remains a merger/coordinator action blocked on machine
+load, correctly identified as such. No stale snapshot is approved:
+this verdict binds ONLY the new pin below.
+
 ## Bounded claim accepted
 
 Exact rel32 branch/call widths with displacement-independent length
@@ -111,5 +142,5 @@ accept/refusal probes, and a memory-changing call-store witness --
 with rel8 selection, multi-branch relaxation, and all
 source/concurrency/hardware claims explicitly OPEN.
 
-CANDIDATE: 423 e17d73ffbd39f5a140e271fe310607a2dcd522f9
+CANDIDATE: 423 37506069cd799dd5a3bad22a5ec4a8a3b03f7b6c
 VERDICT: ACCEPT
