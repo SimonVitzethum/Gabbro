@@ -408,3 +408,4 @@ import Grammatik.X86.CodeImmutability
 import Grammatik.X86.ValidationBudget
 import Grammatik.X86.RegionSeparation
 import Grammatik.X86.AtomicPayload
+import Grammatik.X86.ParallelMoves

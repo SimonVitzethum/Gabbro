@@ -217,7 +217,7 @@ Last ledger refresh: **2026-10-01 13:42 UTC**. This is an operational snapshot, 
 | 425 | Continuous Lean proof reserve: FloatExceptions | Merged after review/checks | 473: Merged after review/checks | [report](messung/muse/MUSE-REPORT-425.md) |
 | 426 | Continuous Lean proof reserve: VectorFootprints | Merged after review/checks | 474: Merged after review/checks | [report](messung/muse/MUSE-REPORT-426.md) |
 | 427 | Continuous Lean proof reserve: RegisterInterference | Committed candidate; review/integration pending | 475: scheduled | [task](lanes/427.md) |
-| 428 | Continuous Lean proof reserve: ParallelMoves | Committed candidate; review/integration pending | 476: Committed candidate; review/integration pending | [task](lanes/428.md) |
+| 428 | Continuous Lean proof reserve: ParallelMoves | Merged after review/checks | 476: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-428.md) |
 | 429 | Continuous Lean proof reserve: CodeImmutability | Merged after review/checks | 477: Merged after review/checks | [report](messung/muse/MUSE-REPORT-429.md) |
 | 430 | Continuous Lean proof reserve: ValidationCache | Agent working | 478: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/430.md) |
 | 431 | Continuous Lean proof reserve: ValidationBudget | Merged after review/checks | 479: Merged after review/checks | [report](messung/muse/MUSE-REPORT-431.md) |
@@ -468,6 +468,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **388**, Independent exact-candidate review of 350 AtomicPayload, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-388.md). <!-- x86-merged:388 -->
 - 2026-10-01: lane **406**, Adversarial implementation audit: DECODE-BOUNDARY, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-406.md). <!-- x86-merged:406 -->
 - 2026-10-01: lane **486**, Independent exact-candidate review of 406, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-486.md). <!-- x86-merged:486 -->
+- 2026-10-01: lane **428**, Continuous Lean proof reserve: ParallelMoves, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-428.md). <!-- x86-merged:428 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
