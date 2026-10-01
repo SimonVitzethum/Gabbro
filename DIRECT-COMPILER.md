@@ -262,7 +262,7 @@ Last ledger refresh: **2026-10-01 19:58 UTC**. This is an operational snapshot, 
 | 601 | Overnight: Flag dependencies across actual decoded control flow | Agent working | 613: scheduled | [task](lanes/601.md) |
 | 602 | Overnight: Code and relocation preservation under real data stores | Agent working | 614: scheduled | [task](lanes/602.md) |
 | 603 | Overnight: Whole-word grouping under actual trace exclusion | Agent working | 615: scheduled | [task](lanes/603.md) |
-| 604 | Overnight: Float payload and exception observability in real source | Committed candidate; review/integration pending | 616: Committed candidate; review/integration pending | [task](lanes/604.md) |
+| 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-604.md) |
 | 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Committed candidate; review/integration pending | 617: Committed candidate; review/integration pending | [task](lanes/605.md) |
 | 618 | Overnight: Resource-safe native Lean invocation for publication tests | Agent working | 619: scheduled | [task](lanes/618.md) |
 
@@ -613,6 +613,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **606**, Independent overnight review of 594, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-606.md). <!-- x86-merged:606 -->
 - 2026-10-01: lane **595**, Overnight: Portable completion and workforce monitor, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-595.md). <!-- x86-merged:595 -->
 - 2026-10-01: lane **607**, Independent overnight review of 595, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-607.md). <!-- x86-merged:607 -->
+- 2026-10-01: lane **604**, Overnight: Float payload and exception observability in real source, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-604.md). <!-- x86-merged:604 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
