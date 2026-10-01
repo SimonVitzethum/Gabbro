@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 21:16 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 21:21 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -271,7 +271,7 @@ Last ledger refresh: **2026-10-01 21:16 UTC**. This is an operational snapshot, 
 | 626 | Direct-source closure: FloatEntryState | Merged after review/checks | 627: Merged after review/checks | [report](messung/muse/MUSE-REPORT-626.md) |
 | 628 | Direct-source closure: SourceAssignmentLowering | Agent working | 629: scheduled | [task](lanes/628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
-| 632 | Direct-source closure: SourceValidatorConnection | Committed candidate; review/integration pending | 633: Agent working | [task](lanes/632.md) |
+| 632 | Direct-source closure: SourceValidatorConnection | Committed candidate; review/integration pending | 633: Committed candidate; review/integration pending | [task](lanes/632.md) |
 | 634 | Direct-source closure: SourceCodeFrame | Merged after review/checks | 635: Merged after review/checks | [report](messung/muse/MUSE-REPORT-634.md) |
 | 636 | Required failover slot lifetime and safe role handback | Merged after review/checks | 637: Merged after review/checks | [report](messung/muse/MUSE-REPORT-636.md) |
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
@@ -684,6 +684,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **635**, Independent direct-source closure review of 634, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-635.md). <!-- x86-merged:635 -->
 - 2026-10-01: lane **642**, Recover preserved IR research draft from recorded edits after clone removal, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-642.md). <!-- x86-merged:642 -->
 - 2026-10-01: lane **643**, Independent exact review of 642, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-643.md). <!-- x86-merged:643 -->
+- 2026-10-01: publication batch checks passed for `106e66a4`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
