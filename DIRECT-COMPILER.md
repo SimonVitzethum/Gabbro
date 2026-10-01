@@ -205,7 +205,7 @@ Last ledger refresh: **2026-10-01 13:49 UTC**. This is an operational snapshot, 
 | 413 | Adversarial implementation audit: BUDGET-OBSERVATIONS | Merged after review/checks | 493: Merged after review/checks | [report](messung/muse/MUSE-REPORT-413.md) |
 | 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Merged after review/checks | 494: Merged after review/checks | [report](messung/muse/MUSE-REPORT-414.md) |
 | 415 | Adversarial implementation audit: END-TO-END-TRUST | Merged after review/checks | 495: Merged after review/checks | [report](messung/muse/MUSE-REPORT-415.md) |
-| 416 | Continuous Lean proof reserve: EffectiveAddress | Merged after review/checks | 464: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-416.md) |
+| 416 | Continuous Lean proof reserve: EffectiveAddress | Merged after review/checks | 464: Merged after review/checks | [report](messung/muse/MUSE-REPORT-416.md) |
 | 417 | Continuous Lean proof reserve: ConditionalMove | Merged after review/checks | 465: Merged after review/checks | [report](messung/muse/MUSE-REPORT-417.md) |
 | 418 | Continuous Lean proof reserve: BitScan | Committed candidate; review/integration pending | 466: Incomplete; preserved; integration gate rejected; repair/re-review required | [task](lanes/418.md) |
 | 419 | Continuous Lean proof reserve: BitCount | Merged after review/checks | 467: Merged after review/checks | [report](messung/muse/MUSE-REPORT-419.md) |
@@ -481,6 +481,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **415**, Adversarial implementation audit: END-TO-END-TRUST, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-415.md). <!-- x86-merged:415 -->
 - 2026-10-01: lane **495**, Independent exact-candidate review of 415, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-495.md). <!-- x86-merged:495 -->
 - 2026-10-01: lane **416**, Continuous Lean proof reserve: EffectiveAddress, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-416.md). <!-- x86-merged:416 -->
+- 2026-10-01: lane **464**, Independent exact-candidate review of 416, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-464.md). <!-- x86-merged:464 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
