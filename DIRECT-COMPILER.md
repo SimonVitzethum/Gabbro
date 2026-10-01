@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 21:09 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 21:10 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -272,8 +272,8 @@ Last ledger refresh: **2026-10-01 21:09 UTC**. This is an operational snapshot, 
 | 628 | Direct-source closure: SourceAssignmentLowering | Agent working | 629: scheduled | [task](lanes/628.md) |
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
 | 632 | Direct-source closure: SourceValidatorConnection | Agent working | 633: scheduled | [task](lanes/632.md) |
-| 634 | Direct-source closure: SourceCodeFrame | Committed candidate; review/integration pending | 635: Agent working | [task](lanes/634.md) |
-| 636 | Required failover slot lifetime and safe role handback | Committed candidate; review/integration pending | 637: Committed candidate; review/integration pending | [task](lanes/636.md) |
+| 634 | Direct-source closure: SourceCodeFrame | Committed candidate; review/integration pending | 635: Committed candidate; review/integration pending | [task](lanes/634.md) |
+| 636 | Required failover slot lifetime and safe role handback | Merged after review/checks | 637: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-636.md) |
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Committed candidate; review/integration pending | 641: Committed candidate; review/integration pending | [task](lanes/640.md) |
 | 642 | Recover preserved IR research draft from recorded edits after clone removal | Agent working | 643: scheduled | [task](lanes/642.md) |
@@ -669,6 +669,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **638**, Align optimiser and compiler design with accepted direct-source lowering, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-638.md). <!-- x86-merged:638 -->
 - 2026-10-01: lane **639**, Independent exact review of 638, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-639.md). <!-- x86-merged:639 -->
 - 2026-10-01: publication batch checks passed for `eb68896b`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **636**, Required failover slot lifetime and safe role handback, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-636.md). <!-- x86-merged:636 -->
+- 2026-10-01: checked master `d1bc2fd7` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d1bc2fd735be2a4cfc21a3dcb1f597b152076903 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

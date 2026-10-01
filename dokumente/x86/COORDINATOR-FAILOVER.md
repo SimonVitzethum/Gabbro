@@ -1,4 +1,4 @@
-# Coordinator failover supervisor (lane 620)
+# Coordinator failover supervisor (lanes 620, closed 636)
 
 Automatic, explicitly authorised OpenCode coordinator takeover. The
 foreground coordinator owns the role and renews its heartbeat lease; this
@@ -8,6 +8,11 @@ slot. It is a portable standard-library Python tool and a complement to the
 existing coordinator, not a replacement scheduler: the independent
 watcher/dispatcher keep running and are only paused/resumed around the role
 change.
+
+Lane 636 closes the four operational gaps the independent review accepted
+as documented limits: inherited slot/role survival across supervisor
+crash, boundary locks held across termination, release only after the
+whole group drains, and churn-free dispatcher reservation.
 
 ## Files
 
@@ -76,25 +81,56 @@ supervisor found the supervisor lock held.
   `GABBRO_COORDINATOR_ROLE=muse` plus `GABBRO_COORDINATOR_EPOCH=<epoch>` so
   the coordinator mutation gate can refuse stale writers.
 - **Shared slots.** The fallback reserves one of the same 15
-  `<pool>/locks/go-contributor-01..15` flock files every managed model uses
-  and holds it until its own tree is gone; at most 15 models exist. Only the
-  supervisor's own dispatcher is stopped to free capacity
-  (`dispatch_stop`, resumed with `dispatch_start` after launch, on pause, on
-  fresh-heartbeat races and on launch failure). Contributors, watchers and the
-  user's own processes are never signalled.
+  `<pool>/locks/go-contributor-01..15` flock files every managed model uses.
+  The SAME locked slot and role descriptions are inherited into the model
+  (`Popen(pass_fds=...)`) and into a dedicated slot-guardian child that runs
+  in its own session (never in the fallback group, so `killpg` on the
+  fallback never signals it) and exits only after the fallback process
+  group has no live member left. Any survivor holding the inherited
+  description keeps the kernel lock, so a supervisor crash or budget exit
+  cannot free the 15-slot accounting while fallback tools still run, and
+  orphaned grandchildren (same pgid, reparented) keep the slot held: the
+  supervisor releases its copies only after the group drains, and a
+  restarted supervisor recognises a still-held slot as held (no
+  best-effort release, no different slot taken). Only the supervisor's
+  own dispatcher is stopped to free capacity (`dispatch_stop`, kept
+  stopped while awaiting a slot, resumed with `dispatch_start` on fresh
+  heartbeat, explicit pause, failed launch or successful handoff; backed
+  off without stop/start churn). Contributors, watchers and the user's
+  own processes are never signalled.
 - **Pid identity.** A pid counts as the fallback only if its cmdline carries
   both the opencode and model markers, its state is not zombie/dead, and its
   process start time matches the lease. Reused, zombie and unrelated pids are
   ignored and never signalled; full cmdlines are never printed or stored.
 - **Safe boundary.** Stopping the role needs more than a clean tree: the
   tree must be clean (no `status --porcelain` output, no `MERGE_HEAD`) AND
-  the watch lock AND the foreground-action lock must be free (nonblocking
-  probes, released at once). Otherwise the supervisor reports
-  `waiting_for_safe_boundary_<reason>` and retries; on timeout it fails
-  closed with status and preserves dirty states instead of killing anything
+  the `foreground-action.lock` AND the `watch.lock` must be HELD (EX) across
+  the signal, the group drain and the lease update -- never probed and
+  released. Acquisition is nonblocking per poll while the lease lock is
+  held (no deadlock: holders keep progressing and the supervisor retries
+  next poll); on success both locks stay held through termination, so no
+  new action or integration can start mid-kill. Otherwise the supervisor
+  reports `waiting_for_safe_boundary_<reason>` (or
+  `descendants_remain_<n>_slot_held` / `descendants_remain_fail_closed`)
+  and retries. A watch-busy wait writes a supervisor-owned
+  `coordinator-pause.json` to request a watcher safe boundary and removes
+  only its own file afterwards; foreign pause files are never touched.
+  Only the fallback's own process group is ever signalled, and the
+  slot/role release happens only after `group_members(pgid)` is empty
+  (zombies excluded, kernel `/proc` scan); an undrained group fails
+  closed with the lease and locks kept instead of killing anything
   outside its own tree.
-- **Pause.** `<control>/pool-paused.json` or `coordinator-pause.json`
-  prevents any takeover and stops a live role at the next safe boundary.
+- **Pause (user only).** `<control>/pool-paused.json` is the explicit USER
+  pause: it prevents any takeover, stops a live role at the next safe
+  boundary, and exits an idle supervisor (`paused_no_takeover`).
+  `<control>/coordinator-pause.json` is INTERNAL and transient (watcher
+  registration or the supervisor's own safe-boundary request): it never
+  blocks takeover, never stops the role, and never exits the supervisor.
+  The supervisor's own request carries `owner: failover-<pid>` plus a
+  `requested` timestamp; startup, every poll, pause exit and budget exit
+  clean a leftover supervisor-owned marker whose pid is dead or whose age
+  exceeds 600 s. Foreign registration markers are never touched and never
+  pause coverage.
 - **Retry bounds.** Launch failures and turns that die within 60 s back off
   exponentially (5 s doubling, capped at 300 s) while staying responsive to
   pause/handback. No restart storm.
@@ -106,8 +142,12 @@ supervisor found the supervisor lock held.
   grandchildren keep the group id alive, so the supervisor waits for its
   direct child and then SIGKILLs strays of the same group.
 - **Recovery.** A restarted supervisor adopts an identified live fallback
-  (re-holding its recorded slot where free) and never starts a duplicate.
-  The supervisor itself is exclusive via `failover-supervisor.lock`.
+  (recognising a still-held slot/role as externally held, re-holding only
+  a free recorded slot from a pre-inheritance lease with a fresh guardian)
+  and never starts a duplicate or a different slot while the old group
+  lives. The supervisor itself is exclusive via `failover-supervisor.lock`.
+  The lease carries `guardian_pid` alongside `model_pid`/`model_start_time`/
+  `slot`/`epoch`; status carries `dispatcher_held`.
 - **Status.** `<control>/failover-status.json` (atomic) reports supervisor
   pid, owner, heartbeat age, model pid, slot, started turns, failures, last
   exit, pause and a short note. Logs carry no credentials.
@@ -131,12 +171,14 @@ and independent, and no proof or test gate is weakened to make a run green.
 
 - A lost heartbeat during a long foreground tool run is indistinguishable
   from a dead foreground here. Mitigation is explicit foreground heartbeats
-  and the safe mutation boundary, documented above; this tool claims no
+  and the held-lock mutation boundary, documented above; this tool claims no
   usage-API detection.
-- After the supervising process exits, its slot lock releases while the
-  fallback may still run; a restart re-holds the recorded slot only if it is
-  still free, so slot accounting across supervisor restarts is best-effort.
 - The tool cannot see work that never reaches the lease, nor distinguish a
   slow integration from a stuck one below the poll granularity.
+- A descendant that leaves its process group (`setsid`/new session) is no
+  longer a group member the guardian waits for; ordinary tool children keep
+  the group id. Slots are kernel flock files: a holder killed with SIGKILL
+  releases only its own copies, and the surviving inherited copies keep the
+  lock, which is exactly the tested property.
 - Registry changes (new pause files, renamed locks, new coordinator
   actions) need an owned follow-up; the supervisor must not guess.
