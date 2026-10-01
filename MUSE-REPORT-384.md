@@ -83,5 +83,29 @@
 - Tree restored before this commit: `git status` clean except
   `MUSE-REPORT-384.md`.
 
+## Re-review note 2026-10-01 (same pin, fresh evidence)
+
+- Snapshot still pins `dabdb177`; candidate bytes unchanged
+  (md5 `a86694e3889643ab237920e7940fe19c`, 443 lines, zero bare
+  `klassifiziere`). Full substantive re-read of all 443 lines this round:
+  N065/arity exact-once binding is a genuine bijection (length = n, Nodup
+  indices, full `0..n-1` coverage); `stubEndsTrapB` cannot false-accept short
+  stubs (Nat subtraction saturates, suffix compared against 2-byte trap);
+  `torKlassifiziere` `lo`/`hi` are free profile parameters with provenance
+  OPEN (recorded, not a defect); all prior F1/F2 statements present unaltered.
+- Fresh execution, staged identically: `./lean-probe` 0 errors exit 0 with
+  standard axioms; **full `./lean-bau` now GREEN —
+  `Build completed successfully (387 jobs)`** (prior thread-exhaustion
+  blocker resolved by calmer machine, not by any candidate change);
+  `gabbro_ziel` probe 0 errors, still exactly
+  `[propext, Classical.choice, Quot.sound]`.
+- Static re-checks: one `axiom` token hit is CUTS prose only; no discards;
+  no `: Prop` premise. Standing unresolved CUTS (unchanged, all openly
+  stated in-file): callee-side obligation (c); trap semantics; bare-metal
+  `int $0x80` clobber rule; M140 tag detection (`m1.rs`); kernel-side
+  table/range/cost meaning; source-to-byte correspondence; scalar fallback
+  as consumer obligation.
+- Verdict unchanged.
+
 CANDIDATE: 346 dabdb1771f215044dc7938e0dcd1d7c6ef6080be
 VERDICT: ACCEPT
