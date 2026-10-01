@@ -49,7 +49,7 @@ source-to-binary chain. OS/runtime/binding logic is user logic; only silicon,
 device behaviour and named timing bounds belong to hardware assumptions.
 
 At most 20 active Contributor model processes, including reviewers. Private
-clones/caches, checked isolation, one queued Lean build globally, root review
+clones/caches, checked isolation, one queued Lean build globally, independent exact-candidate agent review
 before integration, standard goal axioms. Every uncovered form is explicit;
 no guarantee is weakened to turn a build green.
 
@@ -96,3 +96,16 @@ This schedules sixteen Lean implementation owners, three broad independent
 reviewers and one current completed-candidate reviewer (up to20 concurrent
 models). As authors finish, their review sessions replace them under the same
 20-process cap. No Rust codec work is resumed.
+
+## Counter-review of architecture audits
+
+Lane 308 independently counter-reviews the exact committed source/invariant,
+concurrency and optimiser/full-binary audits from 292–294. Those historical
+baseline reports retain their dated claim boundaries. New bounded helper
+modules do not establish any full-chain theorem. Their transfer follows the
+same pinned-candidate ACCEPT gate as implementation work.
+
+If an integration build or proof gate fails after an ACCEPT, the candidate
+remains unmerged. Its author receives the actual gate output for repair and
+a fresh independent review follows any changed commit. Semantic coordinator
+fallback requires a demonstrated inability of agents to resolve the finding.
