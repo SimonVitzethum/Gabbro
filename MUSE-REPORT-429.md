@@ -121,6 +121,18 @@ alike). Needs a machine/process limit fix outside any lane's owned
 files; a fresh independent review of the changed commit is still
 required once the gate can run.
 
+## Second identical gate failure (follow-up round)
+
+The gate failed again with byte-identical evidence (same step 397/398,
+same `failed to create thread`, exit 134, my module's 7 axiom lines
+clean). Local re-probe of the unchanged module: `0 error(s)`, axioms
+unchanged. Re-examined for any defensive repair in owned files (olean
+load cost, proof-term size, import order): none applies — the crash is
+thread spawning during umbrella elaboration, reproduces without my
+import, and my `decide` terms are checked at module compile time, not
+at import time. No Lean file modified; guarantees unchanged; no
+full-chain acceptance claimed. Blocker stands as stated above.
+
 ## Task feedback
 
 The task is sound as stated: nothing requested turned out to need an
