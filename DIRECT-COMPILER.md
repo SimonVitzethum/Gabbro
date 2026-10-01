@@ -231,7 +231,7 @@ Last ledger refresh: **2026-10-01 14:25 UTC**. This is an operational snapshot, 
 | 544 | Next bridge wave N18: RegionFresh | Agent working | 550: scheduled | [task](lanes/544.md) |
 | 545 | Next bridge wave N11: PayloadResidue | Agent working | 551: scheduled | [task](lanes/545.md) |
 | 546 | Next bridge wave N13: ContractSites | Agent working | 552: scheduled | [task](lanes/546.md) |
-| 547 | Next bridge wave N17: TimeTransfer | Committed candidate; review/integration pending | 553: Committed candidate; review/integration pending | [task](lanes/547.md) |
+| 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-547.md) |
 | 554 | Shorter clearer current English README | Agent working | 555: scheduled | [task](lanes/554.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -516,6 +516,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **378**, Independent exact-candidate review of 340 ScalarFloat, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-378.md). <!-- x86-merged:378 -->
 - 2026-10-01: lane **424**, Continuous Lean proof reserve: FeatureProfile, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-424.md). <!-- x86-merged:424 -->
 - 2026-10-01: lane **472**, Independent exact-candidate review of 424, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-472.md). <!-- x86-merged:472 -->
+- 2026-10-01: lane **547**, Next bridge wave N17: TimeTransfer, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-547.md). <!-- x86-merged:547 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
