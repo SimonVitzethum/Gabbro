@@ -399,3 +399,4 @@ import Grammatik.X86.NarrowOps
 import Grammatik.X86.FenceDrain
 import Grammatik.X86.CostSummary
 import Grammatik.X86.ByteSwap
+import Grammatik.X86.ConditionalMove

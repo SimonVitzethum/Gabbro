@@ -206,7 +206,7 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Agent working | 494: scheduled | [task](lanes/414.md) |
 | 415 | Adversarial implementation audit: END-TO-END-TRUST | Agent working | 495: scheduled | [task](lanes/415.md) |
 | 416 | Continuous Lean proof reserve: EffectiveAddress | Agent working | 464: scheduled | [task](lanes/416.md) |
-| 417 | Continuous Lean proof reserve: ConditionalMove | Committed candidate; review/integration pending | 465: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/417.md) |
+| 417 | Continuous Lean proof reserve: ConditionalMove | Merged after review/checks | 465: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-417.md) |
 | 418 | Continuous Lean proof reserve: BitScan | Committed candidate; review/integration pending | 466: Incomplete; preserved; integration gate rejected; repair/re-review required | [task](lanes/418.md) |
 | 419 | Continuous Lean proof reserve: BitCount | Committed candidate; review/integration pending | 467: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/419.md) |
 | 420 | Continuous Lean proof reserve: ByteSwap | Merged after review/checks | 468: Merged after review/checks | [report](messung/muse/MUSE-REPORT-420.md) |
@@ -218,7 +218,7 @@ Last ledger refresh: **2026-10-01 13:34 UTC**. This is an operational snapshot, 
 | 426 | Continuous Lean proof reserve: VectorFootprints | Committed candidate; review/integration pending | 474: Agent working; integration gate rejected; repair/re-review required | [task](lanes/426.md) |
 | 427 | Continuous Lean proof reserve: RegisterInterference | Agent working | 475: scheduled | [task](lanes/427.md) |
 | 428 | Continuous Lean proof reserve: ParallelMoves | Agent working | 476: scheduled | [task](lanes/428.md) |
-| 429 | Continuous Lean proof reserve: CodeImmutability | Committed candidate; review/integration pending | 477: Agent working; integration gate rejected; repair/re-review required | [task](lanes/429.md) |
+| 429 | Continuous Lean proof reserve: CodeImmutability | Committed candidate; review/integration pending | 477: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/429.md) |
 | 430 | Continuous Lean proof reserve: ValidationCache | Committed candidate; review/integration pending | 478: Committed candidate; review/integration pending | [task](lanes/430.md) |
 | 431 | Continuous Lean proof reserve: ValidationBudget | Committed candidate; review/integration pending | 479: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/431.md) |
 | 432 | Continuous Lean proof reserve: RegionSeparation | Committed candidate; review/integration pending | 480: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/432.md) |
@@ -445,6 +445,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **491**, Independent exact-candidate review of 411, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-491.md). <!-- x86-merged:491 -->
 - 2026-10-01: lane **412**, Adversarial implementation audit: FLOAT-SIMD, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-412.md). <!-- x86-merged:412 -->
 - 2026-10-01: lane **492**, Independent exact-candidate review of 412, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-492.md). <!-- x86-merged:492 -->
+- 2026-10-01: lane **417**, Continuous Lean proof reserve: ConditionalMove, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-417.md). <!-- x86-merged:417 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
