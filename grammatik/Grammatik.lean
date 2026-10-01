@@ -394,3 +394,4 @@ import Grammatik.X86.ControlFlow
 import Grammatik.X86.LockedOps
 import Grammatik.X86.AccessList
 import Grammatik.X86.TableLayout
+import Grammatik.X86.EntryState
