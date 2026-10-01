@@ -93,6 +93,34 @@ axioms.
   umbrella thread-creation crash; the merge gate will need a working
   full build to confirm the one-line umbrella import.
 
+## Integration gate 2026-10-01 (post-commit review round)
+
+Independent review accepted the isolated candidate; the integration gate
+FAILED and nothing was merged. Gate evidence (main checkout
+`/home/simon/Dokumente/Gabbro`, step 397/398): my module compiled cleanly
+inside the gate run (all 7 `#print axioms` lines for
+`CodeImmutability.lean` printed, standard axioms only), then the final
+umbrella step crashed identically to the clone:
+`libc++abi: terminating ... failed to create thread`, Lean exit 134, no
+Lean type error.
+
+Repair analysis: there is no repair in my owned files for this failure.
+The crash reproduces with my umbrella import stashed (control run in
+this clone, same step, same signal), so it is independent of my change:
+one import line among ~395 cannot cause thread-creation failure, and
+the umbrella step only loads the already-compiled olean (no
+re-evaluation of my `decide` proofs). Local re-check after the gate:
+`./lean-probe grammatik/Grammatik/X86/CodeImmutability.lean` is still
+`0 error(s)`, axioms unchanged. No Lean file was modified in this
+round; no guarantee weakened; no full source/binary chain acceptance
+claimed.
+
+Concrete blocker for the merger: `lean -j2 -M4096 Grammatik.lean`
+cannot spawn threads in this environment (main checkout and lane clone
+alike). Needs a machine/process limit fix outside any lane's owned
+files; a fresh independent review of the changed commit is still
+required once the gate can run.
+
 ## Task feedback
 
 The task is sound as stated: nothing requested turned out to need an
