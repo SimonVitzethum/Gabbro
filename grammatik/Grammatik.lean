@@ -447,3 +447,4 @@ import Grammatik.X86.TSOTrace
 import Grammatik.X86.ImageStoreFrame
 import Grammatik.X86.BridgeRead
 import Grammatik.X86.VectorCodec
+import Grammatik.X86.SourceCodeFrame
