@@ -93,24 +93,43 @@ theorem schreibTor_ok : torOkB schreibTor = true := by
 def c186VerweigertB (t : TorDekl) : Bool :=
   decide (t.art = .region) && !t.hatOr
 
-/-- Linux callee-saved registers the trampoline needs two of. -/
-def rufbewahrt : List Register :=
-  [Register.rbx, Register.rbp, Register.r12, Register.r13,
-   Register.r14, Register.r15]
+/-- Trampoline pool exactly as the emitter pins it (`emit.rs::syscall_stumpf`:
+    `["r12", "r13", "r14", "r15", "rbx"]`): `rbp` is never pinned (frame
+    pointer), and the pool never meets the fixed-destroyed set (`rcx`,
+    `r11`, `memory`), so only the gate's own bindings occupy it. -/
+def trampolinVorrat : List Register :=
+  [Register.r12, Register.r13, Register.r14, Register.r15, Register.rbx]
 
-/-- Free callee-saved registers: neither bound in nor destroyed. -/
-def freieRufbewahrt (t : TorDekl) : List Register :=
-  rufbewahrt.filter (fun r =>
-    !decide (r ∈ t.ein.map Prod.fst) && !decide (r ∈ t.clobber))
+/-- Free trampoline registers: the pool minus everything the gate occupies
+    (in-registers, the answer register, clobbers), mirroring the emitter's
+    `belegt = regs_in + regs_out + clobbers + fest_zerstoert`. -/
+def freieTrampolin (t : TorDekl) : List Register :=
+  trampolinVorrat.filter (fun r =>
+    !decide (r ∈ t.ein.map Prod.fst) && decide (r ≠ t.aus) &&
+    !decide (r ∈ t.clobber))
 
-/-- C187: a stack gate with fewer than two free callee-saved registers
+/-- C187: a stack gate with fewer than two free trampoline registers
     has no trampoline and is refused. -/
 def c187VerweigertB (t : TorDekl) : Bool :=
-  decide (t.art = .stapel) && decide ((freieRufbewahrt t).length < 2)
+  decide (t.art = .stapel) && decide ((freieTrampolin t).length < 2)
 
-/-- M140: a number used as a pointer is forged and refused at any site. -/
-def m140VerweigertB (istZahl benutztAlsZeiger : Bool) : Bool :=
-  istZahl && benutztAlsZeiger
+/-- M140 site mirror: a stub operand as a tagged value. A `zahl` carries a
+    bare word; a `zeiger` carries base and extent (never a bare word cast).
+    The tag assignment itself is the checker's business (`m1.rs`); this
+    mirror only decides the refusal shape once tags are given. -/
+inductive StubenWert where
+  | zahl (w : Wort)
+  | zeiger (basis len : Nat)
+  deriving DecidableEq, Repr
+
+/-- M140: a call-site operand list `(parameter index, tagged value)` against
+    the indices that expect a pointer. A number where a pointer is expected
+    is forged and refused at that site. -/
+def m140VerweigertB (wartetZeiger : List Nat)
+    (werte : List (Nat × StubenWert)) : Bool :=
+  werte.any (fun p => match p.2 with
+    | .zahl _ => decide (p.1 ∈ wartetZeiger)
+    | .zeiger _ _ => false)
 
 /-! ## 4. Concrete refusals: each check fails on its own shape. -/
 
@@ -179,12 +198,12 @@ theorem torRegionOhneOr_verweigert :
 theorem schreibTor_kein_c186 : c186VerweigertB schreibTor = false := by
   decide
 
-/-- C187 refusal: stack gate whose clobbers eat the trampoline registers. -/
+/-- C187 refusal: stack gate whose clobbers eat the trampoline pool. -/
 def torStapelOhneTrampolin : TorDekl :=
   { nummer := 1
     ein := [(Register.rdi, 0), (Register.rsi, 1), (Register.rdx, 2)]
     aus := Register.rax
-    clobber := [Register.rcx, Register.r11, Register.rbx, Register.rbp,
+    clobber := [Register.rcx, Register.r11, Register.rbx,
       Register.r12, Register.r13, Register.r14, Register.r15]
     errors := [(9, 0), (4, 1), (11, 2)]
     gruende := 3
@@ -192,9 +211,30 @@ def torStapelOhneTrampolin : TorDekl :=
     art := TorArt.stapel
     paramAnzahl := 3 }
 
-/-- A stack gate without two free callee-saved registers is refused. -/
+/-- A stack gate without two free trampoline registers is refused. -/
 theorem torStapelOhneTrampolin_verweigert :
     c187VerweigertB torStapelOhneTrampolin = true := by
+  decide
+
+/-- C187 divergence witness: the answer register occupies the pool.
+    With `aus = rbx` and `r12`-`r15` clobbered, only `rbx` looks free --
+    but the answer register is occupied (`belegt` holds `regs_out`), so no
+    two trampoline registers remain. The pre-fix model cleared this gate. -/
+def torStapelAntwortBelegt : TorDekl :=
+  { nummer := 1
+    ein := [(Register.rdi, 0), (Register.rsi, 1), (Register.rdx, 2)]
+    aus := Register.rbx
+    clobber := [Register.rcx, Register.r11,
+      Register.r12, Register.r13, Register.r14, Register.r15]
+    errors := [(9, 0), (4, 1), (11, 2)]
+    gruende := 3
+    hatOr := true
+    art := TorArt.stapel
+    paramAnzahl := 3 }
+
+/-- An answer register inside the pool counts as occupied: refused. -/
+theorem torStapelAntwortBelegt_verweigert :
+    c187VerweigertB torStapelAntwortBelegt = true := by
   decide
 
 /-- The witness stack shape with free registers is not a C187 refusal. -/
@@ -206,14 +246,19 @@ theorem schreibTor_stapel_kein_c187 :
     c187VerweigertB torStapelZeuge = false := by
   decide
 
-/-- M140 refusal: forged int-to-pointer at a site. -/
+/-- M140 refusal: buffer parameter 1 handed a bare number is forged. -/
 theorem m140_geschmiedet :
-    m140VerweigertB true true = true := by
+    m140VerweigertB [1] [(0, .zahl 5), (1, .zahl 7)] = true := by
   decide
 
-/-- M140 negative: a genuine pointer use is not forged. -/
+/-- M140 negative: a genuine pointer with its extent is not forged. -/
 theorem m140_echt_kein_fund :
-    m140VerweigertB false true = false := by
+    m140VerweigertB [1] [(0, .zahl 5), (1, .zeiger 0x2000 8)] = false := by
+  decide
+
+/-- M140 negative: a number where no pointer is expected is not forged. -/
+theorem m140_zahl_erlaubt :
+    m140VerweigertB [] [(0, .zahl 5)] = false := by
   decide
 
 /-! ## 5. Caller-stub byte-shape obligations. -/
@@ -344,9 +389,16 @@ theorem torStub_zeuge :
      by `linuxClobberB`; a bare-metal gate needs its own clobber rule.
    - C186/C187/M140 are validator/profile admission Bools, not hardware
      faults: `c186VerweigertB` (region answer without `or R`),
-     `c187VerweigertB` (stack gate with fewer than two free callee-saved
-     registers has no trampoline), `m140VerweigertB` (a number used as a
-     pointer is forged at any site).
+     `c187VerweigertB` (stack gate with fewer than two free trampoline
+     registers from the emitter-exact pool `r12`-`r15`/`rbx` has no
+     trampoline; occupancy is in-registers plus the answer register plus
+     clobbers, mirroring the emitter's `belegt`; `rbp` is never pinned),
+     `m140VerweigertB` (a number at a site index that expects a pointer
+     is forged).
+   - M140 detection itself stays OPEN: `StubenWert` tags are given, not
+     computed -- which site expects a pointer and which value is a number
+     is the checker's type business (`m1.rs`), never derived here. The
+     mirror decides only the refusal shape over tagged sites.
    - No trap semantics: the `syscall` instruction is checked literally
      (`0F 05` suffix) and never decoded or stepped -- the pilot
      `Befehl` has no trap form and `schritt` is never duplicated here.
@@ -373,9 +425,11 @@ theorem torStub_zeuge :
 #print axioms torRegionOhneOr_verweigert
 #print axioms schreibTor_kein_c186
 #print axioms torStapelOhneTrampolin_verweigert
+#print axioms torStapelAntwortBelegt_verweigert
 #print axioms schreibTor_stapel_kein_c187
 #print axioms m140_geschmiedet
 #print axioms m140_echt_kein_fund
+#print axioms m140_zahl_erlaubt
 #print axioms zeugenMoves_ok
 #print axioms zeugenStub_trap
 #print axioms zeugenStub_prefix_dekodiert
