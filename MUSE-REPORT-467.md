@@ -1,12 +1,46 @@
 # MUSE-REPORT-467: Independent exact-candidate review of 419 (X86 BitCount)
 
-## Clone / branch verification
+## Re-review of the NEW pinned candidate (2026-10-01, evening)
+
+Previous verdict (on `2c524bb1`) is stale: the author repaired with a new commit and this is
+a fresh substantive review of the NEW pinned snapshot below. Lean code delta vs the previous
+review: NONE — `grammatik/Grammatik/X86/BitCount.lean` blob `ed9a15a4` and the
+`grammatik/Grammatik.lean` hunk (`6e68b11c..e9c9576f`, one import line) are byte-identical to
+what was reviewed before (PATCH hunk mechanically compared: 473/473 lines identical; full
+definition/theorem inventory re-listed and unchanged). The only change in the new commit is
+`MUSE-REPORT-419.md` +31 lines: an addendum assessing the integration-gate failure.
+
+Addendum assessment (checked against the NEW `BUILD-EVIDENCE.json` entries): the author
+claims the gate's 7 quoted `info:` lines are the module's own `#print axioms` outputs
+(standard `[propext, Quot.sound]`, not errors) and the "2 error lines" are the umbrella-link
+crash (`Lean exited with code 134`, `build failed` on target `Grammatik`), byte-identical to
+the previously documented environmental `failed to create thread` failure. Fresh local
+re-checks quoted: probe RC=0/0 errors/0 `sorryAx`/0 `error(lean…)` (new evidence entries
+confirm exactly this), bau again 392/393 then umbrella-link crash. "Repair made: NONE" is the
+CORRECT call: there is no defect in the owned files for the evidence to point at, and editing
+proved-green code to work around a machine resource failure would be fabrication. No premise
+weakened, no guarantee touched, no file outside the three owned ones read or modified. My
+earlier wording nit (a) is addressed well enough by the new evidence: with a warm cache the
+bau log reaches `[392/393] Building Grammatik` past the BitCount target, i.e. the module
+elaborates inside the integration build and only the umbrella link crashes. Previous finding
+(b) (`gabbro_ziel` re-check) stands as documented: unrunnable under the crash, merge gate
+must re-run `./lean-bau` when resources allow.
+
+Fresh independent reproduction on the NEW pinned files (staged only the supplied
+`BitCount.lean` + the one import line, restored afterwards, tree verified clean):
+`./lean-probe grammatik/Grammatik/X86/BitCount.lean` → RC=0, `0 error(s)`, `sorryAx` count 0,
+`Unknown identifier|error(lean` count 0, every `depends on axioms` line within
+`[propext, Quot.sound]` or fewer. All prior checks (ownership = exactly the 3 files, canonical
+reuse, premise use, non-vacuity, joint non-degenerate memory witness, no duplicated
+IR/executor, no safety weakening) carry over unchanged since the code is byte-identical.
+
+## Clone / branch verification (unchanged)
 
 - Clone `/home/simon/Dokumente/gabbro-muse/a467`, branch `muse/467`: MATCH (checked
   `git rev-parse --show-toplevel` and `git branch --show-current`). No other clone read.
-- Candidate base `0b3132b7bb8bf108b3fd1613c70bc0955051f130` is an ancestor of this tree; candidate
-  HEAD `2c524bb1` is not fetched here (no network), so the review used the exact supplied
-  artefacts: `.tmp/review/SNAPSHOT.json`, `author-419/OWNER-TASK.md`, `author-419/PATCH.diff`,
+- Candidate base `0b3132b7bb8bf108b3fd1613c70bc0955051f130` is an ancestor of this tree; pinned
+  candidate HEADs (`2c524bb1` superseded, now `7feee9d0`) are not fetched here (no network),
+  so the review used the exact supplied artefacts: `.tmp/review/SNAPSHOT.json`, `author-419/OWNER-TASK.md`, `author-419/PATCH.diff`,
   `author-419/grammatik/Grammatik/X86/BitCount.lean`, `author-419/MUSE-REPORT-419.md`,
   `author-419/BUILD-EVIDENCE.json`.
 - PATCH bytes vs supplied file: byte-identical (473 lines each, compared mechanically).
@@ -88,5 +122,5 @@ ACCEPT covers ONLY the precisely delivered bounded claim above: pure fixed-width
 arithmetic + stated flag contract + feature-gated refusal + witnesses, with the listed cuts.
 No full compiler closure, no silicon/codec/source/cost/TSO claim is accepted.
 
-CANDIDATE: 419 2c524bb1d2f3008fdf356056024ef20a7a18d332
+CANDIDATE: 419 7feee9d0fe40f03b63dcde91cbecb727b97aec04
 VERDICT: ACCEPT
