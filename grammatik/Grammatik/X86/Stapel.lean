@@ -360,6 +360,91 @@ theorem ergebnis_bleibt_vor_rahmen (m m' : Speicher) (r : Rahmen)
   unfold ladeErgebnis
   exact read64_rahmen m m' (r.schlitzAddr idx) e v hwr hdis
 
+/-! ## 6. Whole-region save/restore. -/
+
+/-- Save a word list into consecutive slots from `ab`. -/
+def sichereListe (m : Speicher) (r : Rahmen) (ab : Nat) :
+    List Wort → Option Speicher
+  | [] => some m
+  | v :: vs =>
+    match sichereWort m r ab v with
+    | none => none
+    | some m' => sichereListe m' r (ab + 1) vs
+
+/-- Load `n` words from consecutive slots from `ab`. -/
+def ladeListe (m : Speicher) (r : Rahmen) (ab : Nat) :
+    Nat → Option (List Wort)
+  | 0 => some []
+  | n + 1 =>
+    match ladeWort m r ab with
+    | none => none
+    | some v =>
+      match ladeListe m r (ab + 1) n with
+      | none => none
+      | some vs => some (v :: vs)
+
+/-- Saving nothing changes nothing. -/
+theorem sichereListe_leer (m : Speicher) (r : Rahmen) (ab : Nat) :
+    sichereListe m r ab [] = some m := rfl
+
+/-- Loading nothing loads nothing. -/
+theorem ladeListe_null (m : Speicher) (r : Rahmen) (ab : Nat) :
+    ladeListe m r ab 0 = some [] := rfl
+
+/-- A region write preserves the read at a slot it never touches. Uses
+    the frame bound, the slot bound, the fit, the separation and the write. -/
+theorem sichereListe_rahmen_fremd (m m' : Speicher) (r : Rahmen) (ab : Nat)
+    (vs : List Wort) (k : Nat)
+    (hle : r.spitzeNat ≤ 2 ^ 64)
+    (hk : k < r.schlitzZahl)
+    (hfit : ∀ j, j < vs.length → ab + j < r.schlitzZahl)
+    (hsep : ∀ j, j < vs.length → k ≠ ab + j)
+    (hwr : sichereListe m r ab vs = some m') :
+    read64 m' (r.schlitzAddr k) = read64 m (r.schlitzAddr k) := by
+  induction vs generalizing ab m m' with
+  | nil =>
+    cases hwr
+    rfl
+  | cons w ws ih =>
+    unfold sichereListe at hwr
+    cases hmw : sichereWort m r ab w with
+    | none =>
+      simp only [hmw] at hwr
+      cases hwr
+    | some m₁ =>
+      simp only [hmw] at hwr
+      have h0 : 0 < (w :: ws).length := by simp
+      have hb : ab + 0 < r.schlitzZahl := hfit 0 h0
+      simp only [Nat.add_zero] at hb
+      have hne : ab ≠ k := fun he => hsep 0 h0 he.symm
+      have hdis : Disjunkt (r.schlitzAddr ab) (r.schlitzAddr k) :=
+        schlitz_disjunkt r ab k hb hk hne hle
+      have hmw64 : write64 m (r.schlitzAddr ab) w = some m₁ := by
+        unfold sichereWort at hmw
+        rw [if_pos hb] at hmw
+        exact hmw
+      have hstep : read64 m₁ (r.schlitzAddr k) =
+          read64 m (r.schlitzAddr k) :=
+        read64_rahmen m m₁ (r.schlitzAddr ab) (r.schlitzAddr k) w hmw64
+          hdis
+      have hfit' : ∀ j, j < ws.length → (ab + 1) + j < r.schlitzZahl := by
+        intro j hj
+        have hj' : j + 1 < (w :: ws).length := by
+          simp only [List.length_cons] at hj ⊢
+          omega
+        have h := hfit (j + 1) hj'
+        omega
+      have hsep' : ∀ j, j < ws.length → k ≠ (ab + 1) + j := by
+        intro j hj
+        have hj' : j + 1 < (w :: ws).length := by
+          simp only [List.length_cons] at hj ⊢
+          omega
+        have h := hsep (j + 1) hj'
+        omega
+      have ihrest := ih m₁ m' (ab + 1) hfit' hsep' hwr
+      rw [hstep] at ihrest
+      exact ihrest
+
 /- CUTS:
     - No instruction semantics, decoder, image mapping, TSO bridge, source
       correspondence, cost transfer or final-image acceptance is proved here.
