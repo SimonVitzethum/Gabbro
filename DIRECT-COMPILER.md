@@ -242,7 +242,7 @@ Last ledger refresh: **2026-10-01 19:38 UTC**. This is an operational snapshot, 
 | 563 | Connection: Multiply/divide byte decoder and execution connection | Merged after review/checks | 581: Merged after review/checks | [report](messung/muse/MUSE-REPORT-563.md) |
 | 564 | Connection: Shift operations byte decoder and execution connection | Merged after review/checks | 582: Merged after review/checks | [report](messung/muse/MUSE-REPORT-564.md) |
 | 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Agent working | 583: scheduled | [task](lanes/565.md) |
-| 566 | Connection: Conditional forms bytes to accepted control execution | Merged after review/checks | 584: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-566.md) |
+| 566 | Connection: Conditional forms bytes to accepted control execution | Merged after review/checks | 584: Merged after review/checks | [report](messung/muse/MUSE-REPORT-566.md) |
 | 567 | Connection: Canonical byte-TSO history projection | Merged after review/checks | 585: Merged after review/checks | [report](messung/muse/MUSE-REPORT-567.md) |
 | 568 | Connection: Executed pilot instruction to realised access footprint | Merged after review/checks | 586: Merged after review/checks | [report](messung/muse/MUSE-REPORT-568.md) |
 | 569 | Connection: Fetched call/return to stack-frame proofs | Merged after review/checks | 587: Merged after review/checks | [report](messung/muse/MUSE-REPORT-569.md) |
@@ -592,6 +592,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `bf0762b4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:bf0762b44d454e7ca1f1fc2d39f3bef16481393a -->
 - 2026-10-01: lane **578**, Independent connection review of 560, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-578.md). <!-- x86-merged:578 -->
 - 2026-10-01: lane **566**, Connection: Conditional forms bytes to accepted control execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-566.md). <!-- x86-merged:566 -->
+- 2026-10-01: lane **584**, Independent connection review of 566, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-584.md). <!-- x86-merged:584 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
