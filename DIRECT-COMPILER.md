@@ -228,7 +228,7 @@ Last ledger refresh: **2026-10-01 16:04 UTC**. This is an operational snapshot, 
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
 | 542 | Next bridge wave N9: StackUnwind | Merged after review/checks | 548: Merged after review/checks | [report](messung/muse/MUSE-REPORT-542.md) |
 | 543 | Next bridge wave N16: DecodeFault | Merged after review/checks | 549: Merged after review/checks | [report](messung/muse/MUSE-REPORT-543.md) |
-| 544 | Next bridge wave N18: RegionFresh | Merged after review/checks | 550: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-544.md) |
+| 544 | Next bridge wave N18: RegionFresh | Merged after review/checks | 550: Merged after review/checks | [report](messung/muse/MUSE-REPORT-544.md) |
 | 545 | Next bridge wave N11: PayloadResidue | Committed candidate; review/integration pending | 551: Committed candidate; review/integration pending | [task](lanes/545.md) |
 | 546 | Next bridge wave N13: ContractSites | Committed candidate; review/integration pending | 552: Committed candidate; review/integration pending | [task](lanes/546.md) |
 | 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Merged after review/checks | [report](messung/muse/MUSE-REPORT-547.md) |
@@ -551,6 +551,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **543**, Next bridge wave N16: DecodeFault, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-543.md). <!-- x86-merged:543 -->
 - 2026-10-01: lane **549**, Independent exact-candidate review of 543 DecodeFault, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-549.md). <!-- x86-merged:549 -->
 - 2026-10-01: lane **544**, Next bridge wave N18: RegionFresh, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-544.md). <!-- x86-merged:544 -->
+- 2026-10-01: lane **550**, Independent exact-candidate review of 544 RegionFresh, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-550.md). <!-- x86-merged:550 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
