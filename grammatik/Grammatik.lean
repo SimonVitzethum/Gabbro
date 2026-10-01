@@ -442,3 +442,4 @@ import Grammatik.X86.LoadedExecution
 import Grammatik.X86.ControlCodec
 import Grammatik.X86.SourceMemory
 import Grammatik.X86.BridgeWrite
+import Grammatik.X86.InstructionSelection
