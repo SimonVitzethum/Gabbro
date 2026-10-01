@@ -865,7 +865,7 @@ its replacement is implemented and checked; no new binary guarantee is claimed.
 
 **Wave A started:** at most 20 Opencode Go Muse Spark 1.3 Contributor agents, local-only.
 The first ten lanes (269–278) own isolated foundation/inventory files; see
-`dokumente/x86/WELLE-A.md`. Shared x86 syntax is `X86/Typen.lean`; no native backend or
+`dokumente/x86/WELLE-A.md`. Foundation lanes 270/271/273 are reviewed and merged locally; execution lane 272 and byte-codec/review lanes 279–281 form the next wave. No source-to-final-image chain is closed. Shared x86 syntax is `X86/Typen.lean`; no native backend or
 final-byte chain is claimed. The starter optimisation scope is recorded in that wave contract.
 
 - [ ] **Scope from implementation:** inventory all source operations, emitter/runtime paths,

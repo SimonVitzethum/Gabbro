@@ -337,7 +337,7 @@ opus/…:opus/…` first.
 | Diagnostic codes | **N578** (highest issued: N577, C-free lane, 2026-10-01; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
 | Gift (poison-probe) numbers | **1398** (highest file: `beispiele/gift/1397`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
 | Example numbers | **185** (highest file: `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
-| Lane numbers | **279** workers (269–278 reserved for direct-x86 wave A, 2026-10-01; highest pre-wave lane: 268); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter is authoritative) |
+| Lane numbers | **282** workers (269–281 reserved for direct-x86 waves A/B, 2026-10-01; highest pre-wave lane: 268); reviewers from **373** at least (372 is the highest named in the tree; the loop's own counter is authoritative) |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
 crates/ | sort -u | tail`, `ls beispiele beispiele/gift`. **It was stale again**, and by more

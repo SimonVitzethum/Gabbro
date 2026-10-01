@@ -80,3 +80,27 @@ use explicit session IDs; they never continue the last session across parallel c
 
 Coordinator state: `.claude/muse-arbeit/x86/state/`; logs: local
 `/home/simon/Dokumente/gabbro-muse/logs/NN.log`. These are operational records, not proof verdicts.
+
+## Reviewed foundation milestone and next execution wave
+
+Merged locally after coordinator review: word/flags (270), byte memory (271),
+and the repaired Rust vocabulary (273). The integrated Lean build and goal
+axiom checks passed; the source goal still uses only propext, Classical.choice,
+Quot.sound. The Rust lane's permission-revocation regression is repaired and
+its full suite passed (1468 passed, zero failed, one ignored); coordinator
+integration checks are being run separately. None of these is a complete
+source-to-byte chain. Remaining wave-A designs are still under review.
+
+Lane 272 now runs against the merged word/memory helpers. Wave B reserves:
+
+| Lane | Owner files | Deliverable |
+|---|---|---|
+| 279 | `X86/Codec.lean`, additive umbrella import | Actual canonical bytes, decoder, generic round-trip and length/refusal facts |
+| 280 | `x86/codec.rs`, additive `x86/mod.rs` export | Untrusted Rust byte encoder/decoder and independently pinned architecture probes |
+| 281 | `dokumente/x86/REVIEW-GRUNDLAGEN.md` | Independent arithmetic/memory/Rust-vocabulary/encoding-contract review |
+
+The byte encoding contract is `BYTE-PILOT.md`. Parallel implementations share
+that contract and the canonical types. The checked Lean decoder will remain
+the trust path; Rust remains unwired. At most 20 active Contributor model
+processes, including review and repair sessions. Independent reviews do not
+replace the later two complete-goal verdicts.
