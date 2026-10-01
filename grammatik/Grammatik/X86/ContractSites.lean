@@ -69,6 +69,57 @@ theorem callSite_vorOk (P : Programm D) (O : Orakel D) (passes fuel : Nat)
     simp only [execStmt, hR] at h
     cases h
 
+/-! ## 2. Return application at the actual values.
+
+    The matching `ensures` half, which `AufrufOpt` leaves OPEN
+    (`InlinePflicht.nachOk` is stated, only `vorOk` derived): a `.ok`
+    outcome of `rufAt` at depth `fuel + 1` carries a true `ensures` over
+    the ACTUAL result between the entry-side and return-side read worlds,
+    and the returned world is the invariant-read world. Derived -- never
+    assumed -- through the shared unfolding `rufAt_fall_nach`. -/
+
+/-- RETURN AT THE SITE: a successful call leaves `ensures` true at the
+    actual result. From the `rufAt` equation (`hfall`) the outcome is the
+    ensures `if` over the actual `v`; the `.logik` branch contradicts the
+    `.ok` equation, the `.ok` branch fixes both the check and the world. -/
+theorem rufAt_ok_gibt_ens (P : Programm D) (O : Orakel D)
+    (passes : Nat)
+    (fuel : Nat) (f : D.Fn) (σ : World D) (ρ : Env D (D.params f))
+    (sread : World D)
+    (hread : sread = σ.lese (Signatur.anfang D (D.signatur f))
+      (P.requires f).orte)
+    (hreq : wahr? (eval sread (P.requires f) sread ρ) = true)
+    (σ1 : World D) (v : ErgVal D (D.erg f))
+    (hbody : execEnd (V := vertragVon D f) O passes (rufAt P O passes fuel)
+      (P.rumpf f) sread ρ = EndAusgang.zurueck σ1 v)
+    (sret : World D)
+    (hret : sret = σ1.lese (vertragVon D f).ende (P.ensures f).orte)
+    (sinv : World D)
+    (hsinv : sinv = (D.invs.filter (schuldet f)).foldl
+      (fun σ' i => σ'.lese (invSicht D i) (P.invariante i).orte) sret)
+    (hinv : D.invs.find? (fun i => schuldet f i &&
+      !wahr? (eval sinv (P.invariante i) sinv .nil)) = none)
+    (σ' : World D)
+    (h : rufAt P O passes (fuel + 1) f σ ρ =
+      RufAusgang.ok (D := D) (f := f) σ' v) :
+    RufEnsCheck P f sread sret ρ v ∧ σ' = sinv := by
+  have hfall := rufAt_fall_nach P O passes fuel f σ ρ sread hread hreq
+    σ1 v hbody sret hret sinv hsinv hinv
+  rw [hfall] at h
+  by_cases hc : wahr? (eval sread (P.ensures f) sret
+      (ergEnv (D.erg f) v ρ)) = false
+  · rw [if_pos hc] at h
+    cases h
+  · rw [if_neg hc] at h
+    cases h
+    refine ⟨?_, rfl⟩
+    show wahr? (eval sread (P.ensures f) sret
+      (ergEnv (D.erg f) v ρ)) = true
+    cases heq : wahr? (eval sread (P.ensures f) sret
+        (ergEnv (D.erg f) v ρ)) with
+    | true => rfl
+    | false => exact absurd heq hc
+
 /- CUTS:
   - IR lowering closure is WAITING on lane 287: no SCFG/target bridge here.
   - Full skeleton lands in the next increments (§1 entry/return site facts,
@@ -77,5 +128,6 @@ theorem callSite_vorOk (P : Programm D) (O : Orakel D) (passes fuel : Nat)
 
 #print axioms kein_fern_vertrag
 #print axioms callSite_vorOk
+#print axioms rufAt_ok_gibt_ens
 
 end Gabbro.Grammatik.X86
