@@ -259,7 +259,7 @@ Last ledger refresh: **2026-10-01 21:16 UTC**. This is an operational snapshot, 
 | 598 | Overnight: Checked validator to loaded fetched execution | Merged after review/checks | 610: Merged after review/checks | [report](messung/muse/MUSE-REPORT-598.md) |
 | 599 | Overnight: Direct typed-source expression to pilot machine code | Merged after review/checks | 611: Merged after review/checks | [report](messung/muse/MUSE-REPORT-599.md) |
 | 600 | Overnight: Invariant-derived instruction selection with byte execution | Merged after review/checks | 612: Merged after review/checks | [report](messung/muse/MUSE-REPORT-600.md) |
-| 601 | Overnight: Flag dependencies across actual decoded control flow | Merged after review/checks | 613: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-601.md) |
+| 601 | Overnight: Flag dependencies across actual decoded control flow | Merged after review/checks | 613: Merged after review/checks | [report](messung/muse/MUSE-REPORT-601.md) |
 | 602 | Overnight: Code and relocation preservation under real data stores | Merged after review/checks | 614: Merged after review/checks | [report](messung/muse/MUSE-REPORT-602.md) |
 | 603 | Overnight: Whole-word grouping under actual trace exclusion | Agent working | 615: scheduled | [task](lanes/603.md) |
 | 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Merged after review/checks | [report](messung/muse/MUSE-REPORT-604.md) |
@@ -677,6 +677,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: publication batch checks passed for `5449d84f`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **601**, Overnight: Flag dependencies across actual decoded control flow, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-601.md). <!-- x86-merged:601 -->
 - 2026-10-01: checked master `fdb25d45` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:fdb25d45055f17a921a63d925889ca18df46c4be -->
+- 2026-10-01: lane **613**, Independent overnight review of 601, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-613.md). <!-- x86-merged:613 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
