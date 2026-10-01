@@ -306,10 +306,14 @@ generated driver, lock through the chain). Reviewers from 321.
     symbols, the licence and the arena `provision` are manifest words. kmod C0 (three probes)
     1659 -> 399 lines, runtime share 0 (`zaehle-c.py`); `pruefe-kernelmodul.sh` GREEN, 12 of 12
     gifts caught.
-  - [ ] C2, slice 2 -- the binding `bibliothek/linux-kmod/linux-kmod.c` in Gabbro (a variadic
-    `extern fn` for `_printk`; `_raw_spin_*` as externs over the lock blob; the kernel thread
-    start as a checked form like hosted `N572`), and the probes' own C (`melde.c`, `atomar.c`;
-    `takt.c`'s hrtimer is the probe's interrupt source).
+  - [x] C2, slice 2 -- the binding in Gabbro: `N573` (a variadic `extern fn` marker `...`; the
+    emitter writes the C prototype `(fixed…, ...)` and casts every argument behind it; gifts
+    1390, 1391; the Lean front end skips it, probe `tVar`), `_printk`/`panic`/`_raw_spin_*` as
+    externs, the report, the load verdict and the lock operations as Gabbro functions; the
+    probes `halde`/`atomar` report through `gabbro_kern_zeige`/`_halt` (`melde.c`, `atomar.c`
+    deleted). kmod C0 399 -> 210 lines, 4 -> 2 files; `pruefe-kernelmodul.sh` GREEN, 12/12 gifts.
+  - [ ] C2, slice 3 -- the kernel thread start and the core number (OFFEN O39), and the `takt`
+    probe's hrtimer (`takt.c`).
   - [ ] Bare metal (C3).
 
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics

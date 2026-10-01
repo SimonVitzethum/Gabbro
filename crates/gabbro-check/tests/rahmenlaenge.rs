@@ -327,3 +327,66 @@ pub fn main() -> i32 in 0 .. 1
 }",
     ]);
 }
+
+// ---- N573: the variadic marker `...` (C-free lane, C2) ---------------------------------
+
+fn variadisch(kopf: &str, nach: &str) -> String {
+    format!(
+        "{kopf} fn druck(fmt : ptr<normal, r> u8, ..., {nach}) -> i32
+    requires 16 <= lenof(fmt)
+    effects {{ reads fmt }}
+    costs <= 64 ops;"
+    )
+}
+
+#[test]
+fn n573_extern_mit_zahlen_und_zeigern_ist_sauber() {
+    // `p` is a byte pointer beside integers, so `N506` asks for its clause as everywhere.
+    sauber(&["extern fn druck(fmt : ptr<normal, r> u8, ..., a : u64, b : i32, p : ptr<normal, r> u8) -> i32
+    requires 16 <= lenof(fmt), 1 <= lenof(p)
+    effects { reads fmt, reads p }
+    costs <= 64 ops;"]);
+}
+
+#[test]
+fn n573_marker_ohne_folgenden_parameter_ist_sauber() {
+    sauber(&["extern fn druck(fmt : ptr<normal, r> u8, ...) -> i32
+    requires 16 <= lenof(fmt)
+    effects { reads fmt }
+    costs <= 64 ops;"]);
+}
+
+#[test]
+fn n573_marker_an_einer_gabbro_funktion() {
+    faellt(
+        &["pub fn summe(a : u64 in 0 .. 100, ..., b : u64 in 0 .. 100) -> u64 in 0 .. 200
+    effects { pure }
+    costs <= 8 ops
+{
+    return a + b;
+}"],
+        "N573",
+    );
+}
+
+#[test]
+fn n573_verbund_hinter_dem_marker() {
+    faellt(
+        &["type Paar = { a : u64, b : u64, };", &variadisch("extern", "p : Paar")],
+        "N573",
+    );
+}
+
+#[test]
+fn n573_marker_mit_fehlerkanal() {
+    faellt(
+        &[
+            "reason R { Nein = 1 \"no\" exhaustive }",
+            "extern fn druck(fmt : ptr<normal, r> u8, ..., a : u64) -> i32 or R
+    requires 16 <= lenof(fmt)
+    effects { reads fmt }
+    costs <= 64 ops;",
+        ],
+        "N573",
+    );
+}

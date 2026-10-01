@@ -1713,3 +1713,21 @@ without pthread (the child of a real `clone` shares the address space and runs o
 | **closed: the store before the branch** | the trap wrote the raw answer to its memory slot (`movq %rax, [roh]`) BEFORE `jz`, so the CHILD stored 0 too. With `-O0` the slot is `rbp`-relative -- the PARENT's frame, which the child shares: a race the parent can lose (it reads 0 back, decodes success with value 0, and runs the region itself). With `rsp`-relative addressing the child writes past the top of its own new stack. Since this commit the store follows the branch: only the parent, which falls through, writes it (`emit.rs`, the trap; 155/156/160 compile unchanged otherwise) |
 | **open: the region's own C runs in the parent's frame** | the region is C inside the parent's function, entered by jump on the handed stack. What it reads -- the one handed slot `N451`/`N452` allow (`stapel` in 160) -- is a local of the parent's C function: a register (preserved across `clone`, fine), an `rbp`-relative slot (the parent's frame: valid only while the parent has not returned), or an `rsp`-relative spill at `-O2` (garbage on the new stack). The checker's reading ("the child starts AT the region") is sound; the C lowering holds it only under compiler choices nothing pins. It is tested on the bare-metal kernel only |
 | **CLOSED the same day** | the region is outlined: `gabbro_kind_<nr>(T handed)` is a function of its own, and the trap's child path aligns the handed stack, moves the handed value out of the stack register into the first argument and CALLS it (`emit.rs`, `kind_tor_falle`, `kind_funktionen`; template `tor.kind`, `SchablonenFaden.lean` §3, `kind_region`). Measured on hosted Linux with a real `clone`: a Gabbro triple whose region reads the handed stack top and ends the process with 42 exits 42 at `-O0` and at `-O2`. `tests/klon_faden.rs` pins the new shape: no `asm goto`, no label, one call, one region function |
+
+## O39 — The kernel module's thread start takes a code address as a NUMBER (recorded 2026-09-30, C-free lane, C2)
+
+`bibliothek/linux-kmod/linux-kmod.gab` declares `extern fn gabbro_kern_faden_start(f : u64,
+koerper : u64) -> u32` (server lane K7, 2026-09-28): the generated module driver hands it the
+address of a root's wrapper as a `u64`, and the C body (`linux-kmod.c`) casts that number back to
+a function and runs it on a new kernel thread. **Nothing restricts the caller to the driver.** A
+Gabbro unit that takes this binding off the shelf can call `gabbro_kern_faden_start(x, y)` with
+any two numbers -- an int→fn-ptr conversion (Simon's decision 1 of 2026-09-30 says none enters
+the language) and a thread the checker's concurrency rules never see (the hosted twin was `N572`,
+closed by the checked `child` region and the proved trampoline `tor.trampolin`).
+
+| | |
+|---|---|
+| **what holds today** | only the generated driver calls it in the corpus, and the checker does not look: the protection is convention, not a rule |
+| **what closing it needs** | a checked kernel thread start: the root handed by NAME from the generated driver only (like hosted `faden.laufzeit`), the binding's start declared in a form no Gabbro call site may reach (the hosted stack gate is reachable only through `child`, `N572`), an `ERR_PTR` answer decoded like a gate's region answer (`tor.region`), and the join without `struct completion` (a word and the kernel's wait) -- then `linux-kmod.c` is gone |
+| **also C, and why** | `gabbro_kern_kernnummer`: one `%gs` load of the kernel's per-CPU DATA symbol `pcpu_hot`; Gabbro has no declaration of a foreign data object, and an `asm` naming it carries a symbol no declaration names (`pruefe-freistehend.sh` calls that UNCLASSIFIED) |
+| **measured** | `zaehle-c.py` kmod: 210 lines in 2 files -- `linux-kmod.c` (112, these two pieces) and the `takt` probe's own `takt.c` (98, its hardirq timer: `struct hrtimer` is a kernel layout) |

@@ -94,60 +94,252 @@ assume kern_bindung_maskiert
     "`gabbro_kern_sperre_nimm_maskiert` leaves no interrupt enabled on the calling core that could take the same lock, until the matching `gabbro_kern_sperre_gib_maskiert` restored what it masked."
     falsifier sonde_kern_maskiert;
 
+-- -- the kernel's own functions this binding calls ----------------------------
+--
+-- Declared here, bodies in the kernel (C-free lane, C2 slice 2). `_printk` is
+-- VARIADIC: its format travels as the fixed parameter and the two numbers
+-- through `...` (`N573`), cast to `u64` at every call. The format is always one
+-- of this file's 96-byte tables below: text, then zeros to the end, and exactly
+-- two `%llu` conversions -- the named assumption `kern_printk_format`.
+assume kern_printk_format
+    "`_printk` reads its format only up to the first zero byte, every format this binding passes holds that zero inside its 96 bytes, and each asks for at most the two 64-bit numbers passed behind it."
+    falsifier sonde_kern_printk;
+
+extern fn _printk(fmt : ptr<normal, r> u8, ..., a : u64, b : u64) -> i32
+    requires 96 <= lenof(fmt)
+    effects { reads fmt } costs <= 4096 ops;
+
+-- The kernel's stop: `panic` never returns (it halts or reboots the machine).
+extern fn panic(fmt : ptr<normal, r> u8, ..., a : u64) -> never
+    requires 96 <= lenof(fmt)
+    effects { diverges } costs <= 4096 ops;
+
+-- **A program's own words, through the same call** -- the report channel a probe
+-- or a driver uses for ITS sentences: a 96-byte table of its own (text, zeros to
+-- the end, at most two `%llu`), the two numbers, and the kernel's log. The same
+-- assumption as the runtime's sentences (`kern_printk_format`).
+pub fn gabbro_kern_zeige(text : ptr<normal, r> u8, a : u64, b : u64)
+    requires 96 <= lenof(text)
+    effects { reads text }
+    costs <= 4112 ops
+{
+    _printk(text, a, b);
+}
+
+-- And its stop: the sentence (at most one `%llu`, `a`), then the kernel halts.
+pub fn gabbro_kern_halt(text : ptr<normal, r> u8, a : u64) -> never
+    requires 96 <= lenof(text)
+    effects { reads text, diverges }
+    costs <= 4112 ops
+{
+    panic(text, a);
+}
+
+-- The lock primitives of this kernel's configuration: a `raw_spinlock_t` of
+-- 4 bytes whose unlocked value is 0 (no `CONFIG_DEBUG_SPINLOCK`, measured on the
+-- 6.8 build tree the manifest names -- `kern_sperre_form`), taken and given by
+-- the kernel's exported out-of-line functions.
+assume kern_sperre_form
+    "On the kernel this module is built for, a `raw_spinlock_t` is 4 bytes, 4 zero bytes are an unlocked one, and `_raw_spin_lock`/`_raw_spin_unlock`, `_raw_spin_lock_irqsave`/`_raw_spin_unlock_irqrestore` take and give it; the irqsave form masks this core's interrupts until the restore."
+    falsifier sonde_kern_sperre_form;
+
+extern fn _raw_spin_lock(l : ptr<normal, rw> u8)
+    effects { writes l } costs <= 512 ops;
+
+extern fn _raw_spin_unlock(l : ptr<normal, rw> u8)
+    effects { writes l } costs <= 512 ops;
+
+extern fn _raw_spin_lock_irqsave(l : ptr<normal, rw> u8) -> u64
+    effects { writes l } costs <= 512 ops;
+
+extern fn _raw_spin_unlock_irqrestore(l : ptr<normal, rw> u8, flaggen : u64)
+    requires 4 <= lenof(l)
+    effects { writes l } costs <= 512 ops;
+
 -- -- the report channel ------------------------------------------------------
 --
 -- The runtime has no words of its own inside a kernel module, because printing
 -- is a kernel call. A refusal travels as a CODE and two numbers
--- (`crates/gabbro-cli/src/treiber.rs`, `KMOD_MELDECODES`, lists the codes) and this binding's body
--- carries one sentence per code.
-extern fn gabbro_kern_melden(code : u32, a : u64, b : u64)
-    effects { pure } costs <= 512 ops;
+-- (`crates/gabbro-cli/src/treiber.rs`, `KMOD_MELDECODES`) and this binding
+-- carries one sentence per code, `KERN_ERR` first (bytes 1, 51).
+-- gabbro: arena refused: bad descriptor (max=%llu, floor=%llu)
+pub const KERN_T_DESKRIPTOR : [u8; 96] = [
+    1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32,
+    114, 101, 102, 117, 115, 101, 100, 58, 32, 98, 97, 100, 32, 100, 101, 115,
+    99, 114, 105, 112, 116, 111, 114, 32, 40, 109, 97, 120, 61, 37, 108, 108,
+    117, 44, 32, 102, 108, 111, 111, 114, 61, 37, 108, 108, 117, 41, 10, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+-- gabbro: arena refused: the floor (%llu slots) exceeds the provision (%llu bytes)
+pub const KERN_T_BODEN : [u8; 96] = [
+    1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32,
+    114, 101, 102, 117, 115, 101, 100, 58, 32, 116, 104, 101, 32, 102, 108, 111,
+    111, 114, 32, 40, 37, 108, 108, 117, 32, 115, 108, 111, 116, 115, 41, 32,
+    101, 120, 99, 101, 101, 100, 115, 32, 116, 104, 101, 32, 112, 114, 111, 118,
+    105, 115, 105, 111, 110, 32, 40, 37, 108, 108, 117, 32, 98, 121, 116, 101,
+    115, 41, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+-- gabbro: arena grow past max (%llu > %llu) -- fail-stop
+pub const KERN_T_UEBER_MAX : [u8; 96] = [
+    1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32,
+    103, 114, 111, 119, 32, 112, 97, 115, 116, 32, 109, 97, 120, 32, 40, 37,
+    108, 108, 117, 32, 62, 32, 37, 108, 108, 117, 41, 32, 45, 45, 32, 102,
+    97, 105, 108, 45, 115, 116, 111, 112, 10, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+-- gabbro: load refused -- the unit answered %llu (%llu)
+pub const KERN_T_ANTWORT : [u8; 96] = [
+    1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 108, 111, 97, 100, 32, 114,
+    101, 102, 117, 115, 101, 100, 32, 45, 45, 32, 116, 104, 101, 32, 117, 110,
+    105, 116, 32, 97, 110, 115, 119, 101, 114, 101, 100, 32, 37, 108, 108, 117,
+    32, 40, 37, 108, 108, 117, 41, 10, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+-- gabbro: load refused -- a fail-stop fired during init (%llu, %llu)
+pub const KERN_T_STOPP : [u8; 96] = [
+    1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 108, 111, 97, 100, 32, 114,
+    101, 102, 117, 115, 101, 100, 32, 45, 45, 32, 97, 32, 102, 97, 105, 108,
+    45, 115, 116, 111, 112, 32, 102, 105, 114, 101, 100, 32, 100, 117, 114, 105,
+    110, 103, 32, 105, 110, 105, 116, 32, 40, 37, 108, 108, 117, 44, 32, 37,
+    108, 108, 117, 41, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+-- gabbro: load refused -- a declared root did not start (%llu, %llu)
+pub const KERN_T_FADEN : [u8; 96] = [
+    1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 108, 111, 97, 100, 32, 114,
+    101, 102, 117, 115, 101, 100, 32, 45, 45, 32, 97, 32, 100, 101, 99, 108,
+    97, 114, 101, 100, 32, 114, 111, 111, 116, 32, 100, 105, 100, 32, 110, 111,
+    116, 32, 115, 116, 97, 114, 116, 32, 40, 37, 108, 108, 117, 44, 32, 37,
+    108, 108, 117, 41, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+-- gabbro: runtime report %llu (%llu) -- this binding has no sentence for it
+pub const KERN_T_SONST : [u8; 96] = [
+    1, 51, 103, 97, 98, 98, 114, 111, 58, 32, 114, 117, 110, 116, 105, 109,
+    101, 32, 114, 101, 112, 111, 114, 116, 32, 37, 108, 108, 117, 32, 40, 37,
+    108, 108, 117, 41, 32, 45, 45, 32, 116, 104, 105, 115, 32, 98, 105, 110,
+    100, 105, 110, 103, 32, 104, 97, 115, 32, 110, 111, 32, 115, 101, 110, 116,
+    101, 110, 99, 101, 32, 102, 111, 114, 32, 105, 116, 10, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+pub fn gabbro_kern_melden(code : u32, a : u64, b : u64)
+    effects { reads KERN_T_DESKRIPTOR, reads KERN_T_BODEN, reads KERN_T_UEBER_MAX, reads KERN_T_ANTWORT, reads KERN_T_STOPP, reads KERN_T_FADEN, reads KERN_T_SONST }
+    costs <= 4200 ops
+{
+    if code == 1 {
+        _printk(KERN_T_DESKRIPTOR, a, b);
+        return;
+    }
+    if code == 3 {
+        _printk(KERN_T_BODEN, a, b);
+        return;
+    }
+    if code == 6 {
+        _printk(KERN_T_UEBER_MAX, a, b);
+        return;
+    }
+    if code == 8 {
+        _printk(KERN_T_ANTWORT, a, b);
+        return;
+    }
+    if code == 9 {
+        _printk(KERN_T_STOPP, a, b);
+        return;
+    }
+    if code == 10 {
+        _printk(KERN_T_FADEN, a, b);
+        return;
+    }
+    _printk(KERN_T_SONST, u64(code), a);
+}
 
 -- -- the load verdict ------------------------------------------------------
 --
--- The generated module driver refuses a load with the code of what went wrong
--- (the list in `crates/gabbro-cli/src/treiber.rs`, `KMOD_MELDECODES`); what the
--- kernel's loader is ANSWERED for it is this binding's word -- a negative errno
--- of the kernel it is written for.
-extern fn gabbro_kern_verweigert(code : u32) -> i32
-    effects { pure } costs <= 32 ops;
-
--- An arena needs nothing from the kernel since the C-free lane's C2: its storage
--- is a static pool of the manifest's `provision`, zeroed by the module loader
--- like all of the module's `.bss`.
+-- The generated module driver refuses a load with the code of what went wrong;
+-- the loader is answered a negative errno of THIS kernel: a floor the provision
+-- cannot hold is a lack of memory (-ENOMEM), everything else an invalid module
+-- state (-EINVAL).
+pub fn gabbro_kern_verweigert(code : u32) -> i32 in -22 .. -12
+    effects { pure }
+    costs <= 8 ops
+{
+    let null : i32 = 0;
+    if code == 3 {
+        return null - 12;
+    }
+    return null - 22;
+}
 
 -- -- the locks ---------------------------------------------------------------
 --
--- The generated driver owns the STORAGE (a zeroed 256-byte blob per `lock`)
--- and these are the OPERATIONS over it. The masked pair is a separate pair of NAMES and not a flag, so that a
+-- The generated driver owns the STORAGE (a zeroed 256-byte blob per `lock`) and
+-- these are the OPERATIONS over it, over the kernel's `raw_spinlock_t` in its
+-- first 4 bytes. The masked pair hands the saved interrupt state OUT and takes it
+-- back IN: the driver keeps it beside the lock, written and read by the holder
+-- only. The masked pair is a separate pair of NAMES and not a flag, so that a
 -- program can bind a different primitive for the promise `masks irqs` makes --
 -- and so that `kern_bindung_maskiert` above has something to be about.
-extern fn gabbro_kern_sperre_init(s : ptr<normal, rw> u8)
+pub fn gabbro_kern_sperre_init(s : ptr<normal, rw> u8)
     requires 256 <= lenof(s)
-    effects { writes s } costs <= 512 ops;
+    effects { writes s }
+    costs <= 16 ops
+{
+    s[0] = 0;
+    s[1] = 0;
+    s[2] = 0;
+    s[3] = 0;
+}
 
-extern fn gabbro_kern_sperre_nimm(s : ptr<normal, rw> u8)
+pub fn gabbro_kern_sperre_nimm(s : ptr<normal, rw> u8)
     requires 256 <= lenof(s)
-    effects { writes s } costs <= 512 ops;
+    effects { writes s }
+    costs <= 520 ops
+{
+    _raw_spin_lock(s);
+}
 
-extern fn gabbro_kern_sperre_gib(s : ptr<normal, rw> u8)
+pub fn gabbro_kern_sperre_gib(s : ptr<normal, rw> u8)
     requires 256 <= lenof(s)
-    effects { writes s } costs <= 512 ops;
+    effects { writes s }
+    costs <= 520 ops
+{
+    _raw_spin_unlock(s);
+}
 
--- The masked pair hands the saved interrupt state OUT and takes it back IN: the
--- generated driver keeps it beside the lock, written and read by the holder only.
-extern fn gabbro_kern_sperre_nimm_maskiert(s : ptr<normal, rw> u8) -> u64
+pub fn gabbro_kern_sperre_nimm_maskiert(s : ptr<normal, rw> u8) -> u64
     requires 256 <= lenof(s)
-    effects { writes s } costs <= 512 ops;
+    effects { writes s }
+    costs <= 520 ops
+{
+    let f = _raw_spin_lock_irqsave(s);
+    return f;
+}
 
-extern fn gabbro_kern_sperre_gib_maskiert(s : ptr<normal, rw> u8, flaggen : u64)
+pub fn gabbro_kern_sperre_gib_maskiert(s : ptr<normal, rw> u8, flaggen : u64)
     requires 256 <= lenof(s)
-    effects { writes s } costs <= 512 ops;
+    effects { writes s }
+    costs <= 520 ops
+{
+    _raw_spin_unlock_irqrestore(s, flaggen);
+}
 
--- Which core is running. The runtime records it as the lock's HOLDER, so that a
+-- Which core is running. The runtime records it as a lock's HOLDER, so that a
 -- probe's own interrupt body can report whether it ever landed on a core that
--- was holding -- a green run that is a measurement and not an absence of bad
--- news.
+-- was holding. **Its body is C** (`linux-kmod.c`, `raw_smp_processor_id()`): the
+-- read is one `%gs`-relative load of the kernel's per-CPU `pcpu_hot`, a DATA
+-- symbol, and Gabbro has no declaration of a foreign data object -- an `asm`
+-- naming it would carry a symbol no declaration names (the freestanding stage
+-- calls that UNCLASSIFIED, rightly). A wall, counted by `zaehle-c.py`.
 extern fn gabbro_kern_kernnummer() -> u32
     effects { pure } costs <= 64 ops;
 

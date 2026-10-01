@@ -1,167 +1,48 @@
-/* bibliothek/linux-kmod/linux-kmod.c -- THE BODIES of the primitives
- * `linux-kmod.gab` declares (server lane, TODO section 0e K7, 2026-09-28).
+/* bibliothek/linux-kmod/linux-kmod.c -- the handwritten C left in a Gabbro kernel
+ * module: the core number and the thread pair `gabbro_kern_faden_start`/`_warte` that
+ * `linux-kmod.gab` declares (server lane K7, 2026-09-28; cut to this by the C-free
+ * lane's C2 slice 2, 2026-09-30).
  *
- * **THIS FILE IS THE ONE PLACE A LINUX KERNEL FUNCTION IS NAMED**, and it is a
- * file of the PROGRAM: a manifest lists it, the module's own build compiles it,
- * and whoever wants a different kernel writes a different one. The Gabbro tree
- * around it names none of these functions -- not the checker, not the emitter,
- * not the module driver the build writes (it declares what it
- * calls and defines nothing). That is Simon's binding constraint, 2026-09-27:
- * *"API calls are always user-made."*
+ * Everything else the binding does is Gabbro in `linux-kmod.gab` since C2: the
+ * report channel over the kernel's variadic `_printk`, the load verdict, the lock
+ * operations over `_raw_spin_*`, the core number (one `%gs` load). What stays here
+ * is a WALL, written down rather than hidden:
  *
- * What stood here before K7 -- measured, not remembered
- * (`dokumente/OFFEN.md` O35): `vzalloc`, `vfree`, `param_ops_uint` (from
- * `module_param`) and `_printk` came out of `laufzeit/kmodul/arena.c`;
- * `_raw_spin_lock_irqsave`, `_raw_spin_unlock_irqrestore` and `pcpu_hot` (from
- * `smp_processor_id`) out of `sperre.h`; `kthread_create_on_node`,
- * `wake_up_process`, `complete`, `wait_for_completion` and
- * `__init_swait_queue_head` out of `kmodul.c`. Twelve names, and they are all
- * below now.
+ *   * the kernel's thread start takes a FUNCTION POINTER to run on the new thread
+ *     (`kthread_create_on_node(threadfn, data, …)`). A Gabbro `extern fn` that took
+ *     one could start a thread the checker's concurrency rules never see -- the
+ *     hosted twin of that hole is `N572`, closed by the checked `child` region and
+ *     the proved trampoline `tor.trampolin`. The kernel needs its own checked form;
+ *     until it exists, the start is this C, called by the generated driver only;
+ *   * its answer is a pointer OR an errno in one word (`ERR_PTR`), a decoding
+ *     Gabbro has for gate answers (`tor.region`) and not for an `extern fn`;
+ *   * the join is a `struct completion`, a kernel type of configuration-dependent
+ *     layout, kept in the driver's 32-word blob (`_Static_assert` below);
+ *   * the core number is a read of the kernel's per-CPU DATA symbol `pcpu_hot`,
+ *     and Gabbro has no declaration of a foreign data object.
  *
- * WHY THE KERNEL'S TYPES LIVE ON THIS SIDE. A `raw_spinlock_t` and a
- * `struct completion` are as much the kernel's as `raw_spin_lock` is, and their
- * SIZE depends on its configuration. So the runtime hands over a blob of words
- * and this file lays its own structs into it -- with a `_Static_assert` that
- * they fit, held against the very kernel the module is being built for. *A blob
- * too small is a loud build error and never a silent overrun.*
- *
- * WHAT MAKES THE MASKED PAIR THE MASKED PAIR. `raw_spin_lock_irqsave`, and the
- * assumption `kern_bindung_maskiert` of the declaration file is exactly the
- * promise it keeps. `raw_spinlock_t` and not `spinlock_t`: on a `PREEMPT_RT`
- * kernel a `spinlock_t` is a sleeping lock, so a holder can be descheduled and a
- * Gabbro lock's declared holding time (`held <= N ops`) would mean nothing.
- * Stronger than asked, never weaker.
+ * `zaehle-c.py` counts this file (kmod target); its removal is C2's next step.
  */
 
-#include <linux/errno.h>
-#include <linux/printk.h>
-#include <linux/spinlock.h>
 #include <linux/smp.h>
 #include <linux/kthread.h>
 #include <linux/completion.h>
 #include <linux/err.h>
 #include <linux/string.h>
 
-/* The report codes of the generated module driver (`treiber.rs`,
- * `KMOD_MELDECODES`) and the thread blob it hands over. The driver and the
- * emitted unit carry the prototypes of every function below, so the C compiler
- * holds each definition against them in the driver's translation unit. */
-#define GABBRO_KERN_M_DESKRIPTOR    1u
-#define GABBRO_KERN_M_BODEN         3u
-#define GABBRO_KERN_M_UEBER_MAX     6u
-#define GABBRO_KERN_M_LADEN_ANTWORT 8u
-#define GABBRO_KERN_M_LADEN_STOPP   9u
-#define GABBRO_KERN_M_LADEN_FADEN  10u
+/* The thread blob the generated module driver hands over (`treiber.rs`,
+ * `erzeuge_kmod`: 32 words per root). The driver carries the prototypes of both
+ * functions below, so the C compiler holds each definition against them. */
 #define GABBRO_KERN_FADEN_WORTE 32
 
-void gabbro_kern_melden(uint32_t code, uint64_t a, uint64_t b);
-int32_t gabbro_kern_verweigert(uint32_t code);
-void gabbro_kern_sperre_init(uint8_t *s);
-void gabbro_kern_sperre_nimm(uint8_t *s);
-void gabbro_kern_sperre_gib(uint8_t *s);
-uint64_t gabbro_kern_sperre_nimm_maskiert(uint8_t *s);
-void gabbro_kern_sperre_gib_maskiert(uint8_t *s, uint64_t flaggen);
 uint32_t gabbro_kern_kernnummer(void);
 uint32_t gabbro_kern_faden_start(uint64_t f, uint64_t koerper);
 void gabbro_kern_faden_warte(uint64_t f);
 
-/* -- the report channel ---------------------------------------------------- */
-/*
- * One sentence per code. The runtime hands over a number because printing is a
- * kernel call; the WORDS are the program's, and this is where they stand. A code
- * this binding does not know is still reported -- a silent drop would make a
- * refusal look like a successful load.
- */
-void gabbro_kern_melden(uint32_t code, uint64_t a, uint64_t b)
-{
-    switch (code) {
-    case GABBRO_KERN_M_DESKRIPTOR:
-        pr_err("gabbro: arena reserve refused: bad descriptor (max=%llu, floor=%llu)\n",
-               a, b);
-        break;
-    case GABBRO_KERN_M_BODEN:
-        pr_err("gabbro: arena refused: the provision (%llu bytes) cannot hold the committed floor (%llu slots)\n",
-               b, a);
-        break;
-    case GABBRO_KERN_M_UEBER_MAX:
-        pr_err("gabbro: arena grow past max (%llu > %llu) -- fail-stop\n", a, b);
-        break;
-    case GABBRO_KERN_M_LADEN_ANTWORT:
-        pr_err("gabbro: load refused -- the unit answered %llu\n", a);
-        break;
-    case GABBRO_KERN_M_LADEN_STOPP:
-        pr_err("gabbro: load refused -- a fail-stop fired during init (%llu)\n", a);
-        break;
-    case GABBRO_KERN_M_LADEN_FADEN:
-        pr_err("gabbro: load refused -- a declared root did not start (%llu)\n", a);
-        break;
-    default:
-        pr_err("gabbro: runtime report %u (%llu, %llu) -- this binding has no sentence for it\n",
-               code, a, b);
-        break;
-    }
-}
-
-/* -- the load verdict ------------------------------------------------------ */
-/*
- * What the kernel's loader is answered when the generated driver refuses a
- * load: a negative errno of THIS kernel. A reservation that cannot hold its
- * floor is a lack of memory; everything else is an invalid module state.
- */
-int32_t gabbro_kern_verweigert(uint32_t code)
-{
-    return code == GABBRO_KERN_M_BODEN ? -ENOMEM : -EINVAL;
-}
-
-/* -- the locks ------------------------------------------------------------- */
-/*
- * THE FLAGS WORD IS IN THIS STRUCT, and that is sound for the same reason it is
- * on bare metal: it is written only by the thread that holds the lock, between
- * the acquire and the release, and read only by that same thread. The interface
- * carries no flags argument, because the emitter's `L_nimm`/`L_gib` take none
- * and nothing may travel on their stack.
- */
-_Static_assert(sizeof(raw_spinlock_t) <= 256,
-               "this kernel's raw_spinlock_t does not fit the driver's 256-byte lock blob");
-_Static_assert(__alignof__(raw_spinlock_t) <= 64,
-               "this kernel's raw_spinlock_t wants more alignment than the driver's lock blob has");
-
-static raw_spinlock_t *sperre(uint8_t *s)
-{
-    return (raw_spinlock_t *)(void *)s;
-}
-
-void gabbro_kern_sperre_init(uint8_t *s)
-{
-    raw_spin_lock_init(sperre(s));
-}
-
-void gabbro_kern_sperre_nimm(uint8_t *s)
-{
-    raw_spin_lock(sperre(s));
-}
-
-void gabbro_kern_sperre_gib(uint8_t *s)
-{
-    raw_spin_unlock(sperre(s));
-}
-
-uint64_t gabbro_kern_sperre_nimm_maskiert(uint8_t *s)
-{
-    unsigned long f;
-
-    raw_spin_lock_irqsave(sperre(s), f);
-    return (uint64_t)f;
-}
-
-void gabbro_kern_sperre_gib_maskiert(uint8_t *s, uint64_t flaggen)
-{
-    raw_spin_unlock_irqrestore(sperre(s), (unsigned long)flaggen);
-}
-
+/* -- the core number ------------------------------------------------------- */
 uint32_t gabbro_kern_kernnummer(void)
 {
-    return (uint32_t)smp_processor_id();
+    return (uint32_t)raw_smp_processor_id();
 }
 
 /* -- the roots as kernel threads ------------------------------------------- */

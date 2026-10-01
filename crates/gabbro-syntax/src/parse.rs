@@ -1748,6 +1748,40 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// **A function's parameter list, with the C-linkage marker `...`** (C-free lane, C2,
+    /// 2026-09-30): `(fmt : ptr<normal, r> u8, ..., a : u64, b : u64)` -- the parameters behind
+    /// the marker are passed through the variadic part of a C function (`_printk`). Every
+    /// parameter is still declared and typed; the marker says only how the foreign symbol's
+    /// PROTOTYPE reads, so the model keeps a fixed arity. The index of the first parameter
+    /// behind it is returned; the checker holds the rest (`N573`: an `extern fn` only, at least
+    /// one parameter before it, integers and pointers behind it).
+    fn params_variadisch(&mut self) -> Erg<(Vec<Parameter>, Option<usize>)> {
+        let mut liste = Vec::new();
+        let mut ab = None;
+        loop {
+            if ab.is_none()
+                && !liste.is_empty()
+                && self.ist_z(Z::Bereich)
+                && self.blick_n(1).art == Art::Zeichen(Z::Punkt)
+            {
+                self.pos += 2;
+                ab = Some(liste.len());
+                if !self.friss_z(Z::Komma) {
+                    break;
+                }
+                continue;
+            }
+            let name = self.erwarte_ident()?;
+            self.erwarte_z(Z::Kolon)?;
+            let typ = self.typeexpr()?;
+            liste.push(Parameter { name, typ });
+            if !self.friss_z(Z::Komma) {
+                break;
+            }
+        }
+        Ok((liste, ab))
+    }
+
     fn params(&mut self) -> Erg<Vec<Parameter>> {
         let mut liste = Vec::new();
         loop {
@@ -3052,10 +3086,10 @@ impl<'a> Parser<'a> {
         self.erwarte_kw(Kw::Fn)?;
         let name = self.erwarte_ident()?;
         self.erwarte_z(Z::RundAuf)?;
-        let parameter = if self.ist_z(Z::RundZu) {
-            Vec::new()
+        let (parameter, variadisch_ab) = if self.ist_z(Z::RundZu) {
+            (Vec::new(), None)
         } else {
-            self.params()?
+            self.params_variadisch()?
         };
         self.erwarte_z(Z::RundZu)?;
         let ergebnis = if self.friss_z(Z::Pfeil) {
@@ -3267,6 +3301,7 @@ impl<'a> Parser<'a> {
             translator_fuer: None,
             name,
             parameter,
+            variadisch_ab,
             ergebnis,
             fehler,
             verfeinert,
@@ -3381,6 +3416,7 @@ impl<'a> Parser<'a> {
                 name: pname,
                 typ: ptyp,
             }],
+            variadisch_ab: None,
             ergebnis,
             fehler: None,
             verfeinert: None,

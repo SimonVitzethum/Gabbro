@@ -4161,7 +4161,13 @@ MARKE_EMIT=156
 # file of its own, so it emits only as the two-file unit it always was built as -- with
 # `bibliothek/linux/linux.gab` beside it -- and that unit is built, linked and RUN by
 # `instrumente/pruefe-os-bindung.sh` (GREEN, 8 harness gifts). Stage 9 emits one file at a time.
-MARKE_EMIT_M=161
+# **161 -> 159 on 2026-09-30 (C-free lane, C2 slice 2), the same reading:**
+# `messung/proben/kmodul/halde-treiber.gab` and `atomar-faeden.gab` report through the kernel
+# binding's Gabbro functions by name (`use linux::kmod::gabbro_kern_zeige`, `_halt`) since their
+# own C (`melde.c`, `atomar.c`) was deleted, so each emits as the unit it is built as -- with
+# `bibliothek/linux-kmod/linux-kmod.gab` beside it -- and that unit is built, LOADED and read in
+# QEMU by `instrumente/pruefe-kernelmodul.sh` (GREEN, 12 harness gifts).
+MARKE_EMIT_M=159
 # **161 -> 162 on 2026-09-30 (server lane, M-ALLTAG C).** One new probe program: `messung/proben/seiten-zurueck/ring.gab`
 # (a 1 MiB static buffer and the one statement that gives it back), the subject of `instrumente/pruefe-seiten-zurueck.sh`.
 # **Und drei Marken kommen dazu, weil die Reichweite der ganze Baum ist** (2026-08-31).

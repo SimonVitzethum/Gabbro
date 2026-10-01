@@ -57,25 +57,54 @@
 -- models is a NAMED ASSUMPTION and not a claim.
 --
 -- **Every call into the kernel is the PROGRAM's** (Simon, 2026-09-27). This
--- unit names one foreign function with its shape, effects, cost and the
--- assumption its body keeps; the body is the program's own C
--- (`messung/proben/kmodul/atomar.c`), which is where `pr_info` stands. Nothing
--- about Linux is in this file -- not even the kthreads, which the module
--- runtime starts from the unit's own `concurrent` set.
+-- unit reports through the binding it takes off the shelf
+-- (`bibliothek/linux-kmod`: `gabbro_kern_zeige` and `gabbro_kern_halt`, Gabbro
+-- functions over the kernel's `_printk` and `panic`) with sentences of its own,
+-- the 96-byte tables below. Until the C-free lane's C2 they were the program's
+-- own C (`atomar.c`, deleted). Nothing about Linux is in this file -- not even
+-- the kthreads, which the module driver starts from the unit's own `concurrent`
+-- set.
 module treiber::atomar {
 
-assume kmod_atomar_vertrag
-    "The module's own `gabbro_kmod_atomar_melde` body writes its two words to the kernel log and returns; it keeps the x86_64 SysV convention and never fails."
-    falsifier sonde_kmod_atomar;
+use linux::kmod::gabbro_kern_zeige;
+use linux::kmod::gabbro_kern_halt;
 
--- The kernel API, declared here and nowhere else.
-extern fn gabbro_kmod_atomar_melde(schluessel : u32, wert : u64) effects { pure } costs <= 64 ops;
+-- "gabbro-atomar: k=%llu v=%llu\n" at KERN_INFO (bytes 1, 54).
+pub const ATOMAR_T : [u8; 96] = [
+    1, 54, 103, 97, 98, 98, 114, 111, 45, 97, 116, 111, 109, 97, 114, 58,
+    32, 107, 61, 37, 108, 108, 117, 32, 118, 61, 37, 108, 108, 117, 10, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+-- "gabbro-atomar: a bounded CAS loop exceeded its declared passes (%llu)\n" at KERN_EMERG.
+pub const ATOMAR_HALT_T : [u8; 96] = [
+    1, 48, 103, 97, 98, 98, 114, 111, 45, 97, 116, 111, 109, 97, 114, 58,
+    32, 97, 32, 98, 111, 117, 110, 100, 101, 100, 32, 67, 65, 83, 32, 108,
+    111, 111, 112, 32, 101, 120, 99, 101, 101, 100, 101, 100, 32, 105, 116, 115,
+    32, 100, 101, 99, 108, 97, 114, 101, 100, 32, 112, 97, 115, 115, 101, 115,
+    32, 40, 37, 108, 108, 117, 41, 10, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+fn gabbro_kmod_atomar_melde(schluessel : u32, wert : u64)
+    costs <= 4200 ops
+{
+    gabbro_kern_zeige(ATOMAR_T, u64(schluessel), wert);
+}
 
 -- The bounded CAS loop's exit. It is never taken by a two-thread run over 256
 -- rounds, and it stays declared because the clause that names it stays written:
 -- a construct that dropped its own clauses where the generator finds a shortcut
 -- would make the shortcut a language rule.
-extern fn aufgegeben() -> never effects { diverges };
+fn aufgegeben() -> never
+    effects { reads ATOMAR_HALT_T, diverges }
+    costs <= 4200 ops
+{
+    gabbro_kern_halt(ATOMAR_HALT_T, 0);
+}
 
 -- **The flag and its payload, and BOTH are atomics.** The obvious shape here is
 -- `beispiele/117`'s -- ordinary storage published on the flag
@@ -190,7 +219,7 @@ concurrent { erzeuger, verbraucher };
 
 -- Load: say so, and answer 0 -- the roots are started by the module runtime
 -- AFTER this returns, which is the same order `main` gives the hosted driver.
-impl fn laden() -> u32 effects { pure } costs <= 64 ops {
+impl fn laden() -> u32 effects { reads ATOMAR_T } costs <= 4264 ops {
     gabbro_kmod_atomar_melde(1, 0);
     return 0;
 }
@@ -198,8 +227,8 @@ impl fn laden() -> u32 effects { pure } costs <= 64 ops {
 -- Unload: every root has returned by now, so this is where the numbers are
 -- read. Four keys, and the harness holds all four against the source.
 impl fn entladen() -> u32
-    effects { reads ZAEHLER, reads TOR, reads gesehen, reads schlecht }
-    costs   <= 1024 ops
+    effects { reads ZAEHLER, reads TOR, reads gesehen, reads schlecht, reads ATOMAR_T }
+    costs   <= 22000 ops
 {
     let z : u64 in 0 .. 1000 = ZAEHLER;
     gabbro_kmod_atomar_melde(2, z);

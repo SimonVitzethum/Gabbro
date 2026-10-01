@@ -22,6 +22,7 @@
 //! | `N463` | at a call, every `x <= lenof(p)` clause of the callee HOLDS, decided: an array passed for `p` bounds `x`'s argument by its length (the range of the argument must lie inside), and a pointer passed for `p` must be the caller's own parameter `q` with `x`'s argument the caller's own parameter `y` and the caller carrying `y <= lenof(q)` itself | `m1.rs` (`transfer_bound_at_call`), one funnel for every call form |
 //! | `N464` | a `syscall` that takes a pointer at numbers (a buffer the kernel moves bytes through) points at BYTES (`u8`/`i8`) and carries a `requires x <= lenof(p)` over one of its integer parameters | `syscall.rs` (`buffer_bound`) |
 //! | `N506` | an `extern fn` that takes a pointer at numbers (a buffer the foreign code moves bytes through) points at BYTES (`u8`/`i8`) and carries a `requires x <= lenof(p)` over one of its integer parameters (lane 262, OFFEN O23) | `rahmenlaenge.rs` (`buffer_bound_extern`) |
+//! | `N573` | the variadic marker `...` of a parameter list stands only at an `extern fn`, behind at least one parameter, with integers and pointers behind it (C-free lane, C2) | `rahmenlaenge.rs` (`variadik`) |
 //!
 //! **What this reading is: strong, not `M115`'s.** `M115` refuses a precondition only where
 //! the argument's range EXCLUDES it and counts the rest as open obligations. `N463` refuses
@@ -163,11 +164,72 @@ pub fn caller_carries(rufer: &[LengthBound], y: &str, q: &str, strikt: bool) -> 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
         let ItemArt::Funktion(f) = &item.art else { return };
+        variadik(baum, modul, f, absagen);
         if f.klasse != Some(FnKlasse::Extern) {
             return;
         }
         buffer_bound_extern(baum, modul, f, absagen);
     });
+}
+
+/// **`N573` -- the variadic marker `...` of a parameter list** (C-free lane, C2, 2026-09-30).
+///
+/// `extern fn _printk(fmt : ptr<normal, r> u8, ..., a : u64, b : u64) -> i32` says that the
+/// foreign SYMBOL is a variadic C function and that `a`, `b` travel through its `...`. Three
+/// things are held:
+///
+/// * **only at an `extern fn`** -- a Gabbro body has no variadic part to receive them, and a
+///   `syscall` passes registers, not a C argument list;
+/// * **at least one parameter before it** -- C has no variadic function without a fixed one;
+/// * **only integers and pointers behind it** -- a record or an array passed through `...`
+///   has no declared layout on the other side, and a float is promoted to `double`, which the
+///   declared type would no longer describe. An integer is promoted to at least `int`, which
+///   keeps its value; a pointer passes as it is.
+///
+/// **Not claimed:** that the foreign function reads exactly the arguments the declaration
+/// passes (a format string that asks for a third number reads a register nobody set) -- that
+/// stays the foreign body's named assumption, like every contract of a foreign edge.
+fn variadik(baum: &Programm, modul: &str, f: &FnDecl, absagen: &mut Absagen) {
+    let Some(ab) = f.variadisch_ab else { return };
+    let grund = if f.klasse != Some(FnKlasse::Extern) {
+        Some("the marker stands at a function that is not `extern` -- only a foreign C symbol \
+              has a variadic part to receive what stands behind it"
+            .to_string())
+    } else if f.fehler.is_some() {
+        Some("the marker stands at a function with an `or <reason>` channel -- that channel is \
+              two out-parameters behind the declared ones, and a variadic C function would \
+              receive them as anonymous arguments"
+            .to_string())
+    } else if ab == 0 {
+        Some("the marker stands before every parameter -- C has no variadic function without a \
+              fixed parameter"
+            .to_string())
+    } else {
+        let u = crate::umgebung::Umgebung::sammle(baum);
+        f.parameter[ab..].iter().find_map(|p| {
+            let gut = matches!(p.typ, TypExpr::Zeiger(_))
+                || matches!(
+                    u.typ_von_ausdruck_decl(modul, &p.typ),
+                    crate::typen::Typ::Ganzzahl(_) | crate::typen::Typ::Umlaufend(_)
+                );
+            (!gut).then(|| {
+                format!(
+                    "`{}` passes through the variadic part and is neither an integer nor a \
+                     pointer -- its layout on the other side is declared nowhere",
+                    p.name.text
+                )
+            })
+        })
+    };
+    if let Some(grund) = grund {
+        absagen.schiebe(
+            Absage::fehler("N573", f.name.span, format!("`fn {}`: {grund}", f.name.text))
+                .mit_notiz(
+                    "`...` in a parameter list says how the foreign C prototype reads; every \
+                     parameter is still declared, typed and passed at every call",
+                ),
+        );
+    }
 }
 
 fn buffer_bound_extern(baum: &Programm, modul: &str, f: &FnDecl, absagen: &mut Absagen) {

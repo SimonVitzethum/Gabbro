@@ -1108,6 +1108,15 @@ def parseParamListe (f : Nat) (toks : List Token) :
       | .ok r2 => match parseTyp f r2 with
         | .error e => .error e
         | .ok (t, r3) => match r3 with
+          -- The variadic marker `...` (lexed `..` `.`; C-free lane, C2): a fact about the
+          -- foreign C prototype only -- every parameter behind it is declared and passed, so
+          -- the parsed list keeps them all and the marker itself carries nothing into `D`.
+          | .zeichen "," :: .zeichen ".." :: .zeichen "." :: .zeichen ")" :: r4 =>
+            .ok ([(n, t)], .zeichen ")" :: r4)
+          | .zeichen "," :: .zeichen ".." :: .zeichen "." :: .zeichen "," :: r4 =>
+            match parseParamListe f r4 with
+            | .error e => .error e
+            | .ok (ps, r) => .ok ((n, t) :: ps, r)
           | .zeichen "," :: r4 => match parseParamListe f r4 with
             | .error e => .error e
             | .ok (ps, r) => .ok ((n, t) :: ps, r)

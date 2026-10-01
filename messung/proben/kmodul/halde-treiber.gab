@@ -6,12 +6,10 @@
 -- cleanly. The instrument is `instrumente/pruefe-kernelmodul.sh`.
 --
 -- **Every call into the kernel is the PROGRAM's** (Simon, 2026-09-27). This
--- unit names ONE foreign function, `gabbro_kmod_melde`, with its shape, its
--- effects, its cost and the assumption its body has to keep. Nothing about
--- Linux is in this file and nothing about Linux is in the tree because of it:
--- the body is the module's own C (`messung/proben/kmodul/melde.c`), which is
--- where `pr_info` stands. A different kernel gets a different body and not a
--- different Gabbro.
+-- unit reports through the binding it takes off the shelf
+-- (`bibliothek/linux-kmod`: `gabbro_kern_zeige`, a Gabbro function over the
+-- kernel's `_printk`) with a sentence of its own, a 96-byte table below. Until
+-- the C-free lane's C2 the report was the module's own C (`melde.c`, deleted).
 --
 -- **The heap.** `Knoten` reserves for 4096 slots (`max`) and starts with 4
 -- committed (`capacity 2 .. 4`). `laden` grows it three times by 1024 -- the
@@ -23,12 +21,23 @@
 -- branch the hosted runtime practically never takes (OFFEN O20).
 module treiber::halde {
 
-assume kmod_melde_vertrag
-    "The module's own `gabbro_kmod_melde` body writes its two words to the kernel log and returns; it keeps the x86_64 SysV convention and never fails."
-    falsifier sonde_kmod_melde;
+use linux::kmod::gabbro_kern_zeige;
 
--- The kernel API, declared here and nowhere else.
-extern fn gabbro_kmod_melde(schluessel : u32, wert : u64) effects { pure } costs <= 64 ops;
+-- "gabbro-halde: k=%llu v=%llu\n" at KERN_INFO (bytes 1, 54).
+pub const HALDE_T : [u8; 96] = [
+    1, 54, 103, 97, 98, 98, 114, 111, 45, 104, 97, 108, 100, 101, 58, 32,
+    107, 61, 37, 108, 108, 117, 32, 118, 61, 37, 108, 108, 117, 10, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+fn gabbro_kmod_melde(schluessel : u32, wert : u64)
+    costs <= 4200 ops
+{
+    gabbro_kern_zeige(HALDE_T, u64(schluessel), wert);
+}
 
 type Wert = u64 in 0 .. 1000;
 
@@ -36,7 +45,7 @@ arena Knoten capacity 2 .. 4 max 4096 of Wert;
 
 -- Load: grow three times, allocate, read back, report. The `else` of the
 -- third `grow` is the refuse-on-full path and reports key 3.
-impl fn laden() -> u32 effects { writes Knoten } costs <= 4096 ops {
+impl fn laden() -> u32 effects { writes Knoten, reads HALDE_T } costs <= 40000 ops {
     gabbro_kmod_melde(1, 0);
     grow Knoten by 1024 else {
         gabbro_kmod_melde(3, 1);
@@ -64,7 +73,7 @@ impl fn laden() -> u32 effects { writes Knoten } costs <= 4096 ops {
 
 -- Unload: one line, and nothing to give back -- the arena's storage is the
 -- runtime's, released with the module.
-impl fn entladen() -> u32 effects { pure } costs <= 64 ops {
+impl fn entladen() -> u32 effects { reads HALDE_T } costs <= 4264 ops {
     gabbro_kmod_melde(9, 0);
     return 0;
 }

@@ -4508,6 +4508,31 @@ pub const PHASEN: &[Satz] = &[
                      (`buffer_bound`); dokumente/SYNTAX.md §12.1",
     },
     Satz {
+        name: "extern.variadik",
+        kennungen: &["N573"],
+        aussage: "The marker `...` in a parameter list says that the foreign C symbol is \
+                  variadic from that parameter on, and nothing else: it stands only at an \
+                  `extern fn`, behind at least one parameter, and every parameter behind it is \
+                  an integer or a pointer (`N573`). Every parameter is still declared, typed \
+                  and passed at every call; the emitter writes the C prototype as the fixed \
+                  parameters and `...`, so the C compiler passes the rest by C's own rules for \
+                  a variadic call (an integer promoted to at least `int`, keeping its value; a \
+                  pointer as it is). The model's foreign body keeps its fixed arity.",
+        vorbehalt: "Not claimed: that the foreign function reads exactly the arguments passed \
+                    (a format string that asks for one more reads a register nobody set) -- \
+                    that is the foreign body's named assumption, user logic, like every \
+                    contract of a foreign edge.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1390 (`N573`: the marker at a Gabbro function), `1391` \
+                      (`N573`: a record behind the marker); the clean side: \
+                      `tests/rahmenlaenge.rs` (`n573_*`) and the kernel-module binding \
+                      `bibliothek/linux-kmod/linux-kmod.gab` (`_printk`), measured in QEMU by \
+                      `instrumente/pruefe-kernelmodul.sh`.",
+        fundstelle: "crates/gabbro-syntax/src/parse.rs (`params_variadisch`); \
+                     crates/gabbro-check/src/rahmenlaenge.rs (`variadik`); \
+                     crates/gabbro-check/src/emit.rs (`prototyp_kern`)",
+    },
+    Satz {
         name: "syscall.zielbindung",
         kennungen: &["N562", "N563", "N564", "N565", "N566", "N567"],
         aussage: "A gate written `via V` calls the kernel the ACTIVE target binds `V` to, and \

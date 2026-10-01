@@ -12,7 +12,7 @@ put into each finished product, per target.
 | target | 2026-09-30 morning | now | what is left |
 |---|---|---|---|
 | hosted | 1174 lines, 7 files | **0 lines, 0 files** | -- |
-| kmod | 1344 lines, 11 files (two probes; 1659 / 13 with the `atomar` probe the counter lists since C2) | **399 lines, 4 files; runtime share 0** | the binding `bibliothek/linux-kmod/linux-kmod.c` (231) and the probes' own C (`takt.c` 98, `atomar.c` 42, `melde.c` 28) -- C2 slice 2 |
+| kmod | 1344 lines, 11 files (two probes; 1659 / 13 with the `atomar` probe the counter lists since C2) | **210 lines, 2 files; runtime share 0** | `bibliothek/linux-kmod/linux-kmod.c` (112: the kernel thread start and the core number, OFFEN O39) and the `takt` probe's hardirq timer `takt.c` (98) |
 | metal | 1962 lines, 6 files | 1962, 6 | C3 not started: `laufzeit/metall/*` |
 
 Hosted imports (`C0_ARBEIT=… python3 instrumente/zaehle-c.py --baue`, toolchain names removed):
@@ -34,7 +34,9 @@ OWN `extern fn` -- the documented point of those two examples; their libc-free t
 | the `child` region outlined | (this merge) | OFFEN O38 closed: the region is a function the trap calls on the handed stack | `tor.kind` |
 | threads | `f2295654`, `dec755b3` | `linux.c`, `bindung.h`, `faden.c`, `faden.h` gone; the hosted binding is Gabbro only | `tor.trampolin`, `faden.laufzeit` |
 | the probe's report | `76e15c34` | `melde.c` gone: the os-probe prints through the binding's Gabbro writers | -- |
-| the kernel-module runtime (C2, slice 1) | (this merge) | `laufzeit/kmodul/*` and `bibliothek/linux-kmod/stdatomic.h` gone: `gabbro build` writes the module driver (static arena pools of the manifest's `provision`, the lock primitives over the binding, a thread per root, the loader's entry symbols and the licence from the manifest), the type headers and a C11-builtin `<stdatomic.h>`; (M11) revised (comment only, `SERVER-0E-SPEC-DIFF.md` Part IV); `N506` accepts a constant clause | `arena.modul`, `modul.lebenslauf` |
+| the kernel-module runtime (C2, slice 1) | `beb513d3` | `laufzeit/kmodul/*` and `bibliothek/linux-kmod/stdatomic.h` gone: `gabbro build` writes the module driver (static arena pools of the manifest's `provision`, the lock primitives over the binding, a thread per root, the loader's entry symbols and the licence from the manifest), the type headers and a C11-builtin `<stdatomic.h>`; (M11) revised (comment only, `SERVER-0E-SPEC-DIFF.md` Part IV); `N506` accepts a constant clause | `arena.modul`, `modul.lebenslauf` |
+
+| the kernel-module binding in Gabbro (C2, slice 2) | (this merge) | `N573`: a variadic `extern fn` (`_printk`, `panic`), arguments behind `...` cast to their declared type; the report, the load verdict and the locks are Gabbro over `_printk`/`_raw_spin_*`; the probes report through `gabbro_kern_zeige`/`_halt` -- `melde.c`, `atomar.c` and all but two pieces of `linux-kmod.c` gone | -- |
 
 Template register (`gabbro schablonen`): 33 entries, 22 machine-checked; `--tor` still names the 6
 hanging premises it named before this lane (none of this lane's).
@@ -45,10 +47,11 @@ hanging premises it named before this lane (none of this lane's).
   since session 8; the network lane has not reported its `tests/*.sh` on it. `N571` asked it for
   74 sites.
 * **Hosted**: a `nolibc` driver (`main` returns into the C runtime's start code).
-* **C2 slice 2** (kernel module): the binding `linux-kmod.c` in Gabbro -- needs a variadic
-  `extern fn` (`_printk`), the kernel thread start as a checked form (the hosted twin is `N572` +
-  `tor.trampolin`), and the core number (`raw_smp_processor_id` is a per-CPU read); the probes'
-  own C. **C3** (bare metal): not started.
+* **C2 slice 3** (kernel module, OFFEN O39): the kernel thread start as a checked form (today
+  an `extern fn` taking a code address as a number -- reachable from any Gabbro call site), the
+  core number (a foreign DATA symbol has no Gabbro declaration), the `takt` probe's hrtimer.
+* **Probe finding:** `atomar`'s "flag seen > 0" is scheduling-dependent -- 1 of 5 runs this
+  session saw the consumer finish before the producer's first store (`kratz/c/s11/kmod-b.log`). **C3** (bare metal): not started.
 * **Machine G has no byte pointers** (OFFEN O37): region programs stay UNCERTIFIED; nothing
   releases a region.
 * No Isabelle on the server: `abnahme.py --voll` has not been run by this lane.

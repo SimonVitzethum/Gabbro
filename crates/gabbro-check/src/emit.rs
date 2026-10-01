@@ -780,6 +780,10 @@ struct Signatur {
     /// read here, not re-derived. Ghost positions keep their entry (the
     /// ghost filter drops them by the same index).
     param_typen: Vec<TypExpr>,
+    /// **`...` (C-free lane, C2)**: the index of the first parameter a variadic foreign symbol
+    /// receives through its variadic part. C converts nothing there, so every such argument is
+    /// cast to its declared type at the call (a literal `7` would travel as `int`).
+    variadisch_ab: Option<usize>,
 }
 
 /// Ein Geraet, so wie der Erzeuger es braucht.
@@ -1434,6 +1438,7 @@ pub fn emittiere_mit(
                 fehler: f.fehler.as_ref().map(|i| i.text.clone()),
                 rueck: f.ergebnis.clone(),
                 param_typen: f.parameter.iter().map(|p| p.typ.clone()).collect(),
+                variadisch_ab: f.variadisch_ab,
                 option_rueck: match &f.ergebnis {
                     Some(TypExpr::Index { tabelle, optional: true, .. }) => {
                         Some(tabelle.text.clone())
@@ -1460,6 +1465,7 @@ pub fn emittiere_mit(
                 fehler: s.fehler.as_ref().map(|i| i.text.clone()),
                 rueck: s.ergebnis.clone(),
                 param_typen: s.parameter.iter().map(|p| p.typ.clone()).collect(),
+                variadisch_ab: None,
                 option_rueck: match &s.ergebnis {
                     Some(TypExpr::Index { tabelle, optional: true, .. }) => {
                         Some(tabelle.text.clone())
@@ -8124,7 +8130,7 @@ fn prototyp_kern(
     // stand in the unit or `cc` disagrees with the real `write` the moment a POSIX header is
     // in the same translation unit. *The call passes a `const Text *` into it, and that
     // conversion is C's own and implicit.*
-    if f.klasse == Some(FnKlasse::Extern) {
+    if f.klasse == Some(FnKlasse::Extern) && f.variadisch_ab.is_none() {
         if let Some(sig) = crate::cnamen::signatur(&f.name.text) {
             if sig.bindbar() {
                 if let Some(k) = aus_ctafel(&sig, f) {
@@ -8150,7 +8156,13 @@ fn prototyp_kern(
     // Der Fehlerkanal nimmt den Rueckgabeplatz ein; das Ergebnis geht durch `_wert`.
     let rueck = if f.fehler.is_some() { "bool".to_string() } else { rueck };
     let mut params = Vec::new();
-    for p in &f.parameter {
+    // **`...` (C-free lane, C2)**: the prototype of a variadic foreign symbol is its fixed
+    // parameters and `...`; the call still passes every declared parameter (`N573`).
+    let mut fest: Option<usize> = None;
+    for (i, p) in f.parameter.iter().enumerate() {
+        if f.variadisch_ab == Some(i) {
+            fest = Some(params.len());
+        }
         if ist_geist(&p.typ, u) {
             continue; // erased -- see above
         }
@@ -8192,6 +8204,16 @@ fn prototyp_kern(
             }
         }
         params.push(format!("{} *_grund", r.text));
+    }
+    if f.variadisch_ab == Some(f.parameter.len()) {
+        fest = Some(params.len());
+    }
+    if let Some(k) = fest {
+        params.truncate(k);
+        if params.is_empty() {
+            return Err((f.name.span, "variadic prototype without a fixed parameter"));
+        }
+        params.push("...".to_string());
     }
     let liste = if params.is_empty() {
         "void".to_string()
@@ -16645,6 +16667,7 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         .get(&name)
         .map(|s| s.param_typen.clone())
         .unwrap_or_default();
+    let variadisch_ab = u.funktionen.get(&name).and_then(|s| s.variadisch_ab);
     let args: Vec<String> = r
         .argumente
         .iter()
@@ -16654,6 +16677,15 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
         // (`kette_zu`); every other argument lowers as before.
         .map(|(i, a)| match typen.get(i) {
             Some(TypExpr::Zeichenkette { max, .. }) => kette_zu(a, *max, u, absagen),
+            // **Behind `...` C converts nothing** (C-free lane, C2): the argument is cast to
+            // its declared type here, or a literal travels as `int` into a 64-bit read.
+            Some(t) if variadisch_ab.is_some_and(|k| i >= k) => match ctyp(t, u) {
+                Some(c) => format!("(({c})({}))", ausdruck(a, u, absagen)),
+                None => {
+                    weigere(absagen, a.span, "an argument behind `...` whose type has no C form");
+                    String::new()
+                }
+            },
             _ => ausdruck(a, u, absagen),
         })
         .collect();

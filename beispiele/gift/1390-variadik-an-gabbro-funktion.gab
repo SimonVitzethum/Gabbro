@@ -1,0 +1,17 @@
+-- erwartet: N573
+-- **The variadic marker `...` belongs to a foreign C symbol, and this function has a body.**
+--
+-- `...` in a parameter list says how the prototype of a foreign C function reads: the
+-- parameters behind it are received through its variadic part. A Gabbro function has no such
+-- part -- its C definition has fixed parameters -- so the marker would promise a calling
+-- convention nothing implements. Refused by name (C-free lane, C2, 2026-09-30).
+module gift::variadik_an_gabbro_funktion {
+
+pub fn summe(a : u64 in 0 .. 100, ..., b : u64 in 0 .. 100) -> u64 in 0 .. 200
+    effects { pure }
+    costs <= 8 ops
+{
+    return a + b;
+}
+
+}

@@ -72,13 +72,13 @@ SZENARIEN = {
     ],
     "kmod": [
         ("halde", CC + KMOD + "provision 24576\nunit gabbro_halde module laden entladen\n"
-         "  {W}/messung/proben/kmodul/halde-treiber.gab\n  {W}/messung/proben/kmodul/melde.c\n" + BINDUNG_KMOD,
+         "  {W}/messung/proben/kmodul/halde-treiber.gab\n" + BINDUNG_KMOD,
          "gabbro_halde"),
         ("takt", CC + KMOD + "unit gabbro_takt module laden entladen\n"
          "  {W}/messung/proben/kmodul/sperre-takt.gab\n  {W}/messung/proben/kmodul/takt.c\n" + BINDUNG_KMOD,
          "gabbro_takt"),
         ("atomar", CC + KMOD + "unit gabbro_atomar module laden entladen\n"
-         "  {W}/messung/proben/kmodul/atomar-faeden.gab\n  {W}/messung/proben/kmodul/atomar.c\n" + BINDUNG_KMOD,
+         "  {W}/messung/proben/kmodul/atomar-faeden.gab\n" + BINDUNG_KMOD,
          "gabbro_atomar"),
     ],
     "metal": [

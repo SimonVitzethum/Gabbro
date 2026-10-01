@@ -1066,6 +1066,11 @@ pub struct FnDecl {
     pub translator_fuer: Option<Ident>,
     pub name: Ident,
     pub parameter: Vec<Parameter>,
+    /// **`...` in the parameter list -- the C symbol is VARIADIC from this parameter on**
+    /// (C-free lane, C2, 2026-09-30). `Some(k)`: the prototype the emitter writes is the first
+    /// `k` parameters and `...`; every call still passes every declared parameter. A fact about
+    /// C linkage only -- the model's `D.Ax` keeps the fixed arity. Held by `N573`.
+    pub variadisch_ab: Option<usize>,
     pub ergebnis: Option<TypExpr>,
     /// **`-> T or R` -- der Fehlerkanal, und er steht in der SIGNATUR** (2026-08-20).
     ///

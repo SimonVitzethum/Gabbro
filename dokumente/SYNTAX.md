@@ -428,7 +428,14 @@ fnptr      = "fn" "(" [ fnptrparams ] ")" [ "->" typeexpr ] fncontract ;
 fncontract = [ "requires" predlist ] [ "ensures" predlist ]
              "effects" "{" efflist "}" "costs" "<=" expr "ops" ;
 typelist   = typeexpr { "," typeexpr } ;
-params     = ident ":" typeexpr { "," ident ":" typeexpr } ;
+params     = ident ":" typeexpr { "," ( ident ":" typeexpr | "..." ) } ;
+(* CHANGED C-free lane, C2 (2026-09-30): `...` once, behind at least one parameter, in the
+   parameter list of an `extern fn` only -- the foreign C symbol is VARIADIC from there on
+   (`_printk`, `panic`). Every parameter behind it is still declared, typed and passed at every
+   call; the emitter writes the prototype as the fixed parameters and `...` and casts each
+   argument behind it to its declared type (C converts nothing there). Only integers and
+   pointers behind it, no `or R` channel (`N573`). The model's `D.Ax` keeps the fixed arity:
+   the marker is a fact about C linkage, and the Lean front end skips it. *)
 fnptrparams = fnptrparam { "," fnptrparam } ;
 fnptrparam  = [ ident ":" ] typeexpr ;
 (* The name in a pointer type is optional: all 11 pointer-type sites in Caprock write none. *)

@@ -119,7 +119,8 @@ $W/bibliothek/linux-kmod/linux-kmod.c"
     case "$1" in
         halde)
             QUELLE="$W/messung/proben/kmodul/halde-treiber.gab"
-            FREMD="$W/messung/proben/kmodul/melde.c"
+            # No C of its own since the C-free lane's C2: the report is Gabbro over the
+            # binding's `gabbro_kern_zeige`.
             MODUL=gabbro_halde
             INIT=laden
             EXIT=entladen
@@ -154,7 +155,7 @@ gabbro-takt: k=9 v=0"
             ;;
         atomar)
             QUELLE="$W/messung/proben/kmodul/atomar-faeden.gab"
-            FREMD="$W/messung/proben/kmodul/atomar.c"
+            # No C of its own since the C-free lane's C2 (report and stop over the binding).
             MODUL=gabbro_atomar
             INIT=laden
             EXIT=entladen
@@ -356,8 +357,14 @@ symbole_pruefe() {   # $1 = module build dir, $2 = module name, $3 = the mark
     local kdir="$1" modul="$2" marke="$3" arb="$1/ksym" n
     mkdir -p "$arb"
     nm -u "$kdir/$modul.ko" 2>/dev/null | awk '{print $2}' | sort -u > "$arb/ko.txt"
-    nm -u "$kdir/gabbro_kmodul.o" 2>/dev/null \
-        | awk '/^ +U/{print $2}' | sort -u > "$arb/rt.txt"
+    # **What the DRIVER TEXT names** (C-free lane, C2): the generated `gabbro_kmodul.c`
+    # includes the emitted unit, whose binding is Gabbro since slice 2 and calls the kernel
+    # by its own `extern fn` declarations -- the program's calls, compiled into the same
+    # object. So the runtime's share is the kernel symbols the driver's OWN text names: every
+    # identifier of `gabbro_kmodul.c` (the include line and comments removed) that the `.ko`
+    # imports. Gift 11 plants one there.
+    sed -e 's|/\*.*\*/||g' -e '/^#include/d' "$kdir/gabbro_kmodul.c" \
+        | grep -oE '[A-Za-z_][A-Za-z0-9_]*' | sort -u > "$arb/rt.txt"
     comm -12 "$arb/ko.txt" "$arb/rt.txt" | grep -Ev "$KSYM_TOOLKETTE" > "$arb/fest.txt"
     n="$(wc -l < "$arb/fest.txt" | tr -d ' ')"
     if [ "$n" -gt "$marke" ]; then
@@ -389,7 +396,7 @@ done
 for p in $PROBEN; do
     probe_waehle "$p"
     [ -f "$QUELLE" ] || nicht_gelaufen "no probe source at $QUELLE"
-    [ -f "$FREMD" ]  || nicht_gelaufen "no probe C body at $FREMD"
+    [ -z "$FREMD" ] || [ -f "$FREMD" ] || nicht_gelaufen "no probe C body at $FREMD"
 done
 
 # **Which binary, and is it newer than the sources?** One register, one file:
@@ -485,7 +492,11 @@ gift_probe() {
         1|2|3|4)  echo halde ;;
         5|6|7)    echo takt ;;
         8|9|10)   echo atomar ;;
-        11|12)    echo halde ;;
+        11)       echo halde ;;
+        # Gift 12 runs on `takt` since the C-free lane's C2: `halde` and `atomar` report
+        # through the binding's Gabbro functions by name (`use linux::kmod::…`), so without
+        # the binding they fall at name resolution before the binding rule could speak.
+        12)       echo takt ;;
         *) echo "pruefe-kernelmodul.sh: no such gift '$1'" >&2; exit 2 ;;
     esac
 }
@@ -524,7 +535,7 @@ lauf_einmal() {   # $1 = gift number or "", $2 = work dir, $3 = probe
         [ -n "$vorrat" ] && echo "provision $vorrat"
         echo "unit $MODUL module $INIT $EXIT"
         echo "  $QUELLE"
-        echo "  $FREMD"
+        [ -n "$FREMD" ] && echo "  $FREMD"
         printf '%s\n' "$bindung" | while IFS= read -r f; do
             [ -n "$f" ] && echo "  $f"
         done
@@ -813,7 +824,7 @@ if [ -z "$GIFT" ]; then
         echo
         echo "-- probe $p: $MODUL"
         echo "   source      $QUELLE"
-        echo "   own C       $FREMD"
+        echo "   own C       ${FREMD:-(none -- Gabbro only)}"
         [ -n "$VORRAT" ] && echo "   provision   $VORRAT bytes (the program's ceiling is max 4096 slots)"
         mkdir -p "$ARB/$p"
         lauf_einmal "" "$ARB/$p" "$p" > "$ARB/$p/aus.txt"

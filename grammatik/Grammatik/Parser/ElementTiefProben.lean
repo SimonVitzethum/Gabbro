@@ -1118,6 +1118,23 @@ theorem t55 : beqTopTief (parseTopTief tt55)
 -- memory kinds are values, not checked here). Rust: `Tabelle`
 -- with a `backed` bound -- same shape.
 
+-- The variadic marker `...` (C-free lane, C2, 2026-09-30): lexed `..` `.`, skipped by the
+-- parameter list -- every declared parameter stays, in order. Rust: `params_variadisch`.
+def ttVar : List Token :=
+  [.wort "extern", .wort "fn", .ident "druck", .zeichen "(",
+   .ident "fmt", .zeichen ":", .ident "Text", .zeichen ",",
+   .zeichen "..", .zeichen ".", .zeichen ",",
+   .ident "a", .zeichen ":", .wort "u64", .zeichen ")",
+   .wort "costs", .zeichen "<=", .zahl 8, .wort "ops", .zeichen ";", .ende]
+theorem tVar_lex :
+    lex "extern fn druck(fmt : Text, ..., a : u64) costs <= 8 ops;" = .ok ttVar := by
+  decide
+theorem tVar : beqTopTief (parseTopTief ttVar)
+    (.ok [.protoT
+      { art := "extern", name := "druck",
+        params := [("fmt", .atom "Text"), ("a", .atom "u64")], ergebnis := .none,
+        fehler := .none, klauseln := [.kosten (.lit 8)] }]) = true := by
+  decide
 def ttEnd : List Token :=
   [.wort "module", .ident "beispiel112", .zeichen "{",
   .wort "table", .ident "Zustand", .wort "count", .zahl 4,
