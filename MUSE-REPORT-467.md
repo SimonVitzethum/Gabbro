@@ -1,5 +1,19 @@
 # MUSE-REPORT-467: Independent exact-candidate review of 419 (X86 BitCount)
 
+## Re-confirmation round (snapshot re-pinned to the same head)
+
+The coordinator re-issued the review request, but the re-supplied snapshot pins the SAME
+head `5d41c247` already accepted in the section below, with content-identical artefacts
+(same blobs: report `acfd60ed`, `BitCount.lean` `ed9a15a4`; same 133-line report with
+Addendum 2; same 32-entry build evidence ending at the `5d41c247` commit; PATCH hunk
+re-compared mechanically: 473/473 lines identical). No new author repair exists, so there is
+no stale snapshot to reject — but the verdict is re-earned, not carried over: the probe was
+re-run on the re-supplied files in this clone (staged only the module + the one import line,
+restored afterwards, tree verified clean): `./lean-probe
+grammatik/Grammatik/X86/BitCount.lean` → RC=0, `0 error(s)`, `sorryAx` count 0,
+`Unknown identifier|error(lean` count 0, all `depends on axioms` lines standard. All prior
+findings stand. Exactly one verdict line below, for the currently pinned head.
+
 ## Re-review of the NEWEST pinned candidate (2026-10-01, later evening)
 
 Previous verdict (on `7feee9d0`) is stale: the author added one more commit and this is a
