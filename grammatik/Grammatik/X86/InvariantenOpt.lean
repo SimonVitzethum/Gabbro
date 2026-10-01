@@ -202,6 +202,38 @@ theorem eval_weiter_n {lo hi lo' hi' : Int} (h1 : lo' ≤ lo) (h2 : hi ≤ hi')
       (eval σ₀ e σ ρ).n :=
   rfl
 
+/-! ## 3. Check/branch elimination with exact trace transfer -/
+
+variable (O : Orakel D) (passes : Nat)
+variable (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+
+/-- Executable `pruefung` elimination: a `where`/check whose condition the
+    computable checker proves is replaced by its body. The correspondence
+    is EXACT about the trace: the condition's read events (`lese`) stay,
+    because the rest runs in the post-read world. The refused `else`
+    branch needs no fault transfer: it is unreachable, proved, not assumed. -/
+theorem exec_pruefung_wahr {l : Bool} {Γ' : Ctx} {Λ'' Λ''' : List (Res D)}
+    (c : Expr D Γ' Λ'' .bool) (sonst : Endblock D V l Γ' Λ'')
+    (rest : Block D V l Γ' Λ'' Λ''') (σ : World D) (ρ : Env D Γ')
+    (h : isWahr c = true) :
+    execBlock O passes R (Block.pruefung c sonst rest) σ ρ =
+      execBlock O passes R rest (σ.lese Λ'' c.orte) ρ := by
+  have hc : wahr? (eval (σ.lese Λ'' c.orte) c (σ.lese Λ'' c.orte) ρ) = true :=
+    isWahrAll_sound c _ _ ρ h
+  simp [execBlock, hc]
+
+/-- Executable `ite` elimination: a branch on a proved condition behaves as
+    the taken side, again in the post-read world, so read observations
+    transfer exactly. -/
+theorem exec_ite_wahr {l : Bool} {Γ' : Ctx} {Λ'' Λ''' : List (Res D)}
+    (c : Expr D Γ' Λ'' .bool) (t e : Block D V l Γ' Λ'' Λ''')
+    (σ : World D) (ρ : Env D Γ') (h : isWahr c = true) :
+    execStmt O passes R (Stmt.ite c t e) σ ρ =
+      execBlock O passes R t (σ.lese Λ'' c.orte) ρ := by
+  have hc : wahr? (eval (σ.lese Λ'' c.orte) c (σ.lese Λ'' c.orte) ρ) = true :=
+    isWahrAll_sound c _ _ ρ h
+  simp [execStmt, hc]
+
 /- CUTS:
    Only the computable check exists so far. Open: its soundness over `eval`;
    constant folding / `weiter` value lemmas; `pruefung`/`ite` elimination with
