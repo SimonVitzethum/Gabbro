@@ -276,6 +276,90 @@ theorem gerettet_stapel_getrennt (b : Belegung) (r : Rahmen) (i j : Nat)
     (by omega) (by omega) (by omega) (by omega)
     (Or.inl (by omega)) (by omega) hb hle
 
+/-! ## 5. Argument and result carriage. -/
+
+/-- Register of the `i`-th integer argument (System V order); further
+    arguments travel on the stack. -/
+def argReg (i : Nat) : Option Register :=
+  if i = 0 then some .rdi
+  else if i = 1 then some .rsi
+  else if i = 2 then some .rdx
+  else if i = 3 then some .rcx
+  else if i = 4 then some .r8
+  else if i = 5 then some .r9
+  else none
+
+/-- Operand probe: the first argument travels in `rdi`. -/
+theorem argReg_sonde_rdi : argReg 0 = some .rdi := by decide
+
+/-- Operand probe: the sixth argument travels in `r9`. -/
+theorem argReg_sonde_r9 : argReg 5 = some .r9 := by decide
+
+/-- The six argument registers are pairwise distinct. -/
+theorem argReg_verschieden :
+    argReg 0 ≠ argReg 1 ∧ argReg 0 ≠ argReg 2 ∧
+    argReg 0 ≠ argReg 3 ∧ argReg 0 ≠ argReg 4 ∧
+    argReg 0 ≠ argReg 5 ∧ argReg 1 ≠ argReg 2 ∧
+    argReg 1 ≠ argReg 3 ∧ argReg 1 ≠ argReg 4 ∧
+    argReg 1 ≠ argReg 5 ∧ argReg 2 ≠ argReg 3 ∧
+    argReg 2 ≠ argReg 4 ∧ argReg 2 ≠ argReg 5 ∧
+    argReg 3 ≠ argReg 4 ∧ argReg 3 ≠ argReg 5 ∧
+    argReg 4 ≠ argReg 5 := by
+  decide
+
+/-- The seventh and further arguments travel on the stack, never in a
+    register. Uses the lower bound. -/
+theorem argReg_ab_sechs (i : Nat) (h : 6 ≤ i) : argReg i = none := by
+  unfold argReg
+  rw [if_neg (by omega), if_neg (by omega), if_neg (by omega),
+    if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+
+/-- Slot index of the `i`-th call argument (`i ≥ 6`): stack-carried words
+    start behind the register-carried ones. -/
+def argStapelIdx (b : Belegung) (i : Nat) : Nat :=
+  b.spill + b.gerettet + (i - 6)
+
+/-- A stack-carried argument of an `n`-argument call lies in the frame.
+    Uses the argument position, the register count, the declared arity
+    and the frame fit. -/
+theorem argStapel_schranke (b : Belegung) (r : Rahmen) (i n : Nat)
+    (hb : i < n) (h6 : 6 ≤ i) (hfit : b.stapelArgs = n - 6)
+    (hpasst : b.braucht * 8 ≤ r.tiefe) :
+    argStapelIdx b i < r.schlitzZahl := by
+  unfold argStapelIdx Belegung.braucht Rahmen.schlitzZahl at *
+  omega
+
+/-- Checked result-word save at a caller address. -/
+def sichereErgebnis (m : Speicher) (e : Adresse) (v : Wort)
+    : Option Speicher :=
+  write64 m e v
+
+/-- Checked result-word load from a caller address. -/
+def ladeErgebnis (m : Speicher) (e : Adresse) : Option Wort :=
+  read64 m e
+
+/-- RESULT ROUND-TRIP: a saved result word loads back through a readable
+    address. -/
+theorem sichere_lade_ergebnis_rundreise (m m' : Speicher) (e : Adresse)
+    (v : Wort) (hwr : sichereErgebnis m e v = some m')
+    (hrd : lesbar8 m e = true) :
+    ladeErgebnis m' e = some v := by
+  unfold sichereErgebnis at hwr
+  unfold ladeErgebnis
+  exact read64_nach_write64 m m' e v hwr hrd
+
+/-- A result word at a frame-disjoint address survives a frame save. Uses
+    the slot bound, the save and the disjointness. -/
+theorem ergebnis_bleibt_vor_rahmen (m m' : Speicher) (r : Rahmen)
+    (idx : Nat) (e : Adresse) (v : Wort) (hb : idx < r.schlitzZahl)
+    (hwr : sichereWort m r idx v = some m')
+    (hdis : Disjunkt (r.schlitzAddr idx) e) :
+    ladeErgebnis m' e = ladeErgebnis m e := by
+  unfold sichereWort at hwr
+  rw [if_pos hb] at hwr
+  unfold ladeErgebnis
+  exact read64_rahmen m m' (r.schlitzAddr idx) e v hwr hdis
+
 /- CUTS:
     - No instruction semantics, decoder, image mapping, TSO bridge, source
       correspondence, cost transfer or final-image acceptance is proved here.
