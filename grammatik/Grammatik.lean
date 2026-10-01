@@ -371,3 +371,4 @@ import Grammatik.X86.Wort
 import Grammatik.X86.Speicher
 import Grammatik.X86.TSO
 import Grammatik.X86.Ausfuehrung
+import Grammatik.X86.Bild
