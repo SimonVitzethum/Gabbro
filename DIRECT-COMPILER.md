@@ -209,7 +209,7 @@ Last ledger refresh: **2026-10-01 13:26 UTC**. This is an operational snapshot, 
 | 417 | Continuous Lean proof reserve: ConditionalMove | Committed candidate; review/integration pending | 465: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/417.md) |
 | 418 | Continuous Lean proof reserve: BitScan | Committed candidate; review/integration pending | 466: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/418.md) |
 | 419 | Continuous Lean proof reserve: BitCount | Committed candidate; review/integration pending | 467: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/419.md) |
-| 420 | Continuous Lean proof reserve: ByteSwap | Merged after review/checks | 468: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-420.md) |
+| 420 | Continuous Lean proof reserve: ByteSwap | Merged after review/checks | 468: Merged after review/checks | [report](messung/muse/MUSE-REPORT-420.md) |
 | 421 | Continuous Lean proof reserve: WordAtomicity | Committed candidate; review/integration pending | 469: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/421.md) |
 | 422 | Continuous Lean proof reserve: ReleaseAcquire | Committed candidate; review/integration pending | 470: scheduled | [task](lanes/422.md) |
 | 423 | Continuous Lean proof reserve: BranchLayout | Committed candidate; review/integration pending | 471: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/423.md) |
@@ -432,6 +432,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: documentation-only publication at `b5b8f099` retains the successful complete local Lean, Rust and emission checks at `c937ebe4`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
 - 2026-10-01: lane **420**, Continuous Lean proof reserve: ByteSwap, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-420.md). <!-- x86-merged:420 -->
 - 2026-10-01: checked master `3f401297` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:3f401297345718254e073d679c9a5189300f72cb -->
+- 2026-10-01: lane **468**, Independent exact-candidate review of 420, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-468.md). <!-- x86-merged:468 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
