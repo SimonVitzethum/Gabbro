@@ -282,6 +282,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **329**, Muse organisation and dependency ownership plan, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-329.md). <!-- x86-merged:329 -->
 - 2026-10-01: checked master `159269ed` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:159269ed9567fda9e3b0fadf303ddf238c4d0fe2 -->
 - 2026-10-01: lane **332**, Independent organisation and ownership plan review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-332.md). <!-- x86-merged:332 -->
+- 2026-10-01: documentation-only publication at `cc400110` retains the successful complete local Lean, Rust and emission checks at `ad1a6e2a`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
