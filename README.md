@@ -19,7 +19,7 @@ Proved today is narrower than the goal; exactly one place states it: the
 header of [`Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean). Where
 they disagree, the header wins. The honest sentence is **"the goal theorem is
 proved over the model, with a witness and non-degeneracy"** — not "Gabbro is
-verified" ([details](#proved-and-not-proved)).
+verified" ([details](#5-proved-and-not-proved)).
 
 The working backend emits C11 plus inline assembly. The selected target is a
 direct x86-64 backend with Lean final-byte validation — `-O3`-like from
@@ -27,7 +27,7 @@ invariants, fast including validation, for arbitrary OS and freestanding
 profiles. Lean X86 helpers exist but are not the complete hardware model;
 backend and validation are not implemented ([record](DIRECT-COMPILER.md)).
 
-## Quick start
+## 1. Quick start
 
 Zero external dependencies — the three crates need `std` and each other only;
 **Rust 1.86 or newer** (`f64::next_up`/`next_down` stable there). **`cc` is
@@ -49,7 +49,7 @@ isabelle build -d beweise -c Gabbro        # the machine-checked templates
 ```
 `gabbro passes` also prints what each pass does **not** check — unchecked silence must never look green.
 
-## Proof check in two commands
+## 2. Proof check in two commands
 
 **Everything above is a claim — this is how you stop taking it on trust,** proved
 in Lean 4 over the language model (thread machine over GX, shared-atomic rely):
@@ -74,7 +74,7 @@ lake env lean NachpruefungZiel.lean     # prints the axioms of every sentence na
 *statement*. The three axioms prove no model fidelity and remove no premise:
 checked program, user logic, hardware assumptions, runtime stay owed.
 
-## How the guarantee is meant to work
+## 3. How the guarantee is meant to work
 
 The Rust checker and emitter will **not** be verified: the compiler is untrusted
 and shows its work — **every accepted program gets a Lean-checked certificate:**
@@ -92,7 +92,7 @@ for runtime, entries, locks, recurring duties (register below). Concurrency
 reuses W / GX; the per-access x86-TSO bridge is open — a proved validator
 refuses bad output, still requiring the new validator and its proof.
 
-## Status
+## 4. Status
 
 Measured snapshot 2026-10-01 — every figure carries its command; provenance and limits in [PROJECT-STATUS](dokumente/PROJECT-STATUS.md).
 
@@ -109,7 +109,7 @@ Measured snapshot 2026-10-01 — every figure carries its command; provenance an
 
 The 15 theories in [`beweise/`](beweise/) hold 3512 lines of Isar (Isabelle2025-2); new proofs go to Lean only.
 
-## Proved and not proved
+## 5. Proved and not proved
 
 - **Proved over the model:** `theorem gabbro_ziel : GabbroZiel`
   ([statement](grammatik/Grammatik/Zielsatz/Spec.lean), proof
@@ -130,7 +130,7 @@ the exporter and listed by name as not claimed in
 written in Gabbro yet; fragments, with origin and verdict, in
 [`dokumente/FRAGMENTE.md`](dokumente/FRAGMENTE.md).
 
-## Documents
+## 6. Documents
 
 - [DIRECT-COMPILER.md](DIRECT-COMPILER.md) — direct x86-64 compiler record ([design](DIRECT-COMPILER-DESIGN.md), [optimiser](grammatik/OPTIMIZER.md), [portability](dokumente/x86/TARGET-PORTABILITY.md))
 - [Tutorial](dokumente/TUTORIAL.md), [open items](TODO.md), [goal statement](grammatik/Grammatik/Zielsatz/Spec.lean), [provenance](dokumente/PROJECT-STATUS.md)

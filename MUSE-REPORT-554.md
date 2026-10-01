@@ -66,6 +66,22 @@ wording with the freshly measured anchor total (`damage one rule at a time:
 - No `cargo`/`lake` invoked directly; guardians ran directly per HARD RULES
   (their internal measuring subprocesses are the guardians' own).
 
+## Repair after independent review (lane 555, verdict REPAIR)
+
+The review found one blocking defect: the rewrite dropped numbered `## N.`
+sections, leaving the five out-of-scope `README §5` references dangling
+(`LICENSE-ADDENDUM.md:51`, `dokumente/DESIGN.md:124`,
+`dokumente/GABBRO-ATS-SPARK.md:12,156`,
+`dokumente/AUFTRAG-GABBROV-VERIFIKATION.md:110`). Accepted without dispute.
+Fixed by numbering the sections 1–6 with the proof boundary as
+`## 5. Proved and not proved` (own wording kept, `5.` prefix added);
+`## 6. Documents` follows. Internal README link and the `AGENTS.md` link now
+point at `#5-proved-and-not-proved` (GitHub slug of the new heading).
+No figure, claim or link target otherwise changed; line count stays 149.
+Re-ran `python3 instrumente/pruefe-todo.py` after the fix: README section
+still `Kennzahlentafel deckt sich mit dem Gegenstand`, speech tests ok.
+The `TODO.md` stale figure remains as reported (not owned).
+
 ## What remains open / notes for the merger
 
 - `TODO.md` has one pre-existing stale figure (`unbewachte fettgedruckte
