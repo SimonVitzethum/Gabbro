@@ -133,6 +133,17 @@ of the umbrella step in the unowned `lean-bau`/slot wrappers). A fresh
 independent review of the changed commit is still required as ordered;
 the Lean content is unchanged since `ee5d6ffd` except this report.
 
+## Addendum 2: repeated identical gate failure
+
+The gate failed again with a byte-identical signature: all 17 module
+axiom lines print, then the umbrella `Grammatik.lean` step aborts with
+`failed to create thread`, exit 134. Fresh local checks confirm the
+unchanged picture: module `./lean-probe` exit 0 / 0 errors, `./lean-bau`
+umbrella step aborts identically. Still no owned defect, still no Lean
+change (this commit touches only the report). The blocker remains
+operational: the umbrella import-all step cannot spawn threads under
+current machine load, on unmodified master exactly as with this lane.
+
 ## Task feedback
 
 Nothing in the task as written is wrong. One note for future reserve
