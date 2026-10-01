@@ -136,6 +136,54 @@ theorem spurSchritt_inv (n n' : SpurKnoten) (hs : SpurSchritt n n')
         have hlt := hblick d y
         omega
 
+/-! ## Append-only shape: issues keep, flushes append one message -/
+
+/-- One step either keeps the history at `x` pointwise or appends exactly
+    one message there: the release message of the flushed entry at the
+    old clock, carrying the flushed value. -/
+theorem spur_schritt_hist (n n' : SpurKnoten) (hs : SpurSchritt n n')
+    (x : Adresse) :
+    n'.hist x = n.hist x ∨
+      (∃ e : TSOEintrag, x = e.addr ∧ ∃ msg,
+        n'.hist x = n.hist x ++ [msg] ∧ msg.ts = n.frisch ∧
+          msg.wert = e.wert) := by
+  cases hs with
+  | issue c a v h hh hb hf =>
+    exact Or.inl (congrFun hh x)
+  | flush c e rest h he hh hb hf =>
+    by_cases hx : x = e.addr
+    · refine Or.inr ⟨e, hx,
+        Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+          (n.blick c) e.addr n.frisch e.wert, ?_, rfl, rfl⟩
+      have hfun := congrFun hh x
+      rw [if_pos hx] at hfun
+      exact hfun
+    · exact Or.inl (by
+        have hfun := congrFun hh x
+        rw [if_neg hx] at hfun
+        exact hfun)
+
+/-- One step never drops a message: previous histories are preserved. -/
+theorem spur_schritt_erhaelt (n n' : SpurKnoten) (hs : SpurSchritt n n')
+    (x : Adresse) (m : Speichermodell.Nachricht Adresse Byte)
+    (hm : m ∈ n.hist x) : m ∈ n'.hist x := by
+  rcases spur_schritt_hist n n' hs x with heq | ⟨e, rfl, msg, heq, _, _⟩
+  · rw [heq]
+    exact hm
+  · rw [heq]
+    exact List.mem_append.mpr (Or.inl hm)
+
+/-- **Legacy link.** The accepted snapshot helper `histVon` stays the
+    bounded evidence it was: every message of a start node is in it.
+    Growth only appends (`spur_schritt_erhaelt`); nothing is reset. -/
+theorem spurStart_legt_snapshot_vor (s : TSOZustand) (a : Adresse)
+    (m : Speichermodell.Nachricht Adresse Byte)
+    (hm : m ∈ (spurStart s).hist a) : m ∈ histVon s a := by
+  simp only [spurStart] at hm
+  simp at hm
+  subst hm
+  simp [histVon]
+
 /- CUTS:
     - So far only the node/step vocabulary; preservation, freshness,
       forwarding and the joint witness follow as increments.
