@@ -226,7 +226,7 @@ Last ledger refresh: **2026-10-01 16:04 UTC**. This is an operational snapshot, 
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Merged after review/checks | 482: Merged after review/checks | [report](messung/muse/MUSE-REPORT-434.md) |
 | 435 | Continuous Lean proof reserve: DecodingCoverage | Merged after review/checks | 483: Merged after review/checks | [report](messung/muse/MUSE-REPORT-435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
-| 542 | Next bridge wave N9: StackUnwind | Committed candidate; review/integration pending | 548: Committed candidate; review/integration pending | [task](lanes/542.md) |
+| 542 | Next bridge wave N9: StackUnwind | Merged after review/checks | 548: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-542.md) |
 | 543 | Next bridge wave N16: DecodeFault | Committed candidate; review/integration pending | 549: Committed candidate; review/integration pending | [task](lanes/543.md) |
 | 544 | Next bridge wave N18: RegionFresh | Committed candidate; review/integration pending | 550: Committed candidate; review/integration pending | [task](lanes/544.md) |
 | 545 | Next bridge wave N11: PayloadResidue | Committed candidate; review/integration pending | 551: Committed candidate; review/integration pending | [task](lanes/545.md) |
@@ -546,6 +546,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **387**, Independent exact-candidate review of 349 ValidatorSkeleton, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-387.md). <!-- x86-merged:387 -->
 - 2026-10-01: lane **435**, Continuous Lean proof reserve: DecodingCoverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-435.md). <!-- x86-merged:435 -->
 - 2026-10-01: lane **483**, Independent exact-candidate review of 435, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-483.md). <!-- x86-merged:483 -->
+- 2026-10-01: lane **542**, Next bridge wave N9: StackUnwind, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-542.md). <!-- x86-merged:542 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
