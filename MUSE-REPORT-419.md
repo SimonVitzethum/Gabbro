@@ -114,3 +114,20 @@ concrete blocker is unchanged: the machine cannot link the ~398-module
 `Grammatik` umbrella under current load (thread creation fails);
 integration must be retried when resources allow, and a fresh
 independent review of the unchanged commit is required as stated.
+
+## Addendum 2 (same day, later): gate failed again with identical evidence
+
+The integration gate failed a second time with byte-identical evidence
+(`[397/398] Building Grammatik`, `failed to create thread`, exit 134;
+the 7 `BitCount.lean` axiom lines all standard). Nothing new to assess:
+same target, same crash, same conclusion — no defect in the owned
+files, no code repair made.
+
+New supporting observation this round: a single-file `./lean-probe`
+of the unchanged module crashed once with RC=134 (zero type errors)
+and passed on immediate retry with **RC=0, 0 errors, 0 `sorryAx`**;
+local `./lean-bau` again builds 392/393 including `BitCount.olean`
+and crashes only at the umbrella link. Crash-then-pass within minutes
+on identical input confirms load fluctuation, not code. Blocker and
+recommendation unchanged: retry integration when the machine allows;
+fresh independent review required.
