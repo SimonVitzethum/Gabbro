@@ -276,7 +276,7 @@ Last ledger refresh: **2026-10-01 21:16 UTC**. This is an operational snapshot, 
 | 636 | Required failover slot lifetime and safe role handback | Merged after review/checks | 637: Merged after review/checks | [report](messung/muse/MUSE-REPORT-636.md) |
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Merged after review/checks | 641: Merged after review/checks | [report](messung/muse/MUSE-REPORT-640.md) |
-| 642 | Recover preserved IR research draft from recorded edits after clone removal | Committed candidate; review/integration pending | 643: Committed candidate; review/integration pending | [task](lanes/642.md) |
+| 642 | Recover preserved IR research draft from recorded edits after clone removal | Merged after review/checks | 643: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-642.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -682,6 +682,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **627**, Independent direct-source closure review of 626, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-627.md). <!-- x86-merged:627 -->
 - 2026-10-01: lane **634**, Direct-source closure: SourceCodeFrame, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-634.md). <!-- x86-merged:634 -->
 - 2026-10-01: lane **635**, Independent direct-source closure review of 634, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-635.md). <!-- x86-merged:635 -->
+- 2026-10-01: lane **642**, Recover preserved IR research draft from recorded edits after clone removal, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-642.md). <!-- x86-merged:642 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
