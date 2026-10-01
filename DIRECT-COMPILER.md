@@ -153,7 +153,7 @@ Last ledger refresh: **2026-10-01 11:26 UTC**. This is an operational snapshot, 
 | 335 | Practical-performance Lean wave A1: NarrowOps | Committed candidate; review/integration pending | 373: Committed candidate; review/integration pending | [task](lanes/335.md) |
 | 336 | Practical-performance Lean wave A2: MulDiv | Merged after review/checks | 374: Merged after review/checks | [report](messung/muse/MUSE-REPORT-336.md) |
 | 337 | Practical-performance Lean wave A3: ShiftLogic | Merged after review/checks | 375: Merged after review/checks | [report](messung/muse/MUSE-REPORT-337.md) |
-| 338 | Practical-performance Lean wave A4: ControlFlow | Merged after review/checks | 376: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-338.md) |
+| 338 | Practical-performance Lean wave A4: ControlFlow | Merged after review/checks | 376: Merged after review/checks | [report](messung/muse/MUSE-REPORT-338.md) |
 | 339 | Practical-performance Lean wave A5: LockedOps | Committed candidate; review/integration pending | 377: Committed candidate; review/integration pending | [task](lanes/339.md) |
 | 340 | Practical-performance Lean wave A6: ScalarFloat | Agent working | 378: scheduled | [task](lanes/340.md) |
 | 341 | Practical-performance Lean wave B1: AccessList | Committed candidate; review/integration pending | 379: Committed candidate; review/integration pending | [task](lanes/341.md) |
@@ -313,6 +313,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **337**, Practical-performance Lean wave A3: ShiftLogic, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-337.md). <!-- x86-merged:337 -->
 - 2026-10-01: lane **375**, Independent exact-candidate review of 337 ShiftLogic, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-375.md). <!-- x86-merged:375 -->
 - 2026-10-01: lane **338**, Practical-performance Lean wave A4: ControlFlow, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-338.md). <!-- x86-merged:338 -->
+- 2026-10-01: lane **376**, Independent exact-candidate review of 338 ControlFlow, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-376.md). <!-- x86-merged:376 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
