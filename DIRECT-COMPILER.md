@@ -233,7 +233,7 @@ Last ledger refresh: **2026-10-01 15:54 UTC**. This is an operational snapshot, 
 | 546 | Next bridge wave N13: ContractSites | Committed candidate; review/integration pending | 552: Committed candidate; review/integration pending | [task](lanes/546.md) |
 | 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Merged after review/checks | [report](messung/muse/MUSE-REPORT-547.md) |
 | 554 | Shorter clearer current English README | Merged after review/checks | 555: Merged after review/checks | [report](messung/muse/MUSE-REPORT-554.md) |
-| 556 | Repeated intermittent CLI alias test diagnosis | Merged after review/checks | 557: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-556.md) |
+| 556 | Repeated intermittent CLI alias test diagnosis | Merged after review/checks | 557: Merged after review/checks | [report](messung/muse/MUSE-REPORT-556.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -522,6 +522,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **554**, Shorter clearer current English README, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-554.md). <!-- x86-merged:554 -->
 - 2026-10-01: lane **555**, Independent exact-candidate README review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-555.md). <!-- x86-merged:555 -->
 - 2026-10-01: lane **556**, Repeated intermittent CLI alias test diagnosis, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-556.md). <!-- x86-merged:556 -->
+- 2026-10-01: lane **557**, Independent exact-candidate CLI alias repair review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-557.md). <!-- x86-merged:557 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
