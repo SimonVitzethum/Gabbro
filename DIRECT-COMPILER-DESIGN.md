@@ -94,6 +94,50 @@ ops, `Speicher.lean` LE access, width `Breite`) are NOT pilot vocabulary: a
 width helper or SIMD helper does not mean ISA support, and any byte outside
 the canonical subset is explicitly refused (non-canonical but architecturally
 valid alternatives are outside the pilot).
+
+## 2A. Selective hardware model and why 14 forms are not maximal performance (PROPOSED)
+
+Feasible and intended: the hardware model covers EXACTLY the emitted
+instruction forms the backend can produce — no more, no less. For each
+selected form it models every architecturally observable state, effect and
+interaction: general registers and flags read/written, memory permissions and
+alignment checked per access, decode/fetch boundaries and lengths from the
+bytes, fault delivery (permission, alignment, divide error, illegal encoding),
+and — for the selected concurrent/FP forms — the TSO store-buffer interaction,
+interrupt/masking interaction and FP control state (MXCSR scope, masks,
+sticky-flag reservation). Selection is driven by generic source emitter
+construct needs ([EMITTER-INVENTAR](dokumente/x86/EMITTER-INVENTAR.md) §§2–10:
+which widths, aggregates, calls, gates, entries the language lowers), never by
+particular programs or names. A whole-hardware model — internal pipeline,
+caches, branch predictors, transistor behaviour — is NOT needed for functional
+translation validation and is explicitly out of scope: functional correctness
+needs the retired-instruction semantics plus its asynchronous interactions,
+not cycle mechanics. Execution-time guarantees are a separate matter: they
+still need named conservative hardware assumptions plus the separate cost
+transfer of §9/[FLOAT-ZEIT §8](dokumente/x86/FLOAT-ZEIT.md); microarchitectural
+tuning (layout, alignment, scheduling) is MEASURED per §10, never guaranteed
+maximal globally — no numerical instruction-count target and no
+maximal-performance claim appear anywhere in this design.
+
+Coverage rule ("only reachable software bodies?"): ALL reachable final code
+must be covered — emitted unit, generated driver, compiled-in binding code,
+runtime and every handwritten entry path ([IMAGE-ABI §10](dokumente/x86/IMAGE-ABI.md));
+anything reachable but unmodelled (unsupported data form, unselected encoding,
+illegal entry) is precisely REFUSED by decode/validator, never silently
+assumed. Plainly: 14 is a proof pilot, inadequate for high performance across
+Gabbro — it lacks multiply/divide, shifts, all sub-64-bit forms, all FP, all
+atomics/fences, CMOV/SETcc and indirect control, while forcing needlessly long
+encodings (always-10-byte `movImm64`, disp32-only memory forms, no short
+branches). The planned practical scalar profile (§3) closes the everyday gap;
+feature-gated tiers (§6) carry SIMD/BMI/AVX separately. Even so, the exact
+selected-forms model remains nontrivial: every added form multiplies the
+interactions with asynchronous events (interrupts landing mid-sequence,
+another core's access between a step's accesses, faults on unselected CMOV
+operands) that the per-access refinement (§5) must survive. Proof boundaries
+are unchanged: only named silicon/device/timing behaviour is a hardware
+assumption; OS, runtime, loader and binding bodies stay user logic with
+checked contracts; the goal statement and all guarantees stay unchanged.
+
 ## 3. PLANNED ISA table: minimal practical-performance profile (PROPOSED)
 
 Not Turing-completeness alone: the profile must compile ordinary integer

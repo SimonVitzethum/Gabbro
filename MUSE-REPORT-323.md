@@ -1,5 +1,20 @@
 # MUSE-REPORT-323: detailed generic direct compiler design, with fast compilation
 
+## Latest steering extension (2026-10-01, second commit)
+
+Added §2A "Selective hardware model and why 14 forms are not maximal
+performance" (~42 lines): hardware model covers EXACTLY the emitted forms
+(registers/flags, permissions/alignment, decode/fetch, faults,
+TSO/interrupt/FP interactions as selected); whole pipeline/cache/transistor
+model out of scope for functional validation; time needs named conservative
+assumptions + separate cost transfer; all reachable final code covered,
+unmodelled forms refused; 14 stated plainly as proof pilot inadequate for
+high performance (no mul/div/shifts/FP/atomics/SIMD, long encodings);
+scalar profile then gated tiers; selected-forms model still nontrivial over
+async events; proof boundaries, goal statement and guarantees unchanged;
+no numerical count target, no maximal-performance claim.
+New measured line count: 506 (was 462).
+
 ## What was done
 
 Wrote the NEW root document `DIRECT-COMPILER-DESIGN.md` (462 lines), a
