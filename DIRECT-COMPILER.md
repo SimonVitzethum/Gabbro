@@ -266,7 +266,7 @@ Last ledger refresh: **2026-10-01 20:19 UTC**. This is an operational snapshot, 
 | 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Merged after review/checks | 617: Merged after review/checks | [report](messung/muse/MUSE-REPORT-605.md) |
 | 618 | Overnight: Resource-safe native Lean invocation for publication tests | Merged after review/checks | 619: Merged after review/checks | [report](messung/muse/MUSE-REPORT-618.md) |
 | 620 | Automatic coordinator takeover on missing foreground heartbeat | Agent working | 621: scheduled | [task](lanes/620.md) |
-| 622 | Remove only completed managed lane task markdown | Committed candidate; review/integration pending | 623: Committed candidate; review/integration pending | [task](lanes/622.md) |
+| 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-622.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -630,6 +630,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **591**, Independent connection review of 573, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-591.md). <!-- x86-merged:591 -->
 - 2026-10-01: lane **600**, Overnight: Invariant-derived instruction selection with byte execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-600.md). <!-- x86-merged:600 -->
 - 2026-10-01: lane **612**, Independent overnight review of 600, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-612.md). <!-- x86-merged:612 -->
+- 2026-10-01: lane **622**, Remove only completed managed lane task markdown, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-622.md). <!-- x86-merged:622 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
