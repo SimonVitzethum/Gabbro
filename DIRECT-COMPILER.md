@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 14:25 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 14:57 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -189,7 +189,7 @@ Last ledger refresh: **2026-10-01 14:25 UTC**. This is an operational snapshot, 
 | 346 | Practical-performance Lean wave C2: GateStub | Merged after review/checks | 384: Merged after review/checks | [report](messung/muse/MUSE-REPORT-346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
-| 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Agent working | 387: scheduled | [task](lanes/349.md) |
+| 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Committed candidate; review/integration pending | 387: Committed candidate; review/integration pending | [task](lanes/349.md) |
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Merged after review/checks | 388: Merged after review/checks | [report](messung/muse/MUSE-REPORT-350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Merged after review/checks | 439: Merged after review/checks | [report](messung/muse/MUSE-REPORT-401.md) |
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Merged after review/checks | [report](messung/muse/MUSE-REPORT-402.md) |
@@ -224,15 +224,16 @@ Last ledger refresh: **2026-10-01 14:25 UTC**. This is an operational snapshot, 
 | 432 | Continuous Lean proof reserve: RegionSeparation | Merged after review/checks | 480: Merged after review/checks | [report](messung/muse/MUSE-REPORT-432.md) |
 | 433 | Continuous Lean proof reserve: ObservationProjection | Merged after review/checks | 481: Merged after review/checks | [report](messung/muse/MUSE-REPORT-433.md) |
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Merged after review/checks | 482: Merged after review/checks | [report](messung/muse/MUSE-REPORT-434.md) |
-| 435 | Continuous Lean proof reserve: DecodingCoverage | Committed candidate; review/integration pending | 483: Agent working | [task](lanes/435.md) |
+| 435 | Continuous Lean proof reserve: DecodingCoverage | Committed candidate; review/integration pending | 483: Committed candidate; review/integration pending | [task](lanes/435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
-| 542 | Next bridge wave N9: StackUnwind | Agent working | 548: scheduled | [task](lanes/542.md) |
-| 543 | Next bridge wave N16: DecodeFault | Agent working | 549: scheduled | [task](lanes/543.md) |
-| 544 | Next bridge wave N18: RegionFresh | Agent working | 550: scheduled | [task](lanes/544.md) |
-| 545 | Next bridge wave N11: PayloadResidue | Agent working | 551: scheduled | [task](lanes/545.md) |
-| 546 | Next bridge wave N13: ContractSites | Agent working | 552: scheduled | [task](lanes/546.md) |
+| 542 | Next bridge wave N9: StackUnwind | Committed candidate; review/integration pending | 548: Committed candidate; review/integration pending | [task](lanes/542.md) |
+| 543 | Next bridge wave N16: DecodeFault | Committed candidate; review/integration pending | 549: Committed candidate; review/integration pending | [task](lanes/543.md) |
+| 544 | Next bridge wave N18: RegionFresh | Committed candidate; review/integration pending | 550: Committed candidate; review/integration pending | [task](lanes/544.md) |
+| 545 | Next bridge wave N11: PayloadResidue | Committed candidate; review/integration pending | 551: Committed candidate; review/integration pending | [task](lanes/545.md) |
+| 546 | Next bridge wave N13: ContractSites | Committed candidate; review/integration pending | 552: Committed candidate; review/integration pending | [task](lanes/546.md) |
 | 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Merged after review/checks | [report](messung/muse/MUSE-REPORT-547.md) |
-| 554 | Shorter clearer current English README | Agent working | 555: scheduled | [task](lanes/554.md) |
+| 554 | Shorter clearer current English README | Merged after review/checks | 555: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-554.md) |
+| 556 | Repeated intermittent CLI alias test diagnosis | Agent working | 557: scheduled | [task](lanes/556.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -518,6 +519,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **472**, Independent exact-candidate review of 424, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-472.md). <!-- x86-merged:472 -->
 - 2026-10-01: lane **547**, Next bridge wave N17: TimeTransfer, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-547.md). <!-- x86-merged:547 -->
 - 2026-10-01: lane **553**, Independent exact-candidate review of 547 TimeTransfer, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-553.md). <!-- x86-merged:553 -->
+- 2026-10-01: lane **554**, Shorter clearer current English README, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-554.md). <!-- x86-merged:554 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

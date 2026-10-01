@@ -445,14 +445,14 @@ EINTRAEGE = [
     ),
     (
         "README.md",
-        r"\*\*(\d+) of \d+ instruments carry all five requirements\*\*",
+        r"\*\*(\d+) of \d+ instruments carry the four static requirements\*\*",
         ["./instrumente/pruefe-waechter.py"],
         r"== (\d+) von \d+ tragen die vier STATISCHEN ==",
         "Instrumente mit Frist, Sprechprobe und rotem Abbruch",
     ),
     (
         "README.md",
-        r"of (\d+) instruments carry all five",
+        r"of (\d+) instruments carry the four static",
         ["./instrumente/pruefe-waechter.py"],
         r"von (\d+) tragen die vier STATISCHEN",
         "Instrumente insgesamt",
