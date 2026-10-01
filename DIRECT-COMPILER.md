@@ -230,3 +230,9 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - [IR/optimisation obligations](dokumente/x86/IR-VALIDIERUNG.md), [full source bridge](dokumente/x86/QUELLBRUECKE.md) and [emitter inventory](dokumente/x86/EMITTER-INVENTAR.md).
 - [TSO/W/GX bridge](dokumente/x86/TSO-GX-BRUECKE.md), [image/ABI coverage](dokumente/x86/IMAGE-ABI.md) and [IEEE/time obligations](dokumente/x86/FLOAT-ZEIT.md).
 - [Source/invariant audit](dokumente/x86/REVIEW-QUELLE-INVARIANTEN.md), [concurrency audit](dokumente/x86/REVIEW-TSO.md) and [optimisation/binary audit](dokumente/x86/REVIEW-OPT-BINAER.md).
+
+- 2026-10-01: fast compilation is an explicit design priority, including mandatory
+  Lean validation. [Author 323](lanes/323.md) is preparing a separate root English
+  instruction, invariant-optimisation and compiler-speed design;
+  [reviewer 324](lanes/324.md) checks the exact committed candidate independently.
+  No speed measurement or expanded native instruction support is claimed.
