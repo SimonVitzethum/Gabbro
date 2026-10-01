@@ -8,7 +8,100 @@ empty, `git diff --check` clean).
 
 CANDIDATE: 554 c910e94b42d9b06317a406aca0673466e759883a
 
-VERDICT: ACCEPT
+VERDICT: REPAIR
+
+## Round 3: coordinator factual questions — three real defects, precise repairs
+
+Re-reviewed the pinned candidate (`c910e94b`, unchanged) against real
+definitions. All three coordinator concerns are REAL; regexes matching the
+numbers does not save them. Evidence below is quoted from this clone, which
+is at the candidate's base for these files (candidate touches none of them).
+
+**1. Intro overclaims the proof boundary (README lines 12–16) — REAL.**
+The intro says the user owes "the application logic (`LogikPflicht`, at every
+budget, against every value a shared atomic read may return)" and "OS,
+runtimes, thread startup and locks are never trusted or assumed — they are
+user/binding logic with checked contracts and implementations."
+`grammatik/Grammatik/Zielsatz/Spec.lean` says otherwise:
+- The duty is `NutzerPflichtA E` (header lines 18–21): bodies at every budget
+  AND against every shared-atomic-read value, which is `LogikPflichtA`, "the
+  rely; on a unit without one it is `LogikPflicht`" — plus `StartPflicht`.
+  Attributing the rely clause to `LogikPflicht` names the wrong obligation
+  (on atomic units the two are not equivalent: `hP_rely_nicht`, lines
+  110–117). Use `NutzerPflichtA`/`LogikPflichtA` or plain language.
+- "Never assumed" is false: (c) `GutO O` assumes every foreign body
+  (`extern fn`, `prim fn`, `asm`, `entry`, `entrust`) writes only its declared
+  frame and keeps held locks — "Foreign code is not Gabbro code: nothing in
+  the language can check it" (lines 868–871); (c) `AxVertragO` assumes every
+  fitting axiom answer meets its declared `ensures` — "the contract of
+  foreign code or a device, which the user writes and nothing checks" (lines
+  883–885); (d) `Laufzeit.lader` assumes the loader establishes `E.sp0` — "A
+  toolchain/loader fact" (lines 896–898); (d) `Laufzeit.start`/`.einmal`
+  assumes the runtime starts exactly the declared starts and run-time thread
+  creation (lines 934ff, 949). Loader, runtime thread startup and foreign
+  code ARE assumed premises.
+- "Already have checked implementations" conflates checked contracts with
+  proved implementation correspondence. Contracts are checker-checked, but
+  the header's STILL TRUSTED/NOT CLAIMED list (lines 70–80) names as
+  unproved: the exporter is unverified; G-being-the-meaning-of-emitted-C is
+  an assumption except chain-instances 104/108 (`zaehle-kette.py --lean`
+  measures 2 of 129 CLOSED); C forms stand 51 lemma / 4 assumption / 27 no
+  semantics. Runtime/OS implementation correspondence is not proved;
+  source-to-byte closure is OPEN.
+Repair: rewrite the intro paragraph to separate intended architecture (OS
+as user/binding logic with declared contracts — Simon's 2026-09-30
+requirement, a direction, not a boundary) from the present proof boundary
+(loader, runtime thread creation and foreign behavior are named assumed
+premises (c)/(d); their implementations' correspondence is unproved), and
+fix the duty name. Keep it to the same ~7 lines; no new claims.
+
+**2. `75 of 89 instruments carry all five requirements` is false — REAL.**
+`instrumente/pruefe-waechter.py:1524` prints `== N von M tragen die vier
+STATISCHEN ==`, and lines 1525–1528 state "Es sind seit dem 2026-08-31
+FUENF … Der Wortlaut `vier` bleibt, weil `pruefe-zahlen.py` diese Zeile
+woertlich nachrechnet". `statisch()` (lines 739–760) checks only the static
+source-text requirements; the fifth family — work quantity beside the
+verdict (W17) — "steht in der Ausgabe und nicht im Quelltext … wird in
+`--lauf` gemessen, sonst gar nicht" (lines 1529–1530). The 75/89 figure
+counts the FOUR STATIC requirements, and the README presents it as "all
+five". The tool-side `pruefe-zahlen.py` patterns already say "vier
+STATISCHEN" (lines 450, 457) while the two README-side patterns say "all
+five" (lines 448, 455) — the unfaithfulness is baked into the register.
+Repair (author 554 is authorised for exactly this narrow edit):
+- README status-table cell: truthful wording, e.g. "**75 of 89 instruments
+  carry the four static requirements**" (keep figures; one clause noting
+  the fifth — work quantity — is measured per run, not statically, if it
+  fits one line; do not relitigate the guardian cell's five-attribute list).
+- `instrumente/pruefe-zahlen.py` lines 447–459: update ONLY the two
+  README-side regexes to the new truthful wording (patterns BEFORE the
+  text); keep both entries' commands (`pruefe-waechter.py`), tool-side
+  patterns, captured figures (75 and 89), mismatch-vs-missing-hit behavior
+  and poison/clean coverage intact; no other entry touched, no guard
+  deleted, no diagnostic masked. Stale baseline ledgers elsewhere are out
+  of scope and stay as they are.
+
+**3. `Printed line` table describes output the recipe never prints — REAL.**
+`grammatik/NachpruefungZiel.lean` (22 lines: imports Beweis, Proben,
+ProbenW1, BeweisAtomar; `#check`/`#print axioms` for `GabbroZiel`,
+`gabbro_ziel`, `gabbro_ziel_sc`, `gabbro_ziel_sc_aus`,
+`gabbro_ziel_verbund`, `gabbro_ziel_verbund_sc_aus`, `gabbro_ziel_zeuge`,
+`probeA/probeD_widerlegt_gilt`, `w1_abgelehnt`) prints NO `schlusssatz`,
+`kette_104/108` or K124 lines. The candidate table row 71
+("`schlusssatz…`, `kette_104/108…`, `K124…` | existing C-backend translation
+validation …") therefore documents lines the two-command recipe cannot
+produce — a reader running it will wait for lines that never come.
+Repair: delete that row from the `Printed line` table (the table must only
+describe what the recipe prints) and, if one line fits without repetition,
+point the C-backend evidence at the provenance page
+(`dokumente/PROJECT-STATUS.md`, which should name the actual chain:
+generic closing theorem, instances 104/108, concurrent 124, with the
+2-of-129-closed scope from `zaehle-kette.py --lean`; no new numbers beyond
+what the instruments print).
+
+The round-2 §5 repair remains necessary and is kept; it is not sufficient.
+No new test results are claimed: guardian outputs cited above are the
+tools' own printed words and my earlier pattern-hit checks, re-confirmed
+on the pinned text. No Lean or cargo build run (review-only lane).
 
 ## Re-review after author repair (new pinned HEAD)
 
