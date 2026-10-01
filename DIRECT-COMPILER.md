@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 20:36 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 20:38 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -256,7 +256,7 @@ Last ledger refresh: **2026-10-01 20:36 UTC**. This is an operational snapshot, 
 | 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Merged after review/checks | [report](messung/muse/MUSE-REPORT-595.md) |
 | 596 | Overnight: TSO history preservation across actual finite traces | Merged after review/checks | 608: Merged after review/checks | [report](messung/muse/MUSE-REPORT-596.md) |
 | 597 | Overnight: Selected SSE2 vector bytes to canonical XMM execution | Merged after review/checks | 609: Merged after review/checks | [report](messung/muse/MUSE-REPORT-597.md) |
-| 598 | Overnight: Checked validator to loaded fetched execution | Committed candidate; review/integration pending | 610: Committed candidate; review/integration pending | [task](lanes/598.md) |
+| 598 | Overnight: Checked validator to loaded fetched execution | Merged after review/checks | 610: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-598.md) |
 | 599 | Overnight: Direct typed-source expression to pilot machine code | Agent working | 611: scheduled | [task](lanes/599.md) |
 | 600 | Overnight: Invariant-derived instruction selection with byte execution | Merged after review/checks | 612: Merged after review/checks | [report](messung/muse/MUSE-REPORT-600.md) |
 | 601 | Overnight: Flag dependencies across actual decoded control flow | Agent working | 613: scheduled | [task](lanes/601.md) |
@@ -273,6 +273,7 @@ Last ledger refresh: **2026-10-01 20:36 UTC**. This is an operational snapshot, 
 | 630 | Direct-source closure: SourceAccessCompleteness | Agent working | 631: scheduled | [task](lanes/630.md) |
 | 632 | Direct-source closure: SourceValidatorConnection | Waiting for accepted dependencies | 633: scheduled | [task](lanes/632.md) |
 | 634 | Direct-source closure: SourceCodeFrame | Agent working | 635: scheduled | [task](lanes/634.md) |
+| 636 | Required failover slot lifetime and safe role handback | Agent working | 637: scheduled | [task](lanes/636.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -655,6 +656,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **620**, Automatic coordinator takeover on missing foreground heartbeat, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-620.md). <!-- x86-merged:620 -->
 - 2026-10-01: lane **621**, Independent lifecycle review of 620, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-621.md). <!-- x86-merged:621 -->
 - 2026-10-01: publication batch checks passed for `a71b7e63`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **598**, Overnight: Checked validator to loaded fetched execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-598.md). <!-- x86-merged:598 -->
+- 2026-10-01: checked master `d0df3f69` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d0df3f69441aa3317c46bf6bc27e4419ba7dcc86 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
