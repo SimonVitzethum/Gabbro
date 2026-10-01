@@ -203,7 +203,7 @@ Last ledger refresh: **2026-10-01 13:49 UTC**. This is an operational snapshot, 
 | 411 | Adversarial implementation audit: DYNAMIC-REGIONS | Merged after review/checks | 491: Merged after review/checks | [report](messung/muse/MUSE-REPORT-411.md) |
 | 412 | Adversarial implementation audit: FLOAT-SIMD | Merged after review/checks | 492: Merged after review/checks | [report](messung/muse/MUSE-REPORT-412.md) |
 | 413 | Adversarial implementation audit: BUDGET-OBSERVATIONS | Merged after review/checks | 493: Merged after review/checks | [report](messung/muse/MUSE-REPORT-413.md) |
-| 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Committed candidate; review/integration pending | 494: Committed candidate; review/integration pending | [task](lanes/414.md) |
+| 414 | Adversarial implementation audit: SOURCE-FOOTPRINT | Merged after review/checks | 494: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-414.md) |
 | 415 | Adversarial implementation audit: END-TO-END-TRUST | Committed candidate; review/integration pending | 495: Committed candidate; review/integration pending | [task](lanes/415.md) |
 | 416 | Continuous Lean proof reserve: EffectiveAddress | Committed candidate; review/integration pending | 464: Committed candidate; review/integration pending | [task](lanes/416.md) |
 | 417 | Continuous Lean proof reserve: ConditionalMove | Merged after review/checks | 465: Merged after review/checks | [report](messung/muse/MUSE-REPORT-417.md) |
@@ -476,6 +476,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **413**, Adversarial implementation audit: BUDGET-OBSERVATIONS, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-413.md). <!-- x86-merged:413 -->
 - 2026-10-01: checked master `e89e53d2` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e89e53d2164932f0ef079f29b1984e9743cab116 -->
 - 2026-10-01: lane **493**, Independent exact-candidate review of 413, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-493.md). <!-- x86-merged:493 -->
+- 2026-10-01: lane **414**, Adversarial implementation audit: SOURCE-FOOTPRINT, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-414.md). <!-- x86-merged:414 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
