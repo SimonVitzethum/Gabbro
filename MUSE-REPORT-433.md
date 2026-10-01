@@ -87,6 +87,39 @@ New theorems (every premise used; no `sorry`/`admit`/`axiom`/`native_decide`):
 - Source correspondence, contracts, call logs, I/O, budget/cost/time, full
   bridge: OPEN cuts, as tasked.
 
+## Repair pass after integration-gate failure (no merge)
+
+Integration evidence (coordinator checkout `/home/simon/Dokumente/Gabbro`,
+merge build): `== exit 1; 2 error line(s)`; step `397/398 Building
+Grammatik` fails with `failed to create thread`, exit 134.
+
+Analysis, from the evidence itself:
+
+- The integration log PRINTS all fourteen `#print axioms` lines of
+  `Grammatik/X86/ObservationProjection.lean` — my module elaborated
+  SUCCESSFULLY inside the integration build. The failure is strictly the
+  subsequent single-process umbrella (`Grammatik.lean`) elaboration.
+- The failure signature is byte-identical to the pre-existing environmental
+  failure proven in my clone (clean-tree stash test: same `failed to create
+  thread`, same step, without my change).
+- No owned file carries a defect: local `./lean-probe` re-run on the
+  committed module gives **0 errors** with standard axioms only (see check
+  results above).
+
+Repair performed: none in Lean — no Lean change can fix coordinator-side
+thread creation, and any edit would only invalidate the accepted isolated
+review without cause. Owned files are unchanged except this report section.
+
+Concrete blocker (not assumed away): the coordinator's merge build cannot
+elaborate the ~397-import umbrella in one Lean process under current
+machine load. Remedies live outside my owned files: retry the merge build
+when fewer lanes run, raise the thread/memory headroom for the umbrella
+step, or split the umbrella elaboration. My candidate (`c1cc7b96`, now plus
+this report) is ready for merge retry unchanged.
+
+A fresh independent review is required for the changed commit, as
+instructed. No acceptance of the full source/binary chain is claimed.
+
 ## Task remarks
 
 - Nothing in the task text appears wrong. One judgment call worth
