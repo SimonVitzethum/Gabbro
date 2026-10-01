@@ -436,3 +436,4 @@ import Grammatik.X86.MulDivCodec
 import Grammatik.X86.AccessExecution
 import Grammatik.X86.EntryExecution
 import Grammatik.X86.NarrowCodec
+import Grammatik.X86.ShiftCodec
