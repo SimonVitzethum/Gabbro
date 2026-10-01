@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 13:18 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 13:19 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -190,7 +190,7 @@ Last ledger refresh: **2026-10-01 13:18 UTC**. This is an operational snapshot, 
 | 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
 | 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Waiting for accepted dependencies | 387: scheduled | [task](lanes/349.md) |
-| 350 | Practical-performance Lean wave C6: AtomicPayload | Agent working | 388: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/350.md) |
+| 350 | Practical-performance Lean wave C6: AtomicPayload | Committed candidate; review/integration pending | 388: Agent working; integration gate rejected; repair/re-review required | [task](lanes/350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Merged after review/checks | 439: Merged after review/checks | [report](messung/muse/MUSE-REPORT-401.md) |
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Merged after review/checks | [report](messung/muse/MUSE-REPORT-402.md) |
 | 404 | Adversarial implementation audit: ARITHMETIC-FLAGS | Merged after review/checks | 484: Merged after review/checks | [report](messung/muse/MUSE-REPORT-404.md) |
@@ -419,6 +419,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: integration of candidate(s) [433] failed the local proof/build gate after independent review 481; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:481 -->
 - 2026-10-01: checked master `2e14380b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:2e14380b71a8aa9b79a48a6c32a52969da72987e -->
 - 2026-10-01: lane **484**, Independent exact-candidate review of 404, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-484.md). <!-- x86-merged:484 -->
+- 2026-10-01: documentation-only publication at `0bd9a875` retains the successful complete local Lean, Rust and emission checks at `c937ebe4`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
