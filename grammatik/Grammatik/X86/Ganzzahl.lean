@@ -69,13 +69,9 @@ def mulHighS (b : Breite) (x y : Wort) : Wort :=
     Unsigned division refuses only divide-by-zero. Signed division
     refuses divide-by-zero AND the `INT_MIN / -1` quotient overflow
     (the quotient would need one more bit than the width holds).
-    Results are `(quotient, remainder)` words at the named width. -/
-
-/-- Division refusal cause. -/
-inductive TeilFehler where
-  | durchNull
-  | quotientUeberlauf
-  deriving DecidableEq, Repr
+    Results are `(quotient, remainder)` words at the named width.
+    Refusal causes are proved as theorems below (`divU/divS_verweigerung_ursache`),
+    not as an unused datatype. -/
 
 /-- Unsigned division at width `b`: `none` exactly on divisor zero. -/
 def divU (b : Breite) (x y : Wort) : Option (Wort × Wort) :=
@@ -134,23 +130,29 @@ def sarB (b : Breite) (x : Wort) (c : Nat) : Wort :=
     MUL/SHIFT leave several flags architecturally undefined, and `Flags`
     stores all but AF as `Bool`, so returning a `Flags` would force an
     arbitrary defined value. Instead each operation returns its defined
-    evidence (MUL carry, shift carry plus an optional overflow valid
-    only for a one-bit shift) and a VALIDITY RELATION pins only the
-    defined flags, leaving the rest unconstrained. -/
+    evidence (unsigned/signed MUL carry, shift carry plus an optional
+    overflow valid only for a one-bit shift) and a VALIDITY RELATION pins
+    only the defined flags, leaving the rest unconstrained. The shift
+    relation takes the width: sign and OF-masking are width-dependent. -/
 
 /-- Validity for logic results: CF/OF cleared, AF undefined. -/
 def LogikGueltig (r : Wort) (f : Flags) : Prop :=
   f.cf = false ∧ f.of = false ∧ f.af = none ∧
   f.zf = zfTest r ∧ f.sf = sfTest r ∧ f.pf = parityEven r
 
-/-- MUL defined evidence: the carry flag (CF = OF = high half nonzero). -/
-def mulTrag (b : Breite) (x y : Wort) : Bool :=
+/-- Unsigned MUL defined evidence: the carry flag (CF = OF = unsigned
+    high half nonzero). Scoped to unsigned MUL by name: the signed
+    reading can fit where the unsigned one overflows
+    (`mulHighU .b8 0xFF 0xFF = 0xFE` versus `-1 * -1 = +1`), so the
+    signed carry has its own evidence `mulTragS` below. -/
+def mulTragU (b : Breite) (x y : Wort) : Bool :=
   decide (mulHighU b x y ≠ 0)
 
-/-- Validity for a MUL flag snapshot: CF/OF pinned, AF undefined,
-    SF/ZF/PF unconstrained (existentially, never forced false). -/
-def MulGueltig (b : Breite) (x y : Wort) (f : Flags) : Prop :=
-  f.cf = mulTrag b x y ∧ f.of = mulTrag b x y ∧ f.af = none
+/-- Validity for an UNSIGNED MUL flag snapshot: CF/OF pinned to the
+    unsigned carry, AF undefined, SF/ZF/PF unconstrained
+    (existentially, never forced false). -/
+def MulGueltigU (b : Breite) (x y : Wort) (f : Flags) : Prop :=
+  f.cf = mulTragU b x y ∧ f.of = mulTragU b x y ∧ f.af = none
 
 /-- Shift defined evidence: carry out plus optional overflow (only a
     one-bit shift defines OF; otherwise it is undefined). -/
@@ -160,15 +162,20 @@ structure SchiebeNachweis where
   ueberlauf : Option Bool
   deriving DecidableEq, Repr
 
-/-- Validity for a shift flag snapshot: result flags pinned, CF pinned,
-    OF pinned exactly when the count is one, AF undefined; for wider
-    counts OF is unconstrained. -/
-def SchiebeGueltig (s : SchiebeNachweis) (c : Nat) (f : Flags) : Prop :=
+/-- Validity for a shift flag snapshot at width `b`: result flags
+    pinned, CF pinned, OF pinned exactly when the MASKED count is one,
+    AF undefined; for wider counts OF is unconstrained. The sign test is
+    the width-correct `negB b` (bit 63 alone misclassifies narrow
+    results such as `sarB .b8 0x80 7 = 0xFF`), and both OF clauses mask
+    with the same `b` as the value operations (a raw count of 33 masks
+    to 33 at `.b64` but to 1 at narrow widths). -/
+def SchiebeGueltig (b : Breite) (s : SchiebeNachweis) (c : Nat)
+    (f : Flags) : Prop :=
   f.cf = s.trag ∧ f.af = none ∧
-  f.zf = zfTest s.ergebnis ∧ f.sf = sfTest s.ergebnis ∧
+  f.zf = zfTest s.ergebnis ∧ f.sf = negB b s.ergebnis ∧
   f.pf = parityEven s.ergebnis ∧
-  (schiebeZaehler .b64 c = 1 → f.of = s.ueberlauf.getD f.of) ∧
-  (s.ueberlauf = none → schiebeZaehler .b64 c ≠ 1)
+  (schiebeZaehler b c = 1 → f.of = s.ueberlauf.getD f.of) ∧
+  (s.ueberlauf = none → schiebeZaehler b c ≠ 1)
 
 /-! ## 5. Source range arithmetic stays distinct from modular results.
 
@@ -247,10 +254,10 @@ theorem mulLow_null_links (b : Breite) (y : Wort) :
     mulLow b 0 y = 0 := by
   simp [mulLow, trunc]
 
-/-- MUL carry reads the high half. -/
-theorem mulTrag_heisst (b : Breite) (x y : Wort) :
-    mulTrag b x y = true ↔ mulHighU b x y ≠ 0 := by
-  simp [mulTrag]
+/-- Unsigned MUL carry reads the unsigned high half. -/
+theorem mulTragU_heisst (b : Breite) (x y : Wort) :
+    mulTragU b x y = true ↔ mulHighU b x y ≠ 0 := by
+  simp [mulTragU]
 
 /-- Unsigned division refuses exactly on divisor zero. -/
 theorem divU_verweigert_bei_null (b : Breite) (x y : Wort)
@@ -273,6 +280,28 @@ theorem divS_verweigert_min_durch_neg1 (b : Breite) (x y : Wort)
     (h1 : sVal b x = sMin b) (h2 : sVal b y = -1) :
     divS b x y = none := by
   simp [divS, h1, h2]
+
+/-- Unsigned refusal cause: `none` means the divisor is zero. -/
+theorem divU_verweigerung_ursache (b : Breite) (x y : Wort)
+    (h : divU b x y = none) : (trunc b y).toNat = 0 := by
+  by_cases h0 : (trunc b y).toNat = 0
+  · exact h0
+  · exfalso
+    obtain ⟨q, r, hqr⟩ := divU_antwortet_bei_nichtnull b x y h0
+    rw [hqr] at h
+    simp at h
+
+/-- Signed refusal causes: `none` means divisor zero or `sMin / -1`. -/
+theorem divS_verweigerung_ursache (b : Breite) (x y : Wort)
+    (h : divS b x y = none) :
+    sVal b y = 0 ∨ (sVal b x = sMin b ∧ sVal b y = -1) := by
+  by_cases h0 : sVal b y = 0
+  · exact Or.inl h0
+  · right
+    by_cases h1 : sVal b x = sMin b ∧ sVal b y = -1
+    · exact h1
+    · exfalso
+      simp [divS, h0, h1] at h
 
 /-- Masked 64-bit counts stay below 64. -/
 theorem schiebeZaehler_b64_schranke (c : Nat) :
@@ -319,30 +348,68 @@ theorem shlB_b64_breite_ist_null (x : Wort) :
   unfold shlB schiebeZaehler
   simp only [show (64 % 64) = 0 from rfl]
 
-/-- A MUL flag snapshot always exists (undefined flags arbitrary). -/
-theorem mul_gueltig_existenz (b : Breite) (x y : Wort) :
-    ∃ f : Flags, MulGueltig b x y f :=
-  ⟨Flags.mk (mulTrag b x y) true none true true (mulTrag b x y),
+/-- An unsigned MUL flag snapshot always exists (undefined flags arbitrary). -/
+theorem mulU_gueltig_existenz (b : Breite) (x y : Wort) :
+    ∃ f : Flags, MulGueltigU b x y f :=
+  ⟨Flags.mk (mulTragU b x y) true none true true (mulTragU b x y),
     rfl, rfl, rfl⟩
 
 /-- Undefined MUL flags are unconstrained: two valid snapshots differ. -/
-theorem mul_unbestimmt_unbeschraenkt (b : Breite) (x y : Wort) :
-    ∃ f1 f2 : Flags, MulGueltig b x y f1 ∧ MulGueltig b x y f2 ∧
+theorem mulU_unbestimmt_unbeschraenkt (b : Breite) (x y : Wort) :
+    ∃ f1 f2 : Flags, MulGueltigU b x y f1 ∧ MulGueltigU b x y f2 ∧
       f1.sf ≠ f2.sf :=
-   ⟨Flags.mk (mulTrag b x y) true none true true (mulTrag b x y),
-   Flags.mk (mulTrag b x y) false none false false (mulTrag b x y),
+   ⟨Flags.mk (mulTragU b x y) true none true true (mulTragU b x y),
+   Flags.mk (mulTragU b x y) false none false false (mulTragU b x y),
+   ⟨rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl⟩, by simp⟩
+
+/-- Signed MUL (IMUL) defined evidence: the carry flag. The full signed
+    product is `low + high * 2 ^ b.bits` with `high` the arithmetic
+    upper half; it fits the signed width exactly when `high` is the sign
+    extension of the low half's sign bit (`0` beside a clear sign bit,
+    `-1` beside a set one). Otherwise CF = OF = 1. -/
+def mulTragS (b : Breite) (x y : Wort) : Bool :=
+  let hoch := (sVal b x * sVal b y).ediv (((2 ^ b.bits : Nat) : Int))
+  decide ¬ ((hoch = 0 ∧ negB b (mulLow b x y) = false) ∨
+    (hoch = -1 ∧ negB b (mulLow b x y) = true))
+
+/-- Validity for a SIGNED MUL flag snapshot: CF/OF pinned to the signed
+    carry, AF undefined, SF/ZF/PF unconstrained. -/
+def MulGueltigS (b : Breite) (x y : Wort) (f : Flags) : Prop :=
+  f.cf = mulTragS b x y ∧ f.of = mulTragS b x y ∧ f.af = none
+
+/-- A signed MUL flag snapshot always exists (undefined flags arbitrary). -/
+theorem mulS_gueltig_existenz (b : Breite) (x y : Wort) :
+    ∃ f : Flags, MulGueltigS b x y f :=
+  ⟨Flags.mk (mulTragS b x y) true none true true (mulTragS b x y),
+    rfl, rfl, rfl⟩
+
+/-- Undefined signed-MUL flags are unconstrained. -/
+theorem mulS_unbestimmt_unbeschraenkt (b : Breite) (x y : Wort) :
+    ∃ f1 f2 : Flags, MulGueltigS b x y f1 ∧ MulGueltigS b x y f2 ∧
+      f1.sf ≠ f2.sf :=
+   ⟨Flags.mk (mulTragS b x y) true none true true (mulTragS b x y),
+   Flags.mk (mulTragS b x y) false none false false (mulTragS b x y),
    ⟨rfl, rfl, rfl⟩, ⟨rfl, rfl, rfl⟩, by simp⟩
 
 /-- A shift flag snapshot exists away from the one-bit overflow case. -/
-theorem schiebe_gueltig_existenz (s : SchiebeNachweis) (c : Nat)
-    (h : s.ueberlauf = none) (h2 : schiebeZaehler .b64 c ≠ 1) :
-    ∃ f : Flags, SchiebeGueltig s c f := by
+theorem schiebe_gueltig_existenz (b : Breite) (s : SchiebeNachweis)
+    (c : Nat) (h : s.ueberlauf = none)
+    (h2 : schiebeZaehler b c ≠ 1) :
+    ∃ f : Flags, SchiebeGueltig b s c f := by
   refine ⟨Flags.mk s.trag (parityEven s.ergebnis) none
-    (zfTest s.ergebnis) (sfTest s.ergebnis) false, rfl, rfl, rfl, rfl,
+    (zfTest s.ergebnis) (negB b s.ergebnis) false, rfl, rfl, rfl, rfl,
     rfl, ?_, fun _ => h2⟩
   · intro _
     rw [h]
     rfl
+
+/-- Width-correct sign in action: the review's failing value. A valid
+    8-bit snapshot of `sarB .b8 0x80 7` (an arithmetic shift whose
+    8-bit sign is set while bit 63 is clear) demands `sf = true`. -/
+theorem schiebe_schmal_sf_korrekt (f : Flags)
+    (h : SchiebeGueltig .b8 ⟨sarB .b8 0x80 7, true, none⟩ 7 f) :
+    f.sf = true :=
+  h.2.2.2.1.trans (by decide)
 
 /-- A fitting unsigned source sum is below the width bound. -/
 theorem passtU_heisst (b : Breite) (a c : Nat)
@@ -381,6 +448,14 @@ theorem probe_mul_hoch_u :
 theorem probe_mul_hoch_s :
     mulHighS .b8 0xFF 0xFF = 0 ∧ sVal .b8 0xFF = -1 ∧
     mulLow .b8 0xFF 0xFF = 1 := by
+  decide
+
+/-- Carry readings diverge where they must: `-1 * -1` at eight bits
+    overflows unsigned (high `0xFE`) but fits signed (`+1`), so the
+    unsigned carry is set and the signed carry is clear. -/
+theorem probe_mul_trag_vorzeichen :
+    mulTragU .b8 0xFF 0xFF = true ∧
+    mulTragS .b8 0xFF 0xFF = false := by
   decide
 
 /-- Signed division refuses `INT_MIN / -1` (quotient overflow). -/
@@ -467,11 +542,13 @@ theorem ganzzahl_speicher_sonde :
      or one `Speicher`; per-access granularity, alignment/tearing and the
      GX refinement stay with the TSO lane (274/284).
    - No hardware verification: the 5-bit/6-bit count mask, the
-     `INT_MIN / -1` fault, the MUL carry rule and the flag-validity
-     relations are STATED executable semantics, not verified against
-     silicon; the even-parity reading of PF is inherited from Wort.lean.
-   - Narrow shifts use one uniform `% 32` mask; any per-form hardware
-     deviation is open and must be settled by the encoding review.
+     `INT_MIN / -1` fault, the unsigned/signed MUL carry rules and the
+     flag-validity relations are STATED executable semantics, not
+     verified against silicon; the even-parity reading of PF is inherited
+     from Wort.lean.
+   - The narrow `% 32` mask follows the uniform 5-bit hardware mask for
+     all narrow forms (confirmed by independent review R-298); only the
+     silicon verification itself remains open.
    - This file adds no new source-language construct or checker rule:
      no diagnostic, poison-probe, example or CLI numbers are taken.
 -/
@@ -487,8 +564,16 @@ theorem ganzzahl_speicher_sonde :
 #print axioms shlB
 #print axioms shrB
 #print axioms sarB
-#print axioms mulTrag_heisst
+#print axioms mulTragU_heisst
+#print axioms divU_verweigerung_ursache
+#print axioms divS_verweigerung_ursache
 #print axioms divS_verweigert_min_durch_neg1
+#print axioms mulTragS
+#print axioms MulGueltigS
+#print axioms mulS_gueltig_existenz
+#print axioms mulS_unbestimmt_unbeschraenkt
+#print axioms probe_mul_trag_vorzeichen
+#print axioms schiebe_schmal_sf_korrekt
 #print axioms schiebe_gueltig_existenz
 #print axioms probe_mul_hoch_u
 #print axioms probe_div_s_ueberlauf

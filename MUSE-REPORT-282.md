@@ -68,3 +68,31 @@ the memory probe is the executable memory witness.
 None blocking. One judgement call: narrow shifts got a uniform `% 32` mask
 (hardware-accurate split would be per-form); flagged in CUTS for the encoding
 review rather than modelled per-form here.
+
+## Repair round (review MUSE-REPORT-298, VERDICT: REPAIR — all three fixed)
+
+- R1 (material): `SchiebeGueltig` ignored the width (b64 mask in both OF
+  clauses, bit-63 SF). Fixed by a `(b : Breite)` parameter: both OF clauses
+  use `schiebeZaehler b c`, SF uses the width-correct `negB b`
+  (at `.b64` definitionally the old `sfTest`). `schiebe_gueltig_existenz`
+  follows the same parameter. New theorem `schiebe_schmal_sf_korrekt` proves
+  the review's failing value now demands the right flag: a valid 8-bit
+  snapshot of `sarB .b8 0x80 7` has `sf = true`.
+- R2 (cleanup): dead inductive `TeilFehler` deleted. Its purpose is now
+  served by proved refusal-cause theorems: `divU_verweigerung_ursache`
+  (`none` iff divisor zero, with `divU_antwortet_bei_nichtnull`) and
+  `divS_verweigerung_ursache` (`none` iff divisor zero or `sMin / -1`).
+- R3 (scoping): `mulTrag`/`MulGueltig` renamed to `mulTragU`/`MulGueltigU`
+  with unsigned-scoped docs (`mulTrag_heisst`, `mul_gueltig_existenz`,
+  `mul_unbestimmt_unbeschraenkt` renamed likewise, statements unchanged);
+  new signed evidence `mulTragS` (carry iff the arithmetic high half is not
+  the sign extension of the low half's sign bit), relation `MulGueltigS`,
+  `mulS_gueltig_existenz`, `mulS_unbestimmt_unbeschraenkt`, and contrast
+  probe `probe_mul_trag_vorzeichen` (`mulTragU .b8 0xFF 0xFF = true`,
+  `mulTragS .b8 0xFF 0xFF = false`).
+- CUTS updated: unsigned/signed carry rules named; the narrow-mask bullet
+  corrected (uniform 5-bit mask is hardware-accurate per the review; only
+  silicon verification stays open).
+- Checks after repair: `./lean-probe` 0 errors, all `#print axioms`
+  `[propext, Quot.sound]` or `[propext]`; `./lean-bau` exit 0, 0 error
+  lines, 369 jobs; no sorry/admit/axiom/native_decide/unsafe.
