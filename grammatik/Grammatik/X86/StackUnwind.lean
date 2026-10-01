@@ -413,8 +413,164 @@ theorem belegung_gerettet_schranke (b : Belegung) (r : Rahmen) (i : Nat)
   simp only [decide_eq_true_eq] at hpasst
   omega
 
+/-! ## 6. Joint witnesses: memory-changing runs and loud refusals. -/
+
+/-- Witness stack slot address: one word below the top. -/
+def zeugOben : Adresse := zeugS.register Register.rsp - BitVec.ofNat 64 8
+
+/-- Witness memory after pushing 42 below the top. -/
+def zeugM1 : Speicher := { zeugSpeicherRW with
+  bytes := writeBytes zeugSpeicherRW zeugOben 42 }
+
+/-- Witness state after `push rax` (length 1). -/
+def zeugS1 : Zustand := schrittPush zeugS Register.rsp
+  (ripNach zeugS.rip 1) zeugOben zeugM1
+
+/-- Witness state after `pop rbx` (length 1) past the push. -/
+def zeugS2 : Zustand := schrittPopReg zeugS1 Register.rsp Register.rbx
+  (ripNach zeugS1.rip 1)
+  (zeugS1.register Register.rsp + BitVec.ofNat 64 8) 42
+
+/-- The witness slot is writable for eight bytes. -/
+theorem zeugOben_schreibbar :
+    schreibbar8 zeugSpeicherRW zeugOben = true := by
+  decide
+
+/-- The witness slot is readable for eight bytes. -/
+theorem zeugOben_lesbar :
+    lesbar8 zeugSpeicherRW zeugOben = true := by
+  decide
+
+/-- The witness push installs its word below the old top. -/
+theorem zeug_push_schreibt : write64 zeugSpeicherRW zeugOben 42 =
+    some zeugM1 := by
+  unfold write64 zeugM1
+  rw [if_pos zeugOben_schreibbar]
+
+/-- The pushed word reads back at the witness slot. -/
+theorem zeug_push_liest : read64 zeugS1.speicher
+    (zeugS1.register Register.rsp) = some 42 := by
+  decide
+
+/-- JOINT WITNESS (push/pop): every premise of single-level restoration
+    holds jointly on a non-degenerate run, and the push observably
+    changes memory (zero becomes 42 below the old top). -/
+theorem push_pop_wiederhergestellt_zeuge :
+    ∃ (s s1 s2 : Zustand) (src dst : Register) (d1 d2 : Decodiert)
+      (m : Speicher) (v : Wort),
+      (laengeOk d1.laenge = true) ∧ (d1.befehl = .push64 src) ∧
+      (write64 s.speicher (s.register Register.rsp - BitVec.ofNat 64 8)
+        (s.register src) = some m) ∧
+      (lesbar8 s.speicher (s.register Register.rsp - BitVec.ofNat 64 8)
+        = true) ∧
+      (schritt d1 s = some s1) ∧
+      (read64 s1.speicher (s1.register Register.rsp) = some v) ∧
+      (schritt d2 s1 = some s2) ∧
+      (laengeOk d2.laenge = true) ∧ (d2.befehl = .pop64 dst) ∧
+      (dst ≠ Register.rsp) ∧
+      (s.speicher.bytes (s.register Register.rsp - BitVec.ofNat 64 8) ≠
+        m.bytes (s.register Register.rsp - BitVec.ofNat 64 8)) := by
+  have hok1 : laengeOk (⟨Befehl.push64 Register.rax, 1⟩ : Decodiert).laenge =
+      true := by
+    decide
+  have hok2 : laengeOk (⟨Befehl.pop64 Register.rbx, 1⟩ : Decodiert).laenge =
+      true := by
+    decide
+  have hdst : Register.rbx ≠ Register.rsp := by decide
+  have hstep1 : schritt (⟨Befehl.push64 Register.rax, 1⟩ : Decodiert)
+      zeugS = some zeugS1 :=
+    schritt_push64_erfolg _ _ _ _ hok1 rfl zeug_push_schreibt
+  have hstep2 : schritt (⟨Befehl.pop64 Register.rbx, 1⟩ : Decodiert)
+      zeugS1 = some zeugS2 :=
+    schritt_pop64_reg _ _ _ _ hok2 rfl hdst zeug_push_liest
+  have hmem : zeugSpeicherRW.bytes zeugOben ≠
+      zeugM1.bytes zeugOben := by
+    have hhit := writeBytesN_hit zeugSpeicherRW zeugOben 42 8 0
+      (by decide) (by decide)
+    rw [addrOff_null] at hhit
+    show BitVec.ofNat 8 0 ≠
+      writeBytes zeugSpeicherRW zeugOben 42 zeugOben
+    unfold writeBytes
+    rw [hhit]
+    decide
+  exact ⟨zeugS, zeugS1, zeugS2, .rax, .rbx,
+    ⟨.push64 .rax, 1⟩, ⟨.pop64 .rbx, 1⟩, zeugM1, 42,
+    hok1, rfl, zeug_push_schreibt, zeugOben_lesbar, hstep1,
+    zeug_push_liest, hstep2, hok2, rfl, hdst, hmem⟩
+
+/-- Witness memory after a call storing the return address 4101. -/
+def zeugMc : Speicher := { zeugSpeicherRW with
+  bytes := writeBytes zeugSpeicherRW zeugOben (ripNach zeugS.rip 5) }
+
+/-- Witness state after `call +0` (length 5). -/
+def zeugSc1 : Zustand := schrittCall zeugS Register.rsp zeugMc zeugOben
+  (ripNach zeugS.rip 5 + dispWort (BitVec.ofNat 32 0))
+
+/-- Witness state after the matching `ret` (length 1). -/
+def zeugSc2 : Zustand := schrittRet zeugSc1 Register.rsp
+  (zeugSc1.register Register.rsp + BitVec.ofNat 64 8)
+  (ripNach zeugS.rip 5)
+
+/-- The witness call installs the post-decode address below the top. -/
+theorem zeug_call_schreibt :
+    write64 zeugSpeicherRW zeugOben (ripNach zeugS.rip 5) =
+      some zeugMc := by
+  unfold write64 zeugMc
+  rw [if_pos zeugOben_schreibbar]
+
+/-- The stored return address reads back at the witness slot. -/
+theorem zeug_call_liest : read64 zeugSc1.speicher
+    (zeugSc1.register Register.rsp) = some (ripNach zeugS.rip 5) := by
+  decide
+
+/-- JOINT WITNESS (call/ret): every premise of call/return restoration
+    holds jointly on a non-degenerate run, and the call observably
+    changes memory (zero becomes the return address below the top). -/
+theorem call_ret_wiederhergestellt_zeuge :
+    ∃ (s s1 s2 : Zustand) (disp : BitVec 32) (d1 d2 : Decodiert)
+      (m : Speicher) (ziel : Wort),
+      (laengeOk d1.laenge = true) ∧ (d1.befehl = .call32 disp) ∧
+      (write64 s.speicher (s.register Register.rsp - BitVec.ofNat 64 8)
+        (ripNach s.rip d1.laenge) = some m) ∧
+      (lesbar8 s.speicher (s.register Register.rsp - BitVec.ofNat 64 8)
+        = true) ∧
+      (schritt d1 s = some s1) ∧
+      (read64 s1.speicher (s1.register Register.rsp) = some ziel) ∧
+      (schritt d2 s1 = some s2) ∧
+      (laengeOk d2.laenge = true) ∧ (d2.befehl = .ret) ∧
+      (s.speicher.bytes (s.register Register.rsp - BitVec.ofNat 64 8) ≠
+        m.bytes (s.register Register.rsp - BitVec.ofNat 64 8)) := by
+  have hok1 : laengeOk
+      (⟨Befehl.call32 (BitVec.ofNat 32 0), 5⟩ : Decodiert).laenge =
+      true := by
+    decide
+  have hok2 : laengeOk (⟨Befehl.ret, 1⟩ : Decodiert).laenge = true := by
+    decide
+  have hstep1 : schritt
+      (⟨Befehl.call32 (BitVec.ofNat 32 0), 5⟩ : Decodiert)
+      zeugS = some zeugSc1 :=
+    schritt_call32_erfolg _ _ _ _ hok1 rfl zeug_call_schreibt
+  have hstep2 : schritt (⟨Befehl.ret, 1⟩ : Decodiert)
+      zeugSc1 = some zeugSc2 :=
+    schritt_ret_erfolg _ _ _ hok2 rfl zeug_call_liest
+  have hmem : zeugSpeicherRW.bytes zeugOben ≠
+      zeugMc.bytes zeugOben := by
+    have hhit := writeBytesN_hit zeugSpeicherRW zeugOben
+      (ripNach zeugS.rip 5) 8 0 (by decide) (by decide)
+    rw [addrOff_null] at hhit
+    show BitVec.ofNat 8 0 ≠
+      writeBytes zeugSpeicherRW zeugOben (ripNach zeugS.rip 5) zeugOben
+    unfold writeBytes
+    rw [hhit]
+    decide
+  exact ⟨zeugS, zeugSc1, zeugSc2, BitVec.ofNat 32 0,
+    ⟨.call32 (BitVec.ofNat 32 0), 5⟩, ⟨.ret, 1⟩, zeugMc,
+    ripNach zeugS.rip 5,
+    hok1, rfl, zeug_call_schreibt, zeugOben_lesbar, hstep1,
+    zeug_call_liest, hstep2, hok2, rfl, hmem⟩
+
 /- CUTS:
-   - Joint non-degenerate witnesses follow in the next commit.
+   - Nested/negative witnesses follow in the next commit.
    - No new executor, decoder, source or OS claim (see header).
 -/
 
@@ -433,5 +589,7 @@ theorem belegung_gerettet_schranke (b : Belegung) (r : Rahmen) (i : Nat)
 #print axioms ausrichtung_ohne_rahmen
 #print axioms kette_ok_sonde
 #print axioms belegung_gerettet_schranke
+#print axioms push_pop_wiederhergestellt_zeuge
+#print axioms call_ret_wiederhergestellt_zeuge
 
 end Gabbro.Grammatik.X86
