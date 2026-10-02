@@ -1631,6 +1631,70 @@ theorem baueBildP_stubs (F : BauFakten p c (encodeAll proP) (encodeAll prog) gs 
           omega
     · exact hx'
 
+/-- A loaded byte inside a table extent: found in the extent's data
+    section, readable, writable, and holding the initial-world byte. -/
+theorem baueBildP_extent_byte (F : BauFakten p c (encodeAll proP) (encodeAll prog) gs ps es)
+    (hnd : gs.Nodup) (e : TabLayout) (he : e ∈ es) (a : Nat) (hlo : e.basis ≤ a)
+    (hhi : a < e.basis + e.len) :
+    ∃ t ∈ (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es).abschnitte,
+      abteilFinden (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es).abschnitte 0 a =
+        some t ∧ t.lesbar = true ∧ t.schreibbar = true ∧
+      ladenByte (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es) 0 a = slotByte ps σ a ∧
+      a < 2 ^ 64 := by
+  have hpw := baueBildP_pairwise p c proP prog gs ps σ es F hnd
+  have hhl := halbe_le p
+  have heh := F.daten_halb e he
+  obtain ⟨t, ht, hv, hm, hd, hl, hw, hb⟩ := daten_vorhanden ps σ es
+    (encodeAll proP ++ encodeAll prog ++ (gs.map stubBytes).flatten) e he
+  have hoff : (encodeAll proP ++ encodeAll prog ++ (gs.map stubBytes).flatten).length =
+      (encodeAll proP).length + (encodeAll prog).length + 10 * gs.length := by
+    rw [List.length_append, List.length_append, stubs_flatten_length]
+  rw [hoff] at ht
+  have hmem : t ∈ (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es).abschnitte := by
+    simp only [baueBildP]
+    apply List.mem_cons_of_mem
+    apply List.mem_append_right
+    exact ht
+  have hf := abteilFinden_eindeutig _ hpw t hmem a (by omega) (by omega)
+  refine ⟨t, hmem, hf, hl, hw, ?_, by omega⟩
+  have hbyte := ladenByte_in _ hpw t hmem (by omega) (a - e.basis) (by omega)
+  rw [show t.vaddr + (a - e.basis) = a by omega] at hbyte
+  rw [hbyte]
+  have hget := getD_von_take_drop _ (datenChunk ps σ e) t.dateiOff e.len (a - e.basis)
+    (BitVec.ofNat 8 0)
+    (show ((baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es).datei.drop t.dateiOff).take
+      e.len = datenChunk ps σ e from hb) (by omega)
+  rw [hget, datenChunk_getD ps σ e _ (by omega), show e.basis + (a - e.basis) = a by omega]
+
+/-- An eight-byte word inside a table extent is readable and writable in
+    the loaded built image (e.g. a stack word in a stack extent). -/
+theorem baueBildP_extent_rw (F : BauFakten p c (encodeAll proP) (encodeAll prog) gs ps es)
+    (hnd : gs.Nodup) (e : TabLayout) (he : e ∈ es) (a : Nat) (hlo : e.basis ≤ a)
+    (hhi : a + 8 ≤ e.basis + e.len) :
+    lesbar8 (ladung (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es)) (natAdresse a) =
+        true ∧
+      schreibbar8 (ladung (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es))
+        (natAdresse a) = true := by
+  constructor
+  · apply lesbar8_von
+    intro k hk
+    obtain ⟨t, -, hf, hl, -, -, hlt⟩ :=
+      baueBildP_extent_byte p c proP prog gs ps σ es F hnd e he (a + k) (by omega) (by omega)
+    show ladenLesbar _ 0 _ = true
+    rw [addrOff_toNat _ _ hlt]
+    unfold ladenLesbar
+    rw [hf]
+    exact hl
+  · apply schreibbar8_von
+    intro k hk
+    obtain ⟨t, -, hf, -, hw, -, hlt⟩ :=
+      baueBildP_extent_byte p c proP prog gs ps σ es F hnd e he (a + k) (by omega) (by omega)
+    show ladenSchreibbar _ 0 _ = true
+    rw [addrOff_toNat _ _ hlt]
+    unfold ladenSchreibbar
+    rw [hf]
+    exact hw
+
 /-- LOADED PLACEMENTS AND WORLD: every placement is admitted, readable and
     writable in the loaded image, and reads back the representation word
     of the initial world the image was built from. -/
@@ -1638,9 +1702,6 @@ theorem baueBildP_welt (F : BauFakten p c (encodeAll proP) (encodeAll prog) gs p
     (hnd : gs.Nodup) :
     platzOkB (ladung (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es)) ps = true ∧
       weltB (ladung (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es)) ps σ = true := by
-  have hpw := baueBildP_pairwise p c proP prog gs ps σ es F hnd
-  have hhl := halbe_le p
-  -- every placed byte lies in the data section of its extent
   have hplatz : ∀ q ∈ ps, ∀ k, k < 8 →
       ∃ t ∈ (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es).abschnitte,
         abteilFinden (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es).abschnitte 0
@@ -1649,28 +1710,7 @@ theorem baueBildP_welt (F : BauFakten p c (encodeAll proP) (encodeAll prog) gs p
           slotByte ps σ (q.a + k) ∧ q.a + k < 2 ^ 64 := by
     intro q hq k hk
     obtain ⟨e, he, hlo, hhi⟩ := F.platz_in q hq
-    have heh := F.daten_halb e he
-    obtain ⟨t, ht, hv, hm, hd, hl, hw, hb⟩ := daten_vorhanden ps σ es
-      (encodeAll proP ++ encodeAll prog ++ (gs.map stubBytes).flatten) e he
-    have hoff : (encodeAll proP ++ encodeAll prog ++ (gs.map stubBytes).flatten).length =
-        (encodeAll proP).length + (encodeAll prog).length + 10 * gs.length := by
-      rw [List.length_append, List.length_append, stubs_flatten_length]
-    rw [hoff] at ht
-    have hmem : t ∈ (baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es).abschnitte := by
-      simp only [baueBildP]
-      apply List.mem_cons_of_mem
-      apply List.mem_append_right
-      exact ht
-    have hf := abteilFinden_eindeutig _ hpw t hmem (q.a + k) (by omega) (by omega)
-    refine ⟨t, hmem, hf, hl, hw, ?_, by omega⟩
-    have hbyte := ladenByte_in _ hpw t hmem (by omega) (q.a + k - e.basis) (by omega)
-    rw [show t.vaddr + (q.a + k - e.basis) = q.a + k by omega] at hbyte
-    rw [hbyte]
-    have hget := getD_von_take_drop _ (datenChunk ps σ e) t.dateiOff e.len (q.a + k - e.basis)
-      (BitVec.ofNat 8 0)
-      (show ((baueBildP c (encodeAll proP) (encodeAll prog) gs ps σ es).datei.drop t.dateiOff).take
-        e.len = datenChunk ps σ e from hb) (by omega)
-    rw [hget, datenChunk_getD ps σ e _ (by omega), show e.basis + (q.a + k - e.basis) = q.a + k by omega]
+    exact baueBildP_extent_byte p c proP prog gs ps σ es F hnd e he (q.a + k) (by omega) (by omega)
   have hadr : ∀ q ∈ ps, ∀ k, k < 8 → (addrOff (natAdresse q.a) k).toNat = q.a + k := by
     intro q hq k hk
     obtain ⟨-, -, -, -, -, -, hlt⟩ := hplatz q hq k hk
@@ -2057,6 +2097,8 @@ end BauSchluss
 #print axioms baueBildP_code
 #print axioms baueBildP_stop
 #print axioms baueBildP_stubs
+#print axioms baueBildP_extent_byte
+#print axioms baueBildP_extent_rw
 #print axioms baueBildP_welt
 #print axioms gleicherSchluessel_selbst
 #print axioms sepB_von
