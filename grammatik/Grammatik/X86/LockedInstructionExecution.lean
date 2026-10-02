@@ -22,6 +22,7 @@ import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
 import Grammatik.X86.TSO
 import Grammatik.X86.LockedOps
+import Grammatik.X86.WordAtomicity
 import Grammatik.X86.ExtendedExecution
 import Grammatik.X86.FeatureProfile
 
@@ -399,6 +400,204 @@ def lockSchrittVoll (a : LockAnweisung) (c : Nat) (m : LockMaschine)
                     ⟨c, Fuss tgt, Fuss tgt, some dest, some dest,
                       true, false⟩
           else .verweigert
+
+/-! ## 5. Step equations: success pins the full successor. -/
+
+/-- XADD success: the word grows by the source register, the source
+    register takes the old word, flags follow the addition, RIP
+    advances by the parsed length. -/
+theorem lockSchrittVoll_xadd_erfolg (m : LockMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (hw : HwProfil) (bp : BereitProfil)
+    (alt sval : Wort) (mem' : Speicher)
+    (hbuf : m.puffer c = [])
+    (hali : ausgerichtet8 (effAddr m.zu base d) = true)
+    (hrd : read64 m.zu.speicher (effAddr m.zu base d) = some alt)
+    (hreg : m.zu.register src = sval)
+    (hok : laengeOk len = true)
+    (hwr : write64 m.zu.speicher (effAddr m.zu base d) (alt + sval) =
+      some mem') :
+    lockSchrittVoll (.ok (.xadd64 src base d) len) c m hw bp =
+      LockAusgang.ok ⟨{ schrittRegister m.zu (ripNach m.zu.rip len) (add64 alt sval).2 src alt with speicher := mem' }, m.puffer⟩
+        ⟨c, Fuss (effAddr m.zu base d), Fuss (effAddr m.zu base d),
+          some alt, some (alt + sval), true, false⟩ := by
+  unfold lockSchrittVoll
+  simp [hbuf, hali, hrd, hreg, hok, hwr]
+
+/-- CMPXCHG success: the source installs, RAX is untouched, ZF is set
+    through the comparison flags. -/
+theorem lockSchrittVoll_cmpxchg_erfolg (m : LockMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (hw : HwProfil) (bp : BereitProfil)
+    (dest sval : Wort) (mem' : Speicher)
+    (hbuf : m.puffer c = [])
+    (hali : ausgerichtet8 (effAddr m.zu base d) = true)
+    (hrd : read64 m.zu.speicher (effAddr m.zu base d) = some dest)
+    (hgleich : (dest == m.zu.register .rax) = true)
+    (hsrc : m.zu.register src = sval)
+    (hok : laengeOk len = true)
+    (hwr : write64 m.zu.speicher (effAddr m.zu base d) sval = some mem') :
+    lockSchrittVoll (.ok (.cmpxchg64 src base d) len) c m hw bp =
+      LockAusgang.ok ⟨{ { { m.zu with rip := ripNach m.zu.rip len } with speicher := mem' } with flags := (sub64 dest (m.zu.register .rax)).2 }, m.puffer⟩
+        ⟨c, Fuss (effAddr m.zu base d), Fuss (effAddr m.zu base d),
+          some dest, some sval, true, false⟩ := by
+  unfold lockSchrittVoll
+  simp [hbuf, hali, hrd, hgleich, hsrc, hok, hwr]
+
+/-- CMPXCHG failure: the word is written back unchanged (the manual's
+    write cycle without regard to the comparison), RAX takes the word,
+    ZF is cleared through the comparison flags. -/
+theorem lockSchrittVoll_cmpxchg_fehlschlag (m : LockMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (hw : HwProfil) (bp : BereitProfil)
+    (dest : Wort) (mem' : Speicher)
+    (hbuf : m.puffer c = [])
+    (hali : ausgerichtet8 (effAddr m.zu base d) = true)
+    (hrd : read64 m.zu.speicher (effAddr m.zu base d) = some dest)
+    (hfehl : (dest == m.zu.register .rax) = false)
+    (hok : laengeOk len = true)
+    (hwr : write64 m.zu.speicher (effAddr m.zu base d) dest = some mem') :
+    lockSchrittVoll (.ok (.cmpxchg64 src base d) len) c m hw bp =
+      LockAusgang.ok ⟨{ schrittRegister m.zu (ripNach m.zu.rip len) (sub64 dest (m.zu.register .rax)).2 .rax dest with speicher := mem' }, m.puffer⟩
+        ⟨c, Fuss (effAddr m.zu base d), Fuss (effAddr m.zu base d),
+          some dest, some dest, true, false⟩ := by
+  unfold lockSchrittVoll
+  simp [hbuf, hali, hrd, hfehl, hok, hwr]
+
+/-- MFENCE success: only RIP advances; memory and every buffer are
+    untouched and the event is fence-only. -/
+theorem lockSchrittVoll_mfence_erfolg (m : LockMaschine) (c : Nat)
+    (len : Nat) (hw : HwProfil) (bp : BereitProfil)
+    (hzulaessig : merkmalZugelassen hw bp .sseDoppel = true)
+    (hbuf : m.puffer c = [])
+    (hok : laengeOk len = true) :
+    lockSchrittVoll (.ok .mfence len) c m hw bp =
+      LockAusgang.ok ⟨{ m.zu with rip := ripNach m.zu.rip len }, m.puffer⟩
+        ⟨c, [], [], none, none, false, true⟩ := by
+  unfold lockSchrittVoll
+  simp [hzulaessig, hbuf, hok]
+
+/-- A parsed #UD never executes: it answers the #UD outcome. -/
+theorem lockSchrittVoll_ud (g : LockUdGrund) (len : Nat) (c : Nat)
+    (m : LockMaschine) (hw : HwProfil) (bp : BereitProfil) :
+    lockSchrittVoll (.ud g len) c m hw bp = .udFehler g := by
+  rfl
+
+/-- Missing SSE2 gates the fence to #UD, exactly as the manual states
+    (CPUID.01H:EDX.SSE2[26] = 0). -/
+theorem lockSchrittVoll_mfence_ohne_sse2 (m : LockMaschine) (c : Nat)
+    (len : Nat) (hw : HwProfil) (bp : BereitProfil)
+    (hok : laengeOk len = true)
+    (hfehlt : merkmalZugelassen hw bp .sseDoppel = false) :
+    lockSchrittVoll (.ok .mfence len) c m hw bp =
+      .udFehler .sse2Fehlt := by
+  unfold lockSchrittVoll
+  simp [hok, hfehlt]
+
+/-- A non-empty own buffer refuses the locked word step: profile
+    admission, never a hardware fault claim. -/
+theorem lockSchrittVoll_xadd_puffer_verweigert (m : LockMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (hw : HwProfil) (bp : BereitProfil)
+    (e : TSOEintrag) (rest : List TSOEintrag)
+    (hbuf : m.puffer c = e :: rest)
+    (hok : laengeOk len = true) :
+    lockSchrittVoll (.ok (.xadd64 src base d) len) c m hw bp =
+      .verweigert := by
+  unfold lockSchrittVoll
+  simp [hbuf, hok]
+
+/-- A misaligned word refuses the locked step as an unsupported
+    profile: the architecture locks misaligned fields, so this is an
+    admission refusal, never a fault claim. -/
+theorem lockSchrittVoll_xadd_unaligned_verweigert (m : LockMaschine)
+    (c : Nat) (src base : Register) (d : BitVec 32) (len : Nat)
+    (hw : HwProfil) (bp : BereitProfil)
+    (hbuf : m.puffer c = [])
+    (hok : laengeOk len = true)
+    (hfehl : ausgerichtet8 (effAddr m.zu base d) = false) :
+    lockSchrittVoll (.ok (.xadd64 src base d) len) c m hw bp =
+      .verweigert := by
+  unfold lockSchrittVoll
+  simp [hbuf, hok, hfehl]
+
+/-! ## 6. Adapter to the accepted LOCK vocabulary.
+
+    The fetched word steps project onto `lockSchritt`/`casSchritt` on
+    the projected TSO state. The one architectural difference is made
+    explicit: the accepted `casSchritt` models a failed comparison as a
+    stutter with no write, while the manual performs the destination
+    write cycle regardless. The adapter proves both sides agree on the
+    success path and on the observable bytes of the failure path, and
+    that the failure path additionally requires full write permission
+    -- exactly the observable mismatch, resolved, not assumed away. -/
+
+/-- XADD projects onto the accepted locked add with the same words. -/
+theorem lockVoll_xadd_adapter (m : LockMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32)
+    (alt : Wort) (mem' : Speicher)
+    (hbuf : m.puffer c = [])
+    (hrd : read64 m.zu.speicher (effAddr m.zu base d) = some alt)
+    (hali : ausgerichtet8 (effAddr m.zu base d) = true)
+    (hwr : write64 m.zu.speicher (effAddr m.zu base d)
+      (alt + m.zu.register src) = some mem') :
+    ∃ ev : LockEreignis,
+      lockSchritt (.xadd64 (effAddr m.zu base d) (m.zu.register src)) c
+        (toTSO m) = some (⟨mem', m.puffer⟩, ev) ∧
+        ev.gelesen = some alt ∧ ev.istRmw = true := by
+  refine ⟨⟨c, Fuss (effAddr m.zu base d), Fuss (effAddr m.zu base d),
+    some alt, some (alt + m.zu.register src), true, false⟩, ?_, rfl,
+    rfl⟩
+  exact lockSchritt_xadd_erfolg (toTSO m) c _ _ alt mem'
+    hbuf hrd hali hwr
+
+/-- CMPXCHG success projects onto the accepted CAS success. -/
+theorem lockVoll_cmpxchg_erfolg_adapter (m : LockMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32)
+    (dest : Wort) (mem' : Speicher)
+    (hbuf : m.puffer c = [])
+    (hrd : read64 m.zu.speicher (effAddr m.zu base d) = some dest)
+    (hali : ausgerichtet8 (effAddr m.zu base d) = true)
+    (hgleich : (dest == m.zu.register .rax) = true)
+    (hwr : write64 m.zu.speicher (effAddr m.zu base d)
+      (m.zu.register src) = some mem') :
+    casSchritt (effAddr m.zu base d) (m.zu.register .rax)
+      (m.zu.register src) c (toTSO m) = some (⟨mem', m.puffer⟩, true) := by
+  exact casSchritt_erfolg (toTSO m) c _ _ _ dest mem'
+    hbuf hrd hali hgleich hwr
+
+/-- RESOLVED MISMATCH (failure path): the accepted `casSchritt` answers
+    a failed comparison with a stutter, while this machine performs the
+    manual's write-back. Both agree that no observable byte changes and
+    that the accepted stutter answers `false`; the write-back
+    additionally pins full write permission of the footprint -- the
+    exact observable difference, proved, not assumed. -/
+theorem lockVoll_cmpxchg_fehlschlag_adapter (m : LockMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32)
+    (dest : Wort) (mem' : Speicher)
+    (hbuf : m.puffer c = [])
+    (hrd : read64 m.zu.speicher (effAddr m.zu base d) = some dest)
+    (hali : ausgerichtet8 (effAddr m.zu base d) = true)
+    (hfehl : (dest == m.zu.register .rax) = false)
+    (hwr : write64 m.zu.speicher (effAddr m.zu base d) dest = some mem') :
+    casSchritt (effAddr m.zu base d) (m.zu.register .rax)
+      (m.zu.register src) c (toTSO m) = some (toTSO m, false) ∧
+      schreibbar8 m.zu.speicher (effAddr m.zu base d) = true ∧
+      (∀ x, (∀ k : Nat, k < 8 → x ≠ addrOff (effAddr m.zu base d) k) →
+        mem'.bytes x = m.zu.speicher.bytes x) := by
+  refine ⟨?_, ?_, ?_⟩
+  · exact casSchritt_fehlschlag (toTSO m) c _ _ _ dest
+      hbuf hrd hali hfehl
+  · exact write64_braucht_schreibbar m.zu.speicher _ dest mem' hwr
+  · intro x haussen
+    exact write64_rahmen m.zu.speicher mem' _ x dest hwr haussen
+
+/-- MFENCE projects onto the accepted fence with the same event. -/
+theorem lockVoll_mfence_adapter (m : LockMaschine) (c : Nat)
+    (hbuf : m.puffer c = []) :
+    lockSchritt .mfence c (toTSO m) =
+      some (toTSO m, ⟨c, [], [], none, none, false, true⟩) := by
+  exact lockSchritt_mfence_erfolg (toTSO m) c hbuf
 
 #print axioms breite_bytes
 
