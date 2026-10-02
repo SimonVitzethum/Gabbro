@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 19:33 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 19:35 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -317,7 +317,8 @@ Last ledger refresh: **2026-10-02 19:33 UTC**. This is an operational snapshot, 
 | 682 | Hardware completion: MXCSR control byte execution | Agent working | 683: scheduled | [task](lanes/682.md) |
 | 684 | Eliminate hardcoded external project filesystem paths | Agent working | 685: scheduled | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Waiting for accepted dependencies | 687: scheduled | [task](lanes/686.md) |
-| 688 | Hardware completion: CPUID and XGETBV byte execution | Scheduled | 689: scheduled | [task](lanes/688.md) |
+| 688 | Hardware completion: CPUID and XGETBV byte execution | Agent working | 689: scheduled | [task](lanes/688.md) |
+| 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
