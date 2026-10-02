@@ -792,11 +792,111 @@ theorem hwWit_zeuge :
     hwWit_spülung_aendert_speicher, hwWit_fremd_neu,
     hwWit_kern1_verweigert, hwWitOverlap_keine_gruppe⟩
 
+/-! ## 11. Stable adapters for follow-up producers.
+
+  Integration order (sequential, each on its accepted candidate):
+  1. integer666 fills `adapterInteger666`, discharging the
+     `HwSchritt.reg` memory-unchanged gate per claimed form; memory
+     forms route through the §3/§6 issue events instead.
+  2. FP668 fills `adapterFp668` the same way over `FpDecodiert`.
+  3. locked662 replaces `adapterLocked662`, discharging the
+     empty-buffer, `ausgerichtet8` and whole-word atomicity guards
+     (`hwGruppe_schliesst_lock_aus` marks the boundary).
+  4. fault670 extends `HwRegAusgang`/`HwSchritt`: `hardwareHalt` is an
+     outcome, never an `Option`-plugged successor state.
+  5. interrupt672 instantiates `HwAdapter E` with its own checked
+     asynchronous event type plus an async step relation.
+  No adapter imports or guesses unmerged source; every default
+  refuses or takes the register path only. This skeleton alone does
+  NOT complete the hardware model (see CUTS). -/
+
+/-- A producer plug: one checked event step on the coherent machine.
+    Future producers instantiate this with their accepted API. -/
+structure HwAdapter (Ereignis : Type) where
+  schritt : HwMaschine → Nat → Ereignis → Option HwMaschine
+
+/-- The refused default: nothing is admitted silently. -/
+def verweigertAdapter (E : Type) : HwAdapter E :=
+  ⟨fun _ _ _ => none⟩
+
+/-- The refused default admits nothing. -/
+theorem verweigertAdapter_verweigert (E : Type) (m : HwMaschine)
+    (c : Nat) (e : E) :
+    (verweigertAdapter E).schritt m c e = none := rfl
+
+/-- locked662: LOCK RMW over the accepted `SperrBefehl` vocabulary.
+    Refused until the producer discharges its guards. -/
+def adapterLocked662 : HwAdapter SperrBefehl := verweigertAdapter _
+
+/-- integer666: integer steps over the unified `ExtInstr` chain,
+    register-path default (memory forms must use §3/§6 events). -/
+def adapterInteger666 : HwAdapter ExtInstr :=
+  ⟨fun m c i =>
+    match stepExt i (projFp m c) (m.bereit c) with
+    | .weiter t' => some (setKernVonFp m c t')
+    | _ => none⟩
+
+/-- FP668: scalar steps over the accepted `FpDecodiert` vocabulary,
+    same register-path discipline as integer666. -/
+def adapterFp668 : HwAdapter FpDecodiert :=
+  ⟨fun m c f =>
+    match fpSchritt f (projFp m c) with
+    | some t' => some (setKernVonFp m c t')
+    | none => none⟩
+
+/-- fault670: divide/machine faults over `MulDivDecodiert`. Refused
+    as a state step: halt is an outcome, not a successor. -/
+def adapterFault670 : HwAdapter MulDivDecodiert := verweigertAdapter _
+
+/-- interrupt672: no accepted asynchronous vocabulary exists yet, so
+    no event type is fixed; the producer instantiates `HwAdapter E`
+    with its own checked event type. The `Unit` default refuses. -/
+def adapterInterrupt672 : HwAdapter Unit := verweigertAdapter _
+
 /- CUTS:
-   Skeleton only: data vocabulary and projections so far.
-   NOT proved: well-formedness, steps, embeddings, witnesses, adapters.
+   Proved here: ONE coherent selected composition -- per-core
+   integer/FP data, ONE shared canonical memory, per-core TSO
+   buffers, checked core/control profile -- over the accepted
+   `decodeExt`/`stepExt` byte dispatcher and the canonical
+   `issueByte`/`loadByte`/`flushKern` equations with the
+   `WortGruppe`/`FremdFrei` guard. Coherence is proved (§1), steps
+   preserve well-formedness (§4), pilot/extended evaluation is
+   embedded with exact conditions including halt and refusal (§5),
+   word stores are eight byte issues with tearing/overlap/LOCK
+   refusals (§6, §10), and a reached two-core fetched-byte run with
+   store issue, forwarding, foreign observation and drain (§8, §9)
+   stands beside planted malformed/control/fault refusals.
+   NOT proved here, and not claimed:
+   - No hardware correspondence: encodings are the accepted
+     canonical subsets with self-consistency only, not x86 truth.
+     The Intel SDM headings checked for the claimed rows are listed
+     in MUSE-REPORT-660.md; they are provenance, not proofs.
+   - No LOCK RMW path (refused: `hwLock_verweigert`,
+     `adapterLocked662`), no SIMD beyond the accepted
+     `decodeExt` rows, no source/IR/ABI/loader/entry/budget link,
+     no per-access target-to-W/GX simulation, no whole-word
+     atomicity beyond `WortGruppe`-guarded byte drains.
+   - Interrupts, faults beyond the carried divide halt, and
+     timing/power behaviour are absent (adapters only).
+   - This skeleton does NOT complete the hardware model; §11 lists
+     the sequential producer order that remains OPEN.
 -/
 
-#print axioms HwMaschine
+#print axioms projZustand_speicher
+#print axioms HwWf
+#print axioms hwSchritt_wf
+#print axioms hwWeiterleitung
+#print axioms hwSpülung_schreibt
+#print axioms hwPilot_weiter
+#print axioms hwPilot_verweigert
+#print axioms hwPilot_kein_halt
+#print axioms hwMuldiv_halt
+#print axioms hwWortAusgabe_puffer
+#print axioms hwWortAusgabe_kein_speicher
+#print axioms hwGruppe_schliesst_lock_aus
+#print axioms hwByteschrittReg_rechtfertigt
+#print axioms hwVec_ohne_os_verweigert
+#print axioms hwWit_zeuge
+#print axioms verweigertAdapter_verweigert
 
 end Gabbro.Grammatik.X86
