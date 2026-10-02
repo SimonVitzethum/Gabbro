@@ -7,7 +7,7 @@ lane owns `MUSE-REPORT-701.md` per HARD RULES and the lane title.)
 
 CANDIDATE: 700 37bb95b0fcd0afa5840894575375ebb8e6b3276d
 
-VERDICT: ACCEPT (bounded; bounds in §6, none repair-blocking)
+VERDICT: ACCEPT
 
 ## 1. What was reviewed
 
