@@ -15,6 +15,7 @@ import Grammatik.X86.ShiftLogic
 import Grammatik.X86.NarrowOps
 import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
+import Grammatik.X86.Byteschritt
 
 namespace Gabbro.Grammatik.X86
 
@@ -948,6 +949,150 @@ theorem stepImm_speicher (d : IntHwImmDec) (s s' : Zustand)
           rw [dop] at h
           cases h
           rfl
+
+/-! ## 9. Fetched-byte paths from actual executable memory.
+
+    Fetch mirrors `fetchDekodiert`: decode the ACTUAL fetched window with
+    the independent decoder, then check consumed-length consistency,
+    the length guard and execute permission of the consumed prefix.
+    A forged `IntHwDec` can never inject an instruction. -/
+
+/-- Fetch and decode a register row from actual memory. -/
+def fetchIntHw (s : Zustand) : Option (IntHwDec × List Byte) :=
+  match decodeIntHw (geholt s) with
+  | none => none
+  | some p =>
+    if p.1.laenge + p.2.length == (geholt s).length &&
+        laengeOk p.1.laenge && ausfuehrbarN s.speicher s.rip p.1.laenge
+    then some p
+    else none
+
+/-- Fetch and decode an immediate row from actual memory. -/
+def fetchIntHwImm (s : Zustand) : Option (IntHwImmDec × List Byte) :=
+  match decodeIntHwImm (geholt s) with
+  | none => none
+  | some p =>
+    if p.1.laenge + p.2.length == (geholt s).length &&
+        laengeOk p.1.laenge && ausfuehrbarN s.speicher s.rip p.1.laenge
+    then some p
+    else none
+
+/-- One register-row byte step from actual memory. -/
+def intHwByteschritt (s : Zustand) : ByteAusgang :=
+  match fetchIntHw s with
+  | none => .verweigert
+  | some (d, _) =>
+    match stepIntHw d s with
+    | none => .verweigert
+    | some s' => .weiter s'
+
+/-- One immediate byte step from actual memory. -/
+def intHwImmByteschritt (s : Zustand) : ByteAusgang :=
+  match fetchIntHwImm s with
+  | none => .verweigert
+  | some (d, _) =>
+    match stepIntHwImm d s with
+    | none => .verweigert
+    | some s' => .weiter s'
+
+/-- A successful register fetch decodes to the admitted instruction:
+    length equation, length guard and execute permission all hold. -/
+theorem fetchIntHw_erfolg (s : Zustand) (d : IntHwDec) (rest : List Byte)
+    (h : fetchIntHw s = some (d, rest)) :
+    decodeIntHw (geholt s) = some (d, rest) ∧
+      d.laenge + rest.length = (geholt s).length ∧
+      laengeOk d.laenge = true ∧
+      ausfuehrbarN s.speicher s.rip d.laenge = true := by
+  have e : fetchIntHw s =
+      match decodeIntHw (geholt s) with
+      | none => (none : Option (IntHwDec × List Byte))
+      | some p =>
+        if p.1.laenge + p.2.length == (geholt s).length &&
+            laengeOk p.1.laenge &&
+            ausfuehrbarN s.speicher s.rip p.1.laenge
+        then some p else none := rfl
+  rw [e] at h
+  cases hdec : decodeIntHw (geholt s) with
+  | none =>
+    simp [hdec] at h
+  | some p =>
+    rw [hdec] at h
+    by_cases hz : (p.1.laenge + p.2.length == (geholt s).length &&
+        laengeOk p.1.laenge &&
+        ausfuehrbarN s.speicher s.rip p.1.laenge) = true
+    · simp only [hz, if_true, Option.some.injEq] at h
+      subst h
+      simp only [Bool.and_eq_true, beq_iff_eq] at hz
+      obtain ⟨⟨hsum, hlen⟩, hexe⟩ := hz
+      have hsum' : d.laenge + rest.length = (geholt s).length := hsum
+      exact ⟨rfl, hsum', hlen, hexe⟩
+    · simp [hz] at h
+
+/-- A successful immediate fetch decodes to the admitted instruction. -/
+theorem fetchIntHwImm_erfolg (s : Zustand) (d : IntHwImmDec)
+    (rest : List Byte) (h : fetchIntHwImm s = some (d, rest)) :
+    decodeIntHwImm (geholt s) = some (d, rest) ∧
+      d.laenge + rest.length = (geholt s).length ∧
+      laengeOk d.laenge = true ∧
+      ausfuehrbarN s.speicher s.rip d.laenge = true := by
+  have e : fetchIntHwImm s =
+      match decodeIntHwImm (geholt s) with
+      | none => (none : Option (IntHwImmDec × List Byte))
+      | some p =>
+        if p.1.laenge + p.2.length == (geholt s).length &&
+            laengeOk p.1.laenge &&
+            ausfuehrbarN s.speicher s.rip p.1.laenge
+        then some p else none := rfl
+  rw [e] at h
+  cases hdec : decodeIntHwImm (geholt s) with
+  | none =>
+    simp [hdec] at h
+  | some p =>
+    rw [hdec] at h
+    by_cases hz : (p.1.laenge + p.2.length == (geholt s).length &&
+        laengeOk p.1.laenge &&
+        ausfuehrbarN s.speicher s.rip p.1.laenge) = true
+    · simp only [hz, if_true, Option.some.injEq] at h
+      subst h
+      simp only [Bool.and_eq_true, beq_iff_eq] at hz
+      obtain ⟨⟨hsum, hlen⟩, hexe⟩ := hz
+      have hsum' : d.laenge + rest.length = (geholt s).length := hsum
+      exact ⟨rfl, hsum', hlen, hexe⟩
+    · simp [hz] at h
+
+/-! ## 10. Branch/validator adapters: TEST/CMP feed `bedingung`.
+
+    TEST sets ZF exactly when the shared AND value is zero; CMP sets the
+    signed-less condition exactly from the shared SUB value. Consumers
+    (branch lane, validator) read flags only through these equations. -/
+
+/-- Word equality test reads the decidable equality (bridge for branch
+    consumers: `==` and `decide` agree on words). -/
+theorem wort_beq_decide (w : Wort) : (w == 0) = decide (w = 0) := by
+  cases h : decide (w = 0) with
+  | true =>
+    have heq : w = 0 := of_decide_eq_true h
+    simp [heq]
+  | false =>
+    have hne : w ≠ 0 := of_decide_eq_false h
+    exact beq_eq_false_iff_ne.mpr hne
+
+/-- TEST zero-flag reads the shared AND value (adapter for branch lane). -/
+theorem inthw_test_zf (b : Breite) (x y : Wort) :
+    bedingung .e (intHwFlagsLogik b (andB b x y)) = decide (andB b x y = 0) := by
+  simp only [bedingung, intHwFlagsLogik, logikFlags, zfTest]
+  exact wort_beq_decide _
+
+/-- CMP signed-less reads the shared SUB value (adapter for branch lane). -/
+theorem inthw_cmp_l (x y : Wort) :
+    bedingung .l (sub64 x y).2 = ((sfTest (x - y) != ofSub (sfTest x) (sfTest y) (sfTest (x - y)))) := by
+  simp [bedingung, sub64]
+
+/-- CMP equal reads ZF of the shared SUB value. -/
+theorem inthw_cmp_e (x y : Wort) :
+    bedingung .e (sub64 x y).2 = decide (x - y = 0) := by
+  simp only [bedingung, sub64, zfTest]
+  exact wort_beq_decide _
 
 /- CUTS:
     Skeleton only: codec/step/fetch/witnesses are open.
