@@ -5,14 +5,14 @@ toplevel and branch match; `git status` clean except this report).
 Owned deliverable: this file only. Report-only exact author-candidate review;
 no source, import, witness, test or PR-branch change made here.
 
-CANDIDATE: 712, full pinned HEAD `f79006310b9fc55a59b48056bedafc15c98471bb`
+CANDIDATE: 712 f79006310b9fc55a59b48056bedafc15c98471bb
 (base `011ff474004a8a617338584d68b13a64c87b1051`, 2 files, clean).
 Author patch (`.tmp/review/author-712/PATCH.diff`) holds exactly the two owned
 files: `MUSE-REPORT-712.md`, `dokumente/x86/UPSTREAM-PR-2-LEAN-REVIEW.md`.
 No Lean/Rust source touched by the candidate. Docs-only, so no in-clone
 `./lean-bau` regression is possible from it.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 The author audit is accurate. Every load-bearing claim was independently
 re-checked against the exact pinned PR sources in my own clone
