@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 16:45 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 18:22 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -251,7 +251,7 @@ Last ledger refresh: **2026-10-02 16:45 UTC**. This is an operational snapshot, 
 | 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
 | 573 | Connection: Projected TSO stores to source W writes | Merged after review/checks | 591: Merged after review/checks | [report](messung/muse/MUSE-REPORT-573.md) |
 | 574 | Connection: Projected TSO loads to source W reads | Merged after review/checks | 592: Merged after review/checks | [report](messung/muse/MUSE-REPORT-574.md) |
-| 575 | Connection: Unified extended decoder and executable byte-step | Agent working | 593: scheduled | [task](lanes/575.md) |
+| 575 | Connection: Unified extended decoder and executable byte-step | Committed candidate; review/integration pending | 593: Committed candidate; review/integration pending | [task](lanes/575.md) |
 | 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Merged after review/checks | [report](messung/muse/MUSE-REPORT-594.md) |
 | 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Merged after review/checks | [report](messung/muse/MUSE-REPORT-595.md) |
 | 596 | Overnight: TSO history preservation across actual finite traces | Merged after review/checks | 608: Merged after review/checks | [report](messung/muse/MUSE-REPORT-596.md) |
@@ -277,6 +277,14 @@ Last ledger refresh: **2026-10-02 16:45 UTC**. This is an operational snapshot, 
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Merged after review/checks | 641: Merged after review/checks | [report](messung/muse/MUSE-REPORT-640.md) |
 | 642 | Recover preserved IR research draft from recorded edits after clone removal | Merged after review/checks | 643: Merged after review/checks | [report](messung/muse/MUSE-REPORT-642.md) |
+| 644 | Organise the next generic source-to-final-byte closure wave | Scheduled | 645: scheduled | [task](lanes/644.md) |
+| 646 | Direct typed statement sequence to fetched machine execution | Scheduled | 647: scheduled | [task](lanes/646.md) |
+| 648 | Generic checked source-assignment byte certificate | Scheduled | 649: scheduled | [task](lanes/648.md) |
+| 650 | Growing TSO history to typed carrier W transition | Scheduled | 651: scheduled | [task](lanes/650.md) |
+| 652 | Whole-word drain with real interleaved foreign accesses | Scheduled | 653: scheduled | [task](lanes/652.md) |
+| 654 | Derived target work bound for direct source lowering | Scheduled | 655: scheduled | [task](lanes/654.md) |
+| 656 | Fetched conditional byte-step flag dependency simulation | Scheduled | 657: scheduled | [task](lanes/656.md) |
+| 658 | Scalar FP final-byte validator admission and MXCSR entry | Waiting for accepted dependencies | 659: scheduled | [task](lanes/658.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -708,6 +716,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: checked master `26c58bd4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:26c58bd41b2c6ad413b54c08c646c1313e4b297e -->
 - 2026-10-02: lane **583**, Independent connection review of 565, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-583.md). <!-- x86-merged:583 -->
 - 2026-10-02: publication batch checks passed for `85cad6ae`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-02: checked master `1668c954` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:1668c954b3830b4c0e95c76ddb732262a42af7aa -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
