@@ -516,9 +516,33 @@ structure PipeCfg where
   adr : Register
   /-- First code byte. -/
   codeBase : Nat
-  /-- Refusal exits: reason `r` exits at `exitBase + r`. -/
+  /-- Refusal exits: reason `r` exits at `exitBase + exitStride * r`
+      (`exitAdr`). -/
   exitBase : Nat
+  /-- Distance between the refusal exits of consecutive reasons. The
+      default `1` is the original layout (`exitBase + r`); an image with a
+      stub per reason needs a stride of at least the stub length plus one
+      (`PipelineImage`). -/
+  exitStride : Nat := 1
   deriving DecidableEq, Repr
+
+/-- The refusal exit of reason `g`. -/
+def exitAdr (c : PipeCfg) (g : Nat) : Nat := c.exitBase + c.exitStride * g
+
+/-- With the default stride the exits are the original `exitBase + g`. -/
+theorem exitAdr_eins (c : PipeCfg) (h : c.exitStride = 1) (g : Nat) :
+    exitAdr c g = c.exitBase + g := by
+  unfold exitAdr
+  rw [h, Nat.one_mul]
+
+/-- Distinct reasons have exits at least one stride apart. -/
+theorem exitAdr_abstand (c : PipeCfg) (g g' : Nat) (h : g < g') :
+    exitAdr c g + c.exitStride ≤ exitAdr c g' := by
+  unfold exitAdr
+  have : c.exitStride * g + c.exitStride ≤ c.exitStride * g' := by
+    rw [← Nat.mul_succ]
+    exact Nat.mul_le_mul_left _ h
+  omega
 
 /-- Position of a variable in its context. -/
 def varIdx : {Γ : Ctx} → {τ : Ty} → Var Γ τ → Nat
@@ -967,9 +991,9 @@ def senkPruef (c : PipeCfg) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (pos : Nat
     match senkBed (abbOf c) cnd c.dst c.tmp with
     | some (code, j) =>
       let posJ := pos + (encodeAll code).length
-      let disp := sprungDisp c posJ (c.exitBase + r.val)
+      let disp := sprungDisp c posJ (exitAdr c r.val)
       if addrOff (natAdresse c.codeBase) (posJ + (encode (.jumpIf32 j disp)).length) +
-          dispWort disp = natAdresse (c.exitBase + r.val) then
+          dispWort disp = natAdresse (exitAdr c r.val) then
         some (code ++ [.jumpIf32 j disp])
       else none
     | none => none
@@ -998,7 +1022,7 @@ def Entspricht (c : PipeCfg) (L : Layout D) (endA : Adresse) {l : Bool} {Γ : Ct
     Ausgang V l Γ → Zustand → Prop
   | .ok σ' ρ', s' => s'.rip = endA ∧ WorldRep L s'.speicher σ' ∧
       EnvRepr ρ' s'.register (abbOf c)
-  | .grund σ' r, s' => s'.rip = natAdresse (c.exitBase + r.val) ∧ WorldRep L s'.speicher σ'
+  | .grund σ' r, s' => s'.rip = natAdresse (exitAdr c r.val) ∧ WorldRep L s'.speicher σ'
   | _, _ => False
 
 /-- BLOCK LOWERING CORRECTNESS: for every lowered block, every source
@@ -1141,9 +1165,9 @@ theorem senkBlock_korrekt (c : PipeCfg) (L : Layout D) (hc : cfgOk c = true)
               by_cases hj : addrOff (natAdresse c.codeBase)
                   (pre.length + (encodeAll code).length +
                     (encode (.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
-                      (c.exitBase + r.val)))).length) +
+                      (exitAdr c r.val)))).length) +
                   dispWort (sprungDisp c (pre.length + (encodeAll code).length)
-                    (c.exitBase + r.val)) = natAdresse (c.exitBase + r.val)
+                    (exitAdr c r.val)) = natAdresse (exitAdr c r.val)
               · rw [if_pos hj] at hs
                 simp only [Option.some.injEq] at hs
                 subst hs
@@ -1154,7 +1178,7 @@ theorem senkBlock_korrekt (c : PipeCfg) (L : Layout D) (hc : cfgOk c = true)
                     hreg1 _ (cfgOk_frei c hc x).1 (cfgOk_frei c hc x).2.1)
                 obtain ⟨hb1, hr1, hc1, -, -⟩ := lauf_zu_laufBytes (natAdresse c.codeBase) flat code pre
                   (encodeAll [Befehl.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
-                    (c.exitBase + r.val))] ++ encodeAll q ++ post)
+                    (exitAdr c r.val))] ++ encodeAll q ++ post)
                   s s1 hgc hrun1 hcode
                   (by rw [hf]; simp [encodeAll]) hrip
                 have hW1 : WorldRep L s1.speicher σL := by rw [hmem1]; exact hW
@@ -1163,19 +1187,19 @@ theorem senkBlock_korrekt (c : PipeCfg) (L : Layout D) (hc : cfgOk c = true)
                 have hbs := byteschritt_im_code s1 (natAdresse c.codeBase) flat
                   (pre ++ encodeAll code) (encodeAll q ++ post)
                   (.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
-                    (c.exitBase + r.val))) hc1
+                    (exitAdr c r.val))) hc1
                   (by rw [hf]; simp [encodeAll])
                   (by rw [hr1, List.length_append])
                 by_cases hcj : bedingung j s1.flags = true
                 · -- the check fails: the jump reaches the reason's exit
                   have hst := schritt_jumpIf32_genommen
                     (kanon (.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
-                      (c.exitBase + r.val)))) s1 j _ (laengeOk_encode _) rfl hcj
+                      (exitAdr c r.val)))) s1 j _ (laengeOk_encode _) rfl hcj
                   rw [hst] at hbs
                   have hf' : wahr? (eval σL cnd σL ρ) = false := by rw [hval, hcj]; rfl
                   let rx : Adresse := ripNach s1.rip (kanon (.jumpIf32 j (sprungDisp c
-                    (pre.length + (encodeAll code).length) (c.exitBase + r.val)))).laenge +
-                    dispWort (sprungDisp c (pre.length + (encodeAll code).length) (c.exitBase + r.val))
+                    (pre.length + (encodeAll code).length) (exitAdr c r.val)))).laenge +
+                    dispWort (sprungDisp c (pre.length + (encodeAll code).length) (exitAdr c r.val))
                   refine ⟨code.length + 1, { s1 with rip := rx }, ?_, ?_⟩
                   · rw [laufBytes_add _ _ _ _ hb1]
                     simp only [laufBytes, hbs]
@@ -1192,15 +1216,15 @@ theorem senkBlock_korrekt (c : PipeCfg) (L : Layout D) (hc : cfgOk c = true)
                     · exact absurd h' hcj
                   have hst := schritt_jumpIf32_nicht
                     (kanon (.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
-                      (c.exitBase + r.val)))) s1 j _ (laengeOk_encode _) rfl hcj'
+                      (exitAdr c r.val)))) s1 j _ (laengeOk_encode _) rfl hcj'
                   rw [hst] at hbs
                   have ht : wahr? (eval σL cnd σL ρ) = true := by rw [hval, hcj']; rfl
                   let r2 : Adresse := ripNach s1.rip (kanon (.jumpIf32 j (sprungDisp c
-                    (pre.length + (encodeAll code).length) (c.exitBase + r.val)))).laenge
+                    (pre.length + (encodeAll code).length) (exitAdr c r.val)))).laenge
                   let s2 : Zustand := { s1 with rip := r2 }
                   have hent := senkBlock_korrekt c L hc hsep O passes R flat rest
                     (pre ++ encodeAll (code ++ [.jumpIf32 j (sprungDisp c
-                      (pre.length + (encodeAll code).length) (c.exitBase + r.val))])) post q hq'
+                      (pre.length + (encodeAll code).length) (exitAdr c r.val))])) post q hq'
                     σL ρ s2 hc1 (by rw [hf]; simp [encodeAll])
                     (by
                       show ripNach s1.rip _ = _
@@ -1216,9 +1240,9 @@ theorem senkBlock_korrekt (c : PipeCfg) (L : Layout D) (hc : cfgOk c = true)
                     exact hb3
                   · rw [hsrc, if_pos ht]
                     have hend : pre.length + (encodeAll (code ++ [Befehl.jumpIf32 j (sprungDisp c
-                        (pre.length + (encodeAll code).length) (c.exitBase + r.val))] ++ q)).length =
+                        (pre.length + (encodeAll code).length) (exitAdr c r.val))] ++ q)).length =
                         (pre ++ encodeAll (code ++ [Befehl.jumpIf32 j (sprungDisp c
-                        (pre.length + (encodeAll code).length) (c.exitBase + r.val))])).length +
+                        (pre.length + (encodeAll code).length) (exitAdr c r.val))])).length +
                         (encodeAll q).length := by
                       simp only [encodeAll_append, List.length_append]
                       omega
@@ -1491,13 +1515,31 @@ theorem pipeline_refuses (c : PipeCfg) (L : Layout D) (certs : List (PassKind ×
     (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c))
     (σ' : World D) (r : Fin V.gruende) (hsrc : execBlock O passes R src σ ρ = .grund σ' r) :
     ∃ n s', laufBytes n s = .weiter s' ∧
-      s'.rip = natAdresse (c.exitBase + r.val) ∧ WorldRep L s'.speicher σ' := by
+      s'.rip = natAdresse (exitAdr c r.val) ∧ WorldRep L s'.speicher σ' := by
   obtain ⟨prog, hc, hlow, hb, -, -⟩ := validate_sound c L certs src bytes hval
   obtain ⟨n, s', hrun, hent⟩ := senkBlock_korrekt c L hc hsep O passes R bytes
     (optimise certs src) [] [] prog hlow σ ρ s hcode (by simp [hb])
     (by rw [hrip]; exact (addrOff_null _).symm) hW hE
   rw [optimise_sound certs src O passes R σ ρ, hsrc] at hent
   exact ⟨n, s', hrun, hent⟩
+
+/-- The refusal correspondence in its ORIGINAL form (exit at
+    `exitBase + r`), for the default stride `1`: the general theorem
+    specialised, nothing assumed beyond the stride. -/
+theorem pipeline_refuses_eins (c : PipeCfg) (hst : c.exitStride = 1) (L : Layout D)
+    (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (hval : validate c L certs src bytes = true) (hsep : LayoutSep L)
+    (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) bytes)
+    (hrip : s.rip = natAdresse c.codeBase)
+    (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c))
+    (σ' : World D) (r : Fin V.gruende) (hsrc : execBlock O passes R src σ ρ = .grund σ' r) :
+    ∃ n s', laufBytes n s = .weiter s' ∧
+      s'.rip = natAdresse (c.exitBase + r.val) ∧ WorldRep L s'.speicher σ' := by
+  rw [← exitAdr_eins c hst]
+  exact pipeline_refuses c L certs src bytes hval hsep O passes R σ ρ s hcode hrip hW hE σ' r hsrc
 
 /-- **NO OTHER OUTCOME.** An accepted source block, run through the real
     `execBlock`, ends normally or at a failed check -- for every world,
@@ -1534,7 +1576,9 @@ end Block
    a bare reason (`ret`, `leave`/`next`, statements in `else`), boolean,
    sum, float or pointer slots, a check folded to literal `false`.
 
-   Refusal exit. A failed check jumps to `exitBase + r`; the run is
+   Refusal exit. A failed check jumps to `exitAdr c r = exitBase +
+   exitStride * r` (stride `1` by default, which is the original
+   `exitBase + r`, re-derived as `pipeline_refuses_eins`); the run is
    followed exactly to that address with the world represented
    (`pipeline_refuses`). No code AT the exit is generated, validated or
    executed: returning the reason to a caller, the ABI and the
@@ -1620,6 +1664,9 @@ end Block
 #print axioms addrOff_natAdresse
 #print axioms pipeline_correct
 #print axioms pipeline_refuses
+#print axioms pipeline_refuses_eins
+#print axioms exitAdr_eins
+#print axioms exitAdr_abstand
 #print axioms pipeline_ausgang
 
 end Gabbro.Grammatik.X86.Pipeline
