@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 16:39 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 16:45 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -251,7 +251,7 @@ Last ledger refresh: **2026-10-02 16:39 UTC**. This is an operational snapshot, 
 | 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
 | 573 | Connection: Projected TSO stores to source W writes | Merged after review/checks | 591: Merged after review/checks | [report](messung/muse/MUSE-REPORT-573.md) |
 | 574 | Connection: Projected TSO loads to source W reads | Merged after review/checks | 592: Merged after review/checks | [report](messung/muse/MUSE-REPORT-574.md) |
-| 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
+| 575 | Connection: Unified extended decoder and executable byte-step | Agent working | 593: scheduled | [task](lanes/575.md) |
 | 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Merged after review/checks | [report](messung/muse/MUSE-REPORT-594.md) |
 | 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Merged after review/checks | [report](messung/muse/MUSE-REPORT-595.md) |
 | 596 | Overnight: TSO history preservation across actual finite traces | Merged after review/checks | 608: Merged after review/checks | [report](messung/muse/MUSE-REPORT-596.md) |
@@ -707,6 +707,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: integration of candidate(s) [565] failed the local proof/build gate after independent review 583; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:583 -->
 - 2026-10-01: checked master `26c58bd4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:26c58bd41b2c6ad413b54c08c646c1313e4b297e -->
 - 2026-10-02: lane **583**, Independent connection review of 565, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-583.md). <!-- x86-merged:583 -->
+- 2026-10-02: publication batch checks passed for `85cad6ae`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
