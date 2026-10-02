@@ -8,13 +8,13 @@ record must distinguish completed proofs from running work and planned work.
 
 The [detailed compiler design](DIRECT-COMPILER-DESIGN.md) specifies the planned instruction forms, invariant-derived optimisation rules, hardware scope and fast compilation/validation architecture. These are design requirements; the ledger below records implementation and proof status. <!-- x86-detailed-design -->
 
-The [complete planned Lean optimiser specification](grammatik/OPTIMIZER.md) describes the shared IR, optimisation rules, invariant/effect premises, certificates, cost/concurrency guarantees, fast compilation and the proposed friend contributor handoff. It is a specification; the implementation and full validation chain remain OPEN. <!-- x86-optimizer-design -->
+The [complete planned Lean optimiser specification](grammatik/OPTIMIZER.md) describes direct source-anchored lowering, optimisation rules, invariant/effect premises, certificates, cost/concurrency guarantees, fast compilation and the proposed friend contributor handoff. It is a specification; the implementation and full validation chain remain OPEN. <!-- x86-optimizer-design -->
 
 Current workforce policy: **at most 15 managed Muse model processes permanently**, including every reviewer and organising/repair role. This latest explicit instruction supersedes the earlier 20/40 plan. A separate dispatcher backfills useful independent work while integration, checks and publication stay serial. Each lane uses a private session database; actual model PID counts are recorded separately from queues and wrappers. Full source-to-binary validation remains OPEN.
 
 <!-- x86-workforce-policy-15 -->
 
-## Immediate priority: complete selected hardware model
+## Hardware completion milestone (reaffirmed 2026-10-02)
 
 Simon reaffirmed on 2026-10-02 that completion of the architectural hardware
 model is the immediate goal, with **15 useful managed Muse models active**
@@ -27,10 +27,43 @@ runtime and binding instruction; fourteen pilot forms and disconnected helpers
 are insufficient. Preserve arbitrary OS/freestanding profiles and source safety;
 deferred last-mile performance tiers retain their documented status. Generic
 source-to-final-byte validation and O3/invariant optimisation remain required,
-but new capacity prioritises missing hardware-model connections. Silicon
+The 2026-10-03 scope update below makes the complete compiler pipeline a concurrent goal; the hardware milestone remains required. Silicon
 realisation and conservative timing assumptions stay explicitly named; no claim
 that every physical CPU is proved is made. This milestone remains **OPEN**.
 <!-- hardware-priority-2026-10-02 -->
+
+## Active goals: complete hardware and the full direct compiler pipeline
+
+Simon expanded the active goal on 2026-10-03: complete both the essential
+selected architectural hardware model and the **entire direct compiler
+pipeline in Lean**, with high optimisation and fast compilation. The later
+Rust compiler is an untrusted candidate/certificate producer; full translation
+validation of its concrete output is mandatory. Neither goal is complete.
+
+Use the existing typed Gabbro source (`Syntax`/`Semantik`, `execBlock` and
+G/GX) directly. Do not introduce another persistent SSA IR or source
+interpreter. Checked machine blocks, byte layouts, allocation decisions,
+access summaries and optimisation certificates are target artefacts or
+recomputed claims, not a second independently trusted source language.
+
+Completion covers source text parsing and full source-computed units/duties;
+all admitted source constructs and reachable functions; direct optimised
+lowering; register allocation and private spills; calls, loops and control
+flow; regions, scalar/IEEE/SIMD operations; concurrent accesses, locks and
+atomics; generic linking/relocation; ABI, entry, binding and support bodies;
+final decoded bytes and actual loaded mapping; source budget and target work
+transfer; and finite/infinite execution soundness. A subset compiler, a
+roundtrip, a Rust mirror or a successful golden test is not this milestone.
+Named silicon/device/timing assumptions remain explicit. OS and binding
+software remain user logic. Arbitrary OS and freestanding profiles stay
+required, with no implicit Linux/libc/ELF dependency.
+
+Distribute the same maximum15 actual managed Muse models among hardware
+authors, compiler/optimisation authors, independent exact reviewers,
+organisers and repairs according to useful dependencies. Existing hardware
+tasks remain required. Capacity must also close the complete source-to-byte
+pipeline, rather than indefinitely adding detached instruction helpers.
+<!-- full-compiler-goal-2026-10-03 -->
 
 ## Intended result
 
@@ -59,7 +92,7 @@ assumed simulation relation does not establish this end condition.
 Binding requirement (Simon, 2026-10-01): the direct x86-64 compiler must support
 extensible target profiles for arbitrary operating systems and freestanding
 environments. This is a target requirement, not a claim of implemented support.
-One source model, IR, optimiser and validation chain serve every profile.
+One source model, direct lowering, optimiser and validation chain serve every profile.
 ABI, image format, entry convention and loaded mapping are explicit checked
 profile inputs; no Linux, POSIX, libc or ELF dependency is implicit. Environment
 services are Gabbro bindings with user-logic contracts and implementation proof
@@ -99,11 +132,53 @@ machine work and hardware timing are separate proof obligations. SIMD and other
 transformations stay refused where these obligations are unproved. Comparable
 performance is a measurement target; no equivalence to GCC/Clang `-O3` is claimed.
 
+## Measured runtime and compilation performance goals
+
+Simon set the runtime targets on 2026-10-03 against equivalent C compiled
+with **GCC `-O3`**:
+
+| Runtime performance relative to GCC `-O3` | Requirement |
+|---|---|
+| **80% or more** | Minimum for the required release benchmark workloads |
+| **95%** | Main engineering target |
+| **Above110%** | Ambitious target where invariant-driven optimisation wins |
+
+For fixed-work runtime benchmarks the score is
+`100 * C_runtime / Gabbro_runtime` (higher is better). For throughput use
+`100 * Gabbro_throughput / C_throughput`. Record each benchmark and workload
+class as well as the aggregate; a good average must not hide failures of the
+minimum. These are targets, **not measured results or an all-program speed
+theorem**. Equivalent work/results, IEEE and concurrency semantics, the same
+hardware and available ISA features, and the actual compiler versions/flags
+are recorded. Input/output checks prevent dead-code removal from producing
+fake gains. Cover the emitter's construct inventory, scalar/FP, selected SIMD,
+memory-bound, calls/control flow, and atomic/concurrent workloads. Benchmarks
+must execute fully validated **direct-backend** binaries; the legacy emitted-C
+route and emulation timings are labelled separately.
+
+Safety, contracts, fault observations, race/lock discipline and claimed
+budget/time guarantees remain mandatory at every score. Runtime performance
+cannot be bought by fast-math, unproved invariant use, unchecked support code
+or omitted validation. Report code size and resource use alongside speed.
+
+Fast compilation is a separate goal. Measure cold and warm **time until the
+final image is accepted**, including source checks, optimisation, lowering,
+encoding/linking, validation and Lean kernel proof checking. Report stage
+times, peak memory and incremental rebuilds separately. Use bounded search,
+deterministic pass budgets, local certificates, reusable context-correct
+proofs and dependency-aware caching; cache indices never replace proof/input
+identity checks. Optimisation budget exhaustion keeps a proved valid route;
+missing source, target or safety correspondence still refuses. Numeric
+compile-time targets are chosen from measured baselines, not invented here.
+The minimum, target, fast-compilation measurements and complete validation
+all remain **OPEN**.
+<!-- gcc-o3-performance-targets-2026-10-03 -->
+
 ## Lean-first sequence and remaining closure
 
 1. Shared x86 vocabulary, modular integers/flags and actual permission-checked byte memory.
 2. Instruction execution, independent byte decoder/encoder, checked images and relocations.
-3. One source-linked typed IR, full source-computed units/duties and checked lowering.
+3. The existing typed source representation, full source-computed units/duties and direct checked machine-block lowering, without an additional persistent IR.
 4. Generic local/CFG optimisation validation, including invariant-derived rules.
 5. Per-access target execution and x86-TSO refinement into existing W/GX concurrency.
 6. Stack/ABI, entries, regions, runtime, binding bodies and all reachable executable code.
@@ -857,6 +932,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **716**, Rust compiler validation and ELF integration review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-716.md). <!-- x86-merged:716 -->
 - 2026-10-02: lane **717**, Independent exact review of 716, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-717.md). <!-- x86-merged:717 -->
 - 2026-10-02: publication batch checks passed for `9444585a`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-03: Simon made the full Lean direct compiler pipeline a concurrent active goal beside complete selected hardware execution, retaining direct source lowering without an additional persistent IR, later untrusted Rust production and mandatory full final-byte validation. Runtime targets against equivalent GCC `-O3` C are minimum80%, target95%, ambitious above110%; accepted-image compilation latency is measured separately. These are requirements, not achieved performance or proof closure. <!-- full-compiler-goal-2026-10-03 -->-history
 <!-- X86-HISTORY -->
 
 ## Detailed references

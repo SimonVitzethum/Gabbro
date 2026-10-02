@@ -797,3 +797,31 @@ for task ownership/next IDs. Root dirty merges, user processes, exact semantic
 review and checked publication remain protected. Official Intel SDM edition093
 public PDF/text inputs are supplied clone-locally to hardware authors/reviewers;
 AMD retrieval failed and no AMD provenance or silicon proof is claimed.
+
+
+### Full compiler pipeline and GCC performance targets (2026-10-03)
+
+<!-- full-compiler-goal-2026-10-03 -->
+Latest Simon scope: complete BOTH the selected architectural hardware model
+and the entire direct Gabbro-to-final-binary compiler pipeline in Lean,
+without adding a persistent SSA IR/source interpreter. Use the existing
+typed source plus checked target blocks/bytes and recomputed certificates.
+High O3-like/invariant optimisation and fast accepted compilation are goals.
+Later Rust produces untrusted candidates; a live complete Lean validation
+path checks the source-derived unit, all reachable support/entry/binding
+bytes, linking/relocation and actual final mapping. Source safety, G/GX
+concurrency, IEEE, contracts, call logs and budget/work guarantees remain.
+Generic OS/freestanding profiles remain required; software is user logic.
+
+Runtime goals against equivalent C built with GCC `-O3`: minimum80%,
+target95%, ambitious above110%. Fixed-work score is100*Ctime/Gabbrotime;
+throughput score is100*Gabbrothroughput/Cthroughput. Record per-workload
+and class results, matched hardware/ISA/semantics/compiler settings and
+full validated direct binaries. Do not report legacy-C execution, unvalidated
+outputs, golden agreement or emulation as direct-backend proof/performance.
+Fast compile latency includes checks, optimisation, production, validation
+and Lean kernel checking, with cold/warm/incremental and memory evidence.
+Targets are OPEN until measured; no all-program universal speed claim.
+Maintain up to15 actual productive Muse models across hardware, compiler,
+optimisation, exact review, organisation and repairs; never exceed the cap
+or modify the user's process. Central details/history: DIRECT-COMPILER.md.
