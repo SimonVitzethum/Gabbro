@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 19:40 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 19:49 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -306,16 +306,16 @@ Last ledger refresh: **2026-10-02 19:40 UTC**. This is an operational snapshot, 
 | 660 | Hardware completion: coherent multicore architectural execution | Agent working | 661: scheduled | [task](lanes/660.md) |
 | 662 | Hardware completion: LOCK atomic and fence final-byte execution | Agent working | 663: scheduled | [task](lanes/662.md) |
 | 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Merged after review/checks | [report](messung/muse/MUSE-REPORT-664.md) |
-| 666 | Hardware completion: practical integer width and compact encoding rows | Committed candidate; review/integration pending | 667: Agent working | [task](lanes/666.md) |
+| 666 | Hardware completion: practical integer width and compact encoding rows | Committed candidate; review/integration pending | 667: Committed candidate; review/integration pending | [task](lanes/666.md) |
 | 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Agent working | 669: scheduled | [task](lanes/668.md) |
-| 670 | Hardware completion: precise selected fault and exception transitions | Committed candidate; review/integration pending | 671: scheduled | [task](lanes/670.md) |
-| 672 | Hardware completion: interrupts entry masking and trap hardware forms | Agent working | 673: scheduled | [task](lanes/672.md) |
+| 670 | Hardware completion: precise selected fault and exception transitions | Committed candidate; review/integration pending | 671: Committed candidate; review/integration pending | [task](lanes/670.md) |
+| 672 | Hardware completion: interrupts entry masking and trap hardware forms | Committed candidate; review/integration pending | 673: Agent working | [task](lanes/672.md) |
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Merged after review/checks | 675: Merged after review/checks | [report](messung/muse/MUSE-REPORT-674.md) |
-| 676 | Hardware completion: port IO and device memory profiles | Agent working | 677: scheduled | [task](lanes/676.md) |
+| 676 | Hardware completion: port IO and device memory profiles | Committed candidate; review/integration pending | 677: Agent working | [task](lanes/676.md) |
 | 678 | Organise and audit complete essential hardware-model coverage | Merged after review/checks | 679: Merged after review/checks | [report](messung/muse/MUSE-REPORT-678.md) |
 | 680 | Hardware completion: indirect and compact control byte forms | Agent working | 681: scheduled | [task](lanes/680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Agent working | 683: scheduled | [task](lanes/682.md) |
-| 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: scheduled | [task](lanes/684.md) |
+| 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Agent working | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Agent working | 687: scheduled | [task](lanes/686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Agent working | 689: scheduled | [task](lanes/688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
@@ -783,6 +783,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **675**, Independent exact review of 674, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-675.md). <!-- x86-merged:675 -->
 - 2026-10-02: lane **678**, Organise and audit complete essential hardware-model coverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-678.md). <!-- x86-merged:678 -->
 - 2026-10-02: lane **679**, Independent exact review of 678, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-679.md). <!-- x86-merged:679 -->
+- 2026-10-02: publication batch checks passed for `a3d5ebc3`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
