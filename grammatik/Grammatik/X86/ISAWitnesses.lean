@@ -3,6 +3,10 @@
   Subject:   Witnesses and poison probes for the unified instruction set
              (`ISA.lean`, `ISAExecution.lean`).
 
+  Section 6 adds the joined compact (`CompactForms`) and integer-core
+  (`IntegerCore`) families: a second mixed program, one row per new form,
+  shared-prefix boundary probes and poison probes.
+
   One MIXED program over all five families (pilot mov/cmp/store, mul/div
   imul, shift shl, setcc, narrow mov32/store32) is encoded with `encodeI`,
   laid out in executable memory, fetched and executed BOTH ways -- by
@@ -292,10 +296,15 @@ theorem gift_rex40_cmov :
     decodeI [natByte 0x40, natByte 0x0F, natByte 0x45, natByte 0xC1] = none := by
   decide
 
-/-- OVERLAPPING PREFIX: REX.W continued by the narrow MOVZX opcode `0F B6`
-    is refused (narrow rows carry W = 0). -/
-theorem gift_rexw_movzx :
-    decodeI [natByte 0x48, natByte 0x0F, natByte 0xB6, natByte 0xC1] = none := by
+/-- SHARED PREFIX, NOW A ROW: REX.W continued by the MOVZX opcode `0F B6`
+    was refused while no family had a W=1 MOVZX row. Since the integer
+    core joined, these exact bytes ARE `movzx64From8 rax, rcx`, and the
+    narrow decoder still refuses them (narrow rows carry W = 0): the
+    former poison probe is replaced by its correct decode. -/
+theorem grenze_rexw_movzx :
+    decodeI [natByte 0x48, natByte 0x0F, natByte 0xB6, natByte 0xC1] =
+        some (⟨.core (.movzx64From8 .rax .rcx), 4⟩, []) ∧
+      decF .narrow [natByte 0x48, natByte 0x0F, natByte 0xB6, natByte 0xC1] = none := by
   decide
 
 /-- OVERLAPPING PREFIX: REX 41 (pilot push/pop prefix) continued by the
@@ -360,12 +369,265 @@ theorem gift_idiv_null :
     ausgangRip (byteschrittI isaNullteiler) = none := by
   decide
 
+/-! ## 6. The two joined families: compact forms and the integer core.
+
+    A second mixed program uses all three new kinds of row together with
+    pilot and setcc rows: compact immediate moves, an integer-core LEA
+    with a scaled index, a compact imm8 ADD, compact disp8/disp0 stores,
+    a core MOVZX and NOT, a pilot CMP and a SETcc. It is laid out by
+    `encodeI`, fetched and executed from actual memory, and changes two
+    zeroed data words. -/
+
+/-- `eax := 6; rcx := 7 (sign-extended); lea rdx, [rax + rcx*4 + 3];
+    add rdx, 5; mov [rbx+8], rdx; movzx r10, dl; not r9;
+    mov [rbx], r10; cmp rax, rcx; setl r11b`. -/
+def isaProg2 : List Instr :=
+  [.compact (.movImm32Zx .rax 6),
+   .compact (.movImm32Sx .rcx 7),
+   .core (.lea64 .rdx .rax (some (.rcx, .s4)) 3),
+   .compact (.aluImm8 .add .rdx 5),
+   .compact (.store64Disp8 .rbx .rdx 8),
+   .core (.movzx64From8 .r10 .rdx),
+   .core (.notReg64 .r9),
+   .compact (.store64Disp0 .rbx .r10),
+   .pilot (.cmpReg64 .rax .rcx),
+   .cond (.setcc .l .r11)]
+
+def isaBytes2 : List Byte := progBytes isaProg2
+
+/-- The layout is 45 bytes long. -/
+theorem isaBytes2_laenge : isaBytes2.length = 45 := by decide
+
+def isaSpeicher2 : Speicher := { isaSpeicher with bytes := bytesAusProg isaBytes2 4096 }
+
+def isaStart2 : Zustand := { isaStart with speicher := isaSpeicher2 }
+
+/-- Observation: rdx, r10, r11, the data bytes at 8192/8200, RIP. -/
+def isaBeob2 (s : Zustand) : Wort × Wort × Wort × Byte × Byte × Adresse :=
+  (s.register .rdx, s.register .r10, s.register .r11,
+    s.speicher.bytes (BitVec.ofNat 64 8192),
+    s.speicher.bytes (BitVec.ofNat 64 8200), s.rip)
+
+def isaAusgangBeob2 :
+    ByteAusgang → Option (Wort × Wort × Wort × Byte × Byte × Adresse)
+  | .weiter s => some (isaBeob2 s)
+  | .verweigert => none
+
+/-- ABSTRACT RUN: 6 + 7*4 + 3 + 5 = 42 lands in rdx, r10 and both data
+    words; 6 < 7 sets r11 to 1. -/
+theorem isa2_lauf_wert :
+    (laufI (isaProg2.map canonI) isaStart2).map isaBeob2 =
+      some (42, 42, 1, BitVec.ofNat 8 42,
+        BitVec.ofNat 8 42, BitVec.ofNat 64 4141) := by
+  decide
+
+/-- BYTE RUN: ten fetched unified byte steps reach the same observation. -/
+theorem isa2_bytes_wert :
+    isaAusgangBeob2 (laufBytesI 10 isaStart2) =
+      some (42, 42, 1, BitVec.ofNat 8 42,
+        BitVec.ofNat 8 42, BitVec.ofNat 64 4141) := by
+  decide
+
+/-- NOT turns r9 = 0 into all ones (core Group-3 row). -/
+theorem isa2_not_wert :
+    (laufI (isaProg2.map canonI) isaStart2).map (fun s => s.register .r9) =
+      some (BitVec.ofNat 64 (2 ^ 64 - 1)) := by
+  decide
+
+theorem isaProg2_kanonisch : ∀ i ∈ isaProg2, kanonischI i = true := by decide
+
+theorem isaProg2_faellt : ∀ i ∈ isaProg2, faelltDurchI i = true := by decide
+
+theorem isaSpeicher2_wx : WX isaStart2.speicher := by
+  intro x hx
+  simp only [isaStart2, isaSpeicher2, isaSpeicher, isaExec, decide_eq_true_eq] at hx
+  show isaDaten x = false
+  simp only [isaDaten, decide_eq_false_iff_not]
+  omega
+
+theorem isaStart2_code : CodeAt isaStart2.speicher isaStart2.rip (progBytes isaProg2) := by
+  intro i hi
+  have hl : i < 45 := by rw [← isaBytes2_laenge]; exact hi
+  revert i
+  decide
+
+/-- JOINT WITNESS for `laufBytesI_layout` over the joined families: every
+    premise instantiated on the second mixed program, the conclusion
+    holds, and the run is memory-changing (two zeroed bytes become 42). -/
+theorem laufBytesI_layout_zeuge2 :
+    ∃ (is : List Instr) (s : Zustand),
+      (∀ i ∈ is, kanonischI i = true) ∧ (∀ i ∈ is, faelltDurchI i = true) ∧
+      WX s.speicher ∧ CodeAt s.speicher s.rip (progBytes is) ∧
+      laufBytesI is.length s = ausgangVon (laufI (is.map canonI) s) ∧
+      isaAusgangBeob2 (laufBytesI is.length s) =
+        some (42, 42, 1, BitVec.ofNat 8 42,
+          BitVec.ofNat 8 42, BitVec.ofNat 64 4141) ∧
+      s.speicher.bytes (BitVec.ofNat 64 8192) = BitVec.ofNat 8 0 ∧
+      s.speicher.bytes (BitVec.ofNat 64 8200) = BitVec.ofNat 8 0 := by
+  refine ⟨isaProg2, isaStart2, isaProg2_kanonisch, isaProg2_faellt,
+    isaSpeicher2_wx, isaStart2_code,
+    laufBytesI_layout isaProg2 isaStart2 isaProg2_kanonisch isaProg2_faellt
+      isaSpeicher2_wx isaStart2_code, isa2_bytes_wert, by decide, by decide⟩
+
+/-- One canonical instruction per new row shape (every compact form, every
+    core form, extended registers included). -/
+def isaNeueFamilien : List Instr :=
+  [.compact (.movImm32Zx .r11 0x12345678),
+   .compact (.movImm32Sx .r12 0xFFFFFFF0),
+   .compact (.aluImm8 .sub .r13 0x80),
+   .compact (.aluImm32 .xor' .rsi 0x7FFF0000),
+   .compact (.load64Disp8 .r9 .r12 0xF8),
+   .compact (.store64Disp8 .rbp .r15 0x10),
+   .compact (.load64Disp0 .rax .rsp),
+   .compact (.store64Disp0 .r14 .rdi),
+   .compact (.jump8 0x7F),
+   .compact (.jumpIf8 .ge 0x80),
+   .core (.lea64 .r8 .r13 (some (.r9, .s8)) 0x40),
+   .core (.lea64 .rax .rsp none 0),
+   .core (.andReg64 .r10 .rcx),
+   .core (.orReg64 .rbx .r11),
+   .core (.testReg64 .r12 .r12),
+   .core (.notReg64 .r15),
+   .core (.negReg64 .rdx),
+   .core (.movzx64From8 .rsi .r9),
+   .core (.movzx64From16 .r10 .rax),
+   .core (.movsx64From8 .rcx .rdx),
+   .core (.movsx64From16 .r14 .r15),
+   .core (.movsx64From32 .rdi .r8)]
+
+/-- Witness for `decodeI_encodeI` on the joined families, with a suffix. -/
+theorem decodeI_encodeI_zeuge2 :
+    ∀ i ∈ isaNeueFamilien, kanonischI i = true ∧
+      decodeI (encodeI i ++ [natByte 195]) = some (canonI i, [natByte 195]) := by
+  decide
+
+/-- Witness for `familien_disjunkt` on the joined families: on each new
+    row exactly ONE of the eight family decoders accepts. -/
+theorem familien_disjunkt_zeuge2 :
+    ∀ i ∈ isaNeueFamilien, ∀ G ∈ alleFam,
+      (decF G (encodeI i)).isSome = decide (G = famI i) := by
+  decide
+
+/-- Witness for `decodeI_eindeutig` and `decodeI_verbraucht` on the joined
+    families. -/
+theorem decodeI_eindeutig_zeuge2 :
+    ∀ i ∈ isaNeueFamilien,
+      famOf (encodeI i ++ [natByte 0]) = famI i ∧
+      (decodeI (encodeI i ++ [natByte 0])).map (fun p => p.1.laenge + p.2.length) =
+        some (encodeI i ++ [natByte 0]).length := by
+  decide
+
+/-! ### Shared prefixes: the byte that separates the families.
+
+    Each pair below opens with the SAME first byte(s); the stated
+    separating byte decides the family, and exactly that family decodes.
+    No byte string is accepted by two decoders (`familien_disjunkt`), so
+    no priority rule between the new and the old families is needed. -/
+
+/-- REX.W `8B`: ModRM mode 1 is the compact disp8 load, mode 2 the pilot
+    disp32 load. -/
+theorem grenze_8b_modus :
+    famOf [natByte 0x48, natByte 0x8B, natByte 0x43, natByte 0x08] = .compact ∧
+      decodeI [natByte 0x48, natByte 0x8B, natByte 0x43, natByte 0x08] =
+        some (⟨.compact (.load64Disp8 .rax .rbx 8), 4⟩, []) ∧
+      famOf (encodeI (.pilot (.load64 .rax .rbx 8))) = .pilot ∧
+      decodeI (encodeI (.pilot (.load64 .rax .rbx 8))) =
+        some (canonI (.pilot (.load64 .rax .rbx 8)), []) := by
+  decide
+
+/-- REX.W `F7`: ModRM digit 2/3 is core NOT/NEG, digit 4/6/7 mul/div. -/
+theorem grenze_f7_ziffer :
+    decodeI [natByte 0x48, natByte 0xF7, natByte 0xD0] =
+        some (⟨.core (.notReg64 .rax), 3⟩, []) ∧
+      decodeI [natByte 0x48, natByte 0xF7, natByte 0xD8] =
+        some (⟨.core (.negReg64 .rax), 3⟩, []) ∧
+      decodeI [natByte 0x48, natByte 0xF7, natByte 0xE0] =
+        some (⟨.muldiv (.mulRax .rax), 3⟩, []) ∧
+      decodeI [natByte 0x48, natByte 0xF7, natByte 0xC0] = none := by
+  decide
+
+/-- `0F B6`: W = 1 is the core MOVZX into 64 bits, W = 0 the narrow MOVZX;
+    `0F AF` (mul/div) and `0F 44` (cmov) share REX.W `0F` with the core. -/
+theorem grenze_0f :
+    famOf [natByte 0x48, natByte 0x0F, natByte 0xB6, natByte 0xC1] = .core ∧
+      famOf [natByte 0x40, natByte 0x0F, natByte 0xB6, natByte 0xC1] = .narrow ∧
+      famOf [natByte 0x48, natByte 0x0F, natByte 0xAF, natByte 0xC1] = .muldiv ∧
+      famOf [natByte 0x48, natByte 0x0F, natByte 0x44, natByte 0xC1] = .cmov ∧
+      (decodeI [natByte 0x40, natByte 0x0F, natByte 0xB6, natByte 0xC1]).isSome ∧
+      decodeI [natByte 0x48, natByte 0x0F, natByte 0xB7, natByte 0xC1] =
+        some (⟨.core (.movzx64From16 .rax .rcx), 4⟩, []) := by
+  decide
+
+/-- `63` MOVSXD exists only with REX.W (core); REX.WX `8D` is an LEA with
+    an extended index (core only: no other family opens on 74..79). -/
+theorem grenze_movsxd_rexx :
+    decodeI [natByte 0x48, natByte 0x63, natByte 0xC1] =
+        some (⟨.core (.movsx64From32 .rax .rcx), 3⟩, []) ∧
+      decodeI [natByte 0x40, natByte 0x63, natByte 0xC1] = none ∧
+      decodeI (encodeI (.core (.lea64 .rax .rax (some (.r9, .s8)) 0))) =
+        some (canonI (.core (.lea64 .rax .rax (some (.r9, .s8)) 0)), []) ∧
+      famOf (encodeI (.core (.lea64 .rax .rax (some (.r9, .s8)) 0))) = .core := by
+  decide
+
+/-- One-byte heads: `EB`/`70..7F`/`B8..BF` are compact, `E9`/`0F 8x` pilot;
+    `41 B8` is the compact `movImm32Zx r8`, `41 50` the pilot `push r8`. -/
+theorem grenze_kopfbyte :
+    famOf [natByte 0xEB, natByte 0x05] = .compact ∧
+      famOf (encodeI (.pilot (.jump32 5))) = .pilot ∧
+      famOf [natByte 0x74, natByte 0x05] = .compact ∧
+      famOf [natByte 0x41, natByte 0xB8, natByte 1, natByte 0, natByte 0, natByte 0] =
+        .compact ∧
+      famOf [natByte 0x41, natByte 0x50] = .pilot := by
+  decide
+
+/-! ### Poison probes for the joined families. -/
+
+/-- TRUNCATED: every new row minus its last byte is refused. -/
+theorem gift_abgeschnitten2 :
+    ∀ i ∈ isaNeueFamilien, decodeI (encodeI i).dropLast = none := by
+  decide
+
+/-- NON-CANONICAL: compact disp0 over `rbp`/`r13` is the RIP-relative row;
+    `kanonischI` refuses the syntax and the decoder refuses the bytes. An
+    LEA index `rsp` is unrepresentable: `kanonischI` refuses it and its
+    bytes decode as the index-free LEA. -/
+theorem gift_nicht_kanonisch2 :
+    kanonischI (.compact (.load64Disp0 .rax .rbp)) = false ∧
+      decodeI (encodeI (.compact (.load64Disp0 .rax .rbp))) = none ∧
+      kanonischI (.compact (.store64Disp0 .r13 .rax)) = false ∧
+      decodeI (encodeI (.compact (.store64Disp0 .r13 .rax))) = none ∧
+      kanonischI (.core (.lea64 .rax .rbx (some (.rsp, .s2)) 0)) = false ∧
+      decodeI (encodeI (.core (.lea64 .rax .rbx (some (.rsp, .s2)) 0))) =
+        some (⟨.core (.lea64 .rax .rbx none 0), 8⟩, []) := by
+  decide
+
+/-- NON-CANONICAL REX: REX.WX (4A) on any non-LEA core opcode, and REX.WR
+    (4C) on a core NOT, are refused by every family. -/
+theorem gift_rex_kern :
+    decodeI [natByte 0x4A, natByte 0x21, natByte 0xC8] = none ∧
+      decodeI [natByte 0x4C, natByte 0xF7, natByte 0xD0] = none := by
+  decide
+
+/-- STRAIGHT-LINE BOUNDARY: the compact rel8 jumps are control flow, so the
+    layout theorem's fall-through premise excludes them. -/
+theorem gift_kompakt_sprung_faellt_nicht :
+    faelltDurchI (.compact (.jump8 3)) = false ∧
+      faelltDurchI (.compact (.jumpIf8 .e 3)) = false := by
+  decide
+
 /- CUTS:
    - The witnesses are concrete runs checked by kernel evaluation; they add
      no generic claim beyond `ISA.lean`/`ISAExecution.lean`.
    - `familien_disjunkt` can only be instantiated with `F = G` (that is its
      content); `familien_disjunkt_zeuge` shows the non-degenerate side:
      on each family's bytes the other five decoders refuse.
+   - Section 6 (compact forms, integer core) is witnessed on one mixed
+     program and one row per new constructor shape; the shared-prefix
+     probes (`grenze_*`) show the separating byte for every prefix the
+     new families share with an earlier one. They do not enumerate every
+     byte string: the generic statement is `familien_disjunkt`.
+   - The former poison probe `gift_rexw_movzx` (REX.W `0F B6`) is now a
+     legitimate integer-core row and is restated as `grenze_rexw_movzx`.
    - No hardware, TSO or source claim.
 -/
 
@@ -381,6 +643,8 @@ theorem gift_idiv_null :
 #print axioms spurAn_layout_zeuge
 #print axioms sprung_muell_verweigert
 #print axioms spurAn_schritt
+#print axioms isaSprung_1_some
+#print axioms isaSprung_2_some
 #print axioms sprung_spur
 #print axioms laufBytesI_spur_zeuge
 #print axioms decodeI_encodeI_zeuge
@@ -393,7 +657,7 @@ theorem gift_idiv_null :
 #print axioms gift_imul_mod0
 #print axioms gift_rexw_setcc
 #print axioms gift_rex40_cmov
-#print axioms gift_rexw_movzx
+#print axioms grenze_rexw_movzx
 #print axioms gift_rex41_imul
 #print axioms gift_rexwr_shift
 #print axioms gift_abgeschnitten
@@ -401,5 +665,26 @@ theorem gift_idiv_null :
 #print axioms gift_mutiert_verweigert
 #print axioms gift_shift_300
 #print axioms gift_idiv_null
+#print axioms isaBytes2_laenge
+#print axioms isa2_lauf_wert
+#print axioms isa2_bytes_wert
+#print axioms isa2_not_wert
+#print axioms isaProg2_kanonisch
+#print axioms isaProg2_faellt
+#print axioms isaSpeicher2_wx
+#print axioms isaStart2_code
+#print axioms laufBytesI_layout_zeuge2
+#print axioms decodeI_encodeI_zeuge2
+#print axioms familien_disjunkt_zeuge2
+#print axioms decodeI_eindeutig_zeuge2
+#print axioms grenze_8b_modus
+#print axioms grenze_f7_ziffer
+#print axioms grenze_0f
+#print axioms grenze_movsxd_rexx
+#print axioms grenze_kopfbyte
+#print axioms gift_abgeschnitten2
+#print axioms gift_nicht_kanonisch2
+#print axioms gift_rex_kern
+#print axioms gift_kompakt_sprung_faellt_nicht
 
 end Gabbro.Grammatik.X86

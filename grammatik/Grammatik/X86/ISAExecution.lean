@@ -191,12 +191,15 @@ def CodeAt (m : Speicher) (a : Adresse) (bs : List Byte) : Prop :=
 def WX (m : Speicher) : Prop :=
   ∀ x, m.ausfuehrbar x = true → m.schreibbar x = false
 
-/-- Fall-through instructions: everything except the pilot control forms. -/
+/-- Fall-through instructions: everything except the pilot control forms
+    and the compact rel8 jumps. -/
 def faelltDurchI : Instr → Bool
   | .pilot (.jump32 _) => false
   | .pilot (.jumpIf32 _ _) => false
   | .pilot (.call32 _) => false
   | .pilot .ret => false
+  | .compact (.jump8 _) => false
+  | .compact (.jumpIf8 _ _) => false
   | _ => true
 
 /-- Memory protection of one step: permissions unchanged, and no
@@ -385,6 +388,57 @@ theorem stepI_rahmen (i : Instr) (l : Nat) (s s1 : Zustand)
       split at h
       · cases h
       · cases h; exact ⟨Schutz_refl _, fun _ => rfl⟩
+  | compact c =>
+    rw [stepI_compact] at h
+    unfold schrittC at h
+    split at h
+    · cases h
+    · cases c with
+      | movImm32Zx dst imm => cases h; exact ⟨Schutz_refl _, fun _ => rfl⟩
+      | movImm32Sx dst imm => cases h; exact ⟨Schutz_refl _, fun _ => rfl⟩
+      | aluImm8 op dst imm =>
+        cases h
+        split <;> exact ⟨Schutz_refl _, fun _ => rfl⟩
+      | aluImm32 op dst imm =>
+        cases h
+        split <;> exact ⟨Schutz_refl _, fun _ => rfl⟩
+      | load64Disp8 dst base disp =>
+        dsimp only at h
+        split at h
+        · cases h; exact ⟨Schutz_refl _, fun _ => rfl⟩
+        · cases h
+      | store64Disp8 base src disp =>
+        dsimp only at h
+        split at h
+        · rename_i m hm
+          cases h
+          exact ⟨write64_schutz _ _ _ _ hm, fun _ => rfl⟩
+        · cases h
+      | load64Disp0 dst base =>
+        dsimp only at h
+        split at h
+        · cases h; exact ⟨Schutz_refl _, fun _ => rfl⟩
+        · cases h
+      | store64Disp0 base src =>
+        dsimp only at h
+        split at h
+        · rename_i m hm
+          cases h
+          exact ⟨write64_schutz _ _ _ _ hm, fun _ => rfl⟩
+        · cases h
+      | jump8 rel =>
+        cases h
+        exact ⟨Schutz_refl _, fun hf => absurd hf Bool.false_ne_true⟩
+      | jumpIf8 cond rel =>
+        cases h
+        exact ⟨Schutz_refl _, fun hf => absurd hf Bool.false_ne_true⟩
+  | core c =>
+    rw [stepI_core] at h
+    refine ⟨by rw [coreSchritt_speicher _ s s1 h]; exact Schutz_refl _, fun _ => ?_⟩
+    unfold coreSchritt at h
+    split at h
+    · cases h
+    · cases c <;> (cases h; rfl)
 
 /-! ### Code placement lemmas. -/
 
@@ -496,7 +550,7 @@ theorem laufBytesI_layout (is : List Instr) (s : Zustand)
 
 /- CUTS (what is NOT proved here):
    - `laufBytesI_layout` covers STRAIGHT-LINE programs (`faelltDurchI`:
-     no pilot jump/branch/call/ret). Programs with control flow are covered
+     no pilot jump/branch/call/ret, no compact rel8 jump). Programs with control flow are covered
      by the trace theorem `laufBytesI_spur`, whose premise `SpurAn` (the
      executed instruction's bytes open the window at the reached RIP) is
      NOT derived from a layout here; a branch-target layout theorem is open.
