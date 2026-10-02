@@ -389,4 +389,300 @@ theorem geraetSchreibt_b8_verweigert (g : Geraet) (off : Nat) (v : Wort)
     (h : fin8 off = none) : geraetSchreibt g .b8 off v = none := by
   simp [geraetSchreibt, h]
 
+/-! ## 3. Machine: CPU, pending WB stores, device, posted writes, UC log.
+
+  Normal WB RAM follows TSO (the accepted `TSO.lean` buffer discipline,
+  referenced as explicit `pending` state); UC accesses bypass it. A
+  CPU-retired UC store is POSTED, not device-completed (Vol.1 §20.5:
+  chipsets may post UC writes); only `busFortschritt` completes it, in
+  FIFO order. The UC log records program order of retired UC events. -/
+
+/-- One UC bus event: program-order log entry for a UC read or write. -/
+inductive UcEreignis where
+  | lese : Adresse → Breite → UcEreignis
+  | schreibe : Adresse → Breite → UcEreignis
+  deriving DecidableEq, Repr
+
+/-- One posted UC write: CPU-retired, not yet device-completed. -/
+structure PostedSchreib where
+  addr : Adresse
+  breite : Breite
+  wert : Wort
+  deriving DecidableEq, Repr
+
+/-- The UC MMIO machine: canonical CPU over canonical RAM, explicit
+    ordinary pending WB stores, the generic device, posted UC writes
+    awaiting bus completion, the UC program-order log, and the
+    software-established UC profile. -/
+structure MmioMaschine where
+  kern : FpZustand
+  pending : List TSOEintrag
+  geraet : Geraet
+  ausstehend : List PostedSchreib
+  ucLog : List UcEreignis
+  profil : UcProfil
+
+/-- Step outcome: success, hardware trap, or explicit refusal. -/
+inductive MmioAusgang where
+  | weiter : MmioMaschine → MmioAusgang
+  | halt : MmioAusgang
+  | verweigert : MmioAusgang
+
+/-- Byte-interval overlap of one posted write with `[start, start+n)`. -/
+def postedUeberlappt (p : PostedSchreib) (start n : Nat) : Bool :=
+  decide (p.addr.toNat < start + n ∧
+    start < p.addr.toNat + p.breite.bytes)
+
+/-- Any posted write overlapping the access extent. -/
+def ueberlapptPosted : List PostedSchreib → Adresse → Nat → Bool
+  | [], _, _ => false
+  | p :: rest, a, n =>
+    postedUeberlappt p a.toNat n || ueberlapptPosted rest a n
+
+/-- An empty posted queue overlaps nothing. -/
+theorem ueberlapptPosted_leer (a : Adresse) (n : Nat) :
+    ueberlapptPosted [] a n = false := rfl
+
+/-- CPU UC store issue: feature, UC membership, device window; then the
+    write is POSTED (log plus pending device work), never buffered in
+    the WB store buffer, never applied to the device yet. -/
+def ucStoreZugriff (m : MmioMaschine) (hw : HwProfil) (bp : BereitProfil)
+    (b : Breite) (a : Adresse) (v : Wort) : Option MmioMaschine :=
+  if breiteZugelassen hw bp b then
+    if istUc m.profil a b.bytes then
+      if imFenster a b.bytes then
+        some { m with
+          ausstehend :=
+            m.ausstehend ++ [{ addr := a, breite := b, wert := v }]
+          ucLog := m.ucLog ++ [.schreibe a b] }
+      else none
+    else none
+  else none
+
+/-- A successful UC store issue has exactly the posted shape. -/
+theorem ucStoreZugriff_erfolg (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (hz : breiteZugelassen hw bp b = true)
+    (hu : istUc m.profil a b.bytes = true)
+    (hf : imFenster a b.bytes = true) :
+    ucStoreZugriff m hw bp b a v =
+      some { m with
+        ausstehend := m.ausstehend ++ [{ addr := a, breite := b, wert := v }]
+        ucLog := m.ucLog ++ [.schreibe a b] } := by
+  unfold ucStoreZugriff
+  rw [if_pos hz, if_pos hu, if_pos hf]
+
+/-- BYPASS: a retired UC store touches no WB buffer, no device byte, no
+    counter, no CPU register, flag, XMM, control word or RAM byte; the
+    log and the posted queue each grow by exactly the new event. -/
+theorem ucStore_bypass (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (m' : MmioMaschine)
+    (h : ucStoreZugriff m hw bp b a v = some m') :
+    m'.pending = m.pending ∧
+      m'.geraet.daten = m.geraet.daten ∧
+      m'.geraet.zugriffe = m.geraet.zugriffe ∧
+      m'.kern = m.kern ∧
+      m'.ucLog = m.ucLog ++ [.schreibe a b] ∧
+      m'.ausstehend =
+        m.ausstehend ++ [{ addr := a, breite := b, wert := v }] := by
+  unfold ucStoreZugriff at h
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz] at h
+    by_cases hu : istUc m.profil a b.bytes = true
+    · rw [if_pos hu] at h
+      by_cases hf : imFenster a b.bytes = true
+      · rw [if_pos hf] at h
+        cases h
+        exact ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+      · rw [if_neg hf] at h
+        cases h
+    · rw [if_neg hu] at h
+      cases h
+  · rw [if_neg hz] at h
+    cases h
+
+/-- A `= false` fact refutes the `= true` condition that `if` decides on. -/
+theorem nicht_wahr (c : Bool) (h : c = false) : ¬ (c = true) := by
+  rw [h]
+  decide
+
+/-- A UC store without UC membership refuses (wrong memory kind). -/
+theorem ucStore_verweigert_ohne_profil (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (hu : istUc m.profil a b.bytes = false) :
+    ucStoreZugriff m hw bp b a v = none := by
+  unfold ucStoreZugriff
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz]
+    by_cases hf : imFenster a b.bytes = true
+    · rw [if_pos hf, if_neg (nicht_wahr _ hu)]
+    · rw [if_neg hf, if_neg (nicht_wahr _ hu)]
+  · rw [if_neg hz]
+
+/-- A UC store outside the device window refuses (no device). -/
+theorem ucStore_verweigert_ohne_fenster (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (hf : imFenster a b.bytes = false) :
+    ucStoreZugriff m hw bp b a v = none := by
+  unfold ucStoreZugriff
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz]
+    by_cases hu : istUc m.profil a b.bytes = true
+    · rw [if_pos hu, if_neg (nicht_wahr _ hf)]
+    · rw [if_neg hu]
+  · rw [if_neg hz]
+
+/-- A UC store without width admission refuses (feature gate). -/
+theorem ucStore_verweigert_ohne_merkmal (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (hz : breiteZugelassen hw bp b = false) :
+    ucStoreZugriff m hw bp b a v = none := by
+  unfold ucStoreZugriff
+  rw [if_neg (nicht_wahr _ hz)]
+
+/-- Register update for a UC load answer inside the machine CPU half:
+    the architectural narrow merge into the destination. -/
+def maschineRegLaden (m : MmioMaschine) (b : Breite) (dst : Register)
+    (v : Wort) : Zustand :=
+  let w := mergeRegNarrow b (m.kern.kern.register dst) v
+  { m.kern.kern with register := regSet m.kern.kern.register dst w }
+
+/-- The helper writes exactly the merged value at the destination. -/
+theorem maschineRegLaden_gleich (m : MmioMaschine) (b : Breite)
+    (dst : Register) (v : Wort) :
+    (maschineRegLaden m b dst v).register dst =
+      mergeRegNarrow b (m.kern.kern.register dst) v := by
+  unfold maschineRegLaden
+  simp [regSet]
+
+/-- CPU UC load: feature, UC membership, device window, and NO overlapping
+    posted write (strong order: complete first, never forward silently);
+    then the device answers, the counter moves, the destination takes
+    the architectural narrow merge, and the event is logged. -/
+def ucLoadZugriff (m : MmioMaschine) (hw : HwProfil) (bp : BereitProfil)
+    (b : Breite) (dst : Register) (a : Adresse) :
+    Option (MmioMaschine × Wort) :=
+  if breiteZugelassen hw bp b then
+    if istUc m.profil a b.bytes then
+      if imFenster a b.bytes then
+        if ueberlapptPosted m.ausstehend a b.bytes then none
+        else
+          match geraetLiest m.geraet b (geraetOff a) with
+          | some (g', v) =>
+            some ({ m with
+              kern := { m.kern with kern := maschineRegLaden m b dst v }
+              geraet := g'
+              ucLog := m.ucLog ++ [.lese a b] }, v)
+          | none => none
+      else none
+    else none
+  else none
+
+/-- A successful UC load has exactly the answered shape. -/
+theorem ucLoadZugriff_erfolg (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (dst : Register) (a : Adresse)
+    (g' : Geraet) (v : Wort)
+    (hz : breiteZugelassen hw bp b = true)
+    (hu : istUc m.profil a b.bytes = true)
+    (hf : imFenster a b.bytes = true)
+    (hp : ueberlapptPosted m.ausstehend a b.bytes = false)
+    (hg : geraetLiest m.geraet b (geraetOff a) = some (g', v)) :
+    ucLoadZugriff m hw bp b dst a =
+      some ({ m with
+        kern := { m.kern with kern := maschineRegLaden m b dst v }
+        geraet := g'
+        ucLog := m.ucLog ++ [.lese a b] }, v) := by
+  unfold ucLoadZugriff
+  rw [if_pos hz, if_pos hu, if_pos hf, if_neg (nicht_wahr _ hp), hg]
+
+/-- A UC load over an overlapping posted write refuses: complete the
+    posted write first (no silent forwarding). -/
+theorem ucLoad_verweigert_bei_ausstehend (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (dst : Register) (a : Adresse)
+    (hp : ueberlapptPosted m.ausstehend a b.bytes = true) :
+    ucLoadZugriff m hw bp b dst a = none := by
+  unfold ucLoadZugriff
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz]
+    by_cases hu : istUc m.profil a b.bytes = true
+    · rw [if_pos hu]
+      by_cases hf : imFenster a b.bytes = true
+      · rw [if_pos hf, if_pos hp]
+      · rw [if_neg hf]
+    · rw [if_neg hu]
+  · rw [if_neg hz]
+
+/-- LOAD FRAME: a UC load changes no RAM byte, no flag, no XMM, no
+    control word, no pending WB store and no posted write; only the
+    destination register, the device counter and the log move. -/
+theorem ucLoad_rahmen (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (dst : Register) (a : Adresse)
+    (m' : MmioMaschine) (v : Wort)
+    (h : ucLoadZugriff m hw bp b dst a = some (m', v)) :
+    m'.kern.kern.speicher = m.kern.kern.speicher ∧
+      m'.kern.kern.flags = m.kern.kern.flags ∧
+      m'.kern.kern.rip = m.kern.kern.rip ∧
+      m'.kern.xmm = m.kern.xmm ∧
+      m'.kern.fp = m.kern.fp ∧
+      m'.pending = m.pending ∧
+      m'.ausstehend = m.ausstehend ∧
+      m'.ucLog = m.ucLog ++ [.lese a b] := by
+  unfold ucLoadZugriff at h
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz] at h
+    by_cases hu : istUc m.profil a b.bytes = true
+    · rw [if_pos hu] at h
+      by_cases hf : imFenster a b.bytes = true
+      · rw [if_pos hf] at h
+        by_cases hpT : ueberlapptPosted m.ausstehend a b.bytes = true
+        · rw [if_pos hpT] at h
+          cases h
+        · rw [if_neg hpT] at h
+          cases hg : geraetLiest m.geraet b (geraetOff a) with
+          | none =>
+            rw [hg] at h
+            cases h
+          | some pw =>
+            rw [hg] at h
+            cases h
+            cases pw
+            exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+      · rw [if_neg hf] at h
+        cases h
+    · rw [if_neg hu] at h
+      cases h
+  · rw [if_neg hz] at h
+    cases h
+
+/-- Bus/device completion: the oldest posted write reaches the device
+    (FIFO); CPU log, RAM, registers and pending WB stores are untouched.
+    `none` on an empty posted queue or a window miss. -/
+def busFortschritt (m : MmioMaschine) : Option MmioMaschine :=
+  match m.ausstehend with
+  | [] => none
+  | p :: rest =>
+    match geraetSchreibt m.geraet p.breite (geraetOff p.addr) p.wert with
+    | some g' => some { m with geraet := g', ausstehend := rest }
+    | none => none
+
+/-- An empty posted queue has no completion step. -/
+theorem busFortschritt_leer (m : MmioMaschine)
+    (he : m.ausstehend = []) : busFortschritt m = none := by
+  unfold busFortschritt
+  rw [he]
+
+/-- FIFO COMPLETION: the oldest posted write completes first; the log,
+    the CPU state and the pending WB stores are preserved. -/
+theorem busFortschritt_fifo (m : MmioMaschine) (p : PostedSchreib)
+    (rest : List PostedSchreib) (g' : Geraet)
+    (he : m.ausstehend = p :: rest)
+    (hg : geraetSchreibt m.geraet p.breite (geraetOff p.addr) p.wert =
+      some g') :
+    ∃ m', busFortschritt m = some m' ∧ m'.geraet = g' ∧
+      m'.ausstehend = rest ∧ m'.ucLog = m.ucLog ∧ m'.kern = m.kern ∧
+      m'.pending = m.pending := by
+  simp only [busFortschritt, he, hg]
+  exact ⟨_, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
 end Gabbro.Grammatik.X86
