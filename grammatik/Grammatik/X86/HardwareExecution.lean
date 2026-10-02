@@ -429,6 +429,65 @@ theorem hwLock_verweigert (m : HwMaschine) (c : Nat)
     (b : SperrBefehl) :
     hwLockAnfrage m c b = none := rfl
 
+/-! ## 7. Computable fetched-byte register step.
+
+  Fetch reads the core projection's ACTUAL executable bytes, decodes
+  through the unified chain, and runs the unified evaluator. Stops
+  (`halt`, `verweigert`) are carried, never hidden. The register path
+  is justified exactly where the accepted step leaves memory alone
+  (the `HwSchritt.reg` gate); memory-changing instructions must use
+  the §3/§6 issue path instead. -/
+
+/-- Machine-level register outcome: the successor machine, the
+    hardware trap, or explicit refusal. -/
+inductive HwRegAusgang where
+  | weiter : HwMaschine → HwRegAusgang
+  | halt : HwRegAusgang
+  | verweigert : HwRegAusgang
+
+/-- One fetched-byte register step on core `c`: fetch, unified
+    decode, unified step, re-embed core data. Memory and buffers are
+    kept by construction (see the justification below). -/
+def hwByteschrittReg (m : HwMaschine) (c : Nat) : HwRegAusgang :=
+  match fetchExt (projFp m c) (geholt (projZustand m c)) with
+  | none => .verweigert
+  | some (i, _) =>
+    match stepExt i (projFp m c) (m.bereit c) with
+    | .weiter t' => .weiter (setKernVonFp m c t')
+    | .halt => .halt
+    | .verweigert => .verweigert
+
+/-- Selection: a fetched instruction justifies a machine `reg` step
+    exactly where it leaves canonical memory alone. -/
+theorem hwByteschrittReg_rechtfertigt (m : HwMaschine) (c : Nat)
+    (i : ExtInstr) (rest : List Byte) (t' : FpZustand)
+    (hf : fetchExt (projFp m c) (geholt (projZustand m c)) = some (i, rest))
+    (hs : stepExt i (projFp m c) (m.bereit c) = .weiter t')
+    (hmem : t'.kern.speicher = m.mem) :
+    hwByteschrittReg m c = .weiter (setKernVonFp m c t') ∧
+      HwSchritt m (setKernVonFp m c t') (.regAusf c i) := by
+  simp only [hwByteschrittReg, hf, hs]
+  exact ⟨trivial, .reg c i t' hs hmem⟩
+
+/-- Fetch refusal is register-step refusal. -/
+theorem hwByteschrittReg_verweigert (m : HwMaschine) (c : Nat)
+    (hf : fetchExt (projFp m c) (geholt (projZustand m c)) = none) :
+    hwByteschrittReg m c = .verweigert := by
+  simp only [hwByteschrittReg, hf]
+
+/-- Control-state refusal on the machine: without OS vector state the
+    packed-integer arm refuses in every state -- the accepted
+    `stepVector_profil_verweigert`, lifted. No silent trust. -/
+theorem hwVec_ohne_os_verweigert (m : HwMaschine) (c : Nat)
+    (v : VectorDec)
+    (hos : (m.bereit c).osXmm = false)
+    (hok : laengeOk v.laenge = true) :
+    stepExt (.vec v) (projFp m c) (m.bereit c) = .verweigert := by
+  apply stepExt_vec_verweigert
+  apply stepVector_profil_verweigert v (projFp m c) (m.bereit c) hok
+  unfold vecEintritt
+  rw [hos]
+
 /- CUTS:
    Skeleton only: data vocabulary and projections so far.
    NOT proved: well-formedness, steps, embeddings, witnesses, adapters.
