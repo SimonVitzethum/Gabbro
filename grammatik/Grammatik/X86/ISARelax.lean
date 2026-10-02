@@ -36,7 +36,7 @@
        simulation `laufB_flach`;
     §6 per-block selection `waehleB` (`sel` on each block body, labels kept)
        and its agreement theorem `waehleB_korrekt`;
-    §7 the combined statement `waehleB_relax_bytes`: select per block,
+    §7 the pass `uebersetze` and `uebersetze_bytes`: check labels, select per block,
        flatten, relax, lay out; the byte run agrees with the ORIGINAL
        block program outside the scratch list, at the same block label.
   Witnesses and poison probes: `ISARelaxWitnesses.lean`.
@@ -232,10 +232,18 @@ theorem codeAt_zeile (m : Speicher) (base : Adresse) (ws : List Bool) (p : LProg
 
 /-! ## 2. Bounded relaxation (DESIGN §2B). -/
 
-/-- One compression attempt at index `k`: narrow it only if it is still
+/-- Is instruction `k` a jump (the only rows a width applies to)? -/
+def istSprungAt (p : LProg) (k : Nat) : Bool :=
+  match p[k]? with
+  | some (.jmp _) => true
+  | some (.jcc _ _) => true
+  | _ => false
+
+/-- One compression attempt at jump `k`: narrow it only if it is still
     wide AND the WHOLE layout with it narrowed validates. -/
 def versuche (p : LProg) (ws : List Bool) (k : Nat) : List Bool :=
-  if ws.getD k false = false ∧ layoutOk (ws.set k true) p = true then ws.set k true else ws
+  if istSprungAt p k = true ∧ ws.getD k false = false ∧ layoutOk (ws.set k true) p = true
+  then ws.set k true else ws
 
 /-- One compression round over all indices, in order. -/
 def runde (p : LProg) (ws : List Bool) : List Bool :=
@@ -262,7 +270,7 @@ theorem versuche_ok (p : LProg) (ws : List Bool) (k : Nat) (h : layoutOk ws p = 
     layoutOk (versuche p ws k) p = true := by
   unfold versuche
   split
-  · rename_i hc; exact hc.2
+  · rename_i hc; exact hc.2.2
   · exact h
 
 theorem runde_ok (p : LProg) (ws : List Bool) (h : layoutOk ws p = true) :
@@ -1026,16 +1034,30 @@ theorem waehleB_korrekt (S : List Register) (p q : BProg) (h : waehleB S p = som
 
 /-! ## 7. Select, flatten, relax, lay out: the combined statement. -/
 
-/-- The whole pass: per-block selection, flattening, bounded relaxation;
-    the answer is the selected program, the widths and the byte image. -/
+/-- A block label is inside the program or at its end. -/
+def termOk (n : Nat) : Term → Bool
+  | .weiter => true
+  | .jmp z => decide (z ≤ n)
+  | .jcc _ z => decide (z ≤ n)
+
+/-- Every block label of the program is inside it or at its end (a label
+    further out would be silently clamped to the end by `startB`, so it is
+    refused instead). -/
+def labelsOkB (bp : BProg) : Bool := bp.all (fun B => termOk bp.length B.term)
+
+/-- The whole pass: label check, per-block selection, flattening, bounded
+    relaxation; the answer is the selected program, the widths and the byte
+    image. -/
 def uebersetze (S : List Register) (fuel : Nat) (p : BProg) :
     Option (BProg × List Bool × List Byte) :=
-  match waehleB S p with
-  | none => none
-  | some q =>
-    match relax fuel (flach q) with
+  if labelsOkB p = true then
+    match waehleB S p with
     | none => none
-    | some ws => some (q, ws, bild ws (flach q))
+    | some q =>
+      match relax fuel (flach q) with
+      | none => none
+      | some ws => some (q, ws, bild ws (flach q))
+  else none
 
 /-- SELECTION ACROSS A BRANCHY PROGRAM, DOWN TO BYTES. If the pass answers
     `(q, ws, img)` and `img` sits at RIP in W^X memory, then for every block
@@ -1055,6 +1077,11 @@ theorem uebersetze_bytes (S : List Register) (fuel : Nat) (p q : BProg) (ws : Li
         laufBytesI k s = .weiter s2 ∧ EndGl S true s1 s2 ∧
         s2.rip = adrL s.rip ws (flach q) (startB q b) := by
   unfold uebersetze at hu
+  have hlab : labelsOkB p = true := by
+    cases h : labelsOkB p
+    · rw [h] at hu; cases hu
+    · rfl
+  rw [if_pos hlab] at hu
   split at hu
   · cases hu
   · rename_i q0 hq
@@ -1123,6 +1150,9 @@ theorem uebersetze_bytes (S : List Register) (fuel : Nat) (p q : BProg) (ws : Li
      done; the scratch list is the caller's declaration that `S` is dead
      everywhere outside the rewrites, exactly as in `waehle_korrekt`, and
      the final agreement is `EndGl S true`.
+   - Block labels beyond the end would be clamped to the end by `startB`;
+     the pass `uebersetze` refuses them (`labelsOkB`), but the generic
+     simulation `laufB_flach` holds without that check (both sides stop).
    - If any block fails selection, `waehleB` refuses the whole program; no
      per-block fallback (a kept block could read a scratch register that
      differs).
