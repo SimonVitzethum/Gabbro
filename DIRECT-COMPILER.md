@@ -324,7 +324,7 @@ Last ledger refresh: **2026-10-02 23:22 UTC**. This is an operational snapshot, 
 | 696 | Essential 8/16/32-bit scalar arithmetic and moves | Agent working | 697: scheduled | [task](lanes/696.md) |
 | 698 | Essential width-selected shifts and rotates | Agent working | 699: scheduled | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
-| 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-702.md) |
+| 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
 | 704 | Generic port bus and precise architectural IO permissions | Committed candidate; review/integration pending | 705: Committed candidate; review/integration pending | [task](lanes/704.md) |
 | 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Committed candidate; review/integration pending | 707: Committed candidate; review/integration pending | [task](lanes/706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
@@ -833,6 +833,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **700**, Essential multiply divide widths and immediate IMUL, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-700.md). <!-- x86-merged:700 -->
 - 2026-10-02: lane **701**, Independent exact review of 700, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-701.md). <!-- x86-merged:701 -->
 - 2026-10-02: lane **702**, Essential scalar binary32 SSE2 architectural forms, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-702.md). <!-- x86-merged:702 -->
+- 2026-10-02: lane **703**, Independent exact review of 702, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-703.md). <!-- x86-merged:703 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
