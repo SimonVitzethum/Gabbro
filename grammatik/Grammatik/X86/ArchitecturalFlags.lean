@@ -778,6 +778,204 @@ theorem popfqWort_bit (laden pre gesp : Wort) (i : Nat) (h64 : i < 64) :
     d64, Bool.true_and]
   rw [hof]
 
+/-! ## 6b. Architectural steps.
+
+    Both steps run on caller-fetched bytes through the one-byte
+    adapters (never through `Codec.decode`, which refuses both
+    opcodes). Stack effects reuse the canonical `write64`/`read64`
+    and `regSet`/`ripNach` shapes; "Flags Affected: None" for PUSHFQ
+    is the unchanged `roh`/flags/steuer. -/
+
+/-- Adapter decode: exactly the one-byte PUSHFQ form (length 1). -/
+def pushfqByte : List Byte → Option Nat
+  | [b] => if b = pushfqOp then some 1 else none
+  | _ => none
+
+/-- Adapter decode: exactly the one-byte POPFQ form (length 1). -/
+def popfqByte : List Byte → Option Nat
+  | [b] => if b = popfqOp then some 1 else none
+  | _ => none
+
+/-- The adapters consume exactly one byte. -/
+theorem pushfqByte_len (bs : List Byte) (len : Nat)
+    (h : pushfqByte bs = some len) : len = 1 := by
+  cases bs with
+  | nil => simp [pushfqByte] at h
+  | cons b rest =>
+    cases rest with
+    | nil =>
+      by_cases hb : b = pushfqOp
+      · simp [pushfqByte, hb] at h
+        cases h
+        rfl
+      · simp [pushfqByte, hb] at h
+    | cons _ _ => simp [pushfqByte] at h
+
+/-- The POPFQ adapter consumes exactly one byte. -/
+theorem popfqByte_len (bs : List Byte) (len : Nat)
+    (h : popfqByte bs = some len) : len = 1 := by
+  cases bs with
+  | nil => simp [popfqByte] at h
+  | cons b rest =>
+    cases rest with
+    | nil =>
+      by_cases hb : b = popfqOp
+      · simp [popfqByte, hb] at h
+        cases h
+        rfl
+      · simp [popfqByte, hb] at h
+    | cons _ _ => simp [popfqByte] at h
+
+/-- Stack address below the top for PUSHFQ. -/
+def pushfqOben (a : ArchZustand) : Adresse :=
+  a.kern.register Register.rsp - BitVec.ofNat 64 8
+
+/-- PUSHFQ register/memory/RIP successor core. -/
+def pushfqKern (a : ArchZustand) (len : Nat) (m : Speicher) : Zustand :=
+  { register := regSet a.kern.register Register.rsp (pushfqOben a),
+    flags := a.kern.flags, rip := ripNach a.kern.rip len, speicher := m }
+
+/-- PUSHFQ step: adapter decode, v8086/IOPL<3 refusal (#GP), 8-byte
+    stack write of the VM/RF-cleared image, RIP advanced, flags and
+    control untouched. -/
+def pushfqSchritt (a : ArchZustand) (bs : List Byte) : Option ArchZustand :=
+  match pushfqByte bs with
+  | none => none
+  | some len =>
+    if a.steuer.vm && decide (a.steuer.iopl < 3) then none
+    else
+      match write64 a.kern.speicher (pushfqOben a)
+        (pushfqWort a.roh) with
+      | none => none
+      | some m => some { kern := pushfqKern a len m, roh := a.roh, steuer := a.steuer }
+
+/-- Stack address above the popped word for POPFQ. -/
+def popfqHoch (a : ArchZustand) : Adresse :=
+  a.kern.register Register.rsp + BitVec.ofNat 64 8
+
+/-- The restored word of a POPFQ step. -/
+def popfqNach (a : ArchZustand) (gesp : Wort) : Wort :=
+  popfqWort (popfqLaden a.steuer.cpl a.steuer.iopl) a.roh gesp
+
+/-- The control successor of a POPFQ step (CPL/VM kept, IOPL/IF from
+    the restored word exactly where Table 1-12 loads them). -/
+def popfqSteuer (a : ArchZustand) (gesp : Wort) : Steuer :=
+  { cpl := a.steuer.cpl,
+    iopl := if a.steuer.cpl = 0 then (if rbit (popfqNach a gesp) 13 then 2 else 0) + (if rbit (popfqNach a gesp) 12 then 1 else 0) else a.steuer.iopl,
+    ifBit := rbit (popfqNach a gesp) 9, vm := a.steuer.vm }
+
+/-- POPFQ register/flags/RIP successor core. -/
+def popfqKern (a : ArchZustand) (len : Nat) (gesp : Wort) : Zustand :=
+  { register := regSet a.kern.register Register.rsp (popfqHoch a),
+    flags := liestStatus (popfqNach a gesp), rip := ripNach a.kern.rip len,
+    speicher := a.kern.speicher }
+
+/-- POPFQ step: adapter decode, v8086 refusal, 8-byte stack read, the
+    Table 1-12 restore with RF cleared, stack pointer and RIP
+    advanced, canonical flags re-read from the restored word. -/
+def popfqSchritt (a : ArchZustand) (bs : List Byte) : Option ArchZustand :=
+  match popfqByte bs with
+  | none => none
+  | some len =>
+    if a.steuer.vm && decide (a.steuer.iopl < 3) then none
+    else match read64 a.kern.speicher (a.kern.register Register.rsp) with
+    | none => none
+    | some gesp => some { kern := popfqKern a len gesp, roh := popfqNach a gesp, steuer := popfqSteuer a gesp }
+
+/-- PUSHFQ success equation: decode, guard and stack write fix the
+    successor exactly. -/
+theorem pushfqSchritt_ok (a : ArchZustand) (bs : List Byte) (len : Nat)
+    (hdec : pushfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (m : Speicher)
+    (hwr : write64 a.kern.speicher (pushfqOben a) (pushfqWort a.roh) =
+      some m) :
+    pushfqSchritt a bs = some { kern := pushfqKern a len m, roh := a.roh, steuer := a.steuer } := by
+  simp only [pushfqSchritt, pushfqKern, hdec, hwr]
+  simp [hv]
+
+/-- PUSHFQ leaves raw word, canonical flags and control untouched. -/
+theorem pushfqSchritt_ruhig (a : ArchZustand) (bs : List Byte)
+    (len : Nat) (nach : ArchZustand)
+    (hdec : pushfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (m : Speicher)
+    (hwr : write64 a.kern.speicher (pushfqOben a) (pushfqWort a.roh) =
+      some m)
+    (h : pushfqSchritt a bs = some nach) :
+    nach.roh = a.roh ∧ nach.kern.flags = a.kern.flags ∧
+    nach.steuer = a.steuer ∧
+    nach.kern.rip = ripNach a.kern.rip len := by
+  have hok := pushfqSchritt_ok a bs len hdec hv m hwr
+  rw [hok] at h
+  cases h
+  exact ⟨rfl, rfl, rfl, rfl⟩
+
+/-- PUSHFQ readback: the written image reads back through a readable
+    footprint. -/
+theorem pushfqSchritt_liest (a : ArchZustand) (bs : List Byte)
+    (len : Nat) (nach : ArchZustand)
+    (hdec : pushfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (m : Speicher)
+    (hwr : write64 a.kern.speicher (pushfqOben a) (pushfqWort a.roh) =
+      some m)
+    (hrd : lesbar8 a.kern.speicher (pushfqOben a) = true)
+    (h : pushfqSchritt a bs = some nach) :
+    read64 nach.kern.speicher (pushfqOben a) =
+      some (pushfqWort a.roh) := by
+  have hok := pushfqSchritt_ok a bs len hdec hv m hwr
+  rw [hok] at h
+  cases h
+  simp only [pushfqKern]
+  exact read64_nach_write64 _ _ _ _ hwr hrd
+
+/-- PUSHFQ preserves coherence: the successor satisfies `archOK`
+    wherever the predecessor does (flags/word/control untouched). -/
+theorem pushfqSchritt_arch (a : ArchZustand) (bs : List Byte)
+    (len : Nat) (nach : ArchZustand)
+    (hdec : pushfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (m : Speicher)
+    (hwr : write64 a.kern.speicher (pushfqOben a) (pushfqWort a.roh) =
+      some m)
+    (h : pushfqSchritt a bs = some nach) (hok : archOK a) :
+    archOK nach := by
+  have hok2 := pushfqSchritt_ok a bs len hdec hv m hwr
+  rw [hok2] at h
+  cases h
+  simp only [pushfqKern]
+  unfold archOK at hok ⊢
+  obtain ⟨hfl, hb1, hcpl, hiopl⟩ := hok
+  exact ⟨hfl, hb1, hcpl, hiopl⟩
+
+/-- PUSHFQ refuses in virtual-8086 mode below IOPL 3 (#GP). -/
+theorem pushfqSchritt_v86 (a : ArchZustand)
+    (hvm : a.steuer.vm = true) (hio : a.steuer.iopl < 3) :
+    pushfqSchritt a [pushfqOp] = none := by
+  have hd : pushfqByte [pushfqOp] = some 1 := by simp [pushfqByte]
+  have hg : (a.steuer.vm && decide (a.steuer.iopl < 3)) = true := by
+    simp [hvm, hio]
+  simp only [pushfqSchritt, hd]
+  exact if_pos hg
+
+/-- PUSHFQ refuses a failed stack write (#SS/#PF analogue). -/
+theorem pushfqSchritt_stapel (a : ArchZustand) (bs : List Byte)
+    (len : Nat)
+    (hdec : pushfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (hwr : write64 a.kern.speicher (pushfqOben a) (pushfqWort a.roh) =
+      none) :
+    pushfqSchritt a bs = none := by
+  simp only [pushfqSchritt, hdec, hwr]
+  simp [hv]
+
+/-- PUSHFQ refuses any other byte. -/
+theorem pushfqSchritt_fremd (a : ArchZustand) (b : Byte)
+    (hb : b ≠ pushfqOp) : pushfqSchritt a [b] = none := by
+  have hd : pushfqByte [b] = none := by simp [pushfqByte, hb]
+  simp only [pushfqSchritt, hd]
+
 /- CUTS:
     Skeleton plus raw word (§2) and nibble groundwork (§3 head):
     effect relation, PUSHFQ/POPFQ observers, consumer admission and
