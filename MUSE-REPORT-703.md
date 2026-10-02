@@ -5,7 +5,7 @@ Own only this report; no source, no live controls, no network/push touched.
 Task typo noted: §21 says "Own only MUSE-REPORT-693.md" — read as 703.
 
 CANDIDATE: 702 a156fdbce65818622b999dc41e35591b69acd731
-VERDICT: ACCEPT (bounded; §6 lists the exact boundary, all already in the candidate CUTS)
+VERDICT: ACCEPT
 
 ## 1. What was reviewed
 
