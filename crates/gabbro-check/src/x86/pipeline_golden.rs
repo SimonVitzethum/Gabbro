@@ -32,12 +32,13 @@
 
 #![allow(clippy::too_many_lines)]
 
-use super::opt::{BlockCert, ExprCert, PassKind, Range, StmtCert};
+use super::opt::{self, BlockCert, ExprCert, PassKind, Range, StmtCert};
 use super::pipeline::proben::{
     feld, idx, pi_es, pi_ps, pw_certs, pw_cfg, pw_ctx, pw_decl, pw_src, pw_welt, pw_x,
 };
 use super::pipeline::*;
 use super::typen::Register::{self, *};
+use super::typen::{Bedingung, Befehl, Disp32};
 
 /// The Lean output, verbatim.
 pub const LEAN_AUSGABE: &str = r#"
@@ -501,6 +502,262 @@ MODUS fest
 IMAGEOK false
 WELTOK true
 ENDE
+FALL pd
+COMPILE SOME 76,137,208,72,190,7,0,0,0,0,0,0,0,72,1,240,72,186,2,0,0,0,0,0,0,0,72,41,208,76,137,209,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,76,137,208,72,190,3,0,0,0,0,0,0,0,72,1,240,72,186,1,0,0,0,0,0,0,0,72,41,208,72,185,90,0,0,0,0,0,0,0,72,57,200,15,141,156,31,0,0,76,137,208,72,185,40,0,0,0,0,0,0,0,72,57,200,15,141,38,0,0,0,76,137,208,72,185,100,0,0,0,0,0,0,0,72,1,200,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,46,0,0,0,76,137,208,72,186,40,0,0,0,0,0,0,0,72,41,208,72,185,244,1,0,0,0,0,0,0,72,1,200,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0
+VALIDATE true
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK true
+DATEI 76,137,208,72,190,7,0,0,0,0,0,0,0,72,1,240,72,186,2,0,0,0,0,0,0,0,72,41,208,76,137,209,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,76,137,208,72,190,3,0,0,0,0,0,0,0,72,1,240,72,186,1,0,0,0,0,0,0,0,72,41,208,72,185,90,0,0,0,0,0,0,0,72,57,200,15,141,156,31,0,0,76,137,208,72,185,40,0,0,0,0,0,0,0,72,57,200,15,141,38,0,0,0,76,137,208,72,185,100,0,0,0,0,0,0,0,72,1,200,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,46,0,0,0,76,137,208,72,186,40,0,0,0,0,0,0,0,72,41,208,72,185,244,1,0,0,0,0,0,0,72,1,200,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0,72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 206 4096 206 true false true 1
+ABSCHNITT 206 10 12288 10 true false true 1
+ABSCHNITT 216 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK true
+WELTOK true
+ENDE
+FALL pd-pe
+COMPILE SOME 76,137,208,72,190,7,0,0,0,0,0,0,0,72,1,240,72,186,2,0,0,0,0,0,0,0,72,41,208,76,137,209,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,76,137,208,72,190,3,0,0,0,0,0,0,0,72,1,240,72,186,1,0,0,0,0,0,0,0,72,41,208,72,185,90,0,0,0,0,0,0,0,72,57,200,15,141,156,31,0,0,76,137,208,72,185,40,0,0,0,0,0,0,0,72,57,200,15,141,38,0,0,0,76,137,208,72,185,100,0,0,0,0,0,0,0,72,1,200,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,46,0,0,0,76,137,208,72,186,40,0,0,0,0,0,0,0,72,41,208,72,185,244,1,0,0,0,0,0,0,72,1,200,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0
+VALIDATE true
+GRUENDE 0
+OHNEDOPPEL 0
+PROLOG 73,137,250
+PROLOGOK true
+BAUOK true
+DATEI 73,137,250,76,137,208,72,190,7,0,0,0,0,0,0,0,72,1,240,72,186,2,0,0,0,0,0,0,0,72,41,208,76,137,209,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,76,137,208,72,190,3,0,0,0,0,0,0,0,72,1,240,72,186,1,0,0,0,0,0,0,0,72,41,208,72,185,90,0,0,0,0,0,0,0,72,57,200,15,141,156,31,0,0,76,137,208,72,185,40,0,0,0,0,0,0,0,72,57,200,15,141,38,0,0,0,76,137,208,72,185,100,0,0,0,0,0,0,0,72,1,200,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,46,0,0,0,76,137,208,72,186,40,0,0,0,0,0,0,0,72,41,208,72,185,244,1,0,0,0,0,0,0,72,1,200,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0,72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+ABSCHNITT 0 209 4093 209 true false true 1
+ABSCHNITT 209 10 12288 10 true false true 1
+ABSCHNITT 219 16 8192 16 true true false 8
+ABSCHNITT 235 64 16384 64 true true false 16
+EINTRAEGE 4093,4096
+RELOKS 0
+MODUS fest
+IMAGEOK true
+WELTOK true
+PROLOGIMAGEOK true
+ENDE
+FALL pd-scratch-eins
+COMPILE NONE
+VALIDATE false
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 10 12288 10 true false true 1
+ABSCHNITT 10 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pd-scratch-leer
+COMPILE NONE
+VALIDATE false
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 10 12288 10 true false true 1
+ABSCHNITT 10 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pd-fenster
+COMPILE NONE
+VALIDATE false
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 10 12288 10 true false true 1
+ABSCHNITT 10 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pd-ite-wahr
+COMPILE NONE
+VALIDATE false
+GRUENDE 
+OHNEDOPPEL 
+BAUOK false
+DATEI 7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pd-ite-nicht
+COMPILE NONE
+VALIDATE false
+GRUENDE 
+OHNEDOPPEL 
+BAUOK false
+DATEI 7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pd-ite-zweig
+COMPILE NONE
+VALIDATE false
+GRUENDE 
+OHNEDOPPEL 
+BAUOK false
+DATEI 7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pd-frei-var
+COMPILE NONE
+VALIDATE false
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 10 12288 10 true false true 1
+ABSCHNITT 10 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pd-frei-rsp
+COMPILE NONE
+VALIDATE false
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 10 12288 10 true false true 1
+ABSCHNITT 10 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pd-frei-dup
+COMPILE NONE
+VALIDATE false
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 10 12288 10 true false true 1
+ABSCHNITT 10 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pd-frei-tmp
+COMPILE NONE
+VALIDATE false
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 0 4096 0 true false true 1
+ABSCHNITT 0 10 12288 10 true false true 1
+ABSCHNITT 10 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK false
+WELTOK true
+ENDE
+FALL pw-tiefe-bed
+COMPILE SOME 76,137,208,72,185,5,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,76,137,208,72,185,50,0,0,0,0,0,0,0,72,57,200,15,141,201,31,0,0,72,184,6,0,0,0,0,0,0,0,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0
+VALIDATE true
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 76,137,208,72,185,5,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,76,137,208,72,185,50,0,0,0,0,0,0,0,72,57,200,15,141,201,31,0,0,72,184,6,0,0,0,0,0,0,0,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0,72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 82 4096 82 true false true 1
+ABSCHNITT 82 10 12288 10 true false true 1
+ABSCHNITT 92 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK true
+WELTOK true
+ENDE
+FALL n1-nested-ite
+COMPILE SOME 76,137,208,72,185,50,0,0,0,0,0,0,0,72,57,200,15,141,98,0,0,0,76,137,208,72,185,10,0,0,0,0,0,0,0,72,57,200,15,143,38,0,0,0,76,137,208,72,185,1,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,33,0,0,0,76,137,208,72,185,2,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,33,0,0,0,76,137,208,72,185,3,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0
+VALIDATE true
+GRUENDE 
+OHNEDOPPEL 
+BAUOK false
+DATEI 76,137,208,72,185,50,0,0,0,0,0,0,0,72,57,200,15,141,98,0,0,0,76,137,208,72,185,10,0,0,0,0,0,0,0,72,57,200,15,143,38,0,0,0,76,137,208,72,185,1,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,33,0,0,0,76,137,208,72,185,2,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,33,0,0,0,76,137,208,72,185,3,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 153 4096 153 true false true 1
+ABSCHNITT 153 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK true
+WELTOK true
+ENDE
+FALL n2-neg-eq
+COMPILE SOME 76,137,208,72,186,100,0,0,0,0,0,0,0,72,41,208,72,49,201,72,41,193,72,137,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,76,137,208,72,186,3,0,0,0,0,0,0,0,72,41,208,72,185,47,0,0,0,0,0,0,0,72,57,200,15,133,179,31,0,0,76,137,208,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0
+VALIDATE true
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 76,137,208,72,186,100,0,0,0,0,0,0,0,72,41,208,72,49,201,72,41,193,72,137,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,76,137,208,72,186,3,0,0,0,0,0,0,0,72,41,208,72,185,47,0,0,0,0,0,0,0,72,57,200,15,133,179,31,0,0,76,137,208,72,187,8,32,0,0,0,0,0,0,72,137,131,0,0,0,0,72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 97 4096 97 true false true 1
+ABSCHNITT 97 10 12288 10 true false true 1
+ABSCHNITT 107 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK true
+WELTOK true
+ENDE
+FALL n3-le-nested-else
+COMPILE SOME 76,137,208,72,186,10,0,0,0,0,0,0,0,72,1,208,72,185,200,0,0,0,0,0,0,0,72,57,200,15,143,221,31,0,0,76,137,208,72,185,20,0,0,0,0,0,0,0,72,57,200,15,141,38,0,0,0,76,137,208,72,185,5,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,93,0,0,0,76,137,208,72,185,60,0,0,0,0,0,0,0,72,57,200,15,133,38,0,0,0,76,137,208,72,185,6,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,33,0,0,0,76,137,208,72,185,7,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0
+VALIDATE true
+GRUENDE 0
+OHNEDOPPEL 0
+BAUOK false
+DATEI 76,137,208,72,186,10,0,0,0,0,0,0,0,72,1,208,72,185,200,0,0,0,0,0,0,0,72,57,200,15,143,221,31,0,0,76,137,208,72,185,20,0,0,0,0,0,0,0,72,57,200,15,141,38,0,0,0,76,137,208,72,185,5,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,93,0,0,0,76,137,208,72,185,60,0,0,0,0,0,0,0,72,57,200,15,133,38,0,0,0,76,137,208,72,185,6,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,233,33,0,0,0,76,137,208,72,185,7,0,0,0,0,0,0,0,72,1,200,72,187,0,32,0,0,0,0,0,0,72,137,131,0,0,0,0,72,184,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0
+ABSCHNITT 0 188 4096 188 true false true 1
+ABSCHNITT 188 10 12288 10 true false true 1
+ABSCHNITT 198 16 8192 16 true true false 8
+EINTRAEGE 4096,4096
+RELOKS 0
+MODUS fest
+IMAGEOK true
+WELTOK true
+ENDE
 "#;
 
 // =============================================================================
@@ -759,6 +1016,7 @@ fn q_cfg() -> PipeCfg {
         code_base: 65536,
         exit_base: 131072,
         exit_stride: 32,
+        frei: vec![],
     }
 }
 
@@ -866,6 +1124,302 @@ fn q_fall(
         src,
         abi,
     }
+}
+
+// ---- the widened fragment: `PipelineImageWitnesses.lean` section 10 ------
+//
+// `pdSrc`/`pdCfg`: a depth-3 value, a deep check and an `ite`, over the
+// SAME declaration/placements/world as "pw" (`pdSrc` is built from
+// `pwIdx0`/`pwIdx1`, not a new table).
+
+/// `((x + 7) - 2) + x`, widened to the field type: three binary levels.
+fn pd_wert0() -> IntExpr {
+    IntExpr::weiter(
+        feld(),
+        IntExpr::add(
+            IntExpr::sub(IntExpr::add(pw_x(), IntExpr::lit(7)), IntExpr::lit(2)),
+            pw_x(),
+        ),
+    )
+}
+
+/// The deep check `((x + 3) - 1) < 90`.
+fn pd_check() -> BoolExpr {
+    BoolExpr::Lt(
+        IntExpr::sub(IntExpr::add(pw_x(), IntExpr::lit(3)), IntExpr::lit(1)),
+        IntExpr::lit(90),
+    )
+}
+
+/// The `ite` condition `x < 40`.
+fn pd_bed() -> BoolExpr {
+    BoolExpr::Lt(pw_x(), IntExpr::lit(40))
+}
+
+/// The then-value `x + 100`.
+fn pd_then() -> IntExpr {
+    IntExpr::weiter(feld(), IntExpr::add(pw_x(), IntExpr::lit(100)))
+}
+
+/// The else-value `(x - 40) + 500`.
+fn pd_else() -> IntExpr {
+    IntExpr::weiter(
+        feld(),
+        IntExpr::add(IntExpr::sub(pw_x(), IntExpr::lit(40)), IntExpr::lit(500)),
+    )
+}
+
+fn pd_t() -> Block {
+    Block::cons(
+        Stmt::AssignSlot {
+            t: 0,
+            f: 0,
+            index: idx(1, 2),
+            value: pd_then(),
+        },
+        Block::Nil,
+    )
+}
+
+fn pd_e() -> Block {
+    Block::cons(
+        Stmt::AssignSlot {
+            t: 0,
+            f: 0,
+            index: idx(1, 2),
+            value: pd_else(),
+        },
+        Block::Nil,
+    )
+}
+
+/// THE WIDENED SOURCE PROGRAM (Lean `pdSrc`):
+/// `T[0].f = ((x+7)-2)+x; check ((x+3)-1) < 90 else reason 0;
+///  if x < 40 { T[1].f = x+100 } else { T[1].f = (x-40)+500 }`
+fn pd_src() -> Block {
+    Block::cons(
+        Stmt::AssignSlot {
+            t: 0,
+            f: 0,
+            index: idx(0, 2),
+            value: pd_wert0(),
+        },
+        Block::pruefung(
+            pd_check(),
+            Sonst::RetGrund(0),
+            Block::cons(
+                Stmt::Ite {
+                    cond: pd_bed(),
+                    then_: Box::new(pd_t()),
+                    else_: Box::new(pd_e()),
+                },
+                Block::Nil,
+            ),
+        ),
+    )
+}
+
+/// The configuration: the original registers, scratch stack `rdx, rsi`,
+/// exit stride 16 (Lean `pdCfg`).
+fn pd_cfg() -> PipeCfg {
+    PipeCfg {
+        exit_stride: 16,
+        frei: vec![Rdx, Rsi],
+        ..pw_cfg()
+    }
+}
+
+/// OUT-OF-RANGE COMPARISON (`gift_vergleich_fenster`): an operand whose
+/// TYPE leaves the signed 64-bit window.
+fn pd_src_weit() -> Block {
+    Block::pruefung(
+        BoolExpr::Lt(
+            IntExpr::add(pw_x(), IntExpr::lit((1i128 << 63) - 50)),
+            IntExpr::lit(0),
+        ),
+        Sonst::RetGrund(0),
+        Block::Nil,
+    )
+}
+
+/// UNSUPPORTED `ite` FORMS (`gift_ite_form`): the literal `true`, a
+/// negation, and an unsupported branch statement.
+fn pd_src_wahr() -> Block {
+    Block::cons(
+        Stmt::Ite {
+            cond: BoolExpr::Wahr,
+            then_: Box::new(pd_t()),
+            else_: Box::new(pd_e()),
+        },
+        Block::Nil,
+    )
+}
+
+fn pd_src_nicht() -> Block {
+    Block::cons(
+        Stmt::Ite {
+            cond: BoolExpr::Nicht(Box::new(pd_bed())),
+            then_: Box::new(pd_t()),
+            else_: Box::new(pd_e()),
+        },
+        Block::Nil,
+    )
+}
+
+fn pd_src_zweig() -> Block {
+    Block::cons(
+        Stmt::Ite {
+            cond: pd_bed(),
+            then_: Box::new(Block::cons(
+                Stmt::Other(opt::Stmt::AssignVar(opt::IExpr::opaque(Range::new(0, 100)))),
+                Block::Nil,
+            )),
+            else_: Box::new(pd_e()),
+        },
+        Block::Nil,
+    )
+}
+
+fn pd_fall(name: &'static str, cfg: PipeCfg, certs: Vec<(PassKind, BlockCert)>, src: Block) -> Fall {
+    Fall {
+        name,
+        profil: Profil::P48,
+        cfg,
+        decl: pw_decl(),
+        ctx: pw_ctx(),
+        ps: pi_ps(),
+        es: pi_es(),
+        welt: pw_welt(),
+        certs,
+        src,
+        abi: None,
+    }
+}
+
+// ---- three new programs: nested `ite`, `<=`, `=`, `neg` ------------------
+
+fn n1_val(k: i128) -> IntExpr {
+    IntExpr::weiter(feld(), IntExpr::add(pw_x(), IntExpr::lit(k)))
+}
+
+/// N1: nested `ite` in the THEN-branch.
+fn n1_src() -> Block {
+    Block::cons(
+        Stmt::Ite {
+            cond: BoolExpr::Lt(pw_x(), IntExpr::lit(50)),
+            then_: Box::new(Block::cons(
+                Stmt::Ite {
+                    cond: BoolExpr::Le(pw_x(), IntExpr::lit(10)),
+                    then_: Box::new(Block::cons(
+                        Stmt::AssignSlot {
+                            t: 0,
+                            f: 0,
+                            index: idx(0, 2),
+                            value: n1_val(1),
+                        },
+                        Block::Nil,
+                    )),
+                    else_: Box::new(Block::cons(
+                        Stmt::AssignSlot {
+                            t: 0,
+                            f: 0,
+                            index: idx(0, 2),
+                            value: n1_val(2),
+                        },
+                        Block::Nil,
+                    )),
+                },
+                Block::Nil,
+            )),
+            else_: Box::new(Block::cons(
+                Stmt::AssignSlot {
+                    t: 0,
+                    f: 0,
+                    index: idx(0, 2),
+                    value: n1_val(3),
+                },
+                Block::Nil,
+            )),
+        },
+        Block::Nil,
+    )
+}
+
+/// N2: `neg` in a value (`-(x - 100)` = `100 - x`), `=` in a deep check
+/// (`(x - 3) = 47`). Needs one extra scratch register.
+fn n2_src() -> Block {
+    Block::cons(
+        Stmt::AssignSlot {
+            t: 0,
+            f: 0,
+            index: idx(0, 2),
+            value: IntExpr::weiter(
+                feld(),
+                IntExpr::neg(IntExpr::sub(pw_x(), IntExpr::lit(100))),
+            ),
+        },
+        Block::pruefung(
+            BoolExpr::Eq(IntExpr::sub(pw_x(), IntExpr::lit(3)), IntExpr::lit(47)),
+            Sonst::RetGrund(0),
+            Block::cons(
+                Stmt::AssignSlot {
+                    t: 0,
+                    f: 0,
+                    index: idx(1, 2),
+                    value: IntExpr::weiter(feld(), pw_x()),
+                },
+                Block::Nil,
+            ),
+        ),
+    )
+}
+
+/// N3: a deep `<=` guard, then a nested `ite` in the ELSE-branch (the
+/// mirror nesting position of N1) with an `=` condition.
+fn n3_src() -> Block {
+    Block::pruefung(
+        BoolExpr::Le(IntExpr::add(pw_x(), IntExpr::lit(10)), IntExpr::lit(200)),
+        Sonst::RetGrund(0),
+        Block::cons(
+            Stmt::Ite {
+                cond: BoolExpr::Lt(pw_x(), IntExpr::lit(20)),
+                then_: Box::new(Block::cons(
+                    Stmt::AssignSlot {
+                        t: 0,
+                        f: 0,
+                        index: idx(0, 2),
+                        value: n1_val(5),
+                    },
+                    Block::Nil,
+                )),
+                else_: Box::new(Block::cons(
+                    Stmt::Ite {
+                        cond: BoolExpr::Eq(pw_x(), IntExpr::lit(60)),
+                        then_: Box::new(Block::cons(
+                            Stmt::AssignSlot {
+                                t: 0,
+                                f: 0,
+                                index: idx(0, 2),
+                                value: n1_val(6),
+                            },
+                            Block::Nil,
+                        )),
+                        else_: Box::new(Block::cons(
+                            Stmt::AssignSlot {
+                                t: 0,
+                                f: 0,
+                                index: idx(0, 2),
+                                value: n1_val(7),
+                            },
+                            Block::Nil,
+                        )),
+                    },
+                    Block::Nil,
+                )),
+            },
+            Block::Nil,
+        ),
+    )
 }
 
 fn alle_faelle() -> Vec<Fall> {
@@ -1070,7 +1624,7 @@ fn alle_faelle() -> Vec<Fall> {
             }],
             q2_certs(),
             q2_src(),
-            sysv,
+            sysv.clone(),
         ),
         q_fall(
             "q2-ohne-prolog",
@@ -1131,6 +1685,104 @@ fn alle_faelle() -> Vec<Fall> {
             ),
             None,
         ),
+        pd_fall("pd", pd_cfg(), vec![], pd_src()),
+        {
+            let mut pd_pe = pd_fall("pd-pe", pd_cfg(), vec![], pd_src());
+            pd_pe.es.push(TabLayout {
+                tab: 1,
+                basis: 16384,
+                len: 64,
+                ausr: 16,
+            });
+            pd_pe.abi = sysv.clone();
+            pd_pe
+        },
+        pd_fall(
+            "pd-scratch-eins",
+            PipeCfg {
+                frei: vec![Rdx],
+                ..pd_cfg()
+            },
+            vec![],
+            pd_src(),
+        ),
+        pd_fall(
+            "pd-scratch-leer",
+            PipeCfg {
+                frei: vec![],
+                ..pd_cfg()
+            },
+            vec![],
+            pd_src(),
+        ),
+        pd_fall("pd-fenster", pd_cfg(), vec![], pd_src_weit()),
+        pd_fall("pd-ite-wahr", pd_cfg(), vec![], pd_src_wahr()),
+        pd_fall("pd-ite-nicht", pd_cfg(), vec![], pd_src_nicht()),
+        pd_fall("pd-ite-zweig", pd_cfg(), vec![], pd_src_zweig()),
+        pd_fall(
+            "pd-frei-var",
+            PipeCfg {
+                frei: vec![R10],
+                ..pd_cfg()
+            },
+            vec![],
+            pd_src(),
+        ),
+        pd_fall(
+            "pd-frei-rsp",
+            PipeCfg {
+                frei: vec![Rsp],
+                ..pd_cfg()
+            },
+            vec![],
+            pd_src(),
+        ),
+        pd_fall(
+            "pd-frei-dup",
+            PipeCfg {
+                frei: vec![Rdx, Rdx],
+                ..pd_cfg()
+            },
+            vec![],
+            pd_src(),
+        ),
+        pd_fall(
+            "pd-frei-tmp",
+            PipeCfg {
+                frei: vec![Rcx],
+                ..pd_cfg()
+            },
+            vec![],
+            pd_src(),
+        ),
+        pw_fall(
+            "pw-tiefe-bed",
+            PipeCfg {
+                frei: vec![Rdx],
+                ..pw_cfg()
+            },
+            pw_certs(),
+            pw_src(0),
+        ),
+        pw_fall("n1-nested-ite", pw_cfg(), vec![], n1_src()),
+        pw_fall(
+            "n2-neg-eq",
+            PipeCfg {
+                frei: vec![Rdx],
+                ..pw_cfg()
+            },
+            vec![],
+            n2_src(),
+        ),
+        pw_fall(
+            "n3-le-nested-else",
+            PipeCfg {
+                frei: vec![Rdx],
+                ..pw_cfg()
+            },
+            vec![],
+            n3_src(),
+        ),
     ]
 }
 
@@ -1143,7 +1795,7 @@ fn every_lean_case_has_a_rust_twin_and_back() {
     let lean: Vec<String> = faelle().into_iter().map(|(n, _)| n).collect();
     let rust: Vec<String> = alle_faelle().iter().map(|f| f.name.to_string()).collect();
     assert_eq!(lean, rust);
-    assert_eq!(lean.len(), 26);
+    assert_eq!(lean.len(), 42);
 }
 
 #[test]
@@ -1270,8 +1922,8 @@ fn compile_to_image_agrees_with_the_lean_verdicts() {
             }
         }
     }
-    // pw3, pe, q1, q1-nur-fold, q1-p57, q2, q2-ohne-prolog.
-    assert_eq!(gebaut, 7);
+    // pw3, pe, q1, q1-nur-fold, q1-p57, q2, q2-ohne-prolog, pd, pd-pe.
+    assert_eq!(gebaut, 9);
 }
 
 /// The certificate producer of `opt.rs`, run on the erased model, proposes
@@ -1310,4 +1962,76 @@ fn produced_certificates_give_the_lean_bytes() {
         );
         assert_eq!(bytes_text(&img.bild.datei), l.feld("DATEI"), "{name}");
     }
+}
+
+/// WRONG BRANCH DISPLACEMENT (Lean `gift_ite_verschiebung`): the `ite`
+/// jump one byte too far (39 instead of 38) decodes but is refused by the
+/// validator, and so is the jump over the else-block one byte short (45
+/// instead of 46). Indices and displacements are the Lean theorem's own
+/// (`pdProg[20]?`/`pdProg[26]?`), over the "pd" case of
+/// [`alle_faelle`].
+#[test]
+fn widened_ite_tamper_wrong_displacement_is_refused() {
+    let f = alle_faelle().into_iter().find(|f| f.name == "pd").unwrap();
+    let prog = compile_prog(&f.cfg, &f.decl, &f.ps, &f.certs, &f.src).unwrap();
+    assert_eq!(
+        prog[20],
+        Befehl::JumpIf32 {
+            cond: Bedingung::Ge,
+            disp: Disp32::von_bits(38),
+        }
+    );
+    let mut p1 = prog.clone();
+    p1[20] = Befehl::JumpIf32 {
+        cond: Bedingung::Ge,
+        disp: Disp32::von_bits(39),
+    };
+    assert!(!validate(
+        &f.cfg,
+        &f.decl,
+        &f.ps,
+        &f.certs,
+        &f.src,
+        &encode_all(&p1)
+    ));
+    assert_eq!(
+        prog[26],
+        Befehl::Jump32 {
+            disp: Disp32::von_bits(46),
+        }
+    );
+    let mut p2 = prog;
+    p2[26] = Befehl::Jump32 {
+        disp: Disp32::von_bits(45),
+    };
+    assert!(!validate(
+        &f.cfg,
+        &f.decl,
+        &f.ps,
+        &f.certs,
+        &f.src,
+        &encode_all(&p2)
+    ));
+}
+
+/// TAMPERED JUMP BYTE (Lean `gift_sprung_byte`): flipping the low
+/// displacement byte of the `ite` jump in the candidate BYTES (not the
+/// instruction list) is refused by the validator. Offset and byte value
+/// are the Lean theorem's own (`pdSprungOffset = 118`).
+#[test]
+fn widened_ite_tamper_jump_byte_is_refused() {
+    let f = alle_faelle().into_iter().find(|f| f.name == "pd").unwrap();
+    let bytes = compile(&f.cfg, &f.decl, &f.ps, &f.certs, &f.src).unwrap();
+    let offset = 118;
+    assert_eq!(bytes[offset], 38);
+    let mut tampered = bytes;
+    tampered[offset] = 39;
+    assert!(!validate(
+        &f.cfg,
+        &f.decl,
+        &f.ps,
+        &f.certs,
+        &f.src,
+        &tampered
+    ));
 }
