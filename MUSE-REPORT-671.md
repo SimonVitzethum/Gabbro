@@ -1,8 +1,10 @@
 # MUSE-REPORT-671: Exact review of author 670 (fault and exception transitions)
 
-## CANDIDATE
+CANDIDATE: 670 3f55ce05c03dc64a5471d1e33606874434cdf8f0
 
-670 3f55ce05c03dc64a5471d1e33606874434cdf8f0
+VERDICT: ACCEPT
+
+## Candidate detail
 
 Files (from pinned snapshot bundle): `MUSE-REPORT-670.md`,
 `grammatik/Grammatik.lean` (+1 additive import), `grammatik/Grammatik/X86/HardwareFaults.lean` (530 lines).
@@ -13,7 +15,7 @@ copy) plus the author's BUILD-EVIDENCE.json and independent reproduction below.
 No source or live-control change is made by this lane; this report is the only
 owned deliverable.
 
-## VERDICT: ACCEPT
+## Substantive verdict (bounded acceptance)
 
 Bounded acceptance: the candidate proves what it claims over the reused
 canonical dispatchers, with honest CUTS boundaries. No repair required.
