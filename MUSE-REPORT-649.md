@@ -95,4 +95,6 @@ No `valX86_sound`; no multi-step control flow, relocation re-decode, TSO/GX
 bridge, hardware, OS/loader, optimiser/loader closure, cost/time/budget-stop;
 single-low-byte observation only. None of this is presented as closed.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
