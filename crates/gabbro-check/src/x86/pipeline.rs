@@ -1,8 +1,9 @@
 //! **The working Rust compiler path that mirrors the proved Lean pipeline.**
 //!
 //! Rust mirror of `grammatik/Grammatik/X86/Pipeline.lean` (`PipeCfg`,
-//! `senkWert`, `senkBed`, `senkPruef`, `senkStmt`, `senkBlock`, `optimise`,
-//! `compileProg`, `compile`, `decodeAll`, `datenGetrennt`, `validate`),
+//! `senkTief`, `senkWertT`, `senkBedT`, `senkPruef`, `senkStmt`, `senkBlock`
+//! (including its `ite` case), `optimise`, `compileProg`, `compile`,
+//! `decodeAll`, `datenGetrennt`, `validate`),
 //! `PipelineImage.lean` (`Platz`/`layoutVon`, `grundListe`, `ohneDoppel`,
 //! `stubBytes`, `slotByte`, `codeAbschnittP`, `stubAbschnitte`,
 //! `datenAbschnitte`, `baueBildP`, `bildFuer`/`bildFuerP`, `bauOk`) and
@@ -26,16 +27,20 @@
 //!   file performs itself is `foldInt` on the `weiter`-carrying model
 //!   (`opt.rs` erases `weiter`, so its `fold_int` cannot produce Lean's
 //!   `.weiter (.lit v)`), and it computes the constant with `opt::const_int`;
-//! * the fragment lowering `senkFrag`/`senkAtom` from [`super::lower`]
-//!   (`senk_frag` over `Fragment`/`Atom`), and `int_wort`;
+//! * `lower.rs`'s `int_wort` (modular integer-to-word conversion); the
+//!   one-level fragment lowering `senkFrag`/`senkAtom` it also carries is
+//!   superseded here by the arbitrary-depth [`senk_tief`]/[`senk_vergleich`]
+//!   (Lean's `ExpressionLoweringDeep.senkTief`/`senkVergleich`), which
+//!   produce the SAME code at depth one (Lean `senkWert_als_tief`/
+//!   `senkBed_als_tief`);
 //! * the canonical encoder/decoder from [`super::codec`].
 //!
 //! ## The input model and its one adapter
 //!
 //! `opt.rs`'s `IExpr` erases the Lean `.weiter` constructor (a widening is a
-//! re-typed node there). The lowering is NOT blind to `weiter`: `senkWert`
-//! strips exactly one, `senkAtom` refuses one, and the optimiser's fold
-//! produces one. So this file carries its own integer/boolean expression
+//! re-typed node there). The lowering is NOT blind to `weiter`: [`senk_tief`]
+//! strips it at every depth, and the optimiser's fold produces one. So this
+//! file carries its own integer/boolean expression
 //! model ([`IntExpr`], [`BoolExpr`]) WITH `weiter`, and one adapter
 //! ([`to_opt_int`], [`to_opt_bool`], [`to_opt_block`]) that erases it for
 //! the oracle. Statements and blocks outside the lowered fragment are
@@ -74,7 +79,7 @@
 //!   `elf.rs` for the documented container layout).
 
 use super::codec::{decode, encode};
-use super::lower::{int_wort, senk_frag, Atom, Fragment};
+use super::lower::int_wort;
 use super::opt::{self, BlockCert, ExprCert, PassKind, Range, StmtCert};
 use super::typen::{Bedingung, Befehl, Byte, Disp32, Register};
 
@@ -259,6 +264,14 @@ pub enum Stmt {
         index: IntExpr,
         value: IntExpr,
     },
+    /// `.ite cnd t e`: a two-branch conditional whose condition is a deep
+    /// comparison and whose branches are lowered blocks in the same
+    /// fragment, recursively.
+    Ite {
+        cond: BoolExpr,
+        then_: Box<Block>,
+        else_: Box<Block>,
+    },
     Other(opt::Stmt),
 }
 
@@ -378,6 +391,11 @@ pub struct PipeCfg {
     pub exit_base: u128,
     /// Distance between the exits of consecutive reasons (Lean default 1).
     pub exit_stride: u128,
+    /// Further scratch registers for arbitrary-depth values and checks
+    /// ([`senk_tief`]): the deep lowering works over the register stack
+    /// `tmp :: frei`. The default `[]` keeps exactly the original
+    /// one-level fragment's register budget (`tmp` alone).
+    pub frei: Vec<Register>,
 }
 
 /// Everything [`compile_to_image`] needs besides the configuration.
@@ -468,6 +486,11 @@ pub fn to_opt_stmt(s: &Stmt) -> opt::Stmt {
         Stmt::AssignSlot { index, value, .. } => {
             opt::Stmt::AssignSlot(to_opt_int(index), to_opt_int(value))
         }
+        Stmt::Ite { cond, then_, else_ } => opt::Stmt::Ite(
+            to_opt_bool(cond),
+            Box::new(to_opt_block(then_)),
+            Box::new(to_opt_block(else_)),
+        ),
         Stmt::Other(o) => o.clone(),
     }
 }
@@ -548,6 +571,12 @@ pub fn typ_ok_block(ctx: &[Range], b: &Block) -> bool {
         Block::Cons(Stmt::AssignSlot { index, value, .. }, rest) => {
             typ_ok_int(ctx, index) && typ_ok_int(ctx, value) && typ_ok_block(ctx, rest)
         }
+        Block::Cons(Stmt::Ite { cond, then_, else_ }, rest) => {
+            typ_ok_bool(ctx, cond)
+                && typ_ok_block(ctx, then_)
+                && typ_ok_block(ctx, else_)
+                && typ_ok_block(ctx, rest)
+        }
         Block::Cons(Stmt::Other(_), rest) => typ_ok_block(ctx, rest),
         Block::Pruefung { cond, rest, .. } => typ_ok_bool(ctx, cond) && typ_ok_block(ctx, rest),
     }
@@ -603,6 +632,27 @@ pub fn apply_stmt(c: &StmtCert, s: &Stmt) -> Option<Stmt> {
                 f: *f,
                 index: index.clone(),
                 value: v2,
+            })
+        }
+        (StmtCert::IteCond(ec), Stmt::Ite { cond, then_, else_ }) => {
+            apply_bool(*ec, cond).map(|c2| Stmt::Ite {
+                cond: c2,
+                then_: then_.clone(),
+                else_: else_.clone(),
+            })
+        }
+        (StmtCert::IteThen(bc), Stmt::Ite { cond, then_, else_ }) => {
+            apply_block(bc, then_).map(|t2| Stmt::Ite {
+                cond: cond.clone(),
+                then_: Box::new(t2),
+                else_: else_.clone(),
+            })
+        }
+        (StmtCert::IteElse(bc), Stmt::Ite { cond, then_, else_ }) => {
+            apply_block(bc, else_).map(|e2| Stmt::Ite {
+                cond: cond.clone(),
+                then_: then_.clone(),
+                else_: Box::new(e2),
             })
         }
         (_, Stmt::Other(o)) => opt::apply_stmt(c, o).map(Stmt::Other),
@@ -691,6 +741,11 @@ pub fn abb_of(c: &PipeCfg, idx: u32) -> Register {
     c.regs.get(idx as usize).copied().unwrap_or(Register::Rsp)
 }
 
+/// `List.Nodup`, restricted to `Register` (small lists, no `Hash` needed).
+fn nodup(rs: &[Register]) -> bool {
+    rs.iter().enumerate().all(|(i, r)| !rs[i + 1..].contains(r))
+}
+
 /// Lean `cfgOk`.
 pub fn cfg_ok(c: &PipeCfg) -> bool {
     !c.regs.contains(&c.dst)
@@ -702,6 +757,14 @@ pub fn cfg_ok(c: &PipeCfg) -> bool {
         && c.dst != Register::Rsp
         && c.tmp != Register::Rsp
         && c.adr != Register::Rsp
+        && nodup(&c.frei)
+        && c.frei.iter().all(|r| {
+            !c.regs.contains(r)
+                && *r != c.dst
+                && *r != c.tmp
+                && *r != c.adr
+                && *r != Register::Rsp
+        })
 }
 
 /// Lean `encodeAll`.
@@ -709,45 +772,64 @@ pub fn encode_all(prog: &[Befehl]) -> Vec<Byte> {
     prog.iter().flat_map(encode).collect()
 }
 
-/// An atom as `lower.rs` sees it (`senkAtom`'s two shapes).
-fn atom(c: &PipeCfg, e: &IntExpr) -> Option<Atom> {
-    match e.kind {
-        IntKind::Lit(n) => Some(Atom::Lit(n)),
-        IntKind::Var(i) => Some(Atom::Var(abb_of(c, i))),
+/// Lean `senkTief`: arbitrary-depth integer-expression lowering over the
+/// shared scratch stack `frei`. `lit`/`var` as the one-level fragment;
+/// `weiter` is a pure re-reading, stripped at EVERY depth (not just the
+/// top) and costs no instruction; `add`/`sub` peel one scratch register
+/// off `frei` for the right operand and recurse on BOTH operands into the
+/// tail; `neg a` is lowered as `0 - a`. Every other form, and an empty
+/// `frei` at a binary node, refuses with `none`.
+pub fn senk_tief(
+    c: &PipeCfg,
+    e: &IntExpr,
+    dst: Register,
+    frei: &[Register],
+) -> Option<Vec<Befehl>> {
+    match &e.kind {
+        IntKind::Lit(n) => Some(vec![Befehl::MovImm64 {
+            dst,
+            value: int_wort(*n),
+        }]),
+        IntKind::Var(i) => Some(vec![Befehl::MovReg64 {
+            dst,
+            src: abb_of(c, *i),
+        }]),
+        IntKind::Weiter(inner) => senk_tief(c, inner, dst, frei),
+        IntKind::Add(a, b) => {
+            let (&tmp, rest) = frei.split_first()?;
+            let mut pa = senk_tief(c, a, dst, rest)?;
+            pa.extend(senk_tief(c, b, tmp, rest)?);
+            pa.push(Befehl::AddReg64 { dst, src: tmp });
+            Some(pa)
+        }
+        IntKind::Sub(a, b) => {
+            let (&tmp, rest) = frei.split_first()?;
+            let mut pa = senk_tief(c, a, dst, rest)?;
+            pa.extend(senk_tief(c, b, tmp, rest)?);
+            pa.push(Befehl::SubReg64 { dst, src: tmp });
+            Some(pa)
+        }
+        IntKind::Neg(a) => {
+            let (&tmp, rest) = frei.split_first()?;
+            let mut pa = senk_tief(c, a, dst, rest)?;
+            pa.push(Befehl::XorReg64 { dst: tmp, src: tmp });
+            pa.push(Befehl::SubReg64 { dst: tmp, src: dst });
+            pa.push(Befehl::MovReg64 { dst, src: tmp });
+            Some(pa)
+        }
         _ => None,
     }
 }
 
-fn atom_frag(a: Atom) -> Fragment {
-    match a {
-        Atom::Lit(n) => Fragment::Lit(n),
-        Atom::Var(r) => Fragment::Var(r),
-    }
-}
-
-/// Lean `senkAtom` through `lower.rs` (an atom is a one-instruction fragment).
-fn senk_atom(c: &PipeCfg, e: &IntExpr, dst: Register, other: Register) -> Option<Vec<Befehl>> {
-    senk_frag(&atom_frag(atom(c, e)?), dst, other).ok()
-}
-
-/// Lean `senkFrag` through `lower.rs`.
-fn senk_frag_p(c: &PipeCfg, e: &IntExpr, dst: Register, tmp: Register) -> Option<Vec<Befehl>> {
-    let frag = match &e.kind {
-        IntKind::Lit(n) => Fragment::Lit(*n),
-        IntKind::Var(i) => Fragment::Var(abb_of(c, *i)),
-        IntKind::Add(a, b) => Fragment::Add(atom(c, a)?, atom(c, b)?),
-        IntKind::Sub(a, b) => Fragment::Sub(atom(c, a)?, atom(c, b)?),
-        _ => return None,
-    };
-    senk_frag(&frag, dst, tmp).ok()
-}
-
-/// Lean `senkWert`: strip ONE `weiter`, then the accepted fragment.
+/// Lean `senkWertT`: the widened value lowering over the register stack
+/// `tmp :: frei` of the configuration (`weiter` stripped at every depth
+/// inside [`senk_tief`] itself, so no separate top-level strip remains
+/// here).
 pub fn senk_wert(c: &PipeCfg, e: &IntExpr) -> Option<Vec<Befehl>> {
-    match &e.kind {
-        IntKind::Weiter(inner) => senk_frag_p(c, inner, c.dst, c.tmp),
-        _ => senk_frag_p(c, e, c.dst, c.tmp),
-    }
+    let mut frei = Vec::with_capacity(1 + c.frei.len());
+    frei.push(c.tmp);
+    frei.extend_from_slice(&c.frei);
+    senk_tief(c, e, c.dst, &frei)
 }
 
 /// Lean `imSigned`: the range lies in the signed 64-bit window.
@@ -755,33 +837,77 @@ fn im_signed(r: Range) -> bool {
     -(1i128 << 63) <= r.lo && r.hi < (1i128 << 63)
 }
 
-/// Lean `vergleich`: both atoms, `cmp dst, tmp`, and the jump condition.
-fn vergleich(
-    c: &PipeCfg,
-    a: &IntExpr,
-    b: &IntExpr,
-    j: Bedingung,
-) -> Option<(Vec<Befehl>, Bedingung)> {
-    if !(im_signed(a.range) && im_signed(b.range)) {
-        return None;
+/// Lean `imFensterB`: the decided range side condition of a comparison —
+/// both operand TYPES lie in the signed 64-bit window; every other form
+/// is refused.
+fn im_fenster_b(e: &BoolExpr) -> bool {
+    match e {
+        BoolExpr::Lt(a, b) | BoolExpr::Le(a, b) | BoolExpr::Eq(a, b) => {
+            im_signed(a.range) && im_signed(b.range)
+        }
+        _ => false,
     }
-    let mut code = senk_atom(c, a, c.dst, c.tmp)?;
-    code.extend(senk_atom(c, b, c.tmp, c.dst)?);
-    code.push(Befehl::CmpReg64 {
-        lhs: c.dst,
-        rhs: c.tmp,
-    });
+}
+
+/// Lean `senkVergleich`: one comparison over arbitrary-depth operands
+/// sharing the register stack, returning the condition that holds when
+/// the source comparison is TRUE.
+fn senk_vergleich(
+    c: &PipeCfg,
+    e: &BoolExpr,
+    dst: Register,
+    frei: &[Register],
+) -> Option<(Vec<Befehl>, Bedingung)> {
+    let (&tmp, rest) = frei.split_first()?;
+    let (a, b, j) = match e {
+        BoolExpr::Lt(a, b) => (a, b, Bedingung::L),
+        BoolExpr::Le(a, b) => (a, b, Bedingung::Le),
+        BoolExpr::Eq(a, b) => (a, b, Bedingung::E),
+        _ => return None,
+    };
+    let mut code = senk_tief(c, a, dst, rest)?;
+    code.extend(senk_tief(c, b, tmp, rest)?);
+    code.push(Befehl::CmpReg64 { lhs: dst, rhs: tmp });
     Some((code, j))
 }
 
-/// Lean `senkBed`: `<`, `<=`, `=` over atoms; the jump is on the NEGATION.
-pub fn senk_bed(c: &PipeCfg, e: &BoolExpr) -> Option<(Vec<Befehl>, Bedingung)> {
-    match e {
-        BoolExpr::Lt(a, b) => vergleich(c, a, b, Bedingung::Ge),
-        BoolExpr::Le(a, b) => vergleich(c, a, b, Bedingung::G),
-        BoolExpr::Eq(a, b) => vergleich(c, a, b, Bedingung::Ne),
-        _ => None,
+/// Lean `negBed`: the x86 negation of a condition code.
+fn neg_bed(j: Bedingung) -> Bedingung {
+    use Bedingung::*;
+    match j {
+        O => No,
+        No => O,
+        B => Ae,
+        Ae => B,
+        E => Ne,
+        Ne => E,
+        Be => A,
+        A => Be,
+        S => Ns,
+        Ns => S,
+        P => Np,
+        Np => P,
+        L => Ge,
+        Ge => L,
+        Le => G,
+        G => Le,
     }
+}
+
+/// Lean `senkBedT`: deep check lowering — the comparison code and the
+/// jump-to-refusal (or jump-to-else) condition, i.e. the negation of the
+/// truth condition that [`senk_vergleich`] names; only `<`/`<=`/`=` with
+/// both operand types in the signed 64-bit window ([`im_fenster_b`]) are
+/// accepted. The literal `true` is handled by [`senk_pruef`], not here.
+pub fn senk_bed_t(c: &PipeCfg, e: &BoolExpr) -> Option<(Vec<Befehl>, Bedingung)> {
+    if !im_fenster_b(e) {
+        return None;
+    }
+    let mut frei = Vec::with_capacity(1 + c.frei.len());
+    frei.push(c.tmp);
+    frei.extend_from_slice(&c.frei);
+    let (code, j) = senk_vergleich(c, e, c.dst, &frei)?;
+    Some((code, neg_bed(j)))
 }
 
 /// Lean `repOk ty base 8 0`.
@@ -815,7 +941,11 @@ pub fn senk_stmt(c: &PipeCfg, decl: &Deklaration, ps: &[Platz], s: &Stmt) -> Opt
             });
             Some(p)
         }
-        Stmt::Other(_) => None,
+        // `senkStmt`'s wildcard arm: an `ite` is lowered by `senk_block`
+        // directly (it needs the byte POSITION to compute its jumps), not
+        // by `senkStmt`, exactly as the Lean `senkStmt` pattern match
+        // never reaches a `.ite`.
+        Stmt::Ite { .. } | Stmt::Other(_) => None,
     }
 }
 
@@ -838,7 +968,7 @@ pub fn senk_pruef(c: &PipeCfg, pos: u128, cond: &BoolExpr, sonst: Sonst) -> Opti
     if *cond == BoolExpr::Wahr {
         return Some(Vec::new());
     }
-    let (mut code, j) = senk_bed(c, cond)?;
+    let (mut code, j) = senk_bed_t(c, cond)?;
     let pos_j = pos.checked_add(encode_all(&code).len() as u128)?;
     let ziel = exit_adr(c, r)?;
     let disp = sprung_disp(c, pos_j, ziel)?;
@@ -856,6 +986,12 @@ pub fn senk_pruef(c: &PipeCfg, pos: u128, cond: &BoolExpr, sonst: Sonst) -> Opti
     }
 }
 
+/// Lean `sprungOk`: a forward jump of `k` bytes is representable as a
+/// 32-bit displacement (`k < 2^31`, so the sign-extended read equals `k`).
+fn sprung_ok(k: u128) -> bool {
+    k < (1u128 << 31)
+}
+
 /// Lean `senkBlock` from byte position `pos` of the code region.
 pub fn senk_block(
     c: &PipeCfg,
@@ -866,6 +1002,39 @@ pub fn senk_block(
 ) -> Option<Vec<Befehl>> {
     match b {
         Block::Nil => Some(Vec::new()),
+        // `ite`: condition, jump on the NEGATED condition over the
+        // then-block, then-block, jump over the else-block, else-block —
+        // every displacement computed from the REAL byte position and
+        // then re-checked representable (Lean `iteCode`/`sprungOk`).
+        Block::Cons(Stmt::Ite { cond, then_, else_ }, rest) => {
+            let (code, j) = senk_bed_t(c, cond)?;
+            let pos_t = pos
+                .checked_add(encode_all(&code).len() as u128)?
+                .checked_add(6)?;
+            let pt = senk_block(c, decl, ps, pos_t, then_)?;
+            let pos_e = pos_t
+                .checked_add(encode_all(&pt).len() as u128)?
+                .checked_add(5)?;
+            let pe = senk_block(c, decl, ps, pos_e, else_)?;
+            let pt_jump = (encode_all(&pt).len() as u128).checked_add(5)?;
+            let pe_len = encode_all(&pe).len() as u128;
+            if !(sprung_ok(pt_jump) && sprung_ok(pe_len)) {
+                return None;
+            }
+            let mut ite = code;
+            ite.push(Befehl::JumpIf32 {
+                cond: j,
+                disp: Disp32::von_bits(pt_jump as u32),
+            });
+            ite.extend(pt);
+            ite.push(Befehl::Jump32 {
+                disp: Disp32::von_bits(pe_len as u32),
+            });
+            ite.extend(pe);
+            let weiter = pos.checked_add(encode_all(&ite).len() as u128)?;
+            ite.extend(senk_block(c, decl, ps, weiter, rest)?);
+            Some(ite)
+        }
         Block::Cons(s, rest) => {
             let mut p = senk_stmt(c, decl, ps, s)?;
             let weiter = pos.checked_add(encode_all(&p).len() as u128)?;
@@ -939,6 +1108,11 @@ pub fn slot_adressen(ps: &[Platz], b: &Block) -> Vec<u128> {
                     .and_then(|k| layout_von(ps, *t, k, *f))
                     .into_iter()
                     .collect(),
+                Stmt::Ite { then_, else_, .. } => {
+                    let mut v = slot_adressen(ps, then_);
+                    v.extend(slot_adressen(ps, else_));
+                    v
+                }
                 Stmt::Other(_) => Vec::new(),
             };
             v.extend(slot_adressen(ps, rest));
@@ -1049,6 +1223,12 @@ pub struct Bild {
 pub fn grund_liste(b: &Block) -> Vec<u32> {
     match b {
         Block::Nil | Block::Other(_) => Vec::new(),
+        Block::Cons(Stmt::Ite { then_, else_, .. }, rest) => {
+            let mut v = grund_liste(then_);
+            v.extend(grund_liste(else_));
+            v.extend(grund_liste(rest));
+            v
+        }
         Block::Cons(_, rest) => grund_liste(rest),
         Block::Pruefung { sonst, rest, .. } => {
             let mut v = match sonst {
@@ -1474,6 +1654,7 @@ pub(crate) mod proben {
             code_base: 4096,
             exit_base: 12288,
             exit_stride: 1,
+            frei: vec![],
         }
     }
 
