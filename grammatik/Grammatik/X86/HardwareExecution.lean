@@ -79,6 +79,161 @@ theorem tsoAnsicht_speicher (m : HwMaschine) :
 theorem tsoAnsicht_puffer (m : HwMaschine) (c : Nat) :
     (tsoAnsicht m).puffer c = m.puffer c := rfl
 
+/-! ## 2. Well-formedness: data state versus checked profile.
+
+  `HwWf` never restates memory agreement (proved in §1); it checks the
+  core/control profile: no core admits a feature its silicon lacks.
+  Updates below keep profiles untouched, so well-formedness survives
+  every memory/buffer/core step. -/
+
+/-- Well-formedness: admitted features have silicon behind them. -/
+def HwWf (m : HwMaschine) : Prop :=
+  ∀ (c : Nat) (f : PerfMerkmal),
+    merkmalZugelassen m.hw (m.bereit c) f = true → hat m.hw f = true
+
+/-- Admission implies silicon: the accepted profile lemma, lifted. -/
+theorem hwWf_aus_zugelassen (m : HwMaschine)
+    (h : ∀ (c : Nat) (f : PerfMerkmal),
+      merkmalZugelassen m.hw (m.bereit c) f = true) :
+    HwWf m := by
+  intro c f _
+  exact (merkmalZugelassen_heisst_beide m.hw (m.bereit c) f (h c f)).1
+
+/-- Core-data update: new data for core `c`, everything else kept. -/
+def setKernDaten (m : HwMaschine) (c : Nat) (k : HwKern) : HwMaschine :=
+  { m with kerne := fun d => if d = c then k else m.kerne d }
+
+/-- Memory/buffer update from a TSO successor: profiles and core data
+    are untouched. -/
+def setTso (m : HwMaschine) (s : TSOZustand) : HwMaschine :=
+  { m with mem := s.mem, puffer := s.puffer }
+
+/-- Core updates preserve well-formedness (profiles untouched). -/
+theorem setKernDaten_wf (m : HwMaschine) (c : Nat) (k : HwKern)
+    (h : HwWf m) : HwWf (setKernDaten m c k) := h
+
+/-- Memory/buffer updates preserve well-formedness. -/
+theorem setTso_wf (m : HwMaschine) (s : TSOZustand)
+    (h : HwWf m) : HwWf (setTso m s) := h
+
+/-- The TSO view of a memory/buffer update is the successor state. -/
+theorem setTso_ansicht (m : HwMaschine) (s : TSOZustand) :
+    tsoAnsicht (setTso m s) = s := by
+  cases s with
+  | mk mem puffer => rfl
+
+/-! ## 3. Machine steps: fetch, register execution, TSO memory events.
+
+  Every case names its accepted equation. The register path re-embeds
+  ONLY core data and keeps machine memory; it is gated by the
+  memory-unchanged premise, so no SC word effect is ever substituted
+  for a buffered access. Memory moves only through `issueByte`,
+  `loadByte` and `flushKern` on the shared TSO view. -/
+
+/-- Observable machine events: what one step did. -/
+inductive HwEreignis where
+  | regAusf : Nat → ExtInstr → HwEreignis
+  | leseBeob : Nat → Adresse → Byte → HwEreignis
+  | schreibAusgabe : Nat → Adresse → Byte → HwEreignis
+  | spülung : Nat → TSOEintrag → HwEreignis
+  | verweigert : Nat → HwEreignis
+  deriving DecidableEq, Repr
+
+/-- Re-embed a successor core view: core data moves, machine memory
+    and buffers stay. This is the register path ONLY (see `HwSchritt.reg`
+    for the memory-unchanged gate). -/
+def setKernVonFp (m : HwMaschine) (c : Nat) (t' : FpZustand) : HwMaschine :=
+  setKernDaten m c ⟨t'.kern.register, t'.kern.flags, t'.kern.rip,
+    t'.xmm, t'.fp⟩
+
+/-- After re-embedding, the core projects to the successor data over
+    the shared memory. -/
+theorem setKernVonFp_register (m : HwMaschine) (c : Nat) (t' : FpZustand) :
+    ((setKernVonFp m c t').kerne c).register = t'.kern.register := by
+  unfold setKernVonFp setKernDaten
+  simp
+
+/-- Re-embedding keeps the shared memory. -/
+theorem setKernVonFp_speicher (m : HwMaschine) (c : Nat) (t' : FpZustand) :
+    (setKernVonFp m c t').mem = m.mem := rfl
+
+/-- Re-embedding keeps the buffers. -/
+theorem setKernVonFp_puffer (m : HwMaschine) (c : Nat) (t' : FpZustand)
+    (d : Nat) :
+    (setKernVonFp m c t').puffer d = m.puffer d := rfl
+
+/-- One coherent machine step, each case from its accepted equation:
+    - `reg`: the unified evaluator on the core projection, admitted
+      only where it leaves canonical memory alone;
+    - `lade`: a `loadByte` observation (forwarding included), no state
+      change;
+    - `gibAus`: a `issueByte` store issue on the shared TSO view;
+    - `spüle`: a `flushKern` drain into shared memory;
+    - `fehler`: explicit refusal (fetch/decode/permission/profile). -/
+inductive HwSchritt : HwMaschine → HwMaschine → HwEreignis → Prop where
+  | reg {m : HwMaschine} (c : Nat) (i : ExtInstr) (t' : FpZustand)
+      (hstep : stepExt i (projFp m c) (m.bereit c) = .weiter t')
+      (hmem : t'.kern.speicher = m.mem) :
+      HwSchritt m (setKernVonFp m c t') (.regAusf c i)
+  | lade {m : HwMaschine} (c : Nat) (a : Adresse) (v : Byte)
+      (h : loadByte (tsoAnsicht m) c a = some v) :
+      HwSchritt m m (.leseBeob c a v)
+  | gibAus {m : HwMaschine} (c : Nat) (a : Adresse) (v : Byte)
+      (s' : TSOZustand)
+      (h : issueByte (tsoAnsicht m) c a v = some s') :
+      HwSchritt m (setTso m s') (.schreibAusgabe c a v)
+  | spüle {m : HwMaschine} (c : Nat) (e : TSOEintrag)
+      (s' : TSOZustand)
+      (h : flushKern (tsoAnsicht m) c = some s')
+      (hkopf : (m.puffer c).head? = some e) :
+      HwSchritt m (setTso m s') (.spülung c e)
+  | fehler {m : HwMaschine} (c : Nat)
+      (h : fetchExt (projFp m c) (geholt (projZustand m c)) = none) :
+      HwSchritt m m (.verweigert c)
+
+/-! ## 4. Step preservation and accepted-equation correspondence.
+
+  Permissions, profiles and the single shared memory survive every
+  step; forwarding and drain effects are exactly the accepted TSO
+  lemmas, lifted to the machine. -/
+
+/-- Every machine step preserves well-formedness. -/
+theorem hwSchritt_wf (m m' : HwMaschine) (e : HwEreignis)
+    (h : HwSchritt m m' e) (hwf : HwWf m) : HwWf m' := by
+  cases h with
+  | reg c i t' hstep hmem => exact setKernDaten_wf _ c _ hwf
+  | lade c a v h => exact hwf
+  | gibAus c a v s' h => exact setTso_wf _ s' hwf
+  | spüle c e s' h hkopf => exact setTso_wf _ s' hwf
+  | fehler c h => exact hwf
+
+/-- A store issue changes no canonical byte (buffer only). -/
+theorem hwGibAus_kein_speicher (m m' : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte) (h : HwSchritt m m' (.schreibAusgabe c a v))
+    (x : Adresse) :
+    m'.mem.bytes x = m.mem.bytes x := by
+  cases h with
+  | gibAus c a v s' h =>
+    exact issue_kein_speicher (tsoAnsicht m) s' c a v h x
+
+/-- Forwarding: after core `c` issues byte `v` at readable `a`, core
+    `c` observes `v` -- exactly `load_nach_issue`, lifted. -/
+theorem hwWeiterleitung (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Byte) (s' : TSOZustand)
+    (h : issueByte (tsoAnsicht m) c a v = some s')
+    (hrd : (tsoAnsicht m).mem.lesbar a = true) :
+    loadByte s' c a = some v :=
+  load_nach_issue (tsoAnsicht m) s' c a v h hrd
+
+/-- A flush installs the buffer head into shared memory -- exactly
+    `flush_schreibt_kopf`, lifted to the machine view. -/
+theorem hwSpülung_schreibt (m : HwMaschine) (c : Nat) (s' : TSOZustand)
+    (e : TSOEintrag) (rest : List TSOEintrag)
+    (he : m.puffer c = e :: rest)
+    (h : flushKern (tsoAnsicht m) c = some s') :
+    s'.mem.bytes e.addr = e.wert := by
+  exact flush_schreibt_kopf (tsoAnsicht m) s' c h e rest he
+
 /- CUTS:
    Skeleton only: data vocabulary and projections so far.
    NOT proved: well-formedness, steps, embeddings, witnesses, adapters.
