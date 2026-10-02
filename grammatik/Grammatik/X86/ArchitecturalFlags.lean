@@ -1311,6 +1311,108 @@ theorem pushfq_popfq_rundgang :
   rw [regSet_gleich]
   decide
 
+/-- Shared write fact for the witness stack. -/
+theorem wit_schreibt : write64 witA1.kern.speicher (pushfqOben witA1)
+    (pushfqWort witRohA) = some witStore := by
+  have hperm : schreibbar8 witA1.kern.speicher (pushfqOben witA1) = true := by
+    decide
+  unfold write64 witStore
+  rw [if_pos hperm]
+
+/-- Shared readback fact for the witness stack. -/
+theorem wit_liest : read64 witStore (pushfqOben witA1) =
+    some (pushfqWort witRohA) :=
+  read64_nach_write64 _ _ _ _ wit_schreibt (by decide)
+
+/-- High-privilege live word: IF set (bit 9). -/
+def witRohH : Wort := BitVec.ofNat 64 (2 + 512)
+
+/-- High-privilege control: CPL 3 above IOPL 0. -/
+def witSteuerHoch : Steuer := { cpl := 3, iopl := 0, ifBit := true, vm := false }
+
+/-- Gating witness: same stack as the push successor, live IF set. -/
+def witA3 : ArchZustand := { kern := (witNach1 witStore).kern, roh := witRohH, steuer := witSteuerHoch }
+
+/-- IF-GATING WITNESS: above IOPL the live IF survives POPFQ even
+    though the stack image disagrees (control-state pin). -/
+theorem popfq_if_gating_zeuge :
+    ∃ (zur2 : ArchZustand),
+      popfqSchritt witA3 [popfqOp] = some zur2 ∧
+      rbit zur2.roh 9 = true ∧ rbit (pushfqWort witRohA) 9 = false := by
+  have hd2 : popfqByte [popfqOp] = some 1 := by simp [popfqByte]
+  have hv3 : (witA3.steuer.vm && decide (witA3.steuer.iopl < 3)) = false := by
+    decide
+  have hrsp : witA3.kern.register Register.rsp = pushfqOben witA1 := by
+    simp only [witA3, witNach1, pushfqKern]
+    exact regSet_gleich _ _ _
+  have hsp : witA3.kern.speicher = witStore := rfl
+  have hrd3 : read64 witA3.kern.speicher (witA3.kern.register
+      Register.rsp) = some (pushfqWort witRohA) := by
+    rw [hsp, hrsp]
+    exact wit_liest
+  have hok3 := popfqSchritt_ok witA3 [popfqOp] 1 (pushfqWort witRohA)
+    hd2 hv3 hrd3
+  have hif := popfqSchritt_if_hoch witA3 [popfqOp] 1 _ _
+    hd2 hv3 hrd3 (by decide) hok3
+  have hpre : rbit witA3.roh 9 = true := by decide
+  rw [hpre] at hif
+  exact ⟨_, hok3, hif, by decide⟩
+
+/-- The adapters refuse each other's opcode. -/
+theorem pushfqByte_ablehnt : pushfqByte [popfqOp] = none := by decide
+
+/-- The POPFQ adapter refuses the PUSHFQ opcode. -/
+theorem popfqByte_ablehnt : popfqByte [pushfqOp] = none := by decide
+
+/-- The adapter refuses two-byte inputs (no length ambiguity). -/
+theorem pushfqByte_lang_ablehnt (a b : Byte) :
+    pushfqByte [a, b] = none := by
+  simp [pushfqByte]
+
+/-- Witness memory with a dead stack (nothing writable). -/
+def flagSpeicherRO : Speicher :=
+  { bytes := fun a => if a = BitVec.ofNat 64 4099 then pushfqOp else BitVec.ofNat 8 0, lesbar := fun _ => true, schreibbar := fun _ => false, ausfuehrbar := fun _ => true }
+
+/-- Witness core on the dead stack. -/
+def witKernRO : Zustand :=
+  { register := witRegA, flags := liestStatus witRohA, rip := BitVec.ofNat 64 4099, speicher := flagSpeicherRO }
+
+/-- Witness state on the dead stack. -/
+def witARO : ArchZustand := { kern := witKernRO, roh := witRohA, steuer := witSteuer }
+
+/-- STACK REFUSAL: PUSHFQ fails where the stack is not writable. -/
+theorem pushfq_stapel_zeuge :
+    pushfqSchritt witARO [pushfqOp] = none := by
+  have hdec : pushfqByte [pushfqOp] = some 1 := by simp [pushfqByte]
+  have hv : (witARO.steuer.vm && decide (witARO.steuer.iopl < 3)) = false := by
+    decide
+  have hwr : write64 witARO.kern.speicher (pushfqOben witARO)
+      (pushfqWort witARO.roh) = none := by
+    decide
+  exact pushfqSchritt_stapel witARO [pushfqOp] 1 hdec hv hwr
+
+/-- Witness memory with an unreadable stack. -/
+def flagSpeicherNR : Speicher :=
+  { bytes := fun a => if a = BitVec.ofNat 64 4099 then pushfqOp else BitVec.ofNat 8 0, lesbar := fun _ => false, schreibbar := fun _ => true, ausfuehrbar := fun _ => true }
+
+/-- Witness core on the unreadable stack. -/
+def witKernNR : Zustand :=
+  { register := witRegA, flags := liestStatus witRohA, rip := BitVec.ofNat 64 4099, speicher := flagSpeicherNR }
+
+/-- Witness state on the unreadable stack. -/
+def witANR : ArchZustand := { kern := witKernNR, roh := witRohA, steuer := witSteuer }
+
+/-- READ REFUSAL: POPFQ fails where the stack is not readable. -/
+theorem popfq_lese_zeuge :
+    popfqSchritt witANR [popfqOp] = none := by
+  have hdec : popfqByte [popfqOp] = some 1 := by simp [popfqByte]
+  have hv : (witANR.steuer.vm && decide (witANR.steuer.iopl < 3)) = false := by
+    decide
+  have hrd : read64 witANR.kern.speicher
+      (witANR.kern.register Register.rsp) = none := by
+    decide
+  exact popfqSchritt_lesefehler witANR [popfqOp] 1 hdec hv hrd
+
 /- CUTS:
     Skeleton plus raw word (§2) and nibble groundwork (§3 head):
     effect relation, PUSHFQ/POPFQ observers, consumer admission and
