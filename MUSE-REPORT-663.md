@@ -1,9 +1,10 @@
 # MUSE-REPORT-663: Exact review of author 662 (LOCK atomic and fence final-byte execution)
 
-## CANDIDATE
-662 56e70f849a52295e9b60d12cb91cb73045e9838c
+## Candidate
 
-## VERDICT: ACCEPT
+CANDIDATE: 662 56e70f849a52295e9b60d12cb91cb73045e9838c
+
+VERDICT: ACCEPT
 
 Bounded acceptance: the three claimed 64-bit rows (LOCK XADD, LOCK CMPXCHG
 over mod=2 base+disp32, MFENCE) with canonical byte decode, fetched
