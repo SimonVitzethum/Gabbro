@@ -7,9 +7,11 @@ control used. Working tree clean except this report (verified by
 
 CANDIDATE: 686 bb8e5470cbb605d56c2a80602b350db5bce67a91
 
-VERDICT: ACCEPT (bounded: exactly the 15 selected rows; the full hardware
-model stays OPEN per the candidate CUTS, which is the correct claim
-boundary, not a silent closure).
+VERDICT: ACCEPT
+
+Scope note (not part of the verdict line): bounded acceptance covers exactly
+the 15 selected rows; the full hardware model stays OPEN per the candidate
+CUTS, which is the correct claim boundary, not a silent closure.
 
 ## What was reviewed
 
