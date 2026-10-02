@@ -435,6 +435,121 @@ theorem aus_braucht_geraet : brauchtGeraetVollendung .aus = true := rfl
 theorem ein_braucht_kein_geraet :
     brauchtGeraetVollendung .ein = false := rfl
 
+/-! ## First instance: the lane-676 latch, where sound.
+
+   `geraetAntwort` is one latch/counter device shared across all ports.
+   As a relation it is port-indifferent by construction -- that
+   limitation stays explicit here (the port argument is unconstrained),
+   and the second instance below shows what generality adds. -/
+
+/-- The old port state as a generic bus state. -/
+def busAusIo (s : IoZustand) : BusZustand GeraetZustand :=
+  ⟨s.kern, s.geraet, s.spur⟩
+
+/-- The latch as an allowed-answer relation: the answer IS
+    `geraetAntwort`, at every port. The step fixes the driven value
+    (`ausGabe` for OUT, 0 for IN), so no direction branch lives here. -/
+def latchErlaubt : BusAntwort GeraetZustand :=
+  fun g dir b _ treiber g' ans =>
+    (geraetAntwort g dir b treiber) = (g', ans)
+
+/-- SOUNDNESS (latch OUT): the stored truncated value is allowed. -/
+theorem latch_aus_sound (g : GeraetZustand) (b : IoBreite) (port v : Nat) :
+    latchErlaubt g .aus b port v ⟨v % ioMaske b, g.zaehl + 1⟩ 0 := by
+  unfold latchErlaubt
+  simp [geraetAntwort]
+
+/-- SOUNDNESS (latch IN): the stored truncated value answers. -/
+theorem latch_ein_sound (g : GeraetZustand) (b : IoBreite) (port : Nat) :
+    latchErlaubt g .ein b port 0 ⟨g.daten, g.zaehl + 1⟩
+      (g.daten % ioMaske b) := by
+  unfold latchErlaubt
+  simp [geraetAntwort]
+
+/-- LIFT (latch OUT): a successful old OUT step is a generic bus step,
+    reading privilege architecturally (the old admission carries
+    CPL<=IOPL, so the direct leg covers it at the full map). -/
+theorem latch_aus_lift (s : IoZustand) (dec : IoDec) (p : IoProfil)
+    (b : IoBreite) (q : PortQuelle) (s' : IoZustand)
+    (hok : laengeOk dec.laenge = true)
+    (hop : dec.op = ⟨.aus, b, q⟩)
+    (hperm : ioZugelassen p (portVon dec.op s.kern.register) = true)
+    (hstep : ioSchritt dec s p = some s') :
+    BusSchritt GeraetZustand latchErlaubt ⟨p.cpl, p.iopl⟩ volleKarte
+      (busAusIo s) (busAusIo s') := by
+  have hpriv := ioZugelassen_heisst_alle p _ hperm
+  have hform := ioSchritt_aus_erfolg dec s p b q hok hop hperm
+  rw [hform] at hstep
+  cases hstep
+  exact .aus (busAusIo s) dec b q _
+    hok hop (arch_direkt _ _ _ _ hpriv.2.1)
+    (latch_aus_sound _ _ _ _)
+
+/-- LIFT (latch IN): a successful old IN step is a generic bus step,
+    under the same architectural privilege reading. -/
+theorem latch_ein_lift (s : IoZustand) (dec : IoDec) (p : IoProfil)
+    (b : IoBreite) (q : PortQuelle) (s' : IoZustand)
+    (hok : laengeOk dec.laenge = true)
+    (hop : dec.op = ⟨.ein, b, q⟩)
+    (hperm : ioZugelassen p (portVon dec.op s.kern.register) = true)
+    (hstep : ioSchritt dec s p = some s') :
+    BusSchritt GeraetZustand latchErlaubt ⟨p.cpl, p.iopl⟩ volleKarte
+      (busAusIo s) (busAusIo s') := by
+  have hpriv := ioZugelassen_heisst_alle p _ hperm
+  have hform := ioSchritt_ein_erfolg dec s p b q hok hop hperm
+  rw [hform] at hstep
+  cases hstep
+  exact .ein (busAusIo s) dec b q _ _
+    hok hop (arch_direkt _ _ _ _ hpriv.2.1)
+    (latch_ein_sound _ _ _)
+
+/-! ## Second instance: a port-distinguishing table device.
+
+   Generality witness: one register per port plus an observation
+   counter. Two ports answer differently from the same start --
+   something the latch can never do (its IN answer is port-independent,
+   proved below). This is what the generic interface adds over 676. -/
+
+/-- Table device: one register per port plus an access counter. -/
+structure TabellenGeraet where
+  tab : Nat → Nat
+  zaehl : Nat
+
+/-- The table device answers the ADDRESSED register truncated to the
+    width; OUT stores the truncated value into the addressed register;
+    every access advances the counter. -/
+def tabellenErlaubt : BusAntwort TabellenGeraet :=
+  fun g dir b port treiber g' ans =>
+    match dir with
+    | .aus =>
+      g' = ⟨fun q => if q = port then treiber % ioMaske b else g.tab q,
+        g.zaehl + 1⟩ ∧ ans = 0
+    | .ein =>
+      g' = ⟨g.tab, g.zaehl + 1⟩ ∧ ans = g.tab port % ioMaske b
+
+/-- PORT-DISTINGUISHING: from a start whose registers differ at ports 96
+    and 97 (mod 256), the two IN answers differ -- from the same device
+    state, keyed by the actual port. -/
+theorem tabelle_unterscheidet (t : Nat → Nat) (z : Nat)
+    (h : t 96 % 256 ≠ t 97 % 256) :
+    ∃ (g1 g2 : TabellenGeraet) (a1 a2 : Nat),
+      tabellenErlaubt ⟨t, z⟩ .ein .p8 96 0 g1 a1 ∧
+      tabellenErlaubt ⟨t, z⟩ .ein .p8 97 0 g2 a2 ∧ a1 ≠ a2 := by
+  refine ⟨⟨t, z + 1⟩, ⟨t, z + 1⟩, t 96 % 256, t 97 % 256,
+    ⟨rfl, rfl⟩, ⟨rfl, rfl⟩, h⟩
+
+/-- The latch cannot distinguish ports: from one start, IN answers the
+    same value at any two ports. This is the documented 676 limitation
+    that the table instance removes. -/
+theorem latch_unterscheidet_nicht (g : GeraetZustand) (b : IoBreite)
+    (p q : Nat) (g1 g2 : GeraetZustand) (a1 a2 : Nat)
+    (h1 : latchErlaubt g .ein b p 0 g1 a1)
+    (h2 : latchErlaubt g .ein b q 0 g2 a2) : a1 = a2 := by
+  unfold latchErlaubt at h1 h2
+  have e1 : (geraetAntwort g .ein b 0).2 = a1 := congrArg Prod.snd h1
+  have e2 : (geraetAntwort g .ein b 0).2 = a2 := congrArg Prod.snd h2
+  exact e1.symm.trans e2
+
 /- CUTS:
    Skeleton only: the TSS map type, one per-byte check and its witness.
    Range checks, the architectural rule, the generic device interface,
