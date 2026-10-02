@@ -716,6 +716,82 @@ theorem hwWit_fremd_neu :
     hwWitFremdNachFlush = some (some (BitVec.ofNat 8 42)) := by
   decide
 
+/-! ## 10. Planted refusals: fault, malformed, overlap, tearing.
+
+  Every unsupported or incoherent shape refuses explicitly: code is
+  not readable, data is not executable, a foreign footprint entry
+  breaks the word group, a partial buffer is no group, and LOCK stays
+  refused. Brown-field evidence (`pin_ext_nichts_unbekannt`,
+  `riss_unter_verweigerter_gruppe`) is cited, not redone. -/
+
+/-- Fault: code memory is not readable -- the load refuses. -/
+theorem hwWit_laden_code_verweigert :
+    loadByte (tsoAnsicht hwWitStart) 0 hwWitCodeAdr = none := by
+  decide
+
+/-- Fault: code memory is not writable -- the issue refuses. -/
+theorem hwWit_ausgabe_code_verweigert :
+    issueByte (tsoAnsicht hwWitStart) 0 hwWitCodeAdr
+      (BitVec.ofNat 8 42) = none := by
+  decide
+
+/-- Overlap state: core 0 holds a full word group while core 1 holds
+    a pending entry inside its footprint. -/
+def hwWitWort : Wort := BitVec.ofNat 64 7
+
+def hwWitOverlap : TSOZustand :=
+  ⟨hwWitMem, fun d =>
+    if d = 0 then wortEintraege hwWitAdr hwWitWort
+    else if d = 1 then [⟨addrOff hwWitAdr 3, BitVec.ofNat 8 1⟩]
+    else []⟩
+
+/-- The foreign entry sits inside the word footprint. -/
+theorem hwWitOverlap_fuss :
+    (addrOff hwWitAdr 3) ∈ Fuss hwWitAdr := by
+  decide
+
+/-- Non-coherence refuses the group: the overlap state never groups. -/
+theorem hwWitOverlap_keine_gruppe :
+    ¬ WortGruppe hwWitOverlap 0 hwWitAdr hwWitWort := by
+  apply hwGruppe_verweigert_bei_fremdeintrag hwWitOverlap 0
+    hwWitAdr hwWitWort 1 (by decide)
+    ⟨addrOff hwWitAdr 3, BitVec.ofNat 8 1⟩ ?_ hwWitOverlap_fuss
+  have hbuf : hwWitOverlap.puffer 1 =
+      [⟨addrOff hwWitAdr 3, BitVec.ofNat 8 1⟩] := by
+    decide
+  rw [hbuf]
+  simp
+
+/-- Tearing refuses the group: two of eight bytes are no word. -/
+theorem hwWitTeil_keine_gruppe :
+    ¬ WortGruppe ⟨hwWitMem, fun d =>
+      if d = 0 then (wortEintraege hwWitAdr hwWitWort).take 2 else []⟩
+      0 hwWitAdr hwWitWort := by
+  apply hwTeilwort_keine_gruppe
+  decide
+
+/-- The joint witness: a reached two-core run that fetches real
+    bytes, changes registers, forwards a buffered store, drains it
+    into shared memory (0 becomes 42, observed from both cores) --
+    with the malformed/control/fault/overlap/tearing refusals beside
+    it. Non-degenerate: the drain changes ACTUAL shared memory. -/
+theorem hwWit_zeuge :
+    hwRipOut hwWitO1 0 = some (BitVec.ofNat 64 4099) ∧
+      hwRegOut hwWitO1 0 .rax = some (BitVec.ofNat 64 9) ∧
+      hwRipOut hwWitO2 0 = some (BitVec.ofNat 64 4103) ∧
+      hwXmmTiefOut hwWitO2 0 .xmm0 = some (BitVec.ofNat 64 7) ∧
+      hwWitMem.bytes hwWitAdr = BitVec.ofNat 8 0 ∧
+      hwWitLoadEigen = some (some (BitVec.ofNat 8 42)) ∧
+      hwWitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+      hwWitNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+      hwWitFremdNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+      hwByteschrittReg hwWitStart 1 = .verweigert ∧
+      ¬ WortGruppe hwWitOverlap 0 hwWitAdr hwWitWort := by
+  refine ⟨hwWit_o1_rip, hwWit_o1_rax, hwWit_o2_rip, hwWit_o2_xmm,
+    hwWit_anfang_null, hwWit_weiterleitung, hwWit_fremd_alt,
+    hwWit_spülung_aendert_speicher, hwWit_fremd_neu,
+    hwWit_kern1_verweigert, hwWitOverlap_keine_gruppe⟩
+
 /- CUTS:
    Skeleton only: data vocabulary and projections so far.
    NOT proved: well-formedness, steps, embeddings, witnesses, adapters.
