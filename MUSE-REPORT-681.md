@@ -6,7 +6,9 @@ CANDIDATE: 680 541207aeeb1c0e9b8cbe5025cd2c159e0a2ed2b1
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded; see §6)
+VERDICT: ACCEPT
+
+Acceptance is bounded as stated in §6; the verdict itself is unchanged.
 
 ## 1. What was reviewed
 
