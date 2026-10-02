@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 19:49 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 19:52 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -309,16 +309,18 @@ Last ledger refresh: **2026-10-02 19:49 UTC**. This is an operational snapshot, 
 | 666 | Hardware completion: practical integer width and compact encoding rows | Committed candidate; review/integration pending | 667: Committed candidate; review/integration pending | [task](lanes/666.md) |
 | 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Agent working | 669: scheduled | [task](lanes/668.md) |
 | 670 | Hardware completion: precise selected fault and exception transitions | Committed candidate; review/integration pending | 671: Committed candidate; review/integration pending | [task](lanes/670.md) |
-| 672 | Hardware completion: interrupts entry masking and trap hardware forms | Committed candidate; review/integration pending | 673: Agent working | [task](lanes/672.md) |
+| 672 | Hardware completion: interrupts entry masking and trap hardware forms | Committed candidate; review/integration pending | 673: Committed candidate; review/integration pending | [task](lanes/672.md) |
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Merged after review/checks | 675: Merged after review/checks | [report](messung/muse/MUSE-REPORT-674.md) |
-| 676 | Hardware completion: port IO and device memory profiles | Committed candidate; review/integration pending | 677: Agent working | [task](lanes/676.md) |
+| 676 | Hardware completion: port IO and device memory profiles | Committed candidate; review/integration pending | 677: Committed candidate; review/integration pending | [task](lanes/676.md) |
 | 678 | Organise and audit complete essential hardware-model coverage | Merged after review/checks | 679: Merged after review/checks | [report](messung/muse/MUSE-REPORT-678.md) |
 | 680 | Hardware completion: indirect and compact control byte forms | Agent working | 681: scheduled | [task](lanes/680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Agent working | 683: scheduled | [task](lanes/682.md) |
-| 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Agent working | [task](lanes/684.md) |
+| 684 | Eliminate hardcoded external project filesystem paths | Agent working | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Agent working | 687: scheduled | [task](lanes/686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Agent working | 689: scheduled | [task](lanes/688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
+| 692 | Hardware completion: observable defined and undefined RFLAGS | Scheduled | 693: scheduled | [task](lanes/692.md) |
+| 694 | Hardware completion: UC MMIO architectural access and ordering | Scheduled | 695: scheduled | [task](lanes/694.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -784,6 +786,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **678**, Organise and audit complete essential hardware-model coverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-678.md). <!-- x86-merged:678 -->
 - 2026-10-02: lane **679**, Independent exact review of 678, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-679.md). <!-- x86-merged:679 -->
 - 2026-10-02: publication batch checks passed for `a3d5ebc3`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-02: checked master `18cf829e` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:18cf829e278fe37e9d4337a0bbcf7e91db2294b2 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
