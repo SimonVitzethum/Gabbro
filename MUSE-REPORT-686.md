@@ -55,6 +55,22 @@ entries have no Flags-Affected section (modelled from DEST-only
 Operation text, stated as observed absence); PADD flag-freeness
 from the description sentence plus accepted producer precedent.
 
+## Integration repair (second commit)
+
+The integration gate failed the first candidate with a name
+collision: `Gabbro.Grammatik.X86.witKern0` already exists in the
+new-master module `Grammatik.X86.ArchitecturalFlags` (absent in
+this clone). Nothing was merged. Repair, owned files only:
+renamed my entire generic witness family `wit*` to lane-specific
+`iv*` (`ivT0`-`ivT4`, `ivKern0`, `ivXmm0`, `ivX4`, `ivM4a`,
+`ivM4`, `ivBereit`, `iv_gate`, `ivLd`, `ivS1`-`ivS4`, `ivHwr`,
+`ivNachbar32`, `ivXmm7`, `ivFlags`, `ivCodeT`, `ivTRO`/`ivTWO`,
+etc.; 14 disjoint-stem replacements, English words verified
+intact). No semantic change: `./lean-probe` 0 errors,
+`./lean-bau` green (466 jobs), axioms unchanged. A fresh
+independent review is required for the changed commit; no
+full source/binary chain acceptance is claimed.
+
 ## Checks
 
 - `./lean-probe .../VectorIntegerHardwareForms.lean`: 0 errors;

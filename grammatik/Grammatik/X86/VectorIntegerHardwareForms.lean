@@ -1797,21 +1797,21 @@ theorem decodeComboIV_paddb :
 
 /-- Narrow-lane add pattern: lane 0 wraps, lane 1 adds
     independently, all other lanes add zero. -/
-def witX4 : Vektor :=
+def ivX4 : Vektor :=
   vecMk .b8 (fun i => if i = 0 then 255 else if i = 1 then 16 else 0)
 
 /-- Witness readiness: OS vector state enabled. -/
-def witBereit : BereitProfil := ⟨kontextReset.mxcsr, true⟩
+def ivBereit : BereitProfil := ⟨kontextReset.mxcsr, true⟩
 
 /-- Witness legacy admission holds. -/
-theorem wit_gate :
-    vektorLegacyZugelassen basisHw witBereit basisCpu
+theorem iv_gate :
+    vektorLegacyZugelassen basisHw ivBereit basisCpu
       basisKontrolle = true := by
   decide
 
 /-- Witness initial core: zeroed registers, default flags, RIP zero,
     the nonzero packed word stored at bytes zero through fifteen. -/
-def witKern0 : Zustand :=
+def ivKern0 : Zustand :=
   { register := fun _ => 0
     flags := ⟨false, false, none, false, false, false⟩
     rip := 0
@@ -1819,16 +1819,16 @@ def witKern0 : Zustand :=
 
 /-- Witness XMM file: the add pattern in xmm4, a sentinel in xmm7,
     zero elsewhere. -/
-def witXmm0 : XmmDatei
-  | .xmm4 => witX4
+def ivXmm0 : XmmDatei
+  | .xmm4 => ivX4
   | .xmm7 => BitVec.ofNat 128 0x0F0E0D0C0B0A090807060504030201
   | _ => 0
 
 /-- Witness initial extended state at the FP reset context. -/
-def witT0 : FpZustand := ⟨witKern0, witXmm0, kontextReset⟩
+def ivT0 : FpZustand := ⟨ivKern0, ivXmm0, kontextReset⟩
 
 /-- The two ordered chunk writes behind the witness pattern store. -/
-theorem witHw1 :
+theorem ivHw1 :
     write64 vecZeugenSpeicher 0 (vLo vecZeugenVektor) =
       some vecZeugenM1 := by
   unfold write64
@@ -1837,7 +1837,7 @@ theorem witHw1 :
   rfl
 
 /-- The second chunk write behind the witness pattern store. -/
-theorem witHw2 :
+theorem ivHw2 :
     write64 vecZeugenM1 (vecHiAddr 0) (vHi vecZeugenVektor) =
       some vecZeugenM2 := by
   unfold write64
@@ -1846,179 +1846,179 @@ theorem witHw2 :
   rfl
 
 /-- No-wrap at the witness load address. -/
-theorem witHno0 : OhneUmbruch16 (0 : Adresse) := by
+theorem ivHno0 : OhneUmbruch16 (0 : Adresse) := by
   unfold OhneUmbruch16
   decide
 
 /-- The witness load reads the nonzero packed word. -/
-theorem witLd :
-    vecRead vecZeugenM2 (effAddr witKern0 .rax 0) =
+theorem ivLd :
+    vecRead vecZeugenM2 (effAddr ivKern0 .rax 0) =
       some vecZeugenVektor :=
   vecRead_nach_write vecZeugenSpeicher vecZeugenM1 vecZeugenM2 0
-    vecZeugenVektor witHw1 witHw2 rfl rfl witHno0
+    vecZeugenVektor ivHw1 ivHw2 rfl rfl ivHno0
 
 /-- Witness successor after the `movdqu` load. -/
-def witT1 : FpZustand :=
-  { witT0 with kern := { witT0.kern with rip := ripNach witT0.kern.rip 9 }, xmm := xmmSet witT0.xmm .xmm3 vecZeugenVektor }
+def ivT1 : FpZustand :=
+  { ivT0 with kern := { ivT0.kern with rip := ripNach ivT0.kern.rip 9 }, xmm := xmmSet ivT0.xmm .xmm3 vecZeugenVektor }
 
 /-- Witness successor after the wrapping `paddb`. -/
-def witT2 : FpZustand :=
-  { witT1 with kern := { witT1.kern with rip := ripNach witT1.kern.rip 5 }, xmm := xmmSet witT1.xmm .xmm3 (vecAdd .b8 vecZeugenVektor witX4) }
+def ivT2 : FpZustand :=
+  { ivT1 with kern := { ivT1.kern with rip := ripNach ivT1.kern.rip 5 }, xmm := xmmSet ivT1.xmm .xmm3 (vecAdd .b8 vecZeugenVektor ivX4) }
 
 /-- Witness successor after the `psllq` imm8 shift. -/
-def witT3 : FpZustand :=
-  { witT2 with kern := { witT2.kern with rip := ripNach witT2.kern.rip 6 }, xmm := xmmSet witT2.xmm .xmm3 (vecShlQ (vecAdd .b8 vecZeugenVektor witX4) 8) }
+def ivT3 : FpZustand :=
+  { ivT2 with kern := { ivT2.kern with rip := ripNach ivT2.kern.rip 6 }, xmm := xmmSet ivT2.xmm .xmm3 (vecShlQ (vecAdd .b8 vecZeugenVektor ivX4) 8) }
 
 /-- Memory after the low chunk of the witness `movdqa` store. -/
-def witM4a : Speicher :=
-  { vecZeugenM2 with bytes := writeBytes vecZeugenM2 (effAddr witT3.kern .rax 16) (vLo (witT3.xmm .xmm3)) }
+def ivM4a : Speicher :=
+  { vecZeugenM2 with bytes := writeBytes vecZeugenM2 (effAddr ivT3.kern .rax 16) (vLo (ivT3.xmm .xmm3)) }
 
 /-- Memory after both chunks of the witness `movdqa` store. -/
-def witM4 : Speicher :=
-  { witM4a with bytes := writeBytes witM4a (vecHiAddr (effAddr witT3.kern .rax 16)) (vHi (witT3.xmm .xmm3)) }
+def ivM4 : Speicher :=
+  { ivM4a with bytes := writeBytes ivM4a (vecHiAddr (effAddr ivT3.kern .rax 16)) (vHi (ivT3.xmm .xmm3)) }
 
 /-- Witness successor after the `movdqa` store. -/
-def witT4 : FpZustand :=
-  { witT3 with kern := { witT3.kern with rip := ripNach witT3.kern.rip 9, speicher := witM4 } }
+def ivT4 : FpZustand :=
+  { ivT3 with kern := { ivT3.kern with rip := ripNach ivT3.kern.rip 9, speicher := ivM4 } }
 
 /-- The low chunk write behind the witness store. -/
-theorem witHs1 :
-    write64 witT3.kern.speicher (effAddr witT3.kern .rax 16)
-      (vLo (witT3.xmm .xmm3)) = some witM4a := by
+theorem ivHs1 :
+    write64 ivT3.kern.speicher (effAddr ivT3.kern .rax 16)
+      (vLo (ivT3.xmm .xmm3)) = some ivM4a := by
   unfold write64
-  have hc : schreibbar8 witT3.kern.speicher
-      (effAddr witT3.kern .rax 16) = true := by
+  have hc : schreibbar8 ivT3.kern.speicher
+      (effAddr ivT3.kern .rax 16) = true := by
     decide
   rw [if_pos hc]
   rfl
 
 /-- The high chunk write behind the witness store. -/
-theorem witHs2 :
-    write64 witM4a (vecHiAddr (effAddr witT3.kern .rax 16))
-      (vHi (witT3.xmm .xmm3)) = some witM4 := by
+theorem ivHs2 :
+    write64 ivM4a (vecHiAddr (effAddr ivT3.kern .rax 16))
+      (vHi (ivT3.xmm .xmm3)) = some ivM4 := by
   unfold write64
-  have hc : schreibbar8 witM4a
-      (vecHiAddr (effAddr witT3.kern .rax 16)) = true := by
+  have hc : schreibbar8 ivM4a
+      (vecHiAddr (effAddr ivT3.kern .rax 16)) = true := by
     decide
   rw [if_pos hc]
   rfl
 
 /-- No #GP at the witness store address (sixteen is aligned). -/
-theorem witGp :
-    vektorGpFehler (effAddr witT3.kern .rax 16) .ausgerichtet =
+theorem ivGp :
+    vektorGpFehler (effAddr ivT3.kern .rax 16) .ausgerichtet =
       false := by
   decide
 
 /-- No-wrap across the witness store footprints. -/
-theorem witHno16 : OhneUmbruch16 (effAddr witT3.kern .rax 16) := by
+theorem ivHno16 : OhneUmbruch16 (effAddr ivT3.kern .rax 16) := by
   unfold OhneUmbruch16
   decide
 
 /-- Step one of the joint sequence: the `movdqu` load. -/
-theorem witS1 :
-    stepIntVec (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) witT0
-      basisHw witBereit basisCpu basisKontrolle = some witT1 :=
-  stepIntVec_movdquLd (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) witT0
-    basisHw witBereit basisCpu basisKontrolle .xmm3 .rax 0
-    vecZeugenVektor (by decide) wit_gate rfl witLd
+theorem ivS1 :
+    stepIntVec (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) ivT0
+      basisHw ivBereit basisCpu basisKontrolle = some ivT1 :=
+  stepIntVec_movdquLd (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) ivT0
+    basisHw ivBereit basisCpu basisKontrolle .xmm3 .rax 0
+    vecZeugenVektor (by decide) iv_gate rfl ivLd
 
 /-- Step two of the joint sequence: the wrapping `paddb`. -/
-theorem witS2 :
-    stepIntVec (⟨.paddbRR .xmm3 .xmm4, 5⟩ : IntVecDec) witT1
-      basisHw witBereit basisCpu basisKontrolle = some witT2 :=
-  stepIntVec_paddb (⟨.paddbRR .xmm3 .xmm4, 5⟩ : IntVecDec) witT1
-    basisHw witBereit basisCpu basisKontrolle .xmm3 .xmm4 (by decide)
-    wit_gate rfl
+theorem ivS2 :
+    stepIntVec (⟨.paddbRR .xmm3 .xmm4, 5⟩ : IntVecDec) ivT1
+      basisHw ivBereit basisCpu basisKontrolle = some ivT2 :=
+  stepIntVec_paddb (⟨.paddbRR .xmm3 .xmm4, 5⟩ : IntVecDec) ivT1
+    basisHw ivBereit basisCpu basisKontrolle .xmm3 .xmm4 (by decide)
+    iv_gate rfl
 
 /-- Step three of the joint sequence: the `psllq` imm8 shift. -/
-theorem witS3 :
-    stepIntVec (⟨.psllqImm .xmm3 8, 6⟩ : IntVecDec) witT2
-      basisHw witBereit basisCpu basisKontrolle = some witT3 :=
-  stepIntVec_psllqImm (⟨.psllqImm .xmm3 8, 6⟩ : IntVecDec) witT2
-    basisHw witBereit basisCpu basisKontrolle .xmm3 8 (by decide)
-    wit_gate rfl
+theorem ivS3 :
+    stepIntVec (⟨.psllqImm .xmm3 8, 6⟩ : IntVecDec) ivT2
+      basisHw ivBereit basisCpu basisKontrolle = some ivT3 :=
+  stepIntVec_psllqImm (⟨.psllqImm .xmm3 8, 6⟩ : IntVecDec) ivT2
+    basisHw ivBereit basisCpu basisKontrolle .xmm3 8 (by decide)
+    iv_gate rfl
 
 /-- Step four of the joint sequence: the `movdqa` store. -/
-theorem witS4 :
-    stepIntVec (⟨.movdqaSt .rax .xmm3 16, 9⟩ : IntVecDec) witT3
-      basisHw witBereit basisCpu basisKontrolle = some witT4 := by
-  have hwr : vecWrite witT3.kern.speicher
-      (effAddr witT3.kern .rax 16) (witT3.xmm .xmm3) = some witM4 := by
+theorem ivS4 :
+    stepIntVec (⟨.movdqaSt .rax .xmm3 16, 9⟩ : IntVecDec) ivT3
+      basisHw ivBereit basisCpu basisKontrolle = some ivT4 := by
+  have hwr : vecWrite ivT3.kern.speicher
+      (effAddr ivT3.kern .rax 16) (ivT3.xmm .xmm3) = some ivM4 := by
     unfold vecWrite
-    simp only [witHs1, witHs2]
+    simp only [ivHs1, ivHs2]
   exact stepIntVec_movdqaSt (⟨.movdqaSt .rax .xmm3 16, 9⟩ : IntVecDec)
-    witT3 basisHw witBereit basisCpu basisKontrolle .rax .xmm3 16
-    witM4 (by decide) wit_gate rfl witGp hwr
+    ivT3 basisHw ivBereit basisCpu basisKontrolle .rax .xmm3 16
+    ivM4 (by decide) iv_gate rfl ivGp hwr
 
 /-- The vector store behind step four. -/
-theorem witHwr : vecWrite witT3.kern.speicher
-    (effAddr witT3.kern .rax 16) (witT3.xmm .xmm3) = some witM4 := by
+theorem ivHwr : vecWrite ivT3.kern.speicher
+    (effAddr ivT3.kern .rax 16) (ivT3.xmm .xmm3) = some ivM4 := by
   unfold vecWrite
-  simp only [witHs1, witHs2]
+  simp only [ivHs1, ivHs2]
 
 /-- The neighboring frame byte past the store is unchanged. -/
-theorem witNachbar32 :
-    witT4.kern.speicher.bytes (natAdresse 32) =
-      witT0.kern.speicher.bytes (natAdresse 32) := by
+theorem ivNachbar32 :
+    ivT4.kern.speicher.bytes (natAdresse 32) =
+      ivT0.kern.speicher.bytes (natAdresse 32) := by
   have hau1 : ∀ k : Nat, k < 8 → natAdresse 32 ≠
-      addrOff (effAddr witT3.kern .rax 16) k := by
+      addrOff (effAddr ivT3.kern .rax 16) k := by
     decide
   have hau2 : ∀ k : Nat, k < 8 → natAdresse 32 ≠
-      addrOff (vecHiAddr (effAddr witT3.kern .rax 16)) k := by
+      addrOff (vecHiAddr (effAddr ivT3.kern .rax 16)) k := by
     decide
-  have hframe := vecWrite_rahmen witT3.kern.speicher witM4a witM4
-    (effAddr witT3.kern .rax 16) (natAdresse 32)
-    (witT3.xmm .xmm3) witHs1 witHs2 hau1 hau2
-  have hspeicher : witT3.kern.speicher = vecZeugenM2 := rfl
+  have hframe := vecWrite_rahmen ivT3.kern.speicher ivM4a ivM4
+    (effAddr ivT3.kern .rax 16) (natAdresse 32)
+    (ivT3.xmm .xmm3) ivHs1 ivHs2 hau1 hau2
+  have hspeicher : ivT3.kern.speicher = vecZeugenM2 := rfl
   rw [hspeicher] at hframe
-  have hspeicher4 : witT4.kern.speicher = witM4 := rfl
-  have hspeicher0 : witT0.kern.speicher = vecZeugenM2 := rfl
+  have hspeicher4 : ivT4.kern.speicher = ivM4 := rfl
+  have hspeicher0 : ivT0.kern.speicher = vecZeugenM2 := rfl
   rw [hspeicher4, hspeicher0]
   exact hframe
 
 /-- The sentinel XMM register survives the whole sequence. -/
-theorem witXmm7 : witT4.xmm .xmm7 = witT0.xmm .xmm7 := by
-  have f1 : witT1.xmm .xmm7 = witT0.xmm .xmm7 :=
+theorem ivXmm7 : ivT4.xmm .xmm7 = ivT0.xmm .xmm7 := by
+  have f1 : ivT1.xmm .xmm7 = ivT0.xmm .xmm7 :=
     stepIntVec_movdquLd_fremd
-      (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) witT0 witT1
-      basisHw witBereit basisCpu basisKontrolle .xmm3 .xmm7 .rax 0
-      vecZeugenVektor (by decide) wit_gate rfl witLd witS1
+      (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) ivT0 ivT1
+      basisHw ivBereit basisCpu basisKontrolle .xmm3 .xmm7 .rax 0
+      vecZeugenVektor (by decide) iv_gate rfl ivLd ivS1
       (by decide)
-  have f2 : witT2.xmm .xmm7 = witT1.xmm .xmm7 :=
+  have f2 : ivT2.xmm .xmm7 = ivT1.xmm .xmm7 :=
     stepIntVec_paddb_fremd
-      (⟨.paddbRR .xmm3 .xmm4, 5⟩ : IntVecDec) witT1 witT2 basisHw
-      witBereit basisCpu basisKontrolle .xmm3 .xmm4 .xmm7 (by decide)
-      wit_gate rfl witS2 (by decide)
-  have f3 : witT3.xmm .xmm7 = witT2.xmm .xmm7 :=
+      (⟨.paddbRR .xmm3 .xmm4, 5⟩ : IntVecDec) ivT1 ivT2 basisHw
+      ivBereit basisCpu basisKontrolle .xmm3 .xmm4 .xmm7 (by decide)
+      iv_gate rfl ivS2 (by decide)
+  have f3 : ivT3.xmm .xmm7 = ivT2.xmm .xmm7 :=
     stepIntVec_psllqImm_fremd
-      (⟨.psllqImm .xmm3 8, 6⟩ : IntVecDec) witT2 witT3 basisHw
-      witBereit basisCpu basisKontrolle .xmm3 .xmm7 8 (by decide)
-      wit_gate rfl witS3 (by decide)
-  have f4 : witT4.xmm = witT3.xmm :=
+      (⟨.psllqImm .xmm3 8, 6⟩ : IntVecDec) ivT2 ivT3 basisHw
+      ivBereit basisCpu basisKontrolle .xmm3 .xmm7 8 (by decide)
+      iv_gate rfl ivS3 (by decide)
+  have f4 : ivT4.xmm = ivT3.xmm :=
     stepIntVec_movdqaSt_xmm
-      (⟨.movdqaSt .rax .xmm3 16, 9⟩ : IntVecDec) witT3 witT4 basisHw
-      witBereit basisCpu basisKontrolle .rax .xmm3 16 witM4 (by decide)
-      wit_gate rfl witGp witHwr witS4
+      (⟨.movdqaSt .rax .xmm3 16, 9⟩ : IntVecDec) ivT3 ivT4 basisHw
+      ivBereit basisCpu basisKontrolle .rax .xmm3 16 ivM4 (by decide)
+      iv_gate rfl ivGp ivHwr ivS4
   rw [f4, f3, f2, f1]
 
 /-- The flags survive the whole sequence. -/
-theorem witFlags : witT4.kern.flags = witT0.kern.flags := by
-  have g1 : witT1.kern.flags = witT0.kern.flags :=
+theorem ivFlags : ivT4.kern.flags = ivT0.kern.flags := by
+  have g1 : ivT1.kern.flags = ivT0.kern.flags :=
     stepIntVec_flags (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec)
-      witT0 witT1 basisHw witBereit basisCpu basisKontrolle
-      (by decide) wit_gate witS1
-  have g2 : witT2.kern.flags = witT1.kern.flags :=
+      ivT0 ivT1 basisHw ivBereit basisCpu basisKontrolle
+      (by decide) iv_gate ivS1
+  have g2 : ivT2.kern.flags = ivT1.kern.flags :=
     stepIntVec_flags (⟨.paddbRR .xmm3 .xmm4, 5⟩ : IntVecDec)
-      witT1 witT2 basisHw witBereit basisCpu basisKontrolle
-      (by decide) wit_gate witS2
-  have g3 : witT3.kern.flags = witT2.kern.flags :=
+      ivT1 ivT2 basisHw ivBereit basisCpu basisKontrolle
+      (by decide) iv_gate ivS2
+  have g3 : ivT3.kern.flags = ivT2.kern.flags :=
     stepIntVec_flags (⟨.psllqImm .xmm3 8, 6⟩ : IntVecDec)
-      witT2 witT3 basisHw witBereit basisCpu basisKontrolle
-      (by decide) wit_gate witS3
-  have g4 : witT4.kern.flags = witT3.kern.flags :=
+      ivT2 ivT3 basisHw ivBereit basisCpu basisKontrolle
+      (by decide) iv_gate ivS3
+  have g4 : ivT4.kern.flags = ivT3.kern.flags :=
     stepIntVec_flags (⟨.movdqaSt .rax .xmm3 16, 9⟩ : IntVecDec)
-      witT3 witT4 basisHw witBereit basisCpu basisKontrolle
-      (by decide) wit_gate witS4
+      ivT3 ivT4 basisHw ivBereit basisCpu basisKontrolle
+      (by decide) iv_gate ivS4
   exact g4.trans (g3.trans (g2.trans g1))
 
 /-- JOINT WITNESS: pinned canonical bytes decode with their
@@ -2038,20 +2038,20 @@ theorem intVec_joint_zeuge :
       d2.laenge + ([] : List Byte).length = bs2.length ∧
       d3.laenge + ([] : List Byte).length = bs3.length ∧
       d4.laenge + ([] : List Byte).length = bs4.length ∧
-      stepIntVec d1 witT0 basisHw witBereit basisCpu
+      stepIntVec d1 ivT0 basisHw ivBereit basisCpu
         basisKontrolle = some t1 ∧
-      stepIntVec d2 t1 basisHw witBereit basisCpu
+      stepIntVec d2 t1 basisHw ivBereit basisCpu
         basisKontrolle = some t2 ∧
-      stepIntVec d3 t2 basisHw witBereit basisCpu
+      stepIntVec d3 t2 basisHw ivBereit basisCpu
         basisKontrolle = some t3 ∧
-      stepIntVec d4 t3 basisHw witBereit basisCpu
+      stepIntVec d4 t3 basisHw ivBereit basisCpu
         basisKontrolle = some t4 ∧
       t4.kern.speicher.bytes (natAdresse 18) ≠
-        witT0.kern.speicher.bytes (natAdresse 18) ∧
+        ivT0.kern.speicher.bytes (natAdresse 18) ∧
       t4.kern.speicher.bytes (natAdresse 32) =
-        witT0.kern.speicher.bytes (natAdresse 32) ∧
-      t4.xmm .xmm7 = witT0.xmm .xmm7 ∧
-      t4.kern.flags = witT0.kern.flags := by
+        ivT0.kern.speicher.bytes (natAdresse 32) ∧
+      t4.xmm .xmm7 = ivT0.xmm .xmm7 ∧
+      t4.kern.flags = ivT0.kern.flags := by
   refine ⟨encodeIntVec (.movdquLd .xmm3 .rax 0),
     encodeIntVec (.paddbRR .xmm3 .xmm4),
     encodeIntVec (.psllqImm .xmm3 8),
@@ -2060,7 +2060,7 @@ theorem intVec_joint_zeuge :
     (⟨.paddbRR .xmm3 .xmm4, 5⟩ : IntVecDec),
     (⟨.psllqImm .xmm3 8, 6⟩ : IntVecDec),
     (⟨.movdqaSt .rax .xmm3 16, 9⟩ : IntVecDec),
-    witT1, witT2, witT3, witT4,
+    ivT1, ivT2, ivT3, ivT4,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact roundtrip_movdquLd .xmm3 .rax 0 []
   · exact roundtrip_paddb .xmm3 .xmm4 []
@@ -2070,14 +2070,14 @@ theorem intVec_joint_zeuge :
   · rfl
   · rfl
   · rfl
-  · exact witS1
-  · exact witS2
-  · exact witS3
-  · exact witS4
+  · exact ivS1
+  · exact ivS2
+  · exact ivS3
+  · exact ivS4
   · decide
-  · exact witNachbar32
-  · exact witXmm7
-  · exact witFlags
+  · exact ivNachbar32
+  · exact ivXmm7
+  · exact ivFlags
 
 /-! ## 18. Fetched-byte pin and concrete refusals.
 
@@ -2088,7 +2088,7 @@ theorem intVec_joint_zeuge :
   registers, malformed neighbors and overlapping footprints. -/
 
 /-- Pinned code bytes: the 5-byte PADDB encoding, then zeros. -/
-def witCodeBytes (a : Adresse) : Byte :=
+def ivCodeBytes (a : Adresse) : Byte :=
   if a.toNat = 0 then natByte 64
   else if a.toNat = 1 then natByte 102
   else if a.toNat = 2 then natByte 15
@@ -2097,21 +2097,21 @@ def witCodeBytes (a : Adresse) : Byte :=
   else BitVec.ofNat 8 0
 
 /-- Pinned code memory: the code bytes, fully executable. -/
-def witCodeMem : Speicher :=
-  { vecZeugenSpeicher with bytes := witCodeBytes, ausfuehrbar := fun _ => true }
+def ivCodeMem : Speicher :=
+  { vecZeugenSpeicher with bytes := ivCodeBytes, ausfuehrbar := fun _ => true }
 
 /-- Pinned fetch state: RIP zero over the code memory. -/
-def witCodeT : FpZustand :=
+def ivCodeT : FpZustand :=
   ⟨{ register := fun _ => 0
      flags := ⟨false, false, none, false, false, false⟩
      rip := 0
-     speicher := witCodeMem },
+     speicher := ivCodeMem },
    fun _ => 0, kontextReset⟩
 
 /-- FETCHED PIN: actual code bytes fetch to the PADDB row with ten
     trailing bytes of rest. -/
 theorem intVec_fetch_pin :
-    fetchIntVec witCodeT (geholt witCodeT.kern) =
+    fetchIntVec ivCodeT (geholt ivCodeT.kern) =
       some ((⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec),
         List.replicate 10 (BitVec.ofNat 8 0)) := by
   decide
@@ -2119,35 +2119,35 @@ theorem intVec_fetch_pin :
 /-- FETCHED BRIDGE PIN: the fetched byte step IS the selected step. -/
 theorem intVec_fetch_bridge_pin :
     ∃ t' : FpZustand,
-      intVecByteschritt witCodeT basisHw witBereit basisCpu
+      intVecByteschritt ivCodeT basisHw ivBereit basisCpu
           basisKontrolle = some t' ∧
         stepIntVec (⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec)
-            witCodeT basisHw witBereit basisCpu
+            ivCodeT basisHw ivBereit basisCpu
             basisKontrolle = some t' := by
-  have hf : fetchIntVec witCodeT (geholt witCodeT.kern) =
+  have hf : fetchIntVec ivCodeT (geholt ivCodeT.kern) =
       some ((⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec),
         List.replicate 10 (BitVec.ofNat 8 0)) := by
     decide
   have hs : stepIntVec (⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec)
-      witCodeT basisHw witBereit basisCpu basisKontrolle =
-      some { witCodeT with kern := { witCodeT.kern with rip := ripNach witCodeT.kern.rip 5 }, xmm := xmmSet witCodeT.xmm .xmm0 (vecAdd .b8 (witCodeT.xmm .xmm0) (witCodeT.xmm .xmm1)) } :=
-    stepIntVec_paddb (⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec) witCodeT
-      basisHw witBereit basisCpu basisKontrolle .xmm0 .xmm1
-      (by decide) wit_gate rfl
+      ivCodeT basisHw ivBereit basisCpu basisKontrolle =
+      some { ivCodeT with kern := { ivCodeT.kern with rip := ripNach ivCodeT.kern.rip 5 }, xmm := xmmSet ivCodeT.xmm .xmm0 (vecAdd .b8 (ivCodeT.xmm .xmm0) (ivCodeT.xmm .xmm1)) } :=
+    stepIntVec_paddb (⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec) ivCodeT
+      basisHw ivBereit basisCpu basisKontrolle .xmm0 .xmm1
+      (by decide) iv_gate rfl
   refine ⟨_, intVec_fetch_bridge _ _ _ _ _ _ _ _ hf hs, hs⟩
 
 /-- SATURATE, NOT MASK, AT STEP LEVEL: imm8 count 64 on the nonzero
     pattern zeroes the destination (a masked count would shift by
     zero and keep it). -/
 theorem intVec_neg_satt_null :
-    stepIntVec (⟨.psllqImm .xmm4 64, 6⟩ : IntVecDec) witT0 basisHw
-      witBereit basisCpu basisKontrolle =
-      some { witT0 with kern := { witT0.kern with rip := ripNach witT0.kern.rip 6 }, xmm := xmmSet witT0.xmm .xmm4 0 } := by
+    stepIntVec (⟨.psllqImm .xmm4 64, 6⟩ : IntVecDec) ivT0 basisHw
+      ivBereit basisCpu basisKontrolle =
+      some { ivT0 with kern := { ivT0.kern with rip := ripNach ivT0.kern.rip 6 }, xmm := xmmSet ivT0.xmm .xmm4 0 } := by
   have h := stepIntVec_psllqImm
-    (⟨.psllqImm .xmm4 64, 6⟩ : IntVecDec) witT0 basisHw witBereit
-    basisCpu basisKontrolle .xmm4 64 (by decide) wit_gate rfl
-  have hsatt : vecShlQ (witT0.xmm .xmm4) 64 = 0 := by
-    have hx : witT0.xmm .xmm4 = witX4 := rfl
+    (⟨.psllqImm .xmm4 64, 6⟩ : IntVecDec) ivT0 basisHw ivBereit
+    basisCpu basisKontrolle .xmm4 64 (by decide) iv_gate rfl
+  have hsatt : vecShlQ (ivT0.xmm .xmm4) 64 = 0 := by
+    have hx : ivT0.xmm .xmm4 = ivX4 := rfl
     rw [hx]
     exact vecShlQ_satt_null _ _ (by decide)
   rw [hsatt] at h
@@ -2155,78 +2155,78 @@ theorem intVec_neg_satt_null :
 
 /-- The saturate witness operand is nonzero (the test is not vacuous:
     masked semantics would keep it). -/
-theorem intVec_neg_satt_operand : witT0.xmm .xmm4 ≠ (0 : Vektor) := by
+theorem intVec_neg_satt_operand : ivT0.xmm .xmm4 ≠ (0 : Vektor) := by
   decide
 
 /-- ALIGNMENT: a `movdqa` store eight past the boundary refuses with
     the #GP classification (the decoder accepts these bytes; the
     step refuses them). -/
 theorem intVec_neg_ausrichtung :
-    stepIntVec (⟨.movdqaSt .rax .xmm3 8, 9⟩ : IntVecDec) witT0
-      basisHw witBereit basisCpu basisKontrolle = none :=
+    stepIntVec (⟨.movdqaSt .rax .xmm3 8, 9⟩ : IntVecDec) ivT0
+      basisHw ivBereit basisCpu basisKontrolle = none :=
   stepIntVec_movdqaSt_gp
-    (⟨.movdqaSt .rax .xmm3 8, 9⟩ : IntVecDec) witT0 basisHw
-    witBereit basisCpu basisKontrolle .rax .xmm3 8 (by decide)
-    wit_gate rfl (by decide)
+    (⟨.movdqaSt .rax .xmm3 8, 9⟩ : IntVecDec) ivT0 basisHw
+    ivBereit basisCpu basisKontrolle .rax .xmm3 8 (by decide)
+    iv_gate rfl (by decide)
 
 /-- Read-only memory for the permission negatives. -/
-def witMemRO : Speicher :=
+def ivMemRO : Speicher :=
   { vecZeugenSpeicher with schreibbar := fun _ => false }
 
 /-- Write-only-blind memory for the permission negatives. -/
-def witMemWO : Speicher :=
+def ivMemWO : Speicher :=
   { vecZeugenSpeicher with lesbar := fun _ => false }
 
 /-- Read-only witness state for the store permission negative. -/
-def witTRO : FpZustand :=
-  { witT0 with kern := { witT0.kern with speicher := witMemRO } }
+def ivTRO : FpZustand :=
+  { ivT0 with kern := { ivT0.kern with speicher := ivMemRO } }
 
 /-- Write-only-blind witness state for the load permission negative. -/
-def witTWO : FpZustand :=
-  { witT0 with kern := { witT0.kern with speicher := witMemWO } }
+def ivTWO : FpZustand :=
+  { ivT0 with kern := { ivT0.kern with speicher := ivMemWO } }
 
 /-- PERMISSION, STORE: a `movdqa` store without write permission
     refuses (the #GP classification passes; the chunk write fails). -/
 theorem intVec_neg_schreibrecht :
-    stepIntVec (⟨.movdqaSt .rax .xmm3 0, 9⟩ : IntVecDec) witTRO
-      basisHw witBereit basisCpu basisKontrolle = none := by
-  have hgp : vektorGpFehler (effAddr witTRO.kern .rax 0)
+    stepIntVec (⟨.movdqaSt .rax .xmm3 0, 9⟩ : IntVecDec) ivTRO
+      basisHw ivBereit basisCpu basisKontrolle = none := by
+  have hgp : vektorGpFehler (effAddr ivTRO.kern .rax 0)
       .ausgerichtet = false := by
     decide
-  have hwr : vecWrite witMemRO (effAddr witTRO.kern .rax 0)
-      (witTRO.xmm .xmm3) = none := by
-    have h1 : write64 witMemRO (effAddr witTRO.kern .rax 0)
-        (vLo (witTRO.xmm .xmm3)) = none := by
+  have hwr : vecWrite ivMemRO (effAddr ivTRO.kern .rax 0)
+      (ivTRO.xmm .xmm3) = none := by
+    have h1 : write64 ivMemRO (effAddr ivTRO.kern .rax 0)
+        (vLo (ivTRO.xmm .xmm3)) = none := by
       unfold write64
       exact if_neg (by decide)
     unfold vecWrite
     rw [h1]
   exact stepIntVec_movdqaSt_speicher
-    (⟨.movdqaSt .rax .xmm3 0, 9⟩ : IntVecDec) witTRO
-    basisHw witBereit basisCpu basisKontrolle .rax .xmm3 0
-    (by decide) wit_gate rfl hgp hwr
+    (⟨.movdqaSt .rax .xmm3 0, 9⟩ : IntVecDec) ivTRO
+    basisHw ivBereit basisCpu basisKontrolle .rax .xmm3 0
+    (by decide) iv_gate rfl hgp hwr
 
 /-- PERMISSION, LOAD: a `movdqu` load without read permission refuses. -/
 theorem intVec_neg_leserecht :
-    stepIntVec (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) witTWO
-      basisHw witBereit basisCpu basisKontrolle = none := by
-  have hrd : vecRead witMemWO (effAddr witTWO.kern .rax 0) = none := by
-    have h1 : read64 witMemWO (effAddr witTWO.kern .rax 0) = none := by
+    stepIntVec (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) ivTWO
+      basisHw ivBereit basisCpu basisKontrolle = none := by
+  have hrd : vecRead ivMemWO (effAddr ivTWO.kern .rax 0) = none := by
+    have h1 : read64 ivMemWO (effAddr ivTWO.kern .rax 0) = none := by
       unfold read64
       exact if_neg (by decide)
     unfold vecRead
     rw [h1]
   exact stepIntVec_movdquLd_speicher
-    (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) witTWO
-    basisHw witBereit basisCpu basisKontrolle .xmm3 .rax 0
-    (by decide) wit_gate rfl hrd
+    (⟨.movdquLd .xmm3 .rax 0, 9⟩ : IntVecDec) ivTWO
+    basisHw ivBereit basisCpu basisKontrolle .xmm3 .rax 0
+    (by decide) iv_gate rfl hrd
 
 /-- FEATURE GATE: no silicon SSE2 refuses every selected row. -/
 theorem intVec_neg_gate :
-    stepIntVec (⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec) witT0
-      basisHw witBereit ⟨false, false⟩ basisKontrolle = none :=
+    stepIntVec (⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec) ivT0
+      basisHw ivBereit ⟨false, false⟩ basisKontrolle = none :=
   stepIntVec_profil_verweigert
-    (⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec) witT0 basisHw witBereit
+    (⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec) ivT0 basisHw ivBereit
     ⟨false, false⟩ basisKontrolle (by decide)
     (vektorLegacy_ohne_cpu _ _ _ _ rfl)
 
