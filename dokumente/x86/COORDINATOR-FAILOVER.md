@@ -1,4 +1,4 @@
-# Coordinator failover supervisor (lanes 620, closed 636)
+# Coordinator failover supervisor (lanes 620, closed 636, launcher repair 706)
 
 Automatic, explicitly authorised OpenCode coordinator takeover. The
 foreground coordinator owns the role and renews its heartbeat lease; this
@@ -13,6 +13,17 @@ Lane 636 closes the four operational gaps the independent review accepted
 as documented limits: inherited slot/role survival across supervisor
 crash, boundary locks held across termination, release only after the
 whole group drains, and churn-free dispatcher reservation.
+
+Lane 706 repairs the deployed launcher defect found after arming (27
+bounded fallback starts, each exit 1): the child argv now matches the
+managed contributor shape (`run --pure --model ... --agent build
+--format json --dir ... --title ... [--file ...] -- MESSAGE`) with a
+nonempty explicit positional coordination instruction even with stdin
+DEVNULL, a provider-config file pointer is forwarded only via
+`OPENCODE_CONFIG`, and quick CLI exits back off monotonically instead of
+resetting the counters at launch. No lifecycle safety from lanes 620/636
+is weakened; the module stays undeployed until exact independent review
+ 707 and fresh root scope approval match its exact blob.
 
 ## Files
 
@@ -43,7 +54,8 @@ python3 instrumente/coordinator-failover.py supervise \
   --opencode /path/to/opencode \
   --model opencode-go/muse-spark-1.3-contributor \
   --budget 43200 --timeout-seconds 300 --turn-seconds 3600 \
-  --prompt-file /path/to/fallback-coordinator.md
+  --prompt-file /path/to/fallback-coordinator.md \
+  --opencode-config /path/to/x86/opencode-go.json
 ```
 
 | Flag | Meaning |
@@ -60,7 +72,18 @@ python3 instrumente/coordinator-failover.py supervise \
 | `--turn-seconds` | Bound per fallback turn, at most 7200. Expiry waits for a safe boundary, then stops only the fallback tree. |
 | `--proc-root` | Process root (`/proc`; fixture root in tests). |
 | `--prompt-file` | Initial role prompt passed to the model as `--file` (the private control plane owns the text). |
+| `--opencode-config` | Existing provider-config FILE PATH pointer. Never read, copied or logged by this tool; forwarded to the fallback child only via `OPENCODE_CONFIG`. The managed coordinator sets it to its existing `opencode-go.json`. |
 | `--poll-seconds` | Lease poll interval (default 5). |
+
+The fallback child argv matches the managed contributor launch shape:
+`run --pure --model <model> --agent build --format json --dir
+<project-root> --title gabbro-fallback-coordinator [--file <prompt-file>]
+-- <message>`, with stdin DEVNULL, the project root as cwd, its own
+process group, and a nonempty explicit positional coordination
+instruction (`FALLBACK_MESSAGE`) even when a prompt file is attached --
+the public CLI vocabulary requires the message (MUST PROVIDE MESSAGE).
+No shell is used, no new model or provider is introduced, and no
+session database, config content or credential ever enters the argv.
 
 `heartbeat` is foreground-only: while an identified Muse fallback owns the
 role it writes `return-to-codex.json` and exits 2 instead of overwriting the
@@ -132,8 +155,15 @@ supervisor found the supervisor lock held.
   exceeds 600 s. Foreign registration markers are never touched and never
   pause coverage.
 - **Retry bounds.** Launch failures and turns that die within 60 s back off
-  exponentially (5 s doubling, capped at 300 s) while staying responsive to
-  pause/handback. No restart storm.
+  exponentially (`next_backoff`: doubling from 5 s, capped at 300 s) while
+  staying responsive to pause/handback. A successful `Popen` alone never
+  resets the counters: only 60 s of live coordination (the same window the
+  quick-exit path uses), or the explicit pause/handback/turn-expiry paths,
+  forget earlier quick-exit history. Consecutive `Popen`-success plus
+  immediate-nonzero-exit cycles therefore back off monotonically
+  (10 s, 20 s, ...) with no runaway launch/stop loop, while a fresh
+  foreground heartbeat or an explicit user pause cancels the pending retry
+  and restores only the managed dispatcher. No restart storm.
 - **Child scope.** The fallback starts as its own process group with a
   private session db (`<control>/sessions/fallback-coordinator.db`,
   inherited OpenCode config is never read) and SSD scratch
@@ -161,6 +191,27 @@ supervisor lives, record one foreground heartbeat, then spawn
 supervisor performs no lane edits, no reviews and no publication by itself;
 guarded publication stays behind the existing checked gates.
 
+### Proposed root argv/config integration (lane 706, minimal)
+
+Against the `.tmp/COORDINATOR.py` snapshot supplied with the task, the
+managed `run()` already builds the working contributor argv; the fallback
+wrapper passes the same shape plus the existing config pointer, without
+reading the config or broadening the wrapper. Exact change description
+(no broad overwrite):
+
+1. Model/prompt constants stay as they are (`OPENCODE`, `MODEL`,
+   `HERE/'opencode-go.json'`).
+2. The detached `supervise` spawn gains exactly two arguments:
+   `--opencode-config <HERE/'opencode-go.json'>` (the existing configured
+   location, supplied by root on deployment) and, when a fallback prompt
+   file exists, the existing `--prompt-file <file>`.
+3. Nothing else changes: the supervisor builds the managed-shape child
+   argv itself (`model_argv`: `--pure/--agent build/--format json/--dir/
+   --title/--file/-- MESSAGE`), forwards the pointer only via
+   `OPENCODE_CONFIG` in `model_env`, and never opens the file. A pointer
+   to the existing user-authorised config is not a new authentication
+   assumption.
+
 ## Authorisation scope
 
 The user authorises the coordinator role only, with guarded publication;
@@ -168,6 +219,15 @@ contributor no-push remains. Source edits stay delegated, reviews stay exact
 and independent, and no proof or test gate is weakened to make a run green.
 
 ## Limits
+
+- Lane 706 state: the supervisor source is armed and its fixture/mock
+  coverage is green (35 tests: strict-CLI, full-launch-path, env-pointer
+  and monotonic-backoff regressions included), but the repaired module is
+  NOT deployed and no successful operational takeover has occurred: root
+  diagnostics observed 27 bounded fallback starts, each exit 1, on the
+  previous argv. Do not claim useful takeover occurred. Deployment needs
+  exact independent review 707 plus fresh root scope approval matching the
+  exact blob.
 
 - A lost heartbeat during a long foreground tool run is indistinguishable
   from a dead foreground here. Mitigation is explicit foreground heartbeats

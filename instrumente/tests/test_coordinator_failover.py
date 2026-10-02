@@ -914,5 +914,333 @@ class PauseDistinctionTest(unittest.TestCase):
         self.assertEqual(self.f.read_lease().get("owner"), "codex")
 
 
+class LaunchMessageEnvBackoffTest(unittest.TestCase):
+    """Lane 706: deployed launcher defects (message, config pointer, backoff).
+
+    The deployed supervisor started 27 bounded fallback turns that each
+    exited 1: model_argv passed an attached --file but no positional
+    message (the CLI vocabulary is MUST PROVIDE MESSAGE), the managed
+    --pure/build/JSON/project shape was missing, no provider-config
+    pointer existed, and the launch branch reset failures/backoff before
+    the child proved productive so quick exits never backed off
+    monotonically. All fixtures stay inside the clone; the strict stubs
+    below mimic only the public CLI contract (never a real provider).
+    """
+
+    def setUp(self):
+        self.f = Fixture()
+
+    def tearDown(self):
+        try:
+            self.f.track_children_from_lease()
+            try:
+                gpid = self.f.read_lease().get("guardian_pid")
+            except (FileNotFoundError, ValueError, OSError):
+                gpid = None
+            if gpid:
+                try:
+                    os.killpg(int(gpid), signal.SIGKILL)
+                except (ProcessLookupError, PermissionError, OSError):
+                    pass
+                try:
+                    os.kill(int(gpid), signal.SIGKILL)
+                except (ProcessLookupError, PermissionError, OSError):
+                    pass
+        finally:
+            self.f.close()
+        self.f.reap()
+
+    # -- strict stub scripts (public CLI contract only) --------------------
+
+    STRICT_VALIDATE = (
+        "import sys, json, os\n"
+        "argv = sys.argv[1:]\n"
+        "ok = True\nwhy = []\n"
+        "for tok in ('--pure', '--model', '--agent', 'build',\n"
+        "            '--format', 'json', '--dir', '--title', '--'):\n"
+        "    if tok not in argv:\n"
+        "        ok = False\nwhy.append('missing:' + tok)\n"
+        "if '--' in argv:\n"
+        "    tail = argv[argv.index('--') + 1:]\n"
+        "    if not tail or not any(t.strip() for t in tail):\n"
+        "        ok = False\nwhy.append('empty-message')\n"
+        "rec = {'argv': argv, 'ok': ok, 'why': why}\n"
+    )
+
+    def _write_stub(self, name, log_name, mode):
+        """A fake model binary whose name carries both identity markers.
+
+        mode 'sleep': validate argv, log the attempt, sleep (a live child).
+        mode 'quickexit': validate argv, log attempt with timestamp, exit 1.
+        mode 'envdump': validate argv, dump the child env selection, sleep.
+        Any argv without the managed flags or without a nonempty
+        positional message after `--` exits 1 with MUST PROVIDE MESSAGE.
+        """
+        log = self.f.root / log_name
+        if mode == "envdump":
+            body = (
+                "env = {k: os.environ.get(k) for k in (\n"
+                "    'OPENCODE_CONFIG', 'OPENCODE_DB', 'TMPDIR',\n"
+                "    'GABBRO_COORDINATOR_ROLE', 'GABBRO_COORDINATOR_EPOCH',\n"
+                "    'OPENCODE_DISABLE_AUTOUPDATE')}\n"
+                f"open({str(log)!r}, 'a').write("
+                "json.dumps({'env': env, 'argv': argv}) + chr(10))\n"
+                "import time as _t\n_t.sleep(30)\n"
+            )
+        elif mode == "quickexit":
+            body = (
+                "import time as _t\n"
+                "rec['t'] = _t.time()\n"
+                f"open({str(log)!r}, 'a').write("
+                "json.dumps(rec) + chr(10))\n"
+                "sys.exit(1)\n"
+            )
+        else:
+            body = (
+                f"open({str(log)!r}, 'a').write("
+                "json.dumps(rec) + chr(10))\n"
+                "if os.environ.get('STUB_NO_SLEEP') == '1':\n"
+                "    sys.exit(0 if ok else 1)\n"
+                "if not ok:\n"
+                "    sys.stderr.write('error: MUST PROVIDE MESSAGE: '\n"
+                "                     'positional coordination instruction '\n"
+                "                     'required after --' + chr(10))\n"
+                "    sys.exit(1)\n"
+                "import time as _t\n_t.sleep(30)\n"
+            )
+        path = self.f.root / name
+        path.write_text("#!/usr/bin/env python3\n" + self.STRICT_VALIDATE
+                        + body)
+        path.chmod(0o755)
+        return path, log
+
+    def _attempts(self, log):
+        if not log.is_file():
+            return []
+        return [json.loads(line) for line in log.read_text().splitlines()]
+
+    def wait_for(self, pred, timeout=10.0):
+        end = time.monotonic() + timeout
+        while time.monotonic() < end:
+            try:
+                if pred():
+                    return True
+            except (FileNotFoundError, ValueError, OSError):
+                pass
+            time.sleep(0.05)
+        return False
+
+    def _status(self):
+        return json.loads(
+            (self.f.control / "failover-status.json").read_text())
+
+    # -- argv shape --------------------------------------------------------
+
+    def test_model_argv_matches_managed_shape_with_message(self):
+        args = self.f.args(prompt_file="/tmp/p.md")
+        argv = CF.model_argv(args)
+        self.assertEqual(argv[0], str(self.f.opencode))
+        self.assertEqual(
+            argv[1:13],
+            ["run", "--pure", "--model", MODEL, "--agent", "build",
+             "--format", "json", "--dir", str(self.f.proj), "--title",
+             "gabbro-fallback-coordinator"])
+        self.assertIn("--file", argv)
+        sep = argv.index("--")
+        self.assertGreater(sep, 12)
+        tail = argv[sep + 1:]
+        self.assertTrue(tail and all(t.strip() for t in tail),
+                        "positional coordination message must be nonempty")
+        self.assertEqual(tail, [CF.FALLBACK_MESSAGE])
+        # Without a prompt file the message is still present.
+        argv2 = CF.model_argv(self.f.args())
+        self.assertNotIn("--file", argv2)
+        self.assertEqual(argv2[-2:], ["--", CF.FALLBACK_MESSAGE])
+
+    def test_strict_stub_rejects_absent_message(self):
+        stub, _log = self._write_stub(
+            f"{OPENCODE_NAME}-{MODEL}-strict.sh", "strict.log", "sleep")
+        # The pre-706 shape (attached --file, no positional message) fails
+        # exactly like the deployed launcher did.
+        old = [str(stub), "run", "--model", MODEL,
+               "--title", "gabbro-fallback-coordinator",
+               "--file", "/tmp/prompt.md"]
+        out = subprocess.run(old, text=True, capture_output=True, timeout=30)
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("MUST PROVIDE MESSAGE", out.stderr)
+        # The repaired argv passes the same strict contract (no sleep).
+        env = dict(os.environ, STUB_NO_SLEEP="1")
+        new = CF.model_argv(self.f.args(opencode=str(stub)))
+        out2 = subprocess.run(new, text=True, capture_output=True, timeout=30,
+                              env=env, cwd=str(self.f.proj),
+                              stdin=subprocess.DEVNULL)
+        self.assertEqual(out2.returncode, 0, out2.stderr)
+
+    def test_full_launch_path_uses_message_through_subprocess(self):
+        stub, log = self._write_stub(
+            f"{OPENCODE_NAME}-{MODEL}-strict-live.sh", "live-argv.log",
+            "sleep")
+        self.f.stale_lease()
+        done = []
+        t = threading.Thread(target=lambda: done.append(
+            CF.run_supervise(self.f.args(budget=30.0, opencode=str(stub)))),
+            daemon=True)
+        t.start()
+        try:
+            self.assertTrue(self.wait_for(
+                lambda: self.f.read_lease().get("owner") == "muse",
+                timeout=10.0))
+            attempts = self._attempts(log)
+            self.assertEqual(len(attempts), 1)
+            self.assertTrue(attempts[0]["ok"], attempts[0]["why"])
+            argv = attempts[0]["argv"]
+            for tok in ("--pure", "--agent", "build", "--format", "json",
+                        "--dir", "--title", "--"):
+                self.assertIn(tok, argv)
+            self.assertEqual(argv[argv.index("--") + 1:],
+                             [CF.FALLBACK_MESSAGE])
+            self.f.track_children_from_lease()
+        finally:
+            (self.f.control / "pool-paused.json").write_text('{"x":1}\n')
+            t.join(timeout=20)
+            self.assertFalse(t.is_alive())
+            self.assertEqual(done, [0])
+
+    # -- provider-config pointer -------------------------------------------
+
+    def test_provider_config_pointer_forwarded_only_via_env(self):
+        stub, log = self._write_stub(
+            f"{OPENCODE_NAME}-{MODEL}-envdump.sh", "env.log", "envdump")
+        pointer = self.f.root / "opencode-go.json"
+        sentinel = '{"model":"muse-spark-testmodel-620"}\n'
+        pointer.write_text(sentinel)
+        self.f.stale_lease()
+        done = []
+        t = threading.Thread(target=lambda: done.append(
+            CF.run_supervise(self.f.args(
+                budget=30.0, opencode=str(stub),
+                opencode_config=str(pointer)))), daemon=True)
+        t.start()
+        try:
+            self.assertTrue(self.wait_for(
+                lambda: self.f.read_lease().get("owner") == "muse",
+                timeout=10.0))
+            rows = self._attempts(log)
+            self.assertEqual(len(rows), 1)
+            env = rows[0]["env"]
+            self.assertEqual(env["OPENCODE_CONFIG"], str(pointer))
+            self.assertTrue(env["OPENCODE_DB"].startswith(
+                str(self.f.control)))
+            self.assertTrue(env["TMPDIR"].startswith(str(self.f.pool)))
+            self.assertEqual(env["GABBRO_COORDINATOR_ROLE"], "muse")
+            self.assertTrue(env["GABBRO_COORDINATOR_EPOCH"])
+            # The pointer target is never read or copied: byte-identical,
+            # and its contents appear in no lease, status or log.
+            self.assertEqual(pointer.read_text(), sentinel)
+            blob = (self.f.control / "failover-status.json").read_text()
+            blob += json.dumps(self.f.read_lease())
+            blob += (self.f.control / "fallback-model.log").read_text()
+            self.assertNotIn("muse-spark-testmodel-620", blob)
+            self.f.track_children_from_lease()
+        finally:
+            (self.f.control / "pool-paused.json").write_text('{"x":1}\n')
+            t.join(timeout=20)
+            self.assertFalse(t.is_alive())
+            self.assertEqual(done, [0])
+
+    def test_no_pointer_leaves_parent_env_untouched(self):
+        had = "OPENCODE_CONFIG" in os.environ
+        parent_val = os.environ.get("OPENCODE_CONFIG")
+        got = CF.model_env(self.f.args(), "epoch-1")
+        self.assertEqual("OPENCODE_CONFIG" in got, had)
+        self.assertEqual(got.get("OPENCODE_CONFIG"), parent_val)
+
+    # -- backoff ------------------------------------------------------------
+
+    def test_next_backoff_monotonic_bounded(self):
+        self.assertEqual(CF.next_backoff(5.0), 10.0)
+        self.assertEqual(CF.next_backoff(10.0), 20.0)
+        self.assertEqual(CF.next_backoff(20.0), 40.0)
+        self.assertEqual(CF.next_backoff(150.0), 300.0)
+        self.assertEqual(CF.next_backoff(1000.0), 300.0)
+        self.assertEqual(CF.next_backoff(0.0), 10.0)
+
+    def test_consecutive_quick_exits_back_off_monotonically(self):
+        stub, log = self._write_stub(
+            f"{OPENCODE_NAME}-{MODEL}-quickexit.sh", "quick.log",
+            "quickexit")
+        self.f.stale_lease()
+        start = time.monotonic()
+        rc = CF.run_supervise(self.f.args(budget=16.0, opencode=str(stub)))
+        elapsed = time.monotonic() - start
+        self.assertEqual(rc, 0)
+        status = self._status()
+        # Two genuine launches ~10 s apart: backoff, not a storm.
+        self.assertEqual(status["bounded_turns_started"], 2)
+        attempts = self._attempts(log)
+        self.assertEqual(len(attempts), 2)
+        for rec in attempts:
+            self.assertTrue(rec["ok"], rec["why"])
+        gap = attempts[1]["t"] - attempts[0]["t"]
+        self.assertGreaterEqual(gap, 8.0)
+        self.assertLess(len(attempts), 4)
+        self.assertGreaterEqual(elapsed, 12.0)
+        self.assertIn("backing_off", status.get("note", ""))
+        self.assertGreaterEqual(status.get("consecutive_failures", 0), 1)
+        # Dispatcher stop/start stays 1:1 with launches: no churn.
+        calls = self.f.coord_calls()
+        self.assertTrue(all(c in ("coord dispatch_stop",
+                                  "coord dispatch_start") for c in calls))
+        self.assertEqual(len([c for c in calls
+                              if c == "coord dispatch_stop"]), 2)
+        self.assertEqual(len([c for c in calls
+                              if c == "coord dispatch_start"]), 2)
+
+    def test_fresh_foreground_cancels_retry_then_pause_exits_promptly(self):
+        import datetime
+        stub, log = self._write_stub(
+            f"{OPENCODE_NAME}-{MODEL}-quickexit2.sh", "quick2.log",
+            "quickexit")
+        self.f.stale_lease()
+        done = []
+        t = threading.Thread(target=lambda: done.append(
+            CF.run_supervise(self.f.args(budget=30.0, opencode=str(stub)))),
+            daemon=True)
+        t.start()
+        try:
+            self.assertTrue(self.wait_for(
+                lambda: self._status().get("consecutive_failures", 0) >= 1,
+                timeout=10.0))
+            # Fresh foreground heartbeat during backoff: the pending retry
+            # must not fire even after the backoff delay elapses.
+            hb = (datetime.datetime.now(datetime.timezone.utc)).isoformat()
+            (self.f.control / "orchestrator-lease.json").write_text(
+                json.dumps({"owner": "codex", "heartbeat": hb,
+                            "timeout_seconds": 300.0}))
+            time.sleep(12.0)
+            self.assertEqual(self._status()["bounded_turns_started"], 1)
+            self.assertEqual(len(self._attempts(log)), 1)
+            # User pause then exits promptly: well before any new retry.
+            begin = time.monotonic()
+            (self.f.control / "pool-paused.json").write_text('{"x":1}\n')
+            t.join(timeout=12)
+            waited = time.monotonic() - begin
+            self.assertFalse(t.is_alive())
+            self.assertLess(waited, 8.0)
+            self.assertEqual(done, [0])
+            self.assertEqual(self._status()["status"], "paused_no_takeover")
+            self.assertEqual(self._status()["bounded_turns_started"], 1)
+            calls = self.f.coord_calls()
+            self.assertTrue(all(c in ("coord dispatch_stop",
+                                      "coord dispatch_start") for c in calls))
+            stops = [c for c in calls if c == "coord dispatch_stop"]
+            starts = [c for c in calls if c == "coord dispatch_start"]
+            self.assertGreaterEqual(len(starts), len(stops))
+        finally:
+            if t.is_alive():
+                (self.f.control / "pool-paused.json").write_text('{"x":1}\n')
+                t.join(timeout=15)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

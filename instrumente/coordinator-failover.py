@@ -37,6 +37,10 @@ def parse_args(argv=None):
     p.add_argument("--turn-seconds", type=float, default=7200.0)
     p.add_argument("--proc-root", default="/proc")
     p.add_argument("--prompt-file", default=None)
+    p.add_argument("--opencode-config", default=None,
+                   help="Existing provider-config FILE PATH pointer. "
+                        "Never read or copied by this tool; forwarded to "
+                        "the fallback child only via OPENCODE_CONFIG.")
     p.add_argument("--poll-seconds", type=float, default=5.0)
     return p.parse_args(argv)
 
@@ -651,6 +655,12 @@ def model_env(args, epoch):
     env["GABBRO_COORDINATOR_ROLE"] = "muse"
     env["GABBRO_COORDINATOR_EPOCH"] = epoch
     env["OPENCODE_DISABLE_AUTOUPDATE"] = "1"
+    # Pointer only: the configured provider file is never opened, read,
+    # copied or logged here. The managed coordinator passes its existing
+    # opencode-go.json location; the child receives it via the environment.
+    opencode_config = getattr(args, "opencode_config", None)
+    if opencode_config:
+        env["OPENCODE_CONFIG"] = str(opencode_config)
     env["OPENCODE_DB"] = str(
         Path(args.control_dir) / "sessions" / "fallback-coordinator.db")
     scratch = Path(args.pool_dir) / "fallback-scratch"
@@ -662,11 +672,35 @@ def model_env(args, epoch):
     return env
 
 
+# Explicit positional coordination instruction for the fallback child.
+# The managed contributor run passes its instruction as a positional
+# message after `--` with stdin DEVNULL; the CLI vocabulary requires it
+# (MUST PROVIDE MESSAGE). This constant keeps the same contract for the
+# fallback: nonempty, explicit, no credentials, no shell interpolation.
+FALLBACK_MESSAGE = (
+    "FALLBACK COORDINATOR: the foreground heartbeat is stale. "
+    "Read the live registry for task ownership and next IDs, "
+    "coordinate within the shared 15-slot cap using only your own "
+    "reserved slot, hold safe-boundary locks across role transitions, "
+    "and hand back when the foreground returns."
+)
+
+
 def model_argv(args):
-    argv = [str(args.opencode), "run", "--model", str(args.model),
+    """Managed-shape launch argv: run --pure --model ... --agent build
+    --format json --dir ... --title ... [--file ...] -- MESSAGE."""
+    argv = [str(args.opencode), "run", "--pure",
+            "--model", str(args.model),
+            "--agent", "build",
+            "--format", "json",
+            "--dir", str(args.project_root),
             "--title", "gabbro-fallback-coordinator"]
     if args.prompt_file:
         argv += ["--file", str(args.prompt_file)]
+    message = FALLBACK_MESSAGE
+    assert isinstance(message, str) and message.strip(), \
+        "fallback coordination message must be nonempty"
+    argv += ["--", message]
     return argv
 
 
@@ -678,6 +712,17 @@ def write_status(control_dir, **fields):
 
 
 MAX_BACKOFF_SECS = 300.0
+
+# A freshly launched child has proved nothing yet: a turn counts as
+# productive only after 60 s of live coordination (the same window the
+# quick-exit path uses). Failure counters reset only then, or on the
+# explicit pause/handback/turn-expiry paths below -- never at launch.
+PRODUCTIVE_AFTER_SECS = 60.0
+
+
+def next_backoff(backoff):
+    """One exponential step, bounded. Monotonic in, bounded out."""
+    return min(max(float(backoff), 5.0) * 2.0, MAX_BACKOFF_SECS)
 
 
 def should_takeover(lease, paused, model_alive, age, timeout):
@@ -989,7 +1034,7 @@ def run_supervise(args):
                         retry_at = 0.0
                     elif quick:
                         failures += 1
-                        backoff = min(backoff * 2, MAX_BACKOFF_SECS)
+                        backoff = next_backoff(backoff)
                         retry_at = (time.monotonic() + backoff)
                         note = f"quick_exit_backing_off_{backoff:.0f}s"
                     else:
@@ -1002,6 +1047,15 @@ def run_supervise(args):
 
             if child is not None:
                 turn_age = time.monotonic() - child["turn_start"]
+                if (alive is not None
+                        and turn_age > PRODUCTIVE_AFTER_SECS
+                        and (failures != 0 or backoff != 5.0)):
+                    # The child proved productive: only now may earlier
+                    # quick-exit history be forgotten. A launch alone
+                    # never resets these counters.
+                    failures = 0
+                    backoff = 5.0
+                    retry_at = 0.0
                 stop_reason = None
                 if paused:
                     stop_reason = f"paused_by_{pause_name}"
@@ -1151,8 +1205,7 @@ def run_supervise(args):
                         role_fh = None
                         note = "role_held_by_other"
                         failures += 1
-                        backoff = min(max(backoff, 5.0) * 2,
-                                      MAX_BACKOFF_SECS)
+                        backoff = next_backoff(backoff)
                         retry_at = time.monotonic() + backoff
                         dispatcher_restore()
                     else:
@@ -1215,8 +1268,7 @@ def run_supervise(args):
                                     slot_fh.close()
                                     role_fh.close()
                                     failures += 1
-                                    backoff = min(backoff * 2,
-                                                  MAX_BACKOFF_SECS)
+                                    backoff = next_backoff(backoff)
                                     retry_at = (time.monotonic() + backoff)
                                     note = "launch_failed"
                                     dispatcher_restore()
@@ -1235,8 +1287,14 @@ def run_supervise(args):
                                     except Exception:
                                         gproc = None
                                     started += 1
-                                    failures = 0
-                                    backoff = 5.0
+                                    # The child has NOT yet proved
+                                    # productive: failures/backoff keep
+                                    # their history so consecutive
+                                    # immediate exits back off
+                                    # monotonically. They reset only
+                                    # after PRODUCTIVE_AFTER_SECS of
+                                    # live coordination, or on the
+                                    # pause/handback/turn-expiry paths.
                                     retry_at = 0.0
                                     begun = get_start_time(
                                         proc.pid, args.proc_root)
