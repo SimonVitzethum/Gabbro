@@ -186,7 +186,7 @@ theorem pipeline_loaded_ausgang_zeuge :
           ∃ σ' ρ', execBlock pwO 0 pwR pwSrc pwSigma pwEnv30 = .ok σ' ρ' ∧
             WorldRep (layoutVon piPs) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf pwCfg)) ∨
         (∃ σ' r, execBlock pwO 0 pwR pwSrc pwSigma pwEnv30 = .grund σ' r ∧
-          s'.rip = natAdresse (pwCfg.exitBase + r.val + 10) ∧
+          s'.rip = natAdresse (exitAdr pwCfg r.val + 10) ∧
           s'.register exitReg = intWort r.val ∧
           WorldRep (layoutVon piPs) s'.speicher σ'))) ∧
     (∃ n s', laufBytes n (piStart 70) = .weiter s' ∧ byteschritt s' = .verweigert ∧
@@ -194,7 +194,7 @@ theorem pipeline_loaded_ausgang_zeuge :
           ∃ σ' ρ', execBlock pwO 0 pwR pwSrc pwSigma pwEnv70 = .ok σ' ρ' ∧
             WorldRep (layoutVon piPs) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf pwCfg)) ∨
         (∃ σ' r, execBlock pwO 0 pwR pwSrc pwSigma pwEnv70 = .grund σ' r ∧
-          s'.rip = natAdresse (pwCfg.exitBase + r.val + 10) ∧
+          s'.rip = natAdresse (exitAdr pwCfg r.val + 10) ∧
           s'.register exitReg = intWort r.val ∧
           WorldRep (layoutVon piPs) s'.speicher σ'))) :=
   ⟨pipeline_loaded_ausgang .p48 piBild pwCfg piPs piEs pwCerts pwSrc pwBytes pi_validate
@@ -306,8 +306,8 @@ theorem imageOk_folgen_zeuge :
     (((⟨(), 0, (), 8192⟩ : Platz pwD).a + 8 ≤ pwCfg.codeBase ∨
         pwCfg.codeBase + pwBytes.length ≤ (⟨(), 0, (), 8192⟩ : Platz pwD).a) ∧
       ∀ g ∈ grundListe (optimise pwCerts pwSrc),
-        (⟨(), 0, (), 8192⟩ : Platz pwD).a + 8 ≤ pwCfg.exitBase + g ∨
-          pwCfg.exitBase + g + 10 ≤ (⟨(), 0, (), 8192⟩ : Platz pwD).a) ∧
+        (⟨(), 0, (), 8192⟩ : Platz pwD).a + 8 ≤ exitAdr pwCfg g ∨
+          exitAdr pwCfg g + 10 ≤ (⟨(), 0, (), 8192⟩ : Platz pwD).a) ∧
     LayoutSep (layoutVon piPs) ∧ WorldRep (layoutVon piPs) (ladung piBild) pwSigma :=
   ⟨imageOk_valX86 .p48 piBild pwCfg piPs piEs pwCerts pwSrc pwBytes pi_imageOk,
     imageOk_daten_getrennt .p48 piBild pwCfg piPs piEs pwCerts pwSrc pwBytes pi_imageOk _

@@ -479,7 +479,7 @@ def codeAbschnitt (c : PipeCfg) (bytes : List Byte) : Abschnitt :=
 def stubAbschnitte (c : PipeCfg) : Nat → List Nat → List Abschnitt
   | _, [] => []
   | off, g :: gs =>
-    { dateiOff := off, dateiLen := 10, vaddr := c.exitBase + g, memLen := 10,
+    { dateiOff := off, dateiLen := 10, vaddr := exitAdr c g, memLen := 10,
       lesbar := true, schreibbar := false, ausfuehrbar := true, ausr := 1 } ::
       stubAbschnitte c (off + 10) gs
 
@@ -523,7 +523,7 @@ def codeRegion (c : PipeCfg) (bytes : List Byte) : Region :=
 
 /-- The stub region of reason `g` as a target region. -/
 def stubRegion (c : PipeCfg) (g : Nat) : Region :=
-  { basis := c.exitBase + g, len := 10, lesbar := true, schreibbar := false,
+  { basis := exitAdr c g, len := 10, lesbar := true, schreibbar := false,
     ausfuehrbar := true }
 
 /-- THE IMAGE CHECK. Everything is RE-DECIDED from the candidate image,
@@ -553,8 +553,8 @@ def imageOk {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (p : P
     gs.all fun g => regionDisjunkt (stubRegion c g) (alsRegion e)) &&
   codeAtB m (natAdresse c.codeBase) bytes &&
   !m.ausfuehrbar (natAdresse (c.codeBase + bytes.length)) &&
-  gs.all (fun g => codeAtB m (natAdresse (c.exitBase + g)) (stubBytes g) &&
-    !m.ausfuehrbar (natAdresse (c.exitBase + g + 10))) &&
+  gs.all (fun g => codeAtB m (natAdresse (exitAdr c g)) (stubBytes g) &&
+    !m.ausfuehrbar (natAdresse (exitAdr c g + 10))) &&
   sepB ps &&
   platzOkB m ps &&
   bild.eintraege.contains c.codeBase
@@ -579,8 +579,8 @@ theorem imageOk_teile (p : Profil) (bild : Bild) (c : PipeCfg) (ps : List (Platz
     codeAtB (ladung bild) (natAdresse c.codeBase) bytes = true ∧
     (ladung bild).ausfuehrbar (natAdresse (c.codeBase + bytes.length)) = false ∧
     (∀ g ∈ grundListe (optimise certs src),
-      codeAtB (ladung bild) (natAdresse (c.exitBase + g)) (stubBytes g) = true ∧
-      (ladung bild).ausfuehrbar (natAdresse (c.exitBase + g + 10)) = false) ∧
+      codeAtB (ladung bild) (natAdresse (exitAdr c g)) (stubBytes g) = true ∧
+      (ladung bild).ausfuehrbar (natAdresse (exitAdr c g + 10)) = false) ∧
     sepB ps = true ∧ platzOkB (ladung bild) ps = true ∧
     c.codeBase ∈ bild.eintraege := by
   unfold imageOk at h
@@ -632,7 +632,7 @@ theorem imageOk_daten_getrennt (p : Profil) (bild : Bild) (c : PipeCfg) (ps : Li
     (q : Platz D) (hq : q ∈ ps) :
     (q.a + 8 ≤ c.codeBase ∨ c.codeBase + bytes.length ≤ q.a) ∧
       ∀ g ∈ grundListe (optimise certs src),
-        q.a + 8 ≤ c.exitBase + g ∨ c.exitBase + g + 10 ≤ q.a := by
+        q.a + 8 ≤ exitAdr c g ∨ exitAdr c g + 10 ≤ q.a := by
   obtain ⟨-, -, hin, hdis, -⟩ := imageOk_teile p bild c ps es certs src bytes h
   obtain ⟨e, he, hlo, hhi⟩ := hin q hq
   obtain ⟨hc, hs⟩ := hdis e he
@@ -708,9 +708,9 @@ theorem pipeline_refuses_loaded (p : Profil) (bild : Bild) (c : PipeCfg)
     (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (σ' : World D) (r : Fin V.gruende) (hsrc : execBlock O passes R src σ ρ = .grund σ' r) :
     ∃ n s1 s', laufBytes n (startZustand bild c reg fl) = .weiter s1 ∧
-      s1.rip = natAdresse (c.exitBase + r.val) ∧
+      s1.rip = natAdresse (exitAdr c r.val) ∧
       byteschritt s1 = .weiter s' ∧
-      s'.rip = natAdresse (c.exitBase + r.val + 10) ∧
+      s'.rip = natAdresse (exitAdr c r.val + 10) ∧
       s'.register exitReg = intWort r.val ∧
       WorldRep (layoutVon ps) s'.speicher σ' ∧
       laufBytes (n + 1) (startZustand bild c reg fl) = .weiter s' ∧
@@ -728,15 +728,15 @@ theorem pipeline_refuses_loaded (p : Profil) (bild : Bild) (c : PipeCfg)
     (startZustand bild c reg fl) (imageOk_codeAt p bild c ps es certs src bytes himg) rfl
     (imageOk_worldRep p bild c ps es certs src bytes himg σ hwelt) hE σ' r hsrc
   -- the stub is still in memory at the exit (it is never writable)
-  have hstub : CodeAt s1.speicher (natAdresse (c.exitBase + r.val)) (stubBytes r.val) :=
+  have hstub : CodeAt s1.speicher (natAdresse (exitAdr c r.val)) (stubBytes r.val) :=
     codeAt_lauf n _ s1 hrun _ _ (codeAtB_sound _ _ _ hstubB)
-  have hbs := byteschritt_im_code s1 (natAdresse (c.exitBase + r.val)) (stubBytes r.val) [] []
+  have hbs := byteschritt_im_code s1 (natAdresse (exitAdr c r.val)) (stubBytes r.val) [] []
     (stubBefehl r.val) hstub (by simp [stubBytes]) (by rw [hrip]; exact (addrOff_null _).symm)
   rw [schritt_movImm64 (kanon (stubBefehl r.val)) s1 exitReg (intWort r.val)
     (laengeOk_encode _) rfl] at hbs
   let s' := schrittRegister s1 (ripNach s1.rip (kanon (stubBefehl r.val)).laenge) s1.flags
     exitReg (intWort r.val)
-  have hrip' : s'.rip = natAdresse (c.exitBase + r.val + 10) := by
+  have hrip' : s'.rip = natAdresse (exitAdr c r.val + 10) := by
     show ripNach s1.rip 10 = _
     rw [hrip, ripNach_addrOff, addrOff_natAdresse]
   have hstop : byteschritt s' = .verweigert := by
@@ -772,7 +772,7 @@ theorem pipeline_loaded_ausgang (p : Profil) (bild : Bild) (c : PipeCfg)
           ∃ σ' ρ', execBlock O passes R src σ ρ = .ok σ' ρ' ∧
             WorldRep (layoutVon ps) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf c)) ∨
         (∃ σ' r, execBlock O passes R src σ ρ = .grund σ' r ∧
-          s'.rip = natAdresse (c.exitBase + r.val + 10) ∧
+          s'.rip = natAdresse (exitAdr c r.val + 10) ∧
           s'.register exitReg = intWort r.val ∧
           WorldRep (layoutVon ps) s'.speicher σ')) := by
   rcases pipeline_ausgang c (layoutVon ps) certs src bytes hval O passes R σ ρ with
