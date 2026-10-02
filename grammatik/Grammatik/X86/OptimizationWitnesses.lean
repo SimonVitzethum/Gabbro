@@ -15,7 +15,11 @@
   that would delete a read, an undecided or always-failing check, an
   unentailed `narrow`, signed division, a non-power-of-two, a possibly
   negative or overflowing operand, a float condition, a pipeline out of
-  order and a mislabelled certificate. Each is checked by computation.
+  order and a mislabelled certificate, a commuted product over a signed or
+  wrapping operand, a variable divisor, an over-wide mask or dividend, and
+  certificate paths into the wrong statement shape. Each is checked by
+  computation. Section 7 runs a rewrite THROUGH a loop body, with a
+  memory-changing loop run.
 -/
 import Grammatik.X86.OptimizationRules
 import Grammatik.X86.InvariantenOpt
@@ -223,6 +227,69 @@ theorem strength_refuses_overflow :
 theorem strength_refuses_wrong_k : checkStrength 2 yMul8 = none := by
   decide
 
+/-- `8 * y`: the commuted product (constant on the left). -/
+def mul8Y := Expr.mul (Expr.lit (D := wD) (Γ := [.int 0 100]) (Λ := []) 8) yVar
+
+/-- Positive probe: the commuted product is selected as the same shift. -/
+theorem strength_accepts_commuted : checkStrength 3 mul8Y = some (.shl 3) := by
+  decide
+
+/-- Every premise of `checkStrength_sound`, jointly, on the commuted
+    product: the shifted operand is the VARIABLE `y = 7`, not the constant. -/
+theorem checkStrength_sound_commuted_zeuge :
+    ∃ x, shiftedOperand wWorld0 mul8Y wWorld0 env7 = some x ∧ 0 ≤ x ∧ x < 2 ^ 64 ∧
+      intOf _ (eval wWorld0 mul8Y wWorld0 env7) = some (((TargetOp.shl 3).run (encodeNat x)).toNat : Int) :=
+  checkStrength_sound 3 mul8Y (.shl 3) (by decide) wWorld0 wWorld0 env7
+
+/-- The commuted product's operand really is `y = 7`, and its value `56`. -/
+theorem strength_commuted_operand :
+    shiftedOperand wWorld0 mul8Y wWorld0 env7 = some 7 ∧
+      intOf _ (eval wWorld0 mul8Y wWorld0 env7) = some 56 := by
+  decide
+
+/-- Every premise of `checkStrength_sound_zahlWort`, jointly: the shift
+    runs on the accepted representation `zahlWort` of the source value `7`. -/
+theorem checkStrength_sound_zahlWort_zeuge :
+    intOf _ (eval wWorld0 yMul8 wWorld0 env7) =
+      some (((TargetOp.shl 3).run (zahlWort (⟨7, by decide, by decide⟩ : Zahl 0 100))).toNat : Int) :=
+  checkStrength_sound_zahlWort 3 yMul8 (.shl 3) (by decide) wWorld0 wWorld0 env7 _ (by decide)
+
+/-- Every premise of `encodeNat_toNat`, jointly. -/
+theorem encodeNat_toNat_zeuge : ((encodeNat 7).toNat : Int) = 7 :=
+  encodeNat_toNat (by decide) (by decide)
+
+/-- Every premise of `shlW_encodeNat`, jointly. -/
+theorem shlW_encodeNat_zeuge : ((shlW (encodeNat 7) 3).toNat : Int) = 7 * 2 ^ 3 :=
+  shlW_encodeNat 3 (by decide) (by decide)
+
+/-- Poison: the commuted product over a possibly negative operand. -/
+theorem strength_refuses_commuted_signed :
+    checkStrength 3 (.mul (.lit 8) (.var .hier) : Expr wD [.int (-5) 5] [] _) = none := by
+  decide
+
+/-- Poison: the commuted product over an operand up to `2^62` may wrap. -/
+theorem strength_refuses_commuted_overflow :
+    checkStrength 3 (.mul (.lit 8) (.var .hier) : Expr wD [.int 0 (2 ^ 62)] [] _) = none := by
+  decide
+
+/-- Poison: a VARIABLE divisor is not a shift, whatever its range. -/
+theorem strength_refuses_variable_divisor :
+    checkStrength 2 (.div (by decide) (by decide) (.var .hier) (.var .hier) :
+      Expr wD [.int 1 4] [] _) = none := by
+  decide
+
+/-- Poison: a mask for `2^65` does not fit the 64-bit word. -/
+theorem strength_refuses_wide_mask :
+    checkStrength 65 (.rem (by decide) (by decide) yVar (.lit (2 ^ 65)) :
+      Expr wD [.int 0 100] [] _) = none := by
+  decide
+
+/-- Poison: a dividend whose range reaches `2^64` does not fit the word. -/
+theorem strength_refuses_wide_dividend :
+    checkStrength 2 (.div (by decide) (by decide) (.var .hier) (.lit 4) :
+      Expr wD [.int 0 (2 ^ 64)] [] _) = none := by
+  decide
+
 /-! ## 5. Joint witnesses for the statement / block layer
 
     All on `wP`, whose run writes the table (`wP_run`). -/
@@ -360,6 +427,103 @@ theorem pipeline_refuses_mislabel :
     applyPipeline [(.checks, cFold)] wP = none := by
   decide
 
+/-- Poison: an in-place condition rewrite that would delete a read. -/
+theorem checkCond_refuses_read :
+    applyBlock (.checkCond .foldBool)
+      (.pruefung (Expr.le slotRead (.lit 100)) (.leave rfl) .nil : Block wD wV true [] [] []) = none := by
+  decide
+
+/-- Poison: a bound value that is not a constant is not folded. -/
+theorem bindValue_refuses_variable :
+    applyBlock (.bindValue .foldInt)
+      (.bind (xVar (Γ := [])) .nil : Block wD wV true [.int 0 5] [] []) = none := by
+  decide
+
+/-- Poison: a `narrow` operand that is not a constant is not folded. -/
+theorem narrowValue_refuses_variable :
+    applyBlock (.narrowValue .foldInt)
+      (.narrow xVar 0 10 (.leave rfl) .nil : Block wD wV true [.int 0 5] [] []) = none := by
+  decide
+
+/-! ## 7. Rewrites inside loops and option branches
+
+    A `traverse` over the table whose body stores `2 + 3`: the certificate
+    reaches the store THROUGH the loop body. The loop's invariant is a
+    contract site and is never rewritten (no certificate exists for it). -/
+
+/-- The loop body: one store of a constant to fold. -/
+def loopBody (e : Expr wD [.index (wD.count ())] [] (wD.typ () ())) :
+    Block wD wV true [.index (wD.count ())] [] [] :=
+  .cons (store e) .nil
+
+/-- `traverse T { T.slot[0] = 2 + 3; }`. -/
+def wL : Block wD wV true [] [] [] := .cons (.traverse () .wahr (loopBody five)) .nil
+
+/-- The loop with the folded store. -/
+def wLOpt : Block wD wV true [] [] [] := .cons (.traverse () .wahr (loopBody fiveLit)) .nil
+
+/-- Fold inside the loop body. -/
+def cLoop : BlockCert := .head (.traverseBody (.head (.assignSlotValue .foldInt)))
+
+/-- Positive probe: the certificate reaches into the loop body. -/
+theorem loop_accepts : applyBlock cLoop wL = some wLOpt := rfl
+
+/-- Every premise of `applyBlock_sound`, jointly, through a loop body. -/
+theorem applyBlock_sound_loop_zeuge : BlockEquiv wL wLOpt :=
+  applyBlock_sound cLoop wL wLOpt loop_accepts
+
+/-- The loop run writes the table: the slot moves from `0` to `5`. -/
+theorem wL_run :
+    ∃ σ' ρ', execBlock wO 5 wR wL wWorld0 Env.nil = .ok σ' ρ' ∧ (σ'.slots () 0 ()).n = 5 :=
+  ⟨_, _, rfl, rfl⟩
+
+/-- The joint loop witness: accepted, same outcome, and a memory-changing run. -/
+theorem loop_zeuge :
+    applyBlock cLoop wL = some wLOpt ∧
+      execBlock wO 5 wR wLOpt wWorld0 Env.nil = execBlock wO 5 wR wL wWorld0 Env.nil ∧
+      (∃ σ' ρ', execBlock wO 5 wR wL wWorld0 Env.nil = .ok σ' ρ' ∧
+        (σ'.slots () 0 ()).n = 5 ∧ (wWorld0.slots () 0 ()).n = 0) := by
+  refine ⟨loop_accepts, applyBlock_sound_loop_zeuge wO 5 wR wWorld0 Env.nil, ?_⟩
+  obtain ⟨σ', ρ', h, h5⟩ := wL_run
+  exact ⟨σ', ρ', h, h5, wWorld0_slot⟩
+
+/-- `retry 2 until 1 <= 2 { T.slot[0] = 2 + 3; } overflow { }`. -/
+def wR2 : Block wD wV true [] [] [] :=
+  .cons (.retry 2 (.le (.lit 1) (.lit 2)) (.cons (store five) .nil) .nil) .nil
+
+/-- Positive probe: the retry condition folds (it reads nothing), and the
+    retry body's store folds, in two pipeline steps of the fold pass. -/
+theorem retry_accepts :
+    applyPipeline [(.fold, .head (.retryCond .foldBool)),
+      (.fold, .head (.retryBody (.head (.assignSlotValue .foldInt))))] wR2 =
+    some (.cons (.retry 2 .wahr (.cons (store fiveLit) .nil) .nil) .nil) := rfl
+
+/-- Every premise of `applyPipeline_sound`, jointly, through a retry loop. -/
+theorem applyPipeline_sound_retry_zeuge :
+    BlockEquiv wR2 (.cons (.retry 2 .wahr (.cons (store fiveLit) .nil) .nil) .nil) :=
+  applyPipeline_sound _ _ _ retry_accepts
+
+/-- An `on option` over `none`: the `none` branch stores `2 + 3`. -/
+def wOpt : Block wD wV true [] [] [] :=
+  .cons (.onOption (.none 1) .nil (.cons (store five) .nil)) .nil
+
+/-- Positive probe and soundness through the `none` branch. -/
+theorem optNone_zeuge :
+    applyBlock (.head (.optNoneBranch (.head (.assignSlotValue .foldInt)))) wOpt =
+      some (.cons (.onOption (.none 1) .nil (.cons (store fiveLit) .nil)) .nil) ∧
+    BlockEquiv wOpt (.cons (.onOption (.none 1) .nil (.cons (store fiveLit) .nil)) .nil) :=
+  ⟨rfl, applyBlock_sound (.head (.optNoneBranch (.head (.assignSlotValue .foldInt)))) _ _ rfl⟩
+
+/-- Poison: a loop-body path into a statement that is not a loop. -/
+theorem loopPath_refuses_wrong_shape :
+    applyBlock (.head (.traverseBody (.head (.assignSlotValue .foldInt)))) wOpt = none ∧
+      applyBlock (.head (.retryBody (.head (.assignSlotValue .foldInt)))) wL = none := by
+  decide
+
+/-- Poison: a loop rewrite filed under the wrong pass. -/
+theorem pipeline_refuses_loop_mislabel : applyPipeline [(.checks, cLoop)] wL = none := by
+  decide
+
 /-- The conservative route on a refused certificate is the input itself. -/
 theorem applyOrKeep_refused_keeps : applyOrKeep .dropCheck wP = wP := rfl
 
@@ -372,7 +536,10 @@ theorem applyOrKeep_refused_keeps : applyOrKeep .dropCheck wP = wP := rfl
    - The poison probes are the refusals the rules file claims (§10.2); they
      do not exhaust every wrong certificate (stale SSA versions, dropped
      ghost events, weakened orderings and atomic rereads belong to rules
-     that need the shared IR and do not exist yet).
+     that need effect summaries and lowering rows and do not exist yet).
+   - No `breaking` witness: `InvariantenOpt.wD` declares no invariant, so
+     a `breaking` statement cannot be built over it; the `breaking` arm is
+     covered by the generic `applyStmt_sound` only.
    - `strength_word_probe` checks the canonical word helpers on concrete
      values; no encoded instruction byte is involved.
 -/
@@ -421,5 +588,28 @@ theorem applyOrKeep_refused_keeps : applyOrKeep .dropCheck wP = wP := rfl
 #print axioms pipeline_refuses_order
 #print axioms pipeline_refuses_mislabel
 #print axioms applyOrKeep_refused_keeps
+#print axioms strength_accepts_commuted
+#print axioms checkStrength_sound_commuted_zeuge
+#print axioms strength_commuted_operand
+#print axioms checkStrength_sound_zahlWort_zeuge
+#print axioms encodeNat_toNat_zeuge
+#print axioms shlW_encodeNat_zeuge
+#print axioms strength_refuses_commuted_signed
+#print axioms strength_refuses_commuted_overflow
+#print axioms strength_refuses_variable_divisor
+#print axioms strength_refuses_wide_mask
+#print axioms strength_refuses_wide_dividend
+#print axioms checkCond_refuses_read
+#print axioms bindValue_refuses_variable
+#print axioms narrowValue_refuses_variable
+#print axioms loop_accepts
+#print axioms applyBlock_sound_loop_zeuge
+#print axioms wL_run
+#print axioms loop_zeuge
+#print axioms retry_accepts
+#print axioms applyPipeline_sound_retry_zeuge
+#print axioms optNone_zeuge
+#print axioms loopPath_refuses_wrong_shape
+#print axioms pipeline_refuses_loop_mislabel
 
 end Gabbro.Grammatik.X86.OptimizationWitnesses
