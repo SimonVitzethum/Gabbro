@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 18:45 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 18:46 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -311,6 +311,8 @@ Last ledger refresh: **2026-10-02 18:45 UTC**. This is an operational snapshot, 
 | 670 | Hardware completion: precise selected fault and exception transitions | Agent working | 671: scheduled | [task](lanes/670.md) |
 | 672 | Hardware completion: interrupts entry masking and trap hardware forms | Agent working | 673: scheduled | [task](lanes/672.md) |
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Agent working | 675: scheduled | [task](lanes/674.md) |
+| 676 | Hardware completion: port IO and device memory profiles | Scheduled | 677: scheduled | [task](lanes/676.md) |
+| 678 | Organise and audit complete essential hardware-model coverage | Scheduled | 679: scheduled | [task](lanes/678.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -753,6 +755,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **652**, Whole-word drain with real interleaved foreign accesses, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-652.md). <!-- x86-merged:652 -->
 - 2026-10-02: lane **653**, Independent exact review of 652, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-653.md). <!-- x86-merged:653 -->
 - 2026-10-02: publication batch checks passed for `1d087115`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-02: checked master `edac320c` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:edac320c43632ef46815f474f27892c95175025f -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
