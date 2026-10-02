@@ -457,3 +457,5 @@ import Grammatik.X86.SourceAssignmentLowering
 import Grammatik.X86.WordAccessGrouping
 import Grammatik.X86.FloatSourceObservations
 import Grammatik.X86.SourceAccessCompleteness
+import Grammatik.X86.OptimizationRules
+import Grammatik.X86.OptimizationWitnesses
