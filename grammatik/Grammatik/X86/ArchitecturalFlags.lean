@@ -976,6 +976,169 @@ theorem pushfqSchritt_fremd (a : ArchZustand) (b : Byte)
   have hd : pushfqByte [b] = none := by simp [pushfqByte, hb]
   simp only [pushfqSchritt, hd]
 
+/-- POPFQ success equation. -/
+theorem popfqSchritt_ok (a : ArchZustand) (bs : List Byte) (len : Nat)
+    (gesp : Wort)
+    (hdec : popfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (hrd : read64 a.kern.speicher (a.kern.register Register.rsp) =
+      some gesp) :
+    popfqSchritt a bs = some { kern := popfqKern a len gesp, roh := popfqNach a gesp, steuer := popfqSteuer a gesp } := by
+  simp only [popfqSchritt, popfqKern, popfqNach, popfqSteuer, hdec, hrd]
+  simp [hv]
+
+/-- POPFQ always clears RF (every Table 1-12 row). -/
+theorem popfqSchritt_rf (a : ArchZustand) (bs : List Byte) (len : Nat)
+    (nach : ArchZustand) (gesp : Wort)
+    (hdec : popfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (hrd : read64 a.kern.speicher (a.kern.register Register.rsp) =
+      some gesp)
+    (h : popfqSchritt a bs = some nach) :
+    rbit nach.roh 16 = false := by
+  have hok := popfqSchritt_ok a bs len gesp hdec hv hrd
+  rw [hok] at h
+  cases h
+  unfold popfqNach
+  rw [popfqWort_bit _ _ _ 16 (by decide)]
+  have hl : (popfqLaden a.steuer.cpl a.steuer.iopl).getLsbD 16 = false :=
+    popfqLaden_erhaelt _ _ _ (Or.inl rfl)
+  rw [hl]
+  simp
+
+/-- POPFQ preserves VM (every row: VM is never loaded). -/
+theorem popfqSchritt_vm (a : ArchZustand) (bs : List Byte) (len : Nat)
+    (nach : ArchZustand) (gesp : Wort)
+    (hdec : popfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (hrd : read64 a.kern.speicher (a.kern.register Register.rsp) =
+      some gesp)
+    (h : popfqSchritt a bs = some nach) :
+    rbit nach.roh 17 = rbit a.roh 17 := by
+  have hok := popfqSchritt_ok a bs len gesp hdec hv hrd
+  rw [hok] at h
+  cases h
+  unfold popfqNach
+  rw [popfqWort_bit _ _ _ 17 (by decide)]
+  have hl : (popfqLaden a.steuer.cpl a.steuer.iopl).getLsbD 17 = false :=
+    popfqLaden_erhaelt _ _ _ (Or.inr (Or.inl rfl))
+  rw [hl]
+  simp
+
+/-- POPFQ above IOPL keeps IF (control-state pin). -/
+theorem popfqSchritt_if_hoch (a : ArchZustand) (bs : List Byte)
+    (len : Nat) (nach : ArchZustand) (gesp : Wort)
+    (hdec : popfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (hrd : read64 a.kern.speicher (a.kern.register Register.rsp) =
+      some gesp)
+    (hlt : a.steuer.iopl < a.steuer.cpl)
+    (h : popfqSchritt a bs = some nach) :
+    rbit nach.roh 9 = rbit a.roh 9 := by
+  have hok := popfqSchritt_ok a bs len gesp hdec hv hrd
+  rw [hok] at h
+  cases h
+  unfold popfqNach
+  rw [popfqWort_bit _ _ _ 9 (by decide)]
+  have hl : (popfqLaden a.steuer.cpl a.steuer.iopl).getLsbD 9 = false := by
+    rw [popfqLaden_if]
+    have hneg : ¬(a.steuer.cpl = 0 ∨ a.steuer.cpl ≤ a.steuer.iopl) := by
+      omega
+    simp [hneg]
+  rw [hl]
+  simp
+
+/-- POPFQ at CPL 0 takes IF from the stack image. -/
+theorem popfqSchritt_if_null (a : ArchZustand) (bs : List Byte)
+    (len : Nat) (nach : ArchZustand) (gesp : Wort)
+    (hdec : popfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (hrd : read64 a.kern.speicher (a.kern.register Register.rsp) =
+      some gesp)
+    (hc0 : a.steuer.cpl = 0)
+    (h : popfqSchritt a bs = some nach) :
+    rbit nach.roh 9 = rbit gesp 9 := by
+  have hok := popfqSchritt_ok a bs len gesp hdec hv hrd
+  rw [hok] at h
+  cases h
+  unfold popfqNach
+  rw [popfqWort_bit _ _ _ 9 (by decide)]
+  have hl : (popfqLaden a.steuer.cpl a.steuer.iopl).getLsbD 9 = true := by
+    rw [popfqLaden_if, decide_eq_true (Or.inl hc0)]
+  rw [hl]
+  simp
+
+/-- POPFQ status bits come from the stack image on every row. -/
+theorem popfqSchritt_status (a : ArchZustand) (bs : List Byte)
+    (len : Nat) (nach : ArchZustand) (gesp : Wort)
+    (hdec : popfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (hrd : read64 a.kern.speicher (a.kern.register Register.rsp) =
+      some gesp)
+    (h : popfqSchritt a bs = some nach) (i : Nat)
+    (hs : i = 0 ∨ i = 2 ∨ i = 4 ∨ i = 6 ∨ i = 7 ∨ i = 11) :
+    rbit nach.roh i = rbit gesp i := by
+  have hok := popfqSchritt_ok a bs len gesp hdec hv hrd
+  rw [hok] at h
+  cases h
+  have h64 : i < 64 := by
+    rcases hs with rfl|rfl|rfl|rfl|rfl|rfl <;> decide
+  have hne : i ≠ 16 := by
+    rcases hs with rfl|rfl|rfl|rfl|rfl|rfl <;> decide
+  unfold popfqNach
+  rw [popfqWort_bit _ _ _ i h64]
+  have hl : (popfqLaden a.steuer.cpl a.steuer.iopl).getLsbD i = true :=
+    popfqLaden_status _ _ _ hs
+  rw [hl]
+  simp [hne]
+
+/-- POPFQ keeps CPL and VM in the control state. -/
+theorem popfqSchritt_steuer (a : ArchZustand) (bs : List Byte)
+    (len : Nat) (nach : ArchZustand) (gesp : Wort)
+    (hdec : popfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (hrd : read64 a.kern.speicher (a.kern.register Register.rsp) =
+      some gesp)
+    (h : popfqSchritt a bs = some nach) :
+    nach.steuer.cpl = a.steuer.cpl ∧ nach.steuer.vm = a.steuer.vm := by
+  have hok := popfqSchritt_ok a bs len gesp hdec hv hrd
+  rw [hok] at h
+  cases h
+  exact ⟨rfl, rfl⟩
+
+/-- POPFQ refuses in virtual-8086 mode below IOPL 3 (#GP). -/
+theorem popfqSchritt_v86 (a : ArchZustand)
+    (hvm : a.steuer.vm = true) (hio : a.steuer.iopl < 3) :
+    popfqSchritt a [popfqOp] = none := by
+  have hd : popfqByte [popfqOp] = some 1 := by simp [popfqByte]
+  have hg : (a.steuer.vm && decide (a.steuer.iopl < 3)) = true := by
+    simp [hvm, hio]
+  simp only [popfqSchritt, hd]
+  exact if_pos hg
+
+/-- POPFQ refuses a failed stack read. -/
+theorem popfqSchritt_lesefehler (a : ArchZustand) (bs : List Byte)
+    (len : Nat)
+    (hdec : popfqByte bs = some len)
+    (hv : (a.steuer.vm && decide (a.steuer.iopl < 3)) = false)
+    (hrd : read64 a.kern.speicher (a.kern.register Register.rsp) = none) :
+    popfqSchritt a bs = none := by
+  simp only [popfqSchritt, hdec, hrd]
+  simp [hv]
+
+/-- POPFQ refuses any other byte. -/
+theorem popfqSchritt_fremd (a : ArchZustand) (b : Byte)
+    (hb : b ≠ popfqOp) : popfqSchritt a [b] = none := by
+  have hd : popfqByte [b] = none := by simp [popfqByte, hb]
+  simp only [popfqSchritt, hd]
+
+/-- The pilot decoder refuses the PUSHFQ byte: the adapter never
+    shadows `Codec.decode`. -/
+theorem pushfq_fremd : decode [pushfqOp] = none := by decide
+
+/-- The pilot decoder refuses the POPFQ byte. -/
+theorem popfq_fremd : decode [popfqOp] = none := by decide
+
 /- CUTS:
     Skeleton plus raw word (§2) and nibble groundwork (§3 head):
     effect relation, PUSHFQ/POPFQ observers, consumer admission and
