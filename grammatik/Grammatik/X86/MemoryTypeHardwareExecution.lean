@@ -744,6 +744,41 @@ theorem maschineSchrittWeiter_rip (m1 : MmioMaschine) (l : Nat) :
     (maschineSchrittWeiter m1 l).kern.kern.rip =
       ripNach m1.kern.kern.rip l := rfl
 
+/-- The advance preserves the UC log. -/
+theorem maschineSchrittWeiter_ucLog (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).ucLog = m1.ucLog := rfl
+
+/-- The advance preserves RAM. -/
+theorem maschineSchrittWeiter_speicher (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.kern.speicher =
+      m1.kern.kern.speicher := rfl
+
+/-- The advance preserves flags. -/
+theorem maschineSchrittWeiter_flags (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.kern.flags = m1.kern.kern.flags :=
+  rfl
+
+/-- The advance preserves the register file. -/
+theorem maschineSchrittWeiter_register (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.kern.register =
+      m1.kern.kern.register := rfl
+
+/-- The advance preserves XMM. -/
+theorem maschineSchrittWeiter_xmm (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.xmm = m1.kern.xmm := rfl
+
+/-- The advance preserves the FP control word. -/
+theorem maschineSchrittWeiter_fp (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.fp = m1.kern.fp := rfl
+
+/-- The advance preserves pending WB stores. -/
+theorem maschineSchrittWeiter_pending (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).pending = m1.pending := rfl
+
+/-- The advance preserves the posted queue. -/
+theorem maschineSchrittWeiter_ausstehend (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).ausstehend = m1.ausstehend := rfl
+
 /-- One fetched UC-aware byte step: fetch from actual executable memory
     through the accepted unified decoder; GP load/store forms to UC take
     the device path; FP memory rows to UC refuse; everything else
@@ -870,5 +905,96 @@ theorem mmioByteschritt_fp_uc_verweigert (m : MmioMaschine)
   unfold mmioByteschritt
   rw [hf]
   simp [hu]
+
+/-- FETCHED STORE FACTS: RIP advances past the fetched length, the UC log
+    grows by the store event in program order, the posted queue grows by
+    the retired write, and RAM, flags, XMM, control word and the WB
+    buffer are preserved. -/
+theorem mmio_uc_speichern_fakten (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (base src : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m' : MmioMaschine)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.store64 base src disp, l⟩, rest))
+    (hz : breiteZugelassen hw bp .b64 = true)
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = true)
+    (hfw : imFenster (effAddr m.kern.kern base disp) 8 = true)
+    (h : mmioByteschritt m hw bp = .weiter m') :
+    m'.kern.kern.rip = ripNach m.kern.kern.rip l ∧
+      m'.ucLog = m.ucLog ++
+        [.schreibe (effAddr m.kern.kern base disp) .b64] ∧
+      m'.kern.kern.speicher = m.kern.kern.speicher ∧
+      m'.kern.kern.flags = m.kern.kern.flags ∧
+      m'.kern.xmm = m.kern.xmm ∧
+      m'.kern.fp = m.kern.fp ∧
+      m'.pending = m.pending ∧
+      m'.ausstehend = m.ausstehend ++ [⟨effAddr m.kern.kern base disp, Breite.b64, m.kern.kern.register src⟩] := by
+  have hacc := ucStoreZugriff_erfolg m hw bp .b64
+    (effAddr m.kern.kern base disp) (m.kern.kern.register src) hz hu hfw
+  have e := mmioByteschritt_uc_speichern m hw bp base src disp l rest _
+    hf hu hacc
+  rw [e] at h
+  cases h
+  obtain ⟨hpend, _, _, hkern, hlog, haus⟩ := ucStore_bypass m hw bp .b64
+    (effAddr m.kern.kern base disp) (m.kern.kern.register src) _ hacc
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [maschineSchrittWeiter_rip, hkern]
+  · rw [maschineSchrittWeiter_ucLog, hlog]
+  · rw [maschineSchrittWeiter_speicher, hkern]
+  · rw [maschineSchrittWeiter_flags, hkern]
+  · rw [maschineSchrittWeiter_xmm, hkern]
+  · rw [maschineSchrittWeiter_fp, hkern]
+  · rw [maschineSchrittWeiter_pending, hpend]
+  · rw [maschineSchrittWeiter_ausstehend, haus]
+
+/-- FETCHED LOAD FACTS: RIP advances past the fetched length, the
+    destination takes the architectural merge of the device answer, and
+    RAM, flags, XMM, control word, the WB buffer and the posted queue
+    are preserved. -/
+theorem mmio_uc_laden_fakten (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (dst base : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m' : MmioMaschine) (g' : Geraet)
+    (v : Wort)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.load64 dst base disp, l⟩, rest))
+    (hz : breiteZugelassen hw bp .b64 = true)
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = true)
+    (hfw : imFenster (effAddr m.kern.kern base disp) 8 = true)
+    (hp : ueberlapptPosted m.ausstehend (effAddr m.kern.kern base disp) 8 =
+      false)
+    (hgdev : geraetLiest m.geraet .b64
+      (geraetOff (effAddr m.kern.kern base disp)) = some (g', v))
+    (h : mmioByteschritt m hw bp = .weiter m') :
+    m'.kern.kern.rip = ripNach m.kern.kern.rip l ∧
+      m'.kern.kern.register dst =
+        mergeRegNarrow .b64 (m.kern.kern.register dst) v ∧
+      m'.ucLog = m.ucLog ++
+        [.lese (effAddr m.kern.kern base disp) .b64] ∧
+      m'.kern.kern.speicher = m.kern.kern.speicher ∧
+      m'.kern.kern.flags = m.kern.kern.flags ∧
+      m'.kern.xmm = m.kern.xmm ∧
+      m'.kern.fp = m.kern.fp ∧
+      m'.pending = m.pending ∧
+      m'.ausstehend = m.ausstehend := by
+  have hacc := ucLoadZugriff_erfolg m hw bp .b64 dst
+    (effAddr m.kern.kern base disp) g' v hz hu hfw hp hgdev
+  have e := mmioByteschritt_uc_laden m hw bp dst base disp l rest _ v
+    hf hu hacc
+  rw [e] at h
+  cases h
+  have hr := ucLoad_rahmen m hw bp .b64 dst
+    (effAddr m.kern.kern base disp) _ v hacc
+  obtain ⟨hram, hfl, hrip0, hxmm, hfp, hpend, haus, hlog⟩ := hr
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [maschineSchrittWeiter_rip, hrip0]
+  · rw [maschineSchrittWeiter_register]
+    show (maschineRegLaden m .b64 dst v).register dst = _
+    exact maschineRegLaden_gleich m .b64 dst v
+  · rw [maschineSchrittWeiter_ucLog, hlog]
+  · rw [maschineSchrittWeiter_speicher, hram]
+  · rw [maschineSchrittWeiter_flags, hfl]
+  · rw [maschineSchrittWeiter_xmm, hxmm]
+  · rw [maschineSchrittWeiter_fp, hfp]
+  · rw [maschineSchrittWeiter_pending, hpend]
+  · rw [maschineSchrittWeiter_ausstehend, haus]
 
 end Gabbro.Grammatik.X86
