@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 23:25 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 23:26 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -330,7 +330,7 @@ Last ledger refresh: **2026-10-02 23:25 UTC**. This is an operational snapshot, 
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
 | 710 | Optimizer rule library proof and scope review | Committed candidate; review/integration pending | 711: Agent working | [task](lanes/710.md) |
 | 712 | Compiler pipeline Lean source-to-byte proof review | Committed candidate; review/integration pending | 713: Committed candidate; review/integration pending | [task](lanes/712.md) |
-| 714 | Compiler ISA and instruction selection architecture review | Agent working | 715: scheduled | [task](lanes/714.md) |
+| 714 | Compiler ISA and instruction selection architecture review | Committed candidate; review/integration pending | 715: scheduled | [task](lanes/714.md) |
 | 716 | Rust compiler validation and ELF integration review | Committed candidate; review/integration pending | 717: Committed candidate; review/integration pending | [task](lanes/716.md) |
 | 718 | Unify accepted architectural final-byte family dispatch | Scheduled | 719: scheduled | [task](lanes/718.md) |
 | 720 | Connect real selected integer bytes to shared TSO execution | Scheduled | 721: scheduled | [task](lanes/720.md) |
@@ -340,6 +340,9 @@ Last ledger refresh: **2026-10-02 23:25 UTC**. This is an operational snapshot, 
 | 728 | Model actual IDT TSS descriptor and entry stack selection | Scheduled | 729: scheduled | [task](lanes/728.md) |
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Scheduled | 731: scheduled | [task](lanes/730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Scheduled | 733: scheduled | [task](lanes/732.md) |
+| 734 | Selected control registers and syscall MSR byte effects | Scheduled | 735: scheduled | [task](lanes/734.md) |
+| 736 | SSE and selected AVX context save restore effects | Scheduled | 737: scheduled | [task](lanes/736.md) |
+| 738 | Derive precise fault ordering across fetched instruction accesses | Scheduled | 739: scheduled | [task](lanes/738.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
