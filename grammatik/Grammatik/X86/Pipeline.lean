@@ -1234,6 +1234,285 @@ decreasing_by
     simp only [Block.cons.sizeOf_spec, Block.pruefung.sizeOf_spec]
     omega
 
+/-- THE ACCEPTOR EXCLUDES EVERY OTHER OUTCOME: a lowered block ends
+    normally or with the reason of a failed check -- never with a return,
+    `leave`/`next`, a logic stop (budget, range) or a hardware stop. This is
+    proved from the acceptor, not assumed. -/
+theorem senkBlock_ausgang (c : PipeCfg) (L : Layout D) (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (pos : Nat)
+    (prog : List Befehl) (h : senkBlock c L pos b = some prog) (σ : World D) (ρ : Env D Γ) :
+    (∃ σ' ρ', execBlock O passes R b σ ρ = .ok σ' ρ') ∨
+      (∃ σ' r, execBlock O passes R b σ ρ = .grund σ' r) := by
+  generalize hb0 : b = b0 at h
+  cases b0 with
+  | nil => exact Or.inl ⟨σ, ρ, rfl⟩
+  | cons st rest =>
+    simp only [senkBlock] at h
+    cases hs : senkStmt c L st with
+    | none => simp [hs] at h
+    | some p =>
+      simp only [hs] at h
+      cases hq : senkBlock c L (pos + (encodeAll p).length) rest with
+      | none => simp [hq] at h
+      | some q =>
+        cases st with
+        | assignSlot t f i e hw hL =>
+          exact senkBlock_ausgang c L O passes R rest _ q hq _ ρ
+        | _ => simp [senkStmt] at hs
+  | pruefung cnd sonst rest =>
+    simp only [senkBlock] at h
+    cases hs : senkPruef c pos cnd sonst with
+    | none => simp [hs] at h
+    | some p =>
+      simp only [hs] at h
+      cases hq : senkBlock c L (pos + (encodeAll p).length) rest with
+      | none => simp [hq] at h
+      | some q =>
+        cases sonst with
+        | retGrund r hΛ =>
+          show (∃ σ' ρ', (if wahr? (eval (σ.lese Λ cnd.orte) cnd (σ.lese Λ cnd.orte) ρ)
+              then execBlock O passes R rest (σ.lese Λ cnd.orte) ρ
+              else .grund (σ.lese Λ cnd.orte) r) = .ok σ' ρ') ∨
+            (∃ σ' r', (if wahr? (eval (σ.lese Λ cnd.orte) cnd (σ.lese Λ cnd.orte) ρ)
+              then execBlock O passes R rest (σ.lese Λ cnd.orte) ρ
+              else .grund (σ.lese Λ cnd.orte) r) = .grund σ' r')
+          split
+          · exact senkBlock_ausgang c L O passes R rest _ q hq _ ρ
+          · exact Or.inr ⟨_, r, rfl⟩
+        | _ => simp [senkPruef] at hs
+  | _ => simp [senkBlock] at h
+termination_by sizeOf b
+decreasing_by
+  all_goals
+    subst hb0
+    simp only [Block.cons.sizeOf_spec, Block.pruefung.sizeOf_spec]
+    omega
+
+/-! ## 9. The pipeline: optimise, lower, encode -- and the validator
+
+    The optimiser stage is the accepted certificate pipeline
+    (`applyPipeline`); a refused certificate list falls back to the
+    unchanged block (the conservative route, sound by reflexivity). The
+    validator RECOMPUTES everything from the source and the certificates:
+    the candidate bytes (untrusted, e.g. produced by Rust) must equal the
+    Lean encoding, decode back to exactly the Lean instruction list, and
+    keep every written slot out of the code region. -/
+
+/-- The optimiser stage with its conservative fallback. -/
+def optimise (certs : List (PassKind × BlockCert)) (b : Block D V l Γ Λ Λ') :
+    Block D V l Γ Λ Λ' :=
+  (applyPipeline certs b).getD b
+
+/-- The optimiser stage refines its input in every outcome. -/
+theorem optimise_sound (certs : List (PassKind × BlockCert)) (b : Block D V l Γ Λ Λ') :
+    BlockEquiv b (optimise certs b) := by
+  unfold optimise
+  cases h : applyPipeline certs b with
+  | none => exact BlockEquiv.refl b
+  | some b' => exact applyPipeline_sound certs b b' h
+
+/-- Optimise, then lower from the start of the code region. -/
+def compileProg (c : PipeCfg) (L : Layout D) (certs : List (PassKind × BlockCert))
+    (b : Block D V l Γ Λ Λ') : Option (List Befehl) :=
+  if cfgOk c then senkBlock c L 0 (optimise certs b) else none
+
+/-- The whole compiler: source block to code bytes. -/
+def compile (c : PipeCfg) (L : Layout D) (certs : List (PassKind × BlockCert))
+    (b : Block D V l Γ Λ Λ') : Option (List Byte) :=
+  (compileProg c L certs b).map encodeAll
+
+/-- Decode a whole byte list with the independent decoder. -/
+def decodeAll : Nat → List Byte → Option (List Befehl)
+  | _, [] => some []
+  | 0, _ :: _ => none
+  | fuel + 1, b :: bs =>
+    match decode (b :: bs) with
+    | some (d, rest) => (decodeAll fuel rest).map (d.befehl :: ·)
+    | none => none
+
+/-- Every instruction has at least one byte. -/
+theorem length_le_encodeAll : ∀ (P : List Befehl), P.length ≤ (encodeAll P).length
+  | [] => Nat.le_refl 0
+  | b :: P => by
+    rw [encodeAll_cons, List.length_append, List.length_cons]
+    have := (encode_len b).1
+    have := length_le_encodeAll P
+    omega
+
+/-- CODEC ROUND TRIP FOR PROGRAMS: decoding the encoded program gives the
+    program back (from the per-instruction `Codec.roundtrip`). -/
+theorem decodeAll_encodeAll : ∀ (P : List Befehl) (fuel : Nat), P.length ≤ fuel →
+    decodeAll fuel (encodeAll P) = some P
+  | [], fuel, _ => by cases fuel <;> rfl
+  | b :: P, fuel, hf => by
+    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by simp at hf; omega⟩
+    obtain ⟨x, xs, hx⟩ : ∃ x xs, encode b ++ encodeAll P = x :: xs := by
+      cases h : encode b ++ encodeAll P with
+      | nil =>
+        have := congrArg List.length h
+        simp only [List.length_append, List.length_nil] at this
+        have := (encode_len b).1
+        omega
+      | cons x xs => exact ⟨x, xs, rfl⟩
+    rw [encodeAll_cons, hx]
+    simp only [decodeAll]
+    rw [← hx, roundtrip b (encodeAll P)]
+    simp [decodeAll_encodeAll P f (by simp at hf; omega)]
+
+/-- The slot addresses a lowered block writes. -/
+def stmtAdresse (L : Layout D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ') : Option Nat :=
+  match s with
+  | .assignSlot t f i _ _ _ =>
+    match constInt? i with
+    | some k => L.loc t k f
+    | none => none
+  | _ => none
+
+def slotAdressen (L : Layout D) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → List Nat
+  | _, _, _, _, .nil => []
+  | _, _, _, _, .cons s rest => (stmtAdresse L s).toList ++ slotAdressen L rest
+  | _, _, _, _, .pruefung _ _ rest => slotAdressen L rest
+  | _, _, _, _, _ => []
+
+/-- Every written slot footprint lies outside the code region `[base, base + len)`. -/
+def datenGetrennt (c : PipeCfg) (L : Layout D) (b : Block D V l Γ Λ Λ') (len : Nat) : Bool :=
+  (slotAdressen L b).all (fun A => decide (A + 8 ≤ c.codeBase ∨ c.codeBase + len ≤ A))
+
+/-- THE VALIDATOR: recompute the program from the source and the
+    certificates, and accept the candidate bytes only if they ARE its
+    encoding, decode back to it, and the written data stays off the code. -/
+def validate (c : PipeCfg) (L : Layout D) (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte) : Bool :=
+  match compileProg c L certs src with
+  | some prog =>
+    decide (bytes = encodeAll prog) && decide (decodeAll bytes.length bytes = some prog) &&
+      datenGetrennt c L (optimise certs src) bytes.length
+  | none => false
+
+/-- What an accepted candidate is: the Lean recomputation, decoded back. -/
+theorem validate_sound (c : PipeCfg) (L : Layout D) (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (h : validate c L certs src bytes = true) :
+    ∃ prog, cfgOk c = true ∧ senkBlock c L 0 (optimise certs src) = some prog ∧
+      bytes = encodeAll prog ∧ decodeAll bytes.length bytes = some prog ∧
+      compile c L certs src = some bytes := by
+  unfold validate at h
+  cases hp : compileProg c L certs src with
+  | none => rw [hp] at h; cases h
+  | some prog =>
+    rw [hp] at h
+    simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+    obtain ⟨⟨hb, hd⟩, -⟩ := h
+    unfold compileProg at hp
+    by_cases hc : cfgOk c = true
+    · rw [if_pos hc] at hp
+      refine ⟨prog, hc, hp, hb, hd, ?_⟩
+      unfold compile compileProg
+      rw [if_pos hc, hp, hb]
+      rfl
+    · rw [if_neg hc] at hp; cases hp
+
+/-- The compiler's own output always validates once its written data is
+    off the code (completeness of the validator on honest candidates). -/
+theorem validate_compile (c : PipeCfg) (L : Layout D) (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte) (h : compile c L certs src = some bytes)
+    (hd : datenGetrennt c L (optimise certs src) bytes.length = true) :
+    validate c L certs src bytes = true := by
+  unfold compile at h
+  cases hp : compileProg c L certs src with
+  | none => rw [hp] at h; cases h
+  | some prog =>
+    rw [hp] at h
+    simp only [Option.map_some, Option.some.injEq] at h
+    subst h
+    unfold validate
+    rw [hp]
+    simp [decodeAll_encodeAll prog _ (length_le_encodeAll prog), hd]
+
+/-- A code region start offset by its length. -/
+theorem addrOff_natAdresse (a n : Nat) : addrOff (natAdresse a) n = natAdresse (a + n) := by
+  unfold addrOff natAdresse
+  rw [BitVec.ofNat_add]
+
+/-! ## 10. THE CLOSING THEOREM -/
+
+/-- **PIPELINE CORRECTNESS.** If the validator accepts candidate bytes for
+    a source block and optimiser certificates, then from ANY target state
+    whose code region holds those bytes (executable, not writable) at the
+    instruction pointer, whose placed slots represent the source world
+    (`WorldRep`, over a separated layout) and whose variable registers
+    represent the environment (`EnvRepr`), and for every source run of the
+    ORIGINAL, UNOPTIMISED block through the REAL `execBlock` that ends
+    normally in `σ'`, `ρ'`: fetching, decoding and executing the bytes from
+    memory terminates at the end of the code region in a state that
+    represents `σ'` and `ρ'`.
+
+    Composed from: optimiser soundness (`applyPipeline_sound` via
+    `optimise_sound`, `BlockEquiv`), lowering correctness
+    (`senkBlock_korrekt`: `senkung_korrekt`, `rep_*`/`RepSlot`, the `cmp`
+    flag facts), the codec round trip and fetch (`kanonisch_schritt_ueberein`
+    through `lauf_zu_laufBytes`), and the recomputing validator
+    (`validate_sound`). -/
+theorem pipeline_correct (c : PipeCfg) (L : Layout D) (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (hval : validate c L certs src bytes = true) (hsep : LayoutSep L)
+    (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) bytes)
+    (hrip : s.rip = natAdresse c.codeBase)
+    (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c))
+    (σ' : World D) (ρ' : Env D Γ) (hsrc : execBlock O passes R src σ ρ = .ok σ' ρ') :
+    ∃ n s', laufBytes n s = .weiter s' ∧
+      s'.rip = natAdresse (c.codeBase + bytes.length) ∧
+      WorldRep L s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf c) := by
+  obtain ⟨prog, hc, hlow, hb, -, -⟩ := validate_sound c L certs src bytes hval
+  obtain ⟨n, s', hrun, hent⟩ := senkBlock_korrekt c L hc hsep O passes R bytes
+    (optimise certs src) [] [] prog hlow σ ρ s hcode (by simp [hb])
+    (by rw [hrip]; exact (addrOff_null _).symm) hW hE
+  rw [optimise_sound certs src O passes R σ ρ, hsrc] at hent
+  obtain ⟨hr, hw, he⟩ := hent
+  refine ⟨n, s', hrun, ?_, hw, he⟩
+  rw [hr, addrOff_natAdresse, hb]
+  simp
+
+/-- **PIPELINE REFUSAL CORRESPONDENCE.** The same chain for a source run
+    that stops at a failed check with reason `r`: the fetched run reaches
+    the refusal exit of `r` with the world of the failed check represented. -/
+theorem pipeline_refuses (c : PipeCfg) (L : Layout D) (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (hval : validate c L certs src bytes = true) (hsep : LayoutSep L)
+    (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) bytes)
+    (hrip : s.rip = natAdresse c.codeBase)
+    (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c))
+    (σ' : World D) (r : Fin V.gruende) (hsrc : execBlock O passes R src σ ρ = .grund σ' r) :
+    ∃ n s', laufBytes n s = .weiter s' ∧
+      s'.rip = natAdresse (c.exitBase + r.val) ∧ WorldRep L s'.speicher σ' := by
+  obtain ⟨prog, hc, hlow, hb, -, -⟩ := validate_sound c L certs src bytes hval
+  obtain ⟨n, s', hrun, hent⟩ := senkBlock_korrekt c L hc hsep O passes R bytes
+    (optimise certs src) [] [] prog hlow σ ρ s hcode (by simp [hb])
+    (by rw [hrip]; exact (addrOff_null _).symm) hW hE
+  rw [optimise_sound certs src O passes R σ ρ, hsrc] at hent
+  exact ⟨n, s', hrun, hent⟩
+
+/-- **NO OTHER OUTCOME.** An accepted source block, run through the real
+    `execBlock`, ends normally or at a failed check -- for every world,
+    environment, oracle, budget and callee table. -/
+theorem pipeline_ausgang (c : PipeCfg) (L : Layout D) (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (hval : validate c L certs src bytes = true)
+    (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) :
+    (∃ σ' ρ', execBlock O passes R src σ ρ = .ok σ' ρ') ∨
+      (∃ σ' r, execBlock O passes R src σ ρ = .grund σ' r) := by
+  obtain ⟨prog, -, hlow, -, -, -⟩ := validate_sound c L certs src bytes hval
+  rw [← optimise_sound certs src O passes R σ ρ]
+  exact senkBlock_ausgang c L O passes R _ 0 prog hlow σ ρ
+
 end Block
 
 end Gabbro.Grammatik.X86.Pipeline
