@@ -1413,10 +1413,53 @@ theorem popfq_lese_zeuge :
     decide
   exact popfqSchritt_lesefehler witANR [popfqOp] 1 hdec hv hrd
 
-/- CUTS:
-    Skeleton plus raw word (§2) and nibble groundwork (§3 head):
-    effect relation, PUSHFQ/POPFQ observers, consumer admission and
-    witnesses follow in later pieces.
+/- CUTS: proved here versus left open.
+
+    PROVED (all over the REUSED canonical words, snapshots and
+    validity relations -- no second arithmetic or interpreter):
+    - raw RFLAGS status model (`rbit`/`liestStatus`/`archOK`) with a
+      coherent projection (`projiziert`) to the existing `Zustand`
+      flags; control bits survive ALU rows by construction (steps
+      carry `steuer` unchanged except POPFQ's Table 1-12 update);
+    - defined AF for ADD/SUB/CMP/NEG at every pilot width, derived
+      from the canonical nibble carry (`trunc_nibble`,
+      `afAddB_ist_afAdd`, `afSubB_ist_afSub`, `negAf_ist_afSub`);
+    - sound defined/undefined effect rows for ADD/SUB/CMP/NEG (all
+      defined), AND/OR/XOR/TEST (AF free), MUL/IMUL (only CF/OF),
+      DIV/IDIV (all free), shifts (AF free, OF at one-count), with
+      adapters exhibiting the producers' deterministic snapshots as
+      admissible members and two-choice witnesses for every free bit;
+    - consumer admission (`verbrauchOK`) with safety theorems for
+      every admitted pair, the DIV refusal witness and the derived
+      raw-AF non-observability proof (`rohAf_frei`);
+    - fetched PUSHFQ (opcode 9CH, VM/RF-cleared image, 8-byte stack
+      write, flags/control/RIP frames) and POPFQ (9DH, Table 1-12
+      64-bit CPL/IOPL gating, RF cleared, VIP/VIF/VM preserved) with
+      success equations, frame theorems and v8086/stack/foreign-byte
+      refusals; the pilot decoder refuses both bytes;
+    - joint fetched arithmetic-then-save run with real stack-memory
+      change, defined-AF distinction, two undefined choices,
+      push/pop roundtrip, IF-gating and concrete stack refusals.
+    NOT proved here, and not claimed:
+    - No floating-point/FPU flag rows (C0-C3, SSE MXCSR): FP forms
+      are deferred to the FP lane.
+    - No INC/DEC (CF preservation), ADC/SBB, CMPXCHG/XADD, BT
+      family, SAHF/LAHF rows: no producer form consumes them here.
+    - POPFQ covers the 64-bit Table 1-12 rows only: 16-bit form,
+      VME/PVI virtual-8086 rows, TSS/task-switch and real-address
+      rows are open.
+    - Pending-interrupt/event delivery effects of IF are not
+      modelled, only the IF bit itself; HardwareInterrupts672 owns
+      delivery. No TSO/concurrency claim; everything is sequential
+      over one `Speicher`.
+    - No wiring into `decodeExt`/`schritt`/`lauf`: the one-byte
+      adapters are the exact boundary for HardwareExecution660.
+    - No source, checker, Spec or goal claim; no new `Befehl`
+      constructor and no pilot decoder change.
+    - No silicon correspondence: physical flag behavior is a named
+      hardware assumption; manual sentences are provenance, and the
+      two producer abstractions found (MUL SF/ZF/PF preservation,
+      DIV whole-snapshot preservation) are adapted, not trusted.
 -/
 
 #print axioms projiziert_flags
@@ -1427,5 +1470,68 @@ theorem popfq_lese_zeuge :
 #print axioms afSubB_ist_afSub
 #print axioms negAf_ist_afSub
 #print axioms cmpAf_ist_afSub
+#print axioms rohAusStatus_bits
+#print axioms roh_mulU
+#print axioms roh_mulS
+#print axioms mulU_hat_roh
+#print axioms mulS_hat_roh
+#print axioms mulU_sf_frei
+#print axioms logik_hat_roh
+#print axioms logik_af_frei
+#print axioms div_alles_frei
+#print axioms schieb_of_frei
+#print axioms schiebAdapter
+#print axioms verbrauchOK_beispiele
+#print axioms addVerbrauch_sicher
+#print axioms subVerbrauch_sicher
+#print axioms negVerbrauch_sicher
+#print axioms logikVerbrauch_sicher
+#print axioms mulVerbrauch_sicher
+#print axioms shiftVerbrauch_eins
+#print axioms divVerbrauch_verweigert
+#print axioms rohAf_frei
+#print axioms pushfqMaske_bit
+#print axioms pushfqWort_status
+#print axioms pushfqWort_vm_rf
+#print axioms popfqLaden_status
+#print axioms popfqLaden_erhaelt
+#print axioms popfqLaden_if
+#print axioms popfqLaden_iopl
+#print axioms ohneRF_bit
+#print axioms popfqWort_bit
+#print axioms pushfqByte_len
+#print axioms popfqByte_len
+#print axioms pushfqSchritt_ok
+#print axioms pushfqSchritt_ruhig
+#print axioms pushfqSchritt_liest
+#print axioms pushfqSchritt_arch
+#print axioms pushfqSchritt_v86
+#print axioms pushfqSchritt_stapel
+#print axioms pushfqSchritt_fremd
+#print axioms popfqSchritt_ok
+#print axioms popfqSchritt_rf
+#print axioms popfqSchritt_vm
+#print axioms popfqSchritt_if_hoch
+#print axioms popfqSchritt_if_null
+#print axioms popfqSchritt_status
+#print axioms popfqSchritt_steuer
+#print axioms popfqSchritt_v86
+#print axioms popfqSchritt_lesefehler
+#print axioms popfqSchritt_fremd
+#print axioms pushfq_fremd
+#print axioms popfq_fremd
+#print axioms witA0_ok
+#print axioms witA1_ok
+#print axioms pushfq_lauf_zeuge
+#print axioms pushfq_af_unterscheidet
+#print axioms pushfq_popfq_rundgang
+#print axioms wit_schreibt
+#print axioms wit_liest
+#print axioms popfq_if_gating_zeuge
+#print axioms pushfqByte_ablehnt
+#print axioms popfqByte_ablehnt
+#print axioms pushfqByte_lang_ablehnt
+#print axioms pushfq_stapel_zeuge
+#print axioms popfq_lese_zeuge
 
 end Gabbro.Grammatik.X86
