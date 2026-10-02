@@ -20,6 +20,7 @@ pub mod lower;
 pub mod pipeline;
 #[cfg(test)]
 mod pipeline_golden;
+pub mod elf;
 
 pub use typen::{
     Adresse, Bedingung, Befehl, Breite, Byte, Decodiert, Disp32, Flags, Register, Speicher, Wort,
