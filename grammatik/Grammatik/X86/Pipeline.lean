@@ -1515,4 +1515,111 @@ theorem pipeline_ausgang (c : PipeCfg) (L : Layout D) (certs : List (PassKind ×
 
 end Block
 
+/- CUTS (exactly what is NOT proved here):
+
+   Fragment. Accepted, and nothing else (every other form answers `none`):
+   - `Block.nil`; `Block.cons` of `Stmt.assignSlot t f i e` where the index
+     `i` is a constant recomputed by `constInt?`, the slot `(t, k, f)` is
+     placed by the layout at an address passing `repOk` (integer field,
+     `0 <= lo`, `hi < 2^64`, no wrap), and the value `e` is in the accepted
+     `senkFrag` fragment (literal, variable, ONE add/sub over atoms),
+     optionally under one `weiter` (what `foldInt` produces);
+   - `Block.pruefung c (retGrund r) rest` with `c` the literal `true`, or
+     `<`/`<=`/`=` over two ATOMS whose ranges lie in the signed 64-bit
+     window, lowered to `cmpReg64` + `jumpIf32` on the negated condition.
+   NOT covered: variable or computed indices (no scaled addressing),
+   deeper expressions, every other statement (`assignVar`, `assignGlob`,
+   `ite`, loops, `locks`, calls, byte writes, ...), every other block form
+   (`bind`, `narrow`, calls, gates, floats, ...), `else` blocks other than
+   a bare reason (`ret`, `leave`/`next`, statements in `else`), boolean,
+   sum, float or pointer slots, a check folded to literal `false`.
+
+   Refusal exit. A failed check jumps to `exitBase + r`; the run is
+   followed exactly to that address with the world represented
+   (`pipeline_refuses`). No code AT the exit is generated, validated or
+   executed: returning the reason to a caller, the ABI and the
+   register/flag state at the exit are OPEN.
+
+   Memory and image. `CodeAt` (code bytes at the instruction pointer,
+   executable, NOT writable), `WorldRep` (placed slots readable, writable,
+   holding the source values) and `LayoutSep` (placed slots pairwise equal
+   or disjoint) are PREMISES on the start state and the layout. `validate`
+   checks the bytes, their decoding and that every WRITTEN slot lies off
+   the code region; it cannot check `LayoutSep` for an arbitrary layout
+   function. The connection to a loaded image (`ValidatorSkeleton.valX86`,
+   `LoadedExecution.bildZustand`, relocation) is NOT made here. Slots the
+   layout does not place are not represented and not claimed.
+
+   Outcome. Only `Ausgang.ok` and `Ausgang.grund` are reachable for an
+   accepted block (`senkBlock_ausgang`, proved). After a normal end the
+   variable registers, the world on placed slots and the end address are
+   claimed; flags and the three working registers are NOT.
+
+   Optimiser. Whatever `applyPipeline` accepts, with its own CUTS
+   (`OptimizationRules.lean`); a refused certificate list falls back to the
+   unchanged block. Rewrites whose output the lowering cannot take (e.g. a
+   condition folded to `false`) make the compile refuse, never guess.
+
+   Machine. Pilot ISA only (`Befehl`, `Codec.encode`/`decode`,
+   `Ausfuehrung.schritt`). The instruction type is used at four points --
+   `encode`, `schritt` (through `kanon`), the shape class `gerade`, and the
+   accepted lowerings `senkAtom`/`senkFrag` -- so a unified ISA can replace
+   it there; `ISA.lean` is not used or edited. Sequential single-core runs
+   only (`laufBytes`): no TSO, no concurrency, no machine-G/GX transfer
+   (a check the optimiser drops removes a G step, `BlockEquiv`). No time or
+   budget transfer: the step count `n` is not related to any source
+   budget. No hardware claim: memory is the model `Speicher`.
+-/
+
+#print axioms addrOff_addrOff
+#print axioms holeFetchAux_praefix
+#print axioms ausfuehrbarN_von
+#print axioms byteschritt_im_code
+#print axioms write64_schreibbar
+#print axioms schreibbar8_byte
+#print axioms write64_nicht_schreibbar
+#print axioms schritt_gerade
+#print axioms codeAt_erhalten
+#print axioms laufBytes_add
+#print axioms lauf_zu_laufBytes
+#print axioms worldRep_lese
+#print axioms repOk_int
+#print axioms natAdresse_ohneUmbruch
+#print axioms natAdresse_toNat
+#print axioms worldRep_store
+#print axioms bedingung_l_sub64
+#print axioms sub64_zf_eq
+#print axioms sint_inj
+#print axioms bedingung_ge_sub64
+#print axioms bedingung_g_sub64
+#print axioms bedingung_ne_sub64
+#print axioms abbOf_mem
+#print axioms cfgOk_frei
+#print axioms cfgOk_regs
+#print axioms cfgOk_frisch
+#print axioms envRepr_fremd
+#print axioms istWert_von
+#print axioms senkAtom_gerade
+#print axioms senkFrag_gerade
+#print axioms senkWert_gerade
+#print axioms senkWert_korrekt
+#print axioms istWahr_wahr
+#print axioms vergleich_inv
+#print axioms istBed_von
+#print axioms vergleich_lauf
+#print axioms intWort_sint_zahl
+#print axioms senkBed_korrekt
+#print axioms assign_lauf
+#print axioms senkBlock_korrekt
+#print axioms senkBlock_ausgang
+#print axioms optimise_sound
+#print axioms length_le_encodeAll
+#print axioms decodeAll_encodeAll
+#print axioms validate_sound
+#print axioms validate_compile
+#print axioms addrOff_natAdresse
+#print axioms pipeline_correct
+#print axioms pipeline_refuses
+#print axioms pipeline_ausgang
+
 end Gabbro.Grammatik.X86.Pipeline
