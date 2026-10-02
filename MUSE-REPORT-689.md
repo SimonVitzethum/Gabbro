@@ -5,7 +5,7 @@ Review-only lane. No source file was modified; this report is the only owned fil
 
 ## CANDIDATE
 
-CANDIDATE: 688 2c15674ab5d4d1af93a0a9c135c4cd97deeb28d1
+CANDIDATE: 688 0b6f141027624559742315adde94572297de2999
 
 Files (from `.tmp/review/SNAPSHOT.json`): `MUSE-REPORT-688.md`,
 `grammatik/Grammatik.lean` (one additive import line),
@@ -107,6 +107,39 @@ Bounded acceptance: three minor safe-direction observations below, none a repair
    needs both false, so no success-path effect; priority corner only.
 3. The serial precondition is exported for lane 660 but not wired into
    `cpuByteschritt` — disclosed as interface-only in CUTS.
+
+## Re-review of the repaired candidate (new pinned head)
+
+The previous verdict on `2c15674a` is superseded. The author repaired the
+failed integration (`beobachte` collision with `HardwareFaults`) in commit
+`0b6f1410` and the pinned `SNAPSHOT.json` now points at
+`0b6f141027624559742315adde94572297de2999`. I re-inspected the full new
+candidate file (still 1234 lines), the updated author report (new §"Repair
+after failed integration"), the extended `BUILD-EVIDENCE.json` (33 entries,
+ending in green probe + `lean-bau` and the repair commit), and the new
+`PATCH.diff` (same three owned files, same single additive import).
+
+- The repair is exactly three renames, owned module only: `beobachte` ->
+  `beobachteCpu` (def, `beobachteCpu_ecx_treu`, all uses), `CpuFault` ->
+  `CpuHwFault`, `ergFehler` -> `ergCpuFehler`. No statement, proof, or
+  scope changed.
+- Completeness of the rename verified mechanically on the new file: zero
+  remnants of the old names, 22 consistent uses of the new names.
+- The collision was real: `grammatik/Grammatik/X86/HardwareFaults.lean`
+  line 257 defines `beobachte` in this clone. The preemptive `CpuHwFault`/
+  `ergCpuFehler` renames introduce no new collision (neither name exists
+  in this tree). The author's stated residual risk (further collisions
+  beyond the reported one surfacing only at integration) is honest and
+  remains open, but is an integration-build property, not a claim made
+  by this module.
+- Reproduced `./lean-probe` on the exact new file in this clone:
+  `== 0 error(s) in the COMPLETE output; exit 0`; all `#print axioms`
+  outputs remain subsets of `[propext, Classical.choice, Quot.sound]`
+  (renamed `beobachteCpu_ecx_treu` included). No forbidden tactics.
+- All findings of the previous review (byte forms, register semantics,
+  fault gates, TSO interface, witnesses, refusals, CUTS boundaries, the
+  three bounded observations) carry over unchanged: the file is identical
+  apart from the three renames.
 
 ## Last check results
 
