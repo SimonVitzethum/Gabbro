@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 19:11 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 19:12 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -315,6 +315,7 @@ Last ledger refresh: **2026-10-02 19:11 UTC**. This is an operational snapshot, 
 | 678 | Organise and audit complete essential hardware-model coverage | Committed candidate; review/integration pending | 679: scheduled | [task](lanes/678.md) |
 | 680 | Hardware completion: indirect and compact control byte forms | Agent working | 681: scheduled | [task](lanes/680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Scheduled | 683: scheduled | [task](lanes/682.md) |
+| 684 | Eliminate hardcoded external project filesystem paths | Scheduled | 685: scheduled | [task](lanes/684.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -766,6 +767,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **648**, Generic checked source-assignment byte certificate, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-648.md). <!-- x86-merged:648 -->
 - 2026-10-02: lane **649**, Independent exact review of 648, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-649.md). <!-- x86-merged:649 -->
 - 2026-10-02: publication batch checks passed for `aa3a9c1e`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-02: checked master `bcedf8cf` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:bcedf8cf06f32e3881dd8949cd20a9837e34e733 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
