@@ -765,3 +765,17 @@ source as the reference and lower directly to checked machine blocks/bytes.
 A persistent SSA IR is not required. Preserve the unaccepted IR287 draft as
 design input; do not introduce another source interpreter on the trust path.
 Full generic source-to-final-loaded-byte validation remains **OPEN**.
+
+
+### Immediate hardware-model completion priority (2026-10-02)
+
+<!-- hardware-priority-2026-10-02 -->
+Simon requires15 useful managed Muse models and prioritises completing the
+agreed selected x86-64 architectural hardware model over additional detached
+source/certificate helpers. Essential scalar/FP/concurrency/SIMD/entry/profile
+forms and their faults, control-state and asynchronous interactions must share
+a coherent byte-facing execution model. Fourteen pilot forms are insufficient.
+Use DIRECT-COMPILER-DESIGN essential/deferred scope; preserve every safety gate,
+OS/freestanding portability, O3/invariant optimisation and full final-byte
+validation obligations. Fill slots with independent productive author/reviewer
+work, never idle filler; report real bottlenecks. Completion remains OPEN.

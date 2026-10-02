@@ -14,6 +14,24 @@ Current workforce policy: **at most 15 managed Muse model processes permanently*
 
 <!-- x86-workforce-policy-15 -->
 
+## Immediate priority: complete selected hardware model
+
+Simon reaffirmed on 2026-10-02 that completion of the architectural hardware
+model is the immediate goal, with **15 useful managed Muse models active**
+where independent tasks and resources permit. Complete the agreed essential
+x86-64 performance profile in DIRECT-COMPILER-DESIGN sections2D-6: all selected
+encodings, retired-instruction effects, registers/flags/FP control, memory
+accesses, faults, TSO/atomics/fences, asynchronous events and enabled-state gates
+must connect to one coherent execution model. Includes every reachable entry,
+runtime and binding instruction; fourteen pilot forms and disconnected helpers
+are insufficient. Preserve arbitrary OS/freestanding profiles and source safety;
+deferred last-mile performance tiers retain their documented status. Generic
+source-to-final-byte validation and O3/invariant optimisation remain required,
+but new capacity prioritises missing hardware-model connections. Silicon
+realisation and conservative timing assumptions stay explicitly named; no claim
+that every physical CPU is proved is made. This milestone remains **OPEN**.
+<!-- hardware-priority-2026-10-02 -->
+
 ## Intended result
 
 Compile Gabbro directly to x86-64 machine bytes, including linking, relocations,
@@ -720,6 +738,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **575**, Connection: Unified extended decoder and executable byte-step, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-575.md). <!-- x86-merged:575 -->
 - 2026-10-02: lane **593**, Independent connection review of 575, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-593.md). <!-- x86-merged:593 -->
 - 2026-10-02: publication batch checks passed for `dc1d0b32`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-02: Simon prioritised the complete selected architectural hardware model and15 productive managed models. Corrected missing explicit filename ownership in the644-659 prompts; existing drafts stay on their original topics with independent exact review and all proof/build gates. Hardware-completion wave660-675 is being registered; registration is not closure. <!-- hardware-priority-2026-10-02 -->-history
 <!-- X86-HISTORY -->
 
 ## Detailed references
