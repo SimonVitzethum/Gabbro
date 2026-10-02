@@ -460,3 +460,4 @@ import Grammatik.X86.SourceAccessCompleteness
 import Grammatik.X86.ScalarFloatCodec
 import Grammatik.X86.ExtendedExecution
 import Grammatik.X86.WordDrainInterleaving
+import Grammatik.X86.DeviceHardwareForms
