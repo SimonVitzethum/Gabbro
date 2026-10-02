@@ -467,3 +467,4 @@ import Grammatik.X86.DerivedWorkBound
 import Grammatik.X86.AddressEncoding
 import Grammatik.X86.VectorHardwareProfile
 import Grammatik.X86.IntegerHardwareForms
+import Grammatik.X86.MemoryTypeHardwareExecution
