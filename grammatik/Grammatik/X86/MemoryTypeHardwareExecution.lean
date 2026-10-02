@@ -997,4 +997,235 @@ theorem mmio_uc_laden_fakten (m : MmioMaschine) (hw : HwProfil)
   · rw [maschineSchrittWeiter_pending, hpend]
   · rw [maschineSchrittWeiter_ausstehend, haus]
 
+/-! ## 5. Joint witness: fetched device write, bus completion, device
+  read, and the answer stored to normal RAM.
+
+  Three pilot instructions at 4096 (`store64 [rbx], rax`, 7 bytes;
+  `load64 rcx, [rbx]`, 7 bytes; `store64 [rdi], rcx`, 7 bytes) with
+  `rbx` at the device window, `rdi` at a normal RAM cell, `rax = 42`.
+  The run posts the UC store, completes it on the bus, reads the device
+  answer into `rcx`, and stores it to RAM. Every fact below is computed
+  from actual fetched bytes through the accepted dispatcher. -/
+
+/-- Witness program: UC store, UC load, then the WB store to RAM. -/
+def witBild : List Byte :=
+  encode (.store64 .rbx .rax (BitVec.ofNat 32 0)) ++
+  encode (.load64 .rcx .rbx (BitVec.ofNat 32 0)) ++
+  encode (.store64 .rdi .rcx (BitVec.ofNat 32 0))
+
+/-- Witness code bytes: the image at 4096, zeroes elsewhere. -/
+def witBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match witBild[a.toNat - 4096]? with
+    | some b => b
+    | none => BitVec.ofNat 8 0
+
+/-- Witness execute permission: exactly the 21 image bytes. -/
+def witCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 21)
+
+/-- Witness data permission: one eight-byte cell at 8192. Device
+    addresses are deliberately NOT RAM-readable/writable. -/
+def witDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 8)
+
+/-- Witness memory: execute-only code, read/write-only data. -/
+def mmioWitSpeicher : Speicher :=
+  { bytes := witBytes, lesbar := witDaten,
+    schreibbar := witDaten, ausfuehrbar := witCode }
+
+/-- Witness registers: the value in rax, the device address in rbx,
+    the RAM cell in rdi. -/
+def mmioWitReg : Register → Wort :=
+  fun q =>
+    if q = Register.rax then BitVec.ofNat 64 42
+    else if q = Register.rbx then BitVec.ofNat 64 65536
+    else if q = Register.rdi then BitVec.ofNat 64 8192
+    else if q = Register.rsp then BitVec.ofNat 64 8704
+    else BitVec.ofNat 64 0
+
+/-- Witness core state: code at 4096. -/
+def witKern : Zustand :=
+  { register := mmioWitReg, flags := zeugeFlags,
+    rip := BitVec.ofNat 64 4096, speicher := mmioWitSpeicher }
+
+/-- Witness CPU: zeroed XMM, reset control word. -/
+def witFp : FpZustand :=
+  ⟨witKern, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness UC profile: exactly the 8-byte device window. -/
+def witProfil : UcProfil :=
+  [{ basis := 65536, len := 8, lesbar := true, schreibbar := true, ausfuehrbar := false }]
+
+/-- The witness device address. -/
+def witDevAddr : Adresse := natAdresse 65536
+
+/-- Witness start machine: one stale ordinary WB store pending (it must
+    survive every UC and bus step: no silent drain). -/
+def witM0 : MmioMaschine :=
+  { kern := witFp
+    pending := [⟨natAdresse 9000, natByte 7⟩]
+    geraet := geraetAnfang
+    ausstehend := []
+    ucLog := []
+    profil := witProfil }
+
+/-- Stage 1: the fetched UC store retires (posted). -/
+def witSchritt1 : MmioAusgang :=
+  mmioByteschritt witM0 basisHw basisBereit
+
+/-- Bus stage: the oldest posted write completes into the device. -/
+def witBus : MmioAusgang :=
+  match witSchritt1 with
+  | .weiter m =>
+    match busFortschritt m with
+    | some m' => .weiter m'
+    | none => .verweigert
+  | _ => .verweigert
+
+/-- Stage 2: the fetched UC load answers from the device. -/
+def witSchritt2 : MmioAusgang :=
+  match witBus with
+  | .weiter m => mmioByteschritt m basisHw basisBereit
+  | _ => .verweigert
+
+/-- Stage 3: the fetched WB store carries the answer to normal RAM. -/
+def witSchritt3 : MmioAusgang :=
+  match witSchritt2 with
+  | .weiter m => mmioByteschritt m basisHw basisBereit
+  | _ => .verweigert
+
+/-- Read RIP out of a step outcome. -/
+def witRip (o : MmioAusgang) : Option Adresse :=
+  match o with
+  | .weiter m => some m.kern.kern.rip
+  | _ => none
+
+/-- Read one RAM byte out of a step outcome. -/
+def witRam (o : MmioAusgang) (a : Adresse) : Option Byte :=
+  match o with
+  | .weiter m => some (m.kern.kern.speicher.bytes a)
+  | _ => none
+
+/-- Read one register out of a step outcome. -/
+def witRegAus (o : MmioAusgang) (r : Register) : Option Wort :=
+  match o with
+  | .weiter m => some (m.kern.kern.register r)
+  | _ => none
+
+/-- Read one device byte out of a step outcome. -/
+def witGeraetByte (o : MmioAusgang) (i : Fin 8) : Option Byte :=
+  match o with
+  | .weiter m => some (m.geraet.daten i)
+  | _ => none
+
+/-- Read the device access counter out of a step outcome. -/
+def witZaehler (o : MmioAusgang) : Option Nat :=
+  match o with
+  | .weiter m => some m.geraet.zugriffe
+  | _ => none
+
+/-- Read the UC program-order log out of a step outcome. -/
+def witLog (o : MmioAusgang) : List UcEreignis :=
+  match o with
+  | .weiter m => m.ucLog
+  | _ => []
+
+/-- Read the posted-queue length out of a step outcome. -/
+def witPosted (o : MmioAusgang) : Nat :=
+  match o with
+  | .weiter m => m.ausstehend.length
+  | _ => 0
+
+/-- Read the pending WB stores out of a step outcome. -/
+def witPending (o : MmioAusgang) : List TSOEintrag :=
+  match o with
+  | .weiter m => m.pending
+  | _ => []
+
+/-- Refusal probe out of a step outcome. -/
+def witVerweigert (o : MmioAusgang) : Bool :=
+  match o with
+  | .verweigert => true
+  | _ => false
+
+/-- Stage 1 advances RIP past the 7-byte store. -/
+theorem wit_s1_rip : witRip witSchritt1 = some (natAdresse 4103) := by
+  decide
+
+/-- Stage 1 posts exactly one device write. -/
+theorem wit_s1_posted : witPosted witSchritt1 = 1 := by
+  decide
+
+/-- Stage 1 leaves the device byte at zero: retired is not completed. -/
+theorem wit_s1_geraet_noch_null :
+    witGeraetByte witSchritt1 ⟨0, by decide⟩ = some (natByte 0) := by
+  decide
+
+/-- The bus stage completes the write: the device byte holds 42. -/
+theorem wit_bus_geraet :
+    witGeraetByte witBus ⟨0, by decide⟩ = some (natByte 42) := by
+  decide
+
+/-- The bus stage drains the posted queue. -/
+theorem wit_bus_geleert : witPosted witBus = 0 := by
+  decide
+
+/-- Stage 2 answers 42 into rcx from fetched bytes. -/
+theorem wit_s2_reg :
+    witRegAus witSchritt2 .rcx = some (BitVec.ofNat 64 42) := by
+  decide
+
+/-- Two device transactions happened: the bus write and the read. -/
+theorem wit_s2_zaehler : witZaehler witSchritt2 = some 2 := by
+  decide
+
+/-- Stage 3 stores the answer to normal RAM. -/
+theorem wit_s3_ram :
+    witRam witSchritt3 (natAdresse 8192) = some (natByte 42) := by
+  decide
+
+/-- The start RAM cell reads zero: the run really changes memory. -/
+theorem wit_anfang_ram :
+    witM0.kern.kern.speicher.bytes (natAdresse 8192) = natByte 0 := by
+  decide
+
+/-- The UC log holds the store and the load in program order. -/
+theorem wit_s3_log :
+    witLog witSchritt3 =
+      [.schreibe witDevAddr .b64, .lese witDevAddr .b64] := by
+  decide
+
+/-- The run advances RIP past all three instructions: 4096 + 7 + 7 + 7. -/
+theorem wit_s3_rip : witRip witSchritt3 = some (natAdresse 4117) := by
+  decide
+
+/-- The stale ordinary store survives every UC and bus step. -/
+theorem wit_pending_erhalten :
+    witPending witSchritt3 = [⟨natAdresse 9000, natByte 7⟩] := by
+  decide
+
+/-- The device byte still holds 42 at the end of the run. -/
+theorem wit_s3_geraet :
+    witGeraetByte witSchritt3 ⟨0, by decide⟩ = some (natByte 42) := by
+  decide
+
+/-- JOINT WITNESS: the reached fetched device-write/read changes real
+    device bytes and real RAM from fetched bytes, logs both UC events
+    in program order, advances RIP past all three instructions, starts
+    from zeroed cells, and the CPU-retired store is observably not
+    device-completed before the bus stage. -/
+theorem wit_joint_zeuge :
+    witRam witSchritt3 (natAdresse 8192) = some (natByte 42) ∧
+    witM0.kern.kern.speicher.bytes (natAdresse 8192) = natByte 0 ∧
+    witGeraetByte witSchritt3 ⟨0, by decide⟩ = some (natByte 42) ∧
+    witGeraetByte witSchritt1 ⟨0, by decide⟩ = some (natByte 0) ∧
+    witLog witSchritt3 =
+      [.schreibe witDevAddr .b64, .lese witDevAddr .b64] ∧
+    witRip witSchritt3 = some (natAdresse 4117) ∧
+    witRegAus witSchritt2 .rcx = some (BitVec.ofNat 64 42) :=
+  ⟨wit_s3_ram, wit_anfang_ram, wit_s3_geraet, wit_s1_geraet_noch_null,
+    wit_s3_log, wit_s3_rip, wit_s2_reg⟩
+
 end Gabbro.Grammatik.X86
