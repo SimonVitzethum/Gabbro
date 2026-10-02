@@ -5,9 +5,13 @@
   Lane 688: exact fetched byte forms of CPUID (0F A2) and XGETBV
   (NP 0F 01 D0) over canonical `Zustand`/`Speicher`, with one generic
   named hardware CPU-information/XCR0 answer interface. Official
-  reference: Intel SDM 325462-093US (Sep 2026), Vol. 2A CPUID pp. 3-202ff
-  and Vol. 2D XGETBV pp. 6-36f, plus Vol. 1 Ch. 13-14 (XSAVE/XCR0, AVX
-  detection). No host probing; see CUTS.
+  reference: Intel SDM 325462-093US (Sep 2026), Vol. 2A CPUID entry
+  pp. 3-202-3-204 and Vol. 2D XGETBV entry pp. 6-36-6-37, plus Vol. 1
+  Chapters 13-14 (XSAVE/XCR0 enumeration, CPUID.01H ECX
+  XSAVE[26]/OSXSAVE[27]/AVX[28], EDX SSE2[26], CPUID.07H:00H EBX
+  AVX2[5], XCR0 XMM[1]+YMM[2], AVX detection sequence); local snapshot
+  `.tmp/HARDWARE-REFERENCES/` (exact record in CUTS). No host probing;
+  no AMD snapshot (none available); see CUTS.
 -/
 import Grammatik.X86.Typen
 import Grammatik.X86.Speicher
@@ -847,12 +851,384 @@ theorem zeuge_schritt1 :
   rw [hans]
   rfl
 
+/-- Witness gap state: selector prepared to 0 at the XGETBV bytes.
+    Straight-line code between the fetches prepares the selector;
+    the byte-level gap composition stays consumer-owned (see §7 head). -/
+def zeugeS1p : Zustand :=
+  { zeugeS1 with register := regSet zeugeS1.register .rcx (zext64 0) }
+
+/-- The gap state fetches without a LOCK prefix. -/
+theorem zeuge_s1p_ohne_lock :
+    leseLock (geholt zeugeS1p) = false := by
+  decide
+
+/-- The gap state covers the XGETBV bytes with execute permission. -/
+theorem zeuge_s1p_exec_xgetbv :
+    ausfuehrbarN zeugeS1p.speicher zeugeS1p.rip 3 = true := by
+  decide
+
+/-- The gap state fetches an XGETBV form. -/
+theorem zeuge_s1p_form_xgetbv :
+    (fetchCpu zeugeS1p).map Prod.fst = some CpuForm.xgetbv := by
+  decide
+
+/-- The gap state fetches something. -/
+theorem zeuge_s1p_some :
+    (fetchCpu zeugeS1p).isSome = true := by
+  decide
+
+/-- The gap state fetches XGETBV with some rest. -/
+theorem zeuge_fetch1p :
+    ∃ rest : List Byte, fetchCpu zeugeS1p = some (.xgetbv, rest) := by
+  cases h : fetchCpu zeugeS1p with
+  | some pr =>
+    obtain ⟨f, restL⟩ := pr
+    have h2 := zeuge_s1p_form_xgetbv
+    rw [h] at h2
+    simp at h2
+    rw [h2]
+    exact ⟨restL, rfl⟩
+  | none =>
+    have h2 := zeuge_s1p_some
+    rw [h] at h2
+    simp at h2
+
+/-- The observed XSAVE bit on the witness post-state is set. -/
+theorem zeuge_beob_xsvae :
+    ecxXSAVE (beobachte zeugeS1) = true := by
+  decide
+
+/-- The witness hardware answers selector 0 with XMM+YMM. -/
+theorem zeuge_xcr_0 :
+    zeugeHw.xcrAns (low32 (zeugeS1p.register .rcx))
+      = some (BitVec.ofNat 32 0, BitVec.ofNat 32 0x6) := by
+  decide
+
+/-- Witness post-XGETBV state: named pair in place, RIP + 3. -/
+def zeugeS2 : Zustand :=
+  { register :=
+      regSet (regSet zeugeS1p.register .rax
+        (zext64 (BitVec.ofNat 32 0x6))) .rdx (zext64 (BitVec.ofNat 32 0))
+    flags := zeugeS1p.flags
+    rip := ripNach zeugeS1p.rip 3
+    speicher := zeugeS1p.speicher }
+
+/-- The second fetched step reaches the explicit post-XGETBV state. -/
+theorem zeuge_schritt2 :
+    cpuByteschritt zeugeHw zeugeScope zeugeCtrl
+      (ecxXSAVE (beobachte zeugeS1)) zeugeS1p = .ok zeugeS2 := by
+  obtain ⟨rest, hf⟩ := zeuge_fetch1p
+  have b := cpuByteschritt_wird_xgetbv zeugeHw zeugeScope zeugeCtrl
+    (ecxXSAVE (beobachte zeugeS1)) zeugeS1p rest
+    zeuge_s1p_ohne_lock hf zeuge_s1p_exec_xgetbv
+  rw [b]
+  have hb : ecxXSAVE (beobachte zeugeS1) = true := zeuge_beob_xsvae
+  have hc : zeugeCtrl.cr4Osxsave = true := by
+    decide
+  unfold cpuSchrittXgetbv
+  simp only [hb, hc, Bool.not_true, Bool.false_or, Bool.false_eq_true,
+    if_false]
+  rw [zeuge_xcr_0]
+  rfl
+
+/-- Witness post-store memory: derived value 1 at the data cell. -/
+def zeugeM : Speicher :=
+  { zeugeS2.speicher with
+    bytes :=
+      writeBytes zeugeS2.speicher zeugenDatenCpu (BitVec.ofNat 64 1) }
+
+/-- The data cell is writable on the witness post-state. -/
+theorem zeuge_schreibbar :
+    schreibbar8 zeugeS2.speicher zeugenDatenCpu = true := by
+  decide
+
+/-- The derived value stores into the explicit post-store memory. -/
+theorem zeuge_mem_schritt :
+    write64 zeugeS2.speicher zeugenDatenCpu (BitVec.ofNat 64 1)
+      = some zeugeM := by
+  unfold write64
+  rw [if_pos zeuge_schreibbar]
+  rfl
+
+/-- The data cell is readable on the witness post-state. -/
+theorem zeuge_lesbar :
+    lesbar8 zeugeS2.speicher zeugenDatenCpu = true := by
+  decide
+
+/-- The derived value reads back from the post-store memory. -/
+theorem zeuge_mem_liest :
+    read64 zeugeM zeugenDatenCpu = some (BitVec.ofNat 64 1) := by
+  exact read64_nach_write64 _ _ _ _ zeuge_mem_schritt zeuge_lesbar
+
+/-- The data cell starts as zero: the store observably changes memory. -/
+theorem zeuge_daten_null :
+    zeugeStart0.speicher.bytes zeugenDatenCpu = BitVec.ofNat 8 0 := by
+  decide
+
+/-- Joint fetched CPUID/XGETBV sequence with derived memory store.
+    Both fetched steps succeed, the observed XSAVE bit gates XGETBV,
+    the derived AVX-ready value stores and reads back, RIP chains
+    through both forms, and the observed ECX is faithful. Every
+    premise is used by the proof. -/
+theorem cpu_kette_speichert_gatter (hw : CpuHw) (scope : CpuScope)
+    (ctrl : CtrlState) (s s1 s1p s2 : Zustand) (o1 : CpuOut)
+    (hi lo : BitVec 32) (m' : Speicher) (daten : Adresse) (v w : Wort)
+    (r1 r2 : List Byte)
+    (hflt : (scope.faultEnabled && decide (0 < scope.cpl)) = false)
+    (hvm : scope.vmNonRoot = false)
+    (hl1 : leseLock (geholt s) = false)
+    (hf1 : fetchCpu s = some (.cpuid, r1))
+    (hx1 : ausfuehrbarN s.speicher s.rip 2 = true)
+    (ho : o1 = hw.cpuidAns (low32 (s.register .rax))
+      (low32 (s.register .rcx)))
+    (hs1 : cpuByteschritt hw scope ctrl false s = .ok s1)
+    (hsel : low32 (s1p.register .rcx) = 0)
+    (hw0 : hw.xcrAns 0 = some (hi, lo))
+    (hl2 : leseLock (geholt s1p) = false)
+    (hf2 : fetchCpu s1p = some (.xgetbv, r2))
+    (hx2 : ausfuehrbarN s1p.speicher s1p.rip 3 = true)
+    (hb : ecxXSAVE o1 = true)
+    (hc : ctrl.cr4Osxsave = true)
+    (hs2 : cpuByteschritt hw scope ctrl (ecxXSAVE o1) s1p = .ok s2)
+    (hv : v = if avxBereit o1 lo then BitVec.ofNat 64 1
+      else BitVec.ofNat 64 0)
+    (hles : lesbar8 s2.speicher daten = true)
+    (hmem : write64 s2.speicher daten v = some m')
+    (hrd : read64 m' daten = some w) :
+    w = v ∧ v = (if avxBereit o1 lo then BitVec.ofNat 64 1
+      else BitVec.ofNat 64 0)
+      ∧ s1.rip = ripNach s.rip 2 ∧ s2.rip = ripNach s1p.rip 3
+      ∧ (beobachte s1).ecx.toNat = o1.ecx.toNat := by
+  have b1 := cpuByteschritt_wird_cpuid hw scope ctrl false s r1
+    hl1 hf1 hx1
+  rw [b1] at hs1
+  have hrahmen1 := cpuid_rahmen hw scope s s1 false rfl hflt hvm hs1
+  have b2 := cpuByteschritt_wird_xgetbv hw scope ctrl (ecxXSAVE o1) s1p
+    r2 hl2 hf2 hx2
+  rw [b2] at hs2
+  have hans : hw.xcrAns (low32 (s1p.register .rcx)) = some (hi, lo) := by
+    rw [hsel, hw0]
+  have hrahmen2 := xgetbv_rahmen hw ctrl (ecxXSAVE o1) s1p s2 false hi lo
+    rfl hb hc hans hs2
+  have hrd2 : read64 m' daten = some v :=
+    read64_nach_write64 _ _ _ _ hmem hles
+  rw [hrd] at hrd2
+  cases hrd2
+  refine ⟨rfl, hv, ?_, ?_, ?_⟩
+  · obtain ⟨_, _, hrip1⟩ := hrahmen1
+    exact hrip1
+  · obtain ⟨_, _, _, _, hrip2⟩ := hrahmen2
+    exact hrip2
+  · exact beobachte_ecx_treu hw scope s s1 o1 false rfl hflt hvm ho hs1
+
+/-- Joint companion witness: the generic chain instantiated with
+    all premises jointly on the concrete reached sequence, plus the
+    memory-change evidence (data cell zero before, derived one after).
+    Non-degenerate: two fetched steps run and the store changes memory. -/
+theorem cpu_kette_speichert_gatter_zeuge :
+    ((1 : Wort) = BitVec.ofNat 64 1)
+      ∧ zeugeS1.rip = ripNach zeugeStart0.rip 2
+      ∧ zeugeS2.rip = ripNach zeugeS1p.rip 3
+      ∧ (beobachte zeugeS1).ecx.toNat = zeugeOut1.ecx.toNat
+      ∧ read64 zeugeM zeugenDatenCpu = some (BitVec.ofNat 64 1)
+      ∧ zeugeStart0.speicher.bytes zeugenDatenCpu = BitVec.ofNat 8 0 := by
+  obtain ⟨r1, hf1⟩ := zeuge_fetch0
+  obtain ⟨r2, hf2⟩ := zeuge_fetch1p
+  have hflt : (zeugeScope.faultEnabled && decide (0 < zeugeScope.cpl))
+      = false := by
+    decide
+  have hvm : zeugeScope.vmNonRoot = false := by
+    decide
+  have ho : zeugeOut1 = zeugeHw.cpuidAns
+      (low32 (zeugeStart0.register .rax))
+      (low32 (zeugeStart0.register .rcx)) := by
+    have e1 : zeugeStart0.register .rax = (zeugenRegCpu 1 0) .rax := rfl
+    have e2 : zeugeStart0.register .rcx = (zeugenRegCpu 1 0) .rcx := rfl
+    rw [e1, e2, zeuge_low32_rax, zeuge_low32_rcx]
+    exact zeugeOut1_ans.symm
+  have hsel : low32 (zeugeS1p.register .rcx) = 0 := by
+    decide
+  have hw0 : zeugeHw.xcrAns 0
+      = some (BitVec.ofNat 32 0, BitVec.ofNat 32 0x6) := by
+    decide
+  have hb : ecxXSAVE zeugeOut1 = true := by
+    decide
+  have hc : zeugeCtrl.cr4Osxsave = true := by
+    decide
+  have hv : (1 : Wort) = if avxBereit zeugeOut1 (BitVec.ofNat 32 0x6)
+      then BitVec.ofNat 64 1 else BitVec.ofNat 64 0 := by
+    decide
+  have main := cpu_kette_speichert_gatter zeugeHw zeugeScope zeugeCtrl
+    zeugeStart0 zeugeS1 zeugeS1p zeugeS2 zeugeOut1
+    (BitVec.ofNat 32 0) (BitVec.ofNat 32 0x6) zeugeM
+    zeugenDatenCpu 1 1 r1 r2 hflt hvm
+    zeuge_start_ohne_lock hf1 zeuge_start_exec_cpuid ho
+    zeuge_schritt1 hsel hw0
+    zeuge_s1p_ohne_lock hf2 zeuge_s1p_exec_xgetbv hb hc
+    zeuge_schritt2 hv zeuge_lesbar zeuge_mem_schritt zeuge_mem_liest
+  obtain ⟨hw1, _, hrip1, hrip2, htreu⟩ := main
+  exact ⟨hw1, hrip1, hrip2, htreu, zeuge_mem_liest, zeuge_daten_null⟩
+
+/-- The first fetched step lands at 0x1002. -/
+theorem zeuge_rip1_wert :
+    zeugeS1.rip = BitVec.ofNat 64 0x1002 := by
+  decide
+
+/-- The second fetched step lands at 0x1005. -/
+theorem zeuge_rip2_wert :
+    zeugeS2.rip = BitVec.ofNat 64 0x1005 := by
+  decide
+
+/-- VM exit projection (no state compare needed). -/
+def ergVm : CpuErg → Bool
+  | .vmExit => true
+  | _ => false
+
+/-! ## 8. Planted refusals: selector, control, prefix, boundary, forgery.
+
+  Wrong selector/feature/control/prefix/nonexec/forged-bit mutations
+  show precise refusals or differing outcomes on actual fetched bytes. -/
+
+/-- Witness XGETBV-only program. -/
+def zeugenProgXgetbv : List Byte := [natByte 15, natByte 1, natByte 208]
+
+/-- Witness XGETBV start over a given RCX word. -/
+def zeugeStartSel (rcx : Wort) : Zustand :=
+  zeugenStartCpu zeugenProgXgetbv 15 1 rcx
+
+/-- Selector 2 on actual fetched bytes is #GP. -/
+theorem zeuge_selektor_gp :
+    ergFehler (cpuByteschritt zeugeHw zeugeScope zeugeCtrl true
+      (zeugeStartSel 2)) = some .gp := by
+  decide
+
+/-- XGETBV without CR4.OSXSAVE is #UD on actual fetched bytes. -/
+theorem zeuge_ohne_os_ud :
+    ergFehler (cpuByteschritt zeugeHw zeugeScope ⟨false⟩ true
+      (zeugeStartSel 0)) = some .ud := by
+  decide
+
+/-- Witness program: LOCK + CPUID. -/
+def zeugenProgLock : List Byte := [natByte 240, natByte 15, natByte 162]
+
+/-- LOCK before CPUID bytes faults #UD at fetch. -/
+theorem zeuge_lock_ud :
+    ergFehler (cpuByteschritt zeugeHw zeugeScope zeugeCtrl false
+      (zeugenStartCpu zeugenProgLock 15 1 0)) = some .ud := by
+  decide
+
+/-- Witness program: truncated XGETBV (third byte cut off). -/
+def zeugenProgStumpf : List Byte := [natByte 15, natByte 1]
+
+/-- A cut-off XGETBV has no transition. -/
+theorem zeuge_stumpf_verweigert :
+    ergRip (cpuByteschritt zeugeHw zeugeScope zeugeCtrl true
+      (zeugenStartCpu zeugenProgStumpf 2 1 0)) = none := by
+  decide
+
+/-- Execute-denied XGETBV bytes admit no fetch. -/
+theorem zeuge_ohne_exec_verweigert :
+    ergRip (cpuByteschritt zeugeHw zeugeScope zeugeCtrl true
+      (zeugenStartCpu zeugenProgXgetbv 0 1 0)) = none := by
+  decide
+
+/-- CPUID-faulting at CPL 3 is #GP on actual fetched bytes. -/
+theorem zeuge_fault_gp :
+    ergFehler (cpuByteschritt zeugeHw ⟨true, 3, false⟩ zeugeCtrl false
+      zeugeStart0) = some .gp := by
+  decide
+
+/-- VMX non-root CPUID is a VM exit on actual fetched bytes. -/
+theorem zeuge_vmExit :
+    ergVm (cpuByteschritt zeugeHw ⟨false, 0, true⟩ zeugeCtrl false
+      zeugeStart0) = true := by
+  decide
+
+/-- Hardware without the XSAVE observation: leaf answers carry no bit. -/
+def zeugeHwOhneXSAVE : CpuHw :=
+  { cpuidAns := fun _ _ => ⟨0, 0, 0, 0⟩
+    xcrAns := zeugeHw.xcrAns }
+
+/-- The zero leaf genuinely clears the observed XSAVE bit. -/
+theorem zeuge_xsvae_bit_klar :
+    ecxXSAVE (zeugeHwOhneXSAVE.cpuidAns 1 0) = false := by
+  decide
+
+/-- With the observed bit clear, XGETBV faults #UD for every state. -/
+theorem zeuge_ohne_beob_ud (s : Zustand) (lock : Bool) :
+    cpuSchrittXgetbv zeugeHwOhneXSAVE zeugeCtrl
+      (ecxXSAVE (zeugeHwOhneXSAVE.cpuidAns 1 0)) s lock
+      = .fault .ud := by
+  unfold cpuSchrittXgetbv
+  rw [zeuge_xsvae_bit_klar]
+  cases lock <;> simp
+
+/-- Hardware with forged EBX bits. -/
+def zeugeHwFalsch : CpuHw :=
+  { cpuidAns := fun _ _ =>
+      ⟨BitVec.ofNat 32 7, BitVec.ofNat 32 0xFFFFFFFF,
+       BitVec.ofNat 32 0x1C000000, BitVec.ofNat 32 0x04000000⟩
+    xcrAns := zeugeHw.xcrAns }
+
+/-- Forged EBX bits change the observed outcome: no silent equality. -/
+theorem zeuge_ausgang_unterscheidet :
+    ergReg .rbx (cpuByteschritt zeugeHw zeugeScope zeugeCtrl false
+      zeugeStart0)
+      ≠ ergReg .rbx (cpuByteschritt zeugeHwFalsch zeugeScope zeugeCtrl
+        false zeugeStart0) := by
+  decide
 /- CUTS: what is not proved here.
-  - Full CPUID/XGETBV execution, faults, gates and witnesses are OPEN.
-  - No hardware correspondence beyond the cited manual entries.
-  - No TSO serialization, entry or validator bridge is claimed yet.
+
+  Provenance (checked 2026-10-02 against the local snapshot
+  `.tmp/HARDWARE-REFERENCES/`, REFERENCES.json sha256
+  `a4a62e6a7ba11a76c7753a195b825087306812aac39b930973f9168ee599f321`,
+  Intel SDM 325462-093US September 2026): the CPUID instruction entry
+  (Vol. 2A pp. 3-202-3-204: opcode 0F A2, implicit EAX/ECX inputs,
+  EAX/EBX/ECX/EDX outputs, high halves cleared on Intel 64,
+  serializing, #UD iff LOCK, invalid leaves Reserved, VM exit under
+  VMX non-root); the XGETBV instruction entry (Vol. 2D pp. 6-36-6-37:
+  NP 0F 01 D0, ECX selector with high 32 of RCX ignored, EDX:EAX
+  answer, #GP on any other selector, #UD on XSAVE=0, CR4.OSXSAVE=0
+  or LOCK); Vol. 1 Chapters 13-14 (CPUID.01H ECX XSAVE[26],
+  OSXSAVE[27], AVX[28]; EDX SSE2[26]; CPUID.07H:00H EBX AVX2[5];
+  XCR0 XMM[1] and YMM[2]; the Example 14-1 AVX detection sequence).
+  No AMD reference snapshot was available; no vendor-difference,
+  silicon-timing or physical-hardware claim is made anywhere here.
+
+  - Unsupported CPUID leaves answer Reserved from `hw`, never #UD;
+    the selected fault/virtualization scope is explicit and narrow.
+  - The between-fetch selector preparation is an explicit gap state
+    (`hsel`/`hw0`); byte-level composition with a MOV lowering stays
+    with the consumer lanes, as does fuller dispatcher integration
+    (pilot disjointness is proved here; decodeExt composition is open).
+  - CPUID serialization is a precondition interface
+    (`cpuidSerialBereit` = `zaunBereit`); no drain, no timing bound,
+    no cross-core effect and no bounded-hardware-timing claim.
+  - No source/checker/emitter correspondence, no TSO-to-W/GX bridge
+    (only the precondition interface for lane 660), no 674/670 or
+    entry-validator integration (only the exported gate boundary:
+    `CpuHw`, `CpuScope`, `CtrlState`, `avxBereit`, `eintrittAvxOk`,
+    `cpuidSerialBereit`, `beobachte`, `fetchCpu`, `cpuByteschritt`).
+  - Only the selected leaves (1, 7/0), selector 0/1-scope validity
+    and the SSE2/AVX/AVX2/OSXSAVE/XMM+YMM gates are modelled; all
+    other leaves, selectors, features and control state stay open.
 -/
 
-#print axioms bit32_skelett
+#print axioms zext64_klein
+#print axioms low32_zext64_nat
+#print axioms decodeCpu_cpuid
+#print axioms decodeCpu_xgetbv
+#print axioms cpuid_schreibt_rax
+#print axioms cpuid_rax_hoch_null
+#print axioms xgetbv_schreibt
+#print axioms avxBereit_zeuge
+#print axioms cpuByteschritt_wird_cpuid
+#print axioms cpuByteschritt_wird_xgetbv
+#print axioms serial_kein_fremd_drain
+#print axioms beobachte_ecx_treu
+#print axioms cpu_kette_speichert_gatter
+#print axioms cpu_kette_speichert_gatter_zeuge
+#print axioms zeuge_selektor_gp
+#print axioms zeuge_ausgang_unterscheidet
 
 end Gabbro.Grammatik.X86
