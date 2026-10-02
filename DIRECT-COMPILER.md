@@ -302,7 +302,7 @@ Last ledger refresh: **2026-10-02 18:50 UTC**. This is an operational snapshot, 
 | 652 | Whole-word drain with real interleaved foreign accesses | Merged after review/checks | 653: Merged after review/checks | [report](messung/muse/MUSE-REPORT-652.md) |
 | 654 | Derived target work bound for direct source lowering | Agent working | 655: scheduled | [task](lanes/654.md) |
 | 656 | Fetched conditional byte-step flag dependency simulation | Committed candidate; review/integration pending | 657: Agent working | [task](lanes/656.md) |
-| 658 | Scalar FP final-byte validator admission and MXCSR entry | Merged after review/checks | 659: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-658.md) |
+| 658 | Scalar FP final-byte validator admission and MXCSR entry | Merged after review/checks | 659: Merged after review/checks | [report](messung/muse/MUSE-REPORT-658.md) |
 | 660 | Hardware completion: coherent multicore architectural execution | Agent working | 661: scheduled | [task](lanes/660.md) |
 | 662 | Hardware completion: LOCK atomic and fence final-byte execution | Agent working | 663: scheduled | [task](lanes/662.md) |
 | 664 | Hardware completion: efficient full selected address encodings | Agent working | 665: scheduled | [task](lanes/664.md) |
@@ -757,6 +757,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: publication batch checks passed for `1d087115`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-02: checked master `edac320c` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:edac320c43632ef46815f474f27892c95175025f -->
 - 2026-10-02: lane **658**, Scalar FP final-byte validator admission and MXCSR entry, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-658.md). <!-- x86-merged:658 -->
+- 2026-10-02: lane **659**, Independent exact review of 658, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-659.md). <!-- x86-merged:659 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
