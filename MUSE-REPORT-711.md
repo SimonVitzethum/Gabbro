@@ -7,14 +7,15 @@ semantics or PR-branch file was changed.
 
 ## Candidate and verdict
 
-CANDIDATE: 710, pinned HEAD `7c9ac116a9a764139a82c164370c6813d53db0bc`
-(doc-only lane: `dokumente/x86/UPSTREAM-PR-1-OPTIMIZER-REVIEW.md` +
+CANDIDATE: 710 7c9ac116a9a764139a82c164370c6813d53db0bc
+
+The candidate is a doc-only lane (`dokumente/x86/UPSTREAM-PR-1-OPTIMIZER-REVIEW.md` +
 `MUSE-REPORT-710.md`), reviewing upstream PR 1 head
 `5d5a72e5889a3063b417b955fa7824e72c52ef7c` (base `26c58bd4`)
 from the pinned public copies in `.tmp/UPSTREAM-PRS/pr-1`
 (`METADATA.json`, `PATCH.diff`, full source tree).
 
-VERDICT: ACCEPT.
+VERDICT: ACCEPT
 
 The author audit is accurate on every checkable claim. No MUST-FIX issue
 was found; no audit statement needed correction beyond immaterial drift
