@@ -322,7 +322,8 @@ modelled as release/acquire in W (sound over-approximation, no total
 order claimed); CAS loops need a static attempt bound or recorded
 DIVERGENCE (no invented termination/constant cost); a fence is never
 removed on race-freedom alone. Classification: **partial (machine and
-fragments proved; complete per-access typed-carrier simulation OPEN)**.
+fragments proved; complete per-access typed-carrier simulation OPEN —
+that simulation is 6B item 1, consuming the 6A item 4 facts)**.
 The existing source `schwach_ist_gX` result is preserved; the missing
 target leg is not assumed.
 
@@ -343,8 +344,8 @@ closing theorem OPEN); `ContractSites`, `RegionFresh`,
 `PayloadResidue`, `DecodeFault`-adjacent entry predicates.
 Classification: **partial (proved components; loaded-mapping +
 relocation-followed-by-re-decoding + source-memory + duties +
-runtime/entry + budget-stop ordering connections OPEN per AGENTS
-§11)**. All reachable final code (emitted unit, generated driver,
+runtime/entry + budget-stop ordering connections OPEN — those
+connections are 6B item 2, not part of the 6A hardware milestone)**. All reachable final code (emitted unit, generated driver,
 compiled-in binding, runtime, handwritten entry paths per
 `IMAGE-ABI.md` §10) must be covered or refused; `GENERATOR_KENNUNG`
 pins `treiber-gen-10`.
@@ -417,6 +418,26 @@ pins `treiber-gen-10`.
 
 ## 5. Essential SIMD versus deferred last-mile (design §2D)
 
+Non-demotion rule (root review repair): the AGREED ESSENTIAL families
+of design §2D — scalar arithmetic/bit/shift/multiply/divide/check
+lowering (§3); efficient immediates/address modes/short branches
+(§2B); the IEEE binary64 scalar baseline (§4); language-needed
+concurrency/atomics/fences (§5); emitter-driven calls/ABI/runtime/
+entry/hardware forms; the SIMD baseline Tiers 1–3 (§6) — together
+with ALL of their observable/fault/TSO/async/control obligations
+(register/flag/FP effects, address/access/fault rules, atomicity and
+tearing, interrupt/masking interaction, FP control state,
+enabled-state gates) can NEVER become complete through refusal,
+through a move to CUTS, or through unilateral deferral. Only families
+ALREADY agreed as deferred by the design (listed below), or later
+explicitly changed by Simon, may remain deferred. An unsupported
+encoding OUTSIDE selected scope may refuse at decode; but missing
+ESSENTIAL supported-source behaviour — a selected form, width,
+observable effect, fault, TSO/atomicity fact, async/control
+interaction, or required profile gate — keeps the milestone OPEN.
+A DONE condition that lets arbitrary missing rows or effects escape
+into §5 with a dated refusal is a scope shrink and is rejected.
+
 Essential (implemented first and completely): scalar
 arithmetic/bit/shift/multiply/divide/check lowering (§3); efficient
 immediates/address modes/short branches (§2B); IEEE binary64 scalar
@@ -435,60 +456,135 @@ demonstrated worthwhile benefit remains; tuning uses already-proved
 translations and measured trait tables, never trusted correctness
 premises.
 
-## 6. Finite auditable DONE condition for the full agreed model
+## 6. Finite auditable DONE conditions (root review repair: two milestones, not one)
 
-The model is DONE when ALL of the following hold on checked master
-(each item names its file/theorem/probe; none is a percentage or ETA):
+The previous revision mixed the hardware model with the future
+compiler chain in a single DONE list, and its items 1/3 let missing
+essential rows escape into §5 by refusal. This revision separates
+them. Neither milestone is a percentage or ETA.
 
-1. **Selected-form enumeration closed**: every row of design §§2B/3/4/5/6
-   Tiers 1–3 either has its Lean execution semantics + encoder row +
-   decoder refusal of neighbours + correspondence lemma, or is listed
-   in §5-deferred with its gate. No `C001`-without-family-proof
-   regression (`EMITTER-INVENTAR.md` §11: a disappearing `weigere(`
-   site without its family proof is a regression).
-2. **Fetched-byte execution**: every admitted form executes through the
-   common architecture (660 composition over canonical state): decode
-   from actual bytes, length/permission/fault checks, register/flag/FP
-   effects, address/access rules, TSO/atomicity/interrupt/control
-   gates. Unsupported encodings refuse explicitly
-   (`decodeExt`-style fallback + planted malformed-byte refusals).
-3. **Omission ledger empty**: defined-AF rows (666), failed-CAS access
-   rules (662), per-access canonical-form faults (670), FP
-   sticky/payload observations (668), CPUID/XCR0/OSXSAVE context (674),
-   device-memory ordering (676) each either proved or moved to §5 with
-   a dated entry and a refusing gate — none left as silent `none`.
-4. **Per-access TSO bridge**: typed-carrier x86-TSO → W simulation
-   (O-align/O-access lemmas, atomicity/tearing table, SB and
-   forbidden-outcome probes failing closed), composed with the
-   preserved `schwach_ist_gX`.
-5. **Image/ABI/entry/budget connected**: actual loaded mapping,
-   relocations followed by re-decoding, source-memory representation,
-   source duties, runtime/entry bodies, budget-stop/work ordering;
-   `valX86_sound` and the source-to-final-loaded-byte closing theorem
-   proved; every layout change revalidated (`layoutOk`).
-6. **Assumption/contract ledger clean**: §12 item 7 gaps (a) and (b)
-   closed or dated with owners; no OS-shape knowledge outside checked
-   gate contracts; `gabbro_ziel` axioms exactly
+### 6A. HARDWARE-MODEL DONE (the immediate goal)
+
+The agreed selected x86-64 architectural hardware model is DONE when
+ALL of the following hold on checked master (each item names its
+file/theorem/probe):
+
+1. **Selected-form enumeration closed — no escape by refusal**:
+   every row of design §§2B/3/4/5/6 Tiers 1–3 has its Lean execution
+   semantics + encoder row + decoder refusal of neighbours +
+   correspondence lemma. Per the §5 non-demotion rule, an AGREED
+   ESSENTIAL row or observable/fault/TSO/async/control obligation
+   cannot be closed by moving it to §5-deferred, to CUTS, or to a
+   refusing gate — only families ALREADY agreed as deferred by the
+   design (or later explicitly changed by Simon) may stay deferred.
+   An unsupported encoding outside selected scope refuses at decode;
+   missing essential supported-source behaviour keeps this milestone
+   OPEN. No `C001`-without-family-proof regression
+   (`EMITTER-INVENTAR.md` §11: a disappearing `weigere(` site
+   without its family proof is a regression).
+2. **Fetched-byte execution through the common architecture**: every
+   admitted form executes through the 660 composition over canonical
+   state — decode from actual bytes, length/permission/fault checks,
+   register/flag/FP effects, address/access rules,
+   TSO/atomicity/interrupt/control gates. Unsupported encodings refuse
+   explicitly (`decodeExt`-style fallback + planted malformed-byte
+   refusals).
+3. **Omission ledger proved, not parked**: defined-AF rows (666),
+   failed-CAS access rules (662), per-access canonical-form faults
+   (670), FP sticky/payload observations incl. MXCSR
+   establishes/preserves per context (668), CPUID/XCR0/OSXSAVE context
+   (674), device-memory ordering (676) are each PROVED for every
+   selected form that needs them. None may be closed by deferral,
+   CUTS, or a silent `none`: any still-open item keeps this milestone
+   OPEN by name.
+4. **Model-side TSO/atomicity facts proved** (prerequisite for the
+   6B bridge, not the bridge itself): per-access TSO machine facts
+   over canonical byte memory and per-core FIFO buffers
+   (forwarding, issue, flush); the aligned-word single-copy atomicity
+   table (which widths/alignments are one event: aligned 32/64-bit
+   MOV; wider/misaligned/cross-carrier access tears and has no single
+   W message); LOCK RMW as one atomicity unit with success/failure
+   distinctness; fence drain semantics (MFENCE orders + drains own
+   buffer; SFENCE/LFENCE narrower; no fence drains another core's
+   buffer); 128-bit vector access NOT single-copy atomic; fault order
+   vs concurrent observers. These facts BELONG TO the model: the 6B
+   source W/GX refinement consumes them but does not re-prove them.
+5. **Assumption ledger clean**: only named silicon/device/timing
+   behaviour is assumed; gate/binding/OS contracts are user logic
+   with checked proofs (§4, including the two §12 item 7 gaps closed
+   or dated with owners); `gabbro_ziel` axioms exactly
    `propext, Classical.choice, Quot.sound`.
-7. **Negative evidence**: joint memory-changing fetched runs plus
-   planted malformed-byte/fault/control-state/overlap/privilege
+6. **Negative hardware evidence**: joint memory-changing fetched runs
+   plus planted malformed-byte/fault/control-state/overlap/privilege
    refusals per producer, with poison + positive probes for every new
-   checker-side refusal; independent exact-candidate review ACCEPT per
-   producer (reviewer = author + 18 pattern for this wave); green
-   `./lean-bau`, zero-failure `./cargo-pruef`, emission and key-scan
-   gates before push.
+   checker-side refusal.
+7. **Exact independent review evidence** (assigned pairs from the
+   committed prompts `lanes/660.md`–`lanes/677.md`; pairing only, no
+   verdict claimed here): 661 reviews 660, 663 reviews 662, 665
+   reviews 664, 667 reviews 666, 669 reviews 668, 671 reviews 670,
+   673 reviews 672, 675 reviews 674, 677 reviews 676 (677's prompt
+   text repeats the 660 title in parentheses after "author676" —
+   recorded as written; nothing inferred). An earlier draft of this
+   matrix wrote "reviewer = author + 18"; that arithmetic described a
+   different wave and is WRONG for this one — struck and replaced by
+   the pairs above. DONE requires each reviewer's committed VERDICT on
+   its exact candidate; number arithmetic never constitutes
+   acceptance. Green `./lean-bau` and standard axioms per candidate
+   before any merge.
 8. **Portability preserved**: no implicit Linux/POSIX/libc/ELF
    dependency; freestanding has no mandatory host runtime or dynamic
    loader; every selected profile retains final-byte, entry,
    support-code and mapping validation (AGENTS §3).
 
+What 6A does NOT require: the future complete compiler theorem, the
+Rust backend, or measured performance. Defining the hardware-only
+milestone as requiring `valX86_sound`, the source-to-final-loaded-byte
+closing theorem, or the Rust backend would hold hostage a model that
+must stand on its own feet first.
+
+### 6B. REQUIRED FOLLOW-ON DONE (mandatory, OPEN — not discarded)
+
+Generic source-to-binary validation remains mandatory and OPEN. The
+6A/6B split must NOT be read as dropping the per-access TSO/source
+obligations the compiler needs — they live here, as requirements:
+
+1. **Per-access TSO → W → GX bridge**: forward simulation x86-TSO → W
+   per access (O-align/O-access lemmas, atomicity/tearing table
+   consumed from 6A item 4, SB and forbidden-outcome probes failing
+   closed), composed with the preserved `schwach_ist_gX`. The
+   `seq_cst`-as-release/acquire modelling stays a documented sound
+   over-approximation (no total order claimed); CAS loops need a
+   static attempt bound or recorded DIVERGENCE; a fence is never
+   removed on race-freedom alone. Owners: TSO-wave bridge lanes
+   (567/573/574 pattern); consumers must not re-abstract what 6A
+   proved.
+2. **Image/ABI/entry/budget connection**: actual loaded mapping,
+   relocations followed by re-decoding, source-memory representation,
+   source duties, runtime/entry bodies, budget-stop/work ordering;
+   `valX86_sound` and the source-to-final-loaded-byte closing theorem
+   proved; every layout change revalidated (`layoutOk`).
+3. **Full publication**: integrated master with green `./lean-bau`,
+   zero-failure `./cargo-pruef`, emission and key-scan gates; Rust
+   backend against reviewed interfaces; §10 measurement baselines
+   published in `DIRECT-COMPILER.md`. No push past a red gate; no
+   weakening of verifier verdicts on resource failure.
+
+Classification rule for atomicity/per-access facts: target hardware
+facts (single-copy atomicity table, LOCK unit, fence drain effects,
+tearing, fault-vs-observer order) belong to 6A; the simulation that
+maps each target access onto W messages and GX runs, with its
+alignment/containment/non-overlap proofs, belongs to 6B.
+
 ## 7. Follow-up tasks (exact NEW paths, dependencies, sketches, witnesses, rejection criteria)
 
 Each task owns ONLY its named NEW module (+ additive umbrella import
 + its `MUSE-REPORT-NNN.md`); source/checker/Spec/goal/emitter files
-and friend-reserved optimiser files stay untouched.
+and friend-reserved optimiser files stay untouched. F1–F6 close 6A
+(hardware model); F7–F8 are the mandatory 6B follow-on (bridge and
+closing validator) — required, not optional, and not a parking lot
+for essential model obligations.
 
-- **F1 — Locked forms completion** (depends on accepted 664 address
+- **F1 — Locked forms completion** (6A; depends on accepted 664 address
   API, 660 adapters): `grammatik/Grammatik/X86/LockedFormsFull.lean`.
   Sketch: LOCK XADD/CMPXCHG word rows with flag/register/RIP effects,
   failed-path access rule from the manual, fence drain/barrier
@@ -496,42 +592,43 @@ and friend-reserved optimiser files stay untouched.
   register-only form, truncation, unsupported alignment. Reject:
   stutter re-presented as full ISA; unbounded CAS progress; silent
   trust in the old false-path equation.
-- **F2 — Canonical-form faults** (depends on 664, 660): extend the
+- **F2 — Canonical-form faults** (6A; depends on 664, 660): extend the
   670 module or a named follow-up with per-access noncanonical
   (#GP) classification tied to real fetched execution. Negative:
   bit-47-violating effective address admitted. Reject: image-level
   `kanonischBereich` cited as per-access proof.
-- **F3 — Defined-AF rows** (depends on 666): per admitted integer row,
+- **F3 — Defined-AF rows** (6A; depends on 666): per admitted integer row,
   either the defined auxiliary-carry value or a proved
   non-observability lemma consumed by every flag consumer. Negative:
   AF-observing sequence across an `af = none` row claimed equal.
   Reject: weakening a flag consumer to make the row fit.
-- **F4 — FP observation closure** (depends on 668, IEEE kernel):
+- **F4 — FP observation closure** (6A; depends on 668, IEEE kernel):
   payload/payload-signalling and sticky-flag accumulation rules, or
   proved non-observability through every program-observable channel;
   MXCSR establishes/preserves per context. Negative: NaN-payload-
   distinguishing store-load, SNaN-quieting observation, sticky-flag
   survival across a claimed reset. Reject: class-level agreement
   cited as raw-bit fidelity; fast-math/FMA fusion smuggled in.
-- **F5 — Enabled-state proofs** (depends on 674): CPUID/XCR0/XGETBV
+- **F5 — Enabled-state proofs** (6A; depends on 674): CPUID/XCR0/XGETBV
   model with entry-established facts re-checked per image; Tier 3
   AVX2 rows gated per named CPU profile. Negative: AVX2 bytes
   admitted with XCR0 YMM clear; context-switch clobber of upper YMM
   across a call-preserved boundary. Reject: `osXmm : Bool` cited as
   completion evidence.
-- **F6 — Device-memory ordering** (depends on 676, TSO bridge):
+- **F6 — Device-memory ordering** (6A; depends on 676, TSO bridge):
   memory-type/order rules for admitted MMIO (and DMA if ever
   admitted), generic device-response interface, typed admission
   memory-kind profile. Negative: MMIO access reordered as WB-RAM;
   DMA access through the RAM rule. Reject: RAM/TSO inheritance for
   device memory; Linux/POSIX assumption; fabricated C wrapper.
-- **F7 — Typed-carrier TSO bridge** (depends on accepted 567/570
-  interfaces): per-access x86-TSO → W simulation with O-align/
-  O-access, atomicity/tearing table, SB/forbidden-outcome probes.
+- **F7 — Typed-carrier TSO bridge** (6B follow-on; depends on 6A item 4
+  facts and accepted TSO-wave bridge interfaces): per-access x86-TSO → W
+  simulation with O-align/O-access, atomicity/tearing table (consumed
+  from 6A item 4), SB/forbidden-outcome probes.
   Negative: torn 128-bit shared store claimed atomic; misaligned
   word claimed single-copy. Reject: byte-level projection cited as
   the full bridge; SC word effects substituted for buffered accesses.
-- **F8 — Closing validator** (depends on all of the above):
+- **F8 — Closing validator** (6B follow-on; depends on 6A DONE plus F7):
   `valX86_sound` + source-to-final-loaded-byte theorem with full
   negative-probe suite. Reject: `valX86` mapping/decode checks cited
   as source refinement; any layout change without revalidation.
@@ -544,12 +641,18 @@ evidence rule, and every unbounded/foreign path named instead of
 hidden. It does not claim: any x86 correspondence, any TSO/ABI/layout
 proof, any accepted byte chain, or any performance figure. There is
 no completed direct-x86 chain (plan §4 measurement); the two closed
-C chains remain legacy evidence only. Counts (62 X86 modules at the
-handoff snapshot; ~26,300 physical lines; 420-job grammar build) are
-not completion evidence.
+C chains remain legacy evidence only. Counts (94 X86 modules, 50,368
+physical lines, measured in this clone at this revision — the older
+handoff snapshot said 62 modules / ~26,300 lines) are not completion
+evidence. No in-flight candidate state is claimed: producer lanes
+660–676 and reviewer 679 work in their own clones, and no VERDICT on
+this matrix exists here — lane 679 (`lanes/679.md`, exact review of
+author 678 with `CANDIDATE: 678 <HEAD>` and `VERDICT: ACCEPT or
+REPAIR`) is pending at the time of writing.
 
 *CUTS (organisation lane 678): no Lean theorems; no decoder/memory/ABI/
 TSO/float/cost proofs; no per-access mapping; no image contract. All
 producer states are prompt-level except where the accepted tree
-proves otherwise. Full typed-carrier TSO→W/GX and source-to-final-
-bytes validation remain OPEN.*
+proves otherwise. The 6B follow-on (typed-carrier TSO→W/GX bridge,
+image/ABI/entry/budget connection, closing validator, Rust backend)
+remains OPEN and mandatory; it is separated from 6A, not dropped.*
