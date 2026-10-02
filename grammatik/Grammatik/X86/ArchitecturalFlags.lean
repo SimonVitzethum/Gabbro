@@ -1139,6 +1139,111 @@ theorem pushfq_fremd : decode [pushfqOp] = none := by decide
 /-- The pilot decoder refuses the POPFQ byte. -/
 theorem popfq_fremd : decode [popfqOp] = none := by decide
 
+/-! ## 6c. Joint fetched run and planted refusals.
+
+    Fetched `add rax, rbx` (defined AF set) followed by the fetched
+    flag-save changes real stack memory; a second run distinguishes
+    the cleared AF; MUL contributes two legal undefined-flag choices;
+    the push/pop roundtrip restores status with RF cleared; and the
+    planted mutations cover malformed bytes, privilege, stack access,
+    control-state gating and undefined consumers. -/
+
+/-- Witness registers: `rax = 0x0F`, `rbx = 0x01`, stack top 8192. -/
+def witRegA : Register → Wort := fun q =>
+  if q = Register.rax then 0x0F
+  else if q = Register.rbx then 0x01
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness raw word: bit 1 (valid), bit 4 (the `0x0F + 0x01` nibble
+    carry), bit 16 (RF, to show the clearing). -/
+def witRohA : Wort := BitVec.ofNat 64 (2 + 16 + 65536)
+
+/-- Witness control: CPL 0, no virtual-8086 mode. -/
+def witSteuer : Steuer := { cpl := 0, iopl := 0, ifBit := true, vm := false }
+
+/-- Witness memory: the PUSHFQ byte at the code address, zeroed stack,
+    fully permissive. -/
+def flagSpeicher : Speicher :=
+  { bytes := fun a => if a = BitVec.ofNat 64 4099 then pushfqOp else BitVec.ofNat 8 0, lesbar := fun _ => true, schreibbar := fun _ => true, ausfuehrbar := fun _ => true }
+
+/-- Witness core before the arithmetic. -/
+def witKern0 : Zustand :=
+  { register := witRegA, flags := liestStatus witRohA, rip := BitVec.ofNat 64 4096, speicher := flagSpeicher }
+
+/-- Witness architectural state before the arithmetic. -/
+def witA0 : ArchZustand := { kern := witKern0, roh := witRohA, steuer := witSteuer }
+
+/-- Witness core after `add rax, rbx`: `rax = 0x10`, RIP advanced by
+    the 3-byte form, flags are the accepted snapshot. -/
+def witKern1 : Zustand :=
+  { register := fun q => if q = Register.rax then 0x10 else witRegA q, flags := (add64 0x0F 0x01).2, rip := BitVec.ofNat 64 4099, speicher := flagSpeicher }
+
+/-- Witness architectural state before the flag-save. -/
+def witA1 : ArchZustand := { kern := witKern1, roh := witRohA, steuer := witSteuer }
+
+/-- Second-run registers: `rax = 0x10` (no nibble carry with `rbx`). -/
+def witRegB : Register → Wort := fun q =>
+  if q = Register.rax then 0x10
+  else if q = Register.rbx then 0x01
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Second-run raw word: valid bit plus the even parity of `0x11`. -/
+def witRohB : Wort := BitVec.ofNat 64 (2 + 4)
+
+/-- Coherence of the pre-arithmetic witness. -/
+theorem witA0_ok : archOK witA0 := by
+  unfold archOK witA0 witKern0
+  refine ⟨rfl, by decide, by decide, by decide⟩
+
+/-- Coherence of the pre-save witness: the raw word reads exactly the
+    accepted ADD snapshot. -/
+theorem witA1_ok : archOK witA1 := by
+  unfold archOK witA1 witKern1
+  refine ⟨by decide, by decide, by decide, by decide⟩
+
+/-- JOINT WITNESS: fetched arithmetic then flag-save.
+
+    `add rax, rbx` on `0x0F + 0x01` sets `rax` to `0x10` with the
+    defined AF; the fetched PUSHFQ byte saves the VM/RF-cleared image
+    to real stack memory (observably changed from zero, RF cleared);
+    and MUL contributes two legal undefined-SF choices. -/
+theorem pushfq_lauf_zeuge :
+    ∃ (nach1 : ArchZustand),
+      (schritt ⟨.addReg64 .rax .rbx, 3⟩ witKern0).map
+        (fun s => s.register Register.rax) = some 0x10 ∧
+      addErlaubt 0x0F 0x01 witRohA ∧
+      (geholt witKern1).take 1 = [pushfqOp] ∧
+      pushfqSchritt witA1 [pushfqOp] = some nach1 ∧
+      nach1.kern.register Register.rsp =
+        witKern1.register Register.rsp - BitVec.ofNat 64 8 ∧
+      read64 nach1.kern.speicher (pushfqOben witA1) =
+        some (pushfqWort witRohA) ∧
+      rbit (pushfqWort witRohA) afBit = true ∧
+      rbit (pushfqWort witRohA) rfPos = false ∧
+      flagSpeicher.bytes (pushfqOben witA1) = BitVec.ofNat 8 0 ∧
+      pushfqWort witRohA ≠ 0 ∧
+      (∃ n1 n2, mulErlaubtU 2 3 n1 ∧ mulErlaubtU 2 3 n2 ∧
+        rbit n1 sfBit = true ∧ rbit n2 sfBit = false) := by
+  have hd : pushfqByte [pushfqOp] = some 1 := by simp [pushfqByte]
+  have hv : (witA1.steuer.vm && decide (witA1.steuer.iopl < 3)) = false := by
+    decide
+  have hrd : lesbar8 witA1.kern.speicher (pushfqOben witA1) = true := by
+    decide
+  obtain ⟨m, hwr⟩ : ∃ m, write64 witA1.kern.speicher (pushfqOben witA1)
+      (pushfqWort witRohA) = some m := ⟨_, rfl⟩
+  have hadd : addErlaubt 0x0F 0x01 witRohA := by
+    unfold addErlaubt
+    decide
+  have hok := pushfqSchritt_ok witA1 [pushfqOp] 1 hd hv m hwr
+  refine ⟨_, by decide, hadd, by decide, hok, ?_, ?_, by decide,
+    by decide, by decide, by decide, mulU_sf_frei 2 3⟩
+  · simp only [pushfqKern]
+    exact regSet_gleich _ _ _
+  · simp only [pushfqKern]
+    exact read64_nach_write64 _ _ _ _ hwr hrd
+
 /- CUTS:
     Skeleton plus raw word (§2) and nibble groundwork (§3 head):
     effect relation, PUSHFQ/POPFQ observers, consumer admission and
