@@ -1182,6 +1182,14 @@ def witKern1 : Zustand :=
 /-- Witness architectural state before the flag-save. -/
 def witA1 : ArchZustand := { kern := witKern1, roh := witRohA, steuer := witSteuer }
 
+/-- Push-successor of the witness (stack image written). -/
+def witNach1 (m : Speicher) : ArchZustand := { kern := pushfqKern witA1 1 m, roh := witRohA, steuer := witSteuer }
+
+/-- The stack store after the witness flag-save (syntactically the
+    `write64` output, so the success fact closes by rewriting). -/
+def witStore : Speicher :=
+  { witA1.kern.speicher with bytes := writeBytes witA1.kern.speicher (pushfqOben witA1) (pushfqWort witRohA) }
+
 /-- Second-run registers: `rax = 0x10` (no nibble carry with `rbx`). -/
 def witRegB : Register → Wort := fun q =>
   if q = Register.rax then 0x10
@@ -1243,6 +1251,65 @@ theorem pushfq_lauf_zeuge :
     exact regSet_gleich _ _ _
   · simp only [pushfqKern]
     exact read64_nach_write64 _ _ _ _ hwr hrd
+
+/-- AF DISTINGUISHER: the `0x0F + 0x01` run saves AF set, the
+    `0x10 + 0x01` run saves AF clear -- defined auxiliary carry is
+    observable through the saved image. -/
+theorem pushfq_af_unterscheidet :
+    rbit (pushfqWort witRohA) afBit = true ∧
+    rbit (pushfqWort witRohB) afBit = false ∧
+    addErlaubt 0x0F 0x01 witRohA ∧ addErlaubt 0x10 0x01 witRohB := by
+  refine ⟨by decide, by decide, ?_, ?_⟩
+  · unfold addErlaubt
+    decide
+  · unfold addErlaubt
+    decide
+
+/-- PUSH/POP ROUNDTRIP: restoring the saved image recovers the status
+    bits, keeps RF cleared and returns the stack top. -/
+theorem pushfq_popfq_rundgang :
+    ∃ (nach1 zur : ArchZustand),
+      pushfqSchritt witA1 [pushfqOp] = some nach1 ∧
+      popfqSchritt nach1 [popfqOp] = some zur ∧
+      liestStatus zur.roh = liestStatus witRohA ∧
+      rbit zur.roh rfPos = false ∧
+      zur.kern.register Register.rsp = BitVec.ofNat 64 8192 ∧
+      zur.kern.rip = ripNach nach1.kern.rip 1 := by
+  have hd : pushfqByte [pushfqOp] = some 1 := by simp [pushfqByte]
+  have hd2 : popfqByte [popfqOp] = some 1 := by simp [popfqByte]
+  have hv : (witA1.steuer.vm && decide (witA1.steuer.iopl < 3)) = false := by
+    decide
+  have hrd : lesbar8 witA1.kern.speicher (pushfqOben witA1) = true := by
+    decide
+  have hperm : schreibbar8 witA1.kern.speicher (pushfqOben witA1) =
+      true := by
+    decide
+  have hwr : write64 witA1.kern.speicher (pushfqOben witA1)
+      (pushfqWort witRohA) = some witStore := by
+    unfold write64 witStore
+    rw [if_pos hperm]
+  have hok := pushfqSchritt_ok witA1 [pushfqOp] 1 hd hv witStore hwr
+  have hlese : read64 witStore (pushfqOben witA1) =
+      some (pushfqWort witRohA) :=
+    read64_nach_write64 _ _ _ _ hwr hrd
+  have hv2 : ((witNach1 witStore).steuer.vm &&
+      decide ((witNach1 witStore).steuer.iopl < 3)) = false := by
+    decide
+  have hrd2 : read64 witStore
+      ((pushfqKern witA1 1 witStore).register Register.rsp) =
+      some (pushfqWort witRohA) := by
+    have htop : (pushfqKern witA1 1 witStore).register Register.rsp =
+        pushfqOben witA1 := by
+      simp only [pushfqKern]
+      exact regSet_gleich _ _ _
+    rw [htop]
+    exact hlese
+  have hok2 := popfqSchritt_ok (witNach1 witStore) [popfqOp] 1
+    (pushfqWort witRohA) hd2 hv2 hrd2
+  refine ⟨_, _, hok, hok2, by decide, by decide, ?_, by decide⟩
+  simp only [popfqKern]
+  rw [regSet_gleich]
+  decide
 
 /- CUTS:
     Skeleton plus raw word (§2) and nibble groundwork (§3 head):
