@@ -311,7 +311,7 @@ Last ledger refresh: **2026-10-02 20:03 UTC**. This is an operational snapshot, 
 | 670 | Hardware completion: precise selected fault and exception transitions | Merged after review/checks | 671: Merged after review/checks | [report](messung/muse/MUSE-REPORT-670.md) |
 | 672 | Hardware completion: interrupts entry masking and trap hardware forms | Agent working | 673: Committed candidate; review/integration pending | [task](lanes/672.md) |
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Merged after review/checks | 675: Merged after review/checks | [report](messung/muse/MUSE-REPORT-674.md) |
-| 676 | Hardware completion: port IO and device memory profiles | Merged after review/checks | 677: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-676.md) |
+| 676 | Hardware completion: port IO and device memory profiles | Merged after review/checks | 677: Merged after review/checks | [report](messung/muse/MUSE-REPORT-676.md) |
 | 678 | Organise and audit complete essential hardware-model coverage | Merged after review/checks | 679: Merged after review/checks | [report](messung/muse/MUSE-REPORT-678.md) |
 | 680 | Hardware completion: indirect and compact control byte forms | Agent working | 681: scheduled | [task](lanes/680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Agent working | 683: scheduled | [task](lanes/682.md) |
@@ -796,6 +796,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **670**, Hardware completion: precise selected fault and exception transitions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-670.md). <!-- x86-merged:670 -->
 - 2026-10-02: lane **671**, Independent exact review of 670, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-671.md). <!-- x86-merged:671 -->
 - 2026-10-02: lane **676**, Hardware completion: port IO and device memory profiles, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-676.md). <!-- x86-merged:676 -->
+- 2026-10-02: lane **677**, Independent exact review of 676, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-677.md). <!-- x86-merged:677 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
