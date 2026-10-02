@@ -511,7 +511,11 @@ def pwSrcVarIdx : Block pwD pwV false [.int 0 1] [] [] :=
 def pwSrcBind : Block pwD pwV false pwCtx [] [] :=
   .bind (.lit 1) .nil
 
-/-- UNSUPPORTED CHECK (a `<` over a non-atom: refused, not guessed). -/
+/-- A CHECK THAT DOES NOT FIT THE REGISTERS (a `<` over a non-atom with
+    the original configuration, whose only scratch register is `tmp`):
+    refused, not guessed. Since the widening it is a scratch-exhaustion
+    refusal: with one more scratch register the same check is lowered
+    (`pw_tiefeBed_mit_frei`). -/
 def pwSrcTiefeBed : Block pwD pwV false pwCtx [] [] :=
   .pruefung (.lt (.add (.var .hier) (.lit 1)) (.lit 50)) (.retGrund ⟨0, by decide⟩ pwHΛ) .nil
 
@@ -520,6 +524,11 @@ theorem gift_nicht_unterstuetzt :
       compile pwCfg pwL [] pwSrcTiefeBed = none ∧
       validate pwCfg pwL [] pwSrcVarIdx [] = false ∧
       validate pwCfg pwL [] pwSrcBind [] = false := by decide
+
+/-- The same deep check IS lowered once the configuration lends one more
+    scratch register (`frei = [rdx]`). -/
+theorem pw_tiefeBed_mit_frei :
+    (compile { pwCfg with frei := [.rdx] } pwL [] pwSrcTiefeBed).isSome = true := by decide
 
 /-- REGISTER CLASH: the value register is the register of `x`. -/
 def pwCfgKlash : PipeCfg := { pwCfg with dst := .r10 }
@@ -914,6 +923,7 @@ theorem probe_codec :
 #print axioms cfg_zeuge
 #print axioms senkWert_zeuge
 #print axioms senkFrag_gerade_zeuge
+#print axioms pw_tiefeBed_mit_frei
 #print axioms senkBed_zeuge
 #print axioms intWort_sint_zahl_zeuge
 #print axioms istWahr_zeuge

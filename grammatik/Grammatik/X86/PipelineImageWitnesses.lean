@@ -12,7 +12,11 @@
              both refusals run; the GENERAL completeness of the builder
              (`kompiliert_geladen`, `bildFuerP_ok`) and the entry
              (`pipeline_correct_entry`, `bildFuerP_eintritt`) are
-             instantiated jointly (sections 7-9).
+             instantiated jointly (sections 7-9). Section 10 takes the
+             WIDENED fragment (a depth-3 value, a deep check, an `ite`
+             whose branches both store) through compile, validate, image,
+             entry and the loaded run for BOTH branch outcomes, with poison
+             probes for the new refusals.
 
   Reused: `PipelineWitnesses` (declaration, contract, program, certificate,
   configuration, candidate bytes, world, environments) and everything of
@@ -1154,6 +1158,652 @@ theorem pipeline_refuses_eins_zeuge :
     pw_envRepr70 σ' ⟨0, by decide⟩ hsrc
   exact ⟨σ', hsrc, n, s', hrun, hrip, hW, read_von_worldRep _ σ' 0 8192 hW rfl 75 h0⟩
 
+/-! ## 10. The widened fragment: a depth-3 value, a deep check and an `ite`
+
+    One program over the same declaration and placements, compiled with
+    NO optimiser certificate, using all three widenings at once:
+
+      T[0].f = ((x + 7) - 2) + x;              -- depth 3, two scratch registers
+      check ((x + 3) - 1) < 90 else reason 0;   -- deep operand
+      if x < 40 { T[1].f = x + 100 } else { T[1].f = (x - 40) + 500 }
+
+    The configuration adds the scratch stack `frei = [rdx, rsi]` and the
+    exit stride 16. The candidate is written out literally (as an untrusted
+    producer would emit it), the validator recomputes it, the image is
+    built and checked, and the run from the LOADED image is taken for both
+    branch outcomes (`x = 30` then-branch, `x = 60` else-branch, both
+    changing memory) and for the refusal (`x = 95`), by computation AND
+    through the general closing theorems. -/
+
+/-- `((x + 7) - 2) + x`, widened to the field type: three binary levels. -/
+def pdWert0 : Expr pwD pwCtx [] (pwD.typ () ()) :=
+  .weiter (lo := 7 + 0 - 2 + 0) (hi := 107 - 2 + 100) (by decide) (by decide)
+    (.add (.sub (.add (.var .hier) (.lit 7)) (.lit 2)) (.var .hier))
+
+/-- The deep check `((x + 3) - 1) < 90`. -/
+def pdCheck : Expr pwD pwCtx [] .bool := .lt (.sub (.add (.var .hier) (.lit 3)) (.lit 1)) (.lit 90)
+
+/-- The `ite` condition `x < 40`. -/
+def pdBed : Expr pwD pwCtx [] .bool := .lt (.var .hier) (.lit 40)
+
+/-- The then-value `x + 100`. -/
+def pdThen : Expr pwD pwCtx [] (pwD.typ () ()) :=
+  .weiter (lo := 0 + 100) (hi := 100 + 100) (by decide) (by decide) (.add (.var .hier) (.lit 100))
+
+/-- The else-value `(x - 40) + 500` (a negative intermediate range). -/
+def pdElse : Expr pwD pwCtx [] (pwD.typ () ()) :=
+  .weiter (lo := 0 - 40 + 500) (hi := 100 - 40 + 500) (by decide) (by decide)
+    (.add (.sub (.var .hier) (.lit 40)) (.lit 500))
+
+/-- The then-block and the else-block: both store to row 1. -/
+def pdT : Block pwD pwV false pwCtx [] [] := .cons (.assignSlot () () pwIdx1 pdThen pwHw pwHL) .nil
+def pdE : Block pwD pwV false pwCtx [] [] := .cons (.assignSlot () () pwIdx1 pdElse pwHw pwHL) .nil
+
+/-- THE WIDENED SOURCE PROGRAM. -/
+def pdSrc : Block pwD pwV false pwCtx [] [] :=
+  .cons (.assignSlot () () pwIdx0 pdWert0 pwHw pwHL)
+    (.pruefung pdCheck (.retGrund ⟨0, by decide⟩ pwHΛ)
+      (.cons (.ite pdBed pdT pdE) .nil))
+
+/-- The configuration: the original registers, scratch stack `rdx, rsi`,
+    exit stride 16. -/
+def pdCfg : PipeCfg := { pwCfg with exitStride := 16, frei := [.rdx, .rsi] }
+
+/-- THE UNTRUSTED CANDIDATE, written out: the depth-3 value (9), the deep
+    check with its jump to the exit 12288 (7), the `ite` condition with the
+    jump over the then-block (+38 bytes) (4), the then-block and the jump
+    over the else-block (+46 bytes) (6), the else-block (7). -/
+def pdProg : List Befehl :=
+  [ .movReg64 .rax .r10, .movImm64 .rsi (intWort 7), .addReg64 .rax .rsi,
+    .movImm64 .rdx (intWort 2), .subReg64 .rax .rdx, .movReg64 .rcx .r10, .addReg64 .rax .rcx,
+    .movImm64 .rbx (natAdresse 8192), .store64 .rbx .rax (BitVec.ofNat 32 0),
+    .movReg64 .rax .r10, .movImm64 .rsi (intWort 3), .addReg64 .rax .rsi,
+    .movImm64 .rdx (intWort 1), .subReg64 .rax .rdx, .movImm64 .rcx (intWort 90),
+    .cmpReg64 .rax .rcx, .jumpIf32 .ge (BitVec.ofNat 32 8092),
+    .movReg64 .rax .r10, .movImm64 .rcx (intWort 40), .cmpReg64 .rax .rcx,
+    .jumpIf32 .ge (BitVec.ofNat 32 38),
+    .movReg64 .rax .r10, .movImm64 .rcx (intWort 100), .addReg64 .rax .rcx,
+    .movImm64 .rbx (natAdresse 8200), .store64 .rbx .rax (BitVec.ofNat 32 0),
+    .jump32 (BitVec.ofNat 32 46),
+    .movReg64 .rax .r10, .movImm64 .rdx (intWort 40), .subReg64 .rax .rdx,
+    .movImm64 .rcx (intWort 500), .addReg64 .rax .rcx,
+    .movImm64 .rbx (natAdresse 8200), .store64 .rbx .rax (BitVec.ofNat 32 0) ]
+
+def pdBytes : List Byte := encodeAll pdProg
+
+theorem pd_cfgOk : cfgOk pdCfg = true := by decide
+
+/-- The compiler produces exactly the candidate (no certificate needed). -/
+theorem pd_compile : compile pdCfg (layoutVon piPs) [] pdSrc = some pdBytes := by decide
+
+/-- THE VALIDATOR ACCEPTS the untrusted candidate, by computation. -/
+theorem pd_validate : validate pdCfg (layoutVon piPs) [] pdSrc pdBytes = true := by decide
+
+theorem pd_laenge : pdBytes.length = 206 := by decide
+
+/-- The reasons the image needs a stub for: the deep check's reason 0. -/
+theorem pd_gruende : grundListe (optimise [] pdSrc) = [0] := by decide
+
+/-- The decided layout side conditions hold. -/
+theorem pd_bauOk :
+    bauOk .p48 pdCfg [] pdBytes (ohneDoppel (grundListe (optimise [] pdSrc))) piPs piEs = true := by
+  decide
+
+def pdBild : Bild := bildFuer pdCfg [] pdSrc pdBytes piPs pwSigma piEs
+
+def pdStart (x : Int) : Zustand := startZustand pdBild pdCfg (pwReg x) witnessFlags
+
+/-- The environments `x = 60` (else-branch) and `x = 95` (failed check). -/
+def pwEnv60 : Env pwD pwCtx := .cons (⟨60, by decide, by decide⟩ : Zahl 0 100) .nil
+def pwEnv95 : Env pwD pwCtx := .cons (⟨95, by decide, by decide⟩ : Zahl 0 100) .nil
+
+theorem pw_envRepr60 : EnvRepr pwEnv60 (pwReg 60) (abbOf pdCfg) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+theorem pw_envRepr95 : EnvRepr pwEnv95 (pwReg 95) (abbOf pdCfg) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+theorem pd_envRepr30 : EnvRepr pwEnv30 (pwReg 30) (abbOf pdCfg) := pw_envRepr30
+
+/-- The REAL source runs: `x = 30` takes the then-branch (rows 7 -> 65,
+    9 -> 130), `x = 60` the else-branch (rows -> 125, 520), `x = 95` fails
+    the deep check (row 0 already 195). -/
+theorem pd_quelle30 : ∃ σ' ρ', execBlock pwO 0 pwR pdSrc pwSigma pwEnv30 = .ok σ' ρ' ∧
+    (σ'.slots () 0 ()).n = 65 ∧ (σ'.slots () 1 ()).n = 130 :=
+  ⟨_, _, rfl, rfl, rfl⟩
+
+theorem pd_quelle60 : ∃ σ' ρ', execBlock pwO 0 pwR pdSrc pwSigma pwEnv60 = .ok σ' ρ' ∧
+    (σ'.slots () 0 ()).n = 125 ∧ (σ'.slots () 1 ()).n = 520 :=
+  ⟨_, _, rfl, rfl, rfl⟩
+
+theorem pd_quelle95 : ∃ σ', execBlock pwO 0 pwR pdSrc pwSigma pwEnv95 =
+    .grund σ' ⟨0, by decide⟩ ∧ (σ'.slots () 0 ()).n = 195 ∧ (σ'.slots () 1 ()).n = 9 :=
+  ⟨_, rfl, rfl, rfl⟩
+
+/-- The fetched runs from the LOADED image, by computation: `x = 30` runs
+    27 steps (falls through the `ite` jump, takes the jump over the else
+    block) to the code end 4302 with rows 65 and 130; `x = 60` is at the
+    else-block (4256) after 21 steps (the `ite` jump taken) and at the code
+    end after 28, with rows 125 and 520 (bytes 8, 2); both STOP there.
+    `x = 95` reaches the exit 12288 after 17 steps and stops after the stub
+    with `rax = 0`. -/
+theorem pd_laeufe :
+    ausgangRip (laufBytes 27 (pdStart 30)) = some (natAdresse 4302) ∧
+      ausgangByte (natAdresse 8192) (laufBytes 27 (pdStart 30)) = some (natByte 65) ∧
+      ausgangByte (natAdresse 8200) (laufBytes 27 (pdStart 30)) = some (natByte 130) ∧
+      ausgangRip (laufBytes 28 (pdStart 30)) = none ∧
+      ausgangRip (laufBytes 21 (pdStart 60)) = some (natAdresse 4256) ∧
+      ausgangRip (laufBytes 28 (pdStart 60)) = some (natAdresse 4302) ∧
+      ausgangByte (natAdresse 8192) (laufBytes 28 (pdStart 60)) = some (natByte 125) ∧
+      ausgangByte (natAdresse 8200) (laufBytes 28 (pdStart 60)) = some (natByte 8) ∧
+      ausgangByte (natAdresse 8201) (laufBytes 28 (pdStart 60)) = some (natByte 2) ∧
+      ausgangRip (laufBytes 29 (pdStart 60)) = none ∧
+      ausgangRip (laufBytes 17 (pdStart 95)) = some (natAdresse 12288) ∧
+      ausgangRip (laufBytes 18 (pdStart 95)) = some (natAdresse 12298) ∧
+      ausgangReg .rax (laufBytes 18 (pdStart 95)) = some (intWort 0) ∧
+      ausgangByte (natAdresse 8192) (laufBytes 18 (pdStart 95)) = some (natByte 195) ∧
+      ausgangRip (laufBytes 19 (pdStart 95)) = none := by
+  decide
+
+/-- JOINT WITNESS for `pipeline_correct_compiled` over the WIDENED
+    fragment, BOTH branch outcomes of the `ite`: from the compiler output
+    alone, the loaded image's run changes rows 7/9 to 65/130 (then) and to
+    125/520 (else) and stops at the code end. -/
+theorem pipeline_correct_compiled_ite_zeuge :
+    (∃ (σ' : World pwD) (ρ' : Env pwD pwCtx),
+      execBlock pwO 0 pwR pdSrc pwSigma pwEnv30 = .ok σ' ρ' ∧
+      ∃ n s', laufBytes n (pdStart 30) = .weiter s' ∧
+        s'.rip = natAdresse (pdCfg.codeBase + pdBytes.length) ∧
+        WorldRep (layoutVon piPs) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf pdCfg) ∧
+        byteschritt s' = .verweigert ∧
+        read64 s'.speicher (natAdresse 8192) = some (BitVec.ofNat 64 65) ∧
+        read64 s'.speicher (natAdresse 8200) = some (BitVec.ofNat 64 130)) ∧
+    (∃ (σ' : World pwD) (ρ' : Env pwD pwCtx),
+      execBlock pwO 0 pwR pdSrc pwSigma pwEnv60 = .ok σ' ρ' ∧
+      ∃ n s', laufBytes n (pdStart 60) = .weiter s' ∧
+        s'.rip = natAdresse (pdCfg.codeBase + pdBytes.length) ∧
+        WorldRep (layoutVon piPs) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf pdCfg) ∧
+        byteschritt s' = .verweigert ∧
+        read64 s'.speicher (natAdresse 8192) = some (BitVec.ofNat 64 125) ∧
+        read64 s'.speicher (natAdresse 8200) = some (BitVec.ofNat 64 520)) := by
+  refine ⟨?_, ?_⟩
+  · obtain ⟨σ', ρ', hsrc, h0, h1⟩ := pd_quelle30
+    obtain ⟨n, s', hrun, hrip, hW, hE, hstop⟩ := pipeline_correct_compiled .p48 pdCfg piPs piEs
+      [] pdSrc pdBytes pd_compile pd_bauOk pwSigma (pwReg 30) witnessFlags pwEnv30
+      pd_envRepr30 pwO 0 pwR σ' ρ' hsrc
+    exact ⟨σ', ρ', hsrc, n, s', hrun, hrip, hW, hE, hstop, pi_lesen _ σ' 0 8192 hW rfl 65 h0,
+      pi_lesen _ σ' 1 8200 hW rfl 130 h1⟩
+  · obtain ⟨σ', ρ', hsrc, h0, h1⟩ := pd_quelle60
+    obtain ⟨n, s', hrun, hrip, hW, hE, hstop⟩ := pipeline_correct_compiled .p48 pdCfg piPs piEs
+      [] pdSrc pdBytes pd_compile pd_bauOk pwSigma (pwReg 60) witnessFlags pwEnv60
+      pw_envRepr60 pwO 0 pwR σ' ρ' hsrc
+    exact ⟨σ', ρ', hsrc, n, s', hrun, hrip, hW, hE, hstop, pi_lesen _ σ' 0 8192 hW rfl 125 h0,
+      pi_lesen _ σ' 1 8200 hW rfl 520 h1⟩
+
+/-- JOINT WITNESS for `pipeline_refuses_compiled` over the deep check:
+    `x = 95` fails `((x + 3) - 1) < 90`, the loaded run ends after the stub
+    at `12298` with `rax = 0` and row 0 already rewritten to 195. -/
+theorem pipeline_refuses_compiled_tief_zeuge :
+    ∃ σ', execBlock pwO 0 pwR pdSrc pwSigma pwEnv95 = .grund σ' ⟨0, by decide⟩ ∧
+      ∃ n s', laufBytes n (pdStart 95) = .weiter s' ∧
+        s'.rip = natAdresse (exitAdr pdCfg 0 + 10) ∧ s'.register exitReg = intWort 0 ∧
+        WorldRep (layoutVon piPs) s'.speicher σ' ∧ byteschritt s' = .verweigert ∧
+        read64 s'.speicher (natAdresse 8192) = some (BitVec.ofNat 64 195) := by
+  obtain ⟨σ', hsrc, h0, -⟩ := pd_quelle95
+  obtain ⟨n, s', hrun, hrip, hreg, hW, hstop⟩ := pipeline_refuses_compiled .p48 pdCfg piPs
+    piEs [] pdSrc pdBytes pd_compile pd_bauOk pwSigma (pwReg 95) witnessFlags pwEnv95
+    pw_envRepr95 pwO 0 pwR σ' ⟨0, by decide⟩ hsrc
+  exact ⟨σ', hsrc, n, s', hrun, hrip, hreg, hW, hstop, pi_lesen _ σ' 0 8192 hW rfl 195 h0⟩
+
+/-- JOINT WITNESS for `senkBlock_korrektC` (the generic block theorem with
+    the code region carried) on the widened program from the LOADED image,
+    both branch outcomes; and for `senkBlock_ausgang` through the `ite`. -/
+theorem senkBlock_korrektC_zeuge :
+    (∃ n s', laufBytes n (pdStart 30) = .weiter s' ∧
+      CodeAt s'.speicher (natAdresse pdCfg.codeBase) pdBytes ∧
+      Entspricht pdCfg (layoutVon piPs) (addrOff (natAdresse pdCfg.codeBase)
+        (([] : List Byte).length + pdBytes.length))
+        (execBlock pwO 0 pwR pdSrc pwSigma pwEnv30) s') ∧
+    (∃ n s', laufBytes n (pdStart 60) = .weiter s' ∧
+      CodeAt s'.speicher (natAdresse pdCfg.codeBase) pdBytes ∧
+      Entspricht pdCfg (layoutVon piPs) (addrOff (natAdresse pdCfg.codeBase)
+        (([] : List Byte).length + pdBytes.length))
+        (execBlock pwO 0 pwR pdSrc pwSigma pwEnv60) s') ∧
+    ((∃ σ' ρ', execBlock pwO 0 pwR pdSrc pwSigma pwEnv95 = .ok σ' ρ') ∨
+      (∃ σ' r, execBlock pwO 0 pwR pdSrc pwSigma pwEnv95 = .grund σ' r)) := by
+  have himg := (kompiliert_geladen .p48 pdCfg piPs piEs [] pdSrc pdBytes pwSigma pd_compile
+    pd_bauOk).2
+  have hcode := imageOk_codeAt .p48 pdBild pdCfg piPs piEs [] pdSrc pdBytes himg.1
+  have hsep := imageOk_layoutSep .p48 pdBild pdCfg piPs piEs [] pdSrc pdBytes himg.1
+  have hW := imageOk_worldRep .p48 pdBild pdCfg piPs piEs [] pdSrc pdBytes himg.1 pwSigma himg.2
+  obtain ⟨prog, hc, hlow, hb, -⟩ := validate_sound pdCfg (layoutVon piPs) [] pdSrc pdBytes
+    pd_validate
+  have hlow' : senkBlock pdCfg (layoutVon piPs) ([] : List Byte).length (optimise [] pdSrc) =
+      some prog := hlow
+  refine ⟨?_, ?_, ?_⟩
+  · have := senkBlock_korrektC pdCfg (layoutVon piPs) hc hsep pwO 0 pwR pdBytes
+      (optimise [] pdSrc) [] [] prog hlow' pwSigma pwEnv30 (pdStart 30) hcode (by rw [hb]; simp)
+      (by show natAdresse 4096 = addrOff (natAdresse 4096) 0; exact (addrOff_null _).symm)
+      hW pd_envRepr30
+    rw [← hb, optimise_sound [] pdSrc pwO 0 pwR pwSigma pwEnv30] at this
+    exact this
+  · have := senkBlock_korrektC pdCfg (layoutVon piPs) hc hsep pwO 0 pwR pdBytes
+      (optimise [] pdSrc) [] [] prog hlow' pwSigma pwEnv60 (pdStart 60) hcode (by rw [hb]; simp)
+      (by show natAdresse 4096 = addrOff (natAdresse 4096) 0; exact (addrOff_null _).symm)
+      hW pw_envRepr60
+    rw [← hb, optimise_sound [] pdSrc pwO 0 pwR pwSigma pwEnv60] at this
+    exact this
+  · have := senkBlock_ausgang pdCfg (layoutVon piPs) pwO 0 pwR (optimise [] pdSrc) 0 prog hlow
+      pwSigma pwEnv95
+    rw [optimise_sound [] pdSrc pwO 0 pwR pwSigma pwEnv95] at this
+    exact this
+
+/-- JOINT WITNESS for `senkBlock_ite_inv`: the accepted `ite` (at its
+    position behind the value and the check) decomposes into the deep
+    condition, the two lowered branches, the two checked forward jumps and
+    the (empty) rest. -/
+theorem senkBlock_ite_inv_zeuge :
+    ∃ code j pt pe q,
+      senkBedT pdCfg pdBed = some (code, j) ∧
+      senkBlock pdCfg (layoutVon piPs) (100 + (encodeAll code).length + 6) pdT = some pt ∧
+      senkBlock pdCfg (layoutVon piPs)
+        (100 + (encodeAll code).length + 6 + (encodeAll pt).length + 5) pdE = some pe ∧
+      sprungOk ((encodeAll pt).length + 5) = true ∧ sprungOk (encodeAll pe).length = true ∧
+      senkBlock pdCfg (layoutVon piPs) (100 + (encodeAll (iteCode code j pt pe)).length)
+        (.nil : Block pwD pwV false pwCtx [] []) = some q ∧
+      iteCode code j pt pe ++ q = pdProg.drop 17 ∧ j = .ge ∧ (encodeAll pt).length = 33 ∧
+      (encodeAll pe).length = 46 := by
+  have h : senkBlock pdCfg (layoutVon piPs) 100 (.cons (.ite pdBed pdT pdE) .nil :
+      Block pwD pwV false pwCtx [] []) = some (pdProg.drop 17) := by decide
+  obtain ⟨code, j, pt, pe, q, hb, ht, he, hk1, hk2, hq, hp⟩ :=
+    senkBlock_ite_inv pdCfg (layoutVon piPs) pdBed pdT pdE .nil 100 _ h
+  have hb' : senkBedT pdCfg pdBed =
+      some ([.movReg64 .rax .r10, .movImm64 .rcx (intWort 40), .cmpReg64 .rax .rcx], .ge) := by
+    decide
+  rw [hb'] at hb
+  injection hb with hb
+  injection hb with hc hj
+  subst hc; subst hj
+  have ht' : senkBlock pdCfg (layoutVon piPs) (100 + (encodeAll [Befehl.movReg64 .rax .r10,
+      .movImm64 .rcx (intWort 40), .cmpReg64 .rax .rcx]).length + 6) pdT =
+      some [.movReg64 .rax .r10, .movImm64 .rcx (intWort 100), .addReg64 .rax .rcx,
+        .movImm64 .rbx (natAdresse 8200), .store64 .rbx .rax (BitVec.ofNat 32 0)] := by decide
+  rw [ht'] at ht
+  injection ht with ht
+  subst ht
+  have he' : senkBlock pdCfg (layoutVon piPs) (100 + (encodeAll [Befehl.movReg64 .rax .r10,
+      .movImm64 .rcx (intWort 40), .cmpReg64 .rax .rcx]).length + 6 +
+      (encodeAll [Befehl.movReg64 .rax .r10, .movImm64 .rcx (intWort 100), .addReg64 .rax .rcx,
+        .movImm64 .rbx (natAdresse 8200), .store64 .rbx .rax (BitVec.ofNat 32 0)]).length + 5)
+      pdE = some [.movReg64 .rax .r10, .movImm64 .rdx (intWort 40), .subReg64 .rax .rdx,
+        .movImm64 .rcx (intWort 500), .addReg64 .rax .rcx,
+        .movImm64 .rbx (natAdresse 8200), .store64 .rbx .rax (BitVec.ofNat 32 0)] := by decide
+  rw [he'] at he
+  injection he with he
+  subst he
+  exact ⟨_, _, _, _, q, hb', ht', he', hk1, hk2, hq, hp.symm, rfl, by decide, by decide⟩
+
+/-- JOINT WITNESS for `senkWertT_korrekt` and `assignT_lauf` on the depth-3
+    value from the image start with `x = 30`: the value code leaves 65 in
+    `rax`, keeps `r10`, and the assignment chunk writes 65 at row 0. -/
+theorem senkWertT_korrekt_zeuge :
+    ∃ p, senkWertT pdCfg pdWert0 = some p ∧ p.length = 7 ∧
+      (∃ s', lauf (p.map kanon) (pdStart 30) = some s' ∧
+        s'.register pdCfg.dst = intWort 65 ∧ s'.speicher = (pdStart 30).speicher ∧
+        s'.register .r10 = intWort 30) ∧
+      (∃ s', lauf ((p ++ [Befehl.movImm64 pdCfg.adr (natAdresse 8192),
+          Befehl.store64 pdCfg.adr pdCfg.dst (BitVec.ofNat 32 0)]).map kanon) (pdStart 30) =
+          some s' ∧ read64 s'.speicher (natAdresse 8192) = some (BitVec.ofNat 64 65)) := by
+  have hp : senkWertT pdCfg pdWert0 = some (pdProg.take 7) := by decide
+  refine ⟨_, hp, by decide, ?_, ?_⟩
+  · obtain ⟨s', hrun, hval, hmem, hreg⟩ := senkWertT_korrekt pdCfg pd_cfgOk pdWert0 pwHT pwEnv30
+      pwSigma pwSigma (pdStart 30) pd_envRepr30 _ hp
+    refine ⟨s', hrun, ?_, hmem, ?_⟩
+    · rw [hval]; rfl
+    · rw [hreg .r10 (by decide) (by decide)]; rfl
+  · have hwr : schreibbar8 (pdStart 30).speicher (natAdresse 8192) = true := by decide
+    obtain ⟨s', hrun, hw, -⟩ := assignT_lauf pdCfg pd_cfgOk pdWert0 pwHT (by decide) (by decide)
+      _ hp 8192 pwEnv30 pwSigma pwSigma (pdStart 30) pd_envRepr30 hwr
+    refine ⟨s', hrun, ?_⟩
+    rw [read64_nach_write64 _ _ _ _ hw (by decide)]
+    rfl
+
+/-- JOINT WITNESS for `senkBedT_korrekt` and `vergleichT_lauf` on the deep
+    check: for `x = 30` the jump condition is false (check holds), for
+    `x = 95` it is true (check fails), each matching the source truth. -/
+theorem senkBedT_korrekt_zeuge :
+    ∃ code j, senkBedT pdCfg pdCheck = some (code, j) ∧ j = .ge ∧
+      (∃ s', lauf (code.map kanon) (pdStart 30) = some s' ∧
+        wahr? (eval pwSigma pdCheck pwSigma pwEnv30) = true ∧ bedingung j s'.flags = false) ∧
+      (∃ s', lauf (code.map kanon) (pdStart 95) = some s' ∧
+        wahr? (eval pwSigma pdCheck pwSigma pwEnv95) = false ∧ bedingung j s'.flags = true) := by
+  have hb : senkBedT pdCfg pdCheck = some (pdProg.drop 9 |>.take 7, .ge) := by decide
+  refine ⟨_, _, hb, rfl, ?_, ?_⟩
+  · obtain ⟨-, s', hrun, -, -, hval⟩ := senkBedT_korrekt pdCfg pd_cfgOk pdCheck _ _ hb pwEnv30
+      pwSigma pwSigma (pdStart 30) pd_envRepr30
+    have ht : wahr? (eval pwSigma pdCheck pwSigma pwEnv30) = true := rfl
+    refine ⟨s', hrun, ht, ?_⟩
+    rw [ht] at hval
+    cases h : bedingung Bedingung.ge s'.flags
+    · rfl
+    · rw [h] at hval; cases hval
+  · obtain ⟨-, s', hrun, -, -, hval⟩ := senkBedT_korrekt pdCfg pd_cfgOk pdCheck _ _ hb pwEnv95
+      pwSigma pwSigma (pdStart 95) pw_envRepr95
+    have ht : wahr? (eval pwSigma pdCheck pwSigma pwEnv95) = false := rfl
+    refine ⟨s', hrun, ht, ?_⟩
+    rw [ht] at hval
+    cases h : bedingung Bedingung.ge s'.flags
+    · rw [h] at hval; cases hval
+    · rfl
+
+/-- JOINT WITNESS for `cfgOk_frischListe`, `cfgOk_rsp`, `cfgOk_var_frei`
+    and `envRepr_tief` on the widened configuration. -/
+theorem cfgOk_frischListe_zeuge :
+    FrischListe (abbOf pdCfg (Γ := pwCtx)) pdCfg.dst (pdCfg.tmp :: pdCfg.frei) ∧
+      (pdCfg.dst ≠ .rsp ∧ Register.rsp ∉ pdCfg.tmp :: pdCfg.frei) ∧
+      abbOf pdCfg (Γ := pwCtx) _ .hier ∉ pdCfg.tmp :: pdCfg.frei ∧
+      pdCfg.frei = [.rdx, .rsi] ∧
+      EnvRepr pwEnv30 (fun q => if q = .rdx then 77 else pwReg 30 q) (abbOf pdCfg) :=
+  ⟨cfgOk_frischListe pdCfg pd_cfgOk, cfgOk_rsp pdCfg pd_cfgOk,
+    (cfgOk_var_frei pdCfg pd_cfgOk .hier).2, rfl,
+    envRepr_tief pdCfg pd_cfgOk pwEnv30 (pwReg 30) _ pd_envRepr30 (fun q _ hq => by
+      have : q ≠ .rdx := fun h => hq (by rw [h]; decide)
+      simp [this])⟩
+
+/-- JOINT WITNESS for the special-case theorems: the ORIGINAL fragment's
+    value `x + 5` and check `x < 50` lower to the same code under the deep
+    lowering with the widened stack (`senkWert_als_tief`,
+    `senkBed_als_tief`, `senkAtom_als_tief`). -/
+theorem als_tief_zeuge :
+    senkTief (abbOf pdCfg) pwWert0 pdCfg.dst (pdCfg.tmp :: pdCfg.frei) =
+        senkWert (abbOf pwCfg) pwWert0 pwCfg.dst pwCfg.tmp ∧
+      (senkWert (abbOf pwCfg) pwWert0 pwCfg.dst pwCfg.tmp).isSome = true ∧
+      senkBedT pdCfg pwCheck = senkBed (abbOf pdCfg) pwCheck pdCfg.dst pdCfg.tmp ∧
+      (senkBed (abbOf pdCfg) pwCheck pdCfg.dst pdCfg.tmp).isSome = true ∧
+      senkTief (abbOf pdCfg) (Expr.var (D := pwD) (Λ := []) (Γ := pwCtx) .hier) .rcx [] =
+        senkAtom (abbOf pdCfg) (Expr.var (D := pwD) (Λ := []) (Γ := pwCtx) .hier) .rcx := by
+  have hv : senkWert (abbOf pwCfg) pwWert0 pwCfg.dst pwCfg.tmp =
+      some [.movReg64 .rax .r10, .movImm64 .rcx (intWort 5), .addReg64 .rax .rcx] := by decide
+  have hb : senkBed (abbOf pdCfg) pwCheck pdCfg.dst pdCfg.tmp =
+      some ([.movReg64 .rax .r10, .movImm64 .rcx (intWort 50), .cmpReg64 .rax .rcx], .ge) := by
+    decide
+  have ha : senkAtom (abbOf pdCfg) (Expr.var (D := pwD) (Λ := []) (Γ := pwCtx) .hier) .rcx =
+      some [.movReg64 .rcx .r10] := rfl
+  refine ⟨?_, by rw [hv]; rfl, ?_, by rw [hb]; rfl, ?_⟩
+  · rw [hv]; exact senkWert_als_tief _ pwWert0 _ _ pdCfg.frei _ hv
+  · rw [hb]; exact senkBed_als_tief pdCfg pwCheck _ _ hb
+  · rw [ha]; exact senkAtom_als_tief _ _ _ [] _ ha
+
+/-- JOINT WITNESS for `bedingung_negBed`, `sprungOk_addr` and the jump
+    lengths: the negation flips every flag state tested, the checked
+    forward jump of 38 lands 38 bytes on, a jump of `2^31` is refused. -/
+theorem sprung_zeuge :
+    bedingung (negBed .l) witnessFlags = !bedingung .l witnessFlags ∧
+      negBed .l = .ge ∧ negBed .le = .g ∧ negBed .e = .ne ∧
+      sprungOk 38 = true ∧ sprungOk (2 ^ 31) = false ∧
+      addrOff (natAdresse 4096) 136 + dispWort (BitVec.ofNat 32 38) =
+        addrOff (natAdresse 4096) (136 + 38) ∧
+      (encode (.jumpIf32 .ge (BitVec.ofNat 32 38))).length = 6 ∧
+      (encode (.jump32 (BitVec.ofNat 32 46))).length = 5 :=
+  ⟨bedingung_negBed _ _, rfl, rfl, rfl, by decide, by decide,
+    sprungOk_addr _ _ _ (by decide), encode_jumpIf32_len _ _, encode_jump32_len _⟩
+
+/-- JOINT WITNESS for `grund_mem` and `slotAdressen_loc` through the `ite`:
+    a block whose ONLY check sits inside the else-branch lists its reason,
+    and the written slots of both branches are placed. -/
+def pdCheckE : Expr pwD pwCtx [] .bool := .lt (.var .hier) (.lit 80)
+
+def pdSrcG : Block pwD pwV false pwCtx [] [] :=
+  .cons (.ite pdBed pdT (.pruefung pdCheckE (.retGrund ⟨0, by decide⟩ pwHΛ) pdE)) .nil
+
+def pdProgG : List Befehl := (senkBlock pdCfg (layoutVon piPs) 0 pdSrcG).getD []
+
+theorem pd_senkG : senkBlock pdCfg (layoutVon piPs) 0 pdSrcG = some pdProgG := by decide
+
+theorem grund_mem_ite_zeuge :
+    grundListe pdSrcG = [0] ∧ slotAdressen (layoutVon piPs) pdSrcG = [8200, 8200] ∧
+      (compile pdCfg (layoutVon piPs) [] pdSrcG).isSome = true ∧
+      ∃ σ', execBlock pwO 0 pwR pdSrcG pwSigma pwEnv95 = .grund σ' ⟨0, by decide⟩ ∧
+        (0 : Nat) ∈ grundListe pdSrcG ∧ ∃ t k f, (layoutVon piPs).loc t k f = some 8200 :=
+  ⟨by decide, by decide, by decide, _, rfl,
+    grund_mem pdCfg (layoutVon piPs) pwO 0 pwR pdSrcG 0 pdProgG pd_senkG pwSigma pwEnv95 _
+      ⟨0, by decide⟩ rfl,
+    slotAdressen_loc _ pdSrcG 8200 (by decide)⟩
+
+/-! ### The widened program behind the entry sequence
+
+    The same entry as section 8 (`mov r10, rdi`, garbage 999 in `r10`, the
+    parameter in `rdi`, a 64-byte stack extent), now in front of the
+    widened program: `pipeline_correct_entry` runs the ELSE-branch
+    (`x = 60`) from the admitted entry without an `EnvRepr` premise. -/
+
+def pdPro : List Befehl := prolog pdCfg sysvParameter peN
+
+def pdpeBild : Bild := bildFuerP pdCfg (encodeAll pdPro) [] pdSrc pdBytes piPs pwSigma peEs
+
+def pdpeZ (x : Int) : EintrittZustand :=
+  { zustand := eintrittStart pdpeBild pdCfg (encodeAll pdPro).length (peReg x) witnessFlags
+    mxcsr := 0x1F80
+    xmmBeruehrt := false
+    mxcsrGesichert := false
+    ifBit := true
+    guardOk := false }
+
+theorem pdpe_prologOk : prologOk pdCfg sysvParameter peN = true := by decide
+
+theorem pdpe_bauOk :
+    bauOk .p48 pdCfg (encodeAll (prolog pdCfg sysvParameter pwCtx.length)) (encodeAll pdProg)
+      (ohneDoppel (grundListe (optimise [] pdSrc))) piPs peEs = true := by
+  decide
+
+theorem pdpe_bedingung60 : eintrittBedingung .nolibcMain peEs 16448 (pdpeZ 60) = true := by
+  unfold eintrittBedingung
+  decide
+
+theorem pdpe_eintritt :
+    prologImageOk pdpeBild pdCfg sysvParameter peN = true ∧
+      eintrittOk .p48 pdpeBild 0 .nolibcMain (pdpeZ 60) = true :=
+  bildFuerP_eintritt .p48 pdCfg sysvParameter pdProg piPs pwSigma peEs [] pdSrc
+    pdpe_prologOk pdpe_bauOk .nolibcMain 16448 (peReg 60) witnessFlags (pdpeZ 60) rfl
+    pdpe_bedingung60
+
+theorem pdpe_zulassung60 :
+    eintrittZulassung .p48 pdpeBild (effBias pdpeBild.modus) .nolibcMain (pdpeZ 60) [] = true := by
+  have hw : wohlgeformt .p48 pdpeBild = true :=
+    valX86_wohlgeformt _ _ (imageOk_teile .p48 pdpeBild pdCfg piPs peEs [] pdSrc
+      pdBytes (bildFuerP_ok .p48 pdCfg pdPro pdProg piPs pwSigma peEs [] pdSrc
+        pdpe_bauOk).1).1
+  show (wohlgeformt .p48 pdpeBild && eintrittOk .p48 pdpeBild 0 .nolibcMain (pdpeZ 60) &&
+    valTore []) = true
+  rw [hw, pdpe_eintritt.2]
+  rfl
+
+/-- JOINT WITNESS for `pipeline_correct_entry` over the widened fragment:
+    the admitted entry with garbage in `r10` runs the entry sequence, the
+    depth-3 value, the deep check and the ELSE-branch of the `ite`; rows
+    7/9 become 125/520 and the stack word stays readable and writable. -/
+theorem pipeline_correct_entry_ite_zeuge :
+    ¬ EnvRepr pwEnv60 (peReg 60) (abbOf pdCfg) ∧
+    ∃ (σ' : World pwD) (ρ' : Env pwD pwCtx), execBlock pwO 0 pwR pdSrc pwSigma pwEnv60 = .ok σ' ρ' ∧
+      ∃ n s', laufBytes n (pdpeZ 60).zustand = .weiter s' ∧
+        s'.rip = natAdresse (pdCfg.codeBase + pdBytes.length) ∧
+        WorldRep (layoutVon piPs) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf pdCfg) ∧
+        byteschritt s' = .verweigert ∧
+        lesbar8 s'.speicher (eintrittRsp (pdpeZ 60) - BitVec.ofNat 64 8) = true ∧
+        read64 s'.speicher (natAdresse 8192) = some (BitVec.ofNat 64 125) ∧
+        read64 s'.speicher (natAdresse 8200) = some (BitVec.ofNat 64 520) := by
+  have hok := bildFuerP_ok .p48 pdCfg pdPro pdProg piPs pwSigma peEs [] pdSrc pdpe_bauOk
+  have hval := (kompiliert_geladen .p48 pdCfg piPs piEs [] pdSrc pdBytes pwSigma
+    pd_compile pd_bauOk).1
+  obtain ⟨σ', ρ', hsrc, h0, h1⟩ := pd_quelle60
+  obtain ⟨n, s', hrun, hrip, hW, hE, hstop, hl, -⟩ := pipeline_correct_entry .p48 pdpeBild pdCfg
+    sysvParameter piPs peEs [] pdSrc pdBytes hval hok.1 pdpe_eintritt.1
+    pwSigma hok.2.1 .nolibcMain (pdpeZ 60) [] pdpe_zulassung60 (peReg 60) witnessFlags rfl pwEnv60
+    (pe_abi 60 (by decide) (by decide)) pwO 0 pwR σ' ρ' hsrc
+  refine ⟨?_, σ', ρ', hsrc, n, s', hrun, hrip, hW, hE, hstop, hl,
+    pi_lesen _ σ' 0 8192 hW rfl 125 h0, pi_lesen _ σ' 1 8200 hW rfl 520 h1⟩
+  intro h
+  have := h 0 100 .hier
+  revert this
+  decide
+
+/-- JOINT WITNESS for `vergleichT_lauf` on the deep check's two operands
+    (`(x + 3) - 1` into `rax`, `90` into `rcx`, scratch `[rdx, rsi]`) from
+    the image start with `x = 95`: the flags are the SUB flags of 97 and 90. -/
+def pdLinks : Expr pwD pwCtx [] (.int (0 + 3 - 1) (100 + 3 - 1)) :=
+  .sub (.add (.var .hier) (.lit 3)) (.lit 1)
+
+theorem vergleichT_lauf_zeuge :
+    ∃ s', lauf ((pdProg.drop 9).take 7 |>.map kanon) (pdStart 95) = some s' ∧
+      s'.speicher = (pdStart 95).speicher ∧ s'.register .r10 = intWort 95 ∧
+      s'.flags = (sub64 (intWort 97) (intWort 90)).2 := by
+  have ha : senkTief (abbOf pdCfg) pdLinks .rax [.rdx, .rsi] = some ((pdProg.drop 9).take 5) := by
+    decide
+  have hb : senkTief (abbOf pdCfg) (Expr.lit (D := pwD) (Γ := pwCtx) (Λ := []) 90) .rcx
+      [.rdx, .rsi] = some [.movImm64 .rcx (intWort 90)] := rfl
+  obtain ⟨s', hrun, hmem, hreg, hfl⟩ := vergleichT_lauf (abbOf pdCfg) pdLinks (.lit 90) .rax .rcx
+    [.rdx, .rsi] _ _ (istTief_von_senkTief _ _ _ _ _ ha) (istTief_von_senkTief _ _ _ _ _ hb)
+    pwEnv95 pwSigma pwSigma (pdStart 95) (cfgOk_frischListe pdCfg pd_cfgOk) (cfgOk_rsp pdCfg pd_cfgOk)
+    pw_envRepr95
+  have hp : (pdProg.drop 9).take 7 = (pdProg.drop 9).take 5 ++ [.movImm64 .rcx (intWort 90)] ++
+      [Befehl.cmpReg64 .rax .rcx] := by decide
+  refine ⟨s', by rw [hp]; exact hrun, hmem, ?_, ?_⟩
+  · rw [hreg .r10 (by decide) (by decide)]; rfl
+  · rw [hfl]; rfl
+
+/-- JOINT WITNESS for the structural helpers of the widened lowering on the
+    widened program: straight-line deep code (`istTief_gerade`,
+    `senkWertT_gerade`), the `ite` code layout (`encodeAll_iteCode`,
+    `encodeAll_iteCode_len`), the assignment equation (`senkBlock_assign`),
+    the source `ite` step and the two `cons` continuations
+    (`execStmt_ite`, `execBlock_cons_stmtOk`, `execBlock_cons_stmtGrund`),
+    the written-slot equation (`slotAdressen_cons_eq`) and the decided
+    scratch facts (`cfgOk_frei_liste`). -/
+theorem hilfs_zeuge :
+    ((pdProg.take 7).all gerade = true) ∧
+    ((encodeAll (iteCode [.movReg64 .rax .r10, .movImm64 .rcx (intWort 40), .cmpReg64 .rax .rcx] .ge
+        ((pdProg.drop 21).take 5) ((pdProg.drop 27).take 7))).length = 106 ∧
+      encodeAll (iteCode [.movReg64 .rax .r10, .movImm64 .rcx (intWort 40), .cmpReg64 .rax .rcx]
+        .ge ((pdProg.drop 21).take 5) ((pdProg.drop 27).take 7)) = encodeAll (pdProg.drop 17)) ∧
+    (senkBlock pdCfg (layoutVon piPs) 0 pdSrc = some pdProg) ∧
+    (execStmt pwO 0 pwR (.ite pdBed pdT pdE) pwSigma pwEnv60 =
+      execBlock pwO 0 pwR pdE pwSigma pwEnv60) ∧
+    (∃ σ' ρ', execStmt pwO 0 pwR (.ite pdBed pdT pdE) pwSigma pwEnv60 = .ok σ' ρ' ∧
+      execBlock pwO 0 pwR (.cons (.ite pdBed pdT pdE) .nil : Block pwD pwV false pwCtx [] [])
+        pwSigma pwEnv60 = .ok σ' ρ' ∧ (σ'.slots () 1 ()).n = 520) ∧
+    (∃ σ', execBlock pwO 0 pwR pdSrcG pwSigma pwEnv95 = .grund σ' ⟨0, by decide⟩) ∧
+    slotAdressen (layoutVon piPs) pdSrc = [8192, 8200, 8200] ∧
+    (pdCfg.frei.Nodup ∧ ∀ r ∈ pdCfg.frei, r ∉ pdCfg.regs ∧ r ≠ pdCfg.dst ∧ r ≠ pdCfg.tmp ∧
+      r ≠ pdCfg.adr ∧ r ≠ .rsp) := by
+  have hp : senkWertT pdCfg pdWert0 = some (pdProg.take 7) := by decide
+  refine ⟨senkWertT_gerade pdCfg pdWert0 _ hp, ⟨?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, cfgOk_frei_liste pdCfg pd_cfgOk⟩
+  · rw [encodeAll_iteCode_len]; decide
+  · rw [encodeAll_iteCode]; decide
+  · exact (senkBlock_assign (V := pwV) pdCfg (layoutVon piPs) () () pwIdx0 pdWert0 pwHw pwHL
+      _ 0).trans (by decide)
+  · rw [execStmt_ite]; rfl
+  · refine ⟨_, _, rfl, ?_, rfl⟩
+    exact execBlock_cons_stmtOk pwO 0 pwR _ .nil pwSigma pwEnv60 _ _ rfl
+  · exact ⟨_, execBlock_cons_stmtGrund pwO 0 pwR _ .nil pwSigma _ pwEnv95 ⟨0, by decide⟩ rfl⟩
+  · unfold pdSrc; rw [slotAdressen_cons_eq _ _ _ rfl]; decide
+
+/-! ### Poison probes of the widened fragment: every one is REFUSED -/
+
+/-- WRONG BRANCH DISPLACEMENT: the candidate with the `ite` jump one byte
+    too far (39 instead of 38) is refused although it decodes; so is the
+    jump over the else-block one byte short. -/
+def pdProgFalschIte : List Befehl :=
+  pdProg.take 20 ++ [.jumpIf32 .ge (BitVec.ofNat 32 39)] ++ pdProg.drop 21
+
+def pdProgFalschEnde : List Befehl :=
+  pdProg.take 26 ++ [.jump32 (BitVec.ofNat 32 45)] ++ pdProg.drop 27
+
+theorem gift_ite_verschiebung :
+    pdProg[20]? = some (.jumpIf32 .ge (BitVec.ofNat 32 38)) ∧
+      decodeAll (encodeAll pdProgFalschIte).length (encodeAll pdProgFalschIte) =
+        some pdProgFalschIte ∧
+      validate pdCfg (layoutVon piPs) [] pdSrc (encodeAll pdProgFalschIte) = false ∧
+      pdProg[26]? = some (.jump32 (BitVec.ofNat 32 46)) ∧
+      validate pdCfg (layoutVon piPs) [] pdSrc (encodeAll pdProgFalschEnde) = false := by
+  refine ⟨by decide, decodeAll_encodeAll _ _ (length_le_encodeAll _), by decide, by decide,
+    by decide⟩
+
+/-- TAMPERED JUMP BYTE: flipping the low displacement byte of the `ite`
+    jump in the candidate BYTES is refused. -/
+def pdSprungOffset : Nat := (encodeAll (pdProg.take 20)).length + 2
+
+theorem gift_sprung_byte :
+    pdSprungOffset = 118 ∧ pdBytes[pdSprungOffset]? = some (natByte 38) ∧
+      validate pdCfg (layoutVon piPs) [] pdSrc (pdBytes.set pdSprungOffset (natByte 39)) =
+        false := by
+  decide
+
+/-- SCRATCH EXHAUSTION: with one scratch register (`frei = [rdx]`) the
+    depth-3 value does not fit and the compile REFUSES (no spilling); with
+    the original configuration (`frei = []`) too. The deep lowering itself
+    names the refusal. -/
+theorem gift_erschoepft :
+    compile { pdCfg with frei := [.rdx] } (layoutVon piPs) [] pdSrc = none ∧
+      compile { pdCfg with frei := [] } (layoutVon piPs) [] pdSrc = none ∧
+      senkWertT { pdCfg with frei := [.rdx] } pdWert0 = none ∧
+      (senkWertT pdCfg pdWert0).isSome = true := by
+  decide
+
+/-- OUT-OF-RANGE COMPARISON: an operand whose TYPE leaves the signed 64-bit
+    window (`x + (2^63 - 50)`, range up to `2^63 + 50`) is refused by the
+    decided side condition, although its tree lowers; the program around
+    it is refused. -/
+def pdCheckWeit : Expr pwD pwCtx [] .bool :=
+  .lt (.add (.var .hier) (.lit (2 ^ 63 - 50))) (.lit 0)
+
+def pdSrcWeit : Block pwD pwV false pwCtx [] [] :=
+  .pruefung pdCheckWeit (.retGrund ⟨0, by decide⟩ pwHΛ) .nil
+
+theorem gift_vergleich_fenster :
+    (senkVergleich (abbOf pdCfg) pdCheckWeit pdCfg.dst (pdCfg.tmp :: pdCfg.frei)).isSome = true ∧
+      imFensterB pdCheckWeit = false ∧ senkBedT pdCfg pdCheckWeit = none ∧
+      compile pdCfg (layoutVon piPs) [] pdSrcWeit = none := by
+  decide
+
+/-- A NON-COMPARISON `ite` condition (the literal `true`, a negation) and
+    an `ite` with an unsupported statement in a branch are refused. -/
+def pdSrcWahr : Block pwD pwV false pwCtx [] [] := .cons (.ite .wahr pdT pdE) .nil
+
+def pdSrcNicht : Block pwD pwV false pwCtx [] [] := .cons (.ite (.nicht pdBed) pdT pdE) .nil
+
+def pdSrcZweig : Block pwD pwV false pwCtx [] [] :=
+  .cons (.ite pdBed (.cons (.assignVar .hier (.var .hier)) .nil) pdE) .nil
+
+theorem gift_ite_form :
+    compile pdCfg (layoutVon piPs) [] pdSrcWahr = none ∧
+      compile pdCfg (layoutVon piPs) [] pdSrcNicht = none ∧
+      compile pdCfg (layoutVon piPs) [] pdSrcZweig = none := by
+  decide
+
+/-- The original configuration has no extra scratch register, so its
+    check is the original one (`cfgOk_ohne_frei`); with the stack it still
+    passes. -/
+theorem cfgOk_ohne_frei_zeuge :
+    cfgOk pwCfg = decide (pwCfg.dst ∉ pwCfg.regs ∧ pwCfg.tmp ∉ pwCfg.regs ∧
+      pwCfg.adr ∉ pwCfg.regs ∧ pwCfg.dst ≠ pwCfg.tmp ∧ pwCfg.dst ≠ pwCfg.adr ∧
+      pwCfg.tmp ≠ pwCfg.adr ∧ pwCfg.dst ≠ .rsp ∧ pwCfg.tmp ≠ .rsp ∧ pwCfg.adr ≠ .rsp) ∧
+      cfgOk pwCfg = true ∧ cfgOk pdCfg = true :=
+  ⟨cfgOk_ohne_frei pwCfg rfl, by decide, pd_cfgOk⟩
+
+/-- A scratch register that is a variable register, or `rsp`, or doubled,
+    or the scratch register `tmp`: the configuration check refuses it. -/
+theorem gift_frei_cfg :
+    cfgOk { pdCfg with frei := [.r10] } = false ∧ cfgOk { pdCfg with frei := [.rsp] } = false ∧
+      cfgOk { pdCfg with frei := [.rdx, .rdx] } = false ∧
+      cfgOk { pdCfg with frei := [.rcx] } = false := by
+  decide
+
 /-! ## CUTS (what this witness file does NOT show)
 
    - One declaration, two programs, one layout: the witnesses instantiate
@@ -1171,7 +1821,14 @@ theorem pipeline_refuses_eins_zeuge :
      witness's own choice of entry registers (`AbiArgs` is the caller's
      duty, not shown for any real caller).
    - All runs are computed by `decide` over the model `Speicher`; no
-     hardware and no operating-system loader is involved. -/
+     hardware and no operating-system loader is involved.
+   - Section 10 (the widened fragment) shows ONE program with a depth-3
+     value, one deep check and one `ite` whose branches each hold one
+     store, under one scratch stack `[rdx, rsi]`; nested `ite`, an `ite`
+     inside an `ite` branch's check, `<=`/`=` conditions and `neg` are
+     covered by the generic theorems but not run here. The poison probes
+     show refusal by the validator or the compiler, not that a tampered
+     image would misbehave. -/
 
 #print axioms pi_layout_gleich
 #print axioms pi_validate
@@ -1283,5 +1940,45 @@ theorem pipeline_refuses_eins_zeuge :
 #print axioms prolog_envRepr_zeuge
 #print axioms exitAdr_zeuge
 #print axioms pipeline_refuses_eins_zeuge
+
+#print axioms pd_cfgOk
+#print axioms pd_compile
+#print axioms pd_validate
+#print axioms pd_laenge
+#print axioms pd_gruende
+#print axioms pd_bauOk
+#print axioms pw_envRepr60
+#print axioms pw_envRepr95
+#print axioms pd_envRepr30
+#print axioms pd_quelle30
+#print axioms pd_quelle60
+#print axioms pd_quelle95
+#print axioms pd_laeufe
+#print axioms pipeline_correct_compiled_ite_zeuge
+#print axioms pipeline_refuses_compiled_tief_zeuge
+#print axioms senkBlock_korrektC_zeuge
+#print axioms senkBlock_ite_inv_zeuge
+#print axioms senkWertT_korrekt_zeuge
+#print axioms senkBedT_korrekt_zeuge
+#print axioms cfgOk_frischListe_zeuge
+#print axioms als_tief_zeuge
+#print axioms sprung_zeuge
+#print axioms pd_senkG
+#print axioms grund_mem_ite_zeuge
+#print axioms pdpe_prologOk
+#print axioms pdpe_bauOk
+#print axioms pdpe_bedingung60
+#print axioms pdpe_eintritt
+#print axioms pdpe_zulassung60
+#print axioms pipeline_correct_entry_ite_zeuge
+#print axioms vergleichT_lauf_zeuge
+#print axioms hilfs_zeuge
+#print axioms gift_ite_verschiebung
+#print axioms gift_sprung_byte
+#print axioms gift_erschoepft
+#print axioms gift_vergleich_fenster
+#print axioms gift_ite_form
+#print axioms cfgOk_ohne_frei_zeuge
+#print axioms gift_frei_cfg
 
 end Gabbro.Grammatik.X86.PipelineImageWitnesses

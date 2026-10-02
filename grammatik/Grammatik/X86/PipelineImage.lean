@@ -383,8 +383,9 @@ theorem byteschritt_stop (s : Zustand) (h : s.speicher.ausfuehrbar s.rip = false
 
 /-! ## 5. The refusal exits a lowered block can reach
 
-    `grundListe` collects the reason of every check of a block; a lowered
-    block that ends with a reason ends with one of them. Proved from the
+    `grundListe` collects the reason of every check of a block (into both
+    branches of an `ite`); a lowered block that ends with a reason ends
+    with one of them. Proved from the
     acceptor (`senkBlock`), mirroring `senkBlock_ausgang`. -/
 
 section Gruende
@@ -394,6 +395,7 @@ variable {V : Vertrag D}
 def grundListe :
     {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Block D V l Γ Λ Λ' → List Nat
   | _, _, _, _, .nil => []
+  | _, _, _, _, .cons (.ite _ t e) rest => grundListe t ++ grundListe e ++ grundListe rest
   | _, _, _, _, .cons _ rest => grundListe rest
   | _, _, _, _, .pruefung _ (.retGrund r _) rest => r.val :: grundListe rest
   | _, _, _, _, .pruefung _ _ rest => grundListe rest
@@ -411,18 +413,45 @@ theorem grund_mem (c : PipeCfg) (L : Layout D) (O : Orakel D) (passes : Nat)
   cases b0 with
   | nil => cases hx
   | cons st rest =>
-    simp only [senkBlock] at h
-    cases hs : senkStmt c L st with
-    | none => simp [hs] at h
-    | some p =>
-      simp only [hs] at h
-      cases hq : senkBlock c L (pos + (encodeAll p).length) rest with
-      | none => simp [hq] at h
-      | some q =>
-        cases st with
-        | assignSlot t f i e hw hL =>
+    cases st with
+    | assignSlot t f i e hw hL =>
+      rw [senkBlock_assign] at h
+      cases hs : senkStmt c L (Stmt.assignSlot (V := V) t f i e hw hL) with
+      | none => rw [hs] at h; cases h
+      | some p =>
+        rw [hs] at h
+        dsimp only at h
+        cases hq : senkBlock c L (pos + (encodeAll p).length) rest with
+        | none => simp [hq] at h
+        | some q =>
+          rw [execBlock_cons_stmtOk O passes R _ rest σ ρ _ ρ rfl] at hx
           exact grund_mem c L O passes R rest _ q hq _ ρ σ' r hx
-        | _ => simp [senkStmt] at hs
+    | ite cnd t e =>
+      obtain ⟨code, j, pt, pe, q, -, ht, he, -, -, hq, -⟩ :=
+        senkBlock_ite_inv c L cnd t e rest pos prog h
+      show r.val ∈ grundListe t ++ grundListe e ++ grundListe rest
+      have hsrc := execStmt_ite O passes R cnd t e σ ρ
+      cases hy : execStmt O passes R (.ite cnd t e) σ ρ with
+      | ok σ1 ρ1 =>
+        rw [execBlock_cons_stmtOk O passes R _ rest σ ρ σ1 ρ1 hy] at hx
+        exact List.mem_append_right _ (grund_mem c L O passes R rest _ q hq σ1 ρ1 σ' r hx)
+      | grund σ1 r1 =>
+        rw [execBlock_cons_stmtGrund O passes R _ rest σ σ1 ρ r1 hy] at hx
+        have hr : r1 = r := by injection hx
+        subst hr
+        rw [hsrc] at hy
+        split at hy
+        · exact List.mem_append_left _ (List.mem_append_left _
+            (grund_mem c L O passes R t _ pt ht _ ρ σ1 r1 hy))
+        · exact List.mem_append_left _ (List.mem_append_right _
+            (grund_mem c L O passes R e _ pe he _ ρ σ1 r1 hy))
+      | _ =>
+        have hx' : execBlock O passes R (.cons (.ite cnd t e) rest) σ ρ =
+            execStmt O passes R (.ite cnd t e) σ ρ := by
+          simp only [execBlock, hy]
+        rw [hx', hy] at hx
+        cases hx
+    | _ => simp [senkBlock, senkStmt] at h
   | pruefung cnd sonst rest =>
     simp only [senkBlock] at h
     cases hs : senkPruef c pos cnd sonst with
@@ -449,7 +478,7 @@ termination_by sizeOf b
 decreasing_by
   all_goals
     subst hb0
-    simp only [Block.cons.sizeOf_spec, Block.pruefung.sizeOf_spec]
+    simp only [Block.cons.sizeOf_spec, Block.pruefung.sizeOf_spec, Stmt.ite.sizeOf_spec]
     omega
 
 end Gruende
@@ -1888,7 +1917,16 @@ theorem slotAdressen_loc (L : Layout D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Re
   cases b0 with
   | nil => simp [slotAdressen] at h
   | cons s rest =>
-    simp only [slotAdressen, List.mem_append] at h
+    by_cases hi : istIte s = true
+    · cases s with
+      | ite cnd t e =>
+        simp only [slotAdressen, List.mem_append] at h
+        rcases h with (h | h) | h
+        · exact slotAdressen_loc L t A h
+        · exact slotAdressen_loc L e A h
+        · exact slotAdressen_loc L rest A h
+      | _ => simp [istIte] at hi
+    rw [slotAdressen_cons_eq L s rest (by simpa using hi), List.mem_append] at h
     rcases h with h | h
     · cases hs : stmtAdresse L s with
       | none => rw [hs] at h; simp at h
@@ -1905,7 +1943,7 @@ termination_by sizeOf b
 decreasing_by
   all_goals
     subst hb0
-    simp only [Block.cons.sizeOf_spec, Block.pruefung.sizeOf_spec]
+    simp only [Block.cons.sizeOf_spec, Block.pruefung.sizeOf_spec, Stmt.ite.sizeOf_spec]
     omega
 
 /-- **COMPILE, THEN BUILD THE IMAGE: A TOTAL, CHECKED PATH.** Whatever the
@@ -2016,8 +2054,9 @@ end BauSchluss
    `EntryExecution` (see the CUTS there).
 
    Refusal exit ABI. One 10-byte stub `mov rax, r` per REACHABLE reason
-   (`grundListe`: the reasons of the block's checks; one per distinct
-   reason in the builder), at `exitAdr c r`. With stride `1` two reachable
+   (`grundListe`: the reasons of the block's checks, including the checks
+   inside both branches of every `ite`; one per distinct reason in the
+   builder), at `exitAdr c r`. With stride `1` two reachable
    reasons less than eleven apart cannot both have a stub and the image is
    REFUSED (`gift_stride_eins`); with stride at least eleven they can.
    Unreachable reasons of the contract get no stub (nothing jumps there).
