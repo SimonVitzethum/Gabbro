@@ -779,3 +779,21 @@ Use DIRECT-COMPILER-DESIGN essential/deferred scope; preserve every safety gate,
 OS/freestanding portability, O3/invariant optimisation and full final-byte
 validation obligations. Fill slots with independent productive author/reviewer
 work, never idle filler; report real bottlenecks. Completion remains OPEN.
+
+
+### Reviewed failover deployment (2026-10-02)
+
+<!-- failover-armed-2026-10-02 -->
+The automatic coordinator supervisor is armed after exact independent ACCEPT
+637 of lifecycle repair636 (`c17193125b0e3b10fc9fc94d13cdba147f6735c6`), integrated with
+27 passing process/flock fixture tests. Deployed module blob: `865d4a0a97de5853e83d9a03f127fb4b409955fd`.
+Inspect live failover-status.json before claiming current health: five minutes
+without a foreground Codex heartbeat permits one Muse coordinator within the
+same15-slot limit; a live foreground never delegates silently. Explicit user
+pause wins, safe boundary locks protect integration and role handback, and no
+background process renews the foreground heartbeat. The fallback prompt now
+prioritises complete selected hardware execution and reads the live registry
+for task ownership/next IDs. Root dirty merges, user processes, exact semantic
+review and checked publication remain protected. Official Intel SDM edition093
+public PDF/text inputs are supplied clone-locally to hardware authors/reviewers;
+AMD retrieval failed and no AMD provenance or silicon proof is claimed.
