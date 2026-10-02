@@ -311,6 +311,130 @@ theorem busSchritt_perm (D : Type) (erlaubt : BusAntwort D)
   | aus dec b q g' hlen hop hperm hant => exact ⟨_, _, hperm⟩
   | ein dec b q g' ans hlen hop hperm hant => exact ⟨_, _, hperm⟩
 
+/-- A bus step advances RIP past a valid decoded length, for every
+    device relation. -/
+theorem busSchritt_rip (D : Type) (erlaubt : BusAntwort D)
+    (r : IoBerechtigung) (k : TssKarte) (s s' : BusZustand D)
+    (h : BusSchritt D erlaubt r k s s') :
+    ∃ l : Nat,
+      s'.kern.rip = ripNach s.kern.rip l ∧ laengeOk l = true := by
+  cases h with
+  | aus dec _ _ _ hlen _ _ _ => exact ⟨dec.laenge, rfl, hlen⟩
+  | ein dec _ _ _ _ hlen _ _ _ => exact ⟨dec.laenge, rfl, hlen⟩
+
+/-! ## Fetched selection through the accepted fetch.
+
+   `fetchIo` (lane 676) decodes the state's ACTUAL fetched window
+   (`Byteschritt.geholt`) under the unified admission discipline. The
+   generic step builds on it directly: a forged `IoDec` cannot inject an
+   access, and malformed bytes refuse at fetch, before any device contact. -/
+
+/-- SELECTION (OUT): a fetched port instruction plus an allowed device
+    answer take a generic bus step. -/
+theorem busSchritt_aus_fetch (D : Type) (erlaubt : BusAntwort D)
+    (r : IoBerechtigung) (k : TssKarte) (s : BusZustand D)
+    (d : IoDec) (rest : List Byte) (g' : D) (b : IoBreite)
+    (q : PortQuelle)
+    (hf : fetchIo s.kern = some (d, rest))
+    (hop : d.op = ⟨.aus, b, q⟩)
+    (hperm : archZugelassen r k (portVon d.op s.kern.register) b = true)
+    (hant : erlaubt s.geraet .aus b (portVon d.op s.kern.register)
+      (ausGabe b (s.kern.register .rax)) g' 0) :
+    BusSchritt D erlaubt r k s
+      ⟨ausKern s.kern d, g',
+        s.spur ++ [⟨.aus, b, portVon d.op s.kern.register,
+          ausGabe b (s.kern.register .rax)⟩]⟩ := by
+  have hlen := (fetchIo_erfolg s.kern d rest hf).2.2.1
+  exact .aus s d b q g' hlen hop hperm hant
+
+/-- SELECTION (IN): a fetched port instruction plus an allowed device
+    answer take a generic bus step. -/
+theorem busSchritt_ein_fetch (D : Type) (erlaubt : BusAntwort D)
+    (r : IoBerechtigung) (k : TssKarte) (s : BusZustand D)
+    (d : IoDec) (rest : List Byte) (g' : D) (ans : Nat) (b : IoBreite)
+    (q : PortQuelle)
+    (hf : fetchIo s.kern = some (d, rest))
+    (hop : d.op = ⟨.ein, b, q⟩)
+    (hperm : archZugelassen r k (portVon d.op s.kern.register) b = true)
+    (hant : erlaubt s.geraet .ein b (portVon d.op s.kern.register)
+      0 g' ans) :
+    BusSchritt D erlaubt r k s
+      ⟨einKern s.kern d b ans, g',
+        s.spur ++ [⟨.ein, b, portVon d.op s.kern.register, ans⟩]⟩ := by
+  have hlen := (fetchIo_erfolg s.kern d rest hf).2.2.1
+  exact .ein s d b q g' ans hlen hop hperm hant
+
+/-! ## TSO-relative port ordering and completion events.
+
+   Vol. 1 20.6: "The processor never buffers I/O writes. Therefore,
+   strict ordering of I/O operations is enforced by the processor."
+   Table 20-1 pins the serialization: IN delays the CURRENT instruction
+   until pending stores complete, and OUT delays the NEXT instruction
+   until pending stores AND the current store complete ("Pending
+   Stores?" is Yes on both rows; "Current Store?" is Yes on OUT).
+   Chipset posting ("it is possible for a chipset to post writes in
+   certain I/O ranges", 20.6) stays outside the CPU model: see CUTS. -/
+
+/-- Ordering gate for one port access on core `c`: the own TSO buffer
+    must be drained first. This is an EXPOSED obligation, never a
+    derived drain: no no-race proof discharges it. -/
+def ordnungOk (tso : TSOZustand) (c : Nat) : IoDir → Bool
+  | .ein => zaunBereit tso c
+  | .aus => zaunBereit tso c
+
+/-- An ordering-ok access runs on a literally empty own buffer. -/
+theorem ordnung_braucht_leeren_puffer (tso : TSOZustand) (c : Nat)
+    (dir : IoDir) (h : ordnungOk tso c dir = true) :
+    tso.puffer c = [] := by
+  unfold ordnungOk zaunBereit at h
+  cases hp : tso.puffer c with
+  | nil => rfl
+  | cons e rest =>
+    simp [hp] at h
+    cases dir <;> simp at h
+
+/-- A pending byte refuses the ordering gate, in either direction. -/
+theorem ordnung_verweigert_bei_vollem_puffer (tso : TSOZustand) (c : Nat)
+    (dir : IoDir) (e : TSOEintrag) (rest : List TSOEintrag)
+    (h : tso.puffer c = e :: rest) : ordnungOk tso c dir = false := by
+  have hle : zaunBereit tso c = false := by
+    unfold zaunBereit
+    simp [h]
+  unfold ordnungOk
+  cases dir
+  · exact hle
+  · exact hle
+
+/-- Completion events: CPU-side completion and device-side response are
+    DISTINCT constructors. For posted OUT ranges CPU completion never
+    implies the device has consumed the byte; IN completes with its
+    answer. No fake device answer for all ports: a device-side event
+    exists only where the response relation allows one. -/
+inductive BusFertig where
+  | cpu : IoDir → IoBreite → Nat → Nat → BusFertig
+  | geraet : IoDir → IoBreite → Nat → Nat → BusFertig
+  deriving DecidableEq, Repr
+
+/-- CPU and device completion never coincide, even with equal fields:
+    posted access keeps them apart. -/
+theorem fertig_getrennt (d : IoDir) (b : IoBreite) (port wert : Nat) :
+    BusFertig.cpu d b port wert ≠ BusFertig.geraet d b port wert := by
+  intro h
+  cases h
+
+/-- OUT needs a separate device-side completion (posted-write ranges,
+    20.6); IN carries its answer synchronously with CPU completion. -/
+def brauchtGeraetVollendung : IoDir → Bool
+  | .aus => true
+  | .ein => false
+
+/-- OUT posts: its device completion is a separate obligation. -/
+theorem aus_braucht_geraet : brauchtGeraetVollendung .aus = true := rfl
+
+/-- IN answers: no separate device completion is owed. -/
+theorem ein_braucht_kein_geraet :
+    brauchtGeraetVollendung .ein = false := rfl
+
 /- CUTS:
    Skeleton only: the TSS map type, one per-byte check and its witness.
    Range checks, the architectural rule, the generic device interface,
