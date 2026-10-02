@@ -326,7 +326,7 @@ Last ledger refresh: **2026-10-02 23:30 UTC**. This is an operational snapshot, 
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
 | 704 | Generic port bus and precise architectural IO permissions | Queued for a model slot | 705: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/704.md) |
-| 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Merged after review/checks | 707: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-706.md) |
+| 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Merged after review/checks | 707: Merged after review/checks | [report](messung/muse/MUSE-REPORT-706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
 | 710 | Optimizer rule library proof and scope review | Committed candidate; review/integration pending | 711: Agent working | [task](lanes/710.md) |
 | 712 | Compiler pipeline Lean source-to-byte proof review | Committed candidate; review/integration pending | 713: Committed candidate; review/integration pending | [task](lanes/712.md) |
@@ -849,6 +849,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **687**, Independent exact review of 686, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-687.md). <!-- x86-merged:687 -->
 - 2026-10-02: lane **706**, Repair actual fallback CLI message, provider pointer and quick-exit backoff, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-706.md). <!-- x86-merged:706 -->
 - 2026-10-02: integration of candidate(s) [704] failed the local proof/build gate after independent review 705; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:705 -->
+- 2026-10-02: lane **707**, Independent exact review of 706, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-707.md). <!-- x86-merged:707 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
