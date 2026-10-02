@@ -312,11 +312,11 @@ Last ledger refresh: **2026-10-02 19:40 UTC**. This is an operational snapshot, 
 | 672 | Hardware completion: interrupts entry masking and trap hardware forms | Agent working | 673: scheduled | [task](lanes/672.md) |
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Merged after review/checks | 675: Merged after review/checks | [report](messung/muse/MUSE-REPORT-674.md) |
 | 676 | Hardware completion: port IO and device memory profiles | Agent working | 677: scheduled | [task](lanes/676.md) |
-| 678 | Organise and audit complete essential hardware-model coverage | Committed candidate; review/integration pending | 679: Committed candidate; review/integration pending | [task](lanes/678.md) |
+| 678 | Organise and audit complete essential hardware-model coverage | Merged after review/checks | 679: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-678.md) |
 | 680 | Hardware completion: indirect and compact control byte forms | Agent working | 681: scheduled | [task](lanes/680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Agent working | 683: scheduled | [task](lanes/682.md) |
 | 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: scheduled | [task](lanes/684.md) |
-| 686 | Hardware completion: essential SSE2 integer and memory byte forms | Waiting for accepted dependencies | 687: scheduled | [task](lanes/686.md) |
+| 686 | Hardware completion: essential SSE2 integer and memory byte forms | Agent working | 687: scheduled | [task](lanes/686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Agent working | 689: scheduled | [task](lanes/688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
 
@@ -781,6 +781,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **665**, Independent exact review of 664, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-665.md). <!-- x86-merged:665 -->
 - 2026-10-02: lane **674**, Hardware completion: SIMD and architectural enabled-state gates, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-674.md). <!-- x86-merged:674 -->
 - 2026-10-02: lane **675**, Independent exact review of 674, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-675.md). <!-- x86-merged:675 -->
+- 2026-10-02: lane **678**, Organise and audit complete essential hardware-model coverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-678.md). <!-- x86-merged:678 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
