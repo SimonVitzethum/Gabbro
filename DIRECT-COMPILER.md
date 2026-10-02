@@ -306,7 +306,7 @@ Last ledger refresh: **2026-10-02 19:54 UTC**. This is an operational snapshot, 
 | 660 | Hardware completion: coherent multicore architectural execution | Agent working | 661: scheduled | [task](lanes/660.md) |
 | 662 | Hardware completion: LOCK atomic and fence final-byte execution | Agent working | 663: scheduled | [task](lanes/662.md) |
 | 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Merged after review/checks | [report](messung/muse/MUSE-REPORT-664.md) |
-| 666 | Hardware completion: practical integer width and compact encoding rows | Merged after review/checks | 667: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-666.md) |
+| 666 | Hardware completion: practical integer width and compact encoding rows | Merged after review/checks | 667: Merged after review/checks | [report](messung/muse/MUSE-REPORT-666.md) |
 | 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Agent working | 669: scheduled | [task](lanes/668.md) |
 | 670 | Hardware completion: precise selected fault and exception transitions | Committed candidate; review/integration pending | 671: Committed candidate; review/integration pending | [task](lanes/670.md) |
 | 672 | Hardware completion: interrupts entry masking and trap hardware forms | Committed candidate; review/integration pending | 673: Committed candidate; review/integration pending | [task](lanes/672.md) |
@@ -788,6 +788,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: publication batch checks passed for `a3d5ebc3`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-02: checked master `18cf829e` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:18cf829e278fe37e9d4337a0bbcf7e91db2294b2 -->
 - 2026-10-02: lane **666**, Hardware completion: practical integer width and compact encoding rows, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-666.md). <!-- x86-merged:666 -->
+- 2026-10-02: lane **667**, Independent exact review of 666, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-667.md). <!-- x86-merged:667 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
