@@ -577,6 +577,207 @@ theorem rohAf_frei (c : Bedingung) (w1 w2 : Wort)
   rw [e, e2]
   exact bedingung_af_frei c (liestStatus w2) _ _
 
+/-! ## 6. The fetched flag save/restore observers.
+
+    PUSHFQ (opcode 9CH) pushes the RFLAGS image with VM (16) and RF
+    (17) cleared and affects no flags; POPFQ (9DH) restores under the
+    Table 1-12 CPL/IOPL gating with RF cleared and VIP/VIF/VM/reserved
+    preserved. The pilot `Codec.decode` refuses both bytes, so the
+    one-byte adapter decodes below never shadow it (proved in §6c);
+    HardwareExecution660/HardwareInterrupts672 own the wiring, this
+    file owns the exact byte/word/stack frames. -/
+
+/-- Remaining RFLAGS bit positions (Vol. 1 Figure 3-8). -/
+def tfPos : Nat := 8
+def ifPos : Nat := 9
+def dfPos : Nat := 10
+def ntPos : Nat := 14
+def rfPos : Nat := 16
+def vmPos : Nat := 17
+def acPos : Nat := 18
+def vifPos : Nat := 19
+def vipPos : Nat := 20
+def idPos : Nat := 21
+
+/-- PUSHFQ opcode byte (9CH). -/
+def pushfqOp : Byte := 156
+
+/-- POPFQ opcode byte (9DH). -/
+def popfqOp : Byte := 157
+
+/-- Saved RFLAGS image mask: VM (16) and RF (17) cleared, per the
+    PUSHFQ operation text (`RFLAGS AND 00000000_00FCFFFFH`). -/
+def pushfqMaske : Wort := 0x00FCFFFF
+
+/-- The pushed image of a raw word. -/
+def pushfqWort (r : Wort) : Wort := r &&& pushfqMaske
+
+/-- The manual mask keeps every bit below 16. -/
+theorem pushfqMaske_bit (i : Nat) (h : i < 16) :
+    pushfqMaske.getLsbD i = true := by
+  have e : pushfqMaske.toNat = 0x00FCFFFF := by decide
+  rw [← BitVec.testBit_toNat, e]
+  have h16 : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨
+      i = 7 ∨ i = 8 ∨ i = 9 ∨ i = 10 ∨ i = 11 ∨ i = 12 ∨ i = 13 ∨
+      i = 14 ∨ i = 15 := by omega
+  rcases h16 with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+    <;> decide
+
+/-- The pushed image preserves every status/control bit below 16. -/
+theorem pushfqWort_status (r : Wort) (i : Nat) (h : i < 16) :
+    rbit (pushfqWort r) i = rbit r i := by
+  have hm := pushfqMaske_bit i h
+  unfold pushfqWort rbit
+  rw [BitVec.testBit_toNat, BitVec.getLsbD_and, hm, Bool.and_true]
+  exact (BitVec.testBit_toNat r).symm
+
+/-- The pushed image clears VM and RF. -/
+theorem pushfqWort_vm_rf (r : Wort) :
+    rbit (pushfqWort r) 16 = false ∧ rbit (pushfqWort r) 17 = false := by
+  have h16 : pushfqMaske.getLsbD 16 = false := by decide
+  have h17 : pushfqMaske.getLsbD 17 = false := by decide
+  unfold pushfqWort rbit
+  constructor
+  · rw [BitVec.testBit_toNat, BitVec.getLsbD_and, h16, Bool.and_false]
+  · rw [BitVec.testBit_toNat, BitVec.getLsbD_and, h17, Bool.and_false]
+
+/-- One raw status bit as a word. -/
+def bitMaske (i : Nat) : Wort := BitVec.ofNat 64 (2 ^ i)
+
+/-- POPFQ loaded bits at CPL 0 (64-bit row: ID/VIP/VIF/VM/RF/reserved
+    excepted, RF cleared separately). -/
+def popfqLadenA : Wort :=
+  bitMaske 0 ||| bitMaske 2 ||| bitMaske 4 ||| bitMaske 6 |||
+  bitMaske 7 ||| bitMaske 8 ||| bitMaske 9 ||| bitMaske 10 |||
+  bitMaske 11 ||| bitMaske 12 ||| bitMaske 13 ||| bitMaske 14 |||
+  bitMaske 18 ||| bitMaske 21
+
+/-- POPFQ loaded bits at CPL > 0 with CPL <= IOPL: IF loads, IOPL is
+    preserved. -/
+def popfqLadenB : Wort :=
+  bitMaske 0 ||| bitMaske 2 ||| bitMaske 4 ||| bitMaske 6 |||
+  bitMaske 7 ||| bitMaske 8 ||| bitMaske 9 ||| bitMaske 10 |||
+  bitMaske 11 ||| bitMaske 14 ||| bitMaske 18 ||| bitMaske 21
+
+/-- POPFQ loaded bits at CPL > IOPL: IF and IOPL are preserved. -/
+def popfqLadenC : Wort :=
+  bitMaske 0 ||| bitMaske 2 ||| bitMaske 4 ||| bitMaske 6 |||
+  bitMaske 7 ||| bitMaske 8 ||| bitMaske 10 |||
+  bitMaske 11 ||| bitMaske 14 ||| bitMaske 18 ||| bitMaske 21
+
+/-- The case mask of Table 1-12 (64-bit rows). -/
+def popfqLaden (cpl iopl : Nat) : Wort :=
+  if cpl = 0 then popfqLadenA
+  else if cpl ≤ iopl then popfqLadenB else popfqLadenC
+
+/-- RF clearing mask. -/
+def popfqOhneRF : Wort := ~~~bitMaske 16
+
+/-- The restored word: loaded bits from the stack image, the rest from
+    the live word, RF cleared. -/
+def popfqWort (laden pre gesp : Wort) : Wort :=
+  ((pre &&& ~~~laden) ||| (gesp &&& laden)) &&& popfqOhneRF
+
+/-- Every case mask loads every status bit. -/
+theorem popfqLaden_status (cpl iopl i : Nat)
+    (h : i = 0 ∨ i = 2 ∨ i = 4 ∨ i = 6 ∨ i = 7 ∨ i = 11) :
+    (popfqLaden cpl iopl).getLsbD i = true := by
+  unfold popfqLaden
+  by_cases hc : cpl = 0
+  · rw [if_pos hc]
+    rcases h with rfl|rfl|rfl|rfl|rfl|rfl <;> decide
+  · rw [if_neg hc]
+    by_cases hl : cpl ≤ iopl
+    · rw [if_pos hl]
+      rcases h with rfl|rfl|rfl|rfl|rfl|rfl <;> decide
+    · rw [if_neg hl]
+      rcases h with rfl|rfl|rfl|rfl|rfl|rfl <;> decide
+
+/-- No case mask loads RF, VM, VIF or VIP. -/
+theorem popfqLaden_erhaelt (cpl iopl i : Nat)
+    (h : i = 16 ∨ i = 17 ∨ i = 19 ∨ i = 20) :
+    (popfqLaden cpl iopl).getLsbD i = false := by
+  unfold popfqLaden
+  by_cases hc : cpl = 0
+  · rw [if_pos hc]
+    rcases h with rfl|rfl|rfl|rfl <;> decide
+  · rw [if_neg hc]
+    by_cases hl : cpl ≤ iopl
+    · rw [if_pos hl]
+      rcases h with rfl|rfl|rfl|rfl <;> decide
+    · rw [if_neg hl]
+      rcases h with rfl|rfl|rfl|rfl <;> decide
+
+/-- IF loads exactly at CPL 0 or CPL <= IOPL. -/
+theorem popfqLaden_if (cpl iopl : Nat) :
+    (popfqLaden cpl iopl).getLsbD 9 =
+      decide (cpl = 0 ∨ cpl ≤ iopl) := by
+  unfold popfqLaden
+  by_cases hc : cpl = 0
+  · rw [if_pos hc]
+    have : (decide (cpl = 0 ∨ cpl ≤ iopl)) = true := by
+      simp [hc]
+    rw [this]
+    decide
+  · rw [if_neg hc]
+    by_cases hl : cpl ≤ iopl
+    · rw [if_pos hl]
+      have : (decide (cpl = 0 ∨ cpl ≤ iopl)) = true := by
+        simp [hc, hl]
+      rw [this]
+      decide
+    · rw [if_neg hl]
+      have : (decide (cpl = 0 ∨ cpl ≤ iopl)) = false := by
+        simp [hc, hl]
+      rw [this]
+      decide
+
+/-- IOPL loads only at CPL 0. -/
+theorem popfqLaden_iopl (cpl iopl : Nat) (i : Nat)
+    (h : i = 12 ∨ i = 13) :
+    (popfqLaden cpl iopl).getLsbD i = decide (cpl = 0) := by
+  unfold popfqLaden
+  by_cases hc : cpl = 0
+  · rw [if_pos hc]
+    have : (decide (cpl = 0)) = true := by simp [hc]
+    rw [this]
+    rcases h with rfl|rfl <;> decide
+  · rw [if_neg hc]
+    have : (decide (cpl = 0)) = false := by simp [hc]
+    rw [this]
+    by_cases hl : cpl ≤ iopl
+    · rw [if_pos hl]
+      rcases h with rfl|rfl <;> decide
+    · rw [if_neg hl]
+      rcases h with rfl|rfl <;> decide
+
+/-- The RF clearer clears exactly bit 16 (in range). -/
+theorem ohneRF_bit (i : Nat) (h64 : i < 64) :
+    popfqOhneRF.getLsbD i = !(decide (i = 16)) := by
+  have d64 : decide (i < 64) = true := decide_eq_true h64
+  unfold popfqOhneRF bitMaske
+  rw [BitVec.getLsbD_not, d64, Bool.true_and, BitVec.getLsbD_ofNat, d64]
+  by_cases h : i = 16
+  · subst h
+    decide
+  · have hne : (16 : Nat) ≠ i := Ne.symm h
+    rw [Nat.testBit_two_pow_of_ne hne]
+    simp [h]
+
+/-- Master bit equation for the restore: preserved bits come from the
+    live word, loaded bits from the stack image, bit 16 is cleared. -/
+theorem popfqWort_bit (laden pre gesp : Wort) (i : Nat) (h64 : i < 64) :
+    rbit (popfqWort laden pre gesp) i =
+      (((rbit pre i && !(laden.getLsbD i)) ||
+        (rbit gesp i && laden.getLsbD i)) && !(decide (i = 16))) := by
+  have d64 : decide (i < 64) = true := decide_eq_true h64
+  have hof := ohneRF_bit i h64
+  unfold popfqWort
+  simp only [rbit, BitVec.testBit_toNat]
+  simp only [BitVec.getLsbD_and, BitVec.getLsbD_or, BitVec.getLsbD_not,
+    d64, Bool.true_and]
+  rw [hof]
+
 /- CUTS:
     Skeleton plus raw word (§2) and nibble groundwork (§3 head):
     effect relation, PUSHFQ/POPFQ observers, consumer admission and
