@@ -550,6 +550,54 @@ theorem latch_unterscheidet_nicht (g : GeraetZustand) (b : IoBreite)
   have e2 : (geraetAntwort g .ein b 0).2 = a2 := congrArg Prod.snd h2
   exact e1.symm.trans e2
 
+/-! ## Adapter for the common hardware execution (owner 660).
+
+   The generic latch step lifted to the extended state: it runs on
+   `kern`; XMM and FP control are untouched (mirroring `laufAlt` and
+   `hw660Schritt`). Denial is the absence of a step, so the adapter
+   takes successful steps only -- there is no refused case to smuggle a
+   fault through. Syscall/interrupt scope stays with lane 672: no trap
+   form exists here. -/
+
+/-- Adapter step on the extended state under checked map data: the
+    successor core with the caller's XMM file and FP context. Takes the
+    reached successor plus its step evidence: the adapter never builds a
+    triple from an unreached state. (No `IoDec` is taken: fetching and
+    decoding happened before the step; the adapter does not re-decode.) -/
+def bus660Schritt (t : FpZustand) (g : GeraetZustand)
+    (spur : List IoEreignis) (r : IoBerechtigung) (k : TssKarte)
+    (s' : BusZustand GeraetZustand)
+    (h : BusSchritt GeraetZustand latchErlaubt r k ⟨t.kern, g, spur⟩ s') :
+    FpZustand × GeraetZustand × List IoEreignis :=
+  ⟨⟨s'.kern, t.xmm, t.fp⟩, s'.geraet, s'.spur⟩
+
+/-- The adapter keeps every XMM register. -/
+theorem bus660Schritt_xmm (t : FpZustand) (g : GeraetZustand)
+    (spur : List IoEreignis) (r : IoBerechtigung) (k : TssKarte)
+    (s' : BusZustand GeraetZustand)
+    (h : BusSchritt GeraetZustand latchErlaubt r k ⟨t.kern, g, spur⟩ s')
+    (q : XmmReg) :
+    (bus660Schritt t g spur r k s' h).1.xmm q = t.xmm q := by
+  unfold bus660Schritt
+  rfl
+
+/-- The adapter keeps the FP control word. -/
+theorem bus660Schritt_fp (t : FpZustand) (g : GeraetZustand)
+    (spur : List IoEreignis) (r : IoBerechtigung) (k : TssKarte)
+    (s' : BusZustand GeraetZustand)
+    (h : BusSchritt GeraetZustand latchErlaubt r k ⟨t.kern, g, spur⟩ s') :
+    (bus660Schritt t g spur r k s' h).1.fp = t.fp := rfl
+
+/-- The adapter never touches canonical memory. -/
+theorem bus660Schritt_speicher (t : FpZustand)
+    (g : GeraetZustand) (spur : List IoEreignis) (r : IoBerechtigung)
+    (k : TssKarte) (s' : BusZustand GeraetZustand)
+    (h : BusSchritt GeraetZustand latchErlaubt r k ⟨t.kern, g, spur⟩ s') :
+    (bus660Schritt t g spur r k s' h).1.kern.speicher =
+      t.kern.speicher := by
+  have hm := busSchritt_speicher GeraetZustand latchErlaubt r k _ s' h
+  exact hm
+
 /- CUTS:
    Skeleton only: the TSS map type, one per-byte check and its witness.
    Range checks, the architectural rule, the generic device interface,
