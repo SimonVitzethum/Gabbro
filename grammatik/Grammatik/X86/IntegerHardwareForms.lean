@@ -213,10 +213,9 @@ theorem encodeIntHw_schmal_leer (dst src : Register) (b : Breite)
 def decodeIntHwModrm (b : Breite) (op : Nat) (rBit bBit : Nat) :
     List Byte → Option (IntHwDec × List Byte)
   | m :: rest =>
-    let reg := byteNat m / 8 % 8
-    let rm := byteNat m % 8
     if byteNat m / 64 == 3 then
-      match codeReg (rBit * 8 + reg), codeReg (bBit * 8 + rm) with
+      match codeReg (rBit * 8 + byteNat m / 8 % 8),
+          codeReg (bBit * 8 + byteNat m % 8) with
       | some rs, some rd =>
         match op with
         | 33 => some (⟨.andRR b rd rs, 3⟩, rest)
@@ -232,16 +231,14 @@ def decodeIntHwModrm (b : Breite) (op : Nat) (rBit bBit : Nat) :
 def decodeIntHwF7 (b : Breite) (bBit : Nat) :
     List Byte → Option (IntHwDec × List Byte)
   | m :: rest =>
-    let reg := byteNat m / 8 % 8
-    let rm := byteNat m % 8
     if byteNat m / 64 == 3 then
-      match reg with
+      match byteNat m / 8 % 8 with
       | 2 =>
-        match codeReg (bBit * 8 + rm) with
+        match codeReg (bBit * 8 + byteNat m % 8) with
         | some rd => some (⟨.notR b rd, 3⟩, rest)
         | none => none
       | 3 =>
-        match codeReg (bBit * 8 + rm) with
+        match codeReg (bBit * 8 + byteNat m % 8) with
         | some rd => some (⟨.negR b rd, 3⟩, rest)
         | none => none
       | _ => none
@@ -676,12 +673,10 @@ def immDecLaenge : IntHwImm → Nat
 def decodeIntHwImmModrm (b : Breite) (wide : Bool) (bBit : Nat) :
     List Byte → Option (IntHwImmDec × List Byte)
   | m :: rest =>
-    let digit := byteNat m / 8 % 8
-    let rm := byteNat m % 8
     if byteNat m / 64 == 3 then
-      match codeReg (bBit * 8 + rm) with
+      match codeReg (bBit * 8 + byteNat m % 8) with
       | some rd =>
-        match digit, b, wide with
+        match byteNat m / 8 % 8, b, wide with
         | 0, .b64, true =>
           match parseLe32 rest with
           | some (imm, rest') => some (⟨.addI rd imm, 7⟩, rest')
@@ -1094,10 +1089,456 @@ theorem inthw_cmp_e (x y : Wort) :
   simp only [bedingung, sub64, zfTest]
   exact wort_beq_decide _
 
+/-! ## 11. Arbitrary-input coverage: every success carries length 3.
+
+    Producer interface for lane 660 (validator): no successful decode of
+    any input smuggles a bad length into the step. -/
+
+/-- Every successful ModRM decode reports length 3. -/
+theorem decodeIntHwModrm_laenge (b : Breite) (op rBit bBit : Nat)
+    (bs : List Byte) (d : IntHwDec) (rest : List Byte)
+    (h : decodeIntHwModrm b op rBit bBit bs = some (d, rest)) :
+    d.laenge = 3 := by
+  cases bs with
+  | nil => simp [decodeIntHwModrm] at h
+  | cons m t =>
+    simp only [decodeIntHwModrm] at h
+    by_cases hmod : byteNat m / 64 == 3
+    · rw [if_pos hmod] at h
+      cases hc1 : codeReg (rBit * 8 + byteNat m / 8 % 8) with
+      | none =>
+        cases hc2 : codeReg (bBit * 8 + byteNat m % 8) with
+        | none => simp [hc1, hc2] at h
+        | some rd => simp [hc1, hc2] at h
+      | some rs =>
+        cases hc2 : codeReg (bBit * 8 + byteNat m % 8) with
+        | none => simp [hc1, hc2] at h
+        | some rd =>
+          simp only [hc1, hc2] at h
+          split at h
+          · cases h; rfl
+          · cases h; rfl
+          · cases h; rfl
+          · cases h
+    · rw [if_neg hmod] at h
+      cases h
+
+/-- Every successful group-F7 decode reports length 3. -/
+theorem decodeIntHwF7_laenge (b : Breite) (bBit : Nat) (bs : List Byte)
+    (d : IntHwDec) (rest : List Byte)
+    (h : decodeIntHwF7 b bBit bs = some (d, rest)) :
+    d.laenge = 3 := by
+  cases bs with
+  | nil => simp [decodeIntHwF7] at h
+  | cons m t =>
+    simp only [decodeIntHwF7] at h
+    by_cases hmod : byteNat m / 64 == 3
+    · rw [if_pos hmod] at h
+      split at h
+      · cases hc : codeReg (bBit * 8 + byteNat m % 8) with
+        | none => simp [hc] at h
+        | some rd =>
+          simp only [hc] at h
+          cases h; rfl
+      · cases hc : codeReg (bBit * 8 + byteNat m % 8) with
+        | none => simp [hc] at h
+        | some rd =>
+          simp only [hc] at h
+          cases h; rfl
+      · cases h
+    · rw [if_neg hmod] at h
+      cases h
+
+/-- Decode length after REX is always 3. -/
+theorem decodeIntHwNach_laenge (b : Breite) (rBit bBit : Nat)
+    (f7ok : Bool) (bs : List Byte) (d : IntHwDec) (rest : List Byte)
+    (h : decodeIntHwNach b rBit bBit f7ok bs = some (d, rest)) :
+    d.laenge = 3 := by
+  cases bs with
+  | nil => simp [decodeIntHwNach] at h
+  | cons op t =>
+    simp only [decodeIntHwNach] at h
+    by_cases h33 : byteNat op == 33
+    · rw [if_pos h33] at h
+      exact decodeIntHwModrm_laenge b 33 rBit bBit t d rest h
+    · rw [if_neg h33] at h
+      by_cases h9 : byteNat op == 9
+      · rw [if_pos h9] at h
+        exact decodeIntHwModrm_laenge b 9 rBit bBit t d rest h
+      · rw [if_neg h9] at h
+        by_cases h85 : byteNat op == 133
+        · rw [if_pos h85] at h
+          exact decodeIntHwModrm_laenge b 133 rBit bBit t d rest h
+        · rw [if_neg h85] at h
+          by_cases hf7 : byteNat op == 247
+          · rw [if_pos hf7] at h
+            by_cases hok : f7ok = true
+            · rw [hok] at h
+              simp at h
+              exact decodeIntHwF7_laenge b bBit t d rest h
+            · have hokf : f7ok = false := by
+                cases he : f7ok with
+                | true => simp [he] at hok
+                | false => rfl
+              rw [hokf] at h
+              simp at h
+          · rw [if_neg hf7] at h
+            cases h
+
+/-- Every successful register decode reports length 3. -/
+theorem decodeIntHw_laenge (bs : List Byte) (d : IntHwDec)
+    (rest : List Byte) (h : decodeIntHw bs = some (d, rest)) :
+    d.laenge = 3 := by
+  cases bs with
+  | nil => simp [decodeIntHw] at h
+  | cons r t =>
+    simp only [decodeIntHw] at h
+    split at h
+    · exact decodeIntHwNach_laenge .b64 0 0 true t d rest h
+    · exact decodeIntHwNach_laenge .b64 0 1 true t d rest h
+    · exact decodeIntHwNach_laenge .b64 1 0 false t d rest h
+    · exact decodeIntHwNach_laenge .b64 1 1 false t d rest h
+    · exact decodeIntHwNach_laenge .b32 0 0 true t d rest h
+    · exact decodeIntHwNach_laenge .b32 0 1 true t d rest h
+    · exact decodeIntHwNach_laenge .b32 1 0 false t d rest h
+    · exact decodeIntHwNach_laenge .b32 1 1 false t d rest h
+    · cases h
+
+/-- A decoded register row always passes the length guard. -/
+theorem decodiert_inthw_laenge_ok (bs : List Byte) (d : IntHwDec)
+    (rest : List Byte) (h : decodeIntHw bs = some (d, rest)) :
+    laengeOk d.laenge = true := by
+  have h3 := decodeIntHw_laenge bs d rest h
+  rw [h3]
+  rfl
+
+/-! ## 12. Decode-to-execute selection (producer interface for lane 660).
+
+    Bytes decoding to a row step through the REUSED shared evaluator with
+    the REUSED value/flag semantics; the length guard comes from the
+    decoded bytes themselves. -/
+
+/-- Decoded AND steps through the shared value with the logic snapshot. -/
+theorem decode_exec_and (bs : List Byte) (d : IntHwDec)
+    (rest : List Byte) (b : Breite) (dst src : Register) (s : Zustand)
+    (hdec : decodeIntHw bs = some (d, rest))
+    (h : d.op = .andRR b dst src) :
+    stepIntHw d s =
+      some (schrittRegister s (ripNach s.rip d.laenge)
+        (intHwFlagsLogik b (andB b (s.register dst) (s.register src))) dst
+        (mergeRegNarrow b (s.register dst)
+          (andB b (s.register dst) (s.register src)))) := by
+  have hok := decodiert_inthw_laenge_ok bs d rest hdec
+  have h3 := decodeIntHw_laenge bs d rest hdec
+  exact stepIntHw_and d s b dst src hok h3 h
+
+/-- Decoded TEST writes no register: only flags and RIP move. -/
+theorem decode_exec_test (bs : List Byte) (d : IntHwDec)
+    (rest : List Byte) (b : Breite) (lhs rhs : Register) (s : Zustand)
+    (hdec : decodeIntHw bs = some (d, rest))
+    (h : d.op = .testRR b lhs rhs) :
+    stepIntHw d s =
+      some ({ s with rip := ripNach s.rip d.laenge, flags := intHwFlagsLogik b (andB b (s.register lhs) (s.register rhs)) }) := by
+  have hok := decodiert_inthw_laenge_ok bs d rest hdec
+  have h3 := decodeIntHw_laenge bs d rest hdec
+  exact stepIntHw_test d s b lhs rhs hok h3 h
+
+/-- Decoded NOT preserves flags exactly. -/
+theorem decode_exec_not_flags (bs : List Byte) (d : IntHwDec)
+    (rest : List Byte) (b : Breite) (dst : Register) (s s' : Zustand)
+    (hdec : decodeIntHw bs = some (d, rest))
+    (h : d.op = .notR b dst)
+    (hstep : stepIntHw d s = some s') :
+    s'.flags = s.flags := by
+  have hok := decodiert_inthw_laenge_ok bs d rest hdec
+  have h3 := decodeIntHw_laenge bs d rest hdec
+  exact stepIntHw_not_flags d s s' b dst hok h3 h hstep
+
+/-- Decoded NEG installs the defined snapshot. -/
+theorem decode_exec_neg_gueltig (bs : List Byte) (d : IntHwDec)
+    (rest : List Byte) (b : Breite) (dst : Register) (s s' : Zustand)
+    (hdec : decodeIntHw bs = some (d, rest))
+    (h : d.op = .negR b dst)
+    (hstep : stepIntHw d s = some s') :
+    NegGueltig b (s.register dst) s'.flags := by
+  have hok := decodiert_inthw_laenge_ok bs d rest hdec
+  have h3 := decodeIntHw_laenge bs d rest hdec
+  exact stepIntHw_neg_gueltig d s s' b dst hok h3 h hstep
+
+/-! ## 13. Joint witness: decoded AND feeding a memory store.
+
+    `and rax, rcx` (3 bytes) followed by the pilot `store [rbx], rax`
+    (7 bytes) in actual code memory: the decoded row steps `rax` from
+    12 to 8, the fetched-byte stepper agrees from the same bytes, and
+    the existing `schritt` stores the value into the data cell,
+    observably changing its byte. NEG overflow (`sMin` borrows and
+    overflows) and the compact/wide choice are pinned jointly with
+    length and permission refusals. -/
+
+/-- Witness program: AND bytes then the pilot store bytes. -/
+def intHwKetteProg : List Byte :=
+  [natByte 72, natByte 33, natByte 200,
+   natByte 72, natByte 137, natByte 131,
+   natByte 0, natByte 0, natByte 0, natByte 0]
+
+/-- Program bytes over addresses from 4096; zero elsewhere. -/
+def intHwKetteBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else intHwKetteProg.getD (a.toNat - 4096) (BitVec.ofNat 8 0)
+
+/-- Code window executable: 4096..4128. -/
+def intHwKetteExec (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4128)
+
+/-- Data cell readable and writable: 8192..8200. -/
+def intHwKetteDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8200)
+
+/-- Witness registers: 12 in rax, 10 in rcx, the data cell in rbx. -/
+def intHwKetteReg : Register → Wort := fun q =>
+  if q = Register.rax then 12
+  else if q = Register.rcx then 10
+  else if q = Register.rbx then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness start state: AND program at 4096, data cell at 8192. -/
+def intHwKetteStart : Zustand :=
+  { register := intHwKetteReg, flags := zeugeFlags,
+    rip := BitVec.ofNat 64 4096,
+    speicher :=
+      { bytes := intHwKetteBytes, lesbar := intHwKetteDaten,
+        schreibbar := intHwKetteDaten, ausfuehrbar := intHwKetteExec } }
+
+/-- The two-step end state: AND, then the pilot store of `rax`. -/
+def intHwKetteEnde : Option Zustand :=
+  (stepIntHw ⟨.andRR .b64 .rax .rcx, 3⟩ intHwKetteStart).bind
+    (schritt ⟨.store64 .rbx .rax (BitVec.ofNat 32 0), 7⟩)
+
+/-- Read rax out of a byte-step outcome. -/
+def intHwZelle (o : ByteAusgang) : Option Wort :=
+  match o with
+  | .weiter s => some (s.register Register.rax)
+  | .verweigert => none
+
+/-- The program bytes are exactly the canonical AND plus the pilot store. -/
+theorem intHw_kette_bytes :
+    intHwKetteProg = encodeIntHw (.andRR .b64 .rax .rcx) ++
+      encode (.store64 .rbx .rax (BitVec.ofNat 32 0)) := by
+  decide
+
+/-- The executed bytes decode to the stepped row. -/
+theorem intHw_kette_dekode :
+    decodeIntHw intHwKetteProg =
+      some (((⟨.andRR .b64 .rax .rcx, 3⟩ : IntHwDec)),
+        intHwKetteProg.drop 3) := by
+  decide
+
+/-- The AND step moves 12 to 8 and advances past its 3 bytes. -/
+theorem intHw_kette_schritt :
+    (stepIntHw ⟨.andRR .b64 .rax .rcx, 3⟩ intHwKetteStart).map
+        (fun s => s.register .rax) = some 8 ∧
+      (stepIntHw ⟨.andRR .b64 .rax .rcx, 3⟩ intHwKetteStart).map
+        (fun s => s.rip) = some (BitVec.ofNat 64 4099) := by
+  decide
+
+/-- The fetched-byte stepper agrees from actual memory: rax holds 8. -/
+theorem intHw_kette_byteschritt :
+    intHwZelle (intHwByteschritt intHwKetteStart) = some 8 := by
+  decide
+
+/-- The AND value reaches memory: the data cell reads 8 and its byte
+    observably changed from zero; a wrong consumed length on the same
+    row refuses. -/
+theorem intHw_kette_speicher :
+    intHwKetteEnde.map (fun s =>
+        read64 s.speicher (BitVec.ofNat 64 8192)) =
+        some (some 8) ∧
+      intHwKetteEnde.map (fun s =>
+        s.speicher.bytes (BitVec.ofNat 64 8192)) =
+        some (natByte 8) ∧
+      intHwKetteStart.speicher.bytes (BitVec.ofNat 64 8192) =
+        BitVec.ofNat 8 0 ∧
+      stepIntHw ⟨.andRR .b64 .rax .rcx, 5⟩ intHwKetteStart = none := by
+  decide
+
+/-- NEG overflow pin: negating the signed minimum borrows and overflows;
+    negating zero does neither. -/
+theorem probe_neg_ueberlauf :
+    negUeberlauf .b64 0x8000000000000000 = true ∧
+    negTrag .b64 0x8000000000000000 = true ∧
+    negUeberlauf .b64 0 = false ∧ negTrag .b64 0 = false := by
+  decide
+
+/-- JOINT WITNESS over decoded bytes, execution and memory: the AND bytes
+    decode and step to 8 through the REUSED evaluator, the fetched-byte
+    stepper agrees from actual memory, the value changes real memory
+    observably, NEG overflow and the compact/wide choice hold jointly,
+    and truncated bytes refuse. Non-degenerate: a store-changing reached
+    execution plus loud refusals, jointly instantiated. -/
+theorem inthw_zeuge :
+    decodeIntHw intHwKetteProg =
+        some (((⟨.andRR .b64 .rax .rcx, 3⟩ : IntHwDec)),
+          intHwKetteProg.drop 3) ∧
+    intHwZelle (intHwByteschritt intHwKetteStart) = some 8 ∧
+    (∃ m1 : Speicher,
+      write64 intHwKetteStart.speicher (BitVec.ofNat 64 8192) 8 = some m1 ∧
+      read64 m1 (BitVec.ofNat 64 8192) = some 8 ∧
+      intHwKetteStart.speicher.bytes (BitVec.ofNat 64 8192) ≠
+        m1.bytes (BitVec.ofNat 64 8192)) ∧
+    negUeberlauf .b64 0x8000000000000000 = true ∧
+    (encodeIntHwImm (.addI .rax 1)).length = 4 ∧
+    (encodeIntHwImm (.addI .rax 256)).length = 7 ∧
+    decodeIntHw [natByte 72, natByte 247] = none ∧
+    decodeIntHwImm [natByte 72, natByte 131, natByte 192] = none := by
+  refine ⟨intHw_kette_dekode, intHw_kette_byteschritt, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · refine ⟨{ intHwKetteStart.speicher with
+        bytes := writeBytes intHwKetteStart.speicher (BitVec.ofNat 64 8192) 8 },
+      ?_, ?_, ?_⟩
+    · unfold write64
+      have hc : schreibbar8 intHwKetteStart.speicher
+          (BitVec.ofNat 64 8192) = true := rfl
+      rw [if_pos hc]
+    · have hwr : write64 intHwKetteStart.speicher (BitVec.ofNat 64 8192) 8 =
+          some { intHwKetteStart.speicher with
+            bytes := writeBytes intHwKetteStart.speicher
+              (BitVec.ofNat 64 8192) 8 } := by
+        unfold write64
+        have hc : schreibbar8 intHwKetteStart.speicher
+            (BitVec.ofNat 64 8192) = true := rfl
+        rw [if_pos hc]
+      have hrd : lesbar8 intHwKetteStart.speicher
+          (BitVec.ofNat 64 8192) = true := rfl
+      exact read64_nach_write64 intHwKetteStart.speicher _ _ 8 hwr hrd
+    · have hhit := writeBytesN_hit intHwKetteStart.speicher
+          (BitVec.ofNat 64 8192) 8 8 0 (by decide) (by decide)
+      rw [addrOff_null (BitVec.ofNat 64 8192 : Adresse)] at hhit
+      show intHwKetteStart.speicher.bytes (BitVec.ofNat 64 8192) ≠
+        writeBytes intHwKetteStart.speicher (BitVec.ofNat 64 8192) 8
+          (BitVec.ofNat 64 8192)
+      unfold writeBytes
+      rw [hhit]
+      decide
+  · exact probe_neg_ueberlauf.1
+  · exact pin_add_kompakt ▸ rfl
+  · exact pin_add_weit ▸ rfl
+  · rfl
+  · rfl
+
 /- CUTS:
-    Skeleton only: codec/step/fetch/witnesses are open.
+    Proved here, reusing the ACCEPTED canonical producers (`Typen`,
+    `Wort.trunc`/`sext`/`add64`/`sub64`/`xor64`, `Speicher.read64`/
+    `write64`, `Ausfuehrung.laengeOk`/`ripNach`/`regSet`/`schrittRegister`/
+    `schritt`, `Codec` bytes/helpers, `Byteschritt.geholt`/
+    `ausfuehrbarN`/`ByteAusgang`, `Ganzzahl.andB`/`orB`/`notB`/`and64`/
+    `or64`/`LogikGueltig`, `ShiftLogic.negW`/`negWf`/`NegGueltig`/
+    `logikFlags`/`andW`, `NarrowOps.mergeRegNarrow` and the UNCHANGED
+    pilot `decode`):
+    value/flag/width layer (§1-2: shared `intHwWert` dispatch, TEST==AND
+    flags, AF-none observation abstraction, b64 agreement with
+    `and64`/`or64`, defined NEG AF, 32-bit zero-upper generic, 64-bit
+    full-word, 8-bit pins);
+    register codec (§3-4: b64/b32 AND/OR/TEST/NOT/NEG encodings with
+    exact 3-byte lengths, empty narrow rows, ModRM/F7/Nach/top decoders
+    with REX.R-over-digit refusal, per-form round trips, pilot
+    disjointness, pins, planted refusals);
+    register step (§5: shared `stepIntHw` with per-form equations,
+    TEST no-write, NOT flag preservation, NEG `NegGueltig`, length
+    refusal, memory-freedom adapter for lane 664);
+    compact immediates (§6-8: int32 value with architectural sign
+    extension, imm8-fit choice with `kompakt_add_feuert`, imm8 pins,
+    group-1 digits with ADC/SBB and 32-bit-arithmetic refusals, REX.R
+    refusal, wide/compact/NEG-32 pins, planted refusals, immediate step
+    with DEFINED ADD/SUB AF, CMP no-write, b64 AND==register snapshot,
+    memory-freedom adapter);
+    fetched-byte paths (§9: `fetchIntHw`/`fetchIntHwImm` over ACTUAL
+    memory with length/permission admission and `fetch*_erfolg`);
+    branch adapters (§10: TEST-ZF and CMP-E/L equations over the shared
+    values); arbitrary-input register length soundness (§11: every
+    successful register decode reports length 3, hence passes
+    `laengeOk`); decode-to-execute selection (§12); joint witness (§13:
+    decoded AND then pilot store changing actual memory, fetched-byte
+    agreement, NEG overflow, compact/wide choice, refusals).
+    NOT proved here, and not claimed:
+    - No hardware correspondence: opcodes, digits, REX discipline, flag
+      rules and the count/sign-extension semantics are STATED canonical
+      subset choices with self-consistency only, not verified against
+      silicon. The `.tmp/HARDWARE-REFERENCES/` manual bundle named in
+      the task is ABSENT from this clone (`.tmp` holds only `LANE.md`),
+      so no new manual heading/page/provenance is recorded; all rows
+      reuse accepted producer semantics and no new ISA detail is
+      invented.
+    - No b8/b16 codec rows (encoder empty, decoder has no arm); value
+      semantics at those widths is proved, wiring stays OPEN.
+    - No 32-bit ADD/SUB/CMP immediates (no narrow arithmetic flag
+      snapshot exists); refused at decode, stays OPEN.
+    - No ADC/SBB rows (digits /2/3 refuse); no memory-operand logic
+      forms; no INC/DEC rows; full immediate length-soundness
+      (arbitrary-input 7/4 consumption) stays OPEN -- immediates execute
+      via explicit-length steps and runtime fetch admission.
+    - No source correspondence, no TSO/GX bridge (all facts sequential
+      over one `Speicher`; register rows never touch memory, proved),
+      no ABI/image/entry/relocation, no cost transfer, no divide-trap
+      transfer (no DIV row claimed; `hardwareHalt` untouched).
+    - No new hardware or software assumptions and no checker rule: no
+      diagnostic, poison-probe, example or CLI numbers are taken; no
+      integer-to-pointer conversion exists anywhere here.
 -/
 
 #print axioms intHwWert_routen
+#print axioms test_flags_eq_and
+#print axioms inthw_logik_af_none
+#print axioms inthw_b64_agrees
+#print axioms inthw_neg_defined
+#print axioms inthw_b32_clears
+#print axioms inthw_b64_full
+#print axioms inthw_b8_pins
+#print axioms encodeIntHw_len_b64
+#print axioms encodeIntHw_schmal_leer
+#print axioms roundtrip_inthw_and64
+#print axioms roundtrip_inthw_or64
+#print axioms roundtrip_inthw_test64
+#print axioms roundtrip_inthw_not64
+#print axioms roundtrip_inthw_neg64
+#print axioms roundtrip_inthw_and32
+#print axioms inthw_pilot_verweigert64
+#print axioms pin_inthw_and_eax_ecx_dekode
+#print axioms pin_inthw_neg_r9_dekode
+#print axioms sonde_inthw_verweigert
+#print axioms stepIntHw_and
+#print axioms stepIntHw_test
+#print axioms stepIntHw_not_flags
+#print axioms stepIntHw_neg_gueltig
+#print axioms stepIntHw_laenge_falsch
+#print axioms stepIntHw_speicher
+#print axioms probe_imm8_neg1
+#print axioms kompakt_add_feuert
+#print axioms pin_add_kompakt
+#print axioms pin_imm_add_kompakt_dekode
+#print axioms sonde_imm_verweigert
+#print axioms stepImm_add_af
+#print axioms stepImm_cmp_reg
+#print axioms stepImm_and64_eq_reg
+#print axioms stepImm_speicher
+#print axioms fetchIntHw_erfolg
+#print axioms fetchIntHwImm_erfolg
+#print axioms inthw_test_zf
+#print axioms inthw_cmp_l
+#print axioms inthw_cmp_e
+#print axioms decodeIntHwModrm_laenge
+#print axioms decodeIntHwF7_laenge
+#print axioms decodeIntHwNach_laenge
+#print axioms decodeIntHw_laenge
+#print axioms decodiert_inthw_laenge_ok
+#print axioms decode_exec_and
+#print axioms decode_exec_test
+#print axioms decode_exec_not_flags
+#print axioms decode_exec_neg_gueltig
+#print axioms intHw_kette_bytes
+#print axioms intHw_kette_dekode
+#print axioms intHw_kette_schritt
+#print axioms intHw_kette_byteschritt
+#print axioms intHw_kette_speicher
+#print axioms probe_neg_ueberlauf
+#print axioms inthw_zeuge
 
 end Gabbro.Grammatik.X86
