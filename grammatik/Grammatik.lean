@@ -458,4 +458,4 @@ import Grammatik.X86.WordAccessGrouping
 import Grammatik.X86.FloatSourceObservations
 import Grammatik.X86.SourceAccessCompleteness
 import Grammatik.X86.ScalarFloatCodec
-import Grammatik.X86.TSOCarrierStep
+import Grammatik.X86.CarrierTraceBridge
