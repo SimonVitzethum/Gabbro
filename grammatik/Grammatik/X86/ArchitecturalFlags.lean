@@ -39,6 +39,7 @@ import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
 import Grammatik.X86.ShiftLogic
 import Grammatik.X86.MulDiv
+import Grammatik.X86.FlagDependencies
 
 namespace Gabbro.Grammatik.X86
 
@@ -262,7 +263,8 @@ def schiebErlaubt (b : Breite) (s : SchiebeNachweis) (c : Nat)
   rbit nach sfBit = negB b s.ergebnis ∧
   rbit nach pfBit = parityEven s.ergebnis ∧
   (schiebeZaehler b c = 1 →
-    rbit nach ofBit = s.ueberlauf.getD (rbit nach ofBit))
+    rbit nach ofBit = s.ueberlauf.getD (rbit nach ofBit)) ∧
+  (s.ueberlauf = none → schiebeZaehler b c ≠ 1)
 
 /-- Canonical raw word from five defined status bits (bit 1 set, AF bit
     cleared, control bits cleared): the builder for adapter members. -/
@@ -371,10 +373,10 @@ theorem schieb_of_frei (b : Breite) (s : SchiebeNachweis) (c : Nat)
       (negB b s.ergebnis) false, ?_, ?_, ?_, ?_⟩
   · unfold schiebErlaubt
     obtain ⟨hcf, hpf, hzf, hsf, -, -⟩ := rohAusStatus_bits _ _ _ _ _
-    exact ⟨hcf, hzf, hsf, hpf, fun hc => absurd hc h⟩
+    exact ⟨hcf, hzf, hsf, hpf, fun hc => absurd hc h, fun _ => h⟩
   · unfold schiebErlaubt
     obtain ⟨hcf, hpf, hzf, hsf, -, -⟩ := rohAusStatus_bits _ _ _ _ _
-    exact ⟨hcf, hzf, hsf, hpf, fun hc => absurd hc h⟩
+    exact ⟨hcf, hzf, hsf, hpf, fun hc => absurd hc h, fun _ => h⟩
   · obtain ⟨-, -, -, -, hof, -⟩ := rohAusStatus_bits _ _ _ _ _
     exact hof
   · obtain ⟨-, -, -, -, hof, -⟩ := rohAusStatus_bits _ _ _ _ _
@@ -390,8 +392,8 @@ theorem schiebAdapter (b : Breite) (s : SchiebeNachweis) (c : Nat)
     schiebErlaubt b s c nach := by
   unfold SchiebeGueltig at hval
   unfold schiebErlaubt
-  obtain ⟨hcfv, -, hzfv, hsfv, hpfv, hofv, -⟩ := hval
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  obtain ⟨hcfv, -, hzfv, hsfv, hpfv, hofv, hnonev⟩ := hval
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [hcf, hcfv]
   · rw [hzf, hzfv]
   · rw [hsf, hsfv]
@@ -400,6 +402,180 @@ theorem schiebAdapter (b : Breite) (s : SchiebeNachweis) (c : Nat)
     have ho := hofv hc
     rw [hof]
     exact ho
+  · exact hnonev
+
+/-! ## 5. Consumers of undefined flags.
+
+    A branch or conditional select may consume a post-state only
+    through flags its row defines. ADD/SUB/NEG define everything.
+    Logic rows define everything but AF, and no condition reads AF.
+    MUL rows define only CF/OF, so only OF/CF conditions are admitted
+    there. DIV defines nothing, and shift OF needs the one-count
+    evidence. Anything else requires an explicit admission the table
+    below refuses. -/
+
+/-- Admission table: which conditions may consume which row. -/
+def verbrauchOK : Bedingung → AluOp → Bool
+  | _, .add => true
+  | _, .sub => true
+  | _, .logik => true
+  | .o, .mulU => true
+  | .no, .mulU => true
+  | .b, .mulU => true
+  | .ae, .mulU => true
+  | .o, .mulS => true
+  | .no, .mulS => true
+  | .b, .mulS => true
+  | .ae, .mulS => true
+  | _, _ => false
+
+/-- The table pins the intended examples. -/
+theorem verbrauchOK_beispiele :
+    verbrauchOK .e .logik = true ∧ verbrauchOK .e .mulU = false ∧
+    verbrauchOK .b .mulU = true ∧ verbrauchOK .e .div = false ∧
+    verbrauchOK .b .shift = false := by
+  decide
+
+/-- ADD successors agree on every condition. -/
+theorem addVerbrauch_sicher (c : Bedingung) (n1 n2 x y : Wort)
+    (h1 : addErlaubt x y n1) (h2 : addErlaubt x y n2) :
+    bedingung c (liestStatus n1) = bedingung c (liestStatus n2) := by
+  rw [h1, h2]
+
+/-- SUB/CMP successors agree on every condition. -/
+theorem subVerbrauch_sicher (c : Bedingung) (n1 n2 x y : Wort)
+    (h1 : subErlaubt x y n1) (h2 : subErlaubt x y n2) :
+    bedingung c (liestStatus n1) = bedingung c (liestStatus n2) := by
+  rw [h1, h2]
+
+/-- NEG successors agree on every condition. -/
+theorem negVerbrauch_sicher (c : Bedingung) (b : Breite) (n1 n2 x : Wort)
+    (h1 : negErlaubt b x n1) (h2 : negErlaubt b x n2) :
+    bedingung c (liestStatus n1) = bedingung c (liestStatus n2) := by
+  rw [h1, h2]
+
+/-- Logic successors agree on every condition: only AF is free and no
+    condition reads it. Every premise is used: `hn` selects the read
+    flag, `h1`/`h2` pin it on both sides. -/
+theorem logikVerbrauch_sicher (c : Bedingung) (n1 n2 r : Wort)
+    (h1 : logikErlaubt r n1) (h2 : logikErlaubt r n2) :
+    bedingung c (liestStatus n1) = bedingung c (liestStatus n2) := by
+  apply bedingung_stabil
+  intro n hn
+  obtain ⟨hcf1, hof1, hpf1, hzf1, hsf1⟩ := h1
+  obtain ⟨hcf2, hof2, hpf2, hzf2, hsf2⟩ := h2
+  cases n with
+  | cf => show rbit n1 cfBit = rbit n2 cfBit; rw [hcf1, hcf2]
+  | pf => show rbit n1 pfBit = rbit n2 pfBit; rw [hpf1, hpf2]
+  | zf => show rbit n1 zfBit = rbit n2 zfBit; rw [hzf1, hzf2]
+  | sf => show rbit n1 sfBit = rbit n2 sfBit; rw [hsf1, hsf2]
+  | of_ => show rbit n1 ofBit = rbit n2 ofBit; rw [hof1, hof2]
+
+/-- MUL successors agree on OF/CF conditions: the admitted set of the
+    table. `hsafe` carries the table row; anything it refuses has no
+    proof here. -/
+theorem mulVerbrauch_sicher (c : Bedingung) (n1 n2 x y : Wort)
+    (hsafe : c = .o ∨ c = .no ∨ c = .b ∨ c = .ae)
+    (h1 : mulErlaubtU x y n1) (h2 : mulErlaubtU x y n2) :
+    bedingung c (liestStatus n1) = bedingung c (liestStatus n2) := by
+  apply bedingung_stabil
+  intro n hn
+  obtain ⟨hcf1, hof1⟩ := h1
+  obtain ⟨hcf2, hof2⟩ := h2
+  rcases hsafe with rfl | rfl | rfl | rfl
+  · cases n with
+    | cf => exact absurd hn (by decide)
+    | pf => exact absurd hn (by decide)
+    | zf => exact absurd hn (by decide)
+    | sf => exact absurd hn (by decide)
+    | of_ => show rbit n1 ofBit = rbit n2 ofBit; rw [hof1, hof2]
+  · cases n with
+    | cf => exact absurd hn (by decide)
+    | pf => exact absurd hn (by decide)
+    | zf => exact absurd hn (by decide)
+    | sf => exact absurd hn (by decide)
+    | of_ => show rbit n1 ofBit = rbit n2 ofBit; rw [hof1, hof2]
+  · cases n with
+    | cf => show rbit n1 cfBit = rbit n2 cfBit; rw [hcf1, hcf2]
+    | pf => exact absurd hn (by decide)
+    | zf => exact absurd hn (by decide)
+    | sf => exact absurd hn (by decide)
+    | of_ => exact absurd hn (by decide)
+  · cases n with
+    | cf => show rbit n1 cfBit = rbit n2 cfBit; rw [hcf1, hcf2]
+    | pf => exact absurd hn (by decide)
+    | zf => exact absurd hn (by decide)
+    | sf => exact absurd hn (by decide)
+    | of_ => exact absurd hn (by decide)
+
+/-- Shift successors at a masked one-count agree on every condition:
+    CF/SF/ZF/PF pinned, OF pinned by the count evidence, AF never
+    read. `hc` is load-bearing: without it OF is free. -/
+theorem shiftVerbrauch_eins (cond : Bedingung) (b : Breite)
+    (s : SchiebeNachweis) (k : Nat) (n1 n2 : Wort)
+    (hc : schiebeZaehler b k = 1)
+    (h1 : schiebErlaubt b s k n1) (h2 : schiebErlaubt b s k n2) :
+    bedingung cond (liestStatus n1) =
+      bedingung cond (liestStatus n2) := by
+  apply bedingung_stabil
+  intro n hn
+  obtain ⟨hcf1, hzf1, hsf1, hpf1, hof1, hnone1⟩ := h1
+  obtain ⟨hcf2, hzf2, hsf2, hpf2, hof2, -⟩ := h2
+  cases n with
+  | cf => show rbit n1 cfBit = rbit n2 cfBit; rw [hcf1, hcf2]
+  | pf => show rbit n1 pfBit = rbit n2 pfBit; rw [hpf1, hpf2]
+  | zf => show rbit n1 zfBit = rbit n2 zfBit; rw [hzf1, hzf2]
+  | sf => show rbit n1 sfBit = rbit n2 sfBit; rw [hsf1, hsf2]
+  | of_ =>
+    show rbit n1 ofBit = rbit n2 ofBit
+    have o1 := hof1 hc
+    have o2 := hof2 hc
+    cases he : s.ueberlauf with
+    | some v => simp only [he, Option.getD_some] at o1 o2; rw [o1, o2]
+    | none => exact absurd hc (hnone1 he)
+
+/-- DIV/IDIV: the zero flag is undetermined -- two admitted successors
+    take opposite branches. No admission theorem exists for `.div`. -/
+theorem divVerbrauch_verweigert :
+    ∃ n1 n2, divErlaubt n1 ∧ divErlaubt n2 ∧
+    bedingung .e (liestStatus n1) = true ∧
+    bedingung .e (liestStatus n2) = false := by
+  refine ⟨rohAusStatus false false true false false,
+    rohAusStatus false false false false false,
+    trivial, trivial, ?_, ?_⟩
+  · have h := (rohAusStatus_bits false false true false false).2.2.1
+    show (liestStatus _).zf = true
+    exact h
+  · have h := (rohAusStatus_bits false false false false false).2.2.1
+    show (liestStatus _).zf = false
+    exact h
+
+/-- Raw AF non-observability: two raw words agreeing off bit 4 agree on
+    every condition. This is the genuine derived proof behind the
+    logic-row admission: `bedingung_af_frei` lifted to raw words. -/
+theorem rohAf_frei (c : Bedingung) (w1 w2 : Wort)
+    (h : ∀ i, i ≠ 4 → w1.toNat.testBit i = w2.toNat.testBit i) :
+    bedingung c (liestStatus w1) = bedingung c (liestStatus w2) := by
+  have e : liestStatus w1 =
+      {(liestStatus w2) with af := (liestStatus w1).af} := by
+    simp only [liestStatus, rbit]
+    have h0 : w1.toNat.testBit 0 = w2.toNat.testBit 0 := h 0 (by decide)
+    have h2 : w1.toNat.testBit 2 = w2.toNat.testBit 2 := h 2 (by decide)
+    have h6 : w1.toNat.testBit 6 = w2.toNat.testBit 6 := h 6 (by decide)
+    have h7 : w1.toNat.testBit 7 = w2.toNat.testBit 7 := h 7 (by decide)
+    have h11 : w1.toNat.testBit 11 = w2.toNat.testBit 11 :=
+      h 11 (by decide)
+    have ecf : cfBit = 0 := rfl
+    have epf : pfBit = 2 := rfl
+    have ezf : zfBit = 6 := rfl
+    have esf : sfBit = 7 := rfl
+    have eof : ofBit = 11 := rfl
+    simp only [ecf, epf, ezf, esf, eof]
+    rw [h0, h2, h6, h7, h11]
+  have e2 : liestStatus w2 =
+      {(liestStatus w2) with af := (liestStatus w2).af} := rfl
+  rw [e, e2]
+  exact bedingung_af_frei c (liestStatus w2) _ _
 
 /- CUTS:
     Skeleton plus raw word (§2) and nibble groundwork (§3 head):
