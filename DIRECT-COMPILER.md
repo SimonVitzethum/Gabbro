@@ -304,7 +304,7 @@ Last ledger refresh: **2026-10-02 20:29 UTC**. This is an operational snapshot, 
 | 656 | Fetched conditional byte-step flag dependency simulation | Merged after review/checks | 657: Merged after review/checks | [report](messung/muse/MUSE-REPORT-656.md) |
 | 658 | Scalar FP final-byte validator admission and MXCSR entry | Merged after review/checks | 659: Merged after review/checks | [report](messung/muse/MUSE-REPORT-658.md) |
 | 660 | Hardware completion: coherent multicore architectural execution | Merged after review/checks | 661: Merged after review/checks | [report](messung/muse/MUSE-REPORT-660.md) |
-| 662 | Hardware completion: LOCK atomic and fence final-byte execution | Merged after review/checks | 663: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-662.md) |
+| 662 | Hardware completion: LOCK atomic and fence final-byte execution | Merged after review/checks | 663: Merged after review/checks | [report](messung/muse/MUSE-REPORT-662.md) |
 | 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Merged after review/checks | [report](messung/muse/MUSE-REPORT-664.md) |
 | 666 | Hardware completion: practical integer width and compact encoding rows | Merged after review/checks | 667: Merged after review/checks | [report](messung/muse/MUSE-REPORT-666.md) |
 | 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Agent working | 669: scheduled | [task](lanes/668.md) |
@@ -806,6 +806,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **660**, Hardware completion: coherent multicore architectural execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-660.md). <!-- x86-merged:660 -->
 - 2026-10-02: lane **661**, Independent exact review of 660, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-661.md). <!-- x86-merged:661 -->
 - 2026-10-02: lane **662**, Hardware completion: LOCK atomic and fence final-byte execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-662.md). <!-- x86-merged:662 -->
+- 2026-10-02: lane **663**, Independent exact review of 662, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-663.md). <!-- x86-merged:663 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
