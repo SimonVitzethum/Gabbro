@@ -472,3 +472,4 @@ import Grammatik.X86.DeviceHardwareForms
 import Grammatik.X86.BlockSequence646
 import Grammatik.X86.HardwareExecution
 import Grammatik.X86.LockedInstructionExecution
+import Grammatik.X86.IndirectControlHardwareForms
