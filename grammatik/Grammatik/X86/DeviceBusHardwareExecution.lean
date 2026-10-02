@@ -666,7 +666,7 @@ def witKarte : TssKarte :=
   { basis := 0, grenze := 8192, bit := fun q => decide (q = 97) }
 
 /-- Witness start: the accepted core image with the latch at `0x1234`. -/
-def witStart : BusZustand GeraetZustand := ⟨ioWitKern, ⟨0x1234, 0⟩, []⟩
+def busWitStart : BusZustand GeraetZustand := ⟨ioWitKern, ⟨0x1234, 0⟩, []⟩
 
 /-- Witness after the generic IN: the accumulator merged 52, the device
     kept `0x1234` with one observation, one ordered event logged. -/
@@ -682,9 +682,9 @@ def witS2 : BusZustand GeraetZustand :=
 
 /-- First step: the generic IN answers 52 into AL under the direct leg. -/
 theorem wit_schritt1 :
-    BusSchritt GeraetZustand latchErlaubt witRecht witKarte witStart
+    BusSchritt GeraetZustand latchErlaubt witRecht witKarte busWitStart
       witS1 := by
-  exact .ein witStart ⟨⟨.ein, .p8, .imm 96⟩, 2⟩ .p8 (.imm 96)
+  exact .ein busWitStart ⟨⟨.ein, .p8, .imm 96⟩, 2⟩ .p8 (.imm 96)
     ⟨0x1234, 1⟩ 52 (by decide) rfl (by decide)
     (latch_ein_sound _ _ _)
 
@@ -711,12 +711,246 @@ theorem wit_rip_anschluss :
     witS2.kern.rip = BitVec.ofNat 64 4100 := by
   decide
 
+/-- FRAME (memory): both generic steps bypassed RAM -- the cell the
+    pilot store will write still reads zero. -/
+theorem wit_rahmen_speicher :
+    witS2.kern.speicher.bytes (BitVec.ofNat 64 8192) =
+      BitVec.ofNat 8 0 := by
+  have h1 := busSchritt_speicher GeraetZustand latchErlaubt witRecht
+    witKarte busWitStart witS1 wit_schritt1
+  have h2 := busSchritt_speicher GeraetZustand latchErlaubt witRecht
+    witKarte witS1 witS2 wit_schritt2
+  have h0 : busWitStart.kern.speicher.bytes (BitVec.ofNat 64 8192) =
+      BitVec.ofNat 8 0 := ioWit_anfang_null
+  rw [h2, h1]
+  exact h0
+
+/-- FRAME (flags): both generic steps are flag-neutral. -/
+theorem wit_rahmen_flags :
+    witS2.kern.flags = busWitStart.kern.flags := by
+  have h1 := busSchritt_flags GeraetZustand latchErlaubt witRecht
+    witKarte busWitStart witS1 wit_schritt1
+  have h2 := busSchritt_flags GeraetZustand latchErlaubt witRecht
+    witKarte witS1 witS2 wit_schritt2
+  rw [h2, h1]
+
+/-- Witness extended state over the port image (reset control word). -/
+def witFp : FpZustand :=
+  ⟨ioWitKern, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- FRAME (FP/XMM): the 660 adapter keeps XMM and control over the
+    reached generic IN step. -/
+theorem wit_rahmen_fp (q : XmmReg) :
+    (bus660Schritt witFp ⟨0x1234, 0⟩ [] witRecht witKarte witS1
+      wit_schritt1).1.xmm q = witFp.xmm q :=
+  bus660Schritt_xmm _ _ _ _ _ _ _ _
+
+/-- WIDTH BOUNDARY: above IOPL a 16-bit access at port 96 covers the set
+    byte 97 and refuses -- every covered byte is checked. -/
+theorem wit_breite_16_an_96_verweigert :
+    archZugelassen ⟨3, 0⟩ witKarte 96 .p16 = false := by
+  decide
+
+/-- The same port at 8 bits is free above IOPL: byte 96 is clear. -/
+theorem wit_breite_8_an_96_frei :
+    archZugelassen ⟨3, 0⟩ witKarte 96 .p8 = true := by
+  decide
+
+/-- WRONG PRIVILEGE: port byte 97 denies above IOPL and faults as #GP. -/
+theorem wit_falsches_privileg_gp :
+    busFehler (archZugelassen ⟨3, 0⟩ witKarte 97 .p8) = some .gp := by
+  decide
+
+/-- MAP MUTATION: clearing the one set bit admits port 97 above IOPL --
+    permission follows checked map data, not a fixed verdict. -/
+theorem wit_kartenmutation_laesst_97_zu :
+    archZugelassen ⟨3, 0⟩ volleKarte 97 .p8 = true := by
+  decide
+
+/-- MALFORMED FETCH: the forged `0xFF` first byte refuses fetch -- no
+    device contact, no event, before any permission or answer question.
+    Raw `BusSchritt` trusts its decoded argument; the selection theorems
+    are the gate, so fetch refusal is byte-step refusal. -/
+theorem wit_fehlbyte_fetch_verweigert :
+    fetchIo ioWitStartFalsch.kern = none := by
+  decide
+
+/-- Witness TSO view over the port image memory, buffer drained. -/
+def witTsoLeer : TSOZustand := ⟨ioWitSpeicher, fun _ => []⟩
+
+/-- Witness TSO view with one pending byte on core 0. -/
+def witTsoVoll : TSOZustand :=
+  ⟨ioWitSpeicher, fun c =>
+    if c = 0 then [⟨BitVec.ofNat 64 8192, BitVec.ofNat 8 1⟩] else []⟩
+
+/-- ORDER OK: IN with a drained own buffer passes the gate. -/
+theorem wit_ordnung_ok : ordnungOk witTsoLeer 0 .ein = true := by
+  decide
+
+/-- ORDER MUTATION: one pending byte refuses the gate in both
+    directions (Table 20-1, "Pending Stores?" is Yes on both rows). -/
+theorem wit_ordnung_mutation :
+    ordnungOk witTsoVoll 0 .ein = false ∧
+      ordnungOk witTsoVoll 0 .aus = false := by
+  decide
+
+/-- IN 32-bit zero-extends at the witness core: the upper half clears,
+    independently of the concrete device relation. -/
+theorem wit_p32_loescht_oben :
+    (einKern ioWitKern ⟨⟨.ein, .p32, .imm 96⟩, 2⟩ .p32 0x11223344).register
+        .rax =
+      BitVec.ofNat 64 0x11223344 := by
+  decide
+
+/-- OUT reads the accumulator implicitly: the driven value is the
+    received 52, never a caller-supplied constant. -/
+theorem wit_aus_liest_rax :
+    ausGabe .p8 (witS1.kern.register .rax) = 52 := by
+  decide
+
+/-- TABLE WITNESS (closed): the identity table answers 96 at port 96
+    and 97 at port 97 -- port-distinguishing, jointly instantiated. -/
+theorem tabelle_unterscheidet_zeuge :
+    ∃ (g1 g2 : TabellenGeraet) (a1 a2 : Nat),
+      tabellenErlaubt ⟨fun q => q, 0⟩ .ein .p8 96 0 g1 a1 ∧
+      tabellenErlaubt ⟨fun q => q, 0⟩ .ein .p8 97 0 g2 a2 ∧
+        a1 ≠ a2 :=
+  tabelle_unterscheidet (fun q => q) 0 (by decide)
+
+/-! ## Joint witness: the reached run beside every planted refusal. -/
+
+/-- JOINT WITNESS: reached fetched generic IN/OUT under the direct leg
+    (accumulator to 52, device `0x1234` to 52 with two observations,
+    ordered IN-then-OUT log, RIP at the pilot store, memory/flags/FP
+    frames) beside the RAM-store Anschluss (cell 8192 zero to 52), the
+    width-boundary split (16-bit at 96 refused, 8-bit free), the
+    wrong-privilege #GP at 97, the admitting map mutation, the
+    malformed-byte fetch refusal and the order-gate mutation.
+    Non-degenerate: the device changed state AND the run reaches the
+    memory-changing pilot store, with planted refusals jointly
+    instantiated. -/
+theorem bus_zeuge_gemeinsam :
+    BusSchritt GeraetZustand latchErlaubt witRecht witKarte busWitStart
+        witS1 ∧
+      BusSchritt GeraetZustand latchErlaubt witRecht witKarte witS1
+        witS2 ∧
+      witS2.geraet.daten = 52 ∧ witS2.geraet.zaehl = 2 ∧
+      witS2.kern.register .rax = BitVec.ofNat 64 52 ∧
+      witS2.kern.rip = BitVec.ofNat 64 4100 ∧
+      ausgangByte (BitVec.ofNat 64 8192) ioWitSchritt3 =
+        some (BitVec.ofNat 8 52) ∧
+      ioWitStart.kern.speicher.bytes (BitVec.ofNat 64 8192) =
+        BitVec.ofNat 8 0 ∧
+      witS2.kern.flags = busWitStart.kern.flags ∧
+      archZugelassen ⟨3, 0⟩ witKarte 96 .p16 = false ∧
+      archZugelassen ⟨3, 0⟩ witKarte 96 .p8 = true ∧
+      busFehler (archZugelassen ⟨3, 0⟩ witKarte 97 .p8) = some .gp ∧
+      archZugelassen ⟨3, 0⟩ volleKarte 97 .p8 = true ∧
+      fetchIo ioWitStartFalsch.kern = none ∧
+      ordnungOk witTsoLeer 0 .ein = true ∧
+      ordnungOk witTsoVoll 0 .aus = false := by
+  refine ⟨wit_schritt1, wit_schritt2, wit_geraet_geaendert.1,
+    wit_geraet_geaendert.2, wit_akk_52, wit_rip_anschluss,
+    ioWit_dritter_speichert.1, ioWit_anfang_null, wit_rahmen_flags,
+    wit_breite_16_an_96_verweigert, wit_breite_8_an_96_frei,
+    wit_falsches_privileg_gp, wit_kartenmutation_laesst_97_zu,
+    wit_fehlbyte_fetch_verweigert, wit_ordnung_ok,
+    wit_ordnung_mutation.2⟩
+
 /- CUTS:
-   Skeleton only: the TSS map type, one per-byte check and its witness.
-   Range checks, the architectural rule, the generic device interface,
-   ordering, instances, adapters and the joint witness are still OPEN.
+    Proved here, over the REUSED accepted vocabulary (`Typen.Zustand`,
+    `DeviceHardwareForms`: `IoBreite/IoDir/PortQuelle/IoOp/IoDec`,
+    `decodeIo/fetchIo/ioByteschritt`, `portVon/ausGabe/einMische`,
+    `ioZugelassen_heisst_alle`, `ioSchritt_aus/ein_erfolg`,
+    `ioWitKern/ioWitStart/ioWitSchritt3/ioWitStartFalsch`,
+    `ioWit_dritter_speichert/ioWit_anfang_null`,
+    `SpeicherProfil/speicherArtZugelassen`, `HardwareFaults.ArchFehler`,
+    `TSO.zaunBereit/TSOZustand`, `ScalarFloat.FpZustand`,
+    `Gleitprofil.kontextReset` -- no second decoder, no copied opcode or
+    register arithmetic, no new machine):
+    - precise TSS bitmap checks for EVERY byte covered by 8/16/32-bit
+      widths (range-end, unspanned and past-65535 bytes deny; missing
+      map denies), with the selected 64-bit long-mode rule (CPL<=IOPL
+      admits directly with no bitmap consult, else the range decides)
+      and denial as #GP(0) in the accepted fault vocabulary;
+    - the lane-676 conjunction kept ONLY as a conservative compiler
+      admission profile, with soundness (admitted implies silicon
+      admits) and incompleteness (direct leg admits what it refuses);
+      profiles are checked data (CPL/IOPL plus the map), never a
+      trusted OS-ready Bool;
+    - one generic bus/device response interface over an arbitrary
+      device type with an allowed read/write relation keyed by actual
+      port/direction/width/driven-value; architectural IN truncation
+      (8/16-bit preserve upper, 32-bit zero-extends) and OUT implicit
+      source proved through the accepted helpers, independently of the
+      concrete relation; RIP/flag/memory/log/permission frames for
+      every relation; fetched selection through the accepted fetch;
+    - TSO-relative ordering as an exposed gate (own buffer drained,
+      both directions, per Table 20-1) with full-buffer refusal --
+      never derived from a no-race proof; CPU and device completion as
+      distinct events with the posted-OUT obligation;
+    - the old latch as one explicit sound instance with both old-step
+      lifts, plus a SECOND port-distinguishing table device (with the
+      latch-indistinguishability limit proved);
+    - the 660 adapter (XMM/control/memory frames over reached steps),
+      the refusing MMIO/DMA 694 stub, and the three-sided validator
+      admission;
+    - a joint reached fetched-IN/OUT run (device `0x1234` to 52, two
+      observations) into the accepted memory-changing pilot store,
+      beside width-boundary, wrong-privilege #GP, map-mutation,
+      malformed-byte and order-gate refusals.
+    NOT proved here, and not claimed:
+    - No hardware correspondence beyond the cited Intel SDM entries
+      (provenance in the file header, not proofs): encodings stay the
+      accepted canonical subset; the bitmap's OS-side population, the
+      TSS layout bytes and chipset posting are named behaviour, not
+      verified silicon.
+    - No MMIO/DMA execution (refused: `mmio694_verweigert_*`); their
+      UC/WC memory-type and ordering rules are unmodelled, and no TSO
+      buffer ever carries a device byte by construction.
+    - No string-IO forms (INS/OUTS), no REP prefix, no LOCK prefix on
+      IN/OUT (#UD stays with the fault lane), no virtual-8086 mode, no
+      timing: the selected rule is 64-bit long mode only.
+    - No per-access target-to-W/GX simulation and no whole-word
+      atomicity beyond the accepted grouping: the ordering gate exposes
+      the drain obligation the TSO bridge must discharge.
+    - No source correspondence, no ABI/image/entry/relocation/budget
+      link, no syscall/interrupt scope (lane 672).
+    - Raw `BusSchritt` trusts its decoded argument (like the accepted
+      `ioSchritt`); fetched admission lives in the selection theorems.
+      `none` is the absence of a transition, never a halt claim.
 -/
 
+#print axioms arch_direkt
+#print axioms arch_bitmap
+#print axioms karte_fehlt_verweigert
+#print axioms busFehler_gp_bei_verweigerung
+#print axioms compiler_sound
+#print axioms compiler_unvollstaendig
+#print axioms busSchritt_speicher
+#print axioms busSchritt_flags
+#print axioms busSchritt_spur_waechst
+#print axioms busSchritt_perm
+#print axioms busSchritt_rip
+#print axioms busSchritt_aus_fetch
+#print axioms busSchritt_ein_fetch
+#print axioms ordnung_braucht_leeren_puffer
+#print axioms ordnung_verweigert_bei_vollem_puffer
+#print axioms fertig_getrennt
+#print axioms latch_aus_sound
+#print axioms latch_ein_sound
+#print axioms latch_aus_lift
+#print axioms latch_ein_lift
+#print axioms tabelle_unterscheidet
+#print axioms latch_unterscheidet_nicht
+#print axioms bus660Schritt_xmm
+#print axioms bus660Schritt_fp
+#print axioms bus660Schritt_speicher
+#print axioms mmio694_verweigert_mmio
+#print axioms busValOk_heisst
+#print axioms wit_schritt1
+#print axioms wit_schritt2
+#print axioms bus_zeuge_gemeinsam
 #print axioms volleKarte_96_frei
 
 end Gabbro.Grammatik.X86
