@@ -473,3 +473,5 @@ import Grammatik.X86.PipelineWitnesses
 import Grammatik.X86.PipelineImage
 import Grammatik.X86.PipelineEntry
 import Grammatik.X86.PipelineImageWitnesses
+import Grammatik.X86.ISASelect
+import Grammatik.X86.ISASelectWitnesses
