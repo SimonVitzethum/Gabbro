@@ -332,6 +332,14 @@ Last ledger refresh: **2026-10-02 23:22 UTC**. This is an operational snapshot, 
 | 712 | Compiler pipeline Lean source-to-byte proof review | Committed candidate; review/integration pending | 713: Committed candidate; review/integration pending | [task](lanes/712.md) |
 | 714 | Compiler ISA and instruction selection architecture review | Agent working | 715: scheduled | [task](lanes/714.md) |
 | 716 | Rust compiler validation and ELF integration review | Committed candidate; review/integration pending | 717: Committed candidate; review/integration pending | [task](lanes/716.md) |
+| 718 | Unify accepted architectural final-byte family dispatch | Scheduled | 719: scheduled | [task](lanes/718.md) |
+| 720 | Connect real selected integer bytes to shared TSO execution | Scheduled | 721: scheduled | [task](lanes/720.md) |
+| 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Scheduled | 723: scheduled | [task](lanes/722.md) |
+| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Scheduled | 725: scheduled | [task](lanes/724.md) |
+| 726 | Model checked long-mode page walks and precise access faults | Scheduled | 727: scheduled | [task](lanes/726.md) |
+| 728 | Model actual IDT TSS descriptor and entry stack selection | Scheduled | 729: scheduled | [task](lanes/728.md) |
+| 730 | Connect full selected SIB RIP-relative addresses to actual effects | Scheduled | 731: scheduled | [task](lanes/730.md) |
+| 732 | Organise exact essential hardware integration and executable coverage | Scheduled | 733: scheduled | [task](lanes/732.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
