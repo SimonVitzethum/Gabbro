@@ -8,7 +8,10 @@ read-only inspection plus `git show` of base objects; scratch only in `$TMPDIR`)
 
 CANDIDATE: 660 1298b05ebcedb35f436355774109df94a8e3442b
 
-VERDICT: ACCEPT (bounded skeleton; integration conditions below; no hardware-model-completion claim)
+VERDICT: ACCEPT
+
+Scope of this ACCEPT (substantive verdict unchanged): bounded skeleton with
+integration conditions F1-F3 below; no hardware-model-completion claim.
 
 ## What was reviewed
 
