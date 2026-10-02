@@ -1,7 +1,10 @@
 # Muse Report 665: exact review of author 664 (address encodings)
 
 CANDIDATE: 664 ff7fb88821ecb9774405cf6d9058e60c558258ff
-VERDICT: ACCEPT (bounded; no repairs required of this candidate)
+VERDICT: ACCEPT
+
+Acceptance is bounded: no repairs are required of this candidate; the
+documented admission gap and open follow-ups are listed below.
 
 ## Scope and method
 
