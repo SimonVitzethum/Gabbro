@@ -320,7 +320,7 @@ Last ledger refresh: **2026-10-02 23:15 UTC**. This is an operational snapshot, 
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Merged after review/checks | 689: Merged after review/checks | [report](messung/muse/MUSE-REPORT-688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
-| 694 | Hardware completion: UC MMIO architectural access and ordering | Merged after review/checks | 695: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-694.md) |
+| 694 | Hardware completion: UC MMIO architectural access and ordering | Merged after review/checks | 695: Merged after review/checks | [report](messung/muse/MUSE-REPORT-694.md) |
 | 696 | Essential 8/16/32-bit scalar arithmetic and moves | Agent working | 697: scheduled | [task](lanes/696.md) |
 | 698 | Essential width-selected shifts and rotates | Agent working | 699: scheduled | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Committed candidate; review/integration pending | 701: Committed candidate; review/integration pending | [task](lanes/700.md) |
@@ -829,6 +829,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: integration of candidate(s) [686] failed the local proof/build gate after independent review 687; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:687 -->
 - 2026-10-02: lane **689**, Independent exact review of 688, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-689.md). <!-- x86-merged:689 -->
 - 2026-10-02: lane **694**, Hardware completion: UC MMIO architectural access and ordering, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-694.md). <!-- x86-merged:694 -->
+- 2026-10-02: lane **695**, Independent exact review of 694, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-695.md). <!-- x86-merged:695 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
