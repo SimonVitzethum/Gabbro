@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 18:24 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 18:28 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -277,7 +277,7 @@ Last ledger refresh: **2026-10-02 18:24 UTC**. This is an operational snapshot, 
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Merged after review/checks | 641: Merged after review/checks | [report](messung/muse/MUSE-REPORT-640.md) |
 | 642 | Recover preserved IR research draft from recorded edits after clone removal | Merged after review/checks | 643: Merged after review/checks | [report](messung/muse/MUSE-REPORT-642.md) |
-| 644 | Organise the next generic source-to-final-byte closure wave | Agent working | 645: scheduled | [task](lanes/644.md) |
+| 644 | Organise the next generic source-to-final-byte closure wave | Committed candidate; review/integration pending | 645: Agent working | [task](lanes/644.md) |
 | 646 | Direct typed statement sequence to fetched machine execution | Agent working | 647: scheduled | [task](lanes/646.md) |
 | 648 | Generic checked source-assignment byte certificate | Agent working | 649: scheduled | [task](lanes/648.md) |
 | 650 | Growing TSO history to typed carrier W transition | Agent working | 651: scheduled | [task](lanes/650.md) |
@@ -719,6 +719,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: checked master `1668c954` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:1668c954b3830b4c0e95c76ddb732262a42af7aa -->
 - 2026-10-02: lane **575**, Connection: Unified extended decoder and executable byte-step, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-575.md). <!-- x86-merged:575 -->
 - 2026-10-02: lane **593**, Independent connection review of 575, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-593.md). <!-- x86-merged:593 -->
+- 2026-10-02: publication batch checks passed for `dc1d0b32`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
