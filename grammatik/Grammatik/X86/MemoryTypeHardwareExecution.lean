@@ -685,4 +685,190 @@ theorem busFortschritt_fifo (m : MmioMaschine) (p : PostedSchreib)
   simp only [busFortschritt, he, hg]
   exact ⟨_, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
+/-! ## 4. Fetched level: actual bytes through the accepted dispatcher.
+
+  Fetch is the accepted `fetchExt` over actual executable memory; the
+  unified `stepExt` is reused for every non-UC instruction (never
+  redefined). GP load/store forms to UC take the device path with exact
+  address, width, register update and RIP advance. FP memory rows to UC
+  refuse (SDM Table 14-2 NOTE: x87/SIMD UC re-access is implementation
+  dependent, so only general-purpose-register forms touch UC). -/
+
+/-- FP memory rows addressing UC: the seven accepted DOUBLE memory
+    forms at their 8-byte `effAddr`. Register-only FP rows never touch
+    memory and are never betroffen. -/
+def fpUcBetroffen (f : FpDecodiert) (t : FpZustand)
+    (profil : UcProfil) : Bool :=
+  match f.befehl with
+  | .addsdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .subsdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .mulsdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .divsdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .ucomisdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .movsdLade _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .movsdSpeichere base _ disp => istUc profil (effAddr t.kern base disp) 8
+  | _ => false
+
+/-- A UC-addressed FP store row is betroffen. -/
+theorem fpUcBetroffen_speichere (base : Register) (src : XmmReg)
+    (disp : BitVec 32) (t : FpZustand) (profil : UcProfil)
+    (h : istUc profil (effAddr t.kern base disp) 8 = true) :
+    fpUcBetroffen ⟨.movsdSpeichere base src disp, 8⟩ t profil = true := by
+  simp only [fpUcBetroffen]
+  exact h
+
+/-- A UC-addressed FP load row is betroffen. -/
+theorem fpUcBetroffen_lade (dst : XmmReg) (base : Register)
+    (disp : BitVec 32) (t : FpZustand) (profil : UcProfil)
+    (h : istUc profil (effAddr t.kern base disp) 8 = true) :
+    fpUcBetroffen ⟨.movsdLade dst base disp, 8⟩ t profil = true := by
+  simp only [fpUcBetroffen]
+  exact h
+
+/-- Delegation: a non-UC instruction runs the accepted unified step,
+    lifting its outcome back into the machine. -/
+def delegiert (m : MmioMaschine) (i : ExtInstr)
+    (bp : BereitProfil) : MmioAusgang :=
+  match stepExt i m.kern bp with
+  | .weiter t' => .weiter { m with kern := t' }
+  | .halt => .halt
+  | .verweigert => .verweigert
+
+/-- Advance the post-access machine past the fetched length. -/
+def maschineSchrittWeiter (m1 : MmioMaschine) (l : Nat) : MmioMaschine :=
+  { m1 with kern := { m1.kern with kern :=
+    { m1.kern.kern with rip := ripNach m1.kern.kern.rip l } } }
+
+/-- The advance moves RIP by exactly the consumed length. -/
+theorem maschineSchrittWeiter_rip (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.kern.rip =
+      ripNach m1.kern.kern.rip l := rfl
+
+/-- One fetched UC-aware byte step: fetch from actual executable memory
+    through the accepted unified decoder; GP load/store forms to UC take
+    the device path; FP memory rows to UC refuse; everything else
+    delegates to the accepted unified step. -/
+def mmioByteschritt (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) : MmioAusgang :=
+  match fetchExt m.kern (geholt m.kern.kern) with
+  | none => .verweigert
+  | some (i, _) =>
+    match i with
+    | .pilot ⟨.load64 dst base disp, l⟩ =>
+      if istUc m.profil (effAddr m.kern.kern base disp) 8 then
+        match ucLoadZugriff m hw bp .b64 dst
+            (effAddr m.kern.kern base disp) with
+        | some (m1, _) => .weiter (maschineSchrittWeiter m1 l)
+        | none => .verweigert
+      else delegiert m i bp
+    | .pilot ⟨.store64 base src disp, l⟩ =>
+      if istUc m.profil (effAddr m.kern.kern base disp) 8 then
+        match ucStoreZugriff m hw bp .b64 (effAddr m.kern.kern base disp)
+            (m.kern.kern.register src) with
+        | some m1 => .weiter (maschineSchrittWeiter m1 l)
+        | none => .verweigert
+      else delegiert m i bp
+    | .narrow ⟨.store32 base src disp, l⟩ =>
+      if istUc m.profil (effAddr m.kern.kern base disp) 4 then
+        match ucStoreZugriff m hw bp .b32 (effAddr m.kern.kern base disp)
+            (trunc .b32 (m.kern.kern.register src)) with
+        | some m1 => .weiter (maschineSchrittWeiter m1 l)
+        | none => .verweigert
+      else delegiert m i bp
+    | .fp f =>
+      if fpUcBetroffen f m.kern m.profil then .verweigert
+      else delegiert m i bp
+    | _ => delegiert m i bp
+
+/-- Without a fetch there is no step: fetch refusal is byte-step refusal. -/
+theorem mmioByteschritt_ohne_fetch (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil)
+    (hf : fetchExt m.kern (geholt m.kern.kern) = none) :
+    mmioByteschritt m hw bp = .verweigert := by
+  unfold mmioByteschritt
+  rw [hf]
+
+/-- SELECTION: a fetched 64-bit GP load to UC performs the device read
+    and advances RIP past the fetched length. -/
+theorem mmioByteschritt_uc_laden (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (dst base : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m1 : MmioMaschine) (v : Wort)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.load64 dst base disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = true)
+    (hg : ucLoadZugriff m hw bp .b64 dst (effAddr m.kern.kern base disp) =
+      some (m1, v)) :
+    mmioByteschritt m hw bp = .weiter (maschineSchrittWeiter m1 l) := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu, hg]
+
+/-- SELECTION: a fetched 64-bit GP store to UC posts the device write
+    and advances RIP past the fetched length. -/
+theorem mmioByteschritt_uc_speichern (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (base src : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m1 : MmioMaschine)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.store64 base src disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = true)
+    (hg : ucStoreZugriff m hw bp .b64 (effAddr m.kern.kern base disp)
+      (m.kern.kern.register src) = some m1) :
+    mmioByteschritt m hw bp = .weiter (maschineSchrittWeiter m1 l) := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu, hg]
+
+/-- SELECTION: a fetched 32-bit narrow store to UC posts the masked
+    device write and advances RIP past the fetched length. -/
+theorem mmioByteschritt_uc_speichern32 (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (base src : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m1 : MmioMaschine)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.narrow ⟨.store32 base src disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 4 = true)
+    (hg : ucStoreZugriff m hw bp .b32 (effAddr m.kern.kern base disp)
+      (trunc .b32 (m.kern.kern.register src)) = some m1) :
+    mmioByteschritt m hw bp = .weiter (maschineSchrittWeiter m1 l) := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu, hg]
+
+/-- SELECTION: a GP load outside UC delegates to the accepted step. -/
+theorem mmioByteschritt_delegiert_laden (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (dst base : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.load64 dst base disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = false) :
+    mmioByteschritt m hw bp =
+      delegiert m (.pilot ⟨.load64 dst base disp, l⟩) bp := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu]
+
+/-- SELECTION: a GP store outside UC delegates to the accepted step. -/
+theorem mmioByteschritt_delegiert_speichern (m : MmioMaschine)
+    (hw : HwProfil) (bp : BereitProfil) (base src : Register)
+    (disp : BitVec 32) (l : Nat) (rest : List Byte)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.store64 base src disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = false) :
+    mmioByteschritt m hw bp =
+      delegiert m (.pilot ⟨.store64 base src disp, l⟩) bp := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu]
+
+/-- SELECTION: an FP memory row addressing UC refuses (never a silent
+    RAM access, never a guessed device semantic). -/
+theorem mmioByteschritt_fp_uc_verweigert (m : MmioMaschine)
+    (hw : HwProfil) (bp : BereitProfil) (f : FpDecodiert)
+    (rest : List Byte)
+    (hf : fetchExt m.kern (geholt m.kern.kern) = some (.fp f, rest))
+    (hu : fpUcBetroffen f m.kern m.profil = true) :
+    mmioByteschritt m hw bp = .verweigert := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu]
+
 end Gabbro.Grammatik.X86
