@@ -26,22 +26,33 @@
   No second loader, no second machine, no second source interpreter, no
   per-program rule.
 
-  THE EXIT ABI (the smallest honest one under the fixed exit addresses of
+  THE EXIT ABI (the smallest honest one under the exit addresses of
   `Pipeline.lean`, where a failed check of reason `r` jumps to
-  `exitBase + r`): at `exitBase + r` the image holds exactly the canonical
-  bytes of `mov rax, r` (`movImm64 .rax (intWort r)`, 10 bytes), executable
-  and not writable; the byte right after it, `exitBase + r + 10`, is NOT
-  executable in the image. So a refusal ends with `rax = r` at the defined
-  stop address `exitBase + r + 10`, where the byte machine stops
-  (`byteschritt = .verweigert`, a fetch without execute permission).
+  `exitAdr c r = exitBase + exitStride * r`): at `exitAdr c r` the image
+  holds exactly the canonical bytes of `mov rax, r` (`movImm64 .rax
+  (intWort r)`, 10 bytes), executable and not writable; the byte right
+  after it, `exitAdr c r + 10`, is NOT executable in the image. So a
+  refusal ends with `rax = r` at the defined stop address
+  `exitAdr c r + 10`, where the byte machine stops (`byteschritt =
+  .verweigert`, a fetch without execute permission).
   Why not `ret` or a jump to one common sequence: the pipeline gives NO
   register facts at the exit (only the address and the world), so a stub
   must not depend on `rsp` or any register; `mov imm` is the only pilot
-  form that does not. Why one stub per USED reason: exits are one byte
-  apart, a 10-byte stub cannot exist for every reason of a contract;
-  stubs are generated for the reasons the lowered block can actually
-  reach (`grundListe`), and the image check refuses overlapping stubs
-  (see CUTS).
+  form that does not. Stubs are generated for the distinct reasons the
+  lowered block can actually reach (`ohneDoppel (grundListe ...)`). With
+  the default stride `1` exits are one byte apart and two reachable
+  reasons closer than eleven cannot both be imaged (the check refuses);
+  with a stride of at least eleven EVERY reason of a contract has room for
+  its stub and its stop byte, and the builder is proved complete for it
+  (section 9).
+
+  COMPLETENESS (section 9): under the decided layout side conditions
+  `bauOk` the image `bildFuerP` of any lowered program passes `valX86`,
+  `imageOk` and `weltOk`, proved over the existing loader;
+  `kompiliert_geladen` makes compile-then-image a total checked path and
+  `pipeline_correct_compiled`/`pipeline_refuses_compiled` close the chain
+  from the compiler output. The builder can put an entry sequence in
+  front of the code (`baueBildP`, used by `PipelineEntry.lean`).
 
   The normal end is a defined stop too: the image check demands that the
   byte right after the code is not executable.
@@ -839,7 +850,6 @@ theorem pipeline_loaded_ausgang (p : Profil) (bild : Bild) (c : PipeCfg)
 
 end Schluss
 
--- BEGIN SEC9
 /-! ## 9. Completeness of the image builder
 
     The constructor `baueBildP` (and so `bildFuer`/`bildFuerP`) of a
@@ -1968,19 +1978,23 @@ theorem pipeline_refuses_compiled (p : Profil) (c : PipeCfg) (ps : List (Platz D
   exact ⟨n + 1, s', hrun, hrip, hreg, hW, hstop⟩
 
 end BauSchluss
--- END SEC9
 
 /- CUTS (exactly what is NOT proved here):
 
-   Image check. `imageOk` is SOUND, not complete: every theorem takes an
-   arbitrary (untrusted) image and demands only the decided check. That
-   the constructor `baueBild`/`bildFuer` always passes it is NOT proved in
-   general; it is shown by computation for the witnesses only. The
+   Image check. `imageOk` is SOUND for every (untrusted) image, and
+   COMPLETE for the builder: `bildFuerP_ok`/`bildFuer_ok` prove that the
+   built image passes it whenever the decided layout side conditions
+   `bauOk` hold. `bauOk` is a SUFFICIENT condition, not a characterisation:
+   it demands more than `imageOk` checks (everything in the low canonical
+   half, stride at least eleven, placements strictly apart, a nonempty
+   code), so layouts that `imageOk` would accept may fail `bauOk`. The
    representation facts (`CodeAt` of code and stubs, the stop bytes,
    permissions and values of placed slots) are decided DIRECTLY over the
    existing loader's memory (`geladen`), byte by byte; `valX86`,
    `layoutOk` and `regionDisjunkt` are checked as admission and are
    load-bearing only for `imageOk_valX86` and `imageOk_daten_getrennt`.
+   The completeness proof covers fixed mode only (`modus = .fest`, bias
+   zero), as built by `baueBildP`.
 
    Layout. Placements are a finite list (`layoutVon`). The table extents
    `es` are a checked `TabLayout` list; they are NOT recomputed from a
@@ -1995,23 +2009,24 @@ end BauSchluss
    represent it. Unplaced slots are neither represented nor claimed.
 
    Entry. The start state is the existing loader's `bildZustand` at
-   `codeBase` with caller-chosen registers and flags; `EnvRepr` of the
-   entry registers stays a premise. The entry model of `EntryState`/
-   `EntryExecution` (stack, MXCSR, interrupt flag, guard page) is NOT
-   connected: this fragment uses no stack.
+   `codeBase` with caller-chosen registers and flags; here `EnvRepr` of the
+   entry registers stays a premise. `PipelineEntry.lean` removes it: a
+   checked entry sequence executed from the image establishes it from a
+   stated parameter ABI, from an entry admitted by `EntryState`/
+   `EntryExecution` (see the CUTS there).
 
    Refusal exit ABI. One 10-byte stub `mov rax, r` per REACHABLE reason
-   (`grundListe`: the reasons of the block's checks), at the fixed
-   `exitBase + r` of `Pipeline.lean`. Since exits are one byte apart, two
-   reachable reasons less than eleven apart cannot both have a stub, and
-   such a block is REFUSED by `imageOk` (the stub bytes and the stop byte
-   cannot all hold); lifting this needs an exit stride in `PipeCfg`
-   (`Pipeline.lean`, not owned here). The stop is the absence of a byte
-   step (`byteschritt = .verweigert`: no execute permission at the stop
-   address); the pilot model has no halt instruction, and returning the
-   reason to a caller (`ret`, a call ABI, an operating system) is NOT
-   modelled. At the stop only `rax`, the address and the world on placed
-   slots are claimed; flags and other registers are not.
+   (`grundListe`: the reasons of the block's checks; one per distinct
+   reason in the builder), at `exitAdr c r`. With stride `1` two reachable
+   reasons less than eleven apart cannot both have a stub and the image is
+   REFUSED (`gift_stride_eins`); with stride at least eleven they can.
+   Unreachable reasons of the contract get no stub (nothing jumps there).
+   The stop is the absence of a byte step (`byteschritt = .verweigert`: no
+   execute permission at the stop address); the pilot model has no halt
+   instruction, and returning the reason to a caller (`ret`, a call ABI,
+   an operating system) is NOT modelled. At the stop only `rax`, the
+   address and the world on placed slots are claimed; flags and other
+   registers are not.
 
    Normal end. The byte after the code is checked non-executable, so the
    machine stops at the code end; the variable registers and the placed
@@ -2049,7 +2064,6 @@ end BauSchluss
 #print axioms pipeline_correct_loaded
 #print axioms pipeline_refuses_loaded
 #print axioms pipeline_loaded_ausgang
--- BEGIN AX9
 #print axioms mem_ohneDoppel
 #print axioms ohneDoppel_nodup
 #print axioms halbe_le
@@ -2110,6 +2124,5 @@ end BauSchluss
 #print axioms kompiliert_geladen
 #print axioms pipeline_correct_compiled
 #print axioms pipeline_refuses_compiled
--- END AX9
 
 end Gabbro.Grammatik.X86.PipelineImage
