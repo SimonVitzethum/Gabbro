@@ -247,14 +247,17 @@ def decodeIntHwF7 (b : Breite) (bBit : Nat) :
     else none
   | [] => none
 
-/-- Decode after REX: opcode 33/9/133 via ModRM, 247 via group F7. -/
-def decodeIntHwNach (b : Breite) (rBit bBit : Nat) :
+/-- Decode after REX: opcode 33/9/133 via ModRM, 247 via group F7.
+    `f7ok = false` (REX.R set) refuses the group opcode: the R bit would
+    extend the digit into an unadmitted row. -/
+def decodeIntHwNach (b : Breite) (rBit bBit : Nat) (f7ok : Bool) :
     List Byte → Option (IntHwDec × List Byte)
   | op :: rest =>
     if byteNat op == 33 then decodeIntHwModrm b 33 rBit bBit rest
     else if byteNat op == 9 then decodeIntHwModrm b 9 rBit bBit rest
     else if byteNat op == 133 then decodeIntHwModrm b 133 rBit bBit rest
-    else if byteNat op == 247 then decodeIntHwF7 b bBit rest
+    else if byteNat op == 247 then
+      if f7ok then decodeIntHwF7 b bBit rest else none
     else none
   | [] => none
 
@@ -263,14 +266,14 @@ def decodeIntHwNach (b : Breite) (rBit bBit : Nat) :
 def decodeIntHw : List Byte → Option (IntHwDec × List Byte)
   | r :: rest =>
     match byteNat r with
-    | 72 => decodeIntHwNach .b64 0 0 rest
-    | 73 => decodeIntHwNach .b64 0 1 rest
-    | 76 => decodeIntHwNach .b64 1 0 rest
-    | 77 => decodeIntHwNach .b64 1 1 rest
-    | 64 => decodeIntHwNach .b32 0 0 rest
-    | 65 => decodeIntHwNach .b32 0 1 rest
-    | 68 => decodeIntHwNach .b32 1 0 rest
-    | 69 => decodeIntHwNach .b32 1 1 rest
+    | 72 => decodeIntHwNach .b64 0 0 true rest
+    | 73 => decodeIntHwNach .b64 0 1 true rest
+    | 76 => decodeIntHwNach .b64 1 0 false rest
+    | 77 => decodeIntHwNach .b64 1 1 false rest
+    | 64 => decodeIntHwNach .b32 0 0 true rest
+    | 65 => decodeIntHwNach .b32 0 1 true rest
+    | 68 => decodeIntHwNach .b32 1 0 false rest
+    | 69 => decodeIntHwNach .b32 1 1 false rest
     | _ => none
   | [] => none
 
@@ -643,6 +646,308 @@ theorem pin_cmp_neg1 :
     encodeIntHwImm (.cmpI .rax 0xFFFFFFFF) =
       [natByte 72, natByte 131, natByte 248, natByte 255] := by
   decide
+
+/-! ## 7. Immediate decoder: both compact and wide forms.
+
+    Parses REX (W selects b64/b32), opcode (129 wide / 131 compact),
+    mod=3 ModRM digit and the immediate bytes. ADC /2 and SBB /3 refuse;
+    32-bit ADD/SUB/CMP refuse (no narrow arithmetic flag snapshot);
+    b8/b16 logic rows refuse (no codec row). -/
+
+/-- Decoded immediate row with consumed length (7 wide, 4 compact). -/
+structure IntHwImmDec where
+  op : IntHwImm
+  laenge : Nat
+  deriving DecidableEq, Repr
+
+/-- Expected length of an immediate row: 4 exactly when compact fires. -/
+def immDecLaenge : IntHwImm → Nat
+  | .addI _ imm => if immPasst8 imm then 4 else 7
+  | .subI _ imm => if immPasst8 imm then 4 else 7
+  | .cmpI _ imm => if immPasst8 imm then 4 else 7
+  | .andI _ _ imm => if immPasst8 imm then 4 else 7
+  | .orI _ _ imm => if immPasst8 imm then 4 else 7
+  | .xorI _ _ imm => if immPasst8 imm then 4 else 7
+
+/-- Decode one group-1 ModRM byte with its immediate tail at width `b`.
+    `wide = true` reads imm32 (opcode 129), else one sign-extended byte
+    (opcode 131). Length 7 wide, 4 compact. -/
+def decodeIntHwImmModrm (b : Breite) (wide : Bool) (bBit : Nat) :
+    List Byte → Option (IntHwImmDec × List Byte)
+  | m :: rest =>
+    let digit := byteNat m / 8 % 8
+    let rm := byteNat m % 8
+    if byteNat m / 64 == 3 then
+      match codeReg (bBit * 8 + rm) with
+      | some rd =>
+        match digit, b, wide with
+        | 0, .b64, true =>
+          match parseLe32 rest with
+          | some (imm, rest') => some (⟨.addI rd imm, 7⟩, rest')
+          | none => none
+        | 0, .b64, false =>
+          match rest with
+          | i :: rest' => some (⟨.addI rd (imm8Erweitern (byteNat i)), 4⟩, rest')
+          | [] => none
+        | 5, .b64, true =>
+          match parseLe32 rest with
+          | some (imm, rest') => some (⟨.subI rd imm, 7⟩, rest')
+          | none => none
+        | 5, .b64, false =>
+          match rest with
+          | i :: rest' => some (⟨.subI rd (imm8Erweitern (byteNat i)), 4⟩, rest')
+          | [] => none
+        | 7, .b64, true =>
+          match parseLe32 rest with
+          | some (imm, rest') => some (⟨.cmpI rd imm, 7⟩, rest')
+          | none => none
+        | 7, .b64, false =>
+          match rest with
+          | i :: rest' => some (⟨.cmpI rd (imm8Erweitern (byteNat i)), 4⟩, rest')
+          | [] => none
+        | 4, _, true =>
+          match parseLe32 rest with
+          | some (imm, rest') => some (⟨.andI b rd imm, 7⟩, rest')
+          | none => none
+        | 4, _, false =>
+          match rest with
+          | i :: rest' => some (⟨.andI b rd (imm8Erweitern (byteNat i)), 4⟩, rest')
+          | [] => none
+        | 1, _, true =>
+          match parseLe32 rest with
+          | some (imm, rest') => some (⟨.orI b rd imm, 7⟩, rest')
+          | none => none
+        | 1, _, false =>
+          match rest with
+          | i :: rest' => some (⟨.orI b rd (imm8Erweitern (byteNat i)), 4⟩, rest')
+          | [] => none
+        | 6, _, true =>
+          match parseLe32 rest with
+          | some (imm, rest') => some (⟨.xorI b rd imm, 7⟩, rest')
+          | none => none
+        | 6, _, false =>
+          match rest with
+          | i :: rest' => some (⟨.xorI b rd (imm8Erweitern (byteNat i)), 4⟩, rest')
+          | [] => none
+        | _, _, _ => none
+      | none => none
+    else none
+  | [] => none
+
+/-- Decode after REX at width `b`: 129 is the wide form, 131 compact. -/
+def decodeIntHwImmNach (b : Breite) (bBit : Nat) :
+    List Byte → Option (IntHwImmDec × List Byte)
+  | op :: rest =>
+    if byteNat op == 129 then decodeIntHwImmModrm b true bBit rest
+    else if byteNat op == 131 then decodeIntHwImmModrm b false bBit rest
+    else none
+  | [] => none
+
+/-- Top-level immediate decode. REX.W rows decode at b64 with the full
+    six-op set; REX W=0 rows decode logic rows at b32 only (digits 0/5/7
+    refuse there: no 32-bit arithmetic flag snapshot). REX.R rows refuse:
+    the R bit would extend the group digit. The decoder also refuses
+    b8/b16 logic digits by width mismatch at step time. -/
+def decodeIntHwImm : List Byte → Option (IntHwImmDec × List Byte)
+  | r :: rest =>
+    match byteNat r with
+    | 72 => decodeIntHwImmNach .b64 0 rest
+    | 73 => decodeIntHwImmNach .b64 1 rest
+    | 64 => decodeIntHwImmNach .b32 0 rest
+    | 65 => decodeIntHwImmNach .b32 1 rest
+    | _ => none
+  | [] => none
+
+/-- Guard: a decoded logic row at b8/b16 is never admitted to the step. -/
+def immDecBreiteOk : IntHwImm → Bool
+  | .addI _ _ => true
+  | .subI _ _ => true
+  | .cmpI _ _ => true
+  | .andI b _ _ => b == .b64 || b == .b32
+  | .orI b _ _ => b == .b64 || b == .b32
+  | .xorI b _ _ => b == .b64 || b == .b32
+
+/-- Pinned decode: compact `add rax, 1` (4 bytes). -/
+theorem pin_imm_add_kompakt_dekode :
+    decodeIntHwImm [natByte 72, natByte 131, natByte 192, natByte 1] =
+      some ((⟨.addI .rax 1, 4⟩ : IntHwImmDec), []) := by
+  decide
+
+/-- Pinned decode: wide `add rax, 256` (7 bytes). -/
+theorem pin_imm_add_weit_dekode :
+    decodeIntHwImm [natByte 72, natByte 129, natByte 192,
+      natByte 0, natByte 1, natByte 0, natByte 0] =
+      some ((⟨.addI .rax 256, 7⟩ : IntHwImmDec), []) := by
+  decide
+
+/-- Pinned decode: compact `cmp rax, -1` (sign extension at decode). -/
+theorem pin_imm_cmp_neg1_dekode :
+    decodeIntHwImm [natByte 72, natByte 131, natByte 248, natByte 255] =
+      some ((⟨.cmpI .rax 0xFFFFFFFF, 4⟩ : IntHwImmDec), []) := by
+  decide
+
+/-- Pinned decode: 32-bit compact `and eax, 1` (zero-upper row). -/
+theorem pin_imm_and32_dekode :
+    decodeIntHwImm [natByte 64, natByte 131, natByte 224, natByte 1] =
+      some ((⟨.andI .b32 .rax 1, 4⟩ : IntHwImmDec), []) := by
+  decide
+
+/-- Planted immediate refusals: ADC digit /2, 32-bit ADD digit /0,
+    REX.R row, truncated wide tail, truncated compact tail, no REX. -/
+theorem sonde_imm_verweigert :
+    decodeIntHwImm [natByte 72, natByte 131, natByte 208, natByte 1] = none ∧
+    decodeIntHwImm [natByte 64, natByte 131, natByte 192, natByte 1] = none ∧
+    decodeIntHwImm [natByte 76, natByte 131, natByte 192, natByte 1] = none ∧
+    decodeIntHwImm [natByte 72, natByte 129, natByte 192, natByte 1] = none ∧
+    decodeIntHwImm [natByte 72, natByte 131, natByte 192] = none ∧
+    decodeIntHwImm [natByte 129, natByte 192, natByte 1, natByte 0, natByte 0, natByte 0] = none := by
+  decide
+
+/-! ## 8. Immediate execution: defined flags, no silent narrowing.
+
+    ADD/SUB reuse add64/sub64 (AF DEFINED via afAdd/afSub); CMP writes no
+    register; b64 logic reuses and64/or64/xor64; b32 logic reuses the
+    width-correct `logikFlags` with the zero-upper merge. b8/b16 logic
+    steps refuse (`immDecBreiteOk`); 32-bit arithmetic never reaches the
+    step (refused at decode). -/
+
+/-- One immediate step; `none` is an explicit refusal. -/
+def stepIntHwImm (d : IntHwImmDec) (s : Zustand) : Option Zustand :=
+  match laengeOk d.laenge with
+  | false => none
+  | true =>
+    if d.laenge != immDecLaenge d.op then none
+    else if !immDecBreiteOk d.op then none
+    else
+      let nach := ripNach s.rip d.laenge
+      match d.op with
+      | .addI dst imm =>
+        let r := add64 (s.register dst) (immWort imm)
+        some (schrittRegister s nach r.2 dst r.1)
+      | .subI dst imm =>
+        let r := sub64 (s.register dst) (immWort imm)
+        some (schrittRegister s nach r.2 dst r.1)
+      | .cmpI lhs imm =>
+        let r := sub64 (s.register lhs) (immWort imm)
+        some ({ s with rip := nach, flags := r.2 })
+      | .andI b dst imm =>
+        let r := andB b (s.register dst) (immWort imm)
+        some (schrittRegister s nach (intHwFlagsLogik b r) dst
+          (mergeRegNarrow b (s.register dst) r))
+      | .orI b dst imm =>
+        let r := orB b (s.register dst) (immWort imm)
+        some (schrittRegister s nach (intHwFlagsLogik b r) dst
+          (mergeRegNarrow b (s.register dst) r))
+      | .xorI b dst imm =>
+        let r := xorB b (s.register dst) (immWort imm)
+        some (schrittRegister s nach (intHwFlagsLogik b r) dst
+          (mergeRegNarrow b (s.register dst) r))
+
+/-- ADD-imm defines AF (the nibble carry, not none). -/
+theorem stepImm_add_af (d : IntHwImmDec) (s s' : Zustand)
+    (dst : Register) (imm : BitVec 32)
+    (hok : laengeOk d.laenge = true)
+    (hlen : d.laenge = immDecLaenge d.op)
+    (hb : immDecBreiteOk d.op = true)
+    (h : d.op = .addI dst imm)
+    (hstep : stepIntHwImm d s = some s') :
+    s'.flags.af = some (afAdd (s.register dst) (immWort imm)) := by
+  have e : stepIntHwImm d s =
+      some (schrittRegister s (ripNach s.rip d.laenge)
+        (add64 (s.register dst) (immWort imm)).2 dst
+        (add64 (s.register dst) (immWort imm)).1) := by
+    unfold stepIntHwImm
+    rw [h] at hlen hb
+    rw [hok, h, hlen, hb]
+    simp
+  rw [e] at hstep
+  cases hstep
+  exact add64_af _ _
+
+/-- CMP-imm writes no register at all. -/
+theorem stepImm_cmp_reg (d : IntHwImmDec) (s s' : Zustand)
+    (lhs : Register) (imm : BitVec 32) (q : Register)
+    (hok : laengeOk d.laenge = true)
+    (hlen : d.laenge = immDecLaenge d.op)
+    (hb : immDecBreiteOk d.op = true)
+    (h : d.op = .cmpI lhs imm)
+    (hstep : stepIntHwImm d s = some s') :
+    s'.register q = s.register q := by
+  have e : stepIntHwImm d s =
+      some ({ s with rip := ripNach s.rip d.laenge, flags := (sub64 (s.register lhs) (immWort imm)).2 }) := by
+    unfold stepIntHwImm
+    rw [h] at hlen hb
+    rw [hok, h, hlen, hb]
+    simp
+  rw [e] at hstep
+  cases hstep
+  rfl
+
+/-- b64 AND-imm flags agree with the register-row snapshot. -/
+theorem stepImm_and64_eq_reg (d : IntHwImmDec) (s s' : Zustand)
+    (dst : Register) (imm : BitVec 32)
+    (hok : laengeOk d.laenge = true)
+    (hlen : d.laenge = immDecLaenge d.op)
+    (hb : immDecBreiteOk d.op = true)
+    (h : d.op = .andI .b64 dst imm)
+    (hstep : stepIntHwImm d s = some s') :
+    s'.flags = (and64 (s.register dst) (immWort imm)).2 ∧
+    s'.register dst = andB .b64 (s.register dst) (immWort imm) := by
+  have e : stepIntHwImm d s =
+      some (schrittRegister s (ripNach s.rip d.laenge)
+        (intHwFlagsLogik .b64 (andB .b64 (s.register dst) (immWort imm))) dst
+        (mergeRegNarrow .b64 (s.register dst)
+          (andB .b64 (s.register dst) (immWort imm)))) := by
+    unfold stepIntHwImm
+    rw [h] at hlen hb
+    rw [hok, h, hlen, hb]
+    simp
+  rw [e] at hstep
+  cases hstep
+  constructor
+  · rw [schrittRegister_flags]
+    simp [intHwFlagsLogik, logikFlags, negB_b64, andB_b64, and64]
+  · have hr : ∀ (f : Flags) (v : Wort),
+        (schrittRegister s (ripNach s.rip d.laenge) f dst v).register dst
+          = v :=
+      fun f v => regSet_gleich s.register dst v
+    rw [hr, mergeRegNarrow_b64, andB_b64]
+
+/-- Immediate steps never touch memory (adapter for address lane 664). -/
+theorem stepImm_speicher (d : IntHwImmDec) (s s' : Zustand)
+    (h : stepIntHwImm d s = some s') : s'.speicher = s.speicher := by
+  unfold stepIntHwImm at h
+  split at h
+  · cases h
+  · split at h
+    · cases h
+    · split at h
+      · cases h
+      · cases dop : d.op with
+        | addI dst imm =>
+          rw [dop] at h
+          cases h
+          rfl
+        | subI dst imm =>
+          rw [dop] at h
+          cases h
+          rfl
+        | cmpI lhs imm =>
+          rw [dop] at h
+          cases h
+          rfl
+        | andI b dst imm =>
+          rw [dop] at h
+          cases h
+          rfl
+        | orI b dst imm =>
+          rw [dop] at h
+          cases h
+          rfl
+        | xorI b dst imm =>
+          rw [dop] at h
+          cases h
+          rfl
 
 /- CUTS:
     Skeleton only: codec/step/fetch/witnesses are open.
