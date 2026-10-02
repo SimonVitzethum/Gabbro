@@ -59,6 +59,28 @@ fields, plus software-written `xcrAns` selector -> EDX:EAX option).
 - No `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`; no host probing;
   no changes outside the three owned files.
 
+## Repair after failed integration (name collision)
+
+The integration gate failed with:
+`import Grammatik.X86.CpuFeatureHardwareForms failed, environment already
+contains 'Gabbro.Grammatik.X86.beobachte' from Grammatik.X86.HardwareFaults`.
+Nothing was merged. Repair, owned module only, no guarantee weakened:
+
+- `beobachte` -> `beobachteCpu` (def, `beobachteCpu_ecx_treu`, all uses).
+- Preemptive disambiguation in the same fault family:
+  `CpuFault` -> `CpuHwFault`, `ergFehler` -> `ergCpuFehler`.
+- No statement, proof, or scope changed; renames only.
+
+Re-checked after repair: `./lean-probe` 0 errors, `./lean-bau` exit 0
+(464 jobs), axioms still within
+`[propext, Classical.choice, Quot.sound]`.
+Residual risk (stated, not assumed away): the other module
+(`HardwareFaults`) is not visible in this clone, so further
+same-environment collisions beyond the reported one cannot be checked
+locally; they would surface only at the next integration build. A fresh
+independent review of the changed commit is still required; no
+source/binary-chain acceptance is claimed.
+
 ## Provenance checked
 
 Local `.tmp/HARDWARE-REFERENCES/` (Intel SDM 325462-093US Sep 2026,

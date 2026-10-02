@@ -67,9 +67,9 @@ structure CtrlState where
   deriving DecidableEq, Repr, Inhabited
 
 /-- Hardware fault classes: invalid opcode vs general protection. -/
-inductive CpuFault where
-  | ud : CpuFault
-  | gp : CpuFault
+inductive CpuHwFault where
+  | ud : CpuHwFault
+  | gp : CpuHwFault
   deriving DecidableEq, Repr, Inhabited
 
 /-- Low 32 bits of a 64-bit word (CPUID leaf/subleaf, XGETBV selector). -/
@@ -214,7 +214,7 @@ theorem decodeCpu_nichts_leer : decodeCpuFeature [] = none := rfl
 /-- Step outcome: success, hardware fault, VM exit event or refusal. -/
 inductive CpuErg where
   | ok : Zustand → CpuErg
-  | fault : CpuFault → CpuErg
+  | fault : CpuHwFault → CpuErg
   | vmExit : CpuErg
   | refuse : CpuErg
 
@@ -593,7 +593,7 @@ def ergReg (r : Register) : CpuErg → Option Wort
   | _ => none
 
 /-- Outcome projections for witnesses (concrete data, no function compare). -/
-def ergFehler : CpuErg → Option CpuFault
+def ergCpuFehler : CpuErg → Option CpuHwFault
   | .fault f => some f
   | _ => none
 
@@ -663,7 +663,7 @@ theorem cpuid_schreibt_rcx (hw : CpuHw) (scope : CpuScope) (s s' : Zustand)
   exact regSet_gleich _ _ _
 
 /-- Observed answer record rebuilt from fetched registers. -/
-def beobachte (s1 : Zustand) : CpuOut :=
+def beobachteCpu (s1 : Zustand) : CpuOut :=
   ⟨low32 (s1.register .rax), low32 (s1.register .rbx),
    low32 (s1.register .rcx), low32 (s1.register .rdx)⟩
 
@@ -674,7 +674,7 @@ theorem bit32_bei_gleichem_wert (a b : BitVec 32) (i : Nat)
   rw [h]
 
 /-- The observed ECX is faithful at the value level. -/
-theorem beobachte_ecx_treu (hw : CpuHw) (scope : CpuScope)
+theorem beobachteCpu_ecx_treu (hw : CpuHw) (scope : CpuScope)
     (s s1 : Zustand) (o1 : CpuOut) (lock : Bool)
     (hlock : lock = false)
     (hflt : (scope.faultEnabled && decide (0 < scope.cpl)) = false)
@@ -682,9 +682,9 @@ theorem beobachte_ecx_treu (hw : CpuHw) (scope : CpuScope)
     (ho : o1 = hw.cpuidAns (low32 (s.register .rax))
       (low32 (s.register .rcx)))
     (h : cpuSchrittCpuid hw scope s lock = .ok s1) :
-    (beobachte s1).ecx.toNat = o1.ecx.toNat := by
+    (beobachteCpu s1).ecx.toNat = o1.ecx.toNat := by
   have hr := cpuid_schreibt_rcx hw scope s s1 lock hlock hflt hvm h
-  unfold beobachte
+  unfold beobachteCpu
   simp only []
   rw [hr, low32_zext64_nat, ho]
 
@@ -895,7 +895,7 @@ theorem zeuge_fetch1p :
 
 /-- The observed XSAVE bit on the witness post-state is set. -/
 theorem zeuge_beob_xsvae :
-    ecxXSAVE (beobachte zeugeS1) = true := by
+    ecxXSAVE (beobachteCpu zeugeS1) = true := by
   decide
 
 /-- The witness hardware answers selector 0 with XMM+YMM. -/
@@ -916,13 +916,13 @@ def zeugeS2 : Zustand :=
 /-- The second fetched step reaches the explicit post-XGETBV state. -/
 theorem zeuge_schritt2 :
     cpuByteschritt zeugeHw zeugeScope zeugeCtrl
-      (ecxXSAVE (beobachte zeugeS1)) zeugeS1p = .ok zeugeS2 := by
+      (ecxXSAVE (beobachteCpu zeugeS1)) zeugeS1p = .ok zeugeS2 := by
   obtain ⟨rest, hf⟩ := zeuge_fetch1p
   have b := cpuByteschritt_wird_xgetbv zeugeHw zeugeScope zeugeCtrl
-    (ecxXSAVE (beobachte zeugeS1)) zeugeS1p rest
+    (ecxXSAVE (beobachteCpu zeugeS1)) zeugeS1p rest
     zeuge_s1p_ohne_lock hf zeuge_s1p_exec_xgetbv
   rw [b]
-  have hb : ecxXSAVE (beobachte zeugeS1) = true := zeuge_beob_xsvae
+  have hb : ecxXSAVE (beobachteCpu zeugeS1) = true := zeuge_beob_xsvae
   have hc : zeugeCtrl.cr4Osxsave = true := by
     decide
   unfold cpuSchrittXgetbv
@@ -998,7 +998,7 @@ theorem cpu_kette_speichert_gatter (hw : CpuHw) (scope : CpuScope)
     w = v ∧ v = (if avxBereit o1 lo then BitVec.ofNat 64 1
       else BitVec.ofNat 64 0)
       ∧ s1.rip = ripNach s.rip 2 ∧ s2.rip = ripNach s1p.rip 3
-      ∧ (beobachte s1).ecx.toNat = o1.ecx.toNat := by
+      ∧ (beobachteCpu s1).ecx.toNat = o1.ecx.toNat := by
   have b1 := cpuByteschritt_wird_cpuid hw scope ctrl false s r1
     hl1 hf1 hx1
   rw [b1] at hs1
@@ -1019,7 +1019,7 @@ theorem cpu_kette_speichert_gatter (hw : CpuHw) (scope : CpuScope)
     exact hrip1
   · obtain ⟨_, _, _, _, hrip2⟩ := hrahmen2
     exact hrip2
-  · exact beobachte_ecx_treu hw scope s s1 o1 false rfl hflt hvm ho hs1
+  · exact beobachteCpu_ecx_treu hw scope s s1 o1 false rfl hflt hvm ho hs1
 
 /-- Joint companion witness: the generic chain instantiated with
     all premises jointly on the concrete reached sequence, plus the
@@ -1029,7 +1029,7 @@ theorem cpu_kette_speichert_gatter_zeuge :
     ((1 : Wort) = BitVec.ofNat 64 1)
       ∧ zeugeS1.rip = ripNach zeugeStart0.rip 2
       ∧ zeugeS2.rip = ripNach zeugeS1p.rip 3
-      ∧ (beobachte zeugeS1).ecx.toNat = zeugeOut1.ecx.toNat
+      ∧ (beobachteCpu zeugeS1).ecx.toNat = zeugeOut1.ecx.toNat
       ∧ read64 zeugeM zeugenDatenCpu = some (BitVec.ofNat 64 1)
       ∧ zeugeStart0.speicher.bytes zeugenDatenCpu = BitVec.ofNat 8 0 := by
   obtain ⟨r1, hf1⟩ := zeuge_fetch0
@@ -1098,13 +1098,13 @@ def zeugeStartSel (rcx : Wort) : Zustand :=
 
 /-- Selector 2 on actual fetched bytes is #GP. -/
 theorem zeuge_selektor_gp :
-    ergFehler (cpuByteschritt zeugeHw zeugeScope zeugeCtrl true
+    ergCpuFehler (cpuByteschritt zeugeHw zeugeScope zeugeCtrl true
       (zeugeStartSel 2)) = some .gp := by
   decide
 
 /-- XGETBV without CR4.OSXSAVE is #UD on actual fetched bytes. -/
 theorem zeuge_ohne_os_ud :
-    ergFehler (cpuByteschritt zeugeHw zeugeScope ⟨false⟩ true
+    ergCpuFehler (cpuByteschritt zeugeHw zeugeScope ⟨false⟩ true
       (zeugeStartSel 0)) = some .ud := by
   decide
 
@@ -1113,7 +1113,7 @@ def zeugenProgLock : List Byte := [natByte 240, natByte 15, natByte 162]
 
 /-- LOCK before CPUID bytes faults #UD at fetch. -/
 theorem zeuge_lock_ud :
-    ergFehler (cpuByteschritt zeugeHw zeugeScope zeugeCtrl false
+    ergCpuFehler (cpuByteschritt zeugeHw zeugeScope zeugeCtrl false
       (zeugenStartCpu zeugenProgLock 15 1 0)) = some .ud := by
   decide
 
@@ -1134,7 +1134,7 @@ theorem zeuge_ohne_exec_verweigert :
 
 /-- CPUID-faulting at CPL 3 is #GP on actual fetched bytes. -/
 theorem zeuge_fault_gp :
-    ergFehler (cpuByteschritt zeugeHw ⟨true, 3, false⟩ zeugeCtrl false
+    ergCpuFehler (cpuByteschritt zeugeHw ⟨true, 3, false⟩ zeugeCtrl false
       zeugeStart0) = some .gp := by
   decide
 
@@ -1208,7 +1208,7 @@ theorem zeuge_ausgang_unterscheidet :
     (only the precondition interface for lane 660), no 674/670 or
     entry-validator integration (only the exported gate boundary:
     `CpuHw`, `CpuScope`, `CtrlState`, `avxBereit`, `eintrittAvxOk`,
-    `cpuidSerialBereit`, `beobachte`, `fetchCpu`, `cpuByteschritt`).
+    `cpuidSerialBereit`, `beobachteCpu`, `fetchCpu`, `cpuByteschritt`).
   - Only the selected leaves (1, 7/0), selector 0/1-scope validity
     and the SSE2/AVX/AVX2/OSXSAVE/XMM+YMM gates are modelled; all
     other leaves, selectors, features and control state stay open.
@@ -1225,7 +1225,7 @@ theorem zeuge_ausgang_unterscheidet :
 #print axioms cpuByteschritt_wird_cpuid
 #print axioms cpuByteschritt_wird_xgetbv
 #print axioms serial_kein_fremd_drain
-#print axioms beobachte_ecx_treu
+#print axioms beobachteCpu_ecx_treu
 #print axioms cpu_kette_speichert_gatter
 #print axioms cpu_kette_speichert_gatter_zeuge
 #print axioms zeuge_selektor_gp
