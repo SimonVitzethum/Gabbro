@@ -3,10 +3,20 @@
 Lane 583, clone `/home/simon/Dokumente/gabbro-muse/a583`, branch `muse/583` (verified).
 Owns only this report. No source file was changed by this lane.
 
-CANDIDATE: 565 3fbe0b8fedfc12d9f740d9a1be81c477f6f77617
-VERDICT: REPAIR
+CANDIDATE: 565 b62e3019de95eed16c79b037ee8723c3a20a54bf
+VERDICT: ACCEPT
 
-## What was reviewed
+## Re-review after repair (supersedes the previous REPAIR verdict)
+
+Previous verdict (on `3fbe0b8f`): REPAIR -- the candidate redefined
+`xmmCode`/`xmmCode_lt` in `Gabbro.Grammatik.X86`, colliding with merged
+`VectorCodec.lean` (lane 597); full `lean-bau` failed at the umbrella.
+The author applied exactly the recommended minimal repair (rename to
+`fpXmmCode`/`fpXmmCode_lt`, `codeXmmLow_xmmCode` keeps its non-colliding
+name) in the new pinned snapshot `b62e3019`. This report re-reviews
+that snapshot from scratch; the old verdict is stale and replaced.
+
+## What was reviewed (new snapshot)
 
 Exact candidate 565 (base `8596f83e`, files `MUSE-REPORT-565.md`,
 `grammatik/Grammatik.lean` one import line,
@@ -47,16 +57,19 @@ The connection itself is sound and genuinely productive, not decorative:
 - CUTS block is honest: REX/high registers, memory arithmetic,
   UCOMISD, NaN payloads, hardware correspondence and source bridge
   are marked open. The report's "no SSE byte evidence in repo to pin
-  against" statement is accurate. (Minor: report says 39 theorems,
-  the file proves 40 items with axiom prints.)
+  against" statement is accurate. (Minor: the first author report
+  said 39 theorems; the file proves 40 items with axiom prints. The
+  repair note corrects this; one stale "39" remains in the report
+  body -- cosmetic only.)
 
 ## Why REPAIR: exact candidate breaks the full build on current master
 
+(Resolved in `b62e3019`; kept here as audit of the previous finding.)
 `grammatik/Grammatik/X86/VectorCodec.lean` (lane 597, merged after the
 candidate's base) defines `xmmCode` and `xmmCode_lt` in the same
-namespace `Gabbro.Grammatik.X86`. The candidate defines both names
-again (textually identical definitions). Full `./lean-bau` with the
-candidate applied fails at the umbrella (reproduced, exit 1):
+namespace `Gabbro.Grammatik.X86`. The old candidate defined both names
+again (textually identical definitions). Full `./lean-bau` with the old
+candidate applied failed at the umbrella (reproduced, exit 1):
 
 ```
 error: Grammatik.lean:44:0: import Grammatik.X86.ScalarFloatCodec
@@ -70,6 +83,7 @@ integration conflict, not a proof defect.
 
 ## Concrete minimal repair (for a 565 continuation)
 
+(Was required; author applied it in `b62e3019`; verified below.)
 In `ScalarFloatCodec.lean`, rename the two colliding declarations and
 their uses, nothing else:
 
@@ -104,16 +118,28 @@ Measurable next integration: wire `fpFetchDekodiert` shapes into
 `ValidatorSkeleton` admission, or extend one more form (memory ADDSD
 or UCOMISD) through the same fetch/execute/witness chain.
 
-## Last build results
+## Last build results (new snapshot `b62e3019`, current master `26c58bd4`)
 
+- Name-collision scan over every `grammatik/Grammatik/X86/*.lean`
+  module vs the new candidate: NONE (previously exactly
+  `xmmCode`, `xmmCode_lt` vs `VectorCodec`).
+- Forbidden-tactic scan of the new file: clean (only comment-word
+  matches for `admit`/`native_decide`; header and CUTS unchanged, no
+  new claims).
 - `./lean-probe grammatik/Grammatik/X86/ScalarFloatCodec.lean` with
-  exact candidate applied: `0 error(s), exit 0` (3 green runs; 40/40
-  axiom lines within standard set).
-- `./lean-bau` with exact candidate applied: `exit 1`, umbrella
-  fails on the `xmmCode` duplicate (quoted above). `ScalarFloatCodec`
-  itself compiled and printed all 40 axiom lines before the umbrella
-  failed. Working tree was reverted afterwards; it is clean except
-  this report.
+  the new candidate applied byte-identically: `0 error(s), exit 0`;
+  40/40 axiom lines within the standard set
+  (`propext`/`Classical.choice`/`Quot.sound`/none).
+- `./lean-bau` with the new candidate applied: `Build completed
+  successfully (457 jobs)` (one retry after the known exit-134
+  thread flake under concurrent load; the previous umbrella
+  duplicate-import error is gone).
+- `#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel`:
+  exactly `[propext, Classical.choice, Quot.sound]`.
+- Working tree was reverted afterwards; it is clean except this
+  report. Previous finding for the old snapshot (umbrella `exit 1`
+  with `environment already contains '...xmmCode.match_1'`) is
+  superseded: the exact failure no longer reproduces.
 
 ## Open / not claimed
 
