@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 18:55 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 18:56 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -313,6 +313,8 @@ Last ledger refresh: **2026-10-02 18:55 UTC**. This is an operational snapshot, 
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Agent working | 675: scheduled | [task](lanes/674.md) |
 | 676 | Hardware completion: port IO and device memory profiles | Agent working | 677: scheduled | [task](lanes/676.md) |
 | 678 | Organise and audit complete essential hardware-model coverage | Agent working | 679: scheduled | [task](lanes/678.md) |
+| 680 | Hardware completion: indirect and compact control byte forms | Scheduled | 681: scheduled | [task](lanes/680.md) |
+| 682 | Hardware completion: MXCSR control byte execution | Scheduled | 683: scheduled | [task](lanes/682.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -759,6 +761,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **658**, Scalar FP final-byte validator admission and MXCSR entry, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-658.md). <!-- x86-merged:658 -->
 - 2026-10-02: lane **659**, Independent exact review of 658, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-659.md). <!-- x86-merged:659 -->
 - 2026-10-02: publication batch checks passed for `68897f76`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-02: checked master `a0fcb4a6` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a0fcb4a69f9509d8db27b6077cbf5b2a450e175d -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
