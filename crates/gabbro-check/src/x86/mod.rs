@@ -11,6 +11,7 @@
 //! `dokumente/x86/WELLE-A.md`). Rust-to-Lean representation fidelity is
 //! unproved and marked at [`typen`].
 
+pub mod opt;
 pub mod typen;
 
 pub use typen::{
