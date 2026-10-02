@@ -810,4 +810,322 @@ theorem istVergleich_von_senkVergleich {D : Deklaration} {Γ : Ctx} {Λ : List (
   | _, .existsSlots _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
   | _, .reaches _ _ _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
 
+/-! ## 8. Comparison correctness: the condition code equals the source
+    truth value, under the signed-64 range side condition.
+
+    `VergleichBereich` packages the exact three facts the proof needs,
+    read off the two operands' own types: both operands' `Bereich64` (so
+    `intWort_sint` round-trips each one) and the DIFFERENCE range in the
+    signed window (so `cmpReg64`'s architectural SUB never overflows --
+    the same shape of premise as `ExpressionLowering.senkung_ohne_ueberlauf_sub`'s
+    `hlo`/`hhi`). -/
+
+/-- The side condition a comparison's correctness needs: both operands'
+    `Bereich64`, plus their difference range inside the signed 64-bit
+    window (so the architectural `cmpReg64` subtraction cannot overflow). -/
+def VergleichBereich {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
+    ∀ {τ : Ty}, Expr D Γ Λ τ → Prop
+  | _, .lt (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b =>
+    Bereich64 a ∧ Bereich64 b ∧ imBereich64 (l1 - h2) (h1 - l2)
+  | _, .le (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b =>
+    Bereich64 a ∧ Bereich64 b ∧ imBereich64 (l1 - h2) (h1 - l2)
+  | _, .eq (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b =>
+    Bereich64 a ∧ Bereich64 b ∧ imBereich64 (l1 - h2) (h1 - l2)
+  | _, _ => True
+
+/-- `(sub64 x y).2.zf` is architectural word equality: a direct group-law
+    computation (`BitVec.sub_eq_iff_eq_add`, `BitVec.zero_add`), reused
+    rather than a second equality test. -/
+theorem sub64_zf_iff (x y : Wort) : (sub64 x y).2.zf = true ↔ x = y := by
+  rw [sub64_zf]
+  unfold zfTest
+  rw [beq_iff_eq]
+  constructor
+  · intro h
+    have h' := BitVec.sub_eq_iff_eq_add.mp h
+    simpa using h'
+  · intro h
+    subst h
+    exact BitVec.sub_self x
+
+/-- The architectural SUB behind `cmpReg64` never overflows when both
+    exact operand values lie in the signed 64-bit window AND their exact
+    difference does too: the signed results are the exact operands and
+    their exact difference (mirrors `senkung_ohne_ueberlauf_sub`'s proof,
+    without building a result `Zahl`). -/
+theorem cmp_kein_ueberlauf {l1 h1 l2 h2 : Int} (na nb : Int)
+    (hna : l1 ≤ na) (hna' : na ≤ h1) (hnb : l2 ≤ nb) (hnb' : nb ≤ h2)
+    (hBa : imBereich64 l1 h1) (hBb : imBereich64 l2 h2)
+    (hdiff : imBereich64 (l1 - h2) (h1 - l2)) :
+    (sub64 (intWort na) (intWort nb)).2.of = false ∧
+    sint (intWort na) = na ∧ sint (intWort nb) = nb ∧
+    sint (sub64 (intWort na) (intWort nb)).1 = na - nb := by
+  obtain ⟨hBa1, hBa2⟩ := hBa
+  obtain ⟨hBb1, hBb2⟩ := hBb
+  obtain ⟨hd1, hd2⟩ := hdiff
+  have hsa : sint (intWort na) = na := intWort_sint _ (by omega) (by omega)
+  have hsb : sint (intWort nb) = nb := intWort_sint _ (by omega) (by omega)
+  have hof : (sub64 (intWort na) (intWort nb)).2.of = false := by
+    cases hofEq : (sub64 (intWort na) (intWort nb)).2.of with
+    | true =>
+      have hout := (sub64_of_iff _ _).mp hofEq
+      rw [hsa, hsb] at hout
+      omega
+    | false => rfl
+  refine ⟨hof, hsa, hsb, ?_⟩
+  have hval := sub64_sint_eq_of_no_overflow (intWort na) (intWort nb) hof
+  rw [hsa, hsb] at hval
+  exact hval
+
+/-- Comparison correctness: the lowered program runs, the chosen
+    `Bedingung` read off the resulting flags equals the source truth
+    value, memory is untouched, every register outside `dst :: frei` is
+    kept, and `rsp` is kept. The register-stack argument is exactly
+    `istTief_korrekt`'s (one scratch peel, shared sequentially); the two
+    operands never write past `dst`/`tmp`, so the comparison reads exactly
+    their committed values. -/
+theorem istVergleich_korrekt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register) :
+    ∀ {e : Expr D Γ Λ Ty.bool} {dst : Register} {frei : List Register}
+      {prog : List Befehl} {cond : Bedingung},
+      IstVergleich abb e dst frei prog cond → VergleichBereich e →
+      ∀ (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand),
+        FrischListe abb dst frei →
+        (dst ≠ Register.rsp ∧ Register.rsp ∉ frei) →
+        EnvRepr ρ s.register abb →
+        ∃ s', lauf (prog.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) s = some s' ∧
+          bedingung cond s'.flags = eval σ₀ e σ ρ ∧
+          s'.speicher = s.speicher ∧
+          (∀ q, q ≠ dst → q ∉ frei → s'.register q = s.register q) ∧
+          s'.register Register.rsp = s.register Register.rsp
+  | _, _, _, _, _, @IstVergleich.lt _ _ _ abb _ _ _ _ a b dst tmp rest pa pb ha hb =>
+    fun hVB ρ σ₀ σ s hfr hrsp hrenv => by
+      obtain ⟨hBa, hBb, hdiff⟩ := hVB
+      have hfrA := frischListe_tail abb dst tmp rest hfr
+      have hfrB := frischListe_kopf abb dst tmp rest hfr
+      have hdstTmp := frischListe_dst_ne_tmp abb dst tmp rest hfr
+      have hrspRest : Register.rsp ∉ rest := fun hin => hrsp.2 (List.mem_cons_of_mem _ hin)
+      have hrspTmp : tmp ≠ Register.rsp := by
+        intro heq; exact hrsp.2 (heq ▸ List.mem_cons_self)
+      obtain ⟨s1, hrun1, hval1, hmem1, hreg1, hrsp1⟩ :=
+        istTief_korrekt abb a dst rest pa ha ρ σ₀ σ s hfrA ⟨hrsp.1, hrspRest⟩ hrenv
+      have hrenv1 : EnvRepr ρ s1.register abb := by
+        intro lo' hi' x
+        have hx := hfr.1 _ x
+        rw [hreg1 _ hx.1 (fun hin => hx.2 (List.mem_cons_of_mem _ hin))]
+        exact hrenv lo' hi' x
+      obtain ⟨s2, hrun2, hval2, hmem2, hreg2, hrsp2⟩ :=
+        istTief_korrekt abb b tmp rest pb hb ρ σ₀ σ s1 hfrB ⟨hrspTmp, hrspRest⟩ hrenv1
+      have hdst2 : s2.register dst = intWort (eval σ₀ a σ ρ).n := by
+        rw [hreg2 dst hdstTmp (fun hin => hfr.2.1 (by rw [List.mem_cons]; exact Or.inr hin))]
+        exact hval1
+      have hlen : laengeOk (encode (Befehl.cmpReg64 dst tmp)).length = true := laengeOk_encode _
+      have hcmp := schritt_cmpReg64 ⟨Befehl.cmpReg64 dst tmp, (encode (Befehl.cmpReg64 dst tmp)).length⟩
+        s2 dst tmp hlen rfl
+      have hmap : ((pa ++ pb ++ [Befehl.cmpReg64 dst tmp]).map
+          fun b => (⟨b, (encode b).length⟩ : Decodiert)) =
+          (pa.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+          (pb.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+          [⟨Befehl.cmpReg64 dst tmp, (encode (Befehl.cmpReg64 dst tmp)).length⟩] := by
+        simp [List.map_append]
+      obtain ⟨hBaRoot1, hBaRoot2⟩ := bereich64_wurzel_tief abb ha hBa
+      obtain ⟨hBbRoot1, hBbRoot2⟩ := bereich64_wurzel_tief abb hb hBb
+      obtain ⟨hof, hsa, hsb, hsd⟩ := cmp_kein_ueberlauf (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+        ⟨hBaRoot1, hBaRoot2⟩ ⟨hBbRoot1, hBbRoot2⟩ hdiff
+      obtain ⟨s3, hrun3, hflag3, hreg3, hspeicher3⟩ :
+          ∃ s3, schritt ⟨Befehl.cmpReg64 dst tmp, (encode (Befehl.cmpReg64 dst tmp)).length⟩ s2
+              = some s3 ∧
+            s3.flags = (sub64 (s2.register dst) (s2.register tmp)).2 ∧
+            s3.register = s2.register ∧ s3.speicher = s2.speicher :=
+        ⟨_, hcmp, rfl, rfl, rfl⟩
+      refine ⟨s3, ?_, ?_, hspeicher3.trans (hmem2.trans hmem1), ?_, ?_⟩
+      · rw [hmap]
+        have h12 : lauf ((pa.map fun b => ⟨b, (encode b).length⟩) ++
+            (pb.map fun b => ⟨b, (encode b).length⟩)) s = some s2 := by
+          rw [lauf_anhang _ _ _ _ hrun1]; exact hrun2
+        rw [lauf_anhang _ _ _ _ h12, lauf_einzeln_gleich]
+        exact hrun3
+      · rw [hflag3]
+        show bedingung .l (sub64 (s2.register dst) (s2.register tmp)).2 = eval σ₀ (Expr.lt a b) σ ρ
+        rw [hdst2, hval2, bedingung_l]
+        have hsfof : ((sub64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2.sf != false) =
+            decide ((eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n) := by
+          rw [sub64_sf_sint, hsd]
+          rcases Int.lt_or_le (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n with hlt | hge
+          · simp [show (eval σ₀ a σ ρ).n - (eval σ₀ b σ ρ).n < 0 from by omega, hlt]
+          · simp [show ¬ (eval σ₀ a σ ρ).n - (eval σ₀ b σ ρ).n < 0 from by omega,
+              show ¬ (eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n from by omega]
+        rw [hof]
+        exact hsfof
+      · intro q hqd hqf
+        have hqtmp : q ≠ tmp := fun heq => hqf (heq ▸ List.mem_cons_self)
+        have hqrest : q ∉ rest := fun hin => hqf (List.mem_cons_of_mem _ hin)
+        show s3.register q = s.register q
+        rw [hreg3, hreg2 q hqtmp hqrest, hreg1 q hqd hqrest]
+      · show s3.register Register.rsp = s.register Register.rsp
+        rw [hreg3, hreg2 _ (Ne.symm hrspTmp) hrspRest, hreg1 _ (Ne.symm hrsp.1) hrspRest]
+  | _, _, _, _, _, @IstVergleich.le _ _ _ abb _ _ _ _ a b dst tmp rest pa pb ha hb =>
+    fun hVB ρ σ₀ σ s hfr hrsp hrenv => by
+      obtain ⟨hBa, hBb, hdiff⟩ := hVB
+      have hfrA := frischListe_tail abb dst tmp rest hfr
+      have hfrB := frischListe_kopf abb dst tmp rest hfr
+      have hdstTmp := frischListe_dst_ne_tmp abb dst tmp rest hfr
+      have hrspRest : Register.rsp ∉ rest := fun hin => hrsp.2 (List.mem_cons_of_mem _ hin)
+      have hrspTmp : tmp ≠ Register.rsp := by
+        intro heq; exact hrsp.2 (heq ▸ List.mem_cons_self)
+      obtain ⟨s1, hrun1, hval1, hmem1, hreg1, hrsp1⟩ :=
+        istTief_korrekt abb a dst rest pa ha ρ σ₀ σ s hfrA ⟨hrsp.1, hrspRest⟩ hrenv
+      have hrenv1 : EnvRepr ρ s1.register abb := by
+        intro lo' hi' x
+        have hx := hfr.1 _ x
+        rw [hreg1 _ hx.1 (fun hin => hx.2 (List.mem_cons_of_mem _ hin))]
+        exact hrenv lo' hi' x
+      obtain ⟨s2, hrun2, hval2, hmem2, hreg2, hrsp2⟩ :=
+        istTief_korrekt abb b tmp rest pb hb ρ σ₀ σ s1 hfrB ⟨hrspTmp, hrspRest⟩ hrenv1
+      have hdst2 : s2.register dst = intWort (eval σ₀ a σ ρ).n := by
+        rw [hreg2 dst hdstTmp (fun hin => hfr.2.1 (by rw [List.mem_cons]; exact Or.inr hin))]
+        exact hval1
+      have hlen : laengeOk (encode (Befehl.cmpReg64 dst tmp)).length = true := laengeOk_encode _
+      have hcmp := schritt_cmpReg64 ⟨Befehl.cmpReg64 dst tmp, (encode (Befehl.cmpReg64 dst tmp)).length⟩
+        s2 dst tmp hlen rfl
+      have hmap : ((pa ++ pb ++ [Befehl.cmpReg64 dst tmp]).map
+          fun b => (⟨b, (encode b).length⟩ : Decodiert)) =
+          (pa.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+          (pb.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+          [⟨Befehl.cmpReg64 dst tmp, (encode (Befehl.cmpReg64 dst tmp)).length⟩] := by
+        simp [List.map_append]
+      obtain ⟨hBaRoot1, hBaRoot2⟩ := bereich64_wurzel_tief abb ha hBa
+      obtain ⟨hBbRoot1, hBbRoot2⟩ := bereich64_wurzel_tief abb hb hBb
+      obtain ⟨hof, hsa, hsb, hsd⟩ := cmp_kein_ueberlauf (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+        ⟨hBaRoot1, hBaRoot2⟩ ⟨hBbRoot1, hBbRoot2⟩ hdiff
+      have hdstVal : s2.register dst = intWort (eval σ₀ a σ ρ).n := hdst2
+      have hzf : (sub64 (s2.register dst) (s2.register tmp)).2.zf =
+          decide ((eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n) := by
+        rw [hdst2, hval2]
+        rcases Decidable.em ((eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n) with heq | hne
+        · rw [heq]
+          simp [(sub64_zf_iff (intWort (eval σ₀ b σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).mpr rfl]
+        · have hxney : intWort (eval σ₀ a σ ρ).n ≠ intWort (eval σ₀ b σ ρ).n := by
+            intro hcontra
+            apply hne
+            have := congrArg sint hcontra
+            rwa [hsa, hsb] at this
+          rw [decide_eq_false hne]
+          cases hz : (sub64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2.zf with
+          | false => rfl
+          | true => exact absurd ((sub64_zf_iff _ _).mp hz) hxney
+      obtain ⟨s3, hrun3, hflag3, hreg3, hspeicher3⟩ :
+          ∃ s3, schritt ⟨Befehl.cmpReg64 dst tmp, (encode (Befehl.cmpReg64 dst tmp)).length⟩ s2
+              = some s3 ∧
+            s3.flags = (sub64 (s2.register dst) (s2.register tmp)).2 ∧
+            s3.register = s2.register ∧ s3.speicher = s2.speicher :=
+        ⟨_, hcmp, rfl, rfl, rfl⟩
+      refine ⟨s3, ?_, ?_, hspeicher3.trans (hmem2.trans hmem1), ?_, ?_⟩
+      · rw [hmap]
+        have h12 : lauf ((pa.map fun b => ⟨b, (encode b).length⟩) ++
+            (pb.map fun b => ⟨b, (encode b).length⟩)) s = some s2 := by
+          rw [lauf_anhang _ _ _ _ hrun1]; exact hrun2
+        rw [lauf_anhang _ _ _ _ h12, lauf_einzeln_gleich]
+        exact hrun3
+      · rw [hflag3]
+        show bedingung .le (sub64 (s2.register dst) (s2.register tmp)).2 = eval σ₀ (Expr.le a b) σ ρ
+        rw [bedingung_le, hzf, hdst2, hval2]
+        have hsfof : ((sub64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2.sf != false) =
+            decide ((eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n) := by
+          rw [sub64_sf_sint, hsd]
+          rcases Int.lt_or_le (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n with hlt | hge
+          · simp [show (eval σ₀ a σ ρ).n - (eval σ₀ b σ ρ).n < 0 from by omega, hlt]
+          · simp [show ¬ (eval σ₀ a σ ρ).n - (eval σ₀ b σ ρ).n < 0 from by omega,
+              show ¬ (eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n from by omega]
+        rw [hof, hsfof]
+        show (decide ((eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n) ||
+          decide ((eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n)) = decide ((eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n)
+        rcases Decidable.em ((eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n) with heq | hne
+        · simp [heq]
+        · rcases Int.lt_or_le (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n with hlt | hge
+          · simp [hne, hlt, show (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n from by omega]
+          · simp [hne, show ¬ (eval σ₀ a σ ρ).n < (eval σ₀ b σ ρ).n from by omega,
+              show ¬ (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n from by omega]
+      · intro q hqd hqf
+        have hqtmp : q ≠ tmp := fun heq => hqf (heq ▸ List.mem_cons_self)
+        have hqrest : q ∉ rest := fun hin => hqf (List.mem_cons_of_mem _ hin)
+        show s3.register q = s.register q
+        rw [hreg3, hreg2 q hqtmp hqrest, hreg1 q hqd hqrest]
+      · show s3.register Register.rsp = s.register Register.rsp
+        rw [hreg3, hreg2 _ (Ne.symm hrspTmp) hrspRest, hreg1 _ (Ne.symm hrsp.1) hrspRest]
+  | _, _, _, _, _, @IstVergleich.eq _ _ _ abb _ _ _ _ a b dst tmp rest pa pb ha hb =>
+    fun hVB ρ σ₀ σ s hfr hrsp hrenv => by
+      obtain ⟨hBa, hBb, hdiff⟩ := hVB
+      have hfrA := frischListe_tail abb dst tmp rest hfr
+      have hfrB := frischListe_kopf abb dst tmp rest hfr
+      have hdstTmp := frischListe_dst_ne_tmp abb dst tmp rest hfr
+      have hrspRest : Register.rsp ∉ rest := fun hin => hrsp.2 (List.mem_cons_of_mem _ hin)
+      have hrspTmp : tmp ≠ Register.rsp := by
+        intro heq; exact hrsp.2 (heq ▸ List.mem_cons_self)
+      obtain ⟨s1, hrun1, hval1, hmem1, hreg1, hrsp1⟩ :=
+        istTief_korrekt abb a dst rest pa ha ρ σ₀ σ s hfrA ⟨hrsp.1, hrspRest⟩ hrenv
+      have hrenv1 : EnvRepr ρ s1.register abb := by
+        intro lo' hi' x
+        have hx := hfr.1 _ x
+        rw [hreg1 _ hx.1 (fun hin => hx.2 (List.mem_cons_of_mem _ hin))]
+        exact hrenv lo' hi' x
+      obtain ⟨s2, hrun2, hval2, hmem2, hreg2, hrsp2⟩ :=
+        istTief_korrekt abb b tmp rest pb hb ρ σ₀ σ s1 hfrB ⟨hrspTmp, hrspRest⟩ hrenv1
+      have hdst2 : s2.register dst = intWort (eval σ₀ a σ ρ).n := by
+        rw [hreg2 dst hdstTmp (fun hin => hfr.2.1 (by rw [List.mem_cons]; exact Or.inr hin))]
+        exact hval1
+      have hlen : laengeOk (encode (Befehl.cmpReg64 dst tmp)).length = true := laengeOk_encode _
+      have hcmp := schritt_cmpReg64 ⟨Befehl.cmpReg64 dst tmp, (encode (Befehl.cmpReg64 dst tmp)).length⟩
+        s2 dst tmp hlen rfl
+      have hmap : ((pa ++ pb ++ [Befehl.cmpReg64 dst tmp]).map
+          fun b => (⟨b, (encode b).length⟩ : Decodiert)) =
+          (pa.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+          (pb.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) ++
+          [⟨Befehl.cmpReg64 dst tmp, (encode (Befehl.cmpReg64 dst tmp)).length⟩] := by
+        simp [List.map_append]
+      obtain ⟨hBaRoot1, hBaRoot2⟩ := bereich64_wurzel_tief abb ha hBa
+      obtain ⟨hBbRoot1, hBbRoot2⟩ := bereich64_wurzel_tief abb hb hBb
+      obtain ⟨hof, hsa, hsb, hsd⟩ := cmp_kein_ueberlauf (eval σ₀ a σ ρ).n (eval σ₀ b σ ρ).n
+        (eval σ₀ a σ ρ).lo_le (eval σ₀ a σ ρ).le_hi (eval σ₀ b σ ρ).lo_le (eval σ₀ b σ ρ).le_hi
+        ⟨hBaRoot1, hBaRoot2⟩ ⟨hBbRoot1, hBbRoot2⟩ hdiff
+      obtain ⟨s3, hrun3, hflag3, hreg3, hspeicher3⟩ :
+          ∃ s3, schritt ⟨Befehl.cmpReg64 dst tmp, (encode (Befehl.cmpReg64 dst tmp)).length⟩ s2
+              = some s3 ∧
+            s3.flags = (sub64 (s2.register dst) (s2.register tmp)).2 ∧
+            s3.register = s2.register ∧ s3.speicher = s2.speicher :=
+        ⟨_, hcmp, rfl, rfl, rfl⟩
+      refine ⟨s3, ?_, ?_, hspeicher3.trans (hmem2.trans hmem1), ?_, ?_⟩
+      · rw [hmap]
+        have h12 : lauf ((pa.map fun b => ⟨b, (encode b).length⟩) ++
+            (pb.map fun b => ⟨b, (encode b).length⟩)) s = some s2 := by
+          rw [lauf_anhang _ _ _ _ hrun1]; exact hrun2
+        rw [lauf_anhang _ _ _ _ h12, lauf_einzeln_gleich]
+        exact hrun3
+      · rw [hflag3]
+        show bedingung .e (sub64 (s2.register dst) (s2.register tmp)).2 = eval σ₀ (Expr.eq a b) σ ρ
+        rw [bedingung_e, hdst2, hval2]
+        show (sub64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2.zf =
+          decide ((eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n)
+        rcases Decidable.em ((eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n) with heq | hne
+        · rw [heq]
+          simp [(sub64_zf_iff (intWort (eval σ₀ b σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).mpr rfl]
+        · have hxney : intWort (eval σ₀ a σ ρ).n ≠ intWort (eval σ₀ b σ ρ).n := by
+            intro hcontra
+            apply hne
+            have hc := congrArg sint hcontra
+            rwa [hsa, hsb] at hc
+          rw [decide_eq_false hne]
+          cases hz : (sub64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2.zf with
+          | false => rfl
+          | true => exact absurd ((sub64_zf_iff _ _).mp hz) hxney
+      · intro q hqd hqf
+        have hqtmp : q ≠ tmp := fun heq => hqf (heq ▸ List.mem_cons_self)
+        have hqrest : q ∉ rest := fun hin => hqf (List.mem_cons_of_mem _ hin)
+        show s3.register q = s.register q
+        rw [hreg3, hreg2 q hqtmp hqrest, hreg1 q hqd hqrest]
+      · show s3.register Register.rsp = s.register Register.rsp
+        rw [hreg3, hreg2 _ (Ne.symm hrspTmp) hrspRest, hreg1 _ (Ne.symm hrsp.1) hrspRest]
+
 end Gabbro.Grammatik.X86
