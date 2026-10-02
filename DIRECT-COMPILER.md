@@ -325,6 +325,8 @@ Last ledger refresh: **2026-10-02 20:14 UTC**. This is an operational snapshot, 
 | 698 | Essential width-selected shifts and rotates | Agent working | 699: scheduled | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Agent working | 701: scheduled | [task](lanes/700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Agent working | 703: scheduled | [task](lanes/702.md) |
+| 704 | Generic port bus and precise architectural IO permissions | Waiting for accepted dependencies | 705: scheduled | [task](lanes/704.md) |
+| 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Scheduled | 707: scheduled | [task](lanes/706.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -798,6 +800,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **676**, Hardware completion: port IO and device memory profiles, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-676.md). <!-- x86-merged:676 -->
 - 2026-10-02: lane **677**, Independent exact review of 676, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-677.md). <!-- x86-merged:677 -->
 - 2026-10-02: publication batch checks passed for `a6315567`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-02: checked master `7e1134af` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:7e1134af50fb3a3cf19e4aa85a6472452b379dd1 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
