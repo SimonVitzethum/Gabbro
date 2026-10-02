@@ -474,3 +474,4 @@ import Grammatik.X86.HardwareExecution
 import Grammatik.X86.LockedInstructionExecution
 import Grammatik.X86.IndirectControlHardwareForms
 import Grammatik.X86.FpControlHardwareForms
+import Grammatik.X86.CarrierTraceBridge

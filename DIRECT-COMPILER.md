@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 22:35 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 22:37 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -298,7 +298,7 @@ Last ledger refresh: **2026-10-02 22:35 UTC**. This is an operational snapshot, 
 | 644 | Organise the next generic source-to-final-byte closure wave | Merged after review/checks | 645: Merged after review/checks | [report](messung/muse/MUSE-REPORT-644.md) |
 | 646 | Direct typed statement sequence to fetched machine execution | Merged after review/checks | 647: Merged after review/checks | [report](messung/muse/MUSE-REPORT-646.md) |
 | 648 | Generic checked source-assignment byte certificate | Merged after review/checks | 649: Merged after review/checks | [report](messung/muse/MUSE-REPORT-648.md) |
-| 650 | Growing TSO history to typed carrier W transition | Committed candidate; review/integration pending | 651: Committed candidate; review/integration pending | [task](lanes/650.md) |
+| 650 | Growing TSO history to typed carrier W transition | Merged after review/checks | 651: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-650.md) |
 | 652 | Whole-word drain with real interleaved foreign accesses | Merged after review/checks | 653: Merged after review/checks | [report](messung/muse/MUSE-REPORT-652.md) |
 | 654 | Derived target work bound for direct source lowering | Merged after review/checks | 655: Merged after review/checks | [report](messung/muse/MUSE-REPORT-654.md) |
 | 656 | Fetched conditional byte-step flag dependency simulation | Merged after review/checks | 657: Merged after review/checks | [report](messung/muse/MUSE-REPORT-656.md) |
@@ -814,6 +814,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **683**, Independent exact review of 682, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-683.md). <!-- x86-merged:683 -->
 - 2026-10-02: publication batch checks passed for `0392b3f0`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-02: checked master `f2ef4878` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:f2ef4878b342c7350aeb5065e1473046145e60d3 -->
+- 2026-10-02: lane **650**, Growing TSO history to typed carrier W transition, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-650.md). <!-- x86-merged:650 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
