@@ -36,9 +36,254 @@ inductive LockForm where
   | mfence
   deriving DecidableEq, Repr
 
-/- CUTS:
-    - Skeleton only: forms declared, decode/execution follow.
--/
+/-! ## 1. Parsed shapes and canonical encoding.
+
+    Opcode facts (Intel SDM Vol. 2A/2B/2D): LOCK is byte 0xF0; XADD
+    r/m64 is REX.W + 0F C1, CMPXCHG r/m64 is REX.W + 0F B1, MFENCE is
+    0F AE with ModRM reg field 6 (any r/m, manual: the processor
+    ignores the r/m field). LOCK with a register destination, and LOCK
+    on MFENCE, are architectural #UD (XADD/CMPXCHG/LOCK entries);
+    MFENCE without SSE2 is #UD (MFENCE entry, CPUID.01H:EDX.SSE2[26]).
+    A failed CMPXCHG comparison still performs the destination write
+    cycle (CMPXCHG entry: "never a locked read without a locked
+    write"), so failure needs write permission. -/
+
+/-- Architectural #UD grounds the byte layer parses but never executes:
+    LOCK on a register destination, LOCK on the fence. -/
+inductive LockUdGrund where
+  | lockAufRegister
+  | lockAufZaun
+  deriving DecidableEq, Repr
+
+/-- One parsed locked instruction: an admitted form, or a parsed
+    architectural #UD, each with its consumed length. -/
+inductive LockAnweisung where
+  | ok (f : LockForm) (len : Nat)
+  | ud (g : LockUdGrund) (len : Nat)
+  deriving DecidableEq, Repr
+
+/-- Canonical byte encoding of one essential locked form: the LOCK
+    prefix, canonical REX.W (X=0, mirroring the pilot REX shape), the
+    0F escape, the opcode, ModRM mod=2 base-plus-disp32 (SIB exactly
+    when the base needs it), and MFENCE as 0F AE F0. -/
+def encodeLock : LockForm → List Byte
+  | .xadd64 src base d =>
+    let head := [natByte 240, rexByte (regHigh src) (regHigh base),
+      natByte 15, natByte 193, modrmMem (regLow src) (regLow base)]
+    if regLow base == 4 then head ++ natByte 36 :: leBytes32 d
+    else head ++ leBytes32 d
+  | .cmpxchg64 src base d =>
+    let head := [natByte 240, rexByte (regHigh src) (regHigh base),
+      natByte 15, natByte 177, modrmMem (regLow src) (regLow base)]
+    if regLow base == 4 then head ++ natByte 36 :: leBytes32 d
+    else head ++ leBytes32 d
+  | .mfence => [natByte 15, natByte 174, natByte 240]
+
+/-- Consumed length of one essential locked form. -/
+def lockLen : LockForm → Nat
+  | .xadd64 _ base _ => if regLow base == 4 then 10 else 9
+  | .cmpxchg64 _ base _ => if regLow base == 4 then 10 else 9
+  | .mfence => 3
+
+/-- Every essential encoding fits the 15-byte instruction cap. -/
+theorem encodeLock_len (f : LockForm) :
+    1 ≤ (encodeLock f).length ∧ (encodeLock f).length ≤ 15 := by
+  cases f with
+  | mfence => exact show 1 ≤ 3 ∧ 3 ≤ 15 from by decide
+  | xadd64 src base d =>
+    simp only [encodeLock]
+    split
+    · exact show 1 ≤ 10 ∧ 10 ≤ 15 from by decide
+    · exact show 1 ≤ 9 ∧ 9 ≤ 15 from by decide
+  | cmpxchg64 src base d =>
+    simp only [encodeLock]
+    split
+    · exact show 1 ≤ 10 ∧ 10 ≤ 15 from by decide
+    · exact show 1 ≤ 9 ∧ 9 ≤ 15 from by decide
+
+/-! ## 2. Byte decoder.
+
+    The LOCK prefix selects the locked rows; without it these opcodes
+    are not claimed here. REX must carry W=1 with X=0 (canonical
+    subset); memory is mod=2 base-plus-disp32 with the SIB byte exactly
+    when the base needs it. LOCK with a register destination (mod=3)
+    parses to the #UD marker with length 5; LOCK before an MFENCE shape
+    parses to the fence #UD marker with length 4. Truncation, wrong
+    opcodes, non-canonical REX and other modes refuse with `none`. -/
+
+/-- Accepted REX prefix bits for the locked rows: W=1, X=0, exactly
+    0x48/0x49/0x4C/0x4D. -/
+def rexLockBits : Byte → Option (Nat × Nat)
+  | b =>
+    match byteNat b with
+    | 72 => some (0, 0)
+    | 73 => some (0, 1)
+    | 76 => some (1, 0)
+    | 77 => some (1, 1)
+    | _ => none
+
+/-- The REX encoder lands in the accepted locked prefix set. -/
+theorem rexLockBits_rexByte (rh bh : Nat)
+    (hrh : rh < 2) (hbh : bh < 2) :
+    rexLockBits (rexByte rh bh) = some (rh, bh) := by
+  unfold rexLockBits rexByte
+  have h1 : rh = 0 ∨ rh = 1 := by omega
+  have h2 : bh = 0 ∨ bh = 1 := by omega
+  cases h1 with
+  | inl h0 =>
+    cases h2 with
+    | inl h3 => subst h0; subst h3; rfl
+    | inr h3 => subst h0; subst h3; rfl
+  | inr h0 =>
+    cases h2 with
+    | inl h3 => subst h0; subst h3; rfl
+    | inr h3 => subst h0; subst h3; rfl
+
+/-- Decode after LOCK, REX.W and the 0F escape: opcodes 193 (XADD)
+    and 177 (CMPXCHG). Memory (mod=2) decodes the word form;
+    register-direct (mod=3) under LOCK is the parsed #UD with the
+    5-byte length; every other mode refuses. -/
+def decodeLockModrm (mk : Register → Register → BitVec 32 → LockForm)
+    (rh bh : Nat) : List Byte → Option (LockAnweisung × List Byte)
+  | [] => none
+  | m :: rest =>
+    let rg := byteNat m / 8 % 8
+    let qm := byteNat m % 8
+    match byteNat m / 64 with
+    | 3 =>
+      match codeReg (rh * 8 + rg), codeReg (bh * 8 + qm) with
+      | some _, some _ => some (LockAnweisung.ud .lockAufRegister 5, rest)
+      | _, _ => none
+    | 2 =>
+      if qm == 4 then
+        match rest with
+        | [] => none
+        | s :: rest1 =>
+          if byteNat s == 36 then
+            match parseLe32 rest1 with
+            | some (d, rest') =>
+              match codeReg (rh * 8 + rg), codeReg (bh * 8 + qm) with
+              | some rs, some rb => some (LockAnweisung.ok (mk rs rb d) 10, rest')
+              | _, _ => none
+            | none => none
+          else none
+      else
+        match parseLe32 rest with
+        | some (d, rest') =>
+          match codeReg (rh * 8 + rg), codeReg (bh * 8 + qm) with
+          | some rs, some rb => some (LockAnweisung.ok (mk rs rb d) 9, rest')
+          | _, _ => none
+        | none => none
+    | _ => none
+
+/-- Top-level locked decode: LOCK-prefixed 64-bit XADD/CMPXCHG word
+    rows, or the bare MFENCE shape (any r/m with reg field 6, per the
+    manual: the processor ignores the r/m field). LOCK before an
+    MFENCE shape is the parsed fence #UD. -/
+def decodeLock : List Byte → Option (LockAnweisung × List Byte)
+  | [] => none
+  | b0 :: rest0 =>
+    if byteNat b0 == 240 then
+      match rest0 with
+      | [] => none
+      | b1 :: rest1 =>
+        match rexLockBits b1 with
+        | some (rh, bh) =>
+          match rest1 with
+          | [] => none
+          | b2 :: rest2 =>
+            if byteNat b2 == 15 then
+              match rest2 with
+              | [] => none
+              | b3 :: rest3 =>
+                match byteNat b3 with
+                | 193 => decodeLockModrm .xadd64 rh bh rest3
+                | 177 => decodeLockModrm .cmpxchg64 rh bh rest3
+                | _ => none
+            else none
+        | none =>
+          if byteNat b1 == 15 then
+            match rest1 with
+            | [] => none
+            | b2 :: rest2 =>
+              if byteNat b2 == 174 then
+                match rest2 with
+                | [] => none
+                | m :: rest =>
+                  if byteNat m / 8 % 8 == 6 then
+                    some (LockAnweisung.ud .lockAufZaun 4, rest)
+                  else none
+              else none
+          else none
+    else if byteNat b0 == 15 then
+      match rest0 with
+      | [] => none
+      | b1 :: rest1 =>
+        if byteNat b1 == 174 then
+          match rest1 with
+          | [] => none
+          | m :: rest =>
+            if byteNat m / 8 % 8 == 6 then
+              some (LockAnweisung.ok .mfence 3, rest)
+            else none
+        else none
+    else none
+
+/-! ## 3. Codec round trips: decode inverts encode on every row. -/
+
+set_option maxHeartbeats 4000000 in
+/-- Round trip for LOCK XADD, both SIB and non-SIB shapes. -/
+theorem roundtrip_lock_xadd (src base : Register) (d : BitVec 32)
+    (suffix : List Byte) :
+    decodeLock (encodeLock (.xadd64 src base d) ++ suffix) =
+      some (LockAnweisung.ok (.xadd64 src base d)
+        (encodeLock (.xadd64 src base d)).length, suffix) := by
+  cases src <;> cases base <;>
+    simp [encodeLock, decodeLock, decodeLockModrm, codeReg, regCode,
+      regHigh, regLow, rexByte, rexLockBits, modrmMem, leBytes32,
+      parseLe32_cons]
+
+set_option maxHeartbeats 4000000 in
+/-- Round trip for LOCK CMPXCHG, both SIB and non-SIB shapes. -/
+theorem roundtrip_lock_cmpxchg (src base : Register) (d : BitVec 32)
+    (suffix : List Byte) :
+    decodeLock (encodeLock (.cmpxchg64 src base d) ++ suffix) =
+      some (LockAnweisung.ok (.cmpxchg64 src base d)
+        (encodeLock (.cmpxchg64 src base d)).length, suffix) := by
+  cases src <;> cases base <;>
+    simp [encodeLock, decodeLock, decodeLockModrm, codeReg, regCode,
+      regHigh, regLow, rexByte, rexLockBits, modrmMem, leBytes32,
+      parseLe32_cons]
+
+/-- Round trip for MFENCE. -/
+theorem roundtrip_lock_mfence (suffix : List Byte) :
+    decodeLock (encodeLock .mfence ++ suffix) =
+      some (LockAnweisung.ok .mfence (encodeLock .mfence).length, suffix) := by
+  rfl
+
+/-- Decoding inverts encoding on every essential locked row, over any
+    suffix. The decoded length is the consumed prefix length. -/
+theorem roundtripLock (f : LockForm) (suffix : List Byte) :
+    decodeLock (encodeLock f ++ suffix) =
+      some (LockAnweisung.ok f (encodeLock f).length, suffix) := by
+  cases f with
+  | mfence => exact roundtrip_lock_mfence suffix
+  | xadd64 src base d => exact roundtrip_lock_xadd src base d suffix
+  | cmpxchg64 src base d =>
+    exact roundtrip_lock_cmpxchg src base d suffix
+
+/-- A successful locked round trip consumes exactly its prefix within
+    the 15-byte cap. -/
+theorem roundtripLock_len_ok (f : LockForm) (suffix : List Byte) :
+    ∃ (n : Nat) (rest : List Byte),
+      decodeLock (encodeLock f ++ suffix) =
+        some (LockAnweisung.ok f n, rest) ∧
+        n + rest.length = (encodeLock f ++ suffix).length ∧
+        1 ≤ n ∧ n ≤ 15 := by
+  refine ⟨(encodeLock f).length, suffix, roundtripLock f suffix, ?_, ?_, ?_⟩
+  · rw [List.length_append]
+  · exact (encodeLock_len f).1
+  · exact (encodeLock_len f).2
 
 #print axioms breite_bytes
 
