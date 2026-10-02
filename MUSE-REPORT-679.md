@@ -1,68 +1,87 @@
-# MUSE-REPORT-679: Exact review of author 678 hardware-model completion matrix
+# MUSE-REPORT-679: Exact re-review of author 678 hardware-model completion matrix
 
-CANDIDATE: 678 0f87c00f2402df2ac719f6ced755d8ecbea3d276
+CANDIDATE: 678 a4276ebf58308cb262b5b2396759ab03e72d1663
 VERDICT: ACCEPT
 
 ## What was done
 
 - Verified clone `/home/simon/Dokumente/gabbro-muse/a679`, branch `muse/679` (match; proceeded).
-- Reviewed the coordinator-pinned exact snapshot `.tmp/review/author-678/`
-  (SNAPSHOT.json: author 678, head `0f87c00f2402df2ac719f6ced755d8ecbea3d276`,
-  base `aefa9ed2`, files `MUSE-REPORT-678.md` +
-  `dokumente/x86/HARDWARE-MODEL-COMPLETION.md`, clean), comprising the matrix
-  (555 lines), the author report, PATCH.diff (642 lines) and BUILD-EVIDENCE.json.
-  No other clone, no control dir, no network was touched.
-- Checked PATCH.diff adds exactly the two owned files; BUILD-EVIDENCE shows the
-  author committed via `commit.sh` with the correct co-author line and a clean
-  tree. Ownership respected.
-- Re-verified every load-bearing factual claim against the actual tree in THIS
-  clone (master `3601dabc`; author's base `aefa9ed2` is one docs generation
-  older, so line numbers were treated as approximate and names/counts as exact).
-  This review is not approval from link checks alone.
+- This is a FRESH review of the NEW pinned snapshot `.tmp/review/SNAPSHOT.json`
+  (author 678, head `a4276ebf58308cb262b5b2396759ab03e72d1663`, base
+  `aefa9ed2`, files `MUSE-REPORT-678.md` +
+  `dokumente/x86/HARDWARE-MODEL-COMPLETION.md`, clean). The previous verdict on
+  `0f87c00f` is superseded and was NOT carried over: every finding below was
+  re-checked against the new candidate files (matrix 658 lines, report 94
+  lines, PATCH.diff 764 lines, BUILD-EVIDENCE.json).
+- BUILD-EVIDENCE confirms the chain in the author clone: branch `muse/678`,
+  rev1 commit `0f87c00f`, repair commit `a4276ebf` via `commit.sh` with correct
+  co-author line, clean tree afterwards. PATCH.diff adds exactly the two owned
+  files. No other clone, no control dir, no network touched.
+- Re-verified all load-bearing claims against the actual tree in THIS clone
+  (master `3601dabc`; author base `aefa9ed2` is slightly older, so line numbers
+  were treated as approximate, names/counts as exact). Not approval from link
+  checks alone.
+
+## The three repairs (all verified, none removes evidence)
+
+1. **Non-demotion rule (§5) + DONE 6A.1/6A.3 rewritten.** Agreed essential
+   families (design §2D list, verified real at `DIRECT-COMPILER-DESIGN.md`
+   :239-275) with all observable/fault/TSO/async/control obligations can never
+   complete by refusal, CUTS move or unilateral deferral; only already-agreed
+   deferred families (or a later explicit Simon change) may stay deferred. The
+   old "move to §5 with a dated refusal" escape hatch is closed. Genuine
+   strengthening; consistent with design §2D; no new proof claim.
+2. **DONE split into 6A (hardware model) vs mandatory 6B (follow-on).** 6A
+   items 1-8 name files/theorems/probes, finite and auditable; 6B items 1-3
+   keep the per-access TSO→W→GX bridge, image/ABI/entry/budget connection,
+   `valX86_sound` + closing theorem, and full publication + Rust backend as
+   mandatory OPEN requirements. The atomicity classification rule (6A item 4
+   owns target facts: single-copy table, LOCK unit, fence drain, tearing,
+   fault-vs-observer order; 6B item 1 owns the simulation mapping) is explicit
+   and prevents re-abstraction by bridge consumers. Rows J/K annotated with
+   their 6B homes; F1–F6 → 6A, F7 (depends on 6A-4 facts + TSO-wave
+   interfaces) and F8 (depends on 6A DONE + F7) → 6B. No obligation dropped.
+3. **Exact reviewer pairs replace "author + 18".** 661→660, 663→662, 665→664,
+   667→666, 669→668, 671→670, 673→672, 675→674, 677→676 — each re-read VERBATIM
+   in `lanes/661.md`–`lanes/677.md` of this clone; all nine match. The 677
+   anomaly (reviews 676, parenthetical title repeats the 660 title) is real and
+   is recorded verbatim without inference, exactly as the author states. No
+   verdict on any pair is claimed; 6A.7 requires each reviewer's committed
+   VERDICT on its exact candidate.
 
 ## Verification results (all pass)
 
-- File/line evidence: `ExtendedExecution.lean` 828 lines with `ExtInstr` at :38
-  (inductive), `decodeExt` :64, `stepExt` :305, `fetchExt` :576,
-  `extByteschritt` :616; `LockedOps.lean` 521 lines with
-  `cas_fehlschlag_stottert`; `ScalarFloat.lean` 1508 lines with class-level NaN
-  agreement and sticky-MXCSR OPEN in CUTS; `ScalarFloatCodec.lean` 710 lines;
-  `NarrowCodec` 959 lines; `Typen.lean` 87 lines with `af : Option Bool`;
-  `DecodeFault.lean` 276 lines; `EntryState.lean` 553 lines;
-  `EntryExecution.lean` 375 lines; `Bild.lean` `kanonischBereich` :43 with
-  48/57 profile theorems :99-115; `OhneUmbruch` in `Speicher.lean` ~:160;
-  `Ausfuehrung.lean` struct-update note :845-846; `BridgeRead.lean` CUTS
-  device/MMIO/DMA cut ~:450; `TSO.lean` `paket_reisst`; `OverlapRefusal`
-  `zugriffOk`/`aliasZulassen`; `AccessExecution` `realisiert_fuss_abdeckung`;
-  `FloatExceptions` `guard_sticky_offen`.
-- Omission greps rerun here: no XCR0/OSXSAVE/CPUID model exists anywhere under
-  `grammatik/Grammatik/X86/` (only `osXmm : Bool` in `FeatureProfile.lean`
-  :42-63 with `hat`-lemmas ~:112-138). The matrix's "proved obstruction" for
-  enabled state is substantiated, not asserted.
-- Scope/provenance: `DIRECT-COMPILER-DESIGN.md` §2D deferred scope is real
-  (:239-275), so DONE items 1/3 deferral paths cite agreed design scope, not
-  invented shrink; `.tmp/HARDWARE-REFERENCES/REFERENCES.json` confirms Intel
-  SDM edition 325462-093US September 2026 with no AMD snapshot; all nine
-  hardware prompts `lanes/660.md`-`lanes/676.md` exist; `EMITTER-INVENTAR.md`
-  §12 item 7 gaps check out (`bibliothek/linux/linux.gab:54`
-  `assume os_bindung_null`; `-4095` fence in `emit.rs` `syscall_stumpf`;
-  `GENERATOR_KENNUNG` is `treiber-gen-10`).
-- No percentages, ETAs, or proof closure from declarations/round trips/Bool
-  bits (only explicit "no percentage, no ETA" statements). No row claims
-  `complete`; rows are `partial (proved)`, `unimplemented`, or carry a named
-  proved obstruction with file evidence. No in-flight candidate is called
-  merged, accepted, or hardware-correspondent (§0 states prompt-level
-  visibility only). Codec self-consistency is never presented as silicon
-  fidelity; `osXmm : Bool` is never cited as completion evidence.
-- DONE condition (§6, 8 items) is finite and auditable: each item names
-  files/theorems/probes, deferral requires a dated entry plus a refusing gate,
-  and item 7 demands per-producer joint memory-changing fetched runs, planted
-  refusals, poison+positive probes, independent review ACCEPT, and green
-  build/test/emission/key-scan gates. No hidden scope shrink found.
-- Follow-ups F1-F8 name exact NEW paths, stable producer dependencies, target
-  sketches, negative witnesses and rejection criteria; none replans existing
-  source owners or touches reserved/protected files.
-- English prose throughout (German tokens are existing Lean identifiers only).
+- All rev1 evidence re-confirmed on the new files: `ExtendedExecution.lean`
+  828 lines (`ExtInstr` :38 inductive, `decodeExt` :64, `stepExt` :305,
+  `fetchExt` :576, `extByteschritt` :616); `LockedOps.lean` 521 lines with
+  `cas_fehlschlag_stottert`; `ScalarFloat.lean` 1508 lines (class-level NaN,
+  sticky OPEN in CUTS); `ScalarFloatCodec` 710 / `NarrowCodec` 959 lines;
+  `Typen.lean` 87 lines (`af : Option Bool`); `DecodeFault` 276 /
+  `EntryState` 553 / `EntryExecution` 375 lines; `kanonischBereich`
+  (`Bild.lean` :43, 48/57 theorems :99-115); `OhneUmbruch` (`Speicher.lean`
+  ~:160); `Ausfuehrung.lean` struct note :845-846; `BridgeRead.lean` CUTS
+  device/MMIO/DMA cut ~:450; `paket_reisst`; `zugriffOk`/`aliasZulassen`;
+  `realisiert_fuss_abdeckung`; `guard_sticky_offen`.
+- Omission grep rerun here: no XCR0/OSXSAVE/CPUID model anywhere under
+  `grammatik/Grammatik/X86/` (only `osXmm : Bool`, `FeatureProfile.lean`
+  :42-63). Both "proved obstructions" substantiated.
+- Scope/provenance re-confirmed: REFERENCES.json (Intel SDM 325462-093US,
+  September 2026, no AMD snapshot); all nine author prompts 660-676 plus all
+  nine reviewer prompts 661-677 present; `linux.gab:54`
+  `assume os_bindung_null`; `-4095` fence in `emit.rs`; `GENERATOR_KENNUNG`
+  `treiber-gen-10`.
+- Counts resolved: matrix now says "94 X86 modules, 50,368 physical lines,
+  measured in this clone". `git ls-tree aefa9ed2 --name-only
+  grammatik/Grammatik/X86/ | wc -l` in THIS clone returns exactly 94 —
+  consistent with the author's base (this master's 97 files / 52,130 lines
+  include three files from later merges). My rev1 staleness observation is
+  repaired and closed.
+- Rows A–K preserved (A–I byte-identical in substance to rev1; J/K gained only
+  the 6B annotations). No row claims `complete`; no in-flight candidate called
+  merged/accepted/hardware-correspondent; codec ≠ silicon fidelity throughout;
+  §8/CUTS honestly state this matrix is UNREVIEWED here and no 679 verdict
+  exists in the author clone. No percentages/ETAs. English prose (German
+  tokens are existing Lean identifiers only).
 
 ## Exact names of new definitions/theorems
 
@@ -71,23 +90,22 @@ this report only.
 
 ## Last build result line
 
-No build run: nothing in this lane affects any build input (single new
-Markdown report). Tree status is clean apart from this untracked report file.
+No build run: nothing in this lane affects any build input (single Markdown
+report). Tree clean apart from the staged report update.
 
 ## What remains open
 
-- All producer work (660-676 candidates, independent reviews, integration,
-  publication) and the F1-F8 follow-ups. The matrix is organisation, not proof;
-  full typed-carrier TSO-to-W/GX and source-to-final-bytes validation stay OPEN,
-  as the matrix itself records.
-- Observation (not a finding): the matrix cites "62 X86 modules at the handoff
-  snapshot"; this newer clone holds 97 `.lean` files under
-  `grammatik/Grammatik/X86/`. The count is explicitly not completion evidence
-  and the snapshot is dated, so no correction is required; future matrix
-  updates should re-pin the count to the merge commit they read.
+- All producer work (660–676 candidates, their reviewers, integration,
+  publication), the F1–F8 follow-ups, and the full 6B follow-on. The matrix is
+  organisation, not proof — as it states itself.
+- Minor observation (not verdict-changing, recorded for the next matrix
+  update): F6 reads "depends on 676, TSO bridge", but under the new
+  classification rule the model-side facts it needs are 6A item 4, while "the
+  TSO bridge" (full per-access simulation) is 6B item 1. Suggest "depends on
+  676 and the 6A item 4 atomicity facts". Imprecise dependency wording in a
+  future-task sketch; no guarantee weakened, no false closure.
 
 ## Anything believed wrong in the task/setup
 
-Nothing. The owner task, the snapshot contents and the evidence rule are
-consistent; the author obeyed the docs-only constraint and reported no
-fictitious build.
+Nothing. The repair instruction, the new snapshot and the evidence rule are
+consistent.
