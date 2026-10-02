@@ -1128,4 +1128,61 @@ theorem istVergleich_korrekt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
       · show s3.register Register.rsp = s.register Register.rsp
         rw [hreg3, hreg2 _ (Ne.symm hrspTmp) hrspRest, hreg1 _ (Ne.symm hrsp.1) hrspRest]
 
+/- CUTS:
+   Proved here, over the single source model (`Semantik.eval`) and the
+   canonical pilot machine (`Codec.encode`, `Ausfuehrung.schritt`,
+   `lauf`), generalising `ExpressionLowering.lean`'s one-level fragment
+   to arbitrary depth:
+   - `senkTief`: lowering of `lit`/`var`/`weiter`/`add`/`sub`/`neg` trees
+     of any depth, over a shared register-stack scratch list; refuses
+     (`none`) on every other source form AND on register exhaustion at a
+     binary node (no spilling);
+   - shape inversion (`IstTief`, `istTief_von_senkTief`) and value/memory/
+     register/`rsp` correctness (`istTief_korrekt`) by a clean structural
+     induction, with no opaque carrier projection ever appearing as an
+     index (the file-wide non-stuck pattern: inversion over a general
+     index, then matching the resulting six-constructor value);
+   - the signed 64-bit overflow corollary (`Bereich64`, computed from the
+     expression's own type indices; `istTief_ohne_ueberlauf`): under it,
+     the register holds the EXACT signed source value, not only its
+     modular reading;
+   - `senkVergleich`/`IstVergleich`/`istVergleich_korrekt`: `lt`/`le`/`eq`
+     lowered to `cmpReg64` plus a `Bedingung`, with the chosen condition
+     code read off the resulting flags proved equal to the source Bool,
+     under the same kind of signed-range side condition
+     (`VergleichBereich`) applied to the architectural SUB behind `cmp`.
+
+   NOT proved here, and not claimed:
+   - No deeper source fragment: `mul`/`div`/`rem`/bitwise/float/memory/
+     calls/control flow and every comparison but `lt`/`le`/`eq` refuse
+     with `none` (honest boundary, not a silent gap).
+   - No register spilling: an empty scratch list at a binary or
+     comparison node refuses, even if the whole expression could fit in
+     fewer registers with a smarter allocator.
+   - No architectural per-node overflow-FLAG tracking through a deep
+     tree: `istTief_ohne_ueberlauf` proves the final signed VALUE only
+     (generalising the one-level fragment's value conclusion, not its
+     flag conclusion). A later pass that needs an intermediate `add`/
+     `sub` node's own `of`/`cf` must prove it locally from `istTief_korrekt`'s
+     modular word, the same way `ExpressionLowering.senkung_ohne_ueberlauf_add/sub`
+     already do for one level.
+   - No branch instruction: `senkVergleich` stops at `cmpReg64` plus the
+     chosen `Bedingung`; emitting and proving the following `jumpIf32`
+     (reusing `schritt_jumpIf32_genommen/nicht`) is the next composition
+     step, not done here.
+   - No TSO bridge: runs are sequential `lauf` folds, as in
+     `ExpressionLowering.lean`.
+   - No whole-source or whole-binary theorem: these are expression/
+     comparison fragments against the pilot machine, composed with (not
+     replacing) the accepted source model and canonical executor.
+-/
+
+#print axioms senkTief_tief_ok
+#print axioms istTief_von_senkTief
+#print axioms istTief_korrekt
+#print axioms bereich64_wurzel_tief
+#print axioms istTief_ohne_ueberlauf
+#print axioms istVergleich_von_senkVergleich
+#print axioms istVergleich_korrekt
+
 end Gabbro.Grammatik.X86
