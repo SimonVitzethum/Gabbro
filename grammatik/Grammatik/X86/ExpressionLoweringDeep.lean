@@ -571,4 +571,76 @@ theorem istTief_korrekt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
       · rw [hpres4 _ (Ne.symm hrsp.1), hpres3 _ (Ne.symm hrspTmp), hpres2 _ (Ne.symm hrspTmp)]
         exact hrsp1
 
+/-! ## 6. Signed 64-bit overflow corollary.
+
+    `Bereich64` is the honest side condition the task asks for: EVERY node
+    of the tree, not only the leaves, has its TYPE range inside the signed
+    64-bit window. It is computed from the expression's indices alone
+    (never assumed): the window bound at this node, conjoined recursively
+    with the same bound on every child. Matched over a general `τ` (no
+    opaque carrier index), with a plain `match` on `t` for `var` since a
+    source variable may carry any type -- only its `.int` instances
+    constrain anything here. -/
+
+/-- `-(2^63) ≤ lo` and `hi < 2^63`: the signed 64-bit window on a range. -/
+def imBereich64 (lo hi : Int) : Prop := -(2 ^ 63 : Int) ≤ lo ∧ hi < 2 ^ 63
+
+/-- Every node's own type range lies in the signed 64-bit window. -/
+def Bereich64 {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} :
+    ∀ {τ : Ty}, Expr D Γ Λ τ → Prop
+  | _, .lit n => imBereich64 n n
+  | .int lo hi, .var _x => imBereich64 lo hi
+  | _, .var _ => True
+  | _, .weiter (lo' := lo') (hi' := hi') _ _ e => imBereich64 lo' hi' ∧ Bereich64 e
+  | _, .add (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b =>
+    imBereich64 (l1 + l2) (h1 + h2) ∧ Bereich64 a ∧ Bereich64 b
+  | _, .sub (l1 := l1) (h1 := h1) (l2 := l2) (h2 := h2) a b =>
+    imBereich64 (l1 - h2) (h1 - l2) ∧ Bereich64 a ∧ Bereich64 b
+  | _, .neg (lo := lo) (hi := hi) a => imBereich64 (-hi) (-lo) ∧ Bereich64 a
+  | _, _ => True
+
+/-- The root's own window bound is exactly the top conjunct (or the whole
+    fact, at a leaf) of `Bereich64`, read off through the six `IstTief`
+    shapes -- the SAME non-stuck matching style as `istTief_korrekt`. -/
+theorem bereich64_wurzel_tief {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register) :
+    ∀ {lo hi : Int} {e : Expr D Γ Λ (.int lo hi)} {dst : Register} {frei : List Register}
+      {prog : List Befehl}, IstTief abb e dst frei prog → Bereich64 e → imBereich64 lo hi
+  | _, _, _, _, _, _, @IstTief.lit _ _ _ abb n dst frei => fun h => h
+  | _, _, _, _, _, _, @IstTief.var _ _ _ abb _ x dst frei => fun h => h
+  | _, _, _, _, _, _, @IstTief.weiter _ _ _ abb _ _ _ _ h1 h2 e dst frei p _he => fun h => h.1
+  | _, _, _, _, _, _, @IstTief.add _ _ _ abb _ _ _ _ a b dst tmp rest pa pb _ha _hb => fun h => h.1
+  | _, _, _, _, _, _, @IstTief.sub _ _ _ abb _ _ _ _ a b dst tmp rest pa pb _ha _hb => fun h => h.1
+  | _, _, _, _, _, _, @IstTief.neg _ _ _ abb _ _ a dst tmp rest pa _ha => fun h => h.1
+
+/-- SIGNED 64-BIT CorrectNESS: under `Bereich64` (every subtree's type
+    range inside the signed 64-bit window, a decidable side condition
+    computed from the expression's indices alone), the modular word
+    `istTief_korrekt` already proves `dst` holds is EXACTLY the source's
+    signed reading -- the deep-tree generalisation of
+    `ExpressionLowering.senkung_ohne_ueberlauf_add/sub`'s value conclusion.
+    No architectural per-node overflow flag is tracked for the deep tree
+    (an honest CUT; the one-level fragment's flag facts live where they
+    were proved). -/
+theorem istTief_ohne_ueberlauf {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register) {lo hi : Int} (e : Expr D Γ Λ (.int lo hi))
+    (dst : Register) (frei : List Register) (prog : List Befehl)
+    (hT : IstTief abb e dst frei prog) (hB : Bereich64 e)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hfr : FrischListe abb dst frei) (hrsp : dst ≠ Register.rsp ∧ Register.rsp ∉ frei)
+    (hrenv : EnvRepr ρ s.register abb) :
+    ∃ s', lauf (prog.map fun b => (⟨b, (encode b).length⟩ : Decodiert)) s = some s' ∧
+      sint (s'.register dst) = (eval σ₀ e σ ρ).n ∧
+      s'.speicher = s.speicher ∧
+      (∀ q, q ≠ dst → q ∉ frei → s'.register q = s.register q) ∧
+      s'.register Register.rsp = s.register Register.rsp := by
+  obtain ⟨s', hrun, hval, hmem, hreg, hrsp'⟩ :=
+    istTief_korrekt abb e dst frei prog hT ρ σ₀ σ s hfr hrsp hrenv
+  obtain ⟨hroot1, hroot2⟩ := bereich64_wurzel_tief abb hT hB
+  have hb1 := (eval σ₀ e σ ρ).lo_le
+  have hb2 := (eval σ₀ e σ ρ).le_hi
+  refine ⟨s', hrun, ?_, hmem, hreg, hrsp'⟩
+  rw [hval]
+  exact intWort_sint _ (by omega) (by omega)
+
 end Gabbro.Grammatik.X86
