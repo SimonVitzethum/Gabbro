@@ -643,4 +643,171 @@ theorem istTief_ohne_ueberlauf {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
   rw [hval]
   exact intWort_sint _ (by omega) (by omega)
 
+/-! ## 7. Comparisons for branches: `lt`/`le`/`eq` lowered to `cmpReg64`.
+
+    Same register-stack discipline as the binary arithmetic nodes: the
+    head of `frei` becomes `tmp` for the right operand, the tail is the
+    shared scratch pool for both (deep) operands. The comparison itself
+    writes NO register (`cmpReg64` only sets flags and advances `rip`,
+    `Ausfuehrung.schritt`'s own equation): the result is read off the
+    flags with a `Bedingung` chosen by the source operator, for a later
+    `jumpIf32` to test. -/
+
+/-- Lower one comparison to lowered operands plus `cmpReg64`, returning the
+    `Bedingung` a branch should test for "true". Every other boolean form,
+    and an empty `frei`, refuses with `none`. -/
+def senkVergleich {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (e : Expr D Γ Λ τ) (dst : Register) (frei : List Register) :
+    Option (List Befehl × Bedingung) :=
+  match e with
+  | .lt a b =>
+    match frei with
+    | [] => none
+    | tmp :: rest =>
+      match senkTief abb a dst rest, senkTief abb b tmp rest with
+      | some pa, some pb => some (pa ++ pb ++ [Befehl.cmpReg64 dst tmp], Bedingung.l)
+      | _, _ => none
+  | .le a b =>
+    match frei with
+    | [] => none
+    | tmp :: rest =>
+      match senkTief abb a dst rest, senkTief abb b tmp rest with
+      | some pa, some pb => some (pa ++ pb ++ [Befehl.cmpReg64 dst tmp], Bedingung.le)
+      | _, _ => none
+  | .eq a b =>
+    match frei with
+    | [] => none
+    | tmp :: rest =>
+      match senkTief abb a dst rest, senkTief abb b tmp rest with
+      | some pa, some pb => some (pa ++ pb ++ [Befehl.cmpReg64 dst tmp], Bedingung.e)
+      | _, _ => none
+  | _ => none
+
+/-- PLANTED REFUSAL: `und`/boolean-and is outside the lowered comparisons. -/
+theorem senkVergleich_verweigert_und {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register) (dst : Register) (frei : List Register) :
+    senkVergleich abb (Expr.und (D := D) (Γ := Γ) (Λ := Λ) .wahr .wahr) dst frei = none := by
+  cases frei <;> rfl
+
+/-- Shape inversion: every successful comparison lowering is `lt`/`le`/`eq`
+    over two DEEP-lowerable operands sharing the register stack, with
+    `cmpReg64` and the matching `Bedingung`. General `τ`, the file-wide
+    non-stuck pattern. -/
+inductive IstVergleich {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register) :
+    ∀ {τ : Ty}, Expr D Γ Λ τ → Register → List Register → List Befehl → Bedingung → Prop where
+  | lt {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+      (dst tmp : Register) (rest : List Register) (pa pb : List Befehl)
+      (ha : IstTief abb a dst rest pa) (hb : IstTief abb b tmp rest pb) :
+      IstVergleich abb (Expr.lt a b) dst (tmp :: rest)
+        (pa ++ pb ++ [Befehl.cmpReg64 dst tmp]) Bedingung.l
+  | le {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+      (dst tmp : Register) (rest : List Register) (pa pb : List Befehl)
+      (ha : IstTief abb a dst rest pa) (hb : IstTief abb b tmp rest pb) :
+      IstVergleich abb (Expr.le a b) dst (tmp :: rest)
+        (pa ++ pb ++ [Befehl.cmpReg64 dst tmp]) Bedingung.le
+  | eq {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+      (dst tmp : Register) (rest : List Register) (pa pb : List Befehl)
+      (ha : IstTief abb a dst rest pa) (hb : IstTief abb b tmp rest pb) :
+      IstVergleich abb (Expr.eq a b) dst (tmp :: rest)
+        (pa ++ pb ++ [Befehl.cmpReg64 dst tmp]) Bedingung.e
+
+/-- Every successful comparison lowering is one of the three `IstVergleich`
+    shapes. Proved over a general `τ` (`e`'s index), closing the ~29
+    unsupported constructors with `simp [senkVergleich]`. -/
+theorem istVergleich_von_senkVergleich {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register) :
+    ∀ {τ : Ty} (e : Expr D Γ Λ τ) (dst : Register) (frei : List Register)
+      (prog : List Befehl) (cond : Bedingung),
+      senkVergleich abb e dst frei = some (prog, cond) →
+      IstVergleich abb e dst frei prog cond
+  | _, .lt a b, dst, frei, prog, cond, h => by
+      cases frei with
+      | nil => simp [senkVergleich] at h
+      | cons tmp rest =>
+        cases h1 : senkTief abb a dst rest with
+        | none => simp [senkVergleich, h1] at h
+        | some pa =>
+          cases h2 : senkTief abb b tmp rest with
+          | none => simp [senkVergleich, h1, h2] at h
+          | some pb =>
+            simp only [senkVergleich, h1, h2] at h
+            have heq := Option.some_inj.mp h.symm
+            injection heq with hprog hcond
+            subst hprog; subst hcond
+            exact .lt a b dst tmp rest pa pb (istTief_von_senkTief abb a dst rest pa h1)
+              (istTief_von_senkTief abb b tmp rest pb h2)
+  | _, .le a b, dst, frei, prog, cond, h => by
+      cases frei with
+      | nil => simp [senkVergleich] at h
+      | cons tmp rest =>
+        cases h1 : senkTief abb a dst rest with
+        | none => simp [senkVergleich, h1] at h
+        | some pa =>
+          cases h2 : senkTief abb b tmp rest with
+          | none => simp [senkVergleich, h1, h2] at h
+          | some pb =>
+            simp only [senkVergleich, h1, h2] at h
+            have heq := Option.some_inj.mp h.symm
+            injection heq with hprog hcond
+            subst hprog; subst hcond
+            exact .le a b dst tmp rest pa pb (istTief_von_senkTief abb a dst rest pa h1)
+              (istTief_von_senkTief abb b tmp rest pb h2)
+  | _, .eq a b, dst, frei, prog, cond, h => by
+      cases frei with
+      | nil => simp [senkVergleich] at h
+      | cons tmp rest =>
+        cases h1 : senkTief abb a dst rest with
+        | none => simp [senkVergleich, h1] at h
+        | some pa =>
+          cases h2 : senkTief abb b tmp rest with
+          | none => simp [senkVergleich, h1, h2] at h
+          | some pb =>
+            simp only [senkVergleich, h1, h2] at h
+            have heq := Option.some_inj.mp h.symm
+            injection heq with hprog hcond
+            subst hprog; subst hcond
+            exact .eq a b dst tmp rest pa pb (istTief_von_senkTief abb a dst rest pa h1)
+              (istTief_von_senkTief abb b tmp rest pb h2)
+  | _, .wahr, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .falsch, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .lit _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .var _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .glob _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .slot _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .durch _ _ _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .ptrOf _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .fnref _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .altGlob _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .altSlot _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .weiter _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .add _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .sub _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .neg _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .mul _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .div _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .rem _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .sdiv _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .srem _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .leseBytes _ _ _ _ _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .band _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .bor _ _ _ _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .bxor _ _ _ _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .shl _ _ _ _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .shr _ _ _ _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .fllt _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .flle _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .und _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .oder _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .nicht _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .none _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .some _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .istSome _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .fall _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .grund _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .forallSlots _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .existsSlots _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+  | _, .reaches _ _ _ _ _ _, _, _, _, _, h => by simp [senkVergleich] at h
+
 end Gabbro.Grammatik.X86
