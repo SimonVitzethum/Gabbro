@@ -303,7 +303,7 @@ Last ledger refresh: **2026-10-02 20:01 UTC**. This is an operational snapshot, 
 | 654 | Derived target work bound for direct source lowering | Merged after review/checks | 655: Merged after review/checks | [report](messung/muse/MUSE-REPORT-654.md) |
 | 656 | Fetched conditional byte-step flag dependency simulation | Merged after review/checks | 657: Merged after review/checks | [report](messung/muse/MUSE-REPORT-656.md) |
 | 658 | Scalar FP final-byte validator admission and MXCSR entry | Merged after review/checks | 659: Merged after review/checks | [report](messung/muse/MUSE-REPORT-658.md) |
-| 660 | Hardware completion: coherent multicore architectural execution | Committed candidate; review/integration pending | 661: scheduled | [task](lanes/660.md) |
+| 660 | Hardware completion: coherent multicore architectural execution | Committed candidate; review/integration pending | 661: Agent working | [task](lanes/660.md) |
 | 662 | Hardware completion: LOCK atomic and fence final-byte execution | Agent working | 663: scheduled | [task](lanes/662.md) |
 | 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Merged after review/checks | [report](messung/muse/MUSE-REPORT-664.md) |
 | 666 | Hardware completion: practical integer width and compact encoding rows | Merged after review/checks | 667: Merged after review/checks | [report](messung/muse/MUSE-REPORT-666.md) |
@@ -321,6 +321,10 @@ Last ledger refresh: **2026-10-02 20:01 UTC**. This is an operational snapshot, 
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Agent working | 693: scheduled | [task](lanes/692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Agent working | 695: scheduled | [task](lanes/694.md) |
+| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Waiting for accepted dependencies | 697: scheduled | [task](lanes/696.md) |
+| 698 | Essential width-selected shifts and rotates | Waiting for accepted dependencies | 699: scheduled | [task](lanes/698.md) |
+| 700 | Essential multiply divide widths and immediate IMUL | Waiting for accepted dependencies | 701: scheduled | [task](lanes/700.md) |
+| 702 | Essential scalar binary32 SSE2 architectural forms | Waiting for accepted dependencies | 703: scheduled | [task](lanes/702.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
