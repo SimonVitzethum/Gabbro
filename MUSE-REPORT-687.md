@@ -5,7 +5,7 @@ Review-only lane. Owns only this report; no source file touched, no live
 control used. Working tree clean except this report (verified by
 `git status --short` before commit).
 
-CANDIDATE: 686 bb8e5470cbb605d56c2a80602b350db5bce67a91
+CANDIDATE: 686 a7b50be3889ccfb97d97c8d446724600eebab81d
 
 VERDICT: ACCEPT
 
@@ -16,7 +16,8 @@ CUTS, which is the correct claim boundary, not a silent closure.
 ## What was reviewed
 
 The exact pinned snapshot in `.tmp/review/author-686/` (SNAPSHOT.json pins
-head `bb8e5470`, base `f65be989`, clean, 3 files), OWNER-TASK.md (full text
+head `a7b50be3` (full: `a7b50be3889ccfb97d97c8d446724600eebab81d`),
+base `f65be989`, clean, 3 files), OWNER-TASK.md (full text
 recovered past the 2000-char preview cut by direct line slicing),
 PATCH.diff, BUILD-EVIDENCE.json, and the candidate module
 `grammatik/Grammatik/X86/VectorIntegerHardwareForms.lean` (2348 lines,
@@ -102,9 +103,41 @@ Ausfuehrung, OverlapRefusal).
 
 ## Last build result line
 
-Author-evidence (BUILD-EVIDENCE.json, final entry): `./lean-bau` green,
-"Build completed successfully (466 jobs)". Own tree: no Lean file changed
-by this lane, so no own build was required; tree clean at `76c45e03`.
+Author-evidence (BUILD-EVIDENCE.json, final entries after the repair
+commit `a7b50be3`): `./lean-probe` 0 errors with unchanged standard
+axioms, then `./lean-bau` green, "Build completed successfully (466
+jobs)". Own tree: no Lean file changed by this lane, so no own build was
+required; tree clean at `76c45e03`.
+
+## Re-review after author repair (new commit `a7b50be3`)
+
+The previous verdict on `bb8e5470` is superseded; this section records the
+independent re-review of the NEW pinned candidate. The repair answers an
+integration-gate name collision (`witKern0` vs new-master
+`ArchitecturalFlags`, absent in this clone) by renaming the whole generic
+witness family `wit*` to lane-specific `iv*` (35 names). Verified on the
+new snapshot:
+
+- Zero leftover `wit`+capital/digit identifiers; English prose intact (the
+  only lowercase `iv` embeddings are ordinary words: deriving, given,
+  derives, survives, missing, privilege, negatives). Each of the 35
+  `iv*` names is defined exactly once; none collides with any `.lean`
+  name in this clone's `grammatik/` tree.
+- All `iv*` occurrences are confined to sections 17 (joint witness) and
+  18 (fetched pin + negatives); architecture sections 1-16 contain zero
+  renamed identifiers, i.e. are untouched. Line count (2349), theorem
+  count (151) and def count (41) identical to the reviewed predecessor.
+- Every previous finding re-checked on the new file: no forbidden
+  tactics; all key theorems present (`intVec_joint_zeuge` still with the
+  `decide`-closed byte-18 change, `vecShlQ_satt_vs_maske`,
+  `vektorLegacy_verfeinert`/`_strikt`, `decodeComboIV_*`,
+  all five `intVec_neg_*`, shared-row agreements, `vecWrite_aufgeteilt`);
+  CUTS block and all 17 `#print axioms` lines intact; PATCH still exactly
+  the 3 owned files.
+- Residual boundary (not a defect): a further new-master collision in a
+  non-witness generic name cannot be ruled out from this clone (the
+  colliding `ArchitecturalFlags` module is absent here); that is the
+  merger's integration gate to confirm, as it did the first time.
 
 ## What remains open (not claimed, correctly)
 
