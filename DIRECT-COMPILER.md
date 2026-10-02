@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 23:30 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 23:31 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -325,7 +325,7 @@ Last ledger refresh: **2026-10-02 23:30 UTC**. This is an operational snapshot, 
 | 698 | Essential width-selected shifts and rotates | Agent working | 699: scheduled | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
-| 704 | Generic port bus and precise architectural IO permissions | Queued for a model slot | 705: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/704.md) |
+| 704 | Generic port bus and precise architectural IO permissions | Agent working | 705: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/704.md) |
 | 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Merged after review/checks | 707: Merged after review/checks | [report](messung/muse/MUSE-REPORT-706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
 | 710 | Optimizer rule library proof and scope review | Committed candidate; review/integration pending | 711: Agent working | [task](lanes/710.md) |
@@ -339,10 +339,12 @@ Last ledger refresh: **2026-10-02 23:30 UTC**. This is an operational snapshot, 
 | 726 | Model checked long-mode page walks and precise access faults | Agent working | 727: scheduled | [task](lanes/726.md) |
 | 728 | Model actual IDT TSS descriptor and entry stack selection | Agent working | 729: scheduled | [task](lanes/728.md) |
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Agent working | 731: scheduled | [task](lanes/730.md) |
-| 732 | Organise exact essential hardware integration and executable coverage | Agent working | 733: scheduled | [task](lanes/732.md) |
+| 732 | Organise exact essential hardware integration and executable coverage | Committed candidate; review/integration pending | 733: scheduled | [task](lanes/732.md) |
 | 734 | Selected control registers and syscall MSR byte effects | Agent working | 735: scheduled | [task](lanes/734.md) |
 | 736 | SSE and selected AVX context save restore effects | Agent working | 737: scheduled | [task](lanes/736.md) |
 | 738 | Derive precise fault ordering across fetched instruction accesses | Agent working | 739: scheduled | [task](lanes/738.md) |
+| 740 | Repair upstream compiler Lean aggregation and scope | Scheduled | 741: scheduled | [task](lanes/740.md) |
+| 742 | Repair upstream compiler Rust panics and mirror fidelity | Scheduled | 743: scheduled | [task](lanes/742.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
