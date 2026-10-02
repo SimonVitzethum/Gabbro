@@ -97,9 +97,9 @@ checks below, done in this tree, apply exactly to the candidate's base.
    and static verification of every reuse above is exhaustive. The
    serial merge gate re-runs the full build before integration.
 
-## CANDIDATE: 658 76640820e62e1daf03a3471af9c5920a3adf623a
+CANDIDATE: 658 76640820e62e1daf03a3471af9c5920a3adf623a
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 Accepted bounded claim: the optional strengthened FP admission
 `valFpEintrittStark` over actual loaded scalar FP bytes (checked
