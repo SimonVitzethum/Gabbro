@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 20:33 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 20:36 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -314,7 +314,7 @@ Last ledger refresh: **2026-10-02 20:33 UTC**. This is an operational snapshot, 
 | 676 | Hardware completion: port IO and device memory profiles | Merged after review/checks | 677: Merged after review/checks | [report](messung/muse/MUSE-REPORT-676.md) |
 | 678 | Organise and audit complete essential hardware-model coverage | Merged after review/checks | 679: Merged after review/checks | [report](messung/muse/MUSE-REPORT-678.md) |
 | 680 | Hardware completion: indirect and compact control byte forms | Merged after review/checks | 681: Merged after review/checks | [report](messung/muse/MUSE-REPORT-680.md) |
-| 682 | Hardware completion: MXCSR control byte execution | Committed candidate; review/integration pending | 683: Committed candidate; review/integration pending | [task](lanes/682.md) |
+| 682 | Hardware completion: MXCSR control byte execution | Merged after review/checks | 683: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-682.md) |
 | 684 | Eliminate hardcoded external project filesystem paths | Agent working | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Agent working | 687: scheduled | [task](lanes/686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Agent working | 689: scheduled | [task](lanes/688.md) |
@@ -809,6 +809,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **663**, Independent exact review of 662, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-663.md). <!-- x86-merged:663 -->
 - 2026-10-02: lane **680**, Hardware completion: indirect and compact control byte forms, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-680.md). <!-- x86-merged:680 -->
 - 2026-10-02: lane **681**, Independent exact review of 680, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-681.md). <!-- x86-merged:681 -->
+- 2026-10-02: lane **682**, Hardware completion: MXCSR control byte execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-682.md). <!-- x86-merged:682 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
