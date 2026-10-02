@@ -241,7 +241,7 @@ Last ledger refresh: **2026-10-02 16:39 UTC**. This is an operational snapshot, 
 | 562 | Connection: Narrow operations byte decoder and execution connection | Merged after review/checks | 580: Merged after review/checks | [report](messung/muse/MUSE-REPORT-562.md) |
 | 563 | Connection: Multiply/divide byte decoder and execution connection | Merged after review/checks | 581: Merged after review/checks | [report](messung/muse/MUSE-REPORT-563.md) |
 | 564 | Connection: Shift operations byte decoder and execution connection | Merged after review/checks | 582: Merged after review/checks | [report](messung/muse/MUSE-REPORT-564.md) |
-| 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Merged after review/checks | 583: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-565.md) |
+| 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Merged after review/checks | 583: Merged after review/checks | [report](messung/muse/MUSE-REPORT-565.md) |
 | 566 | Connection: Conditional forms bytes to accepted control execution | Merged after review/checks | 584: Merged after review/checks | [report](messung/muse/MUSE-REPORT-566.md) |
 | 567 | Connection: Canonical byte-TSO history projection | Merged after review/checks | 585: Merged after review/checks | [report](messung/muse/MUSE-REPORT-567.md) |
 | 568 | Connection: Executed pilot instruction to realised access footprint | Merged after review/checks | 586: Merged after review/checks | [report](messung/muse/MUSE-REPORT-568.md) |
@@ -706,6 +706,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **565**, Connection: Scalar SSE2 bytes to accepted FP execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-565.md). <!-- x86-merged:565 -->
 - 2026-10-02: integration of candidate(s) [565] failed the local proof/build gate after independent review 583; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:583 -->
 - 2026-10-01: checked master `26c58bd4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:26c58bd41b2c6ad413b54c08c646c1313e4b297e -->
+- 2026-10-02: lane **583**, Independent connection review of 565, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-583.md). <!-- x86-merged:583 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
