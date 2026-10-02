@@ -3,8 +3,23 @@
 Lane 583, clone `/home/simon/Dokumente/gabbro-muse/a583`, branch `muse/583` (verified).
 Owns only this report. No source file was changed by this lane.
 
-CANDIDATE: 565 b62e3019de95eed16c79b037ee8723c3a20a54bf
+CANDIDATE: 565 2c935821c0b2b3c0bbd418f9edab41ccca9919a0
 VERDICT: ACCEPT
+
+## Re-review of the report-only follow-up (supersedes the `b62e3019` review)
+
+New pinned commit `2c935821` ("integration-gate failure analysis, no
+module change") touches only `MUSE-REPORT-565.md`: it analyses an
+integration-gate exit-134 (`failed to create thread`) as the known
+apparatus flake and deliberately makes no module change. The Lean
+module in this snapshot is structurally identical to the accepted
+`b62e3019` version (same 710 lines, same declaration names and line
+numbers, `fpXmmCode`/`fpXmmCode_lt` rename in place, 40 axiom
+prints). The previous ACCEPT verdict's basis is therefore unchanged;
+this section records the fresh independent verification of the new
+pinned snapshot. (Cosmetic: the author report still names `b62e3019`
+as "the changed commit" in one sentence; the snapshot of record and
+the reviewed files are `2c935821`.)
 
 ## Re-review after repair (supersedes the previous REPAIR verdict)
 
@@ -118,33 +133,37 @@ Measurable next integration: wire `fpFetchDekodiert` shapes into
 `ValidatorSkeleton` admission, or extend one more form (memory ADDSD
 or UCOMISD) through the same fetch/execute/witness chain.
 
-## Last build results (new snapshot `b62e3019`, current master `26c58bd4`)
+## Last build results (new snapshot `2c935821`, master `26c58bd4`)
 
+- PATCH/file consistency: the `PATCH.diff` module hunk (710 `+` lines)
+  is byte-identical to the extracted candidate file; the
+  `Grammatik.lean` hunk is the single additive import. Merger note:
+  the hunk context anchors the import after `ContractSites` (old base
+  layout); current master has grown past that point, so the import
+  lands at the new tail at merge -- mechanical, not a defect.
 - Name-collision scan over every `grammatik/Grammatik/X86/*.lean`
-  module vs the new candidate: NONE (previously exactly
-  `xmmCode`, `xmmCode_lt` vs `VectorCodec`).
+  module vs the new candidate: NONE.
 - Forbidden-tactic scan of the new file: clean (only comment-word
-  matches for `admit`/`native_decide`; header and CUTS unchanged, no
-  new claims).
+  matches; header and CUTS unchanged, no new claims).
 - `./lean-probe grammatik/Grammatik/X86/ScalarFloatCodec.lean` with
   the new candidate applied byte-identically: `0 error(s), exit 0`;
   40/40 axiom lines within the standard set
   (`propext`/`Classical.choice`/`Quot.sound`/none).
 - `./lean-bau` with the new candidate applied: `Build completed
-  successfully (457 jobs)` (one retry after the known exit-134
-  thread flake under concurrent load; the previous umbrella
-  duplicate-import error is gone).
+  successfully (457 jobs)`, first attempt, no flake this run.
 - `#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel`:
   exactly `[propext, Classical.choice, Quot.sound]`.
+- The author's flake analysis (exit-134 is apparatus load, pure-Lean
+  module spawns no threads, no proof restructuring to chase it) is
+  accurate and matches this lane's own measurements across all three
+  review rounds. No proof change was needed and none was made.
 - Working tree was reverted afterwards; it is clean except this
-  report. Previous finding for the old snapshot (umbrella `exit 1`
-  with `environment already contains '...xmmCode.match_1'`) is
-  superseded: the exact failure no longer reproduces.
+  report.
 
 ## Open / not claimed
 
 No hardware correspondence (stated contract only); no TSO/GX, validator
 or source-bridge consumption; REX/high registers and further forms
 open per the file CUTS. Nothing in the owner task text was found to
-be wrong; the task's byte-connection requirement is met subject to
-the rename repair.
+be wrong; the task's byte-connection requirement is met by the
+pinned candidate.
