@@ -488,6 +488,153 @@ theorem hwVec_ohne_os_verweigert (m : HwMaschine) (c : Nat)
   unfold vecEintritt
   rw [hos]
 
+/-! ## 8. Joint witness: two cores, fetched bytes, buffered store.
+
+  Core 0 fetches two register-only instructions from ACTUAL
+  executable memory (narrow `mov32rr`, then scalar `movsdRR`);
+  afterwards core 0 issues a buffered byte store that core 1 first
+  observes as absent (no foreign forwarding in TSO) and, after the
+  drain, as present in shared memory. Core 1 starts on non-executable
+  memory and refuses. Every claim below is a closed decidable
+  observation (`decide`/`rfl`); no machine equality is ever decided. -/
+
+/-- Witness image: narrow move (3 bytes) then scalar FP move (4). -/
+def hwWitBild : List Byte :=
+  encodeNarrow (.mov32rr .rax .rcx) ++ fpEncodeMovsdRR .xmm0 .xmm1
+
+/-- Witness bytes: the image at 4096, zeroes elsewhere. -/
+def hwWitBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match hwWitBild[a.toNat - 4096]? with
+    | some b => b
+    | none => BitVec.ofNat 8 0
+
+/-- Witness code permission: exactly the 7 image bytes. -/
+def hwWitCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 7)
+
+/-- Witness data permission: eight bytes at 8192. -/
+def hwWitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 8)
+
+/-- Witness shared memory: code is execute-only, data read/write. -/
+def hwWitMem : Speicher :=
+  { bytes := hwWitBytes, lesbar := hwWitDaten,
+    schreibbar := hwWitDaten, ausfuehrbar := hwWitCode }
+
+/-- Witness core-0 registers: values in rcx, zero in rax. -/
+def hwWitReg0 : Register → Wort := fun q =>
+  if q = Register.rcx then BitVec.ofNat 64 9
+  else if q = Register.rax then BitVec.ofNat 64 5
+  else if q = Register.rsp then BitVec.ofNat 64 8704
+  else BitVec.ofNat 64 0
+
+/-- Witness core-0 XMM: the value as low double-word in xmm1. -/
+def hwWitXmm0 : XmmDatei := fun q =>
+  if q = .xmm1 then vecJoin (BitVec.ofNat 64 7) (BitVec.ofNat 64 0)
+  else (BitVec.ofNat 128 0)
+
+/-- Witness core data: core 0 runs at 4096, core 1 idles on the
+    (non-executable) data page. -/
+def hwWitKern : Nat → HwKern
+  | 0 => ⟨hwWitReg0, zeugeFlags, BitVec.ofNat 64 4096, hwWitXmm0,
+      kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon with OS vector state. -/
+def hwWitStart : HwMaschine :=
+  ⟨hwWitMem, hwWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem hwWitStart_wf : HwWf hwWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Read core RIP out of a register outcome. -/
+def hwRipOut (o : HwRegAusgang) (c : Nat) : Option Wort :=
+  match o with
+  | .weiter m => some (m.kerne c).rip
+  | _ => none
+
+/-- Read a core register out of a register outcome. -/
+def hwRegOut (o : HwRegAusgang) (c : Nat) (q : Register) :
+    Option Wort :=
+  match o with
+  | .weiter m => some ((m.kerne c).register q)
+  | _ => none
+
+/-- Read an XMM low double-word out of a register outcome. -/
+def hwXmmTiefOut (o : HwRegAusgang) (c : Nat) (q : XmmReg) :
+    Option Wort :=
+  match o with
+  | .weiter m => some (xmmTief (m.kerne c).xmm q)
+  | _ => none
+
+/-- Read a shared-memory byte out of a register outcome. -/
+def hwMemOut (o : HwRegAusgang) (a : Adresse) : Option Byte :=
+  match o with
+  | .weiter m => some (m.mem.bytes a)
+  | _ => none
+
+/-- Read a buffer length out of a register outcome. -/
+def hwBufOut (o : HwRegAusgang) (c : Nat) : Option Nat :=
+  match o with
+  | .weiter m => some (m.puffer c).length
+  | _ => none
+
+/-- First fetched step on core 0. -/
+def hwWitO1 : HwRegAusgang := hwByteschrittReg hwWitStart 0
+
+/-- Second fetched step on core 0 (over the first successor). -/
+def hwWitO2 : HwRegAusgang :=
+  match hwWitO1 with
+  | .weiter m1 => hwByteschrittReg m1 0
+  | x => x
+
+/-- Step one advances RIP past the 3-byte narrow move. -/
+theorem hwWit_o1_rip :
+    hwRipOut hwWitO1 0 = some (BitVec.ofNat 64 4099) := by
+  decide
+
+/-- Step one moves the 32-bit value into rax. -/
+theorem hwWit_o1_rax :
+    hwRegOut hwWitO1 0 .rax = some (BitVec.ofNat 64 9) := by
+  decide
+
+/-- Step one leaves shared memory alone. -/
+theorem hwWit_o1_mem_still :
+    hwMemOut hwWitO1 (BitVec.ofNat 64 8192) =
+      some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Step one issues no buffer entry. -/
+theorem hwWit_o1_puffer_leer : hwBufOut hwWitO1 0 = some 0 := by
+  decide
+
+/-- Step two advances RIP past the 4-byte scalar move. -/
+theorem hwWit_o2_rip :
+    hwRipOut hwWitO2 0 = some (BitVec.ofNat 64 4103) := by
+  decide
+
+/-- Step two lands the low double-word in xmm0. -/
+theorem hwWit_o2_xmm :
+    hwXmmTiefOut hwWitO2 0 .xmm0 = some (BitVec.ofNat 64 7) := by
+  decide
+
+/-- Step two leaves shared memory alone. -/
+theorem hwWit_o2_mem_still :
+    hwMemOut hwWitO2 (BitVec.ofNat 64 8192) =
+      some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Core 1 refuses: its RIP points at non-executable memory. -/
+theorem hwWit_kern1_verweigert :
+    hwByteschrittReg hwWitStart 1 = .verweigert := by
+  rfl
+
 /- CUTS:
    Skeleton only: data vocabulary and projections so far.
    NOT proved: well-formedness, steps, embeddings, witnesses, adapters.
