@@ -1228,4 +1228,213 @@ theorem wit_joint_zeuge :
   ⟨wit_s3_ram, wit_anfang_ram, wit_s3_geraet, wit_s1_geraet_noch_null,
     wit_s3_log, wit_s3_rip, wit_s2_reg⟩
 
+/-! ## 6. Planted refusals and joint inhabitants. -/
+
+/-- WRONG KIND: the same fetched store with an empty UC profile refuses:
+    the device bytes are WB RAM without write permission there, so the
+    delegated RAM path fails instead of touching a device. -/
+theorem wit_falsch_art_verweigert :
+    witVerweigert (mmioByteschritt { witM0 with profil := [] } basisHw
+      basisBereit) = true := by
+  decide
+
+/-- FP witness program: an FP store to the device window. -/
+def witFpBild : List Byte :=
+  fpEncodeMovsdSpeichere .rbx .xmm0 (BitVec.ofNat 32 0)
+
+/-- FP code bytes: the FP image at 4096, zeroes elsewhere. -/
+def witFpBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match witFpBild[a.toNat - 4096]? with
+    | some b => b
+    | none => BitVec.ofNat 8 0
+
+/-- FP code permission: exactly the 8 FP image bytes. -/
+def witFpCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 8)
+
+/-- FP witness memory: FP code plus the shared data cell. -/
+def witFpSpeicher : Speicher :=
+  { bytes := witFpBytes, lesbar := witDaten,
+    schreibbar := witDaten, ausfuehrbar := witFpCode }
+
+/-- FP witness registers: the device address in rbx. -/
+def witFpReg : Register → Wort :=
+  fun q =>
+    if q = Register.rbx then BitVec.ofNat 64 65536
+    else if q = Register.rsp then BitVec.ofNat 64 8704
+    else BitVec.ofNat 64 0
+
+/-- FP witness core: FP code at 4096. -/
+def witFpKern : Zustand :=
+  { register := witFpReg, flags := zeugeFlags, rip := BitVec.ofNat 64 4096, speicher := witFpSpeicher }
+
+/-- FP witness machine: same device, profile and control state. -/
+def witFpM0 : MmioMaschine :=
+  { kern := ⟨witFpKern, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+    pending := []
+    geraet := geraetAnfang
+    ausstehend := []
+    ucLog := []
+    profil := witProfil }
+
+/-- FP-TO-UC REFUSAL: the FP store to the device window refuses before
+    any RAM or device effect (no silent RAM access, no guessed SIMD
+    device semantic, per the Table 14-2 NOTE). -/
+theorem wit_fp_uc_verweigert :
+    witVerweigert (mmioByteschritt witFpM0 basisHw basisBereit) = true := by
+  decide
+
+/-- Machine with RIP past the executable window. -/
+def witM0HinterBild : MmioMaschine :=
+  { witM0 with kern := { witM0.kern with kern :=
+    { witM0.kern.kern with rip := natAdresse 4117 } } }
+
+/-- PAST-IMAGE REFUSAL: past the executable window the fetch refuses. -/
+theorem wit_nachBild_verweigert :
+    witVerweigert (mmioByteschritt witM0HinterBild basisHw basisBereit) =
+      true := by
+  decide
+
+/-- WIDTH REFUSAL: a 2-byte access straddling the window edge refuses. -/
+theorem wit_fenster_verweigert :
+    ucStoreZugriff witM0 basisHw basisBereit Breite.b16
+      (natAdresse 65543) (BitVec.ofNat 64 7) = none := by
+  apply ucStore_verweigert_ohne_fenster
+  decide
+
+/-- WRAP REFUSAL: an 8-byte access wrapping past 2^64 refuses. -/
+theorem wit_umbruch_verweigert :
+    ucStoreZugriff witM0 basisHw basisBereit Breite.b64
+      (natAdresse (2 ^ 64 - 4)) (BitVec.ofNat 64 7) = none := by
+  apply ucStore_verweigert_ohne_fenster
+  decide
+
+/-- PROFILE REFUSAL: without UC membership the store refuses. -/
+theorem wit_profil_verweigert :
+    ucStoreZugriff { witM0 with profil := [] } basisHw basisBereit
+      Breite.b64 witDevAddr (BitVec.ofNat 64 7) = none := by
+  apply ucStore_verweigert_ohne_profil
+  decide
+
+/-- FEATURE REFUSAL: without silicon the store refuses. -/
+theorem wit_merkmal_verweigert :
+    ucStoreZugriff witM0 ⟨false, true, true, true⟩ basisBereit Breite.b64
+      witDevAddr (BitVec.ofNat 64 7) = none := by
+  apply ucStore_verweigert_ohne_merkmal
+  decide
+
+/-- Posted machine: one 8-byte write already retired at the window. -/
+def witM0Posted : MmioMaschine :=
+  { witM0 with ausstehend :=
+    [⟨witDevAddr, Breite.b64, BitVec.ofNat 64 42⟩] }
+
+/-- ORDERING REFUSAL: a load overlapping the posted write refuses until
+    the bus completes it (no silent forwarding). -/
+theorem wit_ueberlapp_verweigert :
+    ucLoadZugriff witM0Posted basisHw basisBereit Breite.b64 .rcx
+      witDevAddr = none := by
+  apply ucLoad_verweigert_bei_ausstehend
+  decide
+
+/-- BYTE FOOTPRINTS: the device window and the RAM cell are disjoint
+    8-byte footprints (per-byte events, never one atomic occurrence). -/
+theorem wit_fuss_disjunkt : Disjunkt witDevAddr (natAdresse 8192) := by
+  apply disjunkt_von_intervallen
+  · unfold OhneUmbruch
+    decide
+  · unfold OhneUmbruch
+    decide
+  · right
+    decide
+
+/-- INHABITANT of the bypass: a jointly instantiated retired UC store
+    that posts exactly one write and changes no device byte. -/
+theorem ucStore_bypass_zeuge :
+    ∃ (m m' : MmioMaschine),
+      ucStoreZugriff m basisHw basisBereit Breite.b64 witDevAddr
+          (BitVec.ofNat 64 42) = some m' ∧
+        m'.ausstehend = m.ausstehend ++
+          [⟨witDevAddr, Breite.b64, BitVec.ofNat 64 42⟩] ∧
+        m'.geraet.daten = m.geraet.daten := by
+  have hz : breiteZugelassen basisHw basisBereit Breite.b64 = true := by
+    decide
+  have hu : istUc witM0.profil witDevAddr 8 = true := by
+    decide
+  have hfw : imFenster witDevAddr 8 = true := by
+    decide
+  have hacc := ucStoreZugriff_erfolg witM0 basisHw basisBereit Breite.b64
+    witDevAddr (BitVec.ofNat 64 42) hz hu hfw
+  have hb := ucStore_bypass witM0 basisHw basisBereit Breite.b64 witDevAddr
+    (BitVec.ofNat 64 42) _ hacc
+  obtain ⟨_, hdat, _, _, _, haus⟩ := hb
+  exact ⟨witM0, _, hacc, haus, hdat⟩
+
+/-- INHABITANT of FIFO completion: a jointly instantiated bus step that
+    observably changes the device byte and drains the queue. -/
+theorem busFortschritt_fifo_zeuge :
+    ∃ (m : MmioMaschine),
+      (busFortschritt m).map (fun m' => m'.ausstehend.length) =
+        some 0 ∧
+      m.ausstehend.length = 1 ∧
+      (busFortschritt m).map
+        (fun m' => m'.geraet.daten ⟨0, by decide⟩) =
+        some (natByte 42) := by
+  refine ⟨witM0Posted, by decide, rfl, by decide⟩
+
+/- CUTS:
+    Proved here: selected UC MMIO over one explicit 8-byte window --
+    UC membership by software-established profile (WB default), the
+    generic device response (width-indexed LE with an access counter),
+    posted UC stores that bypass the WB buffer, FIFO bus completion,
+    strong UC-UC program order via the event log, refusal of loads over
+    overlapping posted writes, FP-memory-to-UC refusal, and a reached
+    fetched write/bus-complete/read/RAM-store run with joint witness
+    and planted refusals. All fetched code runs through the accepted
+    unified decoder and step; no semantics is redefined.
+    NOT proved here, and not claimed:
+    - No WC/WT/WP/NT/DMA: only UC membership and the WB default exist
+      as profile kinds; write-combining buffers, write-through/protect
+      caching, non-temporal hints and DMA engines have no form here and
+      stay refused/OPEN.
+    - Fetched coverage is exactly pilot 64-bit load/store plus narrow
+      32-bit store; 8/16-bit fetched forms and 32-bit fetched loads have
+      no accepted decoder rows and refuse (access-level widths exist for
+      all four widths, but unfetched widths have no byte path here).
+    - No completion liveness, fairness, timing or retry bounds: the bus
+      step exists but progress, CAS-style retry and cycle costs are OPEN.
+    - No interrupts, faults beyond explicit refusal, LOCK/MFENCE/SFENCE
+      integration, or UC code-fetch gating (§14.3.3 limits are noted but
+      fetch permission alone does not distinguish UC code).
+    - Device semantics beyond the window bytes plus counter (e.g.
+      status-clear-on-read, multi-register banks, mirrors) refine this
+      interface; they are not modelled.
+    - No source, checker, Spec/goal, emitter or optimizer correspondence;
+      no complete physical-vendor proof; AMD provenance absent.
+-/
+
+#print axioms istUc_mem
+#print axioms breiteZugelassen_hat
+#print axioms imFenster_off
+#print axioms geraetLiest_zaehlt
+#print axioms geraetSchreibt_zaehlt
+#print axioms ucStoreZugriff_erfolg
+#print axioms ucStore_bypass
+#print axioms ucLoadZugriff_erfolg
+#print axioms ucLoad_rahmen
+#print axioms busFortschritt_fifo
+#print axioms fpUcBetroffen_speichere
+#print axioms mmioByteschritt_ohne_fetch
+#print axioms mmioByteschritt_uc_laden
+#print axioms mmioByteschritt_uc_speichern
+#print axioms mmioByteschritt_uc_speichern32
+#print axioms mmioByteschritt_delegiert_laden
+#print axioms mmioByteschritt_fp_uc_verweigert
+#print axioms mmio_uc_speichern_fakten
+#print axioms mmio_uc_laden_fakten
+#print axioms wit_joint_zeuge
+#print axioms ucStore_bypass_zeuge
+#print axioms busFortschritt_fifo_zeuge
+
 end Gabbro.Grammatik.X86
