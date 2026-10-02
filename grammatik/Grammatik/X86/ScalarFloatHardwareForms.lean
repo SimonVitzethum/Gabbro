@@ -1330,9 +1330,874 @@ theorem fpHwW1_div_speichert :
   exact ⟨fpHwW1T1, fpHwW1T2, fpHwW1_schritt1, fpHwW1_schritt2,
     fpHwW1_liest, fpHwW1_aendert, fpHwW1Fp⟩
 
-/- CUTS: skeleton plus encoders; decoder, execution and witnesses open.
+/-! ## 9. Joint witness W2: fetched conversion to store.
+
+  A fetched REX.W CVTSI2SD (`rax = 42` to `42.0`, `cvtsiErg_42`) into
+  a fetched REX MOVSD store: the 64-bit integer source the REX.W row
+  selects is exactly what the accepted wrapper converts whole. -/
+
+/-- Witness image: REX.W CVTSI2SD (5 bytes) then REX MOVSD store. -/
+def fpHwW2Bild : List Byte :=
+  fpHwEncodeCvtsi .xmm0 .rax ++ fpHwEncodeMovsdSpeichere .rbx .xmm0 0
+
+/-- Witness memory: the image at 4096 with execute permission exactly
+    on those fourteen bytes; data access stays fully open. -/
+def fpHwW2Speicher : Speicher :=
+  { zeugenSpeicher with bytes := fun a => if a.toNat - 4096 < fpHwW2Bild.length then fpHwW2Bild.getD (a.toNat - 4096) 0 else zeugenSpeicher.bytes a, ausfuehrbar := fun a => decide (4096 ≤ a.toNat ∧ a.toNat < 4110) }
+
+/-- Witness XMM file: all `+0.0` (the conversion overwrites `xmm0`). -/
+def fpHwW2Xmm : XmmDatei := fun _ => vecJoin 0 0
+
+/-- Witness core: `rax` holds 42, `rbx` points at 8192. -/
+def fpHwW2Kern : Zustand :=
+  { register := fun q => if q = Register.rax then BitVec.ofNat 64 42 else if q = Register.rbx then BitVec.ofNat 64 8192 else BitVec.ofNat 64 0, flags := ⟨false, true, some false, false, false, false⟩, rip := BitVec.ofNat 64 4096, speicher := fpHwW2Speicher }
+
+/-- Witness extended state: reset FP control word. -/
+def fpHwW2T : FpZustand := ⟨fpHwW2Kern, fpHwW2Xmm, kontextReset⟩
+
+/-- The witness `rax` holds 42. -/
+theorem fpHwW2Rax : fpHwW2T.kern.register .rax = 42 := by
+  decide
+
+/-- The witness store address: `rbx + 0` is 8192. -/
+theorem fpHwW2EffAddr :
+    effAddr fpHwW2T.kern Register.rbx 0 = BitVec.ofNat 64 8192 := by
+  decide
+
+/-- Admitted profile on the witness state. -/
+theorem fpHwW2Fp : fpEintritt fpHwW2T.fp = true := by
+  decide
+
+/-- The fetch window holds exactly the image. -/
+theorem fpHwW2Geholt : fpHwGeholt fpHwW2T = fpHwW2Bild := by
+  decide
+
+/-- The five conversion bytes carry execute permission. -/
+theorem fpHwW2Perm5 :
+    ausfuehrbarN fpHwW2T.kern.speicher fpHwW2T.kern.rip 5 = true := by
+  decide
+
+/-- The image is fourteen bytes long. -/
+theorem fpHwW2Bild_laenge : fpHwW2Bild.length = 14 := by
+  decide
+
+/-- Fetch from the actual image yields the conversion form. -/
+theorem fpHwW2_fetch1 :
+    fpHwFetchDekodiert fpHwW2T =
+      some (⟨.cvtsi2sd .xmm0 .rax, 5⟩,
+        fpHwEncodeMovsdSpeichere .rbx .xmm0 0) := by
+  have hbytes : fpHwGeholt fpHwW2T =
+      fpHwEncodeCvtsi .xmm0 .rax ++
+        fpHwEncodeMovsdSpeichere .rbx .xmm0 0 := by
+    simp only [fpHwW2Geholt, fpHwW2Bild]
+  have hrt := fpHwRoundtrip_cvtsi .xmm0 .rax
+    (fpHwEncodeMovsdSpeichere .rbx .xmm0 0)
+  have hlen : (fpHwEncodeCvtsi .xmm0 .rax).length = 5 :=
+    fpHwLen_cvtsi _ _
+  rw [hlen] at hrt
+  have hdec : fpHwDecode (fpHwGeholt fpHwW2T) =
+      some (⟨.cvtsi2sd .xmm0 .rax, 5⟩,
+        fpHwEncodeMovsdSpeichere .rbx .xmm0 0) := by
+    rw [hbytes]
+    exact hrt
+  have hlenBild : (fpHwGeholt fpHwW2T).length = 14 := by
+    rw [fpHwW2Geholt, fpHwW2Bild_laenge]
+  have hstore : (fpHwEncodeMovsdSpeichere .rbx .xmm0 0).length = 9 := by
+    rfl
+  have h5 : laengeOk 5 = true := by decide
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlenBild, hstore, h5, fpHwW2Perm5]
+  decide
+
+/-- The conversion gate is open on the CVTSI2SD form. -/
+theorem fpHwW2Gate1 :
+    fpHwCvttZugelassen (.cvtsi2sd .xmm0 .rax) fpHwW2T = true := by
+  rfl
+
+/-- Witness state after the conversion: `xmm0` holds `42.0`. -/
+def fpHwW2T1 : FpZustand :=
+  { fpHwW2T with kern := { fpHwW2T.kern with rip := ripNach fpHwW2T.kern.rip 5 }, xmm := xmmSchreibeTief fpHwW2T.xmm XmmReg.xmm0 0x4045000000000000 }
+
+/-- Witness memory after the store: `42.0` at 8192. -/
+def fpHwW2SpeicherNach : Speicher :=
+  { fpHwW2Speicher with bytes := writeBytes fpHwW2Speicher (BitVec.ofNat 64 8192) 0x4045000000000000 }
+
+/-- Witness state after the store. -/
+def fpHwW2T2 : FpZustand :=
+  { fpHwW2T1 with kern := { fpHwW2T1.kern with speicher := fpHwW2SpeicherNach, rip := ripNach fpHwW2T1.kern.rip 9 } }
+
+/-- First reached byte-step: actual conversion bytes compute `42.0`. -/
+theorem fpHwW2_schritt1 :
+    fpHwByteschritt fpHwW2T = .weiter fpHwW2T1 := by
+  unfold fpHwByteschritt
+  rw [fpHwW2_fetch1]
+  simp only
+  rw [fpHwW2Gate1]
+  simp only
+  have h5 : laengeOk 5 = true := by decide
+  have hs := fpSchritt_cvtsi2sd ⟨.cvtsi2sd .xmm0 .rax, 5⟩ fpHwW2T
+    .xmm0 .rax h5 fpHwW2Fp rfl
+  rw [fpHwW2Rax, cvtsiErg_42] at hs
+  simp only [hs, fpHwW2T1, if_true]
+
+/-- After the conversion, `xmm0` holds `42.0`. -/
+theorem fpHwW2T1_tief0 :
+    xmmTief fpHwW2T1.xmm XmmReg.xmm0 = 0x4045000000000000 := by
+  decide
+
+/-- The second fetch window holds exactly the store bytes. -/
+theorem fpHwW2Geholt2 :
+    fpHwGeholt fpHwW2T1 = fpHwEncodeMovsdSpeichere .rbx .xmm0 0 := by
+  decide
+
+/-- The nine store bytes carry execute permission. -/
+theorem fpHwW2Perm9 :
+    ausfuehrbarN fpHwW2T1.kern.speicher fpHwW2T1.kern.rip 9 = true := by
+  decide
+
+/-- Fetch of the second step yields the store form. -/
+theorem fpHwW2_fetch2 :
+    fpHwFetchDekodiert fpHwW2T1 =
+      some (⟨.movsdSpeichere .rbx .xmm0 0, 9⟩, []) := by
+  have hrt := fpHwRoundtrip_movsdSpeichere .rbx .xmm0 0 []
+  have hstore : (fpHwEncodeMovsdSpeichere .rbx .xmm0 0).length = 9 := by
+    rfl
+  rw [hstore] at hrt
+  have hdec : fpHwDecode (fpHwGeholt fpHwW2T1) =
+      some (⟨.movsdSpeichere .rbx .xmm0 0, 9⟩, []) := by
+    rw [fpHwW2Geholt2]
+    simp only [List.append_nil] at hrt ⊢
+    exact hrt
+  have hlen : (fpHwGeholt fpHwW2T1).length = 9 := by
+    rw [fpHwW2Geholt2, hstore]
+  have h9 : laengeOk 9 = true := by decide
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlen, h9, fpHwW2Perm9]
+  decide
+
+/-- The store address is still 8192 after the conversion. -/
+theorem fpHwW2T1_effAddr :
+    effAddr fpHwW2T1.kern Register.rbx 0 = BitVec.ofNat 64 8192 := by
+  decide
+
+/-- The store goes through: `42.0` lands at 8192. -/
+theorem fpHwW2_schreib :
+    write64 fpHwW2T1.kern.speicher (effAddr fpHwW2T1.kern Register.rbx 0)
+      (xmmTief fpHwW2T1.xmm XmmReg.xmm0) = some fpHwW2SpeicherNach := by
+  rw [fpHwW2T1_effAddr, fpHwW2T1_tief0]
+  have hc : schreibbar8 fpHwW2Speicher (BitVec.ofNat 64 8192) = true := by
+    decide
+  have hmem : fpHwW2T1.kern.speicher = fpHwW2Speicher := rfl
+  rw [hmem]
+  unfold write64
+  rw [if_pos hc, fpHwW2SpeicherNach]
+
+/-- The conversion gate is open on the store form. -/
+theorem fpHwW2Gate2 :
+    fpHwCvttZugelassen (.movsdSpeichere .rbx .xmm0 0) fpHwW2T1 = true := by
+  rfl
+
+/-- Second reached byte-step: actual store bytes write `xmm0`. -/
+theorem fpHwW2_schritt2 :
+    fpHwByteschritt fpHwW2T1 = .weiter fpHwW2T2 := by
+  unfold fpHwByteschritt
+  rw [fpHwW2_fetch2]
+  simp only
+  rw [fpHwW2Gate2]
+  simp only
+  have h9 : laengeOk 9 = true := by decide
+  have hs := fpSchritt_movsdSpeichere_erfolg
+    ⟨.movsdSpeichere .rbx .xmm0 0, 9⟩ fpHwW2T1
+    .rbx .xmm0 0 fpHwW2SpeicherNach
+    h9 fpHwW2Fp rfl fpHwW2_schreib
+  simp only [hs, fpHwW2T2, if_true]
+
+/-- The stored word reads back: `42.0` at 8192. -/
+theorem fpHwW2_liest :
+    read64 fpHwW2T2.kern.speicher (BitVec.ofNat 64 8192) =
+      some 0x4045000000000000 := by
+  have hrd : lesbar8 fpHwW2Speicher (BitVec.ofNat 64 8192) = true := by
+    decide
+  have hmem : fpHwW2T2.kern.speicher = fpHwW2SpeicherNach := rfl
+  rw [hmem]
+  exact read64_nach_write64 _ _ _ _ fpHwW2_schreib hrd
+
+/-- The run observably changed memory (top footprint byte). -/
+theorem fpHwW2_aendert :
+    fpHwW2T.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ≠
+      fpHwW2T2.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) := by
+  decide
+
+/-- Joint witness W2: fetched REX.W conversion then store -- reached,
+    read back, with a real memory change. -/
+theorem fpHwW2_cvtsi_speichert :
+    ∃ (t' t'' : FpZustand),
+      fpHwByteschritt fpHwW2T = .weiter t' ∧
+      fpHwByteschritt t' = .weiter t'' ∧
+      read64 t''.kern.speicher (BitVec.ofNat 64 8192) =
+        some 0x4045000000000000 ∧
+      fpHwW2T.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ≠
+        t''.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ∧
+      fpEintritt fpHwW2T.fp = true := by
+  exact ⟨fpHwW2T1, fpHwW2T2, fpHwW2_schritt1, fpHwW2_schritt2,
+    fpHwW2_liest, fpHwW2_aendert, fpHwW2Fp⟩
+
+/-! ## 10. Joint witness W3: truncation on the domain, refusal off it.
+
+  `42.0` converts to `42` in `rax` through fetched REX.W bytes; the
+  same bytes with `+∞` in the source refuse at the §5 gate, since
+  outside the domain the accepted wrapper and silicon disagree
+  (0 versus the indefinite integer, Vol.2A 3-253). -/
+
+/-- Witness image: REX.W CVTTSD2SI (5 bytes). -/
+def fpHwW3Bild : List Byte := fpHwEncodeCvtt .rax .xmm0
+
+/-- Witness memory: the image at 4096 with execute permission exactly
+    on those five bytes. -/
+def fpHwW3Speicher : Speicher :=
+  { zeugenSpeicher with bytes := fun a => if a.toNat - 4096 < fpHwW3Bild.length then fpHwW3Bild.getD (a.toNat - 4096) 0 else zeugenSpeicher.bytes a, ausfuehrbar := fun a => decide (4096 ≤ a.toNat ∧ a.toNat < 4101) }
+
+/-- Witness XMM file: `xmm0` holds `42.0`. -/
+def fpHwW3Xmm : XmmDatei :=
+  fun q => if q = XmmReg.xmm0 then vecJoin 0x4045000000000000 0
+    else vecJoin 0 0
+
+/-- Witness core: RIP at the image. -/
+def fpHwW3Kern : Zustand :=
+  { register := fun _ => BitVec.ofNat 64 0, flags := ⟨false, true, some false, false, false, false⟩, rip := BitVec.ofNat 64 4096, speicher := fpHwW3Speicher }
+
+/-- Witness extended state: reset FP control word. -/
+def fpHwW3T : FpZustand := ⟨fpHwW3Kern, fpHwW3Xmm, kontextReset⟩
+
+/-- The witness `xmm0` holds `42.0`. -/
+theorem fpHwW3Tief0 :
+    xmmTief fpHwW3T.xmm XmmReg.xmm0 = 0x4045000000000000 := by
+  decide
+
+/-- Admitted profile on the witness state. -/
+theorem fpHwW3Fp : fpEintritt fpHwW3T.fp = true := by
+  decide
+
+/-- The fetch window holds exactly the image. -/
+theorem fpHwW3Geholt : fpHwGeholt fpHwW3T = fpHwW3Bild := by
+  decide
+
+/-- The five conversion bytes carry execute permission. -/
+theorem fpHwW3Perm5 :
+    ausfuehrbarN fpHwW3T.kern.speicher fpHwW3T.kern.rip 5 = true := by
+  decide
+
+/-- Fetch yields the truncation form. -/
+theorem fpHwW3_fetch :
+    fpHwFetchDekodiert fpHwW3T =
+      some (⟨.cvttsd2si .rax .xmm0, 5⟩, []) := by
+  have hbytes : fpHwGeholt fpHwW3T = fpHwEncodeCvtt .rax .xmm0 ++ [] := by
+    simp only [fpHwW3Geholt, fpHwW3Bild, List.append_nil]
+  have hrt := fpHwRoundtrip_cvtt .rax .xmm0 []
+  have hlen : (fpHwEncodeCvtt .rax .xmm0).length = 5 :=
+    fpHwLen_cvtt _ _
+  rw [hlen] at hrt
+  have hdec : fpHwDecode (fpHwGeholt fpHwW3T) =
+      some (⟨.cvttsd2si .rax .xmm0, 5⟩, []) := by
+    rw [hbytes]
+    exact hrt
+  have hlenBild : (fpHwGeholt fpHwW3T).length = 5 := by
+    rw [fpHwW3Geholt]
+    have hb : fpHwW3Bild.length = 5 := by decide
+    exact hb
+  have h5 : laengeOk 5 = true := by decide
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlenBild, h5, fpHwW3Perm5]
+  decide
+
+/-- The conversion gate is open on `42.0`. -/
+theorem fpHwW3Gate :
+    fpHwCvttZugelassen (.cvttsd2si .rax .xmm0) fpHwW3T = true := by
+  have h0 := fpHwW3Tief0
+  simp only [fpHwCvttZugelassen] at h0 ⊢
+  rw [h0, cvttHwGueltig_42]
+
+/-- The wrapper truncates `42.0` to `42`. -/
+theorem fpHwW3_paket : cvttPaket 0x4045000000000000 = 42 := by
+  decide
+
+/-- Wrapping `42` as a word is the identity. -/
+theorem fpHwW3_wort42 : intWort 42 = BitVec.ofNat 64 42 := by
+  decide
+
+/-- Witness state after the truncation: `rax` holds `42`. -/
+def fpHwW3T1 : FpZustand :=
+  { fpHwW3T with kern := { fpHwW3T.kern with register := regSet fpHwW3T.kern.register .rax (BitVec.ofNat 64 42), rip := ripNach fpHwW3T.kern.rip 5 } }
+
+/-- Reached byte-step: actual truncation bytes write `42` to `rax`. -/
+theorem fpHwW3_schritt :
+    fpHwByteschritt fpHwW3T = .weiter fpHwW3T1 := by
+  unfold fpHwByteschritt
+  rw [fpHwW3_fetch]
+  simp only
+  rw [fpHwW3Gate]
+  simp only
+  have h5 : laengeOk 5 = true := by decide
+  have hs := fpSchritt_cvttsd2si ⟨.cvttsd2si .rax .xmm0, 5⟩ fpHwW3T
+    .rax .xmm0 h5 fpHwW3Fp rfl
+  rw [fpHwW3Tief0, fpHwW3_paket, fpHwW3_wort42] at hs
+  simp only [hs, fpHwW3T1, if_true]
+
+/-- After the truncation, `rax` holds `42`. -/
+theorem fpHwW3T1_rax : fpHwW3T1.kern.register .rax = BitVec.ofNat 64 42 := by
+  have h : (regSet fpHwW3T.kern.register .rax (BitVec.ofNat 64 42)) .rax =
+      BitVec.ofNat 64 42 :=
+    regSet_gleich _ _ _
+  have heq : fpHwW3T1.kern.register =
+      regSet fpHwW3T.kern.register .rax (BitVec.ofNat 64 42) := rfl
+  rw [heq]
+  exact h
+
+/-- Joint witness W3 (valid side): fetched truncation runs on the
+    domain and lands `42` in `rax`. -/
+theorem fpHwW3_cvtt_gueltig :
+    ∃ (t' : FpZustand),
+      fpHwByteschritt fpHwW3T = .weiter t' ∧
+      t'.kern.register .rax = BitVec.ofNat 64 42 ∧
+      fpEintritt fpHwW3T.fp = true := by
+  exact ⟨fpHwW3T1, fpHwW3_schritt, fpHwW3T1_rax, fpHwW3Fp⟩
+
+/-- Refused XMM file: `xmm0` holds `+∞`. -/
+def fpHwW3BadXmm : XmmDatei :=
+  fun q => if q = XmmReg.xmm0 then vecJoin 0x7FF0000000000000 0
+    else vecJoin 0 0
+
+/-- Refused state: same image, out-of-domain source. -/
+def fpHwW3BadT : FpZustand := ⟨fpHwW3Kern, fpHwW3BadXmm, kontextReset⟩
+
+/-- The refused `xmm0` holds `+∞`. -/
+theorem fpHwW3BadTief0 :
+    xmmTief fpHwW3BadT.xmm XmmReg.xmm0 = 0x7FF0000000000000 := by
+  decide
+
+/-- Fetch succeeds on the refused state: the bytes are fine, the
+    domain is not. -/
+theorem fpHwW3Bad_fetch :
+    fpHwFetchDekodiert fpHwW3BadT =
+      some (⟨.cvttsd2si .rax .xmm0, 5⟩, []) := by
+  have hbytes : fpHwGeholt fpHwW3BadT = fpHwEncodeCvtt .rax .xmm0 ++ [] := by
+    have hg : fpHwGeholt fpHwW3BadT = fpHwW3Bild := by decide
+    simp only [hg, fpHwW3Bild, List.append_nil]
+  have hrt := fpHwRoundtrip_cvtt .rax .xmm0 []
+  have hlen : (fpHwEncodeCvtt .rax .xmm0).length = 5 :=
+    fpHwLen_cvtt _ _
+  rw [hlen] at hrt
+  have hdec : fpHwDecode (fpHwGeholt fpHwW3BadT) =
+      some (⟨.cvttsd2si .rax .xmm0, 5⟩, []) := by
+    rw [hbytes]
+    exact hrt
+  have hlenBild : (fpHwGeholt fpHwW3BadT).length = 5 := by
+    have hg : fpHwGeholt fpHwW3BadT = fpHwW3Bild := by decide
+    have hb : fpHwW3Bild.length = 5 := by decide
+    rw [hg, hb]
+  have h5 : laengeOk 5 = true := by decide
+  have hperm : ausfuehrbarN fpHwW3BadT.kern.speicher fpHwW3BadT.kern.rip 5 =
+      true := by
+    decide
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlenBild, h5, hperm]
+  decide
+
+/-- The conversion gate is closed on `+∞`. -/
+theorem fpHwW3BadGate :
+    fpHwCvttZugelassen (.cvttsd2si .rax .xmm0) fpHwW3BadT = false := by
+  have h0 := fpHwW3BadTief0
+  simp only [fpHwCvttZugelassen] at h0 ⊢
+  rw [h0, cvttHwGueltig_unendlich]
+
+/-- Joint witness W3 (refused side): the same fetched bytes refuse
+    off the domain -- fetch succeeds, the byte step refuses. -/
+theorem fpHwW3_cvtt_verweigert :
+    (∃ (d : FpDecodiert) (rest : List Byte),
+      fpHwFetchDekodiert fpHwW3BadT = some (d, rest)) ∧
+    fpHwByteschritt fpHwW3BadT = .verweigert := by
+  refine ⟨⟨⟨.cvttsd2si .rax .xmm0, 5⟩, [], fpHwW3Bad_fetch⟩, ?_⟩
+  exact fpHwByteschritt_cvttVerweigert _ _ _ fpHwW3Bad_fetch fpHwW3BadGate
+
+/-! ## 11. Joint witness W4: unordered compare from bytes.
+
+  A fetched REX UCOMISD on `1.0` against `1.0` sets the equal row
+  (only ZF, OF/SF/AF cleared, Vol.2B 4-733f) -- the comparison
+  channel for F-EQ: source float equality does not exist
+  (`FloatSourceObservations`: `Expr.eq` takes only `.int`), flags do. -/
+
+/-- Witness image: REX UCOMISD (5 bytes). -/
+def fpHwW4Bild : List Byte := fpHwEncodeUcomiRR .xmm0 .xmm1
+
+/-- Witness memory: the image at 4096 with execute permission exactly
+    on those five bytes. -/
+def fpHwW4Speicher : Speicher :=
+  { zeugenSpeicher with bytes := fun a => if a.toNat - 4096 < fpHwW4Bild.length then fpHwW4Bild.getD (a.toNat - 4096) 0 else zeugenSpeicher.bytes a, ausfuehrbar := fun a => decide (4096 ≤ a.toNat ∧ a.toNat < 4101) }
+
+/-- Witness XMM file: `xmm0` and `xmm1` hold `1.0`. -/
+def fpHwW4Xmm : XmmDatei :=
+  fun q => if q = XmmReg.xmm0 ∨ q = XmmReg.xmm1 then vecJoin 0x3FF0000000000000 0
+    else vecJoin 0 0
+
+/-- Witness core: RIP at the image. -/
+def fpHwW4Kern : Zustand :=
+  { register := fun _ => BitVec.ofNat 64 0, flags := ⟨false, false, some false, false, false, false⟩, rip := BitVec.ofNat 64 4096, speicher := fpHwW4Speicher }
+
+/-- Witness extended state: reset FP control word. -/
+def fpHwW4T : FpZustand := ⟨fpHwW4Kern, fpHwW4Xmm, kontextReset⟩
+
+/-- Both compared words are `1.0`. -/
+theorem fpHwW4Tief :
+    xmmTief fpHwW4T.xmm XmmReg.xmm0 = 0x3FF0000000000000 ∧
+      xmmTief fpHwW4T.xmm XmmReg.xmm1 = 0x3FF0000000000000 := by
+  decide
+
+/-- `1.0` is not less than `1.0`, either way. -/
+theorem fpHwW4Flt :
+    Gleitkomma.flt Gleitkomma.f64 (bites64 0x3FF0000000000000)
+        (bites64 0x3FF0000000000000) = false := by
+  decide
+
+/-- `1.0` classifies away from NaN. -/
+theorem fpHwW4Klasse :
+    Gleitkomma.klasse Gleitkomma.f64
+      (bites64 0x3FF0000000000000) ≠ .nan := by
+  decide
+
+/-- Admitted profile on the witness state. -/
+theorem fpHwW4Fp : fpEintritt fpHwW4T.fp = true := by
+  decide
+
+/-- Fetch yields the unordered-compare form. -/
+theorem fpHwW4_fetch :
+    fpHwFetchDekodiert fpHwW4T =
+      some (⟨.ucomisdRR .xmm0 .xmm1, 5⟩, []) := by
+  have hbytes : fpHwGeholt fpHwW4T = fpHwEncodeUcomiRR .xmm0 .xmm1 ++ [] := by
+    have hg : fpHwGeholt fpHwW4T = fpHwW4Bild := by decide
+    simp only [hg, fpHwW4Bild, List.append_nil]
+  have hrt := fpHwRoundtrip_ucomiRR .xmm0 .xmm1 []
+  have hlen : (fpHwEncodeUcomiRR .xmm0 .xmm1).length = 5 :=
+    fpHwLen_ucomiRR _ _
+  rw [hlen] at hrt
+  have hdec : fpHwDecode (fpHwGeholt fpHwW4T) =
+      some (⟨.ucomisdRR .xmm0 .xmm1, 5⟩, []) := by
+    rw [hbytes]
+    exact hrt
+  have hlenBild : (fpHwGeholt fpHwW4T).length = 5 := by
+    have hg : fpHwGeholt fpHwW4T = fpHwW4Bild := by decide
+    have hb : fpHwW4Bild.length = 5 := by decide
+    rw [hg, hb]
+  have h5 : laengeOk 5 = true := by decide
+  have hperm : ausfuehrbarN fpHwW4T.kern.speicher fpHwW4T.kern.rip 5 =
+      true := by
+    decide
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlenBild, h5, hperm]
+  decide
+
+/-- The conversion gate is open on the compare form. -/
+theorem fpHwW4Gate :
+    fpHwCvttZugelassen (.ucomisdRR .xmm0 .xmm1) fpHwW4T = true := by
+  rfl
+
+/-- Witness state after the compare: equal row, RIP advanced. -/
+def fpHwW4T1 : FpZustand :=
+  { fpHwW4T with kern := { fpHwW4T.kern with rip := ripNach fpHwW4T.kern.rip 5, flags := ⟨false, false, some false, true, false, false⟩ } }
+
+/-- Reached byte-step: actual compare bytes set the equal row. -/
+theorem fpHwW4_schritt :
+    fpHwByteschritt fpHwW4T = .weiter fpHwW4T1 := by
+  unfold fpHwByteschritt
+  rw [fpHwW4_fetch]
+  simp only
+  rw [fpHwW4Gate]
+  simp only
+  have h5 : laengeOk 5 = true := by decide
+  have hs := fpHwSchritt_ucomisdRR_gleich ⟨.ucomisdRR .xmm0 .xmm1, 5⟩
+    fpHwW4T .xmm0 .xmm1 h5 fpHwW4Fp rfl
+  rw [fpHwW4Tief.1, fpHwW4Tief.2] at hs
+  have hs2 := hs fpHwW4Flt fpHwW4Flt fpHwW4Klasse fpHwW4Klasse
+  simp only [hs2, fpHwW4T1, if_true]
+
+/-- Joint witness W4: the fetched compare observes equality through
+    flags -- ZF set, OF/SF cleared, AF defined zero -- with no XMM or
+    memory change. -/
+theorem fpHwW4_ucomi_gleich :
+    ∃ (t' : FpZustand),
+      fpHwByteschritt fpHwW4T = .weiter t' ∧
+      t'.kern.flags = ⟨false, false, some false, true, false, false⟩ ∧
+      t'.xmm XmmReg.xmm0 = fpHwW4T.xmm XmmReg.xmm0 ∧
+      t'.kern.speicher = fpHwW4T.kern.speicher := by
+  refine ⟨fpHwW4T1, fpHwW4_schritt, ?_, ?_, ?_⟩ <;> rfl
+
+/-! ## 12. Joint witness W5: memory fault refusal.
+
+  The fetched REX MOVSD load addresses unreadable memory: fetch
+  succeeds (execute permission is present), the accepted `read64`
+  fails, and the byte step refuses explicitly -- a fault is never a
+  silent value. -/
+
+/-- Witness image: REX MOVSD load (9 bytes). -/
+def fpHwW5Bild : List Byte := fpHwEncodeMovsdLade .xmm0 .rax 0
+
+/-- Witness memory: the image at 4096 executable, nothing readable
+    or writable anywhere. -/
+def fpHwW5Speicher : Speicher :=
+  { bytes := fun a => if a.toNat - 4096 < fpHwW5Bild.length then fpHwW5Bild.getD (a.toNat - 4096) 0 else BitVec.ofNat 8 0, lesbar := fun _ => false, schreibbar := fun _ => false, ausfuehrbar := fun a => decide (4096 ≤ a.toNat ∧ a.toNat < 4105) }
+
+/-- Witness core: `rax` points at 8192, RIP at the image. -/
+def fpHwW5Kern : Zustand :=
+  { register := fun q => if q = Register.rax then BitVec.ofNat 64 8192 else BitVec.ofNat 64 0, flags := ⟨false, true, some false, false, false, false⟩, rip := BitVec.ofNat 64 4096, speicher := fpHwW5Speicher }
+
+/-- Witness extended state: reset FP control word. -/
+def fpHwW5T : FpZustand := ⟨fpHwW5Kern, fpHwW2Xmm, kontextReset⟩
+
+/-- Admitted profile on the witness state. -/
+theorem fpHwW5Fp : fpEintritt fpHwW5T.fp = true := by
+  decide
+
+/-- Fetch yields the load form: execute access is present. -/
+theorem fpHwW5_fetch :
+    fpHwFetchDekodiert fpHwW5T =
+      some (⟨.movsdLade .xmm0 .rax 0, 9⟩, []) := by
+  have hbytes : fpHwGeholt fpHwW5T = fpHwEncodeMovsdLade .xmm0 .rax 0 ++ [] := by
+    have hg : fpHwGeholt fpHwW5T = fpHwW5Bild := by decide
+    simp only [hg, fpHwW5Bild, List.append_nil]
+  have hrt := fpHwRoundtrip_movsdLade .xmm0 .rax 0 []
+  have hlen : (fpHwEncodeMovsdLade .xmm0 .rax 0).length = 9 := by rfl
+  rw [hlen] at hrt
+  have hdec : fpHwDecode (fpHwGeholt fpHwW5T) =
+      some (⟨.movsdLade .xmm0 .rax 0, 9⟩, []) := by
+    rw [hbytes]
+    exact hrt
+  have hlenBild : (fpHwGeholt fpHwW5T).length = 9 := by
+    have hg : fpHwGeholt fpHwW5T = fpHwW5Bild := by decide
+    have hb : fpHwW5Bild.length = 9 := by decide
+    rw [hg, hb]
+  have h9 : laengeOk 9 = true := by decide
+  have hperm : ausfuehrbarN fpHwW5T.kern.speicher fpHwW5T.kern.rip 9 =
+      true := by
+    decide
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlenBild, h9, hperm]
+  decide
+
+/-- The data read fails: nothing is readable. -/
+theorem fpHwW5_liest_nichts :
+    read64 fpHwW5T.kern.speicher
+      (effAddr fpHwW5T.kern Register.rax 0) = none := by
+  decide
+
+/-- The conversion gate is open on the load form. -/
+theorem fpHwW5Gate :
+    fpHwCvttZugelassen (.movsdLade .xmm0 .rax 0) fpHwW5T = true := by
+  rfl
+
+/-- Joint witness W5: fetch succeeds yet the byte step refuses -- the
+    fault is explicit, never a silent value. -/
+theorem fpHwW5_lade_verweigert :
+    (∃ (d : FpDecodiert) (rest : List Byte),
+      fpHwFetchDekodiert fpHwW5T = some (d, rest)) ∧
+    fpHwByteschritt fpHwW5T = .verweigert := by
+  refine ⟨⟨⟨.movsdLade .xmm0 .rax 0, 9⟩, [], fpHwW5_fetch⟩, ?_⟩
+  have h9 : laengeOk 9 = true := by decide
+  have hstep : fpSchritt ⟨.movsdLade .xmm0 .rax 0, 9⟩ fpHwW5T = none :=
+    fpSchritt_movsdLade_verweigert _ _ _ _ _ h9 fpHwW5Fp rfl
+      fpHwW5_liest_nichts
+  have hstep2 : fpSchritt ⟨.movsdLade .xmm0 .rax 0#32, 9⟩ fpHwW5T = none :=
+    hstep
+  unfold fpHwByteschritt
+  rw [fpHwW5_fetch]
+  simp only
+  rw [fpHwW5Gate]
+  simp [hstep2]
+
+/-! ## 13. Remaining witnesses: control state, high registers, boundary.
+
+  W6 mutates the MXCSR word (flush-to-zero set): the same fetched
+  DIVSD bytes that run under the reset word refuse -- profile
+  admission is per-context data, rechecked at every step, never a
+  one-time establishment. W7 executes a fetched high-register MOVSD
+  copy (`xmm15 <- xmm8`, REX.R and REX.B both set): the low half
+  moves and the destination upper half is preserved. W8 overlaps the
+  code image with non-executable memory: the truncated window
+  decodes to nothing, so the byte step refuses at fetch. -/
+
+/-- Mutated control state: flush-to-zero set (Vol.1 11.4: FTZ off is
+    part of the admitted profile). -/
+def fpHwW6T : FpZustand := { fpHwW1T with fp := ⟨0x9F80⟩ }
+
+/-- The mutated word is refused. -/
+theorem fpHwW6Fp : fpEintritt fpHwW6T.fp = false := by
+  decide
+
+/-- Joint witness W6: identical bytes, mutated control word -- the
+    byte step refuses. -/
+theorem fpHwW6_profil_verweigert :
+    fpHwByteschritt fpHwW6T = .verweigert :=
+  fpHwByteschritt_profil_verweigert _ fpHwW6Fp
+
+/-- Witness image W7: high-register MOVSD copy (5 bytes). -/
+def fpHwW7Bild : List Byte := fpHwEncodeMovsdRR .xmm15 .xmm8
+
+/-- Witness memory W7: the image at 4096 with execute permission
+    exactly on those five bytes. -/
+def fpHwW7Speicher : Speicher :=
+  { zeugenSpeicher with bytes := fun a => if a.toNat - 4096 < fpHwW7Bild.length then fpHwW7Bild.getD (a.toNat - 4096) 0 else zeugenSpeicher.bytes a, ausfuehrbar := fun a => decide (4096 ≤ a.toNat ∧ a.toNat < 4101) }
+
+/-- Witness XMM file W7: `xmm8` low holds `42.0`, `xmm15` high holds
+    a nonzero marker. -/
+def fpHwW7Xmm : XmmDatei :=
+  fun q => if q = XmmReg.xmm8 then vecJoin 0x4045000000000000 0
+    else if q = XmmReg.xmm15 then vecJoin 0 0xDEADBEEFDEADBEEF
+    else vecJoin 0 0
+
+/-- Witness core W7: RIP at the image. -/
+def fpHwW7Kern : Zustand :=
+  { register := fun _ => BitVec.ofNat 64 0, flags := ⟨false, true, some false, false, false, false⟩, rip := BitVec.ofNat 64 4096, speicher := fpHwW7Speicher }
+
+/-- Witness extended state W7: reset FP control word. -/
+def fpHwW7T : FpZustand := ⟨fpHwW7Kern, fpHwW7Xmm, kontextReset⟩
+
+/-- The source low half holds `42.0`. -/
+theorem fpHwW7Tief8 :
+    xmmTief fpHwW7T.xmm XmmReg.xmm8 = 0x4045000000000000 := by
+  decide
+
+/-- The destination upper half holds the marker. -/
+theorem fpHwW7Hoch15 :
+    xmmHoch fpHwW7T.xmm XmmReg.xmm15 = 0xDEADBEEFDEADBEEF := by
+  decide
+
+/-- Admitted profile on the witness state. -/
+theorem fpHwW7Fp : fpEintritt fpHwW7T.fp = true := by
+  decide
+
+/-- Fetch yields the high-register copy form. -/
+theorem fpHwW7_fetch :
+    fpHwFetchDekodiert fpHwW7T =
+      some (⟨.movsdRR .xmm15 .xmm8, 5⟩, []) := by
+  have hbytes : fpHwGeholt fpHwW7T = fpHwEncodeMovsdRR .xmm15 .xmm8 ++ [] := by
+    have hg : fpHwGeholt fpHwW7T = fpHwW7Bild := by decide
+    simp only [hg, fpHwW7Bild, List.append_nil]
+  have hrt := fpHwRoundtrip_movsdRR .xmm15 .xmm8 []
+  have hlen : (fpHwEncodeMovsdRR .xmm15 .xmm8).length = 5 :=
+    fpHwLen_movsdRR _ _
+  rw [hlen] at hrt
+  have hdec : fpHwDecode (fpHwGeholt fpHwW7T) =
+      some (⟨.movsdRR .xmm15 .xmm8, 5⟩, []) := by
+    rw [hbytes]
+    exact hrt
+  have hlenBild : (fpHwGeholt fpHwW7T).length = 5 := by
+    have hg : fpHwGeholt fpHwW7T = fpHwW7Bild := by decide
+    have hb : fpHwW7Bild.length = 5 := by decide
+    rw [hg, hb]
+  have h5 : laengeOk 5 = true := by decide
+  have hperm : ausfuehrbarN fpHwW7T.kern.speicher fpHwW7T.kern.rip 5 =
+      true := by
+    decide
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlenBild, h5, hperm]
+  decide
+
+/-- The conversion gate is open on the copy form. -/
+theorem fpHwW7Gate :
+    fpHwCvttZugelassen (.movsdRR .xmm15 .xmm8) fpHwW7T = true := by
+  rfl
+
+/-- Witness state after the copy. -/
+def fpHwW7T1 : FpZustand :=
+  { fpHwW7T with kern := { fpHwW7T.kern with rip := ripNach fpHwW7T.kern.rip 5 }, xmm := xmmSchreibeTief fpHwW7T.xmm XmmReg.xmm15 0x4045000000000000 }
+
+/-- Reached byte-step: actual high-register copy bytes move the low
+    half. -/
+theorem fpHwW7_schritt :
+    fpHwByteschritt fpHwW7T = .weiter fpHwW7T1 := by
+  unfold fpHwByteschritt
+  rw [fpHwW7_fetch]
+  simp only
+  rw [fpHwW7Gate]
+  simp only
+  have h5 : laengeOk 5 = true := by decide
+  have hs := fpSchritt_movsdRR ⟨.movsdRR .xmm15 .xmm8, 5⟩ fpHwW7T
+    .xmm15 .xmm8 h5 fpHwW7Fp rfl
+  rw [fpHwW7Tief8] at hs
+  simp only [hs, fpHwW7T1, if_true]
+
+/-- Joint witness W7: the fetched high-register copy moves the low
+    half and preserves the destination upper half. -/
+theorem fpHwW7_hoch_ok :
+    ∃ (t' : FpZustand),
+      fpHwByteschritt fpHwW7T = .weiter t' ∧
+      xmmTief t'.xmm XmmReg.xmm15 = 0x4045000000000000 ∧
+      xmmHoch t'.xmm XmmReg.xmm15 = 0xDEADBEEFDEADBEEF := by
+  refine ⟨fpHwW7T1, fpHwW7_schritt, ?_, ?_⟩
+  · have h : xmmTief (xmmSchreibeTief fpHwW7T.xmm XmmReg.xmm15
+        0x4045000000000000) XmmReg.xmm15 = 0x4045000000000000 :=
+      xmmSchreibeTief_tief _ _ _
+    have heq : fpHwW7T1.xmm = xmmSchreibeTief fpHwW7T.xmm XmmReg.xmm15
+        0x4045000000000000 := rfl
+    rw [heq]
+    exact h
+  · have h : xmmHoch (xmmSchreibeTief fpHwW7T.xmm XmmReg.xmm15
+        0x4045000000000000) XmmReg.xmm15 =
+        xmmHoch fpHwW7T.xmm XmmReg.xmm15 :=
+      xmmSchreibeTief_hoch _ _ _
+    have heq : fpHwW7T1.xmm = xmmSchreibeTief fpHwW7T.xmm XmmReg.xmm15
+        0x4045000000000000 := rfl
+    rw [heq, h, fpHwW7Hoch15]
+
+/-- Witness image W8: a 9-byte store whose window truncates after
+    the ModRM byte. -/
+def fpHwW8Bild : List Byte := fpHwEncodeMovsdSpeichere .rax .xmm0 0
+
+/-- Witness memory W8: the store image at 4096 with execute permission
+    on only the first five bytes -- the window truncates mid-form. -/
+def fpHwW8Speicher : Speicher :=
+  { zeugenSpeicher with bytes := fun a => if a.toNat - 4096 < fpHwW8Bild.length then fpHwW8Bild.getD (a.toNat - 4096) 0 else zeugenSpeicher.bytes a, ausfuehrbar := fun a => decide (4096 ≤ a.toNat ∧ a.toNat < 4101) }
+
+/-- Witness core W8: RIP at the truncated image. -/
+def fpHwW8Kern : Zustand :=
+  { register := fun q => if q = Register.rax then BitVec.ofNat 64 8192 else BitVec.ofNat 64 0, flags := ⟨false, true, some false, false, false, false⟩, rip := BitVec.ofNat 64 4096, speicher := fpHwW8Speicher }
+
+/-- Witness extended state W8: reset FP control word. -/
+def fpHwW8T : FpZustand := ⟨fpHwW8Kern, fpHwW1Xmm, kontextReset⟩
+
+/-- Joint witness W8: the window truncates inside the store form, so
+    fetch -- hence the byte step -- refuses at the executable
+    boundary. -/
+theorem fpHwW8_grenze_verweigert :
+    fpHwFetchDekodiert fpHwW8T = none ∧
+      fpHwByteschritt fpHwW8T = .verweigert := by
+  have hf : fpHwFetchDekodiert fpHwW8T = none := by decide
+  refine ⟨hf, ?_⟩
+  unfold fpHwByteschritt
+  rw [hf]
+
+/- CUTS: what is proved here and what is not.
+
+   Proved: REX-aware canonical byte rows for SUBSD/MULSD/DIVSD
+   (register and memory), UCOMISD (register and memory), CVTSI2SD and
+   CVTTSD2SI (REX.W = 1 register forms), MOVSD (register, load,
+   store) and ADDSD memory (register was lane 565), over all sixteen
+   XMM registers and all sixteen GPRs, with an independent decoder
+   over actual bytes, explicit refusals, the CVTTSD2SI
+   silicon-agreement domain adapter, the gated byte step from actual
+   executable memory, and the joint witnesses W1-W8 (two fetched
+   arithmetic/conversion-to-store runs with real memory change,
+   truncation on-domain, four refusal witnesses, high-register
+   execution, boundary truncation).
+   NOT proved, and not claimed:
+   - No silicon correspondence: byte shapes (mandatory prefix before
+     REX per Vol.2A 2-7f, 0F escape, opcodes 58/5C/59/5E/2E/2A/2C/
+     10/11, ModRM mod = 11/10 with the pilot SIB rule) are STATED
+     from the Intel SDM opcode pages as an implementation contract
+     in the BYTE-PILOT.md style, never verified against hardware.
+     Encoder round-trip consistency is not hardware correspondence.
+   - NaN relation is class-level only: payload equality of computed
+     results is never concluded (inherited gap of
+     `Gleitprofil` §7 and `ScalarFloat` §6). SNaN has no model form
+     (`Klasse` carries a single `.nan`): quieting/trapping and the
+     masked QNaN-indefinite response (Vol.1 App.D Table D-1) are
+     unmodelled; the UCOMISD rows hold under the admitted
+     all-masks-set profile, where even SNaN yields the unordered
+     flags with no trap.
+   - Sticky MXCSR flags (bits 0-5) are unchecked and unmodelled:
+     accumulation, clearing and reads have no definitions
+     (inherited gap of `Gleitprofil` §2); `guard_sticky_offen`
+     shows they do not close the slot.
+   - Deliberate subset refusals (validator incompleteness, never
+     wrong execution): arithmetic with REX.W = 1 (silicon ignores
+     REX.W there); REX.W = 0 and memory-source conversions (the
+     32-bit widths and memory sources have no accepted execution);
+     COMISD (traps on quiet NaN, unmodelled); VEX/EVEX, packed
+     lanes beyond lane 597, x87, FMA contraction, fast-math and
+     short/displaced ModRM modes: syntactically absent, refused.
+   - No source, checker, emitter or goal claim: the model-op link
+     (`fpRechne` IS `gleitRechne`) is consumed from `ScalarFloat`
+     §4, never restated; F-EQ stays excluded at the source
+     (`FloatSourceObservations`: `Expr.eq` takes only `.int`, no
+     source `Gleit` value is NaN); flags are the only comparison
+     channel and NaN payloads never cross it.
+   - No TSO/concurrency, cost/timing, ABI/loader/entry/budget or
+     whole-image claim: everything is sequential over one
+     `Speicher`; the unified dispatcher integration is owned by
+     its consumer lanes (660/658), whose exact API (encoders,
+     `fpHwDecode`, `fpHwByteschritt`, gate and adapter lemmas,
+     pilot-disjointness pins) this file provides.
+   - Rule 13 (inhabitation): no theorem here quantifies over the
+     listed source-syntax types (`Vertrag`, `Stmt`, `Endblock`,
+     `ErgExpr`, `Expr`, `Args`); `FpBefehl` is target syntax and
+     `GleitOp` ranges over the model op. The joint non-degenerate
+     evidence is W1 (`fpHwW1_div_speichert`) and W2
+     (`fpHwW2_cvtsi_speichert`): reached fetched runs with real
+     memory change, plus the planted refusal witnesses W3-bad, W5,
+     W6 and W8.
 -/
 
 #print axioms fpHwRex
+#print axioms fpHwRoundtrip_arithRR
+#print axioms fpHwRoundtrip_ucomiRR
+#print axioms fpHwRoundtrip_cvtsi
+#print axioms fpHwRoundtrip_cvtt
+#print axioms fpHwRoundtrip_movsdRR
+#print axioms fpHwRoundtrip_addsdRM
+#print axioms fpHwRoundtrip_subsdRM
+#print axioms fpHwRoundtrip_mulsdRM
+#print axioms fpHwRoundtrip_divsdRM
+#print axioms fpHwRoundtrip_ucomiRM
+#print axioms fpHwRoundtrip_movsdLade
+#print axioms fpHwRoundtrip_movsdSpeichere
+#print axioms fpHwDecode_rexZuerst_verweigert
+#print axioms fpHwDecode_cvtsiW0_verweigert
+#print axioms fpHwDecode_cvttW0_verweigert
+#print axioms fpHwDecode_cvtsiSpeicher_verweigert
+#print axioms fpHwDecode_cvttSpeicher_verweigert
+#print axioms fpHwDecode_comisd_verweigert
+#print axioms fpHwPilot_weist_subsdRR_zurueck
+#print axioms fpHwPilot_weist_mulsdRM_zurueck
+#print axioms fpHwPilot_weist_ucomiRR_zurueck
+#print axioms fpHwPilot_weist_cvtsi_zurueck
+#print axioms fpHwPilot_weist_cvtt_zurueck
+#print axioms cvttAdapter_gueltig
+#print axioms cvttHwGueltig_erfolg
+#print axioms cvttHwGueltig_unendlich
+#print axioms cvttHwGueltig_nan
+#print axioms cvttHwGueltig_42
+#print axioms fpHwFetchDekodiert_erfolg
+#print axioms fpHwByteschritt_schritt
+#print axioms fpHwByteschritt_cvttVerweigert
+#print axioms fpHwByteschritt_profil_verweigert
+#print axioms fpHwByteschritt_arithRR_rechnet
+#print axioms fpHwByteschritt_arithRR_klasse
+#print axioms fpHwByteschritt_arithRR_hoch
+#print axioms fpHwSchritt_ucomisdRR_ungeordnet
+#print axioms fpHwSchritt_ucomisdRR_gleich
+#print axioms fpHwNan_nutzlast_klasse
+#print axioms fpHwNan_ungeordnet
+#print axioms fpHwSub_plusnull
+#print axioms fpHwW1_div_speichert
+#print axioms fpHwW2_cvtsi_speichert
+#print axioms fpHwW3_cvtt_gueltig
+#print axioms fpHwW3_cvtt_verweigert
+#print axioms fpHwW4_ucomi_gleich
+#print axioms fpHwW5_lade_verweigert
+#print axioms fpHwW6_profil_verweigert
+#print axioms fpHwW7_hoch_ok
+#print axioms fpHwW8_grenze_verweigert
 
 end Gabbro.Grammatik.X86
