@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 19:35 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 19:40 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -305,17 +305,17 @@ Last ledger refresh: **2026-10-02 19:35 UTC**. This is an operational snapshot, 
 | 658 | Scalar FP final-byte validator admission and MXCSR entry | Merged after review/checks | 659: Merged after review/checks | [report](messung/muse/MUSE-REPORT-658.md) |
 | 660 | Hardware completion: coherent multicore architectural execution | Agent working | 661: scheduled | [task](lanes/660.md) |
 | 662 | Hardware completion: LOCK atomic and fence final-byte execution | Agent working | 663: scheduled | [task](lanes/662.md) |
-| 664 | Hardware completion: efficient full selected address encodings | Committed candidate; review/integration pending | 665: Committed candidate; review/integration pending | [task](lanes/664.md) |
-| 666 | Hardware completion: practical integer width and compact encoding rows | Agent working | 667: scheduled | [task](lanes/666.md) |
+| 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-664.md) |
+| 666 | Hardware completion: practical integer width and compact encoding rows | Committed candidate; review/integration pending | 667: scheduled | [task](lanes/666.md) |
 | 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Agent working | 669: scheduled | [task](lanes/668.md) |
-| 670 | Hardware completion: precise selected fault and exception transitions | Agent working | 671: scheduled | [task](lanes/670.md) |
+| 670 | Hardware completion: precise selected fault and exception transitions | Committed candidate; review/integration pending | 671: scheduled | [task](lanes/670.md) |
 | 672 | Hardware completion: interrupts entry masking and trap hardware forms | Agent working | 673: scheduled | [task](lanes/672.md) |
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Committed candidate; review/integration pending | 675: Committed candidate; review/integration pending | [task](lanes/674.md) |
 | 676 | Hardware completion: port IO and device memory profiles | Agent working | 677: scheduled | [task](lanes/676.md) |
 | 678 | Organise and audit complete essential hardware-model coverage | Committed candidate; review/integration pending | 679: Committed candidate; review/integration pending | [task](lanes/678.md) |
 | 680 | Hardware completion: indirect and compact control byte forms | Agent working | 681: scheduled | [task](lanes/680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Agent working | 683: scheduled | [task](lanes/682.md) |
-| 684 | Eliminate hardcoded external project filesystem paths | Agent working | 685: scheduled | [task](lanes/684.md) |
+| 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: scheduled | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Waiting for accepted dependencies | 687: scheduled | [task](lanes/686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Agent working | 689: scheduled | [task](lanes/688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
@@ -777,6 +777,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: checked master `99f4743d` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:99f4743d7484ac1ef54224f30ed0582c6a808304 -->
 - 2026-10-02: lane **654**, Derived target work bound for direct source lowering, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-654.md). <!-- x86-merged:654 -->
 - 2026-10-02: lane **655**, Independent exact review of 654, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-655.md). <!-- x86-merged:655 -->
+- 2026-10-02: lane **664**, Hardware completion: efficient full selected address encodings, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-664.md). <!-- x86-merged:664 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
