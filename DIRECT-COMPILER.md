@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 23:02 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 23:08 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -316,8 +316,8 @@ Last ledger refresh: **2026-10-02 23:02 UTC**. This is an operational snapshot, 
 | 680 | Hardware completion: indirect and compact control byte forms | Merged after review/checks | 681: Merged after review/checks | [report](messung/muse/MUSE-REPORT-680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Merged after review/checks | 683: Merged after review/checks | [report](messung/muse/MUSE-REPORT-682.md) |
 | 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
-| 686 | Hardware completion: essential SSE2 integer and memory byte forms | Committed candidate; review/integration pending | 687: Committed candidate; review/integration pending | [task](lanes/686.md) |
-| 688 | Hardware completion: CPUID and XGETBV byte execution | Agent working | 689: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/688.md) |
+| 686 | Hardware completion: essential SSE2 integer and memory byte forms | Agent working | 687: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/686.md) |
+| 688 | Hardware completion: CPUID and XGETBV byte execution | Merged after review/checks | 689: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Committed candidate; review/integration pending | 695: Committed candidate; review/integration pending | [task](lanes/694.md) |
@@ -329,7 +329,7 @@ Last ledger refresh: **2026-10-02 23:02 UTC**. This is an operational snapshot, 
 | 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Committed candidate; review/integration pending | 707: Committed candidate; review/integration pending | [task](lanes/706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
 | 710 | Optimizer rule library proof and scope review | Agent working | 711: scheduled | [task](lanes/710.md) |
-| 712 | Compiler pipeline Lean source-to-byte proof review | Agent working | 713: scheduled | [task](lanes/712.md) |
+| 712 | Compiler pipeline Lean source-to-byte proof review | Committed candidate; review/integration pending | 713: Agent working | [task](lanes/712.md) |
 | 714 | Compiler ISA and instruction selection architecture review | Agent working | 715: scheduled | [task](lanes/714.md) |
 | 716 | Rust compiler validation and ELF integration review | Agent working | 717: scheduled | [task](lanes/716.md) |
 
@@ -825,6 +825,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **692**, Hardware completion: observable defined and undefined RFLAGS, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-692.md). <!-- x86-merged:692 -->
 - 2026-10-02: integration of candidate(s) [688] failed the local proof/build gate after independent review 689; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:689 -->
 - 2026-10-02: lane **693**, Independent exact review of 692, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-693.md). <!-- x86-merged:693 -->
+- 2026-10-02: lane **688**, Hardware completion: CPUID and XGETBV byte execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-688.md). <!-- x86-merged:688 -->
+- 2026-10-02: integration of candidate(s) [686] failed the local proof/build gate after independent review 687; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:687 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
