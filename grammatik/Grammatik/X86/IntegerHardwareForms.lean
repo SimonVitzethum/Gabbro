@@ -526,6 +526,124 @@ theorem stepIntHw_speicher (d : IntHwDec) (s s' : Zustand)
     rw [h2] at h
     cases h
 
+/-! ## 6. Compact immediates: one int32, two encodings.
+
+    ADD/SUB/CMP are b64-only (their AF is DEFINED via add64/sub64, and no
+    narrow ADD/SUB flag snapshot exists); AND/OR/XOR admit b64+b32
+    (width-correct `logikFlags`). The immediate is one int32 value with
+    architectural sign extension; the encoder picks the compact imm8 form
+    (0x83) exactly when the value fits in a signed byte, else imm32 (0x81).
+    Group-1 digits: ADD /0, OR /1, AND /4, SUB /5, XOR /6, CMP /7; ADC /2
+    and SBB /3 refuse (no row claimed). -/
+
+/-- Immediate rows: arithmetic is b64-only, logic is b64/b32. -/
+inductive IntHwImm where
+  | addI (dst : Register) (imm : BitVec 32)
+  | subI (dst : Register) (imm : BitVec 32)
+  | cmpI (lhs : Register) (imm : BitVec 32)
+  | andI (b : Breite) (dst : Register) (imm : BitVec 32)
+  | orI (b : Breite) (dst : Register) (imm : BitVec 32)
+  | xorI (b : Breite) (dst : Register) (imm : BitVec 32)
+  deriving DecidableEq, Repr
+
+/-- Architectural sign extension of the int32 immediate to a word. -/
+def immWort (imm : BitVec 32) : Wort :=
+  sext .b32 (BitVec.ofNat 64 imm.toNat)
+
+/-- The immediate fits in a signed byte: the compact form applies. -/
+def immPasst8 (imm : BitVec 32) : Bool :=
+  decide (-128 ≤ sVal .b32 (BitVec.ofNat 64 imm.toNat) ∧ sVal .b32 (BitVec.ofNat 64 imm.toNat) < 128)
+
+/-- Sign extension of one immediate byte to int32 (0x83 form). -/
+def imm8Erweitern (n : Nat) : BitVec 32 :=
+  if n ≥ 128 then BitVec.ofNat 32 (0xFFFFFF00 + n) else BitVec.ofNat 32 n
+
+/-- The imm8 form round-trips through sign extension on fitting values:
+    -1 (0xFF) extends to 0xFFFFFFFF. -/
+theorem probe_imm8_neg1 : imm8Erweitern 255 = 0xFFFFFFFF := by
+  decide
+
+/-- The imm8 form keeps small positives: 1 extends to 1. -/
+theorem probe_imm8_pos1 : imm8Erweitern 1 = 1 := by
+  decide
+
+/-- Group-1 ModRM digit of an immediate row. -/
+def immDigit : IntHwImm → Nat
+  | .addI _ _ => 0
+  | .orI _ _ _ => 1
+  | .andI _ _ _ => 4
+  | .subI _ _ => 5
+  | .xorI _ _ _ => 6
+  | .cmpI _ _ => 7
+
+/-- Width gate: arithmetic rows need b64; logic rows take b64/b32.
+    A 32-bit ADD/SUB/CMP immediate has no defined flag snapshot and is
+    refused by the decoder (OPEN, not silently computed). -/
+def immBreiteOk : IntHwImm → Breite → Bool
+  | .addI _ _, .b64 => true
+  | .subI _ _, .b64 => true
+  | .cmpI _ _, .b64 => true
+  | .andI b _ _, _ => b == .b64 || b == .b32
+  | .orI b _ _, _ => b == .b64 || b == .b32
+  | .xorI b _ _, _ => b == .b64 || b == .b32
+  | _, _ => false
+
+/-- Canonical encoding: compact imm8 (0x83, 4 bytes) exactly when the
+    value fits, else imm32 (0x81, 7 bytes). REX.W for b64, W=0 for b32. -/
+def encodeIntHwImm : IntHwImm → List Byte
+  | .addI dst imm =>
+    if immPasst8 imm then [rexByte 0 (regHigh dst), natByte 131, modrmReg 0 (regLow dst), natByte (imm.toNat % 256)]
+    else [rexByte 0 (regHigh dst), natByte 129, modrmReg 0 (regLow dst)] ++ leBytes32 imm
+  | .subI dst imm =>
+    if immPasst8 imm then [rexByte 0 (regHigh dst), natByte 131, modrmReg 5 (regLow dst), natByte (imm.toNat % 256)]
+    else [rexByte 0 (regHigh dst), natByte 129, modrmReg 5 (regLow dst)] ++ leBytes32 imm
+  | .cmpI lhs imm =>
+    if immPasst8 imm then [rexByte 0 (regHigh lhs), natByte 131, modrmReg 7 (regLow lhs), natByte (imm.toNat % 256)]
+    else [rexByte 0 (regHigh lhs), natByte 129, modrmReg 7 (regLow lhs)] ++ leBytes32 imm
+  | .andI b dst imm =>
+    let rex := match b with | .b64 => rexByte 0 (regHigh dst) | .b32 => natByte (64 + regHigh dst) | _ => natByte 0
+    if immPasst8 imm then [rex, natByte 131, modrmReg 4 (regLow dst), natByte (imm.toNat % 256)]
+    else [rex, natByte 129, modrmReg 4 (regLow dst)] ++ leBytes32 imm
+  | .orI b dst imm =>
+    let rex := match b with | .b64 => rexByte 0 (regHigh dst) | .b32 => natByte (64 + regHigh dst) | _ => natByte 0
+    if immPasst8 imm then [rex, natByte 131, modrmReg 1 (regLow dst), natByte (imm.toNat % 256)]
+    else [rex, natByte 129, modrmReg 1 (regLow dst)] ++ leBytes32 imm
+  | .xorI b dst imm =>
+    let rex := match b with | .b64 => rexByte 0 (regHigh dst) | .b32 => natByte (64 + regHigh dst) | _ => natByte 0
+    if immPasst8 imm then [rex, natByte 131, modrmReg 6 (regLow dst), natByte (imm.toNat % 256)]
+    else [rex, natByte 129, modrmReg 6 (regLow dst)] ++ leBytes32 imm
+
+/-- The compact choice fires exactly on fitting values (ADD row). -/
+theorem kompakt_add_feuert (dst : Register) (imm : BitVec 32) :
+    (encodeIntHwImm (.addI dst imm)).length = 4 ↔ immPasst8 imm = true := by
+  unfold encodeIntHwImm
+  by_cases h : immPasst8 imm = true
+  · simp [h]
+  · have hf : immPasst8 imm = false := by
+      cases he : immPasst8 imm with
+      | true => simp [he] at h
+      | false => rfl
+    simp [hf, length_leBytes32]
+
+/-- Pinned compact bytes: `add rax, 1` is REX.W, 83, C0, 01. -/
+theorem pin_add_kompakt :
+    encodeIntHwImm (.addI .rax 1) =
+      [natByte 72, natByte 131, natByte 192, natByte 1] := by
+  decide
+
+/-- Pinned wide bytes: `add rax, 256` needs the imm32 form. -/
+theorem pin_add_weit :
+    encodeIntHwImm (.addI .rax 256) =
+      [natByte 72, natByte 129, natByte 192,
+       natByte 0, natByte 1, natByte 0, natByte 0] := by
+  decide
+
+/-- Pinned compact bytes: `cmp rax, -1` signs through one byte. -/
+theorem pin_cmp_neg1 :
+    encodeIntHwImm (.cmpI .rax 0xFFFFFFFF) =
+      [natByte 72, natByte 131, natByte 248, natByte 255] := by
+  decide
+
 /- CUTS:
     Skeleton only: codec/step/fetch/witnesses are open.
 -/
