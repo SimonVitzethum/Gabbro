@@ -177,7 +177,7 @@ theorem strength_accepts :
 
 /-- Every premise of `checkStrength_sound`, jointly: `7 * 8` is `shlW 7 3`. -/
 theorem checkStrength_sound_zeuge :
-    ∃ x, leftOperand wWorld0 yMul8 wWorld0 env7 = some x ∧ 0 ≤ x ∧ x < 2 ^ 64 ∧
+    ∃ x, shiftedOperand wWorld0 yMul8 wWorld0 env7 = some x ∧ 0 ≤ x ∧ x < 2 ^ 64 ∧
       intOf _ (eval wWorld0 yMul8 wWorld0 env7) = some (((TargetOp.shl 3).run (encodeNat x)).toNat : Int) :=
   checkStrength_sound 3 yMul8 (.shl 3) (by decide) wWorld0 wWorld0 env7
 

@@ -6,7 +6,8 @@
 
   Scope (OPTIMIZER.md §11.4, "start with arithmetic / constant-fold /
   strength-reduction rules against the actual existing helpers", and §11.5,
-  "do NOT invent a second IR"): every rule here is a function on the real
+  "do NOT invent a second IR"; the accepted direct-lowering decision 594/606
+  makes the typed source the one reference): every rule here is a function on the real
   typed source syntax (`Syntax.lean`: `Expr`/`Stmt`/`Block`), every
   correspondence a theorem over the real semantics (`Semantik.lean`:
   `eval`/`execStmt`/`execBlock`). No IR, no per-program rule, no trusted
@@ -26,6 +27,7 @@ import Grammatik.Semantik
 import Grammatik.X86.Typen
 import Grammatik.X86.Wort
 import Grammatik.X86.StaerkeReduktion
+import Grammatik.X86.SourceMemory
 
 namespace Gabbro.Grammatik.X86.OptimizationRules
 
@@ -508,21 +510,57 @@ def TargetOp.run : TargetOp → Wort → Wort
   | .shr k, x => shrW x k
   | .mask k, x => x &&& maskW k
 
-/-- A nonnegative source number as a 64-bit word. -/
-def encodeNat (x : Int) : Wort := BitVec.ofNat 64 x.toNat
+/-- A nonnegative source number as a 64-bit word: the accepted
+    representation interface `SourceMemory.zahlWort` (lane 570), read at
+    the point range of the number itself -- reused, not redefined. -/
+def encodeNat (x : Int) : Wort := zahlWort (⟨x, Int.le_refl x, Int.le_refl x⟩ : Zahl x x)
+
+/-- The encoding of a source value is exactly its `zahlWort`. -/
+theorem encodeNat_zahlWort {lo hi : Int} (v : Zahl lo hi) : encodeNat v.n = zahlWort v := rfl
 
 /-- The encoding is faithful below `2^64`. -/
 theorem encodeNat_toNat {x : Int} (h0 : 0 ≤ x) (h : x < 2 ^ 64) :
     ((encodeNat x).toNat : Int) = x := by
   have hn : x.toNat < 2 ^ 64 := by omega
-  simp [encodeNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hn]
+  simp [encodeNat, zahlWort, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hn]
   omega
+
+/-- The shift word on an encoded nonnegative number is the product, as
+    long as the product fits 64 bits (no hidden wrap). -/
+theorem shlW_encodeNat {x : Int} (k : Nat) (h0 : 0 ≤ x) (h : x * 2 ^ k < 2 ^ 64) :
+    ((shlW (encodeNat x) k).toNat : Int) = x * 2 ^ k := by
+  have hpos : (0 : Int) < 2 ^ k := by
+    have : (0 : Nat) < 2 ^ k := Nat.two_pow_pos k
+    exact_mod_cast this
+  have hxlt : x < 2 ^ 64 := by
+    have h1 : (1 : Int) ≤ 2 ^ k := by omega
+    have := Int.mul_le_mul_of_nonneg_left h1 h0
+    simp at this
+    omega
+  have henc := encodeNat_toNat h0 hxlt
+  have hnat : (encodeNat x).toNat * 2 ^ k < 2 ^ 64 := by
+    have : (((encodeNat x).toNat * 2 ^ k : Nat) : Int) < 2 ^ 64 := by
+      push_cast; rw [henc]; exact h
+    exact_mod_cast this
+  rw [shlW_keinUeberlauf _ _ hnat]
+  push_cast
+  rw [henc]
 
 /-- R1 side conditions: `b` is the constant `2^k`, `a` is nonnegative by
     type, and the largest product fits 64 bits. -/
 def strengthMul {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int} (k : Nat)
     (_a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) : Option TargetOp :=
   if constInt? b = some (2 ^ k) ∧ 0 ≤ l1 ∧ h1 * 2 ^ k < 2 ^ 64 then some (.shl k) else none
+
+/-- R1, commuted (`2^k * b`): `a` is the constant `2^k`, `b` is NOT a
+    constant (so the shifted operand is unambiguous: a constant `b` is
+    the left-constant case of `strengthMul`, or a fold), `b` is
+    nonnegative by type and the largest product fits 64 bits. -/
+def strengthMulComm {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int} (k : Nat)
+    (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) : Option TargetOp :=
+  if constInt? a = some (2 ^ k) ∧ constInt? b = none ∧ 0 ≤ l2 ∧ h2 * 2 ^ k < 2 ^ 64 then
+    some (.shl k)
+  else none
 
 /-- R2 side conditions: `b` is the constant `2^k`, `a` is nonnegative and
     fits 64 bits (the divisor is never zero: `2^k ≥ 1`). -/
@@ -536,61 +574,89 @@ def strengthRem {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int} (k : Nat)
   if constInt? b = some (2 ^ k) ∧ 0 ≤ l1 ∧ h1 < 2 ^ 64 ∧ k ≤ 64 then some (.mask k) else none
 
 /-- The strength validator. Everything that is not unsigned `mul`/`div`/`rem`
-    -- in particular `sdiv`/`srem` (R4) -- is refused. -/
+    -- in particular `sdiv`/`srem` (R4) -- is refused. Division and
+    remainder are never commuted: only the divisor may be the constant. -/
 def checkStrength {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (k : Nat) : Expr D Γ Λ τ → Option TargetOp
-  | .mul a b => strengthMul k a b
+  | .mul a b =>
+    match strengthMul k a b with
+    | some op => some op
+    | none => strengthMulComm k a b
   | .div _ _ a b => strengthDiv k a b
   | .rem _ _ a b => strengthRem k a b
   | _ => none
 
-/-- The left operand's value, read through the REAL `eval`. -/
-def leftOperand {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (σ₀ : World D) :
+/-- The operand the selected word operation acts on, read through the
+    REAL `eval`: the left operand, except for a product whose right
+    operand is not a constant (the commuted `2^k * b`). -/
+def shiftedOperand {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (σ₀ : World D) :
     Expr D Γ Λ τ → World D → Env D Γ → Option Int
-  | .mul a _, σ, ρ => some (eval σ₀ a σ ρ).n
+  | .mul a b, σ, ρ =>
+    match constInt? b with
+    | some _ => some (eval σ₀ a σ ρ).n
+    | none => some (eval σ₀ b σ ρ).n
   | .div _ _ a _, σ, ρ => some (eval σ₀ a σ ρ).n
   | .rem _ _ a _, σ, ρ => some (eval σ₀ a σ ρ).n
   | _, _, _ => none
 
 /-- **Generic soundness of strength reduction**: the selected word
-    operation on the encoded left operand reads back as exactly the value
-    the source expression evaluates to. -/
+    operation on the encoded operand reads back as exactly the value the
+    source expression evaluates to. -/
 theorem checkStrength_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (k : Nat) (e : Expr D Γ Λ τ)
     (op : TargetOp) (h : checkStrength k e = some op) (σ₀ σ : World D) (ρ : Env D Γ) :
-    ∃ x, leftOperand σ₀ e σ ρ = some x ∧ 0 ≤ x ∧ x < 2 ^ 64 ∧
+    ∃ x, shiftedOperand σ₀ e σ ρ = some x ∧ 0 ≤ x ∧ x < 2 ^ 64 ∧
       intOf τ (eval σ₀ e σ ρ) = some ((op.run (encodeNat x)).toNat : Int) := by
+  have hpos : (0 : Int) < 2 ^ k := by
+    have : (0 : Nat) < 2 ^ k := Nat.two_pow_pos k
+    exact_mod_cast this
   cases e with
   | mul a b =>
-    simp only [checkStrength, strengthMul] at h
-    split at h
-    · rename_i hc
+    simp only [checkStrength] at h
+    cases hm : strengthMul k a b with
+    | some op' =>
+      rw [hm] at h
       cases h
-      obtain ⟨hb, hl, hh⟩ := hc
-      have hbv := constInt?_sound b σ₀ σ ρ _ hb
-      simp only [intOf, Option.some.injEq] at hbv
-      have ha1 := (eval σ₀ a σ ρ).lo_le
-      have ha2 := (eval σ₀ a σ ρ).le_hi
-      have hpos : (0 : Int) < 2 ^ k := by
-        have : (0 : Nat) < 2 ^ k := Nat.two_pow_pos k
-        exact_mod_cast this
-      have hx64 : (eval σ₀ a σ ρ).n * 2 ^ k < 2 ^ 64 :=
-        Int.lt_of_le_of_lt (Int.mul_le_mul_of_nonneg_right ha2 (Int.le_of_lt hpos)) hh
-      have hxlt : (eval σ₀ a σ ρ).n < 2 ^ 64 := by
-        have : (eval σ₀ a σ ρ).n ≤ (eval σ₀ a σ ρ).n * 2 ^ k := by
+      simp only [strengthMul] at hm
+      split at hm
+      · rename_i hc
+        cases hm
+        obtain ⟨hb, hl, hh⟩ := hc
+        have hbv := constInt?_sound b σ₀ σ ρ _ hb
+        simp only [intOf, Option.some.injEq] at hbv
+        have ha1 := (eval σ₀ a σ ρ).lo_le
+        have ha2 := (eval σ₀ a σ ρ).le_hi
+        have hx64 : (eval σ₀ a σ ρ).n * 2 ^ k < 2 ^ 64 :=
+          Int.lt_of_le_of_lt (Int.mul_le_mul_of_nonneg_right ha2 (Int.le_of_lt hpos)) hh
+        have hxlt : (eval σ₀ a σ ρ).n < 2 ^ 64 := by
           have h1 : (1 : Int) ≤ 2 ^ k := by omega
           have := Int.mul_le_mul_of_nonneg_left h1 (by omega : (0 : Int) ≤ (eval σ₀ a σ ρ).n)
-          simpa using this
-        omega
-      refine ⟨(eval σ₀ a σ ρ).n, rfl, by omega, hxlt, ?_⟩
-      have henc := encodeNat_toNat (x := (eval σ₀ a σ ρ).n) (by omega) hxlt
-      have hnat : (encodeNat (eval σ₀ a σ ρ).n).toNat * 2 ^ k < 2 ^ 64 := by
-        have : (((encodeNat (eval σ₀ a σ ρ).n).toNat * 2 ^ k : Nat) : Int) < 2 ^ 64 := by
-          push_cast; rw [henc]; exact hx64
-        exact_mod_cast this
-      simp only [intOf, eval, Zahl.mul, TargetOp.run, Option.some.injEq]
-      rw [shlW_keinUeberlauf _ _ hnat]
-      push_cast
-      rw [henc, hbv]
-    · cases h
+          simp at this
+          omega
+        refine ⟨(eval σ₀ a σ ρ).n, by simp [shiftedOperand, hb], by omega, hxlt, ?_⟩
+        simp only [intOf, eval, Zahl.mul, TargetOp.run, Option.some.injEq]
+        rw [shlW_encodeNat k (by omega) hx64, hbv]
+      · cases hm
+    | none =>
+      rw [hm] at h
+      simp only [strengthMulComm] at h
+      split at h
+      · rename_i hc
+        cases h
+        obtain ⟨ha, hbn, hl, hh⟩ := hc
+        have hav := constInt?_sound a σ₀ σ ρ _ ha
+        simp only [intOf, Option.some.injEq] at hav
+        have hb1 := (eval σ₀ b σ ρ).lo_le
+        have hb2 := (eval σ₀ b σ ρ).le_hi
+        have hx64 : (eval σ₀ b σ ρ).n * 2 ^ k < 2 ^ 64 :=
+          Int.lt_of_le_of_lt (Int.mul_le_mul_of_nonneg_right hb2 (Int.le_of_lt hpos)) hh
+        have hxlt : (eval σ₀ b σ ρ).n < 2 ^ 64 := by
+          have h1 : (1 : Int) ≤ 2 ^ k := by omega
+          have := Int.mul_le_mul_of_nonneg_left h1 (by omega : (0 : Int) ≤ (eval σ₀ b σ ρ).n)
+          simp at this
+          omega
+        refine ⟨(eval σ₀ b σ ρ).n, by simp [shiftedOperand, hbn], by omega, hxlt, ?_⟩
+        simp only [intOf, eval, Zahl.mul, TargetOp.run, Option.some.injEq]
+        rw [shlW_encodeNat k (by omega) hx64, hav, Int.mul_comm]
+      · cases h
   | div h0 h1' a b =>
     simp only [checkStrength, strengthDiv] at h
     split at h
@@ -629,6 +695,18 @@ theorem checkStrength_sound {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (k : Nat) (
     · cases h
   | _ => simp [checkStrength] at h
 
+/-- The selected word, stated on the accepted representation: for a
+    source operand value `v`, the word operation runs on `zahlWort v`. -/
+theorem checkStrength_sound_zahlWort {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (k : Nat)
+    (e : Expr D Γ Λ τ) (op : TargetOp) (h : checkStrength k e = some op)
+    (σ₀ σ : World D) (ρ : Env D Γ) {lo hi : Int} (v : Zahl lo hi)
+    (hv : shiftedOperand σ₀ e σ ρ = some v.n) :
+    intOf τ (eval σ₀ e σ ρ) = some ((op.run (zahlWort v)).toNat : Int) := by
+  obtain ⟨x, hx, _, _, hval⟩ := checkStrength_sound k e op h σ₀ σ ρ
+  rw [hv] at hx
+  cases hx
+  rw [hval, encodeNat_zahlWort]
+
 /-- R4: signed division is never strength-reduced. -/
 theorem checkStrength_sdiv {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int} (k : Nat)
     (hb : 1 ≤ l2 ∨ h2 ≤ -1) (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) :
@@ -661,8 +739,13 @@ def StmtEquiv {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (s s' : Stmt D V l �
     (σ : World D) (ρ : Env D Γ), execStmt O passes R s' σ ρ = execStmt O passes R s σ ρ
 
 /-- Block refinement, as for statements. Equality of the whole `Ausgang`
-    is what carries faults, budget refusals (`logik`), hardware stops and
-    the event trace (OPTIMIZER.md §1.2 items 1–3, 9–10) through a rule. -/
+    of single-thread `execBlock` carries values, faults, budget refusals
+    (`logik`), hardware stops and the read/write event trace through a rule
+    (OPTIMIZER.md §1.2 items 1, 2 and the single-thread part of 9-10). It
+    does NOT carry concurrent observations (item 3): machine G steps a
+    `pruefung`/`narrow` as a step of its own, so a removed check removes a
+    G step, an interleaving point and its time (`ZeitAb`). The G/GX
+    transfer is OPEN. -/
 def BlockEquiv {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b b' : Block D V l Γ Λ Λ') : Prop :=
   ∀ (O : Orakel D) (passes : Nat) (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     (σ : World D) (ρ : Env D Γ), execBlock O passes R b' σ ρ = execBlock O passes R b σ ρ
@@ -688,6 +771,14 @@ inductive StmtCert where
   | assignSlotValue (c : ExprCert)
   | assignVarValue (c : ExprCert)
   | assignGlobValue (c : ExprCert)
+  | breakingBody (c : BlockCert)
+  | optSomeBranch (c : BlockCert)
+  | optNoneBranch (c : BlockCert)
+  | traverseBody (c : BlockCert)
+  | retryCond (c : ExprCert)
+  | retryBody (c : BlockCert)
+  | retryOverflow (c : BlockCert)
+  | foreverBody (c : BlockCert)
 /-- Block certificates: a block rule at this position, an expression
     rewrite in place, or a path step (`head` into the first statement,
     `rest` into the continuation). -/
@@ -728,6 +819,14 @@ def applyStmt {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .assignVarValue c, .assignVar x e => (applyExpr c _ e).map (fun e' => .assignVar x e')
   | .assignGlobValue c, .assignGlob g e h1 h2 =>
       (applyExpr c _ e).map (fun e' => .assignGlob g e' h1 h2)
+  | .breakingBody c, .breaking i body => (applyBlock c body).map (fun b' => .breaking i b')
+  | .optSomeBranch c, .onOption o p a => (applyBlock c p).map (fun p' => .onOption o p' a)
+  | .optNoneBranch c, .onOption o p a => (applyBlock c a).map (fun a' => .onOption o p a')
+  | .traverseBody c, .traverse t inv body => (applyBlock c body).map (fun b' => .traverse t inv b')
+  | .retryCond c, .retry n bis body ue => (applyExpr c .bool bis).map (fun b' => .retry n b' body ue)
+  | .retryBody c, .retry n bis body ue => (applyBlock c body).map (fun b' => .retry n bis b' ue)
+  | .retryOverflow c, .retry n bis body ue => (applyBlock c ue).map (fun u' => .retry n bis body u')
+  | .foreverBody c, .forever a inv body => (applyBlock c body).map (fun b' => .forever a inv b')
   | _, _ => none
 
 /-- The block validator. A check that is decided `false` is NOT removed:
@@ -743,6 +842,8 @@ def applyBlock {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
   | .head c, .cons s rest => (applyStmt c s).map (fun s' => .cons s' rest)
   | .rest c, .cons s rest => (applyBlock c rest).map (fun r' => .cons s r')
   | .rest c, .bind e rest => (applyBlock c rest).map (fun r' => .bind e r')
+  | .rest c, .bindCall f args he hp hr rest =>
+      (applyBlock c rest).map (fun r' => .bindCall f args he hp hr r')
   | .rest c, .pruefung e sonst rest => (applyBlock c rest).map (fun r' => .pruefung e sonst r')
   | .rest c, .narrow e lo' hi' sonst rest =>
       (applyBlock c rest).map (fun r' => .narrow e lo' hi' sonst r')
@@ -860,6 +961,78 @@ theorem applyStmt_sound {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       intro O passes R σ ρ
       simp only [execStmt, q.orte, q.wert]
     | _ => simp [applyStmt] at h
+  | .breakingBody c, s, s', h => by
+    cases s with
+    | breaking i body =>
+      simp only [applyStmt, Option.map_eq_some_iff] at h
+      obtain ⟨x', hx, rfl⟩ := h
+      have q := applyBlock_sound c body x' hx
+      intro O passes R σ ρ
+      simp only [execStmt, q O passes R]
+    | _ => simp [applyStmt] at h
+  | .optSomeBranch c, s, s', h => by
+    cases s with
+    | onOption o p a =>
+      simp only [applyStmt, Option.map_eq_some_iff] at h
+      obtain ⟨x', hx, rfl⟩ := h
+      have q := applyBlock_sound c p x' hx
+      intro O passes R σ ρ
+      simp only [execStmt, q O passes R]
+    | _ => simp [applyStmt] at h
+  | .optNoneBranch c, s, s', h => by
+    cases s with
+    | onOption o p a =>
+      simp only [applyStmt, Option.map_eq_some_iff] at h
+      obtain ⟨x', hx, rfl⟩ := h
+      have q := applyBlock_sound c a x' hx
+      intro O passes R σ ρ
+      simp only [execStmt, q O passes R]
+    | _ => simp [applyStmt] at h
+  | .traverseBody c, s, s', h => by
+    cases s with
+    | traverse t inv body =>
+      simp only [applyStmt, Option.map_eq_some_iff] at h
+      obtain ⟨x', hx, rfl⟩ := h
+      have q := applyBlock_sound c body x' hx
+      intro O passes R σ ρ
+      simp only [execStmt, q O passes R]
+    | _ => simp [applyStmt] at h
+  | .retryCond c, s, s', h => by
+    cases s with
+    | retry n bis body ue =>
+      simp only [applyStmt, Option.map_eq_some_iff] at h
+      obtain ⟨x', hx, rfl⟩ := h
+      have q := applyExpr_sound c _ bis x' hx
+      intro O passes R σ ρ
+      simp only [execStmt, q.orte, q.wert]
+    | _ => simp [applyStmt] at h
+  | .retryBody c, s, s', h => by
+    cases s with
+    | retry n bis body ue =>
+      simp only [applyStmt, Option.map_eq_some_iff] at h
+      obtain ⟨x', hx, rfl⟩ := h
+      have q := applyBlock_sound c body x' hx
+      intro O passes R σ ρ
+      simp only [execStmt, q O passes R]
+    | _ => simp [applyStmt] at h
+  | .retryOverflow c, s, s', h => by
+    cases s with
+    | retry n bis body ue =>
+      simp only [applyStmt, Option.map_eq_some_iff] at h
+      obtain ⟨x', hx, rfl⟩ := h
+      have q := applyBlock_sound c ue x' hx
+      intro O passes R σ ρ
+      simp only [execStmt, q O passes R]
+    | _ => simp [applyStmt] at h
+  | .foreverBody c, s, s', h => by
+    cases s with
+    | forever a inv body =>
+      simp only [applyStmt, Option.map_eq_some_iff] at h
+      obtain ⟨x', hx, rfl⟩ := h
+      have q := applyBlock_sound c body x' hx
+      intro O passes R σ ρ
+      simp only [execStmt, q O passes R]
+    | _ => simp [applyStmt] at h
 
 /-- **Generic soundness of the block validator.** -/
 theorem applyBlock_sound {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
@@ -928,6 +1101,12 @@ theorem applyBlock_sound {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} :
       have q := applyBlock_sound c rest x' hx
       intro O passes R σ ρ
       simp only [execBlock, q O passes R]
+    | bindCall f args he hp hr rest =>
+      simp only [applyBlock, Option.map_eq_some_iff] at h
+      obtain ⟨x', hx, rfl⟩ := h
+      have q := applyBlock_sound c rest x' hx
+      intro O passes R σ ρ
+      simp only [execBlock, q O passes R]
     | pruefung e sonst rest =>
       simp only [applyBlock, Option.map_eq_some_iff] at h
       obtain ⟨x', hx, rfl⟩ := h
@@ -990,8 +1169,10 @@ mutual
 /-- Every rule a statement certificate uses belongs to pass `k`. -/
 def StmtCert.fits (k : PassKind) : StmtCert → Bool
   | .iteCond c | .assignSlotIndex c | .assignSlotValue c | .assignVarValue c
-  | .assignGlobValue c => c.pass == k
-  | .iteThen c | .iteElse c | .lockBody c => BlockCert.fits k c
+  | .assignGlobValue c | .retryCond c => c.pass == k
+  | .iteThen c | .iteElse c | .lockBody c | .breakingBody c | .optSomeBranch c
+  | .optNoneBranch c | .traverseBody c | .retryBody c | .retryOverflow c
+  | .foreverBody c => BlockCert.fits k c
 /-- Every rule a block certificate uses belongs to pass `k`. -/
 def BlockCert.fits (k : PassKind) : BlockCert → Bool
   | .dropCheck | .narrowEntailed => k == .checks
@@ -1050,17 +1231,24 @@ theorem applyPipeline_order {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
 end Statements
 
 /- CUTS (exactly what is NOT proved here):
-   - No shared IR (lane 287 is pending; OPTIMIZER.md §2): every rule acts on
-     the real source syntax. GVN/CSE (V1/V2), dead code (D1/D2), alias motion
+   - No IR, by decision (594/606: direct lowering from the typed source,
+     lane 287 superseded; OPTIMIZER.md §2): every rule acts on the real
+     source syntax. GVN/CSE (V1/V2), dead code (D1/D2), alias motion
      (A1/A2), LICM (L1/L2), inlining (I1/I2), unrolling (U1/U2) and the
-     peephole/allocation rules (P1–P4) need the IR's SSA, dominators,
-     footprints and effect nodes and are NOT here (§11.4: "only after the
-     shared IR + effects + source-cost interface is accepted").
-   - The block validator descends only through `cons`/`bind`/`pruefung`/
-     `narrow` continuations and `ite` branches / `locks` bodies; rules
-     inside loops (`traverse`/`retry`/`forever`), match arms, calls, and the
-     remaining binders are not reachable by a certificate path yet (a
-     certificate pointing there is refused, never trusted).
+     peephole/allocation rules (P1–P4) need validator-recomputed dominators,
+     footprints, effect summaries and the matching lowering rows, and are
+     NOT here (§11.4: "only after the corresponding lowering rows and the
+     source-cost/effect interface are accepted").
+   - The block validator descends through `cons`/`bind`/`bindCall`/
+     `pruefung`/`narrow` continuations, `ite` branches, `locks`/`breaking`
+     bodies, both `on option` branches, the bodies of `traverse`/`retry`/
+     `forever`, the `retry` overflow block and the `retry` exit condition.
+     NOT reachable (a certificate pointing there is refused, never
+     trusted): `on tag`/`on reason` arms, the other call binders,
+     register/float binders, `exchange`/`awaits`, and the loop INVARIANTS of
+     `traverse`/`forever` -- those are contract sites (§1.2 item 6, §7.4)
+     whose obligations are reused from the unrewritten source, so no rule
+     rewrites them.
    - Branch ELIMINATION for `ite` is not a block rewrite here: the condition
      folds to `true`/`false` (exact), and the branch-free lowering of a
      literal condition belongs to the x86 lowering lane.
@@ -1071,14 +1259,20 @@ end Statements
    - Strength reduction certifies the target WORD operation (`shlW`,
      `shrW`, `&&& maskW`) against the source value; encoding, decoding,
      register allocation and the executed bytes stay with the lowering /
-     image lanes (OPTIMIZER.md §8.7). Only a left operand and a right
-     constant `2^k` are recognised (no `2^k * a`).
+     image lanes (OPTIMIZER.md §8.7). The word is `SourceMemory.zahlWort`
+     of the operand (`encodeNat` is that interface, not a second one).
+     Products are recognised in both orders (`a * 2^k`, `2^k * b` with `b`
+     not constant); division and remainder only with the constant divisor.
    - No floating-point rule exists (F1 literal folding included): F2–F4
      stay REFUSED by absence, `constBool?` answers `none` on `fllt`/`flle`.
    - No concurrency, TSO, budget/time or call-log transfer is CLAIMED
      beyond what exact `Ausgang` equality of single-thread `execBlock`
      already carries; the cross-thread (W/GX) and machine-work/time
-     transfers stay OPEN (§§5, 6.4).
+     transfers stay OPEN (§§5, 6.4). In particular a dropped check or
+     `narrow` removes a machine-G step (see `BlockEquiv`).
+   - `foldInt`'s out-of-range refusal branch is unreachable for a sound
+     `constInt?` (a value outside its type does not exist); it is kept as a
+     recomputed check, and no poison probe can exercise it.
    - The pipeline order check is the order of §9; the rank table is the
      reviewed order of that section, not a measured choice.
 -/
@@ -1090,7 +1284,10 @@ end Statements
 #print axioms foldInt_sound
 #print axioms foldBool_sound
 #print axioms applyExpr_sound
+#print axioms encodeNat_toNat
+#print axioms shlW_encodeNat
 #print axioms checkStrength_sound
+#print axioms checkStrength_sound_zahlWort
 #print axioms checkStrength_sdiv
 #print axioms checkStrength_srem
 #print axioms dropCheck_sound
