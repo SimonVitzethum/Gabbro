@@ -32,6 +32,12 @@ import Grammatik.X86.TSO
 
 namespace Gabbro.Grammatik.X86
 
+/- Lane-704 scope: every declaration below lives in `Bus704`, so no
+   flat `X86` name here can collide with another lane's module at
+   umbrella build time (repair of the failed integration against
+   `MemoryTypeHardwareExecution.witFp`; no semantic change). -/
+namespace Bus704
+
 /-- TSS IO permission map from checked software/configuration data: the
     bitmap base and TSS limit plus the bit for each port byte address
     (`true` = set/denied, `false` = clear/allowed). No trusted OS-ready
@@ -952,5 +958,7 @@ theorem bus_zeuge_gemeinsam :
 #print axioms wit_schritt2
 #print axioms bus_zeuge_gemeinsam
 #print axioms volleKarte_96_frei
+
+end Bus704
 
 end Gabbro.Grammatik.X86

@@ -94,3 +94,30 @@ argument; fetched admission lives in the selection theorems.
   72010-72100 (OUT), 24391-24498 (20.5.x), 24500-24553 (20.6/Table
   20-1). Intel-profile evidence only; AMD retrieval failed upstream
   and no AMD claim is made.
+
+## Integration repair (failed gate, no merge)
+
+The integration gate failed with: `environment already contains
+'Gabbro.Grammatik.X86.witFp' from
+Grammatik.X86.MemoryTypeHardwareExecution`. A lane that landed after
+my base defined the flat `X86.witFp`, colliding with my witness
+extended state of the same name. Nothing was merged; no guarantee was
+weakened to fix it.
+
+Repair: every declaration of the module now lives in the nested
+lane-unique namespace `Bus704`
+(`Gabbro.Grammatik.X86.Bus704.*`), via two added lines
+(`namespace Bus704` / `end Bus704`) plus a plain comment. No
+definition, statement, or proof changed; all 31 `#print axioms`
+outputs are identical except for the qualified names. This ends the
+whole flat-name collision class against concurrently landing lanes,
+not just the one reported `witFp` (a single rename would have left
+the next collision to the next gate round).
+
+Re-verified after the repair: `./lean-probe
+grammatik/Grammatik/X86/DeviceBusHardwareExecution.lean` reports `0
+error(s)`; `./lean-bau` reports `Build completed successfully (472
+jobs)`. Consumers must qualify names (`Bus704.bus660Schritt`,
+`Bus704.bus_zeuge_gemeinsam`, ...). A fresh independent review of the
+changed commit is still required; acceptance of the full
+source/binary chain is not claimed.
