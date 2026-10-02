@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 20:53 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 22:35 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -298,7 +298,7 @@ Last ledger refresh: **2026-10-02 20:53 UTC**. This is an operational snapshot, 
 | 644 | Organise the next generic source-to-final-byte closure wave | Merged after review/checks | 645: Merged after review/checks | [report](messung/muse/MUSE-REPORT-644.md) |
 | 646 | Direct typed statement sequence to fetched machine execution | Merged after review/checks | 647: Merged after review/checks | [report](messung/muse/MUSE-REPORT-646.md) |
 | 648 | Generic checked source-assignment byte certificate | Merged after review/checks | 649: Merged after review/checks | [report](messung/muse/MUSE-REPORT-648.md) |
-| 650 | Growing TSO history to typed carrier W transition | Agent working | 651: scheduled | [task](lanes/650.md) |
+| 650 | Growing TSO history to typed carrier W transition | Committed candidate; review/integration pending | 651: Committed candidate; review/integration pending | [task](lanes/650.md) |
 | 652 | Whole-word drain with real interleaved foreign accesses | Merged after review/checks | 653: Merged after review/checks | [report](messung/muse/MUSE-REPORT-652.md) |
 | 654 | Derived target work bound for direct source lowering | Merged after review/checks | 655: Merged after review/checks | [report](messung/muse/MUSE-REPORT-654.md) |
 | 656 | Fetched conditional byte-step flag dependency simulation | Merged after review/checks | 657: Merged after review/checks | [report](messung/muse/MUSE-REPORT-656.md) |
@@ -307,26 +307,27 @@ Last ledger refresh: **2026-10-02 20:53 UTC**. This is an operational snapshot, 
 | 662 | Hardware completion: LOCK atomic and fence final-byte execution | Merged after review/checks | 663: Merged after review/checks | [report](messung/muse/MUSE-REPORT-662.md) |
 | 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Merged after review/checks | [report](messung/muse/MUSE-REPORT-664.md) |
 | 666 | Hardware completion: practical integer width and compact encoding rows | Merged after review/checks | 667: Merged after review/checks | [report](messung/muse/MUSE-REPORT-666.md) |
-| 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Agent working | 669: scheduled | [task](lanes/668.md) |
+| 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Committed candidate; review/integration pending | 669: Committed candidate; review/integration pending | [task](lanes/668.md) |
 | 670 | Hardware completion: precise selected fault and exception transitions | Merged after review/checks | 671: Merged after review/checks | [report](messung/muse/MUSE-REPORT-670.md) |
-| 672 | Hardware completion: interrupts entry masking and trap hardware forms | Agent working | 673: Committed candidate; review/integration pending | [task](lanes/672.md) |
+| 672 | Hardware completion: interrupts entry masking and trap hardware forms | Committed candidate; review/integration pending | 673: Committed candidate; review/integration pending | [task](lanes/672.md) |
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Merged after review/checks | 675: Merged after review/checks | [report](messung/muse/MUSE-REPORT-674.md) |
 | 676 | Hardware completion: port IO and device memory profiles | Merged after review/checks | 677: Merged after review/checks | [report](messung/muse/MUSE-REPORT-676.md) |
 | 678 | Organise and audit complete essential hardware-model coverage | Merged after review/checks | 679: Merged after review/checks | [report](messung/muse/MUSE-REPORT-678.md) |
 | 680 | Hardware completion: indirect and compact control byte forms | Merged after review/checks | 681: Merged after review/checks | [report](messung/muse/MUSE-REPORT-680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Merged after review/checks | 683: Merged after review/checks | [report](messung/muse/MUSE-REPORT-682.md) |
-| 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Agent working | [task](lanes/684.md) |
+| 684 | Eliminate hardcoded external project filesystem paths | Agent working | 685: Unresolved after agent rounds; not accepted | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Agent working | 687: scheduled | [task](lanes/686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Committed candidate; review/integration pending | 689: Committed candidate; review/integration pending | [task](lanes/688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
-| 692 | Hardware completion: observable defined and undefined RFLAGS | Agent working | 693: scheduled | [task](lanes/692.md) |
-| 694 | Hardware completion: UC MMIO architectural access and ordering | Agent working | 695: scheduled | [task](lanes/694.md) |
+| 692 | Hardware completion: observable defined and undefined RFLAGS | Committed candidate; review/integration pending | 693: Committed candidate; review/integration pending | [task](lanes/692.md) |
+| 694 | Hardware completion: UC MMIO architectural access and ordering | Committed candidate; review/integration pending | 695: Committed candidate; review/integration pending | [task](lanes/694.md) |
 | 696 | Essential 8/16/32-bit scalar arithmetic and moves | Agent working | 697: scheduled | [task](lanes/696.md) |
 | 698 | Essential width-selected shifts and rotates | Agent working | 699: scheduled | [task](lanes/698.md) |
-| 700 | Essential multiply divide widths and immediate IMUL | Agent working | 701: scheduled | [task](lanes/700.md) |
-| 702 | Essential scalar binary32 SSE2 architectural forms | Agent working | 703: scheduled | [task](lanes/702.md) |
-| 704 | Generic port bus and precise architectural IO permissions | Agent working | 705: scheduled | [task](lanes/704.md) |
+| 700 | Essential multiply divide widths and immediate IMUL | Committed candidate; review/integration pending | 701: Committed candidate; review/integration pending | [task](lanes/700.md) |
+| 702 | Essential scalar binary32 SSE2 architectural forms | Committed candidate; review/integration pending | 703: Committed candidate; review/integration pending | [task](lanes/702.md) |
+| 704 | Generic port bus and precise architectural IO permissions | Committed candidate; review/integration pending | 705: Committed candidate; review/integration pending | [task](lanes/704.md) |
 | 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Committed candidate; review/integration pending | 707: Committed candidate; review/integration pending | [task](lanes/706.md) |
+| 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -812,6 +813,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **682**, Hardware completion: MXCSR control byte execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-682.md). <!-- x86-merged:682 -->
 - 2026-10-02: lane **683**, Independent exact review of 682, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-683.md). <!-- x86-merged:683 -->
 - 2026-10-02: publication batch checks passed for `0392b3f0`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-02: checked master `f2ef4878` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:f2ef4878b342c7350aeb5065e1473046145e60d3 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
