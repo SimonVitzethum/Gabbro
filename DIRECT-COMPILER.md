@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 23:26 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 23:30 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -318,31 +318,31 @@ Last ledger refresh: **2026-10-02 23:26 UTC**. This is an operational snapshot, 
 | 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Merged after review/checks | 687: Merged after review/checks | [report](messung/muse/MUSE-REPORT-686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Merged after review/checks | 689: Merged after review/checks | [report](messung/muse/MUSE-REPORT-688.md) |
-| 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
+| 690 | Hardware completion: selected AVX2 integer architectural byte forms | Prepared | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Merged after review/checks | 695: Merged after review/checks | [report](messung/muse/MUSE-REPORT-694.md) |
 | 696 | Essential 8/16/32-bit scalar arithmetic and moves | Agent working | 697: scheduled | [task](lanes/696.md) |
 | 698 | Essential width-selected shifts and rotates | Agent working | 699: scheduled | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
-| 704 | Generic port bus and precise architectural IO permissions | Committed candidate; review/integration pending | 705: Committed candidate; review/integration pending | [task](lanes/704.md) |
-| 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Committed candidate; review/integration pending | 707: Committed candidate; review/integration pending | [task](lanes/706.md) |
+| 704 | Generic port bus and precise architectural IO permissions | Queued for a model slot | 705: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/704.md) |
+| 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Merged after review/checks | 707: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
 | 710 | Optimizer rule library proof and scope review | Committed candidate; review/integration pending | 711: Agent working | [task](lanes/710.md) |
 | 712 | Compiler pipeline Lean source-to-byte proof review | Committed candidate; review/integration pending | 713: Committed candidate; review/integration pending | [task](lanes/712.md) |
-| 714 | Compiler ISA and instruction selection architecture review | Committed candidate; review/integration pending | 715: scheduled | [task](lanes/714.md) |
+| 714 | Compiler ISA and instruction selection architecture review | Committed candidate; review/integration pending | 715: Agent working | [task](lanes/714.md) |
 | 716 | Rust compiler validation and ELF integration review | Committed candidate; review/integration pending | 717: Committed candidate; review/integration pending | [task](lanes/716.md) |
-| 718 | Unify accepted architectural final-byte family dispatch | Scheduled | 719: scheduled | [task](lanes/718.md) |
-| 720 | Connect real selected integer bytes to shared TSO execution | Scheduled | 721: scheduled | [task](lanes/720.md) |
-| 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Scheduled | 723: scheduled | [task](lanes/722.md) |
-| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Scheduled | 725: scheduled | [task](lanes/724.md) |
-| 726 | Model checked long-mode page walks and precise access faults | Scheduled | 727: scheduled | [task](lanes/726.md) |
-| 728 | Model actual IDT TSS descriptor and entry stack selection | Scheduled | 729: scheduled | [task](lanes/728.md) |
-| 730 | Connect full selected SIB RIP-relative addresses to actual effects | Scheduled | 731: scheduled | [task](lanes/730.md) |
-| 732 | Organise exact essential hardware integration and executable coverage | Scheduled | 733: scheduled | [task](lanes/732.md) |
-| 734 | Selected control registers and syscall MSR byte effects | Scheduled | 735: scheduled | [task](lanes/734.md) |
-| 736 | SSE and selected AVX context save restore effects | Scheduled | 737: scheduled | [task](lanes/736.md) |
-| 738 | Derive precise fault ordering across fetched instruction accesses | Scheduled | 739: scheduled | [task](lanes/738.md) |
+| 718 | Unify accepted architectural final-byte family dispatch | Agent working | 719: scheduled | [task](lanes/718.md) |
+| 720 | Connect real selected integer bytes to shared TSO execution | Agent working | 721: scheduled | [task](lanes/720.md) |
+| 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Agent working | 723: scheduled | [task](lanes/722.md) |
+| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Agent working | 725: scheduled | [task](lanes/724.md) |
+| 726 | Model checked long-mode page walks and precise access faults | Agent working | 727: scheduled | [task](lanes/726.md) |
+| 728 | Model actual IDT TSS descriptor and entry stack selection | Agent working | 729: scheduled | [task](lanes/728.md) |
+| 730 | Connect full selected SIB RIP-relative addresses to actual effects | Agent working | 731: scheduled | [task](lanes/730.md) |
+| 732 | Organise exact essential hardware integration and executable coverage | Agent working | 733: scheduled | [task](lanes/732.md) |
+| 734 | Selected control registers and syscall MSR byte effects | Agent working | 735: scheduled | [task](lanes/734.md) |
+| 736 | SSE and selected AVX context save restore effects | Agent working | 737: scheduled | [task](lanes/736.md) |
+| 738 | Derive precise fault ordering across fetched instruction accesses | Agent working | 739: scheduled | [task](lanes/738.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -847,6 +847,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **703**, Independent exact review of 702, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-703.md). <!-- x86-merged:703 -->
 - 2026-10-02: lane **686**, Hardware completion: essential SSE2 integer and memory byte forms, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-686.md). <!-- x86-merged:686 -->
 - 2026-10-02: lane **687**, Independent exact review of 686, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-687.md). <!-- x86-merged:687 -->
+- 2026-10-02: lane **706**, Repair actual fallback CLI message, provider pointer and quick-exit backoff, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-706.md). <!-- x86-merged:706 -->
+- 2026-10-02: integration of candidate(s) [704] failed the local proof/build gate after independent review 705; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:705 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
