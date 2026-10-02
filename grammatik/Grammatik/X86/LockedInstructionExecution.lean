@@ -48,11 +48,14 @@ inductive LockForm where
     cycle (CMPXCHG entry: "never a locked read without a locked
     write"), so failure needs write permission. -/
 
-/-- Architectural #UD grounds the byte layer parses but never executes:
-    LOCK on a register destination, LOCK on the fence. -/
+/-- Architectural #UD grounds the byte layer parses or gates but never
+    executes: LOCK on a register destination, LOCK on the fence, and a
+    fence without silicon SSE2 (MFENCE entry, CPUID.01H:EDX.SSE2[26]).
+    The last ground is raised by control state, never by decode. -/
 inductive LockUdGrund where
   | lockAufRegister
   | lockAufZaun
+  | sse2Fehlt
   deriving DecidableEq, Repr
 
 /-- One parsed locked instruction: an admitted form, or a parsed
@@ -284,6 +287,118 @@ theorem roundtripLock_len_ok (f : LockForm) (suffix : List Byte) :
   · rw [List.length_append]
   · exact (encodeLock_len f).1
   · exact (encodeLock_len f).2
+
+/-! ## 4. Machine and full execution.
+
+    The locked machine pairs the canonical `Zustand` (registers, flags,
+    RIP, memory) with the per-core TSO store buffers. LOCK word steps
+    bypass the acting core's buffer and operate on canonical memory
+    exactly when that buffer is empty, reusing `read64`/`write64` (hence
+    the actual permission checks) and the accepted flag operators
+    `add64`/`sub64`. The fence gates on the SSE2 feature conjunction
+    (`merkmalZugelassen ... .sseDoppel`: silicon AND readiness) and on
+    the empty own buffer, mirroring `mfenceZulaessig`. -/
+
+/-- The locked machine: canonical registers/flags/RIP/memory plus the
+    per-core TSO store buffers. -/
+structure LockMaschine where
+  zu : Zustand
+  puffer : Nat → List TSOEintrag
+
+/-- Projection to the canonical TSO state: the machine memory with the
+    machine buffers. -/
+def toTSO (m : LockMaschine) : TSOZustand := ⟨m.zu.speicher, m.puffer⟩
+
+/-- Execution outcome: success with its access event; the memory-access
+    fault class (`speicherFehler`: failed read/write permission or page
+    failure, never #UD); architectural #UD exactly where the manual
+    states it (`udFehler`); profile refusal (`verweigert`: empty-buffer
+    violation, misalignment, bad length, unsupported shape). Admission
+    refusals are never #UD claims. -/
+inductive LockAusgang where
+  | ok (m : LockMaschine) (ev : LockEreignis)
+  | speicherFehler
+  | udFehler (g : LockUdGrund)
+  | verweigert
+
+/-- Full execution of one parsed locked instruction on core `c`. XADD
+    exchanges the old word into the source register and installs the
+    sum with addition flags (manual Operation/Flags). CMPXCHG compares
+    against RAX: success installs the source with ZF set; failure loads
+    the word into RAX with ZF cleared AND writes the word back, so the
+    failure path also needs write permission (manual: "never a locked
+    read without a locked write"). MFENCE needs admitted SSE2 and an
+    empty own buffer and moves only RIP. -/
+def lockSchrittVoll (a : LockAnweisung) (c : Nat) (m : LockMaschine)
+    (hw : HwProfil) (bp : BereitProfil) : LockAusgang :=
+  match a with
+  | .ud g _ => .udFehler g
+  | .ok f len =>
+    match laengeOk len with
+    | false => .verweigert
+    | true =>
+      match f with
+      | .mfence =>
+        match merkmalZugelassen hw bp .sseDoppel with
+        | false => .udFehler .sse2Fehlt
+        | true =>
+          match m.puffer c with
+          | _ :: _ => .verweigert
+          | [] =>
+            LockAusgang.ok ⟨{ m.zu with rip := ripNach m.zu.rip len }, m.puffer⟩
+              ⟨c, [], [], none, none, false, true⟩
+      | .xadd64 src base d =>
+        match m.puffer c with
+        | _ :: _ => .verweigert
+        | [] =>
+          let tgt := effAddr m.zu base d
+          if ausgerichtet8 tgt then
+            match read64 m.zu.speicher tgt with
+            | none => .speicherFehler
+            | some alt =>
+              match write64 m.zu.speicher tgt
+                  (alt + m.zu.register src) with
+              | none => .speicherFehler
+              | some mem' =>
+                let r := add64 alt (m.zu.register src)
+                let z1 := schrittRegister m.zu (ripNach m.zu.rip len) r.2 src alt
+                let z2 := { z1 with speicher := mem' }
+                LockAusgang.ok ⟨z2, m.puffer⟩
+                  ⟨c, Fuss tgt, Fuss tgt, some alt,
+                    some (alt + m.zu.register src), true, false⟩
+          else .verweigert
+      | .cmpxchg64 src base d =>
+        match m.puffer c with
+        | _ :: _ => .verweigert
+        | [] =>
+          let tgt := effAddr m.zu base d
+          if ausgerichtet8 tgt then
+            match read64 m.zu.speicher tgt with
+            | none => .speicherFehler
+            | some dest =>
+              let acc := m.zu.register .rax
+              let cmp := sub64 dest acc
+              if dest == acc then
+                match write64 m.zu.speicher tgt (m.zu.register src) with
+                | none => .speicherFehler
+                | some mem' =>
+                  let z1 := { m.zu with rip := ripNach m.zu.rip len }
+                  let z2 := { z1 with speicher := mem' }
+                  let z3 := { z2 with flags := cmp.2 }
+                  LockAusgang.ok ⟨z3, m.puffer⟩
+                    ⟨c, Fuss tgt, Fuss tgt, some dest,
+                      some (m.zu.register src), true, false⟩
+              else
+                match write64 m.zu.speicher tgt dest with
+                | none => .speicherFehler
+                | some mem' =>
+                  let z1 := schrittRegister m.zu (ripNach m.zu.rip len)
+                    cmp.2 .rax dest
+                  let z2 := { z1 with speicher := mem' }
+                  LockAusgang.ok ⟨z2, m.puffer⟩
+                    ⟨c, Fuss tgt, Fuss tgt, some dest, some dest,
+                      true, false⟩
+          else .verweigert
 
 #print axioms breite_bytes
 
