@@ -305,7 +305,7 @@ Last ledger refresh: **2026-10-02 19:40 UTC**. This is an operational snapshot, 
 | 658 | Scalar FP final-byte validator admission and MXCSR entry | Merged after review/checks | 659: Merged after review/checks | [report](messung/muse/MUSE-REPORT-658.md) |
 | 660 | Hardware completion: coherent multicore architectural execution | Agent working | 661: scheduled | [task](lanes/660.md) |
 | 662 | Hardware completion: LOCK atomic and fence final-byte execution | Agent working | 663: scheduled | [task](lanes/662.md) |
-| 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-664.md) |
+| 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Merged after review/checks | [report](messung/muse/MUSE-REPORT-664.md) |
 | 666 | Hardware completion: practical integer width and compact encoding rows | Committed candidate; review/integration pending | 667: scheduled | [task](lanes/666.md) |
 | 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Agent working | 669: scheduled | [task](lanes/668.md) |
 | 670 | Hardware completion: precise selected fault and exception transitions | Committed candidate; review/integration pending | 671: scheduled | [task](lanes/670.md) |
@@ -778,6 +778,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **654**, Derived target work bound for direct source lowering, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-654.md). <!-- x86-merged:654 -->
 - 2026-10-02: lane **655**, Independent exact review of 654, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-655.md). <!-- x86-merged:655 -->
 - 2026-10-02: lane **664**, Hardware completion: efficient full selected address encodings, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-664.md). <!-- x86-merged:664 -->
+- 2026-10-02: lane **665**, Independent exact review of 664, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-665.md). <!-- x86-merged:665 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
