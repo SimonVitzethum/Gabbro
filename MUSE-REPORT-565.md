@@ -76,12 +76,50 @@ theorem was changed; nothing outside the three owned paths was touched.
   and §6 pins the FP direction (moves keep GPRs/flags/control word).
   Recorded in the file CUTS block.
 
+## Integration gate failure analysis (no merge, fresh review required)
+
+The integration gate failed with ONLY the documented apparatus flake; no
+proof defect was found, so no module change was made:
+
+```
+error: Lean exited with code 134
+Some required targets logged failures:
+- Grammatik.X86.ScalarFloatCodec
+```
+
+with `info: stderr: libc++abi: terminating due to uncaught exception of
+type lean::exception: failed to create thread`. The gate log's "2 error
+lines" are exactly these two build-system lines; the log contains zero
+Lean elaboration errors attributable to the module (all neighboring
+`info:` lines are passing axiom prints from other modules). This is the
+same intermittent failure this lane measured throughout (~1/3 of queued
+runs, independent of file content and correctness): the Lean process
+aborts at thread creation under concurrent-lane load, before reporting
+any verdict.
+
+Local reproduction on the unchanged committed module just now: green
+`./lean-probe` runs (0 errors, standard axioms) interleaved with
+identical exit-134 aborts minutes apart, plus a fresh full `./lean-bau`
+"Build completed successfully (428 jobs)". The module contains no
+thread-spawning constructs (pure Lean, no `Task`/`Par`); nothing in the
+proof can cause or fix a `pthread_create` failure. Restructuring
+verified proofs to chase a scheduler flake would risk real breakage for
+no gain and was deliberately not done.
+
+Recommendation to the coordinator: retry the integration gate unchanged;
+a fresh independent review of the changed commit (b62e3019) is still
+required per the lane rules, and that review should expect the same
+flake on any long module under load. If the flake rate blocks
+integration systematically, the fix belongs in the build apparatus
+(slot serialization / thread-pool sizing / virtual-address ceiling noted
+in AGENTS.md §11), not in lane proof code.
+
 ## Verification
 
 - `./lean-probe grammatik/Grammatik/X86/ScalarFloatCodec.lean`: **0 errors**,
   repeatedly (10+ green runs).
 - `./lean-bau`: **Build completed successfully (428 jobs)**, repeatedly.
-- `#print axioms` for all 39 theorems: only `propext`, `Classical.choice`,
+- `#print axioms` for all 40 proved items: only `propext`, `Classical.choice`,
   `Quot.sound`, or none.
 - Goal intact: `#print axioms Gabbro.Grammatik.Zielsatz.gabbro_ziel` gives
   exactly `[propext, Classical.choice, Quot.sound]`.
