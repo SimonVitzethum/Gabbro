@@ -234,6 +234,70 @@ theorem hwSpülung_schreibt (m : HwMaschine) (c : Nat) (s' : TSOZustand)
     s'.mem.bytes e.addr = e.wert := by
   exact flush_schreibt_kopf (tsoAnsicht m) s' c h e rest he
 
+/-! ## 5. Embeddings: pilot and extended execution are preserved.
+
+  The old evaluator rides along unchanged (`laufAlt`); refusal and the
+  divide trap (`halt`) survive the embedding with their exact
+  admissibility conditions. No desired hardware refinement is copied:
+  every arm cites its accepted selection lemma. -/
+
+/-- The lift succeeds exactly where the old evaluator succeeds. -/
+theorem hwLaufAlt_some (d : Decodiert) (t : FpZustand) (s' : Zustand)
+    (h : schritt d t.kern = some s') :
+    laufAlt d t = some { t with kern := s' } := by
+  unfold laufAlt
+  rw [h]
+
+/-- The lift refuses exactly where the old evaluator refuses. -/
+theorem hwLaufAlt_none (d : Decodiert) (t : FpZustand)
+    (h : schritt d t.kern = none) :
+    laufAlt d t = none := by
+  unfold laufAlt
+  rw [h]
+
+/-- Pilot success is unified success, on the machine projection. -/
+theorem hwPilot_weiter (m : HwMaschine) (c : Nat) (d : Decodiert)
+    (b : BereitProfil) (s' : Zustand)
+    (h : schritt d (projZustand m c) = some s') :
+    stepExt (.pilot d) (projFp m c) b =
+      .weiter { projFp m c with kern := s' } := by
+  have hl : laufAlt d (projFp m c) = some { projFp m c with kern := s' } :=
+    hwLaufAlt_some d (projFp m c) s' h
+  exact stepExt_pilot d (projFp m c) _ b hl
+
+/-- Pilot refusal is unified refusal, including stopped outcomes. -/
+theorem hwPilot_verweigert (m : HwMaschine) (c : Nat) (d : Decodiert)
+    (b : BereitProfil)
+    (h : schritt d (projZustand m c) = none) :
+    stepExt (.pilot d) (projFp m c) b = .verweigert := by
+  have hl : laufAlt d (projFp m c) = none :=
+    hwLaufAlt_none d (projFp m c) h
+  exact stepExt_pilot_verweigert d (projFp m c) b hl
+
+/-- The pilot arm never traps: no silent halt is introduced. -/
+theorem hwPilot_kein_halt (d : Decodiert) (t : FpZustand)
+    (b : BereitProfil) :
+    stepExt (.pilot d) t b ≠ .halt := by
+  cases hL : laufAlt d t with
+  | some t' =>
+    have hs := stepExt_pilot d t t' b hL
+    rw [hs]
+    intro h
+    cases h
+  | none =>
+    have hs := stepExt_pilot_verweigert d t b hL
+    rw [hs]
+    intro h
+    cases h
+
+/-- The divide trap survives the embedding: accepted hardware halt in,
+    unified halt out, on the machine projection. -/
+theorem hwMuldiv_halt (m : HwMaschine) (c : Nat) (q : MulDivDecodiert)
+    (b : BereitProfil)
+    (h : mulDivSchritt q (projZustand m c) = .hardwareHalt) :
+    stepExt (.muldiv q) (projFp m c) b = .halt :=
+  stepExt_muldiv_halt q (projFp m c) b h
+
 /- CUTS:
    Skeleton only: data vocabulary and projections so far.
    NOT proved: well-formedness, steps, embeddings, witnesses, adapters.
