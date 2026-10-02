@@ -299,7 +299,7 @@ Last ledger refresh: **2026-10-02 18:40 UTC**. This is an operational snapshot, 
 | 646 | Direct typed statement sequence to fetched machine execution | Agent working | 647: scheduled | [task](lanes/646.md) |
 | 648 | Generic checked source-assignment byte certificate | Committed candidate; review/integration pending | 649: Agent working | [task](lanes/648.md) |
 | 650 | Growing TSO history to typed carrier W transition | Agent working | 651: scheduled | [task](lanes/650.md) |
-| 652 | Whole-word drain with real interleaved foreign accesses | Committed candidate; review/integration pending | 653: Committed candidate; review/integration pending | [task](lanes/652.md) |
+| 652 | Whole-word drain with real interleaved foreign accesses | Merged after review/checks | 653: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-652.md) |
 | 654 | Derived target work bound for direct source lowering | Agent working | 655: scheduled | [task](lanes/654.md) |
 | 656 | Fetched conditional byte-step flag dependency simulation | Committed candidate; review/integration pending | 657: Agent working | [task](lanes/656.md) |
 | 658 | Scalar FP final-byte validator admission and MXCSR entry | Committed candidate; review/integration pending | 659: Agent working | [task](lanes/658.md) |
@@ -750,6 +750,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: checked master `a31a0acf` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a31a0acf273b176a7024c093ccdbf269f41daf40 -->
 - 2026-10-02: lane **644**, Organise the next generic source-to-final-byte closure wave, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-644.md). <!-- x86-merged:644 -->
 - 2026-10-02: lane **645**, Independent exact review of 644, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-645.md). <!-- x86-merged:645 -->
+- 2026-10-02: lane **652**, Whole-word drain with real interleaved foreign accesses, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-652.md). <!-- x86-merged:652 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
