@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 19:24 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 19:25 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -316,6 +316,8 @@ Last ledger refresh: **2026-10-02 19:24 UTC**. This is an operational snapshot, 
 | 680 | Hardware completion: indirect and compact control byte forms | Agent working | 681: scheduled | [task](lanes/680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Agent working | 683: scheduled | [task](lanes/682.md) |
 | 684 | Eliminate hardcoded external project filesystem paths | Agent working | 685: scheduled | [task](lanes/684.md) |
+| 686 | Hardware completion: essential SSE2 integer and memory byte forms | Waiting for accepted dependencies | 687: scheduled | [task](lanes/686.md) |
+| 688 | Hardware completion: CPUID and XGETBV byte execution | Scheduled | 689: scheduled | [task](lanes/688.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -771,6 +773,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **656**, Fetched conditional byte-step flag dependency simulation, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-656.md). <!-- x86-merged:656 -->
 - 2026-10-02: lane **657**, Independent exact review of 656, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-657.md). <!-- x86-merged:657 -->
 - 2026-10-02: publication batch checks passed for `e12bf1b9`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-02: checked master `99f4743d` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:99f4743d7484ac1ef54224f30ed0582c6a808304 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
