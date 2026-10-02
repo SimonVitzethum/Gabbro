@@ -295,7 +295,7 @@ Last ledger refresh: **2026-10-02 18:40 UTC**. This is an operational snapshot, 
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Merged after review/checks | 641: Merged after review/checks | [report](messung/muse/MUSE-REPORT-640.md) |
 | 642 | Recover preserved IR research draft from recorded edits after clone removal | Merged after review/checks | 643: Merged after review/checks | [report](messung/muse/MUSE-REPORT-642.md) |
-| 644 | Organise the next generic source-to-final-byte closure wave | Merged after review/checks | 645: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-644.md) |
+| 644 | Organise the next generic source-to-final-byte closure wave | Merged after review/checks | 645: Merged after review/checks | [report](messung/muse/MUSE-REPORT-644.md) |
 | 646 | Direct typed statement sequence to fetched machine execution | Agent working | 647: scheduled | [task](lanes/646.md) |
 | 648 | Generic checked source-assignment byte certificate | Committed candidate; review/integration pending | 649: Agent working | [task](lanes/648.md) |
 | 650 | Growing TSO history to typed carrier W transition | Agent working | 651: scheduled | [task](lanes/650.md) |
@@ -749,6 +749,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: Simon prioritised the complete selected architectural hardware model and15 productive managed models. Corrected missing explicit filename ownership in the644-659 prompts; existing drafts stay on their original topics with independent exact review and all proof/build gates. Hardware-completion wave660-675 is being registered; registration is not closure. <!-- hardware-priority-2026-10-02 -->-history
 - 2026-10-02: checked master `a31a0acf` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a31a0acf273b176a7024c093ccdbf269f41daf40 -->
 - 2026-10-02: lane **644**, Organise the next generic source-to-final-byte closure wave, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-644.md). <!-- x86-merged:644 -->
+- 2026-10-02: lane **645**, Independent exact review of 644, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-645.md). <!-- x86-merged:645 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
