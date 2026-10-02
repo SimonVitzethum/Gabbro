@@ -316,7 +316,7 @@ Last ledger refresh: **2026-10-02 23:25 UTC**. This is an operational snapshot, 
 | 680 | Hardware completion: indirect and compact control byte forms | Merged after review/checks | 681: Merged after review/checks | [report](messung/muse/MUSE-REPORT-680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Merged after review/checks | 683: Merged after review/checks | [report](messung/muse/MUSE-REPORT-682.md) |
 | 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
-| 686 | Hardware completion: essential SSE2 integer and memory byte forms | Merged after review/checks | 687: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-686.md) |
+| 686 | Hardware completion: essential SSE2 integer and memory byte forms | Merged after review/checks | 687: Merged after review/checks | [report](messung/muse/MUSE-REPORT-686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Merged after review/checks | 689: Merged after review/checks | [report](messung/muse/MUSE-REPORT-688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
@@ -843,6 +843,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **702**, Essential scalar binary32 SSE2 architectural forms, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-702.md). <!-- x86-merged:702 -->
 - 2026-10-02: lane **703**, Independent exact review of 702, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-703.md). <!-- x86-merged:703 -->
 - 2026-10-02: lane **686**, Hardware completion: essential SSE2 integer and memory byte forms, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-686.md). <!-- x86-merged:686 -->
+- 2026-10-02: lane **687**, Independent exact review of 686, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-687.md). <!-- x86-merged:687 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
