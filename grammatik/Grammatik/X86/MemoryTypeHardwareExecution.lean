@@ -1,0 +1,1440 @@
+/-
+  File:      Grammatik/X86/MemoryTypeHardwareExecution.lean
+  Subject:   UC MMIO architectural access and ordering over the canonical
+             byte/register/memory state.
+
+  Lane 694 (hardware completion): normal WB RAM follows TSO; selected UC
+  device addresses follow exact documented architecture constraints with
+  one generic named hardware device-response interface. OS/page-table/
+  memory-type configuration is software user logic establishing explicit
+  profile facts, never a trusted Bool.
+
+  Provenance (official Intel SDM 325462-093US, September 2026, local
+  `.tmp/HARDWARE-REFERENCES/intel-instruction-reference.txt`):
+  - Vol.1 Section 20.5 (memory-mapped I/O ordering): UC region reads and
+    writes appear in order on the pins; MTRRs make the MMIO space UC;
+    chipsets may post UC writes (CPU-retired is not device-completed).
+  - Vol.3A Section 14.3 Table 14-2 (Strong Uncacheable UC): reads/writes
+    appear on the bus in program order without reordering, no speculative
+    access; x87/SIMD UC re-access NOTE (only GP-register forms admitted).
+  - Vol.3A Section 14.3.3 (UC code fetch limits; code stays WB here).
+  - Vol.3A Sections 11.1.2/11.2.5 (UC lock serialization, I/O and locked
+    instruction drain of buffered writes; no universal fence claimed).
+  AMD retrieval failed; no AMD provenance or silicon proof is claimed.
+-/
+import Grammatik.X86.Typen
+import Grammatik.X86.Speicher
+import Grammatik.X86.Regionen
+import Grammatik.X86.Ausfuehrung
+import Grammatik.X86.Byteschritt
+import Grammatik.X86.Codec
+import Grammatik.X86.TSO
+import Grammatik.X86.FeatureProfile
+import Grammatik.X86.NarrowOps
+import Grammatik.X86.NarrowCodec
+import Grammatik.X86.ScalarFloat
+import Grammatik.X86.ExtendedExecution
+
+namespace Gabbro.Grammatik.X86
+
+/-- UC MMIO window profile: the explicit list of UC regions established by
+    software (MTRR/PAT/page tables are user logic). An address is UC only
+    by membership here; WB is the default elsewhere. -/
+abbrev UcProfil := List Region
+
+/-! ## 1. UC profile: explicit software-established membership. -/
+
+/-- One UC region covers `[start, start+len)`: inside with no 64-bit wrap. -/
+def decktUc (r : Region) (start len : Nat) : Bool :=
+  decide (r.basis ≤ start ∧ start + len ≤ r.basis + r.len ∧
+    start + len ≤ 2 ^ 64)
+
+/-- An `n`-byte access at `a` is UC exactly by membership in one listed
+    region. WB is whatever no listed region covers. -/
+def istUc : UcProfil → Adresse → Nat → Bool
+  | [], _, _ => false
+  | r :: rest, a, n => decktUc r a.toNat n || istUc rest a n
+
+/-- The empty profile admits no UC access: WB is the default everywhere. -/
+theorem istUc_leer (a : Adresse) (n : Nat) : istUc [] a n = false := rfl
+
+/-- A covering head region makes the access UC. -/
+theorem istUc_kopf (r : Region) (rest : UcProfil) (a : Adresse) (n : Nat)
+    (hd : decktUc r a.toNat n = true) :
+    istUc (r :: rest) a n = true := by
+  unfold istUc
+  rw [hd, Bool.true_or]
+
+/-- Membership of a covering region anywhere in the list makes it UC. -/
+theorem istUc_mem (profil : UcProfil) (r : Region) (a : Adresse) (n : Nat)
+    (hr : r ∈ profil) (hd : decktUc r a.toNat n = true) :
+    istUc profil a n = true := by
+  induction profil with
+  | nil => simp at hr
+  | cons q rest ih =>
+    simp only [istUc]
+    simp at hr
+    rcases hr with rfl | hr
+    · rw [hd, Bool.true_or]
+    · rw [Bool.or_eq_true]
+      exact Or.inr (ih hr)
+
+/-- Width to admitted performance feature: 64-bit needs scalar-64 silicon,
+    narrower widths ride the scalar-32 tier. -/
+def breiteMerkmal : Breite → PerfMerkmal
+  | .b64 => .skalar64
+  | _ => .skalar32
+
+/-- Width admission is silicon plus readiness, never bare existence. -/
+def breiteZugelassen (hw : HwProfil) (b : BereitProfil)
+    (w : Breite) : Bool :=
+  merkmalZugelassen hw b (breiteMerkmal w)
+
+/-- Width admission carries silicon support. -/
+theorem breiteZugelassen_hat (hw : HwProfil) (b : BereitProfil)
+    (w : Breite) (h : breiteZugelassen hw b w = true) :
+    hat hw (breiteMerkmal w) = true :=
+  (merkmalZugelassen_heisst_beide hw b _ h).1
+
+/-- Width admission carries control-state readiness. -/
+theorem breiteZugelassen_bereit (hw : HwProfil) (b : BereitProfil)
+    (w : Breite) (h : breiteZugelassen hw b w = true) :
+    bereit b (breiteMerkmal w) = true :=
+  (merkmalZugelassen_heisst_beide hw b _ h).2
+
+/-! ## 2. Generic named device: window, response, side effects.
+
+  The selected MMIO window is 8 bytes at `geraetBasis`. The device is
+  the ONE generic named hardware interface of this file: deterministic
+  little-endian width-indexed reads/writes with an access counter, so a
+  read observably has side effects (status-clear shapes refine this via
+  the counter, never silently). x87/SIMD forms are never admitted here
+  (SDM Table 14-2 NOTE: UC re-access is implementation dependent; only
+  general-purpose-register loads/stores touch UC). -/
+
+/-- Device window base: the single selected 8-byte MMIO window. -/
+def geraetBasis : Nat := 65536
+
+/-- Generic named hardware device: 8 data bytes plus an access counter.
+    Every successful read or write increments the counter. -/
+structure Geraet where
+  daten : Fin 8 → Byte
+  zugriffe : Nat
+
+/-- The reset device: zeroed bytes, no access yet. -/
+def geraetAnfang : Geraet := ⟨fun _ => BitVec.ofNat 8 0, 0⟩
+
+/-- Offset of an address inside the device window. -/
+def geraetOff (a : Adresse) : Nat := a.toNat - geraetBasis
+
+/-- Window check: the `n`-byte access at `a` lies inside the 8-byte
+    window with no 64-bit wrap. -/
+def imFenster (a : Adresse) (n : Nat) : Bool :=
+  decide (geraetBasis ≤ a.toNat ∧ a.toNat + n ≤ geraetBasis + 8 ∧
+    a.toNat + n ≤ 2 ^ 64)
+
+/-- The window check carries the offset bound the device needs. -/
+theorem imFenster_off (a : Adresse) (n : Nat)
+    (h : imFenster a n = true) : geraetOff a + n ≤ 8 := by
+  have hdec : geraetBasis ≤ a.toNat ∧ a.toNat + n ≤ geraetBasis + 8 ∧
+      a.toNat + n ≤ 2 ^ 64 := of_decide_eq_true h
+  show a.toNat - geraetBasis + n ≤ 8
+  omega
+
+/-- The window check carries no-wrap. -/
+theorem imFenster_ohneUmbruch (a : Adresse) (n : Nat)
+    (h : imFenster a n = true) : a.toNat + n ≤ 2 ^ 64 := by
+  have hdec : geraetBasis ≤ a.toNat ∧ a.toNat + n ≤ geraetBasis + 8 ∧
+      a.toNat + n ≤ 2 ^ 64 := of_decide_eq_true h
+  exact hdec.2.2
+
+/-- Bounded window index: `none` outside the 8 bytes. -/
+def fin8 (n : Nat) : Option (Fin 8) :=
+  if h : n < 8 then some ⟨n, h⟩ else none
+
+/-- A valid index resolves. -/
+theorem fin8_gleich (n : Nat) (h : n < 8) : fin8 n = some ⟨n, h⟩ := by
+  unfold fin8
+  rw [dif_pos h]
+
+/-- An out-of-window index refuses. -/
+theorem fin8_nichts (n : Nat) (h : ¬ n < 8) : fin8 n = none := by
+  unfold fin8
+  rw [dif_neg h]
+
+/-- Window byte update. -/
+def datenSetze (d : Fin 8 → Byte) (i : Fin 8) (v : Byte) :
+    Fin 8 → Byte :=
+  fun j => if j = i then v else d j
+
+/-- The updated index answers the new byte. -/
+theorem datenSetze_gleich (d : Fin 8 → Byte) (i : Fin 8) (v : Byte) :
+    datenSetze d i v i = v := by
+  simp [datenSetze]
+
+/-- Any other index keeps its byte. -/
+theorem datenSetze_anders (d : Fin 8 → Byte) (i j : Fin 8) (v : Byte)
+    (h : j ≠ i) : datenSetze d i v j = d j := by
+  simp [datenSetze, h]
+
+/-- Width-indexed device read: the window bytes little-endian, the
+    counter incremented (read side effect). `none` is an explicit
+    refusal outside the window. -/
+def geraetLiest (g : Geraet) (b : Breite) (off : Nat) :
+    Option (Geraet × Wort) :=
+  match b with
+  | .b8 =>
+    match fin8 off with
+    | some i =>
+      some (⟨g.daten, g.zugriffe + 1⟩, BitVec.ofNat 64 (g.daten i).toNat)
+    | none => none
+  | .b16 =>
+    match fin8 off, fin8 (off + 1) with
+    | some i0, some i1 =>
+      some (⟨g.daten, g.zugriffe + 1⟩,
+        BitVec.ofNat 64 ((g.daten i0).toNat + (g.daten i1).toNat * 256))
+    | _, _ => none
+  | .b32 =>
+    match fin8 off, fin8 (off + 1), fin8 (off + 2), fin8 (off + 3) with
+    | some i0, some i1, some i2, some i3 =>
+      some (⟨g.daten, g.zugriffe + 1⟩,
+        BitVec.ofNat 64 ((g.daten i0).toNat + (g.daten i1).toNat * 256 +
+          (g.daten i2).toNat * 65536 + (g.daten i3).toNat * 16777216))
+    | _, _, _, _ => none
+  | .b64 =>
+    match fin8 off, fin8 (off + 1), fin8 (off + 2), fin8 (off + 3),
+        fin8 (off + 4), fin8 (off + 5), fin8 (off + 6),
+        fin8 (off + 7) with
+    | some i0, some i1, some i2, some i3,
+      some i4, some i5, some i6, some i7 =>
+      some (⟨g.daten, g.zugriffe + 1⟩,
+        BitVec.ofNat 64 ((g.daten i0).toNat + (g.daten i1).toNat * 256 +
+          (g.daten i2).toNat * 65536 + (g.daten i3).toNat * 16777216 +
+          (g.daten i4).toNat * 4294967296 +
+          (g.daten i5).toNat * 1099511627776 +
+          (g.daten i6).toNat * 281474976710656 +
+          (g.daten i7).toNat * 72057594037927936))
+    | _, _, _, _, _, _, _, _ => none
+
+/-- Width-indexed device write: the word's low bytes into the window,
+    the counter incremented. `none` is an explicit refusal. -/
+def geraetSchreibt (g : Geraet) (b : Breite) (off : Nat)
+    (v : Wort) : Option Geraet :=
+  match b with
+  | .b8 =>
+    match fin8 off with
+    | some i =>
+      some ⟨datenSetze g.daten i (wortByte v 0), g.zugriffe + 1⟩
+    | none => none
+  | .b16 =>
+    match fin8 off, fin8 (off + 1) with
+    | some i0, some i1 =>
+      some ⟨datenSetze (datenSetze g.daten i0 (wortByte v 0))
+        i1 (wortByte v 1), g.zugriffe + 1⟩
+    | _, _ => none
+  | .b32 =>
+    match fin8 off, fin8 (off + 1), fin8 (off + 2), fin8 (off + 3) with
+    | some i0, some i1, some i2, some i3 =>
+      some ⟨datenSetze (datenSetze (datenSetze
+        (datenSetze g.daten i0 (wortByte v 0)) i1 (wortByte v 1))
+        i2 (wortByte v 2)) i3 (wortByte v 3), g.zugriffe + 1⟩
+    | _, _, _, _ => none
+  | .b64 =>
+    match fin8 off, fin8 (off + 1), fin8 (off + 2), fin8 (off + 3),
+        fin8 (off + 4), fin8 (off + 5), fin8 (off + 6),
+        fin8 (off + 7) with
+    | some i0, some i1, some i2, some i3,
+      some i4, some i5, some i6, some i7 =>
+      some ⟨datenSetze (datenSetze (datenSetze
+        (datenSetze (datenSetze (datenSetze
+        (datenSetze (datenSetze g.daten i0 (wortByte v 0))
+        i1 (wortByte v 1)) i2 (wortByte v 2)) i3 (wortByte v 3))
+        i4 (wortByte v 4)) i5 (wortByte v 5)) i6 (wortByte v 6))
+        i7 (wortByte v 7), g.zugriffe + 1⟩
+    | _, _, _, _, _, _, _, _ => none
+
+/-- A successful device read increments exactly the counter: data bytes
+    are preserved, so the side effect is exactly the count. -/
+theorem geraetLiest_zaehlt (g : Geraet) (b : Breite) (off : Nat)
+    (g' : Geraet) (v : Wort) (h : geraetLiest g b off = some (g', v)) :
+    g'.zugriffe = g.zugriffe + 1 ∧ g'.daten = g.daten := by
+  cases b with
+  | b8 =>
+    simp only [geraetLiest] at h
+    cases hfin : fin8 off with
+    | none => simp [hfin] at h
+    | some i => simp [hfin] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
+  | b16 =>
+    simp only [geraetLiest] at h
+    cases h0 : fin8 off with
+    | none => simp [h0] at h
+    | some i0 =>
+      cases h1 : fin8 (off + 1) with
+      | none => simp [h0, h1] at h
+      | some i1 =>
+        simp [h0, h1] at h; obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
+  | b32 =>
+    simp only [geraetLiest] at h
+    cases h0 : fin8 off with
+    | none => simp [h0] at h
+    | some i0 =>
+      cases h1 : fin8 (off + 1) with
+      | none => simp [h0, h1] at h
+      | some i1 =>
+        cases h2 : fin8 (off + 2) with
+        | none => simp [h0, h1, h2] at h
+        | some i2 =>
+          cases h3 : fin8 (off + 3) with
+          | none => simp [h0, h1, h2, h3] at h
+          | some i3 =>
+            simp [h0, h1, h2, h3] at h
+            obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
+  | b64 =>
+    simp only [geraetLiest] at h
+    cases h0 : fin8 off with
+    | none => simp [h0] at h
+    | some i0 =>
+      cases h1 : fin8 (off + 1) with
+      | none => simp [h0, h1] at h
+      | some i1 =>
+        cases h2 : fin8 (off + 2) with
+        | none => simp [h0, h1, h2] at h
+        | some i2 =>
+          cases h3 : fin8 (off + 3) with
+          | none => simp [h0, h1, h2, h3] at h
+          | some i3 =>
+            cases h4 : fin8 (off + 4) with
+            | none => simp [h0, h1, h2, h3, h4] at h
+            | some i4 =>
+              cases h5 : fin8 (off + 5) with
+              | none => simp [h0, h1, h2, h3, h4, h5] at h
+              | some i5 =>
+                cases h6 : fin8 (off + 6) with
+                | none => simp [h0, h1, h2, h3, h4, h5, h6] at h
+                | some i6 =>
+                  cases h7 : fin8 (off + 7) with
+                  | none => simp [h0, h1, h2, h3, h4, h5, h6, h7] at h
+                  | some i7 =>
+                    simp [h0, h1, h2, h3, h4, h5, h6, h7] at h
+                    obtain ⟨rfl, rfl⟩ := h; exact ⟨rfl, rfl⟩
+
+/-- A successful device write increments exactly the counter. -/
+theorem geraetSchreibt_zaehlt (g : Geraet) (b : Breite) (off : Nat)
+    (v : Wort) (g' : Geraet) (h : geraetSchreibt g b off v = some g') :
+    g'.zugriffe = g.zugriffe + 1 := by
+  cases b with
+  | b8 =>
+    simp only [geraetSchreibt] at h
+    cases hfin : fin8 off with
+    | none => simp [hfin] at h
+    | some i => simp [hfin] at h; cases h; rfl
+  | b16 =>
+    simp only [geraetSchreibt] at h
+    cases h0 : fin8 off with
+    | none => simp [h0] at h
+    | some i0 =>
+      cases h1 : fin8 (off + 1) with
+      | none => simp [h0, h1] at h
+      | some i1 => simp [h0, h1] at h; cases h; rfl
+  | b32 =>
+    simp only [geraetSchreibt] at h
+    cases h0 : fin8 off with
+    | none => simp [h0] at h
+    | some i0 =>
+      cases h1 : fin8 (off + 1) with
+      | none => simp [h0, h1] at h
+      | some i1 =>
+        cases h2 : fin8 (off + 2) with
+        | none => simp [h0, h1, h2] at h
+        | some i2 =>
+          cases h3 : fin8 (off + 3) with
+          | none => simp [h0, h1, h2, h3] at h
+          | some i3 => simp [h0, h1, h2, h3] at h; cases h; rfl
+  | b64 =>
+    simp only [geraetSchreibt] at h
+    cases h0 : fin8 off with
+    | none => simp [h0] at h
+    | some i0 =>
+      cases h1 : fin8 (off + 1) with
+      | none => simp [h0, h1] at h
+      | some i1 =>
+        cases h2 : fin8 (off + 2) with
+        | none => simp [h0, h1, h2] at h
+        | some i2 =>
+          cases h3 : fin8 (off + 3) with
+          | none => simp [h0, h1, h2, h3] at h
+          | some i3 =>
+            cases h4 : fin8 (off + 4) with
+            | none => simp [h0, h1, h2, h3, h4] at h
+            | some i4 =>
+              cases h5 : fin8 (off + 5) with
+              | none => simp [h0, h1, h2, h3, h4, h5] at h
+              | some i5 =>
+                cases h6 : fin8 (off + 6) with
+                | none => simp [h0, h1, h2, h3, h4, h5, h6] at h
+                | some i6 =>
+                  cases h7 : fin8 (off + 7) with
+                  | none => simp [h0, h1, h2, h3, h4, h5, h6, h7] at h
+                  | some i7 =>
+                    simp [h0, h1, h2, h3, h4, h5, h6, h7] at h
+                    cases h; rfl
+
+/-- A one-byte device read outside the window refuses. -/
+theorem geraetLiest_b8_verweigert (g : Geraet) (off : Nat)
+    (h : fin8 off = none) : geraetLiest g .b8 off = none := by
+  simp [geraetLiest, h]
+
+/-- A one-byte device write outside the window refuses. -/
+theorem geraetSchreibt_b8_verweigert (g : Geraet) (off : Nat) (v : Wort)
+    (h : fin8 off = none) : geraetSchreibt g .b8 off v = none := by
+  simp [geraetSchreibt, h]
+
+/-! ## 3. Machine: CPU, pending WB stores, device, posted writes, UC log.
+
+  Normal WB RAM follows TSO (the accepted `TSO.lean` buffer discipline,
+  referenced as explicit `pending` state); UC accesses bypass it. A
+  CPU-retired UC store is POSTED, not device-completed (Vol.1 §20.5:
+  chipsets may post UC writes); only `busFortschritt` completes it, in
+  FIFO order. The UC log records program order of retired UC events. -/
+
+/-- One UC bus event: program-order log entry for a UC read or write. -/
+inductive UcEreignis where
+  | lese : Adresse → Breite → UcEreignis
+  | schreibe : Adresse → Breite → UcEreignis
+  deriving DecidableEq, Repr
+
+/-- One posted UC write: CPU-retired, not yet device-completed. -/
+structure PostedSchreib where
+  addr : Adresse
+  breite : Breite
+  wert : Wort
+  deriving DecidableEq, Repr
+
+/-- The UC MMIO machine: canonical CPU over canonical RAM, explicit
+    ordinary pending WB stores, the generic device, posted UC writes
+    awaiting bus completion, the UC program-order log, and the
+    software-established UC profile. -/
+structure MmioMaschine where
+  kern : FpZustand
+  pending : List TSOEintrag
+  geraet : Geraet
+  ausstehend : List PostedSchreib
+  ucLog : List UcEreignis
+  profil : UcProfil
+
+/-- Step outcome: success, hardware trap, or explicit refusal. -/
+inductive MmioAusgang where
+  | weiter : MmioMaschine → MmioAusgang
+  | halt : MmioAusgang
+  | verweigert : MmioAusgang
+
+/-- Byte-interval overlap of one posted write with `[start, start+n)`. -/
+def postedUeberlappt (p : PostedSchreib) (start n : Nat) : Bool :=
+  decide (p.addr.toNat < start + n ∧
+    start < p.addr.toNat + p.breite.bytes)
+
+/-- Any posted write overlapping the access extent. -/
+def ueberlapptPosted : List PostedSchreib → Adresse → Nat → Bool
+  | [], _, _ => false
+  | p :: rest, a, n =>
+    postedUeberlappt p a.toNat n || ueberlapptPosted rest a n
+
+/-- An empty posted queue overlaps nothing. -/
+theorem ueberlapptPosted_leer (a : Adresse) (n : Nat) :
+    ueberlapptPosted [] a n = false := rfl
+
+/-- CPU UC store issue: feature, UC membership, device window; then the
+    write is POSTED (log plus pending device work), never buffered in
+    the WB store buffer, never applied to the device yet. -/
+def ucStoreZugriff (m : MmioMaschine) (hw : HwProfil) (bp : BereitProfil)
+    (b : Breite) (a : Adresse) (v : Wort) : Option MmioMaschine :=
+  if breiteZugelassen hw bp b then
+    if istUc m.profil a b.bytes then
+      if imFenster a b.bytes then
+        some { m with
+          ausstehend :=
+            m.ausstehend ++ [{ addr := a, breite := b, wert := v }]
+          ucLog := m.ucLog ++ [.schreibe a b] }
+      else none
+    else none
+  else none
+
+/-- A successful UC store issue has exactly the posted shape. -/
+theorem ucStoreZugriff_erfolg (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (hz : breiteZugelassen hw bp b = true)
+    (hu : istUc m.profil a b.bytes = true)
+    (hf : imFenster a b.bytes = true) :
+    ucStoreZugriff m hw bp b a v =
+      some { m with
+        ausstehend := m.ausstehend ++ [{ addr := a, breite := b, wert := v }]
+        ucLog := m.ucLog ++ [.schreibe a b] } := by
+  unfold ucStoreZugriff
+  rw [if_pos hz, if_pos hu, if_pos hf]
+
+/-- BYPASS: a retired UC store touches no WB buffer, no device byte, no
+    counter, no CPU register, flag, XMM, control word or RAM byte; the
+    log and the posted queue each grow by exactly the new event. -/
+theorem ucStore_bypass (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (m' : MmioMaschine)
+    (h : ucStoreZugriff m hw bp b a v = some m') :
+    m'.pending = m.pending ∧
+      m'.geraet.daten = m.geraet.daten ∧
+      m'.geraet.zugriffe = m.geraet.zugriffe ∧
+      m'.kern = m.kern ∧
+      m'.ucLog = m.ucLog ++ [.schreibe a b] ∧
+      m'.ausstehend =
+        m.ausstehend ++ [{ addr := a, breite := b, wert := v }] := by
+  unfold ucStoreZugriff at h
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz] at h
+    by_cases hu : istUc m.profil a b.bytes = true
+    · rw [if_pos hu] at h
+      by_cases hf : imFenster a b.bytes = true
+      · rw [if_pos hf] at h
+        cases h
+        exact ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+      · rw [if_neg hf] at h
+        cases h
+    · rw [if_neg hu] at h
+      cases h
+  · rw [if_neg hz] at h
+    cases h
+
+/-- A `= false` fact refutes the `= true` condition that `if` decides on. -/
+theorem nicht_wahr (c : Bool) (h : c = false) : ¬ (c = true) := by
+  rw [h]
+  decide
+
+/-- A UC store without UC membership refuses (wrong memory kind). -/
+theorem ucStore_verweigert_ohne_profil (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (hu : istUc m.profil a b.bytes = false) :
+    ucStoreZugriff m hw bp b a v = none := by
+  unfold ucStoreZugriff
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz]
+    by_cases hf : imFenster a b.bytes = true
+    · rw [if_pos hf, if_neg (nicht_wahr _ hu)]
+    · rw [if_neg hf, if_neg (nicht_wahr _ hu)]
+  · rw [if_neg hz]
+
+/-- A UC store outside the device window refuses (no device). -/
+theorem ucStore_verweigert_ohne_fenster (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (hf : imFenster a b.bytes = false) :
+    ucStoreZugriff m hw bp b a v = none := by
+  unfold ucStoreZugriff
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz]
+    by_cases hu : istUc m.profil a b.bytes = true
+    · rw [if_pos hu, if_neg (nicht_wahr _ hf)]
+    · rw [if_neg hu]
+  · rw [if_neg hz]
+
+/-- A UC store without width admission refuses (feature gate). -/
+theorem ucStore_verweigert_ohne_merkmal (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (hz : breiteZugelassen hw bp b = false) :
+    ucStoreZugriff m hw bp b a v = none := by
+  unfold ucStoreZugriff
+  rw [if_neg (nicht_wahr _ hz)]
+
+/-- Register update for a UC load answer inside the machine CPU half:
+    the architectural narrow merge into the destination. -/
+def maschineRegLaden (m : MmioMaschine) (b : Breite) (dst : Register)
+    (v : Wort) : Zustand :=
+  let w := mergeRegNarrow b (m.kern.kern.register dst) v
+  { m.kern.kern with register := regSet m.kern.kern.register dst w }
+
+/-- The helper writes exactly the merged value at the destination. -/
+theorem maschineRegLaden_gleich (m : MmioMaschine) (b : Breite)
+    (dst : Register) (v : Wort) :
+    (maschineRegLaden m b dst v).register dst =
+      mergeRegNarrow b (m.kern.kern.register dst) v := by
+  unfold maschineRegLaden
+  simp [regSet]
+
+/-- CPU UC load: feature, UC membership, device window, and NO overlapping
+    posted write (strong order: complete first, never forward silently);
+    then the device answers, the counter moves, the destination takes
+    the architectural narrow merge, and the event is logged. -/
+def ucLoadZugriff (m : MmioMaschine) (hw : HwProfil) (bp : BereitProfil)
+    (b : Breite) (dst : Register) (a : Adresse) :
+    Option (MmioMaschine × Wort) :=
+  if breiteZugelassen hw bp b then
+    if istUc m.profil a b.bytes then
+      if imFenster a b.bytes then
+        if ueberlapptPosted m.ausstehend a b.bytes then none
+        else
+          match geraetLiest m.geraet b (geraetOff a) with
+          | some (g', v) =>
+            some ({ m with
+              kern := { m.kern with kern := maschineRegLaden m b dst v }
+              geraet := g'
+              ucLog := m.ucLog ++ [.lese a b] }, v)
+          | none => none
+      else none
+    else none
+  else none
+
+/-- A successful UC load has exactly the answered shape. -/
+theorem ucLoadZugriff_erfolg (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (dst : Register) (a : Adresse)
+    (g' : Geraet) (v : Wort)
+    (hz : breiteZugelassen hw bp b = true)
+    (hu : istUc m.profil a b.bytes = true)
+    (hf : imFenster a b.bytes = true)
+    (hp : ueberlapptPosted m.ausstehend a b.bytes = false)
+    (hg : geraetLiest m.geraet b (geraetOff a) = some (g', v)) :
+    ucLoadZugriff m hw bp b dst a =
+      some ({ m with
+        kern := { m.kern with kern := maschineRegLaden m b dst v }
+        geraet := g'
+        ucLog := m.ucLog ++ [.lese a b] }, v) := by
+  unfold ucLoadZugriff
+  rw [if_pos hz, if_pos hu, if_pos hf, if_neg (nicht_wahr _ hp), hg]
+
+/-- A UC load over an overlapping posted write refuses: complete the
+    posted write first (no silent forwarding). -/
+theorem ucLoad_verweigert_bei_ausstehend (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (dst : Register) (a : Adresse)
+    (hp : ueberlapptPosted m.ausstehend a b.bytes = true) :
+    ucLoadZugriff m hw bp b dst a = none := by
+  unfold ucLoadZugriff
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz]
+    by_cases hu : istUc m.profil a b.bytes = true
+    · rw [if_pos hu]
+      by_cases hf : imFenster a b.bytes = true
+      · rw [if_pos hf, if_pos hp]
+      · rw [if_neg hf]
+    · rw [if_neg hu]
+  · rw [if_neg hz]
+
+/-- LOAD FRAME: a UC load changes no RAM byte, no flag, no XMM, no
+    control word, no pending WB store and no posted write; only the
+    destination register, the device counter and the log move. -/
+theorem ucLoad_rahmen (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (dst : Register) (a : Adresse)
+    (m' : MmioMaschine) (v : Wort)
+    (h : ucLoadZugriff m hw bp b dst a = some (m', v)) :
+    m'.kern.kern.speicher = m.kern.kern.speicher ∧
+      m'.kern.kern.flags = m.kern.kern.flags ∧
+      m'.kern.kern.rip = m.kern.kern.rip ∧
+      m'.kern.xmm = m.kern.xmm ∧
+      m'.kern.fp = m.kern.fp ∧
+      m'.pending = m.pending ∧
+      m'.ausstehend = m.ausstehend ∧
+      m'.ucLog = m.ucLog ++ [.lese a b] := by
+  unfold ucLoadZugriff at h
+  by_cases hz : breiteZugelassen hw bp b = true
+  · rw [if_pos hz] at h
+    by_cases hu : istUc m.profil a b.bytes = true
+    · rw [if_pos hu] at h
+      by_cases hf : imFenster a b.bytes = true
+      · rw [if_pos hf] at h
+        by_cases hpT : ueberlapptPosted m.ausstehend a b.bytes = true
+        · rw [if_pos hpT] at h
+          cases h
+        · rw [if_neg hpT] at h
+          cases hg : geraetLiest m.geraet b (geraetOff a) with
+          | none =>
+            rw [hg] at h
+            cases h
+          | some pw =>
+            rw [hg] at h
+            cases h
+            cases pw
+            exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+      · rw [if_neg hf] at h
+        cases h
+    · rw [if_neg hu] at h
+      cases h
+  · rw [if_neg hz] at h
+    cases h
+
+/-- Bus/device completion: the oldest posted write reaches the device
+    (FIFO); CPU log, RAM, registers and pending WB stores are untouched.
+    `none` on an empty posted queue or a window miss. -/
+def busFortschritt (m : MmioMaschine) : Option MmioMaschine :=
+  match m.ausstehend with
+  | [] => none
+  | p :: rest =>
+    match geraetSchreibt m.geraet p.breite (geraetOff p.addr) p.wert with
+    | some g' => some { m with geraet := g', ausstehend := rest }
+    | none => none
+
+/-- An empty posted queue has no completion step. -/
+theorem busFortschritt_leer (m : MmioMaschine)
+    (he : m.ausstehend = []) : busFortschritt m = none := by
+  unfold busFortschritt
+  rw [he]
+
+/-- FIFO COMPLETION: the oldest posted write completes first; the log,
+    the CPU state and the pending WB stores are preserved. -/
+theorem busFortschritt_fifo (m : MmioMaschine) (p : PostedSchreib)
+    (rest : List PostedSchreib) (g' : Geraet)
+    (he : m.ausstehend = p :: rest)
+    (hg : geraetSchreibt m.geraet p.breite (geraetOff p.addr) p.wert =
+      some g') :
+    ∃ m', busFortschritt m = some m' ∧ m'.geraet = g' ∧
+      m'.ausstehend = rest ∧ m'.ucLog = m.ucLog ∧ m'.kern = m.kern ∧
+      m'.pending = m.pending := by
+  simp only [busFortschritt, he, hg]
+  exact ⟨_, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-! ## 4. Fetched level: actual bytes through the accepted dispatcher.
+
+  Fetch is the accepted `fetchExt` over actual executable memory; the
+  unified `stepExt` is reused for every non-UC instruction (never
+  redefined). GP load/store forms to UC take the device path with exact
+  address, width, register update and RIP advance. FP memory rows to UC
+  refuse (SDM Table 14-2 NOTE: x87/SIMD UC re-access is implementation
+  dependent, so only general-purpose-register forms touch UC). -/
+
+/-- FP memory rows addressing UC: the seven accepted DOUBLE memory
+    forms at their 8-byte `effAddr`. Register-only FP rows never touch
+    memory and are never betroffen. -/
+def fpUcBetroffen (f : FpDecodiert) (t : FpZustand)
+    (profil : UcProfil) : Bool :=
+  match f.befehl with
+  | .addsdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .subsdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .mulsdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .divsdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .ucomisdRM _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .movsdLade _ base disp => istUc profil (effAddr t.kern base disp) 8
+  | .movsdSpeichere base _ disp => istUc profil (effAddr t.kern base disp) 8
+  | _ => false
+
+/-- A UC-addressed FP store row is betroffen. -/
+theorem fpUcBetroffen_speichere (base : Register) (src : XmmReg)
+    (disp : BitVec 32) (t : FpZustand) (profil : UcProfil)
+    (h : istUc profil (effAddr t.kern base disp) 8 = true) :
+    fpUcBetroffen ⟨.movsdSpeichere base src disp, 8⟩ t profil = true := by
+  simp only [fpUcBetroffen]
+  exact h
+
+/-- A UC-addressed FP load row is betroffen. -/
+theorem fpUcBetroffen_lade (dst : XmmReg) (base : Register)
+    (disp : BitVec 32) (t : FpZustand) (profil : UcProfil)
+    (h : istUc profil (effAddr t.kern base disp) 8 = true) :
+    fpUcBetroffen ⟨.movsdLade dst base disp, 8⟩ t profil = true := by
+  simp only [fpUcBetroffen]
+  exact h
+
+/-- Delegation: a non-UC instruction runs the accepted unified step,
+    lifting its outcome back into the machine. -/
+def delegiert (m : MmioMaschine) (i : ExtInstr)
+    (bp : BereitProfil) : MmioAusgang :=
+  match stepExt i m.kern bp with
+  | .weiter t' => .weiter { m with kern := t' }
+  | .halt => .halt
+  | .verweigert => .verweigert
+
+/-- Advance the post-access machine past the fetched length. -/
+def maschineSchrittWeiter (m1 : MmioMaschine) (l : Nat) : MmioMaschine :=
+  { m1 with kern := { m1.kern with kern :=
+    { m1.kern.kern with rip := ripNach m1.kern.kern.rip l } } }
+
+/-- The advance moves RIP by exactly the consumed length. -/
+theorem maschineSchrittWeiter_rip (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.kern.rip =
+      ripNach m1.kern.kern.rip l := rfl
+
+/-- The advance preserves the UC log. -/
+theorem maschineSchrittWeiter_ucLog (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).ucLog = m1.ucLog := rfl
+
+/-- The advance preserves RAM. -/
+theorem maschineSchrittWeiter_speicher (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.kern.speicher =
+      m1.kern.kern.speicher := rfl
+
+/-- The advance preserves flags. -/
+theorem maschineSchrittWeiter_flags (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.kern.flags = m1.kern.kern.flags :=
+  rfl
+
+/-- The advance preserves the register file. -/
+theorem maschineSchrittWeiter_register (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.kern.register =
+      m1.kern.kern.register := rfl
+
+/-- The advance preserves XMM. -/
+theorem maschineSchrittWeiter_xmm (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.xmm = m1.kern.xmm := rfl
+
+/-- The advance preserves the FP control word. -/
+theorem maschineSchrittWeiter_fp (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).kern.fp = m1.kern.fp := rfl
+
+/-- The advance preserves pending WB stores. -/
+theorem maschineSchrittWeiter_pending (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).pending = m1.pending := rfl
+
+/-- The advance preserves the posted queue. -/
+theorem maschineSchrittWeiter_ausstehend (m1 : MmioMaschine) (l : Nat) :
+    (maschineSchrittWeiter m1 l).ausstehend = m1.ausstehend := rfl
+
+/-- One fetched UC-aware byte step: fetch from actual executable memory
+    through the accepted unified decoder; GP load/store forms to UC take
+    the device path; FP memory rows to UC refuse; everything else
+    delegates to the accepted unified step. -/
+def mmioByteschritt (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) : MmioAusgang :=
+  match fetchExt m.kern (geholt m.kern.kern) with
+  | none => .verweigert
+  | some (i, _) =>
+    match i with
+    | .pilot ⟨.load64 dst base disp, l⟩ =>
+      if istUc m.profil (effAddr m.kern.kern base disp) 8 then
+        match ucLoadZugriff m hw bp .b64 dst
+            (effAddr m.kern.kern base disp) with
+        | some (m1, _) => .weiter (maschineSchrittWeiter m1 l)
+        | none => .verweigert
+      else delegiert m i bp
+    | .pilot ⟨.store64 base src disp, l⟩ =>
+      if istUc m.profil (effAddr m.kern.kern base disp) 8 then
+        match ucStoreZugriff m hw bp .b64 (effAddr m.kern.kern base disp)
+            (m.kern.kern.register src) with
+        | some m1 => .weiter (maschineSchrittWeiter m1 l)
+        | none => .verweigert
+      else delegiert m i bp
+    | .narrow ⟨.store32 base src disp, l⟩ =>
+      if istUc m.profil (effAddr m.kern.kern base disp) 4 then
+        match ucStoreZugriff m hw bp .b32 (effAddr m.kern.kern base disp)
+            (trunc .b32 (m.kern.kern.register src)) with
+        | some m1 => .weiter (maschineSchrittWeiter m1 l)
+        | none => .verweigert
+      else delegiert m i bp
+    | .fp f =>
+      if fpUcBetroffen f m.kern m.profil then .verweigert
+      else delegiert m i bp
+    | _ => delegiert m i bp
+
+/-- Without a fetch there is no step: fetch refusal is byte-step refusal. -/
+theorem mmioByteschritt_ohne_fetch (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil)
+    (hf : fetchExt m.kern (geholt m.kern.kern) = none) :
+    mmioByteschritt m hw bp = .verweigert := by
+  unfold mmioByteschritt
+  rw [hf]
+
+/-- SELECTION: a fetched 64-bit GP load to UC performs the device read
+    and advances RIP past the fetched length. -/
+theorem mmioByteschritt_uc_laden (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (dst base : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m1 : MmioMaschine) (v : Wort)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.load64 dst base disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = true)
+    (hg : ucLoadZugriff m hw bp .b64 dst (effAddr m.kern.kern base disp) =
+      some (m1, v)) :
+    mmioByteschritt m hw bp = .weiter (maschineSchrittWeiter m1 l) := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu, hg]
+
+/-- SELECTION: a fetched 64-bit GP store to UC posts the device write
+    and advances RIP past the fetched length. -/
+theorem mmioByteschritt_uc_speichern (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (base src : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m1 : MmioMaschine)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.store64 base src disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = true)
+    (hg : ucStoreZugriff m hw bp .b64 (effAddr m.kern.kern base disp)
+      (m.kern.kern.register src) = some m1) :
+    mmioByteschritt m hw bp = .weiter (maschineSchrittWeiter m1 l) := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu, hg]
+
+/-- SELECTION: a fetched 32-bit narrow store to UC posts the masked
+    device write and advances RIP past the fetched length. -/
+theorem mmioByteschritt_uc_speichern32 (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (base src : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m1 : MmioMaschine)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.narrow ⟨.store32 base src disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 4 = true)
+    (hg : ucStoreZugriff m hw bp .b32 (effAddr m.kern.kern base disp)
+      (trunc .b32 (m.kern.kern.register src)) = some m1) :
+    mmioByteschritt m hw bp = .weiter (maschineSchrittWeiter m1 l) := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu, hg]
+
+/-- SELECTION: a GP load outside UC delegates to the accepted step. -/
+theorem mmioByteschritt_delegiert_laden (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (dst base : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.load64 dst base disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = false) :
+    mmioByteschritt m hw bp =
+      delegiert m (.pilot ⟨.load64 dst base disp, l⟩) bp := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu]
+
+/-- SELECTION: a GP store outside UC delegates to the accepted step. -/
+theorem mmioByteschritt_delegiert_speichern (m : MmioMaschine)
+    (hw : HwProfil) (bp : BereitProfil) (base src : Register)
+    (disp : BitVec 32) (l : Nat) (rest : List Byte)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.store64 base src disp, l⟩, rest))
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = false) :
+    mmioByteschritt m hw bp =
+      delegiert m (.pilot ⟨.store64 base src disp, l⟩) bp := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu]
+
+/-- SELECTION: an FP memory row addressing UC refuses (never a silent
+    RAM access, never a guessed device semantic). -/
+theorem mmioByteschritt_fp_uc_verweigert (m : MmioMaschine)
+    (hw : HwProfil) (bp : BereitProfil) (f : FpDecodiert)
+    (rest : List Byte)
+    (hf : fetchExt m.kern (geholt m.kern.kern) = some (.fp f, rest))
+    (hu : fpUcBetroffen f m.kern m.profil = true) :
+    mmioByteschritt m hw bp = .verweigert := by
+  unfold mmioByteschritt
+  rw [hf]
+  simp [hu]
+
+/-- FETCHED STORE FACTS: RIP advances past the fetched length, the UC log
+    grows by the store event in program order, the posted queue grows by
+    the retired write, and RAM, flags, XMM, control word and the WB
+    buffer are preserved. -/
+theorem mmio_uc_speichern_fakten (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (base src : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m' : MmioMaschine)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.store64 base src disp, l⟩, rest))
+    (hz : breiteZugelassen hw bp .b64 = true)
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = true)
+    (hfw : imFenster (effAddr m.kern.kern base disp) 8 = true)
+    (h : mmioByteschritt m hw bp = .weiter m') :
+    m'.kern.kern.rip = ripNach m.kern.kern.rip l ∧
+      m'.ucLog = m.ucLog ++
+        [.schreibe (effAddr m.kern.kern base disp) .b64] ∧
+      m'.kern.kern.speicher = m.kern.kern.speicher ∧
+      m'.kern.kern.flags = m.kern.kern.flags ∧
+      m'.kern.xmm = m.kern.xmm ∧
+      m'.kern.fp = m.kern.fp ∧
+      m'.pending = m.pending ∧
+      m'.ausstehend = m.ausstehend ++ [⟨effAddr m.kern.kern base disp, Breite.b64, m.kern.kern.register src⟩] := by
+  have hacc := ucStoreZugriff_erfolg m hw bp .b64
+    (effAddr m.kern.kern base disp) (m.kern.kern.register src) hz hu hfw
+  have e := mmioByteschritt_uc_speichern m hw bp base src disp l rest _
+    hf hu hacc
+  rw [e] at h
+  cases h
+  obtain ⟨hpend, _, _, hkern, hlog, haus⟩ := ucStore_bypass m hw bp .b64
+    (effAddr m.kern.kern base disp) (m.kern.kern.register src) _ hacc
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [maschineSchrittWeiter_rip, hkern]
+  · rw [maschineSchrittWeiter_ucLog, hlog]
+  · rw [maschineSchrittWeiter_speicher, hkern]
+  · rw [maschineSchrittWeiter_flags, hkern]
+  · rw [maschineSchrittWeiter_xmm, hkern]
+  · rw [maschineSchrittWeiter_fp, hkern]
+  · rw [maschineSchrittWeiter_pending, hpend]
+  · rw [maschineSchrittWeiter_ausstehend, haus]
+
+/-- FETCHED LOAD FACTS: RIP advances past the fetched length, the
+    destination takes the architectural merge of the device answer, and
+    RAM, flags, XMM, control word, the WB buffer and the posted queue
+    are preserved. -/
+theorem mmio_uc_laden_fakten (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (dst base : Register) (disp : BitVec 32)
+    (l : Nat) (rest : List Byte) (m' : MmioMaschine) (g' : Geraet)
+    (v : Wort)
+    (hf : fetchExt m.kern (geholt m.kern.kern) =
+      some (.pilot ⟨.load64 dst base disp, l⟩, rest))
+    (hz : breiteZugelassen hw bp .b64 = true)
+    (hu : istUc m.profil (effAddr m.kern.kern base disp) 8 = true)
+    (hfw : imFenster (effAddr m.kern.kern base disp) 8 = true)
+    (hp : ueberlapptPosted m.ausstehend (effAddr m.kern.kern base disp) 8 =
+      false)
+    (hgdev : geraetLiest m.geraet .b64
+      (geraetOff (effAddr m.kern.kern base disp)) = some (g', v))
+    (h : mmioByteschritt m hw bp = .weiter m') :
+    m'.kern.kern.rip = ripNach m.kern.kern.rip l ∧
+      m'.kern.kern.register dst =
+        mergeRegNarrow .b64 (m.kern.kern.register dst) v ∧
+      m'.ucLog = m.ucLog ++
+        [.lese (effAddr m.kern.kern base disp) .b64] ∧
+      m'.kern.kern.speicher = m.kern.kern.speicher ∧
+      m'.kern.kern.flags = m.kern.kern.flags ∧
+      m'.kern.xmm = m.kern.xmm ∧
+      m'.kern.fp = m.kern.fp ∧
+      m'.pending = m.pending ∧
+      m'.ausstehend = m.ausstehend := by
+  have hacc := ucLoadZugriff_erfolg m hw bp .b64 dst
+    (effAddr m.kern.kern base disp) g' v hz hu hfw hp hgdev
+  have e := mmioByteschritt_uc_laden m hw bp dst base disp l rest _ v
+    hf hu hacc
+  rw [e] at h
+  cases h
+  have hr := ucLoad_rahmen m hw bp .b64 dst
+    (effAddr m.kern.kern base disp) _ v hacc
+  obtain ⟨hram, hfl, hrip0, hxmm, hfp, hpend, haus, hlog⟩ := hr
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [maschineSchrittWeiter_rip, hrip0]
+  · rw [maschineSchrittWeiter_register]
+    show (maschineRegLaden m .b64 dst v).register dst = _
+    exact maschineRegLaden_gleich m .b64 dst v
+  · rw [maschineSchrittWeiter_ucLog, hlog]
+  · rw [maschineSchrittWeiter_speicher, hram]
+  · rw [maschineSchrittWeiter_flags, hfl]
+  · rw [maschineSchrittWeiter_xmm, hxmm]
+  · rw [maschineSchrittWeiter_fp, hfp]
+  · rw [maschineSchrittWeiter_pending, hpend]
+  · rw [maschineSchrittWeiter_ausstehend, haus]
+
+/-! ## 5. Joint witness: fetched device write, bus completion, device
+  read, and the answer stored to normal RAM.
+
+  Three pilot instructions at 4096 (`store64 [rbx], rax`, 7 bytes;
+  `load64 rcx, [rbx]`, 7 bytes; `store64 [rdi], rcx`, 7 bytes) with
+  `rbx` at the device window, `rdi` at a normal RAM cell, `rax = 42`.
+  The run posts the UC store, completes it on the bus, reads the device
+  answer into `rcx`, and stores it to RAM. Every fact below is computed
+  from actual fetched bytes through the accepted dispatcher. -/
+
+/-- Witness program: UC store, UC load, then the WB store to RAM. -/
+def witBild : List Byte :=
+  encode (.store64 .rbx .rax (BitVec.ofNat 32 0)) ++
+  encode (.load64 .rcx .rbx (BitVec.ofNat 32 0)) ++
+  encode (.store64 .rdi .rcx (BitVec.ofNat 32 0))
+
+/-- Witness code bytes: the image at 4096, zeroes elsewhere. -/
+def witBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match witBild[a.toNat - 4096]? with
+    | some b => b
+    | none => BitVec.ofNat 8 0
+
+/-- Witness execute permission: exactly the 21 image bytes. -/
+def witCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 21)
+
+/-- Witness data permission: one eight-byte cell at 8192. Device
+    addresses are deliberately NOT RAM-readable/writable. -/
+def witDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 8)
+
+/-- Witness memory: execute-only code, read/write-only data. -/
+def mmioWitSpeicher : Speicher :=
+  { bytes := witBytes, lesbar := witDaten,
+    schreibbar := witDaten, ausfuehrbar := witCode }
+
+/-- Witness registers: the value in rax, the device address in rbx,
+    the RAM cell in rdi. -/
+def mmioWitReg : Register → Wort :=
+  fun q =>
+    if q = Register.rax then BitVec.ofNat 64 42
+    else if q = Register.rbx then BitVec.ofNat 64 65536
+    else if q = Register.rdi then BitVec.ofNat 64 8192
+    else if q = Register.rsp then BitVec.ofNat 64 8704
+    else BitVec.ofNat 64 0
+
+/-- Witness core state: code at 4096. -/
+def witKern : Zustand :=
+  { register := mmioWitReg, flags := zeugeFlags,
+    rip := BitVec.ofNat 64 4096, speicher := mmioWitSpeicher }
+
+/-- Witness CPU: zeroed XMM, reset control word. -/
+def witFp : FpZustand :=
+  ⟨witKern, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness UC profile: exactly the 8-byte device window. -/
+def witProfil : UcProfil :=
+  [{ basis := 65536, len := 8, lesbar := true, schreibbar := true, ausfuehrbar := false }]
+
+/-- The witness device address. -/
+def witDevAddr : Adresse := natAdresse 65536
+
+/-- Witness start machine: one stale ordinary WB store pending (it must
+    survive every UC and bus step: no silent drain). -/
+def witM0 : MmioMaschine :=
+  { kern := witFp
+    pending := [⟨natAdresse 9000, natByte 7⟩]
+    geraet := geraetAnfang
+    ausstehend := []
+    ucLog := []
+    profil := witProfil }
+
+/-- Stage 1: the fetched UC store retires (posted). -/
+def witSchritt1 : MmioAusgang :=
+  mmioByteschritt witM0 basisHw basisBereit
+
+/-- Bus stage: the oldest posted write completes into the device. -/
+def witBus : MmioAusgang :=
+  match witSchritt1 with
+  | .weiter m =>
+    match busFortschritt m with
+    | some m' => .weiter m'
+    | none => .verweigert
+  | _ => .verweigert
+
+/-- Stage 2: the fetched UC load answers from the device. -/
+def witSchritt2 : MmioAusgang :=
+  match witBus with
+  | .weiter m => mmioByteschritt m basisHw basisBereit
+  | _ => .verweigert
+
+/-- Stage 3: the fetched WB store carries the answer to normal RAM. -/
+def witSchritt3 : MmioAusgang :=
+  match witSchritt2 with
+  | .weiter m => mmioByteschritt m basisHw basisBereit
+  | _ => .verweigert
+
+/-- Read RIP out of a step outcome. -/
+def witRip (o : MmioAusgang) : Option Adresse :=
+  match o with
+  | .weiter m => some m.kern.kern.rip
+  | _ => none
+
+/-- Read one RAM byte out of a step outcome. -/
+def witRam (o : MmioAusgang) (a : Adresse) : Option Byte :=
+  match o with
+  | .weiter m => some (m.kern.kern.speicher.bytes a)
+  | _ => none
+
+/-- Read one register out of a step outcome. -/
+def witRegAus (o : MmioAusgang) (r : Register) : Option Wort :=
+  match o with
+  | .weiter m => some (m.kern.kern.register r)
+  | _ => none
+
+/-- Read one device byte out of a step outcome. -/
+def witGeraetByte (o : MmioAusgang) (i : Fin 8) : Option Byte :=
+  match o with
+  | .weiter m => some (m.geraet.daten i)
+  | _ => none
+
+/-- Read the device access counter out of a step outcome. -/
+def witZaehler (o : MmioAusgang) : Option Nat :=
+  match o with
+  | .weiter m => some m.geraet.zugriffe
+  | _ => none
+
+/-- Read the UC program-order log out of a step outcome. -/
+def witLog (o : MmioAusgang) : List UcEreignis :=
+  match o with
+  | .weiter m => m.ucLog
+  | _ => []
+
+/-- Read the posted-queue length out of a step outcome. -/
+def witPosted (o : MmioAusgang) : Nat :=
+  match o with
+  | .weiter m => m.ausstehend.length
+  | _ => 0
+
+/-- Read the pending WB stores out of a step outcome. -/
+def witPending (o : MmioAusgang) : List TSOEintrag :=
+  match o with
+  | .weiter m => m.pending
+  | _ => []
+
+/-- Refusal probe out of a step outcome. -/
+def witVerweigert (o : MmioAusgang) : Bool :=
+  match o with
+  | .verweigert => true
+  | _ => false
+
+/-- Stage 1 advances RIP past the 7-byte store. -/
+theorem wit_s1_rip : witRip witSchritt1 = some (natAdresse 4103) := by
+  decide
+
+/-- Stage 1 posts exactly one device write. -/
+theorem wit_s1_posted : witPosted witSchritt1 = 1 := by
+  decide
+
+/-- Stage 1 leaves the device byte at zero: retired is not completed. -/
+theorem wit_s1_geraet_noch_null :
+    witGeraetByte witSchritt1 ⟨0, by decide⟩ = some (natByte 0) := by
+  decide
+
+/-- The bus stage completes the write: the device byte holds 42. -/
+theorem wit_bus_geraet :
+    witGeraetByte witBus ⟨0, by decide⟩ = some (natByte 42) := by
+  decide
+
+/-- The bus stage drains the posted queue. -/
+theorem wit_bus_geleert : witPosted witBus = 0 := by
+  decide
+
+/-- Stage 2 answers 42 into rcx from fetched bytes. -/
+theorem wit_s2_reg :
+    witRegAus witSchritt2 .rcx = some (BitVec.ofNat 64 42) := by
+  decide
+
+/-- Two device transactions happened: the bus write and the read. -/
+theorem wit_s2_zaehler : witZaehler witSchritt2 = some 2 := by
+  decide
+
+/-- Stage 3 stores the answer to normal RAM. -/
+theorem wit_s3_ram :
+    witRam witSchritt3 (natAdresse 8192) = some (natByte 42) := by
+  decide
+
+/-- The start RAM cell reads zero: the run really changes memory. -/
+theorem wit_anfang_ram :
+    witM0.kern.kern.speicher.bytes (natAdresse 8192) = natByte 0 := by
+  decide
+
+/-- The UC log holds the store and the load in program order. -/
+theorem wit_s3_log :
+    witLog witSchritt3 =
+      [.schreibe witDevAddr .b64, .lese witDevAddr .b64] := by
+  decide
+
+/-- The run advances RIP past all three instructions: 4096 + 7 + 7 + 7. -/
+theorem wit_s3_rip : witRip witSchritt3 = some (natAdresse 4117) := by
+  decide
+
+/-- The stale ordinary store survives every UC and bus step. -/
+theorem wit_pending_erhalten :
+    witPending witSchritt3 = [⟨natAdresse 9000, natByte 7⟩] := by
+  decide
+
+/-- The device byte still holds 42 at the end of the run. -/
+theorem wit_s3_geraet :
+    witGeraetByte witSchritt3 ⟨0, by decide⟩ = some (natByte 42) := by
+  decide
+
+/-- JOINT WITNESS: the reached fetched device-write/read changes real
+    device bytes and real RAM from fetched bytes, logs both UC events
+    in program order, advances RIP past all three instructions, starts
+    from zeroed cells, and the CPU-retired store is observably not
+    device-completed before the bus stage. -/
+theorem wit_joint_zeuge :
+    witRam witSchritt3 (natAdresse 8192) = some (natByte 42) ∧
+    witM0.kern.kern.speicher.bytes (natAdresse 8192) = natByte 0 ∧
+    witGeraetByte witSchritt3 ⟨0, by decide⟩ = some (natByte 42) ∧
+    witGeraetByte witSchritt1 ⟨0, by decide⟩ = some (natByte 0) ∧
+    witLog witSchritt3 =
+      [.schreibe witDevAddr .b64, .lese witDevAddr .b64] ∧
+    witRip witSchritt3 = some (natAdresse 4117) ∧
+    witRegAus witSchritt2 .rcx = some (BitVec.ofNat 64 42) :=
+  ⟨wit_s3_ram, wit_anfang_ram, wit_s3_geraet, wit_s1_geraet_noch_null,
+    wit_s3_log, wit_s3_rip, wit_s2_reg⟩
+
+/-! ## 6. Planted refusals and joint inhabitants. -/
+
+/-- WRONG KIND: the same fetched store with an empty UC profile refuses:
+    the device bytes are WB RAM without write permission there, so the
+    delegated RAM path fails instead of touching a device. -/
+theorem wit_falsch_art_verweigert :
+    witVerweigert (mmioByteschritt { witM0 with profil := [] } basisHw
+      basisBereit) = true := by
+  decide
+
+/-- FP witness program: an FP store to the device window. -/
+def witFpBild : List Byte :=
+  fpEncodeMovsdSpeichere .rbx .xmm0 (BitVec.ofNat 32 0)
+
+/-- FP code bytes: the FP image at 4096, zeroes elsewhere. -/
+def witFpBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match witFpBild[a.toNat - 4096]? with
+    | some b => b
+    | none => BitVec.ofNat 8 0
+
+/-- FP code permission: exactly the 8 FP image bytes. -/
+def witFpCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 8)
+
+/-- FP witness memory: FP code plus the shared data cell. -/
+def witFpSpeicher : Speicher :=
+  { bytes := witFpBytes, lesbar := witDaten,
+    schreibbar := witDaten, ausfuehrbar := witFpCode }
+
+/-- FP witness registers: the device address in rbx. -/
+def witFpReg : Register → Wort :=
+  fun q =>
+    if q = Register.rbx then BitVec.ofNat 64 65536
+    else if q = Register.rsp then BitVec.ofNat 64 8704
+    else BitVec.ofNat 64 0
+
+/-- FP witness core: FP code at 4096. -/
+def witFpKern : Zustand :=
+  { register := witFpReg, flags := zeugeFlags, rip := BitVec.ofNat 64 4096, speicher := witFpSpeicher }
+
+/-- FP witness machine: same device, profile and control state. -/
+def witFpM0 : MmioMaschine :=
+  { kern := ⟨witFpKern, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+    pending := []
+    geraet := geraetAnfang
+    ausstehend := []
+    ucLog := []
+    profil := witProfil }
+
+/-- FP-TO-UC REFUSAL: the FP store to the device window refuses before
+    any RAM or device effect (no silent RAM access, no guessed SIMD
+    device semantic, per the Table 14-2 NOTE). -/
+theorem wit_fp_uc_verweigert :
+    witVerweigert (mmioByteschritt witFpM0 basisHw basisBereit) = true := by
+  decide
+
+/-- Machine with RIP past the executable window. -/
+def witM0HinterBild : MmioMaschine :=
+  { witM0 with kern := { witM0.kern with kern :=
+    { witM0.kern.kern with rip := natAdresse 4117 } } }
+
+/-- PAST-IMAGE REFUSAL: past the executable window the fetch refuses. -/
+theorem wit_nachBild_verweigert :
+    witVerweigert (mmioByteschritt witM0HinterBild basisHw basisBereit) =
+      true := by
+  decide
+
+/-- WIDTH REFUSAL: a 2-byte access straddling the window edge refuses. -/
+theorem wit_fenster_verweigert :
+    ucStoreZugriff witM0 basisHw basisBereit Breite.b16
+      (natAdresse 65543) (BitVec.ofNat 64 7) = none := by
+  apply ucStore_verweigert_ohne_fenster
+  decide
+
+/-- WRAP REFUSAL: an 8-byte access wrapping past 2^64 refuses. -/
+theorem wit_umbruch_verweigert :
+    ucStoreZugriff witM0 basisHw basisBereit Breite.b64
+      (natAdresse (2 ^ 64 - 4)) (BitVec.ofNat 64 7) = none := by
+  apply ucStore_verweigert_ohne_fenster
+  decide
+
+/-- PROFILE REFUSAL: without UC membership the store refuses. -/
+theorem wit_profil_verweigert :
+    ucStoreZugriff { witM0 with profil := [] } basisHw basisBereit
+      Breite.b64 witDevAddr (BitVec.ofNat 64 7) = none := by
+  apply ucStore_verweigert_ohne_profil
+  decide
+
+/-- FEATURE REFUSAL: without silicon the store refuses. -/
+theorem wit_merkmal_verweigert :
+    ucStoreZugriff witM0 ⟨false, true, true, true⟩ basisBereit Breite.b64
+      witDevAddr (BitVec.ofNat 64 7) = none := by
+  apply ucStore_verweigert_ohne_merkmal
+  decide
+
+/-- Posted machine: one 8-byte write already retired at the window. -/
+def witM0Posted : MmioMaschine :=
+  { witM0 with ausstehend :=
+    [⟨witDevAddr, Breite.b64, BitVec.ofNat 64 42⟩] }
+
+/-- ORDERING REFUSAL: a load overlapping the posted write refuses until
+    the bus completes it (no silent forwarding). -/
+theorem wit_ueberlapp_verweigert :
+    ucLoadZugriff witM0Posted basisHw basisBereit Breite.b64 .rcx
+      witDevAddr = none := by
+  apply ucLoad_verweigert_bei_ausstehend
+  decide
+
+/-- BYTE FOOTPRINTS: the device window and the RAM cell are disjoint
+    8-byte footprints (per-byte events, never one atomic occurrence). -/
+theorem wit_fuss_disjunkt : Disjunkt witDevAddr (natAdresse 8192) := by
+  apply disjunkt_von_intervallen
+  · unfold OhneUmbruch
+    decide
+  · unfold OhneUmbruch
+    decide
+  · right
+    decide
+
+/-- INHABITANT of the bypass: a jointly instantiated retired UC store
+    that posts exactly one write and changes no device byte. -/
+theorem ucStore_bypass_zeuge :
+    ∃ (m m' : MmioMaschine),
+      ucStoreZugriff m basisHw basisBereit Breite.b64 witDevAddr
+          (BitVec.ofNat 64 42) = some m' ∧
+        m'.ausstehend = m.ausstehend ++
+          [⟨witDevAddr, Breite.b64, BitVec.ofNat 64 42⟩] ∧
+        m'.geraet.daten = m.geraet.daten := by
+  have hz : breiteZugelassen basisHw basisBereit Breite.b64 = true := by
+    decide
+  have hu : istUc witM0.profil witDevAddr 8 = true := by
+    decide
+  have hfw : imFenster witDevAddr 8 = true := by
+    decide
+  have hacc := ucStoreZugriff_erfolg witM0 basisHw basisBereit Breite.b64
+    witDevAddr (BitVec.ofNat 64 42) hz hu hfw
+  have hb := ucStore_bypass witM0 basisHw basisBereit Breite.b64 witDevAddr
+    (BitVec.ofNat 64 42) _ hacc
+  obtain ⟨_, hdat, _, _, _, haus⟩ := hb
+  exact ⟨witM0, _, hacc, haus, hdat⟩
+
+/-- INHABITANT of FIFO completion: a jointly instantiated bus step that
+    observably changes the device byte and drains the queue. -/
+theorem busFortschritt_fifo_zeuge :
+    ∃ (m : MmioMaschine),
+      (busFortschritt m).map (fun m' => m'.ausstehend.length) =
+        some 0 ∧
+      m.ausstehend.length = 1 ∧
+      (busFortschritt m).map
+        (fun m' => m'.geraet.daten ⟨0, by decide⟩) =
+        some (natByte 42) := by
+  refine ⟨witM0Posted, by decide, rfl, by decide⟩
+
+/- CUTS:
+    Proved here: selected UC MMIO over one explicit 8-byte window --
+    UC membership by software-established profile (WB default), the
+    generic device response (width-indexed LE with an access counter),
+    posted UC stores that bypass the WB buffer, FIFO bus completion,
+    strong UC-UC program order via the event log, refusal of loads over
+    overlapping posted writes, FP-memory-to-UC refusal, and a reached
+    fetched write/bus-complete/read/RAM-store run with joint witness
+    and planted refusals. All fetched code runs through the accepted
+    unified decoder and step; no semantics is redefined.
+    NOT proved here, and not claimed:
+    - No WC/WT/WP/NT/DMA: only UC membership and the WB default exist
+      as profile kinds; write-combining buffers, write-through/protect
+      caching, non-temporal hints and DMA engines have no form here and
+      stay refused/OPEN.
+    - Fetched coverage is exactly pilot 64-bit load/store plus narrow
+      32-bit store; 8/16-bit fetched forms and 32-bit fetched loads have
+      no accepted decoder rows and refuse (access-level widths exist for
+      all four widths, but unfetched widths have no byte path here).
+    - No completion liveness, fairness, timing or retry bounds: the bus
+      step exists but progress, CAS-style retry and cycle costs are OPEN.
+    - No interrupts, faults beyond explicit refusal, LOCK/MFENCE/SFENCE
+      integration, or UC code-fetch gating (§14.3.3 limits are noted but
+      fetch permission alone does not distinguish UC code).
+    - Device semantics beyond the window bytes plus counter (e.g.
+      status-clear-on-read, multi-register banks, mirrors) refine this
+      interface; they are not modelled.
+    - No source, checker, Spec/goal, emitter or optimizer correspondence;
+      no complete physical-vendor proof; AMD provenance absent.
+-/
+
+#print axioms istUc_mem
+#print axioms breiteZugelassen_hat
+#print axioms imFenster_off
+#print axioms geraetLiest_zaehlt
+#print axioms geraetSchreibt_zaehlt
+#print axioms ucStoreZugriff_erfolg
+#print axioms ucStore_bypass
+#print axioms ucLoadZugriff_erfolg
+#print axioms ucLoad_rahmen
+#print axioms busFortschritt_fifo
+#print axioms fpUcBetroffen_speichere
+#print axioms mmioByteschritt_ohne_fetch
+#print axioms mmioByteschritt_uc_laden
+#print axioms mmioByteschritt_uc_speichern
+#print axioms mmioByteschritt_uc_speichern32
+#print axioms mmioByteschritt_delegiert_laden
+#print axioms mmioByteschritt_fp_uc_verweigert
+#print axioms mmio_uc_speichern_fakten
+#print axioms mmio_uc_laden_fakten
+#print axioms wit_joint_zeuge
+#print axioms ucStore_bypass_zeuge
+#print axioms busFortschritt_fifo_zeuge
+
+end Gabbro.Grammatik.X86
