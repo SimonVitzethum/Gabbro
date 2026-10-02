@@ -1488,11 +1488,366 @@ theorem s32Roundtrip_ucomissRM (lhs : XmmReg) (base : Register)
       fpXmmHoch, regCode, regHigh, regLow, modrmMem, leBytes32,
       parseLe32_cons, s32Rex, s32IstRex, s32RexBits, parseLe32_cons]
 
-/- CUTS (interim):
-   §§0-8 done. OPEN next: the fetched byte step, witnesses.
+/-! ## 9. Fetched byte step, feature gate, legacy YMM, witnesses.
+
+  `s32Byteschritt` fetches from actual executable memory (reusing
+  `geholt`, `ausfuehrbarN`, `laengeOk` component-wise, never a second
+  fetch implementation) and refuses where fetch, length, permission or
+  the step refuse. The feature gate is fail-closed over silicon
+  support, OS vector state and the shared MXCSR profile. Legacy upper
+  YMM halves (bits 255:128) are carried and never written (no VEX
+  zeroing exists here). The joint witness runs fetched ADDSS then
+  fetched MOVSS-store: real RAM changes and the stored single reads
+  back. -/
+
+/-- Byte-step outcome reusing the pilot shape. -/
+inductive S32Ausgang where
+  | weiter : FpZustand → S32Ausgang
+  | verweigert : S32Ausgang
+
+/-- Fetch and decode from actual executable memory: decode the ACTUAL
+    fetched bytes, then check consumed-length/remaining-suffix
+    consistency, decode-length validity and execute permission of the
+    consumed prefix. -/
+def s32FetchDekodiert (t : FpZustand) :
+    Option (S32Decodiert × List Byte) :=
+  match s32Decode (geholt t.kern) with
+  | none => none
+  | some (d, rest) =>
+    if d.laenge + rest.length == (geholt t.kern).length &&
+        laengeOk d.laenge && ausfuehrbarN t.kern.speicher t.kern.rip d.laenge
+    then some (d, rest)
+    else none
+
+/-- One byte step from actual memory: fetch, decode, then `s32Schritt`.
+    Takes ONLY the state: no caller-supplied decoded value ever becomes
+    a trusted fetch. -/
+def s32Byteschritt (t : FpZustand) : S32Ausgang :=
+  match s32FetchDekodiert t with
+  | none => .verweigert
+  | some (d, _) =>
+    match s32Schritt d t with
+    | none => .verweigert
+    | some t' => .weiter t'
+
+/-- A successful fetch plus a successful step continue. -/
+theorem s32Byteschritt_weiter (t t' : FpZustand) (d : S32Decodiert) (rest : List Byte) (hf : s32FetchDekodiert t = some (d, rest)) (hs : s32Schritt d t = some t') : s32Byteschritt t = .weiter t' := by
+  unfold s32Byteschritt
+  simp [hf, hs]
+
+/-- Non-executable code refuses even where the bytes would decode. -/
+theorem s32Byteschritt_verweigert_ohne_ausfuehrbar (t : FpZustand) (d : S32Decodiert) (rest : List Byte) (hf : s32Decode (geholt t.kern) = some (d, rest)) (hx : ausfuehrbarN t.kern.speicher t.kern.rip d.laenge = false) : s32Byteschritt t = .verweigert := by
+  unfold s32Byteschritt s32FetchDekodiert
+  simp [hf, hx]
+
+/-- Silicon SSE single-precision support (what the silicon HAS). -/
+structure S32Hw where
+  hatSseEinfach : Bool
+  deriving DecidableEq, Repr
+
+/-- Admission: silicon support AND OS vector state AND the shared
+    MXCSR profile (the accepted silicon/readiness split; integrating a
+    single-precision feature into `PerfMerkmal` awaits the profile
+    owner, so the local gate is the sharing point, not a duplicate). -/
+def s32Zugelassen (hw : S32Hw) (osXmm : Bool) (k : FPKontext) : Bool :=
+  hw.hatSseEinfach && osXmm && s32Eintritt k
+
+/-- Gated byte step: fail-closed over silicon, OS state and profile. -/
+def s32ByteschrittTor (hw : S32Hw) (osXmm : Bool)
+    (t : FpZustand) : S32Ausgang :=
+  match s32Zugelassen hw osXmm t.fp with
+  | false => .verweigert
+  | true => s32Byteschritt t
+
+/-- Without silicon support every form refuses. -/
+theorem s32Tor_ohne_silizium (osXmm : Bool) (t : FpZustand) :
+    s32ByteschrittTor ⟨false⟩ osXmm t = .verweigert := by
+  unfold s32ByteschrittTor s32Zugelassen
+  simp
+
+/-- Without OS vector state every form refuses. -/
+theorem s32Tor_ohne_os (hw : S32Hw) (t : FpZustand)
+    (hos : hw.hatSseEinfach = true) :
+    s32ByteschrittTor hw false t = .verweigert := by
+  unfold s32ByteschrittTor s32Zugelassen
+  simp [hos]
+
+/-- With a refused control word every form refuses. -/
+theorem s32Tor_ohne_profil (t : FpZustand)
+    (h : s32Eintritt t.fp = false) :
+    s32ByteschrittTor ⟨true⟩ true t = .verweigert := by
+  unfold s32ByteschrittTor s32Zugelassen
+  simp [h]
+
+/-- Admission passes execution through. -/
+theorem s32Tor_weiter_gibt_weiter (hw : S32Hw) (osXmm : Bool) (t t' : FpZustand) (h : s32Zugelassen hw osXmm t.fp = true) (hs : s32Byteschritt t = .weiter t') : s32ByteschrittTor hw osXmm t = .weiter t' := by
+  unfold s32ByteschrittTor
+  simp [h, hs]
+
+/-- Abstract legacy upper halves (bits 255:128): carried, never
+    written by legacy SSE forms. -/
+abbrev YmmOben := XmmReg → BitVec 128
+
+/-- Full legacy state: the shared state plus the carried uppers. -/
+structure S32Voll where
+  t : FpZustand
+  ymm : YmmOben
+
+/-- The step on the full state threads the uppers through untouched. -/
+def s32SchrittVoll (d : S32Decodiert) (v : S32Voll) : Option S32Voll :=
+  match s32Schritt d v.t with
+  | none => none
+  | some t' => some ⟨t', v.ymm⟩
+
+/-- LEGACY UPPER-YMM PRESERVATION: no scalar single form touches the
+    carried upper halves. -/
+theorem s32SchrittVoll_ymm (d : S32Decodiert) (v v' : S32Voll) (q : XmmReg) (h : s32SchrittVoll d v = some v') : v'.ymm q = v.ymm q := by
+  unfold s32SchrittVoll at h
+  split at h
+  · cases h
+  · cases h
+    rfl
+
+/-- Witness code/data bytes: ADDSS at `0x1000`, MOVSS-store at `0x1004`,
+    zero data at `0x2000`. -/
+def s32ZeugeBytes : Adresse → Byte :=
+  fun a =>
+    if a = BitVec.ofNat 64 0x1000 then natByte 243
+    else if a = BitVec.ofNat 64 0x1001 then natByte 15
+    else if a = BitVec.ofNat 64 0x1002 then natByte 88
+    else if a = BitVec.ofNat 64 0x1003 then natByte 193
+    else if a = BitVec.ofNat 64 0x1004 then natByte 243
+    else if a = BitVec.ofNat 64 0x1005 then natByte 15
+    else if a = BitVec.ofNat 64 0x1006 then natByte 17
+    else if a = BitVec.ofNat 64 0x1007 then natByte 128
+    else natByte 0
+
+/-- Witness memory: the code above executable over `0x1000..0x100C`,
+    everything readable and writable. -/
+def s32ZeugeMem : Speicher :=
+  { bytes := s32ZeugeBytes, lesbar := fun _ => true, schreibbar := fun _ => true, ausfuehrbar := fun a => 0x1000 ≤ a.toNat && a.toNat < 0x100C }
+
+/-- Witness XMM file: xmm0 holds `1.0f`, xmm1 holds `2.0f`. -/
+def s32ZeugeXmm : XmmDatei :=
+  fun q => if q = XmmReg.xmm0 then BitVec.ofNat 128 0x3F800000 else if q = XmmReg.xmm1 then BitVec.ofNat 128 0x40000000 else 0
+
+/-- Witness core: rax points at the data page, rcx holds `42`. -/
+def s32ZeugeKern : Zustand :=
+  { register := fun r => if r = Register.rax then BitVec.ofNat 64 0x2000 else if r = Register.rcx then 42 else 0, flags := ⟨false, false, some false, false, false, false⟩, rip := BitVec.ofNat 64 0x1000, speicher := s32ZeugeMem }
+
+/-- Witness start state. -/
+def s32ZeugeT : FpZustand := ⟨s32ZeugeKern, s32ZeugeXmm, kontextReset⟩
+
+/-- Witness state after the ADDSS: xmm0 holds `3.0f`. -/
+def s32ZeugeT1 : FpZustand :=
+  { s32ZeugeT with kern := { s32ZeugeT.kern with rip := ripNach (BitVec.ofNat 64 0x1000) 4 }, xmm := xmmSchreibeTief32 s32ZeugeXmm .xmm0 (0x40400000 : BitVec 32) }
+
+/-- Witness memory after the store: the `3.0f` pattern at `0x2000`. -/
+def s32ZeugeMemNach : Speicher :=
+  { s32ZeugeMem with bytes := writeBytesN s32ZeugeMem (BitVec.ofNat 64 0x2000) (BitVec.setWidth 64 (0x40400000 : BitVec 32)) 4 }
+
+/-- Witness state after the store. -/
+def s32ZeugeT2 : FpZustand :=
+  { s32ZeugeT1 with kern := { s32ZeugeT1.kern with speicher := s32ZeugeMemNach, rip := BitVec.ofNat 64 0x100C } }
+
+/-- The witness start carries `1.0f` in xmm0. -/
+theorem s32Zeuge_tief0 : xmmTief32 s32ZeugeT.xmm .xmm0 = 0x3F800000 := by
+  decide
+
+/-- The witness start carries `2.0f` in xmm1. -/
+theorem s32Zeuge_tief1 : xmmTief32 s32ZeugeT.xmm .xmm1 = 0x40000000 := by
+  decide
+
+/-- The witness profile is admitted. -/
+theorem s32Zeuge_fp : s32Eintritt s32ZeugeT.fp = true := by
+  unfold s32Eintritt
+  exact kontextReset_gueltig
+
+/-- Lengths 4 and 8 are valid decode lengths. -/
+theorem s32Zeuge_laenge4 : laengeOk 4 = true := by
+  decide
+
+/-- Lengths 4 and 8 are valid decode lengths. -/
+theorem s32Zeuge_laenge8 : laengeOk 8 = true := by
+  decide
+
+/-- FETCH 1: the actual code bytes decode to the ADDSS form. -/
+theorem s32Zeuge_fetch1 :
+    s32FetchDekodiert s32ZeugeT =
+      some (⟨.addssRR .xmm0 .xmm1, 4⟩,
+        [natByte 243, natByte 15, natByte 17, natByte 128, natByte 0, natByte 0, natByte 0, natByte 0]) := by
+  decide
+
+/-- FETCH 2: past the first form, the store bytes decode. -/
+theorem s32Zeuge_fetch2 :
+    s32FetchDekodiert s32ZeugeT1 =
+      some (⟨.movssSpeichere .rax .xmm0 0, 8⟩, []) := by
+  decide
+
+/-- STEP 1: the ADDSS computes `3.0f` into xmm0. -/
+theorem s32Zeuge_schritt1 :
+    s32Schritt ⟨.addssRR .xmm0 .xmm1, 4⟩ s32ZeugeT = some s32ZeugeT1 := by
+  have heq := s32Schritt_addssRR ⟨.addssRR .xmm0 .xmm1, 4⟩ s32ZeugeT .xmm0 .xmm1 s32Zeuge_laenge4 s32Zeuge_fp rfl
+  rw [s32Zeuge_tief0, s32Zeuge_tief1, s32_eins_plus_zwei] at heq
+  exact heq
+
+/-- The stored word travels zero-extended. -/
+theorem s32Zeuge_hwr :
+    write32 s32ZeugeT1.kern.speicher (effAddr s32ZeugeT1.kern .rax 0) (BitVec.setWidth 64 (xmmTief32 s32ZeugeT1.xmm .xmm0)) = some s32ZeugeMemNach := by
+  have hmem : s32ZeugeT1.kern.speicher = s32ZeugeMem := rfl
+  have hadr : effAddr s32ZeugeT1.kern .rax 0 = BitVec.ofNat 64 0x2000 := by
+    decide
+  have hlo : xmmTief32 s32ZeugeT1.xmm .xmm0 = (0x40400000 : BitVec 32) := by
+    decide
+  rw [hmem, hadr, hlo]
+  unfold write32
+  rw [if_pos (by decide : schreibbarN s32ZeugeMem (BitVec.ofNat 64 0x2000) 4 = true)]
+  rfl
+
+/-- STEP 2: the store reaches the witness memory. -/
+theorem s32Zeuge_schritt2 :
+    s32Schritt ⟨.movssSpeichere .rax .xmm0 0, 8⟩ s32ZeugeT1 = some s32ZeugeT2 := by
+  exact s32Schritt_movssSpeichere_erfolg _ _ _ _ _ _ s32Zeuge_laenge8 s32Zeuge_fp rfl s32Zeuge_hwr
+
+/-- Readable witness page for the readback. -/
+theorem s32Zeuge_hles :
+    lesbarN s32ZeugeMem (BitVec.ofNat 64 0x2000) 4 = true := by
+  decide
+
+/-- JOINT FETCHED RUN: fetched ADDSS then fetched store change real
+    RAM: the `3.0f` pattern reads back and byte `0x2002` flips from
+    `0x00` to `0x40`. -/
+theorem s32Zeuge_fetched_lauf :
+    ∃ (t1 t2 : FpZustand),
+      s32Byteschritt s32ZeugeT = .weiter t1
+        ∧ s32Byteschritt t1 = .weiter t2
+        ∧ read32 t2.kern.speicher (BitVec.ofNat 64 0x2000) = some (BitVec.ofNat 64 0x40400000)
+        ∧ t2.kern.speicher.bytes (BitVec.ofNat 64 0x2002) ≠ s32ZeugeMem.bytes (BitVec.ofNat 64 0x2002) := by
+  refine ⟨s32ZeugeT1, s32ZeugeT2, ?_, ?_, ?_, ?_⟩
+  · exact s32Byteschritt_weiter _ _ _ _ s32Zeuge_fetch1 s32Zeuge_schritt1
+  · exact s32Byteschritt_weiter _ _ _ _ s32Zeuge_fetch2 s32Zeuge_schritt2
+  · have hrd := s32_speichere_liest_zurueck s32ZeugeT1 .rax .xmm0 0 s32ZeugeMemNach s32Zeuge_hwr s32Zeuge_hles
+    have hadr : effAddr s32ZeugeT1.kern .rax 0 = BitVec.ofNat 64 0x2000 := by
+      decide
+    have hlo : xmmTief32 s32ZeugeT1.xmm .xmm0 = (0x40400000 : BitVec 32) := by
+      decide
+    have h40000 : ((0x40400000 : BitVec 32).toNat) = 0x40400000 := by
+      decide
+    rw [hadr, hlo, h40000] at hrd
+    exact hrd
+  · have hhit := writeBytesN_hit s32ZeugeMem (BitVec.ofNat 64 0x2000) (BitVec.setWidth 64 (0x40400000 : BitVec 32)) 4 2 (by decide) (by decide)
+    have ha2 : addrOff (BitVec.ofNat 64 0x2000) 2 = BitVec.ofNat 64 0x2002 := by
+      decide
+    have hw2 : wortByte (BitVec.setWidth 64 (0x40400000 : BitVec 32)) 2 = natByte 64 := by
+      unfold wortByte
+      rw [setWidth64_wert]
+      decide
+    have hpost : s32ZeugeMemNach.bytes (BitVec.ofNat 64 0x2002) = natByte 64 := by
+      have h1 : s32ZeugeMemNach.bytes (BitVec.ofNat 64 0x2002) = writeBytesN s32ZeugeMem (BitVec.ofNat 64 0x2000) (BitVec.setWidth 64 (0x40400000 : BitVec 32)) 4 (BitVec.ofNat 64 0x2002) := rfl
+      rw [h1, ← ha2, hhit, hw2]
+    have hpre : s32ZeugeMem.bytes (BitVec.ofNat 64 0x2002) = natByte 0 := by
+      decide
+    have hmem2 : s32ZeugeT2.kern.speicher = s32ZeugeMemNach := rfl
+    rw [hmem2, hpost, hpre]
+    decide
+
+/-- `42` converts to `42.0f32` through the 32-bit source. -/
+theorem s32_cvtSI2SS32_42 :
+    muster32 (cvtSI2SS32 42) = 0x42280000 := by
+  decide
+
+/-- CONVERSION WITNESS: CVTSI2SS of the witness rcx (`42`) yields
+    `42.0f32` in the low single. -/
+theorem s32Zeuge_cvtsi42 :
+    ∃ t' : FpZustand,
+      s32Schritt ⟨.cvtsi2ss .xmm2 .rcx false, 4⟩ s32ZeugeT = some t'
+        ∧ xmmTief32 t'.xmm .xmm2 = 0x42280000 := by
+  have hrcx : s32ZeugeT.kern.register .rcx = 42 := by
+    decide
+  have heq := s32Schritt_cvtsi2ss ⟨.cvtsi2ss .xmm2 .rcx false, 4⟩ s32ZeugeT .xmm2 .rcx false s32Zeuge_laenge4 s32Zeuge_fp rfl
+  have heq2 : muster32 (if (false : Bool) then cvtSI2SS64 (s32ZeugeT.kern.register .rcx) else cvtSI2SS32 (s32ZeugeT.kern.register .rcx)) = 0x42280000 := by
+    rw [hrcx]
+    exact s32_cvtSI2SS32_42
+  rw [heq2] at heq
+  refine ⟨_, heq, ?_⟩
+  exact xmmSchreibeTief32_tief _ _ _
+
+/-- NAN-PAYLOAD MUTATION: two payloads, one class, different bits --
+    classification pins no payload (the OPEN gap, made explicit). -/
+theorem s32_nan_nutzlast_mutation :
+    Gleitkomma.klasse Gleitkomma.f32 (bites32 0x7FC00001) = .nan
+      ∧ Gleitkomma.klasse Gleitkomma.f32 (bites32 0x7FC00002) = .nan
+      ∧ (0x7FC00001 : BitVec 32) ≠ 0x7FC00002 := by
+  refine ⟨by decide, by decide, by decide⟩
+
+/-- Blind witness memory: nothing readable, writable or executable. -/
+def s32ZeugeBlind : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0, lesbar := fun _ => false, schreibbar := fun _ => false, ausfuehrbar := fun _ => false }
+
+/-- Blind witness state. -/
+def s32ZeugeBlindT : FpZustand :=
+  ⟨{ s32ZeugeKern with speicher := s32ZeugeBlind }, s32ZeugeXmm, kontextReset⟩
+
+/-- MEMORY FAULT: an unreadable source address refuses explicitly. -/
+theorem s32_blind_verweigert :
+    s32Schritt ⟨.addssRM .xmm0 .rax 0, 8⟩ s32ZeugeBlindT = none := by
+  have hfp : s32Eintritt s32ZeugeBlindT.fp = true := by
+    unfold s32Eintritt
+    exact kontextReset_gueltig
+  have hrd : read32 s32ZeugeBlind (effAddr s32ZeugeBlindT.kern .rax 0) = none := by
+    decide
+  exact s32Schritt_addssRM_verweigert _ _ _ _ _ s32Zeuge_laenge8 hfp rfl hrd
+
+/-- OVERLAP FRAME: a store touches only its four footprint bytes. -/
+theorem s32_speichere_rahmen (t : FpZustand) (base : Register) (src : XmmReg) (disp : BitVec 32) (m' : Speicher) (x : Adresse) (hwr : write32 t.kern.speicher (effAddr t.kern base disp) (BitVec.setWidth 64 (xmmTief32 t.xmm src)) = some m') (haussen : ∀ k : Nat, k < 4 → x ≠ addrOff (effAddr t.kern base disp) k) : m'.bytes x = t.kern.speicher.bytes x :=
+  write32_rahmen t.kern.speicher m' (effAddr t.kern base disp) x (BitVec.setWidth 64 (xmmTief32 t.xmm src)) hwr haussen
+
+/- CUTS:
+   Proved essential rows: MOVSS (register merge preserves upper 96,
+   memory load clears them, store writes the low single), ADDSS/SUBSS/
+   MULSS/DIVSS (register and m32-memory shapes, low-single kernel
+   result, upper preserved), UCOMISS (register and m32 shapes, ZF/PF/CF
+   rows, unordered NaN), CVTSS2SD (exact widening, low-double write,
+   upper-64 kept), CVTSD2SS (kernel-rounded narrowing, overflow to
+   infinity), CVTSI2SS (32/64-bit sources, direct `ofInt` at f32),
+   CVTTSS2SI (truncation, integer indefinite, 32-bit zero-extended).
+   REX.R/B high-XMM selection and REX.W width selection are proved
+   through the independent byte decoder (all-XMM round trips, closed
+   high-register instances, both SIB shapes); fetched fetch/decode/step
+   runs through actual executable memory with length and permission
+   checks; the silicon/OS/profile gate is fail-closed; legacy
+   upper-YMM halves are carried untouched; the joint fetched run
+   changes real RAM.
+   OPEN (essential, never claimed): NaN payload/quiet-bit discipline
+   of computed results (class only); SNaN versus QNaN inputs (one
+   `.nan` in the model); signed-zero/rounding beyond the witnessed
+   rows (the profile admits RNE only); DAZ/FTZ execution (admission
+   refuses them, silicon behaviour unmodelled); sticky-flag
+   accumulation across steps; denormal inputs to conversions;
+   CVTSS2SD exactness as a theorem over all inputs (only witnessed);
+   memory-source integer conversions (no byte row, no step row);
+   VEX/EVEX encodings and AVX upper-zeroing (legacy SSE only);
+   packed SIMD beyond the scalar lane; TSO/store-buffer tearing of the
+   four-byte accesses and the GX bridge; faults beyond explicit
+   refusal (no #XM/#GP/#PF delivery is modelled); timing/budget
+   transfer; integration of the forms into `decodeExt`/`stepExt`
+   (awaits the integration owner) and of a single-precision feature
+   into `PerfMerkmal` (awaits the profile owner; the local
+   `S32Hw`/`s32Zugelassen` gate is the sharing point, and the
+   raw-lane/MXCSR surface (`xmmTief32`, `s32Eintritt`) is shared by
+   construction with the f64 lane, never a duplicate interpreter).
+   Provenance checked: Intel SDM 325462-093US Vol. 1 Chap. 5
+   §5.5.1.1/§5.5.1.2/§5.5.1.3/§5.5.1.6, Chap. 10 §10.4.1.2, Chap. 11
+   §11.5.2.1-§11.5.2.4 + Table 11-1 (local `.txt` witness offsets in
+   the report); Vol. 2 opcode pages are absent from the extracted
+   text, so byte rows are stated canonical contracts mirroring the
+   accepted F2 rows.
 -/
 
-#print axioms s32Roundtrip_addssRR
-#print axioms s32_rex_waehlt_hoch_addss
+#print axioms s32Byteschritt_weiter
+#print axioms s32SchrittVoll_ymm
+#print axioms s32Zeuge_fetched_lauf
+#print axioms s32Tor_ohne_silizium
+#print axioms s32_nan_nutzlast_mutation
 
 end Gabbro.Grammatik.X86
