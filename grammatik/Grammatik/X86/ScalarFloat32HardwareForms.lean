@@ -149,12 +149,95 @@ theorem xmmLadeTief32_nullOben (f : XmmDatei) (dst : XmmReg)
     Nat.mod_eq_of_lt (by omega : w.toNat < 2 ^ 128)]
   exact Nat.div_eq_of_lt hw
 
+/-! ## 2. Genuine binary32 arithmetic on raw patterns.
+
+  Every arithmetic form routes to the ACCEPTED binary32 kernel
+  (`Gleitprofil.fadd32/fsub32/fmul32/fdiv32`) on injected patterns
+  (`bites32`), projected back (`muster32`). The refinement is
+  definitional: `s32Rechne` never re-implements rounding. NaN payloads
+  are classified only (Gleitprofil §7 owns the gap); SNaN, DAZ/FTZ
+  execution and sticky accumulation stay OPEN. -/
+
+/-- Scalar single op: one constructor per accepted kernel op. -/
+inductive S32Op where
+  | add | sub | mul | div
+  deriving DecidableEq, Repr
+
+/-- One machine op on raw patterns: the kernel op, back as raw bits. -/
+def s32Rechne : S32Op → BitVec 32 → BitVec 32 → BitVec 32
+  | .add, a, b => muster32 (fadd32 (bites32 a) (bites32 b))
+  | .sub, a, b => muster32 (fsub32 (bites32 a) (bites32 b))
+  | .mul, a, b => muster32 (fmul32 (bites32 a) (bites32 b))
+  | .div, a, b => muster32 (fdiv32 (bites32 a) (bites32 b))
+
+/-- Routing is definitional for each op (every premise is the route). -/
+theorem s32Rechne_routen (a b : BitVec 32) :
+    s32Rechne .add a b = muster32 (fadd32 (bites32 a) (bites32 b))
+      ∧ s32Rechne .sub a b = muster32 (fsub32 (bites32 a) (bites32 b))
+      ∧ s32Rechne .mul a b = muster32 (fmul32 (bites32 a) (bites32 b))
+      ∧ s32Rechne .div a b = muster32 (fdiv32 (bites32 a) (bites32 b)) :=
+  ⟨rfl, rfl, rfl, rfl⟩
+
+set_option maxRecDepth 100000 in
+set_option exponentiation.threshold 2048 in
+/-- `1.0 + 2.0 = 3.0` as raw patterns. -/
+theorem s32_eins_plus_zwei :
+    s32Rechne .add 0x3F800000 0x40000000 = 0x40400000 := by
+  decide
+
+set_option maxRecDepth 100000 in
+set_option exponentiation.threshold 2048 in
+/-- Signed zero: `+0 + -0 = +0` (round-to-nearest, Vol. 1 §11.5). -/
+theorem s32_plusnull_minusnull :
+    s32Rechne .add 0x00000000 0x80000000 = 0x00000000 := by
+  decide
+
+set_option maxRecDepth 100000 in
+set_option exponentiation.threshold 2048 in
+/-- Subnormals are computed, not flushed: `min + min = next`. -/
+theorem s32_subnormal_waechst :
+    s32Rechne .add 0x00000001 0x00000001 = 0x00000002 := by
+  decide
+
+set_option maxRecDepth 100000 in
+set_option exponentiation.threshold 2048 in
+/-- Masked divide-by-zero is a VALUE: `1 / 0 = +inf`. -/
+theorem s32_eins_durch_null_unendlich :
+    s32Rechne .div 0x3F800000 0x00000000 = 0x7F800000 := by
+  decide
+
+set_option maxRecDepth 100000 in
+set_option exponentiation.threshold 2048 in
+/-- Masked invalid is a VALUE: `0 / 0` classifies as NaN. -/
+theorem s32_null_durch_null_nan :
+    Gleitkomma.klasse Gleitkomma.f32
+      (bites32 (s32Rechne .div 0 0)) = .nan := by
+  decide
+
+set_option maxRecDepth 100000 in
+set_option exponentiation.threshold 2048 in
+/-- NO SILENT PROMOTION (joint rounding counterexample, raw bits).
+    Binary32 stalls at `2^24`: `2^24 + 1` rounds back to `2^24`
+    (the accepted `f32_rundet_16777217` at the machine), while
+    binary64 advances (the accepted `f64_trennt_16777217`). A promoted
+    implementation would return the f64 pattern here. -/
+theorem s32_stallt_bei_2hoch24 :
+    s32Rechne .add 0x4B800000 0x3F800000 = 0x4B800000 := by
+  decide
+
+set_option maxRecDepth 100000 in
+set_option exponentiation.threshold 2048 in
+theorem s32_f64_steigt_weiter :
+    muster64 (fadd64 (bites64 0x4330000000000000)
+      (bites64 0x3FF0000000000000)) ≠ 0x4330000000000000 := by
+  decide
+
 /- CUTS (interim):
-   §1 done. OPEN next: f32 arithmetic refinement, conversions, the
-   S32 step, the REX codec, the fetched byte step, witnesses.
+   §§0-2 done. OPEN next: conversions, the S32 step, the REX codec,
+   the fetched byte step, witnesses.
 -/
 
-#print axioms setzeTief32_tief
-#print axioms setzeTief32_hoch
+#print axioms s32_eins_plus_zwei
+#print axioms s32_stallt_bei_2hoch24
 
 end Gabbro.Grammatik.X86
