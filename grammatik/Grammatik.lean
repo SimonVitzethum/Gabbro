@@ -476,3 +476,4 @@ import Grammatik.X86.IndirectControlHardwareForms
 import Grammatik.X86.FpControlHardwareForms
 import Grammatik.X86.CarrierTraceBridge
 import Grammatik.X86.ScalarFloatHardwareForms
+import Grammatik.X86.ArchitecturalFlags
