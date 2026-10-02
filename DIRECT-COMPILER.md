@@ -308,7 +308,7 @@ Last ledger refresh: **2026-10-02 20:01 UTC**. This is an operational snapshot, 
 | 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Merged after review/checks | [report](messung/muse/MUSE-REPORT-664.md) |
 | 666 | Hardware completion: practical integer width and compact encoding rows | Merged after review/checks | 667: Merged after review/checks | [report](messung/muse/MUSE-REPORT-666.md) |
 | 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Agent working | 669: scheduled | [task](lanes/668.md) |
-| 670 | Hardware completion: precise selected fault and exception transitions | Merged after review/checks | 671: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-670.md) |
+| 670 | Hardware completion: precise selected fault and exception transitions | Merged after review/checks | 671: Merged after review/checks | [report](messung/muse/MUSE-REPORT-670.md) |
 | 672 | Hardware completion: interrupts entry masking and trap hardware forms | Agent working | 673: Committed candidate; review/integration pending | [task](lanes/672.md) |
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Merged after review/checks | 675: Merged after review/checks | [report](messung/muse/MUSE-REPORT-674.md) |
 | 676 | Hardware completion: port IO and device memory profiles | Committed candidate; review/integration pending | 677: Committed candidate; review/integration pending | [task](lanes/676.md) |
@@ -790,6 +790,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **666**, Hardware completion: practical integer width and compact encoding rows, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-666.md). <!-- x86-merged:666 -->
 - 2026-10-02: lane **667**, Independent exact review of 666, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-667.md). <!-- x86-merged:667 -->
 - 2026-10-02: lane **670**, Hardware completion: precise selected fault and exception transitions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-670.md). <!-- x86-merged:670 -->
+- 2026-10-02: lane **671**, Independent exact review of 670, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-671.md). <!-- x86-merged:671 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
