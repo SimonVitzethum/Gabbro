@@ -1,7 +1,11 @@
 # MUSE-REPORT-683: Exact review of author 682 (MXCSR control byte execution)
 
 CANDIDATE: 682 ed966d9be411e362a4fbdf602c8d7f92db806004
-VERDICT: ACCEPT (bounded; no repairs required)
+
+VERDICT: ACCEPT
+
+Acceptance is bounded to the two selected mod-10 disp32 forms with the
+documented refusals and open compositions listed below; no repairs required.
 
 ## Scope of this review
 
@@ -102,7 +106,8 @@ VERDICT: ACCEPT (bounded; no repairs required)
 
 ## Result
 
-Exactly one CANDIDATE: 682 ed966d9be411e362a4fbdf602c8d7f92db806004.
-Exactly one VERDICT: ACCEPT — bounded to the two selected mod-10 disp32
-forms with the documented refusals and open compositions above. No
-guarantee weakened, no desired simulation assumed, no fake closure found.
+The reviewed snapshot is author lane 682 at pinned HEAD
+`ed966d9be411e362a4fbdf602c8d7f92db806004`, judged ACCEPT — bounded to
+the two selected mod-10 disp32 forms with the documented refusals and
+open compositions above. No guarantee weakened, no desired simulation
+assumed, no fake closure found.
