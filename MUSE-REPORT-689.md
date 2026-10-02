@@ -13,7 +13,9 @@ Files (from `.tmp/review/SNAPSHOT.json`): `MUSE-REPORT-688.md`,
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded; three minor safe-direction observations below, none a repair).
+VERDICT: ACCEPT
+
+Bounded acceptance: three minor safe-direction observations below, none a repair.
 
 ## What was checked
 
