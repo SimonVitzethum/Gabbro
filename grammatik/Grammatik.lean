@@ -480,3 +480,4 @@ import Grammatik.X86.ArchitecturalFlags
 import Grammatik.X86.CpuFeatureHardwareForms
 import Grammatik.X86.MemoryTypeHardwareExecution
 import Grammatik.X86.MulDivWidthHardwareForms
+import Grammatik.X86.ScalarFloat32HardwareForms

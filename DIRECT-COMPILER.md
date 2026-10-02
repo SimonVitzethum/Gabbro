@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 23:19 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 23:22 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -316,7 +316,7 @@ Last ledger refresh: **2026-10-02 23:19 UTC**. This is an operational snapshot, 
 | 680 | Hardware completion: indirect and compact control byte forms | Merged after review/checks | 681: Merged after review/checks | [report](messung/muse/MUSE-REPORT-680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Merged after review/checks | 683: Merged after review/checks | [report](messung/muse/MUSE-REPORT-682.md) |
 | 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
-| 686 | Hardware completion: essential SSE2 integer and memory byte forms | Agent working | 687: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/686.md) |
+| 686 | Hardware completion: essential SSE2 integer and memory byte forms | Committed candidate; review/integration pending | 687: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Merged after review/checks | 689: Merged after review/checks | [report](messung/muse/MUSE-REPORT-688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
@@ -324,14 +324,14 @@ Last ledger refresh: **2026-10-02 23:19 UTC**. This is an operational snapshot, 
 | 696 | Essential 8/16/32-bit scalar arithmetic and moves | Agent working | 697: scheduled | [task](lanes/696.md) |
 | 698 | Essential width-selected shifts and rotates | Agent working | 699: scheduled | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
-| 702 | Essential scalar binary32 SSE2 architectural forms | Committed candidate; review/integration pending | 703: Committed candidate; review/integration pending | [task](lanes/702.md) |
+| 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-702.md) |
 | 704 | Generic port bus and precise architectural IO permissions | Committed candidate; review/integration pending | 705: Committed candidate; review/integration pending | [task](lanes/704.md) |
 | 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Committed candidate; review/integration pending | 707: Committed candidate; review/integration pending | [task](lanes/706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
-| 710 | Optimizer rule library proof and scope review | Agent working | 711: scheduled | [task](lanes/710.md) |
+| 710 | Optimizer rule library proof and scope review | Committed candidate; review/integration pending | 711: Agent working | [task](lanes/710.md) |
 | 712 | Compiler pipeline Lean source-to-byte proof review | Committed candidate; review/integration pending | 713: Committed candidate; review/integration pending | [task](lanes/712.md) |
 | 714 | Compiler ISA and instruction selection architecture review | Agent working | 715: scheduled | [task](lanes/714.md) |
-| 716 | Rust compiler validation and ELF integration review | Committed candidate; review/integration pending | 717: Agent working | [task](lanes/716.md) |
+| 716 | Rust compiler validation and ELF integration review | Committed candidate; review/integration pending | 717: Committed candidate; review/integration pending | [task](lanes/716.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -832,6 +832,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **695**, Independent exact review of 694, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-695.md). <!-- x86-merged:695 -->
 - 2026-10-02: lane **700**, Essential multiply divide widths and immediate IMUL, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-700.md). <!-- x86-merged:700 -->
 - 2026-10-02: lane **701**, Independent exact review of 700, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-701.md). <!-- x86-merged:701 -->
+- 2026-10-02: lane **702**, Essential scalar binary32 SSE2 architectural forms, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-702.md). <!-- x86-merged:702 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
