@@ -297,7 +297,7 @@ Last ledger refresh: **2026-10-02 19:06 UTC**. This is an operational snapshot, 
 | 642 | Recover preserved IR research draft from recorded edits after clone removal | Merged after review/checks | 643: Merged after review/checks | [report](messung/muse/MUSE-REPORT-642.md) |
 | 644 | Organise the next generic source-to-final-byte closure wave | Merged after review/checks | 645: Merged after review/checks | [report](messung/muse/MUSE-REPORT-644.md) |
 | 646 | Direct typed statement sequence to fetched machine execution | Agent working | 647: scheduled | [task](lanes/646.md) |
-| 648 | Generic checked source-assignment byte certificate | Merged after review/checks | 649: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-648.md) |
+| 648 | Generic checked source-assignment byte certificate | Merged after review/checks | 649: Merged after review/checks | [report](messung/muse/MUSE-REPORT-648.md) |
 | 650 | Growing TSO history to typed carrier W transition | Agent working | 651: scheduled | [task](lanes/650.md) |
 | 652 | Whole-word drain with real interleaved foreign accesses | Merged after review/checks | 653: Merged after review/checks | [report](messung/muse/MUSE-REPORT-652.md) |
 | 654 | Derived target work bound for direct source lowering | Committed candidate; review/integration pending | 655: scheduled | [task](lanes/654.md) |
@@ -764,6 +764,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: checked master `a0fcb4a6` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a0fcb4a69f9509d8db27b6077cbf5b2a450e175d -->
 - 2026-10-02: armed the independently reviewed automatic coordinator supervisor after exact review637 of repair636 and27 passing fixture tests; current master module matches the reviewed blob. Foreground heartbeat expiry is300 seconds, fallback shares the15-slot cap, explicit user pause and safe integration/handback boundaries remain mandatory. Updated fallback priority to complete selected hardware execution; official Intel SDM edition093 reference inputs are now available in hardware clones, AMD retrieval unavailable. This is orchestration readiness, not additional hardware proof coverage. <!-- failover-armed-2026-10-02 -->
 - 2026-10-02: lane **648**, Generic checked source-assignment byte certificate, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-648.md). <!-- x86-merged:648 -->
+- 2026-10-02: lane **649**, Independent exact review of 648, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-649.md). <!-- x86-merged:649 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
