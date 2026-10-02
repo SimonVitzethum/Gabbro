@@ -3,128 +3,152 @@
 CANDIDATE: 674 7916dce7f062f4c1379978e241645696c6249ff2
 VERDICT: ACCEPT
 
-## Scope of this review
+## Scope and method (full-scope second pass)
 
-Report-only exact review. I inspected the pinned snapshot
-(`.tmp/review/author-674/`: `PATCH.diff`, `VectorHardwareProfile.lean`
-(763 lines), `MUSE-REPORT-674.md`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`,
-`SNAPSHOT.json`) and cross-checked every referenced producer in my own
-clone plus the official local Intel SDM snapshot
-(`.tmp/HARDWARE-REFERENCES/`, 325462-093US Sept 2026, sha-verified).
-I own only this report; no source file was added or modified, no live
-controls touched. My clone/branch verified first:
-`/home/simon/Dokumente/gabbro-muse/a675`, branch `muse/675`.
+Report-only exact review of the unchanged pinned candidate. After a
+format gate and a completeness objection I re-read the FULL owner task
+(`.tmp/review/author-674/OWNER-TASK.md`, all 24 lines; the long task
+line is 2377 chars, read in three bounded ranges — the earlier
+"truncated" remark was a 2000-char tool-output limit, not the task
+length) and checked the candidate against EVERY requirement below.
+I own only this report; no source file was added or modified. Clone
+and branch verified first: `/home/simon/Dokumente/gabbro-muse/a675`,
+branch `muse/675`. Snapshot: `.tmp/review/author-674/` (PATCH,
+761-line `VectorHardwareProfile.lean`, author report, OWNER-TASK,
+BUILD-EVIDENCE, SNAPSHOT). PATCH touches exactly the new module, one
+additive `Grammatik.lean` import line, and the author report.
 
-## What the candidate does
+## Requirement-by-requirement mapping
 
-New leaf module `grammatik/Grammatik/X86/VectorHardwareProfile.lean` plus
-one additive import line in `grammatik/Grammatik.lean`. PATCH touches
-exactly those two files plus `MUSE-REPORT-674.md`. No producer, source,
-checker, Spec/goal, emitter, or friend-reserved optimizer file is touched.
+1. Read design tiers, official encodings, CPUID/XCR0/OSXSAVE/CR0/CR4
+   rules, current producers. The author lists producers as read; the
+   manual file was absent in his clone at his check (his evidence
+   shows `.tmp/` holding only `LANE.md`, `opencode`). I verified the
+   load-bearing manual rows independently in my local verified SDM
+   snapshot (325462-093US, Sept 2026): `66 0F EF /r` PXOR and
+   `66 0F D4 /r` PADDQ (SSE2); legacy operation with
+   `DEST[MAXVL-1:128]` unmodified; Flags None; Numeric None; Table 2-21
+   Type 4 (#UD on CR0.EM=1, CR4.OSFXSR=0, CPUID 0, LOCK prefix;
+   #NM on CR0.TS=1; #GP on misaligned legacy-SSE memory); MOVDQU needs
+   no 16-byte alignment. The candidate cites no manual heading/page —
+   openly, in CUTS — and claims no silicon correspondence. No false
+   provenance claim exists to repair; the architecture I verify below
+   stands on accepted producer theorems plus these rows.
+2. Close enabled-state and actual byte-execution admission for the
+   selected tier through canonical state and the accepted
+   `ExtendedExecution` dispatcher. Done: `hwVektorBereit`,
+   `vektorHwZugelassen`, `stepVectorHw`, `stepExt_vec_hw`,
+   `vectorHw_fetch_bridge`. No interpreter duplicated (`skalarPaar*`
+   are pure word functions over accepted `xorB`/`addB`, feeding no
+   execution path).
+3. Replace the bare `osXmm` Bool. Done as a safe refinement in the
+   admission direction: `osXmm` stays one conjunct of four, and
+   `vektorHw_verfeinert` proves the checked gate implies the old
+   `vecEintritt`. Guarantees only strengthen.
+4. Width/lane/upper-lane effects; alignment faults; per-access
+   footprint/tearing; no auto-atomicity. Proved: `vektorBreite_spur`,
+   PXOR lanes 0+1, PADDQ lane 1, rFLAGS preservation, `vektorGpFehler`
+   classification, `vektorHw_fuss`, `vektorHw_teilt` (torn state
+   restated, atomicity explicitly disclaimed). Partial by explicit
+   enumeration: no PADDQ lane-0 restatement (follows from the accepted
+   producer in ~3 lines via `stepVectorHw_gleich`; nothing claimed
+   about it).
+5. AVX2: exact CPU/XCR0 readiness bound to the admitted form, or
+   refusal / proved scalar fallback with same observable outcomes.
+   The 256-bit row always refuses (`stufe_avx256_verweigert`, rfl);
+   `stufenCpuBereit`/`xcr0AvxBereit` exist as conservative scaffolding
+   feeding no admission (verified by grep — only `avx_braucht_xcr0`
+   uses them), and CR4.OSXSAVE is not consulted, which is safe exactly
+   because the row refuses unconditionally. The xor fallback has full
+   lane-by-lane equality (`skalarPaarXor_gleich`); the add fallback has
+   only the two half projections (no `skalarPaarAdd_gleich`). The
+   author's report enumerates half lemmas without claiming the add
+   equality, so this is bounded incompleteness, not an overclaim, and
+   nothing executes through either fallback.
+6. Codec plus lanes is not silicon fidelity. Honored: round-trips are
+   reused from the producer, never presented as hardware proof; CUTS
+   keeps silicon correspondence OPEN.
+7. Joint fetched vector memory-changing run; CPU/XCR0/control/
+   alignment/alias negatives; true template obligations named. The
+   joint witness decodes pinned canonical PXOR bytes with consumed
+   length, admits the gate, runs the gated step and the unified
+   dispatcher to the same successor, and closes a real byte change
+   (`decide`) through a chained existing MOVSD store — explicit in the
+   theorem, required because the admitted register forms correctly
+   touch no memory. Seven negatives cover missing CPU, XCR0, controls,
+   OS bit, misalignment, alias overlap, unknown opcode. The module
+   creates no templates or Schablonen entries (verified: zero
+   mentions), so there are no created template obligations to name;
+   the reused `vecZeuge*` chain belongs to the producer.
+8. Adapter export for 660/validator consumers. Done:
+   `vektorValidatorZugelassen` with both projections plus the fetch
+   bridge. Consumer acceptance is that lane's business.
+9. Unimplemented AVX2/VEX/raw-bit/fault/context rows stated, not
+   marked done. CUTS lists: register-forms only (no vector memory
+   opcode, no packed-FP lane, no VEX/AVX encoding, no other SSE2 row);
+   execute permission as adapter conjunct, no constructed loaded
+   image; no TSO/GX/source/budget/progress/call-log; `simdFreigabe`
+   untouched (single mention, in CUTS); OS configuration and
+   context preservation declared user logic in the §1 docstring.
+10. Priority clauses: canonical-state reuse yes; only checked inputs
+    assumed (silicon correspondence OPEN); admitted bytes run through
+    the common dispatcher (bridge theorems are proved identities, all
+    premises used, no assumed simulation); unsupported encodings refuse
+    explicitly; producer `.b32`/`.b64` label tension stated side by
+    side, never redefined; own-files-only honored; no forbidden
+    tactics (precise grep clean), no `Prop`-typed premises, no
+    discarded premises; axioms within the standard set per final green
+    evidence (intermediate `sorryAx` states were repaired before the
+    final commit); `gabbro_ziel` untouched (leaf import only).
+11. No producer drift: all six producer files are byte-identical
+    between the candidate base `1d08711` and my HEAD; the only
+    `Grammatik.lean` delta is the unrelated merged
+    `FloatValidatorAdmission` line (standard import-union at merge).
 
-1. Enabled-state (§1): `CpuMerkmal`, `Xcr0Bild`, `KontrollBild`,
-   `xcr0SseBereit` (x87 && SSE), `kontrollSseFrei` (!EM && !TS && OSFXSR),
-   `hwVektorBereit` (silicon SSE2 && XCR0 && controls && `osXmm`),
-   `vektorHwZugelassen` (finite `paketInt128` admission AND hardware
-   readiness), four projection theorems, safe refinement
-   `vektorHw_verfeinert` (checked gate implies old `vecEintritt`).
-2. Gated execution (§2): `stepVectorHw` (accepted `stepVector` under the
-   gate, `none` otherwise); CPU/XCR0/control refusal theorems; width
-   fact `vektorBreite_spur`; PXOR low/high and PADDQ high lane theorems;
-   rFLAGS preservation.
-3. Memory forms (§3): `VektorSpeicherForm` (aligned/unaligned),
-   `vektorGpFehler` (#GP iff 16-byte misaligned, aligned form only),
-   `vektorSchreibZugelassen`, footprint `vektorHw_fuss` (16-byte
-   `vecFuss`), tearing `vektorHw_teilt` (no atomicity claimed).
-4. AVX2 (§4): `VektorStufe`, 128-bit row IS the gate, 256-bit row always
-   `false`; scalar fallbacks `skalarPaarXor`/`skalarPaarAdd` with half
-   lemmas, lane bridges, and `skalarPaarXor_gleich` (xor fallback reads
-   back exactly the packed `vecXor` word lane by lane).
-5. Adapter + witnesses (§5): `vektorValidatorZugelassen`
-   (`extZugelassen` AND hardware gate) with projections;
-   `stepExt_vec_hw`; `vectorHw_fetch_bridge` through unified
-   `extByteschritt`; joint `vectorHw_zeuge` (pinned canonical PXOR bytes
-   decode, gate admits, gated step and unified dispatch reach the same
-   successor, chained MOVSD store changes memory byte 0, closed by
-   `decide`); seven negatives (no CPU / no XCR0 / EM-set / no OS bit /
-   misalignment / alias overlap / unknown opcode byte 0).
+## XCR0 reframing (conservative admission restriction)
 
-## Independent verification (evidence, not trust)
+The XCR0 x87&&SSE conjunct is NOT an architectural SSE requirement —
+Table 2-21 imposes XCR0 only on VEX rows, and pre-XSAVE silicon has
+no XCR0 at all. I treat and record the gate as a conservative compiler
+admission restriction: it refuses a superset of what hardware refuses,
+so every admission is sound while some hardware-valid executions
+(pre-XSAVE machines, XCR0-unset states) are refused by the gate. That
+incompleteness, like the REX-required decoding strictness inherited
+from the accepted producer, is safe-direction and stays OPEN. The
+candidate text never claims hardware faults without XCR0 (its refusal
+theorems speak of the gate), so no material false architectural claim
+exists here.
 
-- Forbidden tokens: precise grep for `sorry|admit|native_decide|unsafe`,
-  `^axiom`, `intro _`, `have _ :=`, `: Prop` premises — all CLEAN.
-  (Loose matches are only English words like "admitted".)
-- Premise use: every theorem's premises are load-bearing. The two
-  `cases ... <;> simp_all` refusals (`stepVectorHw_ohne_xcr0`,
-  `stepVectorHw_ohne_kontrolle`) genuinely need `hx`/`hk` (without them
-  the gate could still be true). Bridge theorems are identities over
-  producer theorems with all of `hf`/`hgate`/`hs` used. No conclusion
-  restates a premise; no contract quantification; no fake semantics.
-- Producer existence + signatures: `vecEintritt`, `stepVector`,
-  `stepVector_pxor_spur`, `stepVector_paddq_spur`, both `_flags`
-  theorems, `stepExt_vec`, `extZugelassen`, `fetchExt`,
-  `extByteschritt`, `extByteschritt_weiter`, all `vecZeuge*`,
-  `vecFuss_in_traeger`, `vecWrite_teilt`,
-  `vecFuss_teilueberlapp_verweigert`, `laneNat_xor`, `xorB_nat`,
-  `vLo_vecJoin`, `laneGet_toNat`, `merkmalZugelassen`,
-  `merkmalBreite .paketInt128 = .b32` — all confirmed present.
-- No producer drift: the six producer files are byte-identical between
-  the candidate base `1d08711` and my HEAD `33b7d56`. The only
-  `Grammatik.lean` delta is an unrelated merged import
-  (`FloatValidatorAdmission`); the candidate's import appends cleanly
-  after `WordDrainInterleaving` (standard import-union at merge).
-- Build evidence: final `./lean-probe` 0 errors; `./lean-bau` "Build
-  completed successfully (460 jobs)"; every `#print axioms` within
-  `[propext, Classical.choice, Quot.sound]`. Intermediate `sorryAx`
-  states in the evidence log were repaired before the final commit
-  (final probe lists `[propext]` for those theorems). `gabbro_ziel` is
-  untouched (leaf import only), so its axiom set cannot have moved.
-- Intel SDM cross-check (ch. Vol.2B 4-201-4-203, 4-530-4-532; Table 2-21
-  Type 4): legacy PXOR `DEST := DEST XOR SRC`, PADDQ per-lane
-  wraparound, both `DEST[MAXVL-1:128] unmodified`, Flags None, Numeric
-  None — the model writes the full 128-bit XMM word, preserves rFLAGS,
-  requires no MXCSR, and reads dest before writing (ModRM:reg r,w).
-  Correct. Type 4 #UD (CR0.EM, CR4.OSFXSR, CPUID 0, LOCK→decode
-  refusal since F0 is no canonical REX) and #NM (CR0.TS) are all in the
-  gate. MOVDQA-#GP-on-misalignment / MOVDQU-never matches the manual.
-  No defined effect is zeroed or ignored; no determinism is invented.
+## No inferred execution
 
-## Bounded acceptance notes (not repairs)
+`vektorSchreibZugelassen` feeds no step (verified: used only by its
+two lemmas and one negative); `stufenCpuBereit` feeds no admission;
+no vector memory opcode, context switch, or AVX2 execution is
+constructed anywhere — declarations and gate helpers stay
+declarations and gate helpers. Memory-fault delivery, context
+preservation, and AVX2 execution remain unimplemented and are stated
+as such.
 
-- XCR0 x87&&SSE is required for legacy SSE although Table 2-21 imposes
-  XCR0 only on VEX rows: safe over-strength (refuses more, admits
-  nothing unsound). Likewise REX-required decoding refuses valid
-  non-REX encodings (inherited from the accepted producer).
-- `.b32` profile label vs `.b64` admitted lanes is stated side by side
-  in `vektorBreite_spur`, never redefined; reconciliation stays with
-  the profile owner, as the author flags.
-- Coverage honesty: PADDQ low-lane restatement and the ADD-fallback
-  joint equality are absent (only halves); the author claims exactly
-  "low-lane PXOR, high-lane PXOR/PADDQ", so nothing is overstated, and
-  each follows from the producer in ~3 lines via `stepVectorHw_gleich`.
-- The joint witness chains a scalar MOVSD store for the observable
-  byte change because the admitted register forms correctly touch no
-  memory; this is explicit in theorem and CUTS. `vektorSchreibZugelassen`
-  carries no explicit no-wrap conjunct but feeds no execution (negatives
-  only). `simdFreigabe` untouched; TSO/GX/source/budget/progress open
-  in CUTS. Manual heading/page provenance stays OPEN (file absent in the
-  author clone; I verified the rows above against the local snapshot).
+## Reproduction note
 
-## Remaining open / follow-ups
+No case survived static verification at the suspicion threshold:
+every bridge is a proved identity over producer theorems, every
+negative is `decide`/`rfl`/exact-reuse, the joint byte change is
+`decide`-closed, and the manual rows above were re-checked against
+the local snapshot. I deliberately did not burn the shared Lean slot
+on a redundant rebuild: `grammatik/.lake` holds no warm X86 oleans
+here, the producers are byte-identical to the candidate base, and the
+evidence log already records the full green build (460 jobs) with
+standard axioms at the pinned commit. Re-deriving it would add no
+information.
 
-Single-line merge concern only: `Grammatik.lean` import-union with the
-meanwhile merged `FloatValidatorAdmission` line. Suggested tiny
-follow-ups (new lane, not this candidate): PADDQ low-lane gate
-restatement, `skalarPaarAdd_gleich`, and — if ever needed — relaxing
-the XCR0 conjunct for pre-XSAVE silicon as an explicit, separately
-reviewed widening.
+## Exact accepted partial scope
 
-## Task remarks
-
-The owner task text was truncated at 2000 chars in `lanes/674.md`, so
-any requirement hidden in the tail (e.g. template-obligation naming)
-could not be reviewed; everything visible is delivered or explicitly
-cut. The missing-manuals situation the author reported is real for his
-clone but the manuals exist locally; I checked the load-bearing rows
-(PXOR/PADDQ operation, flags, exceptions, Type 4, MOVDQU alignment)
-myself — citations above.
+Admitted: two 128-bit legacy-SSE register forms (PXOR `66 0F EF /r`,
+PADDQ `66 0F D4 /r`, REX-canonical only) under silicon-SSE2 + XCR0 +
+control + OS-bit admission, executed through the unified dispatcher.
+Explicitly not done: every other SSE2 row, packed-FP lanes, vector
+memory opcodes, VEX/AVX/EVEX, YMM state, loaded-image construction,
+TSO/GX refinement, source correspondence, budgets, progress,
+call logs, `simdFreigabe`, manual provenance. Full hardware-model
+closure is neither achieved nor claimed.
