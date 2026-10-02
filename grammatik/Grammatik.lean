@@ -468,3 +468,4 @@ import Grammatik.X86.AddressEncoding
 import Grammatik.X86.VectorHardwareProfile
 import Grammatik.X86.IntegerHardwareForms
 import Grammatik.X86.HardwareFaults
+import Grammatik.X86.DeviceHardwareForms
