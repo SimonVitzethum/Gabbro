@@ -329,7 +329,7 @@ Last ledger refresh: **2026-10-02 23:30 UTC**. This is an operational snapshot, 
 | 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Merged after review/checks | 707: Merged after review/checks | [report](messung/muse/MUSE-REPORT-706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
 | 710 | Optimizer rule library proof and scope review | Committed candidate; review/integration pending | 711: Agent working | [task](lanes/710.md) |
-| 712 | Compiler pipeline Lean source-to-byte proof review | Committed candidate; review/integration pending | 713: Committed candidate; review/integration pending | [task](lanes/712.md) |
+| 712 | Compiler pipeline Lean source-to-byte proof review | Merged after review/checks | 713: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-712.md) |
 | 714 | Compiler ISA and instruction selection architecture review | Committed candidate; review/integration pending | 715: Agent working | [task](lanes/714.md) |
 | 716 | Rust compiler validation and ELF integration review | Committed candidate; review/integration pending | 717: Committed candidate; review/integration pending | [task](lanes/716.md) |
 | 718 | Unify accepted architectural final-byte family dispatch | Agent working | 719: scheduled | [task](lanes/718.md) |
@@ -850,6 +850,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **706**, Repair actual fallback CLI message, provider pointer and quick-exit backoff, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-706.md). <!-- x86-merged:706 -->
 - 2026-10-02: integration of candidate(s) [704] failed the local proof/build gate after independent review 705; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:705 -->
 - 2026-10-02: lane **707**, Independent exact review of 706, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-707.md). <!-- x86-merged:707 -->
+- 2026-10-02: lane **712**, Compiler pipeline Lean source-to-byte proof review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-712.md). <!-- x86-merged:712 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
