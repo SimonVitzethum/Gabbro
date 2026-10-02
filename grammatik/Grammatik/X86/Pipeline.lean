@@ -664,4 +664,576 @@ theorem senkWert_korrekt {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {lo hi : Int}
       senkung_korrekt abb e dst tmp ρ σ₀ σ s hfr hrsp hrenv p h
     exact ⟨s', hrun, hval, hmem, hreg⟩
 
+/-! ## 6. Check lowering: `cmp` plus a conditional jump to a refusal exit
+
+    A `pruefung` over a signed comparison of two atoms lowers to the two
+    atom loads, `cmpReg64 dst tmp`, and `jumpIf32` on the NEGATED condition
+    to the refusal exit of its reason. The literal condition `true` (what
+    the optimiser's condition fold leaves) lowers to no code. -/
+
+/-- The signed 64-bit window of an integer range. -/
+def imSigned (lo hi : Int) : Bool := decide (-(2 ^ 63 : Int) ≤ lo ∧ hi < 2 ^ 63)
+
+/-- Compare two atoms; `j` is the jump-to-refusal condition. -/
+def vergleich {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) (dst tmp : Register)
+    (j : Bedingung) : Option (List Befehl × Bedingung) :=
+  if imSigned l1 h1 && imSigned l2 h2 then
+    match senkAtom abb a dst, senkAtom abb b tmp with
+    | some pa, some pb => some (pa ++ pb ++ [.cmpReg64 dst tmp], j)
+    | _, _ => none
+  else none
+
+/-- Condition lowering: `<`, `<=`, `=` over atoms; everything else refuses. -/
+def senkBed {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (e : Expr D Γ Λ τ) (dst tmp : Register) : Option (List Befehl × Bedingung) :=
+  match e with
+  | .lt a b => vergleich abb a b dst tmp .ge
+  | .le a b => vergleich abb a b dst tmp .g
+  | .eq a b => vergleich abb a b dst tmp .ne
+  | _ => none
+
+/-- The literal `true`. -/
+def istWahr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) : Bool :=
+  match e with
+  | .wahr => true
+  | _ => false
+
+theorem istWahr_wahr {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ)
+    (h : istWahr e = true) (σ₀ σ : World D) (ρ : Env D Γ) :
+    boolOf τ (eval σ₀ e σ ρ) = some true := by
+  cases e with
+  | wahr => rfl
+  | _ => simp [istWahr] at h
+
+/-- Shape of a lowered condition. -/
+inductive IstBed {Γ : Ctx} {Λ : List (Res D)} (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (dst tmp : Register) : ∀ {τ : Ty}, Expr D Γ Λ τ → List Befehl → Bedingung → Prop where
+  | lt {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+      (pa pb : List Befehl) (hs1 : imSigned l1 h1 = true) (hs2 : imSigned l2 h2 = true)
+      (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb) :
+      IstBed abb dst tmp (.lt a b) (pa ++ pb ++ [.cmpReg64 dst tmp]) .ge
+  | le {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+      (pa pb : List Befehl) (hs1 : imSigned l1 h1 = true) (hs2 : imSigned l2 h2 = true)
+      (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb) :
+      IstBed abb dst tmp (.le a b) (pa ++ pb ++ [.cmpReg64 dst tmp]) .g
+  | eq {l1 h1 l2 h2 : Int} (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2))
+      (pa pb : List Befehl) (hs1 : imSigned l1 h1 = true) (hs2 : imSigned l2 h2 = true)
+      (ha : senkAtom abb a dst = some pa) (hb : senkAtom abb b tmp = some pb) :
+      IstBed abb dst tmp (.eq a b) (pa ++ pb ++ [.cmpReg64 dst tmp]) .ne
+
+theorem vergleich_inv {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) (dst tmp : Register)
+    (j j' : Bedingung) (code : List Befehl)
+    (h : vergleich abb a b dst tmp j = some (code, j')) :
+    imSigned l1 h1 = true ∧ imSigned l2 h2 = true ∧ j' = j ∧
+      ∃ pa pb, senkAtom abb a dst = some pa ∧ senkAtom abb b tmp = some pb ∧
+        code = pa ++ pb ++ [.cmpReg64 dst tmp] := by
+  unfold vergleich at h
+  by_cases hs : (imSigned l1 h1 && imSigned l2 h2) = true
+  · rw [if_pos hs] at h
+    simp only [Bool.and_eq_true] at hs
+    cases ha : senkAtom abb a dst with
+    | none => rw [ha] at h; cases h
+    | some pa =>
+      cases hb : senkAtom abb b tmp with
+      | none => rw [ha, hb] at h; cases h
+      | some pb =>
+        rw [ha, hb] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        exact ⟨hs.1, hs.2, h.2.symm, pa, pb, rfl, rfl, h.1.symm⟩
+  · rw [if_neg hs] at h; cases h
+
+theorem istBed_von {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register) (e : Expr D Γ Λ τ) (dst tmp : Register)
+    (code : List Befehl) (j : Bedingung) (h : senkBed abb e dst tmp = some (code, j)) :
+    IstBed abb dst tmp e code j := by
+  cases e with
+  | lt a b =>
+    obtain ⟨h1, h2, rfl, pa, pb, ha, hb, rfl⟩ := vergleich_inv abb a b dst tmp _ _ _ h
+    exact .lt a b pa pb h1 h2 ha hb
+  | le a b =>
+    obtain ⟨h1, h2, rfl, pa, pb, ha, hb, rfl⟩ := vergleich_inv abb a b dst tmp _ _ _ h
+    exact .le a b pa pb h1 h2 ha hb
+  | eq a b =>
+    obtain ⟨h1, h2, rfl, pa, pb, ha, hb, rfl⟩ := vergleich_inv abb a b dst tmp _ _ _ h
+    exact .eq a b pa pb h1 h2 ha hb
+  | _ => simp [senkBed] at h
+
+/-- The canonical decoded list of a lowered list is the one the accepted
+    lowering lemmas run. -/
+theorem map_kanon (P : List Befehl) :
+    P.map kanon = P.map fun b => (⟨b, (encode b).length⟩ : Decodiert) := rfl
+
+/-- COMPARE RUN: the two atom loads and the `cmp` leave the SUB flags of
+    the two exact source words; memory and every other register stay. -/
+theorem vergleich_lauf {Γ : Ctx} {Λ : List (Res D)} {l1 h1 l2 h2 : Int}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register)
+    (a : Expr D Γ Λ (.int l1 h1)) (b : Expr D Γ Λ (.int l2 h2)) (dst tmp : Register)
+    (pa pb : List Befehl) (ha : senkAtom abb a dst = some pa)
+    (hb : senkAtom abb b tmp = some pb)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hfr : Frisch abb dst tmp) (hE : EnvRepr ρ s.register abb) :
+    ∃ s', lauf ((pa ++ pb ++ [Befehl.cmpReg64 dst tmp]).map kanon) s = some s' ∧
+      s'.speicher = s.speicher ∧
+      (∀ q, q ≠ dst → q ≠ tmp → s'.register q = s.register q) ∧
+      s'.flags = (sub64 (intWort (eval σ₀ a σ ρ).n) (intWort (eval σ₀ b σ ρ).n)).2 := by
+  obtain ⟨hneu, hne⟩ := hfr
+  obtain ⟨s1, hrun1, hval1, hmem1, hreg1, -⟩ := senkAtom_korrekt abb a dst ρ σ₀ σ s hE pa ha
+  have hE1 : EnvRepr ρ s1.register abb :=
+    envRepr_fremd ρ abb _ _ hE (fun τ x => hreg1 _ (hneu τ x).1)
+  obtain ⟨s2, hrun2, hval2, hmem2, hreg2, -⟩ := senkAtom_korrekt abb b tmp ρ σ₀ σ s1 hE1 pb hb
+  have hd2 : s2.register dst = intWort (eval σ₀ a σ ρ).n := by rw [hreg2 dst hne, hval1]
+  have hcmp := schritt_cmpReg64 (kanon (.cmpReg64 dst tmp)) s2 dst tmp
+    (laengeOk_encode _) rfl
+  let s3 : Zustand := { s2 with rip := ripNach s2.rip (kanon (Befehl.cmpReg64 dst tmp)).laenge, flags := (sub64 (s2.register dst) (s2.register tmp)).2 }
+  refine ⟨s3, ?_, ?_, ?_, ?_⟩
+  · rw [List.map_append, List.map_append, map_kanon, map_kanon,
+      List.append_assoc, lauf_anhang _ _ _ _ hrun1, lauf_anhang _ _ _ _ hrun2]
+    simp only [List.map_cons, List.map_nil, lauf]
+    rw [hcmp]
+  · show s2.speicher = s.speicher
+    rw [hmem2, hmem1]
+  · intro q hq1 hq2
+    show s2.register q = s.register q
+    rw [hreg2 q hq2, hreg1 q hq1]
+  · show (sub64 (s2.register dst) (s2.register tmp)).2 = _
+    rw [hd2, hval2]
+
+/-- The signed reading of an in-window source number is the number. -/
+theorem intWort_sint_zahl {lo hi : Int} (v : Zahl lo hi) (h : imSigned lo hi = true) :
+    sint (intWort v.n) = v.n := by
+  unfold imSigned at h
+  simp only [decide_eq_true_eq] at h
+  have := v.lo_le
+  have := v.le_hi
+  exact intWort_sint _ (by omega) (by omega)
+
+/-- CHECK CORRECTNESS: the lowered condition code runs, keeps memory and
+    every register but the working ones, and the jump-to-refusal
+    condition holds EXACTLY when the source condition is false. -/
+theorem senkBed_korrekt {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (abb : ∀ (τ : Ty), Var Γ τ → Register) (e : Expr D Γ Λ τ) (dst tmp : Register)
+    (code : List Befehl) (j : Bedingung) (h : senkBed abb e dst tmp = some (code, j))
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hfr : Frisch abb dst tmp) (hE : EnvRepr ρ s.register abb) :
+    code.all gerade = true ∧
+      ∃ s', lauf (code.map kanon) s = some s' ∧ s'.speicher = s.speicher ∧
+        (∀ q, q ≠ dst → q ≠ tmp → s'.register q = s.register q) ∧
+        boolOf τ (eval σ₀ e σ ρ) = some (!bedingung j s'.flags) := by
+  cases istBed_von abb e dst tmp code j h with
+  | lt a b pa pb hs1 hs2 ha hb =>
+    refine ⟨by simp [List.all_append, senkAtom_gerade abb a dst pa ha,
+      senkAtom_gerade abb b tmp pb hb, gerade], ?_⟩
+    obtain ⟨s', hrun, hmem, hreg, hfl⟩ := vergleich_lauf abb a b dst tmp pa pb ha hb ρ σ₀ σ s hfr hE
+    refine ⟨s', hrun, hmem, hreg, ?_⟩
+    rw [hfl, bedingung_ge_sub64, intWort_sint_zahl (eval σ₀ a σ ρ) hs1,
+      intWort_sint_zahl (eval σ₀ b σ ρ) hs2]
+    simp [boolOf, eval]
+  | le a b pa pb hs1 hs2 ha hb =>
+    refine ⟨by simp [List.all_append, senkAtom_gerade abb a dst pa ha,
+      senkAtom_gerade abb b tmp pb hb, gerade], ?_⟩
+    obtain ⟨s', hrun, hmem, hreg, hfl⟩ := vergleich_lauf abb a b dst tmp pa pb ha hb ρ σ₀ σ s hfr hE
+    refine ⟨s', hrun, hmem, hreg, ?_⟩
+    rw [hfl, bedingung_g_sub64, intWort_sint_zahl (eval σ₀ a σ ρ) hs1,
+      intWort_sint_zahl (eval σ₀ b σ ρ) hs2]
+    simp only [boolOf, eval, Option.some.injEq]
+    by_cases hc : (eval σ₀ a σ ρ).n ≤ (eval σ₀ b σ ρ).n
+    · have : ¬ (eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n := by omega
+      simp [hc, this]
+    · have : (eval σ₀ b σ ρ).n < (eval σ₀ a σ ρ).n := by omega
+      simp [hc, this]
+  | eq a b pa pb hs1 hs2 ha hb =>
+    refine ⟨by simp [List.all_append, senkAtom_gerade abb a dst pa ha,
+      senkAtom_gerade abb b tmp pb hb, gerade], ?_⟩
+    obtain ⟨s', hrun, hmem, hreg, hfl⟩ := vergleich_lauf abb a b dst tmp pa pb ha hb ρ σ₀ σ s hfr hE
+    refine ⟨s', hrun, hmem, hreg, ?_⟩
+    rw [hfl, bedingung_ne_sub64]
+    have hiff : intWort (eval σ₀ a σ ρ).n = intWort (eval σ₀ b σ ρ).n ↔
+        (eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n := by
+      rw [← sint_inj, intWort_sint_zahl (eval σ₀ a σ ρ) hs1,
+        intWort_sint_zahl (eval σ₀ b σ ρ) hs2]
+    simp only [boolOf, eval, Option.some.injEq, Bool.not_not]
+    by_cases hc : (eval σ₀ a σ ρ).n = (eval σ₀ b σ ρ).n
+    · simp [hc]
+    · have : ¬ intWort (eval σ₀ a σ ρ).n = intWort (eval σ₀ b σ ρ).n := fun h' => hc (hiff.mp h')
+      simp [hc, this]
+
+/-! ## 7. Assignment chunk: value, address, store
+
+    `T.slots[k].f = e` with a CONSTANT index `k` (recomputed by the
+    optimiser's own `constInt?`) at a placed slot lowers to the value code,
+    `movImm64 adr A` and `store64 adr dst 0`. -/
+
+/-- ASSIGNMENT RUN: the chunk writes the representation word of the exact
+    source value at the slot address, and keeps every variable register. -/
+theorem assign_lauf (c : PipeCfg) (hc : cfgOk c = true) {Γ : Ctx} {Λ : List (Res D)}
+    {τ : Ty} (e : Expr D Γ Λ τ) {lo hi : Int} (hτ : τ = .int lo hi) (hlo : 0 ≤ lo)
+    (hhi : hi < 2 ^ 64) (pv : List Befehl)
+    (hp : senkWert (abbOf c) e c.dst c.tmp = some pv) (A : Nat)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand) (hE : EnvRepr ρ s.register (abbOf c))
+    (hwr : schreibbar8 s.speicher (natAdresse A) = true) :
+    ∃ s', lauf ((pv ++ [Befehl.movImm64 c.adr (natAdresse A),
+        Befehl.store64 c.adr c.dst (BitVec.ofNat 32 0)]).map kanon) s = some s' ∧
+      write64 s.speicher (natAdresse A)
+        (zahlWort (cast (congrArg (Wert D) hτ) (eval σ₀ e σ ρ) : Wert D (.int lo hi))) =
+        some s'.speicher ∧
+      EnvRepr ρ s'.register (abbOf c) := by
+  obtain ⟨hdt, hda, hta, hdr, htr, -⟩ := cfgOk_regs c hc
+  obtain ⟨s1, hrun1, hval1, hmem1, hreg1⟩ :=
+    senkWert_korrekt (abbOf c) e hτ c.dst c.tmp ρ σ₀ σ s (cfgOk_frisch c hc) ⟨hdr, htr⟩ hE pv hp
+  have hword : s1.register c.dst =
+      zahlWort (cast (congrArg (Wert D) hτ) (eval σ₀ e σ ρ) : Wert D (.int lo hi)) := by
+    rw [hval1]
+    exact intWort_zahlWort _ hlo hhi
+  have hmi := schritt_movImm64 (kanon (.movImm64 c.adr (natAdresse A))) s1 c.adr
+    (natAdresse A) (laengeOk_encode _) rfl
+  let s2 := schrittRegister s1 (ripNach s1.rip (kanon (.movImm64 c.adr (natAdresse A))).laenge)
+    s1.flags c.adr (natAdresse A)
+  have hs2d : s2.register c.dst = s1.register c.dst := regSet_fremd _ _ _ _ hda
+  have hs2a : s2.register c.adr = natAdresse A := regSet_gleich _ _ _
+  have heff : effAddr s2 c.adr (BitVec.ofNat 32 0) = natAdresse A := by
+    rw [effAddr_null, hs2a]
+  let w : Wort := zahlWort (cast (congrArg (Wert D) hτ) (eval σ₀ e σ ρ) : Wert D (.int lo hi))
+  let m' : Speicher := { s.speicher with bytes := writeBytes s.speicher (natAdresse A) w }
+  have hw : write64 s.speicher (natAdresse A)
+      (zahlWort (cast (congrArg (Wert D) hτ) (eval σ₀ e σ ρ) : Wert D (.int lo hi))) =
+      some m' := by
+    unfold write64
+    rw [if_pos hwr]
+  have hw2 : write64 s2.speicher (effAddr s2 c.adr (BitVec.ofNat 32 0)) (s2.register c.dst) =
+      some m' := by
+    rw [heff, hs2d, hword]
+    show write64 s1.speicher _ _ = _
+    rw [hmem1]
+    exact hw
+  have hst := schritt_store64_erfolg (kanon (.store64 c.adr c.dst (BitVec.ofNat 32 0))) s2
+    c.adr c.dst (BitVec.ofNat 32 0) m' (laengeOk_encode _) rfl hw2
+  let r3 : Adresse := ripNach s2.rip (kanon (.store64 c.adr c.dst (BitVec.ofNat 32 0))).laenge
+  refine ⟨{ s2 with speicher := m', rip := r3 }, ?_, hw, ?_⟩
+  · rw [List.map_append, lauf_anhang _ _ _ _ hrun1]
+    simp only [List.map_cons, List.map_nil, lauf]
+    rw [hmi]
+    simp only
+    rw [hst]
+  · apply envRepr_fremd ρ (abbOf c) s.register _ hE
+    intro τ' x
+    obtain ⟨h1, h2, h3⟩ := cfgOk_frei c hc x
+    show regSet s1.register c.adr (natAdresse A) (abbOf c τ' x) = s.register (abbOf c τ' x)
+    rw [regSet_fremd _ _ _ _ h3, hreg1 _ h1 h2]
+
+/-! ## 8. The lowering of a block, and its correctness
+
+    `senkBlock` walks the REAL block: `cons` of an admitted assignment,
+    `pruefung` with a lowered condition and a reason exit, `nil`. Every other
+    constructor and every other statement is refused (`none`). The jump
+    displacement of a check is computed and then RE-CHECKED against the
+    exit address, so the lowering itself refuses an unreachable exit. -/
+
+section Block
+variable {V : Vertrag D}
+
+/-- Statement lowering: an assignment to a placed integer slot at a
+    constant index. -/
+def senkStmt (c : PipeCfg) (L : Layout D) {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ') : Option (List Befehl) :=
+  match s with
+  | .assignSlot t f i e _ _ =>
+    match constInt? i with
+    | some k =>
+      match L.loc t k f with
+      | some A =>
+        if repOk (D.typ t f) A 8 0 then
+          (senkWert (abbOf c) e c.dst c.tmp).map (fun p => p ++
+            [.movImm64 c.adr (natAdresse A), .store64 c.adr c.dst (BitVec.ofNat 32 0)])
+        else none
+      | none => none
+    | none => none
+  | _ => none
+
+/-- The jump displacement from the end of the jump at `posJ` to `ziel`. -/
+def sprungDisp (c : PipeCfg) (posJ ziel : Nat) : BitVec 32 :=
+  BitVec.ofInt 32 ((ziel : Int) - ((c.codeBase + posJ + 6 : Nat) : Int))
+
+/-- Check lowering: the condition code, then the jump to the exit of the
+    reason; the literal `true` lowers to nothing. -/
+def senkPruef (c : PipeCfg) {l : Bool} {Γ : Ctx} {Λ : List (Res D)} (pos : Nat)
+    (cnd : Expr D Γ Λ .bool) (sonst : Endblock D V l Γ Λ) : Option (List Befehl) :=
+  match sonst with
+  | .retGrund r _ =>
+    if istWahr cnd then some [] else
+    match senkBed (abbOf c) cnd c.dst c.tmp with
+    | some (code, j) =>
+      let posJ := pos + (encodeAll code).length
+      let disp := sprungDisp c posJ (c.exitBase + r.val)
+      if addrOff (natAdresse c.codeBase) (posJ + (encode (.jumpIf32 j disp)).length) +
+          dispWort disp = natAdresse (c.exitBase + r.val) then
+        some (code ++ [.jumpIf32 j disp])
+      else none
+    | none => none
+  | _ => none
+
+/-- Block lowering from byte position `pos` of the code region. -/
+def senkBlock (c : PipeCfg) (L : Layout D) :
+    {l : Bool} → {Γ : Ctx} → {Λ Λ' : List (Res D)} → Nat → Block D V l Γ Λ Λ' →
+      Option (List Befehl)
+  | _, _, _, _, _, .nil => some []
+  | _, _, _, _, pos, .cons s rest =>
+    match senkStmt c L s with
+    | some p => (senkBlock c L (pos + (encodeAll p).length) rest).map (p ++ ·)
+    | none => none
+  | _, _, _, _, pos, .pruefung cnd sonst rest =>
+    match senkPruef c pos cnd sonst with
+    | some p => (senkBlock c L (pos + (encodeAll p).length) rest).map (p ++ ·)
+    | none => none
+  | _, _, _, _, _, _ => none
+
+/-- What a target end state must show for a source outcome: a normal
+    outcome ends at the end of the code with world and environment
+    represented; a reason outcome ends at the reason's refusal exit with
+    the world represented; NO other outcome is admitted. -/
+def Entspricht (c : PipeCfg) (L : Layout D) (endA : Adresse) {l : Bool} {Γ : Ctx} :
+    Ausgang V l Γ → Zustand → Prop
+  | .ok σ' ρ', s' => s'.rip = endA ∧ WorldRep L s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf c)
+  | .grund σ' r, s' => s'.rip = natAdresse (c.exitBase + r.val) ∧ WorldRep L s'.speicher σ'
+  | _, _ => False
+
+/-- BLOCK LOWERING CORRECTNESS: for every lowered block, every source
+    world and environment represented by a target state whose code region
+    holds the lowered bytes at its instruction pointer, the FETCHED byte
+    run reaches a state that corresponds to the REAL `execBlock` outcome.
+    Proved by recursion on the block; the chunks are `assign_lauf` and
+    `senkBed_korrekt` lifted to bytes by `lauf_zu_laufBytes`. -/
+theorem senkBlock_korrekt (c : PipeCfg) (L : Layout D) (hc : cfgOk c = true)
+    (hsep : LayoutSep L) (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f) (flat : List Byte)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ')
+    (pre post : List Byte) (prog : List Befehl)
+    (h : senkBlock c L pre.length b = some prog)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) flat)
+    (hf : flat = pre ++ encodeAll prog ++ post)
+    (hrip : s.rip = addrOff (natAdresse c.codeBase) pre.length)
+    (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c)) :
+    ∃ n s', laufBytes n s = .weiter s' ∧
+      Entspricht c L (addrOff (natAdresse c.codeBase) (pre.length + (encodeAll prog).length))
+        (execBlock O passes R b σ ρ) s' := by
+  generalize hb0 : b = b0 at h
+  cases b0 with
+  | nil =>
+    simp only [senkBlock, Option.some.injEq] at h
+    subst h
+    refine ⟨0, s, rfl, ?_, hW, hE⟩
+    rw [hrip]
+    rfl
+  | cons st rest =>
+    simp only [senkBlock] at h
+    cases hs : senkStmt c L st with
+    | none => simp [hs] at h
+    | some p =>
+      simp only [hs] at h
+      cases hq : senkBlock c L (pre.length + (encodeAll p).length) rest with
+      | none => simp [hq] at h
+      | some q =>
+        simp only [hq, Option.map_some, Option.some.injEq] at h
+        subst h
+        cases st with
+        | assignSlot t f i e hw hL =>
+          simp only [senkStmt] at hs
+          cases hk : constInt? i with
+          | none => simp [hk] at hs
+          | some k =>
+            simp only [hk] at hs
+            cases hA : L.loc t k f with
+            | none => simp [hA] at hs
+            | some A =>
+              simp only [hA] at hs
+              by_cases hok : repOk (D.typ t f) A 8 0 = true
+              · rw [if_pos hok] at hs
+                cases hv : senkWert (abbOf c) e c.dst c.tmp with
+                | none => simp [hv] at hs
+                | some pv =>
+                  simp only [hv] at hs
+                  simp only [Option.map_some, Option.some.injEq] at hs
+                  subst hs
+                  obtain ⟨lo, hi, hT, hlo, hhi, -⟩ := repOk_int _ A hok
+                  -- the source step
+                  let σL := σ.lese Λ (i.orte ++ e.orte)
+                  have hki : (eval σL i σL ρ).n = k := by
+                    have := constInt?_sound i σL σL ρ k hk
+                    simpa [intOf] using this
+                  have hsrc : execBlock O passes R (.cons (.assignSlot t f i e hw hL) rest) σ ρ =
+                      execBlock O passes R rest
+                        (σL.schreibSlot t Λ k f (eval σL e σL ρ)) ρ := by
+                    rw [← hki]
+                    rfl
+                  -- the target chunk
+                  obtain ⟨-, -, hwrA, -⟩ := hW t k f A hA
+                  obtain ⟨s1, hrun1, hw1, hE1⟩ := assign_lauf c hc e hT hlo hhi pv hv A ρ σL σL s hE hwrA
+                  have hgp : (pv ++ [Befehl.movImm64 c.adr (natAdresse A),
+                      Befehl.store64 c.adr c.dst (BitVec.ofNat 32 0)]).all gerade = true := by
+                    simp [List.all_append, senkWert_gerade _ e _ _ pv hv, gerade]
+                  obtain ⟨hb1, hr1, hc1, -, -⟩ := lauf_zu_laufBytes (natAdresse c.codeBase) flat _ pre
+                    (encodeAll q ++ post) s s1 hgp hrun1 hcode
+                    (by rw [hf, encodeAll_append]; simp) hrip
+                  have hW1 : WorldRep L s1.speicher (σL.schreibSlot t Λ k f (eval σL e σL ρ)) :=
+                    worldRep_store L hsep s.speicher s1.speicher σL t k f A hA hW lo hi hT _ hw1 Λ
+                  have hq' : senkBlock c L (pre ++ encodeAll (pv ++ [Befehl.movImm64 c.adr (natAdresse A),
+                      Befehl.store64 c.adr c.dst (BitVec.ofNat 32 0)])).length rest = some q := by
+                    rw [List.length_append]; exact hq
+                  obtain ⟨n2, s2, hb2, hent⟩ := senkBlock_korrekt c L hc hsep O passes R flat rest
+                    (pre ++ encodeAll (pv ++ [Befehl.movImm64 c.adr (natAdresse A),
+                      Befehl.store64 c.adr c.dst (BitVec.ofNat 32 0)])) post q hq'
+                    _ ρ s1 hc1 (by rw [hf, encodeAll_append]; simp)
+                    (by rw [hr1, List.length_append]) hW1 hE1
+                  refine ⟨_ + n2, s2, by rw [laufBytes_add _ _ _ _ hb1]; exact hb2, ?_⟩
+                  rw [hsrc]
+                  have hend : pre.length + (encodeAll (pv ++ [Befehl.movImm64 c.adr (natAdresse A),
+                      Befehl.store64 c.adr c.dst (BitVec.ofNat 32 0)] ++ q)).length =
+                      (pre ++ encodeAll (pv ++ [Befehl.movImm64 c.adr (natAdresse A),
+                      Befehl.store64 c.adr c.dst (BitVec.ofNat 32 0)])).length +
+                      (encodeAll q).length := by
+                    simp only [encodeAll_append, List.length_append]
+                    omega
+                  rw [hend]
+                  exact hent
+              · rw [if_neg hok] at hs; cases hs
+        | _ => simp [senkStmt] at hs
+  | pruefung cnd sonst rest =>
+    simp only [senkBlock] at h
+    cases hs : senkPruef c pre.length cnd sonst with
+    | none => simp [hs] at h
+    | some p =>
+      simp only [hs] at h
+      cases hq : senkBlock c L (pre.length + (encodeAll p).length) rest with
+      | none => simp [hq] at h
+      | some q =>
+        simp only [hq, Option.map_some, Option.some.injEq] at h
+        subst h
+        have hq' : senkBlock c L (pre ++ encodeAll p).length rest = some q := by
+          rw [List.length_append]; exact hq
+        cases sonst with
+        | retGrund r hΛ =>
+          let σL := σ.lese Λ cnd.orte
+          have hsrc : execBlock O passes R (.pruefung cnd (.retGrund r hΛ) rest) σ ρ =
+              if wahr? (eval σL cnd σL ρ) then execBlock O passes R rest σL ρ
+              else .grund σL r := rfl
+          simp only [senkPruef] at hs
+          by_cases hw : istWahr cnd = true
+          · rw [if_pos hw] at hs
+            simp only [Option.some.injEq] at hs
+            subst hs
+            have hv : wahr? (eval σL cnd σL ρ) = true :=
+              Option.some.inj (istWahr_wahr cnd hw σL σL ρ)
+            rw [hsrc, if_pos hv]
+            have hent := senkBlock_korrekt c L hc hsep O passes R flat rest pre post q
+              (by simpa [encodeAll] using hq') σL ρ s hcode (by simpa [encodeAll] using hf) hrip hW hE
+            simpa [encodeAll] using hent
+          · rw [if_neg hw] at hs
+            cases hb : senkBed (abbOf c) cnd c.dst c.tmp with
+            | none => simp [hb] at hs
+            | some cj =>
+              obtain ⟨code, j⟩ := cj
+              simp only [hb] at hs
+              by_cases hj : addrOff (natAdresse c.codeBase)
+                  (pre.length + (encodeAll code).length +
+                    (encode (.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
+                      (c.exitBase + r.val)))).length) +
+                  dispWort (sprungDisp c (pre.length + (encodeAll code).length)
+                    (c.exitBase + r.val)) = natAdresse (c.exitBase + r.val)
+              · rw [if_pos hj] at hs
+                simp only [Option.some.injEq] at hs
+                subst hs
+                obtain ⟨hgc, s1, hrun1, hmem1, hreg1, hbed⟩ := senkBed_korrekt (abbOf c) cnd c.dst
+                  c.tmp code j hb ρ σL σL s (cfgOk_frisch c hc) hE
+                have hE1 : EnvRepr ρ s1.register (abbOf c) :=
+                  envRepr_fremd ρ _ _ _ hE (fun τ x =>
+                    hreg1 _ (cfgOk_frei c hc x).1 (cfgOk_frei c hc x).2.1)
+                obtain ⟨hb1, hr1, hc1, -, -⟩ := lauf_zu_laufBytes (natAdresse c.codeBase) flat code pre
+                  (encodeAll [Befehl.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
+                    (c.exitBase + r.val))] ++ encodeAll q ++ post)
+                  s s1 hgc hrun1 hcode
+                  (by rw [hf]; simp [encodeAll]) hrip
+                have hW1 : WorldRep L s1.speicher σL := by rw [hmem1]; exact hW
+                have hval : wahr? (eval σL cnd σL ρ) =
+                    !bedingung j s1.flags := Option.some.inj hbed
+                have hbs := byteschritt_im_code s1 (natAdresse c.codeBase) flat
+                  (pre ++ encodeAll code) (encodeAll q ++ post)
+                  (.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
+                    (c.exitBase + r.val))) hc1
+                  (by rw [hf]; simp [encodeAll])
+                  (by rw [hr1, List.length_append])
+                by_cases hcj : bedingung j s1.flags = true
+                · -- the check fails: the jump reaches the reason's exit
+                  have hst := schritt_jumpIf32_genommen
+                    (kanon (.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
+                      (c.exitBase + r.val)))) s1 j _ (laengeOk_encode _) rfl hcj
+                  rw [hst] at hbs
+                  have hf' : wahr? (eval σL cnd σL ρ) = false := by rw [hval, hcj]; rfl
+                  let rx : Adresse := ripNach s1.rip (kanon (.jumpIf32 j (sprungDisp c
+                    (pre.length + (encodeAll code).length) (c.exitBase + r.val)))).laenge +
+                    dispWort (sprungDisp c (pre.length + (encodeAll code).length) (c.exitBase + r.val))
+                  refine ⟨code.length + 1, { s1 with rip := rx }, ?_, ?_⟩
+                  · rw [laufBytes_add _ _ _ _ hb1]
+                    simp only [laufBytes, hbs]
+                    rfl
+                  · rw [hsrc, if_neg (by rw [hf']; exact Bool.false_ne_true)]
+                    refine ⟨?_, hW1⟩
+                    show ripNach s1.rip _ + _ = _
+                    rw [hr1, ripNach_addrOff, addrOff_addrOff]
+                    exact hj
+                · -- the check passes: fall through to the rest
+                  have hcj' : bedingung j s1.flags = false := by
+                    cases h' : bedingung j s1.flags
+                    · rfl
+                    · exact absurd h' hcj
+                  have hst := schritt_jumpIf32_nicht
+                    (kanon (.jumpIf32 j (sprungDisp c (pre.length + (encodeAll code).length)
+                      (c.exitBase + r.val)))) s1 j _ (laengeOk_encode _) rfl hcj'
+                  rw [hst] at hbs
+                  have ht : wahr? (eval σL cnd σL ρ) = true := by rw [hval, hcj']; rfl
+                  let r2 : Adresse := ripNach s1.rip (kanon (.jumpIf32 j (sprungDisp c
+                    (pre.length + (encodeAll code).length) (c.exitBase + r.val)))).laenge
+                  let s2 : Zustand := { s1 with rip := r2 }
+                  have hent := senkBlock_korrekt c L hc hsep O passes R flat rest
+                    (pre ++ encodeAll (code ++ [.jumpIf32 j (sprungDisp c
+                      (pre.length + (encodeAll code).length) (c.exitBase + r.val))])) post q hq'
+                    σL ρ s2 hc1 (by rw [hf]; simp [encodeAll])
+                    (by
+                      show ripNach s1.rip _ = _
+                      rw [hr1, ripNach_addrOff, addrOff_addrOff, encodeAll_append,
+                        List.length_append, List.length_append, encodeAll_cons, encodeAll_nil,
+                        List.append_nil]
+                      rfl)
+                    hW1 hE1
+                  obtain ⟨n2, s3, hb3, hent3⟩ := hent
+                  refine ⟨code.length + 1 + n2, s3, ?_, ?_⟩
+                  · rw [Nat.add_assoc, laufBytes_add _ _ _ _ hb1,
+                      laufBytes_add 1 n2 s1 s2 (by simp only [laufBytes, hbs]; rfl)]
+                    exact hb3
+                  · rw [hsrc, if_pos ht]
+                    have hend : pre.length + (encodeAll (code ++ [Befehl.jumpIf32 j (sprungDisp c
+                        (pre.length + (encodeAll code).length) (c.exitBase + r.val))] ++ q)).length =
+                        (pre ++ encodeAll (code ++ [Befehl.jumpIf32 j (sprungDisp c
+                        (pre.length + (encodeAll code).length) (c.exitBase + r.val))])).length +
+                        (encodeAll q).length := by
+                      simp only [encodeAll_append, List.length_append]
+                      omega
+                    rw [hend]
+                    exact hent3
+              · rw [if_neg hj] at hs; cases hs
+        | _ => simp [senkPruef] at hs
+  | _ => simp [senkBlock] at h
+termination_by sizeOf b
+decreasing_by
+  all_goals
+    subst hb0
+    simp only [Block.cons.sizeOf_spec, Block.pruefung.sizeOf_spec]
+    omega
+
+end Block
+
 end Gabbro.Grammatik.X86.Pipeline
