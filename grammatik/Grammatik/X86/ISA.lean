@@ -16,8 +16,18 @@
     narrow          `NarrowOp`         `stepNarrow`           `encodeNarrow`/`decodeNarrow`
     setcc / cmov    `CondForm`         `setccSchrittBytes`,   `encodeSetCC`/`decodeSetCC`,
                                        `cmovSchrittBytes`     `encodeCmov`/`decodeCmov`
+    compact (§2B)   `CompactBefehl`    `schrittC`             `encodeC`/`decodeC`
+    integer core    `CoreBefehl`       `coreSchritt`          `encodeCore`/`decodeCore`
 
-  All five families run over the SAME `Zustand` (`Typen.lean`). Scalar float
+  All seven families run over the SAME `Zustand` (`Typen.lean`). The compact
+  and integer-core families (`CompactForms.lean`, `IntegerCore.lean`) were
+  joined by the four-step procedure of §5; the arbitrary-input signature and
+  consumed-length facts they lacked are proved HERE (`decodeC_sig`,
+  `decodeCore_sig`, `decodeC_verbraucht`, `decodeCore_verbraucht`). Their
+  bytes do NOT genuinely overlap any earlier family: every shared prefix is
+  separated by the opcode or, where the opcode is shared, by the ModRM mode
+  or digit (see `famSig`), so no priority rule is needed and
+  `familien_disjunkt` holds unconditionally over all eight decoders. Scalar float
   (`ScalarFloat.lean`), vector (`VectorCodec.lean`) and locked operations
   (`LockedOps.lean`) need extra state (`FpZustand`, `TSOZustand`) and are
   left OUT (see CUTS); no state is invented for them here.
@@ -46,6 +56,8 @@ import Grammatik.X86.MulDivCodec
 import Grammatik.X86.ShiftCodec
 import Grammatik.X86.NarrowCodec
 import Grammatik.X86.ControlCodec
+import Grammatik.X86.CompactForms
+import Grammatik.X86.IntegerCore
 
 namespace Gabbro.Grammatik.X86
 
@@ -59,6 +71,8 @@ inductive Instr where
   | shift (f : ShiftForm)
   | narrow (o : NarrowOp)
   | cond (c : CondForm)
+  | compact (c : CompactBefehl)
+  | core (c : CoreBefehl)
   deriving DecidableEq, Repr
 
 /-- A decoded unified instruction with its consumed length (checked data,
@@ -94,6 +108,14 @@ def stepIE : InstrDecoded → Zustand → MulDivErgebnis
     match cmovSchrittBytes l s dst src c with
     | some s' => .ok s'
     | none => .misslungen
+  | ⟨.compact c, l⟩, s =>
+    match schrittC ⟨c, l⟩ s with
+    | some s' => .ok s'
+    | none => .misslungen
+  | ⟨.core c, l⟩, s =>
+    match coreSchritt ⟨c, l⟩ s with
+    | some s' => .ok s'
+    | none => .misslungen
 
 /-- The unified step over the one `Zustand`: pure delegation to each
     family's EXISTING step; no family semantics is re-implemented. The
@@ -109,6 +131,8 @@ def stepI : InstrDecoded → Zustand → Option Zustand
   | ⟨.narrow o, l⟩, s => stepNarrow ⟨o, l⟩ s
   | ⟨.cond (.setcc c dst), l⟩, s => setccSchrittBytes l s dst c
   | ⟨.cond (.cmov c dst src), l⟩, s => cmovSchrittBytes l s dst src c
+  | ⟨.compact c, l⟩, s => schrittC ⟨c, l⟩ s
+  | ⟨.core c, l⟩, s => coreSchritt ⟨c, l⟩ s
 
 /-- Successor projection of the full outcome. -/
 def MulDivErgebnis.nachfolger : MulDivErgebnis → Option Zustand
@@ -146,6 +170,14 @@ theorem stepI_eq_stepIE (d : InstrDecoded) (s : Zustand) :
       show cmovSchrittBytes l s dst src c = _
       simp only [stepIE]
       cases cmovSchrittBytes l s dst src c <;> rfl
+  | compact c =>
+    show schrittC ⟨c, l⟩ s = _
+    simp only [stepIE]
+    cases schrittC ⟨c, l⟩ s <;> rfl
+  | core c =>
+    show coreSchritt ⟨c, l⟩ s = _
+    simp only [stepIE]
+    cases coreSchritt ⟨c, l⟩ s <;> rfl
 
 /-- Only the mul/div family can raise the hardware trap. -/
 theorem stepIE_halt_nur_muldiv (d : InstrDecoded) (s : Zustand)
@@ -171,6 +203,12 @@ theorem stepIE_halt_nur_muldiv (d : InstrDecoded) (s : Zustand)
     | cmov c dst src =>
       simp only [stepIE] at h
       split at h <;> cases h
+  | compact c =>
+    simp only [stepIE] at h
+    split at h <;> cases h
+  | core c =>
+    simp only [stepIE] at h
+    split at h <;> cases h
 
 /-! ### Delegation equations: each family's step IS the unified step. -/
 
@@ -194,6 +232,12 @@ theorem stepI_setcc (c : Bedingung) (dst : Register) (l : Nat) (s : Zustand) :
 theorem stepI_cmov (c : Bedingung) (dst src : Register) (l : Nat)
     (s : Zustand) :
     stepI ⟨.cond (.cmov c dst src), l⟩ s = cmovSchrittBytes l s dst src c := rfl
+
+theorem stepI_compact (c : CompactBefehl) (l : Nat) (s : Zustand) :
+    stepI ⟨.compact c, l⟩ s = schrittC ⟨c, l⟩ s := rfl
+
+theorem stepI_core (c : CoreBefehl) (l : Nat) (s : Zustand) :
+    stepI ⟨.core c, l⟩ s = coreSchritt ⟨c, l⟩ s := rfl
 
 /-- A unified run: the decoded sequence applied in order; `none` is a loud
     failure (refusal or trap), never a silent halt. Same shape as `lauf`. -/
@@ -241,11 +285,19 @@ def encodeI : Instr → List Byte
   | .narrow o => encodeNarrow o
   | .cond (.setcc c dst) => encodeSetCC c dst
   | .cond (.cmov c dst src) => encodeCmov c dst src
+  | .compact c => encodeC c
+  | .core c => encodeCore c
 
-/-- Canonicity: the only family whose syntax admits values without a
-    canonical encoding is the shift immediate (`imm8 : Nat`, one byte). -/
+/-- Canonicity: the syntax that admits values without a canonical
+    encoding is the shift immediate (`imm8 : Nat`, one byte), the compact
+    disp0 memory forms over `rbp`/`r13` (mod=0 with those bases is the
+    RIP-relative row, `CompactForms` §6), and an LEA index `rsp`
+    (`IntegerCore.coreValid`). -/
 def kanonischI : Instr → Bool
   | .shift (.imm _ _ n) => decide (n < 256)
+  | .compact (.load64Disp0 _ base) => decide (base ≠ .rbp ∧ base ≠ .r13)
+  | .compact (.store64Disp0 base _) => decide (base ≠ .rbp ∧ base ≠ .r13)
+  | .core c => coreValid c
   | _ => true
 
 /-- The canonical decoded form of an instruction: its encoding length. -/
@@ -254,7 +306,7 @@ def canonI (i : Instr) : InstrDecoded := ⟨i, (encodeI i).length⟩
 /-- The family tags of the unified decoder (the conditional family has two
     independent decoders, so it carries two tags). -/
 inductive Fam where
-  | pilot | muldiv | shift | narrow | setcc | cmov
+  | pilot | muldiv | shift | narrow | setcc | cmov | compact | core
   deriving DecidableEq, Repr
 
 /-- Family tag of an instruction. -/
@@ -265,6 +317,8 @@ def famI : Instr → Fam
   | .narrow _ => .narrow
   | .cond (.setcc _ _) => .setcc
   | .cond (.cmov _ _ _) => .cmov
+  | .compact _ => .compact
+  | .core _ => .core
 
 /-- Family decoders: each is the EXISTING family decoder, its result
     wrapped into `InstrDecoded`. -/
@@ -293,6 +347,14 @@ def decF : Fam → List Byte → Option (InstrDecoded × List Byte)
     match decodeCmov bs with
     | some ((c, dst, src), r) => some (⟨.cond (.cmov c dst src), 4⟩, r)
     | none => none
+  | .compact, bs =>
+    match decodeC bs with
+    | some (d, r) => some (⟨.compact d.befehl, d.laenge⟩, r)
+    | none => none
+  | .core, bs =>
+    match decodeCore bs with
+    | some (d, r) => some (⟨.core d.befehl, d.laenge⟩, r)
+    | none => none
 
 /-- First family in a list that accepts the bytes. -/
 def erstesF : List Fam → List Byte → Option (InstrDecoded × List Byte)
@@ -305,7 +367,8 @@ def erstesF : List Fam → List Byte → Option (InstrDecoded × List Byte)
 /-- The family order of the unified decoder. By §3 the order is
     irrelevant (at most one family accepts any byte string); it is fixed
     here only to make `decodeI` a function. -/
-def alleFam : List Fam := [.pilot, .muldiv, .shift, .narrow, .setcc, .cmov]
+def alleFam : List Fam :=
+  [.pilot, .muldiv, .shift, .narrow, .setcc, .cmov, .compact, .core]
 
 /-- Every family is in the decoder's list. -/
 theorem mem_alleFam (f : Fam) : f ∈ alleFam := by
@@ -314,6 +377,12 @@ theorem mem_alleFam (f : Fam) : f ∈ alleFam := by
 /-- The unified decoder: the first family decoder that accepts. -/
 def decodeI (bs : List Byte) : Option (InstrDecoded × List Byte) :=
   erstesF alleFam bs
+
+/-- Every compact encoding is 2..7 bytes long (no such lemma exists in
+    `CompactForms.lean`; proved here from `encodeC` itself). -/
+theorem encodeC_len (c : CompactBefehl) :
+    1 ≤ (encodeC c).length ∧ (encodeC c).length ≤ 15 := by
+  cases c <;> simp only [encodeC, leBytes32] <;> (try split) <;> simp
 
 /-- Every unified encoding is 1..15 bytes long. -/
 theorem encodeI_len (i : Instr) :
@@ -327,6 +396,8 @@ theorem encodeI_len (i : Instr) :
     cases c with
     | setcc c dst => exact show 1 ≤ 4 ∧ 4 ≤ 15 from by decide
     | cmov c dst src => exact show 1 ≤ 4 ∧ 4 ≤ 15 from by decide
+  | compact c => exact encodeC_len c
+  | core c => exact encodeCore_len_ok c
 
 /-- The canonical length passes the shared decode-length guard. -/
 theorem laengeOk_encodeI (i : Instr) : laengeOk (encodeI i).length = true := by
@@ -362,6 +433,38 @@ theorem decF_encodeI (i : Instr) (hk : kanonischI i = true)
     | cmov c dst src =>
       simp only [famI, decF, encodeI, canonI, roundtrip_cmov c dst src suffix,
         encodeCmov_len]
+  | compact c =>
+    cases c with
+    | movImm32Zx dst imm =>
+      simp only [famI, decF, encodeI, canonI, roundtripC_movImm32Zx dst imm suffix]
+    | movImm32Sx dst imm =>
+      simp only [famI, decF, encodeI, canonI, roundtripC_movImm32Sx dst imm suffix]
+    | aluImm8 op dst imm =>
+      simp only [famI, decF, encodeI, canonI, roundtripC_aluImm8 op dst imm suffix]
+    | aluImm32 op dst imm =>
+      simp only [famI, decF, encodeI, canonI, roundtripC_aluImm32 op dst imm suffix]
+    | load64Disp8 dst base disp =>
+      simp only [famI, decF, encodeI, canonI,
+        roundtripC_load64Disp8 dst base disp suffix]
+    | store64Disp8 base src disp =>
+      simp only [famI, decF, encodeI, canonI,
+        roundtripC_store64Disp8 base src disp suffix]
+    | load64Disp0 dst base =>
+      have hb : base ≠ .rbp ∧ base ≠ .r13 := by simpa [kanonischI] using hk
+      simp only [famI, decF, encodeI, canonI,
+        roundtripC_load64Disp0 dst base suffix hb.1 hb.2]
+    | store64Disp0 base src =>
+      have hb : base ≠ .rbp ∧ base ≠ .r13 := by simpa [kanonischI] using hk
+      simp only [famI, decF, encodeI, canonI,
+        roundtripC_store64Disp0 base src suffix hb.1 hb.2]
+    | jump8 rel =>
+      simp only [famI, decF, encodeI, canonI, roundtripC_jump8 rel suffix]
+    | jumpIf8 cond rel =>
+      simp only [famI, decF, encodeI, canonI, roundtripC_jumpIf8 cond rel suffix]
+  | core c =>
+    have hv : coreValid c = true := by simpa [kanonischI] using hk
+    simp only [famI, decF, encodeI, canonI, roundtripCore c hv suffix,
+      encodeCore_laenge]
 
 /-! ## 3. Disjointness over arbitrary byte strings.
 
@@ -390,19 +493,42 @@ def kopfN : List Byte → Nat
   | [] => 256
   | b :: _ => byteNat b
 
-/-- Family signature of the first three bytes. -/
+/-- Family signature of the first three bytes. The compact and integer
+    core rows share the REX.W prefixes 72/73/76/77 with pilot, mul/div,
+    shift and cmov rows; the SECOND byte (opcode) and, where opcodes are
+    shared, the THIRD byte (ModRM mode or digit, or the second opcode
+    byte after `0F`) separate them:
+      REX.W 0F: 175 mul/div, 64..79 cmov, 182/183/190/191 core;
+      REX.W F7: ModRM digit 2/3 core (NOT/NEG), 4/6/7 mul/div;
+      REX.W 89/8B: ModRM mod 0/1 compact, mod 2/3 pilot;
+      REX.W C7/83/81: compact; REX.W 8D/21/09/85/63: core;
+      REX.WX (74/75/78/79): core (LEA with an extended index only);
+      65 then B8..BF: compact (`movImm32Zx` r8..r15);
+      EB, 70..7F, B8..BF as first byte: compact. -/
 def famSig (n1 n2 n3 : Nat) : Fam :=
   if n1 = 72 ∨ n1 = 73 ∨ n1 = 76 ∨ n1 = 77 then
     if n2 = 15 then
-      (if n3 = 175 then .muldiv else if 64 ≤ n3 ∧ n3 < 80 then .cmov else .pilot)
-    else if n2 = 247 then .muldiv
+      (if n3 = 175 then .muldiv
+       else if 64 ≤ n3 ∧ n3 < 80 then .cmov
+       else if n3 = 182 ∨ n3 = 183 ∨ n3 = 190 ∨ n3 = 191 then .core
+       else .pilot)
+    else if n2 = 247 then
+      (if n3 / 8 % 8 = 2 ∨ n3 / 8 % 8 = 3 then .core else .muldiv)
     else if (n1 = 72 ∨ n1 = 73) ∧ (n2 = 193 ∨ n2 = 211) then .shift
+    else if n2 = 199 ∨ n2 = 131 ∨ n2 = 129 then .compact
+    else if (n2 = 137 ∨ n2 = 139) ∧ n3 / 64 < 2 then .compact
+    else if n2 = 141 ∨ n2 = 33 ∨ n2 = 9 ∨ n2 = 133 ∨ n2 = 99 then .core
     else .pilot
+  else if n1 = 74 ∨ n1 = 75 ∨ n1 = 78 ∨ n1 = 79 then .core
   else if n1 = 64 ∨ n1 = 65 ∨ n1 = 68 ∨ n1 = 69 then
     if n2 = 15 then (if 144 ≤ n3 ∧ n3 < 160 then .setcc else .narrow)
     else if n2 = 137 then .narrow
+    else if n1 = 65 ∧ 184 ≤ n2 ∧ n2 < 192 then .compact
     else .pilot
+  else if n1 = 235 ∨ (112 ≤ n1 ∧ n1 < 128) ∨ (184 ≤ n1 ∧ n1 < 192) then .compact
   else .pilot
+
+theorem kopfN_cons (b : Byte) (t : List Byte) : kopfN (b :: t) = byteNat b := rfl
 
 /-- Signature of a byte string. -/
 def famOf (bs : List Byte) : Fam :=
@@ -418,66 +544,83 @@ theorem famOf_cons3 (b c d : Byte) (rest : List Byte) :
     famOf (b :: c :: d :: rest) = famSig (byteNat b) (byteNat c) (byteNat d) :=
   rfl
 
-/-! ### Signature evaluation lemmas. -/
+/-! ### Signature evaluation lemmas.
+
+    Each is closed by the same mechanical tactic: unfold `famSig`, split
+    every `if`, and close each leaf by `rfl` (the right family) or by
+    `omega` (the hypotheses contradict the branch). -/
+
+/-- Mechanical evaluation of `famSig` under linear byte-class hypotheses. -/
+macro "famSig_auswerten" : tactic =>
+  `(tactic| (unfold famSig; repeat' (first | rfl | (exfalso; omega) | split)))
 
 theorem famSig_sonst (n1 n2 n3 : Nat)
     (h1 : ¬ (n1 = 72 ∨ n1 = 73 ∨ n1 = 76 ∨ n1 = 77))
-    (h2 : ¬ (n1 = 64 ∨ n1 = 65 ∨ n1 = 68 ∨ n1 = 69)) :
+    (h2 : ¬ (n1 = 64 ∨ n1 = 65 ∨ n1 = 68 ∨ n1 = 69))
+    (h3 : ¬ (n1 = 74 ∨ n1 = 75 ∨ n1 = 78 ∨ n1 = 79))
+    (h4 : ¬ (n1 = 235 ∨ (112 ≤ n1 ∧ n1 < 128) ∨ (184 ≤ n1 ∧ n1 < 192))) :
     famSig n1 n2 n3 = .pilot := by
-  unfold famSig
-  rw [if_neg h1, if_neg h2]
+  famSig_auswerten
 
 theorem famSig_rexPilot (n1 n2 n3 : Nat)
     (h1 : n1 = 72 ∨ n1 = 73 ∨ n1 = 76 ∨ n1 = 77)
-    (h2 : n2 ≠ 15 ∧ n2 ≠ 247 ∧ n2 ≠ 193 ∧ n2 ≠ 211) :
+    (h2 : (184 ≤ n2 ∧ n2 < 192) ∨ n2 = 1 ∨ n2 = 41 ∨ n2 = 49 ∨ n2 = 57 ∨
+      ((n2 = 137 ∨ n2 = 139) ∧ 2 ≤ n3 / 64)) :
     famSig n1 n2 n3 = .pilot := by
-  unfold famSig
-  rw [if_pos h1, if_neg h2.1, if_neg h2.2.1, if_neg (by omega)]
+  famSig_auswerten
 
 theorem famSig_65Pilot (n2 n3 : Nat) (h2 : 80 ≤ n2 ∧ n2 < 96) :
     famSig 65 n2 n3 = .pilot := by
-  unfold famSig
-  rw [if_neg (by omega), if_pos (by omega), if_neg (by omega), if_neg (by omega)]
+  famSig_auswerten
 
 theorem famSig_muldiv (n1 n2 n3 : Nat)
     (h1 : n1 = 72 ∨ n1 = 73 ∨ n1 = 76 ∨ n1 = 77)
-    (h2 : n2 = 247 ∨ (n2 = 15 ∧ n3 = 175)) :
+    (h2 : (n2 = 247 ∧ (n3 / 8 % 8 = 4 ∨ n3 / 8 % 8 = 6 ∨ n3 / 8 % 8 = 7)) ∨
+      (n2 = 15 ∧ n3 = 175)) :
     famSig n1 n2 n3 = .muldiv := by
-  unfold famSig
-  rw [if_pos h1]
-  rcases h2 with h2 | ⟨h2, h3⟩
-  · rw [if_neg (by omega), if_pos h2]
-  · rw [if_pos h2, if_pos h3]
+  famSig_auswerten
 
 theorem famSig_shift (n1 n2 n3 : Nat) (h1 : n1 = 72 ∨ n1 = 73)
     (h2 : n2 = 193 ∨ n2 = 211) :
     famSig n1 n2 n3 = .shift := by
-  unfold famSig
-  rw [if_pos (by omega), if_neg (by omega), if_neg (by omega),
-    if_pos ⟨h1, h2⟩]
+  famSig_auswerten
 
 theorem famSig_narrow (n1 n2 n3 : Nat)
     (h1 : n1 = 64 ∨ n1 = 65 ∨ n1 = 68 ∨ n1 = 69)
     (h2 : n2 = 137 ∨ (n2 = 15 ∧ (n3 = 182 ∨ n3 = 190))) :
     famSig n1 n2 n3 = .narrow := by
-  unfold famSig
-  rw [if_neg (by omega), if_pos h1]
-  rcases h2 with h2 | ⟨h2, h3⟩
-  · rw [if_neg (by omega), if_pos h2]
-  · rw [if_pos h2, if_neg (by omega)]
+  famSig_auswerten
 
 theorem famSig_setcc (n1 n2 n3 : Nat) (h1 : n1 = 64 ∨ n1 = 65)
     (h2 : n2 = 15) (h3 : 144 ≤ n3 ∧ n3 < 160) :
     famSig n1 n2 n3 = .setcc := by
-  unfold famSig
-  rw [if_neg (by omega), if_pos (by omega), if_pos h2, if_pos h3]
+  famSig_auswerten
 
 theorem famSig_cmov (n1 n2 n3 : Nat)
     (h1 : n1 = 72 ∨ n1 = 73 ∨ n1 = 76 ∨ n1 = 77)
     (h2 : n2 = 15) (h3 : 64 ≤ n3 ∧ n3 < 80) :
     famSig n1 n2 n3 = .cmov := by
-  unfold famSig
-  rw [if_pos h1, if_pos h2, if_neg (by omega), if_pos h3]
+  famSig_auswerten
+
+/-- COMPACT signature classes. -/
+theorem famSig_compact (n1 n2 n3 : Nat)
+    (h : n1 = 235 ∨ (112 ≤ n1 ∧ n1 < 128) ∨ (184 ≤ n1 ∧ n1 < 192) ∨
+      (n1 = 65 ∧ 184 ≤ n2 ∧ n2 < 192) ∨
+      ((n1 = 72 ∨ n1 = 73 ∨ n1 = 76 ∨ n1 = 77) ∧
+        (n2 = 199 ∨ n2 = 131 ∨ n2 = 129 ∨
+          ((n2 = 137 ∨ n2 = 139) ∧ n3 / 64 < 2)))) :
+    famSig n1 n2 n3 = .compact := by
+  famSig_auswerten
+
+/-- INTEGER-CORE signature classes. -/
+theorem famSig_core (n1 n2 n3 : Nat)
+    (h : (n1 = 74 ∨ n1 = 75 ∨ n1 = 78 ∨ n1 = 79) ∨
+      ((n1 = 72 ∨ n1 = 73 ∨ n1 = 76 ∨ n1 = 77) ∧
+        (n2 = 141 ∨ n2 = 33 ∨ n2 = 9 ∨ n2 = 133 ∨ n2 = 99 ∨
+          (n2 = 247 ∧ (n3 / 8 % 8 = 2 ∨ n3 / 8 % 8 = 3)) ∨
+          (n2 = 15 ∧ (n3 = 182 ∨ n3 = 183 ∨ n3 = 190 ∨ n3 = 191))))) :
+    famSig n1 n2 n3 = .core := by
+  famSig_auswerten
 
 /-! ### Signatures forced by each family decoder (arbitrary input). -/
 
@@ -522,16 +665,34 @@ theorem decodeImulRex_sig (rBit bBit : Nat) (bs : List Byte)
     · exact h1
     · simp [h1] at h
 
+/-- The Group-3 mul/div ModRM carries digit 4, 6 or 7 (never the core's
+    NOT/NEG digits 2/3), over arbitrary input. -/
+theorem decodeF7Modrm_sig (bBit : Nat) (bs : List Byte)
+    (x : MulDivDecodiert × List Byte) (h : decodeF7Modrm bBit bs = some x) :
+    kopfN bs / 8 % 8 = 4 ∨ kopfN bs / 8 % 8 = 6 ∨ kopfN bs / 8 % 8 = 7 := by
+  match bs, h with
+  | [], h => simp [decodeF7Modrm] at h
+  | m :: t, h =>
+    show byteNat m / 8 % 8 = 4 ∨ byteNat m / 8 % 8 = 6 ∨ byteNat m / 8 % 8 = 7
+    simp only [decodeF7Modrm] at h
+    split at h
+    · split at h <;> first | omega | simp at h
+    · simp at h
+
 theorem decodeNachRex_sig (rBit bBit : Nat) (bs : List Byte)
     (x : MulDivDecodiert × List Byte) (h : decodeNachRex rBit bBit bs = some x) :
-    kopfN bs = 247 ∨ (kopfN bs = 15 ∧ kopfN (bs.drop 1) = 175) := by
+    (kopfN bs = 247 ∧ (kopfN (bs.drop 1) / 8 % 8 = 4 ∨
+      kopfN (bs.drop 1) / 8 % 8 = 6 ∨ kopfN (bs.drop 1) / 8 % 8 = 7)) ∨
+      (kopfN bs = 15 ∧ kopfN (bs.drop 1) = 175) := by
   match bs, h with
   | [], h => simp [decodeNachRex] at h
   | op :: t, h =>
-    show byteNat op = 247 ∨ (byteNat op = 15 ∧ kopfN t = 175)
+    show (byteNat op = 247 ∧ (kopfN t / 8 % 8 = 4 ∨ kopfN t / 8 % 8 = 6 ∨
+      kopfN t / 8 % 8 = 7)) ∨ (byteNat op = 15 ∧ kopfN t = 175)
     unfold decodeNachRex at h
     by_cases h1 : byteNat op = 247
-    · exact Or.inl h1
+    · simp only [h1] at h
+      exact Or.inl ⟨h1, decodeF7Modrm_sig bBit t x (by simpa using h)⟩
     · by_cases h2 : byteNat op = 15
       · simp only [h2] at h
         exact Or.inr ⟨h2, decodeImulRex_sig rBit bBit t x (by simpa using h)⟩
@@ -690,17 +851,43 @@ theorem decodeCmov_sig (bs : List Byte)
       exact famSig_cmov _ _ _ (by omega) h1 h2
     · simp at h
 
+/-- A pilot ModRM row is register-direct (mod 3) or disp32 (mod 2). -/
+theorem decodeModrm_sig (rBit bBit op : Nat) (bs : List Byte)
+    (x : Decodiert × List Byte) (h : decodeModrm rBit bBit op bs = some x) :
+    2 ≤ kopfN bs / 64 := by
+  match bs, h with
+  | [], h => simp [decodeModrm] at h
+  | m :: t, h =>
+    show 2 ≤ byteNat m / 64
+    simp only [decodeModrm] at h
+    split at h <;> first | omega | simp at h
+
+/-- PILOT opcode classes after REX.W: `B8..BF`, the four ALU rows, or
+    `89`/`8B` with ModRM mode 2/3 (never the compact mode 0/1). -/
 theorem decodeRex_sig (rBit bBit : Nat) (bs : List Byte)
     (x : Decodiert × List Byte) (h : decodeRex rBit bBit bs = some x) :
-    kopfN bs ≠ 15 ∧ kopfN bs ≠ 247 ∧ kopfN bs ≠ 193 ∧ kopfN bs ≠ 211 := by
+    (184 ≤ kopfN bs ∧ kopfN bs < 192) ∨ kopfN bs = 1 ∨ kopfN bs = 41 ∨
+      kopfN bs = 49 ∨ kopfN bs = 57 ∨
+      ((kopfN bs = 137 ∨ kopfN bs = 139) ∧ 2 ≤ kopfN (bs.drop 1) / 64) := by
   match bs, h with
   | [], h => simp [decodeRex] at h
   | op :: t, h =>
-    show byteNat op ≠ 15 ∧ byteNat op ≠ 247 ∧ byteNat op ≠ 193 ∧ byteNat op ≠ 211
+    show (184 ≤ byteNat op ∧ byteNat op < 192) ∨ byteNat op = 1 ∨
+      byteNat op = 41 ∨ byteNat op = 49 ∨ byteNat op = 57 ∨
+      ((byteNat op = 137 ∨ byteNat op = 139) ∧ 2 ≤ kopfN t / 64)
     simp only [decodeRex] at h
     split at h
     · omega
-    · split at h <;> first | omega | simp at h
+    · split at h
+      · have := decodeModrm_sig rBit bBit 137 t x h
+        omega
+      · omega
+      · omega
+      · omega
+      · omega
+      · have := decodeModrm_sig rBit bBit 139 t x h
+        omega
+      · simp at h
 
 /-- PILOT signature: no pilot row carries another family's signature. -/
 theorem decode_sig (bs : List Byte) (x : Decodiert × List Byte)
@@ -711,10 +898,10 @@ theorem decode_sig (bs : List Byte) (x : Decodiert × List Byte)
     rw [famOf_cons]
     simp only [decode] at h
     split at h
-    · exact famSig_sonst _ _ _ (by omega) (by omega)
-    · exact famSig_sonst _ _ _ (by omega) (by omega)
-    · exact famSig_sonst _ _ _ (by omega) (by omega)
-    · exact famSig_sonst _ _ _ (by omega) (by omega)
+    · exact famSig_sonst _ _ _ (by omega) (by omega) (by omega) (by omega)
+    · exact famSig_sonst _ _ _ (by omega) (by omega) (by omega) (by omega)
+    · exact famSig_sonst _ _ _ (by omega) (by omega) (by omega) (by omega)
+    · exact famSig_sonst _ _ _ (by omega) (by omega) (by omega) (by omega)
     · rename_i hb
       rw [hb]
       match t, h with
@@ -734,10 +921,158 @@ theorem decode_sig (bs : List Byte) (x : Decodiert × List Byte)
     · exact famSig_rexPilot _ _ _ (by omega) (decodeRex_sig 1 1 t x h)
     · rename_i n hn1 hn2 hn3 hn4 hn5 hn6 hn7 hn8 hn9
       by_cases h1 : 80 ≤ byteNat b ∧ byteNat b < 88
-      · exact famSig_sonst _ _ _ (by omega) (by omega)
+      · exact famSig_sonst _ _ _ (by omega) (by omega) (by omega) (by omega)
       · by_cases h2 : 88 ≤ byteNat b ∧ byteNat b < 96
-        · exact famSig_sonst _ _ _ (by omega) (by omega)
+        · exact famSig_sonst _ _ _ (by omega) (by omega) (by omega) (by omega)
         · simp [h1, h2] at h
+
+/-! ### The two new families: compact forms and the integer core. -/
+
+/-- After a compact REX.W: `C7`/`83`/`81`, or `89`/`8B` with mode 0/1. -/
+theorem decodeCRex_sig (rBit bBit : Nat) (bs : List Byte)
+    (x : CompactDecodiert × List Byte) (h : decodeCRex rBit bBit bs = some x) :
+    kopfN bs = 199 ∨ kopfN bs = 131 ∨ kopfN bs = 129 ∨
+      ((kopfN bs = 137 ∨ kopfN bs = 139) ∧ kopfN (bs.drop 1) / 64 < 2) := by
+  match bs, h with
+  | [], h => simp [decodeCRex] at h
+  | op :: t, h =>
+    show byteNat op = 199 ∨ byteNat op = 131 ∨ byteNat op = 129 ∨
+      ((byteNat op = 137 ∨ byteNat op = 139) ∧ kopfN t / 64 < 2)
+    simp only [decodeCRex] at h
+    split at h
+    · omega
+    · omega
+    · omega
+    · match t, h with
+      | [], h => simp at h
+      | m :: t2, h =>
+        show _ ∨ _ ∨ _ ∨ (_ ∧ byteNat m / 64 < 2)
+        simp only at h
+        split at h <;> first | omega | simp at h
+    · match t, h with
+      | [], h => simp at h
+      | m :: t2, h =>
+        show _ ∨ _ ∨ _ ∨ (_ ∧ byteNat m / 64 < 2)
+        simp only at h
+        split at h <;> first | omega | simp at h
+    · simp at h
+
+/-- COMPACT signature over arbitrary input. (`decodeC` is unfolded once and
+    its list match reduced by `simp only`; its numeric-literal opcode
+    match is then split, never handed to `simp [decodeC]`, whose equation
+    lemmas for that match exceed the heartbeat budget.) -/
+theorem decodeC_sig (bs : List Byte) (x : CompactDecodiert × List Byte)
+    (h : decodeC bs = some x) : famOf bs = .compact := by
+  rcases bs with _ | ⟨b, _ | ⟨b2, t⟩⟩
+  · cases h
+  · rw [famOf_cons]
+    apply famSig_compact
+    unfold decodeC at h
+    simp only at h
+    repeat' split at h
+    all_goals first
+      | (simp at h; done)
+      | omega
+      | (simp [decodeCRex] at h; done)
+  · rw [famOf_cons2]
+    apply famSig_compact
+    unfold decodeC at h
+    simp only at h
+    repeat' split at h
+    all_goals first
+      | (simp at h; done)
+      | omega
+      | (have := decodeCRex_sig _ _ _ x h
+         simp only [kopfN_cons, List.drop_succ_cons, List.drop_zero] at this
+         omega)
+
+theorem rexCoreBits_sig (r : Byte) (p : Nat × Nat × Nat)
+    (h : rexCoreBits r = some p) : 72 ≤ byteNat r ∧ byteNat r < 80 := by
+  unfold rexCoreBits at h
+  dsimp only at h
+  split at h
+  · assumption
+  · simp at h
+
+theorem decodeCoreF7_sig (rh bh : Nat) (bs : List Byte)
+    (x : CoreDecodiert × List Byte) (h : decodeCoreF7 rh bh bs = some x) :
+    kopfN bs / 8 % 8 = 2 ∨ kopfN bs / 8 % 8 = 3 := by
+  match bs, h with
+  | [], h => simp [decodeCoreF7] at h
+  | m :: t, h =>
+    show byteNat m / 8 % 8 = 2 ∨ byteNat m / 8 % 8 = 3
+    simp only [decodeCoreF7] at h
+    split at h
+    · split at h <;> first | omega | simp at h
+    · simp at h
+
+theorem decodeCore0F_sig (rh bh : Nat) (bs : List Byte)
+    (x : CoreDecodiert × List Byte) (h : decodeCore0F rh bh bs = some x) :
+    kopfN bs = 182 ∨ kopfN bs = 183 ∨ kopfN bs = 190 ∨ kopfN bs = 191 := by
+  match bs, h with
+  | [], h => simp [decodeCore0F] at h
+  | [_], h => simp [decodeCore0F] at h
+  | op2 :: m :: t, h =>
+    show byteNat op2 = 182 ∨ byteNat op2 = 183 ∨ byteNat op2 = 190 ∨
+      byteNat op2 = 191
+    simp only [decodeCore0F] at h
+    split at h
+    · split at h
+      · split at h <;> first | omega | simp at h
+      · simp at h
+    · simp at h
+
+/-- After the core REX prefix: LEA, a register-register logic row, NOT/NEG
+    (`F7` digit 2/3), a `0F` extension row or MOVSXD. -/
+theorem decodeCoreTail_sig (rh xh bh : Nat) (bs : List Byte)
+    (x : CoreDecodiert × List Byte) (h : decodeCoreTail rh xh bh bs = some x) :
+    kopfN bs = 141 ∨ kopfN bs = 33 ∨ kopfN bs = 9 ∨ kopfN bs = 133 ∨
+      kopfN bs = 99 ∨
+      (kopfN bs = 247 ∧ (kopfN (bs.drop 1) / 8 % 8 = 2 ∨
+        kopfN (bs.drop 1) / 8 % 8 = 3)) ∨
+      (kopfN bs = 15 ∧ (kopfN (bs.drop 1) = 182 ∨ kopfN (bs.drop 1) = 183 ∨
+        kopfN (bs.drop 1) = 190 ∨ kopfN (bs.drop 1) = 191)) := by
+  match bs, h with
+  | [], h => simp [decodeCoreTail] at h
+  | op :: t, h =>
+    show byteNat op = 141 ∨ byteNat op = 33 ∨ byteNat op = 9 ∨
+      byteNat op = 133 ∨ byteNat op = 99 ∨
+      (byteNat op = 247 ∧ (kopfN t / 8 % 8 = 2 ∨ kopfN t / 8 % 8 = 3)) ∨
+      (byteNat op = 15 ∧ (kopfN t = 182 ∨ kopfN t = 183 ∨ kopfN t = 190 ∨
+        kopfN t = 191))
+    simp only [decodeCoreTail] at h
+    by_cases h141 : byteNat op = 141
+    · exact Or.inl h141
+    · have hb : (byteNat op == 141) = false := by simpa using h141
+      rw [if_neg (by simp [hb])] at h
+      split at h
+      · simp at h
+      · split at h
+        · omega
+        · omega
+        · omega
+        · have := decodeCoreF7_sig rh bh t x h
+          omega
+        · have := decodeCore0F_sig rh bh t x h
+          omega
+        · omega
+        · simp at h
+
+/-- INTEGER-CORE signature over arbitrary input. -/
+theorem decodeCore_sig (bs : List Byte) (x : CoreDecodiert × List Byte)
+    (h : decodeCore bs = some x) : famOf bs = .core := by
+  match bs, h with
+  | [], h => simp [decodeCore] at h
+  | r :: t, h =>
+    rw [famOf_cons]
+    apply famSig_core
+    simp only [decodeCore] at h
+    split at h
+    · simp at h
+    · rename_i p hr
+      have h1 := rexCoreBits_sig r _ hr
+      have h2 := decodeCoreTail_sig _ _ _ t x h
+      omega
 
 /-! ### Disjointness and the unified decoder. -/
 
@@ -781,6 +1116,18 @@ theorem decF_sig (F : Fam) (bs : List Byte) (x : InstrDecoded × List Byte)
     · rename_i hy
       exact decodeCmov_sig bs _ hy
     · simp at h
+  | compact =>
+    simp only [decF] at h
+    split at h
+    · rename_i hy
+      exact decodeC_sig bs _ hy
+    · simp at h
+  | core =>
+    simp only [decF] at h
+    split at h
+    · rename_i hy
+      exact decodeCore_sig bs _ hy
+    · simp at h
 
 /-- DISJOINTNESS: over an ARBITRARY byte string at most one family decoder
     accepts. -/
@@ -809,6 +1156,12 @@ theorem decF_famI (F : Fam) (bs : List Byte) (x : InstrDecoded × List Byte)
     simp only [decF] at h
     split at h <;> first | (cases h; rfl) | simp at h
   | cmov =>
+    simp only [decF] at h
+    split at h <;> first | (cases h; rfl) | simp at h
+  | compact =>
+    simp only [decF] at h
+    split at h <;> first | (cases h; rfl) | simp at h
+  | core =>
     simp only [decF] at h
     split at h <;> first | (cases h; rfl) | simp at h
 
@@ -1024,6 +1377,142 @@ theorem decodeCmov_verbraucht (bs : List Byte) (v : Bedingung × Register × Reg
          omega)
       | simp at h
 
+/-! ### Consumed length of the two new families over ARBITRARY input.
+
+    `CompactForms.lean` and `IntegerCore.lean` prove lengths only for
+    encoder output (their CUTS). The arbitrary-input facts the unified
+    decoder needs are proved here, layer by layer, from the decoders
+    themselves (reusing `parseLe32_len` from `DecodingCoverage.lean`). -/
+
+set_option hygiene false in
+/-- Leaf discharge of the arbitrary-input length lemmas: a refused leaf,
+    a constructor clash, or an accepted leaf whose consumed bytes are
+    counted (with `parseLe32_len` for a 32-bit immediate). -/
+macro "blatt_laenge" : tactic => `(tactic| first
+  | (simp at h; done)
+  | (simp only [Option.some.injEq, Prod.mk.injEq] at h
+     obtain ⟨rfl, rfl⟩ := h
+     dsimp only
+     (try have := parseLe32_len _ _ _ ‹parseLe32 _ = some _›)
+     (try simp only [List.length_cons, List.length_nil, true_and, and_true] at *) <;>
+     omega))
+
+theorem decodeMemC_len (isLoad mod01 : Bool) (rBit bBit reg rm : Nat)
+    (bs : List Byte) (d : CompactDecodiert) (rest : List Byte)
+    (h : decodeMemC isLoad mod01 rBit bBit reg rm bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length + 3 ∧ 3 ≤ d.laenge ∧ d.laenge ≤ 5 := by
+  rcases bs with _ | ⟨b, _ | ⟨c, t⟩⟩ <;> simp only [decodeMemC] at h <;>
+    (repeat' split at h)
+  all_goals blatt_laenge
+
+theorem decodeCRex_len (rBit bBit : Nat) (bs : List Byte) (d : CompactDecodiert)
+    (rest : List Byte) (h : decodeCRex rBit bBit bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length + 1 ∧ 3 ≤ d.laenge ∧ d.laenge ≤ 7 := by
+  rcases bs with _ | ⟨op, _ | ⟨m, _ | ⟨c, t⟩⟩⟩ <;> simp only [decodeCRex] at h <;>
+    (repeat' split at h)
+  all_goals first
+    | blatt_laenge
+    | (have := decodeMemC_len _ _ _ _ _ _ _ d rest h
+       simp only [List.length_cons, List.length_nil] at *
+       omega)
+
+theorem decodeC_verbraucht (bs : List Byte) (d : CompactDecodiert)
+    (rest : List Byte) (h : decodeC bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length ∧ 1 ≤ d.laenge ∧ d.laenge ≤ 15 := by
+  rcases bs with _ | ⟨b, _ | ⟨b2, t⟩⟩
+  · cases h
+  · unfold decodeC at h
+    simp only at h
+    repeat' split at h
+    all_goals first
+      | blatt_laenge
+      | (have := decodeCRex_len _ _ _ d rest h
+         simp only [List.length_cons, List.length_nil] at *
+         omega)
+  · unfold decodeC at h
+    simp only at h
+    repeat' split at h
+    all_goals first
+      | blatt_laenge
+      | (have := decodeCRex_len _ _ _ d rest h
+         simp only [List.length_cons] at *
+         omega)
+
+theorem decodeCoreRegReg_len (mk : Register → Register → CoreBefehl) (rh bh : Nat)
+    (bs : List Byte) (d : CoreDecodiert) (rest : List Byte)
+    (h : decodeCoreRegReg mk rh bh bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length + 2 ∧ d.laenge = 3 := by
+  rcases bs with _ | ⟨m, t⟩ <;> unfold decodeCoreRegReg at h <;> simp only at h <;>
+    (repeat' split at h)
+  all_goals blatt_laenge
+
+theorem decodeCoreF7_len (rh bh : Nat) (bs : List Byte) (d : CoreDecodiert)
+    (rest : List Byte) (h : decodeCoreF7 rh bh bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length + 2 ∧ d.laenge = 3 := by
+  rcases bs with _ | ⟨m, t⟩ <;> unfold decodeCoreF7 at h <;> simp only at h <;>
+    (repeat' split at h)
+  all_goals blatt_laenge
+
+theorem decodeCore0F_len (rh bh : Nat) (bs : List Byte) (d : CoreDecodiert)
+    (rest : List Byte) (h : decodeCore0F rh bh bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length + 2 ∧ d.laenge = 4 := by
+  rcases bs with _ | ⟨op2, _ | ⟨m, t⟩⟩ <;> unfold decodeCore0F at h <;>
+    simp only at h <;> (repeat' split at h)
+  all_goals blatt_laenge
+
+theorem decodeCoreMovsxd_len (rh bh : Nat) (bs : List Byte) (d : CoreDecodiert)
+    (rest : List Byte) (h : decodeCoreMovsxd rh bh bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length + 2 ∧ d.laenge = 3 := by
+  rcases bs with _ | ⟨m, t⟩ <;> unfold decodeCoreMovsxd at h <;> simp only at h <;>
+    (repeat' split at h)
+  all_goals blatt_laenge
+
+theorem decodeCoreLea_len (rh xh bh : Nat) (bs : List Byte) (d : CoreDecodiert)
+    (rest : List Byte) (h : decodeCoreLea rh xh bh bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length + 2 ∧ d.laenge = 8 := by
+  rcases bs with _ | ⟨modrm, _ | ⟨sib, t⟩⟩ <;> unfold decodeCoreLea at h <;>
+    simp only at h <;> (repeat' split at h)
+  all_goals blatt_laenge
+
+theorem decodeCoreTail_len (rh xh bh : Nat) (bs : List Byte) (d : CoreDecodiert)
+    (rest : List Byte) (h : decodeCoreTail rh xh bh bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length + 1 ∧ 3 ≤ d.laenge ∧ d.laenge ≤ 8 := by
+  rcases bs with _ | ⟨op, t⟩
+  · cases h
+  · unfold decodeCoreTail at h
+    simp only at h
+    repeat' split at h
+    all_goals first
+      | (simp at h; done)
+      | (have := decodeCoreLea_len _ _ _ t d rest h
+         simp only [List.length_cons] at *
+         omega)
+      | (have := decodeCoreRegReg_len _ _ _ t d rest h
+         simp only [List.length_cons] at *
+         omega)
+      | (have := decodeCoreF7_len _ _ t d rest h
+         simp only [List.length_cons] at *
+         omega)
+      | (have := decodeCore0F_len _ _ t d rest h
+         simp only [List.length_cons] at *
+         omega)
+      | (have := decodeCoreMovsxd_len _ _ t d rest h
+         simp only [List.length_cons] at *
+         omega)
+
+theorem decodeCore_verbraucht (bs : List Byte) (d : CoreDecodiert)
+    (rest : List Byte) (h : decodeCore bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length ∧ 1 ≤ d.laenge ∧ d.laenge ≤ 15 := by
+  rcases bs with _ | ⟨r, t⟩
+  · cases h
+  · unfold decodeCore at h
+    simp only at h
+    split at h
+    · simp at h
+    · have := decodeCoreTail_len _ _ _ t d rest h
+      simp only [List.length_cons]
+      omega
+
 /-- CONSUMED-LENGTH AGREEMENT over ARBITRARY input: every successful unified
     decode consumes exactly its stated length within 1..15. -/
 theorem decodeI_verbraucht (bs : List Byte) (d : InstrDecoded)
@@ -1080,6 +1569,22 @@ theorem decodeI_verbraucht (bs : List Byte) (d : InstrDecoded)
       cases hF
       exact ⟨this, show 1 ≤ 4 from by omega, show 4 ≤ 15 from by omega⟩
     · simp at hF
+  | compact =>
+    simp only [decF] at hF
+    split at hF
+    · rename_i y r hy
+      have := decodeC_verbraucht bs y r hy
+      cases hF
+      exact this
+    · simp at hF
+  | core =>
+    simp only [decF] at hF
+    split at hF
+    · rename_i y r hy
+      have := decodeCore_verbraucht bs y r hy
+      cases hF
+      exact this
+    · simp at hF
 
 /-! ## 5. Adding a further family: four mechanical steps.
 
@@ -1134,7 +1639,17 @@ theorem decodeI_verbraucht (bs : List Byte) (d : InstrDecoded)
      (`imm8 : Nat` above 255 has no encoding: `encodeShift` truncates and the
      decoder returns the truncated count -- see the probe in
      `ISAWitnesses.lean`).
-   - The disjointness theorem is over the five admitted family decoders.
+   - The disjointness theorem is over the eight admitted family decoders
+     (seven families, cond counted twice). Joining CompactForms and
+     IntegerCore changed `famSig` and STRENGTHENED the helper signature
+     lemmas (`decodeNachRex_sig` now also pins the Group-3 digit,
+     `decodeRex_sig` pins the pilot opcode set and the ModRM mode of
+     `89`/`8B`); `famSig_sonst`/`famSig_rexPilot`/`famSig_muldiv` take the
+     correspondingly sharper premises. The main theorems keep their
+     statements.
+   - Integer-core encodings were previously refused by `decodeI`: one old
+     poison probe (`48 0F B6 C1`, REX.W MOVZX) now decodes, correctly, as
+     `movzx64From8 rax rcx`; `ISAWitnesses.lean` records the change.
      It says nothing about bytes NO family accepts (they are refused) and
      nothing about x86 instructions outside the selected subset.
    - No hardware correspondence: decoding and stepping agree with the
@@ -1149,12 +1664,16 @@ theorem decodeI_verbraucht (bs : List Byte) (d : InstrDecoded)
 #print axioms stepI_narrow
 #print axioms stepI_setcc
 #print axioms stepI_cmov
+#print axioms stepI_compact
+#print axioms stepI_core
 #print axioms laufI_append
 #print axioms laufI_pilot
 #print axioms mem_alleFam
+#print axioms encodeC_len
 #print axioms encodeI_len
 #print axioms laengeOk_encodeI
 #print axioms decF_encodeI
+#print axioms kopfN_cons
 #print axioms famOf_cons
 #print axioms famOf_cons2
 #print axioms famOf_cons3
@@ -1166,9 +1685,12 @@ theorem decodeI_verbraucht (bs : List Byte) (d : InstrDecoded)
 #print axioms famSig_narrow
 #print axioms famSig_setcc
 #print axioms famSig_cmov
+#print axioms famSig_compact
+#print axioms famSig_core
 #print axioms decodeShiftOp_sig
 #print axioms decodeShift_sig
 #print axioms decodeImulRex_sig
+#print axioms decodeF7Modrm_sig
 #print axioms decodeNachRex_sig
 #print axioms decodeNachRexR_sig
 #print axioms decodeMulDiv_sig
@@ -1180,8 +1702,16 @@ theorem decodeI_verbraucht (bs : List Byte) (d : InstrDecoded)
 #print axioms decodeSetCC_sig
 #print axioms decodeCmovNach_sig
 #print axioms decodeCmov_sig
+#print axioms decodeModrm_sig
 #print axioms decodeRex_sig
 #print axioms decode_sig
+#print axioms decodeCRex_sig
+#print axioms decodeC_sig
+#print axioms rexCoreBits_sig
+#print axioms decodeCoreF7_sig
+#print axioms decodeCore0F_sig
+#print axioms decodeCoreTail_sig
+#print axioms decodeCore_sig
 #print axioms decF_sig
 #print axioms familien_disjunkt
 #print axioms decF_famI
@@ -1199,6 +1729,16 @@ theorem decodeI_verbraucht (bs : List Byte) (d : InstrDecoded)
 #print axioms decodeSetCC_verbraucht
 #print axioms decodeCmovNach_rest
 #print axioms decodeCmov_verbraucht
+#print axioms decodeMemC_len
+#print axioms decodeCRex_len
+#print axioms decodeC_verbraucht
+#print axioms decodeCoreRegReg_len
+#print axioms decodeCoreF7_len
+#print axioms decodeCore0F_len
+#print axioms decodeCoreMovsxd_len
+#print axioms decodeCoreLea_len
+#print axioms decodeCoreTail_len
+#print axioms decodeCore_verbraucht
 #print axioms decodeI_verbraucht
 
 end Gabbro.Grammatik.X86
