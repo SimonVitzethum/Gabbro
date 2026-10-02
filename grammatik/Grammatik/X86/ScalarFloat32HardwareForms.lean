@@ -32,6 +32,7 @@ import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
 import Grammatik.X86.Byteschritt
 import Grammatik.X86.ScalarFloat
+import Grammatik.X86.ScalarFloatCodec
 
 namespace Gabbro.Grammatik.X86
 
@@ -917,12 +918,342 @@ theorem ucomissFlags_gleich :
       = ⟨false, false, some false, true, false, false⟩ := by
   decide
 
+/-! ## 7. REX-selected byte codec for the scalar single forms.
+
+  Canonical subset stated from the opcode map (F3 prefix for scalar
+  single, F2 for the double-sourced CVTSD2SS, no prefix for UCOMISS;
+  0F escape; opcodes 10/11 moves, 58/5C/59/5E arithmetic, 2E compare,
+  5A conversions, 2A/2C integer conversions), exactly like the accepted
+  F2 double rows state theirs: an implementation contract, never a
+  hardware correspondence claim. REX.R extends the ModRM reg field
+  (destination XMM, or destination GPR for CVTTSS2SI), REX.B the r/m
+  field (source XMM, source GPR, or base GPR); REX.X is refused (no
+  index in this subset); REX.W selects the integer width on the two
+  integer conversions and is refused elsewhere as non-canonical. The
+  decoder parses actual bytes and never accepts a caller-supplied
+  `S32Decodiert` as fetched evidence. -/
+
+/-- High bit of an XMM code (the REX.R/B side). -/
+def fpXmmHoch (r : XmmReg) : Nat := fpXmmCode r / 8
+
+/-- Low three bits of an XMM code (the ModRM field). -/
+def fpXmmTief (r : XmmReg) : Nat := fpXmmCode r % 8
+
+/-- Full 4-bit XMM decode (REX-selected high registers included). -/
+def codeXmmVoll : Nat → Option XmmReg
+  | 0 => some .xmm0 | 1 => some .xmm1 | 2 => some .xmm2 | 3 => some .xmm3
+  | 4 => some .xmm4 | 5 => some .xmm5 | 6 => some .xmm6 | 7 => some .xmm7
+  | 8 => some .xmm8 | 9 => some .xmm9 | 10 => some .xmm10 | 11 => some .xmm11
+  | 12 => some .xmm12 | 13 => some .xmm13 | 14 => some .xmm14
+  | 15 => some .xmm15
+  | _ => none
+
+/-- Decoding inverts encoding on every XMM register, high included. -/
+theorem codeXmmVoll_fpXmmCode (r : XmmReg) :
+    codeXmmVoll (fpXmmCode r) = some r := by
+  cases r <;> rfl
+
+/-- Every XMM code splits into its high bit and low field. -/
+theorem fpXmmCode_split (r : XmmReg) :
+    fpXmmHoch r * 8 + fpXmmTief r = fpXmmCode r := by
+  cases r <;> decide
+
+/-- Optional REX byte: present iff W, R or B is set (X stays 0). -/
+def s32Rex (w r b : Nat) : List Byte :=
+  if w == 0 && r == 0 && b == 0 then []
+  else [natByte (64 + w * 8 + r * 4 + b)]
+
+/-- No high bits and no width bit means no REX byte. -/
+theorem s32Rex_kein : s32Rex 0 0 0 = [] := by
+  decide
+
+/-- REX.W+R+B for a wide high-destination pair is `0x4D`. -/
+theorem s32Rex_hoch_hoch : s32Rex 1 1 1 = [natByte 77] := by
+  decide
+
+/-- A byte is a REX prefix iff it lies in `0x40..0x4F`. -/
+def s32IstRex (b : Byte) : Bool :=
+  decide (64 ≤ byteNat b ∧ byteNat b < 80)
+
+/-- REX bits from the prefix value: W, R, X, B. -/
+def s32RexBits (n : Nat) : Nat × Nat × Nat × Nat :=
+  (n / 8 % 2, n / 4 % 2, n / 2 % 2, n % 2)
+
+/-- Canonical scalar-single register bytes: optional REX, prefix, 0F,
+    opcode, ModRM mod=11. -/
+def s32EncodeRR (vor op : Nat) (dstCode srcCode : Nat) (w r b : Nat) :
+    List Byte :=
+  s32Rex w r b
+    ++ [natByte vor, natByte 15, natByte op, modrmReg dstCode srcCode]
+
+/-- Canonical scalar-single load bytes: optional REX, prefix, 0F,
+    opcode, ModRM mod=10, disp32 (SIB 36 iff the low base code is 4). -/
+def s32EncodeLade (vor op : Nat) (dstCode : Nat) (base : Register)
+    (d : BitVec 32) (w r b : Nat) : List Byte :=
+  let head := s32Rex w r b
+    ++ [natByte vor, natByte 15, natByte op, modrmMem dstCode (regLow base)]
+  if regLow base == 4 then head ++ natByte 36 :: leBytes32 d
+  else head ++ leBytes32 d
+
+/-- ADDSS register bytes: F3 0F 58 /r. -/
+def s32EncodeAddssRR (dst src : XmmReg) : List Byte :=
+  s32EncodeRR 243 88 (fpXmmCode dst) (fpXmmCode src) 0
+    (fpXmmHoch dst) (fpXmmHoch src)
+
+/-- SUBSS register bytes: F3 0F 5C /r. -/
+def s32EncodeSubssRR (dst src : XmmReg) : List Byte :=
+  s32EncodeRR 243 92 (fpXmmCode dst) (fpXmmCode src) 0
+    (fpXmmHoch dst) (fpXmmHoch src)
+
+/-- MULSS register bytes: F3 0F 59 /r. -/
+def s32EncodeMulssRR (dst src : XmmReg) : List Byte :=
+  s32EncodeRR 243 89 (fpXmmCode dst) (fpXmmCode src) 0
+    (fpXmmHoch dst) (fpXmmHoch src)
+
+/-- DIVSS register bytes: F3 0F 5E /r. -/
+def s32EncodeDivssRR (dst src : XmmReg) : List Byte :=
+  s32EncodeRR 243 94 (fpXmmCode dst) (fpXmmCode src) 0
+    (fpXmmHoch dst) (fpXmmHoch src)
+
+/-- ADDSS memory bytes: F3 0F 58 /r, mod=10, disp32. -/
+def s32EncodeAddssRM (dst : XmmReg) (base : Register)
+    (d : BitVec 32) : List Byte :=
+  s32EncodeLade 243 88 (fpXmmCode dst) base d 0
+    (fpXmmHoch dst) (regHigh base)
+
+/-- MOVSS register-merge bytes: F3 0F 10 /r, mod=11. -/
+def s32EncodeMovssRR (dst src : XmmReg) : List Byte :=
+  s32EncodeRR 243 16 (fpXmmCode dst) (fpXmmCode src) 0
+    (fpXmmHoch dst) (fpXmmHoch src)
+
+/-- MOVSS load bytes: F3 0F 10 /r, mod=10, disp32. -/
+def s32EncodeMovssLade (dst : XmmReg) (base : Register)
+    (d : BitVec 32) : List Byte :=
+  s32EncodeLade 243 16 (fpXmmCode dst) base d 0
+    (fpXmmHoch dst) (regHigh base)
+
+/-- MOVSS store bytes: F3 0F 11 /r, mod=10, disp32. -/
+def s32EncodeMovssSpeichere (base : Register) (src : XmmReg)
+    (d : BitVec 32) : List Byte :=
+  s32EncodeLade 243 17 (fpXmmCode src) base d 0
+    (fpXmmHoch src) (regHigh base)
+
+/-- UCOMISS register bytes: 0F 2E /r, no prefix. -/
+def s32EncodeUcomissRR (lhs rhs : XmmReg) : List Byte :=
+  s32Rex 0 (fpXmmHoch lhs) (fpXmmHoch rhs)
+    ++ [natByte 15, natByte 46, modrmReg (fpXmmCode lhs) (fpXmmCode rhs)]
+
+/-- UCOMISS memory bytes: 0F 2E /r, mod=10, disp32, no prefix. -/
+def s32EncodeUcomissRM (lhs : XmmReg) (base : Register)
+    (d : BitVec 32) : List Byte :=
+  let head := s32Rex 0 (fpXmmHoch lhs) (regHigh base)
+    ++ [natByte 15, natByte 46, modrmMem (fpXmmCode lhs) (regLow base)]
+  if regLow base == 4 then head ++ natByte 36 :: leBytes32 d
+  else head ++ leBytes32 d
+
+/-- CVTSS2SD register bytes: F3 0F 5A /r. -/
+def s32EncodeCvtss2sdRR (dst src : XmmReg) : List Byte :=
+  s32EncodeRR 243 90 (fpXmmCode dst) (fpXmmCode src) 0
+    (fpXmmHoch dst) (fpXmmHoch src)
+
+/-- CVTSD2SS register bytes: F2 0F 5A /r. -/
+def s32EncodeCvtsd2ssRR (dst src : XmmReg) : List Byte :=
+  s32EncodeRR 242 90 (fpXmmCode dst) (fpXmmCode src) 0
+    (fpXmmHoch dst) (fpXmmHoch src)
+
+/-- CVTSI2SS bytes: F3 0F 2A /r; REX.W selects the 64-bit source. -/
+def s32EncodeCvtsi2ss (dst : XmmReg) (src : Register)
+    (is64 : Bool) : List Byte :=
+  s32EncodeRR 243 42 (fpXmmCode dst) (regCode src)
+    (if is64 then 1 else 0) (fpXmmHoch dst) (regHigh src)
+
+/-- CVTTSS2SI bytes: F3 0F 2C /r (reg=GPR destination);
+    REX.W selects the 64-bit destination. -/
+def s32EncodeCvttss2si (dst : Register) (src : XmmReg)
+    (is64 : Bool) : List Byte :=
+  s32EncodeRR 243 44 (regCode dst) (fpXmmCode src)
+    (if is64 then 1 else 0) (regHigh dst) (fpXmmHoch src)
+
+/-- Register-direct decode after prefix, escape, opcode and ModRM.
+    `fam` is 0 for F3, 1 for F2, 2 for no prefix; `rex` records whether
+    a REX byte was consumed (the decoded length). The opcode row selects
+    the operand kinds first (a 4-bit code decodes as both XMM and GPR,
+    so kind selection by opcode is load-bearing, not cosmetic). -/
+def s32DecodeReg (w rBit bBit fam op reg rm : Nat) (rex : Bool)
+    (rest : List Byte) : Option (S32Decodiert × List Byte) :=
+  let len := (if rex then 1 else 0) + (if fam == 2 then 3 else 4)
+  match fam, op with
+  | 0, 42 =>
+    match codeXmmVoll (rBit * 8 + reg), codeReg (bBit * 8 + rm) with
+    | some xd, some gs => some (⟨.cvtsi2ss xd gs (w == 1), len⟩, rest)
+    | _, _ => none
+  | 0, 44 =>
+    match codeReg (rBit * 8 + reg), codeXmmVoll (bBit * 8 + rm) with
+    | some gd, some xs => some (⟨.cvttss2si gd xs (w == 1), len⟩, rest)
+    | _, _ => none
+  | _, _ =>
+    match codeXmmVoll (rBit * 8 + reg), codeXmmVoll (bBit * 8 + rm) with
+    | some xd, some xs =>
+      match fam, op with
+      | 0, 16 =>
+        if w == 0 then some (⟨.movssRR xd xs, len⟩, rest) else none
+      | 0, 88 =>
+        if w == 0 then some (⟨.addssRR xd xs, len⟩, rest) else none
+      | 0, 92 =>
+        if w == 0 then some (⟨.subssRR xd xs, len⟩, rest) else none
+      | 0, 89 =>
+        if w == 0 then some (⟨.mulssRR xd xs, len⟩, rest) else none
+      | 0, 94 =>
+        if w == 0 then some (⟨.divssRR xd xs, len⟩, rest) else none
+      | 0, 90 =>
+        if w == 0 then some (⟨.cvtss2sdRR xd xs, len⟩, rest) else none
+      | 1, 90 =>
+        if w == 0 then some (⟨.cvtsd2ssRR xd xs, len⟩, rest) else none
+      | 2, 46 =>
+        if w == 0 then some (⟨.ucomissRR xd xs, len⟩, rest) else none
+      | _, _ => none
+    | _, _ => none
+
+/-- One memory row: the decoded form with its consumed length. -/
+def s32DecodeMemZeile (w fam op : Nat) (len : Nat)
+    (xd : XmmReg) (base : Register) (d : BitVec 32)
+    (rest : List Byte) : Option (S32Decodiert × List Byte) :=
+  match fam, op with
+  | 0, 16 =>
+    if w == 0 then some (⟨.movssLade xd base d, len⟩, rest) else none
+  | 0, 17 =>
+    if w == 0 then some (⟨.movssSpeichere base xd d, len⟩, rest) else none
+  | 0, 88 =>
+    if w == 0 then some (⟨.addssRM xd base d, len⟩, rest) else none
+  | 0, 92 =>
+    if w == 0 then some (⟨.subssRM xd base d, len⟩, rest) else none
+  | 0, 89 =>
+    if w == 0 then some (⟨.mulssRM xd base d, len⟩, rest) else none
+  | 0, 94 =>
+    if w == 0 then some (⟨.divssRM xd base d, len⟩, rest) else none
+  | 2, 46 =>
+    if w == 0 then some (⟨.ucomissRM xd base d, len⟩, rest) else none
+  | _, _ => none
+
+/-- Memory decode after ModRM mod=10: SIB 36 iff the low base code is 4
+    (the pilot rule); conversions have no memory row here. -/
+def s32DecodeMem (w rBit bBit fam op reg rm : Nat) (rex : Bool) :
+    List Byte → Option (S32Decodiert × List Byte)
+  | [] => none
+  | b :: rest =>
+    let basis := (if rex then 1 else 0) + (if fam == 2 then 7 else 8)
+    if rm == 4 then
+      match rest with
+      | [] => none
+      | sib :: rest2 =>
+        if byteNat sib == 36 then
+          match parseLe32 rest2 with
+          | none => none
+          | some (d, rest3) =>
+            match codeXmmVoll (rBit * 8 + reg),
+              codeReg (bBit * 8 + rm) with
+            | some xd, some base =>
+              s32DecodeMemZeile w fam op (basis + 1) xd base d rest3
+            | _, _ => none
+        else none
+    else
+      match parseLe32 (b :: rest) with
+      | none => none
+      | some (d, rest3) =>
+        match codeXmmVoll (rBit * 8 + reg),
+          codeReg (bBit * 8 + rm) with
+        | some xd, some base =>
+          s32DecodeMemZeile w fam op basis xd base d rest3
+        | _, _ => none
+
+/-- F3-prefix dispatch: moves, arithmetic, F3 conversions, int rows. -/
+def s32DecodeF3 (w rBit bBit op : Nat) (rex : Bool) :
+    List Byte → Option (S32Decodiert × List Byte)
+  | [] => none
+  | m :: rest =>
+    let reg := byteNat m / 8 % 8
+    let rm := byteNat m % 8
+    match byteNat m / 64 with
+    | 3 => s32DecodeReg w rBit bBit 0 op reg rm rex rest
+    | 2 => s32DecodeMem w rBit bBit 0 op reg rm rex rest
+    | _ => none
+
+/-- F2-prefix dispatch: only CVTSD2SS, register-direct only. -/
+def s32DecodeF2 (w rBit bBit op : Nat) (rex : Bool) :
+    List Byte → Option (S32Decodiert × List Byte)
+  | [] => none
+  | m :: rest =>
+    let reg := byteNat m / 8 % 8
+    let rm := byteNat m % 8
+    match byteNat m / 64 with
+    | 3 => s32DecodeReg w rBit bBit 1 op reg rm rex rest
+    | _ => none
+
+/-- No-prefix dispatch: only UCOMISS, register or memory. -/
+def s32DecodeNP (w rBit bBit op : Nat) (rex : Bool) :
+    List Byte → Option (S32Decodiert × List Byte)
+  | [] => none
+  | m :: rest =>
+    let reg := byteNat m / 8 % 8
+    let rm := byteNat m % 8
+    match byteNat m / 64 with
+    | 3 => s32DecodeReg w rBit bBit 2 op reg rm rex rest
+    | 2 => s32DecodeMem w rBit bBit 2 op reg rm rex rest
+    | _ => none
+
+/-- Prefix dispatcher after an optional REX byte. -/
+def s32NachRex (w r b : Nat) (rex : Bool) :
+    List Byte → Option (S32Decodiert × List Byte)
+  | [] => none
+  | p :: rest =>
+    if byteNat p == 243 then
+      match rest with
+      | [] => none
+      | e :: rest2 =>
+        if byteNat e == 15 then
+          match rest2 with
+          | [] => none
+          | op :: rest3 => s32DecodeF3 w r b (byteNat op) rex rest3
+        else none
+    else if byteNat p == 242 then
+      match rest with
+      | [] => none
+      | e :: rest2 =>
+        if byteNat e == 15 then
+          match rest2 with
+          | [] => none
+          | op :: rest3 =>
+            if byteNat op == 90 then
+              s32DecodeF2 w r b (byteNat op) rex rest3
+            else none
+        else none
+    else if byteNat p == 15 then
+      match rest with
+      | [] => none
+      | op :: rest2 =>
+        if byteNat op == 46 then s32DecodeNP w r b (byteNat op) rex rest2
+        else none
+    else none
+
+/-- Decode the first canonical scalar-single instruction from actual
+    bytes, returning it with its consumed length and the rest.
+    An optional REX prefix selects high registers (R/B), the integer
+    width (W), and refuses a set X bit. -/
+def s32Decode : List Byte → Option (S32Decodiert × List Byte)
+  | [] => none
+  | b :: rest =>
+    if s32IstRex b then
+      let (w, r, x, bb) := s32RexBits (byteNat b)
+      if x == 1 then none
+      else s32NachRex w r bb true rest
+    else s32NachRex 0 0 0 false (b :: rest)
+
 /- CUTS (interim):
-   §§0-6 done. OPEN next: the REX codec, the fetched byte step,
-   witnesses.
+   §§0-7 (decoders) done. OPEN next: roundtrips, refusals, the fetched
+   byte step, witnesses.
 -/
 
-#print axioms s32Schritt_movssRR_hoch
-#print axioms s32_speichere_liest_zurueck
+#print axioms codeXmmVoll_fpXmmCode
+#print axioms s32Rex_kein
 
 end Gabbro.Grammatik.X86
