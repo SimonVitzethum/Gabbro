@@ -1,12 +1,49 @@
 # MUSE-REPORT-705: Exact review of author 704 (generic port bus and precise IO permissions)
 
-CANDIDATE: 704 32415e0950420c242a0bd772ca0518f4f58a6072
+CANDIDATE: 704 af7ebf38f6d9e40b622ce4246f0f80ac64136d71
 VERDICT: ACCEPT
+
+## Re-review of the repaired snapshot (new pinned HEAD)
+
+The previous verdict on `32415e09` is superseded: the integration
+gate failed after that commit with `environment already contains
+'Gabbro.Grammatik.X86.witFp' from
+Grammatik.X86.MemoryTypeHardwareExecution` (a concurrently landing
+lane claimed the flat name; nothing was merged). The author repaired
+with commit `af7ebf38` ("namespace Bus704 against integration
+collision") and this report re-reviews ONLY the new pinned snapshot
+(HEAD `af7ebf38`, same base `dbfdc83c`, same 3 files, `clean: true`).
+
+Delta verified line by line: the module grew 956 to 964 lines, and
+the 8 added lines are exactly the lane-scope comment (6 lines),
+`namespace Bus704` and `end Bus704` (module lines 34-39 and 962).
+Every definition, statement and proof re-checked by spot grep is
+byte-identical (`tssBitFrei`, `volleKarte` basis 0 / grenze 8192,
+`archZugelassen` direct/range legs, `ordnungOk`, `latchErlaubt`,
+`tabellenErlaubt`, `mmio694Adapter`, `busValOk`,
+`bus_zeuge_gemeinsam`); all 31 `#print axioms` lines are present,
+now `Bus704`-qualified. The umbrella diff is still one additive
+import line; PATCH still touches only the 3 registered files.
+Forbidden-token word grep on the new module is clean; the new
+BUILD-EVIDENCE honestly records the failed intermediate namespace
+attempt, then `./lean-probe` `0 error(s)` with
+`Gabbro.Grammatik.X86.Bus704.*` axiom names and `./lean-bau`
+`Build completed successfully (472 jobs).` Axioms remain within
+`[propext]` / `[propext, Quot.sound]`.
+
+The repair ends the flat-name collision class (no declaration of
+this module remains at flat `X86` scope), weakens no guarantee, and
+changes no claim: consumers qualify names (`Bus704.bus660Schritt`,
+`Bus704.bus_zeuge_gemeinsam`, ...). All findings and bounded notes
+below, established on the prior snapshot, were re-confirmed
+unchanged on the new one. No live build was run in this lane (live
+tree at `4e1b256a` contains neither the candidate nor the colliding
+lane; this lane owns only this report).
 
 ## What was done
 
 Report-only exact review of the pinned author-704 snapshot
-(`.tmp/review/author-704/`, HEAD `32415e09`, base `dbfdc83c`,
+(`.tmp/review/author-704/`, HEAD `af7ebf38`, base `dbfdc83c`,
 files `MUSE-REPORT-704.md`, `grammatik/Grammatik.lean`,
 `grammatik/Grammatik/X86/DeviceBusHardwareExecution.lean`, 956 lines).
 Inspected in full sequential ranges: the complete new module
