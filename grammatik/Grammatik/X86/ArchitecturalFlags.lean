@@ -177,6 +177,230 @@ theorem cmpAf_ist_afSub (b : Breite) (x y : Wort) :
     afSubB b x y = afSub x y :=
   afSubB_ist_afSub b x y
 
+/-! ## 4. Defined/undefined effect rows.
+
+    One class per manual flag sentence. ADD/SUB/CMP/NEG define all six
+    status bits through the accepted snapshots (`add64`/`sub64`/`negWf`
+    over the canonical words, never a second adder). AND/OR/XOR/TEST
+    clear CF/OF, read SF/ZF/PF off the result and leave AF undefined
+    (`LogikGueltig`). MUL/IMUL pin only CF/OF to the accepted carry
+    evidence (`mulTragU`/`mulTragS`); SF/ZF/PF/AF are FREE here --
+    `mulFlagsU`'s preservation of the incoming SF/ZF/PF is an explicit
+    modelling choice of that producer (MulDiv.lean §2), not hardware
+    truth, and §4c exhibits it as one admissible member. DIV/IDIV
+    leave all six free. Shifts pin CF/SF/ZF/PF and OF exactly at a
+    masked count of one (accepted `SchiebeNachweis`/`schiebeZaehler`),
+    AF free. -/
+
+/-- Operation classes with distinct manual flag rows. -/
+inductive AluOp where
+  | add | sub | logik | mulU | mulS | div | shift
+  deriving DecidableEq, Repr
+
+/-- Which raw status bit the manual row defines for each class
+    (bit numbers: CF 0, PF 2, AF 4, ZF 6, SF 7, OF 11). -/
+def definiert : AluOp → Nat → Bool
+  | .add, _ => true
+  | .sub, _ => true
+  | .logik, 4 => false
+  | .logik, _ => true
+  | .mulU, 0 => true
+  | .mulU, 11 => true
+  | .mulU, _ => false
+  | .mulS, 0 => true
+  | .mulS, 11 => true
+  | .mulS, _ => false
+  | .div, _ => false
+  | .shift, 0 => true
+  | .shift, 2 => true
+  | .shift, 6 => true
+  | .shift, 7 => true
+  | .shift, _ => false
+
+/-- ADD class: the raw successor reads exactly the accepted snapshot. -/
+def addErlaubt (x y nach : Wort) : Prop :=
+  liestStatus nach = (add64 x y).2
+
+/-- SUB/CMP class: the raw successor reads exactly the accepted snapshot
+    (`schritt` evaluates `sub64` for `.cmpReg64`, so CMP is covered). -/
+def subErlaubt (x y nach : Wort) : Prop :=
+  liestStatus nach = (sub64 x y).2
+
+/-- NEG class: the raw successor agrees with the accepted `negWf`
+    snapshot on every defined bit (AF is `some` there). -/
+def negErlaubt (b : Breite) (x nach : Wort) : Prop :=
+  liestStatus nach = (negWf b x).2
+
+/-- Logic class (AND/OR/XOR/TEST): CF/OF cleared, SF/ZF/PF off the
+    result, raw AF bit free. -/
+def logikErlaubt (r nach : Wort) : Prop :=
+  rbit nach cfBit = false ∧ rbit nach ofBit = false ∧
+  rbit nach pfBit = parityEven r ∧ rbit nach zfBit = zfTest r ∧
+  rbit nach sfBit = sfTest r
+
+/-- Unsigned MUL class: only CF/OF pinned to the accepted carry
+    evidence; SF/ZF/PF/AF bits are free choices. -/
+def mulErlaubtU (x y nach : Wort) : Prop :=
+  rbit nach cfBit = mulTragU .b64 x y ∧
+  rbit nach ofBit = mulTragU .b64 x y
+
+/-- Signed MUL (IMUL) class: only CF/OF pinned, the rest free. -/
+def mulErlaubtS (x y nach : Wort) : Prop :=
+  rbit nach cfBit = mulTragS .b64 x y ∧
+  rbit nach ofBit = mulTragS .b64 x y
+
+/-- DIV/IDIV class: all six status bits free (manual: "undefined"). -/
+def divErlaubt (_nach : Wort) : Prop := True
+
+/-- Shift class at width `b`: CF/SF/ZF/PF pinned to the accepted
+    evidence, OF pinned exactly at a masked count of one (the
+    `getD`-self idiom of `SchiebeGueltig`: `none` constrains nothing),
+    AF free. -/
+def schiebErlaubt (b : Breite) (s : SchiebeNachweis) (c : Nat)
+    (nach : Wort) : Prop :=
+  rbit nach cfBit = s.trag ∧ rbit nach zfBit = zfTest s.ergebnis ∧
+  rbit nach sfBit = negB b s.ergebnis ∧
+  rbit nach pfBit = parityEven s.ergebnis ∧
+  (schiebeZaehler b c = 1 →
+    rbit nach ofBit = s.ueberlauf.getD (rbit nach ofBit))
+
+/-- Canonical raw word from five defined status bits (bit 1 set, AF bit
+    cleared, control bits cleared): the builder for adapter members. -/
+def rohAusStatus (cf pf zf sf of_ : Bool) : Wort :=
+  BitVec.ofNat 64 ((if cf then 1 else 0) + (if pf then 4 else 0) +
+    (if zf then 64 else 0) + (if sf then 128 else 0) +
+    (if of_ then 2048 else 0) + 2)
+
+/-- The builder reads back exactly the given bits. -/
+theorem rohAusStatus_bits (cf pf zf sf of_ : Bool) :
+    rbit (rohAusStatus cf pf zf sf of_) cfBit = cf ∧
+    rbit (rohAusStatus cf pf zf sf of_) pfBit = pf ∧
+    rbit (rohAusStatus cf pf zf sf of_) zfBit = zf ∧
+    rbit (rohAusStatus cf pf zf sf of_) sfBit = sf ∧
+    rbit (rohAusStatus cf pf zf sf of_) ofBit = of_ ∧
+    rbit (rohAusStatus cf pf zf sf of_) 1 = true := by
+  cases cf <;> cases pf <;> cases zf <;> cases sf <;> cases of_ <;>
+    decide
+
+/-- Any SF/ZF/PF choice joins the accepted unsigned carry evidence. -/
+theorem roh_mulU (x y : Wort) (pf zf sf : Bool) :
+    mulErlaubtU x y
+      (rohAusStatus (mulTragU .b64 x y) pf zf sf
+        (mulTragU .b64 x y)) := by
+  unfold mulErlaubtU
+  obtain ⟨hcf, -, -, -, hof, -⟩ := rohAusStatus_bits _ _ _ _ _
+  exact ⟨hcf, hof⟩
+
+/-- Any SF/ZF/PF choice joins the accepted signed carry evidence. -/
+theorem roh_mulS (x y : Wort) (pf zf sf : Bool) :
+    mulErlaubtS x y
+      (rohAusStatus (mulTragS .b64 x y) pf zf sf
+        (mulTragS .b64 x y)) := by
+  unfold mulErlaubtS
+  obtain ⟨hcf, -, -, -, hof, -⟩ := rohAusStatus_bits _ _ _ _ _
+  exact ⟨hcf, hof⟩
+
+/-- ADAPTER (unsigned MUL): the producer's deterministic snapshot
+    (`mulFlagsU`, which preserves incoming SF/ZF/PF) is one admissible
+    member of the free relation -- preservation is a choice, and this
+    exhibits a raw word carrying the same defined bits. -/
+theorem mulU_hat_roh (x y : Wort) :
+    ∃ nach, mulErlaubtU x y nach ∧ rbit nach 1 = true :=
+  ⟨_, roh_mulU x y true false true,
+    (rohAusStatus_bits _ _ _ _ _).2.2.2.2.2⟩
+
+/-- ADAPTER (signed MUL): same, for `mulFlagsS`. -/
+theorem mulS_hat_roh (x y : Wort) :
+    ∃ nach, mulErlaubtS x y nach ∧ rbit nach 1 = true :=
+  ⟨_, roh_mulS x y true false true,
+    (rohAusStatus_bits _ _ _ _ _).2.2.2.2.2⟩
+
+/-- Two legal undefined-SF choices after unsigned MUL: both admitted,
+    so no consumer may read SF there without explicit admission. -/
+theorem mulU_sf_frei (x y : Wort) :
+    ∃ n1 n2, mulErlaubtU x y n1 ∧ mulErlaubtU x y n2 ∧
+    rbit n1 sfBit = true ∧ rbit n2 sfBit = false :=
+  ⟨_, _, roh_mulU x y false false true, roh_mulU x y false false false,
+    (rohAusStatus_bits _ _ _ _ _).2.2.2.1,
+    (rohAusStatus_bits _ _ _ _ _).2.2.2.1⟩
+
+/-- ADAPTER (logic): every result word has an admitted raw word. -/
+theorem logik_hat_roh (r : Wort) :
+    ∃ nach, logikErlaubt r nach ∧ rbit nach 1 = true := by
+  refine ⟨rohAusStatus false (parityEven r) (zfTest r) (sfTest r) false,
+    ?_, ?_⟩
+  · unfold logikErlaubt
+    obtain ⟨hcf, hpf, hzf, hsf, hof, -⟩ :=
+      rohAusStatus_bits _ _ _ _ _
+    exact ⟨hcf, hof, hpf, hzf, hsf⟩
+  · obtain ⟨-, -, -, -, -, h1⟩ := rohAusStatus_bits _ _ _ _ _
+    exact h1
+
+/-- Two legal undefined-AF choices after a logic op (result zero):
+    the accepted snapshots pin `af = none`, and both raw values occur. -/
+theorem logik_af_frei :
+    ∃ n1 n2, logikErlaubt 0 n1 ∧ logikErlaubt 0 n2 ∧
+    rbit n1 afBit = false ∧ rbit n2 afBit = true := by
+  refine ⟨rohAusStatus false true true false false,
+    BitVec.ofNat 64 86, ?_, by unfold logikErlaubt; decide, by decide,
+    by decide⟩
+  unfold logikErlaubt
+  obtain ⟨hcf, hpf, hzf, hsf, hof, -⟩ :=
+    rohAusStatus_bits false true true false false
+  have hp : parityEven 0 = true := by decide
+  have hz : zfTest 0 = true := by decide
+  have hs : sfTest 0 = false := by decide
+  rw [hp, hz, hs]
+  exact ⟨hcf, hof, hpf, hzf, hsf⟩
+
+/-- DIV/IDIV: any two raw words are admitted, in particular two that
+    disagree on every status bit -- no flag survives a divide. -/
+theorem div_alles_frei :
+    ∃ n1 n2, divErlaubt n1 ∧ divErlaubt n2 ∧
+    liestStatus n1 ≠ liestStatus n2 :=
+  ⟨0, 0xFFFFFFFFFFFFFFFF, trivial, trivial, by decide⟩
+
+/-- Shift OF away from a one-count is free: both choices admitted. -/
+theorem schieb_of_frei (b : Breite) (s : SchiebeNachweis) (c : Nat)
+    (h : schiebeZaehler b c ≠ 1) :
+    ∃ n1 n2, schiebErlaubt b s c n1 ∧ schiebErlaubt b s c n2 ∧
+    rbit n1 ofBit = true ∧ rbit n2 ofBit = false := by
+  refine ⟨rohAusStatus s.trag (parityEven s.ergebnis) (zfTest s.ergebnis)
+      (negB b s.ergebnis) true,
+    rohAusStatus s.trag (parityEven s.ergebnis) (zfTest s.ergebnis)
+      (negB b s.ergebnis) false, ?_, ?_, ?_, ?_⟩
+  · unfold schiebErlaubt
+    obtain ⟨hcf, hpf, hzf, hsf, -, -⟩ := rohAusStatus_bits _ _ _ _ _
+    exact ⟨hcf, hzf, hsf, hpf, fun hc => absurd hc h⟩
+  · unfold schiebErlaubt
+    obtain ⟨hcf, hpf, hzf, hsf, -, -⟩ := rohAusStatus_bits _ _ _ _ _
+    exact ⟨hcf, hzf, hsf, hpf, fun hc => absurd hc h⟩
+  · obtain ⟨-, -, -, -, hof, -⟩ := rohAusStatus_bits _ _ _ _ _
+    exact hof
+  · obtain ⟨-, -, -, -, hof, -⟩ := rohAusStatus_bits _ _ _ _ _
+    exact hof
+
+/-- ADAPTER (shift): every accepted `SchiebeGueltig` snapshot is
+    admitted by the raw relation wherever the raw bits agree with it. -/
+theorem schiebAdapter (b : Breite) (s : SchiebeNachweis) (c : Nat)
+    (f : Flags) (nach : Wort) (hval : SchiebeGueltig b s c f)
+    (hcf : rbit nach cfBit = f.cf) (hzf : rbit nach zfBit = f.zf)
+    (hsf : rbit nach sfBit = f.sf) (hpf : rbit nach pfBit = f.pf)
+    (hof : rbit nach ofBit = f.of) :
+    schiebErlaubt b s c nach := by
+  unfold SchiebeGueltig at hval
+  unfold schiebErlaubt
+  obtain ⟨hcfv, -, hzfv, hsfv, hpfv, hofv, -⟩ := hval
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · rw [hcf, hcfv]
+  · rw [hzf, hzfv]
+  · rw [hsf, hsfv]
+  · rw [hpf, hpfv]
+  · intro hc
+    have ho := hofv hc
+    rw [hof]
+    exact ho
+
 /- CUTS:
     Skeleton plus raw word (§2) and nibble groundwork (§3 head):
     effect relation, PUSHFQ/POPFQ observers, consumer admission and
