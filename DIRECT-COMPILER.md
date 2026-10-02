@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 18:28 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 18:40 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -295,14 +295,22 @@ Last ledger refresh: **2026-10-02 18:28 UTC**. This is an operational snapshot, 
 | 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Merged after review/checks | 641: Merged after review/checks | [report](messung/muse/MUSE-REPORT-640.md) |
 | 642 | Recover preserved IR research draft from recorded edits after clone removal | Merged after review/checks | 643: Merged after review/checks | [report](messung/muse/MUSE-REPORT-642.md) |
-| 644 | Organise the next generic source-to-final-byte closure wave | Committed candidate; review/integration pending | 645: Agent working | [task](lanes/644.md) |
+| 644 | Organise the next generic source-to-final-byte closure wave | Committed candidate; review/integration pending | 645: Committed candidate; review/integration pending | [task](lanes/644.md) |
 | 646 | Direct typed statement sequence to fetched machine execution | Agent working | 647: scheduled | [task](lanes/646.md) |
-| 648 | Generic checked source-assignment byte certificate | Agent working | 649: scheduled | [task](lanes/648.md) |
+| 648 | Generic checked source-assignment byte certificate | Committed candidate; review/integration pending | 649: Agent working | [task](lanes/648.md) |
 | 650 | Growing TSO history to typed carrier W transition | Agent working | 651: scheduled | [task](lanes/650.md) |
-| 652 | Whole-word drain with real interleaved foreign accesses | Agent working | 653: scheduled | [task](lanes/652.md) |
+| 652 | Whole-word drain with real interleaved foreign accesses | Committed candidate; review/integration pending | 653: Committed candidate; review/integration pending | [task](lanes/652.md) |
 | 654 | Derived target work bound for direct source lowering | Agent working | 655: scheduled | [task](lanes/654.md) |
-| 656 | Fetched conditional byte-step flag dependency simulation | Agent working | 657: scheduled | [task](lanes/656.md) |
-| 658 | Scalar FP final-byte validator admission and MXCSR entry | Agent working | 659: scheduled | [task](lanes/658.md) |
+| 656 | Fetched conditional byte-step flag dependency simulation | Committed candidate; review/integration pending | 657: Agent working | [task](lanes/656.md) |
+| 658 | Scalar FP final-byte validator admission and MXCSR entry | Committed candidate; review/integration pending | 659: Agent working | [task](lanes/658.md) |
+| 660 | Hardware completion: coherent multicore architectural execution | Scheduled | 661: scheduled | [task](lanes/660.md) |
+| 662 | Hardware completion: LOCK atomic and fence final-byte execution | Scheduled | 663: scheduled | [task](lanes/662.md) |
+| 664 | Hardware completion: efficient full selected address encodings | Scheduled | 665: scheduled | [task](lanes/664.md) |
+| 666 | Hardware completion: practical integer width and compact encoding rows | Scheduled | 667: scheduled | [task](lanes/666.md) |
+| 668 | Hardware completion: IEEE scalar operation and conversion byte rows | Scheduled | 669: scheduled | [task](lanes/668.md) |
+| 670 | Hardware completion: precise selected fault and exception transitions | Scheduled | 671: scheduled | [task](lanes/670.md) |
+| 672 | Hardware completion: interrupts entry masking and trap hardware forms | Scheduled | 673: scheduled | [task](lanes/672.md) |
+| 674 | Hardware completion: SIMD and architectural enabled-state gates | Scheduled | 675: scheduled | [task](lanes/674.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -739,6 +747,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **593**, Independent connection review of 575, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-593.md). <!-- x86-merged:593 -->
 - 2026-10-02: publication batch checks passed for `dc1d0b32`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-02: Simon prioritised the complete selected architectural hardware model and15 productive managed models. Corrected missing explicit filename ownership in the644-659 prompts; existing drafts stay on their original topics with independent exact review and all proof/build gates. Hardware-completion wave660-675 is being registered; registration is not closure. <!-- hardware-priority-2026-10-02 -->-history
+- 2026-10-02: checked master `a31a0acf` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a31a0acf273b176a7024c093ccdbf269f41daf40 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
