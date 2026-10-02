@@ -1,7 +1,9 @@
 # MUSE-REPORT-667: Exact review of author 666 (integer width and compact encoding rows)
 
 CANDIDATE: 666 e0b372cbc0af00adf8001cf96dddeee5a890a3f6
-VERDICT: ACCEPT (bounded; details and exact OPEN scope below)
+VERDICT: ACCEPT
+
+Acceptance is bounded; details and exact OPEN scope below.
 
 ## What was reviewed
 
