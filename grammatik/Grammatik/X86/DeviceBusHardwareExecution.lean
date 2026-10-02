@@ -598,6 +598,119 @@ theorem bus660Schritt_speicher (t : FpZustand)
   have hm := busSchritt_speicher GeraetZustand latchErlaubt r k _ s' h
   exact hm
 
+/-! ## Device/MMIO adapter (owner 694) and validator admission.
+
+   Port IO runs on the I/O address space; MMIO/DMA run on the memory
+   address space under segmentation, paging and the MTRR memory-type
+   rules (Vol. 1 20.5, first bullet; 20.6, first half: uncacheable
+   regions keep program order externally). Those type and ordering rules
+   are unmodelled here, so both device-memory kinds refuse at this
+   layer -- the stub admits nothing silently, and the remaining
+   memory-type/ordering obligations stay explicit in CUTS. -/
+
+/-- MMIO/694 admission stub: RAM passes through (port IO runs beside
+    ordinary RAM); MMIO and DMA refuse until their rules are modelled. -/
+def mmio694Adapter : SpeicherArt → Option Unit
+  | .ram => some ()
+  | .mmio => none
+  | .dma => none
+
+/-- MMIO refuses at this layer. -/
+theorem mmio694_verweigert_mmio : mmio694Adapter .mmio = none := rfl
+
+/-- DMA refuses at this layer. -/
+theorem mmio694_verweigert_dma : mmio694Adapter .dma = none := rfl
+
+/-- Ordinary RAM passes the kind gate. -/
+theorem mmio694_laesst_ram_zu : mmio694Adapter .ram = some () := rfl
+
+/-- Validator admission for one port operation: architectural permission
+    at the effective port AND an admitted memory kind AND a drained own
+    TSO buffer (Table 20-1). All three are checked facts about the
+    state's data, never assumed OS or binding contracts. -/
+def busValOk (r : IoBerechtigung) (k : TssKarte) (mem : SpeicherProfil)
+    (art : SpeicherArt) (tso : TSOZustand) (c : Nat) (dir : IoDir)
+    (op : IoOp) (regs : Register → Wort) : Bool :=
+  archZugelassen r k (portVon op regs) op.breite &&
+    speicherArtZugelassen mem art && ordnungOk tso c dir
+
+/-- Admission means all three sides hold, jointly. -/
+theorem busValOk_heisst (r : IoBerechtigung) (k : TssKarte)
+    (mem : SpeicherProfil) (art : SpeicherArt) (tso : TSOZustand)
+    (c : Nat) (dir : IoDir) (op : IoOp) (regs : Register → Wort)
+    (h : busValOk r k mem art tso c dir op regs = true) :
+    archZugelassen r k (portVon op regs) op.breite = true ∧
+      speicherArtZugelassen mem art = true ∧
+      ordnungOk tso c dir = true := by
+  unfold busValOk at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨⟨hperm, hkind⟩, hord⟩ := h
+  exact ⟨hperm, hkind, hord⟩
+
+/-! ## Joint witness: fetched generic IN/OUT, device change, RAM store.
+
+   The same image as the lane-676 witness (`ioWitKern`: an 8-bit IN from
+   port 0x60, an 8-bit OUT to 0x60, then the pilot 64-bit store): the
+   device is preset to `0x1234`, so IN answers `0x34 = 52` and OUT stores
+   52 back (device `0x1234` to 52, two observations). Privilege data is
+   CPL 3 against IOPL 3 (direct leg); the map spans everything with only
+   byte 97 set, so width-boundary and wrong-privilege denials are one
+   mutation away. -/
+
+/-- Witness privilege data: user CPL 3 with IOPL 3 (direct leg). -/
+def witRecht : IoBerechtigung := ⟨3, 3⟩
+
+/-- Witness map: fully spanned, only port byte 97 set. Port 96 is free
+    for 8-bit accesses; 16-bit access at 96 covers the set byte 97. -/
+def witKarte : TssKarte :=
+  { basis := 0, grenze := 8192, bit := fun q => decide (q = 97) }
+
+/-- Witness start: the accepted core image with the latch at `0x1234`. -/
+def witStart : BusZustand GeraetZustand := ⟨ioWitKern, ⟨0x1234, 0⟩, []⟩
+
+/-- Witness after the generic IN: the accumulator merged 52, the device
+    kept `0x1234` with one observation, one ordered event logged. -/
+def witS1 : BusZustand GeraetZustand :=
+  ⟨einKern ioWitKern ⟨⟨.ein, .p8, .imm 96⟩, 2⟩ .p8 52, ⟨0x1234, 1⟩,
+    [⟨.ein, .p8, 96, 52⟩]⟩
+
+/-- Witness after the generic OUT: registers kept, the device moved to
+    52 with two observations, IN then OUT logged in order. -/
+def witS2 : BusZustand GeraetZustand :=
+  ⟨ausKern witS1.kern ⟨⟨.aus, .p8, .imm 96⟩, 2⟩, ⟨52, 2⟩,
+    witS1.spur ++ [⟨.aus, .p8, 96, 52⟩]⟩
+
+/-- First step: the generic IN answers 52 into AL under the direct leg. -/
+theorem wit_schritt1 :
+    BusSchritt GeraetZustand latchErlaubt witRecht witKarte witStart
+      witS1 := by
+  exact .ein witStart ⟨⟨.ein, .p8, .imm 96⟩, 2⟩ .p8 (.imm 96)
+    ⟨0x1234, 1⟩ 52 (by decide) rfl (by decide)
+    (latch_ein_sound _ _ _)
+
+/-- Second step: the generic OUT stores the received 52 into the device. -/
+theorem wit_schritt2 :
+    BusSchritt GeraetZustand latchErlaubt witRecht witKarte witS1
+      witS2 := by
+  exact .aus witS1 ⟨⟨.aus, .p8, .imm 96⟩, 2⟩ .p8 (.imm 96) ⟨52, 2⟩
+    (by decide) rfl (by decide)
+    (latch_aus_sound _ _ _ _)
+
+/-- The device observably moved `0x1234` to 52 with two observations. -/
+theorem wit_geraet_geaendert :
+    witS2.geraet.daten = 52 ∧ witS2.geraet.zaehl = 2 := ⟨rfl, rfl⟩
+
+/-- The accumulator holds the received 52 after both port steps. -/
+theorem wit_akk_52 :
+    witS2.kern.register .rax = BitVec.ofNat 64 52 := by
+  decide
+
+/-- Both port steps land RIP at 4100: the pilot store starts from the
+    same core state as the accepted run (`ioWit_zweiter_sendet`). -/
+theorem wit_rip_anschluss :
+    witS2.kern.rip = BitVec.ofNat 64 4100 := by
+  decide
+
 /- CUTS:
    Skeleton only: the TSS map type, one per-byte check and its witness.
    Range checks, the architectural rule, the generic device interface,
