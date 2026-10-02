@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 20:03 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 20:14 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -296,14 +296,14 @@ Last ledger refresh: **2026-10-02 20:03 UTC**. This is an operational snapshot, 
 | 640 | Independent coordinator control-plane takeover and cleanup integration audit | Merged after review/checks | 641: Merged after review/checks | [report](messung/muse/MUSE-REPORT-640.md) |
 | 642 | Recover preserved IR research draft from recorded edits after clone removal | Merged after review/checks | 643: Merged after review/checks | [report](messung/muse/MUSE-REPORT-642.md) |
 | 644 | Organise the next generic source-to-final-byte closure wave | Merged after review/checks | 645: Merged after review/checks | [report](messung/muse/MUSE-REPORT-644.md) |
-| 646 | Direct typed statement sequence to fetched machine execution | Agent working | 647: scheduled | [task](lanes/646.md) |
+| 646 | Direct typed statement sequence to fetched machine execution | Committed candidate; review/integration pending | 647: Committed candidate; review/integration pending | [task](lanes/646.md) |
 | 648 | Generic checked source-assignment byte certificate | Merged after review/checks | 649: Merged after review/checks | [report](messung/muse/MUSE-REPORT-648.md) |
 | 650 | Growing TSO history to typed carrier W transition | Agent working | 651: scheduled | [task](lanes/650.md) |
 | 652 | Whole-word drain with real interleaved foreign accesses | Merged after review/checks | 653: Merged after review/checks | [report](messung/muse/MUSE-REPORT-652.md) |
 | 654 | Derived target work bound for direct source lowering | Merged after review/checks | 655: Merged after review/checks | [report](messung/muse/MUSE-REPORT-654.md) |
 | 656 | Fetched conditional byte-step flag dependency simulation | Merged after review/checks | 657: Merged after review/checks | [report](messung/muse/MUSE-REPORT-656.md) |
 | 658 | Scalar FP final-byte validator admission and MXCSR entry | Merged after review/checks | 659: Merged after review/checks | [report](messung/muse/MUSE-REPORT-658.md) |
-| 660 | Hardware completion: coherent multicore architectural execution | Committed candidate; review/integration pending | 661: Agent working | [task](lanes/660.md) |
+| 660 | Hardware completion: coherent multicore architectural execution | Committed candidate; review/integration pending | 661: Committed candidate; review/integration pending | [task](lanes/660.md) |
 | 662 | Hardware completion: LOCK atomic and fence final-byte execution | Agent working | 663: scheduled | [task](lanes/662.md) |
 | 664 | Hardware completion: efficient full selected address encodings | Merged after review/checks | 665: Merged after review/checks | [report](messung/muse/MUSE-REPORT-664.md) |
 | 666 | Hardware completion: practical integer width and compact encoding rows | Merged after review/checks | 667: Merged after review/checks | [report](messung/muse/MUSE-REPORT-666.md) |
@@ -313,18 +313,18 @@ Last ledger refresh: **2026-10-02 20:03 UTC**. This is an operational snapshot, 
 | 674 | Hardware completion: SIMD and architectural enabled-state gates | Merged after review/checks | 675: Merged after review/checks | [report](messung/muse/MUSE-REPORT-674.md) |
 | 676 | Hardware completion: port IO and device memory profiles | Merged after review/checks | 677: Merged after review/checks | [report](messung/muse/MUSE-REPORT-676.md) |
 | 678 | Organise and audit complete essential hardware-model coverage | Merged after review/checks | 679: Merged after review/checks | [report](messung/muse/MUSE-REPORT-678.md) |
-| 680 | Hardware completion: indirect and compact control byte forms | Agent working | 681: scheduled | [task](lanes/680.md) |
-| 682 | Hardware completion: MXCSR control byte execution | Agent working | 683: scheduled | [task](lanes/682.md) |
-| 684 | Eliminate hardcoded external project filesystem paths | Agent working | 685: Agent working | [task](lanes/684.md) |
+| 680 | Hardware completion: indirect and compact control byte forms | Committed candidate; review/integration pending | 681: Agent working | [task](lanes/680.md) |
+| 682 | Hardware completion: MXCSR control byte execution | Committed candidate; review/integration pending | 683: Committed candidate; review/integration pending | [task](lanes/682.md) |
+| 684 | Eliminate hardcoded external project filesystem paths | Agent working | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Agent working | 687: scheduled | [task](lanes/686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Agent working | 689: scheduled | [task](lanes/688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Agent working | 693: scheduled | [task](lanes/692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Agent working | 695: scheduled | [task](lanes/694.md) |
-| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Waiting for accepted dependencies | 697: scheduled | [task](lanes/696.md) |
-| 698 | Essential width-selected shifts and rotates | Waiting for accepted dependencies | 699: scheduled | [task](lanes/698.md) |
-| 700 | Essential multiply divide widths and immediate IMUL | Waiting for accepted dependencies | 701: scheduled | [task](lanes/700.md) |
-| 702 | Essential scalar binary32 SSE2 architectural forms | Waiting for accepted dependencies | 703: scheduled | [task](lanes/702.md) |
+| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Agent working | 697: scheduled | [task](lanes/696.md) |
+| 698 | Essential width-selected shifts and rotates | Agent working | 699: scheduled | [task](lanes/698.md) |
+| 700 | Essential multiply divide widths and immediate IMUL | Agent working | 701: scheduled | [task](lanes/700.md) |
+| 702 | Essential scalar binary32 SSE2 architectural forms | Agent working | 703: scheduled | [task](lanes/702.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -797,6 +797,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **671**, Independent exact review of 670, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-671.md). <!-- x86-merged:671 -->
 - 2026-10-02: lane **676**, Hardware completion: port IO and device memory profiles, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-676.md). <!-- x86-merged:676 -->
 - 2026-10-02: lane **677**, Independent exact review of 676, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-677.md). <!-- x86-merged:677 -->
+- 2026-10-02: publication batch checks passed for `a6315567`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
