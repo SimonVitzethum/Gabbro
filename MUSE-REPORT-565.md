@@ -4,6 +4,23 @@ Lane 565, clone `/home/simon/Dokumente/gabbro-muse/a565`, branch `muse/565`.
 Owned files only: `grammatik/Grammatik/X86/ScalarFloatCodec.lean` (new, ~670 lines),
 `grammatik/Grammatik.lean` (one additive import line), this report.
 
+## Repair continuation (review 583 verdict REPAIR, applied)
+
+Independent review (lane 583, MUSE-REPORT-583) accepted the bounded proof
+claim but found an integration conflict: lane 597's merged
+`VectorCodec.lean` defines `xmmCode` and `xmmCode_lt` in the same
+namespace, so the umbrella build fails with a duplicate environment
+entry. Applied the reviewer's recommended minimal repair: in
+`ScalarFloatCodec.lean`, `def xmmCode` -> `def fpXmmCode` and
+`theorem xmmCode_lt` -> `theorem fpXmmCode_lt`, with all 16 use sites
+(encoders, round-trip premises and proofs, `#print` lines) updated
+mechanically. No statement logic changed; the `< 8` low-operand
+premises keep their exact meaning. The non-colliding
+`codeXmmLow_xmmCode` kept its name. Re-verified: `./lean-probe` 0
+errors, `./lean-bau` green (428 jobs, repeated), goal axioms unchanged,
+all 40 axiom prints within the standard set. Correction to the first
+report: the file proves 40 items with axiom prints, not 39.
+
 ## What was done
 
 Connected the accepted `ScalarFloat` semantics (`FpBefehl` / `FpDecodiert` /

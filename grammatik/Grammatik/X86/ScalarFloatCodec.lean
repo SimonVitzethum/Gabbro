@@ -24,7 +24,7 @@ namespace Gabbro.Grammatik.X86
 /-- Architectural XMM code: xmm0=0 through xmm15=15. The canonical subset
     below encodes the low eight only (no REX prefix); high registers are
     refused by absence (see CUTS). -/
-def xmmCode : XmmReg → Nat
+def fpXmmCode : XmmReg → Nat
   | .xmm0 => 0 | .xmm1 => 1 | .xmm2 => 2 | .xmm3 => 3
   | .xmm4 => 4 | .xmm5 => 5 | .xmm6 => 6 | .xmm7 => 7
   | .xmm8 => 8 | .xmm9 => 9 | .xmm10 => 10 | .xmm11 => 11
@@ -37,12 +37,12 @@ def codeXmmLow : Nat → Option XmmReg
   | _ => none
 
 /-- Decoding inverts encoding on every low XMM register. -/
-theorem codeXmmLow_xmmCode (r : XmmReg) (h : xmmCode r < 8) :
-    codeXmmLow (xmmCode r) = some r := by
-  cases r <;> simp_all [xmmCode, codeXmmLow] <;> omega
+theorem codeXmmLow_xmmCode (r : XmmReg) (h : fpXmmCode r < 8) :
+    codeXmmLow (fpXmmCode r) = some r := by
+  cases r <;> simp_all [fpXmmCode, codeXmmLow] <;> omega
 
 /-- Every XMM code fits in four bits. -/
-theorem xmmCode_lt (r : XmmReg) : xmmCode r < 16 := by
+theorem fpXmmCode_lt (r : XmmReg) : fpXmmCode r < 16 := by
   cases r <;> decide
 
 /-! ## 1. Canonical byte encodings (stated from the Intel SDM opcode map).
@@ -59,24 +59,24 @@ theorem xmmCode_lt (r : XmmReg) : xmmCode r < 16 := by
 /-- Canonical MOVSD register-copy bytes: F2 0F 10 /r, mod=11. -/
 def fpEncodeMovsdRR (dst src : XmmReg) : List Byte :=
   [natByte 242, natByte 15, natByte 16,
-    modrmReg (xmmCode dst) (xmmCode src)]
+    modrmReg (fpXmmCode dst) (fpXmmCode src)]
 
 /-- Canonical ADDSD register bytes: F2 0F 58 /r, mod=11. -/
 def fpEncodeAddsdRR (dst src : XmmReg) : List Byte :=
   [natByte 242, natByte 15, natByte 88,
-    modrmReg (xmmCode dst) (xmmCode src)]
+    modrmReg (fpXmmCode dst) (fpXmmCode src)]
 
 /-- Canonical MOVSD load bytes: F2 0F 10 /r, mod=10, disp32. -/
 def fpEncodeMovsdLade (dst : XmmReg) (base : Register) (d : BitVec 32) : List Byte :=
   let head := [natByte 242, natByte 15, natByte 16,
-    modrmMem (xmmCode dst) (regLow base)]
+    modrmMem (fpXmmCode dst) (regLow base)]
   if regLow base == 4 then head ++ natByte 36 :: leBytes32 d
   else head ++ leBytes32 d
 
 /-- Canonical MOVSD store bytes: F2 0F 11 /r, mod=10, disp32. -/
 def fpEncodeMovsdSpeichere (base : Register) (src : XmmReg) (d : BitVec 32) : List Byte :=
   let head := [natByte 242, natByte 15, natByte 17,
-    modrmMem (xmmCode src) (regLow base)]
+    modrmMem (fpXmmCode src) (regLow base)]
   if regLow base == 4 then head ++ natByte 36 :: leBytes32 d
   else head ++ leBytes32 d
 
@@ -155,45 +155,45 @@ def fpDecode : List Byte → Option (FpDecodiert × List Byte)
 
 /-- Encode/decode round trip for the MOVSD register copy. -/
 theorem fpRoundtrip_movsdRR (dst src : XmmReg) (suffix : List Byte)
-    (hd : xmmCode dst < 8) (hs : xmmCode src < 8) :
+    (hd : fpXmmCode dst < 8) (hs : fpXmmCode src < 8) :
     fpDecode (fpEncodeMovsdRR dst src ++ suffix) =
       some (⟨.movsdRR dst src, (fpEncodeMovsdRR dst src).length⟩, suffix) := by
   cases dst <;> cases src <;>
-    simp_all [fpEncodeMovsdRR, fpDecode, fpDecodeRest, codeXmmLow, xmmCode,
+    simp_all [fpEncodeMovsdRR, fpDecode, fpDecodeRest, codeXmmLow, fpXmmCode,
       modrmReg, natByte, byteNat]
 
 /-- Encode/decode round trip for the ADDSD register form. -/
 theorem fpRoundtrip_addsdRR (dst src : XmmReg) (suffix : List Byte)
-    (hd : xmmCode dst < 8) (hs : xmmCode src < 8) :
+    (hd : fpXmmCode dst < 8) (hs : fpXmmCode src < 8) :
     fpDecode (fpEncodeAddsdRR dst src ++ suffix) =
       some (⟨.addsdRR dst src, (fpEncodeAddsdRR dst src).length⟩, suffix) := by
   cases dst <;> cases src <;>
-    simp_all [fpEncodeAddsdRR, fpDecode, fpDecodeRest, codeXmmLow, xmmCode,
+    simp_all [fpEncodeAddsdRR, fpDecode, fpDecodeRest, codeXmmLow, fpXmmCode,
       modrmReg, natByte, byteNat]
 
 set_option maxHeartbeats 4000000 in
 /-- Encode/decode round trip for the MOVSD load, both SIB shapes. -/
 theorem fpRoundtrip_movsdLade (dst : XmmReg) (base : Register)
     (d : BitVec 32) (suffix : List Byte)
-    (hd : xmmCode dst < 8) (hb : regCode base < 8) :
+    (hd : fpXmmCode dst < 8) (hb : regCode base < 8) :
     fpDecode (fpEncodeMovsdLade dst base d ++ suffix) =
       some (⟨.movsdLade dst base d, (fpEncodeMovsdLade dst base d).length⟩,
         suffix) := by
   cases dst <;> cases base <;>
     simp_all [fpEncodeMovsdLade, fpDecode, fpDecodeRest, codeXmmLow, codeReg,
-      xmmCode, regCode, regLow, modrmMem, leBytes32, parseLe32_cons]
+      fpXmmCode, regCode, regLow, modrmMem, leBytes32, parseLe32_cons]
 
 set_option maxHeartbeats 4000000 in
 /-- Encode/decode round trip for the MOVSD store, both SIB shapes. -/
 theorem fpRoundtrip_movsdSpeichere (base : Register) (src : XmmReg)
     (d : BitVec 32) (suffix : List Byte)
-    (hb : regCode base < 8) (hs : xmmCode src < 8) :
+    (hb : regCode base < 8) (hs : fpXmmCode src < 8) :
     fpDecode (fpEncodeMovsdSpeichere base src d ++ suffix) =
       some (⟨.movsdSpeichere base src d,
         (fpEncodeMovsdSpeichere base src d).length⟩, suffix) := by
   cases base <;> cases src <;>
     simp_all [fpEncodeMovsdSpeichere, fpDecode, fpDecodeRest, codeXmmLow,
-      codeReg, xmmCode, regCode, regLow, modrmMem, leBytes32, parseLe32_cons]
+      codeReg, fpXmmCode, regCode, regLow, modrmMem, leBytes32, parseLe32_cons]
 
 /-! ## 4. Decoder and admission refusals.
 
@@ -667,7 +667,7 @@ theorem fpCodec_bytes_zeuge :
 -/
 
 #print axioms codeXmmLow_xmmCode
-#print axioms xmmCode_lt
+#print axioms fpXmmCode_lt
 #print axioms fpRoundtrip_movsdRR
 #print axioms fpRoundtrip_addsdRR
 #print axioms fpRoundtrip_movsdLade
