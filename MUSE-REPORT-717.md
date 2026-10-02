@@ -5,7 +5,7 @@ Lane 717, branch `muse/717`, clone `/home/simon/Dokumente/gabbro-muse/a717`
 protocol satisfied). Owned deliverable: this file only. No source, import,
 witness, test, semantics or PR file was changed in this clone.
 
-CANDIDATE: 716, head `378fe47c99f959d050e0e3635d0041331089d7c4`
+CANDIDATE: 716 378fe47c99f959d050e0e3635d0041331089d7c4
 (base `011ff474004a8a617338584d68b13a64c87b1051`), files
 `MUSE-REPORT-716.md` + `dokumente/x86/UPSTREAM-PR-2-RUST-REVIEW.md`
 (per `.tmp/review/SNAPSHOT.json`). The author head object is not in this
@@ -19,7 +19,7 @@ document, file has 257 lines) — patch and copies agree. Author base
 locally; all source checks below are against the exact pinned bytes in
 `.tmp/UPSTREAM-PRS/pr-2/`, never against a live tree.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 The audit is accurate: its measurements reproduce, its code quotes match the
 pinned bytes, every finding B1–B5 verifies, its integration verdict
