@@ -469,3 +469,4 @@ import Grammatik.X86.VectorHardwareProfile
 import Grammatik.X86.IntegerHardwareForms
 import Grammatik.X86.HardwareFaults
 import Grammatik.X86.DeviceHardwareForms
+import Grammatik.X86.MulDivWidthHardwareForms
