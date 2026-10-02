@@ -557,7 +557,7 @@ def s32Schritt (d : S32Decodiert) (t : FpZustand) : Option FpZustand :=
         | none => none
       | .movssSpeichere base src disp =>
         match write32 t.kern.speicher (effAddr t.kern base disp)
-          (BitVec.ofNat 64 (xmmTief32 t.xmm src).toNat) with
+          (BitVec.setWidth 64 (xmmTief32 t.xmm src)) with
         | some m => some { t with kern := { t.kern with speicher := m, rip := nach } }
         | none => none
       | .cvtss2sdRR dst src =>
@@ -633,13 +633,296 @@ theorem write32_braucht_schreibbar (m : Speicher) (a : Adresse)
   · rw [if_neg hc] at h
     cases h
 
+/-! ## 5. Step equations: guards, arithmetic, and their frames.
+
+  Each equation pins the full successor; every premise is used. -/
+
+/-- `addss` (register): the low single holds the model sum. -/
+theorem s32Schritt_addssRR (d : S32Decodiert) (t : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .addssRR dst src) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (s32Rechne .add (xmmTief32 t.xmm dst) (xmmTief32 t.xmm src)) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-- `subss` (register): the low single holds the model difference. -/
+theorem s32Schritt_subssRR (d : S32Decodiert) (t : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .subssRR dst src) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (s32Rechne .sub (xmmTief32 t.xmm dst) (xmmTief32 t.xmm src)) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-- `mulss` (register): the low single holds the model product. -/
+theorem s32Schritt_mulssRR (d : S32Decodiert) (t : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .mulssRR dst src) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (s32Rechne .mul (xmmTief32 t.xmm dst) (xmmTief32 t.xmm src)) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-- `divss` (register): the low single holds the model quotient. -/
+theorem s32Schritt_divssRR (d : S32Decodiert) (t : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .divssRR dst src) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (s32Rechne .div (xmmTief32 t.xmm dst) (xmmTief32 t.xmm src)) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-- `addss` (memory source) success: the four bytes at base plus
+    displacement are the second model operand. -/
+theorem s32Schritt_addssRM_erfolg (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (v : Wort) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .addssRM dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = some v) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (s32Rechne .add (xmmTief32 t.xmm dst) (BitVec.ofNat 32 v.toNat)) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `addss` (memory source) refusal: a failed read is explicit. -/
+theorem s32Schritt_addssRM_verweigert (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .addssRM dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = none) : s32Schritt d t = none := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `subss` (memory source) success. -/
+theorem s32Schritt_subssRM_erfolg (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (v : Wort) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .subssRM dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = some v) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (s32Rechne .sub (xmmTief32 t.xmm dst) (BitVec.ofNat 32 v.toNat)) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `subss` (memory source) refusal. -/
+theorem s32Schritt_subssRM_verweigert (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .subssRM dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = none) : s32Schritt d t = none := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `mulss` (memory source) success. -/
+theorem s32Schritt_mulssRM_erfolg (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (v : Wort) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .mulssRM dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = some v) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (s32Rechne .mul (xmmTief32 t.xmm dst) (BitVec.ofNat 32 v.toNat)) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `mulss` (memory source) refusal. -/
+theorem s32Schritt_mulssRM_verweigert (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .mulssRM dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = none) : s32Schritt d t = none := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `divss` (memory source) success. -/
+theorem s32Schritt_divssRM_erfolg (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (v : Wort) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .divssRM dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = some v) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (s32Rechne .div (xmmTief32 t.xmm dst) (BitVec.ofNat 32 v.toNat)) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `divss` (memory source) refusal. -/
+theorem s32Schritt_divssRM_verweigert (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .divssRM dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = none) : s32Schritt d t = none := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `ucomiss` (register): only flags change. -/
+theorem s32Schritt_ucomissRR (d : S32Decodiert) (t : FpZustand) (lhs rhs : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .ucomissRR lhs rhs) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge, flags := ucomissFlags (bites32 (xmmTief32 t.xmm lhs)) (bites32 (xmmTief32 t.xmm rhs)) } } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-- `ucomiss` (memory source) success. -/
+theorem s32Schritt_ucomissRM_erfolg (d : S32Decodiert) (t : FpZustand) (lhs : XmmReg) (base : Register) (disp : BitVec 32) (v : Wort) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .ucomissRM lhs base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = some v) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge, flags := ucomissFlags (bites32 (xmmTief32 t.xmm lhs)) (bites32 (BitVec.ofNat 32 v.toNat)) } } := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `ucomiss` (memory source) refusal. -/
+theorem s32Schritt_ucomissRM_verweigert (d : S32Decodiert) (t : FpZustand) (lhs : XmmReg) (base : Register) (disp : BitVec 32) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .ucomissRM lhs base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = none) : s32Schritt d t = none := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `movss` (register merge): the low single is copied, the upper 96
+    bits are kept. -/
+theorem s32Schritt_movssRR (d : S32Decodiert) (t : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssRR dst src) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (xmmTief32 t.xmm src) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-- `movss` (load) success: the low single is loaded and the upper 96
+    bits are cleared. -/
+theorem s32Schritt_movssLade_erfolg (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (v : Wort) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssLade dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = some v) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmLadeTief32 t.xmm dst (BitVec.ofNat 32 v.toNat) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `movss` (load) refusal. -/
+theorem s32Schritt_movssLade_verweigert (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssLade dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = none) : s32Schritt d t = none := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hrd]
+
+/-- `movss` (store) success: the low single reaches memory. -/
+theorem s32Schritt_movssSpeichere_erfolg (d : S32Decodiert) (t : FpZustand) (base : Register) (src : XmmReg) (disp : BitVec 32) (m : Speicher) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssSpeichere base src disp) (hwr : write32 t.kern.speicher (effAddr t.kern base disp) (BitVec.setWidth 64 (xmmTief32 t.xmm src)) = some m) : s32Schritt d t = some { t with kern := { t.kern with speicher := m, rip := ripNach t.kern.rip d.laenge } } := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hwr]
+
+/-- `movss` (store) refusal. -/
+theorem s32Schritt_movssSpeichere_verweigert (d : S32Decodiert) (t : FpZustand) (base : Register) (src : XmmReg) (disp : BitVec 32) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssSpeichere base src disp) (hwr : write32 t.kern.speicher (effAddr t.kern base disp) (BitVec.setWidth 64 (xmmTief32 t.xmm src)) = none) : s32Schritt d t = none := by
+  unfold s32Schritt
+  simp [hok, hfp, h, hwr]
+
+/-- `cvtss2sd`: the low double holds the widened value, the high 64
+    bits are kept. -/
+theorem s32Schritt_cvtss2sdRR (d : S32Decodiert) (t : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .cvtss2sdRR dst src) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief t.xmm dst (muster64 (cvtSS2SD (bites32 (xmmTief32 t.xmm src)))) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-- `cvtsd2ss`: the low single holds the narrowed value. -/
+theorem s32Schritt_cvtsd2ssRR (d : S32Decodiert) (t : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .cvtsd2ssRR dst src) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (muster32 (cvtSD2SS (bites64 (xmmTief t.xmm src)))) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-- `cvtsi2ss`: the low single holds the converted integer. -/
+theorem s32Schritt_cvtsi2ss (d : S32Decodiert) (t : FpZustand) (dst : XmmReg) (src : Register) (is64 : Bool) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .cvtsi2ss dst src is64) : s32Schritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief32 t.xmm dst (muster32 (if is64 then cvtSI2SS64 (t.kern.register src) else cvtSI2SS32 (t.kern.register src))) } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-- `cvttss2si`: the GPR holds the truncated value or the indefinite. -/
+theorem s32Schritt_cvttss2si (d : S32Decodiert) (t : FpZustand) (dst : Register) (src : XmmReg) (is64 : Bool) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .cvttss2si dst src is64) : s32Schritt d t = some { t with kern := { t.kern with register := regSet t.kern.register dst (cvttSS2SI (xmmTief32 t.xmm src) is64), rip := ripNach t.kern.rip d.laenge } } := by
+  unfold s32Schritt
+  simp [hok, hfp, h]
+
+/-! ## 6. Frames: preservation versus clearing, per write kind.
+
+  Register MOVSS preserves the upper 96 bits; memory MOVSS clears
+  them; arithmetic preserves them in both shapes; CVTSS2SD keeps the
+  upper 64-bit half; compares and converts touch only their documented
+  state. A store reads back the stored single. -/
+
+/-- `addss` (register) keeps the upper 96 bits at its destination. -/
+theorem s32Schritt_addssRR_hoch (d : S32Decodiert) (t t' : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .addssRR dst src) (hstep : s32Schritt d t = some t') : (t'.xmm dst).toNat / 2 ^ 32 = (t.xmm dst).toNat / 2 ^ 32 := by
+  rw [s32Schritt_addssRR d t dst src hok hfp h] at hstep
+  cases hstep
+  exact xmmSchreibeTief32_hoch96 _ _ _
+
+/-- `addss` (register) preserves the flags. -/
+theorem s32Schritt_addssRR_flags (d : S32Decodiert) (t t' : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .addssRR dst src) (hstep : s32Schritt d t = some t') : t'.kern.flags = t.kern.flags := by
+  rw [s32Schritt_addssRR d t dst src hok hfp h] at hstep
+  cases hstep
+  rfl
+
+/-- `addss` (register) changes no memory byte. -/
+theorem s32Schritt_addssRR_speicher (d : S32Decodiert) (t t' : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .addssRR dst src) (hstep : s32Schritt d t = some t') : t'.kern.speicher = t.kern.speicher := by
+  rw [s32Schritt_addssRR d t dst src hok hfp h] at hstep
+  cases hstep
+  rfl
+
+/-- `addss` (register) keeps every GPR. -/
+theorem s32Schritt_addssRR_gpr (d : S32Decodiert) (t t' : FpZustand) (dst src : XmmReg) (q : Register) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .addssRR dst src) (hstep : s32Schritt d t = some t') : t'.kern.register q = t.kern.register q := by
+  rw [s32Schritt_addssRR d t dst src hok hfp h] at hstep
+  cases hstep
+  rfl
+
+/-- `addss` (memory source) keeps the upper 96 bits at its destination. -/
+theorem s32Schritt_addssRM_hoch (d : S32Decodiert) (t t' : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (v : Wort) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .addssRM dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = some v) (hstep : s32Schritt d t = some t') : (t'.xmm dst).toNat / 2 ^ 32 = (t.xmm dst).toNat / 2 ^ 32 := by
+  rw [s32Schritt_addssRM_erfolg d t dst base disp v hok hfp h hrd] at hstep
+  cases hstep
+  exact xmmSchreibeTief32_hoch96 _ _ _
+
+/-- REGISTER MOVSS PRESERVES: the upper 96 bits survive the merge. -/
+theorem s32Schritt_movssRR_hoch (d : S32Decodiert) (t t' : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssRR dst src) (hstep : s32Schritt d t = some t') : (t'.xmm dst).toNat / 2 ^ 32 = (t.xmm dst).toNat / 2 ^ 32 := by
+  rw [s32Schritt_movssRR d t dst src hok hfp h] at hstep
+  cases hstep
+  exact xmmSchreibeTief32_hoch96 _ _ _
+
+/-- Register MOVSS preserves the flags. -/
+theorem s32Schritt_movssRR_flags (d : S32Decodiert) (t t' : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssRR dst src) (hstep : s32Schritt d t = some t') : t'.kern.flags = t.kern.flags := by
+  rw [s32Schritt_movssRR d t dst src hok hfp h] at hstep
+  cases hstep
+  rfl
+
+/-- Register MOVSS changes no memory byte. -/
+theorem s32Schritt_movssRR_speicher (d : S32Decodiert) (t t' : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssRR dst src) (hstep : s32Schritt d t = some t') : t'.kern.speicher = t.kern.speicher := by
+  rw [s32Schritt_movssRR d t dst src hok hfp h] at hstep
+  cases hstep
+  rfl
+
+/-- MEMORY MOVSS CLEARS: a load zeroes the upper 96 bits. -/
+theorem s32Schritt_movssLade_nullOben (d : S32Decodiert) (t t' : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (v : Wort) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssLade dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = some v) (hstep : s32Schritt d t = some t') : (t'.xmm dst).toNat / 2 ^ 32 = 0 := by
+  rw [s32Schritt_movssLade_erfolg d t dst base disp v hok hfp h hrd] at hstep
+  cases hstep
+  exact xmmLadeTief32_nullOben _ _ _
+
+/-- A load preserves the flags. -/
+theorem s32Schritt_movssLade_flags (d : S32Decodiert) (t t' : FpZustand) (dst : XmmReg) (base : Register) (disp : BitVec 32) (v : Wort) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssLade dst base disp) (hrd : read32 t.kern.speicher (effAddr t.kern base disp) = some v) (hstep : s32Schritt d t = some t') : t'.kern.flags = t.kern.flags := by
+  rw [s32Schritt_movssLade_erfolg d t dst base disp v hok hfp h hrd] at hstep
+  cases hstep
+  rfl
+
+/-- CVTSS2SD keeps the upper 64-bit half at its destination. -/
+theorem s32Schritt_cvtss2sdRR_vHi (d : S32Decodiert) (t t' : FpZustand) (dst src : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .cvtss2sdRR dst src) (hstep : s32Schritt d t = some t') : vHi (t'.xmm dst) = vHi (t.xmm dst) := by
+  rw [s32Schritt_cvtss2sdRR d t dst src hok hfp h] at hstep
+  cases hstep
+  exact xmmSchreibeTief_hoch _ _ _
+
+/-- UCOMISS changes no XMM register. -/
+theorem s32Schritt_ucomissRR_xmm (d : S32Decodiert) (t t' : FpZustand) (lhs rhs : XmmReg) (q : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .ucomissRR lhs rhs) (hstep : s32Schritt d t = some t') : t'.xmm q = t.xmm q := by
+  rw [s32Schritt_ucomissRR d t lhs rhs hok hfp h] at hstep
+  cases hstep
+  rfl
+
+/-- UCOMISS changes no memory byte. -/
+theorem s32Schritt_ucomissRR_speicher (d : S32Decodiert) (t t' : FpZustand) (lhs rhs : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .ucomissRR lhs rhs) (hstep : s32Schritt d t = some t') : t'.kern.speicher = t.kern.speicher := by
+  rw [s32Schritt_ucomissRR d t lhs rhs hok hfp h] at hstep
+  cases hstep
+  rfl
+
+/-- CVTTSS2SI changes no XMM register. -/
+theorem s32Schritt_cvttss2si_xmm (d : S32Decodiert) (t t' : FpZustand) (dst : Register) (src : XmmReg) (is64 : Bool) (q : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .cvttss2si dst src is64) (hstep : s32Schritt d t = some t') : t'.xmm q = t.xmm q := by
+  rw [s32Schritt_cvttss2si d t dst src is64 hok hfp h] at hstep
+  cases hstep
+  rfl
+
+/-- CVTTSS2SI changes no memory byte. -/
+theorem s32Schritt_cvttss2si_speicher (d : S32Decodiert) (t t' : FpZustand) (dst : Register) (src : XmmReg) (is64 : Bool) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .cvttss2si dst src is64) (hstep : s32Schritt d t = some t') : t'.kern.speicher = t.kern.speicher := by
+  rw [s32Schritt_cvttss2si d t dst src is64 hok hfp h] at hstep
+  cases hstep
+  rfl
+
+/-- A store preserves the flags. -/
+theorem s32Schritt_movssSpeichere_flags (d : S32Decodiert) (t t' : FpZustand) (base : Register) (src : XmmReg) (disp : BitVec 32) (m : Speicher) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssSpeichere base src disp) (hwr : write32 t.kern.speicher (effAddr t.kern base disp) (BitVec.setWidth 64 (xmmTief32 t.xmm src)) = some m) (hstep : s32Schritt d t = some t') : t'.kern.flags = t.kern.flags := by
+  rw [s32Schritt_movssSpeichere_erfolg d t base src disp m hok hfp h hwr] at hstep
+  cases hstep
+  rfl
+
+/-- A store keeps every GPR. -/
+theorem s32Schritt_movssSpeichere_gpr (d : S32Decodiert) (t t' : FpZustand) (base : Register) (src : XmmReg) (disp : BitVec 32) (m : Speicher) (q : Register) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssSpeichere base src disp) (hwr : write32 t.kern.speicher (effAddr t.kern base disp) (BitVec.setWidth 64 (xmmTief32 t.xmm src)) = some m) (hstep : s32Schritt d t = some t') : t'.kern.register q = t.kern.register q := by
+  rw [s32Schritt_movssSpeichere_erfolg d t base src disp m hok hfp h hwr] at hstep
+  cases hstep
+  rfl
+
+/-- A store changes no XMM register. -/
+theorem s32Schritt_movssSpeichere_xmm (d : S32Decodiert) (t t' : FpZustand) (base : Register) (src : XmmReg) (disp : BitVec 32) (m : Speicher) (q : XmmReg) (hok : laengeOk d.laenge = true) (hfp : s32Eintritt t.fp = true) (h : d.befehl = .movssSpeichere base src disp) (hwr : write32 t.kern.speicher (effAddr t.kern base disp) (BitVec.setWidth 64 (xmmTief32 t.xmm src)) = some m) (hstep : s32Schritt d t = some t') : t'.xmm q = t.xmm q := by
+  rw [s32Schritt_movssSpeichere_erfolg d t base src disp m hok hfp h hwr] at hstep
+  cases hstep
+  rfl
+
+/-- Zero-extension to 64 bits keeps the 32-bit value. -/
+theorem setWidth64_wert (w : BitVec 32) :
+    (BitVec.setWidth 64 w).toNat = w.toNat := by
+  have hw := w.isLt
+  have h : BitVec.ofNat 64 w.toNat = BitVec.setWidth 64 w := by simp
+  rw [← h, BitVec.toNat_ofNat]
+  have h64 : w.toNat < 2 ^ 64 := by omega
+  rw [Nat.mod_eq_of_lt h64]
+
+/-- STORE READBACK: the stored single reads back exactly. -/
+theorem s32_speichere_liest_zurueck (t : FpZustand) (base : Register) (src : XmmReg) (disp : BitVec 32) (m' : Speicher) (hwr : write32 t.kern.speicher (effAddr t.kern base disp) (BitVec.setWidth 64 (xmmTief32 t.xmm src)) = some m') (hles : lesbarN t.kern.speicher (effAddr t.kern base disp) 4 = true) : read32 m' (effAddr t.kern base disp) = some (BitVec.ofNat 64 (xmmTief32 t.xmm src).toNat) := by
+  have hrd := read32_nach_write32 t.kern.speicher m'
+    (effAddr t.kern base disp)
+    (BitVec.setWidth 64 (xmmTief32 t.xmm src)) hwr hles
+  have hw := (xmmTief32 t.xmm src).isLt
+  have hbridge : (BitVec.setWidth 64 (xmmTief32 t.xmm src)).toNat % 4294967296
+      = (xmmTief32 t.xmm src).toNat := by
+    rw [setWidth64_wert]
+    have h32 : (4294967296 : Nat) = 2 ^ 32 := by decide
+    rw [h32, Nat.mod_eq_of_lt hw]
+  rw [hbridge] at hrd
+  exact hrd
+
+/-- UCOMISS flags: a NaN left operand is unordered (ZF, PF, CF set). -/
+theorem ucomissFlags_ungeordnet :
+    ucomissFlags ⟨false, Gleitkomma.f32.bexpMax, 1⟩ ⟨false, 0, 0⟩
+      = ⟨true, true, some false, true, false, false⟩ := by
+  rfl
+
+/-- UCOMISS flags: `1.0 < 2.0` sets CF alone. -/
+theorem ucomissFlags_kleiner :
+    ucomissFlags (bites32 0x3F800000) (bites32 0x40000000)
+      = ⟨true, false, some false, false, false, false⟩ := by
+  decide
+
+/-- UCOMISS flags: `1.0 = 1.0` sets ZF alone. -/
+theorem ucomissFlags_gleich :
+    ucomissFlags (bites32 0x3F800000) (bites32 0x3F800000)
+      = ⟨false, false, some false, true, false, false⟩ := by
+  decide
+
 /- CUTS (interim):
-   §§0-4 (step defined, refusals, footprints) done. OPEN next: step
-   equations and frames, the REX codec, the fetched byte step,
+   §§0-6 done. OPEN next: the REX codec, the fetched byte step,
    witnesses.
 -/
 
-#print axioms s32Eintritt_reset
-#print axioms read32_wert_klein
+#print axioms s32Schritt_movssRR_hoch
+#print axioms s32_speichere_liest_zurueck
 
 end Gabbro.Grammatik.X86
