@@ -923,6 +923,413 @@ theorem fpHwByteschritt_profil_verweigert (t : FpZustand)
         | false => rfl
       simp [hgate']
 
+/-! ## 7. Byte-level IEEE observations: direction, lanes, classes.
+
+  Operand direction is decoder-established (§3 round trips: the
+  destination rides ModRM.reg, except CVTTSD2SI whose GPR destination
+  rides reg and whose XMM source rides r/m). What is derived here
+  from the accepted evaluator and kernel, never restated: the fetched
+  low-half result IS the model op (all four), hence agrees at class
+  level (NaN payloads never concluded); the UCOMISD unordered and
+  equal rows with reserved flags; two distinct NaN payloads taking
+  the unordered row (payload ignored, class decides); and the
+  signed-zero subtraction. -/
+
+/-- A fetched arithmetic byte-step computes the model op into the
+    low half (all four ops, high and low registers alike). -/
+theorem fpHwByteschritt_arithRR_rechnet (t t' : FpZustand)
+    (d : FpDecodiert) (op : Gabbro.Grammatik.GleitOp)
+    (dst src : XmmReg) (rest : List Byte)
+    (hf : fpHwFetchDekodiert t = some (d, rest))
+    (hform : d.befehl = fpHwArithRR op dst src)
+    (hfp : fpEintritt t.fp = true)
+    (hgate : fpHwCvttZugelassen d.befehl t = true)
+    (hout : fpHwByteschritt t = .weiter t') :
+    xmmTief t'.xmm dst =
+      fpRechne op (xmmTief t.xmm dst) (xmmTief t.xmm src) := by
+  have hok := (fpHwFetchDekodiert_erfolg t d rest hf).2.2.1
+  have hstep := fpHwByteschritt_schritt t t' d rest hf hgate hout
+  cases op with
+  | add =>
+    have hform' : d.befehl = .addsdRR dst src := hform
+    have heq := fpSchritt_addsdRR d t dst src hok hfp hform'
+    rw [hstep] at heq
+    obtain rfl := Option.some_inj.mp heq
+    exact xmmSchreibeTief_tief _ _ _
+  | sub =>
+    have hform' : d.befehl = .subsdRR dst src := hform
+    have heq := fpSchritt_subsdRR d t dst src hok hfp hform'
+    rw [hstep] at heq
+    obtain rfl := Option.some_inj.mp heq
+    exact xmmSchreibeTief_tief _ _ _
+  | mul =>
+    have hform' : d.befehl = .mulsdRR dst src := hform
+    have heq := fpSchritt_mulsdRR d t dst src hok hfp hform'
+    rw [hstep] at heq
+    obtain rfl := Option.some_inj.mp heq
+    exact xmmSchreibeTief_tief _ _ _
+  | div =>
+    have hform' : d.befehl = .divsdRR dst src := hform
+    have heq := fpSchritt_divsdRR d t dst src hok hfp hform'
+    rw [hstep] at heq
+    obtain rfl := Option.some_inj.mp heq
+    exact xmmSchreibeTief_tief _ _ _
+
+/-- A fetched arithmetic byte-step agrees with the source model op at
+    the class level: NaN payload equality is never concluded (the
+    preserved cut of `Gleitprofil` §7 and `ScalarFloat` §4/§6). -/
+theorem fpHwByteschritt_arithRR_klasse (t t' : FpZustand)
+    (d : FpDecodiert) (op : Gabbro.Grammatik.GleitOp)
+    (dst src : XmmReg) (rest : List Byte)
+    (hf : fpHwFetchDekodiert t = some (d, rest))
+    (hform : d.befehl = fpHwArithRR op dst src)
+    (hfp : fpEintritt t.fp = true)
+    (hgate : fpHwCvttZugelassen d.befehl t = true)
+    (hout : fpHwByteschritt t = .weiter t') :
+    Gleitkomma.klasse Gleitkomma.f64 (bites64 (xmmTief t'.xmm dst)) =
+      Gleitkomma.klasse Gleitkomma.f64
+        (Gabbro.Grammatik.gleitRechne op
+          (bites64 (xmmTief t.xmm dst)) (bites64 (xmmTief t.xmm src))) := by
+  have hrech := fpHwByteschritt_arithRR_rechnet t t' d op dst src rest
+    hf hform hfp hgate hout
+  rw [hrech]
+  exact fpRechne_klasse op _ _
+
+/-- A fetched arithmetic byte-step keeps the destination upper half
+    (legacy SSE preserve semantics, Vol.2B 4-692f). -/
+theorem fpHwByteschritt_arithRR_hoch (t t' : FpZustand)
+    (d : FpDecodiert) (op : Gabbro.Grammatik.GleitOp)
+    (dst src : XmmReg) (rest : List Byte)
+    (hf : fpHwFetchDekodiert t = some (d, rest))
+    (hform : d.befehl = fpHwArithRR op dst src)
+    (hfp : fpEintritt t.fp = true)
+    (hgate : fpHwCvttZugelassen d.befehl t = true)
+    (hout : fpHwByteschritt t = .weiter t') :
+    xmmHoch t'.xmm dst = xmmHoch t.xmm dst := by
+  have hok := (fpHwFetchDekodiert_erfolg t d rest hf).2.2.1
+  have hstep := fpHwByteschritt_schritt t t' d rest hf hgate hout
+  cases op with
+  | add =>
+    have hform' : d.befehl = .addsdRR dst src := hform
+    exact fpSchritt_addsdRR_hoch d t t' dst src hok hfp hform' hstep
+  | sub =>
+    have hform' : d.befehl = .subsdRR dst src := hform
+    exact fpSchritt_subsdRR_hoch d t t' dst src hok hfp hform' hstep
+  | mul =>
+    have hform' : d.befehl = .mulsdRR dst src := hform
+    exact fpSchritt_mulsdRR_hoch d t t' dst src hok hfp hform' hstep
+  | div =>
+    have hform' : d.befehl = .divsdRR dst src := hform
+    exact fpSchritt_divsdRR_hoch d t t' dst src hok hfp hform' hstep
+
+/-- UCOMISD unordered row at step level: a NaN-class left operand
+    forces ZF, PF, CF with reserved flags (Vol.2B 4-733f). -/
+theorem fpHwSchritt_ucomisdRR_ungeordnet (d : FpDecodiert)
+    (t : FpZustand) (lhs rhs : XmmReg)
+    (hok : laengeOk d.laenge = true)
+    (hfp : fpEintritt t.fp = true)
+    (h : d.befehl = .ucomisdRR lhs rhs)
+    (hna : Gleitkomma.klasse Gleitkomma.f64
+      (bites64 (xmmTief t.xmm lhs)) = .nan) :
+    fpSchritt d t = some { t with kern := { t.kern with
+      rip := ripNach t.kern.rip d.laenge,
+      flags := ⟨true, true, some false, true, false, false⟩ } } := by
+  rw [fpSchritt_ucomisdRR d t lhs rhs hok hfp h,
+    ucomiFlags_ungeordnet_links _ _ hna]
+
+/-- UCOMISD equal row at step level: no strict comparison either way
+    sets only ZF, with reserved flags. -/
+theorem fpHwSchritt_ucomisdRR_gleich (d : FpDecodiert)
+    (t : FpZustand) (lhs rhs : XmmReg)
+    (hok : laengeOk d.laenge = true)
+    (hfp : fpEintritt t.fp = true)
+    (h : d.befehl = .ucomisdRR lhs rhs)
+    (h1 : Gleitkomma.flt Gleitkomma.f64
+      (bites64 (xmmTief t.xmm lhs)) (bites64 (xmmTief t.xmm rhs)) = false)
+    (h2 : Gleitkomma.flt Gleitkomma.f64
+      (bites64 (xmmTief t.xmm rhs)) (bites64 (xmmTief t.xmm lhs)) = false)
+    (ha : Gleitkomma.klasse Gleitkomma.f64
+      (bites64 (xmmTief t.xmm lhs)) ≠ .nan)
+    (hb : Gleitkomma.klasse Gleitkomma.f64
+      (bites64 (xmmTief t.xmm rhs)) ≠ .nan) :
+    fpSchritt d t = some { t with kern := { t.kern with
+      rip := ripNach t.kern.rip d.laenge,
+      flags := ⟨false, false, some false, true, false, false⟩ } } := by
+  rw [fpSchritt_ucomisdRR d t lhs rhs hok hfp h,
+    ucomiFlags_gleich _ _ h1 h2 ha hb]
+
+/-- Two distinct NaN payloads both classify as NaN: classification
+    pins no payload (binary64, decided at word level). -/
+theorem fpHwNan_nutzlast_klasse :
+    Gleitkomma.klasse Gleitkomma.f64
+        (bites64 0x7FF0000000000001) = .nan ∧
+      Gleitkomma.klasse Gleitkomma.f64
+        (bites64 0x7FF0000000000002) = .nan ∧
+      (0x7FF0000000000001 : Wort) ≠ 0x7FF0000000000002 := by
+  refine ⟨by decide, by decide, by decide⟩
+
+/-- Two distinct NaN payloads take the unordered row: the payload is
+    ignored, the class decides. -/
+theorem fpHwNan_ungeordnet :
+    ucomiFlags (bites64 0x7FF0000000000001)
+      (bites64 0x7FF0000000000002) =
+      ⟨true, true, some false, true, false, false⟩ := by
+  decide
+
+/-- Signed-zero subtraction: `+0.0 - +0.0` is `+0.0`. -/
+theorem fpHwSub_plusnull : fpRechne .sub 0 0 = 0 := by
+  decide
+
+/-! ## 8. Joint witnesses: fetched runs that change memory.
+
+  W1 runs a fetched REX DIVSD special case (`1.0 / +0.0 = +∞`,
+  `div_eins_durch_null`) into a fetched REX MOVSD store: two reached
+  byte-steps from actual executable bytes, one real memory change,
+  the word reading back, under the admitted profile throughout. -/
+
+/-- Witness image: REX DIVSD (5 bytes) then REX MOVSD store (9). -/
+def fpHwW1Bild : List Byte :=
+  fpHwEncodeArithRR .div .xmm0 .xmm1 ++
+    fpHwEncodeMovsdSpeichere .rax .xmm0 0
+
+/-- The DIVSD prefix is five bytes long. -/
+theorem fpHwW1Div_laenge :
+    (fpHwEncodeArithRR .div .xmm0 .xmm1).length = 5 := by
+  rfl
+
+/-- The store suffix is nine bytes long. -/
+theorem fpHwW1Store_laenge :
+    (fpHwEncodeMovsdSpeichere .rax .xmm0 0).length = 9 := by
+  rfl
+
+/-- Witness memory: zeroed bytes with the image at 4096 and execute
+    permission exactly on those fourteen bytes; data access stays
+    fully open. -/
+def fpHwW1Speicher : Speicher :=
+  { zeugenSpeicher with
+    bytes := fun a =>
+      if a.toNat - 4096 < fpHwW1Bild.length then
+        fpHwW1Bild.getD (a.toNat - 4096) 0
+      else zeugenSpeicher.bytes a
+    ausfuehrbar := fun a => decide (4096 ≤ a.toNat ∧ a.toNat < 4110) }
+
+/-- Witness XMM file: `xmm0` holds `1.0`, every other register `+0.0`. -/
+def fpHwW1Xmm : XmmDatei :=
+  fun q => if q = XmmReg.xmm0 then vecJoin 0x3FF0000000000000 0
+    else vecJoin 0 0
+
+/-- Witness core: `rax` points at 8192, RIP at the image. -/
+def fpHwW1Kern : Zustand :=
+  { register := fun q => if q = Register.rax then BitVec.ofNat 64 8192
+      else BitVec.ofNat 64 0
+    flags := ⟨false, true, some false, false, false, false⟩
+    rip := BitVec.ofNat 64 4096
+    speicher := fpHwW1Speicher }
+
+/-- Witness extended state: reset FP control word (admitted profile). -/
+def fpHwW1T : FpZustand := ⟨fpHwW1Kern, fpHwW1Xmm, kontextReset⟩
+
+/-- The witness `xmm0` holds `1.0`. -/
+theorem fpHwW1Tief0 :
+    xmmTief fpHwW1T.xmm XmmReg.xmm0 = 0x3FF0000000000000 := by
+  decide
+
+/-- The witness `xmm1` holds `+0.0`. -/
+theorem fpHwW1Tief1 : xmmTief fpHwW1T.xmm XmmReg.xmm1 = 0 := by
+  decide
+
+/-- The witness store address: `rax + 0` is 8192. -/
+theorem fpHwW1EffAddr :
+    effAddr fpHwW1T.kern Register.rax 0 = BitVec.ofNat 64 8192 := by
+  decide
+
+/-- Admitted profile on the witness state. -/
+theorem fpHwW1Fp : fpEintritt fpHwW1T.fp = true := by
+  decide
+
+/-- Five-byte decode lengths are checked data. -/
+theorem fpHwW1Laenge5 : laengeOk 5 = true := by
+  decide
+
+/-- Nine-byte decode lengths are checked data. -/
+theorem fpHwW1Laenge9 : laengeOk 9 = true := by
+  decide
+
+/-- The fetch window holds exactly the image. -/
+theorem fpHwW1Geholt : fpHwGeholt fpHwW1T = fpHwW1Bild := by
+  decide
+
+/-- The five DIVSD bytes carry execute permission. -/
+theorem fpHwW1Perm5 :
+    ausfuehrbarN fpHwW1T.kern.speicher fpHwW1T.kern.rip 5 = true := by
+  decide
+
+/-- The image is fourteen bytes long. -/
+theorem fpHwW1Bild_laenge : fpHwW1Bild.length = 14 := by
+  decide
+
+/-- Fetch from the actual image yields the DIVSD form with the store
+    bytes as suffix. -/
+theorem fpHwW1_fetch1 :
+    fpHwFetchDekodiert fpHwW1T =
+      some (⟨.divsdRR .xmm0 .xmm1, 5⟩,
+        fpHwEncodeMovsdSpeichere .rax .xmm0 0) := by
+  have hbytes : fpHwGeholt fpHwW1T =
+      fpHwEncodeArithRR .div .xmm0 .xmm1 ++
+        fpHwEncodeMovsdSpeichere .rax .xmm0 0 := by
+    simp only [fpHwW1Geholt, fpHwW1Bild]
+  have hrt := fpHwRoundtrip_arithRR .div .xmm0 .xmm1
+    (fpHwEncodeMovsdSpeichere .rax .xmm0 0)
+  have hred : fpHwArithRR .div .xmm0 .xmm1 = .divsdRR .xmm0 .xmm1 := rfl
+  have hlen : (fpHwEncodeArithRR .div .xmm0 .xmm1).length = 5 :=
+    fpHwW1Div_laenge
+  rw [hlen, hred] at hrt
+  have hdec : fpHwDecode (fpHwGeholt fpHwW1T) =
+      some (⟨.divsdRR .xmm0 .xmm1, 5⟩,
+        fpHwEncodeMovsdSpeichere .rax .xmm0 0) := by
+    rw [hbytes]
+    exact hrt
+  have hlenBild : (fpHwGeholt fpHwW1T).length = 14 := by
+    rw [fpHwW1Geholt, fpHwW1Bild_laenge]
+  have hstore : (fpHwEncodeMovsdSpeichere .rax .xmm0 0).length = 9 :=
+    fpHwW1Store_laenge
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlenBild, hstore, fpHwW1Laenge5, fpHwW1Perm5]
+  decide
+
+/-- The conversion gate is open on the DIVSD form. -/
+theorem fpHwW1Gate1 :
+    fpHwCvttZugelassen (.divsdRR .xmm0 .xmm1) fpHwW1T = true := by
+  rfl
+
+/-- Witness state after the divide: `xmm0` holds `+∞`. -/
+def fpHwW1T1 : FpZustand :=
+  { fpHwW1T with kern := { fpHwW1T.kern with rip := ripNach fpHwW1T.kern.rip 5 }, xmm := xmmSchreibeTief fpHwW1T.xmm XmmReg.xmm0 0x7FF0000000000000 }
+
+/-- Witness memory after the store: `+∞` at 8192. -/
+def fpHwW1SpeicherNach : Speicher :=
+  { fpHwW1Speicher with bytes := writeBytes fpHwW1Speicher (BitVec.ofNat 64 8192) 0x7FF0000000000000 }
+
+/-- Witness state after the store. -/
+def fpHwW1T2 : FpZustand :=
+  { fpHwW1T1 with kern := { fpHwW1T1.kern with speicher := fpHwW1SpeicherNach, rip := ripNach fpHwW1T1.kern.rip 9 } }
+
+/-- First reached byte-step: actual DIVSD bytes compute `+∞`. -/
+theorem fpHwW1_schritt1 :
+    fpHwByteschritt fpHwW1T = .weiter fpHwW1T1 := by
+  unfold fpHwByteschritt
+  rw [fpHwW1_fetch1]
+  simp only
+  rw [fpHwW1Gate1]
+  simp only
+  have hs := fpSchritt_divsdRR ⟨.divsdRR .xmm0 .xmm1, 5⟩ fpHwW1T
+    .xmm0 .xmm1 fpHwW1Laenge5 fpHwW1Fp rfl
+  rw [fpHwW1Tief0, fpHwW1Tief1, div_eins_durch_null] at hs
+  simp only [hs, fpHwW1T1, if_true]
+
+/-- After the divide, `xmm0` holds `+∞`. -/
+theorem fpHwW1T1_tief0 :
+    xmmTief fpHwW1T1.xmm XmmReg.xmm0 = 0x7FF0000000000000 := by
+  decide
+
+/-- The second fetch window holds exactly the store bytes. -/
+theorem fpHwW1Geholt2 :
+    fpHwGeholt fpHwW1T1 = fpHwEncodeMovsdSpeichere .rax .xmm0 0 := by
+  decide
+
+/-- The nine store bytes carry execute permission. -/
+theorem fpHwW1Perm9 :
+    ausfuehrbarN fpHwW1T1.kern.speicher fpHwW1T1.kern.rip 9 = true := by
+  decide
+
+/-- Fetch of the second step yields the store form. -/
+theorem fpHwW1_fetch2 :
+    fpHwFetchDekodiert fpHwW1T1 =
+      some (⟨.movsdSpeichere .rax .xmm0 0, 9⟩, []) := by
+  have hrt := fpHwRoundtrip_movsdSpeichere .rax .xmm0 0 []
+  rw [fpHwW1Store_laenge] at hrt
+  have hdec : fpHwDecode (fpHwGeholt fpHwW1T1) =
+      some (⟨.movsdSpeichere .rax .xmm0 0, 9⟩, []) := by
+    rw [fpHwW1Geholt2]
+    simp only [List.append_nil] at hrt ⊢
+    exact hrt
+  have hlen : (fpHwGeholt fpHwW1T1).length = 9 := by
+    rw [fpHwW1Geholt2, fpHwW1Store_laenge]
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlen, fpHwW1Laenge9, fpHwW1Perm9]
+  decide
+
+/-- The store address is still 8192 after the divide. -/
+theorem fpHwW1T1_effAddr :
+    effAddr fpHwW1T1.kern Register.rax 0 = BitVec.ofNat 64 8192 := by
+  decide
+
+/-- The store goes through: `+∞` lands at 8192. -/
+theorem fpHwW1_schreib :
+    write64 fpHwW1T1.kern.speicher (effAddr fpHwW1T1.kern Register.rax 0)
+      (xmmTief fpHwW1T1.xmm XmmReg.xmm0) = some fpHwW1SpeicherNach := by
+  rw [fpHwW1T1_effAddr, fpHwW1T1_tief0]
+  have hc : schreibbar8 fpHwW1Speicher (BitVec.ofNat 64 8192) = true := by
+    decide
+  have hmem : fpHwW1T1.kern.speicher = fpHwW1Speicher := rfl
+  rw [hmem]
+  unfold write64
+  rw [if_pos hc, fpHwW1SpeicherNach]
+
+/-- The conversion gate is open on the store form. -/
+theorem fpHwW1Gate2 :
+    fpHwCvttZugelassen (.movsdSpeichere .rax .xmm0 0) fpHwW1T1 = true := by
+  rfl
+
+/-- Second reached byte-step: actual store bytes write `xmm0`. -/
+theorem fpHwW1_schritt2 :
+    fpHwByteschritt fpHwW1T1 = .weiter fpHwW1T2 := by
+  unfold fpHwByteschritt
+  rw [fpHwW1_fetch2]
+  simp only
+  rw [fpHwW1Gate2]
+  simp only
+  have hs := fpSchritt_movsdSpeichere_erfolg
+    ⟨.movsdSpeichere .rax .xmm0 0, 9⟩ fpHwW1T1
+    .rax .xmm0 0 fpHwW1SpeicherNach
+    fpHwW1Laenge9 fpHwW1Fp rfl fpHwW1_schreib
+  simp only [hs, fpHwW1T2, if_true]
+
+/-- The stored word reads back: `+∞` at 8192. -/
+theorem fpHwW1_liest :
+    read64 fpHwW1T2.kern.speicher (BitVec.ofNat 64 8192) =
+      some 0x7FF0000000000000 := by
+  have hrd : lesbar8 fpHwW1Speicher (BitVec.ofNat 64 8192) = true := by
+    decide
+  have hmem : fpHwW1T2.kern.speicher = fpHwW1SpeicherNach := rfl
+  rw [hmem]
+  exact read64_nach_write64 _ _ _ _ fpHwW1_schreib hrd
+
+/-- The run observably changed memory (top footprint byte). -/
+theorem fpHwW1_aendert :
+    fpHwW1T.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ≠
+      fpHwW1T2.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) := by
+  decide
+
+/-- Joint witness W1: two fetched REX byte-steps compute the DIVSD
+    special case and store it, with a real memory change -- reached,
+    read back, under the admitted profile. -/
+theorem fpHwW1_div_speichert :
+    ∃ (t' t'' : FpZustand),
+      fpHwByteschritt fpHwW1T = .weiter t' ∧
+      fpHwByteschritt t' = .weiter t'' ∧
+      read64 t''.kern.speicher (BitVec.ofNat 64 8192) =
+        some 0x7FF0000000000000 ∧
+      fpHwW1T.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ≠
+        t''.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ∧
+      fpEintritt fpHwW1T.fp = true := by
+  exact ⟨fpHwW1T1, fpHwW1T2, fpHwW1_schritt1, fpHwW1_schritt2,
+    fpHwW1_liest, fpHwW1_aendert, fpHwW1Fp⟩
+
 /- CUTS: skeleton plus encoders; decoder, execution and witnesses open.
 -/
 
