@@ -10,9 +10,9 @@
   goal, Rust, emitter, ledger or control file touched. Report-only review:
   no source edits made by this reviewer.
 
-## CANDIDATE: 644 ef8e47df794053b1f6fdb05aad1bd742610cc386
+CANDIDATE: 644 ef8e47df794053b1f6fdb05aad1bd742610cc386
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 ## What was checked (independently, in this clone)
 
