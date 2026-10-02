@@ -133,7 +133,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-01 14:59 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-01 22:31 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -155,7 +155,7 @@ Last ledger refresh: **2026-10-01 14:59 UTC**. This is an operational snapshot, 
 | 284 | Executable target TSO over real byte memory | Merged after review/checks | 300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-284.md) |
 | 285 | Mathematical carry and signed-overflow characterisation | Merged after review/checks | 301: Merged after review/checks | [report](messung/muse/MUSE-REPORT-285.md) |
 | 286 | Width-aware IEEE target data and f32 bridge evidence | Merged after review/checks | 302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-286.md) |
-| 287 | One typed IR and source-linked lowering foundation | Incomplete; preserved | 303: scheduled | [task](lanes/287.md) |
+| 287 | One typed IR and source-linked lowering foundation | Merged after review/checks | 303: Merged after review/checks | [report](messung/muse/MUSE-REPORT-287.md) |
 | 288 | Invariant-derived optimisation on actual source semantics | Merged after review/checks | 304: Merged after review/checks | [report](messung/muse/MUSE-REPORT-288.md) |
 | 289 | Disjoint byte-memory commutation | Merged after review/checks | 305: Merged after review/checks | [report](messung/muse/MUSE-REPORT-289.md) |
 | 290 | Packed integer lane model for future SIMD | Merged after review/checks | 306: Merged after review/checks | [report](messung/muse/MUSE-REPORT-290.md) |
@@ -189,7 +189,7 @@ Last ledger refresh: **2026-10-01 14:59 UTC**. This is an operational snapshot, 
 | 346 | Practical-performance Lean wave C2: GateStub | Merged after review/checks | 384: Merged after review/checks | [report](messung/muse/MUSE-REPORT-346.md) |
 | 347 | Practical-performance Lean wave C3: CostSummary | Merged after review/checks | 385: Merged after review/checks | [report](messung/muse/MUSE-REPORT-347.md) |
 | 348 | Practical-performance Lean wave C4: EntryState | Merged after review/checks | 386: Merged after review/checks | [report](messung/muse/MUSE-REPORT-348.md) |
-| 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Committed candidate; review/integration pending | 387: Committed candidate; review/integration pending | [task](lanes/349.md) |
+| 349 | Practical-performance Lean wave C5: ValidatorSkeleton | Merged after review/checks | 387: Merged after review/checks | [report](messung/muse/MUSE-REPORT-349.md) |
 | 350 | Practical-performance Lean wave C6: AtomicPayload | Merged after review/checks | 388: Merged after review/checks | [report](messung/muse/MUSE-REPORT-350.md) |
 | 401 | Continuous workforce organisation and next dependency-aware proof queue | Merged after review/checks | 439: Merged after review/checks | [report](messung/muse/MUSE-REPORT-401.md) |
 | 402 | Independent operating Muse scheduler audit and reproducible repair proposal | Merged after review/checks | 403: Merged after review/checks | [report](messung/muse/MUSE-REPORT-402.md) |
@@ -224,16 +224,59 @@ Last ledger refresh: **2026-10-01 14:59 UTC**. This is an operational snapshot, 
 | 432 | Continuous Lean proof reserve: RegionSeparation | Merged after review/checks | 480: Merged after review/checks | [report](messung/muse/MUSE-REPORT-432.md) |
 | 433 | Continuous Lean proof reserve: ObservationProjection | Merged after review/checks | 481: Merged after review/checks | [report](messung/muse/MUSE-REPORT-433.md) |
 | 434 | Continuous Lean proof reserve: HardwareAssumptions | Merged after review/checks | 482: Merged after review/checks | [report](messung/muse/MUSE-REPORT-434.md) |
-| 435 | Continuous Lean proof reserve: DecodingCoverage | Committed candidate; review/integration pending | 483: Committed candidate; review/integration pending | [task](lanes/435.md) |
+| 435 | Continuous Lean proof reserve: DecodingCoverage | Merged after review/checks | 483: Merged after review/checks | [report](messung/muse/MUSE-REPORT-435.md) |
 | 540 | OS-independent and freestanding target architecture | Merged after review/checks | 541: Merged after review/checks | [report](messung/muse/MUSE-REPORT-540.md) |
-| 542 | Next bridge wave N9: StackUnwind | Committed candidate; review/integration pending | 548: Committed candidate; review/integration pending | [task](lanes/542.md) |
-| 543 | Next bridge wave N16: DecodeFault | Committed candidate; review/integration pending | 549: Committed candidate; review/integration pending | [task](lanes/543.md) |
-| 544 | Next bridge wave N18: RegionFresh | Committed candidate; review/integration pending | 550: Committed candidate; review/integration pending | [task](lanes/544.md) |
-| 545 | Next bridge wave N11: PayloadResidue | Committed candidate; review/integration pending | 551: Committed candidate; review/integration pending | [task](lanes/545.md) |
-| 546 | Next bridge wave N13: ContractSites | Committed candidate; review/integration pending | 552: Committed candidate; review/integration pending | [task](lanes/546.md) |
+| 542 | Next bridge wave N9: StackUnwind | Merged after review/checks | 548: Merged after review/checks | [report](messung/muse/MUSE-REPORT-542.md) |
+| 543 | Next bridge wave N16: DecodeFault | Merged after review/checks | 549: Merged after review/checks | [report](messung/muse/MUSE-REPORT-543.md) |
+| 544 | Next bridge wave N18: RegionFresh | Merged after review/checks | 550: Merged after review/checks | [report](messung/muse/MUSE-REPORT-544.md) |
+| 545 | Next bridge wave N11: PayloadResidue | Merged after review/checks | 551: Merged after review/checks | [report](messung/muse/MUSE-REPORT-545.md) |
+| 546 | Next bridge wave N13: ContractSites | Merged after review/checks | 552: Merged after review/checks | [report](messung/muse/MUSE-REPORT-546.md) |
 | 547 | Next bridge wave N17: TimeTransfer | Merged after review/checks | 553: Merged after review/checks | [report](messung/muse/MUSE-REPORT-547.md) |
 | 554 | Shorter clearer current English README | Merged after review/checks | 555: Merged after review/checks | [report](messung/muse/MUSE-REPORT-554.md) |
-| 556 | Repeated intermittent CLI alias test diagnosis | Agent working | 557: scheduled | [task](lanes/556.md) |
+| 556 | Repeated intermittent CLI alias test diagnosis | Merged after review/checks | 557: Merged after review/checks | [report](messung/muse/MUSE-REPORT-556.md) |
+| 558 | Connection: Connection plan and integration ownership | Merged after review/checks | 576: Merged after review/checks | [report](messung/muse/MUSE-REPORT-558.md) |
+| 559 | Connection: Arbitrary-input pilot decoder soundness | Merged after review/checks | 577: Merged after review/checks | [report](messung/muse/MUSE-REPORT-559.md) |
+| 560 | Connection: Loaded image to actual instruction fetch | Merged after review/checks | 578: Merged after review/checks | [report](messung/muse/MUSE-REPORT-560.md) |
+| 561 | Connection: Relocated bytes to re-decoded instruction execution | Merged after review/checks | 579: Merged after review/checks | [report](messung/muse/MUSE-REPORT-561.md) |
+| 562 | Connection: Narrow operations byte decoder and execution connection | Merged after review/checks | 580: Merged after review/checks | [report](messung/muse/MUSE-REPORT-562.md) |
+| 563 | Connection: Multiply/divide byte decoder and execution connection | Merged after review/checks | 581: Merged after review/checks | [report](messung/muse/MUSE-REPORT-563.md) |
+| 564 | Connection: Shift operations byte decoder and execution connection | Merged after review/checks | 582: Merged after review/checks | [report](messung/muse/MUSE-REPORT-564.md) |
+| 565 | Connection: Scalar SSE2 bytes to accepted FP execution | Agent working | 583: scheduled | [task](lanes/565.md) |
+| 566 | Connection: Conditional forms bytes to accepted control execution | Merged after review/checks | 584: Merged after review/checks | [report](messung/muse/MUSE-REPORT-566.md) |
+| 567 | Connection: Canonical byte-TSO history projection | Merged after review/checks | 585: Merged after review/checks | [report](messung/muse/MUSE-REPORT-567.md) |
+| 568 | Connection: Executed pilot instruction to realised access footprint | Merged after review/checks | 586: Merged after review/checks | [report](messung/muse/MUSE-REPORT-568.md) |
+| 569 | Connection: Fetched call/return to stack-frame proofs | Merged after review/checks | 587: Merged after review/checks | [report](messung/muse/MUSE-REPORT-569.md) |
+| 570 | Connection: Source world/table values to target byte representation | Merged after review/checks | 588: Merged after review/checks | [report](messung/muse/MUSE-REPORT-570.md) |
+| 571 | Connection: Entry state, image permissions and user binding duties | Merged after review/checks | 589: Merged after review/checks | [report](messung/muse/MUSE-REPORT-571.md) |
+| 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
+| 573 | Connection: Projected TSO stores to source W writes | Merged after review/checks | 591: Merged after review/checks | [report](messung/muse/MUSE-REPORT-573.md) |
+| 574 | Connection: Projected TSO loads to source W reads | Merged after review/checks | 592: Merged after review/checks | [report](messung/muse/MUSE-REPORT-574.md) |
+| 575 | Connection: Unified extended decoder and executable byte-step | Waiting for accepted dependencies | 593: scheduled | [task](lanes/575.md) |
+| 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Merged after review/checks | [report](messung/muse/MUSE-REPORT-594.md) |
+| 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Merged after review/checks | [report](messung/muse/MUSE-REPORT-595.md) |
+| 596 | Overnight: TSO history preservation across actual finite traces | Merged after review/checks | 608: Merged after review/checks | [report](messung/muse/MUSE-REPORT-596.md) |
+| 597 | Overnight: Selected SSE2 vector bytes to canonical XMM execution | Merged after review/checks | 609: Merged after review/checks | [report](messung/muse/MUSE-REPORT-597.md) |
+| 598 | Overnight: Checked validator to loaded fetched execution | Merged after review/checks | 610: Merged after review/checks | [report](messung/muse/MUSE-REPORT-598.md) |
+| 599 | Overnight: Direct typed-source expression to pilot machine code | Merged after review/checks | 611: Merged after review/checks | [report](messung/muse/MUSE-REPORT-599.md) |
+| 600 | Overnight: Invariant-derived instruction selection with byte execution | Merged after review/checks | 612: Merged after review/checks | [report](messung/muse/MUSE-REPORT-600.md) |
+| 601 | Overnight: Flag dependencies across actual decoded control flow | Merged after review/checks | 613: Merged after review/checks | [report](messung/muse/MUSE-REPORT-601.md) |
+| 602 | Overnight: Code and relocation preservation under real data stores | Merged after review/checks | 614: Merged after review/checks | [report](messung/muse/MUSE-REPORT-602.md) |
+| 603 | Overnight: Whole-word grouping under actual trace exclusion | Merged after review/checks | 615: Merged after review/checks | [report](messung/muse/MUSE-REPORT-603.md) |
+| 604 | Overnight: Float payload and exception observability in real source | Merged after review/checks | 616: Merged after review/checks | [report](messung/muse/MUSE-REPORT-604.md) |
+| 605 | Overnight: Concurrency bridge integration and producer adequacy audit | Merged after review/checks | 617: Merged after review/checks | [report](messung/muse/MUSE-REPORT-605.md) |
+| 618 | Overnight: Resource-safe native Lean invocation for publication tests | Merged after review/checks | 619: Merged after review/checks | [report](messung/muse/MUSE-REPORT-618.md) |
+| 620 | Automatic coordinator takeover on missing foreground heartbeat | Merged after review/checks | 621: Merged after review/checks | [report](messung/muse/MUSE-REPORT-620.md) |
+| 622 | Remove only completed managed lane task markdown | Merged after review/checks | 623: Merged after review/checks | [report](messung/muse/MUSE-REPORT-622.md) |
+| 624 | Direct-source closure: FloatSourceObservations | Merged after review/checks | 625: Merged after review/checks | [report](messung/muse/MUSE-REPORT-624.md) |
+| 626 | Direct-source closure: FloatEntryState | Merged after review/checks | 627: Merged after review/checks | [report](messung/muse/MUSE-REPORT-626.md) |
+| 628 | Direct-source closure: SourceAssignmentLowering | Merged after review/checks | 629: Merged after review/checks | [report](messung/muse/MUSE-REPORT-628.md) |
+| 630 | Direct-source closure: SourceAccessCompleteness | Merged after review/checks | 631: Merged after review/checks | [report](messung/muse/MUSE-REPORT-630.md) |
+| 632 | Direct-source closure: SourceValidatorConnection | Merged after review/checks | 633: Merged after review/checks | [report](messung/muse/MUSE-REPORT-632.md) |
+| 634 | Direct-source closure: SourceCodeFrame | Merged after review/checks | 635: Merged after review/checks | [report](messung/muse/MUSE-REPORT-634.md) |
+| 636 | Required failover slot lifetime and safe role handback | Merged after review/checks | 637: Merged after review/checks | [report](messung/muse/MUSE-REPORT-636.md) |
+| 638 | Align optimiser and compiler design with accepted direct-source lowering | Merged after review/checks | 639: Merged after review/checks | [report](messung/muse/MUSE-REPORT-638.md) |
+| 640 | Independent coordinator control-plane takeover and cleanup integration audit | Merged after review/checks | 641: Merged after review/checks | [report](messung/muse/MUSE-REPORT-640.md) |
+| 642 | Recover preserved IR research draft from recorded edits after clone removal | Merged after review/checks | 643: Merged after review/checks | [report](messung/muse/MUSE-REPORT-642.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -521,6 +564,145 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-01: lane **553**, Independent exact-candidate review of 547 TimeTransfer, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-553.md). <!-- x86-merged:553 -->
 - 2026-10-01: lane **554**, Shorter clearer current English README, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-554.md). <!-- x86-merged:554 -->
 - 2026-10-01: lane **555**, Independent exact-candidate README review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-555.md). <!-- x86-merged:555 -->
+- 2026-10-01: lane **556**, Repeated intermittent CLI alias test diagnosis, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-556.md). <!-- x86-merged:556 -->
+- 2026-10-01: lane **557**, Independent exact-candidate CLI alias repair review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-557.md). <!-- x86-merged:557 -->
+- 2026-10-01: Simon prioritised connecting the accepted model components. Registered source-linked IR continuation 287, connection owners 558-575 and independent reviewers 576-593, with a permanent global cap of 15 actual Muse processes. Initial work connects decoded bytes, loaded mappings, relocations, realised accesses, TSO histories and source-memory representation; W read/write and unified extension dispatch wait for accepted producer interfaces. Registration is not execution or proof closure. <!-- x86-connection-wave-558 -->
+- 2026-10-01: lane **349**, Practical-performance Lean wave C5: ValidatorSkeleton, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-349.md). <!-- x86-merged:349 -->
+- 2026-10-01: lane **387**, Independent exact-candidate review of 349 ValidatorSkeleton, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-387.md). <!-- x86-merged:387 -->
+- 2026-10-01: lane **435**, Continuous Lean proof reserve: DecodingCoverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-435.md). <!-- x86-merged:435 -->
+- 2026-10-01: lane **483**, Independent exact-candidate review of 435, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-483.md). <!-- x86-merged:483 -->
+- 2026-10-01: lane **542**, Next bridge wave N9: StackUnwind, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-542.md). <!-- x86-merged:542 -->
+- 2026-10-01: lane **548**, Independent exact-candidate review of 542 StackUnwind, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-548.md). <!-- x86-merged:548 -->
+- 2026-10-01: lane **543**, Next bridge wave N16: DecodeFault, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-543.md). <!-- x86-merged:543 -->
+- 2026-10-01: lane **549**, Independent exact-candidate review of 543 DecodeFault, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-549.md). <!-- x86-merged:549 -->
+- 2026-10-01: lane **544**, Next bridge wave N18: RegionFresh, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-544.md). <!-- x86-merged:544 -->
+- 2026-10-01: lane **550**, Independent exact-candidate review of 544 RegionFresh, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-550.md). <!-- x86-merged:550 -->
+- 2026-10-01: lane **545**, Next bridge wave N11: PayloadResidue, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-545.md). <!-- x86-merged:545 -->
+- 2026-10-01: lane **551**, Independent exact-candidate review of 545 PayloadResidue, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-551.md). <!-- x86-merged:551 -->
+- 2026-10-01: lane **546**, Next bridge wave N13: ContractSites, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-546.md). <!-- x86-merged:546 -->
+- 2026-10-01: lane **552**, Independent exact-candidate review of 546 ContractSites, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-552.md). <!-- x86-merged:552 -->
+- 2026-10-01: Simon requested an explicit pause for Glass Town handoff. All 15 active Muse lanes (287, 558-571), automatic backfill and serial integration/publication are paused. Clones, uncommitted drafts, private sessions, prompts and reports are preserved. ValidatorSkeleton349, DecodingCoverage435 and bridge helpers542-546 were integrated with independent reviews before the pause; the last Lean publication build passed, but unfinished Rust/emission publication checks were stopped and no successful full-wave push is claimed. See AGENTS.md section11 for takeover instructions. <!-- x86-glass-town-pause -->
+- 2026-10-01: lane **558**, Connection: Connection plan and integration ownership, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-558.md). <!-- x86-merged:558 -->
+- 2026-10-01: lane **576**, Independent connection review of 558, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-576.md). <!-- x86-merged:576 -->
+- 2026-10-01: lane **559**, Connection: Arbitrary-input pilot decoder soundness, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-559.md). <!-- x86-merged:559 -->
+- 2026-10-01: lane **577**, Independent connection review of 559, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-577.md). <!-- x86-merged:577 -->
+- 2026-10-01: lane **572**, Connection: Source budget-stop and target work connection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-572.md). <!-- x86-merged:572 -->
+- 2026-10-01: lane **590**, Independent connection review of 572, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-590.md). <!-- x86-merged:590 -->
+- 2026-10-01: publication batch checks passed for `7f9fcb17`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **567**, Connection: Canonical byte-TSO history projection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-567.md). <!-- x86-merged:567 -->
+- 2026-10-01: checked master `2fbe1071` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:2fbe10718c4d8a98e09750635f1f00ed4cf133c8 -->
+- 2026-10-01: lane **585**, Independent connection review of 567, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-585.md). <!-- x86-merged:585 -->
+- 2026-10-01: publication batch checks passed for `00aec74d`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **563**, Connection: Multiply/divide byte decoder and execution connection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-563.md). <!-- x86-merged:563 -->
+- 2026-10-01: checked master `c7108a5c` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:c7108a5c330c30703e1e8627a6b486d84d96a1fa -->
+- 2026-10-01: lane **581**, Independent connection review of 563, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-581.md). <!-- x86-merged:581 -->
+- 2026-10-01: lane **568**, Connection: Executed pilot instruction to realised access footprint, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-568.md). <!-- x86-merged:568 -->
+- 2026-10-01: lane **586**, Independent connection review of 568, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-586.md). <!-- x86-merged:586 -->
+- 2026-10-01: lane **569**, Connection: Fetched call/return to stack-frame proofs, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-569.md). <!-- x86-merged:569 -->
+- 2026-10-01: lane **587**, Independent connection review of 569, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-587.md). <!-- x86-merged:587 -->
+- 2026-10-01: lane **571**, Connection: Entry state, image permissions and user binding duties, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-571.md). <!-- x86-merged:571 -->
+- 2026-10-01: lane **589**, Independent connection review of 571, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-589.md). <!-- x86-merged:589 -->
+- 2026-10-01: publication batch checks passed for `a529523d`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **562**, Connection: Narrow operations byte decoder and execution connection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-562.md). <!-- x86-merged:562 -->
+- 2026-10-01: checked master `bfbf0e09` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:bfbf0e09eb3fd799700114ba5cec06816985ae4c -->
+- 2026-10-01: lane **580**, Independent connection review of 562, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-580.md). <!-- x86-merged:580 -->
+- 2026-10-01: lane **564**, Connection: Shift operations byte decoder and execution connection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-564.md). <!-- x86-merged:564 -->
+- 2026-10-01: lane **582**, Independent connection review of 564, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-582.md). <!-- x86-merged:582 -->
+- 2026-10-01: publication batch checks passed for `bcefc6ec`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **561**, Connection: Relocated bytes to re-decoded instruction execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-561.md). <!-- x86-merged:561 -->
+- 2026-10-01: checked master `ed644a73` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:ed644a7349150ff06fa6fccbd7cfbe79df3773bc -->
+- 2026-10-01: lane **579**, Independent connection review of 561, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-579.md). <!-- x86-merged:579 -->
+- 2026-10-01: publication batch checks passed for `6a26f772`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **560**, Connection: Loaded image to actual instruction fetch, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-560.md). <!-- x86-merged:560 -->
+- 2026-10-01: checked master `bf0762b4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:bf0762b44d454e7ca1f1fc2d39f3bef16481393a -->
+- 2026-10-01: lane **578**, Independent connection review of 560, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-578.md). <!-- x86-merged:578 -->
+- 2026-10-01: lane **566**, Connection: Conditional forms bytes to accepted control execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-566.md). <!-- x86-merged:566 -->
+- 2026-10-01: lane **584**, Independent connection review of 566, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-584.md). <!-- x86-merged:584 -->
+- 2026-10-01: Simon resumed Muse coordination after the Glass Town attempt and requested sustained overnight work near15 productive models with completion monitoring. Registered architecture/IR-reuse decision594, read-only monitor595, connection owners596-605 and independently reviewed native Lean resource repair618. Independent reviewers606-617/619 share the same cap. Existing source/decoder/TSO work continues; no extra SSA IR is presumed mandatory. Registration is not proof closure; full source-to-final-bytes validation remains OPEN. <!-- x86-overnight-594 -->
+- 2026-10-01: lane **570**, Connection: Source world/table values to target byte representation, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-570.md). <!-- x86-merged:570 -->
+- 2026-10-01: lane **588**, Independent connection review of 570, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-588.md). <!-- x86-merged:588 -->
+- 2026-10-01: lane **594**, Overnight: Architecture decision: existing source model versus additional SSA, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-594.md). <!-- x86-merged:594 -->
+- 2026-10-01: lane **606**, Independent overnight review of 594, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-606.md). <!-- x86-merged:606 -->
+- 2026-10-01: lane **595**, Overnight: Portable completion and workforce monitor, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-595.md). <!-- x86-merged:595 -->
+- 2026-10-01: lane **607**, Independent overnight review of 595, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-607.md). <!-- x86-merged:607 -->
+- 2026-10-01: lane **604**, Overnight: Float payload and exception observability in real source, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-604.md). <!-- x86-merged:604 -->
+- 2026-10-01: lane **616**, Independent overnight review of 604, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-616.md). <!-- x86-merged:616 -->
+- 2026-10-01: lane **605**, Overnight: Concurrency bridge integration and producer adequacy audit, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-605.md). <!-- x86-merged:605 -->
+- 2026-10-01: lane **617**, Independent overnight review of 605, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-617.md). <!-- x86-merged:617 -->
+- 2026-10-01: publication batch checks passed for `8bc6baf5`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: Simon authorised automatic OpenCode coordinator takeover after a missing foreground heartbeat and deletion of completed numeric lane task Markdown. Authors620/622 and exact reviewers621/623 are running/planned within the same15-slot cap. The reviewed monitor595/607 and direct typed-source lowering decision594/606 are integrated. Takeover is not armed before its independent review; reports/logs and Git task history remain audit evidence. Full final-byte validation remains OPEN. <!-- x86-automatic-coordination -->
+- 2026-10-01: lane **618**, Overnight: Resource-safe native Lean invocation for publication tests, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-618.md). <!-- x86-merged:618 -->
+- 2026-10-01: checked master `82447300` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:82447300f79ffa77fbe6a60fd6834356b066ac4a -->
+- 2026-10-01: lane **619**, Independent overnight review of 618, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-619.md). <!-- x86-merged:619 -->
+- 2026-10-01: publication batch checks passed for `de1b11ce`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **573**, Connection: Projected TSO stores to source W writes, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-573.md). <!-- x86-merged:573 -->
+- 2026-10-01: checked master `57b0f0cb` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:57b0f0cb34f3a0d33815e9a29523bb83b73bee9c -->
+- 2026-10-01: lane **591**, Independent connection review of 573, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-591.md). <!-- x86-merged:591 -->
+- 2026-10-01: lane **600**, Overnight: Invariant-derived instruction selection with byte execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-600.md). <!-- x86-merged:600 -->
+- 2026-10-01: lane **612**, Independent overnight review of 600, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-612.md). <!-- x86-merged:612 -->
+- 2026-10-01: lane **622**, Remove only completed managed lane task markdown, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-622.md). <!-- x86-merged:622 -->
+- 2026-10-01: lane **623**, Independent lifecycle review of 622, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-623.md). <!-- x86-merged:623 -->
+- 2026-10-01: publication batch checks passed for `3c1ffa8c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **287**, One typed IR and source-linked lowering foundation, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-287.md). <!-- x86-merged:287 -->
+- 2026-10-01: checked master `5c7ad4cd` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:5c7ad4cddcfdb1a8bc33f85399ee3b7dcf277ec6 -->
+- 2026-10-01: lane **303**, Independent review of 287, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-303.md). <!-- x86-merged:303 -->
+- 2026-10-01: lane **596**, Overnight: TSO history preservation across actual finite traces, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-596.md). <!-- x86-merged:596 -->
+- 2026-10-01: lane **608**, Independent overnight review of 596, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-608.md). <!-- x86-merged:608 -->
+- 2026-10-01: lane **602**, Overnight: Code and relocation preservation under real data stores, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-602.md). <!-- x86-merged:602 -->
+- 2026-10-01: lane **614**, Independent overnight review of 602, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-614.md). <!-- x86-merged:614 -->
+- 2026-10-01: publication batch checks passed for `0455c60c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: checked master `3859c4af` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:3859c4afcc04dff7dcaf586bfa13584da59372a6 -->
+- 2026-10-01: lane **574**, Connection: Projected TSO loads to source W reads, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-574.md). <!-- x86-merged:574 -->
+- 2026-10-01: lane **592**, Independent connection review of 574, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-592.md). <!-- x86-merged:592 -->
+- 2026-10-01: lane **597**, Overnight: Selected SSE2 vector bytes to canonical XMM execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-597.md). <!-- x86-merged:597 -->
+- 2026-10-01: lane **609**, Independent overnight review of 597, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-609.md). <!-- x86-merged:609 -->
+- 2026-10-01: lane **620**, Automatic coordinator takeover on missing foreground heartbeat, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-620.md). <!-- x86-merged:620 -->
+- 2026-10-01: lane **621**, Independent lifecycle review of 620, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-621.md). <!-- x86-merged:621 -->
+- 2026-10-01: publication batch checks passed for `a71b7e63`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **598**, Overnight: Checked validator to loaded fetched execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-598.md). <!-- x86-merged:598 -->
+- 2026-10-01: checked master `d0df3f69` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d0df3f69441aa3317c46bf6bc27e4419ba7dcc86 -->
+- 2026-10-01: lane **610**, Independent overnight review of 598, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-610.md). <!-- x86-merged:610 -->
+- 2026-10-01: publication batch checks passed for `7bf25826`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: checked master `04b1d896` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:04b1d896ae6157c981862c92e059560f12554f85 -->
+- 2026-10-01: lane **599**, Overnight: Direct typed-source expression to pilot machine code, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-599.md). <!-- x86-merged:599 -->
+- 2026-10-01: lane **611**, Independent overnight review of 599, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-611.md). <!-- x86-merged:611 -->
+- 2026-10-01: lane **638**, Align optimiser and compiler design with accepted direct-source lowering, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-638.md). <!-- x86-merged:638 -->
+- 2026-10-01: lane **639**, Independent exact review of 638, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-639.md). <!-- x86-merged:639 -->
+- 2026-10-01: publication batch checks passed for `eb68896b`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **636**, Required failover slot lifetime and safe role handback, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-636.md). <!-- x86-merged:636 -->
+- 2026-10-01: checked master `d1bc2fd7` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d1bc2fd735be2a4cfc21a3dcb1f597b152076903 -->
+- 2026-10-01: lane **637**, Independent deployment-scope failover review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-637.md). <!-- x86-merged:637 -->
+- 2026-10-01: lane **640**, Independent coordinator control-plane takeover and cleanup integration audit, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-640.md). <!-- x86-merged:640 -->
+- 2026-10-01: lane **641**, Independent exact review of 640, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-641.md). <!-- x86-merged:641 -->
+- 2026-10-01: publication batch checks passed for `5449d84f`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **601**, Overnight: Flag dependencies across actual decoded control flow, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-601.md). <!-- x86-merged:601 -->
+- 2026-10-01: checked master `fdb25d45` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:fdb25d45055f17a921a63d925889ca18df46c4be -->
+- 2026-10-01: lane **613**, Independent overnight review of 601, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-613.md). <!-- x86-merged:613 -->
+- 2026-10-01: lane **626**, Direct-source closure: FloatEntryState, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-626.md). <!-- x86-merged:626 -->
+- 2026-10-01: lane **627**, Independent direct-source closure review of 626, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-627.md). <!-- x86-merged:627 -->
+- 2026-10-01: lane **634**, Direct-source closure: SourceCodeFrame, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-634.md). <!-- x86-merged:634 -->
+- 2026-10-01: lane **635**, Independent direct-source closure review of 634, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-635.md). <!-- x86-merged:635 -->
+- 2026-10-01: lane **642**, Recover preserved IR research draft from recorded edits after clone removal, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-642.md). <!-- x86-merged:642 -->
+- 2026-10-01: lane **643**, Independent exact review of 642, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-643.md). <!-- x86-merged:643 -->
+- 2026-10-01: publication batch checks passed for `106e66a4`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **632**, Direct-source closure: SourceValidatorConnection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-632.md). <!-- x86-merged:632 -->
+- 2026-10-01: checked master `d36d08bd` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d36d08bd4ac20e60cb0f6e96b7994c0cffb3d3a8 -->
+- 2026-10-01: lane **633**, Independent direct-source closure review of 632, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-633.md). <!-- x86-merged:633 -->
+- 2026-10-01: publication batch checks passed for `81b7ea7e`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **628**, Direct-source closure: SourceAssignmentLowering, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-628.md). <!-- x86-merged:628 -->
+- 2026-10-01: checked master `838a1c22` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:838a1c220cfd11b76f55524f4f2ce229cac62651 -->
+- 2026-10-01: lane **629**, Independent direct-source closure review of 628, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-629.md). <!-- x86-merged:629 -->
+- 2026-10-01: publication batch checks passed for `45331a32`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **603**, Overnight: Whole-word grouping under actual trace exclusion, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-603.md). <!-- x86-merged:603 -->
+- 2026-10-01: checked master `59519ab3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:59519ab3e7238e6ae16a0dba037aa06ff90cd1b1 -->
+- 2026-10-01: lane **615**, Independent overnight review of 603, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-615.md). <!-- x86-merged:615 -->
+- 2026-10-01: lane **624**, Direct-source closure: FloatSourceObservations, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-624.md). <!-- x86-merged:624 -->
+- 2026-10-01: lane **625**, Independent direct-source closure review of 624, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-625.md). <!-- x86-merged:625 -->
+- 2026-10-01: publication batch checks passed for `98ff68ff`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-01: lane **630**, Direct-source closure: SourceAccessCompleteness, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-630.md). <!-- x86-merged:630 -->
+- 2026-10-01: checked master `66e6e9b0` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:66e6e9b0ecdb2c374206fd32d0c06f0886bcb412 -->
+- 2026-10-01: lane **631**, Independent direct-source closure review of 630, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-631.md). <!-- x86-merged:631 -->
+- 2026-10-01: publication batch checks passed for `92d3219f`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
@@ -532,24 +714,24 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - [Source/invariant audit](dokumente/x86/REVIEW-QUELLE-INVARIANTEN.md), [concurrency audit](dokumente/x86/REVIEW-TSO.md) and [optimisation/binary audit](dokumente/x86/REVIEW-OPT-BINAER.md).
 
 - 2026-10-01: fast compilation is an explicit design priority, including mandatory
-  Lean validation. [Author 323](lanes/323.md) is preparing a separate root English
+  Lean validation. [Author 323](https://github.com/SimonVitzethum/Gabbro/blob/3c5e40ead05b017330bdba3dfd5a92db0537a3eb/lanes/323.md) is preparing a separate root English
   instruction, invariant-optimisation and compiler-speed design;
-  [reviewer 324](lanes/324.md) checks the exact committed candidate independently.
+  [reviewer 324](https://github.com/SimonVitzethum/Gabbro/blob/3c5e40ead05b017330bdba3dfd5a92db0537a3eb/lanes/324.md) checks the exact committed candidate independently.
   No speed measurement or expanded native instruction support is claimed.
 
 - 2026-10-01: the instruction and invariant design is integrated after independent
   review 324. The latest user priority is high runtime performance with a feasible
   complete selected architectural hardware model, alongside fast compilation and
-  full mandatory validation. [Author 325](lanes/325.md) revises the detailed design;
-  [reviewer 326](lanes/326.md) independently checks its exact candidate.
+  full mandatory validation. [Author 325](https://github.com/SimonVitzethum/Gabbro/blob/837eb6380926f9a33bc66e80cc0d7fc5566abe07/lanes/325.md) revises the detailed design;
+  [reviewer 326](https://github.com/SimonVitzethum/Gabbro/blob/837eb6380926f9a33bc66e80cc0d7fc5566abe07/lanes/326.md) independently checks its exact candidate.
   No measured runtime or compiler speed, expanded ISA support or whole-binary proof
   is claimed.
 
 - 2026-10-01: latest scope priority: broad important practical performance, with
   safety above marginal final improvements. The user’s approximate “last 10%” is
   qualitative prioritisation, not reduced proof coverage or a measured performance
-  guarantee. [Author 327](lanes/327.md) clarifies essential and deferred instruction
-  families; [reviewer 328](lanes/328.md) checks the exact plan independently.
+  guarantee. [Author 327](https://github.com/SimonVitzethum/Gabbro/blob/1ab5471a425f070de82d5be59046a3920ad871b3/lanes/327.md) clarifies essential and deferred instruction
+  families; [reviewer 328](https://github.com/SimonVitzethum/Gabbro/blob/1ab5471a425f070de82d5be59046a3920ad871b3/lanes/328.md) checks the exact plan independently.
   Full mandatory source/final-byte validation and fast accepted compilation remain
   requirements; the full chain remains OPEN.
 

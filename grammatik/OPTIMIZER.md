@@ -16,27 +16,21 @@ definitions and changes no guarantee. English file and identifier names.*
 *Link convention: this file sits in `grammatik/`, so `../X` means the
 repository root and `Grammatik/X86/*.lean` means the Lean model files.*
 
-*Inspected 2026-10-01 (this lane): `Grammatik/X86/` contains 20 accepted
-Lean modules (`Typen`, `Wort`, `Ganzzahl`, `Speicher`, `SpeicherKommutation`,
-`Zugriffe`, `Ausfuehrung`, `Byteschritt`, `Codec`, `Bild`, `Relokation`,
-`Regionen`, `Stapel`, `TSO`, `FlagBeweis`, `Gleitprofil`, `Vektor`,
-`InvariantenOpt`, `AufrufOpt`, `StaerkeReduktion` — 11,223 lines total);
-there is NO `IR.lean`, NO `OptimizationRules.lean`, NO
-`OptimizationWitnesses.lean` in the tree. The shared typed IR is lane 287's
-task ([287.md](../lanes/287.md)) and is PENDING, not accepted. Anything
-below that consumes the IR is therefore PROPOSED against a frozen-interface
-dependency. Reviewer: lane 334 ([334.md](../lanes/334.md)).*
-
-*Update 2026-10-01 (friend handoff, first delivery, PENDING REVIEW): the two
-reserved files now exist —
-[OptimizationRules.lean](Grammatik/X86/OptimizationRules.lean) and
-[OptimizationWitnesses.lean](Grammatik/X86/OptimizationWitnesses.lean). They
-implement the §11.4 starting set over the ACTUAL source syntax (no IR, §11.5):
-certificates, executable Lean validators and their generic soundness for
-constant folding, range-decided check removal, entailed `narrow`, target-word
-strength reduction and the §9 pass-order check. §13 lists exactly what is
-proved and what is not. The statement above ("there is NO
-`OptimizationRules.lean`") is the lane-331 inspection and stays as history.*
+*Inspected 2026-10-01 (lane 331; alignment lane 638): `Grammatik/X86/`
+contains 82 accepted Lean modules (see §1.4 for the optimiser-relevant
+subset); there is NO `IR.lean`, NO `OptimizationRules.lean`, NO
+`OptimizationWitnesses.lean` in the tree. The shared typed SSA IR is
+lane 287's task and is SUPERSEDED, not pending: the accepted direct
+lowering decision ([DIRECT-LOWERING-DECISION.md](../dokumente/x86/DIRECT-LOWERING-DECISION.md),
+owner lane 594, independent reviewer lane 606, both merged) selects the
+existing typed source model (`Syntax`/`Semantik` `exec`, candidate A) as
+the single reusable source representation and rejects adding a
+persistent SSA language with its own runner. Lane 287 finished
+report-only (no `IR.lean` committed; draft preserved under ignored
+`.tmp/IR287-PRESERVED/`), judged by reviewer lane 303 (ACCEPT,
+report-only). Anything below that previously consumed "the IR" therefore
+speaks about source-anchored blocks plus validator-recomputed claims
+(§2, decision §§3–6, contracts L1–L4). Reviewer of this file: lane 334.*
 
 ## 0. Reading guide and claim boundary
 
@@ -104,8 +98,12 @@ Every admitted optimisation preserves, for every accepted source unit:
 accepted source unit (full text)
   -> source-computed obligations (generic theorems over the source,
      computed in Lean from the source, not trusted from Rust prints)
-  -> ONE shared typed IR (lane 287, PENDING; §2)
-  -> untrusted Rust candidate passes + certificates (evidence only)
+  -> direct checked lowering: source-anchored blocks to machine
+     blocks/final bytes (decision §§3-6, contracts L1-L4; NO mandatory
+     persistent SSA language/interpreter)
+  -> untrusted Rust candidate passes + certificates (evidence only;
+     internal Rust CFG/SSA/analysis hints are transient implementation
+     detail, never trusted and never a required proof-language stage)
   -> executable Lean Bool validators (proved sound, §7)
   -> lowered/decoded final x86-64 bytes in a checked image (§8)
   -> revalidation of fetched bytes against the loaded mapping (OPEN)
@@ -134,40 +132,71 @@ or a timed-out optional pass yields refusal or the conservative route
 | [Gleitprofil.lean](Grammatik/X86/Gleitprofil.lean) (653 lines) | MXCSR checks (RNE, FTZ/DAZ off, masks), per-context FP state, f32/f64 projection, f32-vs-f64 counterexample, NaN/sticky/SSE gaps | hardware correspondence; any FP optimisation admission |
 | [Vektor.lean](Grammatik/X86/Vektor.lean) (651 lines) | packed-integer data/operation foundation (128-bit, lane widths, two-chunk memory carriage); NO `Befehl` extension, NO FP SIMD | SIMD optimisation admission (refused until correspondence proved) |
 
-Exact cuts: no shared IR exists; no optimisation certificate format
-exists; no validator `Bool` exists; no lowering from full source exists;
-no TSO-to-GX refinement exists; no budget/time transfer exists. §12
-lists every open obligation.
+Exact cuts: no persistent SSA IR exists and none is required (decision
+594/606: direct source-anchored lowering, IR287 superseded); no
+optimisation certificate format exists; no per-pass validator `Bool`
+exists (only the skeleton `valX86` image-mapping/decoding check,
+lane 349); no lowering from full source exists beyond the accepted
+bounded rows — `SourceMemory` (lane 570: one `.int lo hi` slot as one
+LE 8-byte word, `repOk`/`zahlWort`/`wortZahl`), arbitrary-input pilot
+decoder soundness (lane 559), loaded-image fetch/execution (lane 560),
+realised access footprints (lane 568), fetched stack execution
+(lane 569), entry/first-instruction admission (lane 571),
+budget-stop/work connection (lane 572); no TSO-to-GX refinement exists;
+no budget/time transfer exists. §12 lists every open obligation.
 
-## 2. IR, effects and control interface (PROPOSED, blocked on lane 287)
+## 2. Direct lowering, effects and control interface (PROPOSED, per decision 594/606)
 
-### 2.1 Identity: one shared typed SSA IR
+Canonical reference is the existing typed source AST and its execution:
+`Deklaration`, `Programm D`, `Expr`/`Stmt`/`Block`/`Endblock`,
+`World`/`Env`, `eval`/`execStmt`/`execBlock`/`execEnd`/`exec` — the exact
+execution the goal theorem speaks about. Lowering is a checked relation
+from source-anchored blocks to validated machine blocks/final bytes
+(decision contracts L1–L4), not a new language with its own runner.
+There is NO mandatory persistent SSA language or interpreter on the
+trust path: no `IRGraph`, no `irRun`, no trusted `irWF`. CFG, dataflow
+and register facts live as validator-recomputed checked claims over
+explicit block/edge lists (dominators, availability, liveness, token
+threading, colouring maps, §§7–8), re-decided in Lean from the blocks
+and the source, with Rust-side CFG/SSA/analysis artefacts as transient
+untrusted hints only. The accepted small representation interface is
+lane 570's `SourceMemory` pattern (`repOk`-style admission Bools,
+`zahlWort`/`wortZahl` + roundtrip, `layoutOk`/`regionDisjunkt`); each
+new width/object adds rows to that interface, never a fork. IR287's
+algorithms (token threading, anchor discipline, pure-expression
+lowering shape, WF checks as validator checks) may migrate as untrusted
+implementation guidance; its interpreter, trusted WF checker and
+fragment datatypes are not adopted (decision §7). Until a lowering row
+is proved, its forms refuse.
 
-There is exactly ONE intermediate representation for optimisation. It is
-the typed SSA/control-flow representation of lane 287's task
-([287.md](../lanes/287.md)), consumed by every later certificate. No
-second IR (no "optimiser IR" beside a "lowering IR"), no per-pass syntax,
-no source-program-specific syntax (no rule mentions one program's names).
-Until lane 287's interface is frozen and accepted, all downstream work
-reuses the actual source syntax (`Expr`/`Stmt`/`Block`) plus the accepted
-helpers of §1.4. Inventing a parallel IR while waiting is forbidden
-(see §11.5).
+### 2.1 Identity: source-anchored blocks, no second language
 
-Required IR content (acceptance checklist for the frozen interface):
+There is exactly ONE source of truth for program meaning: the typed
+source AST with `exec`. Optimisation certificates speak about pairs of
+source-anchored block lists (before/after) plus decoded bytes through
+the L1–L4 contracts — never about acceptance of a separate IR graph.
+No second IR (no "optimiser IR" beside a "lowering IR"), no per-pass
+syntax, no source-program-specific syntax (no rule mentions one
+program's names). Internal Rust CFG/SSA structures are permitted as
+implementation detail but create no proof obligation to keep in
+lockstep: the validator checks blocks, edges, maps and side conditions,
+not the Rust structures that suggested them.
+
+Required block content (acceptance checklist for each lowering/certificate row):
 
 | Element | Requirement |
 |---|---|
 | Types/widths | every value carries its source type and target width (`Ty` × `Breite`); widths from [Typen.lean](Grammatik/X86/Typen.lean); no widthless temporaries |
-| SSA + CFG | explicit control labels, edges, terminators; definition/use references; block arguments with φ-nodes; computed dominators (checked, not trusted) |
+| Blocks + CFG | explicit control labels, edges, terminators; definition/use references over SSA-style value names (block-list identities, validator-recomputed); block arguments with φ-nodes where merges need them; dominators recomputed by the validator (checked, not trusted) |
 | Effect nodes | explicit nodes for memory read/write, atomic access (per-width ordering token), lock acquire/release, call (with callee identity + actual args), budget consume, fault/stop (`or R` channel, `nieZurueck`) |
 | Region ownership | every memory node names its region; footprints as byte sets reusing `Fuss` ([Speicher.lean](Grammatik/X86/Speicher.lean)); alias relations explicit (§2.3) |
 | Source anchors | every node carries its source-unit anchor (function, statement index) for contract-place (§4) and call-log (§4.6) reconstruction |
-| Well-formedness | decided graph predicate (`Bool`): closed uses, typed φ-nodes, single terminator per block, reachable exit or declared-divergent |
-| Checked interpretation | executable interpretation over actual memory-changing operations (memory writes really change the canonical `Speicher`); a semantics that cannot change memory is not a semantics |
+| Well-formedness | decided block-list predicate (`Bool`): closed uses, typed φ-nodes, single terminator per block, reachable exit or declared-divergent; a validator check, never a trusted `irWF` |
+| Checked meaning | NO new interpreter: meaning comes from source `exec` on one side and decoded-byte execution (`Byteschritt`, `Ausfuehrung.schritt`) on the other; any auxiliary block interpretation used inside a proof must change real canonical `Speicher` bytes to count as a semantics |
 
 ### 2.2 Semantic relation (PROPOSED)
 
-The IR semantics must cover, jointly:
+The lowering refinement (source-anchored blocks to decoded bytes) must cover, jointly:
 
 - registers (the 16 `Register` of [Typen.lean](Grammatik/X86/Typen.lean)),
   flags (`Flags`, AF `Option`-undefined), FP control (`MXCSR` per
@@ -214,15 +243,13 @@ Conventions for every row: PATTERN (syntactic input shape) → FACT SOURCE
 content + recomputed checks) → REFUSAL/COUNTEREXAMPLE (what fails, with a
 concrete program sketch). Status is one of: ACCEPTED-HELPER (proved Lean
 lemma exists), PROPOSED (specified here, unproved), REFUSED (admission
-explicitly withheld), PROVED-PENDING-REVIEW (certificate + validator `Bool`
-+ generic soundness + joint witness + poison probes in the reserved files,
-§13; not yet independently reviewed, so NOT accepted).
+explicitly withheld).
 
 ### 3.1 Constant/copy folding and checked arithmetic
 
 | # | Rule | Status |
 |---|---|---|
-| C1 | literal `lit a ⊕ lit b` → `lit (a⊕b)` where `⊕` is total at the type (bool ops, int add within proved range) | ACCEPTED-HELPER (`alsLitOpt`, `litLeBool`, `litEqBool` in [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)); general integer/boolean fold PROVED-PENDING-REVIEW (`foldInt`, `foldBool`, §13) |
+| C1 | literal `lit a ⊕ lit b` → `lit (a⊕b)` where `⊕` is total at the type (bool ops, int add within proved range) | ACCEPTED-HELPER (`alsLitOpt`, `litLeBool`, `litEqBool` in [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)) |
 | C2 | copy `x = y; …x…` → substitute where `y` is SSA-single-def, same type/width, no intervening write to `y` | PROPOSED |
 | C3 | checked op with Decidable side condition proved `true` (e.g. `x ≤ y` by `litLeBool`) → unchecked body with the check retained as a ghost precondition | ACCEPTED-HELPER (`isWahrAll`, `holdsBool` in [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)) |
 
@@ -241,9 +268,9 @@ channel preserved (C4).
 
 | # | Rule | Status |
 |---|---|---|
-| S1 | `if isWahrAll(c) = true then A else B` → `A` (condition kept as ghost) | ACCEPTED-HELPER (truth checker + correspondence in [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)); exact decider incl. `not`/false side + condition fold PROVED-PENDING-REVIEW (`constBool?`, `foldBool`, §13) |
+| S1 | `if isWahrAll(c) = true then A else B` → `A` (condition kept as ghost) | ACCEPTED-HELPER (truth checker + correspondence in [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)) |
 | S2 | unreachable block (no predecessor after S1) removed; φ-nodes re-typed | PROPOSED |
-| S3 | sparse conditional propagation of C1 facts along decided edges | PROPOSED (local part — deciding a condition from constants and operand TYPE ranges — PROVED-PENDING-REVIEW, `constBool?`, §13) |
+| S3 | sparse conditional propagation of C1 facts along decided edges | PROPOSED |
 
 Refusal: S1 fires only when `isWahrAll` returns `true` by recomputation
 in the validator. A condition that is "true by contract" without a
@@ -281,9 +308,9 @@ is miscompilation (see §10.4 test `flagslive`).
 
 | # | Rule | Status |
 |---|---|---|
-| B1 | redundant bounds check removed where the range fact at THIS program point (SSA version, §4.2) entails the access inside the extent | PROPOSED (read-free check decided by type ranges: PROVED-PENDING-REVIEW, `dropCheck`, §13) |
-| B2 | `narrow` kept unless the source range already fits the target width at this version | PROVED-PENDING-REVIEW (`narrowEntailed`, §13) |
-| B3 | overflow check removed only under a proved-impossible overflow (range entailment, recomputed) | PROPOSED (the explicit `where`-check form: PROVED-PENDING-REVIEW, `dropCheck`, §13) |
+| B1 | redundant bounds check removed where the range fact at THIS program point (SSA version, §4.2) entails the access inside the extent | PROPOSED |
+| B2 | `narrow` kept unless the source range already fits the target width at this version | PROPOSED |
+| B3 | overflow check removed only under a proved-impossible overflow (range entailment, recomputed) | PROPOSED |
 
 Counterexample (B1): `p[i]` checked against extent `n` at entry, then
 `i := i + k` inside a loop, then `p[i]` unchecked — the entry fact does
@@ -294,10 +321,10 @@ the certificate must name the SSA version and the entailment proof.
 
 | # | Rule | Status |
 |---|---|---|
-| R1 | `x * 2^k` → `x << k` for nonneg `x` (source range proves `0 ≤ x`), `k < width` | ACCEPTED-HELPER ([StaerkeReduktion.lean](Grammatik/X86/StaerkeReduktion.lean): `shlW`, side conditions); certified target-word selection PROVED-PENDING-REVIEW (`checkStrength`, §13) |
-| R2 | `x / 2^k` → `x >> k` for nonneg `x`, divisor never zero (`2^k ≠ 0` by `k` bound) | ACCEPTED-HELPER (`shrW` + divisor lemma); certified selection PROVED-PENDING-REVIEW (§13) |
-| R3 | `x % 2^k` → `x &&& (2^k - 1)` (`maskW`, `mod_pow2_and_mask`) | ACCEPTED-HELPER; certified selection PROVED-PENDING-REVIEW (§13) |
-| R4 | signed `sdiv`/`srem` → shift: REFUSED (truncation ≠ shift for negative numerators) | REFUSED (in the helper file itself; the validator refuses it by construction, `checkStrength_sdiv`/`_srem`, §13) |
+| R1 | `x * 2^k` → `x << k` for nonneg `x` (source range proves `0 ≤ x`), `k < width` | ACCEPTED-HELPER ([StaerkeReduktion.lean](Grammatik/X86/StaerkeReduktion.lean): `shlW`, side conditions) |
+| R2 | `x / 2^k` → `x >> k` for nonneg `x`, divisor never zero (`2^k ≠ 0` by `k` bound) | ACCEPTED-HELPER (`shrW` + divisor lemma) |
+| R3 | `x % 2^k` → `x &&& (2^k - 1)` (`maskW`, `mod_pow2_and_mask`) | ACCEPTED-HELPER |
+| R4 | signed `sdiv`/`srem` → shift: REFUSED (truncation ≠ shift for negative numerators) | REFUSED (in the helper file itself) |
 | R5 | reassociation `(a+b)+c → a+(b+c)`, FMA formation, float strength moves | REFUSED (§3.9) |
 
 Example (R1): `x * 8` with `x : u32 in 0 .. 100` → `x << 3`. Fact
@@ -433,6 +460,19 @@ model (entry / return / `ruhe` / holder-observed / lock moves) is part of
 the goal statement ([Spec.lean](Grammatik/Zielsatz/Spec.lean): `VertragAmOrtG`,
 `InvAmOrtG`, `InvAmGrundG`, `InvRuheG`, `InvSichtG`, `SperrWechselG`,
 `SperrSichtG`); the optimiser reuses it and adds nothing.
+
+Rule legality binds ONLY facts actually available at the rewritten
+site: the source invariant at its guaranteed place with actual values,
+the effect/export binding for that site (writes, locks, atomics, FP
+modes, costs), the user duty proved for that site, and the W/GX
+ordering that actually holds there. A fact from any other place — an
+entry range inside a running writer's mutating loop, a quiescent
+invariant inside an arbitrary held section, a pre-call version after an
+unknown-body call, a lock-move fact away from the move — is unavailable
+and its use is refused. No fast-math, atomic-ordering, MMIO/device,
+fault-elision or cost-bypass rewrite is ever licensed by an invariant:
+those families refuse by default (§§3.9, 3.13, 5, 6) regardless of
+what some invariant says.
 
 ### 4.1 Fact homes
 
@@ -886,7 +926,8 @@ finish the whole proof — they are the floor, not the ceiling.
 ### 10.5 Dependency graph and proof-completion gates
 
 ```
-IR frozen+accepted -> rule helpers (done: C/S/R/call-ghost) ->
+L1 lowering rows (SourceMemory accepted; per-width/object extensions)
+  -> rule helpers (done: C/S/R/call-ghost) ->
   per-pass cert+Bool+soundness -> TSO bridge -> budget/time transfer ->
   FP admission (narrow) -> SIMD admission -> closing validator soundness ->
   finite+infinite coverage -> Rust implementation -> integrated validation
@@ -912,12 +953,16 @@ promise exists in this file.
 
 ### 11.1 What the friend can own
 
-A generic optimisation rule/proof library AGAINST THE FROZEN SHARED IR:
-rule statements, certificate schemas, validator `Bool`s, soundness
-proofs, `_zeuge` witnesses, poison/positive probes. This is practical
-separate work: it touches only the reserved files (§11.2) plus new
-proof-only helpers it adds itself, and it composes with lane 287's IR
-through the frozen interface.
+A generic optimisation rule/proof library AGAINST THE EXISTING TYPED
+SOURCE plus the accepted target interfaces: rule statements over
+source-anchored block pairs, certificate schemas, validator `Bool`s,
+soundness proofs against `exec` on one side and decoded-byte execution
+(`Codec.decode`, `Byteschritt`, `Ausfuehrung.schritt`) on the other,
+`_zeuge` witnesses, poison/positive probes. This is practical separate
+work: it touches only the reserved files (§11.2) plus new proof-only
+helpers it adds itself, and it composes with the accepted `SourceMemory`
+representation interface (L1 rows) and the per-access TSO-bridge tables
+as those land — never with a separate IR graph.
 
 ### 11.2 Reserved English files (NOT YET EXISTING — do not link as present)
 
@@ -926,18 +971,20 @@ through the frozen interface.
 - `Grammatik/X86/OptimizationWitnesses.lean` — `_zeuge` companions +
   poison/positive probe theorems (PROPOSED, reserved for the friend).
 
-Muse lanes do NOT edit these paths (standing instruction). They did not
-exist in the tree when lane 331 wrote this section. Since the first
-friend delivery (2026-10-01, §13) both files exist; they are PENDING
-REVIEW, not accepted, and their content is listed in §13.
+Muse lanes do NOT edit these paths (standing instruction). They do not
+exist in the tree as of 2026-10-01 (verified by this lane); any link
+that presents them as accepted would be a dead link and is therefore
+given here as a path string, not a hyperlink.
 
 ### 11.3 What the friend does NOT own
 
-Central IR (lane 287), TSO bridge, encoder/image, root umbrella
-(`Grammatik.lean`), `Zielsatz/Spec.lean`, shared invariant interface,
-pass scheduling, pipeline/caching, Rust implementation. These stay with
-the coordinator/lanes; the friend waits for the frozen IR interface
-rather than inventing a second IR (§11.5).
+Central lowering (decision L1–L4 contracts), TSO bridge, encoder/image,
+root umbrella (`Grammatik.lean`), `Zielsatz/Spec.lean`, shared invariant
+interface, pass scheduling, pipeline/caching, Rust implementation. These
+stay with the coordinator/lanes; the friend builds against the accepted
+source/target interfaces (§11.4) rather than inventing a second IR
+(§11.5). No `IR.lean` exists or is awaited: lane 287 is superseded by
+the accepted decision 594/606 (report-only, reviewer 303 ACCEPT).
 
 ### 11.4 Starting order and acceptance contract
 
@@ -947,7 +994,9 @@ ACTUAL existing helpers ([Wort.lean](Grammatik/X86/Wort.lean),
 [StaerkeReduktion.lean](Grammatik/X86/StaerkeReduktion.lean),
 [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)) — inspect live
 flags, faults, overflow behaviour first. Then: CSE/LICM/inlining rules
-only after the shared IR + effects + source-cost interface is accepted.
+only after the corresponding lowering rows (L1 representation + L2
+statement coverage) and the source-cost/effect interface for those rows
+are accepted.
 
 Proof-acceptance contract per deliverable: generic statement, kernel-
 checked proof, joint non-degenerate `_zeuge` with a real
@@ -956,17 +1005,19 @@ memory-changing run, poison + positive probes, queued wrappers only
 hardcoded programs (no per-function-name lemmas), concrete
 counterexample for each refusal the rule claims.
 
-### 11.5 While waiting for the IR
+### 11.5 No second IR — ever
 
-Do NOT invent a second IR. Useful waiting work that needs no IR:
-extend the accepted helper families (more literal/fold lemmas in the
-style of [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean), more
+Do NOT invent a second IR. Useful work that needs no IR: extend the
+accepted helper families (more literal/fold lemmas in the style of
+[InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean), more
 range-justified reductions in the style of
 [StaerkeReduktion.lean](Grammatik/X86/StaerkeReduktion.lean)), more
-`geistPaar`-style ghost lemmas, more probe/poison programs. Anything
-shaped like an IR goes into a clearly marked PROPOSED scratch file of
-its own, never into the reserved paths, and is rebased onto lane 287's
-interface when frozen.
+`geistPaar`-style ghost lemmas, more probe/poison programs, more
+lowering rows in the accepted `SourceMemory` pattern. Anything shaped
+like a second language with its own runner goes nowhere near the
+reserved paths; the accepted decision
+([DIRECT-LOWERING-DECISION.md](../dokumente/x86/DIRECT-LOWERING-DECISION.md))
+records why the IR fork stays closed.
 
 ### 11.6 Submission mechanics
 
@@ -987,9 +1038,9 @@ no delivered line is asserted anywhere in this file.
 
 | # | Obligation | Depends on |
 |---|---|---|
-| O1 | shared typed IR frozen + accepted (lane 287) | source syntax/semantics (ACCEPTED) |
+| O1 | direct lowering representation rows (L1 pattern: `repOk`-style admission + value roundtrips + `layoutOk`/`regionDisjunkt`), extended per width/object, never forked | source syntax/semantics (ACCEPTED), `SourceMemory` (ACCEPTED, lane 570) |
 | O2 | per-pass certificates + validator `Bool`s + generic soundness | O1 |
-| O3 | lowering full source → IR, checked, with refusal catalogue | O1 |
+| O3 | lowering full source → machine blocks/bytes, checked, with refusal catalogue | O1 |
 | O4 | per-access target execution + x86-TSO refinement into W/GX | [TSO.lean](Grammatik/X86/TSO.lean) + W/GX (ACCEPTED helpers only) |
 | O5 | stack/ABI/entries/regions/runtime/binding coverage of all reachable bytes | [Stapel.lean](Grammatik/X86/Stapel.lean)/[Regionen.lean](Grammatik/X86/Regionen.lean) fragments |
 | O6 | IEEE/control-state correspondence | [Gleitprofil.lean](Grammatik/X86/Gleitprofil.lean) profile only |
@@ -1017,132 +1068,35 @@ beyond the named hardware assumptions stay NOT CLAIMED per
 [Spec.lean](Grammatik/Zielsatz/Spec.lean). The optimiser preserves
 claimed guarantees; it proves none about silicon.
 
-## 13. First friend delivery: the rule library over source syntax (PROVED-PENDING-REVIEW)
-
-*2026-10-01. Files:
-[OptimizationRules.lean](Grammatik/X86/OptimizationRules.lean) (rules,
-certificates, validators, soundness) and
-[OptimizationWitnesses.lean](Grammatik/X86/OptimizationWitnesses.lean)
-(joint `_zeuge` witnesses, positive and poison probes). Both are imported
-by the umbrella `Grammatik.lean`. Nothing here is accepted until an
-independent review pins it (§10.5).*
-
-### 13.1 Why source syntax and not an IR
-
-Lane 287's IR is not frozen (§2.1), and §11.5 forbids a second IR. Every
-rule therefore acts on the real typed source syntax (`Expr`/`Stmt`/`Block`)
-and is proved against the real semantics (`eval`/`execStmt`/`execBlock`).
-When the IR is frozen, these rules are the reference the IR-level rules
-must agree with; nothing here has to be thrown away.
-
-### 13.2 The refinement relations
-
-| Name | Meaning | Why this strength |
-|---|---|---|
-| `ExprEquiv e e'` | `e'.orte = e.orte` and `eval` equal in every world and environment | value equality alone would let a rule delete a READ event; the race-freedom legs are stated over the event trace |
-| `StmtEquiv` / `BlockEquiv` | identical `Ausgang` under EVERY oracle, loop budget and call handler | the whole `Ausgang` carries world, trace, environment, returns, reasons, `logik` stops (incl. budget refusal) and `hardware` stops (§1.2 items 1–3, 9, 10) |
-
-Both are reflexive (the conservative route, §7.6) and transitive (passes
-chain, §3.14).
-
-### 13.3 Rules, certificates, validators
-
-| Rule (§3) | Validator | Fact source, recomputed in Lean | Soundness |
-|---|---|---|---|
-| C1 integer fold | `foldInt` | `constInt?`: literals and every pure integer operator, each arm the SAME operation `eval` uses (incl. `sdiv`/`srem` as values) | `foldInt_sound` (via `constInt?_sound`, `constInt?_orte`) |
-| C1/S3 condition fold | `foldBool` | `constBool?`: constants, `<`/`<=`/`=` decided by operand TYPE ranges (`bounds`), `and`/`or`/`not`; refused if the condition reads anything | `foldBool_sound` (via `constBool?_sound`) |
-| S1/B1/B3 check removal | `dropCheck` | condition read-free and decided `true` | `dropCheck_sound` |
-| B2 entailed `narrow` | `narrowEntailed` | the operand's type range lies inside the target range; the `narrow` becomes a widening `bind` | `narrowEntailed_sound` |
-| R1–R3 strength (target words) | `checkStrength` | right operand the constant `2^k`, left operand nonnegative by type, range (and for `mul` the product) below `2^64`, `k ≤ 64` for the mask | `checkStrength_sound`: `shlW`/`shrW`/`&&& maskW` on the encoded left operand reads back as the source value |
-| R4 | `checkStrength` | — | `checkStrength_sdiv`, `checkStrength_srem`: always refused |
-| placement | `applyExpr`, `applyStmt`, `applyBlock` | certificate = rule + path (`head`/`rest`, `ite` branches, `locks` body, expression positions) | `applyExpr_sound`, `applyStmt_sound`, `applyBlock_sound` (one mutual theorem by recursion on the certificate) |
-| conservative route (§7.6) | `applyOrKeep` | refused ⇒ input unchanged | `applyOrKeep_sound` |
-| pipeline order (§§8.5, 9) | `applyPipeline` | passes in §9 rank order and every certificate uses only rules of the pass it is filed under | `applyPipeline_sound`, `applyPipeline_order` |
-
-A certificate never carries a value, range or proof the validator trusts:
-it says only WHERE and WHICH rule. The validator recomputes every fact.
-
-Mapping to the §7.1 sketch names: `OptCert` is `ExprCert`/`StmtCert`/
-`BlockCert` (plus the shift count of `checkStrength`); `pruefeOpt` is
-`applyExpr`/`applyStmt`/`applyBlock`/`checkStrength`/`applyPipeline`;
-`optSound` is the family of `*_sound` theorems. The validators are
-`Option`-valued rather than `Bool`-valued: the source syntax has no
-decidable equality (its terms carry proofs), so instead of comparing a
-Rust output with a Lean recomputation, Lean REBUILDS the output from the
-input and the certificate, and `none` is the refusal. The untrusted Rust
-side (§7.1) then only has to emit what Lean rebuilt. `QuellAnnahmen` is
-not needed by these rules: all their facts come from the source text.
-
-Why range facts from TYPES are version-exact (§4.2): a source value
-outside its type does not exist (`Typen.lean` §2), and the range belongs
-to the expression itself. A variable keeps its declared type for every
-value ever assigned to it, so a fact read off its type cannot go stale
-across a writer step. No `requires`/`ensures`/invariant is consulted,
-so §4.5 (no compiler-guessed contracts) holds by construction.
-
-### 13.4 Witnesses and probes (§§10.1, 10.2)
-
-The joint witness `pipeline_zeuge` runs the whole chain on a program over
-`InvariantenOpt.wD` (one table, written by its contract): a range-decided
-check, an entailed `narrow`, a store of the narrowed variable and a store
-of `2 + 3`. The certified pipeline (fold → drop check → widen `narrow`)
-is accepted (`wPipe_accepts`), the optimised and source runs have the same
-outcome, and that run moves the slot from `0` to `5`. Every generic
-theorem of §13.3 has its own `_zeuge`.
-
-Poison probes (the validators MUST refuse, each checked by computation):
-a fold that would delete a slot read although the condition is decided
-(`foldBool_refuses_read`, `dropCheck_refuses_read`); an undecided check;
-a check decided `false`; an unentailed `narrow`; an integer fold of a
-variable; a rule at the wrong type; float comparisons (no FP rule exists);
-a certificate path into the wrong shape; signed division; a multiplier
-that is not a power of two; a possibly negative operand (§3.6's
-counterexample); a product that may wrap 64 bits; a wrong shift count;
-a pipeline out of §9 order; a fold certificate filed under the
-check-removal pass.
-
-### 13.5 What this delivery does NOT do
-
-- No IR: V1/V2, D1/D2, A1/A2, L1/L2, I1/I2, U1/U2, P1–P4 still wait for
-  lane 287 (§11.4).
-- Certificate paths reach `cons`/`bind`/`pruefung`/`narrow` continuations,
-  `ite` branches, `locks` bodies and expression positions of `ite`,
-  `assignSlot`, `assignVar`, `assignGlob`, `pruefung`, `bind`, `narrow`.
-  Loops, match arms, calls and the other binders are not reachable yet;
-  a certificate pointing there is refused.
-- Branch elimination is not a block rewrite: a decided condition folds to
-  `true`/`false` exactly; dropping the dead branch is a lowering step.
-- A decided condition that reads memory is refused, not optimised.
-- Strength reduction certifies the WORD operation, not encoded bytes,
-  registers or the final image (§8.7, O3/O5 stay OPEN).
-- No FP rule (F1 included), no SIMD, no concurrency/TSO, budget/time or
-  call-log transfer beyond exact single-thread `Ausgang` equality.
-- No Rust: §12.2 (Lean first) is respected; the Rust certificate producer
-  comes after review.
-
 ---
 
 ## CUTS (honest)
 
 - This file is documentation only: no Lean definition, no theorem, no
   validator `Bool`, no certificate schema is implemented or proved here.
-- The shared IR does not exist (lane 287 pending); every section that
-  consumes it (§§2, 6.4, 7, 8, 9, 10, O1–O10) is plan, not inventory.
-- Accepted helpers are exactly §1.4's table (20 X86 modules, 11,223
-  lines); nothing in §§2–12 upgrades a PROPOSED/REFUSED/OPEN item to
-  accepted.
+- No persistent SSA IR exists and none is awaited (accepted decision
+  594/606: direct source-anchored lowering; lane 287 superseded,
+  report-only, reviewer 303 ACCEPT); every section that previously
+  consumed "the IR" (§§2, 6.4, 7, 8, 9, 10, O1–O10) now speaks about
+  source-anchored blocks plus validator-recomputed claims and is plan,
+  not inventory.
+- Accepted helpers are §1.4's table plus the bounded lowering rows
+  listed there (notably `SourceMemory`, lanes 559/560/568/569/571/572);
+  nothing in §§2–12 upgrades a PROPOSED/REFUSED/OPEN item to accepted.
 - No TSO-to-GX refinement, no budget/time transfer, no FP/SIMD
-  admission, no lowering, no closing validator exists at the time of
-  writing.
+  admission, no full-source lowering, no closing validator exists at
+  the time of writing.
 - No performance numbers, no throughput/RSS/latency data, no benchmark
   comparison exists in this file; §10.6 records the unknowns.
-- Relative links were checked against the tree on 2026-10-01:
-  `../DIRECT-COMPILER.md`, `../DIRECT-COMPILER-DESIGN.md`,
-  `../lanes/287.md`, `../lanes/334.md`, `Grammatik/X86/*.lean` and
-  `Grammatik/Zielsatz/Spec.lean` all resolve; the two reserved friend
-  files were deliberately NOT hyperlinked because they did not exist
-  then. Since the first friend delivery (§13) they exist and are linked
-  from §13 and the update note at the top.
+- Relative links were checked against the tree on 2026-10-01 (lane 638
+  re-checks them): `../DIRECT-COMPILER.md`,
+  `../DIRECT-COMPILER-DESIGN.md`,
+  `../dokumente/x86/DIRECT-LOWERING-DECISION.md`,
+  `Grammatik/X86/*.lean` and `Grammatik/Zielsatz/Spec.lean` all
+  resolve (the numeric lane task files `../lanes/287.md`/`334.md` were
+  removed after integration and are no longer linked); the two
+  reserved friend files are deliberately NOT hyperlinked because they
+  do not exist.
 - Inspected, not merely repeated: the headers and key definitions of
   `InvariantenOpt` (`alsLitOpt`, `litLeBool`, `isWahrAll`, `holdsBool`),
   `AufrufOpt` (`GeistAntwort`, `geistPaar`, `geistPaar_laenge`),

@@ -1,10 +1,26 @@
 # Shared SSA / control-flow representation and certificate architecture
 
-*Lane 275, wave A. Owner file for the optimisation-validation half of the direct
+*Lane 275, wave A, aligned by lane 638 with the accepted direct lowering
+decision ([DIRECT-LOWERING-DECISION.md](DIRECT-LOWERING-DECISION.md),
+owner lane 594, independent reviewer lane 606, both merged). Owner file
+for the optimisation-validation half of the direct
 x86-64 plan (`dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5, contract
 `dokumente/x86/WELLE-A.md`). Status: architecture specification, not an
 implementation or a proof. No Lean file, no Rust code, no new source construct,
 diagnostic, probe or CLI switch is added here.*
+
+*Alignment note (lane 638): "SCFG" in this document names the
+certificate-claim vocabulary — source-anchored block lists plus
+validator-recomputed claims (contracts L1–L4 of the decision). It is
+NOT a mandatory persistent SSA language with its own runner: there is
+no committed `IR.lean`, no `irRun`, no trusted `irWF` (lane 287
+superseded, report-only, reviewer 303 ACCEPT; draft preserved under
+ignored `.tmp/IR287-PRESERVED/`). The normative source reference is the
+existing typed AST with `execStmt`/`exec`; normative target sides are
+the accepted byte definitions (`Codec.decode`, `Byteschritt`,
+`Ausfuehrung.schritt`, `TSO`). Rust-side CFG/SSA/analysis artefacts
+are transient untrusted hints, never trusted and never required
+proof-language stages.*
 
 ## 0. Position in the chain
 
@@ -62,7 +78,7 @@ Two separations govern everything below:
   for the C chain: structural, decidable (`decide`-settled), soundness by
   induction at every call depth.
 
-## 1. The shared representation: SCFG
+## 1. The shared certificate vocabulary: SCFG (claim shape, not a language)
 
 ### 1.1 Why one representation
 
@@ -71,15 +87,20 @@ inlining, register allocation with private spills, peephole lowering, LICM,
 bounded unrolling, selective independent-lane SIMD) must not each invent a
 private IR with a private correspondence proof: that is nine trust paths and
 nine chances to disagree about what a memory access is. There is ONE shared
-representation, called here **SCFG** (SSA control-flow graph), owned by phase B
+certificate vocabulary, called here **SCFG** (SSA-style control-flow block
+lists with explicit memory token, §1.2), owned by phase B
 (suggested home §5). Every optimisation certificate is a claim *about a pair
-of SCFG graphs* (before/after) plus *a mapping into validated machine bytes*;
+of source-anchored block lists* (before/after) plus *a mapping into validated machine bytes*;
 the generic validator checks the claim, and ONE generic refinement theorem
-lifts checked SCFG pairs to model correspondence.
+lifts checked block pairs to model correspondence. SCFG is a claim shape,
+not a second language: no persistent `IRGraph` file, no `irRun`
+interpreter, no trusted `irWF` stands between the source `exec` and the
+decoded bytes.
 
 ### 1.2 Shape (requirements on the phase-B formalisation, not the definition)
 
-SCFG is deliberately small. Requirements:
+SCFG is deliberately small. Requirements (on block lists and their
+validator checks — not on a committed language file):
 
 - **Functions, blocks, straight-line bodies.** A unit is a list of functions;
   a function is a labelled list of basic blocks; a block is a straight-line
@@ -128,25 +149,28 @@ SCFG is deliberately small. Requirements:
 
 ### 1.3 What SCFG is lowered from, and to
 
-- **Lowering source → SCFG** is a Lean function (phase B, lane 277's
-  `QUELLBRUECKE` closes it): from the FULL source-computed unit `E`
+- **Lowering source → blocks** is a Lean function (phase B, lane 277's
+  `QUELLBRUECKE` closes it, in the decision's L1/L2 contract shape):
+  from the FULL source-computed unit `E`
   (code `P` plus checker data, lock invariants, axiom ensures, declared
-  starts, initial memory — the `Kette.E` shape) to the initial graph
+  starts, initial memory — the `Kette.E` shape) to the initial
+  source-anchored block list
   `G0 = lower(E)`, proved to preserve `execStmt`/`exec` outcomes on the
-  covered fragment. There is NO free initial graph: `G0` is either computed
+  covered fragment. There is NO free initial block list: `G0` is either computed
   by this Lean function (correct by construction) or proposed by Rust and
   admitted only through a PROVED lowering checker `lowerOk(E, G0) = true`
   that decides node-by-node correspondence against `E` (the `korrOk`
   discipline applied to the first step). The Rust backend does NOT define
   the source semantics; a Rust-side "lowering" without a passing `lowerOk`
-  is refused, never used as a worklist.
-- **Lowering SCFG → machine bytes** is validated per §4: each SCFG op maps
+  is refused, never used as a worklist. No `irRun`-style second executor
+  is introduced at any point: meaning flows from `exec` to decoded bytes.
+- **Lowering blocks → machine bytes** is validated per §4: each block op maps
   to a validated instruction sequence (decoder-checked bytes, lane 272's
-  `Ausfuehrung.lean` semantics), register allocation maps SSA names to
+  `Ausfuehrung.lean` semantics), register allocation maps value names to
   registers/spills (§3.5), and block layout maps CFG edges to
   `jump32`/`jumpIf32`/`call32`/`ret` displacements resolved against the
-  final image (lane 276's `IMAGE-ABI` owns addresses/relocations; SCFG owns
-  only the graph).
+  final image (lane 276's `IMAGE-ABI` owns addresses/relocations; the
+  block vocabulary owns only the claim shape).
 
 ## 2. The certificate interface
 
@@ -242,7 +266,7 @@ the rule/motion lemmas (§3).
 
 > For every source-computed unit `E` (the FULL declaration: code `P`,
 > checker data, lock invariants, axiom ensures, declared starts, initial
-> memory), let `G0` be the initial SCFG graph with `lowerOk(E, G0) = true`
+> memory), let `G0` be the initial source-anchored block list with `lowerOk(E, G0) = true`
 > (decided: Lean-computed, or Rust-proposed and checker-validated per
 > §1.3). For every optimisation sequence `G0 → … → Gn` with per-step
 > certificates `C1 … Cn`, and every final image `Img` with decoded bytes
@@ -344,7 +368,7 @@ condition.
    without the ghost events is refused, because contracts hold at their
    place (entry/return) with the actual values.
    Prove: call/return correspondence (argument passing + return-value +
-   token threading = the `bsem_bindCall` shape lifted to SCFG); duties
+    token threading = the `bsem_bindCall` shape lifted to block claims); duties
    checked at the inlined site exactly as at a call; ghost events make the
    inlined execution's observable call log equal to the source's (same
    entries, same order, same values) — hence the `FolgeG` leg (order of
@@ -534,8 +558,10 @@ finite block/name sets:
 - each rewrite site then cites a recomputed fact — a wrong hint only costs
   time (recomputation rejects the site), never correctness.
 
-The analysis transfer functions are proved sound against SCFG block
-semantics once (phase B); every instance reuses that proof.
+The analysis transfer functions are proved sound against the block
+correspondence (`exec` ↔ decoded bytes) once (phase B); every instance
+reuses that proof. No block-runner semantics is introduced: soundness
+is stated over source executions and fetched-byte runs.
 
 ### 4.3 CFG mapping and block stuttering
 
@@ -582,7 +608,7 @@ corpus; they determine nothing about acceptance.
 | `AtomicExport` | per-site ordering, footprint objects, `NutzerPflichtA` value sets | footprint rule + `NutzerPflichtA` (O25c) |
 | `FpExport` | rounding-mode scopes, FP op sites with widths | IEEE model (`Gleitkomma*.lean`) |
 | `CostExport` | level (a) declared costs + block sums (validator-resummed); level (b) measured work carried opaquely, never read by soundness; level (c) machine-work bound — OPEN obligation with lane 278 | `Budget.lean` (`Op.cost`, `totalCost`) for (a); (b)/(c) new |
-| `LowerMap` | source-node → SCFG-op anchors (memory/call/check/atomic/lock/stop) | new Lean lowering (lane 277 with this lane's §1) |
+| `LowerMap` | source-node → block-op anchors (memory/call/check/atomic/lock/stop) | new Lean lowering (lane 277 with this lane's §1) |
 
 Wire format: Lean-computed data printers (same discipline as `corrlean.rs`'s
 `KCert` section: one line per function, exporter map included, layout from
@@ -592,20 +618,27 @@ precedent: `parseC` + guardian re-emit comparison).
 
 ### 5.2 Suggested phase-B file ownership (one topic per file/lane)
 
+Names below are PROPOSED validator-adapter shapes for direct lowering
+(decision L1–L4), not committed files and not an adoption of `IR.lean`:
+no file here introduces a second executor or a trusted WF predicate —
+block meaning is proved against `exec` and decoded bytes, never against
+a block runner.
+
 | File / area | Content | Note |
 |---|---|---|
-| `grammatik/Grammatik/X86/SCFG.lean` | SCFG syntax + block semantics over `exec`-shaped worlds | needs Lean; refines to `P`, not standalone |
+| `grammatik/Grammatik/X86/SCFG.lean` | block-list claim vocabulary + correspondence against `exec`-shaped worlds and decoded bytes | needs Lean; claim shape, not standalone, never a runner |
 | `grammatik/Grammatik/X86/SCFGZert.lean` | layer A/B/C checkers (`check_C`) + soundness framework | `korrOk` discipline: structural, `decide`-settled |
 | `grammatik/Grammatik/X86/OptRegeln.lean` | reviewed rule register (peephole + motion lemmas) | one lemma per rule, arbitrary operands |
 | `grammatik/Grammatik/X86/RegAllok.lean` | colouring/spill certificate + freshness-commutation lemma | consumes lane-274 memory relation |
 | `grammatik/Grammatik/X86/SIMDProfil.lean` | vector profile: widths, alignment, lane-independence rule | jointly with lanes 274 + 278 |
-| `crates/gabbro-check/src/x86/scfg.rs` | untrusted SCFG builder + certificate emitter (hints only) | unwired until Lean side reviewed (wave-A rule) |
-| `dokumente/x86/QUELLBRUECKE.md` (lane 277) | source→SCFG lowering proof, duty-export wiring | closes §5.1 `LowerMap` + `DutyExport` |
+| `crates/gabbro-check/src/x86/scfg.rs` | untrusted block/certificate emitter (hints only) | unwired until Lean side reviewed (wave-A rule) |
+| `dokumente/x86/QUELLBRUECKE.md` (lane 277) | source→block lowering proof, duty-export wiring | closes §5.1 `LowerMap` + `DutyExport` |
 | `dokumente/x86/TSO-GX-BRUECKE.md` (lane 274) | per-access TSO table, spill-freshness consumer lemma | §3 items 5/9 depend on it |
 | `dokumente/x86/FLOAT-ZEIT.md` (lane 278) | IEEE mapping, trap/mask scope, cost-bound interface | §3 items 10/11 depend on it |
-| `dokumente/x86/IMAGE-ABI.md` (lane 276) | block layout, displacement resolution, entry binding | consumes validated SCFG+allocation maps |
+| `dokumente/x86/IMAGE-ABI.md` (lane 276) | block layout, displacement resolution, entry binding | consumes validated block+allocation maps |
 
-Phase-B gating (from the plan §4, order): SCFG syntax/semantics →
+Phase-B gating (from the plan §4, order): block claim vocabulary +
+lowering correspondence →
 decoder+memory relation → pilot through bytes with an altered-bytes refusal
 witness → concurrent mappings (spill/SIMD need these) → family extensions →
 final-image theorem. Optimiser certificates slot into step 6's closing
@@ -711,11 +744,13 @@ miscompilation.
 
 ## 8. Review checklist for phase B (acceptance of this architecture)
 
-- [ ] SCFG formalisation refines to `P`/`GX` executions (no standalone
-      mini-language theorem presented as correspondence).
-- [ ] Initial-graph provenance closed: `G0` Lean-computed or `lowerOk(E, G0)`
+- [ ] Block-claim formalisation refines source-anchored block lists to
+      `P`/`GX` executions via `exec` and decoded bytes (no standalone
+      mini-language theorem presented as correspondence; no second
+      executor, no trusted WF predicate).
+- [ ] Initial-block provenance closed: `G0` Lean-computed or `lowerOk(E, G0)`
       proved; final theorem binds the optimisation sequence AND the decoded
-      bytes/image to the full unit `E` (§2.4) — no free initial graph, no
+      bytes/image to the full unit `E` (§2.4) — no free initial block list, no
       duty-only binding, no assumed refinement.
 - [ ] Every rule lemma quantifies over arbitrary operand values with a
       jointly inhabited non-degenerate source-program witness per gate.
@@ -749,7 +784,7 @@ miscompilation.
 
 ---
 
-*CUTS (this document proves nothing; it specifies): no SCFG Lean definition,
+*CUTS (this document proves nothing; it specifies): no block-claim Lean definition,
 no rule lemma, no checker Bool (`lowerOk`, `check_C`, `layoutOk`), no
 refinement theorem, no decoder, no TSO table, no lowering function, no
 machine-work bound (c) and no cost-transfer proof is given here. All are

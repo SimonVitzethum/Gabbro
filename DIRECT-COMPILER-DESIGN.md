@@ -35,11 +35,16 @@ an unproved form, and never changes FP, concurrency or contract semantics.
 
 The compiler accepts EVERY full source unit the Lean checker accepts and
 produces a final relocated executable image whose every executed byte refines
-the source model. Lean first, then Rust: the IR, lowering, optimisation rules,
+the source model. Lean first, then Rust: the direct lowering
+(representation rows, statement/control/concurrency contracts L1–L4 per
+the accepted [DIRECT-LOWERING-DECISION](dokumente/x86/DIRECT-LOWERING-DECISION.md),
+owner lane 594, reviewer lane 606), optimisation rules,
 encoder/decoder, image layout, ABI, TSO bridge and validator are modelled and
 proved generic in Lean 4; the Rust backend (optimiser, allocator, encoder,
 layout, certificate emitter) is untrusted and its output is re-checked by the
-Lean validator. Target quality is `-O3`-like scope (constant/copy propagation,
+Lean validator. Internal Rust CFG/SSA/analysis structures are transient
+implementation detail only: they are never trusted and never a required
+proof-language stage. Target quality is `-O3`-like scope (constant/copy propagation,
 DCE/CSE, selective inlining, register allocation with private spills, peephole
 selection, LICM, bounded unrolling, selective SIMD after its correspondence is
 proved) plus invariant-derived extras (redundant-check removal, strength
@@ -59,8 +64,10 @@ Chain (see [plan §§0–5](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md)):
 source text -- Lean uebersetzeAllg --> P over declOf u, duties, checker Bool
    |  (T3 parse fidelity, Pflichten/src, PrueferX AkzeptiertSpecX)
    +-- untrusted Rust backend --> final image bytes + certificate hints
-            |  (source -> IR -> opts -> allocation -> machine instr
-            |   -> FINAL relocated bytes -> loader -> fetched decoded steps)
+             |  (source-anchored blocks -> opts -> allocation -> machine instr
+             |   -> FINAL relocated bytes -> loader -> fetched decoded steps;
+             |   NO mandatory persistent SSA language/interpreter;
+             |   Rust CFG/SSA hints transient, never trusted)
             Lean decoding and validation (valX86 E bild = true, decided)
             |  generic refinement per-access x86-TSO -> W -> GX
             existing gabbro_ziel over GX (premises (a)(b)(c)(d) unchanged)
@@ -318,7 +325,10 @@ addresses travel as `entry fn` values under the N575–N577 discipline.
 
 ## 3A. Scalar selection, allocation and address selection (PROPOSED)
 
-Instruction selection works on the SCFG ([IR-VALIDIERUNG §1](dokumente/x86/IR-VALIDIERUNG.md))
+Instruction selection works on source-anchored block lists
+([IR-VALIDIERUNG §1](dokumente/x86/IR-VALIDIERUNG.md), as aligned by lane
+638 with the accepted direct lowering: blocks plus validator-recomputed
+claims, no persistent SSA language)
 bottom-up over matched tiles; every tile is a proved rule in the register
 (§7) and the validator re-decides its side conditions. Planned high-value
 tiles (each OPEN until its rule lemma closes):
@@ -485,14 +495,16 @@ means the selected long-mode profiles above.
 
 ## 7. Optimisation inventory with premises and failure cases (PROPOSED)
 
-Rule register design per [IR-VALIDIERUNG §3](dokumente/x86/IR-VALIDIERUNG.md):
-one shared SCFG (SSA + explicit memory token), layer-A local rewrites (rule
+Rule register design per [IR-VALIDIERUNG §3](dokumente/x86/IR-VALIDIERUNG.md)
+(as aligned by lane 638: source-anchored block pairs plus decoded bytes
+through the L1–L4 contracts, never `IRGraph` acceptance):
+explicit memory token threading over the block lists, layer-A local rewrites (rule
 lemma over arbitrary values + re-decided side conditions), layer-B
 dataflow/CFG certificates (validator recomputes avail/liveness/dominators,
 checks block maps), layer-C duty binding (writes, locks, atomics, FP modes,
 costs from source exports). Phase/cost column: E = early canonicalise, M =
 mid global, L = late layout/alloc; certificate size O(window) local,
-O(sites) global; validator work linear in graph + recomputed analyses.
+O(sites) global; validator work linear in block lists + recomputed analyses.
 
 | Optimisation | Local premise (validator-decided) | Certificate | Failure case (refuse) | Phase/cost |
 |---|---|---|---|---|
@@ -516,7 +528,10 @@ Proof required for: source fault/refusal/stop order (faults never
 events), execution budget (ghost source-budget correspondence — re-summing
 declared costs is bookkeeping, exhaustion-timing is OPEN), actual machine work
 (separate transfer). Range `x`, safe `x*8 → x<<3` never justifies signed
-divide rounding or shift-count semantics. Entry invariant ceases during a
+divide rounding or shift-count semantics. Every rule binds ONLY facts
+actually available at its site — the source invariant at its guaranteed
+place with actual values, the site's effect/duty binding, and the W/GX
+ordering that actually holds there. Entry invariant ceases during a
 writer; lock invariant observed only in protected allowed locations; repeated
 shared reads eliminated only under immutable/continuous-exclusive/held-lock
 proof — a local token never suffices. Never derive `ensures`; never turn a
@@ -525,8 +540,8 @@ refusal into a warning.
 Concrete generic examples (no program-name rules):
 
 1. Copy folding: `v1 = add w64 a b; v2 = copy v1; v3 = add w64 v2 c` → drop
-   the copy, use `v1` (premise: avail + dominance + width; see IR §6 worked
-   certificate). Counterexample: `v1` redefined between — recomputed avail
+   the copy, use `v1` (premise: avail + dominance + width; see
+   IR-VALIDIERUNG §6 worked certificate). Counterexample: `v1` redefined between — recomputed avail
    refuses.
 2. Guard preservation: `narrow x to lo..hi else` stays even when entry says
    `x in lo..hi` if a call that may write `x`'s carrier intervenes — delete
@@ -574,12 +589,16 @@ on-demand queries) and ThinLTO <https://clang.llvm.org/docs/ThinLTO.html>
 (function summaries, independent backends, deterministic import) — no LLVM
 code or library is committed; the compiler is Lean-modelled, Rust-built.
 
-- One compact typed IR: the SCFG of [IR-VALIDIERUNG §1](dokumente/x86/IR-VALIDIERUNG.md)
-  (SSA values versioned, memory token threading, closed op set, types on every
-  value, source anchors required on memory/call/check/atomic/lock/stop).
-  Shared effects/footprints travel with the graph; IDs interned (`v<n>`,
+- One compact checked block form: source-anchored block lists per
+  [IR-VALIDIERUNG §1](dokumente/x86/IR-VALIDIERUNG.md) (versioned value
+  names, memory token threading, closed op set, types on every value,
+  source anchors required on memory/call/check/atomic/lock/stop; aligned
+  by lane 638 with the accepted direct lowering — no persistent SSA
+  language, no second interpreter).
+  Shared effects/footprints travel with the block lists; IDs interned (`v<n>`,
   block labels), blocks/ops in contiguous arenas — cache-friendly linear
-  walks, no pointer chasing per query.
+  walks, no pointer chasing per query. Rust-side CFG/SSA structures are
+  transient hints only and never cross the trust boundary.
 - Deterministic bounded passes: each pass declares required analyses and
   preserved facts; invalidation is explicit (pass drops only what it moves).
   Dataflow facts computed by bounded worklists over finite block/name sets
@@ -662,8 +681,8 @@ produced binaries is measured on the same workloads as compile speed — both
 matter, neither is asserted before measurement.
 
 - Dimensions: cold / warm / incremental full compilation + validation;
-  latency p50/p95 over the workload mix; throughput (IR nodes/s, source
-  nodes/s); split times (analysis, optimisation, allocation, emission,
+  latency p50/p95 over the workload mix; throughput (source nodes/s,
+  block ops/s); split times (analysis, optimisation, allocation, emission,
   certificate check, kernel check); certificate size; peak RSS; output binary
   size; runtime cost of the produced binary (cycles on the profile machine).
 - Workloads: generic scalable GENERATED programs (nesting depth, function
@@ -708,8 +727,10 @@ refusals, no `sorry/admit/axiom/native_decide/unsafe`.
    execution, 279 codec pending review). Gate: canonical encoding + round-trip.
 2. Decoder + checked image/relocation/loader contract (283 merged; 279/291
    pending). Gate: altered-byte refusal witness.
-3. Typed IR + source lowering + duty exports (287/288 working; 277 bridge
-   design merged). Gate: `lowerOk` + full-unit identity.
+3. Direct lowering + duty exports (L1 representation rows: 570 accepted;
+   L2 statement rows working; 277 bridge design merged; lane 287 IR
+   superseded by accepted decision 594/606). Gate: `repOk`-style
+   admission + `lowerOk`-style `E`-anchored checks + full-unit identity.
 4. Local/CFG optimisation rules + certificates (275 design; 288/289 partial).
    Gate: per-rule generic lemma + planted-defect refusal probes.
 5. Per-access TSO refinement into W/GX (274 design; 284 TSO machine merged).
@@ -753,7 +774,7 @@ progress table.
 ## 12. Target portability: one chain, arbitrary OS and freestanding profiles (PROPOSED summary)
 
 Full architecture: [TARGET-PORTABILITY](dokumente/x86/TARGET-PORTABILITY.md).
-One source model, one shared IR, one executor vocabulary and one validation
+One source model, one checked block/byte vocabulary and one validation
 chain serve every profile. Three separated concerns: hardware instruction
 profile (emittable forms with semantics, encodings, atomicity/tearing/fence
 and FP rows), declarative ABI/image/entry profile (calling convention, stack

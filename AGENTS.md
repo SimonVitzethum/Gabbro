@@ -253,8 +253,8 @@ Nothing on that machine is loaded into its running kernel: kernel modules are te
   `./lean-probe` — are the only build entry points a lane uses (permissions: no push and no
   network for lanes).
 - Lane prompts live in `lanes/NN.md` (compose with the HARD-RULES preamble), logs in
-  `logs/NN.log`; keep a copy of every lane file in `.claude/muse-arbeit/lanes5/` and
-  `.claude/muse-sicherung/`.
+  `logs/NN.log`; keep task copies while the lane is active or awaiting review.
+  Remove numeric lane task Markdown after final checked integration; preserve reports/logs and Git history.
 
 **Writing a lane:**
 
@@ -370,7 +370,7 @@ opus/…:opus/…` first.
 | Diagnostic codes | **N578** (highest issued: N577, C-free lane, 2026-10-01; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
 | Gift (poison-probe) numbers | **1398** (highest file: `beispiele/gift/1397`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
 | Example numbers | **185** (highest file: `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
-| Lane numbers | **496** next free for the continuous direct-compiler pool (401–435 authors/organisation, 403/439/464–495 reviews reserved; earlier practical-performance 335–350/373–388 retained). Allocate unique IDs from the actual coordinator registry before launching. |
+| Lane numbers | **644** next free; allocate unique IDs from the actual live coordinator registry. |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
 crates/ | sort -u | tail`, `ls beispiele beispiele/gift`. **It was stale again**, and by more
@@ -523,3 +523,245 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 
 *Current work list: `TODO.md`. History of how things got here: `git log`, the verdicts and the
 lane reports.*
+
+## 11. Coordinator handoff: connecting the direct compiler (2026-10-01)
+
+This section records the working knowledge needed to take over this session.
+Treat the dated numbers below as a snapshot. Re-read the live registry and Git
+before reporting current activity or publishing. The latest task is to **connect
+the existing Lean components**, with up to **15 productive Muse processes** and
+substantial delegation of implementation, independent review and organisation.
+
+**Latest steering, 2026-10-01: Simon resumed Muse coordination after Glass
+Town did not work and requested sustained overnight progress with up to 15
+productive models and completion monitoring.** The earlier pause is historical;
+do not restore it without a new user request. Before taking over, inspect live
+`inventory`, `overnight-monitor.json`, completion events and worker identities.
+Do not start a second coordinator. Actual active models, starting runners,
+waiting builds and queued dependencies are different counts.
+
+Connection wave558-575 has progressed: byte decoder soundness, narrow/muldiv/
+shift/control codecs, loaded-image/relocation execution and several access/entry/
+budget connections are integrated. SourceMemory570 is a committed candidate
+under review588; scalar FP codec565 and source-linked IR287 are still working
+in the last measured snapshot. Full typed-carrier TSO->W/GX and source-to-final-
+bytes validation remain OPEN. The publication suite again found a resource
+failure in the native Lean measurement path; owner618 and reviewer619 diagnose
+it without weakening tests or verifier verdicts.
+
+The overnight wave has owners594-605 and618 with independent reviewers606-617
+and619. Owner594 evaluates direct lowering from the existing typed source AST/
+GabbroV versus an additional SSA stage; an extra IR is not a requirement for
+correct source-to-binary validation. Preserve IR287 work, but do not freeze an
+unnecessary parallel source representation before this decision. Owner595 and
+reviewer607 produce the portable read-only completion monitor. Until accepted,
+the existing coordinator's bootstrap monitor records events and bounded
+interrupted-turn recovery. Monitor deployment must not create a second scheduler.
+
+`coordinator-events.jsonl` and `overnight-monitor.json` record completions,
+actual verified model PIDs, blockers, capacity gaps and worker liveness. The
+`monitor_report` action returns newly undelivered events to the orchestrator.
+Dispatch owns useful automatic backfill; watch owns checked serial integration
+and publication. Neither a completion notification nor a positive review may
+bypass the source build, axiom, test, emission or key-scan gate. The overnight
+monitor is bounded to 12 hours; author turns remain bounded and recoveries are
+limited. If the queue empties, organisation must supply substantive disjoint
+closure tasks; do not start filler to make the process count look busy.
+
+At the pause, master was `8596f83e`: ValidatorSkeleton349, DecodingCoverage435
+and StackUnwind542, DecodeFault543, RegionFresh544, PayloadResidue545,
+ContractSites546 had landed with their exact independent reviews. The X86
+directory now has 62 accepted modules. The publication wave's Lean build
+passed; its remaining checks were interrupted by the requested pause. This
+does **not** grant a successful full publication result or an upstream push.
+
+### Current proof boundary and critical path
+
+- The accepted X86 directory currently contains 55 Lean modules, about 26,300
+  physical lines, including optimisation and validation helpers. The complete
+  local grammar build passed with 420 jobs. Counts are not completion evidence.
+- `Codec.decode` and `Ausfuehrung.schritt` cover the 14 pilot forms;
+  `Byteschritt` fetches actual executable memory before decoding and executing.
+  Wider integer, scalar SSE2, LOCK and other helpers do not yet form one
+  completely byte-connected target machine. In particular, encoder round-trip
+  consistency is not hardware correspondence.
+- `TSO` has real canonical byte memory, per-core FIFO buffers, forwarding,
+  issue and flush. Per-byte facts do not establish aligned whole-word atomicity.
+  A complete per-access target-to-W/GX simulation is still OPEN. Preserve the
+  existing source `schwach_ist_gX` result; do not assume the missing target leg.
+- Source-linked IR owner 287 has a substantial preserved, uncommitted
+  `IR.lean` draft in its isolated clone. It is **not an accepted interface**.
+  Resume this owner; do not make a competing IR. Reviewer 303 waits for a
+  clean committed candidate and joint source/table-write witnesses.
+- ValidatorSkeleton owner 349 and reviewer 387 are now integrated. Its
+  `valX86` checks image mapping
+  and decode coverage, not complete source refinement. `valX86_sound` and the
+  source-to-final-loaded-byte closing theorem remain OPEN.
+- Actual loaded mapping, relocations followed by re-decoding, source-memory
+  representation, source duties, runtime/entry bodies and budget-stop ordering
+  must be connected. Named hardware timing bounds never prove software bodies,
+  source simulation, fairness or bounded CAS retries.
+
+### Local control plane and delegation
+
+The existing coordinator is
+`.claude/muse-arbeit/x86/coordinate.py`; it launches the actual local
+`/home/simon/.opencode/bin/opencode` with model
+`opencode-go/muse-spark-1.3-contributor`. The contributor clones are
+`/home/simon/Dokumente/gabbro-muse/aNNN`, each on local `muse/NNN` with no
+remote. Do not substitute other models silently or touch Simon's OpenCode.
+
+The private control files are deliberately ignored; committed `lanes/NNN.md`,
+`messung/muse/MUSE-REPORT-NNN.md` and `DIRECT-COMPILER.md` are the portable audit.
+If the private control plane is unavailable, reconstruct it from committed
+tasks/reports and existing clone identities; do not infer acceptance from a
+missing state file or recreate a clone over existing work.
+
+- `manifest.json`: ownership, priorities, accepted dependencies and paired
+  reviewers. Allocate IDs from this registry, not the historical table in §7.
+- `state/NNN.json`: author/reviewer status, exact candidate hashes and PIDs.
+  `report_ready` means a candidate exists; it does not mean accepted or merged.
+- `dispatch.json` / `dispatch.log`: independent automatic backfill. The
+  dispatcher schedules useful authors, repairs and exact-candidate reviews.
+- `watch.json` / `watch.log`: serial integration and publication. Dispatch can
+  remain alive while integration stops at a gate; inspect both separately.
+- `publication-checks.json`, `publication-result.json` and `wave-*.log`: check
+  provenance. README-only publication also has `readme-update-result.json`.
+  These files can describe different commits; fetch and inspect `origin/master`
+  before claiming what is published. Never relabel an old check as a fresh one.
+
+Use the approved coordinator entry point with **positional lane numbers**:
+
+```bash
+python3 /home/simon/Dokumente/Gabbro/.claude/muse-arbeit/x86/coordinate.py inventory
+python3 /home/simon/Dokumente/Gabbro/.claude/muse-arbeit/x86/coordinate.py session_count
+python3 /home/simon/Dokumente/Gabbro/.claude/muse-arbeit/x86/coordinate.py build_activity
+python3 /home/simon/Dokumente/Gabbro/.claude/muse-arbeit/x86/coordinate.py resume NNN --budget 14400 --feedback /absolute/path/to/feedback.md
+python3 /home/simon/Dokumente/Gabbro/.claude/muse-arbeit/x86/coordinate.py merge AUTHOR REVIEWER
+python3 /home/simon/Dokumente/Gabbro/.claude/muse-arbeit/x86/coordinate.py dispatch_start --budget 0
+python3 /home/simon/Dokumente/Gabbro/.claude/muse-arbeit/x86/coordinate.py watch_start --budget 0
+```
+
+Inspect identities and status first. Start commands reject an already-live
+worker; never launch duplicate dispatchers/watchers. `--budget 0` means the
+dispatcher/watcher persists; contributor turns have bounded budgets. Use
+`dispatch_stop` or `watch_stop` only for our own verified worker identities and
+at clean integration boundaries. Do not stop author models just to edit docs.
+`coordinator-pause.json` is a private safe-boundary pause marker; remove it only
+after its owning coordinator update is finished.
+
+### Connection wave ownership
+
+New connection owners 558–575 are registered with paired reviewers
+576–593 (`reviewer = author + 18`). Their committed prompts are authoritative;
+registration and a target of 15 are not a claim that 15 models are running.
+
+| Owners | Deliverable |
+|---|---|
+| 558 | Integration organisation and concrete producer/consumer plan |
+| 559–561 | Arbitrary-input decoder soundness, loaded-image execution, patched-byte re-decoding |
+| 562–566 | Narrow, multiply/divide, shift, scalar FP and conditional byte-facing connections |
+| 567–569 | Shared TSO-history projection, realised instruction footprints and fetched stack execution |
+| 570–572 | Source-world byte representation, entry/user duties and budget-stop/work connection |
+| 573–574 | Actual W store/read bridges; wait for accepted 567 and 570 interfaces |
+| 575 | One extended decoder/execution path; waits for accepted decoder producers |
+
+IR287 resumes alongside this wave. Owners may prove a useful bounded
+connection or a precise obstruction, but must not manufacture a desired
+simulation premise, duplicate an interpreter, count a conjunction of checks as
+execution, or claim the full bridge from a byte-level projection alone.
+Keep the friend-reserved optimiser files untouched. No overlapping writers of
+canonical vocabulary; central fixes need an explicitly assigned follow-up.
+Reviewer clones get exact committed snapshots and their own checks. Organisation
+agents propose ordering and mechanical integration; semantic acceptance remains
+independent, and publication remains serial and checked.
+
+### Known integration and apparatus issues
+
+- The integration watcher previously stopped after an intermittent CLI alias
+  test failure. Muse 556 diagnosed resource starvation/concurrent Lean duty
+  measurements; Muse 557 independently reviewed the exact repair. Both are now
+  merged (`a6e63a86`, `daec5d32`). The candidate's full suite passed with
+  1471 tests and zero failures; **fresh integrated publication checks are still
+  required**. The repair serialises measurements per model and retries only
+  specific bounded resource failures; it does not weaken checker verdicts.
+- Accepted candidates 542–546 and reviewers 548–552 were integrated before
+  the pause. They cover StackUnwind, DecodeFault, RegionFresh, PayloadResidue
+  and ContractSites. Read their actual CUTS before using them as foundations.
+- Heavy builds share a memory lease through the pool's `cargo-slot` and
+  `lean-slot`. Native Lean retains two workers and a 4096-MiB heap budget;
+  the recovered process virtual-address ceiling is 16 GiB. The old 8-GiB
+  virtual ceiling caused `failed to create thread` even on unchanged source.
+  Do not confuse virtual address space with resident RAM or relax proof gates.
+- Some condensed wrappers can exit successfully after a child failure. Check
+  their **complete-output summary** (`== exit 0`, zero errors/failing tests),
+  not only shell return code. `cargo-pruef` retains `.tmp/cargo-test-full.log`.
+- Rust/prover reviewers need warm **private** `programmlogik/.lake` and
+  `bruecke/.lake` as well as `grammatik/.lake`. Missing or incompatible caches
+  caused network stalls or misleading exported-program errors. Never share a
+  writable build directory across clones or download dependencies in a lane.
+- Separate per-lane OpenCode databases prevent the earlier shared SQLite/session
+  failures. Keep those private paths; do not inspect keys/config credentials.
+- Scratch belongs on the project SSD, not RAM-backed `/tmp`. Keep actual model
+  PIDs separate from starting jobs, Python runners and build processes. Aim for
+  15 useful models, report actual counts, and record genuine resource/dependency
+  bottlenecks rather than starting filler.
+
+### Publication and preservation
+
+The README change removing Caprock and replacing the quick start with a tested
+Hello workflow is pushed and upstream-verified at `6faacdfe`. Preserve it during
+later merges. The Hello sequence generated source, checked, built and printed
+`Hi`; Isabelle and developer acceptance commands were removed from the entry
+workflow. README metrics and negative guardian probes must remain protected.
+
+363 fully merged local branches were removed. The worktree
+`.claude/worktrees/agent-afcfe48d684b6bb5b` still contains unique uncommitted
+`laufzeit/metall/metall.ld` and `start.S` changes: **preserve it**. Other unmerged
+worktrees and the unsuccessful separate README-publication candidate are not
+eligible for automatic merged-work cleanup. Delete clean accepted lane clones
+only after checked integration, retaining committed reports and logs.
+
+Update this handoff and `DIRECT-COMPILER.md` when its operational facts change.
+The next coordinator should be able to distinguish a running author, reviewed
+candidate, integrated theorem, green publication check and verified upstream
+push without relying on this conversation.
+
+
+### Automatic coordinator takeover and completed task cleanup
+
+Simon explicitly authorised an OpenCode coordinator to take over if the
+foreground Codex session no longer responds, including a usage-limit stop.
+The intended trigger is five minutes without a foreground heartbeat; it does
+not query or infer an API usage balance. The fallback consumes one of the
+same **15** model slots, leaving at most 14 contributor/reviewer models.
+Only foreground Codex records `root_heartbeat`; background monitoring must
+never keep that heartbeat alive. An exclusive owner lease and action lock
+prevent competing foreground coordinators. Returning Codex requests a safe
+handback before mutating root; dirty integrations and running publication
+actions must be preserved. Explicit user pause overrides takeover/backfill.
+
+Implementation belongs to author620 and independent reviewer621:
+`instrumente/coordinator-failover.py` with mock-provider, lock, pause,
+PID-identity and handback tests. The private prototype is not armed until
+this exact candidate is reviewed and integrated. Inspect live
+`.claude/muse-arbeit/x86/failover-status.json` and `orchestrator-lease.json`
+for the actual role/health; registration is not an operational takeover.
+Fallback source work stays delegated to isolated contributors; no direct
+push bypass is granted. Checked publication, goal axioms and exact independent
+reviews remain mandatory. Persist handoff notes in private `FALLBACK-HANDOFF.md`.
+
+Latest instruction: remove numeric lane task Markdown when work is finally
+over. Author622/reviewer623 own `instrumente/lane-cleanup.py` and adversarial
+fixtures. Delete only registered, completed, idle lane tasks after checked
+integration and after pending task consumers have their exact snapshots.
+Keep active, paused, incomplete, blocked, repair and review-waiting tasks.
+Preserve `lanes/VORSPANN.md`, reports/logs, all unmerged source, and Git task
+history. Run historical sweeps and future cleanup at serial clean boundaries;
+commit tracked removals and keep progress links pointing to surviving evidence.
+
+Architecture594/reviewer606 is accepted: use the existing typed Syntax/exec
+source as the reference and lower directly to checked machine blocks/bytes.
+A persistent SSA IR is not required. Preserve the unaccepted IR287 draft as
+design input; do not introduce another source interpreter on the trust path.
+Full generic source-to-final-loaded-byte validation remains **OPEN**.
