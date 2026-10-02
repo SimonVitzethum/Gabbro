@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 20:36 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 20:53 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -315,9 +315,9 @@ Last ledger refresh: **2026-10-02 20:36 UTC**. This is an operational snapshot, 
 | 678 | Organise and audit complete essential hardware-model coverage | Merged after review/checks | 679: Merged after review/checks | [report](messung/muse/MUSE-REPORT-678.md) |
 | 680 | Hardware completion: indirect and compact control byte forms | Merged after review/checks | 681: Merged after review/checks | [report](messung/muse/MUSE-REPORT-680.md) |
 | 682 | Hardware completion: MXCSR control byte execution | Merged after review/checks | 683: Merged after review/checks | [report](messung/muse/MUSE-REPORT-682.md) |
-| 684 | Eliminate hardcoded external project filesystem paths | Agent working | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
+| 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Agent working | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Agent working | 687: scheduled | [task](lanes/686.md) |
-| 688 | Hardware completion: CPUID and XGETBV byte execution | Agent working | 689: scheduled | [task](lanes/688.md) |
+| 688 | Hardware completion: CPUID and XGETBV byte execution | Committed candidate; review/integration pending | 689: Committed candidate; review/integration pending | [task](lanes/688.md) |
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Waiting for accepted dependencies | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Agent working | 693: scheduled | [task](lanes/692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Agent working | 695: scheduled | [task](lanes/694.md) |
@@ -326,7 +326,7 @@ Last ledger refresh: **2026-10-02 20:36 UTC**. This is an operational snapshot, 
 | 700 | Essential multiply divide widths and immediate IMUL | Agent working | 701: scheduled | [task](lanes/700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Agent working | 703: scheduled | [task](lanes/702.md) |
 | 704 | Generic port bus and precise architectural IO permissions | Agent working | 705: scheduled | [task](lanes/704.md) |
-| 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Agent working | 707: scheduled | [task](lanes/706.md) |
+| 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Committed candidate; review/integration pending | 707: Committed candidate; review/integration pending | [task](lanes/706.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -811,6 +811,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **681**, Independent exact review of 680, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-681.md). <!-- x86-merged:681 -->
 - 2026-10-02: lane **682**, Hardware completion: MXCSR control byte execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-682.md). <!-- x86-merged:682 -->
 - 2026-10-02: lane **683**, Independent exact review of 682, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-683.md). <!-- x86-merged:683 -->
+- 2026-10-02: publication batch checks passed for `0392b3f0`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
