@@ -1140,10 +1140,10 @@ def s32DecodeMemZeile (w fam op : Nat) (len : Nat)
 def s32DecodeMem (w rBit bBit fam op reg rm : Nat) (rex : Bool) :
     List Byte → Option (S32Decodiert × List Byte)
   | [] => none
-  | b :: rest =>
+  | bytes =>
     let basis := (if rex then 1 else 0) + (if fam == 2 then 7 else 8)
     if rm == 4 then
-      match rest with
+      match bytes with
       | [] => none
       | sib :: rest2 =>
         if byteNat sib == 36 then
@@ -1157,7 +1157,7 @@ def s32DecodeMem (w rBit bBit fam op reg rm : Nat) (rex : Bool) :
             | _, _ => none
         else none
     else
-      match parseLe32 (b :: rest) with
+      match parseLe32 bytes with
       | none => none
       | some (d, rest3) =>
         match codeXmmVoll (rBit * 8 + reg),
@@ -1248,12 +1248,251 @@ def s32Decode : List Byte → Option (S32Decodiert × List Byte)
       else s32NachRex w r bb true rest
     else s32NachRex 0 0 0 false (b :: rest)
 
+/-! ## 8. Round trips, REX selection, and refusals.
+
+  Decoding inverts encoding on all sixteen XMM registers (high
+  registers only decode through their REX bit); the decoded length is
+  the consumed prefix length. Cross-width bytes (F2 arithmetic/MOVSD),
+  wrong prefixes, set REX.W on non-integer rows, set REX.X,
+  non-canonical ModRM modes and truncations refuse explicitly. -/
+
+/-- Encode/decode round trip for ADDSS register, every XMM pair. -/
+theorem s32Roundtrip_addssRR (dst src : XmmReg) (suffix : List Byte) :
+    s32Decode (s32EncodeAddssRR dst src ++ suffix) =
+      some (⟨.addssRR dst src, (s32EncodeAddssRR dst src).length⟩,
+        suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Encode/decode round trip for SUBSS register. -/
+theorem s32Roundtrip_subssRR (dst src : XmmReg) (suffix : List Byte) :
+    s32Decode (s32EncodeSubssRR dst src ++ suffix) =
+      some (⟨.subssRR dst src, (s32EncodeSubssRR dst src).length⟩,
+        suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Encode/decode round trip for MULSS register. -/
+theorem s32Roundtrip_mulssRR (dst src : XmmReg) (suffix : List Byte) :
+    s32Decode (s32EncodeMulssRR dst src ++ suffix) =
+      some (⟨.mulssRR dst src, (s32EncodeMulssRR dst src).length⟩,
+        suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Encode/decode round trip for DIVSS register. -/
+theorem s32Roundtrip_divssRR (dst src : XmmReg) (suffix : List Byte) :
+    s32Decode (s32EncodeDivssRR dst src ++ suffix) =
+      some (⟨.divssRR dst src, (s32EncodeDivssRR dst src).length⟩,
+        suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Encode/decode round trip for MOVSS register merge. -/
+theorem s32Roundtrip_movssRR (dst src : XmmReg) (suffix : List Byte) :
+    s32Decode (s32EncodeMovssRR dst src ++ suffix) =
+      some (⟨.movssRR dst src, (s32EncodeMovssRR dst src).length⟩,
+        suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Encode/decode round trip for UCOMISS register. -/
+theorem s32Roundtrip_ucomissRR (lhs rhs : XmmReg)
+    (suffix : List Byte) :
+    s32Decode (s32EncodeUcomissRR lhs rhs ++ suffix) =
+      some (⟨.ucomissRR lhs rhs, (s32EncodeUcomissRR lhs rhs).length⟩,
+        suffix) := by
+  cases lhs <;> cases rhs <;> rfl
+
+/-- Encode/decode round trip for CVTSS2SD register. -/
+theorem s32Roundtrip_cvtss2sdRR (dst src : XmmReg)
+    (suffix : List Byte) :
+    s32Decode (s32EncodeCvtss2sdRR dst src ++ suffix) =
+      some (⟨.cvtss2sdRR dst src, (s32EncodeCvtss2sdRR dst src).length⟩,
+        suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Encode/decode round trip for CVTSD2SS register. -/
+theorem s32Roundtrip_cvtsd2ssRR (dst src : XmmReg)
+    (suffix : List Byte) :
+    s32Decode (s32EncodeCvtsd2ssRR dst src ++ suffix) =
+      some (⟨.cvtsd2ssRR dst src, (s32EncodeCvtsd2ssRR dst src).length⟩,
+        suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Encode/decode round trip for CVTSI2SS, both widths. -/
+theorem s32Roundtrip_cvtsi2ss (dst : XmmReg) (src : Register)
+    (is64 : Bool) (suffix : List Byte) :
+    s32Decode (s32EncodeCvtsi2ss dst src is64 ++ suffix) =
+      some (⟨.cvtsi2ss dst src is64,
+        (s32EncodeCvtsi2ss dst src is64).length⟩, suffix) := by
+  cases dst <;> cases src <;> cases is64 <;> rfl
+
+/-- Encode/decode round trip for CVTTSS2SI, both widths. -/
+theorem s32Roundtrip_cvttss2si (dst : Register) (src : XmmReg)
+    (is64 : Bool) (suffix : List Byte) :
+    s32Decode (s32EncodeCvttss2si dst src is64 ++ suffix) =
+      some (⟨.cvttss2si dst src is64,
+        (s32EncodeCvttss2si dst src is64).length⟩, suffix) := by
+  cases dst <;> cases src <;> cases is64 <;> rfl
+
+/-- HIGH-XMM REX SELECTION: `REX.R+B` (`0x45`) selects xmm8/xmm9. -/
+theorem s32_rex_waehlt_hoch_addss :
+    s32Decode [natByte 69, natByte 243, natByte 15, natByte 88,
+      modrmReg 0 1]
+      = some (⟨.addssRR .xmm8 .xmm9, 5⟩, []) := by
+  decide
+
+/-- REX.W selects the 64-bit integer source on CVTSI2SS. -/
+theorem s32_rex_w_waehlt_64_cvtsi :
+    s32Decode [natByte 72, natByte 243, natByte 15, natByte 42,
+      modrmReg 0 1]
+      = some (⟨.cvtsi2ss .xmm0 .rcx true, 5⟩, []) := by
+  decide
+
+/-- REX.W selects the 64-bit destination on CVTTSS2SI. -/
+theorem s32_rex_w_waehlt_64_cvtt :
+    s32Decode [natByte 72, natByte 243, natByte 15, natByte 44,
+      modrmReg 0 1]
+      = some (⟨.cvttss2si .rax .xmm1 true, 5⟩, []) := by
+  decide
+
+/-- WRONG WIDTH: F2-prefix arithmetic (ADDSD bytes) is refused. -/
+theorem s32Decode_f2_arith_verweigert :
+    s32Decode [natByte 242, natByte 15, natByte 88, modrmReg 0 1]
+      = none := by
+  decide
+
+/-- WRONG WIDTH: F2-prefix moves (MOVSD bytes) are refused. -/
+theorem s32Decode_movsd_verweigert :
+    s32Decode [natByte 242, natByte 15, natByte 16, modrmReg 0 1]
+      = none := by
+  decide
+
+/-- WRONG PREFIX: F3 on the compare opcode is refused. -/
+theorem s32Decode_ucomiss_mit_f3_verweigert :
+    s32Decode [natByte 243, natByte 15, natByte 46, modrmReg 0 1]
+      = none := by
+  decide
+
+/-- MISSING PREFIX: prefix-less arithmetic bytes are refused. -/
+theorem s32Decode_addss_ohne_praefix_verweigert :
+    s32Decode [natByte 15, natByte 88, modrmReg 0 1] = none := by
+  decide
+
+/-- REX.W on an arithmetic row is non-canonical and refused. -/
+theorem s32Decode_w_arith_verweigert :
+    s32Decode [natByte 72, natByte 243, natByte 15, natByte 88,
+      modrmReg 0 1] = none := by
+  decide
+
+/-- A set REX.X bit is outside the subset and refused. -/
+theorem s32Decode_x_verweigert :
+    s32Decode [natByte 66, natByte 243, natByte 15, natByte 88,
+      modrmReg 0 1] = none := by
+  decide
+
+/-- A lone F3 prefix refuses. -/
+theorem s32Decode_abgeschnitten_praefix :
+    s32Decode [natByte 243] = none := by
+  decide
+
+/-- F3 0F without opcode and ModRM refuses. -/
+theorem s32Decode_abgeschnitten_opcode :
+    s32Decode [natByte 243, natByte 15] = none := by
+  decide
+
+/-- F3 0F 58 without ModRM refuses. -/
+theorem s32Decode_abgeschnitten_modrm :
+    s32Decode [natByte 243, natByte 15, natByte 88] = none := by
+  decide
+
+/-- ModRM mod=1 is non-canonical and refuses. -/
+theorem s32Decode_modEins_verweigert :
+    s32Decode [natByte 243, natByte 15, natByte 88, natByte 64]
+      = none := by
+  decide
+
+/-- Opcode 11 with a register ModRM (non-canonical register store)
+    refuses. -/
+theorem s32Decode_speichereRegister_verweigert :
+    s32Decode [natByte 243, natByte 15, natByte 17, modrmReg 0 1]
+      = none := by
+  decide
+
+/-- A 66 prefix on the compare opcode refuses. -/
+theorem s32Decode_sechsundsechzig_verweigert :
+    s32Decode [natByte 102, natByte 15, natByte 46, modrmReg 0 1]
+      = none := by
+  decide
+
+/-- CONTROL-STATE MUTATION: an FTZ word closes every form. -/
+theorem s32Schritt_ftz_verweigert (d : S32Decodiert) (t : FpZustand)
+    (hok : laengeOk d.laenge = true) :
+    s32Schritt d ⟨t.kern, t.xmm, ⟨0x9F80⟩⟩ = none := by
+  have h : s32Eintritt (⟨0x9F80⟩ : FPKontext) = false :=
+    mxcsr_ftz_verweigert
+  exact s32Schritt_profil_verweigert d _ hok h
+
+/-- STICKY FLAGS DO NOT CLOSE ADMISSION: status observed, not trapped. -/
+theorem s32Schritt_sticky_offen :
+    s32Eintritt (⟨0x1FBF⟩ : FPKontext) = true := by
+  unfold s32Eintritt
+  exact (mxcsr_sticky_egal_gueltig).1
+
+set_option maxHeartbeats 4000000 in
+/-- Encode/decode round trip for the MOVSS load, both SIB shapes. -/
+theorem s32Roundtrip_movssLade (dst : XmmReg) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    s32Decode (s32EncodeMovssLade dst base d ++ suffix) =
+      some (⟨.movssLade dst base d,
+        (s32EncodeMovssLade dst base d).length⟩, suffix) := by
+  cases dst <;> cases base <;>
+    simp_all [s32EncodeMovssLade, s32EncodeLade, s32Decode, s32NachRex,
+      s32DecodeF3, s32DecodeMem, s32DecodeMemZeile, codeXmmVoll, codeReg,
+      fpXmmCode, fpXmmHoch, regCode, regHigh, regLow, modrmMem, leBytes32,
+      parseLe32_cons, s32Rex, s32IstRex, s32RexBits, parseLe32_cons]
+
+set_option maxHeartbeats 4000000 in
+/-- Encode/decode round trip for the MOVSS store, both SIB shapes. -/
+theorem s32Roundtrip_movssSpeichere (base : Register) (src : XmmReg)
+    (d : BitVec 32) (suffix : List Byte) :
+    s32Decode (s32EncodeMovssSpeichere base src d ++ suffix) =
+      some (⟨.movssSpeichere base src d,
+        (s32EncodeMovssSpeichere base src d).length⟩, suffix) := by
+  cases base <;> cases src <;>
+    simp_all [s32EncodeMovssSpeichere, s32EncodeLade, s32Decode,
+      s32NachRex, s32DecodeF3, s32DecodeMem, s32DecodeMemZeile,
+      codeXmmVoll, codeReg, fpXmmCode, fpXmmHoch, regCode, regHigh, regLow,
+      modrmMem, leBytes32, parseLe32_cons, s32Rex, s32IstRex,
+      s32RexBits, parseLe32_cons]
+
+set_option maxHeartbeats 4000000 in
+/-- Encode/decode round trip for ADDSS memory source, both SIB shapes. -/
+theorem s32Roundtrip_addssRM (dst : XmmReg) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    s32Decode (s32EncodeAddssRM dst base d ++ suffix) =
+      some (⟨.addssRM dst base d,
+        (s32EncodeAddssRM dst base d).length⟩, suffix) := by
+  cases dst <;> cases base <;>
+    simp_all [s32EncodeAddssRM, s32EncodeLade, s32Decode, s32NachRex,
+      s32DecodeF3, s32DecodeMem, s32DecodeMemZeile, codeXmmVoll, codeReg,
+      fpXmmCode, fpXmmHoch, regCode, regHigh, regLow, modrmMem, leBytes32,
+      parseLe32_cons, s32Rex, s32IstRex, s32RexBits, parseLe32_cons]
+
+set_option maxHeartbeats 4000000 in
+/-- Encode/decode round trip for UCOMISS memory source. -/
+theorem s32Roundtrip_ucomissRM (lhs : XmmReg) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    s32Decode (s32EncodeUcomissRM lhs base d ++ suffix) =
+      some (⟨.ucomissRM lhs base d,
+        (s32EncodeUcomissRM lhs base d).length⟩, suffix) := by
+  cases lhs <;> cases base <;>
+    simp_all [s32EncodeUcomissRM, s32Decode, s32NachRex, s32DecodeNP,
+      s32DecodeMem, s32DecodeMemZeile, codeXmmVoll, codeReg, fpXmmCode,
+      fpXmmHoch, regCode, regHigh, regLow, modrmMem, leBytes32,
+      parseLe32_cons, s32Rex, s32IstRex, s32RexBits, parseLe32_cons]
+
 /- CUTS (interim):
-   §§0-7 (decoders) done. OPEN next: roundtrips, refusals, the fetched
-   byte step, witnesses.
+   §§0-8 done. OPEN next: the fetched byte step, witnesses.
 -/
 
-#print axioms codeXmmVoll_fpXmmCode
-#print axioms s32Rex_kein
+#print axioms s32Roundtrip_addssRR
+#print axioms s32_rex_waehlt_hoch_addss
 
 end Gabbro.Grammatik.X86
