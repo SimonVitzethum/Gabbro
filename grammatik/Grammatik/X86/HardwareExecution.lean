@@ -298,6 +298,137 @@ theorem hwMuldiv_halt (m : HwMaschine) (c : Nat) (q : MulDivDecodiert)
     stepExt (.muldiv q) (projFp m c) b = .halt :=
   stepExt_muldiv_halt q (projFp m c) b h
 
+/-! ## 6. Word discipline: bytes issued, groups guarded, tearing refused.
+
+  A word store is NEVER the SC `write64` effect: it is eight
+  `issueByte` steps over `wortEintraege`. A grouped drain additionally
+  needs `WortGruppe` (exact eight entries plus `FremdFrei`); a partial
+  buffer, a foreign footprint entry, or alignment alone never groups.
+  LOCK RMW has no machine step: it is explicitly refused until the
+  locked662 producer lands (adapter in §9). -/
+
+/-- Fold `issueByte` over an entry list: one refusal fails the whole
+    word. Memory is untouched throughout (each issue keeps `mem`). -/
+def issueListe (s : TSOZustand) (c : Nat) : List TSOEintrag →
+    Option TSOZustand
+  | [] => some s
+  | e :: rest =>
+    match issueByte s c e.addr e.wert with
+    | none => none
+    | some s1 => issueListe s1 c rest
+
+/-- A successful word fold appends exactly the entries, oldest first. -/
+theorem issueListe_haengt_an (s s' : TSOZustand) (c : Nat)
+    (l : List TSOEintrag) (h : issueListe s c l = some s') :
+    s'.puffer c = s.puffer c ++ l := by
+  induction l generalizing s s' with
+  | nil =>
+    simp [issueListe] at h
+    subst h
+    simp
+  | cons e rest ih =>
+    unfold issueListe at h
+    cases h1 : issueByte s c e.addr e.wert with
+    | none => rw [h1] at h; cases h
+    | some s1 =>
+      rw [h1] at h
+      have ihh := ih s1 s' h
+      have hp : (s1.puffer c) = s.puffer c ++ [e] := by
+        have := issue_haengt_an s s1 c e.addr e.wert h1
+        simpa using this
+      rw [ihh, hp, List.append_assoc]
+      rfl
+
+/-- A word fold leaves canonical memory unchanged. -/
+theorem issueListe_kein_speicher (s s' : TSOZustand) (c : Nat)
+    (l : List TSOEintrag) (h : issueListe s c l = some s')
+    (x : Adresse) :
+    s'.mem.bytes x = s.mem.bytes x := by
+  induction l generalizing s s' with
+  | nil =>
+    simp [issueListe] at h
+    rw [h]
+  | cons e rest ih =>
+    unfold issueListe at h
+    cases h1 : issueByte s c e.addr e.wert with
+    | none => rw [h1] at h; cases h
+    | some s1 =>
+      rw [h1] at h
+      rw [ih s1 s' h]
+      exact issue_kein_speicher s s1 c e.addr e.wert h1 x
+
+/-- Word store on the machine: eight buffered byte issues, never the
+    SC word effect. `none` = at least one byte refused. -/
+def hwWortAusgabe (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Wort) : Option HwMaschine :=
+  match issueListe (tsoAnsicht m) c (wortEintraege a v) with
+  | none => none
+  | some s' => some (setTso m s')
+
+/-- A successful word store appends exactly the eight canonical
+    entries to the acting core's buffer. -/
+theorem hwWortAusgabe_puffer (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Wort) (m' : HwMaschine)
+    (h : hwWortAusgabe m c a v = some m') :
+    m'.puffer c = m.puffer c ++ wortEintraege a v := by
+  unfold hwWortAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c (wortEintraege a v) with
+  | none => rw [h1] at h; cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    exact issueListe_haengt_an (tsoAnsicht m) s' c _ h1
+
+/-- A word store changes no canonical byte. -/
+theorem hwWortAusgabe_kein_speicher (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Wort) (m' : HwMaschine)
+    (h : hwWortAusgabe m c a v = some m') (x : Adresse) :
+    m'.mem.bytes x = m.mem.bytes x := by
+  unfold hwWortAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c (wortEintraege a v) with
+  | none => rw [h1] at h; cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    exact issueListe_kein_speicher (tsoAnsicht m) s' c _ h1 x
+
+/-- A partial buffer is no group: tearing is refused structurally. -/
+theorem hwTeilwort_keine_gruppe (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort)
+    (hne : s.puffer c ≠ wortEintraege a v) :
+    ¬ WortGruppe s c a v := by
+  intro hgrp
+  obtain ⟨hbufl, _⟩ := hgrp
+  exact hne hbufl
+
+/-- A foreign footprint entry refuses the group. -/
+theorem hwGruppe_verweigert_bei_fremdeintrag (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort) (d : Nat) (hne : d ≠ c)
+    (e : TSOEintrag) (hmem : e ∈ s.puffer d)
+    (hfuss : e.addr ∈ Fuss a) :
+    ¬ WortGruppe s c a v := by
+  intro hgrp
+  obtain ⟨_, hff⟩ := hgrp
+  exact (hff d hne e hmem) hfuss
+
+/-- A grouped buffer admits no LOCK step on the acting core: the
+    accepted `gruppe_verweigert_lock`, lifted to the machine view. -/
+theorem hwGruppe_schliesst_lock_aus (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v delta : Wort)
+    (hgrp : WortGruppe (tsoAnsicht m) c a v) :
+    lockSchritt (.xadd64 a delta) c (tsoAnsicht m) = none :=
+  gruppe_verweigert_lock (tsoAnsicht m) c a v delta hgrp
+
+/-- LOCK requests are explicitly refused until the locked662 producer
+    provides the checked RMW path (adapter in §9). -/
+def hwLockAnfrage (_m : HwMaschine) (_c : Nat)
+    (_b : SperrBefehl) : Option HwMaschine := none
+
+/-- Every LOCK request refuses. -/
+theorem hwLock_verweigert (m : HwMaschine) (c : Nat)
+    (b : SperrBefehl) :
+    hwLockAnfrage m c b = none := rfl
+
 /- CUTS:
    Skeleton only: data vocabulary and projections so far.
    NOT proved: well-formedness, steps, embeddings, witnesses, adapters.
