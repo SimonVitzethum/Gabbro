@@ -2,6 +2,9 @@
 
 ## Verdict: ACCEPT
 
+CANDIDATE: 714 7b49fd615f54c3dd31e75364997739ae08d4c3e7
+VERDICT: ACCEPT
+
 Candidate `7b49fd615f54c3dd31e75364997739ae08d4c3e7` (author lane 714:
 `dokumente/x86/UPSTREAM-PR-2-ISA-REVIEW.md` + `MUSE-REPORT-714.md`, exact
 files from `.tmp/review/author-714`, pinned in `.tmp/review/SNAPSHOT.json`)
