@@ -635,6 +635,87 @@ theorem hwWit_kern1_verweigert :
     hwByteschrittReg hwWitStart 1 = .verweigert := by
   rfl
 
+/-! ## 9. Joint TSO stage: issue, forwarding, foreign view, drain.
+
+  Chained onto the second register successor: core 0 issues byte 42
+  at 8192, observes it by forwarding, core 1 still reads the old
+  byte (TSO has no foreign forwarding), and after core 0 drains the
+  shared byte reads 42 on both cores. The run changes ACTUAL shared
+  memory through the accepted byte equations only. -/
+
+/-- Witness data address. -/
+def hwWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness code address (execute-only). -/
+def hwWitCodeAdr : Adresse := BitVec.ofNat 64 4096
+
+/-- The machine after the two register steps, if reached. -/
+def hwWitM2 : Option HwMaschine :=
+  match hwWitO2 with
+  | .weiter m => some m
+  | _ => none
+
+/-- Core 0 issues byte 42 at the data cell. -/
+def hwWitTso1 : Option TSOZustand :=
+  match hwWitM2 with
+  | some m2 => issueByte (tsoAnsicht m2) 0 hwWitAdr (BitVec.ofNat 8 42)
+  | none => none
+
+/-- Core 0 observes its own byte (forwarding). -/
+def hwWitLoadEigen : Option (Option Byte) :=
+  match hwWitTso1 with
+  | some s => some (loadByte s 0 hwWitAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def hwWitLoadFremd : Option (Option Byte) :=
+  match hwWitTso1 with
+  | some s => some (loadByte s 1 hwWitAdr)
+  | none => none
+
+/-- Core 0 drains its oldest entry. -/
+def hwWitTso2 : Option TSOZustand :=
+  match hwWitTso1 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def hwWitNachFlush : Option (Option Byte) :=
+  match hwWitTso2 with
+  | some s => some (some (s.mem.bytes hwWitAdr))
+  | none => none
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def hwWitFremdNachFlush : Option (Option Byte) :=
+  match hwWitTso2 with
+  | some s => some (loadByte s 1 hwWitAdr)
+  | none => none
+
+/-- The data cell starts zeroed: the run really changes memory. -/
+theorem hwWit_anfang_null :
+    hwWitMem.bytes hwWitAdr = BitVec.ofNat 8 0 := by
+  decide
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem hwWit_weiterleitung :
+    hwWitLoadEigen = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem hwWit_fremd_alt :
+    hwWitLoadFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 42. -/
+theorem hwWit_spülung_aendert_speicher :
+    hwWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem hwWit_fremd_neu :
+    hwWitFremdNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
 /- CUTS:
    Skeleton only: data vocabulary and projections so far.
    NOT proved: well-formedness, steps, embeddings, witnesses, adapters.
