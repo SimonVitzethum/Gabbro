@@ -4,7 +4,7 @@ Lane 695, clone `/home/simon/Dokumente/gabbro-muse/a695`, branch `muse/695`.
 OWN ONLY: this report. No source, control, or registry changes.
 
 CANDIDATE: 694 83a21c4c5173368b1135c3d0f9ad549ad3639397
-VERDICT: ACCEPT (bounded; see §5)
+VERDICT: ACCEPT
 
 ## 1. What was reviewed
 
@@ -138,5 +138,6 @@ the candidate module is absent from this clone's `grammatik/` by design
 `lean-bau` (467 jobs) plus axiom prints. No red build, no bypass, no
 guarantee weakening, no desired-correctness premise found.
 
-Report-only exact review: CANDIDATE: 694
-83a21c4c5173368b1135c3d0f9ad549ad3639397, exactly one VERDICT: ACCEPT.
+Report-only exact review as recorded in the header lines above.
+No unsupported desired-correctness premises, no weakened guarantees,
+no fake closure. Acceptance is bounded as stated in section 5.
