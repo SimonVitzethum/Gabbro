@@ -1786,8 +1786,18 @@ theorem gift_ite_form :
       compile pdCfg (layoutVon piPs) [] pdSrcZweig = none := by
   decide
 
-/-- A scratch register that is a variable register, or `rsp`, or doubled:
-    the configuration check refuses it. -/
+/-- The original configuration has no extra scratch register, so its
+    check is the original one (`cfgOk_ohne_frei`); with the stack it still
+    passes. -/
+theorem cfgOk_ohne_frei_zeuge :
+    cfgOk pwCfg = decide (pwCfg.dst ∉ pwCfg.regs ∧ pwCfg.tmp ∉ pwCfg.regs ∧
+      pwCfg.adr ∉ pwCfg.regs ∧ pwCfg.dst ≠ pwCfg.tmp ∧ pwCfg.dst ≠ pwCfg.adr ∧
+      pwCfg.tmp ≠ pwCfg.adr ∧ pwCfg.dst ≠ .rsp ∧ pwCfg.tmp ≠ .rsp ∧ pwCfg.adr ≠ .rsp) ∧
+      cfgOk pwCfg = true ∧ cfgOk pdCfg = true :=
+  ⟨cfgOk_ohne_frei pwCfg rfl, by decide, pd_cfgOk⟩
+
+/-- A scratch register that is a variable register, or `rsp`, or doubled,
+    or the scratch register `tmp`: the configuration check refuses it. -/
 theorem gift_frei_cfg :
     cfgOk { pdCfg with frei := [.r10] } = false ∧ cfgOk { pdCfg with frei := [.rsp] } = false ∧
       cfgOk { pdCfg with frei := [.rdx, .rdx] } = false ∧
@@ -1968,6 +1978,7 @@ theorem gift_frei_cfg :
 #print axioms gift_erschoepft
 #print axioms gift_vergleich_fenster
 #print axioms gift_ite_form
+#print axioms cfgOk_ohne_frei_zeuge
 #print axioms gift_frei_cfg
 
 end Gabbro.Grammatik.X86.PipelineImageWitnesses

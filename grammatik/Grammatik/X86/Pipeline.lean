@@ -624,6 +624,16 @@ theorem envRepr_fremd {Γ : Ctx} (ρ : Env D Γ) (abb : ∀ (τ : Ty), Var Γ τ
   intro lo hi x
   rw [hr, h]
 
+/-- WITHOUT extra scratch registers (`frei = []`, the default and the only
+    form before the widening) the configuration check is exactly the
+    original nine-fact check: the new conjuncts are vacuous. -/
+theorem cfgOk_ohne_frei (c : PipeCfg) (h : c.frei = []) :
+    cfgOk c = decide (c.dst ∉ c.regs ∧ c.tmp ∉ c.regs ∧ c.adr ∉ c.regs ∧ c.dst ≠ c.tmp ∧
+      c.dst ≠ c.adr ∧ c.tmp ≠ c.adr ∧ c.dst ≠ .rsp ∧ c.tmp ≠ .rsp ∧ c.adr ≠ .rsp) := by
+  unfold cfgOk
+  rw [h]
+  simp
+
 /-- The scratch facts the checked configuration decides. -/
 theorem cfgOk_frei_liste (c : PipeCfg) (hc : cfgOk c = true) :
     c.frei.Nodup ∧ ∀ r ∈ c.frei, r ∉ c.regs ∧ r ≠ c.dst ∧ r ≠ c.tmp ∧ r ≠ c.adr ∧ r ≠ .rsp := by
@@ -2436,6 +2446,7 @@ end Block
 #print axioms exitAdr_eins
 #print axioms exitAdr_abstand
 #print axioms pipeline_ausgang
+#print axioms cfgOk_ohne_frei
 #print axioms cfgOk_frei_liste
 #print axioms cfgOk_frischListe
 #print axioms cfgOk_rsp
