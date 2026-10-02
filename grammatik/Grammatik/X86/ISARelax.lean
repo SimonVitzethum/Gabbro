@@ -468,7 +468,7 @@ theorem byteschrittL (base : Adresse) (ws : List Bool) (p : LProg)
         simp only [hk, if_true] at hz
         have hJ' : aufloesen ws p pc (.jmp z) =
             .compact (.jump8 (rel8FromWort (dispW ws p pc z 2))) := by
-          simp only [aufloesen, hk, if_true, Bool.false_eq_true, if_false]
+          simp only [aufloesen, hk, if_true]
         rw [hJ'] at hw
         rw [(byteschrittI_kanonisch _ rfl s suf hw).2]
         show ausgangVon (schrittC ⟨.jump8 _, 2⟩ s) = _
@@ -479,7 +479,7 @@ theorem byteschrittL (base : Adresse) (ws : List Bool) (p : LProg)
         simp only [hk] at hz
         have hJ' : aufloesen ws p pc (.jmp z) =
             .pilot (.jump32 (BitVec.ofNat 32 (dispW ws p pc z 5).toNat)) := by
-          simp only [aufloesen, hk, if_true, Bool.false_eq_true, if_false]
+          simp only [aufloesen, hk, Bool.false_eq_true, if_false]
         rw [hJ'] at hw
         rw [(byteschrittI_kanonisch _ rfl s suf hw).2]
         have hc : canonI (.pilot (.jump32 (BitVec.ofNat 32 (dispW ws p pc z 5).toNat))) =
@@ -502,7 +502,7 @@ theorem byteschrittL (base : Adresse) (ws : List Bool) (p : LProg)
         simp only [hk, if_true] at hz
         have hJ' : aufloesen ws p pc (.jcc c z) =
             .compact (.jumpIf8 c (rel8FromWort (dispW ws p pc z 2))) := by
-          simp only [aufloesen, hk, if_true, Bool.false_eq_true, if_false]
+          simp only [aufloesen, hk, if_true]
         rw [hJ'] at hw
         rw [(byteschrittI_kanonisch _ rfl s suf hw).2]
         show ausgangVon (schrittC ⟨.jumpIf8 c _, 2⟩ s) = _
@@ -517,12 +517,12 @@ theorem byteschrittL (base : Adresse) (ws : List Bool) (p : LProg)
           simp only [Bool.false_eq_true, if_false]
           show ByteAusgang.weiter _ = ByteAusgang.weiter _
           rw [adrL_succ, hlen, ← hinv.1]
-          simp only [lenL, hk, if_true, Bool.false_eq_true, if_false]
+          simp only [lenL, hk, if_true]
       | false =>
         simp only [hk] at hz
         have hJ' : aufloesen ws p pc (.jcc c z) =
             .pilot (.jumpIf32 c (BitVec.ofNat 32 (dispW ws p pc z 6).toNat)) := by
-          simp only [aufloesen, hk, if_true, Bool.false_eq_true, if_false]
+          simp only [aufloesen, hk, Bool.false_eq_true, if_false]
         rw [hJ'] at hw
         rw [(byteschrittI_kanonisch _ rfl s suf hw).2]
         have hc : canonI (.pilot (.jumpIf32 c (BitVec.ofNat 32 (dispW ws p pc z 6).toNat))) =
@@ -541,7 +541,7 @@ theorem byteschrittL (base : Adresse) (ws : List Bool) (p : LProg)
           simp only [Bool.false_eq_true, if_false]
           show ByteAusgang.weiter _ = ByteAusgang.weiter _
           rw [adrL_succ, hlen, ← hinv.1]
-          simp only [lenL, hk, if_true, Bool.false_eq_true, if_false]
+          simp only [lenL, hk, Bool.false_eq_true, if_false]
     · simp only [stepL, hli, Option.some.injEq] at hy
       subst hy
       split
@@ -649,5 +649,533 @@ theorem relax_laufBytes (fuel : Nat) (p : LProg) (ws : List Bool)
       ∀ y, laufL (adrL s.rip ws p) p n (0, s) = some y →
         y.2.rip = adrL s.rip ws p y.1 :=
   laufBytesL_start ws p (relax_ok fuel p ws hr) s hwx hcode n
+
+/-! ## 5. Basic blocks and their flattening. -/
+
+/-- A block terminator: fall through to the next block, or a jump to a
+    BLOCK label (the index equal to the block count is the program end). -/
+inductive Term where
+  | weiter
+  | jmp (ziel : Nat)
+  | jcc (c : Bedingung) (ziel : Nat)
+  deriving DecidableEq, Repr
+
+/-- A basic block: a straight-line body and one terminator. -/
+structure Block where
+  body : List Instr
+  term : Term
+  deriving DecidableEq, Repr
+
+/-- A block program; labels are block indices. -/
+abbrev BProg := List Block
+
+def termLen : Term → Nat
+  | .weiter => 0
+  | _ => 1
+
+def blockLen (B : Block) : Nat := B.body.length + termLen B.term
+
+/-- The instruction index at which block `b` starts in the flattening. -/
+def startB (bp : BProg) (b : Nat) : Nat := ((bp.take b).map blockLen).sum
+
+def termFlach (bp : BProg) : Term → LProg
+  | .weiter => []
+  | .jmp z => [.jmp (startB bp z)]
+  | .jcc c z => [.jcc c (startB bp z)]
+
+def blockFlach (bp : BProg) (B : Block) : LProg :=
+  B.body.map .op ++ termFlach bp B.term
+
+/-- The flattening: blocks back to back, block labels turned into the
+    instruction index of the block start. -/
+def flach (bp : BProg) : LProg := (bp.map (blockFlach bp)).flatten
+
+/-- Block-level semantics: one block body under `laufI`, then its
+    terminator; jumps set RIP to the address `adr` of the target block. -/
+def termSchritt (adr : Nat → Adresse) (b : Nat) (s : Zustand) : Term → Nat × Zustand
+  | .weiter => (b + 1, s)
+  | .jmp z => (z, { s with rip := adr z })
+  | .jcc c z =>
+    if bedingung c s.flags then (z, { s with rip := adr z })
+    else (b + 1, { s with rip := adr (b + 1) })
+
+def stepB (adr : Nat → Adresse) (bp : BProg) (x : Nat × Zustand) : Option (Nat × Zustand) :=
+  match bp[x.1]? with
+  | none => some x
+  | some B => (laufI (B.body.map canonI) x.2).map (fun s1 => termSchritt adr x.1 s1 B.term)
+
+/-- Bounded block run (fuel counts blocks); stops at the program end. -/
+def laufB (adr : Nat → Adresse) (bp : BProg) : Nat → Nat × Zustand → Option (Nat × Zustand)
+  | 0, x => some x
+  | n + 1, x =>
+    if x.1 < bp.length then
+      match stepB adr bp x with
+      | some y => laufB adr bp n y
+      | none => none
+    else some x
+
+theorem blockFlach_laenge (bp : BProg) (B : Block) :
+    (blockFlach bp B).length = blockLen B := by
+  unfold blockFlach blockLen
+  cases B.term <;> simp [termFlach, termLen]
+
+theorem startB_null (bp : BProg) : startB bp 0 = 0 := by simp [startB]
+
+theorem startB_succ (bp : BProg) (b : Nat) (hb : b < bp.length) :
+    startB bp (b + 1) = startB bp b + blockLen bp[b] := by
+  unfold startB
+  rw [List.take_add_one, List.getElem?_eq_getElem hb, Option.toList_some, List.map_append,
+    List.sum_append]
+  simp
+
+theorem laenge_flatten_map (bp : BProg) (xs : List Block) :
+    ((xs.map (blockFlach bp)).flatten).length = (xs.map blockLen).sum := by
+  induction xs with
+  | nil => rfl
+  | cons x xs ih =>
+    simp only [List.map_cons, List.flatten_cons, List.length_append, List.sum_cons, ih,
+      blockFlach_laenge]
+
+theorem flatten_map_mitte (f : α → List β) (l : List α) (b : Nat) (hb : b < l.length) :
+    (l.map f).flatten =
+      ((l.take b).map f).flatten ++ (f l[b] ++ ((l.drop (b + 1)).map f).flatten) := by
+  have hl : l = l.take b ++ l[b] :: l.drop (b + 1) := by
+    rw [← List.drop_eq_getElem_cons hb, List.take_append_drop]
+  conv => lhs; rw [hl]
+  simp only [List.map_append, List.map_cons, List.flatten_append, List.flatten_cons]
+
+/-- The flattening around block `b`: what lies before it is exactly
+    `startB bp b` instructions long. -/
+theorem flach_zerlegung (bp : BProg) (b : Nat) (hb : b < bp.length) :
+    ∃ A R : LProg, flach bp = A ++ (blockFlach bp bp[b] ++ R) ∧ A.length = startB bp b := by
+  refine ⟨((bp.take b).map (blockFlach bp)).flatten,
+    ((bp.drop (b + 1)).map (blockFlach bp)).flatten, ?_, laenge_flatten_map bp _⟩
+  unfold flach
+  exact flatten_map_mitte (blockFlach bp) bp b hb
+
+theorem getElem?_mitte (A X R : List α) (j : Nat) (hj : j < X.length) :
+    (A ++ (X ++ R))[A.length + j]? = X[j]? := by
+  rw [List.getElem?_append_right (by omega), Nat.add_sub_cancel_left,
+    List.getElem?_append_left hj]
+
+theorem flach_body (bp : BProg) (b : Nat) (hb : b < bp.length) (j : Nat)
+    (hj : j < bp[b].body.length) :
+    (flach bp)[startB bp b + j]? = some (.op bp[b].body[j]) := by
+  obtain ⟨A, R, hf, hA⟩ := flach_zerlegung bp b hb
+  rw [hf, ← hA, getElem?_mitte _ _ _ _ (by rw [blockFlach_laenge]; unfold blockLen; omega)]
+  unfold blockFlach
+  rw [List.getElem?_append_left (by simpa using hj)]
+  simp [hj]
+
+theorem flach_term (bp : BProg) (b : Nat) (hb : b < bp.length) (t : LInstr)
+    (ht : termFlach bp bp[b].term = [t]) :
+    (flach bp)[startB bp b + bp[b].body.length]? = some t := by
+  obtain ⟨A, R, hf, hA⟩ := flach_zerlegung bp b hb
+  rw [hf, ← hA, getElem?_mitte _ _ _ _ (by
+    rw [blockFlach_laenge]; unfold blockLen; cases h : bp[b].term <;>
+      simp_all [termFlach, termLen])]
+  unfold blockFlach
+  rw [ht, List.getElem?_append_right (by simp)]
+  simp
+
+/-- A straight-line body found in the labelled program runs as `laufI`. -/
+theorem laufL_body (adr : Nat → Adresse) (p : LProg) (body : List Instr) :
+    ∀ (pc : Nat) (s : Zustand), (∀ j (hj : j < body.length), p[pc + j]? = some (.op body[j])) →
+      laufL adr p body.length (pc, s) =
+        (laufI (body.map canonI) s).map (fun s' => (pc + body.length, s')) := by
+  induction body with
+  | nil => intro pc s _; simp [laufL, laufI]
+  | cons i rest ih =>
+    intro pc s h
+    have h0 := h 0 (by simp)
+    simp only [Nat.add_zero, List.getElem_cons_zero] at h0
+    have hlt : pc < p.length := by
+      rcases Nat.lt_or_ge pc p.length with h1 | h1
+      · exact h1
+      · rw [List.getElem?_eq_none h1] at h0; cases h0
+    simp only [List.length_cons, laufL, hlt, if_true, stepL, h0, List.map_cons, laufI_cons]
+    cases hs : stepI (canonI i) s with
+    | none => rfl
+    | some s1 =>
+      simp only [Option.map_some, Option.bind_some]
+      rw [ih (pc + 1) s1 (fun j hj => by
+        have := h (j + 1) (by simp; omega)
+        rw [show pc + (j + 1) = pc + 1 + j by omega] at this
+        simpa using this)]
+      congr 1
+      funext s'
+      congr 1
+      omega
+
+/-- One labelled step at a terminator jump inside the program. -/
+theorem laufL_eins (adr : Nat → Adresse) (p : LProg) (x : Nat × Zustand)
+    (hx : x.1 < p.length) : laufL adr p 1 x = stepL adr p x := by
+  simp only [laufL, hx, if_true]
+  cases stepL adr p x <;> rfl
+
+/-- BLOCK-TO-LABEL SIMULATION. Every bounded block run is matched by a
+    bounded labelled run of the flattening (with the label map
+    `b ↦ startB bp b` and the block addresses `adr ∘ startB bp`): the same
+    states, refusals and reached labels. -/
+theorem laufB_flach (adr : Nat → Adresse) (bp : BProg) :
+    ∀ (n : Nat) (x : Nat × Zustand), ∃ k,
+      laufL adr (flach bp) k (startB bp x.1, x.2) =
+        (laufB (fun b => adr (startB bp b)) bp n x).map (fun y => (startB bp y.1, y.2)) := by
+  intro n
+  induction n with
+  | zero => intro x; exact ⟨0, rfl⟩
+  | succ n ih =>
+    intro x
+    obtain ⟨b, s⟩ := x
+    by_cases hb : b < bp.length
+    · have hli : bp[b]? = some bp[b] := List.getElem?_eq_getElem hb
+      have hbody := laufL_body adr (flach bp) bp[b].body (startB bp b) s
+        (fun j hj => flach_body bp b hb j hj)
+      simp only [laufB, hb, if_true, stepB, hli]
+      cases hl : laufI (bp[b].body.map canonI) s with
+      | none =>
+        rw [hl] at hbody
+        exact ⟨bp[b].body.length, hbody⟩
+      | some s1 =>
+        rw [hl] at hbody
+        simp only [Option.map_some] at hbody ⊢
+        have hsucc := startB_succ bp b hb
+        generalize ht : bp[b].term = t
+        cases t with
+        | weiter =>
+          obtain ⟨k2, hk2⟩ := ih (b + 1, s1)
+          refine ⟨bp[b].body.length + k2, ?_⟩
+          rw [laufL_add, hbody, Option.bind_some]
+          have : startB bp b + bp[b].body.length = startB bp (b + 1) := by
+            rw [hsucc]; unfold blockLen; rw [ht]; rfl
+          rw [this]
+          exact hk2
+        | jmp z =>
+          have hterm := flach_term bp b hb (.jmp (startB bp z)) (by rw [ht]; rfl)
+          have hlt : startB bp b + bp[b].body.length < (flach bp).length := by
+            rcases Nat.lt_or_ge (startB bp b + bp[b].body.length) (flach bp).length with h1 | h1
+            · exact h1
+            · rw [List.getElem?_eq_none h1] at hterm; cases hterm
+          obtain ⟨k2, hk2⟩ := ih (z, { s1 with rip := adr (startB bp z) })
+          refine ⟨bp[b].body.length + 1 + k2, ?_⟩
+          rw [laufL_add, laufL_add, hbody, Option.bind_some, laufL_eins _ _ _ hlt]
+          simp only [stepL, hterm, Option.bind_some, termSchritt]
+          exact hk2
+        | jcc c z =>
+          have hterm := flach_term bp b hb (.jcc c (startB bp z)) (by rw [ht]; rfl)
+          have hlt : startB bp b + bp[b].body.length < (flach bp).length := by
+            rcases Nat.lt_or_ge (startB bp b + bp[b].body.length) (flach bp).length with h1 | h1
+            · exact h1
+            · rw [List.getElem?_eq_none h1] at hterm; cases hterm
+          have hnext : startB bp b + bp[b].body.length + 1 = startB bp (b + 1) := by
+            rw [hsucc]; unfold blockLen; rw [ht]; rfl
+          simp only [termSchritt]
+          cases hbed : bedingung c s1.flags with
+          | true =>
+            obtain ⟨k2, hk2⟩ := ih (z, { s1 with rip := adr (startB bp z) })
+            refine ⟨bp[b].body.length + 1 + k2, ?_⟩
+            rw [laufL_add, laufL_add, hbody, Option.bind_some, laufL_eins _ _ _ hlt]
+            simp only [stepL, hterm, Option.bind_some, hbed, if_true]
+            exact hk2
+          | false =>
+            obtain ⟨k2, hk2⟩ := ih (b + 1, { s1 with rip := adr (startB bp (b + 1)) })
+            refine ⟨bp[b].body.length + 1 + k2, ?_⟩
+            rw [laufL_add, laufL_add, hbody, Option.bind_some, laufL_eins _ _ _ hlt]
+            simp only [stepL, hterm, Option.bind_some, hbed, Bool.false_eq_true, if_false]
+            rw [hnext]
+            exact hk2
+    · refine ⟨0, ?_⟩
+      simp [laufB, hb, laufL]
+
+/-! ## 6. Selection per basic block. -/
+
+/-- Select one block body with the decided selector `sel`: the scratch
+    registers may already differ at block entry (D = S), all flags agree at
+    entry and must agree at exit (`fe = true`, so a terminating `jcc` reads
+    agreeing flags). The terminator -- and with it every label -- is kept. -/
+def waehleBlock (S : List Register) (B : Block) : Option Block :=
+  (sel S true S true B.body).map (fun q => ⟨q, B.term⟩)
+
+/-- Selection over a whole block program: every block must be selected
+    (`none` otherwise, and the caller keeps the original program). -/
+def waehleB (S : List Register) : BProg → Option BProg
+  | [] => some []
+  | B :: bs =>
+    match waehleBlock S B, waehleB S bs with
+    | some B', some bs' => some (B' :: bs')
+    | _, _ => none
+
+/-- LABELS PRESERVED: the selected program has the same blocks in the same
+    order with the same terminators, and every body is a `Wahl`
+    derivation of the original body. -/
+theorem waehleB_bloecke (S : List Register) :
+    ∀ (p q : BProg), waehleB S p = some q →
+      q.length = p.length ∧
+        ∀ (b : Nat) (B : Block), p[b]? = some B →
+          ∃ B' : Block, q[b]? = some B' ∧ B'.term = B.term ∧ Wahl S true S true B.body B'.body := by
+  intro p
+  induction p with
+  | nil => intro q h; cases h; exact ⟨rfl, fun b B hB => by simp at hB⟩
+  | cons B bs ih =>
+    intro q h
+    simp only [waehleB] at h
+    split at h
+    · rename_i B' bs' hB hbs
+      cases h
+      obtain ⟨hl, hr⟩ := ih bs' hbs
+      refine ⟨by simp [hl], fun b C hC => ?_⟩
+      cases b with
+      | zero =>
+        simp only [List.getElem?_cons_zero, Option.some.injEq] at hC
+        subst hC
+        unfold waehleBlock at hB
+        cases hs : sel S true S true B.body with
+        | none => rw [hs] at hB; cases hB
+        | some qb =>
+          rw [hs] at hB
+          cases hB
+          exact ⟨_, rfl, rfl, sel_wahl S true B.body S true qb hs⟩
+      | succ b =>
+        simp only [List.getElem?_cons_succ] at hC ⊢
+        exact hr b C hC
+    · cases h
+
+theorem waehleB_labels (S : List Register) (p q : BProg) (h : waehleB S p = some q) :
+    q.map Block.term = p.map Block.term := by
+  obtain ⟨hl, hr⟩ := waehleB_bloecke S p q h
+  apply List.ext_getElem (by simp [hl])
+  intro b h1 h2
+  simp only [List.length_map] at h1 h2
+  obtain ⟨B', hB', ht, _⟩ := hr b p[b] (List.getElem?_eq_getElem h2)
+  rw [List.getElem?_eq_getElem h1, Option.some.injEq] at hB'
+  simp only [List.getElem_map, hB', ht]
+
+/-- Lifting a relation to optional outcomes (refuse together, or both
+    succeed related). -/
+def OptRelP (R : α → α → Prop) : Option α → Option α → Prop
+  | none, none => True
+  | some a, some b => R a b
+  | _, _ => False
+
+/-- Agreement of two block states: the same label, and agreement outside
+    the scratch list on registers, on all memory and on all flags. RIP is
+    not compared (each program has its own layout). -/
+def GlB (S : List Register) (x y : Nat × Zustand) : Prop :=
+  x.1 = y.1 ∧ Gl S true x.2 y.2
+
+theorem gl_rip (S : List Register) (s1 s2 : Zustand) (a1 a2 : Adresse)
+    (h : Gl S true s1 s2) : Gl S true { s1 with rip := a1 } { s2 with rip := a2 } :=
+  ⟨h.1, h.2.1, h.2.2⟩
+
+theorem termSchritt_gl (S : List Register) (adr1 adr2 : Nat → Adresse) (b : Nat)
+    (s1 s2 : Zustand) (t : Term) (h : Gl S true s1 s2) :
+    GlB S (termSchritt adr1 b s1 t) (termSchritt adr2 b s2 t) := by
+  cases t with
+  | weiter => exact ⟨rfl, h⟩
+  | jmp z => exact ⟨rfl, gl_rip S s1 s2 _ _ h⟩
+  | jcc c z =>
+    have hc : bedingung c s2.flags = bedingung c s1.flags := by rw [h.2.2 rfl]
+    simp only [termSchritt]
+    rw [hc]
+    split
+    · exact ⟨rfl, gl_rip S s1 s2 _ _ h⟩
+    · exact ⟨rfl, gl_rip S s1 s2 _ _ h⟩
+
+/-- CROSS-BLOCK SELECTION CORRECTNESS. If the per-block selector accepts
+    `p` with scratch list `S`, then for any two block-address maps and any
+    two agreeing start states at the same label, the bounded block runs of
+    the original and the selected program refuse together, or both succeed
+    at the SAME label in states that agree outside `S`, on memory and on
+    the flags. -/
+theorem waehleB_korrekt (S : List Register) (p q : BProg) (h : waehleB S p = some q)
+    (adrP adrQ : Nat → Adresse) :
+    ∀ (n : Nat) (x y : Nat × Zustand), GlB S x y →
+      OptRelP (GlB S) (laufB adrP p n x) (laufB adrQ q n y) := by
+  obtain ⟨hl, hr⟩ := waehleB_bloecke S p q h
+  intro n
+  induction n with
+  | zero => intro x y hg; exact hg
+  | succ n ih =>
+    intro x y hg
+    obtain ⟨b, s1⟩ := x
+    obtain ⟨b', s2⟩ := y
+    obtain ⟨hbb, hg2⟩ := hg
+    simp only at hbb
+    subst hbb
+    by_cases hb : b < p.length
+    · have hbq : b < q.length := by rw [hl]; exact hb
+      obtain ⟨B', hB', ht, hw⟩ := hr b p[b] (List.getElem?_eq_getElem hb)
+      have hk := wahl_korrekt S true S true _ _ hw s1 s2 (fun _ h => h) hg2
+      simp only [laufB, hb, hbq, if_true, stepB, List.getElem?_eq_getElem hb, hB']
+      cases h1 : laufI (p[b].body.map canonI) s1 with
+      | none =>
+        cases h2 : laufI (B'.body.map canonI) s2 with
+        | none => trivial
+        | some t2 => rw [h1, h2] at hk; exact absurd hk id
+      | some t1 =>
+        cases h2 : laufI (B'.body.map canonI) s2 with
+        | none => rw [h1, h2] at hk; exact absurd hk id
+        | some t2 =>
+          rw [h1, h2] at hk
+          simp only [Option.map_some]
+          rw [ht]
+          exact ih _ _ (termSchritt_gl S adrP adrQ b t1 t2 _ ⟨hk.1, hk.2.1, hk.2.2⟩)
+    · have hbq : ¬ b < q.length := by rw [hl]; exact hb
+      simp only [laufB, hb, hbq, if_false]
+      exact ⟨rfl, hg2⟩
+
+/-! ## 7. Select, flatten, relax, lay out: the combined statement. -/
+
+/-- The whole pass: per-block selection, flattening, bounded relaxation;
+    the answer is the selected program, the widths and the byte image. -/
+def uebersetze (S : List Register) (fuel : Nat) (p : BProg) :
+    Option (BProg × List Bool × List Byte) :=
+  match waehleB S p with
+  | none => none
+  | some q =>
+    match relax fuel (flach q) with
+    | none => none
+    | some ws => some (q, ws, bild ws (flach q))
+
+/-- SELECTION ACROSS A BRANCHY PROGRAM, DOWN TO BYTES. If the pass answers
+    `(q, ws, img)` and `img` sits at RIP in W^X memory, then for every block
+    fuel `n` there is a byte step count `k` such that the ORIGINAL block
+    program `p` (under any address map) and the byte run of `img` from
+    actual memory refuse together, or both succeed: the original reaches
+    block label `b` in a state that agrees with the byte state outside the
+    scratch list, on all memory and on all flags, and the byte state's RIP
+    is the address of the SAME block label `b` in the relaxed layout. -/
+theorem uebersetze_bytes (S : List Register) (fuel : Nat) (p q : BProg) (ws : List Bool)
+    (img : List Byte) (hu : uebersetze S fuel p = some (q, ws, img)) (s : Zustand)
+    (hwx : WX s.speicher) (hcode : CodeAt s.speicher s.rip img)
+    (adrP : Nat → Adresse) (n : Nat) :
+    ∃ k : Nat,
+      (laufB adrP p n (0, s) = none ∧ laufBytesI k s = .verweigert) ∨
+      ∃ (b : Nat) (s1 s2 : Zustand), laufB adrP p n (0, s) = some (b, s1) ∧
+        laufBytesI k s = .weiter s2 ∧ EndGl S true s1 s2 ∧
+        s2.rip = adrL s.rip ws (flach q) (startB q b) := by
+  unfold uebersetze at hu
+  split at hu
+  · cases hu
+  · rename_i q0 hq
+    split at hu
+    · cases hu
+    · rename_i ws0 hr
+      cases hu
+      have hok := relax_ok fuel _ _ hr
+      let adrF := adrL s.rip ws (flach q)
+      obtain ⟨k, hk⟩ := laufB_flach adrF q n (0, s)
+      rw [startB_null] at hk
+      obtain ⟨hbytes, hrip⟩ := laufBytesL_start ws (flach q) hok s hwx hcode k
+      have hsel := waehleB_korrekt S p q hq adrP (fun b => adrF (startB q b)) n (0, s) (0, s)
+        ⟨rfl, fun _ _ => rfl, rfl, fun _ => rfl⟩
+      refine ⟨schritteL adrF (flach q) k (0, s), ?_⟩
+      rw [hbytes, hk]
+      cases h1 : laufB adrP p n (0, s) with
+      | none =>
+        cases h2 : laufB (fun b => adrF (startB q b)) q n (0, s) with
+        | none => exact Or.inl ⟨rfl, rfl⟩
+        | some y => rw [h1, h2] at hsel; exact absurd hsel id
+      | some x =>
+        cases h2 : laufB (fun b => adrF (startB q b)) q n (0, s) with
+        | none => rw [h1, h2] at hsel; exact absurd hsel id
+        | some y =>
+          rw [h1, h2] at hsel
+          obtain ⟨hxy, hg⟩ := hsel
+          refine Or.inr ⟨x.1, x.2, y.2, rfl, rfl, ⟨hg.1, hg.2.1, hg.2.2⟩, ?_⟩
+          have := hrip (startB q y.1, y.2) (by rw [hk, h2]; rfl)
+          rw [hxy]
+          exact this
+
+/- CUTS (what is NOT proved here):
+   - The labelled semantics `stepL` sets RIP at a jump to `adr z`, the
+     address of the label in the layout the theorem is about; it is a
+     semantics PARAMETRISED by the label-address map, not a
+     layout-independent one. The layout-independent content is stated in
+     `waehleB_korrekt`/`uebersetze_bytes`, which compare runs modulo RIP
+     (`Gl`), and in the reached LABEL, which is compared exactly.
+   - Runs are BOUNDED (fuel `n`); `laufBytesL` is an equation for every
+     fuel, not a termination, liveness or cost claim. The step count of the
+     byte run is computed (`schritteL`), and `uebersetze_bytes` only says
+     that SOME byte step count matches a given block fuel.
+   - At the program end (label = length) the labelled run STOPS; the byte
+     machine has no halt, so nothing is claimed about the bytes past the
+     image (they are whatever memory holds; under the theorem the run is
+     simply not continued).
+   - Relaxation is the DESIGN-§2B bounded scheme: all wide first, rounds
+     narrow one branch at a time and keep a narrowing only if the WHOLE
+     layout still validates (`layoutOk`, decided). Soundness
+     (`relax_ok`) holds for any fuel; NO optimality, convergence or
+     fixpoint claim is made, and no theorem says narrowing is monotone
+     (with only shrinking it is, but the validator re-checks every branch
+     instead of relying on that).
+   - rel32 range: the all-wide layout must validate, i.e. every rel32
+     displacement must round-trip (`passtRel32Wort`); a program larger than
+     2^31 bytes is refused, not split. Addresses are modular (`ripNach`),
+     no no-wrap premise is needed and no physical placement is claimed.
+   - Ordinary rows must fall through (`faelltDurchI`) and be canonical:
+     raw pilot/compact jumps, calls and returns are not admitted as `op`
+     rows (calls/returns are out of scope here: no stack-return labels).
+   - Per-block selection keeps ALL flags live at every block boundary
+     (`fe = true`) and lets the scratch registers `S` differ at every block
+     entry (D = S); a block that reads a scratch register before writing it
+     makes the whole selection refuse. No cross-block liveness analysis is
+     done; the scratch list is the caller's declaration that `S` is dead
+     everywhere outside the rewrites, exactly as in `waehle_korrekt`, and
+     the final agreement is `EndGl S true`.
+   - If any block fails selection, `waehleB` refuses the whole program; no
+     per-block fallback (a kept block could read a scratch register that
+     differs).
+   - Self-modifying code is excluded by W^X at the start (`WX`) and the
+     per-family frame `stepI_rahmen`, as in `laufBytesI_layout`.
+   - No TSO, concurrency, timing, hardware or source-correspondence claim.
+-/
+
+#print axioms off_null
+#print axioms off_succ
+#print axioms layoutOk_zeile
+#print axioms progBytes_append
+#print axioms jump32_laenge
+#print axioms jumpIf32_laenge
+#print axioms aufloesen_laenge
+#print axioms aufloesenAt_laenge
+#print axioms off_bild
+#print axioms codeAt_zeile
+#print axioms versuche_ok
+#print axioms runde_ok
+#print axioms relaxN_ok
+#print axioms relax_ok
+#print axioms relax_null
+#print axioms laufL_add
+#print axioms ripNach_ripNach
+#print axioms ripNach_null
+#print axioms ziel_arith
+#print axioms adrL_succ
+#print axioms ziel_kurz
+#print axioms ziel_weit
+#print axioms invL_rip
+#print axioms byteschrittL
+#print axioms laufBytesL
+#print axioms spurAn_layoutL
+#print axioms laufBytesL_start
+#print axioms relax_laufBytes
+#print axioms blockFlach_laenge
+#print axioms startB_null
+#print axioms startB_succ
+#print axioms laenge_flatten_map
+#print axioms flatten_map_mitte
+#print axioms flach_zerlegung
+#print axioms getElem?_mitte
+#print axioms flach_body
+#print axioms flach_term
+#print axioms laufL_body
+#print axioms laufL_eins
+#print axioms laufB_flach
+#print axioms waehleB_bloecke
+#print axioms waehleB_labels
+#print axioms gl_rip
+#print axioms termSchritt_gl
+#print axioms waehleB_korrekt
+#print axioms uebersetze_bytes
 
 end Gabbro.Grammatik.X86
