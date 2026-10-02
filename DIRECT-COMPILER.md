@@ -251,7 +251,7 @@ Last ledger refresh: **2026-10-02 18:24 UTC**. This is an operational snapshot, 
 | 572 | Connection: Source budget-stop and target work connection | Merged after review/checks | 590: Merged after review/checks | [report](messung/muse/MUSE-REPORT-572.md) |
 | 573 | Connection: Projected TSO stores to source W writes | Merged after review/checks | 591: Merged after review/checks | [report](messung/muse/MUSE-REPORT-573.md) |
 | 574 | Connection: Projected TSO loads to source W reads | Merged after review/checks | 592: Merged after review/checks | [report](messung/muse/MUSE-REPORT-574.md) |
-| 575 | Connection: Unified extended decoder and executable byte-step | Merged after review/checks | 593: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-575.md) |
+| 575 | Connection: Unified extended decoder and executable byte-step | Merged after review/checks | 593: Merged after review/checks | [report](messung/muse/MUSE-REPORT-575.md) |
 | 594 | Overnight: Architecture decision: existing source model versus additional SSA | Merged after review/checks | 606: Merged after review/checks | [report](messung/muse/MUSE-REPORT-594.md) |
 | 595 | Overnight: Portable completion and workforce monitor | Merged after review/checks | 607: Merged after review/checks | [report](messung/muse/MUSE-REPORT-595.md) |
 | 596 | Overnight: TSO history preservation across actual finite traces | Merged after review/checks | 608: Merged after review/checks | [report](messung/muse/MUSE-REPORT-596.md) |
@@ -718,6 +718,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: publication batch checks passed for `85cad6ae`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-02: checked master `1668c954` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:1668c954b3830b4c0e95c76ddb732262a42af7aa -->
 - 2026-10-02: lane **575**, Connection: Unified extended decoder and executable byte-step, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-575.md). <!-- x86-merged:575 -->
+- 2026-10-02: lane **593**, Independent connection review of 575, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-593.md). <!-- x86-merged:593 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
