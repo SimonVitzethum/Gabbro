@@ -420,12 +420,226 @@ theorem cvtt_trennt_vom_saettiger :
           (bites64 0x7FF8000000000000) = 0 := by
   constructor <;> decide
 
+/-! ## 4. Scalar single step semantics on the shared state.
+
+  `s32Schritt` steps ONLY the selected binary32 forms on the ACCEPTED
+  extended state `FpZustand` (canonical `Zustand` + XMM file + per-context
+  MXCSR): the 14-form pilot evaluator is never redefined (`laufAlt`
+  lifts it) and no second XMM file is created. Guards, in order: decode
+  length (`laengeOk`, checked data), profile admission (`s32Eintritt`,
+  the same essential MXCSR profile both lanes share), memory permission
+  (`read32`/`write32` `none`). Arithmetic and register MOVSS write the
+  low 32 bits and keep the upper 96; memory MOVSS loads clear them;
+  CVTSS2SD writes the low 64 bits (reusing `xmmSchreibeTief`); UCOMISS
+  writes only flags; RIP advances past the decode length. -/
+
+/-- Selected scalar single forms: four arithmetic ops in register and
+    m32-memory shape, unordered compare in both shapes, three MOVSS
+    shapes, two same-register width conversions, integer conversions
+    with explicit REX.W width (`is64`). -/
+inductive S32Befehl where
+  | addssRR (dst src : XmmReg)
+  | subssRR (dst src : XmmReg)
+  | mulssRR (dst src : XmmReg)
+  | divssRR (dst src : XmmReg)
+  | addssRM (dst : XmmReg) (base : Register) (disp : BitVec 32)
+  | subssRM (dst : XmmReg) (base : Register) (disp : BitVec 32)
+  | mulssRM (dst : XmmReg) (base : Register) (disp : BitVec 32)
+  | divssRM (dst : XmmReg) (base : Register) (disp : BitVec 32)
+  | ucomissRR (lhs rhs : XmmReg)
+  | ucomissRM (lhs : XmmReg) (base : Register) (disp : BitVec 32)
+  | movssRR (dst src : XmmReg)
+  | movssLade (dst : XmmReg) (base : Register) (disp : BitVec 32)
+  | movssSpeichere (base : Register) (src : XmmReg) (disp : BitVec 32)
+  | cvtss2sdRR (dst src : XmmReg)
+  | cvtsd2ssRR (dst src : XmmReg)
+  | cvtsi2ss (dst : XmmReg) (src : Register) (is64 : Bool)
+  | cvttss2si (dst : Register) (src : XmmReg) (is64 : Bool)
+  deriving DecidableEq, Repr
+
+/-- A decoded scalar single instruction: the form plus its decode length
+    (checked `1..15` data, exactly as the pilot `Decodiert`). -/
+structure S32Decodiert where
+  befehl : S32Befehl
+  laenge : Nat
+  deriving DecidableEq, Repr
+
+/-- Profile admission at the control word: the checked `mxcsrGueltig`
+    premise both scalar lanes share. `false` is a VALIDATOR refusal,
+    never a hardware fault. -/
+def s32Eintritt (k : FPKontext) : Bool := mxcsrGueltig k.mxcsr
+
+/-- The reset control word is admitted. -/
+theorem s32Eintritt_reset : s32Eintritt kontextReset = true := by
+  unfold s32Eintritt
+  exact kontextReset_gueltig
+
+/-- UCOMISS flag result over two model singles: ZF/PF/CF per the
+    architecture (unordered NaN operand: all three set; greater: none;
+    less: CF; equal: ZF). OF/SF/AF are cleared -- AF as `some false`
+    (defined zero, exactly the accepted `ucomiFlags` shape at f32). -/
+def ucomissFlags (a b : Gleitkomma.GBits Gleitkomma.f32) : Flags :=
+  match Gleitkomma.klasse Gleitkomma.f32 a,
+    Gleitkomma.klasse Gleitkomma.f32 b with
+  | .nan, _ => ⟨true, true, some false, true, false, false⟩
+  | _, .nan => ⟨true, true, some false, true, false, false⟩
+  | _, _ =>
+    if Gleitkomma.flt Gleitkomma.f32 a b then
+      ⟨true, false, some false, false, false, false⟩
+    else if Gleitkomma.flt Gleitkomma.f32 b a then
+      ⟨false, false, some false, false, false, false⟩
+    else ⟨false, false, some false, true, false, false⟩
+
+/-- Single scalar single step; `none` is an explicit refusal (bad length,
+    refused profile, or failed memory access). -/
+def s32Schritt (d : S32Decodiert) (t : FpZustand) : Option FpZustand :=
+  match laengeOk d.laenge with
+  | false => none
+  | true =>
+    match s32Eintritt t.fp with
+    | false => none
+    | true =>
+      let nach := ripNach t.kern.rip d.laenge
+      match d.befehl with
+      | .addssRR dst src =>
+        let w := s32Rechne .add (xmmTief32 t.xmm dst) (xmmTief32 t.xmm src)
+        some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+      | .subssRR dst src =>
+        let w := s32Rechne .sub (xmmTief32 t.xmm dst) (xmmTief32 t.xmm src)
+        some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+      | .mulssRR dst src =>
+        let w := s32Rechne .mul (xmmTief32 t.xmm dst) (xmmTief32 t.xmm src)
+        some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+      | .divssRR dst src =>
+        let w := s32Rechne .div (xmmTief32 t.xmm dst) (xmmTief32 t.xmm src)
+        some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+      | .addssRM dst base disp =>
+        match read32 t.kern.speicher (effAddr t.kern base disp) with
+        | some v =>
+          let w := s32Rechne .add (xmmTief32 t.xmm dst) (BitVec.ofNat 32 v.toNat)
+          some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+        | none => none
+      | .subssRM dst base disp =>
+        match read32 t.kern.speicher (effAddr t.kern base disp) with
+        | some v =>
+          let w := s32Rechne .sub (xmmTief32 t.xmm dst) (BitVec.ofNat 32 v.toNat)
+          some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+        | none => none
+      | .mulssRM dst base disp =>
+        match read32 t.kern.speicher (effAddr t.kern base disp) with
+        | some v =>
+          let w := s32Rechne .mul (xmmTief32 t.xmm dst) (BitVec.ofNat 32 v.toNat)
+          some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+        | none => none
+      | .divssRM dst base disp =>
+        match read32 t.kern.speicher (effAddr t.kern base disp) with
+        | some v =>
+          let w := s32Rechne .div (xmmTief32 t.xmm dst) (BitVec.ofNat 32 v.toNat)
+          some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+        | none => none
+      | .ucomissRR lhs rhs =>
+        let f := ucomissFlags (bites32 (xmmTief32 t.xmm lhs))
+          (bites32 (xmmTief32 t.xmm rhs))
+        some { t with kern := { t.kern with rip := nach, flags := f } }
+      | .ucomissRM lhs base disp =>
+        match read32 t.kern.speicher (effAddr t.kern base disp) with
+        | some v =>
+          let f := ucomissFlags (bites32 (xmmTief32 t.xmm lhs))
+            (bites32 (BitVec.ofNat 32 v.toNat))
+          some { t with kern := { t.kern with rip := nach, flags := f } }
+        | none => none
+      | .movssRR dst src =>
+        some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst (xmmTief32 t.xmm src) }
+      | .movssLade dst base disp =>
+        match read32 t.kern.speicher (effAddr t.kern base disp) with
+        | some v =>
+          some { t with kern := { t.kern with rip := nach }, xmm := xmmLadeTief32 t.xmm dst (BitVec.ofNat 32 v.toNat) }
+        | none => none
+      | .movssSpeichere base src disp =>
+        match write32 t.kern.speicher (effAddr t.kern base disp)
+          (BitVec.ofNat 64 (xmmTief32 t.xmm src).toNat) with
+        | some m => some { t with kern := { t.kern with speicher := m, rip := nach } }
+        | none => none
+      | .cvtss2sdRR dst src =>
+        let w := muster64 (cvtSS2SD (bites32 (xmmTief32 t.xmm src)))
+        some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief t.xmm dst w }
+      | .cvtsd2ssRR dst src =>
+        let w := muster32 (cvtSD2SS (bites64 (xmmTief t.xmm src)))
+        some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+      | .cvtsi2ss dst src is64 =>
+        let w := muster32 (if is64 then cvtSI2SS64 (t.kern.register src)
+          else cvtSI2SS32 (t.kern.register src))
+        some { t with kern := { t.kern with rip := nach }, xmm := xmmSchreibeTief32 t.xmm dst w }
+      | .cvttss2si dst src is64 =>
+        let w := cvttSS2SI (xmmTief32 t.xmm src) is64
+        some { t with kern := { t.kern with register := regSet t.kern.register dst w, rip := nach } }
+
+/-- A bad decode length refuses every scalar single form. -/
+theorem s32Schritt_laenge_verweigert (d : S32Decodiert) (t : FpZustand)
+    (h : laengeOk d.laenge = false) : s32Schritt d t = none := by
+  unfold s32Schritt
+  simp [h]
+
+/-- A refused profile refuses every scalar single form (validator
+    admission, not a hardware fault). -/
+theorem s32Schritt_profil_verweigert (d : S32Decodiert) (t : FpZustand)
+    (hok : laengeOk d.laenge = true) (h : s32Eintritt t.fp = false) :
+    s32Schritt d t = none := by
+  unfold s32Schritt
+  simp [hok, h]
+
+/-- A successful 32-bit read carries a 32-bit value (four-byte
+    footprint: the upper half is always zero). -/
+theorem read32_wert_klein (m : Speicher) (a : Adresse) (v : Wort)
+    (h : read32 m a = some v) : v.toNat < 2 ^ 32 := by
+  unfold read32 at h
+  by_cases hc : lesbarN m a 4 = true
+  · rw [if_pos hc] at h
+    cases h
+    rw [BitVec.toNat_ofNat]
+    have b0 := (m.bytes a).isLt
+    have b1 := (m.bytes (addrOff a 1)).isLt
+    have b2 := (m.bytes (addrOff a 2)).isLt
+    have b3 := (m.bytes (addrOff a 3)).isLt
+    have hsum : (m.bytes a).toNat + (m.bytes (addrOff a 1)).toNat * 256 +
+        (m.bytes (addrOff a 2)).toNat * 65536 +
+        (m.bytes (addrOff a 3)).toNat * 16777216 < 2 ^ 32 := by
+      omega
+    have h64 : (m.bytes a).toNat + (m.bytes (addrOff a 1)).toNat * 256 +
+        (m.bytes (addrOff a 2)).toNat * 65536 +
+        (m.bytes (addrOff a 3)).toNat * 16777216 < 2 ^ 64 := by
+      omega
+    rw [Nat.mod_eq_of_lt h64]
+    exact hsum
+  · rw [if_neg hc] at h
+    cases h
+
+/-- A successful 32-bit read proves the four readable bytes. -/
+theorem read32_braucht_lesbar (m : Speicher) (a : Adresse) (v : Wort)
+    (h : read32 m a = some v) : lesbarN m a 4 = true := by
+  unfold read32 at h
+  by_cases hc : lesbarN m a 4 = true
+  · exact hc
+  · rw [if_neg hc] at h
+    cases h
+
+/-- A successful 32-bit write proves the four writable bytes. -/
+theorem write32_braucht_schreibbar (m : Speicher) (a : Adresse)
+    (v : Wort) (m' : Speicher) (h : write32 m a v = some m') :
+    schreibbarN m a 4 = true := by
+  unfold write32 at h
+  by_cases hc : schreibbarN m a 4 = true
+  · exact hc
+  · rw [if_neg hc] at h
+    cases h
+
 /- CUTS (interim):
-   §§0-3 done. OPEN next: the S32 step, the REX codec, the fetched
-   byte step, witnesses.
+   §§0-4 (step defined, refusals, footprints) done. OPEN next: step
+   equations and frames, the REX codec, the fetched byte step,
+   witnesses.
 -/
 
-#print axioms cvtSS2SD_eins
-#print axioms cvtt_trennt_vom_saettiger
+#print axioms s32Eintritt_reset
+#print axioms read32_wert_klein
 
 end Gabbro.Grammatik.X86
