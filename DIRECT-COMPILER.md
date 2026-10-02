@@ -151,7 +151,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-02 18:50 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-02 18:55 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -758,6 +758,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: checked master `edac320c` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:edac320c43632ef46815f474f27892c95175025f -->
 - 2026-10-02: lane **658**, Scalar FP final-byte validator admission and MXCSR entry, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-658.md). <!-- x86-merged:658 -->
 - 2026-10-02: lane **659**, Independent exact review of 658, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-659.md). <!-- x86-merged:659 -->
+- 2026-10-02: publication batch checks passed for `68897f76`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
