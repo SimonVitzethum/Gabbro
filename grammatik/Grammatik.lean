@@ -491,3 +491,4 @@ import Grammatik.X86.CompactImm8Sub
 import Grammatik.X86.CompactImm8Logic
 import Grammatik.X86.CompactArithRax
 import Grammatik.X86.ZeroIdiomXor
+import Grammatik.X86.JumpTableCert
