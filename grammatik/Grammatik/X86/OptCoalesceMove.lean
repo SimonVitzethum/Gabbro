@@ -199,4 +199,93 @@ theorem OptCoalesceMove_verbindung {D : Deklaration} (V : Vertrag D)
   refine ⟨by rw [hv], ?_, coalWort _ hW⟩
   simp only [execEnd, ho, hv]
 
+/-! ## 4. Joint witness: the rule fires on a real program that moves memory.
+
+    ALL premises of `OptCoalesceMove_verbindung` instantiated JOINTLY:
+    `3 + 4` computed once and its copy `7` coalesced under a `bind`
+    with a `leave` continuation, in the NON-DEGENERATE reference program
+    `refD` (whose `einzahlen` writes its table, `refEin_schreibt`), beside
+    the reached F-machine run `MB` that changes memory (`refB_erreicht`,
+    `refB_schreibt`: slot `0 -> 100`). All three conjunct groups are used. -/
+
+/-- JOINT WITNESS for `OptCoalesceMove_verbindung`: `3 + 4` and its copy
+    `7` coalesce on `refD`, beside the memory-changing reached run. -/
+theorem OptCoalesceMove_verbindung_zeuge :
+    ∃ (V : Vertrag refD) (O : Orakel refD) (passes : Nat)
+      (R : ∀ f : refD.Fn, World refD → Env refD (refD.params f) → RufAusgang f)
+      (Γ : Ctx) (Λ : List (Res refD)) (l : Bool) (lo hi : Int)
+      (rw : CoalRewrite) (an : CoalAnalyse)
+      (eOrig eKopie : Expr refD Γ Λ (.int lo hi))
+      (rest : Endblock refD V l ((.int lo hi) :: Γ) Λ)
+      (_hz : coalZulassen rw an = true)
+      (σ : World refD) (ρ : Env refD Γ)
+      (_hWert : ∀ w w' : World refD, eval w eKopie w' ρ = eval w eOrig w' ρ)
+      (_hOrte : coalZulassen rw an = true → eKopie.orte = eOrig.orte)
+      (_hW : 0 ≤ (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n ∧
+        (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n < 2 ^ 64),
+      (eval (σ.lese Λ eOrig.orte) eKopie (σ.lese Λ eOrig.orte) ρ).n
+        = (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n
+      ∧ execEnd O passes R
+          (Endblock.bind eKopie rest) σ ρ
+        = execEnd O passes R
+          (Endblock.bind eOrig rest) σ ρ
+      ∧ ((BitVec.ofNat 64 (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n.toNat : Wort)).toNat
+        = (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n.toNat
+      ∧ (vertragVon refD refEin).schreibt () = true
+      ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+      ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hV := OptCoalesceMove_verbindung (D := refD) (V := vertragVon refD refEin)
+    (O := refO) (passes := 0) (R := keinRuf) (Γ := []) (Λ := []) (l := true)
+    (lo := 7) (hi := 7)
+    (rw := ⟨0, 1, true⟩) (an := ⟨true, true, false, false⟩)
+    (eOrig := .add (.lit 3) (.lit 4)) (eKopie := .lit 7)
+    (rest := Endblock.leave rfl) (hz := by decide)
+    (σ := refSp0.welt []) (ρ := Env.nil)
+    (hWert := fun _ _ => rfl) (hOrte := fun _ => rfl)
+    (hW := by decide)
+  refine ⟨vertragVon refD refEin, refO, 0, keinRuf, [], [], true, 7, 7,
+    ⟨0, 1, true⟩, ⟨true, true, false, false⟩,
+    .add (.lit 3) (.lit 4), .lit 7,
+    Endblock.leave rfl, by decide,
+    refSp0.welt [], Env.nil,
+    fun _ _ => rfl, fun _ => rfl, by decide,
+    ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact hV.1
+  · exact hV.2.1
+  · exact hV.2.2
+  · exact refEin_schreibt ()
+  · exact refB_erreicht
+  · exact refB_schreibt
+
+/- CUTS:
+    - No block-window float rewrite: section 2 proves the admitted float
+      copy preserves value and `gleitPasst` outcome at the value level;
+      no `Endblock` float-copy window is given (the lowering lane owns it).
+    - No multi-copy chains or 2-cycles: one copy of one available
+      dominating definition only; chained copies and swap cycles need
+      their own avail/dominance citations per link (no liveness analysis
+      here: deadness of the removed copy slot is the allocator's proof
+      obligation, not stated).
+    - No totalCost inequality: the coalesced window is the same block
+      shape with one pure copy removed, so step-budget accounting is
+      unchanged; the formal level-(c) machine-work bound is OPEN per
+      IR-VALIDIERUNG (lane 278).
+    - No silicon correspondence, no TSO/GX bridge, no ABI/loader claim:
+      correspondence stops at canonical words and `gleitPasst` values.
+    - No memory-copy rule: this is register/value copy coalescing only;
+      spill-slot copies reuse `SpillPrivate` freshness/disjointness and
+      refuse address-taken slots here (section 1).
+-/
+
+#print axioms coalZulassen
+#print axioms coalVerweigert_avail
+#print axioms coalVerweigert_dominiert
+#print axioms coalVerweigert_weite
+#print axioms coalVerweigert_adressGenommen
+#print axioms coalVerweigert_callArg
+#print axioms coalWort
+#print axioms coalGleit_behält
+#print axioms OptCoalesceMove_verbindung
+#print axioms OptCoalesceMove_verbindung_zeuge
+
 end Gabbro.Grammatik.X86
