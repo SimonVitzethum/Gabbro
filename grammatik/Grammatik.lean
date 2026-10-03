@@ -510,3 +510,4 @@ import Grammatik.X86.ConcurrentIntegerExecution
 import Grammatik.X86.InterruptDescriptorHardware
 import Grammatik.X86.ExceptionPriorityHardware
 import Grammatik.X86.ComposeDecodeExec
+import Grammatik.X86.ComposeImageFetch

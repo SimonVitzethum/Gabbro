@@ -500,7 +500,7 @@ Last ledger refresh: **2026-10-03 21:07 UTC**. This is an operational snapshot, 
 | 822 | Hardware completion: tier-2 MOVDQU instance | Scheduled | 972: scheduled | [task](lanes/822.md) |
 | 823 | Hardware completion: tier-2 PCMPEQB instance | Scheduled | 973: scheduled | [task](lanes/823.md) |
 | 824 | Composition closing: decode-to-execution closing | Merged after review/checks | 974: Merged after review/checks | [report](messung/muse/MUSE-REPORT-824.md) |
-| 825 | Composition closing: image-to-fetch closing | Committed candidate; review/integration pending | 975: Committed candidate; review/integration pending | [task](lanes/825.md) |
+| 825 | Composition closing: image-to-fetch closing | Merged after review/checks | 975: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-825.md) |
 | 826 | Composition closing: relocation-to-redecode closing | Committed candidate; review/integration pending | 976: Committed candidate; review/integration pending | [task](lanes/826.md) |
 | 827 | Composition closing: entry-to-mapping closing | Committed candidate; review/integration pending | 977: Committed candidate; review/integration pending | [task](lanes/827.md) |
 | 828 | Composition closing: stack-to-ABI closing | Committed candidate; review/integration pending | 978: Committed candidate; review/integration pending | [task](lanes/828.md) |
@@ -593,7 +593,7 @@ Last ledger refresh: **2026-10-03 21:07 UTC**. This is an operational snapshot, 
 | 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Committed candidate; review/integration pending | 1093: Committed candidate; review/integration pending | [task](lanes/1073.md) |
 | 1094 | Idle pool cache cleanup with strict guards | Incomplete; preserved | 1095: scheduled | [task](lanes/1094.md) |
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
-| 1098 | Standing dynamic work planner for compiler/hardware closure | Scheduled | 1099: scheduled | [task](lanes/1098.md) |
+| 1098 | Standing dynamic work planner for compiler/hardware closure | Agent working | 1099: scheduled | [task](lanes/1098.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1195,6 +1195,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: checked master `67a174b1` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:67a174b1f09d84a6246d40bf31d7cb8960c2ff67 -->
 - 2026-10-03: lane **824**, Composition closing: decode-to-execution closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-824.md). <!-- x86-merged:824 -->
 - 2026-10-03: lane **974**, Independent exact review of 824, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-974.md). <!-- x86-merged:974 -->
+- 2026-10-03: lane **825**, Composition closing: image-to-fetch closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-825.md). <!-- x86-merged:825 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
