@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 13:49 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 13:52 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -408,7 +408,7 @@ Last ledger refresh: **2026-10-03 13:49 UTC**. This is an operational snapshot, 
 | 714 | Compiler ISA and instruction selection architecture review | Merged after review/checks | 715: Merged after review/checks | [report](messung/muse/MUSE-REPORT-714.md) |
 | 716 | Rust compiler validation and ELF integration review | Merged after review/checks | 717: Merged after review/checks | [report](messung/muse/MUSE-REPORT-716.md) |
 | 718 | Unify accepted architectural final-byte family dispatch | Incomplete; preserved | 719: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/718.md) |
-| 720 | Connect real selected integer bytes to shared TSO execution | Committed candidate; review/integration pending | 721: Committed candidate; review/integration pending | [task](lanes/720.md) |
+| 720 | Connect real selected integer bytes to shared TSO execution | Merged after review/checks | 721: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-720.md) |
 | 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Incomplete; preserved | 723: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/722.md) |
 | 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Committed candidate; review/integration pending | 725: Committed candidate; review/integration pending | [task](lanes/724.md) |
 | 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Committed candidate; review/integration pending | [task](lanes/726.md) |
@@ -1181,6 +1181,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: checked master `e97737a3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e97737a30a7317613603bc05fa177e1f3501e6a3 -->
 - 2026-10-03: lane **731**, Independent exact review of 730, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-731.md). <!-- x86-merged:731 -->
 - 2026-10-03: publication batch checks passed for `a8d0044e`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-03: lane **720**, Connect real selected integer bytes to shared TSO execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-720.md). <!-- x86-merged:720 -->
+- 2026-10-03: checked master `8a5de0aa` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:8a5de0aa611e729622292dd66fed42d6e0475ada -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
