@@ -1,7 +1,9 @@
 # MUSE-REPORT-1093: Exact review of author 1073 (task-brief audit batch B20)
 
 CANDIDATE: 1073 17dc094651920812ff1957f5e07533012dd2dd5b
-VERDICT: ACCEPT (bounded: the audit findings doc plus its report only; not the underlying optimiser work)
+VERDICT: ACCEPT
+
+Acceptance is bounded: the audit findings doc plus its report only, not the underlying optimiser work.
 
 ## What was done
 
