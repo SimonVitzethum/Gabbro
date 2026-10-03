@@ -457,7 +457,7 @@ Last ledger refresh: **2026-10-03 13:18 UTC**. This is an operational snapshot, 
 | 779 | Hardware completion: XCHG ordering need | Merged after review/checks | 929: Merged after review/checks | [report](messung/muse/MUSE-REPORT-779.md) |
 | 780 | Hardware completion: MFENCE drain-own semantics | Merged after review/checks | 930: Merged after review/checks | [report](messung/muse/MUSE-REPORT-780.md) |
 | 781 | Hardware completion: SFENCE store narrowness | Merged after review/checks | 931: Merged after review/checks | [report](messung/muse/MUSE-REPORT-781.md) |
-| 782 | Hardware completion: LFENCE load narrowness | Merged after review/checks | 932: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-782.md) |
+| 782 | Hardware completion: LFENCE load narrowness | Merged after review/checks | 932: Merged after review/checks | [report](messung/muse/MUSE-REPORT-782.md) |
 | 783 | Hardware completion: seq_cst lowering bracket | Committed candidate; review/integration pending | 933: scheduled | [task](lanes/783.md) |
 | 784 | Hardware completion: CAS retry attempt bound | Committed candidate; review/integration pending | 934: Committed candidate; review/integration pending | [task](lanes/784.md) |
 | 785 | Hardware completion: CAS divergence record | Committed candidate; review/integration pending | 935: Committed candidate; review/integration pending | [task](lanes/785.md) |
@@ -1167,6 +1167,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **781**, Hardware completion: SFENCE store narrowness, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-781.md). <!-- x86-merged:781 -->
 - 2026-10-03: lane **931**, Independent exact review of 781, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-931.md). <!-- x86-merged:931 -->
 - 2026-10-03: lane **782**, Hardware completion: LFENCE load narrowness, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-782.md). <!-- x86-merged:782 -->
+- 2026-10-03: lane **932**, Independent exact review of 782, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-932.md). <!-- x86-merged:932 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
