@@ -563,3 +563,4 @@ import Grammatik.X86.OptPeepholeDisp
 import Grammatik.X86.OptAllocLinear
 import Grammatik.X86.OptSpillFresh
 import Grammatik.X86.OptCoalesceMove
+import Grammatik.X86.OptRematConst
