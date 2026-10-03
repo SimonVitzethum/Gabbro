@@ -525,3 +525,4 @@ import Grammatik.X86.ComposeFenceOrder
 import Grammatik.X86.ComposeAtomicLedger
 import Grammatik.X86.ComposeFpLedger
 import Grammatik.X86.ComposeFlagLedger
+import Grammatik.X86.ComposeWidthLedger
