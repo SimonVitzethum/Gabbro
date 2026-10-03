@@ -2,8 +2,10 @@
 
 ## CANDIDATE and VERDICT
 
-- CANDIDATE: 830 735b6d5aa59c4a95e69b2510ff4853b4be5eaecf
-- VERDICT: ACCEPT (bounded: composition closing only, per CUTS below)
+CANDIDATE: 830 735b6d5aa59c4a95e69b2510ff4853b4be5eaecf
+VERDICT: ACCEPT
+
+Acceptance is bounded to the composition closing stated in CUTS below.
 
 Snapshot base `e7c75908456285d1e37c18dc32d4f9c0e10d1fa4` equals this
 clone's HEAD on branch `muse/980`; snapshot reports `clean: true`.
