@@ -564,7 +564,7 @@ Last ledger refresh: **2026-10-03 22:31 UTC**. This is an operational snapshot, 
 | 886 | Optimiser rule: LEA selection rule | Merged after review/checks | 1036: Merged after review/checks | [report](messung/muse/MUSE-REPORT-886.md) |
 | 887 | Optimiser rule: shift selection rule | Merged after review/checks | 1037: Merged after review/checks | [report](messung/muse/MUSE-REPORT-887.md) |
 | 888 | Optimiser rule: multiply selection rule | Merged after review/checks | 1038: Merged after review/checks | [report](messung/muse/MUSE-REPORT-888.md) |
-| 889 | Optimiser rule: division guard rule | Merged after review/checks | 1039: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-889.md) |
+| 889 | Optimiser rule: division guard rule | Merged after review/checks | 1039: Merged after review/checks | [report](messung/muse/MUSE-REPORT-889.md) |
 | 890 | Optimiser rule: SETcc selection rule | Committed candidate; review/integration pending | 1040: Committed candidate; review/integration pending | [task](lanes/890.md) |
 | 891 | Optimiser rule: CMOV selection rule | Committed candidate; review/integration pending | 1041: Committed candidate; review/integration pending | [task](lanes/891.md) |
 | 892 | Optimiser rule: MOV-immediate selection rule | Committed candidate; review/integration pending | 1042: Committed candidate; review/integration pending | [task](lanes/892.md) |
@@ -1319,6 +1319,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **888**, Optimiser rule: multiply selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-888.md). <!-- x86-merged:888 -->
 - 2026-10-03: lane **1038**, Independent exact review of 888, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1038.md). <!-- x86-merged:1038 -->
 - 2026-10-03: lane **889**, Optimiser rule: division guard rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-889.md). <!-- x86-merged:889 -->
+- 2026-10-03: lane **1039**, Independent exact review of 889, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1039.md). <!-- x86-merged:1039 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
