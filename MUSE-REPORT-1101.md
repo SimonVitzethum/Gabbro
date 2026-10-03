@@ -2,13 +2,15 @@
 
 ## Scope
 
-Report-only independent exact review of CANDIDATE 1100, pinned HEAD
+Report-only independent exact review of author lane 1100, pinned HEAD
 `ed9b6a6c2f3ea8685da1a84de2dd75fcbf649de6` (base `f31f93197c59c64371b654a960ccbdf6f166f40d`),
 evidence snapshot `.tmp/review/author-1100/` (SNAPSHOT.json, PATCH.diff,
 OWNER-TASK.md, BUILD-EVIDENCE.json). Own file only: MUSE-REPORT-1101.md.
 No source, private, root, or network changes. Reviewer clone
 `/home/simon/Dokumente/gabbro-muse/a1101`, branch `muse/1101`, verified
 before starting.
+
+CANDIDATE: 1100 ed9b6a6c2f3ea8685da1a84de2dd75fcbf649de6
 
 ## What was done
 
@@ -139,9 +141,11 @@ at the hardware layer; the candidate's explicit mapping to the written
 footprint cell `concWitA` plus the memory-changing drain is the right
 non-degeneracy analogue and is accepted.
 
-## VERDICT: ACCEPT
+## Verdict
 
-Candidate 1100 at `ed9b6a6c2f3ea8685da1a84de2dd75fcbf649de6` is ACCEPTED
+VERDICT: ACCEPT
+
+Candidate 1100 at `ed9b6a6c2f3ea8685da1a84de2dd75fcbf649de6` is accepted
 for merge with the single mechanical merge action above (append the
 `Grammatik.lean` import line, then rebuild). Every admitted 720 row is
 covered with no third case, flag helpers are reused with no local AF
