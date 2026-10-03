@@ -2,9 +2,12 @@
 
 ## Candidate and verdict
 
-- CANDIDATE: 889 9056176b48e6c2367de2eca043a8b245ac7efd5d
-- Base: b040b155 (matches this clone's HEAD at review time).
-- VERDICT: ACCEPT (bounded, see scope limits below).
+CANDIDATE: 889 9056176b48e6c2367de2eca043a8b245ac7efd5d
+VERDICT: ACCEPT
+
+- Author lane 889 at the pinned commit above; base b040b155 (matches this
+  clone's HEAD at review time).
+- Assessment: accept, bounded by the scope limits stated below.
 
 ## What was reviewed
 
