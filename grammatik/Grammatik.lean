@@ -553,3 +553,4 @@ import Grammatik.X86.OptRangeElim
 import Grammatik.X86.OptBoundElim
 import Grammatik.X86.OptOverflowElim
 import Grammatik.X86.OptAliasCommute
+import Grammatik.X86.OptStrengthRed
