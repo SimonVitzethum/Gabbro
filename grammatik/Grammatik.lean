@@ -549,3 +549,4 @@ import Grammatik.X86.OptCfgSimp
 import Grammatik.X86.OptCseLoad
 import Grammatik.X86.OptDceDead
 import Grammatik.X86.OptDceStore
+import Grammatik.X86.OptRangeElim
