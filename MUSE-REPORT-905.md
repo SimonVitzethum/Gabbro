@@ -1,7 +1,7 @@
 # Muse Report 905: Exact review of author 755 (pure LEA address arithmetic)
 
 CANDIDATE: 755 093642d11dec51442a497a436df70f1c0135e986
-VERDICT: ACCEPT (bounded, see scope below)
+VERDICT: ACCEPT
 
 ## Clone / branch
 
