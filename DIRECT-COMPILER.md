@@ -413,7 +413,7 @@ Last ledger refresh: **2026-10-03 13:42 UTC**. This is an operational snapshot, 
 | 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Committed candidate; review/integration pending | 725: Committed candidate; review/integration pending | [task](lanes/724.md) |
 | 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Committed candidate; review/integration pending | [task](lanes/726.md) |
 | 728 | Model actual IDT TSS descriptor and entry stack selection | Committed candidate; review/integration pending | 729: Incomplete; preserved | [task](lanes/728.md) |
-| 730 | Connect full selected SIB RIP-relative addresses to actual effects | Merged after review/checks | 731: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-730.md) |
+| 730 | Connect full selected SIB RIP-relative addresses to actual effects | Merged after review/checks | 731: Merged after review/checks | [report](messung/muse/MUSE-REPORT-730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
 | 734 | Selected control registers and syscall MSR byte effects | Committed candidate; review/integration pending | 735: scheduled | [task](lanes/734.md) |
 | 736 | SSE and selected AVX context save restore effects | Agent working | 737: scheduled | [task](lanes/736.md) |
@@ -1179,6 +1179,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: publication batch checks passed for `cc704538`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-03: lane **730**, Connect full selected SIB RIP-relative addresses to actual effects, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-730.md). <!-- x86-merged:730 -->
 - 2026-10-03: checked master `e97737a3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e97737a30a7317613603bc05fa177e1f3501e6a3 -->
+- 2026-10-03: lane **731**, Independent exact review of 730, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-731.md). <!-- x86-merged:731 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
