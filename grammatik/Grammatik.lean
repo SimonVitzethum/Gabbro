@@ -487,3 +487,4 @@ import Grammatik.X86.Disp0Frame
 import Grammatik.X86.LeaPureForm
 import Grammatik.X86.CompactImmMov32Zero
 import Grammatik.X86.CompactImm8Add
+import Grammatik.X86.CompactImm8Sub
