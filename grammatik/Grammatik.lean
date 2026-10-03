@@ -534,3 +534,4 @@ import Grammatik.X86.ComposePatchBytes
 import Grammatik.X86.ComposeMapPerms
 import Grammatik.X86.ComposeGuardPages
 import Grammatik.X86.ComposeUnwindTable
+import Grammatik.X86.ComposeHandlerTable
