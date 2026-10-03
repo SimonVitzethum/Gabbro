@@ -451,7 +451,7 @@ Last ledger refresh: **2026-10-03 13:17 UTC**. This is an operational snapshot, 
 | 773 | Hardware completion: layout stability under narrowing | Committed candidate; review/integration pending | 923: Incomplete; preserved | [task](lanes/773.md) |
 | 774 | Hardware completion: far-transfer refusal | Committed candidate; review/integration pending | 924: Incomplete; preserved | [task](lanes/774.md) |
 | 775 | Hardware completion: privileged-form refusal | Incomplete; preserved | 925: scheduled | [task](lanes/775.md) |
-| 776 | Hardware completion: LOCK CMPXCHG success path | Merged after review/checks | 926: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-776.md) |
+| 776 | Hardware completion: LOCK CMPXCHG success path | Merged after review/checks | 926: Merged after review/checks | [report](messung/muse/MUSE-REPORT-776.md) |
 | 777 | Hardware completion: LOCK CMPXCHG failure stutter | Incomplete; preserved | 927: scheduled | [task](lanes/777.md) |
 | 778 | Hardware completion: LOCK XADD fetch-add | Committed candidate; review/integration pending | 928: Committed candidate; review/integration pending | [task](lanes/778.md) |
 | 779 | Hardware completion: XCHG ordering need | Committed candidate; review/integration pending | 929: Committed candidate; review/integration pending | [task](lanes/779.md) |
@@ -1157,6 +1157,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **772**, Hardware completion: rel8 reachability, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-772.md). <!-- x86-merged:772 -->
 - 2026-10-03: lane **922**, Independent exact review of 772, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-922.md). <!-- x86-merged:922 -->
 - 2026-10-03: lane **776**, Hardware completion: LOCK CMPXCHG success path, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-776.md). <!-- x86-merged:776 -->
+- 2026-10-03: lane **926**, Independent exact review of 776, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-926.md). <!-- x86-merged:926 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
