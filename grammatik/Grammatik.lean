@@ -571,3 +571,4 @@ import Grammatik.X86.OptMulSel
 import Grammatik.X86.OptDivGuard
 import Grammatik.X86.OptSetccSel
 import Grammatik.X86.OptCmovSel
+import Grammatik.X86.OptMovImmSel
