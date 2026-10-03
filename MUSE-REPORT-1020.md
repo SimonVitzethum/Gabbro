@@ -1,87 +1,105 @@
-# MUSE-REPORT-1020: Exact review of author 870 (alias commutation rule) — BLOCKED, no verdict
+# MUSE-REPORT-1020: Exact review of author 870 (alias commutation rule)
 
-## Status: BLOCKED — candidate snapshot not available in this clone, no VERDICT issued
+CANDIDATE: 870 7e51b5f8ae59c2dc02351d8ee44c8487b24704a5
+VERDICT: ACCEPT
 
-I did **not** issue ACCEPT or REPAIR for author 870 because the exact candidate
-material required by the task is not accessible from this isolated clone, and
-the execution tools needed to retrieve or verify it are denied. Per HARD RULES
-§4 (no invented results) and the lane rule "exactly one CANDIDATE / one VERDICT
-with real evidence", a verdict without the pinned snapshot would be fabrication.
-This report records the precise blocker and the honest partial status.
+## Review basis
 
-## Clone / branch verification (partial)
+Pinned snapshot inspected at `.tmp/review/SNAPSHOT.json` (head
+`7e51b5f8ae59c2dc02351d8ee44c8487b24704a5`, base `b040b155`, clean tree):
+`OWNER-TASK.md`, `MUSE-REPORT-870.md`, `PATCH.diff` (3 files only:
+`MUSE-REPORT-870.md`, one import line `Grammatik.X86.OptAliasCommute` in
+`grammatik/Grammatik.lean`, new module
+`grammatik/Grammatik/X86/OptAliasCommute.lean`), and `BUILD-EVIDENCE.json`
+with the complete stepwise probe history. I read the new module in full
+(405 lines). Base `b040b155` equals this clone's parent commit, so the
+snapshot sits directly on current master. I did not re-execute the build
+(this lane owns the report only and may add no source to the clone); the
+build facts below come from the author's recorded evidence, cross-checked
+against the file content for consistency.
 
-- Earlier in this lane one shell probe succeeded and showed:
-  workdir `/home/simon/Dokumente/gabbro-muse/a1020`, branch `muse/1020`,
-  HEAD `b040b155159f47629542b0083e2f0a8a607f2b4c`, clean status output.
-  That matches the lane header (clone a1020, branch muse/1020), so no STOP applied.
-- Subsequent shell calls (`git branch -a`, listing the coordinator state dir)
-  were denied by the permission classifier, so I could not re-verify HEAD at
-  report time nor run the queued wrappers (`./lean-bau`, `./lean-probe`,
-  `./cargo-pruef`). No build/check evidence is claimed below.
+## Build and axiom evidence (recorded, consistent)
 
-## What I searched (read-only tools only)
+- Final `./lean-bau`: `Built Grammatik (511 jobs)`, success, after one
+  genuine red iteration (name collision `aliasZulassen` with
+  `X86/OverlapRefusal`, repaired by renaming to `aliasCommuteZulassen`;
+  probe names renamed the same way). The red-then-green history is credible
+  development evidence, not a pasted result: intermediate probes show real
+  errors (`rewrite` miss at line 122, unsolved `spur.length` goal at 170,
+  `Decidable` synthesis failures, `List.mem_cons_self` arity) each followed
+  by a green re-probe.
+- `#print axioms` for every main theorem: refusals and probes at
+  `[propext]` or no axioms; value core at `[propext, Quot.sound]`;
+  `OptAliasCommute_verbindung` at `[propext, Quot.sound]` and its
+  `_zeuge` companion at `[propext, Classical.choice, Quot.sound]`.
+  No `sorry`, `admit`, `axiom`, `native_decide`, `unsafe` in the file.
+- `gabbro_ziel` family still prints exactly
+  `[propext, Classical.choice, Quot.sound]` after the change.
+- Scope discipline held: no new diagnostic/gift/example/CLI numbers, no
+  MARKE changes, no source/checker/Spec/goal/emitter edits, no
+  friend-reserved optimiser files touched.
 
-- `lanes/` contains no `870.md` (38 entries listed; 870 absent). No committed
-  task/PATCH for author 870 exists in this clone.
-- `messung/muse/` contains no `MUSE-REPORT-870.md` (checked by glob; only
-  unrelated numbers present).
-- `**/*870*` over the repo finds only `beispiele/gift/870-translator-call-checked.gab`,
-  which is gift-probe number 870 and unrelated to lane/author 870.
-- `grammatik/Grammatik/X86/` in this clone contains no alias-commutation module;
-  grep for `lias.?[Cc]ommut|AliasCommut|commut.*alias` over
-  `grammatik/Grammatik` returns no files. The author's candidate work is not
-  merged into this clone's master, as expected for an exact review of an
-  unmerged snapshot — but the snapshot itself was never delivered here.
-- The coordinator control plane (pinned HEAD registry, exact snapshot) was not
-  reachable: the one attempt to list it was permission-denied, and the lane
-  instructions forbid other clones, network, and provider/model calls, so I did
-  not attempt any workaround.
+## Substantive findings
 
-## Missing inputs (all required for the verdict)
+1. Real vocabulary, no invented semantics. The rule is stated over the
+   actual `Syntax`/`Semantik` `World.storeSlot` / `World.schreibSlot`
+   fragment and the real declared cost `CostSummary.expandBound`, per the
+   owner task's fallback while no accepted shared IR exists. Value lemmas
+   (`storeSlot_hit`, `storeSlot_miss`, the four commute read-backs) are
+   over arbitrary `Wert` of arbitrary slot type, floats included, with no
+   rounding or width change anywhere in the commute path.
+2. Refusals are loud and cover the DESIGN failure case. Fence/lock/
+   acquire-release between the sites refuses even with full token evidence
+   (`aliasVerweigert_schranke`); shared motion without interleaving
+   evidence refuses (`aliasVerweigert_anteil`); name inequality alone is
+   not disjointness (`aliasVerweigert_fuss`); reordered token order
+   refuses (`aliasVerweigert_token`). A refused site keeps its certified
+   unoptimised translation; nothing becomes a warning. No `ensures`
+   derived; no faulting form speculated above its guard (two plain
+   stores only, both total).
+3. Every premise of the connection theorem is used by its proof
+   (`hDisj`/`hz` feed `hNe`, `hStab`/`hz` feed `hS`, `hFloat`/`hz` feed
+   the IEEE conjunct, `s`/`src`/`op`/float indices/`Λ` each land in
+   their conjunct). The side conditions are validator-decided
+   (`admission = true -> fact`), exactly the shape the owner task
+   demands; the disjointness is assumed-from-admission, not computed,
+   and the certificate shape (local record plus recomputed layer-B/C
+   citations) is named in the section-6 comment.
+4. Witness is joint and non-degenerate.
+   `OptAliasCommute_verbindung_zeuge` instantiates all premises together
+   on `refD` (whose `einzahlen` writes its table), stores `7`/`5` at
+   disjoint indices `0`/`1` under a held lock, beside reached F-machine
+   run `MB` with a memory-changing step. No degenerate empty-run or
+   table-free witness.
+5. Bounded weaknesses, all disclosed in CUTS and none verdict-changing:
+   (a) the cost conjunct is definitional order-independence
+   (`expandBound s src = expandBound s src` by `rfl`); the formal
+   level-(c) work bound stays OPEN on lane 278 — appropriate for pure
+   motion of identical block shape, and honestly cut;
+   (b) no full-frame equality beyond the two touched slots (noted as
+   following the same `storeSlot_miss` shape);
+   (c) single slot family only, no cross-table/field citation;
+   (d) correspondence stops at source worlds and `gleitRechne` values:
+   no byte forms, no TSO/GX bridge, no silicon/ABI/loader claim.
+   The claim stays inside the proved boundary throughout.
 
-1. **CANDIDATE pinned HEAD**: author 870's full commit hash was never supplied
-   (not in `.tmp/LANE.md`, not in `lanes/`, not retrievable — shell denied).
-2. **Task / PATCH / snapshot**: no file, diff, or review-copy of the alias
-   commutation rule available in this clone.
-3. **Reference check ability**: `./lean-probe` reproduction of suspicious cases
-   impossible — shell denied.
+## Bounded acceptance
 
-## No findings on the substance
+ACCEPT for the source-world rule lemma `OptAliasCommute_verbindung`
+with its witness, refusals and probes: value/fault/observation/IEEE/
+lock/cost preservation for commuting two proved-disjoint slot stores
+under validator-recomputed admission, with the DESIGN failure case
+refused. The acceptance explicitly does NOT cover byte-level lowering,
+TSO/concurrency-bridge behaviour, cross-table motion, or machine-work
+bounds — all cut in the file. No repairs required; no guarantee
+weakened; no desired-correctness premise smuggled in.
 
-No Lean definitions, theorems, or proofs of author 870 were inspected because
-none are present here. I state no architecture judgement (byte forms, REX /
-register / width / flag semantics, TSO/atomicity, gates, canonical execution),
-no witness/mutation assessment, and no CUTS/claim-boundary statement. Anything
-else would be unsupported.
+## CUTS (of this review, not the candidate)
 
-## Minimal unblock request
-
-Re-dispatch lane 1020 with, inside this clone or its `.tmp/`:
-(a) the full pinned HEAD of author 870,
-(b) the exact task text and PATCH/snapshot (or a review copy path inside this
-clone),
-(c) shell permission for `git` read-only commands and the queued wrappers
-(`./lean-probe`, `./lean-bau`).
-With those, the exact review (CANDIDATE + single ACCEPT/REPAIR verdict with
-real evidence) can be completed in one continuation.
-
-## Rule compliance
-
-- Owned only this file (`MUSE-REPORT-1020.md`); no source, control, or live
-  files touched. No network, no push, no other clones, no credentials read.
-- No `sorry`/`admit`/`axiom`/`native_decide` introduced (no Lean written).
-- Commit: this report was committed on branch `muse/1020` (commit `e86dca23`;
-  a follow-up commit corrects this paragraph, which was written while shell
-  access appeared denied). No other files staged or touched.
-
-## CUTS
-
-- Everything: the entire exact review of author 870 (candidate identification,
-  independent inspection, reproduction, verdict) remains open.
-- Commit of this report via `./commit.sh` not performed (tool denied).
-
-```
-CANDIDATE: 870 <unknown — pinned HEAD not supplied>
-VERDICT: none (BLOCKED, see above)
-```
+- No independent Lean re-execution (report-only lane; build facts are
+  recorded evidence plus full-content cross-read).
+- Integration merge itself (`muse/870` into master) not performed here;
+  base matches master tip parent, single import-line delta is in the
+  auto-resolvable class.
+- Downstream consumers (lowering lane, validator citation layer-B/C)
+  remain open by design.
