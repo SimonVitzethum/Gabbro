@@ -433,7 +433,7 @@ Last ledger refresh: **2026-10-03 12:01 UTC**. This is an operational snapshot, 
 | 755 | Hardware completion: pure LEA address arithmetic | Committed candidate; review/integration pending | 905: Agent working | [task](lanes/755.md) |
 | 756 | Hardware completion: compact TEST with imm | Agent working | 906: scheduled | [task](lanes/756.md) |
 | 757 | Hardware completion: compact NOT/NEG forms | Agent working | 907: scheduled | [task](lanes/757.md) |
-| 758 | Hardware completion: disp0 memory form | Merged after review/checks | 908: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-758.md) |
+| 758 | Hardware completion: disp0 memory form | Merged after review/checks | 908: Merged after review/checks | [report](messung/muse/MUSE-REPORT-758.md) |
 | 759 | Hardware completion: disp8 memory form | Agent working | 909: scheduled | [task](lanes/759.md) |
 | 760 | Hardware completion: base+index*scale+disp form | Scheduled | 910: scheduled | [task](lanes/760.md) |
 | 761 | Hardware completion: no-index rsp rule | Scheduled | 911: scheduled | [task](lanes/761.md) |
@@ -1119,6 +1119,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: integration of candidate(s) [698] failed the local proof/build gate after independent review 699; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:699 -->
 - 2026-10-03: integration of candidate(s) [718] failed the local proof/build gate after independent review 719; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:719 -->
 - 2026-10-03: integration of candidate(s) [722] failed the local proof/build gate after independent review 723; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:723 -->
+- 2026-10-03: lane **908**, Independent exact review of 758, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-908.md). <!-- x86-merged:908 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
