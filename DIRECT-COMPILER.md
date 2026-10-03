@@ -570,7 +570,7 @@ Last ledger refresh: **2026-10-03 22:32 UTC**. This is an operational snapshot, 
 | 892 | Optimiser rule: MOV-immediate selection rule | Merged after review/checks | 1042: Merged after review/checks | [report](messung/muse/MUSE-REPORT-892.md) |
 | 893 | Optimiser rule: address-mode selection rule | Merged after review/checks | 1043: Merged after review/checks | [report](messung/muse/MUSE-REPORT-893.md) |
 | 894 | Optimiser rule: call-argument selection rule | Merged after review/checks | 1044: Merged after review/checks | [report](messung/muse/MUSE-REPORT-894.md) |
-| 895 | Optimiser rule: return-path selection rule | Committed candidate; review/integration pending | 1045: Committed candidate; review/integration pending | [task](lanes/895.md) |
+| 895 | Optimiser rule: return-path selection rule | Merged after review/checks | 1045: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-895.md) |
 | 1054 | Task-brief audit batch B01 (lanes 746-760) | Committed candidate; review/integration pending | 1074: Committed candidate; review/integration pending | [task](lanes/1054.md) |
 | 1055 | Task-brief audit batch B02 (lanes 761-775) | Committed candidate; review/integration pending | 1075: Committed candidate; review/integration pending | [task](lanes/1055.md) |
 | 1056 | Task-brief audit batch B03 (lanes 776-790) | Committed candidate; review/integration pending | 1076: Committed candidate; review/integration pending | [task](lanes/1056.md) |
@@ -596,7 +596,7 @@ Last ledger refresh: **2026-10-03 22:32 UTC**. This is an operational snapshot, 
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Committed candidate; review/integration pending | [task](lanes/1100.md) |
 | 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: Committed candidate; review/integration pending | [task](lanes/1102.md) |
-| 1104 | Close the accepted consumers through the common dispatcher | Committed candidate; review/integration pending | 1105: Committed candidate; review/integration pending | [task](lanes/1104.md) |
+| 1104 | Close the accepted consumers through the common dispatcher | Committed candidate; review/integration pending | 1105: Agent working | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Committed candidate; review/integration pending | 1109: Committed candidate; review/integration pending | [task](lanes/1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Committed candidate; review/integration pending | 1111: Agent working | [task](lanes/1110.md) |
@@ -1330,6 +1330,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1043**, Independent exact review of 893, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1043.md). <!-- x86-merged:1043 -->
 - 2026-10-03: lane **894**, Optimiser rule: call-argument selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-894.md). <!-- x86-merged:894 -->
 - 2026-10-03: lane **1044**, Independent exact review of 894, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1044.md). <!-- x86-merged:1044 -->
+- 2026-10-03: lane **895**, Optimiser rule: return-path selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-895.md). <!-- x86-merged:895 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
