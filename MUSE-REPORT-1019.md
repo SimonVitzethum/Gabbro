@@ -1,9 +1,12 @@
 # MUSE-REPORT-1019: Exact review of author 869 (overflow-check elimination rule)
 
-## CANDIDATE / VERDICT
+## Outcome
 
-- CANDIDATE: 869 565b2106e9fdf9c1b816a1fc7fbd0b008df950f9
-- VERDICT: ACCEPT (bounded; remarks below are non-blocking)
+CANDIDATE: 869 565b2106e9fdf9c1b816a1fc7fbd0b008df950f9
+VERDICT: ACCEPT
+
+Acceptance is bounded by the remarks recorded below; the substantive
+verdict is unchanged by this format fix.
 
 ## What was done
 
