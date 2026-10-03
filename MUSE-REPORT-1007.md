@@ -1,11 +1,18 @@
 # MUSE-REPORT-1007: Exact review of author 857 (permission-check closing)
 
-## CANDIDATE and VERDICT
+## Machine-readable verdict
 
-- CANDIDATE: 857 098a0e1bf8013b2727b69a5ddb9c7f4c169aad53
+CANDIDATE: 857 098a0e1bf8013b2727b69a5ddb9c7f4c169aad53
+VERDICT: ACCEPT
+
+The acceptance above is bounded; the bounds are stated in the
+"Bounds of this ACCEPT" section and the follow-ups below. The
+substantive verdict and findings are unchanged by this format fix.
+
+## Review detail
+
 - Base: b040b155159f47629542b0083e2f0a8a607f2b4c (verified equal to this
   reviewer's HEAD via `git log`; author's BUILD-EVIDENCE base matches).
-- VERDICT: ACCEPT (bounded; bounds and follow-ups below).
 
 ## Task reviewed
 
