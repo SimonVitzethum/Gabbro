@@ -166,6 +166,105 @@ theorem probe_kopieRein_slot :
     kopieRein (Expr.slot () () refIdxEin refDarfEin) = false := by
   decide
 
+/-- Soundness of the recomputed purity: a decided-`true` expression
+    reads nothing. The induction goes through `Expr.rec` (the type is
+    mutual, with `NutzlastExpr` discharged by the trivial motive, after
+    the `InvariantenOpt` precedent); every `false` arm closes from the
+    contradictory hypothesis. -/
+theorem kopieRein_klingt {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (e : Expr D Γ Λ τ) (h : kopieRein e = true) :
+    e.orte = [] := by
+  induction e using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  | lit _ => rfl
+  | wahr => rfl
+  | falsch => rfl
+  | var _ => rfl
+  | ptrOf _ _ _ _ => rfl
+  | fnref _ _ _ => rfl
+  | none _ => rfl
+  | grund _ _ => rfl
+  | weiter _ _ e ih =>
+    simp only [kopieRein] at h
+    simp only [Expr.orte, ih h]
+  | neg a ih =>
+    simp only [kopieRein] at h
+    simp only [Expr.orte, ih h]
+  | nicht a ih =>
+    simp only [kopieRein] at h
+    simp only [Expr.orte, ih h]
+  | some e ih =>
+    simp only [kopieRein] at h
+    simp only [Expr.orte, ih h]
+  | istSome e ih =>
+    simp only [kopieRein] at h
+    simp only [Expr.orte, ih h]
+  | add a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | sub a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | mul a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | div _ _ a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | rem _ _ a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | sdiv _ a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | srem _ a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | band _ _ a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | bor _ _ _ _ _ a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | bxor _ _ _ _ _ a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | shl _ _ _ _ _ a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | shr _ _ _ _ _ a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | lt a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | le a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | eq a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | fllt a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | flle a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | und a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | oder a b iha ihb =>
+    simp only [kopieRein, Bool.and_eq_true] at h
+    simp only [Expr.orte, iha h.1, ihb h.2, List.append_nil]
+  | _ => simp_all [kopieRein]
+
+/-- Joint inhabitation for `kopieRein_klingt`: `3 + 4` is decided pure
+    with empty footprint, on the table-writing reference program. -/
+theorem kopieRein_klingt_zeuge :
+    ∃ (e : Expr refD [] [] (.int 7 7)) (_h : kopieRein e = true),
+      e.orte = [] ∧ (vertragVon refD refEin).schreibt () = true :=
+  ⟨.add (.lit 3) (.lit 4), rfl,
+    kopieRein_klingt _ rfl, refEin_schreibt ()⟩
+
 /-! ## 2. Value preservation: the copy carries the source value whole.
 
     Over ARBITRARY values (`v : Int`): the copy is the identity on the
