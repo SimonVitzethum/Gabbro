@@ -173,6 +173,77 @@ theorem ComposeFpLedger_verbindung (k : FpLedger)
   rw [hbleibt, ← hledger]
   exact hfp
 
+/-! ## 4. No contraction: one guarded step is exactly one model op.
+
+  The guarded byte step applies a single `FpBefehl`: the arithmetic
+  instance below pins exactly one `fpRechne` application (one rounding)
+  for a fetched ADDSD -- no fused second op, no FMA contraction. -/
+
+/-- No contraction through the ledger: a guarded ADDSD byte step
+    computes exactly one model addition into the low half. -/
+theorem ComposeFpLedger_keineKontraktion (k : FpLedger)
+    (t t1 : FpZustand) (d : FpDecodiert) (rest : List Byte)
+    (dst src : XmmReg)
+    (hfp : fpEintritt t.fp = true)
+    (hledger : t.fp = k)
+    (hf : fpFetchDekodiert t = some (d, rest))
+    (hform : d.befehl = .addsdRR dst src)
+    (hout : fpLedgerByteschritt k t = .weiter t1) :
+    xmmTief t1.xmm dst =
+      fpRechne .add (xmmTief t.xmm dst) (xmmTief t.xmm src) := by
+  have hok := (fpFetchDekodiert_erfolg t d rest hf).2.2.1
+  have hconn := ComposeFpLedger_verbindung k t t1 d rest hfp hledger hf hout
+  have heq := fpSchritt_addsdRR d t dst src hok hfp hform
+  rw [hconn.1] at heq
+  obtain rfl := Option.some_inj.mp heq
+  exact xmmSchreibeTief_tief _ _ _
+
+/-! ## 5. Planted refusals: one varied ledger leg each.
+
+  Every refusal below varies exactly one leg of the admitted run and
+  is decided on actual words, never trusted. -/
+
+/-- FTZ word (bit 15): the ledger refuses, although fetch and scope
+    match hold. -/
+theorem ComposeFpLedgerNeg_ftz :
+    fpLedgerSchritt kontextReset ⟨.movsdSpeichere .rax .xmm0 0, 8⟩
+      { fpCodecT with fp := (⟨0x9F80⟩ : FPKontext) } = none :=
+  fpLedgerSchritt_ledger_verweigert _ _ _ (by decide)
+
+/-- DAZ word (bit 6): the ledger refuses. -/
+theorem ComposeFpLedgerNeg_daz :
+    fpLedgerSchritt kontextReset ⟨.movsdSpeichere .rax .xmm0 0, 8⟩
+      { fpCodecT with fp := (⟨0x1FC0⟩ : FPKontext) } = none :=
+  fpLedgerSchritt_ledger_verweigert _ _ _ (by decide)
+
+/-- Round-down word (RC = 01): the RNE ledger leg refuses. -/
+theorem ComposeFpLedgerNeg_runde :
+    fpLedgerSchritt kontextReset ⟨.movsdSpeichere .rax .xmm0 0, 8⟩
+      { fpCodecT with fp := (⟨0x3F80⟩ : FPKontext) } = none :=
+  fpLedgerSchritt_ledger_verweigert _ _ _ (by decide)
+
+/-- Cleared precision mask: the mask ledger leg refuses. -/
+theorem ComposeFpLedgerNeg_maske :
+    fpLedgerSchritt kontextReset ⟨.movsdSpeichere .rax .xmm0 0, 8⟩
+      { fpCodecT with fp := (⟨0x0F80⟩ : FPKontext) } = none :=
+  fpLedgerSchritt_ledger_verweigert _ _ _ (by decide)
+
+/-- Scope crossing with an admitted word: sticky flags set (`0x1FBF`
+    is admitted) but the word is not this scope's ledger entry. -/
+theorem ComposeFpLedgerNeg_kreuzung :
+    fpLedgerSchritt kontextReset ⟨.movsdSpeichere .rax .xmm0 0, 8⟩
+      { fpCodecT with fp := (⟨0x1FBF⟩ : FPKontext) } = none :=
+  fpLedgerSchritt_kreuzung_verweigert _ _ _ (by decide) (by decide)
+
+/-- Control change forces re-ledgering: the reached LDMXCSR load
+    (`mxcsrWit_schritt1`) installs `0x1FBF` -- a real control change
+    (`mxcsrWit_kontrolle_aendert`) -- so the old scope entry
+    `kontextReset` no longer matches and the guarded step refuses. -/
+theorem ComposeFpLedgerNeg_nachLaden :
+    fpLedgerSchritt kontextReset ⟨.movsdSpeichere .rax .xmm0 0, 8⟩
+      mxcsrWitT1 = none :=
+  fpLedgerSchritt_kreuzung_verweigert _ _ _ mxcsrWit_eintritt (by decide)
+
 /- CUTS: skeleton only; closing theorems follow.
 -/
 
