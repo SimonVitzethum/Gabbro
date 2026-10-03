@@ -31,6 +31,7 @@ import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
 import Grammatik.X86.NarrowOps
 import Grammatik.X86.DecodingCoverage
+import Grammatik.X86.Byteschritt
 
 namespace Gabbro.Grammatik.X86
 
@@ -391,6 +392,357 @@ theorem kompaktFuerKlein (v : Wort) (h : v.toNat < 2 ^ 32) :
   apply BitVec.eq_of_toNat_eq
   rw [compactWert_nat, BitVec.toNat_ofNat]
   exact Nat.mod_eq_of_lt h
+
+/-! ## 7. Execution: the accepted 32-bit clearing step plus advance.
+
+    MOV Flags Affected: None -- flags are preserved. No memory operand
+    exists, so no permission is consulted and no TSO event is produced;
+    `stepCompact_ohne_speicher` pins that memory-independence. The
+    destination takes the zero-extended immediate through the same
+    register-file helpers as every pilot step. -/
+
+/-- Compact step: destination takes the zero-extended immediate, RIP
+    advances past the decoded length. Bad lengths refuse. -/
+def stepCompact (d : CompactDec) (s : Zustand) : Option Zustand :=
+  match laengeOk d.laenge with
+  | false => none
+  | true =>
+    let nach := ripNach s.rip d.laenge
+    match d.op with
+    | .mov32imm dst imm => some ({ s with register := regSet s.register dst (compactWert imm), rip := nach })
+
+/-- The canonical lengths pass the length guard. -/
+theorem compactLen_ok (dst : Register) :
+    laengeOk (compactLen dst) = true := by
+  cases dst <;> rfl
+
+/-- Step equation: the destination lands the zero-extended value. -/
+theorem stepCompact_mov32imm (d : CompactDec) (s : Zustand)
+    (dst : Register) (imm : BitVec 32)
+    (hok : laengeOk d.laenge = true)
+    (h : d.op = .mov32imm dst imm) :
+    stepCompact d s = some ({ s with register := regSet s.register dst (compactWert imm), rip := ripNach s.rip d.laenge }) := by
+  unfold stepCompact
+  rw [hok, h]
+
+/-- A bad decode length refuses, unconditionally. -/
+theorem stepCompact_laenge_verweigert (d : CompactDec) (s : Zustand)
+    (h : laengeOk d.laenge = false) : stepCompact d s = none := by
+  unfold stepCompact
+  simp [h]
+
+/-- The destination holds exactly the zero-extended immediate. -/
+theorem stepCompact_wert (d : CompactDec) (s s' : Zustand) (dst : Register)
+    (imm : BitVec 32) (hok : laengeOk d.laenge = true)
+    (h : d.op = .mov32imm dst imm)
+    (hstep : stepCompact d s = some s') :
+    s'.register dst = compactWert imm := by
+  rw [stepCompact_mov32imm d s dst imm hok h] at hstep
+  cases hstep
+  exact regSet_gleich _ _ _
+
+/-- Every other register keeps its value. -/
+theorem stepCompact_fremd (d : CompactDec) (s s' : Zustand) (dst q : Register)
+    (imm : BitVec 32) (hok : laengeOk d.laenge = true)
+    (h : d.op = .mov32imm dst imm)
+    (hstep : stepCompact d s = some s') (hq : q ≠ dst) :
+    s'.register q = s.register q := by
+  rw [stepCompact_mov32imm d s dst imm hok h] at hstep
+  cases hstep
+  exact regSet_fremd _ _ _ _ hq
+
+/-- Flags are preserved (MOV Flags Affected: None). -/
+theorem stepCompact_flags (d : CompactDec) (s s' : Zustand) (dst : Register)
+    (imm : BitVec 32) (hok : laengeOk d.laenge = true)
+    (h : d.op = .mov32imm dst imm)
+    (hstep : stepCompact d s = some s') :
+    s'.flags = s.flags := by
+  rw [stepCompact_mov32imm d s dst imm hok h] at hstep
+  cases hstep
+  rfl
+
+/-- No memory byte changes (no memory operand exists). -/
+theorem stepCompact_speicher (d : CompactDec) (s s' : Zustand) (dst : Register)
+    (imm : BitVec 32) (hok : laengeOk d.laenge = true)
+    (h : d.op = .mov32imm dst imm)
+    (hstep : stepCompact d s = some s') :
+    s'.speicher = s.speicher := by
+  rw [stepCompact_mov32imm d s dst imm hok h] at hstep
+  cases hstep
+  rfl
+
+/-- RIP advances past the decoded length. -/
+theorem stepCompact_rip (d : CompactDec) (s s' : Zustand) (dst : Register)
+    (imm : BitVec 32) (hok : laengeOk d.laenge = true)
+    (h : d.op = .mov32imm dst imm)
+    (hstep : stepCompact d s = some s') :
+    s'.rip = ripNach s.rip d.laenge := by
+  rw [stepCompact_mov32imm d s dst imm hok h] at hstep
+  cases hstep
+  rfl
+
+/-- The step lands the accepted 32-bit merge: same discipline as every
+    narrow 32-bit move, not a second semantics. -/
+theorem stepCompact_gleich_merge (d : CompactDec) (s s' : Zustand) (dst : Register)
+    (imm : BitVec 32) (hok : laengeOk d.laenge = true)
+    (h : d.op = .mov32imm dst imm)
+    (hstep : stepCompact d s = some s') :
+    s'.register dst =
+      mergeRegNarrow .b32 (s.register dst) (compactWert imm) := by
+  have hw := stepCompact_wert d s s' dst imm hok h hstep
+  rw [hw]
+  exact (compactWert_gleich_merge (s.register dst) imm).symm
+
+/-- DESTINATION-DEAD proof obligation: the successor destination is
+    the zero-extended immediate whatever the old value was. A compiler
+    may treat the destination as killed by this row. -/
+theorem compact_dst_tot (s : Zustand) (dst : Register) (imm : BitVec 32)
+    (alt : Wort) (s1' s2' : Zustand)
+    (h1 : stepCompact ⟨.mov32imm dst imm, compactLen dst⟩
+      { s with register := regSet s.register dst alt } = some s1')
+    (h2 : stepCompact ⟨.mov32imm dst imm, compactLen dst⟩ s = some s2') :
+    s1'.register dst = s2'.register dst := by
+  have hok := compactLen_ok dst
+  have e1 := stepCompact_wert ⟨.mov32imm dst imm, compactLen dst⟩ _ s1' dst imm hok rfl h1
+  have e2 := stepCompact_wert ⟨.mov32imm dst imm, compactLen dst⟩ _ s2' dst imm hok rfl h2
+  rw [e1, e2]
+
+/-- NO MEMORY ACCESS: the step never consults memory. Two states
+    differing only in memory agree on destination, RIP and flags of
+    their successors. No TSO event, no fault class and no permission
+    gate arises from this row. -/
+theorem stepCompact_ohne_speicher (s : Zustand) (m : Speicher)
+    (dst : Register) (imm : BitVec 32) (s1' s2' : Zustand)
+    (h1 : stepCompact ⟨.mov32imm dst imm, compactLen dst⟩ { s with speicher := m } = some s1')
+    (h2 : stepCompact ⟨.mov32imm dst imm, compactLen dst⟩ s = some s2') :
+    s1'.register dst = s2'.register dst ∧ s1'.rip = s2'.rip ∧
+      s1'.flags = s2'.flags := by
+  have hok := compactLen_ok dst
+  have w1 := stepCompact_wert ⟨.mov32imm dst imm, compactLen dst⟩ _ s1' dst imm hok rfl h1
+  have w2 := stepCompact_wert ⟨.mov32imm dst imm, compactLen dst⟩ _ s2' dst imm hok rfl h2
+  have r1 := stepCompact_rip ⟨.mov32imm dst imm, compactLen dst⟩ _ s1' dst imm hok rfl h1
+  have r2 := stepCompact_rip ⟨.mov32imm dst imm, compactLen dst⟩ _ s2' dst imm hok rfl h2
+  have f1 := stepCompact_flags ⟨.mov32imm dst imm, compactLen dst⟩ _ s1' dst imm hok rfl h1
+  have f2 := stepCompact_flags ⟨.mov32imm dst imm, compactLen dst⟩ _ s2' dst imm hok rfl h2
+  exact ⟨by rw [w1, w2], by simp [r1, r2], by simp [f1, f2]⟩
+
+/-! ## 8. Fetch and byte-step from actual executable memory.
+
+    The `fetchDekodiert` discipline lifted to the compact row: the
+    fetched window is the state's ACTUAL bytes at `rip`
+    (`Byteschritt.geholt`), admission checks the consumed length
+    against the window, the length guard and execute permission of the
+    consumed prefix. No caller-supplied decoded value is trusted. -/
+
+/-- Compact admission: length equation, length guard and execute
+    permission of the consumed prefix. -/
+def compactZugelassen (s : Zustand) (fenster : List Byte) (d : CompactDec)
+    (rest : List Byte) : Bool :=
+  decide (d.laenge + rest.length = fenster.length) &&
+    laengeOk d.laenge &&
+    ausfuehrbarN s.speicher s.rip d.laenge
+
+/-- Admission carries the length equation. -/
+theorem compactZugelassen_summe (s : Zustand) (fenster : List Byte)
+    (d : CompactDec) (rest : List Byte)
+    (h : compactZugelassen s fenster d rest = true) :
+    d.laenge + rest.length = fenster.length := by
+  unfold compactZugelassen at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨⟨hsum, _⟩, _⟩ := h
+  exact of_decide_eq_true hsum
+
+/-- Admission carries the length guard. -/
+theorem compactZugelassen_laenge (s : Zustand) (fenster : List Byte)
+    (d : CompactDec) (rest : List Byte)
+    (h : compactZugelassen s fenster d rest = true) :
+    laengeOk d.laenge = true := by
+  unfold compactZugelassen at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨⟨_, hlen⟩, _⟩ := h
+  exact hlen
+
+/-- Admission carries execute permission of the consumed prefix. -/
+theorem compactZugelassen_ausfuehrbar (s : Zustand) (fenster : List Byte)
+    (d : CompactDec) (rest : List Byte)
+    (h : compactZugelassen s fenster d rest = true) :
+    ausfuehrbarN s.speicher s.rip d.laenge = true := by
+  unfold compactZugelassen at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨_, hexe⟩ := h
+  exact hexe
+
+/-- Fetch and decode over actual bytes, gated by admission. -/
+def fetchCompact (s : Zustand) : Option (CompactDec × List Byte) :=
+  match decodeCompact (geholt s) with
+  | none => none
+  | some p =>
+    if compactZugelassen s (geholt s) p.1 p.2 then some p else none
+
+/-- A successful fetch decodes to the admitted row with length
+    equation, length guard and execute permission. -/
+theorem fetchCompact_erfolg (s : Zustand) (d : CompactDec)
+    (rest : List Byte)
+    (h : fetchCompact s = some (d, rest)) :
+    decodeCompact (geholt s) = some (d, rest) ∧
+      d.laenge + rest.length = (geholt s).length ∧
+      laengeOk d.laenge = true ∧
+      ausfuehrbarN s.speicher s.rip d.laenge = true := by
+  have e : fetchCompact s =
+      match decodeCompact (geholt s) with
+      | none => (none : Option (CompactDec × List Byte))
+      | some p =>
+        if compactZugelassen s (geholt s) p.1 p.2
+        then some p else (none : Option (CompactDec × List Byte)) := rfl
+  rw [e] at h
+  cases hdec : decodeCompact (geholt s) with
+  | none =>
+    simp [hdec] at h
+  | some p =>
+    rw [hdec] at h
+    by_cases hz : compactZugelassen s (geholt s) p.1 p.2 = true
+    case pos =>
+      simp [hz] at h
+      rw [h] at hz
+      exact ⟨by rw [h],
+        compactZugelassen_summe s (geholt s) _ _ hz,
+        compactZugelassen_laenge s (geholt s) _ _ hz,
+        compactZugelassen_ausfuehrbar s (geholt s) _ _ hz⟩
+    case neg =>
+      simp [hz] at h
+
+/-- Byte-step outcome: success carries the successor, refusal is
+    explicit. No halt constructor: `verweigert` is no transition,
+    never a fault claim. -/
+inductive CompactAusgang where
+  | weiter : Zustand → CompactAusgang
+  | verweigert : CompactAusgang
+
+/-- One byte step from actual memory: fetch, decode, then the compact
+    step. Takes ONLY the state, so a forged `CompactDec` cannot inject
+    an instruction. -/
+def compactByteschritt (s : Zustand) : CompactAusgang :=
+  match fetchCompact s with
+  | none => .verweigert
+  | some (d, _) =>
+    match stepCompact d s with
+    | none => .verweigert
+    | some s' => .weiter s'
+
+/-- Selection: a fetched row with a successful step continues. -/
+theorem compactByteschritt_weiter (s s' : Zustand) (d : CompactDec)
+    (rest : List Byte)
+    (hf : fetchCompact s = some (d, rest))
+    (hs : stepCompact d s = some s') :
+    compactByteschritt s = .weiter s' := by
+  have e : compactByteschritt s =
+      match fetchCompact s with
+      | none => CompactAusgang.verweigert
+      | some (dd, _) =>
+        match stepCompact dd s with
+        | none => CompactAusgang.verweigert
+        | some t => CompactAusgang.weiter t := rfl
+  rw [e, hf]
+  simp [hs]
+
+/-- Selection: a fetched row with a failed step refuses. -/
+theorem compactByteschritt_schritt_verweigert (s : Zustand)
+    (d : CompactDec) (rest : List Byte)
+    (hf : fetchCompact s = some (d, rest))
+    (hs : stepCompact d s = none) :
+    compactByteschritt s = .verweigert := by
+  have e : compactByteschritt s =
+      match fetchCompact s with
+      | none => CompactAusgang.verweigert
+      | some (dd, _) =>
+        match stepCompact dd s with
+        | none => CompactAusgang.verweigert
+        | some t => CompactAusgang.weiter t := rfl
+  rw [e, hf]
+  simp [hs]
+
+/-- Selection: fetch refusal is byte-step refusal (never a fault). -/
+theorem compactByteschritt_hol_verweigert (s : Zustand)
+    (hf : fetchCompact s = none) :
+    compactByteschritt s = .verweigert := by
+  have e : compactByteschritt s =
+      match fetchCompact s with
+      | none => CompactAusgang.verweigert
+      | some (dd, _) =>
+        match stepCompact dd s with
+        | none => CompactAusgang.verweigert
+        | some t => CompactAusgang.weiter t := rfl
+  rw [e, hf]
+
+/-! ## 9. The connection and its joint witness.
+
+    `CompactImmMov32Zero_verbindung` ties bytes to execution: decode
+    of the canonical encoding, the zero-extended destination, flag
+    and memory preservation, and the width-exact bound. -/
+
+/-- END-TO-END CONNECTION: canonical bytes decode, the destination
+    takes the zero-extended immediate, flags and memory are preserved,
+    and the value fits 32 bits. -/
+theorem CompactImmMov32Zero_verbindung (dst : Register) (imm : BitVec 32)
+    (s : Zustand) (hok : laengeOk (compactLen dst) = true) :
+    decodeCompact (encodeCompact (.mov32imm dst imm)) =
+      some (⟨.mov32imm dst imm, compactLen dst⟩, []) ∧
+    (stepCompact ⟨.mov32imm dst imm, compactLen dst⟩ s).map
+      (fun t => t.register dst) = some (compactWert imm) ∧
+    (stepCompact ⟨.mov32imm dst imm, compactLen dst⟩ s).map
+      (fun t => t.flags) = some s.flags ∧
+    (stepCompact ⟨.mov32imm dst imm, compactLen dst⟩ s).map
+      (fun t => t.speicher) = some s.speicher ∧
+    (compactWert imm).toNat < 2 ^ 32 := by
+  have hlen := encodeCompact_len dst imm
+  have hdec : decodeCompact (encodeCompact (.mov32imm dst imm)) =
+      some (⟨.mov32imm dst imm, compactLen dst⟩, []) := by
+    have hr := roundtripCompact (.mov32imm dst imm) []
+    simp only [List.append_nil] at hr
+    rw [hlen] at hr
+    exact hr
+  have hstep : stepCompact ⟨.mov32imm dst imm, compactLen dst⟩ s = some ({ s with register := regSet s.register dst (compactWert imm), rip := ripNach s.rip (compactLen dst) }) :=
+    stepCompact_mov32imm _ s dst imm hok rfl
+  exact ⟨hdec, by simp [hstep, regSet_gleich], by simp [hstep], by simp [hstep], compactWert_fits imm⟩
+
+/-- Hostile witness registers: every register holds all-ones, so the
+    zeroing above bit 31 is observable, not vacuous. -/
+def kompaktWitReg : Register → Wort :=
+  fun _ => BitVec.ofNat 64 0xFFFFFFFFFFFFFFFF
+
+/-- Witness start state: hostile registers, code at 4096. -/
+def kompaktWitState : Zustand :=
+  { register := kompaktWitReg, flags := zeugeFlags,
+    rip := BitVec.ofNat 64 4096, speicher := zeugenSpeicher }
+
+/-- JOINT WITNESS: the connection instantiated at `rax := 0x80000001`
+    over hostile all-ones registers (upper half observably cleared),
+    together with the reached memory-changing run from actual
+    `Ausfuehrung` vocabulary (cell 8192 goes 0 to 42). Non-degenerate:
+    a register-changing reached step plus a store-changing reached
+    run, jointly instantiated. -/
+theorem CompactImmMov32Zero_verbindung_zeuge :
+    (stepCompact ⟨.mov32imm .rax (BitVec.ofNat 32 0x80000001), 5⟩
+      kompaktWitState).map (fun t => t.register .rax) =
+      some (BitVec.ofNat 64 0x80000001) ∧
+    (stepCompact ⟨.mov32imm .rax (BitVec.ofNat 32 0x80000001), 5⟩
+      kompaktWitState).map (fun t => t.flags) =
+      some kompaktWitState.flags ∧
+    decodeCompact (encodeCompact
+        (.mov32imm .rax (BitVec.ofNat 32 0x80000001))) =
+      some (⟨.mov32imm .rax (BitVec.ofNat 32 0x80000001),
+        compactLen .rax⟩, []) ∧
+    (compactWert (BitVec.ofNat 32 0x80000001)).toNat < 2 ^ 32 ∧
+    ((lauf zeugeProg zeugeZustand).map
+      (fun s => s.speicher.bytes (BitVec.ofNat 64 8192)) =
+      some (BitVec.ofNat 8 42)) ∧
+    zeugeZustand.speicher.bytes (BitVec.ofNat 64 8192) =
+      BitVec.ofNat 8 0 := by
+  have hverb := CompactImmMov32Zero_verbindung .rax
+    (BitVec.ofNat 32 0x80000001) kompaktWitState (compactLen_ok .rax)
+  obtain ⟨hd, _, _, _, hfit⟩ := hverb
+  obtain ⟨_, hmem, hnull⟩ := zeuge_speicher_aendert_sich
+  exact ⟨by decide, by decide, hd, hfit, hmem, hnull⟩
 
 /- CUTS:
     Skeleton only: encoder, decoder, execution and witnesses are open.
