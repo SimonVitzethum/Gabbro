@@ -139,6 +139,40 @@ theorem fpLedgerByteschritt_schritt (k : FpLedger)
     subst h2
     rfl
 
+/-! ## 3. The closing connection.
+
+  Producer/consumer interface closed here: input is the scope ledger
+  entry `k` plus the fetched site (`fpFetchDekodiert` from actual
+  bytes); output is the accepted `fpSchritt` successor with the ledger
+  still holding. Every premise is used. -/
+
+/-- The FP-ledger closing: a guarded byte step from actual bytes runs
+    the accepted step on the fetched form, and the scope ledger still
+    holds afterwards (admitted word, still this scope). -/
+theorem ComposeFpLedger_verbindung (k : FpLedger)
+    (t t1 : FpZustand) (d : FpDecodiert) (rest : List Byte)
+    (hfp : fpEintritt t.fp = true)
+    (hledger : t.fp = k)
+    (hf : fpFetchDekodiert t = some (d, rest))
+    (hout : fpLedgerByteschritt k t = .weiter t1) :
+    fpSchritt d t = some t1 ∧ t1.fp = k ∧ fpEintritt t1.fp = true := by
+  have hschritt : fpLedgerSchritt k d t = some t1 :=
+    fpLedgerByteschritt_schritt k t t1 d rest hf hout
+  have hst : fpSchritt d t = some t1 :=
+    fpLedgerSchritt_schritt k d t t1 hschritt
+  have e1 : decide (t.fp = k) = true := by simp [hledger]
+  have hbleibt : t1.fp = k := by
+    unfold fpLedgerSchritt at hschritt
+    simp only [hfp, e1] at hschritt
+    rw [hst] at hschritt
+    simp only at hschritt
+    cases hb : decide (t1.fp = k) with
+    | false => simp [hb] at hschritt
+    | true => exact of_decide_eq_true hb
+  refine ⟨hst, hbleibt, ?_⟩
+  rw [hbleibt, ← hledger]
+  exact hfp
+
 /- CUTS: skeleton only; closing theorems follow.
 -/
 
