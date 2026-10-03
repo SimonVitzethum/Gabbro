@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 13:10 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 13:11 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -426,7 +426,7 @@ Last ledger refresh: **2026-10-03 13:10 UTC**. This is an operational snapshot, 
 | 748 | Hardware completion: compact ADD with imm8 | Merged after review/checks | 898: Merged after review/checks | [report](messung/muse/MUSE-REPORT-748.md) |
 | 749 | Hardware completion: compact SUB with imm8 | Merged after review/checks | 899: Merged after review/checks | [report](messung/muse/MUSE-REPORT-749.md) |
 | 750 | Hardware completion: compact CMP with imm8 | Incomplete; preserved | 900: scheduled | [task](lanes/750.md) |
-| 751 | Hardware completion: compact AND/OR/XOR with imm8 | Committed candidate; review/integration pending | 901: Committed candidate; review/integration pending | [task](lanes/751.md) |
+| 751 | Hardware completion: compact AND/OR/XOR with imm8 | Merged after review/checks | 901: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-751.md) |
 | 752 | Hardware completion: compact ADD/SUB/CMP with imm32 | Committed candidate; review/integration pending | 902: Committed candidate; review/integration pending | [task](lanes/752.md) |
 | 753 | Hardware completion: accumulator short ALU forms | Committed candidate; review/integration pending | 903: Committed candidate; review/integration pending | [task](lanes/753.md) |
 | 754 | Hardware completion: zero idiom XOR reg, reg | Committed candidate; review/integration pending | 904: Committed candidate; review/integration pending | [task](lanes/754.md) |
@@ -1130,6 +1130,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **898**, Independent exact review of 748, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-898.md). <!-- x86-merged:898 -->
 - 2026-10-03: lane **749**, Hardware completion: compact SUB with imm8, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-749.md). <!-- x86-merged:749 -->
 - 2026-10-03: lane **899**, Independent exact review of 749, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-899.md). <!-- x86-merged:899 -->
+- 2026-10-03: lane **751**, Hardware completion: compact AND/OR/XOR with imm8, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-751.md). <!-- x86-merged:751 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
