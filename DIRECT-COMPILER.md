@@ -444,7 +444,7 @@ Last ledger refresh: **2026-10-03 13:15 UTC**. This is an operational snapshot, 
 | 766 | Hardware completion: SETcc byte forms | Queued for a model slot | 916: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/766.md) |
 | 767 | Hardware completion: register-only CMOVcc | Agent working | 917: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/767.md) |
 | 768 | Hardware completion: memory-source CMOV fault rule | Agent working | 918: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/768.md) |
-| 769 | Hardware completion: jump-table certificates | Merged after review/checks | 919: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-769.md) |
+| 769 | Hardware completion: jump-table certificates | Merged after review/checks | 919: Merged after review/checks | [report](messung/muse/MUSE-REPORT-769.md) |
 | 770 | Hardware completion: indirect CALL provenance | Committed candidate; review/integration pending | 920: Committed candidate; review/integration pending | [task](lanes/770.md) |
 | 771 | Hardware completion: 16-byte call alignment | Committed candidate; review/integration pending | 921: Committed candidate; review/integration pending | [task](lanes/771.md) |
 | 772 | Hardware completion: rel8 reachability | Committed candidate; review/integration pending | 922: Committed candidate; review/integration pending | [task](lanes/772.md) |
@@ -1149,6 +1149,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: integration of candidate(s) [766] failed the local proof/build gate after independent review 916; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:916 -->
 - 2026-10-03: integration of candidate(s) [767] failed the local proof/build gate after independent review 917; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:917 -->
 - 2026-10-03: integration of candidate(s) [768] failed the local proof/build gate after independent review 918; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:918 -->
+- 2026-10-03: lane **919**, Independent exact review of 769, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-919.md). <!-- x86-merged:919 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
