@@ -2,7 +2,7 @@
 
 CANDIDATE: 827 db00126cff328ab888e7ae8ca2ccf9015f640f46
 
-VERDICT: ACCEPT (bounded, as stated in CUTS)
+VERDICT: ACCEPT
 
 ## Scope checked
 
