@@ -6,7 +6,9 @@ CANDIDATE: 887 da65c2e6c2133f5c6f7ac17d6c87fa752cd09962
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded — within the CUTS stated in the file, see below).
+VERDICT: ACCEPT
+
+Scope: bounded — within the CUTS stated in the file, see below.
 
 ## What was done
 
