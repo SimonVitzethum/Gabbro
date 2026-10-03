@@ -3,20 +3,20 @@
 Lane 931, clone `/home/simon/Dokumente/gabbro-muse/a931`, branch `muse/931`.
 Report-only exact review. Own file: this report. No source touched.
 
-## CANDIDATE
+## Machine-readable verdict
 
-CANDIDATE: 781 `2de9b8b54e380bfafa5b0a2977d1b57c6215709c`
-(base `56537272a31df3de5d9b7898bbade91c3de817b8`, = this clone's HEAD;
-files `MUSE-REPORT-781.md`, `grammatik/Grammatik.lean` (+1 import line),
-new `grammatik/Grammatik/X86/SfenceStoreNarrow.lean`, 664 lines; tree clean
-per `SNAPSHOT.json`. The snapshot file and the `PATCH.diff` new-file body
-agree, including the `CUTS` block and all 31 `#print axioms` lines.)
+CANDIDATE: 781 2de9b8b54e380bfafa5b0a2977d1b57c6215709c
+VERDICT: ACCEPT
 
-## VERDICT
-
-VERDICT: ACCEPT (bounded: store-narrowness connection as cut; WC/NT paths,
-serializing partners, interrupts/devices/timing/fairness and any W/GX
-transfer stay OPEN exactly as the file's `CUTS` states).
+The acceptance above is bounded: the store-narrowness connection as cut;
+WC/NT paths, serializing partners, interrupts/devices/timing/fairness and
+any W/GX transfer stay OPEN exactly as the file's `CUTS` states.
+Pinned base `56537272a31df3de5d9b7898bbade91c3de817b8` (= this clone's
+HEAD); files `MUSE-REPORT-781.md`, `grammatik/Grammatik.lean` (+1 import
+line), new `grammatik/Grammatik/X86/SfenceStoreNarrow.lean`, 664 lines;
+tree clean per `SNAPSHOT.json`. The snapshot file and the `PATCH.diff`
+new-file body agree, including the `CUTS` block and all 31 `#print axioms`
+lines.
 
 ## What was independently checked
 
