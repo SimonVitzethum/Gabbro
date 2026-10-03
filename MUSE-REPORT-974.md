@@ -6,7 +6,7 @@ CANDIDATE: 824 4feb5b9f3bd28b368b043931ac59b4ff3a08edb5
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded; scope as stated in the candidate's in-file CUTS)
+VERDICT: ACCEPT
 
 ## What was reviewed
 
