@@ -483,3 +483,4 @@ import Grammatik.X86.MulDivWidthHardwareForms
 import Grammatik.X86.ScalarFloat32HardwareForms
 import Grammatik.X86.VectorIntegerHardwareForms
 import Grammatik.X86.DeviceBusHardwareExecution
+import Grammatik.X86.CompactImm8Sub
