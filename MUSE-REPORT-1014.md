@@ -1,7 +1,9 @@
 # MUSE-REPORT-1014: Exact review of author 864 (redundant-load CSE rule)
 
 CANDIDATE: 864 a4292cebe74e9f060e4cebc2109b6f7843d04eaa
-VERDICT: ACCEPT (bounded; scope as stated in the candidate CUTS)
+VERDICT: ACCEPT
+
+Acceptance is bounded to the candidate CUTS scope stated in this report.
 
 ## What was done
 
