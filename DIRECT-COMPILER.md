@@ -535,7 +535,7 @@ Last ledger refresh: **2026-10-03 13:18 UTC**. This is an operational snapshot, 
 | 857 | Composition closing: permission-check closing | Scheduled | 1007: scheduled | [task](lanes/857.md) |
 | 858 | Composition closing: entry-duties closing | Scheduled | 1008: scheduled | [task](lanes/858.md) |
 | 859 | Composition closing: region-ceiling closing | Scheduled | 1009: scheduled | [task](lanes/859.md) |
-| 860 | Optimiser rule: constant folding rule | Committed candidate; review/integration pending | 1010: Committed candidate; review/integration pending | [task](lanes/860.md) |
+| 860 | Optimiser rule: constant folding rule | Merged after review/checks | 1010: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-860.md) |
 | 861 | Optimiser rule: copy propagation rule | Scheduled | 1011: scheduled | [task](lanes/861.md) |
 | 862 | Optimiser rule: CFG simplification rule | Scheduled | 1012: scheduled | [task](lanes/862.md) |
 | 863 | Optimiser rule: pure CSE rule | Scheduled | 1013: scheduled | [task](lanes/863.md) |
@@ -1174,6 +1174,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **935**, Independent exact review of 785, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-935.md). <!-- x86-merged:935 -->
 - 2026-10-03: lane **789**, Hardware completion: CVTSI2SD from 64-bit int, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-789.md). <!-- x86-merged:789 -->
 - 2026-10-03: lane **939**, Independent exact review of 789, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-939.md). <!-- x86-merged:939 -->
+- 2026-10-03: lane **860**, Optimiser rule: constant folding rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-860.md). <!-- x86-merged:860 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
