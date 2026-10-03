@@ -118,6 +118,111 @@ theorem addImmFlags_pf (x : Wort) (n : Nat) :
     (addImmFlags .b64 x n).pf = (add64 x (immSext n)).2.pf := by
   simp [addImmFlags, addImmOp, add64, trunc_b64]
 
+/-! ## Canonical codec: exactly the REX.W 83 /0 ib register row.
+
+  Bytes (Vol. 2A 3-14 opcode table "REX.W + 83 /0 ib"): REX.W with only
+  the B extension bit (72/73; REX.R would rewrite the /0 extension digit
+  into an unadmitted row, so 76/77 refuse), opcode 131, ModRM
+  register-direct (mod = 3) with the /0 digit in the reg field, then the
+  imm8 byte. Length 4. The encoder takes the immediate as a `Nat` and
+  refuses anything outside a byte (`none`): no silent truncation. -/
+
+/-- The one covered compact form: ADD r64, imm8 with the immediate as
+    an unbounded `Nat` (range-checked at encode time). -/
+inductive CompactAddForm where
+  | addImm8 (dst : Register) (imm : Nat)
+  deriving DecidableEq, Repr
+
+/-- Canonical byte encoding of the covered row, or `none` outside i8. -/
+def encodeCompactAdd : CompactAddForm → Option (List Byte)
+  | .addImm8 dst n =>
+    if n < 256 then
+      some [rexByte 0 (regHigh dst), natByte 131,
+        natByte (192 + regLow dst), natByte n]
+    else none
+
+/-- Decoded length of the covered row: 4. -/
+def compactAddLaenge : CompactAddForm → Nat
+  | .addImm8 _ _ => 4
+
+/-- The covered row fits the 1..15 instruction bound. -/
+theorem compactAddLaenge_ok (f : CompactAddForm) :
+    laengeOk (compactAddLaenge f) = true := by
+  cases f <;> rfl
+
+/-- Decode after an admitted REX prefix: opcode 131 is the compact ADD;
+    ModRM must be register-direct (mod = 3) with the /0 extension digit
+    in the reg field. Anything else refuses with `none` WITHOUT touching
+    later bytes. -/
+def decodeCompactAddOp (bBit op : Nat) :
+    List Byte → Option (CompactAddForm × List Byte)
+  | rest =>
+    if op == 131 then
+      match rest with
+      | m :: i :: rest' =>
+        if byteNat m / 64 == 3 && byteNat m / 8 % 8 == 0 then
+          match codeReg (bBit * 8 + byteNat m % 8) with
+          | some dst => some ((.addImm8 dst (byteNat i)), rest')
+          | none => none
+        else none
+      | _ => none
+    else none
+
+/-- Decode the covered row: an admitted REX.W prefix (72/73, R = 0 so
+    the /0 digit is untouched), then opcode 131, ModRM and imm8. -/
+def decodeCompactAdd : List Byte → Option (CompactAddForm × List Byte)
+  | r :: rest =>
+    if byteNat r == 72 then
+      match rest with
+      | op :: rest' => decodeCompactAddOp 0 (byteNat op) rest'
+      | [] => none
+    else if byteNat r == 73 then
+      match rest with
+      | op :: rest' => decodeCompactAddOp 1 (byteNat op) rest'
+      | [] => none
+    else none
+  | [] => none
+
+/-! ## Round trip: decoding inverts encoding with the suffix.
+
+  The immediate form needs `n < 256` (one byte carries it); the same
+  premise is discharged by the byte round trip itself. -/
+
+/-- Round trip over any suffix: the four canonical bytes decode back to
+    the form with the immediate intact. -/
+theorem roundtripCompactAdd (dst : Register) (n : Nat) (h : n < 256)
+    (suffix : List Byte) :
+    decodeCompactAdd ([rexByte 0 (regHigh dst), natByte 131,
+      natByte (192 + regLow dst), natByte n] ++ suffix) =
+      some ((.addImm8 dst n), suffix) := by
+  cases dst <;>
+    simp [decodeCompactAdd, decodeCompactAddOp, rexByte, regHigh,
+      regLow, regCode, codeReg, (byteNat_natByte_of_lt n h)]
+
+/-! ## Encoder range: inside i8 four bytes, outside i8 refusal. -/
+
+/-- Inside i8 the encoder answers with exactly the four canonical bytes. -/
+theorem encodeCompactAdd_some (dst : Register) (n : Nat) (h : n < 256) :
+    encodeCompactAdd (.addImm8 dst n) =
+      some [rexByte 0 (regHigh dst), natByte 131,
+        natByte (192 + regLow dst), natByte n] := by
+  simp [encodeCompactAdd, h]
+
+/-- Outside i8 the encoder refuses: no silent truncation into a byte. -/
+theorem encodeCompactAdd_verweigert (dst : Register) (n : Nat)
+    (h : 256 ≤ n) :
+    encodeCompactAdd (.addImm8 dst n) = none := by
+  simp [encodeCompactAdd, Nat.not_lt.mpr h]
+
+/-- Refusal cause: `none` means the immediate is outside i8. -/
+theorem encodeCompactAdd_ursache (dst : Register) (n : Nat)
+    (h : encodeCompactAdd (.addImm8 dst n) = none) : 256 ≤ n := by
+  by_cases h' : n < 256
+  · exfalso
+    rw [encodeCompactAdd_some dst n h'] at h
+    simp at h
+  · exact Nat.le_of_not_lt h'
+
 /- CUTS:
     Proved here so far: sign-extended imm8 (`immSext` reusing canonical
     `sext .b8`) with one pin.
