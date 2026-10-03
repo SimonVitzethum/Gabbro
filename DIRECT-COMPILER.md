@@ -541,7 +541,7 @@ Last ledger refresh: **2026-10-03 22:26 UTC**. This is an operational snapshot, 
 | 863 | Optimiser rule: pure CSE rule | Merged after review/checks | 1013: Merged after review/checks | [report](messung/muse/MUSE-REPORT-863.md) |
 | 864 | Optimiser rule: redundant load CSE rule | Merged after review/checks | 1014: Merged after review/checks | [report](messung/muse/MUSE-REPORT-864.md) |
 | 865 | Optimiser rule: dead code rule | Merged after review/checks | 1015: Merged after review/checks | [report](messung/muse/MUSE-REPORT-865.md) |
-| 866 | Optimiser rule: dead store rule | Merged after review/checks | 1016: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-866.md) |
+| 866 | Optimiser rule: dead store rule | Merged after review/checks | 1016: Merged after review/checks | [report](messung/muse/MUSE-REPORT-866.md) |
 | 867 | Optimiser rule: range-check elimination rule | Committed candidate; review/integration pending | 1017: Committed candidate; review/integration pending | [task](lanes/867.md) |
 | 868 | Optimiser rule: bound-check elimination rule | Committed candidate; review/integration pending | 1018: Committed candidate; review/integration pending | [task](lanes/868.md) |
 | 869 | Optimiser rule: overflow-check elimination rule | Committed candidate; review/integration pending | 1019: Committed candidate; review/integration pending | [task](lanes/869.md) |
@@ -1278,6 +1278,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **865**, Optimiser rule: dead code rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-865.md). <!-- x86-merged:865 -->
 - 2026-10-03: lane **1015**, Independent exact review of 865, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1015.md). <!-- x86-merged:1015 -->
 - 2026-10-03: lane **866**, Optimiser rule: dead store rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-866.md). <!-- x86-merged:866 -->
+- 2026-10-03: lane **1016**, Independent exact review of 866, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1016.md). <!-- x86-merged:1016 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
