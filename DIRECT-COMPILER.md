@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 21:06 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 21:07 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -499,7 +499,7 @@ Last ledger refresh: **2026-10-03 21:06 UTC**. This is an operational snapshot, 
 | 821 | Hardware completion: tier-2 MOVDQA instance | Committed candidate; review/integration pending | 971: Committed candidate; review/integration pending | [task](lanes/821.md) |
 | 822 | Hardware completion: tier-2 MOVDQU instance | Scheduled | 972: scheduled | [task](lanes/822.md) |
 | 823 | Hardware completion: tier-2 PCMPEQB instance | Scheduled | 973: scheduled | [task](lanes/823.md) |
-| 824 | Composition closing: decode-to-execution closing | Committed candidate; review/integration pending | 974: Committed candidate; review/integration pending | [task](lanes/824.md) |
+| 824 | Composition closing: decode-to-execution closing | Merged after review/checks | 974: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-824.md) |
 | 825 | Composition closing: image-to-fetch closing | Committed candidate; review/integration pending | 975: Committed candidate; review/integration pending | [task](lanes/825.md) |
 | 826 | Composition closing: relocation-to-redecode closing | Committed candidate; review/integration pending | 976: Committed candidate; review/integration pending | [task](lanes/826.md) |
 | 827 | Composition closing: entry-to-mapping closing | Committed candidate; review/integration pending | 977: Committed candidate; review/integration pending | [task](lanes/827.md) |
@@ -522,7 +522,7 @@ Last ledger refresh: **2026-10-03 21:06 UTC**. This is an operational snapshot, 
 | 844 | Composition closing: profile-selection closing | Agent working | 994: scheduled | [task](lanes/844.md) |
 | 845 | Composition closing: relaxation-layout closing | Agent working | 995: scheduled | [task](lanes/845.md) |
 | 846 | Composition closing: patch-bytes closing | Agent working | 996: scheduled | [task](lanes/846.md) |
-| 847 | Composition closing: mapping-permission closing | Scheduled | 997: scheduled | [task](lanes/847.md) |
+| 847 | Composition closing: mapping-permission closing | Agent working | 997: scheduled | [task](lanes/847.md) |
 | 848 | Composition closing: guard-page closing | Scheduled | 998: scheduled | [task](lanes/848.md) |
 | 849 | Composition closing: unwind-table closing | Scheduled | 999: scheduled | [task](lanes/849.md) |
 | 850 | Composition closing: handler-table closing | Scheduled | 1000: scheduled | [task](lanes/850.md) |
@@ -1193,6 +1193,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **739**, Independent exact review of 738, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-739.md). <!-- x86-merged:739 -->
 - 2026-10-03: publication batch checks passed for `aace49e3`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-03: checked master `67a174b1` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:67a174b1f09d84a6246d40bf31d7cb8960c2ff67 -->
+- 2026-10-03: lane **824**, Composition closing: decode-to-execution closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-824.md). <!-- x86-merged:824 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
