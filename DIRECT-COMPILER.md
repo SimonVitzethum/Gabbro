@@ -414,7 +414,7 @@ Last ledger refresh: **2026-10-03 00:15 UTC**. This is an operational snapshot, 
 | 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Agent working | [task](lanes/726.md) |
 | 728 | Model actual IDT TSS descriptor and entry stack selection | Agent working | 729: scheduled | [task](lanes/728.md) |
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Agent working | 731: scheduled | [task](lanes/730.md) |
-| 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-732.md) |
+| 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
 | 734 | Selected control registers and syscall MSR byte effects | Agent working | 735: scheduled | [task](lanes/734.md) |
 | 736 | SSE and selected AVX context save restore effects | Agent working | 737: scheduled | [task](lanes/736.md) |
 | 738 | Derive precise fault ordering across fetched instruction accesses | Agent working | 739: scheduled | [task](lanes/738.md) |
@@ -941,6 +941,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **714**, Compiler ISA and instruction selection architecture review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-714.md). <!-- x86-merged:714 -->
 - 2026-10-02: lane **715**, Independent exact review of 714, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-715.md). <!-- x86-merged:715 -->
 - 2026-10-02: lane **732**, Organise exact essential hardware integration and executable coverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-732.md). <!-- x86-merged:732 -->
+- 2026-10-02: lane **733**, Independent exact review of 732, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-733.md). <!-- x86-merged:733 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
