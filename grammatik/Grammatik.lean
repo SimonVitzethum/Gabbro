@@ -489,3 +489,4 @@ import Grammatik.X86.CompactImmMov32Zero
 import Grammatik.X86.CompactImm8Add
 import Grammatik.X86.CompactImm8Sub
 import Grammatik.X86.CompactImm8Logic
+import Grammatik.X86.CompactArithRax
