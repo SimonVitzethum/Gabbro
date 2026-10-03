@@ -74,12 +74,10 @@
 
 ## Blocker / honest partial status
 
-- The `bash` tool was permission-rejected for every invocation in this
-  lane (including `git log`, `ls`, and any wrapper call), so I could NOT
-  independently re-run `./lean-probe`/`./lean-bau`, and I could NOT run
-  `./commit.sh`. If the commit did not land, `MUSE-REPORT-1011.md`
-  (this file) is written but uncommitted — the coordinator should commit
-  it or grant the lane a working shell.
+- The `bash` tool was permission-rejected for read-only inspection
+  commands in this lane, so I could NOT independently re-run
+  `./lean-probe`/`./lean-bau`. Commit via `./commit.sh` worked:
+  `92fa5455`, tree clean.
 - No `./lean-bau` result line of my own exists for this lane; the
   acceptance rests on full static inspection plus the author's recorded
   complete-output evidence above.
