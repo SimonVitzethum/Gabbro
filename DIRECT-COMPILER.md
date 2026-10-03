@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 12:01 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 12:08 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -430,12 +430,12 @@ Last ledger refresh: **2026-10-03 12:01 UTC**. This is an operational snapshot, 
 | 752 | Hardware completion: compact ADD/SUB/CMP with imm32 | Agent working | 902: scheduled | [task](lanes/752.md) |
 | 753 | Hardware completion: accumulator short ALU forms | Agent working | 903: scheduled | [task](lanes/753.md) |
 | 754 | Hardware completion: zero idiom XOR reg, reg | Agent working | 904: scheduled | [task](lanes/754.md) |
-| 755 | Hardware completion: pure LEA address arithmetic | Committed candidate; review/integration pending | 905: Agent working | [task](lanes/755.md) |
+| 755 | Hardware completion: pure LEA address arithmetic | Committed candidate; review/integration pending | 905: Committed candidate; review/integration pending | [task](lanes/755.md) |
 | 756 | Hardware completion: compact TEST with imm | Agent working | 906: scheduled | [task](lanes/756.md) |
 | 757 | Hardware completion: compact NOT/NEG forms | Agent working | 907: scheduled | [task](lanes/757.md) |
 | 758 | Hardware completion: disp0 memory form | Merged after review/checks | 908: Merged after review/checks | [report](messung/muse/MUSE-REPORT-758.md) |
 | 759 | Hardware completion: disp8 memory form | Agent working | 909: scheduled | [task](lanes/759.md) |
-| 760 | Hardware completion: base+index*scale+disp form | Scheduled | 910: scheduled | [task](lanes/760.md) |
+| 760 | Hardware completion: base+index*scale+disp form | Agent working | 910: scheduled | [task](lanes/760.md) |
 | 761 | Hardware completion: no-index rsp rule | Scheduled | 911: scheduled | [task](lanes/761.md) |
 | 762 | Hardware completion: RIP-relative image data | Scheduled | 912: scheduled | [task](lanes/762.md) |
 | 763 | Hardware completion: RIP-relative jump tables | Scheduled | 913: scheduled | [task](lanes/763.md) |
@@ -535,7 +535,7 @@ Last ledger refresh: **2026-10-03 12:01 UTC**. This is an operational snapshot, 
 | 857 | Composition closing: permission-check closing | Scheduled | 1007: scheduled | [task](lanes/857.md) |
 | 858 | Composition closing: entry-duties closing | Scheduled | 1008: scheduled | [task](lanes/858.md) |
 | 859 | Composition closing: region-ceiling closing | Scheduled | 1009: scheduled | [task](lanes/859.md) |
-| 860 | Optimiser rule: constant folding rule | Scheduled | 1010: scheduled | [task](lanes/860.md) |
+| 860 | Optimiser rule: constant folding rule | Agent working | 1010: scheduled | [task](lanes/860.md) |
 | 861 | Optimiser rule: copy propagation rule | Scheduled | 1011: scheduled | [task](lanes/861.md) |
 | 862 | Optimiser rule: CFG simplification rule | Scheduled | 1012: scheduled | [task](lanes/862.md) |
 | 863 | Optimiser rule: pure CSE rule | Scheduled | 1013: scheduled | [task](lanes/863.md) |
@@ -1120,6 +1120,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: integration of candidate(s) [718] failed the local proof/build gate after independent review 719; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:719 -->
 - 2026-10-03: integration of candidate(s) [722] failed the local proof/build gate after independent review 723; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:723 -->
 - 2026-10-03: lane **908**, Independent exact review of 758, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-908.md). <!-- x86-merged:908 -->
+- 2026-10-03: publication batch checks passed for `4b42ac53`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
