@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 22:26 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 22:27 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -545,7 +545,7 @@ Last ledger refresh: **2026-10-03 22:26 UTC**. This is an operational snapshot, 
 | 867 | Optimiser rule: range-check elimination rule | Merged after review/checks | 1017: Merged after review/checks | [report](messung/muse/MUSE-REPORT-867.md) |
 | 868 | Optimiser rule: bound-check elimination rule | Merged after review/checks | 1018: Merged after review/checks | [report](messung/muse/MUSE-REPORT-868.md) |
 | 869 | Optimiser rule: overflow-check elimination rule | Merged after review/checks | 1019: Merged after review/checks | [report](messung/muse/MUSE-REPORT-869.md) |
-| 870 | Optimiser rule: alias commutation rule | Committed candidate; review/integration pending | 1020: Committed candidate; review/integration pending | [task](lanes/870.md) |
+| 870 | Optimiser rule: alias commutation rule | Merged after review/checks | 1020: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-870.md) |
 | 871 | Optimiser rule: strength reduction rule | Committed candidate; review/integration pending | 1021: Committed candidate; review/integration pending | [task](lanes/871.md) |
 | 872 | Optimiser rule: LICM rule | Committed candidate; review/integration pending | 1022: Committed candidate; review/integration pending | [task](lanes/872.md) |
 | 873 | Optimiser rule: inlining rule | Committed candidate; review/integration pending | 1023: Committed candidate; review/integration pending | [task](lanes/873.md) |
@@ -1285,6 +1285,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1018**, Independent exact review of 868, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1018.md). <!-- x86-merged:1018 -->
 - 2026-10-03: lane **869**, Optimiser rule: overflow-check elimination rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-869.md). <!-- x86-merged:869 -->
 - 2026-10-03: lane **1019**, Independent exact review of 869, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1019.md). <!-- x86-merged:1019 -->
+- 2026-10-03: lane **870**, Optimiser rule: alias commutation rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-870.md). <!-- x86-merged:870 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
