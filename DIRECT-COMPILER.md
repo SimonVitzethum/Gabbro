@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 22:44 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 22:49 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -1352,6 +1352,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **885**, Optimiser rule: zero-idiom selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-885.md). <!-- x86-merged:885 -->
 - 2026-10-03: checked master `0889dfcd` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:0889dfcd5f39f16059f53e43802466a65e52b33c -->
 - 2026-10-03: lane **1035**, Independent exact review of 885, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1035.md). <!-- x86-merged:1035 -->
+- 2026-10-03: publication batch checks passed for `8e0c5994`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
