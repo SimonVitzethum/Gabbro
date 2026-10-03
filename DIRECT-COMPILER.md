@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 10:47 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 12:01 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -397,7 +397,7 @@ Last ledger refresh: **2026-10-03 10:47 UTC**. This is an operational snapshot, 
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Merged after review/checks | 695: Merged after review/checks | [report](messung/muse/MUSE-REPORT-694.md) |
 | 696 | Essential 8/16/32-bit scalar arithmetic and moves | Committed candidate; review/integration pending | 697: Incomplete; preserved | [task](lanes/696.md) |
-| 698 | Essential width-selected shifts and rotates | Committed candidate; review/integration pending | 699: Incomplete; preserved | [task](lanes/698.md) |
+| 698 | Essential width-selected shifts and rotates | Incomplete; preserved | 699: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
 | 704 | Generic port bus and precise architectural IO permissions | Merged after review/checks | 705: Merged after review/checks | [report](messung/muse/MUSE-REPORT-704.md) |
@@ -407,20 +407,190 @@ Last ledger refresh: **2026-10-03 10:47 UTC**. This is an operational snapshot, 
 | 712 | Compiler pipeline Lean source-to-byte proof review | Merged after review/checks | 713: Merged after review/checks | [report](messung/muse/MUSE-REPORT-712.md) |
 | 714 | Compiler ISA and instruction selection architecture review | Merged after review/checks | 715: Merged after review/checks | [report](messung/muse/MUSE-REPORT-714.md) |
 | 716 | Rust compiler validation and ELF integration review | Merged after review/checks | 717: Merged after review/checks | [report](messung/muse/MUSE-REPORT-716.md) |
-| 718 | Unify accepted architectural final-byte family dispatch | Committed candidate; review/integration pending | 719: Incomplete; preserved | [task](lanes/718.md) |
+| 718 | Unify accepted architectural final-byte family dispatch | Incomplete; preserved | 719: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/718.md) |
 | 720 | Connect real selected integer bytes to shared TSO execution | Committed candidate; review/integration pending | 721: Incomplete; preserved | [task](lanes/720.md) |
-| 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Committed candidate; review/integration pending | 723: Incomplete; preserved | [task](lanes/722.md) |
-| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Incomplete; preserved | 725: scheduled | [task](lanes/724.md) |
+| 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Incomplete; preserved | 723: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/722.md) |
+| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Committed candidate; review/integration pending | 725: scheduled | [task](lanes/724.md) |
 | 726 | Model checked long-mode page walks and precise access faults | Incomplete; preserved | 727: Committed candidate; review/integration pending | [task](lanes/726.md) |
 | 728 | Model actual IDT TSS descriptor and entry stack selection | Committed candidate; review/integration pending | 729: Incomplete; preserved | [task](lanes/728.md) |
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Committed candidate; review/integration pending | 731: Incomplete; preserved | [task](lanes/730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
-| 734 | Selected control registers and syscall MSR byte effects | Incomplete; preserved | 735: scheduled | [task](lanes/734.md) |
+| 734 | Selected control registers and syscall MSR byte effects | Committed candidate; review/integration pending | 735: scheduled | [task](lanes/734.md) |
 | 736 | SSE and selected AVX context save restore effects | Incomplete; preserved | 737: scheduled | [task](lanes/736.md) |
 | 738 | Derive precise fault ordering across fetched instruction accesses | Committed candidate; review/integration pending | 739: Incomplete; preserved | [task](lanes/738.md) |
 | 740 | Repair upstream compiler Lean aggregation and scope | Committed candidate; review/integration pending | 741: Incomplete; preserved | [task](lanes/740.md) |
-| 742 | Repair upstream compiler Rust panics and mirror fidelity | Committed candidate; review/integration pending | 743: Incomplete; preserved | [task](lanes/742.md) |
-| 744 | Organise complete direct Lean compiler optimiser validation and performance closure | Scheduled | 745: scheduled | [task](lanes/744.md) |
+| 742 | Repair upstream compiler Rust panics and mirror fidelity | Committed candidate; review/integration pending | 743: Unresolved after agent rounds; not accepted | [task](lanes/742.md) |
+| 744 | Organise complete direct Lean compiler optimiser validation and performance closure | Committed candidate; review/integration pending | 745: Incomplete; preserved | [task](lanes/744.md) |
+| 746 | Hardware completion: compact zero-extending MOV reg, imm32 | Agent working | 896: scheduled | [task](lanes/746.md) |
+| 747 | Hardware completion: compact sign-extended MOV reg, imm32 | Agent working | 897: scheduled | [task](lanes/747.md) |
+| 748 | Hardware completion: compact ADD with imm8 | Agent working | 898: scheduled | [task](lanes/748.md) |
+| 749 | Hardware completion: compact SUB with imm8 | Agent working | 899: scheduled | [task](lanes/749.md) |
+| 750 | Hardware completion: compact CMP with imm8 | Agent working | 900: scheduled | [task](lanes/750.md) |
+| 751 | Hardware completion: compact AND/OR/XOR with imm8 | Agent working | 901: scheduled | [task](lanes/751.md) |
+| 752 | Hardware completion: compact ADD/SUB/CMP with imm32 | Agent working | 902: scheduled | [task](lanes/752.md) |
+| 753 | Hardware completion: accumulator short ALU forms | Agent working | 903: scheduled | [task](lanes/753.md) |
+| 754 | Hardware completion: zero idiom XOR reg, reg | Agent working | 904: scheduled | [task](lanes/754.md) |
+| 755 | Hardware completion: pure LEA address arithmetic | Committed candidate; review/integration pending | 905: Agent working | [task](lanes/755.md) |
+| 756 | Hardware completion: compact TEST with imm | Agent working | 906: scheduled | [task](lanes/756.md) |
+| 757 | Hardware completion: compact NOT/NEG forms | Agent working | 907: scheduled | [task](lanes/757.md) |
+| 758 | Hardware completion: disp0 memory form | Merged after review/checks | 908: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-758.md) |
+| 759 | Hardware completion: disp8 memory form | Agent working | 909: scheduled | [task](lanes/759.md) |
+| 760 | Hardware completion: base+index*scale+disp form | Scheduled | 910: scheduled | [task](lanes/760.md) |
+| 761 | Hardware completion: no-index rsp rule | Scheduled | 911: scheduled | [task](lanes/761.md) |
+| 762 | Hardware completion: RIP-relative image data | Scheduled | 912: scheduled | [task](lanes/762.md) |
+| 763 | Hardware completion: RIP-relative jump tables | Scheduled | 913: scheduled | [task](lanes/763.md) |
+| 764 | Hardware completion: canonical address per length | Scheduled | 914: scheduled | [task](lanes/764.md) |
+| 765 | Hardware completion: private stack slot addressing | Scheduled | 915: scheduled | [task](lanes/765.md) |
+| 766 | Hardware completion: SETcc byte forms | Scheduled | 916: scheduled | [task](lanes/766.md) |
+| 767 | Hardware completion: register-only CMOVcc | Scheduled | 917: scheduled | [task](lanes/767.md) |
+| 768 | Hardware completion: memory-source CMOV fault rule | Scheduled | 918: scheduled | [task](lanes/768.md) |
+| 769 | Hardware completion: jump-table certificates | Scheduled | 919: scheduled | [task](lanes/769.md) |
+| 770 | Hardware completion: indirect CALL provenance | Scheduled | 920: scheduled | [task](lanes/770.md) |
+| 771 | Hardware completion: 16-byte call alignment | Scheduled | 921: scheduled | [task](lanes/771.md) |
+| 772 | Hardware completion: rel8 reachability | Scheduled | 922: scheduled | [task](lanes/772.md) |
+| 773 | Hardware completion: layout stability under narrowing | Scheduled | 923: scheduled | [task](lanes/773.md) |
+| 774 | Hardware completion: far-transfer refusal | Scheduled | 924: scheduled | [task](lanes/774.md) |
+| 775 | Hardware completion: privileged-form refusal | Scheduled | 925: scheduled | [task](lanes/775.md) |
+| 776 | Hardware completion: LOCK CMPXCHG success path | Scheduled | 926: scheduled | [task](lanes/776.md) |
+| 777 | Hardware completion: LOCK CMPXCHG failure stutter | Scheduled | 927: scheduled | [task](lanes/777.md) |
+| 778 | Hardware completion: LOCK XADD fetch-add | Scheduled | 928: scheduled | [task](lanes/778.md) |
+| 779 | Hardware completion: XCHG ordering need | Scheduled | 929: scheduled | [task](lanes/779.md) |
+| 780 | Hardware completion: MFENCE drain-own semantics | Scheduled | 930: scheduled | [task](lanes/780.md) |
+| 781 | Hardware completion: SFENCE store narrowness | Scheduled | 931: scheduled | [task](lanes/781.md) |
+| 782 | Hardware completion: LFENCE load narrowness | Scheduled | 932: scheduled | [task](lanes/782.md) |
+| 783 | Hardware completion: seq_cst lowering bracket | Scheduled | 933: scheduled | [task](lanes/783.md) |
+| 784 | Hardware completion: CAS retry attempt bound | Scheduled | 934: scheduled | [task](lanes/784.md) |
+| 785 | Hardware completion: CAS divergence record | Scheduled | 935: scheduled | [task](lanes/785.md) |
+| 786 | Hardware completion: youngest-own-store forwarding | Scheduled | 936: scheduled | [task](lanes/786.md) |
+| 787 | Hardware completion: tearing refusal table | Scheduled | 937: scheduled | [task](lanes/787.md) |
+| 788 | Hardware completion: CVTSI2SD from 32-bit int | Scheduled | 938: scheduled | [task](lanes/788.md) |
+| 789 | Hardware completion: CVTSI2SD from 64-bit int | Scheduled | 939: scheduled | [task](lanes/789.md) |
+| 790 | Hardware completion: UCOMISD unordered rows | Scheduled | 940: scheduled | [task](lanes/790.md) |
+| 791 | Hardware completion: float narrow range check | Scheduled | 941: scheduled | [task](lanes/791.md) |
+| 792 | Hardware completion: float finite bit test | Scheduled | 942: scheduled | [task](lanes/792.md) |
+| 793 | Hardware completion: CVTTSD2SI saturation wrapper | Scheduled | 943: scheduled | [task](lanes/793.md) |
+| 794 | Hardware completion: f32 single-rounding refusal | Scheduled | 944: scheduled | [task](lanes/794.md) |
+| 795 | Hardware completion: RNE control establishment | Scheduled | 945: scheduled | [task](lanes/795.md) |
+| 796 | Hardware completion: no-contraction gate | Scheduled | 946: scheduled | [task](lanes/796.md) |
+| 797 | Hardware completion: FTZ DAZ zero with masks | Scheduled | 947: scheduled | [task](lanes/797.md) |
+| 798 | Hardware completion: NaN payload class relaxation | Scheduled | 948: scheduled | [task](lanes/798.md) |
+| 799 | Hardware completion: MOVSD memory order | Scheduled | 949: scheduled | [task](lanes/799.md) |
+| 800 | Hardware completion: faults of compact immediates | Scheduled | 950: scheduled | [task](lanes/800.md) |
+| 801 | Hardware completion: faults of disp forms | Scheduled | 951: scheduled | [task](lanes/801.md) |
+| 802 | Hardware completion: faults of SIB addressing | Scheduled | 952: scheduled | [task](lanes/802.md) |
+| 803 | Hardware completion: faults of RIP-relative data | Scheduled | 953: scheduled | [task](lanes/803.md) |
+| 804 | Hardware completion: faults of short branches | Scheduled | 954: scheduled | [task](lanes/804.md) |
+| 805 | Hardware completion: faults of SETcc memory dest | Scheduled | 955: scheduled | [task](lanes/805.md) |
+| 806 | Hardware completion: faults of CMOV memory source | Scheduled | 956: scheduled | [task](lanes/806.md) |
+| 807 | Hardware completion: faults of indirect targets | Scheduled | 957: scheduled | [task](lanes/807.md) |
+| 808 | Hardware completion: faults of LOCK accesses | Scheduled | 958: scheduled | [task](lanes/808.md) |
+| 809 | Hardware completion: faults of port IO | Scheduled | 959: scheduled | [task](lanes/809.md) |
+| 810 | Hardware completion: faults of feature-gated forms | Scheduled | 960: scheduled | [task](lanes/810.md) |
+| 811 | Hardware completion: faults of MSR scope | Scheduled | 961: scheduled | [task](lanes/811.md) |
+| 812 | Hardware completion: tier-2 PADDB instance | Scheduled | 962: scheduled | [task](lanes/812.md) |
+| 813 | Hardware completion: tier-2 PADDW instance | Scheduled | 963: scheduled | [task](lanes/813.md) |
+| 814 | Hardware completion: tier-2 PADDD instance | Scheduled | 964: scheduled | [task](lanes/814.md) |
+| 815 | Hardware completion: tier-2 PADDQ instance | Scheduled | 965: scheduled | [task](lanes/815.md) |
+| 816 | Hardware completion: tier-2 PXOR instance | Scheduled | 966: scheduled | [task](lanes/816.md) |
+| 817 | Hardware completion: tier-2 PAND instance | Scheduled | 967: scheduled | [task](lanes/817.md) |
+| 818 | Hardware completion: tier-2 POR instance | Scheduled | 968: scheduled | [task](lanes/818.md) |
+| 819 | Hardware completion: tier-2 PSLLQ instance | Scheduled | 969: scheduled | [task](lanes/819.md) |
+| 820 | Hardware completion: tier-2 PSRLQ instance | Scheduled | 970: scheduled | [task](lanes/820.md) |
+| 821 | Hardware completion: tier-2 MOVDQA instance | Scheduled | 971: scheduled | [task](lanes/821.md) |
+| 822 | Hardware completion: tier-2 MOVDQU instance | Scheduled | 972: scheduled | [task](lanes/822.md) |
+| 823 | Hardware completion: tier-2 PCMPEQB instance | Scheduled | 973: scheduled | [task](lanes/823.md) |
+| 824 | Composition closing: decode-to-execution closing | Scheduled | 974: scheduled | [task](lanes/824.md) |
+| 825 | Composition closing: image-to-fetch closing | Scheduled | 975: scheduled | [task](lanes/825.md) |
+| 826 | Composition closing: relocation-to-redecode closing | Scheduled | 976: scheduled | [task](lanes/826.md) |
+| 827 | Composition closing: entry-to-mapping closing | Scheduled | 977: scheduled | [task](lanes/827.md) |
+| 828 | Composition closing: stack-to-ABI closing | Scheduled | 978: scheduled | [task](lanes/828.md) |
+| 829 | Composition closing: call-lowering closing | Scheduled | 979: scheduled | [task](lanes/829.md) |
+| 830 | Composition closing: spill-privacy closing | Scheduled | 980: scheduled | [task](lanes/830.md) |
+| 831 | Composition closing: contract-at-call closing | Scheduled | 981: scheduled | [task](lanes/831.md) |
+| 832 | Composition closing: contract-at-return closing | Scheduled | 982: scheduled | [task](lanes/832.md) |
+| 833 | Composition closing: call-log ghost closing | Scheduled | 983: scheduled | [task](lanes/833.md) |
+| 834 | Composition closing: budget-resumption closing | Scheduled | 984: scheduled | [task](lanes/834.md) |
+| 835 | Composition closing: work-transfer closing | Scheduled | 985: scheduled | [task](lanes/835.md) |
+| 836 | Composition closing: time-bound closing | Scheduled | 986: scheduled | [task](lanes/836.md) |
+| 837 | Composition closing: fence-order closing | Scheduled | 987: scheduled | [task](lanes/837.md) |
+| 838 | Composition closing: atomic-ledger closing | Scheduled | 988: scheduled | [task](lanes/838.md) |
+| 839 | Composition closing: FP-ledger closing | Scheduled | 989: scheduled | [task](lanes/839.md) |
+| 840 | Composition closing: flag-ledger closing | Scheduled | 990: scheduled | [task](lanes/840.md) |
+| 841 | Composition closing: width-ledger closing | Scheduled | 991: scheduled | [task](lanes/841.md) |
+| 842 | Composition closing: fault-ledger closing | Scheduled | 992: scheduled | [task](lanes/842.md) |
+| 843 | Composition closing: feature-gate closing | Scheduled | 993: scheduled | [task](lanes/843.md) |
+| 844 | Composition closing: profile-selection closing | Scheduled | 994: scheduled | [task](lanes/844.md) |
+| 845 | Composition closing: relaxation-layout closing | Scheduled | 995: scheduled | [task](lanes/845.md) |
+| 846 | Composition closing: patch-bytes closing | Scheduled | 996: scheduled | [task](lanes/846.md) |
+| 847 | Composition closing: mapping-permission closing | Scheduled | 997: scheduled | [task](lanes/847.md) |
+| 848 | Composition closing: guard-page closing | Scheduled | 998: scheduled | [task](lanes/848.md) |
+| 849 | Composition closing: unwind-table closing | Scheduled | 999: scheduled | [task](lanes/849.md) |
+| 850 | Composition closing: handler-table closing | Scheduled | 1000: scheduled | [task](lanes/850.md) |
+| 851 | Composition closing: binding-surface closing | Scheduled | 1001: scheduled | [task](lanes/851.md) |
+| 852 | Composition closing: runtime-bodies closing | Scheduled | 1002: scheduled | [task](lanes/852.md) |
+| 853 | Composition closing: entry-hook closing | Scheduled | 1003: scheduled | [task](lanes/853.md) |
+| 854 | Composition closing: support-bytes closing | Scheduled | 1004: scheduled | [task](lanes/854.md) |
+| 855 | Composition closing: loader-bias closing | Scheduled | 1005: scheduled | [task](lanes/855.md) |
+| 856 | Composition closing: virtual-address closing | Scheduled | 1006: scheduled | [task](lanes/856.md) |
+| 857 | Composition closing: permission-check closing | Scheduled | 1007: scheduled | [task](lanes/857.md) |
+| 858 | Composition closing: entry-duties closing | Scheduled | 1008: scheduled | [task](lanes/858.md) |
+| 859 | Composition closing: region-ceiling closing | Scheduled | 1009: scheduled | [task](lanes/859.md) |
+| 860 | Optimiser rule: constant folding rule | Scheduled | 1010: scheduled | [task](lanes/860.md) |
+| 861 | Optimiser rule: copy propagation rule | Scheduled | 1011: scheduled | [task](lanes/861.md) |
+| 862 | Optimiser rule: CFG simplification rule | Scheduled | 1012: scheduled | [task](lanes/862.md) |
+| 863 | Optimiser rule: pure CSE rule | Scheduled | 1013: scheduled | [task](lanes/863.md) |
+| 864 | Optimiser rule: redundant load CSE rule | Scheduled | 1014: scheduled | [task](lanes/864.md) |
+| 865 | Optimiser rule: dead code rule | Scheduled | 1015: scheduled | [task](lanes/865.md) |
+| 866 | Optimiser rule: dead store rule | Scheduled | 1016: scheduled | [task](lanes/866.md) |
+| 867 | Optimiser rule: range-check elimination rule | Scheduled | 1017: scheduled | [task](lanes/867.md) |
+| 868 | Optimiser rule: bound-check elimination rule | Scheduled | 1018: scheduled | [task](lanes/868.md) |
+| 869 | Optimiser rule: overflow-check elimination rule | Scheduled | 1019: scheduled | [task](lanes/869.md) |
+| 870 | Optimiser rule: alias commutation rule | Scheduled | 1020: scheduled | [task](lanes/870.md) |
+| 871 | Optimiser rule: strength reduction rule | Scheduled | 1021: scheduled | [task](lanes/871.md) |
+| 872 | Optimiser rule: LICM rule | Scheduled | 1022: scheduled | [task](lanes/872.md) |
+| 873 | Optimiser rule: inlining rule | Scheduled | 1023: scheduled | [task](lanes/873.md) |
+| 874 | Optimiser rule: bounded unroll rule | Scheduled | 1024: scheduled | [task](lanes/874.md) |
+| 875 | Optimiser rule: vectorisation gate rule | Scheduled | 1025: scheduled | [task](lanes/875.md) |
+| 876 | Optimiser rule: flags peephole rule | Scheduled | 1026: scheduled | [task](lanes/876.md) |
+| 877 | Optimiser rule: displacement peephole rule | Scheduled | 1027: scheduled | [task](lanes/877.md) |
+| 878 | Optimiser rule: linear-scan allocation rule | Scheduled | 1028: scheduled | [task](lanes/878.md) |
+| 879 | Optimiser rule: spill freshness rule | Scheduled | 1029: scheduled | [task](lanes/879.md) |
+| 880 | Optimiser rule: copy coalescing rule | Scheduled | 1030: scheduled | [task](lanes/880.md) |
+| 881 | Optimiser rule: rematerialisation rule | Scheduled | 1031: scheduled | [task](lanes/881.md) |
+| 882 | Optimiser rule: chain scheduling rule | Scheduled | 1032: scheduled | [task](lanes/882.md) |
+| 883 | Optimiser rule: loop alignment rule | Scheduled | 1033: scheduled | [task](lanes/883.md) |
+| 884 | Optimiser rule: branch bias rule | Scheduled | 1034: scheduled | [task](lanes/884.md) |
+| 885 | Optimiser rule: zero-idiom selection rule | Scheduled | 1035: scheduled | [task](lanes/885.md) |
+| 886 | Optimiser rule: LEA selection rule | Scheduled | 1036: scheduled | [task](lanes/886.md) |
+| 887 | Optimiser rule: shift selection rule | Scheduled | 1037: scheduled | [task](lanes/887.md) |
+| 888 | Optimiser rule: multiply selection rule | Scheduled | 1038: scheduled | [task](lanes/888.md) |
+| 889 | Optimiser rule: division guard rule | Scheduled | 1039: scheduled | [task](lanes/889.md) |
+| 890 | Optimiser rule: SETcc selection rule | Scheduled | 1040: scheduled | [task](lanes/890.md) |
+| 891 | Optimiser rule: CMOV selection rule | Scheduled | 1041: scheduled | [task](lanes/891.md) |
+| 892 | Optimiser rule: MOV-immediate selection rule | Scheduled | 1042: scheduled | [task](lanes/892.md) |
+| 893 | Optimiser rule: address-mode selection rule | Scheduled | 1043: scheduled | [task](lanes/893.md) |
+| 894 | Optimiser rule: call-argument selection rule | Scheduled | 1044: scheduled | [task](lanes/894.md) |
+| 895 | Optimiser rule: return-path selection rule | Scheduled | 1045: scheduled | [task](lanes/895.md) |
+| 1054 | Task-brief audit batch B01 (lanes 746-760) | Scheduled | 1074: scheduled | [task](lanes/1054.md) |
+| 1055 | Task-brief audit batch B02 (lanes 761-775) | Scheduled | 1075: scheduled | [task](lanes/1055.md) |
+| 1056 | Task-brief audit batch B03 (lanes 776-790) | Scheduled | 1076: scheduled | [task](lanes/1056.md) |
+| 1057 | Task-brief audit batch B04 (lanes 791-805) | Scheduled | 1077: scheduled | [task](lanes/1057.md) |
+| 1058 | Task-brief audit batch B05 (lanes 806-820) | Scheduled | 1078: scheduled | [task](lanes/1058.md) |
+| 1059 | Task-brief audit batch B06 (lanes 821-835) | Scheduled | 1079: scheduled | [task](lanes/1059.md) |
+| 1060 | Task-brief audit batch B07 (lanes 836-850) | Scheduled | 1080: scheduled | [task](lanes/1060.md) |
+| 1061 | Task-brief audit batch B08 (lanes 851-865) | Scheduled | 1081: scheduled | [task](lanes/1061.md) |
+| 1062 | Task-brief audit batch B09 (lanes 866-880) | Scheduled | 1082: scheduled | [task](lanes/1062.md) |
+| 1063 | Task-brief audit batch B10 (lanes 881-895) | Scheduled | 1083: scheduled | [task](lanes/1063.md) |
+| 1064 | Task-brief audit batch B11 (lanes 896-910) | Scheduled | 1084: scheduled | [task](lanes/1064.md) |
+| 1065 | Task-brief audit batch B12 (lanes 911-925) | Scheduled | 1085: scheduled | [task](lanes/1065.md) |
+| 1066 | Task-brief audit batch B13 (lanes 926-940) | Scheduled | 1086: scheduled | [task](lanes/1066.md) |
+| 1067 | Task-brief audit batch B14 (lanes 941-955) | Scheduled | 1087: scheduled | [task](lanes/1067.md) |
+| 1068 | Task-brief audit batch B15 (lanes 956-970) | Scheduled | 1088: scheduled | [task](lanes/1068.md) |
+| 1069 | Task-brief audit batch B16 (lanes 971-985) | Scheduled | 1089: scheduled | [task](lanes/1069.md) |
+| 1070 | Task-brief audit batch B17 (lanes 986-1000) | Scheduled | 1090: scheduled | [task](lanes/1070.md) |
+| 1071 | Task-brief audit batch B18 (lanes 1001-1015) | Scheduled | 1091: scheduled | [task](lanes/1071.md) |
+| 1072 | Task-brief audit batch B19 (lanes 1016-1030) | Scheduled | 1092: scheduled | [task](lanes/1072.md) |
+| 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Scheduled | 1093: scheduled | [task](lanes/1073.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -945,6 +1115,10 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **733**, Independent exact review of 732, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-733.md). <!-- x86-merged:733 -->
 - 2026-10-03: publication batch checks passed for `e0fd57c4`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-03: checked master `4ebf7893` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:4ebf78936bf2ac5c09db7d392353f1f04a5c7b94 -->
+- 2026-10-03: lane **758**, Hardware completion: disp0 memory form, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-758.md). <!-- x86-merged:758 -->
+- 2026-10-03: integration of candidate(s) [698] failed the local proof/build gate after independent review 699; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:699 -->
+- 2026-10-03: integration of candidate(s) [718] failed the local proof/build gate after independent review 719; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:719 -->
+- 2026-10-03: integration of candidate(s) [722] failed the local proof/build gate after independent review 723; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:723 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
