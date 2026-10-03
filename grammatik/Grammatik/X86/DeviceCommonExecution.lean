@@ -377,6 +377,61 @@ theorem devSchritt_pending_leer (D : Type)
   cases h with
   | schritt s' hbus hord hpend => exact hpend
 
+/-! ## 5. The two target separation theorems.
+
+    `deviceCommon_tso_verweigert`: no TSO buffer ever carries a
+    device byte -- every reached common step leaves every buffer
+    unchanged (construction, §3 frames), and a device byte offered
+    to the RAM TSO rule is refused by the rule itself
+    (`issue_verweigert` over checked permissions).
+
+    `deviceCommon_mmio_ordnung`: MMIO never inherits WB-RAM
+    ordering -- a retired UC store bypasses the WB buffer
+    (`ucStore_bypass`) and bus completion preserves it
+    (`busFortschritt_fifo`), so neither side orders the other. -/
+
+/-- TARGET: device traffic is excluded from the RAM TSO rule --
+    buffers are unchanged by every reached step, and the issue
+    rule refuses the device address. -/
+theorem deviceCommon_tso_verweigert (D : Type)
+    (erlaubt : Bus704.BusAntwort D) (r : Bus704.IoBerechtigung)
+    (k : Bus704.TssKarte) (pend : List PendingResp)
+    (m m' : HwMaschine) (c : Nat) (g : D) (spur : List IoEreignis)
+    (g' : D) (spur' : List IoEreignis) (a : Adresse) (v : Byte)
+    (hstep : DeviceCommonSchritt D erlaubt r k pend m c g spur
+      m' g' spur')
+    (hro : (tsoAnsicht m).mem.schreibbar a = false) :
+    m'.puffer c = m.puffer c ∧
+      issueByte (tsoAnsicht m) c a v = none := by
+  have hpuffer := devSchritt_puffer D erlaubt r k pend m m' c g spur
+    g' spur' hstep
+  have hnone := issue_verweigert (tsoAnsicht m) c a v hro
+  rw [hpuffer]
+  exact ⟨rfl, hnone⟩
+
+/-- TARGET: MMIO never inherits WB-RAM ordering -- a UC store
+    retires past the WB buffer and bus completion drains past it;
+    the pending WB stores are untouched on both legs. -/
+theorem deviceCommon_mmio_ordnung (m : MmioMaschine) (hw : HwProfil)
+    (bp : BereitProfil) (b : Breite) (a : Adresse) (v : Wort)
+    (m1 m2 : MmioMaschine) (p : PostedSchreib)
+    (rest : List PostedSchreib) (g' : Geraet)
+    (hstore : ucStoreZugriff m hw bp b a v = some m1)
+    (he : m1.ausstehend = p :: rest)
+    (hg : geraetSchreibt m1.geraet p.breite (geraetOff p.addr)
+      p.wert = some g')
+    (hbus : busFortschritt m1 = some m2) :
+    m1.pending = m.pending ∧ m2.pending = m.pending ∧
+      m2.ausstehend = rest ∧ m2.ucLog = m1.ucLog := by
+  obtain ⟨hp1, _, _, _, _, _⟩ :=
+    ucStore_bypass m hw bp b a v m1 hstore
+  obtain ⟨m', hbm, _, haus, hlog, _, hpend2⟩ :=
+    busFortschritt_fifo m1 p rest g' he hg
+  rw [hbm] at hbus
+  have heq : m2 = m' := (Option.some_inj.mp hbus).symm
+  subst heq
+  exact ⟨hp1, hpend2.trans hp1, haus, hlog⟩
+
 #print axioms pending_belegt_verweigert
 #print axioms pending_leer_ok
 
