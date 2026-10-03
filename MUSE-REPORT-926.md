@@ -6,7 +6,10 @@ snapshot base). Owned file only: `MUSE-REPORT-926.md`. No source touched,
 no live controls used.
 
 CANDIDATE: 776 450f855d2da2325be138b6e933e2c3f796c87654
-VERDICT: ACCEPT (bounded: exactly the success-path connection as stated in its CUTS)
+VERDICT: ACCEPT
+
+Scope of this accept: exactly the success-path connection as stated in the
+candidate's own CUTS (see Bounded acceptance below).
 
 ## What was reviewed
 
