@@ -453,7 +453,7 @@ Last ledger refresh: **2026-10-03 13:17 UTC**. This is an operational snapshot, 
 | 775 | Hardware completion: privileged-form refusal | Incomplete; preserved | 925: scheduled | [task](lanes/775.md) |
 | 776 | Hardware completion: LOCK CMPXCHG success path | Merged after review/checks | 926: Merged after review/checks | [report](messung/muse/MUSE-REPORT-776.md) |
 | 777 | Hardware completion: LOCK CMPXCHG failure stutter | Incomplete; preserved | 927: scheduled | [task](lanes/777.md) |
-| 778 | Hardware completion: LOCK XADD fetch-add | Merged after review/checks | 928: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-778.md) |
+| 778 | Hardware completion: LOCK XADD fetch-add | Merged after review/checks | 928: Merged after review/checks | [report](messung/muse/MUSE-REPORT-778.md) |
 | 779 | Hardware completion: XCHG ordering need | Committed candidate; review/integration pending | 929: Committed candidate; review/integration pending | [task](lanes/779.md) |
 | 780 | Hardware completion: MFENCE drain-own semantics | Committed candidate; review/integration pending | 930: Committed candidate; review/integration pending | [task](lanes/780.md) |
 | 781 | Hardware completion: SFENCE store narrowness | Committed candidate; review/integration pending | 931: Committed candidate; review/integration pending | [task](lanes/781.md) |
@@ -1159,6 +1159,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **776**, Hardware completion: LOCK CMPXCHG success path, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-776.md). <!-- x86-merged:776 -->
 - 2026-10-03: lane **926**, Independent exact review of 776, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-926.md). <!-- x86-merged:926 -->
 - 2026-10-03: lane **778**, Hardware completion: LOCK XADD fetch-add, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-778.md). <!-- x86-merged:778 -->
+- 2026-10-03: lane **928**, Independent exact review of 778, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-928.md). <!-- x86-merged:928 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
