@@ -1,7 +1,12 @@
 # MUSE-REPORT-1025: Exact review of author 875 (vectorisation gate rule)
 
 CANDIDATE: 875 bdc0c06a701e128bca827ad33d5bab71c7dc745b
-VERDICT: ACCEPT (bounded; scope exactly as stated in the candidate CUTS)
+VERDICT: ACCEPT
+
+Scope of acceptance: bounded; it covers exactly the proved gate,
+certificate, refusal, lane and connection claims within the
+candidate CUTS (no native lowering, no TSO bridge, no FP lanes,
+no cost bound, no silicon correspondence).
 
 ## What was reviewed
 
