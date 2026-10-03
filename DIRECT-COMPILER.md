@@ -558,7 +558,7 @@ Last ledger refresh: **2026-10-03 22:30 UTC**. This is an operational snapshot, 
 | 880 | Optimiser rule: copy coalescing rule | Merged after review/checks | 1030: Merged after review/checks | [report](messung/muse/MUSE-REPORT-880.md) |
 | 881 | Optimiser rule: rematerialisation rule | Merged after review/checks | 1031: Merged after review/checks | [report](messung/muse/MUSE-REPORT-881.md) |
 | 882 | Optimiser rule: chain scheduling rule | Committed candidate; review/integration pending | 1032: Incomplete; preserved | [task](lanes/882.md) |
-| 883 | Optimiser rule: loop alignment rule | Committed candidate; review/integration pending | 1033: Committed candidate; review/integration pending | [task](lanes/883.md) |
+| 883 | Optimiser rule: loop alignment rule | Merged after review/checks | 1033: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-883.md) |
 | 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Incomplete; preserved | [task](lanes/884.md) |
 | 885 | Optimiser rule: zero-idiom selection rule | Committed candidate; review/integration pending | 1035: Committed candidate; review/integration pending | [task](lanes/885.md) |
 | 886 | Optimiser rule: LEA selection rule | Committed candidate; review/integration pending | 1036: Committed candidate; review/integration pending | [task](lanes/886.md) |
@@ -596,7 +596,7 @@ Last ledger refresh: **2026-10-03 22:30 UTC**. This is an operational snapshot, 
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Committed candidate; review/integration pending | [task](lanes/1100.md) |
 | 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: Agent working | [task](lanes/1102.md) |
-| 1104 | Close the accepted consumers through the common dispatcher | Agent working | 1105: scheduled | [task](lanes/1104.md) |
+| 1104 | Close the accepted consumers through the common dispatcher | Committed candidate; review/integration pending | 1105: scheduled | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Committed candidate; review/integration pending | 1109: Agent working | [task](lanes/1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Agent working | 1111: scheduled | [task](lanes/1110.md) |
@@ -1309,6 +1309,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1030**, Independent exact review of 880, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1030.md). <!-- x86-merged:1030 -->
 - 2026-10-03: lane **881**, Optimiser rule: rematerialisation rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-881.md). <!-- x86-merged:881 -->
 - 2026-10-03: lane **1031**, Independent exact review of 881, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1031.md). <!-- x86-merged:1031 -->
+- 2026-10-03: lane **883**, Optimiser rule: loop alignment rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-883.md). <!-- x86-merged:883 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
