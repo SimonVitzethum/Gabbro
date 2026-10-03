@@ -505,7 +505,7 @@ Last ledger refresh: **2026-10-03 22:20 UTC**. This is an operational snapshot, 
 | 827 | Composition closing: entry-to-mapping closing | Merged after review/checks | 977: Merged after review/checks | [report](messung/muse/MUSE-REPORT-827.md) |
 | 828 | Composition closing: stack-to-ABI closing | Merged after review/checks | 978: Merged after review/checks | [report](messung/muse/MUSE-REPORT-828.md) |
 | 829 | Composition closing: call-lowering closing | Committed candidate; review/integration pending | 979: Incomplete; preserved | [task](lanes/829.md) |
-| 830 | Composition closing: spill-privacy closing | Merged after review/checks | 980: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-830.md) |
+| 830 | Composition closing: spill-privacy closing | Merged after review/checks | 980: Merged after review/checks | [report](messung/muse/MUSE-REPORT-830.md) |
 | 831 | Composition closing: contract-at-call closing | Committed candidate; review/integration pending | 981: Committed candidate; review/integration pending | [task](lanes/831.md) |
 | 832 | Composition closing: contract-at-return closing | Committed candidate; review/integration pending | 982: Committed candidate; review/integration pending | [task](lanes/832.md) |
 | 833 | Composition closing: call-log ghost closing | Committed candidate; review/integration pending | 983: Committed candidate; review/integration pending | [task](lanes/833.md) |
@@ -1210,6 +1210,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **828**, Composition closing: stack-to-ABI closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-828.md). <!-- x86-merged:828 -->
 - 2026-10-03: lane **978**, Independent exact review of 828, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-978.md). <!-- x86-merged:978 -->
 - 2026-10-03: lane **830**, Composition closing: spill-privacy closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-830.md). <!-- x86-merged:830 -->
+- 2026-10-03: lane **980**, Independent exact review of 830, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-980.md). <!-- x86-merged:980 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
