@@ -512,7 +512,7 @@ Last ledger refresh: **2026-10-03 22:21 UTC**. This is an operational snapshot, 
 | 834 | Composition closing: budget-resumption closing | Merged after review/checks | 984: Merged after review/checks | [report](messung/muse/MUSE-REPORT-834.md) |
 | 835 | Composition closing: work-transfer closing | Merged after review/checks | 985: Merged after review/checks | [report](messung/muse/MUSE-REPORT-835.md) |
 | 836 | Composition closing: time-bound closing | Merged after review/checks | 986: Merged after review/checks | [report](messung/muse/MUSE-REPORT-836.md) |
-| 837 | Composition closing: fence-order closing | Merged after review/checks | 987: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-837.md) |
+| 837 | Composition closing: fence-order closing | Merged after review/checks | 987: Merged after review/checks | [report](messung/muse/MUSE-REPORT-837.md) |
 | 838 | Composition closing: atomic-ledger closing | Committed candidate; review/integration pending | 988: Committed candidate; review/integration pending | [task](lanes/838.md) |
 | 839 | Composition closing: FP-ledger closing | Committed candidate; review/integration pending | 989: Committed candidate; review/integration pending | [task](lanes/839.md) |
 | 840 | Composition closing: flag-ledger closing | Committed candidate; review/integration pending | 990: Committed candidate; review/integration pending | [task](lanes/840.md) |
@@ -1224,6 +1224,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **836**, Composition closing: time-bound closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-836.md). <!-- x86-merged:836 -->
 - 2026-10-03: lane **986**, Independent exact review of 836, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-986.md). <!-- x86-merged:986 -->
 - 2026-10-03: lane **837**, Composition closing: fence-order closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-837.md). <!-- x86-merged:837 -->
+- 2026-10-03: lane **987**, Independent exact review of 837, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-987.md). <!-- x86-merged:987 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
