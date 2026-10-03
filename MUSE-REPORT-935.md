@@ -13,12 +13,14 @@
 
 ## CANDIDATE and VERDICT
 
-- CANDIDATE: 785 `502e5403cc521806c0e8cc3d0927a0411f67f6d5`
-  (base `56537272a31df3de5d9b7898bbade91c3de817b8`, identical to this clone's HEAD;
-  files: `MUSE-REPORT-785.md`, `grammatik/Grammatik.lean` (one appended import),
-  `grammatik/Grammatik/X86/CasDivergenceRec.lean`; status clean per SNAPSHOT.json).
-- VERDICT: ACCEPT — bounded acceptance as stated under "Scope of acceptance".
-  No repair required; no minimal-repair list.
+CANDIDATE: 785 502e5403cc521806c0e8cc3d0927a0411f67f6d5
+VERDICT: ACCEPT
+
+Details: base 56537272a31df3de5d9b7898bbade91c3de817b8, identical to this
+clone's HEAD; files MUSE-REPORT-785.md, grammatik/Grammatik.lean (one appended
+import), grammatik/Grammatik/X86/CasDivergenceRec.lean; status clean per
+SNAPSHOT.json. Bounded acceptance as stated under "Scope of acceptance".
+No repair required; no minimal-repair list. The substantive verdict is unchanged.
 
 ## What the candidate does (confirmed against PATCH + file)
 
