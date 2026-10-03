@@ -1,7 +1,9 @@
 # MUSE-REPORT-1042: Exact review of author 892 (MOV-immediate selection rule)
 
 CANDIDATE: 892 f6d094221adb62f69fc722acabef3cedcf25fdcc
-VERDICT: ACCEPT (bounded — see bounds B1–B4; no repairs demanded)
+VERDICT: ACCEPT
+
+Acceptance is bounded by B1–B4 below; no repairs are demanded.
 
 ## Scope and method
 
