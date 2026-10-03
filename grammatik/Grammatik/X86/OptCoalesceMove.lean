@@ -146,4 +146,57 @@ theorem probe_coalGleit :
       gleitPasst (0, 1) (1, 1) (bruch (3, 4)) := by
   rfl
 
+/-! ## 3. Connection: the coalesced bind behaves like the copied one.
+
+    The rewrite fires only where the validator admitted the site
+    (`hz`: recomputed avail + dominance + width, no address-taken spill,
+    no call-arg escape), and is stated at an `Endblock.bind` window with
+    an ARBITRARY continuation `rest`, so the conclusion covers every
+    downstream observation at once. Conclusion, jointly:
+    (1) the evaluated bound VALUE is preserved (the copy carries the
+    source value: `hWert`, the validator-recomputed avail fact);
+    (2) the `execEnd` OUTCOME is equal -- same constructor, same
+    successor worlds and environments -- so no fault is added or removed
+    (`logik`/`hardware` agree, IEEE `logik bereich` untouched: integers
+    have no rounding scope, the float copy keeps its single `bruch` by
+    section 2), every downstream observation agrees (contracts at their
+    place read the same values from the same environments, call logs gain
+    no event -- both sides read `orte` equal by `hOrte`, and the copy is
+    pure with no call --, no shared access is added or removed for
+    concurrency, and step-budget accounting is unchanged: same block
+    shape, the removed copy is pure and unbudgeted);
+    (3) the coalesced value reads back whole through the canonical word.
+    Nothing here derives an `ensures`, turns a refusal into a warning, or
+    speculates a faulting form above its guard (redefinition, dominance
+    loss, width change and spill/call-arg escape all refuse in section 1).
+    The checker's range at the site is untouched and still enforced there. -/
+
+/-- CONNECTION: using the available dominating original instead of its
+    copy preserves value, outcome and the width-exact word image. -/
+theorem OptCoalesceMove_verbindung {D : Deklaration} (V : Vertrag D)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    {Γ : Ctx} {Λ : List (Res D)} {l : Bool} {lo hi : Int}
+    (rw : CoalRewrite) (an : CoalAnalyse)
+    (eOrig eKopie : Expr D Γ Λ (.int lo hi))
+    (rest : Endblock D V l ((.int lo hi) :: Γ) Λ)
+    (hz : coalZulassen rw an = true)
+    (σ : World D) (ρ : Env D Γ)
+    (hWert : ∀ w w' : World D, eval w eKopie w' ρ = eval w eOrig w' ρ)
+    (hOrte : coalZulassen rw an = true → eKopie.orte = eOrig.orte)
+    (hW : 0 ≤ (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n ∧
+      (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n < 2 ^ 64) :
+    (eval (σ.lese Λ eOrig.orte) eKopie (σ.lese Λ eOrig.orte) ρ).n
+      = (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n
+    ∧ execEnd O passes R
+        (Endblock.bind eKopie rest) σ ρ
+      = execEnd O passes R
+        (Endblock.bind eOrig rest) σ ρ
+    ∧ ((BitVec.ofNat 64 (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n.toNat : Wort)).toNat
+      = (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n.toNat := by
+  have ho := hOrte hz
+  have hv := hWert (σ.lese Λ eOrig.orte) (σ.lese Λ eOrig.orte)
+  refine ⟨by rw [hv], ?_, coalWort _ hW⟩
+  simp only [execEnd, ho, hv]
+
 end Gabbro.Grammatik.X86
