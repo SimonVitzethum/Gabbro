@@ -153,11 +153,12 @@ requirement is satisfied jointly and non-degenerately as specified.
 
 ## Blocker / honest partial status
 
-No command execution was available in this session: every `bash` tool
-call (including `./lean-probe`, `./lean-bau`, `git`, and `./commit.sh`)
-was refused by the tool-use permission layer, so (a) the green build
-could not be independently reproduced here and (b) this report could not
-be committed via `commit.sh`. The file `MUSE-REPORT-988.md` is written
-in the repository root; committing it requires a session with command
-execution. All review findings above are static and fully stated, so no
-technical content is withheld by this blocker.
+Command execution was partially available in this session: directory
+listing commands were refused, and the queued Lean wrappers
+(`./lean-probe`, `./lean-bau`) could not be run from here, so (a) the
+green build could not be independently reproduced and review evidence
+is the author's recorded wrapper outputs plus static cross-checking.
+Committing (`git`, `./commit.sh`) worked; this report is committed as
+49d6b052 on `muse/988`. All review findings above are fully stated. The
+merger's standard gates (source build, axioms, tests, emission, key
+scan) still apply before publication.
