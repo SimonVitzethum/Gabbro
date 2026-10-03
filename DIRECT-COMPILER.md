@@ -529,7 +529,7 @@ Last ledger refresh: **2026-10-03 22:24 UTC**. This is an operational snapshot, 
 | 851 | Composition closing: binding-surface closing | Merged after review/checks | 1001: Merged after review/checks | [report](messung/muse/MUSE-REPORT-851.md) |
 | 852 | Composition closing: runtime-bodies closing | Committed candidate; review/integration pending | 1002: Incomplete; preserved | [task](lanes/852.md) |
 | 853 | Composition closing: entry-hook closing | Merged after review/checks | 1003: Merged after review/checks | [report](messung/muse/MUSE-REPORT-853.md) |
-| 854 | Composition closing: support-bytes closing | Merged after review/checks | 1004: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-854.md) |
+| 854 | Composition closing: support-bytes closing | Merged after review/checks | 1004: Merged after review/checks | [report](messung/muse/MUSE-REPORT-854.md) |
 | 855 | Composition closing: loader-bias closing | Committed candidate; review/integration pending | 1005: Committed candidate; review/integration pending | [task](lanes/855.md) |
 | 856 | Composition closing: virtual-address closing | Committed candidate; review/integration pending | 1006: Committed candidate; review/integration pending | [task](lanes/856.md) |
 | 857 | Composition closing: permission-check closing | Committed candidate; review/integration pending | 1007: Committed candidate; review/integration pending | [task](lanes/857.md) |
@@ -1256,6 +1256,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **853**, Composition closing: entry-hook closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-853.md). <!-- x86-merged:853 -->
 - 2026-10-03: lane **1003**, Independent exact review of 853, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1003.md). <!-- x86-merged:1003 -->
 - 2026-10-03: lane **854**, Composition closing: support-bytes closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-854.md). <!-- x86-merged:854 -->
+- 2026-10-03: lane **1004**, Independent exact review of 854, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1004.md). <!-- x86-merged:1004 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
