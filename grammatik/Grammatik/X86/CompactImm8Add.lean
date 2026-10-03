@@ -374,6 +374,88 @@ theorem compactAddSchritt_immer (dst : Register) (n : Nat)
     (addImmOp .b64 (s.register dst) n), ?_⟩
   exact compactAddSchritt_weiter _ s dst n rfl rfl
 
+/-- Frame: the destination holds the sum, flags carry the snapshot,
+    memory and every other register are kept, RIP advances past the
+    decoded length. -/
+theorem compactAddSchritt_rahmen (d : CompactAddDec) (s s' : Zustand)
+    (dst : Register) (n : Nat) (h : d.befehl = .addImm8 dst n)
+    (hlen : d.laenge == compactAddLaenge d.befehl)
+    (hstep : compactAddSchritt d s = some s') :
+    s'.register dst = s.register dst + immSext n ∧
+      s'.flags = addImmFlags .b64 (s.register dst) n ∧
+      s'.speicher = s.speicher ∧
+      s'.rip = ripNach s.rip d.laenge ∧
+      (∀ q : Register, q ≠ dst → s'.register q = s.register q) := by
+  rw [compactAddSchritt_weiter d s dst n h hlen] at hstep
+  cases hstep
+  refine ⟨?_, rfl, rfl, rfl, ?_⟩
+  · unfold schrittRegister
+    rw [addImmOp_b64]
+    exact regSet_gleich _ _ _
+  · intro q hq
+    unfold schrittRegister
+    exact regSet_fremd _ _ _ _ hq
+
+/-! ## Byte-to-memory connection.
+
+  The four canonical bytes decode to the stepped form, the encoder
+  answers inside i8, the step lands the sign-extended sum with the
+  accepted flags (AF none), and the pilot store carries the sum into
+  real byte memory with a word read-back. Decode, value, flags and the
+  memory handoff in one jointly inhabited statement. -/
+
+/-- CONNECTION: canonical bytes decode to the form, the form steps to
+    the sign-extended sum with the accepted flags, and the pilot store
+    moves the sum into memory with a word read-back. -/
+theorem CompactImm8Add_verbindung (dst base : Register) (n : Nat)
+    (hn : n < 256) (s s' : Zustand) (disp : BitVec 32) (m : Speicher)
+    (hadd : compactAddSchritt ⟨.addImm8 dst n, 4⟩ s = some s')
+    (hwr : write64 s'.speicher (effAddr s' base disp) (s'.register dst) =
+      some m)
+    (hrd : lesbar8 s'.speicher (effAddr s' base disp) = true) :
+    decodeCompactAdd [rexByte 0 (regHigh dst), natByte 131,
+        natByte (192 + regLow dst), natByte n] =
+        some ((.addImm8 dst n), []) ∧
+      encodeCompactAdd (.addImm8 dst n) ≠ none ∧
+      s'.register dst = s.register dst + immSext n ∧
+      s'.flags.af = none ∧
+      s'.flags.cf = (add64 (s.register dst) (immSext n)).2.cf ∧
+      s'.flags.of = (add64 (s.register dst) (immSext n)).2.of ∧
+      s'.flags.sf = (add64 (s.register dst) (immSext n)).2.sf ∧
+      s'.flags.zf = (add64 (s.register dst) (immSext n)).2.zf ∧
+      s'.flags.pf = (add64 (s.register dst) (immSext n)).2.pf ∧
+      schritt ⟨.store64 base dst disp, 7⟩ s' =
+        some ({ s' with speicher := m, rip := ripNach s'.rip 7 }) ∧
+      read64 m (effAddr s' base disp) = some (s'.register dst) := by
+  have hrt : decodeCompactAdd [rexByte 0 (regHigh dst), natByte 131,
+      natByte (192 + regLow dst), natByte n] =
+      some ((.addImm8 dst n), []) := by
+    have h := roundtripCompactAdd dst n hn []
+    rwa [List.append_nil] at h
+  have henc : encodeCompactAdd (.addImm8 dst n) ≠ none := by
+    rw [encodeCompactAdd_some dst n hn]
+    simp
+  have hr := compactAddSchritt_rahmen ⟨.addImm8 dst n, 4⟩ s s' dst n
+    rfl rfl hadd
+  obtain ⟨hval, hflags, -, -, -⟩ := hr
+  have hok7 : laengeOk 7 = true := by decide
+  have hstore := schritt_store64_erfolg ⟨.store64 base dst disp, 7⟩ s'
+    base dst disp m hok7 rfl hwr
+  have hread := read64_nach_write64 _ _ _ _ hwr hrd
+  have haf : s'.flags.af = none := by
+    rw [hflags]; exact addImmFlags_af _ _ _
+  have hcf : s'.flags.cf = (add64 (s.register dst) (immSext n)).2.cf := by
+    rw [hflags]; exact addImmFlags_cf _ _
+  have hof : s'.flags.of = (add64 (s.register dst) (immSext n)).2.of := by
+    rw [hflags]; exact addImmFlags_of _ _
+  have hsf : s'.flags.sf = (add64 (s.register dst) (immSext n)).2.sf := by
+    rw [hflags]; exact addImmFlags_sf _ _
+  have hzf : s'.flags.zf = (add64 (s.register dst) (immSext n)).2.zf := by
+    rw [hflags]; exact addImmFlags_zf _ _
+  have hpf : s'.flags.pf = (add64 (s.register dst) (immSext n)).2.pf := by
+    rw [hflags]; exact addImmFlags_pf _ _
+  exact ⟨hrt, henc, hval, haf, hcf, hof, hsf, hzf, hpf, hstore, hread⟩
+
 /- CUTS:
     Proved here so far: sign-extended imm8 (`immSext` reusing canonical
     `sext .b8`) with one pin.
