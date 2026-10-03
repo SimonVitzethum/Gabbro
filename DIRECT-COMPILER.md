@@ -598,7 +598,7 @@ Last ledger refresh: **2026-10-03 22:33 UTC**. This is an operational snapshot, 
 | 1102 | Port and device execution on the common machine | Merged after review/checks | 1103: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Merged after review/checks | 1105: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
-| 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Committed candidate; review/integration pending | 1109: Committed candidate; review/integration pending | [task](lanes/1108.md) |
+| 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Merged after review/checks | 1109: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Committed candidate; review/integration pending | 1111: Agent working | [task](lanes/1110.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1342,6 +1342,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1103**, Independent exact review of 1102, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1103.md). <!-- x86-merged:1103 -->
 - 2026-10-03: lane **1104**, Close the accepted consumers through the common dispatcher, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1104.md). <!-- x86-merged:1104 -->
 - 2026-10-03: lane **1105**, Independent exact review of 1104, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1105.md). <!-- x86-merged:1105 -->
+- 2026-10-03: lane **1108**, Binary32 fetched steps with a lifting API for the FP consumer, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1108.md). <!-- x86-merged:1108 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
