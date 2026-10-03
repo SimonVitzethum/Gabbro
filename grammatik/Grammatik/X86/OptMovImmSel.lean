@@ -256,4 +256,214 @@ theorem waehle_wert (v : Wort) (c : MovImmCert) :
       rw [e]
       rfl
 
+/-! ## 3. Firewall: outside the gates the narrow tiles never fire.
+
+    The precise refusal cases where the rule must NOT fire: a live
+    upper half, an overflowing value, and a non-i32 value each force
+    the certified wide fallback. A refused optional tile falls back,
+    never warns. -/
+
+/-- FIREWALL (upper half live): without a dead upper half the selector
+    never emits the zero tile. -/
+theorem waehle_kein_kompakt_ohne_tot (v : Wort) (c : MovImmCert)
+    (h : c.oberTot = false) (imm : BitVec 32) :
+    waehleMovImm v c ≠ .kompakt imm := by
+  have hz : nullZulassen v c = false := nullVerweigert_oberLebendig v c h
+  have hzn : ¬ nullZulassen v c = true := by simp [hz]
+  simp only [waehleMovImm, if_neg hzn]
+  by_cases hs : passtI32 v = true <;> simp_all
+
+/-- FIREWALL (value too big): an overflowing value never takes the zero
+    tile, however dead its upper half is. -/
+theorem waehle_kein_kompakt_bei_gross (v : Wort) (c : MovImmCert)
+    (h : passtU32 v = false) (imm : BitVec 32) :
+    waehleMovImm v c ≠ .kompakt imm := by
+  have hz : nullZulassen v c = false := nullVerweigert_gross v c h
+  have hzn : ¬ nullZulassen v c = true := by simp [hz]
+  simp only [waehleMovImm, if_neg hzn]
+  by_cases hs : passtI32 v = true <;> simp_all
+
+/-- FIREWALL (outside i32): a non-i32 value never takes the sign tile. -/
+theorem waehle_kein_sign_ohne_bereich (v : Wort) (c : MovImmCert)
+    (h : passtI32 v = false) (imm : BitVec 32) :
+    waehleMovImm v c ≠ .sign imm := by
+  have hsn : ¬ passtI32 v = true := by simp [h]
+  by_cases hz : nullZulassen v c = true
+  · rw [waehle_null v c hz]
+    simp
+  · have hzn : ¬ nullZulassen v c = true := hz
+    rw [waehleMovImm, if_neg hzn, if_neg hsn]
+    intro he
+    cases he
+
+/-! ## 4. Lengths: the rule only ever narrows.
+
+    Wide is 10 bytes (pilot row), compact 5/6 (accepted row), sign 7
+    (DESIGN 2B row data; its codec lands with lane 747). Budget side:
+    `CostSummary.targetWork` counts one retired instruction either way,
+    so the byte count strictly drops while the work count never grows. -/
+
+/-- Wide length is 10 bytes for every destination and value. -/
+theorem weitLaenge (dst : Register) (v : Wort) :
+    (encode (.movImm64 dst v)).length = 10 := by
+  cases dst <;> rfl
+
+/-- The selected tile never exceeds the wide length. -/
+theorem tileLaenge_hoechstens_weit (v : Wort) (c : MovImmCert)
+    (dst : Register) : tileLaenge (waehleMovImm v c) dst ≤ 10 := by
+  by_cases hz : nullZulassen v c = true
+  · rw [waehle_null v c hz]
+    show compactLen dst ≤ 10
+    unfold compactLen
+    split <;> decide
+  · by_cases hs : passtI32 v = true
+    · have e : waehleMovImm v c = .sign (BitVec.ofNat 32 v.toNat) := by
+        simp [waehleMovImm, hz, hs]
+      rw [e]
+      show (7 : Nat) ≤ 10
+      decide
+    · have e : waehleMovImm v c = .weit v := by
+        simp [waehleMovImm, hz, hs]
+      rw [e]
+      simp [tileLaenge]
+
+/-! ## 5. Execution: both byte-connected tiles land the word and
+    preserve every observation.
+
+    MOV affects no flags, touches no memory, and keeps every other
+    register: contracts at their place read the same values elsewhere,
+    no shared access is added or removed for concurrency (no new TSO
+    event; the per-access bridge stays the consumer), and any
+    downstream branch -- integer or float `UCOMISD`/`Jcc` rows alike --
+    observes identical flags. -/
+
+/-- The wide tile lands the word through the canonical pilot step. -/
+theorem weitSchritt_wert (dst : Register) (v : Wort) (s : Zustand) :
+    (schritt ⟨.movImm64 dst v, 10⟩ s).map (fun t => t.register dst)
+      = some v := by
+  have h := schritt_movImm64 ⟨.movImm64 dst v, 10⟩ s dst v rfl rfl
+  rw [h]
+  simp [schrittRegister, regSet]
+
+/-- The wide tile preserves the flags. -/
+theorem weitSchritt_flags (dst : Register) (v : Wort) (s s' : Zustand)
+    (hstep : schritt ⟨.movImm64 dst v, 10⟩ s = some s') :
+    s'.flags = s.flags :=
+  schritt_movImm64_flags _ s s' dst v rfl rfl hstep
+
+/-- The wide tile changes no memory byte. -/
+theorem weitSchritt_speicher (dst : Register) (v : Wort) (s s' : Zustand)
+    (hstep : schritt ⟨.movImm64 dst v, 10⟩ s = some s') :
+    s'.speicher = s.speicher :=
+  schritt_movImm64_speicher _ s s' dst v rfl rfl hstep
+
+/-- The wide tile keeps every other register (contract frame). -/
+theorem weitSchritt_fremd (dst q : Register) (v : Wort) (s s' : Zustand)
+    (hstep : schritt ⟨.movImm64 dst v, 10⟩ s = some s')
+    (hq : q ≠ dst) : s'.register q = s.register q :=
+  schritt_movImm64_reg _ s s' dst q v rfl rfl hstep hq
+
+/-- An admitted site steps the compact tile to the same word. -/
+theorem kompaktSchritt_wert (dst : Register) (v : Wort) (s : Zustand)
+    (c : MovImmCert) (h : nullZulassen v c = true) :
+    (stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+      compactLen dst⟩ s).map (fun t => t.register dst) = some v := by
+  have hp : passtU32 v = true := by
+    simp only [nullZulassen, Bool.and_eq_true] at h
+    exact h.2
+  have hw : compactWert (BitVec.ofNat 32 v.toNat) = v :=
+    kompaktWert_rundgang v hp
+  have hstep := stepCompact_mov32imm
+    ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat), compactLen dst⟩ s dst
+    (BitVec.ofNat 32 v.toNat) (compactLen_ok dst) rfl
+  have e : (stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+      compactLen dst⟩ s).map (fun t => t.register dst)
+      = some (compactWert (BitVec.ofNat 32 v.toNat)) := by
+    rw [hstep]
+    simp [regSet_gleich]
+  rw [e, hw]
+
+/-- The compact tile preserves the flags. -/
+theorem kompaktSchritt_flags (dst : Register) (v : Wort) (s s' : Zustand)
+    (hstep : stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+      compactLen dst⟩ s = some s') : s'.flags = s.flags :=
+  stepCompact_flags _ s s' dst _ (compactLen_ok dst) rfl hstep
+
+/-- The compact tile changes no memory byte. -/
+theorem kompaktSchritt_speicher (dst : Register) (v : Wort) (s s' : Zustand)
+    (hstep : stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+      compactLen dst⟩ s = some s') : s'.speicher = s.speicher :=
+  stepCompact_speicher _ s s' dst _ (compactLen_ok dst) rfl hstep
+
+/-- The compact tile keeps every other register (contract frame). -/
+theorem kompaktSchritt_fremd (dst q : Register) (v : Wort) (s s' : Zustand)
+    (hstep : stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+      compactLen dst⟩ s = some s') (hq : q ≠ dst) :
+    s'.register q = s.register q :=
+  stepCompact_fremd _ s s' dst q _ (compactLen_ok dst) rfl hstep hq
+
+/-- Every downstream branch observes identical flags from either tile:
+    the wide and the compact successor agree on every `Bedingung`,
+    including the float unordered rows. -/
+theorem movSelBedingung_gleich (dst : Register) (v : Wort) (s : Zustand)
+    (cond : Bedingung) (sW sN : Zustand)
+    (hW : schritt ⟨.movImm64 dst v, 10⟩ s = some sW)
+    (hN : stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+      compactLen dst⟩ s = some sN) :
+    bedingung cond sW.flags = bedingung cond sN.flags := by
+  have fW := weitSchritt_flags dst v s sW hW
+  have hokN := compactLen_ok dst
+  have fN := stepCompact_flags _ s sN dst (BitVec.ofNat 32 v.toNat)
+    hokN rfl hN
+  rw [fW, fN]
+
+/-! ## 6. Bytes: the selected tiles decode through the accepted rows.
+
+    No new codec: wide bytes round-trip through the pilot `Codec`,
+    compact bytes through the accepted `decodeCompact`. The sign row's
+    codec lands with lane 747. -/
+
+/-- Wide bytes decode back to the wide tile, over any suffix. -/
+theorem movSelBytes_weit (dst : Register) (v : Wort)
+    (suffix : List Byte) :
+    decode (encode (.movImm64 dst v) ++ suffix)
+      = some (⟨.movImm64 dst v, (encode (.movImm64 dst v)).length⟩,
+        suffix) :=
+  roundtrip _ _
+
+/-- Compact bytes decode back to the compact tile, over any suffix. -/
+theorem movSelBytes_kompakt (dst : Register) (v : Wort)
+    (suffix : List Byte) :
+    decodeCompact
+        (encodeCompact (.mov32imm dst (BitVec.ofNat 32 v.toNat)) ++ suffix)
+      = some (⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+        (encodeCompact
+          (.mov32imm dst (BitVec.ofNat 32 v.toNat))).length⟩, suffix) :=
+  roundtripCompact _ _
+
+/-! ## 7. Pins: the selector at concrete values. -/
+
+/-- `5` with a dead upper half selects the zero tile. -/
+theorem pin_waehle_fuenf : waehleMovImm (BitVec.ofNat 64 5) ⟨true⟩
+    = .kompakt (BitVec.ofNat 32 5) := by
+  decide
+
+/-- `-1` (all ones) needs no zero tile but fits i32: sign tile. -/
+theorem pin_waehle_minus_eins :
+    waehleMovImm (BitVec.ofNat 64 0xFFFFFFFFFFFFFFFF) ⟨true⟩
+      = .sign (BitVec.ofNat 32 0xFFFFFFFFFFFFFFFF) := by
+  decide
+
+/-- `2^32` fits neither narrow tile: the wide fallback holds even
+    with a dead upper half. -/
+theorem pin_waehle_gross_bleibt_weit :
+    waehleMovImm (BitVec.ofNat 64 0x100000000) ⟨true⟩
+      = .weit (BitVec.ofNat 64 0x100000000) := by
+  decide
+
+/-- A live upper half refuses admission even for `5`. -/
+theorem pin_nullZulassen_oberLebendig :
+    nullZulassen (BitVec.ofNat 64 5) ⟨false⟩ = false := by
+  decide
+
 end Gabbro.Grammatik.X86
