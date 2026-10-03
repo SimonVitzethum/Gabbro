@@ -2,11 +2,13 @@
 
 CANDIDATE: 846 e050fd5a773f4bf58538d38f4731e4fee17c0e5c
 
-VERDICT: ACCEPT (bounded: whole-region patch-to-redecode closing over all
-three `RelocArt` classes, jump field-level displacement agreement,
+VERDICT: ACCEPT
+
+Scope of this acceptance (bounded): whole-region patch-to-redecode closing
+over all three `RelocArt` classes, jump field-level displacement agreement,
 permission-carrying execution leg, planted overrun/forged-opcode refusals;
 `valX86` closing, call/conditional field agreement, TSO/GX bridge, source
-correspondence remain OPEN as the file states).
+correspondence remain OPEN as the file states.
 
 ## What was done
 
