@@ -1,7 +1,8 @@
 # MUSE-REPORT-1045: Exact review of author 895 (Optimiser rule: return-path selection rule)
 
 CANDIDATE: 895 6969d6601c61421afe17f754b4cefc82e93452ef
-VERDICT: ACCEPT (bounded — taken-path discipline only; see bounds below)
+VERDICT: ACCEPT
+Scope: bounded — taken-path discipline only; tail-rewrite/epilogue-jump and B/C citation soundness out of scope (see bounds below).
 
 ## Clone / snapshot verification
 
