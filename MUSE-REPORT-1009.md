@@ -6,7 +6,10 @@ CANDIDATE: 859 7191caf341e969ac272c99ebb86e43f0579541e0
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded — see scope below)
+VERDICT: ACCEPT
+
+Acceptance is bounded — see scope section below; the substantive verdict is
+unchanged.
 
 ## What was reviewed
 
