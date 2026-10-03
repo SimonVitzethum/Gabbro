@@ -6,7 +6,10 @@ CANDIDATE: 838 f1fb50980304ea4c0f99dedc2e8d6e4f86b0a0da
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded — see acceptance boundary below)
+VERDICT: ACCEPT
+
+Acceptance is bounded as stated in the acceptance-boundary section below;
+the machine-readable verdict line above is intentionally plain.
 
 ## What was reviewed
 
