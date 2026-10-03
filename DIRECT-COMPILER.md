@@ -511,7 +511,7 @@ Last ledger refresh: **2026-10-03 22:21 UTC**. This is an operational snapshot, 
 | 833 | Composition closing: call-log ghost closing | Merged after review/checks | 983: Merged after review/checks | [report](messung/muse/MUSE-REPORT-833.md) |
 | 834 | Composition closing: budget-resumption closing | Merged after review/checks | 984: Merged after review/checks | [report](messung/muse/MUSE-REPORT-834.md) |
 | 835 | Composition closing: work-transfer closing | Merged after review/checks | 985: Merged after review/checks | [report](messung/muse/MUSE-REPORT-835.md) |
-| 836 | Composition closing: time-bound closing | Committed candidate; review/integration pending | 986: Committed candidate; review/integration pending | [task](lanes/836.md) |
+| 836 | Composition closing: time-bound closing | Merged after review/checks | 986: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-836.md) |
 | 837 | Composition closing: fence-order closing | Committed candidate; review/integration pending | 987: Committed candidate; review/integration pending | [task](lanes/837.md) |
 | 838 | Composition closing: atomic-ledger closing | Committed candidate; review/integration pending | 988: Committed candidate; review/integration pending | [task](lanes/838.md) |
 | 839 | Composition closing: FP-ledger closing | Committed candidate; review/integration pending | 989: Committed candidate; review/integration pending | [task](lanes/839.md) |
@@ -1221,6 +1221,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **984**, Independent exact review of 834, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-984.md). <!-- x86-merged:984 -->
 - 2026-10-03: lane **835**, Composition closing: work-transfer closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-835.md). <!-- x86-merged:835 -->
 - 2026-10-03: lane **985**, Independent exact review of 835, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-985.md). <!-- x86-merged:985 -->
+- 2026-10-03: lane **836**, Composition closing: time-bound closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-836.md). <!-- x86-merged:836 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
