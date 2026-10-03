@@ -432,6 +432,346 @@ theorem deviceCommon_mmio_ordnung (m : MmioMaschine) (hw : HwProfil)
   subst heq
   exact ⟨hp1, hpend2.trans hp1, haus, hlog⟩
 
+/-! ## 6. Joint witness: fetched run on the common machine.
+
+    Core 0 stands on the accepted port image (`ioWitKern`: an 8-bit
+    IN from port 96, an 8-bit OUT to 96, then the pilot 64-bit
+    store); the device starts at `0x1234`. Privilege is the direct
+    leg (CPL 3 against IOPL 3) over the fully spanned map. The run
+    reaches the memory-changing pilot store (reused
+    `ioWit_dritter_speichert` from a zeroed cell), beside the three
+    planted refusals: a device byte offered to the RAM TSO rule,
+    an unprivileged access under a denying 728-derived card, and a
+    pending response consumed as an answer. -/
+
+/-- Witness core data: core 0 on the accepted port image, the rest
+    idle on the data page. -/
+def devWitKern : Nat → HwKern
+  | 0 => ⟨ioWitKern.register, ioWitKern.flags, ioWitKern.rip,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0,
+      kontextReset⟩
+
+/-- Witness start machine: shared port image, empty buffers, full
+    silicon with OS vector state. -/
+def devWitStart : HwMaschine :=
+  ⟨ioWitSpeicher, devWitKern, fun _ => [], basisHw,
+    fun _ => basisBereit⟩
+
+/-- First fetched step on core 0. -/
+def devWitO1 : DevCommonAusgang :=
+  deviceCommon_byteschritt Bus704.witRecht Bus704.witKarte []
+    devWitStart 0 ⟨0x1234, 0⟩ []
+
+/-- Second fetched step on core 0 (over the first successor). -/
+def devWitO2 : DevCommonAusgang :=
+  match devWitO1 with
+  | .weiter m g sp =>
+    deviceCommon_byteschritt Bus704.witRecht Bus704.witKarte []
+      m 0 g sp
+  | .verweigert => .verweigert
+
+/-- Observe the accumulator of core 0 as a natural. -/
+def devAkkOut : DevCommonAusgang → Option Nat
+  | .weiter m _ _ => some ((m.kerne 0).register .rax).toNat
+  | .verweigert => none
+
+/-- Observe the ordered trace. -/
+def devSpurOut : DevCommonAusgang → Option (List IoEreignis)
+  | .weiter _ _ sp => some sp
+  | .verweigert => none
+
+/-- Observe RIP of core 0 as a natural. -/
+def devRipOut : DevCommonAusgang → Option Nat
+  | .weiter m _ _ => some (m.kerne 0).rip.toNat
+  | .verweigert => none
+
+/-- Observe the device register and counter. -/
+def devGeraetOut : DevCommonAusgang → Option (Nat × Nat)
+  | .weiter _ g _ => some (g.daten, g.zaehl)
+  | .verweigert => none
+
+/-- Observe one shared-memory byte as a natural. -/
+def devMemOut (o : DevCommonAusgang) (n : Nat) : Option Nat :=
+  match o with
+  | .weiter m _ _ => some (m.mem.bytes (BitVec.ofNat 64 n)).toNat
+  | .verweigert => none
+
+/-- Observe a buffer length. -/
+def devPufferOut : DevCommonAusgang → Nat → Option Nat
+  | .weiter m _ _, c => some (m.puffer c).length
+  | .verweigert, _ => none
+
+/-- Refusal probe out of a step outcome. -/
+def devVerweigert : DevCommonAusgang → Bool
+  | .weiter _ _ _ => false
+  | .verweigert => true
+
+/-- First step: the fetched IN answers 52 into AL. -/
+theorem dev_wit_s1_akk : devAkkOut devWitO1 = some 52 := by
+  decide
+
+/-- The first fetch decodes the actual IN from the witness window,
+    with the 13 remaining window bytes. -/
+theorem dev_fetch_s1 :
+    fetchIo (projZustand devWitStart 0) =
+      some (⟨⟨.ein, .p8, .imm 96⟩, 2⟩,
+        [natByte 230, natByte 96, natByte 72, natByte 137,
+          natByte 131, natByte 0, natByte 0, natByte 0, natByte 0,
+          natByte 0, natByte 0, natByte 0, natByte 0]) := by
+  decide
+
+/-- Exhibited reached generic step: the first fetched IN is a
+    `DeviceCommonSchritt` with all premises jointly instantiated
+    (fetch, length, direct-leg permission, drained buffer, empty
+    pending list, allowed latch answer). -/
+theorem deviceCommon_schritt_zeuge :
+    ∃ (m' : HwMaschine) (g' : GeraetZustand) (sp' : List IoEreignis),
+      DeviceCommonSchritt GeraetZustand Bus704.latchErlaubt
+        Bus704.witRecht Bus704.witKarte [] devWitStart 0
+        ⟨0x1234, 0⟩ [] m' g' sp' ∧
+      g'.daten = 0x1234 ∧ g'.zaehl = 1 ∧
+        sp' = [⟨.ein, .p8, 96, 52⟩] := by
+  have h := (deviceCommon_ein_fetch Bus704.witRecht Bus704.witKarte
+    [] devWitStart 0 ⟨0x1234, 0⟩ []
+    ⟨⟨.ein, .p8, .imm 96⟩, 2⟩
+    [natByte 230, natByte 96, natByte 72, natByte 137,
+      natByte 131, natByte 0, natByte 0, natByte 0, natByte 0,
+      natByte 0, natByte 0, natByte 0, natByte 0]
+    .p8 (.imm 96) dev_fetch_s1 rfl (by decide) (by decide)
+    (by decide) rfl).2
+  exact ⟨_, _, _, h, rfl, rfl, rfl⟩
+
+/-- First step logs exactly the ordered IN event. -/
+theorem dev_wit_s1_spur :
+    devSpurOut devWitO1 = some [⟨.ein, .p8, 96, 52⟩] := by
+  decide
+
+/-- Both steps: the device moved `0x1234` to 52 with two
+    observations and the accumulator holds 52. -/
+theorem dev_wit_s2_geraet :
+    devGeraetOut devWitO2 = some (52, 2) ∧
+      devAkkOut devWitO2 = some 52 := by
+  decide
+
+/-- Both steps log IN then OUT in order. -/
+theorem dev_wit_s2_spur :
+    devSpurOut devWitO2 =
+      some [⟨.ein, .p8, 96, 52⟩, ⟨.aus, .p8, 96, 52⟩] := by
+  decide
+
+/-- Both steps land RIP at 4100: the pilot store starts from the
+    same core state as the accepted run. -/
+theorem dev_wit_s2_rip : devRipOut devWitO2 = some 4100 := by
+  decide
+
+/-- FRAME: both steps bypass RAM -- the cell the pilot store will
+    write still reads zero. -/
+theorem dev_wit_s2_mem_null : devMemOut devWitO2 8192 = some 0 := by
+  decide
+
+/-- FRAME: both steps issue no buffer entry on any core. -/
+theorem dev_wit_s2_puffer_leer :
+    devPufferOut devWitO2 0 = some 0 ∧
+      devPufferOut devWitO2 1 = some 0 := by
+  decide
+
+/-! ## 7. Planted refusals: one per target separation.
+
+    PROBE 1 (TSO exclusion): the MMIO window byte offered to the
+    RAM TSO issue rule is refused -- the device window is not
+    writable RAM in the witness image.
+    PROBE 2 (privilege): an unprivileged access (CPL 3 against
+    IOPL 0) under a 728-derived denying card (missing TSS window,
+    so no bitmap byte is spanned) refuses before any device
+    contact; the 728 software-INT DPL check refuses the same
+    privilege shape.
+    PROBE 3 (pending): the reached first step with one outstanding
+    pending response refuses -- the pending answer is never
+    consumed. -/
+
+/-- Denying control state: CPL 3 with a missing TSS window (limit
+    below base), so every bitmap byte denies. -/
+def devSteuerDunkel : Steuerstand :=
+  ⟨BitVec.ofNat 64 4096, 47, BitVec.ofNat 64 12288, 0, 3, true⟩
+
+/-- Denying card derived from the denying control state: all bits
+    set, and the window missing in any case. -/
+def devKarteDunkel : Bus704.TssKarte :=
+  devKarteAusSteuer devSteuerDunkel (fun _ => true)
+
+/-- PROBE 1: the device-window byte is refused by the RAM TSO
+    issue rule. -/
+theorem dev_probe_tso_verweigert :
+    issueByte ⟨ioWitSpeicher, fun _ => []⟩ 0 (natAdresse 65536)
+      (natByte 1) = none := by
+  decide
+
+/-- PROBE 2a: the denying card refuses port 96 above IOPL. -/
+theorem dev_probe_privileg_karte :
+    Bus704.archZugelassen ⟨3, 0⟩ devKarteDunkel 96 .p8 = false := by
+  decide
+
+/-- PROBE 2b: the fetched step refuses under the denying card. -/
+theorem dev_probe_privileg_schritt :
+    devVerweigert
+      (deviceCommon_byteschritt ⟨3, 0⟩ devKarteDunkel []
+        devWitStart 0 ⟨0x1234, 0⟩ []) = true := by
+  decide
+
+/-- PROBE 2c: the 728 DPL check refuses the same privilege shape
+    for a software interrupt. -/
+theorem dev_probe_privileg_dpl :
+    dplZugelassen (.softwareInt false) 0 3 = false := by
+  decide
+
+/-- PROBE 3: one outstanding pending response refuses the reached
+    first step. -/
+theorem dev_probe_pending_verweigert :
+    devVerweigert
+      (deviceCommon_byteschritt Bus704.witRecht Bus704.witKarte
+        [⟨96, .ein, .p8, 52⟩] devWitStart 0 ⟨0x1234, 0⟩ []) =
+      true := by
+  decide
+
+/-! ## 8. Joint witness and target companions.
+
+    One conjunction ties the reached fetched IN/OUT run (device
+    `0x1234` to 52, two observations, ordered log, RIP at the pilot
+    store, empty buffers, zeroed RAM cell) to the memory-changing
+    pilot store and all three planted refusals. Non-degenerate:
+    the device observably changed state AND the run reaches the
+    memory-changing pilot store. -/
+
+/-- JOINT WITNESS. -/
+theorem deviceCommon_zeuge_gemeinsam :
+    devAkkOut devWitO1 = some 52 ∧
+      devGeraetOut devWitO2 = some (52, 2) ∧
+      devSpurOut devWitO2 =
+        some [⟨.ein, .p8, 96, 52⟩, ⟨.aus, .p8, 96, 52⟩] ∧
+      devRipOut devWitO2 = some 4100 ∧
+      devMemOut devWitO2 8192 = some 0 ∧
+      devPufferOut devWitO2 0 = some 0 ∧
+      ausgangByte (BitVec.ofNat 64 8192) ioWitSchritt3 =
+        some (BitVec.ofNat 8 52) ∧
+      ioWitStart.kern.speicher.bytes (BitVec.ofNat 64 8192) =
+        BitVec.ofNat 8 0 ∧
+      issueByte ⟨ioWitSpeicher, fun _ => []⟩ 0 (natAdresse 65536)
+        (natByte 1) = none ∧
+      Bus704.archZugelassen ⟨3, 0⟩ devKarteDunkel 96 .p8 = false ∧
+      devVerweigert
+        (deviceCommon_byteschritt ⟨3, 0⟩ devKarteDunkel []
+          devWitStart 0 ⟨0x1234, 0⟩ []) = true ∧
+      dplZugelassen (.softwareInt false) 0 3 = false ∧
+      devVerweigert
+        (deviceCommon_byteschritt Bus704.witRecht Bus704.witKarte
+          [⟨96, .ein, .p8, 52⟩] devWitStart 0 ⟨0x1234, 0⟩ []) =
+        true := by
+  refine ⟨dev_wit_s1_akk, dev_wit_s2_geraet.1, dev_wit_s2_spur,
+    dev_wit_s2_rip, dev_wit_s2_mem_null, dev_wit_s2_puffer_leer.1,
+    ioWit_dritter_speichert.1, ioWit_anfang_null,
+    dev_probe_tso_verweigert, dev_probe_privileg_karte,
+    dev_probe_privileg_schritt, dev_probe_privileg_dpl,
+    dev_probe_pending_verweigert⟩
+
+/-- Companion for `deviceCommon_byteschritt`: the fetched step
+    succeeds on the witness with the device answer and the ordered
+    event. -/
+theorem deviceCommon_byteschritt_zeuge :
+    devAkkOut devWitO1 = some 52 ∧
+      devSpurOut devWitO1 = some [⟨.ein, .p8, 96, 52⟩] ∧
+      devVerweigert
+        (deviceCommon_byteschritt Bus704.witRecht Bus704.witKarte
+          [⟨96, .ein, .p8, 52⟩] devWitStart 0 ⟨0x1234, 0⟩ []) =
+        true :=
+  ⟨dev_wit_s1_akk, dev_wit_s1_spur, dev_probe_pending_verweigert⟩
+
+/-- Witness MMIO machine: the reset device, no pending WB stores,
+    the device-window profile. -/
+def ordWitM : MmioMaschine :=
+  ⟨witFp, [], geraetAnfang, [], [], witProfil⟩
+
+/-- The MMIO store/complete chain is jointly instantiable on the
+    witness: retire then bus-complete succeeds. -/
+theorem ordWit_kette :
+    ((ucStoreZugriff ordWitM basisHw basisBereit .b64
+      (natAdresse 65536) (BitVec.ofNat 64 42)).bind
+      busFortschritt).isSome = true := by
+  decide
+
+/-- Companion for `deviceCommon_tso_verweigert`: buffers unchanged
+    on the reached witness run, and the RAM rule refuses the
+    device byte. -/
+theorem deviceCommon_tso_verweigert_zeuge :
+    devPufferOut devWitO2 0 = some 0 ∧
+      devPufferOut devWitO2 1 = some 0 ∧
+      issueByte ⟨ioWitSpeicher, fun _ => []⟩ 0 (natAdresse 65536)
+        (natByte 1) = none :=
+  ⟨dev_wit_s2_puffer_leer.1, dev_wit_s2_puffer_leer.2,
+    dev_probe_tso_verweigert⟩
+
+/-- Companion for `deviceCommon_mmio_ordnung`: the witness
+    store/complete chain runs with empty WB pending throughout. -/
+theorem deviceCommon_mmio_ordnung_zeuge :
+    ((ucStoreZugriff ordWitM basisHw basisBereit .b64
+      (natAdresse 65536) (BitVec.ofNat 64 42)).bind
+      busFortschritt).isSome = true ∧
+      ordWitM.pending = [] :=
+  ⟨ordWit_kette, rfl⟩
+
+/- CUTS:
+   Proved here, over the REUSED accepted vocabulary (`Typen`,
+   `Speicher`, `TSO`, `DeviceHardwareForms`, `HardwareExecution`,
+   `Bus704`, 694 `MmioMaschine`, 728 descriptors -- no second
+   decoder, no parallel descriptor model, no second IN/OUT
+   interpreter, no new machine):
+   - generic device-response interface over an arbitrary device
+     type (the accepted `BusAntwort` relation) with the explicit
+     pending gate: outstanding pending responses refuse every
+     step (`devSchritt_pending_leer`, `pending_belegt_verweigert`);
+   - privilege/IOPL/TSS through the 728 layer (card and right
+     from `Steuerstand`, DPL check, shared #GP family);
+   - fetched port/device step on HwMaschine with both selection
+     lifts to reached generic steps;
+   - TSO exclusion (buffers never carry device bytes; the RAM
+     rule refuses the device byte) and MMIO order separation
+     (UC bypass and bus completion both pass the WB buffer by);
+   - joint reached fetched-IN/OUT run (device `0x1234` to 52)
+     into the accepted memory-changing pilot store, beside the
+     three planted refusals.
+   NOT proved here, and not claimed:
+   - No hardware correspondence beyond the cited Intel SDM
+     entries of 676/694/704/728 (provenance, not proofs).
+   - Pending responses enumerated, never answered: no claim
+     about what any concrete device answers.
+   - No per-access target-to-W/GX simulation and no whole-word
+     atomicity beyond the accepted grouping.
+   - No source correspondence, no ABI/image/entry/relocation/
+     budget link, no syscall/interrupt scope.
+-/
+
+#print axioms pending_belegt_verweigert
+#print axioms pending_leer_ok
+#print axioms dev_karte_fehlt_verweigert
+#print axioms dev_dpl_verweigert_software
+#print axioms dev_verweigerung_ist_gp
+#print axioms ordnungOk_zaun
+#print axioms devSchritt_speicher
+#print axioms devSchritt_puffer
+#print axioms devSchritt_spur_waechst
+#print axioms devSchritt_xmm
+#print axioms devSchritt_pending_leer
+#print axioms deviceCommon_aus_fetch
+#print axioms deviceCommon_ein_fetch
+#print axioms deviceCommon_tso_verweigert
+#print axioms deviceCommon_mmio_ordnung
+#print axioms deviceCommon_zeuge_gemeinsam
+#print axioms deviceCommon_schritt_zeuge
+#print axioms deviceCommon_byteschritt_zeuge
+#print axioms deviceCommon_tso_verweigert_zeuge
+#print axioms deviceCommon_mmio_ordnung_zeuge
+
 #print axioms pending_belegt_verweigert
 #print axioms pending_leer_ok
 
