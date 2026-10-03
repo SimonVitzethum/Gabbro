@@ -562,7 +562,7 @@ Last ledger refresh: **2026-10-03 22:30 UTC**. This is an operational snapshot, 
 | 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Incomplete; preserved | [task](lanes/884.md) |
 | 885 | Optimiser rule: zero-idiom selection rule | Agent working | 1035: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/885.md) |
 | 886 | Optimiser rule: LEA selection rule | Merged after review/checks | 1036: Merged after review/checks | [report](messung/muse/MUSE-REPORT-886.md) |
-| 887 | Optimiser rule: shift selection rule | Committed candidate; review/integration pending | 1037: Committed candidate; review/integration pending | [task](lanes/887.md) |
+| 887 | Optimiser rule: shift selection rule | Merged after review/checks | 1037: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-887.md) |
 | 888 | Optimiser rule: multiply selection rule | Committed candidate; review/integration pending | 1038: Committed candidate; review/integration pending | [task](lanes/888.md) |
 | 889 | Optimiser rule: division guard rule | Committed candidate; review/integration pending | 1039: Committed candidate; review/integration pending | [task](lanes/889.md) |
 | 890 | Optimiser rule: SETcc selection rule | Committed candidate; review/integration pending | 1040: Committed candidate; review/integration pending | [task](lanes/890.md) |
@@ -595,7 +595,7 @@ Last ledger refresh: **2026-10-03 22:30 UTC**. This is an operational snapshot, 
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Committed candidate; review/integration pending | [task](lanes/1100.md) |
-| 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: Agent working | [task](lanes/1102.md) |
+| 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: Committed candidate; review/integration pending | [task](lanes/1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Committed candidate; review/integration pending | 1105: Agent working | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Committed candidate; review/integration pending | 1109: Agent working | [task](lanes/1108.md) |
@@ -1314,6 +1314,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **886**, Optimiser rule: LEA selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-886.md). <!-- x86-merged:886 -->
 - 2026-10-03: integration of candidate(s) [885] failed the local proof/build gate after independent review 1035; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1035 -->
 - 2026-10-03: lane **1036**, Independent exact review of 886, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1036.md). <!-- x86-merged:1036 -->
+- 2026-10-03: lane **887**, Optimiser rule: shift selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-887.md). <!-- x86-merged:887 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
