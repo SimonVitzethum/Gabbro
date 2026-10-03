@@ -454,7 +454,7 @@ Last ledger refresh: **2026-10-03 13:17 UTC**. This is an operational snapshot, 
 | 776 | Hardware completion: LOCK CMPXCHG success path | Merged after review/checks | 926: Merged after review/checks | [report](messung/muse/MUSE-REPORT-776.md) |
 | 777 | Hardware completion: LOCK CMPXCHG failure stutter | Incomplete; preserved | 927: scheduled | [task](lanes/777.md) |
 | 778 | Hardware completion: LOCK XADD fetch-add | Merged after review/checks | 928: Merged after review/checks | [report](messung/muse/MUSE-REPORT-778.md) |
-| 779 | Hardware completion: XCHG ordering need | Merged after review/checks | 929: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-779.md) |
+| 779 | Hardware completion: XCHG ordering need | Merged after review/checks | 929: Merged after review/checks | [report](messung/muse/MUSE-REPORT-779.md) |
 | 780 | Hardware completion: MFENCE drain-own semantics | Committed candidate; review/integration pending | 930: Committed candidate; review/integration pending | [task](lanes/780.md) |
 | 781 | Hardware completion: SFENCE store narrowness | Committed candidate; review/integration pending | 931: Committed candidate; review/integration pending | [task](lanes/781.md) |
 | 782 | Hardware completion: LFENCE load narrowness | Committed candidate; review/integration pending | 932: Committed candidate; review/integration pending | [task](lanes/782.md) |
@@ -1161,6 +1161,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **778**, Hardware completion: LOCK XADD fetch-add, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-778.md). <!-- x86-merged:778 -->
 - 2026-10-03: lane **928**, Independent exact review of 778, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-928.md). <!-- x86-merged:928 -->
 - 2026-10-03: lane **779**, Hardware completion: XCHG ordering need, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-779.md). <!-- x86-merged:779 -->
+- 2026-10-03: lane **929**, Independent exact review of 779, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-929.md). <!-- x86-merged:929 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
