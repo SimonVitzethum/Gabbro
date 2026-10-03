@@ -1,6 +1,6 @@
 # MUSE-REPORT-1035: Exact review of author 885 (zero-idiom selection rule)
 
-CANDIDATE: 885 2ca9b0f5a4501bc4ae6a1b774358379ddded6983
+CANDIDATE: 885 a224a31aa21d6efb3222a992e027da917de20abd
 VERDICT: ACCEPT
 
 ## 1. What was reviewed
@@ -18,6 +18,19 @@ in the review snapshot). The candidate adds exactly two content items:
 Plus `MUSE-REPORT-885.md` (report only). No source, checker, Spec, goal,
 emitter, guardian, number-register or friend-reserved
 (`OptimizationRules.lean`, `OptimizationWitnesses.lean`) file is touched.
+
+Re-review of the NEW snapshot (head `a224a31a...`, superseding `2ca9b0f5...`):
+the only change is the integration-collision rename documented in the
+author's "Integration repair" section — `ZeroSelNachweis` →
+`NullSelNachweis`, `nachweisOk` → `nullNachweisOk` (hence
+`nullNachweisOk_tot`, `nullNachweisOk_waehlt`), plus the report section
+and the CUTS/`#print axioms` name updates. I re-read the renamed §4
+(statements and proof scripts identical), grepped the whole new file for
+stale names (12 hits, all new names, zero stale), and confirmed the new
+names collide with nothing in this base (no `OptUnrollBound`, no
+`NullSelNachweis`/`nullNachweisOk` anywhere under `grammatik/`). Every
+finding of the previous review was re-inspected against the new files;
+all stand unchanged.
 
 Claim: DESIGN §7 "Flags-aware peepholes" row — select `XOR r, r` (3 bytes,
 flags clobbered) only with a validator-decided flag-liveness proof at the
@@ -157,19 +170,24 @@ development, final state):
 My static verification (every cited lemma present with matching statement,
 proofs following accepted patterns, flag/byte semantics matching the
 SDM-stated rows) corroborates green plausibility but does NOT replace the
-merge gate's rebuild.
+merge gate's rebuild. Post-repair author evidence (new final
+`BUILD-EVIDENCE.json` entries): `./lean-probe` 0 errors with the renamed
+`nullNachweisOk_tot`/`nullNachweisOk_waehlt` axiom prints, `./lean-bau`
+exit 0 (511 jobs) with the same renamed prints, repair commit `a224a31a`
+staging exactly the two owned files.
 
 ## 7. Bounds and what remains open (acceptance conditions)
 
 1. Bounded acceptance: the merge gate MUST rebuild `grammatik/` green and
    confirm `#print axioms` within the standard triple before integration;
    neither my review nor the author's transcript replaces that check.
-2. The pinned head is `2ca9b0f5a4501bc4ae6a1b774358379ddded6983`
+2. The pinned head is `a224a31aa21d6efb3222a992e027da917de20abd`
    (`.tmp/review/SNAPSHOT.json`: author 885, base `b040b155...` matching this
    lane's HEAD, files exactly `MUSE-REPORT-885.md`,
    `grammatik/Grammatik.lean`,
    `grammatik/Grammatik/X86/OptZeroIdiomSel.lean`, clean tree). Content
    identity was verified here by exact file equality instead of hash trust.
+   (Previous snapshot `2ca9b0f5...` is superseded; it is not approved.)
 3. Per CUTS (accepted as precise, no fake closure): no silicon
    correspondence; no liveness-analysis implementation (demand is cited site
    data); no source refinement or TSO/GX bridge; no cost/time claim beyond
