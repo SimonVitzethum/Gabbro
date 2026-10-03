@@ -1,12 +1,15 @@
 # MUSE-REPORT-1024: Exact review of author 874 (bounded unroll rule)
 
-## CANDIDATE
+## Candidate
 
 CANDIDATE: 874 50be21340ec701c0e9615454af0524397bd89635
 
-## VERDICT
+## Verdict
 
-VERDICT: ACCEPT (bounded: token-level rule lemma; see scope bounds below)
+VERDICT: ACCEPT
+
+Scope of this acceptance: bounded token-level rule lemma; see scope
+bounds below. The substantive verdict is unchanged.
 
 ## What was done
 
