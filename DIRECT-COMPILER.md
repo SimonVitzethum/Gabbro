@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 12:09 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 13:09 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -421,63 +421,63 @@ Last ledger refresh: **2026-10-03 12:09 UTC**. This is an operational snapshot, 
 | 740 | Repair upstream compiler Lean aggregation and scope | Committed candidate; review/integration pending | 741: Incomplete; preserved | [task](lanes/740.md) |
 | 742 | Repair upstream compiler Rust panics and mirror fidelity | Committed candidate; review/integration pending | 743: Unresolved after agent rounds; not accepted | [task](lanes/742.md) |
 | 744 | Organise complete direct Lean compiler optimiser validation and performance closure | Committed candidate; review/integration pending | 745: Incomplete; preserved | [task](lanes/744.md) |
-| 746 | Hardware completion: compact zero-extending MOV reg, imm32 | Agent working | 896: scheduled | [task](lanes/746.md) |
-| 747 | Hardware completion: compact sign-extended MOV reg, imm32 | Agent working | 897: scheduled | [task](lanes/747.md) |
-| 748 | Hardware completion: compact ADD with imm8 | Agent working | 898: scheduled | [task](lanes/748.md) |
-| 749 | Hardware completion: compact SUB with imm8 | Agent working | 899: scheduled | [task](lanes/749.md) |
-| 750 | Hardware completion: compact CMP with imm8 | Agent working | 900: scheduled | [task](lanes/750.md) |
-| 751 | Hardware completion: compact AND/OR/XOR with imm8 | Agent working | 901: scheduled | [task](lanes/751.md) |
-| 752 | Hardware completion: compact ADD/SUB/CMP with imm32 | Agent working | 902: scheduled | [task](lanes/752.md) |
-| 753 | Hardware completion: accumulator short ALU forms | Agent working | 903: scheduled | [task](lanes/753.md) |
-| 754 | Hardware completion: zero idiom XOR reg, reg | Agent working | 904: scheduled | [task](lanes/754.md) |
+| 746 | Hardware completion: compact zero-extending MOV reg, imm32 | Merged after review/checks | 896: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-746.md) |
+| 747 | Hardware completion: compact sign-extended MOV reg, imm32 | Incomplete; preserved | 897: scheduled | [task](lanes/747.md) |
+| 748 | Hardware completion: compact ADD with imm8 | Committed candidate; review/integration pending | 898: Committed candidate; review/integration pending | [task](lanes/748.md) |
+| 749 | Hardware completion: compact SUB with imm8 | Committed candidate; review/integration pending | 899: Committed candidate; review/integration pending | [task](lanes/749.md) |
+| 750 | Hardware completion: compact CMP with imm8 | Incomplete; preserved | 900: scheduled | [task](lanes/750.md) |
+| 751 | Hardware completion: compact AND/OR/XOR with imm8 | Committed candidate; review/integration pending | 901: Committed candidate; review/integration pending | [task](lanes/751.md) |
+| 752 | Hardware completion: compact ADD/SUB/CMP with imm32 | Committed candidate; review/integration pending | 902: Committed candidate; review/integration pending | [task](lanes/752.md) |
+| 753 | Hardware completion: accumulator short ALU forms | Committed candidate; review/integration pending | 903: Committed candidate; review/integration pending | [task](lanes/753.md) |
+| 754 | Hardware completion: zero idiom XOR reg, reg | Committed candidate; review/integration pending | 904: Committed candidate; review/integration pending | [task](lanes/754.md) |
 | 755 | Hardware completion: pure LEA address arithmetic | Merged after review/checks | 905: Merged after review/checks | [report](messung/muse/MUSE-REPORT-755.md) |
-| 756 | Hardware completion: compact TEST with imm | Agent working | 906: scheduled | [task](lanes/756.md) |
-| 757 | Hardware completion: compact NOT/NEG forms | Agent working | 907: scheduled | [task](lanes/757.md) |
+| 756 | Hardware completion: compact TEST with imm | Incomplete; preserved | 906: scheduled | [task](lanes/756.md) |
+| 757 | Hardware completion: compact NOT/NEG forms | Committed candidate; review/integration pending | 907: Committed candidate; review/integration pending | [task](lanes/757.md) |
 | 758 | Hardware completion: disp0 memory form | Merged after review/checks | 908: Merged after review/checks | [report](messung/muse/MUSE-REPORT-758.md) |
-| 759 | Hardware completion: disp8 memory form | Agent working | 909: scheduled | [task](lanes/759.md) |
-| 760 | Hardware completion: base+index*scale+disp form | Agent working | 910: scheduled | [task](lanes/760.md) |
-| 761 | Hardware completion: no-index rsp rule | Scheduled | 911: scheduled | [task](lanes/761.md) |
-| 762 | Hardware completion: RIP-relative image data | Scheduled | 912: scheduled | [task](lanes/762.md) |
-| 763 | Hardware completion: RIP-relative jump tables | Scheduled | 913: scheduled | [task](lanes/763.md) |
-| 764 | Hardware completion: canonical address per length | Scheduled | 914: scheduled | [task](lanes/764.md) |
-| 765 | Hardware completion: private stack slot addressing | Scheduled | 915: scheduled | [task](lanes/765.md) |
-| 766 | Hardware completion: SETcc byte forms | Scheduled | 916: scheduled | [task](lanes/766.md) |
-| 767 | Hardware completion: register-only CMOVcc | Scheduled | 917: scheduled | [task](lanes/767.md) |
-| 768 | Hardware completion: memory-source CMOV fault rule | Scheduled | 918: scheduled | [task](lanes/768.md) |
-| 769 | Hardware completion: jump-table certificates | Scheduled | 919: scheduled | [task](lanes/769.md) |
-| 770 | Hardware completion: indirect CALL provenance | Scheduled | 920: scheduled | [task](lanes/770.md) |
-| 771 | Hardware completion: 16-byte call alignment | Scheduled | 921: scheduled | [task](lanes/771.md) |
-| 772 | Hardware completion: rel8 reachability | Scheduled | 922: scheduled | [task](lanes/772.md) |
-| 773 | Hardware completion: layout stability under narrowing | Scheduled | 923: scheduled | [task](lanes/773.md) |
-| 774 | Hardware completion: far-transfer refusal | Scheduled | 924: scheduled | [task](lanes/774.md) |
-| 775 | Hardware completion: privileged-form refusal | Scheduled | 925: scheduled | [task](lanes/775.md) |
-| 776 | Hardware completion: LOCK CMPXCHG success path | Scheduled | 926: scheduled | [task](lanes/776.md) |
-| 777 | Hardware completion: LOCK CMPXCHG failure stutter | Scheduled | 927: scheduled | [task](lanes/777.md) |
-| 778 | Hardware completion: LOCK XADD fetch-add | Scheduled | 928: scheduled | [task](lanes/778.md) |
-| 779 | Hardware completion: XCHG ordering need | Scheduled | 929: scheduled | [task](lanes/779.md) |
-| 780 | Hardware completion: MFENCE drain-own semantics | Scheduled | 930: scheduled | [task](lanes/780.md) |
-| 781 | Hardware completion: SFENCE store narrowness | Scheduled | 931: scheduled | [task](lanes/781.md) |
-| 782 | Hardware completion: LFENCE load narrowness | Scheduled | 932: scheduled | [task](lanes/782.md) |
-| 783 | Hardware completion: seq_cst lowering bracket | Scheduled | 933: scheduled | [task](lanes/783.md) |
-| 784 | Hardware completion: CAS retry attempt bound | Scheduled | 934: scheduled | [task](lanes/784.md) |
-| 785 | Hardware completion: CAS divergence record | Scheduled | 935: scheduled | [task](lanes/785.md) |
-| 786 | Hardware completion: youngest-own-store forwarding | Scheduled | 936: scheduled | [task](lanes/786.md) |
-| 787 | Hardware completion: tearing refusal table | Scheduled | 937: scheduled | [task](lanes/787.md) |
-| 788 | Hardware completion: CVTSI2SD from 32-bit int | Scheduled | 938: scheduled | [task](lanes/788.md) |
-| 789 | Hardware completion: CVTSI2SD from 64-bit int | Scheduled | 939: scheduled | [task](lanes/789.md) |
-| 790 | Hardware completion: UCOMISD unordered rows | Scheduled | 940: scheduled | [task](lanes/790.md) |
-| 791 | Hardware completion: float narrow range check | Scheduled | 941: scheduled | [task](lanes/791.md) |
-| 792 | Hardware completion: float finite bit test | Scheduled | 942: scheduled | [task](lanes/792.md) |
-| 793 | Hardware completion: CVTTSD2SI saturation wrapper | Scheduled | 943: scheduled | [task](lanes/793.md) |
-| 794 | Hardware completion: f32 single-rounding refusal | Scheduled | 944: scheduled | [task](lanes/794.md) |
-| 795 | Hardware completion: RNE control establishment | Scheduled | 945: scheduled | [task](lanes/795.md) |
-| 796 | Hardware completion: no-contraction gate | Scheduled | 946: scheduled | [task](lanes/796.md) |
-| 797 | Hardware completion: FTZ DAZ zero with masks | Scheduled | 947: scheduled | [task](lanes/797.md) |
-| 798 | Hardware completion: NaN payload class relaxation | Scheduled | 948: scheduled | [task](lanes/798.md) |
-| 799 | Hardware completion: MOVSD memory order | Scheduled | 949: scheduled | [task](lanes/799.md) |
-| 800 | Hardware completion: faults of compact immediates | Scheduled | 950: scheduled | [task](lanes/800.md) |
-| 801 | Hardware completion: faults of disp forms | Scheduled | 951: scheduled | [task](lanes/801.md) |
-| 802 | Hardware completion: faults of SIB addressing | Scheduled | 952: scheduled | [task](lanes/802.md) |
+| 759 | Hardware completion: disp8 memory form | Committed candidate; review/integration pending | 909: Committed candidate; review/integration pending | [task](lanes/759.md) |
+| 760 | Hardware completion: base+index*scale+disp form | Committed candidate; review/integration pending | 910: Committed candidate; review/integration pending | [task](lanes/760.md) |
+| 761 | Hardware completion: no-index rsp rule | Committed candidate; review/integration pending | 911: Committed candidate; review/integration pending | [task](lanes/761.md) |
+| 762 | Hardware completion: RIP-relative image data | Committed candidate; review/integration pending | 912: Committed candidate; review/integration pending | [task](lanes/762.md) |
+| 763 | Hardware completion: RIP-relative jump tables | Committed candidate; review/integration pending | 913: Committed candidate; review/integration pending | [task](lanes/763.md) |
+| 764 | Hardware completion: canonical address per length | Committed candidate; review/integration pending | 914: Committed candidate; review/integration pending | [task](lanes/764.md) |
+| 765 | Hardware completion: private stack slot addressing | Committed candidate; review/integration pending | 915: Committed candidate; review/integration pending | [task](lanes/765.md) |
+| 766 | Hardware completion: SETcc byte forms | Committed candidate; review/integration pending | 916: Committed candidate; review/integration pending | [task](lanes/766.md) |
+| 767 | Hardware completion: register-only CMOVcc | Committed candidate; review/integration pending | 917: Committed candidate; review/integration pending | [task](lanes/767.md) |
+| 768 | Hardware completion: memory-source CMOV fault rule | Committed candidate; review/integration pending | 918: Committed candidate; review/integration pending | [task](lanes/768.md) |
+| 769 | Hardware completion: jump-table certificates | Committed candidate; review/integration pending | 919: Committed candidate; review/integration pending | [task](lanes/769.md) |
+| 770 | Hardware completion: indirect CALL provenance | Committed candidate; review/integration pending | 920: Committed candidate; review/integration pending | [task](lanes/770.md) |
+| 771 | Hardware completion: 16-byte call alignment | Committed candidate; review/integration pending | 921: Committed candidate; review/integration pending | [task](lanes/771.md) |
+| 772 | Hardware completion: rel8 reachability | Committed candidate; review/integration pending | 922: Committed candidate; review/integration pending | [task](lanes/772.md) |
+| 773 | Hardware completion: layout stability under narrowing | Committed candidate; review/integration pending | 923: Incomplete; preserved | [task](lanes/773.md) |
+| 774 | Hardware completion: far-transfer refusal | Committed candidate; review/integration pending | 924: Incomplete; preserved | [task](lanes/774.md) |
+| 775 | Hardware completion: privileged-form refusal | Incomplete; preserved | 925: scheduled | [task](lanes/775.md) |
+| 776 | Hardware completion: LOCK CMPXCHG success path | Committed candidate; review/integration pending | 926: Committed candidate; review/integration pending | [task](lanes/776.md) |
+| 777 | Hardware completion: LOCK CMPXCHG failure stutter | Incomplete; preserved | 927: scheduled | [task](lanes/777.md) |
+| 778 | Hardware completion: LOCK XADD fetch-add | Committed candidate; review/integration pending | 928: Committed candidate; review/integration pending | [task](lanes/778.md) |
+| 779 | Hardware completion: XCHG ordering need | Committed candidate; review/integration pending | 929: Committed candidate; review/integration pending | [task](lanes/779.md) |
+| 780 | Hardware completion: MFENCE drain-own semantics | Committed candidate; review/integration pending | 930: Committed candidate; review/integration pending | [task](lanes/780.md) |
+| 781 | Hardware completion: SFENCE store narrowness | Committed candidate; review/integration pending | 931: Committed candidate; review/integration pending | [task](lanes/781.md) |
+| 782 | Hardware completion: LFENCE load narrowness | Committed candidate; review/integration pending | 932: Committed candidate; review/integration pending | [task](lanes/782.md) |
+| 783 | Hardware completion: seq_cst lowering bracket | Committed candidate; review/integration pending | 933: scheduled | [task](lanes/783.md) |
+| 784 | Hardware completion: CAS retry attempt bound | Committed candidate; review/integration pending | 934: Committed candidate; review/integration pending | [task](lanes/784.md) |
+| 785 | Hardware completion: CAS divergence record | Committed candidate; review/integration pending | 935: Committed candidate; review/integration pending | [task](lanes/785.md) |
+| 786 | Hardware completion: youngest-own-store forwarding | Incomplete; preserved | 936: scheduled | [task](lanes/786.md) |
+| 787 | Hardware completion: tearing refusal table | Incomplete; preserved | 937: scheduled | [task](lanes/787.md) |
+| 788 | Hardware completion: CVTSI2SD from 32-bit int | Agent working | 938: scheduled | [task](lanes/788.md) |
+| 789 | Hardware completion: CVTSI2SD from 64-bit int | Committed candidate; review/integration pending | 939: Committed candidate; review/integration pending | [task](lanes/789.md) |
+| 790 | Hardware completion: UCOMISD unordered rows | Incomplete; preserved | 940: scheduled | [task](lanes/790.md) |
+| 791 | Hardware completion: float narrow range check | Agent working | 941: scheduled | [task](lanes/791.md) |
+| 792 | Hardware completion: float finite bit test | Agent working | 942: scheduled | [task](lanes/792.md) |
+| 793 | Hardware completion: CVTTSD2SI saturation wrapper | Committed candidate; review/integration pending | 943: scheduled | [task](lanes/793.md) |
+| 794 | Hardware completion: f32 single-rounding refusal | Committed candidate; review/integration pending | 944: scheduled | [task](lanes/794.md) |
+| 795 | Hardware completion: RNE control establishment | Committed candidate; review/integration pending | 945: scheduled | [task](lanes/795.md) |
+| 796 | Hardware completion: no-contraction gate | Committed candidate; review/integration pending | 946: scheduled | [task](lanes/796.md) |
+| 797 | Hardware completion: FTZ DAZ zero with masks | Agent working | 947: scheduled | [task](lanes/797.md) |
+| 798 | Hardware completion: NaN payload class relaxation | Agent working | 948: scheduled | [task](lanes/798.md) |
+| 799 | Hardware completion: MOVSD memory order | Agent working | 949: scheduled | [task](lanes/799.md) |
+| 800 | Hardware completion: faults of compact immediates | Committed candidate; review/integration pending | 950: scheduled | [task](lanes/800.md) |
+| 801 | Hardware completion: faults of disp forms | Agent working | 951: scheduled | [task](lanes/801.md) |
+| 802 | Hardware completion: faults of SIB addressing | Agent working | 952: scheduled | [task](lanes/802.md) |
 | 803 | Hardware completion: faults of RIP-relative data | Scheduled | 953: scheduled | [task](lanes/803.md) |
 | 804 | Hardware completion: faults of short branches | Scheduled | 954: scheduled | [task](lanes/804.md) |
 | 805 | Hardware completion: faults of SETcc memory dest | Scheduled | 955: scheduled | [task](lanes/805.md) |
@@ -535,7 +535,7 @@ Last ledger refresh: **2026-10-03 12:09 UTC**. This is an operational snapshot, 
 | 857 | Composition closing: permission-check closing | Scheduled | 1007: scheduled | [task](lanes/857.md) |
 | 858 | Composition closing: entry-duties closing | Scheduled | 1008: scheduled | [task](lanes/858.md) |
 | 859 | Composition closing: region-ceiling closing | Scheduled | 1009: scheduled | [task](lanes/859.md) |
-| 860 | Optimiser rule: constant folding rule | Agent working | 1010: scheduled | [task](lanes/860.md) |
+| 860 | Optimiser rule: constant folding rule | Committed candidate; review/integration pending | 1010: Committed candidate; review/integration pending | [task](lanes/860.md) |
 | 861 | Optimiser rule: copy propagation rule | Scheduled | 1011: scheduled | [task](lanes/861.md) |
 | 862 | Optimiser rule: CFG simplification rule | Scheduled | 1012: scheduled | [task](lanes/862.md) |
 | 863 | Optimiser rule: pure CSE rule | Scheduled | 1013: scheduled | [task](lanes/863.md) |
@@ -1124,6 +1124,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **755**, Hardware completion: pure LEA address arithmetic, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-755.md). <!-- x86-merged:755 -->
 - 2026-10-03: checked master `cbe5946f` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:cbe5946fc190e2a0b744776545001edda282370a -->
 - 2026-10-03: lane **905**, Independent exact review of 755, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-905.md). <!-- x86-merged:905 -->
+- 2026-10-03: lane **746**, Hardware completion: compact zero-extending MOV reg, imm32, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-746.md). <!-- x86-merged:746 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
