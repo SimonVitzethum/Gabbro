@@ -546,7 +546,7 @@ Last ledger refresh: **2026-10-03 22:27 UTC**. This is an operational snapshot, 
 | 868 | Optimiser rule: bound-check elimination rule | Merged after review/checks | 1018: Merged after review/checks | [report](messung/muse/MUSE-REPORT-868.md) |
 | 869 | Optimiser rule: overflow-check elimination rule | Merged after review/checks | 1019: Merged after review/checks | [report](messung/muse/MUSE-REPORT-869.md) |
 | 870 | Optimiser rule: alias commutation rule | Merged after review/checks | 1020: Merged after review/checks | [report](messung/muse/MUSE-REPORT-870.md) |
-| 871 | Optimiser rule: strength reduction rule | Merged after review/checks | 1021: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-871.md) |
+| 871 | Optimiser rule: strength reduction rule | Merged after review/checks | 1021: Merged after review/checks | [report](messung/muse/MUSE-REPORT-871.md) |
 | 872 | Optimiser rule: LICM rule | Committed candidate; review/integration pending | 1022: Committed candidate; review/integration pending | [task](lanes/872.md) |
 | 873 | Optimiser rule: inlining rule | Committed candidate; review/integration pending | 1023: Committed candidate; review/integration pending | [task](lanes/873.md) |
 | 874 | Optimiser rule: bounded unroll rule | Committed candidate; review/integration pending | 1024: Committed candidate; review/integration pending | [task](lanes/874.md) |
@@ -1288,6 +1288,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **870**, Optimiser rule: alias commutation rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-870.md). <!-- x86-merged:870 -->
 - 2026-10-03: lane **1020**, Independent exact review of 870, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1020.md). <!-- x86-merged:1020 -->
 - 2026-10-03: lane **871**, Optimiser rule: strength reduction rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-871.md). <!-- x86-merged:871 -->
+- 2026-10-03: lane **1021**, Independent exact review of 871, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1021.md). <!-- x86-merged:1021 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
