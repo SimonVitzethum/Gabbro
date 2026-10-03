@@ -516,3 +516,4 @@ import Grammatik.X86.ComposeEntryMap
 import Grammatik.X86.ComposeStackAbi
 import Grammatik.X86.ComposeSpillPrivacy
 import Grammatik.X86.ComposeContractCall
+import Grammatik.X86.ComposeContractReturn

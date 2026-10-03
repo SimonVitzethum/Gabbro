@@ -507,7 +507,7 @@ Last ledger refresh: **2026-10-03 22:20 UTC**. This is an operational snapshot, 
 | 829 | Composition closing: call-lowering closing | Committed candidate; review/integration pending | 979: Incomplete; preserved | [task](lanes/829.md) |
 | 830 | Composition closing: spill-privacy closing | Merged after review/checks | 980: Merged after review/checks | [report](messung/muse/MUSE-REPORT-830.md) |
 | 831 | Composition closing: contract-at-call closing | Merged after review/checks | 981: Merged after review/checks | [report](messung/muse/MUSE-REPORT-831.md) |
-| 832 | Composition closing: contract-at-return closing | Committed candidate; review/integration pending | 982: Committed candidate; review/integration pending | [task](lanes/832.md) |
+| 832 | Composition closing: contract-at-return closing | Merged after review/checks | 982: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-832.md) |
 | 833 | Composition closing: call-log ghost closing | Committed candidate; review/integration pending | 983: Committed candidate; review/integration pending | [task](lanes/833.md) |
 | 834 | Composition closing: budget-resumption closing | Committed candidate; review/integration pending | 984: Committed candidate; review/integration pending | [task](lanes/834.md) |
 | 835 | Composition closing: work-transfer closing | Committed candidate; review/integration pending | 985: Committed candidate; review/integration pending | [task](lanes/835.md) |
@@ -1213,6 +1213,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **980**, Independent exact review of 830, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-980.md). <!-- x86-merged:980 -->
 - 2026-10-03: lane **831**, Composition closing: contract-at-call closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-831.md). <!-- x86-merged:831 -->
 - 2026-10-03: lane **981**, Independent exact review of 831, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-981.md). <!-- x86-merged:981 -->
+- 2026-10-03: lane **832**, Composition closing: contract-at-return closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-832.md). <!-- x86-merged:832 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
