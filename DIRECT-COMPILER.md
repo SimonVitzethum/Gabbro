@@ -549,7 +549,7 @@ Last ledger refresh: **2026-10-03 22:28 UTC**. This is an operational snapshot, 
 | 871 | Optimiser rule: strength reduction rule | Merged after review/checks | 1021: Merged after review/checks | [report](messung/muse/MUSE-REPORT-871.md) |
 | 872 | Optimiser rule: LICM rule | Merged after review/checks | 1022: Merged after review/checks | [report](messung/muse/MUSE-REPORT-872.md) |
 | 873 | Optimiser rule: inlining rule | Merged after review/checks | 1023: Merged after review/checks | [report](messung/muse/MUSE-REPORT-873.md) |
-| 874 | Optimiser rule: bounded unroll rule | Merged after review/checks | 1024: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-874.md) |
+| 874 | Optimiser rule: bounded unroll rule | Merged after review/checks | 1024: Merged after review/checks | [report](messung/muse/MUSE-REPORT-874.md) |
 | 875 | Optimiser rule: vectorisation gate rule | Committed candidate; review/integration pending | 1025: Committed candidate; review/integration pending | [task](lanes/875.md) |
 | 876 | Optimiser rule: flags peephole rule | Committed candidate; review/integration pending | 1026: Committed candidate; review/integration pending | [task](lanes/876.md) |
 | 877 | Optimiser rule: displacement peephole rule | Committed candidate; review/integration pending | 1027: Committed candidate; review/integration pending | [task](lanes/877.md) |
@@ -1294,6 +1294,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **873**, Optimiser rule: inlining rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-873.md). <!-- x86-merged:873 -->
 - 2026-10-03: lane **1023**, Independent exact review of 873, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1023.md). <!-- x86-merged:1023 -->
 - 2026-10-03: lane **874**, Optimiser rule: bounded unroll rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-874.md). <!-- x86-merged:874 -->
+- 2026-10-03: lane **1024**, Independent exact review of 874, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1024.md). <!-- x86-merged:1024 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
