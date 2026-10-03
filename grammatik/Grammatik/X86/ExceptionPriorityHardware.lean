@@ -1074,4 +1074,84 @@ theorem wahl_divFalle :
   · simp [zugriffKandidat, schreibKandidat, divZ]
   · rfl
 
+/-- The byte step halts on the fetched divide trap. -/
+theorem halt_divFalle :
+    extByteschritt divFalleStart extWitBereit = .halt := by
+  have hf : fetchExt divFalleStart (geholt divFalleStart.kern) =
+      some (.muldiv ⟨.divRax .rcx, 3⟩, []) := by
+    have hdec : decodeExt (geholt divFalleStart.kern) =
+        some (.muldiv ⟨.divRax .rcx, 3⟩, []) := by
+      rw [geholt_divFalle]
+      exact decode_divFalle
+    simp [fetchExt, hdec, zugelassen_divFalle]
+  have hs : stepExt (.muldiv ⟨.divRax .rcx, 3⟩) divFalleStart extWitBereit =
+      .halt :=
+    stepExt_muldiv_halt _ _ _ falle_divFalle
+  exact extByteschritt_weiter _ _ _ _ _ hf hs
+
+/-- The halt verdict binds the trap, and the halt comes from divide. -/
+theorem urteil_divFalle :
+    bindeUrteil (extByteschritt divFalleStart extWitBereit)
+        (ersteWahl
+          (kandidatenReihe divFalleStart divZ pgDunkel stStumpf illLeer
+            true)) = .fehler ⟨.teilung, .de⟩ := by
+  rw [halt_divFalle]
+  exact urteil_halt_ist_teilung _
+
+/-! ## Conflict probes: several pending faults, one exact cause.
+
+  Each probe fires candidates at several stages at once and proves the
+  single chosen cause from the priority theorems -- never by picking a
+  desired outcome. -/
+
+/-- CONFLICT 1 (fetch beats divide and access): a noncanonical RIP wins
+    over a pending divide trap and a dark data access. -/
+def konfliktAbrufStart : FpZustand :=
+  { extWitStart with kern :=
+    { extWitKern with rip := BitVec.ofNat 64 (2 ^ 47) } }
+
+/-- The fetch #GP candidate fires on the noncanonical RIP. -/
+theorem kandidat_konflikt_abruf :
+    abrufKandidat konfliktAbrufStart = some ⟨.abruf, .gp⟩ := by
+  apply abruf_nichtkanonisch_rip
+  show istKanonisch (BitVec.ofNat 64 (2 ^ 47)) = false
+  exact nichtkanonisch_bit47
+
+/-- CHOICE: fetch #GP beats the pending divide trap. -/
+theorem wahl_konflikt_abruf :
+    ersteWahl
+        (kandidatenReihe konfliktAbrufStart dunkelKonfliktZ pgDunkel
+          stStumpf illLeer true) = some ⟨.abruf, .gp⟩ :=
+  abruf_schlaegt_alles _ _ _ _ _ _ _ kandidat_konflikt_abruf
+
+/-- CONFLICT 2 (address beats access): a noncanonical read wins over a
+    refused dark read, with divide pending behind both. -/
+theorem hadr_konflikt_adresse :
+    adressKandidat dunkelKonfliktZ = some ⟨.adresse, .gp⟩ := by
+  have h := adress_lese_nichtkanonisch dunkelKonfliktZ
+    (BitVec.ofNat 64 (2 ^ 47)) rfl nichtkanonisch_bit47
+  simpa [dunkelKonfliktZ] using h
+
+/-- The dark read would refuse as #PF -- but address fires first. -/
+theorem zugriff_konflikt_haette_auch :
+    zugriffKandidat divFalleStart dunkelKonfliktZ pgDunkel =
+      some ⟨.zugriff, .pf⟩ := by
+  have hread : read64 divFalleStart.kern.speicher
+      (BitVec.ofNat 64 (2 ^ 47)) = none := by
+    decide
+  have h := zugriff_lese_verweigert divFalleStart dunkelKonfliktZ pgDunkel
+    (BitVec.ofNat 64 (2 ^ 47)) rfl hread
+  have hklasse : seitenKlasse pgDunkel (BitVec.ofNat 64 (2 ^ 47)) = .pf :=
+    seitenKlasse_nicht_vorhanden _ _ rfl
+  rw [hklasse] at h
+  exact h
+
+/-- CHOICE: address #GP beats access and divide. -/
+theorem wahl_konflikt_adresse :
+    ersteWahl
+        (kandidatenReihe divFalleStart dunkelKonfliktZ pgDunkel stStumpf
+          illLeer true) = some ⟨.adresse, .gp⟩ := by
+  apply adresse_schlaegt_spaete _ _ _ _ _ _ _ abruf_divFalle_keiner
+    (dekodiere_divFalle_keiner _) hadr_konflikt_adresse
+
 end Gabbro.Grammatik.X86
