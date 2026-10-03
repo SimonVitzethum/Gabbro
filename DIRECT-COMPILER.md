@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 13:18 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 13:24 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -476,7 +476,7 @@ Last ledger refresh: **2026-10-03 13:18 UTC**. This is an operational snapshot, 
 | 798 | Hardware completion: NaN payload class relaxation | Committed candidate; review/integration pending | 948: scheduled | [task](lanes/798.md) |
 | 799 | Hardware completion: MOVSD memory order | Committed candidate; review/integration pending | 949: scheduled | [task](lanes/799.md) |
 | 800 | Hardware completion: faults of compact immediates | Committed candidate; review/integration pending | 950: scheduled | [task](lanes/800.md) |
-| 801 | Hardware completion: faults of disp forms | Agent working | 951: scheduled | [task](lanes/801.md) |
+| 801 | Hardware completion: faults of disp forms | Committed candidate; review/integration pending | 951: scheduled | [task](lanes/801.md) |
 | 802 | Hardware completion: faults of SIB addressing | Committed candidate; review/integration pending | 952: scheduled | [task](lanes/802.md) |
 | 803 | Hardware completion: faults of RIP-relative data | Scheduled | 953: scheduled | [task](lanes/803.md) |
 | 804 | Hardware completion: faults of short branches | Scheduled | 954: scheduled | [task](lanes/804.md) |
@@ -1176,6 +1176,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **939**, Independent exact review of 789, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-939.md). <!-- x86-merged:939 -->
 - 2026-10-03: lane **860**, Optimiser rule: constant folding rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-860.md). <!-- x86-merged:860 -->
 - 2026-10-03: lane **1010**, Independent exact review of 860, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1010.md). <!-- x86-merged:1010 -->
+- 2026-10-03: publication batch checks passed for `cc704538`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
