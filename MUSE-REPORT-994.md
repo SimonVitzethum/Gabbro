@@ -1,7 +1,11 @@
 # MUSE-REPORT-994: Exact review of author 844 (profile-selection closing)
 
 CANDIDATE: 844 929e23b253cf1478015effba88bc988d832e109c
-VERDICT: ACCEPT (bounded; scope is the zeroing form family only, per the file's own CUTS)
+VERDICT: ACCEPT
+
+Scope of this acceptance: bounded. The accepted composition covers the
+zeroing form family only; valX86, source lowering, budget, hardware and
+cost claims remain open per the file's own CUTS.
 
 ## What was reviewed
 
