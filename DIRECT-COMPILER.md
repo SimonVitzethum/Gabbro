@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 13:53 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 14:02 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -396,7 +396,7 @@ Last ledger refresh: **2026-10-03 13:53 UTC**. This is an operational snapshot, 
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Agent working | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Merged after review/checks | 695: Merged after review/checks | [report](messung/muse/MUSE-REPORT-694.md) |
-| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Committed candidate; review/integration pending | 697: Committed candidate; review/integration pending | [task](lanes/696.md) |
+| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Agent working | 697: Committed candidate; review/integration pending | [task](lanes/696.md) |
 | 698 | Essential width-selected shifts and rotates | Incomplete; preserved | 699: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
@@ -410,8 +410,8 @@ Last ledger refresh: **2026-10-03 13:53 UTC**. This is an operational snapshot, 
 | 718 | Unify accepted architectural final-byte family dispatch | Incomplete; preserved | 719: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/718.md) |
 | 720 | Connect real selected integer bytes to shared TSO execution | Merged after review/checks | 721: Merged after review/checks | [report](messung/muse/MUSE-REPORT-720.md) |
 | 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Incomplete; preserved | 723: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/722.md) |
-| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Committed candidate; review/integration pending | 725: Committed candidate; review/integration pending | [task](lanes/724.md) |
-| 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Committed candidate; review/integration pending | [task](lanes/726.md) |
+| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Agent working | 725: Committed candidate; review/integration pending | [task](lanes/724.md) |
+| 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Agent working | [task](lanes/726.md) |
 | 728 | Model actual IDT TSS descriptor and entry stack selection | Merged after review/checks | 729: Merged after review/checks | [report](messung/muse/MUSE-REPORT-728.md) |
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Merged after review/checks | 731: Merged after review/checks | [report](messung/muse/MUSE-REPORT-730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
@@ -458,25 +458,25 @@ Last ledger refresh: **2026-10-03 13:53 UTC**. This is an operational snapshot, 
 | 780 | Hardware completion: MFENCE drain-own semantics | Merged after review/checks | 930: Merged after review/checks | [report](messung/muse/MUSE-REPORT-780.md) |
 | 781 | Hardware completion: SFENCE store narrowness | Merged after review/checks | 931: Merged after review/checks | [report](messung/muse/MUSE-REPORT-781.md) |
 | 782 | Hardware completion: LFENCE load narrowness | Merged after review/checks | 932: Merged after review/checks | [report](messung/muse/MUSE-REPORT-782.md) |
-| 783 | Hardware completion: seq_cst lowering bracket | Committed candidate; review/integration pending | 933: scheduled | [task](lanes/783.md) |
+| 783 | Hardware completion: seq_cst lowering bracket | Committed candidate; review/integration pending | 933: Committed candidate; review/integration pending | [task](lanes/783.md) |
 | 784 | Hardware completion: CAS retry attempt bound | Merged after review/checks | 934: Merged after review/checks | [report](messung/muse/MUSE-REPORT-784.md) |
 | 785 | Hardware completion: CAS divergence record | Merged after review/checks | 935: Merged after review/checks | [report](messung/muse/MUSE-REPORT-785.md) |
 | 786 | Hardware completion: youngest-own-store forwarding | Incomplete; preserved | 936: scheduled | [task](lanes/786.md) |
 | 787 | Hardware completion: tearing refusal table | Incomplete; preserved | 937: scheduled | [task](lanes/787.md) |
-| 788 | Hardware completion: CVTSI2SD from 32-bit int | Committed candidate; review/integration pending | 938: scheduled | [task](lanes/788.md) |
+| 788 | Hardware completion: CVTSI2SD from 32-bit int | Committed candidate; review/integration pending | 938: Committed candidate; review/integration pending | [task](lanes/788.md) |
 | 789 | Hardware completion: CVTSI2SD from 64-bit int | Merged after review/checks | 939: Merged after review/checks | [report](messung/muse/MUSE-REPORT-789.md) |
 | 790 | Hardware completion: UCOMISD unordered rows | Incomplete; preserved | 940: scheduled | [task](lanes/790.md) |
-| 791 | Hardware completion: float narrow range check | Committed candidate; review/integration pending | 941: scheduled | [task](lanes/791.md) |
-| 792 | Hardware completion: float finite bit test | Committed candidate; review/integration pending | 942: scheduled | [task](lanes/792.md) |
-| 793 | Hardware completion: CVTTSD2SI saturation wrapper | Committed candidate; review/integration pending | 943: scheduled | [task](lanes/793.md) |
-| 794 | Hardware completion: f32 single-rounding refusal | Committed candidate; review/integration pending | 944: scheduled | [task](lanes/794.md) |
-| 795 | Hardware completion: RNE control establishment | Committed candidate; review/integration pending | 945: scheduled | [task](lanes/795.md) |
-| 796 | Hardware completion: no-contraction gate | Committed candidate; review/integration pending | 946: scheduled | [task](lanes/796.md) |
-| 797 | Hardware completion: FTZ DAZ zero with masks | Committed candidate; review/integration pending | 947: scheduled | [task](lanes/797.md) |
-| 798 | Hardware completion: NaN payload class relaxation | Committed candidate; review/integration pending | 948: scheduled | [task](lanes/798.md) |
-| 799 | Hardware completion: MOVSD memory order | Committed candidate; review/integration pending | 949: scheduled | [task](lanes/799.md) |
-| 800 | Hardware completion: faults of compact immediates | Committed candidate; review/integration pending | 950: scheduled | [task](lanes/800.md) |
-| 801 | Hardware completion: faults of disp forms | Committed candidate; review/integration pending | 951: scheduled | [task](lanes/801.md) |
+| 791 | Hardware completion: float narrow range check | Committed candidate; review/integration pending | 941: Agent working | [task](lanes/791.md) |
+| 792 | Hardware completion: float finite bit test | Committed candidate; review/integration pending | 942: Committed candidate; review/integration pending | [task](lanes/792.md) |
+| 793 | Hardware completion: CVTTSD2SI saturation wrapper | Committed candidate; review/integration pending | 943: Committed candidate; review/integration pending | [task](lanes/793.md) |
+| 794 | Hardware completion: f32 single-rounding refusal | Committed candidate; review/integration pending | 944: Agent working | [task](lanes/794.md) |
+| 795 | Hardware completion: RNE control establishment | Committed candidate; review/integration pending | 945: Agent working | [task](lanes/795.md) |
+| 796 | Hardware completion: no-contraction gate | Committed candidate; review/integration pending | 946: Agent working | [task](lanes/796.md) |
+| 797 | Hardware completion: FTZ DAZ zero with masks | Committed candidate; review/integration pending | 947: Agent working | [task](lanes/797.md) |
+| 798 | Hardware completion: NaN payload class relaxation | Committed candidate; review/integration pending | 948: Agent working | [task](lanes/798.md) |
+| 799 | Hardware completion: MOVSD memory order | Committed candidate; review/integration pending | 949: Agent working | [task](lanes/799.md) |
+| 800 | Hardware completion: faults of compact immediates | Committed candidate; review/integration pending | 950: Agent working | [task](lanes/800.md) |
+| 801 | Hardware completion: faults of disp forms | Committed candidate; review/integration pending | 951: Agent working | [task](lanes/801.md) |
 | 802 | Hardware completion: faults of SIB addressing | Committed candidate; review/integration pending | 952: scheduled | [task](lanes/802.md) |
 | 803 | Hardware completion: faults of RIP-relative data | Scheduled | 953: scheduled | [task](lanes/803.md) |
 | 804 | Hardware completion: faults of short branches | Scheduled | 954: scheduled | [task](lanes/804.md) |
@@ -1188,6 +1188,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **729**, Independent exact review of 728, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-729.md). <!-- x86-merged:729 -->
 - 2026-10-03: lane **738**, Derive precise fault ordering across fetched instruction accesses, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-738.md). <!-- x86-merged:738 -->
 - 2026-10-03: lane **739**, Independent exact review of 738, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-739.md). <!-- x86-merged:739 -->
+- 2026-10-03: publication batch checks passed for `aace49e3`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
