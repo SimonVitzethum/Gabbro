@@ -538,3 +538,4 @@ import Grammatik.X86.ComposeHandlerTable
 import Grammatik.X86.ComposeBindingSurface
 import Grammatik.X86.ComposeEntryHooks
 import Grammatik.X86.ComposeSupportBytes
+import Grammatik.X86.ComposeLoaderBias

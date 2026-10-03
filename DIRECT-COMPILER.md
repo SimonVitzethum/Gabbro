@@ -530,7 +530,7 @@ Last ledger refresh: **2026-10-03 22:24 UTC**. This is an operational snapshot, 
 | 852 | Composition closing: runtime-bodies closing | Committed candidate; review/integration pending | 1002: Incomplete; preserved | [task](lanes/852.md) |
 | 853 | Composition closing: entry-hook closing | Merged after review/checks | 1003: Merged after review/checks | [report](messung/muse/MUSE-REPORT-853.md) |
 | 854 | Composition closing: support-bytes closing | Merged after review/checks | 1004: Merged after review/checks | [report](messung/muse/MUSE-REPORT-854.md) |
-| 855 | Composition closing: loader-bias closing | Committed candidate; review/integration pending | 1005: Committed candidate; review/integration pending | [task](lanes/855.md) |
+| 855 | Composition closing: loader-bias closing | Merged after review/checks | 1005: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-855.md) |
 | 856 | Composition closing: virtual-address closing | Committed candidate; review/integration pending | 1006: Committed candidate; review/integration pending | [task](lanes/856.md) |
 | 857 | Composition closing: permission-check closing | Committed candidate; review/integration pending | 1007: Committed candidate; review/integration pending | [task](lanes/857.md) |
 | 858 | Composition closing: entry-duties closing | Committed candidate; review/integration pending | 1008: Committed candidate; review/integration pending | [task](lanes/858.md) |
@@ -594,7 +594,7 @@ Last ledger refresh: **2026-10-03 22:24 UTC**. This is an operational snapshot, 
 | 1094 | Idle pool cache cleanup with strict guards | Incomplete; preserved | 1095: scheduled | [task](lanes/1094.md) |
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
-| 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: scheduled | [task](lanes/1100.md) |
+| 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Agent working | [task](lanes/1100.md) |
 | 1102 | Port and device execution on the common machine | Agent working | 1103: scheduled | [task](lanes/1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Agent working | 1105: scheduled | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
@@ -1257,6 +1257,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1003**, Independent exact review of 853, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1003.md). <!-- x86-merged:1003 -->
 - 2026-10-03: lane **854**, Composition closing: support-bytes closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-854.md). <!-- x86-merged:854 -->
 - 2026-10-03: lane **1004**, Independent exact review of 854, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1004.md). <!-- x86-merged:1004 -->
+- 2026-10-03: lane **855**, Composition closing: loader-bias closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-855.md). <!-- x86-merged:855 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
