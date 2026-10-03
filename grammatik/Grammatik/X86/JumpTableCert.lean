@@ -249,13 +249,92 @@ theorem jtZiel_nichtkanonisch_gate :
     adrKlasse (BitVec.ofNat 64 (2 ^ 47)) false = some .gp :=
   adrKlasse_daten_gp
 
+/-! ## 6. Pinned bytes, common dispatch, explicit refusals.
+
+    The table jump is the canonical `REX.W FF /4` mod=2 `rax`-based
+    memory-indirect form (`Vol.2A 3-504`); its bytes execute through the
+    accepted pilot-first adapter (`indAdapterDecode`), never a second
+    decoder. Neighbours outside the profile (far `/3`, `mod=0`,
+    the `E3` counter family) refuse by construction. -/
+
+/-- PIN: the table-jump bytes through `rax+0` are
+    `48 FF A0 00 00 00 00`. -/
+theorem jtPin_bytes :
+    encodeIndMem false .rax (BitVec.ofNat 32 0) =
+      [natByte 72, natByte 255, natByte 160, natByte 0, natByte 0,
+        natByte 0, natByte 0] := by
+  decide
+
+/-- PIN: the table-jump bytes dispatch through the common adapter to
+    the memory-indirect jump form (pilot-first, no shadowing). -/
+theorem jtAdapter_bytes (suffix : List Byte) :
+    indAdapterDecode
+      (encodeIndMem false .rax (BitVec.ofNat 32 0) ++ suffix) =
+      some ((.indirekt (.jmpMem .rax (BitVec.ofNat 32 0)
+        (if regLow .rax == 4 then 8 else 7))), suffix) :=
+  indAdapter_indirekt _ _ _
+    (pilot_verweigert_indMem false .rax _ _) (roundtrip_indMem_jmp .rax _ _)
+
+/-- The pilot takes no table-jump bytes (disjoint dispatch). -/
+theorem jtPilot_verweigert_tabellensprung (suffix : List Byte) :
+    decode (encodeIndMem false .rax (BitVec.ofNat 32 0) ++ suffix) =
+      none :=
+  pilot_verweigert_indMem false .rax _ suffix
+
+/-- NEIGHBOUR REFUSAL: the far-call extension `/3` is no table jump. -/
+theorem jtNachbar_far_verweigert :
+    decodeIndirekt [natByte 255, natByte 216] = none :=
+  far_erweiterung_verweigert
+
+/-- NEIGHBOUR REFUSAL: the non-canonical `mod=0` shape is no table jump. -/
+theorem jtNachbar_modus0_verweigert :
+    decodeIndirekt [natByte 255, natByte 16] = none :=
+  modus0_verweigert
+
+/-- NEIGHBOUR REFUSAL: the `E3` counter family is no table jump. -/
+theorem jtNachbar_zaehler_verweigert :
+    decodeIndirekt [natByte 227, natByte 5] = none :=
+  zaehler_verweigert
+
+/-- An unreadable first slot refuses the whole certificate. Every
+    premise is used. -/
+theorem jtZert_unlesbar_verweigert (starts eintraege : List Adresse)
+    (speicher : Speicher) (basis : Adresse) (n : Nat)
+    (h0 : 0 < n)
+    (hlese : tabEintrag speicher basis 0 = none) :
+    jtZertOk starts eintraege speicher basis n = false := by
+  cases hcert : jtZertOk starts eintraege speicher basis n with
+  | true =>
+    have hall := (List.all_eq_true.mp hcert) 0 (List.mem_range.mpr h0)
+    simp [hlese] at hall
+  | false => rfl
+
+/-- A table entry outside every start and entry refuses the whole
+    certificate. Every premise is used. -/
+theorem jtZert_fremdziel_verweigert (starts eintraege : List Adresse)
+    (speicher : Speicher) (basis : Adresse) (n idx : Nat) (z : Wort)
+    (hidx : idx < n)
+    (hrd : tabEintrag speicher basis idx = some z)
+    (hfremd : indirektZielOk starts eintraege z = false) :
+    jtZertOk starts eintraege speicher basis n = false := by
+  cases hcert : jtZertOk starts eintraege speicher basis n with
+  | true =>
+    have hz := jtZertOk_eintrag starts eintraege speicher basis n idx z
+      hcert hidx hrd
+    rw [hz] at hfremd
+    cases hfremd
+  | false => rfl
+
 /- CUTS:
    Proved here so far: provenance, slots, entry reads, the certificate
    with its entry projection, table words with membership, the
    forged-pointer check with genuine/forged facts, the bounded slot
    check, the connection theorem, TSO store-buffer neutrality, the slot
    fault class with its no-speculation refusal, the out-of-bounds index
-   refusal and the canonical-address gate pins.
+   refusal, the canonical-address gate pins, pinned table-jump bytes
+   with common-adapter dispatch and pilot separation, three neighbour
+   refusals, and two certificate refusals (unreadable slot, foreign
+   target).
    NOT proved here, and not claimed: everything else (see task).
 -/
 
@@ -274,5 +353,13 @@ theorem jtZiel_nichtkanonisch_gate :
 #print axioms jtIndex_ausserhalb_verweigert
 #print axioms jtZiel_kanonisch_beispiel
 #print axioms jtZiel_nichtkanonisch_gate
+#print axioms jtPin_bytes
+#print axioms jtAdapter_bytes
+#print axioms jtPilot_verweigert_tabellensprung
+#print axioms jtNachbar_far_verweigert
+#print axioms jtNachbar_modus0_verweigert
+#print axioms jtNachbar_zaehler_verweigert
+#print axioms jtZert_unlesbar_verweigert
+#print axioms jtZert_fremdziel_verweigert
 
 end Gabbro.Grammatik.X86
