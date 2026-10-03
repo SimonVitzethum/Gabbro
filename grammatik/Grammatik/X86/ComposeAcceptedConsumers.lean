@@ -166,6 +166,99 @@ theorem composeAccepted_gesamt (m : HwMaschine) (c : Nat)
     reiheOhneZugriff (projFp m c) z pg st ill teiltFalle hquiet,
     composeAccepted_luecken⟩
 
+/-- Witness instruction: pilot `movReg64 rax, rcx` (register-only,
+    so the `HwSchritt.reg` memory gate holds). -/
+def gesamtWitBf : Befehl := .movReg64 .rax .rcx
+
+/-- Witness image: the single pilot encoding at 4096. -/
+def gesamtWitBild : List Byte := encode gesamtWitBf
+
+/-- Witness code bytes: the image at 4096, zeroes elsewhere. -/
+def gesamtWitBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match gesamtWitBild[a.toNat - 4096]? with
+    | some b => b
+    | none => BitVec.ofNat 8 0
+
+/-- Witness code permission: exactly the 3 image bytes, so the
+    fetched window is exactly the encoding with an empty suffix. -/
+def gesamtWitCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 3)
+
+/-- Witness data permission: eight bytes at 8192. -/
+def gesamtWitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8200)
+
+/-- Witness shared memory: code is execute-only, data read/write. -/
+def gesamtWitMem : Speicher :=
+  { bytes := gesamtWitBytes, lesbar := gesamtWitDaten,
+    schreibbar := gesamtWitDaten, ausfuehrbar := gesamtWitCode }
+
+/-- Witness core-0 registers: value 9 in rcx, 5 in rax. -/
+def gesamtWitReg : Register → Wort := fun q =>
+  if q = Register.rcx then BitVec.ofNat 64 9
+  else if q = Register.rax then BitVec.ofNat 64 5
+  else if q = Register.rsp then BitVec.ofNat 64 8704
+  else BitVec.ofNat 64 0
+
+/-- Witness cores: core 0 runs at 4096, others idle on data. -/
+def gesamtWitKern : Nat → HwKern
+  | 0 => ⟨gesamtWitReg, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness machine: shared memory, running core, empty buffers,
+    full silicon with the admitted readiness profile. -/
+def gesamtWitM : HwMaschine :=
+  ⟨gesamtWitMem, gesamtWitKern, fun _ => [], basisHw,
+    fun _ => basisBereit⟩
+
+/-- The pilot encoding is 3 bytes long. -/
+theorem gesamtWit_len3 : (encode gesamtWitBf).length = 3 := by
+  decide
+
+/-- The fetched window is exactly the pilot encoding. -/
+theorem gesamtWit_hwin :
+    geholt (projFp gesamtWitM 0).kern = encode gesamtWitBf ++ [] := by
+  decide
+
+/-- The 3 image bytes are executable. -/
+theorem gesamtWit_hexe :
+    ausfuehrbarN (projFp gesamtWitM 0).kern.speicher
+      (projFp gesamtWitM 0).kern.rip
+      (encode gesamtWitBf).length = true := by
+  decide
+
+/-- The dispatcher fetches the pilot move with an empty suffix. -/
+theorem gesamtWit_fetch :
+    fetchExt (projFp gesamtWitM 0) (geholt (projZustand gesamtWitM 0)) =
+      some (.pilot ⟨gesamtWitBf, (encode gesamtWitBf).length⟩, []) :=
+  (pilotKanonischErreicht (projFp gesamtWitM 0) (gesamtWitM.bereit 0)
+    gesamtWitBf [] gesamtWit_hwin gesamtWit_hexe).1
+
+/-- Witness successor core state: rax holds 9, RIP past the move. -/
+def gesamtWitS1 : Zustand :=
+  schrittRegister (projZustand gesamtWitM 0)
+    (ripNach (projZustand gesamtWitM 0).rip (encode gesamtWitBf).length)
+    (projZustand gesamtWitM 0).flags .rax
+    ((projZustand gesamtWitM 0).register .rcx)
+
+/-- Witness successor FP state after the move. -/
+def gesamtWitT1 : FpZustand := { projFp gesamtWitM 0 with kern := gesamtWitS1 }
+
+/-- The unified rule runs the register move: rax takes rcx. -/
+theorem gesamtWit_step :
+    stepExt (.pilot ⟨gesamtWitBf, (encode gesamtWitBf).length⟩)
+      (projFp gesamtWitM 0) (gesamtWitM.bereit 0) =
+      .weiter gesamtWitT1 := by
+  apply hwPilot_weiter
+  exact schritt_movReg64 _ _ .rax .rcx (by decide) rfl
+
+/-- The move keeps canonical memory: the `HwSchritt.reg` gate. -/
+theorem gesamtWit_hmem : gesamtWitT1.kern.speicher = gesamtWitM.mem := rfl
+
 /- CUTS:
    Proved here so far: the pending-family enumeration `PendingFam`
    with its lane-number audit `familienCode`, and the gap closing
