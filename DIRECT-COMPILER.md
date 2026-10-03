@@ -553,7 +553,7 @@ Last ledger refresh: **2026-10-03 22:29 UTC**. This is an operational snapshot, 
 | 875 | Optimiser rule: vectorisation gate rule | Merged after review/checks | 1025: Merged after review/checks | [report](messung/muse/MUSE-REPORT-875.md) |
 | 876 | Optimiser rule: flags peephole rule | Merged after review/checks | 1026: Merged after review/checks | [report](messung/muse/MUSE-REPORT-876.md) |
 | 877 | Optimiser rule: displacement peephole rule | Merged after review/checks | 1027: Merged after review/checks | [report](messung/muse/MUSE-REPORT-877.md) |
-| 878 | Optimiser rule: linear-scan allocation rule | Merged after review/checks | 1028: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-878.md) |
+| 878 | Optimiser rule: linear-scan allocation rule | Merged after review/checks | 1028: Merged after review/checks | [report](messung/muse/MUSE-REPORT-878.md) |
 | 879 | Optimiser rule: spill freshness rule | Committed candidate; review/integration pending | 1029: Committed candidate; review/integration pending | [task](lanes/879.md) |
 | 880 | Optimiser rule: copy coalescing rule | Committed candidate; review/integration pending | 1030: Committed candidate; review/integration pending | [task](lanes/880.md) |
 | 881 | Optimiser rule: rematerialisation rule | Committed candidate; review/integration pending | 1031: Committed candidate; review/integration pending | [task](lanes/881.md) |
@@ -1302,6 +1302,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **877**, Optimiser rule: displacement peephole rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-877.md). <!-- x86-merged:877 -->
 - 2026-10-03: lane **1027**, Independent exact review of 877, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1027.md). <!-- x86-merged:1027 -->
 - 2026-10-03: lane **878**, Optimiser rule: linear-scan allocation rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-878.md). <!-- x86-merged:878 -->
+- 2026-10-03: lane **1028**, Independent exact review of 878, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1028.md). <!-- x86-merged:1028 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
