@@ -201,6 +201,44 @@ theorem probe_belegVerweigert_speicher :
     belegOk ⟨0, 1, ⟨true, true, true, false, true, true⟩, 2, 3⟩ = false := by
   decide
 
+/-! ## 4. Blocks: the branch and the validator's choice.
+
+    The branch computes both arms as pure literals and takes one; the
+    select binds the chosen value. Both arms are literals (`orte =
+    []`), so neither reads a shared carrier, calls, nor traps. The
+    validator's choice is the select exactly where the certificate is
+    admitted, otherwise the branch (default stays branch). -/
+
+/-- The branch: both arms pure literals, one taken. -/
+def branchEnd {D : Deklaration} (V : Vertrag D)
+    {Γ : Ctx} {Λ : List (Res D)}
+    (c : Expr D Γ Λ .bool) (x y : Int) : Endblock D V true Γ Λ :=
+  .cons (.ite c (Block.bind (.lit x) .nil) (Block.bind (.lit y) .nil))
+    (.leave rfl)
+
+/-- The select: the chosen value bound. -/
+def selectEnd {D : Deklaration} (V : Vertrag D)
+    {Γ : Ctx} {Λ : List (Res D)}
+    (v : Int) : Endblock D V true Γ Λ :=
+  .bind (.lit v) (.leave rfl)
+
+/-- The validator's choice: the select where admitted, else the
+    branch. -/
+def cmovWahlBlock {D : Deklaration} (V : Vertrag D)
+    {Γ : Ctx} {Λ : List (Res D)}
+    (g : CmovSelBeleg) (c : Expr D Γ Λ .bool) (b : Bool)
+    (x y : Int) : Endblock D V true Γ Λ :=
+  if belegOk g then selectEnd V (selWert b x y) else branchEnd V c x y
+
+/-- ADMISSION USE: the admitted validator choice IS the select. -/
+theorem cmovWahl_waehlt {D : Deklaration} (V : Vertrag D)
+    {Γ : Ctx} {Λ : List (Res D)}
+    (g : CmovSelBeleg) (hz : belegOk g = true)
+    (c : Expr D Γ Λ .bool) (b : Bool) (x y : Int) :
+    cmovWahlBlock V g c b x y = selectEnd V (selWert b x y) := by
+  unfold cmovWahlBlock
+  simp [hz]
+
 /- CUTS:
     - Proved: admission, six refusals, select value equations, taken/
       untaken target words, width-exact word readback, `gleitPasst`
@@ -228,5 +266,9 @@ theorem probe_belegVerweigert_speicher :
 #print axioms belegOk
 #print axioms probe_belegOk
 #print axioms probe_belegVerweigert_speicher
+#print axioms branchEnd
+#print axioms selectEnd
+#print axioms cmovWahlBlock
+#print axioms cmovWahl_waehlt
 
 end Gabbro.Grammatik.X86
