@@ -1,7 +1,8 @@
 # MUSE-REPORT-985: Exact review of author 835 (work-transfer composition closing)
 
 CANDIDATE: 835 e21c40da63fb2fe39a329f1f0b4ed0970b4f60d0
-VERDICT: ACCEPT (bounded: explicit interface closure over the covered fragment only; no new hardware coverage beyond lanes 654/572)
+VERDICT: ACCEPT
+Bound: explicit interface closure over the covered fragment only; no new hardware coverage beyond lanes 654/572.
 
 ## Identity and scope
 
