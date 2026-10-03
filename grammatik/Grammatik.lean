@@ -518,3 +518,4 @@ import Grammatik.X86.ComposeSpillPrivacy
 import Grammatik.X86.ComposeContractCall
 import Grammatik.X86.ComposeContractReturn
 import Grammatik.X86.ComposeCallLogGhost
+import Grammatik.X86.ComposeBudgetResum
