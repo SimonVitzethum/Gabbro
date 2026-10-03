@@ -2,11 +2,13 @@
 
 ## CANDIDATE and VERDICT
 
-- CANDIDATE: 837 da5a2868b2c2f95a2f3ec21a862bbc929b97f246
-  (base e7c75908456285d1e37c18dc32d4f9c0e10d1fa4, 3 files per SNAPSHOT.json:
+CANDIDATE: 837 da5a2868b2c2f95a2f3ec21a862bbc929b97f246
+VERDICT: ACCEPT
+
+- Pinned base: e7c75908456285d1e37c18dc32d4f9c0e10d1fa4, 3 files per SNAPSHOT.json:
   `MUSE-REPORT-837.md`, `grammatik/Grammatik.lean` (one import line),
-  `grammatik/Grammatik/X86/ComposeFenceOrder.lean` (171 lines). Clean tree.)
-- VERDICT: ACCEPT (bounded: TSO/fence composition level only).
+  `grammatik/Grammatik/X86/ComposeFenceOrder.lean` (171 lines). Clean tree.
+- Acceptance is bounded: TSO/fence composition level only.
 - Scope of acceptance: the candidate closes fence placement to the stated
   per-access concurrent postcondition over the ONE canonical `TSOZustand`
   by composing already-accepted legs, with a jointly-inhabited
