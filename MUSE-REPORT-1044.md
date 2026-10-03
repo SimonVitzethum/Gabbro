@@ -2,12 +2,15 @@
 
 ## CANDIDATE and VERDICT
 
-- CANDIDATE: 894 `cde946930f7c597df3ef0b38440cd3e9cacafbe8`
+CANDIDATE: 894 cde946930f7c597df3ef0b38440cd3e9cacafbe8
+VERDICT: REPAIR
+
+Details: pinned head `cde946930f7c597df3ef0b38440cd3e9cacafbe8`
   (base `b040b155159f47629542b0083e2f0a8a607f2b4c`; files:
   `MUSE-REPORT-894.md`, `grammatik/Grammatik.lean` (one import line),
   `grammatik/Grammatik/X86/OptCallArgSel.lean` (new, 402 lines)).
-- VERDICT: REPAIR (narrow, minimal repairs R1-R3 below; everything else is
-  accept-worthy bounded work, see §2).
+  The verdict is REPAIR with narrow, minimal repairs R1-R3 below; everything
+  else is accept-worthy bounded work, see §2.
 
 ## 1. What was inspected
 
