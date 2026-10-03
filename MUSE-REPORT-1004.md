@@ -4,7 +4,9 @@
 
 CANDIDATE: 854 242ab56253f67b30fb8e1171c92939c2c4d37856
 
-VERDICT: ACCEPT (bounded — scope bounds listed below, all already stated as CUTS in the candidate file)
+VERDICT: ACCEPT
+
+Acceptance is bounded: scope bounds are listed below, all already stated as CUTS in the candidate file. The substantive verdict is unchanged by this format fix.
 
 ## What was reviewed
 
