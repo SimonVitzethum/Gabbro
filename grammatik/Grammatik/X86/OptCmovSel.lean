@@ -166,6 +166,41 @@ theorem selGleit_behaelt (b : Bool) (qa qb : GFloat)
       if b then gleitPasst lo hi qa else gleitPasst lo hi qb := by
   cases b <;> rfl
 
+/-! ## 3. Certificate: local rewrite record plus recomputed citations.
+
+    The exact certificate shape the emitter attaches to one
+    CMOV-selection site: the source site and condition spans
+    (recomputed positions, not diagnostic codes), the
+    validator-decided side conditions, and the references to the
+    recomputed analyses (branch-bias evidence for unpredictability,
+    operand-cost facts for cheapness, the fault-freedom proof for the
+    unselected side). The validator re-decides every side condition
+    from these citations; `belegOk` gates USE of the rewrite. -/
+
+/-- One CMOV-selection certificate: local rewrite record plus
+    recomputed analysis citations. -/
+structure CmovSelBeleg where
+  stelle : Nat
+  bedingungStelle : Nat
+  zulassung : CmovSelCert
+  biasBeleg : Nat
+  kostenBeleg : Nat
+  deriving DecidableEq, Repr
+
+/-- Certificate admission: the carried side conditions hold. -/
+def belegOk (g : CmovSelBeleg) : Bool :=
+  cmovSelZulassen g.zulassung
+
+/-- Probe: an admitted certificate passes. -/
+theorem probe_belegOk :
+    belegOk ⟨0, 1, ⟨true, true, true, true, true, true⟩, 2, 3⟩ = true := by
+  decide
+
+/-- Probe: a memory-source certificate is refused. -/
+theorem probe_belegVerweigert_speicher :
+    belegOk ⟨0, 1, ⟨true, true, true, false, true, true⟩, 2, 3⟩ = false := by
+  decide
+
 /- CUTS:
     - Proved: admission, six refusals, select value equations, taken/
       untaken target words, width-exact word readback, `gleitPasst`
@@ -190,5 +225,8 @@ theorem selGleit_behaelt (b : Bool) (qa qb : GFloat)
 #print axioms cmovWaehlt_nicht
 #print axioms selWortLiest
 #print axioms selGleit_behaelt
+#print axioms belegOk
+#print axioms probe_belegOk
+#print axioms probe_belegVerweigert_speicher
 
 end Gabbro.Grammatik.X86
