@@ -515,7 +515,7 @@ Last ledger refresh: **2026-10-03 22:22 UTC**. This is an operational snapshot, 
 | 837 | Composition closing: fence-order closing | Merged after review/checks | 987: Merged after review/checks | [report](messung/muse/MUSE-REPORT-837.md) |
 | 838 | Composition closing: atomic-ledger closing | Merged after review/checks | 988: Merged after review/checks | [report](messung/muse/MUSE-REPORT-838.md) |
 | 839 | Composition closing: FP-ledger closing | Merged after review/checks | 989: Merged after review/checks | [report](messung/muse/MUSE-REPORT-839.md) |
-| 840 | Composition closing: flag-ledger closing | Committed candidate; review/integration pending | 990: Committed candidate; review/integration pending | [task](lanes/840.md) |
+| 840 | Composition closing: flag-ledger closing | Merged after review/checks | 990: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-840.md) |
 | 841 | Composition closing: width-ledger closing | Committed candidate; review/integration pending | 991: Committed candidate; review/integration pending | [task](lanes/841.md) |
 | 842 | Composition closing: fault-ledger closing | Committed candidate; review/integration pending | 992: Committed candidate; review/integration pending | [task](lanes/842.md) |
 | 843 | Composition closing: feature-gate closing | Committed candidate; review/integration pending | 993: Committed candidate; review/integration pending | [task](lanes/843.md) |
@@ -1229,6 +1229,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **988**, Independent exact review of 838, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-988.md). <!-- x86-merged:988 -->
 - 2026-10-03: lane **839**, Composition closing: FP-ledger closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-839.md). <!-- x86-merged:839 -->
 - 2026-10-03: lane **989**, Independent exact review of 839, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-989.md). <!-- x86-merged:989 -->
+- 2026-10-03: lane **840**, Composition closing: flag-ledger closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-840.md). <!-- x86-merged:840 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
