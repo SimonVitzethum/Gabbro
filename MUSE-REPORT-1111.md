@@ -4,11 +4,13 @@ Clone `/home/simon/Dokumente/gabbro-muse/a1111`, branch `muse/1111` (verified:
 `git branch --show-current` = `muse/1111`, HEAD `d493860a`). Report-only review;
 no source, private, root or network changes. Own deliverable: this file only.
 
-Candidate: lane 1110, HEAD `8a4054d77eacf0890483efb8b08e7cda219dded0`
-(base `4cfa9991c6aa33a5283365c3022cd03d915c2ff4`), reviewed as the exact
-committed snapshot in `.tmp/review/author-1110/` (SNAPSHOT.json: clean, 2 files:
-`MUSE-REPORT-1110.md`, `grammatik/Grammatik/X86/VectorIntegerFetchedSteps.lean`,
-499 lines). PATCH.diff scope confirmed: report + new module only.
+CANDIDATE: 1110 8a4054d77eacf0890483efb8b08e7cda219dded0
+
+Author lane 1110 (base 4cfa9991c6aa33a5283365c3022cd03d915c2ff4), reviewed as
+the exact committed snapshot in `.tmp/review/author-1110/` (SNAPSHOT.json:
+clean, 2 files: `MUSE-REPORT-1110.md`,
+`grammatik/Grammatik/X86/VectorIntegerFetchedSteps.lean`, 499 lines).
+PATCH.diff scope confirmed: report + new module only.
 
 ## Independent verification performed (all read-only, inside this clone)
 
@@ -100,7 +102,9 @@ committed snapshot in `.tmp/review/author-1110/` (SNAPSHOT.json: clean, 2 files:
 - `vecFetched_slot_schnittstelle_zeuge` uses `Classical.choice`; still within
   the standard `gabbro_ziel` axiom set.
 
-## VERDICT: ACCEPT
+## Machine-readable verdict (substance unchanged from the review above)
+
+VERDICT: ACCEPT
 
 Evidence: exact-file probe `0 error(s)` reproduced independently; unification
 attempt fails with `Unknown constant VecShiftLesart.maskiert`; all reused names
