@@ -244,9 +244,107 @@ theorem ComposeFpLedgerNeg_nachLaden :
       mxcsrWitT1 = none :=
   fpLedgerSchritt_kreuzung_verweigert _ _ _ mxcsrWit_eintritt (by decide)
 
-/- CUTS: skeleton only; closing theorems follow.
+/-! ## 6. Joint witness: all premises together on a reached run.
+
+  The premises of `ComposeFpLedger_verbindung` are inhabited JOINTLY
+  on the accepted store image: fetch from actual bytes, ledger
+  admission, scope match, and the guarded byte step -- concluding the
+  accepted step with the ledger still holding, plus a real memory
+  change (the word reads back, one byte observably changed).
+  Non-degenerate: a reached memory-changing run, not an empty one. -/
+
+/-- The guarded byte step on the witness image reaches the store. -/
+theorem ComposeFpLedgerWit_schritt :
+    fpLedgerByteschritt kontextReset fpCodecT = .weiter fpCodecT2 := by
+  have hstep : fpSchritt ⟨.movsdSpeichere .rax .xmm0 0, 8⟩ fpCodecT
+      = some fpCodecT2 :=
+    fpByteschritt_schritt fpCodecT fpCodecT2 _ [] fpCodec_fetch
+      fpCodec_schritt
+  have hbleibt : fpCodecT2.fp = kontextReset := rfl
+  have hL := fpLedgerSchritt_erfolg kontextReset
+    ⟨.movsdSpeichere .rax .xmm0 0, 8⟩ fpCodecT fpCodecT2 fpCodecFp rfl
+    hstep hbleibt
+  unfold fpLedgerByteschritt
+  simp only [fpCodec_fetch, hL]
+
+/-- JOINT WITNESS: ledger entry, admitted scope, fetched form and
+    guarded step hold together; the accepted step runs, the ledger
+    still holds, and memory observably changed with read-back. -/
+theorem ComposeFpLedger_verbindung_zeuge :
+    ∃ (k : FpLedger) (t t1 : FpZustand) (d : FpDecodiert)
+      (rest : List Byte),
+      fpEintritt t.fp = true
+      ∧ t.fp = k
+      ∧ fpFetchDekodiert t = some (d, rest)
+      ∧ fpLedgerByteschritt k t = .weiter t1
+      ∧ fpSchritt d t = some t1
+      ∧ t1.fp = k
+      ∧ fpEintritt t1.fp = true
+      ∧ read64 t1.kern.speicher (BitVec.ofNat 64 8192) =
+          some 0x7FF0000000000000
+      ∧ t.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ≠
+          t1.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) := by
+  have hconn := ComposeFpLedger_verbindung kontextReset fpCodecT fpCodecT2
+    ⟨.movsdSpeichere .rax .xmm0 0, 8⟩ [] fpCodecFp rfl fpCodec_fetch
+    ComposeFpLedgerWit_schritt
+  refine ⟨kontextReset, fpCodecT, fpCodecT2,
+    ⟨.movsdSpeichere .rax .xmm0 0, 8⟩, [], fpCodecFp, rfl,
+    fpCodec_fetch, ComposeFpLedgerWit_schritt, hconn.1, hconn.2.1,
+    hconn.2.2, fpCodec_liest, fpCodec_aendert⟩
+
+/- CUTS: what is not proved here.
+
+  Proved here, over the reused accepted definitions by name
+  (`Gleitprofil` ledger data with `kontextReset`/`mxcsrGueltig`,
+  `ScalarFloat` with `FpZustand`/`fpEintritt`/`fpSchritt`,
+  `ScalarFloatCodec` with `fpFetchDekodiert`/`fpByteschritt`/
+  `FpByteAusgang` and the `fpCodec` store image,
+  `FpControlHardwareForms` with the `mxcsrWit` load/store fragment):
+  - the ledger-guarded step (§1) with its refusal equations (bad
+    ledger word, scope crossing) and its success equation;
+  - the byte-facing composition (§2): fetch from actual executable
+    memory, then the ledger guard -- a forged decoded value can never
+    inject an instruction, and a forged word never becomes control
+    state without its ledger checks;
+  - the closing connection (§3): guarded success runs the accepted
+    step on the fetched form with the ledger still holding;
+  - no contraction (§4): one guarded ADDSD is exactly one model
+    addition (one rounding);
+  - planted refusals (§5): FTZ, DAZ, non-RNE rounding, cleared mask,
+    scope crossing with an admitted word, and re-ledgering after the
+    reached control-word change;
+  - the joint witness (§6): all premises together on a reached
+    memory-changing run with read-back.
+  NOT proved here, and not claimed:
+  - No new instruction semantics, decoder, encoder or profile data:
+    every producer fact is reused, never restated.
+  - No per-form ledger frames beyond the §3 successor check: the
+    ledger holds by the post-step word comparison, not by a
+    form-by-form preservation proof (open for a follow-up lane).
+  - No VEX/x87/FMA/packed forms, no REX extension, no TSO/GX
+    concurrency leg, no validator/image/entry/budget integration:
+    those producer and consumer legs are owned by their lanes
+    (named in DIRECT-COMPILER.md); missing legs are cuts, never
+    assumed.
+  - The `decide` proofs are closed concrete evaluations over
+    kernel-computable definitions (never `native_decide`).
 -/
 
-#print axioms fpEintritt_reset
+#print axioms fpLedgerSchritt_ledger_verweigert
+#print axioms fpLedgerSchritt_kreuzung_verweigert
+#print axioms fpLedgerSchritt_erfolg
+#print axioms fpLedgerSchritt_schritt
+#print axioms fpLedgerByteschritt_hol_verweigert
+#print axioms fpLedgerByteschritt_schritt
+#print axioms ComposeFpLedger_verbindung
+#print axioms ComposeFpLedger_keineKontraktion
+#print axioms ComposeFpLedgerNeg_ftz
+#print axioms ComposeFpLedgerNeg_daz
+#print axioms ComposeFpLedgerNeg_runde
+#print axioms ComposeFpLedgerNeg_maske
+#print axioms ComposeFpLedgerNeg_kreuzung
+#print axioms ComposeFpLedgerNeg_nachLaden
+#print axioms ComposeFpLedgerWit_schritt
+#print axioms ComposeFpLedger_verbindung_zeuge
 
 end Gabbro.Grammatik.X86
