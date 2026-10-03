@@ -508,3 +508,4 @@ import Grammatik.X86.OptFoldConst
 import Grammatik.X86.AddressedHardwareExecution
 import Grammatik.X86.ConcurrentIntegerExecution
 import Grammatik.X86.InterruptDescriptorHardware
+import Grammatik.X86.ExceptionPriorityHardware
