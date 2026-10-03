@@ -412,7 +412,7 @@ Last ledger refresh: **2026-10-03 13:52 UTC**. This is an operational snapshot, 
 | 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Incomplete; preserved | 723: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/722.md) |
 | 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Committed candidate; review/integration pending | 725: Committed candidate; review/integration pending | [task](lanes/724.md) |
 | 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Committed candidate; review/integration pending | [task](lanes/726.md) |
-| 728 | Model actual IDT TSS descriptor and entry stack selection | Committed candidate; review/integration pending | 729: Committed candidate; review/integration pending | [task](lanes/728.md) |
+| 728 | Model actual IDT TSS descriptor and entry stack selection | Merged after review/checks | 729: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-728.md) |
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Merged after review/checks | 731: Merged after review/checks | [report](messung/muse/MUSE-REPORT-730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
 | 734 | Selected control registers and syscall MSR byte effects | Committed candidate; review/integration pending | 735: scheduled | [task](lanes/734.md) |
@@ -1184,6 +1184,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **720**, Connect real selected integer bytes to shared TSO execution, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-720.md). <!-- x86-merged:720 -->
 - 2026-10-03: checked master `8a5de0aa` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:8a5de0aa611e729622292dd66fed42d6e0475ada -->
 - 2026-10-03: lane **721**, Independent exact review of 720, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-721.md). <!-- x86-merged:721 -->
+- 2026-10-03: lane **728**, Model actual IDT TSS descriptor and entry stack selection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-728.md). <!-- x86-merged:728 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
