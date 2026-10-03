@@ -6,7 +6,7 @@ CANDIDATE: 770 8f64c2f3abfd62902c8f090fe63a767188ef2aba
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded, as scoped below)
+VERDICT: ACCEPT
 
 ## Task reviewed
 
