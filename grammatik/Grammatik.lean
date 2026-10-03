@@ -557,3 +557,4 @@ import Grammatik.X86.OptStrengthRed
 import Grammatik.X86.OptLicmLoop
 import Grammatik.X86.OptInlineCall
 import Grammatik.X86.OptUnrollBound
+import Grammatik.X86.OptVectorGate
