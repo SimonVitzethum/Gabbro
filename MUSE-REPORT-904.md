@@ -4,7 +4,8 @@ Lane 904, clone `/home/simon/Dokumente/gabbro-muse/a904`, branch `muse/904` (ver
 Own file only: `MUSE-REPORT-904.md`. No source, control, or live-queue files touched.
 
 CANDIDATE: 754 51afe820c69e2291dc60463c8096a8adf7bd343e
-VERDICT: ACCEPT (bounded; see §6 for the exact scope and non-blocking follow-ups)
+VERDICT: ACCEPT
+Scope: bounded; see §6 for the exact scope and non-blocking follow-ups.
 
 ## 1. What was reviewed
 
