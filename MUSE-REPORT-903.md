@@ -1,7 +1,9 @@
 # MUSE-REPORT-903: exact review of author 753 (accumulator short ALU forms)
 
 CANDIDATE: 753 cae1f67fad7b3fa4c7f7fc12531187b654e84e4b
-VERDICT: ACCEPT (bounded; scope as stated in the candidate CUTS, no repairs required)
+VERDICT: ACCEPT
+
+Acceptance is bounded: scope as stated in the candidate CUTS, no repairs required.
 
 ## Task
 
