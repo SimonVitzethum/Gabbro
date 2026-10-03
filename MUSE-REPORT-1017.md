@@ -1,9 +1,11 @@
 # MUSE-REPORT-1017: Exact review of author 867 (range-check elimination rule)
 
-## CANDIDATE / VERDICT
+CANDIDATE: 867 050d19147479d21b83e630e05a87bb9474838d1b
+VERDICT: ACCEPT
 
-- CANDIDATE: 867 050d19147479d21b83e630e05a87bb9474838d1b
-- VERDICT: ACCEPT (bounded; scope notes below are non-blocking)
+The acceptance above is bounded; the scope notes below are non-blocking
+and do not change it. The substantive verdict and findings are preserved
+from the reviewed pinned snapshot.
 
 Base `b040b155159f47629542b0083e2f0a8a607f2b4c` matches this clone's HEAD
 (`b040b155` merge: Muse 975 direct-x86 foundation). Patch files:
