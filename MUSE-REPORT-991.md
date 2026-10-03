@@ -1,7 +1,9 @@
 # MUSE-REPORT-991: Exact review of author 841 (width-ledger closing)
 
 CANDIDATE: 841 17f30511b8755d8990db508a9e09895bab941c7e
-VERDICT: ACCEPT (bounded: exactly what the file's CUTS block states, no more)
+VERDICT: ACCEPT
+
+Acceptance is bounded: exactly what the candidate file's CUTS block states, no more.
 
 ## Clone/branch verification
 
