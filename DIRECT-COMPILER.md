@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 22:27 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 22:28 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -549,7 +549,7 @@ Last ledger refresh: **2026-10-03 22:27 UTC**. This is an operational snapshot, 
 | 871 | Optimiser rule: strength reduction rule | Merged after review/checks | 1021: Merged after review/checks | [report](messung/muse/MUSE-REPORT-871.md) |
 | 872 | Optimiser rule: LICM rule | Merged after review/checks | 1022: Merged after review/checks | [report](messung/muse/MUSE-REPORT-872.md) |
 | 873 | Optimiser rule: inlining rule | Merged after review/checks | 1023: Merged after review/checks | [report](messung/muse/MUSE-REPORT-873.md) |
-| 874 | Optimiser rule: bounded unroll rule | Committed candidate; review/integration pending | 1024: Committed candidate; review/integration pending | [task](lanes/874.md) |
+| 874 | Optimiser rule: bounded unroll rule | Merged after review/checks | 1024: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-874.md) |
 | 875 | Optimiser rule: vectorisation gate rule | Committed candidate; review/integration pending | 1025: Committed candidate; review/integration pending | [task](lanes/875.md) |
 | 876 | Optimiser rule: flags peephole rule | Committed candidate; review/integration pending | 1026: Committed candidate; review/integration pending | [task](lanes/876.md) |
 | 877 | Optimiser rule: displacement peephole rule | Committed candidate; review/integration pending | 1027: Committed candidate; review/integration pending | [task](lanes/877.md) |
@@ -595,7 +595,7 @@ Last ledger refresh: **2026-10-03 22:27 UTC**. This is an operational snapshot, 
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Committed candidate; review/integration pending | [task](lanes/1100.md) |
-| 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: scheduled | [task](lanes/1102.md) |
+| 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: Agent working | [task](lanes/1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Agent working | 1105: scheduled | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Agent working | 1109: scheduled | [task](lanes/1108.md) |
@@ -1293,6 +1293,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1022**, Independent exact review of 872, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1022.md). <!-- x86-merged:1022 -->
 - 2026-10-03: lane **873**, Optimiser rule: inlining rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-873.md). <!-- x86-merged:873 -->
 - 2026-10-03: lane **1023**, Independent exact review of 873, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1023.md). <!-- x86-merged:1023 -->
+- 2026-10-03: lane **874**, Optimiser rule: bounded unroll rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-874.md). <!-- x86-merged:874 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
