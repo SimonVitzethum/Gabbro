@@ -400,7 +400,7 @@ Last ledger refresh: **2026-10-03 00:01 UTC**. This is an operational snapshot, 
 | 698 | Essential width-selected shifts and rotates | Agent working | 699: scheduled | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
-| 704 | Generic port bus and precise architectural IO permissions | Merged after review/checks | 705: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-704.md) |
+| 704 | Generic port bus and precise architectural IO permissions | Merged after review/checks | 705: Merged after review/checks | [report](messung/muse/MUSE-REPORT-704.md) |
 | 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Merged after review/checks | 707: Merged after review/checks | [report](messung/muse/MUSE-REPORT-706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
 | 710 | Optimizer rule library proof and scope review | Committed candidate; review/integration pending | 711: Committed candidate; review/integration pending | [task](lanes/710.md) |
@@ -935,6 +935,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: Simon made the full Lean direct compiler pipeline a concurrent active goal beside complete selected hardware execution, retaining direct source lowering without an additional persistent IR, later untrusted Rust production and mandatory full final-byte validation. Runtime targets against equivalent GCC `-O3` C are minimum80%, target95%, ambitious above110%; accepted-image compilation latency is measured separately. These are requirements, not achieved performance or proof closure. <!-- full-compiler-goal-2026-10-03 -->-history
 - 2026-10-02: lane **704**, Generic port bus and precise architectural IO permissions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-704.md). <!-- x86-merged:704 -->
 - 2026-10-02: checked master `9cf8a7c0` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:9cf8a7c0be4d589a9eada673774ef9ad9a626f30 -->
+- 2026-10-02: lane **705**, Independent exact review of 704, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-705.md). <!-- x86-merged:705 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
