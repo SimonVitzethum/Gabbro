@@ -4,7 +4,7 @@ Lane 932, clone `/home/simon/Dokumente/gabbro-muse/a932`, branch `muse/932`.
 Owns ONLY this file. No source touched, no live controls used.
 
 CANDIDATE: 782 a8b4c7a5fbd06b98aa7dff99c363a5b66887ef18
-VERDICT: ACCEPT (bounded: TSO/canonical-byte load-ordering narrowness; see scope below)
+VERDICT: ACCEPT
 
 ## Snapshot checked
 
