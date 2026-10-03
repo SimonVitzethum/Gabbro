@@ -17,7 +17,7 @@ the diff.
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded — see claim boundary below).
+VERDICT: ACCEPT
 
 ## What was checked
 
