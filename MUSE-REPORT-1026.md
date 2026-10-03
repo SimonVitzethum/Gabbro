@@ -1,7 +1,7 @@
 # MUSE-REPORT-1026: Exact review of author 876 (flags peephole rule)
 
 CANDIDATE: 876 86f151ffe0b878dd83acfdb1259f3cbc06e010ac
-VERDICT: ACCEPT (bounded, source-level rule lemma; no byte/TSO/silicon claim)
+VERDICT: ACCEPT
 
 ## Scope of this review
 
