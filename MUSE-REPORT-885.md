@@ -16,8 +16,8 @@ Spec/goal/emitter change, no friend-reserved file touched.
 
 Definitions: `ZeroSelCert` (liveness + disp + pure-window side
 conditions), `zeroSelZulassen`, `waehleNull`, `weitSchritt`,
-`ZeroSelNachweis` (local rewrite record + recomputed analysis
-citations), `nachweisOk`, `zeroSelZeugeCert`.
+`NullSelNachweis` (local rewrite record + recomputed analysis
+citations), `nullNachweisOk`, `zeroSelZeugeCert`.
 
 Theorems: `zeroSelZulassen_tot`, `zeroSelVerweigert_lebendig`
 (the DESIGN failure case), `zeroSelVerweigert_disp`,
@@ -26,7 +26,7 @@ Theorems: `zeroSelZulassen_tot`, `zeroSelVerweigert_lebendig`
 `weitLaenge_zehn`, `weitSchritt_laenge_ok/wert/flags/speicher/rip/
 fremd`, `nullSpart_gegen_weit` (3 + 7 = 10),
 `weitSchritt_laufAlt/stepExt`, `nullSchritt_stepExt` (IEEE leg: XMM/FP
-untouched on both sides), `nachweisOk_tot/waehlt`,
+untouched on both sides), `nullNachweisOk_tot/waehlt`,
 `waehleNull_arbeit` (one retired instruction either way),
 `nullGleichtWeit_register` (identical full register files),
 `OptZeroIdiomSel_verbindung` (15-conjunct site connection: pilot
@@ -48,6 +48,21 @@ Axioms: every theorem within `[propext, Classical.choice,
 Quot.sound]` (the `verbindung` pair uses all three; most use fewer;
 probes/`decide` facts use none). No `sorry`/`admit`/`axiom`/
 `native_decide`/`unsafe`; every premise is used.
+
+## Integration repair (post-review, nothing merged)
+
+The integration gate failed with a name collision, not a proof
+failure: newer master carries `Grammatik.X86.OptUnrollBound`, which
+already defines `Gabbro.Grammatik.X86.nachweisOk`, so importing my
+module failed with "environment already contains
+'Gabbro.Grammatik.X86.nachweisOk'". Repair, in my owned file only:
+`ZeroSelNachweis` -> `NullSelNachweis`, `nachweisOk` ->
+`nullNachweisOk` (hence `nullNachweisOk_tot`,
+`nullNachweisOk_waehlt`). Statements and proofs unchanged; no
+guarantee weakened. Local `./lean-probe` 0 errors and `./lean-bau`
+exit 0 (511 jobs) after the rename. A fresh independent review of the
+changed commit is still required; I do not claim acceptance of the
+full source/binary chain.
 
 ## What remains open
 

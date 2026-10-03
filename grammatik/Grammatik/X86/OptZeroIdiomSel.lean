@@ -260,7 +260,7 @@ theorem nullSchritt_stepExt (r : Register) (t : FpZustand)
 
 /-- The exact per-site certificate: a local rewrite record (`reg`,
     `von`, `nach`) plus recomputed analysis citations (`cert`). -/
-structure ZeroSelNachweis where
+structure NullSelNachweis where
   reg : Register
   von : Befehl
   nach : Befehl
@@ -269,26 +269,26 @@ structure ZeroSelNachweis where
 
 /-- A valid certificate rewrites exactly `MOV r, 0` to `XOR r, r`
     under an admitted site analysis. -/
-def nachweisOk (n : ZeroSelNachweis) : Bool :=
+def nullNachweisOk (n : NullSelNachweis) : Bool :=
   decide (n.von = .movImm64 n.reg 0 ∧ n.nach = .xorReg64 n.reg n.reg) &&
     zeroSelZulassen n.cert
 
 /-- A valid certificate cites dead flag demand. -/
-theorem nachweisOk_tot (n : ZeroSelNachweis)
-    (h : nachweisOk n = true) :
+theorem nullNachweisOk_tot (n : NullSelNachweis)
+    (h : nullNachweisOk n = true) :
     ¬ Lebendig n.cert.bedarf := by
   have hz : zeroSelZulassen n.cert = true := by
-    unfold nachweisOk at h
+    unfold nullNachweisOk at h
     rw [Bool.and_eq_true] at h
     exact h.2
   exact zeroSelZulassen_tot n.cert hz
 
 /-- A valid certificate selects the idiom. -/
-theorem nachweisOk_waehlt (n : ZeroSelNachweis)
-    (h : nachweisOk n = true) :
+theorem nullNachweisOk_waehlt (n : NullSelNachweis)
+    (h : nullNachweisOk n = true) :
     waehleNull n.reg n.cert = .xorReg64 n.reg n.reg := by
   have hz : zeroSelZulassen n.cert = true := by
-    unfold nachweisOk at h
+    unfold nullNachweisOk at h
     rw [Bool.and_eq_true] at h
     exact h.2
   exact waehleNull_nimmt_idiom n.reg n.cert hz
@@ -483,9 +483,9 @@ theorem OptZeroIdiomSel_verbindung_zeuge :
       (`weitSchritt_laufAlt`/`weitSchritt_stepExt`,
       `nullSchritt_stepExt`): XMM and the FP context untouched, `kern`
       carries the respective successor (the IEEE leg);
-    - the exact certificate shape (`ZeroSelNachweis`: local rewrite
+    - the exact certificate shape (`NullSelNachweis`: local rewrite
       record plus recomputed analysis citations) with validity
-      (`nachweisOk`) citing dead demand and selecting the idiom;
+      (`nullNachweisOk`) citing dead demand and selecting the idiom;
     - unchanged machine work (`waehleNull_arbeit`: one retired target
       instruction either way);
     - full register-file agreement (`nullGleichtWeit_register`) and
@@ -534,8 +534,8 @@ theorem OptZeroIdiomSel_verbindung_zeuge :
 #print axioms weitSchritt_laufAlt
 #print axioms weitSchritt_stepExt
 #print axioms nullSchritt_stepExt
-#print axioms nachweisOk_tot
-#print axioms nachweisOk_waehlt
+#print axioms nullNachweisOk_tot
+#print axioms nullNachweisOk_waehlt
 #print axioms waehleNull_arbeit
 #print axioms nullGleichtWeit_register
 #print axioms OptZeroIdiomSel_verbindung
