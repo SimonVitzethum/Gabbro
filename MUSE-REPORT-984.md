@@ -1,7 +1,9 @@
 # MUSE-REPORT-984: Exact review of author 834 (Composition closing: budget-resumption closing)
 
 CANDIDATE: 834 b1a78264bd1afe3b7e74461edcaf61fe73fbf93b
-VERDICT: ACCEPT (bounded, as stated in CUTS)
+VERDICT: ACCEPT
+
+Acceptance is bounded as stated in CUTS (see sections below).
 
 ## Task and scope verified
 
@@ -126,6 +128,6 @@ cycles, constant-time/CAS-progress — all explicitly OPEN, none claimed.
 
 ## Conclusion
 
-Exactly one CANDIDATE reviewed, exactly one VERDICT: ACCEPT (bounded as in
-CUTS). No guarantee weakened, no desired simulation assumed, no fake
+One candidate reviewed, decision as stated in the machine-readable header.
+No guarantee weakened, no desired simulation assumed, no fake
 closure. No repairs required.
