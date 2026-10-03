@@ -1,17 +1,18 @@
 # MUSE-REPORT-1029: Exact review of author 879 (optimiser rule: spill freshness)
 
-CANDIDATE: 879 e3eb6772 (`Lane 879: optimiser rule spill freshness (DESIGN section 7 row)`).
-Full 40-hex HEAD was not included in the review bundle (`.tmp/review/author-879/`
-holds `OWNER-TASK.md`, `MUSE-REPORT-879.md`, `BUILD-EVIDENCE.json`, `PATCH.diff`
-and a snapshot copy of the new file). Content pin from `PATCH.diff`: new file
-blob `2bcd4e73`, report blob `3e30cf92`, `grammatik/Grammatik.lean`
+CANDIDATE: 879 e3eb67729e6b2db5635404e50da60e2a315433e7
+Pinned snapshot: `.tmp/review/SNAPSHOT.json` (author 879, base `b040b155`,
+clean, files `MUSE-REPORT-879.md`, `grammatik/Grammatik.lean`,
+`grammatik/Grammatik/X86/OptSpillFresh.lean`). Content pin from `PATCH.diff`:
+new file blob `2bcd4e73`, report blob `3e30cf92`, `grammatik/Grammatik.lean`
 `c9337c3e..4552242a` (one appended import line). The reviewed snapshot
 (`.tmp/review/author-879/grammatik/Grammatik/X86/OptSpillFresh.lean`, 398 lines)
 starts byte-identical to the PATCH hunk.
 
-VERDICT: ACCEPT (bounded: the rule lemma as stated, within its CUTS; serial
+VERDICT: ACCEPT
+Bounded acceptance: the rule lemma as stated, within its CUTS; serial
 merge-time gates -- source build, axiom, emission, key scan -- still apply at
-integration and are not waived by this review).
+integration and are not waived by this review.
 
 ## What was reviewed
 
