@@ -539,7 +539,7 @@ Last ledger refresh: **2026-10-03 22:25 UTC**. This is an operational snapshot, 
 | 861 | Optimiser rule: copy propagation rule | Merged after review/checks | 1011: Merged after review/checks | [report](messung/muse/MUSE-REPORT-861.md) |
 | 862 | Optimiser rule: CFG simplification rule | Merged after review/checks | 1012: Merged after review/checks | [report](messung/muse/MUSE-REPORT-862.md) |
 | 863 | Optimiser rule: pure CSE rule | Merged after review/checks | 1013: Merged after review/checks | [report](messung/muse/MUSE-REPORT-863.md) |
-| 864 | Optimiser rule: redundant load CSE rule | Committed candidate; review/integration pending | 1014: Committed candidate; review/integration pending | [task](lanes/864.md) |
+| 864 | Optimiser rule: redundant load CSE rule | Merged after review/checks | 1014: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-864.md) |
 | 865 | Optimiser rule: dead code rule | Committed candidate; review/integration pending | 1015: Committed candidate; review/integration pending | [task](lanes/865.md) |
 | 866 | Optimiser rule: dead store rule | Committed candidate; review/integration pending | 1016: Committed candidate; review/integration pending | [task](lanes/866.md) |
 | 867 | Optimiser rule: range-check elimination rule | Committed candidate; review/integration pending | 1017: Committed candidate; review/integration pending | [task](lanes/867.md) |
@@ -1273,6 +1273,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1012**, Independent exact review of 862, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1012.md). <!-- x86-merged:1012 -->
 - 2026-10-03: lane **863**, Optimiser rule: pure CSE rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-863.md). <!-- x86-merged:863 -->
 - 2026-10-03: lane **1013**, Independent exact review of 863, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1013.md). <!-- x86-merged:1013 -->
+- 2026-10-03: lane **864**, Optimiser rule: redundant load CSE rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-864.md). <!-- x86-merged:864 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

@@ -546,3 +546,4 @@ import Grammatik.X86.ComposeEntryDuties
 import Grammatik.X86.ComposeRegionCeil
 import Grammatik.X86.OptFoldCopy
 import Grammatik.X86.OptCfgSimp
+import Grammatik.X86.OptCseLoad
