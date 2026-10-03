@@ -216,4 +216,151 @@ theorem vecFetched_satt_erhalten_zeuge (i : Nat) :
   exact vecFetched_satt_erhalten vecSattT _ basisHw ivBereit basisCpu
     basisKontrolle _ _ .xmm4 64 hf rfl (by decide) hfet i
 
+/-- Dispatch slot tag: one slot per byte family. `pilot` is the
+    accepted pilot decoder, `ext` the accepted unified dispatcher, then
+    one slot per producer decoder module in task order (575 after the
+    pilot because `decodeComboIV` chains it there; the rest in the
+    order 666, 668, 662, 680, 682, 688, 692), and `intVec` for the
+    selected packed-integer rows. The 694 MMIO module shares the unified
+    byte dispatch (`fetchExt` over `decodeExt`), so its byte slot
+    coincides with `ext`; its profile side is pinned separately by
+    `vecSlot_mmio`. -/
+inductive VecSlotTag where
+  | pilot : VecSlotTag
+  | ext : VecSlotTag
+  | intHw : VecSlotTag
+  | fpHw : VecSlotTag
+  | lock : VecSlotTag
+  | ind : VecSlotTag
+  | mxcsr : VecSlotTag
+  | cpuFeat : VecSlotTag
+  | flags : VecSlotTag
+  | intVec : VecSlotTag
+  deriving DecidableEq, Repr
+
+/-- Slot discriminator over actual bytes: the first matching family in
+    slot order wins; `none` is refused by every family. The 692 flag
+    adapters match single-byte lists only. Cross-family shadowing beyond
+    the pinned rows stays OPEN (see CUTS). -/
+def vecSlotVon (bs : List Byte) : Option VecSlotTag :=
+  match decode bs with
+  | some _ => some .pilot
+  | none =>
+    match decodeExt bs with
+    | some _ => some .ext
+    | none =>
+      match decodeIntHw bs with
+      | some _ => some .intHw
+      | none =>
+        match fpHwDecode bs with
+        | some _ => some .fpHw
+        | none =>
+          match decodeLockExt bs with
+          | some _ => some .lock
+          | none =>
+            match decodeIndirekt bs with
+            | some _ => some .ind
+            | none =>
+              match mxcsrDecode bs with
+              | some _ => some .mxcsr
+              | none =>
+                match decodeCpuFeature bs with
+                | some _ => some .cpuFeat
+                | none =>
+                  match pushfqByte bs, popfqByte bs with
+                  | some _, _ => some .flags
+                  | _, some _ => some .flags
+                  | none, none =>
+                    match decodeIntVec bs with
+                    | some _ => some .intVec
+                    | none => none
+
+/-- The pilot decoder refuses the PADDB bytes. -/
+theorem vecSlot_pilot_weist_paddb_zurueck :
+    decode (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none := by
+  decide
+
+/-- The 666 integer decoder refuses the PADDB bytes. -/
+theorem vecSlot_intHw_weist_paddb_zurueck :
+    decodeIntHw (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none := by
+  decide
+
+/-- The 668 scalar-float decoder refuses the PADDB bytes. -/
+theorem vecSlot_fpHw_weist_paddb_zurueck :
+    fpHwDecode (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none := by
+  decide
+
+/-- The 662 combined lock decoder refuses the PADDB bytes. -/
+theorem vecSlot_lock_weist_paddb_zurueck :
+    decodeLockExt (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none := by
+  decide
+
+/-- The 680 indirect decoder refuses the PADDB bytes. -/
+theorem vecSlot_ind_weist_paddb_zurueck :
+    decodeIndirekt (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none := by
+  decide
+
+/-- The 682 MXCSR decoder refuses the PADDB bytes. -/
+theorem vecSlot_mxcsr_weist_paddb_zurueck :
+    mxcsrDecode (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none := by
+  decide
+
+/-- The 688 CPU-feature decoder refuses the PADDB bytes. -/
+theorem vecSlot_cpuFeat_weist_paddb_zurueck :
+    decodeCpuFeature (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none := by
+  decide
+
+/-- The 692 flag adapters refuse the PADDB bytes (multi-byte lists
+    match neither single-byte adapter, by shape). -/
+theorem vecSlot_flags_weist_paddb_zurueck :
+    pushfqByte (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none ∧
+      popfqByte (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none :=
+  ⟨rfl, rfl⟩
+
+/-- The 694 MMIO side: the unified dispatcher refuses the vector
+    load bytes (so the UC device path never sees them), and the empty
+    UC profile covers nothing (WB is the default everywhere). -/
+theorem vecSlot_mmio :
+    decodeExt (encodeIntVec (.movdquLd .xmm0 .rax 0)) = none ∧
+      ∀ (a : Adresse) (n : Nat), istUc [] a n = false :=
+  ⟨intVec_ext_weist_movdquLd_zurueck, fun a n => istUc_leer a n⟩
+
+/-- SLOT INTERFACE INHABITATION: the canonical PADDB bytes classify to
+    the packed-integer slot. Every earlier family refuses them (pilot,
+    the accepted unified dispatcher, all nine producer decoders, both
+    flag adapters); the selected decoder accepts them. -/
+theorem vecFetched_slot_schnittstelle :
+    vecSlotVon (encodeIntVec (.paddbRR .xmm0 .xmm1)) = some .intVec := by
+  have hround : decodeIntVec (encodeIntVec (.paddbRR .xmm0 .xmm1)) =
+      some ((⟨.paddbRR .xmm0 .xmm1, 5⟩ : IntVecDec), []) := by
+    simpa using roundtrip_paddb .xmm0 .xmm1 []
+  have hflags := vecSlot_flags_weist_paddb_zurueck
+  unfold vecSlotVon
+  simp only [vecSlot_pilot_weist_paddb_zurueck,
+    intVec_ext_weist_paddb_zurueck, vecSlot_intHw_weist_paddb_zurueck,
+    vecSlot_fpHw_weist_paddb_zurueck, vecSlot_lock_weist_paddb_zurueck,
+    vecSlot_ind_weist_paddb_zurueck, vecSlot_mxcsr_weist_paddb_zurueck,
+    vecSlot_cpuFeat_weist_paddb_zurueck, hflags.1, hflags.2, hround]
+
+/-- WITNESS for `vecFetched_slot_schnittstelle`, from the producer
+    side: the canonical 688 CPUID bytes classify to the CPU-feature
+    slot, never to the packed-integer slot. Every earlier family
+    refuses them; the producer decoder accepts them. -/
+theorem vecFetched_slot_schnittstelle_zeuge :
+    vecSlotVon (cpuEncode .cpuid) = some .cpuFeat := by
+  have hpilot : decode (cpuEncode .cpuid) = none := by decide
+  have hext : decodeExt (cpuEncode .cpuid) = none := by decide
+  have hintHw : decodeIntHw (cpuEncode .cpuid) = none := by decide
+  have hfpHw : fpHwDecode (cpuEncode .cpuid) = none := by decide
+  have hlock : decodeLockExt (cpuEncode .cpuid) = none := by decide
+  have hind : decodeIndirekt (cpuEncode .cpuid) = none := by decide
+  have hmxcsr : mxcsrDecode (cpuEncode .cpuid) = none := by decide
+  have hpush : pushfqByte (cpuEncode .cpuid) = none := by decide
+  have hpop : popfqByte (cpuEncode .cpuid) = none := by decide
+  have hcpu : decodeCpuFeature (cpuEncode .cpuid) =
+      some (.cpuid, []) := by
+    simpa using decodeCpu_cpuid []
+  unfold vecSlotVon
+  rw [hpilot, hext, hintHw, hfpHw, hlock, hind, hmxcsr, hpush, hpop, hcpu]
+
 end Gabbro.Grammatik.X86
