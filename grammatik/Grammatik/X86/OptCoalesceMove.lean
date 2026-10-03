@@ -106,6 +106,66 @@ theorem probe_coalZulassen_spillCall :
     coalZulassen ⟨0, 1, true⟩ ⟨true, true, true, true⟩ = false := by
   decide
 
+/-! ## 2. Purity bridge: validator-recomputed read-footprint facts.
+
+    The validator re-decides `kopieRein` from the expression syntax at
+    the site; `kopieRein_klingt` proves the decided `true` means the
+    read footprint `orte` is empty, so the `execEnd` bind-window
+    `lese` step is the identity on both sides. This is the proved
+    admission-to-semantics instance for footprints: orte equality is
+    DERIVED from a recomputed side condition plus syntax, never assumed.
+    Conservative: `fall` (payload dispatch) and every memory, globe,
+    device or binder form answer `false`, even where a finer analysis
+    could admit them -- refusal is always safe, never a warning. -/
+
+/-- Validator-recomputed purity: `true` only for expressions with no
+    memory, globe, device or binder reads (their `orte` is empty). -/
+def kopieRein {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} :
+    Expr D Γ Λ τ → Bool
+  | .lit _ => true
+  | .wahr => true
+  | .falsch => true
+  | .var _ => true
+  | .ptrOf _ _ _ _ => true
+  | .fnref _ _ _ => true
+  | .none _ => true
+  | .grund _ _ => true
+  | .weiter _ _ e => kopieRein e
+  | .neg a => kopieRein a
+  | .nicht a => kopieRein a
+  | .some e => kopieRein e
+  | .istSome e => kopieRein e
+  | .add a b => kopieRein a && kopieRein b
+  | .sub a b => kopieRein a && kopieRein b
+  | .mul a b => kopieRein a && kopieRein b
+  | .div _ _ a b => kopieRein a && kopieRein b
+  | .rem _ _ a b => kopieRein a && kopieRein b
+  | .sdiv _ a b => kopieRein a && kopieRein b
+  | .srem _ a b => kopieRein a && kopieRein b
+  | .band _ _ a b => kopieRein a && kopieRein b
+  | .bor _ _ _ _ _ a b => kopieRein a && kopieRein b
+  | .bxor _ _ _ _ _ a b => kopieRein a && kopieRein b
+  | .shl _ _ _ _ _ a b => kopieRein a && kopieRein b
+  | .shr _ _ _ _ _ a b => kopieRein a && kopieRein b
+  | .lt a b => kopieRein a && kopieRein b
+  | .le a b => kopieRein a && kopieRein b
+  | .eq a b => kopieRein a && kopieRein b
+  | .fllt a b => kopieRein a && kopieRein b
+  | .flle a b => kopieRein a && kopieRein b
+  | .und a b => kopieRein a && kopieRein b
+  | .oder a b => kopieRein a && kopieRein b
+  | _ => false
+
+/-- Probe: `3 + 4` is pure. -/
+theorem probe_kopieRein_add :
+    kopieRein (.add (.lit 3) (.lit 4) : Expr refD [] [] (.int 7 7)) = true := by
+  decide
+
+/-- Probe: a table slot read is impure (refused). -/
+theorem probe_kopieRein_slot :
+    kopieRein (Expr.slot () () refIdxEin refDarfEin) = false := by
+  decide
+
 /-! ## 2. Value preservation: the copy carries the source value whole.
 
     Over ARBITRARY values (`v : Int`): the copy is the identity on the
