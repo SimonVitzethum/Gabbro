@@ -90,6 +90,82 @@ theorem composeAccepted_luecken (p : PendingFam) : istOffen p := by
 theorem composeAccepted_luecken_zeuge : ∃ (p : PendingFam), istOffen p :=
   ⟨.lock722, composeAccepted_luecken .lock722⟩
 
+/-- A silent ordered row carries no fetch candidate (738 interface). -/
+theorem reiheOhneAbruf (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool)
+    (h : ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = none) :
+    abrufKandidat t = none := by
+  cases ha : abrufKandidat t with
+  | some f => simp [ersteWahl, kandidatenReihe, ha] at h
+  | none => rfl
+
+/-- A silent ordered row carries no decode candidate. -/
+theorem reiheOhneDekodiere (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool)
+    (h : ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = none) :
+    dekodiereKandidat t ill = none := by
+  have ha := reiheOhneAbruf t z pg st ill teiltFalle h
+  cases hd : dekodiereKandidat t ill with
+  | some f => simp [ersteWahl, kandidatenReihe, ha, hd] at h
+  | none => rfl
+
+/-- A silent ordered row carries no address candidate. -/
+theorem reiheOhneAdresse (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool)
+    (h : ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = none) :
+    adressKandidat z = none := by
+  have ha := reiheOhneAbruf t z pg st ill teiltFalle h
+  have hd := reiheOhneDekodiere t z pg st ill teiltFalle h
+  cases had : adressKandidat z with
+  | some f => simp [ersteWahl, kandidatenReihe, ha, hd, had] at h
+  | none => rfl
+
+/-- A silent ordered row carries no access candidate. -/
+theorem reiheOhneZugriff (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool)
+    (h : ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = none) :
+    zugriffKandidat t z pg = none := by
+  have ha := reiheOhneAbruf t z pg st ill teiltFalle h
+  have hd := reiheOhneDekodiere t z pg st ill teiltFalle h
+  have had := reiheOhneAdresse t z pg st ill teiltFalle h
+  cases hz : zugriffKandidat t z pg with
+  | some f => simp [ersteWahl, kandidatenReihe, ha, hd, had, hz] at h
+  | none => rfl
+
+/-- CLOSING through the common dispatcher over `HwMaschine`: a
+    fetched instruction whose unified rule succeeds with unchanged
+    canonical memory runs as a coherent `HwSchritt.reg` step, with
+    decoder agreement (824 backbone) and a silent ordered row (738:
+    no address and no access candidate pending). The pending families
+    thread through as still open, never assumed. -/
+theorem composeAccepted_gesamt (m : HwMaschine) (c : Nat)
+    (i : ExtInstr) (rest : List Byte) (t' : FpZustand)
+    (z : ZugriffsBeschreibung) (pg : SeitenInfo) (st : SteuerInfo)
+    (ill : IllegalInfo) (teiltFalle : Bool)
+    (hfetch : fetchExt (projFp m c) (geholt (projZustand m c)) =
+      some (i, rest))
+    (hstep : stepExt i (projFp m c) (m.bereit c) = .weiter t')
+    (hmem : t'.kern.speicher = m.mem)
+    (hquiet : ersteWahl (kandidatenReihe (projFp m c) z pg st ill
+      teiltFalle) = none) :
+    decodeExt (geholt (projZustand m c)) = some (i, rest) ∧
+      extByteschritt (projFp m c) (m.bereit c) = .weiter t' ∧
+      HwSchritt m (setKernVonFp m c t') (.regAusf c i) ∧
+      adressKandidat z = none ∧
+      zugriffKandidat (projFp m c) z pg = none ∧
+      ∀ (p : PendingFam), istOffen p := by
+  refine ⟨(fetchTrifftDekodierer (projFp m c) i rest hfetch).1,
+    extByteschritt_weiter (projFp m c) (m.bereit c) i rest (.weiter t')
+      hfetch hstep,
+    HwSchritt.reg c i t' hstep hmem,
+    reiheOhneAdresse (projFp m c) z pg st ill teiltFalle hquiet,
+    reiheOhneZugriff (projFp m c) z pg st ill teiltFalle hquiet,
+    composeAccepted_luecken⟩
+
 /- CUTS:
    Proved here so far: the pending-family enumeration `PendingFam`
    with its lane-number audit `familienCode`, and the gap closing
