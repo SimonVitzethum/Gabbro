@@ -1,10 +1,13 @@
 # MUSE-REPORT-992: Exact review of author 842 (fault-ledger closing)
 
-## CANDIDATE / VERDICT
+## Review outcome
 
-CANDIDATE: 842 174cec9d2961fc14e85ec235147778bfcbb6e7b8 (base e7c75908456285d1e37c18dc32d4f9c0e10d1fa4)
+CANDIDATE: 842 174cec9d2961fc14e85ec235147778bfcbb6e7b8
 
-VERDICT: ACCEPT (bounded — see §5 for the exact claim boundary)
+VERDICT: ACCEPT
+
+Pinned base: e7c75908456285d1e37c18dc32d4f9c0e10d1fa4. Acceptance is bounded;
+see the bounded-acceptance section below for the exact claim boundary.
 
 Scope of this review: report only. I own only MUSE-REPORT-992.md. No source
 file was created, edited, or applied in this clone; the candidate was inspected
