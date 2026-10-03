@@ -5,14 +5,15 @@ Report-only review: no Lean, Rust, instrument, or docs file touched, so
 `./lean-bau` state is unchanged (nothing to re-run for this lane; no `_zeuge`
 obligation arises — no theorems added).
 
-CANDIDATE: 1098 69e016835d6f7abf118aea62eeee8afbc69d7bcc
+CANDIDATE: 1098 c2f2aaf19689e32b86a7f5b2b23aaac47a95a824
 
-Pinned hash resolved from `.tmp/review/SNAPSHOT.json` (the LANE.md task
-names the lane but not the hash); base `03491267`, files
+Pinned hash resolved from `.tmp/review/SNAPSHOT.json` (supersedes the
+first-round hash `69e01683`; see §5 re-review); base `03491267`, files
 `MUSE-REPORT-1098.md` + `dokumente/x86/ARBEITSPLAN-AKTUELL.md`, snapshot
 `clean: true`.
-The reviewed bytes are `.tmp/review/author-1098/PATCH.diff` (531 lines);
-the report inside it is identical to `MUSE-REPORT-1098.md` there.
+The reviewed bytes are `.tmp/review/author-1098/PATCH.diff` (base report
+plus the §8 repair record in the second round); the report inside it is
+identical to `MUSE-REPORT-1098.md` there.
 
 ## 1. What I verified (all inside this clone, read-only)
 
@@ -86,9 +87,12 @@ de-duplication against live holds/queues cannot be closed by this
 review. The candidate states this limitation twice and gates
 registration on a live re-check. That gate is mandatory, not optional.
 
-## 3. Verdict
+## 3. Verdict history
 
-VERDICT: REPAIR
+First round (candidate `69e01683`): REPAIR with the two-item list below.
+Second round (candidate `c2f2aaf1`, §5): both items resolved — ACCEPT.
+
+VERDICT: ACCEPT
 
 Precise repair list (mechanical, one planner turn, no rescope):
 
@@ -113,9 +117,38 @@ Precise repair list (mechanical, one planner turn, no rescope):
 - Six authors each appending one import line to `grammatik/Grammatik.lean`
   must integrate serially at publication (candidate already notes this).
 - Task oddity (not verdict-relevant): the LANE.md review task pins the
-  candidate lane but not its hash; the hash had to be resolved from
+  candidate lane but not its hash; each hash had to be resolved from
   `.tmp/review/SNAPSHOT.json`. Future review tasks should carry the full
   pinned HEAD inline.
+
+## 5. Re-review of the repaired candidate (2026-10-03, second round)
+
+Re-reviewed the NEW pinned snapshot (`c2f2aaf1`, same base, same two
+files, `clean: true`) with its PATCH and BUILD-EVIDENCE:
+
+- Commit chain: `c2f2aaf1` sits directly on `69e01683`; the repair diff
+  is docs-only (59 insertions, 7 deletions across the two owned files),
+  committed clean with empty status after. No source touched.
+- D1 resolved and verified in the text itself, not just claimed: proposal
+  F task text (report lines 289–295, 304–307) and review text (312–315)
+  now cite the exact nine producer modules of `lanes/718.md:21` by name
+  plus the pilot/extended byte families, and the reviewer coverage check
+  references the same corrected list — one anchored inventory, no drift,
+  executable as written. The root-cause sentence flagged by the author
+  (`HARDWARE-INTEGRATION-COVERAGE.md:358`, "eight accepted decoder
+  families") is real and correctly left for the coordinator/732-owner —
+  it is not this candidate's file.
+- D2 resolved as an honest partial: re-pinning from the lane clone is
+  impossible (fetch denied, consistent with HARD RULES), so instead the
+  registration gate in BOTH owned files now requires re-verification of
+  the §1 disjointness statements against the post-`03491267` delta (tip
+  `b040b155`, merge 975: new merges, owned paths, holds, 698/718/722
+  repair and 744/745 landing state) before any of the six authors is
+  registered. Residual risk sits behind an explicit coordinator-side
+  gate, not an assumption. No rescope, no new claims, no weakened
+  guarantees introduced by the repair turn.
+- Previous round's confirmations (§1) still hold for the unchanged bulk
+  of the proposal; no regressions found in the repair diff.
 
 No Lean theorems added by this lane; `./lean-bau` not re-run (no build
 inputs touched — review-only turn).
