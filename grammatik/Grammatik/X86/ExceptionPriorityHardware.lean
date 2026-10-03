@@ -917,4 +917,161 @@ theorem ruhe_weiter (irqNr : Nat) :
       .weiterAusfuehren := by
   simp [grenzEntscheid, burstAusfuehrung]
 
+/-! ## Ordered selection, completed: decode and control dominance. -/
+
+/-- A decode candidate beats address, access, divide and control --
+    given a quiet fetch. -/
+theorem dekodiere_schlaegt_spaete (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool) (f : PrioritaetsFehler)
+    (hfrueh : abrufKandidat t = none)
+    (hdec : dekodiereKandidat t ill = some f) :
+    ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = some f := by
+  simp [ersteWahl, kandidatenReihe, hfrueh, hdec]
+
+/-- The control candidate wins when everything before it is quiet. -/
+theorem steuerung_als_letzte (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool) (f : PrioritaetsFehler)
+    (hfrueh : abrufKandidat t = none)
+    (hdec : dekodiereKandidat t ill = none)
+    (hadr : adressKandidat z = none)
+    (hzug : zugriffKandidat t z pg = none)
+    (hteil : teilungsKandidat teiltFalle = none)
+    (hst : steuerKandidat z st = some f) :
+    ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = some f := by
+  simp [ersteWahl, kandidatenReihe, hfrueh, hdec, hadr, hzug, hteil, hst]
+
+/-! ## Witness states: a fetched divide trap, dark and bright.
+
+  `divFalleStart` fetches a real `divRax rcx` with divisor zero from
+  actual executable memory; its data side is dark (nothing readable or
+  writable), so permission candidates fire on demand. `hellFalleStart`
+  shares the same fetched window over permissive data memory, so
+  alignment control can fire while access stays quiet. -/
+
+/-- The fetched divide bytes at 4096, zeroes elsewhere. -/
+def divFalleBytes (a : Adresse) : Byte :=
+  match (mulDivEncode (.divRax .rcx))[a.toNat - 4096]? with
+  | some b => b
+  | none => BitVec.ofNat 8 0
+
+/-- Dark code-and-data memory: three executable divide bytes, nothing
+    readable or writable. Fetch uses execute permission only. -/
+def divFalleSpeicher : Speicher :=
+  { bytes := divFalleBytes
+    lesbar := fun _ => false
+    schreibbar := fun _ => false
+    ausfuehrbar := fun a => decide (4096 ≤ a.toNat ∧ a.toNat < 4099) }
+
+/-- Bright variant: the same fetched window over permissive data. -/
+def hellFalleSpeicher : Speicher :=
+  { divFalleSpeicher with
+    lesbar := fun _ => true
+    schreibbar := fun _ => true }
+
+/-- Divide-trap core: zero divisor registers under the dark memory. -/
+def divFalleKern : Zustand :=
+  { register := mdRegNull, flags := zeugeFlags,
+    rip := BitVec.ofNat 64 4096, speicher := divFalleSpeicher }
+
+/-- Divide-trap start state with reset FP control. -/
+def divFalleStart : FpZustand :=
+  ⟨divFalleKern, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Bright start state: same window, permissive data memory. -/
+def hellFalleStart : FpZustand :=
+  ⟨{ divFalleKern with speicher := hellFalleSpeicher },
+    fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Pure divide descriptor: no data access, divides. -/
+def divZ : ZugriffsBeschreibung := ⟨none, none, false, 8, true⟩
+
+/-- Dark conflict descriptor: noncanonical read plus divide. -/
+def dunkelKonfliktZ : ZugriffsBeschreibung :=
+  ⟨some (BitVec.ofNat 64 (2 ^ 47)), none, false, 8, true⟩
+
+/-- Control descriptor: unaligned permitted read plus divide. -/
+def hellKontrollZ : ZugriffsBeschreibung :=
+  ⟨some (BitVec.ofNat 64 8193), none, false, 8, true⟩
+
+/-- Overlap descriptor: the write target is the fetched code page. -/
+def overlapZ : ZugriffsBeschreibung :=
+  ⟨none, some (BitVec.ofNat 64 4096), false, 8, false⟩
+
+/-- Empty oracles: no page present, nothing stated illegal. -/
+def illLeer : IllegalInfo := ⟨fun _ => false⟩
+
+/-- Oracle stating the truncated jump opcode byte illegal. -/
+def illE9 : IllegalInfo := ⟨fun w => decide (w = [natByte 233])⟩
+
+/-- Page states: nothing present, everything present. -/
+def pgDunkel : SeitenInfo := ⟨fun _ => false⟩
+def pgHell : SeitenInfo := ⟨fun _ => true⟩
+
+/-- Control states: armed, disarmed. -/
+def stScharf : SteuerInfo := ⟨true⟩
+def stStumpf : SteuerInfo := ⟨false⟩
+
+/-! ## Divide-trap probes on fetched bytes.
+
+  The window IS the encoded divide, admission holds, no fetch/decode/
+  address/access candidate fires, the actual evaluator traps, the
+  choice is exactly the divide #DE, the byte step halts, and the
+  verdict binds the halt to the trap. -/
+
+/-- The fetched window is the encoded divide. -/
+theorem geholt_divFalle :
+    geholt divFalleStart.kern = mulDivEncode (.divRax .rcx) := by
+  decide
+
+/-- The window decodes to the divide arm with no suffix. -/
+theorem decode_divFalle :
+    decodeExt (mulDivEncode (.divRax .rcx)) =
+      some (.muldiv ⟨.divRax .rcx, 3⟩, []) := by
+  decide
+
+/-- Admission holds over the fetched window. -/
+theorem zugelassen_divFalle :
+    extZugelassen divFalleStart (geholt divFalleStart.kern)
+      (.muldiv ⟨.divRax .rcx, 3⟩) [] = true := by
+  rw [geholt_divFalle]
+  decide
+
+/-- No fetch candidate over the admitted divide window. -/
+theorem abruf_divFalle_keiner :
+    abrufKandidat divFalleStart = none := by
+  have hne : geholt divFalleStart.kern ≠ [] := by
+    rw [geholt_divFalle]
+    decide
+  have hdec : decodeExt (geholt divFalleStart.kern) =
+      some (.muldiv ⟨.divRax .rcx, 3⟩, []) := by
+    rw [geholt_divFalle]
+    exact decode_divFalle
+  have hkan : istKanonisch divFalleStart.kern.rip = true := kanonisch_code
+  exact abruf_zugelassen_keiner _ _ _ hkan hne hdec zugelassen_divFalle
+
+/-- No decode candidate over the admitted divide window. -/
+theorem dekodiere_divFalle_keiner (ill : IllegalInfo) :
+    dekodiereKandidat divFalleStart ill = none := by
+  apply dekodiere_erfolg_keiner _ _ _ _
+  rw [geholt_divFalle]
+  exact decode_divFalle
+
+/-- The actual evaluator traps on the fetched divide state. -/
+theorem falle_divFalle :
+    mulDivSchritt ⟨.divRax .rcx, 3⟩ divFalleKern = .hardwareHalt :=
+  fehler_div_null_haelt _ _ _ (by decide) rfl (by decide)
+
+/-- CHOICE: the divide #DE wins over the quiet earlier stages. -/
+theorem wahl_divFalle :
+    ersteWahl
+        (kandidatenReihe divFalleStart divZ pgDunkel stStumpf illLeer
+          true) = some ⟨.teilung, .de⟩ := by
+  apply teilung_schlaegt_steuerung _ _ _ _ _ abruf_divFalle_keiner
+    (dekodiere_divFalle_keiner _) _ _ _
+  · simp [adressKandidat, divZ]
+  · simp [zugriffKandidat, schreibKandidat, divZ]
+  · rfl
+
 end Gabbro.Grammatik.X86
