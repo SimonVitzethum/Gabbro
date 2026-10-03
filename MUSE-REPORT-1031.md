@@ -4,9 +4,11 @@
 
 CANDIDATE: 881 00f68a6a6017cf13da20f1afd452ee7d4af2b9c0
 
-## VERDICT: ACCEPT (bounded)
+## Verdict
 
-Bounded acceptance of the exact pinned HEAD. The candidate proves a
+VERDICT: ACCEPT
+
+Bounded acceptance of the exact pinned HEAD (substance unchanged). The candidate proves a
 source-level rematerialisation rule lemma with a validator-decided
 admission Bool, decided refusal of every DESIGN section 7 failure case,
 value/word/float preservation lemmas, an exhibited `1 vs 2`
