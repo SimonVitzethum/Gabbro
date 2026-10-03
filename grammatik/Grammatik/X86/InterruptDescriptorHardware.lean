@@ -609,13 +609,579 @@ theorem erste_pruefung_gewinnt_dpl (vektor idtLimit : Nat)
     rw [hcon] at h
     cases h
 
+/-! ## 6. Frame push and end-to-end delivery.
+
+  A 64-bit gate pushes old SS, old RSP, RFLAGS, old CS, old RIP and,
+  where the vector carries one, the error code -- each an 8-byte
+  push descending from the selected top (INT entry, IA-32e paths).
+  Every push is an accepted `write64`: a refused push refuses the
+  whole delivery with #SS and changes nothing. A noncanonical
+  selected pointer faults with #SS before any push. An interrupt
+  gate clears IF; a trap gate keeps it. -/
+
+/-- Push a word list descending from `top`: each word lands 8 bytes
+    below the previous top. -/
+def schiebeRahmen : Speicher → Adresse → List Wort → Option Speicher
+  | m, _, [] => some m
+  | m, top, w :: rest =>
+    match write64 m (top - BitVec.ofNat 64 8) w with
+    | none => none
+    | some m' => schiebeRahmen m' (top - BitVec.ofNat 64 8) rest
+
+/-- Empty frame pushes nothing. -/
+theorem schiebeRahmen_leer (m : Speicher) (top : Adresse) :
+    schiebeRahmen m top [] = some m := rfl
+
+/-- Delivery request: vector, raw gate words, source, code-row input,
+    privilege-change data, current pointer and the frame words. The
+    code-segment row itself (`codeOk`) stays downstream-owned. -/
+structure LieferAnfrage where
+  vektor : Nat
+  tor : Wort × Wort
+  herkunft : Herkunft
+  codeOk : Bool
+  wechsel : Bool
+  neuDpl : Nat
+  curRsp : Wort
+  ssAlt : Wort
+  rflags : Wort
+  csAlt : Wort
+  ripAlt : Wort
+  fehlercode : Option Wort
+
+/-- Frame words in push order: SS, RSP, RFLAGS, CS, RIP, error code. -/
+def rahmenWorte (q : LieferAnfrage) : List Wort :=
+  [q.ssAlt, q.curRsp, q.rflags, q.csAlt, q.ripAlt] ++ q.fehlercode.toList
+
+/-- Frame length: five words, six with an error code. -/
+theorem rahmenWorte_laenge (q : LieferAnfrage) :
+    (rahmenWorte q).length = 5 + q.fehlercode.toList.length := by
+  cases hq : q.fehlercode with
+  | none => simp [rahmenWorte, hq]
+  | some e => simp [rahmenWorte, hq]
+
+/-- Delivery outcome: the new memory with handler RIP and new IF,
+    or the precise fault with its error code. No equality: memory
+    has none. -/
+inductive LieferErgebnis where
+  | zugestellt : Speicher → Adresse → Bool → Bool → LieferErgebnis
+  | lieferFehler : TorFehler → Wort → LieferErgebnis
+
+/-- Push stage: canonical-pointer check, then the accepted frame
+    chain. Shared by the kept and the switched stack. -/
+def schiebeUndStelle (m : Speicher) (g : IdtTor) (s : Steuerstand)
+    (q : LieferAnfrage) (rsp : Wort) (gewechselt : Bool) : LieferErgebnis :=
+  if !istKanonisch rsp then .lieferFehler .stapelFehler 0
+  else match schiebeRahmen m rsp (rahmenWorte q) with
+  | none => .lieferFehler .stapelFehler 0
+  | some m' =>
+    .zugestellt m' g.offset
+      (if g.unterbrechung then false else s.ifBit) gewechselt
+
+/-- End-to-end delivery: gate check, stack selection, push stage.
+    Faults carry their error code; memory moves only on success. -/
+def liefere (m : Speicher) (s : Steuerstand)
+    (q : LieferAnfrage) : LieferErgebnis :=
+  match pruefeTor q.vektor s.idtLimit q.tor q.herkunft s.cpl q.codeOk with
+  | .fehler f => .lieferFehler f (torFehlerCode f q.herkunft)
+  | .bereit g =>
+    match waehleStapel m s g.ist q.neuDpl q.wechsel q.curRsp with
+    | .stapelFehler f => .lieferFehler f (torFehlerCode f q.herkunft)
+    | .behalten rsp => schiebeUndStelle m g s q rsp false
+    | .wechseln rsp => schiebeUndStelle m g s q rsp true
+
+/-- CHECKS BEFORE EFFECTS: a failed gate check delivers the fault
+    with its code and produces no memory. -/
+theorem liefere_prueft_zuerst (m : Speicher) (s : Steuerstand)
+    (q : LieferAnfrage) (f : TorFehler)
+    (h : pruefeTor q.vektor s.idtLimit q.tor q.herkunft s.cpl q.codeOk =
+      .fehler f) :
+    liefere m s q = .lieferFehler f (torFehlerCode f q.herkunft) := by
+  simp [liefere, h]
+
+/-- STACK FAULT BEFORE PUSH: a failed stack selection faults with
+    its code and pushes nothing. -/
+theorem liefere_stapel_vor_wirkung (m : Speicher) (s : Steuerstand)
+    (q : LieferAnfrage) (g : IdtTor) (f : TorFehler)
+    (hp : pruefeTor q.vektor s.idtLimit q.tor q.herkunft s.cpl q.codeOk =
+      .bereit g)
+    (hs : waehleStapel m s g.ist q.neuDpl q.wechsel q.curRsp =
+      .stapelFehler f) :
+    liefere m s q = .lieferFehler f (torFehlerCode f q.herkunft) := by
+  simp [liefere, hp, hs]
+
+/-- NONCANONICAL POINTER BEFORE PUSH: the loaded pointer is checked
+    before the first frame word lands. -/
+theorem liefere_rsp_nichtkanonisch (m : Speicher) (s : Steuerstand)
+    (q : LieferAnfrage) (g : IdtTor) (rsp : Wort)
+    (hp : pruefeTor q.vektor s.idtLimit q.tor q.herkunft s.cpl q.codeOk =
+      .bereit g)
+    (hs : waehleStapel m s g.ist q.neuDpl q.wechsel q.curRsp =
+      .wechseln rsp)
+    (hk : istKanonisch rsp = false) :
+    liefere m s q = .lieferFehler .stapelFehler 0 := by
+  unfold liefere schiebeUndStelle
+  simp [hp, hs, hk]
+
+/-- SUCCESS over a switched stack: the frame lands and control state
+    follows the gate kind. -/
+theorem liefere_zugestellt_wechsel (m m' : Speicher) (s : Steuerstand)
+    (q : LieferAnfrage) (g : IdtTor) (rsp : Wort)
+    (hp : pruefeTor q.vektor s.idtLimit q.tor q.herkunft s.cpl q.codeOk =
+      .bereit g)
+    (hs : waehleStapel m s g.ist q.neuDpl q.wechsel q.curRsp =
+      .wechseln rsp)
+    (hk : istKanonisch rsp = true)
+    (hpush : schiebeRahmen m rsp (rahmenWorte q) = some m') :
+    liefere m s q = .zugestellt m' g.offset
+      (if g.unterbrechung then false else s.ifBit) true := by
+  unfold liefere schiebeUndStelle
+  simp [hp, hs, hk, hpush]
+
+/-- SUCCESS over the kept stack: same frame, no switch flag. -/
+theorem liefere_zugestellt_behalten (m m' : Speicher) (s : Steuerstand)
+    (q : LieferAnfrage) (g : IdtTor) (rsp : Wort)
+    (hp : pruefeTor q.vektor s.idtLimit q.tor q.herkunft s.cpl q.codeOk =
+      .bereit g)
+    (hs : waehleStapel m s g.ist q.neuDpl q.wechsel q.curRsp =
+      .behalten rsp)
+    (hk : istKanonisch rsp = true)
+    (hpush : schiebeRahmen m rsp (rahmenWorte q) = some m') :
+    liefere m s q = .zugestellt m' g.offset
+      (if g.unterbrechung then false else s.ifBit) false := by
+  unfold liefere schiebeUndStelle
+  simp [hp, hs, hk, hpush]
+
+/-! ## 7. Joint witness: byte-populated IDT/TSS, real delivery.
+
+  IDT at 4096 (three entries, limit 47); vector 2 is a present
+  interrupt gate (type `0xE`, DPL 0, IST 1, selector `0x08`) naming
+  handler `0x2000`. TSS at 12288 (limit 103); IST1 holds `0x4000`.
+  External delivery at CPL 0 clears IF through the interrupt gate,
+  switches to the IST stack and pushes five nonzero frame words. -/
+
+/-- Witness gate low word: offset `0x2000`, selector `0x08`, IST 1,
+    `P/DPL/type = 0x8E`. -/
+def loWitNat : Nat :=
+  32 * 256 + 8 * 65536 + 1 * 4294967296 + 142 * 1099511627776
+
+/-- Witness gate low word. -/
+def loWit : Wort := BitVec.ofNat 64 loWitNat
+
+/-- IDT image bytes relative to 4096: the vector-2 gate at +32. -/
+def witIdtByte (n : Nat) : Byte :=
+  match n with
+  | 32 => natByte 0
+  | 33 => natByte 32
+  | 34 => natByte 8
+  | 35 => natByte 0
+  | 36 => natByte 1
+  | 37 => natByte 142
+  | _ => BitVec.ofNat 8 0
+
+/-- TSS image bytes relative to 12288: IST1 (`0x4000`) at +36. -/
+def witTssByte (n : Nat) : Byte :=
+  match n with
+  | 36 => natByte 0
+  | 37 => natByte 64
+  | _ => BitVec.ofNat 8 0
+
+/-- Witness bytes: IDT and TSS images, zero elsewhere. -/
+def idtWitBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else if a.toNat < 4096 + 48 then witIdtByte (a.toNat - 4096)
+  else if a.toNat < 12288 then BitVec.ofNat 8 0
+  else if a.toNat < 12288 + 48 then witTssByte (a.toNat - 12288)
+  else BitVec.ofNat 8 0
+
+/-- Witness memory: IDT/TSS/stack readable, IDT/TSS never
+    executable and stack writable (delivery never fetches here). -/
+def witMem : Speicher :=
+  { bytes := idtWitBytes
+    lesbar := fun a =>
+      decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 48) ||
+        decide (12288 ≤ a.toNat ∧ a.toNat < 12288 + 48) ||
+        decide (16336 ≤ a.toNat ∧ a.toNat < 16384)
+    schreibbar := fun a => decide (16336 ≤ a.toNat ∧ a.toNat < 16384)
+    ausfuehrbar := fun _ => false }
+
+/-- Witness control state: IDT limit 47, TSS limit 103, CPL 0. -/
+def idtWitSteuer : Steuerstand :=
+  ⟨BitVec.ofNat 64 4096, 47, BitVec.ofNat 64 12288, 103, 0, true⟩
+
+/-- Witness request: external vector 2, no privilege change data,
+    nonzero frame words, no error code. -/
+def witAnfrage : LieferAnfrage :=
+  ⟨2, (loWit, BitVec.ofNat 64 0), .extern, true, false, 0,
+    BitVec.ofNat 64 20480, BitVec.ofNat 64 16, BitVec.ofNat 64 514,
+    BitVec.ofNat 64 8, BitVec.ofNat 64 4660, none⟩
+
+/-- Gate address of vector 2 is 4128. -/
+theorem wit_torAdresse :
+    torAdresse (BitVec.ofNat 64 4096) 2 = BitVec.ofNat 64 4128 := by
+  decide
+
+/-- Vector 2 fits the witness IDT limit. -/
+theorem wit_imLimit : torImLimit 47 2 = true := by
+  decide
+
+/-- The gate bytes read back as the two witness words. -/
+theorem idtWit_liest :
+    liesTorBytes witMem (BitVec.ofNat 64 4128) = some (loWit, 0) := by
+  decide
+
+/-- The witness words parse to the expected gate. -/
+theorem wit_zerlegt :
+    zerlegeTor (loWit, (0 : Wort)) =
+      .ok ⟨BitVec.ofNat 64 8192, 8, 1, 0, true⟩ := by
+  decide
+
+/-- The witness gate is admitted. -/
+theorem wit_bereit :
+    pruefeTor 2 47 (loWit, (0 : Wort)) .extern 0 true =
+      .bereit ⟨BitVec.ofNat 64 8192, 8, 1, 0, true⟩ := by
+  decide
+
+/-- The witness TSS slot loads the IST stack. -/
+theorem wit_stapel :
+    waehleStapel witMem idtWitSteuer 1 0 false (BitVec.ofNat 64 20480) =
+      .wechseln (BitVec.ofNat 64 16384) := by
+  decide
+
+/-! ## 8. Negative probes: every malformed shape faults precisely.
+
+  Each probe names its vector, class and code: limit/type/DPL/
+  present/reserved/selector/canonical/TSS-limit/stack faults plus
+  the INT1 exemption and the error-code values. -/
+
+/-- Fault vector and code projections for downstream consumers. -/
+def ergebnisVektor : LieferErgebnis → Option Nat
+  | .zugestellt _ _ _ _ => none
+  | .lieferFehler f _ => some (torVektor f)
+
+/-- Fault error-code projection. -/
+def ergebnisCode : LieferErgebnis → Option Wort
+  | .zugestellt _ _ _ _ => none
+  | .lieferFehler _ c => some c
+
+/-- LIMIT: vector 3 lies past the witness IDT. -/
+theorem neg_limit :
+    pruefeTor 3 47 (loWit, (0 : Wort)) .extern 0 true =
+      .fehler (.limitFehler 3) := by
+  decide
+
+/-- TYPE: `P=1, type=0` is no interrupt or trap gate. -/
+def loTypFalsch : Wort :=
+  BitVec.ofNat 64 (32 * 256 + 8 * 65536 + 1 * 4294967296 + 128 * 1099511627776)
+
+/-- Wrong-type gate parses as `falscherTyp` and faults. -/
+theorem neg_typ :
+    zerlegeTor (loTypFalsch, (0 : Wort)) = .falscherTyp ∧
+      pruefeTor 2 47 (loTypFalsch, (0 : Wort)) .extern 0 true =
+        .fehler (.typFehler 2) := by
+  decide
+
+/-- PRESENT: `P=0, type=0xE` admits the shape but not the gate. -/
+def loAbwesend : Wort :=
+  BitVec.ofNat 64 (32 * 256 + 8 * 65536 + 1 * 4294967296 + 14 * 1099511627776)
+
+/-- Non-present gate faults with #NP after the DPL stage. -/
+theorem neg_abwesend :
+    pruefeTor 2 47 (loAbwesend, (0 : Wort)) .extern 0 true =
+      .fehler (.nichtVorhanden 2) := by
+  decide
+
+/-- IST-RESERVED: nonzero bit 3 of the IST byte. -/
+def loIstReserviert : Wort :=
+  BitVec.ofNat 64 (32 * 256 + 8 * 65536 + 9 * 4294967296 + 142 * 1099511627776)
+
+/-- Reserved IST bits fault with the vector. -/
+theorem neg_reserviert_ist :
+    zerlegeTor (loIstReserviert, (0 : Wort)) = .reserviertIst ∧
+      pruefeTor 2 47 (loIstReserviert, (0 : Wort)) .extern 0 true =
+        .fehler (.reserviertFehler 2) := by
+  decide
+
+/-- HIGH-RESERVED: gate byte 12 (high-word byte 4) set. -/
+theorem neg_reserviert_hoch :
+    zerlegeTor (loWit, BitVec.ofNat 64 4294967296) = .reserviertHoch := by
+  decide
+
+/-- NULL selector: zero selector faults after the present check. -/
+def loSelektorNull : Wort :=
+  BitVec.ofNat 64 (32 * 256 + 1 * 4294967296 + 142 * 1099511627776)
+
+/-- NULL selector faults naming the zero selector. -/
+theorem neg_selektor :
+    pruefeTor 2 47 (loSelektorNull, (0 : Wort)) .extern 0 true =
+      .fehler (.selektorFehler 0) := by
+  decide
+
+/-- NONCANONICAL handler: offset `2 ^ 47` lives in gate byte 9. -/
+def loZielFalsch : Wort :=
+  BitVec.ofNat 64 (8 * 65536 + 1 * 4294967296 + 142 * 1099511627776)
+
+/-- High word carrying gate byte 9 = 128. -/
+def hiZielFalsch : Wort := BitVec.ofNat 64 32768
+
+/-- Noncanonical handler faults before any stack is read. -/
+theorem neg_ziel :
+    pruefeTor 2 47 (loZielFalsch, hiZielFalsch) .extern 0 true =
+      .fehler .zielFehler := by
+  decide
+
+/-- DPL: software INT at CPL 3 against DPL 0 faults; INT1 and
+    external delivery pass the same gate. -/
+theorem neg_dpl_kontrast :
+    pruefeTor 2 47 (loWit, (0 : Wort)) (.softwareInt false) 3 true =
+        .fehler (.dplFehler 2) ∧
+      pruefeTor 2 47 (loWit, (0 : Wort)) (.softwareInt true) 3 true =
+        .bereit ⟨BitVec.ofNat 64 8192, 8, 1, 0, true⟩ ∧
+      pruefeTor 2 47 (loWit, (0 : Wort)) .extern 3 true =
+        .bereit ⟨BitVec.ofNat 64 8192, 8, 1, 0, true⟩ := by
+  decide
+
+/-- Short TSS: slot 36 needs bytes through 43. -/
+def idtWitSteuerKurz : Steuerstand :=
+  ⟨BitVec.ofNat 64 4096, 47, BitVec.ofNat 64 12288, 42, 0, true⟩
+
+/-- TSS-limit fault names the offending slot offset. -/
+theorem neg_tss_limit :
+    waehleStapel witMem idtWitSteuerKurz 1 0 true (BitVec.ofNat 64 20480) =
+      .stapelFehler (.tssFehler 36) := by
+  decide
+
+/-- IST zero without privilege change keeps the stack. -/
+theorem neg_kein_wechsel :
+    waehleStapel witMem idtWitSteuer 0 0 false (BitVec.ofNat 64 20480) =
+      .behalten (BitVec.ofNat 64 20480) := by
+  decide
+
+/-- Dark stack: no writable frame cell, delivery faults with #SS. -/
+def witMemDunkel : Speicher :=
+  { witMem with schreibbar := fun _ => false }
+
+/-- Dark-stack delivery faults: vector 12, code zero. -/
+theorem neg_dunkel_vektor :
+    ergebnisVektor (liefere witMemDunkel idtWitSteuer witAnfrage) = some 12 ∧
+      ergebnisCode (liefere witMemDunkel idtWitSteuer witAnfrage) =
+        some 0 := by
+  decide
+
+/-- Error-code values: IDT fault with/without EXT, selector fault. -/
+theorem neg_codes :
+    torFehlerCode (.limitFehler 3) (.softwareInt false) =
+        BitVec.ofNat 64 26 ∧
+      torFehlerCode (.nichtVorhanden 2) .extern =
+        BitVec.ofNat 64 19 ∧
+      torFehlerCode (.selektorFehler 24) .extern =
+        BitVec.ofNat 64 25 := by
+  decide
+
+/-! ## 9. Joint witness and producer interface.
+
+  One conjunction ties the byte-populated IDT/TSS run to its
+  checked facts: the gate reads from actual canonical bytes, parses,
+  is admitted, the IST stack loads, delivery switches stacks,
+  clears IF through the interrupt gate, pushes five nonzero frame
+  words that read back, and observably changes memory from zero.
+  Non-degenerate: two frame cells change actual bytes.
+
+  CONSUMED BY 672 (delivery): `idtWit_liest` (bytes), `wit_zerlegt`
+  (shape), `wit_bereit` (admission order), `wit_stapel` (slot),
+  `liefere_zugestellt_wechsel/behalten` (frame equations),
+  `torFehlerCode` + `torVektor` (fault data),
+  `erste_pruefung_gewinnt_dpl` (check order). CONSUMED BY 708
+  (entry): the `zugestellt` fields -- new memory, handler RIP,
+  new IF. Full async delivery, TSO/store-buffer interaction and
+  the GDT/code-row ownership stay downstream. -/
+
+/-- Project the delivered memory (witness memory on fault). -/
+def ergebnisSpeicher : LieferErgebnis → Speicher
+  | .zugestellt m _ _ _ => m
+  | .lieferFehler _ _ => witMem
+
+/-- Delivery reaches the witness handler offset. -/
+theorem wit_liefert_rip :
+    (match liefere witMem idtWitSteuer witAnfrage with
+      | .zugestellt _ rip _ _ => rip
+      | .lieferFehler _ _ => BitVec.ofNat 64 0) =
+      BitVec.ofNat 64 8192 := by
+  decide
+
+/-- The interrupt gate clears IF. -/
+theorem wit_liefert_if :
+    (match liefere witMem idtWitSteuer witAnfrage with
+      | .zugestellt _ _ ifNeu _ => ifNeu
+      | .lieferFehler _ _ => true) = false := by
+  decide
+
+/-- Delivery reports the IST switch. -/
+theorem wit_liefert_gew :
+    (match liefere witMem idtWitSteuer witAnfrage with
+      | .zugestellt _ _ _ gew => gew
+      | .lieferFehler _ _ => false) = true := by
+  decide
+
+/-- First frame word reads back. -/
+theorem wit_rahmen_ss :
+    read64 (ergebnisSpeicher (liefere witMem idtWitSteuer witAnfrage))
+        (BitVec.ofNat 64 16376) = some (BitVec.ofNat 64 16) := by
+  decide
+
+/-- Last frame word reads back. -/
+theorem wit_rahmen_rip :
+    read64 (ergebnisSpeicher (liefere witMem idtWitSteuer witAnfrage))
+        (BitVec.ofNat 64 16344) = some (BitVec.ofNat 64 4660) := by
+  decide
+
+/-- Both frame cells start zeroed. -/
+theorem wit_rahmen_anfang :
+    witMem.bytes (BitVec.ofNat 64 16376) = BitVec.ofNat 8 0 ∧
+      witMem.bytes (BitVec.ofNat 64 16344) = BitVec.ofNat 8 0 := by
+  decide
+
+/-- Both frame cells observably change. -/
+theorem wit_rahmen_aendert :
+    witMem.bytes (BitVec.ofNat 64 16376) ≠
+        (ergebnisSpeicher (liefere witMem idtWitSteuer witAnfrage)).bytes
+          (BitVec.ofNat 64 16376) ∧
+      witMem.bytes (BitVec.ofNat 64 16344) ≠
+        (ergebnisSpeicher (liefere witMem idtWitSteuer witAnfrage)).bytes
+          (BitVec.ofNat 64 16344) := by
+  decide
+
+/-- JOINT WITNESS: checked delivery over byte-populated canonical
+    memory with an observable five-word frame change. -/
+theorem liefer_zeuge_gemeinsam :
+    (match liefere witMem idtWitSteuer witAnfrage with
+      | .zugestellt _ rip _ _ => rip
+      | .lieferFehler _ _ => BitVec.ofNat 64 0) =
+        BitVec.ofNat 64 8192 ∧
+      (match liefere witMem idtWitSteuer witAnfrage with
+        | .zugestellt _ _ ifNeu _ => ifNeu
+        | .lieferFehler _ _ => true) = false ∧
+      read64 (ergebnisSpeicher (liefere witMem idtWitSteuer witAnfrage))
+          (BitVec.ofNat 64 16376) = some (BitVec.ofNat 64 16) ∧
+      read64 (ergebnisSpeicher (liefere witMem idtWitSteuer witAnfrage))
+          (BitVec.ofNat 64 16344) = some (BitVec.ofNat 64 4660) ∧
+      witMem.bytes (BitVec.ofNat 64 16376) ≠
+        (ergebnisSpeicher (liefere witMem idtWitSteuer witAnfrage)).bytes
+          (BitVec.ofNat 64 16376) ∧
+      witMem.bytes (BitVec.ofNat 64 16344) ≠
+        (ergebnisSpeicher (liefere witMem idtWitSteuer witAnfrage)).bytes
+          (BitVec.ofNat 64 16344) :=
+  ⟨wit_liefert_rip, wit_liefert_if, wit_rahmen_ss, wit_rahmen_rip,
+    wit_rahmen_aendert.1, wit_rahmen_aendert.2⟩
+
 /- CUTS:
-   Skeleton only: control state, gate address and the IDT-limit
-   predicate. Parsing, checks, slot lookup, selection, faults,
-   priority, frame, producer interface and witnesses are OPEN.
+   Proved here, over canonical `Speicher` equations only (no new
+   machine, no decoder row, no source claim):
+   - control state (`Steuerstand`: IDTR/TSS windows, CPL, IF);
+   - vector selection (`torAdresse`, `torImLimit`) and the two-half
+     gate read (`liesTorBytes`: any unreadable half refuses);
+   - 16-byte parse (`zerlegeTor`: interrupt `0xE`/trap `0xF`,
+     IST/high reserved checks, DPL needs no range check);
+   - check pipeline in INT-entry pseudocode order (`pruefeTor` /
+     `pruefeTorKern`), software-INT DPL with the INT1 exemption
+     and external bypass (`dplZugelassen`), NULL-selector and
+     canonical-handler checks, downstream-owned `codeOk` explicit;
+   - TSS slot lookup (`stapelSlotOffset`: IST slot wins, else the
+     target-level RSP slot; `slotImLimit`) and selection
+     (`waehleStapel`: no read where nothing switches);
+   - fault vectors (Table 6-1), error codes (INT-entry
+     `error_code` comments) and the admitted-vocabulary bridge
+     (`alsArch`; #NP/#TS have no admitted member);
+   - first-failure priority (`erste_pruefung_gewinnt_dpl`);
+   - frame push (`schiebeRahmen`: five/six accepted `write64`
+     pushes in pseudocode order) and end-to-end delivery
+     (`liefere`) with checks-before-effects, stack-fault-before-
+     push and both success equations;
+   - joint byte-populated witness (IDT/TSS images in canonical
+     memory, IST switch, IF cleared, five-word frame read-back,
+     two observably changed cells) beside twelve fault/control/
+     overlap probes (limit, type, absent, both reserveds, NULL
+     selector, noncanonical target, DPL contrast incl. INT1,
+     TSS limit, no-switch keep, dark stack, code values).
+   NOT proved here, and not claimed:
+   - No GDT/code-segment ownership: `codeOk` arrives as an
+     explicit checked input; selector table walks, conforming
+     checks and CPL changes from code DPL stay downstream (672).
+   - No async completion: this layer checks descriptors and
+     pushes one frame; what the handler runs, nested delivery,
+     #DF escalation, TSO/store-buffer interaction and timing
+     stay with 672/708 and the concurrency lanes.
+   - No full 20-vector error-code table: presence is an explicit
+     `Option` in the request; only the code VALUES of reached
+     faults are pinned.
+   - No `RSP & ...F0` masking line: the loaded pointer is the
+     producer output; the pseudocode alignment mask is OPEN.
+   - No shadow-stack/CET/FRED paths: the `CR4.FRED = 0` IDT
+     delivery only (INT entry); task gates are refused as
+     `falscherTyp`.
+   - No silicon proof: field positions cite the Vol. 3 gate/TSS
+     figures (outside the local txt snapshot) as stated
+     architecture; every CHECK is proved from canonical-memory
+     equations, and `gabbro_ziel` axioms are untouched.
 -/
 
 #print axioms torAdresse
 #print axioms torImLimit
+#print axioms liesTorBytes_verweigert_unten
+#print axioms liesTorBytes_erfolg
+#print axioms zerlegeTor_typ
+#print axioms zerlegeTor_ist
+#print axioms zerlegeTor_hoch
+#print axioms dpl_verweigert_software
+#print axioms dpl_int1_frei
+#print axioms dpl_extern_frei
+#print axioms pruefeTor_limit
+#print axioms pruefeTor_dpl
+#print axioms pruefeTor_abwesend
+#print axioms pruefeTor_selektor_null
+#print axioms pruefeTor_typ
+#print axioms pruefeTor_reserviert_ist
+#print axioms pruefeTor_reserviert_hoch
+#print axioms pruefeTor_bereit
+#print axioms torDetail_faelle
+#print axioms waehleStapel_behalten
+#print axioms waehleStapel_tss_limit
+#print axioms waehleStapel_wechseln
+#print axioms slot_ist_pins
+#print axioms slot_rsp_pins
+#print axioms alsArch_gp
+#print axioms alsArch_ohne_mitglied
+#print axioms erste_pruefung_gewinnt_dpl
+#print axioms rahmenWorte_laenge
+#print axioms schiebeRahmen_leer
+#print axioms liefere_prueft_zuerst
+#print axioms liefere_stapel_vor_wirkung
+#print axioms liefere_rsp_nichtkanonisch
+#print axioms liefere_zugestellt_wechsel
+#print axioms liefere_zugestellt_behalten
+#print axioms idtWit_liest
+#print axioms wit_zerlegt
+#print axioms wit_bereit
+#print axioms wit_stapel
+#print axioms neg_limit
+#print axioms neg_typ
+#print axioms neg_abwesend
+#print axioms neg_reserviert_ist
+#print axioms neg_reserviert_hoch
+#print axioms neg_selektor
+#print axioms neg_ziel
+#print axioms neg_dpl_kontrast
+#print axioms neg_tss_limit
+#print axioms neg_kein_wechsel
+#print axioms neg_dunkel_vektor
+#print axioms neg_codes
+#print axioms wit_liefert_rip
+#print axioms wit_liefert_if
+#print axioms wit_liefert_gew
+#print axioms wit_rahmen_ss
+#print axioms wit_rahmen_rip
+#print axioms wit_rahmen_anfang
+#print axioms wit_rahmen_aendert
+#print axioms liefer_zeuge_gemeinsam
 
 end Gabbro.Grammatik.X86
