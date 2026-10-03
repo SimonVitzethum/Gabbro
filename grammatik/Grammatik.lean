@@ -533,3 +533,4 @@ import Grammatik.X86.ComposeRelaxLayout
 import Grammatik.X86.ComposePatchBytes
 import Grammatik.X86.ComposeMapPerms
 import Grammatik.X86.ComposeGuardPages
+import Grammatik.X86.ComposeUnwindTable
