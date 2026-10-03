@@ -574,4 +574,156 @@ theorem teilung_schlaegt_steuerung (t : FpZustand) (z : ZugriffsBeschreibung)
   simp [ersteWahl, kandidatenReihe, teilungsKandidat, hfrueh, hdec, hadr,
     hzug, hfalle]
 
+/-! ## Verdict producer for common execution and IRQ delivery.
+
+  The verdict keeps three outcomes apart BY CONSTRUCTION: success with
+  the actual successor, a fault with its stage and class, and admission
+  refusal (validator verdict, never a fault). The binder takes the
+  ACTUAL unified outcome, so success is never invented. `halt` binds to
+  the divide trap: it is proved below that `halt` comes only from the
+  divide arm. -/
+
+/-- The bound verdict: success, ordered fault, or admission refusal. -/
+inductive FehlerUrteil where
+  | erfolg : FpZustand → FehlerUrteil
+  | fehler : PrioritaetsFehler → FehlerUrteil
+  | zugelassenVerweigert : FehlerUrteil
+
+/-- Bind the actual outcome to the ordered choice: success keeps its
+    successor, `halt` IS the divide trap, refusal carries the choice or
+    stays admission refusal when no candidate fires. -/
+def bindeUrteil (o : ExtAusgang) (wahl : Option PrioritaetsFehler) :
+    FehlerUrteil :=
+  match o with
+  | .weiter t' => .erfolg t'
+  | .halt => .fehler ⟨.teilung, .de⟩
+  | .verweigert =>
+    match wahl with
+    | some f => .fehler f
+    | none => .zugelassenVerweigert
+
+/-- Success is never invented: `erfolg` carries the actual successor. -/
+theorem urteil_erfolg_treue (t' : FpZustand) (wahl : Option PrioritaetsFehler) :
+    bindeUrteil (.weiter t') wahl = .erfolg t' := rfl
+
+/-- `halt` always binds the divide trap, whatever the choice says. -/
+theorem urteil_halt_ist_teilung (wahl : Option PrioritaetsFehler) :
+    bindeUrteil .halt wahl = .fehler ⟨.teilung, .de⟩ := rfl
+
+/-- Admission refusal is never a fault: the two outcomes differ. -/
+theorem verweigerung_kein_fehler (f : PrioritaetsFehler) :
+    FehlerUrteil.zugelassenVerweigert ≠ .fehler f := by
+  intro h
+  cases h
+
+/-- Refusal with a choice binds that exact choice. -/
+theorem urteil_verweigert_wahl (f : PrioritaetsFehler) :
+    bindeUrteil .verweigert (some f) = .fehler f := rfl
+
+/-- Refusal without a choice stays admission refusal. -/
+theorem urteil_verweigert_ohne_wahl :
+    bindeUrteil .verweigert none = .zugelassenVerweigert := rfl
+
+/-- HALT COMES ONLY FROM DIVIDE: a byte-step `halt` implies a fetched
+    multiply/divide instruction whose actual evaluator trapped. Every
+    other arm yields `weiter` or `verweigert` by its selection equation. -/
+theorem halt_kommt_von_teilung (t : FpZustand) (b : BereitProfil)
+    (h : extByteschritt t b = .halt) :
+    ∃ m : MulDivDecodiert, ∃ rest : List Byte,
+      fetchExt t (geholt t.kern) = some (.muldiv m, rest) ∧
+        mulDivSchritt m t.kern = .hardwareHalt := by
+  have e : extByteschritt t b =
+      match fetchExt t (geholt t.kern) with
+      | none => ExtAusgang.verweigert
+      | some (j, _) => stepExt j t b := rfl
+  rw [e] at h
+  cases hfetch : fetchExt t (geholt t.kern) with
+  | none => simp [hfetch] at h
+  | some p =>
+    simp [hfetch] at h
+    cases p with
+    | mk i rest =>
+      cases i with
+      | pilot d =>
+        cases hstep : laufAlt d t with
+        | some t' =>
+          have hs := stepExt_pilot d t t' b hstep
+          rw [hs] at h
+          cases h
+        | none =>
+          have hs := stepExt_pilot_verweigert d t b hstep
+          rw [hs] at h
+          cases h
+      | narrow n =>
+        have hs : stepExt (.narrow n) t b ≠ .halt := by
+          cases hstep : stepNarrow n t.kern with
+          | some s' =>
+            have := stepExt_narrow n t b s' hstep
+            simp [this]
+          | none =>
+            have := stepExt_narrow_verweigert n t b hstep
+            simp [this]
+        exact absurd h hs
+      | muldiv m =>
+        cases htrap : mulDivSchritt m t.kern with
+        | ok s' =>
+          have hs := stepExt_muldiv_ok m t b s' htrap
+          rw [hs] at h
+          cases h
+        | hardwareHalt => exact ⟨m, rest, rfl, htrap⟩
+        | misslungen =>
+          have hs := stepExt_muldiv_misslungen m t b htrap
+          rw [hs] at h
+          cases h
+      | shift d =>
+        have hs : stepExt (.shift d) t b ≠ .halt := by
+          cases hstep : shiftSchritt d t.kern with
+          | some s' =>
+            have := stepExt_shift d t b s' hstep
+            simp [this]
+          | none =>
+            have := stepExt_shift_verweigert d t b hstep
+            simp [this]
+        exact absurd h hs
+      | setcc c dst l =>
+        have hs : stepExt (.setcc c dst l) t b ≠ .halt := by
+          cases hstep : setccSchrittBytes l t.kern dst c with
+          | some s' =>
+            have := stepExt_setcc c dst l t b s' hstep
+            simp [this]
+          | none =>
+            have := stepExt_setcc_verweigert c dst l t b hstep
+            simp [this]
+        exact absurd h hs
+      | cmov c dst src l =>
+        have hs : stepExt (.cmov c dst src l) t b ≠ .halt := by
+          cases hstep : cmovSchrittBytes l t.kern dst src c with
+          | some s' =>
+            have := stepExt_cmov c dst src l t b s' hstep
+            simp [this]
+          | none =>
+            have := stepExt_cmov_verweigert c dst src l t b hstep
+            simp [this]
+        exact absurd h hs
+      | fp f =>
+        have hs : stepExt (.fp f) t b ≠ .halt := by
+          cases hstep : fpSchritt f t with
+          | some t' =>
+            have := stepExt_fp f t t' b hstep
+            simp [this]
+          | none =>
+            have := stepExt_fp_verweigert f t b hstep
+            simp [this]
+        exact absurd h hs
+      | vec v =>
+        have hs : stepExt (.vec v) t b ≠ .halt := by
+          cases hstep : stepVector v t b with
+          | some t' =>
+            have := stepExt_vec v t t' b hstep
+            simp [this]
+          | none =>
+            have := stepExt_vec_verweigert v t b hstep
+            simp [this]
+        exact absurd h hs
+
 end Gabbro.Grammatik.X86
