@@ -556,7 +556,7 @@ Last ledger refresh: **2026-10-03 22:30 UTC**. This is an operational snapshot, 
 | 878 | Optimiser rule: linear-scan allocation rule | Merged after review/checks | 1028: Merged after review/checks | [report](messung/muse/MUSE-REPORT-878.md) |
 | 879 | Optimiser rule: spill freshness rule | Merged after review/checks | 1029: Merged after review/checks | [report](messung/muse/MUSE-REPORT-879.md) |
 | 880 | Optimiser rule: copy coalescing rule | Merged after review/checks | 1030: Merged after review/checks | [report](messung/muse/MUSE-REPORT-880.md) |
-| 881 | Optimiser rule: rematerialisation rule | Merged after review/checks | 1031: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-881.md) |
+| 881 | Optimiser rule: rematerialisation rule | Merged after review/checks | 1031: Merged after review/checks | [report](messung/muse/MUSE-REPORT-881.md) |
 | 882 | Optimiser rule: chain scheduling rule | Committed candidate; review/integration pending | 1032: Incomplete; preserved | [task](lanes/882.md) |
 | 883 | Optimiser rule: loop alignment rule | Committed candidate; review/integration pending | 1033: Committed candidate; review/integration pending | [task](lanes/883.md) |
 | 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Incomplete; preserved | [task](lanes/884.md) |
@@ -1308,6 +1308,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **880**, Optimiser rule: copy coalescing rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-880.md). <!-- x86-merged:880 -->
 - 2026-10-03: lane **1030**, Independent exact review of 880, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1030.md). <!-- x86-merged:1030 -->
 - 2026-10-03: lane **881**, Optimiser rule: rematerialisation rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-881.md). <!-- x86-merged:881 -->
+- 2026-10-03: lane **1031**, Independent exact review of 881, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1031.md). <!-- x86-merged:1031 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
