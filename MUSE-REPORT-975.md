@@ -6,7 +6,9 @@ CANDIDATE: 825 cd5b847858b5eb452ec4c67435ec93fa2c3cc3dc
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded: composition-closing interface only; see CUTS below)
+VERDICT: ACCEPT
+
+Bounded scope: composition-closing interface only; see CUTS below.
 
 ## What was reviewed
 
