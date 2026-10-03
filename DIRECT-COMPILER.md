@@ -599,7 +599,7 @@ Last ledger refresh: **2026-10-03 22:39 UTC**. This is an operational snapshot, 
 | 1104 | Close the accepted consumers through the common dispatcher | Merged after review/checks | 1105: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Committed candidate; review/integration pending | 1107: Agent working | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Merged after review/checks | 1109: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1108.md) |
-| 1110 | Packed-integer fetched steps with a dispatch-slot API | Merged after review/checks | 1111: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1110.md) |
+| 1110 | Packed-integer fetched steps with a dispatch-slot API | Merged after review/checks | 1111: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1110.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1347,6 +1347,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: publication batch checks passed for `91ee03ff`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-03: lane **1110**, Packed-integer fetched steps with a dispatch-slot API, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1110.md). <!-- x86-merged:1110 -->
 - 2026-10-03: checked master `491bd562` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:491bd562d3f0f0ddb7ab43d915e591edb2612856 -->
+- 2026-10-03: lane **1111**, Independent exact review of 1110, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1111.md). <!-- x86-merged:1111 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
