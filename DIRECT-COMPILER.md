@@ -430,7 +430,7 @@ Last ledger refresh: **2026-10-03 12:09 UTC**. This is an operational snapshot, 
 | 752 | Hardware completion: compact ADD/SUB/CMP with imm32 | Agent working | 902: scheduled | [task](lanes/752.md) |
 | 753 | Hardware completion: accumulator short ALU forms | Agent working | 903: scheduled | [task](lanes/753.md) |
 | 754 | Hardware completion: zero idiom XOR reg, reg | Agent working | 904: scheduled | [task](lanes/754.md) |
-| 755 | Hardware completion: pure LEA address arithmetic | Merged after review/checks | 905: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-755.md) |
+| 755 | Hardware completion: pure LEA address arithmetic | Merged after review/checks | 905: Merged after review/checks | [report](messung/muse/MUSE-REPORT-755.md) |
 | 756 | Hardware completion: compact TEST with imm | Agent working | 906: scheduled | [task](lanes/756.md) |
 | 757 | Hardware completion: compact NOT/NEG forms | Agent working | 907: scheduled | [task](lanes/757.md) |
 | 758 | Hardware completion: disp0 memory form | Merged after review/checks | 908: Merged after review/checks | [report](messung/muse/MUSE-REPORT-758.md) |
@@ -1123,6 +1123,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: publication batch checks passed for `4b42ac53`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-03: lane **755**, Hardware completion: pure LEA address arithmetic, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-755.md). <!-- x86-merged:755 -->
 - 2026-10-03: checked master `cbe5946f` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:cbe5946fc190e2a0b744776545001edda282370a -->
+- 2026-10-03: lane **905**, Independent exact review of 755, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-905.md). <!-- x86-merged:905 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
