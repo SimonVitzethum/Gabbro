@@ -13,6 +13,7 @@ import Grammatik.X86.Speicher
 import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.IndirectControlHardwareForms
 import Grammatik.X86.HardwareFaults
+import Grammatik.X86.TSO
 
 namespace Gabbro.Grammatik.X86
 
@@ -176,11 +177,85 @@ theorem JumpTableCert_verbindung
   · exact indByteschritt_weiter s _ rest s' hfetch hschritt
   · exact jtEcht_nicht_geschmiedet s.speicher basis n idx ziel hidx htab
 
+/-! ## 5. Faults, gates and TSO framing.
+
+    Widths: every slot is one 8-byte word (`read64`); the stride is 8.
+    Order: the target word is read from the pre-state before control
+    moves (reused `jmpMemSchritt_erfolg` order). Permissions: the slot
+    needs `lesbar8`, the code prefix `ausfuehrbarN` (via `fetchInd`).
+    Faults are the accepted classes: a faulting slot read observes
+    `#PF` (the pinned permitted member), never a validator verdict.
+    Flags: the jump keeps every flag (defined and undefined alike make
+    no claim beyond preservation). TSO: the jump is load-only, so the
+    per-core store buffer is untouched and canonical memory is unchanged
+    by construction. The full per-access target-to-W/GX simulation stays
+    OPEN (see CUTS). -/
+
+/-- TSO projection after the jump: memory follows the successor, the
+    store buffer is untouched (the jump issues no store). -/
+def jtTsoNach (t : TSOZustand) (s' : Zustand) : TSOZustand :=
+  { t with mem := s'.speicher }
+
+/-- STORE-BUFFER NEUTRALITY: the table jump keeps every pending buffer
+    and changes no canonical memory. Every premise is used. -/
+theorem jtSprung_tso_neutral (t : TSOZustand) (s s' : Zustand)
+    (base : Register) (disp : BitVec 32) (len : Nat) (ziel : Wort)
+    (hok : laengeOk len = true)
+    (hrd : read64 s.speicher (effAddr s base disp) = some ziel)
+    (hstep : jmpMemSchritt len s base disp = some s') :
+    (jtTsoNach t s').puffer = t.puffer ∧ s'.speicher = s.speicher := by
+  have hform : jmpMemSchritt len s base disp = some ({ s with rip := ziel }) :=
+    jmpMemSchritt_erfolg len s base disp ziel hok hrd
+  have hgleich : s' = { s with rip := ziel } := by
+    rw [hform] at hstep
+    cases hstep
+    rfl
+  exact ⟨rfl, by rw [hgleich]⟩
+
+/-- A faulting slot read observes `#PF` (the pinned permitted member of
+    `datenFehlerKlassen`). Every premise is used. -/
+theorem jtLesefehler_pf (s : Zustand) (base : Register) (disp : BitVec 32)
+    (hrd : read64 s.speicher (effAddr s base disp) = none) :
+    leseKlasse s.speicher (effAddr s base disp) = some .pf := by
+  simp [leseKlasse, hrd]
+
+/-- NO-SPECULATION for the table slot: a faulting slot read admits no
+    jump transition. Reuses the accepted refusal (as the fault catalogue
+    does for CMOV), never restated. -/
+theorem jtSprung_verweigert_ohne_leserecht (len : Nat) (s : Zustand)
+    (base : Register) (disp : BitVec 32)
+    (hok : laengeOk len = true)
+    (hrd : read64 s.speicher (effAddr s base disp) = none) :
+    jmpMemSchritt len s base disp = none :=
+  jmpMemSchritt_verweigert len s base disp hok hrd
+
+/-- An out-of-bounds index refuses the slot check. Every premise is used. -/
+theorem jtIndex_ausserhalb_verweigert (s : Zustand) (base : Register)
+    (disp : BitVec 32) (basis : Adresse) (idx n : Nat)
+    (h : n ≤ idx) :
+    jtSprungOk s base disp basis idx n = false := by
+  have hlt : ¬ idx < n := by omega
+  unfold jtSprungOk
+  exact decide_eq_false (fun hc => hlt hc.2)
+
+/-- Witness targets are canonical addresses (the profile gate). -/
+theorem jtZiel_kanonisch_beispiel :
+    istKanonisch (BitVec.ofNat 64 4200) = true ∧
+    istKanonisch (BitVec.ofNat 64 4208) = true := by
+  decide
+
+/-- A noncanonical data reference faults as `#GP` (reused gate). -/
+theorem jtZiel_nichtkanonisch_gate :
+    adrKlasse (BitVec.ofNat 64 (2 ^ 47)) false = some .gp :=
+  adrKlasse_daten_gp
+
 /- CUTS:
    Proved here so far: provenance, slots, entry reads, the certificate
    with its entry projection, table words with membership, the
    forged-pointer check with genuine/forged facts, the bounded slot
-   check, and the connection theorem.
+   check, the connection theorem, TSO store-buffer neutrality, the slot
+   fault class with its no-speculation refusal, the out-of-bounds index
+   refusal and the canonical-address gate pins.
    NOT proved here, and not claimed: everything else (see task).
 -/
 
@@ -193,5 +268,11 @@ theorem JumpTableCert_verbindung
 #print axioms jtGeschmiedet_verweigert
 #print axioms jtSprungOk_slot
 #print axioms JumpTableCert_verbindung
+#print axioms jtSprung_tso_neutral
+#print axioms jtLesefehler_pf
+#print axioms jtSprung_verweigert_ohne_leserecht
+#print axioms jtIndex_ausserhalb_verweigert
+#print axioms jtZiel_kanonisch_beispiel
+#print axioms jtZiel_nichtkanonisch_gate
 
 end Gabbro.Grammatik.X86
