@@ -373,4 +373,205 @@ theorem zugriff_erfolg_keiner (t : FpZustand) (z : ZugriffsBeschreibung)
       dsimp only
       rw [hm']
 
+/-! ## Divide and control candidates.
+
+  The divide stage fires only on the actual evaluator trap (the caller
+  ties the flag to `mulDivSchritt = .hardwareHalt`, the same selection
+  pattern as `stepExt_muldiv_halt`). The control stage fires #AC only
+  when armed through the explicit control input; disarmed control never
+  faults, matching silicon where #AC needs flag setup. -/
+
+/-- Divide-stage candidate: the actual divide trap IS #DE. The flag is
+    caller-supplied evidence from `mulDivSchritt`, never an assumption. -/
+def teilungsKandidat (falle : Bool) : Option PrioritaetsFehler :=
+  if falle then some ⟨.teilung, .de⟩ else none
+
+/-- A proved trap is the divide candidate. -/
+theorem teilung_falle_ist_de (h : falle = true) :
+    teilungsKandidat falle = some ⟨.teilung, .de⟩ := by
+  simp [teilungsKandidat, h]
+
+/-- Without trap evidence there is no divide candidate. -/
+theorem teilung_ohne_falle_keiner (h : falle = false) :
+    teilungsKandidat falle = none := by
+  simp [teilungsKandidat, h]
+
+/-- Control-stage candidate: #AC only when armed and misaligned. The
+    addresses are the descriptor's present data addresses; the check is
+    the actual `addrAusgerichtet` predicate. -/
+def steuerKandidat (z : ZugriffsBeschreibung) (st : SteuerInfo) :
+    Option PrioritaetsFehler :=
+  if st.acScharf then
+    match z.lese with
+    | some a =>
+      if addrAusgerichtet a z.ausrichtung then
+        match z.schreibe with
+        | some b =>
+          if addrAusgerichtet b z.ausrichtung then none
+          else some ⟨.steuerung, .ac⟩
+        | none => none
+      else some ⟨.steuerung, .ac⟩
+    | none =>
+      match z.schreibe with
+      | some b =>
+        if addrAusgerichtet b z.ausrichtung then none
+        else some ⟨.steuerung, .ac⟩
+      | none => none
+  else none
+
+/-- Disarmed control never faults, in every state and descriptor. -/
+theorem steuerung_entschaerft_keiner (z : ZugriffsBeschreibung)
+    (st : SteuerInfo) (h : st.acScharf = false) :
+    steuerKandidat z st = none := by
+  simp [steuerKandidat, h]
+
+/-- An armed misaligned read is the #AC candidate. -/
+theorem steuerung_scharf_falsch_ausgerichtet (z : ZugriffsBeschreibung)
+    (st : SteuerInfo) (a : Adresse)
+    (hscharf : st.acScharf = true) (hlese : z.lese = some a)
+    (hschief : addrAusgerichtet a z.ausrichtung = false) :
+    steuerKandidat z st = some ⟨.steuerung, .ac⟩ := by
+  simp [steuerKandidat, hscharf, hlese, hschief]
+
+/-! ## Ordered selection: the first pending candidate wins.
+
+  The candidate row is collected in priority order by construction, so
+  the head IS the minimum-rank pending fault. Dominance theorems pin
+  the exact chosen cause whenever several stages fire at once. -/
+
+/-- The ordered candidate row: fetch, decode, address, access, divide,
+    control -- priority order by construction. -/
+def kandidatenReihe (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool) : List PrioritaetsFehler :=
+  ((abrufKandidat t).toList ++ (dekodiereKandidat t ill).toList ++
+    (adressKandidat z).toList ++ (zugriffKandidat t z pg).toList ++
+    (teilungsKandidat teiltFalle).toList ++
+    (steuerKandidat z st).toList)
+
+/-- The chosen fault: the first pending candidate. -/
+def ersteWahl (ks : List PrioritaetsFehler) : Option PrioritaetsFehler :=
+  ks.head?
+
+/-- The choice over the row: exactly the row head. -/
+theorem ersteWahl_reihe (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool) :
+    ersteWahl (kandidatenReihe t z pg st ill teiltFalle) =
+      (kandidatenReihe t z pg st ill teiltFalle).head? := rfl
+
+/-- CASE SPLIT: the choice is the earliest firing stage. The chosen
+    cause is never beaten by a later stage, and no earlier stage fires. -/
+theorem wahl_fallunterscheidung (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool) (f : PrioritaetsFehler)
+    (h : ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = some f) :
+    abrufKandidat t = some f ∨
+      (abrufKandidat t = none ∧ dekodiereKandidat t ill = some f) ∨
+      (abrufKandidat t = none ∧ dekodiereKandidat t ill = none ∧
+        adressKandidat z = some f) ∨
+      (abrufKandidat t = none ∧ dekodiereKandidat t ill = none ∧
+        adressKandidat z = none ∧ zugriffKandidat t z pg = some f) ∨
+      (abrufKandidat t = none ∧ dekodiereKandidat t ill = none ∧
+        adressKandidat z = none ∧ zugriffKandidat t z pg = none ∧
+        teilungsKandidat teiltFalle = some f) ∨
+      (abrufKandidat t = none ∧ dekodiereKandidat t ill = none ∧
+        adressKandidat z = none ∧ zugriffKandidat t z pg = none ∧
+        teilungsKandidat teiltFalle = none ∧
+        steuerKandidat z st = some f) := by
+  cases hab : abrufKandidat t with
+  | some g =>
+    have hgf : g = f := by
+      simp [ersteWahl, kandidatenReihe, hab] at h
+      exact h
+    exact Or.inl (by rw [hgf])
+  | none =>
+    cases hdec : dekodiereKandidat t ill with
+    | some g =>
+      have hgf : g = f := by
+        simp [ersteWahl, kandidatenReihe, hab, hdec] at h
+        exact h
+      exact Or.inr (Or.inl ⟨rfl, by rw [hgf]⟩)
+    | none =>
+      cases hadr : adressKandidat z with
+      | some g =>
+        have hgf : g = f := by
+          simp [ersteWahl, kandidatenReihe, hab, hdec, hadr] at h
+          exact h
+        exact Or.inr (Or.inr (Or.inl ⟨rfl, rfl, by rw [hgf]⟩))
+      | none =>
+        cases hzug : zugriffKandidat t z pg with
+        | some g =>
+          have hgf : g = f := by
+            simp [ersteWahl, kandidatenReihe, hab, hdec, hadr, hzug] at h
+            exact h
+          exact Or.inr (Or.inr (Or.inr (Or.inl ⟨rfl, rfl, rfl,
+            by rw [hgf]⟩)))
+        | none =>
+          cases htei : teilungsKandidat teiltFalle with
+          | some g =>
+            have hgf : g = f := by
+              simp [ersteWahl, kandidatenReihe, hab, hdec, hadr, hzug,
+                htei] at h
+              exact h
+            exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl
+              ⟨rfl, rfl, rfl, rfl, by rw [hgf]⟩))))
+          | none =>
+            cases hst : steuerKandidat z st with
+            | some g =>
+              have hgf : g = f := by
+                simp [ersteWahl, kandidatenReihe, hab, hdec, hadr, hzug,
+                  htei, hst] at h
+                exact h
+              exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+                ⟨rfl, rfl, rfl, rfl, rfl, by rw [hgf]⟩))))
+            | none =>
+              simp [ersteWahl, kandidatenReihe, hab, hdec, hadr, hzug,
+                htei, hst] at h
+
+/-- A fetch candidate beats everything: exact cause under conflict. -/
+theorem abruf_schlaegt_alles (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool) (f : PrioritaetsFehler)
+    (h : abrufKandidat t = some f) :
+    ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = some f := by
+  simp [ersteWahl, kandidatenReihe, h]
+
+/-- An address candidate beats access, divide and control -- given quiet
+    fetch and decode. -/
+theorem adresse_schlaegt_spaete (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (teiltFalle : Bool) (f : PrioritaetsFehler)
+    (hfrueh : abrufKandidat t = none)
+    (hdec : dekodiereKandidat t ill = none)
+    (hadr : adressKandidat z = some f) :
+    ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = some f := by
+  simp [ersteWahl, kandidatenReihe, hfrueh, hdec, hadr]
+
+/-- An access candidate beats divide and control -- given quiet fetch,
+    decode and address. -/
+theorem zugriff_schlaegt_teilung_steuerung (t : FpZustand)
+    (z : ZugriffsBeschreibung) (pg : SeitenInfo) (st : SteuerInfo)
+    (ill : IllegalInfo) (teiltFalle : Bool) (f : PrioritaetsFehler)
+    (hfrueh : abrufKandidat t = none)
+    (hdec : dekodiereKandidat t ill = none)
+    (hadr : adressKandidat z = none)
+    (hzug : zugriffKandidat t z pg = some f) :
+    ersteWahl (kandidatenReihe t z pg st ill teiltFalle) = some f := by
+  simp [ersteWahl, kandidatenReihe, hfrueh, hdec, hadr, hzug]
+
+/-- The divide trap beats control -- given quiet fetch, decode, address
+    and access. -/
+theorem teilung_schlaegt_steuerung (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (st : SteuerInfo) (ill : IllegalInfo)
+    (hfrueh : abrufKandidat t = none)
+    (hdec : dekodiereKandidat t ill = none)
+    (hadr : adressKandidat z = none)
+    (hzug : zugriffKandidat t z pg = none)
+    (hfalle : teiltFalle = true) :
+    ersteWahl (kandidatenReihe t z pg st ill teiltFalle) =
+      some ⟨.teilung, .de⟩ := by
+  simp [ersteWahl, kandidatenReihe, teilungsKandidat, hfrueh, hdec, hadr,
+    hzug, hfalle]
+
 end Gabbro.Grammatik.X86
