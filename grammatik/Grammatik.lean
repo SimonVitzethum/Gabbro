@@ -496,3 +496,4 @@ import Grammatik.X86.IndirectCallProv
 import Grammatik.X86.CallAlign16
 import Grammatik.X86.Rel8Reach
 import Grammatik.X86.LockCmpxchgSuccess
+import Grammatik.X86.LockXaddFetch
