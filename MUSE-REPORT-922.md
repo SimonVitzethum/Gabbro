@@ -5,7 +5,9 @@ Lane 922, clone `/home/simon/Dokumente/gabbro-muse/a922`, branch `muse/922`
 
 CANDIDATE: 772 e569041f09c6aed8096105321e70f4df80acc184
 
-VERDICT: ACCEPT (bounded: short-branch selection/reachability layer only, as cut)
+VERDICT: ACCEPT
+
+Scope of this ACCEPT (bounded): short-branch selection/reachability layer only, as cut.
 
 ## What was reviewed
 
