@@ -536,3 +536,4 @@ import Grammatik.X86.ComposeGuardPages
 import Grammatik.X86.ComposeUnwindTable
 import Grammatik.X86.ComposeHandlerTable
 import Grammatik.X86.ComposeBindingSurface
+import Grammatik.X86.ComposeEntryHooks

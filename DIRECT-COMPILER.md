@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 22:23 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 22:24 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -528,7 +528,7 @@ Last ledger refresh: **2026-10-03 22:23 UTC**. This is an operational snapshot, 
 | 850 | Composition closing: handler-table closing | Merged after review/checks | 1000: Merged after review/checks | [report](messung/muse/MUSE-REPORT-850.md) |
 | 851 | Composition closing: binding-surface closing | Merged after review/checks | 1001: Merged after review/checks | [report](messung/muse/MUSE-REPORT-851.md) |
 | 852 | Composition closing: runtime-bodies closing | Committed candidate; review/integration pending | 1002: Incomplete; preserved | [task](lanes/852.md) |
-| 853 | Composition closing: entry-hook closing | Committed candidate; review/integration pending | 1003: Committed candidate; review/integration pending | [task](lanes/853.md) |
+| 853 | Composition closing: entry-hook closing | Merged after review/checks | 1003: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-853.md) |
 | 854 | Composition closing: support-bytes closing | Committed candidate; review/integration pending | 1004: Committed candidate; review/integration pending | [task](lanes/854.md) |
 | 855 | Composition closing: loader-bias closing | Committed candidate; review/integration pending | 1005: Committed candidate; review/integration pending | [task](lanes/855.md) |
 | 856 | Composition closing: virtual-address closing | Committed candidate; review/integration pending | 1006: Committed candidate; review/integration pending | [task](lanes/856.md) |
@@ -594,7 +594,7 @@ Last ledger refresh: **2026-10-03 22:23 UTC**. This is an operational snapshot, 
 | 1094 | Idle pool cache cleanup with strict guards | Incomplete; preserved | 1095: scheduled | [task](lanes/1094.md) |
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
-| 1100 | Defined auxiliary-carry rows for admitted integer execution | Agent working | 1101: scheduled | [task](lanes/1100.md) |
+| 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: scheduled | [task](lanes/1100.md) |
 | 1102 | Port and device execution on the common machine | Agent working | 1103: scheduled | [task](lanes/1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Agent working | 1105: scheduled | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
@@ -1253,6 +1253,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1000**, Independent exact review of 850, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1000.md). <!-- x86-merged:1000 -->
 - 2026-10-03: lane **851**, Composition closing: binding-surface closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-851.md). <!-- x86-merged:851 -->
 - 2026-10-03: lane **1001**, Independent exact review of 851, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1001.md). <!-- x86-merged:1001 -->
+- 2026-10-03: lane **853**, Composition closing: entry-hook closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-853.md). <!-- x86-merged:853 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
