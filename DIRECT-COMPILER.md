@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 21:07 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 22:19 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -513,64 +513,64 @@ Last ledger refresh: **2026-10-03 21:07 UTC**. This is an operational snapshot, 
 | 835 | Composition closing: work-transfer closing | Committed candidate; review/integration pending | 985: Committed candidate; review/integration pending | [task](lanes/835.md) |
 | 836 | Composition closing: time-bound closing | Committed candidate; review/integration pending | 986: Committed candidate; review/integration pending | [task](lanes/836.md) |
 | 837 | Composition closing: fence-order closing | Committed candidate; review/integration pending | 987: Committed candidate; review/integration pending | [task](lanes/837.md) |
-| 838 | Composition closing: atomic-ledger closing | Committed candidate; review/integration pending | 988: Agent working | [task](lanes/838.md) |
-| 839 | Composition closing: FP-ledger closing | Agent working | 989: scheduled | [task](lanes/839.md) |
-| 840 | Composition closing: flag-ledger closing | Agent working | 990: scheduled | [task](lanes/840.md) |
-| 841 | Composition closing: width-ledger closing | Agent working | 991: scheduled | [task](lanes/841.md) |
-| 842 | Composition closing: fault-ledger closing | Agent working | 992: scheduled | [task](lanes/842.md) |
-| 843 | Composition closing: feature-gate closing | Agent working | 993: scheduled | [task](lanes/843.md) |
-| 844 | Composition closing: profile-selection closing | Agent working | 994: scheduled | [task](lanes/844.md) |
-| 845 | Composition closing: relaxation-layout closing | Agent working | 995: scheduled | [task](lanes/845.md) |
-| 846 | Composition closing: patch-bytes closing | Agent working | 996: scheduled | [task](lanes/846.md) |
-| 847 | Composition closing: mapping-permission closing | Agent working | 997: scheduled | [task](lanes/847.md) |
-| 848 | Composition closing: guard-page closing | Scheduled | 998: scheduled | [task](lanes/848.md) |
-| 849 | Composition closing: unwind-table closing | Scheduled | 999: scheduled | [task](lanes/849.md) |
-| 850 | Composition closing: handler-table closing | Scheduled | 1000: scheduled | [task](lanes/850.md) |
-| 851 | Composition closing: binding-surface closing | Scheduled | 1001: scheduled | [task](lanes/851.md) |
-| 852 | Composition closing: runtime-bodies closing | Scheduled | 1002: scheduled | [task](lanes/852.md) |
-| 853 | Composition closing: entry-hook closing | Scheduled | 1003: scheduled | [task](lanes/853.md) |
-| 854 | Composition closing: support-bytes closing | Scheduled | 1004: scheduled | [task](lanes/854.md) |
-| 855 | Composition closing: loader-bias closing | Scheduled | 1005: scheduled | [task](lanes/855.md) |
-| 856 | Composition closing: virtual-address closing | Scheduled | 1006: scheduled | [task](lanes/856.md) |
-| 857 | Composition closing: permission-check closing | Scheduled | 1007: scheduled | [task](lanes/857.md) |
-| 858 | Composition closing: entry-duties closing | Scheduled | 1008: scheduled | [task](lanes/858.md) |
-| 859 | Composition closing: region-ceiling closing | Scheduled | 1009: scheduled | [task](lanes/859.md) |
+| 838 | Composition closing: atomic-ledger closing | Committed candidate; review/integration pending | 988: Committed candidate; review/integration pending | [task](lanes/838.md) |
+| 839 | Composition closing: FP-ledger closing | Committed candidate; review/integration pending | 989: Committed candidate; review/integration pending | [task](lanes/839.md) |
+| 840 | Composition closing: flag-ledger closing | Committed candidate; review/integration pending | 990: Committed candidate; review/integration pending | [task](lanes/840.md) |
+| 841 | Composition closing: width-ledger closing | Committed candidate; review/integration pending | 991: Committed candidate; review/integration pending | [task](lanes/841.md) |
+| 842 | Composition closing: fault-ledger closing | Committed candidate; review/integration pending | 992: Committed candidate; review/integration pending | [task](lanes/842.md) |
+| 843 | Composition closing: feature-gate closing | Committed candidate; review/integration pending | 993: Committed candidate; review/integration pending | [task](lanes/843.md) |
+| 844 | Composition closing: profile-selection closing | Committed candidate; review/integration pending | 994: Committed candidate; review/integration pending | [task](lanes/844.md) |
+| 845 | Composition closing: relaxation-layout closing | Committed candidate; review/integration pending | 995: Committed candidate; review/integration pending | [task](lanes/845.md) |
+| 846 | Composition closing: patch-bytes closing | Committed candidate; review/integration pending | 996: Committed candidate; review/integration pending | [task](lanes/846.md) |
+| 847 | Composition closing: mapping-permission closing | Committed candidate; review/integration pending | 997: Committed candidate; review/integration pending | [task](lanes/847.md) |
+| 848 | Composition closing: guard-page closing | Committed candidate; review/integration pending | 998: Committed candidate; review/integration pending | [task](lanes/848.md) |
+| 849 | Composition closing: unwind-table closing | Committed candidate; review/integration pending | 999: Committed candidate; review/integration pending | [task](lanes/849.md) |
+| 850 | Composition closing: handler-table closing | Committed candidate; review/integration pending | 1000: Committed candidate; review/integration pending | [task](lanes/850.md) |
+| 851 | Composition closing: binding-surface closing | Committed candidate; review/integration pending | 1001: Committed candidate; review/integration pending | [task](lanes/851.md) |
+| 852 | Composition closing: runtime-bodies closing | Committed candidate; review/integration pending | 1002: Incomplete; preserved | [task](lanes/852.md) |
+| 853 | Composition closing: entry-hook closing | Committed candidate; review/integration pending | 1003: Committed candidate; review/integration pending | [task](lanes/853.md) |
+| 854 | Composition closing: support-bytes closing | Committed candidate; review/integration pending | 1004: Committed candidate; review/integration pending | [task](lanes/854.md) |
+| 855 | Composition closing: loader-bias closing | Committed candidate; review/integration pending | 1005: Committed candidate; review/integration pending | [task](lanes/855.md) |
+| 856 | Composition closing: virtual-address closing | Committed candidate; review/integration pending | 1006: Committed candidate; review/integration pending | [task](lanes/856.md) |
+| 857 | Composition closing: permission-check closing | Committed candidate; review/integration pending | 1007: Committed candidate; review/integration pending | [task](lanes/857.md) |
+| 858 | Composition closing: entry-duties closing | Committed candidate; review/integration pending | 1008: Committed candidate; review/integration pending | [task](lanes/858.md) |
+| 859 | Composition closing: region-ceiling closing | Committed candidate; review/integration pending | 1009: Committed candidate; review/integration pending | [task](lanes/859.md) |
 | 860 | Optimiser rule: constant folding rule | Merged after review/checks | 1010: Merged after review/checks | [report](messung/muse/MUSE-REPORT-860.md) |
-| 861 | Optimiser rule: copy propagation rule | Scheduled | 1011: scheduled | [task](lanes/861.md) |
-| 862 | Optimiser rule: CFG simplification rule | Scheduled | 1012: scheduled | [task](lanes/862.md) |
-| 863 | Optimiser rule: pure CSE rule | Scheduled | 1013: scheduled | [task](lanes/863.md) |
-| 864 | Optimiser rule: redundant load CSE rule | Scheduled | 1014: scheduled | [task](lanes/864.md) |
-| 865 | Optimiser rule: dead code rule | Scheduled | 1015: scheduled | [task](lanes/865.md) |
-| 866 | Optimiser rule: dead store rule | Scheduled | 1016: scheduled | [task](lanes/866.md) |
-| 867 | Optimiser rule: range-check elimination rule | Scheduled | 1017: scheduled | [task](lanes/867.md) |
-| 868 | Optimiser rule: bound-check elimination rule | Scheduled | 1018: scheduled | [task](lanes/868.md) |
-| 869 | Optimiser rule: overflow-check elimination rule | Scheduled | 1019: scheduled | [task](lanes/869.md) |
-| 870 | Optimiser rule: alias commutation rule | Scheduled | 1020: scheduled | [task](lanes/870.md) |
-| 871 | Optimiser rule: strength reduction rule | Scheduled | 1021: scheduled | [task](lanes/871.md) |
-| 872 | Optimiser rule: LICM rule | Scheduled | 1022: scheduled | [task](lanes/872.md) |
-| 873 | Optimiser rule: inlining rule | Scheduled | 1023: scheduled | [task](lanes/873.md) |
-| 874 | Optimiser rule: bounded unroll rule | Scheduled | 1024: scheduled | [task](lanes/874.md) |
-| 875 | Optimiser rule: vectorisation gate rule | Scheduled | 1025: scheduled | [task](lanes/875.md) |
-| 876 | Optimiser rule: flags peephole rule | Scheduled | 1026: scheduled | [task](lanes/876.md) |
-| 877 | Optimiser rule: displacement peephole rule | Scheduled | 1027: scheduled | [task](lanes/877.md) |
-| 878 | Optimiser rule: linear-scan allocation rule | Scheduled | 1028: scheduled | [task](lanes/878.md) |
-| 879 | Optimiser rule: spill freshness rule | Scheduled | 1029: scheduled | [task](lanes/879.md) |
-| 880 | Optimiser rule: copy coalescing rule | Scheduled | 1030: scheduled | [task](lanes/880.md) |
-| 881 | Optimiser rule: rematerialisation rule | Scheduled | 1031: scheduled | [task](lanes/881.md) |
-| 882 | Optimiser rule: chain scheduling rule | Scheduled | 1032: scheduled | [task](lanes/882.md) |
-| 883 | Optimiser rule: loop alignment rule | Scheduled | 1033: scheduled | [task](lanes/883.md) |
-| 884 | Optimiser rule: branch bias rule | Scheduled | 1034: scheduled | [task](lanes/884.md) |
-| 885 | Optimiser rule: zero-idiom selection rule | Scheduled | 1035: scheduled | [task](lanes/885.md) |
-| 886 | Optimiser rule: LEA selection rule | Scheduled | 1036: scheduled | [task](lanes/886.md) |
-| 887 | Optimiser rule: shift selection rule | Scheduled | 1037: scheduled | [task](lanes/887.md) |
-| 888 | Optimiser rule: multiply selection rule | Scheduled | 1038: scheduled | [task](lanes/888.md) |
-| 889 | Optimiser rule: division guard rule | Scheduled | 1039: scheduled | [task](lanes/889.md) |
-| 890 | Optimiser rule: SETcc selection rule | Scheduled | 1040: scheduled | [task](lanes/890.md) |
-| 891 | Optimiser rule: CMOV selection rule | Scheduled | 1041: scheduled | [task](lanes/891.md) |
-| 892 | Optimiser rule: MOV-immediate selection rule | Scheduled | 1042: scheduled | [task](lanes/892.md) |
-| 893 | Optimiser rule: address-mode selection rule | Scheduled | 1043: scheduled | [task](lanes/893.md) |
-| 894 | Optimiser rule: call-argument selection rule | Scheduled | 1044: scheduled | [task](lanes/894.md) |
-| 895 | Optimiser rule: return-path selection rule | Scheduled | 1045: scheduled | [task](lanes/895.md) |
+| 861 | Optimiser rule: copy propagation rule | Committed candidate; review/integration pending | 1011: Committed candidate; review/integration pending | [task](lanes/861.md) |
+| 862 | Optimiser rule: CFG simplification rule | Committed candidate; review/integration pending | 1012: Committed candidate; review/integration pending | [task](lanes/862.md) |
+| 863 | Optimiser rule: pure CSE rule | Committed candidate; review/integration pending | 1013: Committed candidate; review/integration pending | [task](lanes/863.md) |
+| 864 | Optimiser rule: redundant load CSE rule | Committed candidate; review/integration pending | 1014: Committed candidate; review/integration pending | [task](lanes/864.md) |
+| 865 | Optimiser rule: dead code rule | Committed candidate; review/integration pending | 1015: Committed candidate; review/integration pending | [task](lanes/865.md) |
+| 866 | Optimiser rule: dead store rule | Committed candidate; review/integration pending | 1016: Committed candidate; review/integration pending | [task](lanes/866.md) |
+| 867 | Optimiser rule: range-check elimination rule | Committed candidate; review/integration pending | 1017: Committed candidate; review/integration pending | [task](lanes/867.md) |
+| 868 | Optimiser rule: bound-check elimination rule | Committed candidate; review/integration pending | 1018: Committed candidate; review/integration pending | [task](lanes/868.md) |
+| 869 | Optimiser rule: overflow-check elimination rule | Committed candidate; review/integration pending | 1019: Committed candidate; review/integration pending | [task](lanes/869.md) |
+| 870 | Optimiser rule: alias commutation rule | Committed candidate; review/integration pending | 1020: Committed candidate; review/integration pending | [task](lanes/870.md) |
+| 871 | Optimiser rule: strength reduction rule | Committed candidate; review/integration pending | 1021: Committed candidate; review/integration pending | [task](lanes/871.md) |
+| 872 | Optimiser rule: LICM rule | Committed candidate; review/integration pending | 1022: Committed candidate; review/integration pending | [task](lanes/872.md) |
+| 873 | Optimiser rule: inlining rule | Committed candidate; review/integration pending | 1023: Committed candidate; review/integration pending | [task](lanes/873.md) |
+| 874 | Optimiser rule: bounded unroll rule | Committed candidate; review/integration pending | 1024: Committed candidate; review/integration pending | [task](lanes/874.md) |
+| 875 | Optimiser rule: vectorisation gate rule | Committed candidate; review/integration pending | 1025: Committed candidate; review/integration pending | [task](lanes/875.md) |
+| 876 | Optimiser rule: flags peephole rule | Committed candidate; review/integration pending | 1026: Committed candidate; review/integration pending | [task](lanes/876.md) |
+| 877 | Optimiser rule: displacement peephole rule | Committed candidate; review/integration pending | 1027: Committed candidate; review/integration pending | [task](lanes/877.md) |
+| 878 | Optimiser rule: linear-scan allocation rule | Committed candidate; review/integration pending | 1028: Committed candidate; review/integration pending | [task](lanes/878.md) |
+| 879 | Optimiser rule: spill freshness rule | Committed candidate; review/integration pending | 1029: Committed candidate; review/integration pending | [task](lanes/879.md) |
+| 880 | Optimiser rule: copy coalescing rule | Committed candidate; review/integration pending | 1030: Committed candidate; review/integration pending | [task](lanes/880.md) |
+| 881 | Optimiser rule: rematerialisation rule | Committed candidate; review/integration pending | 1031: Committed candidate; review/integration pending | [task](lanes/881.md) |
+| 882 | Optimiser rule: chain scheduling rule | Committed candidate; review/integration pending | 1032: Incomplete; preserved | [task](lanes/882.md) |
+| 883 | Optimiser rule: loop alignment rule | Committed candidate; review/integration pending | 1033: Committed candidate; review/integration pending | [task](lanes/883.md) |
+| 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Incomplete; preserved | [task](lanes/884.md) |
+| 885 | Optimiser rule: zero-idiom selection rule | Committed candidate; review/integration pending | 1035: Committed candidate; review/integration pending | [task](lanes/885.md) |
+| 886 | Optimiser rule: LEA selection rule | Committed candidate; review/integration pending | 1036: Committed candidate; review/integration pending | [task](lanes/886.md) |
+| 887 | Optimiser rule: shift selection rule | Committed candidate; review/integration pending | 1037: Committed candidate; review/integration pending | [task](lanes/887.md) |
+| 888 | Optimiser rule: multiply selection rule | Committed candidate; review/integration pending | 1038: Committed candidate; review/integration pending | [task](lanes/888.md) |
+| 889 | Optimiser rule: division guard rule | Committed candidate; review/integration pending | 1039: Committed candidate; review/integration pending | [task](lanes/889.md) |
+| 890 | Optimiser rule: SETcc selection rule | Committed candidate; review/integration pending | 1040: Committed candidate; review/integration pending | [task](lanes/890.md) |
+| 891 | Optimiser rule: CMOV selection rule | Committed candidate; review/integration pending | 1041: Committed candidate; review/integration pending | [task](lanes/891.md) |
+| 892 | Optimiser rule: MOV-immediate selection rule | Committed candidate; review/integration pending | 1042: Committed candidate; review/integration pending | [task](lanes/892.md) |
+| 893 | Optimiser rule: address-mode selection rule | Committed candidate; review/integration pending | 1043: Committed candidate; review/integration pending | [task](lanes/893.md) |
+| 894 | Optimiser rule: call-argument selection rule | Committed candidate; review/integration pending | 1044: Committed candidate; review/integration pending | [task](lanes/894.md) |
+| 895 | Optimiser rule: return-path selection rule | Committed candidate; review/integration pending | 1045: Committed candidate; review/integration pending | [task](lanes/895.md) |
 | 1054 | Task-brief audit batch B01 (lanes 746-760) | Committed candidate; review/integration pending | 1074: Committed candidate; review/integration pending | [task](lanes/1054.md) |
 | 1055 | Task-brief audit batch B02 (lanes 761-775) | Committed candidate; review/integration pending | 1075: Committed candidate; review/integration pending | [task](lanes/1055.md) |
 | 1056 | Task-brief audit batch B03 (lanes 776-790) | Committed candidate; review/integration pending | 1076: Committed candidate; review/integration pending | [task](lanes/1056.md) |
@@ -593,7 +593,13 @@ Last ledger refresh: **2026-10-03 21:07 UTC**. This is an operational snapshot, 
 | 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Committed candidate; review/integration pending | 1093: Committed candidate; review/integration pending | [task](lanes/1073.md) |
 | 1094 | Idle pool cache cleanup with strict guards | Incomplete; preserved | 1095: scheduled | [task](lanes/1094.md) |
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
-| 1098 | Standing dynamic work planner for compiler/hardware closure | Agent working | 1099: scheduled | [task](lanes/1098.md) |
+| 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
+| 1100 | Defined auxiliary-carry rows for admitted integer execution | Scheduled | 1101: scheduled | [task](lanes/1100.md) |
+| 1102 | Port and device execution on the common machine | Scheduled | 1103: scheduled | [task](lanes/1102.md) |
+| 1104 | Close the accepted consumers through the common dispatcher | Scheduled | 1105: scheduled | [task](lanes/1104.md) |
+| 1106 | Realised per-access footprints for the connected integer rows | Scheduled | 1107: scheduled | [task](lanes/1106.md) |
+| 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Scheduled | 1109: scheduled | [task](lanes/1108.md) |
+| 1110 | Packed-integer fetched steps with a dispatch-slot API | Scheduled | 1111: scheduled | [task](lanes/1110.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
