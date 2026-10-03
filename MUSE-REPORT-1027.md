@@ -7,11 +7,15 @@
 
 ## CANDIDATE
 
-- CANDIDATE: 877 d97a14ee1ea7e9a1a139267e92d5f33d1764e627
+CANDIDATE: 877 d97a14ee1ea7e9a1a139267e92d5f33d1764e627
 - Files (from `SNAPSHOT.json` + `PATCH.diff`): `MUSE-REPORT-877.md`, `grammatik/Grammatik.lean` (one added import line), `grammatik/Grammatik/X86/OptPeepholeDisp.lean` (new, 360 lines). `clean: true`.
 - Task: `OWNER-TASK.md` (lane 877, displacement peephole rule, `ZEUGE: OptPeepholeDisp_verbindung` + joint companion `OptPeepholeDisp_verbindung_zeuge`).
 
-## VERDICT: ACCEPT (bounded)
+## Verdict
+
+VERDICT: ACCEPT
+
+Bounded accept (substantive verdict unchanged):
 
 The candidate is a bounded optimiser rule lemma in the established house pattern (direct sibling: accepted lane 860 `OptFoldConst.lean`). It proves what it claims over the reused canonical vocabulary and defers everything else in precise CUTS. No repair required.
 
