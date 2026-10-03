@@ -5,16 +5,20 @@
 - Clone `/home/simon/Dokumente/gabbro-muse/a976`, branch `muse/976`: verified, match.
 - Owned file only: `MUSE-REPORT-976.md`. No source or live-control file touched.
 
-## CANDIDATE
+## Pinned snapshot
 
-- CANDIDATE: 826 `822160c2da462a8718537c1bec334b6487b6887e`
+CANDIDATE: 826 822160c2da462a8718537c1bec334b6487b6887e
 - Pinned base `e7c75908456285d1e37c18dc32d4f9c0e10d1fa4` equals this clone's
   HEAD at review time. Snapshot `clean: true`.
 - Files: `MUSE-REPORT-826.md`, `grammatik/Grammatik.lean` (one appended
   import line), `grammatik/Grammatik/X86/ComposeRelocRedecode.lean` (new,
   265 lines). No other file in the PATCH.
 
-## VERDICT: ACCEPT (bounded)
+## Independent verdict
+
+VERDICT: ACCEPT
+
+Acceptance is bounded as documented in the note below.
 
 The candidate genuinely closes the stated gap: finite file-byte patching
 (`Relokation.patchAt`) to re-decoding through the canonical decoder, plus
