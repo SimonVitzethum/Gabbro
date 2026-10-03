@@ -531,7 +531,7 @@ Last ledger refresh: **2026-10-03 22:24 UTC**. This is an operational snapshot, 
 | 853 | Composition closing: entry-hook closing | Merged after review/checks | 1003: Merged after review/checks | [report](messung/muse/MUSE-REPORT-853.md) |
 | 854 | Composition closing: support-bytes closing | Merged after review/checks | 1004: Merged after review/checks | [report](messung/muse/MUSE-REPORT-854.md) |
 | 855 | Composition closing: loader-bias closing | Merged after review/checks | 1005: Merged after review/checks | [report](messung/muse/MUSE-REPORT-855.md) |
-| 856 | Composition closing: virtual-address closing | Merged after review/checks | 1006: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-856.md) |
+| 856 | Composition closing: virtual-address closing | Merged after review/checks | 1006: Merged after review/checks | [report](messung/muse/MUSE-REPORT-856.md) |
 | 857 | Composition closing: permission-check closing | Committed candidate; review/integration pending | 1007: Committed candidate; review/integration pending | [task](lanes/857.md) |
 | 858 | Composition closing: entry-duties closing | Committed candidate; review/integration pending | 1008: Committed candidate; review/integration pending | [task](lanes/858.md) |
 | 859 | Composition closing: region-ceiling closing | Committed candidate; review/integration pending | 1009: Committed candidate; review/integration pending | [task](lanes/859.md) |
@@ -1260,6 +1260,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **855**, Composition closing: loader-bias closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-855.md). <!-- x86-merged:855 -->
 - 2026-10-03: lane **1005**, Independent exact review of 855, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1005.md). <!-- x86-merged:1005 -->
 - 2026-10-03: lane **856**, Composition closing: virtual-address closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-856.md). <!-- x86-merged:856 -->
+- 2026-10-03: lane **1006**, Independent exact review of 856, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1006.md). <!-- x86-merged:1006 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
