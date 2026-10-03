@@ -1,7 +1,8 @@
 # MUSE-REPORT-982: Exact review of author 832 (contract-at-return closing)
 
 CANDIDATE: 832 286d28f2711e4f955cfcb1e9f45e70ec446a9ee9
-VERDICT: ACCEPT (bounded: admitted-interface conjunction, not source-to-byte validation)
+VERDICT: ACCEPT
+Scope: bounded admitted-interface conjunction, not source-to-byte validation.
 
 ## Scope inspected
 
