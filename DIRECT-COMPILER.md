@@ -560,7 +560,7 @@ Last ledger refresh: **2026-10-03 22:32 UTC**. This is an operational snapshot, 
 | 882 | Optimiser rule: chain scheduling rule | Committed candidate; review/integration pending | 1032: Incomplete; preserved | [task](lanes/882.md) |
 | 883 | Optimiser rule: loop alignment rule | Merged after review/checks | 1033: Merged after review/checks | [report](messung/muse/MUSE-REPORT-883.md) |
 | 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Incomplete; preserved | [task](lanes/884.md) |
-| 885 | Optimiser rule: zero-idiom selection rule | Committed candidate; review/integration pending | 1035: Agent working; integration gate rejected; repair/re-review required | [task](lanes/885.md) |
+| 885 | Optimiser rule: zero-idiom selection rule | Committed candidate; review/integration pending | 1035: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/885.md) |
 | 886 | Optimiser rule: LEA selection rule | Merged after review/checks | 1036: Merged after review/checks | [report](messung/muse/MUSE-REPORT-886.md) |
 | 887 | Optimiser rule: shift selection rule | Merged after review/checks | 1037: Merged after review/checks | [report](messung/muse/MUSE-REPORT-887.md) |
 | 888 | Optimiser rule: multiply selection rule | Merged after review/checks | 1038: Merged after review/checks | [report](messung/muse/MUSE-REPORT-888.md) |
@@ -590,7 +590,7 @@ Last ledger refresh: **2026-10-03 22:32 UTC**. This is an operational snapshot, 
 | 1070 | Task-brief audit batch B17 (lanes 986-1000) | Scheduled | 1090: scheduled | [task](lanes/1070.md) |
 | 1071 | Task-brief audit batch B18 (lanes 1001-1015) | Scheduled | 1091: scheduled | [task](lanes/1071.md) |
 | 1072 | Task-brief audit batch B19 (lanes 1016-1030) | Scheduled | 1092: scheduled | [task](lanes/1072.md) |
-| 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Committed candidate; review/integration pending | 1093: Committed candidate; review/integration pending | [task](lanes/1073.md) |
+| 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Merged after review/checks | 1093: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1073.md) |
 | 1094 | Idle pool cache cleanup with strict guards | Incomplete; preserved | 1095: scheduled | [task](lanes/1094.md) |
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
@@ -1332,6 +1332,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1044**, Independent exact review of 894, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1044.md). <!-- x86-merged:1044 -->
 - 2026-10-03: lane **895**, Optimiser rule: return-path selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-895.md). <!-- x86-merged:895 -->
 - 2026-10-03: lane **1045**, Independent exact review of 895, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1045.md). <!-- x86-merged:1045 -->
+- 2026-10-03: lane **1073**, Task-brief audit batch B20 (lanes 1031-1045), integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1073.md). <!-- x86-merged:1073 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
