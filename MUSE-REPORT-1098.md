@@ -286,8 +286,13 @@ friends' files, or another lane's module.
   discipline, 128-bit access explicitly non-single-copy-atomic, shared vector
   stores refused by a checked gate until the 6B TSO bridge rules them. Legacy
   upper bits beyond 128 stay unmodelled (CUTS, as in 686). Export a SMALL
-  explicit dispatch-slot interface (tag discriminator + slot lemmas over the
-  eight accepted decoder families named in `lanes/718.md`) that the 718-repair
+explicit dispatch-slot interface (tag discriminator + slot lemmas over the
+nine producer decoder modules listed in `lanes/718.md:21`
+(ExtendedExecution575, IntegerHardwareForms666,
+ScalarFloatHardwareForms668, LockedInstructionExecution662,
+IndirectControlHardwareForms680, FpControlHardwareForms682,
+CpuFeatureHardwareForms688, ArchitecturalFlags692,
+MemoryTypeHardwareExecution694) plus the pilot/extended byte families) that the 718-repair
   and 724 can consume; document the saturate-vs-mask divergence AT the
   interface so a unifying consumer is a loud type error. Targets:
   `vecFetched_schritt` (fetched step agreement per `IntVecOp` row),
@@ -297,14 +302,17 @@ friends' files, or another lane's module.
   lane-shift AND a memory row), plus planted probes: a masked-count reading
   of a vector shift (refused), a shared vector store claimed executable
   (refused), a 129th-bit dependence claim (refused). Read first:
-  `VectorIntegerHardwareForms.lean` (`:226-229` divergence, `:267-425`
-  decoders, `:2249` CUTS), `lanes/718.md` (eight decoder families in scope),
+`VectorIntegerHardwareForms.lean` (`:226-229` divergence, `:267-425`
+decoders, `:2249` CUTS), `lanes/718.md:21` (nine producer decoder modules
+plus pilot/extended byte families — the exact slot-interface scope),
   732 rows I5 + §4.1/§4.2 (no unification, no second executor).
 - Review text: exact CANDIDATE author HEAD. Check evaluator reuse (no rival
   vector semantics); check divergence theorem blocks unification (attempt the
   unifying rewrite and show it fails); check 128-bit/shared-store limits are
-  theorems, not comments; check slot interface covers the eight 718 families
-  and is provided+used; check no 718/724 import; joint `_zeuge` + three
+  theorems, not comments; check slot interface covers exactly the nine
+  `lanes/718.md:21` producer modules plus the pilot/extended families (the
+  same corrected list as the task text — author and reviewer share one
+  anchored inventory, no drift) and is provided+used; check no 718/724 import; joint `_zeuge` + three
   probes; CUTS honesty; one-line import. VERDICT: ACCEPT or REPAIR.
 
 ## 4. Integration order and slot budget
@@ -384,3 +392,44 @@ authors integrate serially at publication.
 No Lean theorems added by this lane: no `_zeuge` obligation arises for lane
 1098 itself. ./lean-bau not re-run (no `grammatik/`, Rust, or instrument file
 touched by this lane; docs-only turn).
+
+## 8. Repair record 2026-10-03 (reviewer 1099: VERDICT REPAIR → resolved)
+
+Reviewer 1099 checked candidate `69e016835d6f7abf118aea62eeee8afbc69d7bcc`
+(report-only, no source touched) and found two defects, both resolved here:
+
+- **D1 (factual, proposal F):** the task text and review text anchored the
+  slot interface on "the eight accepted decoder families named in
+  `lanes/718.md`". That file's line 21 lists NINE producer modules
+  (ExtendedExecution575, IntegerHardwareForms666,
+  ScalarFloatHardwareForms668, LockedInstructionExecution662,
+  IndirectControlHardwareForms680, FpControlHardwareForms682,
+  CpuFeatureHardwareForms688, ArchitecturalFlags692,
+  MemoryTypeHardwareExecution694) plus pilot/extended byte families — the
+  count "eight" is verifiable nowhere in the cited file. Both texts now cite
+  the exact nine-module inventory plus pilot/extended families, and the
+  reviewer coverage check references the same corrected list (no author/
+  reviewer inventory drift). Root cause note: the "eight" phrasing was taken
+  over from `HARDWARE-INTEGRATION-COVERAGE.md` §6.1 line 358 ("dispatch over
+  the eight accepted decoder families named in `lanes/718.md`"), which is
+  itself unverifiable against `lanes/718.md:21`. That sentence lives in lane
+  732's file, not mine — flagged for the coordinator/732-owner, not edited
+  here.
+- **D2 (staleness):** candidate base `03491267` (merge 974) vs tip `b040b155`
+  (merge 975). Re-pinning from this clone is NOT possible: `git fetch`/`pull`
+  and branch switches are denied to lanes, and `git log --all` here ends at
+  this lane's own commit — the 975 delta is unavailable locally. Honest
+  partial instead of a fake rebase: the registration gate (§1, and
+  ARBEITSPLAN-AKTUELL.md §1) is extended to require re-verification of the
+  §1 disjointness statements against the 975 delta (new merges, newly
+  registered owned paths, newly cleared/added holds, 698/718/722 repair and
+  744/745 landing state) before any of the six authors is registered. No
+  other change was requested; no rescope performed.
+
+Checks for this repair turn: `grep` over both owned files confirms no live
+"eight families" inventory claim remains outside this §8 record (the only
+remaining mentions quote the repaired defect itself); `git status`/`diff
+--name-only` confirms docs-only
+(`MUSE-REPORT-1098.md`, `dokumente/x86/ARBEITSPLAN-AKTUELL.md`); no
+`grammatik/`, Rust, or instrument file touched, so `./lean-bau` state is
+unchanged from base and no `_zeuge` obligation arises for lane 1098.

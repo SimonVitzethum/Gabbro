@@ -21,7 +21,12 @@ NOT visible from this clone. The states below rest on committed evidence only:
 `DIRECT-COMPILER.md` history entries, committed `lanes/*.md` prompts (present
 = not finally integrated; absent = merged or removed), `git log`, and the
 `grammatik/Grammatik/X86/` tree. The coordinator MUST re-check the live
-registry at registration (PIDs, holds, blocking lists may have moved).
+registry at registration (PIDs, holds, blocking lists may have moved) AND
+re-verify the §1 disjointness statements against the post-`03491267` delta:
+tip `b040b155` (merge 975) was unavailable in the planner clone (lane fetch
+is denied), so new merges, newly registered owned paths, newly cleared/added
+holds, and the 698/718/722 repair plus 744/745 landing state at registration
+time are gating inputs, not assumptions.
 
 Accepted and integrated in this base (consumers now available as dependencies):
 720/721 (integer bytes to shared TSO execution), 728/729 (IDT/TSS descriptor
