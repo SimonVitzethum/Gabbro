@@ -519,7 +519,7 @@ Last ledger refresh: **2026-10-03 22:22 UTC**. This is an operational snapshot, 
 | 841 | Composition closing: width-ledger closing | Merged after review/checks | 991: Merged after review/checks | [report](messung/muse/MUSE-REPORT-841.md) |
 | 842 | Composition closing: fault-ledger closing | Merged after review/checks | 992: Merged after review/checks | [report](messung/muse/MUSE-REPORT-842.md) |
 | 843 | Composition closing: feature-gate closing | Merged after review/checks | 993: Merged after review/checks | [report](messung/muse/MUSE-REPORT-843.md) |
-| 844 | Composition closing: profile-selection closing | Merged after review/checks | 994: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-844.md) |
+| 844 | Composition closing: profile-selection closing | Merged after review/checks | 994: Merged after review/checks | [report](messung/muse/MUSE-REPORT-844.md) |
 | 845 | Composition closing: relaxation-layout closing | Committed candidate; review/integration pending | 995: Committed candidate; review/integration pending | [task](lanes/845.md) |
 | 846 | Composition closing: patch-bytes closing | Committed candidate; review/integration pending | 996: Committed candidate; review/integration pending | [task](lanes/846.md) |
 | 847 | Composition closing: mapping-permission closing | Committed candidate; review/integration pending | 997: Committed candidate; review/integration pending | [task](lanes/847.md) |
@@ -1238,6 +1238,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **843**, Composition closing: feature-gate closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-843.md). <!-- x86-merged:843 -->
 - 2026-10-03: lane **993**, Independent exact review of 843, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-993.md). <!-- x86-merged:993 -->
 - 2026-10-03: lane **844**, Composition closing: profile-selection closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-844.md). <!-- x86-merged:844 -->
+- 2026-10-03: lane **994**, Independent exact review of 844, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-994.md). <!-- x86-merged:994 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
