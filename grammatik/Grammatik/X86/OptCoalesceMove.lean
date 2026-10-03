@@ -265,7 +265,33 @@ theorem kopieRein_klingt_zeuge :
   ⟨.add (.lit 3) (.lit 4), rfl,
     kopieRein_klingt _ rfl, refEin_schreibt ()⟩
 
-/-! ## 2. Value preservation: the copy carries the source value whole.
+/-- A variable read of the just-bound slot IS the bound value, by
+    computation from the bind/environment semantics (`eval` of `.var`
+    is the environment lookup, and the bind extends the environment
+    with exactly the evaluated value). This is the computed core of
+    the copy rule: the copy mechanism itself needs no assumed value
+    fact -- only the avail fact (the in-scope slot really holds the
+    dominating value) stays a validator-discharged premise below. -/
+theorem kopieBind_liest {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (e : Expr D Γ Λ τ) (w w' w'' : World D) (ρ : Env D Γ) :
+    eval w' ((.var .hier : Expr D (τ :: Γ) Λ τ)) w''
+      (.cons (eval w e w' ρ) ρ)
+      = eval w e w' ρ := rfl
+
+/-- Joint inhabitation for `kopieBind_liest`: the just-bound `3 + 4`
+    reads back through the head slot, on the table-writing program. -/
+theorem kopieBind_liest_zeuge :
+    ∃ (e : Expr refD [] [] (.int 7 7))
+      (w w' w'' : World refD) (ρ : Env refD []),
+      eval w' ((.var .hier : Expr refD ((.int 7 7) :: []) [] (.int 7 7))) w''
+        (.cons (eval w e w' ρ) ρ)
+        = eval w e w' ρ
+      ∧ (vertragVon refD refEin).schreibt () = true :=
+  ⟨.add (.lit 3) (.lit 4),
+    refSp0.welt [], refSp0.welt [], refSp0.welt [], Env.nil,
+    kopieBind_liest _ _ _ _ _, refEin_schreibt ()⟩
+
+/-! ## 3. Value preservation: the copy carries the source value whole.
 
     Over ARBITRARY values (`v : Int`): the copy is the identity on the
     value, so no value is changed, no fault added or removed, and the
@@ -305,87 +331,121 @@ theorem probe_coalGleit :
       gleitPasst (0, 1) (1, 1) (bruch (3, 4)) := by
   rfl
 
-/-! ## 3. Connection: the coalesced bind behaves like the copied one.
+/-! ## 4. Connection: the coalesced bind behaves like the copied one.
 
-    The rewrite fires only where the validator admitted the site
-    (`hz`: recomputed avail + dominance + width, no address-taken spill,
-    no call-arg escape), and is stated at an `Endblock.bind` window with
+    The copy has a CONCRETE shape here: `eKopie` is the variable read
+    `var x` of the available dominating definition (DESIGN C2/copy
+    folding: `x` is SSA-single-def, same type and width, no intervening
+    write), and the rewrite fires only where the validator admitted the
+    site (`hz`: recomputed avail + dominance + width, no address-taken
+    spill, no call-arg escape). Stated at an `Endblock.bind` window with
     an ARBITRARY continuation `rest`, so the conclusion covers every
-    downstream observation at once. Conclusion, jointly:
-    (1) the evaluated bound VALUE is preserved (the copy carries the
-    source value: `hWert`, the validator-recomputed avail fact);
-    (2) the `execEnd` OUTCOME is equal -- same constructor, same
-    successor worlds and environments -- so no fault is added or removed
-    (`logik`/`hardware` agree, IEEE `logik bereich` untouched: integers
-    have no rounding scope, the float copy keeps its single `bruch` by
-    section 2), every downstream observation agrees (contracts at their
-    place read the same values from the same environments, call logs gain
-    no event -- both sides read `orte` equal by `hOrte`, and the copy is
-    pure with no call --, no shared access is added or removed for
-    concurrency, and step-budget accounting is unchanged: same block
-    shape, the removed copy is pure and unbudgeted);
-    (3) the coalesced value reads back whole through the canonical word.
-    Nothing here derives an `ensures`, turns a refusal into a warning, or
-    speculates a faulting form above its guard (redefinition, dominance
-    loss, width change and spill/call-arg escape all refuse in section 1).
-    The checker's range at the site is untouched and still enforced there. -/
+    downstream observation at once. What is assumed and what is proved,
+    exactly:
+    - ASSUMED (validator discharge, one open obligation each, see CUTS):
+      `hRein` (the validator recomputed purity at the site) and
+      `hVerfuegbar` (the environment really holds the dominating value
+      at the actual worlds -- the semantic content of avail+dominance).
+      Per-site discharge of these from recomputed avail/dominance is
+      owned by the validator/lowering lane; the joint witness below
+      discharges them by computation on its instance and does NOT count
+      as that discharge.
+    - PROVED: (1) the evaluated bound VALUE is preserved -- via the
+      COMPUTED var-read fact (`eval` of `var` is the environment
+      lookup), not an assumed expression equation; (2) the `execEnd`
+      OUTCOME is equal, with the orte equality DERIVED from the
+      admitted purity via `kopieRein_klingt` (both sides read nothing,
+      so the `lese` step is the identity) -- hence the same constructor,
+      same successor worlds and environments: no fault added or removed
+      (`logik`/`hardware` agree, IEEE `logik bereich` untouched:
+      integers have no rounding scope, the float copy keeps its single
+      `bruch` by the float lemma above), contracts at their place read
+      the same values from the same environments, call logs gain no
+      event, no shared access is added or removed for concurrency, and
+      step-budget accounting is unchanged (same block shape, the
+      removed copy is pure and unbudgeted); (3) the coalesced value
+      reads back whole through the canonical word.
+    Nothing here derives an `ensures`, turns a refusal into a warning,
+    or speculates a faulting form above its guard (redefinition,
+    dominance loss, width change and spill/call-arg escape all refuse
+    in section 1). The checker's range at the site is untouched and
+    still enforced there. -/
 
-/-- CONNECTION: using the available dominating original instead of its
-    copy preserves value, outcome and the width-exact word image. -/
+/-- CONNECTION: reusing the available dominating variable instead of
+    recomputing its pure copy preserves value, outcome and the
+    width-exact word image. -/
 theorem OptCoalesceMove_verbindung {D : Deklaration} (V : Vertrag D)
     (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
     {Γ : Ctx} {Λ : List (Res D)} {l : Bool} {lo hi : Int}
     (rw : CoalRewrite) (an : CoalAnalyse)
-    (eOrig eKopie : Expr D Γ Λ (.int lo hi))
+    (x : Var Γ (.int lo hi))
+    (eOrig : Expr D Γ Λ (.int lo hi))
     (rest : Endblock D V l ((.int lo hi) :: Γ) Λ)
     (hz : coalZulassen rw an = true)
     (σ : World D) (ρ : Env D Γ)
-    (hWert : ∀ w w' : World D, eval w eKopie w' ρ = eval w eOrig w' ρ)
-    (hOrte : coalZulassen rw an = true → eKopie.orte = eOrig.orte)
+    (hRein : coalZulassen rw an = true → kopieRein eOrig = true)
+    (hVerfuegbar : coalZulassen rw an = true →
+      eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ = ρ.get x)
     (hW : 0 ≤ (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n ∧
       (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n < 2 ^ 64) :
-    (eval (σ.lese Λ eOrig.orte) eKopie (σ.lese Λ eOrig.orte) ρ).n
+    (eval (σ.lese Λ eOrig.orte) ((.var x : Expr D Γ Λ (.int lo hi)))
+      (σ.lese Λ eOrig.orte) ρ).n
       = (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n
     ∧ execEnd O passes R
-        (Endblock.bind eKopie rest) σ ρ
+        (Endblock.bind ((.var x : Expr D Γ Λ (.int lo hi))) rest) σ ρ
       = execEnd O passes R
         (Endblock.bind eOrig rest) σ ρ
     ∧ ((BitVec.ofNat 64 (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n.toNat : Wort)).toNat
       = (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n.toNat := by
-  have ho := hOrte hz
-  have hv := hWert (σ.lese Λ eOrig.orte) (σ.lese Λ eOrig.orte)
-  refine ⟨by rw [hv], ?_, coalWort _ hW⟩
-  simp only [execEnd, ho, hv]
+  have hR := kopieRein_klingt _ (hRein hz)
+  have hV := hVerfuegbar hz
+  have hK : ∀ w w' : World D,
+      eval w ((.var x : Expr D Γ Λ (.int lo hi))) w' ρ = ρ.get x :=
+    fun _ _ => rfl
+  have hOvar : ((.var x : Expr D Γ Λ (.int lo hi))).orte = [] := rfl
+  refine ⟨by rw [hK, hV], ?_, coalWort _ hW⟩
+  simp only [execEnd]
+  rw [hOvar, hR]
+  rw [hR] at hV
+  rw [hK, hV]
 
-/-! ## 4. Joint witness: the rule fires on a real program that moves memory.
+/-! ## 5. Joint witness: the rule fires on a real program that moves memory.
 
     ALL premises of `OptCoalesceMove_verbindung` instantiated JOINTLY:
-    `3 + 4` computed once and its copy `7` coalesced under a `bind`
-    with a `leave` continuation, in the NON-DEGENERATE reference program
-    `refD` (whose `einzahlen` writes its table, `refEin_schreibt`), beside
-    the reached F-machine run `MB` that changes memory (`refB_erreicht`,
-    `refB_schreibt`: slot `0 -> 100`). All three conjunct groups are used. -/
+    the in-scope slot holding `7` is reused instead of recomputing the
+    pure `7` under a `bind` with a `leave` continuation, in the
+    NON-DEGENERATE reference program `refD` (whose `einzahlen` writes
+    its table, `refEin_schreibt`), beside the reached F-machine run `MB`
+    that changes memory (`refB_erreicht`, `refB_schreibt`:
+    slot `0 -> 100`). All three conjunct groups are used. NOTE (R2):
+    the `hRein`/`hVerfuegbar` discharges below are computations on this
+    instance (`rfl`); they exercise the rule but do NOT count as the
+    per-site validator discharge from recomputed avail/dominance, which
+    stays the open obligation recorded in CUTS. -/
 
-/-- JOINT WITNESS for `OptCoalesceMove_verbindung`: `3 + 4` and its copy
-    `7` coalesce on `refD`, beside the memory-changing reached run. -/
+/-- JOINT WITNESS for `OptCoalesceMove_verbindung`: the available slot
+    holding `7` is reused on `refD`, beside the memory-changing run. -/
 theorem OptCoalesceMove_verbindung_zeuge :
     ∃ (V : Vertrag refD) (O : Orakel refD) (passes : Nat)
       (R : ∀ f : refD.Fn, World refD → Env refD (refD.params f) → RufAusgang f)
       (Γ : Ctx) (Λ : List (Res refD)) (l : Bool) (lo hi : Int)
       (rw : CoalRewrite) (an : CoalAnalyse)
-      (eOrig eKopie : Expr refD Γ Λ (.int lo hi))
+      (x : Var Γ (.int lo hi))
+      (eOrig : Expr refD Γ Λ (.int lo hi))
       (rest : Endblock refD V l ((.int lo hi) :: Γ) Λ)
       (_hz : coalZulassen rw an = true)
       (σ : World refD) (ρ : Env refD Γ)
-      (_hWert : ∀ w w' : World refD, eval w eKopie w' ρ = eval w eOrig w' ρ)
-      (_hOrte : coalZulassen rw an = true → eKopie.orte = eOrig.orte)
+      (_hRein : coalZulassen rw an = true → kopieRein eOrig = true)
+      (_hVerfuegbar : coalZulassen rw an = true →
+        eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ = ρ.get x)
       (_hW : 0 ≤ (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n ∧
         (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n < 2 ^ 64),
-      (eval (σ.lese Λ eOrig.orte) eKopie (σ.lese Λ eOrig.orte) ρ).n
+      (eval (σ.lese Λ eOrig.orte) ((.var x : Expr refD Γ Λ (.int lo hi)))
+        (σ.lese Λ eOrig.orte) ρ).n
         = (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n
       ∧ execEnd O passes R
-          (Endblock.bind eKopie rest) σ ρ
+          (Endblock.bind ((.var x : Expr refD Γ Λ (.int lo hi))) rest) σ ρ
         = execEnd O passes R
           (Endblock.bind eOrig rest) σ ρ
       ∧ ((BitVec.ofNat 64 (eval (σ.lese Λ eOrig.orte) eOrig (σ.lese Λ eOrig.orte) ρ).n.toNat : Wort)).toNat
@@ -394,20 +454,20 @@ theorem OptCoalesceMove_verbindung_zeuge :
       ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
       ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
   have hV := OptCoalesceMove_verbindung (D := refD) (V := vertragVon refD refEin)
-    (O := refO) (passes := 0) (R := keinRuf) (Γ := []) (Λ := []) (l := true)
+    (O := refO) (passes := 0) (R := keinRuf) (Γ := [.int 7 7]) (Λ := []) (l := true)
     (lo := 7) (hi := 7)
     (rw := ⟨0, 1, true⟩) (an := ⟨true, true, false, false⟩)
-    (eOrig := .add (.lit 3) (.lit 4)) (eKopie := .lit 7)
+    (x := .hier) (eOrig := .lit 7)
     (rest := Endblock.leave rfl) (hz := by decide)
-    (σ := refSp0.welt []) (ρ := Env.nil)
-    (hWert := fun _ _ => rfl) (hOrte := fun _ => rfl)
+    (σ := refSp0.welt []) (ρ := Env.cons ⟨7, by decide, by decide⟩ Env.nil)
+    (hRein := fun _ => rfl) (hVerfuegbar := fun _ => rfl)
     (hW := by decide)
-  refine ⟨vertragVon refD refEin, refO, 0, keinRuf, [], [], true, 7, 7,
+  refine ⟨vertragVon refD refEin, refO, 0, keinRuf, [.int 7 7], [], true, 7, 7,
     ⟨0, 1, true⟩, ⟨true, true, false, false⟩,
-    .add (.lit 3) (.lit 4), .lit 7,
+    .hier, .lit 7,
     Endblock.leave rfl, by decide,
-    refSp0.welt [], Env.nil,
-    fun _ _ => rfl, fun _ => rfl, by decide,
+    refSp0.welt [], Env.cons ⟨7, by decide, by decide⟩ Env.nil,
+    fun _ => rfl, fun _ => rfl, by decide,
     ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact hV.1
   · exact hV.2.1
@@ -417,14 +477,32 @@ theorem OptCoalesceMove_verbindung_zeuge :
   · exact refB_schreibt
 
 /- CUTS:
-    - No block-window float rewrite: section 2 proves the admitted float
-      copy preserves value and `gleitPasst` outcome at the value level;
-      no `Endblock` float-copy window is given (the lowering lane owns it).
+    - PROVED bridge instances (review 1030 R1/R2): `kopieRein_klingt`
+      (a decided-`true` purity means empty `orte`: orte equality is
+      derived from a recomputed side condition plus syntax, never
+      assumed) and `kopieBind_liest` (a variable read of the just-bound
+      slot IS the bound value, by computation from the bind/env
+      semantics). The value conclusion of the connection is derived
+      through the computed var-read fact, not assumed as an expression
+      equation.
+    - OPEN admission-to-semantics residue: per-site discharge of
+      `hRein`/`hVerfuegbar` (purity recomputation; the environment
+      really holding the dominating value -- the semantic content of
+      avail+dominance) from validator-recomputed avail/dominance is
+      owned by the validator/lowering lane. The joint witness
+      discharges both by computation on its instance (`rfl`); those
+      discharges exercise the rule but do NOT count as validator
+      discharge.
+    - No block-window float rewrite: the float copy preserves value and
+      `gleitPasst` outcome at the value level only; no `Endblock`
+      float-copy window is given (the lowering lane owns it).
     - No multi-copy chains or 2-cycles: one copy of one available
       dominating definition only; chained copies and swap cycles need
       their own avail/dominance citations per link (no liveness analysis
       here: deadness of the removed copy slot is the allocator's proof
       obligation, not stated).
+    - Conservative purity: `fall` and every memory, globe, device or
+      binder form answer `kopieRein = false`; refusal is always safe.
     - No totalCost inequality: the coalesced window is the same block
       shape with one pure copy removed, so step-budget accounting is
       unchanged; the formal level-(c) machine-work bound is OPEN per
@@ -442,6 +520,11 @@ theorem OptCoalesceMove_verbindung_zeuge :
 #print axioms coalVerweigert_weite
 #print axioms coalVerweigert_adressGenommen
 #print axioms coalVerweigert_callArg
+#print axioms kopieRein
+#print axioms kopieRein_klingt
+#print axioms kopieRein_klingt_zeuge
+#print axioms kopieBind_liest
+#print axioms kopieBind_liest_zeuge
 #print axioms coalWort
 #print axioms coalGleit_behält
 #print axioms OptCoalesceMove_verbindung
