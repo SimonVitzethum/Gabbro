@@ -332,15 +332,131 @@ theorem OptCmovSel_verbindung {D : Deklaration} (V : Vertrag D)
   · exact ⟨cmovAnwenden_speicher s dst src c0,
       cmovAnwenden_flags s dst src c0⟩
 
+/-! ## 7. Joint witnesses: the rule fires beside a memory-changing run.
+
+    ALL premises instantiated JOINTLY on the NON-DEGENERATE reference
+    program `refD` (whose `einzahlen` writes its table,
+    `refEin_schreibt`), beside the reached F-machine run `MB` that
+    changes memory (`refB_erreicht`, `refB_schreibt`: slot `0 -> 100`).
+    The source condition is `.wahr` (reads no place, evaluates to the
+    taken branch); the target state is `witTrue` (flags take `.e`,
+    `rbx` holds the taken arm word `20`, `rax` the untaken word `10`),
+    so source and target agree on the taken value `20`. -/
+
+/-- JOINT WITNESS for `cmovWahl_waehlt`: the admitted choice is the
+    select, on `refD` beside the memory-changing reached run. -/
+theorem cmovWahl_waehlt_zeuge :
+    ∃ (V : Vertrag refD) (Γ : Ctx) (Λ : List (Res refD))
+      (g : CmovSelBeleg) (_hz : belegOk g = true)
+      (c : Expr refD Γ Λ .bool) (b : Bool) (x y : Int),
+      cmovWahlBlock V g c b x y = selectEnd V (selWert b x y) ∧
+      (vertragVon refD refEin).schreibt () = true ∧
+      RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB ∧
+      MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hV := cmovWahl_waehlt (V := vertragVon refD refEin)
+    (Γ := []) (Λ := [])
+    (g := ⟨0, 1, ⟨true, true, true, true, true, true⟩, 2, 3⟩)
+    (hz := by decide) (c := Expr.wahr) (b := true) (x := 20) (y := 10)
+  refine ⟨vertragVon refD refEin, [], [],
+    ⟨0, 1, ⟨true, true, true, true, true, true⟩, 2, 3⟩, by decide,
+    Expr.wahr, true, 20, 10, ?_, ?_, ?_, ?_⟩
+  · exact hV
+  · exact refEin_schreibt ()
+  · exact refB_erreicht
+  · exact refB_schreibt
+
+/-- JOINT WITNESS for `OptCmovSel_verbindung`: the taken select
+    (`20`) keeps value, outcome, word image, float outcome and frame,
+    on `refD` beside the memory-changing reached run. -/
+theorem OptCmovSel_verbindung_zeuge :
+    ∃ (V : Vertrag refD) (O : Orakel refD) (passes : Nat)
+      (R : ∀ f : refD.Fn, World refD → Env refD (refD.params f) →
+        RufAusgang f)
+      (Γ : Ctx) (Λ : List (Res refD))
+      (g : CmovSelBeleg) (_hz : belegOk g = true)
+      (b : Bool) (x y : Int)
+      (c : Expr refD Γ Λ .bool)
+      (σ : World refD) (ρ : Env refD Γ)
+      (_hc : wahr? (eval σ c σ ρ) = b)
+      (_hc0 : c.orte = [])
+      (s : Zustand) (c0 : Bedingung) (dst src : Register)
+      (_hbed : bedingung c0 s.flags = b)
+      (xw yw : Wort)
+      (_hsrc : s.register src = xw)
+      (_hdst : s.register dst = yw)
+      (_hlink : xw = BitVec.ofNat 64 x.toNat ∧
+        yw = BitVec.ofNat 64 y.toNat)
+      (_hW : 0 ≤ x ∧ x < 2 ^ 64 ∧ 0 ≤ y ∧ y < 2 ^ 64)
+      (qa qb : GFloat) (lo hi : Int × Int),
+      (cmovAnwenden s dst src c0).register dst =
+        (if b then xw else yw) ∧
+      execEnd O passes R (branchEnd V c x y) σ ρ =
+        execEnd O passes R (cmovWahlBlock V g c b x y) σ ρ ∧
+      (xw.toNat = x.toNat ∧ yw.toNat = y.toNat) ∧
+      (gleitPasst lo hi (if b then qa else qb) =
+        if b then gleitPasst lo hi qa else gleitPasst lo hi qb) ∧
+      ((cmovAnwenden s dst src c0).speicher = s.speicher ∧
+        (cmovAnwenden s dst src c0).flags = s.flags) ∧
+      (vertragVon refD refEin).schreibt () = true ∧
+      RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB ∧
+      MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hV := OptCmovSel_verbindung (V := vertragVon refD refEin)
+    (O := refO) (passes := 0) (R := keinRuf) (Γ := []) (Λ := [])
+    (g := ⟨0, 1, ⟨true, true, true, true, true, true⟩, 2, 3⟩)
+    (hz := by decide) (b := true) (x := 20) (y := 10)
+    (c := Expr.wahr) (σ := refSp0.welt []) (ρ := Env.nil)
+    (hc := rfl) (hc0 := rfl)
+    (s := witTrue) (c0 := .e) (dst := .rax) (src := .rbx)
+    (hbed := by decide)
+    (xw := BitVec.ofNat 64 20) (yw := BitVec.ofNat 64 10)
+    (hsrc := by decide) (hdst := by decide)
+    (hlink := ⟨by decide, by decide⟩) (hW := by decide)
+    (qa := bruch (1, 2)) (qb := bruch (1, 4))
+    (lo := (1, 2)) (hi := (3, 4))
+  refine ⟨vertragVon refD refEin, refO, 0, keinRuf, [], [],
+    ⟨0, 1, ⟨true, true, true, true, true, true⟩, 2, 3⟩, by decide,
+    true, 20, 10, Expr.wahr, refSp0.welt [], Env.nil,
+    rfl, rfl, witTrue, .e, .rax, .rbx, by decide,
+    BitVec.ofNat 64 20, BitVec.ofNat 64 10, by decide, by decide,
+    ⟨by decide, by decide⟩, by decide,
+    bruch (1, 2), bruch (1, 4), (1, 2), (3, 4),
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact hV.1
+  · exact hV.2.1
+  · exact hV.2.2.1
+  · exact hV.2.2.2.1
+  · exact hV.2.2.2.2
+  · exact refEin_schreibt ()
+  · exact refB_erreicht
+  · exact refB_schreibt
+
 /- CUTS:
     - Proved: admission, six refusals, select value equations, taken/
       untaken target words, width-exact word readback, `gleitPasst`
       preservation, certificate shape, branch/select blocks, admitted
-      validator choice, empty-read helpers, and the
+      validator choice, empty-read helpers, the
       `OptCmovSel_verbindung` rule lemma (select value, exec-outcome,
-      word image, float outcome, memory/flag frame).
-    - OPEN: the joint witnesses (`cmovWahl_waehlt_zeuge`,
-      `OptCmovSel_verbindung_zeuge`).
+      word image, float outcome, memory/flag frame), and both joint
+      witnesses (`cmovWahl_waehlt_zeuge`,
+      `OptCmovSel_verbindung_zeuge`) on `refD` beside the
+      memory-changing run `MB`.
+    - NOT proved here, and not claimed:
+    - No `Befehl` constructor, no `Codec` row, no bytes: CMOVcc has no
+      native pilot encoding, so there is no codec/source
+      correspondence and no emitted native ISA expansion here; target
+      value facts reuse `ControlFlow.cmovAnwenden` and
+      `ConditionalMove` equations over decoded lengths only.
+    - No hardware correspondence: flag readings reuse `bedingung`,
+      faults are the existing permission-checked outcomes, not
+      silicon; the memory-source CMOV fault fact is reused, never
+      re-decided.
+    - No TSO/GX bridge, no ABI/loader claim, no cycle/timing claim;
+      budget preservation is the same-shape source accounting (as in
+      lane 860), the formal level-(c) machine-work bound stays OPEN
+      per IR-VALIDIERUNG; no termination claim.
+    - No lowering correspondence: the source-to-register placement
+      (`hbed`/`hsrc`/`hdst`/`hlink`) is the validator-decided premise
+      the lowering lane discharges per site.
 -/
 
 #print axioms cmovSelZulassen
@@ -369,5 +485,7 @@ theorem OptCmovSel_verbindung {D : Deklaration} (V : Vertrag D)
 #print axioms lese_leer
 #print axioms lit_orte_leer
 #print axioms OptCmovSel_verbindung
+#print axioms cmovWahl_waehlt_zeuge
+#print axioms OptCmovSel_verbindung_zeuge
 
 end Gabbro.Grammatik.X86
