@@ -1,7 +1,7 @@
-# MUSE-REPORT-1006: Exact review of author 856 (virtual-address closing)
-
 CANDIDATE: 856 9908c9ede78b644894f7311cad3133cb69a63948
-VERDICT: ACCEPT (bounded: the VA-closing composition as stated; all wider claims stay open per its CUTS)
+VERDICT: ACCEPT
+
+Bounded acceptance: the verdict covers the VA-closing composition as stated; all wider claims stay open per its CUTS.
 
 ## Scope verified
 
