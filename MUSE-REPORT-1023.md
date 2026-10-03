@@ -6,7 +6,9 @@ CANDIDATE: 873 d2fb9f67fb0f07b29472f09a8816d499590c061c
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded; scope limits in "Accepted as" / "Not accepted" below).
+VERDICT: ACCEPT
+
+Scope of this acceptance is bounded; limits are stated in "Accepted as" / "Not accepted" below.
 
 ## What was reviewed
 
