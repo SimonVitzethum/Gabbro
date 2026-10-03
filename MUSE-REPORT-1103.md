@@ -6,6 +6,8 @@ root or network changes.
 
 ## Candidate under review
 
+CANDIDATE: 1102 d5f75c7a401432538b02d4dca2f4b8c5b2815187
+
 - Author lane 1102, pinned HEAD `d5f75c7a401432538b02d4dca2f4b8c5b2815187`
   (per `.tmp/review/SNAPSHOT.json`: base `f31f93197c59c64371b654a960ccbdf6f166f40d`,
   `clean: true`).
@@ -15,7 +17,9 @@ root or network changes.
   glob: no `DeviceCommonExecution.lean` under `grammatik/Grammatik/X86/`), so
   this review changed no build input.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 The candidate meets every checked gate. Evidence below is verified against this
 clone's accepted modules and by an independent probe run in this clone.
