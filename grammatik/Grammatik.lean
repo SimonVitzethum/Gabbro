@@ -560,3 +560,4 @@ import Grammatik.X86.OptUnrollBound
 import Grammatik.X86.OptVectorGate
 import Grammatik.X86.OptPeepholeFlags
 import Grammatik.X86.OptPeepholeDisp
+import Grammatik.X86.OptAllocLinear
