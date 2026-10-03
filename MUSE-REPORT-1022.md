@@ -5,7 +5,7 @@ Owned file only: this report. No source touched, no live controls used.
 
 ## CANDIDATE
 
-CANDIDATE: 872 `dd5e1ea70bf15f36e5cd4a1e70cc93a3fd0aa274`
+CANDIDATE: 872 dd5e1ea70bf15f36e5cd4a1e70cc93a3fd0aa274
 (base `b040b155`, verified equal to this clone's HEAD; working tree clean).
 
 Pinned snapshot (`.tmp/review/author-872/`): OWNER-TASK.md, PATCH.diff
@@ -17,7 +17,11 @@ is identical to the PATCH hunk; the PATCH touches exactly 3 files
 optimiser files, no diagnostic/gift/example/CLI numbers, no MARKE changes,
 no source/checker/Spec/goal/emitter edits.
 
-## VERDICT: ACCEPT (bounded, see §Bounds)
+## Verdict
+
+VERDICT: ACCEPT
+
+(Bounded: see §Bounds. The substantive verdict is unchanged.)
 
 ## What was independently checked (real evidence, not Lean-green only)
 
