@@ -468,7 +468,64 @@ theorem eval_set_frisch {D : Deklaration} {Λ : List (Res D)} {σ₀ σ : World 
     refine ih _ _ _ ?_
     assumption
 
-/-! ## 4. Small helpers: empty reads observe nothing, double set collapses. -/
+/-! ## 4. Concrete witness components on the reference program.
+
+    The removed write `x = 5`, the overwriting write `x = 7` (both
+    widened to `0 .. 10`), the one-variable environment, and the
+    overwriting value -- all as closed definitions, so every joint
+    witness below unifies without placeholders. -/
+
+/-- The removed write's expression: `5` widened to `0 .. 10`. -/
+def dceE1 : Expr refD [.int 0 10] [] (.int 0 10) :=
+  .weiter (by decide) (by decide) (.lit 5)
+
+/-- The overwriting write's expression: `7` widened to `0 .. 10`. -/
+def dceE2 : Expr refD [.int 0 10] [] (.int 0 10) :=
+  .weiter (by decide) (by decide) (.lit 7)
+
+/-- The one-variable environment holding `5`. -/
+def dceRho : Env refD [.int 0 10] :=
+  Env.cons (⟨5, by decide, by decide⟩ : Wert refD (.int 0 10)) Env.nil
+
+/-- The overwriting value `7`. -/
+def dceV7 : Wert refD (.int 0 10) :=
+  ⟨7, by decide, by decide⟩
+
+/-- The removed computation reads no shared carrier. -/
+theorem dceE1_rein : dceE1.orte = [] := by decide
+
+/-- The overwriting expression does not read the target. -/
+theorem dceE2_tot : liest dceE2 (Var.hier : Var [.int 0 10] (.int 0 10)) = false := by decide
+
+/-- The removed expression does not read the target either. -/
+theorem dceE1_tot : liest dceE1 (Var.hier : Var [.int 0 10] (.int 0 10)) = false := by decide
+
+/-! ## 5. Joint witness for the frame lemma: all premises together.
+
+    Instantiated on the non-degenerate reference program `refD` (whose
+    `einzahlen` writes its table): `dceE1` under `dceRho`, beside the
+    reached F-machine run `MB` that changes memory (`refB_erreicht`,
+    `refB_schreibt`). -/
+
+/-- JOINT WITNESS for `eval_set_frisch`: setting an unread local
+    changes no value, on `refD` beside the memory-changing run. -/
+theorem eval_set_frisch_zeuge :
+    ∃ (Γ : Ctx) (Λ : List (Res refD)) (τ τ' : Ty) (e : Expr refD Γ Λ τ)
+      (σ₀ σ : World refD) (ρ : Env refD Γ) (x : Var Γ τ') (v : Wert refD τ')
+      (_h : liest e x = false),
+      eval σ₀ e σ (ρ.set x v) = eval σ₀ e σ ρ
+      ∧ (vertragVon refD refEin).schreibt () = true
+      ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+      ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hF := eval_set_frisch (D := refD) (Λ := [])
+    (σ₀ := refSp0.welt []) (σ := refSp0.welt [])
+    (Γ := [.int 0 10]) (τ := .int 0 10) (τ' := .int 0 10)
+    (e := dceE1) (ρ := dceRho) (x := Var.hier) (v := dceV7) dceE1_tot
+  refine ⟨[.int 0 10], [], .int 0 10, .int 0 10, dceE1, refSp0.welt [], refSp0.welt [],
+    dceRho, Var.hier, dceV7, dceE1_tot, hF, refEin_schreibt (),
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## 6. Small helpers: empty reads observe nothing, double set collapses. -/
 
 /-- Reading no carrier appends no trace event: the world is unchanged. -/
 theorem lese_nil {D : Deklaration} (σ : World D) (Λ : List (Res D)) :
@@ -486,6 +543,89 @@ theorem envSet_twice {D : Deklaration} {Γ : Ctx} {τ : Ty}
   | dort x' =>
     cases ρ with
     | cons _ ρ' => simp only [Env.set, envSet_twice ρ' x' a b]
+
+/-! ## 7. Connection: removing a pure overwritten write preserves the run.
+
+    The rewrite fires on two consecutive writes to the same local
+    (the DESIGN overwrite window): the first value is dead exactly
+    when the overwriting expression does not read its target (`hTot`,
+    recomputed `liest`) and the removed computation reads no shared
+    carrier (`hRein`, recomputed `Expr.orte`). Conclusion, jointly:
+    (1) the `execBlock` OUTCOME is equal -- same constructor, same
+    successor worlds and environments -- so the evaluated VALUES
+    agree, no fault is added or removed (`logik`/`hardware` agree:
+    `assignVar` never faults, and `e2` evaluates identically by the
+    frame lemma), every downstream observation agrees (contracts at
+    their place read the same values from the same environments, call
+    logs gain no event since the window holds no call, no shared
+    access is added or removed for concurrency -- `e1.orte = []`
+    appends no trace event by `lese_nil`), and the step-budget
+    accounting only shrinks (section 7);
+    (2) IEEE: the window covers local writes only -- a trap-capable
+    float block (`Block.gleit`, `logik bereich` on out-of-range or
+    NaN) is a different constructor the rule never fires on
+    (section 8 refusal exhibit).
+    Nothing here derives an `ensures`, turns a refusal into a warning,
+    or speculates a faulting form above its guard. The checker's range
+    at any site is untouched by the removal and still enforced there. -/
+
+/-- CONNECTION: removing `x = e1` before `x = e2` preserves the
+    `execBlock` outcome when `e1` reads nothing shared and `e2`
+    does not read `x`. -/
+theorem OptDceDead_verbindung {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ'' : List (Res D)} {τ : Ty}
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (x : Var Γ τ) (e1 e2 : Expr D Γ Λ τ)
+    (rest : Block D V l Γ Λ Λ'')
+    (hRein : e1.orte = [])
+    (hTot : liest e2 x = false)
+    (σ : World D) (ρ : Env D Γ) :
+    execBlock O passes R (Block.cons (Stmt.assignVar x e1) (Block.cons (Stmt.assignVar x e2) rest)) σ ρ
+    = execBlock O passes R (Block.cons (Stmt.assignVar x e2) rest) σ ρ := by
+  have hL : σ.lese Λ e1.orte = σ := by
+    rw [hRein]
+    exact lese_nil σ Λ
+  have hFr : ∀ (σ' : World D) (w : Wert D τ),
+      eval σ' e2 σ' (ρ.set x w) = eval σ' e2 σ' ρ :=
+    fun σ' w => eval_set_frisch e2 ρ x w hTot
+  simp only [execBlock, execStmt, hL, hFr, envSet_twice]
+
+/-! ## 8. Joint witness: the rule fires on a real program that moves memory.
+
+    ALL premises of `OptDceDead_verbindung` instantiated JOINTLY:
+    `x = 5` overwritten by `x = 7` (both widened to `0 .. 10`) before
+    `nil`, in the NON-DEGENERATE reference program `refD` (whose
+    `einzahlen` writes its table, `refEin_schreibt`), beside the
+    reached F-machine run `MB` that changes memory (`refB_erreicht`,
+    `refB_schreibt`: slot `0` changes). -/
+
+/-- JOINT WITNESS for `OptDceDead_verbindung`: the dead `x = 5`
+    vanishes before `x = 7` on `refD`, beside the memory-changing
+    reached run. -/
+theorem OptDceDead_verbindung_zeuge :
+    ∃ (V : Vertrag refD) (O : Orakel refD) (passes : Nat)
+      (R : ∀ f : refD.Fn, World refD → Env refD (refD.params f) → RufAusgang f)
+      (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res refD)) (τ : Ty)
+      (x : Var Γ τ) (e1 e2 : Expr refD Γ Λ τ)
+      (rest : Block refD V l Γ Λ Λ')
+      (_hRein : e1.orte = [])
+      (_hTot : liest e2 x = false)
+      (σ : World refD) (ρ : Env refD Γ),
+      execBlock O passes R (Block.cons (Stmt.assignVar x e1) (Block.cons (Stmt.assignVar x e2) rest)) σ ρ
+      = execBlock O passes R (Block.cons (Stmt.assignVar x e2) rest) σ ρ
+      ∧ (vertragVon refD refEin).schreibt () = true
+      ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+      ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hV := OptDceDead_verbindung (D := refD) (V := vertragVon refD refEin)
+    (O := refO) (passes := 0) (R := keinRuf) (l := true)
+    (Γ := [.int 0 10]) (Λ := []) (Λ'' := []) (τ := .int 0 10)
+    (x := Var.hier) (e1 := dceE1) (e2 := dceE2)
+    (rest := Block.nil) (hRein := dceE1_rein) (hTot := dceE2_tot)
+    (σ := refSp0.welt []) (ρ := dceRho)
+  refine ⟨vertragVon refD refEin, refO, 0, keinRuf, true, [.int 0 10], [], [], .int 0 10,
+    Var.hier, dceE1, dceE2, Block.nil, dceE1_rein, dceE2_tot, refSp0.welt [], dceRho,
+    hV, refEin_schreibt (), refB_erreicht, refB_schreibt⟩
 
 /- CUTS:
     - The `liest` frame lemma, the overwrite connection with its joint
