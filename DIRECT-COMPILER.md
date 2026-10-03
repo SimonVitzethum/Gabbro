@@ -547,7 +547,7 @@ Last ledger refresh: **2026-10-03 22:27 UTC**. This is an operational snapshot, 
 | 869 | Optimiser rule: overflow-check elimination rule | Merged after review/checks | 1019: Merged after review/checks | [report](messung/muse/MUSE-REPORT-869.md) |
 | 870 | Optimiser rule: alias commutation rule | Merged after review/checks | 1020: Merged after review/checks | [report](messung/muse/MUSE-REPORT-870.md) |
 | 871 | Optimiser rule: strength reduction rule | Merged after review/checks | 1021: Merged after review/checks | [report](messung/muse/MUSE-REPORT-871.md) |
-| 872 | Optimiser rule: LICM rule | Committed candidate; review/integration pending | 1022: Committed candidate; review/integration pending | [task](lanes/872.md) |
+| 872 | Optimiser rule: LICM rule | Merged after review/checks | 1022: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-872.md) |
 | 873 | Optimiser rule: inlining rule | Committed candidate; review/integration pending | 1023: Committed candidate; review/integration pending | [task](lanes/873.md) |
 | 874 | Optimiser rule: bounded unroll rule | Committed candidate; review/integration pending | 1024: Committed candidate; review/integration pending | [task](lanes/874.md) |
 | 875 | Optimiser rule: vectorisation gate rule | Committed candidate; review/integration pending | 1025: Committed candidate; review/integration pending | [task](lanes/875.md) |
@@ -595,7 +595,7 @@ Last ledger refresh: **2026-10-03 22:27 UTC**. This is an operational snapshot, 
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Committed candidate; review/integration pending | [task](lanes/1100.md) |
-| 1102 | Port and device execution on the common machine | Agent working | 1103: scheduled | [task](lanes/1102.md) |
+| 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: scheduled | [task](lanes/1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Agent working | 1105: scheduled | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Agent working | 1109: scheduled | [task](lanes/1108.md) |
@@ -1289,6 +1289,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1020**, Independent exact review of 870, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1020.md). <!-- x86-merged:1020 -->
 - 2026-10-03: lane **871**, Optimiser rule: strength reduction rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-871.md). <!-- x86-merged:871 -->
 - 2026-10-03: lane **1021**, Independent exact review of 871, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1021.md). <!-- x86-merged:1021 -->
+- 2026-10-03: lane **872**, Optimiser rule: LICM rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-872.md). <!-- x86-merged:872 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
