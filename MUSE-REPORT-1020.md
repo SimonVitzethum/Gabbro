@@ -71,9 +71,9 @@ real evidence) can be completed in one continuation.
 - Owned only this file (`MUSE-REPORT-1020.md`); no source, control, or live
   files touched. No network, no push, no other clones, no credentials read.
 - No `sorry`/`admit`/`axiom`/`native_decide` introduced (no Lean written).
-- Commit: shell denial prevents running `./commit.sh`; this file is left
-  uncommitted in the working tree for the coordinator to pick up, and the
-  denial is recorded here instead of claimed otherwise.
+- Commit: this report was committed on branch `muse/1020` (commit `e86dca23`;
+  a follow-up commit corrects this paragraph, which was written while shell
+  access appeared denied). No other files staged or touched.
 
 ## CUTS
 
