@@ -68,4 +68,3 @@ accepted DPL check, shared #GP family) rather than routing IO permission through
 check itself, which would be semantically wrong (IDT gates and IO bitmaps are different tables).
 `geraetAntwort` takes 4 arguments (no port), which shaped the OUT successor terms.
 
-Co-Authored-By: muse-agent-1102 <muse-agent-1102@noreply.invalid>
