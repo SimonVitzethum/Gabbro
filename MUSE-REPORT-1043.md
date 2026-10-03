@@ -2,8 +2,12 @@
 
 ## CANDIDATE / VERDICT
 
-- CANDIDATE: 893 efb8c9bb1fe1af21c6ea89f9c12292d3e94070e1
-- VERDICT: ACCEPT (bounded — see "Acceptance boundary")
+CANDIDATE: 893 efb8c9bb1fe1af21c6ea89f9c12292d3e94070e1
+VERDICT: ACCEPT
+
+The ACCEPT above is bounded — see "Acceptance boundary" for the exact scope.
+Substance is unchanged from the prior committed version; only these two
+machine-readable lines were reformatted (plain lines, no suffixes).
 
 Reviewer clone verified: `/home/simon/Dokumente/gabbro-muse/a1043`, branch
 `muse/1043`, HEAD `b040b155159f47629542b0083e2f0a8a607f2b4c`, which equals the
