@@ -417,7 +417,7 @@ Last ledger refresh: **2026-10-03 13:53 UTC**. This is an operational snapshot, 
 | 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
 | 734 | Selected control registers and syscall MSR byte effects | Committed candidate; review/integration pending | 735: scheduled | [task](lanes/734.md) |
 | 736 | SSE and selected AVX context save restore effects | Agent working | 737: scheduled | [task](lanes/736.md) |
-| 738 | Derive precise fault ordering across fetched instruction accesses | Merged after review/checks | 739: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-738.md) |
+| 738 | Derive precise fault ordering across fetched instruction accesses | Merged after review/checks | 739: Merged after review/checks | [report](messung/muse/MUSE-REPORT-738.md) |
 | 740 | Repair upstream compiler Lean aggregation and scope | Committed candidate; review/integration pending | 741: Incomplete; preserved | [task](lanes/740.md) |
 | 742 | Repair upstream compiler Rust panics and mirror fidelity | Committed candidate; review/integration pending | 743: Incomplete; preserved | [task](lanes/742.md) |
 | 744 | Organise complete direct Lean compiler optimiser validation and performance closure | Committed candidate; review/integration pending | 745: Committed candidate; review/integration pending | [task](lanes/744.md) |
@@ -1187,6 +1187,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **728**, Model actual IDT TSS descriptor and entry stack selection, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-728.md). <!-- x86-merged:728 -->
 - 2026-10-03: lane **729**, Independent exact review of 728, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-729.md). <!-- x86-merged:729 -->
 - 2026-10-03: lane **738**, Derive precise fault ordering across fetched instruction accesses, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-738.md). <!-- x86-merged:738 -->
+- 2026-10-03: lane **739**, Independent exact review of 738, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-739.md). <!-- x86-merged:739 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
