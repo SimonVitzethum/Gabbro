@@ -1,14 +1,17 @@
 # MUSE-REPORT-1011: Exact review of author 861 (copy propagation rule)
 
-## CANDIDATE / VERDICT
+## Result
 
-- CANDIDATE: 861 `98002a0a44774614339863607dd8a9264da27a62`
+CANDIDATE: 861 98002a0a44774614339863607dd8a9264da27a62
+VERDICT: ACCEPT
+
+- Pinned HEAD `98002a0a44774614339863607dd8a9264da27a62`
   (base `b040b155159f47629542b0083e2f0a8a607f2b4c`, matches this clone's HEAD;
   branch `muse/1011` verified; snapshot files: `MUSE-REPORT-861.md`,
   `grammatik/Grammatik.lean` (one-line import), new
   `grammatik/Grammatik/X86/OptFoldCopy.lean` (288 lines)).
-- VERDICT: ACCEPT (bounded: source-level `Endblock.bind` rule lemma only;
-  no lowering, byte, TSO/GX, cost-bound or silicon claims — all in CUTS).
+- Bounded accept: source-level `Endblock.bind` rule lemma only;
+  no lowering, byte, TSO/GX, cost-bound or silicon claims — all in CUTS.
 
 ## What was inspected
 
