@@ -403,7 +403,7 @@ Last ledger refresh: **2026-10-03 00:14 UTC**. This is an operational snapshot, 
 | 704 | Generic port bus and precise architectural IO permissions | Merged after review/checks | 705: Merged after review/checks | [report](messung/muse/MUSE-REPORT-704.md) |
 | 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Merged after review/checks | 707: Merged after review/checks | [report](messung/muse/MUSE-REPORT-706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
-| 710 | Optimizer rule library proof and scope review | Merged after review/checks | 711: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-710.md) |
+| 710 | Optimizer rule library proof and scope review | Merged after review/checks | 711: Merged after review/checks | [report](messung/muse/MUSE-REPORT-710.md) |
 | 712 | Compiler pipeline Lean source-to-byte proof review | Merged after review/checks | 713: Merged after review/checks | [report](messung/muse/MUSE-REPORT-712.md) |
 | 714 | Compiler ISA and instruction selection architecture review | Committed candidate; review/integration pending | 715: Committed candidate; review/integration pending | [task](lanes/714.md) |
 | 716 | Rust compiler validation and ELF integration review | Merged after review/checks | 717: Merged after review/checks | [report](messung/muse/MUSE-REPORT-716.md) |
@@ -937,6 +937,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: checked master `9cf8a7c0` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:9cf8a7c0be4d589a9eada673774ef9ad9a626f30 -->
 - 2026-10-02: lane **705**, Independent exact review of 704, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-705.md). <!-- x86-merged:705 -->
 - 2026-10-02: lane **710**, Optimizer rule library proof and scope review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-710.md). <!-- x86-merged:710 -->
+- 2026-10-02: lane **711**, Independent exact review of 710, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-711.md). <!-- x86-merged:711 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
