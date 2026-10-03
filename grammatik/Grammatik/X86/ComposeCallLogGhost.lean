@@ -190,8 +190,118 @@ theorem ComposeCallLogGhost_schluss_verweigert :
       [.xorReg64 .rax .rax] true = false := by
   decide
 
-/- CUTS (skeleton):
-  - `ComposeCallLogGhost_verbindung_zeuge`: open.
+/-! ## 5. Joint witness on a non-degenerate source program. -/
+
+/-- JOINT WITNESS: on the reached five-step run of the table-writing fixture
+    program (call `setze`, its write `0 -> 5`, its return, call `pruefe`, its
+    return) the thread log holds exactly the ghost pair of `pruefe` over the
+    return of `setze` with the actual values; the checked leg passes there and
+    the order leg holds there by the composition theorem. -/
+theorem ComposeCallLogGhost_verbindung_zeuge :
+    ∃ M : RufMaschineG eD,
+      RufErreichbarG eP eO 0 (RufStartG eP eSp eInit) M ∧
+      (eSp.slots () 0 ()).n = 0 ∧
+      (eD.signatur eSetze).schreibt () = true ∧
+      ∃ (rhoP : Env eD (eD.params ePruefe)) (wP bP : World eD)
+        (vP : ErgVal eD (eD.erg ePruefe))
+        (rhoS : Env eD (eD.params eSetze)) (vS : ErgVal eD (eD.erg eSetze))
+        (aS bS : World eD) (rest : List (RufEreignisF eD)),
+        (M.faeden 0).log =
+          geistPaar ePruefe rhoP wP (.ok vP bP) ++
+          (RufEreignisF.rueck eSetze rhoS vS aS bS :: rest) ∧
+        (wP.slots () 0 ()).n = 5 ∧
+        senkeOk Φ50 ePruefe rhoP wP (.ok vP bP)
+          (RufEreignisF.rueck eSetze rhoS vS aS bS :: rest) = true ∧
+        FolgeLog Φ50 (M.faeden 0).log := by
+  have h00 : (RufStartG eP eSp eInit).faeden 0 = ⟨[], ⟨eHaupt, .nil, eSp.welt [],
+      ⟨false, [], [], .nil, .ende eRumpfHaupt⟩⟩, [],
+      [RufEreignisF.eintritt eHaupt .nil (eSp.welt [])]⟩ := rfl
+  have hoff0 : offen ((RufStartG eP eSp eInit).faeden 0).spur = [] := rfl
+  obtain ⟨M1, s1, hZ1⟩ := w_rufEnde (P := eP) (O := eO) (passes := 0) h00 eSetze .nil eHpSetze rfl
+    (.cons (.call ePruefe .nil eHpPruefe rfl) (.ret .keine List.Perm.nil)) .nil rfl (ehg0 hoff0).heldIn
+  have hoff1 : offen (M1.faeden 0).spur = [] := by
+    rw [hZ1.spur, (Erw.lese _ _ _).offen]; exact hoff0
+  obtain ⟨M2, s2, hZ2⟩ := w_blatt (P := eP) (O := eO) (passes := 0) hZ1.1
+    _ _ _ rfl rfl (ehg0 (eoff_z hZ1 hoff1)).heldIn _ _ (execStmt_assignSlot _ _ _ _ _ _ _ _ _ _ _)
+    ((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _))
+  have hoff2 : offen (M2.faeden 0).spur = [] := by
+    rw [hZ2.spur]
+    exact (((Erw.lese _ _ _).trans (Erw.schreibSlot _ _ _ _ _ _)).offen).trans hoff1
+  obtain ⟨M3, s3, hG3⟩ := w_rueckP (P := eP) (O := eO) (passes := 0) hZ2.1 _ _ rfl
+    (PopArt.wie rfl) _ _ _ rfl (ehg0 (eoff_z hZ2 hoff2)).heldIn
+  have hoff3 : offen (M3.faeden 0).spur = [] := by
+    rw [hG3.1]
+    exact ((Erw.lese _ _ _).offen).trans hoff2
+  obtain ⟨M4, s4, hZ4⟩ := w_rufEnde (P := eP) (O := eO) (passes := 0) hG3.1 ePruefe .nil eHpPruefe
+    rfl (.ret .keine List.Perm.nil) .nil rfl (ehg0 (eoff_g hG3 hoff3)).heldIn
+  have hoff4 : offen (M4.faeden 0).spur = [] := by
+    rw [hZ4.spur, (Erw.lese _ _ _).offen]; exact hoff3
+  obtain ⟨M5, s5, hG5⟩ := w_rueckP (P := eP) (O := eO) (passes := 0) hZ4.1 _ _ rfl
+    (PopArt.wie rfl) _ _ _ rfl (ehg0 (eoff_z hZ4 hoff4)).heldIn
+  have hr5 : RufErreichbarG eP eO 0 (RufStartG eP eSp eInit) M5 :=
+    .schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ (.schritt _ _ _ .start s1)
+      s2) s3) s4) s5
+  have hlog5 : ∃ (rhoP : Env eD (eD.params ePruefe)) (wP bP : World eD)
+      (vP : ErgVal eD (eD.erg ePruefe))
+      (rhoS : Env eD (eD.params eSetze)) (vS : ErgVal eD (eD.erg eSetze))
+      (aS bS : World eD) (rest : List (RufEreignisF eD)),
+      (M5.faeden 0).log = RufEreignisF.rueck ePruefe rhoP vP wP bP ::
+        RufEreignisF.eintritt ePruefe rhoP wP ::
+        RufEreignisF.rueck eSetze rhoS vS aS bS :: rest := by
+    rw [hG5.1]
+    exact ⟨_, _, _, _, _, _, _, _, _, rfl⟩
+  obtain ⟨rhoP, wP, bP, vP, rhoS, vS, aS, bS, rest, hl5⟩ := hlog5
+  have hm5 : RufEreignisF.eintritt ePruefe rhoP wP ∈ (M5.faeden 0).log := by
+    rw [hl5]; exact List.mem_cons_of_mem _ List.mem_cons_self
+  have hreq5 := ((eP_zertifiziert M5 hr5).1 0 _ hm5).1 _ _ _ rfl
+  have hfol : FolgeLog Φ50 (M5.faeden 0).log :=
+    (folgeG_erreichbar eSp eInit hr5 Φ50 eP_folge50 0).1
+  rw [hl5] at hfol
+  have hrest : FolgeLog Φ50 (RufEreignisF.rueck eSetze rhoS vS aS bS :: rest) :=
+    hfol.2.2
+  have e1 : Pflichtig Φ50 (RufEreignisF.eintritt ePruefe rhoP wP) = true := rfl
+  have e2 : Armiert Φ50 (RufEreignisF.rueck eSetze rhoS vS aS bS :: rest) = true := rfl
+  have e3 : Pflichtig Φ50 (RufEreignisF.rueck ePruefe rhoP vP wP bP) = false := rfl
+  have hok : senkeOk Φ50 ePruefe rhoP wP (.ok vP bP)
+      (RufEreignisF.rueck eSetze rhoS vS aS bS :: rest) = true := by
+    simp [senkeOk, e1, e2, e3]
+  refine ⟨M5, hr5, rfl, rfl, rhoP, wP, bP, vP, rhoS, vS, aS, bS, rest, ?_, ?_, hok, ?_⟩
+  · rw [hl5]; rfl
+  · exact of_decide_eq_true hreq5
+  · rw [hl5]
+    exact ComposeCallLogGhost_verbindung Φ50 ePruefe rhoP wP (.ok vP bP) _ hrest hok
+
+/- CUTS:
+  - No executable source-body inline rewrite: as in `AufrufOpt`, there is no
+    function splicing a callee body at a call site, hence no proved body-splice
+    simulation. What is closed here is the CHECKED site step: the ghost pair
+    (`geistPaar`, actual values, both channels) re-emitted at the eliminated
+    site preserves `FolgeLog` exactly under the recomputed `senkeOk` legs.
+  - No target-byte execution of the ghost: ghost events are source call-log
+    data (`RufEreignisF`), not emitted bytes; the byte side enters only through
+    the selector verdict (`wahlOk`) in `schlussOk`. The lowering of ghost
+    emission to the shared representation (QUELLBRUECKE, phase B) is the next
+    dependency (owning lane: the bridge wave, not lane 833).
+  - No concrete `grund`-channel decided instance: `eD.gruende` is `0` for every
+    fixture function, so `Fin (eD.gruende _)` is empty; the reason channel is
+    covered generically (`senkeOk_ordnung_grund`, the `grund` case of the
+    composition) but has no closed fixture inhabitant.
+  - Return-duty extraction stays where `AufrufOpt` left it: only the entry half
+    is derived; the composition carries the actual answer values but does not
+    discharge `ensures`.
+  - Indirect calls, bounds/depth, budget timing, concurrency transfer: untouched,
+    as in the producer legs.
 -/
+
+#print axioms senkeOk_ordnung_wert
+#print axioms senkeOk_ordnung_grund
+#print axioms ComposeCallLogGhost_verbindung
+#print axioms ComposeCallLogGhost_verbindung_zeuge
+#print axioms ComposeCallLogGhost_verweigert_wahl
+#print axioms ComposeCallLogGhost_verweigert_senke
+#print axioms ComposeCallLogGhost_ordnung_verloren
+#print axioms ComposeCallLogGhost_splice_gut
+#print axioms ComposeCallLogGhost_schluss_gut
+#print axioms ComposeCallLogGhost_schluss_verweigert
 
 end Gabbro.Grammatik.X86
