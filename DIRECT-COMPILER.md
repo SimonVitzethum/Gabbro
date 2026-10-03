@@ -560,7 +560,7 @@ Last ledger refresh: **2026-10-03 22:44 UTC**. This is an operational snapshot, 
 | 882 | Optimiser rule: chain scheduling rule | Committed candidate; review/integration pending | 1032: Incomplete; preserved | [task](lanes/882.md) |
 | 883 | Optimiser rule: loop alignment rule | Merged after review/checks | 1033: Merged after review/checks | [report](messung/muse/MUSE-REPORT-883.md) |
 | 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Incomplete; preserved | [task](lanes/884.md) |
-| 885 | Optimiser rule: zero-idiom selection rule | Committed candidate; review/integration pending | 1035: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/885.md) |
+| 885 | Optimiser rule: zero-idiom selection rule | Merged after review/checks | 1035: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-885.md) |
 | 886 | Optimiser rule: LEA selection rule | Merged after review/checks | 1036: Merged after review/checks | [report](messung/muse/MUSE-REPORT-886.md) |
 | 887 | Optimiser rule: shift selection rule | Merged after review/checks | 1037: Merged after review/checks | [report](messung/muse/MUSE-REPORT-887.md) |
 | 888 | Optimiser rule: multiply selection rule | Merged after review/checks | 1038: Merged after review/checks | [report](messung/muse/MUSE-REPORT-888.md) |
@@ -1349,6 +1349,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: checked master `491bd562` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:491bd562d3f0f0ddb7ab43d915e591edb2612856 -->
 - 2026-10-03: lane **1111**, Independent exact review of 1110, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1111.md). <!-- x86-merged:1111 -->
 - 2026-10-03: publication batch checks passed for `c7992810`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-03: lane **885**, Optimiser rule: zero-idiom selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-885.md). <!-- x86-merged:885 -->
+- 2026-10-03: checked master `0889dfcd` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:0889dfcd5f39f16059f53e43802466a65e52b33c -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
