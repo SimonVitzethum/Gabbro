@@ -1,7 +1,7 @@
 # MUSE-REPORT-1035: Exact review of author 885 (zero-idiom selection rule)
 
-CANDIDATE: 885 2ca9b0f5
-VERDICT: ACCEPT (bounded, see §7)
+CANDIDATE: 885 2ca9b0f5a4501bc4ae6a1b774358379ddded6983
+VERDICT: ACCEPT
 
 ## 1. What was reviewed
 
@@ -164,10 +164,12 @@ merge gate's rebuild.
 1. Bounded acceptance: the merge gate MUST rebuild `grammatik/` green and
    confirm `#print axioms` within the standard triple before integration;
    neither my review nor the author's transcript replaces that check.
-2. The review snapshot ships only the SHORT commit hash `2ca9b0f5`
-   ("Lane 885: zero-idiom selection rule (OptZeroIdiomSel)" on `b040b155`).
-   The full 40-char HEAD must be resolved at merge from the author branch;
-   content identity here is pinned by exact file equality instead.
+2. The pinned head is `2ca9b0f5a4501bc4ae6a1b774358379ddded6983`
+   (`.tmp/review/SNAPSHOT.json`: author 885, base `b040b155...` matching this
+   lane's HEAD, files exactly `MUSE-REPORT-885.md`,
+   `grammatik/Grammatik.lean`,
+   `grammatik/Grammatik/X86/OptZeroIdiomSel.lean`, clean tree). Content
+   identity was verified here by exact file equality instead of hash trust.
 3. Per CUTS (accepted as precise, no fake closure): no silicon
    correspondence; no liveness-analysis implementation (demand is cited site
    data); no source refinement or TSO/GX bridge; no cost/time claim beyond
