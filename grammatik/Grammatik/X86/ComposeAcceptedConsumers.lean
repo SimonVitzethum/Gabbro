@@ -224,6 +224,11 @@ theorem gesamtWit_hwin :
     geholt (projFp gesamtWitM 0).kern = encode gesamtWitBf ++ [] := by
   decide
 
+/-- Same window through the core projection (definitional twin). -/
+theorem gesamtWit_hwin' :
+    geholt (projZustand gesamtWitM 0) = encode gesamtWitBf ++ [] :=
+  gesamtWit_hwin
+
 /-- The 3 image bytes are executable. -/
 theorem gesamtWit_hexe :
     ausfuehrbarN (projFp gesamtWitM 0).kern.speicher
@@ -259,22 +264,179 @@ theorem gesamtWit_step :
 /-- The move keeps canonical memory: the `HwSchritt.reg` gate. -/
 theorem gesamtWit_hmem : gesamtWitT1.kern.speicher = gesamtWitM.mem := rfl
 
+/-- Admission holds over the fetched pilot window. -/
+theorem gesamtWit_zugelassen :
+    extZugelassen (projFp gesamtWitM 0)
+      (geholt (projZustand gesamtWitM 0))
+      (.pilot ⟨gesamtWitBf, (encode gesamtWitBf).length⟩) [] = true := by
+  have hlen : (geholt (projZustand gesamtWitM 0)).length =
+      (encode gesamtWitBf).length := by
+    have h := congrArg List.length gesamtWit_hwin'
+    simpa using h
+  have hok : laengeOk (encode gesamtWitBf).length = true := by
+    decide
+  unfold extZugelassen
+  simp [extLen, hlen, hok, gesamtWit_hexe]
+
+/-- The fetched window decodes to the pilot move. -/
+theorem gesamtWit_hdec :
+    decodeExt (geholt (projFp gesamtWitM 0).kern) =
+      some ((.pilot ⟨gesamtWitBf, (encode gesamtWitBf).length⟩), []) := by
+  rw [gesamtWit_hwin]
+  exact decodeExt_kanonisch _ _ _ (roundtrip gesamtWitBf [])
+
+/-- No fetch candidate over the admitted pilot window. -/
+theorem gesamtWit_abruf : abrufKandidat (projFp gesamtWitM 0) = none := by
+  apply abruf_zugelassen_keiner _ _ _ kanonisch_code _ gesamtWit_hdec
+    gesamtWit_zugelassen
+  rw [gesamtWit_hwin]
+  decide
+
+/-- No decode candidate over the admitted pilot window. -/
+theorem gesamtWit_nodec :
+    dekodiereKandidat (projFp gesamtWitM 0) illLeer = none :=
+  dekodiere_erfolg_keiner _ _ _ _ gesamtWit_hdec
+
+/-- The ordered row is silent at the witness: no data access, a quiet
+    divide flag, disarmed control. -/
+theorem gesamtWit_quiet :
+    ersteWahl (kandidatenReihe (projFp gesamtWitM 0) divZ pgHell stStumpf
+      illLeer false) = none := by
+  have habruf := gesamtWit_abruf
+  have hdec := gesamtWit_nodec
+  have hadr : adressKandidat divZ = none := rfl
+  have hzug : zugriffKandidat (projFp gesamtWitM 0) divZ pgHell = none := rfl
+  have hteil : teilungsKandidat false = none := rfl
+  have hst : steuerKandidat divZ stStumpf = none :=
+    steuerung_entschaerft_keiner divZ stStumpf rfl
+  simp [ersteWahl, kandidatenReihe, habruf, hdec, hadr, hzug, hteil, hst]
+
+/-- Joint inhabitant of the closing: every premise holds together on
+    the reached pilot-move run (RIP 4096 to 4099, rax 5 to 9); the
+    memory gate holds because the move is register-only. The
+    `HwSchritt` leg reuses the closing itself. -/
+theorem composeAccepted_gesamt_zeuge :
+    ∃ (m : HwMaschine) (c : Nat) (i : ExtInstr) (rest : List Byte)
+      (t' : FpZustand),
+      (fetchExt (projFp m c) (geholt (projZustand m c)) = some (i, rest)) ∧
+      (stepExt i (projFp m c) (m.bereit c) = .weiter t') ∧
+      t'.kern.speicher = m.mem ∧
+      ersteWahl (kandidatenReihe (projFp m c) divZ pgHell stStumpf
+        illLeer false) = none ∧
+      HwSchritt m (setKernVonFp m c t') (.regAusf c i) := by
+  refine ⟨gesamtWitM, 0, _, _, _, gesamtWit_fetch, gesamtWit_step,
+    gesamtWit_hmem, gesamtWit_quiet, ?_⟩
+  exact (composeAccepted_gesamt gesamtWitM 0 _ _ gesamtWitT1 divZ pgHell
+    stStumpf illLeer false gesamtWit_fetch gesamtWit_step
+    gesamtWit_hmem gesamtWit_quiet).2.2.1
+
+/-- JOINT WITNESS across the accepted consumers: a fetched
+    register-only run on the coherent machine, an integer store
+    drained into shared memory (0 becomes 4), a fetched LOCK XADD
+    through a scaled address (byte 8201 becomes 32), both address
+    spellings naming 8200, the divide-trap priority choice on fetched
+    bytes with its halt verdict, the same-level stack input, and the
+    three planted pending refusals (width, LOCK, FP). Non-degenerate:
+    two independent memory-changing runs beside the reached
+    register run. -/
+theorem composeAccepted_zeuge :
+    hwRipOut hwWitO1 0 = some (BitVec.ofNat 64 4099) ∧
+      hwRegOut hwWitO1 0 .rax = some (BitVec.ofNat 64 9) ∧
+      concWitMem.bytes concWitA = BitVec.ofNat 8 0 ∧
+      concWitNachFlush = some (some (BitVec.ofNat 8 4)) ∧
+      (lockAdrWit.zu.speicher.bytes (BitVec.ofNat 64 8201) =
+          BitVec.ofNat 8 0 ∧
+        (match lockXaddGeholt 0 lockAdrWit with
+        | .ok m' ev =>
+          some (m'.zu.speicher.bytes (BitVec.ofNat 64 8201),
+            ev.gelesen, ev.geschrieben, m'.zu.register .r8, m'.zu.rip)
+        | _ => none) =
+        some (BitVec.ofNat 8 32, some 0,
+          some (BitVec.ofNat 64 8192), 0, BitVec.ofNat 64 4103)) ∧
+      (adrEff lockAdrWit.zu (ripNach lockAdrWit.zu.rip 7)
+          ⟨some .r8, some .rcx, 8, u8Nach32 (natByte 0), .d8, false⟩ =
+          BitVec.ofNat 64 8200 ∧
+        adrEff lockRipWit.zu (ripNach lockRipWit.zu.rip 9)
+            (ripForm (BitVec.ofNat 32 4095)) =
+          BitVec.ofNat 64 8200) ∧
+      ersteWahl
+          (kandidatenReihe divFalleStart divZ pgDunkel stStumpf illLeer
+            true) = some ⟨.teilung, .de⟩ ∧
+      bindeUrteil (extByteschritt divFalleStart extWitBereit)
+          (ersteWahl
+            (kandidatenReihe divFalleStart divZ pgDunkel stStumpf illLeer
+              true)) = .fehler ⟨.teilung, .de⟩ ∧
+      waehleStapel concWitMem idtWitSteuer 0 0 false 0 = .behalten 0 ∧
+      decodeExt [natByte 102, natByte 137, natByte 216] = none ∧
+      decodeExt [natByte 240, natByte 77, natByte 15, natByte 193,
+        natByte 68, natByte 200, natByte 0] = none ∧
+      decodeExt [natByte 243, natByte 15, natByte 16,
+        natByte 192] = none := by
+  refine ⟨hwWit_o1_rip, hwWit_o1_rax, concWit_anfang_null,
+    concWit_spuelung, lockXaddGeholt_zeuge, adress_formen_alias_pin,
+    wahl_divFalle, urteil_divFalle,
+    waehleStapel_behalten concWitMem idtWitSteuer 0 0, ?_, ?_, ?_⟩
+  · decide
+  · decide
+  · decide
+
 /- CUTS:
-   Proved here so far: the pending-family enumeration `PendingFam`
-   with its lane-number audit `familienCode`, and the gap closing
-   `composeAccepted_luecken` (every family refused through its pin,
-   exhaustive arms) with its inhabitant.
-   NOT proved here, and not claimed: the fetched-execution closing,
-   the integer/TSO, address, priority and descriptor/stack
-   composition, the joint witness and the planted probes. Pending
-   families are never imported (especially not modules owned by lanes
-   718/722/724/726/734/736/690/708/696/698), never assumed, and never
-   closed by a premise shaped like the conclusion. The `istOffen`
-   pins show dispatcher refusal, not row ownership.
+   Proved here (all by composing already-accepted theorems; no
+   decoder, evaluator, fetch, admission, address, priority,
+   descriptor or stack fact is re-proved, and no second executor
+   is defined):
+   - the pending-family enumeration `PendingFam` (width rows
+     696/698, LOCK 722, FP 724, paging 726, control 734, context
+     736, AVX2 690, returns 708) with its lane-number audit
+     `familienCode`;
+   - the gap closing `composeAccepted_luecken` (every family
+     refused through its dispatcher pin, exhaustive arms, so a
+     silent widening is a type error) with its inhabitant;
+   - the 738 quiet-row projections (`reiheOhneAbruf/Dekodiere/
+     Adresse/Zugriff`: a silent ordered row carries no per-stage
+     candidate);
+   - the fetched-execution closing `composeAccepted_gesamt`
+     (fetched bytes to `HwSchritt.reg` runs: 824 decoder agreement
+     and dispatcher selection, the 660 register-path gate, 738
+     priority silence on address and access, pending families
+     threaded through as still open);
+   - the joint inhabitant `composeAccepted_gesamt_zeuge` (all
+     closing premises together on a reached pilot-move run);
+   - the cross-piece joint witness `composeAccepted_zeuge`
+     (fetched register run, integer drain 0 to 4, fetched LOCK
+     XADD, both address spellings of 8200, divide-trap choice with
+     halt verdict, same-level stack input, three planted pending
+     refusals).
+   NOT proved here, and not claimed:
+   - No per-family canonical-byte closing beyond the accepted pins;
+     the `istOffen` pins show dispatcher refusal, not row
+     ownership (which bytes each pending family will accept stays
+     with lanes 696/698/722/724/726/734/736/690/708).
+   - No hardware correspondence, no source/IR correspondence, no
+     TSO/W/GX bridge beyond the reused accepted rows, no ABI/
+     loader/entry/budget connection, no whole-image coverage.
+   - `verweigert` is the absence of a transition, never a
+     termination claim. Near `ret` (`0xC3`) stays accepted pilot;
+     the returns pin uses `iret`.
+   - At the hardware layer there is no Gabbro source program, so
+     "table-writing function" has no literal witness here:
+     non-degeneracy is witnessed by two independent
+     memory-changing reached runs beside the register run.
+   - Pending families are never imported (especially not modules
+     owned by lanes 718/722/724/726/734/736/690/708/696/698),
+     never assumed, and never closed by a premise shaped like the
+     conclusion.
 -/
 
 #print axioms familienCode
 #print axioms composeAccepted_luecken
 #print axioms composeAccepted_luecken_zeuge
+#print axioms reiheOhneAbruf
+#print axioms reiheOhneDekodiere
+#print axioms reiheOhneAdresse
+#print axioms reiheOhneZugriff
+#print axioms composeAccepted_gesamt
+#print axioms composeAccepted_gesamt_zeuge
+#print axioms composeAccepted_zeuge
 
 end Gabbro.Grammatik.X86
