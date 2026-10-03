@@ -523,7 +523,7 @@ Last ledger refresh: **2026-10-03 22:23 UTC**. This is an operational snapshot, 
 | 845 | Composition closing: relaxation-layout closing | Merged after review/checks | 995: Merged after review/checks | [report](messung/muse/MUSE-REPORT-845.md) |
 | 846 | Composition closing: patch-bytes closing | Merged after review/checks | 996: Merged after review/checks | [report](messung/muse/MUSE-REPORT-846.md) |
 | 847 | Composition closing: mapping-permission closing | Merged after review/checks | 997: Merged after review/checks | [report](messung/muse/MUSE-REPORT-847.md) |
-| 848 | Composition closing: guard-page closing | Committed candidate; review/integration pending | 998: Committed candidate; review/integration pending | [task](lanes/848.md) |
+| 848 | Composition closing: guard-page closing | Merged after review/checks | 998: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-848.md) |
 | 849 | Composition closing: unwind-table closing | Committed candidate; review/integration pending | 999: Committed candidate; review/integration pending | [task](lanes/849.md) |
 | 850 | Composition closing: handler-table closing | Committed candidate; review/integration pending | 1000: Committed candidate; review/integration pending | [task](lanes/850.md) |
 | 851 | Composition closing: binding-surface closing | Committed candidate; review/integration pending | 1001: Committed candidate; review/integration pending | [task](lanes/851.md) |
@@ -1245,6 +1245,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **996**, Independent exact review of 846, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-996.md). <!-- x86-merged:996 -->
 - 2026-10-03: lane **847**, Composition closing: mapping-permission closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-847.md). <!-- x86-merged:847 -->
 - 2026-10-03: lane **997**, Independent exact review of 847, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-997.md). <!-- x86-merged:997 -->
+- 2026-10-03: lane **848**, Composition closing: guard-page closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-848.md). <!-- x86-merged:848 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
