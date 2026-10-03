@@ -5,10 +5,12 @@ Report-only review: no Lean, Rust, instrument, or docs file touched, so
 `./lean-bau` state is unchanged (nothing to re-run for this lane; no `_zeuge`
 obligation arises — no theorems added).
 
-CANDIDATE: 1098, pinned HEAD `69e016835d6f7abf118aea62eeee8afbc69d7bcc`
-(resolved from `.tmp/review/SNAPSHOT.json`; the LANE.md task names the lane
-but not the hash), base `03491267`, files `MUSE-REPORT-1098.md` +
-`dokumente/x86/ARBEITSPLAN-AKTUELL.md`, snapshot `clean: true`.
+CANDIDATE: 1098 69e016835d6f7abf118aea62eeee8afbc69d7bcc
+
+Pinned hash resolved from `.tmp/review/SNAPSHOT.json` (the LANE.md task
+names the lane but not the hash); base `03491267`, files
+`MUSE-REPORT-1098.md` + `dokumente/x86/ARBEITSPLAN-AKTUELL.md`, snapshot
+`clean: true`.
 The reviewed bytes are `.tmp/review/author-1098/PATCH.diff` (531 lines);
 the report inside it is identical to `MUSE-REPORT-1098.md` there.
 
