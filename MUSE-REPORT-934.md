@@ -7,9 +7,13 @@
 
 ## CANDIDATE and VERDICT
 
-- CANDIDATE: 784 `eda490e62ac0403ffd7650478072ffe598395763`
-  (base `56537272a31df3de5d9b7898bbade91c3de817b8`).
-- VERDICT: ACCEPT (bounded — see apparatus blocker below).
+CANDIDATE: 784 eda490e62ac0403ffd7650478072ffe598395763
+
+Base: 56537272a31df3de5d9b7898bbade91c3de817b8.
+
+VERDICT: ACCEPT
+
+(Substantive verdict unchanged: bounded acceptance — see apparatus blocker below.)
 
 ## What was reviewed
 
