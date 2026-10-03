@@ -506,4 +506,204 @@ theorem lockRipGeholt_zeuge :
         some (BitVec.ofNat 64 8192), 0, BitVec.ofNat 64 4105) := by
   refine ⟨by decide, by decide⟩
 
+/-! ## 6. Negative probes: malformed tails, length, order, faults.
+
+    Every refusal below is pinned on closed bytes or proved in full
+    generality from the definition: register-direct and truncated
+    tails, missing LOCK and legacy prefixes, zero length, a nonempty
+    buffer ahead of a bad address, a noncanonical address ahead of
+    permissions, and a failed read behind admitted checks. -/
+
+/-- REFUSAL: register-direct under LOCK names no address here (the
+    producer parses it as architectural #UD; no UD is claimed here). -/
+theorem decoder_weist_mod3_zurueck :
+    decodeLockAdr [natByte 240, natByte 76, natByte 15, natByte 193,
+      natByte 192] = none := by
+  decide
+
+/-- REFUSAL: ModRM without its SIB byte (truncated). -/
+theorem decoder_weist_ohne_sib_zurueck :
+    decodeLockAdr [natByte 240, natByte 76, natByte 15, natByte 193,
+      natByte 68] = none := by
+  decide
+
+/-- REFUSAL: SIB present but the displacement byte missing. -/
+theorem decoder_weist_kurze_disp8_zurueck :
+    decodeLockAdr [natByte 240, natByte 77, natByte 15, natByte 193,
+      natByte 68, natByte 200] = none := by
+  decide
+
+/-- REFUSAL: no LOCK prefix, no extended row. -/
+theorem decoder_weist_ohne_lock_zurueck :
+    decodeLockAdr [natByte 15, natByte 193, natByte 68, natByte 200,
+      natByte 0] = none := by
+  decide
+
+/-- REFUSAL: a legacy prefix before LOCK is not canonical. -/
+theorem decoder_weist_vorsatz_zurueck :
+    decodeLockAdr [natByte 102, natByte 240, natByte 77, natByte 15,
+      natByte 193, natByte 68, natByte 200, natByte 0] = none := by
+  decide
+
+/-- REFUSAL: zero length never steps, whatever the machine holds. -/
+theorem lockXaddAdr_laenge_verweigert (m : LockMaschine) (f : AdrForm)
+    (n : Adresse) :
+    lockXaddAdr 0 .rax f 0 m n = .verweigert := by
+  unfold lockXaddAdr
+  rfl
+
+/-- ORDER: a nonempty own buffer refuses before the address is
+    consulted at all. -/
+theorem lockXaddAdr_puffer_zuerst (c : Nat) (src : Register)
+    (f : AdrForm) (len : Nat) (m : LockMaschine) (ripNext : Adresse)
+    (x : TSOEintrag) (xs : List TSOEintrag)
+    (hok : laengeOk len = true) (hbuf : m.puffer c = x :: xs) :
+    lockXaddAdr c src f len m ripNext = .verweigert := by
+  unfold lockXaddAdr
+  simp only [hok, hbuf]
+
+/-- ORDER: a noncanonical target is a memory fault even with an empty
+    buffer and a good length, before permissions are consulted. -/
+theorem lockXaddAdr_unkanonisch (c : Nat) (src : Register)
+    (f : AdrForm) (len : Nat) (m : LockMaschine) (ripNext : Adresse)
+    (hok : laengeOk len = true) (hbuf : m.puffer c = [])
+    (hkan : kanonisch48 (adrEff m.zu ripNext f) = false) :
+    lockXaddAdr c src f len m ripNext = .speicherFehler := by
+  unfold lockXaddAdr
+  simp only [hok, hbuf, adrPruefe_ordnung_kanonisch _ _ _ hkan]
+
+/-- FAULT: a failed read behind admitted checks is a memory fault,
+    never a silent value. -/
+theorem lockXaddAdr_lesefehler (c : Nat) (src : Register) (f : AdrForm)
+    (len : Nat) (m : LockMaschine) (ripNext : Adresse)
+    (hok : laengeOk len = true) (hbuf : m.puffer c = [])
+    (hali : ausgerichtet8 (adrEff m.zu ripNext f) = true)
+    (hrd : read64 m.zu.speicher (adrEff m.zu ripNext f) = none) :
+    lockXaddAdr c src f len m ripNext = .speicherFehler := by
+  unfold lockXaddAdr
+  simp only [hok, hbuf]
+  cases hpr : adrPruefe m.zu.speicher (adrEff m.zu ripNext f) true with
+  | some _ => rfl
+  | none => simp only [hali, hrd, if_true]
+
+/-- CANONICAL FIRST on closed values: the noncanonical hole refuses
+    under fully permissive memory. -/
+theorem adrPruefe_loch :
+    adrPruefe zeugenSpeicher (BitVec.ofNat 64 (2 ^ 47)) true =
+      some .unkanonisch := by
+  decide
+
+/-! ## 7. Aliasing across forms: one address, several spellings.
+
+    Different full forms may name the same address; the adapter never
+    claims injectivity. The two witnesses above already land on 8200
+    through different forms; the pins below name the equality. -/
+
+/-- Witness registers for the alias pin: `rbx = 8192`, `rcx = 0`. -/
+def aliasReg : Register → Wort
+  | .rbx => BitVec.ofNat 64 8192
+  | .rcx => BitVec.ofNat 64 0
+  | _ => BitVec.ofNat 64 0
+
+/-- ALIAS: a scaled form with a zero index IS the base form. -/
+theorem adress_alias_pin :
+    adrEff ⟨aliasReg, zeugeFlags, BitVec.ofNat 64 0, zeugenSpeicher⟩
+        (BitVec.ofNat 64 0)
+        (skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8) =
+      adrEff ⟨aliasReg, zeugeFlags, BitVec.ofNat 64 0, zeugenSpeicher⟩
+        (BitVec.ofNat 64 0) (basisForm .rbx (BitVec.ofNat 32 5)) := by
+  decide
+
+/-- ALIAS at the witness addresses: the scaled SIB spelling and the
+    RIP-relative spelling both name 8200. -/
+theorem adress_formen_alias_pin :
+    adrEff lockAdrWit.zu (ripNach lockAdrWit.zu.rip 7)
+        ⟨some .r8, some .rcx, 8, u8Nach32 (natByte 0), .d8, false⟩ =
+        BitVec.ofNat 64 8200 ∧
+      adrEff lockRipWit.zu (ripNach lockRipWit.zu.rip 9)
+          (ripForm (BitVec.ofNat 32 4095)) =
+        BitVec.ofNat 64 8200 := by
+  decide
+
+/-! ## 8. Consumer interface (documentation only).
+
+    Unified-dispatcher and concurrency consumers use exactly:
+    `decodeLockAdr` (bytes to source register, `AdrForm`, rest),
+    `lockXaddAdr` (adapter step with actual length and next RIP),
+    `lockXaddGeholt` (fetched step from actual executable memory),
+    `adrLade` / `adrSpeichere` (generic checked access),
+    `adrPruefe` (ordered admission, lawful with `fussZugelassen`),
+    and the `LockEreignis` footprints (`Fuss` byte lists) for
+    per-access grouping. No other definition here is load-bearing
+    for consumers. -/
+
+/- CUTS:
+    Proved here: ordered admission (`adrPruefe`) lawful with the
+    accepted `fussZugelassen`, with canonical/wrap-before-permission
+    order; generic addressed load/store bound to the actual length
+    and next RIP, with success/refusal equations and the pilot bridge
+    (`adrLade_basisForm_pilot`); an extended LOCK XADD decoder over
+    full selected tails reusing `rexLockBits` and `parseAdrTail`,
+    disjoint from the accepted producer in both directions on closed
+    bytes; the adapter execution mirroring the accepted
+    `lockSchrittVoll` XADD arm, with the lawful-adapter equation on
+    the canonical aligned base-plus-displacement subset; fetched
+    joint memory-changing witnesses for a scaled SIB XADD and a
+    RIP-relative XADD, plus a pure RIP-relative observation;
+    negative probes (register-direct, truncated SIB/disp, missing
+    LOCK, legacy prefix, pilot tails both ways, zero length, buffer
+    order, noncanonical order, read fault, the noncanonical hole
+    under full rights); cross-form alias pins, including both
+    witness spellings of 8200.
+    NOT proved here, and not claimed:
+    - No silicon correspondence: byte shapes follow the clone-local
+      Intel SDM 325462-093US (Vol. 1 Sections 3.7.5/3.7.5.1, LOCK
+      prefix and XADD entries) as stated contracts; no socket,
+      stepping or vendor-difference claim.
+    - No X-extended (REX.X = 1) high-index scaled LOCK rows: the
+      decoder reuses the accepted canonical `rexLockBits` subset, so
+      `r9`-as-index LOCK tails stay refused here; a follow-up owns
+      them with their own round trips.
+    - No LOCK CMPXCHG through full forms and no generic round trip
+      over all register pairs: each shape class is pinned on closed
+      bytes, as in the accepted producers.
+    - No TSO/GX bridge: events carry sequential `Fuss` byte lists as
+      grouping hooks; tearing, visibility and interleaving stay OPEN.
+    - No source correspondence, no ABI/loader/entry/budget claim, no
+      whole-image or source-to-byte validation claim.
+-/
+
+#print axioms adrPruefe_gleich_fuss
+#print axioms adrPruefe_ordnung_kanonisch
+#print axioms adrPruefe_ordnung_umbruch
+#print axioms adrLade_erfolg
+#print axioms adrLade_verweigert_fehler
+#print axioms adrSpeichere_erfolg
+#print axioms adrLade_basisForm_pilot
+#print axioms adrPruefe_schreib_frei
+#print axioms adrPruefe_schreib_verweigert
+#print axioms decoder_weist_pilot_basis_zurueck
+#print axioms decoder_weist_pilot_sib_zurueck
+#print axioms produzent_weist_skaliert_zurueck
+#print axioms decoder_nimmt_skaliert
+#print axioms lockXaddAdr_basisForm
+#print axioms lockXaddAdr_erfolg
+#print axioms lockXaddGeholt_zeuge
+#print axioms decoder_nimmt_rip
+#print axioms produzent_weist_rip_zurueck
+#print axioms ripForm_beobachtung
+#print axioms lockRipGeholt_zeuge
+#print axioms decoder_weist_mod3_zurueck
+#print axioms decoder_weist_ohne_sib_zurueck
+#print axioms decoder_weist_kurze_disp8_zurueck
+#print axioms decoder_weist_ohne_lock_zurueck
+#print axioms decoder_weist_vorsatz_zurueck
+#print axioms lockXaddAdr_laenge_verweigert
+#print axioms lockXaddAdr_puffer_zuerst
+#print axioms lockXaddAdr_unkanonisch
+#print axioms lockXaddAdr_lesefehler
+#print axioms adrPruefe_loch
+#print axioms adress_alias_pin
+#print axioms adress_formen_alias_pin
+
 end Gabbro.Grammatik.X86
