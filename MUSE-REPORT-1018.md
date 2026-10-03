@@ -7,7 +7,10 @@ Identity check: `git rev-parse HEAD` = `b040b155159f47629542b0083e2f0a8a607f2b4c
 branch `muse/1018`, tree clean. HEAD equals the SNAPSHOT base. Proceeded.
 
 CANDIDATE: 868 b161382e70525c34e7013213253308c6c7b91eb2
-VERDICT: ACCEPT (bounded — see scope §6)
+VERDICT: ACCEPT
+
+Acceptance is bounded as stated in scope §6 below; the bound does not change
+the verdict.
 
 ## 1. What was reviewed
 
