@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 22:24 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 22:25 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -534,7 +534,7 @@ Last ledger refresh: **2026-10-03 22:24 UTC**. This is an operational snapshot, 
 | 856 | Composition closing: virtual-address closing | Merged after review/checks | 1006: Merged after review/checks | [report](messung/muse/MUSE-REPORT-856.md) |
 | 857 | Composition closing: permission-check closing | Merged after review/checks | 1007: Merged after review/checks | [report](messung/muse/MUSE-REPORT-857.md) |
 | 858 | Composition closing: entry-duties closing | Merged after review/checks | 1008: Merged after review/checks | [report](messung/muse/MUSE-REPORT-858.md) |
-| 859 | Composition closing: region-ceiling closing | Committed candidate; review/integration pending | 1009: Committed candidate; review/integration pending | [task](lanes/859.md) |
+| 859 | Composition closing: region-ceiling closing | Merged after review/checks | 1009: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-859.md) |
 | 860 | Optimiser rule: constant folding rule | Merged after review/checks | 1010: Merged after review/checks | [report](messung/muse/MUSE-REPORT-860.md) |
 | 861 | Optimiser rule: copy propagation rule | Committed candidate; review/integration pending | 1011: Committed candidate; review/integration pending | [task](lanes/861.md) |
 | 862 | Optimiser rule: CFG simplification rule | Committed candidate; review/integration pending | 1012: Committed candidate; review/integration pending | [task](lanes/862.md) |
@@ -1265,6 +1265,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1007**, Independent exact review of 857, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1007.md). <!-- x86-merged:1007 -->
 - 2026-10-03: lane **858**, Composition closing: entry-duties closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-858.md). <!-- x86-merged:858 -->
 - 2026-10-03: lane **1008**, Independent exact review of 858, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1008.md). <!-- x86-merged:1008 -->
+- 2026-10-03: lane **859**, Composition closing: region-ceiling closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-859.md). <!-- x86-merged:859 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
