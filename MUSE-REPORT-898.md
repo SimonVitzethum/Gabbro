@@ -3,11 +3,13 @@
 Lane 898, clone `/home/simon/Dokumente/gabbro-muse/a898`, branch `muse/898` (verified).
 Review-only lane. Own file: `MUSE-REPORT-898.md`. No source or live-control changes.
 
-## CANDIDATE and VERDICT
+## Machine-readable result
 
-- CANDIDATE: 748 `f50afecfd56929253ff917effd621c4ec0910322`
-- VERDICT: ACCEPT (bounded: exactly the `REX.W + 83 /0 ib` register-direct
-  ADD r64, imm8 row; see boundaries below)
+CANDIDATE: 748 f50afecfd56929253ff917effd621c4ec0910322
+VERDICT: ACCEPT
+
+Bounded acceptance: exactly the `REX.W + 83 /0 ib` register-direct
+ADD r64, imm8 row; see boundaries below. Substantive verdict unchanged.
 
 ## What was reviewed
 
