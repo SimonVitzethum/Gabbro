@@ -49,6 +49,25 @@ theorem expandBound_mono (s : CostSummary) (m src src' k k' : Nat)
   have hmul : src * m ≤ src' * m := Nat.mul_le_mul_right m hle
   omega
 
+/-- Resumption preserves coverage: the summary coverage over `src`
+    covers the same segment over any larger `src'`. The ghost keeps
+    tracking the OLD budget; the proof replays the accepted expansion
+    on both sides. Every premise is used. -/
+theorem deckung_resum (s : CostSummary) (m src src' : Nat)
+    (xs : List Decodiert)
+    (hMax : alleMax s = some m)
+    (hDeck : Deckung s src xs)
+    (hle : src ≤ src') :
+    Deckung s src' xs := by
+  intro k' hk'
+  have e1 := expandBound_keinVerlust s src m hMax
+  have e2 := expandBound_keinVerlust s src' m hMax
+  have hwork := hDeck _ e1
+  rw [e2] at hk'
+  cases hk'
+  have hmul : src * m ≤ src' * m := Nat.mul_le_mul_right m hle
+  omega
+
 /- CUTS (step 1):
      `GhostBudget` interface plus accepted-expansion monotonicity
      (`expandBound_mono`). Resumption coverage and the main closing
@@ -57,5 +76,6 @@ theorem expandBound_mono (s : CostSummary) (m src src' k k' : Nat)
 
 #print axioms GhostBudget
 #print axioms expandBound_mono
+#print axioms deckung_resum
 
 end Gabbro.Grammatik.X86
