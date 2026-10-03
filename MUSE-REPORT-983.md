@@ -2,8 +2,12 @@
 
 ## Candidate
 
-- CANDIDATE: 833 `004925e033ae8b51f74048c6e10dfe3604dac566` (base `e7c75908456285d1e37c18dc32d4f9c0e10d1fa4`, my clone HEAD — match).
-- VERDICT: ACCEPT (bounded; see §5).
+CANDIDATE: 833 004925e033ae8b51f74048c6e10dfe3604dac566
+
+VERDICT: ACCEPT
+
+- Pinned head `004925e033ae8b51f74048c6e10dfe3604dac566` (base `e7c75908456285d1e37c18dc32d4f9c0e10d1fa4`, my clone HEAD — match).
+- Substantive outcome: bounded accept (see §5).
 - Scope (from `.tmp/review/SNAPSHOT.json` + `PATCH.diff`, 393 lines): only
   `MUSE-REPORT-833.md` (new), `grammatik/Grammatik.lean` (+1 import line),
   `grammatik/Grammatik/X86/ComposeCallLogGhost.lean` (new, 307 lines).
