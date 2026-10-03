@@ -3,15 +3,18 @@
 Lane 901, clone `/home/simon/Dokumente/gabbro-muse/a901`, branch `muse/901`.
 Owned file only: this report. No source, no live controls touched.
 
-## CANDIDATE and VERDICT
+## Candidate and finding
 
-- CANDIDATE: 751 `27b1a7ba73eb09fccce0c8e6a5124601219939ac`
-  (identity and base `23b9a42fb44f2365b636cf8a9c440a2dfd8cae50` from the
-  coordinator snapshot `.tmp/review/SNAPSHOT.json`; the author's clone was
-  not accessed. The snapshot content tree
-  `.tmp/review/author-751/` — task, report, PATCH, build evidence and the
-  post-image files — is what was reviewed byte for byte.)
-- VERDICT: ACCEPT (bounded, see §5). No repairs required.
+CANDIDATE: 751 27b1a7ba73eb09fccce0c8e6a5124601219939ac
+VERDICT: ACCEPT
+
+Pinned head is author 751 at `27b1a7ba73eb09fccce0c8e6a5124601219939ac`
+(identity and base `23b9a42fb44f2365b636cf8a9c440a2dfd8cae50` from the
+coordinator snapshot `.tmp/review/SNAPSHOT.json`; the author's clone was
+not accessed. The snapshot content tree
+`.tmp/review/author-751/` — task, report, PATCH, build evidence and the
+post-image files — is what was reviewed byte for byte.)
+Bounded acceptance (see claim boundary below). No repairs required.
 
 ## What the candidate is
 
