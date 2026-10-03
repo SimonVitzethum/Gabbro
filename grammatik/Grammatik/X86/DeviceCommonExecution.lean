@@ -186,6 +186,184 @@ theorem devSchritt_xmm (D : Type)
     unfold setKernDaten hwKernAusZustand
     simp
 
+/-! ## 4. Fetched port/device step on the common machine.
+
+    Fetch reads the acting core projection's ACTUAL executable
+    bytes through the accepted `fetchIo`; the successor cores reuse
+    the accepted `ausKern`/`einKern`; the latch answers come from
+    the accepted computable `geraetAntwort`. The generic Prop
+    interface of §3 stays the semantic reference: both selection
+    lemmas below tie the computable step to a reached generic
+    step, so no fiat answer is ever consumed. -/
+
+/-- Outcome of one fetched common device step. -/
+inductive DevCommonAusgang where
+  | weiter : HwMaschine → GeraetZustand → List IoEreignis →
+      DevCommonAusgang
+  | verweigert : DevCommonAusgang
+
+/-- One fetched port/device step on core `c`: fetch from actual
+    bytes, architectural permission at the effective port, drained
+    own TSO buffer, empty pending list, then the accepted latch
+    answer. Anything else is `.verweigert`. -/
+def deviceCommon_byteschritt (r : Bus704.IoBerechtigung)
+    (k : Bus704.TssKarte) (pend : List PendingResp) (m : HwMaschine)
+    (c : Nat) (g : GeraetZustand) (spur : List IoEreignis) :
+    DevCommonAusgang :=
+  match fetchIo (projZustand m c) with
+  | none => .verweigert
+  | some (dec, _) =>
+    match dec.op with
+    | ⟨.aus, b, _⟩ =>
+      if laengeOk dec.laenge &&
+          Bus704.archZugelassen r k
+            (portVon dec.op (projZustand m c).register) b &&
+          zaunBereit (tsoAnsicht m) c && pendingLeer pend then
+        .weiter
+          (setKernDaten m c
+            (hwKernAusZustand m c
+              (Bus704.ausKern (projZustand m c) dec)))
+          (geraetAntwort g .aus b
+            (ausGabe b ((projZustand m c).register .rax))).1
+          (spur ++ [⟨.aus, b,
+            portVon dec.op (projZustand m c).register,
+            ausGabe b ((projZustand m c).register .rax)⟩])
+      else .verweigert
+    | ⟨.ein, b, _⟩ =>
+      if laengeOk dec.laenge &&
+          Bus704.archZugelassen r k
+            (portVon dec.op (projZustand m c).register) b &&
+          zaunBereit (tsoAnsicht m) c && pendingLeer pend then
+        .weiter
+          (setKernDaten m c
+            (hwKernAusZustand m c
+              (Bus704.einKern (projZustand m c) dec b
+                (geraetAntwort g .ein b 0).2)))
+          (geraetAntwort g .ein b 0).1
+          (spur ++ [⟨.ein, b,
+            portVon dec.op (projZustand m c).register,
+            (geraetAntwort g .ein b 0).2⟩])
+      else .verweigert
+
+/-- The latch OUT pair in projection form. -/
+theorem latchAus_paar (g : GeraetZustand) (b : IoBreite)
+    (v : Nat) :
+    (geraetAntwort g .aus b v).1 = ⟨v % ioMaske b, g.zaehl + 1⟩ :=
+  rfl
+
+/-- The latch OUT answer is the channel zero. -/
+theorem latchAus_ant0 (g : GeraetZustand) (b : IoBreite)
+    (v : Nat) :
+    (geraetAntwort g .aus b v).2 = 0 := rfl
+
+/-- The latch IN pair in projection form. -/
+theorem latchEin_paar (g : GeraetZustand) (b : IoBreite) :
+    (geraetAntwort g .ein b 0).1 = ⟨g.daten, g.zaehl + 1⟩ := rfl
+
+/-- The latch IN answer in projection form. -/
+theorem latchEin_ant (g : GeraetZustand) (b : IoBreite) :
+    (geraetAntwort g .ein b 0).2 = g.daten % ioMaske b := rfl
+
+/-- SELECTION (OUT): a fetched port OUT under permission, drained
+    buffer and empty pending list computes the successor AND
+    justifies a reached generic step. -/
+theorem deviceCommon_aus_fetch (r : Bus704.IoBerechtigung)
+    (k : Bus704.TssKarte) (pend : List PendingResp) (m : HwMaschine)
+    (c : Nat) (g : GeraetZustand) (spur : List IoEreignis)
+    (d : IoDec) (rest : List Byte) (b : IoBreite) (q : PortQuelle)
+    (hf : fetchIo (projZustand m c) = some (d, rest))
+    (hop : d.op = ⟨.aus, b, q⟩)
+    (hlen : laengeOk d.laenge = true)
+    (hperm : Bus704.archZugelassen r k
+      (portVon ⟨.aus, b, q⟩ (projZustand m c).register) b = true)
+    (hord : zaunBereit (tsoAnsicht m) c = true)
+    (hpend : pendingLeer pend = true) :
+    deviceCommon_byteschritt r k pend m c g spur =
+      .weiter
+        (setKernDaten m c
+          (hwKernAusZustand m c (Bus704.ausKern (projZustand m c) d)))
+        (geraetAntwort g .aus b
+          (ausGabe b ((projZustand m c).register .rax))).1
+        (spur ++ [⟨.aus, b,
+          portVon d.op (projZustand m c).register,
+          ausGabe b ((projZustand m c).register .rax)⟩]) ∧
+    DeviceCommonSchritt GeraetZustand Bus704.latchErlaubt r k pend
+      m c g spur
+      (setKernDaten m c
+        (hwKernAusZustand m c (Bus704.ausKern (projZustand m c) d)))
+      (geraetAntwort g .aus b
+        (ausGabe b ((projZustand m c).register .rax))).1
+      (spur ++ [⟨.aus, b,
+        portVon d.op (projZustand m c).register,
+        ausGabe b ((projZustand m c).register .rax)⟩]) := by
+  have hant : Bus704.latchErlaubt g .aus b
+      (portVon d.op (projZustand m c).register)
+      (ausGabe b ((projZustand m c).register .rax))
+      (geraetAntwort g .aus b
+        (ausGabe b ((projZustand m c).register .rax))).1
+      0 := by
+    rw [latchAus_paar]
+    exact Bus704.latch_aus_sound g b _ _
+  have hperm' : Bus704.archZugelassen r k
+      (portVon d.op (projZustand m c).register) b = true := by
+    rw [hop]
+    exact hperm
+  refine ⟨?_, .schritt _ (.aus _ d b q _ hlen hop hperm' hant) hord
+    hpend⟩
+  unfold deviceCommon_byteschritt
+  rw [hf]
+  simp [hop, hlen, hperm, hord, hpend]
+
+/-- SELECTION (IN): a fetched port IN under permission, drained
+    buffer and empty pending list computes the successor AND
+    justifies a reached generic step. -/
+theorem deviceCommon_ein_fetch (r : Bus704.IoBerechtigung)
+    (k : Bus704.TssKarte) (pend : List PendingResp) (m : HwMaschine)
+    (c : Nat) (g : GeraetZustand) (spur : List IoEreignis)
+    (d : IoDec) (rest : List Byte) (b : IoBreite) (q : PortQuelle)
+    (hf : fetchIo (projZustand m c) = some (d, rest))
+    (hop : d.op = ⟨.ein, b, q⟩)
+    (hlen : laengeOk d.laenge = true)
+    (hperm : Bus704.archZugelassen r k
+      (portVon ⟨.ein, b, q⟩ (projZustand m c).register) b = true)
+    (hord : zaunBereit (tsoAnsicht m) c = true)
+    (hpend : pendingLeer pend = true) :
+    deviceCommon_byteschritt r k pend m c g spur =
+      .weiter
+        (setKernDaten m c
+          (hwKernAusZustand m c
+            (Bus704.einKern (projZustand m c) d b
+              (geraetAntwort g .ein b 0).2)))
+        (geraetAntwort g .ein b 0).1
+        (spur ++ [⟨.ein, b,
+          portVon d.op (projZustand m c).register,
+          (geraetAntwort g .ein b 0).2⟩]) ∧
+    DeviceCommonSchritt GeraetZustand Bus704.latchErlaubt r k pend
+      m c g spur
+      (setKernDaten m c
+        (hwKernAusZustand m c
+          (Bus704.einKern (projZustand m c) d b
+            (geraetAntwort g .ein b 0).2)))
+      (geraetAntwort g .ein b 0).1
+      (spur ++ [⟨.ein, b,
+        portVon d.op (projZustand m c).register,
+        (geraetAntwort g .ein b 0).2⟩]) := by
+  have hant : Bus704.latchErlaubt g .ein b
+      (portVon d.op (projZustand m c).register) 0
+      (geraetAntwort g .ein b 0).1
+      (geraetAntwort g .ein b 0).2 := by
+    rw [latchEin_paar, latchEin_ant]
+    exact Bus704.latch_ein_sound g b _
+  have hperm' : Bus704.archZugelassen r k
+      (portVon d.op (projZustand m c).register) b = true := by
+    rw [hop]
+    exact hperm
+  refine ⟨?_, .schritt _ (.ein _ d b q _ _ hlen hop hperm' hant) hord
+    hpend⟩
+  unfold deviceCommon_byteschritt
+  rw [hf]
+  simp [hop, hlen, hperm, hord, hpend]
+
 /-- The pending gate is a premise of every reached step: an
     outstanding pending response is never consumed as an answer. -/
 theorem devSchritt_pending_leer (D : Type)
