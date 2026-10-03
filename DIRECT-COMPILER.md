@@ -503,7 +503,7 @@ Last ledger refresh: **2026-10-03 22:20 UTC**. This is an operational snapshot, 
 | 825 | Composition closing: image-to-fetch closing | Merged after review/checks | 975: Merged after review/checks | [report](messung/muse/MUSE-REPORT-825.md) |
 | 826 | Composition closing: relocation-to-redecode closing | Merged after review/checks | 976: Merged after review/checks | [report](messung/muse/MUSE-REPORT-826.md) |
 | 827 | Composition closing: entry-to-mapping closing | Merged after review/checks | 977: Merged after review/checks | [report](messung/muse/MUSE-REPORT-827.md) |
-| 828 | Composition closing: stack-to-ABI closing | Merged after review/checks | 978: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-828.md) |
+| 828 | Composition closing: stack-to-ABI closing | Merged after review/checks | 978: Merged after review/checks | [report](messung/muse/MUSE-REPORT-828.md) |
 | 829 | Composition closing: call-lowering closing | Committed candidate; review/integration pending | 979: Incomplete; preserved | [task](lanes/829.md) |
 | 830 | Composition closing: spill-privacy closing | Committed candidate; review/integration pending | 980: Committed candidate; review/integration pending | [task](lanes/830.md) |
 | 831 | Composition closing: contract-at-call closing | Committed candidate; review/integration pending | 981: Committed candidate; review/integration pending | [task](lanes/831.md) |
@@ -597,7 +597,7 @@ Last ledger refresh: **2026-10-03 22:20 UTC**. This is an operational snapshot, 
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Agent working | 1101: scheduled | [task](lanes/1100.md) |
 | 1102 | Port and device execution on the common machine | Agent working | 1103: scheduled | [task](lanes/1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Agent working | 1105: scheduled | [task](lanes/1104.md) |
-| 1106 | Realised per-access footprints for the connected integer rows | Scheduled | 1107: scheduled | [task](lanes/1106.md) |
+| 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Scheduled | 1109: scheduled | [task](lanes/1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Scheduled | 1111: scheduled | [task](lanes/1110.md) |
 
@@ -1208,6 +1208,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **827**, Composition closing: entry-to-mapping closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-827.md). <!-- x86-merged:827 -->
 - 2026-10-03: lane **977**, Independent exact review of 827, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-977.md). <!-- x86-merged:977 -->
 - 2026-10-03: lane **828**, Composition closing: stack-to-ABI closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-828.md). <!-- x86-merged:828 -->
+- 2026-10-03: lane **978**, Independent exact review of 828, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-978.md). <!-- x86-merged:978 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
