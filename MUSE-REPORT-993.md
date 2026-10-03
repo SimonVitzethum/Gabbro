@@ -5,12 +5,14 @@ Owns only this report. No source file touched, no live controls used.
 
 ## CANDIDATE and VERDICT
 
-CANDIDATE: 843 `4bb20cd3e74967145e6ca2204c71e78f397083b4`
-(pinned base `e7c75908456285d1e37c18dc32d4f9c0e10d1fa4`; files:
+CANDIDATE: 843 4bb20cd3e74967145e6ca2204c71e78f397083b4
+(pinned base e7c75908456285d1e37c18dc32d4f9c0e10d1fa4; files:
 `MUSE-REPORT-843.md`, `grammatik/Grammatik.lean` (one import line),
 `grammatik/Grammatik/X86/ComposeFeatureGate.lean` (new, 508 lines)).
 
-VERDICT: ACCEPT — bounded to the composition as stated, with the CUTS below.
+VERDICT: ACCEPT
+
+Bounded to the composition as stated, with the CUTS below.
 No repairs required. No guarantee weakened, no desired simulation assumed,
 no fake closure found.
 
