@@ -466,4 +466,189 @@ theorem pin_nullZulassen_oberLebendig :
     nullZulassen (BitVec.ofNat 64 5) ⟨false⟩ = false := by
   decide
 
+/-! ## 8. The connection and its joint witness.
+
+    `OptMovImmSel_verbindung` ties the selector to execution: the
+    selected tile denotes the word, the wide step lands it with flags
+    and memory preserved, the selection never exceeds the wide length,
+    an admitted site steps the compact tile to the same value with
+    flags and memory preserved, and the three firewall pins hold. No
+    `ensures` is derived, no refusal becomes a warning, and no
+    faulting form is speculated above its guard (MOV has no faulting
+    form: neither tile consults memory). -/
+
+/-- CONNECTION: narrowest-valid selection preserves value, steps,
+    observations and the firewall. -/
+theorem OptMovImmSel_verbindung (dst : Register) (v : Wort) (s : Zustand)
+    (c : MovImmCert) :
+    tileWert (waehleMovImm v c) = v
+    ∧ (schritt ⟨.movImm64 dst v, 10⟩ s).map (fun t => t.register dst)
+      = some v
+    ∧ (schritt ⟨.movImm64 dst v, 10⟩ s).map (fun t => t.flags)
+      = some s.flags
+    ∧ (schritt ⟨.movImm64 dst v, 10⟩ s).map (fun t => t.speicher)
+      = some s.speicher
+    ∧ tileLaenge (waehleMovImm v c) dst ≤ 10
+    ∧ (nullZulassen v c = true →
+        (stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+          compactLen dst⟩ s).map (fun t => t.register dst) = some v
+        ∧ (stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+          compactLen dst⟩ s).map (fun t => t.flags) = some s.flags
+        ∧ (stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+          compactLen dst⟩ s).map (fun t => t.speicher)
+          = some s.speicher)
+    ∧ (c.oberTot = false → ∀ imm, waehleMovImm v c ≠ .kompakt imm)
+    ∧ (passtU32 v = false → ∀ imm, waehleMovImm v c ≠ .kompakt imm)
+    ∧ (passtI32 v = false → ∀ imm, waehleMovImm v c ≠ .sign imm) := by
+  refine ⟨waehle_wert v c, ?_, ?_, ?_,
+    tileLaenge_hoechstens_weit v c dst, ?_, ?_, ?_, ?_⟩
+  · have h := schritt_movImm64 ⟨.movImm64 dst v, 10⟩ s dst v rfl rfl
+    simp [h, schrittRegister, regSet_gleich]
+  · have h := schritt_movImm64 ⟨.movImm64 dst v, 10⟩ s dst v rfl rfl
+    simp [h, schrittRegister]
+  · have h := schritt_movImm64 ⟨.movImm64 dst v, 10⟩ s dst v rfl rfl
+    simp [h, schrittRegister]
+  · intro hz
+    have hstep := stepCompact_mov32imm
+      ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat), compactLen dst⟩ s dst
+      (BitVec.ofNat 32 v.toNat) (compactLen_ok dst) rfl
+    have hc : (stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+        compactLen dst⟩ s).map (fun t => t.register dst) = some v :=
+      kompaktSchritt_wert dst v s c hz
+    have hf : (stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+        compactLen dst⟩ s).map (fun t => t.flags) = some s.flags := by
+      rw [hstep]
+      rfl
+    have hm : (stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+        compactLen dst⟩ s).map (fun t => t.speicher)
+        = some s.speicher := by
+      rw [hstep]
+      rfl
+    exact ⟨hc, hf, hm⟩
+  · intro h imm
+    exact waehle_kein_kompakt_ohne_tot v c h imm
+  · intro h imm
+    exact waehle_kein_kompakt_bei_gross v c h imm
+  · intro h imm
+    exact waehle_kein_sign_ohne_bereich v c h imm
+
+/-- JOINT WITNESS: the connection at `rax := 0x80000001` over hostile
+    all-ones registers (the upper-half clearing is observable, not
+    vacuous), together with the reached memory-changing run from
+    actual `Ausfuehrung` vocabulary (cell 8192 goes 0 to 42).
+    Non-degenerate: a register-changing reached step plus a
+    store-changing reached run, jointly instantiated. -/
+theorem OptMovImmSel_verbindung_zeuge :
+    ∃ (dst : Register) (v : Wort) (s : Zustand) (c : MovImmCert),
+      tileWert (waehleMovImm v c) = v
+      ∧ (schritt ⟨.movImm64 dst v, 10⟩ s).map (fun t => t.register dst)
+        = some v
+      ∧ tileLaenge (waehleMovImm v c) dst ≤ 10
+      ∧ nullZulassen v c = true
+      ∧ (stepCompact ⟨.mov32imm dst (BitVec.ofNat 32 v.toNat),
+          compactLen dst⟩ s).map (fun t => t.register dst) = some v
+      ∧ (compactWert (BitVec.ofNat 32 0x80000001)).toNat < 2 ^ 32
+      ∧ ((lauf zeugeProg zeugeZustand).map
+          (fun s => s.speicher.bytes (BitVec.ofNat 64 8192)) =
+          some (BitVec.ofNat 8 42))
+      ∧ zeugeZustand.speicher.bytes (BitVec.ofNat 64 8192) =
+          BitVec.ofNat 8 0 := by
+  have hverb := OptMovImmSel_verbindung .rax
+    (BitVec.ofNat 64 0x80000001) kompaktWitState ⟨true⟩
+  obtain ⟨hwert, hweit, _, _, hlen, hkompakt, _, _, _⟩ := hverb
+  have hzul : nullZulassen (BitVec.ofNat 64 0x80000001) ⟨true⟩ = true := by
+    decide
+  obtain ⟨_, hmem, hnull⟩ := zeuge_speicher_aendert_sich
+  exact ⟨.rax, BitVec.ofNat 64 0x80000001, kompaktWitState, ⟨true⟩,
+    hwert, hweit, hlen, hzul, (hkompakt hzul).1,
+    compactWert_fits _, hmem, hnull⟩
+
+/- CUTS:
+    Proved here, over the REUSED canonical vocabulary (`Typen`,
+    `Wort.sext`/`trunc`, `Speicher`, `Ausfuehrung.schritt`/`regSet`/
+    `lauf`/`zeuge_speicher_aendert_sich`, `Codec.encode`/`decode`/
+    `roundtrip`, `NarrowOps.narrowTruncMod`, and the UNCHANGED
+    `CompactImmMov32Zero` row):
+    - the three tiles (`MovTile`/`tileWert`) with the validator-decided
+      certificate (`MovImmCert`, DESIGN 2B gates as `passtU32`/`passtI32`
+      with `nullZulassen`) and the narrowest-valid selector
+      (`waehleMovImm`, DESIGN 2B order zero/sign/wide);
+    - value preservation over arbitrary values (`waehle_wert` via
+      `kompaktWert_rundgang` and the `sext` identity
+      `signWert_rundgang`, whose bit bridge restates the accepted
+      `RelocatedExecution` pattern under selection-local names);
+    - the exact firewall where the rule must NOT fire
+      (`waehle_kein_kompakt_ohne_tot`,
+      `waehle_kein_kompakt_bei_gross`,
+      `waehle_kein_sign_ohne_bereich`, plus the gate refusals);
+    - lengths that only narrow (`weitLaenge`,
+      `tileLaenge_hoechstens_weit`: 10 vs 5/6/7);
+    - execution agreement for the byte-connected pair (wide and
+      compact steps land the word; flags, memory and all other
+      registers preserved; every `Bedingung` agrees downstream);
+    - byte grounding through the accepted rows (`movSelBytes_weit`,
+      `movSelBytes_kompakt`) and selector pins;
+    - the end-to-end `OptMovImmSel_verbindung` with its joint
+      companion `OptMovImmSel_verbindung_zeuge` (hostile all-ones
+      registers with `rax := 0x80000001`, plus the reached
+      memory-changing `lauf` run taking cell 8192 from 0 to 42).
+    NOT proved here, and not claimed:
+    - No sign-row codec, fetch or byte-step: the C7/0 encoding,
+      decoder acceptance and fetched execution belong to lane 747,
+      whose names and rows this file never duplicates; until it lands,
+      a validator must refuse to EMIT the sign tile and keep the
+      certified wide fallback (`pin_waehle_gross_bleibt_weit` shape).
+    - No source correspondence beyond the word: the lowering site's
+      range evidence (checker `weiter`/`narrow` facts) is consumed,
+      never re-derived; `TableLayout.layoutOk`/`hinweisOk` and
+      `CostSummary.kostenSummeOk`/`expandBound` stay the consumers.
+    - No TSO/concurrency bridge: memory preservation is sequential
+      over one `Speicher`; per-access target-to-W/GX simulation stays
+      with the TSO bridge lanes.
+    - No FP-context lift: `FpZustand`/`stepExt` integration
+      (XMM/MXCSR untouched) stays with the dispatcher owners; the
+      flag agreement proved here is its value-level precondition.
+    - No call-log transfer: selection is lowering-internal (no source
+      rewrite, no call emitted); ghost-event (`FolgeG`) transfer
+      belongs to the lowering validator (layer C).
+    - No hardware correspondence: encoder round-trip consistency is
+      not silicon verification; refused neighbours are proved refusal
+      only.
+-/
+
+#print axioms passtU32_genau
+#print axioms passtI32_genau
+#print axioms nullVerweigert_oberLebendig
+#print axioms nullVerweigert_gross
+#print axioms passtU32_verweigert_gross
+#print axioms waehle_null
+#print axioms movSelBit_div_pow
+#print axioms movSelBit31
+#print axioms kompaktWert_rundgang
+#print axioms movSelMod64_32
+#print axioms signWert_rundgang
+#print axioms waehle_wert
+#print axioms waehle_kein_kompakt_ohne_tot
+#print axioms waehle_kein_kompakt_bei_gross
+#print axioms waehle_kein_sign_ohne_bereich
+#print axioms weitLaenge
+#print axioms tileLaenge_hoechstens_weit
+#print axioms weitSchritt_wert
+#print axioms weitSchritt_flags
+#print axioms weitSchritt_speicher
+#print axioms weitSchritt_fremd
+#print axioms kompaktSchritt_wert
+#print axioms kompaktSchritt_flags
+#print axioms kompaktSchritt_speicher
+#print axioms kompaktSchritt_fremd
+#print axioms movSelBedingung_gleich
+#print axioms movSelBytes_weit
+#print axioms movSelBytes_kompakt
+#print axioms pin_waehle_fuenf
+#print axioms pin_waehle_minus_eins
+#print axioms pin_waehle_gross_bleibt_weit
+#print axioms pin_nullZulassen_oberLebendig
+#print axioms OptMovImmSel_verbindung
+#print axioms OptMovImmSel_verbindung_zeuge
+
 end Gabbro.Grammatik.X86
