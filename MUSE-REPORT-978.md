@@ -1,7 +1,10 @@
 # MUSE-REPORT-978: exact review of author 828 (stack-to-ABI closing)
 
 CANDIDATE: 828 1e1d0bea34a29493694a3d4ab52508d3d4b30818
-VERDICT: ACCEPT (bounded: one checked composition step as claimed; no wider closure granted)
+VERDICT: ACCEPT
+
+Scope bound (not a second verdict): one checked composition step as
+claimed; no wider whole-call closure granted.
 
 ## Scope of this review
 
