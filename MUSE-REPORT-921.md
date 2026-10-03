@@ -5,7 +5,7 @@ Owned file only: this report. No source, no live controls touched.
 
 CANDIDATE: 771 f225b5a5bb42984f396f8ccf310f0a6047b8857a
 
-VERDICT: ACCEPT (bounded; see §5 limits)
+VERDICT: ACCEPT
 
 ## 1. What was reviewed
 
