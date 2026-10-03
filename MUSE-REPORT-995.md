@@ -14,7 +14,7 @@
 
 ## Candidate
 
-- CANDIDATE: 845 cc8b129807da520eea3e02ee544d08cff0de0b87
+- Pinned snapshot: author 845 at head cc8b129807da520eea3e02ee544d08cff0de0b87
 - Base: e7c75908456285d1e37c18dc32d4f9c0e10d1fa4 (per SNAPSHOT.json)
 - Files: `MUSE-REPORT-845.md`, `grammatik/Grammatik.lean`
   (one import line added), `grammatik/Grammatik/X86/ComposeRelaxLayout.lean`
@@ -153,9 +153,14 @@ COMPLETE output`, `Build completed successfully (509 jobs)`.
   reading of "narrowed branch re-decoded" is documented in the file
   header and matches the short-refusal design.
 
-## Verdict
+## Decision
 
-- VERDICT: ACCEPT (bounded: one wide call site per round step to
+- Substantive decision: ACCEPT (bounded: one wide call site per round step to
   re-decoded final bytes with re-decided layout, reached
   memory-changing `byteschritt` execution plus planted refusals; all
   wider legs explicitly remain with their named owners).
+
+## Machine-readable verdict
+
+CANDIDATE: 845 cc8b129807da520eea3e02ee544d08cff0de0b87
+VERDICT: ACCEPT
