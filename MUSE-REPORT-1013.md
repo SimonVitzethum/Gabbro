@@ -33,8 +33,10 @@ CANDIDATE: 863 badf048e28fa3917ff5d430061fb524eb9224cb7
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded; bounds listed below, all already declared in the
-candidate's own CUTS).
+VERDICT: ACCEPT
+
+Acceptance is bounded; the bounds are listed below and were all already
+declared in the candidate's own CUTS. The substantive verdict is unchanged.
 
 ## What the candidate does (verified from the PATCH)
 
