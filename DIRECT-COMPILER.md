@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 22:39 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 22:44 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -560,7 +560,7 @@ Last ledger refresh: **2026-10-03 22:39 UTC**. This is an operational snapshot, 
 | 882 | Optimiser rule: chain scheduling rule | Committed candidate; review/integration pending | 1032: Incomplete; preserved | [task](lanes/882.md) |
 | 883 | Optimiser rule: loop alignment rule | Merged after review/checks | 1033: Merged after review/checks | [report](messung/muse/MUSE-REPORT-883.md) |
 | 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Incomplete; preserved | [task](lanes/884.md) |
-| 885 | Optimiser rule: zero-idiom selection rule | Agent working | 1035: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/885.md) |
+| 885 | Optimiser rule: zero-idiom selection rule | Committed candidate; review/integration pending | 1035: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/885.md) |
 | 886 | Optimiser rule: LEA selection rule | Merged after review/checks | 1036: Merged after review/checks | [report](messung/muse/MUSE-REPORT-886.md) |
 | 887 | Optimiser rule: shift selection rule | Merged after review/checks | 1037: Merged after review/checks | [report](messung/muse/MUSE-REPORT-887.md) |
 | 888 | Optimiser rule: multiply selection rule | Merged after review/checks | 1038: Merged after review/checks | [report](messung/muse/MUSE-REPORT-888.md) |
@@ -597,7 +597,7 @@ Last ledger refresh: **2026-10-03 22:39 UTC**. This is an operational snapshot, 
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Merged after review/checks | 1101: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1100.md) |
 | 1102 | Port and device execution on the common machine | Merged after review/checks | 1103: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Merged after review/checks | 1105: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1104.md) |
-| 1106 | Realised per-access footprints for the connected integer rows | Committed candidate; review/integration pending | 1107: Agent working | [task](lanes/1106.md) |
+| 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: Committed candidate; review/integration pending | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Merged after review/checks | 1109: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Merged after review/checks | 1111: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1110.md) |
 
@@ -1348,6 +1348,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1110**, Packed-integer fetched steps with a dispatch-slot API, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1110.md). <!-- x86-merged:1110 -->
 - 2026-10-03: checked master `491bd562` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:491bd562d3f0f0ddb7ab43d915e591edb2612856 -->
 - 2026-10-03: lane **1111**, Independent exact review of 1110, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1111.md). <!-- x86-merged:1111 -->
+- 2026-10-03: publication batch checks passed for `c7992810`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
