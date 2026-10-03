@@ -454,7 +454,7 @@ Last ledger refresh: **2026-10-03 13:17 UTC**. This is an operational snapshot, 
 | 776 | Hardware completion: LOCK CMPXCHG success path | Merged after review/checks | 926: Merged after review/checks | [report](messung/muse/MUSE-REPORT-776.md) |
 | 777 | Hardware completion: LOCK CMPXCHG failure stutter | Incomplete; preserved | 927: scheduled | [task](lanes/777.md) |
 | 778 | Hardware completion: LOCK XADD fetch-add | Merged after review/checks | 928: Merged after review/checks | [report](messung/muse/MUSE-REPORT-778.md) |
-| 779 | Hardware completion: XCHG ordering need | Committed candidate; review/integration pending | 929: Committed candidate; review/integration pending | [task](lanes/779.md) |
+| 779 | Hardware completion: XCHG ordering need | Merged after review/checks | 929: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-779.md) |
 | 780 | Hardware completion: MFENCE drain-own semantics | Committed candidate; review/integration pending | 930: Committed candidate; review/integration pending | [task](lanes/780.md) |
 | 781 | Hardware completion: SFENCE store narrowness | Committed candidate; review/integration pending | 931: Committed candidate; review/integration pending | [task](lanes/781.md) |
 | 782 | Hardware completion: LFENCE load narrowness | Committed candidate; review/integration pending | 932: Committed candidate; review/integration pending | [task](lanes/782.md) |
@@ -463,7 +463,7 @@ Last ledger refresh: **2026-10-03 13:17 UTC**. This is an operational snapshot, 
 | 785 | Hardware completion: CAS divergence record | Committed candidate; review/integration pending | 935: Committed candidate; review/integration pending | [task](lanes/785.md) |
 | 786 | Hardware completion: youngest-own-store forwarding | Incomplete; preserved | 936: scheduled | [task](lanes/786.md) |
 | 787 | Hardware completion: tearing refusal table | Incomplete; preserved | 937: scheduled | [task](lanes/787.md) |
-| 788 | Hardware completion: CVTSI2SD from 32-bit int | Agent working | 938: scheduled | [task](lanes/788.md) |
+| 788 | Hardware completion: CVTSI2SD from 32-bit int | Committed candidate; review/integration pending | 938: scheduled | [task](lanes/788.md) |
 | 789 | Hardware completion: CVTSI2SD from 64-bit int | Committed candidate; review/integration pending | 939: Committed candidate; review/integration pending | [task](lanes/789.md) |
 | 790 | Hardware completion: UCOMISD unordered rows | Incomplete; preserved | 940: scheduled | [task](lanes/790.md) |
 | 791 | Hardware completion: float narrow range check | Agent working | 941: scheduled | [task](lanes/791.md) |
@@ -1160,6 +1160,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **926**, Independent exact review of 776, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-926.md). <!-- x86-merged:926 -->
 - 2026-10-03: lane **778**, Hardware completion: LOCK XADD fetch-add, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-778.md). <!-- x86-merged:778 -->
 - 2026-10-03: lane **928**, Independent exact review of 778, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-928.md). <!-- x86-merged:928 -->
+- 2026-10-03: lane **779**, Hardware completion: XCHG ordering need, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-779.md). <!-- x86-merged:779 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
