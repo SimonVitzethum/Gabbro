@@ -543,7 +543,7 @@ Last ledger refresh: **2026-10-03 22:26 UTC**. This is an operational snapshot, 
 | 865 | Optimiser rule: dead code rule | Merged after review/checks | 1015: Merged after review/checks | [report](messung/muse/MUSE-REPORT-865.md) |
 | 866 | Optimiser rule: dead store rule | Merged after review/checks | 1016: Merged after review/checks | [report](messung/muse/MUSE-REPORT-866.md) |
 | 867 | Optimiser rule: range-check elimination rule | Merged after review/checks | 1017: Merged after review/checks | [report](messung/muse/MUSE-REPORT-867.md) |
-| 868 | Optimiser rule: bound-check elimination rule | Committed candidate; review/integration pending | 1018: Committed candidate; review/integration pending | [task](lanes/868.md) |
+| 868 | Optimiser rule: bound-check elimination rule | Merged after review/checks | 1018: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-868.md) |
 | 869 | Optimiser rule: overflow-check elimination rule | Committed candidate; review/integration pending | 1019: Committed candidate; review/integration pending | [task](lanes/869.md) |
 | 870 | Optimiser rule: alias commutation rule | Committed candidate; review/integration pending | 1020: Committed candidate; review/integration pending | [task](lanes/870.md) |
 | 871 | Optimiser rule: strength reduction rule | Committed candidate; review/integration pending | 1021: Committed candidate; review/integration pending | [task](lanes/871.md) |
@@ -594,7 +594,7 @@ Last ledger refresh: **2026-10-03 22:26 UTC**. This is an operational snapshot, 
 | 1094 | Idle pool cache cleanup with strict guards | Incomplete; preserved | 1095: scheduled | [task](lanes/1094.md) |
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
-| 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Committed candidate; review/integration pending | [task](lanes/1100.md) |
+| 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Agent working | [task](lanes/1100.md) |
 | 1102 | Port and device execution on the common machine | Agent working | 1103: scheduled | [task](lanes/1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Agent working | 1105: scheduled | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
@@ -1281,6 +1281,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1016**, Independent exact review of 866, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1016.md). <!-- x86-merged:1016 -->
 - 2026-10-03: lane **867**, Optimiser rule: range-check elimination rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-867.md). <!-- x86-merged:867 -->
 - 2026-10-03: lane **1017**, Independent exact review of 867, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1017.md). <!-- x86-merged:1017 -->
+- 2026-10-03: lane **868**, Optimiser rule: bound-check elimination rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-868.md). <!-- x86-merged:868 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
