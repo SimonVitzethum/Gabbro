@@ -567,3 +567,4 @@ import Grammatik.X86.OptRematConst
 import Grammatik.X86.OptLayoutAlign
 import Grammatik.X86.OptLeaSel
 import Grammatik.X86.OptShiftSel
+import Grammatik.X86.OptMulSel
