@@ -1,7 +1,9 @@
 # MUSE-REPORT-1030: Exact re-review of author 880 (copy coalescing rule, repair resubmission)
 
 CANDIDATE: 880 1bd04eb13b4c28cd1eaa5e6d97b1615c0137a9d5
-VERDICT: ACCEPT (bounded; bounds in "Accepted as" below)
+VERDICT: ACCEPT
+
+Acceptance is bounded; the bounds are stated in "Accepted as" below.
 
 This supersedes the previous verdict (REPAIR on 880 `5bce2fe6…`). The new
 pinned snapshot was inspected in full; every previous finding was re-checked
