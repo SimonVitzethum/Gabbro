@@ -2,15 +2,17 @@
 
 ## CANDIDATE and VERDICT
 
-CANDIDATE: 894 cde946930f7c597df3ef0b38440cd3e9cacafbe8
-VERDICT: REPAIR
+CANDIDATE: 894 48138d969ae8795f1e03ee3676e095796eb993de
+VERDICT: ACCEPT
 
-Details: pinned head `cde946930f7c597df3ef0b38440cd3e9cacafbe8`
+Details: pinned head `48138d969ae8795f1e03ee3676e095796eb993de`
   (base `b040b155159f47629542b0083e2f0a8a607f2b4c`; files:
   `MUSE-REPORT-894.md`, `grammatik/Grammatik.lean` (one import line),
-  `grammatik/Grammatik/X86/OptCallArgSel.lean` (new, 402 lines)).
-  The verdict is REPAIR with narrow, minimal repairs R1-R3 below; everything
-  else is accept-worthy bounded work, see §2.
+  `grammatik/Grammatik/X86/OptCallArgSel.lean` (repaired, 562 lines)).
+  Bounded acceptance: the R1-R3 repairs below were verified against the new
+  snapshot (§9); remaining scope is precisely cut (§6). The prior REPAIR on
+  the superseded head `cde94693` is stale and replaced by this verdict --
+  the old snapshot was not approved.
 
 ## 1. What was inspected
 
@@ -160,12 +162,51 @@ review's R1/R2 would then be caught by construction.
 ## 8. Last build result
 
 `./lean-bau` on the untouched base (`b040b155`): green,
-`Build completed successfully (510 jobs).` Candidate's pinned evidence:
-`./lean-bau` exit 0 (511 jobs), `./lean-probe` 0 errors, standard axioms.
-No source file was added or modified by this review lane; tree is clean
-except this report.
+`Build completed successfully (510 jobs).` New pinned evidence
+(BUILD-EVIDENCE.json, final entries): `./lean-bau` exit 0
+(`Built Grammatik`, 511 jobs), final `./lean-probe` 0 errors, new theorems
+(`wertInt_int`, `envInts_cons`, `probe_envInts`, `refHeldIff`,
+`refHpEinAt`) at `[propext]`, both main theorems at
+`[propext, Classical.choice, Quot.sound]`; evidence `git log` tops at
+`48138d96`, matching the new pinned head. Intermediate red probes in the
+record were repaired in-candidate. No source file was added or modified
+by this review lane; tree is clean except this report.
 
-CUTS: nothing is proved beyond §2-§5 above; the evalArgs-preservation link
-(R1), a non-trivial rewrite witness (R2) and the register-class/alignment/
-convention-content cuts (R3) are outstanding and belong to a repair of 894,
-not to this report.
+## 9. Re-review of the repair (new snapshot only)
+
+Each prior finding was re-inspected against the new file (562 lines):
+
+- R1 CLOSED (route (a)+(b) combined): new §3 (`wertInt`, `envInts`,
+  `wertInt_int`, `envInts_cons`, `probe_envInts`) links `vs` to the calls
+  via `hVs`/`hVs'`; conjuncts (1)+(2) derive read-back to each site's
+  evaluated integer values through `platziere_liest`
+  (`rw [hVs, platziere_liest]`), conjunct (3) derives the integer-value
+  agreement through the shared record (`rw [<- hVs, <- hVs']`). The
+  remaining outcome conjunct (6) is now an explicitly conditional
+  congruence (assumed `hOrte` + full `hVals`), and full `evalArgs`
+  preservation beyond the integer projection is CUT as OPEN for the
+  lowering/validator lane (CUTS first bullet). The overclaiming header is
+  gone: the theorem is now documented as "one admitted placement carries
+  both sites' values; outcome congruence is conditional on equal
+  evaluation". `envInts` is lossy (drops non-integers) -- disclosed in
+  text and cuts, acceptable as bounded.
+- R2 CLOSED: the witness now calls `einzahlen` with two syntactically
+  different terms (`argDreiLit`, widened `3`, vs `argDreiAdd`, widened
+  `1 + 2`), same value `3`, `vs = [3]` tied by `rfl` computation,
+  non-trivial placement `[(.reg 0, 3)]`, new scaffolding `refHeldIff` /
+  `refHpEinAt`. Non-degeneracy unchanged (`refEin_schreibt`,
+  `refB_erreicht`, `refB_schreibt`). A real rewrite is exhibited.
+- R3 CLOSED: CUTS now name one-`reg`-file vs int/xmm classes, REX/width/
+  flags, 16-byte entry alignment, convention content beyond one `Bool`,
+  `maxArgs = 64` provenance (fixed constant, decided per-site bound
+  check), and TSO effects of stack-slot stores.
+- Hygiene re-checked on the new file: no `sorry`/`admit`/`axiom`/
+  `native_decide`/`unsafe`/`intro _`/`have _ :=` (stricter grep clean);
+  PATCH touches only the three declared files (`Grammatik.lean` diff is
+  the single import line); no new numbers/MARKE changes/reserved files.
+  Every new premise is used; no `ensures` derived; no refusal weakened.
+
+CUTS: this report proves nothing beyond §§2, 5 and 9; all source claims
+live in the candidate. Open work is §6 (byte correspondence, cost maxima,
+spill/fence accounting, TSO/GX bridge, full lowering-side
+`evalArgs` preservation).
