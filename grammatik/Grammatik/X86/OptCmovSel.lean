@@ -55,6 +55,65 @@ def cmovSelZulassen (c : CmovSelCert) : Bool :=
 /-- Selected value: what the branch would take and the select computes. -/
 def selWert (b : Bool) (x y : Int) : Int := if b then x else y
 
+/-! ## 1. Refusal: the DESIGN failure cases must NOT select.
+
+    A CMOV with a memory source reads BOTH sides' memory: the
+    unselected side may still fault architecturally (page fault on the
+    untaken path is real, OPTIMIZER §3.10 hard gate), so
+    `nurRegister = false` forces `cmovSelZulassen = false` and the
+    default branch stays. A may-fault unselected side
+    (`fehlerfrei = false`: division, faulting load, trap-capable FP
+    behind the select) is refused the same way: predicating a faulting
+    form behind `cmov` does NOT remove its fault. Predictable
+    branches, expensive operands, stale flags and cross-scope floats
+    are refused likewise. All proved of the decided Bool. -/
+
+/-- Memory-source CMOV refuses: the unselected side may still fault. -/
+theorem cmovSelVerweigert_speicher (c : CmovSelCert)
+    (h : c.nurRegister = false) :
+    cmovSelZulassen c = false := by
+  simp [cmovSelZulassen, h]
+
+/-- A may-fault unselected side refuses. -/
+theorem cmovSelVerweigert_fehler (c : CmovSelCert)
+    (h : c.fehlerfrei = false) :
+    cmovSelZulassen c = false := by
+  simp [cmovSelZulassen, h]
+
+/-- A predictable branch refuses: default stays branch. -/
+theorem cmovSelVerweigert_vorhersehbar (c : CmovSelCert)
+    (h : c.unvorhersehbar = false) :
+    cmovSelZulassen c = false := by
+  simp [cmovSelZulassen, h]
+
+/-- Expensive operands refuse. -/
+theorem cmovSelVerweigert_teuer (c : CmovSelCert)
+    (h : c.billig = false) :
+    cmovSelZulassen c = false := by
+  simp [cmovSelZulassen, h]
+
+/-- Stale flags refuse: the select must read the compare's flags. -/
+theorem cmovSelVerweigert_flags (c : CmovSelCert)
+    (h : c.flagsFrisch = false) :
+    cmovSelZulassen c = false := by
+  simp [cmovSelZulassen, h]
+
+/-- A cross-rounding-scope float select refuses. -/
+theorem cmovSelVerweigert_rundung (c : CmovSelCert)
+    (h : c.gleicheRundung = false) :
+    cmovSelZulassen c = false := by
+  simp [cmovSelZulassen, h]
+
+/-- Probe: the fully admitted certificate passes. -/
+theorem probe_cmovSelZulassen_ok :
+    cmovSelZulassen ⟨true, true, true, true, true, true⟩ = true := by
+  decide
+
+/-- Probe: a memory-tainted certificate is refused. -/
+theorem probe_cmovSelZulassen_speicher :
+    cmovSelZulassen ⟨true, true, true, false, true, true⟩ = false := by
+  decide
+
 /- CUTS:
     - Skeleton only: admission Bool, selected value. The refusal
       theorems, value/word/float lemmas, branch/select blocks, the
@@ -64,5 +123,13 @@ def selWert (b : Bool) (x y : Int) : Int := if b then x else y
 
 #print axioms cmovSelZulassen
 #print axioms selWert
+#print axioms cmovSelVerweigert_speicher
+#print axioms cmovSelVerweigert_fehler
+#print axioms cmovSelVerweigert_vorhersehbar
+#print axioms cmovSelVerweigert_teuer
+#print axioms cmovSelVerweigert_flags
+#print axioms cmovSelVerweigert_rundung
+#print axioms probe_cmovSelZulassen_ok
+#print axioms probe_cmovSelZulassen_speicher
 
 end Gabbro.Grammatik.X86
