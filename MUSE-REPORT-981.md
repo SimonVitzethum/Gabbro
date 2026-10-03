@@ -5,11 +5,13 @@ Owns only this file. No source or live controls touched.
 
 ## CANDIDATE / VERDICT
 
-- CANDIDATE: 831 `1f7bddf78e97b30086efd3cbaaa889d16650976c`
-  (base `e7c75908456285d1e37c18dc32d4f9c0e10d1fa4`, equals this clone's HEAD;
-  files: `MUSE-REPORT-831.md`, `grammatik/Grammatik.lean` (+1 import),
-  `grammatik/Grammatik/X86/ComposeContractCall.lean` (new, 431 lines)).
-- VERDICT: ACCEPT (bounded; bounds in "Scope of acceptance" below).
+CANDIDATE: 831 1f7bddf78e97b30086efd3cbaaa889d16650976c
+VERDICT: ACCEPT
+
+(Base `e7c75908456285d1e37c18dc32d4f9c0e10d1fa4`, equals this clone's HEAD;
+files: `MUSE-REPORT-831.md`, `grammatik/Grammatik.lean` (+1 import),
+`grammatik/Grammatik/X86/ComposeContractCall.lean` (new, 431 lines).
+Acceptance is bounded; bounds in "Scope of acceptance" below.)
 
 ## What was checked
 
