@@ -540,3 +540,4 @@ import Grammatik.X86.ComposeEntryHooks
 import Grammatik.X86.ComposeSupportBytes
 import Grammatik.X86.ComposeLoaderBias
 import Grammatik.X86.ComposeVaCheck
+import Grammatik.X86.ComposePermCheck
