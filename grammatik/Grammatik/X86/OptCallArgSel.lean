@@ -19,10 +19,14 @@
   Proved over the REUSED canonical vocabulary (`Typen`, `Syntax`,
   `Semantik`, `ReferenzB`, `X86.Typen`, `X86.Wort`): value preservation at
   arbitrary types, regs-before-stack shape, IEEE outcome stability
-  (`gleitPasst` over preserved values), bounded cost, no new fault, and
-  the source call-outcome connection (`execStmt` `.call` equality under
-  equal `orte`/`evalArgs`, so contracts at their place, call logs,
-  concurrency and budget observations agree downstream). No `ensures`
+  (`gleitPasst` over preserved values), bounded cost, no new fault, the
+  placement tied to each call's evaluated integer values (`envInts`,
+  derived round-trips plus the value agreement obtained through the
+  shared record), and the conditional source call-outcome congruence
+  (`execStmt` `.call` equality under equal `orte`/full `evalArgs`, so
+  where it applies, contracts at their place, call logs, concurrency
+  and budget observations agree downstream). Full `evalArgs`-
+  preservation by the lowering stays OPEN (see CUTS). No `ensures`
   is derived, no refusal becomes a warning, no faulting form is
   speculated above its guard.
 -/
@@ -36,6 +40,8 @@ import Grammatik.X86.Wort
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik
+
+variable {D : Deklaration}
 
 /-- The validator-decided side conditions for one call-argument selection
     site (DESIGN section 7 row): the per-image calling convention was
@@ -204,7 +210,52 @@ theorem probe_platz6 : platzFuer 6 = .stapel 0 := by decide
 
 theorem probe_platz7 : platzFuer 7 = .stapel 8 := by decide
 
-/-! ## 3. IEEE, arity gate and no new fault.
+/-! ## 3. Integer projection: tying the placement to a real call.
+
+    The optimisation moves EVALUATED values, so the rule links its value
+    list `vs` to the integer values a real call passes: `wertInt` reads
+    the number out of an integer-typed value (nothing else carries one),
+    `envInts` collects them left to right over an evaluated argument
+    environment. Both are pure recomputable functions -- the validator
+    re-runs them on the checked call, nothing is trusted. -/
+
+/-- The integer carried by a value, if its type is an integer range. -/
+def wertInt {τ : Ty} (v : Wert D τ) : Option Int :=
+  match τ with
+  | .int _ _ => some v.n
+  | _ => none
+
+/-- The integer values of an evaluated argument environment, left to
+    right; non-integer arguments contribute nothing. -/
+def envInts {Γ : Ctx} : Env D Γ → List Int
+  | .nil => []
+  | .cons v rest =>
+    match wertInt v with
+    | some n => n :: envInts rest
+    | none => envInts rest
+
+/-- An integer value projects to its number. -/
+theorem wertInt_int (lo hi n : Int)
+    (v : Wert D (.int lo hi)) (h : v.n = n) :
+    wertInt v = some n := by
+  simp [wertInt, h]
+
+/-- Projection over a cons cell agrees with the head value. -/
+theorem envInts_cons (τ : Ty) (Γ : Ctx)
+    (v : Wert D τ) (ρ : Env D Γ) :
+    envInts (Env.cons v ρ) =
+      match wertInt v with
+      | some n => n :: envInts ρ
+      | none => envInts ρ := by
+  rfl
+
+/-- Probe: `[7]` projects from a one-integer environment. -/
+theorem probe_envInts {D : Deklaration} :
+    envInts (Env.cons (⟨7, by decide, by decide⟩ : Wert D (.int 0 10)) Env.nil :
+      Env D [.int 0 10]) = [7] := by
+  rfl
+
+/-! ## 4. IEEE, arity gate and no new fault.
 
     Float arguments cross the selection as UNCONVERTED bit patterns
     (here: the `bruch` numerator/denominator pair): the rule never rounds,
@@ -260,19 +311,30 @@ theorem probe_platzWort :
     ((BitVec.ofNat 64 ((42 : Int)).toNat : Wort)).toNat = 42 := by
   decide
 
-/-! ## 4. Connection: the selected call behaves like the source call.
+/-! ## 5. Connection: one recomputed placement serves the call sites.
 
-    The rewrite is stated at a `Stmt.call` window with ARBITRARY
-    continuations downstream, so the conclusion covers every downstream
-    observation at once. The selection changes only the LOWERING
-    placement; the source arguments keep their `orte` (`hOrte`) and
-    their evaluated values (`hVals`, at every world, since `execStmt`
-    evaluates in the post-read world). Conclusion, jointly:
-    (1) the placed values read back whole (value preservation);
-    (2) one location per argument (budget unchanged);
-    (3) the admitted placement passes the arity gate (no new fault);
-    (4) the `execStmt` OUTCOME is equal -- same constructor, same
-    successor worlds and environments -- so no fault is added or removed
+    The rewrite is stated at a `Stmt.call` window, so its consequences
+    cover every downstream observation at once. The optimisation's value
+    list `vs` is LINKED to the calls it serves: `hVs`/`hVs'` premise that
+    `vs` is exactly the integer values each site evaluates
+    (`envInts (evalArgs …)`, recomputed by the validator, never trusted).
+    Conclusion, jointly:
+    (1)+(2) the placed values read back to each site's evaluated values
+    -- DERIVED through the shared record via `platziere_liest`, not
+    assumed;
+    (3) both sites agree on their integer values -- DERIVED from the two
+    links (the `hVals`-like equality obtained through the placement);
+    (4) one location per argument (budget unchanged);
+    (5) the admitted placement passes the arity gate (no new fault);
+    (6) the `execStmt` OUTCOME is equal -- a CONDITIONAL congruence: it
+    assumes equal footprints (`hOrte`) and equal full evaluation
+    (`hVals`). Full `evalArgs`-preservation by the lowering (beyond the
+    integer values (3) proves) is CUT as OPEN (see CUTS): this lemma shows
+    the placement carries the values and that equal evaluation gives
+    equal outcomes; closing the remaining gap belongs to the
+    lowering/validator lane.
+    Where (6) applies, same constructor, same successor worlds and
+    environments follow -- so no fault is added or removed
     (`logik`/`hardware` agree), contracts at their place read the same
     values from the same environments, call logs gain no event, no
     shared access is added or removed for concurrency, and the
@@ -281,8 +343,8 @@ theorem probe_platzWort :
     or speculates a faulting form above its guard: the source check
     (`weiter`/`narrow`) at the site still enforces every range. -/
 
-/-- CONNECTION: admitted argument selection preserves values, cost,
-    arity and the source call outcome. -/
+/-- CONNECTION: one admitted placement carries both sites' values;
+    outcome congruence is conditional on equal evaluation. -/
 theorem OptCallArgSel_verbindung {D : Deklaration} {V : Vertrag D}
     (O : Orakel D) (passes : Nat)
     (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
@@ -295,28 +357,84 @@ theorem OptCallArgSel_verbindung {D : Deklaration} {V : Vertrag D}
     (hz : callArgZulassen cert = true)
     (hN : vs.length ≤ maxArgs)
     (σ : World D) (ρ : Env D Γ)
+    (hVs : vs = envInts (evalArgs σ args σ ρ))
+    (hVs' : vs = envInts (evalArgs σ args' σ ρ))
     (hOrte : args.orte = args'.orte)
     (hVals : ∀ w : World D, evalArgs w args w ρ = evalArgs w args' w ρ) :
-    liesWerte (α := Int) (platziere (α := Int) vs) = vs
+    liesWerte (α := Int) (platziere (α := Int) vs)
+      = envInts (evalArgs σ args σ ρ)
+    ∧ liesWerte (α := Int) (platziere (α := Int) vs)
+      = envInts (evalArgs σ args' σ ρ)
+    ∧ envInts (evalArgs σ args σ ρ) = envInts (evalArgs σ args' σ ρ)
     ∧ ((platziere (α := Int) vs).length = vs.length)
     ∧ platzOk cert vs.length = true
     ∧ execStmt (l := l) O passes R (Stmt.call (l := l) f args hp hr) σ ρ
       = execStmt (l := l) O passes R (Stmt.call (l := l) f args' hp' hr') σ ρ := by
-  refine ⟨platziere_liest vs, platziere_laenge vs,
+  refine ⟨?_, ?_, ?_, platziere_laenge vs,
     platzOk_von_zulassen cert vs.length hz hN, ?_⟩
-  simp only [execStmt, hOrte, hVals]
+  · rw [hVs, platziere_liest]
+  · rw [hVs', platziere_liest]
+  · rw [← hVs, ← hVs']
+  · simp only [execStmt, hOrte, hVals]
 
-/-! ## 5. Joint witness: the rule fires on a real program that moves memory.
+/-! ## 6. Joint witness: the rule fires on a real program that moves memory.
 
-    ALL premises of `OptCallArgSel_verbindung` instantiated JOINTLY: the
-    `lies`-call of the NON-DEGENERATE reference program `refD` (whose
-    `einzahlen` writes its table, `refEin_schreibt`), with the admitted
-    certificate and two placed values `[3, 4]`, beside the reached
-    F-machine run `MB` that changes memory (`refB_erreicht`,
-    `refB_schreibt`: slot `0 -> 100`). Every conjunct is used. -/
+    The witness call goes to `einzahlen` (`refEin`), the reference
+    function WITH an integer parameter, so the rewrite is exhibited on
+    two SYNTACTICALLY DIFFERENT argument terms: `3` as a widened literal
+    versus `1 + 2` as a widened sum. Both evaluate to `3` with empty
+    footprints, and `vs = [3]` is tied to both evaluations by computation
+    (`rfl`), so the shared placement `[(.reg 0, 3)]` is non-trivial: it
+    genuinely selects a register and reads the value back. -/
+
+/-- The held-set of `einzahlen` is exactly the witness lock holdings:
+    the exact-held-set shape `hh_von`/`hx_von` need. -/
+theorem refHeldIff :
+    ∀ L : refD.Lock,
+      Res.held (D := refD) L ∈ [Res.held (D := refD) ()]
+        ↔ L ∈ (refD.signatur refEin).haelt := by
+  intro L
+  have eH : (refD.signatur refEin).haelt = [()] := rfl
+  constructor
+  · intro hL
+    have heq := List.mem_singleton.mp hL
+    cases heq
+    rw [eH]
+    exact List.mem_singleton.mpr rfl
+  · intro hL
+    rw [eH] at hL
+    have eL := List.mem_singleton.mp hL
+    cases eL
+    exact List.mem_singleton.mpr rfl
+
+/-- The call from the witness site to `einzahlen`: one integer argument,
+    the callee holds the same lock, needs nothing else. Same lock-set
+    shape as `refHpLiesAt` (`einzahlen` holds exactly `[()]`). -/
+theorem refHpEinAt :
+    RufPasst refD (vertragVon refD refEin) (refD.signatur refEin)
+      [Res.held (D := refD) ()] where
+  hw := fun t ht => by cases t <;> rfl
+  hg := fun g => nomatch g
+  hk := ⟨[], List.Perm.refl [], by simp⟩
+  hh := RufPasst.hh_von refHeldIff
+  hx := RufPasst.hx_von refHeldIff
+
+/-- Witness argument: `3` as a widened literal. The type is stated as
+    `[.int 0 10]` (definitionally `refD.params refEin` by
+    `refEin_params`), so every downstream computation reduces. -/
+def argDreiLit : Args refD [] [Res.held (D := refD) ()] [.int 0 10] :=
+  Args.cons ((.weiter (by decide) (by decide) (.lit 3)) :
+    Expr refD [] [Res.held (D := refD) ()] (.int 0 10)) Args.nil
+
+/-- Witness argument: `3` as a widened sum `1 + 2` -- syntactically
+    different from `argDreiLit`, same value, same (empty) footprint. -/
+def argDreiAdd : Args refD [] [Res.held (D := refD) ()] [.int 0 10] :=
+  Args.cons ((.weiter (by decide) (by decide) (.add (.lit 1) (.lit 2))) :
+    Expr refD [] [Res.held (D := refD) ()] (.int 0 10)) Args.nil
 
 /-- JOINT WITNESS for `OptCallArgSel_verbindung`: admitted selection of
-    `[3, 4]` at the `lies`-call of `refD`, beside the memory-changing
+    `[3]` at the `einzahlen`-call of `refD` -- literal `3` versus sum
+    `1 + 2`, one shared register placement -- beside the memory-changing
     reached run. -/
 theorem OptCallArgSel_verbindung_zeuge :
     ∃ (O : Orakel refD) (passes : Nat)
@@ -328,8 +446,16 @@ theorem OptCallArgSel_verbindung_zeuge :
       (cert : CallArgCert) (vs : List Int)
       (_hz : callArgZulassen cert = true)
       (_hN : vs.length ≤ maxArgs)
-      (σ : World refD) (ρ : Env refD Γ),
-      liesWerte (α := Int) (platziere (α := Int) vs) = vs
+      (σ : World refD) (ρ : Env refD Γ)
+      (_hVs : vs = envInts (evalArgs σ args σ ρ))
+      (_hVs' : vs = envInts (evalArgs σ args' σ ρ))
+      (_hOrte : args.orte = args'.orte)
+      (_hVals : ∀ w : World refD, evalArgs w args w ρ = evalArgs w args' w ρ),
+      liesWerte (α := Int) (platziere (α := Int) vs)
+        = envInts (evalArgs σ args σ ρ)
+      ∧ liesWerte (α := Int) (platziere (α := Int) vs)
+        = envInts (evalArgs σ args' σ ρ)
+      ∧ envInts (evalArgs σ args σ ρ) = envInts (evalArgs σ args' σ ρ)
       ∧ ((platziere (α := Int) vs).length = vs.length)
       ∧ platzOk cert vs.length = true
       ∧ execStmt (l := l) O passes R (Stmt.call (l := l) f args hp hr) σ ρ
@@ -339,29 +465,58 @@ theorem OptCallArgSel_verbindung_zeuge :
       ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
   have hV := OptCallArgSel_verbindung (V := vertragVon refD refEin)
     (O := refO) (passes := 0) (R := keinRuf)
-    (Γ := [.int 0 10]) (Λ := [Res.held (D := refD) ()]) (l := false)
-    (f := refLies) (args := refArgsLies) (args' := refArgsLies)
-    (hp := refHpLiesAt) (hp' := refHpLiesAt) (hr := rfl) (hr' := rfl)
-    (cert := ⟨true, true, true, true⟩) (vs := [3, 4])
+    (Γ := []) (Λ := [Res.held (D := refD) ()]) (l := false)
+    (f := refEin) (args := argDreiLit) (args' := argDreiAdd)
+    (hp := refHpEinAt) (hp' := refHpEinAt) (hr := rfl) (hr' := rfl)
+    (cert := ⟨true, true, true, true⟩) (vs := [3])
     (hz := by decide) (hN := by decide)
-    (σ := refSp0.welt [])
-    (ρ := Env.cons (⟨0, by decide, by decide⟩ : Zahl 0 10) Env.nil)
-    (hOrte := rfl) (hVals := fun _ => rfl)
-  refine ⟨refO, 0, keinRuf, [.int 0 10], [Res.held (D := refD) ()], false,
-    refLies, refArgsLies, refArgsLies, refHpLiesAt, refHpLiesAt, rfl, rfl,
-    ⟨true, true, true, true⟩, [3, 4], by decide, by decide,
-    refSp0.welt [], Env.cons (⟨0, by decide, by decide⟩ : Zahl 0 10) Env.nil,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    (σ := refSp0.welt []) (ρ := Env.nil)
+    (hVs := rfl) (hVs' := rfl) (hOrte := rfl) (hVals := fun _ => rfl)
+  refine ⟨refO, 0, keinRuf, [], [Res.held (D := refD) ()], false,
+    refEin, argDreiLit, argDreiAdd, refHpEinAt, refHpEinAt, rfl, rfl,
+    ⟨true, true, true, true⟩, [3], by decide, by decide,
+    refSp0.welt [], Env.nil, rfl, rfl, rfl, fun _ => rfl,
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact hV.1
   · exact hV.2.1
   · exact hV.2.2.1
-  · exact hV.2.2.2
+  · exact hV.2.2.2.1
+  · exact hV.2.2.2.2.1
+  · exact hV.2.2.2.2.2
   · exact refEin_schreibt ()
   · exact refB_erreicht
   · exact refB_schreibt
 
 /- CUTS:
-  - No block-window float rewrite beyond value stability: section 3 proves
+  - Full `evalArgs`-preservation by the lowering is OPEN (review 1044,
+    R1): this file derives the integer-value agreement through the
+    shared placement record (`envInts` round-trips) and the conditional
+    outcome congruence; showing that the EMITTED bytes evaluate every
+    argument (including non-integer ones) to the same values belongs to
+    the lowering/validator lane with the byte correspondence.
+  - No register classes: the model has ONE `reg` file keyed by position.
+    Integer versus float (xmm) classes under System V AMD64, and which
+    positions consume which class, are not modelled -- the validator
+    decides the per-image convention content, carried here only as the
+    `konventionGeprueft` Bool.
+  - No REX/width/flag effects: widths below 64 bits, sign/zero extension
+    on narrower moves, and condition-code clobbering by argument moves
+    are not modelled.
+  - No 16-byte entry alignment: only 8-alignment of each stack slot is
+    proved (`platzFuer_buendig`); the call-entry 16-alignment invariant
+    (stack depth parity at the call) is unchecked here.
+  - No convention content beyond one `Bool`: the per-image calling
+    convention (register order, stack layout, hidden parameters, class
+    rules) enters only as `konventionGeprueft`; its recomputation from
+    the image is validator work, not proved here.
+  - `maxArgs = 64` provenance: a fixed constant of this rule, not a
+    validator-decided value; the per-site BOUND CHECK (`platzOk`,
+    `keinFehlerNeu`) is decided, the number itself is reviewed, not
+    derived.
+  - No TSO/memory-order claim for stack-slot stores: the order in which
+    lowered stores become visible to other threads, and their interaction
+    with fences/locks, stays with the TSO/GX bridge lane.
+  - No block-window float rewrite beyond value stability: section 4 proves
     the `gleitPasst` outcome is a pure function of preserved values; the
     kernel recomputation of any folded float equation stays with the
     constant-folding lane.
@@ -375,8 +530,8 @@ theorem OptCallArgSel_verbindung_zeuge :
     cost lane.
   - No silicon correspondence, no TSO/GX bridge, no ABI/loader claim:
     correspondence stops at preserved source values, `gleitPasst`
-    outcomes and `execStmt` call-outcome equality over the canonical
-    vocabulary.
+    outcomes and the conditional `execStmt` call-outcome congruence over
+    the canonical vocabulary.
   - No checker change: no source admission is tightened to ease proof;
     everything is over the real `Stmt.call`, the real `evalArgs` and the
     real reference program `refD`.
@@ -396,6 +551,11 @@ theorem OptCallArgSel_verbindung_zeuge :
 #print axioms platzOk_von_zulassen
 #print axioms keinFehlerNeu
 #print axioms platzWort
+#print axioms wertInt_int
+#print axioms envInts_cons
+#print axioms probe_envInts
+#print axioms refHeldIff
+#print axioms refHpEinAt
 #print axioms OptCallArgSel_verbindung
 #print axioms OptCallArgSel_verbindung_zeuge
 
