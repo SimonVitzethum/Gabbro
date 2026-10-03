@@ -29,12 +29,33 @@ def GhostBudget (s : CostSummary) (ghost src : Nat)
     (xs : List Decodiert) : Prop :=
   ghost = src ∧ Deckung s src xs
 
-/- CUTS:
-     Skeleton only: `GhostBudget` interface stated. Main closing
-     theorems, resumption monotonicity and joint witnesses follow.
-     Exhaustion timing stays OPEN (scheduling/IR lanes own it).
+/-- Accepted-expansion monotonicity: a larger source budget never
+    shrinks the expansion bound. From the accepted formula
+    (`expandBound_keinVerlust`), never a re-sum. Every premise is
+    used: `hMax` fixes the uniform maximum for both sides, `hk` and
+    `hk'` pin the two bounds, `hle` orders them. -/
+theorem expandBound_mono (s : CostSummary) (m src src' k k' : Nat)
+    (hMax : alleMax s = some m)
+    (hk : expandBound s src = some k)
+    (hk' : expandBound s src' = some k')
+    (hle : src ≤ src') :
+    k ≤ k' := by
+  have e1 := expandBound_keinVerlust s src m hMax
+  have e2 := expandBound_keinVerlust s src' m hMax
+  rw [e1] at hk
+  rw [e2] at hk'
+  cases hk
+  cases hk'
+  have hmul : src * m ≤ src' * m := Nat.mul_le_mul_right m hle
+  omega
+
+/- CUTS (step 1):
+     `GhostBudget` interface plus accepted-expansion monotonicity
+     (`expandBound_mono`). Resumption coverage and the main closing
+     theorem follow. Exhaustion timing stays OPEN.
 -/
 
 #print axioms GhostBudget
+#print axioms expandBound_mono
 
 end Gabbro.Grammatik.X86
