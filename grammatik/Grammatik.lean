@@ -521,3 +521,4 @@ import Grammatik.X86.ComposeCallLogGhost
 import Grammatik.X86.ComposeBudgetResum
 import Grammatik.X86.ComposeWorkTransfer
 import Grammatik.X86.ComposeTimeBound
+import Grammatik.X86.ComposeFenceOrder
