@@ -325,17 +325,245 @@ theorem jtZert_fremdziel_verweigert (starts eintraege : List Adresse)
     cases hfremd
   | false => rfl
 
+/-! ## 7. Reached witness machine.
+
+    Closed concrete machine: `JMP [rax+0]` (`48 FF A0 00 00 00 00`,
+    7 bytes) at 4096 with `rax = 8200`; the two-slot table at 8200
+    holds `4200` and `4208` (both `ret` bytes, both executed-only
+    starts); a separate data cell at 8300 is readable and writable.
+    Code is execute-only, the table read-only, the data cell
+    read/write: W^X throughout. -/
+
+/-- Witness bytes: the jump encoding, the two table words
+    (`4200 = 0x1068`, `4208 = 0x1070`, little-endian) and two `ret`. -/
+def jtCodeBytes (a : Adresse) : Byte :=
+  if a.toNat = 4096 then natByte 72
+  else if a.toNat = 4097 then natByte 255
+  else if a.toNat = 4098 then natByte 160
+  else if a.toNat = 4099 then natByte 0
+  else if a.toNat = 4100 then natByte 0
+  else if a.toNat = 4101 then natByte 0
+  else if a.toNat = 4102 then natByte 0
+  else if a.toNat = 8200 then natByte 104
+  else if a.toNat = 8201 then natByte 16
+  else if a.toNat = 8208 then natByte 112
+  else if a.toNat = 8209 then natByte 16
+  else if a.toNat = 4200 then natByte 195
+  else if a.toNat = 4208 then natByte 195
+  else BitVec.ofNat 8 0
+
+/-- Witness execute permission: the 7-byte jump window and the two
+    one-byte targets. -/
+def jtExec (a : Adresse) : Bool :=
+  decide ((4096 ≤ a.toNat ∧ a.toNat < 4103) ∨
+    a.toNat = 4200 ∨ a.toNat = 4208)
+
+/-- Witness read permission: the 16-byte table and the data cell. -/
+def jtLesbar (a : Adresse) : Bool :=
+  decide ((8200 ≤ a.toNat ∧ a.toNat < 8216) ∨
+    (8300 ≤ a.toNat ∧ a.toNat < 8308))
+
+/-- Witness write permission: the data cell only (W^X elsewhere). -/
+def jtSchreibbar (a : Adresse) : Bool :=
+  decide (8300 ≤ a.toNat ∧ a.toNat < 8308)
+
+/-- Witness memory: code execute-only, table read-only, data cell
+    read/write. -/
+def jtSpeicher : Speicher :=
+  { bytes := jtCodeBytes
+    lesbar := jtLesbar
+    schreibbar := jtSchreibbar
+    ausfuehrbar := jtExec }
+
+/-- Witness registers: table base in `rax`, stack top at 9000. -/
+def jtReg : Register → Wort := fun q =>
+  if q = Register.rax then BitVec.ofNat 64 8200
+  else if q = Register.rsp then BitVec.ofNat 64 9000
+  else BitVec.ofNat 64 0
+
+/-- Witness start: table jump at 4096. -/
+def jtS0 : Zustand :=
+  { register := jtReg
+    flags := zeugeFlags
+    rip := BitVec.ofNat 64 4096
+    speicher := jtSpeicher }
+
+/-- Witness successor: control at the first table target. -/
+def jtS1 : Zustand :=
+  { jtS0 with rip := BitVec.ofNat 64 4200 }
+
+/-- FETCH: the actual 7 bytes at 4096 are the canonical `JMP [rax+0]`
+    with nothing after. -/
+theorem jtS0_fetch :
+    fetchInd jtS0 (geholt jtS0) =
+      some (((.jmpMem .rax (BitVec.ofNat 32 0) 7)), []) := by
+  decide
+
+/-- The slot address is the table base: `rax + 0 = 8200`. -/
+theorem jtS0_adresse :
+    effAddr jtS0 .rax (BitVec.ofNat 32 0) =
+      BitVec.ofNat 64 8200 := by
+  decide
+
+/-- The slot reads back the first target word `4200`. -/
+theorem jtS0_liest :
+    read64 jtS0.speicher (effAddr jtS0 .rax (BitVec.ofNat 32 0)) =
+      some (BitVec.ofNat 64 4200) := by
+  decide
+
+/-- The slot equation: the effective address IS table slot 0. -/
+theorem jtS0_slot :
+    effAddr jtS0 .rax (BitVec.ofNat 32 0) =
+      tabSlot (BitVec.ofNat 64 8200) 0 := by
+  decide
+
+/-- The two-slot table certifies against the two tracked starts. -/
+theorem jtS0_zert :
+    jtZertOk [BitVec.ofNat 64 4200, BitVec.ofNat 64 4208] []
+      jtS0.speicher (BitVec.ofNat 64 8200) 2 = true := by
+  decide
+
+/-- FETCHED TABLE JUMP: from actual bytes, the byte step moves control
+    to the table word. -/
+theorem jtS0_schritt :
+    jmpMemSchritt 7 jtS0 .rax (BitVec.ofNat 32 0) = some jtS1 := by
+  have hok : laengeOk 7 = true := by decide
+  have e := jmpMemSchritt_erfolg 7 jtS0 .rax (BitVec.ofNat 32 0)
+    (BitVec.ofNat 64 4200) hok jtS0_liest
+  unfold jtS1
+  exact e
+
+/-! ## 8. Joint companion witness.
+
+    All premises of `JumpTableCert_verbindung` on joint concrete values
+    (two-slot certified table, in-bounds slot 0, fetched `JMP [rax+0]`,
+    target word `4200`), every conclusion conjunct through the fired
+    connection, plus a memory-changing run on the separate data cell
+    (zero to 42, read back): non-degenerate, reached, memory-changing. -/
+
+/-- The data cell changes observably: zero to 42, read back. -/
+theorem jtSpeicher_zeuge :
+    ∃ (m' : Speicher),
+      write64 jtSpeicher (BitVec.ofNat 64 8300) 42 = some m' ∧
+      read64 m' (BitVec.ofNat 64 8300) = some 42 ∧
+      jtSpeicher.bytes (BitVec.ofNat 64 8300) ≠
+        m'.bytes (BitVec.ofNat 64 8300) := by
+  have hsch : schreibbar8 jtSpeicher (BitVec.ofNat 64 8300) = true := by
+    decide
+  have hles : lesbar8 jtSpeicher (BitVec.ofNat 64 8300) = true := by
+    decide
+  have hwr : write64 jtSpeicher (BitVec.ofNat 64 8300) 42 =
+      some { jtSpeicher with
+        bytes := writeBytes jtSpeicher (BitVec.ofNat 64 8300) 42 } := by
+    unfold write64
+    rw [if_pos hsch]
+  refine ⟨_, hwr, read64_nach_write64 _ _ _ _ hwr hles, ?_⟩
+  have hhit := writeBytesN_hit jtSpeicher (BitVec.ofNat 64 8300) 42 8 0
+    (by decide) (by decide)
+  rw [addrOff_null] at hhit
+  have hnull : jtSpeicher.bytes (BitVec.ofNat 64 8300) =
+      BitVec.ofNat 8 0 := by
+    decide
+  show jtSpeicher.bytes (BitVec.ofNat 64 8300) ≠
+    writeBytesN jtSpeicher (BitVec.ofNat 64 8300) 42 8
+      (BitVec.ofNat 64 8300)
+  rw [hnull, hhit]
+  decide
+
+/-- JOINT WITNESS for `JumpTableCert_verbindung`: every premise jointly
+    on concrete values, every conclusion conjunct through the fired
+    connection, and the memory-changing run beside the (load-only)
+    jump. -/
+theorem JumpTableCert_verbindung_zeuge :
+    jtZertOk [BitVec.ofNat 64 4200, BitVec.ofNat 64 4208] []
+        jtS0.speicher (BitVec.ofNat 64 8200) 2 = true ∧
+    0 < 2 ∧
+    effAddr jtS0 .rax (BitVec.ofNat 32 0) =
+      tabSlot (BitVec.ofNat 64 8200) 0 ∧
+    fetchInd jtS0 (geholt jtS0) =
+      some (((.jmpMem .rax (BitVec.ofNat 32 0) 7)), []) ∧
+    read64 jtS0.speicher (effAddr jtS0 .rax (BitVec.ofNat 32 0)) =
+      some (BitVec.ofNat 64 4200) ∧
+    jmpMemSchritt 7 jtS0 .rax (BitVec.ofNat 32 0) = some jtS1 ∧
+    jtS1.rip = BitVec.ofNat 64 4200 ∧
+    jtS1.flags = jtS0.flags ∧
+    jtS1.speicher = jtS0.speicher ∧
+    (∀ q : Register, jtS1.register q = jtS0.register q) ∧
+    ((BitVec.ofNat 64 4200) ∈
+      [BitVec.ofNat 64 4200, BitVec.ofNat 64 4208] ∨
+      (BitVec.ofNat 64 4200) ∈ ([] : List Adresse)) ∧
+    leseKlasse jtS0.speicher (effAddr jtS0 .rax (BitVec.ofNat 32 0)) =
+      none ∧
+    indByteschritt jtS0 = some jtS1 ∧
+    jtGeschmiedetB jtS0.speicher (BitVec.ofNat 64 8200) 2
+        (BitVec.ofNat 64 4200) = false ∧
+    (∃ (m' : Speicher),
+      write64 jtSpeicher (BitVec.ofNat 64 8300) 42 = some m' ∧
+      read64 m' (BitVec.ofNat 64 8300) = some 42 ∧
+      jtSpeicher.bytes (BitVec.ofNat 64 8300) ≠
+        m'.bytes (BitVec.ofNat 64 8300)) := by
+  have hconn := JumpTableCert_verbindung jtS0 jtS1 .rax
+    (BitVec.ofNat 32 0) 7 (BitVec.ofNat 64 8200) 0 2
+    [BitVec.ofNat 64 4200, BitVec.ofNat 64 4208] [] []
+    (BitVec.ofNat 64 4200) jtS0_zert (by decide) jtS0_slot jtS0_fetch
+    jtS0_liest jtS0_schritt
+  exact ⟨jtS0_zert, by decide, jtS0_slot, jtS0_fetch, jtS0_liest,
+    jtS0_schritt, hconn.1, hconn.2.1, hconn.2.2.1, hconn.2.2.2.1,
+    hconn.2.2.2.2.1, hconn.2.2.2.2.2.1, hconn.2.2.2.2.2.2.1,
+    hconn.2.2.2.2.2.2.2, jtSpeicher_zeuge⟩
+
 /- CUTS:
-   Proved here so far: provenance, slots, entry reads, the certificate
-   with its entry projection, table words with membership, the
-   forged-pointer check with genuine/forged facts, the bounded slot
-   check, the connection theorem, TSO store-buffer neutrality, the slot
-   fault class with its no-speculation refusal, the out-of-bounds index
-   refusal, the canonical-address gate pins, pinned table-jump bytes
-   with common-adapter dispatch and pilot separation, three neighbour
-   refusals, and two certificate refusals (unreadable slot, foreign
-   target).
-   NOT proved here, and not claimed: everything else (see task).
+   Proved here, over the REUSED canonical vocabulary (`Typen`,
+   `Speicher.read64`/`write64`, `Ausfuehrung.effAddr`/`ripNach`,
+   `Byteschritt.geholt`/`ausfuehrbarN`, `Codec` bytes,
+   `IndirectControlHardwareForms` (`decodeIndirekt`, `jmpMemSchritt`,
+   `fetchInd`, `indByteschritt`, `indirektZielOk`, `indAdapterDecode`,
+   `GateStub`-mirrored M140 shape), `HardwareFaults` (`leseKlasse`,
+   `istKanonisch`, `adrKlasse`), `TSO.TSOZustand` and no new machine,
+   no new decoder row, no new interpreter:
+   - jump-table slots (`tabSlot`, stride 8) with permission-checked
+     entry reads (`tabEintrag` over `read64`);
+   - the validator-tracked certificate (`jtZertOk`: every slot word a
+     decoded start or a listed entry) with the entry projection
+     (`jtZertOk_eintrag`);
+   - table words with membership (`tabWorte`, `tabWorte_enthaelt`);
+   - the no-forged-pointer check (`jtGeschmiedetB`, the M140 mirror:
+     genuine table words pass, foreign words refuse);
+   - the bounded-index slot equation (`jtSprungOk`);
+   - the CONNECTION (`JumpTableCert_verbindung`): a certified fetched
+     `JMP [base+disp]` lands on a tracked target with flags/memory/
+     registers kept (RIP only), no fault class, through the accepted
+     fetched byte step, unforged -- admission DERIVED from the
+     certificate, the target read ordered on the pre-state;
+   - TSO store-buffer neutrality (load-only: no `issueByte`, canonical
+     memory unchanged); slot fault class (`#PF` member) with the
+     no-speculation refusal; out-of-bounds index refusal;
+     canonical-address gate pins;
+   - pinned canonical bytes (`48 FF A0 00 00 00 00`) with common-adapter
+     dispatch and pilot separation; three neighbour refusals (far
+     `/3`, `mod=0`, `E3`); certificate refusals (unreadable slot,
+     foreign target);
+   - the reached joint witness (`JumpTableCert_verbindung_zeuge`):
+     every premise jointly on concrete values, every conclusion
+     conjunct through the fired connection, plus a memory-changing
+     run (data cell zero to 42, read back) beside the load-only jump.
+   NOT proved here, and not claimed:
+   - No hardware correspondence: encodings are the stated canonical
+     subset with self-consistency only, not x86 truth; the quotient of
+     `decodeExt` (unified dispatcher) admission for these bytes stays
+     with the dispatcher owner -- no second dispatcher is invented
+     here (`indAdapterDecode` is reused, pilot-first-disjoint).
+   - No whole-image validation: `starts`/`eintraege` are checked inputs;
+     the decoded-start producer (byte walk from section starts and
+     entries) and patched-site re-decode stay OPEN with their owners.
+   - No per-access target-to-W/GX simulation: per-byte TSO facts do not
+     establish aligned whole-word atomicity; the bridge stays OPEN.
+   - No source correspondence, no contract/cost/time/termination
+     claim; absence of a transition is never a termination statement.
+   - No fault delivery (IDT/stack/handler/error code): delivery stays
+     with its lane; only the class observation is stated.
+   - Only named silicon/device/timing behaviour is assumed (the cited
+     SDM headings); everything else is checked data or refused.
 -/
 
 #print axioms jtHandbuch
@@ -361,5 +589,13 @@ theorem jtZert_fremdziel_verweigert (starts eintraege : List Adresse)
 #print axioms jtNachbar_zaehler_verweigert
 #print axioms jtZert_unlesbar_verweigert
 #print axioms jtZert_fremdziel_verweigert
+#print axioms jtS0_fetch
+#print axioms jtS0_adresse
+#print axioms jtS0_liest
+#print axioms jtS0_slot
+#print axioms jtS0_zert
+#print axioms jtS0_schritt
+#print axioms jtSpeicher_zeuge
+#print axioms JumpTableCert_verbindung_zeuge
 
 end Gabbro.Grammatik.X86
