@@ -224,4 +224,153 @@ theorem dekodiere_voll_ohne_orakel_gp (t : FpZustand) (ill : IllegalInfo)
     dekodiereKandidat t ill = some ⟨.dekodiere, .gp⟩ := by
   simp [dekodiereKandidat, href, hill, hvoll]
 
+/-! ## Address, access, divide and control candidates.
+
+  The address stage reuses lane 670's `adrKlasse` (#SS for stack
+  references, #GP else) over the descriptor's addresses, read before
+  write in program order. The access stage runs the actual
+  permission-checked `read64`/`write64` and resolves #GP vs #PF through
+  the explicit page state. The divide stage fires only on the actual
+  evaluator trap (same selection pattern as `stepExt_muldiv_halt`); the
+  control stage fires #AC only when armed. -/
+
+/-- Address-stage candidate: noncanonical operand addresses, read before
+    write. The class reuses the proved `adrKlasse` rule. -/
+def adressKandidat (z : ZugriffsBeschreibung) : Option PrioritaetsFehler :=
+  match z.lese with
+  | some a =>
+    match adrKlasse a z.stapel with
+    | some k => some ⟨.adresse, k⟩
+    | none =>
+      match z.schreibe with
+      | some b =>
+        match adrKlasse b z.stapel with
+        | some k => some ⟨.adresse, k⟩
+        | none => none
+      | none => none
+  | none =>
+    match z.schreibe with
+    | some b =>
+      match adrKlasse b z.stapel with
+      | some k => some ⟨.adresse, k⟩
+      | none => none
+    | none => none
+
+/-- A noncanonical read address is the address-stage candidate, whatever
+    the write side says: the read is checked first. Stack references give
+    #SS, all others #GP. -/
+theorem adress_lese_nichtkanonisch (z : ZugriffsBeschreibung) (a : Adresse)
+    (hlese : z.lese = some a) (hkan : istKanonisch a = false) :
+    adressKandidat z =
+      if z.stapel then some ⟨.adresse, .ss⟩
+      else some ⟨.adresse, .gp⟩ := by
+  unfold adressKandidat
+  rw [hlese]
+  cases hst : z.stapel <;> simp_all [adrKlasse]
+
+/-- Canonical addresses on both sides carry no address candidate. -/
+theorem adress_kanonisch_keiner (z : ZugriffsBeschreibung)
+    (hlese : ∀ a, z.lese = some a → istKanonisch a = true)
+    (hschreibe : ∀ b, z.schreibe = some b → istKanonisch b = true) :
+    adressKandidat z = none := by
+  cases hlese' : z.lese with
+  | none =>
+    cases hschreibe' : z.schreibe with
+    | none => simp [adressKandidat, hlese', hschreibe']
+    | some b =>
+      have hkan := hschreibe b hschreibe'
+      have hklasse := adrKlasse_kanonisch_kein_fehler b hkan z.stapel
+      simp [adressKandidat, hlese', hschreibe', hklasse]
+  | some a =>
+    have hkan := hlese a hlese'
+    have hklasse := adrKlasse_kanonisch_kein_fehler a hkan z.stapel
+    cases hschreibe' : z.schreibe with
+    | none => simp [adressKandidat, hlese', hklasse, hschreibe']
+    | some b =>
+      have hkan2 := hschreibe b hschreibe'
+      have hklasse2 := adrKlasse_kanonisch_kein_fehler b hkan2 z.stapel
+      simp [adressKandidat, hlese', hklasse, hschreibe', hklasse2]
+
+/-- Access-stage candidate: the actual permission-checked access through
+    `read64`/`write64`, read before write, class from the page state. -/
+def schreibKandidat (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) : Option PrioritaetsFehler :=
+  match z.schreibe with
+  | some b =>
+    match write64 t.kern.speicher b 0 with
+    | some _ => none
+    | none => some ⟨.zugriff, seitenKlasse pg b⟩
+  | none => none
+
+/-- Access-stage candidate: the actual permission-checked access through
+    `read64`/`write64`, read before write, class from the page state. -/
+def zugriffKandidat (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) : Option PrioritaetsFehler :=
+  match z.lese with
+  | some a =>
+    match read64 t.kern.speicher a with
+    | some _ => schreibKandidat t z pg
+    | none => some ⟨.zugriff, seitenKlasse pg a⟩
+  | none => schreibKandidat t z pg
+
+/-- A refused read is the access-stage candidate with the page-state
+    class, whatever the write side says. -/
+theorem zugriff_lese_verweigert (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (a : Adresse)
+    (hlese : z.lese = some a)
+    (hread : read64 t.kern.speicher a = none) :
+    zugriffKandidat t z pg = some ⟨.zugriff, seitenKlasse pg a⟩ := by
+  simp [zugriffKandidat, hlese, hread]
+
+/-- A refused write with no read side is the access-stage candidate. -/
+theorem zugriff_schreibe_verweigert (t : FpZustand)
+    (z : ZugriffsBeschreibung) (pg : SeitenInfo) (b : Adresse)
+    (hlese : z.lese = none) (hschreibe : z.schreibe = some b)
+    (hwrite : write64 t.kern.speicher b 0 = none) :
+    zugriffKandidat t z pg = some ⟨.zugriff, seitenKlasse pg b⟩ := by
+  unfold zugriffKandidat schreibKandidat
+  rw [hlese, hschreibe]
+  dsimp only
+  rw [hwrite]
+
+/-- Successful accesses on both sides carry no access candidate. -/
+theorem zugriff_erfolg_keiner (t : FpZustand) (z : ZugriffsBeschreibung)
+    (pg : SeitenInfo) (v : Wort)
+    (hlese : ∀ a, z.lese = some a → read64 t.kern.speicher a = some v)
+    (hschreibe : ∀ b, z.schreibe = some b →
+      ∃ m' : Speicher, write64 t.kern.speicher b 0 = some m') :
+    zugriffKandidat t z pg = none := by
+  cases hlese' : z.lese with
+  | none =>
+    cases hschreibe' : z.schreibe with
+    | none =>
+      unfold zugriffKandidat schreibKandidat
+      rw [hlese', hschreibe']
+    | some b =>
+      obtain ⟨m', hm'⟩ := hschreibe b hschreibe'
+      unfold zugriffKandidat schreibKandidat
+      rw [hlese', hschreibe']
+      dsimp only
+      rw [hm']
+  | some a =>
+    have hread := hlese a hlese'
+    cases hschreibe' : z.schreibe with
+    | none =>
+      unfold zugriffKandidat schreibKandidat
+      rw [hlese']
+      dsimp only
+      rw [hread]
+      dsimp only
+      rw [hschreibe']
+    | some b =>
+      obtain ⟨m', hm'⟩ := hschreibe b hschreibe'
+      unfold zugriffKandidat schreibKandidat
+      rw [hlese']
+      dsimp only
+      rw [hread]
+      dsimp only
+      rw [hschreibe']
+      dsimp only
+      rw [hm']
+
 end Gabbro.Grammatik.X86
