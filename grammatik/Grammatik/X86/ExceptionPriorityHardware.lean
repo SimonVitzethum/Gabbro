@@ -1154,4 +1154,90 @@ theorem wahl_konflikt_adresse :
   apply adresse_schlaegt_spaete _ _ _ _ _ _ _ abruf_divFalle_keiner
     (dekodiere_divFalle_keiner _) hadr_konflikt_adresse
 
+/-! ## Control probes over the bright window.
+
+  The same fetched divide over permissive data: the unaligned read
+  succeeds (no access candidate), the armed control fires #AC, and the
+  pending divide still wins. With a quiet divide the control wins. -/
+
+/-- The bright window matches the encoded divide. -/
+theorem geholt_hellFalle :
+    geholt hellFalleStart.kern = mulDivEncode (.divRax .rcx) := by
+  decide
+
+/-- No fetch candidate over the bright window. -/
+theorem abruf_hellFalle_keiner :
+    abrufKandidat hellFalleStart = none := by
+  have hne : geholt hellFalleStart.kern ≠ [] := by
+    rw [geholt_hellFalle]
+    decide
+  have hdec : decodeExt (geholt hellFalleStart.kern) =
+      some (.muldiv ⟨.divRax .rcx, 3⟩, []) := by
+    rw [geholt_hellFalle]
+    exact decode_divFalle
+  have hz : extZugelassen hellFalleStart (geholt hellFalleStart.kern)
+      (.muldiv ⟨.divRax .rcx, 3⟩) [] = true := by
+    rw [geholt_hellFalle]
+    decide
+  have hkan : istKanonisch hellFalleStart.kern.rip = true := kanonisch_code
+  exact abruf_zugelassen_keiner _ _ _ hkan hne hdec hz
+
+/-- No decode candidate over the bright window. -/
+theorem dekodiere_hellFalle_keiner (ill : IllegalInfo) :
+    dekodiereKandidat hellFalleStart ill = none := by
+  apply dekodiere_erfolg_keiner _ _ _ _
+  rw [geholt_hellFalle]
+  exact decode_divFalle
+
+/-- No address candidate: the control address is canonical. -/
+theorem hadr_hellFalle_keiner :
+    adressKandidat hellKontrollZ = none := by
+  apply adress_kanonisch_keiner
+  · intro a ha
+    have ha' : BitVec.ofNat 64 8193 = a := Option.some_inj.mp ha
+    rw [←ha']
+    decide
+  · intro b hb
+    simp [hellKontrollZ] at hb
+
+/-- The unaligned read succeeds: two zero bytes of evidence. -/
+theorem hlese_hellFalle (a : Adresse)
+    (ha : (some (BitVec.ofNat 64 8193) : Option Adresse) = some a) :
+    read64 hellFalleStart.kern.speicher a = some 0 := by
+  have ha' : BitVec.ofNat 64 8193 = a := Option.some_inj.mp ha
+  rw [←ha']
+  decide
+
+/-- No access candidate: the misaligned read is permitted. -/
+theorem hzug_hellFalle_keiner :
+    zugriffKandidat hellFalleStart hellKontrollZ pgHell = none := by
+  apply zugriff_erfolg_keiner _ _ _ _ hlese_hellFalle _
+  intro b hb
+  simp [hellKontrollZ] at hb
+
+/-- The armed misaligned read is the #AC candidate. -/
+theorem hsteuer_hellFalle :
+    steuerKandidat hellKontrollZ stScharf = some ⟨.steuerung, .ac⟩ := by
+  apply steuerung_scharf_falsch_ausgerichtet _ _ _ rfl rfl _
+  exact zugriff_ohne_ac.1
+
+/-- CHOICE: the pending divide beats the armed control. -/
+theorem wahl_kontrolle_teilung_gewinnt :
+    ersteWahl
+        (kandidatenReihe hellFalleStart hellKontrollZ pgHell stScharf
+          illLeer true) = some ⟨.teilung, .de⟩ := by
+  apply teilung_schlaegt_steuerung _ _ _ _ _ abruf_hellFalle_keiner
+    (dekodiere_hellFalle_keiner _) hadr_hellFalle_keiner
+    hzug_hellFalle_keiner rfl
+
+/-- CHOICE: with a quiet divide the armed control wins. -/
+theorem wahl_kontrolle_gewinnt_ohne_teilung :
+    ersteWahl
+        (kandidatenReihe hellFalleStart hellKontrollZ pgHell stScharf
+          illLeer false) = some ⟨.steuerung, .ac⟩ := by
+  apply steuerung_als_letzte _ _ _ _ _ _ _ abruf_hellFalle_keiner
+    (dekodiere_hellFalle_keiner _) hadr_hellFalle_keiner
+    hzug_hellFalle_keiner _ hsteuer_hellFalle
+  rfl
+
 end Gabbro.Grammatik.X86
