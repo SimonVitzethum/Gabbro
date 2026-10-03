@@ -6,7 +6,10 @@ CANDIDATE: 839 e67b0b287ffd1d3de151c0be13843bd1dd9b6ac7
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded: scalar-FP ledger gating over the accepted producers; cuts as stated in the file)
+VERDICT: ACCEPT
+
+Acceptance is bounded: scalar-FP ledger gating over the accepted producers,
+with the cuts stated in the candidate file (see bounded-acceptance notes).
 
 ## What was done
 
