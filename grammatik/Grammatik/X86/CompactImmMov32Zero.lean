@@ -32,6 +32,7 @@ import Grammatik.X86.Codec
 import Grammatik.X86.NarrowOps
 import Grammatik.X86.DecodingCoverage
 import Grammatik.X86.Byteschritt
+import Grammatik.X86.NarrowCodec
 
 namespace Gabbro.Grammatik.X86
 
@@ -744,10 +745,170 @@ theorem CompactImmMov32Zero_verbindung_zeuge :
   obtain ⟨_, hmem, hnull⟩ := zeuge_speicher_aendert_sich
   exact ⟨by decide, by decide, hd, hfit, hmem, hnull⟩
 
+/-! ## 10. Pinned bytes and explicit refusals. -/
+
+/-- Pinned bytes: `mov eax, 1` is B8 01 00 00 00. -/
+theorem pin_mov32imm_eax_eins :
+    encodeCompact (.mov32imm .rax (BitVec.ofNat 32 1)) =
+      [natByte 184, natByte 1, natByte 0, natByte 0, natByte 0] := by
+  decide
+
+/-- Pinned decode: the same five bytes name rax at length 5. -/
+theorem pin_mov32imm_eax_eins_dekode :
+    decodeCompact
+      [natByte 184, natByte 1, natByte 0, natByte 0, natByte 0] =
+      some ((⟨.mov32imm .rax (BitVec.ofNat 32 1), 5⟩ : CompactDec),
+        []) := by
+  decide
+
+/-- Pinned bytes: `mov r15d, 0xFFFFFFFF` takes the REX.B byte. -/
+theorem pin_mov32imm_r15 :
+    encodeCompact (.mov32imm .r15 (BitVec.ofNat 32 0xFFFFFFFF)) =
+      [natByte 65, natByte 191, natByte 255, natByte 255, natByte 255,
+        natByte 255] := by
+  decide
+
+/-- Pinned decode: the REX.B form names r15 at length 6. -/
+theorem pin_mov32imm_r15_dekode :
+    decodeCompact [natByte 65, natByte 191, natByte 255, natByte 255,
+      natByte 255, natByte 255] =
+      some ((⟨.mov32imm .r15 (BitVec.ofNat 32 0xFFFFFFFF), 6⟩ : CompactDec),
+        []) := by
+  decide
+
+/-- The empty input decodes to nothing. -/
+theorem kompakt_nichts_leer : decodeCompact [] = none := rfl
+
+/-- A bare opcode without its immediate is truncated. -/
+theorem kompakt_nichts_abgeschnitten :
+    decodeCompact [natByte 184] = none := rfl
+
+/-- A REX.W prefix stays the pilot's domain (10-byte `movImm64`):
+    refused by this row. -/
+theorem kompakt_nichts_rex_w :
+    decodeCompact [natByte 72, natByte 184, natByte 1, natByte 0,
+      natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] =
+      none := rfl
+
+/-- A redundant REX byte (W=R=X=B=0) is non-canonical here. -/
+theorem kompakt_nichts_rex_leer :
+    decodeCompact [natByte 64, natByte 184, natByte 1, natByte 0,
+      natByte 0, natByte 0] = none := rfl
+
+/-- A REX.X prefix is not canonical. -/
+theorem kompakt_nichts_rex_x :
+    decodeCompact [natByte 66, natByte 184, natByte 1, natByte 0,
+      natByte 0, natByte 0] = none := rfl
+
+/-- An unknown opcode is refused. -/
+theorem kompakt_nichts_unbekannt :
+    decodeCompact [natByte 255] = none := rfl
+
+/-- NARROW DISJOINTNESS: the accepted narrow decoder refuses every
+    covered compact encoding (bare B8 is no REX prefix; the 0x41
+    prefix never continues into a narrow opcode). -/
+theorem kompakt_narrow_verweigert (dst : Register) (imm : BitVec 32)
+    (suffix : List Byte) :
+    decodeNarrow (encodeCompact (.mov32imm dst imm) ++ suffix) = none := by
+  cases dst <;> rfl
+
+/-- JOINT REFUSAL PIN: the word `2 ^ 32` needs imm64, so no compact
+    immediate denotes it. -/
+theorem kompakt_gross_verweigert_pin (imm : BitVec 32) :
+    compactWert imm ≠ BitVec.ofNat 64 (2 ^ 32) := by
+  have hfit := compactWert_fits imm
+  have hval : (BitVec.ofNat 64 (2 ^ 32)).toNat = 2 ^ 32 := by
+    rw [BitVec.toNat_ofNat]
+  intro heq
+  have hcon := congrArg BitVec.toNat heq
+  omega
+
 /- CUTS:
-    Skeleton only: encoder, decoder, execution and witnesses are open.
+    Proved here, over the REUSED canonical vocabulary (`Typen`,
+    `Wort.trunc`/`narrowTruncMod`, `Speicher`, `Ausfuehrung.laengeOk`/
+    `ripNach`/`effAddr`-free `regSet`, `Codec.codeReg`/`regCode`/
+    `regHigh`/`regLow`/`parseLe32`/`leBytes32`, `Byteschritt.geholt`/
+    `ausfuehrbarN`, `DecodingCoverage.parseLe32_suffix`,
+    `NarrowOps.mergeRegNarrow`/`extendNarrow` and the UNCHANGED pilot
+    `Codec.decode`/`decodeNarrow`):
+    - the one covered row (`CompactImmMov32`/`CompactDec`) with its
+      canonical encoder (`encodeCompact`: bare B8+rd, 5 bytes; 0x41
+      REX.B prefix for r8-r15, 6 bytes), exact decoded lengths
+      (`encodeCompact_len`, the 1..15 cap), generic round trips
+      (`roundtripCompact`, `roundtripCompact_len_ok`) and pinned bytes
+      for `mov eax, 1` and `mov r15d, 0xFFFFFFFF`;
+    - decoder-side arbitrary-input coverage
+      (`decodeCompact_abdeckung` with the tail shape
+      `compactTailAb`, plus `decodeCompact_consumes`);
+    - width-exact zeroing through the canonical `trunc`
+      (`compactWert_nat`/`compactWert_fits`, the merge-discipline
+      bridge `compactWert_gleich_merge`, the extension bridge
+      `compactWert_gleich_extend`);
+    - the exact imm64 gate in both directions
+      (`keinKompaktFuerGross` refusal, `kompaktFuerKlein` positive,
+      plus the joint pin `kompakt_gross_verweigert_pin`);
+    - execution through the common `Zustand` (`stepCompact` with per-
+      form step equation, value/frame/RIP facts, the merge-discipline
+      bridge `stepCompact_gleich_merge`, the DESTINATION-DEAD
+      obligation `compact_dst_tot`, the no-memory-access fact
+      `stepCompact_ohne_speicher`, length refusal);
+    - fetch and byte-step from actual executable memory
+      (`compactZugelassen` carriers, `fetchCompact_erfolg`,
+      `compactByteschritt` with the three selection facts) following
+      the `fetchDekodiert` discipline;
+    - pilot-first combined dispatch (`decodeComboCompact` and its
+      three dispatch facts) with pilot disjointness
+      (`compact_pilot_verweigert`) and narrow disjointness
+      (`kompakt_narrow_verweigert`);
+    - explicit refusals (empty, truncated, REX.W in the pilot domain,
+      redundant REX, REX.X, unknown opcode);
+    - the end-to-end `CompactImmMov32Zero_verbindung` with its joint
+      companion `CompactImmMov32Zero_verbindung_zeuge` (hostile
+      all-ones registers with `rax := 0x80000001`, plus the reached
+      memory-changing `lauf` run taking cell 8192 from 0 to 42).
+    NOT proved here, and not claimed:
+    - No hardware correspondence: the encoding is the stated canonical
+      row (MOV opcode table `B8+ rd id`, operand-size rule, default
+      32-bit operation size, Flags Affected None) with
+      self-consistency only, not silicon verification. Encoder
+      round-trip consistency is not hardware fidelity.
+    - No other MOV rows: 16-bit (`66 B8`), r/m32 immediates (`C7 /0`),
+      segment-register moves, `moffs` forms and the REX.W 10-byte form
+      (pilot `movImm64`, reused by reference) stay open; each new row
+      needs its own encoding, coverage and execution proof.
+    - No fetch rewiring: the shared `Byteschritt.byteschritt` and
+      `ExtendedExecution.extByteschritt` still dispatch without this
+      row; routing them through `decodeComboCompact` waits on the
+      dispatcher owners and is the next integration.
+    - No #UD membership: refused neighbours are proved refusal only;
+      which refused bytes are truly illegal encodings stays OPEN
+      (same honesty as `HardwareFaults.fehlbyte_kein_stiller_ud`).
+    - No TSO/concurrency bridge: the no-memory-access fact is
+      sequential over one `Speicher`; per-access target-to-W/GX
+      simulation stays with the TSO bridge lanes.
+    - No source correspondence, no ABI/image/entry/relocation/cost
+      claim: `verweigert`/`none` is the absence of a transition, never
+      a halt claim; no new hardware or software assumption beyond the
+      named manual entries.
 -/
 
-#print axioms compactWert
+#print axioms encodeCompact_len
+#print axioms roundtripCompact
+#print axioms decodeCompact_abdeckung
+#print axioms decodeCompact_consumes
+#print axioms compactWert_fits
+#print axioms keinKompaktFuerGross
+#print axioms kompaktFuerKlein
+#print axioms stepCompact_mov32imm
+#print axioms compact_dst_tot
+#print axioms stepCompact_ohne_speicher
+#print axioms fetchCompact_erfolg
+#print axioms compactByteschritt_weiter
+#print axioms CompactImmMov32Zero_verbindung
+#print axioms CompactImmMov32Zero_verbindung_zeuge
+#print axioms pin_mov32imm_eax_eins_dekode
+#print axioms pin_mov32imm_r15_dekode
+#print axioms kompakt_narrow_verweigert
+#print axioms kompakt_gross_verweigert_pin
 
 end Gabbro.Grammatik.X86
