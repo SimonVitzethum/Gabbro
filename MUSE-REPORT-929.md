@@ -12,14 +12,17 @@
 
 ## CANDIDATE / VERDICT
 
-- CANDIDATE: 779 `aa8feb6217b05bf25a3744c641deb9be539cbd66`
-  (base `56537272a31df3de5d9b7898bbade91c3de817b8`, from
-  `.tmp/review/SNAPSHOT.json`; files `MUSE-REPORT-779.md`,
-  `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/XchgOrderNeed.lean`).
-- VERDICT: ACCEPT (bounded: the two canonical REX.W+0x87 rows with
-  barrier-carrying memory exchange, explicit neighbour refusals, and the
-  proved bare-register-XCHG admission refusal; no full W/GX bridge claimed
-  and none accepted).
+CANDIDATE: 779 aa8feb6217b05bf25a3744c641deb9be539cbd66
+VERDICT: ACCEPT
+
+Scope of the verdict (bounded, substance unchanged): the two canonical
+REX.W+0x87 rows with barrier-carrying memory exchange, explicit neighbour
+refusals, and the proved bare-register-XCHG admission refusal; no full
+W/GX bridge claimed and none accepted. Base pinned in
+`.tmp/review/SNAPSHOT.json` is
+`56537272a31df3de5d9b7898bbade91c3de817b8`; pinned files are
+`MUSE-REPORT-779.md`, `grammatik/Grammatik.lean`,
+`grammatik/Grammatik/X86/XchgOrderNeed.lean`.
 
 ## What was inspected
 
