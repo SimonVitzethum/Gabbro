@@ -551,7 +551,7 @@ Last ledger refresh: **2026-10-03 22:28 UTC**. This is an operational snapshot, 
 | 873 | Optimiser rule: inlining rule | Merged after review/checks | 1023: Merged after review/checks | [report](messung/muse/MUSE-REPORT-873.md) |
 | 874 | Optimiser rule: bounded unroll rule | Merged after review/checks | 1024: Merged after review/checks | [report](messung/muse/MUSE-REPORT-874.md) |
 | 875 | Optimiser rule: vectorisation gate rule | Merged after review/checks | 1025: Merged after review/checks | [report](messung/muse/MUSE-REPORT-875.md) |
-| 876 | Optimiser rule: flags peephole rule | Committed candidate; review/integration pending | 1026: Committed candidate; review/integration pending | [task](lanes/876.md) |
+| 876 | Optimiser rule: flags peephole rule | Merged after review/checks | 1026: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-876.md) |
 | 877 | Optimiser rule: displacement peephole rule | Committed candidate; review/integration pending | 1027: Committed candidate; review/integration pending | [task](lanes/877.md) |
 | 878 | Optimiser rule: linear-scan allocation rule | Committed candidate; review/integration pending | 1028: Committed candidate; review/integration pending | [task](lanes/878.md) |
 | 879 | Optimiser rule: spill freshness rule | Committed candidate; review/integration pending | 1029: Committed candidate; review/integration pending | [task](lanes/879.md) |
@@ -598,7 +598,7 @@ Last ledger refresh: **2026-10-03 22:28 UTC**. This is an operational snapshot, 
 | 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: Agent working | [task](lanes/1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Agent working | 1105: scheduled | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
-| 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Agent working | 1109: scheduled | [task](lanes/1108.md) |
+| 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Committed candidate; review/integration pending | 1109: scheduled | [task](lanes/1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Agent working | 1111: scheduled | [task](lanes/1110.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1297,6 +1297,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1024**, Independent exact review of 874, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1024.md). <!-- x86-merged:1024 -->
 - 2026-10-03: lane **875**, Optimiser rule: vectorisation gate rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-875.md). <!-- x86-merged:875 -->
 - 2026-10-03: lane **1025**, Independent exact review of 875, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1025.md). <!-- x86-merged:1025 -->
+- 2026-10-03: lane **876**, Optimiser rule: flags peephole rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-876.md). <!-- x86-merged:876 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
