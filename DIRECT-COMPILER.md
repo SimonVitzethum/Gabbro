@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 00:46 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 10:47 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -393,10 +393,10 @@ Last ledger refresh: **2026-10-03 00:46 UTC**. This is an operational snapshot, 
 | 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Merged after review/checks | 687: Merged after review/checks | [report](messung/muse/MUSE-REPORT-686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Merged after review/checks | 689: Merged after review/checks | [report](messung/muse/MUSE-REPORT-688.md) |
-| 690 | Hardware completion: selected AVX2 integer architectural byte forms | Agent working | 691: scheduled | [task](lanes/690.md) |
+| 690 | Hardware completion: selected AVX2 integer architectural byte forms | Incomplete; preserved | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Merged after review/checks | 695: Merged after review/checks | [report](messung/muse/MUSE-REPORT-694.md) |
-| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Agent working | 697: scheduled | [task](lanes/696.md) |
+| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Committed candidate; review/integration pending | 697: Incomplete; preserved | [task](lanes/696.md) |
 | 698 | Essential width-selected shifts and rotates | Committed candidate; review/integration pending | 699: Incomplete; preserved | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
@@ -408,18 +408,19 @@ Last ledger refresh: **2026-10-03 00:46 UTC**. This is an operational snapshot, 
 | 714 | Compiler ISA and instruction selection architecture review | Merged after review/checks | 715: Merged after review/checks | [report](messung/muse/MUSE-REPORT-714.md) |
 | 716 | Rust compiler validation and ELF integration review | Merged after review/checks | 717: Merged after review/checks | [report](messung/muse/MUSE-REPORT-716.md) |
 | 718 | Unify accepted architectural final-byte family dispatch | Committed candidate; review/integration pending | 719: Incomplete; preserved | [task](lanes/718.md) |
-| 720 | Connect real selected integer bytes to shared TSO execution | Agent working | 721: scheduled | [task](lanes/720.md) |
-| 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Agent working | 723: scheduled | [task](lanes/722.md) |
-| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Agent working | 725: scheduled | [task](lanes/724.md) |
+| 720 | Connect real selected integer bytes to shared TSO execution | Committed candidate; review/integration pending | 721: Incomplete; preserved | [task](lanes/720.md) |
+| 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Committed candidate; review/integration pending | 723: Incomplete; preserved | [task](lanes/722.md) |
+| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Incomplete; preserved | 725: scheduled | [task](lanes/724.md) |
 | 726 | Model checked long-mode page walks and precise access faults | Incomplete; preserved | 727: Committed candidate; review/integration pending | [task](lanes/726.md) |
-| 728 | Model actual IDT TSS descriptor and entry stack selection | Agent working | 729: scheduled | [task](lanes/728.md) |
-| 730 | Connect full selected SIB RIP-relative addresses to actual effects | Agent working | 731: scheduled | [task](lanes/730.md) |
+| 728 | Model actual IDT TSS descriptor and entry stack selection | Committed candidate; review/integration pending | 729: Incomplete; preserved | [task](lanes/728.md) |
+| 730 | Connect full selected SIB RIP-relative addresses to actual effects | Committed candidate; review/integration pending | 731: Incomplete; preserved | [task](lanes/730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
-| 734 | Selected control registers and syscall MSR byte effects | Agent working | 735: scheduled | [task](lanes/734.md) |
-| 736 | SSE and selected AVX context save restore effects | Agent working | 737: scheduled | [task](lanes/736.md) |
-| 738 | Derive precise fault ordering across fetched instruction accesses | Agent working | 739: scheduled | [task](lanes/738.md) |
-| 740 | Repair upstream compiler Lean aggregation and scope | Committed candidate; review/integration pending | 741: Agent working | [task](lanes/740.md) |
-| 742 | Repair upstream compiler Rust panics and mirror fidelity | Agent working | 743: scheduled | [task](lanes/742.md) |
+| 734 | Selected control registers and syscall MSR byte effects | Incomplete; preserved | 735: scheduled | [task](lanes/734.md) |
+| 736 | SSE and selected AVX context save restore effects | Incomplete; preserved | 737: scheduled | [task](lanes/736.md) |
+| 738 | Derive precise fault ordering across fetched instruction accesses | Committed candidate; review/integration pending | 739: Incomplete; preserved | [task](lanes/738.md) |
+| 740 | Repair upstream compiler Lean aggregation and scope | Committed candidate; review/integration pending | 741: Incomplete; preserved | [task](lanes/740.md) |
+| 742 | Repair upstream compiler Rust panics and mirror fidelity | Committed candidate; review/integration pending | 743: Incomplete; preserved | [task](lanes/742.md) |
+| 744 | Organise complete direct Lean compiler optimiser validation and performance closure | Scheduled | 745: scheduled | [task](lanes/744.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -943,6 +944,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **732**, Organise exact essential hardware integration and executable coverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-732.md). <!-- x86-merged:732 -->
 - 2026-10-02: lane **733**, Independent exact review of 732, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-733.md). <!-- x86-merged:733 -->
 - 2026-10-03: publication batch checks passed for `e0fd57c4`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-03: checked master `4ebf7893` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:4ebf78936bf2ac5c09db7d392353f1f04a5c7b94 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
