@@ -29,6 +29,7 @@ import Grammatik.ReferenzB
 import Grammatik.X86.Typen
 import Grammatik.X86.Wort
 import Grammatik.X86.ControlFlow
+import Grammatik.X86.ConditionalMove
 
 namespace Gabbro.Grammatik.X86
 
@@ -114,11 +115,63 @@ theorem probe_cmovSelZulassen_speicher :
     cmovSelZulassen ⟨true, true, true, false, true, true⟩ = false := by
   decide
 
+/-! ## 2. Value: the register-only select computes the taken arm.
+
+    Over ARBITRARY words (`xw yw : Wort`): the `cmovAnwenden`
+    destination word under flags reading `b` IS the taken arm word.
+    Both arms are already computed values in registers (cheap-operand
+    premise, carried by `hsrc`/`hdst`); the select adds no rounding,
+    no fault and no memory event of its own. -/
+
+/-- Taken select value: `selWert true` is the first arm. -/
+theorem selWert_genommen (x y : Int) : selWert true x y = x := by
+  rfl
+
+/-- Untaken select value: `selWert false` is the second arm. -/
+theorem selWert_nicht (x y : Int) : selWert false x y = y := by
+  rfl
+
+/-- Taken target word: under taken flags the destination takes the
+    source word (the taken arm, already in its register). -/
+theorem cmovWaehlt_genommen (s : Zustand) (dst src : Register)
+    (c0 : Bedingung) (xw : Wort)
+    (hbed : bedingung c0 s.flags = true)
+    (hsrc : s.register src = xw) :
+    (cmovAnwenden s dst src c0).register dst = xw := by
+  rw [cmovAnwenden_genommen_wert s dst src c0 hbed, hsrc]
+
+/-- Untaken target word: under untaken flags the destination keeps
+    its word (the untaken arm, already in its register). -/
+theorem cmovWaehlt_nicht (s : Zustand) (dst src : Register)
+    (c0 : Bedingung) (yw : Wort)
+    (hbed : bedingung c0 s.flags = false)
+    (hdst : s.register dst = yw) :
+    (cmovAnwenden s dst src c0).register dst = yw := by
+  rw [cmovAnwenden_nicht_wert s dst src c0 hbed, hdst]
+
+/-- The selected value reads back whole through the canonical word:
+    width-exact (`hW`), no truncation, no wrap. -/
+theorem selWortLiest (x : Int) (hW : 0 ≤ x ∧ x < 2 ^ 64) :
+    ((BitVec.ofNat 64 x.toNat : Wort)).toNat = x.toNat := by
+  have h : x.toNat < 2 ^ 64 := by omega
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt h]
+
+/-- The select preserves the taken arm's `gleitPasst` outcome: a
+    register-only select moves the exact bit pattern, adding no
+    rounding scope of its own, so neither a value nor a `logik
+    bereich` outcome is folded away. -/
+theorem selGleit_behaelt (b : Bool) (qa qb : GFloat)
+    (lo hi : Int × Int) :
+    gleitPasst lo hi (if b then qa else qb) =
+      if b then gleitPasst lo hi qa else gleitPasst lo hi qb := by
+  cases b <;> rfl
+
 /- CUTS:
-    - Skeleton only: admission Bool, selected value. The refusal
-      theorems, value/word/float lemmas, branch/select blocks, the
-      `OptCmovSel_verbindung` rule lemma and its joint witness follow
-      in small steps.
+    - Proved: admission, six refusals, select value equations, taken/
+      untaken target words, width-exact word readback, `gleitPasst`
+      preservation.
+    - OPEN: branch/select blocks, the `OptCmovSel_verbindung` rule
+      lemma (exec-outcome preservation) and its joint witness.
 -/
 
 #print axioms cmovSelZulassen
@@ -131,5 +184,11 @@ theorem probe_cmovSelZulassen_speicher :
 #print axioms cmovSelVerweigert_rundung
 #print axioms probe_cmovSelZulassen_ok
 #print axioms probe_cmovSelZulassen_speicher
+#print axioms selWert_genommen
+#print axioms selWert_nicht
+#print axioms cmovWaehlt_genommen
+#print axioms cmovWaehlt_nicht
+#print axioms selWortLiest
+#print axioms selGleit_behaelt
 
 end Gabbro.Grammatik.X86
