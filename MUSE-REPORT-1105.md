@@ -4,7 +4,9 @@ Clone `/home/simon/Dokumente/gabbro-muse/a1105`, branch `muse/1105`.
 Report-only independent review; OWN ONLY this file. No source, private,
 root, or network changes. No other models called.
 
-CANDIDATE: lane 1104, HEAD `3d507bc49895d0890452d9c20f3236e1ce7ca2ad`
+CANDIDATE: 1104 3d507bc49895d0890452d9c20f3236e1ce7ca2ad
+
+The reviewed candidate is lane 1104 at the HEAD pinned above
 (per `.tmp/review/SNAPSHOT.json`; files `MUSE-REPORT-1104.md`,
 `grammatik/Grammatik/X86/ComposeAcceptedConsumers.lean`, clean).
 Reviewed the exact snapshot copy under `.tmp/review/author-1104/`
@@ -104,7 +106,7 @@ final `./lean-probe` `0 error(s)` with full axiom prints, `./lean-bau`
 - PATCH.diff touches only the two owned files (module + report),
   matching SNAPSHOT.json.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 The candidate composes the accepted 824/720/730/738/728 pieces
 through the common dispatcher with no rival executor, no unaccepted
