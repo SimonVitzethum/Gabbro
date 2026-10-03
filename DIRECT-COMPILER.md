@@ -446,7 +446,7 @@ Last ledger refresh: **2026-10-03 13:16 UTC**. This is an operational snapshot, 
 | 768 | Hardware completion: memory-source CMOV fault rule | Agent working | 918: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/768.md) |
 | 769 | Hardware completion: jump-table certificates | Merged after review/checks | 919: Merged after review/checks | [report](messung/muse/MUSE-REPORT-769.md) |
 | 770 | Hardware completion: indirect CALL provenance | Merged after review/checks | 920: Merged after review/checks | [report](messung/muse/MUSE-REPORT-770.md) |
-| 771 | Hardware completion: 16-byte call alignment | Merged after review/checks | 921: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-771.md) |
+| 771 | Hardware completion: 16-byte call alignment | Merged after review/checks | 921: Merged after review/checks | [report](messung/muse/MUSE-REPORT-771.md) |
 | 772 | Hardware completion: rel8 reachability | Committed candidate; review/integration pending | 922: Committed candidate; review/integration pending | [task](lanes/772.md) |
 | 773 | Hardware completion: layout stability under narrowing | Committed candidate; review/integration pending | 923: Incomplete; preserved | [task](lanes/773.md) |
 | 774 | Hardware completion: far-transfer refusal | Committed candidate; review/integration pending | 924: Incomplete; preserved | [task](lanes/774.md) |
@@ -1153,6 +1153,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **770**, Hardware completion: indirect CALL provenance, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-770.md). <!-- x86-merged:770 -->
 - 2026-10-03: lane **920**, Independent exact review of 770, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-920.md). <!-- x86-merged:920 -->
 - 2026-10-03: lane **771**, Hardware completion: 16-byte call alignment, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-771.md). <!-- x86-merged:771 -->
+- 2026-10-03: lane **921**, Independent exact review of 771, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-921.md). <!-- x86-merged:921 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
