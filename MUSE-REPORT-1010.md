@@ -1,7 +1,10 @@
 # MUSE-REPORT-1010: Exact review of author 860 (constant folding rule)
 
 CANDIDATE: 860 5fd37472b323021c3e70cc45cca5c87c4df0afa2
-VERDICT: ACCEPT (bounded; scope below)
+VERDICT: ACCEPT
+
+Scope of the ACCEPT verdict is bounded as recorded below; the substantive
+verdict itself is unchanged.
 
 ## What was done
 
