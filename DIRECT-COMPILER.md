@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 19:31 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 19:38 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -592,6 +592,7 @@ Last ledger refresh: **2026-10-03 19:31 UTC**. This is an operational snapshot, 
 | 1072 | Task-brief audit batch B19 (lanes 1016-1030) | Agent working | 1092: scheduled | [task](lanes/1072.md) |
 | 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Scheduled | 1093: scheduled | [task](lanes/1073.md) |
 | 1094 | Idle pool cache cleanup with strict guards | Scheduled | 1095: scheduled | [task](lanes/1094.md) |
+| 1096 | Hourly managed-agent census with coordinator warning | Scheduled | 1097: scheduled | [task](lanes/1096.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
