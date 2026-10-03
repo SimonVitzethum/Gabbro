@@ -627,12 +627,147 @@ theorem OptDceDead_verbindung_zeuge :
     Var.hier, dceE1, dceE2, Block.nil, dceE1_rein, dceE2_tot, refSp0.welt [], dceRho,
     hV, refEin_schreibt (), refB_erreicht, refB_schreibt⟩
 
+/-! ## 9. Budget: removing a write only shrinks the source cost.
+
+    The optimized window is the original minus `1 + kostenExpr e1`
+    (the removed `assignVar` and its expression): any source budget
+    covering the original covers the optimized block. Step-budget
+    exhaustion timing is the separate OPEN obligation per
+    IR-VALIDIERUNG (lane 278); what is proved here is the cost
+    inequality, so the budget side never grows. -/
+
+/-- Removing the dead write does not grow `kostenBlock`. -/
+theorem dceKosten_faellt {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ'' : List (Res D)} {τ : Ty}
+    (c : D.Fn → Nat) (pa : Nat)
+    (x : Var Γ τ) (e1 e2 : Expr D Γ Λ τ)
+    (rest : Block D V l Γ Λ Λ'') :
+    kostenBlock c pa (Block.cons (Stmt.assignVar x e2) rest)
+    ≤ kostenBlock c pa (Block.cons (Stmt.assignVar x e1) (Block.cons (Stmt.assignVar x e2) rest)) := by
+  simp only [kostenBlock, kostenStmt]
+  omega
+
+/-- JOINT WITNESS for `dceKosten_faellt`: the counted inequality on
+    `refD` beside the memory-changing reached run. -/
+theorem dceKosten_faellt_zeuge :
+    ∃ (V : Vertrag refD) (c : refD.Fn → Nat) (pa : Nat)
+      (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res refD)) (τ : Ty)
+      (x : Var Γ τ) (e1 e2 : Expr refD Γ Λ τ)
+      (rest : Block refD V l Γ Λ Λ'),
+      kostenBlock c pa (Block.cons (Stmt.assignVar x e2) rest)
+      ≤ kostenBlock c pa (Block.cons (Stmt.assignVar x e1) (Block.cons (Stmt.assignVar x e2) rest))
+      ∧ (vertragVon refD refEin).schreibt () = true
+      ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+      ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hK := dceKosten_faellt (D := refD) (V := vertragVon refD refEin)
+    (c := fun _ => 0) (pa := 0) (l := true)
+    (Γ := [.int 0 10]) (Λ := []) (Λ'' := []) (τ := .int 0 10)
+    (x := Var.hier) (e1 := dceE1) (e2 := dceE2) (rest := Block.nil)
+  refine ⟨vertragVon refD refEin, fun _ => 0, 0, true, [.int 0 10], [], [], .int 0 10,
+    Var.hier, dceE1, dceE2, Block.nil, hK, refEin_schreibt (),
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## 10. Refusal exhibit I: a dead float block can fault (IEEE).
+
+    The DESIGN failure case "remove `0.0/0.0`": an unused NaN hides
+    `logik bereich`. A `Block.gleitLit` whose literal lies outside its
+    declared range evaluates to `.logik .bereich` -- removing such a
+    block would delete a stop the source demands. The overwrite rule
+    of section 7 never fires here: it removes `Stmt.assignVar`
+    only. Concretely: `1` against the range `0 .. 0` faults. -/
+
+/-- Probe: `1` against the range `0 .. 0` is no value. -/
+theorem dceGleit_beispiel :
+    gleitPasst (0, 1) (0, 1) (bruch (1, 1)) = none := by decide
+
+/-- A dead float literal block faults instead of binding: removing it
+    would hide `logik bereich`, so the rule must NOT fire here. -/
+theorem dceVerweigert_gleit {D : Deklaration} {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (rest : Block D V l ((.fl (0, 1) (0, 1)) :: Γ) Λ Λ')
+    (σ : World D) (ρ : Env D Γ) :
+    execBlock O passes R (Block.gleitLit (1, 1) (0, 1) (0, 1) rest) σ ρ
+    = .logik .bereich := by
+  have hN := dceGleit_beispiel
+  simp only [execBlock, hN]
+  try rfl
+
+/-- JOINT WITNESS for `dceVerweigert_gleit`: the faulting float block
+    on `refD` beside the memory-changing reached run. -/
+theorem dceVerweigert_gleit_zeuge :
+    ∃ (V : Vertrag refD) (O : Orakel refD) (passes : Nat)
+      (R : ∀ f : refD.Fn, World refD → Env refD (refD.params f) → RufAusgang f)
+      (l : Bool) (Γ : Ctx) (Λ Λ' : List (Res refD))
+      (rest : Block refD V l ((.fl (0, 1) (0, 1)) :: Γ) Λ Λ')
+      (σ : World refD) (ρ : Env refD Γ),
+      execBlock O passes R (Block.gleitLit (1, 1) (0, 1) (0, 1) rest) σ ρ
+      = .logik .bereich
+      ∧ (vertragVon refD refEin).schreibt () = true
+      ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+      ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hG := dceVerweigert_gleit (D := refD) (V := vertragVon refD refEin)
+    (O := refO) (passes := 0) (R := keinRuf) (l := true)
+    (Γ := []) (Λ := []) (Λ' := []) (rest := Block.nil)
+    (σ := refSp0.welt []) (ρ := Env.nil)
+  refine ⟨vertragVon refD refEin, refO, 0, keinRuf, true, [], [], [],
+    Block.nil, refSp0.welt [], Env.nil, hG, refEin_schreibt (),
+    refB_erreicht, refB_schreibt⟩
+
+/-! ## 11. Refusal exhibit II: a shared read always observes (concurrency).
+
+    The DESIGN failure case "remove a spin load": a spin/wait loop's
+    load observes shared state, so removing it deletes a concurrency
+    observation (and the loop's termination behaviour). Every shared
+    read appends a trace event (`lese` grows `spur` by exactly one),
+    hence no removed computation with `orte ≠ []` is pure: the
+    `hRein` premise of section 7 refuses it. -/
+
+/-- A shared-carrier read appends exactly one trace event: it is
+    never pure, so removing it is refused by `hRein`. -/
+theorem dceSpin_beobachtet {D : Deklaration} (σ : World D) (Λ : List (Res D)) (t : D.Tab) :
+    (σ.lese Λ [.inl t]).spur.length = σ.spur.length + 1 := by
+  simp [World.lese, World.merke]
+  try rfl
+
 /- CUTS:
-    - The `liest` frame lemma, the overwrite connection with its joint
-      witness, the budget inequality, and the two DESIGN refusal
-      exhibits (dead FP block, spin load) follow in later pieces.
+    - No block-window float rewrite: section 10 exhibits the fault a
+      dead `gleitLit` keeps (`logik bereich`); the two-block
+      `gleitLit`/`gleit` window with recomputed avail facts (DESIGN
+      certificate "A+B") stays with the lowering lane.
+    - No non-overwrite deadness: `zielTot` beyond the immediate
+      overwrite window (redefinition before any read across longer
+      windows) needs recomputed liveness over whole blocks; only the
+      overwrite window is connected here, where deadness holds by
+      construction and `liest e2 x` is the recomputed check.
+    - No totalCost/budget-exhaustion transfer: section 9 proves the
+      source-cost inequality; relating machine work to `passes`
+      exhaustion (`budget_simulation`) is the separate OPEN
+      obligation per IR-VALIDIERUNG (lane 278).
+    - No silicon correspondence, no TSO/GX bridge, no ABI/loader
+      claim: correspondence stops at `execBlock` outcomes and
+      `kostenBlock` numbers over the canonical source semantics.
+    - No new `Befehl` evaluation: the one target semantics
+      (`Ausfuehrung.schritt`) is reused untouched; this file adds no
+      target forms.
+    - No checker change: no source admission is tightened to ease
+      proof; everything is over the real source semantics
+      (`eval`/`execBlock`) and the real cost functions.
 -/
 
 #print axioms dceZulassen
+#print axioms dceVerweigert_orte
+#print axioms dceVerweigert_tot
+#print axioms eval_set_frisch
+#print axioms eval_set_frisch_zeuge
+#print axioms OptDceDead_verbindung
+#print axioms OptDceDead_verbindung_zeuge
+#print axioms dceKosten_faellt
+#print axioms dceKosten_faellt_zeuge
+#print axioms dceGleit_beispiel
+#print axioms dceVerweigert_gleit
+#print axioms dceVerweigert_gleit_zeuge
+#print axioms dceSpin_beobachtet
 
 end Gabbro.Grammatik.X86
