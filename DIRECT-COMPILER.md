@@ -459,7 +459,7 @@ Last ledger refresh: **2026-10-03 13:18 UTC**. This is an operational snapshot, 
 | 781 | Hardware completion: SFENCE store narrowness | Merged after review/checks | 931: Merged after review/checks | [report](messung/muse/MUSE-REPORT-781.md) |
 | 782 | Hardware completion: LFENCE load narrowness | Merged after review/checks | 932: Merged after review/checks | [report](messung/muse/MUSE-REPORT-782.md) |
 | 783 | Hardware completion: seq_cst lowering bracket | Committed candidate; review/integration pending | 933: scheduled | [task](lanes/783.md) |
-| 784 | Hardware completion: CAS retry attempt bound | Merged after review/checks | 934: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-784.md) |
+| 784 | Hardware completion: CAS retry attempt bound | Merged after review/checks | 934: Merged after review/checks | [report](messung/muse/MUSE-REPORT-784.md) |
 | 785 | Hardware completion: CAS divergence record | Committed candidate; review/integration pending | 935: Committed candidate; review/integration pending | [task](lanes/785.md) |
 | 786 | Hardware completion: youngest-own-store forwarding | Incomplete; preserved | 936: scheduled | [task](lanes/786.md) |
 | 787 | Hardware completion: tearing refusal table | Incomplete; preserved | 937: scheduled | [task](lanes/787.md) |
@@ -1169,6 +1169,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **782**, Hardware completion: LFENCE load narrowness, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-782.md). <!-- x86-merged:782 -->
 - 2026-10-03: lane **932**, Independent exact review of 782, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-932.md). <!-- x86-merged:932 -->
 - 2026-10-03: lane **784**, Hardware completion: CAS retry attempt bound, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-784.md). <!-- x86-merged:784 -->
+- 2026-10-03: lane **934**, Independent exact review of 784, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-934.md). <!-- x86-merged:934 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
