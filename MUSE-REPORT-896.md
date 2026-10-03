@@ -18,8 +18,11 @@ optimiser files. Scope-compliant.
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded: exactly the canonical no-REX.W `B8+rd id` row, with
-the CUTS below; no hardware correspondence claimed or granted).
+VERDICT: ACCEPT
+
+Scope of this ACCEPT (substantive verdict unchanged): exactly the canonical
+no-REX.W `B8+rd id` row, with the CUTS below; no hardware correspondence
+claimed or granted.
 
 ## What I inspected
 
