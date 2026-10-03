@@ -68,6 +68,44 @@ theorem deckung_resum (s : CostSummary) (m src src' : Nat)
   have hmul : src * m ≤ src' * m := Nat.mul_le_mul_right m hle
   omega
 
+/-- CLOSING: source budget exhaustion meets target work spent, with
+    ghost correspondence and resumption. The four conjuncts compose
+    accepted modules only: ghost tracking (rewrite of `hGhost`),
+    transfer at `src` (`budgetAusfuehrung_transfer`), transfer at the
+    resumed `src'` (`deckung_resum` + `budgetAusfuehrung_transfer`),
+    and joint stopping order (`stoppReihenfolge`: the over-budget head
+    op names the source budget breach AND the refused head form
+    refuses the target aggregation). Every premise is used. -/
+theorem ComposeBudgetResum_verbindung
+    (s : CostSummary) (p : HardwareProfil)
+    (xs : List Decodiert) (src src' B t ghost : Nat)
+    (bound left : Nat) (op : Op) (rest : List Op)
+    (d : Decodiert) (tl : List Decodiert)
+    (m : Nat)
+    (hGhost : ghost = src)
+    (hMax : alleMax s = some m)
+    (hDeck : Deckung s src xs)
+    (hCost : laufKosten p xs = some t)
+    (hb : ∀ d ∈ xs, ∃ c, schrittKosten p d = some c ∧ c ≤ B)
+    (hSrcOver : ¬ op.cost ≤ left)
+    (hTgtRef : schrittKosten p d = none)
+    (hResum : src ≤ src') :
+    Deckung s ghost xs ∧
+    (∀ k, expandBound s src = some k → t ≤ B * k) ∧
+    (∀ k', expandBound s src' = some k' → t ≤ B * k') ∧
+    ((∃ needed, runOps bound left (op :: rest)
+      = .budget "per_pass.ops" needed bound) ∧
+    laufKosten p (d :: tl) = none) := by
+  have hGhostDeck : Deckung s ghost xs := by
+    rw [hGhost]
+    exact hDeck
+  have hTransfer := budgetAusfuehrung_transfer s p xs src B t hCost hb hDeck
+  have hDeck' := deckung_resum s m src src' xs hMax hDeck hResum
+  have hTransfer' :=
+    budgetAusfuehrung_transfer s p xs src' B t hCost hb hDeck'
+  have hStop := stoppReihenfolge bound left op rest p d tl hSrcOver hTgtRef
+  exact ⟨hGhostDeck, hTransfer, hTransfer', hStop⟩
+
 /- CUTS (step 1):
      `GhostBudget` interface plus accepted-expansion monotonicity
      (`expandBound_mono`). Resumption coverage and the main closing
@@ -77,5 +115,6 @@ theorem deckung_resum (s : CostSummary) (m src src' : Nat)
 #print axioms GhostBudget
 #print axioms expandBound_mono
 #print axioms deckung_resum
+#print axioms ComposeBudgetResum_verbindung
 
 end Gabbro.Grammatik.X86
