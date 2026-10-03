@@ -223,6 +223,101 @@ theorem encodeCompactAdd_ursache (dst : Register) (n : Nat)
     simp at h
   · exact Nat.le_of_not_lt h'
 
+/-! ## Pinned bytes. -/
+
+/-- Pinned bytes: `ADD rax, 5` is REX.W, 83, C0, 05. -/
+theorem pin_addImm_rax_5 :
+    encodeCompactAdd (.addImm8 .rax 5) =
+      some [natByte 72, natByte 131, natByte 192, natByte 5] := by
+  decide
+
+/-- Pinned decode: `ADD rax, 5`. -/
+theorem pin_addImm_rax_5_dekode :
+    decodeCompactAdd [natByte 72, natByte 131, natByte 192, natByte 5] =
+      some (((.addImm8 .rax 5) : CompactAddForm), []) := by
+  decide
+
+/-- Pinned bytes: `ADD r9, 255` carries the B extension bit. -/
+theorem pin_addImm_r9_ff :
+    encodeCompactAdd (.addImm8 .r9 255) =
+      some [natByte 73, natByte 131, natByte 193, natByte 255] := by
+  decide
+
+/-- Pinned decode: `ADD r9, 255`. -/
+theorem pin_addImm_r9_ff_dekode :
+    decodeCompactAdd [natByte 73, natByte 131, natByte 193, natByte 255] =
+      some (((.addImm8 .r9 255) : CompactAddForm), []) := by
+  decide
+
+/-! ## Explicit refusals: truncations, neighbours, non-canonical prefixes. -/
+
+/-- Truncated rows refuse: empty, lone REX, opcode without ModRM,
+    ModRM without the immediate byte. -/
+theorem sonde_abgeschnitten :
+    decodeCompactAdd [] = none ∧
+    decodeCompactAdd [natByte 72] = none ∧
+    decodeCompactAdd [natByte 72, natByte 131] = none ∧
+    decodeCompactAdd [natByte 72, natByte 131, natByte 192] = none := by
+  decide
+
+/-- Unsupported neighbours refuse: the imm32 opcode (129), a digit
+    other than /0 (/1 OR, /7 CMP), a memory ModRM (mod = 2), the
+    accumulator row (REX.W + 05), and prefixes outside 72/73 (REX.R,
+    missing REX.W, no REX at all). -/
+theorem sonde_nachbarn :
+    decodeCompactAdd [natByte 72, natByte 129, natByte 192, natByte 5] =
+        none ∧
+    decodeCompactAdd [natByte 72, natByte 131, natByte 200, natByte 5] =
+        none ∧
+    decodeCompactAdd [natByte 72, natByte 131, natByte 248, natByte 5] =
+        none ∧
+    decodeCompactAdd [natByte 72, natByte 131, natByte 131, natByte 5] =
+        none ∧
+    decodeCompactAdd
+        [natByte 72, natByte 5, natByte 1, natByte 0, natByte 0,
+          natByte 0] = none ∧
+    decodeCompactAdd [natByte 76, natByte 131, natByte 192, natByte 5] =
+        none ∧
+    decodeCompactAdd [natByte 64, natByte 131, natByte 192, natByte 5] =
+        none ∧
+    decodeCompactAdd [natByte 131, natByte 192, natByte 5] = none := by
+  decide
+
+/-! ## Prefix dispatch: no collision with the pilot decoder.
+
+  Neither decoder is rewritten: the pilot `decode` refuses the covered
+  row (its REX dispatch admits no group opcode 131), and
+  `decodeCompactAdd` refuses every pilot row (no pilot row is an
+  admitted REX followed by opcode 131 with a /0 register-direct
+  ModRM). -/
+
+/-- The pilot decoder refuses the covered row for every immediate,
+    over any suffix. -/
+theorem pilot_verweigert_compactAdd (dst : Register) (n : Nat)
+    (suffix : List Byte) :
+    decode ([rexByte 0 (regHigh dst), natByte 131,
+      natByte (192 + regLow dst), natByte n] ++ suffix) = none := by
+  cases dst <;> rfl
+
+/-- The compact decoder refuses every pilot row, over any suffix. -/
+theorem compactAdd_verweigert_pilot (b : Befehl) (suffix : List Byte) :
+    decodeCompactAdd (encode b ++ suffix) = none := by
+  cases b with
+  | movImm64 dst v => cases dst <;> rfl
+  | movReg64 dst src => cases dst <;> cases src <;> rfl
+  | addReg64 dst src => cases dst <;> cases src <;> rfl
+  | subReg64 dst src => cases dst <;> cases src <;> rfl
+  | xorReg64 dst src => cases dst <;> cases src <;> rfl
+  | cmpReg64 lhs rhs => cases lhs <;> cases rhs <;> rfl
+  | load64 dst base d => cases dst <;> cases base <;> rfl
+  | store64 base src d => cases base <;> cases src <;> rfl
+  | jump32 d => rfl
+  | jumpIf32 c d => cases c <;> rfl
+  | call32 d => rfl
+  | push64 src => cases src <;> rfl
+  | pop64 dst => cases dst <;> rfl
+  | ret => rfl
+
 /- CUTS:
     Proved here so far: sign-extended imm8 (`immSext` reusing canonical
     `sext .b8`) with one pin.
