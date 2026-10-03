@@ -4,6 +4,8 @@ Lane 1109, report-only independent review. Clone verified: `/home/simon/Dokument
 branch `muse/1109` (via `.git/HEAD`). OWN ONLY respected: this report is the only file written;
 no source, private, root, or network changes.
 
+CANDIDATE: 1108 b58ec1acb4e73aad93c5e3671b569860b2903a4d
+
 ## Candidate identity (exact)
 
 - Author 1108, pinned HEAD `b58ec1acb4e73aad93c5e3671b569860b2903a4d`, base `9fb1d5e9`,
@@ -68,7 +70,9 @@ no source, private, root, or network changes.
   successfully (513 jobs)` (BUILD-EVIDENCE.json; one intermediate 1-error probe during development
   is shown and then fixed — honest incremental evidence).
 
-## VERDICT: ACCEPT
+## Decision
+
+VERDICT: ACCEPT
 
 Candidate 1108 at `b58ec1acb4e73aad93c5e3671b569860b2903a4d` is accepted as reviewed: all three
 targets (`s32Fetched_schritt`, `s32Fetched_narrowing`, `s32Fetched_lift_schnittstelle`) are proved
