@@ -53,4 +53,57 @@ structure CoalAnalyse where
 def coalZulassen (rw : CoalRewrite) (an : CoalAnalyse) : Bool :=
   rw.gleicheWeite && an.avail && an.dominiert && (!an.adressGenommen) && (!an.callArg)
 
+/-! ## 1. Refusals: every failing side condition refuses the rule.
+
+    DESIGN section 7 example-1 counterexample (`v1` redefined between:
+    recomputed avail refuses) and the row failure case (address-taken
+    spill via call arg refuses). Each is proved of the decided Bool, so
+    the validator cannot silently skip it. -/
+
+/-- Redefined between: no avail, no coalescing. -/
+theorem coalVerweigert_avail (rw : CoalRewrite) (an : CoalAnalyse)
+    (h : an.avail = false) :
+    coalZulassen rw an = false := by
+  simp [coalZulassen, h]
+
+/-- Use not dominated by the definition: refused. -/
+theorem coalVerweigert_dominiert (rw : CoalRewrite) (an : CoalAnalyse)
+    (h : an.dominiert = false) :
+    coalZulassen rw an = false := by
+  simp [coalZulassen, h]
+
+/-- Width mismatch between source and copy: refused. -/
+theorem coalVerweigert_weite (rw : CoalRewrite) (an : CoalAnalyse)
+    (h : rw.gleicheWeite = false) :
+    coalZulassen rw an = false := by
+  simp [coalZulassen, h]
+
+/-- Address-taken slot: the spill must stay, the copy must stay. -/
+theorem coalVerweigert_adressGenommen (rw : CoalRewrite) (an : CoalAnalyse)
+    (h : an.adressGenommen = true) :
+    coalZulassen rw an = false := by
+  simp [coalZulassen, h]
+
+/-- Slot travelling as a call argument (callee-visible footprint):
+    the copy must stay. -/
+theorem coalVerweigert_callArg (rw : CoalRewrite) (an : CoalAnalyse)
+    (h : an.callArg = true) :
+    coalZulassen rw an = false := by
+  simp [coalZulassen, h]
+
+/-- Probe: the fully admitted certificate passes. -/
+theorem probe_coalZulassen_ok :
+    coalZulassen ⟨0, 1, true⟩ ⟨true, true, false, false⟩ = true := by
+  decide
+
+/-- Probe: a redefined source (avail lost) is refused. -/
+theorem probe_coalZulassen_avail :
+    coalZulassen ⟨0, 1, true⟩ ⟨false, true, false, false⟩ = false := by
+  decide
+
+/-- Probe: the address-taken spill via call arg is refused. -/
+theorem probe_coalZulassen_spillCall :
+    coalZulassen ⟨0, 1, true⟩ ⟨true, true, true, true⟩ = false := by
+  decide
+
 end Gabbro.Grammatik.X86
