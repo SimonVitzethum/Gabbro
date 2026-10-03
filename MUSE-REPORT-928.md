@@ -6,7 +6,9 @@ Review-only lane: owns ONLY this file. No source touched, no live controls used.
 
 CANDIDATE: 778 7f1d760210299e16164813ac25f9e95de3f9b04a
 
-VERDICT: ACCEPT (bounded — scope bounds in §5, reproduction boundary in §4)
+VERDICT: ACCEPT
+
+Scope of this acceptance is bounded (bounds in §5, reproduction boundary in §4).
 
 ## 1. What was reviewed
 
@@ -140,8 +142,8 @@ demanding more would exceed the accepted vocabulary or the owner task.
 
 ## 6. Result
 
-CANDIDATE: 778 7f1d760210299e16164813ac25f9e95de3f9b04a
-VERDICT: ACCEPT (bounded per §5; reproduction boundary per §4).
+The reviewed candidate (stated once at the top of this report) is accepted
+within the bounds of §5 and the reproduction boundary of §4.
 
 No repairs requested. No guarantee weakened, no desired-simulation premise
 introduced, no fake closure found.
