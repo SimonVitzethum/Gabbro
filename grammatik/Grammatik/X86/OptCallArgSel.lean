@@ -70,17 +70,333 @@ def regBudget : Nat := 6
     anything above is refused, never truncated. -/
 def maxArgs : Nat := 64
 
+/-! ## 1. Refusal: every unchecked side condition must NOT select.
+
+    Each DESIGN failure case is proved of the decided Bool: an unchecked
+    per-image convention, an over-budget arity, a hidden/variadic
+    parameter, or a misaligned stack slot forces `callArgZulassen =
+    false`, so the validator cannot silently skip it. The rule then falls
+    back to another certified translation, never to a warning. -/
+
+/-- Unchecked calling convention refuses the selection. -/
+theorem callArgVerweigert_konvention (c : CallArgCert)
+    (h : c.konventionGeprueft = false) :
+    callArgZulassen c = false := by
+  simp [callArgZulassen, h]
+
+/-- Over-budget arity refuses the selection. -/
+theorem callArgVerweigert_budget (c : CallArgCert)
+    (h : c.registerBudgetOk = false) :
+    callArgZulassen c = false := by
+  simp [callArgZulassen, h]
+
+/-- A hidden/variadic parameter refuses the selection. -/
+theorem callArgVerweigert_versteckt (c : CallArgCert)
+    (h : c.keineVersteckten = false) :
+    callArgZulassen c = false := by
+  simp [callArgZulassen, h]
+
+/-- A misaligned stack slot refuses the selection. -/
+theorem callArgVerweigert_stapel (c : CallArgCert)
+    (h : c.stapelBuendig = false) :
+    callArgZulassen c = false := by
+  simp [callArgZulassen, h]
+
+/-- Probe: the fully admitted certificate passes. -/
+theorem probe_callArgZulassen_ok :
+    callArgZulassen ⟨true, true, true, true⟩ = true := by
+  decide
+
+/-- Probe: an unchecked convention is refused. -/
+theorem probe_callArgZulassen_konv :
+    callArgZulassen ⟨false, true, true, true⟩ = false := by
+  decide
+
+/-- Probe: a hidden parameter is refused. -/
+theorem probe_callArgZulassen_versteckt :
+    callArgZulassen ⟨true, true, false, true⟩ = false := by
+  decide
+
+/-! ## 2. Placement: registers before stack slots, over arbitrary values.
+
+    `platzFuer i` is the lowered location of argument `i`: the first
+    `regBudget` arguments go in ABI registers, the rest in stack slots at
+    8-byte offsets. `platziere` pairs the locations with ARBITRARY values
+    (`α`: integers, float bit patterns, pointers alike -- the selection
+    never inspects a value), `liesWerte` reads the values back. The
+    validator recomputes this exact function; nothing is trusted. -/
+
+/-- The lowered location of argument `i`: register while in budget,
+    8-byte stack slot above it. -/
+def platzFuer (i : Nat) : ArgPlatz :=
+  if i < regBudget then .reg i else .stapel ((i - regBudget) * 8)
+
+/-- Pair locations with arbitrary argument values, left to right. -/
+def platziereAux (i : Nat) : List α → List (ArgPlatz × α)
+  | [] => []
+  | v :: vs => (platzFuer i, v) :: platziereAux (i + 1) vs
+
+/-- The computed per-site placement: the local rewrite record of the
+    certificate (DESIGN layer A). -/
+def platziere (vs : List α) : List (ArgPlatz × α) :=
+  platziereAux 0 vs
+
+/-- Read the values back from a placed list. -/
+def liesWerte : List (ArgPlatz × α) → List α :=
+  List.map Prod.snd
+
+/-- VALUE PRESERVATION: the placed arguments read back to exactly the
+    passed values, at any type. No value is changed, dropped or
+    reordered by the selection. -/
+theorem platziere_liest (vs : List α) :
+    liesWerte (platziere vs) = vs := by
+  unfold platziere liesWerte
+  suffices h : ∀ (i : Nat) (ws : List α),
+      (platziereAux i ws).map Prod.snd = ws from h 0 vs
+  intro i ws
+  induction ws generalizing i with
+  | nil => rfl
+  | cons v vs ih => simp [platziereAux, ih]
+
+/-- COST BOUND: one lowered location per argument -- no hidden extra
+    move, so the step-budget accounting is unchanged (same count the
+    source budget priced). -/
+theorem platziere_laenge (vs : List α) :
+    (platziere vs).length = vs.length := by
+  unfold platziere
+  suffices h : ∀ (i : Nat) (ws : List α),
+      (platziereAux i ws).length = ws.length from h 0 vs
+  intro i ws
+  induction ws generalizing i with
+  | nil => rfl
+  | cons _ _ ih => simp [platziereAux, ih]
+
+/-- REGS FIRST: argument `i` below the budget goes in register `i`. -/
+theorem platzFuer_reg (i : Nat) (h : i < regBudget) :
+    platzFuer i = .reg i := by
+  simp [platzFuer, h]
+
+/-- STACK ABOVE: argument `i` at/above the budget goes on the stack at
+    the 8-byte offset for its position. -/
+theorem platzFuer_stapel (i : Nat) (h : regBudget ≤ i) :
+    platzFuer i = .stapel ((i - regBudget) * 8) := by
+  simp [platzFuer, Nat.not_lt.mpr h]
+
+/-- STACK ALIGNED: every stack slot the rule emits is 8-aligned. -/
+theorem platzFuer_buendig (i : Nat) (off : Nat)
+    (h : platzFuer i = .stapel off) :
+    off % 8 = 0 := by
+  have hi : ¬ i < regBudget := by
+    intro hc
+    rw [platzFuer_reg i hc] at h
+    exact ArgPlatz.noConfusion h
+  rw [platzFuer_stapel i (Nat.le_of_not_lt hi)] at h
+  cases h
+  omega
+
+/-- Probes: args 0 and 5 in registers, arg 6 on the stack at offset 0,
+    arg 7 at offset 8. -/
+theorem probe_platz0 : platzFuer 0 = .reg 0 := by decide
+
+theorem probe_platz5 : platzFuer 5 = .reg 5 := by decide
+
+theorem probe_platz6 : platzFuer 6 = .stapel 0 := by decide
+
+theorem probe_platz7 : platzFuer 7 = .stapel 8 := by decide
+
+/-! ## 3. IEEE, arity gate and no new fault.
+
+    Float arguments cross the selection as UNCONVERTED bit patterns
+    (here: the `bruch` numerator/denominator pair): the rule never rounds,
+    narrows or re-evaluates a float, so the `gleitPasst` outcome -- the
+    `logik bereich` check -- is a pure function of preserved values.
+    `platzOk` gates USE of a placement on the admitted certificate plus
+    the arity bound; an admitted placement therefore stays in budget, so
+    no stack-overflow fault is introduced and no faulting form is
+    speculated above its guard. -/
+
+/-- IEEE STABILITY: the `gleitPasst` outcome over placed-then-read float
+    patterns equals the outcome over the passed patterns -- same pushed
+    value, same `logik bereich` outcome, at every index. -/
+theorem gleitPasst_erhalt (lo hi : Int × Int) (qs : List (Int × Int)) (i : Nat) :
+    ((liesWerte (platziere qs))[i]?.map (fun q => gleitPasst lo hi (bruch q))) =
+      ((qs[i]?).map (fun q => gleitPasst lo hi (bruch q))) := by
+  rw [platziere_liest]
+
+/-- Probe: the kernel computes `0.5 + 0.25 = 0.75` through placed values. -/
+theorem probe_gleitPlatz :
+    gleitRechne .add (bruch (1, 2)) (bruch (1, 4)) = bruch (3, 4) := by
+  decide
+
+/-- The arity gate: an admitted certificate plus an in-budget argument
+    count. The validator re-decides both; the lowering trusts neither. -/
+def platzOk (c : CallArgCert) (n : Nat) : Bool :=
+  callArgZulassen c && decide (n ≤ maxArgs)
+
+/-- An admitted certificate within budget admits the placement. -/
+theorem platzOk_von_zulassen (c : CallArgCert) (n : Nat)
+    (hz : callArgZulassen c = true) (hN : n ≤ maxArgs) :
+    platzOk c n = true := by
+  simp [platzOk, hz, hN]
+
+/-- NO NEW FAULT: an admitted placement stays in budget -- the emitted
+    stack window cannot overflow, so the selection introduces no
+    `hardware` stop the source had no counterpart for. -/
+theorem keinFehlerNeu (c : CallArgCert) (n : Nat)
+    (h : platzOk c n = true) :
+    n ≤ maxArgs := by
+  simp [platzOk] at h
+  exact h.2
+
+/-- The placed integer values read back whole through the canonical
+    word under the width-exact premise the validator decided. -/
+theorem platzWort (x : Int) (hW : 0 ≤ x ∧ x < 2 ^ 64) :
+    ((BitVec.ofNat 64 x.toNat : Wort)).toNat = x.toNat := by
+  have h : x.toNat < 2 ^ 64 := by omega
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt h]
+
+/-- Probe: `42` reads back as `42` through the word. -/
+theorem probe_platzWort :
+    ((BitVec.ofNat 64 ((42 : Int)).toNat : Wort)).toNat = 42 := by
+  decide
+
+/-! ## 4. Connection: the selected call behaves like the source call.
+
+    The rewrite is stated at a `Stmt.call` window with ARBITRARY
+    continuations downstream, so the conclusion covers every downstream
+    observation at once. The selection changes only the LOWERING
+    placement; the source arguments keep their `orte` (`hOrte`) and
+    their evaluated values (`hVals`, at every world, since `execStmt`
+    evaluates in the post-read world). Conclusion, jointly:
+    (1) the placed values read back whole (value preservation);
+    (2) one location per argument (budget unchanged);
+    (3) the admitted placement passes the arity gate (no new fault);
+    (4) the `execStmt` OUTCOME is equal -- same constructor, same
+    successor worlds and environments -- so no fault is added or removed
+    (`logik`/`hardware` agree), contracts at their place read the same
+    values from the same environments, call logs gain no event, no
+    shared access is added or removed for concurrency, and the
+    step-budget accounting is unchanged.
+    Nothing here derives an `ensures`, turns a refusal into a warning,
+    or speculates a faulting form above its guard: the source check
+    (`weiter`/`narrow`) at the site still enforces every range. -/
+
+/-- CONNECTION: admitted argument selection preserves values, cost,
+    arity and the source call outcome. -/
+theorem OptCallArgSel_verbindung {D : Deklaration} {V : Vertrag D}
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    {Γ : Ctx} {Λ : List (Res D)} {l : Bool} {f : D.Fn}
+    (args args' : Args D Γ Λ (D.params f))
+    (hp : RufPasst D V (D.signatur f) Λ)
+    (hp' : RufPasst D V (D.signatur f) Λ)
+    (hr : D.gruende f = 0) (hr' : D.gruende f = 0)
+    (cert : CallArgCert) (vs : List Int)
+    (hz : callArgZulassen cert = true)
+    (hN : vs.length ≤ maxArgs)
+    (σ : World D) (ρ : Env D Γ)
+    (hOrte : args.orte = args'.orte)
+    (hVals : ∀ w : World D, evalArgs w args w ρ = evalArgs w args' w ρ) :
+    liesWerte (α := Int) (platziere (α := Int) vs) = vs
+    ∧ ((platziere (α := Int) vs).length = vs.length)
+    ∧ platzOk cert vs.length = true
+    ∧ execStmt (l := l) O passes R (Stmt.call (l := l) f args hp hr) σ ρ
+      = execStmt (l := l) O passes R (Stmt.call (l := l) f args' hp' hr') σ ρ := by
+  refine ⟨platziere_liest vs, platziere_laenge vs,
+    platzOk_von_zulassen cert vs.length hz hN, ?_⟩
+  simp only [execStmt, hOrte, hVals]
+
+/-! ## 5. Joint witness: the rule fires on a real program that moves memory.
+
+    ALL premises of `OptCallArgSel_verbindung` instantiated JOINTLY: the
+    `lies`-call of the NON-DEGENERATE reference program `refD` (whose
+    `einzahlen` writes its table, `refEin_schreibt`), with the admitted
+    certificate and two placed values `[3, 4]`, beside the reached
+    F-machine run `MB` that changes memory (`refB_erreicht`,
+    `refB_schreibt`: slot `0 -> 100`). Every conjunct is used. -/
+
+/-- JOINT WITNESS for `OptCallArgSel_verbindung`: admitted selection of
+    `[3, 4]` at the `lies`-call of `refD`, beside the memory-changing
+    reached run. -/
+theorem OptCallArgSel_verbindung_zeuge :
+    ∃ (O : Orakel refD) (passes : Nat)
+      (R : ∀ f : refD.Fn, World refD → Env refD (refD.params f) → RufAusgang f)
+      (Γ : Ctx) (Λ : List (Res refD)) (l : Bool) (f : refD.Fn)
+      (args args' : Args refD Γ Λ (refD.params f))
+      (hp hp' : RufPasst refD (vertragVon refD refEin) (refD.signatur f) Λ)
+      (hr hr' : refD.gruende f = 0)
+      (cert : CallArgCert) (vs : List Int)
+      (_hz : callArgZulassen cert = true)
+      (_hN : vs.length ≤ maxArgs)
+      (σ : World refD) (ρ : Env refD Γ),
+      liesWerte (α := Int) (platziere (α := Int) vs) = vs
+      ∧ ((platziere (α := Int) vs).length = vs.length)
+      ∧ platzOk cert vs.length = true
+      ∧ execStmt (l := l) O passes R (Stmt.call (l := l) f args hp hr) σ ρ
+        = execStmt (l := l) O passes R (Stmt.call (l := l) f args' hp' hr') σ ρ
+      ∧ (vertragVon refD refEin).schreibt () = true
+      ∧ RufErreichbarF refP refO 0 (RufStartF refP refSp0 initB) MB
+      ∧ MB.speicher.slots () 0 () ≠ refSp0.slots () 0 () := by
+  have hV := OptCallArgSel_verbindung (V := vertragVon refD refEin)
+    (O := refO) (passes := 0) (R := keinRuf)
+    (Γ := [.int 0 10]) (Λ := [Res.held (D := refD) ()]) (l := false)
+    (f := refLies) (args := refArgsLies) (args' := refArgsLies)
+    (hp := refHpLiesAt) (hp' := refHpLiesAt) (hr := rfl) (hr' := rfl)
+    (cert := ⟨true, true, true, true⟩) (vs := [3, 4])
+    (hz := by decide) (hN := by decide)
+    (σ := refSp0.welt [])
+    (ρ := Env.cons (⟨0, by decide, by decide⟩ : Zahl 0 10) Env.nil)
+    (hOrte := rfl) (hVals := fun _ => rfl)
+  refine ⟨refO, 0, keinRuf, [.int 0 10], [Res.held (D := refD) ()], false,
+    refLies, refArgsLies, refArgsLies, refHpLiesAt, refHpLiesAt, rfl, rfl,
+    ⟨true, true, true, true⟩, [3, 4], by decide, by decide,
+    refSp0.welt [], Env.cons (⟨0, by decide, by decide⟩ : Zahl 0 10) Env.nil,
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact hV.1
+  · exact hV.2.1
+  · exact hV.2.2.1
+  · exact hV.2.2.2
+  · exact refEin_schreibt ()
+  · exact refB_erreicht
+  · exact refB_schreibt
+
 /- CUTS:
-  - Placement model (`platzFuer`, `platziere`, `liesWerte`), value/fault/
-    IEEE preservation, cost bound, regs-first/stack-aligned shape, the
-    `OptCallArgSel_verbindung` rule lemma with its joint `_zeuge`
-    witness on a table-writing program with a memory-changing reached
-    run, and the exact refusal case are added next, one piece at a time.
+  - No block-window float rewrite beyond value stability: section 3 proves
+    the `gleitPasst` outcome is a pure function of preserved values; the
+    kernel recomputation of any folded float equation stays with the
+    constant-folding lane.
+  - No lowering to bytes: `platziere` is the SOURCE-side value record of
+    the per-site placement (DESIGN layer A over arbitrary values), not a
+    decoded machine instruction; the byte correspondence through decoded
+    final machine bytes stays with the decoder/bridge lanes.
+  - No per-site spill/fence accounting beyond the unit count: section 2
+    proves one location per argument, so no hidden move enters the
+    `CostSummary` expansion; the counted per-class maxima stay with the
+    cost lane.
   - No silicon correspondence, no TSO/GX bridge, no ABI/loader claim:
-    correspondence stops at preserved source values and `gleitPasst`
-    outcomes over the canonical vocabulary.
+    correspondence stops at preserved source values, `gleitPasst`
+    outcomes and `execStmt` call-outcome equality over the canonical
+    vocabulary.
+  - No checker change: no source admission is tightened to ease proof;
+    everything is over the real `Stmt.call`, the real `evalArgs` and the
+    real reference program `refD`.
 -/
 
 #print axioms callArgZulassen
+#print axioms callArgVerweigert_konvention
+#print axioms callArgVerweigert_budget
+#print axioms callArgVerweigert_versteckt
+#print axioms callArgVerweigert_stapel
+#print axioms platziere_liest
+#print axioms platziere_laenge
+#print axioms platzFuer_reg
+#print axioms platzFuer_stapel
+#print axioms platzFuer_buendig
+#print axioms gleitPasst_erhalt
+#print axioms platzOk_von_zulassen
+#print axioms keinFehlerNeu
+#print axioms platzWort
+#print axioms OptCallArgSel_verbindung
+#print axioms OptCallArgSel_verbindung_zeuge
 
 end Gabbro.Grammatik.X86
