@@ -428,7 +428,7 @@ Last ledger refresh: **2026-10-03 13:11 UTC**. This is an operational snapshot, 
 | 750 | Hardware completion: compact CMP with imm8 | Incomplete; preserved | 900: scheduled | [task](lanes/750.md) |
 | 751 | Hardware completion: compact AND/OR/XOR with imm8 | Merged after review/checks | 901: Merged after review/checks | [report](messung/muse/MUSE-REPORT-751.md) |
 | 752 | Hardware completion: compact ADD/SUB/CMP with imm32 | Agent working | 902: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/752.md) |
-| 753 | Hardware completion: accumulator short ALU forms | Merged after review/checks | 903: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-753.md) |
+| 753 | Hardware completion: accumulator short ALU forms | Merged after review/checks | 903: Merged after review/checks | [report](messung/muse/MUSE-REPORT-753.md) |
 | 754 | Hardware completion: zero idiom XOR reg, reg | Committed candidate; review/integration pending | 904: Committed candidate; review/integration pending | [task](lanes/754.md) |
 | 755 | Hardware completion: pure LEA address arithmetic | Merged after review/checks | 905: Merged after review/checks | [report](messung/muse/MUSE-REPORT-755.md) |
 | 756 | Hardware completion: compact TEST with imm | Incomplete; preserved | 906: scheduled | [task](lanes/756.md) |
@@ -1134,6 +1134,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **901**, Independent exact review of 751, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-901.md). <!-- x86-merged:901 -->
 - 2026-10-03: lane **753**, Hardware completion: accumulator short ALU forms, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-753.md). <!-- x86-merged:753 -->
 - 2026-10-03: integration of candidate(s) [752] failed the local proof/build gate after independent review 902; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:902 -->
+- 2026-10-03: lane **903**, Independent exact review of 753, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-903.md). <!-- x86-merged:903 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
