@@ -6,7 +6,8 @@ Review-only lane: owns ONLY this file. No source touched, no live controls used.
 ## CANDIDATE and VERDICT
 
 CANDIDATE: 780 5c486ed6a46b366d8fda9a3b68fe98112f9607a5
-VERDICT: ACCEPT (bounded: MFENCE as own-buffer drain-then-gate over canonical TSO, no foreign discharge)
+VERDICT: ACCEPT
+Scope: bounded to MFENCE as own-buffer drain-then-gate over canonical TSO, no foreign discharge.
 
 Scope of acceptance: the three pinned files only
 (`MUSE-REPORT-780.md`, `grammatik/Grammatik.lean` one import line,
