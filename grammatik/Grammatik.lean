@@ -500,3 +500,4 @@ import Grammatik.X86.LockXaddFetch
 import Grammatik.X86.XchgOrderNeed
 import Grammatik.X86.MfenceDrainOwn
 import Grammatik.X86.SfenceStoreNarrow
+import Grammatik.X86.LfenceLoadNarrow
