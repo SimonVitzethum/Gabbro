@@ -50,19 +50,62 @@ def familienCode : PendingFam → Nat
   | .avx690 => 690
   | .rueck708 => 708
 
+/-- Dispatcher-refusal pin per pending family: representative bytes
+    from each family's region that the accepted unified dispatcher
+    refuses today. The LOCK pin reuses the closed 730 witness bytes
+    (`lockAdrWitBild`): the adapter takes exactly what the dispatcher
+    refuses. Near `ret` (`0xC3`) stays accepted pilot, so the returns
+    pin uses `iret` (`0xCF`). These pins show refusal, not row
+    ownership: which bytes each family will accept stays with the
+    owning lanes. -/
+def istOffen : PendingFam → Prop
+  | .breite696 => decodeExt [natByte 102, natByte 137, natByte 216] = none
+  | .breite698 => decodeExt [natByte 64, natByte 144] = none
+  | .lock722 => decodeExt [natByte 240, natByte 77, natByte 15, natByte 193,
+      natByte 68, natByte 200, natByte 0] = none
+  | .fp724 => decodeExt [natByte 243, natByte 15, natByte 16,
+      natByte 192] = none
+  | .seiten726 => decodeExt [natByte 15, natByte 1, natByte 56] = none
+  | .steuer734 => decodeExt [natByte 15, natByte 11] = none
+  | .kontext736 => decodeExt [natByte 15, natByte 174, natByte 0] = none
+  | .avx690 => decodeExt [natByte 197, natByte 248, natByte 119] = none
+  | .rueck708 => decodeExt [natByte 207] = none
+
+/-- LUECKEN: every pending family stays open through its refusal pin.
+    The explicit `cases ... with` arms enumerate all nine families,
+    so adding a family without a pin is a type error. -/
+theorem composeAccepted_luecken (p : PendingFam) : istOffen p := by
+  cases p with
+  | breite696 => unfold istOffen; decide
+  | breite698 => unfold istOffen; decide
+  | lock722 => unfold istOffen; decide
+  | fp724 => unfold istOffen; decide
+  | seiten726 => unfold istOffen; decide
+  | steuer734 => unfold istOffen; decide
+  | kontext736 => unfold istOffen; decide
+  | avx690 => unfold istOffen; decide
+  | rueck708 => unfold istOffen; decide
+
+/-- The gap enumeration is inhabited: the LOCK family is open. -/
+theorem composeAccepted_luecken_zeuge : ∃ (p : PendingFam), istOffen p :=
+  ⟨.lock722, composeAccepted_luecken .lock722⟩
+
 /- CUTS:
    Proved here so far: the pending-family enumeration `PendingFam`
-   with its lane-number audit `familienCode`.
-   NOT proved here, and not claimed: everything in the lane task --
-   the fetched-execution closing, the integer/TSO, address, priority
-   and descriptor/stack composition, the joint witness and the
-   planted probes. Pending families (width rows 696/698, LOCK 722,
-   FP 724, paging 726, control 734, context 736, AVX2 690, returns
-   708) are never imported (especially not modules owned by lanes
+   with its lane-number audit `familienCode`, and the gap closing
+   `composeAccepted_luecken` (every family refused through its pin,
+   exhaustive arms) with its inhabitant.
+   NOT proved here, and not claimed: the fetched-execution closing,
+   the integer/TSO, address, priority and descriptor/stack
+   composition, the joint witness and the planted probes. Pending
+   families are never imported (especially not modules owned by lanes
    718/722/724/726/734/736/690/708/696/698), never assumed, and never
-   closed by a premise shaped like the conclusion.
+   closed by a premise shaped like the conclusion. The `istOffen`
+   pins show dispatcher refusal, not row ownership.
 -/
 
 #print axioms familienCode
+#print axioms composeAccepted_luecken
+#print axioms composeAccepted_luecken_zeuge
 
 end Gabbro.Grammatik.X86
