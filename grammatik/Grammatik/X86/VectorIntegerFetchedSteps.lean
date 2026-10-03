@@ -363,4 +363,137 @@ theorem vecFetched_slot_schnittstelle_zeuge :
   unfold vecSlotVon
   rw [hpilot, hext, hintHw, hfpHw, hlock, hind, hmxcsr, hpush, hpop, hcpu]
 
+/-- SHARED STORE, REFUSED (planted probe): a fetched unaligned
+    vector store to a shared address is refused by the checked gate,
+    even where fetch and decoding succeed. -/
+theorem vecFetched_geteilt_u_verweigert (t : FpZustand) (hw : HwProfil)
+    (b : BereitProfil) (cpu : CpuMerkmal) (k : KontrollBild)
+    (d : IntVecDec) (rest : List Byte) (base : Register) (src : XmmReg)
+    (disp : BitVec 32)
+    (hf : fetchIntVec t (geholt t.kern) = some (d, rest))
+    (hstore : d.op = .movdquSt base src disp) :
+    vecFetched t hw b cpu k true = none := by
+  unfold vecFetched
+  simp only [hf, hstore, vecGeteiltFrei_versperrt_u]
+
+/-- SHARED STORE, REFUSED (planted probe): the aligned twin. -/
+theorem vecFetched_geteilt_a_verweigert (t : FpZustand) (hw : HwProfil)
+    (b : BereitProfil) (cpu : CpuMerkmal) (k : KontrollBild)
+    (d : IntVecDec) (rest : List Byte) (base : Register) (src : XmmReg)
+    (disp : BitVec 32)
+    (hf : fetchIntVec t (geholt t.kern) = some (d, rest))
+    (hstore : d.op = .movdqaSt base src disp) :
+    vecFetched t hw b cpu k true = none := by
+  unfold vecFetched
+  simp only [hf, hstore, vecGeteiltFrei_versperrt_a]
+
+/-- 129TH-BIT DEPENDENCE, REFUSED (planted probe): left-shift
+    results are a function of the 128-bit word value alone. Two equal
+    words never shift apart, so no bit beyond 127 influences any packed
+    shift left. -/
+theorem vecFetched_bit129_shl_verweigert :
+    ¬ ∃ (v w : Vektor) (c : Nat),
+      v = w ∧ vecShlQ v c ≠ vecShlQ w c := by
+  intro h
+  obtain ⟨v, w, c, heq, hne⟩ := h
+  subst heq
+  exact hne rfl
+
+/-- 129TH-BIT DEPENDENCE, REFUSED (planted probe): the right-shift
+    twin. -/
+theorem vecFetched_bit129_shr_verweigert :
+    ¬ ∃ (v w : Vektor) (c : Nat),
+      v = w ∧ vecShrQ v c ≠ vecShrQ w c := by
+  intro h
+  obtain ⟨v, w, c, heq, hne⟩ := h
+  subst heq
+  exact hne rfl
+
+/-- The 730 address discipline for the vector memory rows: every
+    row addresses through the accepted `effAddr` of the pre-state
+    register file -- no second address model -- so the accepted
+    prestate-aliasing transfers to all four load/store rows. -/
+theorem vecFetched_adresse_prestate (s1 s2 : Zustand) (base : Register)
+    (disp : BitVec 32)
+    (h : s1.register base = s2.register base) :
+    effAddr s1 base disp = effAddr s2 base disp :=
+  effAddr_prestate s1 s2 base disp h
+
+/-- The 720 no-single-event discipline for the vector memory rows: the
+    witness 128-bit store factors into the two ordered canonical
+    64-bit chunk writes with the torn intermediate state standing --
+    never one atomic 16-byte event. -/
+theorem vecFetched_zwei_chunks :
+    ∃ m1 : Speicher,
+      write64 ivT3.kern.speicher (effAddr ivT3.kern .rax 16)
+          (vLo (ivT3.xmm .xmm3)) = some m1 ∧
+        write64 m1 (vecHiAddr (effAddr ivT3.kern .rax 16))
+          (vHi (ivT3.xmm .xmm3)) = some ivM4 :=
+  vecWrite_aufgeteilt _ _ _ _ ivHwr
+
+/-- JOINT WITNESS (non-degenerate): a fetched packed row agrees
+    through the wrapper, while the lane-shift and memory rows of the
+    accepted joint sequence run with an observably memory-changing
+    store. The run reaches its steps and changes memory (byte 18); the
+    frame byte, the sentinel register and the flags stay put in 686. -/
+theorem vecFetched_joint_zeuge :
+    ∃ t' : FpZustand,
+      vecFetched ivCodeT basisHw ivBereit basisCpu basisKontrolle
+          false = some t' ∧
+        stepIntVec (⟨.psllqImm .xmm3 8, 6⟩ : IntVecDec) ivT2 basisHw
+          ivBereit basisCpu basisKontrolle = some ivT3 ∧
+        stepIntVec (⟨.movdqaSt .rax .xmm3 16, 9⟩ : IntVecDec) ivT3
+          basisHw ivBereit basisCpu basisKontrolle = some ivT4 ∧
+        ivT4.kern.speicher.bytes (natAdresse 18) ≠
+          ivT0.kern.speicher.bytes (natAdresse 18) := by
+  refine ⟨_, vecFetched_schritt_zeuge, ivS3, ivS4, ?_⟩
+  decide
+
+/- CUTS: what is not proved here.
+
+   - Legacy YMM upper bits (`MAXVL-1:128` unmodified) stay unmodelled,
+     as in lane 686: no YMM state exists in `FpZustand`.
+   - No 128-bit single-copy atomicity is claimed anywhere: every
+     load/store factors into the two ordered canonical 64-bit chunk
+     accesses (`vecFetched_zwei_chunks`); the torn intermediate stands.
+   - Shared vector stores are refused by the checked gate
+     (`vecGeteiltFrei`) until the 6B TSO bridge rules them. Per-access
+     TSO granularity, GX refinement and global visibility stay OPEN.
+   - The 730 canonicality adapter (`kanonisch48`, `fussZugelassen`) is
+     not re-proved for the vector rows: addresses reuse the accepted
+     `effAddr` (no second address model, `vecFetched_adresse_prestate`),
+     permissions stay per-byte data facts as in 686.
+   - Dispatch-slot disjointness holds for the pinned canonical bytes
+     only. The discriminator order (pilot, ext, nine producers,
+     intVec) documents priority; shadowing-freedom over ALL byte
+     strings, and producer rows beyond the pinned CPUID bytes, stay
+     OPEN. The 694 MMIO byte slot coincides with `ext` (shared unified
+     dispatch); only its profile side is pinned (`vecSlot_mmio`).
+   - Masked-count scalar semantics is not unified with these rows by
+     construction (`VecShiftLesart` has no masked constructor); the
+     refusal is pinned (`vecFetched_maskiert_verweigert`).
+   - Source correspondence, budget transfer, progress, call-log
+     effects and `simdFreigabe` stay open, as in 686.
+   - Unaccepted lanes 718/724 are not imported; this module is their
+     consumption point, not their proof.
+-/
+
+#print axioms vecFetched
+#print axioms vecGeteiltFrei
+#print axioms vecSlotVon
+#print axioms vecFetched_schritt
+#print axioms vecFetched_satt_erhalten
+#print axioms vecFetched_slot_schnittstelle
+#print axioms vecFetched_joint_zeuge
+#print axioms vecFetched_schritt_zeuge
+#print axioms vecFetched_satt_erhalten_zeuge
+#print axioms vecFetched_slot_schnittstelle_zeuge
+#print axioms vecFetched_maskiert_verweigert
+#print axioms vecFetched_geteilt_u_verweigert
+#print axioms vecFetched_geteilt_a_verweigert
+#print axioms vecFetched_bit129_shl_verweigert
+#print axioms vecFetched_bit129_shr_verweigert
+#print axioms vecFetched_zwei_chunks
+#print axioms vecFetched_adresse_prestate
+
 end Gabbro.Grammatik.X86
