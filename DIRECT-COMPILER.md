@@ -551,7 +551,7 @@ Last ledger refresh: **2026-10-03 22:28 UTC**. This is an operational snapshot, 
 | 873 | Optimiser rule: inlining rule | Merged after review/checks | 1023: Merged after review/checks | [report](messung/muse/MUSE-REPORT-873.md) |
 | 874 | Optimiser rule: bounded unroll rule | Merged after review/checks | 1024: Merged after review/checks | [report](messung/muse/MUSE-REPORT-874.md) |
 | 875 | Optimiser rule: vectorisation gate rule | Merged after review/checks | 1025: Merged after review/checks | [report](messung/muse/MUSE-REPORT-875.md) |
-| 876 | Optimiser rule: flags peephole rule | Merged after review/checks | 1026: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-876.md) |
+| 876 | Optimiser rule: flags peephole rule | Merged after review/checks | 1026: Merged after review/checks | [report](messung/muse/MUSE-REPORT-876.md) |
 | 877 | Optimiser rule: displacement peephole rule | Committed candidate; review/integration pending | 1027: Committed candidate; review/integration pending | [task](lanes/877.md) |
 | 878 | Optimiser rule: linear-scan allocation rule | Committed candidate; review/integration pending | 1028: Committed candidate; review/integration pending | [task](lanes/878.md) |
 | 879 | Optimiser rule: spill freshness rule | Committed candidate; review/integration pending | 1029: Committed candidate; review/integration pending | [task](lanes/879.md) |
@@ -1298,6 +1298,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **875**, Optimiser rule: vectorisation gate rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-875.md). <!-- x86-merged:875 -->
 - 2026-10-03: lane **1025**, Independent exact review of 875, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1025.md). <!-- x86-merged:1025 -->
 - 2026-10-03: lane **876**, Optimiser rule: flags peephole rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-876.md). <!-- x86-merged:876 -->
+- 2026-10-03: lane **1026**, Independent exact review of 876, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1026.md). <!-- x86-merged:1026 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
