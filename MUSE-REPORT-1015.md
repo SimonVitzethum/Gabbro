@@ -8,10 +8,12 @@ touched; no network, no other clones, no keys.
 
 CANDIDATE: 865 b48e3f02c78ea13131aa7618a570e9d92f84a00e
 
-VERDICT: ACCEPT (bounded: semantic/architectural acceptance of the exact
+VERDICT: ACCEPT
+
+Bounded scope of this ACCEPT: semantic/architectural acceptance of the exact
 pinned snapshot as delivered under `.tmp/review/author-865/`; build
 greenness per the author's recorded queued-wrapper evidence below; the
-merge gate re-runs the build mechanically before integration).
+merge gate re-runs the build mechanically before integration.
 
 ## What was reviewed
 
