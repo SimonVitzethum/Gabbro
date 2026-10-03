@@ -12,6 +12,7 @@ import Grammatik.X86.Typen
 import Grammatik.X86.Speicher
 import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.IndirectControlHardwareForms
+import Grammatik.X86.HardwareFaults
 
 namespace Gabbro.Grammatik.X86
 
@@ -117,10 +118,69 @@ theorem jtSprungOk_slot (s : Zustand) (base : Register) (disp : BitVec 32)
   unfold jtSprungOk at h
   exact of_decide_eq_true h
 
+/-! ## 4. The connection: a certified fetched table jump.
+
+    A `jmpMem` fetched from actual executable bytes, whose effective
+    address is an in-bounds table slot of a certified table, lands on a
+    validator-tracked target: a decoded start or a listed entry, read
+    (never forged) from the table. The step keeps flags, memory and all
+    registers except RIP, observes no fault class, and runs through the
+    accepted fetched byte step. The target read comes from the pre-state
+    before control moves (inherited order of `jmpMemSchritt_erfolg`); the
+    admission is DERIVED from the certificate, never assumed. -/
+
+/-- CONNECTION: the certified fetched table jump lands tracked. -/
+theorem JumpTableCert_verbindung
+    (s s' : Zustand) (base : Register) (disp : BitVec 32) (len : Nat)
+    (basis : Adresse) (idx n : Nat)
+    (starts eintraege : List Adresse)
+    (rest : List Byte) (ziel : Wort)
+    (hzert : jtZertOk starts eintraege s.speicher basis n = true)
+    (hidx : idx < n)
+    (hslot : effAddr s base disp = tabSlot basis idx)
+    (hfetch : fetchInd s (geholt s) = some ((.jmpMem base disp len), rest))
+    (hrd : read64 s.speicher (effAddr s base disp) = some ziel)
+    (hstep : jmpMemSchritt len s base disp = some s') :
+    s'.rip = ziel ∧ s'.flags = s.flags ∧
+    s'.speicher = s.speicher ∧
+    (∀ q : Register, s'.register q = s.register q) ∧
+    (ziel ∈ starts ∨ ziel ∈ eintraege) ∧
+    leseKlasse s.speicher (effAddr s base disp) = none ∧
+    indByteschritt s = some s' ∧
+    jtGeschmiedetB s.speicher basis n ziel = false := by
+  have hok := (fetchInd_erfolg s (geholt s) _ _ hfetch).2.2.1
+  have htab : tabEintrag s.speicher basis idx = some ziel := by
+    unfold tabEintrag
+    rw [← hslot]
+    exact hrd
+  have hzul : indirektZielOk starts eintraege ziel = true :=
+    jtZertOk_eintrag starts eintraege s.speicher basis n idx ziel
+      hzert hidx htab
+  have hform : jmpMemSchritt len s base disp = some ({ s with rip := ziel }) :=
+    jmpMemSchritt_erfolg len s base disp ziel hok hrd
+  have hgleich : s' = { s with rip := ziel } := by
+    rw [hform] at hstep
+    cases hstep
+    rfl
+  have hschritt : indSchritt (.jmpMem base disp len) s = some s' := by
+    unfold indSchritt
+    exact hstep
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hgleich]
+  · rw [hgleich]
+  · rw [hgleich]
+  · intro q
+    rw [hgleich]
+  · exact indirektZielOk_garantiert starts eintraege ziel hzul
+  · exact leseErfolg_kein_fehler s.speicher (effAddr s base disp) ziel hrd
+  · exact indByteschritt_weiter s _ rest s' hfetch hschritt
+  · exact jtEcht_nicht_geschmiedet s.speicher basis n idx ziel hidx htab
+
 /- CUTS:
    Proved here so far: provenance, slots, entry reads, the certificate
    with its entry projection, table words with membership, the
-   forged-pointer check with genuine/forged facts, the bounded slot check.
+   forged-pointer check with genuine/forged facts, the bounded slot
+   check, and the connection theorem.
    NOT proved here, and not claimed: everything else (see task).
 -/
 
@@ -132,5 +192,6 @@ theorem jtSprungOk_slot (s : Zustand) (base : Register) (disp : BitVec 32)
 #print axioms jtEcht_nicht_geschmiedet
 #print axioms jtGeschmiedet_verweigert
 #print axioms jtSprungOk_slot
+#print axioms JumpTableCert_verbindung
 
 end Gabbro.Grammatik.X86
