@@ -21,7 +21,9 @@ appended), new `grammatik/Grammatik/X86/ComposeUnwindTable.lean` (272 lines).
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded; see scope notes below).
+VERDICT: ACCEPT
+
+Acceptance is bounded; see scope notes below.
 
 ## What was checked
 
