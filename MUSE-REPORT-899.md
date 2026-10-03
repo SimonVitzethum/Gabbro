@@ -19,7 +19,9 @@ the owner task (`.tmp/review/author-749/OWNER-TASK.md`), the author report
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded; scope is exactly one row, see CUTS below)
+VERDICT: ACCEPT
+
+Bound: acceptance is bounded to exactly one row (REX.W + 83 /5 ib, SUB r/m64, imm8, mod=3); see CUTS below.
 
 ## What was reviewed
 
