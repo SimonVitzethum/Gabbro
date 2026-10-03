@@ -500,7 +500,7 @@ Last ledger refresh: **2026-10-03 21:07 UTC**. This is an operational snapshot, 
 | 822 | Hardware completion: tier-2 MOVDQU instance | Scheduled | 972: scheduled | [task](lanes/822.md) |
 | 823 | Hardware completion: tier-2 PCMPEQB instance | Scheduled | 973: scheduled | [task](lanes/823.md) |
 | 824 | Composition closing: decode-to-execution closing | Merged after review/checks | 974: Merged after review/checks | [report](messung/muse/MUSE-REPORT-824.md) |
-| 825 | Composition closing: image-to-fetch closing | Merged after review/checks | 975: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-825.md) |
+| 825 | Composition closing: image-to-fetch closing | Merged after review/checks | 975: Merged after review/checks | [report](messung/muse/MUSE-REPORT-825.md) |
 | 826 | Composition closing: relocation-to-redecode closing | Committed candidate; review/integration pending | 976: Committed candidate; review/integration pending | [task](lanes/826.md) |
 | 827 | Composition closing: entry-to-mapping closing | Committed candidate; review/integration pending | 977: Committed candidate; review/integration pending | [task](lanes/827.md) |
 | 828 | Composition closing: stack-to-ABI closing | Committed candidate; review/integration pending | 978: Committed candidate; review/integration pending | [task](lanes/828.md) |
@@ -1196,6 +1196,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **824**, Composition closing: decode-to-execution closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-824.md). <!-- x86-merged:824 -->
 - 2026-10-03: lane **974**, Independent exact review of 824, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-974.md). <!-- x86-merged:974 -->
 - 2026-10-03: lane **825**, Composition closing: image-to-fetch closing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-825.md). <!-- x86-merged:825 -->
+- 2026-10-03: lane **975**, Independent exact review of 825, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-975.md). <!-- x86-merged:975 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
