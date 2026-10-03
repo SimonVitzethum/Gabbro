@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 13:42 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 13:49 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -396,7 +396,7 @@ Last ledger refresh: **2026-10-03 13:42 UTC**. This is an operational snapshot, 
 | 690 | Hardware completion: selected AVX2 integer architectural byte forms | Agent working | 691: scheduled | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Merged after review/checks | 695: Merged after review/checks | [report](messung/muse/MUSE-REPORT-694.md) |
-| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Committed candidate; review/integration pending | 697: Incomplete; preserved | [task](lanes/696.md) |
+| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Committed candidate; review/integration pending | 697: Committed candidate; review/integration pending | [task](lanes/696.md) |
 | 698 | Essential width-selected shifts and rotates | Incomplete; preserved | 699: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
@@ -412,12 +412,12 @@ Last ledger refresh: **2026-10-03 13:42 UTC**. This is an operational snapshot, 
 | 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Incomplete; preserved | 723: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/722.md) |
 | 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Committed candidate; review/integration pending | 725: Committed candidate; review/integration pending | [task](lanes/724.md) |
 | 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Committed candidate; review/integration pending | [task](lanes/726.md) |
-| 728 | Model actual IDT TSS descriptor and entry stack selection | Committed candidate; review/integration pending | 729: Incomplete; preserved | [task](lanes/728.md) |
+| 728 | Model actual IDT TSS descriptor and entry stack selection | Committed candidate; review/integration pending | 729: Committed candidate; review/integration pending | [task](lanes/728.md) |
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Merged after review/checks | 731: Merged after review/checks | [report](messung/muse/MUSE-REPORT-730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
 | 734 | Selected control registers and syscall MSR byte effects | Committed candidate; review/integration pending | 735: scheduled | [task](lanes/734.md) |
 | 736 | SSE and selected AVX context save restore effects | Agent working | 737: scheduled | [task](lanes/736.md) |
-| 738 | Derive precise fault ordering across fetched instruction accesses | Committed candidate; review/integration pending | 739: Incomplete; preserved | [task](lanes/738.md) |
+| 738 | Derive precise fault ordering across fetched instruction accesses | Committed candidate; review/integration pending | 739: Committed candidate; review/integration pending | [task](lanes/738.md) |
 | 740 | Repair upstream compiler Lean aggregation and scope | Committed candidate; review/integration pending | 741: Incomplete; preserved | [task](lanes/740.md) |
 | 742 | Repair upstream compiler Rust panics and mirror fidelity | Committed candidate; review/integration pending | 743: Incomplete; preserved | [task](lanes/742.md) |
 | 744 | Organise complete direct Lean compiler optimiser validation and performance closure | Committed candidate; review/integration pending | 745: Committed candidate; review/integration pending | [task](lanes/744.md) |
@@ -1180,6 +1180,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **730**, Connect full selected SIB RIP-relative addresses to actual effects, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-730.md). <!-- x86-merged:730 -->
 - 2026-10-03: checked master `e97737a3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e97737a30a7317613603bc05fa177e1f3501e6a3 -->
 - 2026-10-03: lane **731**, Independent exact review of 730, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-731.md). <!-- x86-merged:731 -->
+- 2026-10-03: publication batch checks passed for `a8d0044e`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
