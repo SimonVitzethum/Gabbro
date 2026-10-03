@@ -6,7 +6,9 @@ CANDIDATE: 890 f5a0499e23faa89060418b9be9fb1780303617a4
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded, as cut in the file's own CUTS)
+VERDICT: ACCEPT
+
+Acceptance is bounded, as cut in the candidate file's own CUTS (see Open section below).
 
 ## What was reviewed
 
