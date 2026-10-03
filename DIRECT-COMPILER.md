@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 13:15 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 13:16 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -427,12 +427,12 @@ Last ledger refresh: **2026-10-03 13:15 UTC**. This is an operational snapshot, 
 | 749 | Hardware completion: compact SUB with imm8 | Merged after review/checks | 899: Merged after review/checks | [report](messung/muse/MUSE-REPORT-749.md) |
 | 750 | Hardware completion: compact CMP with imm8 | Incomplete; preserved | 900: scheduled | [task](lanes/750.md) |
 | 751 | Hardware completion: compact AND/OR/XOR with imm8 | Merged after review/checks | 901: Merged after review/checks | [report](messung/muse/MUSE-REPORT-751.md) |
-| 752 | Hardware completion: compact ADD/SUB/CMP with imm32 | Agent working | 902: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/752.md) |
+| 752 | Hardware completion: compact ADD/SUB/CMP with imm32 | Committed candidate; review/integration pending | 902: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/752.md) |
 | 753 | Hardware completion: accumulator short ALU forms | Merged after review/checks | 903: Merged after review/checks | [report](messung/muse/MUSE-REPORT-753.md) |
 | 754 | Hardware completion: zero idiom XOR reg, reg | Merged after review/checks | 904: Merged after review/checks | [report](messung/muse/MUSE-REPORT-754.md) |
 | 755 | Hardware completion: pure LEA address arithmetic | Merged after review/checks | 905: Merged after review/checks | [report](messung/muse/MUSE-REPORT-755.md) |
 | 756 | Hardware completion: compact TEST with imm | Incomplete; preserved | 906: scheduled | [task](lanes/756.md) |
-| 757 | Hardware completion: compact NOT/NEG forms | Agent working | 907: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/757.md) |
+| 757 | Hardware completion: compact NOT/NEG forms | Committed candidate; review/integration pending | 907: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/757.md) |
 | 758 | Hardware completion: disp0 memory form | Merged after review/checks | 908: Merged after review/checks | [report](messung/muse/MUSE-REPORT-758.md) |
 | 759 | Hardware completion: disp8 memory form | Committed candidate; review/integration pending | 909: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/759.md) |
 | 760 | Hardware completion: base+index*scale+disp form | Committed candidate; review/integration pending | 910: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/760.md) |
@@ -441,11 +441,11 @@ Last ledger refresh: **2026-10-03 13:15 UTC**. This is an operational snapshot, 
 | 763 | Hardware completion: RIP-relative jump tables | Committed candidate; review/integration pending | 913: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/763.md) |
 | 764 | Hardware completion: canonical address per length | Agent working | 914: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/764.md) |
 | 765 | Hardware completion: private stack slot addressing | Agent working | 915: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/765.md) |
-| 766 | Hardware completion: SETcc byte forms | Queued for a model slot | 916: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/766.md) |
+| 766 | Hardware completion: SETcc byte forms | Agent working | 916: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/766.md) |
 | 767 | Hardware completion: register-only CMOVcc | Agent working | 917: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/767.md) |
 | 768 | Hardware completion: memory-source CMOV fault rule | Agent working | 918: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/768.md) |
 | 769 | Hardware completion: jump-table certificates | Merged after review/checks | 919: Merged after review/checks | [report](messung/muse/MUSE-REPORT-769.md) |
-| 770 | Hardware completion: indirect CALL provenance | Committed candidate; review/integration pending | 920: Committed candidate; review/integration pending | [task](lanes/770.md) |
+| 770 | Hardware completion: indirect CALL provenance | Merged after review/checks | 920: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-770.md) |
 | 771 | Hardware completion: 16-byte call alignment | Committed candidate; review/integration pending | 921: Committed candidate; review/integration pending | [task](lanes/771.md) |
 | 772 | Hardware completion: rel8 reachability | Committed candidate; review/integration pending | 922: Committed candidate; review/integration pending | [task](lanes/772.md) |
 | 773 | Hardware completion: layout stability under narrowing | Committed candidate; review/integration pending | 923: Incomplete; preserved | [task](lanes/773.md) |
@@ -474,7 +474,7 @@ Last ledger refresh: **2026-10-03 13:15 UTC**. This is an operational snapshot, 
 | 796 | Hardware completion: no-contraction gate | Committed candidate; review/integration pending | 946: scheduled | [task](lanes/796.md) |
 | 797 | Hardware completion: FTZ DAZ zero with masks | Agent working | 947: scheduled | [task](lanes/797.md) |
 | 798 | Hardware completion: NaN payload class relaxation | Committed candidate; review/integration pending | 948: scheduled | [task](lanes/798.md) |
-| 799 | Hardware completion: MOVSD memory order | Agent working | 949: scheduled | [task](lanes/799.md) |
+| 799 | Hardware completion: MOVSD memory order | Committed candidate; review/integration pending | 949: scheduled | [task](lanes/799.md) |
 | 800 | Hardware completion: faults of compact immediates | Committed candidate; review/integration pending | 950: scheduled | [task](lanes/800.md) |
 | 801 | Hardware completion: faults of disp forms | Agent working | 951: scheduled | [task](lanes/801.md) |
 | 802 | Hardware completion: faults of SIB addressing | Agent working | 952: scheduled | [task](lanes/802.md) |
@@ -1150,6 +1150,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: integration of candidate(s) [767] failed the local proof/build gate after independent review 917; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:917 -->
 - 2026-10-03: integration of candidate(s) [768] failed the local proof/build gate after independent review 918; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:918 -->
 - 2026-10-03: lane **919**, Independent exact review of 769, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-919.md). <!-- x86-merged:919 -->
+- 2026-10-03: lane **770**, Hardware completion: indirect CALL provenance, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-770.md). <!-- x86-merged:770 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
