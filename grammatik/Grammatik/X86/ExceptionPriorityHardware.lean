@@ -1240,4 +1240,235 @@ theorem wahl_kontrolle_gewinnt_ohne_teilung :
     hzug_hellFalle_keiner _ hsteuer_hellFalle
   rfl
 
+/-! ## Malformed probes: truncated fetch and the #UD oracle.
+
+  A lone jump opcode byte refuses decode; without oracle evidence the
+  relation reads fetch-side #PF (never #UD); the oracle alone decides
+  #UD membership. -/
+
+/-- The truncated window holds the lone jump opcode byte. -/
+theorem geholt_trunk :
+    geholt (einByteStart (natByte 233)).kern = [natByte 233] := by
+  decide
+
+/-- The truncated window refuses the unified decoder. -/
+theorem decode_trunk : decodeExt [natByte 233] = none := by
+  decide
+
+/-- Refusal without oracle evidence reads as fetch #PF, never #UD. -/
+theorem wahl_trunk :
+    dekodiereKandidat (einByteStart (natByte 233)) illLeer =
+      some ⟨.abruf, .pf⟩ := by
+  apply dekodiere_ohne_orakel_kein_ud _ _ _ _ _
+  · show decodeExt (geholt (einByteStart (natByte 233)).kern) = none
+    rw [geholt_trunk]
+    exact decode_trunk
+  · show illLeer.istIllegal (geholt (einByteStart (natByte 233)).kern) =
+      false
+    rw [geholt_trunk]
+    rfl
+  · rw [geholt_trunk]
+    decide
+
+/-- No fetch candidate on the truncated window (decode refused). -/
+theorem abruf_trunk_keiner :
+    abrufKandidat (einByteStart (natByte 233)) = none := by
+  have hkan : istKanonisch (einByteStart (natByte 233)).kern.rip = true :=
+    kanonisch_code
+  simp [abrufKandidat, hkan, geholt_trunk, decode_trunk]
+
+/-- CHOICE: the truncated fetch #PF is delivered uncontested. -/
+theorem wahl_trunk_entscheidung :
+    ersteWahl
+        (kandidatenReihe (einByteStart (natByte 233)) divZ pgDunkel
+          stStumpf illLeer false) = some ⟨.abruf, .pf⟩ := by
+  apply dekodiere_schlaegt_spaete _ _ _ _ _ _ _ abruf_trunk_keiner
+    wahl_trunk
+
+/-- The oracle alone decides #UD membership. -/
+theorem wahl_trunk_ud :
+    dekodiereKandidat (einByteStart (natByte 233)) illE9 =
+      some ⟨.dekodiere, .ud⟩ := by
+  apply dekodiere_orakel_ud _ _ _ _
+  · show decodeExt (geholt (einByteStart (natByte 233)).kern) = none
+    rw [geholt_trunk]
+    exact decode_trunk
+  · show illE9.istIllegal (geholt (einByteStart (natByte 233)).kern) = true
+    rw [geholt_trunk]
+    decide
+
+/-- NO INFERRED #UD: refusal without oracle evidence is never #UD. -/
+theorem kein_erschlichenes_ud :
+    dekodiereKandidat (einByteStart (natByte 233)) illLeer ≠
+      some ⟨.dekodiere, .ud⟩ := by
+  rw [wahl_trunk]
+  decide
+
+/-! ## Overlap probe: the write target is the fetched code page.
+
+  Fetching from 4096 while the descriptor writes 4096 resolves to the
+  exact access-stage cause; the page oracle decides #GP vs #PF. -/
+
+/-- The code-page write refuses. -/
+theorem hwrite_overlap :
+    write64 divFalleStart.kern.speicher (BitVec.ofNat 64 4096) 0 = none := by
+  decide
+
+/-- Overlap resolves to the access candidate; the oracle says #PF. -/
+theorem zugriff_overlap_dunkel :
+    zugriffKandidat divFalleStart overlapZ pgDunkel =
+      some ⟨.zugriff, .pf⟩ := by
+  have h := zugriff_schreibe_verweigert divFalleStart overlapZ pgDunkel
+    (BitVec.ofNat 64 4096) rfl rfl hwrite_overlap
+  have hklasse : seitenKlasse pgDunkel (BitVec.ofNat 64 4096) = .pf :=
+    seitenKlasse_nicht_vorhanden _ _ rfl
+  rw [hklasse] at h
+  exact h
+
+/-- The same overlap resolves to #GP under a present page. -/
+theorem zugriff_overlap_hell :
+    zugriffKandidat divFalleStart overlapZ pgHell =
+      some ⟨.zugriff, .gp⟩ := by
+  have h := zugriff_schreibe_verweigert divFalleStart overlapZ pgHell
+    (BitVec.ofNat 64 4096) rfl rfl hwrite_overlap
+  have hklasse : seitenKlasse pgHell (BitVec.ofNat 64 4096) = .gp :=
+    seitenKlasse_vorhanden _ _ rfl
+  rw [hklasse] at h
+  exact h
+
+/-- No address candidate on the canonical code-page write. -/
+theorem hadr_overlap_keiner :
+    adressKandidat overlapZ = none := by
+  simp [adressKandidat, overlapZ, adrKlasse, kanonisch_code]
+
+/-- CHOICE: the overlap access cause wins with quiet divide. -/
+theorem wahl_overlap :
+    ersteWahl
+        (kandidatenReihe divFalleStart overlapZ pgDunkel stStumpf illLeer
+          false) = some ⟨.zugriff, .pf⟩ := by
+  apply zugriff_schlaegt_teilung_steuerung _ _ _ _ _ _ _
+    abruf_divFalle_keiner (dekodiere_divFalle_keiner _)
+    hadr_overlap_keiner zugriff_overlap_dunkel
+
+/-! ## Joint witness: a reached memory-changing run plus exact causes.
+
+  One conjunction ties the genuine fetched two-cell store run (cells
+  from zero to 42) to the proved exact fault causes under conflict:
+  divide #DE on fetched bytes with its halt verdict, address #GP over
+  a pending access fault, control #AC over a quiet divide, the
+  truncated fetch #PF, the never-inferred #UD, and disarmed control
+  silence. Non-degenerate: the run changes two actual cells. -/
+
+/-- JOINT WITNESS: reached store run plus exact ordered causes. -/
+theorem prioritaet_zeuge_gemeinsam :
+    extZelle (extSchritt2 extWitStart extWitBereit)
+        (BitVec.ofNat 64 8192) = some (BitVec.ofNat 8 42) ∧
+      extZelle (extSchritt2 extWitStart extWitBereit)
+        (BitVec.ofNat 64 8200) = some (BitVec.ofNat 8 42) ∧
+      extWitStart.kern.speicher.bytes (BitVec.ofNat 64 8192) =
+        BitVec.ofNat 8 0 ∧
+      ersteWahl
+          (kandidatenReihe divFalleStart divZ pgDunkel stStumpf illLeer
+            true) = some ⟨.teilung, .de⟩ ∧
+      bindeUrteil (extByteschritt divFalleStart extWitBereit)
+          (ersteWahl
+            (kandidatenReihe divFalleStart divZ pgDunkel stStumpf illLeer
+              true)) = .fehler ⟨.teilung, .de⟩ ∧
+      ersteWahl
+          (kandidatenReihe divFalleStart dunkelKonfliktZ pgDunkel stStumpf
+            illLeer true) = some ⟨.adresse, .gp⟩ ∧
+      ersteWahl
+          (kandidatenReihe hellFalleStart hellKontrollZ pgHell stScharf
+            illLeer false) = some ⟨.steuerung, .ac⟩ ∧
+      dekodiereKandidat (einByteStart (natByte 233)) illLeer ≠
+        some ⟨.dekodiere, .ud⟩ := by
+  exact ⟨extWit_zwei_schritte_speichern.1,
+    extWit_zwei_schritte_speichern.2, extWit_anfang_null.1, wahl_divFalle,
+    urteil_divFalle, wahl_konflikt_adresse,
+    wahl_kontrolle_gewinnt_ohne_teilung, kein_erschlichenes_ud⟩
+
+/- CUTS:
+    Proved here (all over the REUSED canonical producers -- no new
+    machine, no new decoder row, no new instruction, no source claim):
+    - priority stages `FehlerStufe` with the proved rank chain
+      (fetch < decode < address < access < divide < control; cross-class
+      order follows Table 7-2 for fetch/decode and execution order
+      afterwards);
+    - explicit input interfaces instead of inferred faults: `SeitenInfo`
+      decides #GP vs #PF (both directions proved), `IllegalInfo`
+      alone decides #UD membership (refusal without it is never #UD),
+      `SteuerInfo` arms #AC (disarmed control never faults);
+    - stage collectors from actual model functions: `abrufKandidat`
+      (noncanonical RIP #GP, empty window #PF, refused admission #PF),
+      `dekodiereKandidat` (#UD only under oracle, overlong full-window
+      #GP, truncated short-window fetch #PF), `adressKandidat`
+      (reused `adrKlasse`, read before write), `zugriffKandidat`
+      (actual `read64`/`write64`, class from the page state),
+      `teilungsKandidat` (actual trap only), `steuerKandidat`
+      (armed misalignment only);
+    - ordered selection `kandidatenReihe`/`ersteWahl` with the six-way
+      case split and six dominance theorems pinning the exact chosen
+      cause under conflict;
+    - verdict producer `FehlerUrteil`/`bindeUrteil` keeping success,
+      ordered fault and admission refusal apart by construction, with
+      `halt_kommt_von_teilung` (halt only from the divide arm);
+    - delivery interface `fehlerVektor` (Table 6-1) and pre-fault RIP
+      with the pre-state observation; proved no-partial-write
+      (`kein_teilschreiben` from `writeBytesN_hit`/`_miss`);
+    - Table 7-2 boundary producer `grenzEntscheid` (previous traps >
+      NMI > enabled maskable IRQs > fault-class debug > fetch/decode
+      faults) with during-execution faults trapping immediately;
+    - concrete probes on fetched bytes: divide trap choice with halt
+      and verdict, fetch-over-divide/access and address-over-access/
+      divide conflicts (losing candidates exhibited), divide-over-
+      control and control-over-quiet-divide, truncated fetch, oracle
+      #UD, never-inferred #UD, code-page overlap under both page
+      states, plus the joint witness with the reached two-cell run.
+    NOT proved here, and not claimed:
+    - No within-class silicon order where the manual leaves it
+      implementation-dependent (Table 7-2 note): the row pins
+      illegal-before-overlong-before-truncated at decode and
+      read-before-write at address/access; these are stated-model
+      rules, not silicon facts.
+    - No overlong-by-decode-success #GP producer: the 15-byte fetch
+      cap makes `extLen > 15` unreachable through admission; the
+      overlong candidate fires only on full-window decode refusal.
+    - No unmasked #NM/#XM producer: the admitted profile runs masked
+      (control state owned by `FpControlHardwareForms`); enabled-state
+      refusal stays admission, never a fault claim.
+    - No #DB/#BP class: `ArchFehler` (lane 670) has no debug vector;
+      boundary classes 4/7 travel as `GrenzEreignis`, never as faults.
+    - No paging-structure truth: `SeitenInfo` is stated by the
+      consumer; which pages are present is a hardware assumption.
+    - No TSO/concurrency bridge: all facts are sequential over one
+      `Speicher`; tearing and GX refinement stay with the TSO lane.
+    - No stack-switch, handler, error-code or IDT delivery proof:
+      delivery consumes `fehlerVektor`/`fehlerRipVor`; lane 672 owns
+      the call.
+    - No hardware verification: classes and orders NAME the manual
+      entries; evaluation rules are inherited from the accepted
+      producers, not verified against silicon.
+    - No source stop-class, cost or time transfer.
+-/
+
+#print axioms stufenRang
+#print axioms rang_kette
+#print axioms seitenKlasse
+#print axioms abrufKandidat
+#print axioms dekodiereKandidat
+#print axioms adressKandidat
+#print axioms zugriffKandidat
+#print axioms teilungsKandidat
+#print axioms steuerKandidat
+#print axioms kandidatenReihe
+#print axioms ersteWahl
+#print axioms wahl_fallunterscheidung
+#print axioms bindeUrteil
+#print axioms halt_kommt_von_teilung
+#print axioms fehlerVektor
+#print axioms kein_teilschreiben
+#print axioms grenzEntscheid
+#print axioms ausfuehrungsfehler_sofort
+#print axioms prioritaet_zeuge_gemeinsam
+
 end Gabbro.Grammatik.X86
