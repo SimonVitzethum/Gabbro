@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 14:02 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 19:31 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -393,10 +393,10 @@ Last ledger refresh: **2026-10-03 14:02 UTC**. This is an operational snapshot, 
 | 684 | Eliminate hardcoded external project filesystem paths | Committed candidate; review/integration pending | 685: Committed candidate; review/integration pending | [task](lanes/684.md) |
 | 686 | Hardware completion: essential SSE2 integer and memory byte forms | Merged after review/checks | 687: Merged after review/checks | [report](messung/muse/MUSE-REPORT-686.md) |
 | 688 | Hardware completion: CPUID and XGETBV byte execution | Merged after review/checks | 689: Merged after review/checks | [report](messung/muse/MUSE-REPORT-688.md) |
-| 690 | Hardware completion: selected AVX2 integer architectural byte forms | Agent working | 691: scheduled | [task](lanes/690.md) |
+| 690 | Hardware completion: selected AVX2 integer architectural byte forms | Committed candidate; review/integration pending | 691: Unresolved after agent rounds; not accepted | [task](lanes/690.md) |
 | 692 | Hardware completion: observable defined and undefined RFLAGS | Merged after review/checks | 693: Merged after review/checks | [report](messung/muse/MUSE-REPORT-692.md) |
 | 694 | Hardware completion: UC MMIO architectural access and ordering | Merged after review/checks | 695: Merged after review/checks | [report](messung/muse/MUSE-REPORT-694.md) |
-| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Agent working | 697: Committed candidate; review/integration pending | [task](lanes/696.md) |
+| 696 | Essential 8/16/32-bit scalar arithmetic and moves | Committed candidate; review/integration pending | 697: Committed candidate; review/integration pending | [task](lanes/696.md) |
 | 698 | Essential width-selected shifts and rotates | Incomplete; preserved | 699: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/698.md) |
 | 700 | Essential multiply divide widths and immediate IMUL | Merged after review/checks | 701: Merged after review/checks | [report](messung/muse/MUSE-REPORT-700.md) |
 | 702 | Essential scalar binary32 SSE2 architectural forms | Merged after review/checks | 703: Merged after review/checks | [report](messung/muse/MUSE-REPORT-702.md) |
@@ -410,8 +410,8 @@ Last ledger refresh: **2026-10-03 14:02 UTC**. This is an operational snapshot, 
 | 718 | Unify accepted architectural final-byte family dispatch | Incomplete; preserved | 719: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/718.md) |
 | 720 | Connect real selected integer bytes to shared TSO execution | Merged after review/checks | 721: Merged after review/checks | [report](messung/muse/MUSE-REPORT-720.md) |
 | 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Incomplete; preserved | 723: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/722.md) |
-| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Agent working | 725: Committed candidate; review/integration pending | [task](lanes/724.md) |
-| 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Agent working | [task](lanes/726.md) |
+| 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Committed candidate; review/integration pending | 725: Committed candidate; review/integration pending | [task](lanes/724.md) |
+| 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Committed candidate; review/integration pending | [task](lanes/726.md) |
 | 728 | Model actual IDT TSS descriptor and entry stack selection | Merged after review/checks | 729: Merged after review/checks | [report](messung/muse/MUSE-REPORT-728.md) |
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Merged after review/checks | 731: Merged after review/checks | [report](messung/muse/MUSE-REPORT-730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
@@ -466,39 +466,39 @@ Last ledger refresh: **2026-10-03 14:02 UTC**. This is an operational snapshot, 
 | 788 | Hardware completion: CVTSI2SD from 32-bit int | Committed candidate; review/integration pending | 938: Committed candidate; review/integration pending | [task](lanes/788.md) |
 | 789 | Hardware completion: CVTSI2SD from 64-bit int | Merged after review/checks | 939: Merged after review/checks | [report](messung/muse/MUSE-REPORT-789.md) |
 | 790 | Hardware completion: UCOMISD unordered rows | Incomplete; preserved | 940: scheduled | [task](lanes/790.md) |
-| 791 | Hardware completion: float narrow range check | Committed candidate; review/integration pending | 941: Agent working | [task](lanes/791.md) |
+| 791 | Hardware completion: float narrow range check | Committed candidate; review/integration pending | 941: Committed candidate; review/integration pending | [task](lanes/791.md) |
 | 792 | Hardware completion: float finite bit test | Committed candidate; review/integration pending | 942: Committed candidate; review/integration pending | [task](lanes/792.md) |
 | 793 | Hardware completion: CVTTSD2SI saturation wrapper | Committed candidate; review/integration pending | 943: Committed candidate; review/integration pending | [task](lanes/793.md) |
-| 794 | Hardware completion: f32 single-rounding refusal | Committed candidate; review/integration pending | 944: Agent working | [task](lanes/794.md) |
-| 795 | Hardware completion: RNE control establishment | Committed candidate; review/integration pending | 945: Agent working | [task](lanes/795.md) |
-| 796 | Hardware completion: no-contraction gate | Committed candidate; review/integration pending | 946: Agent working | [task](lanes/796.md) |
-| 797 | Hardware completion: FTZ DAZ zero with masks | Committed candidate; review/integration pending | 947: Agent working | [task](lanes/797.md) |
-| 798 | Hardware completion: NaN payload class relaxation | Committed candidate; review/integration pending | 948: Agent working | [task](lanes/798.md) |
-| 799 | Hardware completion: MOVSD memory order | Committed candidate; review/integration pending | 949: Agent working | [task](lanes/799.md) |
-| 800 | Hardware completion: faults of compact immediates | Committed candidate; review/integration pending | 950: Agent working | [task](lanes/800.md) |
-| 801 | Hardware completion: faults of disp forms | Committed candidate; review/integration pending | 951: Agent working | [task](lanes/801.md) |
-| 802 | Hardware completion: faults of SIB addressing | Committed candidate; review/integration pending | 952: scheduled | [task](lanes/802.md) |
-| 803 | Hardware completion: faults of RIP-relative data | Scheduled | 953: scheduled | [task](lanes/803.md) |
-| 804 | Hardware completion: faults of short branches | Scheduled | 954: scheduled | [task](lanes/804.md) |
-| 805 | Hardware completion: faults of SETcc memory dest | Scheduled | 955: scheduled | [task](lanes/805.md) |
-| 806 | Hardware completion: faults of CMOV memory source | Scheduled | 956: scheduled | [task](lanes/806.md) |
-| 807 | Hardware completion: faults of indirect targets | Scheduled | 957: scheduled | [task](lanes/807.md) |
-| 808 | Hardware completion: faults of LOCK accesses | Scheduled | 958: scheduled | [task](lanes/808.md) |
-| 809 | Hardware completion: faults of port IO | Scheduled | 959: scheduled | [task](lanes/809.md) |
-| 810 | Hardware completion: faults of feature-gated forms | Scheduled | 960: scheduled | [task](lanes/810.md) |
-| 811 | Hardware completion: faults of MSR scope | Scheduled | 961: scheduled | [task](lanes/811.md) |
-| 812 | Hardware completion: tier-2 PADDB instance | Scheduled | 962: scheduled | [task](lanes/812.md) |
-| 813 | Hardware completion: tier-2 PADDW instance | Scheduled | 963: scheduled | [task](lanes/813.md) |
-| 814 | Hardware completion: tier-2 PADDD instance | Scheduled | 964: scheduled | [task](lanes/814.md) |
-| 815 | Hardware completion: tier-2 PADDQ instance | Scheduled | 965: scheduled | [task](lanes/815.md) |
-| 816 | Hardware completion: tier-2 PXOR instance | Scheduled | 966: scheduled | [task](lanes/816.md) |
-| 817 | Hardware completion: tier-2 PAND instance | Scheduled | 967: scheduled | [task](lanes/817.md) |
-| 818 | Hardware completion: tier-2 POR instance | Scheduled | 968: scheduled | [task](lanes/818.md) |
-| 819 | Hardware completion: tier-2 PSLLQ instance | Scheduled | 969: scheduled | [task](lanes/819.md) |
-| 820 | Hardware completion: tier-2 PSRLQ instance | Scheduled | 970: scheduled | [task](lanes/820.md) |
-| 821 | Hardware completion: tier-2 MOVDQA instance | Scheduled | 971: scheduled | [task](lanes/821.md) |
-| 822 | Hardware completion: tier-2 MOVDQU instance | Scheduled | 972: scheduled | [task](lanes/822.md) |
-| 823 | Hardware completion: tier-2 PCMPEQB instance | Scheduled | 973: scheduled | [task](lanes/823.md) |
+| 794 | Hardware completion: f32 single-rounding refusal | Committed candidate; review/integration pending | 944: Committed candidate; review/integration pending | [task](lanes/794.md) |
+| 795 | Hardware completion: RNE control establishment | Committed candidate; review/integration pending | 945: Committed candidate; review/integration pending | [task](lanes/795.md) |
+| 796 | Hardware completion: no-contraction gate | Committed candidate; review/integration pending | 946: Committed candidate; review/integration pending | [task](lanes/796.md) |
+| 797 | Hardware completion: FTZ DAZ zero with masks | Committed candidate; review/integration pending | 947: Committed candidate; review/integration pending | [task](lanes/797.md) |
+| 798 | Hardware completion: NaN payload class relaxation | Committed candidate; review/integration pending | 948: Committed candidate; review/integration pending | [task](lanes/798.md) |
+| 799 | Hardware completion: MOVSD memory order | Committed candidate; review/integration pending | 949: Committed candidate; review/integration pending | [task](lanes/799.md) |
+| 800 | Hardware completion: faults of compact immediates | Committed candidate; review/integration pending | 950: Committed candidate; review/integration pending | [task](lanes/800.md) |
+| 801 | Hardware completion: faults of disp forms | Committed candidate; review/integration pending | 951: Committed candidate; review/integration pending | [task](lanes/801.md) |
+| 802 | Hardware completion: faults of SIB addressing | Committed candidate; review/integration pending | 952: Committed candidate; review/integration pending | [task](lanes/802.md) |
+| 803 | Hardware completion: faults of RIP-relative data | Committed candidate; review/integration pending | 953: Committed candidate; review/integration pending | [task](lanes/803.md) |
+| 804 | Hardware completion: faults of short branches | Committed candidate; review/integration pending | 954: Committed candidate; review/integration pending | [task](lanes/804.md) |
+| 805 | Hardware completion: faults of SETcc memory dest | Committed candidate; review/integration pending | 955: Committed candidate; review/integration pending | [task](lanes/805.md) |
+| 806 | Hardware completion: faults of CMOV memory source | Committed candidate; review/integration pending | 956: Committed candidate; review/integration pending | [task](lanes/806.md) |
+| 807 | Hardware completion: faults of indirect targets | Committed candidate; review/integration pending | 957: Committed candidate; review/integration pending | [task](lanes/807.md) |
+| 808 | Hardware completion: faults of LOCK accesses | Committed candidate; review/integration pending | 958: Committed candidate; review/integration pending | [task](lanes/808.md) |
+| 809 | Hardware completion: faults of port IO | Committed candidate; review/integration pending | 959: Committed candidate; review/integration pending | [task](lanes/809.md) |
+| 810 | Hardware completion: faults of feature-gated forms | Committed candidate; review/integration pending | 960: Committed candidate; review/integration pending | [task](lanes/810.md) |
+| 811 | Hardware completion: faults of MSR scope | Committed candidate; review/integration pending | 961: Committed candidate; review/integration pending | [task](lanes/811.md) |
+| 812 | Hardware completion: tier-2 PADDB instance | Committed candidate; review/integration pending | 962: Committed candidate; review/integration pending | [task](lanes/812.md) |
+| 813 | Hardware completion: tier-2 PADDW instance | Committed candidate; review/integration pending | 963: Committed candidate; review/integration pending | [task](lanes/813.md) |
+| 814 | Hardware completion: tier-2 PADDD instance | Committed candidate; review/integration pending | 964: Committed candidate; review/integration pending | [task](lanes/814.md) |
+| 815 | Hardware completion: tier-2 PADDQ instance | Committed candidate; review/integration pending | 965: Committed candidate; review/integration pending | [task](lanes/815.md) |
+| 816 | Hardware completion: tier-2 PXOR instance | Committed candidate; review/integration pending | 966: Committed candidate; review/integration pending | [task](lanes/816.md) |
+| 817 | Hardware completion: tier-2 PAND instance | Committed candidate; review/integration pending | 967: Agent working | [task](lanes/817.md) |
+| 818 | Hardware completion: tier-2 POR instance | Committed candidate; review/integration pending | 968: scheduled | [task](lanes/818.md) |
+| 819 | Hardware completion: tier-2 PSLLQ instance | Committed candidate; review/integration pending | 969: Committed candidate; review/integration pending | [task](lanes/819.md) |
+| 820 | Hardware completion: tier-2 PSRLQ instance | Committed candidate; review/integration pending | 970: Committed candidate; review/integration pending | [task](lanes/820.md) |
+| 821 | Hardware completion: tier-2 MOVDQA instance | Committed candidate; review/integration pending | 971: Committed candidate; review/integration pending | [task](lanes/821.md) |
+| 822 | Hardware completion: tier-2 MOVDQU instance | Agent working | 972: scheduled | [task](lanes/822.md) |
+| 823 | Hardware completion: tier-2 PCMPEQB instance | Agent working | 973: scheduled | [task](lanes/823.md) |
 | 824 | Composition closing: decode-to-execution closing | Scheduled | 974: scheduled | [task](lanes/824.md) |
 | 825 | Composition closing: image-to-fetch closing | Scheduled | 975: scheduled | [task](lanes/825.md) |
 | 826 | Composition closing: relocation-to-redecode closing | Scheduled | 976: scheduled | [task](lanes/826.md) |
@@ -571,26 +571,27 @@ Last ledger refresh: **2026-10-03 14:02 UTC**. This is an operational snapshot, 
 | 893 | Optimiser rule: address-mode selection rule | Scheduled | 1043: scheduled | [task](lanes/893.md) |
 | 894 | Optimiser rule: call-argument selection rule | Scheduled | 1044: scheduled | [task](lanes/894.md) |
 | 895 | Optimiser rule: return-path selection rule | Scheduled | 1045: scheduled | [task](lanes/895.md) |
-| 1054 | Task-brief audit batch B01 (lanes 746-760) | Scheduled | 1074: scheduled | [task](lanes/1054.md) |
-| 1055 | Task-brief audit batch B02 (lanes 761-775) | Scheduled | 1075: scheduled | [task](lanes/1055.md) |
-| 1056 | Task-brief audit batch B03 (lanes 776-790) | Scheduled | 1076: scheduled | [task](lanes/1056.md) |
-| 1057 | Task-brief audit batch B04 (lanes 791-805) | Scheduled | 1077: scheduled | [task](lanes/1057.md) |
-| 1058 | Task-brief audit batch B05 (lanes 806-820) | Scheduled | 1078: scheduled | [task](lanes/1058.md) |
-| 1059 | Task-brief audit batch B06 (lanes 821-835) | Scheduled | 1079: scheduled | [task](lanes/1059.md) |
-| 1060 | Task-brief audit batch B07 (lanes 836-850) | Scheduled | 1080: scheduled | [task](lanes/1060.md) |
-| 1061 | Task-brief audit batch B08 (lanes 851-865) | Scheduled | 1081: scheduled | [task](lanes/1061.md) |
-| 1062 | Task-brief audit batch B09 (lanes 866-880) | Scheduled | 1082: scheduled | [task](lanes/1062.md) |
-| 1063 | Task-brief audit batch B10 (lanes 881-895) | Scheduled | 1083: scheduled | [task](lanes/1063.md) |
-| 1064 | Task-brief audit batch B11 (lanes 896-910) | Scheduled | 1084: scheduled | [task](lanes/1064.md) |
-| 1065 | Task-brief audit batch B12 (lanes 911-925) | Scheduled | 1085: scheduled | [task](lanes/1065.md) |
-| 1066 | Task-brief audit batch B13 (lanes 926-940) | Scheduled | 1086: scheduled | [task](lanes/1066.md) |
-| 1067 | Task-brief audit batch B14 (lanes 941-955) | Scheduled | 1087: scheduled | [task](lanes/1067.md) |
-| 1068 | Task-brief audit batch B15 (lanes 956-970) | Scheduled | 1088: scheduled | [task](lanes/1068.md) |
-| 1069 | Task-brief audit batch B16 (lanes 971-985) | Scheduled | 1089: scheduled | [task](lanes/1069.md) |
-| 1070 | Task-brief audit batch B17 (lanes 986-1000) | Scheduled | 1090: scheduled | [task](lanes/1070.md) |
-| 1071 | Task-brief audit batch B18 (lanes 1001-1015) | Scheduled | 1091: scheduled | [task](lanes/1071.md) |
-| 1072 | Task-brief audit batch B19 (lanes 1016-1030) | Scheduled | 1092: scheduled | [task](lanes/1072.md) |
+| 1054 | Task-brief audit batch B01 (lanes 746-760) | Committed candidate; review/integration pending | 1074: Committed candidate; review/integration pending | [task](lanes/1054.md) |
+| 1055 | Task-brief audit batch B02 (lanes 761-775) | Committed candidate; review/integration pending | 1075: Committed candidate; review/integration pending | [task](lanes/1055.md) |
+| 1056 | Task-brief audit batch B03 (lanes 776-790) | Committed candidate; review/integration pending | 1076: Committed candidate; review/integration pending | [task](lanes/1056.md) |
+| 1057 | Task-brief audit batch B04 (lanes 791-805) | Committed candidate; review/integration pending | 1077: Committed candidate; review/integration pending | [task](lanes/1057.md) |
+| 1058 | Task-brief audit batch B05 (lanes 806-820) | Committed candidate; review/integration pending | 1078: Committed candidate; review/integration pending | [task](lanes/1058.md) |
+| 1059 | Task-brief audit batch B06 (lanes 821-835) | Committed candidate; review/integration pending | 1079: Committed candidate; review/integration pending | [task](lanes/1059.md) |
+| 1060 | Task-brief audit batch B07 (lanes 836-850) | Committed candidate; review/integration pending | 1080: Committed candidate; review/integration pending | [task](lanes/1060.md) |
+| 1061 | Task-brief audit batch B08 (lanes 851-865) | Committed candidate; review/integration pending | 1081: Committed candidate; review/integration pending | [task](lanes/1061.md) |
+| 1062 | Task-brief audit batch B09 (lanes 866-880) | Committed candidate; review/integration pending | 1082: Committed candidate; review/integration pending | [task](lanes/1062.md) |
+| 1063 | Task-brief audit batch B10 (lanes 881-895) | Committed candidate; review/integration pending | 1083: scheduled | [task](lanes/1063.md) |
+| 1064 | Task-brief audit batch B11 (lanes 896-910) | Committed candidate; review/integration pending | 1084: scheduled | [task](lanes/1064.md) |
+| 1065 | Task-brief audit batch B12 (lanes 911-925) | Agent working | 1085: scheduled | [task](lanes/1065.md) |
+| 1066 | Task-brief audit batch B13 (lanes 926-940) | Agent working | 1086: scheduled | [task](lanes/1066.md) |
+| 1067 | Task-brief audit batch B14 (lanes 941-955) | Agent working | 1087: scheduled | [task](lanes/1067.md) |
+| 1068 | Task-brief audit batch B15 (lanes 956-970) | Agent working | 1088: scheduled | [task](lanes/1068.md) |
+| 1069 | Task-brief audit batch B16 (lanes 971-985) | Agent working | 1089: scheduled | [task](lanes/1069.md) |
+| 1070 | Task-brief audit batch B17 (lanes 986-1000) | Agent working | 1090: scheduled | [task](lanes/1070.md) |
+| 1071 | Task-brief audit batch B18 (lanes 1001-1015) | Agent working | 1091: scheduled | [task](lanes/1071.md) |
+| 1072 | Task-brief audit batch B19 (lanes 1016-1030) | Agent working | 1092: scheduled | [task](lanes/1072.md) |
 | 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Scheduled | 1093: scheduled | [task](lanes/1073.md) |
+| 1094 | Idle pool cache cleanup with strict guards | Scheduled | 1095: scheduled | [task](lanes/1094.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1189,6 +1190,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **738**, Derive precise fault ordering across fetched instruction accesses, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-738.md). <!-- x86-merged:738 -->
 - 2026-10-03: lane **739**, Independent exact review of 738, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-739.md). <!-- x86-merged:739 -->
 - 2026-10-03: publication batch checks passed for `aace49e3`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-03: checked master `67a174b1` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:67a174b1f09d84a6246d40bf31d7cb8960c2ff67 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
