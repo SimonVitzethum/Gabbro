@@ -4,6 +4,9 @@ Lane 1016, clone `/home/simon/Dokumente/gabbro-muse/a1016`, branch `muse/1016`.
 Review-only lane: this commit owns ONLY this report. No source file was touched
 (`git status` before commit showed only this untracked file).
 
+CANDIDATE: 866 cd2610ef2f513dec875d58a5226b83f75752d7c8
+VERDICT: ACCEPT
+
 ## CANDIDATE
 
 - Author: **866**
@@ -14,7 +17,7 @@ Review-only lane: this commit owns ONLY this report. No source file was touched
   `grammatik/Grammatik.lean` (one added line `import Grammatik.X86.OptDceStore`),
   `grammatik/Grammatik/X86/OptDceStore.lean` (new, 515 lines).
 
-## VERDICT: ACCEPT (bounded)
+## Substantive verdict: accept, bounded
 
 The candidate is a sound, honestly bounded source-level rule lemma. All
 mechanical gates reproduce; the architecture matches the DESIGN section 7
