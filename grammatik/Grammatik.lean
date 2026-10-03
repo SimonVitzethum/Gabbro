@@ -512,3 +512,4 @@ import Grammatik.X86.ExceptionPriorityHardware
 import Grammatik.X86.ComposeDecodeExec
 import Grammatik.X86.ComposeImageFetch
 import Grammatik.X86.ComposeRelocRedecode
+import Grammatik.X86.ComposeEntryMap
