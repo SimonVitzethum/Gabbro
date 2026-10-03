@@ -253,7 +253,7 @@ theorem pin_addImm_r9_ff_dekode :
 
 /-- Truncated rows refuse: empty, lone REX, opcode without ModRM,
     ModRM without the immediate byte. -/
-theorem sonde_abgeschnitten :
+theorem compactAdd_sonde_abgeschnitten :
     decodeCompactAdd [] = none ∧
     decodeCompactAdd [natByte 72] = none ∧
     decodeCompactAdd [natByte 72, natByte 131] = none ∧
@@ -264,7 +264,7 @@ theorem sonde_abgeschnitten :
     other than /0 (/1 OR, /7 CMP), a memory ModRM (mod = 2), the
     accumulator row (REX.W + 05), and prefixes outside 72/73 (REX.R,
     missing REX.W, no REX at all). -/
-theorem sonde_nachbarn :
+theorem compactAdd_sonde_nachbarn :
     decodeCompactAdd [natByte 72, natByte 129, natByte 192, natByte 5] =
         none ∧
     decodeCompactAdd [natByte 72, natByte 131, natByte 200, natByte 5] =
@@ -456,15 +456,202 @@ theorem CompactImm8Add_verbindung (dst base : Register) (n : Nat)
     rw [hflags]; exact addImmFlags_pf _ _
   exact ⟨hrt, henc, hval, haf, hcf, hof, hsf, hzf, hpf, hstore, hread⟩
 
+/-! ## Reached witness: decoded ADD feeding a memory store.
+
+  `ADD rax, 5` (4 bytes) followed by the pilot `store [rbx], rax`
+  (7 bytes): the decoded form steps `rax` from 10 to 15, and the
+  existing `schritt` stores the sum into the data cell, observably
+  changing its byte. Code bytes are pinned through the decoder;
+  execution reuses the accepted pilot store on the same `Zustand`. -/
+
+/-- Witness program: ADD bytes then the pilot store bytes. -/
+def addKetteProg : List Byte :=
+  [natByte 72, natByte 131, natByte 192, natByte 5] ++
+    encode (.store64 .rbx .rax (BitVec.ofNat 32 0))
+
+/-- The executed bytes decode to the stepped form, leaving the pilot
+    store bytes as the suffix. -/
+theorem add_kette_dekode :
+    decodeCompactAdd addKetteProg =
+      some (((.addImm8 .rax 5) : CompactAddForm),
+        encode (.store64 .rbx .rax (BitVec.ofNat 32 0))) := by
+  decide
+
+/-- Witness registers: `rax` holds 10, `rbx` the data cell. -/
+def addKetteReg : Register → Wort := fun q =>
+  if q = Register.rax then 10
+  else if q = Register.rbx then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness start state: sum input in `rax`, data cell at 8192. -/
+def addKetteStart : Zustand :=
+  { register := addKetteReg, flags := zeugeFlags,
+    rip := BitVec.ofNat 64 4096, speicher := zeugenSpeicher }
+
+/-- Witness mid state: after the ADD (`rax` 10 goes to 15). -/
+def addKetteMitte : Zustand :=
+  schrittRegister addKetteStart (ripNach addKetteStart.rip 4)
+    (addImmFlags .b64 (addKetteStart.register .rax) 5) .rax
+    (addImmOp .b64 (addKetteStart.register .rax) 5)
+
+/-- Witness memory after the store: the sum lands in the data cell
+    (stated with the explicit constructor, field for field what the
+    accepted `write64` produces). -/
+def addKetteNach : Speicher :=
+  Speicher.mk (writeBytes addKetteMitte.speicher
+    (effAddr addKetteMitte .rbx (BitVec.ofNat 32 0))
+    (addKetteMitte.register .rax))
+    addKetteMitte.speicher.lesbar addKetteMitte.speicher.schreibbar
+    addKetteMitte.speicher.ausfuehrbar
+
+/-- The ADD step moves 10 to 15, advances past its 4 bytes and leaves
+    carry cleared. -/
+theorem add_kette_schritt :
+    (compactAddSchritt ⟨.addImm8 .rax 5, 4⟩ addKetteStart).map
+        (fun s => s.register .rax) = some 15 ∧
+      (compactAddSchritt ⟨.addImm8 .rax 5, 4⟩ addKetteStart).map
+        (fun s => s.rip) = some (BitVec.ofNat 64 4100) ∧
+      (compactAddSchritt ⟨.addImm8 .rax 5, 4⟩ addKetteStart).map
+        (fun s => s.flags.cf) = some false := by
+  decide
+
+/-- The two-step end state: ADD, then the pilot store of `rax`. -/
+def addKetteEnde : Option Zustand :=
+  (compactAddSchritt ⟨.addImm8 .rax 5, 4⟩ addKetteStart).bind
+    (schritt ⟨.store64 .rbx .rax (BitVec.ofNat 32 0), 7⟩)
+
+/-- The sum reaches memory: the data cell reads 15 and its byte
+    observably changed from zero; a wrong consumed length on the same
+    form refuses. -/
+theorem add_kette_speicher :
+    addKetteEnde.map (fun s =>
+        read64 s.speicher (BitVec.ofNat 64 8192)) =
+        some (some 15) ∧
+      addKetteEnde.map (fun s =>
+        s.speicher.bytes (BitVec.ofNat 64 8192)) =
+        some (natByte 15) ∧
+      addKetteStart.speicher.bytes (BitVec.ofNat 64 8192) =
+        BitVec.ofNat 8 0 ∧
+      compactAddSchritt ⟨.addImm8 .rax 5, 5⟩ addKetteStart = none := by
+  decide
+
+/-- JOINT witness for `CompactImm8Add_verbindung`: every premise on
+    concrete values (imm 5 inside i8; the ADD step from the witness
+    start; the write plus readability at the data cell) with the
+    memory run observably changing the data byte from zero to 15.
+    Non-degenerate: a reached two-step run whose second step changes
+    actual memory, plus a planted length refusal above. -/
+theorem CompactImm8Add_verbindung_zeuge :
+    ∃ (s' : Zustand) (m : Speicher),
+      compactAddSchritt ⟨.addImm8 .rax 5, 4⟩ addKetteStart = some s' ∧
+      write64 s'.speicher (effAddr s' .rbx (BitVec.ofNat 32 0))
+        (s'.register .rax) = some m ∧
+      lesbar8 s'.speicher (effAddr s' .rbx (BitVec.ofNat 32 0)) = true ∧
+      s'.register .rax = 15 ∧
+      s'.flags.af = none ∧
+      addKetteStart.speicher.bytes (BitVec.ofNat 64 8192) =
+        BitVec.ofNat 8 0 ∧
+      m.bytes (BitVec.ofNat 64 8192) ≠
+        addKetteStart.speicher.bytes (BitVec.ofNat 64 8192) := by
+  have hperm : schreibbar8 addKetteMitte.speicher
+      (effAddr addKetteMitte .rbx (BitVec.ofNat 32 0)) = true := by
+    decide
+  have hwr : write64 addKetteMitte.speicher
+      (effAddr addKetteMitte .rbx (BitVec.ofNat 32 0))
+      (addKetteMitte.register .rax) = some addKetteNach := by
+    unfold write64 addKetteNach
+    rw [if_pos hperm]
+  refine ⟨addKetteMitte, addKetteNach,
+    compactAddSchritt_weiter _ _ .rax 5 rfl rfl, hwr, ?_, ?_, ?_, ?_, ?_⟩
+  · decide
+  · decide
+  · decide
+  · decide
+  · decide
+
 /- CUTS:
-    Proved here so far: sign-extended imm8 (`immSext` reusing canonical
-    `sext .b8`) with one pin.
+    Proved here, over the ACTUAL accepted vocabulary (`Typen`,
+    `Wort.sext`/`trunc`/`cfAdd`/`ofAdd`/`zfTest`/`sfTest`/`parityEven`/
+    `add64`, `ShiftLogic.negB_b64`, `Codec.rexByte`/`natByte`/`byteNat`/
+    `codeReg`/`regHigh`/`regLow`/`decode`/`encode`,
+    `Ausfuehrung.laengeOk`/`ripNach`/`regSet`/`schrittRegister`/
+    `schritt`/`effAddr`/`zeugeFlags`, `Speicher.zeugenSpeicher`/
+    `write64`/`read64`/`lesbar8`): exactly one row, `REX.W + 83 /0 ib`
+    register-direct ADD r64, imm8 (Vol. 2A 3-14), with the sign-extended
+    immediate (`immSext` reusing canonical `sext .b8`, four pins),
+    width-generic value and flags (`addImmOp`/`addImmFlags`) whose AF is
+    `none` at every width and whose 64-bit value and CF/OF/SF/ZF/PF ARE
+    the accepted `add64` ones (no second evaluator), a canonical
+    Option encoder (four bytes inside i8, `none` outside with proved
+    cause), a byte-parsing decoder (admitted REX.W 72/73, opcode 131,
+    mod-3 /0 ModRM) with a generic round trip, pinned bytes for
+    `rax, 5` and `r9, 255`, explicit refusals (truncations, imm32
+    opcode, other digits, memory ModRM, accumulator row, REX.R,
+    missing REX.W, bare opcode), two-sided pilot dispatch without
+    rewriting either decoder, a length-checked step
+    (`compactAddSchritt`) through the accepted register step that never
+    faults at canonical length, per-form frame facts, and the joint
+    connection (`CompactImm8Add_verbindung`: bytes decode, encoder
+    answers, step lands the sum with the accepted flags, pilot store
+    hands the sum to memory with word read-back) with its jointly
+    inhabited companion (`CompactImm8Add_verbindung_zeuge`: concrete
+    imm 5, reached two-step run changing the data byte 0 to 15, plus a
+    planted length refusal).
     NOT proved here, and not claimed:
-    - Everything else of the lane task: codec, flag identities, pins,
-      refusals, execution connection, joint witness.
-    - No hardware verification: stated executable semantics only.
+    - No hardware verification: encodings, sign-extension, flag rules
+      and the AF-undefined modelling are STATED executable semantics
+      grounded in the cited manual lines, not verified against silicon;
+      the manual lists AF among the affected flags while this file
+      leaves it `none` (deliberate conservative gap: undefined is never
+      invented, following the `Ganzzahl` §4 discipline).
+    - No full ADD family: memory-destination 83 rows, 16/32-bit rows,
+      the 81 imm32 row and the accumulator rows refuse loudly here;
+      each new row needs its own encoding, coverage and execution proof.
+    - No fetch wiring: `Byteschritt.fetchDekodiert` and the
+      `ExtendedExecution` dispatcher still serve the pilot rows only;
+      routing the covered bytes through them waits on those owners and
+      is the next integration (no dispatcher was rewritten here).
+    - No source correspondence, no TSO/W/GX bridge, no image/ABI/
+      entry/relocation/budget/cost claim: the register form touches no
+      memory (no permissions, no TSO entry, no fault surface) and the
+      memory handoff reuses the accepted pilot store sequentially;
+      per-access granularity and concurrency stay with the TSO bridge.
+    - `verweigert`/`none` is the absence of a transition, never a halt
+      claim; 64-bit mode (REX.W) is the assumed selected profile.
 -/
 
 #print axioms pin_immSext_7f
+#print axioms pin_immSext_80
+#print axioms pin_immSext_ff
+#print axioms pin_immSext_00
+#print axioms addImmFlags_af
+#print axioms addImmOp_b64
+#print axioms addImmFlags_cf
+#print axioms addImmFlags_of
+#print axioms addImmFlags_sf
+#print axioms addImmFlags_zf
+#print axioms addImmFlags_pf
+#print axioms compactAddLaenge_ok
+#print axioms roundtripCompactAdd
+#print axioms encodeCompactAdd_some
+#print axioms encodeCompactAdd_verweigert
+#print axioms encodeCompactAdd_ursache
+#print axioms pin_addImm_rax_5
+#print axioms pin_addImm_rax_5_dekode
+#print axioms pin_addImm_r9_ff
+#print axioms pin_addImm_r9_ff_dekode
+#print axioms compactAdd_sonde_abgeschnitten
+#print axioms compactAdd_sonde_nachbarn
+#print axioms pilot_verweigert_compactAdd
+#print axioms compactAdd_verweigert_pilot
+#print axioms compactAddSchritt_laenge
+#print axioms compactAddSchritt_weiter
+#print axioms compactAddSchritt_immer
+#print axioms compactAddSchritt_rahmen
+#print axioms CompactImm8Add_verbindung
+#print axioms add_kette_dekode
+#print axioms add_kette_schritt
+#print axioms add_kette_speicher
+#print axioms CompactImm8Add_verbindung_zeuge
 
 end Gabbro.Grammatik.X86
