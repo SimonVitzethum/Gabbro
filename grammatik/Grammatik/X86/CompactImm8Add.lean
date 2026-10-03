@@ -318,6 +318,62 @@ theorem compactAdd_verweigert_pilot (b : Befehl) (suffix : List Byte) :
   | pop64 dst => cases dst <;> rfl
   | ret => rfl
 
+/-! ## Execution connection: the accepted register step plus advance.
+
+  The register form touches no memory (no permissions, no #GP/#PF/#AC
+  surface), raises no arithmetic fault (addition has no divide error;
+  contrast MulDiv's `hardwareHalt`), and installs no AF. The only
+  refusal is a length mismatch against the decoded length. -/
+
+/-- A decoded compact ADD: the form with its consumed length, checked
+    against `compactAddLaenge` at step time. -/
+structure CompactAddDec where
+  befehl : CompactAddForm
+  laenge : Nat
+  deriving DecidableEq, Repr
+
+/-- One compact ADD step: refuse on length mismatch; otherwise write the
+    64-bit value with its flag snapshot through the accepted
+    `schrittRegister`, advancing RIP past the decoded length. -/
+def compactAddSchritt (d : CompactAddDec) (s : Zustand) : Option Zustand :=
+  if d.laenge == compactAddLaenge d.befehl then
+    match d.befehl with
+    | .addImm8 dst n =>
+      some (schrittRegister s (ripNach s.rip d.laenge)
+        (addImmFlags .b64 (s.register dst) n) dst
+        (addImmOp .b64 (s.register dst) n))
+  else none
+
+/-- Length mismatch refuses: the consumed length is checked data. -/
+theorem compactAddSchritt_laenge (d : CompactAddDec) (s : Zustand)
+    (h : d.laenge ≠ compactAddLaenge d.befehl) :
+    compactAddSchritt d s = none := by
+  unfold compactAddSchritt
+  rw [if_neg (by simpa [beq_iff_eq] using h)]
+
+/-- The step equation: a matching length runs the value-plus-flags
+    update through the accepted register step. -/
+theorem compactAddSchritt_weiter (d : CompactAddDec) (s : Zustand)
+    (dst : Register) (n : Nat) (h : d.befehl = .addImm8 dst n)
+    (hlen : d.laenge == compactAddLaenge d.befehl) :
+    compactAddSchritt d s =
+      some (schrittRegister s (ripNach s.rip d.laenge)
+        (addImmFlags .b64 (s.register dst) n) dst
+        (addImmOp .b64 (s.register dst) n)) := by
+  unfold compactAddSchritt
+  rw [if_pos hlen, h]
+
+/-- At the canonical length the register form never refuses: addition
+    has no divide error and the register destination has no fault
+    surface (contrast memory forms, whose #GP/#PF/#AC stay open). -/
+theorem compactAddSchritt_immer (dst : Register) (n : Nat)
+    (s : Zustand) :
+    ∃ s', compactAddSchritt ⟨.addImm8 dst n, 4⟩ s = some s' := by
+  refine ⟨schrittRegister s (ripNach s.rip 4)
+    (addImmFlags .b64 (s.register dst) n) dst
+    (addImmOp .b64 (s.register dst) n), ?_⟩
+  exact compactAddSchritt_weiter _ s dst n rfl rfl
+
 /- CUTS:
     Proved here so far: sign-extended imm8 (`immSext` reusing canonical
     `sext .b8`) with one pin.
