@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 13:17 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 13:18 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -456,7 +456,7 @@ Last ledger refresh: **2026-10-03 13:17 UTC**. This is an operational snapshot, 
 | 778 | Hardware completion: LOCK XADD fetch-add | Merged after review/checks | 928: Merged after review/checks | [report](messung/muse/MUSE-REPORT-778.md) |
 | 779 | Hardware completion: XCHG ordering need | Merged after review/checks | 929: Merged after review/checks | [report](messung/muse/MUSE-REPORT-779.md) |
 | 780 | Hardware completion: MFENCE drain-own semantics | Merged after review/checks | 930: Merged after review/checks | [report](messung/muse/MUSE-REPORT-780.md) |
-| 781 | Hardware completion: SFENCE store narrowness | Committed candidate; review/integration pending | 931: Committed candidate; review/integration pending | [task](lanes/781.md) |
+| 781 | Hardware completion: SFENCE store narrowness | Merged after review/checks | 931: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-781.md) |
 | 782 | Hardware completion: LFENCE load narrowness | Committed candidate; review/integration pending | 932: Committed candidate; review/integration pending | [task](lanes/782.md) |
 | 783 | Hardware completion: seq_cst lowering bracket | Committed candidate; review/integration pending | 933: scheduled | [task](lanes/783.md) |
 | 784 | Hardware completion: CAS retry attempt bound | Committed candidate; review/integration pending | 934: Committed candidate; review/integration pending | [task](lanes/784.md) |
@@ -1164,6 +1164,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **929**, Independent exact review of 779, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-929.md). <!-- x86-merged:929 -->
 - 2026-10-03: lane **780**, Hardware completion: MFENCE drain-own semantics, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-780.md). <!-- x86-merged:780 -->
 - 2026-10-03: lane **930**, Independent exact review of 780, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-930.md). <!-- x86-merged:930 -->
+- 2026-10-03: lane **781**, Hardware completion: SFENCE store narrowness, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-781.md). <!-- x86-merged:781 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
