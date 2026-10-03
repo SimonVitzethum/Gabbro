@@ -1,10 +1,14 @@
 # MUSE-REPORT-919: Exact review of author 769 (jump-table certificates)
 
-## CANDIDATE
+## Candidate under review
 
-769 `97150eb9c1114488ac154db51855c8099da69c8a` (base `56537272a31df3de5d9b7898bbade91c3de817b8`, clean)
+CANDIDATE: 769 97150eb9c1114488ac154db51855c8099da69c8a
 
-## VERDICT: ACCEPT (bounded)
+(base `56537272a31df3de5d9b7898bbade91c3de817b8`, clean)
+
+## Finding (bounded acceptance)
+
+VERDICT: ACCEPT
 
 Bounded acceptance: the candidate proves exactly what its CUTS block claims --
 a validator-tracked jump-table certificate over the reused canonical
