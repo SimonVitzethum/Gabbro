@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 22:31 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 22:32 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -568,7 +568,7 @@ Last ledger refresh: **2026-10-03 22:31 UTC**. This is an operational snapshot, 
 | 890 | Optimiser rule: SETcc selection rule | Merged after review/checks | 1040: Merged after review/checks | [report](messung/muse/MUSE-REPORT-890.md) |
 | 891 | Optimiser rule: CMOV selection rule | Merged after review/checks | 1041: Merged after review/checks | [report](messung/muse/MUSE-REPORT-891.md) |
 | 892 | Optimiser rule: MOV-immediate selection rule | Merged after review/checks | 1042: Merged after review/checks | [report](messung/muse/MUSE-REPORT-892.md) |
-| 893 | Optimiser rule: address-mode selection rule | Committed candidate; review/integration pending | 1043: Committed candidate; review/integration pending | [task](lanes/893.md) |
+| 893 | Optimiser rule: address-mode selection rule | Merged after review/checks | 1043: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-893.md) |
 | 894 | Optimiser rule: call-argument selection rule | Committed candidate; review/integration pending | 1044: Committed candidate; review/integration pending | [task](lanes/894.md) |
 | 895 | Optimiser rule: return-path selection rule | Committed candidate; review/integration pending | 1045: Committed candidate; review/integration pending | [task](lanes/895.md) |
 | 1054 | Task-brief audit batch B01 (lanes 746-760) | Committed candidate; review/integration pending | 1074: Committed candidate; review/integration pending | [task](lanes/1054.md) |
@@ -596,7 +596,7 @@ Last ledger refresh: **2026-10-03 22:31 UTC**. This is an operational snapshot, 
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Committed candidate; review/integration pending | [task](lanes/1100.md) |
 | 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: Committed candidate; review/integration pending | [task](lanes/1102.md) |
-| 1104 | Close the accepted consumers through the common dispatcher | Committed candidate; review/integration pending | 1105: Agent working | [task](lanes/1104.md) |
+| 1104 | Close the accepted consumers through the common dispatcher | Committed candidate; review/integration pending | 1105: Committed candidate; review/integration pending | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Committed candidate; review/integration pending | 1109: Committed candidate; review/integration pending | [task](lanes/1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Committed candidate; review/integration pending | 1111: Agent working | [task](lanes/1110.md) |
@@ -1326,6 +1326,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1041**, Independent exact review of 891, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1041.md). <!-- x86-merged:1041 -->
 - 2026-10-03: lane **892**, Optimiser rule: MOV-immediate selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-892.md). <!-- x86-merged:892 -->
 - 2026-10-03: lane **1042**, Independent exact review of 892, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1042.md). <!-- x86-merged:1042 -->
+- 2026-10-03: lane **893**, Optimiser rule: address-mode selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-893.md). <!-- x86-merged:893 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
