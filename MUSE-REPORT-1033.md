@@ -1,7 +1,7 @@
 # MUSE-REPORT-1033: Exact review of author 883 (loop alignment rule)
 
 CANDIDATE: 883 a501373ef0ea0a44ddede580408e9c70cf64d038
-VERDICT: ACCEPT (bounded; see scope below)
+VERDICT: ACCEPT
 
 ## What was reviewed
 
@@ -79,17 +79,14 @@ claims permitted).
   "Build completed successfully (511 jobs)", `#print axioms` standard for
   both mains (`[propext, Classical.choice, Quot.sound]`), helpers
   `[propext]` or none.
-- Live re-verification in this clone was NOT possible: `bash` tool calls for
-  inspection/build/commit were rejected by the permission gate (two
-  rejections on read-only `ls`/`wc`/`git -C` invocations; one earlier
-  `git rev-parse` succeeded and confirmed clone
-  `/home/simon/Dokumente/gabbro-muse/a1033`, branch `muse/1033`, HEAD
-  `b040b155...` = snapshot base). The verdict therefore rests on the
-  pinned evidence plus complete read-only inspection of the exact snapshot.
-  No network, push, or other-clone access was used or needed.
-- Commit of this report via `./commit.sh` needs the blocked `bash` tool;
-  attempted if available, otherwise this file is left written but
-  uncommitted -- see status line below.
+- Live re-verification in this clone was NOT possible: early `bash` calls for
+  inspection (`ls` with pipes, `wc`/`git -C` forms) were rejected by the
+  permission gate; plain `git`/staging/commit commands later worked. The
+  verdict therefore rests on the pinned evidence plus complete read-only
+  inspection of the exact snapshot. No network, push, or other-clone access
+  was used or needed.
+- This report is committed through `./commit.sh`; only `MUSE-REPORT-1033.md`
+  is owned/touched by lane 1033.
 
 ## Bounded acceptance scope
 
@@ -100,5 +97,6 @@ the layout-only identity plus recomputed head facts; the joint witness; the
 CUTS as written. It does NOT cover any machine-byte, timing, TSO, ABI, or
 relaxation-convergence claim -- none is made.
 
-Status: report written to `MUSE-REPORT-1033.md`; commit pending on `bash`
-availability (permission gate rejected build/shell calls during this turn).
+Status: report `MUSE-REPORT-1033.md` committed on `muse/1033`; tree otherwise
+untouched. Format fix: machine-readable `CANDIDATE:` (full pinned HEAD) and
+`VERDICT:` lines are plain and unique; substantive verdict unchanged.
