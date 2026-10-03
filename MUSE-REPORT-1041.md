@@ -1,7 +1,10 @@
 # MUSE-REPORT-1041: Exact review of author 891 (Optimiser rule: CMOV selection rule)
 
 CANDIDATE: 891 cc4a85e52f4d9b147e71f4f87ddfb1c960f9cf30
-VERDICT: ACCEPT (bounded; layer-A rule lemma only, no byte/hardware/TSO/budget-machine claims)
+VERDICT: ACCEPT
+
+Scope of acceptance (unchanged substance): bounded; layer-A rule lemma only,
+no byte/hardware/TSO/budget-machine claims.
 
 ## Method
 
