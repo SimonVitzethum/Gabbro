@@ -809,4 +809,112 @@ theorem kein_teilschreiben (m m' : Speicher) (a : Adresse) (v : Wort)
       unfold writeBytes
       exact writeBytesN_miss m a v 8 x (fun k hk => hfoot' k hk)
 
+/-! ## Instruction-boundary order (Table 7-2, classes 4-9).
+
+  At an instruction boundary the processor services the highest-priority
+  pending event; lower-priority exceptions are discarded (and possibly
+  re-generated later). Classes 1-3 (reset, task switch, external
+  interventions) are hardware assumptions outside this model. Faults that
+  arise DURING execution (address, access, divide, control) are not
+  boundary events at all: they trap immediately, ahead of any pending
+  interrupt, because interrupts are sampled only at boundaries. -/
+
+/-- Boundary events of classes 4-7: previous-instruction trap, NMI,
+    maskable interrupt with its vector, fault-class debug breakpoint. -/
+inductive GrenzEreignis where
+  | vorTrap : GrenzEreignis
+  | nmi : GrenzEreignis
+  | irq : Nat → GrenzEreignis
+  | bruchFehler : GrenzEreignis
+
+/-- Boundary decision: deliver an event, deliver an ordered fault, or
+    execute on. -/
+inductive GrenzEntscheid where
+  | ereignisAusliefern : GrenzEreignis → GrenzEntscheid
+  | falleAusliefern : PrioritaetsFehler → GrenzEntscheid
+  | weiterAusfuehren : GrenzEntscheid
+
+/-- During-execution faults never wait for the boundary. -/
+def istAusfuehrungsfehler : PrioritaetsFehler → Bool
+  | ⟨.adresse, _⟩ => true
+  | ⟨.zugriff, _⟩ => true
+  | ⟨.teilung, _⟩ => true
+  | ⟨.steuerung, _⟩ => true
+  | _ => false
+
+/-- Split off an immediate during-execution fault, if any. -/
+def burstAusfuehrung (wahl : Option PrioritaetsFehler) :
+    Option PrioritaetsFehler :=
+  match wahl with
+  | some f => if istAusfuehrungsfehler f then some f else none
+  | none => none
+
+/-- The boundary decision in Table 7-2 order: previous traps, NMI,
+    enabled maskable interrupts, fault-class debug, then fetch/decode
+    faults of the next instruction. -/
+def grenzEntscheid (vorTrap : Bool) (nmiAnhaengig : Bool)
+    (irqAnhaengig : Bool) (irqNr : Nat) (irqFrei : Bool) (bruch : Bool)
+    (wahl : Option PrioritaetsFehler) : GrenzEntscheid :=
+  match burstAusfuehrung wahl with
+  | some f => .falleAusliefern f
+  | none =>
+    if vorTrap then .ereignisAusliefern .vorTrap
+    else if nmiAnhaengig then .ereignisAusliefern .nmi
+    else if irqAnhaengig && irqFrei then .ereignisAusliefern (.irq irqNr)
+    else if bruch then .ereignisAusliefern .bruchFehler
+    else match wahl with
+      | some f => .falleAusliefern f
+      | none => .weiterAusfuehren
+
+/-- DURING-EXECUTION FAULTS TRAP IMMEDIATELY: no pending event at the
+    (not yet reached) boundary defers them. -/
+theorem ausfuehrungsfehler_sofort (vorTrap : Bool) (nmiAnhaengig : Bool)
+    (irqAnhaengig : Bool) (irqNr : Nat) (irqFrei : Bool) (bruch : Bool)
+    (f : PrioritaetsFehler)
+    (hausf : istAusfuehrungsfehler f = true) :
+    grenzEntscheid vorTrap nmiAnhaengig irqAnhaengig irqNr irqFrei bruch
+      (some f) = .falleAusliefern f := by
+  simp [grenzEntscheid, burstAusfuehrung, hausf]
+
+/-- Class 4 beats everything behind it: a previous-instruction trap is
+    delivered ahead of interrupts and fetch/decode faults. -/
+theorem vortrap_schlaegt_alle (nmiAnhaengig : Bool) (irqAnhaengig : Bool)
+    (irqNr : Nat) (irqFrei : Bool) (bruch : Bool)
+    (wahl : Option PrioritaetsFehler)
+    (hburst : burstAusfuehrung wahl = none) :
+    grenzEntscheid true nmiAnhaengig irqAnhaengig irqNr irqFrei bruch
+      wahl = .ereignisAusliefern .vorTrap := by
+  simp [grenzEntscheid, hburst]
+
+/-- Class 5 beats maskable interrupts and fetch/decode faults. -/
+theorem nmi_schlaegt_irq_und_abruf (irqAnhaengig : Bool) (irqNr : Nat)
+    (irqFrei : Bool) (bruch : Bool) (wahl : Option PrioritaetsFehler)
+    (hburst : burstAusfuehrung wahl = none) :
+    grenzEntscheid false true irqAnhaengig irqNr irqFrei bruch
+      wahl = .ereignisAusliefern .nmi := by
+  simp [grenzEntscheid, hburst]
+
+/-- Class 6 beats fetch/decode faults: a pending enabled interrupt is
+    serviced BEFORE the next instruction is fetched, so its fetch fault
+    (if any) is discarded and re-generated later. -/
+theorem irq_schlaegt_abruf (irqNr : Nat) (bruch : Bool)
+    (f : PrioritaetsFehler)
+    (hburst : burstAusfuehrung (some f) = none) :
+    grenzEntscheid false false true irqNr true bruch
+      (some f) = .ereignisAusliefern (.irq irqNr) := by
+  simp [grenzEntscheid, hburst]
+
+/-- An uncontested fetch/decode fault is delivered. -/
+theorem abruf_ohne_konkurrenz (f : PrioritaetsFehler)
+    (hburst : burstAusfuehrung (some f) = none) :
+    grenzEntscheid false false false 0 false false
+      (some f) = .falleAusliefern f := by
+  simp [grenzEntscheid, hburst]
+
+/-- A quiet boundary executes on. -/
+theorem ruhe_weiter (irqNr : Nat) :
+    grenzEntscheid false false false irqNr false false none =
+      .weiterAusfuehren := by
+  simp [grenzEntscheid, burstAusfuehrung]
+
 end Gabbro.Grammatik.X86
