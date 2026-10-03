@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 19:38 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 21:06 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -416,7 +416,7 @@ Last ledger refresh: **2026-10-03 19:38 UTC**. This is an operational snapshot, 
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Merged after review/checks | 731: Merged after review/checks | [report](messung/muse/MUSE-REPORT-730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Merged after review/checks | 733: Merged after review/checks | [report](messung/muse/MUSE-REPORT-732.md) |
 | 734 | Selected control registers and syscall MSR byte effects | Committed candidate; review/integration pending | 735: scheduled | [task](lanes/734.md) |
-| 736 | SSE and selected AVX context save restore effects | Agent working | 737: scheduled | [task](lanes/736.md) |
+| 736 | SSE and selected AVX context save restore effects | Scheduled | 737: scheduled | [task](lanes/736.md) |
 | 738 | Derive precise fault ordering across fetched instruction accesses | Merged after review/checks | 739: Merged after review/checks | [report](messung/muse/MUSE-REPORT-738.md) |
 | 740 | Repair upstream compiler Lean aggregation and scope | Committed candidate; review/integration pending | 741: Incomplete; preserved | [task](lanes/740.md) |
 | 742 | Repair upstream compiler Rust panics and mirror fidelity | Committed candidate; review/integration pending | 743: Incomplete; preserved | [task](lanes/742.md) |
@@ -492,36 +492,36 @@ Last ledger refresh: **2026-10-03 19:38 UTC**. This is an operational snapshot, 
 | 814 | Hardware completion: tier-2 PADDD instance | Committed candidate; review/integration pending | 964: Committed candidate; review/integration pending | [task](lanes/814.md) |
 | 815 | Hardware completion: tier-2 PADDQ instance | Committed candidate; review/integration pending | 965: Committed candidate; review/integration pending | [task](lanes/815.md) |
 | 816 | Hardware completion: tier-2 PXOR instance | Committed candidate; review/integration pending | 966: Committed candidate; review/integration pending | [task](lanes/816.md) |
-| 817 | Hardware completion: tier-2 PAND instance | Committed candidate; review/integration pending | 967: Agent working | [task](lanes/817.md) |
+| 817 | Hardware completion: tier-2 PAND instance | Committed candidate; review/integration pending | 967: scheduled | [task](lanes/817.md) |
 | 818 | Hardware completion: tier-2 POR instance | Committed candidate; review/integration pending | 968: scheduled | [task](lanes/818.md) |
 | 819 | Hardware completion: tier-2 PSLLQ instance | Committed candidate; review/integration pending | 969: Committed candidate; review/integration pending | [task](lanes/819.md) |
 | 820 | Hardware completion: tier-2 PSRLQ instance | Committed candidate; review/integration pending | 970: Committed candidate; review/integration pending | [task](lanes/820.md) |
 | 821 | Hardware completion: tier-2 MOVDQA instance | Committed candidate; review/integration pending | 971: Committed candidate; review/integration pending | [task](lanes/821.md) |
-| 822 | Hardware completion: tier-2 MOVDQU instance | Agent working | 972: scheduled | [task](lanes/822.md) |
-| 823 | Hardware completion: tier-2 PCMPEQB instance | Agent working | 973: scheduled | [task](lanes/823.md) |
-| 824 | Composition closing: decode-to-execution closing | Scheduled | 974: scheduled | [task](lanes/824.md) |
-| 825 | Composition closing: image-to-fetch closing | Scheduled | 975: scheduled | [task](lanes/825.md) |
-| 826 | Composition closing: relocation-to-redecode closing | Scheduled | 976: scheduled | [task](lanes/826.md) |
-| 827 | Composition closing: entry-to-mapping closing | Scheduled | 977: scheduled | [task](lanes/827.md) |
-| 828 | Composition closing: stack-to-ABI closing | Scheduled | 978: scheduled | [task](lanes/828.md) |
-| 829 | Composition closing: call-lowering closing | Scheduled | 979: scheduled | [task](lanes/829.md) |
-| 830 | Composition closing: spill-privacy closing | Scheduled | 980: scheduled | [task](lanes/830.md) |
-| 831 | Composition closing: contract-at-call closing | Scheduled | 981: scheduled | [task](lanes/831.md) |
-| 832 | Composition closing: contract-at-return closing | Scheduled | 982: scheduled | [task](lanes/832.md) |
-| 833 | Composition closing: call-log ghost closing | Scheduled | 983: scheduled | [task](lanes/833.md) |
-| 834 | Composition closing: budget-resumption closing | Scheduled | 984: scheduled | [task](lanes/834.md) |
-| 835 | Composition closing: work-transfer closing | Scheduled | 985: scheduled | [task](lanes/835.md) |
-| 836 | Composition closing: time-bound closing | Scheduled | 986: scheduled | [task](lanes/836.md) |
-| 837 | Composition closing: fence-order closing | Scheduled | 987: scheduled | [task](lanes/837.md) |
-| 838 | Composition closing: atomic-ledger closing | Scheduled | 988: scheduled | [task](lanes/838.md) |
-| 839 | Composition closing: FP-ledger closing | Scheduled | 989: scheduled | [task](lanes/839.md) |
-| 840 | Composition closing: flag-ledger closing | Scheduled | 990: scheduled | [task](lanes/840.md) |
-| 841 | Composition closing: width-ledger closing | Scheduled | 991: scheduled | [task](lanes/841.md) |
-| 842 | Composition closing: fault-ledger closing | Scheduled | 992: scheduled | [task](lanes/842.md) |
-| 843 | Composition closing: feature-gate closing | Scheduled | 993: scheduled | [task](lanes/843.md) |
-| 844 | Composition closing: profile-selection closing | Scheduled | 994: scheduled | [task](lanes/844.md) |
-| 845 | Composition closing: relaxation-layout closing | Scheduled | 995: scheduled | [task](lanes/845.md) |
-| 846 | Composition closing: patch-bytes closing | Scheduled | 996: scheduled | [task](lanes/846.md) |
+| 822 | Hardware completion: tier-2 MOVDQU instance | Scheduled | 972: scheduled | [task](lanes/822.md) |
+| 823 | Hardware completion: tier-2 PCMPEQB instance | Scheduled | 973: scheduled | [task](lanes/823.md) |
+| 824 | Composition closing: decode-to-execution closing | Committed candidate; review/integration pending | 974: Committed candidate; review/integration pending | [task](lanes/824.md) |
+| 825 | Composition closing: image-to-fetch closing | Committed candidate; review/integration pending | 975: Committed candidate; review/integration pending | [task](lanes/825.md) |
+| 826 | Composition closing: relocation-to-redecode closing | Committed candidate; review/integration pending | 976: Committed candidate; review/integration pending | [task](lanes/826.md) |
+| 827 | Composition closing: entry-to-mapping closing | Committed candidate; review/integration pending | 977: Committed candidate; review/integration pending | [task](lanes/827.md) |
+| 828 | Composition closing: stack-to-ABI closing | Committed candidate; review/integration pending | 978: Committed candidate; review/integration pending | [task](lanes/828.md) |
+| 829 | Composition closing: call-lowering closing | Committed candidate; review/integration pending | 979: Incomplete; preserved | [task](lanes/829.md) |
+| 830 | Composition closing: spill-privacy closing | Committed candidate; review/integration pending | 980: Committed candidate; review/integration pending | [task](lanes/830.md) |
+| 831 | Composition closing: contract-at-call closing | Committed candidate; review/integration pending | 981: Committed candidate; review/integration pending | [task](lanes/831.md) |
+| 832 | Composition closing: contract-at-return closing | Committed candidate; review/integration pending | 982: Committed candidate; review/integration pending | [task](lanes/832.md) |
+| 833 | Composition closing: call-log ghost closing | Committed candidate; review/integration pending | 983: Committed candidate; review/integration pending | [task](lanes/833.md) |
+| 834 | Composition closing: budget-resumption closing | Committed candidate; review/integration pending | 984: Committed candidate; review/integration pending | [task](lanes/834.md) |
+| 835 | Composition closing: work-transfer closing | Committed candidate; review/integration pending | 985: Committed candidate; review/integration pending | [task](lanes/835.md) |
+| 836 | Composition closing: time-bound closing | Committed candidate; review/integration pending | 986: Committed candidate; review/integration pending | [task](lanes/836.md) |
+| 837 | Composition closing: fence-order closing | Committed candidate; review/integration pending | 987: Committed candidate; review/integration pending | [task](lanes/837.md) |
+| 838 | Composition closing: atomic-ledger closing | Committed candidate; review/integration pending | 988: Agent working | [task](lanes/838.md) |
+| 839 | Composition closing: FP-ledger closing | Agent working | 989: scheduled | [task](lanes/839.md) |
+| 840 | Composition closing: flag-ledger closing | Agent working | 990: scheduled | [task](lanes/840.md) |
+| 841 | Composition closing: width-ledger closing | Agent working | 991: scheduled | [task](lanes/841.md) |
+| 842 | Composition closing: fault-ledger closing | Agent working | 992: scheduled | [task](lanes/842.md) |
+| 843 | Composition closing: feature-gate closing | Agent working | 993: scheduled | [task](lanes/843.md) |
+| 844 | Composition closing: profile-selection closing | Agent working | 994: scheduled | [task](lanes/844.md) |
+| 845 | Composition closing: relaxation-layout closing | Agent working | 995: scheduled | [task](lanes/845.md) |
+| 846 | Composition closing: patch-bytes closing | Agent working | 996: scheduled | [task](lanes/846.md) |
 | 847 | Composition closing: mapping-permission closing | Scheduled | 997: scheduled | [task](lanes/847.md) |
 | 848 | Composition closing: guard-page closing | Scheduled | 998: scheduled | [task](lanes/848.md) |
 | 849 | Composition closing: unwind-table closing | Scheduled | 999: scheduled | [task](lanes/849.md) |
@@ -582,17 +582,18 @@ Last ledger refresh: **2026-10-03 19:38 UTC**. This is an operational snapshot, 
 | 1062 | Task-brief audit batch B09 (lanes 866-880) | Committed candidate; review/integration pending | 1082: Committed candidate; review/integration pending | [task](lanes/1062.md) |
 | 1063 | Task-brief audit batch B10 (lanes 881-895) | Committed candidate; review/integration pending | 1083: scheduled | [task](lanes/1063.md) |
 | 1064 | Task-brief audit batch B11 (lanes 896-910) | Committed candidate; review/integration pending | 1084: scheduled | [task](lanes/1064.md) |
-| 1065 | Task-brief audit batch B12 (lanes 911-925) | Agent working | 1085: scheduled | [task](lanes/1065.md) |
-| 1066 | Task-brief audit batch B13 (lanes 926-940) | Agent working | 1086: scheduled | [task](lanes/1066.md) |
-| 1067 | Task-brief audit batch B14 (lanes 941-955) | Agent working | 1087: scheduled | [task](lanes/1067.md) |
-| 1068 | Task-brief audit batch B15 (lanes 956-970) | Agent working | 1088: scheduled | [task](lanes/1068.md) |
-| 1069 | Task-brief audit batch B16 (lanes 971-985) | Agent working | 1089: scheduled | [task](lanes/1069.md) |
-| 1070 | Task-brief audit batch B17 (lanes 986-1000) | Agent working | 1090: scheduled | [task](lanes/1070.md) |
-| 1071 | Task-brief audit batch B18 (lanes 1001-1015) | Agent working | 1091: scheduled | [task](lanes/1071.md) |
-| 1072 | Task-brief audit batch B19 (lanes 1016-1030) | Agent working | 1092: scheduled | [task](lanes/1072.md) |
-| 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Scheduled | 1093: scheduled | [task](lanes/1073.md) |
-| 1094 | Idle pool cache cleanup with strict guards | Scheduled | 1095: scheduled | [task](lanes/1094.md) |
-| 1096 | Hourly managed-agent census with coordinator warning | Scheduled | 1097: scheduled | [task](lanes/1096.md) |
+| 1065 | Task-brief audit batch B12 (lanes 911-925) | Scheduled | 1085: scheduled | [task](lanes/1065.md) |
+| 1066 | Task-brief audit batch B13 (lanes 926-940) | Scheduled | 1086: scheduled | [task](lanes/1066.md) |
+| 1067 | Task-brief audit batch B14 (lanes 941-955) | Scheduled | 1087: scheduled | [task](lanes/1067.md) |
+| 1068 | Task-brief audit batch B15 (lanes 956-970) | Scheduled | 1088: scheduled | [task](lanes/1068.md) |
+| 1069 | Task-brief audit batch B16 (lanes 971-985) | Scheduled | 1089: scheduled | [task](lanes/1069.md) |
+| 1070 | Task-brief audit batch B17 (lanes 986-1000) | Scheduled | 1090: scheduled | [task](lanes/1070.md) |
+| 1071 | Task-brief audit batch B18 (lanes 1001-1015) | Scheduled | 1091: scheduled | [task](lanes/1071.md) |
+| 1072 | Task-brief audit batch B19 (lanes 1016-1030) | Scheduled | 1092: scheduled | [task](lanes/1072.md) |
+| 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Committed candidate; review/integration pending | 1093: Committed candidate; review/integration pending | [task](lanes/1073.md) |
+| 1094 | Idle pool cache cleanup with strict guards | Incomplete; preserved | 1095: scheduled | [task](lanes/1094.md) |
+| 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
+| 1098 | Standing dynamic work planner for compiler/hardware closure | Scheduled | 1099: scheduled | [task](lanes/1098.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
