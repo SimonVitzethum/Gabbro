@@ -239,12 +239,108 @@ theorem cmovWahl_waehlt {D : Deklaration} (V : Vertrag D)
   unfold cmovWahlBlock
   simp [hz]
 
+/-! ## 5. Helpers: empty reads change nothing.
+
+    A `lese` over no places appends no event, so the world is
+    unchanged; literal conditions and literal arms read nothing. Both
+    arms of the branch site are literals, hence the site's only read
+    is the condition's places (`hc0`). -/
+
+/-- Reading no places changes no world. -/
+theorem lese_leer {D : Deklaration} (σ : World D) (Λ : List (Res D)) :
+    σ.lese Λ [] = σ := by
+  rfl
+
+/-- A literal reads no place. -/
+theorem lit_orte_leer {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}
+    (v : Int) : (Expr.lit v : Expr D Γ Λ (.int v v)).orte = [] := by
+  rfl
+
+/-! ## 6. Connection: the admitted select keeps value and outcome.
+
+    The optimisation as a generic rule lemma over ARBITRARY values
+    (`b x y`, arbitrary words `xw yw`, arbitrary floats `qa qb`):
+    where the certificate is admitted (`hz`), the lowering placed the
+    taken arm values in the registers (`hbed`, `hsrc`, `hdst`,
+    `hlink`), and the run's condition reads `b` over no places
+    (`hc`, `hc0`), jointly:
+    (1) the target select computes the taken arm word;
+    (2) the admitted validator choice keeps the `execEnd` OUTCOME --
+    same constructor, same successor worlds and environments -- so no
+    fault is added or removed (`logik`/`hardware` agree), every
+    downstream observation agrees (contracts at their place read the
+    same values from the same environments, call logs gain no event,
+    no shared access is read or written by either side -- both arms
+    are literals and the condition reads no place -- and the
+    step-budget accounting is unchanged: same block shape, the
+    removed branch is pure and unbudgeted);
+    (3) the lowered words read back whole through the canonical word;
+    (4) the select preserves the taken arm's `gleitPasst` outcome
+    (IEEE: the select moves the exact pattern, adding no rounding);
+    (5) the select changes no memory byte and no flag (concurrency:
+    no added shared access; observation: no flag change).
+    Nothing here derives an `ensures`, turns a refusal into a warning,
+    or speculates a faulting form above its guard (both arms are
+    literals; any memory, division or trap-capable FP behind the site
+    keeps the `fehlerfrei = false` refusal). -/
+
+/-- CONNECTION: the admitted CMOV select preserves the taken arm
+    value, the run outcome, the word image, the float outcome and the
+    memory/flag frame. -/
+theorem OptCmovSel_verbindung {D : Deklaration} (V : Vertrag D)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    {Γ : Ctx} {Λ : List (Res D)}
+    (g : CmovSelBeleg) (hz : belegOk g = true)
+    (b : Bool) (x y : Int)
+    (c : Expr D Γ Λ .bool)
+    (σ : World D) (ρ : Env D Γ)
+    (hc : wahr? (eval σ c σ ρ) = b)
+    (hc0 : c.orte = [])
+    (s : Zustand) (c0 : Bedingung) (dst src : Register)
+    (hbed : bedingung c0 s.flags = b)
+    (xw yw : Wort)
+    (hsrc : s.register src = xw)
+    (hdst : s.register dst = yw)
+    (hlink : xw = BitVec.ofNat 64 x.toNat ∧
+      yw = BitVec.ofNat 64 y.toNat)
+    (hW : 0 ≤ x ∧ x < 2 ^ 64 ∧ 0 ≤ y ∧ y < 2 ^ 64)
+    (qa qb : GFloat) (lo hi : Int × Int) :
+    (cmovAnwenden s dst src c0).register dst = (if b then xw else yw) ∧
+    execEnd O passes R (branchEnd V c x y) σ ρ =
+      execEnd O passes R (cmovWahlBlock V g c b x y) σ ρ ∧
+    (xw.toNat = x.toNat ∧ yw.toNat = y.toNat) ∧
+    (gleitPasst lo hi (if b then qa else qb) =
+      if b then gleitPasst lo hi qa else gleitPasst lo hi qb) ∧
+    ((cmovAnwenden s dst src c0).speicher = s.speicher ∧
+      (cmovAnwenden s dst src c0).flags = s.flags) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · cases b with
+    | true => rw [cmovWaehlt_genommen s dst src c0 xw hbed hsrc, if_pos rfl]
+    | false =>
+      rw [cmovWaehlt_nicht s dst src c0 yw hbed hdst, if_neg (by decide)]
+  · rw [cmovWahl_waehlt V g hz c b x y]
+    simp only [branchEnd, selectEnd, execEnd, execStmt, execBlock,
+      Ausgang.schrumpf, EndAusgang.schrumpf, Env.tail]
+    rw [hc0, lit_orte_leer x, lit_orte_leer y,
+      lit_orte_leer (selWert b x y), lese_leer, hc]
+    cases b <;> rfl
+  · obtain ⟨hx0, hxb, hy0, hyb⟩ := hW
+    rw [hlink.1, hlink.2]
+    exact ⟨selWortLiest x ⟨hx0, hxb⟩, selWortLiest y ⟨hy0, hyb⟩⟩
+  · exact selGleit_behaelt b qa qb lo hi
+  · exact ⟨cmovAnwenden_speicher s dst src c0,
+      cmovAnwenden_flags s dst src c0⟩
+
 /- CUTS:
     - Proved: admission, six refusals, select value equations, taken/
       untaken target words, width-exact word readback, `gleitPasst`
-      preservation.
-    - OPEN: branch/select blocks, the `OptCmovSel_verbindung` rule
-      lemma (exec-outcome preservation) and its joint witness.
+      preservation, certificate shape, branch/select blocks, admitted
+      validator choice, empty-read helpers, and the
+      `OptCmovSel_verbindung` rule lemma (select value, exec-outcome,
+      word image, float outcome, memory/flag frame).
+    - OPEN: the joint witnesses (`cmovWahl_waehlt_zeuge`,
+      `OptCmovSel_verbindung_zeuge`).
 -/
 
 #print axioms cmovSelZulassen
@@ -270,5 +366,8 @@ theorem cmovWahl_waehlt {D : Deklaration} (V : Vertrag D)
 #print axioms selectEnd
 #print axioms cmovWahlBlock
 #print axioms cmovWahl_waehlt
+#print axioms lese_leer
+#print axioms lit_orte_leer
+#print axioms OptCmovSel_verbindung
 
 end Gabbro.Grammatik.X86
