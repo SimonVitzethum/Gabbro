@@ -98,6 +98,47 @@ theorem fpLedgerSchritt_schritt (k : FpLedger)
           simp only [hb] at hout
           exact hout
 
+/-! ## 2. Byte-facing composition: fetched bytes under the ledger.
+
+  Fetch reads actual executable memory through the accepted
+  `fpFetchDekodiert` (never a caller-supplied decoded value); the
+  decoded form then runs through the §1 ledger guard. -/
+
+/-- One ledger-guarded byte step from actual memory: fetch, decode,
+    then the §1 ledger step under the scope entry `k`. -/
+def fpLedgerByteschritt (k : FpLedger) (t : FpZustand) : FpByteAusgang :=
+  match fpFetchDekodiert t with
+  | none => .verweigert
+  | some (d, _) =>
+    match fpLedgerSchritt k d t with
+    | none => .verweigert
+    | some t' => .weiter t'
+
+/-- Fetch refusal is byte-step refusal. -/
+theorem fpLedgerByteschritt_hol_verweigert (k : FpLedger)
+    (t : FpZustand) (hf : fpFetchDekodiert t = none) :
+    fpLedgerByteschritt k t = .verweigert := by
+  unfold fpLedgerByteschritt
+  rw [hf]
+
+/-- A successful ledger byte-step runs the §1 ledger step on the
+    fetched form. -/
+theorem fpLedgerByteschritt_schritt (k : FpLedger)
+    (t t' : FpZustand) (d : FpDecodiert) (rest : List Byte)
+    (hf : fpFetchDekodiert t = some (d, rest))
+    (hout : fpLedgerByteschritt k t = .weiter t') :
+    fpLedgerSchritt k d t = some t' := by
+  unfold fpLedgerByteschritt at hout
+  rw [hf] at hout
+  simp only at hout
+  cases hs : fpLedgerSchritt k d t with
+  | none => simp [hs] at hout
+  | some u =>
+    simp only [hs] at hout
+    have h2 : u = t' := by injection hout
+    subst h2
+    rfl
+
 /- CUTS: skeleton only; closing theorems follow.
 -/
 
