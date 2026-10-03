@@ -6,7 +6,7 @@ CANDIDATE: 851 0dcdc7a7822e7282ce7026184ba5b03c1c3aeec7
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded: composition-only closing; see scope below)
+VERDICT: ACCEPT
 
 ## What was reviewed
 
