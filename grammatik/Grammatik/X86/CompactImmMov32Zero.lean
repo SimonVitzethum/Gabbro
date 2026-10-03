@@ -30,6 +30,7 @@ import Grammatik.X86.Speicher
 import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
 import Grammatik.X86.NarrowOps
+import Grammatik.X86.DecodingCoverage
 
 namespace Gabbro.Grammatik.X86
 
@@ -153,11 +154,13 @@ def decodeCompact : List Byte → Option (CompactDec × List Byte)
   | b :: rest =>
     if byteNat b == 65 then
       match decodeCompactTail rest with
-      | some (⟨.mov32imm dstLow v, 5⟩, rest') =>
-        match codeReg (regCode dstLow + 8) with
-        | some dst => some (⟨.mov32imm dst v, 6⟩, rest')
-        | none => none
-      | _ => none
+      | some (dd, rest') =>
+        match dd.op with
+        | .mov32imm dstLow v =>
+          match codeReg (regCode dstLow + 8) with
+          | some dst => some (⟨.mov32imm dst v, 6⟩, rest')
+          | none => none
+      | none => none
     else decodeCompactTail (b :: rest)
 
 /-- Round trip for low registers (bare 5-byte form). -/
@@ -262,6 +265,132 @@ theorem decodeComboCompact_nichts (bs : List Byte) (h1 : decode bs = none)
     decodeComboCompact bs = none := by
   unfold decodeComboCompact
   rw [h1, h2]
+
+/-! ## 5. Arbitrary-input coverage: every success consumes its length.
+
+    Proved from the decoder side only (never from encoder round
+    trips), reusing `DecodingCoverage.parseLe32_suffix`. Needs the
+    import for that fact; the statement below reuses nothing else. -/
+
+/-- Coverage shape: the one covered row at its exact length (5 bare,
+    6 with the REX.B byte). -/
+def compactDecktAb (d : CompactDec) : Prop :=
+  ∃ dst imm, d.op = .mov32imm dst imm ∧ (d.laenge = 5 ∨ d.laenge = 6)
+
+/-- Tail shape: the tail row always claims length 5. -/
+def compactTailAb (d : CompactDec) : Prop :=
+  ∃ dst imm, d.op = .mov32imm dst imm ∧ d.laenge = 5
+
+/-- Tail coverage: opcode byte plus four immediate bytes. -/
+theorem decodeCompactTail_abdeckung (bs : List Byte) (d : CompactDec)
+    (rest : List Byte)
+    (h : decodeCompactTail bs = some (d, rest)) :
+    (∃ pre, bs = pre ++ rest ∧ pre.length = d.laenge) ∧
+      laengeOk d.laenge = true ∧ compactTailAb d := by
+  cases bs with
+  | nil => simp [decodeCompactTail] at h
+  | cons op t =>
+    simp only [decodeCompactTail] at h
+    split at h
+    · cases hparse : parseLe32 t with
+      | none =>
+        cases hc : codeReg (byteNat op - 184) with
+        | none => simp [hparse, hc] at h
+        | some dst => simp [hparse, hc] at h
+      | some pr =>
+        obtain ⟨v, mid⟩ := pr
+        simp only [hparse] at h
+        cases hc : codeReg (byteNat op - 184) with
+        | none => simp [hc] at h
+        | some dst =>
+          simp only [hc] at h
+          obtain ⟨b0, b1, b2, b3, h4⟩ :=
+            parseLe32_suffix t v mid hparse
+          cases h
+          refine ⟨⟨[op, b0, b1, b2, b3], by simp [h4], rfl⟩, rfl, ?_⟩
+          exact ⟨_, _, rfl, rfl⟩
+    · simp at h
+
+/-- Tail shape implies the full shape (length 5 is a covered length). -/
+theorem compactTail_zu_Ab (d : CompactDec) (h : compactTailAb d) :
+    compactDecktAb d := by
+  obtain ⟨dst, imm, hop, h5⟩ := h
+  exact ⟨dst, imm, hop, Or.inl h5⟩
+
+/-- Top-level coverage: the REX.B prefix plus the tail row. -/
+theorem decodeCompact_abdeckung (bs : List Byte) (d : CompactDec)
+    (rest : List Byte) (h : decodeCompact bs = some (d, rest)) :
+    (∃ pre, bs = pre ++ rest ∧ pre.length = d.laenge) ∧
+      laengeOk d.laenge = true ∧ compactDecktAb d := by
+  cases bs with
+  | nil => simp [decodeCompact] at h
+  | cons b t =>
+    simp only [decodeCompact] at h
+    split at h
+    · cases ht : decodeCompactTail t with
+      | none => simp [ht] at h
+      | some pr =>
+        obtain ⟨dd, mid⟩ := pr
+        simp only [ht] at h
+        cases hop : dd.op with
+        | mov32imm dstLow v =>
+          simp only [hop] at h
+          cases hc : codeReg (regCode dstLow + 8) with
+          | none => simp [hc] at h
+          | some dst =>
+            simp only [hc] at h
+            cases h
+            have hsub := decodeCompactTail_abdeckung t dd rest ht
+            obtain ⟨⟨pre, hbs, hlen⟩, _, _, _, _, h5⟩ := hsub
+            refine ⟨⟨b :: pre, by simp [hbs], by simp [hlen, h5]⟩, rfl, ?_⟩
+            exact ⟨_, _, rfl, Or.inr rfl⟩
+    · have hsub := decodeCompactTail_abdeckung (b :: t) d rest h
+      exact ⟨hsub.1, hsub.2.1, compactTail_zu_Ab d hsub.2.2⟩
+
+/-- Every successful decode of an arbitrary input consumes exactly its
+    stated length within 1..15. -/
+theorem decodeCompact_consumes (bs : List Byte) (d : CompactDec)
+    (rest : List Byte) (h : decodeCompact bs = some (d, rest)) :
+    d.laenge + rest.length = bs.length ∧ 1 ≤ d.laenge ∧ d.laenge ≤ 15 := by
+  obtain ⟨⟨pre, hbs, hlen⟩, hok, _⟩ := decodeCompact_abdeckung bs d rest h
+  have hbl : bs.length = pre.length + rest.length := by
+    rw [hbs, List.length_append]
+  have hb : 1 ≤ d.laenge ∧ d.laenge ≤ 15 := by
+    simp only [laengeOk, decide_eq_true_eq] at hok
+    exact hok
+  exact ⟨by omega, hb.1, hb.2⟩
+
+/-! ## 6. Values needing imm64 are refused by this row.
+
+    MOV opcode table: `B8+ rd id` carries imm32; only `REX.W + B8+
+    rd io` carries imm64 (the pilot `movImm64` domain, whose round
+    trip `roundtrip_movImm64` already proves that row exists). The
+    gate below is exact in both directions. -/
+
+/-- A word needs the 10-byte REX.W form iff it does not fit 32 bits. -/
+def brauchtImm64 (v : Wort) : Bool := decide (2 ^ 32 ≤ v.toNat)
+
+/-- The gate answers the size question exactly. -/
+theorem brauchtImm64_genau (v : Wort) :
+    brauchtImm64 v = true ↔ 2 ^ 32 ≤ v.toNat := by
+  simp [brauchtImm64]
+
+/-- REFUSAL: no compact immediate denotes a word needing imm64. -/
+theorem keinKompaktFuerGross (v : Wort) (h : brauchtImm64 v = true)
+    (imm : BitVec 32) : compactWert imm ≠ v := by
+  have hfit := compactWert_fits imm
+  have hle : 2 ^ 32 ≤ v.toNat := (brauchtImm64_genau v).mp h
+  intro heq
+  have hcon := congrArg BitVec.toNat heq
+  omega
+
+/-- POSITIVE: every sub-2^32 word has a compact immediate. -/
+theorem kompaktFuerKlein (v : Wort) (h : v.toNat < 2 ^ 32) :
+    ∃ imm : BitVec 32, compactWert imm = v := by
+  refine ⟨BitVec.ofNat 32 v.toNat, ?_⟩
+  apply BitVec.eq_of_toNat_eq
+  rw [compactWert_nat, BitVec.toNat_ofNat]
+  exact Nat.mod_eq_of_lt h
 
 /- CUTS:
     Skeleton only: encoder, decoder, execution and witnesses are open.
