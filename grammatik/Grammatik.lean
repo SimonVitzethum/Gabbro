@@ -570,3 +570,4 @@ import Grammatik.X86.OptShiftSel
 import Grammatik.X86.OptMulSel
 import Grammatik.X86.OptDivGuard
 import Grammatik.X86.OptSetccSel
+import Grammatik.X86.OptCmovSel
