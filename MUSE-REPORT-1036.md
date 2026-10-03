@@ -9,7 +9,9 @@ CANDIDATE: 886 8c0bb68b06f5b745801e1cf65efedfdbd0c32095
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded — see claim boundary below)
+VERDICT: ACCEPT
+
+Acceptance is bounded — see claim boundary below.
 
 ## What was reviewed
 
