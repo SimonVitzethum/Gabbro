@@ -10,8 +10,11 @@
 
 ## Verdict
 
-- CANDIDATE: 862 0eb5dbddfd2e940178074571d7af5b5c3fd28cea
-- VERDICT: ACCEPT (bounded; bounds in "Acceptance bounds" below)
+CANDIDATE: 862 0eb5dbddfd2e940178074571d7af5b5c3fd28cea
+VERDICT: ACCEPT
+
+Acceptance is bounded; the bounds are stated in "Acceptance bounds" below
+and do not change the verdict.
 
 ## What the candidate is
 
