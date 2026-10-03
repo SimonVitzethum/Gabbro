@@ -593,10 +593,10 @@ Last ledger refresh: **2026-10-03 22:32 UTC**. This is an operational snapshot, 
 | 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Merged after review/checks | 1093: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1073.md) |
 | 1094 | Idle pool cache cleanup with strict guards | Incomplete; preserved | 1095: scheduled | [task](lanes/1094.md) |
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
-| 1098 | Standing dynamic work planner for compiler/hardware closure | Committed candidate; review/integration pending | 1099: Committed candidate; review/integration pending | [task](lanes/1098.md) |
+| 1098 | Standing dynamic work planner for compiler/hardware closure | Merged after review/checks | 1099: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1098.md) |
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Committed candidate; review/integration pending | 1101: Committed candidate; review/integration pending | [task](lanes/1100.md) |
 | 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: Committed candidate; review/integration pending | [task](lanes/1102.md) |
-| 1104 | Close the accepted consumers through the common dispatcher | Committed candidate; review/integration pending | 1105: Agent working | [task](lanes/1104.md) |
+| 1104 | Close the accepted consumers through the common dispatcher | Committed candidate; review/integration pending | 1105: Committed candidate; review/integration pending | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Committed candidate; review/integration pending | 1109: Committed candidate; review/integration pending | [task](lanes/1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Committed candidate; review/integration pending | 1111: Agent working | [task](lanes/1110.md) |
@@ -1334,6 +1334,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1045**, Independent exact review of 895, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1045.md). <!-- x86-merged:1045 -->
 - 2026-10-03: lane **1073**, Task-brief audit batch B20 (lanes 1031-1045), integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1073.md). <!-- x86-merged:1073 -->
 - 2026-10-03: lane **1093**, Independent exact review of 1073, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1093.md). <!-- x86-merged:1093 -->
+- 2026-10-03: lane **1098**, Standing dynamic work planner for compiler/hardware closure, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1098.md). <!-- x86-merged:1098 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
