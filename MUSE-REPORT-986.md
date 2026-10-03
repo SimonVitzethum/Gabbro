@@ -1,7 +1,7 @@
 # MUSE-REPORT-986: Exact review of author 836 (Composition closing: time-bound closing)
 
 CANDIDATE: 836 6c73cdbbf351e3f22e2a2e313843709ba1ebcdc1
-VERDICT: ACCEPT (bounded; see scope below)
+VERDICT: ACCEPT
 
 ## Clone/branch verification
 
