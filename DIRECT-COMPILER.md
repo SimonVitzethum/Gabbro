@@ -560,11 +560,11 @@ Last ledger refresh: **2026-10-03 22:31 UTC**. This is an operational snapshot, 
 | 882 | Optimiser rule: chain scheduling rule | Committed candidate; review/integration pending | 1032: Incomplete; preserved | [task](lanes/882.md) |
 | 883 | Optimiser rule: loop alignment rule | Merged after review/checks | 1033: Merged after review/checks | [report](messung/muse/MUSE-REPORT-883.md) |
 | 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Incomplete; preserved | [task](lanes/884.md) |
-| 885 | Optimiser rule: zero-idiom selection rule | Agent working | 1035: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/885.md) |
+| 885 | Optimiser rule: zero-idiom selection rule | Committed candidate; review/integration pending | 1035: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/885.md) |
 | 886 | Optimiser rule: LEA selection rule | Merged after review/checks | 1036: Merged after review/checks | [report](messung/muse/MUSE-REPORT-886.md) |
 | 887 | Optimiser rule: shift selection rule | Merged after review/checks | 1037: Merged after review/checks | [report](messung/muse/MUSE-REPORT-887.md) |
 | 888 | Optimiser rule: multiply selection rule | Merged after review/checks | 1038: Merged after review/checks | [report](messung/muse/MUSE-REPORT-888.md) |
-| 889 | Optimiser rule: division guard rule | Committed candidate; review/integration pending | 1039: Committed candidate; review/integration pending | [task](lanes/889.md) |
+| 889 | Optimiser rule: division guard rule | Merged after review/checks | 1039: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-889.md) |
 | 890 | Optimiser rule: SETcc selection rule | Committed candidate; review/integration pending | 1040: Committed candidate; review/integration pending | [task](lanes/890.md) |
 | 891 | Optimiser rule: CMOV selection rule | Committed candidate; review/integration pending | 1041: Committed candidate; review/integration pending | [task](lanes/891.md) |
 | 892 | Optimiser rule: MOV-immediate selection rule | Committed candidate; review/integration pending | 1042: Committed candidate; review/integration pending | [task](lanes/892.md) |
@@ -598,7 +598,7 @@ Last ledger refresh: **2026-10-03 22:31 UTC**. This is an operational snapshot, 
 | 1102 | Port and device execution on the common machine | Committed candidate; review/integration pending | 1103: Agent working | [task](lanes/1102.md) |
 | 1104 | Close the accepted consumers through the common dispatcher | Committed candidate; review/integration pending | 1105: Agent working | [task](lanes/1104.md) |
 | 1106 | Realised per-access footprints for the connected integer rows | Agent working | 1107: scheduled | [task](lanes/1106.md) |
-| 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Committed candidate; review/integration pending | 1109: Committed candidate; review/integration pending | [task](lanes/1108.md) |
+| 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Committed candidate; review/integration pending | 1109: Agent working | [task](lanes/1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Agent working | 1111: scheduled | [task](lanes/1110.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1318,6 +1318,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1037**, Independent exact review of 887, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1037.md). <!-- x86-merged:1037 -->
 - 2026-10-03: lane **888**, Optimiser rule: multiply selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-888.md). <!-- x86-merged:888 -->
 - 2026-10-03: lane **1038**, Independent exact review of 888, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1038.md). <!-- x86-merged:1038 -->
+- 2026-10-03: lane **889**, Optimiser rule: division guard rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-889.md). <!-- x86-merged:889 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
