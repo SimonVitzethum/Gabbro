@@ -6,7 +6,9 @@ CANDIDATE: 871 ca858ebe6b3bf24b83994cf10307a22614f8eabf
 
 ## VERDICT
 
-VERDICT: ACCEPT (bounded: source-level `eval`/`execEnd`/word connection only; no machine-byte, TSO/GX, ABI/loader, or machine-work claim — exactly the boundary stated in the candidate's CUTS, which I endorse as the acceptance scope).
+VERDICT: ACCEPT
+
+Acceptance scope (bounded, substance unchanged): source-level `eval`/`execEnd`/word connection only; no machine-byte, TSO/GX, ABI/loader, or machine-work claim — exactly the boundary stated in the candidate's CUTS, which I endorse as the acceptance scope.
 
 ## What was reviewed
 
