@@ -464,7 +464,7 @@ Last ledger refresh: **2026-10-03 13:18 UTC**. This is an operational snapshot, 
 | 786 | Hardware completion: youngest-own-store forwarding | Incomplete; preserved | 936: scheduled | [task](lanes/786.md) |
 | 787 | Hardware completion: tearing refusal table | Incomplete; preserved | 937: scheduled | [task](lanes/787.md) |
 | 788 | Hardware completion: CVTSI2SD from 32-bit int | Committed candidate; review/integration pending | 938: scheduled | [task](lanes/788.md) |
-| 789 | Hardware completion: CVTSI2SD from 64-bit int | Committed candidate; review/integration pending | 939: Committed candidate; review/integration pending | [task](lanes/789.md) |
+| 789 | Hardware completion: CVTSI2SD from 64-bit int | Merged after review/checks | 939: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-789.md) |
 | 790 | Hardware completion: UCOMISD unordered rows | Incomplete; preserved | 940: scheduled | [task](lanes/790.md) |
 | 791 | Hardware completion: float narrow range check | Agent working | 941: scheduled | [task](lanes/791.md) |
 | 792 | Hardware completion: float finite bit test | Agent working | 942: scheduled | [task](lanes/792.md) |
@@ -1172,6 +1172,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **934**, Independent exact review of 784, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-934.md). <!-- x86-merged:934 -->
 - 2026-10-03: lane **785**, Hardware completion: CAS divergence record, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-785.md). <!-- x86-merged:785 -->
 - 2026-10-03: lane **935**, Independent exact review of 785, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-935.md). <!-- x86-merged:935 -->
+- 2026-10-03: lane **789**, Hardware completion: CVTSI2SD from 64-bit int, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-789.md). <!-- x86-merged:789 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

@@ -503,3 +503,4 @@ import Grammatik.X86.SfenceStoreNarrow
 import Grammatik.X86.LfenceLoadNarrow
 import Grammatik.X86.CasRetryBound
 import Grammatik.X86.CasDivergenceRec
+import Grammatik.X86.Cvtsi2sdW64
