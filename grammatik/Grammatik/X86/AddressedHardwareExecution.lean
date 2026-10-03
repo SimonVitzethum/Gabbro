@@ -396,4 +396,114 @@ def lockXaddGeholt (c : Nat) (m : LockMaschine) : LockAusgang :=
     let l := (geholt m.zu).length - rest.length
     lockXaddAdr c src f l m (ripNach m.zu.rip l)
 
+/-! ## 5. Reached witnesses: fetched scaled and RIP-relative XADD.
+
+    Both witnesses fetch CLOSED bytes from actual executable memory and
+    change data memory observably: the scaled SIB form writes through
+    `r8 + rcx * 8`, the RIP-relative form through `ripNext + disp`,
+    both landing on the aligned word at 8200. -/
+
+/-- Scaled witness image: `LOCK XADD r8, [r8 + rcx*8 + 0]`. -/
+def lockAdrWitBild : List Byte :=
+  [natByte 240, natByte 77, natByte 15, natByte 193,
+    natByte 68, natByte 200, natByte 0]
+
+/-- RIP-relative witness image: `LOCK XADD r8, [rip + 4095]`. -/
+def lockRipWitBild : List Byte :=
+  [natByte 240, natByte 76, natByte 15, natByte 193,
+    natByte 5, natByte 255, natByte 15, natByte 0, natByte 0]
+
+/-- Witness code bytes: the image at 4096, zeroes elsewhere. -/
+def lockWitBytes (bild : List Byte) (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match bild[a.toNat - 4096]? with
+    | some b => b
+    | none => BitVec.ofNat 8 0
+
+/-- Witness execute permission: exactly the image bytes. -/
+def lockWitCode (n : Nat) (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + n)
+
+/-- Witness data permission: sixteen bytes at 8192. -/
+def lockWitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8208)
+
+/-- Witness memory over one image. -/
+def lockWitSpeicher (bild : List Byte) (n : Nat) : Speicher :=
+  { bytes := lockWitBytes bild, lesbar := lockWitDaten,
+    schreibbar := lockWitDaten, ausfuehrbar := lockWitCode n }
+
+/-- Witness registers: `r8 = 8192`, `rcx = 1`. -/
+def lockWitReg : Register → Wort
+  | .r8 => BitVec.ofNat 64 8192
+  | .rcx => BitVec.ofNat 64 1
+  | .rsp => BitVec.ofNat 64 8704
+  | _ => BitVec.ofNat 64 0
+
+/-- Scaled witness machine: code at 4096, empty buffers. -/
+def lockAdrWit : LockMaschine :=
+  ⟨{ register := lockWitReg, flags := zeugeFlags,
+     rip := BitVec.ofNat 64 4096,
+     speicher := lockWitSpeicher lockAdrWitBild 7 },
+   fun _ => []⟩
+
+/-- RIP-relative witness machine: code at 4096, empty buffers. -/
+def lockRipWit : LockMaschine :=
+  ⟨{ register := lockWitReg, flags := zeugeFlags,
+     rip := BitVec.ofNat 64 4096,
+     speicher := lockWitSpeicher lockRipWitBild 9 },
+   fun _ => []⟩
+
+/-- JOINT WITNESS: the fetched scaled XADD lands `0 + 8192` at
+    `r8 + rcx * 8 = 8200`, observably changing byte 8201 from zero,
+    exchanging `r8 := 0` and advancing RIP past its seven bytes. -/
+theorem lockXaddGeholt_zeuge :
+    lockAdrWit.zu.speicher.bytes (BitVec.ofNat 64 8201) =
+      BitVec.ofNat 8 0 ∧
+    (match lockXaddGeholt 0 lockAdrWit with
+     | .ok m' ev =>
+       some (m'.zu.speicher.bytes (BitVec.ofNat 64 8201),
+         ev.gelesen, ev.geschrieben, m'.zu.register .r8, m'.zu.rip)
+     | _ => none) =
+      some (BitVec.ofNat 8 32, some 0,
+        some (BitVec.ofNat 64 8192), 0, BitVec.ofNat 64 4103) := by
+  refine ⟨by decide, by decide⟩
+
+/-- The extended decoder takes the RIP-relative tail whole. -/
+theorem decoder_nimmt_rip :
+    decodeLockAdr [natByte 240, natByte 76, natByte 15, natByte 193,
+      natByte 5, natByte 255, natByte 15, natByte 0, natByte 0] =
+      some (.r8, ripForm (BitVec.ofNat 32 4095), []) := by
+  decide
+
+/-- The accepted producer refuses the RIP-relative LOCK tail. -/
+theorem produzent_weist_rip_zurueck :
+    decodeLock [natByte 240, natByte 76, natByte 15, natByte 193,
+      natByte 5, natByte 255, natByte 15, natByte 0, natByte 0] =
+      none := by
+  decide
+
+/-- PURE RIP OBSERVATION: the RIP-relative form names 8200 from the
+    post-decode RIP, without touching memory. -/
+theorem ripForm_beobachtung :
+    adrEff lockRipWit.zu (ripNach lockRipWit.zu.rip 9)
+      (ripForm (BitVec.ofNat 32 4095)) = BitVec.ofNat 64 8200 := by
+  decide
+
+/-- JOINT WITNESS: the fetched RIP-relative XADD lands `0 + 8192` at
+    `ripNext + 4095 = 8200`, with the same observable change,
+    exchange and RIP advance (nine bytes this time). -/
+theorem lockRipGeholt_zeuge :
+    lockRipWit.zu.speicher.bytes (BitVec.ofNat 64 8201) =
+      BitVec.ofNat 8 0 ∧
+    (match lockXaddGeholt 0 lockRipWit with
+     | .ok m' ev =>
+       some (m'.zu.speicher.bytes (BitVec.ofNat 64 8201),
+         ev.gelesen, ev.geschrieben, m'.zu.register .r8, m'.zu.rip)
+     | _ => none) =
+      some (BitVec.ofNat 8 32, some 0,
+        some (BitVec.ofNat 64 8192), 0, BitVec.ofNat 64 4105) := by
+  refine ⟨by decide, by decide⟩
+
 end Gabbro.Grammatik.X86
