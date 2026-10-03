@@ -1,15 +1,17 @@
 # MUSE-REPORT-1003: Exact review of author 853 (Composition closing: entry-hook closing)
 
-## CANDIDATE
+## Candidate
 
-- CANDIDATE: 853 d420540f07c15ff66cbd4d57d1fe3d706d587ceb
+CANDIDATE: 853 d420540f07c15ff66cbd4d57d1fe3d706d587ceb
 - Base matches this clone: b040b155159f47629542b0083e2f0a8a607f2b4c (clone
   `/home/simon/Dokumente/gabbro-muse/a1003`, branch `muse/1003` verified).
 - Files (from `.tmp/review/SNAPSHOT.json` and `PATCH.diff`): `MUSE-REPORT-853.md`,
   `grammatik/Grammatik.lean` (one import line), new
   `grammatik/Grammatik/X86/ComposeEntryHooks.lean` (355 lines).
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Bounded acceptance: the candidate closes nolibc entry-hook admission
 (`os_anfang`/`os_ende` presence plus unchanged main-status handoff) onto the
