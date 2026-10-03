@@ -2,8 +2,10 @@
 
 ## Candidate and verdict
 
-- CANDIDATE: 850 43392858a3fc395dfc76942bacbe650a4313fe39 (base b040b155159f47629542b0083e2f0a8a607f2b4c, files: MUSE-REPORT-850.md, grammatik/Grammatik.lean, grammatik/Grammatik/X86/ComposeHandlerTable.lean)
-- VERDICT: ACCEPT (bounded, as stated below)
+CANDIDATE: 850 43392858a3fc395dfc76942bacbe650a4313fe39
+VERDICT: ACCEPT
+
+Pinned base b040b155159f47629542b0083e2f0a8a607f2b4c; files MUSE-REPORT-850.md, grammatik/Grammatik.lean, grammatik/Grammatik/X86/ComposeHandlerTable.lean. The acceptance above is bounded as stated under Bounded acceptance.
 
 Clone/branch verified: /home/simon/Dokumente/gabbro-muse/a1000 on refs/heads/muse/1000; base matches the candidate base. Owns only this report; no source or live controls touched.
 
