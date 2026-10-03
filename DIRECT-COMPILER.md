@@ -569,7 +569,7 @@ Last ledger refresh: **2026-10-03 22:32 UTC**. This is an operational snapshot, 
 | 891 | Optimiser rule: CMOV selection rule | Merged after review/checks | 1041: Merged after review/checks | [report](messung/muse/MUSE-REPORT-891.md) |
 | 892 | Optimiser rule: MOV-immediate selection rule | Merged after review/checks | 1042: Merged after review/checks | [report](messung/muse/MUSE-REPORT-892.md) |
 | 893 | Optimiser rule: address-mode selection rule | Merged after review/checks | 1043: Merged after review/checks | [report](messung/muse/MUSE-REPORT-893.md) |
-| 894 | Optimiser rule: call-argument selection rule | Committed candidate; review/integration pending | 1044: Committed candidate; review/integration pending | [task](lanes/894.md) |
+| 894 | Optimiser rule: call-argument selection rule | Merged after review/checks | 1044: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-894.md) |
 | 895 | Optimiser rule: return-path selection rule | Committed candidate; review/integration pending | 1045: Committed candidate; review/integration pending | [task](lanes/895.md) |
 | 1054 | Task-brief audit batch B01 (lanes 746-760) | Committed candidate; review/integration pending | 1074: Committed candidate; review/integration pending | [task](lanes/1054.md) |
 | 1055 | Task-brief audit batch B02 (lanes 761-775) | Committed candidate; review/integration pending | 1075: Committed candidate; review/integration pending | [task](lanes/1055.md) |
@@ -1328,6 +1328,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1042**, Independent exact review of 892, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1042.md). <!-- x86-merged:1042 -->
 - 2026-10-03: lane **893**, Optimiser rule: address-mode selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-893.md). <!-- x86-merged:893 -->
 - 2026-10-03: lane **1043**, Independent exact review of 893, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1043.md). <!-- x86-merged:1043 -->
+- 2026-10-03: lane **894**, Optimiser rule: call-argument selection rule, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-894.md). <!-- x86-merged:894 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
