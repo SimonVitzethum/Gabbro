@@ -140,12 +140,9 @@ inhabited, non-degenerate, memory-changing reached run) is met by
 execution" bar is met by `imageSchritt_weiter` plus the 42-store run
 through the closing step.
 
-## Session limits (honest partial status)
+## Session note
 
-Report written and owned file complete. `bash` tool calls (including
-`./lean-bau`, `./lean-probe`, `git`, `./commit.sh`) are denied by the
-session permission gate, so the report could not be committed from this
-session and no live build was re-run here. If commit access is restored,
-the commit is: add `MUSE-REPORT-975.md` only, message `Lane 975: exact
-review of author825 (ACCEPT, bounded)` plus the
-`Co-Authored-By: muse-agent-975 <muse-agent-975@noreply.invalid>` line.
+Report-only lane: no source files touched; live tree holds only this
+report besides the commit. Shell access was briefly gated mid-session
+(one denied call) then restored; producer references were verified live
+via search. Commit: add `MUSE-REPORT-975.md` only (done).
