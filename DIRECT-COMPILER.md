@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 00:14 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 00:15 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -405,7 +405,7 @@ Last ledger refresh: **2026-10-03 00:14 UTC**. This is an operational snapshot, 
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
 | 710 | Optimizer rule library proof and scope review | Merged after review/checks | 711: Merged after review/checks | [report](messung/muse/MUSE-REPORT-710.md) |
 | 712 | Compiler pipeline Lean source-to-byte proof review | Merged after review/checks | 713: Merged after review/checks | [report](messung/muse/MUSE-REPORT-712.md) |
-| 714 | Compiler ISA and instruction selection architecture review | Committed candidate; review/integration pending | 715: Committed candidate; review/integration pending | [task](lanes/714.md) |
+| 714 | Compiler ISA and instruction selection architecture review | Merged after review/checks | 715: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-714.md) |
 | 716 | Rust compiler validation and ELF integration review | Merged after review/checks | 717: Merged after review/checks | [report](messung/muse/MUSE-REPORT-716.md) |
 | 718 | Unify accepted architectural final-byte family dispatch | Committed candidate; review/integration pending | 719: scheduled | [task](lanes/718.md) |
 | 720 | Connect real selected integer bytes to shared TSO execution | Agent working | 721: scheduled | [task](lanes/720.md) |
@@ -938,6 +938,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **705**, Independent exact review of 704, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-705.md). <!-- x86-merged:705 -->
 - 2026-10-02: lane **710**, Optimizer rule library proof and scope review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-710.md). <!-- x86-merged:710 -->
 - 2026-10-02: lane **711**, Independent exact review of 710, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-711.md). <!-- x86-merged:711 -->
+- 2026-10-02: lane **714**, Compiler ISA and instruction selection architecture review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-714.md). <!-- x86-merged:714 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
