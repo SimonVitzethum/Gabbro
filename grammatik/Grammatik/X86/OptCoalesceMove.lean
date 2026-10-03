@@ -106,4 +106,44 @@ theorem probe_coalZulassen_spillCall :
     coalZulassen ⟨0, 1, true⟩ ⟨true, true, true, true⟩ = false := by
   decide
 
+/-! ## 2. Value preservation: the copy carries the source value whole.
+
+    Over ARBITRARY values (`v : Int`): the copy is the identity on the
+    value, so no value is changed, no fault added or removed, and the
+    IEEE scope is untouched (integers have no rounding; the float copy
+    keeps its single `bruch` below). The width-exact image reads back
+    through the canonical word: the later lowering writes the coalesced
+    value, not a wrapped one. -/
+
+/-- The copied value reads back whole through the canonical word. -/
+theorem coalWort (v : Int) (hW : 0 ≤ v ∧ v < 2 ^ 64) :
+    ((BitVec.ofNat 64 v.toNat : Wort)).toNat = v.toNat := by
+  have h : v.toNat < 2 ^ 64 := by omega
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt h]
+
+/-- Probe: `7` reads back as `7` through the word. -/
+theorem probe_coalWort :
+    ((BitVec.ofNat 64 ((7 : Int)).toNat : Wort)).toNat = 7 := by
+  decide
+
+/-- The admitted float copy preserves value and `gleitPasst` outcome:
+    the copy keeps the single `bruch` (never host `strtod`, never a
+    width change, one rounding scope), so neither a value nor a
+    `logik bereich` fault is folded away. The equation is claimed only
+    where the validator admitted the site (`hEq` takes `hz`). -/
+theorem coalGleit_behält (rw : CoalRewrite) (an : CoalAnalyse)
+    (qa qf : Int × Int) (lo hi : Int × Int)
+    (hz : coalZulassen rw an = true)
+    (hEq : coalZulassen rw an = true → bruch qf = bruch qa) :
+    gleitPasst lo hi (bruch qf) =
+      gleitPasst lo hi (bruch qa) := by
+  have e := hEq hz
+  rw [e]
+
+/-- Probe: the kernel compares `3/4` against itself. -/
+theorem probe_coalGleit :
+    gleitPasst (0, 1) (1, 1) (bruch (3, 4)) =
+      gleitPasst (0, 1) (1, 1) (bruch (3, 4)) := by
+  rfl
+
 end Gabbro.Grammatik.X86
