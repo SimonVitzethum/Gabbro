@@ -6,7 +6,7 @@ Owned file only: `MUSE-REPORT-990.md` (this file). No source, no live controls.
 
 CANDIDATE: 840 275ac0dc7366f48e47709487e90af6677e83462e
 
-VERDICT: ACCEPT (bounded; scope below)
+VERDICT: ACCEPT
 
 ## What was reviewed
 
