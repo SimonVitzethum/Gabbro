@@ -528,3 +528,4 @@ import Grammatik.X86.ComposeFlagLedger
 import Grammatik.X86.ComposeWidthLedger
 import Grammatik.X86.ComposeFaultLedger
 import Grammatik.X86.ComposeFeatureGate
+import Grammatik.X86.ComposeProfileSelect
