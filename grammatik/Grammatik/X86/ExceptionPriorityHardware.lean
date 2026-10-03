@@ -726,4 +726,87 @@ theorem halt_kommt_von_teilung (t : FpZustand) (b : BereitProfil)
             simp [this]
         exact absurd h hs
 
+/-! ## Delivery interface: vector numbers and fault RIP.
+
+  The consumer for fault delivery (lane 672) reads the Table 6-1 vector
+  and the faulting RIP off the verdict. The fault RIP is the pre-state
+  RIP by construction: no handler runs and no RIP advances here. -/
+
+/-- Table 6-1 vector of one fault class. -/
+def fehlerVektor : ArchFehler → Nat
+  | .de => 0
+  | .ud => 6
+  | .nm => 7
+  | .ss => 12
+  | .gp => 13
+  | .pf => 14
+  | .ac => 17
+  | .xm => 19
+
+/-- The divide trap delivers on vector 0. -/
+theorem vektor_de_null : fehlerVektor .de = 0 := rfl
+
+/-- The page fault delivers on vector 14. -/
+theorem vektor_pf_vierzehn : fehlerVektor .pf = 14 := rfl
+
+/-- The faulting RIP of one bound verdict, for IDT delivery. -/
+def urteilRip (u : FehlerUrteil) : Option Adresse :=
+  match u with
+  | .fehler _ => none
+  | .erfolg t' => some t'.kern.rip
+  | .zugelassenVerweigert => none
+
+/-- The pre-fault RIP producer: the faulting instruction address is the
+    pre-state RIP, read off the state the candidate ran on. -/
+def fehlerRipVor (t : FpZustand) : Adresse := t.kern.rip
+
+/-- The pre-fault observation IS the pre-state: fault RIP names the
+    faulting instruction and no successor memory exists. -/
+theorem vorFehler_beobachtung (t : FpZustand) (f : PrioritaetsFehler) :
+    fehlerRipVor t = t.kern.rip ∧
+      ∀ t' : FpZustand, bindeUrteil .verweigert (some f) ≠ .erfolg t' := by
+  refine ⟨rfl, ?_⟩
+  intro t' hcon
+  simp [bindeUrteil] at hcon
+
+/-! ## No partial writes: success writes the whole footprint.
+
+  A successful `write64` writes exactly the eight footprint bytes
+  (proved from `writeBytesN_hit`/`_miss`); a refused store has no
+  successor at all. Partial-write and stack-switch specifics stay
+  unstated (see CUTS). -/
+
+/-- NO PARTIAL WRITE: a successful store writes every footprint byte
+    from the value and keeps every outside byte. -/
+theorem kein_teilschreiben (m m' : Speicher) (a : Adresse) (v : Wort)
+    (h : write64 m a v = some m') (x : Adresse) :
+    (∃ i : Nat, i < 8 ∧ x = addrOff a i ∧ m'.bytes x = wortByte v i) ∨
+      (∀ i : Nat, i < 8 → x ≠ addrOff a i) ∧ m'.bytes x = m.bytes x := by
+  have hdef : write64 m a v =
+      if schreibbar8 m a then some { m with bytes := writeBytes m a v }
+        else none := rfl
+  rw [hdef] at h
+  cases hperm : schreibbar8 m a with
+  | false => simp [hperm] at h
+  | true =>
+    simp [hperm] at h
+    have hm' : m' = { m with bytes := writeBytes m a v } := h.symm
+    by_cases hfoot : ∃ i : Nat, i < 8 ∧ x = addrOff a i
+    · obtain ⟨i, hi, rfl⟩ := hfoot
+      left
+      refine ⟨i, hi, rfl, ?_⟩
+      rw [hm']
+      show writeBytes m a v (addrOff a i) = wortByte v i
+      unfold writeBytes
+      exact writeBytesN_hit m a v 8 i hi (by omega)
+    · right
+      have hfoot' : ∀ i : Nat, i < 8 → x ≠ addrOff a i := by
+        intro i hi hcontra
+        exact hfoot ⟨i, hi, hcontra⟩
+      refine ⟨hfoot', ?_⟩
+      rw [hm']
+      show writeBytes m a v x = m.bytes x
+      unfold writeBytes
+      exact writeBytesN_miss m a v 8 x (fun k hk => hfoot' k hk)
+
 end Gabbro.Grammatik.X86
