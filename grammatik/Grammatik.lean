@@ -514,3 +514,4 @@ import Grammatik.X86.ComposeImageFetch
 import Grammatik.X86.ComposeRelocRedecode
 import Grammatik.X86.ComposeEntryMap
 import Grammatik.X86.ComposeStackAbi
+import Grammatik.X86.ComposeSpillPrivacy
