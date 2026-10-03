@@ -531,3 +531,4 @@ import Grammatik.X86.ComposeFeatureGate
 import Grammatik.X86.ComposeProfileSelect
 import Grammatik.X86.ComposeRelaxLayout
 import Grammatik.X86.ComposePatchBytes
+import Grammatik.X86.ComposeMapPerms
