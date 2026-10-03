@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-03 00:01 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-03 00:14 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -403,22 +403,22 @@ Last ledger refresh: **2026-10-03 00:01 UTC**. This is an operational snapshot, 
 | 704 | Generic port bus and precise architectural IO permissions | Merged after review/checks | 705: Merged after review/checks | [report](messung/muse/MUSE-REPORT-704.md) |
 | 706 | Repair actual fallback CLI message, provider pointer and quick-exit backoff | Merged after review/checks | 707: Merged after review/checks | [report](messung/muse/MUSE-REPORT-706.md) |
 | 708 | Essential long-mode interrupt and system return hardware forms | Waiting for accepted dependencies | 709: scheduled | [task](lanes/708.md) |
-| 710 | Optimizer rule library proof and scope review | Committed candidate; review/integration pending | 711: Committed candidate; review/integration pending | [task](lanes/710.md) |
+| 710 | Optimizer rule library proof and scope review | Merged after review/checks | 711: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-710.md) |
 | 712 | Compiler pipeline Lean source-to-byte proof review | Merged after review/checks | 713: Merged after review/checks | [report](messung/muse/MUSE-REPORT-712.md) |
 | 714 | Compiler ISA and instruction selection architecture review | Committed candidate; review/integration pending | 715: Committed candidate; review/integration pending | [task](lanes/714.md) |
 | 716 | Rust compiler validation and ELF integration review | Merged after review/checks | 717: Merged after review/checks | [report](messung/muse/MUSE-REPORT-716.md) |
-| 718 | Unify accepted architectural final-byte family dispatch | Agent working | 719: scheduled | [task](lanes/718.md) |
+| 718 | Unify accepted architectural final-byte family dispatch | Committed candidate; review/integration pending | 719: scheduled | [task](lanes/718.md) |
 | 720 | Connect real selected integer bytes to shared TSO execution | Agent working | 721: scheduled | [task](lanes/720.md) |
 | 722 | Integrate LOCK RMW and fences with canonical multicore buffers | Agent working | 723: scheduled | [task](lanes/722.md) |
 | 724 | Integrate scalar FP and MXCSR with coherent hardware execution | Agent working | 725: scheduled | [task](lanes/724.md) |
-| 726 | Model checked long-mode page walks and precise access faults | Agent working | 727: scheduled | [task](lanes/726.md) |
+| 726 | Model checked long-mode page walks and precise access faults | Committed candidate; review/integration pending | 727: Agent working | [task](lanes/726.md) |
 | 728 | Model actual IDT TSS descriptor and entry stack selection | Agent working | 729: scheduled | [task](lanes/728.md) |
 | 730 | Connect full selected SIB RIP-relative addresses to actual effects | Agent working | 731: scheduled | [task](lanes/730.md) |
 | 732 | Organise exact essential hardware integration and executable coverage | Committed candidate; review/integration pending | 733: Committed candidate; review/integration pending | [task](lanes/732.md) |
 | 734 | Selected control registers and syscall MSR byte effects | Agent working | 735: scheduled | [task](lanes/734.md) |
 | 736 | SSE and selected AVX context save restore effects | Agent working | 737: scheduled | [task](lanes/736.md) |
 | 738 | Derive precise fault ordering across fetched instruction accesses | Agent working | 739: scheduled | [task](lanes/738.md) |
-| 740 | Repair upstream compiler Lean aggregation and scope | Agent working | 741: scheduled | [task](lanes/740.md) |
+| 740 | Repair upstream compiler Lean aggregation and scope | Committed candidate; review/integration pending | 741: Agent working | [task](lanes/740.md) |
 | 742 | Repair upstream compiler Rust panics and mirror fidelity | Agent working | 743: scheduled | [task](lanes/742.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -936,6 +936,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-02: lane **704**, Generic port bus and precise architectural IO permissions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-704.md). <!-- x86-merged:704 -->
 - 2026-10-02: checked master `9cf8a7c0` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:9cf8a7c0be4d589a9eada673774ef9ad9a626f30 -->
 - 2026-10-02: lane **705**, Independent exact review of 704, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-705.md). <!-- x86-merged:705 -->
+- 2026-10-02: lane **710**, Optimizer rule library proof and scope review, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-710.md). <!-- x86-merged:710 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
