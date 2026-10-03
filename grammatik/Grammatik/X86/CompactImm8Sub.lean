@@ -230,6 +230,90 @@ theorem subkompakt_kurz_verweigert :
     decodeIntHwImm [natByte 72, natByte 131, natByte 232] = none := by
   decide
 
+/-! ## 3. Borrow/flag identity of the compact SUB step.
+
+    A compact SUB-imm step IS the canonical `sub64` borrow: the
+    destination takes the modular difference, CF is the borrow
+    (`cfSub`), AF the nibble borrow (`afSub`, DEFINED like the
+    manual's flag row), and RIP advances past the 4 compact bytes.
+    Memory is untouched, so this row consults no data permission
+    and raises no data fault. -/
+
+/-- Borrow probe: `0 - 1` borrows, `5 - 1` does not. -/
+theorem probe_sub_borgt :
+    (sub64 0 1).1 = 0xFFFFFFFFFFFFFFFF ∧ (sub64 0 1).2.cf = true ∧
+    (sub64 5 1).1 = 4 ∧ (sub64 5 1).2.cf = false ∧
+    (sub64 5 1).2.af = some false := by
+  decide
+
+/-- The compact SUB step is the canonical borrow: value, full flag
+    snapshot, borrow bit, defined nibble borrow and RIP advance. -/
+theorem subkompakt_schritt (d : IntHwImmDec) (s s' : Zustand)
+    (dst : Register) (imm : BitVec 32)
+    (hok : laengeOk d.laenge = true)
+    (hlen : d.laenge = immDecLaenge d.op)
+    (hb : immDecBreiteOk d.op = true)
+    (h : d.op = .subI dst imm)
+    (hstep : stepIntHwImm d s = some s') :
+    s'.register dst = s.register dst - immWort imm ∧
+    s'.flags = (sub64 (s.register dst) (immWort imm)).2 ∧
+    s'.flags.cf = cfSub (s.register dst) (immWort imm) ∧
+    s'.flags.af = some (afSub (s.register dst) (immWort imm)) ∧
+    s'.rip = ripNach s.rip d.laenge := by
+  have e : stepIntHwImm d s =
+      some (schrittRegister s (ripNach s.rip d.laenge)
+        (sub64 (s.register dst) (immWort imm)).2 dst
+        (sub64 (s.register dst) (immWort imm)).1) := by
+    unfold stepIntHwImm
+    rw [h] at hlen hb
+    rw [hok, h, hlen, hb]
+    simp
+  rw [e] at hstep
+  cases hstep
+  refine ⟨by simp only [schrittRegister, regSet_gleich, sub64],
+    schrittRegister_flags _ _ _ _ _,
+    by simp only [schrittRegister_flags, sub64],
+    by simp only [schrittRegister_flags, sub64],
+    schrittRegister_rip _ _ _ _ _⟩
+
+/-! ## 4. Fetched-byte connection: the admitted compact SUB row.
+
+    From actual executable memory, the accepted immediate fetch
+    (`fetchIntHwImm`) admits the compact SUB row and the accepted
+    byte step (`intHwImmByteschritt`) executes it with the borrow
+    identity above. No new dispatcher is invented. -/
+
+/-- TARGET: a fetched compact SUB executes with borrow identity,
+    advances past its 4 bytes and leaves memory untouched. -/
+theorem CompactImm8Sub_verbindung (s s' : Zustand) (dst : Register)
+    (imm : BitVec 32) (rest : List Byte)
+    (hfetch : fetchIntHwImm s = some (⟨.subI dst imm, 4⟩, rest))
+    (hfit : immPasst8 imm = true)
+    (hstep : intHwImmByteschritt s = .weiter s') :
+    s'.register dst = s.register dst - immWort imm ∧
+    s'.flags.cf = cfSub (s.register dst) (immWort imm) ∧
+    s'.flags.af = some (afSub (s.register dst) (immWort imm)) ∧
+    s'.rip = ripNach s.rip 4 ∧
+    s'.speicher = s.speicher := by
+  have hlen4 : immDecLaenge (.subI dst imm) = 4 := by
+    simp [immDecLaenge, hfit]
+  cases hst : stepIntHwImm ⟨.subI dst imm, 4⟩ s with
+  | none =>
+    have hnone : intHwImmByteschritt s = .verweigert := by
+      simp only [intHwImmByteschritt, hfetch, hst]
+    rw [hnone] at hstep
+    cases hstep
+  | some t =>
+    have hwt : intHwImmByteschritt s = .weiter t := by
+      simp only [intHwImmByteschritt, hfetch, hst]
+    rw [hwt] at hstep
+    cases hstep
+    have hsub := subkompakt_schritt _ s s' dst imm rfl hlen4.symm
+      rfl rfl hst
+    obtain ⟨hreg, _, hcf, haf, hrip⟩ := hsub
+    refine ⟨hreg, hcf, haf, ?_, stepImm_speicher _ s s' hst⟩
+    simpa using hrip
+
 /- CUTS (skeleton; extended below):
    No hardware correspondence beyond the stated row; no source, TSO,
    cost or whole-image claim.
