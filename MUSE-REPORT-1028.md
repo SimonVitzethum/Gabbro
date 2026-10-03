@@ -1,10 +1,13 @@
 # MUSE-REPORT-1028: Exact review of author 878 (linear-scan allocation rule)
 
-## CANDIDATE
+CANDIDATE: 878 c48bbf5251533d8f90f2278022c3c10cb6d1c2f6
 
-878 `c48bbf5251533d8f90f2278022c3c10cb6d1c2f6` (base `b040b155159f47629542b0083e2f0a8a607f2b4c`)
+VERDICT: ACCEPT
 
-## VERDICT: ACCEPT (bounded)
+Scope of this ACCEPT (bounded): the rule-lemma scope — linear-scan
+colouring against recomputed liveness with colouring/spill certificate,
+and the fused 16-byte spill refusal (base
+`b040b155159f47629542b0083e2f0a8a607f2b4c`).
 
 Bounded acceptance of the rule-lemma scope: linear-scan colouring against
 recomputed liveness with colouring/spill certificate, and the fused 16-byte
