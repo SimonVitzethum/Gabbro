@@ -4,6 +4,8 @@
 Status: PROPOSED organisation, not an implementation or a proof.
 Nothing here claims any source-to-final-bytes chain is closed.
 Central progress record: `DIRECT-COMPILER.md`.
+This matrix is the hardware basis for `COMPILER-SCHLUSSPLAN.md` §§1/4;
+in-flight lists below are snapshots at write time, not registry state.*
 Design scope: `DIRECT-COMPILER-DESIGN.md`. Emitter scope:
 `dokumente/x86/EMITTER-INVENTAR.md`.*
 

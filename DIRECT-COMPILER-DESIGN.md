@@ -3,7 +3,8 @@
 *Lane 323 (design) revised by lane 325, 2026-10-01. Status: PROPOSED design,
 not an implementation or a proof. Nothing here claims any source-to-x86 chain
 is closed. Central progress record: [DIRECT-COMPILER.md](DIRECT-COMPILER.md).
-All source-to-executed-final-binary claims remain OPEN.*
+Binding closure plan: [COMPILER-SCHLUSSPLAN.md](dokumente/x86/COMPILER-SCHLUSSPLAN.md)
+(2026-10-04). All source-to-executed-final-binary claims remain OPEN.*
 
 *Design priority, per user steering (2026-10-01): the intended final compiler
 delivers HIGH PRACTICAL RUNTIME PERFORMANCE of the produced binaries within a

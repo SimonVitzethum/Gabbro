@@ -1,5 +1,11 @@
 # Shared SSA / control-flow representation and certificate architecture
 
+*Binding closure plan: [COMPILER-SCHLUSSPLAN.md](COMPILER-SCHLUSSPLAN.md)
+(2026-10-04, §0/§1). Title "SSA" below means certificate-claim vocabulary
+(SCFG: source-anchored block lists + validator-recomputed claims), never a
+mandatory persistent SSA language — see alignment note. No contradiction with
+the accepted direct lowering (594/606 merged).*
+
 *Lane 275, wave A, aligned by lane 638 with the accepted direct lowering
 decision ([DIRECT-LOWERING-DECISION.md](DIRECT-LOWERING-DECISION.md),
 owner lane 594, independent reviewer lane 606, both merged). Owner file

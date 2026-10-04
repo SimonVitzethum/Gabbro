@@ -3,7 +3,8 @@
 *Owner: lane 558. Base: `8596f83e` (merge Muse 552). Scope: this document
 plus `MUSE-REPORT-558.md` only. No Lean, checker, goal, emitter or optimiser
 file is changed by this lane. This is an integration-owner handoff, not proof
-acceptance and not permission to merge. Reviewer: lane 576.*
+acceptance and not permission to merge. Reviewer: lane 576.
+Binding closure plan since 2026-10-04: `COMPILER-SCHLUSSPLAN.md`.*
 
 ## 0. What counts as connected (closure rule for every lane below)
 

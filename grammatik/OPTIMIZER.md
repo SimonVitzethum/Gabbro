@@ -11,7 +11,9 @@ source-to-final-binary closure remains OPEN.*
 compiler — interfaces, rule inventory, certificates, pipeline, pass order,
 verification register, and the friend-contributor handoff. Normative Lean
 sources live under [Grammatik/X86/](Grammatik/X86/); this file adds no
-definitions and changes no guarantee. English file and identifier names.*
+definitions and changes no guarantee. English file and identifier names.
+Binding closure plan: [COMPILER-SCHLUSSPLAN.md](../dokumente/x86/COMPILER-SCHLUSSPLAN.md)
+(2026-10-04, §§2–4: pipeline, 80%-scope, instruction minimum).*
 
 *Link convention: this file sits in `grammatik/`, so `../X` means the
 repository root and `Grammatik/X86/*.lean` means the Lean model files.*

@@ -2,7 +2,11 @@
 
 *Owner: lane 401. Owns only this file plus `MUSE-REPORT-401.md`.
 Status: work plan, not a proof. Full source-to-final-bytes validation remains OPEN.
-No model, goal, checker, emitter or ledger change is made or claimed here.*
+No model, goal, checker, emitter or ledger change is made or claimed here.
+Historical snapshot note (2026-10-04): module/line counts (§0: "27 modules")
+and in-flight lists below describe the 2026-10-01 tree; for compiler closure
+the binding plan is `dokumente/x86/COMPILER-SCHLUSSPLAN.md`, ledger state is
+`DIRECT-COMPILER.md`. Counts here are not re-typed measurements.*
 
 **Capacity policy (authoritative): at most 15 managed Muse model processes
 permanently, including reviewers, organisers and repairs.** Target useful steady

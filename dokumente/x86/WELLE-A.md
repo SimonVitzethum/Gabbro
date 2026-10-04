@@ -1,7 +1,9 @@
 # Direct x86-64 validation — wave A
 
-*Started 2026-10-01 by Simon's instruction: coordinate at most 20
-`opencode-go/muse-spark-1.3-contributor` agents. All execution and builds are local.*
+*Started 2026-10-01 by Simon's instruction; SUPERSEDED capacity note:
+coordinate at most **15** `opencode-go/muse-spark-1.3-contributor` agents
+(authoritative since 2026-10-01, see `dokumente/x86/COMPILER-SCHLUSSPLAN.md`
+§0). The "20" first written here is historical. All execution and builds are local.*
 
 ## Shared contract
 

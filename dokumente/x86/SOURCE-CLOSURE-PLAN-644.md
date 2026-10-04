@@ -9,7 +9,8 @@ file is changed by this lane. Reviewer: lane 645.*
 (branch `muse/644`, verified). All definition names below were resolved by
 reading the cited files in this clone; line references are to this base.*
 
-*Central record: [DIRECT-COMPILER.md](../../DIRECT-COMPILER.md). Design:
+*Central record: [DIRECT-COMPILER.md](../../DIRECT-COMPILER.md). Binding closure
+plan since 2026-10-04: [COMPILER-SCHLUSSPLAN.md](COMPILER-SCHLUSSPLAN.md). Design:
 [DIRECT-COMPILER-DESIGN.md](../../DIRECT-COMPILER-DESIGN.md). Optimiser spec:
 [OPTIMIZER.md](../../grammatik/OPTIMIZER.md). Closing schema:
 [QUELLBRUECKE.md](QUELLBRUECKE.md) §4. Concurrency bridge:

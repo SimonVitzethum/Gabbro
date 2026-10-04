@@ -65,6 +65,16 @@ tasks remain required. Capacity must also close the complete source-to-byte
 pipeline, rather than indefinitely adding detached instruction helpers.
 <!-- full-compiler-goal-2026-10-03 -->
 
+## Binding closure plan
+
+The binding closure plan for the complete translation-validated fast compiler
+is [`dokumente/x86/COMPILER-SCHLUSSPLAN.md`](dokumente/x86/COMPILER-SCHLUSSPLAN.md)
+(2026-10-04, PROPOSED): 7-stage Lean-first pipeline, 80%/95%/110% GCC-`-O3`
+scope (§§3–4), refusal by default, no persistent SSA IR, friend files reserved.
+It governs follow-up compiler waves once registered; until a wave lands it
+claims no closed chain.
+<!-- compiler-schlussplan-2026-10-04 -->
+
 ## Intended result
 
 Compile Gabbro directly to x86-64 machine bytes, including linking, relocations,

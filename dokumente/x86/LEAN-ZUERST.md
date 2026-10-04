@@ -4,6 +4,7 @@ Simon, 2026-10-01: model everything in Lean with agents first. The final
 objective remains generic full Gabbro source-to-actual-binary translation
 validation, with the -O3-like starter package and additional transformations
 justified by Gabbro guarantees. No program-specific acceptance rules.
+Binding closure plan: `dokumente/x86/COMPILER-SCHLUSSPLAN.md` (§§1–6).
 
 The unmerged Rust codec lane 280 is stopped; its draft and logs are preserved.
 No further Rust/native backend work is scheduled until the relevant Lean
@@ -22,7 +23,7 @@ Active Lean owners:
 | 284 | `X86/TSO.lean` | Executable FIFO buffers/forwarding/flush over canonical memory |
 | 285 | `X86/FlagBeweis.lean` | Mathematical signed overflow and carry characterisation |
 | 286 | `X86/Gleitprofil.lean` | Width/control checks, IEEE bit facts and explicit f32 gap evidence |
-| 287 | `X86/IR.lean` | Single typed IR and actual source-linked lowering fragment |
+| 287 | ~~`X86/IR.lean`~~ superseded, report-only | Single typed IR ~~and actual source-linked lowering fragment~~ — SUPERSEDED by `DIRECT-LOWERING-DECISION.md` (594/606 merged): no persistent SSA IR, source-anchored blocks instead; see `COMPILER-SCHLUSSPLAN.md` §0 |
 | 288 | `X86/InvariantenOpt.lean` | Source-semantic rewrite proofs using correctly scoped invariants |
 
 These bounded first tasks do not model or validate the full language yet.

@@ -3,6 +3,9 @@
 *Owner: planner lane 1098 (this file) plus `MUSE-REPORT-1098.md`.
 Status: organisation only — no implementation, no proof, no closure claim.
 Central progress record: `DIRECT-COMPILER.md`.
+Binding closure plan: `dokumente/x86/COMPILER-SCHLUSSPLAN.md` (2026-10-04;
+supersedes the `FULL-COMPILER-WORK-PLAN.md` reference below once waves
+register against it).*
 Scope records: `DIRECT-COMPILER-DESIGN.md` (essential/deferred scope),
 `dokumente/x86/HARDWARE-INTEGRATION-COVERAGE.md` (producer/consumer states, lane 732),
 `dokumente/x86/FULL-COMPILER-WORK-PLAN.md` (lane 744, once integrated).*
