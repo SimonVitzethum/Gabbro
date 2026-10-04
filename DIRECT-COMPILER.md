@@ -226,7 +226,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-04 07:21 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-04 07:32 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -600,7 +600,7 @@ Last ledger refresh: **2026-10-04 07:21 UTC**. This is an operational snapshot, 
 | 1106 | Realised per-access footprints for the connected integer rows | Committed candidate; review/integration pending | 1107: Unresolved after agent rounds; not accepted | [task](lanes/1106.md) |
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Merged after review/checks | 1109: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Merged after review/checks | 1111: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1110.md) |
-| 1112 | Standing dynamic work planner, cycle 2 | Scheduled | 1113: scheduled | [task](lanes/1112.md) |
+| 1112 | Standing dynamic work planner, cycle 2 | Merged after review/checks | 1113: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1112.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1355,6 +1355,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-03: lane **1035**, Independent exact review of 885, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1035.md). <!-- x86-merged:1035 -->
 - 2026-10-03: publication batch checks passed for `8e0c5994`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-03: checked master `1b3c2ce4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:1b3c2ce4446fb8c115ec302f624b554641b849f0 -->
+- 2026-10-04: lane **1112**, Standing dynamic work planner, cycle 2, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1112.md). <!-- x86-merged:1112 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
