@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-04 11:16 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-04 11:20 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -1375,6 +1375,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-04: lane **1115**, Hardware completion: short-branch rel8 encoding rows (Nemotron author, Muse review), integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1115.md). <!-- x86-merged:1115 -->
 - 2026-10-04: checked master `fe5f3062` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:fe5f3062c094bde0e758d97b31a5bc5ae81d44f3 -->
 - 2026-10-04: lane **1118**, Independent exact-candidate review of 1115, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1118.md). <!-- x86-merged:1118 -->
+- 2026-10-04: publication batch checks passed for `0ff93e6f`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
