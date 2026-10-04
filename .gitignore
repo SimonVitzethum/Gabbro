@@ -60,3 +60,6 @@ programmlogik/_pruefung/
 # `qemu.out`, emittiertes C. Dieselbe Klasse wie `target-*/` darueber: ein Baumverzeichnis,
 # das kein Baumname ist.
 .tmp/
+.town/*
+!.town/town.toml
+!.town/roles/
