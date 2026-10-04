@@ -825,3 +825,30 @@ Targets are OPEN until measured; no all-program universal speed claim.
 Maintain up to15 actual productive Muse models across hardware, compiler,
 optimisation, exact review, organisation and repairs; never exceed the cap
 or modify the user's process. Central details/history: DIRECT-COMPILER.md.
+
+## 12. Model onboarding: behavior rules that make entry easier (Simon, 2026-10-04)
+
+*New models (any provider) fail the same way on first contact: outdated tactic
+names, invented lemma names, uncommitted work, ended turns. The HARD-RULES
+preamble (`lanes/VORSPANN.md` rules 15–16) now carries the toolchain truth; this
+section is the coordinator-side record.*
+
+- **Toolchain truth, not training memory.** `grammatik/` pins Lean v4.33.1 with
+  NO mathlib: `split` (never `split_ifs`), `omega`/`decide`/`simp` available,
+  `norm_num`/`ring_nf` absent. Mathlib stays allowed where it already belongs
+  (`programmlogik/`-side work); it is not a fix for tactic-name errors and is
+  never vendored into `grammatik/` without Simon's explicit project-wide
+  decision (README two-command check, lane network ban, build times).
+- **Names are read, not guessed.** Every `BitVec.*`/helper lemma name is
+  grepped from the tree before use; `unknown identifier` = wrong name.
+  Canonical definitions are reused (`Stapel.lean` push), never duplicated.
+- **Silicon over proof shape.** A green proof of a wrong hardware definition
+  (e.g. PUSH imm32 zero-extended — silicon sign-extends) is a finding for the
+  reviewer, counted as REPAIR material, never as a result.
+- **Work discipline for newcomers.** Commit the green skeleton early (preamble
+  rule 10), never end a turn with work pending (rule 11 — the harness resumes
+  sessions, single-shot stops prove nothing), one definition per check.
+- **Capability tests run outside the coordinator** (scratch clones, private
+  logs, held slot locks, no manifest/state/dispatch entries) until a model
+  passes review; only then do its lanes register. Test clones are deleted
+  after evaluation.
