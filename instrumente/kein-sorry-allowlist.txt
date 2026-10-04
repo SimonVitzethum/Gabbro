@@ -1,0 +1,6 @@
+# Recorded `axiom` declarations (single source of truth for pruefe-kein-sorry.py).
+# Format per line: <path> <name> <justification pointer>
+# A new axiom needs Simon's explicit decision + a review reference before it
+# may stand here. `gabbro_ziel` itself must still print exactly
+# propext, Classical.choice, Quot.sound (NachpruefungZiel.lean).
+grammatik/Grammatik/Geraet.lean dma_inhalt DMA content invariant as NAMED hardware assumption (device window content); used as hypothesis, never as a proved fact — see file header and OFFEN/hardware-assumption ledger

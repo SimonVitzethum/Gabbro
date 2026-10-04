@@ -506,6 +506,14 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 - **Semantic merge breaks** show up only in the build: a new structure field needs `none`
   appended at every literal, and an arity change in `lean_g.rs` needs every caller updated.
   Always build after a merge, even a clean one.
+- **Sorry is mechanically refused at merge** (Simon, 2026-10-04):
+  `instrumente/pruefe-kein-sorry.py` runs in the merge gate over the candidate
+  (`--rev muse/NN --diff master`): `sorry`/`admit`/`native_decide`/`sorryAx`/`unsafe`
+  in `grammatik/` code, unrecorded `axiom` declarations (allowlist:
+  `instrumente/kein-sorry-allowlist.txt`, currently only `dma_inhalt`), and added
+  X86 theorems without `#print axioms` all fail the merge. `bruecke/` and
+  `programmlogik/` are out of scope by design (documented `sorry` patterns owned
+  by their lanes).
 
 **Machines:**
 
