@@ -576,3 +576,4 @@ import Grammatik.X86.OptAddrModeSel
 import Grammatik.X86.OptCallArgSel
 import Grammatik.X86.OptRetPathSel
 import Grammatik.X86.OptZeroIdiomSel
+import Grammatik.X86.ShortBranchEncoding
