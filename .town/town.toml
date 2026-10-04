@@ -108,10 +108,15 @@ shell_allow = [
     "cargo fmt *",
     "cargo test *",
     "cargo clippy *",
+    "cargo *",
     "lake *",
     "lean *",
+    "ls *",
+    "mkdir *",
+    "cp *",
     "./lean-bau *",
     "./lean-probe *",
+    "./target/*",
     "./instrumente/*",
 ]
 task_permissions = [
@@ -131,10 +136,15 @@ shell_allow = [
     "cargo fmt *",
     "cargo test *",
     "cargo clippy *",
+    "cargo *",
     "lake *",
     "lean *",
+    "ls *",
+    "mkdir *",
+    "cp *",
     "./lean-bau *",
     "./lean-probe *",
+    "./target/*",
     "./instrumente/*",
 ]
 task_permissions = [
