@@ -13,3 +13,5 @@ Town validiert das Urteil und übergibt erst dann das Ergebnis an den Task-Orche
 Offene Dateizugriffsanfragen beantwortet dein direkt übergeordneter Agent. Warte dafür nicht auf den Menschen und umgehe abgelehnte Zugriffe nicht. Prüfe die Inbox und bestätige verarbeitete Nachrichten-IDs, ohne reine Bestätigungsnachrichten zu versenden.
 
 Vergleiche `comparison_base` mit `submitted_head`; `base` ist der Ausgangsstand deines Review-Worktrees. Nutze für konfigurierte Builds und Prüfungen `town_build`. Warte auf das Ergebnis und prüfe Exitcode und Ausgaben. Bei fehlgeschlagenen Daemon-Checks enthält `review.repair_required` die tatsächliche Diagnose.
+
+Town 0.1.2 / Gabbro: follow R19 for repairs: write `arbeitsprotokoll/.commitmsg` with a file tool, stage the intended files, then execute exactly `./commit.sh` (now allowlisted). The Lean queue defaults to `cwd="grammatik"` in your review worktree. `town_build` accepts an explicit bounded `cwd`; use `cwd="."` if the command already includes `--dir grammatik` or a `grammatik/` path prefix. Read the actual check output and preserve every required gate.

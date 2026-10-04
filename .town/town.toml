@@ -22,6 +22,7 @@ kind = "opencode"
 native_delegation = false
 
 [build.queues.lean]
+cwd = "grammatik"
 match = [
     "lake build",
     "lake build *",
@@ -60,6 +61,7 @@ target_branch = "master"
 [observation]
 debounce = "500ms"
 ignore = [
+    "**/.lake/",
     ".git",
     ".town/",
     "target/",
@@ -102,6 +104,7 @@ shell_auto_allow = true
 file_access = "write"
 shell = "ask"
 shell_allow = [
+    "./commit.sh",
     "git status *",
     "git diff *",
     "git add *",
@@ -131,6 +134,7 @@ shell_auto_allow = true
 file_access = "write"
 shell = "ask"
 shell_allow = [
+    "./commit.sh",
     "git status *",
     "git diff *",
     "git add *",
