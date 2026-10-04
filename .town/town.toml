@@ -182,7 +182,7 @@ id = "completion"
 roles = ["worker"]
 
 [[roles.coordinator.watch]]
-after = "2h"
+after = "15m"
 event = "agent.no_edits"
 id = "worker-no-edits"
 states = ["working"]
@@ -267,7 +267,7 @@ id = "backend-down"
 all = true
 
 [[roles.human-interface.watch]]
-after = "2h"
+after = "15m"
 event = "agent.no_edits"
 id = "worker-no-edits"
 states = ["working"]
