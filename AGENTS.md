@@ -517,6 +517,14 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 
 **Machines:**
 
+- **ELAN_TOOLCHAIN leak rebuilds everything under the wrong Lean** (measured
+  2026-10-04: desktop session exported `v4.34.1`, agents inherited it, full
+  incompatible rebuild burned RAM/swap for garbage while the repo pins
+  v4.33.1). `lean-bau`/`lean-probe` start lake with `env -u ELAN_TOOLCHAIN`;
+  every clone copy carries the same line (copies are local-only, re-apply
+  after re-cloning). After a toolchain incident replace poisoned
+  worktree `.lake` caches with the warm master cache, never resume them.
+
 - **Low memory kills jobs silently.** A push job died that way once.
   Watch RAM before heavy builds; one build at a time in one checkout.
 - **The combined merge+push was blocked by the classifier once.** Split it into two steps.
