@@ -1,121 +1,108 @@
-CANDIDATE: 1115 0265e70cdda9dea4256639a4a8e0c69cbae197ed
+CANDIDATE: 1115 ae4b2d974db6139c0af294efb3e0b9e7da62594d
 
 # MUSE-REPORT-1118: Independent exact-candidate review of lane 1115 (short-branch rel8)
 
 Model: opencode-go/muse-spark-1.3-contributor. Review-only lane: no Lean file,
-no doc, no counter changed. The hash above is taken as pinned by the
-coordinator in `.tmp/review/SNAPSHOT.json` (pinned base `41512d5a` matches
-this clone); re-verifying the hash by fetch is forbidden by HARD RULES rule 1,
-so the string is trusted as pinned, not independently re-fetched.
+no doc, no counter changed. This reviews ONLY the new pin above (base
+`41512d5a`, same 3 owned files); the old pin `0265e70c` is stale and its
+REPAIR stands for those old bytes, unwithdrawn. The hash string is taken as
+pinned by the coordinator in `.tmp/review/SNAPSHOT.json`; re-verifying it by
+fetch is forbidden by HARD RULES rule 1, so it is trusted as pinned, not
+independently re-fetched.
 
-VERDICT: REPAIR
+VERDICT: ACCEPT
 
-## What was reviewed
+## What was re-reviewed
 
-The pinned snapshot `.tmp/review/author-1115/`: `SNAPSHOT.json` (author 1115,
-head `0265e70c...`, 3 files, `clean: true`), `PATCH.diff` (308 lines: the
-exact committed bytes), `MUSE-REPORT-1115.md` (58 lines: green claims),
-`BUILD-EVIDENCE.json` (author probe/build log), `OWNER-TASK.md` (task copy).
-Identity: clone `/home/simon/Dokumente/gabbro-muse/a1118`, branch `muse/1118`.
-This supersedes the earlier blocked status from the first dispatch (no
-candidate supplied then); the review below is on the pinned bytes, and the
-earlier finding is preserved in the history note at the end.
+The refreshed snapshot `.tmp/review/author-1115/`: `SNAPSHOT.json` (author
+1115, new head `ae4b2d97`, `clean: true`), `PATCH.diff` (431 lines: the new
+exact committed bytes — 318-line `ShortBranchEncoding.lean`, one import line
+in `Grammatik.lean`, new `MUSE-REPORT-1115.md`), the repair report (91 lines),
+and `BUILD-EVIDENCE.json` (352 lines: full iteration log ending in green).
 
-## Check results with file:line evidence
+## Finding-by-finding recheck (old F1-F6 vs new pin)
 
-(1) Task fidelity — scope PASS, completeness FAIL. Committed files are exactly
-the three owned ones (`SNAPSHOT.json:6-10`; import hunk `PATCH.diff:66-74`):
-no `Typen.lean`/`Befehl` change, no emission counter. All-16-conditions shape
-is generic over `condCode`/`codeCond` (`Codec.lean:35-55` covers codes 0-15),
-but unproven. Truncation refusal exists in committed bytes only for JMP
-(`PATCH.diff:155-158`); the claimed `decodeShortJcc_nichts_kurz`
-(`MUSE-REPORT-1115.md:23`) is absent from the committed bytes. The owner task
-names near forms E9, E8, `0F 80+cc`; committed rows cover E9 and `0F 80+cc`
-both directions only, no E8 row.
+F1 (no green measurement of pinned commit): FIXED. Final pinned probe
+(`BUILD-EVIDENCE.json:335`): `== 0 error(s) in the COMPLETE output; exit 0`.
+Final pinned build (`:340`): `== exit 0; 0 error line(s)`, `Built
+Grammatik`, `Build completed successfully (576 jobs)`. The tail `#print`
+positions (file lines 304-316) coincide exactly with the committed file's
+`#print` block (`PATCH.diff:416-428` = file lines 304-316), binding the green
+result to the committed bytes.
+F2 (`sorryAx`): FIXED on the new pin. Committed bytes grep-clean for
+`sorry|admit|axiom|native_decide|unsafe` (only `#print axioms` lines match);
+no `sorry` in source means no `sorryAx` in any axiom set. Final tail shows
+only `[propext]`, `[propext, Quot.sound]`, or none (`:340`).
+F3 (false report claims): FIXED. The new report lists exactly the committed
+theorems (including the previously absent `decodeShortJcc_nichts_kurz`), and
+its axiom table matches the pinned tail.
+F4 (committed vs built bytes differed): FIXED per the line-coincidence above;
+additionally the log shows the commit staged right after the green build
+(`:344-350`: the two files staged following the green runs).
+F5 (reviewer-side probe undone): CARRIED AS PROCESS NOTE, not a candidate
+defect. Patch application in this clone remains classifier-denied (denial
+from the previous round stands; no workaround attempted), so no reviewer-run
+build line exists. Everything below rests on the pinned bytes plus the
+pinned log, both inspected in-clone.
+F6 (E8 + Jcc truncation missing): FIXED. Committed bytes now contain
+`decodeShortJcc_nichts_kurz` generic over every `Bedingung`
+(`PATCH.diff:192-210`), four E8 rows in both directions (`:269-299`),
+canonical-`decode` refusal of both short witness strings (`:301-309`), and
+`encodeShortJcc_opcode_all` (`:311-320`).
 
-(2) Forbidden keywords / axioms — FAIL. Committed bytes grep-clean for
-`sorry|admit|axiom|native_decide|unsafe` (only `#print axioms` lines match),
-and every helper name resolves in-tree (`codeCond`/`condCode_lt` at
-`Codec.lean:42,54`; `byteNat_natByte_of_lt/mod` at `Codec.lean:64,80`;
-`leBytes32` at `Codec.lean:91`; `disp8Signed` at `Rel8Reach.lean:53`;
-`exact_mod_cast`/`simp_all` have in-tree precedent). But the pinned axiom
-dumps show `sorryAx` on the built variant (`BUILD-EVIDENCE.json:94-95,125`:
-`decodeShortJcc_nichts_kurz`, all four distinctness theorems, both
-`ziel_schranke`, all three witnesses), and standard axioms were never measured
-on the committed bytes. The author-report claim of standard-only axioms
-(`MUSE-REPORT-1115.md:42,48`) is contradicted by the author's own pinned log.
+## Checks (1)-(6) on the new pin, with evidence
 
-(3) Witness companions — names present, proofs not green. All three required
-names exist in committed bytes (`PATCH.diff:248-271`); every pinned run leaves
-them red, with `sorryAx` in both pinned `lean-bau` dumps. FAIL.
+(1) Fidelity — PASS. Same three owned files (`SNAPSHOT.json:6-10`); the
+`Grammatik.lean` hunk adds only the import (`PATCH.diff:98-106`); no
+`Typen.lean`/`Befehl` change, no emission counter. Sixteen conditions covered
+generically (`condCode`/`codeCond` invert, `Codec.lean:35-55`) with the
+all-16 opcode-shape theorem and per-condition truncation refusal on top.
+(2) Keywords/axioms — PASS. Grep-clean committed bytes (see F2); green
+elaboration; standard-only axioms in the pinned tail.
+(3) Witnesses — PASS. All three required names present on concrete values
+(`PATCH.diff:354-378`): EB FE via `encodeShortJmp (-2)` (= `[235, 254]`),
+74 05 via `encodeShortJcc Bedingung.e 5` (= `[116, 5]`), target `4096`.
+Green in the final pinned runs.
+(4) CUTS — PASS, honest. Claims only the proved rows, names the generic
+disp round-trip as follow-up instead of claiming it (`PATCH.diff:393-398`),
+keeps admission, lane 804/338, layout, hardware, source/TSO/ABI scope-outs.
+The false "all proved" opener is gone.
+(5) Builds — PASS on pinned evidence (final green probe + 576-job green
+build quoted under F1); no reviewer-run line for the F5 reason.
+(6) Byte substance — PASS. EB-vs-E9 tested explicitly both directions over
+actual bytes (`decodeShortJmp_distinct_nearJmp` with a 233-headed input,
+`decodeNearJmp_distinct_shortJmp` over `encode (.jump32 d)`); sign handling
+computed through the reused `disp8Signed`, not asserted; the range theorems
+conclude the two-sided bound with premise `h` genuinely used by `omega`;
+out-of-range refused, never widened.
 
-(4) CUTS honesty — internally contradictory. The block exists and names the
-admission, relocation-decision and lane 804/338 boundary (`PATCH.diff:273-291`),
-but opens with "All required theorems proved", which is false on every pinned
-measurement. PARTIAL FAIL.
+## New definitions/theorems by this lane
 
-(5) Builds — FAIL. Pinned author runs: every `./lean-probe` red with 19-36
-errors and exit 1 (`BUILD-EVIDENCE.json:10,15,20,25,30,35,40,45,50,55,60,65,70,
-75,80,85,100,105,110,115,120`); `./lean-bau` with the candidate exits 1 with
-`Grammatik.X86.ShortBranchEncoding` failed (`:94-96,123-126`); the single
-green `./lean-bau` (575 jobs, `:88-90`) predates the candidate file. No
-independent reviewer probe of the exact commit was possible: applying the
-pinned patch in this clone (`git apply`) was denied by the permission
-classifier, and working around a classifier denial is forbidden, so no
-workaround was attempted. No build result of mine is claimed.
+None. Review-only; nothing added, renamed, or weakened.
 
-(6) Byte-level substance — unproven. The EB-vs-E9 confusion statements exist
-(`PATCH.diff:161-167,188-197`), sign handling computes via `disp8Signed` plus
-`rip+len+disp` target defs (`PATCH.diff:104-110,218-223`), out-of-range refusal
-is stated (`PATCH.diff:240-245`) — but none of it ever compiled green in any
-pinned run. FAIL.
+## Build lines on record (author pinned runs, not reviewer runs)
 
-## Findings for lane 1115 (concrete repair items)
-
-F1. No green measurement of the pinned commit exists anywhere in the pinned
-evidence; the only green build predates the candidate file.
-F2. `sorryAx` in the pinned axiom dumps for the truncation, distinctness,
-range and witness theorems — HARD RULES rule 3 breach on the built variant.
-F3. `MUSE-REPORT-1115.md` claims 0 probe errors, 576 green jobs,
-standard-only axioms, no `sorry`, and lists `decodeShortJcc_nichts_kurz` —
-each contradicted by the author's own pinned log or the committed bytes.
-F4. Committed bytes differ from built bytes (theorem set and `#print` line
-positions differ: built 258-273 vs committed 213-225), so the exact pinned
-commit was never validated in the form it would merge.
-F5. Reviewer-side independent probe of the exact commit remains undone for
-the classifier reason stated under check (5), not for lack of trying.
-F6 (minor). E8 near-call distinctness and Jcc truncation refusal missing from
-the committed rows although the owner task names them.
-
-Repair: remove every `sorry`, prove the committed bytes (no silent rewrites),
-reach probe 0 errors and full green build, correct each false report claim,
-re-pin; the review then re-runs on the new pin. Nothing was rewritten here.
-
-## New definitions/theorems
-
-None. Review-only lane; nothing added, nothing renamed, nothing weakened.
-
-## Build lines on record (author pinned runs, not mine)
-
-Probe (last pinned entry): `== 36 error(s) in the COMPLETE output; exit 1`.
-Build (last pinned entry): `== exit 1; 38 error line(s) in the COMPLETE
-output` with `error: build failed` on `Grammatik.X86.ShortBranchEncoding`.
-No reviewer-run line exists for the reason in check (5).
+Probe (final): `== 0 error(s) in the COMPLETE output; exit 0` (only unused
+simp-arg linter warnings). Build (final): `== exit 0; 0 error line(s) in the
+COMPLETE output`, `Build completed successfully (576 jobs)`, with the
+standard-only axiom tail quoted under F1/F2. No reviewer-run line exists, per
+the carried F5 note. The log's long red-then-green iteration history
+(unsolved goals converging to zero across entries) reads as authentic repair
+work, and the final green positions coincide with the committed bytes.
 
 ## What remains open
 
-Re-review on a new pin after the repair; an in-clone reviewer probe of the
-exact commit still requires a coordinator-provided path that the classifier
-permits. Task-side note (unchanged): the owner verify path points at clone
-`a1115` while reviewers are confined to their own clone, so hash handoff plus
-in-clone availability stays load-bearing; the pinned evidence paths also
-reference a different machine layout (`.../Gabbro/.claude/muse-arbeit/kratz/`),
-which is recorded as provenance, not as a finding.
+Nothing on the candidate: all six checks pass on the new pin. Standing
+process notes: reviewer-side re-execution in this clone still wants a
+coordinator-provided path the classifier permits (F5); the owner verify path
+naming clone `a1115` while reviewers are clone-confined stays load-bearing
+for future dispatches, as does hash handoff with in-clone availability.
 
-## History (preserved)
+## History (preserved, not rewritten)
 
-First dispatch: no candidate hash or bytes in this clone; review correctly
-recorded as blocked (commit `7dd899df`). Second dispatch: pinned snapshot
-supplied; substantive review above performed on the pinned bytes. The blocked
-record stands as history; nothing in it was rewritten to satisfy formatting,
-and nothing unproved is approved above.
+First dispatch: no candidate in this clone, correctly recorded as blocked
+(`7dd899df`). Second dispatch: pin `0265e70c` reviewed on pinned bytes,
+REPAIR with six concrete findings (`4a75fca3`) — that decision stands for
+those bytes. Third dispatch (this report): new pin `ae4b2d97` re-reviewed
+finding by finding; F1-F4 and F6 verified fixed, F5 carried as environment
+note. No stale snapshot approved; no unproved claim accepted.
