@@ -280,32 +280,33 @@ roles = ["worker"]
 [roles.reviewer]
 backend = "opencode"
 default_model = "opencode-go/muse-spark-1.3-contributor"
-instances = 1
+instances = 3
 profile = "reviewer"
 prompt = "roles/reviewer.md"
 supervisor_role = "coordinator"
 
 [roles.reviewer.models]
-"opencode-go/muse-spark-1.3-contributor" = 1
+"opencode-go/muse-spark-1.3-contributor" = 3
 
 [roles.worker]
 backend = "opencode"
 default_model = "opencode/nemotron-3-ultra-free"
-instances = 1
+instances = 10
 profile = "worker"
 prompt = "roles/worker.md"
 supervisor_role = "coordinator"
 
 [roles.worker.models]
-"opencode/nemotron-3-ultra-free" = 1
+"opencode-go/muse-spark-1.3-contributor" = 6
+"opencode/nemotron-3-ultra-free" = 4
 
 [runtime]
 delivery_max_attempts = 5
 delivery_retry_initial = "5s"
 delivery_retry_max = "5m"
 human_reserved_turns = 1
-max_active_turns = 4
-max_agents = 6
+max_active_turns = 12
+max_agents = 15
 max_batch_messages = 16
 max_message_bytes = 32768
 max_unacknowledged_deliveries = 10000
