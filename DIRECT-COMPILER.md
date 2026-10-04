@@ -128,12 +128,15 @@ The initial package targets an **`-O3`-like optimisation scope**:
 - Loop-invariant motion and bounded unrolling.
 - Selective SIMD after its generic source/target correspondence is proved.
 
-Additional transformations should use what Gabbro actually proves: ranges,
+Additional transformations MUST use what Gabbro actually proves: ranges,
 regions, disjoint ownership, race freedom, stable protected memory and invariants
-at their guaranteed locations. Examples are redundant-check removal, integer
-strength reduction, alias separation and protected-load reuse. A fact at entry
-cannot silently become a fact inside a writer or held section. Shared-memory
-stability requires the actual global discipline, not a local token alone.
+at their guaranteed locations. Every optimisation that removes a check, folds
+or moves code, or reuses a load MUST carry its invariant/range/region premise
+with its exact location; without it the validator refuses. Examples are
+redundant-check removal, integer strength reduction, alias separation and
+protected-load reuse. A fact at entry cannot silently become a fact inside a
+writer or held section. Shared-memory stability requires the actual global
+discipline, not a local token alone.
 
 Every admitted optimisation must preserve values, faults, memory observations,
 IEEE behaviour and control state, contracts, call logs, concurrent behaviour,

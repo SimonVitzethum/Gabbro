@@ -81,6 +81,14 @@ kompakte Kodierung; LICM + begrenztes Unrolling; Stärke-Reduktion aus Bereichen
 redundante Prüfung nur an bewiesenen Stellen entfernen; Alias-Trennung aus
 Regionen/Disjointheit; Protected-Load-Reuse; Branch-/Call-Layout.
 
+**Invarianten-Pflicht (MUSS):** jede Opt, die eine Prüfung entfernt, Code faltet /
+bewegt oder eine Ladung wiederverwendet, MUSS ihre Invarianten-/Bereichs-/
+Regions-Prämisse mit exakter Stelle tragen (`invRuhe`/`invSicht` außerhalb
+Writer, `sperrWechsel`/`sperrSicht` nur an erlaubten Haltepunkten, Entry-Fakt
+nie in Writer/Held-Abschnitt). Ohne Prämisse weist der Validator ab — keine
+Opt ohne belegte Invariante, kein Token-lokaler Scheinbeweis bei
+Shared-Memory-Stabilität.
+
 **Für 95%/110%:** selektive SIMD (erst nach Korrespondenz), Profil-Auswahl unter
 validen Translationen, Linkzeit-Layout. Tuning wählt nur unter bereits validen
 Translationen — schwächt nie Beweise, ändert nie FP/Concurrency/Verträge.

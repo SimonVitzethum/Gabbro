@@ -532,7 +532,10 @@ declared costs is bookkeeping, exhaustion-timing is OPEN), actual machine work
 divide rounding or shift-count semantics. Every rule binds ONLY facts
 actually available at its site — the source invariant at its guaranteed
 place with actual values, the site's effect/duty binding, and the W/GX
-ordering that actually holds there. Entry invariant ceases during a
+ordering that actually holds there (Invarianten-Pflicht, MUSS:
+keine Prüfung-Entfernung, Faltung, Bewegung oder Load-Wiederverwendung ohne
+belegte Prämisse mit exakter Stelle; siehe `COMPILER-SCHLUSSPLAN.md` §3).
+Entry invariant ceases during a
 writer; lock invariant observed only in protected allowed locations; repeated
 shared reads eliminated only under immutable/continuous-exclusive/held-lock
 proof — a local token never suffices. Never derive `ensures`; never turn a

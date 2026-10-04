@@ -146,6 +146,11 @@ realised access footprints (lane 568), fetched stack execution
 (lane 569), entry/first-instruction admission (lane 571),
 budget-stop/work connection (lane 572); no TSO-to-GX refinement exists;
 no budget/time transfer exists. §12 lists every open obligation.
+Invarianten-Pflicht (MUSS, binding: `COMPILER-SCHLUSSPLAN.md` §3): keine
+Prüfung-Entfernung, Faltung, Bewegung oder Load-Wiederverwendung ohne
+belegte Invarianten-/Bereichs-/Regions-Prämisse mit exakter Stelle —
+`invRuhe`/`invSicht` außerhalb Writer, `sperrWechsel`/`sperrSicht` nur an
+erlaubten Haltepunkten, Entry-Fakt nie in Writer/Held-Abschnitt.
 
 ## 2. Direct lowering, effects and control interface (PROPOSED, per decision 594/606)
 
