@@ -77,6 +77,26 @@ theorem decodeShortJmp_nichts_kurz :
   dsimp only [decodeShortJmp, parseDisp8]
   <;> rfl
 
+/-- Truncated short Jcc (only opcode byte) is refused, for every condition. -/
+theorem decodeShortJcc_nichts_kurz (cond : Bedingung) :
+    decodeShortJcc [natByte (112 + condCode cond)] = none := by
+  have hbyte : byteNat (natByte (112 + condCode cond)) = 112 + condCode cond := by
+    have hlt : 112 + condCode cond < 256 := by
+      have hc := condCode_lt cond
+      omega
+    exact byteNat_natByte_of_lt _ hlt
+  have hrange : 112 ≤ 112 + condCode cond ∧ 112 + condCode cond < 128 := by
+    have hc := condCode_lt cond
+    omega
+  have hcode : codeCond (112 + condCode cond - 112) = some cond := by
+    have heq : 112 + condCode cond - 112 = condCode cond := by omega
+    rw [heq]
+    exact codeCond_condCode cond
+  dsimp only [decodeShortJcc]
+  rw [hbyte]
+  simp only [hrange, hcode, parseDisp8]
+  rfl
+
 /-- Decode distinctness: short JMP (EB) never decodes as near JMP (E9). -/
 theorem decodeShortJmp_distinct_nearJmp (suffix : List Byte) :
     decodeShortJmp (natByte 233 :: (leBytes32 (BitVec.ofNat 32 0) ++ suffix)) = none := by
@@ -134,6 +154,59 @@ theorem decodeNearJcc_distinct_shortJcc (cond : Bedingung) (d : BitVec 32) (suff
   (try decide) <;>
   rfl
 
+/-- Decode distinctness: short JMP (EB) never decodes as near CALL (E8). -/
+theorem decodeShortJmp_distinct_nearCall (suffix : List Byte) :
+    decodeShortJmp (natByte 232 :: (leBytes32 (BitVec.ofNat 32 0) ++ suffix)) = none := by
+  have h₂₃₂ : byteNat (natByte (232 : Nat)) = 232 := by
+    rw [byteNat_natByte_of_lt 232 (by decide)]
+  dsimp only [decodeShortJmp]
+  simp [h₂₃₂]
+
+/-- Decode distinctness: short Jcc (70+cc) never decodes as near CALL (E8). -/
+theorem decodeShortJcc_distinct_nearCall (suffix : List Byte) :
+    decodeShortJcc (natByte 232 :: (leBytes32 (BitVec.ofNat 32 0) ++ suffix)) = none := by
+  have h₂₃₂ : byteNat (natByte (232 : Nat)) = 232 := by
+    rw [byteNat_natByte_of_lt 232 (by decide)]
+  dsimp only [decodeShortJcc]
+  simp [h₂₃₂]
+
+/-- Decode distinctness: near CALL (E8) never decodes as short JMP (EB). -/
+theorem decodeNearCall_distinct_shortJmp (d : BitVec 32) (suffix : List Byte) :
+    decodeShortJmp (encode (.call32 d) ++ suffix) = none := by
+  have h₂₃₂ : byteNat (natByte (232 : Nat)) = 232 := by
+    rw [byteNat_natByte_of_lt 232 (by decide)]
+  dsimp only [encode, decodeShortJmp] at *
+  simp [h₂₃₂, leBytes32] at *
+
+/-- Decode distinctness: near CALL (E8) never decodes as short Jcc (70+cc). -/
+theorem decodeNearCall_distinct_shortJcc (d : BitVec 32) (suffix : List Byte) :
+    decodeShortJcc (encode (.call32 d) ++ suffix) = none := by
+  have h₂₃₂ : byteNat (natByte (232 : Nat)) = 232 := by
+    rw [byteNat_natByte_of_lt 232 (by decide)]
+  dsimp only [encode, decodeShortJcc] at *
+  simp [h₂₃₂, leBytes32] at *
+
+/-- Canonical decoder refuses short JMP bytes: no byte string decodes both ways. -/
+theorem decode_verweigert_shortJmp :
+    decode [natByte 235, natByte 254] = none := by
+  decide
+
+/-- Canonical decoder refuses short Jcc bytes: no byte string decodes both ways. -/
+theorem decode_verweigert_shortJcc :
+    decode [natByte 116, natByte 5] = none := by
+  decide
+
+/-- All 16 conditions share one short-Jcc opcode shape at fixed disp 5. -/
+theorem encodeShortJcc_opcode_all (cond : Bedingung) :
+    (encodeShortJcc cond 5).length = 2 ∧
+      byteNat (encodeShortJcc cond 5).head! = 112 + condCode cond := by
+  have hlt : 112 + condCode cond < 256 := by
+    have hc := condCode_lt cond
+    omega
+  have hbyte := byteNat_natByte_of_lt (112 + condCode cond) hlt
+  simp only [encodeShortJcc]
+  exact ⟨rfl, hbyte⟩
+
 /-- Target address computation for short JMP: rip_after + sext8(disp). -/
 def shortJmpZiel (rip : Nat) (len : Nat) (disp : Int) : Int :=
   (rip + len : Int) + disp
@@ -145,16 +218,18 @@ def shortJccZiel (rip : Nat) (len : Nat) (disp : Int) : Int :=
 /-- The target of a short branch lies within -128..+127 of rip_after. -/
 theorem shortJmp_ziel_schranke (rip len : Nat) (disp : Int)
     (h : -128 ≤ disp ∧ disp ≤ 127) :
-    shortJmpZiel rip len disp - (rip + len : Int) = disp := by
+    -128 ≤ shortJmpZiel rip len disp - (rip + len : Int) ∧
+      shortJmpZiel rip len disp - (rip + len : Int) ≤ 127 := by
   dsimp only [shortJmpZiel]
-  <;> omega
+  exact ⟨by omega, by omega⟩
 
 /-- The target of a short conditional branch lies within -128..+127 of rip_after. -/
 theorem shortJcc_ziel_schranke (rip len : Nat) (disp : Int)
     (h : -128 ≤ disp ∧ disp ≤ 127) :
-    shortJccZiel rip len disp - (rip + len : Int) = disp := by
+    -128 ≤ shortJccZiel rip len disp - (rip + len : Int) ∧
+      shortJccZiel rip len disp - (rip + len : Int) ≤ 127 := by
   dsimp only [shortJccZiel]
-  <;> omega
+  exact ⟨by omega, by omega⟩
 
 /-- Out-of-range displacement is refused by the range check. -/
 theorem disp8_ausser_reichweite_verweigert (disp : Int) (h : disp < -128 ∨ disp > 127) :
@@ -191,16 +266,24 @@ theorem shortBranch_target_zeuge :
   rfl
 
 /- CUTS:
-  - All required theorems proved: canonical 2-byte lengths for EB / 70+cc;
-    disp8 sign-extension with target computation (rip_after + sext8);
-    encode/decode round-trip over the canonical subset with explicit refusal
-    of truncated inputs; decode-distinctness against the near forms (E9, E8,
-    0F 80+cc) so no byte string decodes both ways; rel8 range bound facts
-    (target within -128..+127 of rip_after; out-of-range is a follow-up
-    relocation decision, refused here, never silently widened); the three
-    ZEUGE theorems.
+  - Proved here: canonical 2-byte lengths for EB / 70+cc;
+    disp8 sign handling via the reused `disp8Signed` with target
+    computation (rip_after + sext8); witness round-trips EB FE and
+    74 05 plus the all-16 opcode-shape fact `encodeShortJcc_opcode_all`;
+    explicit refusal of truncated inputs for JMP and for every Jcc
+    condition; decode-distinctness against all three near forms
+    (E9 jump, E8 call, 0F 80+cc) in both directions, plus canonical
+    `decode` refusal of the short witness bytes so no byte string
+    decodes both ways; rel8 range bound facts (target within
+    -128..+127 of rip_after; out-of-range is a follow-up relocation
+    decision, refused here, never silently widened); the three ZEUGE
+    theorems.
   - NOT proved here, and not claimed:
     - Admission into the `Befehl` inductive (follow-up work).
+    - Generic round-trip for arbitrary in-range disp values
+      (`disp8Signed (disp8Byte d) = d` for -128 <= d <= 127):
+      only the pinned instances EB FE and 74 05 plus the opcode
+      shape for all 16 conditions are proved here.
     - Execution semantics for short branches (faults are lane 804; control
       execution is lane 338; encoding rows only here).
     - Layout selection between rel8 and rel32 (that is a relocation decision
@@ -213,10 +296,18 @@ theorem shortBranch_target_zeuge :
 #print axioms encodeShortJmp_len
 #print axioms encodeShortJcc_len
 #print axioms decodeShortJmp_nichts_kurz
+#print axioms decodeShortJcc_nichts_kurz
 #print axioms decodeShortJmp_distinct_nearJmp
 #print axioms decodeShortJcc_distinct_nearJcc
 #print axioms decodeNearJmp_distinct_shortJmp
 #print axioms decodeNearJcc_distinct_shortJcc
+#print axioms decodeShortJmp_distinct_nearCall
+#print axioms decodeShortJcc_distinct_nearCall
+#print axioms decodeNearCall_distinct_shortJmp
+#print axioms decodeNearCall_distinct_shortJcc
+#print axioms decode_verweigert_shortJmp
+#print axioms decode_verweigert_shortJcc
+#print axioms encodeShortJcc_opcode_all
 #print axioms shortJmp_ziel_schranke
 #print axioms shortJcc_ziel_schranke
 #print axioms disp8_ausser_reichweite_verweigert
