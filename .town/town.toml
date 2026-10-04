@@ -106,6 +106,9 @@ shell = "ask"
 shell_allow = [
     "./commit.sh",
     "git status *",
+    "git log *",
+    "git show *",
+    "git rev-parse *",
     "git diff *",
     "git add *",
     "git commit *",
@@ -136,6 +139,9 @@ shell = "ask"
 shell_allow = [
     "./commit.sh",
     "git status *",
+    "git log *",
+    "git show *",
+    "git rev-parse *",
     "git diff *",
     "git add *",
     "git commit *",
