@@ -527,6 +527,17 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 
 - **Low memory kills jobs silently.** A push job died that way once.
   Watch RAM before heavy builds; one build at a time in one checkout.
+- **RAM discipline for agents, Lean builds independent and killable** (Simon,
+  2026-10-04): agents run Lean ONLY through the wrappers (`lean-bau`,
+  `lean-probe` — adaptive `-M`/`-j` from free RAM, one build via `lean-slot`,
+  builds pinned to cores 4+ so ~50% CPU during builds is normal, not a bug);
+  never raw `lake` (unbounded flags, wrong cwd outside `grammatik/`). Every
+  slot holder writes `locks/lean.pid` (PID + command, removed on exit) — end
+  any Lean build without touching agents via
+  `kill -- -$(ps -o pgid= -p $(cat locks/lean.pid))`. 10 opencode servers cost
+  ~1 GB each: worker count IS a RAM decision. `/tmp` is RAM-backed tmpfs
+  (checkpoints + opencode temp live there). No swap = no safety net: the next
+  spike kills processes (OOM) instead of slowing down.
 - **The combined merge+push was blocked by the classifier once.** Split it into two steps.
 
 ## 10. Talking to Simon
