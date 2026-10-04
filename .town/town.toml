@@ -98,6 +98,7 @@ task_permissions = [
 ]
 
 [profiles.reviewer]
+shell_auto_allow = true
 file_access = "write"
 shell = "ask"
 shell_allow = [
@@ -126,6 +127,7 @@ task_permissions = [
 ]
 
 [profiles.worker]
+shell_auto_allow = true
 file_access = "write"
 shell = "ask"
 shell_allow = [
