@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-04 07:32 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-04 11:15 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -614,6 +614,7 @@ Last ledger refresh: **2026-10-04 07:32 UTC**. This is an operational snapshot, 
 | 1108 | Binary32 fetched steps with a lifting API for the FP consumer | Merged after review/checks | 1109: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1108.md) |
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Merged after review/checks | 1111: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1110.md) |
 | 1112 | Standing dynamic work planner, cycle 2 | Merged after review/checks | 1113: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1112.md) |
+| 1115 | Hardware completion: short-branch rel8 encoding rows (Nemotron author, Muse review) | Merged after review/checks | 1118: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1115.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1371,6 +1372,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-04: lane **1112**, Standing dynamic work planner, cycle 2, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1112.md). <!-- x86-merged:1112 -->
 - 2026-10-04: lane **1113**, Independent exact review of 1112, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1113.md). <!-- x86-merged:1113 -->
 - 2026-10-04: documentation-only publication at `4547048d` retains the successful complete local Lean, Rust and emission checks at `8e0c5994`; source/build files are unchanged. Goal axioms checked again. Full source-to-binary validation remains OPEN.
+- 2026-10-04: lane **1115**, Hardware completion: short-branch rel8 encoding rows (Nemotron author, Muse review), integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1115.md). <!-- x86-merged:1115 -->
+- 2026-10-04: checked master `fe5f3062` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:fe5f3062c094bde0e758d97b31a5bc5ae81d44f3 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
