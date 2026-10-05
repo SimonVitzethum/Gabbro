@@ -122,4 +122,40 @@ no TSO, no time).
   `unusedSimpArgs` linter warning on `Stmt.ite.sizeOf_spec` is misleading:
   removing it breaks the `t`/`e` goals).
 
+## Response to review lane 1176 (REPAIR, apparatus-directed)
+
+MUSE-REPORT-1176 records verdict REPAIR explicitly addressed to the review
+apparatus, not to these proofs: no author file was observable from that
+lane (candidate absent from its worktree, no working shell), so it contains
+no finding for or against any theorem above. There is therefore no theorem
+defect to repair, and none was manufactured: the Lean files are unchanged
+by this update (report-only change).
+
+Author-side verification performed for this response (all in this clone):
+- HEAD is exactly the pinned candidate `eddf71c3` on `muse/1175`, tree
+  clean; the 1176 snapshot values (author, HEAD, base `062b979a`, the same
+  three files) match this clone exactly.
+- Diff against base `062b979a`: exactly the three owned files, 787
+  insertions, 0 deletions; `Grammatik.lean` change is the single appended
+  import line (verified by diff).
+- Banned tokens: grep for `sorry|admit|native_decide|sorryAx|unsafe|^axiom`
+  over `PipelineInfinite.lean` finds nothing.
+- Premise use: every premise of every new theorem is consumed by its proof
+  (checked by reading each proof; no `intro _` / `have _ :=` anywhere,
+  verified by grep); no conclusion restates a premise; `ρ` is always the
+  concrete environment at actual values, never quantified away.
+- Witnesses are joint and non-degenerate (`pwSrc` writes two slots; source
+  runs change memory 7 -> 35 / 9 -> 6; target runs are computed, including
+  the 12-step run to the code end).
+- No silicon facts are stated anywhere in the new file (no encodings, no
+  extension/flag claims); the machine is reused unchanged.
+- Fresh `./lean-probe grammatik/Grammatik/X86/PipelineInfinite.lean`:
+  `== 0 error(s) in the COMPLETE output; exit 0` (axioms as listed above).
+- Fresh `./lean-bau`: `== exit 0; 0 error line(s) in the COMPLETE output`,
+  `Build completed successfully (608 jobs)`.
+
+Suggested dispatch fix (unchanged from 1176): hand the reviewer the pinned
+HEAD with candidate access in the same step instead of scheduling the review
+while the author lane is still working.
+
 Co-Authored-By: muse-agent-1175 <muse-agent-1175@noreply.invalid>
