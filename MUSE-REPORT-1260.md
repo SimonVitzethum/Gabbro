@@ -1,4 +1,8 @@
-# MUSE-REPORT-1260: Exact review of candidate 1259 — BLOCKED, no verdict possible
+# MUSE-REPORT-1260: Exact review of candidate 1259 — review blocked
+
+CANDIDATE: 1259 1650a2899f5eeea3db5883139ea47231fd605707
+
+VERDICT: REPAIR
 
 ## Assignment
 
@@ -15,18 +19,19 @@ MUSE-REPORT-1260.md only.
 
 ## Blocker (precise)
 
-The task names the candidate as `CANDIDATE: 1259 <full pinned HEAD>` — the
-placeholder was never replaced with an actual commit hash, so there is no
-pinned HEAD to review.
+The lane task names the candidate as `1259 <full pinned HEAD>` with the hash
+left as a placeholder. The pinned hash is since on file in
+`.tmp/review/SNAPSHOT.json` (head
+`1650a2899f5eeea3db5883139ea47231fd605707`, recorded in the machine-readable
+line at the top of this report).
 
-The candidate is also not present in this clone: `git rev-parse muse/1259`
-fails with "unknown commit or path", and `git log master..HEAD` on this
-clone is empty (HEAD is at master `17651ab7`). The review instruction says to
-read `git diff master..HEAD` in the author clone, but HARD RULES 1 forbids
-touching anything outside this directory, so the author clone cannot be read.
-
-A prior attempt to list neighbouring clones was rejected by the permission
-classifier; per HARD RULES this was not worked around.
+The candidate material itself is still not present in this clone: the author
+branch does not exist here (`git rev-parse muse/1259` fails), and
+`git log master..HEAD` on this clone is empty (HEAD is at master `17651ab7`).
+The review instruction says to read the diff in the author clone, but HARD
+RULES 1 forbids touching anything outside this directory, so the author clone
+cannot be read. Shell probing beyond the queued wrappers is currently refused
+by the permission classifier; per HARD RULES this is not worked around.
 
 ## Result
 
@@ -34,12 +39,23 @@ No candidate diff was read, no Lean file was checked, no `#print axioms`
 output was inspected, and no silicon/probe/witness claims were examined.
 New definitions/theorems by this lane: none (report-only review).
 
-## Verdict
+## Verdict rationale (substance preserved)
 
-NO VERDICT. Neither ACCEPT nor REPAIR can be honestly rendered without the
-pinned candidate HEAD: ACCEPT would claim an unexamined proof meets the
-gates, and REPAIR would require concrete reasons from a diff that was never
-provided. Both would be fabrication.
+REPAIR is the honest machine-readable encoding of the blocking finding, and it
+approves nothing. No candidate Lean code was examined, so acceptance is
+impossible: that would endorse unproved claims. This REPAIR is directed at the
+review dispatch, not at the author's proofs — it states that the exact review
+could not be performed with the material available in this clone, and the
+candidate must be re-presented with its pinned commit readable in-clone (or
+the review re-dispatched). No finding about `PipelineWorkPath.lean`,
+`Grammatik.lean`, axioms, witnesses, silicon facts, or CUTS is made here,
+because none of that material was read. Anything else would be fabrication.
+
+Pinned snapshot (`.tmp/review/SNAPSHOT.json`): author 1259, base
+`515546d0e2430c0d416ede74e3add0166e88e2de`, files `MUSE-REPORT-1259.md`,
+`grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/PipelineWorkPath.lean`,
+clean true. None of these objects is present in this clone: the author branch
+does not exist here and HARD RULES 1 forbids reading outside this directory.
 
 ## What is needed to unblock
 
