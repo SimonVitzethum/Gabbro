@@ -2032,21 +2032,23 @@ theorem vollLade_ist_hw (v v' : VollMaschine) (c : Nat)
 theorem vollGibAus_ist_hw (v v' : VollMaschine) (c : Nat)
     (a : Adresse) (w : Byte)
     (h : VollSchritt v v' (.schreibAusgabe c a w)) :
-    ∃ s' : TSOZustand, HwSchritt (vollHw v) (vollHw v')
-      (.schreibAusgabe c a w) := by
+    ∃ s' : TSOZustand,
+      issueByte (tsoAnsicht (vollHw v)) c a w = some s' ∧
+      HwSchritt (vollHw v) (vollHw v') (.schreibAusgabe c a w) := by
   cases h with
   | gibAus c a w t ht =>
-    exact ⟨t, HwSchritt.gibAus c a w t ht⟩
+    exact ⟨t, ht, HwSchritt.gibAus c a w t ht⟩
 
 /-- (2) The TSO drain leg IS the coherent TSO step. -/
 theorem vollSpüle_ist_hw (v v' : VollMaschine) (c : Nat)
     (e : TSOEintrag)
     (h : VollSchritt v v' (.spülung c e)) :
-    ∃ s' : TSOZustand, HwSchritt (vollHw v) (vollHw v')
-      (.spülung c e) := by
+    ∃ s' : TSOZustand,
+      flushKern (tsoAnsicht (vollHw v)) c = some s' ∧
+      HwSchritt (vollHw v) (vollHw v') (.spülung c e) := by
   cases h with
   | spüle c e t ht hkopf =>
-    exact ⟨t, HwSchritt.spüle c e t ht hkopf⟩
+    exact ⟨t, ht, HwSchritt.spüle c e t ht hkopf⟩
 
 /-- BACKWARD embedding, exact: a drain step comes only from the
     coherent drain with the same head condition. -/
@@ -2059,5 +2061,156 @@ theorem vollSpüle_ist_hw_zurueck (v v' : VollMaschine) (c : Nat)
       v' = setVollTso v s' := by
   cases h with
   | spüle c e s' h hkopf => exact ⟨s', h, hkopf, rfl⟩
+
+/-! ## 8. Joint witness: two cores save, forward, drain; refusals;
+    FINIT; the save/restore identity observed.
+
+  Core 0 saves at `0x1000`, core 1 at `0x2000` (both 64-aligned
+  and canonical). Memory starts zeroed; permissions cover exactly
+  the two full areas (736 footprint entries spanning 832 bytes
+  with SSE and AVX).
+  Core 0 carries MXCSR `0x1F80`, XMM low halves `7`, the FINIT
+  reset x87 image, mask `0xFFBF` and YMM upper low-halves `9`;
+  core 1 carries `0x1FBF`, low halves `11`, the constant-`5` x87
+  image and upper low-halves `13`. -/
+
+/-- A folded issue leaves every other core's buffer alone. -/
+theorem issueListe_anderer_kern (s s' : TSOZustand) (c : Nat)
+    (l : List TSOEintrag) (d : Nat) (hne : d ≠ c)
+    (h : issueListe s c l = some s') :
+    s'.puffer d = s.puffer d := by
+  induction l generalizing s s' with
+  | nil =>
+    simp only [issueListe] at h
+    have e : s = s' := Option.some_inj.mp h
+    rw [e]
+  | cons e rest ih =>
+    unfold issueListe at h
+    cases h1 : issueByte s c e.addr e.wert with
+    | none =>
+      rw [h1] at h
+      cases h
+    | some s1 =>
+      rw [h1] at h
+      have hd : s1.puffer d = s.puffer d :=
+        issue_anderer_kern s s1 c e.addr e.wert h1 hne
+      rw [ih s1 s' h, hd]
+
+/-- Save entries grow one per footprint offset. -/
+theorem fxEintraegeAux_laenge (f : Nat → Byte) (a : Adresse)
+    (os : List Nat) :
+    (fxEintraegeAux f a os).length = os.length := by
+  induction os with
+  | nil => rfl
+  | cons i rest ih =>
+    simp only [fxEintraegeAux, List.length_cons, ih]
+
+/-- Witness area base, core 0 (64-aligned, canonical). -/
+def vollWitArea0 : Adresse := BitVec.ofNat 64 4096
+
+/-- Witness area base, core 1. -/
+def vollWitArea1 : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness area base, reserved-bit probe. -/
+def vollWitAreaR : Adresse := BitVec.ofNat 64 12288
+
+/-- Witness permission: exactly the two full 832-byte areas. -/
+def vollWitOk (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 832) ||
+    decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 832)
+
+/-- Witness memory: zeroed bytes, footprint permissions. -/
+def vollWitMem : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0, lesbar := vollWitOk,
+    schreibbar := vollWitOk, ausfuehrbar := fun _ => false }
+
+/-- Witness XMM file, core 0 (low halves 7). -/
+def vollWitX0 : XmmDatei :=
+  fun _ => vecJoin (BitVec.ofNat 64 7) (BitVec.ofNat 64 0)
+
+/-- Witness XMM file, core 1 (low halves 11). -/
+def vollWitX1 : XmmDatei :=
+  fun _ => vecJoin (BitVec.ofNat 64 11) (BitVec.ofNat 64 0)
+
+/-- Witness cores: distinct FP state per core. -/
+def vollWitKern : Nat → HwKern
+  | 0 => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 0, vollWitX0, ⟨0x1F80⟩⟩
+  | 1 => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 0, vollWitX1, ⟨0x1FBF⟩⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 0, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness x87 images: core 0 starts from the FINIT reset image,
+    every other core carries the constant-`5` image (nonzero, so
+    forwarding is observable against zeroed memory). -/
+def vollWitX87 : Nat → X87Bild
+  | 0 => x87Reset
+  | _ => fun _ => BitVec.ofNat 8 5
+
+/-- Witness masks: the `0xFFBF` constant everywhere. -/
+def vollWitMaske : Nat → BitVec 32 :=
+  fun _ => BitVec.ofNat 32 0xFFBF
+
+/-- Witness upper files: low halves `9` on core 0, `13` elsewhere. -/
+def vollWitOber : Nat → YmmDatei
+  | 0 => fun _ => vecJoin (BitVec.ofNat 64 9) (BitVec.ofNat 64 0)
+  | _ => fun _ => vecJoin (BitVec.ofNat 64 13) (BitVec.ofNat 64 0)
+
+/-- Witness start machine: shared memory, two saving cores, empty
+    buffers, full silicon, baseline readiness. -/
+def vollWitStart : VollMaschine :=
+  ⟨⟨⟨vollWitMem, vollWitKern, fun _ => [], basisHw,
+    fun _ => basisBereit⟩, vollWitOber⟩, vollWitX87, vollWitMaske⟩
+
+/-- Witness XCR0: x87, SSE and AVX enabled. -/
+def vollWitXc : Xcr0Bild := ⟨true, true, true⟩
+
+/-- Witness fault inputs: no fault fires. -/
+def vollWitF : VollFehlerIn :=
+  ⟨false, true, false, false, false, false⟩
+
+/-- The witness machine is well-formed. -/
+theorem vollWitStart_wf : VollWf vollWitStart := by
+  unfold VollWf
+  intro c f _
+  cases f <;> rfl
+
+set_option maxRecDepth 10000 in
+/-- Witness permissions cover the full footprint, both ways. -/
+theorem vollWit_perm (a : Adresse)
+    (h : a = vollWitArea0 ∨ a = vollWitArea1) :
+    ctxAlle vollWitMem.schreibbar a (vollOffsets true true) = true ∧
+      ctxAlle vollWitMem.lesbar a (vollOffsets true true) = true := by
+  rcases h with rfl | rfl <;> decide
+
+/-- Witness addresses are canonical. -/
+theorem vollWit_kanonisch :
+    kanonisch vollWitArea0 = true ∧
+      kanonisch vollWitArea1 = true := by
+  decide
+
+/-- Witness addresses are save-aligned. -/
+theorem vollWit_ausgerichtet :
+    xAusgerichtet vollWitArea0 = true ∧
+      xAusgerichtet vollWitArea1 = true ∧
+      fxAusgerichtet vollWitArea0 = true := by
+  decide
+
+/-- Witness XCR0 enables SSE and AVX. -/
+theorem vollWit_bereit :
+    xcr0SseBereit vollWitXc = true ∧
+      xcr0AvxBereit vollWitXc = true := by
+  decide
+
+/-- FINIT facts on the witness: reset installs, everything else
+    stays, and core 0 already starts from reset. -/
+theorem vollWit_finit :
+    ((vollFinit vollWitStart 1).x87 1) 0 = x87Reset 0 ∧
+      vollHw (vollFinit vollWitStart 1) = vollHw vollWitStart ∧
+      (vollFinit vollWitStart 1).maske = vollWitStart.maske ∧
+      (vollWitX87 0) 0 = x87Reset 0 := by
+  exact ⟨vollFinit_setzt_zurueck _ _ _,
+    vollFinit_hw_still _ _, vollFinit_maske_still _ _, rfl⟩
 
 end Gabbro.Grammatik.X86
