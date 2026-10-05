@@ -194,13 +194,13 @@ theorem cmpAf_ist_afSub (b : Breite) (x y : Wort) :
     AF free. -/
 
 /-- Operation classes with distinct manual flag rows. -/
-inductive AluOp where
+inductive FlagKlasse where
   | add | sub | logik | mulU | mulS | div | shift
   deriving DecidableEq, Repr
 
 /-- Which raw status bit the manual row defines for each class
     (bit numbers: CF 0, PF 2, AF 4, ZF 6, SF 7, OF 11). -/
-def definiert : AluOp → Nat → Bool
+def definiert : FlagKlasse → Nat → Bool
   | .add, _ => true
   | .sub, _ => true
   | .logik, 4 => false
@@ -415,7 +415,7 @@ theorem schiebAdapter (b : Breite) (s : SchiebeNachweis) (c : Nat)
     below refuses. -/
 
 /-- Admission table: which conditions may consume which row. -/
-def verbrauchOK : Bedingung → AluOp → Bool
+def verbrauchOK : Bedingung → FlagKlasse → Bool
   | _, .add => true
   | _, .sub => true
   | _, .logik => true
