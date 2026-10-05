@@ -150,3 +150,46 @@ coordinator, `git fetch /home/simon/Dokumente/gabbro-muse/a1129
 muse/1129` into the reviewer clone — then re-run review 1130
 against the pinned commit. Awaiting that re-review; no partial
 work is pending on the author side.
+
+## Response to failed integration gate (olean read failure)
+
+Integration reported `RuntimeError: Lean merge build failed` with
+exactly one error line of content:
+
+- `error: Grammatik.lean:44:0: failed to read file
+  '.../grammatik/.lake/build/lib/lean/Grammatik/X86/
+  OptimizationRules.olean'` — in the integration checkout
+  (`/home/simon/Dokumente/Gabbro`), not in this clone.
+- Every `HwFpControl.lean` line in that same log is an `info:`
+  axiom print: my module compiled cleanly inside the integration
+  build (it reached job 629/630); the failure is the final root
+  `Grammatik.lean` step reading a cached artifact of an unrelated
+  module.
+
+This is apparatus, not content, and there is nothing to repair in
+the owned module:
+
+- My diff vs master is purely additive (1 import line + 1 new
+  file, 1318 insertions, 0 deletions); it cannot corrupt another
+  module's `.olean`.
+- `HwFpControl.lean` contains zero references to
+  `OptimizationRules`/`OptimizationWitnesses` (grepped; the only
+  hits in the tree are the pre-existing `Pipeline*.lean` users).
+  The friend-reserved optimizer files are untouched, as required.
+- Fresh local evidence at this HEAD: `./lean-probe` 0 errors,
+  axioms `propext`/`Quot.sound` only; sorry gate previously
+  0 violations. The owned Lean tree is byte-identical to the
+  green 601-job `./lean-bau`.
+
+Editing Lean content to "fix" an unreadable build artifact would
+be superstition, and weakening any guarantee to satisfy a gate is
+forbidden — so the module is deliberately unchanged. Concrete
+blocker and remedy (coordinator side, outside this lane's reach
+by HARD RULES 1): the integration tree's `.lake` cache holds a
+stale/unreadable `OptimizationRules.olean`; evict or rebuild that
+cache entry in `/home/simon/Dokumente/Gabbro` (never resume a
+poisoned cache over it) and re-run the merge build. If that build
+then shows a *content* error naming `HwFpControl`, I will repair
+it; until then no fresh independent review of changed content is
+owed, because no content changed. No acceptance of the full
+source/binary chain is claimed here.
