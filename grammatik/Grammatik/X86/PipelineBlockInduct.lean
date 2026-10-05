@@ -226,4 +226,38 @@ theorem block_zwei_korrekt (c : PipeCfg) (L : Layout D)
     budgetAusfuehrung_transfer pipeSummary prof _ _ _ _ hcost hball hdeck
   exact ⟨hsrc, hrun, hdeck, hcost, hwork, hlow, htime⟩
 
+/-! ## 4. Refusals: deep trees, branches, loops, binds.
+
+    Unsupported shapes are REFUSED (`none`), never guessed. The deep
+    refusal connects scratch exhaustion to the statement level: the
+    same index, layout and admission that accept the shallow witness
+    chunk refuse the deep tree, so the refusal is from depth alone. -/
+
+/-- Deep value: two nested additions over literals (type `.int 6 6`).
+    Needs a scratch register past `tmp`. -/
+def tiefWert1195 {Γ : Ctx} {Λ : List (Res pwD)} : Expr pwD Γ Λ (.int 6 6) :=
+  .add (.add (.lit 1) (.lit 2)) (.lit 3)
+
+/-- The deep value widened to the witness field type. -/
+def tiefWertFeld1195 : Expr pwD pwCtx [] (pwD.typ () ()) :=
+  .weiter (by decide) (by decide) tiefWert1195
+
+/-- DEEP-TREE REFUSAL (generic): with no scratch register past `tmp`
+    (`frei = []`) the deep tree lowers to nothing. Reuses the accepted
+    `senkTief_verweigert_tief`; both premises are used. -/
+theorem block_verweigert_tief (c : PipeCfg) {Γ : Ctx} {Λ : List (Res pwD)}
+    (hfrei : c.frei = []) :
+    senkWertT c (tiefWert1195 (Γ := Γ) (Λ := Λ)) = none := by
+  unfold senkWertT
+  rw [hfrei]
+  exact senkTief_verweigert_tief _ _ _
+
+/-- DEEP-TREE REFUSAL (statement level): the witness layout admits the
+    slot, yet the deep value gives no chunk -- refused, not guessed. -/
+theorem block_verweigert_tief_stmt :
+    senkStmt pwCfg pwL
+      (Stmt.assignSlot (V := pwV) (l := false) () ()
+        pwIdx0 tiefWertFeld1195 pwHw pwHL) = none := by
+  decide
+
 end Gabbro.Grammatik.X86.PipeBlock
