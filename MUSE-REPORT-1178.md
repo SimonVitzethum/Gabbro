@@ -1,5 +1,8 @@
 # MUSE-REPORT-1178: Exact review of candidate 1177 (PipelineUnit)
 
+CANDIDATE: 1177 10a3eabecaa99eaeb0dc35f09e259b2273161fa7
+VERDICT: ACCEPT
+
 Lane 1178, clone `/home/simon/Dokumente/gabbro-muse/a1178`, branch `muse/1178`
 (verified: `pwd` + `git branch --show-current` match the lane file; STOP condition not triggered).
 Owned file: only this report. No Lean or Rust changes made; branch was clean before and after.
