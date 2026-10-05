@@ -339,6 +339,120 @@ theorem gangGross_gleich (gst : GrossSteuerung) (q : SeitenAnfrage)
   rw [gangGross_bei_2M gst q e3 e2 e1 e0 hg2]
   exact gangGross2M_gleich gst q e3 e2 e1 e0 h1 h2 hg1
 
+/-! ## 4. Fault behaviour of the new causes.
+
+  A misaligned large leaf faults with RSVD set (the same error-code
+  bit the 4 KiB walk uses for its reserved rules); a SMEP/SMAP
+  violation faults as protection (P set, RSVD clear) with the access
+  bits live. With AC set, SMAP never fires: the check falls through
+  to the accepted leaf outcome. -/
+
+/-- A misaligned 2 MiB leaf faults with RSVD set. -/
+theorem gangGross2M_fehlaligniert (gst : GrossSteuerung)
+    (q : SeitenAnfrage) (e3 e2 e1 e0 : SeitenEintrag)
+    (hk : istKanonischNat q.linear = true)
+    (h3 : e3.vorhanden = true) (hn3 : e3.noExec = false)
+    (hg3 : e3.gross = false)
+    (h2v : e2.vorhanden = true) (hn2 : e2.noExec = false)
+    (hg2 : e2.gross = false)
+    (h1v : e1.vorhanden = true) (hn1 : e1.noExec = false)
+    (hnxe : gst.basis.nxe = true)
+    (hg1 : e1.gross = true)
+    (hm : grossAusgerichtet2M e1.rahmen = false) :
+    gangGross2M gst q e3 e2 e1 e0 =
+      .seitenFehler q.linear
+        ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩ := by
+  simp [gangGross2M, hk, h3, hn3, hg3, h2v, hn2, hg2, h1v, hn1, hnxe,
+    hg1, hm]
+
+/-- A misaligned 1 GiB leaf faults with RSVD set. -/
+theorem gangGross1G_fehlaligniert (gst : GrossSteuerung)
+    (q : SeitenAnfrage) (e3 e2 e1 e0 : SeitenEintrag)
+    (hk : istKanonischNat q.linear = true)
+    (h3 : e3.vorhanden = true) (hn3 : e3.noExec = false)
+    (hg3 : e3.gross = false)
+    (h2v : e2.vorhanden = true) (hn2 : e2.noExec = false)
+    (hnxe : gst.basis.nxe = true)
+    (hg2 : e2.gross = true)
+    (hm : grossAusgerichtet1G e2.rahmen = false) :
+    gangGross1G gst q e3 e2 e1 e0 =
+      .seitenFehler q.linear
+        ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩ := by
+  simp [gangGross1G, hk, h3, hn3, hg3, h2v, hn2, hnxe, hg2, hm]
+
+/-- Supervisor fetch from a user 2 MiB page faults under armed SMEP. -/
+theorem gangGross2M_smep (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag)
+    (hk : istKanonischNat q.linear = true)
+    (h3 : e3.vorhanden = true) (hn3 : e3.noExec = false)
+    (hg3 : e3.gross = false)
+    (h2v : e2.vorhanden = true) (hn2 : e2.noExec = false)
+    (hg2 : e2.gross = false)
+    (h1v : e1.vorhanden = true) (hn1 : e1.noExec = false)
+    (hnxe : gst.basis.nxe = true)
+    (hg1 : e1.gross = true)
+    (hal : grossAusgerichtet2M e1.rahmen = true)
+    (hsmep : gst.basis.smep = true)
+    (hab : q.abruf = true) (hben : q.benutzer = false)
+    (hus : (e3.benutzer && e2.benutzer && e1.benutzer) = true) :
+    gangGross2M gst q e3 e2 e1 e0 =
+      .seitenFehler q.linear
+        ⟨true, q.schreiben, q.benutzer, false, true⟩ := by
+  simp [gangGross2M, grossBlatt, smepVerletzt, hk, h3, hn3, hg3, h2v,
+    hn2, hg2, h1v, hn1, hnxe, hg1, hal, hsmep, hab, hben, hus]
+
+/-- Supervisor data access to a user 2 MiB page faults under armed
+    SMAP while AC is clear (fetches never reach SMAP). -/
+theorem gangGross2M_smap (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag)
+    (hk : istKanonischNat q.linear = true)
+    (h3 : e3.vorhanden = true) (hn3 : e3.noExec = false)
+    (hg3 : e3.gross = false)
+    (h2v : e2.vorhanden = true) (hn2 : e2.noExec = false)
+    (hg2 : e2.gross = false)
+    (h1v : e1.vorhanden = true) (hn1 : e1.noExec = false)
+    (hnxe : gst.basis.nxe = true)
+    (hg1 : e1.gross = true)
+    (hal : grossAusgerichtet2M e1.rahmen = true)
+    (hsmap : gst.basis.smap = true) (hac : gst.ac = false)
+    (hab : q.abruf = false) (hben : q.benutzer = false)
+    (hus : (e3.benutzer && e2.benutzer && e1.benutzer) = true) :
+    gangGross2M gst q e3 e2 e1 e0 =
+      .seitenFehler q.linear
+        ⟨true, q.schreiben, q.benutzer, false, false⟩ := by
+  simp [gangGross2M, grossBlatt, smepVerletzt, smapVerletzt, hk, h3,
+    hn3, hg3, h2v, hn2, hg2, h1v, hn1, hnxe, hg1, hal, hsmap, hac,
+    hab, hben, hus]
+
+/-- With AC set, SMAP never fires: the check falls through to the
+    accepted leaf outcome with the caller offset. -/
+theorem grossBlatt_ac_gleich (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (effRW effUS effXD : Bool) (rahmen offset : Nat)
+    (hsmep : st.smep = false) :
+    grossBlatt st true q effRW effUS effXD rahmen offset =
+      match blattPruefung st q effRW effUS effXD rahmen with
+      | .ok _ => .ok (rahmen * 4096 + offset)
+      | e => e := by
+  have hs1 : ∀ (u : Bool), smepVerletzt st q u = false := by
+    intro u
+    exact smepVerletzt_off st q u hsmep
+  simp [grossBlatt, hs1, smapVerletzt_ac]
+
+/-- Error code of a misaligned user read: P, U/S and RSVD set. -/
+theorem code_fehlaligniert_lese :
+    pfCodeBits ⟨true, false, true, true, false⟩ = 13 := by
+  decide
+
+/-- Error code of a SMEP supervisor fetch: P and I/D set. -/
+theorem code_smep_abruf :
+    pfCodeBits ⟨true, false, false, false, true⟩ = 17 := by
+  decide
+
+/-- Error code of a SMAP supervisor write: P and W/R set. -/
+theorem code_smap_schreib :
+    pfCodeBits ⟨true, true, false, false, false⟩ = 3 := by
+  decide
+
 /- CUTS:
    Skeleton only; full CUTS with the reviewed file.
 -/
