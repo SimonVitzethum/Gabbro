@@ -129,6 +129,167 @@ theorem eintrittCallPrefix_lauf
     simp [schrittCall, regSet, hsrc]
   exact ⟨hrun, by rw [hrsp, hrsp0], hrip, by rw [hval, hsrc1], hexeP, hlesP, hschrP⟩
 
+open Gabbro.Grammatik.X86.PipelineImage
+
+/-- THE LINKAGE: ENTRY REPRESENTATION REACHES THE FRAGMENT HEAD. From an
+    admitted entry (`prologImageOk`, the caller's `AbiArgs` duty) followed
+    by one fetched call/push/pop/ret nest whose two stack slots are foreign
+    to every placed slot (`StapelLayoutFremd`) and whose clobbered
+    registers (`rsp`, `dst`) hold no variable, the byte run reaches the
+    fragment-head state with the entry world still represented and every
+    variable still in its pipeline register. `EnvRepr` is ESTABLISHED by
+    the fetched entry sequence (`prolog_lauf`), not assumed; `WorldRep`
+    crosses the two frame writes by the foreign-store frame, and the
+    pop/ret memory passthrough is derived from the accepted success
+    lemmas. -/
+theorem byteKopf_antwortErhalten {D : Deklaration} {Γ : Ctx}
+    (L : Layout D) (c : PipeCfg) (bild : Bild) (abi : List Register)
+    (ρ : Env D Γ) (σE : World D)
+    (s0 s1 b1 b2 b3 b4 : Zustand)
+    (disp : BitVec 32) (src dst : Register)
+    (sc sp sq sr : List Byte)
+    (mc mp : Speicher) (vp vr : Wort)
+    (hproImg : prologImageOk bild c abi Γ.length = true)
+    (hs : s0.speicher = ladung bild)
+    (hrip : s0.rip = natAdresse (c.codeBase - (encodeAll (prolog c abi Γ.length)).length))
+    (hargs : AbiArgs abi ρ s0.register)
+    (hpro : laufBytes (prolog c abi Γ.length).length s0 = .weiter s1)
+    (hW0 : WorldRep L s0.speicher σE)
+    (hfremd : StapelLayoutFremd L (s1.register Register.rsp - BitVec.ofNat 64 8)
+      (b1.register Register.rsp - BitVec.ofNat 64 8))
+    (hvar : ∀ (τ : Ty) (x : Var Γ τ), abbOf c τ x ≠ Register.rsp ∧ abbOf c τ x ≠ dst)
+    (hwinc : StapelGeholt s1 (.call32 disp) sc)
+    (hexec : ausfuehrbarN s1.speicher s1.rip
+      (encode (.call32 disp)).length = true)
+    (hwrc : write64 s1.speicher (s1.register Register.rsp - BitVec.ofNat 64 8)
+      (ripNach s1.rip (encode (.call32 disp)).length) = some mc)
+    (hlesc : lesbar8 s1.speicher
+      (s1.register Register.rsp - BitVec.ofNat 64 8) = true)
+    (hstepc : schritt ⟨.call32 disp, (encode (.call32 disp)).length⟩ s1 =
+      some b1)
+    (hwinp : StapelGeholt b1 (.push64 src) sp)
+    (hexep : ausfuehrbarN b1.speicher b1.rip
+      (encode (.push64 src)).length = true)
+    (hwrp : write64 b1.speicher (b1.register Register.rsp - BitVec.ofNat 64 8)
+      (b1.register src) = some mp)
+    (hlesp : lesbar8 b1.speicher
+      (b1.register Register.rsp - BitVec.ofNat 64 8) = true)
+    (hstepp : schritt ⟨.push64 src, (encode (.push64 src)).length⟩ b1 =
+      some b2)
+    (hrdp : read64 b2.speicher (b2.register Register.rsp) = some vp)
+    (hstepq : schritt ⟨.pop64 dst, (encode (.pop64 dst)).length⟩ b2 =
+      some b3)
+    (hdst : dst ≠ Register.rsp)
+    (hsrc : src ≠ Register.rsp)
+    (hwinq : StapelGeholt b2 (.pop64 dst) sq)
+    (hexeq : ausfuehrbarN b2.speicher b2.rip
+      (encode (.pop64 dst)).length = true)
+    (hrdr : read64 b3.speicher (b3.register Register.rsp) = some vr)
+    (hstepr : schritt ⟨.ret, (encode .ret).length⟩ b3 = some b4)
+    (hwinr : StapelGeholt b3 .ret sr)
+    (hexer : ausfuehrbarN b3.speicher b3.rip
+      (encode .ret).length = true)
+    (hdis : Disjunkt (s1.register Register.rsp - BitVec.ofNat 64 8)
+      (b1.register Register.rsp - BitVec.ofNat 64 8)) :
+    ∃ b4', laufBytes ((prolog c abi Γ.length).length + 4) s0 = .weiter b4' ∧
+      WorldRep L b4'.speicher σE ∧ EnvRepr ρ b4'.register (abbOf c) ∧
+      b4'.register Register.rsp = s0.register Register.rsp := by
+  obtain ⟨s1', hrunP', -, hmemP, hrspP, hE1⟩ :=
+    prolog_lauf bild c abi ρ hproImg s0 hs hrip hargs
+  have hpro2 := hpro
+  rw [hrunP'] at hpro2
+  cases hpro2
+  have hW1 : WorldRep L s1.speicher σE := by
+    rw [hmemP, ← hs]
+    exact hW0
+  have hlenC : laengeOk (encode (.call32 disp)).length = true := by
+    unfold laengeOk
+    simp only [decide_eq_true_eq]
+    exact encode_len _
+  have hlenP : laengeOk (encode (.push64 src)).length = true := by
+    unfold laengeOk
+    simp only [decide_eq_true_eq]
+    exact encode_len _
+  have hlenQ : laengeOk (encode (.pop64 dst)).length = true := by
+    unfold laengeOk
+    simp only [decide_eq_true_eq]
+    exact encode_len _
+  have hlenR : laengeOk (encode .ret).length = true := by
+    unfold laengeOk
+    simp only [decide_eq_true_eq]
+    exact encode_len _
+  have eC := schritt_call32_erfolg ⟨.call32 disp, (encode (.call32 disp)).length⟩
+    s1 disp mc hlenC rfl hwrc
+  rw [hstepc] at eC
+  have eCeq := Option.some.inj eC
+  have eP := schritt_push64_erfolg ⟨.push64 src, (encode (.push64 src)).length⟩
+    b1 src mp hlenP rfl hwrp
+  rw [hstepp] at eP
+  have ePeq := Option.some.inj eP
+  have eQ := schritt_pop64_reg ⟨.pop64 dst, (encode (.pop64 dst)).length⟩
+    b2 dst vp hlenQ rfl hdst hrdp
+  rw [hstepq] at eQ
+  have eQeq := Option.some.inj eQ
+  have eR := schritt_ret_erfolg ⟨.ret, (encode .ret).length⟩ b3 vr hlenR rfl hrdr
+  rw [hstepr] at eR
+  have eReq := Option.some.inj eR
+  have hm1 : b1.speicher = mc := by rw [eCeq]; rfl
+  have hm2 : b2.speicher = mp := by rw [ePeq]; rfl
+  have hm3 : b3.speicher = b2.speicher := by rw [eQeq]; rfl
+  have hm4 : b4.speicher = b3.speicher := by rw [eReq]; rfl
+  have hfC : ∀ (t : D.Tab) (k : Int) (f : D.Feld t) (a0 : Nat),
+      L.loc t k f = some a0 →
+        Disjunkt (s1.register Register.rsp - BitVec.ofNat 64 8) (natAdresse a0) :=
+    fun t k f a0 h => (hfremd t k f a0 h).1
+  have hfP : ∀ (t : D.Tab) (k : Int) (f : D.Feld t) (a0 : Nat),
+      L.loc t k f = some a0 →
+        Disjunkt (b1.register Register.rsp - BitVec.ofNat 64 8) (natAdresse a0) :=
+    fun t k f a0 h => (hfremd t k f a0 h).2
+  have hWb1 : WorldRep L b1.speicher σE := by
+    rw [hm1]
+    exact worldRep_schreiben_fremd L s1.speicher mc σE _ _ hW1 hwrc hfC
+  have hWb2 : WorldRep L b2.speicher σE := by
+    rw [hm2]
+    exact worldRep_schreiben_fremd L b1.speicher mp σE _ _ hWb1 hwrp hfP
+  have hWb4 : WorldRep L b4.speicher σE := by
+    rw [hm4, hm3]
+    exact hWb2
+  have k1 : ∀ q : Register, q ≠ Register.rsp → b1.register q = s1.register q := by
+    intro q hq
+    rw [eCeq]
+    show regSet s1.register Register.rsp _ q = s1.register q
+    unfold regSet
+    rw [if_neg hq]
+  have k2 : ∀ q : Register, q ≠ Register.rsp → b2.register q = b1.register q := by
+    intro q hq
+    rw [ePeq]
+    show regSet b1.register Register.rsp _ q = b1.register q
+    unfold regSet
+    rw [if_neg hq]
+  have k3 : ∀ q : Register, q ≠ Register.rsp → q ≠ dst →
+      b3.register q = b2.register q := by
+    intro q hq1 hq2
+    rw [eQeq]
+    show regSet (regSet b2.register Register.rsp _) dst _ q = b2.register q
+    unfold regSet
+    rw [if_neg hq2, if_neg hq1]
+  have k4 : ∀ q : Register, q ≠ Register.rsp → b4.register q = b3.register q := by
+    intro q hq
+    rw [eReq]
+    show regSet b3.register Register.rsp _ q = b3.register q
+    unfold regSet
+    rw [if_neg hq]
+  have hkeep : ∀ q : Register, q ≠ Register.rsp → q ≠ dst →
+      b4.register q = s1.register q := by
+    intro q hq1 hq2
+    rw [k4 q hq1, k3 q hq1 hq2, k2 q hq1, k1 q hq1]
+  have hEnv4 : EnvRepr ρ b4.register (abbOf c) :=
+    envRepr_fremd _ _ _ _ hE1 (fun τ x => hkeep _ (hvar τ x).1 (hvar τ x).2)
+  obtain ⟨hrun, hrspB, -, -, -, -, -⟩ := eintrittCallPrefix_lauf s0 s1 b1 b2 b3 b4
+    (prolog c abi Γ.length).length disp src dst sc sp sq sr mc mp vp vr
+    hpro hrspP hwinc hexec hwrc hlesc hstepc hwinp hexep hwrp hlesp hstepp
+    hrdp hstepq hdst hsrc hwinq hexeq hrdr hstepr hwinr hexer hdis
+  exact ⟨b4, hrun, hWb4, hEnv4, hrspB⟩
 /- CUTS (exactly what is NOT proved here):
    - No lowering certificate from the source program `eP` to bytes: the
      identity of the source fragment head with the byte head is OPEN with
