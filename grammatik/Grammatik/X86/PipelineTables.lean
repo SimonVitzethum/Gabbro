@@ -762,3 +762,34 @@ theorem senkSchreiben_verweigert_oob (A : TabAnker D) (c : PipeCfg)
     senkSchreiben A c (.assignSlot t f i e hw hL : Stmt D V l Γ Λ Λ) = none := by
   have hnone : feldAdr A t k f = none := feldAdr_kein_oob A t k f hoob
   simp only [senkSchreiben, hk, hnone]
+
+/-! ## 7. The closing theorem over fetched bytes -/
+
+/-- **TABLE-STORE CORRECTNESS OVER FETCHED BYTES.** For a lowered
+    store, the fetched byte run from a code region holding the bytes
+    reaches the end of the code in a state representing the real
+    `execStmt` outcome, with the environment: the chunk correctness
+    (`senkSchreiben_korrekt`: value lowering, `repOk`/`RepSlot`, the
+    `worldRep_store` frame) lifted to bytes by `lauf_zu_laufBytes`. -/
+theorem tabellen_schreiben_laufBytes (A : TabAnker D) (c : PipeCfg)
+    (hc : cfgOk c = true) (hsep : ankerSepB A = true)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ)
+    (ρ : Env D Γ) (σ : World D) (st : Zustand)
+    (hE : EnvRepr ρ st.register (abbOf c)) (hW : WorldRep (tabLayout A) st.speicher σ)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (flat pre post : List Byte) (p : List Befehl)
+    (h : senkSchreiben A c s = some p) (hgp : p.all gerade = true)
+    (hcode : CodeAt st.speicher (natAdresse c.codeBase) flat)
+    (hf : flat = pre ++ encodeAll p ++ post)
+    (hrip : st.rip = addrOff (natAdresse c.codeBase) pre.length) :
+    ∃ n s' σ', laufBytes n st = .weiter s' ∧
+      s'.rip = addrOff (natAdresse c.codeBase) (pre.length + (encodeAll p).length) ∧
+      execStmt O passes R s σ ρ = .ok σ' ρ ∧
+      WorldRep (tabLayout A) s'.speicher σ' ∧ EnvRepr ρ s'.register (abbOf c) := by
+  obtain ⟨s1, σ', hrun1, hsrc, hW1, hE1⟩ :=
+    senkSchreiben_korrekt A c hc hsep s ρ σ st hE hW O passes R p h
+  obtain ⟨hb, hr, -, -, -⟩ :=
+    lauf_zu_laufBytes (natAdresse c.codeBase) flat p pre post st s1 hgp hrun1 hcode hf hrip
+  exact ⟨p.length, s1, σ', hb, hr, hsrc, hW1, hE1⟩
