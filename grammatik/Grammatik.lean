@@ -678,3 +678,4 @@ import Grammatik.X86.HwContextState
 import Grammatik.X86.HwPaging
 import Grammatik.X86.HwMemTypesWC
 import Grammatik.X86.IntCarryForms
+import Grammatik.X86.IntBitTest
