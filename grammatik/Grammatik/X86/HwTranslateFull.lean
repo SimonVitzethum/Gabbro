@@ -155,11 +155,106 @@ theorem voll_walkLesen_gleich (st : SeitenSteuerung) (ac : Bool)
   rw [hg] at h
   exact walkLesen_ok st tab s phys h
 
+/-! ## 3. Permission caching closed exactly.
+
+  The precise closure is three proved facts: (1) a hit reuses the cached frame and its
+  rights for EVERY current table and control state, including states whose walk now
+  faults (`uebersetzeVoll_stal_unabhaengig`); (2) INVLPG and CR3-write remove the entry
+  on the acting core only; (3) after removal the current walk decides again. The stale
+  exceptions of lane 1299 become the closed rule plus its reached witnesses below:
+  a revoked mapping and armed SMAP/SMEP fault while the stale hit still admits.
+-/
+
+/-- After INVLPG of its page the full resolution re-walks into the walk success. -/
+theorem uebersetzeVoll_nach_invlpg (gst : GrossSteuerung) (tab : Nat → Wort)
+    (tlb : List TlbEintrag) (q : SeitenAnfrage) (phys : Nat)
+    (hkan : istKanonischNat q.linear = true)
+    (h : (seitenGangGross gst tab q).1 = .ok phys) :
+    uebersetzeVoll gst tab (tlbEntfernen tlb (q.linear / 4096)) q =
+      some phys := by
+  have hMiss : tlbSuche (tlbEntfernen tlb (q.linear / 4096))
+      (q.linear / 4096) = none :=
+    tlbEntfernen_sucht_verfehlt tlb (q.linear / 4096)
+  exact uebersetzeVoll_frisch_ok gst tab _ q phys hkan hMiss h
+
+/-- After INVLPG of its page a walk fault resolves to none. -/
+theorem uebersetzeVoll_nach_invlpg_fehl (gst : GrossSteuerung)
+    (tab : Nat → Wort) (tlb : List TlbEintrag) (q : SeitenAnfrage)
+    (a : Nat) (code : PfFehlerCode)
+    (hkan : istKanonischNat q.linear = true)
+    (h : (seitenGangGross gst tab q).1 = .seitenFehler a code) :
+    uebersetzeVoll gst tab (tlbEntfernen tlb (q.linear / 4096)) q = none := by
+  have hMiss : tlbSuche (tlbEntfernen tlb (q.linear / 4096))
+      (q.linear / 4096) = none :=
+    tlbEntfernen_sucht_verfehlt tlb (q.linear / 4096)
+  unfold uebersetzeVoll
+  rw [hkan]
+  simp [hMiss, h]
+
+/-- A CR3 write empties the joined core TLB (PCID off): lifted unchanged. -/
+theorem uebersetzeVoll_cr3_leert (tlb : List TlbEintrag) :
+    tlbCr3Spuelung tlb = [] :=
+  tlbCr3Spuelung_leert tlb
+
+/-- LOCALITY: invalidating on core `c` leaves core `d` alone (software shootdown
+    stays a user-logic duty). -/
+theorem uebersetzeVoll_invlpg_lokal (tlb : Nat → List TlbEintrag)
+    (c d s : Nat) (h : d ≠ c) :
+    (fun e => if e = c then tlbEntfernen (tlb c) s else tlb e) d =
+      tlb d :=
+  tlbEntfernen_lokal tlb c d s h
+
+/-! ### Stale-rights witnesses: the walk faults, the cached rights still admit.
+
+  Changed tables: `witGrossTab` with the PD[0] 2 MiB leaf cleared (the mapping
+  revocation, mirroring the lane-1299 witness shape on the large page). -/
+
+/-- Witness tables: the large-page mapping revoked (PD[0] leaf cleared). -/
+def witVollTab1 : Nat → Wort :=
+  fun n => if n = 42 * 512 + 0 then 0 else witGrossTab n
+
+/-- The revoked walk faults non-present on a supervisor read. -/
+theorem witVollTab1_pf :
+    (seitenGangGross witGrossSteuer witVollTab1 ⟨0, false, false, false⟩).1 =
+      .seitenFehler 0 ⟨false, false, false, false, false⟩ := by
+  decide
+
+/-- STALE RIGHTS 1 (revoked mapping): the walk faults, the cached frame still admits. -/
+theorem witVoll_stal_revoke :
+    uebersetzeVoll witGrossSteuer witVollTab1 [⟨0, 512⟩]
+      ⟨0, false, false, false⟩ = some 2097152 := by
+  decide
+
+/-- STALE RIGHTS 2 (SMAP): the supervisor read faults under armed SMAP
+    (`wit_gross_smap`), the stale hit still admits with cached rights. -/
+theorem witVoll_stal_smap :
+    uebersetzeVoll witGrossSteuerSmap witGrossTab [⟨0, 512⟩]
+      ⟨0, false, false, false⟩ = some 2097152 := by
+  decide
+
+/-- STALE RIGHTS 3 (SMEP): the supervisor fetch faults under armed SMEP
+    (`wit_gross_smep`), the stale hit still admits with cached rights. -/
+theorem witVoll_stal_smep :
+    uebersetzeVoll witGrossSteuerSmep witGrossTab [⟨0, 512⟩]
+      ⟨0, false, false, true⟩ = some 2097152 := by
+  decide
+
+/-- After INVLPG the revoked mapping re-faults: the stale use is over. -/
+theorem witVoll_nach_invlpg_fehl :
+    uebersetzeVoll witGrossSteuer witVollTab1 (tlbEntfernen [⟨0, 512⟩] 0)
+      ⟨0, false, false, false⟩ = none := by
+  decide
+
+/-- #GP beats a hit: a cached entry for the non-canonical page never answers. -/
+theorem witVoll_nichtkanonisch_hit :
+    uebersetzeVoll witGrossSteuer witGrossTab [⟨2 ^ 35, 7⟩]
+      ⟨2 ^ 47, false, true, false⟩ = none := by
+  decide
+
 /- CUTS:
-   Proved: §1 joined resolution; §2 fresh/stale agreement, #GP-before-walk (pure and
-   walk-level), 1299 probe correspondence where the walks agree.
-   Follow: INVLPG/CR3 effects, flat bridge, permission-caching closure, machine
-   connection, joint witness.
+   Proved: §§1-3 (join, fresh/stale agreement, #GP-first, 1299 link, INVLPG/CR3
+   effects, caching closure, stale-rights witnesses).
+   Follow: flat bridge (§4), machine connection (§5), joint witness (§6).
    NOT proved: everything above; no hardware correspondence beyond self-consistency.
 -/
 
@@ -172,5 +267,16 @@ theorem voll_walkLesen_gleich (st : SeitenSteuerung) (ac : Bool)
 #print axioms gangGross_nichtkanonisch_gp
 #print axioms seitenGangGross_nichtkanonisch_gp
 #print axioms voll_walkLesen_gleich
+#print axioms uebersetzeVoll_nach_invlpg
+#print axioms uebersetzeVoll_nach_invlpg_fehl
+#print axioms uebersetzeVoll_cr3_leert
+#print axioms uebersetzeVoll_invlpg_lokal
+#print axioms witVollTab1
+#print axioms witVollTab1_pf
+#print axioms witVoll_stal_revoke
+#print axioms witVoll_stal_smap
+#print axioms witVoll_stal_smep
+#print axioms witVoll_nach_invlpg_fehl
+#print axioms witVoll_nichtkanonisch_hit
 
 end Gabbro.Grammatik.X86
