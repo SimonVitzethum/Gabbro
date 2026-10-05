@@ -46,11 +46,134 @@ def hwLockSchritt (m : HwMaschine) (c : Nat)
 /-- The LOCK/RMW producer plug: the admitted step as an `HwAdapter`. -/
 def adapterLockRmw : HwAdapter LockAnweisung := ⟨hwLockSchritt⟩
 
+/-! ## 2. Event-exposing step, observers and the ok/none bridge.
+
+  `hwLockSchritt` drops the accepted access event; `hwLockSchrittEv`
+  keeps it so agreement with `lockSchritt`/`casSchritt` is stated on
+  both state and event. Observers project admitted outcomes to
+  decidable facts for the closed pins below. -/
+
+/-- Admitted step keeping the accepted access event. -/
+def hwLockSchrittEv (m : HwMaschine) (c : Nat)
+    (a : LockAnweisung) : Option (HwMaschine × LockEreignis) :=
+  match lockSchrittVoll a c (lockMaschineVonHw m c) m.hw (m.bereit c) with
+  | .ok lm' ev => some (einbettenLock m c lm', ev)
+  | _ => none
+
+/-- The plug step is the event step without the event. -/
+theorem hwLockSchritt_als_event (m : HwMaschine) (c : Nat)
+    (a : LockAnweisung) :
+    hwLockSchritt m c a = Option.map Prod.fst (hwLockSchrittEv m c a) := by
+  unfold hwLockSchritt hwLockSchrittEv
+  cases h1 : lockSchrittVoll a c (lockMaschineVonHw m c) m.hw
+    (m.bereit c) with
+  | ok lm ev => rfl
+  | speicherFehler => rfl
+  | udFehler g => rfl
+  | verweigert => rfl
+
+/-- Observe one 64-bit word of an admitted outcome (`none` if refused). -/
+def hwLockWort (a : Adresse) : Option HwMaschine → Option Wort
+  | some m' => read64 m'.mem a
+  | none => none
+
+/-- Observe one register of an admitted outcome (`none` if refused). -/
+def hwLockReg (r : Register) : Option HwMaschine → Option Wort
+  | some m' => some ((m'.kerne 0).register r)
+  | none => none
+
+/-- Observe the acting core's RIP of an admitted outcome. -/
+def hwLockRip (c : Nat) : Option HwMaschine → Option Adresse
+  | some m' => some ((m'.kerne c).rip)
+  | none => none
+
+/-- Observe a core buffer length of an admitted outcome. -/
+def hwLockBuf (c : Nat) : Option HwMaschine → Option Nat
+  | some m' => some (((m'.puffer c).length))
+  | none => none
+
+/-- A non-`ok` accepted outcome refuses the plug step. -/
+theorem hwLockSchritt_verweigert_bei (m : HwMaschine) (c : Nat)
+    (a : LockAnweisung)
+    (h : lockArt (lockSchrittVoll a c (lockMaschineVonHw m c) m.hw
+      (m.bereit c)) ≠ .ok) :
+    hwLockSchritt m c a = none := by
+  unfold hwLockSchritt
+  cases h1 : lockSchrittVoll a c (lockMaschineVonHw m c) m.hw
+    (m.bereit c) with
+  | ok lm ev =>
+    rw [h1] at h
+    exact absurd rfl h
+  | speicherFehler => rfl
+  | udFehler g => rfl
+  | verweigert => rfl
+
+/-- An `ok` accepted outcome is admitted. -/
+theorem hwLockSchritt_ok_bei (m : HwMaschine) (c : Nat)
+    (a : LockAnweisung) (lm' : LockMaschine) (ev : LockEreignis)
+    (h : lockSchrittVoll a c (lockMaschineVonHw m c) m.hw
+      (m.bereit c) = .ok lm' ev) :
+    hwLockSchritt m c a = some (einbettenLock m c lm') := by
+  unfold hwLockSchritt
+  rw [h]
+
+/-! ## 3. Exact agreement: the accepted evaluator rides along.
+
+  Each admitted form is pinned by the accepted step equation with the
+  SAME guards: empty own buffer, alignment, permissions, length. The
+  old evaluator is lifted, never redefined. -/
+
+/-- XADD agreement: under the accepted guards the plug step admits
+    exactly the accepted successor and event, the word reads back, and
+    every buffer is kept. -/
+theorem hwLock_xadd_stimmt (m : HwMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (alt sval : Wort) (mem' : Speicher)
+    (hbuf : m.puffer c = [])
+    (hali : ausgerichtet8 (effAddr (projZustand m c) base d) = true)
+    (hrd : read64 m.mem (effAddr (projZustand m c) base d) = some alt)
+    (hreg : (m.kerne c).register src = sval)
+    (hok : laengeOk len = true)
+    (hwr : write64 m.mem (effAddr (projZustand m c) base d)
+      (alt + sval) = some mem')
+    (hles : lesbar8 m.mem (effAddr (projZustand m c) base d) = true) :
+    hwLockSchrittEv m c (.ok (.xadd64 src base d) len) =
+      some (einbettenLock m c ⟨{ schrittRegister (lockMaschineVonHw m c).zu
+        (ripNach (lockMaschineVonHw m c).zu.rip len) (add64 alt sval).2 src alt
+        with speicher := mem' }, (lockMaschineVonHw m c).puffer⟩,
+      ⟨c, Fuss (effAddr (lockMaschineVonHw m c).zu base d),
+        Fuss (effAddr (lockMaschineVonHw m c).zu base d),
+        some alt, some (alt + sval), true, false⟩) ∧
+    read64 (einbettenLock m c ⟨{ schrittRegister (lockMaschineVonHw m c).zu
+      (ripNach (lockMaschineVonHw m c).zu.rip len) (add64 alt sval).2 src alt
+      with speicher := mem' }, (lockMaschineVonHw m c).puffer⟩).mem
+      (effAddr (projZustand m c) base d) = some (alt + sval) ∧
+    (einbettenLock m c ⟨{ schrittRegister (lockMaschineVonHw m c).zu
+      (ripNach (lockMaschineVonHw m c).zu.rip len) (add64 alt sval).2 src alt
+      with speicher := mem' }, (lockMaschineVonHw m c).puffer⟩).puffer =
+      m.puffer := by
+  have hstep := lockSchrittVoll_xadd_erfolg (lockMaschineVonHw m c) c
+    src base d len m.hw (m.bereit c) alt sval mem'
+    hbuf hali hrd hreg hok hwr
+  refine ⟨?_, ?_, ?_⟩
+  · unfold hwLockSchrittEv
+    rw [hstep]
+  · exact read64_nach_write64 m.mem mem'
+      (effAddr (projZustand m c) base d) (alt + sval) hwr hles
+  · rfl
+
 /- CUTS:
-    Skeleton only: projection, re-embedding with `HwWf` preservation,
-    and the admitted-step adapter shell. NOT proved yet: exact agreement
-    with `lockSchrittVoll`, planted refusals, two-core witness.
+    Proved here: projection with the shared TSO view, re-embedding with
+    `HwWf` preservation, the admitted-step plug with its event-exposing
+    twin and ok/none bridge, decidable observers, and XADD exact
+    agreement (same guards, same successor and event, read-back, kept
+    buffers). NOT proved yet: CMPXCHG/MFENCE agreement, planted
+    refusals, two-core witness, no W/GX claim.
 -/
 
 #print axioms lockMaschineVonHw_tso
 #print axioms einbettenLock_wf
+#print axioms hwLockSchritt_als_event
+#print axioms hwLockSchritt_verweigert_bei
+#print axioms hwLockSchritt_ok_bei
+#print axioms hwLock_xadd_stimmt
