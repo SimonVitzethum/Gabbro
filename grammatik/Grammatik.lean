@@ -632,3 +632,4 @@ import Grammatik.X86.HwIsaFamilies
 import Grammatik.X86.HwWordAtomicity
 import Grammatik.X86.PipelineAtomicsBind
 import Grammatik.X86.HwFpControl
+import Grammatik.X86.HwVector

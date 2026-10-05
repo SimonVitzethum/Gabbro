@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 14:10 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 14:11 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -621,14 +621,14 @@ Last ledger refresh: **2026-10-05 14:10 UTC**. This is an operational snapshot, 
 | 1125 | Asynchronous interrupt delivery on the coherent machine | Merged after review/checks | 1126: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1125.md) |
 | 1127 | Multiply/divide and narrow widths connected | Merged after review/checks | 1128: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1127.md) |
 | 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Merged after review/checks | 1130: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1129.md) |
-| 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Committed candidate; review/integration pending | 1132: Committed candidate; review/integration pending | [task](lanes/1131.md) |
+| 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Merged after review/checks | 1132: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1131.md) |
 | 1133 | Device/MMIO and memory types on the coherent machine | Agent working | 1134: scheduled | [task](lanes/1133.md) |
 | 1135 | CPUID/feature enabled-state gating inside HwSchritt | Merged after review/checks | 1136: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1135.md) |
 | 1137 | Coherent machine fetching from the loaded image | Merged after review/checks | 1138: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1137.md) |
 | 1139 | Stack, call and return per core through TSO | Merged after review/checks | 1140: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1139.md) |
 | 1141 | ISA-strand families (compact/core/cond) on the coherent machine | Merged after review/checks | 1142: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1141.md) |
 | 1143 | TSO to W bridge: fragment READS | Merged after review/checks | 1144: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1143.md) |
-| 1145 | TSO to W bridge: LOCK/RMW steps | Agent working | 1146: scheduled | [task](lanes/1145.md) |
+| 1145 | TSO to W bridge: LOCK/RMW steps | Committed candidate; review/integration pending | 1146: Agent working | [task](lanes/1145.md) |
 | 1147 | Whole-word atomicity of guarded aligned accesses | Merged after review/checks | 1148: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1147.md) |
 | 1149 | Capstone: one coherent machine over all accepted families | Waiting for accepted dependencies | 1150: scheduled | [task](lanes/1149.md) |
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Merged after review/checks | 1152: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1151.md) |
@@ -655,7 +655,7 @@ Last ledger refresh: **2026-10-05 14:10 UTC**. This is an operational snapshot, 
 | 1193 | Linking: multi-unit convergence and operand kinds | Merged after review/checks | 1194: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1193.md) |
 | 1195 | Pipeline: block-size induction over multi-statement blocks | Committed candidate; review/integration pending | 1196: Agent working | [task](lanes/1195.md) |
 | 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
-| 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Committed candidate; review/integration pending | 1200: scheduled | [task](lanes/1199.md) |
+| 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Committed candidate; review/integration pending | 1200: Agent working | [task](lanes/1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Committed candidate; review/integration pending | 1202: Agent working | [task](lanes/1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
 | 1205 | Loaded image: per-family reached fetch instances | Committed candidate; review/integration pending | 1206: Agent working | [task](lanes/1205.md) |
@@ -1506,6 +1506,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1204**, Independent exact review of 1203, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1204.md). <!-- x86-merged:1204 -->
 - 2026-10-05: lane **1129**, Scalar FP32/FP64 and MXCSR on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1129.md). <!-- x86-merged:1129 -->
 - 2026-10-05: lane **1130**, Independent exact review of 1129, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1130.md). <!-- x86-merged:1130 -->
+- 2026-10-05: lane **1131**, SIMD integer forms and enabled-state gates on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1131.md). <!-- x86-merged:1131 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
