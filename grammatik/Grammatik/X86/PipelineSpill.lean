@@ -382,4 +382,299 @@ theorem spillPlan_tabellenGetrennt (r : Rahmen) (slots : List Nat)
   · exact Or.inl (by omega)
   · exact Or.inr (by omega)
 
+/-! ## 4. Round-trip under a validated plan.
+
+    A reached save through a validated plan reloads its own value
+    through the token-threaded step, keeps permissions, leaves a
+    disjoint foreign footprint unchanged, and runs beside pairwise
+    disjoint spill slots. Composed from the accepted
+    `ComposeSpillPrivacy_verbindung` plus the validator legs; every
+    premise is used. -/
+
+/-- ROUND-TRIP UNDER A VALIDATED PLAN: validator admission (slot bound
+    from plan membership, joint admission from the checked
+    `spillPrivatOk`) plus TSO freshness give the checked save/restore
+    round-trip, permission preservation, disjoint foreign stability,
+    and pairwise slot separation over the whole plan. -/
+theorem spill_rundreise_privat (m m1 : Speicher) (r : Rahmen)
+    (slots : List Nat) (s : Nat) (hmem : s ∈ slots)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (hplan : spillPlanOk r slots codeBase codeLen daten = true)
+    (v w : Wort) (fremd : Adresse) (tso : TSOZustand)
+    (genommen extent : Bool)
+    (hok : spillPrivatOk genommen extent (decide (s < r.schlitzZahl)) = true)
+    (hfrisch : SpillFrisch tso r s)
+    (hdis : GetrenntK r s fremd)
+    (hrd : lesbar8 m (spillSlot r s) = true)
+    (hwr : sichereWort m r s v = some m1)
+    (hrd2 : ladeWort m1 r s = some w) :
+    w = v ∧
+    spillPrivatSchritt m r s v = some (m1, v) ∧
+    SpillZugelassen genommen extent tso r s ∧
+    m1.lesbar = m.lesbar ∧ m1.schreibbar = m.schreibbar ∧
+    read64 m1 fremd = read64 m fremd ∧
+    ladeWort m1 r s = some v ∧
+    (∀ i j, i ∈ slots → j ∈ slots → i ≠ j →
+      Disjunkt (spillSlot r i) (spillSlot r j)) := by
+  have hb : s < r.schlitzZahl :=
+    spillPlan_inRahmen r slots codeBase codeLen daten hplan s hmem
+  have hle : r.spitzeNat ≤ 2 ^ 64 :=
+    spillPlan_schranke r slots codeBase codeLen daten hplan
+  have hmain := ComposeSpillPrivacy_verbindung m m1 r s v w fremd tso
+    genommen extent hb hok hfrisch hdis hrd hwr hrd2
+  refine ⟨hmain.1, hmain.2.1, hmain.2.2.1, hmain.2.2.2.1, hmain.2.2.2.2.1,
+    hmain.2.2.2.2.2.1, hmain.2.2.2.2.2.2, ?_⟩
+  intro i j hi hj hne
+  exact spill_schlitze_getrennt r i j hle
+    (spillPlan_inRahmen r slots codeBase codeLen daten hplan i hi)
+    (spillPlan_inRahmen r slots codeBase codeLen daten hplan j hj) hne
+
+/-! ## 5. The closing theorem: spilled lowering preserves the source
+    meaning and touches neither a source table nor another spill slot.
+
+    If the pipeline validator accepts candidate bytes for a source
+    block and a spill plan validates over a table-free frame, then every
+    real source run of the block is matched by a fetched byte run with
+    world and environment represented — every listed spill slot lies
+    disjoint from every placed source slot, distinct slots are pairwise
+    footprint-disjoint, and every slot avoids every declared table
+    extent. Composed from `pipeline_correct` plus the spill legs; every
+    premise is used. -/
+
+/-- SPILL PRESERVATION: validated pipeline bytes plus a validated spill
+    plan give the fetched run with world and environment represented,
+    slot-vs-table privacy, pairwise slot separation, and slot-vs-extent
+    separation. -/
+theorem spill_haelt_bedeutung (c : PipeCfg) (L : Layout D)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (src : Block D V l Γ Λ Λ')
+    (bytes : List Byte)
+    (r : Rahmen) (slots : List Nat) (daten : List Nat)
+    (hval : validate c L certs src bytes = true)
+    (hsep : LayoutSep L)
+    (hplan : spillPlanOk r slots c.codeBase bytes.length daten = true)
+    (hrahmen : PipeRahmenGetrennt r L)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) bytes)
+    (hrip : s.rip = natAdresse c.codeBase)
+    (hW : WorldRep L s.speicher σ)
+    (hE : EnvRepr ρ s.register (abbOf c))
+    (σ' : World D) (ρ' : Env D Γ)
+    (hsrc : execBlock O passes R src σ ρ = .ok σ' ρ') :
+    (∃ n s', laufBytes n s = .weiter s' ∧
+      s'.rip = natAdresse (c.codeBase + bytes.length) ∧
+      WorldRep L s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf c)) ∧
+    SpillVonTabellenGetrennt r slots L ∧
+    (∀ i j, i ∈ slots → j ∈ slots → i ≠ j →
+      Disjunkt (spillSlot r i) (spillSlot r j)) ∧
+    (∀ a ∈ daten, ∀ q ∈ slots,
+      a + 8 ≤ r.schlitzNat q ∨ r.schlitzNat q + 8 ≤ a) := by
+  obtain ⟨n, s', hrun, hrip', hW', hE'⟩ :=
+    pipeline_correct c L certs src bytes hval hsep O passes R σ ρ s
+      hcode hrip hW hE σ' ρ' hsrc
+  refine ⟨⟨n, s', hrun, hrip', hW', hE'⟩, ?_, ?_, ?_⟩
+  · exact spillPlan_tabellenGetrennt r slots L c.codeBase bytes.length
+      daten hplan hrahmen
+  · intro i j hi hj hne
+    exact spill_schlitze_getrennt r i j
+      (spillPlan_schranke r slots c.codeBase bytes.length daten hplan)
+      (spillPlan_inRahmen r slots c.codeBase bytes.length daten hplan i hi)
+      (spillPlan_inRahmen r slots c.codeBase bytes.length daten hplan j hj) hne
+  · intro a ha q hq
+    exact spillPlan_offDaten r slots c.codeBase bytes.length daten hplan
+      a ha q hq
+
+/-! ## 6. Refusals: loud on every path.
+
+    A spill into a declared table extent, a slot past the frame, and a
+    plan with aliased slots are all refused (`false`), never guessed.
+    Each general refusal goes through the corresponding validator leg. -/
+
+/-- TABLE REFUSAL: a slot overlapping a declared table extent is never
+    admitted. -/
+theorem spill_verweigert_tabelle (r : Rahmen) (slots : List Nat)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (a : Nat) (hmem : a ∈ daten) (s : Nat) (hs : s ∈ slots)
+    (h : ¬ (a + 8 ≤ r.schlitzNat s ∨ r.schlitzNat s + 8 ≤ a)) :
+    spillPlanOk r slots codeBase codeLen daten = false := by
+  cases heq : spillPlanOk r slots codeBase codeLen daten with
+  | true =>
+    exact absurd (spillPlan_offDaten r slots codeBase codeLen daten heq
+      a hmem s hs) h
+  | false => rfl
+
+/-- OUT-OF-FRAME REFUSAL: a listed slot past the frame is never admitted. -/
+theorem spill_verweigert_aussen (r : Rahmen) (slots : List Nat)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (s : Nat) (hs : s ∈ slots) (h : r.schlitzZahl ≤ s) :
+    spillPlanOk r slots codeBase codeLen daten = false := by
+  cases heq : spillPlanOk r slots codeBase codeLen daten with
+  | true =>
+    have hlt := spillPlan_inRahmen r slots codeBase codeLen daten heq s hs
+    omega
+  | false => rfl
+
+/-- COLLISION REFUSAL: aliased slots are never admitted. -/
+theorem spill_verweigert_kollision (r : Rahmen) (slots : List Nat)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : ¬ slots.Nodup) :
+    spillPlanOk r slots codeBase codeLen daten = false := by
+  cases heq : spillPlanOk r slots codeBase codeLen daten with
+  | true =>
+    exact absurd (spillPlan_nodup r slots codeBase codeLen daten heq) h
+  | false => rfl
+
+/-! ## 7. Poison probes.
+
+    One positive probe (the witness plan validates) and one refused
+    probe per validator leg: a spill into a table extent (also through
+    the refusal theorem), a slot past the frame, aliased slots, and a
+    frame over the code. The witness frame sits at 16384 (off the
+    witness code at `[4096, 4178)` and off the witness tables at
+    8192/8200); slots 0 and 1 are the two eight-byte words there. -/
+
+/-- The witness plan: slots 0 and 1 of the frame at 16384, code at
+    4096, table extents at 8192 and 8200. -/
+def spillP0 : List Nat := [0, 1]
+
+def spillR0 : Rahmen := ⟨16384, 16⟩
+
+def spillD0 : List Nat := [8192, 8200]
+
+/-- POSITIVE PROBE: the witness plan validates, by computation. -/
+theorem spill_probe_pos : spillPlanOk spillR0 spillP0 4096 pwBytes.length spillD0 = true := by
+  decide
+
+/-- TABLE EXTENT: a spill naming a table byte is refused (here the
+    declared extent 16384 covers slot 0). -/
+def spillBadTabelle : List Nat := [16384]
+
+theorem spill_probe_tabelle :
+    spillPlanOk spillR0 spillP0 4096 pwBytes.length spillBadTabelle = false := by
+  decide
+
+/-- TABLE REFUSAL through the theorem: slot 0 at 16384 overlaps the
+    declared extent 16384. -/
+theorem spill_probe_tabelle_satz :
+    spillPlanOk spillR0 [0] 4096 pwBytes.length [16384] = false :=
+  spill_verweigert_tabelle spillR0 [0] 4096 pwBytes.length [16384]
+    16384 (by decide) 0 (by decide) (by decide)
+
+/-- OUT-OF-FRAME: a slot past the two-slot frame is refused. -/
+theorem spill_probe_aussen :
+    spillPlanOk spillR0 [0, 7] 4096 pwBytes.length spillD0 = false := by
+  decide
+
+/-- COLLISION: the same slot twice is refused (it would alias another
+    spill slot). -/
+theorem spill_probe_kollision :
+    spillPlanOk spillR0 [0, 0] 4096 pwBytes.length spillD0 = false := by
+  decide
+
+/-- CODE OVERLAP: a frame over the code region is refused. -/
+theorem spill_probe_code :
+    spillPlanOk ⟨4096, 16⟩ [0] 4096 pwBytes.length spillD0 = false := by
+  decide
+
+/-! ## 8. Joint witness on a non-degenerate program.
+
+    Every premise of `spill_haelt_bedeutung` holds jointly on the
+    pipeline witness program (one variable, two slots written, check
+    passed; memory 7 -> 35 and 9 -> 6, so the run is non-degenerate
+    and memory-changing); the closing theorem delivers the fetched run
+    plus slot-vs-table privacy, pairwise slot separation and
+    slot-vs-extent separation. -/
+
+/-- The witness frame holds no source table byte, by computation on the
+    two placed addresses. -/
+theorem spillR0_getrennt : PipeRahmenGetrennt spillR0 pwL := by
+  intro t k f a hloc
+  cases t
+  cases f
+  simp only [pwL] at hloc
+  by_cases e1 : k = 0
+  · rw [if_pos e1] at hloc
+    cases hloc
+    exact Or.inl (by decide)
+  · rw [if_neg e1] at hloc
+    by_cases e2 : k = 1
+    · rw [if_pos e2] at hloc
+      cases hloc
+      exact Or.inl (by decide)
+    · rw [if_neg e2] at hloc
+      cases hloc
+
+/-- JOINT WITNESS for `spill_haelt_bedeutung`: every premise holds
+    jointly on the pipeline witness program with the witness spill
+    plan; the source run changes memory (rows 7 -> 35, 9 -> 6). -/
+theorem spill_haelt_bedeutung_zeuge :
+    ∃ (σ' : World pwD) (ρ' : Env pwD pwCtx),
+      spillPlanOk spillR0 spillP0 pwCfg.codeBase pwBytes.length spillD0 = true ∧
+      PipeRahmenGetrennt spillR0 pwL ∧
+      validate pwCfg pwL pwCerts pwSrc pwBytes = true ∧
+      LayoutSep pwL ∧
+      CodeAt (pwStart 30).speicher (natAdresse pwCfg.codeBase) pwBytes ∧
+      (pwStart 30).rip = natAdresse pwCfg.codeBase ∧
+      WorldRep pwL (pwStart 30).speicher pwSigma ∧
+      EnvRepr pwEnv30 (pwStart 30).register (abbOf pwCfg) ∧
+      execBlock pwO 0 pwR pwSrc pwSigma pwEnv30 = .ok σ' ρ' ∧
+      (pwSigma.slots () 0 ()).n = 7 ∧ (σ'.slots () 0 ()).n = 35 ∧
+      (pwSigma.slots () 1 ()).n = 9 ∧ (σ'.slots () 1 ()).n = 6 ∧
+      (∃ n s', laufBytes n (pwStart 30) = .weiter s' ∧
+        s'.rip = natAdresse (pwCfg.codeBase + pwBytes.length) ∧
+        WorldRep pwL s'.speicher σ' ∧
+        EnvRepr ρ' s'.register (abbOf pwCfg)) ∧
+      SpillVonTabellenGetrennt spillR0 spillP0 pwL ∧
+      (∀ i j, i ∈ spillP0 → j ∈ spillP0 → i ≠ j →
+        Disjunkt (spillSlot spillR0 i) (spillSlot spillR0 j)) ∧
+      (∀ a ∈ spillD0, ∀ q ∈ spillP0,
+        a + 8 ≤ spillR0.schlitzNat q ∨ spillR0.schlitzNat q + 8 ≤ a) := by
+  obtain ⟨σ', ρ', hsrc, h0, h1⟩ := pw_quelle30
+  obtain ⟨hv0, hv1⟩ := pw_quelle_vorher
+  have hplan : spillPlanOk spillR0 spillP0 pwCfg.codeBase pwBytes.length
+      spillD0 = true :=
+    spill_probe_pos
+  obtain ⟨⟨n, s', hrun, hrip', hW, hE'⟩, hpriv, hsep2, hdat⟩ :=
+    spill_haelt_bedeutung pwCfg pwL pwCerts pwSrc pwBytes spillR0 spillP0
+      spillD0 pw_validate pw_layoutSep hplan spillR0_getrennt pwO 0 pwR
+      pwSigma pwEnv30 (pwStart 30) pw_code rfl pw_worldRep pw_envRepr30
+      σ' ρ' hsrc
+  exact ⟨σ', ρ', hplan, spillR0_getrennt, pw_validate, pw_layoutSep, pw_code,
+    rfl, pw_worldRep, pw_envRepr30, hsrc, hv0, h0, hv1, h1,
+    ⟨n, s', hrun, hrip', hW, hE'⟩, hpriv, hsep2, hdat⟩
+
+/-- JOINT WITNESS for `spill_rundreise_privat`: every premise holds
+    jointly on concrete values — a reached checked save of `42` into
+    slot 0 that observably changes memory and reloads through the
+    threaded token — beside the non-degenerate writer program
+    `zeugenU` (table `konto` written by `setze`). -/
+theorem spill_rundreise_privat_zeuge :
+    ∃ (m m1 : Speicher) (v w : Wort),
+      (0 : Nat) ∈ ([0] : List Nat) ∧
+      spillPlanOk spillRahmenW [0] 4096 pwBytes.length [16] = true ∧
+      spillPrivatOk false false (decide (0 < spillRahmenW.schlitzZahl)) = true ∧
+      SpillFrisch spillTSO0 spillRahmenW 0 ∧
+      GetrenntK spillRahmenW 0 16 ∧
+      lesbar8 m (spillSlot spillRahmenW 0) = true ∧
+      sichereWort m spillRahmenW 0 v = some m1 ∧
+      ladeWort m1 spillRahmenW 0 = some w ∧
+      (zeugenU.fns.get ⟨0, by decide⟩).schreibt = ["konto"] ∧
+      w = v ∧
+      m.bytes (spillSlot spillRahmenW 0) ≠
+        m1.bytes (spillSlot spillRahmenW 0) ∧
+      spillPrivatSchritt m spillRahmenW 0 v = some (m1, v) := by
+  have hplan : spillPlanOk spillRahmenW [0] 4096 pwBytes.length [16] = true := by
+    decide
+  have hmain := spill_rundreise_privat speicherZeuge spillZeuM1 spillRahmenW
+    [0] 0 (by decide) 4096 pwBytes.length [16] hplan 42 42 16 spillTSO0
+    false false spillZeu_ok spill_frisch0 spill_getrennt_rW spillZeu_lesbar
+    spillZeu_speichert spillZeu_rundreise
+  exact ⟨speicherZeuge, spillZeuM1, 42, 42, by decide, hplan, spillZeu_ok,
+    spill_frisch0, spill_getrennt_rW, spillZeu_lesbar, spillZeu_speichert,
+    spillZeu_rundreise, zeugenU_schreibt, hmain.1, spillZeu_wechselt,
+    hmain.2.1⟩
+
 end Gabbro.Grammatik.X86.PipeSpill
