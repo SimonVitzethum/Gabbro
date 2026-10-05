@@ -94,6 +94,46 @@ theorem sperrlauf_fremd (c : Nat) (secs : List (List AtomQuelle))
     intro d hd
     rw [ih d hd, hframe d hd]
 
+/-! ## 2. CAS failure binding at register level.
+
+    Lane 1203 bound only CAS *success* (`bind_cas_erfolg`); the failure
+    stutter stayed with the accepted `casSchritt_fehlschlag` (lane 1163,
+    `cas_korrekt_fehlschlag`). Here the failure is bound too: the
+    lowered LOCK CMPXCHG at the address the register pair names stutters
+    with the decided `false` ledger entry. -/
+
+/-- **CAS FAILURE BINDING.** The lowered LOCK CMPXCHG whose comparison
+    against rax fails stutters at exactly the address the register pair
+    names, with the decided failure ledger. The write-permission pin
+    (`hwr`) is the accepted adapter's premise, never a new claim. -/
+theorem bind_cas_fehlschlag (m : LockMaschine) (c : Nat) (a : Adresse)
+    (src base : Register) (d : BitVec 32)
+    (dest : Wort) (mem' : Speicher)
+    (heff : effAddr m.zu base d = a)
+    (hbuf : m.puffer c = [])
+    (hrd : read64 m.zu.speicher a = some dest)
+    (hali : ausgerichtet8 a = true)
+    (hfehl : (dest == m.zu.register .rax) = false)
+    (hwr : write64 m.zu.speicher a dest = some mem') :
+    PipelineAtomics.senkAtom (PipelineAtomics.AtomQuelle.cas src base d) =
+      some [PipelineAtomics.ZielOp.lock (.cmpxchg64 src base d)] ∧
+    casSchritt a (m.zu.register .rax) (m.zu.register src) c (toTSO m) =
+      some (toTSO m, false) ∧
+    ledgerDeckt (.cas a (m.zu.register .rax) (m.zu.register src))
+      (ledgerCasOk a false) = true := by
+  have hrd' : read64 m.zu.speicher (effAddr m.zu base d) = some dest := by
+    rw [heff]; exact hrd
+  have hali' : ausgerichtet8 (effAddr m.zu base d) = true := by
+    rw [heff]; exact hali
+  have hwr' : write64 m.zu.speicher (effAddr m.zu base d) dest =
+      some mem' := by
+    rw [heff]; exact hwr
+  have h := lockVoll_cmpxchg_fehlschlag_adapter m c src base d dest mem'
+    hbuf hrd' hali' hfehl hwr'
+  rw [heff] at h
+  exact ⟨PipelineAtomics.senk_cas src base d, h.1,
+    cas_schliesst a (m.zu.register .rax) (m.zu.register src) false⟩
+
 /- CUTS: what is not proved here
      Proved here so far: nothing beyond `SperrSchritt` (skeleton).
      NOT proved here, and not claimed:
