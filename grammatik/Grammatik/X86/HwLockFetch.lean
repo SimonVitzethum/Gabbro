@@ -472,11 +472,186 @@ theorem hwLockFetchWit_reg_ud :
     decide
   exact hwLockFetchSchritt_ud _ _ _ _ _ hf
 
+/-- Fence machine: MFENCE bytes at 4096, empty buffers. -/
+def hwLockFetchZaun : HwMaschine :=
+  ⟨lockZeugSpeicher pinMfence 0 lockCodeExec lockDataRW lockDataRW,
+    hwLockWitKernLesen hwLockWitReg0, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- The fetched fence advances RIP past its 3 bytes. -/
+theorem hwLockFetchWit_zaun_rip :
+    hwLockRip 0 (hwLockFetchSchritt hwLockFetchZaun 0) =
+      some (BitVec.ofNat 64 4099) := by
+  decide
+
+/-- The fence without admitted SSE2 refuses on the fetched path. -/
+theorem hwLockFetchWit_sse2 :
+    hwLockFetchSchritt hwLockWitOhneSse2 0 = none := by
+  have hf : hwLockFetch hwLockWitOhneSse2 0 =
+      some (.ok .mfence 3, List.replicate 12 (BitVec.ofNat 8 0)) := by
+    decide
+  have hff : lockFuss hwLockWitOhneSse2 0 .mfence = none := rfl
+  have hplug : hwLockSchritt hwLockWitOhneSse2 0 (.ok .mfence 3) = none :=
+    hwLock_mfence_ohne_sse2_verweigert hwLockWitOhneSse2 0 3
+      (by decide) (by decide)
+  have hs : match lockFuss hwLockWitOhneSse2 0 .mfence with
+      | some tgt => splitSperre tgt = false
+      | none => True := by
+    simp only [hff]
+  rw [hwLockFetchSchritt_ohne_split _ _ _ _ _ hf hs, hplug]
+
+/-- The unreadable word refuses on the fetched path. -/
+theorem hwLockFetchWit_lesefehler :
+    hwLockFetchSchritt hwLockWitOhneLesen 0 = none := by
+  have hf : hwLockFetch hwLockWitOhneLesen 0 =
+      some (.ok (.xadd64 .rax .rbp 0) 9,
+        List.replicate 6 (BitVec.ofNat 8 0)) := by
+    decide
+  have hff : lockFuss hwLockWitOhneLesen 0 (.xadd64 .rax .rbp 0) =
+      some (BitVec.ofNat 64 8192) := by
+    decide
+  have hplug : hwLockSchritt hwLockWitOhneLesen 0
+      (.ok (.xadd64 .rax .rbp 0) 9) = none := by
+    apply hwLockSchritt_verweigert_bei
+    rw [hwLockWit_lesefehler_art]
+    decide
+  have hs : match lockFuss hwLockWitOhneLesen 0 (.xadd64 .rax .rbp 0) with
+      | some tgt => splitSperre tgt = false
+      | none => True := by
+    simp only [hff, hwLockFetchWit_kein_split]
+  rw [hwLockFetchSchritt_ohne_split _ _ _ _ _ hf hs, hplug]
+
+/-- The misaligned base refuses on the fetched path (unsupported
+    profile, never a fault claim). -/
+theorem hwLockFetchWit_unaligned :
+    hwLockFetchSchritt hwLockWitUnaligned 0 = none := by
+  have hf : hwLockFetch hwLockWitUnaligned 0 =
+      some (.ok (.xadd64 .rax .rbp 0) 9,
+        List.replicate 6 (BitVec.ofNat 8 0)) := by
+    decide
+  have hplug : hwLockSchritt hwLockWitUnaligned 0
+      (.ok (.xadd64 .rax .rbp 0) 9) = none :=
+    hwLock_unaligned_bleibt_verweigert hwLockWitUnaligned 0 .rax .rbp 0 9
+      (by decide) (by decide) (by decide)
+  -- 8193 stays on line 128: misaligned but never split.
+  have hnosplit : splitSperre (BitVec.ofNat 64 8193) = false := by
+    decide
+  have hff : lockFuss hwLockWitUnaligned 0 (.xadd64 .rax .rbp 0) =
+      some (BitVec.ofNat 64 8193) := by
+    decide
+  have hs : match lockFuss hwLockWitUnaligned 0 (.xadd64 .rax .rbp 0) with
+      | some tgt => splitSperre tgt = false
+      | none => True := by
+    simp only [hff, hnosplit]
+  rw [hwLockFetchSchritt_ohne_split _ _ _ _ _ hf hs, hplug]
+
+/-! ## 8. Joint witness: every premise together on reached runs.
+
+  Non-degenerate: core 0 fetched-adds 10 to 15 and core 1
+  fetched-adds 15 to 22 in canonical memory (memory-changing steps
+  on both cores), a buffered store is forwarded to its owner only,
+  the drain lands it in shared memory, the SIB shape runs, and the
+  split/narrow/mode/#UD/buffer/SSE2/permission refusals stand beside
+  the run. -/
+
+/-- Joint fetched LOCK witness on the coherent machine. -/
+theorem hwLockFetch_zeuge :
+    hwLockFetch hwLockWitStart 0 =
+      some (.ok (.xadd64 .rax .rbp 0) 9,
+        List.replicate 6 (BitVec.ofNat 8 0)) ∧
+    hwLockWort hwLockWitAdr (hwLockFetchSchritt hwLockWitStart 0) =
+      some 15 ∧
+    hwLockReg 0 .rax (hwLockFetchSchritt hwLockWitStart 0) = some 10 ∧
+    hwLockSicht (hwLockFetchSchritt hwLockWitStart 0) 1
+      hwLockWitFremdAdr = some (some (BitVec.ofNat 8 99)) ∧
+    hwLockSicht (hwLockFetchSchritt hwLockWitStart 0) 0
+      hwLockWitFremdAdr = some (some (BitVec.ofNat 8 0)) ∧
+    hwLockWort hwLockWitAdr
+      (match hwLockWitBereit2 with
+        | some m2 => hwLockFetchSchritt m2 1
+        | none => none) = some 22 ∧
+    hwLockReg 1 .rax
+      (match hwLockWitBereit2 with
+        | some m2 => hwLockFetchSchritt m2 1
+        | none => none) = some 15 ∧
+    HwWf hwLockWitStart ∧
+    hwLockWort (BitVec.ofNat 64 8192)
+      (hwLockFetchSchritt hwLockFetchSib 0) = some 15 ∧
+    hwLockFetchSchritt hwLockFetchSplit 0 = none ∧
+    hwLockFetchSchritt (hwLockFetchCode pinXadd32) 0 = none ∧
+    hwLockFetchSchritt (hwLockFetchCode pinXaddMod0) 0 = none ∧
+    hwLockFetchSchritt hwLockWitStart 1 = none ∧
+    hwLockFetchSchritt hwLockWitOhneSse2 0 = none ∧
+    hwLockFetchSchritt hwLockWitOhneLesen 0 = none ∧
+    hwLockFetchSchritt hwLockWitUnaligned 0 = none := by
+  refine ⟨hwLockFetchWit_start0, hwLockFetchWit_nach1_wort,
+    hwLockFetchWit_nach1_rax, hwLockFetchWit_nach1_sicht.1,
+    hwLockFetchWit_nach1_sicht.2, hwLockFetchWit_nach2_wort,
+    hwLockFetchWit_nach2_rax1, hwLockWitStart_wf,
+    hwLockFetchWit_sib_wort, hwLockFetchWit_split,
+    hwLockFetchWit_schmal32_schritt, hwLockFetchWit_mod0_schritt,
+    hwLockFetchWit_puffer, hwLockFetchWit_sse2, hwLockFetchWit_lesefehler,
+    hwLockFetchWit_unaligned⟩
+
 /- CUTS:
-     Skeleton only: fetched decode `hwLockFetch` as the 662 fetch on
-     the core projection. NOT proved here: the fetched step, split-lock
-     refusal, narrower-width / other-mode refusals, agreement with the
-     parsed plug, witness. See task lane 1209.
+     Proved here: fetched-byte dispatch for the LOCK family on the
+     coherent machine -- `hwLockFetch` as the 662 fetch on the core
+     projection (actual executable bytes at the core RIP, combined
+     decoder, length and execute-permission checks); the fetched step
+     `hwLockFetchSchritt` with the `Unit` producer plug
+     `adapterLockFetch` (the fetch decides, never the caller);
+     split-lock (8-byte word crossing a 64-byte line) as a stated
+     admission refusal, strictly stronger than the parsed 1119 plug;
+     narrower widths (8/16/32-bit XADD/CMPXCHG have no 662 row) and
+     non-mod=2 addressing modes refused at the decoder, never
+     executed; the 662-accepted SIB shape dispatched and run;
+     `HwWf` preservation of every fetched successor; exact
+     agreement with the parsed plug off-split and with the
+     single-core 662 `lockByteschritt` outcome; `ExtendedExecution`
+     discipline (older rows keep their bytes); closed fetched pins
+     for fetch equations, the two-core run (word 10 to 15 on core 0,
+     15 to 22 on core 1 after the drain, owner-only forwarding), the
+     fence, and every refusal; the joint non-degenerate witness
+     `hwLockFetch_zeuge`.
+     Silicon provenance: the LOCK/XADD/CMPXCHG/MFENCE rows are the
+     accepted 662 rows (Intel SDM 325462-093US Sep 2026 Vol. 2A
+     3-565/3-566, Vol. 2D 6-27/6-28, Vol. 2A 3-193/3-194, Vol. 2B
+     4-15) -- this lane adds no new silicon claim beyond reusing
+     those rows, except two NAMED ASSUMPTIONS: (i) cache lines are
+     64 bytes (`cacheLinie`); (ii) a line-crossing locked word is
+     refused admission here (no bus transaction performed, no #AC
+     control state claimed, no timing claim).
+     NOT proved here, and not claimed:
+     - No hardware correspondence beyond self-consistency: encodings,
+       flag effects and ordering rules are the accepted 662 rows.
+     - No W/GX refinement and no per-access linearisation: the bridge
+       owns them. No cycle, latency, progress or retry-bound claim.
+     - Narrower widths and further addressing modes (mod=0/1,
+       RIP-relative, SIB index/scale, segment overrides) stay open
+       with 662; this layer only refuses them, never models them.
+     - Unlocked XADD/CMPXCHG and REX-prefixed MFENCE are refused by
+       the 662 decoder, not modelled here.
+     - No self-modifying-code guard (open with 662).
+     - Generic arbitrary-input disjointness beyond the pins: the
+       combined decoder tries `decodeExt` first (no shadowing by
+       construction); only closed rows are pinned refused/admitted.
+     - No source, checker, contract, budget, duty or goal change:
+       nothing here speaks about `Vertrag`, `Stmt`, duties or
+       `gabbro_ziel`.
 -/
 
 #print axioms hwLockFetch_aus_projektion
+#print axioms adapterLockFetch_wf
+#print axioms hwLockFetchSchritt_ohne_split
+#print axioms hwLockFetchSchritt_split
+#print axioms hwLockFetch_weicht_aelter
+#print axioms hwLockSchritt_trifft_byteschritt
+#print axioms hwLockFetchSchritt_trifft_lockByteschritt
+#print axioms hwLockFetchWit_nach1_wort
+#print axioms hwLockFetchWit_nach2_wort
+#print axioms hwLockFetchWit_sib_wort
+#print axioms hwLockFetchWit_split
+#print axioms hwLockFetchWit_schmal32_schritt
+#print axioms hwLockFetch_zeuge
+
+end Gabbro.Grammatik.X86
