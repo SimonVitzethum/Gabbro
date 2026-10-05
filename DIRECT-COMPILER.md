@@ -725,7 +725,7 @@ Last ledger refresh: **2026-10-05 21:40 UTC**. This is an operational snapshot, 
 | 1333 | Opcode ledger: one-byte opcodes 00-3F | Merged after review/checks | 1334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1333.md) |
 | 1335 | Opcode ledger: one-byte opcodes 40-7F | Committed candidate; review/integration pending | 1336: Incomplete; preserved | [task](lanes/1335.md) |
 | 1337 | Opcode ledger: one-byte opcodes 80-BF | Agent working | 1338: scheduled | [task](lanes/1337.md) |
-| 1339 | Opcode ledger: one-byte opcodes C0-FF | Merged after review/checks | 1340: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1339.md) |
+| 1339 | Opcode ledger: one-byte opcodes C0-FF | Merged after review/checks | 1340: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1339.md) |
 | 1341 | Opcode ledger: two-byte opcodes 0F 00-3F | Committed candidate; review/integration pending | 1342: scheduled | [task](lanes/1341.md) |
 | 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Merged after review/checks | 1344: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1343.md) |
 | 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
@@ -1775,6 +1775,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1333**, Opcode ledger: one-byte opcodes 00-3F, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1333.md). <!-- x86-merged:1333 -->
 - 2026-10-05: lane **1334**, Independent exact review of 1333, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1334.md). <!-- x86-merged:1334 -->
 - 2026-10-05: lane **1339**, Opcode ledger: one-byte opcodes C0-FF, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1339.md). <!-- x86-merged:1339 -->
+- 2026-10-05: lane **1340**, Independent exact review of 1339, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1340.md). <!-- x86-merged:1340 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
