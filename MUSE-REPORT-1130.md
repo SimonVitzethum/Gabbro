@@ -1,47 +1,93 @@
-# MUSE-REPORT-1130: Exact review of candidate 1129 (Scalar FP32/FP64 and MXCSR)
+# MUSE-REPORT-1130: Exact re-review of candidate 1129 (Scalar FP32/FP64 and MXCSR)
 
-CANDIDATE: 1129 6032515d21b2cd9730bc5baeaa1a197a1e392abb
+CANDIDATE: 1129 f105c9366997fc7e20ec09616f0661a0cc6604d3
 
 Lane 1130 (reviewer). Clone `/home/simon/Dokumente/gabbro-muse/a1130`, branch `muse/1130`: verified (`pwd`, `git branch --show-current`).
 
-## Candidate
+## What changed since the stale verdict
 
-Pinned snapshot `.tmp/review/SNAPSHOT.json` names author 1129 at HEAD
-`6032515d21b2cd9730bc5baeaa1a197a1e392abb` (base `8744590d77cbc7f31d809b4c62cd303bae4ed66f`;
-files `MUSE-REPORT-1129.md`, `grammatik/Grammatik.lean`,
-`grammatik/Grammatik/X86/HwFpControl.lean`).
-That commit is not reachable from the owned clone:
+The previous verdict (REPAIR on reviewability only, commits `ed19117d`/`eddcdb14`)
+reported that pinned commit `6032515d` was not reachable from this clone. The
+coordinator has since repinned to `f105c936` (same Lean tree; the delta to
+`6032515d` is report text only, "No Lean change" per author evidence) and
+provided the exact snapshot in-clone at `.tmp/review/`: `SNAPSHOT.json`
+(author 1129, head `f105c936…`, base `8744590d…`, files `MUSE-REPORT-1129.md`,
+`grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/HwFpControl.lean`),
+`PATCH.diff` (1490 lines), the candidate `grammatik/` file, `OWNER-TASK.md`,
+`MUSE-REPORT-1129.md` and `BUILD-EVIDENCE.json`. This re-review runs the full
+checklist against that exact material. No stale snapshot is approved.
 
-- `git log --oneline --all --grep=1129`: empty.
-- `git diff master..HEAD --stat` on `muse/1130`: empty (own branch carries no changes).
-- Local ref `muse/1129`: does not exist; the author clone is outside this directory and out of scope under HARD RULES 1.
+## Checks performed (all against the pinned material)
 
-Latest master in this clone is `811e1fda` (merge of Muse 1128). No 1129 commit is reachable from here.
-
-## Checks performed
-
-- The review checklist (no sorry/axiom/native_decide, `#print axioms` standard, one import line only,
-  every premise used, evaluator lifted not copied, refusals refuse, non-degenerate witness, silicon
-  facts vs Intel SDM, honest CUTS, no claim beyond proof) could NOT be executed: there is no
-  candidate diff to read. Nothing was reviewed, so nothing is accepted.
-- `./lean-bau` on the owned (base) tree: green, last line `Build completed successfully (604 jobs).`
-  This measures the base only, not the candidate.
+- **Scope/ownership**: `PATCH.diff` touches exactly the three owned files:
+  new `MUSE-REPORT-1129.md`, one appended line `import Grammatik.X86.HwFpControl`
+  in `grammatik/Grammatik.lean` (hunk at end of imports), new 1317-line
+  `grammatik/Grammatik/X86/HwFpControl.lean`. No existing theorem edited.
+- **Forbidden tactics**: static scan of the candidate file for
+  sorry/admit/axiom-declarations/native_decide/unsafe finds only English prose
+  ("admitted"/"admits" in doc comments); no tactic use. Corroborated by the
+  axiom prints (no `sorryAx`) and by independent elaboration below.
+- **Independent elaboration (reviewer-measured)**: `./lean-probe` on the exact
+  snapshot file in this clone: `== 0 error(s) in the COMPLETE output; exit 0`
+  (one linter warning: unused binder `s'`, harmless). This also confirms the
+  file still elaborates against this clone's newer master: every referenced
+  accepted name (`stepExt_fp`, `s32Schritt_addssRR`, `mxcsrSchritt_ld_erfolg`,
+  `issueListe_anderer_kern`, `fpHwEncodeArithRR`, `fpHwLen_rr`, …) resolves.
+- **Axioms**: `#print axioms` block present for every main theorem; outputs
+  (reviewer-observed) are only `propext`/`Quot.sound` subsets, matching the
+  author's recorded lines. Standard.
+- **Lift, not copy**: the file imports the four family modules plus
+  `HardwareExecution` and `ConcurrentIntegerExecution`; family evaluators
+  (`s32Schritt`, `fpSchritt`, `mxcsrSchritt`) appear only as applied equation
+  premises and cited lemmas, never redefined. The earlier duplicate
+  `issueListe_anderer_kern` is gone: exactly one occurrence, a use
+  (line 785) fed by the accepted import — the repair from `857cce26` holds in
+  the pinned tree.
+- **Premises used**: spot-checked across all sections; every theorem premise
+  feeds its proof (step equations drive `cases`/rewrites; `hmem` gates feed the
+  `HwSchritt.reg` constructor; refusal hypotheses rewrite the step to `none`).
+  No `Prop`-typed premise, no discarded premise, no conclusion restating a
+  premise (the `∃ s'` in `fpCtrlSpüle_ist_hw` packages the embedding
+  `FpCtrlSchritt → HwSchritt`, not a rename).
+- **Refusals**: length/profile/LOCK/permission refusals conclude `False` from
+  (step ∧ refusal condition) via the accepted family refusal lemmas; they
+  elaborate, so the refusal chains genuinely close.
+- **Witness** (`fpCtrl_zeuge`): non-degenerate — two-core reached run
+  (core 0 fetches REX DIVSD `1.0/+0.0=+inf`, register ADDSS
+  `1.0f32+2.0f32=3.0f32` with upper96 preserved, MXCSR reset install with
+  admission); the four-drain changes actual shared memory (`0` becomes
+  `0x40400000`, closed `decide` evaluation); owner-only forwarding proved
+  (`0x40` owner vs `0x00` foreign, then foreign observes `0x40` post-drain);
+  core-1 fetch refusal included. All premises jointly instantiated.
+- **Silicon**: lengths used (DIVSD 5 = F2+REX.W+0F+opcode+ModRM, ADDSS 4,
+  LDMXCSR m32 7) match the architecture; reset word `0x1F80`; LOCK-prefixed
+  LDMXCSR `#UD`. All silicon facts live in the accepted families and are
+  cited, never restated; the file and CUTS explicitly disclaim hardware
+  correspondence beyond self-consistency and claim no W/GX bridge.
+- **CUTS**: honest block present; open points (no `decodeExt` s32/MXCSR rows,
+  no per-access W/GX simulation, no word atomicity beyond byte groups,
+  inherited family cuts) match the code. Claim is not larger than the proof.
+- **Build**: author evidence records full `./lean-bau` green (601 jobs) at the
+  pinned Lean tree plus sorry-gate 0 violations. Reviewer ran `./lean-bau` on
+  the own tree (candidate import not wired here): green, last line
+  `Build completed successfully (604 jobs).` Full-candidate-tree rebuild was
+  not reproduced in the reviewer clone (would require editing `grammatik/`
+  beyond owned files); module-level green is reviewer-measured, project-level
+  green is author-evidenced and consistent with it.
 
 ## Finding
 
-VERDICT: REPAIR
+VERDICT: ACCEPT
 
-Substantive verdict unchanged: **REPAIR** — not on the candidate's content (unseen) but on reviewability:
-the pinned diff is not present in the owned clone, so the exact review cannot be performed.
-Same situation and same verdict as review lane 1128 gave for 1127
-(`d8dc6fb9`, `8ca34424`).
-
-To make candidate 1129 reviewable: make the pinned diff reachable from the reviewer's
-owned clone (fetchable ref or exact snapshot of the three listed files); the re-review then runs the full
-checklist plus `./lean-bau` on the candidate tree.
+Candidate 1129 at the pinned HEAD is accepted: the family's accepted
+evaluators are lifted unchanged onto the coherent machine with exact embedding
+theorems, wf preservation, genuine refusals, and a non-degenerate two-core
+witness; axioms standard; CUTS honest; no claim beyond the proof. The one
+content defect in its history (duplicated `issueListe_anderer_kern`) was
+repaired before pinning and verified absent. The previous reviewability REPAIR
+is superseded by the provided exact snapshot, not overridden.
 
 ## Open
 
-- Re-run this review once the pinned 1129 diff is reachable in the reviewer's clone.
-- No Lean code was added by this lane; no new definitions/theorems; no witness obligation applies.
-- `MUSE-REPORT-1130.md` is the only file owned and committed by this lane.
+- Nothing pending on this review. `MUSE-REPORT-1130.md` is the only file owned
+  and committed by this lane; no Lean code added, so no witness obligation applies.
