@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 14:11 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 14:12 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -646,7 +646,7 @@ Last ledger refresh: **2026-10-05 14:11 UTC**. This is an operational snapshot, 
 | 1175 | Finite and infinite execution soundness of the pipeline | Committed candidate; review/integration pending | 1176: Unresolved after agent rounds; not accepted | [task](lanes/1175.md) |
 | 1177 | Source-computed units and duties feeding the pipeline | Merged after review/checks | 1178: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1177.md) |
 | 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Merged after review/checks | 1180: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1179.md) |
-| 1181 | Nested interrupt delivery, #DF and handler entry | Committed candidate; review/integration pending | 1182: Committed candidate; review/integration pending | [task](lanes/1181.md) |
+| 1181 | Nested interrupt delivery, #DF and handler entry | Merged after review/checks | 1182: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1181.md) |
 | 1183 | Feature gating enforced per step, not by wrapper | Merged after review/checks | 1184: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1183.md) |
 | 1185 | Generic word-forwarding theorem | Merged after review/checks | 1186: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1185.md) |
 | 1187 | TSO traces to W runs: run induction | Merged after review/checks | 1188: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1187.md) |
@@ -1510,6 +1510,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1132**, Independent exact review of 1131, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1132.md). <!-- x86-merged:1132 -->
 - 2026-10-05: lane **1177**, Source-computed units and duties feeding the pipeline, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1177.md). <!-- x86-merged:1177 -->
 - 2026-10-05: lane **1178**, Independent exact review of 1177, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1178.md). <!-- x86-merged:1178 -->
+- 2026-10-05: lane **1181**, Nested interrupt delivery, #DF and handler entry, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1181.md). <!-- x86-merged:1181 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

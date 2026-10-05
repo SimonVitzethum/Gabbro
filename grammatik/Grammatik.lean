@@ -634,3 +634,4 @@ import Grammatik.X86.PipelineAtomicsBind
 import Grammatik.X86.HwFpControl
 import Grammatik.X86.HwVector
 import Grammatik.X86.PipelineUnit
+import Grammatik.X86.HwNestedInterrupts
