@@ -32,6 +32,7 @@ open Gabbro.Grammatik.X86
 open Gabbro.Grammatik.X86.Pipeline
 open Gabbro.Grammatik.X86.PipelineWitnesses
 open Gabbro.Grammatik.X86.PipeSpill
+open Gabbro.Grammatik.X86.PipeRegAlloc
 open Gabbro.Grammatik.X86.PipelineCalls
 
 /-- Splice direction: save the register into the slot, or reload the
@@ -313,6 +314,149 @@ theorem spleissMehr_einz (c : PipeCfg) (r : Rahmen) (P : List Befehl)
     spleissMehr c r P [p] =
       (P.take p.pos) ++ spleissFrag c r p ++ (P.drop p.pos) := by
   simp [spleissMehr, spleissSeg]
+
+/-! ## 4. Paired save/reload round-trip across an explicit middle
+    segment.
+
+    A save spliced before a middle segment and its reload after it
+    carry the register value through the slot. The middle segment's
+    non-interference (its run, and slot-byte preservation across it)
+    is an explicit premise on explicit states, in the established
+    token style: discharging it is the allocator/homing layer's job
+    (lane 1227's homing is not merged here, see CUTS). -/
+
+/-- PAIRED ROUND-TRIP: prefix runs, the save stores the register word
+    in the slot, the middle segment runs and keeps the slot bytes, the
+    reload restores the saved word into the register, the suffix runs.
+    The save keeps every register but the address register. -/
+theorem spleiss_paar_rundreise (c : PipeCfg) (r : Rahmen) (slot : Nat)
+    (reg : Register)
+    (pre mid post : List Befehl)
+    (s t1 t1m t2 t3 u : Zustand) (m' : Speicher)
+    (hne : reg ≠ c.adr)
+    (hslot : slot < r.schlitzZahl)
+    (hpre : lauf (pre.map kanon) s = some t1)
+    (hwr : write64 t1.speicher (spillSlot r slot) (t1.register reg) = some m')
+    (hrd : lesbar8 t1.speicher (spillSlot r slot) = true)
+    (hsave : lauf ((spillSaveCode c r slot reg).map kanon) t1 = some t1m)
+    (hmid : lauf (mid.map kanon) t1m = some t2)
+    (hslotmid : read64 t2.speicher (spillSlot r slot) =
+      read64 m' (spillSlot r slot))
+    (hload : lauf ((spillLoadCode c r slot reg).map kanon) t2 = some t3)
+    (hpost : lauf (post.map kanon) t3 = some u) :
+    lauf (((pre ++ spillSaveCode c r slot reg) ++ mid ++
+      spillLoadCode c r slot reg ++ post).map kanon) s = some u ∧
+      t3.register reg = t1.register reg ∧
+      t3.speicher = t2.speicher ∧
+      (∀ q, q ≠ c.adr → t1m.register q = t1.register q) := by
+  have hsw : sichereWort t1.speicher r slot (t1.register reg) = some m' := by
+    unfold sichereWort
+    rw [if_pos hslot]
+    exact hwr
+  have hround : ladeWort m' r slot = some (t1.register reg) :=
+    sichere_lade_rundreise _ _ _ _ _ hslot hsw hrd
+  have hrdm : read64 m' (spillSlot r slot) = some (t1.register reg) := by
+    unfold ladeWort at hround
+    rw [if_pos hslot] at hround
+    exact hround
+  have hrd2 : read64 t2.speicher (spillSlot r slot) =
+      some (t1.register reg) := by
+    rw [hslotmid]
+    exact hrdm
+  obtain ⟨s2, hs2run, hs2mem, hs2reg⟩ :=
+    spillLoad_lauf c r slot reg t2 (t1.register reg) hrd2
+  cases Option.some_inj.mp (hs2run.symm.trans hload)
+  have hmap1 : ((pre ++ spillSaveCode c r slot reg) ++ mid ++
+      spillLoadCode c r slot reg ++ post).map kanon =
+      (pre.map kanon) ++ ((spillSaveCode c r slot reg ++ mid ++
+        spillLoadCode c r slot reg ++ post).map kanon) := by
+    simp [List.map_append, List.append_assoc]
+  have hmap2 : (spillSaveCode c r slot reg ++ mid ++
+      spillLoadCode c r slot reg ++ post).map kanon =
+      ((spillSaveCode c r slot reg).map kanon) ++
+        ((mid ++ spillLoadCode c r slot reg ++ post).map kanon) := by
+    simp [List.map_append, List.append_assoc]
+  have hmap3 : (mid ++ spillLoadCode c r slot reg ++ post).map kanon =
+      (mid.map kanon) ++
+        ((spillLoadCode c r slot reg ++ post).map kanon) := by
+    simp [List.map_append, List.append_assoc]
+  have hmap4 : (spillLoadCode c r slot reg ++ post).map kanon =
+      ((spillLoadCode c r slot reg).map kanon) ++ (post.map kanon) := by
+    simp [List.map_append]
+  have hrun : lauf (((pre ++ spillSaveCode c r slot reg) ++ mid ++
+      spillLoadCode c r slot reg ++ post).map kanon) s = some u := by
+    rw [hmap1, lauf_anhang _ _ _ _ hpre, hmap2,
+      lauf_anhang _ _ _ _ hsave, hmap3, lauf_anhang _ _ _ _ hmid,
+      hmap4, lauf_anhang _ _ _ _ hload]
+    exact hpost
+  refine ⟨hrun, hs2reg, hs2mem, ?_⟩
+  intro q hq
+  exact spleiss_save_fremd c r slot reg t1 t1m m' hne hwr hsave q hq
+
+variable {D : Deklaration}
+
+/-! ## 5. The closing theorem: the spliced lowering preserves the
+    source meaning and the privacy of the frame.
+
+    Validated pipeline bytes give the fetched run with world and
+    environment represented (lane 1191's `spill_haelt_bedeutung`,
+    itself over `pipeline_correct`); the validated splice plan adds
+    slot-vs-table privacy, pairwise slot separation, slot-vs-extent
+    separation, and per-point fragment facts (straight-line, in-frame
+    slot, no save onto the address register). -/
+
+/-- SPLICE PRESERVATION: validated pipeline bytes plus a validated
+    splice plan give the fetched run with world and environment
+    represented, slot-vs-table privacy, pairwise slot separation,
+    slot-vs-extent separation, and per-point fragment admission. -/
+theorem spleiss_haelt_bedeutung (c : PipeCfg) (L : Layout D)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (src : Block D V l Γ Λ Λ')
+    (bytes : List Byte)
+    (r : Rahmen) (P : List Befehl) (pts : List SpleissPunkt)
+    (daten : List Nat)
+    (hval : validate c L certs src bytes = true)
+    (hsep : LayoutSep L)
+    (hplan : spillPlanOk r (pts.map (·.schlitz)) c.codeBase bytes.length
+      daten = true)
+    (hspleiss : spleissPlanOk c r P pts c.codeBase bytes.length daten = true)
+    (hrahmen : PipeRahmenGetrennt r L)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) bytes)
+    (hrip : s.rip = natAdresse c.codeBase)
+    (hW : WorldRep L s.speicher σ)
+    (hE : EnvRepr ρ s.register (abbOf c))
+    (σ' : World D) (ρ' : Env D Γ)
+    (hsrc : execBlock O passes R src σ ρ = .ok σ' ρ') :
+    (∃ n s', laufBytes n s = .weiter s' ∧
+      s'.rip = natAdresse (c.codeBase + bytes.length) ∧
+      WorldRep L s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf c)) ∧
+    SpillVonTabellenGetrennt r (pts.map (·.schlitz)) L ∧
+    (∀ i j, i ∈ (pts.map (·.schlitz)) → j ∈ (pts.map (·.schlitz)) →
+      i ≠ j → Disjunkt (spillSlot r i) (spillSlot r j)) ∧
+    (∀ a ∈ daten, ∀ q ∈ (pts.map (·.schlitz)),
+      a + 8 ≤ r.schlitzNat q ∨ r.schlitzNat q + 8 ≤ a) ∧
+    (∀ p ∈ pts, (spleissFrag c r p).all gerade = true ∧
+      p.schlitz < r.schlitzZahl ∧
+      (p.richtung = .sichern → p.reg ≠ c.adr)) := by
+  obtain ⟨hrun, hpriv, hsep2, hdat⟩ :=
+    spill_haelt_bedeutung c L certs src bytes r (pts.map (·.schlitz))
+      daten hval hsep hplan hrahmen O passes R σ ρ s hcode hrip hW hE
+      σ' ρ' hsrc
+  have hspill : spillPlanOk r (pts.map (·.schlitz)) c.codeBase bytes.length
+      daten = true :=
+    spleissPlan_spill c r P pts c.codeBase bytes.length daten hspleiss
+  refine ⟨hrun, hpriv, hsep2, hdat, ?_⟩
+  intro p hp
+  refine ⟨spleissFrag_gerade c r p, ?_, ?_⟩
+  · exact spillPlan_inRahmen r (pts.map (·.schlitz)) c.codeBase
+      bytes.length daten hspill p.schlitz (List.mem_map.mpr ⟨p, hp, rfl⟩)
+  · intro hdir
+    exact spleissPlan_saveReg c r P pts c.codeBase bytes.length daten
+      hspleiss p hp hdir
 
 /- CUTS:
      - Skeleton only: split-point type and fragment selection over the
