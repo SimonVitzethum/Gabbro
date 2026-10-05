@@ -26,6 +26,7 @@
 -/
 import Grammatik.X86.Pipeline
 import Grammatik.X86.PipelineImage
+import Grammatik.X86.PipelineWitnesses
 import Grammatik.X86.EffectiveAddress
 import Grammatik.X86.AddressEncoding
 
@@ -36,6 +37,7 @@ open Gabbro.Grammatik.X86
 open Gabbro.Grammatik.X86.OptimizationRules
 open Gabbro.Grammatik.X86.Pipeline
 open Gabbro.Grammatik.X86.PipelineImage
+open Gabbro.Grammatik.X86.PipelineWitnesses
 
 variable {D : Deklaration}
 
@@ -925,6 +927,79 @@ theorem zeLowRead : senkLesen zeA zeCfg zeReadSlot = some zeLoadProg := by decid
 theorem zeLowReadDurch : senkLesen zeA zeCfg zeReadDurch = some zeLoadProg := by decide
 
 theorem zeLowWriteDurch : senkSchreiben zeA zeCfg zeWriteDurch = some zeStoreProg := by decide
+
+/-! ## 9. Witness memory, world and representation -/
+
+/-- The source world: every row and field holds 7. -/
+def zeSigma : World zeD where
+  slots := fun _ _ _ => (⟨7, by decide, by decide⟩ : Zahl 0 1000)
+  globs := fun g => nomatch g
+  spur := []
+
+/-- The lowered store bytes (what the image holds). -/
+def zeBytes : List Byte := encodeAll zeStoreProg
+
+/-- The memory: code at `[4096, 4096 + len)`, the table extent at
+    `[8192, 8224)` holding 7 in every slot, zero elsewhere. -/
+def zeMemBytes (a : Adresse) : Byte :=
+  if 4096 ≤ a.toNat ∧ a.toNat < 4096 + zeBytes.length then zeBytes.getD (a.toNat - 4096) 0
+  else if 8192 ≤ a.toNat ∧ a.toNat < 8224 then wortByte 7 ((a.toNat - 8192) % 8)
+  else 0
+
+def zeCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + zeBytes.length)
+
+def zeDaten (a : Adresse) : Bool := decide (8192 ≤ a.toNat ∧ a.toNat < 8224)
+
+def zeMem : Speicher :=
+  { bytes := zeMemBytes, lesbar := zeDaten, schreibbar := zeDaten, ausfuehrbar := zeCode }
+
+/-- Registers: `r10` holds the variable index 0, everything else zero. -/
+def zeReg : Register → Wort := fun q => if q = .r10 then intWort 0 else 0
+
+def zeStart : Zustand :=
+  { register := zeReg, flags := witnessFlags, rip := natAdresse 4096, speicher := zeMem }
+
+theorem zeLenLt : 4096 + zeBytes.length < 2 ^ 64 := by decide
+
+theorem zeLenDaten : zeBytes.length ≤ 4096 := by decide
+
+theorem zeCodeAt : CodeAt zeMem (natAdresse 4096) zeBytes := by
+  apply codeAt_von zeMem 4096 zeBytes zeLenLt
+  intro a h1 h2
+  have hlen := zeLenDaten
+  have hd : ¬ (8192 ≤ a.toNat ∧ a.toNat < 8224) := by omega
+  simp only [zeMem, zeCode, zeDaten, zeMemBytes, decide_eq_true_eq, decide_eq_false_iff_not]
+  exact ⟨⟨h1, h2⟩, hd, by rw [if_pos ⟨h1, h2⟩]⟩
+
+theorem zeOkB : tabOkB zeA zeMem = true := by decide
+
+theorem zeWeltB : tabWeltB zeA zeMem zeSigma = true := by decide
+
+theorem zeWorldRep : WorldRep (tabLayout zeA) zeMem zeSigma :=
+  tabWorldRep zeA zeMem zeSigma zeOkB zeWeltB
+
+theorem zeEnvRepr : EnvRepr (D := zeD) (Env.nil : Env zeD []) zeStart.register (abbOf zeCfg) := by
+  intro lo hi x
+  cases x
+
+/-- THE SOURCE RUN: `T[1].f2 = 42;` writes 42, through the real
+    `execStmt`. -/
+theorem zeSrcWrite : ∃ σ', execStmt zeO 0 zeR zeWrite zeSigma Env.nil = .ok σ' Env.nil ∧
+    (σ'.slots false 1 true).n = 42 :=
+  ⟨_, rfl, rfl⟩
+
+/-- THE TARGET RUN reaches a state whose byte at 8216 changed from 7
+    to 42: a real memory-changing reached run. -/
+theorem zeWriteRun :
+    ((lauf (zeStoreProg.map kanon) zeStart).map
+      (fun s => s.speicher.bytes (natAdresse 8216)) =
+      some (BitVec.ofNat 8 42)) ∧
+    (zeStart.speicher.bytes (natAdresse 8216) = wortByte 7 0) := by
+  refine ⟨by decide, by decide⟩
+
+/-- The source read evaluates to 7. -/
+theorem zeReadEval : (eval zeSigma zeReadSlot zeSigma Env.nil).n = 7 := rfl
 
 /-! ## 7. The closing theorem over fetched bytes -/
 
