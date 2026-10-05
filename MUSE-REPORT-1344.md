@@ -1,5 +1,8 @@
 # MUSE-REPORT-1344: Exact review of candidate 1343 (opcode ledger 0F 40-7F)
 
+CANDIDATE: 1343 cc28bfa452dcb972cd3cb6bcb9435294c495edfa
+VERDICT: REPAIR
+
 ## VERDICT: REPAIR
 
 ## Candidate
