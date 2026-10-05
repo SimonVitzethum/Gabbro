@@ -343,10 +343,96 @@ theorem acht_ausgaben_erreichbar
     (.issue _ _ _ _ _ h2)) (.issue _ _ _ _ _ h3)) (.issue _ _ _ _ _ h4))
     (.issue _ _ _ _ _ h5)) (.issue _ _ _ _ _ h6)) (.issue _ _ _ _ _ h7)
 
-/- CUTS: what is not proved here (skeleton; extended with each piece)
+/-! ## 5. Install, refusal, and the joint witness.
+
+    `wort_installation` closes the word-install proof: the exact group
+    plus an exclusion-checked drain to an empty own buffer installs the
+    whole word unsplit in canonical memory, and the drain is a reached
+    run. A grouped state admits no LOCK step on the acting core (the
+    LOCK form needs the empty buffer the group fills) -- the group
+    guard and atomicity never overlap. The joint witness ties the
+    fence bytes, the MFENCE lowering, a written table, and a reached
+    memory-changing drain together. -/
+
+/-- **WORD INSTALL.** An exclusion-checked drain from the exact
+    eight-entry group installs the whole word unsplit, and the drain
+    is a reached run. Every premise pins one guard of the accepted
+    read-back. -/
+theorem wort_installation (s sN : TSOZustand) (t : List TSOZustand)
+    (c : Nat) (a : Adresse) (v : Wort)
+    (hgrp : WortGruppe s c a v)
+    (hles : lesbar8 s.mem a = true)
+    (hspur : DrainSpur c s sN t)
+    (hend : sN ∈ t)
+    (hleer : sN.puffer c = [])
+    (hstoer : ∀ x ∈ t, FremdFrei x c a) :
+    read64 sN.mem a = some v ∧ TSOErreichbar s sN :=
+  ⟨wort_gruppe_liest_zurueck s sN t c a v hgrp hles hspur hend hleer hstoer,
+    drain_spur_erreichbar c s sN t hspur⟩
+
+/-- POISON: a grouped state admits no LOCK XADD on the acting core. -/
+theorem gift_gruppe_verweigert_lock (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v delta : Wort)
+    (hgrp : WortGruppe s c a v) :
+    lockSchritt (.xadd64 a delta) c s = none :=
+  gruppe_verweigert_lock s c a v delta hgrp
+
+/-- **JOINT WITNESS.** The fence pins, the MFENCE lowering, a written
+    table, and a reached eight-drain run that observably changes
+    memory hold together. Non-degenerate on both sides. -/
+theorem bind_zeuge :
+    ∃ (t : List TSOZustand) (sN : TSOZustand),
+      DrainSpur 0 grpS2 sN t ∧ TSOErreichbar grpS2 sN ∧
+      sN.puffer 0 = [] ∧ (∀ x ∈ t, FremdFrei x 0 0) ∧
+      lesbar8 grpS2.mem 0 = true ∧
+      read64 sN.mem 0 = some zeugenWort ∧
+      grpS2.mem.bytes 0 ≠ sN.mem.bytes 0 ∧
+      witD.schreibt () () = true ∧
+      zaunBytes .sfence = pinSfence ∧
+      zaunBytes .lfence = lfenceBytes ∧
+      PipelineAtomics.senkAtom PipelineAtomics.AtomQuelle.zaun =
+        some [PipelineAtomics.ZielOp.lock .mfence] := by
+  obtain ⟨t, sN, hspur, hreach, hempty, hstoer, hles, hread, hchg⟩ :=
+    wort_gruppe_liest_zurueck_zeuge
+  exact ⟨t, sN, hspur, hreach, hempty, hstoer, hles, hread, hchg, rfl,
+    rfl, rfl, PipelineAtomics.senk_zaun⟩
+
+/- CUTS: what is not proved here
+    Proved here (all over REUSED accepted definitions -- no new machine,
+    no new decoder row, no second IR, no source/checker/goal change):
+    - register-address binding (§1): `bind_xadd` (lowered LOCK XADD
+      runs the accepted locked add at the address the register pair
+      names), `bind_cas_erfolg` (lowered LOCK CMPXCHG success runs the
+      accepted CAS success there), `bind_mfence` (the fence needs no
+      address at all);
+    - fence lowering (§§2-3): `zaunBytes`/`valZaun` (`valZaun_korrekt`)
+      with decode facts for all three pins, `zaun_sfence_korrekt`
+      (narrow-store fence is TSO-observably the identity with the
+      fence-only event), `zaun_lfence_korrekt` (narrow-load fence is
+      state-preserving with the narrow event while the MFENCE gate
+      refuses), refusals for missing SSE and pending stores, and
+      decoder-disjointness poison probes;
+    - word install (§§4-5): `acht_ausgaben_gruppe` (exactly eight byte
+      issues in order build the canonical group with memory and foreign
+      buffers untouched), `acht_ausgaben_erreichbar` (the issues form
+      one reached run), `wort_installation` (exclusion-checked drain
+      from the exact group installs the whole word unsplit, reached),
+      the group/LOCK exclusion poison, and the joint non-degenerate
+      witness `bind_zeuge` (reached memory-changing drain, written
+      table, fence pins, MFENCE lowering).
     NOT proved here, and not claimed:
-    - No seq_cst total order, no fairness, no CAS retry bound.
-    - No full source `execBlock` correspondence for atomics.
+    - No `execBlock` correspondence for atomics: the pipeline fragment
+      (`Pipeline.lean` CUTS) covers integer slots only; atomics enter
+      through the per-access facts above, never through a block run.
+    - No CAS failure binding at register level: success is bound in
+      §1; the failure stutter is the accepted `casSchritt_fehlschlag`
+      (lane 1163, `cas_korrekt_fehlschlag`), not re-bound here.
+    - No SFENCE/LFENCE bracket for lock sections: sections stay
+      MFENCE-bracketed (lane 1163, `sperre_korrekt`); the narrow forms
+      are single-fence lowerings only.
+    - No seq_cst total order (inherited `kein_seqcst_total`), no
+      fairness, no CAS retry bound, no timing or cost.
+    - No interrupt, device, MMIO or DMA claim.
 -/
 
 #print axioms zaunBytes_mfence
@@ -367,5 +453,8 @@ theorem acht_ausgaben_erreichbar
 #print axioms bind_xadd
 #print axioms bind_cas_erfolg
 #print axioms bind_mfence
+#print axioms wort_installation
+#print axioms gift_gruppe_verweigert_lock
+#print axioms bind_zeuge
 
 end Gabbro.Grammatik.X86.PipelineAtomicsBind
