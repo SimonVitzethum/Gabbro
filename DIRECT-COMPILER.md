@@ -625,7 +625,7 @@ Last ledger refresh: **2026-10-05 11:41 UTC**. This is an operational snapshot, 
 | 1133 | Device/MMIO and memory types on the coherent machine | Incomplete; preserved | 1134: scheduled | [task](lanes/1133.md) |
 | 1135 | CPUID/feature enabled-state gating inside HwSchritt | Merged after review/checks | 1136: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1135.md) |
 | 1137 | Coherent machine fetching from the loaded image | Merged after review/checks | 1138: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1137.md) |
-| 1139 | Stack, call and return per core through TSO | Merged after review/checks | 1140: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1139.md) |
+| 1139 | Stack, call and return per core through TSO | Merged after review/checks | 1140: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1139.md) |
 | 1141 | ISA-strand families (compact/core/cond) on the coherent machine | Committed candidate; review/integration pending | 1142: Incomplete; preserved | [task](lanes/1141.md) |
 | 1143 | TSO to W bridge: fragment READS | Committed candidate; review/integration pending | 1144: Agent working | [task](lanes/1143.md) |
 | 1145 | TSO to W bridge: LOCK/RMW steps | Waiting for accepted dependencies | 1146: scheduled | [task](lanes/1145.md) |
@@ -1412,6 +1412,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1138**, Independent exact review of 1137, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1138.md). <!-- x86-merged:1138 -->
 - 2026-10-05: publication batch checks passed for `84c19aca`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: lane **1139**, Stack, call and return per core through TSO, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1139.md). <!-- x86-merged:1139 -->
+- 2026-10-05: lane **1140**, Independent exact review of 1139, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1140.md). <!-- x86-merged:1140 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
