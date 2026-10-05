@@ -1,8 +1,25 @@
 # MUSE-REPORT-1210: exact review of candidate 1209 (HwLockFetch)
 
-CANDIDATE: 1209 424bd9b9017aa2c507510da67e14e9a87c2fdd11
+CANDIDATE: 1209 262cd5eafd4616fabb5b16acc497d2fb19433ee4
 
 VERDICT: ACCEPT
+
+## Re-review note (new pin)
+
+The previous verdict covered `424bd9b9`; the pin has since moved to
+`262cd5ea` after author repairs. This is a full independent re-review
+of the NEW snapshot, not a carry-over: every finding below was
+re-inspected against the new snapshot files. The Lean source is
+verified UNCHANGED between the two pins -- the declaration inventory
+of the snapshot `HwLockFetch.lean` is identical (53 `def`/`theorem`
+entries at identical line numbers, e.g. `hwLockFetch` line 24,
+`adapterLockFetch_wf` line 134, `hwLockFetch_zeuge` line 558) and
+the delta `424bd9b9..262cd5ea` is, per `BUILD-EVIDENCE.json` command
+history and the author report, the report file only
+(`MUSE-REPORT-1209.md` gained the integration-gate-failure section;
+`git status` CLEAN at the new head). No proof was changed, so no
+previous finding could have been silently invalidated; all were
+still re-checked.
 
 ## Scope and method
 
@@ -13,7 +30,7 @@ coordinator-supplied exact snapshot in this clone:
 `grammatik/Grammatik/X86/HwLockFetch.lean`, 657 lines;
 `MUSE-REPORT-1209.md`; `BUILD-EVIDENCE.json`; `OWNER-TASK.md`)
 with pin `SNAPSHOT.json`: head
-`424bd9b9017aa2c507510da67e14e9a87c2fdd11`, base `988d75ef`,
+`262cd5eafd4616fabb5b16acc497d2fb19433ee4`, base `988d75ef`,
 files exactly `MUSE-REPORT-1209.md`, `grammatik/Grammatik.lean`,
 `grammatik/Grammatik/X86/HwLockFetch.lean`, clean tree.
 The full candidate source was read via the snapshot diff. This clone's
@@ -84,15 +101,36 @@ own tree was not modified except for this report.
 
 ## Builds
 
-- Candidate evidence (`BUILD-EVIDENCE.json`): `./lean-probe
-  grammatik/Grammatik/X86/HwLockFetch.lean` == 0 error(s);
-  `./lean-bau` "Build completed successfully (640 jobs)" at the
-  pinned commit.
+- Candidate evidence (`BUILD-EVIDENCE.json`, extended for the new
+  pin): `./lean-probe grammatik/Grammatik/X86/HwLockFetch.lean` ==
+  0 error(s) at `424bd9b9`; full `./lean-bau` "Build completed
+  successfully (640 jobs)"; after the report-only commit the new
+  head `262cd5ea` is verified `git status` CLEAN. No Lean source
+  changed in the repair turn, so the green build transfers to the
+  new pin.
 - Reviewer baseline in this clone (candidate not applied here;
   own-only constraint): `./lean-bau` ->
   `Build completed successfully (641 jobs).` (one more module than
   the candidate base from later merges; base tree green, exit 0,
-  0 error lines).
+  0 error lines), re-run fresh for this re-review.
+
+## Integration-gate failure (author repair turn) -- reviewer assessment
+
+The merge gate failed with `failed to read file
+'.../Std/Tactic/BVDecide/Bitblast/BVExpr/Circuit/Impl/Operations/ZeroExtend.olean.private'`
+at the final root `Grammatik.lean` link step, after the candidate's
+own module compiled (its `#print axioms` lines in the integration
+log). Assessment: this is a toolchain-installation artifact (a file
+READ failure of an Elan toolchain object, not a Lean elaboration
+error citing candidate source), and the candidate cannot cause it
+(it adds no import beyond in-tree `HwLockRmw` and no toolchain
+dependency). The author performed NO source change in response,
+which is correct under the no-weakening rule -- inventing a change
+(e.g. dropping stock `decide`) would be churn. The requested remedy
+(repair the toolchain serving the integration checkout, re-run the
+gate on the unchanged candidate) is coordinator business and does
+not alter this verdict: the candidate itself remains ACCEPT-worthy.
+This review approves the NEW snapshot `262cd5ea`, not the stale one.
 
 ## Remarks on the task
 
