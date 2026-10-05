@@ -487,17 +487,6 @@ theorem rumpfBruecke (O : Orakel D) (passes : Nat)
   rumpfBruecke_aux O passes R (sizeOf body) body b tail (Nat.le_refl _) hb he
     σ ρ σ' ρ' hsrc
 
-/- CUTS (exactly what is NOT proved here):
-    Skeleton only: the projection above, nothing else yet.
--/
-
-#print axioms rumpfBlock
-#print axioms rumpfEnde
-#print axioms rumpfBlock_total_aux
-#print axioms rumpfBlock_total
-#print axioms rumpfBruecke_aux
-#print axioms rumpfBruecke
-
 /-! ## 3. The per-function unit closing check.
 
     One decided `Bool` per unit function: the body projects to a pipeline
@@ -1572,5 +1561,196 @@ theorem einheit_ruf_ens_zeuge :
   refine ⟨σ1, v, σ', σp, ρp, hbody, hok, hens, hrun, rfl, ?_⟩
   cases hbody
   rfl
+
+/-! ## 11. Poison probes: every refusal is reached. -/
+
+/-- A call body is refused by the projection. -/
+theorem gift_ruf : rumpfBlock euBodyCaller = none := by
+  rfl
+
+/-- A control body is refused by the projection. -/
+def euBodyIte : Endblock euD (vertragVon euD false) false [] [] :=
+  .cons (.ite Expr.wahr .nil .nil) (.ret .keine List.Perm.nil)
+
+/-- The control body is refused. -/
+theorem gift_ite : rumpfBlock euBodyIte = none := by
+  rfl
+
+/-- A binder tail is refused by the projection. -/
+def euBodyBind : Endblock euD (vertragVon euD false) false [] [] :=
+  .bind (.lit 1) (.ret .keine List.Perm.nil)
+
+/-- The binder tail is refused. -/
+theorem gift_bind : rumpfBlock euBodyBind = none := by
+  rfl
+
+/-- A call body has no tail. -/
+theorem gift_ende_ruf : rumpfEnde euBodyCaller = none := by
+  rfl
+
+/-- A binder tail is no value return. -/
+theorem gift_endrueck : istRueck euBodyBind = false := rfl
+
+/-- Tampered bytes are refused by the validator. -/
+theorem gift_bytes_falsch :
+    validate euCfg (layoutVon euPs) [] euBlk (natByte 1 :: euBytes) = false := by
+  decide
+
+/-- Tampered bytes are refused by the image check. -/
+theorem gift_bild_falsch :
+    imageOk .p48 euBild euCfg euPs euEs [] euBlk (natByte 1 :: euBytes) =
+      false := by
+  decide
+
+/-- A world that disagrees with the loaded image is refused. -/
+def euSigma8 : World euD where
+  slots := fun t _ f => by cases t; cases f; exact ⟨8, by decide, by decide⟩
+  globs := fun g => nomatch g
+  spur := []
+
+/-- The disagreeing world is refused. -/
+theorem gift_welt_falsch : weltOk euBild euPs euSigma8 = false := by
+  decide
+
+/-- An entry sequence that does not fit the registers is refused. -/
+theorem gift_prolog_falsch : prologOk euCfg [.rax] 1 = false := by
+  decide
+
+/-- An entry state with the wrong IF bit is refused. -/
+theorem gift_eintritt_falsch :
+    eintrittZulassung .p48 euBild (effBias euBild.modus) .nolibcMain
+      { euZ with ifBit := false } [] = false := by
+  decide
+
+/-- A program whose entry duty fails is refused by the closing check. -/
+def euPfalse : Programm euD where
+  invariante := fun i => nomatch i
+  requires := fun _ => Expr.falsch
+  ensures := fun _ => Expr.wahr
+  rumpf
+    | false => euBodyCal
+    | true => euBodyCaller
+
+/-- The failing entry duty refuses the whole check. -/
+theorem gift_requires_falsch : einheitSchluss euPfalse false euCfg euPs euEs
+    [] euBytes .p48 euBild [] euSigma
+    (Env.nil : Env euD ((euD).params false)) .nolibcMain euZ [] = false := by
+  decide
+
+/-- The elaborated 104-adjacent unit check evaluates. -/
+theorem t3_uExp108 : t3EinheitOk uExp108 = true := by
+  decide
+
+/- CUTS (exactly what is NOT proved here):
+
+    Fragment. Only straight-line `assignSlot` prefixes project
+    (`rumpfBlock`); `ite`, calls, binders, locks, loops and everything
+    else is REFUSED (`none`), never guessed. The T3 body language without
+    calls is covered completely; `ite`-carrying bodies stay lowerable at
+    the block level through the pipeline directly.
+
+    Tails. Only value-return (`ret`) tails run through the entry theorem.
+    `retGrund`/`leave`/`next` tails are refused by the `istRueck` leg
+    (`ohne_endrueck`); `retGrund` tails are uninhabited at `gruende = 0`.
+
+    No dynamic byte refusal. A projected prefix always runs `.ok`
+    (`rumpfBlock_total`), so no source `.grund` ever reaches a refusal
+    exit from a projected body. There is deliberately NO
+    `pipeline_refuses`-style byte theorem here: that shape is vacuous for
+    this fragment. Refusals are static and decided instead (seven
+    `ohne_*` legs plus the per-function T3 verdicts), each with a poison
+    probe. This is weaker than the lane task's `pipeline_refuses_*` ask;
+    closing a byte-level refusal would need exit stubs for trailing
+    grunds, which do not exist at the unit level.
+
+    Duties. `requires` is carried at the entry (a closing leg with its
+    projection) and at direct call sites (reused `callSite_vorOk`);
+    `ensures` is carried at call results (reused `rufAt_ok_gibt_ens`).
+    The post-run `ensures` of the entry function itself is user logic and
+    is NOT derived here.
+
+    Units. The T3 side is generic over `UProg`/`lowerFnAt` (no
+    per-program rule); the whole-unit check covers `List.finRange`, the
+    same coverage `lowerAllg` itself uses, and is evaluated on `uExp108`.
+    Function bodies are reused as lowered (`RumpTy`); no second source
+    interpreter and no SSA IR are introduced.
+
+    Model. Everything of the pipeline CUTS still applies (pilot ISA only,
+    one core, model memory, no time, no TSO, integer slots only). The
+    witnesses above are witnesses only, off the trust path.
+-/
+
+#print axioms rumpfBlock
+#print axioms rumpfEnde
+#print axioms rumpfBlock_total_aux
+#print axioms rumpfBlock_total
+#print axioms rumpfBruecke_aux
+#print axioms rumpfBruecke
+#print axioms istRueck
+#print axioms einheitSchluss
+#print axioms istRueck_ret
+#print axioms einheitSchluss_verbindung
+#print axioms einheitSchluss_gibt_projektion
+#print axioms einheitSchluss_legs
+#print axioms einheitSchluss_gibt_validate
+#print axioms einheitSchluss_gibt_imageOk
+#print axioms einheitSchluss_gibt_weltOk
+#print axioms einheitSchluss_gibt_prolog
+#print axioms einheitSchluss_gibt_zulassung
+#print axioms einheitSchluss_gibt_requires
+#print axioms einheitSchluss_verweigert_ohne_projektion
+#print axioms einheitSchluss_verweigert_ohne_ende
+#print axioms einheitSchluss_verweigert_ohne_endrueck
+#print axioms einheitSchluss_verweigert_ohne_validate
+#print axioms einheitSchluss_verweigert_ohne_requires
+#print axioms einheitSchluss_verweigert_ohne_prolog
+#print axioms einheitSchluss_verweigert_ohne_eintritt
+#print axioms einheit_correct_entry
+#print axioms einheit_ruf_req
+#print axioms einheit_ruf_ens
+#print axioms t3Stand
+#print axioms t3EinheitOk
+#print axioms t3Grund
+#print axioms t3Einheit_gedeckt
+#print axioms t3Stand_verweigert
+#print axioms all_verweigert_aux
+#print axioms t3Einheit_verweigert
+#print axioms euHw
+#print axioms euHL
+#print axioms euQuelle
+#print axioms euProj
+#print axioms euEnde
+#print axioms euRueck
+#print axioms euCfgOk
+#print axioms euCompileSome
+#print axioms euValidate
+#print axioms euImageOk
+#print axioms euWeltOk
+#print axioms euPrologOk
+#print axioms euZulassung
+#print axioms euAbi
+#print axioms euReq
+#print axioms euSchluss
+#print axioms euLoc
+#print axioms euLesen
+#print axioms euSlot42
+#print axioms rumpfBlock_total_zeuge
+#print axioms rumpfBruecke_zeuge
+#print axioms einheitSchluss_legs_zeuge
+#print axioms einheit_correct_entry_zeuge
+#print axioms einheit_ruf_req_zeuge
+#print axioms einheit_ruf_ens_zeuge
+#print axioms gift_ruf
+#print axioms gift_ite
+#print axioms gift_bind
+#print axioms gift_ende_ruf
+#print axioms gift_endrueck
+#print axioms gift_bytes_falsch
+#print axioms gift_bild_falsch
+#print axioms gift_welt_falsch
+#print axioms gift_prolog_falsch
+#print axioms gift_eintritt_falsch
+#print axioms gift_requires_falsch
+#print axioms t3_uExp108
 
 end Gabbro.Grammatik.X86.PipelineUnit
