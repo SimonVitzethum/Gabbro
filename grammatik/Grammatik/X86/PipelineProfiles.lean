@@ -185,6 +185,85 @@ theorem profilOk_stuetz_verweigert (bild : Bild) (bias : Nat)
     stuetzSchritt bild bias s = .verweigert :=
   stuetzSchritt_verweigert_ohne_fetch bild bias s hf
 
+/-! ## 2. Refusals: every missing leg refuses the profile
+
+    Unsupported shapes are REFUSED, never guessed. Each refusal reuses
+    the accepted leg refusal; every premise is used. -/
+
+/-- REFUSAL: without the `anfang` handoff no profile is admitted. -/
+theorem profil_verweigert_ohne_anfang (w : ZielProfil) (bild : Bild)
+    (bias : Nat) (z : EintrittZustand) (tor : TorDekl)
+    (moves : List Befehl) (es : List TabLayout) (h : NolibcHaken)
+    (code rueck : Nat) (hanf : h.anfang = false) :
+    profilOk w bild bias z tor moves es h code rueck = false := by
+  unfold profilOk
+  rw [hakenZulassung_verweigert_ohne_anfang _ _ _ _ _ _ _ _ _ hanf]
+  simp
+
+/-- REFUSAL: without the `ende` hook no profile is admitted. -/
+theorem profil_verweigert_ohne_ende (w : ZielProfil) (bild : Bild)
+    (bias : Nat) (z : EintrittZustand) (tor : TorDekl)
+    (moves : List Befehl) (es : List TabLayout) (h : NolibcHaken)
+    (code rueck : Nat) (hende : h.ende = false) :
+    profilOk w bild bias z tor moves es h code rueck = false := by
+  unfold profilOk
+  rw [hakenZulassung_verweigert_ohne_ende _ _ _ _ _ _ _ _ _ hende]
+  simp
+
+/-- REFUSAL: a handed status that differs from the returned one admits
+    no profile. -/
+theorem profil_verweigert_status (w : ZielProfil) (bild : Bild)
+    (bias : Nat) (z : EintrittZustand) (tor : TorDekl)
+    (moves : List Befehl) (es : List TabLayout) (h : NolibcHaken)
+    (code rueck : Nat) (hmis : rueck ≠ code) :
+    profilOk w bild bias z tor moves es h code rueck = false := by
+  unfold profilOk
+  rw [hakenZulassung_verweigert_status _ _ _ _ _ _ _ _ _ hmis]
+  simp
+
+/-- REFUSAL: an unlisted RIP admits no profile. -/
+theorem profil_verweigert_unlisted (w : ZielProfil) (bild : Bild)
+    (bias : Nat) (z : EintrittZustand) (tor : TorDekl)
+    (moves : List Befehl) (es : List TabLayout) (h : NolibcHaken)
+    (code rueck : Nat)
+    (hrip : eintragGelisted bild z.zustand.rip.toNat = false) :
+    profilOk w bild bias z tor moves es h code rueck = false := by
+  unfold profilOk
+  rw [hakenZulassung_verweigert_unlisted _ _ _ _ _ _ _ _ _ hrip]
+  simp
+
+/-- REFUSAL: a refused gate admits no profile. -/
+theorem profil_verweigert_tor (w : ZielProfil) (bild : Bild)
+    (bias : Nat) (z : EintrittZustand) (tor : TorDekl)
+    (moves : List Befehl) (es : List TabLayout) (h : NolibcHaken)
+    (code rueck : Nat) (href : torOkB tor = false) :
+    profilOk w bild bias z tor moves es h code rueck = false := by
+  unfold profilOk
+  rw [hakenZulassung_verweigert_tor _ _ _ _ _ _ _ _ _ tor
+    List.mem_cons_self href]
+  simp
+
+/-- IMAGE REFUSAL: support bytes outside a validated image admit no
+    profile, whatever the entry side says. -/
+theorem profil_verweigert_ohne_bild (w : ZielProfil) (bild : Bild)
+    (bias : Nat) (z : EintrittZustand) (tor : TorDekl)
+    (moves : List Befehl) (es : List TabLayout) (h : NolibcHaken)
+    (code rueck : Nat) (hbild : valX86 .p48 bild = false) :
+    profilOk w bild bias z tor moves es h code rueck = false := by
+  unfold profilOk
+  rw [stuetz_verweigert_ohne_bild _ _ _ _ _ _ _ hbild]
+  simp
+
+/-- FLOAT REFUSAL: an invalid float control word admits no profile. -/
+theorem profil_verweigert_ohne_mxcsr (w : ZielProfil) (bild : Bild)
+    (bias : Nat) (z : EintrittZustand) (tor : TorDekl)
+    (moves : List Befehl) (es : List TabLayout) (h : NolibcHaken)
+    (code rueck : Nat) (hmx : mxcsrGueltig z.mxcsr = false) :
+    profilOk w bild bias z tor moves es h code rueck = false := by
+  unfold profilOk
+  rw [stuetz_verweigert_ohne_mxcsr _ _ _ _ _ _ _ hmx]
+  simp
+
 #print axioms profilEintritt
 #print axioms profilAbi
 
