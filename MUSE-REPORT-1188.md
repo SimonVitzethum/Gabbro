@@ -1,8 +1,12 @@
 # MUSE-REPORT-1188: Exact review of candidate 1187 (TSO traces to W runs: run induction)
 
-## VERDICT: ACCEPT
+## Verdict
 
-Candidate: lane 1187, pinned HEAD `cb3384a9f97274563029b29fb8d74f9d94263c6d`
+CANDIDATE: 1187 cb3384a9f97274563029b29fb8d74f9d94263c6d
+
+VERDICT: ACCEPT
+
+Reviewed lane 1187, pinned HEAD `cb3384a9f97274563029b29fb8d74f9d94263c6d`
 (base `4f906f555d739de5b9444364735eae29b6445ed6`, reviewed from the in-clone
 snapshot `.tmp/review/author-1187`: `PATCH.diff`, `OWNER-TASK.md`,
 `MUSE-REPORT-1187.md`, `BUILD-EVIDENCE.json`). Files in candidate:
