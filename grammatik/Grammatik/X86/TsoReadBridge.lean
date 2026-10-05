@@ -447,7 +447,12 @@ theorem schrittW_aus_lesefragment_gruppe {D : Deklaration} {l : Bool}
     derived from the buffer here. The read carrier differs from the
     written one (`hNe`), so the relaxed table-read contributes nothing to
     the written carrier's view and the write timestamp stays fresh at the
-    trace clock. Every premise is used. -/
+    trace clock. The read observations live at their own TSO state `sR`
+    (loads and projection), the grouped drain at `s2`: they share only
+    the source fragment (which reads one and writes the other), never a
+    buffer -- the temporal read-before-issue ordering stays with the
+    lowering consumer that owns the executed program. Every premise is
+    used. -/
 theorem schrittW_aus_lesefragment_weiterleitung {D : Deklaration} {l : Bool}
     {Γ : Ctx} {Λ : List (Res D)}
     (P : Programm D) (O : Orakel D) (passes : Nat)
@@ -496,18 +501,19 @@ theorem schrittW_aus_lesefragment_weiterleitung {D : Deklaration} {l : Bool}
     (hspur : DrainSpur co s2 sN tlist) (hend : sN ∈ tlist)
     (hleer : sN.puffer co = []) (hstoer : ∀ x ∈ tlist, FremdFrei x co a)
     (rdA : Adresse) (vr : Zahl lo2 hi2)
+    (sR : TSOZustand)
     (f8 : Fin 8 → Byte)
-    (hL8 : ∀ j : Fin 8, loadByte s2 co (addrOff rdA j.val) = some (f8 j))
+    (hL8 : ∀ j : Fin 8, loadByte sR co (addrOff rdA j.val) = some (f8 j))
     (hPend : ∀ j : Fin 8, ∃ w : Byte,
-      neuestens (s2.puffer co) (addrOff rdA j.val) = some w)
+      neuestens (sR.puffer co) (addrOff rdA j.val) = some w)
     (hWert : wortZahl lo2 hi2 (bytesWort f8) =
       some (cast (congrArg (Wert D) hT2) (σ.speicher.slots t2 k2 f2)))
     (hv2 : (cast (congrArg (Wert D) hT2) (σ.speicher.slots t2 k2 f2)) = vr)
     (ts : Nat)
     (hMemR : (⟨ts, σ.speicher, Speichermodell.Sicht.null⟩ : NachrichtW D) ∈
       W.hist (.inl t2))
-    (hProjR : W.sicht u (.inl t2) ≤ sichtVon s2 co rdA)
-    (hTsR : sichtVon s2 co rdA ≤ ts)
+    (hProjR : W.sicht u (.inl t2) ≤ sichtVon sR co rdA)
+    (hTsR : sichtVon sR co rdA ≤ ts)
     (hTraegerR : TraegerGleich σ.speicher σ.speicher (.inl t2)) :
     ∃ (W' : RufMaschineW D) (σm : Gabbro.Grammatik.Speicher D)
       (M'' : RufMaschineG D)
@@ -860,11 +866,6 @@ def rdO : Orakel rdD where
   regLies := fun r => nomatch r
   regSchreib := fun r => nomatch r
   sichtbar := fun g => nomatch g
-
-/-- The witness callee table: every call succeeds without moving memory. -/
-def rdR : ∀ f : rdD.Fn, World rdD → Env rdD (rdD.params f) →
-    RufAusgang f :=
-  fun _ σ _ => .ok σ ()
 
 /-- The witness index: row 0 (of the read table). -/
 def rdI : Expr rdD [] [] (.index (rdD.count true)) := Expr.lit 0
@@ -1308,8 +1309,8 @@ theorem rd_hv : (cast (congrArg (Wert rdD) rdHTW)
     (eval rdSL rdE rdSL Env.nil) : Wert rdD (.int 0 100)) =
     rdZero := rfl
 
-/-- The source step runs: one reached step. -/
-theorem rd_hExecFull : ∃ σ' ρ', execStmt rdO 0 rdR
+/-- The source step runs: one reached step (no calls). -/
+theorem rd_hExecFull : ∃ σ' ρ', execStmt rdO 0 keinRuf
     (Stmt.assignSlot (l := true) false () rdI rdE rdHwW rdHLW)
     rdSigma Env.nil = .ok σ' ρ' := by
   simp only [execStmt]
@@ -1503,6 +1504,85 @@ theorem rd_hErbtFw :
 /-- The clock-2 node stands over the drain-end state. -/
 theorem rd_hnodeFw : rdNB11.tso = rdS11 := rfl
 
+/-! ## 12. Joint witnesses: forwarded transition and trace lemma. -/
+
+/-- **JOINT WITNESS for `schrittW_aus_lesefragment_weiterleitung`.**
+    Every premise holds jointly on concrete values: the same two-table
+    copy run (`0` over `9`, memory-changing on both sides) and the same
+    growing drain as §9, but the read value comes from eight pending
+    own-buffer zero bytes assembled by core 0, linked to the source read
+    value by the explicit value certificate, over the reading W with its
+    timestamp-1 message and the clock-2 projected drain end. The
+    stale-view divergence rides along unchanged: no global value for the
+    unflushed foreign store. Non-degenerate: a written table, a
+    memory-changing source step and a memory-changing target drain. -/
+theorem schrittW_aus_lesefragment_weiterleitung_zeuge :
+    ∃ (σ' : World rdD) (ρ' : Env rdD []),
+      execStmt rdO 0 rdR
+        (Stmt.assignSlot (l := true) false () rdI rdE rdHwW rdHLW)
+        rdSigma Env.nil = .ok σ' ρ' ∧
+      (rdSigma.slots false 0 ()).n = 9 ∧ (σ'.slots false 0 ()).n = 0 ∧
+      rdM9.bytes witA ≠ rdM9'.bytes witA ∧
+      rdD.schreibt () false = true ∧
+      (.inl true : rdD.Tab ⊕ rdD.Glob) ≠ .inl false ∧
+      ErbtW rdNB11 rdW1 0 0 (Sum.inl false) witA ∧
+      SpurInv rdNB11 ∧
+      rdS4.puffer 1 = [⟨ctF, ctFv⟩] ∧ ctF ∉ Fuss witA ∧
+      loadByte rdS4 0 ctF = some (BitVec.ofNat 8 0) ∧
+      loadByte rdS4 1 ctF = some ctFv ∧
+      (∃ (W' : RufMaschineW rdD) (σm : Gabbro.Grammatik.Speicher rdD)
+        (M'' : RufMaschineG rdD)
+        (wahl : rdD.Tab ⊕ rdD.Glob → NachrichtW rdD)
+        (neu : rdD.Tab ⊕ rdD.Glob → Nat),
+        SchrittW rdProg rdO 0 (fun g => nomatch g) rdW1 0 W'
+          σm M'' wahl neu ∧
+        (∃ w, read64 rdNB11.tso.mem witA = some w ∧
+          wortZahl 0 100 w = some rdZero) ∧
+        RepSlot false 0 () 0 100 rdHTW witA rdM9' σ' ∧
+        wortZahl 0 100 (bytesWort rdF8) = some rdZero) := by
+  obtain ⟨σ', ρ', hExec⟩ := rd_hExecFull
+  have hAfter : (σ'.slots false 0 ()).n = 0 := by
+    cases hExec
+    rfl
+  have hMain := schrittW_aus_lesefragment_weiterleitung rdProg rdO 0
+    (fun g => nomatch g) false () 0 100 rdHTW 4096 16 0 rd_hOk rdI rdE
+    rdMachine 0 rdSigma Env.nil rdHwW rdHLW rdS rdRest rfl rd_hhead rdSL
+    rd_hLese 0 rdZero rd_hk rd_hv true () 0 100 rdHTR 0 rdOrte rd_hNe witA rdM9
+    rdM9' σ' ρ' hExec rd_hTgt rd_hRd (by decide) (by decide) rd_hwelt rd_hΛ
+    rdW1 rfl 0 rdNB11 rd_hErbtFw rd_hInvB rdS11
+    rd_hnodeFw rdS2 [rdS2, rdS3, rdS4, rdS5, rdS6, rdS7, rdS8, rdS9, rdS10, rdS11]
+    rd_hgrp rd_hles rd_spur rd_hend rd_hempty rd_hstoer
+    rdA2 rdZero rdSF rdF8 rd_hL8 rd_hPend rd_hWertFw rd_hv2Fw 1
+    rd_hMemRFw rd_hProjRFw rd_hTsRFw rd_hTraegerR
+  obtain ⟨W', σm, M'', wahl, neu, hSW, hValW, hRepW, hReadV⟩ := hMain
+  exact ⟨σ', ρ', hExec, rd_hBefore, hAfter, rd_hBytes, rd_hWr, rd_hNe,
+    rd_hErbtFw, rd_hInvB, rdBuf1_4, ctFfresh, rd_stale0, rd_stale1,
+    W', σm, M'', wahl, neu, hSW, hValW, hRepW, hReadV⟩
+
+/-- **JOINT WITNESS for `lesespur_assignSlot`.** Every premise holds
+    jointly on the two-table copy run -- one table the witness function
+    writes, a reached step changing the source slot `9 → 0` and the
+    mapped target bytes -- and so does the two-event trace shape, with
+    the writer fact and the memory change beside it. -/
+theorem lesespur_assignSlot_zeuge :
+    ∃ (σ' : World rdD) (ρ' : Env rdD []),
+      execStmt rdO 0 rdR
+        (Stmt.assignSlot (l := true) false () rdI rdE rdHwW rdHLW)
+        rdSigma Env.nil = .ok σ' ρ' ∧
+      σ'.spur = [Ereignis.zugriff false true [] rdSL.haelt,
+        Ereignis.zugriff true false [] rdSigma.haelt] ++ rdSigma.spur ∧
+      rdI.orte ++ rdE.orte = [.inl true] ∧
+      rdD.schreibt () false = true ∧
+      (rdSigma.slots false 0 ()).n = 9 ∧ (σ'.slots false 0 ()).n = 0 ∧
+      rdM9.bytes witA ≠ rdM9'.bytes witA := by
+  obtain ⟨σ', ρ', hExec⟩ := rd_hExecFull
+  have hAfter : (σ'.slots false 0 ()).n = 0 := by
+    cases hExec
+    rfl
+  have hSpur := lesespur_assignSlot rdO 0 false () rdI rdE rdHwW rdHLW rdSigma
+    Env.nil rdSL rd_hLese true rdOrte σ' ρ' hExec
+  exact ⟨σ', ρ', hExec, hSpur, rdOrte, rd_hWr, rd_hBefore, hAfter, rd_hBytes⟩
+
 /-- **JOINT WITNESS for `schrittW_aus_lesefragment_gruppe`.** Every
     premise holds jointly on concrete values: the two-table declaration
     with a table the witness function writes, a reached one-step run that
@@ -1561,16 +1641,39 @@ theorem schrittW_aus_lesefragment_gruppe_zeuge :
     W', σm, M'', wahl, neu, hSW, hValW, hRepW, hReadV⟩
 
 /- CUTS:
-    - Proved here (§§1-5): read-case preservation (`hwLade_erhaelt_wf`),
-      the committed machine-read value (`hwLade_trifft_speicher`), the
+    - Proved here: read-case preservation (`hwLade_erhaelt_wf`), the
+      committed machine-read value (`hwLade_trifft_speicher`), the
       table-read contribution bound (`beitrag_tabelle_le`), the trace of a
       one-read fragment (`lesespur_assignSlot`), the committed
-      read-fragment `SchrittW` (`schrittW_aus_lesefragment_gruppe`) and the
+      read-fragment `SchrittW` (`schrittW_aus_lesefragment_gruppe`), the
       forwarded read-fragment `SchrittW`
-      (`schrittW_aus_lesefragment_weiterleitung`), the stale-view
-      refusals (`stale_kein_globaler_wert`, `gruppe_kein_globaler_wert`).
-    - OPEN: the joint witness (two-table declaration, drain chain,
-      `_zeuge` for both transitions and the trace lemma).
+      (`schrittW_aus_lesefragment_weiterleitung`, read and drain at
+      separate TSO states sharing only the source fragment), the
+      stale-view refusals (`stale_kein_globaler_wert`,
+      `gruppe_kein_globaler_wert`), and the joint non-degenerate
+      witnesses (`schrittW_aus_lesefragment_gruppe_zeuge`,
+      `schrittW_aus_lesefragment_weiterleitung_zeuge`,
+      `lesespur_assignSlot_zeuge` over the two-table copy run `9 → 0`
+      with a growing drain, a real foreign issue and the stale-view
+      divergence beside it).
+    - NOT proved here, and not claimed:
+      - No hardware correspondence beyond self-consistency; no silicon,
+        timing, fairness or progress claim.
+      - The forwarded witness uses a clock-2 node carrying only the last
+        drain flush as a real projected step; the earlier seven flushes
+        ride the `DrainSpur` witness, and the full 9-step projected trace
+        stays OPEN.
+      - The forwarded value link (`hWert`) and the reading W shape
+        (timestamp-1 message, view 1) are explicit premises supplied by
+        the lowering certificate, never derived here; mixed
+        committed/forwarded footprints have no value simulation (tearing
+        refusal of §5).
+      - No per-access run induction from x86 traces to W runs, no GX
+        refinement, no validator soundness (`valX86_sound`); the
+        source-to-final-bytes closing theorem stays OPEN.
+      - No new executor, no second IR, no source/checker/contract change;
+        `TSOZustand`, `RepSlot`, `witA`, `ctF`/`ctFv` and the `witD`
+        vocabulary are reused unchanged.
 -/
 
 #print axioms hwLade_erhaelt_wf
@@ -1581,5 +1684,8 @@ theorem schrittW_aus_lesefragment_gruppe_zeuge :
 #print axioms schrittW_aus_lesefragment_weiterleitung
 #print axioms stale_kein_globaler_wert
 #print axioms gruppe_kein_globaler_wert
+#print axioms schrittW_aus_lesefragment_gruppe_zeuge
+#print axioms schrittW_aus_lesefragment_weiterleitung_zeuge
+#print axioms lesespur_assignSlot_zeuge
 
 end Gabbro.Grammatik.X86
