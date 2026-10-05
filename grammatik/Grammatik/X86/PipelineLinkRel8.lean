@@ -746,4 +746,240 @@ theorem relaxLang_dekodiert (out : List Byte) (ij : Nat) (disp : Int)
   have htake := fenster_sprung out ij disp hop hfeld
   exact feld_agreement_sprung out ij disp d rest hfit htake hdec
 
+/-! ## 5. Planted refusals: overlap, overrun, ranges, non-sites.
+    Unsupported shapes are REFUSED, never guessed. -/
+
+/-- OVERLAP REFUSAL: the decided disjointness check refuses
+    overlapping sites, never merges them. -/
+theorem relaxUeberlapp_verweigert :
+    opsDisjunktB [(1, .rel32 (16 : Int)), (2, .rel32 (16 : Int))] =
+      false := by
+  decide
+
+/-- OVERRUN REFUSAL: a four-byte operand two bytes before the end of
+    a three-byte image is refused, never wrapped. -/
+theorem relaxUeberlauf_verweigert :
+    multiPatchAlle [natByte 233, natByte 0, natByte 0]
+      [(2, .rel32 (16 : Int))] = none := by
+  decide
+
+/-- RANGE REFUSAL (rel8): a short displacement past `+127` patches
+    nothing. -/
+theorem relaxAussen8_verweigert :
+    multiPatch [natByte 233, natByte 0] 1 (.rel8 128) = none := by
+  decide
+
+/-- RANGE REFUSAL (rel32): an out-of-range displacement patches
+    nothing. -/
+theorem relaxAussen32_verweigert :
+    multiPatch [natByte 233, natByte 0, natByte 0, natByte 0,
+      natByte 0] 1 (.rel32 2147483648) = none := by
+  decide
+
+/-- NON-JUMP SITE: a `ret` window decodes to `ret`, never to a
+    relocation site -- other instructions are refused as sites,
+    never guessed into one. -/
+theorem relaxKeinSprung_verweigert :
+    decode [natByte 195, natByte 16, natByte 0, natByte 0, natByte 0] =
+      some ((⟨.ret, 1⟩,
+        [natByte 16, natByte 0, natByte 0, natByte 0])) := by
+  decide
+
+/-- SHORT FORM NEVER DECODES: a rel8 operand has no decoder row, so
+    short re-decode is byte read-back only (`relaxVerknuepft_korrekt`
+    reads short sites through `disp8Signed`, never `decode`). -/
+theorem relaxKurz_nicht_dekodiert :
+    decode [natByte 235, natByte 16] = none := by
+  decide
+
+/-! ## 6. Joint witness: relaxation converges and the link closes. -/
+
+/-- JOINT WITNESS: a two-site relaxed program converges in one step
+    (the far site widens, the near site stays short at its shifted
+    address), the fixed point fits, a two-operand closing applies at
+    disjoint sites with fall-through survival, the short site reads
+    back, a reached memory-changing run goes through actual bytes
+    (`ruf_schritt_zeuge`), and the planted refusals hold. -/
+theorem relaxLink_zeuge :
+    ∃ (prog q : List RelaxStueck) (z : List (Option Nat)) (b : Nat)
+      (img out : List Byte) (ops : List SchliessOp),
+      relaxSchritt prog z b = q ∧
+      progLE prog q ∧
+      relaxSchritt q z b = q ∧
+      (∀ (i : Nat) (t ad : Nat), q[i]? = some .kurz →
+        z[i]? = some (some t) → (adressen q b)[i]? = some ad →
+        rel8Passt (dispAn t ad 2) = true) ∧
+      multiPatchAlle img ops = some out ∧
+      opsDisjunktB ops = true ∧
+      (∀ (off : Nat) (d : Int), (off, .rel8 d) ∈ ops →
+        rel8Passt d = true) ∧
+      (∀ i, (∀ op ∈ ops, ∀ kk, kk < opWeite op →
+        i ≠ opStelle op + kk) → out[i]? = img[i]?) ∧
+      out.length = img.length ∧
+      out[5]? = some (rel8Byte 16) ∧
+      disp8Signed (rel8Byte 16) = 16 ∧
+      (∃ m : Speicher, byteschritt zustandRuf =
+        .weiter (schrittCall zustandRuf Register.rsp m
+          (zustandRuf.register Register.rsp - BitVec.ofNat 64 8)
+          (BitVec.ofNat 64 0x1015)) ∧
+        read64 m (BitVec.ofNat 64 0x1FF8) =
+          some (BitVec.ofNat 64 0x1005) ∧
+        m.bytes (BitVec.ofNat 64 0x1FF8) ≠
+          zustandRuf.speicher.bytes (BitVec.ofNat 64 0x1FF8)) ∧
+      opsDisjunktB [(1, .rel32 (16 : Int)),
+        (2, .rel32 (16 : Int))] = false ∧
+      multiPatchAlle [natByte 233, natByte 0, natByte 0]
+        [(2, .rel32 (16 : Int))] = none := by
+  have hstep : relaxSchritt [RelaxStueck.fest 1, RelaxStueck.kurz,
+      RelaxStueck.fest 3, RelaxStueck.kurz]
+      [none, some 8192, none, some 4096] 4096 =
+      [RelaxStueck.fest 1, RelaxStueck.weit, RelaxStueck.fest 3,
+        RelaxStueck.kurz] := by
+    decide
+  have hle : progLE [RelaxStueck.fest 1, RelaxStueck.kurz,
+      RelaxStueck.fest 3, RelaxStueck.kurz]
+      [RelaxStueck.fest 1, RelaxStueck.weit, RelaxStueck.fest 3,
+        RelaxStueck.kurz] :=
+    ⟨stueckLE.fest_eq 1, stueckLE.kurz_weit, stueckLE.fest_eq 3,
+      stueckLE.kurz_kurz, trivial⟩
+  have hfix : relaxSchritt [RelaxStueck.fest 1, RelaxStueck.weit,
+      RelaxStueck.fest 3, RelaxStueck.kurz]
+      [none, some 8192, none, some 4096] 4096 =
+      [RelaxStueck.fest 1, RelaxStueck.weit, RelaxStueck.fest 3,
+        RelaxStueck.kurz] := by
+    decide
+  have hfit : ∀ (i : Nat) (t ad : Nat),
+      [RelaxStueck.fest 1, RelaxStueck.weit, RelaxStueck.fest 3,
+        RelaxStueck.kurz][i]? = some RelaxStueck.kurz →
+      ([none, some 8192, none, some 4096] :
+        List (Option Nat))[i]? = some (some t) →
+      (adressen [RelaxStueck.fest 1, RelaxStueck.weit,
+        RelaxStueck.fest 3, RelaxStueck.kurz] 4096)[i]? =
+        some ad →
+      rel8Passt (dispAn t ad 2) = true := by
+    intro i t ad hs hz ha
+    exact relaxSchritt_fixpunkt_passt _ _ _ hfix i t ad hs hz ha
+  have hpatch : multiPatchAlle
+      [natByte 233, natByte 0, natByte 0, natByte 0, natByte 0,
+        natByte 16]
+      [(1, .rel32 (16 : Int)), (5, .rel8 (16 : Int))] =
+      some [natByte 233, natByte 16, natByte 0, natByte 0,
+        natByte 0, natByte 16] := by
+    decide
+  have hdisjw : opsDisjunktB
+      [(1, .rel32 (16 : Int)), (5, .rel8 (16 : Int))] = true := by
+    decide
+  have hfit8w : ∀ (off : Nat) (d : Int),
+      (off, MultiFeld.rel8 d) ∈
+        [(1, MultiFeld.rel32 (16 : Int)),
+          (5, MultiFeld.rel8 (16 : Int))] →
+      rel8Passt d = true := by
+    intro off d hm
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hm
+    rcases hm with h | h
+    · have h2 : MultiFeld.rel8 d = MultiFeld.rel32 16 :=
+        congrArg Prod.snd h
+      simp at h2
+    · simp at h
+      obtain ⟨rfl, rfl⟩ := h
+      decide
+  have hclose := relaxVerknuepft_korrekt _ _ _ hpatch hdisjw hfit8w
+  have hmem : ((5, MultiFeld.rel8 (16 : Int)) ∈
+      [(1, MultiFeld.rel32 (16 : Int)),
+        (5, MultiFeld.rel8 (16 : Int))]) := by
+    decide
+  have hsite := hclose.2.2.2 5 16 hmem
+  exact ⟨[.fest 1, .kurz, .fest 3, .kurz],
+    [.fest 1, .weit, .fest 3, .kurz],
+    [none, some 8192, none, some 4096], 4096,
+    [natByte 233, natByte 0, natByte 0, natByte 0, natByte 0,
+      natByte 16],
+    [natByte 233, natByte 16, natByte 0, natByte 0, natByte 0,
+      natByte 16],
+    [(1, .rel32 (16 : Int)), (5, .rel8 (16 : Int))],
+    hstep, hle, hfix, hfit, hpatch, hdisjw, hfit8w,
+    hclose.1, hclose.2.1, hsite.1, hsite.2,
+    ruf_schritt_zeuge,
+    relaxUeberlapp_verweigert, relaxUeberlauf_verweigert⟩
+
+/- CUTS:
+   - Proved here: relaxation vocabulary (`stueckWeite_*`);
+     monotone layout (`weite_mono`, `adressenAux_laenge`,
+     `adressenAux_mono`: widening never moves a laid-out address
+     down); one relaxation step (`relaxSchrittAux_laenge`,
+     `schrittWaechstAux`/`relaxSchritt_waechst`: steps only widen,
+     `schrittFixpunkt_passtAux`/`relaxSchritt_fixpunkt_passt`:
+     where the step rests every short site fits signed-8);
+     termination (`anzahlKurz`, `progLE_refl`, `stueckLE_trans`,
+     `progLE_trans`, `progLE_anzahl`, `progLE_gleich`,
+     `schrittOhneKurzAux`, `relaxSchrittOhneKurz`,
+     `schrittAendertZahl`, `relaxSchrittAendertZahl`,
+     `relaxMitFuel`, `relaxKonvAux`, `relaxKonvergiert`: fuelled
+     iteration rests within the short-site count at a widened
+     program where every short site fits); the relaxed link
+     closing (`relaxAlle_stelle`: every operand's bytes are exact;
+     `relaxVerknuepft_korrekt`: fall-through frame, length, exact
+     sites, short read-back; `relaxLang_dekodiert`: widened jump
+     sites re-decode through the accepted window and agreement
+     legs); planted refusals for overlap, overrun, out-of-range
+     rel8/rel32, non-jump sites and short forms without a decoder
+     row; the joint `_zeuge` witness with a reached
+     memory-changing run.
+   - Explicitly OPEN (never assumed here): source correspondence --
+     programs arrive already lowered, nothing here claims the bytes
+     are the emitted form of any source block or that duties,
+     contracts, costs, locks or call logs refine anything
+     (consumer: pipeline and validator lanes); `valX86_sound` and
+     any full source-to-final-loaded-byte closing theorem;
+     hardware correspondence -- fetch runs over the model
+     `Speicher` function, not silicon; TSO/GX bridge, concurrency,
+     budget/work transfer, allocator behaviour (other lanes).
+   - Explicitly OPEN link scope: unconditional short/wide
+     relaxation only (2 against 5 bytes); conditional sites keep
+     the accepted `feld_agreement_bedingt` leg (applied, not
+     re-proved) and stay with the extension codec lanes, as do
+     call-site re-decode beyond `feld_agreement_ruf`, abs64 data
+     sites beyond the reused `multi_abs64_liest`, and any
+     instruction outside jump/call/conditional (refused here as
+     sites, never guessed). Overlapping sites are refused
+     (`opsDisjunktB`, never merged). The checked image (W^X,
+     executed mapping) stays with `PipelineLinkMulti`'s `mBild`.
+   - No loader execution, entry handoff or OS interaction is
+     modelled: addresses are pure layout sums; entries are never
+     executed here.
+   - No second decoder, loader, executor, ISA model or IR is
+     created here: every fact reuses the named producer theorems.
+-/
+
+#print axioms stueckWeite_kurz_le_weit
+#print axioms weite_mono
+#print axioms adressenAux_laenge
+#print axioms adressenAux_mono
+#print axioms relaxSchrittAux_laenge
+#print axioms schrittWaechstAux
+#print axioms relaxSchritt_waechst
+#print axioms schrittFixpunkt_passtAux
+#print axioms relaxSchritt_fixpunkt_passt
+#print axioms progLE_refl
+#print axioms stueckLE_trans
+#print axioms progLE_trans
+#print axioms progLE_anzahl
+#print axioms progLE_gleich
+#print axioms schrittOhneKurzAux
+#print axioms relaxSchrittOhneKurz
+#print axioms schrittAendertZahl
+#print axioms relaxSchrittAendertZahl
+#print axioms relaxKonvAux
+#print axioms relaxKonvergiert
+#print axioms relaxAlle_stelle
+#print axioms relaxVerknuepft_korrekt
+#print axioms relaxLang_dekodiert
+#print axioms relaxUeberlapp_verweigert
+#print axioms relaxUeberlauf_verweigert
+#print axioms relaxAussen8_verweigert
+#print axioms relaxAussen32_verweigert
+#print axioms relaxKeinSprung_verweigert
+#print axioms relaxKurz_nicht_dekodiert
+#print axioms relaxLink_zeuge
+
 end Gabbro.Grammatik.X86
