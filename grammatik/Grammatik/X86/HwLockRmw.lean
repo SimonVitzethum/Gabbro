@@ -78,8 +78,8 @@ def hwLockWort (a : Adresse) : Option HwMaschine → Option Wort
   | none => none
 
 /-- Observe one register of an admitted outcome (`none` if refused). -/
-def hwLockReg (r : Register) : Option HwMaschine → Option Wort
-  | some m' => some ((m'.kerne 0).register r)
+def hwLockReg (c : Nat) (r : Register) : Option HwMaschine → Option Wort
+  | some m' => some ((m'.kerne c).register r)
   | none => none
 
 /-- Observe the acting core's RIP of an admitted outcome. -/
@@ -91,6 +91,168 @@ def hwLockRip (c : Nat) : Option HwMaschine → Option Adresse
 def hwLockBuf (c : Nat) : Option HwMaschine → Option Nat
   | some m' => some (((m'.puffer c).length))
   | none => none
+
+/-! ## 5. Two-core witness: locked adds with a foreign buffered byte.
+
+  Word 10 at 8192 (data window, readable and writable); core 0 adds 5,
+  core 1 adds 7. Core 1 holds one pending buffered byte at 8200 --
+  inside the data window but outside the word footprint -- so the
+  locked steps must succeed beside it (only the own buffer gates),
+  keep it (no foreign drain), forward it to its owner only, and never
+  tear the canonical word. Memory definitions are reused from 662
+  (`lockZeugSpeicher`, `lockZeugReg`, `lockCodeExec`, `lockDataRW`),
+  never duplicated. -/
+
+/-- Witness registers core 0: delta 5 in rax, base 8192 in rbp. -/
+def hwLockWitReg0 : Register → Wort := lockZeugReg 5 8192 7
+
+/-- Witness registers core 1: delta 7 in rax, base 8192 in rbp. -/
+def hwLockWitReg1 : Register → Wort := lockZeugReg 7 8192 0
+
+/-- Witness core data: both cores run, with their own deltas. -/
+def hwLockWitKern : Nat → HwKern
+  | 0 => ⟨hwLockWitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | 1 => ⟨hwLockWitReg1, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 4096, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness buffers: core 1 holds one pending byte at 8200, readable
+    and writable data outside the 8192-word footprint. -/
+def hwLockWitBuf : Nat → List TSOEintrag
+  | 1 => [⟨BitVec.ofNat 64 8200, BitVec.ofNat 8 99⟩]
+  | _ => []
+
+/-- Witness start machine: shared word memory, two cores, full
+    silicon with OS vector state. -/
+def hwLockWitStart : HwMaschine :=
+  ⟨lockZeugSpeicher pinXadd 10 lockCodeExec lockDataRW lockDataRW,
+    hwLockWitKern, hwLockWitBuf, basisHw, fun _ => basisBereit⟩
+
+/-- After core 0 locked-adds 5. -/
+def hwLockWitNach1 : Option HwMaschine :=
+  hwLockSchritt hwLockWitStart 0 (.ok (.xadd64 .rax .rbp 0) 9)
+
+/-- Core 1 drains its pending byte into shared memory. -/
+def hwLockWitFlush1 : Option TSOZustand :=
+  match hwLockWitNach1 with
+  | some m1 => flushKern (tsoAnsicht m1) 1
+  | none => none
+
+/-- The drained machine: core 1 buffer empty, byte 99 in memory. -/
+def hwLockWitBereit2 : Option HwMaschine :=
+  match hwLockWitNach1, hwLockWitFlush1 with
+  | some m1, some s => some (setTso m1 s)
+  | _, _ => none
+
+/-- After core 1 locked-adds 7 on top. -/
+def hwLockWitNach2 : Option HwMaschine :=
+  match hwLockWitBereit2 with
+  | some m2 => hwLockSchritt m2 1 (.ok (.xadd64 .rax .rbp 0) 9)
+  | none => none
+
+/-- Observe a core byte load through the shared TSO view
+    (`none` if the step refused). Forwarding is owner-only by the
+    accepted `loadByte` equation. -/
+def hwLockSicht (o : Option HwMaschine) (c : Nat)
+    (a : Adresse) : Option (Option Byte) :=
+  match o with
+  | some m => some (loadByte (tsoAnsicht m) c a)
+  | none => none
+
+/-- Admission on the witness baseline, closed per feature. -/
+theorem hwLockWitStart_zugelassen (f : PerfMerkmal) :
+    merkmalZugelassen basisHw basisBereit f = true := by
+  cases f with
+  | skalar64 => rfl
+  | skalar32 => rfl
+  | sseDoppel => decide
+  | paketInt128 => rfl
+
+/-- The witness machine is well-formed: full silicon admits all,
+    uniformly over cores (readiness is constant). -/
+theorem hwLockWitStart_wf : HwWf hwLockWitStart :=
+  hwWf_aus_zugelassen _ fun _ => hwLockWitStart_zugelassen
+
+/-! ## 6. Closed pins: reached steps, forwarding, refusal outcomes.
+
+  Every pin below evaluates the complete computation on closed
+  machines (`decide`/`rfl`); no machine equality is ever decided.
+  Success pins observe words, registers, buffers and TSO loads;
+  refusal pins go through the ok/none bridge. -/
+
+/-- Witness word address. -/
+def hwLockWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness foreign-byte address: data, outside the word footprint. -/
+def hwLockWitFremdAdr : Adresse := BitVec.ofNat 64 8200
+
+/-- The word starts at 10: the run really changes memory. -/
+theorem hwLockWit_anfang :
+    read64 hwLockWitStart.mem hwLockWitAdr = some 10 := by
+  decide
+
+/-- Step one moves the word 10 to 15. -/
+theorem hwLockWit_nach1_wort :
+    hwLockWort hwLockWitAdr hwLockWitNach1 = some 15 := by
+  decide
+
+/-- Step one returns the old word through rax. -/
+theorem hwLockWit_nach1_rax :
+    hwLockReg 0 .rax hwLockWitNach1 = some 10 := by
+  decide
+
+/-- Step one keeps the foreign pending byte: no foreign drain. -/
+theorem hwLockWit_nach1_fremd_buf :
+    hwLockBuf 1 hwLockWitNach1 = some 1 := by
+  decide
+
+/-- Forwarding to the owner: core 1 reads its own unflushed byte. -/
+theorem hwLockWit_nach1_eigen_sicht :
+    hwLockSicht hwLockWitNach1 1 hwLockWitFremdAdr =
+      some (some (BitVec.ofNat 8 99)) := by
+  decide
+
+/-- No foreign forwarding: core 0 reads canonical memory. -/
+theorem hwLockWit_nach1_fremd_sicht :
+    hwLockSicht hwLockWitNach1 0 hwLockWitFremdAdr =
+      some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- Step two moves the word 15 to 22 on the other core. -/
+theorem hwLockWit_nach2_wort :
+    hwLockWort hwLockWitAdr hwLockWitNach2 = some 22 := by
+  decide
+
+/-- The drained byte lands in shared memory: both cores observe 99. -/
+theorem hwLockWit_gespült_sichtbar :
+    hwLockSicht hwLockWitBereit2 0 hwLockWitFremdAdr =
+      some (some (BitVec.ofNat 8 99)) ∧
+    hwLockSicht hwLockWitBereit2 1 hwLockWitFremdAdr =
+      some (some (BitVec.ofNat 8 99)) := by
+  refine ⟨by decide, by decide⟩
+
+/-- Step two returns the old word through core 1 rax. -/
+theorem hwLockWit_nach2_rax1 :
+    hwLockReg 1 .rax hwLockWitNach2 = some 15 := by
+  decide
+
+/-- No torn word for the foreign core: its whole pending buffer sits
+    outside the locked word footprint. -/
+theorem hwLockWit_fremd_ohne_fuss :
+    hwLockWitBuf 1 = [⟨hwLockWitFremdAdr, BitVec.ofNat 8 99⟩] ∧
+    hwLockWitFremdAdr ∉ Fuss hwLockWitAdr := by
+  refine ⟨by decide, by decide⟩
+
+/-- Fetched-fence analogue on the plug: the fence succeeds on core 0
+    past its 3 bytes while core 1 keeps its pending store. -/
+theorem hwLockWit_mfence_ok :
+    hwLockRip 0 (hwLockSchritt hwLockWitStart 0 (.ok .mfence 3)) =
+      some (BitVec.ofNat 64 4099) ∧
+    hwLockBuf 1 (hwLockSchritt hwLockWitStart 0 (.ok .mfence 3)) =
+      some 1 := by
+  refine ⟨by decide, by decide⟩
 
 /-- A non-`ok` accepted outcome refuses the plug step. -/
 theorem hwLockSchritt_verweigert_bei (m : HwMaschine) (c : Nat)
