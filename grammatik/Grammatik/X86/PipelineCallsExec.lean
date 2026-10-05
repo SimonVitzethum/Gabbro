@@ -195,4 +195,111 @@ theorem einzelChunk_lauf (c : PipeCfg) (hc : cfgOk c = true)
     rw [regSet_fremd _ _ _ _ hqa]
     exact hregV q hqd hqf
 
+/-- CALLEE CORRECTNESS (real source correspondence): for an admitted
+    caller frame and validated callee bytes of ONE source assignment,
+    the fetched byte run reaches the end of the code with the world of
+    the REAL `execBlock` run represented, the environment represented,
+    and every callee-saved register preserved. The callee body is the
+    real lowered block (`senkBlock` inversion, `senkWertT` value run,
+    `worldRep_store`), not an abstracted result write. Every premise is
+    consumed: `hval` for frame admission and recomputed bytes, `hsep`
+    for the store, `hfremd` for callee-saved preservation, `hcode` and
+    `hrip` for the fetch, `hW` and `hE` for the representation, `hsrc`
+    for the source outcome. -/
+theorem einzelRuf_korrekt (b : Belegung) (rh : Rahmen) (nArgs : Nat)
+    (benutztRot : Bool) (c : PipeCfg) (L : Layout D)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
+    (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ)
+    (bytes : List Byte)
+    (hval : rufExecOk b rh nArgs benutztRot c L
+      ((.cons (.assignSlot t f i e hw hL) .nil : Block D V l Γ Λ Λ)) bytes = true)
+    (hsep : LayoutSep L) (hfremd : calleeFremd c = true)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) bytes)
+    (hrip : s.rip = natAdresse c.codeBase)
+    (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c))
+    (σ' : World D) (ρ' : Env D Γ)
+    (hsrc : execBlock O passes R
+      ((.cons (.assignSlot t f i e hw hL) .nil : Block D V l Γ Λ Λ)) σ ρ =
+      (.ok σ' ρ' : Ausgang V l Γ)) :
+    rufOk b rh nArgs benutztRot = true ∧
+    ∃ n s', laufBytes n s = .weiter s' ∧
+      s'.rip = natAdresse (c.codeBase + bytes.length) ∧
+      WorldRep L s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf c) ∧
+      (∀ q, q ∈ calleeGerettet → s'.register q = s.register q) := by
+  have hruf : rufOk b rh nArgs benutztRot = true :=
+    (rufExecOk_teile b rh nArgs benutztRot c L _ _ hval).1
+  have hval2 : validate c L []
+      ((.cons (.assignSlot t f i e hw hL) .nil : Block D V l Γ Λ Λ)) bytes = true :=
+    (rufExecOk_teile b rh nArgs benutztRot c L _ _ hval).2.2
+  obtain ⟨prog, hc, hlow, hb, -, -⟩ := validate_sound c L [] _ bytes hval2
+  rw [optimise_nil] at hlow
+  rw [senkBlock_assign] at hlow
+  cases hs : senkStmt c L (Stmt.assignSlot (V := V) t f i e hw hL) with
+  | none => rw [hs] at hlow; cases hlow
+  | some p =>
+    rw [hs] at hlow
+    dsimp only at hlow
+    have hnil : senkBlock c L (0 + (encodeAll p).length)
+        (Block.nil : Block D V l Γ Λ Λ) = some [] := by simp [senkBlock]
+    rw [hnil] at hlow
+    simp only [Option.map_some, Option.some.injEq] at hlow
+    subst hlow
+    simp only [senkStmt] at hs
+    cases hk : constInt? i with
+    | none => simp [hk] at hs
+    | some k =>
+      simp only [hk] at hs
+      cases hA : L.loc t k f with
+      | none => simp [hA] at hs
+      | some A =>
+        simp only [hA] at hs
+        by_cases hok : repOk (D.typ t f) A 8 0 = true
+        · rw [if_pos hok] at hs
+          cases hv : senkWertT c e with
+          | none => simp [hv] at hs
+          | some pv =>
+            simp only [hv] at hs
+            simp only [Option.map_some, Option.some.injEq] at hs
+            subst hs
+            rw [List.append_nil] at hb
+            obtain ⟨lo, hi, hT, hlo, hhi, -⟩ := repOk_int _ A hok
+            let σL := σ.lese Λ (i.orte ++ e.orte)
+            have hki : (eval σL i σL ρ).n = k := by
+              have hci := constInt?_sound i σL σL ρ k hk
+              simpa [intOf] using hci
+            have hsrcEq : execBlock O passes R
+                ((.cons (.assignSlot t f i e hw hL) .nil : Block D V l Γ Λ Λ)) σ ρ =
+                execBlock O passes R (.nil : Block D V l Γ Λ Λ)
+                  (σL.schreibSlot t Λ k f (eval σL e σL ρ)) ρ := by
+              rw [← hki]
+              rfl
+            have hnilOk : execBlock O passes R (.nil : Block D V l Γ Λ Λ)
+                (σL.schreibSlot t Λ k f (eval σL e σL ρ)) ρ =
+                .ok (σL.schreibSlot t Λ k f (eval σL e σL ρ)) ρ := by simp [execBlock]
+            rw [hsrcEq, hnilOk] at hsrc
+            cases hsrc
+            obtain ⟨-, -, hwrA, -⟩ := hW t k f A hA
+            obtain ⟨s1, hrun1, hw1, hE1, hreg⟩ :=
+              einzelChunk_lauf c hc e hT hlo hhi pv hv A ρ σL σL s hE hwrA
+            have hgp : (pv ++ [Befehl.movImm64 c.adr (natAdresse A),
+                Befehl.store64 c.adr c.dst (BitVec.ofNat 32 0)]).all gerade = true := by
+              simp [List.all_append, senkWertT_gerade c e pv hv, gerade]
+            obtain ⟨hb1, hr1, -, -, -⟩ := lauf_zu_laufBytes (natAdresse c.codeBase) bytes
+              (pv ++ [Befehl.movImm64 c.adr (natAdresse A),
+                Befehl.store64 c.adr c.dst (BitVec.ofNat 32 0)]) [] [] s s1 hgp hrun1 hcode
+              (by simp [hb]) (by rw [hrip]; exact (addrOff_null _).symm)
+            have hW1 : WorldRep L s1.speicher (σL.schreibSlot t Λ k f (eval σL e σL ρ)) :=
+              worldRep_store L hsep s.speicher s1.speicher σL t k f A hA hW lo hi hT _ hw1 Λ
+            refine ⟨hruf, _, s1, hb1, ?_, hW1, hE1, ?_⟩
+            · rw [hr1, hb, addrOff_natAdresse]
+              simp
+            · intro q hq
+              obtain ⟨hne1, hne2, hne3⟩ := calleeFremd_mem c hfremd q hq
+              exact hreg q hne1 hne2 hne3
+        · rw [if_neg hok] at hs; cases hs
+
 end Gabbro.Grammatik.X86.PipelineCallsExec
