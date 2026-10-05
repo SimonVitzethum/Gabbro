@@ -70,4 +70,59 @@ theorem ketteLaenge_sum (chunks : List (List Befehl)) :
   unfold targetWork
   rw [List.length_flatten]
 
+/-! ## 2. Budget additivity: source budget to target work over chunks.
+
+    `Deckung` is DERIVED (1165), never a premise of the lowering. Two
+    covered chunks concatenate to a covered block at the SUM budget:
+    with the admitted summary's honest zero spill/fence counts
+    (`pipeSummary_expand`) the bound is purely additive. -/
+
+/-- COVER APPEND: two covered chunks concatenate at the sum budget.
+    Every premise is used: `h1`/`h2` bound the two works, `hk` names
+    the sum bound, and the work equation splits it. -/
+theorem deckung_append_pipe (n m : Nat) (xs ys : List Decodiert)
+    (h1 : Deckung pipeSummary n xs) (h2 : Deckung pipeSummary m ys) :
+    Deckung pipeSummary (n + m) (xs ++ ys) := by
+  intro k hk
+  rw [pipeSummary_expand] at hk
+  cases hk
+  have a := h1 _ (pipeSummary_expand n)
+  have b := h2 _ (pipeSummary_expand m)
+  have hlen : targetWork ((xs ++ ys).map (fun d => d.befehl)) =
+      targetWork (xs.map (fun d => d.befehl)) +
+        targetWork (ys.map (fun d => d.befehl)) := by
+    simp [targetWork]
+  rw [hlen]
+  omega
+
+/-- BLOCK DECKUNG (induction over the chunk list): every chunk covered
+    at budget 1 gives the flattened block covered at the chunk count.
+    The empty block is covered at zero by computation. -/
+theorem blockDeckung_eins (chunks : List (List Befehl))
+    (h : ∀ c ∈ chunks, Deckung pipeSummary 1 (decodiertZu c)) :
+    Deckung pipeSummary chunks.length (decodiertZu chunks.flatten) := by
+  induction chunks with
+  | nil =>
+    exact deckung_leer pipeSummary 0 (pipeSummary_expand 0)
+  | cons p rest ih =>
+    have hhead : Deckung pipeSummary 1 (decodiertZu p) :=
+      h p List.mem_cons_self
+    have htail : Deckung pipeSummary rest.length (decodiertZu rest.flatten) :=
+      ih (fun c hc => h c (List.mem_cons_of_mem _ hc))
+    have hcat := deckung_append_pipe 1 rest.length _ _ hhead htail
+    simp only [List.flatten_cons, List.length_cons]
+    rw [decodiertZu_append]
+    have heq : 1 + rest.length = rest.length + 1 := Nat.add_comm _ _
+    rwa [heq] at hcat
+
+/-- TIME APPEND: named-time aggregation over concatenated chunks is
+    the sum of the chunk times (reused `laufKosten_anhang_erfolg`). -/
+theorem zeit_append_pipe (prof : HardwareProfil) (p q : List Befehl)
+    (t1 t2 : Nat)
+    (h1 : laufKosten prof (decodiertZu p) = some t1)
+    (h2 : laufKosten prof (decodiertZu q) = some t2) :
+    laufKosten prof (decodiertZu (p ++ q)) = some (t1 + t2) := by
+  rw [decodiertZu_append]
+  exact laufKosten_anhang_erfolg prof _ _ t1 t2 h1 h2
+
 end Gabbro.Grammatik.X86.PipeBlock
