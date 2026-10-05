@@ -629,7 +629,7 @@ Last ledger refresh: **2026-10-05 13:55 UTC**. This is an operational snapshot, 
 | 1141 | ISA-strand families (compact/core/cond) on the coherent machine | Merged after review/checks | 1142: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1141.md) |
 | 1143 | TSO to W bridge: fragment READS | Merged after review/checks | 1144: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1143.md) |
 | 1145 | TSO to W bridge: LOCK/RMW steps | Agent working | 1146: scheduled | [task](lanes/1145.md) |
-| 1147 | Whole-word atomicity of guarded aligned accesses | Merged after review/checks | 1148: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1147.md) |
+| 1147 | Whole-word atomicity of guarded aligned accesses | Merged after review/checks | 1148: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1147.md) |
 | 1149 | Capstone: one coherent machine over all accepted families | Waiting for accepted dependencies | 1150: scheduled | [task](lanes/1149.md) |
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Merged after review/checks | 1152: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1151.md) |
 | 1153 | Pipeline lowering onto the wider ISA | Merged after review/checks | 1154: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1153.md) |
@@ -1498,6 +1498,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `6a3a761b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:6a3a761b017f420830163c083aa4350a059c662e -->
 - 2026-10-05: lane **1142**, Independent exact review of 1141, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1142.md). <!-- x86-merged:1142 -->
 - 2026-10-05: lane **1147**, Whole-word atomicity of guarded aligned accesses, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1147.md). <!-- x86-merged:1147 -->
+- 2026-10-05: lane **1148**, Independent exact review of 1147, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1148.md). <!-- x86-merged:1148 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
