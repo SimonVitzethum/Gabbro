@@ -194,6 +194,76 @@ theorem fpRechne_sub_nan_rechts (a b : Wort)
   show muster64 (Gleitkomma.sub Gleitkomma.f64 (bites64 a) (bites64 b)) = _
   rw [nanSub_rechts _ _ hb ha]
 
+/-! ## 3. Quiet and signalling as the accepted codecs define them.
+
+  The codecs define NO distinction: `Klasse` carries a single `.nan`,
+  propagation is verbatim whatever the quiet bit says, and UCOMISD
+  takes the unordered row for every NaN-class operand (ScalarFloat
+  §5: "quiet or signalling -- the model has a single `.nan`, so no
+  signalling bit is observed anywhere"). The quiet bit (bit 51, the
+  MSB of the 52-bit payload field) is named here only to state what
+  is IGNORED: a signalling-like word (quiet bit clear) passes
+  through unquieted -- silicon quieting under a masked invalid
+  exception is NOT modelled and NOT claimed (see CUTS and §4). -/
+
+/-- The quiet bit of a binary64 word: bit 51, MSB of the payload field. -/
+def nanStill (w : Wort) : Bool := w.toNat.testBit 51
+
+/-- The canonical quiet NaN word carries its quiet bit. -/
+theorem nanStill_quiet : nanStill 0x7FF8000000000001 = true := by
+  decide
+
+/-- The signalling-like NaN word clears it. -/
+theorem nanStill_signalisierend : nanStill 0x7FF4000000000001 = false := by
+  decide
+
+/-- The quiet payload word classifies as NaN. -/
+theorem nanKlasse_quiet :
+    Gleitkomma.klasse Gleitkomma.f64 (bites64 0x7FF8000000000001) = .nan := by
+  decide
+
+/-- The signalling-like word classifies as NaN too: the class ignores
+    the quiet bit. -/
+theorem nanKlasse_signalisierend :
+    Gleitkomma.klasse Gleitkomma.f64 (bites64 0x7FF4000000000001) = .nan := by
+  decide
+
+/-- A second payload classifies as NaN (right-side witness below). -/
+theorem nanKlasse_nutzlast2 :
+    Gleitkomma.klasse Gleitkomma.f64 (bites64 0x7FF8000000000002) = .nan := by
+  decide
+
+/-- `1.0` is not NaN (the non-NaN side of the witnesses). -/
+theorem nanKlasse_eins :
+    Gleitkomma.klasse Gleitkomma.f64 (bites64 0x3FF0000000000000) ≠ .nan := by
+  decide
+
+/-- QUIET PAYLOAD WITNESS: the payload word comes back bit-exact. -/
+theorem nanNutzlast_quiet_add :
+    fpRechne .add 0x7FF8000000000001 0x3FF0000000000000
+      = 0x7FF8000000000001 :=
+  fpRechne_nan_links .add _ _ nanKlasse_quiet
+
+/-- SIGNALLING-LIKE WITNESS: no quieting in the model -- the word
+    passes through with its quiet bit still clear. -/
+theorem nanNutzlast_signalisierend_add :
+    fpRechne .add 0x7FF4000000000001 0x3FF0000000000000
+      = 0x7FF4000000000001 :=
+  fpRechne_nan_links .add _ _ nanKlasse_signalisierend
+
+/-- RIGHT-SIDE PAYLOAD WITNESS: the right payload wins bit-exact. -/
+theorem nanNutzlast_rechts_mul :
+    fpRechne .mul 0x3FF0000000000000 0x7FF8000000000002
+      = 0x7FF8000000000002 :=
+  fpRechne_mul_nan_rechts _ _ nanKlasse_nutzlast2 nanKlasse_eins
+
+/-- UCOMISD is unordered for the signalling-like word too: the quiet
+    bit is observed by nothing. -/
+theorem nanUcomi_signalisierend :
+    ucomiFlags (bites64 0x7FF4000000000001) (bites64 0x3FF0000000000000)
+      = ⟨true, true, some false, true, false, false⟩ :=
+  ucomiFlags_ungeordnet_links _ _ nanKlasse_signalisierend
+
 /- CUTS: what is not proved here (filled as the file grows). -/
 
 #print axioms nanPipeOk_reset
