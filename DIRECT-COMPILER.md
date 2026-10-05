@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 15:07 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 15:08 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -622,7 +622,7 @@ Last ledger refresh: **2026-10-05 15:07 UTC**. This is an operational snapshot, 
 | 1127 | Multiply/divide and narrow widths connected | Merged after review/checks | 1128: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1127.md) |
 | 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Merged after review/checks | 1130: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1129.md) |
 | 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Merged after review/checks | 1132: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1131.md) |
-| 1133 | Device/MMIO and memory types on the coherent machine | Merged after review/checks | 1134: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1133.md) |
+| 1133 | Device/MMIO and memory types on the coherent machine | Merged after review/checks | 1134: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1133.md) |
 | 1135 | CPUID/feature enabled-state gating inside HwSchritt | Merged after review/checks | 1136: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1135.md) |
 | 1137 | Coherent machine fetching from the loaded image | Merged after review/checks | 1138: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1137.md) |
 | 1139 | Stack, call and return per core through TSO | Merged after review/checks | 1140: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1139.md) |
@@ -1562,6 +1562,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: publication batch checks passed for `d457fd09`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: lane **1133**, Device/MMIO and memory types on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1133.md). <!-- x86-merged:1133 -->
 - 2026-10-05: checked master `8e37bab1` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:8e37bab17052c567fc094d00211da675714346df -->
+- 2026-10-05: lane **1134**, Independent exact review of 1133, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1134.md). <!-- x86-merged:1134 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
