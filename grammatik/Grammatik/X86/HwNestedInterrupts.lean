@@ -1375,6 +1375,119 @@ theorem nestIret_if :
     nestIretIf = some true := by
   decide
 
+/-! ## 12. Joint witness.
+
+   The first leg succeeds (as an existential triple), the second leg
+   succeeds under the tracked IF, and both join the machine-level
+   nest equation and the reached extended-relation step. -/
+
+/-- The first leg succeeds. -/
+theorem nestH1ex : ∃ r1 : HwMaschine × Bool × Bool,
+    asyncSchritt nestStart 0 evMask32 nestSteuer = some r1 := by
+  cases he : nestD1 with
+  | none =>
+    have hrip := nestD1_rip
+    simp [he, asyncRipOut] at hrip
+  | some r1 => exact ⟨r1, he⟩
+
+/-- JOINT WITNESS: trap delivery (IF kept, IST switch, empty
+    buffers, frame read-back), nested interrupt delivery (IF
+    cleared), masked refusal, NMI bypass, double-fault escalation
+    (vector 8, code zero) with leg statuses, owner-only forwarding
+    with a memory-changing drain, the 40-entry buffered frame with
+    owner-only word forwarding, IRET restoration, well-formedness,
+    the reached machine-level nest and the reached extended step.
+    Non-degenerate: two cores touch memory, three deliveries and a
+    drain observably change shared-memory bytes. -/
+theorem verschachtelt_zeuge :
+    asyncRipOut nestD1 0 = some (BitVec.ofNat 64 8448) ∧
+      asyncIfOut nestD1 = some true ∧
+      asyncGewOut nestD1 = some true ∧
+      asyncBufOut nestD1 0 = some 0 ∧
+      asyncBufOut nestD1 1 = some 0 ∧
+      read64 (asyncMemOut nestD1) (BitVec.ofNat 64 16376) =
+        some (BitVec.ofNat 64 16) ∧
+      read64 (asyncMemOut nestD1) (BitVec.ofNat 64 16344) =
+        some (BitVec.ofNat 64 4660) ∧
+      nestRipOut nestVerschachtelt 0 = some (BitVec.ofNat 64 8704) ∧
+      nestIfOut nestVerschachtelt = some false ∧
+      nestBufOut nestVerschachtelt 0 = some 0 ∧
+      nestBufOut nestVerschachtelt 1 = some 0 ∧
+      nestDritt = none ∧
+      asyncRipOut nestNmi 0 = some (BitVec.ofNat 64 8192) ∧
+      asyncIfOut nestNmi = some false ∧
+      dfVektorVon (liefereMitDf nestMem nestSteuer dfQ1 dfQ2) =
+        some 8 ∧
+      dfCodeVon (liefereMitDf nestMem nestSteuer dfQ1 dfQ2) =
+        some 0 ∧
+      ergebnisVektor (liefere nestMem nestSteuer dfQ1) = none ∧
+      ergebnisVektor
+          (liefere (ergebnisSpeicher (liefere nestMem nestSteuer dfQ1))
+            { nestSteuer with ifBit := true } dfQ2) = some 13 ∧
+      nestMem.bytes nestZelle = BitVec.ofNat 8 0 ∧
+      nestTsoLoadEigen = some (some (BitVec.ofNat 8 42)) ∧
+      nestTsoLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+      nestTsoNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+      nestTsoFremdNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+      nestPufferLen = some 40 ∧
+      nestPufferMemStill = some (BitVec.ofNat 8 0) ∧
+      nestPufferWortEigen = some (some (BitVec.ofNat 64 16)) ∧
+      nestPufferWortFremd = some (some (BitVec.ofNat 64 0)) ∧
+      nestIretRip = some (BitVec.ofNat 64 4660) ∧
+      nestIretRsp = some (BitVec.ofNat 64 20480) ∧
+      nestIretIf = some true ∧
+      HwWf nestStart ∧
+      (∃ r1 : HwMaschine × Bool × Bool,
+        ∃ r2 : HwMaschine × Bool × Bool,
+        verschachteltSchritt nestStart 0 evMask32 evMask33
+          nestSteuer =
+          some (r2.1, r2.2.1, r1.2.2, r2.2.2)) ∧
+      (∃ s' : HwIntMaschine, ∃ e : NestEreignis,
+        HwNestSchritt ⟨nestStart, nestSteuerAlle⟩ s' e) := by
+  have hstep : (∃ r1 : HwMaschine × Bool × Bool,
+        ∃ r2 : HwMaschine × Bool × Bool,
+        verschachteltSchritt nestStart 0 evMask32 evMask33
+          nestSteuer =
+          some (r2.1, r2.2.1, r1.2.2, r2.2.2)) ∧
+      (∃ s' : HwIntMaschine, ∃ e : NestEreignis,
+        HwNestSchritt ⟨nestStart, nestSteuerAlle⟩ s' e) := by
+    obtain ⟨⟨m1, ifNeu1, gew1⟩, h1⟩ := nestH1ex
+    have hif1 : ifNeu1 = true := by
+      have hn1 : nestD1 = some (m1, ifNeu1, gew1) := h1
+      have hif := nestD1_if
+      rw [hn1] at hif
+      simpa [asyncIfOut] using hif
+    have hd : decide (evMask33.steuer =
+        { nestSteuer with ifBit := ifNeu1 }) = true := by
+      simp [evMask33, hif1]
+    have h2ex : ∃ r2 : HwMaschine × Bool × Bool,
+        asyncSchritt m1 0 evMask33
+          { nestSteuer with ifBit := ifNeu1 } = some r2 := by
+      cases he : asyncSchritt m1 0 evMask33
+          { nestSteuer with ifBit := ifNeu1 } with
+      | none =>
+        have hrip := nestV_rip
+        simp [nestVerschachtelt, verschachteltSchritt, h1, hd, he,
+          nestRipOut] at hrip
+      | some r2 => exact ⟨r2, rfl⟩
+    obtain ⟨⟨m2, ifNeu2, gew2⟩, h2⟩ := h2ex
+    have hmatch : evMask33.steuer =
+        { nestSteuer with ifBit := (m1, ifNeu1, gew1).2.1 } := by
+      simp [evMask33, hif1]
+    refine ⟨⟨_, _, verschachtelt_erfolg nestStart 0 evMask32 evMask33
+      nestSteuer _ _ h1 hmatch h2⟩, _, _,
+      HwNestSchritt.nest 0 evMask32 evMask33 rfl h1
+        (by simp [evMask33, nestSteuerAlle, hif1]) h2⟩
+  refine ⟨nestD1_rip, nestD1_if, nestD1_gew, nestD1_puffer_0,
+    nestD1_puffer_1, nestD1_rahmen_ss, nestD1_rahmen_rip, nestV_rip,
+    nestV_if, nestV_puffer_0, nestV_puffer_1, nestDritt_verweigert,
+    nestNmi_rip, nestNmi_if, nestDf_vektor, nestDf_code,
+    nestDf_h1vektor, nestDf_h2vektor, nestTso_anfang_null,
+    nestTso_weiterleitung, nestTso_fremd_alt, nestTso_spuelung_aendert,
+    nestTso_fremd_neu, nestPuffer_40, nestPuffer_mem_still,
+    nestPuffer_wort_eigen, nestPuffer_wort_fremd, nestIret_rip,
+    nestIret_rsp, nestIret_if, nestStart_wf, hstep.1, hstep.2⟩
+
 /- CUTS:
    Proved here: SKELETON ONLY so far -- the double-fault vector
    constant. Nested delivery, #DF escalation, the TSO-buffered
