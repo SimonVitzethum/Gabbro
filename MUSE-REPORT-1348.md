@@ -1,10 +1,9 @@
 # MUSE-REPORT-1348: Exact review of candidate 1347 (opcode ledger 0F C0-FF + 0F 38/0F 3A)
 
-## VERDICT: ACCEPT
+CANDIDATE: 1347 84a71dee554996fb92638585932dbad26480d13f
+VERDICT: ACCEPT
 
-CANDIDATE: author lane 1347, pinned HEAD
-`84a71dee554996fb92638585932dbad26480d13f`
-(base `574ac3d75180a53907fa28302e3af11cf2d9f2db`).
+Pinned base `574ac3d75180a53907fa28302e3af11cf2d9f2db`.
 Three files, nothing else: `MUSE-REPORT-1347.md`,
 `grammatik/Grammatik.lean` (+1 import line),
 `grammatik/Grammatik/X86/OpcodeLedger0FC0.lean` (new, 677 lines).
