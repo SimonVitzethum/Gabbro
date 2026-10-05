@@ -4,6 +4,9 @@ Lane 1230, clone `/home/simon/Dokumente/gabbro-muse/a1230`, branch `muse/1230`
 (verified: `git branch --show-current` = `muse/1230`).
 OWN ONLY `MUSE-REPORT-1230.md`. Report-only exact review, no Lean/Rust edits.
 
+CANDIDATE: 1229 39f795fc54ca317ef9e27db09b5220c0caaf486e
+VERDICT: ACCEPT
+
 ## Candidate
 
 - Author lane 1229, pinned HEAD `39f795fc54ca317ef9e27db09b5220c0caaf486e`
@@ -80,7 +83,7 @@ OWN ONLY `MUSE-REPORT-1230.md`. Report-only exact review, no Lean/Rust edits.
   `grammatik/` in its own tree before committing, which is the correct remedy;
   noted here so the merger re-verifies green rather than trusting this report.
 
-## VERDICT: ACCEPT
+## Substantive finding: accept the candidate
 
 Candidate 1229 at `39f795fc54ca317ef9e27db09b5220c0caaf486e` is accepted as
 reviewed: probe-green complete file, standard axioms, single import line,
