@@ -421,6 +421,241 @@ theorem stepI_nurRegister_speicher (d : InstrDecoded) (s s' : Zustand)
     rw [e] at h
     exact coreSchritt_speicher ⟨c, l⟩ s s' h
 
+/-! ## 2. The adapter: register lift plus TSO byte events.
+
+  Memory forms never take the register path (the classifier refuses
+  them there); they travel as buffered byte issues and byte loads,
+  exactly the `HwSchritt` events of §3. No SC word effect is ever
+  substituted for a buffered access. -/
+
+/-- One ISA-strand step on the coherent machine: register execution
+    of a decoded unified instruction (admitted forms only), one
+    observed byte load, one issued byte store, or explicit refusal. -/
+def adapterIsa : HwAdapter IsaEreignis :=
+  ⟨fun m c e =>
+    match e with
+    | .reg d =>
+      match stepI d (projZustand m c) with
+      | some s' =>
+        match isaNurRegister d.instr with
+        | true => some (setKernVonZustand m c s')
+        | false => none
+      | none => none
+    | .lade a v =>
+      match loadByte (tsoAnsicht m) c a with
+      | some w => if w == v then some m else none
+      | none => none
+    | .gibAus a v =>
+      match issueByte (tsoAnsicht m) c a v with
+      | some s' => some (setTso m s')
+      | none => none
+    | .verweigert => none⟩
+
+/-- After re-embedding, the core projects to the successor register
+    file over the shared memory. -/
+theorem setKernVonZustand_register (m : HwMaschine) (c : Nat)
+    (s' : Zustand) :
+    ((setKernVonZustand m c s').kerne c).register = s'.register := by
+  unfold setKernVonZustand setKernDaten
+  simp
+
+/-- After re-embedding, the core carries the successor flags. -/
+theorem setKernVonZustand_flags (m : HwMaschine) (c : Nat)
+    (s' : Zustand) :
+    ((setKernVonZustand m c s').kerne c).flags = s'.flags := by
+  unfold setKernVonZustand setKernDaten
+  simp
+
+/-- After re-embedding, the core carries the successor RIP. -/
+theorem setKernVonZustand_rip (m : HwMaschine) (c : Nat)
+    (s' : Zustand) :
+    ((setKernVonZustand m c s').kerne c).rip = s'.rip := by
+  unfold setKernVonZustand setKernDaten
+  simp
+
+/-- Re-embedding keeps the shared memory. -/
+theorem setKernVonZustand_speicher (m : HwMaschine) (c : Nat)
+    (s' : Zustand) : (setKernVonZustand m c s').mem = m.mem := rfl
+
+/-- Re-embedding keeps the buffers. -/
+theorem setKernVonZustand_puffer (m : HwMaschine) (c : Nat)
+    (s' : Zustand) (d : Nat) :
+    (setKernVonZustand m c s').puffer d = m.puffer d := rfl
+
+/-- Selection: an admitted register step is taken. -/
+theorem adapterIsa_reg (m : HwMaschine) (c : Nat) (d : InstrDecoded)
+    (s' : Zustand)
+    (hstep : stepI d (projZustand m c) = some s')
+    (hg : isaNurRegister d.instr = true) :
+    adapterIsa.schritt m c (.reg d) = some (setKernVonZustand m c s') := by
+  simp only [adapterIsa, hstep, hg]
+
+/-- Selection: a refused evaluation is adapter refusal. -/
+theorem adapterIsa_reg_verweigert_schritt (m : HwMaschine) (c : Nat)
+    (d : InstrDecoded)
+    (hstep : stepI d (projZustand m c) = none) :
+    adapterIsa.schritt m c (.reg d) = none := by
+  simp only [adapterIsa, hstep]
+
+/-- Selection: a memory form is refused on the register path. -/
+theorem adapterIsa_reg_verweigert_speicher (m : HwMaschine) (c : Nat)
+    (d : InstrDecoded) (s' : Zustand)
+    (hstep : stepI d (projZustand m c) = some s')
+    (hg : isaNurRegister d.instr = false) :
+    adapterIsa.schritt m c (.reg d) = none := by
+  simp only [adapterIsa, hstep, hg]
+
+/-- Selection: an observed load is taken. -/
+theorem adapterIsa_lade (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v w : Byte)
+    (hload : loadByte (tsoAnsicht m) c a = some w)
+    (heq : (w == v) = true) :
+    adapterIsa.schritt m c (.lade a v) = some m := by
+  simp only [adapterIsa, hload]
+  exact if_pos heq
+
+/-- Selection: a mismatched observation refuses. -/
+theorem adapterIsa_lade_verweigert_wert (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v w : Byte)
+    (hload : loadByte (tsoAnsicht m) c a = some w)
+    (heq : (w == v) = false) :
+    adapterIsa.schritt m c (.lade a v) = none := by
+  simp only [adapterIsa, hload]
+  exact if_neg (by simp [heq])
+
+/-- Selection: an unreadable load refuses. -/
+theorem adapterIsa_lade_verweigert (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte)
+    (hload : loadByte (tsoAnsicht m) c a = none) :
+    adapterIsa.schritt m c (.lade a v) = none := by
+  simp only [adapterIsa, hload]
+
+/-- Selection: a permitted issue is taken. -/
+theorem adapterIsa_gibAus (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Byte) (s' : TSOZustand)
+    (hissue : issueByte (tsoAnsicht m) c a v = some s') :
+    adapterIsa.schritt m c (.gibAus a v) = some (setTso m s') := by
+  simp only [adapterIsa, hissue]
+
+/-- Selection: an unpermitted issue refuses. -/
+theorem adapterIsa_gibAus_verweigert (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte)
+    (hissue : issueByte (tsoAnsicht m) c a v = none) :
+    adapterIsa.schritt m c (.gibAus a v) = none := by
+  simp only [adapterIsa, hissue]
+
+/-- Selection: the refusal event refuses. -/
+theorem adapterIsa_verweigert (m : HwMaschine) (c : Nat) :
+    adapterIsa.schritt m c .verweigert = none := rfl
+
+/-! ## 3. Preservation and agreement with the accepted evaluator.
+
+  Every adapter step preserves well-formedness, and a successful
+  register step carries EXACTLY the `stepI` successor's register file,
+  flags and RIP over the shared memory. -/
+
+/-- Every adapter step preserves well-formedness. -/
+theorem adapterIsa_wf (m m' : HwMaschine) (c : Nat) (e : IsaEreignis)
+    (h : adapterIsa.schritt m c e = some m') (hwf : HwWf m) : HwWf m' := by
+  cases e with
+  | reg d =>
+    cases hstep : stepI d (projZustand m c) with
+    | some s' =>
+      cases hg : isaNurRegister d.instr with
+      | true =>
+        have e := adapterIsa_reg m c d s' hstep hg
+        rw [e] at h
+        cases h
+        exact setKernVonZustand_wf m c s' hwf
+      | false =>
+        have e := adapterIsa_reg_verweigert_speicher m c d s' hstep hg
+        rw [e] at h
+        cases h
+    | none =>
+      have e := adapterIsa_reg_verweigert_schritt m c d hstep
+      rw [e] at h
+      cases h
+  | lade a v =>
+    cases hload : loadByte (tsoAnsicht m) c a with
+    | some w =>
+      cases heq : (w == v) with
+      | true =>
+        have e := adapterIsa_lade m c a v w hload heq
+        rw [e] at h
+        cases h
+        exact hwf
+      | false =>
+        have e := adapterIsa_lade_verweigert_wert m c a v w hload heq
+        rw [e] at h
+        cases h
+    | none =>
+      have e := adapterIsa_lade_verweigert m c a v hload
+      rw [e] at h
+      cases h
+  | gibAus a v =>
+    cases hissue : issueByte (tsoAnsicht m) c a v with
+    | some s' =>
+      have e := adapterIsa_gibAus m c a v s' hissue
+      rw [e] at h
+      cases h
+      exact setTso_wf m s' hwf
+    | none =>
+      have e := adapterIsa_gibAus_verweigert m c a v hissue
+      rw [e] at h
+      cases h
+  | verweigert =>
+    have e := adapterIsa_verweigert m c
+    rw [e] at h
+    cases h
+
+/-- Agreement with the accepted evaluator on the register projection:
+    a successful adapter register step carries exactly the `stepI`
+    successor's register file, flags and RIP over shared memory. -/
+theorem adapterIsa_reg_stimmt (m : HwMaschine) (c : Nat)
+    (d : InstrDecoded) (m' : HwMaschine)
+    (h : adapterIsa.schritt m c (.reg d) = some m') :
+    ∃ s' : Zustand, stepI d (projZustand m c) = some s' ∧
+      (m'.kerne c).register = s'.register ∧
+      (m'.kerne c).flags = s'.flags ∧ (m'.kerne c).rip = s'.rip ∧
+      m'.mem = m.mem ∧ m'.puffer = m.puffer := by
+  cases hstep : stepI d (projZustand m c) with
+  | some s' =>
+    cases hg : isaNurRegister d.instr with
+    | true =>
+      have e := adapterIsa_reg m c d s' hstep hg
+      rw [e] at h
+      cases h
+      exact ⟨s', rfl, setKernVonZustand_register m c s',
+        setKernVonZustand_flags m c s', setKernVonZustand_rip m c s',
+        setKernVonZustand_speicher m c s',
+        funext fun d => setKernVonZustand_puffer m c s' d⟩
+    | false =>
+      have e := adapterIsa_reg_verweigert_speicher m c d s' hstep hg
+      rw [e] at h
+      cases h
+  | none =>
+    have e := adapterIsa_reg_verweigert_schritt m c d hstep
+    rw [e] at h
+    cases h
+
+/-- A store issue changes no canonical byte (buffer only): the
+    adapter never substitutes an SC word effect, by the accepted
+    `issue_kein_speicher`. -/
+theorem adapterIsa_gibAus_kein_speicher (m m' : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte)
+    (h : adapterIsa.schritt m c (.gibAus a v) = some m') (x : Adresse) :
+    m'.mem.bytes x = m.mem.bytes x := by
+  cases hissue : issueByte (tsoAnsicht m) c a v with
+  | some s' =>
+    have e := adapterIsa_gibAus m c a v s' hissue
+    rw [e] at h
+    cases h
+    exact issue_kein_speicher (tsoAnsicht m) s' c a v hissue x
+  | none =>
+    have e := adapterIsa_gibAus_verweigert m c a v hissue
+    rw [e] at h
+    cases h
+
 /- CUTS:
     Skeleton only: the event type and the re-embedding. The classifier,
     the adapter, the stepI/stepExt agreement, the refusals and the
