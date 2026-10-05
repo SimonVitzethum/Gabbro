@@ -1,43 +1,47 @@
 # MUSE-REPORT-1228: Exact review of lane 1227 (PipelineSpillHoming)
 
-CANDIDATE: 1227 638654c2736f9dfd6e0ed5d03af60c411d9261a5
+CANDIDATE: 1227 875988f01065ed5f6c320e170023e31ace131a74
 
 VERDICT: REPAIR
 
-## Snapshot inspected
+## Snapshot inspected (new pin, not the stale one)
 
-`.tmp/review/SNAPSHOT.json` pins author lane 1227 at head
-638654c2736f9dfd6e0ed5d03af60c411d9261a5, base
+`.tmp/review/SNAPSHOT.json` now pins author lane 1227 at head
+875988f01065ed5f6c320e170023e31ace131a74, base
 cbc0afe00eeb8708961b13489750e41e998740d1, files MUSE-REPORT-1227.md,
 grammatik/Grammatik.lean, grammatik/Grammatik/X86/PipelineSpillHoming.lean,
-clean true. Reviewer clone is /home/simon/Dokumente/gabbro-muse/a1228 on
-branch muse/1228 (verified), HEAD cbc0afe0, which equals the snapshot base.
+clean true. This supersedes the previous pin
+638654c2736f9dfd6e0ed5d03af60c411d9261a5, which this lane no longer judges.
+Reviewer clone is /home/simon/Dokumente/gabbro-muse/a1228 on branch
+muse/1228 (verified), HEAD cbc0afe0, which equals the new snapshot base.
 Tree clean.
 
-## Substantive finding (why no accept)
+## Substantive finding (previous finding re-checked against the new pin)
 
-The pinned object is absent from this clone: `git show 638654...` answers
-`bad object`. HARD RULES rule 1 forbids reading outside this directory, so the
-author clone is not accessible and the candidate content (the new Lean file,
-the Grammatik.lean import line, the author report) could not be examined at
-all. Consequently none of the required exact-review checks could be performed:
-no banned-construct grep, no `#print axioms` verification, no premise-use
-check, no evaluator-reuse check, no refusal-probe check, no witness
-non-degeneracy check, no silicon-fact check against the Intel SDM extracts, no
-CUTS honesty check, and no `./lean-bau` run (building unmodified base master
-would not be evidence about the candidate). Accepting on this basis would
-approve unproved claims, which the task explicitly forbids. The verdict above
-is therefore REPAIR, with the concrete repair action below. This preserves the
-prior blocked status while giving the machine-readable verdict the gate
-requires; nothing substantive was changed to make formatting pass.
+The new pinned object is absent from this clone: `git show 875988f0...`
+answers `bad object`. HARD RULES rule 1 forbids reading outside this
+directory, so the author clone is not accessible and the repaired candidate
+content (the new Lean file, the Grammatik.lean import line, the author
+report) could not be examined at all. The previous REPAIR finding therefore
+persists unchanged for the new pin: none of the required exact-review checks
+could be performed (no banned-construct grep, no `#print axioms`
+verification, no premise-use check, no evaluator-reuse check, no
+refusal-probe check, no witness non-degeneracy check, no silicon-fact check
+against the Intel SDM extracts, no CUTS honesty check, and no `./lean-bau`
+run, since building unmodified base master would not be evidence about the
+candidate). Accepting on this basis would approve unproved claims, which the
+task explicitly forbids. The verdict above is therefore REPAIR, with the
+concrete repair action below. Nothing was approved from the stale snapshot
+and nothing substantive was changed to make formatting pass.
 
 ## Repair required
 
-Make the pinned candidate material available inside the reviewer clone (or
-re-issue this review with the snapshot content attached). Once the three
-snapshotted files at 638654c2736f9dfd6e0ed5d03af60c411d9261a5 are readable
-here against base cbc0afe0, the full exact review will be performed and the
-verdict revisited on the actual content.
+Make the new pinned candidate material (head
+875988f01065ed5f6c320e170023e31ace131a74) available inside the reviewer
+clone, or re-issue this review with the snapshot content attached. Once the
+three snapshotted files at the new head are readable here against base
+cbc0afe0, the full exact review will be performed and the verdict revisited
+on the actual repaired content.
 
 ## Reference: what the candidate should contain (from lanes/1227.md)
 
