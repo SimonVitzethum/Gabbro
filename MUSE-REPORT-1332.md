@@ -6,7 +6,9 @@ branch `muse/1332` (verified). Candidate 1331, pinned HEAD
 hash itself never inspected per HARD RULE 1 -- review is over the delivered FILES only:
 `PATCH.diff`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`, copied sources).
 
-## VERDICT: REPAIR
+CANDIDATE: 1331 f1f508185e471d45ed03e525cab1afdb8e5201d8
+
+VERDICT: REPAIR
 
 The candidate is green and its theorems are true, but two points need bounded repair
 before integration (concrete items R1/R2 below). This is not a rejection of the approach:
