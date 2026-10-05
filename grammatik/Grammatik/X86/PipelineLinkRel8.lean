@@ -641,4 +641,109 @@ theorem relaxKonvergiert (p : List RelaxStueck)
   intro i t ad hs hz ha
   exact relaxSchritt_fixpunkt_passt _ _ _ hfix i t ad hs hz ha
 
+/-! ## 4. The relaxed link closing: fall-through frame, exact
+    site bytes, short read-back, long re-decode. -/
+
+/-- EVERY SITE'S BYTES ARE EXACT: after a disjoint multi-operand
+    closing, each operand's range carries exactly its operand bytes.
+    The head case survives through `multiPatchAlle_kopf_stelle` with
+    head-against-tail separation from the decided check (no diagonal
+    needed); the tail case is the induction hypothesis on the
+    remaining operands. -/
+theorem relaxAlle_stelle (img : List Byte) (ops : List SchliessOp)
+    (out : List Byte) (h : multiPatchAlle img ops = some out)
+    (hdisj : opsDisjunktB ops = true)
+    (op : SchliessOp) (hm : op ∈ ops)
+    (k : Nat) (hk : k < opWeite op) :
+    out[opStelle op + k]? = (multiBytes op.2)[k]? := by
+  revert h hdisj hm hk
+  induction ops generalizing img out op k with
+  | nil =>
+    intro h hdisj hm hk
+    simp at hm
+  | cons hd rest ih =>
+    intro h hdisj hm hk
+    simp only [opsDisjunktB, Bool.and_eq_true] at hdisj
+    obtain ⟨hall, hrest⟩ := hdisj
+    cases h1 : multiPatch img hd.1 hd.2 with
+    | none =>
+      have h2 := h
+      simp only [multiPatchAlle, h1] at h2
+      cases h2
+    | some mid =>
+      have htail : multiPatchAlle mid rest = some out := by
+        have h2 := h
+        simp only [multiPatchAlle, h1] at h2
+        exact h2
+      simp only [List.mem_cons] at hm
+      rcases hm with rfl | hmem
+      · have hdis : ∀ op' ∈ rest, ∀ kk, kk < opWeite op →
+            ∀ j, j < opWeite op' →
+            opStelle op + kk ≠ opStelle op' + j := by
+          intro op' hm' kk hkk j hj
+          have hdec : decide (disjunktStellen (opStelle op)
+              (opWeite op) (opStelle op') (opWeite op')) = true :=
+            List.all_eq_true.mp hall op' hm'
+          have hpair := of_decide_eq_true hdec
+          simp only [disjunktStellen] at hpair
+          omega
+        exact multiPatchAlle_kopf_stelle img op rest out h hdis k hk
+      · exact ih mid out op k htail hrest hmem hk
+
+/-- **RELAXED LINK CORRECTNESS.** For a disjoint multi-operand
+    closing over relaxed-program bytes: fall-through bytes (outside
+    every operand) survive, the length is kept, every site's bytes
+    are exact, and every short site reads back to its displacement.
+    Every premise is used: `h` runs the frame, length and sites,
+    `hdisj` orders the sites, `hfit8` rounds the short bytes back. -/
+theorem relaxVerknuepft_korrekt (img out : List Byte)
+    (ops : List SchliessOp)
+    (h : multiPatchAlle img ops = some out)
+    (hdisj : opsDisjunktB ops = true)
+    (hfit8 : ∀ (off : Nat) (d : Int),
+      (off, .rel8 d) ∈ ops → rel8Passt d = true) :
+    (∀ i, (∀ op ∈ ops, ∀ kk, kk < opWeite op →
+        i ≠ opStelle op + kk) → out[i]? = img[i]?) ∧
+    out.length = img.length ∧
+    (∀ op ∈ ops, ∀ kk, kk < opWeite op →
+      out[opStelle op + kk]? = (multiBytes op.2)[kk]?) ∧
+    (∀ (off : Nat) (d : Int), (off, .rel8 d) ∈ ops →
+      out[off]? = some (rel8Byte d) ∧
+      disp8Signed (rel8Byte d) = d) := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro i haussen
+    exact multiPatchAlle_rahmen img ops out h i haussen
+  · exact multiPatchAlle_laenge img ops out h
+  · intro op hm kk hk
+    exact relaxAlle_stelle img ops out h hdisj op hm kk hk
+  · intro off d hm
+    have hfit := hfit8 off d hm
+    have hfitI := rel8Passt_grenzen d hfit
+    have hk : 0 < opWeite (off, .rel8 d) := by
+      simp [opWeite, multiBytes]
+    have hstelle :=
+      relaxAlle_stelle img ops out h hdisj (off, .rel8 d) hm 0 hk
+    have hbyte : out[off]? = some (rel8Byte d) := by
+      simpa [opStelle, multiBytes] using hstelle
+    exact ⟨hbyte, rel8Byte_rundgang d hfitI.1 hfitI.2⟩
+
+/-- LONG-SITE RE-DECODE: a widened unconditional-jump site whose
+    window carries the opcode and the displacement bytes, and which
+    re-decodes to a five-byte jump, carries the relaxed displacement;
+    the taken window re-decodes. Through the accepted window and
+    agreement legs, never through decoder internals. -/
+theorem relaxLang_dekodiert (out : List Byte) (ij : Nat) (disp : Int)
+    (d : BitVec 32) (rest : List Byte)
+    (hop : out[ij]? = some (natByte 233))
+    (hfeld : ∀ kk, kk < 4 → out[ij + 1 + kk]? = (rel32Bytes disp)[kk]?)
+    (hfit : rel32Passt disp = true)
+    (hdec : decode (out.drop ij) = some ((⟨.jump32 d, 5⟩, rest))) :
+    dispSigned d = disp ∧
+    5 + rest.length = (out.drop ij).length ∧
+    decktAb ⟨.jump32 d, 5⟩ ∧
+    decode ((out.drop ij).take 5 ++ rest) =
+      some ((⟨.jump32 d, 5⟩, rest)) := by
+  have htake := fenster_sprung out ij disp hop hfeld
+  exact feld_agreement_sprung out ij disp d rest hfit htake hdec
+
 end Gabbro.Grammatik.X86
