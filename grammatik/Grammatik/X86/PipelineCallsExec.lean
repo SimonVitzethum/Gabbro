@@ -302,4 +302,34 @@ theorem einzelRuf_korrekt (b : Belegung) (rh : Rahmen) (nArgs : Nat)
               exact hreg q hne1 hne2 hne3
         · rw [if_neg hok] at hs; cases hs
 
+/-- CALLER-FRAME CORRECTNESS under the joint validator: the admitted
+    setup carries every stack argument, the caller result word and
+    untouched callee-save slots (`pipeline_ruf_rahmen`, reused -- the
+    caller-visible consequence of the frame the callee runs beside).
+    Every premise is consumed through the reused theorem. -/
+theorem rufExecOk_rahmen (b : Belegung) (rh : Rahmen) (nArgs : Nat)
+    (benutztRot : Bool) (c : PipeCfg) (L : Layout D)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (m0 m1 m2 : Speicher) (vs : List Wort)
+    (e : Adresse) (v : Wort)
+    (hval : rufExecOk b rh nArgs benutztRot c L body bytes = true)
+    (hvs : vs.length = nArgs - 6)
+    (hret : sichereErgebnis m0 e v = some m1)
+    (hrde : lesbar8 m0 e = true)
+    (hwr : sichereListe m1 rh (b.spill + b.gerettet) vs = some m2)
+    (hrd : ∀ j, j < vs.length →
+      lesbar8 m1 (rh.schlitzAddr (b.spill + b.gerettet + j)) = true)
+    (hdis : ∀ j, j < vs.length →
+      Disjunkt (rh.schlitzAddr (b.spill + b.gerettet + j)) e) :
+    ladeListe m2 rh (b.spill + b.gerettet) vs.length = some vs ∧
+    ladeErgebnis m2 e = some v ∧
+    (∀ i, i < 6 → ladeWort m2 rh (b.gerettetIdx i) =
+      ladeWort m1 rh (b.gerettetIdx i)) ∧
+    benutztRot = false := by
+  have hruf : rufOk b rh nArgs benutztRot = true :=
+    (rufExecOk_teile b rh nArgs benutztRot c L _ _ hval).1
+  exact pipeline_ruf_rahmen b rh nArgs benutztRot m0 m1 m2 vs e v
+    hruf hvs hret hrde hwr hrd hdis
+
 end Gabbro.Grammatik.X86.PipelineCallsExec
