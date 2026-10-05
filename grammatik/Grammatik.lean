@@ -689,6 +689,7 @@ import Grammatik.X86.IntRotate
 import Grammatik.X86.IntBitScan
 import Grammatik.X86.HwKapsteinRun
 import Grammatik.X86.HwKapsteinTso
+import Grammatik.X86.HwKapsteinTsoIsaAddr
 import Grammatik.X86.HwWcOrdering
 import Grammatik.X86.ValidatorKapDecoder
 import Grammatik.X86.IntSignXchg
