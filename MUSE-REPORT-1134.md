@@ -1,10 +1,13 @@
 # MUSE-REPORT-1134: Exact review of candidate 1133
 
+CANDIDATE: 1133 d9e7092f7d288e9852b297363009a70c24d624fe
+
 Lane 1134, clone `/home/simon/Dokumente/gabbro-muse/a1134`, branch `muse/1134`
 (verified). OWN ONLY this report. No Lean code added by this lane.
 
-CANDIDATE: lane 1133, pinned HEAD `d9e7092f7d288e9852b297363009a70c24d624fe`
-(base `8744590d`), reviewed from the exact snapshot in
+The reviewed candidate is lane 1133, pinned HEAD
+`d9e7092f7d288e9852b297363009a70c24d624fe` (base `8744590d`), reviewed from
+the exact snapshot in
 `.tmp/review/author-1133/` (`SNAPSHOT.json`: files `MUSE-REPORT-1133.md`,
 `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/HwDevices.lean`,
 `clean: true`; `PATCH.diff` 1102 lines; `HwDevices.lean` 994 lines, read in
@@ -84,7 +87,9 @@ permissions, so the pinned snapshot is the review basis.
   601 jobs; review master `de94b21c`, 634 jobs): every relied-upon API is
   present and computes identically here.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1133 at `d9e7092f7d288e9852b297363009a70c24d624fe` is accepted for
 merge: exact lift of the accepted UC/port evaluators onto the coherent
