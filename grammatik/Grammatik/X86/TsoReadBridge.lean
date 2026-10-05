@@ -1244,6 +1244,19 @@ theorem rd_hTgt : write64 rdM9 witA (zahlWort rdZero) = some rdM9' := by
   simp only [write64, rdM9']
   rw [if_pos (by decide : schreibbar8 rdM9 witA = true)]
 
+/-- The drain observably changes the canonical byte at the slot. -/
+theorem rd_hBytes : rdM9.bytes witA ≠ rdM9'.bytes witA := by
+  have hByte : writeBytes rdM9 witA (zahlWort rdZero) witA =
+      wortByte (zahlWort rdZero) 0 := by
+    have h := writeBytesN_hit rdM9 witA (zahlWort rdZero) 8 0
+      (by decide) (by decide)
+    rw [addrOff_null] at h
+    unfold writeBytes
+    exact h
+  show rdM9bytes witA ≠ writeBytes rdM9 witA (zahlWort rdZero) witA
+  rw [hByte]
+  decide
+
 /-! ## 8. Witness machine and source-step facts. -/
 
 /-- Witness program over `rdD` (never consulted by the blatt step). -/
@@ -1314,18 +1327,183 @@ theorem rd_hLese : rdSL = rdSigma.lese [] (rdI.orte ++ rdE.orte) := rfl
 /-- The frame contract writes the written table. -/
 theorem rd_hWr : rdD.schreibt () false = true := rfl
 
-/-- The drain observably changes the canonical byte at the slot. -/
-theorem rd_hBytes : rdM9.bytes witA ≠ rdM9'.bytes witA := by
-  have hByte : writeBytes rdM9 witA (zahlWort rdZero) witA =
-      wortByte (zahlWort rdZero) 0 := by
-    have h := writeBytesN_hit rdM9 witA (zahlWort rdZero) 8 0
-      (by decide) (by decide)
-    rw [addrOff_null] at h
-    unfold writeBytes
-    exact h
-  show rdM9bytes witA ≠ writeBytes rdM9 witA (zahlWort rdZero) witA
-  rw [hByte]
+/-! ## 9. Witness read-side facts and the committed joint witness. -/
+
+/-- The read footprint is untouched by the write drain's buffer. -/
+theorem rd_hMiss : ∀ j : Nat, j < 8 →
+    neuestens (rdS2.puffer 0) (addrOff rdA2 j) = none := by
   decide
+
+/-- The read footprint is fully readable. -/
+theorem rd_hRdR : lesbar8 rdS2.mem rdA2 = true := by decide
+
+/-- The read slot is represented at the read footprint: it holds 0. -/
+theorem rd_hRepRead :
+    RepSlot true 0 () 0 100 rdHTR rdA2 rdS2.mem rdSigma := by
+  unfold RepSlot
+  decide
+
+/-- The canonical word at the read footprint is the zero word. -/
+theorem rd_hR64 : read64 rdS2.mem rdA2 = some (zahlWort rdZero) :=
+  rd_hRepRead
+
+/-- The committed group load at the read footprint is the zero word. -/
+theorem rd_hWort : ladeWort8 rdS2 0 rdA2 = some (zahlWort rdZero) :=
+  (ladeWort8_ohne_weiterleitung rdS2 0 rdA2 rd_hMiss rd_hRdR).trans rd_hR64
+
+/-- The source read slot holds the witness zero. -/
+theorem rd_hv2 : (cast (congrArg (Wert rdD) rdHTR)
+    (rdSigma.slots true 0 ())) = rdZero := rfl
+
+/-- The start W history carries the timestamp-0 read message. -/
+theorem rd_hMemR : (⟨0, rdSigma.speicher, Speichermodell.Sicht.null⟩ :
+    NachrichtW rdD) ∈ (RufStartW rdMachine).hist (.inl true) :=
+  List.mem_singleton_self _
+
+/-- The start view is covered by the read projection. -/
+theorem rd_hProjR : (RufStartW rdMachine).sicht 0 (.inl true) ≤
+    sichtVon rdS2 0 rdA2 :=
+  Nat.zero_le _
+
+/-- The read projection sits below timestamp 0: no pending entry at the
+    read base address. -/
+theorem rd_hTsR : sichtVon rdS2 0 rdA2 ≤ 0 := by decide
+
+/-- The presented memory agrees with itself at the read carrier. -/
+theorem rd_hTraegerR :
+    TraegerGleich rdSigma.speicher rdSigma.speicher (.inl true) :=
+  traegerGleich_refl _ _
+
+/-- The inherited history over the drain end. -/
+theorem rd_hErbt :
+    ErbtW (spurStart rdS11) (RufStartW rdMachine) 0 0 (Sum.inl false) witA :=
+  erbtW_start _ _ _ _ _ _
+
+/-- The drain-end start node satisfies the trace invariant. -/
+theorem rd_hInv : SpurInv (spurStart rdS11) := spurStart_inv _
+
+/-- The drain-end node stands over the drain-end state. -/
+theorem rd_hnode : (spurStart rdS11).tso = rdS11 := rfl
+
+/-! ## 10. Forwarded-witness state and reading W. -/
+
+/-- Forwarded-read TSO state: the nine-word memory, core 0 carries eight
+    pending zero bytes at the read footprint, all other buffers empty.
+    Every footprint byte forwards its (zero) value to core 0 only. -/
+def rdSF : TSOZustand :=
+  ⟨rdM9, fun d => if d = 0 then wortEintraege rdA2 (zahlWort rdZero) else []⟩
+
+/-- The forwarded bytes: all zero. -/
+def rdF8 : Fin 8 → Byte := fun _ => BitVec.ofNat 8 0
+
+/-- Every footprint byte loads its forwarded zero. -/
+theorem rd_hL8 : ∀ j : Fin 8,
+    loadByte rdSF 0 (addrOff rdA2 j.val) = some (rdF8 j) := by
+  decide
+
+/-- Every footprint byte has a pending own-buffer entry. -/
+theorem rd_hPend : ∀ j : Fin 8, ∃ w : Byte,
+    neuestens (rdSF.puffer 0) (addrOff rdA2 j.val) = some w := by
+  decide
+
+/-- The assembled forwarded word parses to the source read value. -/
+theorem rd_hWertFw : wortZahl 0 100 (bytesWort rdF8) =
+    some (cast (congrArg (Wert rdD) rdHTR)
+      (rdSigma.speicher.slots true 0 ())) := by
+  have hB : bytesWort rdF8 = zahlWort rdZero := by decide
+  rw [hB, zahlWort_wortZahl rdZero (by decide) (by decide)]
+  rfl
+
+/-- The message memory holds the witness zero at the read slot. -/
+theorem rd_hv2Fw : (cast (congrArg (Wert rdD) rdHTR)
+    (rdSigma.speicher.slots true 0 ())) = rdZero := rfl
+
+/-- Read and written carriers differ. -/
+theorem rd_hNe : (.inl true : rdD.Tab ⊕ rdD.Glob) ≠ .inl false := by
+  decide
+
+/-- The reading W: the G machine with a timestamp-0 message everywhere
+    and one timestamp-1 message at the read carrier (value: the witness
+    memory), view 1 at the read carrier, 0 elsewhere. This is the W shape
+    a lowering certificate must supply for a forwarded read: the value
+    link is explicit, never derived from the buffer here. -/
+def rdW1 : RufMaschineW rdD :=
+  ⟨rdMachine,
+    fun c => if c = .inl true then
+      [⟨0, rdSigma.speicher, Speichermodell.Sicht.null⟩,
+        ⟨1, rdSigma.speicher, Speichermodell.Sicht.null⟩]
+      else [⟨0, rdSigma.speicher, Speichermodell.Sicht.null⟩],
+    fun _ c => if c = .inl true then 1 else 0,
+    fun _ => Speichermodell.Sicht.null⟩
+
+/-- The timestamp-1 read message is in the reading history. -/
+theorem rd_hMemRFw : (⟨1, rdSigma.speicher, Speichermodell.Sicht.null⟩ :
+    NachrichtW rdD) ∈ rdW1.hist (.inl true) := by
+  simp [rdW1]
+
+/-- The reading view is covered by the forwarding projection. -/
+theorem rd_hProjRFw : rdW1.sicht 0 (.inl true) ≤ sichtVon rdSF 0 rdA2 := by
+  decide
+
+/-- The forwarding projection sits below timestamp 1. -/
+theorem rd_hTsRFw : sichtVon rdSF 0 rdA2 ≤ 1 := by decide
+
+/-- **JOINT WITNESS for `schrittW_aus_lesefragment_gruppe`.** Every
+    premise holds jointly on concrete values: the two-table declaration
+    with a table the witness function writes, a reached one-step run that
+    copies 0 over 9 (memory-changing on both sides: source slot `9 → 0`,
+    target bytes nine-word to zero-word), the growing eight-flush drain
+    at the slot address with a real foreign issue inside it, the committed
+    group read of the read slot at its actual value 0, and the inherited
+    history over the drain end -- and so do the `SchrittW` transition, the
+    write-side value agreement and representation, and the read-side value
+    agreement. On top: two distinct trace timestamps on a reached step,
+    the pending foreign byte outside the footprint, and the stale-view
+    divergence (core 0 canonically reads zero where core 1 forwards
+    seven -- the unflushed store is refused a global value).
+    Non-degenerate: a written table, a memory-changing source step and a
+    memory-changing target drain. -/
+theorem schrittW_aus_lesefragment_gruppe_zeuge :
+    ∃ (σ' : World rdD) (ρ' : Env rdD []),
+      execStmt rdO 0 rdR
+        (Stmt.assignSlot (l := true) false () rdI rdE rdHwW rdHLW)
+        rdSigma Env.nil = .ok σ' ρ' ∧
+      (rdSigma.slots false 0 ()).n = 9 ∧ (σ'.slots false 0 ()).n = 0 ∧
+      rdM9.bytes witA ≠ rdM9'.bytes witA ∧
+      rdD.schreibt () false = true ∧
+      ErbtW (spurStart rdS11) (RufStartW rdMachine) 0 0 (Sum.inl false) witA ∧
+      SpurInv (spurStart rdS11) ∧
+      rdS4.puffer 1 = [⟨ctF, ctFv⟩] ∧ ctF ∉ Fuss witA ∧
+      loadByte rdS4 0 ctF = some (BitVec.ofNat 8 0) ∧
+      loadByte rdS4 1 ctF = some ctFv ∧
+      (∃ (W' : RufMaschineW rdD) (σm : Gabbro.Grammatik.Speicher rdD)
+        (M'' : RufMaschineG rdD)
+        (wahl : rdD.Tab ⊕ rdD.Glob → NachrichtW rdD)
+        (neu : rdD.Tab ⊕ rdD.Glob → Nat),
+        SchrittW rdProg rdO 0 (fun g => nomatch g) (RufStartW rdMachine) 0 W'
+          σm M'' wahl neu ∧
+        (∃ w, read64 (spurStart rdS11).tso.mem witA = some w ∧
+          wortZahl 0 100 w = some rdZero) ∧
+        RepSlot false 0 () 0 100 rdHTW witA rdM9' σ' ∧
+        wortZahl 0 100 (zahlWort rdZero) = some rdZero) := by
+  obtain ⟨σ', ρ', hExec⟩ := rd_hExecFull
+  have hAfter : (σ'.slots false 0 ()).n = 0 := by
+    cases hExec
+    rfl
+  have hMain := schrittW_aus_lesefragment_gruppe rdProg rdO 0
+    (fun g => nomatch g) false () 0 100 rdHTW 4096 16 0 rd_hOk rdI rdE
+    rdMachine 0 rdSigma Env.nil rdHwW rdHLW rdS rdRest rfl rd_hhead rdSL
+    rd_hLese 0 rdZero rd_hk rd_hv true () 0 100 rdHTR 0 rdOrte witA rdM9
+    rdM9' σ' ρ' hExec rd_hTgt rd_hRd (by decide) (by decide) rd_hwelt rd_hΛ
+    (RufStartW rdMachine) rd_hWg 0 (spurStart rdS11) rd_hErbt rd_hInv rdS11
+    rd_hnode rdS2 [rdS2, rdS3, rdS4, rdS5, rdS6, rdS7, rdS8, rdS9, rdS10, rdS11]
+    rd_hgrp rd_hles rd_spur rd_hend rd_hempty rd_hstoer rdA2 rdZero rd_hRepRead
+    rd_hMiss rd_hRdR (by decide) (by decide) (zahlWort rdZero) rd_hWort rd_hv2 0
+    rd_hMemR rd_hProjR rd_hTsR rd_hTraegerR
+  obtain ⟨W', σm, M'', wahl, neu, hSW, hValW, hRepW, hReadV⟩ := hMain
+  exact ⟨σ', ρ', hExec, rd_hBefore, hAfter, rd_hBytes, rd_hWr, rd_hErbt,
+    rd_hInv, rdBuf1_4, ctFfresh, rd_stale0, rd_stale1,
+    W', σm, M'', wahl, neu, hSW, hValW, hRepW, hReadV⟩
 
 /- CUTS:
     - Proved here (§§1-5): read-case preservation (`hwLade_erhaelt_wf`),
