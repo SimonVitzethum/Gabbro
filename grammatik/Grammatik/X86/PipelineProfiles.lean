@@ -32,6 +32,7 @@ import Grammatik.X86.TableLayout
 namespace Gabbro.Grammatik.X86.PipelineProfiles
 
 open Gabbro.Grammatik.X86
+open Gabbro.Grammatik.X86.Pipeline
 open Gabbro.Grammatik.X86.PipelineEntry
 
 /-- The two checked OS profiles: hosted (`main` under a C runtime) and
@@ -264,7 +265,192 @@ theorem profil_verweigert_ohne_mxcsr (w : ZielProfil) (bild : Bild)
   rw [stuetz_verweigert_ohne_mxcsr _ _ _ _ _ _ _ hmx]
   simp
 
+/-! ## 3. The checked entry sequence
+
+    The pipeline's variable registers are ESTABLISHED, never assumed:
+    the entry sequence copies the profile ABI registers into them. This
+    is the accepted `PipelineEntry.prolog` at the profile ABI, with its
+    decided check and its run. -/
+
+/-- The entry sequence of one OS profile for `n` parameters. -/
+def profilProlog (c : PipeCfg) (w : ZielProfil) (n : Nat) : List Befehl :=
+  prolog c (profilAbi w) n
+
+/-- The entry sequence is straight-line code. -/
+theorem profilProlog_gerade (c : PipeCfg) (w : ZielProfil) (n : Nat) :
+    (profilProlog c w n).all gerade = true :=
+  prolog_gerade c (profilAbi w) n
+
+/-- THE ENTRY SEQUENCE RUNS: the copies execute one after the other,
+    keep memory, set every destination to its source's ENTRY value, and
+    keep every register that is no destination. -/
+theorem profilProlog_lauf (c : PipeCfg) (w : ZielProfil) (n : Nat)
+    (s : Zustand)
+    (h : (prologPaare c (profilAbi w) n).Pairwise ZugOk) :
+    ∃ s', lauf (((prologPaare c (profilAbi w) n).map fun q =>
+      Befehl.movReg64 q.1 q.2).map kanon) s = some s' ∧
+      s'.speicher = s.speicher ∧
+      (∀ q ∈ prologPaare c (profilAbi w) n,
+        s'.register q.1 = s.register q.2) ∧
+      (∀ r, (∀ q ∈ prologPaare c (profilAbi w) n, r ≠ q.1) →
+        s'.register r = s.register r) :=
+  zuege_lauf _ s h
+
+/-! ## 4. The profile closing
+
+    Generic over arbitrary admitted inputs: a profile admission carries
+    the accepted joint entry admission, both hooks, the unchanged status
+    handoff, the executable RIP through the CHECKED loaded mapping, the
+    readable/writable entry stack window, and every support half (image
+    bytes with decode coverage, gate, arena layout, stub bindings, trap
+    suffix, float control word). Composes the accepted producer lemmas
+    by name; no producer fact is re-proved here. -/
+
+/-- PROFILE CLOSING over arbitrary admitted inputs. -/
+theorem pipeline_profil_verbindung (w : ZielProfil) (bild : Bild)
+    (bias : Nat) (z : EintrittZustand) (tor : TorDekl)
+    (moves : List Befehl) (es : List TabLayout) (h : NolibcHaken)
+    (code rueck : Nat)
+    (hadm : profilOk w bild bias z tor moves es h code rueck = true) :
+    eintrittZulassung .p48 bild bias (profilEintritt w) z [tor] = true ∧
+      hakenOk h = true ∧ rueck = code ∧
+      (geladen bild bias).ausfuehrbar z.zustand.rip = true ∧
+      lesbar8 z.zustand.speicher
+        (eintrittRsp z - BitVec.ofNat 64 8) = true ∧
+      schreibbar8 z.zustand.speicher
+        (eintrittRsp z - BitVec.ofNat 64 8) = true ∧
+      valX86 .p48 bild = true ∧ torOkB tor = true ∧
+      valLayout es = true ∧
+      bindungErstelltB tor moves = true ∧
+      stubEndsTrapB (moves.flatMap encode ++ trapBytes) = true ∧
+      mxcsrGueltig z.mxcsr = true := by
+  obtain ⟨hh, _⟩ :=
+    profilOk_teile w bild bias z tor moves es h code rueck hadm
+  obtain ⟨hzul, hhok, hst, hrip, hrw1, hrw2⟩ :=
+    ComposeEntryHooks_verbindung _ _ _ _ _ _ _ _ _ hh
+  obtain ⟨_, _, _, hA, hB, hC, hD, hE, hG⟩ :=
+    profilOk_folgen w bild bias z tor moves es h code rueck hadm
+  exact ⟨hzul, hhok, hst, hrip, hrw1, hrw2, hA, hB, hC, hD, hE, hG⟩
+
+/-! ## 5. Joint witnesses and poison probes
+
+    Both profiles are admitted on the minimal image with both hooks and
+    the unchanged zero status, next to a fetched `ret` and its executed
+    step, a real memory-changing write/read, a table some function
+    writes, and a planted refusal for every missing leg. -/
+
+/-- ACCEPTANCE (hosted): the hosted profile is admitted on the minimal
+    image with both hooks and the unchanged zero status. -/
+theorem profil_gehostet_ok :
+    profilOk .gehostet valZeuge 0 zeugenEintrittAusf schreibTor zeugenMoves
+      (layoutFuer zeugenU 4096 8) zeugenHaken 0 0 = true := by
+  decide
+
+/-- ACCEPTANCE (freestanding): the freestanding profile is admitted
+    on the minimal image with both hooks and the unchanged zero
+    status. -/
+theorem profil_frei_ok :
+    profilOk .frei valZeuge 0 zeugenEintrittAusf schreibTor zeugenMoves
+      (layoutFuer zeugenU 4096 8) zeugenHaken 0 0 = true := by
+  decide
+
+/-- JOINT WITNESS for `pipeline_profil_verbindung`: both profiles
+    admitted jointly on the minimal image (both hooks, unchanged zero
+    status), with the fetched `ret` and its executed step (a reached run
+    from checked bytes), a real memory-changing write/read, a table some
+    function writes, and planted refusals for every missing leg. -/
+theorem pipeline_profil_verbindung_zeuge :
+    profilOk .gehostet valZeuge 0 zeugenEintrittAusf schreibTor
+      zeugenMoves (layoutFuer zeugenU 4096 8) zeugenHaken 0 0 = true ∧
+    profilOk .frei valZeuge 0 zeugenEintrittAusf schreibTor zeugenMoves
+      (layoutFuer zeugenU 4096 8) zeugenHaken 0 0 = true ∧
+    fetchDekodiert zeugenEintrittAusf.zustand = some (⟨.ret, 1⟩, []) ∧
+    ausgangRip (byteschritt zeugenEintrittAusf.zustand) =
+      some (BitVec.ofNat 64 0) ∧
+    (∃ (m m' : Speicher) (a : Adresse) (v : Wort),
+      v ≠ 0 ∧ write64 m a v = some m' ∧ read64 m' a = some v ∧
+        m.bytes a ≠ m'.bytes a) ∧
+    (zeugenU.fns.get ⟨0, by decide⟩).schreibt = ["konto"] ∧
+    profilOk .gehostet valZeuge 0 zeugenEintrittAusf schreibTor
+      zeugenMoves (layoutFuer zeugenU 4096 8)
+      { anfang := false, ende := true } 0 0 = false ∧
+    profilOk .frei valZeuge 0 zeugenEintrittAusf schreibTor zeugenMoves
+      (layoutFuer zeugenU 4096 8) zeugenHaken 0 1 = false ∧
+    profilOk .gehostet valWx 0 zeugenEintrittAusf schreibTor zeugenMoves
+      (layoutFuer zeugenU 4096 8) zeugenHaken 0 0 = false ∧
+    profilOk .frei valZeuge 0 zeugenEintrittAusf torAusClobber
+      zeugenMoves (layoutFuer zeugenU 4096 8) zeugenHaken 0 0
+      = false := by
+  refine ⟨profil_gehostet_ok, profil_frei_ok, zulassung_fetch_ret,
+    zulassung_schritt_ret, schreibLese_zeuge, zeugenU_schreibt, ?_, ?_,
+    ?_, ?_⟩
+  · exact profil_verweigert_ohne_anfang _ _ _ _ _ _ _ _ _ _ rfl
+  · exact profil_verweigert_status _ _ _ _ _ _ _ _ _ _ (by decide)
+  · exact profil_verweigert_ohne_bild _ _ _ _ _ _ _ _ _ _ valWx_verweigert
+  · have href : torOkB torAusClobber = false := by decide
+    exact profil_verweigert_tor _ _ _ _ _ _ _ _ _ _ href
+
+/- CUTS: what is not proved here.
+   Proved here, by composing the accepted producer modules (no producer
+   fact re-proved, no second loader/decoder/executor/ISA/IR): the two
+   checked OS profiles (`ZielProfil`: hosted `main` vs freestanding
+   `nolibc` entry), each with its entry kind (`profilEintritt`), its
+   stated integer parameter ABI (`profilAbi`, System V order as data),
+   its checked entry sequence (`profilProlog`, with its run), and the
+   one checked admission `profilOk` (hooked entry AND support); its
+   split and projections, the executable RIP through the CHECKED loaded
+   mapping, the entry stack window, the fetched-first-instruction step,
+   the support coverage step (loaded-memory execution, no fetch means
+   no transition), one refusal per missing leg (hooks, status, RIP,
+   gate, image, float word), the generic closing
+   (`pipeline_profil_verbindung` over arbitrary admitted inputs), and
+   one joint witness with a reached memory-changing run plus planted
+   refusals.
+   NOT proved here, and not claimed:
+   - No source correspondence: nothing here claims the admitted bytes
+     are the emitted form of any source program. The lowering closure
+     waits on the shared IR (lane 287, pending); no substitute is
+     invented here.
+   - No hardware correspondence: fetch runs over the model `Speicher`
+     function, not silicon; caches, TLBs, store buffers, interrupts,
+     faults beyond the decoded refusal, and timing are OPEN.
+   - No TSO/W/GX bridge: per-access refinement of profile bytes stays
+     with the bridge lanes; the source `schwach_ist_gX` leg is reused,
+     never assumed for the target.
+   - No budget/cost transfer, no multi-step control-flow validation, no
+     relocation patched-site re-decoding, no kernel behaviour beyond
+     the named assumption. Environment services (gates, bindings, the
+     loader, the kernel) stay user logic; only hardware behaviour is
+     assumed. No implicit Linux/POSIX/libc/ELF anywhere.
+   - `verweigert` is the absence of a transition, never a termination
+     claim.
+-/
+
 #print axioms profilEintritt
 #print axioms profilAbi
+#print axioms profilOk
+#print axioms profilOk_teile
+#print axioms profilOk_eintrittZulassung
+#print axioms profilOk_eintritt
+#print axioms profilOk_haken
+#print axioms profilOk_status
+#print axioms profilOk_folgen
+#print axioms profilOk_erster_schritt
+#print axioms profilOk_stuetz_schritt
+#print axioms profilOk_stuetz_verweigert
+#print axioms profil_verweigert_ohne_anfang
+#print axioms profil_verweigert_ohne_ende
+#print axioms profil_verweigert_status
+#print axioms profil_verweigert_unlisted
+#print axioms profil_verweigert_tor
+#print axioms profil_verweigert_ohne_bild
+#print axioms profil_verweigert_ohne_mxcsr
+#print axioms profilProlog
+#print axioms profilProlog_gerade
+#print axioms profilProlog_lauf
+#print axioms pipeline_profil_verbindung
+#print axioms profil_gehostet_ok
+#print axioms profil_frei_ok
+#print axioms pipeline_profil_verbindung_zeuge
 
 end Gabbro.Grammatik.X86.PipelineProfiles
