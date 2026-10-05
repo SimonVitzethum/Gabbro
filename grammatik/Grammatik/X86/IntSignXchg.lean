@@ -28,6 +28,7 @@ import Grammatik.X86.Gleitprofil
 import Grammatik.X86.ScalarFloat
 import Grammatik.X86.HardwareExecution
 import Grammatik.X86.HwMulDivWidth
+import Grammatik.X86.XchgOrderNeed
 
 namespace Gabbro.Grammatik.X86
 
@@ -61,7 +62,7 @@ structure SxDecodiert where
     `cbwSchritt` sign-extends AL into AX and merges it (upper RAX
     bits kept, per the 16-bit write discipline of `mergeRegNarrow`).
     `cwdSchritt` broadcasts the sign of AX into DX the same way the
-    accepted `vor99Schritt` broadcasts at 32/64 bits. `xchgSeite`
+    accepted `vor99Schritt` broadcasts at 32/64 bits. `sxXchgSeite`
     states one side of an exchange at an explicit width (8/16-bit
     merge, 32-bit zero-extends, 64-bit whole); both sides read the
     OLD values, so a same-register 87-form exchange keeps the
@@ -88,7 +89,7 @@ def cwdSchritt (s : Zustand) : Zustand :=
 
 /-- One side of a width exchange: what a register holding `old`
     shows after exchanging with `other` at width `b`. -/
-def xchgSeite (b : Breite) (old other : Wort) : Wort :=
+def sxXchgSeite (b : Breite) (old other : Wort) : Wort :=
   match b with
   | .b8 => mergeRegNarrow .b8 old other
   | .b16 => mergeRegNarrow .b16 old other
@@ -97,11 +98,11 @@ def xchgSeite (b : Breite) (old other : Wort) : Wort :=
 
 /-- Exchange shape: both sides read the OLD values, then RIP
     advances at the caller. -/
-def xchgSchritt (b : Breite) (a c : Register) (s : Zustand) : Zustand :=
+def sxXchgSchritt (b : Breite) (a c : Register) (s : Zustand) : Zustand :=
   let va := s.register a
   let vc := s.register c
-  let r1 := regSet s.register a (xchgSeite b va vc)
-  let r2 := regSet r1 c (xchgSeite b vc va)
+  let r1 := regSet s.register a (sxXchgSeite b va vc)
+  let r2 := regSet r1 c (sxXchgSeite b vc va)
   { s with register := r2 }
 
 /-- MOVSXD shape: the destination takes the full sign-extension of
@@ -126,10 +127,10 @@ def sxSchritt (d : SxDecodiert) (s : Zustand) : MulDivErgebnis :=
     | .cdq => wdSchritt ⟨.vor99 .w32, d.laenge⟩ s
     | .cqo => wdSchritt ⟨.vor99 .w64, d.laenge⟩ s
     | .nop => .ok { s with rip := nach }
-    | .xchgReg b a c => .ok { (xchgSchritt b a c s) with rip := nach }
-    | .xchgRax16 r => .ok { (xchgSchritt .b16 Register.rax r s) with rip := nach }
-    | .xchgRax32 r => .ok { (xchgSchritt .b32 Register.rax r s) with rip := nach }
-    | .xchgRax64 r => .ok { (xchgSchritt .b64 Register.rax r s) with rip := nach }
+    | .xchgReg b a c => .ok { (sxXchgSchritt b a c s) with rip := nach }
+    | .xchgRax16 r => .ok { (sxXchgSchritt .b16 Register.rax r s) with rip := nach }
+    | .xchgRax32 r => .ok { (sxXchgSchritt .b32 Register.rax r s) with rip := nach }
+    | .xchgRax64 r => .ok { (sxXchgSchritt .b64 Register.rax r s) with rip := nach }
     | .movsxd dst src => .ok { (movsxdSchritt dst src s) with rip := nach }
 
 /-! ## 2. The old evaluator is lifted, never redefined.
@@ -164,27 +165,57 @@ theorem sx_cqo_ist_vor99 (l : Nat) (s : Zustand) :
     and no fresh arm touches memory. -/
 
 /-- The exchange shape as nested register updates (old values). -/
-theorem xchgSchritt_eq (b : Breite) (a c : Register) (s : Zustand) :
-    (xchgSchritt b a c s).register =
-      regSet (regSet s.register a (xchgSeite b (s.register a) (s.register c))) c
-        (xchgSeite b (s.register c) (s.register a)) := by
+theorem sxXchgSchritt_eq (b : Breite) (a c : Register) (s : Zustand) :
+    (sxXchgSchritt b a c s).register =
+      regSet (regSet s.register a (sxXchgSeite b (s.register a) (s.register c))) c
+        (sxXchgSeite b (s.register c) (s.register a)) := by
   rfl
 
 /-- Read-back at the first side (distinct registers). -/
-theorem xchgSchritt_bei_a_neq (b : Breite) (a c : Register) (s : Zustand)
+theorem sxXchgSchritt_bei_a_neq (b : Breite) (a c : Register) (s : Zustand)
     (hne : a ≠ c) :
-    (xchgSchritt b a c s).register a =
-      xchgSeite b (s.register a) (s.register c) := by
-  rw [xchgSchritt_eq]
+    (sxXchgSchritt b a c s).register a =
+      sxXchgSeite b (s.register a) (s.register c) := by
+  rw [sxXchgSchritt_eq]
   rw [regSet_fremd _ c a _ hne]
   exact regSet_gleich _ _ _
 
 /-- Read-back at the second side (no side condition). -/
-theorem xchgSchritt_bei_c (b : Breite) (a c : Register) (s : Zustand) :
-    (xchgSchritt b a c s).register c =
-      xchgSeite b (s.register c) (s.register a) := by
-  rw [xchgSchritt_eq]
+theorem sxXchgSchritt_bei_c (b : Breite) (a c : Register) (s : Zustand) :
+    (sxXchgSchritt b a c s).register c =
+      sxXchgSeite b (s.register c) (s.register a) := by
+  rw [sxXchgSchritt_eq]
   exact regSet_gleich _ _ _
+
+/-! ## 3b. The accepted 64-bit register swap is lifted, not redone.
+
+    `XchgOrderNeed` (lane 779) already models the 64-bit register
+    exchange (`XchgForm.reg`, pure swap, no barrier) with its byte
+    codec over `REX.W + 87 /r`. The 64-bit arm here IS that swap:
+    both sides read the old values. The shared bytes below decode
+    in both decoders (field naming differs, the swap agrees); the
+    memory form, the barrier and the `90`-alias refusal stay solely
+    with the accepted file. -/
+
+/-- Shared bytes: the accepted decoder reads the 64-bit exchange
+    of the same two registers (field naming differs, the swap is
+    the same one). -/
+theorem pin_xchgAkzeptiert_dekode :
+    decodeXchg [natByte 72, natByte 135, natByte 193] =
+      some ((XchgForm.reg .rcx .rax), []) := by
+  decide
+
+/-- The 64-bit register exchange IS the accepted register swap. -/
+theorem sxXchg64_ist_reg (a c : Register) (s : Zustand)
+    (t : TSOZustand) (n : Nat) (q : Register) :
+    (sxXchgSchritt .b64 a c s).register q =
+      match xchgSchritt (XchgForm.reg a c) n
+        ⟨s.register, s.flags, t⟩ with
+      | some s' => s'.reg q
+      | none => s.register q := by
+  rw [sxXchgSchritt_eq]
+  unfold xchgSchritt
+  simp [sxXchgSeite]
 
 /-- CBW keeps the flags. -/
 theorem cbwSchritt_flags (s : Zustand) : (cbwSchritt s).flags = s.flags := rfl
@@ -199,12 +230,12 @@ theorem cwdSchritt_flags (s : Zustand) : (cwdSchritt s).flags = s.flags := rfl
 theorem cwdSchritt_memory (s : Zustand) : (cwdSchritt s).speicher = s.speicher := rfl
 
 /-- Exchanges keep the flags. -/
-theorem xchgSchritt_flags (b : Breite) (a c : Register) (s : Zustand) :
-    (xchgSchritt b a c s).flags = s.flags := rfl
+theorem sxXchgSchritt_flags (b : Breite) (a c : Register) (s : Zustand) :
+    (sxXchgSchritt b a c s).flags = s.flags := rfl
 
 /-- Exchanges keep the memory. -/
-theorem xchgSchritt_memory (b : Breite) (a c : Register) (s : Zustand) :
-    (xchgSchritt b a c s).speicher = s.speicher := rfl
+theorem sxXchgSchritt_memory (b : Breite) (a c : Register) (s : Zustand) :
+    (sxXchgSchritt b a c s).speicher = s.speicher := rfl
 
 /-- MOVSXD keeps the flags. -/
 theorem movsxdSchritt_flags (dst src : Register) (s : Zustand) :
@@ -226,13 +257,13 @@ theorem probe_cwd_merge :
   decide
 
 /-- Pinned 32-bit exchange side: zero-extends the other word. -/
-theorem probe_xchgSeite_32 :
-    xchgSeite .b32 0xFFFFFFFFFFFFFFFF 0x11223344 = 0x11223344 := by
+theorem probe_sxXchgSeite_32 :
+    sxXchgSeite .b32 0xFFFFFFFFFFFFFFFF 0x11223344 = 0x11223344 := by
   decide
 
 /-- Pinned 8-bit exchange side: merges the low byte, keeps upper. -/
-theorem probe_xchgSeite_8 :
-    xchgSeite .b8 0xABCDEF1234567890 0x11 = 0xABCDEF1234567811 := by
+theorem probe_sxXchgSeite_8 :
+    sxXchgSeite .b8 0xABCDEF1234567890 0x11 = 0xABCDEF1234567811 := by
   decide
 
 /-- Pinned MOVSXD: `-1` as doubleword extends to all ones. -/
@@ -1342,12 +1373,249 @@ theorem sxHwRegSchritt_weiter_wf (m : HwMaschine) (c : Nat)
     simp only at h
     cases h
 
+/-! ## 15. Joint witness: two cores, family steps, buffered store.
+
+    Core 0 sign-extends `AL = 0xFF` into `AX` (CBW); core 1
+    exchanges `EAX` with `ECX` at 32 bits and extends `EAX` into
+    `RDX` (MOVSXD); afterwards core 0 issues a buffered byte store
+    that only the owner observes by forwarding, and the drain
+    changes actual shared memory from 0 to 42. A bad length refuses
+    and LOCK stays refused beside the run. Every claim projects to
+    plain values before `decide` (machines contain functions). -/
+
+/-- Witness registers core 0: AL holds `0xFF` (-1) for CBW. -/
+def sxHwWitReg0 : Register → Wort := fun q =>
+  if q = Register.rax then 0xFF
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness registers core 1: full RAX and a doubleword RCX for
+    the 32-bit exchange and the MOVSXD source. -/
+def sxHwWitReg1 : Register → Wort := fun q =>
+  if q = Register.rax then 0x1122334455667788
+  else if q = Register.rcx then 0xAABBCCDD
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness cores: core 0 extends, core 1 exchanges. -/
+def sxHwWitKern : Nat → HwKern
+  | 0 => ⟨sxHwWitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨sxHwWitReg1, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon. -/
+def sxHwWitStart : HwMaschine :=
+  ⟨zeugenSpeicher, sxHwWitKern, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem sxHwWitStart_wf : HwWf sxHwWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Core 0 extends `AL = 0xFF` through the machine outcome. -/
+def sxHwOutCbw : HwRegAusgang :=
+  sxHwRegSchritt sxHwWitStart 0 ⟨.cbw, 2⟩
+
+/-- Core 1 exchanges `EAX` with `ECX` through the machine outcome. -/
+def sxHwOutXchg : HwRegAusgang :=
+  sxHwRegSchritt sxHwWitStart 1 ⟨.xchgReg .b32 .rax .rcx, 2⟩
+
+/-- Core 1 extends `EAX` into `RDX` through the machine outcome. -/
+def sxHwOutMovsxd : HwRegAusgang :=
+  sxHwRegSchritt sxHwWitStart 1 ⟨.movsxd .rdx .rax, 3⟩
+
+/-- Read a core register out of a machine outcome. -/
+def sxHwRegOut (o : HwRegAusgang) (c : Nat) (q : Register) :
+    Option Wort :=
+  match o with
+  | .weiter m => some ((m.kerne c).register q)
+  | _ => none
+
+/-- Core 0 CBW: AX holds `0xFFFF`, RAX upper kept zero. -/
+theorem sxHw_cbw_rax :
+    sxHwRegOut sxHwOutCbw 0 Register.rax = some 0xFFFF := by
+  decide
+
+/-- Core 1 exchange: EAX holds the zero-extended ECX. -/
+theorem sxHw_xchg_rax :
+    sxHwRegOut sxHwOutXchg 1 Register.rax = some 0xAABBCCDD := by
+  decide
+
+/-- Core 1 exchange: ECX holds the zero-extended old EAX. -/
+theorem sxHw_xchg_rcx :
+    sxHwRegOut sxHwOutXchg 1 Register.rcx = some 0x55667788 := by
+  decide
+
+/-- Core 1 MOVSXD: RDX holds the positive doubleword unchanged. -/
+theorem sxHw_movsxd_rdx :
+    sxHwRegOut sxHwOutMovsxd 1 Register.rdx = some 0x55667788 := by
+  decide
+
+/-- Witness data address. -/
+def sxHwWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness TSO start: canonical memory, empty buffers. -/
+def sxHwWitTso0 : TSOZustand := ⟨zeugenSpeicher, fun _ => []⟩
+
+/-- Core 0 issues byte 42 at the data cell. -/
+def sxHwWitTso1 : Option TSOZustand :=
+  issueByte sxHwWitTso0 0 sxHwWitAdr (BitVec.ofNat 8 42)
+
+/-- Core 0 observes its own byte (forwarding). -/
+def sxHwWitEigen : Option (Option Byte) :=
+  match sxHwWitTso1 with
+  | some s => some (loadByte s 0 sxHwWitAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def sxHwWitFremd : Option (Option Byte) :=
+  match sxHwWitTso1 with
+  | some s => some (loadByte s 1 sxHwWitAdr)
+  | none => none
+
+/-- Core 0 drains its oldest entry. -/
+def sxHwWitTso2 : Option TSOZustand :=
+  match sxHwWitTso1 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def sxHwWitNachFlush : Option (Option Byte) :=
+  match sxHwWitTso2 with
+  | some s => some (some (s.mem.bytes sxHwWitAdr))
+  | none => none
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def sxHwWitFremdNach : Option (Option Byte) :=
+  match sxHwWitTso2 with
+  | some s => some (loadByte s 1 sxHwWitAdr)
+  | none => none
+
+/-- The data cell starts zeroed. -/
+theorem sxHw_anfang_null :
+    zeugenSpeicher.bytes sxHwWitAdr = BitVec.ofNat 8 0 := by
+  rfl
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem sxHw_weiterleitung :
+    sxHwWitEigen = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem sxHw_fremd_alt :
+    sxHwWitFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 42. -/
+theorem sxHw_spuelung_aendert_speicher :
+    sxHwWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem sxHw_fremd_neu :
+    sxHwWitFremdNach = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- A bad decode length refuses the machine step. -/
+theorem sxHw_schlechte_laenge_verweigert :
+    sxHwRegSchritt sxHwWitStart 0 ⟨.cbw, 0⟩ = .verweigert := by
+  have hstep := sx_laenge_misslungen ⟨.cbw, 0⟩
+    (projZustand sxHwWitStart 0) (by decide)
+  exact sxHwRegSchritt_verweigert _ _ _ hstep
+
+/-- The joint witness: a reached two-core family run (CBW on core
+    0, exchange and MOVSXD on core 1) beside a buffered store that
+    only the owner forwards and a drain that changes actual shared
+    memory from 0 to 42 -- with the refusal and decode refusals
+    beside it. Non-degenerate: the drain changes actual shared
+    memory. -/
+theorem sxHw_zeuge :
+    sxHwRegOut sxHwOutCbw 0 Register.rax = some 0xFFFF ∧
+      sxHwRegOut sxHwOutXchg 1 Register.rax = some 0xAABBCCDD ∧
+      sxHwRegOut sxHwOutXchg 1 Register.rcx = some 0x55667788 ∧
+      sxHwRegOut sxHwOutMovsxd 1 Register.rdx = some 0x55667788 ∧
+      sxHwWitEigen = some (some (BitVec.ofNat 8 42)) ∧
+      sxHwWitFremd = some (some (BitVec.ofNat 8 0)) ∧
+      sxHwWitNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+      sxHwWitFremdNach = some (some (BitVec.ofNat 8 42)) ∧
+      zeugenSpeicher.bytes sxHwWitAdr = BitVec.ofNat 8 0 ∧
+      HwWf sxHwWitStart ∧
+      sxHwRegSchritt sxHwWitStart 0 ⟨.cbw, 0⟩ = .verweigert ∧
+      decodeSignXchg [natByte 240, natByte 144] = none := by
+  refine ⟨sxHw_cbw_rax, sxHw_xchg_rax, sxHw_xchg_rcx,
+    sxHw_movsxd_rdx, sxHw_weiterleitung, sxHw_fremd_alt,
+    sxHw_spuelung_aendert_speicher, sxHw_fremd_neu, sxHw_anfang_null,
+    sxHwWitStart_wf, sxHw_schlechte_laenge_verweigert,
+    sxHw_nichts_lock90⟩
+
 /- CUTS:
-   Skeleton only: event vocabulary without semantics.
-   NOT proved here, and not claimed: everything (see task).
+   Proved here: the sign-extend-accumulator family (CBW/CWDE/CDQE,
+   CWD/CDQ/CQO), the register XCHG forms (`86`/`87` ModRM-reg and
+   `90+r`, with bare `90` exactly the architectural NOP) and the
+   register MOVSXD, connected to the coherent machine and the
+   unified byte dispatcher -- the dispatcher prefers the accepted
+   unified chain (16 rows proved refused, overlapping rows keep
+   their unified arm), one unified step selects the evaluators
+   exactly, the 32/64-bit preparations ARE the accepted
+   `vor98Schritt`/`vor99Schritt` arms (lifted, never redefined),
+   the 64-bit register exchange IS the accepted `XchgForm.reg`
+   swap of `XchgOrderNeed` (lifted, never a second swap; shared
+   bytes pinned in both decoders), every successful step keeps
+   flags and memory, no step halts,
+   the `HwAdapter SxDecodiert` plug preserves `HwWf` with exact
+   agreement and planted refusals, the machine outcome reuses the
+   accepted `HwRegAusgang`, and a reached two-core run with
+   owner-only forwarding and a memory-changing drain stands beside
+   refusal evidence.
+   NOT proved here, and not claimed:
+   - No hardware correspondence: encodings are self-consistent
+     canonical subsets checked against the SDM opcodes cited in
+     the accepted `MulDivWidthHardwareForms` file (preparations
+     `98`/`99`) and the standard `90+r`/`86`/`87`/`63` rows, not
+     x86 truth. Silicon assumptions named: CBW merges into AX
+     (upper RAX kept), CWDE zero-extends EAX into RAX, CDQE takes
+     the full sign-extension, CWD broadcasts the AX sign into DX
+     (upper RDX kept), CDQ/CQO broadcast into the full register,
+     32-bit exchanges zero-extend both sides, bare `90` changes
+     nothing but RIP, XCHG-mem is implicitly LOCKed, MOVSXD needs
+     REX.W in 64-bit mode, REX.R names no field on `90+r` (it is
+     ignored), `66`+REX.W refuses as overdetermined.
+   - Deliberate over-refusals (documented, never silent
+     mis-execution): non-`0x48` REX on `98`/`99`, `66`+REX on
+     `98`/`99`/`87`, REX without W on `87` outside `66`, REX.X
+     anywhere here, MOVSXD without REX.W or with `66`.
+   - No memory-operand forms: XCHG-mem stays with the locked
+     families (the accepted `XchgForm.mem` barrier is neither
+     redefined nor rewired here); MOVSXD-mem needs the TSO read
+     path (still open).
+   - No 8-bit `90+r` form exists (unencodable by construction:
+     three RAX-exchange constructors, not one width-indexed).
+   - No source/IR/ABI/loader/entry/budget link, no per-access
+     target-to-W/GX simulation, no whole-word atomicity beyond
+     byte drains, no timing/power behaviour.
 -/
 
 #print axioms SxBefehl
 #print axioms SxDecodiert
+#print axioms decodeSx
+#print axioms sxEncode
+#print axioms sxSchritt
+#print axioms sx_cwde_ist_vor98
+#print axioms sxSchritt_flags
+#print axioms sxSchritt_memory
+#print axioms sxSchritt_kein_halt
+#print axioms decodeSignXchg
+#print axioms sxHwSchritt
+#print axioms adapterSignXchg
+#print axioms adapterSignXchg_wf
+#print axioms adapterSignXchg_ok
+#print axioms sxHwRegSchritt_weiter
+#print axioms sxHwWitStart_wf
+#print axioms sxTabelle_verweigert
+#print axioms sxRoundtrip_movsxd
+#print axioms sxHw_zeuge
 
 end Gabbro.Grammatik.X86
