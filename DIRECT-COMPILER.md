@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 14:17 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 14:18 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -653,7 +653,7 @@ Last ledger refresh: **2026-10-05 14:17 UTC**. This is an operational snapshot, 
 | 1189 | Pipeline calls: real source execBlock correspondence | Merged after review/checks | 1190: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1189.md) |
 | 1191 | Pipeline: spill code generation with privacy | Merged after review/checks | 1192: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1191.md) |
 | 1193 | Linking: multi-unit convergence and operand kinds | Merged after review/checks | 1194: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1193.md) |
-| 1195 | Pipeline: block-size induction over multi-statement blocks | Merged after review/checks | 1196: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1195.md) |
+| 1195 | Pipeline: block-size induction over multi-statement blocks | Merged after review/checks | 1196: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1195.md) |
 | 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Committed candidate; review/integration pending | 1200: Agent working | [task](lanes/1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Committed candidate; review/integration pending | 1202: Committed candidate; review/integration pending | [task](lanes/1201.md) |
@@ -1517,6 +1517,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `94e4eed3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:94e4eed33a5aecb72c36f14c82c238d220289fb0 -->
 - 2026-10-05: lane **1146**, Independent exact review of 1145, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1146.md). <!-- x86-merged:1146 -->
 - 2026-10-05: lane **1195**, Pipeline: block-size induction over multi-statement blocks, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1195.md). <!-- x86-merged:1195 -->
+- 2026-10-05: lane **1196**, Independent exact review of 1195, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1196.md). <!-- x86-merged:1196 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
