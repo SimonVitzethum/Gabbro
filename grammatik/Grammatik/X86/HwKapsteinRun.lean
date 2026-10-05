@@ -254,6 +254,57 @@ theorem run_vec_gate :
       basisCpu basisKontrolle) = some true := by
   decide
 
+/-! ## 4. Drains: core 0 flushes its 24 buffered bytes, then core 1.
+
+  Core 0 holds store (8) + push (8) + call (8); core 1 holds its
+  foreign byte. Every flush is a `drain` union step below. -/
+
+/-- Flush core 0 `n` times through the drain adapter. -/
+def runDrain0 : Nat → Option HwMaschine → Option HwMaschine
+  | 0, m => m
+  | n + 1, m =>
+    match m with
+    | none => none
+    | some mm =>
+      match drainAdapter.schritt mm 0 .eigenSpuele with
+      | some mm' => runDrain0 n (some mm')
+      | none => none
+
+/-- After core 0 drains all 24 buffered bytes into shared memory. -/
+def runNachFlush0 : Option HwMaschine := runDrain0 24 runNachVec
+
+/-- After core 1 drains its foreign byte into shared memory. -/
+def runNachFlush1 : Option HwMaschine :=
+  match runNachFlush0 with
+  | some m => drainAdapter.schritt m 1 .eigenSpuele
+  | none => none
+
+/-- Buffer census along the run: every issue and every drain lands. -/
+theorem run_puffer_zensus :
+    (runNachStore.map fun m => (m.puffer 0).length) = some 8 ∧
+    (runNachPush.map fun m => (m.puffer 0).length) = some 16 ∧
+    (runNachRuf.map fun m => (m.puffer 0).length) = some 24 ∧
+    (runNachVec.map fun m => (m.puffer 0).length) = some 24 ∧
+    (runNachFlush0.map fun m => (m.puffer 0).length) = some 0 ∧
+    (runNachFlush0.map fun m => (m.puffer 1).length) = some 1 ∧
+    (runNachFlush1.map fun m => (m.puffer 0).length) = some 0 ∧
+    (runNachFlush1.map fun m => (m.puffer 1).length) = some 0 := by
+  decide
+
+/-- Final memory: the locked word, the stored word, the younger call
+    word at the slot, and the foreign byte -- all in shared memory,
+    observed identically from both cores. -/
+theorem run_speicher_ende :
+    (runNachFlush1.map fun m => read64 m.mem (BitVec.ofNat 64 8192)) =
+      some (some 15) ∧
+    (runNachFlush1.map fun m => read64 m.mem runStoreAdr) =
+      some (some runStoreWort) ∧
+    (runNachFlush1.map fun m => read64 m.mem (BitVec.ofNat 64 8200)) =
+      some (some runRufWort) ∧
+    (runNachFlush1.map fun m => m.mem.bytes (BitVec.ofNat 64 8216)) =
+      some (BitVec.ofNat 8 99) := by
+  decide
+
 /- CUTS:
     Skeleton only: start machine plus well-formedness. The run steps,
     drains, observations and final memory are not yet built.
