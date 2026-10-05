@@ -665,7 +665,7 @@ Last ledger refresh: **2026-10-05 15:09 UTC**. This is an operational snapshot, 
 | 1213 | LOCK words to W history: timestamp and value link | Merged after review/checks | 1214: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1213.md) |
 | 1215 | From W runs to the GX refinement: the missing target leg | Merged after review/checks | 1216: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1215.md) |
 | 1217 | Pipeline atomics: execBlock correspondence | Committed candidate; review/integration pending | 1218: Agent working | [task](lanes/1217.md) |
-| 1219 | Pipeline: derive per-chunk runs from the lowering alone | Committed candidate; review/integration pending | 1220: Committed candidate; review/integration pending | [task](lanes/1219.md) |
+| 1219 | Pipeline: derive per-chunk runs from the lowering alone | Merged after review/checks | 1220: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1219.md) |
 | 1221 | Linking: rel8 selection convergence and fall-through coverage | Committed candidate; review/integration pending | 1222: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1221.md) |
 | 1223 | valX86_sound for the decidable part | Committed candidate; review/integration pending | 1224: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1223.md) |
 | 1225 | Faults and interrupts against the store buffer: precise exceptions | Committed candidate; review/integration pending | 1226: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1225.md) |
@@ -1575,6 +1575,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1212**, Independent exact review of 1211, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1212.md). <!-- x86-merged:1212 -->
 - 2026-10-05: lane **1215**, From W runs to the GX refinement: the missing target leg, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1215.md). <!-- x86-merged:1215 -->
 - 2026-10-05: lane **1216**, Independent exact review of 1215, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1216.md). <!-- x86-merged:1216 -->
+- 2026-10-05: lane **1219**, Pipeline: derive per-chunk runs from the lowering alone, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1219.md). <!-- x86-merged:1219 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
