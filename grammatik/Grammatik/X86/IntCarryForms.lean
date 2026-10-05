@@ -591,11 +591,468 @@ theorem sbb_kette_128 (x0 x1 y0 y1 : Wort) :
     simp only [g2]
     congr 1
 
+/-! ## 3. Codec: canonical bytes for the family.
+
+   SDM opcode map (Intel 325462-093US, ADC/SBB/INC/DEC entries, checked
+   against `.tmp/HARDWARE-REFERENCES/intel-instruction-reference.txt`):
+   ADC 10H/11H/12H/13H (`/r`), 14H (`AL,Ib`), 15H (`eAX,Iz`), Group 1
+   80H/81H/83H (`/2`); SBB 18H-1BH, 1CH, 1DH, Group 1 `/3`; INC/DEC
+   FEH (`/0` INC, `/1` DEC, byte) and FFH (`/0` INC, `/1` DEC, Ev).
+   40H-4FH are REX prefixes in 64-bit mode, never one-byte INC/DEC.
+   Width: REX.W selects 64, 66H selects 16, else 32 (Ev forms); Eb
+   forms are always 8-bit. Only register-direct (mod=11) ModRM runs
+   the register path; mod/=11 decodes to a memory descriptor for the
+   TSO path (§5), never the register plug. -/
+
+/-- Memory-form class. -/
+inductive MemKlasse where
+  | adc | sbb | inc | dec
+  deriving DecidableEq, Repr
+
+/-- Memory operand descriptor: class, width, whether the destination
+    is memory (store/RMW) or a register (load), the raw ModRM byte,
+    displacement bytes, and the consumed length. SIB (`rm=4`) and
+    RIP-relative (`mod=0,rm=5`) shapes decode but never resolve (§5). -/
+structure CarryMem where
+  klasse : MemKlasse
+  breite : Breite
+  speichernd : Bool
+  modrm : Nat
+  disp : List Byte
+  laenge : Nat
+  deriving DecidableEq, Repr
+
+/-- One decoded family instruction: register form or memory form. -/
+inductive CarryInstr where
+  | reg : CarryDecodiert → CarryInstr
+  | mem : CarryMem → CarryInstr
+  deriving DecidableEq, Repr
+
+/-- Width from prefix bits: REX.W selects 64, 66H selects 16, else 32. -/
+def carryBreite (rexW op66 : Bool) : Breite :=
+  if rexW then .b64 else if op66 then .b16 else .b32
+
+/-- REX.W always means 64 bits. -/
+theorem carryBreite_rexW (op66 : Bool) : carryBreite true op66 = .b64 :=
+  rfl
+
+/-- 66H without REX.W means 16 bits. -/
+theorem carryBreite_16 : carryBreite false true = .b16 := rfl
+
+/-- No prefix means 32 bits. -/
+theorem carryBreite_32 : carryBreite false false = .b32 := rfl
+
+/-- High-byte refusal: codes 4-7 name AH/CH/DH/BH (no REX) or
+    SPL/BPL/SIL/DIL (REX), neither in the `Register` vocabulary
+    (SDM Vol. 1 3.4.1.1). Codes 0-3 and 8-15 are always fine. -/
+def hochbyteCode (code : Nat) : Bool := decide (4 ≤ code ∧ code < 8)
+
+/-- Pinned high-byte classification. -/
+theorem probe_hochbyteCode :
+    hochbyteCode 3 = false ∧ hochbyteCode 4 = true ∧
+    hochbyteCode 7 = true ∧ hochbyteCode 8 = false := by
+  decide
+
+/-- 8-bit immediate value (Group 80H, AL forms). -/
+def imm8Wert (v : Byte) : Wort := BitVec.ofNat 64 (byteNat v)
+
+/-- 16-bit immediate value, zero-extended (narrowing truncates anyway). -/
+def imm16Wert (d : BitVec 16) : Wort := BitVec.ofNat 64 d.toNat
+
+/-- 32-bit immediate value: plain at 16/32 bits, sign-extended at 64
+    bits (REX.W `81 /id` and `15 id` take imm32, SDM Vol. 2A 3-14). -/
+def imm32Wert (b : Breite) (d : BitVec 32) : Wort :=
+  if b = .b64 then sext .b32 (BitVec.ofNat 64 d.toNat)
+  else BitVec.ofNat 64 d.toNat
+
+/-- Sign-extended 8-bit immediate (Group 83H); plain at 8 bits. -/
+def imm8Sext (b : Breite) (v : Byte) : Wort :=
+  if b = .b8 then BitVec.ofNat 64 (byteNat v)
+  else sext .b8 (BitVec.ofNat 64 (byteNat v))
+
+/-- Parse two little-endian bytes, returning the rest. -/
+def parseLe16 : List Byte → Option (BitVec 16 × List Byte)
+  | b0 :: b1 :: rest =>
+    some (BitVec.ofNat 16 (byteNat b0 + byteNat b1 * 256), rest)
+  | _ => none
+
+/-- Canonical immediate operand: what decode reads back from the
+    canonical encoding (§3b writes exactly these bytes). -/
+def canonImm (b : Breite) (op : Wort) : Wort :=
+  match b with
+  | .b8 => imm8Wert (wortByte op 0)
+  | .b16 => imm16Wert (BitVec.ofNat 16 (byteNat (wortByte op 0) + byteNat (wortByte op 1) * 256))
+  | .b32 => imm32Wert .b32 (BitVec.ofNat 32 (byteNat (wortByte op 0) + byteNat (wortByte op 1) * 256 + byteNat (wortByte op 2) * 65536 + byteNat (wortByte op 3) * 16777216))
+  | .b64 => imm32Wert .b64 (BitVec.ofNat 32 (byteNat (wortByte op 0) + byteNat (wortByte op 1) * 256 + byteNat (wortByte op 2) * 65536 + byteNat (wortByte op 3) * 16777216))
+
+/-- Register operand from full codes with the high-byte refusal. -/
+def decodeCarryReg (alu : Bool) (b : Breite) (dstCode srcCode : Nat)
+    (len : Nat) :
+    List Byte → Option (CarryInstr × List Byte)
+  | rest =>
+    if decide (b = .b8) && (hochbyteCode dstCode || hochbyteCode srcCode) then
+      none
+    else match codeReg dstCode, codeReg srcCode with
+    | some dst, some src =>
+      some (.reg ⟨if alu then .adcReg b dst src else .sbbReg b dst src, len⟩, rest)
+    | _, _ => none
+
+/-- INC/DEC register operand from the full code. -/
+def decodeCarryIndee (inc : Bool) (b : Breite) (dstCode : Nat)
+    (len : Nat) :
+    List Byte → Option (CarryInstr × List Byte)
+  | rest =>
+    if decide (b = .b8) && hochbyteCode dstCode then none
+    else match codeReg dstCode with
+    | some dst =>
+      some (.reg ⟨if inc then .incReg b dst else .decReg b dst, len⟩, rest)
+    | none => none
+
+/-- Immediate operand after its bytes: value plus consumed length. -/
+def immLies (immKind : Nat) (b : Breite) :
+    List Byte → Option (Wort × List Byte)
+  | rest =>
+    match immKind with
+    | 0 =>
+      match rest with
+      | ib :: rest' => some (imm8Wert ib, rest')
+      | _ => none
+    | 1 =>
+      match parseLe16 rest with
+      | some (d, rest') => some (imm16Wert d, rest')
+      | none => none
+    | 2 =>
+      match parseLe32 rest with
+      | some (d, rest') => some (imm32Wert b d, rest')
+      | none => none
+    | _ =>
+      match rest with
+      | ib :: rest' => some (imm8Sext b ib, rest')
+      | _ => none
+
+/-- Immediate length by kind: imm8/imm16/imm32/sex8. -/
+def immLenOf : Nat → Nat
+  | 0 => 1
+  | 1 => 2
+  | _ => 4
+
+/-- Group-1 register destination with the extended operand. -/
+def decodeGruppe1Reg (adc : Bool) (b : Breite) (dstCode : Nat) (op : Wort)
+    (len : Nat) :
+    List Byte → Option (CarryInstr × List Byte)
+  | rest =>
+    if decide (b = .b8) && hochbyteCode dstCode then none
+    else match codeReg dstCode with
+    | some dst =>
+      some (.reg ⟨if adc then .adcImm b dst op else .sbbImm b dst op, len⟩, rest)
+    | none => none
+
+/-- Group-1 ModRM: register destination runs the register path with
+    the extended operand, memory goes to a descriptor (RMW store). -/
+def decodeGruppe1 (adc : Bool) (b : Breite) (immKind : Nat) (bBit : Nat)
+    (len : Nat) (m : Byte) :
+    List Byte → Option (CarryInstr × List Byte)
+  | rest =>
+    let mod := byteNat m / 64
+    let rm := byteNat m % 8
+    if mod == 3 then
+      match immLies immKind b rest with
+      | some (op, rest') =>
+        decodeGruppe1Reg adc b (bBit * 8 + rm) op (len + immLenOf immKind) rest'
+      | none => none
+    else
+      let k := if adc then MemKlasse.adc else MemKlasse.sbb
+      match mod, rm with
+      | 1, _ =>
+        match rest with
+        | d0 :: rest1 =>
+          match immLies immKind b rest1 with
+          | some (_, rest') =>
+            some (.mem ⟨k, b, true, byteNat m, [d0], len + 1 + immLenOf immKind⟩, rest')
+          | none => none
+        | _ => none
+      | 2, _ =>
+        match rest with
+        | d0 :: d1 :: d2 :: d3 :: rest1 =>
+          match immLies immKind b rest1 with
+          | some (_, rest') =>
+            some (.mem ⟨k, b, true, byteNat m, [d0, d1, d2, d3], len + 4 + immLenOf immKind⟩, rest')
+          | none => none
+        | _ => none
+      | _, 5 =>
+        match rest with
+        | d0 :: d1 :: d2 :: d3 :: rest1 =>
+          match immLies immKind b rest1 with
+          | some (_, rest') =>
+            some (.mem ⟨k, b, true, byteNat m, [d0, d1, d2, d3], len + 4 + immLenOf immKind⟩, rest')
+          | none => none
+        | _ => none
+      | _, _ =>
+        match immLies immKind b rest with
+        | some (_, rest') =>
+          some (.mem ⟨k, b, true, byteNat m, [], len + immLenOf immKind⟩, rest')
+        | none => none
+
+/-- ModRM dispatch for the `/r` forms: register-direct runs the
+    register path (`dstRm` says whether r/m is the destination),
+    anything else becomes a memory descriptor. -/
+def decodeCarryModrm (alu : Bool) (b : Breite) (rBit bBit : Nat)
+    (dstRm : Bool) (len : Nat) (m : Byte) :
+    List Byte → Option (CarryInstr × List Byte)
+  | rest =>
+    let mod := byteNat m / 64
+    let reg := byteNat m / 8 % 8
+    let rm := byteNat m % 8
+    if mod == 3 then
+      if dstRm then decodeCarryReg alu b (bBit * 8 + rm) (rBit * 8 + reg) len rest
+      else decodeCarryReg alu b (rBit * 8 + reg) (bBit * 8 + rm) len rest
+    else
+      let k := if alu then MemKlasse.adc else MemKlasse.sbb
+      match mod, rm with
+      | 1, _ =>
+        match rest with
+        | d0 :: rest' =>
+          some (.mem ⟨k, b, dstRm, byteNat m, [d0], len + 1⟩, rest')
+        | _ => none
+      | 2, _ =>
+        match rest with
+        | d0 :: d1 :: d2 :: d3 :: rest' =>
+          some (.mem ⟨k, b, dstRm, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+        | _ => none
+      | _, 5 =>
+        match rest with
+        | d0 :: d1 :: d2 :: d3 :: rest' =>
+          some (.mem ⟨k, b, dstRm, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+        | _ => none
+      | _, _ => some (.mem ⟨k, b, dstRm, byteNat m, [], len⟩, rest)
+
+/-- INC/DEC ModRM: `/0` is INC, `/1` is DEC, anything else refuses
+    (FF `/2` to `/7` are CALL/JMP/PUSH, never INC/DEC). -/
+def decodeCarryIncDecModrm (b : Breite) (bBit : Nat) (len : Nat)
+    (m : Byte) :
+    List Byte → Option (CarryInstr × List Byte)
+  | rest =>
+    let mod := byteNat m / 64
+    let reg := byteNat m / 8 % 8
+    let rm := byteNat m % 8
+    match reg with
+    | 0 =>
+      if mod == 3 then decodeCarryIndee true b (bBit * 8 + rm) len rest
+      else
+        match mod, rm with
+        | 1, _ =>
+          match rest with
+          | d0 :: rest' =>
+            some (.mem ⟨.inc, b, true, byteNat m, [d0], len + 1⟩, rest')
+          | _ => none
+        | 2, _ =>
+          match rest with
+          | d0 :: d1 :: d2 :: d3 :: rest' =>
+            some (.mem ⟨.inc, b, true, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+          | _ => none
+        | _, 5 =>
+          match rest with
+          | d0 :: d1 :: d2 :: d3 :: rest' =>
+            some (.mem ⟨.inc, b, true, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+          | _ => none
+        | _, _ => some (.mem ⟨.inc, b, true, byteNat m, [], len⟩, rest)
+    | 1 =>
+      if mod == 3 then decodeCarryIndee false b (bBit * 8 + rm) len rest
+      else
+        match mod, rm with
+        | 1, _ =>
+          match rest with
+          | d0 :: rest' =>
+            some (.mem ⟨.dec, b, true, byteNat m, [d0], len + 1⟩, rest')
+          | _ => none
+        | 2, _ =>
+          match rest with
+          | d0 :: d1 :: d2 :: d3 :: rest' =>
+            some (.mem ⟨.dec, b, true, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+          | _ => none
+        | _, 5 =>
+          match rest with
+          | d0 :: d1 :: d2 :: d3 :: rest' =>
+            some (.mem ⟨.dec, b, true, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+          | _ => none
+        | _, _ => some (.mem ⟨.dec, b, true, byteNat m, [], len⟩, rest)
+    | _ => none
+
+/-- Opcode dispatch after the prefix: every ADC/SBB/INC/DEC opcode
+    of the family map, nothing else. `plen` is the consumed prefix
+    length (0 or 1); `rBit`/`bBit` extend the ModRM fields. -/
+def decodeCarryOp (rexW rexR rexB op66 : Bool) (plen : Nat) (op : Byte) :
+    List Byte → Option (CarryInstr × List Byte)
+  | rest =>
+    let bEv := carryBreite rexW op66
+    let rBit := if rexR then 1 else 0
+    let bBit := if rexB then 1 else 0
+    match byteNat op with
+    | 16 =>
+      match rest with
+      | m :: rest' => decodeCarryModrm true .b8 rBit bBit true (plen + 2) m rest'
+      | _ => none
+    | 17 =>
+      match rest with
+      | m :: rest' => decodeCarryModrm true bEv rBit bBit true (plen + 2) m rest'
+      | _ => none
+    | 18 =>
+      match rest with
+      | m :: rest' => decodeCarryModrm true .b8 rBit bBit false (plen + 2) m rest'
+      | _ => none
+    | 19 =>
+      match rest with
+      | m :: rest' => decodeCarryModrm true bEv rBit bBit false (plen + 2) m rest'
+      | _ => none
+    | 20 =>
+      match rest with
+      | ib :: rest' => some (.reg ⟨.adcImm .b8 .rax (imm8Wert ib), plen + 2⟩, rest')
+      | _ => none
+    | 21 =>
+      if op66 then
+        match parseLe16 rest with
+        | some (d, rest') => some (.reg ⟨.adcImm .b16 .rax (imm16Wert d), plen + 3⟩, rest')
+        | none => none
+      else
+        match parseLe32 rest with
+        | some (d, rest') => some (.reg ⟨.adcImm bEv .rax (imm32Wert bEv d), plen + 5⟩, rest')
+        | none => none
+    | 24 =>
+      match rest with
+      | m :: rest' => decodeCarryModrm false .b8 rBit bBit true (plen + 2) m rest'
+      | _ => none
+    | 25 =>
+      match rest with
+      | m :: rest' => decodeCarryModrm false bEv rBit bBit true (plen + 2) m rest'
+      | _ => none
+    | 26 =>
+      match rest with
+      | m :: rest' => decodeCarryModrm false .b8 rBit bBit false (plen + 2) m rest'
+      | _ => none
+    | 27 =>
+      match rest with
+      | m :: rest' => decodeCarryModrm false bEv rBit bBit false (plen + 2) m rest'
+      | _ => none
+    | 28 =>
+      match rest with
+      | ib :: rest' => some (.reg ⟨.sbbImm .b8 .rax (imm8Wert ib), plen + 2⟩, rest')
+      | _ => none
+    | 29 =>
+      if op66 then
+        match parseLe16 rest with
+        | some (d, rest') => some (.reg ⟨.sbbImm .b16 .rax (imm16Wert d), plen + 3⟩, rest')
+        | none => none
+      else
+        match parseLe32 rest with
+        | some (d, rest') => some (.reg ⟨.sbbImm bEv .rax (imm32Wert bEv d), plen + 5⟩, rest')
+        | none => none
+    | 128 =>
+      match rest with
+      | m :: rest' =>
+        match byteNat m / 8 % 8 with
+        | 2 => decodeGruppe1 true .b8 0 bBit (plen + 2) m rest'
+        | 3 => decodeGruppe1 false .b8 0 bBit (plen + 2) m rest'
+        | _ => none
+      | _ => none
+    | 129 =>
+      match rest with
+      | m :: rest' =>
+        match byteNat m / 8 % 8 with
+        | 2 => decodeGruppe1 true bEv (if op66 then 1 else 2) bBit (plen + 2) m rest'
+        | 3 => decodeGruppe1 false bEv (if op66 then 1 else 2) bBit (plen + 2) m rest'
+        | _ => none
+      | _ => none
+    | 131 =>
+      match rest with
+      | m :: rest' =>
+        match byteNat m / 8 % 8 with
+        | 2 => decodeGruppe1 true bEv 3 bBit (plen + 2) m rest'
+        | 3 => decodeGruppe1 false bEv 3 bBit (plen + 2) m rest'
+        | _ => none
+      | _ => none
+    | 254 =>
+      match rest with
+      | m :: rest' => decodeCarryIncDecModrm .b8 bBit (plen + 2) m rest'
+      | _ => none
+    | 255 =>
+      match rest with
+      | m :: rest' => decodeCarryIncDecModrm bEv bBit (plen + 2) m rest'
+      | _ => none
+    | _ => none
+
+/-- One family decoder: an optional single 66H or REX prefix, then the
+    opcode. A second prefix byte reads as the opcode and refuses below
+    with a named reason. -/
+def decodeCarry : List Byte → Option (CarryInstr × List Byte)
+  | [] => none
+  | b :: rest =>
+    if byteNat b == 102 then
+      match rest with
+      | [] => none
+      | op :: rest' => decodeCarryOp false false false true 1 op rest'
+    else if decide (64 ≤ byteNat b ∧ byteNat b < 80) then
+      match rest with
+      | [] => none
+      | op :: rest' =>
+        decodeCarryOp (byteNat b / 8 % 2 == 1) (byteNat b / 4 % 2 == 1)
+          (byteNat b % 2 == 1) false 1 op rest'
+    else decodeCarryOp false false false false 0 b rest
+
+/-! ## Named refusal reasons.
+
+    Shallow shapes (LOCK, address-size, double prefix, one-byte
+    INC/DEC, truncation, non-carry opcodes) name their reason through
+    `ablehnGrund`. Group shapes (wrong extension digit, high-byte
+    codes) name theirs in the refusal theorems beside the pins, since
+    the reason needs the ModRM byte. -/
+
+/-- Named refusal reasons for unsupported encodings. -/
+inductive AblehnGrund where
+  | lock | adressGroesse | doppelPraefix | einByteIncDec | unvollstaendig
+  | keinTrageform | falscheErweiterung | hochbyte
+  deriving DecidableEq, Repr
+
+/-- A prefix-class byte: 66H or any REX 40H-4FH. -/
+def istPraefixByte (n : Nat) : Bool :=
+  (n == 102) || decide (64 ≤ n ∧ n < 80)
+
+/-- The opcode-position byte after stripping one optional prefix. -/
+def opcodeNachPraefix : List Byte → Option Nat
+  | [] => none
+  | b :: rest =>
+    if istPraefixByte (byteNat b) then
+      match rest with
+      | [] => none
+      | op :: _ => some (byteNat op)
+    else some (byteNat b)
+
+/-- Shallow refusal reason for a byte string. Family opcodes
+    (16-19, 20-21, 24-29, 128-129, 131, 254-255) carry none here:
+    they decode, or refuse deep for a named ModRM cause. -/
+def ablehnGrund : List Byte → Option AblehnGrund
+  | [] => some .unvollstaendig
+  | b :: rest =>
+    if byteNat b == 240 then some .lock
+    else if byteNat b == 103 then some .adressGroesse
+    else match opcodeNachPraefix (b :: rest) with
+    | none => some .unvollstaendig
+    | some op =>
+      if op == 240 then some .lock
+      else if op == 103 then some .adressGroesse
+      else if istPraefixByte (byteNat b) && op == 102 then
+        some .doppelPraefix
+      else if istPraefixByte (byteNat b) &&
+          decide (64 ≤ op ∧ op < 80) then some .einByteIncDec
+      else if decide (op = 16 ∨ op = 17 ∨ op = 18 ∨ op = 19 ∨
+          op = 20 ∨ op = 21 ∨ op = 24 ∨ op = 25 ∨ op = 26 ∨ op = 27 ∨
+          op = 28 ∨ op = 29 ∨ op = 128 ∨ op = 129 ∨ op = 131 ∨
+          op = 254 ∨ op = 255) then none
+      else some .keinTrageform
+
 /- CUTS:
-    Value/flag layer (§1) and register step skeleton (§2) stand.
-    NOT proved here, and not claimed: memory discipline of the step,
-    64-bit step agreements, the multiword chain, decode/encode,
-    the machine adapter, the witness (see lane task).
+    Value/flag layer (§1) and register step (§2) stand.
+    NOT proved here, and not claimed: the opcode dispatch, encode,
+    round trips, refusal reasons, the machine adapter, the witness.
 -/
 
 #print axioms CarryKlasse
