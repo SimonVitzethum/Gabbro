@@ -1,8 +1,13 @@
 # MUSE-REPORT-1174: exact review of candidate 1173 (hosted/freestanding profiles)
 
-## VERDICT: ACCEPT
+CANDIDATE: 1173 c6677edd11818267cb85b19caa3eb38ce5a0043f
+VERDICT: ACCEPT
 
-Candidate: author lane 1173, pinned HEAD `c6677edd11818267cb85b19caa3eb38ce5a0043f`
+## Verdict
+
+Substantive verdict ACCEPT, unchanged from the prior commit `5db9dc24`; this
+update only adds the machine-readable lines above. Reviewed author lane 1173
+at pinned HEAD `c6677edd11818267cb85b19caa3eb38ce5a0043f`
 (base `062b979a6271b7b3044ab06be3f3cde411a0d4f1`), reviewed from the exact
 snapshot `.tmp/review/author-1173/` (`SNAPSHOT.json`, `PATCH.diff`, full new
 file, `MUSE-REPORT-1173.md`, `BUILD-EVIDENCE.json`). No other source was read
