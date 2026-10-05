@@ -342,6 +342,12 @@ generated driver, lock through the chain). Reviewers from 321.
       (templates `sperre.metall`, `sperre.maskiert`, `rcu.metall`, `SchablonenMetallSperre.lean`;
       register 36 -> 39 entries, 25 -> 28 machine-checked). Metal C0 1879 -> 1734 lines
       (`metall.h` 372 -> 227); `pruefe-metall.sh` 18 booted + 8 gifts, freestanding 338/338.
+    - [x] Slice 3 (2026-10-05): the IDT (table, gate encoding, runtime slots, `lidt`, the two
+      installers) is the generated `<unit>.metall.idt.c` (template `idt.metall`,
+      `SchablonenMetallIdt.lean`; register 39 -> 40 entries, 28 -> 29 machine-checked;
+      `gabbro runtime metal-idt`). `pruefe-os-bindung.sh`'s bare-metal OS-name scan now reads the
+      generated machine layer too (it read only `laufzeit/metall/`, so every slice shrank what it
+      measured).
     - [ ] The kernel proper: serial + report, IDT, LAPIC, ACPI/MADT, SMP bring-up, scheduler,
       context switch (`kern.c`), `start.S`, `eintritt_asm.h`, `metall.h`.
       Mapped in `messung/C3-WAENDE.md` (2026-10-05): walls A (a device at a fixed hardware

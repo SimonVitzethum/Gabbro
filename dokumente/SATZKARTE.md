@@ -4951,3 +4951,28 @@ grace wait (OFFEN O32), and the runtime's own side of the yield (`metall_abgeben
 scheduler stay `kern.c`, wall C of `messung/C3-WAENDE.md`). `Zielsatz/Spec.lean` unchanged: the
 goal's lock premise is `LaufzeitC.sperre`, which `ticketLP_sperrAbstrakt` discharges, and the
 generated lock refines it step for step.
+
+## 72. The bare-metal image's interrupt descriptor table: `idt.metall` (C-free lane, 2026-10-05, C3 slice 3)
+
+**The gap.** The IDT -- the 256 gate descriptors, the encoding of one gate, the runtime's slots,
+`lidt`, and the two installers a metal driver calls for the program's entries -- was a part of
+`laufzeit/metall/kern.c`. It is now the generator's `<unit>.metall.idt.c`
+(`treiber.rs::METALL_IDT`; `gabbro runtime metal-idt` for harnesses), compiled and linked as a
+translation unit of its own; `kern.c` calls `metall_idt_bau`/`metall_idt_lade`, and the timer
+and wake vectors are one register (`METALL_TAKT_VEKTOR`, `METALL_WECK_VEKTOR` in `metall.h`).
+
+| Lean name | File | What it says |
+|---|---|---|
+| `kodiere`, `dekodiere` | SchablonenMetallIdt §1 | the three address fields of a gate, and the CPU's reading of them |
+| **`kodiere_dekodiere`** | SchablonenMetallIdt §1 | the gate points at the stub, for every 64-bit address |
+| `art_ist_interrupt_gate` | SchablonenMetallIdt §1 | `0x8E` is a present DPL-0 interrupt gate (IF cleared on entry) |
+| **`fehlercode_c_ist_die_liste`** | SchablonenMetallIdt §2 | the C test `hat_fehlercode` is exactly the SDM's error-code list |
+| `bau`, `nimmt`, `nimmtFc`, `installiere`, `installiereAlle`, `Passt` | SchablonenMetallIdt §3 | the build, the two installers (ending the machine = `none`), what every table satisfies |
+| **`installieren_bewahrt_laufzeit`** | SchablonenMetallIdt §3 | after any sequence of installs that return, the timer, wake and spurious vectors are the runtime's |
+| **`installieren_passt`** | SchablonenMetallIdt §3 | every program stub sits on a vector of its own error-code kind |
+| `installieren_ohne_wache_waere_falsch` | SchablonenMetallIdt §3 | without the refusals a plain stub lands on #GP and the timer is overwritten |
+| `idt_metall_zeuge` | SchablonenMetallIdt §3 | WITNESS: entries on 2, `0xF0`, `0x80` and (error-code twin) 13 installed; the timer and a twin on 2 refused; a high-half address encoded and read back |
+
+NOT proved: the SDM's gate format on real silicon (the hardware assumption every metal image
+names), that every core executes `lidt` before its first interrupt (the runtime's bring-up order,
+`kern.c`), and the stubs (`start.S`, `eintritt_asm.h`, wall D). `Zielsatz/Spec.lean` unchanged.

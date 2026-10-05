@@ -53,6 +53,12 @@ pub fn metall_speicher() -> &'static str {
     treiber::METALL_SPEICHER
 }
 
+/// The bare-metal image's interrupt descriptor table (`gabbro runtime metal-idt`), one
+/// translation unit of its own (template `idt.metall`).
+pub fn metall_idt() -> &'static str {
+    treiber::METALL_IDT
+}
+
 /// Write the image's two generated header names into `ziel` (`gabbro runtime metal-include
 /// <dir>`).
 pub fn metall_koepfe_schreiben(ziel: &str) -> Result<(), String> {
@@ -2898,15 +2904,19 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
     let speicher = aus.join(format!("{name}.metall.speicher.c"));
     std::fs::write(&speicher, treiber::METALL_SPEICHER)
         .map_err(|err| format!("bare-metal image: {}: {err}", speicher.display()))?;
+    let idt = aus.join(format!("{name}.metall.idt.c"));
+    std::fs::write(&idt, treiber::METALL_IDT)
+        .map_err(|err| format!("bare-metal image: {}: {err}", idt.display()))?;
     let flaggen = |c: &mut std::process::Command| {
         c.args(METALL_FLAGGEN);
         c.arg("-isystem").arg(&gccinc);
         c.arg("-isystem").arg(&koepfe);
     };
     let obj = |teil: &str| aus.join(format!("{name}.metall.{teil}.o"));
-    for (quelle, teil) in [(dir.join("kern.c"), "kern"), (speicher.clone(), "speicher")] {
+    for (quelle, teil) in [(dir.join("kern.c"), "kern"), (speicher.clone(), "speicher"), (idt.clone(), "idt")] {
         let mut c = std::process::Command::new(cc);
         flaggen(&mut c);
+        c.arg("-I").arg(&dir);
         c.arg("-c").arg(&quelle).arg("-o").arg(obj(teil));
         lauf(c, &quelle.display().to_string())?;
     }
@@ -2923,7 +2933,7 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
     let mut c = std::process::Command::new("ld");
     c.args(["-nostdlib", "-static", "-no-pie", "-z", "max-page-size=0x1000", "-T"]);
     c.arg(dir.join("metall.ld")).arg("-o").arg(&bild);
-    for teil in ["start", "kern", "speicher", "treiber"] {
+    for teil in ["start", "kern", "speicher", "idt", "treiber"] {
         c.arg(obj(teil));
     }
     lauf(c, "the link (`ld -nostdlib`: no C library)")?;

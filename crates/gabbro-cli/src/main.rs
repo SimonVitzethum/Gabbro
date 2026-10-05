@@ -706,6 +706,10 @@ fn main() -> std::process::ExitCode {
                 print!("{}", bau::metall_speicher());
                 std::process::ExitCode::SUCCESS
             }
+            Some("metal-idt") => {
+                print!("{}", bau::metall_idt());
+                std::process::ExitCode::SUCCESS
+            }
             Some("metal-include") => match rest.get(1) {
                 Some(ziel) => match bau::metall_koepfe_schreiben(ziel) {
                     Ok(()) => std::process::ExitCode::SUCCESS,
@@ -723,7 +727,7 @@ fn main() -> std::process::ExitCode {
                 // 1 and not 2: the command is known, its argument is not.
                 eprintln!(
                     "gabbro runtime: one of `arena`, `threads`, `metal-arena`, `metal-memory`, \
-                     `metal-include <dir>`"
+                     `metal-idt`, `metal-include <dir>`"
                 );
                 std::process::ExitCode::from(1)
             }

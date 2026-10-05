@@ -96,6 +96,7 @@ RT="$ARB/rt-gen"
 mkdir -p "$RT"
 G runtime metal-include "$RT/include"
 G runtime metal-memory > "$RT/speicher.c"
+G runtime metal-idt > "$RT/idt.c"
 G runtime metal-arena > "$RT/arena.c"
 CF="-std=c11 -O2 -ffreestanding -fno-builtin -nostdlib -nostdinc -isystem $GCCINC
     -isystem $RT/include -fno-pic -fno-pie -mno-red-zone
@@ -119,13 +120,14 @@ baue() {
     grep -q 'gabbro_modul_reserve' "$d/treiber.c" || cat "$RT/arena.c" >> "$d/treiber-voll.c"
     cc $CF $extra -c "$M/kern.c" -o "$d/kern.o" 2> "$d/cc.err" \
       && cc $CF $extra -c "$RT/speicher.c" -o "$d/speicher.o" 2>> "$d/cc.err" \
+      && cc $CF $extra -I"$M" -c "$RT/idt.c" -o "$d/idt.o" 2>> "$d/cc.err" \
       && cc -fno-pie -c "$M/start.S" -o "$d/start.o" 2>> "$d/cc.err" \
       && cc $CF $extra $textra -I"$M" -I"$d" -DEINHEIT_INCLUDE='"einheit.c"' \
             -c "$d/treiber-voll.c" -o "$d/treiber.o" 2>> "$d/cc.err" || {
         echo "  $1: BUILD FAILED"; head -20 "$d/cc.err"; return 1; }
     : > "$d/fremd.S"
     if [ -f "$d/fremd.ok" ]; then
-        nm --defined-only "$d/kern.o" "$d/speicher.o" "$d/start.o" | awk 'NF == 3 {print $3}' \
+        nm --defined-only "$d/kern.o" "$d/speicher.o" "$d/idt.o" "$d/start.o" | awk 'NF == 3 {print $3}' \
             | sort -u > "$d/rt.def"
         nm -u "$d/treiber.o" | awk '{print $2}' | sort -u | comm -23 - "$d/rt.def" > "$d/fremd.namen"
         while IFS= read -r s; do
@@ -136,7 +138,7 @@ baue() {
     # shellcheck disable=SC2086
     cc -fno-pie -c "$d/fremd.S" -o "$d/fremd.o" 2>> "$d/cc.err" \
       && ld -nostdlib -static -no-pie -T "$M/metall.ld" -z max-page-size=0x1000 \
-            -o "$d/k.elf" "$d/start.o" "$d/kern.o" "$d/speicher.o" "$d/treiber.o" "$d/fremd.o" \
+            -o "$d/k.elf" "$d/start.o" "$d/kern.o" "$d/speicher.o" "$d/idt.o" "$d/treiber.o" "$d/fremd.o" \
             2>> "$d/cc.err" \
       && objcopy -O elf32-i386 "$d/k.elf" "$d/k32.elf" 2>> "$d/cc.err" || {
         echo "  $1: BUILD FAILED"; head -20 "$d/cc.err"; return 1; }

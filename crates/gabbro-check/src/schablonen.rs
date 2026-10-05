@@ -174,6 +174,7 @@ pub const RATSCHE: &[&str] = &[
     "sperre.metall",
     "sperre.maskiert",
     "rcu.metall",
+    "idt.metall",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -687,6 +688,42 @@ pub const SCHABLONEN: &[Schablone] = &[
         ],
         fundstelle: "grammatik/Grammatik/SchablonenMetallSperre.lean §3; crates/gabbro-cli/src/treiber.rs \
                      (`METALL_SPERREN`); instrumente/pruefe-freistehend.sh (the rcu driver stage)",
+    },
+    // **Entered 2026-10-05 by the C-free lane (C3 slice 3), PROVED in the same commit**: the
+    // interrupt descriptor table, until then a part of `laufzeit/metall/kern.c`.
+    Schablone {
+        name: "idt.metall",
+        haengt_an: &[],
+        konstrukt: "every bare-metal image, and every `entry … vector N` of a unit built for it \
+                    (the generated `<unit>.metall.idt.c`, `treiber.rs::METALL_IDT`: the table, \
+                    `metall_idt_bau`, `metall_idt_lade`, the installers `metall_idt_setze`, \
+                    `metall_idt_setze_fc` the metal driver calls)",
+        pflicht: "256 64-bit interrupt gates, the runtime's slots filled once (the 32 exception \
+                  stubs, the timer `0x40`, the wake vector `0x41`, the kernel service entry \
+                  `0x80`, the spurious vector `0xFF`), and two installers for the program's \
+                  entries that end the machine rather than install the wrong thing. \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenMetallIdt.lean`): \
+                  the three address fields put back together are the stub's address for every \
+                  64-bit address (`kodiere_dekodiere`); the type byte is a present DPL-0 \
+                  interrupt gate (`art_ist_interrupt_gate`); the C test for an error-code \
+                  vector is exactly the SDM's list (`fehlercode_c_ist_die_liste`); after the \
+                  build and ANY sequence of installer calls that return, the timer, wake and \
+                  spurious vectors hold the runtime's stubs (`installieren_bewahrt_laufzeit`) \
+                  and every program stub sits on a vector of its own error-code kind \
+                  (`installieren_passt`) -- without the refusals neither holds \
+                  (`installieren_ohne_wache_waere_falsch`); witness `idt_metall_zeuge`. \
+                  **NOT proved:** that the CPU decodes gates as the SDM says (the hardware \
+                  assumption of every metal image), and the stubs themselves (`start.S`, \
+                  `eintritt_asm.h`, wall D).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "every core runs with this table loaded", durch: Some("the runtime's bring-up: the BSP calls `metall_idt_bau` and `metall_idt_lade` before it starts any core, and every AP calls `metall_idt_lade` before it enables its timer (`kern.c`, `metall_bsp`, `metall_ap`)"), braeuchte: None },
+            Voraussetzung { was: "a program entry is installed through the installer of its kind, before any root runs", durch: Some("the metal driver (`treiber.rs::erzeuge_metall_voll`): `metall_idt_setze_fc` exactly for the vectors `hat_fehlercode` names, `metall_idt_setze` otherwise, all at the head of `gabbro_metall_haupt`; a wrong pairing ends the machine (`installieren_passt` is about the calls that return)"), braeuchte: None },
+            Voraussetzung { was: "the entry's vector is a number the table has", durch: Some("the template itself: both installers end the machine before writing a slot for a vector above `0xFE` (`nimmt`, `nimmtFc` of the model), so no write lands beyond the 256 gates"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenMetallIdt.lean; crates/gabbro-cli/src/treiber.rs \
+                     (`METALL_IDT`); instrumente/pruefe-metall.sh (metall57, metall59, metall163-165, \
+                     165-gift)",
     },
     // **Entered 2026-09-30 by the C-free lane (OFFEN O38), PROVED**: the lowering of the
     // gate+guard+`child` triple, which lane 260 wrote as a jump into the parent's function.

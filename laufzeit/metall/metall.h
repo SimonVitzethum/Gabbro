@@ -130,6 +130,16 @@ struct metall_rahmen {
 #define METALL_SYSTEMRUF_VEKTOR 0x80u
 void metall_systemruf(struct metall_rahmen *r) __attribute__((weak));
 
+/* The runtime's own vectors: the LAPIC timer and the wake IPI (kern.c). No program entry
+ * may take them -- the generated IDT's installers refuse both (`idt.metall`). */
+#define METALL_TAKT_VEKTOR 0x40u
+#define METALL_WECK_VEKTOR 0x41u
+
+/* The IDT (generated, `<unit>.metall.idt.c`, template `idt.metall`): the BSP builds the
+ * table once, every core loads it, a driver installs the program's entries. */
+void metall_idt_bau(void);
+void metall_idt_lade(void);
+
 void metall_eoi(void);
 void metall_idt_setze(uint32_t vektor, void (*stub)(void));
 void metall_ipi_fest(uint32_t kern_nr, uint32_t vektor);   /* fixed IPI to one core */

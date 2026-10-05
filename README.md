@@ -102,7 +102,7 @@ Measured snapshot 2026-10-01 — every figure carries its command; provenance an
 |---|---|---|
 | **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 481 diagnostics · `gabbro passes` |
 | **Grammar** | **188 EBNF rules**, closed and reachable | vocabulary covers every terminal, 242 / 242 |
-| **Proof templates** | **39, of which 28 are machine-checked** | `gabbro templates` |
+| **Proof templates** | **40, of which 29 are machine-checked** | `gabbro templates` |
 | **Corpus** | 157 clean examples, 857 poison files | `cargo test --no-fail-fast` |
 | **Backend** | working C11 backend (`cc -std=c11 -Wall -Wextra -Werror`, `-O0` and `-O2`); every emitted unit is compiled, part executed against a handwritten twin | `./instrumente/pruefe-emission.sh` |
 | **Guardians** | 56, each with deadline, two-way speech test, red on abort, pinned locale; **75 of 89 instruments carry the four static requirements** (work quantity is measured per run) | `./instrumente/abnahme.py` |

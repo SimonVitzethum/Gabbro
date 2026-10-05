@@ -523,6 +523,16 @@ metall_pruefe() {   # $1 = work dir
     local arb="$1" dir="$1/metall" n hw dateien
     mkdir -p "$dir"
     cp -r "$W/laufzeit/metall/." "$dir/"
+    # Since the C-free lane's C3 slices (2026-10-05) part of the machine layer is the
+    # GENERATOR's text -- the memory functions, the arena, the headers with the locks, the
+    # IDT. Scanned here too, from the same bytes the build writes: a stage that read only
+    # what is left in `laufzeit/metall/` would measure less after every slice (W16).
+    mkdir -p "$dir/erzeugt"
+    "$GABBRO" runtime metal-memory > "$dir/erzeugt/speicher.c" \
+        && "$GABBRO" runtime metal-arena > "$dir/erzeugt/arena.c" \
+        && "$GABBRO" runtime metal-idt > "$dir/erzeugt/idt.c" \
+        && "$GABBRO" runtime metal-include "$dir/erzeugt/include" \
+        || { echo "HARNESS: bare metal FAILED -- the generated machine layer could not be written"; return 0; }
     n="$(metall_os_funde "$dir" | grep -c '' | tr -d ' ')"
     hw="$(grep -rhEo --include='*.c' --include='*.h' --include='*.S' "$METALL_HARDWARE" "$dir" 2>/dev/null \
         | grep -c '' | tr -d ' ')"

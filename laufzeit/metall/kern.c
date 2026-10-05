@@ -211,74 +211,9 @@ __attribute__((noreturn)) void metall_ausnahme(uint64_t vektor, uint64_t fehler,
     metall_ende(2);
 }
 
-/* -- The IDT. --------------------------------------------------------------- */
-
-struct idt_eintrag {
-    uint16_t off0;
-    uint16_t sel;
-    uint8_t ist;
-    uint8_t art;
-    uint16_t off1;
-    uint32_t off2;
-    uint32_t null;
-} __attribute__((packed));
-
-static struct idt_eintrag idt[256] __attribute__((aligned(16)));
-
-struct idt_zeiger {
-    uint16_t grenze;
-    uint64_t basis;
-} __attribute__((packed));
-
-extern char metall_ausnahme_0[], metall_ausnahme_1[], metall_ausnahme_2[], metall_ausnahme_3[],
-    metall_ausnahme_4[], metall_ausnahme_5[], metall_ausnahme_6[], metall_ausnahme_7[],
-    metall_ausnahme_8[], metall_ausnahme_9[], metall_ausnahme_10[], metall_ausnahme_11[],
-    metall_ausnahme_12[], metall_ausnahme_13[], metall_ausnahme_14[], metall_ausnahme_15[],
-    metall_ausnahme_16[], metall_ausnahme_17[], metall_ausnahme_18[], metall_ausnahme_19[],
-    metall_ausnahme_20[], metall_ausnahme_21[], metall_ausnahme_22[], metall_ausnahme_23[],
-    metall_ausnahme_24[], metall_ausnahme_25[], metall_ausnahme_26[], metall_ausnahme_27[],
-    metall_ausnahme_28[], metall_ausnahme_29[], metall_ausnahme_30[], metall_ausnahme_31[];
-extern char metall_takt_eintritt[], metall_unecht[], metall_wecken_eintritt[],
-    metall_systemruf_eintritt[];
-
-static void idt_setze(int v, void *ziel)
-{
-    uint64_t a = (uint64_t)ziel;
-    idt[v].off0 = (uint16_t)a;
-    idt[v].sel = 0x18;          /* SEL_CODE64 */
-    idt[v].ist = 0;
-    idt[v].art = 0x8E;          /* present, DPL 0, 64-bit INTERRUPT gate: IF cleared on entry */
-    idt[v].off1 = (uint16_t)(a >> 16);
-    idt[v].off2 = (uint32_t)(a >> 32);
-    idt[v].null = 0;
-}
-
-static void idt_bau(void)
-{
-    void *t[32] = {
-        metall_ausnahme_0, metall_ausnahme_1, metall_ausnahme_2, metall_ausnahme_3,
-        metall_ausnahme_4, metall_ausnahme_5, metall_ausnahme_6, metall_ausnahme_7,
-        metall_ausnahme_8, metall_ausnahme_9, metall_ausnahme_10, metall_ausnahme_11,
-        metall_ausnahme_12, metall_ausnahme_13, metall_ausnahme_14, metall_ausnahme_15,
-        metall_ausnahme_16, metall_ausnahme_17, metall_ausnahme_18, metall_ausnahme_19,
-        metall_ausnahme_20, metall_ausnahme_21, metall_ausnahme_22, metall_ausnahme_23,
-        metall_ausnahme_24, metall_ausnahme_25, metall_ausnahme_26, metall_ausnahme_27,
-        metall_ausnahme_28, metall_ausnahme_29, metall_ausnahme_30, metall_ausnahme_31,
-    };
-    for (int i = 0; i < 32; i++) {
-        idt_setze(i, t[i]);
-    }
-    idt_setze(0x40, metall_takt_eintritt);
-    idt_setze(0x41, metall_wecken_eintritt);
-    idt_setze(METALL_SYSTEMRUF_VEKTOR, metall_systemruf_eintritt);   /* O31: kernel service entry */
-    idt_setze(0xFF, metall_unecht);
-}
-
-static void idt_lade(void)
-{
-    struct idt_zeiger z = { sizeof(idt) - 1, (uint64_t)idt };
-    __asm__ __volatile__("lidt %0" :: "m"(z));
-}
+/* -- The IDT: GENERATED text since the C-free lane's C3 slice 3 (2026-10-05) -- --------
+ * `<unit>.metall.idt.c` (template `idt.metall`, Grammatik/SchablonenMetallIdt.lean):
+ * `metall_idt_bau`, `metall_idt_lade`, `metall_idt_setze`, `metall_idt_setze_fc`. */
 
 /* -- The LAPIC. ------------------------------------------------------------- */
 
@@ -296,8 +231,8 @@ static inline void lapic_schreib(uint32_t r, uint32_t v) { lapic[r / 4u] = v; }
 #define LAPIC_T_INIT  0x380u
 #define LAPIC_T_TEIL  0x3E0u
 
-#define TAKT_VEKTOR   0x40u
-#define WECK_VEKTOR   0x41u
+#define TAKT_VEKTOR   METALL_TAKT_VEKTOR
+#define WECK_VEKTOR   METALL_WECK_VEKTOR
 
 /* The quantum. The LAPIC timer counts the bus clock divided by 16; at QEMU's
  * nominal 1 GHz that is 1.6 ms per quantum. The LENGTH is not a guarantee of
@@ -675,55 +610,6 @@ __attribute__((noreturn)) void metall_fremd_fehlt(const char *name)
     metall_ende(7);
 }
 
-/* Install a program entry. The runtime's own vectors are never overwritten
- * (the timer 0x40, the wake vector 0x41, the spurious vector 0xFF): taken by a
- * program they would silently switch off a guarantee of the runtime, so that
- * is a loud end of the machine instead. An EXCEPTION vector (0..31) may be
- * taken -- a kernel's NMI or page-fault handler is a program entry like any
- * other (`beispiele/07` declares `nmi vector 2`) -- but only one WITHOUT a
- * CPU error code: the common stub (start.S) does not pop one, so an entry on
- * 8, 10..14, 17, 21, 29 or 30 would `iretq` into garbage. Refused loudly,
- * named in OFFEN O32. The IDT is one table for all cores; the store is visible
- * to every core's next interrupt dispatch. */
-static int hat_fehlercode(uint32_t v)
-{
-    return v == 8u || (v >= 10u && v <= 14u) || v == 17u || v == 21u || v == 29u || v == 30u;
-}
-
-void metall_idt_setze(uint32_t vektor, void (*stub)(void))
-{
-    if (vektor > 0xFEu || vektor == TAKT_VEKTOR || vektor == WECK_VEKTOR || hat_fehlercode(vektor) ||
-        stub == 0) {
-        schreibe_roh("METALL: entry vector ");
-        zahl_roh(vektor);
-        schreibe_roh(" is the runtime's own, carries a CPU error code, or is out of range -- refused\n");
-        metall_ende(5);
-    }
-    uint64_t f = ia_aus();
-    idt_setze((int)vektor, (void *)stub);
-    __atomic_thread_fence(__ATOMIC_SEQ_CST);
-    ia_her(f);
-}
-
-/* The error-code twin (OFFEN O32 (9), Opus agent L): ONLY the vectors whose
- * exception pushes a CPU error code, with a `METALL_EINTRITT_FC` stub that
- * drops it (`metall_eintritt_gemeinsam_fc`). Any other vector is refused here,
- * as an error-code vector is refused by `metall_idt_setze`: a stub on the
- * wrong kind of vector would `iretq` one word off. */
-void metall_idt_setze_fc(uint32_t vektor, void (*stub)(void))
-{
-    if (!hat_fehlercode(vektor) || stub == 0) {
-        schreibe_roh("METALL: entry vector ");
-        zahl_roh(vektor);
-        schreibe_roh(" pushes no CPU error code -- the error-code stub would iretq off by one word; refused\n");
-        metall_ende(5);
-    }
-    uint64_t f = ia_aus();
-    idt_setze((int)vektor, (void *)stub);
-    __atomic_thread_fence(__ATOMIC_SEQ_CST);
-    ia_her(f);
-}
-
 /* The current core, for `accumulates ... per cpu N` (the emitter's foreign
  * body `gabbro_kern`, certificate section E: "it returns a core number below
  * the `per cpu` count, and nothing here proves that"). On bare metal the
@@ -866,7 +752,7 @@ static __attribute__((noreturn)) void metall_ap(void);
 static __attribute__((noreturn)) void metall_ap(void)
 {
     kern_setze(ap_nr);
-    idt_lade();
+    metall_idt_lade();
     lapic_an();
     kerne[ap_nr].apic_id = lapic_lies(LAPIC_ID) >> 24;
     takt_an();
@@ -932,8 +818,8 @@ __attribute__((noreturn)) void metall_bsp(void)
     outb(0x21, 0xFF);                     /* mask both 8259s */
     outb(0xA1, 0xFF);
     kern_setze(0);
-    idt_bau();
-    idt_lade();
+    metall_idt_bau();
+    metall_idt_lade();
     madt_lies();
     lapic_an();
     kerne[0].apic_id = lapic_lies(LAPIC_ID) >> 24;

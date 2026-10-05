@@ -601,7 +601,10 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // **25 -> 28 on 2026-10-05 (C-free lane, C3 slice 2):** `sperre.metall`, `sperre.maskiert`
     // and `rcu.metall`, the bare-metal image's locks and rcu read sides as generated text
     // (`<metall_sperren.h>`), entered and proved in one commit (`SchablonenMetallSperre.lean`).
-    assert_eq!(bewiesen(), 28);
+    // **28 -> 29 on 2026-10-05 (C-free lane, C3 slice 3):** `idt.metall`, the bare-metal
+    // image's interrupt descriptor table as generated text, entered and proved in one commit
+    // (`SchablonenMetallIdt.lean`).
+    assert_eq!(bewiesen(), 29);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.
