@@ -1061,15 +1061,46 @@ def stmtSkalOk (c : PipeCfg) {Γ : Ctx} (ρ : Env D Γ)
     | _ => True
   | _ => True
 
-/-- Per-read premises over a whole block (conjunction over `cons`;
-    `True` for shapes the lowering refuses — those are `none` anyway). -/
-def blockSkalOk (c : PipeCfg) {Γ : Ctx} (ρ : Env D Γ)
+/-- Per-read premises over a whole block: the checked runtime bound and
+    register freshness per read, plus the no-read-after-write guard —
+    a read index must not have been written earlier in the block
+    (`written` records written indices), so its value still agrees with
+    the initial environment. `True` for shapes the lowering refuses. -/
+def blockSkalOk (c : PipeCfg) {Γ : Ctx} (ρ : Env D Γ) (written : Nat → Prop)
     {V : Vertrag D} {l : Bool} {Λ Λ' : List (Res D)}
     (b : Block D V l Γ Λ Λ') : Prop :=
   match b with
   | .nil => True
-  | .cons s rest => stmtSkalOk c ρ s ∧ blockSkalOk c ρ rest
+  | .cons s rest =>
+    match s with
+    | .assignVar x e =>
+      match e with
+      | .slot t f i _ =>
+        match idxVarG? i with
+        | some y =>
+          idxOkB (ρ.get y).n (D.count t) = true ∧
+          (∀ (τ' : Ty) (z : Var Γ τ'),
+            abbOf c τ' z = abbOf c _ x → varIdx z = varIdx x) ∧
+          ¬written (varIdx y) ∧
+          blockSkalOk c ρ (fun n => n = varIdx x ∨ written n) rest
+        | none => True
+      | .durch _ t _ f i _ =>
+        match idxVarG? i with
+        | some y =>
+          idxOkB (ρ.get y).n (D.count t) = true ∧
+          (∀ (τ' : Ty) (z : Var Γ τ'), abbOf c τ' z = abbOf c _ x → varIdx z = varIdx x) ∧
+          ¬written (varIdx y) ∧
+          blockSkalOk c ρ (fun n => n = varIdx x ∨ written n) rest
+        | none => True
+      | _ => True
+    | _ => True
   | _ => True
+
+/-- The top-level block predicate: nothing written yet. -/
+def blockSkalOkNil (c : PipeCfg) {Γ : Ctx} (ρ : Env D Γ)
+    {V : Vertrag D} {l : Bool} {Λ Λ' : List (Res D)}
+    (b : Block D V l Γ Λ Λ') : Prop :=
+  blockSkalOk c ρ (fun _ => False) b
 
 /-- STATEMENT LOWERING for block-level reads: `x := T[k].f` (or through
     a region pointer) at a variable index becomes the scaled chunk (value
@@ -1577,7 +1608,59 @@ theorem senkStmtSkal_gerade (A : TabAnker D) (c : PipeCfg)
     | _ => simp [senkStmtSkal] at h
   | _ => simp [senkStmtSkal] at h
 
+
 /- CUTS:
-   Environment get/set facts done. Statement/block lowering, the closing
-   theorem, refusal theorems for blocks, witnesses and axioms output are OPEN.
+   Done: scaled-index read lowering (senkSkalLesen), chunk runs
+   (skalRest_lauf, skalChunk_lauf), statement correctness
+   (senkStmtSkal_korrekt_slot/durch, senkStmtSkal_korrekt), straight-line
+   shape (senkStmtSkal_gerade), block lowering (senkStmtSkal,
+   senkBlockSkal) with the written-guard predicate (blockSkalOk,
+   blockSkalOkNil), and refusal theorems with joint witnesses for every
+   unsupported shape.
+   OPEN: the fetched-bytes block closing theorem: after one statement the
+   rest-block premise is stated at the old environment and needs an
+   environment-agreement transport lemma (from envGet_set_idx over indices
+   outside the written set); the nested-match blockSkalOk needs per-shape
+   casing like the dispatcher.
+   OPEN: _zeuge companions for the correctness theorems
+   (senkSkalLesen_korrekt, senkStmtSkal_korrekt_slot/durch,
+   senkStmtSkal_korrekt) on a non-degenerate memory-changing witness.
 -/
+#print axioms senkSkalLesen_korrekt
+#print axioms senkStmtSkal_korrekt_slot
+#print axioms senkStmtSkal_korrekt_durch
+#print axioms senkStmtSkal_korrekt
+#print axioms senkStmtSkal_gerade
+#print axioms skalRest_lauf
+#print axioms skalChunk_lauf
+#print axioms verdoppeln_lauf
+#print axioms idxVarG?_eval
+#print axioms senkSkalLesen_durch_slot
+#print axioms senkSkalLesen_nichtvar_slot
+#print axioms senkSkalLesen_ohne_basis
+#print axioms senkSkalLesen_ohne_zeile
+#print axioms senkSkalLesen_ohne_feld
+#print axioms senkSkalLesen_falsche_zeile
+#print axioms senkSkalLesen_rsp_index
+#print axioms senkSkalLesen_falsche_basis
+#print axioms senkSkalLesen_nichtvar_durch
+#print axioms senkSkalLesen_ohne_basis_durch
+#print axioms senkSkalLesen_ohne_zeile_durch
+#print axioms senkSkalLesen_ohne_feld_durch
+#print axioms senkSkalLesen_falsche_zeile_durch
+#print axioms senkSkalLesen_rsp_index_durch
+#print axioms senkSkalLesen_falsche_basis_durch
+#print axioms senkSkalLesen_nichtvar_slot_zeuge
+#print axioms senkSkalLesen_ohne_basis_zeuge
+#print axioms senkSkalLesen_ohne_zeile_zeuge
+#print axioms senkSkalLesen_ohne_feld_zeuge
+#print axioms senkSkalLesen_falsche_zeile_zeuge
+#print axioms senkSkalLesen_rsp_index_zeuge
+#print axioms senkSkalLesen_falsche_basis_zeuge
+#print axioms senkSkalLesen_nichtvar_durch_zeuge
+#print axioms senkSkalLesen_ohne_basis_durch_zeuge
+#print axioms senkSkalLesen_ohne_zeile_durch_zeuge
+#print axioms senkSkalLesen_ohne_feld_durch_zeuge
+#print axioms senkSkalLesen_falsche_zeile_durch_zeuge
+#print axioms senkSkalLesen_rsp_index_durch_zeuge
+#print axioms senkSkalLesen_falsche_basis_durch_zeuge
