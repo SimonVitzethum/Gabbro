@@ -201,6 +201,69 @@ theorem kap_addr_store_tso (m m' : HwMaschine) (c : Nat)
   exact kapTso_concIssue_erreichbar (kapTso m) c b
     (hwAddrOf m c ripNext f) ((m.kerne c).register src) s' hconc
 
+/-- An addressed load leaves the projection unchanged and observes
+    the forwarding-aware value: only the destination register (through
+    the accepted `mergeRegNarrow`) and RIP move. The footprint is the
+    selected address (`hwAddrOf`) at the access width. -/
+theorem kap_addr_load_still (m m' : HwMaschine) (c : Nat)
+    (b : Breite) (f : AdrForm) (ripNext : Adresse) (dst : Register)
+    (len : Nat)
+    (h : hwAddrLoad m c b f ripNext dst len = some m') :
+    kapTso m' = kapTso m ∧ ∃ w : Wort,
+      concLoad (kapTso m) c b (hwAddrOf m c ripNext f) = some w
+      ∧ (m'.kerne c).register dst
+        = mergeRegNarrow b ((m.kerne c).register dst) w := by
+  unfold hwAddrLoad at h
+  cases hlen : laengeOk len with
+  | false => simp [hlen] at h
+  | true =>
+    simp only [hlen] at h
+    cases hl : concLoad (tsoAnsicht m) c b (hwAddrOf m c ripNext f) with
+    | none => simp [hl] at h
+    | some w =>
+      simp [hl] at h
+      cases h
+      exact ⟨rfl, w, hl, by simp [regSet_gleich]⟩
+
+/-- Every addressed adapter step reaches through the projection:
+    stores via the `concIssue` fold, loads silently. -/
+theorem kap_addr_tso (m m' : HwMaschine) (c : Nat)
+    (e : HwAddrEreignis)
+    (h : adapterAddr.schritt m c e = some m') :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases e with
+  | store b f ripNext src len =>
+    exact kap_addr_store_tso m m' c b f ripNext src len h
+  | load b f ripNext dst len =>
+    have heq := (kap_addr_load_still m m' c b f ripNext dst len h).1
+    rw [heq]
+    exact .start
+  | verweigert =>
+    have he := adapterAddr_verweigert m c
+    rw [he] at h
+    cases h
+
+/-- Width cases 1/2/4/8 bytes: each width-selected store issues exactly
+    its byte count into the acting core's buffer (`entriesOf_laenge`). -/
+theorem kap_addr_breiten (a : Adresse) (v : Wort) :
+    (entriesOf .b8 a v).length = 1 ∧ (entriesOf .b16 a v).length = 2
+    ∧ (entriesOf .b32 a v).length = 4
+    ∧ (entriesOf .b64 a v).length = 8 := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [entriesOf_laenge]; decide
+  · rw [entriesOf_laenge]; decide
+  · rw [entriesOf_laenge]; decide
+  · rw [entriesOf_laenge]; decide
+
+/-- A split across a group boundary stays the accepted tearing refusal:
+    the exhibited partial buffer and the foreign-footprint overlap are
+    no word group (`hwAddrWitTeil_keine_gruppe`,
+    `hwAddrWitOverlap_keine_gruppe`, lifted unchanged). -/
+theorem kap_addr_tearing :
+    ¬ WortGruppe hwAddrWitTeil 0 hwAddrWitA hwAddrWitV
+    ∧ ¬ WortGruppe hwAddrWitOverlap 0 hwAddrWitA hwAddrWitV := by
+  exact ⟨hwAddrWitTeil_keine_gruppe, hwAddrWitOverlap_keine_gruppe⟩
+
 /- CUTS:
     Proved here so far: `kapTso_setKernVonZustand` (ISA register
     re-embedding is silent on the TSO projection) and the exact ISA
@@ -218,5 +281,9 @@ theorem kap_addr_store_tso (m m' : HwMaschine) (c : Nat)
 #print axioms kapTso_concIssue_erreichbar
 #print axioms kap_addr_store_issue
 #print axioms kap_addr_store_tso
+#print axioms kap_addr_load_still
+#print axioms kap_addr_tso
+#print axioms kap_addr_breiten
+#print axioms kap_addr_tearing
 
 end Gabbro.Grammatik.X86
