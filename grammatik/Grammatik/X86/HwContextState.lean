@@ -205,4 +205,213 @@ theorem ctxRundlauf_pur (k : FPKontext) (x : XmmDatei) :
     rw [hlo, hhi, bytesWort_wortByte, bytesWort_wortByte]
     exact vecJoin_split (x r)
 
+/-! ## 2. Footprint and the TSO bridge.
+
+    The modelled footprint is 260 bytes: offsets 24-27 (MXCSR) and
+    160-415 (XMM slots). Entries are built by a cons-recursion over an
+    explicit offset list, so the forwarding proofs below induct
+    directly on it. -/
+
+/-- Modelled footprint offsets: 24-27 then 160-415. -/
+def ctxOffsets : List Nat :=
+  (List.range 4).map (24 + ·) ++ (List.range 256).map (160 + ·)
+
+/-- Every footprint offset fits well inside the area. -/
+theorem ctxOffsets_klein (i : Nat) (h : i ∈ ctxOffsets) : i < 512 := by
+  unfold ctxOffsets at h
+  simp only [List.mem_append, List.mem_map, List.mem_range] at h
+  rcases h with ⟨k, hk, rfl⟩ | ⟨k, hk, rfl⟩ <;> omega
+
+set_option maxRecDepth 10000 in
+/-- The footprint has no duplicate offset (elaboration-only depth
+    budget, same pattern as the model file's kernel `decide`s). -/
+theorem ctxOffsets_nodup : ctxOffsets.Nodup := by decide
+
+/-- MXCSR offsets are in the footprint. -/
+theorem ctxOffsets_mxcsr (j : Nat) (hj : j < 4) : 24 + j ∈ ctxOffsets := by
+  unfold ctxOffsets
+  simp only [List.mem_append, List.mem_map, List.mem_range]
+  exact Or.inl ⟨j, hj, rfl⟩
+
+/-- XMM slot offsets are in the footprint. -/
+theorem ctxOffsets_xmm (n j : Nat) (hn : n < 16) (hj : j < 16) :
+    160 + 16 * n + j ∈ ctxOffsets := by
+  unfold ctxOffsets
+  simp only [List.mem_append, List.mem_map, List.mem_range]
+  exact Or.inr ⟨16 * n + j, by omega, by omega⟩
+
+/-- Footprint addresses stay distinct: `addrOff` is injective below
+    512 (same shape as `addrOff_inj8`, reused idea, wider bound). -/
+theorem addrOff_inj512 {a : Adresse} {i j : Nat}
+    (hi : i < 512) (hj : j < 512)
+    (h : addrOff a i = addrOff a j) : i = j := by
+  unfold addrOff at h
+  have h2 := congrArg BitVec.toNat h
+  rw [BitVec.toNat_add, BitVec.toNat_add,
+    BitVec.toNat_ofNat, BitVec.toNat_ofNat] at h2
+  have ha := a.isLt
+  omega
+
+/-- Save entries over an offset list: one buffered byte per offset. -/
+def fxEintraegeAux (f : Nat → Byte) (a : Adresse) : List Nat → List TSOEintrag
+  | [] => []
+  | i :: rest => ⟨addrOff a i, f i⟩ :: fxEintraegeAux f a rest
+
+/-- The save entries of a context at area base `a`. -/
+def fxEintraege (k : FPKontext) (x : XmmDatei) (a : Adresse) :
+    List TSOEintrag :=
+  fxEintraegeAux (ctxByte k x) a ctxOffsets
+
+/-- The youngest match in an appended list comes from the suffix when
+    the suffix matches, else from the prefix. -/
+theorem neuestens_append (l1 l2 : List TSOEintrag) (a : Adresse) :
+    neuestens (l1 ++ l2) a =
+      match neuestens l2 a with
+      | some v => some v
+      | none => neuestens l1 a := by
+  induction l1 with
+  | nil =>
+    cases h : neuestens l2 a <;> simp [h, neuestens]
+  | cons e t ih =>
+    have h1 : (e :: t) ++ l2 = e :: (t ++ l2) := rfl
+    rw [h1]
+    simp only [neuestens]
+    rw [ih]
+    cases h2 : neuestens l2 a <;> cases ht : neuestens t a <;> simp_all
+
+/-- An offset outside the list never matches the entries. -/
+theorem neuestens_nicht_enthalten (f : Nat → Byte) (a : Adresse)
+    (os : List Nat) (k : Nat)
+    (hk : k < 512) (hb : ∀ i ∈ os, i < 512)
+    (h : ∀ i ∈ os, i ≠ k) :
+    neuestens (fxEintraegeAux f a os) (addrOff a k) = none := by
+  induction os with
+  | nil => rfl
+  | cons i rest ih =>
+    have hi : i ≠ k := h i (by simp)
+    have hni : addrOff a i ≠ addrOff a k := by
+      intro he
+      exact hi (addrOff_inj512 (hb i (by simp)) hk he)
+    have ihr := ih (fun j hj => hb j (by simp [hj]))
+      (fun j hj => h j (by simp [hj]))
+    simp only [fxEintraegeAux, neuestens, ihr]
+    simp [hni]
+
+/-- Point update of a byte image at one offset. -/
+def ctxAktual (g : Nat → Byte) (k : Nat) (v : Byte) : Nat → Byte :=
+  fun i => if i = k then v else g i
+
+/-- Fold loaded pairs over a base image, newer pairs shadowing. -/
+def ctxFalte : List (Nat × Byte) → (Nat → Byte) → (Nat → Byte)
+  | [], g => g
+  | p :: rest, g => ctxFalte rest (ctxAktual g p.1 p.2)
+
+/-- Folding pairs whose keys all differ from `j` keeps whatever
+    value the accumulator already holds at `j`. -/
+theorem ctxFalte_behaelt_allg (bs : List (Nat × Byte)) (g : Nat → Byte)
+    (j : Nat) (b : Byte)
+    (hg : g j = b) (h : ∀ p ∈ bs, p.1 ≠ j) :
+    ctxFalte bs g j = b := by
+  induction bs generalizing g with
+  | nil =>
+    unfold ctxFalte
+    exact hg
+  | cons p rest ih =>
+    have hp : p.1 ≠ j := h p (by simp)
+    unfold ctxFalte
+    apply ih
+    · unfold ctxAktual
+      have hne : ¬ (j = p.1) := fun he => hp he.symm
+      rw [if_neg hne]
+      exact hg
+    · exact fun q hq => h q (by simp [hq])
+
+/-- Folding pairs whose keys all differ from `j` keeps the value at
+    `j` installed by an earlier update. -/
+theorem ctxFalte_behaelt (bs : List (Nat × Byte)) (base : Nat → Byte)
+    (j : Nat) (b : Byte)
+    (h : ∀ p ∈ bs, p.1 ≠ j) :
+    ctxFalte bs (ctxAktual base j b) j = b :=
+  ctxFalte_behaelt_allg bs _ j b (by unfold ctxAktual; simp) h
+
+/-- Load the footprint offsets through the TSO view (forwarding
+    included): one `(offset, byte)` pair per offset, head-first. -/
+def ctxLadeAux (s : TSOZustand) (c : Nat) (a : Adresse) :
+    List Nat → Option (List (Nat × Byte))
+  | [] => some []
+  | i :: rest =>
+    match ctxLadeAux s c a rest with
+    | none => none
+    | some bs =>
+      match loadByte s c (addrOff a i) with
+      | none => none
+      | some b => some ((i, b) :: bs)
+
+/-- Loaded pair keys lie inside the requested offsets. -/
+theorem ctxLadeAux_keys (s : TSOZustand) (c : Nat) (a : Adresse)
+    (os : List Nat) (bs : List (Nat × Byte))
+    (hbs : ctxLadeAux s c a os = some bs) :
+    ∀ p ∈ bs, p.1 ∈ os := by
+  induction os generalizing bs with
+  | nil =>
+    simp only [ctxLadeAux] at hbs
+    cases hbs
+    simp
+  | cons j rest ih =>
+    simp only [ctxLadeAux] at hbs
+    cases hrec : ctxLadeAux s c a rest with
+    | none => simp [hrec] at hbs
+    | some bs' =>
+      cases hld : loadByte s c (addrOff a j) with
+      | none => simp [hrec, hld] at hbs
+      | some b =>
+        simp [hrec, hld] at hbs
+        subst hbs
+        intro p hp
+        have hmem : p = (j, b) ∨ p ∈ bs' := by simpa using hp
+        rcases hmem with rfl | hmem'
+        · simp
+        · have h2 := ih bs' hrec p hmem'
+          simp [h2]
+
+/-- A successful footprint load folds back to the loaded image on
+    every footprint offset. -/
+theorem ctxLade_geladen (s : TSOZustand) (c : Nat) (a : Adresse)
+    (f : Nat → Byte) (os : List Nat) :
+    ∀ (base : Nat → Byte) (hnd : os.Nodup),
+    ∀ (hl : ∀ i ∈ os, loadByte s c (addrOff a i) = some (f i)),
+    ∀ (bs : List (Nat × Byte)),
+    ctxLadeAux s c a os = some bs → ∀ (i : Nat), i ∈ os →
+      ctxFalte bs base i = f i := by
+  induction os with
+  | nil =>
+    intro base _hnd _hl bs hbs i hi
+    simp at hi
+  | cons j rest ih =>
+    intro base hnd hl bs hbs i hi
+    have hndj : j ∉ rest := (List.nodup_cons.mp hnd).1
+    have hndr : rest.Nodup := (List.nodup_cons.mp hnd).2
+    have hjl := hl j (by simp)
+    have hrest : ∀ k ∈ rest, loadByte s c (addrOff a k) = some (f k) :=
+      fun k hk => hl k (by simp [hk])
+    simp only [ctxLadeAux] at hbs
+    cases hrec : ctxLadeAux s c a rest with
+    | none => simp [hrec] at hbs
+    | some bs' =>
+      cases hld : loadByte s c (addrOff a j) with
+      | none => simp [hrec, hld] at hbs
+      | some b =>
+        simp [hrec, hld] at hbs
+        subst hbs
+        have hbj : b = f j := Option.some_inj.mp (hld.symm.trans hjl)
+        have hkeys := ctxLadeAux_keys s c a rest bs' hrec
+        have hmem : i = j ∨ i ∈ rest := by simpa using hi
+        rcases hmem with heq | hir
+        · unfold ctxFalte
+          rw [heq, hbj]
+          exact ctxFalte_behaelt bs' base j (f j)
+            (fun p hp => fun heq2 => hndj (heq2 ▸ hkeys p hp))
+        · unfold ctxFalte
+          exact ih (ctxAktual base j b) hndr hrest bs' hrec i hir
+
 end Gabbro.Grammatik.X86
