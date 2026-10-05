@@ -255,6 +255,252 @@ theorem chunk_deckung_eins_abgeleitet_zeuge :
   exact chunk_deckung_eins_abgeleitet pwCfg pwL () () pwIdx0 pwWert0 pwHT0
     pwHw pwHL _ _ pw_senkWert0 pwChunkCast
 
+/-! ## 4. N-chunk chains: lowering, runs and coverage by induction.
+
+    An `assignSlot` preserves the resource list (`Stmt ... Λ Λ`), so a
+    list of chunks is a well-typed dependent `Block` at ANY length --
+    past lane 1195's two conses. The per-chunk lowering
+    (`chunksAusListe`) refuses as soon as one chunk refuses; the block
+    lowering (`senkBlock`) is its flattening. -/
+
+/-- The statement of one chunk. -/
+def chunkStmt (a : AssignChunk D V l Γ Λ) : Stmt D V l Γ Λ Λ :=
+  .assignSlot a.t a.f a.i a.e a.hw a.hL
+
+/-- The dependent source block of a chunk list. -/
+def blockAusChunks : List (AssignChunk D V l Γ Λ) → Block D V l Γ Λ Λ
+  | [] => .nil
+  | a :: rest => .cons (chunkStmt a) (blockAusChunks rest)
+
+/-- The per-chunk lowering: each chunk through `senkStmt`. -/
+def chunksAusListe (c : PipeCfg) (L : Layout D) :
+    List (AssignChunk D V l Γ Λ) → Option (List (List Befehl))
+  | [] => some []
+  | a :: rest =>
+    match senkStmt c L (chunkStmt a) with
+    | some p => (chunksAusListe c L rest).map (p :: ·)
+    | none => none
+
+/-- The block lowering of one chunk statement is the chunk equation. -/
+theorem senkBlock_chunkStmt (c : PipeCfg) (L : Layout D)
+    (a : AssignChunk D V l Γ Λ) {Λ'' : List (Res D)}
+    (rest : Block D V l Γ Λ Λ'') (pos : Nat) :
+    senkBlock c L pos (.cons (chunkStmt a) rest) =
+      match senkStmt c L (chunkStmt a) with
+      | some p => (senkBlock c L (pos + (encodeAll p).length) rest).map (p ++ ·)
+      | none => none :=
+  senkBlock_assign c L a.t a.f a.i a.e a.hw a.hL rest pos
+
+/-- BLOCK LOWERING BY INDUCTION: the lowered block is the flattened
+    chunk list. Every premise is used: `h` drives the case splits and
+    feeds the induction. -/
+theorem senkBlock_blockAusChunks (c : PipeCfg) (L : Layout D) (pos : Nat)
+    (as : List (AssignChunk D V l Γ Λ)) (chunks : List (List Befehl))
+    (h : chunksAusListe c L as = some chunks) :
+    senkBlock c L pos (blockAusChunks as) = some chunks.flatten := by
+  induction as generalizing pos chunks with
+  | nil =>
+    simp only [chunksAusListe, Option.some.injEq] at h
+    subst h
+    rfl
+  | cons a rest ih =>
+    simp only [chunksAusListe] at h
+    cases hs : senkStmt c L (chunkStmt a) with
+    | none => simp [hs] at h
+    | some p =>
+      simp only [hs] at h
+      cases hq : chunksAusListe c L rest with
+      | none => simp [hq] at h
+      | some chunksRest =>
+        simp only [hq, Option.map_some, Option.some.injEq] at h
+        subst h
+        have ihrest := ih (pos + (encodeAll p).length) chunksRest hq
+        simp only [blockAusChunks]
+        rw [senkBlock_chunkStmt, hs]
+        simp only
+        rw [ihrest]
+        rfl
+
+/-- N-CHUNK RUN, DERIVED: from the per-chunk lowering, a checked
+    configuration, a separated layout and a represented start state,
+    the source `execBlock` over the whole chain AND the target run
+    chain over the chunks reach the final written world, represented.
+    The induction threads representation through
+    `chunk_lauf_abgeleitet`; the source side composes through the real
+    `execBlock_cons_stmtOk`. Every premise is used. -/
+theorem ketteLauf_blockAusChunks (c : PipeCfg) (L : Layout D)
+    (hc : cfgOk c = true) (hsep : LayoutSep L)
+    (as : List (AssignChunk D V l Γ Λ)) (chunks : List (List Befehl))
+    (hchunks : chunksAusListe c L as = some chunks)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (st : Zustand)
+    (hW : WorldRep L st.speicher σ) (hE : EnvRepr ρ st.register (abbOf c)) :
+    ∃ (σ' : World D) (st' : Zustand),
+      execBlock O passes R (blockAusChunks as) σ ρ = .ok σ' ρ ∧
+      KetteLauf chunks st st' ∧
+      WorldRep L st'.speicher σ' ∧ EnvRepr ρ st'.register (abbOf c) := by
+  induction as generalizing σ st chunks with
+  | nil =>
+    simp only [chunksAusListe, Option.some.injEq] at hchunks
+    subst hchunks
+    exact ⟨σ, st, rfl, .nil st, hW, hE⟩
+  | cons a rest ih =>
+    simp only [chunksAusListe] at hchunks
+    cases hs : senkStmt c L (chunkStmt a) with
+    | none => simp [hs] at hchunks
+    | some p =>
+      simp only [hs] at hchunks
+      cases hq : chunksAusListe c L rest with
+      | none => simp [hq] at hchunks
+      | some chunksRest =>
+        simp only [hq, Option.map_some, Option.some.injEq] at hchunks
+        subst hchunks
+        obtain ⟨σ1, st1, hsrc1, hrun1, hW1, hE1⟩ :=
+          chunk_lauf_abgeleitet c L hc hsep a.t a.f a.i a.e a.hw a.hL p hs
+            O passes R σ ρ st hW hE
+        obtain ⟨σ2, st2, hsrcRest, hrunRest, hW2, hE2⟩ :=
+          ih chunksRest hq σ1 st1 hW1 hE1
+        have hsrc : execBlock O passes R (blockAusChunks (a :: rest)) σ ρ =
+            .ok σ2 ρ := by
+          simp only [blockAusChunks]
+          rw [execBlock_cons_stmtOk O passes R (chunkStmt a) _ σ ρ σ1 ρ hsrc1]
+          exact hsrcRest
+        exact ⟨σ2, st2, hsrc,
+          KetteLauf.cons p chunksRest st st1 st2 hrun1 hrunRest, hW2, hE2⟩
+
+/-- N-CHUNK COVERAGE, DERIVED: the flattened chunks are covered by
+    the admitted pipeline summary over the summed generated lengths.
+    Generic per-chunk budgets (`deckung_chunk_generisch`) append
+    through `deckung_append_pipe`. Every premise is used. -/
+theorem deckung_blockAusChunks (c : PipeCfg) (L : Layout D)
+    (as : List (AssignChunk D V l Γ Λ)) (chunks : List (List Befehl))
+    (h : chunksAusListe c L as = some chunks) :
+    Deckung pipeSummary (chunks.map List.length).sum
+      (decodiertZu chunks.flatten) := by
+  induction as generalizing chunks with
+  | nil =>
+    simp only [chunksAusListe, Option.some.injEq] at h
+    subst h
+    simp only [List.map_nil, List.sum_nil, List.flatten_nil, decodiertZu,
+      List.map_nil]
+    exact deckung_leer pipeSummary 0 (by simp [pipeSummary_expand])
+  | cons a rest ih =>
+    simp only [chunksAusListe] at h
+    cases hs : senkStmt c L (chunkStmt a) with
+    | none => simp [hs] at h
+    | some p =>
+      simp only [hs] at h
+      cases hq : chunksAusListe c L rest with
+      | none => simp [hq] at h
+      | some chunksRest =>
+        simp only [hq, Option.map_some, Option.some.injEq] at h
+        subst h
+        have hdeckRest := ih _ hq
+        simp only [List.map_cons, List.sum_cons, List.flatten_cons]
+        rw [decodiertZu_append]
+        exact deckung_append_pipe p.length (chunksRest.map List.length).sum
+          _ _ (deckung_chunk_generisch p) hdeckRest
+
+/-- N-CHUNK STRAIGHT-LINE: every lowered chunk list flattens to
+    straight-line code, so the byte-fetch bridge (`lauf_zu_laufBytes`)
+    applies. Every premise is used. -/
+theorem chunks_flatten_gerade (c : PipeCfg) (L : Layout D)
+    (as : List (AssignChunk D V l Γ Λ)) (chunks : List (List Befehl))
+    (h : chunksAusListe c L as = some chunks) :
+    chunks.flatten.all gerade = true := by
+  induction as generalizing chunks with
+  | nil =>
+    simp only [chunksAusListe, Option.some.injEq] at h
+    subst h
+    rfl
+  | cons a rest ih =>
+    simp only [chunksAusListe] at h
+    cases hs : senkStmt c L (chunkStmt a) with
+    | none => simp [hs] at h
+    | some p =>
+      simp only [hs] at h
+      cases hq : chunksAusListe c L rest with
+      | none => simp [hq] at h
+      | some chunksRest =>
+        simp only [hq, Option.map_some, Option.some.injEq] at h
+        subst h
+        obtain ⟨k, A, pv, -, -, hok, hpv, hcode⟩ :=
+          senkStmt_assign_inv c L a.t a.f a.i a.e a.hw a.hL p hs
+        have hg : p.all gerade = true :=
+          chunkCode_gerade pv p c.adr c.dst A (senkWertT_gerade c a.e pv hpv)
+            hcode
+        simp [List.flatten_cons, List.all_append, hg, ih _ hq]
+
+/-- The witness chunk: row `0` gets `x + 5`. -/
+def witChunk1219 : AssignChunk pwD pwV false pwCtx [] :=
+  { t := (), f := (), i := pwIdx0, e := pwWert0, hw := pwHw, hL := pwHL }
+
+/-- Three witness chunks lower to three copies of the five-instruction
+    chunk, by computation. -/
+theorem chunksAusListe_drei1219 :
+    chunksAusListe pwCfg pwL [witChunk1219, witChunk1219, witChunk1219] =
+      some [pwProg.take 5, pwProg.take 5, pwProg.take 5] := rfl
+
+/-- JOINT WITNESS for `senkBlock_blockAusChunks`: the three-chunk
+    lowering is the flattened triple, with the shared non-degenerate
+    package (`PipePaket`). -/
+theorem senkBlock_blockAusChunks_zeuge :
+    ∃ (prog : List Befehl),
+      chunksAusListe pwCfg pwL [witChunk1219, witChunk1219, witChunk1219] =
+        some [pwProg.take 5, pwProg.take 5, pwProg.take 5] ∧
+      senkBlock pwCfg pwL 0
+        (blockAusChunks [witChunk1219, witChunk1219, witChunk1219]) =
+        some prog ∧
+      prog = [pwProg.take 5, pwProg.take 5, pwProg.take 5].flatten ∧
+      PipePaket := by
+  refine ⟨_, chunksAusListe_drei1219, ?_, rfl, pipePaket_hold⟩
+  exact senkBlock_blockAusChunks pwCfg pwL 0 _ _ chunksAusListe_drei1219
+
+/-- JOINT WITNESS for `ketteLauf_blockAusChunks`: source run, target
+    run chain and preserved representation over three witness chunks,
+    with the shared non-degenerate package (`PipePaket`). -/
+theorem ketteLauf_blockAusChunks_zeuge :
+    ∃ (σ' : World pwD) (st' : Zustand),
+      execBlock pwO 0 pwR
+        (blockAusChunks [witChunk1219, witChunk1219, witChunk1219])
+        pwSigma pwEnv30 = .ok σ' pwEnv30 ∧
+      KetteLauf [pwProg.take 5, pwProg.take 5, pwProg.take 5]
+        (pwStart 30) st' ∧
+      WorldRep pwL st'.speicher σ' ∧
+      EnvRepr pwEnv30 st'.register (abbOf pwCfg) ∧
+      PipePaket := by
+  obtain ⟨σ', st', hsrc, hrun, hW', hE'⟩ :=
+    ketteLauf_blockAusChunks pwCfg pwL pw_cfgOk pw_layoutSep _ _
+      chunksAusListe_drei1219 pwO 0 pwR pwSigma pwEnv30 (pwStart 30)
+      pw_worldRep pw_envRepr30
+  exact ⟨σ', st', hsrc, hrun, hW', hE', pipePaket_hold⟩
+
+/-- JOINT WITNESS for `deckung_blockAusChunks`: the triple is covered
+    at the summed generated length, with the shared non-degenerate
+    package (`PipePaket`). -/
+theorem deckung_blockAusChunks_zeuge :
+    ∃ (chunks : List (List Befehl)),
+      chunksAusListe pwCfg pwL [witChunk1219, witChunk1219, witChunk1219] =
+        some chunks ∧
+      Deckung pipeSummary (chunks.map List.length).sum
+        (decodiertZu chunks.flatten) ∧
+      PipePaket := by
+  refine ⟨_, chunksAusListe_drei1219, ?_, pipePaket_hold⟩
+  exact deckung_blockAusChunks pwCfg pwL _ _ chunksAusListe_drei1219
+
+/-- JOINT WITNESS for `chunks_flatten_gerade`: the triple flattens to
+    straight-line code, with the shared non-degenerate package
+    (`PipePaket`). -/
+theorem chunks_flatten_gerade_zeuge :
+    ∃ (chunks : List (List Befehl)),
+      chunksAusListe pwCfg pwL [witChunk1219, witChunk1219, witChunk1219] =
+        some chunks ∧
+      chunks.flatten.all gerade = true ∧
+      PipePaket := by
+  refine ⟨_, chunksAusListe_drei1219, ?_, pipePaket_hold⟩
+  exact chunks_flatten_gerade pwCfg pwL _ _ chunksAusListe_drei1219
+
 /- CUTS:
    - Skeleton green: `AssignChunk` (assignSlot-only chains, no case split).
    - OPEN: everything in the task (derived runs, coverage, n-chunk
