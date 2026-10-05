@@ -100,10 +100,10 @@ Measured snapshot 2026-10-01 — every figure carries its command; provenance an
 
 | | | |
 |---|---|---|
-| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 481 diagnostics · `gabbro passes` |
+| **Compiler** | 12 passes, 3 complete, **9 carried with a named residue**, 0 partial, 0 open | 482 diagnostics · `gabbro passes` |
 | **Grammar** | **188 EBNF rules**, closed and reachable | vocabulary covers every terminal, 242 / 242 |
 | **Proof templates** | **41, of which 30 are machine-checked** | `gabbro templates` |
-| **Corpus** | 157 clean examples, 857 poison files | `cargo test --no-fail-fast` |
+| **Corpus** | 157 clean examples, 858 poison files | `cargo test --no-fail-fast` |
 | **Backend** | working C11 backend (`cc -std=c11 -Wall -Wextra -Werror`, `-O0` and `-O2`); every emitted unit is compiled, part executed against a handwritten twin | `./instrumente/pruefe-emission.sh` |
 | **Guardians** | 57, each with deadline, two-way speech test, red on abort, pinned locale; **75 of 89 instruments carry the four static requirements** (work quantity is measured per run) | `./instrumente/abnahme.py` |
 | **Blind spots** | **73 blind · 175 covered · 24 poison-only · 12 no cell** *(of 285 pairs)* — poison-only is a hint, not a proof | `gabbro blindspots` |

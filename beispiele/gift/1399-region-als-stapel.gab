@@ -1,0 +1,85 @@
+-- erwartet: N578 allein
+-- **The handed stack is a number, never a pointer.**
+--
+-- The argument at a gate's `stack` parameter is the one value that travels into the `child`
+-- region, and the parent runs on beside the child. Here it is a REGION bound from a gate
+-- answer, whose extent clause (`ensures len <= lenof(result)`) held on both paths: the child
+-- writes `seite[5]`, the parent writes `seite[5]` -- two threads, one byte, no order, and no
+-- declared carrier the race rule (`N457`) could guard. Before `N578` (C-free lane,
+-- 2026-10-05) this file checked with 0 errors.
+module gift::region_als_stapel {
+
+reason HolFehler {
+    Leer = 12 "no memory"
+    exhaustive
+}
+
+reason UebergabeFehler {
+    KeinStapel = 1 "no stack was handed"
+    exhaustive
+}
+
+assume region_vertrag
+    "The gate answers the base of at least `len` fresh bytes shared with nothing else, or -errno."
+    falsifier sonde_region;
+
+assume faden_start_vertrag
+    "The starter keeps its contract on this machine."
+    falsifier sonde_faden_start;
+
+assume ende_vertrag
+    "The gate ends the process and never returns."
+    falsifier sonde_ende;
+
+syscall holen(len : u64) -> ptr<normal, rw> u8 or HolFehler
+    abi linux arch x86_64 number 1001
+    regs in { rdi = len }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { ENOMEM => Leer }
+    ensures len <= lenof(result)
+    effects { pure }
+    costs <= 8 ops
+    assume region_vertrag falsifier sonde_region;
+
+syscall roher_start(art : u64, stapel : ptr<normal, rw> u8) -> u64 or UebergabeFehler
+    abi linux arch x86_64 number 1000
+    regs in { rdi = art, rsi = stapel }
+    regs out { rax }
+    stack rsi
+    clobbers { rcx, r11 }
+    errors { ENOMEM => KeinStapel }
+    requires 4096 <= lenof(stapel)
+    effects { pure }
+    costs <= 64 ops
+    assume faden_start_vertrag falsifier sonde_faden_start;
+
+syscall ende(code : u64) -> never
+    abi linux arch x86_64 number 1002
+    regs in { rdi = code }
+    regs out { rax }
+    clobbers { rcx, r11 }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume ende_vertrag falsifier sonde_ende;
+
+pub fn anfang() -> never
+    effects { diverges }
+    costs   <= 400 ops
+{
+    let seite = holen(4096) else (e) {
+        ende(2);
+    }
+    let v = roher_start(0, seite) else (e) { ende(4); }
+    if v == 0 {
+        child {
+            seite[5] = 1;
+            ende(0);
+        }
+    }
+    seite[5] = 2;
+    ende(0);
+}
+
+}

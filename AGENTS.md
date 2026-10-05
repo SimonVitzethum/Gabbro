@@ -367,8 +367,8 @@ opus/…:opus/…` first.
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N578** (highest issued: N577, C-free lane, 2026-10-01; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
-| Gift (poison-probe) numbers | **1399** (highest file: `beispiele/gift/1398`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
+| Diagnostic codes | **N579** (highest issued: N578, C-free lane, 2026-10-05; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
+| Gift (poison-probe) numbers | **1400** (highest file: `beispiele/gift/1399`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
 | Example numbers | **185** (highest file: `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
 | Lane numbers | **1114** next free; allocate unique IDs from the actual live coordinator registry. |
 
@@ -448,6 +448,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 
 | C-free lane, the kernel thread start in Gabbro (C2 slice 3, 2026-10-01, OFFEN O39) | **not reserved** | **N575**-**N577** (`eintritt.code`: the type `entry fn(…) -> R` -- where it stands, no Gabbro caller of a function taking one, one whole hand-over outside every loop), gifts **1394**-**1397**, example **184** (`code-vom-treiber`). `bibliothek/linux-kmod/linux-kmod.gab`'s thread start and join sleep are Gabbro (`kthread_create_on_node`, `wake_up_process`, `msleep`); `linux-kmod.c` keeps the core number only. PROVED template `faden.modul` (`SchablonenModul.lean` §3; register 33 -> 34 entries, 22 -> 23 machine-checked). Emitter repair: a function-pointer PARAMETER is written with its name inside the declarator (it was `T (*)(…) name`, a C error). OFFEN O40 (private functions of one name in two modules share a C name)
 | C-free lane, OFFEN O40 half closed (2026-10-05) | **not reserved** | gift **1398** (`zwei-private-gleichen-namens`); **no code**: `N042` widened to two function bodies of one name in two modules with a private side (`namen.rs::zwei_ruempfe_ein_name`); no example (clean twins `beispiele/29`, `messung/fragmente/F05.gab`). Also C3 slice 1 the same day (no number: templates `metall.speicher`, `arena.metall`) |
+| C-free lane, the handed stack is a number (2026-10-05) | **not reserved** | **N578** (`klon.stapel_zahl`: the parameter a gate's `stack` clause binds is a written integer type -- a region pointer handed as the stack kept its extent in the `child` region and in the parent, and both indexed one byte with 0 errors), gift **1399**; no example (clean side: 155, 156, 160, `linux.gab`'s `gabbro_os_klon_tor`, all `u64`). Corpus scan over every tracked `.gab`: no other file gains `N578` |
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);
   they are never handed to another topic. Next free is always above the highest number in use,

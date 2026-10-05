@@ -27,6 +27,7 @@
 //! | `N456` | the child holds nothing the parent holds: no `child` inside `locks`/`observes`/`breaking` or under a signature `requires Held` (fix lane F3) | gifts 1141, 1142 |
 //! | `N457` | the child is a thread for race freedom: every carrier its path touches that anyone writes is guarded, atomic or per-core (in `fusswache2.rs`, fix lane F3) | gifts 1143, 1144, 1145 |
 //! | `N572` | every stack-gate call hands to a region -- a call with no `child` behind it falls (C-free lane, 2026-09-30) | gift 1388 |
+//! | `N578` | the parameter the `stack` clause binds is a written integer type -- a pointer there carried a region's extent into the child beside the parent (C-free lane, 2026-10-05) | gift 1399 |
 //! | `C185` | the `child` block has no lowering in the stub template and is refused by name (in `emit.rs`, beside the best-effort block) | gift 1112 |
 //!
 //! What is NOT checked here is the link the machine keeps: that the child
@@ -277,6 +278,47 @@ fn stapelklausel(s: &SyscallDecl, absagen: &mut Absagen) {
                  reaches the child",
             ),
         );
+        return;
+    }
+    // **`N578` -- the handed stack is a NUMBER, never a pointer** (C-free lane, 2026-10-05).
+    //
+    // The argument at the stack parameter is the one value that travels into the `child`
+    // region (`N451`/`N452` let it be read there), and the parent keeps running beside the
+    // child. A pointer there hands the child the parent's memory: a region bound from a
+    // gate (`ensures n <= lenof(result)`) kept its extent clause on BOTH paths, so
+    // `seite[5] = 1` in the child and `seite[5] = 2` in the parent checked with 0 errors --
+    // two threads, one byte, no order, and no carrier `N457` could see (bytes behind a
+    // pointer are no declared carrier). An integer carries no extent and no carrier: the
+    // child cannot index it, and what it says about the stack is the gate's contract.
+    // Fail-closed: only a written integer type passes -- an alias name could be a pointer.
+    let param = s
+        .regs_in
+        .iter()
+        .find(|(r, _)| r.text == stapel.text)
+        .and_then(|(_, p)| s.parameter.iter().find(|q| q.name.text == p.text));
+    if let Some(p) = param {
+        if !matches!(p.typ, TypExpr::Int(_)) {
+            absagen.schiebe(
+                Absage::fehler(
+                    "N578",
+                    p.typ.span(),
+                    format!(
+                        "`{}` hands the stack in `{}`, which is no integer -- the value at the \
+                         stack parameter travels into the `child` region while the caller runs on",
+                        s.name.text, p.name.text
+                    ),
+                )
+                .mit_notiz(
+                    "a pointer there would reach the parent's memory from the child: a region's \
+                     extent clause held on both paths, and two threads indexed one byte with no \
+                     order and no carrier the race rules see",
+                )
+                .mit_notiz(
+                    "declare the stack parameter as an integer (`spitze : u64`): the child cannot \
+                     index a number, and that it is a stack top is the gate's contract",
+                ),
+            );
+        }
     }
 }
 
