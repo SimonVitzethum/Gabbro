@@ -325,3 +325,87 @@ theorem ankerSep_sound (A : TabAnker D) (h : ankerSepB A = true) :
     · have hmul : (k2.toNat + 1) * Z2 ≤ (D.count t2).toNat * Z2 :=
         Nat.mul_le_mul (by omega) (Nat.le_refl _)
       omega
+
+/-! ## 3. Decided admission and the world representation -/
+
+/-- DECIDED PLACEMENT ADMISSION over a memory (`platzOkB`-style): every
+    row of every anchored table, at every listed field, is an admitted
+    integer slot (`repOk`), readable and writable for its eight bytes.
+    The enumeration is finite: rows by `count`, fields by the list. -/
+def tabOkB (A : TabAnker D) (m : Speicher) : Bool :=
+  A.basis.all fun e => (match ankerZeile A e.1 with
+    | some Z => ((List.range (D.count e.1).toNat).all fun kn =>
+      ((A.felder e.1).all fun fo =>
+        let Adr := e.2 + kn * Z + fo.2
+        (repOk (D.typ e.1 fo.1) Adr 8 0 && lesbar8 m (natAdresse Adr) &&
+          schreibbar8 m (natAdresse Adr))))
+    | none => false)
+
+/-- DECIDED WORLD CHECK over a memory: every placed slot reads back the
+    representation word of the source value. -/
+def tabWeltB (A : TabAnker D) (m : Speicher) (σ : World D) : Bool :=
+  A.basis.all fun e => (match ankerZeile A e.1 with
+    | some Z => ((List.range (D.count e.1).toNat).all fun kn =>
+      ((A.felder e.1).all fun fo =>
+        let Adr := e.2 + kn * Z + fo.2
+        decide (read64 m (natAdresse Adr) =
+          some (slotWort _ (σ.slots e.1 (kn : Int) fo.1)))))
+    | none => false)
+
+/-- REPRESENTATION FROM THE CHECKS: admission and the world check give
+    the pipeline's `WorldRep` for the computed layout. -/
+theorem tabWorldRep (A : TabAnker D) (m : Speicher) (σ : World D)
+    (hOk : tabOkB A m = true) (hW : tabWeltB A m σ = true) :
+    WorldRep (tabLayout A) m σ := by
+  intro t k f a hloc
+  rw [tabLayout_loc] at hloc
+  obtain ⟨B, Z, O, hB, hZ, hO, hka, hkb, ha⟩ := feldAdr_some A t k f a hloc
+  obtain ⟨e, he, ht, hBe⟩ := ankerBasis_mem A t B hB
+  obtain ⟨o, ho, hf, hOe⟩ := feldOff_mem A t f O hO
+  subst hf
+  have hallOk : ∀ x ∈ A.basis, (match ankerZeile A x.1 with
+      | some Z => ((List.range (D.count x.1).toNat).all fun kn =>
+        ((A.felder x.1).all fun fo =>
+          let Adr := x.2 + kn * Z + fo.2
+          (repOk (D.typ x.1 fo.1) Adr 8 0 && lesbar8 m (natAdresse Adr) &&
+            schreibbar8 m (natAdresse Adr))))
+      | none => false) = true := by
+    unfold tabOkB at hOk
+    exact List.all_eq_true.mp hOk
+  have hZe : ankerZeile A e.1 = some Z := by rw [ht]; exact hZ
+  have hrow := hallOk e he
+  simp only [hZe] at hrow
+  have hkn : k.toNat < (D.count t).toNat := idxOk_toNat k _
+    (by simp only [idxOkB, decide_eq_true_eq]; exact ⟨hka, hkb⟩)
+  have hkn' : k.toNat < (D.count e.1).toNat := by rw [ht]; exact hkn
+  have hknmem : k.toNat ∈ List.range (D.count e.1).toNat := by
+    rw [List.mem_range]; exact hkn'
+  have hcell := List.all_eq_true.mp hrow _ hknmem
+  rw [ht] at hcell
+  have hslot := List.all_eq_true.mp hcell o ho
+  simp only [Bool.and_eq_true] at hslot
+  obtain ⟨⟨hrep, hrd⟩, hwr⟩ := hslot
+  have hallW : ∀ x ∈ A.basis, (match ankerZeile A x.1 with
+      | some Z => ((List.range (D.count x.1).toNat).all fun kn =>
+        ((A.felder x.1).all fun fo =>
+          let Adr := x.2 + kn * Z + fo.2
+          decide (read64 m (natAdresse Adr) =
+            some (slotWort _ (σ.slots x.1 (kn : Int) fo.1)))))
+      | none => false) = true := by
+    unfold tabWeltB at hW
+    exact List.all_eq_true.mp hW
+  have hrowW := hallW e he
+  simp only [hZe] at hrowW
+  have hcellW := List.all_eq_true.mp hrowW _ hknmem
+  rw [ht] at hcellW
+  have hreadW := List.all_eq_true.mp hcellW o ho
+  have hslots : σ.slots t (k.toNat : Int) o.1 = σ.slots t k o.1 := by
+    rw [Int.toNat_of_nonneg hka]
+  rw [hBe, hOe] at hrep hrd hwr hreadW
+  simp only [decide_eq_true_eq] at hreadW
+  rw [← ha] at hrep hrd hwr
+  rw [← ha, hslots] at hreadW
+  refine ⟨hrep, hrd, hwr, fun lo hi hT => ?_⟩
+  unfold RepSlot
+  rw [slotWort_cast _ hT] at hreadW
+  exact hreadW
