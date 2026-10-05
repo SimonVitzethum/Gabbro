@@ -642,7 +642,7 @@ Last ledger refresh: **2026-10-05 12:07 UTC**. This is an operational snapshot, 
 | 1167 | Pipeline: register allocation, spills and privacy validated | Committed candidate; review/integration pending | 1168: Agent working | [task](lanes/1167.md) |
 | 1169 | Pipeline correctness over the multi-core TSO machine | Committed candidate; review/integration pending | 1170: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1169.md) |
 | 1171 | Linking, relocations and the final mapping | Merged after review/checks | 1172: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1171.md) |
-| 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1173.md) |
+| 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
 | 1175 | Finite and infinite execution soundness of the pipeline | Agent working | 1176: scheduled | [task](lanes/1175.md) |
 | 1177 | Source-computed units and duties feeding the pipeline | Agent working | 1178: scheduled | [task](lanes/1177.md) |
 
@@ -1439,6 +1439,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: integration of candidate(s) [1169] failed the local proof/build gate after independent review 1170; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1170 -->
 - 2026-10-05: integration of candidate(s) [1173] failed the local proof/build gate after independent review 1174; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1174 -->
 - 2026-10-05: checked master `e891e016` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e891e01633b3e0875313ada95ab66f72a2d069c2 -->
+- 2026-10-05: lane **1174**, Independent exact review of 1173, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1174.md). <!-- x86-merged:1174 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
