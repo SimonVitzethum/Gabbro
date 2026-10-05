@@ -1096,4 +1096,242 @@ theorem profil_urteilt_bsf_nie (hatTzcnt : Bool) :
     scanProfilUrteil hatTzcnt [natByte 15, natByte 188,
       natByte 193] = false := by
   simp [scanProfilUrteil, verzoegert_schweigt_bsf]
+
+/-! ## 6. Machine adapter: the family on the coherent machine.
+
+  The producer plug instantiates `HwAdapter BsDecodiert` with the
+  accepted API: a successful family step re-embeds core data over the
+  shared memory; the feature refusal and memory/length refusals admit
+  no successor. The CPUID bit arrives as a plug parameter (the
+  observed answer, mirroring the `leaf1`/`xcrLo` parameters of
+  `adapterFeatureTor`): the finite `PerfMerkmal` has no POPCNT row
+  and this file changes no existing file. -/
+
+/-- A successful family step leaves canonical memory alone: every
+    successor is a record update away from memory. -/
+theorem bsSchritt_speicher (feat : PopcntMerkmal) (d : BsDecodiert)
+    (s s' : Zustand) (h : bsSchritt feat d s = .ok s') :
+    s'.speicher = s.speicher := by
+  cases d with
+  | mk befehl len =>
+    cases hL : laengeOk len with
+    | false =>
+      have heq : bsSchritt feat ⟨befehl, len⟩ s = .misslungen := by
+        unfold bsSchritt
+        rw [hL]
+      rw [heq] at h
+      cases h
+    | true =>
+      cases befehl with
+      | bsf b dst q =>
+        cases q with
+        | reg src =>
+          have heq := bs_bsf_ok feat b dst src len s hL
+          rw [heq] at h
+          cases h
+          rfl
+        | mem mm dd =>
+          have heq := bs_bsf_mem_misslungen feat b dst mm dd len s hL
+          rw [heq] at h
+          cases h
+      | bsr b dst q =>
+        cases q with
+        | reg src =>
+          have heq := bs_bsr_ok feat b dst src len s hL
+          rw [heq] at h
+          cases h
+          rfl
+        | mem mm dd =>
+          have heq := bs_bsr_mem_misslungen feat b dst mm dd len s hL
+          rw [heq] at h
+          cases h
+      | popcnt b dst q =>
+        cases q with
+        | reg src =>
+          cases hfeat : feat.popcnt with
+          | false =>
+            have heq := bs_popcnt_verweigert feat b dst src len s hL hfeat
+            rw [heq] at h
+            cases h
+          | true =>
+            have heq := bs_popcnt_ok feat b dst src len s hL hfeat
+            rw [heq] at h
+            cases h
+            rfl
+        | mem mm dd =>
+          have heq := bs_popcnt_mem_misslungen feat b dst mm dd len s hL
+          rw [heq] at h
+          cases h
+      | bswap b rd =>
+        have heq := bs_bswap_ok feat b rd len s hL
+        rw [heq] at h
+        cases h
+        rfl
+
+/-- The scan/count plug: one checked family event step on the coherent
+    machine. `none` = feature, length or memory refusal, never a
+    silent successor. -/
+def adapterBitScan (feat : PopcntMerkmal) : HwAdapter BsDecodiert :=
+  ⟨fun m c d =>
+    match bsSchritt feat d (projZustand m c) with
+    | .ok s' =>
+      some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+    | .verweigert => none
+    | .misslungen => none⟩
+
+/-- Every adapter step preserves well-formedness: only core data
+    moves, profiles are untouched. -/
+theorem adapterBitScan_wf (feat : PopcntMerkmal) (m : HwMaschine)
+    (c : Nat) (d : BsDecodiert) (m' : HwMaschine) (hwf : HwWf m)
+    (h : (adapterBitScan feat).schritt m c d = some m') :
+    HwWf m' := by
+  unfold adapterBitScan at h
+  simp only at h
+  cases hsch : bsSchritt feat d (projZustand m c) with
+  | ok s' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    unfold setKernVonFp
+    exact setKernDaten_wf _ _ _ hwf
+  | verweigert =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+  | misslungen =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
+/-- Agreement: the adapter succeeds exactly where the accepted family
+    step succeeds, with the successor core data re-embedded. -/
+theorem adapterBitScan_ok (feat : PopcntMerkmal) (m : HwMaschine)
+    (c : Nat) (d : BsDecodiert) (s' : Zustand)
+    (h : bsSchritt feat d (projZustand m c) = .ok s') :
+    (adapterBitScan feat).schritt m c d =
+      some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩) := by
+  unfold adapterBitScan
+  simp only [h]
+
+/-- The successor core sees the accepted successor registers over
+    the shared memory. -/
+theorem adapterBitScan_proj (feat : PopcntMerkmal) (m : HwMaschine)
+    (c : Nat) (d : BsDecodiert) (s' : Zustand)
+    (h : bsSchritt feat d (projZustand m c) = .ok s') :
+    ((setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩).kerne c).register =
+      s'.register ∧
+    (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩).mem = m.mem ∧
+    s'.speicher = m.mem := by
+  refine ⟨setKernVonFp_register m c _,
+    setKernVonFp_speicher m c _, ?_⟩
+  have hmem := bsSchritt_speicher feat d (projZustand m c) s' h
+  have hproj : (projZustand m c).speicher = m.mem := rfl
+  rw [hproj] at hmem
+  exact hmem
+
+/-- A bad decode length admits no adapter step. -/
+theorem adapterBitScan_verweigert_bei_laenge (feat : PopcntMerkmal)
+    (m : HwMaschine) (c : Nat) (d : BsDecodiert)
+    (h : laengeOk d.laenge = false) :
+    (adapterBitScan feat).schritt m c d = none := by
+  have hstep := bs_laenge_misslungen feat d (projZustand m c) h
+  unfold adapterBitScan
+  simp only [hstep]
+
+/-- Without the CPUID bit no count step is admitted. -/
+theorem adapterBitScan_verweigert_ohne_merkmal (feat : PopcntMerkmal)
+    (m : HwMaschine) (c : Nat) (b : BsBreite) (dst src : Register)
+    (len : Nat) (hfeat : feat.popcnt = false)
+    (hok : laengeOk len = true) :
+    (adapterBitScan feat).schritt m c
+      ⟨.popcnt b dst (.reg src), len⟩ = none := by
+  have hstep := bs_popcnt_verweigert feat b dst src len
+    (projZustand m c) hok hfeat
+  unfold adapterBitScan
+  simp only [hstep]
+
+/-! ## 7. Machine outcome: register steps on the coherent machine.
+
+  Reuses the accepted `HwRegAusgang` unchanged: success re-embeds
+  core data, both refusals are `verweigert`. This family has no
+  hardware trap (no divide, no fault outcome). -/
+
+/-- One family machine step on core `c`: the accepted family step on
+    the core projection, re-embedded on success. Memory and buffers
+    are kept by construction (§6 `bsSchritt_speicher`). -/
+def bsHwRegSchritt (feat : PopcntMerkmal) (m : HwMaschine) (c : Nat)
+    (d : BsDecodiert) : HwRegAusgang :=
+  match bsSchritt feat d (projZustand m c) with
+  | .ok s' =>
+    .weiter (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+  | .verweigert => .verweigert
+  | .misslungen => .verweigert
+
+/-- Selection: a successful family step continues on the machine. -/
+theorem bsHwRegSchritt_weiter (feat : PopcntMerkmal) (m : HwMaschine)
+    (c : Nat) (d : BsDecodiert) (s' : Zustand)
+    (h : bsSchritt feat d (projZustand m c) = .ok s') :
+    bsHwRegSchritt feat m c d =
+      .weiter (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩) := by
+  have e : bsHwRegSchritt feat m c d =
+      match bsSchritt feat d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .verweigert => .verweigert
+      | .misslungen => .verweigert := rfl
+  rw [e, h]
+
+/-- Selection: the feature refusal is machine refusal. -/
+theorem bsHwRegSchritt_verweigert (feat : PopcntMerkmal) (m : HwMaschine)
+    (c : Nat) (d : BsDecodiert)
+    (h : bsSchritt feat d (projZustand m c) = .verweigert) :
+    bsHwRegSchritt feat m c d = .verweigert := by
+  have e : bsHwRegSchritt feat m c d =
+      match bsSchritt feat d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .verweigert => .verweigert
+      | .misslungen => .verweigert := rfl
+  rw [e, h]
+
+/-- Selection: memory/length refusal is machine refusal. -/
+theorem bsHwRegSchritt_misslungen (feat : PopcntMerkmal) (m : HwMaschine)
+    (c : Nat) (d : BsDecodiert)
+    (h : bsSchritt feat d (projZustand m c) = .misslungen) :
+    bsHwRegSchritt feat m c d = .verweigert := by
+  have e : bsHwRegSchritt feat m c d =
+      match bsSchritt feat d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .verweigert => .verweigert
+      | .misslungen => .verweigert := rfl
+  rw [e, h]
+
+/-- A machine continue preserves well-formedness. -/
+theorem bsHwRegSchritt_weiter_wf (feat : PopcntMerkmal) (m : HwMaschine)
+    (c : Nat) (d : BsDecodiert) (m' : HwMaschine) (hwf : HwWf m)
+    (h : bsHwRegSchritt feat m c d = .weiter m') :
+    HwWf m' := by
+  have e : bsHwRegSchritt feat m c d =
+      match bsSchritt feat d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .verweigert => .verweigert
+      | .misslungen => .verweigert := rfl
+  rw [e] at h
+  cases hsch : bsSchritt feat d (projZustand m c) with
+  | ok s' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    unfold setKernVonFp
+    exact setKernDaten_wf _ _ _ hwf
+  | verweigert =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+  | misslungen =>
+    rw [hsch] at h
+    simp only at h
+    cases h
 end Gabbro.Grammatik.X86
