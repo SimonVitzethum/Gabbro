@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 17:58 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 18:00 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -697,7 +697,7 @@ Last ledger refresh: **2026-10-05 17:58 UTC**. This is an operational snapshot, 
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Agent working | 1278: scheduled | [task](lanes/1277.md) |
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Agent working | 1280: scheduled | [task](lanes/1279.md) |
 | 1281 | Sign-extend-accumulator ops and register XCHG | Agent working | 1282: Committed candidate; review/integration pending | [task](lanes/1281.md) |
-| 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Committed candidate; review/integration pending | 1284: Committed candidate; review/integration pending | [task](lanes/1283.md) |
+| 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Committed candidate; review/integration pending | 1288: Committed candidate; review/integration pending | [task](lanes/1287.md) |
 
@@ -1665,6 +1665,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1150**, Independent exact review of 1149, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1150.md). <!-- x86-merged:1150 -->
 - 2026-10-05: lane **1247**, Extended context state across interrupts and context switches, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1247.md). <!-- x86-merged:1247 -->
 - 2026-10-05: lane **1248**, Independent exact review of 1247, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1248.md). <!-- x86-merged:1248 -->
+- 2026-10-05: lane **1283**, Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1283.md). <!-- x86-merged:1283 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
