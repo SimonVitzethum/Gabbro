@@ -223,4 +223,70 @@ theorem pipelineFloat_cmp_le (a b : GFloat)
     rw [ucomiFlags_gleich a b h hba ha hb]
     exact Or.inr rfl
 
+/-! ## 4. Conversions: only where the accepted codec exists.
+
+  `cvtsi2sd` (64-bit GPR to binary64) IS the source `gleitAusInt`
+  at the machine, and the `cvttsd2si` wrapper IS the source
+  `gleitRoh` on every word (`cvttPaket_gleicht_gleitRoh`). Any other
+  width has no accepted form and is refused (`konvBreiteOk`).
+  Literals travel as correctly rounded words (`bruch`/`muster64`). -/
+
+/-- Lower an integer register to a float register: the accepted
+    64-bit conversion only. -/
+def senkGleitVon : Register → XmmReg → FpBefehl
+  | src, dst => .cvtsi2sd dst src
+
+/-- Lower a float register to an integer register: the accepted
+    truncating 64-bit conversion only. -/
+def senkGleitNach : XmmReg → Register → FpBefehl
+  | src, dst => .cvttsd2si dst src
+
+/-- Lower a source literal to its correctly rounded word. -/
+def senkGleitLit (q : Int × Int) : Wort := muster64 (bruch q)
+
+/-- The decided conversion-width check: 64 bits only. -/
+def konvBreiteOk (w : Nat) : Bool := decide (w = 64)
+
+/-- 64-bit conversions are admitted. -/
+theorem konvBreiteOk_64 : konvBreiteOk 64 = true := by decide
+
+/-- 32-bit conversions are refused: no accepted form. -/
+theorem konvBreiteOk_32 : konvBreiteOk 32 = false := by decide
+
+/-- Any non-64 width is refused. -/
+theorem konvBreiteOk_nur64 (w : Nat) (h : w ≠ 64) : konvBreiteOk w = false := by
+  unfold konvBreiteOk
+  cases h' : decide (w = 64) with
+  | true => exact absurd (of_decide_eq_true h') h
+  | false => rfl
+
+/-- INT TO FLOAT: the lowered conversion holds exactly the source
+    `gleitAusInt` of the register value, bit for bit. -/
+theorem pipelineFloat_von (src : Register) (dst : XmmReg) (d : FpDecodiert)
+    (t : FpZustand)
+    (hok : laengeOk d.laenge = true)
+    (hfp : fpEintritt t.fp = true)
+    (h : d.befehl = senkGleitVon src dst) :
+    fpSchritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge }, xmm := xmmSchreibeTief t.xmm dst (muster64 (gleitAusInt (t.kern.register src).toInt)) } :=
+  fpSchritt_cvtsi2sd d t dst src hok hfp h
+
+/-- FLOAT TO INT: the lowered conversion holds exactly the source
+    `gleitRoh` (truncation toward zero, saturated) of the operand. -/
+theorem pipelineFloat_nach (src : XmmReg) (dst : Register) (d : FpDecodiert)
+    (t : FpZustand)
+    (hok : laengeOk d.laenge = true)
+    (hfp : fpEintritt t.fp = true)
+    (h : d.befehl = senkGleitNach src dst) :
+    fpSchritt d t = some { t with kern := { t.kern with register := regSet t.kern.register dst (intWort (gleitRoh (bites64 (xmmTief t.xmm src)))), rip := ripNach t.kern.rip d.laenge } } := by
+  have hstep := fpSchritt_cvttsd2si d t dst src hok hfp h
+  rw [cvttPaket_gleicht_gleitRoh] at hstep
+  exact hstep
+
+/-- LITERALS ROUND-TRIP: injecting the lowered word gives back a
+    well-formed source literal. -/
+theorem pipelineFloat_lit_rund (q : Int × Int)
+    (hwf : Gleitkomma.wf Gleitkomma.f64 (bruch q)) :
+    bites64 (senkGleitLit q) = bruch q :=
+  bites64_muster64 _ hwf
+
 end Gabbro.Grammatik.X86.PipelineFloat
