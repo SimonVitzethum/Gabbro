@@ -86,3 +86,33 @@ consuming those runs for shared atomic carriers.
   directory; source memory must be `Gabbro.Grammatik.Speicher D`
   (two stain-removal edits). `GeteiltV` needs `Grammatik.Zielsatz.Spec`
   imported plus `[DecidableEq D.Fn]`.
+
+## Integration-gate failure 2026-10-05 (repair pass, no merge happened)
+
+- Evidence: merge build failed with exactly one owned-file error,
+  `Grammatik/X86/TsoGxRefine.lean:22:0: failed to read file
+  '.../grammatik/.lake/build/lib/lean/Grammatik/RufAdaequatG.olean'`
+  (exit 1, 3 error lines, all this one). Zero elaboration errors
+  (`unknown identifier`, type errors) in the owned file; the sibling
+  candidate `TsoRmwLink.lean` (newer master, unknown to this clone)
+  printed its axiom lines normally.
+- Diagnosis: `RufAdaequatG` is imported by `CarrierTraceBridge`
+  (line 28), reached transitively via my `TsoRunInduction` import. It is
+  not owned or touched by this lane. A missing dependency `.olean` at
+  the import block with no source-level errors is an incomplete/stale
+  integration build directory (warm cache from another commit,
+  interrupted prior build, or concurrent builds sharing one checkout),
+  not a source defect.
+- Repair in owned files: none applies. Removing the `Zielsatz.Spec`
+  import would not help (the missing artifact is on the
+  `TsoRunInduction` cone); adding a direct `import
+  Grammatik.RufAdaequatG` would not create the artifact either; import
+  order in `Grammatik.lean` is irrelevant to Lake. Lean sources
+  therefore unchanged.
+- Local re-verification after the failure: `./lean-probe ... 0
+  error(s)`; `./lean-bau ... Build completed successfully (640 jobs).`
+  No `sorry`/`admit`/`axiom`/`native_decide`/`unsafe` (only the English
+  word "admitted" in comments).
+- Concrete blocker: re-run the merge build from a correct (warm or
+  clean) cache in the master checkout; then the fresh independent
+  review required for the changed commit.
