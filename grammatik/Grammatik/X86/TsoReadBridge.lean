@@ -762,15 +762,46 @@ theorem schrittW_aus_lesefragment_weiterleitung {D : Deklaration} {l : Bool}
       zahlWort_wortZahl v hLo hHi⟩
   · exact hWert.trans (congrArg Option.some hv2)
 
+/-! ## 5. Stale views are allowed; no global value for unflushed stores. -/
+
+/-- **STALE DIVERGENCE (proved):** in `sbNach2` core 0 loads `0` at `sbY`
+    while core 1 holds the unflushed `1` there -- the two cores observe
+    different values at one address. An unflushed store has no global
+    value; a validator that needs one global value per address refuses
+    this state. -/
+theorem stale_kein_globaler_wert :
+    ∃ (s : TSOZustand) (a : Adresse),
+      loadByte s 0 a ≠ loadByte s 1 a := by
+  refine ⟨sbNach2, sbY, ?_⟩
+  have h0 : loadByte sbNach2 0 sbY = some 0 := sb_beide_laden_null.1
+  have h1 : loadByte sbNach2 1 sbY = some sbEins := by decide
+  rw [h0, h1]
+  decide
+
+/-- **GROUP DIVERGENCE (proved):** at `hS3` (two issued bytes, only the
+    first flushed) the forwarding core and the foreign core assemble
+    different words at one base address. No single source message covers
+    both observations: the committed path (§3) and the uniformly-linked
+    forwarded path (§4) never fire on a torn footprint. -/
+theorem gruppe_kein_globaler_wert :
+    ladeWort8 hS3 1 sbX ≠ ladeWort8 hS3 0 sbX := by
+  have h := gruppe_reisst_fremd
+  rw [h.1, h.2.1]
+  decide
+
+/-! ## 6. Joint witness: two tables, one copy, growing drain. -/
+
 /- CUTS:
-    - Proved here (§§1-4): read-case preservation (`hwLade_erhaelt_wf`),
+    - Proved here (§§1-5): read-case preservation (`hwLade_erhaelt_wf`),
       the committed machine-read value (`hwLade_trifft_speicher`), the
       table-read contribution bound (`beitrag_tabelle_le`), the trace of a
       one-read fragment (`lesespur_assignSlot`), the committed
       read-fragment `SchrittW` (`schrittW_aus_lesefragment_gruppe`) and the
       forwarded read-fragment `SchrittW`
-      (`schrittW_aus_lesefragment_weiterleitung`).
-    - OPEN: the stale-view refusal and the joint witness.
+      (`schrittW_aus_lesefragment_weiterleitung`), the stale-view
+      refusals (`stale_kein_globaler_wert`, `gruppe_kein_globaler_wert`).
+    - OPEN: the joint witness (two-table declaration, drain chain,
+      `_zeuge` for both transitions and the trace lemma).
 -/
 
 #print axioms hwLade_erhaelt_wf
@@ -779,5 +810,7 @@ theorem schrittW_aus_lesefragment_weiterleitung {D : Deklaration} {l : Bool}
 #print axioms lesespur_assignSlot
 #print axioms schrittW_aus_lesefragment_gruppe
 #print axioms schrittW_aus_lesefragment_weiterleitung
+#print axioms stale_kein_globaler_wert
+#print axioms gruppe_kein_globaler_wert
 
 end Gabbro.Grammatik.X86
