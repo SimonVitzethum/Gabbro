@@ -907,4 +907,446 @@ theorem avx256_alte_gate_verweigert (hw : HwProfil)
     stufenZugelassenHw hw b cpu x k .avx256 = false :=
   stufe_avx256_verweigert hw b cpu x k
 
+/-! ## 8. Witness: a reached two-core run with a memory-changing
+  32-byte store.
+
+  Core 0 adds two 256-bit words (`vpaddb`: lane 0 wraps `0xFF + 2`
+  with no carry out), stores the sum through thirty-two buffered TSO
+  byte issues (canonical memory unchanged), observes its own byte
+  through forwarding while core 1 still observes the old byte, then
+  one flush visibly changes shared memory. Beside it: the gate, the
+  misaligned `#GP`, the VEX.128 and the unencodable-shift refusals. -/
+
+/-- Witness data address: 32-byte aligned. -/
+def avxWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness bytes: `7` at the base, zeroes elsewhere. -/
+def avxWitBytes (a : Adresse) : Byte :=
+  if a.toNat = 8192 then BitVec.ofNat 8 7 else BitVec.ofNat 8 0
+
+/-- Witness data permission: thirty-two bytes at 8192. -/
+def avxWitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 32)
+
+/-- Witness shared memory: data read/write, nothing executable
+    (nothing is fetched here). -/
+def avxWitMem : Speicher :=
+  { bytes := avxWitBytes, lesbar := avxWitDaten,
+    schreibbar := avxWitDaten, ausfuehrbar := fun _ => false }
+
+/-- Witness packed operand: low byte `0xFF`, lane 1 `0x01`. -/
+def avxWitA : Ymm :=
+  (BitVec.ofNat 128 0x010101010101010101010101010101FF,
+    BitVec.ofNat 128 0)
+
+/-- Witness packed operand: low byte `0x02`, lane 1 `0x01`. -/
+def avxWitB : Ymm :=
+  (BitVec.ofNat 128 0x0F0E0D0C0B0A09080706050403020102,
+    BitVec.ofNat 128 0)
+
+/-- The stored 256-bit word: the accepted byte-lane sum. -/
+def avxWitS : Ymm := ymmAdd .b8 avxWitA avxWitB
+
+/-- Witness core-0 registers: data address in rax. -/
+def avxWitReg0 : Register → Wort := fun q =>
+  if q = Register.rax then BitVec.ofNat 64 8192
+  else if q = Register.rsp then BitVec.ofNat 64 8704
+  else BitVec.ofNat 64 0
+
+/-- Witness core-0 YMM: the operands in ymm1/ymm2. -/
+def avxWitYmm0 : YmmDatei := fun q =>
+  if q = .ymm1 then avxWitA
+  else if q = .ymm2 then avxWitB
+  else ((BitVec.ofNat 128 0, BitVec.ofNat 128 0) : Ymm)
+
+/-- Witness core data: core 0 runs at 4096, core 1 idles. -/
+def avxWitKern : Nat → HwKern
+  | 0 => ⟨avxWitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0,
+      kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon with OS vector state, operand YMM files. -/
+def avxWitS0 : Avx2Maschine :=
+  ⟨⟨avxWitMem, avxWitKern, fun _ => [], basisHw,
+    fun _ => vecZeugeBereit⟩, fun _ => avxWitYmm0⟩
+
+/-- The decoded add row: `vpaddb` over five bytes. -/
+def avxWitZAdd : Avx2Zeile := ⟨.vpaddRR .b8 .ymm0 .ymm1 .ymm2, 5⟩
+
+/-- The decoded store row: `vmovdqu` store over six bytes. -/
+def avxWitZSt : Avx2Zeile := ⟨.vmovdquSt .rax .ymm0 0x00, 6⟩
+
+/-- The explicit machine successor after the `vpaddb`. -/
+def avxWitS1 : Avx2Maschine := avx2SetReg avxWitS0 0 5 .ymm0 avxWitS
+
+/-- The tier gate admits at the witness profiles. -/
+theorem avxWit_gate :
+    avx2TierZugelassen avxWitS0.hw.hw (avxWitS0.hw.bereit 0)
+      avx2Cpu avx2Xcr0 basisKontrolle = true :=
+  avx2Tier_basis_zugelassen
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem avxWitS0_wf : Avx2Wf avxWitS0 := by
+  intro c f h
+  cases f <;> rfl
+
+/-- The witness successor is well-formed: profiles are untouched. -/
+theorem avxWitS1_wf : Avx2Wf avxWitS1 := avxWitS0_wf
+
+/-- The accepted `vpaddb` equation reaches the explicit successor. -/
+theorem avxWit_paddb :
+    avx2RegAuswertung avxWitZAdd.op (avxWitS0.ymm 0) = some avxWitS :=
+  avx2Auswertung_add .b8 .ymm0 .ymm1 .ymm2 _
+
+/-- The plug reaches the explicit machine successor. -/
+theorem avxWit_plug :
+    avx2RegSchritt avxWitS0 0 avx2Cpu avx2Xcr0 basisKontrolle
+      avxWitZAdd = some avxWitS1 :=
+  avx2RegSchritt_gleich avxWitS0 0 avx2Cpu avx2Xcr0 basisKontrolle
+    avxWitZAdd .ymm0 avxWitS avxWit_gate (by decide) rfl
+    avxWit_paddb rfl
+
+/-- First joint step: the register plug on core 0. -/
+theorem avxWit_reg :
+    Avx2Schritt avxWitS0 avxWitS1
+      (.avxReg 0 avx2Cpu avx2Xcr0 basisKontrolle avxWitZAdd) :=
+  .reg rfl (by decide) avxWit_gate avxWit_paddb rfl
+
+/-- The store address computes: rax plus zero disp is the base. -/
+theorem avxWit_eff :
+    avx2Addr avxWitS1 0 .rax 0x00 = avxWitAdr := by
+  decide
+
+/-- The stored YMM value is the accepted sum. -/
+theorem avxWit_ymm :
+    avxWitS1.ymm 0 .ymm0 = avxWitS :=
+  avx2SetReg_ymm avxWitS0 0 5 .ymm0 avxWitS
+
+/-- The explicit TSO state after the thirty-two issues: shared memory
+    kept, acting buffer carrying exactly the thirty-two entries. -/
+def avxWitT2 : TSOZustand :=
+  ⟨avxWitMem, fun d =>
+    if d = 0 then ymmEintraege avxWitAdr avxWitS else []⟩
+
+/-- The explicit machine successor after the store. -/
+def avxWitS2 : Avx2Maschine :=
+  ⟨setTso avxWitS1.hw avxWitT2, avxWitS1.ymm⟩
+
+/-- The thirty-two issues compute as claimed: shared memory kept,
+    acting buffer carrying exactly the entries. The folded buffer is
+    extensionally (not definitionally) the stipulated one, so this
+    goes through the fold lemmas. -/
+theorem avxWit_issue :
+    ymmSpeichern (tsoAnsicht avxWitS1.hw) 0 avxWitAdr avxWitS =
+      some avxWitT2 := by
+  have hperm0 : schreibbar8 (tsoAnsicht avxWitS1.hw).mem avxWitAdr =
+      true := by
+    decide
+  have hperm8 : schreibbar8 (tsoAnsicht avxWitS1.hw).mem
+      (addrOff avxWitAdr 8) = true := by
+    decide
+  have hperm16 : schreibbar8 (tsoAnsicht avxWitS1.hw).mem
+      (addrOff avxWitAdr 16) = true := by
+    decide
+  have hperm24 : schreibbar8 (tsoAnsicht avxWitS1.hw).mem
+      (addrOff avxWitAdr 24) = true := by
+    decide
+  obtain ⟨s', hs'⟩ := ymmSpeichern_erfolg (tsoAnsicht avxWitS1.hw) 0
+    avxWitAdr avxWitS hperm0 hperm8 hperm16 hperm24
+  have hbuf0 : s'.puffer 0 = ymmEintraege avxWitAdr avxWitS := by
+    have ha := ymmSpeichern_haengt_an _ s' 0 _ _ hs'
+    have hempty : (tsoAnsicht avxWitS1.hw).puffer 0 = [] := rfl
+    rw [hempty] at ha
+    exact ha
+  have hbufd : ∀ d : Nat, d ≠ 0 → s'.puffer d = [] := by
+    intro d hd
+    have ha := issueListe_anderer_kern _ s' 0 _ d hd hs'
+    have hempty : (tsoAnsicht avxWitS1.hw).puffer d = [] := rfl
+    rw [hempty] at ha
+    exact ha
+  have hpuff : s'.puffer = avxWitT2.puffer := by
+    funext d
+    show s'.puffer d =
+      (if d = 0 then ymmEintraege avxWitAdr avxWitS else [])
+    by_cases hd : d = 0
+    · subst hd
+      rw [if_pos rfl]
+      exact hbuf0
+    · rw [if_neg hd]
+      exact hbufd d hd
+  have hmemM : s'.mem = avxWitMem := by
+    have hm := issueListe_mem _ s' 0 _ hs'
+    have hme : (tsoAnsicht avxWitS1.hw).mem = avxWitMem := rfl
+    rw [hm]
+    exact hme
+  have hsurj : s' = ⟨s'.mem, s'.puffer⟩ := rfl
+  rw [hs', hsurj, hmemM, hpuff]
+  rfl
+
+/-- The legacy gate still admits over the successor: profiles are
+    untouched by core-data updates. -/
+theorem avxWit_gate_s1 :
+    avx2TierZugelassen avxWitS1.hw.hw (avxWitS1.hw.bereit 0)
+      avx2Cpu avx2Xcr0 basisKontrolle = true :=
+  avxWit_gate
+
+/-- The plug reaches the explicit store successor. -/
+theorem avxWit_plug_s2 :
+    avx2SpeicherSchritt avxWitS1 0 avx2Cpu avx2Xcr0 basisKontrolle
+      avxWitZSt = some avxWitS2 := by
+  have hop : avxWitZSt.op = .vmovdquSt .rax .ymm0 0x00 := rfl
+  unfold avx2SpeicherSchritt
+  simp only [hop, avxWit_gate_s1]
+  have heff := avxWit_eff
+  have hymm := avxWit_ymm
+  rw [heff, hymm]
+  have hi := avxWit_issue
+  rw [hi]
+  rfl
+
+/-- Second joint step: the TSO store on core 0. -/
+theorem avxWit_speichere :
+    Avx2Schritt avxWitS1 avxWitS2
+      (.avxSpeichere 0 avx2Cpu avx2Xcr0 basisKontrolle avxWitZSt) :=
+  .speichereU rfl (by decide) avxWit_gate_s1 avxWit_issue
+
+/-- Step one advances RIP past the 5-byte row. -/
+theorem avxWit_r1_rip :
+    ((avx2RegSchritt avxWitS0 0 avx2Cpu avx2Xcr0 basisKontrolle
+      avxWitZAdd).map fun m => (m.hw.kerne 0).rip) =
+      some (BitVec.ofNat 64 4101) := by
+  decide
+
+/-- Step one wraps lane 0 (`0xFF + 0x02` to `0x01`): no carry out. -/
+theorem avxWit_r1_lane0 :
+    ((avx2RegSchritt avxWitS0 0 avx2Cpu avx2Xcr0 basisKontrolle
+      avxWitZAdd).map fun m => laneNat .b8 (m.ymm 0 .ymm0).1 0) =
+      some 1 := by
+  decide
+
+/-- Step one adds lane 1 independently (`0x01 + 0x01`): no carry in. -/
+theorem avxWit_r1_lane1 :
+    ((avx2RegSchritt avxWitS0 0 avx2Cpu avx2Xcr0 basisKontrolle
+      avxWitZAdd).map fun m => laneNat .b8 (m.ymm 0 .ymm0).1 1) =
+      some 2 := by
+  decide
+
+/-- The store issues exactly thirty-two buffer entries. -/
+theorem avxWit_s2_buflen :
+    ((avx2SpeicherSchritt avxWitS1 0 avx2Cpu avx2Xcr0 basisKontrolle
+      avxWitZSt).map fun m => (m.hw.puffer 0).length) = some 32 := by
+  decide
+
+/-- The store changes no canonical byte (buffer only): the old `7`
+    stands. -/
+theorem avxWit_s2_mem_still :
+    ((avx2SpeicherSchritt avxWitS1 0 avx2Cpu avx2Xcr0 basisKontrolle
+      avxWitZSt).map fun m => m.hw.mem.bytes avxWitAdr) =
+      some (BitVec.ofNat 8 7) := by
+  decide
+
+/-- Owner-only forwarding: core 0 observes its buffered byte `1`. -/
+theorem avxWit_eigen :
+    loadByte (tsoAnsicht avxWitS2.hw) 0 avxWitAdr =
+      some (BitVec.ofNat 8 1) := by
+  decide
+
+/-- Foreign observation: core 1 still observes the old byte `7`. -/
+theorem avxWit_fremd :
+    loadByte (tsoAnsicht avxWitS2.hw) 1 avxWitAdr =
+      some (BitVec.ofNat 8 7) := by
+  decide
+
+/-- The full-word load over the buffered store reads back the stored
+    word: every one of the thirty-two bytes forwards. -/
+theorem avxWit_ymm_lade :
+    ymmLaden (tsoAnsicht avxWitS2.hw) 0 avxWitAdr = some avxWitS := by
+  decide
+
+/-- One flush visibly changes shared memory (`7` becomes `1`). -/
+theorem avxWit_spuelung :
+    ((flushKern (tsoAnsicht avxWitS2.hw) 0).map fun s' =>
+      s'.mem.bytes avxWitAdr) = some (BitVec.ofNat 8 1) := by
+  decide
+
+/-- The old byte stands before the flush. -/
+theorem avxWit_anfang :
+    avxWitMem.bytes avxWitAdr = BitVec.ofNat 8 7 := by
+  decide
+
+/-- Beside the run: without the AVX bit the row refuses. -/
+theorem avxWit_gate_aus :
+    avx2RegSchritt avxWitS0 0 basisCpu basisXcr0 basisKontrolle
+      avxWitZAdd = none := by
+  decide
+
+/-- Beside the run: the aligned store off its boundary refuses
+    (8192 + 16 is 16 past a 32-byte boundary). -/
+theorem avxWit_fehl_ausgerichtet :
+    avx2SpeicherSchritt avxWitS1 0 avx2Cpu avx2Xcr0 basisKontrolle
+      ⟨.vmovdqaSt .rax .ymm0 16, 6⟩ = none := by
+  decide
+
+/-- Beside the run: the byte shift has no encoding and refuses. -/
+theorem avxWit_sll_b8_aus :
+    avx2RegSchritt avxWitS0 0 avx2Cpu avx2Xcr0 basisKontrolle
+      ⟨.vpsllImm .b8 .ymm0 .ymm1 1, 5⟩ = none := by
+  decide
+
+/-- THE JOINT WITNESS: a reached two-core run -- register execution
+    with lane separation, a thirty-two-entry buffered store that
+    changes no canonical byte, owner-only forwarding of the new byte,
+    a memory-changing flush observed afterwards -- with the gate, the
+    `#GP`, the VEX.128, the unencodable-shift and the old-row
+    refusals beside it. Non-degenerate: the flush changes ACTUAL
+    shared memory (`7` to `1`). -/
+theorem avx2Wit_zeuge :
+    Avx2Schritt avxWitS0 avxWitS1
+        (.avxReg 0 avx2Cpu avx2Xcr0 basisKontrolle avxWitZAdd) ∧
+      Avx2Schritt avxWitS1 avxWitS2
+        (.avxSpeichere 0 avx2Cpu avx2Xcr0 basisKontrolle avxWitZSt) ∧
+      Avx2Wf avxWitS0 ∧ Avx2Wf avxWitS1 ∧ Avx2Wf avxWitS2 ∧
+      avx2Bereit witBlatt1 witBlatt7 witXcrLo = true ∧
+      avx2TierBereit (cpuAusBlaettern witBlatt1 witBlatt7)
+        (xcr0AusWort witXcrLo) basisKontrolle vecZeugeBereit = true ∧
+      stufenZugelassenHw basisHw basisBereit basisCpu basisXcr0
+        basisKontrolle .avx256 = false ∧
+      dekodiereAvx2 [(0xC4 : Byte), 0xE1, 0x74, 0xD4, 0xC2] = none ∧
+      avxWitS2.hw.mem.bytes avxWitAdr =
+        BitVec.ofNat 8 7 ∧
+      loadByte (tsoAnsicht avxWitS2.hw) 0 avxWitAdr =
+        some (BitVec.ofNat 8 1) ∧
+      loadByte (tsoAnsicht avxWitS2.hw) 1 avxWitAdr =
+        some (BitVec.ofNat 8 7) ∧
+      ((flushKern (tsoAnsicht avxWitS2.hw) 0).map fun s' =>
+        s'.mem.bytes avxWitAdr) = some (BitVec.ofNat 8 1) := by
+  have hbr := avx2Bruecke_blatt_zeuge
+  have hmem7 : avxWitS2.hw.mem.bytes avxWitAdr =
+      BitVec.ofNat 8 7 := by
+    decide
+  exact ⟨avxWit_reg, avxWit_speichere, avxWitS0_wf, avxWitS1_wf,
+    avxWitS1_wf, hbr.1, hbr.2,
+    avx256_alte_gate_verweigert basisHw basisBereit basisCpu
+      basisXcr0 basisKontrolle,
+    dekodiere_vex128_verweigert, hmem7, avxWit_eigen,
+    avxWit_fremd, avxWit_spuelung⟩
+
+/- CUTS: what is not proved here.
+
+   - Join scope: only `Avx2Ops` (lane 1239) is joined. The sibling
+     pieces Vex (1237), State (1241) and Mem (1243) are NOT in this
+     tree, so the VEX-row decoder (§1), the YMM file (§3 head) and
+     the 32-byte TSO forms (§3) are defined HERE, reusing accepted
+     vocabulary (`ymm*`, `issueListe`, `ladeAcht`, `effAddr`,
+     `ripNach`) and never copying a model. If the siblings land with
+     different shapes, this file's substitutes must be re-pointed at
+     them (a mechanical integration, explicitly not done here).
+   - Decoder coverage: four pinned rows only. Full ModRM/SIB,
+     disp8 sign handling beyond disp 0, EVEX, masks, broadcast,
+     gather, shuffles/permutes and the 128-bit VEX rows stay open
+     with the absent Vex piece. The four pinned prefix derivations
+     assume Vol. 2A 2.3.5 bit positions (named silicon assumption).
+   - Disp8 is zero-extended (`avx2Addr`); silicon sign-extends.
+     The witness uses disp 0 where both agree.
+   - No YMM legacy semantics: upper-half zeroing (VEX.128),
+     VZEROUPPER/VZEROALL, MXCSR SIMD exceptions, #NM/#XM classes
+     and the exact #UD-vs-#GP priority stay open. Absent-gate
+     refusal is one `#UD`-class `none`, never a fault taxonomy.
+   - No whole-vector atomicity: thirty-two per-byte TSO events
+     (oldest-first issues, oldest-first flushes); torn intermediates
+     stand. No per-access target-to-W/GX simulation and no source
+     correspondence are claimed.
+   - The bridge is conditional both ways (§2 states each missing
+     conjunct); the unconditional reading (silicon AVX2 always
+     carries CPUID SSE2/OSXSAVE and XCR0 x87, control state always
+     ready) is a named silicon/binding assumption, not a theorem.
+   - Reachability is chained joint steps from the witness start;
+     no `TSOErreichbar` 32-issue induction is built.
+   - Silicon correspondence beyond the cited extract lines is OPEN:
+     the theorems are self-consistency of the stated functions
+     against the accepted evaluators, not hardware proofs.
+-/
+
+#print axioms ymmSet_gleich
+#print axioms ymmSet_fremd
+#print axioms dekodiere_paddq
+#print axioms dekodiere_pxor
+#print axioms dekodiere_movdquLd
+#print axioms dekodiere_movdquSt
+#print axioms dekodiere_vex128_verweigert
+#print axioms dekodiere_fremd_verweigert
+#print axioms cpuAusBlaettern_avx
+#print axioms cpuAusBlaettern_sse2
+#print axioms xcr0AusWort_avx
+#print axioms avx2Bruecke_vor
+#print axioms avx2Bruecke_zurueck
+#print axioms avx2Bruecke_blatt_zeuge
+#print axioms ymmEintraege_laenge
+#print axioms ymmSpeichern_ist_issueListe
+#print axioms ymmSpeichern_haengt_an
+#print axioms ymmSpeichern_kein_speicher
+#print axioms ymmEintrag_schreibbar
+#print axioms ymmSpeichern_erfolg
+#print axioms avx2Auswertung_add
+#print axioms avx2Auswertung_sub
+#print axioms avx2Auswertung_and
+#print axioms avx2Auswertung_or
+#print axioms avx2Auswertung_xor
+#print axioms avx2Auswertung_andn
+#print axioms avx2Auswertung_cmpeq
+#print axioms avx2Auswertung_sll
+#print axioms avx2Auswertung_srl
+#print axioms avx2Auswertung_sra
+#print axioms avx2Auswertung_sll_b8
+#print axioms avx2Auswertung_srl_b8
+#print axioms avx2Auswertung_sra_b64
+#print axioms avx2Auswertung_speicher
+#print axioms ymmGp_nie_unausgerichtet
+#print axioms ymmGp_ausgerichtet_fehler
+#print axioms ymmGp_ausgerichtet_ok
+#print axioms avx2SetReg_speicher
+#print axioms avx2SetReg_puffer
+#print axioms avx2SetReg_ymm
+#print axioms avx2Dst_ist_register
+#print axioms avx2RegSchritt_gleich
+#print axioms avx2Schritt_wf
+#print axioms avx2Schritt_einbettet
+#print axioms avx2Schritt_projiziert
+#print axioms avx2Reg_ohne_gate
+#print axioms avx2Lade_ohne_gate
+#print axioms avx2Speichere_ohne_gate
+#print axioms avx2Reg_speicher_verweigert
+#print axioms avx2Speichere_register_verweigert
+#print axioms avx2SpeichereA_fehl_ausgerichtet
+#print axioms avx256_alte_gate_verweigert
+#print axioms avxWit_gate
+#print axioms avxWitS0_wf
+#print axioms avxWitS1_wf
+#print axioms avxWit_paddb
+#print axioms avxWit_plug
+#print axioms avxWit_reg
+#print axioms avxWit_eff
+#print axioms avxWit_ymm
+#print axioms avxWit_issue
+#print axioms avxWit_gate_s1
+#print axioms avxWit_plug_s2
+#print axioms avxWit_speichere
+#print axioms avxWit_r1_rip
+#print axioms avxWit_r1_lane0
+#print axioms avxWit_r1_lane1
+#print axioms avxWit_s2_buflen
+#print axioms avxWit_s2_mem_still
+#print axioms avxWit_eigen
+#print axioms avxWit_fremd
+#print axioms avxWit_ymm_lade
+#print axioms avxWit_spuelung
+#print axioms avxWit_anfang
+#print axioms avxWit_gate_aus
+#print axioms avxWit_fehl_ausgerichtet
+#print axioms avxWit_sll_b8_aus
+#print axioms avx2Wit_zeuge
+
 end Gabbro.Grammatik.X86
