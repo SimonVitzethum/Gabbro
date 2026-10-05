@@ -600,6 +600,131 @@ theorem seitenGangGross_nichtOk_still (gst : GrossSteuerung)
   rw [h1]
   exact seitenGangTab_nichtOk _ _ _ _ h2
 
+/-! ## 6. Machine connection: adapter plug and extended steps.
+
+  No walk admits a `HwMaschine` successor: faults have none by
+  construction, and accessed/dirty updates touch the tables, which
+  live outside `HwMaschine`. Walk behaviour lives in
+  `HwGrossSchritt` over machine-plus-tables, embedding `HwSchritt`
+  exactly. -/
+
+/-- The large-page adapter: the refused default. No walk admits a
+    machine successor state. -/
+def adapterGross : HwAdapter SeitenAnfrage := verweigertAdapter _
+
+/-- The large-page adapter admits nothing. -/
+theorem adapterGross_verweigert (m : HwMaschine) (c : Nat)
+    (q : SeitenAnfrage) :
+    adapterGross.schritt m c q = none := rfl
+
+/-- Paging state: the coherent machine plus extended control plus
+    tables. -/
+structure GrossZustand where
+  maschine : HwMaschine
+  steuer : GrossSteuerung
+  tabellen : Nat → Wort
+
+/-- Paging events: the old events, an admitted walk, a page fault. -/
+inductive GrossEreignis where
+  | alt : HwEreignis → GrossEreignis
+  | gangOk : SeitenAnfrage → Nat → GrossEreignis
+  | gangPf : SeitenAnfrage → Nat → PfFehlerCode → GrossEreignis
+  deriving DecidableEq, Repr
+
+/-- One large-paging step: the embedded old step (tables kept), an
+    admitted walk (tables gain accessed/dirty, machine kept), or a
+    page fault (a self-loop carrying the faulting address and error
+    code). A noncanonical address admits NO step. -/
+inductive HwGrossSchritt :
+    GrossZustand → GrossZustand → GrossEreignis → Prop where
+  | einbettet {s : GrossZustand} {m' : HwMaschine} {e : HwEreignis}
+      (h : HwSchritt s.maschine m' e) :
+      HwGrossSchritt s ⟨m', s.steuer, s.tabellen⟩ (.alt e)
+  | gang {s : GrossZustand} {q : SeitenAnfrage} {phys : Nat}
+      {tab' : Nat → Wort}
+      (h : (seitenGangGross s.steuer s.tabellen q).1 = .ok phys)
+      (ht : (seitenGangGross s.steuer s.tabellen q).2 = tab') :
+      HwGrossSchritt s ⟨s.maschine, s.steuer, tab'⟩ (.gangOk q phys)
+  | fehler {s : GrossZustand} {q : SeitenAnfrage} {a : Nat}
+      {c : PfFehlerCode}
+      (h : (seitenGangGross s.steuer s.tabellen q).1 = .seitenFehler a c) :
+      HwGrossSchritt s s (.gangPf q a c)
+
+/-- FORWARD embedding: every old step is a large-paging step. -/
+theorem hwGrossSchritt_einbettung_vor (s : GrossZustand)
+    (m' : HwMaschine) (e : HwEreignis)
+    (h : HwSchritt s.maschine m' e) :
+    HwGrossSchritt s ⟨m', s.steuer, s.tabellen⟩ (.alt e) :=
+  .einbettet h
+
+/-- BACKWARD embedding, exact: an `.alt` step comes only from the old
+    step with the same event. -/
+theorem hwGrossSchritt_alt_invert (s t : GrossZustand)
+    (e : HwEreignis) (h : HwGrossSchritt s t (.alt e)) :
+    ∃ m', t.maschine = m' ∧ t.tabellen = s.tabellen ∧
+      HwSchritt s.maschine m' e := by
+  cases h with
+  | einbettet hstep => exact ⟨_, rfl, rfl, hstep⟩
+
+/-- An `.alt` step over the reached target is the old step. -/
+theorem hwGrossSchritt_einbettung_zurueck (s : GrossZustand)
+    (m' : HwMaschine) (e : HwEreignis)
+    (h : HwGrossSchritt s ⟨m', s.steuer, s.tabellen⟩ (.alt e)) :
+    HwSchritt s.maschine m' e := by
+  obtain ⟨m'', hm, _, hstep⟩ := hwGrossSchritt_alt_invert s _ e h
+  subst hm
+  exact hstep
+
+/-- A walk step carries its walk equation. -/
+theorem grossGangOk_invert (s t : GrossZustand) (q : SeitenAnfrage)
+    (phys : Nat) (h : HwGrossSchritt s t (.gangOk q phys)) :
+    (seitenGangGross s.steuer s.tabellen q).1 = .ok phys := by
+  cases h with
+  | gang h ht => exact h
+
+/-- A fault step carries its walk equation. -/
+theorem grossGangPf_invert (s t : GrossZustand) (q : SeitenAnfrage)
+    (a : Nat) (c : PfFehlerCode)
+    (h : HwGrossSchritt s t (.gangPf q a c)) :
+    (seitenGangGross s.steuer s.tabellen q).1 = .seitenFehler a c := by
+  cases h with
+  | fehler h => exact h
+
+/-- A fault step never moves the state. -/
+theorem hwGrossSchritt_fehler_still (s s' : GrossZustand)
+    (q : SeitenAnfrage) (a : Nat) (c : PfFehlerCode)
+    (h : HwGrossSchritt s s' (.gangPf q a c)) : s' = s := by
+  cases h
+  rfl
+
+/-- Every large-paging step preserves machine well-formedness: old
+    steps by the accepted preservation, walk steps because the
+    machine is kept, fault steps because the state never moves. -/
+theorem hwGrossSchritt_wf (s s' : GrossZustand)
+    (e : GrossEreignis) (h : HwGrossSchritt s s' e)
+    (hwf : HwWf s.maschine) : HwWf s'.maschine := by
+  cases h with
+  | einbettet hstep => exact hwSchritt_wf _ _ _ hstep hwf
+  | gang h ht => exact hwf
+  | fehler h => exact hwf
+
+/-- A noncanonical address admits no large-paging step: the #GP
+    belongs to the address stage, which already owns it. -/
+theorem grossSeitenGp_verweigert (s s' : GrossZustand)
+    (q : SeitenAnfrage) (a phys : Nat) (a' : Nat) (c : PfFehlerCode)
+    (hg : (seitenGangGross s.steuer s.tabellen q).1 = .gpFehler a) :
+    ¬ HwGrossSchritt s s' (.gangOk q phys) ∧
+      ¬ HwGrossSchritt s s' (.gangPf q a' c) := by
+  refine ⟨?_, ?_⟩
+  · intro hstep
+    have hok := grossGangOk_invert s s' q phys hstep
+    rw [hg] at hok
+    cases hok
+  · intro hstep
+    have hpf := grossGangPf_invert s s' q a' c hstep
+    rw [hg] at hpf
+    cases hpf
+
 /- CUTS:
    Skeleton only; full CUTS with the reviewed file.
 -/
