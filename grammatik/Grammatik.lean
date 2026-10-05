@@ -607,3 +607,4 @@ import Grammatik.X86.HwInterrupts
 import Grammatik.X86.HwMulDivWidth
 import Grammatik.X86.HwFeatureGates
 import Grammatik.X86.HwLoadedImage
+import Grammatik.X86.HwStackCalls
