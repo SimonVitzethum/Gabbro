@@ -274,6 +274,148 @@ theorem ruf_correct_loaded_zeuge :
     cw_envRepr, hok, hv0, h35, hruf, hrun, hrip', hW, hE', hcallee,
     rufWit_wechselt, rufWit_rundreise⟩
 
+/-! ## 3. Table family: anchored loads and stores, over loaded memory.
+
+    A lowered store (`senkSchreiben`) runs from a state whose memory
+    IS the loaded mapping (`hst`), with the code bytes (`CodeAt`,
+    W^X per byte) and the decided anchor checks (`tabOkB`,
+    `tabWeltB`, projected through `tabWorldRep`) feeding the accepted
+    `tabellen_schreiben_laufBytes`. Every premise is consumed. -/
+
+/-- TABLE-STORE CORRECTNESS OVER LOADED MEMORY: the fetched byte run
+    of a lowered store reaches the code end with the real `execStmt`
+    outcome represented. -/
+theorem tabellen_correct_loaded {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (bild : Bild) (c : PipeCfg) (A : TabAnker D)
+    (hc : cfgOk c = true) (hsep : ankerSepB A = true)
+    (flat pre post : List Byte) (p : List Befehl)
+    (s : Stmt D V l Γ Λ Λ)
+    (ρ : Env D Γ) (σ : World D) (st : Zustand)
+    (hst : st.speicher = ladung bild)
+    (hrip0 : st.rip = addrOff (natAdresse c.codeBase) pre.length)
+    (hE : EnvRepr ρ st.register (abbOf c))
+    (hokB : tabOkB A (ladung bild) = true) (hwB : tabWeltB A (ladung bild) σ = true)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (h : senkSchreiben A c s = some p) (hgp : p.all gerade = true)
+    (hcode : CodeAt (ladung bild) (natAdresse c.codeBase) flat)
+    (hf : flat = pre ++ encodeAll p ++ post) :
+    ∃ n s' σ', laufBytes n st = .weiter s' ∧
+      s'.rip = addrOff (natAdresse c.codeBase) (pre.length + (encodeAll p).length) ∧
+      execStmt O passes R s σ ρ = .ok σ' ρ ∧
+      WorldRep (tabLayout A) s'.speicher σ' ∧ EnvRepr ρ s'.register (abbOf c) := by
+  have hW := tabWorldRep A (ladung bild) σ hokB hwB
+  have hcode' : CodeAt st.speicher (natAdresse c.codeBase) flat := by
+    rw [hst]
+    exact hcode
+  have hW' : WorldRep (tabLayout A) st.speicher σ := by
+    rw [hst]
+    exact hW
+  exact tabellen_schreiben_laufBytes A c hc hsep s ρ σ st hE hW' O passes R flat
+    pre post p h hgp hcode' hf hrip0
+
+/-! ## 3b. Table witness image and joint witness.
+
+    A minimal two-section image (code plus the four-slot data extent)
+    whose loaded bytes carry word 7 in every anchored slot; the
+    decided code, admission and world checks all hold by computation.
+    No full `imageOk` is needed: the table chunk theorem consumes
+    exactly these three checks. -/
+
+/-- Witness code section: the lowered store bytes at 4096. -/
+def zeBildCode : Abschnitt :=
+  { dateiOff := 0, dateiLen := zeBytes.length, vaddr := 4096,
+    memLen := zeBytes.length, lesbar := false, schreibbar := false,
+    ausfuehrbar := true, ausr := 1 }
+
+/-- Witness data section: four slots of word 7 at 8192. -/
+def zeBildDaten : Abschnitt :=
+  { dateiOff := zeBytes.length, dateiLen := 32, vaddr := 8192, memLen := 32,
+    lesbar := true, schreibbar := true, ausfuehrbar := false, ausr := 8 }
+
+/-- Witness file: code bytes plus the four word-7 slots. -/
+def zeBildDatei : List Byte :=
+  zeBytes ++ (List.range 32).map fun i => wortByte 7 (i % 8)
+
+/-- The table witness image. -/
+def zeBild : Bild :=
+  { datei := zeBildDatei
+    abschnitte := [zeBildCode, zeBildDaten]
+    reloks := []
+    eintraege := [4096]
+    modus := .fest }
+
+/-- DECIDED CODE over the loaded witness image. -/
+theorem zeBild_codeAtB :
+    codeAtB (ladung zeBild) (natAdresse zeCfg.codeBase) zeBytes = true := by
+  decide
+
+/-- LOADED CODE for the witness image. -/
+theorem zeBild_codeAt :
+    CodeAt (ladung zeBild) (natAdresse zeCfg.codeBase) zeBytes :=
+  codeAtB_sound _ _ _ zeBild_codeAtB
+
+/-- DECIDED ADMISSION over the loaded witness image. -/
+theorem zeBild_okB : tabOkB zeA (ladung zeBild) = true := by
+  decide
+
+/-- DECIDED WORLD CHECK over the loaded witness image. -/
+theorem zeBild_weltB : tabWeltB zeA (ladung zeBild) zeSigma = true := by
+  decide
+
+/-- The loaded start state is at the code base. -/
+theorem zeBild_rip :
+    (startZustand zeBild zeCfg zeReg witnessFlags).rip =
+      addrOff (natAdresse zeCfg.codeBase) ([] : List Byte).length := by
+  have h1 : (startZustand zeBild zeCfg zeReg witnessFlags).rip =
+      natAdresse zeCfg.codeBase := rfl
+  have h2 : natAdresse zeCfg.codeBase =
+      addrOff (natAdresse zeCfg.codeBase) ([] : List Byte).length := by
+    simp [addrOff_null]
+  exact h1.trans h2
+
+/-- JOINT WITNESS for `tabellen_correct_loaded`: every premise holds
+    jointly on the two-field record program (checked configuration
+    and separation, decided checks over the loaded witness image,
+    recomputed store code, the REAL `execStmt` run that writes 42);
+    the theorem then gives the fetched loaded run with the outcome
+    represented, beside the memory-changing run (byte 7 becomes 42). -/
+theorem tabellen_correct_loaded_zeuge :
+    ∃ (σ' : World zeD) (n : Nat) (s' : Zustand),
+      cfgOk zeCfg = true ∧ ankerSepB zeA = true ∧
+      EnvRepr (D := zeD) (Env.nil : Env zeD []) zeReg (abbOf zeCfg) ∧
+      tabOkB zeA (ladung zeBild) = true ∧
+      tabWeltB zeA (ladung zeBild) zeSigma = true ∧
+      senkSchreiben zeA zeCfg zeWrite = some zeStoreProg ∧
+      zeStoreProg.all gerade = true ∧
+      CodeAt (ladung zeBild) (natAdresse zeCfg.codeBase) zeBytes ∧
+      zeBytes = ([] : List Byte) ++ encodeAll zeStoreProg ++ [] ∧
+      execStmt zeO 0 zeR zeWrite zeSigma (Env.nil : Env zeD []) = .ok σ' Env.nil ∧
+      (σ'.slots false 1 true).n = 42 ∧
+      laufBytes n (startZustand zeBild zeCfg zeReg witnessFlags) = .weiter s' ∧
+      s'.rip = addrOff (natAdresse zeCfg.codeBase)
+        (([] : List Byte).length + (encodeAll zeStoreProg).length) ∧
+      WorldRep (tabLayout zeA) s'.speicher σ' ∧
+      EnvRepr (D := zeD) (Env.nil : Env zeD []) s'.register (abbOf zeCfg) ∧
+      zeV.schreibt false = true ∧
+      zeRunChange := by
+  obtain ⟨σ', hsrc, h42⟩ := zeSrcWrite
+  have hst : (startZustand zeBild zeCfg zeReg witnessFlags).speicher =
+      ladung zeBild := rfl
+  obtain ⟨n, sW, σW, hrun, hrip, hsrcW, hW, hE2⟩ :=
+    tabellen_correct_loaded zeBild zeCfg zeA zeCfgOk zeSep zeBytes [] [] zeStoreProg
+      zeWrite Env.nil zeSigma (startZustand zeBild zeCfg zeReg witnessFlags) hst
+      zeBild_rip zeEnvRepr zeBild_okB zeBild_weltB zeO 0 zeR zeLowWrite zeGerade
+      zeBild_codeAt zeBytesEq
+  have heq : σW = σ' := by
+    have h := hsrcW.symm.trans hsrc
+    cases h
+    rfl
+  subst heq
+  exact ⟨σW, n, sW, zeCfgOk, zeSep, zeEnvRepr, zeBild_okB, zeBild_weltB, zeLowWrite,
+    zeGerade, zeBild_codeAt, zeBytesEq, hsrc, h42, hrun, hrip, hW, hE2, zeHw,
+    zeRunChangeProof⟩
+
 /- CUTS (skeleton):
    Only the shared loaded-code predicate so far. Per-family
    correctness, refusals, probes and witnesses follow in pieces.
