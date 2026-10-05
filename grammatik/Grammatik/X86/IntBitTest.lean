@@ -174,8 +174,8 @@ theorem bt_bts_setzt (w : Breite) (base : Wort) (off : Nat) :
     have m : maske .b8 = BitVec.ofNat 64 (2 ^ 8 - 1) := by decide
     have hm := btMasken_bit .b8 off
     rw [m] at hm
-    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc,
-      m, BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
+    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
       BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64, hm, btMaske_bit_gleich]
     cases base.getLsbD (btIndex .b8 off) <;> rfl
   | b16 =>
@@ -185,8 +185,8 @@ theorem bt_bts_setzt (w : Breite) (base : Wort) (off : Nat) :
     have m : maske .b16 = BitVec.ofNat 64 (2 ^ 16 - 1) := by decide
     have hm := btMasken_bit .b16 off
     rw [m] at hm
-    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc,
-      m, BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
+    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
       BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64, hm, btMaske_bit_gleich]
     cases base.getLsbD (btIndex .b16 off) <;> rfl
   | b32 =>
@@ -196,8 +196,8 @@ theorem bt_bts_setzt (w : Breite) (base : Wort) (off : Nat) :
     have m : maske .b32 = BitVec.ofNat 64 (2 ^ 32 - 1) := by decide
     have hm := btMasken_bit .b32 off
     rw [m] at hm
-    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc,
-      m, BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
+    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
       BitVec.getLsbD_ofNat, d64, hm, btMaske_bit_gleich]
     cases base.getLsbD (btIndex .b32 off) <;> rfl
   | b64 =>
@@ -205,8 +205,8 @@ theorem bt_bts_setzt (w : Breite) (base : Wort) (off : Nat) :
     have m : maske .b64 = BitVec.ofNat 64 (2 ^ 64 - 1) := by decide
     have hm := btMasken_bit .b64 off
     rw [m] at hm
-    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc,
-      m, BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
+    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
       BitVec.getLsbD_ofNat, hi, hm, btMaske_bit_gleich]
     cases base.getLsbD (btIndex .b64 off) <;> rfl
 
@@ -221,8 +221,8 @@ theorem bt_btr_loescht (w : Breite) (base : Wort) (off : Nat) :
     have m : maske .b8 = BitVec.ofNat 64 (2 ^ 8 - 1) := by decide
     have hm := btMasken_bit .b8 off
     rw [m] at hm
-    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc,
-      m, BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
+    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
       BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64, hm, btMaske_bit_gleich]
     cases base.getLsbD (btIndex .b8 off) <;> rfl
   | b16 =>
@@ -232,8 +232,8 @@ theorem bt_btr_loescht (w : Breite) (base : Wort) (off : Nat) :
     have m : maske .b16 = BitVec.ofNat 64 (2 ^ 16 - 1) := by decide
     have hm := btMasken_bit .b16 off
     rw [m] at hm
-    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc,
-      m, BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
+    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.testBit_toNat, BitVec.getLsbD_and, BitVec.getLsbD_or,
       BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64, hm, btMaske_bit_gleich]
     cases base.getLsbD (btIndex .b16 off) <;> rfl
   | b32 =>
@@ -243,8 +243,8 @@ theorem bt_btr_loescht (w : Breite) (base : Wort) (off : Nat) :
     have m : maske .b32 = BitVec.ofNat 64 (2 ^ 32 - 1) := by decide
     have hm := btMasken_bit .b32 off
     rw [m] at hm
-    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc,
-      m, BitVec.testBit_toNat, BitVec.getLsbD_and,
+    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.testBit_toNat, BitVec.getLsbD_and,
       BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64, hm, btMaske_bit_gleich]
     cases base.getLsbD (btIndex .b32 off) <;> rfl
   | b64 =>
@@ -252,9 +252,203 @@ theorem bt_btr_loescht (w : Breite) (base : Wort) (off : Nat) :
     have m : maske .b64 = BitVec.ofNat 64 (2 ^ 64 - 1) := by decide
     have hm := btMasken_bit .b64 off
     rw [m] at hm
-    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc,
-      m, BitVec.testBit_toNat, BitVec.getLsbD_and,
+    simp only [btBit, btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.testBit_toNat, BitVec.getLsbD_and,
       BitVec.getLsbD_not, BitVec.getLsbD_ofNat, hi, hm, btMaske_bit_gleich]
     cases base.getLsbD (btIndex .b64 off) <;> rfl
+
+/-- BTC complements the selected bit (CF keeps the old bit). -/
+theorem bt_btc_kehrt_um (w : Breite) (base : Wort) (off : Nat) :
+    btBit w (btSchreibe w base (btRoh .btc w base off)) off =
+      !(btBit w base off) := by
+  simp only [btRoh]
+  by_cases hB : btBit w base off = true
+  · rw [if_pos hB]
+    have hb := bt_btr_loescht w base off
+    simp only [btRoh] at hb
+    rw [hb]
+    cases hc : btBit w base off <;> simp_all
+  · rw [if_neg hB]
+    have hb := bt_bts_setzt w base off
+    simp only [btRoh] at hb
+    rw [hb]
+    cases hc : btBit w base off <;> simp_all
+
+/-! ## 4. Frame: every other bit is untouched.
+
+    The width mask covers any in-range index; the one-bit mask names
+    no other index (`btMaske_bit_anders`). -/
+
+/-- The width mask covers every in-range index. -/
+theorem btMasken_bit_lt (w : Breite) (j : Nat) (hj : j < w.bits) :
+    (maske w).getLsbD j = true := by
+  cases w with
+  | b8 =>
+    have hj8 : j < 8 := hj
+    have dj : decide (j < 8) = true := decide_eq_true hj8
+    have d64j : decide (j < 64) = true := decide_eq_true (by omega)
+    have m : maske .b8 = BitVec.ofNat 64 (2 ^ 8 - 1) := by decide
+    rw [m]
+    simp only [BitVec.getLsbD_ofNat, d64j, Bool.true_and,
+      Nat.testBit_two_pow_sub_one]
+    exact dj
+  | b16 =>
+    have hj16 : j < 16 := hj
+    have dj : decide (j < 16) = true := decide_eq_true hj16
+    have d64j : decide (j < 64) = true := decide_eq_true (by omega)
+    have m : maske .b16 = BitVec.ofNat 64 (2 ^ 16 - 1) := by decide
+    rw [m]
+    simp only [BitVec.getLsbD_ofNat, d64j, Bool.true_and,
+      Nat.testBit_two_pow_sub_one]
+    exact dj
+  | b32 =>
+    have hj32 : j < 32 := hj
+    have dj : decide (j < 32) = true := decide_eq_true hj32
+    have d64j : decide (j < 64) = true := decide_eq_true (by omega)
+    have m : maske .b32 = BitVec.ofNat 64 (2 ^ 32 - 1) := by decide
+    rw [m]
+    simp only [BitVec.getLsbD_ofNat, d64j, Bool.true_and,
+      Nat.testBit_two_pow_sub_one]
+    exact dj
+  | b64 =>
+    have dj : decide (j < 64) = true := decide_eq_true hj
+    have m : maske .b64 = BitVec.ofNat 64 (2 ^ 64 - 1) := by decide
+    rw [m]
+    simp only [BitVec.getLsbD_ofNat, dj, Bool.true_and,
+      Nat.testBit_two_pow_sub_one]
+
+/-- BTS frame: every other in-range bit is kept. -/
+theorem bt_bts_frame (w : Breite) (base : Wort) (off j : Nat)
+    (hj : j < w.bits) (hne : j ≠ btIndex w off) :
+    ((btSchreibe w base (btRoh .bts w base off)) &&& maske w).getLsbD j =
+      (base &&& maske w).getLsbD j := by
+  cases w with
+  | b8 =>
+    have hj8 : j < 8 := hj
+    have d64j : decide (j < 64) = true := decide_eq_true (by omega)
+    have hM : (2 ^ btIndex .b8 off).testBit j = false :=
+      btMaske_bit_anders _ _ (Ne.symm hne)
+    have hMask := btMasken_bit_lt .b8 j hj
+    have m : maske .b8 = BitVec.ofNat 64 (2 ^ 8 - 1) := by decide
+    rw [m] at hMask ⊢
+    simp only [btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.getLsbD_and, BitVec.getLsbD_or,
+      BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64j, hMask, hM]
+    cases base.getLsbD j <;> rfl
+  | b16 =>
+    have hj16 : j < 16 := hj
+    have d64j : decide (j < 64) = true := decide_eq_true (by omega)
+    have hM : (2 ^ btIndex .b16 off).testBit j = false :=
+      btMaske_bit_anders _ _ (Ne.symm hne)
+    have hMask := btMasken_bit_lt .b16 j hj
+    have m : maske .b16 = BitVec.ofNat 64 (2 ^ 16 - 1) := by decide
+    rw [m] at hMask ⊢
+    simp only [btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.getLsbD_and, BitVec.getLsbD_or,
+      BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64j, hMask, hM]
+    cases base.getLsbD j <;> rfl
+  | b32 =>
+    have hj32 : j < 32 := hj
+    have d64j : decide (j < 64) = true := decide_eq_true (by omega)
+    have hM : (2 ^ btIndex .b32 off).testBit j = false :=
+      btMaske_bit_anders _ _ (Ne.symm hne)
+    have hMask := btMasken_bit_lt .b32 j hj
+    have m : maske .b32 = BitVec.ofNat 64 (2 ^ 32 - 1) := by decide
+    rw [m] at hMask ⊢
+    simp only [btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.getLsbD_and, BitVec.getLsbD_or,
+      BitVec.getLsbD_ofNat, d64j, hMask, hM]
+    cases base.getLsbD j <;> rfl
+  | b64 =>
+    have d64j : decide (j < 64) = true := decide_eq_true hj
+    have hM : (2 ^ btIndex .b64 off).testBit j = false :=
+      btMaske_bit_anders _ _ (Ne.symm hne)
+    have hMask := btMasken_bit_lt .b64 j hj
+    have m : maske .b64 = BitVec.ofNat 64 (2 ^ 64 - 1) := by decide
+    rw [m] at hMask ⊢
+    simp only [btSchreibe, btRoh, btMaske, mergeRegNarrow,
+      BitVec.getLsbD_and, BitVec.getLsbD_or,
+      BitVec.getLsbD_ofNat, d64j, hMask, hM]
+    cases base.getLsbD j <;> rfl
+
+/-- BTR frame: every other in-range bit is kept. -/
+theorem bt_btr_frame (w : Breite) (base : Wort) (off j : Nat)
+    (hj : j < w.bits) (hne : j ≠ btIndex w off) :
+    ((btSchreibe w base (btRoh .btr w base off)) &&& maske w).getLsbD j =
+      (base &&& maske w).getLsbD j := by
+  cases w with
+  | b8 =>
+    have hj8 : j < 8 := hj
+    have d64j : decide (j < 64) = true := decide_eq_true (by omega)
+    have hM : (2 ^ btIndex .b8 off).testBit j = false :=
+      btMaske_bit_anders _ _ (Ne.symm hne)
+    have hMask := btMasken_bit_lt .b8 j hj
+    have m : maske .b8 = BitVec.ofNat 64 (2 ^ 8 - 1) := by decide
+    rw [m] at hMask ⊢
+    simp only [btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.getLsbD_and, BitVec.getLsbD_or,
+      BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64j, hMask, hM]
+    cases base.getLsbD j <;> rfl
+  | b16 =>
+    have hj16 : j < 16 := hj
+    have d64j : decide (j < 64) = true := decide_eq_true (by omega)
+    have hM : (2 ^ btIndex .b16 off).testBit j = false :=
+      btMaske_bit_anders _ _ (Ne.symm hne)
+    have hMask := btMasken_bit_lt .b16 j hj
+    have m : maske .b16 = BitVec.ofNat 64 (2 ^ 16 - 1) := by decide
+    rw [m] at hMask ⊢
+    simp only [btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.getLsbD_and, BitVec.getLsbD_or,
+      BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64j, hMask, hM]
+    cases base.getLsbD j <;> rfl
+  | b32 =>
+    have hj32 : j < 32 := hj
+    have d64j : decide (j < 64) = true := decide_eq_true (by omega)
+    have hM : (2 ^ btIndex .b32 off).testBit j = false :=
+      btMaske_bit_anders _ _ (Ne.symm hne)
+    have hMask := btMasken_bit_lt .b32 j hj
+    have m : maske .b32 = BitVec.ofNat 64 (2 ^ 32 - 1) := by decide
+    rw [m] at hMask ⊢
+    simp only [btSchreibe, btRoh, btMaske, mergeRegNarrow, trunc, m,
+      BitVec.getLsbD_and,
+      BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64j, hMask, hM]
+    cases base.getLsbD j <;> rfl
+  | b64 =>
+    have d64j : decide (j < 64) = true := decide_eq_true hj
+    have hM : (2 ^ btIndex .b64 off).testBit j = false :=
+      btMaske_bit_anders _ _ (Ne.symm hne)
+    have hMask := btMasken_bit_lt .b64 j hj
+    have m : maske .b64 = BitVec.ofNat 64 (2 ^ 64 - 1) := by decide
+    rw [m] at hMask ⊢
+    simp only [btSchreibe, btRoh, btMaske, mergeRegNarrow,
+      BitVec.getLsbD_and,
+      BitVec.getLsbD_not, BitVec.getLsbD_ofNat, d64j, hMask, hM]
+    cases base.getLsbD j <;> rfl
+
+/-- BTC frame: every other in-range bit is kept (both outcomes reuse
+    the set/reset frames). -/
+theorem bt_btc_frame (w : Breite) (base : Wort) (off j : Nat)
+    (hj : j < w.bits) (hne : j ≠ btIndex w off) :
+    ((btSchreibe w base (btRoh .btc w base off)) &&& maske w).getLsbD j =
+      (base &&& maske w).getLsbD j := by
+  simp only [btRoh]
+  split
+  · next _ => simpa [btRoh] using bt_btr_frame w base off j hj hne
+  · next _ => simpa [btRoh] using bt_bts_frame w base off j hj hne
+
+/-! ## 5. Concrete pins: offsets, values, selected bits. -/
+
+/-- Index pins: the offset wraps modulo the width. -/
+theorem probe_bt_index :
+    btIndex .b16 20 = 4 ∧ btIndex .b64 70 = 6 ∧
+    btIndex .b32 35 = 3 := by
+  decide
+
+/-- Value pins: set gives 8, reset gives 7, BT keeps, bits read back. -/
+theorem probe_bt_werte :
+    btRoh .bts .b64 0 3 = 8 ∧ btRoh .btr .b64 15 3 = 7 ∧
+    btRoh .bt .b64 9 3 = 9 ∧ btBit .b64 8 3 = true ∧
+    btBit .b64 7 3 = false := by
+  decide
 
 end Gabbro.Grammatik.X86
