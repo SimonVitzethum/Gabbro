@@ -657,7 +657,7 @@ Last ledger refresh: **2026-10-05 14:02 UTC**. This is an operational snapshot, 
 | 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Agent working | 1200: scheduled | [task](lanes/1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Agent working | 1202: scheduled | [task](lanes/1201.md) |
-| 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1203.md) |
+| 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
 | 1205 | Loaded image: per-family reached fetch instances | Agent working | 1206: scheduled | [task](lanes/1205.md) |
 | 1207 | Generic drain-equals-write64 induction | Agent working | 1208: scheduled | [task](lanes/1207.md) |
 
@@ -1503,6 +1503,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1203**, Pipeline atomics: register-address binding, fences, word-install proof, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1203.md). <!-- x86-merged:1203 -->
 - 2026-10-05: integration of candidate(s) [1129] failed the local proof/build gate after independent review 1130; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1130 -->
 - 2026-10-05: checked master `8bf99785` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:8bf99785e3f5c9563daed4697f47334a2ee563ca -->
+- 2026-10-05: lane **1204**, Independent exact review of 1203, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1204.md). <!-- x86-merged:1204 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
