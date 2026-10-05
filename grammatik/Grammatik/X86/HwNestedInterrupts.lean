@@ -227,6 +227,194 @@ theorem verschachteltSchritt_wf (m : HwMaschine) (c : Nat)
   exact asyncSchritt_wf_allgemein r1.1 c ev2
     { st1 with ifBit := r1.2.1 } r2 h2 hwf1
 
+/-! ## 3. Double fault as outcome (S4).
+
+   A fault raised while the handler of a fault is being entered
+   escalates: the accepted `liefere` fault of the SECOND delivery
+   becomes #DF, vector 8, error code zero. The first delivery's own
+   fault is reported unchanged; two successes deliver. -/
+
+/-- Nested outcome with #DF: success, a first-delivery fault, or the
+    escalated double fault (vector 8, code zero). -/
+inductive DfErgebnis where
+  | zugestellt : Speicher → Adresse → Bool → Bool → DfErgebnis
+  | fehler : TorFehler → Wort → DfErgebnis
+  | doppelFehler : DfErgebnis
+
+/-- Fault vector projection: a first-delivery fault keeps the
+    accepted `torVektor`; the double fault is vector 8 (S4). -/
+def dfVektorVon : DfErgebnis → Option Nat
+  | .zugestellt _ _ _ _ => none
+  | .fehler f _ => some (torVektor f)
+  | .doppelFehler => some dfVektor
+
+/-- Error-code projection: a first-delivery fault keeps its code;
+    the double fault carries zero (S4). -/
+def dfCodeVon : DfErgebnis → Option Wort
+  | .zugestellt _ _ _ _ => none
+  | .fehler _ c => some c
+  | .doppelFehler => some dfCode
+
+/-- Nested delivery with escalation: the first `liefere` fault is
+    reported, two successes deliver, a second-delivery fault while
+    entering the handler escalates to #DF. -/
+def liefereMitDf (m : Speicher) (s : Steuerstand)
+    (q1 q2 : LieferAnfrage) : DfErgebnis :=
+  match liefere m s q1 with
+  | .lieferFehler f c => .fehler f c
+  | .zugestellt m1 _ ifNeu _ =>
+    match liefere m1 { s with ifBit := ifNeu } q2 with
+    | .zugestellt m2 rip ifNeu2 gew => .zugestellt m2 rip ifNeu2 gew
+    | .lieferFehler _ _ => .doppelFehler
+
+/-- FIRST FAULT REPORTED: a failed first delivery is no escalation. -/
+theorem liefereMitDf_erste_fehlschlaegt (m : Speicher)
+    (s : Steuerstand) (q1 q2 : LieferAnfrage) (f : TorFehler)
+    (c : Wort)
+    (h1 : liefere m s q1 = .lieferFehler f c) :
+    liefereMitDf m s q1 q2 = .fehler f c := by
+  simp [liefereMitDf, h1]
+
+/-- DOUBLE FAULT (S4): the handler was entered and the nested
+    delivery faults -- vector 8, error code zero. -/
+theorem liefereMitDf_doppelt (m m1 : Speicher) (s : Steuerstand)
+    (q1 q2 : LieferAnfrage) (rip : Adresse) (ifNeu : Bool)
+    (gew : Bool) (f2 : TorFehler) (c2 : Wort)
+    (h1 : liefere m s q1 = .zugestellt m1 rip ifNeu gew)
+    (h2 : liefere m1 { s with ifBit := ifNeu } q2 =
+      .lieferFehler f2 c2) :
+    liefereMitDf m s q1 q2 = .doppelFehler ∧
+      dfVektorVon (liefereMitDf m s q1 q2) = some dfVektor ∧
+      dfCodeVon (liefereMitDf m s q1 q2) = some dfCode := by
+  have h : liefereMitDf m s q1 q2 = .doppelFehler := by
+    simp [liefereMitDf, h1, h2]
+  refine ⟨h, ?_, ?_⟩ <;> rw [h] <;> rfl
+
+/-- TWO SUCCESSES DELIVER: no fault anywhere, no escalation. -/
+theorem liefereMitDf_zugestellt (m m1 m2 : Speicher) (s : Steuerstand)
+    (q1 q2 : LieferAnfrage) (rip1 rip2 : Adresse)
+    (ifNeu1 ifNeu2 : Bool) (gew1 gew2 : Bool)
+    (h1 : liefere m s q1 = .zugestellt m1 rip1 ifNeu1 gew1)
+    (h2 : liefere m1 { s with ifBit := ifNeu1 } q2 =
+      .zugestellt m2 rip2 ifNeu2 gew2) :
+    liefereMitDf m s q1 q2 = .zugestellt m2 rip2 ifNeu2 gew2 := by
+  simp [liefereMitDf, h1, h2]
+
+/-- (2) AGREEMENT, nested wechseln/wechseln path: the nest succeeds
+    exactly where both accepted `liefere` legs deliver -- same frame
+    memories, handler RIPs, IF values and switch flags. The old
+    evaluator is lifted, never redefined. Every premise feeds the
+    leg that consumes it; the descended RSP links the legs. -/
+theorem verschachtelt_vereinbarung (m : HwMaschine) (c : Nat)
+    (ev1 ev2 : AsyncEreignis) (st1 : Steuerstand)
+    (t1 : Wort × Wort) (g1 : IdtTor)
+    (curRsp1w rsp1w : Wort) (m2a : Speicher)
+    (hv1 : asyncVektorOk ev1 = true)
+    (hb1 : asyncBereit ev1 = true)
+    (hl1 : torImLimit st1.idtLimit ev1.vektor = true)
+    (hr1 : liesTorBytes m.mem (torAdresse st1.idtBasis ev1.vektor) =
+      some t1)
+    (hcur1 : (m.kerne c).register Register.rsp = curRsp1w)
+    (hp1 : pruefeTor ev1.vektor st1.idtLimit t1 .extern st1.cpl
+      ev1.codeOk = .bereit g1)
+    (hs1 : waehleStapel m.mem st1 g1.ist ev1.neuDpl ev1.wechsel
+      curRsp1w = .wechseln rsp1w)
+    (hk1 : istKanonisch rsp1w = true)
+    (hpush1 : schiebeRahmen m.mem rsp1w
+      (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)) = some m2a)
+    (hmatch : ev2.steuer = { st1 with ifBit :=
+      if g1.unterbrechung then false else st1.ifBit })
+    (t2 : Wort × Wort) (g2 : IdtTor)
+    (rsp2w : Wort) (m2b : Speicher)
+    (hv2 : asyncVektorOk ev2 = true)
+    (hb2 : asyncBereit ev2 = true)
+    (hl2 : torImLimit ({ st1 with ifBit :=
+      if g1.unterbrechung then false else st1.ifBit }).idtLimit
+      ev2.vektor = true)
+    (hr2 : liesTorBytes m2a (torAdresse ({ st1 with ifBit :=
+      if g1.unterbrechung then false else st1.ifBit }).idtBasis
+      ev2.vektor) = some t2)
+    (hcur2 : (((asyncMasch m c g1 (asyncAnfrage ev1 t1 curRsp1w)
+      rsp1w m2a).kerne c).register Register.rsp) =
+      rsp1w - BitVec.ofNat 64
+        (8 * (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)).length))
+    (hp2 : pruefeTor ev2.vektor ({ st1 with ifBit :=
+        if g1.unterbrechung then false else st1.ifBit }).idtLimit t2
+      .extern ({ st1 with ifBit :=
+        if g1.unterbrechung then false else st1.ifBit }).cpl
+      ev2.codeOk = .bereit g2)
+    (hs2 : waehleStapel m2a ({ st1 with ifBit :=
+        if g1.unterbrechung then false else st1.ifBit })
+      g2.ist ev2.neuDpl ev2.wechsel (rsp1w - BitVec.ofNat 64
+        (8 * (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)).length)) =
+      .wechseln rsp2w)
+    (hk2 : istKanonisch rsp2w = true)
+    (hpush2 : schiebeRahmen m2a rsp2w
+      (rahmenWorte (asyncAnfrage ev2 t2 (rsp1w - BitVec.ofNat 64
+        (8 * (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)).length)))) =
+      some m2b) :
+    ∃ r2 : HwMaschine × Bool × Bool,
+      verschachteltSchritt m c ev1 ev2 st1 =
+        some (r2.1, r2.2.1, true, r2.2.2) ∧
+      liefere m.mem st1 (asyncAnfrage ev1 t1 curRsp1w) =
+        .zugestellt m2a g1.offset
+          (if g1.unterbrechung then false else st1.ifBit) true ∧
+      liefere m2a { st1 with ifBit :=
+          if g1.unterbrechung then false else st1.ifBit }
+        (asyncAnfrage ev2 t2 (rsp1w - BitVec.ofNat 64
+          (8 * (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)).length))) =
+        .zugestellt m2b g2.offset
+          (if g2.unterbrechung then false else
+            (if g1.unterbrechung then false else st1.ifBit))
+          true := by
+  have hz1 := asyncSchritt_zugestellt_wechsel m c ev1 st1 t1 g1
+    curRsp1w rsp1w m2a hv1 hb1 hl1 hr1 hcur1 hp1 hs1 hk1 hpush1
+  have hz2 := asyncSchritt_zugestellt_wechsel
+    (asyncMasch m c g1 (asyncAnfrage ev1 t1 curRsp1w) rsp1w m2a)
+    c ev2 { st1 with ifBit :=
+      if g1.unterbrechung then false else st1.ifBit }
+    t2 g2 (rsp1w - BitVec.ofNat 64
+      (8 * (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)).length))
+    rsp2w m2b hv2 hb2 hl2 hr2 hcur2 hp2 hs2 hk2 hpush2
+  have hlief1 := asyncSchritt_liefere_wechsel m ev1 st1 t1 g1
+    curRsp1w rsp1w m2a hp1 hs1 hk1 hpush1
+  have hlief2 := asyncSchritt_liefere_wechsel
+    (asyncMasch m c g1 (asyncAnfrage ev1 t1 curRsp1w) rsp1w m2a)
+    ev2 { st1 with ifBit :=
+      if g1.unterbrechung then false else st1.ifBit }
+    t2 g2 (rsp1w - BitVec.ofNat 64
+      (8 * (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)).length))
+    rsp2w m2b hp2 hs2 hk2 hpush2
+  have hnest : verschachteltSchritt m c ev1 ev2 st1 =
+      some (asyncMasch (asyncMasch m c g1 (asyncAnfrage ev1 t1 curRsp1w)
+        rsp1w m2a) c g2
+        (asyncAnfrage ev2 t2 (rsp1w - BitVec.ofNat 64
+          (8 * (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)).length)))
+        rsp2w m2b,
+      if g2.unterbrechung then false else
+        (if g1.unterbrechung then false else st1.ifBit),
+      true, true) :=
+    verschachtelt_erfolg m c ev1 ev2 st1
+      (asyncMasch m c g1 (asyncAnfrage ev1 t1 curRsp1w) rsp1w m2a,
+        if g1.unterbrechung then false else st1.ifBit, true)
+      (asyncMasch (asyncMasch m c g1 (asyncAnfrage ev1 t1 curRsp1w)
+        rsp1w m2a) c g2
+        (asyncAnfrage ev2 t2 (rsp1w - BitVec.ofNat 64
+          (8 * (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)).length)))
+        rsp2w m2b,
+      if g2.unterbrechung then false else
+        (if g1.unterbrechung then false else st1.ifBit),
+      true)
+      hz1 hmatch hz2
+  exact ⟨(asyncMasch (asyncMasch m c g1 (asyncAnfrage ev1 t1 curRsp1w)
+    rsp1w m2a) c g2
+    (asyncAnfrage ev2 t2 (rsp1w - BitVec.ofNat 64
+      (8 * (rahmenWorte (asyncAnfrage ev1 t1 curRsp1w)).length)))
+    rsp2w m2b,
+  if g2.unterbrechung then false else
+    (if g1.unterbrechung then false else st1.ifBit),
+  true), hnest, hlief1, hlief2⟩
+
 /- CUTS:
    Proved here: SKELETON ONLY so far -- the double-fault vector
    constant. Nested delivery, #DF escalation, the TSO-buffered
