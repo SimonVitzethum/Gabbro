@@ -660,14 +660,14 @@ Last ledger refresh: **2026-10-05 14:57 UTC**. This is an operational snapshot, 
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
 | 1205 | Loaded image: per-family reached fetch instances | Merged after review/checks | 1206: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1205.md) |
 | 1207 | Generic drain-equals-write64 induction | Merged after review/checks | 1208: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1207.md) |
-| 1209 | LOCK family: fetched-byte dispatch, narrower widths and split-lock | Merged after review/checks | 1210: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1209.md) |
+| 1209 | LOCK family: fetched-byte dispatch, narrower widths and split-lock | Merged after review/checks | 1210: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1209.md) |
 | 1211 | FP s32/MXCSR rows in the unified dispatcher | Committed candidate; review/integration pending | 1212: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1211.md) |
 | 1213 | LOCK words to W history: timestamp and value link | Merged after review/checks | 1214: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1213.md) |
 | 1215 | From W runs to the GX refinement: the missing target leg | Committed candidate; review/integration pending | 1216: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1215.md) |
 | 1217 | Pipeline atomics: execBlock correspondence | Agent working | 1218: scheduled | [task](lanes/1217.md) |
 | 1219 | Pipeline: derive per-chunk runs from the lowering alone | Committed candidate; review/integration pending | 1220: Agent working | [task](lanes/1219.md) |
 | 1221 | Linking: rel8 selection convergence and fall-through coverage | Committed candidate; review/integration pending | 1222: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1221.md) |
-| 1223 | valX86_sound for the decidable part | Committed candidate; review/integration pending | 1224: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1223.md) |
+| 1223 | valX86_sound for the decidable part | Committed candidate; review/integration pending | 1224: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1223.md) |
 | 1225 | Faults and interrupts against the store buffer: precise exceptions | Committed candidate; review/integration pending | 1226: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1225.md) |
 | 1227 | Pipeline spills: variable homing and live-range splitting | Committed candidate; review/integration pending | 1228: Committed candidate; review/integration pending | [task](lanes/1227.md) |
 | 1229 | Pipeline calls: multi-statement callee bodies | Committed candidate; review/integration pending | 1230: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1229.md) |
@@ -1558,6 +1558,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: integration of candidate(s) [1229] failed the local proof/build gate after independent review 1230; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1230 -->
 - 2026-10-05: integration of candidate(s) [1231] failed the local proof/build gate after independent review 1232; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1232 -->
 - 2026-10-05: lane **1209**, LOCK family: fetched-byte dispatch, narrower widths and split-lock, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1209.md). <!-- x86-merged:1209 -->
+- 2026-10-05: lane **1210**, Independent exact review of 1209, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1210.md). <!-- x86-merged:1210 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
