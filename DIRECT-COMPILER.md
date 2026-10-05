@@ -620,7 +620,7 @@ Last ledger refresh: **2026-10-05 14:10 UTC**. This is an operational snapshot, 
 | 1123 | Architectural faults as outcomes of the coherent machine | Merged after review/checks | 1124: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1123.md) |
 | 1125 | Asynchronous interrupt delivery on the coherent machine | Merged after review/checks | 1126: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1125.md) |
 | 1127 | Multiply/divide and narrow widths connected | Merged after review/checks | 1128: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1127.md) |
-| 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Merged after review/checks | 1130: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1129.md) |
+| 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Merged after review/checks | 1130: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1129.md) |
 | 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Committed candidate; review/integration pending | 1132: Committed candidate; review/integration pending | [task](lanes/1131.md) |
 | 1133 | Device/MMIO and memory types on the coherent machine | Agent working | 1134: scheduled | [task](lanes/1133.md) |
 | 1135 | CPUID/feature enabled-state gating inside HwSchritt | Merged after review/checks | 1136: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1135.md) |
@@ -1505,6 +1505,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `8bf99785` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:8bf99785e3f5c9563daed4697f47334a2ee563ca -->
 - 2026-10-05: lane **1204**, Independent exact review of 1203, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1204.md). <!-- x86-merged:1204 -->
 - 2026-10-05: lane **1129**, Scalar FP32/FP64 and MXCSR on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1129.md). <!-- x86-merged:1129 -->
+- 2026-10-05: lane **1130**, Independent exact review of 1129, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1130.md). <!-- x86-merged:1130 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
