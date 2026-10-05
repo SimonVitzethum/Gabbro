@@ -34,13 +34,17 @@ namespace Gabbro.Grammatik.X86
     (opcodes `66 98`/`66 99`); `cwde`/`cdqe`/`cdq`/`cqo` lift the
     accepted width preparations; `nop` is bare `90` (exactly the
     architectural NOP, never a zero-extending self-exchange);
-    `xchgReg`/`xchgRax` are the register exchanges at an explicit
-    width; `movsxd` is the REX.W register move with doubleword
+    `xchgReg`/`xchgRax16`/`xchgRax32`/`xchgRax64` are the register
+    exchanges at an explicit width (`90+r` has no 8-bit form, so the
+    RAX-exchange comes in 16/32/64-bit variants);
+    `movsxd` is the REX.W register move with doubleword
     sign-extension. -/
 inductive SxBefehl where
   | cbw | cwde | cdqe | cwd | cdq | cqo | nop
   | xchgReg (b : Breite) (a c : Register)
-  | xchgRax (b : Breite) (r : Register)
+  | xchgRax16 (r : Register)
+  | xchgRax32 (r : Register)
+  | xchgRax64 (r : Register)
   | movsxd (dst src : Register)
   deriving DecidableEq, Repr
 
@@ -122,7 +126,9 @@ def sxSchritt (d : SxDecodiert) (s : Zustand) : MulDivErgebnis :=
     | .cqo => wdSchritt ⟨.vor99 .w64, d.laenge⟩ s
     | .nop => .ok { s with rip := nach }
     | .xchgReg b a c => .ok { (xchgSchritt b a c s) with rip := nach }
-    | .xchgRax b r => .ok { (xchgSchritt b Register.rax r s) with rip := nach }
+    | .xchgRax16 r => .ok { (xchgSchritt .b16 Register.rax r s) with rip := nach }
+    | .xchgRax32 r => .ok { (xchgSchritt .b32 Register.rax r s) with rip := nach }
+    | .xchgRax64 r => .ok { (xchgSchritt .b64 Register.rax r s) with rip := nach }
     | .movsxd dst src => .ok { (movsxdSchritt dst src s) with rip := nach }
 
 /-! ## 2. The old evaluator is lifted, never redefined.
@@ -328,7 +334,15 @@ theorem sxSchritt_flags (d : SxDecodiert) (s s' : Zustand)
       simp [hbef] at h
       cases h
       rfl
-    | xchgRax b r =>
+    | xchgRax16 r =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | xchgRax32 r =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | xchgRax64 r =>
       simp [hbef] at h
       cases h
       rfl
@@ -375,7 +389,15 @@ theorem sxSchritt_memory (d : SxDecodiert) (s s' : Zustand)
       simp [hbef] at h
       cases h
       rfl
-    | xchgRax b r =>
+    | xchgRax16 r =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | xchgRax32 r =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | xchgRax64 r =>
       simp [hbef] at h
       cases h
       rfl
@@ -453,6 +475,139 @@ theorem ext_weist_sxlock98_zurueck :
 theorem ext_weist_sxxchg87mem_zurueck :
     decodeExt [natByte 135, natByte 0] = none := by
   decide
+
+/-! ## 6. Decode: the accepted prefix parse, family opcodes after it.
+
+    `decodeSx` reuses `nimmPraefix` (LOCK refusal, `66`/REX parse)
+    and `wdBits`/`codeReg` unchanged. SIB (`xb == 1`) refuses
+    everywhere (no addressed form lives here); every memory ModRM
+    refuses (an XCHG memory operand is implicitly LOCKed and stays
+    with the locked families; a MOVSXD memory source needs the TSO
+    read path, still open). Bare `90` with no prefix at all
+    (`npfx == 0`, which already forces `op16 = false`) is the
+    architectural NOP, never a zero-extending self-exchange: the
+    self-exchange event at 32 bits stays reachable through the
+    redundant-REX encoding `[0x40, 0x90]`. -/
+
+/-- Preparation dispatch after the prefix (`98`/`99`): 16-bit with
+    `66`, 32-bit default, 64-bit with REX.W. REX.R/B name no field
+    here and are ignored; `66`+REX.W refuses. -/
+def decodeSx98 (op16 : Bool) (wb npfx : Nat) (is99 : Bool)
+    (rest : List Byte) : Option (SxDecodiert × List Byte) :=
+  if op16 && wb == 1 then none
+  else if op16 then
+    some (⟨if is99 then .cwd else .cbw, npfx + 1⟩, rest)
+  else if wb == 1 then
+    some (⟨if is99 then .cqo else .cdqe, npfx + 1⟩, rest)
+  else
+    some (⟨if is99 then .cdq else .cwde, npfx + 1⟩, rest)
+
+/-- `90+r` dispatch after the prefix: bare `90` is NOP; otherwise
+    the width follows the prefix (default 32, `66` 16, REX.W 64)
+    and REX.B extends the opcode register. REX.R names no field
+    and is ignored. -/
+def decodeSx90 (op16 : Bool) (wb rb bb npfx : Nat) (op : Byte)
+    (rest : List Byte) : Option (SxDecodiert × List Byte) :=
+  let n := byteNat op
+  if n < 144 || 151 < n then none
+  else
+    let lo := n - 144
+    if lo == 0 && npfx == 0 then
+      some (⟨.nop, 1⟩, rest)
+    else if !op16 && wb == 0 then
+      match codeReg (bb * 8 + lo) with
+      | some r => some (⟨.xchgRax32 r, npfx + 1⟩, rest)
+      | none => none
+    else if op16 && wb == 0 then
+      match codeReg (bb * 8 + lo) with
+      | some r => some (⟨.xchgRax16 r, npfx + 1⟩, rest)
+      | none => none
+    else if !op16 && wb == 1 && rb == 0 then
+      match codeReg (bb * 8 + lo) with
+      | some r => some (⟨.xchgRax64 r, npfx + 1⟩, rest)
+      | none => none
+    else none
+
+/-- `86` ModRM (`mod = 3`): the 8-bit register exchange. Operand
+    size and REX.W name nothing at one byte and are ignored. -/
+def decodeSx86 (rb bb npfx : Nat)
+    (m : Byte) (rest : List Byte) : Option (SxDecodiert × List Byte) :=
+  if byteNat m / 64 == 3 then
+    match codeReg (rb * 8 + byteNat m / 8 % 8),
+      codeReg (bb * 8 + byteNat m % 8) with
+    | some a, some c => some (⟨.xchgReg .b8 a c, npfx + 2⟩, rest)
+    | _, _ => none
+  else none
+
+/-- `87` ModRM (`mod = 3`): the 16/32/64-bit register exchange at
+    the prefix width. `66`+REX.W refuses. -/
+def decodeSx87 (op16 : Bool) (wb rb bb npfx : Nat)
+    (m : Byte) (rest : List Byte) : Option (SxDecodiert × List Byte) :=
+  if byteNat m / 64 == 3 then
+    match codeReg (rb * 8 + byteNat m / 8 % 8),
+      codeReg (bb * 8 + byteNat m % 8) with
+    | some a, some c =>
+      if !op16 && wb == 0 then
+        some (⟨.xchgReg .b32 a c, npfx + 2⟩, rest)
+      else if op16 && wb == 0 then
+        some (⟨.xchgReg .b16 a c, npfx + 2⟩, rest)
+      else if !op16 && wb == 1 then
+        some (⟨.xchgReg .b64 a c, npfx + 2⟩, rest)
+      else none
+    | _, _ => none
+  else none
+
+/-- `63` ModRM (`mod = 3`): the REX.W register MOVSXD. Without
+    REX.W, or with `66`, the form refuses. -/
+def decodeSx63 (op16 : Bool) (wb rb bb npfx : Nat)
+    (m : Byte) (rest : List Byte) : Option (SxDecodiert × List Byte) :=
+  if op16 then none
+  else if wb == 0 then none
+  else if byteNat m / 64 == 3 then
+    match codeReg (rb * 8 + byteNat m / 8 % 8),
+      codeReg (bb * 8 + byteNat m % 8) with
+    | some dst, some src =>
+      some (⟨.movsxd dst src, npfx + 2⟩, rest)
+    | _, _ => none
+  else none
+
+/-- Opcode dispatch after the prefix: `98`/`99`, `90+r`, `86`,
+    `87`, `63`. Anything else refuses. -/
+def decodeSxNachPraefix (op16 : Bool) (wb rb xb bb npfx : Nat) :
+    List Byte → Option (SxDecodiert × List Byte)
+  | [] => none
+  | op :: rest =>
+    if xb == 1 then none
+    else if byteNat op == 152 then decodeSx98 op16 wb npfx false rest
+    else if byteNat op == 153 then decodeSx98 op16 wb npfx true rest
+    else if byteNat op == 134 then
+      match rest with
+      | [] => none
+      | m :: rest2 => decodeSx86 rb bb npfx m rest2
+    else if byteNat op == 135 then
+      match rest with
+      | [] => none
+      | m :: rest2 => decodeSx87 op16 wb rb bb npfx m rest2
+    else if byteNat op == 99 then
+      match rest with
+      | [] => none
+      | m :: rest2 => decodeSx63 op16 wb rb bb npfx m rest2
+    else if 144 ≤ byteNat op && byteNat op ≤ 151 then
+      decodeSx90 op16 wb rb bb npfx op rest
+    else none
+
+/-- Full decode: the accepted prefix parse, then the family layer.
+    The parser reads bytes and never compares against encoder
+    output. -/
+def decodeSx : List Byte → Option (SxDecodiert × List Byte)
+  | [] => none
+  | b :: rest =>
+    match nimmPraefix (b :: rest) with
+    | none => none
+    | some (pfx, tail) =>
+      let bits := wdBits pfx.rex
+      decodeSxNachPraefix pfx.op16 bits.1 bits.2.1 bits.2.2.1
+        bits.2.2.2 pfx.n tail
 
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
