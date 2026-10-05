@@ -9,6 +9,8 @@ snapshot (no author-clone access from this lane):
 - Files: `MUSE-REPORT-1225.md` (new), `grammatik/Grammatik.lean` (+1 import),
   `grammatik/Grammatik/X86/HwPreciseFault.lean` (new, 469 lines).
 
+CANDIDATE: 1225 b34a68e3a076237b4e90224b09ca16a7c456398e
+
 ## Checks performed
 
 - Forbidden tokens over the new file: no `sorry`, `admit` (tactic),
@@ -64,7 +66,7 @@ snapshot (no author-clone access from this lane):
   exhaustion exit 134 — documented, retry green unchanged). Own baseline
   `./lean-bau` in this clone: `Build completed successfully (641 jobs).`
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 Candidate 1225 at `b34a68e3` meets the lane 1225 task: precise fault as
 no-effect self-loop, delivery-is-not-a-drain (S3, named), handler forwarding
