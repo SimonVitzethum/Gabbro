@@ -1153,6 +1153,228 @@ theorem nestNmi_if :
     asyncIfOut nestNmi = some false := by
   decide
 
+/-! ## 9. Double-fault observation on the witness.
+
+   First leg delivers through the trap gate; the nested leg names
+   vector 35, past the IDT limit, and faults -- escalation to #DF
+   (vector 8, code zero). Leg statuses are observed through the
+   accepted fault-vector projection. -/
+
+/-- First nested-delivery request (trap gate words, as read). -/
+def dfQ1 : LieferAnfrage :=
+  ⟨32, (loWit32, BitVec.ofNat 64 0), .extern, true, false, 0,
+    BitVec.ofNat 64 20480, BitVec.ofNat 64 16, BitVec.ofNat 64 514,
+    BitVec.ofNat 64 8, BitVec.ofNat 64 4660, none⟩
+
+/-- Second nested-delivery request: vector 35, past the IDT limit. -/
+def dfQ2 : LieferAnfrage :=
+  ⟨35, (loWit32, BitVec.ofNat 64 0), .extern, true, false, 0,
+    BitVec.ofNat 64 16344, BitVec.ofNat 64 16, BitVec.ofNat 64 514,
+    BitVec.ofNat 64 8, BitVec.ofNat 64 4660, none⟩
+
+/-- First leg delivers (no fault vector). -/
+theorem nestDf_h1vektor :
+    ergebnisVektor (liefere nestMem nestSteuer dfQ1) = none := by
+  decide
+
+/-- Second leg faults with the #GP-class vector. -/
+theorem nestDf_h2vektor :
+    ergebnisVektor
+      (liefere (ergebnisSpeicher (liefere nestMem nestSteuer dfQ1))
+        { nestSteuer with ifBit := true } dfQ2) = some 13 := by
+  decide
+
+/-- DOUBLE FAULT (S4, witnessed): the escalated outcome carries
+    vector 8. -/
+theorem nestDf_vektor :
+    dfVektorVon (liefereMitDf nestMem nestSteuer dfQ1 dfQ2) =
+      some 8 := by
+  decide
+
+/-- DOUBLE FAULT (S4, witnessed): the escalated outcome carries
+    error code zero. -/
+theorem nestDf_code :
+    dfCodeVon (liefereMitDf nestMem nestSteuer dfQ1 dfQ2) =
+      some 0 := by
+  decide
+
+/-! ## 10. TSO stage and buffered frame on the witness.
+
+   Chained onto the first delivery: core 1 issues byte 42 at a cell
+   clear of the frame, forwards it to itself only, and the drain
+   changes shared memory observed from both cores. Beside it the
+   five-word handler frame rides the acting core's buffer (40
+   entries, memory unchanged, owner-only word forwarding). -/
+
+/-- Witness data cell: writable, clear of the frame. -/
+def nestZelle : Adresse := BitVec.ofNat 64 16336
+
+/-- The machine after the first delivery, if reached. -/
+def nestTsoM1 : Option HwMaschine :=
+  match nestD1 with
+  | some (m1, _, _) => some m1
+  | none => none
+
+/-- Core 1 issues byte 42 at the data cell. -/
+def nestTso1 : Option TSOZustand :=
+  match nestTsoM1 with
+  | some m1 => issueByte (tsoAnsicht m1) 1 nestZelle (BitVec.ofNat 8 42)
+  | none => none
+
+/-- Core 1 observes its own byte (forwarding). -/
+def nestTsoLoadEigen : Option (Option Byte) :=
+  match nestTso1 with
+  | some s => some (loadByte s 1 nestZelle)
+  | none => none
+
+/-- Core 0 observes the old byte (no foreign forwarding). -/
+def nestTsoLoadFremd : Option (Option Byte) :=
+  match nestTso1 with
+  | some s => some (loadByte s 0 nestZelle)
+  | none => none
+
+/-- Core 1 drains its oldest entry. -/
+def nestTso2 : Option TSOZustand :=
+  match nestTso1 with
+  | some s => flushKern s 1
+  | none => none
+
+/-- The shared byte after the drain. -/
+def nestTsoNachFlush : Option (Option Byte) :=
+  match nestTso2 with
+  | some s => some (some (s.mem.bytes nestZelle))
+  | none => none
+
+/-- Core 0 reads the drained byte from shared memory. -/
+def nestTsoFremdNachFlush : Option (Option Byte) :=
+  match nestTso2 with
+  | some s => some (loadByte s 0 nestZelle)
+  | none => none
+
+/-- The data cell starts zeroed. -/
+theorem nestTso_anfang_null :
+    nestMem.bytes nestZelle = BitVec.ofNat 8 0 := by
+  decide
+
+/-- Forwarding: core 1 reads its own unflushed byte. -/
+theorem nestTso_weiterleitung :
+    nestTsoLoadEigen = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- No foreign forwarding: core 0 still reads zero. -/
+theorem nestTso_fremd_alt :
+    nestTsoLoadFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 42. -/
+theorem nestTso_spuelung_aendert :
+    nestTsoNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- After the drain core 0 observes the new byte. -/
+theorem nestTso_fremd_neu :
+    nestTsoFremdNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- The five handler frame words (SS, RSP, RFLAGS, CS, RIP). -/
+def nestRahmenWorte : List Wort :=
+  [BitVec.ofNat 64 16, BitVec.ofNat 64 20480, BitVec.ofNat 64 514,
+   BitVec.ofNat 64 8, BitVec.ofNat 64 4660]
+
+/-- The frame buffered on core 0 at the IST top. -/
+def nestPuffer : Option HwMaschine :=
+  puffereRahmen nestStart 0 (BitVec.ofNat 64 16384) nestRahmenWorte
+
+/-- Buffered entry count on core 0 after the frame push. -/
+def nestPufferLen : Option Nat :=
+  match nestPuffer with
+  | some m => some (m.puffer 0).length
+  | none => none
+
+/-- Shared-memory byte at the first slot right after buffering. -/
+def nestPufferMemStill : Option Byte :=
+  match nestPuffer with
+  | some m1 => some (m1.mem.bytes (BitVec.ofNat 64 16376))
+  | none => none
+
+/-- Core 0 observes its own buffered first word (forwarding). -/
+def nestPufferWortEigen : Option (Option Wort) :=
+  match nestPuffer with
+  | some m1 =>
+    some (stapelLadeWort (tsoAnsicht m1) 0 (BitVec.ofNat 64 16376))
+  | none => none
+
+/-- Core 1 observes the old word (no foreign forwarding). -/
+def nestPufferWortFremd : Option (Option Wort) :=
+  match nestPuffer with
+  | some m1 =>
+    some (stapelLadeWort (tsoAnsicht m1) 1 (BitVec.ofNat 64 16376))
+  | none => none
+
+/-- The buffered frame is exactly 40 entries. -/
+theorem nestPuffer_40 : nestPufferLen = some 40 := by
+  decide
+
+/-- Buffering leaves the shared slot byte at zero. -/
+theorem nestPuffer_mem_still :
+    nestPufferMemStill = some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Forwarding: core 0 reads its own unflushed frame word. -/
+theorem nestPuffer_wort_eigen :
+    nestPufferWortEigen = some (some (BitVec.ofNat 64 16)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem nestPuffer_wort_fremd :
+    nestPufferWortFremd = some (some (BitVec.ofNat 64 0)) := by
+  decide
+
+/-! ## 11. IRET observation on the witness.
+
+   After the first delivery the handler returns: RIP and RSP are
+   restored from the frame, IF comes back from RFLAGS bit 9. -/
+
+/-- IRET after the first delivery. -/
+def nestIret : Option HwIntMaschine :=
+  match nestD1 with
+  | some (m1, ifNeu, _) =>
+    iretSchritt ⟨m1, fun _ => { nestSteuer with ifBit := ifNeu }⟩ 0 true
+  | none => none
+
+/-- Restored RIP out of the IRET outcome. -/
+def nestIretRip : Option Wort :=
+  match nestIret with
+  | some s => some (s.hw.kerne 0).rip
+  | _ => none
+
+/-- Restored RSP out of the IRET outcome. -/
+def nestIretRsp : Option Wort :=
+  match nestIret with
+  | some s => some ((s.hw.kerne 0).register Register.rsp)
+  | _ => none
+
+/-- Restored IF out of the IRET outcome. -/
+def nestIretIf : Option Bool :=
+  match nestIret with
+  | some s => some (s.steuer 0).ifBit
+  | _ => none
+
+/-- IRET restores the pre-handler RIP. -/
+theorem nestIret_rip :
+    nestIretRip = some (BitVec.ofNat 64 4660) := by
+  decide
+
+/-- IRET restores the pre-handler RSP. -/
+theorem nestIret_rsp :
+    nestIretRsp = some (BitVec.ofNat 64 20480) := by
+  decide
+
+/-- IRET restores IF from RFLAGS bit 9 (S6, witnessed). -/
+theorem nestIret_if :
+    nestIretIf = some true := by
+  decide
+
 /- CUTS:
    Proved here: SKELETON ONLY so far -- the double-fault vector
    constant. Nested delivery, #DF escalation, the TSO-buffered
