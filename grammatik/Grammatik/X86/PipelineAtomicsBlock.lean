@@ -300,6 +300,45 @@ def abSigma : World abD where
 
 def abEnv : Env abD [] := .nil -- empty context
 
+/-! ## 5. The block access sequence and its refusal.
+
+    The atomic contents of `abSrc` as one access sequence: the shared
+    global at `abGlobA` written then read (release/acquire, plain MOV
+    under the named rule), plus the lock-section body. Integer-slot
+    writes stay with the accepted `Pipeline` lowering (cited, never
+    redone); what is lowered HERE is exactly the atomic sequence. -/
+
+/-- The shared-atomic global lives at this address. -/
+def abGlobA : Adresse := natAdresse 8208
+
+/-- The block's atomic access sequence: release write then acquire
+    read of the shared global. -/
+def abOps : List PipelineAtomics.AtomQuelle :=
+  [PipelineAtomics.AtomQuelle.schreibe abGlobA .freigabe .rbp .rax 0,
+    PipelineAtomics.AtomQuelle.lese abGlobA .freigabe .rax .rbp 0]
+
+/-- The sequence lowers to two plain MOVs (positive). -/
+theorem abOps_senk : PipelineAtomics.senkListe abOps =
+    some [PipelineAtomics.ZielOp.movStore .rbp .rax 0,
+      PipelineAtomics.ZielOp.movLoad .rax .rbp 0] := rfl
+
+/-- **BLOCK REFUSAL.** A block holding a nested lock section anywhere
+    is REFUSED by the lowering -- never guessed, wherever it stands. -/
+theorem abblock_refuses_nested (pre post : List PipelineAtomics.AtomQuelle) :
+    PipelineAtomics.senkListe (pre ++
+      [PipelineAtomics.AtomQuelle.sperre
+        [PipelineAtomics.AtomQuelle.sperre
+          [PipelineAtomics.AtomQuelle.zaun]]] ++ post) = none := by
+  induction pre with
+  | nil => rfl
+  | cons q qs ih =>
+    have h2 : PipelineAtomics.senkListe (qs ++
+      [PipelineAtomics.AtomQuelle.sperre
+        [PipelineAtomics.AtomQuelle.sperre
+          [PipelineAtomics.AtomQuelle.zaun]]] ++ post) = none := ih
+    simp only [List.cons_append, PipelineAtomics.senkListe, h2]
+    cases h : PipelineAtomics.senkEinzeln q <;> rfl
+
 /-- THE SOURCE RUN: `T[0] = 35; A = 42; locks L { T[1] = 17 };
     T[0] = A;` gives row 0 = 42 (the atomic read), row 1 = 17, atomic
     42. Row 0 changes 7 -> 35 -> 42; the atomic changes 41 -> 42. -/
