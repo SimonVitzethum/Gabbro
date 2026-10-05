@@ -205,6 +205,130 @@ theorem segPin_ohne_bleibt :
       BitVec.ofNat 64 100 := by
   decide
 
+/-! ## 3. TLB: per-core cached translations, INVLPG, CR3 flush.
+
+  Entries are page-granular (4 KiB). The page walk itself is a
+  parameter (`SeitenDurchlauf`, owned by lane HwPaging), never defined
+  here. PCID is off (see `tlbGlobal`); a stale entry may be used until
+  invalidated (see `tlbAufloesung_trifft`); INVLPG is core-local (see
+  `tlbEntfernen_lokal`). -/
+
+/-- TLB page size: 4 KiB pages. -/
+def tlbSeitenGroesse : Nat := 4096
+
+/-- Page number of a linear address. -/
+def seitenNr (a : Adresse) : Nat := a.toNat / tlbSeitenGroesse
+
+/-- Offset inside the page. -/
+def seitenOffset (a : Adresse) : Nat := a.toNat % tlbSeitenGroesse
+
+/-- One cached translation: page number to frame number. -/
+structure TlbEintrag where
+  seite : Nat
+  rahmen : Nat
+  deriving DecidableEq, Repr
+
+/-- Physical address from a frame and the offset of `a`. -/
+def physAddr (rahmen : Nat) (a : Adresse) : Adresse :=
+  BitVec.ofNat 64 (rahmen * tlbSeitenGroesse + seitenOffset a)
+
+/-- First cached frame for page `s` (`none` = miss). -/
+def tlbSuche : List TlbEintrag → Nat → Option Nat
+  | [], _ => none
+  | e :: rest, s => if e.seite == s then some e.rahmen else tlbSuche rest s
+
+/-- Page walk (owned by lane HwPaging): page number to frame number,
+    `none` = walk fault (not modelled here). -/
+abbrev SeitenDurchlauf := Nat → Option Nat
+
+/-- Resolution: a hit uses the cached frame (even a stale one); a miss
+    walks. The walk result is returned, never silently cached here. -/
+def tlbAufloesung (tlb : List TlbEintrag) (walk : SeitenDurchlauf)
+    (a : Adresse) : Option Adresse :=
+  match tlbSuche tlb (seitenNr a) with
+  | some r => some (physAddr r a)
+  | none =>
+    match walk (seitenNr a) with
+    | some r => some (physAddr r a)
+    | none => none
+
+/-- HIT: the cached frame answers, whatever the walk now says. This IS
+    the stale-entry rule: once cached, the walk is not consulted until
+    the entry is invalidated. -/
+theorem tlbAufloesung_trifft (tlb : List TlbEintrag)
+    (walk : SeitenDurchlauf) (a : Adresse) (r : Nat)
+    (hHit : tlbSuche tlb (seitenNr a) = some r) :
+    tlbAufloesung tlb walk a = some (physAddr r a) := by
+  simp [tlbAufloesung, hHit]
+
+/-- MISS: the walk answers. -/
+theorem tlbAufloesung_verfehlt (tlb : List TlbEintrag)
+    (walk : SeitenDurchlauf) (a : Adresse) (r : Nat)
+    (hMiss : tlbSuche tlb (seitenNr a) = none)
+    (hWalk : walk (seitenNr a) = some r) :
+    tlbAufloesung tlb walk a = some (physAddr r a) := by
+  simp [tlbAufloesung, hMiss, hWalk]
+
+/-- INVLPG: drop every entry for page `s` on this core. -/
+def tlbEntfernen : List TlbEintrag → Nat → List TlbEintrag
+  | [], _ => []
+  | e :: rest, s =>
+    if e.seite == s then tlbEntfernen rest s
+    else e :: tlbEntfernen rest s
+
+/-- After INVLPG the page misses. -/
+theorem tlbEntfernen_sucht_verfehlt (tlb : List TlbEintrag) (s : Nat) :
+    tlbSuche (tlbEntfernen tlb s) s = none := by
+  induction tlb with
+  | nil => rfl
+  | cons e rest ih =>
+    cases h : e.seite == s with
+    | true => simp [tlbEntfernen, h, ih]
+    | false => simp [tlbEntfernen, tlbSuche, h, ih]
+
+/-- After INVLPG of its page the next access re-walks. -/
+theorem tlbNachEntfernen_geht_durch (tlb : List TlbEintrag)
+    (walk : SeitenDurchlauf) (a : Adresse) (r : Nat)
+    (hWalk : walk (seitenNr a) = some r) :
+    tlbAufloesung (tlbEntfernen tlb (seitenNr a)) walk a =
+      some (physAddr r a) := by
+  have hMiss :
+      tlbSuche (tlbEntfernen tlb (seitenNr a)) (seitenNr a) = none :=
+    tlbEntfernen_sucht_verfehlt tlb (seitenNr a)
+  exact tlbAufloesung_verfehlt _ walk a r hMiss hWalk
+
+/-- Global-bit oracle: PCID is OFF, so no entry is global (named
+    silicon assumption: with PCID on, global entries would survive). -/
+def tlbGlobal (_ : TlbEintrag) : Bool := false
+
+/-- No entry is global while PCID is off. -/
+theorem tlbGlobal_aus (e : TlbEintrag) : tlbGlobal e = false := rfl
+
+/-- CR3 write: drop every non-global entry on this core (with PCID off
+    that is every entry). -/
+def tlbCr3Spuelung : List TlbEintrag → List TlbEintrag
+  | [] => []
+  | e :: rest =>
+    if tlbGlobal e then e :: tlbCr3Spuelung rest else tlbCr3Spuelung rest
+
+/-- A CR3 write empties the core TLB (PCID off). -/
+theorem tlbCr3Spuelung_leert (tlb : List TlbEintrag) :
+    tlbCr3Spuelung tlb = [] := by
+  induction tlb with
+  | nil => rfl
+  | cons e rest ih =>
+    have hg : tlbGlobal e = false := rfl
+    simp [tlbCr3Spuelung, hg, ih]
+
+/-- LOCALITY: invalidating on core `c` leaves core `d` alone. The
+    silicon side (INVLPG touches only the current core; anything else
+    needs software shootdown) is a named assumption. -/
+theorem tlbEntfernen_lokal (tlb : Nat → List TlbEintrag) (c d s : Nat)
+    (h : d ≠ c) :
+    (fun e => if e = c then tlbEntfernen (tlb c) s else tlb e) d =
+      tlb d := by
+  simp [h]
+
 /- CUTS:
    Skeleton only. NOT proved here, and not claimed: everything.
 -/
