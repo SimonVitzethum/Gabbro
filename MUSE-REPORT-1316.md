@@ -1,8 +1,9 @@
 # MUSE-REPORT-1316: Exact review of candidate 1315 (IntMemForms)
 
-## VERDICT: ACCEPT
+CANDIDATE: 1315 bae01144de14240e742b57518bc336730b304297
+VERDICT: ACCEPT
 
-CANDIDATE: 1315, pinned HEAD `bae01144de14240e742b57518bc336730b304297`
+Pinned HEAD is the hash on the machine-readable line above
 (base `f92c2649c25c822f0ff7791f82dfecad9c7d4c31`).
 Scope: NEW `grammatik/Grammatik/X86/IntMemForms.lean` (1996 lines),
 one `import Grammatik.X86.IntMemForms` line in `grammatik/Grammatik.lean`,
