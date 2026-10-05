@@ -608,6 +608,7 @@ import Grammatik.X86.HwMulDivWidth
 import Grammatik.X86.HwFeatureGates
 import Grammatik.X86.HwLoadedImage
 import Grammatik.X86.HwStackCalls
+import Grammatik.X86.HwForwardingGeneric
 import Grammatik.X86.TsoReadBridge
 import Grammatik.X86.PipelineLink
 import Grammatik.X86.PipelineProfiles
