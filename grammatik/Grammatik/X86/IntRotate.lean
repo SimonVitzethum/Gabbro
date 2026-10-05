@@ -1012,6 +1012,449 @@ theorem probe_rot_flags :
     rotFlags .rol .b8 0x81 false zeugeFlags 0 = zeugeFlags := by
   decide
 
+/-! ## 6. Canonical bytes: decode, encode, round trips, refusals.
+
+    Opcodes D0 (byte, by one), D1 (wide, by one), D2 (byte, by CL),
+    D3 (wide, by CL), C0 (byte, imm8) and C1 (wide, imm8) with
+    digits 0 to 3 for ROL, ROR, RCL and RCR. The 66h prefix selects
+    16 bits, REX.W selects 64, otherwise 32 (byte forms take no 66h
+    and no REX.W). REX.R would rewrite the extension digit and
+    REX.X has no SIB to extend, so both refuse; LOCK refuses.
+    ModRM mod 3 is register-direct, mod 2 is base plus disp32 (the
+    pilot canonical memory shape, with the SIB byte where the pilot
+    has one); modes 0 and 1 refuse. The decoder parses bytes, never
+    encode-equality. -/
+
+/-- Count source: by one, by CL, or by an 8-bit immediate. -/
+inductive RotQuelle where
+  | eins | cl | imm8 (n : Nat)
+  deriving DecidableEq, Repr
+
+/-- Operand: register-direct or base-plus-displacement memory. -/
+inductive RotOperand where
+  | reg (dst : Register)
+  | mem (base : Register) (disp : BitVec 32)
+  deriving DecidableEq, Repr
+
+/-- One rotate form: operation, width, count source, operand. -/
+structure RotForm where
+  op : RotOp
+  breite : Breite
+  quelle : RotQuelle
+  operand : RotOperand
+  deriving DecidableEq, Repr
+
+/-- A decoded rotate instruction with its consumed length. -/
+structure RotDecodiert where
+  befehl : RotForm
+  laenge : Nat
+  deriving DecidableEq, Repr
+
+/-- Parsed prefix: 16-bit override, REX bits, consumed length. -/
+structure RotPraefix where
+  op16 : Bool
+  w : Nat
+  r : Nat
+  x : Nat
+  b : Nat
+  n : Nat
+  deriving DecidableEq, Repr
+
+/-- Prefix parse after an optional REX byte position: at most one
+    REX follows (LOCK refuses, anything else takes no prefix). -/
+def rotNimmRex (op16 : Bool) (n : Nat) :
+    List Byte → Option (RotPraefix × List Byte)
+  | [] => none
+  | b1 :: rest =>
+    if byteNat b1 == 240 then none
+    else if byteNat b1 / 16 == 4 then
+      let q := byteNat b1 - 64
+      some (⟨op16, q / 8, q / 4 % 2, q / 2 % 2, q % 2, n + 1⟩, rest)
+    else some (⟨op16, 0, 0, 0, 0, n⟩, b1 :: rest)
+
+/-- Prefix parse: at most one 66h then at most one REX. LOCK
+    refuses; a lone prefix byte is truncation. -/
+def rotNimmPraefix : List Byte → Option (RotPraefix × List Byte)
+  | [] => none
+  | b1 :: rest =>
+    if byteNat b1 == 240 then none
+    else if byteNat b1 == 102 then rotNimmRex true 1 rest
+    else rotNimmRex false 0 (b1 :: rest)
+
+/-- Width from the prefix: byte forms take no 66h and no REX.W,
+    wide forms take 16 bits on 66h, 64 on REX.W, else 32. -/
+def rotBreite (is8 : Bool) (p : RotPraefix) : Option Breite :=
+  if is8 then
+    if p.op16 then none
+    else if p.w == 1 then none
+    else some .b8
+  else
+    if p.op16 then some .b16
+    else if p.w == 1 then some .b64
+    else some .b32
+
+/-- ModRM body after an admitted prefix and width: register-direct
+    or disp32 memory (with the pilot SIB byte), operation digit 0
+    to 3, every other mode or digit refuses. Returns the operation,
+    the operand, the ModRM tail length and the rest. -/
+def rotModrm (p : RotPraefix) :
+    List Byte → Option (RotOp × RotOperand × Nat × List Byte)
+  | [] => none
+  | m :: rest =>
+    match feldRotOp (byteNat m / 8 % 8) with
+    | none => none
+    | some o =>
+      if byteNat m / 64 == 3 then
+        match codeReg (p.b * 8 + byteNat m % 8) with
+        | some dst => some (o, .reg dst, 1, rest)
+        | none => none
+      else if byteNat m / 64 == 2 then
+        let rm := byteNat m % 8
+        if rm == 4 then
+          match rest with
+          | sib :: rest2 =>
+            if byteNat sib == 36 then
+              match parseLe32 rest2 with
+              | some (d, rest3) =>
+                match codeReg (p.b * 8 + rm) with
+                | some base => some (o, .mem base d, 6, rest3)
+                | none => none
+              | none => none
+            else none
+          | [] => none
+        else
+          match parseLe32 rest with
+          | some (d, rest2) =>
+            match codeReg (p.b * 8 + rm) with
+            | some base => some (o, .mem base d, 5, rest2)
+            | none => none
+          | none => none
+      else none
+
+/-- Group decode for the by-one and by-CL opcodes: REX.R would
+    rewrite the digit and REX.X has no SIB, so both refuse. -/
+def rotGruppe (p : RotPraefix) (is8 : Bool) (q : RotQuelle) :
+    List Byte → Option (RotDecodiert × List Byte)
+  | bs =>
+    if p.r == 1 || p.x == 1 then none
+    else match rotBreite is8 p with
+    | none => none
+    | some b =>
+      match rotModrm p bs with
+      | some (o, operand, ml, rest) =>
+        some (⟨⟨o, b, q, operand⟩, p.n + 1 + ml⟩, rest)
+      | none => none
+
+/-- Group decode for the imm8 opcodes: one immediate byte follows
+    the ModRM tail. -/
+def rotGruppeImm (p : RotPraefix) (is8 : Bool) :
+    List Byte → Option (RotDecodiert × List Byte)
+  | bs =>
+    if p.r == 1 || p.x == 1 then none
+    else match rotBreite is8 p with
+    | none => none
+    | some b =>
+      match rotModrm p bs with
+      | some (o, operand, ml, ib :: rest) =>
+        some (⟨⟨o, b, .imm8 (byteNat ib), operand⟩, p.n + 2 + ml⟩, rest)
+      | _ => none
+
+/-- Opcode dispatch after the prefix: D0 through D3 and C0, C1;
+    anything else refuses without touching later bytes. -/
+def rotNachOpcode (p : RotPraefix) :
+    List Byte → Option (RotDecodiert × List Byte)
+  | [] => none
+  | op :: rest =>
+    let n := byteNat op
+    if n == 208 then rotGruppe p true .eins rest
+    else if n == 209 then rotGruppe p false .eins rest
+    else if n == 210 then rotGruppe p true .cl rest
+    else if n == 211 then rotGruppe p false .cl rest
+    else if n == 192 then rotGruppeImm p true rest
+    else if n == 193 then rotGruppeImm p false rest
+    else none
+
+/-- Full decode: prefix then opcode, ModRM and immediate. -/
+def decodeRot : List Byte → Option (RotDecodiert × List Byte)
+  | [] => none
+  | b :: rest =>
+    match rotNimmPraefix (b :: rest) with
+    | none => none
+    | some (p, tail) => rotNachOpcode p tail
+
+/-- Group opcode byte of a width and count source. -/
+def rotOpcode (b : Breite) (q : RotQuelle) : Nat :=
+  match b, q with
+  | .b8, .eins => 208
+  | .b8, .cl => 210
+  | .b8, .imm8 _ => 192
+  | .b16, .eins => 209
+  | .b16, .cl => 211
+  | .b16, .imm8 _ => 193
+  | .b32, .eins => 209
+  | .b32, .cl => 211
+  | .b32, .imm8 _ => 193
+  | .b64, .eins => 209
+  | .b64, .cl => 211
+  | .b64, .imm8 _ => 193
+
+/-- Canonical prefix bytes of a width over a register: 66h for 16
+    bits, REX.W for 64, REX.B where the code needs it. -/
+def rotPraefixBytes (b : Breite) (r : Register) : List Byte :=
+  match b with
+  | .b8 => if regHigh r == 0 then [] else [natByte (64 + regHigh r)]
+  | .b16 => [natByte 102] ++
+      (if regHigh r == 0 then [] else [natByte (64 + regHigh r)])
+  | .b32 => if regHigh r == 0 then [] else [natByte (64 + regHigh r)]
+  | .b64 => [natByte (72 + regHigh r)]
+
+/-- Immediate tail of a count source (one byte or nothing). -/
+def rotImmTail : RotQuelle → List Byte
+  | .imm8 n => [natByte n]
+  | _ => []
+
+/-- SIB tail of a base register (the pilot byte where needed). -/
+def rotSibTail (base : Register) : List Byte :=
+  if regLow base == 4 then [natByte 36] else []
+
+/-- Canonical bytes of one rotate form. -/
+def rotEncode : RotForm → List Byte
+  | ⟨o, b, q, .reg dst⟩ =>
+    rotPraefixBytes b dst ++ [natByte (rotOpcode b q),
+      natByte (192 + 8 * rotOpFeld o + regLow dst)] ++ rotImmTail q
+  | ⟨o, b, q, .mem base d⟩ =>
+    rotPraefixBytes b base ++ [natByte (rotOpcode b q),
+      natByte (128 + 8 * rotOpFeld o + regLow base)] ++
+      rotSibTail base ++ leBytes32 d ++ rotImmTail q
+
+/-- Decoded length of one rotate form. -/
+def rotLaenge : RotForm → Nat
+  | ⟨_, b, q, .reg dst⟩ =>
+    (rotPraefixBytes b dst).length + 2 + (rotImmTail q).length
+  | ⟨_, b, q, .mem base _⟩ =>
+    (rotPraefixBytes b base).length + 2 +
+      (rotSibTail base).length + 4 + (rotImmTail q).length
+
+/-- The encoding is exactly the decoded length. -/
+theorem rotEncode_laenge (f : RotForm) :
+    (rotEncode f).length = rotLaenge f := by
+  cases f with
+  | mk o b q operand =>
+    cases b <;> cases q <;> cases operand with
+    | reg dst => cases dst <;> rfl
+    | mem base d => cases base <;> rfl
+
+/-- A canonical prefix is at most two bytes. -/
+theorem rotPraefixBytes_len (b : Breite) (r : Register) :
+    (rotPraefixBytes b r).length ≤ 2 := by
+  cases b <;> cases r <;> decide
+
+/-- An immediate tail is at most one byte. -/
+theorem rotImmTail_len (q : RotQuelle) :
+    (rotImmTail q).length ≤ 1 := by
+  cases q with
+  | eins => exact Nat.zero_le _
+  | cl => exact Nat.zero_le _
+  | imm8 n => exact Nat.le_refl _
+
+/-- A SIB tail is at most one byte. -/
+theorem rotSibTail_len (base : Register) :
+    (rotSibTail base).length ≤ 1 := by
+  cases base <;> decide
+
+/-- Every rotate encoding fits the 1 to 15 instruction bound. -/
+theorem rotEncode_len_ok (f : RotForm) :
+    1 ≤ (rotEncode f).length ∧ (rotEncode f).length ≤ 15 := by
+  rw [rotEncode_laenge]
+  cases f with
+  | mk o b q operand =>
+    cases operand with
+    | reg dst =>
+      have hp := rotPraefixBytes_len b dst
+      have hi := rotImmTail_len q
+      simp only [rotLaenge]
+      omega
+    | mem base d =>
+      have hp := rotPraefixBytes_len b base
+      have hs := rotSibTail_len base
+      have hi := rotImmTail_len q
+      simp only [rotLaenge]
+      omega
+
+/-- The decoded length passes the length guard. -/
+theorem rotLaenge_ok (f : RotForm) :
+    laengeOk (rotLaenge f) = true := by
+  cases f with
+  | mk o b q operand =>
+    cases b <;> cases q <;> cases operand with
+    | reg dst => cases dst <;> rfl
+    | mem base d => cases base <;> rfl
+
+/-! ## 7. Round trips, pins and planted refusals.
+
+    Decoding inverts encoding with the suffix: register forms
+    generically (immediate forms over a byte premise), memory forms
+    through the little-endian displacement. Shift digits, foreign
+    modes, LOCK, stray REX bits and truncations refuse by name. -/
+
+/-- Round trip for by-one register forms, over any suffix. -/
+theorem rotRoundtrip_reg_eins (o : RotOp) (b : Breite) (dst : Register)
+    (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, b, .eins, .reg dst⟩ ++ suffix) =
+      some (⟨⟨o, b, .eins, .reg dst⟩,
+        rotLaenge ⟨o, b, .eins, .reg dst⟩⟩, suffix) := by
+  cases o <;> cases b <;> cases dst <;> rfl
+
+/-- Round trip for by-CL register forms, over any suffix. -/
+theorem rotRoundtrip_reg_cl (o : RotOp) (b : Breite) (dst : Register)
+    (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, b, .cl, .reg dst⟩ ++ suffix) =
+      some (⟨⟨o, b, .cl, .reg dst⟩,
+        rotLaenge ⟨o, b, .cl, .reg dst⟩⟩, suffix) := by
+  cases o <;> cases b <;> cases dst <;> rfl
+
+/-- Round trip for immediate register forms over a byte premise,
+    8-bit width. -/
+theorem rotRoundtrip_reg_imm8 (o : RotOp) (dst : Register)
+    (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b8, .imm8 n, .reg dst⟩ ++ suffix) =
+      some (⟨⟨o, .b8, .imm8 n, .reg dst⟩,
+        rotLaenge ⟨o, .b8, .imm8 n, .reg dst⟩⟩, suffix) := by
+  cases o <;> cases dst <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppeImm, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotLaenge, (byteNat_natByte_of_lt n h)]
+
+/-- Round trip for immediate register forms over a byte premise,
+    16-bit width. -/
+theorem rotRoundtrip_reg_imm16 (o : RotOp) (dst : Register)
+    (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b16, .imm8 n, .reg dst⟩ ++ suffix) =
+      some (⟨⟨o, .b16, .imm8 n, .reg dst⟩,
+        rotLaenge ⟨o, .b16, .imm8 n, .reg dst⟩⟩, suffix) := by
+  cases o <;> cases dst <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppeImm, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotLaenge, (byteNat_natByte_of_lt n h)]
+
+/-- Round trip for immediate register forms over a byte premise,
+    32-bit width. -/
+theorem rotRoundtrip_reg_imm32 (o : RotOp) (dst : Register)
+    (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b32, .imm8 n, .reg dst⟩ ++ suffix) =
+      some (⟨⟨o, .b32, .imm8 n, .reg dst⟩,
+        rotLaenge ⟨o, .b32, .imm8 n, .reg dst⟩⟩, suffix) := by
+  cases o <;> cases dst <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppeImm, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotLaenge, (byteNat_natByte_of_lt n h)]
+
+/-- Round trip for immediate register forms over a byte premise,
+    64-bit width. -/
+theorem rotRoundtrip_reg_imm64 (o : RotOp) (dst : Register)
+    (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b64, .imm8 n, .reg dst⟩ ++ suffix) =
+      some (⟨⟨o, .b64, .imm8 n, .reg dst⟩,
+        rotLaenge ⟨o, .b64, .imm8 n, .reg dst⟩⟩, suffix) := by
+  cases o <;> cases dst <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppeImm, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotLaenge, (byteNat_natByte_of_lt n h)]
+
+/-- Pinned bytes: ROL r/m8 by one over rax. -/
+theorem pin_rot_rol8_eins :
+    decodeRot [natByte 208, natByte 192] =
+      some ((⟨⟨.rol, .b8, .eins, .reg .rax⟩, 2⟩ : RotDecodiert), []) := by
+  decide
+
+/-- Pinned bytes: ROR r9 by CL at 64 bits. -/
+theorem pin_rot_ror64_cl :
+    decodeRot [natByte 73, natByte 211, natByte 201] =
+      some ((⟨⟨.ror, .b64, .cl, .reg .r9⟩, 3⟩ : RotDecodiert), []) := by
+  decide
+
+/-- Pinned bytes: RCL edx by imm8 5 at 16 bits. -/
+theorem pin_rot_rcl16_imm :
+    decodeRot [natByte 102, natByte 193, natByte 210, natByte 5] =
+      some ((⟨⟨.rcl, .b16, .imm8 5, .reg .rdx⟩, 4⟩ : RotDecodiert),
+        []) := by
+  decide
+
+/-- Pinned bytes: RCR dword at rbx plus 16 by one. -/
+theorem pin_rot_rcr32_mem :
+    decodeRot [natByte 209, natByte 155, natByte 16, natByte 0,
+      natByte 0, natByte 0] =
+      some ((⟨⟨.rcr, .b32, .eins,
+        .mem .rbx (BitVec.ofNat 32 16)⟩, 6⟩ : RotDecodiert), []) := by
+  decide
+
+/-- Pinned bytes: ROL r8 by one at 64 bits. -/
+theorem pin_rot_rol64_weit :
+    decodeRot [natByte 73, natByte 209, natByte 192] =
+      some ((⟨⟨.rol, .b64, .eins, .reg .r8⟩, 3⟩ : RotDecodiert), []) := by
+  decide
+
+/-- Planted refusal: LOCK stays refused. -/
+theorem rot_nichts_lock :
+    decodeRot [natByte 240, natByte 209, natByte 192] = none := by
+  decide
+
+/-- Planted refusal: the shift digit stays a shift row, not a rotate. -/
+theorem rot_nichts_digit_vier :
+    decodeRot [natByte 208, natByte 224] = none := by
+  decide
+
+/-- Planted refusal: mod 0 is no canonical rotate memory. -/
+theorem rot_nichts_modus_null :
+    decodeRot [natByte 209, natByte 0] = none := by
+  decide
+
+/-- Planted refusal: mod 1 is no canonical rotate memory. -/
+theorem rot_nichts_modus_eins :
+    decodeRot [natByte 209, natByte 64] = none := by
+  decide
+
+/-- Planted refusal: 66h selects no byte form. -/
+theorem rot_nichts_sechzehn_bei_byte :
+    decodeRot [natByte 102, natByte 208, natByte 192] = none := by
+  decide
+
+/-- Planted refusal: REX.W promotes no byte form. -/
+theorem rot_nichts_rex_w_bei_byte :
+    decodeRot [natByte 72, natByte 208, natByte 192] = none := by
+  decide
+
+/-- Planted refusal: REX.R would rewrite the extension digit. -/
+theorem rot_nichts_rex_r :
+    decodeRot [natByte 76, natByte 209, natByte 192] = none := by
+  decide
+
+/-- Planted refusal: REX.X has no SIB to extend here. -/
+theorem rot_nichts_rex_x :
+    decodeRot [natByte 66, natByte 209, natByte 192] = none := by
+  decide
+
+/-- Planted refusal: an unknown opcode refuses. -/
+theorem rot_nichts_unbekannt : decodeRot [natByte 255] = none := by
+  decide
+
+/-- Planted refusal: the empty input decodes to nothing. -/
+theorem rot_nichts_leer : decodeRot [] = none := rfl
+
+/-- Planted refusal: an opcode without ModRM is truncated. -/
+theorem rot_nichts_opcode_allein :
+    decodeRot [natByte 209] = none := by
+  decide
+
+/-- Planted refusal: an imm8 form without its byte is truncated. -/
+theorem rot_nichts_imm_kurz :
+    decodeRot [natByte 193, natByte 224] = none := by
+  decide
+
 /- CUTS (checkpoint: value core only):    Proved here: rotate operation digits, Nat value core for ROL/ROR
     and RCL/RCR with architectural count masking, single-step
     inverses in both directions, and pinned values.
