@@ -621,3 +621,4 @@ import Grammatik.X86.PipelineFloat
 import Grammatik.X86.PipelineAtomics
 import Grammatik.X86.PipelineWork
 import Grammatik.X86.HwBildFamilien
+import Grammatik.X86.HwFeatureStep

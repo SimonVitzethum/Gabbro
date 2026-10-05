@@ -647,7 +647,7 @@ Last ledger refresh: **2026-10-05 13:38 UTC**. This is an operational snapshot, 
 | 1177 | Source-computed units and duties feeding the pipeline | Incomplete; preserved | 1178: scheduled | [task](lanes/1177.md) |
 | 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Merged after review/checks | 1180: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1179.md) |
 | 1181 | Nested interrupt delivery, #DF and handler entry | Agent working | 1182: scheduled | [task](lanes/1181.md) |
-| 1183 | Feature gating enforced per step, not by wrapper | Committed candidate; review/integration pending | 1184: Committed candidate; review/integration pending | [task](lanes/1183.md) |
+| 1183 | Feature gating enforced per step, not by wrapper | Merged after review/checks | 1184: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1183.md) |
 | 1185 | Generic word-forwarding theorem | Committed candidate; review/integration pending | 1186: Committed candidate; review/integration pending | [task](lanes/1185.md) |
 | 1187 | TSO traces to W runs: run induction | Committed candidate; review/integration pending | 1188: Committed candidate; review/integration pending | [task](lanes/1187.md) |
 | 1189 | Pipeline calls: real source execBlock correspondence | Committed candidate; review/integration pending | 1190: Committed candidate; review/integration pending | [task](lanes/1189.md) |
@@ -1471,6 +1471,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1166**, Independent exact review of 1165, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1166.md). <!-- x86-merged:1166 -->
 - 2026-10-05: lane **1179**, Loaded-image fetch: obstruction lemmas for all extension families, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1179.md). <!-- x86-merged:1179 -->
 - 2026-10-05: lane **1180**, Independent exact review of 1179, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1180.md). <!-- x86-merged:1180 -->
+- 2026-10-05: lane **1183**, Feature gating enforced per step, not by wrapper, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1183.md). <!-- x86-merged:1183 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
