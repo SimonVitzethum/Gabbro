@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 18:53 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 18:54 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -692,7 +692,7 @@ Last ledger refresh: **2026-10-05 18:53 UTC**. This is an operational snapshot, 
 | 1267 | AVX2: per-lane equation for arithmetic shift right | Merged after review/checks | 1268: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1267.md) |
 | 1269 | Cross-declaration lowering certificate for the GX refinement | Merged after review/checks | 1270: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1269.md) |
 | 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Merged after review/checks | 1272: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1271.md) |
-| 1273 | Rotates: ROL, ROR, RCL, RCR | Agent working | 1274: Committed candidate; review/integration pending | [task](lanes/1273.md) |
+| 1273 | Rotates: ROL, ROR, RCL, RCR | Committed candidate; review/integration pending | 1274: Committed candidate; review/integration pending | [task](lanes/1273.md) |
 | 1275 | ADC, SBB, INC, DEC | Merged after review/checks | 1276: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Merged after review/checks | 1278: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1277.md) |
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Agent working | 1280: Committed candidate; review/integration pending | [task](lanes/1279.md) |
@@ -702,14 +702,14 @@ Last ledger refresh: **2026-10-05 18:53 UTC**. This is an operational snapshot, 
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1287.md) |
 | 1289 | Capstone: union steps for the embedded-by-equation tags, and the two plug-less families | Merged after review/checks | 1290: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1289.md) |
 | 1291 | Capstone: byte-decoder disjointness across all families | Merged after review/checks | 1292: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1291.md) |
-| 1293 | Capstone: a reached multi-family program run on two cores from bytes | Committed candidate; review/integration pending | 1294: Agent working | [task](lanes/1293.md) |
+| 1293 | Capstone: a reached multi-family program run on two cores from bytes | Committed candidate; review/integration pending | 1294: Committed candidate; review/integration pending | [task](lanes/1293.md) |
 | 1295 | Capstone: every union step projects to the TSO store-buffer model | Committed candidate; review/integration pending | 1296: Incomplete; preserved | [task](lanes/1295.md) |
-| 1297 | Paging follow-up: large pages and SMEP/SMAP | Committed candidate; review/integration pending | 1298: Agent working | [task](lanes/1297.md) |
+| 1297 | Paging follow-up: large pages and SMEP/SMAP | Committed candidate; review/integration pending | 1298: Committed candidate; review/integration pending | [task](lanes/1297.md) |
 | 1299 | Translation: the page walk joined with the TLB and the flat memory model | Merged after review/checks | 1300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1299.md) |
 | 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Agent working | 1302: scheduled | [task](lanes/1301.md) |
 | 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Agent working | 1304: scheduled | [task](lanes/1303.md) |
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
-| 1307 | FP store forms: drain equals the 32-bit write | Committed candidate; review/integration pending | 1308: Committed candidate; review/integration pending | [task](lanes/1307.md) |
+| 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1307.md) |
 | 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Committed candidate; review/integration pending | 1310: Committed candidate; review/integration pending | [task](lanes/1309.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1694,6 +1694,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1292**, Independent exact review of 1291, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1292.md). <!-- x86-merged:1292 -->
 - 2026-10-05: lane **1299**, Translation: the page walk joined with the TLB and the flat memory model, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1299.md). <!-- x86-merged:1299 -->
 - 2026-10-05: lane **1300**, Independent exact review of 1299, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1300.md). <!-- x86-merged:1300 -->
+- 2026-10-05: lane **1307**, FP store forms: drain equals the 32-bit write, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1307.md). <!-- x86-merged:1307 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
