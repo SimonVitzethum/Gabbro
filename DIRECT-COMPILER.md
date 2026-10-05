@@ -717,7 +717,7 @@ Last ledger refresh: **2026-10-05 19:32 UTC**. This is an operational snapshot, 
 | 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Agent working | 1320: scheduled | [task](lanes/1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Agent working | 1322: scheduled | [task](lanes/1321.md) |
-| 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1323.md) |
+| 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1722,6 +1722,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1301**, WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1301.md). <!-- x86-merged:1301 -->
 - 2026-10-05: lane **1302**, Independent exact review of 1301, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1302.md). <!-- x86-merged:1302 -->
 - 2026-10-05: lane **1323**, valX86 decode coverage over the capstone decoder chain, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1323.md). <!-- x86-merged:1323 -->
+- 2026-10-05: lane **1324**, Independent exact review of 1323, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1324.md). <!-- x86-merged:1324 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
