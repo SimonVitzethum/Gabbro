@@ -1027,26 +1027,6 @@ inductive AblehnGrund where
 def istPraefixByte (n : Nat) : Bool :=
   (n == 102) || decide (64 ≤ n ∧ n < 80)
 
-/-- The opcode-position byte after stripping prefixes: one 66H
-    (itself followed by at most one REX), or one REX. -/
-def opcodeNachPraefix : List Byte → Option Nat
-  | [] => none
-  | b :: rest =>
-    if byteNat b == 102 then
-      match rest with
-      | [] => none
-      | b2 :: rest2 =>
-        if decide (64 ≤ byteNat b2 ∧ byteNat b2 < 80) then
-          match rest2 with
-          | [] => none
-          | op :: _ => some (byteNat op)
-        else some (byteNat b2)
-    else if decide (64 ≤ byteNat b ∧ byteNat b < 80) then
-      match rest with
-      | [] => none
-      | op :: _ => some (byteNat op)
-    else some (byteNat b)
-
 /-! ## Canonical encode and round trips.
 
     The canonical encoding uses the `/r` ADC/SBB direction with the
@@ -1215,9 +1195,22 @@ theorem roundtrip_sbbImm16 (dst : Register) (op : Wort)
       some (.reg ⟨.sbbImm .b16 dst (canonImm .b16 op), (carryEncode (.sbbImm .b16 dst op)).length⟩, suffix) := by
   cases dst <;> rfl
 
-/-- The ModRM-position byte value after stripping prefixes (the
-    opcode sits one slot before it). -/
-def modrmAn : List Byte → Option Nat
+/-- Displacement length from ModRM mode bits: disp8/disp32/none. -/
+def dispLaenge (mod rm : Nat) : Nat :=
+  if mod == 1 then 1
+  else if mod == 2 || (mod == 0 && rm == 5) then 4
+  else 0
+
+/-- Immediate kind by Group-1 opcode and 66H prefix. -/
+def immKindVon (op : Nat) (op66 : Bool) : Nat :=
+  if op == 128 then 0
+  else if op == 129 then (if op66 then 1 else 2)
+  else 3
+
+/-- Split prefix/opcode/tail: 66H flag, opcode value, bytes after the
+    opcode. At most one 66H (itself followed by at most one REX) or
+    one REX is consumed. -/
+def praefixOp : List Byte → Option (Bool × Nat × List Byte)
   | [] => none
   | b :: rest =>
     if byteNat b == 102 then
@@ -1226,18 +1219,14 @@ def modrmAn : List Byte → Option Nat
       | b2 :: rest2 =>
         if decide (64 ≤ byteNat b2 ∧ byteNat b2 < 80) then
           match rest2 with
-          | _ :: m :: _ => some (byteNat m)
+          | op :: tail => some (true, byteNat op, tail)
           | _ => none
-        else match rest2 with
-        | m :: _ => some (byteNat m)
-        | _ => none
+        else some (true, byteNat b2, rest2)
     else if decide (64 ≤ byteNat b ∧ byteNat b < 80) then
       match rest with
-      | _ :: m :: _ => some (byteNat m)
+      | op :: tail => some (false, byteNat op, tail)
       | _ => none
-    else match rest with
-    | m :: _ => some (byteNat m)
-    | _ => none
+    else some (false, byteNat b, rest)
 
 /-- High-byte reason without REX context: no-prefix or 66H-only
     inputs with a register-direct 8-bit ModRM naming code 4-7 refuse
@@ -1269,37 +1258,55 @@ def ohneRexForm : List Byte → Bool
       | _ => true
     else !(decide (64 ≤ byteNat b ∧ byteNat b < 80))
 
-/-- Deep reason from the opcode-position byte and the ModRM slot:
-    LOCK, address-size, a REX byte in the opcode slot, a wrong Group
-    extension digit, a REX-free high-byte code, or nothing decodable. -/
-def ablehnGrundTief (bs : List Byte) (op : Nat) : Option AblehnGrund :=
+/-- Deep reason from the prefix split: LOCK, address-size, a REX byte
+    in the opcode slot, a wrong Group extension digit, a missing
+    ModRM/displacement/immediate tail, a REX-free high-byte code, or
+    nothing decodable. -/
+def ablehnGrundTief (bs : List Byte) (op66 : Bool) (op : Nat)
+    (tail : List Byte) : Option AblehnGrund :=
   if op == 240 then some .lock
   else if op == 103 then some .adressGroesse
   else if decide (64 ≤ op ∧ op < 80) then some .einByteIncDec
-  else if decide (op = 128 ∨ op = 129 ∨ op = 131 ∨ op = 254 ∨
-      op = 255) then
-    match modrmAn bs with
-    | none => some .unvollstaendig
-    | some m =>
-      let ext := m / 8 % 8
-      if op == 128 || op == 129 || op == 131 then
-        if ext == 2 || ext == 3 then
-          hochbyteGrund op (ohneRexForm bs) m
-        else some .falscheErweiterung
-      else if ext == 0 || ext == 1 then
-        hochbyteGrund op (ohneRexForm bs) m
+  else if decide (op = 128 ∨ op = 129 ∨ op = 131) then
+    match tail with
+    | [] => some .unvollstaendig
+    | m :: tail2 =>
+      let ext := byteNat m / 8 % 8
+      if ext == 2 || ext == 3 then
+        let need := dispLaenge (byteNat m / 64) (byteNat m % 8) +
+          immLenOf (immKindVon op op66)
+        if tail2.length < need then some .unvollstaendig
+        else hochbyteGrund op (ohneRexForm bs) (byteNat m)
       else some .falscheErweiterung
-  else if decide (op = 16 ∨ op = 17 ∨ op = 18 ∨ op = 19 ∨
-      op = 20 ∨ op = 21 ∨ op = 24 ∨ op = 25 ∨ op = 26 ∨ op = 27 ∨
-      op = 28 ∨ op = 29) then
-    match modrmAn bs with
-    | none => none
-    | some m => hochbyteGrund op (ohneRexForm bs) m
+  else if decide (op = 254 ∨ op = 255) then
+    match tail with
+    | [] => some .unvollstaendig
+    | m :: tail2 =>
+      let ext := byteNat m / 8 % 8
+      if ext == 0 || ext == 1 then
+        let need := dispLaenge (byteNat m / 64) (byteNat m % 8)
+        if tail2.length < need then some .unvollstaendig
+        else hochbyteGrund op (ohneRexForm bs) (byteNat m)
+      else some .falscheErweiterung
+  else if decide (op = 16 ∨ op = 17 ∨ op = 18 ∨ op = 19 ∨ op = 24 ∨
+      op = 25 ∨ op = 26 ∨ op = 27) then
+    match tail with
+    | [] => some .unvollstaendig
+    | m :: tail2 =>
+      let need :=
+        if byteNat m / 64 == 3 then 0
+        else dispLaenge (byteNat m / 64) (byteNat m % 8)
+      if tail2.length < need then some .unvollstaendig
+      else hochbyteGrund op (ohneRexForm bs) (byteNat m)
+  else if decide (op = 20 ∨ op = 28) then
+    if tail.length < 1 then some .unvollstaendig else none
+  else if decide (op = 21 ∨ op = 29) then
+    if tail.length < (if op66 then 2 else 4) then some .unvollstaendig
+    else none
   else some .keinTrageform
 
 /-- Shallow refusal reason for a byte string. Family opcodes that
-    decode carry none; Group shapes name a wrong extension digit,
-    and REX-free 8-bit high-byte codes name `.hochbyte`. -/
+    decode carry none; every other refused shape names its reason. -/
 def ablehnGrund : List Byte → Option AblehnGrund
   | [] => some .unvollstaendig
   | b :: rest =>
@@ -1309,13 +1316,288 @@ def ablehnGrund : List Byte → Option AblehnGrund
     | b2 :: _ =>
       if istPraefixByte (byteNat b) && byteNat b2 == 102 then
         some .doppelPraefix
-      else match opcodeNachPraefix (b :: rest) with
+      else match praefixOp (b :: rest) with
       | none => some .unvollstaendig
-      | some op => ablehnGrundTief (b :: rest) op
+      | some (op66, op, tail) => ablehnGrundTief (b :: rest) op66 op tail
     | _ =>
-      match opcodeNachPraefix (b :: rest) with
+      match praefixOp (b :: rest) with
       | none => some .unvollstaendig
-      | some op => ablehnGrundTief (b :: rest) op
+      | some (op66, op, tail) => ablehnGrundTief (b :: rest) op66 op tail
+
+/-! ## Pinned bytes: SDM spot checks, refusals, reasons.
+
+    Each pin evaluates the decoder (or the reason classifier) on
+    concrete bytes through `decide`: the accepted shapes below are
+    the SDM rows of §3, and every refused shape pairs `decodeCarry`
+    with its `ablehnGrund` reason. -/
+
+/-- Pin: `11 /r` ADC Ev,Gv register-direct. -/
+theorem pin_decode_adcReg32 :
+    decodeCarry [natByte 17, natByte 193] =
+      some (.reg ⟨.adcReg .b32 .rcx .rax, 2⟩, []) := by
+  decide
+
+/-- Pin: `10 /r` ADC Eb,Gb register-direct. -/
+theorem pin_decode_adcReg8 :
+    decodeCarry [natByte 16, natByte 200] =
+      some (.reg ⟨.adcReg .b8 .rax .rcx, 2⟩, []) := by
+  decide
+
+/-- Pin: `14 ib` ADC AL,Ib. -/
+theorem pin_decode_adcAL :
+    decodeCarry [natByte 20, natByte 5] =
+      some (.reg ⟨.adcImm .b8 .rax (imm8Wert (natByte 5)), 2⟩, []) := by
+  decide
+
+/-- Pin: `83 /2 ib` ADC Ev,Ib with a negative byte (sign-extended). -/
+theorem pin_decode_adcImm83 :
+    decodeCarry [natByte 131, natByte 208, natByte 253] =
+      some (.reg ⟨.adcImm .b32 .rax (imm8Sext .b32 (natByte 253)), 3⟩,
+        []) := by
+  decide
+
+/-- Pin: `FE /0` INC Eb. -/
+theorem pin_decode_incReg8 :
+    decodeCarry [natByte 254, natByte 192] =
+      some (.reg ⟨.incReg .b8 .rax, 2⟩, []) := by
+  decide
+
+/-- Pin: REX.W `FF /0` INC Ev. -/
+theorem pin_decode_incReg64 :
+    decodeCarry [natByte 72, natByte 255, natByte 192] =
+      some (.reg ⟨.incReg .b64 .rax, 3⟩, []) := by
+  decide
+
+/-- Pin: `11 /r` with a memory source decodes to a descriptor. -/
+theorem pin_decode_mem :
+    decodeCarry [natByte 17, natByte 1] =
+      some (.mem ⟨.adc, .b32, true, 1, [], 2⟩, []) := by
+  decide
+
+/-- Pin: `1B /r` SBB Gv,Ev with a memory source is a load. -/
+theorem pin_decode_sbbMemLoad :
+    decodeCarry [natByte 27, natByte 1] =
+      some (.mem ⟨.sbb, .b32, false, 1, [], 2⟩, []) := by
+  decide
+
+/-- Pin: `FF /1` DEC Ev with a memory destination is a store. -/
+theorem pin_decode_decMem :
+    decodeCarry [natByte 255, natByte 9] =
+      some (.mem ⟨.dec, .b32, true, 9, [], 2⟩, []) := by
+  decide
+
+/-- Pin: REX prefix, no width change for 32-bit forms. -/
+theorem pin_decode_preRex :
+    decodeCarry [natByte 64, natByte 17, natByte 193] =
+      some (.reg ⟨.adcReg .b32 .rcx .rax, 3⟩, []) := by
+  decide
+
+/-- Pin: 66H prefix selects 16 bits. -/
+theorem pin_decode_pre66 :
+    decodeCarry [natByte 102, natByte 17, natByte 193] =
+      some (.reg ⟨.adcReg .b16 .rcx .rax, 3⟩, []) := by
+  decide
+
+/-- Pin: 66H+REX pair selects 16 bits with plain registers. -/
+theorem pin_decode_pre66Rex :
+    decodeCarry [natByte 102, natByte 64, natByte 17, natByte 193] =
+      some (.reg ⟨.adcReg .b16 .rcx .rax, 4⟩, []) := by
+  decide
+
+/-- Refusal: empty input. -/
+theorem pin_nichts_leer : decodeCarry [] = none := rfl
+
+/-- Refusal: lone REX prefix is truncated. -/
+theorem pin_nichts_rexAllein : decodeCarry [natByte 64] = none := by
+  decide
+
+/-- Refusal: opcode without ModRM is truncated. -/
+theorem pin_nichts_opAllein : decodeCarry [natByte 17] = none := by
+  decide
+
+/-- Refusal: Group-1 opcode without ModRM is truncated. -/
+theorem pin_nichts_modrm80 : decodeCarry [natByte 128] = none := by
+  decide
+
+/-- Refusal: Group-1 with ModRM but without immediate is truncated. -/
+theorem pin_nichts_imm81 :
+    decodeCarry [natByte 129, natByte 208] = none := by
+  decide
+
+/-- Refusal: eAX-immediate opcode without immediate is truncated. -/
+theorem pin_nichts_imm15 : decodeCarry [natByte 21] = none := by
+  decide
+
+/-- Refusal: disp8 mode without displacement is truncated. -/
+theorem pin_nichts_disp1 :
+    decodeCarry [natByte 17, natByte 65] = none := by
+  decide
+
+/-- Refusal: disp32 mode with a short tail is truncated. -/
+theorem pin_nichts_disp2 :
+    decodeCarry [natByte 17, natByte 133, natByte 1, natByte 2,
+      natByte 3] = none := by
+  decide
+
+/-- Refusal: LOCK prefix is refused. -/
+theorem pin_nichts_lock :
+    decodeCarry [natByte 240, natByte 17, natByte 193] = none := by
+  decide
+
+/-- Refusal: address-size prefix is refused. -/
+theorem pin_nichts_67 :
+    decodeCarry [natByte 103, natByte 17, natByte 193] = none := by
+  decide
+
+/-- Refusal: doubled 66H prefix is refused. -/
+theorem pin_nichts_doppel66 :
+    decodeCarry [natByte 102, natByte 102, natByte 17, natByte 193] =
+      none := by
+  decide
+
+/-- Refusal: REX byte in the opcode slot is refused. -/
+theorem pin_nichts_rexAlsOp : decodeCarry [natByte 64, natByte 64] = none := by
+  decide
+
+/-- Refusal: REX byte after a full prefix pair is refused. -/
+theorem pin_nichts_rex66Op :
+    decodeCarry [natByte 102, natByte 64, natByte 192] = none := by
+  decide
+
+/-- Refusal: a non-carry opcode (ADD) is refused. -/
+theorem pin_nichts_fremd : decodeCarry [natByte 0, natByte 192] = none := by
+  decide
+
+/-- Refusal: Group-1 extension `/5` is no carry form. -/
+theorem pin_nichts_falsch80 :
+    decodeCarry [natByte 128, natByte 232] = none := by
+  decide
+
+/-- Refusal: FF extension `/2` (CALL) is no INC/DEC form. -/
+theorem pin_nichts_falschFF2 :
+    decodeCarry [natByte 255, natByte 208] = none := by
+  decide
+
+/-- Refusal: FF extension `/3` (CALLF) is no INC/DEC form. -/
+theorem pin_nichts_falschFF3 :
+    decodeCarry [natByte 255, natByte 216] = none := by
+  decide
+
+/-- Refusal: high-byte source without REX is refused. -/
+theorem pin_nichts_hoch10 :
+    decodeCarry [natByte 16, natByte 224] = none := by
+  decide
+
+/-- Refusal: high-byte INC destination without REX is refused. -/
+theorem pin_nichts_hochFE :
+    decodeCarry [natByte 254, natByte 196] = none := by
+  decide
+
+/-- Asymmetry pin: the 8-bit high-byte code encodes but never
+    decodes (no AH/SPL in the vocabulary, by silicon necessity). -/
+theorem pin_nichts_b8Asym :
+    decodeCarry (carryEncode (.adcReg .b8 .rsp .rax)) = none := by
+  decide
+
+/-- Reason: empty input is truncated. -/
+theorem pin_grund_leer : ablehnGrund [] = some .unvollstaendig := rfl
+
+/-- Reason: lone REX prefix is truncated. -/
+theorem pin_grund_truncRex :
+    ablehnGrund [natByte 64] = some .unvollstaendig := by
+  decide
+
+/-- Reason: opcode without ModRM is truncated. -/
+theorem pin_grund_truncOp :
+    ablehnGrund [natByte 17] = some .unvollstaendig := by
+  decide
+
+/-- Reason: Group-1 without ModRM is truncated. -/
+theorem pin_grund_trunc80 :
+    ablehnGrund [natByte 128] = some .unvollstaendig := by
+  decide
+
+/-- Reason: Group-1 with ModRM but without immediate is truncated. -/
+theorem pin_grund_truncImm81 :
+    ablehnGrund [natByte 129, natByte 208] = some .unvollstaendig := by
+  decide
+
+/-- Reason: LOCK names itself. -/
+theorem pin_grund_lock :
+    ablehnGrund [natByte 240, natByte 17, natByte 193] =
+      some .lock := by
+  decide
+
+/-- Reason: address-size names itself. -/
+theorem pin_grund_67 :
+    ablehnGrund [natByte 103, natByte 17, natByte 193] =
+      some .adressGroesse := by
+  decide
+
+/-- Reason: doubled 66H names itself. -/
+theorem pin_grund_doppel66 :
+    ablehnGrund [natByte 102, natByte 102, natByte 17, natByte 193] =
+      some .doppelPraefix := by
+  decide
+
+/-- Reason: REX after REX names the double prefix. -/
+theorem pin_grund_doppelRex66 :
+    ablehnGrund [natByte 64, natByte 102, natByte 17, natByte 193] =
+      some .doppelPraefix := by
+  decide
+
+/-- Reason: REX after a full prefix pair is no one-byte INC/DEC. -/
+theorem pin_grund_einByte :
+    ablehnGrund [natByte 102, natByte 64, natByte 64] =
+      some .einByteIncDec := by
+  decide
+
+/-- Reason: REX in the opcode slot is no one-byte INC/DEC. -/
+theorem pin_grund_einByte2 :
+    ablehnGrund [natByte 64, natByte 64] = some .einByteIncDec := by
+  decide
+
+/-- Reason: a non-carry opcode names itself. -/
+theorem pin_grund_fremd :
+    ablehnGrund [natByte 0, natByte 192] = some .keinTrageform := by
+  decide
+
+/-- Reason: Group-1 extension `/5` names itself. -/
+theorem pin_grund_falsch80 :
+    ablehnGrund [natByte 128, natByte 232] =
+      some .falscheErweiterung := by
+  decide
+
+/-- Reason: FF extension `/2` names itself. -/
+theorem pin_grund_falschFF2 :
+    ablehnGrund [natByte 255, natByte 208] =
+      some .falscheErweiterung := by
+  decide
+
+/-- Reason: FF extension `/3` names itself. -/
+theorem pin_grund_falschFF3 :
+    ablehnGrund [natByte 255, natByte 216] =
+      some .falscheErweiterung := by
+  decide
+
+/-- Reason: high-byte source names itself. -/
+theorem pin_grund_hoch10 :
+    ablehnGrund [natByte 16, natByte 224] = some .hochbyte := by
+  decide
+
+/-- Reason: high-byte INC destination names itself. -/
+theorem pin_grund_hochFE :
+    ablehnGrund [natByte 254, natByte 196] = some .hochbyte := by
+  decide
+
+/-- Reason: decodable register bytes carry no reason. -/
+theorem pin_grund_ok :
+    ablehnGrund [natByte 17, natByte 193] = none := by
+  decide
+
+/-- Reason: decodable memory bytes carry no reason. -/
+theorem pin_grund_okMem : ablehnGrund [natByte 17, natByte 1] = none := by
+  decide
 
 /- CUTS:
     Value/flag layer (§1) and register step (§2) stand.
