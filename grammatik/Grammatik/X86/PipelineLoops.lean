@@ -21,6 +21,8 @@
     `retryLauf`/`foreverLauf`, `bedingung`.
 -/
 import Grammatik.X86.ISARelax
+import Grammatik.X86.Regionen
+import Grammatik.X86.SourceAssignmentLowering
 import Grammatik.Semantik
 
 namespace Gabbro.Grammatik.X86.PipelineLoops
@@ -202,7 +204,7 @@ theorem schleife_korrekt_endlich {D : Deklaration} {V : Vertrag D} {l : Bool} {�
     (bis : World D → Env D Γ → World D × Bool)
     (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
     (hLese : ∀ σ ρ s, Rep σ ρ s → Rep (bis σ ρ).1 ρ s)
-    (hBisStabil : ∀ σ ρ, (bis (bis σ ρ).1 ρ).2 = (bis σ ρ).2)
+    (hBisStabil : ∀ σ ρ, bis (bis σ ρ).1 ρ = bis σ ρ)
     (hBed : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = bedingung c s.flags)
     (hWeiter : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = false →
       ∃ σ₁ ρ₁ s₁, (schritt (bis σ ρ).1 ρ = .ok σ₁ ρ₁ ∨
@@ -211,9 +213,8 @@ theorem schleife_korrekt_endlich {D : Deklaration} {V : Vertrag D} {l : Bool} {�
           = some (0, s₁) ∧
         Rep σ₁ ρ₁ s₁)
     (hEnde : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = true →
-      laufL adr (schleifeProg koerper c) 1 (0, s)
-        = some (koerper.length + 2, { s with rip := adr (koerper.length + 2) }))
-    (hRepRip : ∀ σ ρ s a, Rep σ ρ s → Rep σ ρ { s with rip := a })
+      ∃ s', laufL adr (schleifeProg koerper c) 1 (0, s)
+        = some (koerper.length + 2, s') ∧ Rep (bis σ ρ).1 ρ s')
     (hUeberlauf : ∀ σ ρ σ' ρ', (bis σ ρ).2 = false →
       ueberlauf (bis σ ρ).1 ρ ≠ .ok σ' ρ') :
     ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (s : Zustand),
@@ -246,9 +247,9 @@ theorem schleife_korrekt_endlich {D : Deklaration} {V : Vertrag D} {l : Bool} {�
       have hexit := hEnde _ _ _ hrepL heL
       have hb0 : schleifeSchritte 0 koerper.length = 1 := by
         simp [schleifeSchritte]
-      refine ⟨{ s with rip := adr (koerper.length + 2) }, ?_, hRepRip _ _ _ _ hrepL⟩
-      rw [hb0]
-      exact hexit
+      obtain ⟨s', hrun1, hrep'⟩ := hexit
+      rw [hBisStabil] at hrep'
+      exact ⟨s', by rw [hb0]; exact hrun1, hrep'⟩
     | false =>
       simp only [retryLauf, he] at hrun
       exact absurd hrun (hUeberlauf σ ρ σ' ρ' he)
@@ -265,14 +266,16 @@ theorem schleife_korrekt_endlich {D : Deklaration} {V : Vertrag D} {l : Bool} {�
         exact he
       have hexit := hEnde _ _ _ hrepL heL
       have hm2 : koerper.length + 2 = 1 + (koerper.length + 1) := by omega
+      obtain ⟨sx, hrunx, hrepx⟩ := hexit
+      rw [hBisStabil] at hrepx
       have hseg1 : laufL adr (schleifeProg koerper c) (koerper.length + 2) (0, s)
-          = some (koerper.length + 2, { s with rip := adr (koerper.length + 2) }) := by
+          = some (koerper.length + 2, sx) := by
         have e1 : laufL adr (schleifeProg koerper c) (1 + (koerper.length + 1)) (0, s)
-            = some (koerper.length + 2, { s with rip := adr (koerper.length + 2) }) := by
-          rw [laufL_add, hexit]
+            = some (koerper.length + 2, sx) := by
+          rw [laufL_add, hrunx]
           exact hstop _ _
         rwa [← hm2] at e1
-      refine ⟨{ s with rip := adr (koerper.length + 2) }, ?_, hRepRip _ _ _ _ hrepL⟩
+      refine ⟨sx, ?_, hrepx⟩
       rw [schleifeSchritte_add, laufL_add, hseg1]
       exact hstop _ _
     | false =>
@@ -310,6 +313,112 @@ theorem schleife_bytes (treibstoff : Nat) (koerper : List Instr) (c : Bedingung)
           (schleifeProg koerper c) n (0, s) = some y →
         y.2.rip = adrL s.rip ws (schleifeProg koerper c) y.1 :=
   relax_laufBytes treibstoff (schleifeProg koerper c) ws hr s hwx hcode n
+
+/-! ## 7. Joint witness on a non-degenerate program -/
+
+/-- One table of two rows with one integer field in `0 .. 1000`, written
+    by the loop step (the shape reused from `PipelineWitnesses.pwD`). -/
+def zwD : Deklaration where
+  Tab := Unit
+  count := fun _ => 2
+  Feld := fun _ => Unit
+  typ := fun _ _ => .int 0 1000
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some () | _ => none
+  Glob := Empty
+  gtyp := fun g => nomatch g
+  nutzlast := fun g => nomatch g
+  atomar := fun g => nomatch g
+  geteilt := fun _ => false
+  ggeteilt := fun g => nomatch g
+  Lock := Empty
+  rang := fun L => nomatch L
+  maskiert := fun L => nomatch L
+  Marke := Empty
+  stufen := fun m => nomatch m
+  braucht := fun _ => []
+  gbraucht := fun g => nomatch g
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 0
+  sigNr := fun _ => witSig628
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun i => nomatch i
+  invs := []
+  Ax := Empty
+  aparams := fun a => nomatch a
+  aerg := fun a => nomatch a
+  aschreibt := fun a => nomatch a
+  agschreibt := fun a => nomatch a
+  Reg := Empty
+  rtyp := fun r => nomatch r
+  rklasse := fun r => nomatch r
+  spiegel := fun r => nomatch r
+  rzusage := fun r => nomatch r
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun g => nomatch g
+
+/-- The contract: writes the table, no refusal reasons. -/
+def zwV : Vertrag zwD :=
+  { schreibt := fun _ => true
+    gschreibt := fun g => nomatch g
+    erg := none
+    gruende := 0
+    haelt := []
+    produziert := []
+    boden := none }
+
+/-- The bound predicate: done exactly when row 0 holds 1. It records no
+    read (the world is unchanged), so re-reading is stable by `rfl`. -/
+def zwBis : World zwD → Env zwD [] → World zwD × Bool :=
+  fun σ _ => (σ, decide ((σ.slots () 0 ()).n = 1))
+
+/-- One body round at source level: write 1 into row 0 (the memory-changing
+    step). -/
+def zwSchritt : World zwD → Env zwD [] → Ausgang zwV true [] :=
+  fun σ ρ => .ok (σ.schreibSlot () [] 0 () ⟨1, by decide, by decide⟩) ρ
+
+/-- The overflow block refuses loudly, always: it never answers `.ok`. -/
+def zwUeberlauf : World zwD → Env zwD [] → Ausgang zwV false [] :=
+  fun _ _ => .logik .schleife
+
+/-- The target body: `rcx := 1; rax += rcx; [8192] := rax; reload; compare`.
+    Six fall-through rows. -/
+def zwKoerper : List Instr :=
+  [ .pilot (.movImm64 .rcx 1)
+  , .pilot (.addReg64 .rax .rcx)
+  , .pilot (.movImm64 .rbx (natAdresse 8192))
+  , .pilot (.store64 .rbx .rax (BitVec.ofNat 32 0))
+  , .pilot (.load64 .rdx .rbx (BitVec.ofNat 32 0))
+  , .pilot (.cmpReg64 .rdx .rcx) ]
+
+/-- The body has six rows. -/
+theorem zwKoerper_len : zwKoerper.length = 6 := rfl
+
+/-- The label address map of the witness (constant, closed). -/
+def zwAdr : Nat → Adresse := fun _ => natAdresse 6000
+
+/-- The witness start state: registers zero, flags say "not equal"
+    (`0 - 1 ≠ 0`), all memory readable and writable, bytes zero. -/
+def zwS0 : Zustand :=
+  { register := fun _ => 0
+    flags := (sub64 0 1).2
+    rip := natAdresse 6000
+    speicher :=
+      { bytes := fun _ => 0
+        lesbar := fun _ => true
+        schreibbar := fun _ => true
+        ausfuehrbar := fun _ => false } }
+
+/-- The source start world: row 0 holds 0. -/
+def zwSigma0 : World zwD where
+  slots := fun _ _ _ => ⟨0, by decide, by decide⟩
+  globs := fun g => nomatch g
+  spur := []
 
 /-
 CUTS:
