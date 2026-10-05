@@ -11,12 +11,24 @@
 //! `dokumente/x86/WELLE-A.md`). Rust-to-Lean representation fidelity is
 //! unproved and marked at [`typen`].
 
+pub mod opt;
 pub mod typen;
+pub mod codec;
+#[cfg(test)]
+mod codec_golden;
+pub mod lower;
+pub mod pipeline;
+#[cfg(test)]
+mod pipeline_golden;
+pub mod elf;
 
 pub use typen::{
     Adresse, Bedingung, Befehl, Breite, Byte, Decodiert, Disp32, Flags, Register, Speicher, Wort,
     Zustand,
 };
+pub use codec::{decode, encode};
+pub use lower::{int_wort, senk_assign, senk_frag, Atom, Fragment, LowerError};
+pub use pipeline::{compile_to_image, Image, PipeCfg, Program, Refusal};
 
 #[cfg(test)]
 mod proben {

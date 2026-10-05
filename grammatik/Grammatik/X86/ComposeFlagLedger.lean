@@ -3,7 +3,7 @@
   Subject:   Flag-ledger closing: every flag producer closed to its consumer.
 
   Lane 840 (composition closing): composes the accepted producer rows of
-  `ArchitecturalFlags` (AluOp effect classes with defined/undefined flags)
+  `ArchitecturalFlags` (FlagKlasse effect classes with defined/undefined flags)
   with the accepted consumer read sets of `FlagDependencies` (liestFlag over
   the canonical Bedingung, executed through Ausfuehrung.schritt jumpIf32 and
   the ControlCodec byte steps) into one checked closing step with liveness:
@@ -22,7 +22,7 @@ namespace Gabbro.Grammatik.X86
     everything; logic defines everything but the free AF; MUL pins only
     CF/OF; DIV defines nothing; shift pins CF/PF/ZF/SF conservatively
     (OF needs the masked one-count evidence of shiftVerbrauch_eins). -/
-def definiertFlag : AluOp → FlagName → Bool
+def definiertFlag : FlagKlasse → FlagName → Bool
   | .add, _ => true
   | .sub, _ => true
   | .logik, _ => true
@@ -46,7 +46,7 @@ def definiertFlag : AluOp → FlagName → Bool
     defined by the producer. Dead flags may differ arbitrarily; live flags
     the consumer does not read are unconstrained. All five conjuncts are
     used by the closing theorem. -/
-def ledgerErlaubt (prod : AluOp) (c : Bedingung)
+def ledgerErlaubt (prod : FlagKlasse) (c : Bedingung)
     (leb : FlagName → Bool) : Bool :=
   ((!liestFlag c .cf || !leb .cf || definiertFlag prod .cf) &&
    (!liestFlag c .pf || !leb .pf || definiertFlag prod .pf) &&
@@ -121,7 +121,7 @@ theorem ledger_shift_o_verweigert :
     the consumer outcome (ledger_umschreibung_stabil below); a change to a
     live flag the consumer reads is refused (ledger_div_verweigert and
     kin, divVerbrauch_verweigert, mov_xor_wechsel_zeuge). -/
-theorem ComposeFlagLedger_verbindung (prod : AluOp) (c : Bedingung)
+theorem ComposeFlagLedger_verbindung (prod : FlagKlasse) (c : Bedingung)
     (leb : FlagName → Bool) (f g : Flags)
     (hok : ledgerErlaubt prod c leb = true)
     (hlive : ∀ n, liestFlag c n = true → leb n = true)
@@ -163,7 +163,7 @@ theorem ledger_umschreibung_stabil (c : Bedingung) (leb : FlagName → Bool)
     is refused both in the ledger and at execution level (two admitted
     successors take opposite branches). -/
 theorem ComposeFlagLedger_verbindung_zeuge :
-    ∃ (prod : AluOp) (c : Bedingung) (leb : FlagName → Bool) (f g : Flags),
+    ∃ (prod : FlagKlasse) (c : Bedingung) (leb : FlagName → Bool) (f g : Flags),
       ledgerErlaubt prod c leb = true ∧
       (∀ n, liestFlag c n = true → leb n = true) ∧
       (∀ n, definiertFlag prod n = true → flagWert n f = flagWert n g) ∧
@@ -199,7 +199,7 @@ theorem ComposeFlagLedger_verbindung_zeuge :
   · exact probe_sprung_genommen
 
 /- CUTS:
-   Proved here (over the REUSED accepted definitions AluOp effect rows,
+   Proved here (over the REUSED accepted definitions FlagKlasse effect rows,
    liestFlag/stimmtUebberein/bedingung_stabil, Codec.decode,
    Ausfuehrung.schritt/lauf and the zeuge witnesses -- no new machine,
    decoder, interpreter or executor, no re-proof of accepted internals):
