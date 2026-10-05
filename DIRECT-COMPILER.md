@@ -645,6 +645,14 @@ Last ledger refresh: **2026-10-05 13:01 UTC**. This is an operational snapshot, 
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
 | 1175 | Finite and infinite execution soundness of the pipeline | Committed candidate; review/integration pending | 1176: Unresolved after agent rounds; not accepted | [task](lanes/1175.md) |
 | 1177 | Source-computed units and duties feeding the pipeline | Incomplete; preserved | 1178: scheduled | [task](lanes/1177.md) |
+| 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Scheduled | 1180: scheduled | [task](lanes/1179.md) |
+| 1181 | Nested interrupt delivery, #DF and handler entry | Scheduled | 1182: scheduled | [task](lanes/1181.md) |
+| 1183 | Feature gating enforced per step, not by wrapper | Scheduled | 1184: scheduled | [task](lanes/1183.md) |
+| 1185 | Generic word-forwarding theorem | Scheduled | 1186: scheduled | [task](lanes/1185.md) |
+| 1187 | TSO traces to W runs: run induction | Waiting for accepted dependencies | 1188: scheduled | [task](lanes/1187.md) |
+| 1189 | Pipeline calls: real source execBlock correspondence | Scheduled | 1190: scheduled | [task](lanes/1189.md) |
+| 1191 | Pipeline: spill code generation with privacy | Scheduled | 1192: scheduled | [task](lanes/1191.md) |
+| 1193 | Linking: multi-unit convergence and operand kinds | Scheduled | 1194: scheduled | [task](lanes/1193.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
