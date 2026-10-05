@@ -240,6 +240,109 @@ theorem gift_sfence_nachbar_lfence :
     decodeSfence [natByte 15, natByte 174, natByte 232] = none :=
   (pin_sfence_verweigert_nachbarn).2.1
 
+/-! ## 4. Word install: eight byte issues in order plus the group guard.
+
+    A word store reaches canonical memory as exactly eight byte issues
+    in oldest-first order (`wortEintraege`), then an exclusion-checked
+    drain (`DrainSpur` with `FremdFrei` at every visited state). The
+    group guard `WortGruppe` is the exact eight-entry own buffer plus
+    foreign-footprint freedom -- alignment alone is insufficient (the
+    byte drain never consults `ausgerichtet8`; see the reused
+    `ausrichtung_reicht_nicht`). The install itself is the accepted
+    `wort_gruppe_liest_zurueck`; the drain is a reached run by the
+    accepted `drain_spur_erreichbar`. -/
+
+/-- One issue appends exactly one entry to the acting core's buffer. -/
+theorem issueByte_puffer (s s' : TSOZustand) (c : Nat) (a : Adresse)
+    (w : Byte) (h : issueByte s c a w = some s') :
+    s'.puffer c = s.puffer c ++ [⟨a, w⟩] := by
+  unfold issueByte at h
+  by_cases hc : s.mem.schreibbar a = true
+  · rw [if_pos hc] at h
+    cases h
+    exact pufferSetze_gleich _ _ _
+  · rw [if_neg hc] at h
+    cases h
+
+/-- One issue leaves canonical memory unchanged. -/
+theorem issueByte_mem (s s' : TSOZustand) (c : Nat) (a : Adresse)
+    (w : Byte) (h : issueByte s c a w = some s') :
+    s'.mem = s.mem := by
+  unfold issueByte at h
+  by_cases hc : s.mem.schreibbar a = true
+  · rw [if_pos hc] at h
+    cases h
+    rfl
+  · rw [if_neg hc] at h
+    cases h
+
+/-- **EIGHT ISSUES BUILD THE GROUP.** Eight byte issues in
+    oldest-first order onto an empty own buffer carry exactly the
+    canonical eight entries; canonical memory and every foreign buffer
+    are untouched. Every premise is used: `hbuf` seeds the chain, each
+    `hk` extends it, and the foreign frame closes over all eight. -/
+theorem acht_ausgaben_gruppe
+    (s0 s1 s2 s3 s4 s5 s6 s7 s8 : TSOZustand)
+    (c : Nat) (a : Adresse) (v : Wort)
+    (hbuf : s0.puffer c = [])
+    (h0 : issueByte s0 c (addrOff a 0) (wortByte v 0) = some s1)
+    (h1 : issueByte s1 c (addrOff a 1) (wortByte v 1) = some s2)
+    (h2 : issueByte s2 c (addrOff a 2) (wortByte v 2) = some s3)
+    (h3 : issueByte s3 c (addrOff a 3) (wortByte v 3) = some s4)
+    (h4 : issueByte s4 c (addrOff a 4) (wortByte v 4) = some s5)
+    (h5 : issueByte s5 c (addrOff a 5) (wortByte v 5) = some s6)
+    (h6 : issueByte s6 c (addrOff a 6) (wortByte v 6) = some s7)
+    (h7 : issueByte s7 c (addrOff a 7) (wortByte v 7) = some s8) :
+    s8.puffer c = wortEintraege a v ∧ s8.mem = s0.mem ∧
+      ∀ d : Nat, d ≠ c → s8.puffer d = s0.puffer d := by
+  have e0 := issueByte_puffer s0 s1 c _ _ h0
+  have e1 := issueByte_puffer s1 s2 c _ _ h1
+  have e2 := issueByte_puffer s2 s3 c _ _ h2
+  have e3 := issueByte_puffer s3 s4 c _ _ h3
+  have e4 := issueByte_puffer s4 s5 c _ _ h4
+  have e5 := issueByte_puffer s5 s6 c _ _ h5
+  have e6 := issueByte_puffer s6 s7 c _ _ h6
+  have e7 := issueByte_puffer s7 s8 c _ _ h7
+  have m0 := issueByte_mem s0 s1 c _ _ h0
+  have m1 := issueByte_mem s1 s2 c _ _ h1
+  have m2 := issueByte_mem s2 s3 c _ _ h2
+  have m3 := issueByte_mem s3 s4 c _ _ h3
+  have m4 := issueByte_mem s4 s5 c _ _ h4
+  have m5 := issueByte_mem s5 s6 c _ _ h5
+  have m6 := issueByte_mem s6 s7 c _ _ h6
+  have m7 := issueByte_mem s7 s8 c _ _ h7
+  refine ⟨?_, ?_, ?_⟩
+  · rw [e7, e6, e5, e4, e3, e2, e1, e0, hbuf]
+    rfl
+  · rw [m7, m6, m5, m4, m3, m2, m1, m0]
+  · intro d hd
+    rw [issue_anderer_kern s7 s8 c _ _ h7 hd,
+      issue_anderer_kern s6 s7 c _ _ h6 hd,
+      issue_anderer_kern s5 s6 c _ _ h5 hd,
+      issue_anderer_kern s4 s5 c _ _ h4 hd,
+      issue_anderer_kern s3 s4 c _ _ h3 hd,
+      issue_anderer_kern s2 s3 c _ _ h2 hd,
+      issue_anderer_kern s1 s2 c _ _ h1 hd,
+      issue_anderer_kern s0 s1 c _ _ h0 hd]
+
+/-- The eight issues form one reached run. -/
+theorem acht_ausgaben_erreichbar
+    (s0 s1 s2 s3 s4 s5 s6 s7 s8 : TSOZustand)
+    (c : Nat) (a : Adresse) (v : Wort)
+    (h0 : issueByte s0 c (addrOff a 0) (wortByte v 0) = some s1)
+    (h1 : issueByte s1 c (addrOff a 1) (wortByte v 1) = some s2)
+    (h2 : issueByte s2 c (addrOff a 2) (wortByte v 2) = some s3)
+    (h3 : issueByte s3 c (addrOff a 3) (wortByte v 3) = some s4)
+    (h4 : issueByte s4 c (addrOff a 4) (wortByte v 4) = some s5)
+    (h5 : issueByte s5 c (addrOff a 5) (wortByte v 5) = some s6)
+    (h6 : issueByte s6 c (addrOff a 6) (wortByte v 6) = some s7)
+    (h7 : issueByte s7 c (addrOff a 7) (wortByte v 7) = some s8) :
+    TSOErreichbar s0 s8 := by
+  exact .schritt (.schritt (.schritt (.schritt (.schritt (.schritt
+    (.schritt (.schritt .start (.issue _ _ _ _ _ h0)) (.issue _ _ _ _ _ h1))
+    (.issue _ _ _ _ _ h2)) (.issue _ _ _ _ _ h3)) (.issue _ _ _ _ _ h4))
+    (.issue _ _ _ _ _ h5)) (.issue _ _ _ _ _ h6)) (.issue _ _ _ _ _ h7)
+
 /- CUTS: what is not proved here (skeleton; extended with each piece)
     NOT proved here, and not claimed:
     - No seq_cst total order, no fairness, no CAS retry bound.
@@ -253,6 +356,10 @@ theorem gift_sfence_nachbar_lfence :
 #print axioms zaun_sfence_dekodiert
 #print axioms zaun_lfence_dekodiert
 #print axioms valZaun_korrekt
+#print axioms issueByte_puffer
+#print axioms issueByte_mem
+#print axioms acht_ausgaben_gruppe
+#print axioms acht_ausgaben_erreichbar
 #print axioms zaun_sfence_korrekt
 #print axioms zaun_lfence_korrekt
 #print axioms zaun_sfence_ohne_sse
