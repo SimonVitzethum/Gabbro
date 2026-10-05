@@ -337,4 +337,188 @@ theorem rest_union_instanzen (m m' : HwMaschine) (c : Nat)
     rw [hs]
     exact .start
 
+/-! ## 6. Interrupts: buffer-silent delivery is a FINDING, not TSO.
+
+  Delivery is explicitly NOT a serialising drain of the per-core
+  store buffer (S3 in `HwNestedInterrupts.lean`,
+  `asyncMasch_puffer_still`): the frame lands in canonical memory
+  through direct `write64` pushes (`schiebeRahmen`) with every store
+  buffer untouched. A memory write by a path other than the TSO
+  events is therefore a FINDING of high priority: no `TSOErreichbar`
+  leg is claimed for the `nested`/`int` tags, and the per-access
+  bridge needs a drained-own-buffer guard for delivery. What IS
+  proved: buffer silence for every successful single and nested
+  delivery, the exhibited NMI run changing memory with still
+  buffers, and the exhibited delivery refusals. -/
+
+/-- Buffer silence of the push stage: a successful frame push never
+    touches any store buffer. -/
+theorem rest_asyncFertig_puffer (m : HwMaschine) (c : Nat)
+    (st : Steuerstand) (g : IdtTor) (q : LieferAnfrage) (rsp : Wort)
+    (gew : Bool) (r : HwMaschine × Bool × Bool)
+    (h : asyncFertig m c st g q rsp gew = some r) (d : Nat) :
+    r.1.puffer d = m.puffer d := by
+  unfold asyncFertig at h
+  cases hk : istKanonisch rsp with
+  | false =>
+    simp [hk] at h
+  | true =>
+    simp [hk] at h
+    cases hpush : schiebeRahmen m.mem rsp (rahmenWorte q) with
+    | none =>
+      simp [hpush] at h
+    | some m2 =>
+      simp [hpush] at h
+      cases h
+      exact asyncMasch_puffer_still _ _ _ _ _ _ _
+
+/-- Buffer silence of single delivery: every successful `asyncSchritt`
+    leaves every store buffer byte-identical. -/
+theorem rest_async_puffer_still (m : HwMaschine) (c : Nat)
+    (ev : AsyncEreignis) (st : Steuerstand)
+    (r : HwMaschine × Bool × Bool)
+    (h : asyncSchritt m c ev st = some r) (d : Nat) :
+    r.1.puffer d = m.puffer d := by
+  unfold asyncSchritt at h
+  cases hv : asyncVektorOk ev with
+  | false =>
+    simp [hv] at h
+  | true =>
+    simp [hv] at h
+    cases hb : asyncBereit ev with
+    | false =>
+      simp [hb] at h
+    | true =>
+      simp [hb] at h
+      cases hl : torImLimit st.idtLimit ev.vektor with
+      | false =>
+        simp [hl] at h
+      | true =>
+        simp [hl] at h
+        cases ht : liesTorBytes m.mem
+            (torAdresse st.idtBasis ev.vektor) with
+        | none =>
+          simp [ht] at h
+        | some t =>
+          simp [ht] at h
+          cases hp : pruefeTor ev.vektor st.idtLimit t .extern st.cpl
+              ev.codeOk with
+          | fehler _ =>
+            simp [hp] at h
+          | bereit g =>
+            simp [hp] at h
+            cases hs : waehleStapel m.mem st g.ist ev.neuDpl ev.wechsel
+                ((m.kerne c).register Register.rsp) with
+            | stapelFehler _ =>
+              simp [hs] at h
+            | behalten rsp =>
+              simp [hs] at h
+              exact rest_asyncFertig_puffer _ _ _ _ _ _ _ _ h d
+            | wechseln rsp =>
+              simp [hs] at h
+              exact rest_asyncFertig_puffer _ _ _ _ _ _ _ _ h d
+
+/-- Adapter-level buffer silence of single delivery. -/
+theorem rest_int_puffer (m : HwMaschine) (c : Nat)
+    (ev : AsyncEreignis) (m' : HwMaschine)
+    (h : adapterInterrupt1125.schritt m c ev = some m') (d : Nat) :
+    m'.puffer d = m.puffer d := by
+  unfold adapterInterrupt1125 at h
+  cases hr : asyncSchritt m c ev ev.steuer with
+  | none =>
+    simp [hr] at h
+  | some r =>
+    simp [hr] at h
+    cases h
+    exact rest_async_puffer_still m c ev ev.steuer _ hr d
+
+/-- Buffer silence of nested delivery: both legs are `asyncSchritt`
+    legs, each buffer-silent. -/
+theorem rest_nest_puffer_still (m : HwMaschine) (c : Nat)
+    (ev1 ev2 : AsyncEreignis) (st1 : Steuerstand)
+    (m2 : HwMaschine) (a b cc : Bool)
+    (h : verschachteltSchritt m c ev1 ev2 st1 = some (m2, a, b, cc))
+    (d : Nat) :
+    m2.puffer d = m.puffer d := by
+  unfold verschachteltSchritt at h
+  cases h1 : asyncSchritt m c ev1 st1 with
+  | none =>
+    simp [h1] at h
+  | some r1 =>
+    rw [h1] at h
+    simp only at h
+    cases hd : decide (ev2.steuer = { st1 with ifBit := r1.2.1 }) with
+    | false =>
+      simp [hd] at h
+    | true =>
+      simp [hd] at h
+      cases h2 : asyncSchritt r1.1 c ev2
+          { st1 with ifBit := r1.2.1 } with
+      | none =>
+        simp [h2] at h
+      | some r2 =>
+        rw [h2] at h
+        simp only at h
+        cases h
+        have hleg1 : r1.1.puffer d = m.puffer d :=
+          rest_async_puffer_still m c ev1 st1 r1 h1 d
+        have hleg2 : r2.1.puffer d = r1.1.puffer d :=
+          rest_async_puffer_still r1.1 c ev2
+            { st1 with ifBit := r1.2.1 } r2 h2 d
+        exact hleg2.trans hleg1
+
+/-- Adapter-level buffer silence of nested delivery. -/
+theorem rest_nested_puffer (m : HwMaschine) (c : Nat)
+    (ev : AsyncEreignis × AsyncEreignis) (m' : HwMaschine)
+    (h : adapterVerschachtelt.schritt m c ev = some m') (d : Nat) :
+    m'.puffer d = m.puffer d := by
+  unfold adapterVerschachtelt at h
+  simp only at h
+  cases hn : verschachteltSchritt m c ev.1 ev.2 ev.1.steuer with
+  | none =>
+    rw [hn] at h
+    simp only at h
+    cases h
+  | some r =>
+    obtain ⟨m2, a, b, cc⟩ := r
+    rw [hn] at h
+    simp only at h
+    have hm' : m' = m2 := (Option.some_inj.mp h).symm
+    rw [hm']
+    exact rest_nest_puffer_still m c ev.1 ev.2 ev.1.steuer
+      m2 a b cc hn d
+
+/-- FINDING, sharp: the exhibited NMI delivery changes canonical
+    memory through the direct-push path while every store buffer
+    stays still. This is a memory write by a path other than the TSO
+    events, so no `TSOErreichbar` leg is claimed for it. -/
+theorem rest_int_befund (m' : HwMaschine)
+    (hplug : adapterInterrupt1125.schritt intWitStart 0 witNmi
+      = some m') :
+    m'.mem ≠ intWitStart.mem ∧
+      ∀ d : Nat, m'.puffer d = intWitStart.puffer d := by
+  obtain ⟨m0, ifNeu, gew, hplug0, hschritt⟩ := kapPlug_int
+  have hm' : m' = m0 := (Option.some_inj.mp (hplug0.symm.trans hplug)).symm
+  rw [hm']
+  refine ⟨?_, fun d => rest_int_puffer _ _ _ _ hplug0 d⟩
+  have hmem : asyncMemOut witSchritt = m0.mem := by
+    have hws : witSchritt = some (m0, ifNeu, gew) := hschritt
+    rw [hws]
+    rfl
+  intro hcon
+  have hbyte : (asyncMemOut witSchritt).bytes (BitVec.ofNat 64 16376) =
+      witMem.bytes (BitVec.ofNat 64 16376) := by
+    rw [hmem, hcon]
+    rfl
+  exact witNmi_aendert_ss hbyte.symm
+
+/-- Exhibited delivery refusals stay refused: masked, over-limit and
+    dark-stack probes admit no delivery step. -/
+theorem rest_int_verweigert :
+    asyncSchritt intWitStart 1 witMaskiert witSteuerNmi = none ∧
+      asyncSchritt intWitStart 1 witLimit witLimitSteuer = none ∧
+        asyncSchritt intWitDunkel 0 witNmi witSteuerNmi = none :=
+  ⟨witNmi_maskiert_verweigert, witNmi_limit_verweigert,
+    witNmi_dunkel_verweigert⟩
+
 end Gabbro.Grammatik.X86
