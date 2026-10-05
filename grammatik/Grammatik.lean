@@ -652,3 +652,4 @@ import Grammatik.X86.ValidatorSoundPart
 import Grammatik.X86.HwPreciseFault
 import Grammatik.X86.PipelineCallsBlock
 import Grammatik.X86.PipelineWorkBranches
+import Grammatik.X86.PipelineAtomicsBlock

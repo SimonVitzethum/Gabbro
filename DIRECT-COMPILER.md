@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 15:25 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 15:26 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -664,7 +664,7 @@ Last ledger refresh: **2026-10-05 15:25 UTC**. This is an operational snapshot, 
 | 1211 | FP s32/MXCSR rows in the unified dispatcher | Merged after review/checks | 1212: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1211.md) |
 | 1213 | LOCK words to W history: timestamp and value link | Merged after review/checks | 1214: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1213.md) |
 | 1215 | From W runs to the GX refinement: the missing target leg | Merged after review/checks | 1216: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1215.md) |
-| 1217 | Pipeline atomics: execBlock correspondence | Committed candidate; review/integration pending | 1218: Committed candidate; review/integration pending | [task](lanes/1217.md) |
+| 1217 | Pipeline atomics: execBlock correspondence | Merged after review/checks | 1218: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1217.md) |
 | 1219 | Pipeline: derive per-chunk runs from the lowering alone | Merged after review/checks | 1220: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1219.md) |
 | 1221 | Linking: rel8 selection convergence and fall-through coverage | Merged after review/checks | 1222: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1221.md) |
 | 1223 | valX86_sound for the decidable part | Merged after review/checks | 1224: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1223.md) |
@@ -1588,6 +1588,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1233**, Pipeline work bounds for branches and loops, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1233.md). <!-- x86-merged:1233 -->
 - 2026-10-05: lane **1234**, Independent exact review of 1233, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1234.md). <!-- x86-merged:1234 -->
 - 2026-10-05: publication batch checks passed for `bd57fa7c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1217**, Pipeline atomics: execBlock correspondence, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1217.md). <!-- x86-merged:1217 -->
+- 2026-10-05: checked master `a8a12bcc` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a8a12bccbe1f3cdfcd582f33db98d12a50e111fb -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
