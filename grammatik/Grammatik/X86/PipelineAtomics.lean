@@ -316,3 +316,275 @@ theorem schreibe_korrekt (q : AtomQuelle) (ts : List ZielOp)
     rfl, schreibe_schliesst _ _ _⟩
   rw [← hb]
   exact hRegel.eigenSichtbar t t' c _ b0 hIssue hrd
+
+/-! ## 5. Per-access correspondence: fences.
+
+    A lowered fence is the decoded MFENCE byte form running the
+    own-buffer drain: afterwards the own buffer is empty and
+    fence-ready, every foreign buffer is intact, and later loads on the
+    acting core observe canonical memory. Draining another core is NOT
+    claimed. -/
+
+/-- **FENCE CORRESPONDENCE.** The lowered MFENCE bytes decode to the
+    fence form and drain the own buffer with the full local frame. -/
+theorem zaun_korrekt (q : AtomQuelle) (ts : List ZielOp)
+    (t t' : TSOZustand) (c : Nat) (rest : List Byte)
+    (hq : q = .zaun)
+    (hSen : senkAtom q = some ts)
+    (hdec : decodeLock pinMfence = some (LockAnweisung.ok .mfence 3, rest))
+    (hbuf : t.puffer c = [])
+    (hdrain : mfenceDrain t c = some t') :
+    t'.puffer c = [] ∧ zaunBereit t' c = true ∧
+      (∀ d : Nat, d ≠ c → t'.puffer d = t.puffer d) ∧
+      (∀ a : Adresse, t'.mem.lesbar a = true →
+        loadByte t' c a = some (t'.mem.bytes a)) ∧
+      lockSchritt .mfence c t =
+        some (t, ⟨c, [], [], none, none, false, true⟩) ∧
+      ts = [.lock .mfence] ∧
+      mfenceSchrittAusBytes pinMfence t c = some t' ∧
+      ledgerDeckt .zaun (ledgerEintrag .zaun) = true := by
+  subst hq
+  rw [senk_zaun] at hSen
+  cases hSen
+  have hbyte : mfenceSchrittAusBytes pinMfence t c = some t' := by
+    unfold mfenceSchrittAusBytes
+    rw [hdec]
+    exact hdrain
+  exact ⟨mfenceDrain_leert t t' c hdrain,
+    mfenceDrain_bereit t t' c hdrain,
+    fun d hd => mfenceDrain_fremd t t' c hd hdrain,
+    fun a hrd => mfenceDrain_ordnung t t' c hdrain a hrd,
+    lockSchritt_mfence_erfolg t c hbuf, rfl, hbyte, zaun_schliesst⟩
+
+/-- The byte step equation behind the fence correspondence. -/
+theorem zaun_byteseite (t t' : TSOZustand) (c : Nat)
+    (hdrain : drainVoll t c = some t') :
+    mfenceSchrittAusBytes pinMfence t c = some t' :=
+  mfenceSchrittAusBytes_ok t t' c [] pin_lock_mfence_decodiert hdrain
+
+/-! ## 6. Per-access correspondence: RMW.
+
+    Lowered fetch-add and compare-exchange run the accepted locked steps
+    on canonical memory with the full atomicity frame. The
+    register-address binding of the byte forms (which base/disp names
+    which address) is NOT proved here: it is the stated open gap, and
+    the fetched byte runs stay with the reused pins. -/
+
+/-- **XADD CORRESPONDENCE.** The lowered LOCK XADD grows the word by the
+    delta with the single-RMW event, keeps every outside byte, decodes
+    from its canonical bytes, and closes the ledger. -/
+theorem xadd_korrekt (q : AtomQuelle) (ts : List ZielOp)
+    (t t' : TSOZustand) (c : Nat)
+    (a : Adresse) (delta alt : Wort) (m' : Speicher) (ev : LockEreignis)
+    (src base : Register) (disp : BitVec 32)
+    (hq : q = .xadd src base disp)
+    (hSen : senkAtom q = some ts)
+    (hbuf : t.puffer c = [])
+    (hrd : read64 t.mem a = some alt)
+    (hali : ausgerichtet8 a = true)
+    (hwr : write64 t.mem a (alt + delta) = some m')
+    (hstep : lockSchritt (.xadd64 a delta) c t = some (t', ev)) :
+    ev.istRmw = true ∧ ev.lesen = Fuss a ∧ ev.schreiben = Fuss a ∧
+      ev.gelesen = some alt ∧ ev.geschrieben = some (alt + delta) ∧
+      (∀ x, (∀ k : Nat, k < 8 → x ≠ addrOff a k) →
+        t'.mem.bytes x = t.mem.bytes x) ∧
+      ts = [.lock (.xadd64 src base disp)] ∧
+      decodeLock (zielBytes (.lock (.xadd64 src base disp))) =
+        some (LockAnweisung.ok (.xadd64 src base disp)
+          (zielBytes (.lock (.xadd64 src base disp))).length, []) ∧
+      ledgerDeckt (.xadd a delta) (ledgerEintrag (.xadd a delta)) = true := by
+  subst hq
+  rw [senk_xadd] at hSen
+  cases hSen
+  obtain ⟨hrmw, hles, hschr, hgelesen, hgeschr, -, -, -, hrahmen⟩ :=
+    lock_xadd_atomar t t' c a delta alt m' ev hbuf hrd hali hwr hstep
+  have hrt := zielBytes_lock_rundweg (.xadd64 src base disp) []
+  simp only [List.append_nil] at hrt
+  exact ⟨hrmw, hles, hschr, hgelesen, hgeschr, hrahmen, rfl, hrt,
+    xadd_schliesst a delta⟩
+
+/-- **CAS SUCCESS CORRESPONDENCE.** The lowered LOCK CMPXCHG installs
+    the new word, observably changes the read-back, keeps every outside
+    byte, decodes from its canonical bytes, and closes the ledger with
+    the decided outcome. -/
+theorem cas_korrekt_erfolg (q : AtomQuelle) (ts : List ZielOp)
+    (t t' : TSOZustand) (c : Nat)
+    (a : Adresse) (erwartet neu alt : Wort) (m' : Speicher)
+    (src base : Register) (disp : BitVec 32)
+    (hq : q = .cas src base disp)
+    (hSen : senkAtom q = some ts)
+    (hbuf : t.puffer c = [])
+    (hrd : read64 t.mem a = some alt)
+    (hali : ausgerichtet8 a = true)
+    (hgleich : (alt == erwartet) = true)
+    (hwr : write64 t.mem a neu = some m')
+    (hles : lesbar8 t.mem a = true)
+    (hne : neu ≠ alt)
+    (hstep : casSchritt a erwartet neu c t = some (t', true)) :
+    read64 t'.mem a = some neu ∧
+      (∀ x, (∀ k : Nat, k < 8 → x ≠ addrOff a k) →
+        t'.mem.bytes x = t.mem.bytes x) ∧
+      ts = [.lock (.cmpxchg64 src base disp)] ∧
+      decodeLock (zielBytes (.lock (.cmpxchg64 src base disp))) =
+        some (LockAnweisung.ok (.cmpxchg64 src base disp)
+          (zielBytes (.lock (.cmpxchg64 src base disp))).length, []) ∧
+      ledgerDeckt (.cas a erwartet neu) (ledgerCasOk a true) = true := by
+  subst hq
+  rw [senk_cas] at hSen
+  cases hSen
+  obtain ⟨hrb, -, -, hrahmen⟩ := cas_erfolg_schreibt t t' c a erwartet neu alt
+    m' hbuf hrd hali hgleich hwr hles hstep hne
+  have hrt := zielBytes_lock_rundweg (.cmpxchg64 src base disp) []
+  simp only [List.append_nil] at hrt
+  exact ⟨hrb, hrahmen, rfl, hrt, cas_schliesst a erwartet neu true⟩
+
+/-- **CAS FAILURE CORRESPONDENCE.** A failed comparison stutters (the
+    accepted step performs no install); the ledger records the decided
+    `false`. The byte machine's write-back (which additionally pins
+    write permission) stays with the reused adapter
+    `lockVoll_cmpxchg_fehlschlag_adapter`, cited, not restated. -/
+theorem cas_korrekt_fehlschlag (q : AtomQuelle) (ts : List ZielOp)
+    (t t' : TSOZustand) (c : Nat)
+    (a : Adresse) (erwartet neu alt : Wort)
+    (src base : Register) (disp : BitVec 32)
+    (hq : q = .cas src base disp)
+    (hSen : senkAtom q = some ts)
+    (hbuf : t.puffer c = [])
+    (hrd : read64 t.mem a = some alt)
+    (hali : ausgerichtet8 a = true)
+    (hfehl : (alt == erwartet) = false)
+    (hstep : casSchritt a erwartet neu c t = some (t', false)) :
+    t' = t ∧
+      ts = [.lock (.cmpxchg64 src base disp)] ∧
+      decodeLock (zielBytes (.lock (.cmpxchg64 src base disp))) =
+        some (LockAnweisung.ok (.cmpxchg64 src base disp)
+          (zielBytes (.lock (.cmpxchg64 src base disp))).length, []) ∧
+      ledgerDeckt (.cas a erwartet neu) (ledgerCasOk a false) = true := by
+  subst hq
+  rw [senk_cas] at hSen
+  cases hSen
+  have heq := casSchritt_fehlschlag t c a erwartet neu alt hbuf hrd hali hfehl
+  rw [heq] at hstep
+  cases hstep
+  have hrt := zielBytes_lock_rundweg (.cmpxchg64 src base disp) []
+  simp only [List.append_nil] at hrt
+  exact ⟨rfl, rfl, hrt, cas_schliesst a erwartet neu false⟩
+
+/-! ## 7. Lock sections: fence-bracketed bodies.
+
+    A lock section lowers to the MFENCE entry, the lowered body, the
+    MFENCE exit. Entry makes later loads canonical (acquire side),
+    exit drains prior stores to visibility (release side); foreign
+    buffers survive all three phases. The inner run's foreign frame is
+    an explicit premise (per-step framing of arbitrary inner runs is
+    OPEN, see CUTS). -/
+
+/-- Reached runs chain: the recorded steps of the second run extend the
+    first. Reused shape, proved once here. -/
+theorem erreichbar_kette (s0 s1 s2 : TSOZustand)
+    (h1 : TSOErreichbar s0 s1) (h2 : TSOErreichbar s1 s2) :
+    TSOErreichbar s0 s2 := by
+  induction h2 with
+  | start => exact h1
+  | schritt _ hstep ih => exact .schritt ih hstep
+
+/-- **LOCK-SECTION CORRESPONDENCE.** Entry and exit drains empty the own
+    buffer and fence it, every foreign buffer ends as it began, and the
+    whole bracket is one reached run. -/
+theorem sperre_korrekt (innen : List AtomQuelle) (innere : List ZielOp)
+    (s0 s1 s2 s3 : TSOZustand) (c : Nat)
+    (hIn : senkListe innen = some innere)
+    (hEintritt : mfenceDrain s0 c = some s1)
+    (hMitte : TSOErreichbar s1 s2)
+    (hRahmen : ∀ d : Nat, d ≠ c → s2.puffer d = s1.puffer d)
+    (hAustritt : mfenceDrain s2 c = some s3) :
+    senkAtom (.sperre innen) =
+        some ([.lock .mfence] ++ innere ++ [.lock .mfence]) ∧
+      s3.puffer c = [] ∧ zaunBereit s3 c = true ∧
+      (∀ d : Nat, d ≠ c → s3.puffer d = s0.puffer d) ∧
+      TSOErreichbar s0 s3 := by
+  have hSen := senk_sperre innen innere hIn
+  have r1 : TSOErreichbar s0 s1 :=
+    mfenceDrain_erreichbar_von s0 s0 s1 c .start hEintritt
+  have r2 : TSOErreichbar s0 s2 := erreichbar_kette s0 s1 s2 r1 hMitte
+  have r3 : TSOErreichbar s0 s3 :=
+    mfenceDrain_erreichbar_von s0 s2 s3 c r2 hAustritt
+  refine ⟨hSen, mfenceDrain_leert s2 s3 c hAustritt,
+    mfenceDrain_bereit s2 s3 c hAustritt, ?_, r3⟩
+  intro d hd
+  rw [mfenceDrain_fremd s2 s3 c hd hAustritt, hRahmen d hd,
+    mfenceDrain_fremd s0 s1 c hd hEintritt]
+
+/-! ## 8. GX legs: what is proved per access toward the source.
+
+    The committed group read simulates a source W read (the `lies`
+    consequent for a real recording G step is DERIVED through the
+    reused `wLesbar_aus_gruppe`), and a plain-carrier value survives
+    every atomic environment of the rely (`havoc_erhaelt_gruppenwert`).
+    No full `SchrittW` is derived here: `schwach_ist_gX` is cited, not
+    applied -- exactly the boundary `BridgeRead` records. -/
+
+/-- **GX READ LEG.** A lowered plain load at a represented slot parses
+    to exactly the source slot value and derives the `lies` consequent
+    for every recording G step. -/
+theorem gx_lese_korrekt {D : Deklaration} {t : D.Tab} {k : Int}
+    {f : D.Feld t} {lo hi : Int} {hT : D.typ t f = .int lo hi}
+    {a : Adresse} {s : TSOZustand} {c0 : Nat}
+    {σw : World D} {σ : Gabbro.Grammatik.Speicher D}
+    {W : RufMaschineW D} {u : Faden} {M'' : RufMaschineG D} {n : Nat}
+    (q : AtomQuelle) (zt : List ZielOp)
+    (o : Speichermodell.Ordnung) (dst base : Register) (disp : BitVec 32)
+    (hq : q = .lese a o dst base disp)
+    (hSen : senkAtom q = some zt)
+    (v : Zahl lo hi)
+    (hRep : RepSlot t k f lo hi hT a s.mem σw)
+    (hMiss : ∀ i : Nat, i < 8 → neuestens (s.puffer c0) (addrOff a i) = none)
+    (hRd : lesbar8 s.mem a = true)
+    (hLo : 0 ≤ lo) (hHi : hi < 2 ^ 64)
+    (w : Wort) (hWort : ladeWort8 s c0 a = some w)
+    (hv : (cast (congrArg (Wert D) hT) (σw.slots t k f)) = v)
+    (hMem : (⟨n, σw.speicher, Speichermodell.Sicht.null⟩ : NachrichtW D) ∈
+      W.hist (.inl t))
+    (hProj : W.sicht u (.inl t) ≤ sichtVon s c0 a)
+    (hTs : sichtVon s c0 a ≤ n)
+    (hTraeger : TraegerGleich σ σw.speicher (.inl t)) :
+    zt = [.movLoad dst base disp] ∧
+      wortZahl lo hi w = some v ∧
+      ledgerDeckt (.lese a o) (ledgerEintrag (.lese a o)) = true ∧
+      (LiestG (mitSpeicher W.g σ) M'' u (.inl t) →
+        Speichermodell.Lesbar W.hist (W.sicht u) (.inl t)
+          (⟨n, σw.speicher, Speichermodell.Sicht.null⟩ : NachrichtW D) ∧
+        TraegerGleich σ
+          (⟨n, σw.speicher, Speichermodell.Sicht.null⟩ : NachrichtW D).wert
+          (.inl t)) := by
+  subst hq
+  rw [senk_lese] at hSen
+  cases hSen
+  obtain ⟨hval, hlie⟩ := wLesbar_aus_gruppe v hRep hMiss hRd hLo hHi w
+    hWort hv hMem hProj hTs hTraeger
+  exact ⟨rfl, hval, lese_schliesst a o, hlie⟩
+
+/-- **RELY STABILITY LEG.** A plain-carrier value read through a lowered
+    load survives every atomic environment of the rely. -/
+theorem rely_stabil {D : Deklaration}
+    {T : D.Tab ⊕ D.Glob → Prop} {A : AUmwelt D} (hA : HavocA T A)
+    {t : D.Tab} {k : Int} {f : D.Feld t} {lo hi : Int}
+    {hT : D.typ t f = .int lo hi} {v : Zahl lo hi}
+    (q : AtomQuelle) (zt : List ZielOp)
+    (a : Adresse) (o : Speichermodell.Ordnung)
+    (dst base : Register) (disp : BitVec 32)
+    (hq : q = .lese a o dst base disp)
+    (hSen : senkAtom q = some zt)
+    (hTnot : ¬ T (.inl t))
+    {X : List (D.Tab ⊕ D.Glob)} {σw : World D}
+    (hV : (cast (congrArg (Wert D) hT) (σw.speicher.slots t k f)) = v) :
+    (cast (congrArg (Wert D) hT) (((A X σw).speicher.slots) t k f)) = v ∧
+      zt = [.movLoad dst base disp] ∧
+      ledgerDeckt (.lese a o) (ledgerEintrag (.lese a o)) = true := by
+  subst hq
+  rw [senk_lese] at hSen
+  cases hSen
+  have hstab : (cast (congrArg (Wert D) hT)
+      (((A X σw).speicher.slots) t k f)) = v :=
+    havoc_erhaelt_gruppenwert (hT := hT) hA hTnot hV
+  exact ⟨hstab, rfl, lese_schliesst a o⟩
