@@ -466,4 +466,152 @@ theorem reloc_probe_status :
       16 zeugenGepatcht = false :=
   reloc_verweigert_status _ _ _ _ _ _ _ _ _ _ _ _ _ _ (by decide)
 
+/-! ## 6. Joint witnesses.
+
+    Both profiles are admitted on the minimal image with both hooks
+    and the unchanged zero status, next to the applied relocation
+    and its re-decode, a real memory-changing write/read, a table
+    some function writes, a reached memory-changing run through
+    actual bytes, the multi-step straight-line program, and a
+    planted refusal for every missing leg. -/
+
+/-- ACCEPTANCE (hosted): the hosted relocation is admitted on the
+    minimal image with the applied `+16` jump operand. -/
+theorem reloc_gehostet_ok :
+    relocOk .gehostet valZeuge 0 zeugenEintrittAusf schreibTor
+      zeugenMoves (layoutFuer zeugenU 4096 8) zeugenHaken 0 0
+      zeugenVerknuepft 0 16 zeugenGepatcht = true := by
+  unfold relocOk
+  simp only [profil_gehostet_ok, Bool.true_and]
+  rw [Nat.zero_add, multiPatch_rel32_gleich, decide_eq_true_eq]
+  exact zeugen_patch
+
+/-- ACCEPTANCE (freestanding): the freestanding relocation is
+    admitted on the minimal image with the applied operand. -/
+theorem reloc_frei_ok :
+    relocOk .frei valZeuge 0 zeugenEintrittAusf schreibTor zeugenMoves
+      (layoutFuer zeugenU 4096 8) zeugenHaken 0 0 zeugenVerknuepft 0
+      16 zeugenGepatcht = true := by
+  unfold relocOk
+  simp only [profil_frei_ok, Bool.true_and]
+  rw [Nat.zero_add, multiPatch_rel32_gleich, decide_eq_true_eq]
+  exact zeugen_patch
+
+/-- JOINT WITNESS for the relocation closings: both profiles
+    admitted jointly on the minimal image (both hooks, unchanged
+    zero status) with the applied `+16` operand, the patched window
+    re-decoded to `jump32 +16`, a real memory-changing write/read, a
+    table some function writes, a reached memory-changing run
+    through actual bytes, the multi-step program, and planted
+    refusals for every missing leg. -/
+theorem pipeline_profil_reloc_verbindung_zeuge :
+    relocOk .gehostet valZeuge 0 zeugenEintrittAusf schreibTor
+      zeugenMoves (layoutFuer zeugenU 4096 8) zeugenHaken 0 0
+      zeugenVerknuepft 0 16 zeugenGepatcht = true ∧
+    relocOk .frei valZeuge 0 zeugenEintrittAusf schreibTor zeugenMoves
+      (layoutFuer zeugenU 4096 8) zeugenHaken 0 0 zeugenVerknuepft 0
+      16 zeugenGepatcht = true ∧
+    decode (zeugenGepatcht.drop 0) =
+      some ((⟨.jump32 zeugenDispField, 5⟩, [natByte 195])) ∧
+    (∃ (m m' : Speicher) (a : Adresse) (v : Wort),
+      v ≠ 0 ∧ write64 m a v = some m' ∧ read64 m' a = some v ∧
+        m.bytes a ≠ m'.bytes a) ∧
+    (zeugenU.fns.get ⟨0, by decide⟩).schreibt = ["konto"] ∧
+    (∃ m : Speicher, byteschritt zustandRuf =
+      .weiter (schrittCall zustandRuf Register.rsp m
+        (zustandRuf.register Register.rsp - BitVec.ofNat 64 8)
+        (BitVec.ofNat 64 0x1015)) ∧
+      read64 m (BitVec.ofNat 64 0x1FF8) =
+        some (BitVec.ofNat 64 0x1005) ∧
+      m.bytes (BitVec.ofNat 64 0x1FF8) ≠
+        zustandRuf.speicher.bytes (BitVec.ofNat 64 0x1FF8)) ∧
+    relocProg.all gerade = true ∧
+    relocOk .gehostet valZeuge 0 zeugenEintrittAusf schreibTor
+      zeugenMoves (layoutFuer zeugenU 4096 8)
+      { anfang := false, ende := true } 0 0 zeugenVerknuepft 0 16
+      zeugenGepatcht = false ∧
+    multiPatch zeugenVerknuepft 1 (.rel32 2147483648) = none ∧
+    opsDisjunktB [(0, .rel32 16), (1, .rel32 16)] = false ∧
+    decode ([natByte 6] ++ rel32Bytes 16) = none := by
+  exact ⟨reloc_gehostet_ok, reloc_frei_ok, zeugen_dek,
+    schreibLese_zeuge, zeugenU_schreibt, ruf_schritt_zeuge,
+    relocProg_gerade, reloc_probe_ohne_anfang, reloc_probe_aussen,
+    reloc_probe_ueberlapp, verknuepft_opcode_falsch_verweigert⟩
+
+/- CUTS: what is not proved here.
+   Proved here, by composing the accepted producer modules (no
+   producer fact re-proved, no second loader/decoder/executor/ISA/
+   IR): the checked relocation admission `relocOk` (profile AND one
+   applied rel32 operand) for both OS profiles (`ZielProfil`:
+   hosted `main` vs freestanding `nolibc` entry); its split and
+   projections; the operand frame legs (range, exact site bytes, no
+   byte outside the operand changed, length kept); two relocation
+   closings over arbitrary admitted inputs (jump through the
+   two-unit link leg, call through the multi-unit leg: profile
+   closing plus re-decoded displacement, fit, coverage and exact
+   window); the multi-step fetched run (`relocOk_mehrschritt`) with
+   a concrete three-instruction program and the entry-plus-program
+   composition; the support coverage (a successful fetch runs the
+   existing step, no fetch means no transition, image validated in
+   both cases); one refusal per missing leg (operand, hooks,
+   status, image) with poison probes for overrun, range, overlap,
+   handoff, operand and status; and one joint witness with a
+   reached memory-changing run, a written table and planted
+   refusals.
+   NOT proved here, and not claimed:
+   - No source correspondence: nothing here claims the admitted or
+     patched bytes are the emitted form of any source program. The
+     lowering closure waits on the shared IR (lane 287, pending);
+     no substitute is invented here. Units arrive already lowered.
+   - No hardware correspondence: fetch runs over the model
+     `Speicher` function, not silicon; caches, TLBs, store buffers,
+     interrupts, faults beyond the decoded refusal, and timing are
+     OPEN.
+   - No TSO/W/GX bridge: per-access refinement of relocated bytes
+     stays with the bridge lanes; the source `schwach_ist_gX` leg
+     is reused, never assumed for the target.
+   - No multi-operand closing is re-proved: several operands per
+     closing stay with `PipelineLinkMulti.mehrere_korrekt`; the
+     decided disjointness probe (`opsDisjunktB`) is this file's
+     overlap gate. abs64/rel8 data read-back stays with
+     `multi_abs64_liest`/`multi_rel8_liest`, cited, not wrapped.
+   - No budget/cost transfer, no kernel behaviour beyond the named
+     assumption. Environment services (gates, bindings, the loader,
+     the kernel) stay user logic; only hardware behaviour is
+     assumed. No implicit Linux/POSIX/libc/ELF anywhere.
+   - `verweigert` is the absence of a transition, never a
+     termination claim.
+-/
+
+#print axioms relocOk
+#print axioms relocOk_teile
+#print axioms relocOk_profil
+#print axioms relocOk_patch
+#print axioms relocOk_patch_link
+#print axioms relocOk_patch_bereich
+#print axioms relocOk_patch_stelle
+#print axioms relocOk_patch_rahmen
+#print axioms relocOk_patch_laenge
+#print axioms relocOk_sprung_verbindung
+#print axioms relocOk_ruf_verbindung
+#print axioms relocProg
+#print axioms relocProg_gerade
+#print axioms relocOk_mehrschritt
+#print axioms relocOk_eintritt_plus_programm
+#print axioms relocOk_stuetz_abdeckung
+#print axioms relocOk_stuetz_verweigert
+#print axioms reloc_verweigert_ohne_patch
+#print axioms reloc_verweigert_ohne_anfang
+#print axioms reloc_verweigert_status
+#print axioms reloc_verweigert_ohne_bild
+#print axioms reloc_probe_ueberlauf
+#print axioms reloc_probe_aussen
+#print axioms reloc_probe_ueberlapp
+#print axioms reloc_probe_ohne_anfang
+#print axioms reloc_probe_ohne_patch
+#print axioms reloc_probe_status
+#print axioms reloc_gehostet_ok
+#print axioms reloc_frei_ok
+#print axioms pipeline_profil_reloc_verbindung_zeuge
+
 end Gabbro.Grammatik.X86.PipelineProfilesReloc
