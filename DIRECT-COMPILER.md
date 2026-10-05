@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 19:01 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 19:02 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -704,7 +704,7 @@ Last ledger refresh: **2026-10-05 19:01 UTC**. This is an operational snapshot, 
 | 1291 | Capstone: byte-decoder disjointness across all families | Merged after review/checks | 1292: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1291.md) |
 | 1293 | Capstone: a reached multi-family program run on two cores from bytes | Merged after review/checks | 1294: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1293.md) |
 | 1295 | Capstone: every union step projects to the TSO store-buffer model | Committed candidate; review/integration pending | 1296: Incomplete; preserved | [task](lanes/1295.md) |
-| 1297 | Paging follow-up: large pages and SMEP/SMAP | Committed candidate; review/integration pending | 1298: Committed candidate; review/integration pending | [task](lanes/1297.md) |
+| 1297 | Paging follow-up: large pages and SMEP/SMAP | Merged after review/checks | 1298: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1297.md) |
 | 1299 | Translation: the page walk joined with the TLB and the flat memory model | Merged after review/checks | 1300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1299.md) |
 | 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Agent working | 1302: scheduled | [task](lanes/1301.md) |
 | 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Agent working | 1304: scheduled | [task](lanes/1303.md) |
@@ -1706,6 +1706,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1280**, Independent exact review of 1279, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1280.md). <!-- x86-merged:1280 -->
 - 2026-10-05: lane **1293**, Capstone: a reached multi-family program run on two cores from bytes, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1293.md). <!-- x86-merged:1293 -->
 - 2026-10-05: lane **1294**, Independent exact review of 1293, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1294.md). <!-- x86-merged:1294 -->
+- 2026-10-05: lane **1297**, Paging follow-up: large pages and SMEP/SMAP, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1297.md). <!-- x86-merged:1297 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
