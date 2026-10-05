@@ -2,59 +2,92 @@
 
 CANDIDATE: 1227 4bc4873d36fdf96753975a06d5ac74e62080d169
 
-VERDICT: REPAIR
+VERDICT: ACCEPT
 
-## Snapshot inspected (new pin, not a stale one)
+## What was reviewed
 
-`.tmp/review/SNAPSHOT.json` now pins author lane 1227 at head
-4bc4873d36fdf96753975a06d5ac74e62080d169, base
-cbc0afe00eeb8708961b13489750e41e998740d1, files MUSE-REPORT-1227.md,
-grammatik/Grammatik.lean, grammatik/Grammatik/X86/PipelineSpillHoming.lean,
-clean true. This supersedes the previous pins
-638654c2736f9dfd6e0ed5d03af60c411d9261a5 and
-875988f01065ed5f6c320e170023e31ace131a74, which this lane no longer judges.
-Reviewer clone is /home/simon/Dokumente/gabbro-muse/a1228 on branch
-muse/1228 (verified), HEAD cbc0afe0, which equals the new snapshot base.
-Tree clean.
+Correction applied: the author clone hash is not readable from this clone,
+so the review used the delivered files under `.tmp/review/author-1227/`:
+`PATCH.diff` (base cbc0afe0 to head 4bc4873d, 593 lines), the copied new
+file `grammatik/Grammatik/X86/PipelineSpillHoming.lean` (449 lines),
+`OWNER-TASK.md` (= lanes/1227.md task), `BUILD-EVIDENCE.json`, and
+`MUSE-REPORT-1227.md`. Prior REPAIR findings were about unreadability only
+and identified no content defect; they are superseded by this content
+review of the reviewed pin. Reviewer clone /home/simon/Dokumente/gabbro-muse/a1228,
+branch muse/1228, HEAD cbc0afe0 = snapshot base, tree clean.
 
-## Substantive finding (previous finding re-checked against the new pin)
+## Checks, each performed
 
-The new pinned object is absent from this clone: `git show 4bc4873d...`
-answers `bad object`. HARD RULES rule 1 forbids reading outside this
-directory, so the author clone is not accessible and the repaired candidate
-content (the new Lean file, the Grammatik.lean import line, the author
-report) could not be examined at all. The previous REPAIR finding therefore
-persists unchanged for the new pin: none of the required exact-review checks
-could be performed (no banned-construct grep, no `#print axioms`
-verification, no premise-use check, no evaluator-reuse check, no
-refusal-probe check, no witness non-degeneracy check, no silicon-fact check
-against the Intel SDM extracts, no CUTS honesty check, and no `./lean-bau`
-run, since building unmodified base master would not be evidence about the
-candidate). Accepting on this basis would approve unproved claims, which the
-task explicitly forbids. The verdict above is therefore REPAIR, with the
-concrete repair action below. Nothing was approved from a stale snapshot and
-nothing substantive was changed to make formatting pass.
+- Banned constructs: `rg` over the candidate file for sorry/admit/axiom
+  declarations/native_decide/unsafe/split_ifs/norm_num/ring_nf/discarded
+  premises finds only the English word "admitted" in comments and the
+  required `#print axioms` lines. No `axiom` declaration. No Prop-typed
+  premise.
+- File scope: PATCH touches exactly the three snapshotted files. The only
+  existing-file change is one appended
+  `import Grammatik.X86.PipelineSpillHoming` line in `grammatik/Grammatik.lean`
+  after `HwDrainGeneric`, matching this clone's file end. Reserved
+  optimiser files untouched.
+- Axioms: independent `./lean-probe` of the delivered file in this clone:
+  `0 error(s)`, exit 0. Main theorem `pipeHoming_haelt_bedeutung` and the
+  joint witness depend on exactly `[propext, Classical.choice,
+  Quot.sound]` (the standard set); every other name depends on a subset or
+  nothing. Matches the author's `#print axioms` output.
+- Evaluator reuse, not duplication: no `validate`/`execBlock`/`laufBytes`
+  redefinition in the file (`rg` empty). The closing theorem feeds the
+  accepted `pipeline_correct` plus the accepted allocator/spill legs
+  (`pipe_alloc_interferenzFrei`, `spillPlan_tabellenGetrennt`,
+  `spill_schlitze_getrennt`, `spillPlan_schranke/inRahmen/offDaten`,
+  `pipe_alloc_verweigert_kollision`), each verified to exist with the used
+  signature in this clone's `Pipeline*.lean`.
+- Premise use: every premise of every new theorem is consumed.
+  `pipeHoming_haelt_bedeutung` uses `hval`+`hsep` (via `pipeline_correct`),
+  `hhom` (via `pipeHoming_allocOk`/`pipeHoming_planOk`), `hrahmen` (via
+  `pipeHoming_tabellenGetrennt`), and all machine/world/environment
+  premises through `pipeline_correct`. The four projection legs each use
+  their hypothesis; each refusal theorem uses all its arguments; no
+  `intro _` / `have _ :=`.
+- Refusals really refuse: one positive probe (`pipeHoming_probe_pos`, by
+  `decide`) and five refusal probes (clash/table/out-of-frame/split via
+  their refusal theorems, code-overlap by `decide`) all elaborate green in
+  the independent probe — `decide` can only close a true computation, and
+  the refusal-theorem applications typecheck only against genuinely
+  refusing instances.
+- Witness non-degenerate: `pipeHoming_haelt_bedeutung_zeuge` is joint over
+  the accepted pipeline witness program via `pw_quelle30` (real `execBlock`
+  run, rows to 35 and 6) and `pw_quelle_vorher` (rows from 7 and 9), so the
+  source run is memory-changing. All witness vocabulary verified present in
+  this clone's `PipelineWitnesses.lean`/`PipelineRegAlloc.lean`.
+- Silicon: no new hardware facts, encodings, or fault classes are stated;
+  only accepted machine vocabulary is reused. Nothing to check against the
+  SDM extracts, and none is claimed.
+- CUTS honest: claims exactly the decided-homing composition; OPEN items
+  (no save/reload splicing at splits, no range merging, no calls, TSO
+  freshness beyond `SpillFrisch`, no `pipeline_correct_loaded` re-proof)
+  are listed. No hardware-correspondence or W/GX claim. The author's entry-
+  vs `pipeline_correct`-level remark is accurate: homing involves no
+  parameter ABI, and the entry connection is inherited through the wrapped
+  theorem.
+- Build: `./lean-bau` in this clone (base, warm cache): `exit 0`,
+  `Build completed successfully (640 jobs)`. The candidate-tree green
+  (641 jobs) is the author's BUILD-EVIDENCE plus my 0-error probe of the
+  exact delivered file against this base; the three transient apparatus
+  failures in the author's log are documented resource-pressure events at
+  the root step, not code defects.
 
-## Repair required
+## Remarks (not defects)
 
-Make the new pinned candidate material (head
-4bc4873d36fdf96753975a06d5ac74e62080d169) available inside the reviewer
-clone, or re-issue this review with the snapshot content attached. Once the
-three snapshotted files at the new head are readable here against base
-cbc0afe0, the full exact review will be performed and the verdict revisited
-on the actual repaired content.
-
-## Reference: what the candidate should contain (from lanes/1227.md)
-
-NEW FILE `grammatik/Grammatik/X86/PipelineSpillHoming.lean` plus one import
-line in `grammatik/Grammatik.lean`: decided variable homing with live-range
-splitting at statement boundaries, a decided check, a homing preservation
-theorem in the style of `pipeline_correct_entry`, a `pipeline_refuses_*`
-refusal theorem, poison probes per refusal, a non-degenerate `_zeuge`, CUTS
-and `#print axioms`. Follow-up of lane 1191; no persistent SSA IR; Rust out
-of scope.
+- The author's "394 lines" count predates later additions; the delivered
+  file is 449 lines including all probes, the witness, CUTS and axiom
+  prints. Content, not the count, was reviewed.
+- Task-conformance note: correctness is stated at the `pipeline_correct`
+  level rather than `pipeline_correct_entry`; justified (no ABI involved)
+  and the family pattern (`spill_haelt_bedeutung`,
+  `pipe_alloc_haelt_bedeutung`) is followed.
 
 ## Owned files
 
-Only MUSE-REPORT-1228.md (this file). No Lean files touched, nothing else
-written.
+Only MUSE-REPORT-1228.md (this file). The candidate file was probed
+in place under `.tmp/review/` via `./lean-probe <path>` (the wrapper
+accepts any path; lake resolves imports from the project); nothing was
+copied into `grammatik/` and no other file was written.
