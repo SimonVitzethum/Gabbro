@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 16:02 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 16:05 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -654,7 +654,7 @@ Last ledger refresh: **2026-10-05 16:02 UTC**. This is an operational snapshot, 
 | 1191 | Pipeline: spill code generation with privacy | Merged after review/checks | 1192: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1191.md) |
 | 1193 | Linking: multi-unit convergence and operand kinds | Merged after review/checks | 1194: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1193.md) |
 | 1195 | Pipeline: block-size induction over multi-statement blocks | Merged after review/checks | 1196: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1195.md) |
-| 1197 | Pipeline: block-level table reads and scaled-index addressing | Incomplete; preserved | 1198: scheduled | [task](lanes/1197.md) |
+| 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Merged after review/checks | 1200: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Merged after review/checks | 1202: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
@@ -683,23 +683,23 @@ Last ledger refresh: **2026-10-05 16:02 UTC**. This is an operational snapshot, 
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Agent working | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
-| 1255 | Pipeline calls: three-or-more-statement callee bodies | Agent working | 1256: scheduled | [task](lanes/1255.md) |
-| 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Committed candidate; review/integration pending | 1258: Agent working | [task](lanes/1257.md) |
-| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Committed candidate; review/integration pending | 1260: Agent working | [task](lanes/1259.md) |
-| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Committed candidate; review/integration pending | 1262: Incomplete; preserved | [task](lanes/1261.md) |
+| 1255 | Pipeline calls: three-or-more-statement callee bodies | Committed candidate; review/integration pending | 1256: Agent working | [task](lanes/1255.md) |
+| 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Merged after review/checks | 1258: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1257.md) |
+| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Agent working | 1260: Committed candidate; review/integration pending | [task](lanes/1259.md) |
+| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Committed candidate; review/integration pending | 1262: Agent working | [task](lanes/1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Agent working | 1264: scheduled | [task](lanes/1263.md) |
 | 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Agent working | 1266: scheduled | [task](lanes/1265.md) |
 | 1267 | AVX2: per-lane equation for arithmetic shift right | Agent working | 1268: scheduled | [task](lanes/1267.md) |
-| 1269 | Cross-declaration lowering certificate for the GX refinement | Committed candidate; review/integration pending | 1270: Agent working | [task](lanes/1269.md) |
+| 1269 | Cross-declaration lowering certificate for the GX refinement | Committed candidate; review/integration pending | 1270: Committed candidate; review/integration pending | [task](lanes/1269.md) |
 | 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Agent working | 1272: scheduled | [task](lanes/1271.md) |
-| 1273 | Rotates: ROL, ROR, RCL, RCR | Scheduled | 1274: scheduled | [task](lanes/1273.md) |
-| 1275 | ADC, SBB, INC, DEC | Scheduled | 1276: scheduled | [task](lanes/1275.md) |
-| 1277 | Bit test family: BT, BTS, BTR, BTC | Scheduled | 1278: scheduled | [task](lanes/1277.md) |
-| 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Scheduled | 1280: scheduled | [task](lanes/1279.md) |
-| 1281 | Sign-extend-accumulator ops and register XCHG | Scheduled | 1282: scheduled | [task](lanes/1281.md) |
-| 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Scheduled | 1284: scheduled | [task](lanes/1283.md) |
-| 1285 | FS/GS segment bases and the TLB | Scheduled | 1286: scheduled | [task](lanes/1285.md) |
-| 1287 | Memory types WC, WT, WP and the cache-control instructions | Scheduled | 1288: scheduled | [task](lanes/1287.md) |
+| 1273 | Rotates: ROL, ROR, RCL, RCR | Agent working | 1274: scheduled | [task](lanes/1273.md) |
+| 1275 | ADC, SBB, INC, DEC | Agent working | 1276: scheduled | [task](lanes/1275.md) |
+| 1277 | Bit test family: BT, BTS, BTR, BTC | Prepared | 1278: scheduled | [task](lanes/1277.md) |
+| 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Prepared | 1280: scheduled | [task](lanes/1279.md) |
+| 1281 | Sign-extend-accumulator ops and register XCHG | Prepared | 1282: scheduled | [task](lanes/1281.md) |
+| 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Prepared | 1284: scheduled | [task](lanes/1283.md) |
+| 1285 | FS/GS segment bases and the TLB | Prepared | 1286: scheduled | [task](lanes/1285.md) |
+| 1287 | Memory types WC, WT, WP and the cache-control instructions | Prepared | 1288: scheduled | [task](lanes/1287.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1619,6 +1619,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1242**, Independent exact review of 1241, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1242.md). <!-- x86-merged:1242 -->
 - 2026-10-05: publication batch checks passed for `38012ab5`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: checked master `93a086c1` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:93a086c1322acdfb470a68fd48d05b43fa224c50 -->
+- 2026-10-05: lane **1257**, Pipeline spills: splice save/reload at split points, callee-saved and arguments, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1257.md). <!-- x86-merged:1257 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
