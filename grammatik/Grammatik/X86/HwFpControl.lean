@@ -1092,15 +1092,244 @@ theorem fpCtrlWit_m2_rne :
       mxcsrRundungRNE ((fpCtrlWitM1.kerne 0).fp).mxcsr :=
   fpCtrlS32_erhaelt_rneMaschine _ _ _ _ fpCtrlWit_schritt2
 
-/- CUTS (steps I done):
-   Proved: reached fetched REX divide and register s32 add on the
-   coherent machine, with value, upper-preservation, RIP and RNE
-   observations.
-   NOT proved yet: the TSO run, MXCSR install and `fpCtrl_zeuge`.
+/-! ## 10. Reached steps II: buffered store, drain, MXCSR load.
+
+  Core 0 issues the 32-bit result as four buffered TSO bytes
+  (forwarded to the owner only), drains them into shared memory
+  (the word reads back on both cores: `0` becomes `0x40400000`),
+  and installs the reset MXCSR word (admission established).
+  Core 1 refuses the fetch throughout. -/
+
+/-- The stored 32-bit word: `3.0f32` as a target word. -/
+def fpCtrlWitWert : Wort := BitVec.ofNat 64 0x40400000
+
+/-- Core 0 issues the result word at the data cell. -/
+def fpCtrlWitM3 : Option HwMaschine :=
+  fpCtrlAusgabe32 fpCtrlWitM2 0 fpCtrlWitAdr fpCtrlWitWert
+
+/-- Core 0 observes its own third footprint byte (forwarding). -/
+def fpCtrlWitLoadEigen : Option (Option Byte) :=
+  match fpCtrlWitM3 with
+  | some m => some (loadByte (tsoAnsicht m) 0 (addrOff fpCtrlWitAdr 2))
+  | none => none
+
+/-- Core 1 observes the old third footprint byte (no forwarding). -/
+def fpCtrlWitLoadFremd : Option (Option Byte) :=
+  match fpCtrlWitM3 with
+  | some m => some (loadByte (tsoAnsicht m) 1 (addrOff fpCtrlWitAdr 2))
+  | none => none
+
+/-- Forwarding: core 0 reads its own unflushed `0x40`. -/
+theorem fpCtrlWit_weiterleitung :
+    fpCtrlWitLoadEigen = some (some (BitVec.ofNat 8 0x40)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem fpCtrlWit_fremd_alt :
+    fpCtrlWitLoadFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- Core 0 drains its oldest entry. -/
+def fpCtrlWitF1 : Option HwMaschine :=
+  match fpCtrlWitM3 with
+  | some m =>
+    match flushKern (tsoAnsicht m) 0 with
+    | some s => some (setTso m s)
+    | none => none
+  | none => none
+
+/-- Second drain. -/
+def fpCtrlWitF2 : Option HwMaschine :=
+  match fpCtrlWitF1 with
+  | some m =>
+    match flushKern (tsoAnsicht m) 0 with
+    | some s => some (setTso m s)
+    | none => none
+  | none => none
+
+/-- Third drain. -/
+def fpCtrlWitF3 : Option HwMaschine :=
+  match fpCtrlWitF2 with
+  | some m =>
+    match flushKern (tsoAnsicht m) 0 with
+    | some s => some (setTso m s)
+    | none => none
+  | none => none
+
+/-- Fourth drain: the footprint is fully installed. -/
+def fpCtrlWitF4 : Option HwMaschine :=
+  match fpCtrlWitF3 with
+  | some m =>
+    match flushKern (tsoAnsicht m) 0 with
+    | some s => some (setTso m s)
+    | none => none
+  | none => none
+
+/-- The shared word after the drain. -/
+def fpCtrlWitNachFlush : Option (Option Wort) :=
+  match fpCtrlWitF4 with
+  | some m => some (read32 m.mem fpCtrlWitAdr)
+  | none => none
+
+/-- The drain changes shared memory: the cell reads `3.0f32`. -/
+theorem fpCtrlWit_spuelung_aendert :
+    fpCtrlWitNachFlush = some (some fpCtrlWitWert) := by
+  decide
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def fpCtrlWitFremdNach : Option (Option Byte) :=
+  match fpCtrlWitF4 with
+  | some m => some (loadByte (tsoAnsicht m) 1 (addrOff fpCtrlWitAdr 2))
+  | none => none
+
+/-- After the drain core 1 observes the new byte. -/
+theorem fpCtrlWit_fremd_neu :
+    fpCtrlWitFremdNach = some (some (BitVec.ofNat 8 0x40)) := by
+  decide
+
+/-- State after the MXCSR reset-word load. -/
+def fpCtrlWitMxcsrT : FpZustand :=
+  { projFp fpCtrlWitM0 0 with
+    kern := { (projFp fpCtrlWitM0 0).kern with
+      rip := ripNach (projFp fpCtrlWitM0 0).kern.rip 7 },
+    fp := ⟨0x1F80⟩ }
+
+/-- Machine after the MXCSR reset-word load. -/
+def fpCtrlWitMxcsrM : HwMaschine :=
+  setKernVonFp fpCtrlWitM0 0 fpCtrlWitMxcsrT
+
+/-- Reached MXCSR reset-word load on the coherent machine. -/
+theorem fpCtrlWit_mxcsr_schritt :
+    FpCtrlSchritt fpCtrlWitM0 fpCtrlWitMxcsrM
+      (.mxcsrLd 0 ⟨.ldmxcsr .rax 4, 7, false⟩) := by
+  have hrd : read32 (projFp fpCtrlWitM0 0).kern.speicher
+      (effAddr (projFp fpCtrlWitM0 0).kern Register.rax 4) =
+      some (BitVec.ofNat 64 0x1F80) := by
+    show read32 fpCtrlWitMem _ = _
+    rw [fpCtrlWit_effAddr4]
+    exact fpCtrlWit_liest_reset
+  have hs := mxcsrSchritt_ld_erfolg ⟨.ldmxcsr .rax 4, 7, false⟩
+    (projFp fpCtrlWitM0 0) mxcsrProfilModern mxcsrSteuerungOffen
+    .rax 4 (BitVec.ofNat 64 0x1F80) 0x1F80
+    fpCtrlWit_laenge7 rfl mxcsrSteuerungOffen_ok rfl hrd rfl
+    ldmxcsrArchOk_reset_modern
+  exact FpCtrlSchritt.mxcsrLd 0 _ fpCtrlWitMxcsrT hs rfl
+
+/-- The reset-word load establishes admission on the core. -/
+theorem fpCtrlWit_mxcsr_einlass :
+    fpEintritt (fpCtrlWitMxcsrM.kerne 0).fp = true :=
+  fpCtrlReset_einlass
+
+/-- Core 1 refuses: its RIP points at non-executable memory. -/
+theorem fpCtrlWit_kern1_verweigert :
+    hwByteschrittReg fpCtrlWitM0 1 = .verweigert := by
+  rfl
+
+/-! ## 11. Joint witness: a reached non-degenerate two-core run.
+
+  Fetched REX divide (`+inf`), register s32 add (`3.0f32`, upper
+  preserved), RNE preserved across both, buffered 32-bit store
+  forwarded to the owner only, four-drain install (`0` becomes
+  `0x40400000`, observed from both cores), MXCSR reset install
+  (admission), core-1 refusal, NaN classification and the
+  no-contraction split beside it. Non-degenerate: the drain
+  changes actual shared memory while both cores participate. -/
+
+/-- JOINT WITNESS (fetched FP run on the coherent machine). -/
+theorem fpCtrl_zeuge :
+    FpCtrlSchritt fpCtrlWitM0 fpCtrlWitM1
+        (.f64reg 0 ⟨.divsdRR .xmm0 .xmm1, 5⟩) ∧
+      xmmTief (fpCtrlWitM1.kerne 0).xmm .xmm0 = 0x7FF0000000000000 ∧
+      FpCtrlSchritt fpCtrlWitM1 fpCtrlWitM2
+        (.s32reg 0 ⟨.addssRR .xmm2 .xmm3, 4⟩) ∧
+      xmmTief32 (fpCtrlWitM2.kerne 0).xmm .xmm2 = 0x40400000 ∧
+      ((fpCtrlWitM2.kerne 0).xmm .xmm2).toNat / 2 ^ 32 = 1 ∧
+      mxcsrRundungRNE ((fpCtrlWitM1.kerne 0).fp).mxcsr =
+        mxcsrRundungRNE ((fpCtrlWitM0.kerne 0).fp).mxcsr ∧
+      mxcsrRundungRNE ((fpCtrlWitM2.kerne 0).fp).mxcsr =
+        mxcsrRundungRNE ((fpCtrlWitM1.kerne 0).fp).mxcsr ∧
+      fpCtrlWitLoadEigen = some (some (BitVec.ofNat 8 0x40)) ∧
+      fpCtrlWitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+      fpCtrlWitNachFlush = some (some fpCtrlWitWert) ∧
+      fpCtrlWitFremdNach = some (some (BitVec.ofNat 8 0x40)) ∧
+      FpCtrlSchritt fpCtrlWitM0 fpCtrlWitMxcsrM
+        (.mxcsrLd 0 ⟨.ldmxcsr .rax 4, 7, false⟩) ∧
+      fpEintritt (fpCtrlWitMxcsrM.kerne 0).fp = true ∧
+      hwByteschrittReg fpCtrlWitM0 1 = .verweigert ∧
+      Gleitkomma.klasse Gleitkomma.f32
+        (bites32 (s32Rechne .div 0 0)) = .nan ∧
+      HwWf fpCtrlWitM0 := by
+  refine ⟨fpCtrlWit_schritt1, fpCtrlWit_m1_inf, fpCtrlWit_schritt2,
+    fpCtrlWit_m2_tief32, fpCtrlWit_m2_hoch96, fpCtrlWit_m1_rne,
+    fpCtrlWit_m2_rne, fpCtrlWit_weiterleitung, fpCtrlWit_fremd_alt,
+    fpCtrlWit_spuelung_aendert, fpCtrlWit_fremd_neu,
+    fpCtrlWit_mxcsr_schritt, fpCtrlWit_mxcsr_einlass,
+    fpCtrlWit_kern1_verweigert, fpCtrlS32_nan, fpCtrlWitM0_wf⟩
+
+/- CUTS: what is not proved here.
+
+   Proved here, over the reused accepted vocabulary (`HardwareExecution`:
+   `HwMaschine`/`HwSchritt`/`issueListe`/`setKernVonFp`/`setTso`;
+   `ScalarFloat32HardwareForms`: `s32Schritt`; `ScalarFloatHardwareForms`:
+   `fpSchritt` via `fpHwDecode`; `FpControlHardwareForms`:
+   `mxcsrSchritt`; `TSO`: `issueByte`/`loadByte`/`flushKern`):
+   - the family event type and step relation with the `HwSchritt.reg`
+     memory-unchanged gate on every register leg; wf preservation;
+     exact agreement (the f64 leg IS `HwSchritt.reg` through
+     `stepExt_fp`; s32/MXCSR legs run the accepted evaluators, which
+     are lifted, never redefined);
+   - 32-bit FP stores as four byte issues (buffer, memory, permission
+     frames, wf), per-byte owner forwarding, entry-free observation,
+     and the 32-bit group with tearing/overlap refusals and
+     establishment (64-bit stores reuse `hwWortAusgabe`/`WortGruppe`);
+   - control state: s32/f64 steps keep the word (hence RNE) on states
+     and on the machine; the reset word establishes RNE/admission
+     through the coherent MXCSR load; the FTZ arch-vs-source split;
+   - NaN (both widths), signed zero (both widths) and the
+     no-contraction split, cited from the accepted kernel;
+   - length/profile/LOCK/permission refusals, including the
+     LOCK-prefixed MXCSR `#UD` (hence no machine step);
+   - the reached two-core joint witness `fpCtrl_zeuge`: fetched REX
+     divide, register s32 add with upper preservation, RNE on both
+     legs, owner-only forwarding, four-drain install changing actual
+     shared memory observed from both cores, MXCSR reset install,
+     core-1 refusal, NaN classification.
+   NOT proved here, and not claimed:
+   - No hardware correspondence: encodings are the accepted canonical
+     subsets with self-consistency only. The Intel SDM edition 093
+     extracts in `.tmp/HARDWARE-REFERENCES/` (prefix-before-REX
+     order, MOVSS load-zeroes-upper, arithmetic-preserves-upper,
+     UCOMISS flag rows, CVT semantics, MXCSR layout/reset `1F80H`,
+     LDMXCSR/STMXCSR `NP 0F AE /2`/`/3`) are provenance, not proofs.
+   - `decodeExt`/`fetchExt` carry no s32/MXCSR rows: those legs plug
+     in through `FpCtrlSchritt`, not through the unified dispatcher;
+     the REX leg reaches bytes only through the family fetchers
+     (`fpHwFetchDekodiert`), and conversion-domain gating
+     (`fpHwCvttZugelassen`) is cited, not re-proved, at the machine.
+   - No per-access target-to-W/GX simulation and no whole-word
+     atomicity beyond the byte-drain groups; timing, power,
+     interrupts and faults beyond the carried divide halt are
+     absent; sticky-flag accumulation, SNaN/DAZ/FTZ execution and
+     NaN payloads stay at the inherited family cuts.
 -/
 
+#print axioms fpCtrlSchritt_wf
+#print axioms fpCtrlF64_reg_ist_hwReg
+#print axioms fpCtrlS32_addssRR_rechnet
+#print axioms fpCtrlMxcsrLd_installiert
+#print axioms fpCtrlAusgabe32_wf
+#print axioms fpCtrlWeiterleitung32
+#print axioms fpCtrlLade_beobachtet
+#print axioms s32Schritt_erhaelt_fp
+#print axioms fpCtrlS32_erhaelt_rneMaschine
+#print axioms fpCtrlMxcsrReset_stellt_her
+#print axioms fpCtrlKeineKontraktion
+#print axioms fpCtrlF64_profil_kein_schritt
+#print axioms fpCtrlMxcsrLock_kein_schritt
+#print axioms fpCtrlAusgabe32_gruppe
 #print axioms fpCtrlWit_schritt1
 #print axioms fpCtrlWit_schritt2
-#print axioms fpCtrlWit_m2_hoch96
+#print axioms fpCtrlWit_mxcsr_schritt
+#print axioms fpCtrl_zeuge
 
 end Gabbro.Grammatik.X86
