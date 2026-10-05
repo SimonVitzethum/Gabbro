@@ -1156,3 +1156,47 @@ theorem tabellen_schreiben_laufBytes (A : TabAnker D) (c : PipeCfg)
   obtain ⟨hb, hr, -, -, -⟩ :=
     lauf_zu_laufBytes (natAdresse c.codeBase) flat p pre post st s1 hgp hrun1 hcode hf hrip
   exact ⟨p.length, s1, σ', hb, hr, hsrc, hW1, hE1⟩
+
+/-! ## 11. Joint witness for the closing theorem -/
+
+theorem zeGerade : zeStoreProg.all gerade = true := by decide
+
+theorem zeBytesEq : zeBytes = ([] : List Byte) ++ encodeAll zeStoreProg ++ [] := by
+  simp [zeBytes]
+
+theorem zeRipEq : zeStart.rip =
+    addrOff (natAdresse zeCfg.codeBase) ([] : List Byte).length := by
+  simp [zeStart, zeCfg, addrOff_null]
+
+theorem zeCodeAt' : CodeAt zeStart.speicher (natAdresse zeCfg.codeBase) zeBytes :=
+  zeCodeAt
+
+/-- JOINT WITNESS for `tabellen_schreiben_laufBytes`: every premise
+    holds jointly — the checked configuration, separation, environment,
+    world, recomputed store code, straight-line shape, the code region
+    with the bytes at the instruction pointer — and the fetched byte
+    run reaches the end of the code with the real `execStmt` outcome
+    represented; beside it the memory-changing run. -/
+theorem tabellen_schreiben_laufBytes_zeuge :
+    ∃ n s' σ', cfgOk zeCfg = true ∧ ankerSepB zeA = true ∧
+      EnvRepr (D := zeD) (Env.nil : Env zeD []) zeStart.register (abbOf zeCfg) ∧
+      WorldRep (tabLayout zeA) zeStart.speicher zeSigma ∧
+      senkSchreiben zeA zeCfg zeWrite = some zeStoreProg ∧
+      zeStoreProg.all gerade = true ∧
+      CodeAt zeStart.speicher (natAdresse zeCfg.codeBase) zeBytes ∧
+      zeBytes = ([] : List Byte) ++ encodeAll zeStoreProg ++ [] ∧
+      zeStart.rip = addrOff (natAdresse zeCfg.codeBase) ([] : List Byte).length ∧
+      laufBytes n zeStart = .weiter s' ∧
+      s'.rip = addrOff (natAdresse zeCfg.codeBase)
+        (([] : List Byte).length + (encodeAll zeStoreProg).length) ∧
+      execStmt zeO 0 zeR zeWrite zeSigma (Env.nil : Env zeD []) = .ok σ' Env.nil ∧
+      WorldRep (tabLayout zeA) s'.speicher σ' ∧
+      EnvRepr (D := zeD) (Env.nil : Env zeD []) s'.register (abbOf zeCfg) ∧
+      zeV.schreibt false = true ∧
+      zeRunChange := by
+  obtain ⟨n, s', σ', hb, hr, hsrc, hW, hE⟩ := tabellen_schreiben_laufBytes zeA
+    zeCfg zeCfgOk zeSep zeWrite (Env.nil : Env zeD []) zeSigma zeStart zeEnvRepr
+    zeWorldRep zeO 0 zeR zeBytes ([] : List Byte) ([] : List Byte) zeStoreProg
+    zeLowWrite zeGerade zeCodeAt' zeBytesEq zeRipEq
+  exact ⟨n, s', σ', zeCfgOk, zeSep, zeEnvRepr, zeWorldRep, zeLowWrite, zeGerade,
+    zeCodeAt', zeBytesEq, zeRipEq, hb, hr, hsrc, hW, hE, zeHw, zeRunChangeProof⟩
