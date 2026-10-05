@@ -572,6 +572,321 @@ theorem avx2Wit_neg_profil :
       basisKontrolle ⟨0⟩ = false :=
   avx2Mem_ohne_profil _ _ _ _ _ _ (by decide)
 
+/-! ## 7. Stores as thirty-two buffered byte issues.
+
+  The 32-byte store is NEVER the direct two-`vecWrite` effect: it is
+  `issueListe` over `avx2Eintraege`. One refused byte fails the whole
+  access with memory unchanged (`none` carries no state). -/
+
+/-- One byte of a writable chunk is writable. -/
+theorem avx2Schreibbar8_einzeln (m : Speicher) (b : Adresse) (k : Nat)
+    (hk : k < 8) (h : schreibbar8 m b = true) :
+    m.schreibbar (addrOff b k) = true := by
+  unfold schreibbar8 at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩ := h
+  have h8 : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨
+      k = 6 ∨ k = 7 := by
+    omega
+  rcases h8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    assumption
+
+/-- One byte of a readable chunk is readable. -/
+theorem avx2Lesbar8_einzeln (m : Speicher) (b : Adresse) (k : Nat)
+    (hk : k < 8) (h : lesbar8 m b = true) :
+    m.lesbar (addrOff b k) = true := by
+  unfold lesbar8 at h
+  simp only [Bool.and_eq_true] at h
+  obtain ⟨⟨⟨⟨⟨⟨⟨h0, h1⟩, h2⟩, h3⟩, h4⟩, h5⟩, h6⟩, h7⟩ := h
+  have h8 : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨
+      k = 6 ∨ k = 7 := by
+    omega
+  rcases h8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    assumption
+
+/-- Write permission at any of the four chunk bytes, from the four
+    chunk permissions. -/
+theorem avx2Schreibbar_einzeln (m : Speicher) (a : Adresse)
+    (c k : Nat) (hc : c < 4) (hk : k < 8)
+    (h0 : schreibbar8 m a = true)
+    (h1 : schreibbar8 m (vecHiAddr a) = true)
+    (h2 : schreibbar8 m (addrOff a 16) = true)
+    (h3 : schreibbar8 m (vecHiAddr (addrOff a 16)) = true) :
+    m.schreibbar (addrOff (avx2Chunk a c) k) = true := by
+  have h4 : c = 0 ∨ c = 1 ∨ c = 2 ∨ c = 3 := by omega
+  rcases h4 with rfl | rfl | rfl | rfl
+  · show m.schreibbar (addrOff a k) = true
+    exact avx2Schreibbar8_einzeln m a k hk h0
+  · show m.schreibbar (addrOff (vecHiAddr a) k) = true
+    exact avx2Schreibbar8_einzeln m (vecHiAddr a) k hk h1
+  · show m.schreibbar (addrOff (addrOff a 16) k) = true
+    exact avx2Schreibbar8_einzeln m (addrOff a 16) k hk h2
+  · show m.schreibbar (addrOff (vecHiAddr (addrOff a 16)) k) = true
+    exact avx2Schreibbar8_einzeln m (vecHiAddr (addrOff a 16)) k hk h3
+
+/-- Read permission at any of the four chunk bytes, from the four
+    chunk permissions. -/
+theorem avx2Lesbar_einzeln (m : Speicher) (a : Adresse)
+    (c k : Nat) (hc : c < 4) (hk : k < 8)
+    (h0 : lesbar8 m a = true)
+    (h1 : lesbar8 m (vecHiAddr a) = true)
+    (h2 : lesbar8 m (addrOff a 16) = true)
+    (h3 : lesbar8 m (vecHiAddr (addrOff a 16)) = true) :
+    m.lesbar (addrOff (avx2Chunk a c) k) = true := by
+  have h4 : c = 0 ∨ c = 1 ∨ c = 2 ∨ c = 3 := by omega
+  rcases h4 with rfl | rfl | rfl | rfl
+  · show m.lesbar (addrOff a k) = true
+    exact avx2Lesbar8_einzeln m a k hk h0
+  · show m.lesbar (addrOff (vecHiAddr a) k) = true
+    exact avx2Lesbar8_einzeln m (vecHiAddr a) k hk h1
+  · show m.lesbar (addrOff (addrOff a 16) k) = true
+    exact avx2Lesbar8_einzeln m (addrOff a 16) k hk h2
+  · show m.lesbar (addrOff (vecHiAddr (addrOff a 16)) k) = true
+    exact avx2Lesbar8_einzeln m (vecHiAddr (addrOff a 16)) k hk h3
+
+/-- YMM store issue on the TSO view: thirty-two buffered byte
+    issues, never the direct memory effect. `none` = a refused byte. -/
+def avx2Speichern (s : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Avx2Vektor) : Option TSOZustand :=
+  issueListe s c (avx2Eintraege a v)
+
+/-- A successful YMM issue appends exactly the thirty-two entries. -/
+theorem avx2Speichern_haengt_an (s s' : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Avx2Vektor)
+    (h : avx2Speichern s c a v = some s') :
+    s'.puffer c = s.puffer c ++ avx2Eintraege a v :=
+  issueListe_haengt_an s s' c _ h
+
+/-- A YMM issue changes no canonical byte (buffer only). -/
+theorem avx2Speichern_kein_speicher (s s' : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Avx2Vektor)
+    (h : avx2Speichern s c a v = some s') (x : Adresse) :
+    s'.mem.bytes x = s.mem.bytes x :=
+  issueListe_kein_speicher s s' c _ h x
+
+/-- A fold of issues succeeds wherever every entry has write
+    permission. Permissions survive each issue (the memory is kept),
+    so the whole list goes through. -/
+theorem avx2IssueListe_erfolg (l : List TSOEintrag) (s : TSOZustand)
+    (c : Nat) (h : ∀ e ∈ l, s.mem.schreibbar e.addr = true) :
+    ∃ s' : TSOZustand, issueListe s c l = some s' := by
+  induction l generalizing s with
+  | nil => exact ⟨s, rfl⟩
+  | cons e rest ih =>
+    have he : s.mem.schreibbar e.addr = true := h e (by simp)
+    have h1 : issueByte s c e.addr e.wert =
+        some ⟨s.mem, pufferSetze s.puffer c (s.puffer c ++ [e])⟩ := by
+      unfold issueByte
+      rw [if_pos he]
+    have hrest : ∀ e' ∈ rest,
+        (⟨s.mem, pufferSetze s.puffer c (s.puffer c ++ [e])⟩ :
+          TSOZustand).mem.schreibbar e'.addr = true :=
+      fun e' hm => h e' (by simp [hm])
+    obtain ⟨s', hs'⟩ := ih _ hrest
+    have hfold : issueListe s c (e :: rest) =
+        issueListe ⟨s.mem, pufferSetze s.puffer c (s.puffer c ++ [e])⟩
+          c rest := by
+      show (match issueByte s c e.addr e.wert with
+        | none => (none : Option TSOZustand)
+        | some s1 => issueListe s1 c rest) = _
+      rw [h1]
+    rw [hfold]
+    exact ⟨s', hs'⟩
+
+/-- Write permission across all four chunks issues the whole YMM word. -/
+theorem avx2Speichern_erfolg (s : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Avx2Vektor)
+    (h0 : schreibbar8 s.mem a = true)
+    (h1 : schreibbar8 s.mem (vecHiAddr a) = true)
+    (h2 : schreibbar8 s.mem (addrOff a 16) = true)
+    (h3 : schreibbar8 s.mem (vecHiAddr (addrOff a 16)) = true) :
+    ∃ s' : TSOZustand, avx2Speichern s c a v = some s' := by
+  apply avx2IssueListe_erfolg
+  intro e hmem
+  rcases avx2Eintrag_klass a v e hmem with
+      ⟨c0, hk0, rfl⟩ | ⟨c0, hk0, rfl⟩ | ⟨c0, hk0, rfl⟩ | ⟨c0, hk0, rfl⟩
+  · show s.mem.schreibbar (addrOff a c0) = true
+    exact avx2Schreibbar8_einzeln s.mem a c0 hk0 h0
+  · show s.mem.schreibbar (addrOff (vecHiAddr a) c0) = true
+    exact avx2Schreibbar8_einzeln s.mem (vecHiAddr a) c0 hk0 h1
+  · show s.mem.schreibbar (addrOff (addrOff a 16) c0) = true
+    exact avx2Schreibbar8_einzeln s.mem (addrOff a 16) c0 hk0 h2
+  · show s.mem.schreibbar
+        (addrOff (vecHiAddr (addrOff a 16)) c0) = true
+    exact avx2Schreibbar8_einzeln s.mem (vecHiAddr (addrOff a 16))
+      c0 hk0 h3
+
+/-- A fold of issues refuses wherever any entry lacks write
+    permission: one refused byte fails the whole access. Permissions
+    survive each issue, so the first refusal is reached. -/
+theorem avx2IssueListe_verweigert (l : List TSOEintrag)
+    (s : TSOZustand) (c : Nat) (e : TSOEintrag) (hmem : e ∈ l)
+    (h : s.mem.schreibbar e.addr = false) :
+    issueListe s c l = none := by
+  induction l generalizing s with
+  | nil =>
+    simp at hmem
+  | cons hd tl ih =>
+    have heq : issueListe s c (hd :: tl) =
+        match issueByte s c hd.addr hd.wert with
+        | none => (none : Option TSOZustand)
+        | some s1 => issueListe s1 c tl := rfl
+    rw [heq]
+    simp only [List.mem_cons] at hmem
+    rcases hmem with hhead | hmem2
+    · rw [hhead] at h
+      have hn : issueByte s c hd.addr hd.wert = none := by
+        unfold issueByte
+        simp [h]
+      rw [hn]
+    · cases hb : issueByte s c hd.addr hd.wert with
+      | none => rfl
+      | some s1 =>
+        have hperm : s1.mem.schreibbar e.addr = false := by
+          have hp := issue_erhaelt_berechtigungen s s1 c hd.addr
+            hd.wert hb
+          rw [hp.2.1]
+          exact h
+        exact ih s1 hmem2 hperm
+
+/-- A store without write permission at any listed entry refuses. -/
+theorem avx2Speichern_verweigert_bei (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Avx2Vektor) (e : TSOEintrag)
+    (hmem : e ∈ avx2Eintraege a v)
+    (h : s.mem.schreibbar e.addr = false) :
+    avx2Speichern s c a v = none :=
+  avx2IssueListe_verweigert _ s c e hmem h
+
+/-- A chunk-zero byte entry is in the thirty-two, by offset. -/
+theorem avx2Eintraege_mem_c0_entry (a : Adresse) (v : Avx2Vektor)
+    (k : Nat) (hk : k < 8) :
+    (⟨addrOff a k, wortByte (vLo v.lo) k⟩ : TSOEintrag) ∈
+      avx2Eintraege a v := by
+  have hk8 : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨
+      k = 6 ∨ k = 7 := by
+    omega
+  have h0 : (⟨addrOff a k, wortByte (vLo v.lo) k⟩ : TSOEintrag) ∈
+      avx2EintraegeC0 a v := by
+    unfold avx2EintraegeC0
+    rcases hk8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact List.Mem.head _
+    · exact List.Mem.tail _ (List.Mem.head _)
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _)))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _))))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _)))))))
+  unfold avx2Eintraege
+  apply List.mem_append.mpr; apply Or.inl
+  apply List.mem_append.mpr; apply Or.inl
+  apply List.mem_append.mpr; apply Or.inl
+  exact h0
+
+/-- A chunk-one byte entry is in the thirty-two, by offset. -/
+theorem avx2Eintraege_mem_c1_entry (a : Adresse) (v : Avx2Vektor)
+    (k : Nat) (hk : k < 8) :
+    (⟨addrOff (vecHiAddr a) k, wortByte (vHi v.lo) k⟩ : TSOEintrag) ∈
+      avx2Eintraege a v := by
+  have hk8 : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨
+      k = 6 ∨ k = 7 := by
+    omega
+  have h1 : (⟨addrOff (vecHiAddr a) k, wortByte (vHi v.lo) k⟩ :
+      TSOEintrag) ∈ avx2EintraegeC1 a v := by
+    unfold avx2EintraegeC1
+    rcases hk8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact List.Mem.head _
+    · exact List.Mem.tail _ (List.Mem.head _)
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _)))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _))))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _)))))))
+  unfold avx2Eintraege
+  apply List.mem_append.mpr; apply Or.inl
+  apply List.mem_append.mpr; apply Or.inl
+  apply List.mem_append.mpr; apply Or.inr
+  exact h1
+
+/-- A chunk-two byte entry is in the thirty-two, by offset. -/
+theorem avx2Eintraege_mem_c2_entry (a : Adresse) (v : Avx2Vektor)
+    (k : Nat) (hk : k < 8) :
+    (⟨addrOff (addrOff a 16) k, wortByte (vLo v.hi) k⟩ : TSOEintrag) ∈
+      avx2Eintraege a v := by
+  have hk8 : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨
+      k = 6 ∨ k = 7 := by
+    omega
+  have h2 : (⟨addrOff (addrOff a 16) k, wortByte (vLo v.hi) k⟩ :
+      TSOEintrag) ∈ avx2EintraegeC2 a v := by
+    unfold avx2EintraegeC2
+    rcases hk8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact List.Mem.head _
+    · exact List.Mem.tail _ (List.Mem.head _)
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _)))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _))))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _)))))))
+  unfold avx2Eintraege
+  apply List.mem_append.mpr; apply Or.inl
+  apply List.mem_append.mpr; apply Or.inr
+  exact h2
+
+/-- A chunk-three byte entry is in the thirty-two, by offset. -/
+theorem avx2Eintraege_mem_c3_entry (a : Adresse) (v : Avx2Vektor)
+    (k : Nat) (hk : k < 8) :
+    (⟨addrOff (vecHiAddr (addrOff a 16)) k,
+      wortByte (vHi v.hi) k⟩ : TSOEintrag) ∈ avx2Eintraege a v := by
+  have hk8 : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨
+      k = 6 ∨ k = 7 := by
+    omega
+  have h3 : (⟨addrOff (vecHiAddr (addrOff a 16)) k,
+      wortByte (vHi v.hi) k⟩ : TSOEintrag) ∈
+      avx2EintraegeC3 a v := by
+    unfold avx2EintraegeC3
+    rcases hk8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact List.Mem.head _
+    · exact List.Mem.tail _ (List.Mem.head _)
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _)))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _))))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _)))))))
+  unfold avx2Eintraege
+  apply List.mem_append.mpr; apply Or.inr
+  exact h3
+
 /- CUTS:
    Skeleton only: forms are named, nothing is proved yet.
 -/
