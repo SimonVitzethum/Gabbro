@@ -1437,6 +1437,560 @@ theorem decodeXchgVoll_lock_verweigert (suffix : List Byte) :
   | [_, _] => rfl
   | _ :: _ :: _ :: _ => rfl
 
-/- CUTS: skeleton only; full statement at the end of the file. -/
+/-! ## 8. Reached witness: two cores, SIB and RIP-relative forms.
+
+  Core 0 runs a carry INC through the SIB form `rbx + rcx * 8`
+  (8200), forwards the value to its own load while core 1 still reads
+  zero, then drains it into shared memory (0 becomes 1, both cores
+  observe). Chained on the drained machine, core 0 runs a rotate ROL
+  through the same SIB form (1 becomes 2, same owner-only pattern).
+  Core 1 then swaps through the RIP-relative form (register 7 in,
+  old word 2 out) and, after the drain, sign-loads the landed word.
+  Every claim below is a closed decidable observation. -/
+
+/-- Witness SIB form: base `rbx`, index `rcx`, scale 8, disp8 zero. -/
+def intMemWitSIB : AdrForm :=
+  skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 0) .d8
+
+/-- Witness RIP-relative form: next-RIP plus 4097. -/
+def intMemWitRIP : AdrForm := ripForm (BitVec.ofNat 32 4097)
+
+/-- Witness next-RIP bases (instruction lengths 7 and 9). -/
+def intMemWitNext0 : Adresse := BitVec.ofNat 64 4103
+def intMemWitNext1 : Adresse := BitVec.ofNat 64 4103
+
+/-- Witness data address. -/
+def intMemWitA : Adresse := BitVec.ofNat 64 8200
+
+/-- Witness descriptors: INC, ROL-by-1, XCHG, sign load. -/
+def intMemWitInc : CarryVoll := CarryVoll.incV .b32 intMemWitSIB 7
+def intMemWitRol : RotVoll := RotVoll.mk .rol .b32 1 intMemWitSIB 7
+def intMemWitXchg : XchgVoll := XchgVoll.mk .b32 intMemWitRIP .rdx 9
+def intMemWitSign : SignVoll := SignVoll.mk .b32 .rax intMemWitRIP 9
+
+/-- Witness shared bytes: zeroed. -/
+def intMemWitBytes (_ : Adresse) : Byte := BitVec.ofNat 8 0
+
+/-- Witness code permission: seven bytes at 4096. -/
+def intMemWitCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4103)
+
+/-- Witness data permission: sixteen bytes at 8192. -/
+def intMemWitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8208)
+
+/-- Witness shared memory. -/
+def intMemWitMem : Speicher :=
+  { bytes := intMemWitBytes, lesbar := intMemWitDaten,
+    schreibbar := intMemWitDaten, ausfuehrbar := intMemWitCode }
+
+/-- Witness core-0 registers: base, index, stack. -/
+def intMemWitReg0 : Register → Wort := fun q =>
+  if q = Register.rbx then BitVec.ofNat 64 8192
+  else if q = Register.rcx then BitVec.ofNat 64 1
+  else if q = Register.rsp then BitVec.ofNat 64 8704
+  else BitVec.ofNat 64 0
+
+/-- Witness core-1 registers: exchange value in `rdx`, stack. -/
+def intMemWitReg1 : Register → Wort := fun q =>
+  if q = Register.rdx then BitVec.ofNat 64 7
+  else if q = Register.rsp then BitVec.ofNat 64 8704
+  else BitVec.ofNat 64 0
+
+/-- Witness cores: core 0 runs at 4096, core 1 idles on the
+    (non-executable) data page. -/
+def intMemWitKern : Nat → HwKern
+  | 0 => HwKern.mk intMemWitReg0 zeugeFlags (BitVec.ofNat 64 4096)
+      (fun _ => BitVec.ofNat 128 0) kontextReset
+  | _ => HwKern.mk intMemWitReg1 zeugeFlags (BitVec.ofNat 64 8192)
+      (fun _ => BitVec.ofNat 128 0) kontextReset
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon with OS vector state. -/
+def intMemWitM0 : HwMaschine :=
+  HwMaschine.mk intMemWitMem intMemWitKern (fun _ => [])
+    basisHw (fun _ => basisBereit)
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem intMemWitM0_wf : HwWf intMemWitM0 := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Read a buffer length out of a machine outcome. -/
+def intMemBufOut (o : Option HwMaschine) (c : Nat) : Option Nat :=
+  o.map (fun m => (m.puffer c).length)
+
+/-- Read a core RIP out of a machine outcome. -/
+def intMemRipOut (o : Option HwMaschine) (c : Nat) : Option Wort :=
+  o.map (fun m => (m.kerne c).rip)
+
+/-- Read a core register out of a machine outcome. -/
+def intMemRegOut (o : Option HwMaschine) (c : Nat)
+    (q : Register) : Option Wort :=
+  o.map (fun m => (m.kerne c).register q)
+
+/-- The SIB form names the data cell from pre-state registers. -/
+theorem intMemWit_sib_addr :
+    intMemAddr intMemWitM0 0 intMemWitNext0 intMemWitSIB =
+      intMemWitA := by
+  decide
+
+/-- The RIP-relative form names the data cell from the next RIP. -/
+theorem intMemWit_rip_addr :
+    intMemAddr intMemWitM0 1 intMemWitNext1 intMemWitRIP =
+      intMemWitA := by
+  decide
+
+/-- Both witness forms are admitted as data. -/
+theorem intMemWit_form_ok :
+    adrOk intMemWitSIB = true ∧ adrOk intMemWitRIP = true := by
+  decide
+
+/-- The data cell starts zeroed: the run really changes memory. -/
+theorem intMemWit_anfang_null :
+    intMemWitMem.bytes intMemWitA = BitVec.ofNat 8 0 := by
+  decide
+
+/-- Core 0 INC through the SIB form. -/
+def intMemWitM1 : Option HwMaschine :=
+  carryVollSchritt intMemWitM0 0 intMemWitInc intMemWitNext0
+
+/-- The shared TSO state after the INC issue. -/
+def intMemWitT1 : Option TSOZustand :=
+  intMemWitM1.map tsoAnsicht
+
+/-- Core 0 observes its own issued word (forwarding). -/
+def intMemWitE1 : Option (Option Wort) :=
+  intMemWitT1.map (fun s => concLoad s 0 .b32 intMemWitA)
+
+/-- Core 1 observes the old word (no foreign forwarding). -/
+def intMemWitF1 : Option (Option Wort) :=
+  intMemWitT1.map (fun s => concLoad s 1 .b32 intMemWitA)
+
+/-- Core 0 drains its four entries, one flush per state. -/
+def intMemWitT2 : Option TSOZustand :=
+  intMemWitT1.bind (fun s => flushKern s 0)
+
+def intMemWitT3 : Option TSOZustand :=
+  intMemWitT2.bind (fun s => flushKern s 0)
+
+def intMemWitT4 : Option TSOZustand :=
+  intMemWitT3.bind (fun s => flushKern s 0)
+
+def intMemWitT5 : Option TSOZustand :=
+  intMemWitT4.bind (fun s => flushKern s 0)
+
+/-- The shared byte after the first drain. -/
+def intMemWitN1 : Option (Option Byte) :=
+  intMemWitT5.map (fun s => some (s.mem.bytes intMemWitA))
+
+/-- The machine after the first drain (core data kept). -/
+def intMemWitM1d : Option HwMaschine :=
+  match intMemWitM1, intMemWitT5 with
+  | some m1, some t5 => some (setTso m1 t5)
+  | _, _ => none
+
+/-- Core 0 ROL-by-1 through the same SIB form, chained on the drain. -/
+def intMemWitM2 : Option HwMaschine :=
+  intMemWitM1d.bind (fun m => rotVollSchritt m 0 intMemWitRol
+    intMemWitNext0)
+
+/-- The shared TSO state after the ROL issue. -/
+def intMemWitT6 : Option TSOZustand :=
+  intMemWitM2.map tsoAnsicht
+
+/-- Core 0 observes its rotated word (forwarding). -/
+def intMemWitE2 : Option (Option Wort) :=
+  intMemWitT6.map (fun s => concLoad s 0 .b32 intMemWitA)
+
+/-- Core 1 observes the drained word (no foreign forwarding). -/
+def intMemWitF2 : Option (Option Wort) :=
+  intMemWitT6.map (fun s => concLoad s 1 .b32 intMemWitA)
+
+/-- Core 0 drains the rotated word, one flush per state. -/
+def intMemWitT7 : Option TSOZustand :=
+  intMemWitT6.bind (fun s => flushKern s 0)
+
+def intMemWitT8 : Option TSOZustand :=
+  intMemWitT7.bind (fun s => flushKern s 0)
+
+def intMemWitT9 : Option TSOZustand :=
+  intMemWitT8.bind (fun s => flushKern s 0)
+
+def intMemWitT10 : Option TSOZustand :=
+  intMemWitT9.bind (fun s => flushKern s 0)
+
+/-- The shared byte after the second drain. -/
+def intMemWitN2 : Option (Option Byte) :=
+  intMemWitT10.map (fun s => some (s.mem.bytes intMemWitA))
+
+/-- The machine after the second drain (core data kept). -/
+def intMemWitM2d : Option HwMaschine :=
+  match intMemWitM2, intMemWitT10 with
+  | some m2, some t10 => some (setTso m2 t10)
+  | _, _ => none
+
+/-- The INC issues four buffer entries. -/
+theorem intMemWit_m1_buf :
+    intMemBufOut intMemWitM1 0 = some 4 := by
+  decide
+
+/-- The INC advances RIP past its length. -/
+theorem intMemWit_m1_rip :
+    intMemRipOut intMemWitM1 0 = some (BitVec.ofNat 64 4103) := by
+  decide
+
+/-- Forwarding: core 0 reads its own unflushed word. -/
+theorem intMemWit_e1 :
+    intMemWitE1 = some (some (BitVec.ofNat 64 1)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem intMemWit_f1 :
+    intMemWitF1 = some (some (BitVec.ofNat 64 0)) := by
+  decide
+
+/-- The first drain changes shared memory: the cell reads `0x01`. -/
+theorem intMemWit_n1 :
+    intMemWitN1 = some (some (BitVec.ofNat 8 1)) := by
+  decide
+
+/-- The ROL issues four buffer entries over the empty buffer. -/
+theorem intMemWit_m2_buf :
+    intMemBufOut intMemWitM2 0 = some 4 := by
+  decide
+
+/-- The ROL advances RIP past its length. -/
+theorem intMemWit_m2_rip :
+    intMemRipOut intMemWitM2 0 = some (BitVec.ofNat 64 4110) := by
+  decide
+
+/-- Forwarding: core 0 reads its rotated word. -/
+theorem intMemWit_e2 :
+    intMemWitE2 = some (some (BitVec.ofNat 64 2)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads the drained word. -/
+theorem intMemWit_f2 :
+    intMemWitF2 = some (some (BitVec.ofNat 64 1)) := by
+  decide
+
+/-- The second drain changes shared memory: the cell reads `0x02`. -/
+theorem intMemWit_n2 :
+    intMemWitN2 = some (some (BitVec.ofNat 8 2)) := by
+  decide
+
+/-! ## 7. The adapter plug over the coherent machine.
+
+  One checked event step per family on the shared TSO view, reusing
+  the §3/§4 evaluators. Register-only forms never enter this plug;
+  LOCK has no event (refused at decode, §6). -/
+
+/-- Lifted family events: rotate RMW, carry RMW, sign load, XCHG swap,
+    each with its next-RIP base, plus explicit refusal. -/
+inductive IntMemEreignis where
+  | rot (r : RotVoll) (ripNext : Adresse)
+  | carry (v : CarryVoll) (ripNext : Adresse)
+  | sign (s : SignVoll) (ripNext : Adresse)
+  | xchg (x : XchgVoll) (ripNext : Adresse)
+  | verweigert
+  deriving DecidableEq, Repr
+
+/-- The lifted adapter: one checked event step on the coherent machine. -/
+def adapterIntMem : HwAdapter IntMemEreignis :=
+  ⟨fun m c e =>
+    match e with
+    | .rot r ripNext => rotVollSchritt m c r ripNext
+    | .carry v ripNext => carryVollSchritt m c v ripNext
+    | .sign s ripNext => signVollSchritt m c s ripNext
+    | .xchg x ripNext => xchgVollSchritt m c x ripNext
+    | .verweigert => none⟩
+
+/-- The refused event admits nothing. -/
+theorem adapterIntMem_verweigert (m : HwMaschine) (c : Nat) :
+    adapterIntMem.schritt m c .verweigert = none := rfl
+
+/-- An adapter rotate step is a lifted rotate RMW. -/
+theorem adapterIntMem_rot (m m' : HwMaschine) (c : Nat) (r : RotVoll)
+    (ripNext : Adresse)
+    (h : adapterIntMem.schritt m c (.rot r ripNext) = some m') :
+    rotVollSchritt m c r ripNext = some m' := h
+
+/-- An adapter carry step is a lifted carry RMW. -/
+theorem adapterIntMem_carry (m m' : HwMaschine) (c : Nat)
+    (v : CarryVoll) (ripNext : Adresse)
+    (h : adapterIntMem.schritt m c (.carry v ripNext) = some m') :
+    carryVollSchritt m c v ripNext = some m' := h
+
+/-- An adapter sign step is a lifted sign load. -/
+theorem adapterIntMem_sign (m m' : HwMaschine) (c : Nat)
+    (s : SignVoll) (ripNext : Adresse)
+    (h : adapterIntMem.schritt m c (.sign s ripNext) = some m') :
+    signVollSchritt m c s ripNext = some m' := h
+
+/-- An adapter XCHG step is a lifted swap. -/
+theorem adapterIntMem_xchg (m m' : HwMaschine) (c : Nat)
+    (x : XchgVoll) (ripNext : Adresse)
+    (h : adapterIntMem.schritt m c (.xchg x ripNext) = some m') :
+    xchgVollSchritt m c x ripNext = some m' := h
+
+/-- Every adapter step preserves well-formedness: only core data,
+    buffers and shared memory move; profiles are untouched. -/
+theorem adapterIntMem_wf (m m' : HwMaschine) (c : Nat)
+    (e : IntMemEreignis) (hwf : HwWf m)
+    (h : adapterIntMem.schritt m c e = some m') : HwWf m' := by
+  cases e with
+  | rot r ripNext => exact rotVollSchritt_wf m m' c r ripNext h hwf
+  | carry v ripNext => exact carryVollSchritt_wf m m' c v ripNext h hwf
+  | sign s ripNext => exact signVollSchritt_wf m m' c s ripNext h hwf
+  | xchg x ripNext => exact xchgVollSchritt_wf m m' c x ripNext h hwf
+  | verweigert => simp [adapterIntMem] at h
+
+/-- A bad length admits no adapter rotate step. -/
+theorem adapterIntMem_rot_laenge (m : HwMaschine) (c : Nat)
+    (r : RotVoll) (ripNext : Adresse)
+    (h : laengeOk r.laenge = false) :
+    adapterIntMem.schritt m c (.rot r ripNext) = none :=
+  rotVollSchritt_laenge_verweigert m c r ripNext h
+
+/-- A bad length admits no adapter carry step. -/
+theorem adapterIntMem_carry_laenge (m : HwMaschine) (c : Nat)
+    (v : CarryVoll) (ripNext : Adresse)
+    (h : laengeOk (carryVollLaenge v) = false) :
+    adapterIntMem.schritt m c (.carry v ripNext) = none :=
+  carryVollSchritt_laenge_verweigert m c v ripNext h
+
+/-- A bad length admits no adapter sign step. -/
+theorem adapterIntMem_sign_laenge (m : HwMaschine) (c : Nat)
+    (s : SignVoll) (ripNext : Adresse)
+    (h : laengeOk s.laenge = false) :
+    adapterIntMem.schritt m c (.sign s ripNext) = none :=
+  signVollSchritt_laenge_verweigert m c s ripNext h
+
+/-- A bad length admits no adapter XCHG step. -/
+theorem adapterIntMem_xchg_laenge (m : HwMaschine) (c : Nat)
+    (x : XchgVoll) (ripNext : Adresse)
+    (h : laengeOk x.laenge = false) :
+    adapterIntMem.schritt m c (.xchg x ripNext) = none :=
+  xchgVollSchritt_laenge_verweigert m c x ripNext h
+
+/-- Core 1 XCHG through the RIP-relative form, chained on the
+    second drain: register 7 installs, old word 2 lands in `rdx`. -/
+def intMemWitM3 : Option HwMaschine :=
+  intMemWitM2d.bind (fun m => xchgVollSchritt m 1 intMemWitXchg
+    intMemWitNext1)
+
+/-- Core 1 drains its four swap entries, one flush per state. -/
+def intMemWitT11 : Option TSOZustand :=
+  intMemWitM3.map tsoAnsicht
+
+def intMemWitT12 : Option TSOZustand :=
+  intMemWitT11.bind (fun s => flushKern s 1)
+
+def intMemWitT13 : Option TSOZustand :=
+  intMemWitT12.bind (fun s => flushKern s 1)
+
+def intMemWitT14 : Option TSOZustand :=
+  intMemWitT13.bind (fun s => flushKern s 1)
+
+def intMemWitT15 : Option TSOZustand :=
+  intMemWitT14.bind (fun s => flushKern s 1)
+
+/-- The shared byte after the third drain. -/
+def intMemWitN3 : Option (Option Byte) :=
+  intMemWitT15.map (fun s => some (s.mem.bytes intMemWitA))
+
+/-- The machine after the third drain (core data kept). -/
+def intMemWitM3d : Option HwMaschine :=
+  match intMemWitM3, intMemWitT15 with
+  | some m3, some t15 => some (setTso m3 t15)
+  | _, _ => none
+
+/-- Core 1 sign-loads the landed word through the RIP-relative form. -/
+def intMemWitM4 : Option HwMaschine :=
+  intMemWitM3d.bind (fun m => signVollSchritt m 1 intMemWitSign
+    intMemWitNext1)
+
+/-- The swap installs the old word in `rdx`. -/
+theorem intMemWit_m3_rdx :
+    intMemRegOut intMemWitM3 1 .rdx = some (BitVec.ofNat 64 2) := by
+  decide
+
+/-- The swap buffers four entries on core 1. -/
+theorem intMemWit_m3_buf :
+    intMemBufOut intMemWitM3 1 = some 4 := by
+  decide
+
+/-- The swap advances core-1 RIP past its length. -/
+theorem intMemWit_m3_rip :
+    intMemRipOut intMemWitM3 1 = some (BitVec.ofNat 64 8201) := by
+  decide
+
+/-- The third drain changes shared memory: the cell reads `0x07`. -/
+theorem intMemWit_n3 :
+    intMemWitN3 = some (some (BitVec.ofNat 8 7)) := by
+  decide
+
+/-- The sign load lands the swapped word in `rax`. -/
+theorem intMemWit_m4_rax :
+    intMemRegOut intMemWitM4 1 .rax = some (BitVec.ofNat 64 7) := by
+  decide
+
+/-- The sign load advances core-1 RIP past its length. -/
+theorem intMemWit_m4_rip :
+    intMemRipOut intMemWitM4 1 = some (BitVec.ofNat 64 8210) := by
+  decide
+
+/-- The adapter runs the witness INC: the plug agrees on the run. -/
+theorem intMemWit_adapter_m1 :
+    adapterIntMem.schritt intMemWitM0 0
+      (IntMemEreignis.carry intMemWitInc intMemWitNext0) =
+      intMemWitM1 := rfl
+
+/-- THE JOINT WITNESS: a reached two-core run through a SIB form
+    (carry INC then rotate ROL with owner-only forwarding and two
+    observable drains, 0 to 1 to 2) and a RIP-relative form (XCHG
+    swapping 7 for 2, drained to 7, sign-loaded back) -- beside the
+    adapter agreement, the LOCK refusal, the SIB refusal and the
+    well-formedness of the start machine. Non-degenerate: three
+    drains observably change shared memory, and every buffered store
+    is visible via forwarding to the owner only. -/
+theorem intMemWit_zeuge :
+    intMemAddr intMemWitM0 0 intMemWitNext0 intMemWitSIB =
+        intMemWitA ∧
+      intMemAddr intMemWitM0 1 intMemWitNext1 intMemWitRIP =
+        intMemWitA ∧
+      adrOk intMemWitSIB = true ∧ adrOk intMemWitRIP = true ∧
+      intMemWitMem.bytes intMemWitA = BitVec.ofNat 8 0 ∧
+      intMemBufOut intMemWitM1 0 = some 4 ∧
+      intMemRipOut intMemWitM1 0 = some (BitVec.ofNat 64 4103) ∧
+      intMemWitE1 = some (some (BitVec.ofNat 64 1)) ∧
+      intMemWitF1 = some (some (BitVec.ofNat 64 0)) ∧
+      intMemWitN1 = some (some (BitVec.ofNat 8 1)) ∧
+      intMemBufOut intMemWitM2 0 = some 4 ∧
+      intMemRipOut intMemWitM2 0 = some (BitVec.ofNat 64 4110) ∧
+      intMemWitE2 = some (some (BitVec.ofNat 64 2)) ∧
+      intMemWitF2 = some (some (BitVec.ofNat 64 1)) ∧
+      intMemWitN2 = some (some (BitVec.ofNat 8 2)) ∧
+      intMemRegOut intMemWitM3 1 .rdx = some (BitVec.ofNat 64 2) ∧
+      intMemBufOut intMemWitM3 1 = some 4 ∧
+      intMemRipOut intMemWitM3 1 = some (BitVec.ofNat 64 8201) ∧
+      intMemWitN3 = some (some (BitVec.ofNat 8 7)) ∧
+      intMemRegOut intMemWitM4 1 .rax = some (BitVec.ofNat 64 7) ∧
+      intMemRipOut intMemWitM4 1 = some (BitVec.ofNat 64 8210) ∧
+      adapterIntMem.schritt intMemWitM0 0
+        (IntMemEreignis.carry intMemWitInc intMemWitNext0) =
+        intMemWitM1 ∧
+      decodeCarryVoll ([natByte 240] ++ []) = none ∧
+      rotVollEncode ⟨.rol, .b32, 1,
+        skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8, 7⟩ = none ∧
+      HwWf intMemWitM0 := by
+  refine ⟨intMemWit_sib_addr, intMemWit_rip_addr, ?_, ?_,
+    intMemWit_anfang_null, intMemWit_m1_buf, intMemWit_m1_rip,
+    intMemWit_e1, intMemWit_f1, intMemWit_n1, intMemWit_m2_buf,
+    intMemWit_m2_rip, intMemWit_e2, intMemWit_f2, intMemWit_n2,
+    intMemWit_m3_rdx, intMemWit_m3_buf, intMemWit_m3_rip,
+    intMemWit_n3, intMemWit_m4_rax, intMemWit_m4_rip,
+    intMemWit_adapter_m1, ?_, ?_, intMemWitM0_wf⟩
+  · exact (intMemWit_form_ok).1
+  · exact (intMemWit_form_ok).2
+  · exact decodeCarryVoll_lock_verweigert []
+  · exact rotVollEncode_rsp_verweigert .b32 1 7
+
+/- CUTS:
+    Proved here, layering over (never editing) the accepted producers:
+    - §0: the lifted address IS the selected `adrEff`
+      (`intMemAddr_basisForm` against `effAddr`); width codec bits
+      round-trip (`codeBreite_breitenCode`).
+    - §1: lifted memory descriptors for all three families over the
+      full `AdrForm` set (SIB choice, RIP-relative, disp8/disp0):
+      `RotVoll`, `CarryVoll` (ADC/SBB register and immediate source,
+      INC/DEC), `SignVoll` (8/16/32-bit source, 64-bit refused),
+      `XchgVoll`.
+    - §2: value agreement with the accepted evaluators, never a
+      second model: rotate ROL/ROR/RCL/RCR values and the executable
+      flag snapshot with its validity proof; ADC/SBB/INC/DEC values
+      and flags with CF preservation; sign extension IS `sext`;
+      the exchange install IS the narrow merge (full word at 64
+      bits, the accepted swap shape).
+    - §3/§4: machine events as TSO load-modify-store pairs on the
+      shared view (`concLoad` then `concIssue`): exact `entriesOf`
+      footprint appended, no canonical byte changed, RIP advanced,
+      accepted flags installed (rotates, carry), flags kept (sign,
+      XCHG), well-formedness preserved; planted refusals for bad
+      length, refused load gate and, for sign, the 64-bit source.
+    - §5/§6: NEW canonical lifted bytes (tags 113-116, never read by
+      any accepted decoder, so nothing is shadowed) with pinned
+      SIB and RIP-relative round trips per family (rotate, carry
+      register/immediate, sign, XCHG), encode-needs-admission,
+      unadmitted-form refusals (`rsp` index, `rbp` without
+      displacement, 64-bit sign source), and LOCK refusal on every
+      tag (the locked path stays with the locked families).
+    - §7: the `HwAdapter IntMemEreignis` plug with exact step
+      agreement (each event IS its §3/§4 step), well-formedness
+      preservation and length refusals.
+    - §8: reached two-core joint witness (`intMemWit_zeuge`): SIB
+      INC then SIB ROL with owner-only forwarding and two observable
+      drains (0 to 1 to 2), RIP-relative XCHG (7 for 2, drained to
+      7) and sign load back (7) -- beside adapter agreement, LOCK
+      refusal, SIB refusal and well-formedness. Non-degenerate:
+      three drains observably change shared memory; every buffered
+      store is visible via forwarding to the owner only.
+    NOT proved here, and not claimed:
+    - No hardware correspondence: the lifted tags 113-116 are new
+      canonical bytes with self-consistency only (round trips,
+      pins); no Intel SDM heading is cited for them and no x86
+      truth is claimed. Value shapes reuse the accepted silicon
+      assumptions of IntRotate/IntCarryForms (count masks, CF/OF
+      rows, CF preservation) without re-checking them.
+    - No byte-fetched execution: the witness drives decoded
+      descriptors; fetch/decode coverage of the lifted tags stays
+      open (no `decodeExt`/`stepExt` arm, no length-cap theorem
+      over the lifted bytes beyond the pinned lengths 7/9/15).
+    - No atomicity: XCHG runs as load-modify-store events; the
+      single-access/locked-leg claim stays with the locked
+      families (`xchgSchritt` barrier, `WortGruppe` guards).
+      Whole-word atomicity beyond byte drains is not claimed.
+    - No fault beyond the carried gate refusals, no interrupts,
+      no per-access target-to-W/GX simulation, no source/ABI/
+      loader/entry/budget claim, no timing or power claim.
+-/
+
+#print axioms intMemAddr_basisForm
+#print axioms codeBreite_breitenCode
+#print axioms rotVollNeu_rol
+#print axioms rotVollFlags_gueltig
+#print axioms carryVollNeu_adcV
+#print axioms carryVollNeu_inc_cf
+#print axioms signVollNeu_gleich
+#print axioms xchgVollNeuReg_b64
+#print axioms rotVollSchritt_puffer
+#print axioms rotVollSchritt_kein_speicher
+#print axioms rotVollSchritt_wf
+#print axioms carryVollSchritt_puffer
+#print axioms carryVollSchritt_flags
+#print axioms carryVollSchritt_wf
+#print axioms signVollSchritt_dst
+#print axioms signVollSchritt_wf
+#print axioms xchgVollSchritt_puffer
+#print axioms xchgVollSchritt_reg
+#print axioms xchgVollSchritt_wf
+#print axioms rotVollRundweg_sib
+#print axioms rotVollRundweg_rip
+#print axioms carryVollRundweg_sib
+#print axioms carryVollRundweg_rip
+#print axioms carryVollRundweg_sibImm
+#print axioms signVollRundweg_sib
+#print axioms signVollRundweg_rip
+#print axioms xchgVollRundweg_sib
+#print axioms xchgVollRundweg_rip
+#print axioms decodeRotVoll_lock_verweigert
+#print axioms decodeCarryVoll_lock_verweigert
+#print axioms decodeSignVoll_lock_verweigert
+#print axioms decodeXchgVoll_lock_verweigert
+#print axioms adapterIntMem_verweigert
+#print axioms adapterIntMem_wf
+#print axioms intMemWitM0_wf
+#print axioms intMemWit_zeuge
 
 end Gabbro.Grammatik.X86
