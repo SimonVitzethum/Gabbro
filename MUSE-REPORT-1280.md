@@ -1,5 +1,19 @@
 # MUSE-REPORT-1280: Exact review of candidate 1279 (BSF/BSR/POPCNT/BSWAP)
 
+CANDIDATE: 1279 cf407e527e7b4053af372175670d6875cc446890
+VERDICT: ACCEPT
+
+The candidate meets every checkable requirement: exact owned scope,
+no forbidden tactics or new axioms (standard axioms only), accepted
+evaluator lifted unchanged, refusals that really refuse, a
+non-degenerate two-core witness with a memory-changing drain, silicon
+facts matching the supplied SDM extract, honest CUTS with no
+hardware-correspondence or W/GX claim. The general memory-row
+decode/encode composition stays open with a documented, specific
+tactic-budget obstruction; register rows are general and both
+composition halves are proved, so this is a named gap, not a silent
+weakening.
+
 Clone `/home/simon/Dokumente/gabbro-muse/a1280`, branch `muse/1280`
 (`.git/HEAD` reads `ref: refs/heads/muse/1280`; verified first, no mismatch).
 Owned file: only this report. No Lean or Rust code added or changed by
@@ -130,16 +144,4 @@ tree, so there is no overlap with the accepted `BitScan`/`BitCount`/
   above plus snapshot `clean: true`, and the merge gate rebuilds
   `grammatik/` mechanically before committing.
 
-CANDIDATE: 1279 cf407e527e7b4053af372175670d6875cc446890
-VERDICT: ACCEPT
-
-The candidate meets every checkable requirement: exact owned scope,
-no forbidden tactics or new axioms (standard axioms only), accepted
-evaluator lifted unchanged, refusals that really refuse, a
-non-degenerate two-core witness with a memory-changing drain, silicon
-facts matching the supplied SDM extract, honest CUTS with no
-hardware-correspondence or W/GX claim. The general memory-row
-decode/encode composition stays open with a documented, specific
-tactic-budget obstruction; register rows are general and both
-composition halves are proved, so this is a named gap, not a silent
-weakening.
+Machine-readable verdict and reasons are at the top of this report.
