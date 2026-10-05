@@ -71,3 +71,28 @@ the deliverable proves joint reachability plus representation transport and
 books the identity as OPEN. If the reviewers want the identity, it needs the
 pipeline owners' certificate, not more premises here (rule 12/4a would forbid
 assuming it).
+
+## Review response (2026-10-05, reviewer lane 1272)
+
+Reviewer verdict on this candidate: REPAIR, reason purely infrastructural —
+the pinned snapshot (`c73645e2f3b678c7ecef169c917a1dcf989c936d`) was absent
+from the reviewer clone, so no exact-review check could run. The review carries
+NO semantic finding against this deliverable (no sorry/axiom misuse, no witness
+defect, no silicon error: nothing was inspected).
+
+Author-side verification after the review (this clone, `muse/1271`):
+
+- HEAD is exactly the pinned hash (`git rev-parse HEAD` =
+  `c73645e2f3b678c7ecef169c917a1dcf989c936d`); the deliverable is intact:
+  `grammatik/Grammatik/X86/TsoGxEntryBytes.lean`, the import line in
+  `grammatik/Grammatik.lean`, `MUSE-REPORT-1271.md`.
+- Forbidden-token scan over the new file (`sorry`/`admit`/`native_decide`/
+  `sorryAx`/`unsafe`/top-level `axiom`): zero matches (only English prose
+  "admitted" in comments).
+- `./lean-bau`: `Build completed successfully (658 jobs)`, whole project green.
+- `#print axioms` unchanged: every main theorem at most
+  `propext, Classical.choice, Quot.sound`; `giftPrologCfg` axiom-free.
+
+Nothing in the deliverable was weakened, redefined, or restated to answer the
+review, because there was no semantic finding to answer. The candidate stands
+as committed; re-review needs the snapshot delivered into the reviewer clone.
