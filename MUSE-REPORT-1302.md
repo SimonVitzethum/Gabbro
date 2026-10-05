@@ -4,13 +4,16 @@ Lane 1302: independent exact review of candidate 1301 (WC ordering:
 cross-core eviction order and CLFLUSHOPT/CLWB).
 
 Candidate: lane 1301, pinned HEAD
-`be7b1559194fd2d7fb261e81125d5365e9b736a0`, base
+`1618e410e2a763bac2a5eb824001dc680d1f9305` (re-review after the
+author's whitespace repair; previous pinned HEAD
+`be7b1559194fd2d7fb261e81125d5365e9b736a0` was refused by the
+integration gate on trailing whitespace), base
 `234f2728a718157cba0e1f9e0ef300874b34ea6a`. Changed files (per
 `.tmp/review/SNAPSHOT.json`): `MUSE-REPORT-1301.md`,
 `grammatik/Grammatik.lean` (one import line),
 `grammatik/Grammatik/X86/HwWcOrdering.lean` (new, 1382 lines).
 
-CANDIDATE: 1301 be7b1559194fd2d7fb261e81125d5365e9b736a0
+CANDIDATE: 1301 1618e410e2a763bac2a5eb824001dc680d1f9305
 
 ## Checks performed
 
@@ -82,12 +85,25 @@ displacement); no wider decode coverage is claimed.
 
 VERDICT: ACCEPT
 
-Candidate 1301 `be7b1559194fd2d7fb261e81125d5365e9b736a0`: ACCEPT.
+Candidate 1301 `1618e410e2a763bac2a5eb824001dc680d1f9305`: ACCEPT.
 No unsupported desired-correctness premises, no weakened
 guarantees, no fake closure. The claimed scope (lifted WC machine
 with oldest-first eviction, same-core WC read ordering, weakly
 ordered CLFLUSHOPT/CLWB under named ordering assumptions, two-core
 non-degenerate witness) is proved as stated.
+
+## Re-review of the repaired HEAD
+
+The author's repair is exactly what the report claims:
+whitespace-only. Line 1043 (`wit_schritt6_1301`) lost its trailing
+space; the file is otherwise identical (1382 lines, same theorems,
+same proofs). Re-verified on the NEW pinned files: `./lean-probe`
+gives `== 0 error(s)` with unchanged `#print axioms` output
+(`propext`, plus inherited `Quot.sound` on the fence-carrying
+lemmas); forbidden-tactic grep still shows only the 8 benign
+"admitted" prose matches; all previous findings carry over
+unchanged. No stale snapshot approved: this verdict binds only the
+NEW HEAD above.
 
 ## What remains open
 
