@@ -1022,6 +1022,137 @@ theorem nestKanonisch :
     istKanonisch (BitVec.ofNat 64 16384) = true := by
   decide
 
+/-! ## 8. Delivery observations on the witness.
+
+   First the maskable trap delivery (keeps IF), then the nested
+   maskable interrupt delivery (clears IF), then the masked refusal
+   and the NMI bypass under cleared IF. -/
+
+/-- First delivery: maskable vector 32 on core 0. -/
+def nestD1 : Option (HwMaschine × Bool × Bool) :=
+  asyncSchritt nestStart 0 evMask32 nestSteuer
+
+/-- Nested delivery: vector 32 then vector 33 on core 0. -/
+def nestVerschachtelt : Option (HwMaschine × Bool × Bool × Bool) :=
+  verschachteltSchritt nestStart 0 evMask32 evMask33 nestSteuer
+
+/-- Nested projections: handler RIP out of a nested outcome. -/
+def nestRipOut (o : Option (HwMaschine × Bool × Bool × Bool))
+    (c : Nat) : Option Wort :=
+  match o with
+  | some (m, _, _, _) => some (m.kerne c).rip
+  | _ => none
+
+/-- Nested projections: final IF out of a nested outcome. -/
+def nestIfOut (o : Option (HwMaschine × Bool × Bool × Bool)) :
+    Option Bool :=
+  match o with
+  | some (_, b, _, _) => some b
+  | _ => none
+
+/-- Nested projections: buffer length out of a nested outcome. -/
+def nestBufOut (o : Option (HwMaschine × Bool × Bool × Bool))
+    (c : Nat) : Option Nat :=
+  match o with
+  | some (m, _, _, _) => some (m.puffer c).length
+  | _ => none
+
+/-- Nested projections: delivered memory (witness memory on refusal). -/
+def nestMemOut (o : Option (HwMaschine × Bool × Bool × Bool)) :
+    Speicher :=
+  match o with
+  | some (m, _, _, _) => m.mem
+  | none => nestMem
+
+/-- MASKABLE SUCCESS: delivery reaches the trap handler `0x2100`. -/
+theorem nestD1_rip :
+    asyncRipOut nestD1 0 = some (BitVec.ofNat 64 8448) := by
+  decide
+
+/-- The trap gate keeps IF (S5, witnessed). -/
+theorem nestD1_if :
+    asyncIfOut nestD1 = some true := by
+  decide
+
+/-- Delivery reports the IST switch. -/
+theorem nestD1_gew :
+    asyncGewOut nestD1 = some true := by
+  decide
+
+/-- S3 witnessed: no buffer grew on the acting core. -/
+theorem nestD1_puffer_0 : asyncBufOut nestD1 0 = some 0 := by
+  decide
+
+/-- S3 witnessed: no buffer grew on the other core either. -/
+theorem nestD1_puffer_1 : asyncBufOut nestD1 1 = some 0 := by
+  decide
+
+/-- First frame word reads back. -/
+theorem nestD1_rahmen_ss :
+    read64 (asyncMemOut nestD1) (BitVec.ofNat 64 16376) =
+      some (BitVec.ofNat 64 16) := by
+  decide
+
+/-- Last frame word reads back. -/
+theorem nestD1_rahmen_rip :
+    read64 (asyncMemOut nestD1) (BitVec.ofNat 64 16344) =
+      some (BitVec.ofNat 64 4660) := by
+  decide
+
+/-- NESTED SUCCESS: the second delivery reaches `0x2200`. -/
+theorem nestV_rip :
+    nestRipOut nestVerschachtelt 0 = some (BitVec.ofNat 64 8704) := by
+  decide
+
+/-- The nested interrupt gate clears IF (S5, witnessed). -/
+theorem nestV_if :
+    nestIfOut nestVerschachtelt = some false := by
+  decide
+
+/-- S3 witnessed across the nest: acting buffer still empty. -/
+theorem nestV_puffer_0 : nestBufOut nestVerschachtelt 0 = some 0 := by
+  decide
+
+/-- S3 witnessed across the nest: other buffer still empty. -/
+theorem nestV_puffer_1 : nestBufOut nestVerschachtelt 1 = some 0 := by
+  decide
+
+/-- The machine after the nest, if reached. -/
+def nestM2 : Option HwMaschine :=
+  match nestVerschachtelt with
+  | some (m2, _, _, _) => some m2
+  | none => none
+
+/-- Third attempt: maskable vector 32 under cleared IF. -/
+def nestDritt : Option (HwMaschine × Bool × Bool) :=
+  match nestM2 with
+  | some m2 =>
+    asyncSchritt m2 0 evMaskiert32 { nestSteuer with ifBit := false }
+  | none => none
+
+/-- NESTED MASK REFUSES: a maskable event under cleared IF never
+    delivers, even with a present gate. -/
+theorem nestDritt_verweigert : nestDritt = none := by
+  decide
+
+/-- NMI attempt under cleared IF after the nest. -/
+def nestNmi : Option (HwMaschine × Bool × Bool) :=
+  match nestM2 with
+  | some m2 =>
+    asyncSchritt m2 0 evNmi2 { nestSteuer with ifBit := false }
+  | none => none
+
+/-- NMI BYPASS (S1, witnessed): delivery reaches `0x2000` despite
+    cleared IF. -/
+theorem nestNmi_rip :
+    asyncRipOut nestNmi 0 = some (BitVec.ofNat 64 8192) := by
+  decide
+
+/-- The NMI interrupt gate clears IF. -/
+theorem nestNmi_if :
+    asyncIfOut nestNmi = some false := by
+  decide
+
 /- CUTS:
    Proved here: SKELETON ONLY so far -- the double-fault vector
    constant. Nested delivery, #DF escalation, the TSO-buffered
