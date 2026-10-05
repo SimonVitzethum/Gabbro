@@ -107,7 +107,9 @@
   level the coherent machine stores at; the report explains why the 8-byte
   refusal does not transfer. No weakening.
 
-## VERDICT: ACCEPT
+## Verdict
 
-CANDIDATE: 1123 `6aaaecf8f8e0e8f3b55c75ee63b9a4397bd6ba01` — ACCEPT.
+CANDIDATE: 1123 6aaaecf8f8e0e8f3b55c75ee63b9a4397bd6ba01
+VERDICT: ACCEPT
+
 Exact candidate, no premise smuggling, no weakened guarantee, no fake closure.
