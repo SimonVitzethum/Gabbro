@@ -18,6 +18,7 @@
 -/
 import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
+
 namespace Gabbro.Grammatik.AtomarXZeuge
 
 open Gabbro.Grammatik Speichermodell Zielsatz NIZeuge

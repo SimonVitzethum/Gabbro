@@ -27,6 +27,7 @@
   a proof would be probing something else.
 -/
 import Grammatik.Korrespondenz.Allgemein.KorrespondenzAllg
+
 namespace Gabbro.Grammatik.WeitZeuge
 
 open Gabbro.Grammatik

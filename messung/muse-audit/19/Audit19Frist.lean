@@ -9,6 +9,7 @@
 -- says sampling alone never discharges `hspace`.
 import Grammatik.Kern.Syntax.Ziel
 import Grammatik.Kern.Semantik.Fristlauf
+
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

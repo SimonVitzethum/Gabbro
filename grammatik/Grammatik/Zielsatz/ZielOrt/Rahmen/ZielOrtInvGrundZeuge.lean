@@ -30,6 +30,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 import Grammatik.Proben.InvZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The declaration -/

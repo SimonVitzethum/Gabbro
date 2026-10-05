@@ -20,6 +20,7 @@ import Grammatik.X86.Flags.FeatureProfile
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.TSO.Kern.WordAccessGrouping
 import Grammatik.X86.TSO.Verriegelt.LockedOps
+
 namespace Gabbro.Grammatik.X86
 
 /-- Per-core data WITHOUT memory: integer file, flags, RIP, XMM file

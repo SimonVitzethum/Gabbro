@@ -34,6 +34,7 @@ import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Befehle.Arithmetik.NarrowCodec
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- UC MMIO window profile: the explicit list of UC regions established by

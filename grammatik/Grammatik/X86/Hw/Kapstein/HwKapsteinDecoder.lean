@@ -22,6 +22,7 @@ import Grammatik.X86.Befehle.ISA.ISA
 import Grammatik.X86.Befehle.Kompakt.CompactForms
 import Grammatik.X86.Befehle.Ganzzahl.IntegerCore
 import Grammatik.X86.Befehle.Vektor.Avx2Join
+
 namespace Gabbro.Grammatik.X86
 
 /-- One decoded row of the capstone chain: the width dispatcher arm

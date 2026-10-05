@@ -15,6 +15,7 @@
       for ANY two predicates of thread pairs — the step equations are unused.
 -/
 import Grammatik.Kern.Semantik.Maschine
+
 open Gabbro.Grammatik
 
 variable {D : Deklaration}

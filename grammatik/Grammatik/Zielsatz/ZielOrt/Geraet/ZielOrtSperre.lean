@@ -15,6 +15,7 @@
   machine lock invariant back (`kopfS_frei_inv`).
 -/
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreMaschine
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

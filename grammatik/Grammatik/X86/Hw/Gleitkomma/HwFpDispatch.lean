@@ -19,6 +19,7 @@ import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat32HardwareForms
 import Grammatik.X86.Befehle.Gleitkomma.FpControlHardwareForms
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloatHardwareForms
+
 namespace Gabbro.Grammatik.X86
 
 /-- One dispatched instruction: the whole unified chain plus the s32 and

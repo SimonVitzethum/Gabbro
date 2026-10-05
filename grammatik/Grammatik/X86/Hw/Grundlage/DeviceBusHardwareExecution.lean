@@ -29,6 +29,7 @@
 import Grammatik.X86.Hw.Grundlage.DeviceHardwareForms
 import Grammatik.X86.Hw.Grundlage.HardwareFaults
 import Grammatik.X86.TSO.Kern.TSO
+
 namespace Gabbro.Grammatik.X86
 
 /- Lane-704 scope: every declaration below lives in `Bus704`, so no

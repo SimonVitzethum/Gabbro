@@ -32,6 +32,7 @@ import Grammatik.X86.Kosten.CostSummary
 import Grammatik.X86.Kosten.BudgetExecution
 import Grammatik.X86.TSO.Verriegelt.LockedInstructionExecution
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfadenZeuge
+
 namespace Gabbro.Grammatik.X86
 
 /-- Contention structure at one CAS retry site, as checked data: either a

@@ -23,6 +23,7 @@
   `envR_envZ`, `zurueck_mitRuhe`).
 -/
 import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -12,6 +12,7 @@
 -/
 
 import Grammatik.CBackend.Semantik.ZeichenfolgeGebunden
+
 namespace Gabbro.Grammatik
 
 /-- The emitted C object for `string max N`: the length word plus the full

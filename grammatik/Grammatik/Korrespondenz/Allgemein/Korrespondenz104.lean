@@ -11,6 +11,7 @@
               `gabbro corr-lean beispiele/104-referenz.gab` on this tree.
 -/
 import Grammatik.CBackend.Formen.CFormenZeuge
+
 namespace Gabbro.Grammatik
 
 /-- The slot layout facts of table `Konto`: `n` records, `ss` bytes apart,

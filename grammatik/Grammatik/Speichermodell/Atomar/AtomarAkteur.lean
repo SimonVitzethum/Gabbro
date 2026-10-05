@@ -11,6 +11,7 @@
   depends on how `M` was reached: the replay invariant `FadenSA` is the whole premise.
 -/
 import Grammatik.Speichermodell.Atomar.AtomarReplay
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

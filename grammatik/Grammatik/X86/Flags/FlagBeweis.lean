@@ -16,6 +16,7 @@
 -/
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- Signed interpretation of a word: two's complement value in

@@ -18,6 +18,7 @@
 -/
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
 import Grammatik.Bausteine.Arena.ArenaZucker
+
 namespace Gabbro.Grammatik.ArenaDyn
 
 /-- A dynamic arena: ceiling `M`, commit floor `hi`, committed prefix `c`. -/

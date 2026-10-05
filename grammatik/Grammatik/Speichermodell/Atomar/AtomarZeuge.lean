@@ -33,6 +33,7 @@
 -/
 import Grammatik.Speichermodell.Atomar.Atomar
 import Grammatik.Speichermodell.Maschine.Zeuge
+
 namespace Gabbro.Grammatik
 
 open Speichermodell Zielsatz

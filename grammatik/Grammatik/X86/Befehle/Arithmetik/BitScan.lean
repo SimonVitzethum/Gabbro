@@ -17,6 +17,7 @@
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- A set bit of the width-truncated operand: bit `i` of `trunc b w`. -/

@@ -14,6 +14,7 @@ import Grammatik.X86.Befehle.Arithmetik.ShiftLogic
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- The three shift directions with a canonical byte row in this file. -/

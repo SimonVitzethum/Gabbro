@@ -22,6 +22,7 @@ import Grammatik.X86.Befehle.Arithmetik.MulDiv
 import Grammatik.X86.Befehle.Arithmetik.MulDivCodec
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 /-- Admitted operand width: practical 32-bit and 64-bit forms. -/

@@ -17,6 +17,7 @@ import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Befehle.ISA.ISA
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Befehle.ISA.ISAWitnesses
+
 namespace Gabbro.Grammatik.X86
 
 /-- Events of one ISA-strand step on the coherent machine: register

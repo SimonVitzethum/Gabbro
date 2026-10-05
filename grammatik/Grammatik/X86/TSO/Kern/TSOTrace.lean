@@ -11,6 +11,7 @@
   source semantics. Byte granularity only: typed-carrier W/GX stays CUTS.
 -/
 import Grammatik.X86.TSO.Kern.TSOHistory
+
 namespace Gabbro.Grammatik.X86
 
 /-- A trace node: the canonical TSO state plus its grown history, the

@@ -7,6 +7,7 @@
 import Grammatik.Zielsatz.Faeden.RuheNutzer
 import Grammatik.Speichermodell.Atomar.AtomarRuhe
 import Grammatik.Zielsatz.Atomar.AtomarPflicht
+
 namespace Gabbro.Grammatik
 
 open Zielsatz

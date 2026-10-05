@@ -18,6 +18,7 @@ import Grammatik.Kern.Semantik.Semantik
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfadenZeuge
 import Grammatik.Logik.Fortschritt.FolgeBeweis
 import Grammatik.Logik.Fortschritt.FolgeZeuge
+
 namespace Gabbro.Grammatik.X86
 
 variable {D : Deklaration}

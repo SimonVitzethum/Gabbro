@@ -18,6 +18,7 @@ import Grammatik.X86.Speicher.AddressedHardwareExecution
 import Grammatik.X86.Hw.Grundlage.ExceptionPriorityHardware
 import Grammatik.X86.Hw.Grundlage.InterruptDescriptorHardware
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Pending producer families, by owning lane number: width rows

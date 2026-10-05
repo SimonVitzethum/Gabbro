@@ -23,6 +23,7 @@ import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Laden.Relokation
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Exact encoded widths of the rel32 branch/call forms. -/

@@ -6,6 +6,7 @@
              Opus lane O25b, 2026-09-26. Standalone.
 -/
 import Grammatik.Speichermodell.Atomar.AtomarSem
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

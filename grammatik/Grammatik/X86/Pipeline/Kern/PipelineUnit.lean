@@ -24,6 +24,7 @@ import Grammatik.X86.Pipeline.Kern.PipelineEntry
 import Grammatik.X86.Validierung.ContractSites
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
 import Grammatik.Parser.UebersetzeAllg2
+
 namespace Gabbro.Grammatik.X86.PipelineUnit
 
 open Gabbro.Grammatik

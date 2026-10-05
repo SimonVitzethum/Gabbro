@@ -10,6 +10,7 @@
 -/
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- A checked stack frame: byte base plus depth, over canonical addresses. -/

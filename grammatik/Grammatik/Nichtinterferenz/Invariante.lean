@@ -11,6 +11,7 @@
   call graph by the thread invariant `merkInvG_erreichbar`.
 -/
 import Grammatik.Nichtinterferenz.LokalSchritt
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

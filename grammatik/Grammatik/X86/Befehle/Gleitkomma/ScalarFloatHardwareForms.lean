@@ -31,6 +31,7 @@ import Grammatik.X86.Befehle.Vektor.VectorCodec
 import Grammatik.X86.Befehle.Gleitkomma.FloatExceptions
 import Grammatik.X86.Befehle.Gleitkomma.FloatEntryState
 import Grammatik.X86.Befehle.Gleitkomma.FloatSourceObservations
+
 namespace Gabbro.Grammatik.X86
 
 /-- Canonical REX byte: 0100WRXB with X = 0 (no SIB index anywhere in

@@ -29,6 +29,7 @@ import Grammatik.X86.Validierung.DecodingCoverage
 import Grammatik.X86.Validierung.ValidatorSkeleton
 import Grammatik.X86.Laden.LoadedExecution
 import Grammatik.X86.Compose.Bild.ComposePatchBytes
+
 namespace Gabbro.Grammatik.X86
 
 /-- One separately lowered unit: its bytes and its link-time virtual base.

@@ -13,6 +13,7 @@
 import Grammatik.X86.Kern.Stapel
 import Grammatik.X86.Befehle.Kontrolle.CallAlign16
 import Grammatik.X86.Laden.StackExecution
+
 namespace Gabbro.Grammatik.X86.PipelineCalls
 
 open Gabbro.Grammatik.X86

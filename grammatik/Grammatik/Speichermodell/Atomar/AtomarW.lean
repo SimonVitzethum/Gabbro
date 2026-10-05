@@ -7,6 +7,7 @@
              class "not in `Tg`" in place of "not atomic". Opus lane O25b, 2026-09-26.
 -/
 import Grammatik.Speichermodell.Atomar.AtomarLauf
+
 namespace Gabbro.Grammatik
 
 open Speichermodell

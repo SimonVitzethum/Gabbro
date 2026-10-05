@@ -12,6 +12,7 @@
   `hFreiVor`/`hFreiNach` are dead premises.
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

@@ -2,6 +2,7 @@
    (PLAN-BITS section 4, model half). -/
 
 import Grammatik.Kern.Syntax.Typen
+
 namespace Gabbro.Grammatik
 
 /-- Storage-width helper: `2 ^ (w+1)` is positive on `Int`. -/

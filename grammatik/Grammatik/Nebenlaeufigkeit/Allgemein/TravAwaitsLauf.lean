@@ -6,6 +6,7 @@
              `locks`, call, `if`, `awaits`, return).
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. Start states and small facts -/

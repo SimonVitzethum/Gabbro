@@ -11,6 +11,7 @@ import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Befehle.Arithmetik.NarrowCodec
+
 namespace Gabbro.Grammatik.X86
 
 /-- Width conversion ledger: every known conversion names its width;

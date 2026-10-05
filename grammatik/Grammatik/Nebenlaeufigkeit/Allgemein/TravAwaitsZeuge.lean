@@ -33,6 +33,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The declaration and the program -/

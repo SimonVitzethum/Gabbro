@@ -24,6 +24,7 @@
 -/
 import Grammatik.Zielsatz.Kern.Akzeptiert
 import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+
 namespace Gabbro.Grammatik
 
 open Zielsatz

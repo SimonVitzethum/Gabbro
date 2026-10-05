@@ -49,6 +49,7 @@ import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
 import Grammatik.Korrespondenz.Zeugnis.ZeugnisIdent
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
+
 namespace Gabbro.Grammatik
 
 open Parser Parser.Uebersetze

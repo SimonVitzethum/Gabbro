@@ -11,6 +11,7 @@
   semantics of the device forms in `ZielOrtGeraetSem.lean`.
 -/
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetBeweis
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

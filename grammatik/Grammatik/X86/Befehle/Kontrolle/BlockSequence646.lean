@@ -26,6 +26,7 @@ import Grammatik.X86.Quelle.SourceMemory
 import Grammatik.X86.Quelle.ExpressionLowering
 import Grammatik.X86.Quelle.SourceAssignmentLowering
 import Grammatik.X86.Speicher.ImageStoreFrame
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

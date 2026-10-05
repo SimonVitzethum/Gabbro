@@ -5,6 +5,7 @@
   source correspondence is claimed here.
 -/
 import Grammatik.X86.Kern.Typen
+
 namespace Gabbro.Grammatik.X86
 
 /-- Architectural register code: rax=0 through r15=15. -/

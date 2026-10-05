@@ -29,6 +29,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Kosten.CostSummary
 import Grammatik.X86.Opt.Schleifen.InvariantenOpt
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

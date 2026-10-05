@@ -26,6 +26,7 @@ import Grammatik.X86.Speicher.AddressEncoding
 import Grammatik.X86.Hw.Grundlage.HardwareFaults
 import Grammatik.X86.Speicher.AddressedHardwareExecution
 import Grammatik.X86.Hw.Grundlage.ExceptionPriorityHardware
+
 namespace Gabbro.Grammatik.X86
 
 /-- Canonical-form agreement: the accepted `kanonisch48` check and the

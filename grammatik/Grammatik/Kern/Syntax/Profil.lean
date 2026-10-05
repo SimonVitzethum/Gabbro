@@ -15,6 +15,7 @@
   (`profil_modell_zeuge`, `bindung_fuegt_nichts_hinzu_zeuge`).
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 /-- Keyed mode assumption keys (finite inductive, PLAN-ERWEITUNG.md section 0c,

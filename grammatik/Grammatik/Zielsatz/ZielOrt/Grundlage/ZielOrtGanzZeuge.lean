@@ -31,6 +31,7 @@ import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
 import Grammatik.Korrespondenz.Allgemein.Referenz104Rahmen
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The corpus program `104-referenz.gab` -/

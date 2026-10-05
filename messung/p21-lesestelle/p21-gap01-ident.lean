@@ -19,6 +19,7 @@
   the carrier link is the `Var`/`Expr.var` constructor it feeds.
 -/
 import Grammatik.Kern.Syntax.Syntax
+
 namespace P21.Gap01Ident
 
 /-- Binder-position resolution: the use `m` against the binder stack (head = innermost). -/

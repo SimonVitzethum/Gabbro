@@ -27,6 +27,7 @@
 import Grammatik.X86.Befehle.Vektor.VectorIntegerHardwareForms
 import Grammatik.X86.Befehle.Vektor.VectorHardwareProfile
 import Grammatik.X86.Flags.FeatureProfile
+
 namespace Gabbro.Grammatik.X86
 
 /-- A 256-bit AVX2 integer value: the low and high 128-bit halves.

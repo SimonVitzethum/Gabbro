@@ -8,6 +8,7 @@
   for unaligned concurrent use (that is the TSO bridge lane's business).
 -/
 import Grammatik.X86.Kern.Typen
+
 namespace Gabbro.Grammatik.X86
 
 /-- Byte address: 64-bit modular addition of a natural offset. -/

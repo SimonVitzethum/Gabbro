@@ -17,6 +17,7 @@
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Kern.Syntax.Extraktion
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik.Extraktion

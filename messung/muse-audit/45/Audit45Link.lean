@@ -8,6 +8,7 @@
 -- Demonstration: from `w` alone (plus the world equation) the same equality
 -- `wahr? ... = true` follows; `h` contributes only the transport.
 import Grammatik.Logik.Vertraege.VertragOrtB
+
 namespace GabbroAudit45D
 
 open Gabbro.Grammatik

@@ -10,6 +10,7 @@
   only, so it cannot see a 30-slot census form.
 -/
 import Grammatik.Kern.Semantik.Erhaltung
+
 open Gabbro.Grammatik
 
 /-- F2: closure holds for a cert whose rows are all `.literal` -- trivially. -/

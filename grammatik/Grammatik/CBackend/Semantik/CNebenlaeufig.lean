@@ -90,6 +90,7 @@
 -/
 import Grammatik.CBackend.Formen.CFormenDet
 import Grammatik.Zielsatz.Kern.Beweis
+
 namespace Gabbro.Grammatik
 
 open Zielsatz

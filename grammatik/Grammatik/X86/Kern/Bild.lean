@@ -9,6 +9,7 @@
 -/
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- Address profile: canonical width is 48 or 57, nothing else. -/

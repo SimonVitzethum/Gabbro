@@ -13,6 +13,7 @@
 import Grammatik.X86.Kern.Stapel
 import Grammatik.X86.TSO.Kern.TSO
 import Grammatik.X86.Speicher.SpeicherKommutation
+
 namespace Gabbro.Grammatik.X86
 
 /-- Spill slot address: the canonical frame slot, no new address model. -/

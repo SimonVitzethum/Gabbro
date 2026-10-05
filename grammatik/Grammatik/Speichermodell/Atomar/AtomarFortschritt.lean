@@ -22,6 +22,7 @@ import Grammatik.Speichermodell.Atomar.AtomarZeuge
 import Grammatik.Logik.Fortschritt.Fortschritt
 import Grammatik.Logik.Vertraege.AntwortOrte
 import Grammatik.Logik.Ruf.RufHaeltG
+
 namespace Gabbro.Grammatik
 
 open Speichermodell Zielsatz

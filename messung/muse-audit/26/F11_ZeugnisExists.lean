@@ -9,6 +9,7 @@
   is exactly `Nonempty`.
 -/
 import Grammatik.Korrespondenz.Zeugnis.Zeugnis
+
 open Gabbro.Grammatik
 
 /-- F11: the conclusion is exactly `Nonempty` of the judgment. -/

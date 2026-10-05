@@ -22,6 +22,7 @@ import Grammatik.X86.TSO.Kern.TSO
 import Grammatik.X86.Befehle.Ganzzahl.IntRotate
 import Grammatik.X86.Befehle.Ganzzahl.IntCarryForms
 import Grammatik.X86.TSO.Verriegelt.XchgOrderNeed
+
 namespace Gabbro.Grammatik.X86
 
 /-- Byte-register target of a full register code under a REX flag:

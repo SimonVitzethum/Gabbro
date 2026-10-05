@@ -18,6 +18,7 @@
   `fortV_mono`, `logOk_grund` and the leaf lemmas are reused.
 -/
 import Grammatik.Logik.Vertraege.AxiomVertrag
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

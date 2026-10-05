@@ -30,6 +30,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The declaration -/

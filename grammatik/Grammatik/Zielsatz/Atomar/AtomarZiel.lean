@@ -23,6 +23,7 @@
 import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 import Grammatik.Zielsatz.Atomar.AtomarRuheNutzer
 import Grammatik.Zielsatz.Kern.Beweis
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik Speichermodell

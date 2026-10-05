@@ -24,6 +24,7 @@ import Grammatik.X86.Pipeline.Kern.Pipeline
 import Grammatik.X86.Opt.Register.SpillPrivate
 import Grammatik.X86.Kern.Stapel
 import Grammatik.X86.Pipeline.Kern.PipelineWitnesses
+
 namespace Gabbro.Grammatik.X86.PipeRegAlloc
 
 open Gabbro.Grammatik

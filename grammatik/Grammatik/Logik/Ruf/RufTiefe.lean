@@ -35,6 +35,7 @@
   has no premise here.
 -/
 import Grammatik.Logik.Vertraege.HandlerKongruenz
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -18,6 +18,7 @@ import Grammatik.X86.Kosten.CostSummary
 import Grammatik.X86.Hw.Grundlage.HardwareAssumptions
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfadenZeuge
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## Closing interface: validation acceptance to time bound.

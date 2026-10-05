@@ -29,6 +29,7 @@ import Grammatik.X86.Pipeline.Kern.PipelineImage
 import Grammatik.X86.Pipeline.Kern.PipelineWitnesses
 import Grammatik.X86.Speicher.EffectiveAddress
 import Grammatik.X86.Speicher.AddressEncoding
+
 namespace Gabbro.Grammatik.X86.PipelineTables
 
 open Gabbro.Grammatik

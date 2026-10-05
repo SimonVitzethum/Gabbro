@@ -16,6 +16,7 @@
 import Grammatik.Zielsatz.Atomar.AtomarZiel
 import Grammatik.Speichermodell.Maschine.GXMaschine
 import Grammatik.Zielsatz.Faeden.Verbund
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik Speichermodell

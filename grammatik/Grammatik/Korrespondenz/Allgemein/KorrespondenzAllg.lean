@@ -97,6 +97,7 @@
 import Grammatik.Korrespondenz.Allgemein.Korrespondenz
 import Grammatik.CBackend.Formen.CFormenDet
 import Grammatik.Logik.Ruf.RufOhneHardware
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

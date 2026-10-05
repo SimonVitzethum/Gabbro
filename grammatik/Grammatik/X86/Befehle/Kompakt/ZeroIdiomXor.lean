@@ -20,6 +20,7 @@ import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Kern.Ganzzahl
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- A zero idiom names the register it zeroes: `XOR r, r`. -/

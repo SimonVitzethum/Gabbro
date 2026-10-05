@@ -17,6 +17,7 @@ import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Hw.Grundlage.DeviceHardwareForms
 import Grammatik.X86.Hw.Grundlage.DeviceBusHardwareExecution
 import Grammatik.X86.Speicher.MemoryTypeHardwareExecution
+
 namespace Gabbro.Grammatik.X86
 
 namespace HwDev1133

@@ -34,6 +34,7 @@ import Grammatik.X86.Hw.Familien.HwStackCalls
 import Grammatik.X86.Hw.Speicher.HwDrainGeneric
 import Grammatik.X86.Hw.Gleitkomma.HwFpControl
 import Grammatik.X86.TSO.Verriegelt.ConcurrentIntegerExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- A lowered 64-bit store at `a` with word `v`: eight byte issues

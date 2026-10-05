@@ -17,6 +17,7 @@
 import Grammatik.X86.TSO.Kern.WordAtomicity
 import Grammatik.X86.Speicher.AccessExecution
 import Grammatik.X86.TSO.Kern.TSOHistory
+
 namespace Gabbro.Grammatik.X86
 
 /-- The eight canonical byte-store entries of word `v` at `a`, oldest

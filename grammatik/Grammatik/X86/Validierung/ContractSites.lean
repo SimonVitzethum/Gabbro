@@ -19,6 +19,7 @@ import Grammatik.Logik.Ruf.RufAtNachB
 import Grammatik.Logik.Vertraege.VertragOrtB
 import Grammatik.Logik.Fortschritt.FolgeZeuge
 import Grammatik.Logik.Fortschritt.FolgeBeweis
+
 namespace Gabbro.Grammatik.X86
 
 variable {D : Deklaration}

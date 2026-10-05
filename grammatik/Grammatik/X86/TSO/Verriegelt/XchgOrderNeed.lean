@@ -23,6 +23,7 @@ import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.TSO.Kern.TSO
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Ausfuehrung
+
 namespace Gabbro.Grammatik.X86
 
 /-- XCHG 64-bit word forms: memory exchange (ordering-carrying) and

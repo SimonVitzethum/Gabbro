@@ -27,6 +27,7 @@
   `native_decide`/`unsafe`; every premise used).
 -/
 import Grammatik.Parser.Rundlauf
+
 namespace Gabbro.Grammatik.Parser
 
 -- Kernel places: variables and suffix chains over kernel

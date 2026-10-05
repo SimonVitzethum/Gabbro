@@ -20,6 +20,7 @@ import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Laden.StackUnwind
 import Grammatik.X86.Befehle.Kontrolle.CallAlign16
 import Grammatik.X86.Speicher.CodeImmutability
+
 namespace Gabbro.Grammatik.X86
 
 /-- Stack slot of core `c`: one word below its top. -/

@@ -5,6 +5,7 @@
 -- exec traces", but any Brav pair counts. Ziel.lean:218-232.
 import Grammatik.Kern.Syntax.Ziel
 import Grammatik.Kern.Syntax.Satz
+
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

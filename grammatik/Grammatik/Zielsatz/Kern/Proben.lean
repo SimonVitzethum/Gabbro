@@ -42,6 +42,7 @@ import Grammatik.Zielsatz.Kern.SpecProben
 import Grammatik.Zielsatz.Faeden.RuheZeuge
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 import Grammatik.Zielsatz.Kern.Beweis
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

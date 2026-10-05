@@ -25,6 +25,7 @@ import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Laden.RelocatedExecution
 import Grammatik.X86.Befehle.Ganzzahl.IntegerHardwareForms
+
 namespace Gabbro.Grammatik.X86
 
 /-- Pinned compact bytes: `sub rax, 1` is REX.W, 83, E8, 01. -/

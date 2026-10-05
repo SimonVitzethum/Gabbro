@@ -33,6 +33,7 @@ import Grammatik.X86.TSO.Kern.AtomicPayload
 import Grammatik.Speichermodell.Atomar.Atomar
 import Grammatik.Speichermodell.Atomar.AtomarReplay
 import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
+
 namespace Gabbro.Grammatik.X86.PayloadResidue
 
 open Gabbro.Grammatik Zielsatz Speichermodell NIZeuge SchwachZeuge AtomarXZeuge AtomicPayload

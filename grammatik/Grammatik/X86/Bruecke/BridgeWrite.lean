@@ -16,6 +16,7 @@
 import Grammatik.X86.TSO.Kern.TSOHistory
 import Grammatik.X86.Quelle.SourceMemory
 import Grammatik.X86.TSO.Kern.WordAtomicity
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

@@ -1,4 +1,5 @@
 import Grammatik.Bausteine.Gleitkomma.Gleitkomma
+
 /-
   Datei:      Grammatik/Typen.lean
   Gegenstand: Die TYPEN der Grammatik, und die Werte, die sie tragen. **Jede Zahl traegt

@@ -15,6 +15,7 @@
   executor or ISA model.
 -/
 import Grammatik.X86.Laden.EntryExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Nolibc entry hooks as validator findings: the `os_anfang` handoff was

@@ -27,6 +27,7 @@
 import Grammatik.Speichermodell.Maschine.SperreSemA
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
 import Grammatik.Speichermodell.Maschine.MaschineW
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

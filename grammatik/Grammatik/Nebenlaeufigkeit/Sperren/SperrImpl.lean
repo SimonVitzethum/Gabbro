@@ -70,6 +70,7 @@
 -/
 import Grammatik.CBackend.Semantik.CTicket
 import Grammatik.Korrespondenz.Kette.Schlusssatz124
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The contract, whole and per lock -/

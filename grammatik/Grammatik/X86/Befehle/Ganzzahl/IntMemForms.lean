@@ -22,6 +22,7 @@ import Grammatik.X86.TSO.Verriegelt.ConcurrentIntegerExecution
 import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Befehle.Ganzzahl.IntRotate
 import Grammatik.X86.Befehle.Ganzzahl.IntCarryForms
+
 namespace Gabbro.Grammatik.X86
 
 /-- Selected address of one access from the acting core's pre-state

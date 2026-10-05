@@ -12,6 +12,7 @@
   of an obligation.
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

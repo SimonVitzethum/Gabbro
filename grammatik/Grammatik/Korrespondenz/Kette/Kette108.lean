@@ -25,6 +25,7 @@
 -/
 import Grammatik.Korrespondenz.Kette.Schlusssatz
 import Grammatik.Korrespondenz.Kette.Schlusssatz104
+
 namespace Gabbro.Grammatik.Kette108
 
 open Gabbro.Grammatik Parser Parser.Uebersetze Parser.UebersetzeAllg Parser.UebersetzeAllg2 Zielsatz

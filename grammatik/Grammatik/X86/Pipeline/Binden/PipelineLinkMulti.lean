@@ -26,6 +26,7 @@ import Grammatik.X86.Pipeline.Binden.PipelineLink
 import Grammatik.X86.Compose.Bild.ComposePatchBytes
 import Grammatik.X86.Befehle.Kontrolle.Rel8Reach
 import Grammatik.X86.Befehle.Kontrolle.BranchLayout
+
 namespace Gabbro.Grammatik.X86
 
 /-- Relocation operand kind at link time: rel32 displacement, abs64

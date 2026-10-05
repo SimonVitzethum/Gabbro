@@ -18,6 +18,7 @@ import Grammatik.X86.Laden.LoadedExecution
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Hw.Bild.HwLoadedImage
+
 namespace Gabbro.Grammatik.X86
 
 /-- A unified instruction is an extension row when it is no pilot row. -/

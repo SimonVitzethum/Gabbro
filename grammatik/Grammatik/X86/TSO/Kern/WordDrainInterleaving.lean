@@ -15,6 +15,7 @@
   source refinement, no fairness or timing premise.
 -/
 import Grammatik.X86.TSO.Kern.WordAccessGrouping
+
 namespace Gabbro.Grammatik.X86
 
 /-- Grouped word base address: zero (aligned). -/

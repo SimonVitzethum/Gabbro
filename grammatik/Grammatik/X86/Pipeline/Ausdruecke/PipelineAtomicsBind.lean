@@ -15,6 +15,7 @@ import Grammatik.X86.Pipeline.Ausdruecke.PipelineAtomics
 import Grammatik.X86.TSO.Kern.SfenceStoreNarrow
 import Grammatik.X86.TSO.Kern.LfenceLoadNarrow
 import Grammatik.X86.TSO.Kern.WordAccessGrouping
+
 namespace Gabbro.Grammatik.X86.PipelineAtomicsBind
 
 open Gabbro.Grammatik

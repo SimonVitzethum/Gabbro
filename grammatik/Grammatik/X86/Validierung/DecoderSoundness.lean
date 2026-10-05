@@ -16,6 +16,7 @@ import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Validierung.DecodingCoverage
+
 namespace Gabbro.Grammatik.X86
 
 /-- A valid decode length is within the 1..15 architectural bound. -/

@@ -9,6 +9,7 @@
   `ZielOrtVollSem.lean`.
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

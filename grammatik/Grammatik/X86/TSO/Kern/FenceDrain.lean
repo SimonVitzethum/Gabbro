@@ -8,6 +8,7 @@
   a foreign buffer. No second IR, no second evaluator, no source change.
 -/
 import Grammatik.X86.TSO.Kern.TSO
+
 namespace Gabbro.Grammatik.X86
 
 /-- Bounded local drain: `n` oldest-first flushes on core `c`.

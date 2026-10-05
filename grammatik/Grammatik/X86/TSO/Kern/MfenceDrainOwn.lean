@@ -22,6 +22,7 @@
 import Grammatik.X86.TSO.Kern.FenceDrain
 import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.X86.TSO.Verriegelt.LockedInstructionExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- MFENCE as drain-then-gate on the acting core: flush the OWN buffer

@@ -140,6 +140,7 @@
 -/
 
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik.Adressraum
 
 /-! ## 1. The two sides, and the region the far side lives in -/

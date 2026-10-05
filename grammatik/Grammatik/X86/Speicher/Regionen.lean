@@ -14,6 +14,7 @@
 -/
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- Target region handle: declared extent plus declared rights. -/

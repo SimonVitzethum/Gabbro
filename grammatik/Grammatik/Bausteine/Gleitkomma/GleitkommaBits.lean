@@ -8,6 +8,7 @@
   `Typen.lean`, hence by everything) does not change for the C side.
 -/
 import Grammatik.Bausteine.Gleitkomma.Gleitkomma
+
 namespace Gabbro.Grammatik.Gleitkomma
 
 /-! ## Bits back to values, and every result well-formed

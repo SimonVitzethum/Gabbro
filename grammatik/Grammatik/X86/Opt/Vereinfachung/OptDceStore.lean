@@ -21,6 +21,7 @@ import Grammatik.Kern.Syntax.Satz
 import Grammatik.Kern.Semantik.Budget
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
 import Grammatik.Kern.Semantik.Maschine
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

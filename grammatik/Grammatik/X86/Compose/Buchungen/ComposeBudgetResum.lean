@@ -17,6 +17,7 @@ import Grammatik.X86.Kosten.BudgetExecution
 import Grammatik.X86.Kosten.CostSummary
 import Grammatik.X86.Hw.Grundlage.HardwareAssumptions
 import Grammatik.Kern.Semantik.Budget
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

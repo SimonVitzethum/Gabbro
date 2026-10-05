@@ -23,6 +23,7 @@
     half), because the root stands twice in `ws`.
 -/
 import Grammatik.Zielsatz.Kern.Beweis
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

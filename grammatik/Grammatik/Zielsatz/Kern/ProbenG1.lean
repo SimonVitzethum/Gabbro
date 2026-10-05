@@ -28,6 +28,7 @@
 import Grammatik.Zielsatz.Kern.SpecProben
 import Grammatik.Zielsatz.Kern.Akzeptiert
 import Grammatik.Logik.Vertraege.EinpassenVoll
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

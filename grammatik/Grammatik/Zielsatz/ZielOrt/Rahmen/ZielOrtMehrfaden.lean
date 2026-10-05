@@ -36,6 +36,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
 import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMerkmal
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

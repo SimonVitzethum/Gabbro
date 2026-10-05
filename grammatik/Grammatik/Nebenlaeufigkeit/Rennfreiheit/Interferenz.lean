@@ -64,6 +64,7 @@
 -/
 import Grammatik.Kern.Syntax.Satz
 import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

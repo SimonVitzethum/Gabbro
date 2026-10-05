@@ -23,6 +23,7 @@
   as release/acquire.
 -/
 import Grammatik.Zielsatz.Kern.Beweis
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

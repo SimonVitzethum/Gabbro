@@ -34,6 +34,7 @@
 import Grammatik.X86.Befehle.Ganzzahl.IntegerHardwareForms
 import Grammatik.X86.Befehle.Arithmetik.ShiftLogic
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 /-- Witness value in rax before the compact OR step (nonzero). -/

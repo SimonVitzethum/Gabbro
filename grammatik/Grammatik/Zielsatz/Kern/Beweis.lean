@@ -79,6 +79,7 @@ import Grammatik.Speichermodell.Maschine.DRF
 import Grammatik.Zielsatz.Faeden.Faeden
 import Grammatik.Zielsatz.Eigenschaften.Invarianten
 import Grammatik.Logik.Fortschritt.FolgeBeweis
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

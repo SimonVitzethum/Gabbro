@@ -15,6 +15,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenBeweis
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

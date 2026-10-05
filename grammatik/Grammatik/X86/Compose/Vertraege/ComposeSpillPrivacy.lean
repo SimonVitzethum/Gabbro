@@ -20,6 +20,7 @@
 -/
 import Grammatik.X86.Opt.Register.SpillPrivate
 import Grammatik.X86.Speicher.TableLayout
+
 namespace Gabbro.Grammatik.X86
 
 /-- Token-threaded private spill step: checked save then checked reload.

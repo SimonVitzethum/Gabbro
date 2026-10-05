@@ -25,6 +25,7 @@ import Grammatik.X86.Quelle.SourceMemory
 import Grammatik.Speichermodell.Maschine.Sicht
 import Grammatik.Speichermodell.Maschine.MaschineW
 import Grammatik.Speichermodell.Atomar.AtomarSem
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

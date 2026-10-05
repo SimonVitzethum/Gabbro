@@ -14,6 +14,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Gleitprofil
 import Grammatik.X86.Kern.Vektor
+
 namespace Gabbro.Grammatik.X86
 
 /-- Finite admitted performance features: two scalar widths, scalar

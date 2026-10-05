@@ -32,6 +32,7 @@
   semantics, plus the acquire and release lemmas).
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

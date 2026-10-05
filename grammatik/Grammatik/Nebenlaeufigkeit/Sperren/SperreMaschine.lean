@@ -11,6 +11,7 @@
              user obligation, `ZielOrtSperre.lean`).
 -/
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreBeweis
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -23,6 +23,7 @@ import Grammatik.X86.Speicher.RegionSeparation
 import Grammatik.X86.Kern.Vektor
 import Grammatik.X86.Speicher.TableLayout
 import Grammatik.X86.Kern.Ausfuehrung
+
 namespace Gabbro.Grammatik.X86
 
 /-- A code section: executable and never writable (checked W^X shape). -/

@@ -13,6 +13,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+
 namespace Gabbro.Grammatik
 
 namespace G118_sperrinvariante_erhaltung

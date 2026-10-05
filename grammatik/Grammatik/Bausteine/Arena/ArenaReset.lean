@@ -16,6 +16,7 @@
   What the RUN does is this store, and that is what is proved.
 -/
 import Grammatik.Bausteine.Arena.ArenaZucker
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

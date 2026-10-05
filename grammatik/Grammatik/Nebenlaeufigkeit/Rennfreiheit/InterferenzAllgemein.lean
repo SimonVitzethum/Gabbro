@@ -111,6 +111,7 @@
      statt es erst herzustellen.
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

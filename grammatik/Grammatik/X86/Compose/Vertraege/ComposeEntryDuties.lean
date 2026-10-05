@@ -17,6 +17,7 @@
 -/
 import Grammatik.X86.Laden.EntryExecution
 import Grammatik.X86.Speicher.TableLayout
+
 namespace Gabbro.Grammatik.X86
 
 /-- One checked duty conjunction per image: joint entry admission AND

@@ -10,6 +10,7 @@
   steps), and proves wrapper and step-level versions agree.
 -/
 import Grammatik.X86.Hw.Ausnahmen.HwFeatureGates
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Step-level gated evaluator.

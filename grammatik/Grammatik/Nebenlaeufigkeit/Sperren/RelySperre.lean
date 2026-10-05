@@ -17,6 +17,7 @@ import Grammatik.Kern.Semantik.Maschine
 import Grammatik.CBackend.Semantik.CSLInvariante
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
 import Grammatik.Nebenlaeufigkeit.Allgemein.WacheGlobal
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

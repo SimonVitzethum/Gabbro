@@ -24,6 +24,7 @@ import Grammatik.X86.Bruecke.TsoRmwBridge
 import Grammatik.Speichermodell.Atomar.AtomarW
 import Grammatik.Speichermodell.Atomar.AtomarLauf
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

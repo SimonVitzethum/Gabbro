@@ -28,6 +28,7 @@
   leaves and `bindAxiom`).
 -/
 import Grammatik.Logik.Ruf.RufMaschineG
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

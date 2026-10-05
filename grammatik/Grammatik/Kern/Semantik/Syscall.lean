@@ -17,6 +17,7 @@
   Ghost carriers and the kernel-pairing theorem are later lanes (S3, S4).
 -/
 import Grammatik.Kern.Syntax.Typen
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. Registers and the ABI record -/

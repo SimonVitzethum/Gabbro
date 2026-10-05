@@ -13,6 +13,7 @@
   REFUSED by the printer -- section 3 records the exact output.
 -/
 import Grammatik.Korrespondenz.Zeugnis.ZeugnisStmt2
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The demo declaration: the probe names as Lean types

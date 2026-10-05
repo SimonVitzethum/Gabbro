@@ -28,6 +28,7 @@
 
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
 import Grammatik.CBackend.Semantik.CSpeicher
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}

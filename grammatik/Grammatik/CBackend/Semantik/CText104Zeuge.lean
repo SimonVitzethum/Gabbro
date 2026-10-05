@@ -19,6 +19,7 @@
   volatile) are probed in `CParser/CProben.lean`, on short texts.
 -/
 import Grammatik.CBackend.Semantik.CText104
+
 namespace Gabbro.Grammatik.CText104
 
 open Gabbro.Grammatik Gabbro.Grammatik.CParser Gabbro.Grammatik.Kette104

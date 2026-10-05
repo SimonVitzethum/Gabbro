@@ -12,6 +12,7 @@
   `.logik (.nachbedingung f)` iff the ensures check holds.
 -/
 import Grammatik.Logik.Vertraege.VertragOrtB
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

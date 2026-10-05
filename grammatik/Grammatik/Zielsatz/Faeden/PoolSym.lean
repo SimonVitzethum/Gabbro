@@ -20,6 +20,7 @@
 -/
 import Grammatik.Zielsatz.Kern.Akzeptiert
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 open Zielsatz

@@ -18,6 +18,7 @@
   is the split: bound expression for the checker, wrapper for the record.
 -/
 import Grammatik.Kern.Syntax.Syntax
+
 namespace P21.Gap25CostExpr
 
 /-- Elaboration split: the bound goes to the checker, the class to the record. -/

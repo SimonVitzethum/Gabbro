@@ -18,6 +18,7 @@
   qualified names.
 -/
 import Grammatik.Kern.Syntax.Syntax
+
 namespace P21.Gap15Path
 
 /-- Resolution: position of the qualified name among the declared operations. -/

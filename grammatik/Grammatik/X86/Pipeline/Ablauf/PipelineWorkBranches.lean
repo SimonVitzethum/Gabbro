@@ -26,6 +26,7 @@ import Grammatik.X86.Pipeline.Kern.PipelineImageWitnesses
 import Grammatik.X86.Kosten.BudgetExecution
 import Grammatik.X86.Kosten.DerivedWorkBound
 import Grammatik.X86.Hw.Grundlage.HardwareAssumptions
+
 namespace Gabbro.Grammatik.X86.PipeWorkBranches
 
 open Gabbro.Grammatik

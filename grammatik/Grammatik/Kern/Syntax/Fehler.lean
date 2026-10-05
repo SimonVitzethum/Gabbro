@@ -153,6 +153,7 @@
   Kein `mathlib`, kein `sorry`, kein `axiom`, kein Import aus `programmlogik/`.
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

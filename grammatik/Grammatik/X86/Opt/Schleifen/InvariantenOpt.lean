@@ -10,6 +10,7 @@
   over `eval`/`execBlock` with real table-writing witnesses.
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik.X86.InvariantenOpt
 
 variable {D : Deklaration} {V : Vertrag D}

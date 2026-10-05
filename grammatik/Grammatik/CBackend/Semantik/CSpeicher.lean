@@ -52,6 +52,7 @@
        load, the relation preserved (`refKonto_zeuge`).
 -/
 import Grammatik.CBackend.Semantik.CSemantik
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. Cell types -/

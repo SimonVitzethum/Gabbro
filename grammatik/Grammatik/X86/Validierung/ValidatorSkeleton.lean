@@ -12,6 +12,7 @@ import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Befehle.Kontrolle.GateStub
 import Grammatik.X86.Speicher.TableLayout
 import Grammatik.X86.Validierung.ValidationBudget
+
 namespace Gabbro.Grammatik.X86
 
 /-- Syntactic validator refusal shapes (IMAGE-ABI sec. 15, non-exhaustive). -/

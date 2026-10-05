@@ -13,6 +13,7 @@
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Ausfuehrung
+
 namespace Gabbro.Grammatik.X86
 
 /-- Population count of the low `k` bits of `n` (structural recursion). -/

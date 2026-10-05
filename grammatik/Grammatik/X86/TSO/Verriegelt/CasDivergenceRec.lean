@@ -25,6 +25,7 @@
 import Grammatik.X86.Kosten.CostSummary
 import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfadenZeuge
+
 namespace Gabbro.Grammatik.X86
 
 /-- Per-program CAS divergence record: for ONE source step that lowers to

@@ -40,6 +40,7 @@
   its MEMORY premise -- what a GA step presents -- and nothing more.
 -/
 import Grammatik.Speichermodell.Maschine.DRF
+
 namespace Gabbro.Grammatik
 
 open Speichermodell

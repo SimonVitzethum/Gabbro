@@ -29,6 +29,7 @@
 -/
 import Grammatik.Zielsatz.Eigenschaften.Invarianten
 import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

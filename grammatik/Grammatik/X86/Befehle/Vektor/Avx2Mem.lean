@@ -28,6 +28,7 @@ import Grammatik.X86.Flags.FeatureProfile
 import Grammatik.X86.Befehle.Vektor.VectorHardwareProfile
 import Grammatik.X86.Befehle.Vektor.VectorFootprints
 import Grammatik.X86.Kern.Ausfuehrung
+
 namespace Gabbro.Grammatik.X86
 
 /-- The two selected 256-bit memory shapes: aligned (VMOVDQA) and

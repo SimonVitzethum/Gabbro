@@ -15,6 +15,7 @@
 -/
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Gleitprofil
+
 namespace Gabbro.Grammatik.X86
 
 /-- Selected hardware profile: the FP control word the silicon runs under

@@ -39,6 +39,7 @@
 import Grammatik.Logik.Ruf.RufMaschineG
 import Grammatik.Logik.Ruf.RufAdaequatG
 import Grammatik.Logik.Ruf.RufUmkehrRufG
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -30,6 +30,7 @@
     are in the caller's footprint).
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtSem
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

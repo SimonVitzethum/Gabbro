@@ -29,6 +29,7 @@ import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Befehle.Arithmetik.ShiftLogic
+
 namespace Gabbro.Grammatik.X86
 
 /-- Sign-extended imm8 as a full word: the low byte sign-extended through

@@ -27,6 +27,7 @@
   `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.10.
 -/
 import Grammatik.Korrespondenz.Allgemein.KorrespondenzAllg
+
 namespace Gabbro.Grammatik.GeraetZeuge
 
 open Gabbro.Grammatik

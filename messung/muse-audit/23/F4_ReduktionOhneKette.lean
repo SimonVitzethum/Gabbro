@@ -17,6 +17,7 @@
       non-writing step and ANY restoring writer -- no commutation is shown.
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

@@ -11,6 +11,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -13,6 +13,7 @@
   too (`CCallR.Funktional`).
 -/
 import Grammatik.CBackend.Formen.CFormenI
+
 namespace Gabbro.Grammatik
 
 /-- A call meaning answers at most one way. -/

@@ -13,6 +13,7 @@
   answer is recorded.
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxBeweis
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

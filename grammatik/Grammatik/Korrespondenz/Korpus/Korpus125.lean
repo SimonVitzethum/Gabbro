@@ -27,6 +27,7 @@
   exporter, not of G.
 -/
 import Grammatik.Zielsatz.Kern.Proben
+
 namespace Gabbro.Grammatik
 
 namespace K125

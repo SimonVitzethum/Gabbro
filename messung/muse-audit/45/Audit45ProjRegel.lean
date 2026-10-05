@@ -6,6 +6,7 @@
 -- run with NO non-contract steps, and the converse direction (atom lists
 -- constraining steps) is not stated at all.
 import Grammatik.Logik.Vertraege.VertragOrtB
+
 namespace GabbroAudit45B
 
 open Gabbro.Grammatik

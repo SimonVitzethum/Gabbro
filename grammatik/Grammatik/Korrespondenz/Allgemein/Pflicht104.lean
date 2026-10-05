@@ -48,6 +48,7 @@ import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
 import Grammatik.Logik.Ruf.RufAdaequatG
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+
 namespace Gabbro.Grammatik
 
 open G104_referenz_oblig (GTab GLock GKontoFeld GFn g_einzahlen g_lies gCtx_einzahlen gCtx_lies

@@ -6,6 +6,7 @@
              No new statement constructor: the call IS an `axiomCall`.
 -/
 import Grammatik.Logik.Ruf.RufMaschineF
+
 namespace Gabbro.Grammatik
 
 /-- A run-time library function (PLAN-ERWEITUNG.md section 6, lane E2):

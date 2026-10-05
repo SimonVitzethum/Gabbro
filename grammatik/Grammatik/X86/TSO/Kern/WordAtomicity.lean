@@ -17,6 +17,7 @@
 -/
 import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.X86.TSO.Kern.TSO
+
 namespace Gabbro.Grammatik.X86
 
 /-- Admission guard for one aligned whole-word LOCK update on core `c`:

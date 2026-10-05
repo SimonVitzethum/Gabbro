@@ -16,6 +16,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. Corpus 104 without the footprint check -/

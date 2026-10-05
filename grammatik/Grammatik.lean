@@ -369,6 +369,7 @@ import Grammatik.Zielsatz.Eigenschaften.FolgeZiel
 import Grammatik.Zielsatz.Atomar.AtomarGoalZeuge
 import Grammatik.Zielsatz.Atomar.AtomarZertifikatZeuge
 import Grammatik.Speichermodell.Maschine.ZaehlerW
+
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Speicher.Speicher
@@ -688,6 +689,7 @@ import Grammatik.X86.Befehle.Ganzzahl.IntRotate
 import Grammatik.X86.Befehle.Ganzzahl.IntBitScan
 import Grammatik.X86.Hw.Kapstein.HwKapsteinRun
 import Grammatik.X86.Hw.Kapstein.HwKapsteinTso
+import Grammatik.X86.Hw.Kapstein.HwKapsteinTsoIsaAddr
 import Grammatik.X86.Hw.Speicher.HwWcOrdering
 import Grammatik.X86.Validierung.ValidatorKapDecoder
 import Grammatik.X86.Befehle.Ganzzahl.IntSignXchg
@@ -696,3 +698,14 @@ import Grammatik.X86.Hw.Speicher.HwTranslateFull
 import Grammatik.X86.Befehle.Ganzzahl.IntMemForms
 import Grammatik.X86.Befehle.Ganzzahl.IntByteForms
 import Grammatik.X86.Validierung.ValidatorKapLength
+import Grammatik.X86.Hw.Kapstein.HwKapsteinZwei
+import Grammatik.X86.Hw.Kapstein.HwKapsteinTsoRest
+import Grammatik.X86.Opcode.OpcodeLedger0F40
+import Grammatik.X86.Opcode.OpcodeLedger0F80
+import Grammatik.X86.Opcode.OpcodeLedger0FC0
+import Grammatik.X86.Hw.Gleitkomma.HwXsaveFull
+import Grammatik.X86.Hw.Kapstein.HwKapsteinTsoLocked
+import Grammatik.X86.Opcode.OpcodeLedger1Byte00
+import Grammatik.X86.Opcode.OpcodeLedger1ByteC0
+import Grammatik.X86.Opcode.OpcodeLedger0F00
+import Grammatik.X86.Opcode.OpcodeLedger1Byte80

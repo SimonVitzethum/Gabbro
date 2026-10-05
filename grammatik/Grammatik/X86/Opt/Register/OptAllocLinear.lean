@@ -26,6 +26,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Opt.Register.RegisterInterference
 import Grammatik.X86.Kern.Stapel
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

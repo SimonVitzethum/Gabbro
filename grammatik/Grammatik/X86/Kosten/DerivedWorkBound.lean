@@ -21,6 +21,7 @@ import Grammatik.X86.Kosten.BudgetExecution
 import Grammatik.X86.Hw.Grundlage.HardwareAssumptions
 import Grammatik.X86.Kosten.TimeTransfer
 import Grammatik.X86.Opt.Schleifen.InvariantenOpt
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

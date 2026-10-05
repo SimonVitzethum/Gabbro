@@ -26,6 +26,7 @@
     range check's failure branch (`logik bereich`) -- floats stay FINITE.
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 open Gleitkomma

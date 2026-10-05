@@ -86,6 +86,7 @@
     name every axiom the soundness proofs rest on.
 -/
 import Grammatik.Kern.Syntax.Syntax
+
 namespace Gabbro.Grammatik
 
 /-! ## Context lookups: what the range table consults besides the term

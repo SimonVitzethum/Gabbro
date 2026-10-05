@@ -6,6 +6,7 @@
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.TSO.Kern.WordAccessGrouping
 import Grammatik.X86.TSO.Kern.FenceDrain
+
 namespace Gabbro.Grammatik.X86.PipelineTso
 
 open Gabbro.Grammatik.X86

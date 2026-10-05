@@ -15,6 +15,7 @@
   call-meaning parameter `R`.
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D}

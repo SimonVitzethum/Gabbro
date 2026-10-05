@@ -24,6 +24,7 @@ import Grammatik.X86.Flags.ConditionalMove
 import Grammatik.X86.Befehle.Kontrolle.BranchLayout
 import Grammatik.X86.Opt.Auswahl.InstructionSelection
 import Grammatik.X86.Quelle.SourceCodeFrame
+
 namespace Gabbro.Grammatik.X86
 
 /-- Witness displacement of the fetched conditional jump (`je +16`). -/

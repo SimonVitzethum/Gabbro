@@ -26,6 +26,7 @@ import Grammatik.Kern.Semantik.Semantik
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Wort
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

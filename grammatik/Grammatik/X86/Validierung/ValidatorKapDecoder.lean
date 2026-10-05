@@ -10,6 +10,7 @@
 -/
 import Grammatik.X86.Hw.Kapstein.HwKapsteinDecoder
 import Grammatik.X86.Kern.Bild
+
 namespace Gabbro.Grammatik.X86
 
 /-- Named refusal reasons: every covered byte decodes through the

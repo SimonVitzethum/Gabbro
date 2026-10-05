@@ -24,6 +24,7 @@
 import Grammatik.Korrespondenz.Zeugnis.ZeugnisStmt2
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
 import Grammatik.Korrespondenz.Korpus.Export108
+
 namespace Gabbro.Grammatik
 
 /-! ## Contracts: one per result type (the place travels as paste data) -/

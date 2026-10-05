@@ -30,6 +30,7 @@ import Grammatik.X86.TSO.Kern.TSO
 import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.X86.TSO.Verriegelt.LockedInstructionExecution
 import Grammatik.X86.TSO.Kern.FenceDrain
+
 namespace Gabbro.Grammatik.X86
 
 /-- LFENCE event: fence-only, load-ordering shape. `istMfence` is false

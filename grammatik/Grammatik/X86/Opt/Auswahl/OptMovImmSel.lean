@@ -17,6 +17,7 @@ import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Befehle.Kompakt.CompactImmMov32Zero
 import Grammatik.X86.Befehle.Arithmetik.NarrowOps
+
 namespace Gabbro.Grammatik.X86
 
 /-- The three MOV-immediate tiles: the 10-byte pilot `movImm64`, the

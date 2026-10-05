@@ -28,6 +28,7 @@
   writers (`s->bytes[i] = b;` under `if (!(i < N)) __builtin_trap();`).
 -/
 import Grammatik.CBackend.Formen.CFormenR
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

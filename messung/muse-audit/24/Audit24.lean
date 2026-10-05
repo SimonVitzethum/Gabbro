@@ -2,6 +2,7 @@ import Grammatik.Kern.Syntax.Extraktion
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 import Grammatik.Kern.Semantik.Semantik
+
 open Gabbro.Grammatik
 
 /-- F1 (pattern a): `progAus_aus_rumpf` states its own definition unfolded.

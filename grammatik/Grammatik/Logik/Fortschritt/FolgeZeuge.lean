@@ -28,6 +28,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfadenZeuge
 import Grammatik.Logik.Fortschritt.FolgeBeweis
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The two order specifications, and the check on `eP` -/

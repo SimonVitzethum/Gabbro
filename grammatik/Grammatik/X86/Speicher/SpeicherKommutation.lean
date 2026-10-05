@@ -15,6 +15,7 @@
   (see CUTS).
 -/
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- Footprint membership as an existentially quantified byte index. -/

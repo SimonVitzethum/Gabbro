@@ -31,6 +31,7 @@ import Grammatik.Zielsatz.Kern.Akzeptiert
 import Grammatik.Zielsatz.Kern.Beweis
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik
 
 namespace G116_payload_free_counter_oblig

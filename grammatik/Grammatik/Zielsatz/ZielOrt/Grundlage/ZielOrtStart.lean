@@ -46,6 +46,7 @@
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
 import Grammatik.Kern.Semantik.Durchgaenge
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -6,6 +6,7 @@
 -- any step reasoning. Slice anchor: Ziel.lean:581-666 consumes this via
 -- `interferenceFree_of_invariantForm` in the §8 leg.
 import Grammatik.Kern.Syntax.Ziel
+
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

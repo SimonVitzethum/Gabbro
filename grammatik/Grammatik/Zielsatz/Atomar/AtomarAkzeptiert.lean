@@ -32,6 +32,7 @@ import Grammatik.Zielsatz.Atomar.AtomarInvarianten
 import Grammatik.Zielsatz.Atomar.AtomarMasken
 import Grammatik.Zielsatz.Atomar.AtomarPflicht
 import Grammatik.Zielsatz.Kern.Akzeptiert
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik Speichermodell

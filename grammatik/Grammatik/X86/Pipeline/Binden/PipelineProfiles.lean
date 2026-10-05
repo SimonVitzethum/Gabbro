@@ -28,6 +28,7 @@ import Grammatik.X86.Compose.Vertraege.ComposeEntryHooks
 import Grammatik.X86.Compose.Bild.ComposeSupportBytes
 import Grammatik.X86.Compose.Vertraege.ComposeProfileSelect
 import Grammatik.X86.Speicher.TableLayout
+
 namespace Gabbro.Grammatik.X86.PipelineProfiles
 
 open Gabbro.Grammatik.X86

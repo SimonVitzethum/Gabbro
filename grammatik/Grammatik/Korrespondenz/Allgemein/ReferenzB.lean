@@ -17,6 +17,7 @@
 -/
 import Grammatik.Logik.Ruf.RufMaschineD
 import Grammatik.Logik.Ruf.RufMaschineF
+
 namespace Gabbro.Grammatik
 
 /-- Signature of `einzahlen`: one `.int 0 10` parameter, no result, holds

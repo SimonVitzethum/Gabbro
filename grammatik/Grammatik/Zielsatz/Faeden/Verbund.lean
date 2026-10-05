@@ -33,6 +33,7 @@
   Witnesses: Zielsatz/VerbundZeuge.lean.
 -/
 import Grammatik.Zielsatz.Kern.Beweis
+
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
 variable {D : Deklaration}

@@ -15,6 +15,7 @@
   extension, no `schritt` change, no new source-language construct.
 -/
 import Grammatik.X86.Befehle.Kompakt.CompactForms
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Witness states (reusing `zeugeSpeicher`/`zeugeFlags` etc.). -/

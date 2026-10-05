@@ -4,6 +4,7 @@
   No existing file is modified.
 -/
 import Grammatik.Kern.Syntax.Koernung
+
 open Gabbro.Grammatik
 
 namespace Audit25.Koernung

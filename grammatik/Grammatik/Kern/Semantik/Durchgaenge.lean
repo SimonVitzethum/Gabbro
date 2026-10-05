@@ -38,6 +38,7 @@
   carries over to the quantified goal theorem at no cost.
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

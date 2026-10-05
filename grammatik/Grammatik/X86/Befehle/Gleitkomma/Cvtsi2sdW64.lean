@@ -25,6 +25,7 @@
 -/
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloatHardwareForms
+
 namespace Gabbro.Grammatik.X86
 
 /-- Lane marker: the 64-bit integer source width handled here. -/

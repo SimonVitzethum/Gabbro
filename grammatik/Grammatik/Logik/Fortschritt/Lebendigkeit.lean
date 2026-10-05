@@ -64,6 +64,7 @@
   unchanged.
 -/
 import Grammatik.Logik.Fortschritt.Fortschritt
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

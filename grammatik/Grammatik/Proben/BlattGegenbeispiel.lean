@@ -26,6 +26,7 @@
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Kern.Syntax.Satz
 import Grammatik.Kern.Syntax.Extraktion
+
 namespace Gabbro.Grammatik.BG
 
 open Gabbro.Grammatik

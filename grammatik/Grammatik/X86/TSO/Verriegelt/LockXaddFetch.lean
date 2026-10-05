@@ -30,6 +30,7 @@ import Grammatik.X86.TSO.Kern.TSO
 import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.X86.TSO.Verriegelt.LockedInstructionExecution
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Fetch-add shape cost is one unit: reuse of the accepted locked cost. -/

@@ -16,6 +16,7 @@
 import Grammatik.X86.Befehle.Kontrolle.GateStub
 import Grammatik.X86.Laden.EntryState
 import Grammatik.X86.Validierung.ContractSites
+
 namespace Gabbro.Grammatik.X86
 
 /-- CLOSING INTERFACE (producer/consumer): the binding surface admits a

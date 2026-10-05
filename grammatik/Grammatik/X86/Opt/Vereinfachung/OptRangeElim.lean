@@ -12,6 +12,7 @@ import Grammatik.Kern.Syntax.Typen
 import Grammatik.Kern.Syntax.Syntax
 import Grammatik.Kern.Semantik.Semantik
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

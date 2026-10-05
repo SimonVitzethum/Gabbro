@@ -8,6 +8,7 @@
 -/
 import Grammatik.Logik.Vertraege.VertragsFuss
 import Grammatik.Kern.Syntax.Profil
+
 namespace Gabbro.Grammatik
 
 /-- Counter-lemma A (VertragsFuss): the joint checker premise of the four

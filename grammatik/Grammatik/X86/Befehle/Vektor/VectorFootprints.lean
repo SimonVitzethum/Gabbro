@@ -16,6 +16,7 @@
 import Grammatik.X86.Kern.Vektor
 import Grammatik.X86.Speicher.Regionen
 import Grammatik.X86.Validierung.OverlapRefusal
+
 namespace Gabbro.Grammatik.X86
 
 /-- The 16-byte footprint of a packed-vector access: the two ordered

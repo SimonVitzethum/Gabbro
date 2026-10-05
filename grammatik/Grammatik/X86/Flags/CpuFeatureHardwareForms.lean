@@ -19,6 +19,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.TSO.Kern.TSO
+
 namespace Gabbro.Grammatik.X86
 
 /-- CPUID output: exact 32-bit EAX/EBX/ECX/EDX fields. -/

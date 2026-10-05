@@ -47,6 +47,7 @@ import Grammatik.X86.Opt.Regeln.OptimizationRules
 import Grammatik.X86.Quelle.SourceAssignmentLowering
 import Grammatik.X86.Speicher.EffectiveAddress
 import Grammatik.X86.Quelle.ExpressionLoweringDeep
+
 namespace Gabbro.Grammatik.X86.Pipeline
 
 open Gabbro.Grammatik

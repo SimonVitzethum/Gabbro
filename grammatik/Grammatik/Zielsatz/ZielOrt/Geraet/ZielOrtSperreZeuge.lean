@@ -29,6 +29,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 0. Helpers for concrete bodies -/

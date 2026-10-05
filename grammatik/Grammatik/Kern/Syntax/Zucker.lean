@@ -18,6 +18,7 @@
   Nichts hier hat eine eigene Bedeutung: `eval`/`exec` sehen nur den Kern.
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

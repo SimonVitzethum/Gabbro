@@ -68,6 +68,7 @@
     Konstruktor hier; SPRACHE.md:788 "Linear means linear, not affine".
 -/
 import Grammatik.Kern.Syntax.Typen
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. Die Deklarationen -- was `program = { item }` vor dem ersten Rumpf festlegt -/

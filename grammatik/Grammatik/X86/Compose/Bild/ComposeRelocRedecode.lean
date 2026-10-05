@@ -23,6 +23,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Speicher.TableLayout
 import Grammatik.X86.Kern.Bild
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik.Parser.Uebersetze

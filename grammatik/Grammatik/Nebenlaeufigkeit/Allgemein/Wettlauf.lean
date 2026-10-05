@@ -36,6 +36,7 @@
 -/
 import Grammatik.Kern.Syntax.Satz
 import Grammatik.Kern.Syntax.Marken
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

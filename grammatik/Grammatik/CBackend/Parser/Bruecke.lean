@@ -19,6 +19,7 @@
 import Grammatik.CBackend.Parser.CParse
 import Grammatik.Korrespondenz.Allgemein.KorrespondenzAllg
 import Grammatik.Korrespondenz.Kette.Schlusssatz
+
 namespace Gabbro.Grammatik.CParser
 
 open Gabbro.Grammatik Parser.UebersetzeAllg Zielsatz

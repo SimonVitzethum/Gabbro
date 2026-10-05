@@ -12,6 +12,7 @@
 -/
 import Grammatik.Korrespondenz.Zeugnis.Zeugnis
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 /-- Boolean conditions as plain data: the `ite`/`retry`/`forever`/`pruefung`

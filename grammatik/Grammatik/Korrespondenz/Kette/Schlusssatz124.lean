@@ -50,6 +50,7 @@
 -/
 import Grammatik.CBackend.Semantik.CNebenlaeufig
 import Grammatik.Korrespondenz.Korpus.Korpus124
+
 namespace Gabbro.Grammatik
 
 namespace K124

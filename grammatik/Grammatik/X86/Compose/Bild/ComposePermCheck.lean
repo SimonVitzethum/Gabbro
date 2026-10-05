@@ -17,6 +17,7 @@ import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Speicher.Zugriffe
 import Grammatik.X86.Speicher.AccessExecution
 import Grammatik.X86.TSO.Kern.WordAtomicity
+
 namespace Gabbro.Grammatik.X86
 
 /-- Checked permission bundle for one fetched instruction: the consumed

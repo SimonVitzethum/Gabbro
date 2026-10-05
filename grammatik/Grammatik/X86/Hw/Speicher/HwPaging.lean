@@ -11,6 +11,7 @@
 -/
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Hw.Grundlage.ExceptionPriorityHardware
+
 namespace Gabbro.Grammatik.X86
 
 /-- One IA-32e page-table entry, decoded. Bit positions per SDM Vol 3A

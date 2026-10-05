@@ -15,6 +15,7 @@
 -/
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.TSO.Kern.WordDrainInterleaving
+
 namespace Gabbro.Grammatik.X86
 
 /-- Word-access family events on the coherent machine: a buffered

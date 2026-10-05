@@ -11,6 +11,7 @@
   contradicts the miss arm.
 -/
 import Grammatik.Kern.Semantik.Fristlauf
+
 open Gabbro.Grammatik
 
 /-- F10: spacing contradicts the miss arm on its own (no clock needed). -/

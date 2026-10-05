@@ -43,6 +43,7 @@
   produced) -- a convention stated as the premise `code = index`.
 -/
 import Grammatik.CBackend.Formen.CFormenW
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

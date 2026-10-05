@@ -25,6 +25,7 @@
   trivially true (owed nowhere).
 -/
 import Grammatik.Zielsatz.Kern.Proben
+
 namespace Gabbro.Grammatik
 
 namespace K59

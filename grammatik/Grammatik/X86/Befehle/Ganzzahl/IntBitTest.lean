@@ -24,6 +24,7 @@ import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.TSO.Kern.TSO
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- The four bit-test operations. -/

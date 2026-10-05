@@ -11,6 +11,7 @@
   the model slot read at `flachIndex`.
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Verschachtelt
+
 namespace Gabbro.Grammatik
 
 /-- The emitted read of `A[i][j]` on `T A[M][N]` with `es`-byte elements:

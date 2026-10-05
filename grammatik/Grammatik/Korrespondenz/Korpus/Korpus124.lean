@@ -35,6 +35,7 @@
   is kept as the record of the finding.
 -/
 import Grammatik.Zielsatz.Kern.Proben
+
 namespace Gabbro.Grammatik
 
 namespace K124

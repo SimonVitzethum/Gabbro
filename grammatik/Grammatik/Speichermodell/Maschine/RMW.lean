@@ -38,6 +38,7 @@
 -/
 import Lean
 import Grammatik.Speichermodell.Atomar.Atomar
+
 namespace Gabbro.Grammatik
 
 open Speichermodell

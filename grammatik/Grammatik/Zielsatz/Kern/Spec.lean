@@ -1477,6 +1477,7 @@ import Grammatik.Speichermodell.Maschine.MaschineW
 import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
 import Grammatik.Speichermodell.Maschine.GXMaschine
 import Grammatik.Logik.Fortschritt.Folge
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

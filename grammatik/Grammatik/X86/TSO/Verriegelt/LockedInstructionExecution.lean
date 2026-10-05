@@ -25,6 +25,7 @@ import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.X86.TSO.Kern.WordAtomicity
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Flags.FeatureProfile
+
 namespace Gabbro.Grammatik.X86
 
 /-- Essential locked word forms: LOCK XADD and LOCK CMPXCHG over one

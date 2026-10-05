@@ -29,6 +29,7 @@
   Spec diff, not made here (`messung/OPUS-O25-ATOMICS.md` §6).
 -/
 import Grammatik.Speichermodell.Maschine.Sicht
+
 namespace Gabbro.Grammatik.Speichermodell
 
 /-- A message of the counter: timestamp and value. -/

@@ -42,6 +42,7 @@
 -/
 import Grammatik.CBackend.Semantik.CSpeicher
 import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. C integer types and their ranges -/

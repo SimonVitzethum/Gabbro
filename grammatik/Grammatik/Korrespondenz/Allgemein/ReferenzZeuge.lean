@@ -42,6 +42,7 @@ import Grammatik.Korrespondenz.Allgemein.KorrespondenzWeitZeuge
 import Grammatik.Logik.Vertraege.EinpassenVoll
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.Kern.Syntax.Satz
+
 namespace Gabbro.Grammatik.ReferenzZeuge
 
 open Gabbro.Grammatik

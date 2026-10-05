@@ -24,6 +24,7 @@ import Grammatik.X86.Speicher.AddressEncoding
 import Grammatik.X86.Speicher.EffectiveAddress
 import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.X86.TSO.Verriegelt.LockedInstructionExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Ordered admission faults of one addressed access: canonical form

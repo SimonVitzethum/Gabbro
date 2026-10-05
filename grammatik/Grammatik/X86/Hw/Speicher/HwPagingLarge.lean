@@ -10,6 +10,7 @@
   decided per-access check, and the machine embeds `HwSchritt` exactly.
 -/
 import Grammatik.X86.Hw.Speicher.HwPaging
+
 namespace Gabbro.Grammatik.X86
 
 /-- Extended control: accepted control plus the EFLAGS.AC flag. -/

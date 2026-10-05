@@ -17,6 +17,7 @@ import Grammatik.Kern.Syntax.Typen
 import Grammatik.Bausteine.Gleitkomma.Gleitkomma
 import Grammatik.X86.Kern.Gleitprofil
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
+
 namespace Gabbro.Grammatik.X86
 
 /-- Two finite floats agree on every model comparison, in all four

@@ -14,6 +14,7 @@ import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Befehle.Arithmetik.MulDiv
 import Grammatik.X86.Befehle.Kontrolle.ControlFlow
 import Grammatik.X86.Befehle.Arithmetik.NarrowOps
+
 namespace Gabbro.Grammatik.X86
 
 /-- Architectural fault outcome of a new-form step: only `hardwareHalt`. -/

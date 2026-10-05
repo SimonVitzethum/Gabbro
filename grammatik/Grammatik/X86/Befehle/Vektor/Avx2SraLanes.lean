@@ -19,6 +19,7 @@
 -/
 import Grammatik.X86.Befehle.Vektor.Avx2Ops
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Admitted AVX2 arithmetic-shift widths: W (VPSRAW) and D (VPSRAD).

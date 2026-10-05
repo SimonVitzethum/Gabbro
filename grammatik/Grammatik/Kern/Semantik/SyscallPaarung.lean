@@ -15,6 +15,7 @@
 -/
 import Grammatik.Kern.Semantik.Syscall
 import Grammatik.Kern.Syntax.Satz
+
 namespace Gabbro.Grammatik
 
 /-- A kernel dispatch entry: the call number, the register map, and the

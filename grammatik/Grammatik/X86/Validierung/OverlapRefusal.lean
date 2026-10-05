@@ -18,6 +18,7 @@ import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Speicher.Zugriffe
 import Grammatik.X86.Speicher.Regionen
 import Grammatik.X86.Kern.Bild
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Decided alignment and containment over footprints. -/

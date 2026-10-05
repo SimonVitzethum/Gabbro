@@ -6,6 +6,7 @@
 -- inside `ziel_nutzer_last` (line 388).
 import Grammatik.Kern.Syntax.Ziel
 import Grammatik.Kern.Syntax.Satz
+
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

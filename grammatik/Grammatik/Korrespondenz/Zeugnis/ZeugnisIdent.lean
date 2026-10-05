@@ -22,6 +22,7 @@
 -/
 import Grammatik.Korrespondenz.Zeugnis.Zeugnis
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 /-- De Bruijn index of a variable: the position `CertExpr.var` names. -/

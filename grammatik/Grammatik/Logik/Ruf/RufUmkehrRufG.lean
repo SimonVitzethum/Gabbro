@@ -23,6 +23,7 @@
   i.e. at least the nesting depth of the calls; nothing else bounds the run.
 -/
 import Grammatik.Logik.Ruf.RufAdaequatRufG
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

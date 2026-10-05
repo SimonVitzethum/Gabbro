@@ -26,6 +26,7 @@ import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Speicher.AddressEncoding
 import Grammatik.X86.Speicher.EffectiveAddress
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Source-level displacement admission: the signed 32-bit range. -/

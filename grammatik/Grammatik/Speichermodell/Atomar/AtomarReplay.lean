@@ -13,6 +13,7 @@
   in `ziel_ort_sperre`, and only body reads may see the rely.
 -/
 import Grammatik.Speichermodell.Atomar.AtomarRec
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -42,6 +42,7 @@
   frame remembers the start world, exactly as a declared start that is scheduled late does.
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

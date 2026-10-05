@@ -14,6 +14,7 @@
   unchanged.
 -/
 import Grammatik.CBackend.Formen.CFormenZeuge
+
 namespace Gabbro.Grammatik
 
 /-- One emitted-C statement as certificate data: a member of a form

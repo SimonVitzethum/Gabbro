@@ -19,6 +19,7 @@ import Grammatik.X86.Speicher.Regionen
 import Grammatik.X86.Kern.Bild
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Speicher.TableLayout
+
 namespace Gabbro.Grammatik.X86
 
 /-- Pairwise disjointness of a finite region list (quadratic decided check). -/

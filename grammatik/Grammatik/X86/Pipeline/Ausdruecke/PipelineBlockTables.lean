@@ -39,6 +39,7 @@ import Grammatik.X86.Pipeline.Ausdruecke.PipelineTables
 import Grammatik.X86.Quelle.ExpressionLowering
 import Grammatik.X86.Quelle.SourceAssignmentLowering
 import Grammatik.X86.Quelle.SourceMemory
+
 namespace Gabbro.Grammatik.X86.PipelineBlockTables
 
 open Gabbro.Grammatik

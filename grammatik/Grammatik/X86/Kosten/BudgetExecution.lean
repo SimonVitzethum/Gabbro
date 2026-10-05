@@ -20,6 +20,7 @@ import Grammatik.X86.Kosten.TimeTransfer
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Bruecke.ObservationProjection
 import Grammatik.X86.TSO.Verriegelt.LockedOps
+
 namespace Gabbro.Grammatik.X86
 
 /-- Explicit representation interface: the target segment `xs` spends its

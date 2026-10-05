@@ -16,6 +16,7 @@ import Grammatik.X86.Befehle.Vektor.VectorIntegerHardwareForms
 import Grammatik.X86.Befehle.Vektor.VectorHardwareProfile
 import Grammatik.X86.Befehle.Vektor.VectorFootprints
 import Grammatik.X86.TSO.Verriegelt.ConcurrentIntegerExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. The sixteen canonical byte entries of one packed word.

@@ -15,6 +15,7 @@
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Wort
+
 namespace Gabbro.Grammatik.X86
 
 /-- Helper-level acceptance never decides final validation: site

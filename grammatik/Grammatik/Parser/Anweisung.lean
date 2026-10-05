@@ -9,6 +9,7 @@
   Probes live in `Parser/AnweisungProben.lean`.
 -/
 import Grammatik.Parser.Ausdruck
+
 namespace Gabbro.Grammatik.Parser
 
 set_option maxRecDepth 100000

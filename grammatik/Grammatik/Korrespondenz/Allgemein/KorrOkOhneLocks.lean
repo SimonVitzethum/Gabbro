@@ -43,6 +43,7 @@
 -/
 import Grammatik.Korrespondenz.Allgemein.KorrespondenzAllg
 import Grammatik.Logik.Ruf.RufLogik
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

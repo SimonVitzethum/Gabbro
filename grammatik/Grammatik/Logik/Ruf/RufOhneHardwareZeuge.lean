@@ -29,6 +29,7 @@ import Grammatik.Logik.Ruf.RufOhneHardware
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAxZeuge
 import Grammatik.Zielsatz.Kern.Spec
 import Grammatik.CBackend.Formen.CFormenM
+
 namespace Gabbro.Grammatik
 
 open Zielsatz

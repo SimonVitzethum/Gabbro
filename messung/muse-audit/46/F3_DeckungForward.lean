@@ -23,6 +23,7 @@
   (worlds/run/trace by construction at each level) -- not challenged here.
 -/
 import Grammatik.Korrespondenz.Kette.KetteMehrfadenC
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

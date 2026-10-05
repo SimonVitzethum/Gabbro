@@ -15,6 +15,7 @@
 -/
 import Grammatik.Korrespondenz.Zeugnis.ZeugnisStmt
 import Grammatik.Korrespondenz.Allgemein.ReferenzAR
+
 namespace Gabbro.Grammatik
 
 /-- The two remaining `Stmt` shapes as plain data. `axiomCall` names the

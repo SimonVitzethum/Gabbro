@@ -32,6 +32,7 @@
 import Grammatik.Zielsatz.Faeden.Verbund
 import Grammatik.Zielsatz.Faeden.PoolZeuge
 import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
+
 namespace Gabbro.Grammatik.Zielsatz
 open Gabbro.Grammatik
 

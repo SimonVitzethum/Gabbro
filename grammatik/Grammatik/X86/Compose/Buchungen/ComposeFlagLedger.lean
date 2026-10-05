@@ -13,6 +13,7 @@
 -/
 import Grammatik.X86.Flags.ArchitecturalFlags
 import Grammatik.X86.Flags.FlagDependencies
+
 namespace Gabbro.Grammatik.X86
 
 /-- Defined-flag map of each producer class: the conservative reading of

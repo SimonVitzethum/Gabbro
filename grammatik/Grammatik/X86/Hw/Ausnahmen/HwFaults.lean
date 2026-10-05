@@ -14,6 +14,7 @@
 -/
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Hw.Grundlage.ExceptionPriorityHardware
+
 namespace Gabbro.Grammatik.X86
 
 /-- Machine-level fault choice: the accepted ordered row, run on the

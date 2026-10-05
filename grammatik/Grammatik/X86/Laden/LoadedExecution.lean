@@ -10,6 +10,7 @@
 -/
 import Grammatik.X86.Kern.Bild
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 /-- Execution state over a canonically loaded image: registers, flags and

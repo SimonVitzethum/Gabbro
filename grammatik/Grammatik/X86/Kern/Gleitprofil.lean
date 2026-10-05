@@ -12,6 +12,7 @@ import Grammatik.Bausteine.Gleitkomma.Gleitkomma
 import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
 import Grammatik.Kern.Syntax.Typen
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- Target FP control word: the 32-bit MXCSR. -/

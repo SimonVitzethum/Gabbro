@@ -39,6 +39,7 @@
   own return, and `StartEndeG` gives it there (`fertig_retKopf`).
 -/
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

@@ -15,6 +15,7 @@ import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Kern.Syntax.Satz
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.EigenZustandD
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik.EZD

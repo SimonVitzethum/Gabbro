@@ -35,6 +35,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfaden
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -8,6 +8,7 @@
   "nothing happened".
 -/
 import Grammatik.Kern.Semantik.Erhaltung
+
 open Gabbro.Grammatik
 
 /-- F3: the empty certificate satisfies completeness (nothing owed). -/

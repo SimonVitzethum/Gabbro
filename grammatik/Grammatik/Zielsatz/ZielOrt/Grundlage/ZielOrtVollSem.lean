@@ -36,6 +36,7 @@
     residues in it that read inside a footprint.
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtSem
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

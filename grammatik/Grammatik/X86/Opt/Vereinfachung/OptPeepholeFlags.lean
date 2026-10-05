@@ -31,6 +31,7 @@ import Grammatik.Bausteine.Gleitkomma.Gleitkomma
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Wort
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

@@ -23,6 +23,7 @@
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Logik.Vertraege.VertragOrtB
 import Grammatik.Logik.Ruf.RufMaschineF
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

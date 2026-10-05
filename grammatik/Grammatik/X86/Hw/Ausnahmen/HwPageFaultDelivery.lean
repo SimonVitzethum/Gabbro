@@ -19,6 +19,7 @@ import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Hw.Speicher.HwPaging
 import Grammatik.X86.Hw.Ausnahmen.HwPreciseFault
 import Grammatik.X86.Hw.Ausnahmen.HwNestedInterrupts
+
 namespace Gabbro.Grammatik.X86
 
 /-- Page-fault vector (S1): #PF is vector 14. -/

@@ -19,6 +19,7 @@ import Grammatik.Kern.Semantik.Budget
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.X86.Kern.Typen
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtEinfadenZeuge
+
 namespace Gabbro.Grammatik.X86
 
 /-- Source step classes the backend summary prices, one per class. -/

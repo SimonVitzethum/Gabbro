@@ -13,6 +13,7 @@
 -/
 import Grammatik.X86.TSO.Kern.TSO
 import Grammatik.Speichermodell.Maschine.Sicht
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik.Speichermodell

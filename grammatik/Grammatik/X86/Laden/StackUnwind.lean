@@ -15,6 +15,7 @@ import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Stapel
 import Grammatik.X86.Speicher.Regionen
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 /-- Frame-chain well-formedness: both frames are checked and the inner

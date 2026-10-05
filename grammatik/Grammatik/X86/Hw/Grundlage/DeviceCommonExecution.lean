@@ -23,6 +23,7 @@ import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Hw.Grundlage.DeviceBusHardwareExecution
 import Grammatik.X86.Speicher.MemoryTypeHardwareExecution
 import Grammatik.X86.Hw.Grundlage.InterruptDescriptorHardware
+
 namespace Gabbro.Grammatik.X86
 
 namespace DeviceCommon1102

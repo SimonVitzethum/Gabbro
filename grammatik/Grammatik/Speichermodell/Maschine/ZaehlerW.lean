@@ -23,6 +23,7 @@
   inversion over the rules of G, as `g_schritt_0` does for one step (report §6).
 -/
 import Grammatik.Speichermodell.Maschine.RMW
+
 namespace Gabbro.Grammatik
 
 open Speichermodell

@@ -45,6 +45,7 @@
 -/
 import Grammatik.Zielsatz.Kern.Spec
 import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

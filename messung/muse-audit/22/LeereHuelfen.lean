@@ -1,4 +1,5 @@
 import Grammatik.Kern.Semantik.Maschine
+
 open Gabbro.Grammatik
 
 /-! ## Trivially-true guards and degenerate obligations (patterns c and e)

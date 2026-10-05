@@ -38,6 +38,7 @@
 import Grammatik.Zielsatz.Eigenschaften.NeverAsm
 import Grammatik.Logik.Ruf.RufMaschineF
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanz
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

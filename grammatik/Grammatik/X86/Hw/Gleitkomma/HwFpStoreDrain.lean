@@ -19,6 +19,7 @@ import Grammatik.X86.Hw.Gleitkomma.HwFpControl
 import Grammatik.X86.Hw.Gleitkomma.HwFpDispatch
 import Grammatik.X86.Hw.Speicher.HwDrainGeneric
 import Grammatik.X86.TSO.Kern.WordAccessGrouping
+
 namespace Gabbro.Grammatik.X86
 
 /-- FP 32-bit store-drain family events on the coherent machine. -/

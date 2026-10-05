@@ -27,6 +27,7 @@
 -/
 import Grammatik.CBackend.Formen.CFormen
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 /-- One integer `match` arm pattern (lane 222 `IntPat`, mirrored):

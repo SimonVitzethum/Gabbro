@@ -17,6 +17,7 @@
   `uN`/`iN`; an omitted `effects` (derived by the checker) read as the empty set.
 -/
 import Grammatik.Korrespondenz.Kette.Schlusssatz
+
 namespace Gabbro.Grammatik.Parser.UebersetzeProben
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

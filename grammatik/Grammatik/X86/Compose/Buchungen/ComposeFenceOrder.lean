@@ -20,6 +20,7 @@
 import Grammatik.X86.TSO.Kern.MfenceDrainOwn
 import Grammatik.X86.TSO.Kern.SfenceStoreNarrow
 import Grammatik.X86.TSO.Kern.LfenceLoadNarrow
+
 namespace Gabbro.Grammatik.X86
 
 /-- The composed fence-order postcondition: own buffer drained and fence-ready,

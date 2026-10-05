@@ -10,6 +10,7 @@
 -/
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.TSO.Verriegelt.LockedInstructionExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Project core `c` of the coherent machine to a locked machine:

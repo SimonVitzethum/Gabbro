@@ -42,6 +42,7 @@ import Grammatik.X86.Befehle.Arithmetik.MulDiv
 import Grammatik.X86.Befehle.Arithmetik.MulDivCodec
 import Grammatik.X86.Befehle.Arithmetik.ShiftCodec
 import Grammatik.X86.Befehle.Arithmetik.NarrowCodec
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. `Scale`: the SIB scale field, as a shift amount.

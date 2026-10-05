@@ -16,6 +16,7 @@
   construction, and is register-local when `O` is (`regLokal_orakelAus`).
 -/
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

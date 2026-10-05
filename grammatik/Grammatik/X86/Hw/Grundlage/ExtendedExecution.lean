@@ -29,6 +29,7 @@ import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloatCodec
 import Grammatik.X86.Befehle.Vektor.VectorCodec
 import Grammatik.X86.Flags.FeatureProfile
+
 namespace Gabbro.Grammatik.X86
 
 /-- One unified instruction: the pilot plus exactly one new-form

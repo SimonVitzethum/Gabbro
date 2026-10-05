@@ -7,6 +7,7 @@
   hardware fault. Reuses Gleitkomma/Gleitprofil/Speicher, claims no hardware.
 -/
 import Grammatik.X86.Kern.Gleitprofil
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik.Gleitkomma

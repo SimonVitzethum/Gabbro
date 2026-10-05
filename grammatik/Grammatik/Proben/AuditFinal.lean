@@ -13,6 +13,7 @@ import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetZeuge
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiG
 import Grammatik.Logik.Fortschritt.KostenGZeuge
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

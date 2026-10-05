@@ -16,6 +16,7 @@
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
 import Grammatik.Logik.Vertraege.AxiomVertrag
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The bounds of `zP`, computed -/

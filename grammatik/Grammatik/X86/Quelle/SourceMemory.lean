@@ -17,6 +17,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Speicher.Regionen
 import Grammatik.X86.Speicher.TableLayout
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

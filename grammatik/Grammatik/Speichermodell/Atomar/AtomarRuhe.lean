@@ -7,6 +7,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSperre
 import Grammatik.Speichermodell.Maschine.SperreSemA
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

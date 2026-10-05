@@ -31,6 +31,7 @@
   function 1 is `lies`; locals `k = 0`, `i = 1`, `b = 2`.
 -/
 import Grammatik.CBackend.Formen.CFormenH
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The emitted C, as data -/

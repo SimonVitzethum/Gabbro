@@ -14,6 +14,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Befehle.Kontrolle.ControlCodec
 import Grammatik.X86.Validierung.DecodingCoverage
+
 namespace Gabbro.Grammatik.X86
 
 /-- Finite flag names read by a decoded branch or conditional select.

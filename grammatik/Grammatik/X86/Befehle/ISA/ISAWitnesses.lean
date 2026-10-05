@@ -20,6 +20,7 @@
   (`Byteschritt.lean`) for the memory layout vocabulary.
 -/
 import Grammatik.X86.Befehle.ISA.ISAExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. The mixed program. -/

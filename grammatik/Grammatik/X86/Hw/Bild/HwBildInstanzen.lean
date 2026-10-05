@@ -27,6 +27,7 @@ import Grammatik.X86.Befehle.Arithmetik.ShiftCodec
 import Grammatik.X86.Befehle.Kontrolle.ControlCodec
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
 import Grammatik.X86.Befehle.Vektor.VectorCodec
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## Shared data address: every instance maps data at 0x2000. -/

@@ -19,6 +19,7 @@
      functions (probe C); the witness run interleaves two threads (probe E).
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## A. The handler domain of `KoerperGut` is inhabited -/

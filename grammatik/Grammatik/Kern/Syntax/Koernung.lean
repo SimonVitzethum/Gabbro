@@ -76,6 +76,7 @@
     width-based (`eventWidth <= 1`), the machine step itself stays a word.
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {Γ : Ctx} {Λ : List (Res D)}

@@ -52,6 +52,7 @@
 -/
 import Grammatik.Kern.Syntax.Zucker
 import Grammatik.Bausteine.Arena.Arena
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

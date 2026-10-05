@@ -33,6 +33,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The fragment widened by the register forms -/

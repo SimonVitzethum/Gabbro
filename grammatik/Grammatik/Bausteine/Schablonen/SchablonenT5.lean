@@ -24,6 +24,7 @@
 -/
 
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. `table.indexschranke` (table/count: 370/354 corpus lines).

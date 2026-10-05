@@ -26,6 +26,7 @@ import Grammatik.X86.Hw.Grundlage.HardwareFaults
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.TSO.Kern.TSO
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- YMM upper-half file: bits 255:128 of each YMM register, keyed by

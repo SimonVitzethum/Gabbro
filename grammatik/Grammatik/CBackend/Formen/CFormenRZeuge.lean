@@ -60,6 +60,7 @@
   the ghosts `7` (for `n`) and `8` (for `e`).
 -/
 import Grammatik.CBackend.Formen.CFormenR
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The declaration -/

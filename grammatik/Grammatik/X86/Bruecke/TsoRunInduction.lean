@@ -18,6 +18,7 @@ import Grammatik.X86.TSO.Kern.TSOTrace
 import Grammatik.X86.Bruecke.CarrierTraceBridge
 import Grammatik.X86.Bruecke.TsoReadBridge
 import Grammatik.Speichermodell.Maschine.MaschineW
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

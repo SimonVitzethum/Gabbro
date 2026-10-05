@@ -33,6 +33,7 @@
   of a local oracle is the machine's answer.
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollBeweis
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

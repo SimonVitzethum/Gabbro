@@ -110,6 +110,7 @@
 import Grammatik.Zielsatz.Kern.Spec
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 import Grammatik.Logik.Vertraege.EinpassenVoll
+
 namespace Gabbro.Grammatik
 
 open Zielsatz

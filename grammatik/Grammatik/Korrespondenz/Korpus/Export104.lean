@@ -18,6 +18,7 @@
 -/
 import Grammatik.Korrespondenz.Allgemein.Referenz104
 import Grammatik.Korrespondenz.Allgemein.Referenz104Rahmen
+
 namespace Gabbro.Grammatik
 
 namespace G104_referenz

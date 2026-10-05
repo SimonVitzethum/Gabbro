@@ -17,6 +17,7 @@
 -/
 import Grammatik.Logik.Fortschritt.Fortschritt
 import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

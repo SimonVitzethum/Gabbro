@@ -5,6 +5,7 @@
              budget (measured 2026-09-30: the first file alone passes 7 GB with these twelve added).
 -/
 import Grammatik.Korrespondenz.Kette.Schlusssatz
+
 namespace Gabbro.Grammatik.Parser.UebersetzeProben2
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

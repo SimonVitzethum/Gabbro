@@ -26,6 +26,7 @@
   No second source interpreter, no new IEEE model, no optimiser edit.
 -/
 import Grammatik.X86.Pipeline.Ausdruecke.PipelineFloat
+
 namespace Gabbro.Grammatik.X86.PipelineFloatNaN
 
 open Gabbro.Grammatik

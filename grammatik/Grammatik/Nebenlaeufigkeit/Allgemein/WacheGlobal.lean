@@ -9,6 +9,7 @@
   the touch rule (`WaechterGehalten`) instead of `J.hSchuld`.
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

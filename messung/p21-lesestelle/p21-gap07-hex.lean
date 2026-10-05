@@ -14,6 +14,7 @@
   digit VALUES (the `hexdigit` class itself is p22's even gap).
 -/
 import Grammatik.Kern.Syntax.Syntax
+
 namespace P21.Gap07Hex
 
 /-- Value of a hexdigit-value sequence, head = most significant. -/

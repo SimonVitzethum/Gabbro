@@ -29,6 +29,7 @@ import Grammatik.Zielsatz.Atomar.AtomarZiel
 import Grammatik.Speichermodell.Atomar.AtomarZeuge
 import Grammatik.Speichermodell.Maschine.Zeuge
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtGanzZeuge
+
 namespace Gabbro.Grammatik.AtomarXZeuge
 
 open Gabbro.Grammatik Speichermodell Zielsatz NIZeuge

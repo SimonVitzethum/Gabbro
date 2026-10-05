@@ -16,6 +16,7 @@
               gap for program #2, see CUTS).
 -/
 import Grammatik.Korrespondenz.Kette.Schlusssatz124
+
 namespace Gabbro.Grammatik
 
 open K124

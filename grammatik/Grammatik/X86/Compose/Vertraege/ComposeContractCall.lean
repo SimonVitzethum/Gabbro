@@ -21,6 +21,7 @@
 import Grammatik.X86.Validierung.ContractSites
 import Grammatik.X86.Befehle.Kontrolle.GateStub
 import Grammatik.X86.Validierung.ValidatorSkeleton
+
 namespace Gabbro.Grammatik.X86
 
 variable {D : Deklaration}

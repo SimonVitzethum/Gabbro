@@ -102,6 +102,7 @@
           ueber `cpuAnteil` bleiben Schnitt (C4 fuellt das Praedikat, nicht den Satz).
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

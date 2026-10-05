@@ -19,6 +19,7 @@
 import Grammatik.X86.Kosten.CostSummary
 import Grammatik.X86.Hw.Grundlage.HardwareAssumptions
 import Grammatik.X86.Kern.Ausfuehrung
+
 namespace Gabbro.Grammatik.X86
 
 /-- Transfer admission: an admitted summary AND an admitted profile.

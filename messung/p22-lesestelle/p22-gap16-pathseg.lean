@@ -8,6 +8,7 @@
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
 import Grammatik.Kern.Syntax.Syntax
+
 open Gabbro.Grammatik
 
 #check @Expr.fnref

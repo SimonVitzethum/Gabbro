@@ -16,6 +16,7 @@
   preserve source range and fault semantics.
 -/
 import Grammatik.X86.Kern.Typen
+
 namespace Gabbro.Grammatik.X86
 
 /-- Width mask: exactly the low `b.bits` bits set. -/

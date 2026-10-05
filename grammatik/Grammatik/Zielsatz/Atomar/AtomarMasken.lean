@@ -10,6 +10,7 @@
 -/
 import Grammatik.Zielsatz.Eigenschaften.Masken
 import Grammatik.Speichermodell.Atomar.Atomar
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik Speichermodell

@@ -15,6 +15,7 @@ import Grammatik.X86.Flags.FeatureProfile
 import Grammatik.X86.Befehle.Vektor.VectorCodec
 import Grammatik.X86.Befehle.Vektor.VectorFootprints
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Silicon feature bits the selected tier needs: SSE2 presence plus

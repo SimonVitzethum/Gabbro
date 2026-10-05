@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 20:38 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 22:06 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -707,29 +707,29 @@ Last ledger refresh: **2026-10-05 20:38 UTC**. This is an operational snapshot, 
 | 1297 | Paging follow-up: large pages and SMEP/SMAP | Merged after review/checks | 1298: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1297.md) |
 | 1299 | Translation: the page walk joined with the TLB and the flat memory model | Merged after review/checks | 1300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1299.md) |
 | 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Merged after review/checks | 1302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1301.md) |
-| 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Agent working | 1304: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1303.md) |
+| 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Merged after review/checks | 1304: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1303.md) |
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
 | 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1307.md) |
 | 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Merged after review/checks | 1310: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1309.md) |
-| 1311 | Capstone, second step: add the families merged since the first union | Committed candidate; review/integration pending | 1312: Committed candidate; review/integration pending | [task](lanes/1311.md) |
-| 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Agent working | 1314: scheduled | [task](lanes/1313.md) |
+| 1311 | Capstone, second step: add the families merged since the first union | Merged after review/checks | 1312: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1311.md) |
+| 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Incomplete; preserved | 1314: scheduled | [task](lanes/1313.md) |
 | 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Merged after review/checks | 1316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1315.md) |
 | 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Merged after review/checks | 1320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
-| 1325 | TSO projection: the locked and direct-memory tags | Agent working | 1326: scheduled | [task](lanes/1325.md) |
-| 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Committed candidate; review/integration pending | 1328: Committed candidate; review/integration pending | [task](lanes/1327.md) |
-| 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Committed candidate; review/integration pending | 1330: scheduled | [task](lanes/1329.md) |
+| 1325 | TSO projection: the locked and direct-memory tags | Merged after review/checks | 1326: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1325.md) |
+| 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Merged after review/checks | 1328: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1327.md) |
+| 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Merged after review/checks | 1330: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1329.md) |
 | 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1331.md) |
-| 1333 | Opcode ledger: one-byte opcodes 00-3F | Agent working | 1334: scheduled | [task](lanes/1333.md) |
-| 1335 | Opcode ledger: one-byte opcodes 40-7F | Agent working | 1336: scheduled | [task](lanes/1335.md) |
-| 1337 | Opcode ledger: one-byte opcodes 80-BF | Agent working | 1338: scheduled | [task](lanes/1337.md) |
-| 1339 | Opcode ledger: one-byte opcodes C0-FF | Agent working | 1340: scheduled | [task](lanes/1339.md) |
-| 1341 | Opcode ledger: two-byte opcodes 0F 00-3F | Agent working | 1342: scheduled | [task](lanes/1341.md) |
-| 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Agent working | 1344: scheduled | [task](lanes/1343.md) |
-| 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Agent working | 1346: scheduled | [task](lanes/1345.md) |
-| 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Agent working | 1348: scheduled | [task](lanes/1347.md) |
+| 1333 | Opcode ledger: one-byte opcodes 00-3F | Merged after review/checks | 1334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1333.md) |
+| 1335 | Opcode ledger: one-byte opcodes 40-7F | Committed candidate; review/integration pending | 1336: Incomplete; preserved | [task](lanes/1335.md) |
+| 1337 | Opcode ledger: one-byte opcodes 80-BF | Merged after review/checks | 1338: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1337.md) |
+| 1339 | Opcode ledger: one-byte opcodes C0-FF | Merged after review/checks | 1340: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1339.md) |
+| 1341 | Opcode ledger: two-byte opcodes 0F 00-3F | Merged after review/checks | 1342: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1341.md) |
+| 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Merged after review/checks | 1344: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1343.md) |
+| 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
+| 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1752,6 +1752,39 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1320**, Independent exact review of 1319, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1320.md). <!-- x86-merged:1320 -->
 - 2026-10-05: lane **1331**, Per-row consumed length for the capstone decoder chain, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1331.md). <!-- x86-merged:1331 -->
 - 2026-10-05: lane **1332**, Independent exact review of 1331, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1332.md). <!-- x86-merged:1332 -->
+- 2026-10-05: publication batch checks passed for `7e0c5b98`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1311**, Capstone, second step: add the families merged since the first union, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1311.md). <!-- x86-merged:1311 -->
+- 2026-10-05: checked master `677371fd` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:677371fdc97b323460e7f76c0fdb6d2e7226e74d -->
+- 2026-10-05: lane **1312**, Independent exact review of 1311, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1312.md). <!-- x86-merged:1312 -->
+- 2026-10-05: lane **1327**, TSO projection: the issue-path tags isa, addr, muldiv, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1327.md). <!-- x86-merged:1327 -->
+- 2026-10-05: lane **1328**, Independent exact review of 1327, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1328.md). <!-- x86-merged:1328 -->
+- 2026-10-05: lane **1329**, TSO projection: device, FP, vector, fault, gate, interrupt and image tags, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1329.md). <!-- x86-merged:1329 -->
+- 2026-10-05: lane **1330**, Independent exact review of 1329, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1330.md). <!-- x86-merged:1330 -->
+- 2026-10-05: lane **1343**, Opcode ledger: two-byte opcodes 0F 40-7F, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1343.md). <!-- x86-merged:1343 -->
+- 2026-10-05: lane **1344**, Independent exact review of 1343, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1344.md). <!-- x86-merged:1344 -->
+- 2026-10-05: lane **1345**, Opcode ledger: two-byte opcodes 0F 80-BF, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1345.md). <!-- x86-merged:1345 -->
+- 2026-10-05: lane **1346**, Independent exact review of 1345, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1346.md). <!-- x86-merged:1346 -->
+- 2026-10-05: lane **1347**, Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1347.md). <!-- x86-merged:1347 -->
+- 2026-10-05: lane **1348**, Independent exact review of 1347, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1348.md). <!-- x86-merged:1348 -->
+- 2026-10-05: publication batch checks passed for `68d5fd6b`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1303**, Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1303.md). <!-- x86-merged:1303 -->
+- 2026-10-05: checked master `216ae362` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:216ae3628e31db46f65ebf667dadfaff060eb87c -->
+- 2026-10-05: lane **1304**, Independent exact review of 1303, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1304.md). <!-- x86-merged:1304 -->
+- 2026-10-05: lane **1325**, TSO projection: the locked and direct-memory tags, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1325.md). <!-- x86-merged:1325 -->
+- 2026-10-05: lane **1326**, Independent exact review of 1325, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1326.md). <!-- x86-merged:1326 -->
+- 2026-10-05: lane **1333**, Opcode ledger: one-byte opcodes 00-3F, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1333.md). <!-- x86-merged:1333 -->
+- 2026-10-05: lane **1334**, Independent exact review of 1333, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1334.md). <!-- x86-merged:1334 -->
+- 2026-10-05: lane **1339**, Opcode ledger: one-byte opcodes C0-FF, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1339.md). <!-- x86-merged:1339 -->
+- 2026-10-05: lane **1340**, Independent exact review of 1339, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1340.md). <!-- x86-merged:1340 -->
+- 2026-10-05: publication batch checks passed for `77e4d525`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1341**, Opcode ledger: two-byte opcodes 0F 00-3F, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1341.md). <!-- x86-merged:1341 -->
+- 2026-10-05: checked master `eefa9c78` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:eefa9c786721f61dfe471a32b733ef08d90acace -->
+- 2026-10-05: lane **1342**, Independent exact review of 1341, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1342.md). <!-- x86-merged:1342 -->
+- 2026-10-05: publication batch checks passed for `d72d633a`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1337**, Opcode ledger: one-byte opcodes 80-BF, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1337.md). <!-- x86-merged:1337 -->
+- 2026-10-05: checked master `bbbdbe2e` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:bbbdbe2e03ce2c576b583ab1d23060e9e60b1d1c -->
+- 2026-10-05: lane **1338**, Independent exact review of 1337, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1338.md). <!-- x86-merged:1338 -->
+- 2026-10-05: publication batch checks passed for `1c924cbf`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references

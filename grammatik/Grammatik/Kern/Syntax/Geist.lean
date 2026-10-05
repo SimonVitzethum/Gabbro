@@ -9,6 +9,7 @@
 import Grammatik.Kern.Syntax.Extraktion
 import Grammatik.Kern.Syntax.Satz
 import Grammatik.Kern.Semantik.Maschine
+
 namespace Gabbro.Grammatik.Geist
 
 open Gabbro.Grammatik

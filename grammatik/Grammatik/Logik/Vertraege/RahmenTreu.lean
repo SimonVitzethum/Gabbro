@@ -43,6 +43,7 @@
   two conjuncts of `GutO`). That is H1 and it is named, not hidden.
 -/
 import Grammatik.Kern.Syntax.Satz
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D}

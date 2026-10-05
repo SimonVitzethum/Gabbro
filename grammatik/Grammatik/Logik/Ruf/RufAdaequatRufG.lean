@@ -29,6 +29,7 @@
   handler that the machine realises is the bare body run.
 -/
 import Grammatik.Logik.Ruf.RufAdaequatG
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -26,6 +26,7 @@ import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Ganzzahl
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Codec
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. The ten compact forms. -/

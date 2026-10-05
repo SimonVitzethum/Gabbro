@@ -39,6 +39,7 @@
   passes, so the C's not checking it is harmless there.
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

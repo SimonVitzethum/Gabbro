@@ -28,6 +28,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Bild
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Laden.StackUnwind
+
 namespace Gabbro.Grammatik.X86
 
 /-- Call-site instruction class: only `call32` pushes a return word. -/

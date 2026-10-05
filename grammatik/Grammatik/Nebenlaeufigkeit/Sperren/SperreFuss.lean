@@ -29,6 +29,7 @@
     acquire moves and release checks, for every move in `HavocOk S`.
 -/
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

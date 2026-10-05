@@ -27,6 +27,7 @@
   axiom `-> never` (`fort_dann`, Fortschritt.lean; `KopfHalt .nieZurueck`, Spec.lean).
 -/
 import Grammatik.Logik.Ruf.RufAdaequatG
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -28,6 +28,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Opt.Schleifen.StaerkeReduktion
 import Grammatik.X86.Quelle.SourceMemory
+
 namespace Gabbro.Grammatik.X86.OptimizationRules
 
 open Gabbro.Grammatik

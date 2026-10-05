@@ -6,6 +6,7 @@ import Grammatik.Zielsatz.Kern.Beweis
 import Grammatik.Zielsatz.Kern.Proben
 import Grammatik.Zielsatz.Kern.ProbenW1
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
+
 open Gabbro.Grammatik
 
 #check @Gabbro.Grammatik.Zielsatz.GabbroZiel

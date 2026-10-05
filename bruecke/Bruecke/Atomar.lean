@@ -1,5 +1,6 @@
 import Bruecke.Simulation
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
+
 /-!
 # S4 (atomic rely): `NutzerPflichtA` for a unit the parser elaborates
 

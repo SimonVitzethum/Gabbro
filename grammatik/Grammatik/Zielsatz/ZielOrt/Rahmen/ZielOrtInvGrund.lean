@@ -30,6 +30,7 @@
   (twin of `invLog_schritt`), `ziel_ort_sperre_invGrund`.
 -/
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

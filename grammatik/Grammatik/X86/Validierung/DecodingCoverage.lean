@@ -16,6 +16,7 @@ import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Kern.Bild
+
 namespace Gabbro.Grammatik.X86
 
 /-- Executable entry window: the first `n` bytes of a loaded image at entry

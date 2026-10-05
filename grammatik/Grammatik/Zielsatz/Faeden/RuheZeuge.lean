@@ -18,6 +18,7 @@ import Grammatik.Zielsatz.Faeden.Ruhe
 import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
 import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheSemantik
+
 namespace Gabbro.Grammatik
 
 open Zielsatz

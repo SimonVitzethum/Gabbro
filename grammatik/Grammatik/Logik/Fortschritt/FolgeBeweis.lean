@@ -23,6 +23,7 @@
   residue was checked at.
 -/
 import Grammatik.Logik.Fortschritt.Folge
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

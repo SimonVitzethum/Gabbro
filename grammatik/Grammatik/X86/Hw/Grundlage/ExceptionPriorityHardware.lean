@@ -31,6 +31,7 @@
 -/
 import Grammatik.X86.Hw.Grundlage.HardwareFaults
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Priority stage of one fault candidate, in architectural order:

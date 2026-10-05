@@ -29,6 +29,7 @@ import Grammatik.Kern.Syntax.Satz
 import Grammatik.Logik.Vertraege.AxiomVertrag
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. User-declared gates as data -/

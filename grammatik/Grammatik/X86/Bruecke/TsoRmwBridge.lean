@@ -21,6 +21,7 @@ import Grammatik.X86.Hw.Familien.HwLockRmw
 import Grammatik.X86.TSO.Verriegelt.LockXaddFetch
 import Grammatik.X86.TSO.Verriegelt.LockCmpxchgSuccess
 import Grammatik.X86.TSO.Verriegelt.CasRetryBound
+
 namespace Gabbro.Grammatik.X86
 
 /-- The TSO-to-RMW bridge plug: the accepted admitted LOCK/RMW step,

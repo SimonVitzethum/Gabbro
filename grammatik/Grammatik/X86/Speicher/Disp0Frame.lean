@@ -32,6 +32,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Speicher.AddressEncoding
+
 namespace Gabbro.Grammatik.X86
 
 /-- The disp0 (mod=00) frame: no displacement bytes plus the accepted

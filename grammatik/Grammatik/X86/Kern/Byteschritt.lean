@@ -11,6 +11,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Codec
+
 namespace Gabbro.Grammatik.X86
 
 /-- Fetch cap: at most 15 bytes, the x86 maximum instruction length. -/

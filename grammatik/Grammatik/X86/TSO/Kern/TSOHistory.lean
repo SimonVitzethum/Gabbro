@@ -14,6 +14,7 @@
 -/
 import Grammatik.X86.TSO.Kern.TSO
 import Grammatik.Speichermodell.Maschine.Sicht
+
 namespace Gabbro.Grammatik.X86
 
 /-- Committed history projection: every address holds its initial message

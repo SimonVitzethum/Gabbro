@@ -27,6 +27,7 @@ import Grammatik.X86.Hw.Speicher.HwDrainGeneric
 import Grammatik.X86.Hw.Speicher.HwForwardingGeneric
 import Grammatik.X86.Hw.Bild.HwLoadedImage
 import Grammatik.X86.Hw.Bild.HwBildInstanzen
+
 namespace Gabbro.Grammatik.X86
 
 /-- Union events: the coherent base plus one tag per merged family step. -/

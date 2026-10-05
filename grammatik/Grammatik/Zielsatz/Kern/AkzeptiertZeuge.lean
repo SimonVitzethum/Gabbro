@@ -25,6 +25,7 @@ import Grammatik.Zielsatz.Kern.Akzeptiert
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
 import Grammatik.Korrespondenz.Korpus.Export104
+
 namespace Gabbro.Grammatik
 
 open Zielsatz

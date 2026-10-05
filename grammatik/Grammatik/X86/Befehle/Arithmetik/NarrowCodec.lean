@@ -24,6 +24,7 @@ import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Validierung.DecodingCoverage
 import Grammatik.X86.Befehle.Arithmetik.NarrowOps
+
 namespace Gabbro.Grammatik.X86
 
 /-- Covered narrow extension rows. Only these four rows are claimed;

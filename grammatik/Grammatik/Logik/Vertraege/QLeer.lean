@@ -27,6 +27,7 @@
 import Grammatik.Kern.Syntax.Extraktion
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+
 namespace Gabbro.Grammatik
 
 /-- Signature of the single function: one parameter `k : int in 0 .. 5`,

@@ -14,6 +14,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Speicher.SpeicherKommutation
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 /-- A store footprint at `a` is foreign to the code window: every address

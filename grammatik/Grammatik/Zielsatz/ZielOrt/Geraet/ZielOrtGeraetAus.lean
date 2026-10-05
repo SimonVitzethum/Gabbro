@@ -24,6 +24,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtRegister
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraet
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The counterexample as declared -/

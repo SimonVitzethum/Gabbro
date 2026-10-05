@@ -22,6 +22,7 @@ import Lean
 import Grammatik.Nichtinterferenz.Zeuge
 import Grammatik.Zielsatz.Faeden.PoolZeuge
 import Grammatik.Zielsatz.Eigenschaften.Schwach
+
 namespace Gabbro.Grammatik
 
 open Speichermodell

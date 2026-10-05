@@ -42,6 +42,7 @@
   Witnesses and poison probes: `ISARelaxWitnesses.lean`.
 -/
 import Grammatik.X86.Befehle.ISA.ISASelect
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Labelled programs, layout, resolution, validation. -/

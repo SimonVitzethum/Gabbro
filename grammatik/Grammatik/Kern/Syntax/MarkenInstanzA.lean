@@ -21,6 +21,7 @@
 -/
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Kern.Syntax.Extraktion
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik.Extraktion

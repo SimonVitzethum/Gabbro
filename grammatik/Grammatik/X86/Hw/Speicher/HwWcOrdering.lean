@@ -29,6 +29,7 @@
   is never proved.
 -/
 import Grammatik.X86.Hw.Speicher.HwMemTypesWC
+
 namespace Gabbro.Grammatik.X86
 
 namespace HwWcOrd1301

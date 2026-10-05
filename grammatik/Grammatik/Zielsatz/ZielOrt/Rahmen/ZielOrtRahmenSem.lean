@@ -33,6 +33,7 @@
   of every thread; `rufG_rahmen` proves it on every reachable machine.
 -/
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

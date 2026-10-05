@@ -42,6 +42,7 @@
   certificate does (`korrOk_hardwareFrei`, KorrespondenzAllg.lean).
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

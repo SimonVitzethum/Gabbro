@@ -36,6 +36,7 @@
   `idx a (i*N + j) (M*N) es` -- row-major, exactly the flattening.
 -/
 import Grammatik.CBackend.Formen.CFormen
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

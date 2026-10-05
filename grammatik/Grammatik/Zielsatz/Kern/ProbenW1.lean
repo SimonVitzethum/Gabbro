@@ -24,6 +24,7 @@
   return (`_Noreturn`), and the continuation is unreachable in the C as in G.
 -/
 import Grammatik.Zielsatz.Kern.ProbenG1
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

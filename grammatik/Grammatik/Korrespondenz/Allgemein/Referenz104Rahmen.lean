@@ -17,6 +17,7 @@
 -/
 import Grammatik.Korrespondenz.Allgemein.Referenz104
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmen
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. `einzahlen` meets the obligation against declared frames -/

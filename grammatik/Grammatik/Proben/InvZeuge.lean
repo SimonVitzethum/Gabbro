@@ -28,6 +28,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The declaration -/

@@ -16,6 +16,7 @@ import Grammatik.X86.Speicher.Regionen
 import Grammatik.X86.Speicher.RegionSeparation
 import Grammatik.X86.Speicher.TableLayout
 import Grammatik.X86.Kern.Ausfuehrung
+
 namespace Gabbro.Grammatik.X86
 
 /-- A bare number names no region extent: admission requires membership. -/

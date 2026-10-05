@@ -26,6 +26,7 @@
 import Grammatik.X86.Pipeline.Kern.PipelineImage
 import Grammatik.X86.Pipeline.Kern.PipelineWitnesses
 import Grammatik.X86.Pipeline.Kern.PipelineEntry
+
 namespace Gabbro.Grammatik.X86.PipelineImageWitnesses
 
 open Gabbro.Grammatik

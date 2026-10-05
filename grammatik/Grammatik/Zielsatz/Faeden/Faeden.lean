@@ -23,6 +23,7 @@
     the `join` step or a join wait for a starter, dormancy for a slot.
 -/
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

@@ -23,6 +23,7 @@
 -/
 import Grammatik.X86.Pipeline.Kern.PipelineImage
 import Grammatik.X86.Pipeline.Kern.PipelineWitnesses
+
 namespace Gabbro.Grammatik.X86.PipelineInfinite
 
 open Gabbro.Grammatik

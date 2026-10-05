@@ -11,6 +11,7 @@
   definitional identity.
 -/
 import Grammatik.Kern.Semantik.Terminierung
+
 open Gabbro.Grammatik
 
 /-- F9: `traverse_fallend_terminiert` IS `mass_faellt_schranke`. -/

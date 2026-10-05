@@ -15,6 +15,7 @@
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
 import Grammatik.X86.Flags.FeatureProfile
 import Grammatik.X86.Kern.Codec
+
 namespace Gabbro.Grammatik.X86
 
 /-- Architectural XMM code: xmm0=0 through xmm15=15. -/

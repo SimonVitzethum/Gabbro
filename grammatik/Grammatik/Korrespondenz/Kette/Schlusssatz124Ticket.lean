@@ -22,6 +22,7 @@
 -/
 import Grammatik.CBackend.Semantik.CTicket
 import Grammatik.Korrespondenz.Kette.Schlusssatz124
+
 namespace Gabbro.Grammatik
 
 namespace K124

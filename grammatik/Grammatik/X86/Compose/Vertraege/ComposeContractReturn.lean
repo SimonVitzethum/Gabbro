@@ -15,6 +15,7 @@ import Grammatik.X86.Validierung.ContractSites
 import Grammatik.X86.Laden.EntryState
 import Grammatik.X86.Validierung.ValidatorSkeleton
 import Grammatik.X86.Kosten.CostSummary
+
 namespace Gabbro.Grammatik.X86
 
 /-- Closing step: the actual-result ensures bit at its place plus the three

@@ -10,6 +10,7 @@
   case.
 -/
 import Grammatik.Kern.Syntax.Typen
+
 namespace Gabbro.Grammatik
 
 /-- Bit list of `x` over `w` positions, LSB first. -/

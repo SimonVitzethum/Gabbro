@@ -58,6 +58,7 @@
   model, not a rule; the header of `Zielsatz/Spec.lean` would have to be rewritten for it.
 -/
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik.Sperrstreifen
 
 open Gabbro.Grammatik

@@ -17,6 +17,7 @@
       never combined across threads.
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

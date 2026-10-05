@@ -17,6 +17,7 @@
   stages for 104.
 -/
 import Grammatik.Parser.Uebersetze
+
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg
 
 open Gabbro.Grammatik.Parser.Uebersetze

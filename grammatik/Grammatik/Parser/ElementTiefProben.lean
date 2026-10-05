@@ -16,6 +16,7 @@
   whole file with a table, a lock and contracted functions).
 -/
 import Grammatik.Parser.ElementTief
+
 namespace Gabbro.Grammatik.Parser
 
 set_option maxRecDepth 100000

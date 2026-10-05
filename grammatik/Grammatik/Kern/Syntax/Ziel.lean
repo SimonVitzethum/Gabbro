@@ -58,6 +58,7 @@ import Grammatik.Kern.Semantik.Fristlauf
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Kern.Semantik.MaschinenKette
 import Grammatik.Kern.Syntax.Extraktion
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D}

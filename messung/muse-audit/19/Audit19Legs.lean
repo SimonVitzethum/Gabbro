@@ -6,6 +6,7 @@
 -- Slice anchors: Ziel.lean:370 (`hLowering : Absenkung`), :379-380
 -- (outcome disjunction), :388-389 (proof lines).
 import Grammatik.Kern.Syntax.Ziel
+
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

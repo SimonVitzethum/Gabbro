@@ -37,6 +37,7 @@ import Grammatik.X86.Pipeline.Kern.PipelineWitnesses
 import Grammatik.X86.Pipeline.Kern.PipelineRegAlloc
 import Grammatik.X86.Compose.Vertraege.ComposeSpillPrivacy
 import Grammatik.X86.Speicher.EffectiveAddress
+
 namespace Gabbro.Grammatik.X86.PipeSpill
 
 open Gabbro.Grammatik

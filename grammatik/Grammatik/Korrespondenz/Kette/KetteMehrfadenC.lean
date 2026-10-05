@@ -70,6 +70,7 @@
 -/
 
 import Grammatik.Kern.Semantik.Maschine
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

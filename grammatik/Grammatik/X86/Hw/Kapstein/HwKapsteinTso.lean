@@ -11,6 +11,7 @@
   Every accepted definition is reused unchanged, never redefined.
 -/
 import Grammatik.X86.Hw.Kapstein.HwKapstein
+
 namespace Gabbro.Grammatik.X86
 
 /-- Projection of the coherent machine to the TSO-only machine:

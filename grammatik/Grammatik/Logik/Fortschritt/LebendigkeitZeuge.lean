@@ -24,6 +24,7 @@
 -/
 import Grammatik.Logik.Fortschritt.Lebendigkeit
 import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
+
 namespace Gabbro.Grammatik
 
 set_option linter.unusedVariables false

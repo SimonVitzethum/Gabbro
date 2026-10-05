@@ -12,6 +12,7 @@
   premise `hungeteilt` with a new program-text premise `PCUnsharedSep`.
 -/
 import Grammatik.Kern.Semantik.Maschine
+
 open Gabbro.Grammatik
 
 variable {D : Deklaration}

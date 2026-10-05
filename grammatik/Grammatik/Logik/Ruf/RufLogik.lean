@@ -45,6 +45,7 @@ import Grammatik.Logik.Vertraege.RahmenTreu
 import Grammatik.Logik.Ruf.RufTiefe
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInv
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

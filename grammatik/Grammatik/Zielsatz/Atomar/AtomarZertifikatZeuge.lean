@@ -11,6 +11,7 @@
   `atomic` in the exported declaration, and it IS an admitted shared atomic of the unit.
 -/
 import Grammatik.Zertifikat.Reihe01.G162_geteilte_flagge
+
 namespace Gabbro.Grammatik.AtomarZertifikatZeuge
 
 open Gabbro.Grammatik G162_geteilte_flagge_oblig

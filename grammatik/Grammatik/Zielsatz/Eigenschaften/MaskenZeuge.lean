@@ -29,6 +29,7 @@
     theorem about every program: what carries it is (a).
 -/
 import Grammatik.Korrespondenz.Korpus.Korpus59
+
 namespace Gabbro.Grammatik
 
 namespace K59

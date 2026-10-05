@@ -22,6 +22,7 @@
 -/
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat32HardwareForms
 import Grammatik.X86.Befehle.Gleitkomma.FpControlHardwareForms
+
 namespace Gabbro.Grammatik.X86
 
 /-- Lane marker: the fetched binary32 step layer over the accepted S32 rows. -/

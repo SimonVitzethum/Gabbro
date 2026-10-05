@@ -16,6 +16,7 @@ import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Stapel
 import Grammatik.X86.Laden.StackUnwind
 import Grammatik.X86.Befehle.Kontrolle.CallAlign16
+
 namespace Gabbro.Grammatik.X86
 
 /-- Red-zone rule per frame: the 128 bytes below `rsp` lie inside the frame

@@ -26,6 +26,7 @@
   the empty block and returns, logging exactly that `7`.
 -/
 import Grammatik.Logik.Ruf.RufAdaequatRufG
+
 namespace Gabbro.Grammatik
 
 /-- The loop body: `if !false { leave }` (the refusal `pruefung`). -/

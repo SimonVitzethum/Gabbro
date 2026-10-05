@@ -10,6 +10,7 @@
   alone, for handler and non-handler threads alike.
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Unterbrechung
+
 open Gabbro.Grammatik
 
 /-- F7: the handler premise is discarded -- plain threads suffice. -/

@@ -18,6 +18,7 @@ import Grammatik.X86.TSO.Kern.WordAccessGrouping
 import Grammatik.X86.Hw.Familien.HwStackCalls
 import Grammatik.X86.Hw.Speicher.HwForwardingGeneric
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Family events and the adapter. -/

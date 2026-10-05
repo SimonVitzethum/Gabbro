@@ -18,6 +18,7 @@ import Grammatik.X86.Validierung.ValidatorSkeleton
 import Grammatik.Logik.Vertraege.VertragOrtB
 import Grammatik.Logik.Ruf.FremdRuf
 import Grammatik.X86.Validierung.ContractSites
+
 namespace Gabbro.Grammatik.X86
 
 /-- Joint x86 admission for one entry: checked image mapping AND entry

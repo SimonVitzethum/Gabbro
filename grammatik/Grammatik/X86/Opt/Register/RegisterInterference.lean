@@ -13,6 +13,7 @@
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Speicher.Zugriffe
+
 namespace Gabbro.Grammatik.X86
 
 /-- Canonical register reads of one pilot instruction, pre-state view.

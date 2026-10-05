@@ -18,6 +18,7 @@ import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.X86.TSO.Kern.WordAtomicity
 import Grammatik.X86.TSO.Kern.ReleaseAcquire
 import Grammatik.X86.TSO.Kern.TSOHistory
+
 namespace Gabbro.Grammatik.X86
 
 /-- Shared atomic access: the shape the ledger closes. Loads and stores

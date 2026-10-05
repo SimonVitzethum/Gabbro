@@ -12,6 +12,7 @@
   (see CUTS): no rule-13 witness exists on the reference fixture.
 -/
 import Grammatik.Korrespondenz.Zeugnis.ZeugnisStmt
+
 namespace Gabbro.Grammatik
 
 /-- Case-list certificates for `Stmt.onTag`: one `CertSeq` per `sum` case,

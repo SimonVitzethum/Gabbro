@@ -9,6 +9,7 @@
   not derivable with an empty trace (`axiomCall_ohne_sperre_nicht_ableitbar`).
 -/
 import Grammatik.Kern.Syntax.Satz
+
 namespace Gabbro.Grammatik
 
 /-- One guarded table holding one boolean; one lock; one writing axiom. -/

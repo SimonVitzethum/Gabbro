@@ -13,6 +13,7 @@
   the value it guards feeds `Expr.lit` through GAP-05 (`int`).
 -/
 import Grammatik.Kern.Syntax.Syntax
+
 namespace P21.Gap03Digit
 
 /-- The lexer class: exactly "0" through "9". -/

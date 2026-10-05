@@ -89,6 +89,7 @@
   No `mathlib`, no `sorry`, no `axiom`.
 -/
 import Grammatik.Kern.Syntax.Satz
+
 namespace Gabbro.Grammatik
 
 /-- A logical moment: a step index into a run, never wall-clock. There is no

@@ -12,6 +12,7 @@
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Speicher.AddressEncoding
 import Grammatik.X86.TSO.Kern.TSO
+
 namespace Gabbro.Grammatik.X86
 
 /-- Segment override choice on one memory access: no override, or the

@@ -13,6 +13,7 @@
   No rule-4 violation: every binder below appears in the stated goal.
 -/
 import Grammatik.Korrespondenz.Kette.KetteMehrfadenC
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

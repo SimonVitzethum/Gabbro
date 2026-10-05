@@ -16,6 +16,7 @@
   each projection -- the frame proof never inspects which lock event fired.
 -/
 import Grammatik.Kern.Semantik.Maschine
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

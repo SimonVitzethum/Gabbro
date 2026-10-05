@@ -17,6 +17,7 @@
   reduced pair; the carrier link is `Block.gleitLit`.
 -/
 import Grammatik.Kern.Syntax.Syntax
+
 namespace P21.Gap09Float
 
 /-- Denominator `den` divides some power of two (fuel bounds the search). -/

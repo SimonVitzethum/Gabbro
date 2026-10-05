@@ -29,6 +29,7 @@
 -/
 import Grammatik.Logik.Ruf.RufHaeltG
 import Grammatik.Logik.Ruf.RufAdaequatG
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

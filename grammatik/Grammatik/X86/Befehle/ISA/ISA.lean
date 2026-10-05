@@ -58,6 +58,7 @@ import Grammatik.X86.Befehle.Arithmetik.NarrowCodec
 import Grammatik.X86.Befehle.Kontrolle.ControlCodec
 import Grammatik.X86.Befehle.Kompakt.CompactForms
 import Grammatik.X86.Befehle.Ganzzahl.IntegerCore
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. One instruction type, one step, one run. -/

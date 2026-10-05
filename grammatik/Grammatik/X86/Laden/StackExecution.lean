@@ -15,6 +15,7 @@ import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Kern.Stapel
 import Grammatik.X86.Speicher.CodeImmutability
 import Grammatik.X86.Laden.StackUnwind
+
 namespace Gabbro.Grammatik.X86
 
 /-- The fetched window at `rip` is the canonical encoding of stack

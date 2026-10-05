@@ -28,6 +28,7 @@
   as `cCorr_assignSlot_blk`.
 -/
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 /-! ## 0. Widths and ranges: the integer types the five forms need -/

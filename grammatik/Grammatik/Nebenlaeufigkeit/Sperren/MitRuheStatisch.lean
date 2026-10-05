@@ -7,6 +7,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Sperren.MitRuhe
 import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

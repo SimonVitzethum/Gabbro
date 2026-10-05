@@ -22,6 +22,7 @@
 import Grammatik.X86.Pipeline.Kern.PipelineEntry
 import Grammatik.X86.Laden.StackExecution
 import Grammatik.X86.Bruecke.TsoGxStart
+
 namespace Gabbro.Grammatik.X86.TsoGxEntryBytes
 
 open Gabbro.Grammatik

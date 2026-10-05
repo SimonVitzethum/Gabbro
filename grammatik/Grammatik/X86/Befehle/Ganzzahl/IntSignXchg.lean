@@ -29,6 +29,7 @@ import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Hw.Familien.HwMulDivWidth
 import Grammatik.X86.TSO.Verriegelt.XchgOrderNeed
+
 namespace Gabbro.Grammatik.X86
 
 /-- Admitted event forms. `cbw`/`cwd` are the 16-bit preparations

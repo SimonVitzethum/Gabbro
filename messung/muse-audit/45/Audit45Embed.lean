@@ -5,6 +5,7 @@
 -- Demonstration: `rfl` unfolding and one entry atom the "embedding"
 -- cannot come from a three-case PC atom (there is no PCAtom argument).
 import Grammatik.Logik.Vertraege.VertragOrtB
+
 namespace GabbroAudit45A
 
 open Gabbro.Grammatik

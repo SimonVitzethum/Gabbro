@@ -40,6 +40,7 @@
   blocker for full `gut`, stated at the end of this file.
 -/
 import Grammatik.Parser.Rundlauf2
+
 namespace Gabbro.Grammatik.Parser
 
 -- The eight fuel-generalised round-trip legs for one fixed tree:

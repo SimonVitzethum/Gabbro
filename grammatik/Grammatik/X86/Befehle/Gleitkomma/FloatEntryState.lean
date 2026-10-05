@@ -16,6 +16,7 @@ import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
 import Grammatik.X86.Laden.EntryState
 import Grammatik.X86.Flags.FeatureProfile
 import Grammatik.X86.Validierung.ContractSites
+
 namespace Gabbro.Grammatik.X86
 
 /-- The entry's FP context: the entry state's own MXCSR word as the

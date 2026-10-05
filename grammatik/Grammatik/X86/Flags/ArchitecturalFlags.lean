@@ -40,6 +40,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Befehle.Arithmetik.ShiftLogic
 import Grammatik.X86.Befehle.Arithmetik.MulDiv
 import Grammatik.X86.Flags.FlagDependencies
+
 namespace Gabbro.Grammatik.X86
 
 /-- RFLAGS status bit positions (Intel SDM Vol. 1 Figure 3-8). -/

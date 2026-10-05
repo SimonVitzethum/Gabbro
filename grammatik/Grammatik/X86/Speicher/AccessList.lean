@@ -16,6 +16,7 @@
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 import Grammatik.Speichermodell.Maschine.RMW
 import Grammatik.Nebenlaeufigkeit.Allgemein.TravAwaitsLauf
+
 namespace Gabbro.Grammatik.X86
 
 variable {D : Deklaration}

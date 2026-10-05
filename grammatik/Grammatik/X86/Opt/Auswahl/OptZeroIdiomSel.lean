@@ -26,6 +26,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Kosten.CostSummary
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

@@ -17,6 +17,7 @@
 -/
 import Grammatik.Korrespondenz.Zeugnis.ZeugnisStmt2
 import Grammatik.Korrespondenz.Korpus.Export104
+
 namespace Gabbro.Grammatik
 
 /-- Body prints with calls-with-arguments and pointer returns: reuse

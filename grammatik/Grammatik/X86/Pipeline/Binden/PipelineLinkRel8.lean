@@ -27,6 +27,7 @@
     memory-changing run through actual bytes).
 -/
 import Grammatik.X86.Pipeline.Binden.PipelineLinkMulti
+
 namespace Gabbro.Grammatik.X86
 
 /-- One relaxed program piece: fixed fall-through bytes of length

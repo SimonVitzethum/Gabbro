@@ -15,6 +15,7 @@
   declared in the source, so the family is trivially true (owed nowhere).
 -/
 import Grammatik.Zielsatz.Kern.Proben
+
 namespace Gabbro.Grammatik
 
 namespace K109

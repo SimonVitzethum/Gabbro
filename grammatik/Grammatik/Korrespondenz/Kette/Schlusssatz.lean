@@ -43,6 +43,7 @@ import Grammatik.Korrespondenz.Allgemein.KorrespondenzAllg
 import Grammatik.Korrespondenz.Allgemein.KorrOkOhneLocks
 import Grammatik.Parser.UebersetzeAllg2
 import Grammatik.Zielsatz.Kern.Beweis
+
 namespace Gabbro.Grammatik
 
 open Parser Parser.Uebersetze Parser.UebersetzeAllg Parser.UebersetzeAllg2 Zielsatz

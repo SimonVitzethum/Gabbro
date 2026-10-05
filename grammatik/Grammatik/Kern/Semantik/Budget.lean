@@ -97,6 +97,7 @@
 import Grammatik.Kern.Syntax.Syntax
 import Grammatik.Kern.Syntax.Ziel
 import Grammatik.Korrespondenz.Zeugnis.Zeugnis
+
 namespace Gabbro.Grammatik
 
 /-- One budgeted primitive step. `cost` is its DECLARED cost (premise P1). -/

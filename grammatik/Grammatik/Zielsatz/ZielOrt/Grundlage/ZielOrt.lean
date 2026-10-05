@@ -52,6 +52,7 @@ import Grammatik.Logik.Ruf.RufHaeltG
 import Grammatik.Logik.Ruf.HoareRuf
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
 import Grammatik.Nebenlaeufigkeit.Sperren.RelySperre
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

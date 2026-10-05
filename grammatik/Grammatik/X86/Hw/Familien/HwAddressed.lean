@@ -18,6 +18,7 @@ import Grammatik.X86.Speicher.AddressEncoding
 import Grammatik.X86.TSO.Verriegelt.ConcurrentIntegerExecution
 import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Speicher.EffectiveAddress
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Addressed access: selected address, width-selected bytes. -/

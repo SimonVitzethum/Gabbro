@@ -119,6 +119,7 @@
    new theorems rest on.
 -/
 import Grammatik.Kern.Syntax.Ziel
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. Correspondence: exec-to-C, as data plus four Prop shapes -/

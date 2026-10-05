@@ -31,6 +31,7 @@
 -/
 import Grammatik.X86.Pipeline.Kern.PipelineImage
 import Grammatik.X86.Bruecke.CarrierTraceBridge
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

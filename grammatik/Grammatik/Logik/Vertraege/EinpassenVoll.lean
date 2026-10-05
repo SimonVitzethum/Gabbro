@@ -43,6 +43,7 @@
     (`antwortenB`, Zielsatz/Akzeptiert.lean).
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

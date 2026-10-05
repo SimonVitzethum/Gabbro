@@ -54,6 +54,7 @@
 -/
 import Grammatik.Kern.Semantik.Semantik
 import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -40,6 +40,7 @@
 -/
 import Grammatik.Kern.Semantik.Erhaltung
 import Grammatik.CBackend.Formen.CFormenH
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

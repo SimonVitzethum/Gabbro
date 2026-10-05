@@ -70,6 +70,7 @@
 
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 import Grammatik.Kern.Syntax.Extraktion
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

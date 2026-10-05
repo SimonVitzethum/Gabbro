@@ -22,6 +22,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Bild
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Laden.LoadedExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- The one checked closing step: fetch, decode and execute from the

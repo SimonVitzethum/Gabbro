@@ -12,6 +12,7 @@ import Grammatik.X86.Hw.Grundlage.HardwareFaults
 import Grammatik.X86.Validierung.ValidatorSkeleton
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Kosten.BudgetExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Ledger outcome: success carries the successor, halt carries its

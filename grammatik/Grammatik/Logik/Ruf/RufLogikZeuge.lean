@@ -31,6 +31,7 @@
 -/
 import Grammatik.Korrespondenz.Kette.Kette104Satz
 import Grammatik.Korrespondenz.Kette.Kette108
+
 namespace Gabbro.Grammatik.Kette104
 
 /-- **WITNESS for `rufAt_tiefer` / `rufAt_stabil_ab` on the 104 chain.** -/

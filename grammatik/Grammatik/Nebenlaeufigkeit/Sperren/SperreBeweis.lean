@@ -23,6 +23,7 @@
     at the machine world (`kopfS_frei_inv`).
 -/
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

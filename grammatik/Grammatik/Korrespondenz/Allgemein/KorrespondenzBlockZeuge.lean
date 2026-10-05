@@ -24,6 +24,7 @@
   proof would be probing something else.
 -/
 import Grammatik.Korrespondenz.Allgemein.KorrespondenzWeitZeuge
+
 namespace Gabbro.Grammatik.BlockZeuge
 
 open Gabbro.Grammatik Gabbro.Grammatik.WeitZeuge

@@ -42,6 +42,7 @@
   `some f`, and every function behaves in `P.mitRuhe` as in `P`.
 -/
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. Types, signatures, the declaration -/

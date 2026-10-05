@@ -12,6 +12,7 @@
   redefined; fetches cite the accepted decode pins.
 -/
 import Grammatik.X86.Hw.Kapstein.HwKapstein
+
 namespace Gabbro.Grammatik.X86
 
 /-- Run data window: 8192..8224, holding the lock word (8192), the stack

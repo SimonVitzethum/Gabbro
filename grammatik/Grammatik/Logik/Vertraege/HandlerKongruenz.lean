@@ -49,6 +49,7 @@
   is NOT proved here (see `RufLogik.lean` and the report).
 -/
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

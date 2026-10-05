@@ -19,6 +19,7 @@
   cannot satisfy the lock-only predicate. Both use every binder.
 -/
 import Grammatik.Kern.Semantik.Maschine
+
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

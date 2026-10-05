@@ -17,6 +17,7 @@
   on the trust path (witness only).
 -/
 import Grammatik.X86.Pipeline.Kern.Pipeline
+
 namespace Gabbro.Grammatik.X86.PipelineWitnesses
 
 open Gabbro.Grammatik

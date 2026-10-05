@@ -10,6 +10,7 @@
   cites is gone. This demo shows the current truth: the table decides.
 -/
 import Grammatik.Kern.Semantik.Erhaltung
+
 open Gabbro.Grammatik
 
 /-- F4: the table IS closed today (the stale header says it is open). -/

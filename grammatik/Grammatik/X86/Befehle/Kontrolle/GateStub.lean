@@ -10,6 +10,7 @@
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Codec
+
 namespace Gabbro.Grammatik.X86
 
 /-- Gate kind: ordinary value, region answer, or stack (clone) gate. -/

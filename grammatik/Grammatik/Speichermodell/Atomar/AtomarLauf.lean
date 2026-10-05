@@ -21,6 +21,7 @@
 -/
 import Grammatik.Speichermodell.Atomar.AtomarAkteur
 import Grammatik.Speichermodell.Atomar.Atomar
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

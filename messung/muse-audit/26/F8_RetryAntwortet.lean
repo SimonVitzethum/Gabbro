@@ -8,6 +8,7 @@
   witness can be `none` (out of fuel) and the theorem still holds.
 -/
 import Grammatik.Kern.Semantik.Terminierung
+
 open Gabbro.Grammatik
 
 /-- F8: the "answer" may be `none` -- out of fuel counts as answering. -/

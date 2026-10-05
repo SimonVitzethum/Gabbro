@@ -49,6 +49,7 @@
 -/
 import Grammatik.Kern.Syntax.Syntax
 import Grammatik.Bausteine.Gleitkomma.GleitkommaBits
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

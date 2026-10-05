@@ -30,6 +30,7 @@
 -/
 import Grammatik.X86.Bruecke.TsoRmwBridge
 import Grammatik.Speichermodell.Maschine.Sicht
+
 namespace Gabbro.Grammatik.X86
 
 /-- History vocabulary reused for the link: histories over LOCK word

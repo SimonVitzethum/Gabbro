@@ -23,6 +23,7 @@ import Grammatik.X86.Kosten.DerivedWorkBound
 import Grammatik.X86.Kosten.BudgetExecution
 import Grammatik.X86.Hw.Grundlage.HardwareAssumptions
 import Grammatik.X86.Quelle.ExpressionLowering
+
 namespace Gabbro.Grammatik.X86.PipeBlock
 
 open Gabbro.Grammatik

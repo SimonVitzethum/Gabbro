@@ -24,6 +24,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtRahmenSem
 import Grammatik.Logik.Vertraege.AxiomVertrag
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

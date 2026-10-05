@@ -19,6 +19,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
+
 namespace Gabbro.Grammatik.X86
 
 /-- Selected port widths: 8, 16 or 32 bits through the accumulator. -/

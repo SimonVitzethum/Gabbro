@@ -24,6 +24,7 @@
 import Grammatik.Nebenlaeufigkeit.Allgemein.FadenMaschine
 import Grammatik.Logik.Fortschritt.KostenG
 import Grammatik.Speichermodell.Atomar.AtomarLauf
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

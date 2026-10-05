@@ -22,6 +22,7 @@ import Grammatik.X86.Flags.ArchitecturalFlags
 import Grammatik.X86.Speicher.MemoryTypeHardwareExecution
 import Grammatik.X86.TSO.Verriegelt.ConcurrentIntegerExecution
 import Grammatik.X86.Speicher.AddressedHardwareExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Shared-store gate: a vector store to a shared address is refused

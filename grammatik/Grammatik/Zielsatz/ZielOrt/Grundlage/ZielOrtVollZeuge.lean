@@ -23,6 +23,7 @@
   records its write (`GutO`).
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVoll
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The declaration and the program -/

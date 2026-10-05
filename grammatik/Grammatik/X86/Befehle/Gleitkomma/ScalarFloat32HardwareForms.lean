@@ -33,6 +33,7 @@ import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloatCodec
+
 namespace Gabbro.Grammatik.X86
 
 /-- Lane marker: the scalar single-precision family handled here. -/

@@ -40,6 +40,7 @@ import Grammatik.Zielsatz.Kern.Akzeptiert
 import Grammatik.Zielsatz.Kern.Beweis
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik
 
 namespace G59_eintritt_nimmt_maskierte_sperre_oblig

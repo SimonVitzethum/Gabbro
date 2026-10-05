@@ -15,6 +15,7 @@
 -/
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.Speichermodell.Maschine.Sicht
+
 namespace Gabbro.Grammatik.X86
 
 /-- One pending byte store: its address and its byte value. -/

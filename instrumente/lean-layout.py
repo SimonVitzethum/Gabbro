@@ -208,7 +208,7 @@ def cmd_apply():
     return 0
 
 
-IMPORT = re.compile(r'^(\s*import\s+)(Grammatik(?:\.[A-Za-z0-9_]+)+)\s*$', re.M)
+IMPORT = re.compile(r'^([ \t]*import[ \t]+)(Grammatik(?:\.[A-Za-z0-9_]+)+)([ \t]*)$', re.M)
 
 
 def rewrite_imports(files, mapping):
@@ -216,7 +216,7 @@ def rewrite_imports(files, mapping):
     for f in lean_files(files):
         p = ROOT / f
         s = p.read_text()
-        t = IMPORT.sub(lambda m: m.group(1) + mapping.get(m.group(2), m.group(2)), s)
+        t = IMPORT.sub(lambda m: m.group(1) + mapping.get(m.group(2), m.group(2)) + m.group(3), s)
         if t != s:
             p.write_text(t)
             n += 1

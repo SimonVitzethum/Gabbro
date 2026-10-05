@@ -14,6 +14,7 @@ import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Befehle.Kontrolle.IndirectControlHardwareForms
 import Grammatik.X86.Hw.Grundlage.HardwareFaults
 import Grammatik.X86.TSO.Kern.TSO
+
 namespace Gabbro.Grammatik.X86
 
 /-- Manual provenance for every form claimed here. -/

@@ -15,6 +15,7 @@
   `axiomCall` leaf, whose oracle writes slot `0 := 100`.
 -/
 import Grammatik.Logik.Ruf.RufMaschineF
+
 namespace Gabbro.Grammatik
 
 /-- Device registers: `w` is writable and mirrors `r`; `r` is readable. -/

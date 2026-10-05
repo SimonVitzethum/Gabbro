@@ -23,6 +23,7 @@ import Grammatik.X86.Speicher.AccessExecution
 import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.X86.Speicher.TableLayout
 import Grammatik.X86.Bruecke.BridgeRead
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

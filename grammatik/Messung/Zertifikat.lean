@@ -16,6 +16,7 @@
   main build. Scaling probes live in scratch files, not here.
 -/
 import Grammatik.Kern.Syntax.Typen
+
 namespace Gabbro.Messung.Zertifikat
 
 open Gabbro.Grammatik

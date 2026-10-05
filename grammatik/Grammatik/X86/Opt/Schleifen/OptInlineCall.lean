@@ -32,6 +32,7 @@ import Grammatik.X86.Opt.Schleifen.AufrufOpt
 import Grammatik.X86.Validierung.ContractSites
 import Grammatik.X86.Kosten.CostSummary
 import Grammatik.Logik.Ruf.RufAdaequatRufG
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

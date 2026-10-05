@@ -33,6 +33,7 @@ import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Validierung.DecodingCoverage
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Befehle.Arithmetik.NarrowCodec
+
 namespace Gabbro.Grammatik.X86
 
 /-- The one covered row: compact move of a 32-bit immediate into the

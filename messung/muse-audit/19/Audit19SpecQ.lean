@@ -3,6 +3,7 @@
 -- at the SAME world, so the "return" leg is evaluated at entry worlds too.
 -- This shows pattern (b) at Ziel.lean:454 and pattern (d) in its docstring.
 import Grammatik.Kern.Syntax.Ziel
+
 namespace Gabbro.Grammatik
 
 open Extraktion in

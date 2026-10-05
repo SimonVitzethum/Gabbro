@@ -28,6 +28,7 @@
   one thread 0 held `L` (`helfer_zeuge`).
 -/
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The declaration -/

@@ -18,6 +18,7 @@
 -/
 import Grammatik.Parser.UebersetzeAllg
 import Grammatik.Korrespondenz.Korpus.Export108
+
 namespace Gabbro.Grammatik.Parser.UebersetzeAllg2
 
 open Gabbro.Grammatik.Parser.Uebersetze

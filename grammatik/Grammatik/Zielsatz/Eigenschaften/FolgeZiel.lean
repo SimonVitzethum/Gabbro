@@ -14,6 +14,7 @@
 -/
 import Grammatik.Zielsatz.Kern.Beweis
 import Grammatik.Nebenlaeufigkeit.Sperren.MitRuheStatisch
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

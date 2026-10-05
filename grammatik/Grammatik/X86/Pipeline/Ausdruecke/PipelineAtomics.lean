@@ -21,6 +21,7 @@ import Grammatik.X86.Bruecke.BridgeRead
 import Grammatik.X86.TSO.Kern.MfenceDrainOwn
 import Grammatik.X86.TSO.Verriegelt.LockedInstructionExecution
 import Grammatik.X86.Speicher.EffectiveAddress
+
 namespace Gabbro.Grammatik.X86.PipelineAtomics
 
 open Gabbro.Grammatik

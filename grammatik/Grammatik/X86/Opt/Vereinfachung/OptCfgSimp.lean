@@ -23,6 +23,7 @@ import Grammatik.Kern.Syntax.Syntax
 import Grammatik.Kern.Semantik.Semantik
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
 import Grammatik.X86.Opt.Schleifen.InvariantenOpt
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

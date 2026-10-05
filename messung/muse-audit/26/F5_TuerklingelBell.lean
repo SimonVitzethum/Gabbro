@@ -10,6 +10,7 @@
   follows with the bell replaced by a bare index equation.
 -/
 import Grammatik.Kern.Semantik.Geraet
+
 open Gabbro.Grammatik
 
 /-- F5: the return bell premise is unused -- only `d' = m` travels. -/

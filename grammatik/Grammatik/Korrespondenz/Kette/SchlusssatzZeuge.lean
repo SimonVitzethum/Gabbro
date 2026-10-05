@@ -10,6 +10,7 @@
 -/
 import Grammatik.Korrespondenz.Kette.Kette104Satz
 import Grammatik.Korrespondenz.Kette.Kette108
+
 namespace Gabbro.Grammatik
 
 open Kette104 Zielsatz

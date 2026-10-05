@@ -17,6 +17,7 @@ import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Hw.Ausnahmen.HwInterrupts
 import Grammatik.X86.Befehle.Gleitkomma.FpControlHardwareForms
 import Grammatik.X86.Befehle.Vektor.VectorHardwareProfile
+
 namespace Gabbro.Grammatik.X86
 
 /-- Snapshot of one core's saved FP/vector state: control word plus

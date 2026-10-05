@@ -14,6 +14,7 @@
 -/
 import Grammatik.X86.Hw.Ausnahmen.HwInterrupts
 import Grammatik.X86.Hw.Familien.HwStackCalls
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Silicon assumptions (ANNAHMEN).

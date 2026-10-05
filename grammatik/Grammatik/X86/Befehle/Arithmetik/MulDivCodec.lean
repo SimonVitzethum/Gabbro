@@ -15,6 +15,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Befehle.Arithmetik.MulDiv
+
 namespace Gabbro.Grammatik.X86
 
 /-- Canonical byte encoding of one MulDiv operation: Group 3 `F7 /4`

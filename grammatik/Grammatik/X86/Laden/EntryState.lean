@@ -9,6 +9,7 @@ import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Bild
 import Grammatik.X86.Kern.Stapel
 import Grammatik.X86.Kern.Gleitprofil
+
 namespace Gabbro.Grammatik.X86
 
 /-- Entry kinds of IMAGE-ABI section 5. -/

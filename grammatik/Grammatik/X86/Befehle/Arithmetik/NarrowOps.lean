@@ -18,6 +18,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Ausfuehrung
+
 namespace Gabbro.Grammatik.X86
 
 /-- Narrow register merge with architectural upper-bit discipline: 8/16-bit

@@ -9,6 +9,7 @@
 -/
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.Kern.Syntax.Bits
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

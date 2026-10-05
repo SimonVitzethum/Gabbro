@@ -20,6 +20,7 @@
 import Grammatik.X86.TSO.Verriegelt.ConcurrentIntegerExecution
 import Grammatik.X86.Flags.ArchitecturalFlags
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- One admitted 720 row on the coherent machine: loads merge through

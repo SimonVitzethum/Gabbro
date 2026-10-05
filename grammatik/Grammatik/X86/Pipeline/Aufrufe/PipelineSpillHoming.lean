@@ -18,6 +18,7 @@ import Grammatik.X86.Pipeline.Kern.Pipeline
 import Grammatik.X86.Pipeline.Kern.PipelineWitnesses
 import Grammatik.X86.Pipeline.Kern.PipelineRegAlloc
 import Grammatik.X86.Pipeline.Aufrufe.PipelineSpill
+
 namespace Gabbro.Grammatik.X86.PipeSpillHoming
 
 open Gabbro.Grammatik

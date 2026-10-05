@@ -13,6 +13,7 @@ import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Bild
 import Grammatik.X86.Speicher.Regionen
 import Grammatik.Parser.UebersetzeAllg
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik.Parser.Uebersetze

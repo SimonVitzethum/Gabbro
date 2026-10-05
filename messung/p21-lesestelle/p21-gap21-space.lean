@@ -19,6 +19,7 @@
   model below is the barrier choice over the six sides.
 -/
 import Grammatik.Kern.Syntax.Syntax
+
 namespace P21.Gap21Space
 
 /-- The six fixed sides plus a declared side. -/

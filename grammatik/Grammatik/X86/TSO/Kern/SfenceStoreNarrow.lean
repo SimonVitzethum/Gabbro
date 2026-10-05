@@ -33,6 +33,7 @@ import Grammatik.X86.TSO.Verriegelt.LockedOps
 import Grammatik.X86.TSO.Verriegelt.LockedInstructionExecution
 import Grammatik.X86.Flags.FeatureProfile
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 /-- The single admitted SFENCE store-fence form. The manual's F8..FF

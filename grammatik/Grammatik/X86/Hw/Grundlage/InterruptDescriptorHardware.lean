@@ -24,6 +24,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Speicher.Speicher
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Hw.Grundlage.HardwareFaults
+
 namespace Gabbro.Grammatik.X86
 
 /-- Architectural control state: IDT register, current TSS window,

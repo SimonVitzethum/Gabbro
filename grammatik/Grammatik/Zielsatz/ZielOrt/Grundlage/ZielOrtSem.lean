@@ -25,6 +25,7 @@
      reading only inside a given footprint).
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrt
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -31,6 +31,7 @@
   `dokumente/NICHTINTERFERENZ.md`, §8.
 -/
 import Grammatik.Nichtinterferenz.Zeuge
+
 namespace Gabbro.Grammatik
 
 open NIZeuge

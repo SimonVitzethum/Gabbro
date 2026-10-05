@@ -30,6 +30,7 @@
   on them (`popS_inv`, the invariant twin of `popS_ens`).
 -/
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

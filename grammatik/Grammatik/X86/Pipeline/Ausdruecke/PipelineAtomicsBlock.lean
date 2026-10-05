@@ -18,6 +18,7 @@
   second source interpreter, no optimiser change. Rust is out of scope.
 -/
 import Grammatik.X86.Pipeline.Ausdruecke.PipelineAtomicsBind
+
 namespace Gabbro.Grammatik.X86.PipelineAtomicsBlock
 
 open Gabbro.Grammatik

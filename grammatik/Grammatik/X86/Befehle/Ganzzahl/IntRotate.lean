@@ -23,6 +23,7 @@ import Grammatik.X86.Flags.ArchitecturalFlags
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.TSO.Kern.TSO
+
 namespace Gabbro.Grammatik.X86
 
 /-- The four rotate operations; the Group-2 extension digit is the

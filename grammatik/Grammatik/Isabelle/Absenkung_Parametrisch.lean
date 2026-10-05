@@ -30,6 +30,7 @@
 -/
 
 import Grammatik.Isabelle.Table_Ops_Erhaltung
+
 namespace Gabbro.Grammatik.AbsenkungParam
 
 open Gabbro.Grammatik.TableOps

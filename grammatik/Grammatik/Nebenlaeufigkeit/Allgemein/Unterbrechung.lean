@@ -57,6 +57,7 @@
         `exec_gut` (`Satz.lean`), unchanged and unrepeated here.
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

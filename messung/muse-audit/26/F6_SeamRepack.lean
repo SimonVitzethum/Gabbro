@@ -9,6 +9,7 @@
   the field level.
 -/
 import Grammatik.Kern.Semantik.Geraet
+
 open Gabbro.Grammatik
 
 /-- F6: every pair is a window (the filed bridge). -/

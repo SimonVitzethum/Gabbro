@@ -34,6 +34,7 @@
 -/
 import Grammatik.Zielsatz.Kern.Proben
 import Grammatik.Zielsatz.Faeden.PoolSym
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

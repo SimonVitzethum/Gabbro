@@ -94,6 +94,7 @@
       `RennfreiC` by construction and not by an argument about atomics.
 -/
 import Grammatik.CBackend.Semantik.CNebenlaeufig
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. A one-point update -/

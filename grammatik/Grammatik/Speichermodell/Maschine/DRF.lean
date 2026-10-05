@@ -39,6 +39,7 @@
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiOrte
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreFuss
 import Grammatik.Speichermodell.Maschine.MaschineW
+
 namespace Gabbro.Grammatik
 
 open Speichermodell

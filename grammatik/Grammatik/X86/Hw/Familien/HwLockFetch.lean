@@ -15,6 +15,7 @@
   The old evaluators are lifted, never redefined.
 -/
 import Grammatik.X86.Hw.Familien.HwLockRmw
+
 namespace Gabbro.Grammatik.X86
 
 /-- Fetched decode on the coherent machine: the 662 `lockFetch` on the

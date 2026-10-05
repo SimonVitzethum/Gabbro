@@ -27,6 +27,7 @@
 import Grammatik.Logik.Ruf.HoareRegeln
 import Grammatik.Logik.Vertraege.VertragOrtB
 import Grammatik.Logik.Ruf.RufMaschineD
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration} {V : Vertrag D}

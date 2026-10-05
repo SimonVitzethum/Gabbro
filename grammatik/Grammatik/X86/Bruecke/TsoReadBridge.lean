@@ -23,6 +23,7 @@ import Grammatik.Logik.Ruf.RufAdaequatG
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 import Grammatik.Speichermodell.Maschine.MaschineW
 import Grammatik.Speichermodell.Maschine.Sicht
+
 namespace Gabbro.Grammatik.X86
 
 open Gabbro.Grammatik

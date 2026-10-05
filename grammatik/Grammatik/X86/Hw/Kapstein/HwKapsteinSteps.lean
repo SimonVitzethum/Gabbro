@@ -16,6 +16,7 @@ import Grammatik.X86.Hw.Bild.HwLoadedImage
 import Grammatik.X86.Hw.Bild.HwBildInstanzen
 import Grammatik.X86.Hw.Bild.HwBildFamilien
 import Grammatik.X86.Hw.Ausnahmen.HwFeatureStep
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Port witness machine: a fetched OUT on core 0.

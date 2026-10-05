@@ -22,6 +22,7 @@ import Grammatik.X86.Speicher.AddressEncoding
 import Grammatik.X86.TSO.Kern.WordAccessGrouping
 import Grammatik.X86.TSO.Kern.WordDrainInterleaving
 import Grammatik.X86.Befehle.Arithmetik.NarrowCodec
+
 namespace Gabbro.Grammatik.X86
 
 /-- Width-selected integer memory op: load/store at an explicit width

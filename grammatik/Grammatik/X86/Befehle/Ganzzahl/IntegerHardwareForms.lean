@@ -16,6 +16,7 @@ import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 /-- Practical integer logical rows: register AND/OR, non-writing TEST,

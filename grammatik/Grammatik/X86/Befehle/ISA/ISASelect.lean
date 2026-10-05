@@ -50,6 +50,7 @@
 import Grammatik.X86.Befehle.ISA.ISAExecution
 import Grammatik.X86.Befehle.Kompakt.CompactFormsWitnesses
 import Grammatik.X86.Flags.FlagDependencies
+
 namespace Gabbro.Grammatik.X86
 
 /-! ## 1. Agreement modulo a difference set. -/

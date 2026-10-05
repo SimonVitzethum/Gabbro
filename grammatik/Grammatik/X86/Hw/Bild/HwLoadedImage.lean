@@ -20,6 +20,7 @@ import Grammatik.X86.Compose.Bild.ComposeMapPerms
 import Grammatik.X86.Validierung.ValidatorSkeleton
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Memory coincidence: the machine runs on the loaded image. -/

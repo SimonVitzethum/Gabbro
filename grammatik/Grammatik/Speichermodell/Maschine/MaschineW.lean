@@ -49,6 +49,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 import Grammatik.Speichermodell.Maschine.Sicht
+
 namespace Gabbro.Grammatik
 
 open Speichermodell

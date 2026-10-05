@@ -14,6 +14,7 @@
   its fault on the untaken path by the reused `cmovMem_feheler_bleibt`.
 -/
 import Grammatik.X86.Befehle.Kontrolle.ControlFlow
+
 namespace Gabbro.Grammatik.X86
 
 /-- Safe optional-lowering admission for a register-only conditional

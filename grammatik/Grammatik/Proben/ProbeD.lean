@@ -30,6 +30,7 @@
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperreZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The probe -/

@@ -41,6 +41,7 @@
 -/
 import Grammatik.Korrespondenz.Allgemein.KorrespondenzAllg
 import Grammatik.Logik.Ruf.RufAdaequatRufG
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

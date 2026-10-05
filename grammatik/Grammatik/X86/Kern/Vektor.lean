@@ -17,6 +17,7 @@
 import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Wort
 import Grammatik.X86.Speicher.Speicher
+
 namespace Gabbro.Grammatik.X86
 
 /-- A packed integer word: 128 bits holding 16/8/4/2 lanes. -/

@@ -22,6 +22,7 @@
 -/
 import Grammatik.Speichermodell.Atomar.AtomarZiel
 import Grammatik.Zielsatz.Eigenschaften.Invarianten
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik Speichermodell

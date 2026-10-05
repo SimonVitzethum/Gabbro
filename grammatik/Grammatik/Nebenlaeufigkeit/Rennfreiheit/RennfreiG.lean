@@ -8,6 +8,7 @@
   one-step rely `schritt_traeger` makes provable without a 70-case analysis.
 -/
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtZeuge
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

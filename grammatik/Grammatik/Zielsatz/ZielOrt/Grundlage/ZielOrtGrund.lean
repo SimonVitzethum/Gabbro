@@ -22,6 +22,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

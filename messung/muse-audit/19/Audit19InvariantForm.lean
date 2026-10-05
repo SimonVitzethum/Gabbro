@@ -5,6 +5,7 @@
 -- (`hForm` shape) and (d) in the section-7 docstring ("same conclusion").
 import Grammatik.Kern.Syntax.Ziel
 import Grammatik.Kern.Syntax.Satz
+
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

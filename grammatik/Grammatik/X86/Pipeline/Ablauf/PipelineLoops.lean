@@ -24,6 +24,7 @@ import Grammatik.X86.Befehle.ISA.ISARelax
 import Grammatik.X86.Speicher.Regionen
 import Grammatik.X86.Quelle.SourceAssignmentLowering
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik.X86.PipelineLoops
 
 open Gabbro.Grammatik

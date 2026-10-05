@@ -22,6 +22,7 @@
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Befehle.Kontrolle.DecodeFault
 import Grammatik.X86.Validierung.OverlapRefusal
+
 namespace Gabbro.Grammatik.X86
 
 /-- Architectural fault class: the admitted-profile subset of Table 6-1.

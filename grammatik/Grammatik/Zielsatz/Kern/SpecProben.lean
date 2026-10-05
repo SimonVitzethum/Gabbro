@@ -41,6 +41,7 @@ import Grammatik.Zielsatz.Kern.Spec
 import Grammatik.Proben.ProbeD
 import Grammatik.Proben.InvZeuge
 import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenZeuge
+
 namespace Gabbro.Grammatik.Zielsatz
 
 open Gabbro.Grammatik

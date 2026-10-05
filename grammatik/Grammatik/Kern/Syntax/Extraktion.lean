@@ -76,6 +76,7 @@ import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
 import Grammatik.Kern.Semantik.Semantik
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.Interferenz
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+
 namespace Gabbro.Grammatik.Extraktion
 
 variable {D : Deklaration}

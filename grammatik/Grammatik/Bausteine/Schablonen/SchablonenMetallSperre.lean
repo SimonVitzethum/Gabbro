@@ -49,6 +49,7 @@
   premises jointly.
 -/
 import Grammatik.CBackend.Semantik.CTicket
+
 namespace Gabbro.Grammatik
 
 namespace MetallSperre

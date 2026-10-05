@@ -12,6 +12,7 @@
   is outside `ziel_ort_voll`'s obligation and inside `ziel_ort_voll_ax`'s.
 -/
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtAx
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. Program facts, oracle, start -/

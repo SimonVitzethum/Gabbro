@@ -18,6 +18,7 @@ import Grammatik.X86.Befehle.Arithmetik.ByteSwap
 import Grammatik.X86.Befehle.Arithmetik.NarrowOps
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Hw.Grundlage.HardwareExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- Scan/count widths with a canonical row in this file: 16/32/64.

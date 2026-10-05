@@ -6,6 +6,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Geteilt
 import Grammatik.Kern.Syntax.Marken
+
 open Gabbro.Grammatik.Geteilt
 
 namespace Audit25.Geteilt

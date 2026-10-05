@@ -34,6 +34,7 @@ import Grammatik.X86.Laden.Relokation
 import Grammatik.X86.Kern.Bild
 import Grammatik.X86.Kern.Byteschritt
 import Grammatik.X86.Laden.RelocatedExecution
+
 namespace Gabbro.Grammatik.X86
 
 /-- One relaxation-round site: the checked wide certificate, the carried

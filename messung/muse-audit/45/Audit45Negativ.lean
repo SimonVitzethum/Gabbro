@@ -7,6 +7,7 @@
 -- flips the Q, so the predicate is not constant on ordinary programs.
 import Grammatik.Logik.Vertraege.QLeer
 import Grammatik.Proben.BlattGegenbeispiel
+
 namespace GabbroAudit45E
 
 open Gabbro.Grammatik

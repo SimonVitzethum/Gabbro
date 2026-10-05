@@ -62,6 +62,7 @@
 -/
 import Grammatik.Logik.Fortschritt.KostenGZeuge
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The declaration -/

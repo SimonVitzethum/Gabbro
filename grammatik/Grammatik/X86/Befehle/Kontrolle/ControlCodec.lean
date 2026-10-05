@@ -15,6 +15,7 @@
 -/
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Flags.ConditionalMove
+
 namespace Gabbro.Grammatik.X86
 
 /-- SETcc second opcode byte: `0F 90+cc` (144 + condition code). -/

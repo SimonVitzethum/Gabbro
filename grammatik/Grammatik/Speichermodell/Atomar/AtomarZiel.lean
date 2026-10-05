@@ -29,6 +29,7 @@
 import Grammatik.Speichermodell.Atomar.AtomarInv
 import Grammatik.Speichermodell.Atomar.AtomarZeuge
 import Grammatik.Speichermodell.Atomar.AtomarFortschritt
+
 namespace Gabbro.Grammatik
 
 open Speichermodell Zielsatz

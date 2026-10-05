@@ -21,6 +21,7 @@ import Grammatik.X86.TSO.Verriegelt.LockedInstructionExecution
 import Grammatik.X86.Hw.Grundlage.ExtendedExecution
 import Grammatik.X86.Flags.FeatureProfile
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 /-- The single-RMW shape of a CMPXCHG success event: one indivisible

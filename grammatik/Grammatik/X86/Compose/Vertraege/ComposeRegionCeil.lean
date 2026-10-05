@@ -17,6 +17,7 @@ import Grammatik.X86.Speicher.RegionSeparation
 import Grammatik.X86.Speicher.RegionFresh
 import Grammatik.X86.Speicher.TableLayout
 import Grammatik.X86.Kern.Ausfuehrung
+
 namespace Gabbro.Grammatik.X86
 
 /-- Opt-in gate for the ceiling-free model: without the explicitly named

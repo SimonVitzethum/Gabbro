@@ -34,6 +34,7 @@
 -/
 import Grammatik.Kern.Syntax.Syntax
 import Grammatik.Kern.Semantik.Semantik
+
 namespace Gabbro.Grammatik
 
 /-- The storage width of an operand, in bits: the smallest `w` with

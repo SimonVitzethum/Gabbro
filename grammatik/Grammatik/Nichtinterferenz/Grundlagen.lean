@@ -44,6 +44,7 @@
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiVoll
 import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtMehrfaden
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

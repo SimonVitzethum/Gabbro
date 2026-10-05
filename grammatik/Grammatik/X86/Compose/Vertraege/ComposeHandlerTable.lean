@@ -11,6 +11,7 @@
   interpreter or executor.
 -/
 import Grammatik.X86.Hw.Grundlage.InterruptDescriptorHardware
+
 namespace Gabbro.Grammatik.X86
 
 /-- Declared interrupt handler: vector closed to its IDT handler RIP. -/

@@ -6,6 +6,7 @@
 -- finding): it bounds demos D/H by showing what "load-bearing" means here
 -- and what it does not (semantic independence, shown in H).
 import Grammatik.Kern.Syntax.Ziel
+
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

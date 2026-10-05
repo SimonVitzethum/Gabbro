@@ -32,6 +32,7 @@
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik
 
 -- PASTED from `gabbro lean-g beispiele/108-disjoint-start-locks.gab` block `G108_disjoint_start_locks`

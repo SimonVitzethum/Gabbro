@@ -37,6 +37,7 @@
   predicate `GRest.fR` carries the same check over the continuation layers of machine G.
 -/
 import Grammatik.Nebenlaeufigkeit.Allgemein.Verklemmung
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

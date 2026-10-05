@@ -46,6 +46,7 @@ import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 import Grammatik.Zielsatz.Atomar.AtomarAkzeptiertZeuge
 import Grammatik.Speichermodell.Maschine.Zeuge
 import Grammatik.Nichtinterferenz.Zeuge
+
 namespace Gabbro.Grammatik.X86.AtomicPayload
 
 open Gabbro.Grammatik Zielsatz Speichermodell NIZeuge SchwachZeuge AtomarXZeuge

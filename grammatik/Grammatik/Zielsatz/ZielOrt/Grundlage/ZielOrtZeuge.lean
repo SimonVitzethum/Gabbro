@@ -30,6 +30,7 @@
   `konto[0] = 0`; `einzahlen` here writes last.)
 -/
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtBeweis
+
 namespace Gabbro.Grammatik
 
 /-! ## 1. The declaration and the program -/

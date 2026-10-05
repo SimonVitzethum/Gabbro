@@ -41,6 +41,7 @@ import Grammatik.Zielsatz.ZielOrt.Rahmen.ZielOrtInvGrund
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtStart
 import Grammatik.Logik.Ruf.RufAdaequatG
 import Grammatik.Zielsatz.ZielOrt.Grundlage.ZielOrtVollZeuge
+
 namespace Gabbro.Grammatik
 
 open G108_disjoint_start_locks_oblig (GTab GTFeld GFn g_read_a g_read_c gCtx_read_a gCtx_read_c

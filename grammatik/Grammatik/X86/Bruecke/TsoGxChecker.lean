@@ -15,6 +15,7 @@ import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Kern.AkzeptiertZeuge
 import Grammatik.Zielsatz.Kern.SpecProben
+
 namespace Gabbro.Grammatik.X86.TsoGxChecker
 
 open Gabbro.Grammatik Gabbro.Grammatik.Zielsatz

@@ -7,6 +7,7 @@
   while the CerCo twin with the same counts FAILS.
 -/
 import Grammatik.Kern.Semantik.Erhaltung
+
 open Gabbro.Grammatik
 
 /-- F1: production `costKept` holds with diverging counts (vacuous). -/

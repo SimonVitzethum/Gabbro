@@ -33,6 +33,7 @@
   particular for `T` empty or the identity havoc (`execEndHA_id`).
 -/
 import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

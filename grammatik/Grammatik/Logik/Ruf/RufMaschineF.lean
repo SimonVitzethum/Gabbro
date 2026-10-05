@@ -19,6 +19,7 @@
 -/
 import Grammatik.Kern.Semantik.Maschine
 import Grammatik.Logik.Vertraege.VertragOrtB
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

@@ -19,6 +19,7 @@
   check disappears from the theorem.
 -/
 import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtSperre
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

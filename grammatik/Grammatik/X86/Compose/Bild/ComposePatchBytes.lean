@@ -22,6 +22,7 @@ import Grammatik.X86.Befehle.Kontrolle.BranchLayout
 import Grammatik.X86.Laden.RelocatedExecution
 import Grammatik.X86.Validierung.DecodingCoverage
 import Grammatik.X86.Kern.Byteschritt
+
 namespace Gabbro.Grammatik.X86
 
 /-- A successful rel32 field patch passed its signed-32 fit check: the

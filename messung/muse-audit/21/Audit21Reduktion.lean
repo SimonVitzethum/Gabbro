@@ -8,6 +8,7 @@
   term mentions no mover, no commutativity, no order construction of its own.
 -/
 import Grammatik.Kern.Semantik.Maschine
+
 open Gabbro.Grammatik
 
 variable {D : Deklaration}

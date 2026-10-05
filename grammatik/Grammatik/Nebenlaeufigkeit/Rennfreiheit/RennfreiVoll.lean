@@ -27,6 +27,7 @@
     release/acquire of a guard) with `keine_datenrasse_g`.
 -/
 import Grammatik.Nebenlaeufigkeit.Rennfreiheit.RennfreiG
+
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

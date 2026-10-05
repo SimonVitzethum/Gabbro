@@ -33,6 +33,7 @@ import Grammatik.Zielsatz.Kern.Akzeptiert
 import Grammatik.Zielsatz.Kern.Beweis
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Kern.Spec
+
 namespace Gabbro.Grammatik
 
 namespace G166_eintritt_irq_maskiert_oblig

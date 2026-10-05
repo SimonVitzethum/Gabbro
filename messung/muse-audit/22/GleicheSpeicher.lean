@@ -1,4 +1,5 @@
 import Grammatik.Kern.Semantik.Maschine
+
 open Gabbro.Grammatik
 
 /-! ## Indistinguishable successors (pattern a/e): the eigen iff is symmetric noise

@@ -29,6 +29,7 @@ import Grammatik.X86.Pipeline.Kern.Pipeline
 import Grammatik.X86.Pipeline.Kern.PipelineWitnesses
 import Grammatik.X86.Compose.Buchungen.ComposeWorkTransfer
 import Grammatik.X86.Compose.Buchungen.ComposeBudgetResum
+
 namespace Gabbro.Grammatik.X86.PipelineWork
 
 open Gabbro.Grammatik

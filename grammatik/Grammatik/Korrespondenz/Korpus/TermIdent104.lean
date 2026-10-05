@@ -19,6 +19,7 @@
 -/
 import Grammatik.Korrespondenz.Zeugnis.ZeugnisIdent
 import Grammatik.Korrespondenz.Allgemein.ReferenzB
+
 namespace Gabbro.Grammatik
 
 /-- Differential witness 1 (first program that works):
