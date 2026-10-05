@@ -887,6 +887,301 @@ theorem avx2Eintraege_mem_c3_entry (a : Adresse) (v : Avx2Vektor)
   apply List.mem_append.mpr; apply Or.inr
   exact h3
 
+/-! ## 8. Loads as thirty-two TSO byte observations.
+
+  Each chunk loads through eight `loadByte` observations (youngest
+  own-buffer entry wins per byte: forwarding is observed, never
+  bypassed); the four chunk words join into the YMM value through
+  the accepted `vecJoin`. `none` = an unreadable byte. -/
+
+/-- Assemble eight observed bytes into a chunk function. -/
+def avx2AchtFun (b0 b1 b2 b3 b4 b5 b6 b7 : Byte) : Fin 8 → Byte :=
+  fun j => match j with
+  | ⟨0, _⟩ => b0 | ⟨1, _⟩ => b1 | ⟨2, _⟩ => b2 | ⟨3, _⟩ => b3
+  | ⟨4, _⟩ => b4 | ⟨5, _⟩ => b5 | ⟨6, _⟩ => b6 | ⟨_, _⟩ => b7
+
+/-- Load one eight-byte chunk at `b` on core `c` through eight TSO
+    byte observations, assembled low byte first. -/
+def avx2Acht (s : TSOZustand) (c : Nat) (b : Adresse) : Option Wort :=
+  match loadByte s c (addrOff b 0), loadByte s c (addrOff b 1),
+      loadByte s c (addrOff b 2), loadByte s c (addrOff b 3),
+      loadByte s c (addrOff b 4), loadByte s c (addrOff b 5),
+      loadByte s c (addrOff b 6), loadByte s c (addrOff b 7) with
+  | some b0, some b1, some b2, some b3, some b4, some b5, some b6,
+    some b7 =>
+    some (bytesWort (avx2AchtFun b0 b1 b2 b3 b4 b5 b6 b7))
+  | _, _, _, _, _, _, _, _ => none
+
+/-- A chunk load with no pending own entry at any of its eight bytes
+    observes exactly the canonical chunk word: the accepted `read64`
+    value, never a guessed one. -/
+theorem avx2Acht_ist_read64 (s : TSOZustand) (c : Nat) (b : Adresse)
+    (w : Wort)
+    (hmiss : ∀ k : Nat, k < 8 →
+      neuestens (s.puffer c) (addrOff b k) = none)
+    (hrd : lesbar8 s.mem b = true)
+    (h : avx2Acht s c b = some w) :
+    read64 s.mem b = some w := by
+  unfold avx2Acht at h
+  cases h0 : loadByte s c (addrOff b 0) with
+  | none =>
+    rw [h0] at h
+    dsimp only at h
+    cases h
+  | some b0 =>
+    cases h1 : loadByte s c (addrOff b 1) with
+    | none =>
+      rw [h0, h1] at h
+      dsimp only at h
+      cases h
+    | some b1 =>
+      cases h2 : loadByte s c (addrOff b 2) with
+      | none =>
+        rw [h0, h1, h2] at h
+        dsimp only at h
+        cases h
+      | some b2 =>
+        cases h3 : loadByte s c (addrOff b 3) with
+        | none =>
+          rw [h0, h1, h2, h3] at h
+          dsimp only at h
+          cases h
+        | some b3 =>
+          cases h4 : loadByte s c (addrOff b 4) with
+          | none =>
+            rw [h0, h1, h2, h3, h4] at h
+            dsimp only at h
+            cases h
+          | some b4 =>
+            cases h5 : loadByte s c (addrOff b 5) with
+            | none =>
+              rw [h0, h1, h2, h3, h4, h5] at h
+              dsimp only at h
+              cases h
+            | some b5 =>
+              cases h6 : loadByte s c (addrOff b 6) with
+              | none =>
+                rw [h0, h1, h2, h3, h4, h5, h6] at h
+                dsimp only at h
+                cases h
+              | some b6 =>
+                cases h7 : loadByte s c (addrOff b 7) with
+                | none =>
+                  rw [h0, h1, h2, h3, h4, h5, h6, h7] at h
+                  dsimp only at h
+                  cases h
+                | some b7 =>
+                  rw [h0, h1, h2, h3, h4, h5, h6, h7] at h
+                  dsimp only at h
+                  obtain rfl := Option.some_inj.mp h
+                  have m0 : b0 = s.mem.bytes (addrOff b 0) := by
+                    have hg := load_ohne_eintrag s c (addrOff b 0)
+                      (hmiss 0 (by decide))
+                      (avx2Lesbar8_einzeln s.mem b 0 (by decide) hrd)
+                    rw [h0] at hg
+                    exact Option.some_inj.mp hg
+                  have m1 : b1 = s.mem.bytes (addrOff b 1) := by
+                    have hg := load_ohne_eintrag s c (addrOff b 1)
+                      (hmiss 1 (by decide))
+                      (avx2Lesbar8_einzeln s.mem b 1 (by decide) hrd)
+                    rw [h1] at hg
+                    exact Option.some_inj.mp hg
+                  have m2 : b2 = s.mem.bytes (addrOff b 2) := by
+                    have hg := load_ohne_eintrag s c (addrOff b 2)
+                      (hmiss 2 (by decide))
+                      (avx2Lesbar8_einzeln s.mem b 2 (by decide) hrd)
+                    rw [h2] at hg
+                    exact Option.some_inj.mp hg
+                  have m3 : b3 = s.mem.bytes (addrOff b 3) := by
+                    have hg := load_ohne_eintrag s c (addrOff b 3)
+                      (hmiss 3 (by decide))
+                      (avx2Lesbar8_einzeln s.mem b 3 (by decide) hrd)
+                    rw [h3] at hg
+                    exact Option.some_inj.mp hg
+                  have m4 : b4 = s.mem.bytes (addrOff b 4) := by
+                    have hg := load_ohne_eintrag s c (addrOff b 4)
+                      (hmiss 4 (by decide))
+                      (avx2Lesbar8_einzeln s.mem b 4 (by decide) hrd)
+                    rw [h4] at hg
+                    exact Option.some_inj.mp hg
+                  have m5 : b5 = s.mem.bytes (addrOff b 5) := by
+                    have hg := load_ohne_eintrag s c (addrOff b 5)
+                      (hmiss 5 (by decide))
+                      (avx2Lesbar8_einzeln s.mem b 5 (by decide) hrd)
+                    rw [h5] at hg
+                    exact Option.some_inj.mp hg
+                  have m6 : b6 = s.mem.bytes (addrOff b 6) := by
+                    have hg := load_ohne_eintrag s c (addrOff b 6)
+                      (hmiss 6 (by decide))
+                      (avx2Lesbar8_einzeln s.mem b 6 (by decide) hrd)
+                    rw [h6] at hg
+                    exact Option.some_inj.mp hg
+                  have m7 : b7 = s.mem.bytes (addrOff b 7) := by
+                    have hg := load_ohne_eintrag s c (addrOff b 7)
+                      (hmiss 7 (by decide))
+                      (avx2Lesbar8_einzeln s.mem b 7 (by decide) hrd)
+                    rw [h7] at hg
+                    exact Option.some_inj.mp hg
+                  have hfun : readBytes s.mem b =
+                      avx2AchtFun b0 b1 b2 b3 b4 b5 b6 b7 := by
+                    funext ⟨jv, hj⟩
+                    have h8 : jv = 0 ∨ jv = 1 ∨ jv = 2 ∨ jv = 3 ∨
+                        jv = 4 ∨ jv = 5 ∨ jv = 6 ∨ jv = 7 := by
+                      omega
+                    rcases h8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+                    · exact m0.symm
+                    · exact m1.symm
+                    · exact m2.symm
+                    · exact m3.symm
+                    · exact m4.symm
+                    · exact m5.symm
+                    · exact m6.symm
+                    · exact m7.symm
+                  have hrd8 : read64 s.mem b =
+                      some (bytesWort (readBytes s.mem b)) := by
+                    unfold read64
+                    rw [if_pos hrd]
+                  rw [hrd8, hfun]
+
+/-- A chunk load with an unreadable byte refuses: one failed
+    `loadByte` fails the whole chunk. -/
+theorem avx2Acht_verweigert (s : TSOZustand) (c : Nat) (b : Adresse)
+    (k0 : Nat) (hk0 : k0 < 8)
+    (h : loadByte s c (addrOff b k0) = none) :
+    avx2Acht s c b = none := by
+  unfold avx2Acht
+  cases h0 : loadByte s c (addrOff b 0) with
+  | none => rfl
+  | some b0 =>
+    cases h1 : loadByte s c (addrOff b 1) with
+    | none => rfl
+    | some b1 =>
+      cases h2 : loadByte s c (addrOff b 2) with
+      | none => rfl
+      | some b2 =>
+        cases h3 : loadByte s c (addrOff b 3) with
+        | none => rfl
+        | some b3 =>
+          cases h4 : loadByte s c (addrOff b 4) with
+          | none => rfl
+          | some b4 =>
+            cases h5 : loadByte s c (addrOff b 5) with
+            | none => rfl
+            | some b5 =>
+              cases h6 : loadByte s c (addrOff b 6) with
+              | none => rfl
+              | some b6 =>
+                cases h7 : loadByte s c (addrOff b 7) with
+                | none => rfl
+                | some b7 =>
+                  have hk8 : k0 = 0 ∨ k0 = 1 ∨ k0 = 2 ∨ k0 = 3 ∨
+                      k0 = 4 ∨ k0 = 5 ∨ k0 = 6 ∨ k0 = 7 := by
+                    omega
+                  rcases hk8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+                  · rw [h0] at h
+                    cases h
+                  · rw [h1] at h
+                    cases h
+                  · rw [h2] at h
+                    cases h
+                  · rw [h3] at h
+                    cases h
+                  · rw [h4] at h
+                    cases h
+                  · rw [h5] at h
+                    cases h
+                  · rw [h6] at h
+                    cases h
+                  · rw [h7] at h
+                    cases h
+
+/-- Load a YMM word at `a` on core `c`: four chunk observations
+    through the accepted `vecJoin`, low half then high half. -/
+def avx2Laden (s : TSOZustand) (c : Nat) (a : Adresse) :
+    Option Avx2Vektor :=
+  match avx2Acht s c a, avx2Acht s c (vecHiAddr a),
+      avx2Acht s c (addrOff a 16),
+      avx2Acht s c (vecHiAddr (addrOff a 16)) with
+  | some w0, some w1, some w2, some w3 =>
+    some ⟨vecJoin w0 w1, vecJoin w2 w3⟩
+  | _, _, _, _ => none
+
+/-- The accepted memory-level YMM read: two accepted `vecRead`
+    halves. The old evaluator lifted, never redefined. -/
+def avx2Read (m : Speicher) (a : Adresse) : Option Avx2Vektor :=
+  match vecRead m a, vecRead m (addrOff a 16) with
+  | some lo, some hi => some ⟨lo, hi⟩
+  | _, _ => none
+
+/-- A YMM load with no pending own entry anywhere in its
+    thirty-two footprint bytes observes exactly the accepted
+    `avx2Read` value. -/
+theorem avx2Laden_ist_avx2Read (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Avx2Vektor)
+    (hmiss : ∀ x ∈ avx2Fuss a, neuestens (s.puffer c) x = none)
+    (hrd0 : lesbar8 s.mem a = true)
+    (hrd1 : lesbar8 s.mem (vecHiAddr a) = true)
+    (hrd2 : lesbar8 s.mem (addrOff a 16) = true)
+    (hrd3 : lesbar8 s.mem (vecHiAddr (addrOff a 16)) = true)
+    (h : avx2Laden s c a = some v) :
+    avx2Read s.mem a = some v := by
+  have e : avx2Laden s c a = match avx2Acht s c a,
+      avx2Acht s c (vecHiAddr a), avx2Acht s c (addrOff a 16),
+      avx2Acht s c (vecHiAddr (addrOff a 16)) with
+    | some w0, some w1, some w2, some w3 =>
+      some (⟨vecJoin w0 w1, vecJoin w2 w3⟩ : Avx2Vektor)
+    | _, _, _, _ => (none : Option Avx2Vektor) := rfl
+  rw [e] at h
+  cases hw0 : avx2Acht s c a with
+  | none =>
+    rw [hw0] at h
+    dsimp only at h
+    cases h
+  | some w0 =>
+    cases hw1 : avx2Acht s c (vecHiAddr a) with
+    | none =>
+      rw [hw0, hw1] at h
+      dsimp only at h
+      cases h
+    | some w1 =>
+      cases hw2 : avx2Acht s c (addrOff a 16) with
+      | none =>
+        rw [hw0, hw1, hw2] at h
+        dsimp only at h
+        cases h
+      | some w2 =>
+        cases hw3 : avx2Acht s c (vecHiAddr (addrOff a 16)) with
+        | none =>
+          rw [hw0, hw1, hw2, hw3] at h
+          dsimp only at h
+          cases h
+        | some w3 =>
+          rw [hw0, hw1, hw2, hw3] at h
+          dsimp only at h
+          obtain rfl := Option.some_inj.mp h
+          have r0 := avx2Acht_ist_read64 s c a w0
+            (fun k hk => hmiss _ (avx2Eintrag_mem_c0 a k hk))
+            hrd0 hw0
+          have r1 := avx2Acht_ist_read64 s c (vecHiAddr a) w1
+            (fun k hk => hmiss _ (avx2Eintrag_mem_c1 a k hk))
+            hrd1 hw1
+          have r2 := avx2Acht_ist_read64 s c (addrOff a 16) w2
+            (fun k hk => hmiss _ (avx2Eintrag_mem_c2 a k hk))
+            hrd2 hw2
+          have r3 := avx2Acht_ist_read64 s c
+            (vecHiAddr (addrOff a 16)) w3
+            (fun k hk => hmiss _ (avx2Eintrag_mem_c3 a k hk))
+            hrd3 hw3
+          have rlo : vecRead s.mem a = some (vecJoin w0 w1) := by
+            unfold vecRead
+            rw [r0, r1]
+          have rhi : vecRead s.mem (addrOff a 16) =
+              some (vecJoin w2 w3) := by
+            unfold vecRead
+            rw [r2, r3]
+          unfold avx2Read
+          rw [rlo, rhi]
+
 /- CUTS:
    Skeleton only: forms are named, nothing is proved yet.
 -/
