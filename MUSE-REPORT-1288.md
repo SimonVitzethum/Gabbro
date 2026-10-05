@@ -8,7 +8,7 @@ evaluator lifted not copied; planted refusals really refuse; witness
 non-degenerate (memory-changing step, two cores where relevant); silicon
 facts against Intel SDM extracts; CUTS honest and no claim larger than the
 proof (no hardware-correspondence or W/GX claim). Run `./lean-bau`, report
-last result line. Exactly one VERDICT: ACCEPT or REPAIR.
+last result line. Exactly one machine-readable verdict line.
 
 ## Clone verification
 - `pwd` = `/home/simon/Dokumente/gabbro-muse/a1288`,
@@ -17,12 +17,20 @@ last result line. Exactly one VERDICT: ACCEPT or REPAIR.
 - Owned file only: `MUSE-REPORT-1288.md`. No other file created or edited.
 
 ## Candidate identity
-- CANDIDATE: 1287 <full pinned HEAD unknown to reviewer>.
+
+CANDIDATE: 1287 162a6d021e311bffc2ee516cfd39f6c84705fddf
+
+- Pinned snapshot (`.tmp/review/SNAPSHOT.json`): author 1287, head
+  `162a6d021e311bffc2ee516cfd39f6c84705fddf`, base
+  `738366545afbddf7ac664db92804703db24f8868`, files
+  `MUSE-REPORT-1287.md`, `grammatik/Grammatik.lean`,
+  `grammatik/Grammatik/X86/HwMemTypesWC.lean`, clean true.
 - The task instruction requires reading `git diff master..HEAD` in the
-  author clone `/home/simon/Dokumente/gabbro-muse/a1287` at a pinned HEAD.
-  That pinned HEAD was never supplied to this lane (the `.tmp/LANE.md`
-  template literally reads `CANDIDATE: 1287 <full pinned HEAD>`), and no
-  snapshot, hash, or exact-candidate export is present inside this clone.
+  author clone `/home/simon/Dokumente/gabbro-muse/a1287` at the pinned HEAD.
+  The pinned HEAD is now known from the snapshot above, but the candidate
+  diff content is still not present inside this clone (the candidate files
+  are absent here and the candidate git object cannot be inspected from
+  this session), so no line-by-line review of the candidate was possible.
 - Author task (read from `lanes/1287.md` inside this clone, lines 20-27):
   NEW FILE `grammatik/Grammatik/X86/HwMemTypesWC.lean` + one import line in
   `grammatik/Grammatik.lean`; follow-up of lane 1133; per-region memory-type
@@ -59,17 +67,20 @@ last result line. Exactly one VERDICT: ACCEPT or REPAIR.
 - New definitions/theorems added by this review lane: NONE (report-only
   review; nothing added by design).
 
-## VERDICT: REPAIR
+## Verdict
+
+VERDICT: REPAIR
 - This is a procedural REPAIR, not a semantic finding against the candidate:
-  the exact review could not be carried out because (a) no pinned candidate
-  HEAD/snapshot was provided and the candidate files are absent from this
-  clone, and (b) the shell/build apparatus (`bash`, hence `git diff` and
-  `./lean-bau`) is blocked in this session, so the two mandatory review
-  inputs (exact diff, build result line) are missing.
-- Concretely required for a valid exact review: supply the pinned full HEAD
-  (or an exact-candidate export inside the reviewer clone), grant the
-  reviewer a readable exact snapshot without violating the one-directory
-  rule (e.g. pre-place the diff/snapshot inside `a1288`), and restore a
+  the exact review could not be carried out because (a) the candidate diff
+  content is absent from this clone (candidate files not present; the
+  candidate git object cannot be inspected from this session; only the
+  pinned snapshot metadata above is available), and (b) no `git diff`
+  against the candidate could be obtained and `./lean-bau` was not run, so
+  the two mandatory review inputs (exact diff, build result line) are
+  missing.
+- Concretely required for a valid exact review: place the exact candidate
+  export (the snapshot's three files at the pinned HEAD) inside the
+  reviewer clone without violating the one-directory rule, and restore a
   working `bash` path for `git diff` + `./lean-bau`. Then re-run this lane.
 - No ACCEPT is granted. No claim is made about candidate 1287's correctness,
   axioms, witnesses, silicon accuracy, or mergeability. No weakened
@@ -90,5 +101,9 @@ last result line. Exactly one VERDICT: ACCEPT or REPAIR.
   permission layer enforces exactly that (parent-directory access rejected).
   Either the exact candidate must be materialised inside the reviewer clone
   before dispatch, or the rule must name the sanctioned exception path.
-- The `CANDIDATE: 1287 <full pinned HEAD>` placeholder was never filled in,
-  so even a privileged read would have no pinned hash to verify against.
+- The lane template's candidate placeholder was unfilled at dispatch; it was
+  resolved during this format fix from `.tmp/review/SNAPSHOT.json` (head
+  `162a6d021e311bffc2ee516cfd39f6c84705fddf`, see Candidate identity).
+  The underlying one-directory problem remains: the task orders a diff read
+  in the author clone while HARD RULES rule 1 forbids touching anything
+  outside this directory.
