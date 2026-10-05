@@ -79,3 +79,31 @@ runs family register steps on two cores and exercises memory through
 the TSO issue/forward/drain path instead; the joint theorem pins both
 halves together. This is reported as an interpretation, not a
 deviation: a memory-touching family step would contradict §5.
+
+## Review response (lane 1128, REPAIR on apparatus grounds)
+
+- Reviewer report MUSE-REPORT-1128 (VERDICT: REPAIR) raises NO
+  substantive finding against the deliverable content. Its reasons
+  are exclusively apparatus: in the review clone
+  (`/home/simon/Dokumente/gabbro-muse/a1128`, branch `muse/1128`)
+  the file `grammatik/Grammatik/X86/HwMulDivWidth.lean` was absent
+  and no `muse/1127` ref existed locally, so the exact-review
+  checklist could not be executed there.
+- Author-side verification at the pinned head cited by the reviewer:
+  this clone is `/home/simon/Dokumente/gabbro-muse/a1127`, branch
+  `muse/1127`, HEAD `28c3af544cc83f25823b4ad675eaf7c24ea4bae8`
+  (identical to the pinned candidate), the three owned files are
+  present, and `git diff master..HEAD` shows exactly
+  `MUSE-REPORT-1127.md` + 1 import line in `grammatik/Grammatik.lean`
+  + the 870-line new file, 952 insertions total, no other changes.
+- Full `./lean-bau` re-run at this head: `Build completed
+  successfully (601 jobs).` Axioms unchanged (standard).
+- Resolution required is coordinator-side: make the pinned author
+  diff available inside the review clone (staging the pinned files
+  or diff through the coordinator channel), then re-run the exact
+  review. HARD RULES rule 1 forbids the author lane from touching
+  anything outside its own clone, so this lane cannot perform that
+  staging itself.
+- Lean content is intentionally byte-identical to the reviewed
+  candidate so the pinned head stays valid; only this report section
+  was added.
