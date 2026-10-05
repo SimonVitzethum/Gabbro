@@ -394,16 +394,245 @@ theorem fpCtrlLade_beobachtet (m : HwMaschine) (c : Nat) (a : Adresse)
     loadByte (tsoAnsicht m) c a = some (m.mem.bytes a) :=
   load_ohne_eintrag (tsoAnsicht m) c a hmiss hrd
 
-/- CUTS (bridges done):
-   Proved: 32-bit FP stores as four byte issues (buffer, memory and
-   permission frames, wf); per-byte forwarding to the owner;
-   entry-free observation reads canonical memory.
-   NOT proved yet: control-state establish/preserve, NaN/signed-zero/
-   no-contraction, refusals, the joint witness.
+/-! ## 5. Control state: RNE established and preserved.
+
+  No admitted scalar step touches the control word: the f64 leg
+  keeps it by the accepted `fpSchritt_erhaelt_fp` (all fifteen
+  forms), the s32 leg by the same case analysis below (all
+  seventeen forms, proved here since the family states only
+  per-form frames). Hence rounding mode (RNE) survives every
+  register step. Establishment is the MXCSR load leg: the reset
+  word installs admission, while the FTZ word stays
+  source-inadmissible although architecturally loadable. -/
+
+/-- The s32 admission gate is the f64 admission gate. -/
+theorem s32Eintritt_ist_fpEintritt (k : FPKontext) :
+    s32Eintritt k = fpEintritt k := rfl
+
+/-- No s32 step touches the control word: all seventeen forms write
+    only `kern`/`xmm`. -/
+theorem s32Schritt_erhaelt_fp (d : S32Decodiert) (t t' : FpZustand)
+    (hstep : s32Schritt d t = some t') : t'.fp = t.fp := by
+  cases hok : laengeOk d.laenge with
+  | false =>
+    rw [s32Schritt_laenge_verweigert d t hok] at hstep
+    cases hstep
+  | true =>
+    cases hfp : s32Eintritt t.fp with
+    | false =>
+      rw [s32Schritt_profil_verweigert d t hok hfp] at hstep
+      cases hstep
+    | true =>
+      cases hbef : d.befehl with
+      | addssRR dst src =>
+        rw [s32Schritt_addssRR d t dst src hok hfp hbef] at hstep
+        cases hstep
+        rfl
+      | subssRR dst src =>
+        rw [s32Schritt_subssRR d t dst src hok hfp hbef] at hstep
+        cases hstep
+        rfl
+      | mulssRR dst src =>
+        rw [s32Schritt_mulssRR d t dst src hok hfp hbef] at hstep
+        cases hstep
+        rfl
+      | divssRR dst src =>
+        rw [s32Schritt_divssRR d t dst src hok hfp hbef] at hstep
+        cases hstep
+        rfl
+      | addssRM dst base disp =>
+        cases hrd : read32 t.kern.speicher (effAddr t.kern base disp) with
+        | none =>
+          rw [s32Schritt_addssRM_verweigert d t dst base disp hok hfp hbef
+            hrd] at hstep
+          cases hstep
+        | some v =>
+          rw [s32Schritt_addssRM_erfolg d t dst base disp v hok hfp hbef
+            hrd] at hstep
+          cases hstep
+          rfl
+      | subssRM dst base disp =>
+        cases hrd : read32 t.kern.speicher (effAddr t.kern base disp) with
+        | none =>
+          rw [s32Schritt_subssRM_verweigert d t dst base disp hok hfp hbef
+            hrd] at hstep
+          cases hstep
+        | some v =>
+          rw [s32Schritt_subssRM_erfolg d t dst base disp v hok hfp hbef
+            hrd] at hstep
+          cases hstep
+          rfl
+      | mulssRM dst base disp =>
+        cases hrd : read32 t.kern.speicher (effAddr t.kern base disp) with
+        | none =>
+          rw [s32Schritt_mulssRM_verweigert d t dst base disp hok hfp hbef
+            hrd] at hstep
+          cases hstep
+        | some v =>
+          rw [s32Schritt_mulssRM_erfolg d t dst base disp v hok hfp hbef
+            hrd] at hstep
+          cases hstep
+          rfl
+      | divssRM dst base disp =>
+        cases hrd : read32 t.kern.speicher (effAddr t.kern base disp) with
+        | none =>
+          rw [s32Schritt_divssRM_verweigert d t dst base disp hok hfp hbef
+            hrd] at hstep
+          cases hstep
+        | some v =>
+          rw [s32Schritt_divssRM_erfolg d t dst base disp v hok hfp hbef
+            hrd] at hstep
+          cases hstep
+          rfl
+      | ucomissRR lhs rhs =>
+        rw [s32Schritt_ucomissRR d t lhs rhs hok hfp hbef] at hstep
+        cases hstep
+        rfl
+      | ucomissRM lhs base disp =>
+        cases hrd : read32 t.kern.speicher (effAddr t.kern base disp) with
+        | none =>
+          rw [s32Schritt_ucomissRM_verweigert d t lhs base disp hok hfp
+            hbef hrd] at hstep
+          cases hstep
+        | some v =>
+          rw [s32Schritt_ucomissRM_erfolg d t lhs base disp v hok hfp
+            hbef hrd] at hstep
+          cases hstep
+          rfl
+      | movssRR dst src =>
+        rw [s32Schritt_movssRR d t dst src hok hfp hbef] at hstep
+        cases hstep
+        rfl
+      | movssLade dst base disp =>
+        cases hrd : read32 t.kern.speicher (effAddr t.kern base disp) with
+        | none =>
+          rw [s32Schritt_movssLade_verweigert d t dst base disp hok hfp
+            hbef hrd] at hstep
+          cases hstep
+        | some v =>
+          rw [s32Schritt_movssLade_erfolg d t dst base disp v hok hfp
+            hbef hrd] at hstep
+          cases hstep
+          rfl
+      | movssSpeichere base src disp =>
+        cases hwr : write32 t.kern.speicher (effAddr t.kern base disp)
+            (BitVec.setWidth 64 (xmmTief32 t.xmm src)) with
+        | none =>
+          rw [s32Schritt_movssSpeichere_verweigert d t base src disp hok
+            hfp hbef hwr] at hstep
+          cases hstep
+        | some m =>
+          rw [s32Schritt_movssSpeichere_erfolg d t base src disp m hok
+            hfp hbef hwr] at hstep
+          cases hstep
+          rfl
+      | cvtss2sdRR dst src =>
+        rw [s32Schritt_cvtss2sdRR d t dst src hok hfp hbef] at hstep
+        cases hstep
+        rfl
+      | cvtsd2ssRR dst src =>
+        rw [s32Schritt_cvtsd2ssRR d t dst src hok hfp hbef] at hstep
+        cases hstep
+        rfl
+      | cvtsi2ss dst src is64 =>
+        rw [s32Schritt_cvtsi2ss d t dst src is64 hok hfp hbef] at hstep
+        cases hstep
+        rfl
+      | cvttss2si dst src is64 =>
+        rw [s32Schritt_cvttss2si d t dst src is64 hok hfp hbef] at hstep
+        cases hstep
+        rfl
+
+/-- Admission is preserved across s32 steps. -/
+theorem s32Schritt_erhaelt_Eintritt (d : S32Decodiert) (t t' : FpZustand)
+    (hstep : s32Schritt d t = some t') :
+    s32Eintritt t'.fp = s32Eintritt t.fp := by
+  rw [s32Schritt_erhaelt_fp d t t' hstep]
+
+/-- Every s32 step keeps the rounding mode. -/
+theorem fpCtrlS32_erhaelt_rne (d : S32Decodiert) (t t' : FpZustand)
+    (hstep : s32Schritt d t = some t') :
+    mxcsrRundungRNE t'.fp.mxcsr = mxcsrRundungRNE t.fp.mxcsr := by
+  rw [s32Schritt_erhaelt_fp d t t' hstep]
+
+/-- Every f64 step keeps the rounding mode. -/
+theorem fpCtrlF64_erhaelt_rne (d : FpDecodiert) (t t' : FpZustand)
+    (hstep : fpSchritt d t = some t') :
+    mxcsrRundungRNE t'.fp.mxcsr = mxcsrRundungRNE t.fp.mxcsr := by
+  rw [fpSchritt_erhaelt_fp d t t' hstep]
+
+/-- A coherent s32 register step keeps the core rounding mode. -/
+theorem fpCtrlS32_erhaelt_rneMaschine (m m' : HwMaschine) (c : Nat)
+    (d : S32Decodiert)
+    (h : FpCtrlSchritt m m' (.s32reg c d)) :
+    mxcsrRundungRNE ((m'.kerne c).fp).mxcsr =
+      mxcsrRundungRNE ((m.kerne c).fp).mxcsr := by
+  cases h with
+  | s32reg c d t' hstep hmem =>
+    have hfp : t'.fp = (m.kerne c).fp :=
+      s32Schritt_erhaelt_fp d (projFp m c) t' hstep
+    rw [setKernVonFp_fp, hfp]
+
+/-- A coherent f64 register step keeps the core rounding mode. -/
+theorem fpCtrlF64_erhaelt_rneMaschine (m m' : HwMaschine) (c : Nat)
+    (d : FpDecodiert)
+    (h : FpCtrlSchritt m m' (.f64reg c d)) :
+    mxcsrRundungRNE ((m'.kerne c).fp).mxcsr =
+      mxcsrRundungRNE ((m.kerne c).fp).mxcsr := by
+  cases h with
+  | f64reg c d t' hstep hmem =>
+    have hfp : t'.fp = (m.kerne c).fp :=
+      fpSchritt_erhaelt_fp d (projFp m c) t' hstep
+    rw [setKernVonFp_fp, hfp]
+
+/-- The reset word is round-to-nearest. -/
+theorem fpCtrlReset_rne : mxcsrRundungRNE (0x1F80 : MXCSR) = true := by
+  decide
+
+/-- The reset word is admitted. -/
+theorem fpCtrlReset_einlass : fpEintritt (⟨0x1F80⟩ : FPKontext) = true :=
+  kontextReset_gueltig
+
+/-- The FTZ word is architecturally loadable but source-inadmissible:
+    hardware `#GP` and source refusal apart, on the machine. -/
+theorem fpCtrlFtz_spalt :
+    ldmxcsrArchOk mxcsrProfilModern 0x9F80 = true ∧
+      fpEintritt (⟨0x9F80⟩ : FPKontext) = false :=
+  ⟨ldmxcsrArchOk_ftz_modern, mxcsr_ftz_verweigert⟩
+
+/-- A coherent reset-word MXCSR load establishes admission on the
+    core: the installed word is admitted. -/
+theorem fpCtrlMxcsrReset_stellt_her (m m' : HwMaschine) (c : Nat)
+    (base : Register) (disp : BitVec 32) (l : Nat) (v : Wort)
+    (hok : laengeOk l = true)
+    (hrd : read32 (projFp m c).kern.speicher
+      (effAddr (projFp m c).kern base disp) = some v)
+    (hwv : v = BitVec.ofNat 64 0x1F80)
+    (h : FpCtrlSchritt m m'
+      (.mxcsrLd c ⟨.ldmxcsr base disp, l, false⟩)) :
+    fpEintritt (m'.kerne c).fp = true := by
+  have hw : (BitVec.ofNat 32 (v.toNat % 4294967296) : MXCSR) = 0x1F80 := by
+    rw [hwv]
+    decide
+  have hok2 : ldmxcsrArchOk mxcsrProfilModern
+      (BitVec.ofNat 32 (v.toNat % 4294967296)) = true := by
+    rw [hw]
+    exact ldmxcsrArchOk_reset_modern
+  have hinst := fpCtrlMxcsrLd_installiert m m' c base disp l v
+    (BitVec.ofNat 32 (v.toNat % 4294967296)) hok hrd rfl hok2 h
+  have hfin : mxcsrGueltig ((m'.kerne c).fp.mxcsr) = true := by
+    rw [hinst, hw]
+    exact mxcsr_standard
+  exact hfin
+
+/- CUTS (control done):
+   Proved: s32/f64 steps keep the control word (hence RNE) on states
+   and on the machine; reset establishes RNE/admission; the FTZ split.
+   NOT proved yet: NaN/signed-zero/no-contraction, refusals, witness.
 -/
 
-#print axioms fpCtrlAusgabe32_wf
-#print axioms fpCtrlWeiterleitung32
-#print axioms fpCtrlLade_beobachtet
+#print axioms s32Schritt_erhaelt_fp
+#print axioms fpCtrlS32_erhaelt_rneMaschine
+#print axioms fpCtrlMxcsrReset_stellt_her
 
 end Gabbro.Grammatik.X86
