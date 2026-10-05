@@ -611,3 +611,4 @@ import Grammatik.X86.HwStackCalls
 import Grammatik.X86.TsoReadBridge
 import Grammatik.X86.PipelineLink
 import Grammatik.X86.PipelineProfiles
+import Grammatik.X86.PipelineCalls
