@@ -505,14 +505,160 @@ theorem schleife_pfad_bytes_zeuge :
   exact ⟨s', wp_relax, wp_wx, wp_code, hRepP, hrun0, hbytes, hrip, hrep',
     rfl, rfl, rfl⟩
 
+/-! ## 8. Refusals: what the taken-path transfer does not cover.
+
+    Two planted refusals in the `pipeline_refuses_*` style, each
+    with a poison probe firing by computation. A loop body row that
+    is not canonical fall-through code refuses compilation at every
+    fuel (lifted from `schleife_verweigert_schlechten_koerper`,
+    never guessed); and no taken prefix extends its static list (a
+    claimed longer prefix refuses). Nothing is weakened to make a
+    bound go through. -/
+
+/-- LOOP-BODY REFUSAL: a bad body row refuses compilation. -/
+theorem pfad_verweigert_schlechten_koerper (treibstoff : Nat) (koerper : List Instr)
+    (c : Bedingung) (j : Nat) (hj : j < koerper.length)
+    (hschlecht : (kanonischI koerper[j] && faelltDurchI koerper[j]) = false) :
+    schleifeKompilieren treibstoff koerper c = none :=
+  schleife_verweigert_schlechten_koerper treibstoff koerper c j hj hschlecht
+
+/-- PREFIX REFUSAL: no taken prefix extends its static list. -/
+theorem pfad_verweigert_verlaengerung (chunk : List Befehl) (b : Befehl) :
+    ¬ ∃ rest, chunk = (chunk ++ [b]) ++ rest := by
+  intro h
+  obtain ⟨rest, hr⟩ := h
+  have hlen := congrArg List.length hr
+  simp only [List.length_append, List.length_cons, List.length_nil] at hlen
+  omega
+
+/-! ## 9. Poison probes: every refusal fires on concrete data. -/
+
+/-- Poison probe: `ret` in the loop body is refused. -/
+theorem gift_pfad_ret : schleifeKompilieren 0 [.pilot .ret] .e = none :=
+  schleife_verweigert_ret 0 .e
+
+/-- Poison probe: a jump in the loop body is refused. -/
+theorem gift_pfad_sprung :
+    schleifeKompilieren 0 [.pilot (.jump32 (BitVec.ofNat 32 0))] .e = none :=
+  schleife_verweigert_sprung 0 .e _
+
+/-- Poison probe: bound 2 covers no taken prefix of the witness
+    chunk (it retires 5). -/
+theorem gift_pfad_knapp :
+    ¬ targetWork ((decodiertZu (pwProg.take 5)).map fun d => d.befehl) ≤ 2 := by
+  decide
+
+/-- Poison probe: the witness chunk has no longer prefix. -/
+theorem gift_pfad_verlaengerung :
+    ¬ ∃ rest, pwChunk = (pwChunk ++ [Befehl.ret]) ++ rest :=
+  pfad_verweigert_verlaengerung pwChunk Befehl.ret
+
+/-! ## 10. Joint witnesses of the refusals. -/
+
+/-- Joint witness for the loop-body refusal, on the accepted
+    non-degenerate package. -/
+theorem pfad_verweigert_schlechten_koerper_zeuge :
+    (schleifeKompilieren 0 ([.pilot .ret] : List Instr) .e = none) ∧ PipePaket :=
+  ⟨pfad_verweigert_schlechten_koerper 0 ([.pilot .ret] : List Instr) .e 0
+    (by decide) (by decide), pipePaket_hold⟩
+
+/-- Joint witness for the prefix refusal, on the accepted
+    non-degenerate package. -/
+theorem pfad_verweigert_verlaengerung_zeuge :
+    (¬ ∃ rest, pwChunk = (pwChunk ++ [Befehl.ret]) ++ rest) ∧ PipePaket :=
+  ⟨gift_pfad_verlaengerung, pipePaket_hold⟩
+
 /- CUTS:
-   - Skeleton only: `genommenArbeit` names the taken-path count.
-   - OPEN: the prefix-run bridge (`laufBytes_genommen`), the dynamic
-     `Deckung` producer, the per-round loop correspondence
-     (`runde_einzel`), the labelled-to-bytes leg
-     (`schleife_pfad_bytes`), refusals, gifts and joint witnesses.
+    - Proved here (generic): the taken-path count (`genommenArbeit`);
+      the taken-path prefix bridge (`laufBytes_genommen`: the fetched
+      run of `T.length` steps retires exactly the taken prefix, work
+      is the taken length, taken length within the static length);
+      the dynamic coverage (`deckung_pfad_chunk`: the executed
+      prefix of a shallow chunk is covered by the admitted summary);
+      the round decomposition (`schleife_runde_zerlegung`) and the
+      single-round correspondence (`runde_einzel`: one continuing
+      source round is the one-round labelled segment, with explicit
+      segment anatomy); the round simulation at the loaded map
+      (`wpWeiter`/`wpEnde`); the labelled-to-bytes leg
+      (`schleife_pfad_bytes`: a finished source run is the
+      fetched-byte run of its relaxed image, ending at the end
+      label); two refusals (bad loop body, over-static prefix) and
+      four poison probes (all firing by computation); joint
+      non-degenerate witnesses for every syntax-premise theorem.
+    - Witness-only: every `_zeuge` is joint on an accepted package
+      (straight-line side: `PipePaket` -- one table its contract
+      writes, source slots `7 -> 35`, `9 -> 6` through actual
+      `execBlock`, fetched-byte run observably changing memory;
+      loop side: the witness loop's table written by its step, with
+      a memory-changing round `0 -> 1` behind the byte run).
+    - OPEN (fragment): taken-path coverage is single straight-line
+      prefixes and shallow chunks (3 or 5 instructions); deeper
+      trees, checks and branches with jumps, calls, floats,
+      pointers, aggregates and globals carry no taken-path bound
+      here -- all refused (`none`), never guessed. Loop bodies with
+      internal control flow are refused, never guessed.
+    - OPEN (unbounded loops): `forever` has no finite taken-path
+      budget here -- only the finite-prefix unfolding
+      (`ewig_ein_schritt`) and the loud budget stop at zero passes
+      (proved in `BudgetExecution.lean`, not restated here).
+    - OPEN (per-body simulation): the one-round simulation premise
+      (`hWeiter` of `runde_einzel`/`schleife_pfad_bytes`) is proved
+      per body by its producer (straight-line bodies by the
+      `Pipeline.lean` lemmas); this file lifts it to single rounds
+      with explicit anatomy and to fetched bytes. The re-read
+      stability (`hBisStabil`) and the loud overflow (`hUeberlauf`)
+      are the other named premises.
+    - OPEN (blocks): multi-statement programs compose only over
+      carried `Deckung`; no block-size induction from taken
+      prefixes to whole-program `src` is proved here.
+    - OPEN (scheduling): exhaustion TIMING -- when the target stops
+      relative to source exhaustion, interleavings, waiting delays
+      -- is owned by the scheduling lanes; the leg bounds admitted
+      finite runs only.
+    - OPEN (entry/image): admission beyond `CodeAt`/`WX` (mapping,
+      entry sequence, ABI duties, guards) composes through
+      `PipelineImage`/`PipelineEntry`; no TSO/concurrency claim
+      (per-access target-to-W/GX simulation stays with the bridge
+      lanes).
+    - OPEN (timing-model fidelity): retired counts are instruction
+      counts, never measured silicon latencies; no constant-time
+      claim; no CAS-progress or fairness promise.
+    - No new interpreter, no second cost model, no IR: the one
+      `senkStmt`/`senkWertT` lowering, the one `targetWork`, the
+      actual `execBlock`/`lauf`/`laufBytes`/`laufL`/`laufBytesI`
+      runs and the accepted `relax`/`relax_laufBytes` bridge are
+      reused untouched. No checker, Spec, goal, emitter or
+      friend-reserved file is touched.
 -/
 
 #print axioms genommenArbeit
+#print axioms laufBytes_genommen
+#print axioms laufBytes_genommen_zeuge
+#print axioms deckung_pfad_chunk
+#print axioms deckung_pfad_chunk_zeuge
+#print axioms schleife_runde_zerlegung
+#print axioms runde_einzel
+#print axioms runde_einzel_zeuge
+#print axioms wpWs
+#print axioms wpBild
+#print axioms wpMem
+#print axioms wpPost
+#print axioms wp_allwide
+#print axioms wp_relax
+#print axioms wp_wx
+#print axioms wp_code
+#print axioms wp_read1
+#print axioms wpWeiter
+#print axioms wpEnde
+#print axioms schleife_pfad_bytes
+#print axioms schleife_pfad_bytes_zeuge
+#print axioms pfad_verweigert_schlechten_koerper
+#print axioms pfad_verweigert_verlaengerung
+#print axioms gift_pfad_ret
+#print axioms gift_pfad_sprung
+#print axioms gift_pfad_knapp
+#print axioms gift_pfad_verlaengerung
+#print axioms pfad_verweigert_schlechten_koerper_zeuge
+#print axioms pfad_verweigert_verlaengerung_zeuge
 
 end Gabbro.Grammatik.X86.PipelineWorkPath
