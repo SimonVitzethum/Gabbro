@@ -947,4 +947,376 @@ theorem vollKongr_ymm (f g : Nat → Byte) (sse avx : Bool)
     exact h _ (vollOffsets_ymm (xmmIdx r) (8 + j.val) hn hj16 sse ha)
   rw [hlo, hhi]
 
+/-! ## 3. Machine state, save entries, and the TSO bridge.
+
+  The full machine pairs the coherent YMM machine (which carries
+  XMM, YMM upper halves, registers and the TSO view) with the
+  opaque per-core x87 image and the per-core MXCSR_MASK value (a
+  fixed CPU constant, carried, never computed). -/
+
+/-- Full XSAVE machine: coherent YMM machine plus per-core opaque
+    x87 image and mask value. -/
+structure VollMaschine where
+  ym : YmmMaschine
+  x87 : Nat → X87Bild
+  maske : Nat → BitVec 32
+
+/-- The coherent machine inside the full state. -/
+def vollHw (v : VollMaschine) : HwMaschine := v.ym.hw
+
+/-- Well-formedness is the coherent well-formedness. -/
+def VollWf (v : VollMaschine) : Prop := HwWf v.ym.hw
+
+/-- Memory/buffer update from a TSO successor: core data, x87
+    images and masks are untouched. -/
+def setVollTso (v : VollMaschine) (s : TSOZustand) : VollMaschine :=
+  { v with ym := ⟨setTso v.ym.hw s, v.ym.ober⟩ }
+
+/-- The TSO view of a memory/buffer update is the successor state. -/
+theorem setVollTso_ansicht (v : VollMaschine) (s : TSOZustand) :
+    tsoAnsicht (vollHw (setVollTso v s)) = s := by
+  unfold vollHw setVollTso
+  simp only
+  exact setTso_ansicht v.ym.hw s
+
+/-- A save changes no core data. -/
+theorem setVollTso_kern (v : VollMaschine) (s : TSOZustand)
+    (c : Nat) :
+    (vollHw (setVollTso v s)).kerne c = (vollHw v).kerne c := rfl
+
+/-- A save keeps the x87 images. -/
+theorem setVollTso_x87 (v : VollMaschine) (s : TSOZustand) :
+    (setVollTso v s).x87 = v.x87 := rfl
+
+/-- A save keeps the masks. -/
+theorem setVollTso_maske (v : VollMaschine) (s : TSOZustand) :
+    (setVollTso v s).maske = v.maske := rfl
+
+/-- A save keeps the YMM upper files. -/
+theorem setVollTso_ober (v : VollMaschine) (s : TSOZustand) :
+    (setVollTso v s).ym.ober = v.ym.ober := rfl
+
+/-- Memory/buffer updates preserve well-formedness. -/
+theorem setVollTso_wf (v : VollMaschine) (s : TSOZustand)
+    (h : VollWf v) : VollWf (setVollTso v s) :=
+  setTso_wf v.ym.hw s h
+
+/-- Install restored components on core `c`: FP context, XMM file,
+    YMM upper file and the opaque x87 image. Masks are never
+    installed (silicon leaves MXCSR_MASK unchanged on restore). -/
+def setVollKern (v : VollMaschine) (c : Nat) (k : FPKontext)
+    (x : XmmDatei) (y : YmmDatei) (b : X87Bild) : VollMaschine :=
+  ⟨⟨setKernDaten v.ym.hw c
+      ⟨(v.ym.hw.kerne c).register, (v.ym.hw.kerne c).flags,
+        (v.ym.hw.kerne c).rip, x, k⟩,
+    fun d => if d = c then y else v.ym.ober d⟩,
+   fun d => if d = c then b else v.x87 d, v.maske⟩
+
+/-- Installed core answers the restored control word. -/
+theorem setVollKern_fp (v : VollMaschine) (c : Nat) (k : FPKontext)
+    (x : XmmDatei) (y : YmmDatei) (b : X87Bild) :
+    (((vollHw (setVollKern v c k x y b)).kerne c).fp).mxcsr =
+      k.mxcsr := by
+  unfold vollHw setVollKern
+  rw [setKernDaten_fp]
+
+/-- Installed core answers the restored XMM file. -/
+theorem setVollKern_xmm (v : VollMaschine) (c : Nat) (k : FPKontext)
+    (x : XmmDatei) (y : YmmDatei) (b : X87Bild) (r : XmmReg) :
+    ((vollHw (setVollKern v c k x y b)).kerne c).xmm r = x r := by
+  unfold vollHw setVollKern
+  rw [setKernDaten_xmm]
+
+/-- Installed core answers the restored upper half. -/
+theorem setVollKern_ober (v : VollMaschine) (c : Nat) (k : FPKontext)
+    (x : XmmDatei) (y : YmmDatei) (b : X87Bild) (r : XmmReg) :
+    ((setVollKern v c k x y b).ym.ober c) r = y r := by
+  show ((if c = c then y else v.ym.ober c)) r = y r
+  rw [if_pos rfl]
+
+/-- Installed core answers the restored opaque byte. -/
+theorem setVollKern_x87 (v : VollMaschine) (c : Nat) (k : FPKontext)
+    (x : XmmDatei) (y : YmmDatei) (b : X87Bild) (t : Nat) :
+    ((setVollKern v c k x y b).x87 c) t = b t := by
+  show ((if c = c then b else v.x87 c)) t = b t
+  rw [if_pos rfl]
+
+/-- An install keeps the mask (silicon ignores it on restore). -/
+theorem setVollKern_maske (v : VollMaschine) (c : Nat) (k : FPKontext)
+    (x : XmmDatei) (y : YmmDatei) (b : X87Bild) :
+    (setVollKern v c k x y b).maske = v.maske := rfl
+
+/-- An install preserves well-formedness (profiles untouched). -/
+theorem setVollKern_wf (v : VollMaschine) (c : Nat) (k : FPKontext)
+    (x : XmmDatei) (y : YmmDatei) (b : X87Bild)
+    (h : VollWf v) : VollWf (setVollKern v c k x y b) :=
+  setKernDaten_wf v.ym.hw c _ h
+
+/-- The save entries of a full state at area base `a`. -/
+def vollEintraege (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+    (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (sse avx : Bool)
+    (a : Adresse) : List TSOEintrag :=
+  fxEintraegeAux (vollByte k x b mm h y) a (vollOffsets sse avx)
+
+/-- Observed fault preconditions for one request. Each is a
+    CHECKED input (oracle): its derivation (CR0.TS, CPUID
+    FXSR/XSAVE, LOCK prefix, segment limits, paging, CPL/AC)
+    belongs to the feature/paging apparatus, never assumed here.
+    Priority in the step below is NM > UD > GP > SS > PF > AC. -/
+structure VollFehlerIn where
+  nm : Bool
+  cpuidOk : Bool
+  lock : Bool
+  ss : Bool
+  pf : Bool
+  ac : Bool
+
+/-- Machine-level outcomes: successor, refusal, or the
+    architectural fault class (the accepted `ArchFehler`). -/
+inductive VollAusgang where
+  | weiter : VollMaschine → VollAusgang
+  | verweigert : VollAusgang
+  | fehler : ArchFehler → VollAusgang
+
+/-- 48-bit canonical address check (low half or sign-extended
+    high half; a non-canonical XSAVE address raises #GP). -/
+def kanonisch (a : Adresse) : Bool :=
+  decide (a.toNat < 2 ^ 47 ∨ 2 ^ 64 - 2 ^ 47 ≤ a.toNat)
+
+/-- One full save on core `c` at area base `a`: fault gates in
+    priority order, XCR0/request gates, canonical and alignment
+    gates, the permission gate over the footprint, then the
+    buffered byte-issue fold. -/
+def vollSpeichern (v : VollMaschine) (c : Nat) (a : Adresse)
+    (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn) :
+    VollAusgang :=
+  if f.nm then .fehler .nm
+  else if !f.cpuidOk || f.lock then .fehler .ud
+  else if !xc.x87 then .fehler .gp
+  else if sse && !xcr0SseBereit xc then .fehler .ud
+  else if avx && !xcr0AvxBereit xc then .fehler .ud
+  else if !sse && !avx then .verweigert
+  else if !kanonisch a then .fehler .gp
+  else if !xAusgerichtet a then .fehler .gp
+  else if f.ss then .fehler .ss
+  else if f.pf then .fehler .pf
+  else if f.ac then .fehler .ac
+  else if !ctxAlle (vollHw v).mem.schreibbar a
+      (vollOffsets sse avx) then .verweigert
+  else match issueListe (tsoAnsicht (vollHw v)) c
+      (vollEintraege ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
+        sse avx a) with
+  | none => .verweigert
+  | some s' => .weiter (setVollTso v s')
+
+/-- Success shape: a successful save is a successful issue fold. -/
+theorem vollSpeichern_erfolg (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (m' : VollMaschine)
+    (h : vollSpeichern v c a xc sse avx f = .weiter m') :
+    ∃ s' : TSOZustand,
+      issueListe (tsoAnsicht (vollHw v)) c
+        (vollEintraege ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+          (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
+          sse avx a) = some s' ∧
+      m' = setVollTso v s' := by
+  unfold vollSpeichern at h
+  cases hn : f.nm with
+  | true => simp [hn] at h
+  | false =>
+    cases hc : (!f.cpuidOk || f.lock) with
+    | true => simp [hn, hc] at h
+    | false =>
+      cases hx : (!xc.x87) with
+      | true => simp [hn, hc, hx] at h
+      | false =>
+        cases hsse : (sse && !xcr0SseBereit xc) with
+        | true => simp [hn, hc, hx, hsse] at h
+        | false =>
+          cases havx : (avx && !xcr0AvxBereit xc) with
+          | true => simp [hn, hc, hx, hsse, havx] at h
+          | false =>
+            cases hleer : (!sse && !avx) with
+            | true => simp [hn, hc, hx, hsse, havx, hleer] at h
+            | false =>
+              cases hkan : (!kanonisch a) with
+              | true => simp [hn, hc, hx, hsse, havx, hleer, hkan] at h
+              | false =>
+                cases hal : (!xAusgerichtet a) with
+                | true =>
+                  simp [hn, hc, hx, hsse, havx, hleer, hkan, hal] at h
+                | false =>
+                  cases hss : f.ss with
+                  | true =>
+                    simp [hn, hc, hx, hsse, havx, hleer, hkan, hal,
+                      hss] at h
+                  | false =>
+                    cases hpf : f.pf with
+                    | true =>
+                      simp [hn, hc, hx, hsse, havx, hleer, hkan, hal,
+                        hss, hpf] at h
+                    | false =>
+                      cases hac : f.ac with
+                      | true =>
+                        simp [hn, hc, hx, hsse, havx, hleer, hkan,
+                          hal, hss, hpf, hac] at h
+                      | false =>
+                        cases hp : (!ctxAlle (vollHw v).mem.schreibbar
+                            a (vollOffsets sse avx)) with
+                        | true =>
+                          simp [hn, hc, hx, hsse, havx, hleer, hkan,
+                            hal, hss, hpf, hac, hp] at h
+                        | false =>
+                          simp [hn, hc, hx, hsse, havx, hleer, hkan,
+                            hal, hss, hpf, hac, hp] at h
+                          cases hs2 : issueListe (tsoAnsicht (vollHw v))
+                              c (vollEintraege ((vollHw v).kerne c).fp
+                                ((vollHw v).kerne c).xmm (v.x87 c)
+                                (v.maske c) (kopfStandard sse avx)
+                                (v.ym.ober c) sse avx a) with
+                          | none =>
+                            rw [hs2] at h
+                            cases h
+                          | some s' =>
+                            have hm : setVollTso v s' = m' := by
+                              simpa [hs2] using h
+                            exact ⟨s', rfl, hm.symm⟩
+
+/-- SAVE GOES THROUGH THE TSO BUFFER: the acting core's buffer
+    grows by exactly the footprint entries. -/
+theorem vollSpeichern_puffer (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (m' : VollMaschine)
+    (h : vollSpeichern v c a xc sse avx f = .weiter m') :
+    (vollHw m').puffer c = (vollHw v).puffer c ++
+      vollEintraege ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
+        sse avx a := by
+  obtain ⟨s', hs, rfl⟩ := vollSpeichern_erfolg v c a xc sse avx f m' h
+  exact issueListe_haengt_an (tsoAnsicht (vollHw v)) s' c _ hs
+
+/-- A save changes no canonical byte (buffer only). -/
+theorem vollSpeichern_kein_speicher (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (m' : VollMaschine)
+    (h : vollSpeichern v c a xc sse avx f = .weiter m')
+    (x : Adresse) :
+    (vollHw m').mem.bytes x = (vollHw v).mem.bytes x := by
+  obtain ⟨s', hs, rfl⟩ := vollSpeichern_erfolg v c a xc sse avx f m' h
+  exact issueListe_kein_speicher (tsoAnsicht (vollHw v)) s' c _ hs x
+
+/-- A save preserves well-formedness (profiles untouched). -/
+theorem vollSpeichern_wf (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (hwf : VollWf v) (m' : VollMaschine)
+    (h : vollSpeichern v c a xc sse avx f = .weiter m') :
+    VollWf m' := by
+  obtain ⟨s', _, rfl⟩ := vollSpeichern_erfolg v c a xc sse avx f m' h
+  exact setVollTso_wf v s' hwf
+
+/-- Footprint addresses stay distinct below 832 (the accepted
+    `addrOff_inj512` argument, widened: the full area reaches the
+    YMM region at 576-831, so the 512 bound cannot be reused). -/
+theorem addrOff_inj832 {a : Adresse} {i j : Nat}
+    (hi : i < 832) (hj : j < 832)
+    (h : addrOff a i = addrOff a j) : i = j := by
+  unfold addrOff at h
+  have h2 := congrArg BitVec.toNat h
+  rw [BitVec.toNat_add, BitVec.toNat_add,
+    BitVec.toNat_ofNat, BitVec.toNat_ofNat] at h2
+  have ha := a.isLt
+  omega
+
+/-- An offset outside the list never matches the entries (832
+    bound; the accepted `neuestens_nicht_enthalten` with the
+    widened injectivity above). -/
+theorem neuestens_nicht_enthalten832 (f : Nat → Byte) (a : Adresse)
+    (os : List Nat) (k : Nat)
+    (hk : k < 832) (hb : ∀ i ∈ os, i < 832)
+    (h : ∀ i ∈ os, i ≠ k) :
+    neuestens (fxEintraegeAux f a os) (addrOff a k) = none := by
+  induction os with
+  | nil => rfl
+  | cons i rest ih =>
+    have hi : i ≠ k := h i (by simp)
+    have hni : addrOff a i ≠ addrOff a k := by
+      intro he
+      exact hi (addrOff_inj832 (hb i (by simp)) hk he)
+    have ihr := ih (fun j hj => hb j (by simp [hj]))
+      (fun j hj => h j (by simp [hj]))
+    simp only [fxEintraegeAux, neuestens, ihr]
+    simp [hni]
+
+/-- A footprint offset reads its own entry byte (832 bound; the
+    accepted `neuestens_einmal` with the widened injectivity). -/
+theorem neuestens_einmal832 (f : Nat → Byte) (a : Adresse)
+    (os : List Nat) (k : Nat) :
+    ∀ (_hb : ∀ j ∈ os, j < 832) (_hk832 : k < 832),
+    ∀ (hnd : os.Nodup) (hm : k ∈ os),
+    neuestens (fxEintraegeAux f a os) (addrOff a k) = some (f k) := by
+  induction os with
+  | nil =>
+    intro _hb _hk832 _hnd hm
+    simp at hm
+  | cons i rest ih =>
+    intro hb hk832 hnd hm
+    have hni : i ∉ rest := (List.nodup_cons.mp hnd).1
+    have hmem : k = i ∨ k ∈ rest := by simpa using hm
+    rcases hmem with heq | hmr
+    · have hmiss : ∀ j ∈ rest, j ≠ k :=
+        fun j hj hjeq => hni (heq ▸ (hjeq ▸ hj))
+      have hnone := neuestens_nicht_enthalten832 f a rest k hk832
+        (fun j hj => hb j (by simp [hj])) hmiss
+      simp only [fxEintraegeAux, neuestens, hnone]
+      rw [if_pos (by rw [heq]), heq]
+    · have ihr := ih (fun j hj => hb j (by simp [hj])) hk832
+        ((List.nodup_cons.mp hnd).2) hmr
+      simp only [fxEintraegeAux, neuestens, ihr]
+
+/-- FORWARDING AT SAVE: after a successful save, every footprint
+    offset loads the saved image byte through the owner's buffer. -/
+theorem vollWeiterleitung_gespeichert (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (s1' : TSOZustand)
+    (hs : issueListe (tsoAnsicht (vollHw v)) c
+      (vollEintraege ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
+        sse avx a) = some s1')
+    (hles : ctxAlle (vollHw v).mem.lesbar a (vollOffsets sse avx)
+      = true)
+    (i : Nat) (hi : i ∈ vollOffsets sse avx) :
+    loadByte s1' c (addrOff a i) =
+      some (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
+        i) := by
+  have hbuf := issueListe_haengt_an (tsoAnsicht (vollHw v)) s1' c _ hs
+  have hmem : s1'.mem = (tsoAnsicht (vollHw v)).mem :=
+    issueListe_mem_still _ _ _ _ hs
+  have hmemHw : s1'.mem = (vollHw v).mem := hmem
+  have hlesbar : s1'.mem.lesbar (addrOff a i) = true := by
+    rw [hmemHw]
+    exact ctxAlle_holt (vollHw v).mem.lesbar a (vollOffsets sse avx)
+      i hi hles
+  have hneu : neuestens (s1'.puffer c) (addrOff a i) =
+      some (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
+        i) := by
+    have he := neuestens_einmal832
+      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
+      a (vollOffsets sse avx) i
+      (fun j hj => vollOffsets_klein sse avx j hj)
+      (vollOffsets_klein sse avx i hi) (vollOffsets_nodup sse avx) hi
+    have hentries : vollEintraege ((vollHw v).kerne c).fp
+        ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+        (kopfStandard sse avx) (v.ym.ober c) sse avx a =
+        fxEintraegeAux (vollByte ((vollHw v).kerne c).fp
+          ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+          (kopfStandard sse avx) (v.ym.ober c)) a
+          (vollOffsets sse avx) := rfl
+    rw [hbuf, hentries, neuestens_append, he]
+  unfold loadByte
+  rw [if_pos hlesbar, hneu]
+
 end Gabbro.Grammatik.X86
