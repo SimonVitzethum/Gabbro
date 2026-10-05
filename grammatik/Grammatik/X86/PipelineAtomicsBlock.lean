@@ -134,6 +134,46 @@ theorem bind_cas_fehlschlag (m : LockMaschine) (c : Nat) (a : Adresse)
   exact ⟨PipelineAtomics.senk_cas src base d, h.1,
     cas_schliesst a (m.zu.register .rax) (m.zu.register src) false⟩
 
+/-! ## 3. Block refusals and poison probes.
+
+    Unsupported block shapes are REFUSED, never guessed: nested lock
+    sections (no lock-order claim, lane 1163), overlong validator
+    inputs, and anything the decided validator does not recompute. -/
+
+/-- A doubly nested lock section is REFUSED. -/
+theorem block_nested_verweigert :
+    PipelineAtomics.senkAtom
+      (.sperre [.sperre [.zaun]]) = none := by
+  decide
+
+/-- The empty body lowers to the empty target (positive). -/
+theorem block_leer_ok : PipelineAtomics.senkListe [] = some [] := rfl
+
+/-- A singleton fence body lowers to one MFENCE (positive). -/
+theorem block_singleton_ok :
+    PipelineAtomics.senkListe
+      [PipelineAtomics.AtomQuelle.zaun] =
+      some [PipelineAtomics.ZielOp.lock .mfence] := rfl
+
+/-- POISON: the validator rejects a nested lock section. -/
+theorem gift_block_val_nested (ts : List PipelineAtomics.ZielOp) :
+    PipelineAtomics.valAtom
+      (.sperre [.sperre [.zaun]]) ts = false := by
+  have h : PipelineAtomics.senkAtom
+      (PipelineAtomics.AtomQuelle.sperre
+        [PipelineAtomics.AtomQuelle.sperre
+          [PipelineAtomics.AtomQuelle.zaun]]) = none :=
+    block_nested_verweigert
+  unfold PipelineAtomics.valAtom
+  rw [h]
+
+/-- POISON: the validator rejects an overlong fence sequence (one fence
+    lowers to exactly one MFENCE, never two). -/
+theorem gift_block_val_ueberlang :
+    PipelineAtomics.valAtom PipelineAtomics.AtomQuelle.zaun
+      [.lock .mfence, .lock .mfence] = false := by
+  decide
+
 /- CUTS: what is not proved here
      Proved here so far: nothing beyond `SperrSchritt` (skeleton).
      NOT proved here, and not claimed:
