@@ -757,6 +757,77 @@ theorem senkSkalLesen_ohne_feld_zeuge :
     zeV.schreibt false = true ∧ zeRunChange := by
   refine ⟨rfl, zeHw, zeRunChangeProof⟩
 
+/-- Anchor with an 8-byte row stride: the scaled addressing covers it. -/
+def ankerSkala8 : TabAnker zeD :=
+  { basis := [(false, 8192)], zeile := [(false, 8)],
+    felder := fun _ => [(false, 0), (true, 8)] }
+
+/-- Configuration with no variable registers: every variable reads as
+    `rsp` (which is never a legal scaled-index register). -/
+def cfgRsp : PipeCfg := { zeCfg with regs := [] }
+
+/-- Configuration with the address register `rbp`: the pilot load form
+    needs a displacement for it, so the zero-displacement chunk is
+    refused. -/
+def cfgRbp : PipeCfg := { zeCfg with adr := .rbp }
+
+/-- REFUSAL, NON-SCALE STRIDE: a table whose row length is not 1, 2, 4
+    or 8 admits no scaled-index addressing and is refused. -/
+theorem senkSkalLesen_falsche_zeile (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
+    (y : Var Γ (.index (D.count t))) (hL : darf D t Λ) (B Z O : Nat)
+    (lo hi : Int) (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = some O)
+    (hT : D.typ t f = .int lo hi) (hS : skalaOk Z = false) :
+    senkSkalLesen A c (.slot t f (.var y) hL) = none := by
+  simp [senkSkalLesen, idxVarG?, hB, hZ, hO, hT, hS]
+
+/-- JOINT WITNESS for `senkSkalLesen_falsche_zeile`: the 16-byte stride
+    of lane 1159's anchor admits no scale. -/
+theorem senkSkalLesen_falsche_zeile_zeuge :
+    senkSkalLesen zeA zeCfg zeReadVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+/-- REFUSAL, `rsp` INDEX: `rsp` is never a scaled-index register
+    (SIB index 100 means absent), so a read whose index lives in `rsp`
+    is refused. -/
+theorem senkSkalLesen_rsp_index (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
+    (y : Var Γ (.index (D.count t))) (hL : darf D t Λ) (B Z O : Nat)
+    (lo hi : Int) (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = some O)
+    (hT : D.typ t f = .int lo hi) (hrsp : abbOf c _ y = .rsp) :
+    senkSkalLesen A c (.slot t f (.var y) hL) = none := by
+  simp [senkSkalLesen, idxVarG?, hB, hZ, hO, hT, hrsp]
+
+/-- JOINT WITNESS for `senkSkalLesen_rsp_index`. -/
+theorem senkSkalLesen_rsp_index_zeuge :
+    senkSkalLesen ankerSkala8 cfgRsp zeReadVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+/-- REFUSAL, `rbp`/`r13` BASE: the pilot load uses zero displacement,
+    which never encodes those bases (mod=00 r/m=101 is RIP-relative),
+    so such a configuration is refused. -/
+theorem senkSkalLesen_falsche_basis (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
+    (y : Var Γ (.index (D.count t))) (hL : darf D t Λ) (B Z O : Nat)
+    (lo hi : Int) (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = some O)
+    (hT : D.typ t f = .int lo hi) (hadr : c.adr = .rbp) :
+    senkSkalLesen A c (.slot t f (.var y) hL) = none := by
+  simp [senkSkalLesen, idxVarG?, hB, hZ, hO, hT, hadr, adrOk, basisKeinForm]
+
+/-- JOINT WITNESS for `senkSkalLesen_falsche_basis`. -/
+theorem senkSkalLesen_falsche_basis_zeuge :
+    senkSkalLesen ankerSkala8 cfgRbp zeReadVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
 /- CUTS:
    Skeleton only: scale exponent stub. The chunk, lowering, correctness,
    refusals and witnesses are OPEN.
