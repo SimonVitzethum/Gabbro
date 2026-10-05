@@ -728,7 +728,7 @@ Last ledger refresh: **2026-10-05 21:27 UTC**. This is an operational snapshot, 
 | 1339 | Opcode ledger: one-byte opcodes C0-FF | Committed candidate; review/integration pending | 1340: Agent working | [task](lanes/1339.md) |
 | 1341 | Opcode ledger: two-byte opcodes 0F 00-3F | Agent working | 1342: scheduled | [task](lanes/1341.md) |
 | 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Merged after review/checks | 1344: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1343.md) |
-| 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1345.md) |
+| 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Committed candidate; review/integration pending | 1348: Committed candidate; review/integration pending | [task](lanes/1347.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1763,6 +1763,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1343**, Opcode ledger: two-byte opcodes 0F 40-7F, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1343.md). <!-- x86-merged:1343 -->
 - 2026-10-05: lane **1344**, Independent exact review of 1343, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1344.md). <!-- x86-merged:1344 -->
 - 2026-10-05: lane **1345**, Opcode ledger: two-byte opcodes 0F 80-BF, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1345.md). <!-- x86-merged:1345 -->
+- 2026-10-05: lane **1346**, Independent exact review of 1345, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1346.md). <!-- x86-merged:1346 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
