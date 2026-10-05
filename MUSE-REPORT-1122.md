@@ -1,6 +1,8 @@
 # MUSE-REPORT-1122: Exact review of candidate 1121 (addressed loads/stores through TSO)
 
-## VERDICT: ACCEPT
+CANDIDATE: 1121 5fe35f25493157e98c05b7915d89c2685f549d24
+
+VERDICT: ACCEPT
 
 Candidate: lane 1121, HEAD `5fe35f25493157e98c05b7915d89c2685f549d24`
 (base `8744590d77cbc7f31d809b4c62cd303bae4ed66f`, per
