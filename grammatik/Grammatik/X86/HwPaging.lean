@@ -460,7 +460,7 @@ theorem blatt_lese_ok (st : SeitenSteuerung) (q : SeitenAnfrage)
 def SeitenTabellen := Nat → Wort
 
 /-- Read one decoded entry: table at frame `rahmen`, slot `idx`. -/
-def tabEintrag (tab : Nat → Wort) (rahmen idx : Nat) : SeitenEintrag :=
+def seitenTabEintrag (tab : Nat → Wort) (rahmen idx : Nat) : SeitenEintrag :=
   eintragDekodieren (tab (rahmen * 512 + idx))
 
 /-- Set the accessed bit of a raw entry word. -/
@@ -653,54 +653,54 @@ theorem seitenGangTab_nichtOk (tab : Nat → Wort) (touched : List Nat)
     let-free so the lookup equations rewrite directly. -/
 def seitenGang (st : SeitenSteuerung) (tab : Nat → Wort)
     (q : SeitenAnfrage) : GangErgebnis × (Nat → Wort) :=
-  (gangEbenen st q (tabEintrag tab st.cr3 (gangIndexPML4 q.linear))
-    (tabEintrag tab
-      (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+  (gangEbenen st q (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear))
+    (seitenTabEintrag tab
+      (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
       (gangIndexPDPT q.linear))
-    (tabEintrag tab
-      (tabEintrag tab
-        (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+    (seitenTabEintrag tab
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
         (gangIndexPDPT q.linear)).rahmen
       (gangIndexPD q.linear))
-    (tabEintrag tab
-      (tabEintrag tab
-        (tabEintrag tab
-          (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+    (seitenTabEintrag tab
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
           (gangIndexPDPT q.linear)).rahmen
         (gangIndexPD q.linear)).rahmen
       (gangIndexPT q.linear)),
    seitenGangTab tab
     [st.cr3 * 512 + gangIndexPML4 q.linear,
-     (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen * 512 +
+     (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen * 512 +
        gangIndexPDPT q.linear,
-     (tabEintrag tab
-       (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+     (seitenTabEintrag tab
+       (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
        (gangIndexPDPT q.linear)).rahmen * 512 + gangIndexPD q.linear,
-     (tabEintrag tab
-       (tabEintrag tab
-         (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+     (seitenTabEintrag tab
+       (seitenTabEintrag tab
+         (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
          (gangIndexPDPT q.linear)).rahmen
        (gangIndexPD q.linear)).rahmen * 512 + gangIndexPT q.linear]
     (if q.schreiben then
-      some ((tabEintrag tab
-        (tabEintrag tab
-          (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+      some ((seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
           (gangIndexPDPT q.linear)).rahmen
         (gangIndexPD q.linear)).rahmen * 512 + gangIndexPT q.linear)
      else none)
-    (gangEbenen st q (tabEintrag tab st.cr3 (gangIndexPML4 q.linear))
-      (tabEintrag tab
-        (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+    (gangEbenen st q (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear))
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
         (gangIndexPDPT q.linear))
-      (tabEintrag tab
-        (tabEintrag tab
-          (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
           (gangIndexPDPT q.linear)).rahmen
         (gangIndexPD q.linear))
-      (tabEintrag tab
-        (tabEintrag tab
-          (tabEintrag tab
-            (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab
+            (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
             (gangIndexPDPT q.linear)).rahmen
           (gangIndexPD q.linear)).rahmen
         (gangIndexPT q.linear))))
@@ -752,19 +752,19 @@ theorem gangEbenen_kongr (st : SeitenSteuerung) (q : SeitenAnfrage)
 theorem seitenGang_fst (st : SeitenSteuerung) (tab : Nat → Wort)
     (q : SeitenAnfrage) :
     (seitenGang st tab q).1 =
-      gangEbenen st q (tabEintrag tab st.cr3 (gangIndexPML4 q.linear))
-        (tabEintrag tab
-          (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+      gangEbenen st q (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear))
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
           (gangIndexPDPT q.linear))
-        (tabEintrag tab
-          (tabEintrag tab
-            (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab
+            (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
             (gangIndexPDPT q.linear)).rahmen
           (gangIndexPD q.linear))
-        (tabEintrag tab
-          (tabEintrag tab
-            (tabEintrag tab
-              (tabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab
+            (seitenTabEintrag tab
+              (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
               (gangIndexPDPT q.linear)).rahmen
             (gangIndexPD q.linear)).rahmen
           (gangIndexPT q.linear)) := rfl
@@ -852,7 +852,7 @@ theorem seitenGang_steuer_gleich (st : SeitenSteuerung)
   have g1 := seitenGang_fst st tab q
   have g2 := seitenGang_fst st tab' q
   rw [g1, g2]
-  simp only [tabEintrag]
+  simp only [seitenTabEintrag]
   rw [hf3, hf2, hf1]
   exact gangEbenen_kongr st q _ _ _ _ _ _ _ _ hv3 hr3 hu3 hg3 hx3
     hv2 hr2 hu2 hg2 hx2 hv1 hr1 hu1 hg1 hx1 hv0 hr0 hu0 hg0 hx0 hf0
@@ -898,74 +898,74 @@ def witTab : Nat → Wort :=
     else 0
 
 /-- Witness control: CR3 at frame 16, WP armed, SMEP/SMAP off, NXE on. -/
-def witSteuer : SeitenSteuerung :=
+def witSeitenSteuer : SeitenSteuerung :=
   { cr3 := 16, wp := true, smep := false, smap := false, nxe := true }
 
 /-- User read of linear page 1 succeeds onto frame 32. -/
 theorem wit_lese_rw_ok :
-    (seitenGang witSteuer witTab ⟨4096, false, true, false⟩).1 =
+    (seitenGang witSeitenSteuer witTab ⟨4096, false, true, false⟩).1 =
       .ok 131072 := by
   decide
 
 /-- User read of linear page 2 succeeds onto the SAME frame 32. -/
 theorem wit_lese_ro_ok :
-    (seitenGang witSteuer witTab ⟨8192, false, true, false⟩).1 =
+    (seitenGang witSeitenSteuer witTab ⟨8192, false, true, false⟩).1 =
       .ok 131072 := by
   decide
 
 /-- Both mappings name the same physical page. -/
 theorem wit_gleiches_blatt :
-    (seitenGang witSteuer witTab ⟨4096, false, true, false⟩).1 =
-      (seitenGang witSteuer witTab ⟨8192, false, true, false⟩).1 := by
+    (seitenGang witSeitenSteuer witTab ⟨4096, false, true, false⟩).1 =
+      (seitenGang witSeitenSteuer witTab ⟨8192, false, true, false⟩).1 := by
   decide
 
 /-- User write through the RW mapping succeeds. -/
 theorem wit_schreibe_rw_ok :
-    (seitenGang witSteuer witTab ⟨4096, true, true, false⟩).1 =
+    (seitenGang witSeitenSteuer witTab ⟨4096, true, true, false⟩).1 =
       .ok 131072 := by
   decide
 
 /-- User write through the RO mapping faults with W/R set. -/
 theorem wit_schreibe_ro_pf :
-    (seitenGang witSteuer witTab ⟨8192, true, true, false⟩).1 =
+    (seitenGang witSeitenSteuer witTab ⟨8192, true, true, false⟩).1 =
       .seitenFehler 8192 ⟨true, true, true, false, false⟩ := by
   decide
 
 /-- Supervisor write through the RO mapping faults under WP. -/
 theorem wit_schreibe_ro_wp :
-    (seitenGang witSteuer witTab ⟨8192, true, false, false⟩).1 =
+    (seitenGang witSeitenSteuer witTab ⟨8192, true, false, false⟩).1 =
       .seitenFehler 8192 ⟨true, true, false, false, false⟩ := by
   decide
 
 /-- Read of the unmapped linear page 3 faults non-present. -/
 theorem wit_lese_loch_pf :
-    (seitenGang witSteuer witTab ⟨12288, false, true, false⟩).1 =
+    (seitenGang witSeitenSteuer witTab ⟨12288, false, true, false⟩).1 =
       .seitenFehler 12288 ⟨false, false, true, false, false⟩ := by
   decide
 
 /-- A noncanonical linear address is #GP in the full walk. -/
 theorem wit_nichtkanonisch_gp :
-    (seitenGang witSteuer witTab ⟨2 ^ 47, false, true, false⟩).1 =
+    (seitenGang witSeitenSteuer witTab ⟨2 ^ 47, false, true, false⟩).1 =
       .gpFehler (2 ^ 47) := by
   decide
 
 /-- The write sets accessed on the touched intermediate entry. -/
 theorem wit_zugriff_gesetzt :
     (eintragDekodieren
-      ((seitenGang witSteuer witTab ⟨4096, true, true, false⟩).2
+      ((seitenGang witSeitenSteuer witTab ⟨4096, true, true, false⟩).2
         (16 * 512 + 0))).zugegriffen = true := by
   decide
 
 /-- The write sets dirty on the leaf entry. -/
 theorem wit_schmutzig_gesetzt :
     (eintragDekodieren
-      ((seitenGang witSteuer witTab ⟨4096, true, true, false⟩).2
+      ((seitenGang witSeitenSteuer witTab ⟨4096, true, true, false⟩).2
         (16 * 512 + 1))).schmutzig = true := by
   decide
 
 /-- An untouched entry keeps its exact word through the write-back. -/
 theorem wit_unberuehrt_still :
-    (seitenGang witSteuer witTab ⟨4096, true, true, false⟩).2
+    (seitenGang witSeitenSteuer witTab ⟨4096, true, true, false⟩).2
       (16 * 512 + 7) = witTab (16 * 512 + 7) := by
   decide
 
@@ -1258,11 +1258,11 @@ theorem seitenGp_verweigert (s s' : SeitenZustand)
     change. -/
 theorem hwSeiten_zeuge :
     HwWf hwWitStart ∧
-      (seitenGang witSteuer witTab ⟨4096, false, true, false⟩).1 =
+      (seitenGang witSeitenSteuer witTab ⟨4096, false, true, false⟩).1 =
         .ok 131072 ∧
-      (seitenGang witSteuer witTab ⟨8192, false, true, false⟩).1 =
+      (seitenGang witSeitenSteuer witTab ⟨8192, false, true, false⟩).1 =
         .ok 131072 ∧
-      (seitenGang witSteuer witTab ⟨8192, true, true, false⟩).1 =
+      (seitenGang witSeitenSteuer witTab ⟨8192, true, true, false⟩).1 =
         .seitenFehler 8192 ⟨true, true, true, false, false⟩ ∧
       hwWitLoadEigen = some (some (BitVec.ofNat 8 42)) ∧
       hwWitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
@@ -1287,7 +1287,7 @@ theorem hwSeiten_zeuge :
      refusal, #GP, present/RSVD/large-page rules at every level, the
      WP-aware leaf check `blattPruefung`, and the checked AND/OR
      rights combination `gangRechte` (§3);
-   - table memory `tabEintrag`, accessed/dirty word updates with
+   - table memory `seitenTabEintrag`, accessed/dirty word updates with
      preservation of every permission bit and the frame, and the set
      facts (§4);
    - the write-back `tabAD` (untouched entries keep their word; only
@@ -1372,7 +1372,7 @@ theorem hwSeiten_zeuge :
 #print axioms blatt_abruf_xd
 #print axioms blatt_lese_ok
 #print axioms gangEbenen_kongr
-#print axioms tabEintrag
+#print axioms seitenTabEintrag
 #print axioms wortZugriff
 #print axioms wortSchmutzig
 #print axioms wortZugriff_vorhanden
@@ -1399,7 +1399,7 @@ theorem hwSeiten_zeuge :
 #print axioms seitenGang_nichtOk_still
 #print axioms seitenGang_steuer_gleich
 #print axioms witTab
-#print axioms witSteuer
+#print axioms witSeitenSteuer
 #print axioms wit_lese_rw_ok
 #print axioms wit_lese_ro_ok
 #print axioms wit_gleiches_blatt
