@@ -16,6 +16,7 @@ import Grammatik.X86.Speicher
 import Grammatik.X86.TSO
 import Grammatik.X86.WordAccessGrouping
 import Grammatik.X86.HwStackCalls
+import Grammatik.X86.HwForwardingGeneric
 import Grammatik.X86.HardwareExecution
 
 namespace Gabbro.Grammatik.X86
@@ -453,10 +454,566 @@ theorem drainGleichWrite64 (s sN : TSOZustand)
   intro j hj
   rw [hfoot j hj, hmeq]
 
+/-! ## 5. Negative: a foreign overlapping flush breaks it.
+
+  After a complete eight-drain (`grpS10`, accepted 603 state) a foreign
+  entry inside the footprint flushes afterwards: byte three becomes 7
+  while `write64` holds 5, so memory is observably not the written
+  word. The exclusion premise is exactly what fails. -/
+
+/-- Overlapping foreign byte: 7 (word byte three of `zeugenWort` is 5). -/
+def ovFremd : Byte := BitVec.ofNat 8 7
+
+/-- Overlap state: drained memory with a foreign footprint entry. -/
+def ovS0 : TSOZustand :=
+  ⟨grpS10.mem, pufferSetze grpS10.puffer 1
+    [⟨addrOff (0 : Adresse) 3, ovFremd⟩]⟩
+
+/-- After the foreign flush: byte three carries the foreign byte. -/
+def ovS1 : TSOZustand :=
+  ⟨{ ovS0.mem with bytes := fun x =>
+      if x = addrOff (0 : Adresse) 3 then ovFremd
+      else ovS0.mem.bytes x },
+    pufferSetze ovS0.puffer 1 []⟩
+
+/-- The foreign flush computes as claimed. -/
+theorem ov_flush : flushKern ovS0 1 = some ovS1 := by rfl
+
+/-- The overlapping entry breaks foreign-footprint freedom. -/
+theorem ov_kein_fremdfrei : ¬ FremdFrei ovS0 0 (0 : Adresse) := by
+  intro h
+  have hmem : (⟨addrOff (0 : Adresse) 3, ovFremd⟩ : TSOEintrag) ∈
+      ovS0.puffer 1 := by
+    have heq : ovS0.puffer 1 =
+        [⟨addrOff (0 : Adresse) 3, ovFremd⟩] := by
+      simp [ovS0, pufferSetze]
+    rw [heq]
+    simp
+  exact (h 1 (by decide) _ hmem)
+    (fuss_mem_offset (0 : Adresse) 3 (by decide))
+
+/-- The foreign flush breaks the footprint: byte three is 7, not 5. -/
+theorem ov_byte_bricht :
+    ovS1.mem.bytes (addrOff (0 : Adresse) 3) ≠
+      writeBytes grpS2.mem (0 : Adresse) zeugenWort
+        (addrOff (0 : Adresse) 3) := by
+  decide
+
+/-- The foreign flush breaks the read-back: the word no longer reads. -/
+theorem ov_read_bricht :
+    read64 ovS1.mem (0 : Adresse) ≠ some zeugenWort := by
+  intro heq
+  have hles : lesbar8 ovS1.mem (0 : Adresse) = true := by rfl
+  unfold read64 at heq
+  rw [if_pos hles] at heq
+  simp only [Option.some.injEq] at heq
+  have heqb := congrArg (fun w => wortByte w 3) heq
+  rw [fwd_wortByte_bytesWort3] at heqb
+  have hbyte : ovS1.mem.bytes (addrOff (0 : Adresse) 3) =
+      wortByte zeugenWort 3 := heqb
+  have hne : ovS1.mem.bytes (addrOff (0 : Adresse) 3) ≠
+      wortByte zeugenWort 3 := by decide
+  exact hne hbyte
+
+/-! ## 6. Joint witness: two cores, store, forward, drain.
+
+  Core 0 buffers word 42 at address 8184 through the family adapter;
+  core 0 forwards it while core 1 still reads zero; after core 0
+  drains, shared memory holds the `write64` footprint for both cores.
+  The drain observably changes memory (0 becomes 42). Beside it stand
+  the planted guard, dark-read and empty-drain refusals. -/
+
+/-- Witness bytes: zeroed everywhere. -/
+def drainWitBytes (_ : Adresse) : Byte := BitVec.ofNat 8 0
+
+/-- Witness data permission: sixteen bytes at 8176. -/
+def drainWitDaten (a : Adresse) : Bool :=
+  decide (8176 ≤ a.toNat ∧ a.toNat < 8192)
+
+/-- Witness code permission: fifteen bytes at 4096. -/
+def drainWitCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4111)
+
+/-- Witness shared memory: zeroed bytes, data RW, code X-only. -/
+def drainWitMem : Speicher :=
+  { bytes := drainWitBytes, lesbar := drainWitDaten,
+    schreibbar := drainWitDaten, ausfuehrbar := drainWitCode }
+
+/-- Witness core-0 registers: top at 8192, `rax` holding 9. -/
+def drainWitReg0 : Register → Wort := fun q =>
+  if q = Register.rsp then BitVec.ofNat 64 8192
+  else if q = Register.rax then BitVec.ofNat 64 9
+  else BitVec.ofNat 64 0
+
+/-- Witness core-1 registers: top at 8184. -/
+def drainWitReg1 : Register → Wort := fun q =>
+  if q = Register.rsp then BitVec.ofNat 64 8184
+  else BitVec.ofNat 64 0
+
+/-- Witness core data: core 0 runs at 4096, core 1 idles at 8192. -/
+def drainWitKern : Nat → HwKern
+  | 0 => ⟨drainWitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      (fun _ => BitVec.ofNat 128 0), kontextReset⟩
+  | _ => ⟨drainWitReg1, zeugeFlags, BitVec.ofNat 64 8192,
+      (fun _ => BitVec.ofNat 128 0), kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon with OS vector state. -/
+def drainWitM0 : HwMaschine :=
+  ⟨drainWitMem, drainWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- Witness word address. -/
+def drainWitAdr : Adresse := BitVec.ofNat 64 8184
+
+/-- Witness stored word. -/
+def drainWitWort : Wort := BitVec.ofNat 64 42
+
+/-- Witness zero word. -/
+def drainWitNull : Wort := BitVec.ofNat 64 0
+
+/-- Witness pushed machine: core 0 carries the exact eight entries,
+    core 1 is empty. The adapter reaches exactly this state. -/
+def drainWitM1 : HwMaschine :=
+  setTso drainWitM0 ⟨drainWitMem, fun d =>
+    if d = 0 then wortEintraege drainWitAdr drainWitWort else []⟩
+
+/-- Core 0 stores word 42 at the witness address through the
+    family adapter. -/
+def drainWitPush : Option HwMaschine :=
+  drainAdapter.schritt drainWitM0 0 (.speichere drainWitAdr drainWitWort)
+
+/-- Buffered entry count on core 0 after the store. -/
+def drainWitBufLen : Option Nat :=
+  match drainWitPush with
+  | some m1 => some (m1.puffer 0).length
+  | none => none
+
+/-- Shared-memory byte at the address right after the store. -/
+def drainWitMemStill : Option Byte :=
+  match drainWitPush with
+  | some m1 => some (m1.mem.bytes drainWitAdr)
+  | none => none
+
+/-- Core 0 observes its own buffered word (forwarding). -/
+def drainWitLoadEigen : Option (Option Wort) :=
+  match drainWitPush with
+  | some m1 => some (stapelLadeWort (tsoAnsicht m1) 0 drainWitAdr)
+  | none => none
+
+/-- Core 1 observes the old word (no foreign forwarding). -/
+def drainWitLoadFremd : Option (Option Wort) :=
+  match drainWitPush with
+  | some m1 => some (stapelLadeWort (tsoAnsicht m1) 1 drainWitAdr)
+  | none => none
+
+/-- First own-drain step through the family adapter. -/
+def drainWitEigen : Option HwMaschine :=
+  match drainWitPush with
+  | some m1 => drainAdapter.schritt m1 0 .eigenSpuele
+  | none => none
+
+/-- Buffered entry count on core 0 after the first drain step. -/
+def drainWitEigenLen : Option Nat :=
+  match drainWitEigen with
+  | some m => some (m.puffer 0).length
+  | none => none
+
+/-- Core 0 drains its oldest entry, eight times chained. -/
+def drainWitD1 : Option TSOZustand :=
+  match drainWitPush with
+  | some m1 => flushKern (tsoAnsicht m1) 0
+  | none => none
+
+def drainWitD2 : Option TSOZustand :=
+  match drainWitD1 with
+  | some s => flushKern s 0
+  | none => none
+
+def drainWitD3 : Option TSOZustand :=
+  match drainWitD2 with
+  | some s => flushKern s 0
+  | none => none
+
+def drainWitD4 : Option TSOZustand :=
+  match drainWitD3 with
+  | some s => flushKern s 0
+  | none => none
+
+def drainWitD5 : Option TSOZustand :=
+  match drainWitD4 with
+  | some s => flushKern s 0
+  | none => none
+
+def drainWitD6 : Option TSOZustand :=
+  match drainWitD5 with
+  | some s => flushKern s 0
+  | none => none
+
+def drainWitD7 : Option TSOZustand :=
+  match drainWitD6 with
+  | some s => flushKern s 0
+  | none => none
+
+def drainWitD8 : Option TSOZustand :=
+  match drainWitD7 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- Shared memory after the full drain. -/
+def drainWitNachFlush : Option Speicher :=
+  match drainWitD8 with
+  | some s => some s.mem
+  | none => none
+
+/-- The word read from shared memory after the drain. -/
+def drainWitNachRead : Option (Option Wort) :=
+  match drainWitNachFlush with
+  | some mem => some (read64 mem drainWitAdr)
+  | none => none
+
+/-- Core 1 reads the drained word from shared memory. -/
+def drainWitFremdNachFlush : Option (Option Wort) :=
+  match drainWitD8 with
+  | some s => some (stapelLadeWort s 1 drainWitAdr)
+  | none => none
+
+/-! ## 7. Witness facts: the reached run forwards, then drains. -/
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem drainWit_wf : HwWf drainWitM0 := by
+  intro c f _
+  cases f <;> rfl
+
+/-- The store buffers exactly eight entries on core 0. -/
+theorem drainWit_puffer8 : drainWitBufLen = some 8 := by
+  decide
+
+/-- The store leaves the shared address byte at zero. -/
+theorem drainWit_mem_still :
+    drainWitMemStill = some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Forwarding on the reached run: core 0 reads its own word 42. -/
+theorem drainWit_weiterleitung :
+    drainWitLoadEigen = some (some drainWitWort) := by
+  decide
+
+/-- No foreign forwarding on the reached run: core 1 reads zero. -/
+theorem drainWit_fremd_alt :
+    drainWitLoadFremd = some (some drainWitNull) := by
+  decide
+
+/-- The first adapter drain step leaves seven entries. -/
+theorem drainWit_eigen_sieben : drainWitEigenLen = some 7 := by
+  decide
+
+/-- The drain changes shared memory: the address reads 42. -/
+theorem drainWit_spuelung_aendert_speicher :
+    drainWitNachRead = some (some drainWitWort) := by
+  decide
+
+/-- After the drain core 1 observes the new word. -/
+theorem drainWit_fremd_neu :
+    drainWitFremdNachFlush = some (some drainWitWort) := by
+  decide
+
+/-- The address starts zeroed: the run really changes memory. -/
+theorem drainWit_anfang_null :
+    drainWitMem.bytes drainWitAdr = BitVec.ofNat 8 0 := by
+  decide
+
+/-- The pushed buffer carries exactly the word entries. -/
+theorem drainWit_pufferform :
+    (tsoAnsicht drainWitM1).puffer 0 =
+      wortEintraege drainWitAdr drainWitWort := by
+  decide
+
+/-- No foreign entry touches the footprint on the witness. -/
+theorem drainWit_fremdfrei :
+    FremdFrei (tsoAnsicht drainWitM1) 0 drainWitAdr := by
+  intro d hd e hm
+  have hbuf : (tsoAnsicht drainWitM1).puffer d = [] := by
+    simp only [tsoAnsicht, drainWitM1, setTso]
+    rw [if_neg hd]
+  rw [hbuf] at hm
+  cases hm
+
+/-- The pushed state satisfies the group guard. -/
+theorem drainWit_gruppe :
+    WortGruppe (tsoAnsicht drainWitM1) 0 drainWitAdr drainWitWort :=
+  ⟨drainWit_pufferform, drainWit_fremdfrei⟩
+
+/-- Every footprint byte is readable on the witness. -/
+theorem drainWit_lesbar_all (k : Nat) (hk : k < 8) :
+    (tsoAnsicht drainWitM1).mem.lesbar (addrOff drainWitAdr k) = true := by
+  have haddr : (addrOff drainWitAdr k).toNat = 8184 + k := by
+    unfold addrOff drainWitAdr
+    rw [BitVec.toNat_add]
+    have e1 : (BitVec.ofNat 64 8184).toNat = 8184 := by
+      rw [BitVec.toNat_ofNat]
+    have e2 : (BitVec.ofNat 64 k).toNat = k := by
+      rw [BitVec.toNat_ofNat]
+      exact Nat.mod_eq_of_lt (by omega)
+    rw [e1, e2]
+    exact Nat.mod_eq_of_lt (by omega)
+  show drainWitDaten (addrOff drainWitAdr k) = true
+  unfold drainWitDaten
+  rw [decide_eq_true_eq]
+  omega
+
+/-! ## 8. Generic fires on the accepted eight-drain.
+
+  The accepted 603 witness (`grpS2` to `grpS10`) satisfies every
+  premise jointly, so the generic induction fires on it: footprint
+  bytes equal the `write64` bytes, the option equation agrees, and a
+  mid-trace state is exactly its prefix. -/
+
+/-- The `write64` of the grouped word succeeds on the witness start. -/
+theorem drainGrp_hwr :
+    write64 grpS2.mem (0 : Adresse) zeugenWort = some zeugenSpeicherNach := by
+  show write64 zeugenSpeicher (0 : Adresse) zeugenWort =
+    some zeugenSpeicherNach
+  unfold write64
+  have hc : schreibbar8 zeugenSpeicher (0 : Adresse) = true := rfl
+  rw [if_pos hc]
+  rfl
+
+/-- GENERIC FOOTPRINT FIRE: the drained bytes are the `write64` bytes. -/
+theorem drainGrp_fuss (j : Nat) (hj : j < 8) :
+    grpS10.mem.bytes (addrOff (0 : Adresse) j) =
+      writeBytes grpS2.mem (0 : Adresse) zeugenWort
+        (addrOff (0 : Adresse) j) :=
+  drainFuss_gleich_schreibbytes grpS2 grpS10 _ 0 (0 : Adresse) zeugenWort
+    grp_hgrp grp_spur grp_hend grp_hempty grp_hstoer j hj
+
+/-- GENERIC `write64` FIRE: footprint agreement plus read-back. -/
+theorem drainGrp_write64 :
+    (∀ j : Nat, j < 8 →
+      grpS10.mem.bytes (addrOff (0 : Adresse) j) =
+        zeugenSpeicherNach.bytes (addrOff (0 : Adresse) j)) ∧
+      read64 grpS10.mem (0 : Adresse) = some zeugenWort :=
+  drainGleichWrite64 grpS2 grpS10 _ 0 (0 : Adresse) zeugenWort
+    zeugenSpeicherNach grp_hgrp grp_hles grp_spur grp_hend grp_hempty
+    grp_hstoer drainGrp_hwr
+
+/-- GENERIC MID-TRACE FIRE: the fourth visited state is exactly its
+    prefix (three installed, five still from the start). -/
+theorem drainGrp_mitte :
+    ∃ k' : Nat, k' ≤ 8 ∧
+      grpS5.puffer 0 = (wortEintraege (0 : Adresse) zeugenWort).drop k' ∧
+      (∀ j : Nat, j < k' →
+        grpS5.mem.bytes (addrOff (0 : Adresse) j) = wortByte zeugenWort j) ∧
+      (∀ j : Nat, k' ≤ j → j < 8 →
+        grpS5.mem.bytes (addrOff (0 : Adresse) j) =
+          grpS2.mem.bytes (addrOff (0 : Adresse) j)) :=
+  drainZwischen_voll 0 (0 : Adresse) zeugenWort grpS2 grpS10 _ grp_hgrp
+    grp_spur grp_hstoer grpS5 (by simp)
+
+/-! ## 9. Refusal witnesses. -/
+
+/-- Guard witness memory: nothing is writable. -/
+def drainWitGuardMem : Speicher :=
+  { bytes := drainWitBytes, lesbar := drainWitDaten,
+    schreibbar := fun _ => false, ausfuehrbar := drainWitCode }
+
+/-- Guard witness machine: same cores, write-protected memory. -/
+def drainWitGuardM0 : HwMaschine :=
+  ⟨drainWitGuardMem, drainWitKern, fun _ => [], basisHw,
+    fun _ => basisBereit⟩
+
+/-- Dark witness memory: nothing is readable. -/
+def drainWitDarkMem : Speicher :=
+  { bytes := drainWitBytes, lesbar := fun _ => false,
+    schreibbar := drainWitDaten, ausfuehrbar := drainWitCode }
+
+/-- The guard denies the first footprint byte. -/
+theorem drainWit_guard_dicht :
+    drainWitGuardM0.mem.schreibbar (addrOff drainWitAdr 0) = false := by
+  decide
+
+/-- Guard store refuses on the witness, through the generic refusal. -/
+theorem drainWit_guard_speichere_verweigert :
+    drainAdapter.schritt drainWitGuardM0 0
+      (.speichere drainWitAdr drainWitWort) = none :=
+  drainSpeichere_wache _ _ _ _ drainWit_guard_dicht
+
+/-- The dark page denies the first footprint byte. -/
+theorem drainWit_dark_dicht :
+    drainWitDarkMem.lesbar (addrOff drainWitAdr 0) = false := by
+  decide
+
+/-- Dark observation refuses on the witness. -/
+theorem drainWit_dark_beob_verweigert :
+    stapelLadeWort ⟨drainWitDarkMem, fun _ => []⟩ 0 drainWitAdr = none :=
+  drainBeobachte_dunkel _ _ _ drainWit_dark_dicht
+
+/-- Empty own drain refuses on the witness start machine. -/
+theorem drainWit_eigen_leer_verweigert :
+    drainAdapter.schritt drainWitM0 0 .eigenSpuele = none :=
+  drainEigen_leer_verweigert _ _ rfl
+
+/-! ## 10. Joint witness.
+
+  Every duty premise holds jointly on reached, non-degenerate runs:
+  the group guard with readability, owner-only forwarding of 42 on two
+  cores, an adapter drain step, a full drain changing shared memory 0
+  to 42 observed from both cores, the generic footprint/`write64`
+  fires with a mid-trace prefix -- beside the planted guard,
+  dark-read and empty-drain refusals and the overlapping-flush break
+  (exclusion failure, wrong byte, wrong read-back). -/
+
+/-- JOINT WITNESS. -/
+theorem drainGeneric_zeuge :
+    HwWf drainWitM0 ∧
+      WortGruppe (tsoAnsicht drainWitM1) 0 drainWitAdr drainWitWort ∧
+      (∀ k, k < 8 →
+        (tsoAnsicht drainWitM1).mem.lesbar (addrOff drainWitAdr k) =
+          true) ∧
+      (1 : Nat) ≠ 0 ∧
+      drainWitBufLen = some 8 ∧
+      drainWitMemStill = some (BitVec.ofNat 8 0) ∧
+      drainWitLoadEigen = some (some drainWitWort) ∧
+      drainWitLoadFremd = some (some drainWitNull) ∧
+      drainWitEigenLen = some 7 ∧
+      drainWitNachRead = some (some drainWitWort) ∧
+      drainWitFremdNachFlush = some (some drainWitWort) ∧
+      drainWitMem.bytes drainWitAdr = BitVec.ofNat 8 0 ∧
+      (∀ j, j < 8 →
+        grpS10.mem.bytes (addrOff (0 : Adresse) j) =
+          writeBytes grpS2.mem (0 : Adresse) zeugenWort
+            (addrOff (0 : Adresse) j)) ∧
+      ((∀ j : Nat, j < 8 →
+        grpS10.mem.bytes (addrOff (0 : Adresse) j) =
+          zeugenSpeicherNach.bytes (addrOff (0 : Adresse) j)) ∧
+        read64 grpS10.mem (0 : Adresse) = some zeugenWort) ∧
+      (∃ k' : Nat, k' ≤ 8 ∧
+        grpS5.puffer 0 = (wortEintraege (0 : Adresse) zeugenWort).drop k' ∧
+        (∀ j : Nat, j < k' →
+          grpS5.mem.bytes (addrOff (0 : Adresse) j) = wortByte zeugenWort j) ∧
+        (∀ j : Nat, k' ≤ j → j < 8 →
+          grpS5.mem.bytes (addrOff (0 : Adresse) j) =
+            grpS2.mem.bytes (addrOff (0 : Adresse) j))) ∧
+      drainWitGuardM0.mem.schreibbar (addrOff drainWitAdr 0) = false ∧
+      drainAdapter.schritt drainWitGuardM0 0
+        (.speichere drainWitAdr drainWitWort) = none ∧
+      drainWitDarkMem.lesbar (addrOff drainWitAdr 0) = false ∧
+      stapelLadeWort ⟨drainWitDarkMem, fun _ => []⟩ 0 drainWitAdr =
+        none ∧
+      drainAdapter.schritt drainWitM0 0 .eigenSpuele = none ∧
+      ¬ FremdFrei ovS0 0 (0 : Adresse) ∧
+      flushKern ovS0 1 = some ovS1 ∧
+      ovS1.mem.bytes (addrOff (0 : Adresse) 3) ≠
+        writeBytes grpS2.mem (0 : Adresse) zeugenWort
+          (addrOff (0 : Adresse) 3) ∧
+      read64 ovS1.mem (0 : Adresse) ≠ some zeugenWort := by
+  exact ⟨drainWit_wf, drainWit_gruppe, drainWit_lesbar_all, by decide,
+    drainWit_puffer8, drainWit_mem_still, drainWit_weiterleitung,
+    drainWit_fremd_alt, drainWit_eigen_sieben,
+    drainWit_spuelung_aendert_speicher, drainWit_fremd_neu,
+    drainWit_anfang_null, drainGrp_fuss, drainGrp_write64, drainGrp_mitte,
+    drainWit_guard_dicht, drainWit_guard_speichere_verweigert,
+    drainWit_dark_dicht, drainWit_dark_beob_verweigert,
+    drainWit_eigen_leer_verweigert, ov_kein_fremdfrei, ov_flush,
+    ov_byte_bricht, ov_read_bricht⟩
+
 /- CUTS:
-   Skeleton only: adapter defined, induction and witnesses open.
+   Proved here (all over the REUSED canonical `Zustand`/`Speicher`
+   vocabulary, the accepted `HwMaschine`/`HwSchritt`/`HwWf`,
+   `issueByte`/`loadByte`/`flushKern`, `wortEintraege`,
+   `WortGruppe`/`FremdFrei`/`DrainSpur`, `hwWortAusgabe`,
+   `stapelLadeWort`, `read64`/`write64`/`writeBytes` -- no new
+   machine, no new decoder row, no new instruction, no source claim):
+   - family events `DrainEreignis` and the adapter `drainAdapter`
+     (stores buffer a word, own/foreign drains flush, foreign issues
+     buffer, observations read without moving state); every adapter
+     step preserves `HwWf` (`drainAdapter_wf`);
+   - buffer agreement: stores append exactly the canonical eight
+     entries (`drainSpeichere_puffer`) and change no shared-memory
+     byte (`drainSpeichere_kein_speicher`); observations move no
+     state (`drainBeobachte_still`); own drains are the accepted
+     flush (`drainEigen_ist_flush`) and a machine flush event
+     (`drainEigen_ist_schritt`);
+   - GENERIC PREFIXES: every visited drain state is exactly a stated
+     prefix -- buffer suffix with installed bytes
+     (`drainZwischen_praefix` over `drain_installiert_aux`),
+     not-yet-drained bytes still from the start memory
+     (`drainUninstalliert_bleibt_aux`, new induction over
+     `DrainSpur`), joined (`drainZwischen_voll`);
+   - DRAIN EQUALS `write64` (generic): exclusion-checked eight-drains
+     install exactly the `write64` footprint bytes
+     (`drainFuss_gleich_schreibbytes`) and agree with the successful
+     `write64` with read-back (`drainGleichWrite64` over the accepted
+     `wort_gruppe_liest_zurueck`);
+   - negative: a foreign overlapping flush breaks the footprint, the
+     read-back and the exclusion (`ov_flush`, `ov_kein_fremdfrei`,
+     `ov_byte_bricht`, `ov_read_bricht` over the accepted 603 drain
+     end `grpS10`; word byte three of `zeugenWort` is 5, the foreign
+     byte is 7);
+   - planted refusals: guard stores (`drainSpeichere_wache` via
+     `issueListe_cons_none`), dark observations
+     (`drainBeobachte_dunkel` via `stapelPop_unlesbar`), empty own
+     drains (`drainEigen_leer_verweigert` via `flush_leer`);
+   - joint non-degenerate two-core witness (`drainGeneric_zeuge`):
+     adapter store of 42 with owner-only forwarding, an adapter
+     drain step (8 to 7), a full drain changing shared memory 0 to
+     42 observed from both cores, the generic fires on the accepted
+     eight-drain with a mid-trace prefix, beside guard, dark-read
+     and empty-drain refusals and the overlapping-flush break.
+   NOT proved here, and not claimed:
+   - No silicon correspondence: encodings are the accepted
+     canonical subsets with self-consistency only, not x86 truth.
+     Alignment carries no gate in this model (the byte drain is
+     alignment-agnostic by `WortGruppe` design). The Intel SDM
+     extracts supplied to the clone were consulted for ordering
+     (TSO store-issue FIFO, youngest-own forwarding, no multi-byte
+     atomicity); they are provenance, not proofs.
+   - No global memory equality with `write64`: foreign flushes
+     satisfying `FremdFrei` are real steps that change disjoint
+     bytes, so equality holds on the grouped footprint (and, via
+     the accepted `wort_gruppe_rahmen`, on separately guarded
+     footprints), never whole-memory.
+   - No LOCK/RMW, fault, interrupt, addressed/SIB, FP-control or
+     SIMD path; no source/IR/ABI/loader/entry/budget link; no
+     target-to-W/GX simulation; no whole-word atomicity beyond
+     `WortGruppe`-guarded byte drains.
+   - `drainZwischen_praefix` and the 603 `verflochten_*` wrappers
+     overlap in scope (all over `drain_installiert_aux`); this lane
+     adds the uninstall-preserved half, the `write64` footprint
+     equation and the machine adapter, and cites -- never
+     duplicates -- the accepted statements.
 -/
 
+#print axioms DrainEreignis
 #print axioms drainAdapter
+#print axioms drainAdapter_wf
+#print axioms drainSpeichere_puffer
+#print axioms drainSpeichere_kein_speicher
+#print axioms drainEigen_ist_flush
+#print axioms drainEigen_ist_schritt
+#print axioms drainBeobachte_still
+#print axioms drainEigen_leer_verweigert
+#print axioms drainSpeichere_wache
+#print axioms drainBeobachte_dunkel
+#print axioms drainZwischen_praefix
+#print axioms drainUninstalliert_bleibt_aux
+#print axioms drainZwischen_voll
+#print axioms drainFuss_gleich_schreibbytes
+#print axioms drainGleichWrite64
+#print axioms ov_flush
+#print axioms ov_kein_fremdfrei
+#print axioms ov_byte_bricht
+#print axioms ov_read_bricht
+#print axioms drainWit_wf
+#print axioms drainWit_gruppe
+#print axioms drainWit_lesbar_all
+#print axioms drainWit_weiterleitung
+#print axioms drainGrp_hwr
+#print axioms drainGrp_fuss
+#print axioms drainGrp_write64
+#print axioms drainGrp_mitte
+#print axioms drainWit_guard_speichere_verweigert
+#print axioms drainWit_dark_beob_verweigert
+#print axioms drainWit_eigen_leer_verweigert
+#print axioms drainGeneric_zeuge
 
 end Gabbro.Grammatik.X86
