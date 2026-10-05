@@ -33,7 +33,11 @@ Own file only: this report. No Lean or other source changes made.
 
 ## Notes on the task
 
-- The `.tmp/LANE.md` placeholder `CANDIDATE: 1205 <full pinned HEAD>` resolves via `.tmp/review/SNAPSHOT.json` to `99f2eca…`; no correction to the task itself is needed.
+- The lane file's candidate placeholder resolves via `.tmp/review/SNAPSHOT.json` to the pinned head named below; no correction to the task itself is needed.
 - No new definitions or theorems were added by lane 1206.
 
-## VERDICT: ACCEPT
+## Verdict
+
+CANDIDATE: 1205 99f2ecab59c7da1772e7b0b7d39ea3eceaff5bdc
+
+VERDICT: ACCEPT
