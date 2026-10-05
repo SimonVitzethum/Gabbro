@@ -640,7 +640,7 @@ Last ledger refresh: **2026-10-05 17:24 UTC**. This is an operational snapshot, 
 | 1163 | Pipeline: atomics and locks onto TSO | Merged after review/checks | 1164: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1163.md) |
 | 1165 | Pipeline: source budget to target work and time transfer | Merged after review/checks | 1166: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1165.md) |
 | 1167 | Pipeline: register allocation, spills and privacy validated | Merged after review/checks | 1168: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1167.md) |
-| 1169 | Pipeline correctness over the multi-core TSO machine | Merged after review/checks | 1170: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1169.md) |
+| 1169 | Pipeline correctness over the multi-core TSO machine | Merged after review/checks | 1170: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1169.md) |
 | 1171 | Linking, relocations and the final mapping | Merged after review/checks | 1172: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1171.md) |
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
 | 1175 | Finite and infinite execution soundness of the pipeline | Committed candidate; review/integration pending | 1176: Committed candidate; review/integration pending | [task](lanes/1175.md) |
@@ -679,7 +679,7 @@ Last ledger refresh: **2026-10-05 17:24 UTC**. This is an operational snapshot, 
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Committed candidate; review/integration pending | 1244: Committed candidate; review/integration pending | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
-| 1247 | Extended context state across interrupts and context switches | Committed candidate; review/integration pending | 1248: Agent working | [task](lanes/1247.md) |
+| 1247 | Extended context state across interrupts and context switches | Committed candidate; review/integration pending | 1248: Committed candidate; review/integration pending | [task](lanes/1247.md) |
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Unresolved after agent rounds; not accepted | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
@@ -1646,6 +1646,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `fbfc380d` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:fbfc380d836f43027ce97e8cf4883c2ef70355a2 -->
 - 2026-10-05: lane **1266**, Independent exact review of 1265, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1266.md). <!-- x86-merged:1266 -->
 - 2026-10-05: lane **1169**, Pipeline correctness over the multi-core TSO machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1169.md). <!-- x86-merged:1169 -->
+- 2026-10-05: lane **1170**, Independent exact review of 1169, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1170.md). <!-- x86-merged:1170 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
