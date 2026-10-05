@@ -663,7 +663,7 @@ Last ledger refresh: **2026-10-05 15:09 UTC**. This is an operational snapshot, 
 | 1209 | LOCK family: fetched-byte dispatch, narrower widths and split-lock | Merged after review/checks | 1210: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1209.md) |
 | 1211 | FP s32/MXCSR rows in the unified dispatcher | Merged after review/checks | 1212: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1211.md) |
 | 1213 | LOCK words to W history: timestamp and value link | Merged after review/checks | 1214: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1213.md) |
-| 1215 | From W runs to the GX refinement: the missing target leg | Committed candidate; review/integration pending | 1216: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1215.md) |
+| 1215 | From W runs to the GX refinement: the missing target leg | Merged after review/checks | 1216: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1215.md) |
 | 1217 | Pipeline atomics: execBlock correspondence | Committed candidate; review/integration pending | 1218: Agent working | [task](lanes/1217.md) |
 | 1219 | Pipeline: derive per-chunk runs from the lowering alone | Committed candidate; review/integration pending | 1220: Committed candidate; review/integration pending | [task](lanes/1219.md) |
 | 1221 | Linking: rel8 selection convergence and fall-through coverage | Committed candidate; review/integration pending | 1222: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1221.md) |
@@ -1573,6 +1573,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1134**, Independent exact review of 1133, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1134.md). <!-- x86-merged:1134 -->
 - 2026-10-05: lane **1211**, FP s32/MXCSR rows in the unified dispatcher, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1211.md). <!-- x86-merged:1211 -->
 - 2026-10-05: lane **1212**, Independent exact review of 1211, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1212.md). <!-- x86-merged:1212 -->
+- 2026-10-05: lane **1215**, From W runs to the GX refinement: the missing target leg, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1215.md). <!-- x86-merged:1215 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
