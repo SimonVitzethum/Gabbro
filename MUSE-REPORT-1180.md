@@ -1,5 +1,7 @@
 # MUSE-REPORT-1180: Exact review of candidate 1179 (HwBildFamilien)
 
+CANDIDATE: 1179 94a8dfd02639f6ff1aca5842a63b3cfb1ef623c3
+
 ## Identity
 
 - Clone verified: `/home/simon/Dokumente/gabbro-muse/a1180`, branch `muse/1180`. No mismatch, no STOP.
@@ -87,4 +89,4 @@ touch, no repair needed.
 - No hardware correspondence, no W/GX bridge, no LOCK RMW path — all explicitly
   disclaimed.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
