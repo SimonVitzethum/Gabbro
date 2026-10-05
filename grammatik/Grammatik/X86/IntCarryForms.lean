@@ -730,11 +730,13 @@ def immLies (immKind : Nat) (b : Breite) :
       | ib :: rest' => some (imm8Sext b ib, rest')
       | _ => none
 
-/-- Immediate length by kind: imm8/imm16/imm32/sex8. -/
+/-- Immediate length by kind: imm8/imm16/imm32/sex8 (the 83H form
+    carries one byte). -/
 def immLenOf : Nat → Nat
   | 0 => 1
   | 1 => 2
-  | _ => 4
+  | 2 => 4
+  | _ => 1
 
 /-- Group-1 register destination with the extended operand. -/
 def decodeGruppe1Reg (adc : Bool) (b : Breite) (dstCode : Nat) (op : Wort)
@@ -1045,19 +1047,6 @@ def opcodeNachPraefix : List Byte → Option Nat
       | op :: _ => some (byteNat op)
     else some (byteNat b)
 
-/-- Shallow reason from the opcode-position byte: LOCK, address-size,
-    a REX byte in the opcode slot (never one-byte INC/DEC in 64-bit),
-    a non-carry opcode, or nothing for family opcodes. -/
-def ablehnGrundOp (op : Nat) : Option AblehnGrund :=
-  if op == 240 then some .lock
-  else if op == 103 then some .adressGroesse
-  else if decide (64 ≤ op ∧ op < 80) then some .einByteIncDec
-  else if decide (op = 16 ∨ op = 17 ∨ op = 18 ∨ op = 19 ∨
-      op = 20 ∨ op = 21 ∨ op = 24 ∨ op = 25 ∨ op = 26 ∨ op = 27 ∨
-      op = 28 ∨ op = 29 ∨ op = 128 ∨ op = 129 ∨ op = 131 ∨
-      op = 254 ∨ op = 255) then none
-  else some .keinTrageform
-
 /-! ## Canonical encode and round trips.
 
     The canonical encoding uses the `/r` ADC/SBB direction with the
@@ -1226,9 +1215,91 @@ theorem roundtrip_sbbImm16 (dst : Register) (op : Wort)
       some (.reg ⟨.sbbImm .b16 dst (canonImm .b16 op), (carryEncode (.sbbImm .b16 dst op)).length⟩, suffix) := by
   cases dst <;> rfl
 
-/-- Shallow refusal reason for a byte string. Family opcodes
-    (16-19, 20-21, 24-29, 128-129, 131, 254-255) carry none here:
-    they decode, or refuse deep for a named ModRM cause. -/
+/-- The ModRM-position byte value after stripping prefixes (the
+    opcode sits one slot before it). -/
+def modrmAn : List Byte → Option Nat
+  | [] => none
+  | b :: rest =>
+    if byteNat b == 102 then
+      match rest with
+      | [] => none
+      | b2 :: rest2 =>
+        if decide (64 ≤ byteNat b2 ∧ byteNat b2 < 80) then
+          match rest2 with
+          | _ :: m :: _ => some (byteNat m)
+          | _ => none
+        else match rest2 with
+        | m :: _ => some (byteNat m)
+        | _ => none
+    else if decide (64 ≤ byteNat b ∧ byteNat b < 80) then
+      match rest with
+      | _ :: m :: _ => some (byteNat m)
+      | _ => none
+    else match rest with
+    | m :: _ => some (byteNat m)
+    | _ => none
+
+/-- High-byte reason without REX context: no-prefix or 66H-only
+    inputs with a register-direct 8-bit ModRM naming code 4-7 refuse
+    with `.hochbyte`. REX-involved shapes refuse in decode but carry
+    no computed reason here (documented gap, see CUTS). -/
+def hochbyteGrund (op : Nat) (ohneRex : Bool) (m : Nat) :
+    Option AblehnGrund :=
+  if !ohneRex then none
+  else if decide (op = 16 ∨ op = 18 ∨ op = 128 ∨ op = 254) then
+    if m / 64 == 3 then
+      let rm := m % 8
+      let reg := m / 8 % 8
+      if op == 16 || op == 18 then
+        if hochbyteCode rm || hochbyteCode reg then some .hochbyte
+        else none
+      else if hochbyteCode rm then some .hochbyte
+      else none
+    else none
+  else none
+
+/-- No REX byte participates: no prefix at all, or a lone 66H. Only
+    then is the high-byte check computable without extension bits. -/
+def ohneRexForm : List Byte → Bool
+  | [] => true
+  | b :: rest =>
+    if byteNat b == 102 then
+      match rest with
+      | b2 :: _ => !(decide (64 ≤ byteNat b2 ∧ byteNat b2 < 80))
+      | _ => true
+    else !(decide (64 ≤ byteNat b ∧ byteNat b < 80))
+
+/-- Deep reason from the opcode-position byte and the ModRM slot:
+    LOCK, address-size, a REX byte in the opcode slot, a wrong Group
+    extension digit, a REX-free high-byte code, or nothing decodable. -/
+def ablehnGrundTief (bs : List Byte) (op : Nat) : Option AblehnGrund :=
+  if op == 240 then some .lock
+  else if op == 103 then some .adressGroesse
+  else if decide (64 ≤ op ∧ op < 80) then some .einByteIncDec
+  else if decide (op = 128 ∨ op = 129 ∨ op = 131 ∨ op = 254 ∨
+      op = 255) then
+    match modrmAn bs with
+    | none => some .unvollstaendig
+    | some m =>
+      let ext := m / 8 % 8
+      if op == 128 || op == 129 || op == 131 then
+        if ext == 2 || ext == 3 then
+          hochbyteGrund op (ohneRexForm bs) m
+        else some .falscheErweiterung
+      else if ext == 0 || ext == 1 then
+        hochbyteGrund op (ohneRexForm bs) m
+      else some .falscheErweiterung
+  else if decide (op = 16 ∨ op = 17 ∨ op = 18 ∨ op = 19 ∨
+      op = 20 ∨ op = 21 ∨ op = 24 ∨ op = 25 ∨ op = 26 ∨ op = 27 ∨
+      op = 28 ∨ op = 29) then
+    match modrmAn bs with
+    | none => none
+    | some m => hochbyteGrund op (ohneRexForm bs) m
+  else some .keinTrageform
+
+/-- Shallow refusal reason for a byte string. Family opcodes that
+    decode carry none; Group shapes name a wrong extension digit,
+    and REX-free 8-bit high-byte codes name `.hochbyte`. -/
 def ablehnGrund : List Byte → Option AblehnGrund
   | [] => some .unvollstaendig
   | b :: rest =>
@@ -1240,11 +1311,11 @@ def ablehnGrund : List Byte → Option AblehnGrund
         some .doppelPraefix
       else match opcodeNachPraefix (b :: rest) with
       | none => some .unvollstaendig
-      | some op => ablehnGrundOp op
+      | some op => ablehnGrundTief (b :: rest) op
     | _ =>
       match opcodeNachPraefix (b :: rest) with
       | none => some .unvollstaendig
-      | some op => ablehnGrundOp op
+      | some op => ablehnGrundTief (b :: rest) op
 
 /- CUTS:
     Value/flag layer (§1) and register step (§2) stand.
