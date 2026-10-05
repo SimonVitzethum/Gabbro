@@ -1,8 +1,10 @@
 # MUSE-REPORT-1300: Exact review of candidate 1299 (HwTranslate join)
 
 Clone: /home/simon/Dokumente/gabbro-muse/a1300, branch muse/1300 (own files only: this report).
-CANDIDATE: lane 1299, pinned head e2265f20b2d5bfa2c227ae022950970c0319292a, base 234f2728.
-Delivered files reviewed in full: `.tmp/review/author-1299/PATCH.diff` (887 lines),
+
+CANDIDATE: 1299 e2265f20b2d5bfa2c227ae022950970c0319292a
+
+Delivered files reviewed in full (base 234f2728): `.tmp/review/author-1299/PATCH.diff` (887 lines),
 `grammatik/Grammatik/X86/HwTranslate.lean` (768 lines, read completely),
 `OWNER-TASK.md`, `MUSE-REPORT-1299.md`, `BUILD-EVIDENCE.json` (15 completed steps).
 
@@ -56,7 +58,9 @@ Delivered files reviewed in full: `.tmp/review/author-1299/PATCH.diff` (887 line
 verification therefore relies on the author's recorded evidence above, plus complete static review
 of all 768 candidate lines. No content concern was found that would require a re-run to resolve.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1299 meets its task with no weakened guarantee and no fake closure. Merge-eligible as far
 as this review can determine; merger still runs the standard gates (build, axioms, probes, keys).
