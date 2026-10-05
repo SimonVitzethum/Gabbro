@@ -161,6 +161,82 @@ theorem adapterLockFetch_wf (m : HwMaschine) (c : Nat) (u : Unit)
               (by simp only [hff]; simpa using hs)] at h2
             exact adapterLockRmw_wf m c _ m' h2 hwf
 
+/-! ## 4. ExtendedExecution discipline and the single-core bridge.
+
+  The 662 combined decoder tries the accepted `decodeExt` first, so
+  every older row keeps its bytes: where the unified dispatcher
+  accepts, the coherent LOCK fetch refuses. And every admitted
+  fetched step rides the single-core 662 `lockByteschritt` outcome. -/
+
+/-- Where the unified dispatcher accepts, the coherent LOCK fetch
+    refuses: older rows keep their bytes (`decodeExt` first by
+    construction, never shadowed). -/
+theorem hwLockFetch_weicht_aelter (m : HwMaschine) (c : Nat)
+    (e : ExtInstr) (rest : List Byte)
+    (h : decodeExt (geholt (projZustand m c)) = some (e, rest)) :
+    hwLockFetch m c = none := by
+  unfold hwLockFetch
+  have hde : decodeLockExt (geholt (lockMaschineVonHw m c).zu) = none :=
+    decodeLockExt_aelter _ e rest h
+  unfold lockFetch
+  rw [hde]
+
+/-- A parsed-plug successor is a single-core fetched `.ok`: the
+    fetched instruction runs `lockSchrittVoll` on the same projection
+    with the same profiles. -/
+theorem hwLockSchritt_trifft_byteschritt (m : HwMaschine) (c : Nat)
+    (a : LockAnweisung) (rest : List Byte) (m' : HwMaschine)
+    (hf : hwLockFetch m c = some (a, rest))
+    (h : hwLockSchritt m c a = some m') :
+    lockArt (lockByteschritt (lockMaschineVonHw m c) c m.hw
+      (m.bereit c)) = .ok := by
+  have hfe : lockFetch (lockMaschineVonHw m c) = some (a, rest) := hf
+  have e1 : lockByteschritt (lockMaschineVonHw m c) c m.hw (m.bereit c)
+      = lockSchrittVoll a c (lockMaschineVonHw m c) m.hw (m.bereit c) := by
+    unfold lockByteschritt
+    simp only [hfe]
+  unfold hwLockSchritt at h
+  cases h1 : lockSchrittVoll a c (lockMaschineVonHw m c) m.hw
+    (m.bereit c) with
+  | ok lm ev =>
+    rw [e1, h1]
+    rfl
+  | speicherFehler => rw [h1] at h; cases h
+  | udFehler g => rw [h1] at h; cases h
+  | verweigert => rw [h1] at h; cases h
+
+/-- Every admitted fetched step is a single-core fetched `.ok` on the
+    same projection: fetch consistency across the two machines. -/
+theorem hwLockFetchSchritt_trifft_lockByteschritt (m : HwMaschine)
+    (c : Nat) (m' : HwMaschine)
+    (h : hwLockFetchSchritt m c = some m') :
+    lockArt (lockByteschritt (lockMaschineVonHw m c) c m.hw
+      (m.bereit c)) = .ok := by
+  cases hf : hwLockFetch m c with
+  | none =>
+    rw [hwLockFetchSchritt_ohne_fetch m c hf] at h
+    cases h
+  | some pr =>
+    cases pr with
+    | mk a rest =>
+      cases a with
+      | ud g len =>
+        rw [hwLockFetchSchritt_ud m c g len rest hf] at h
+        cases h
+      | ok f len =>
+        cases hff : lockFuss m c f with
+        | none =>
+          rw [hwLockFetchSchritt_ohne_split m c f len rest hf
+            (by simp only [hff])] at h
+          exact hwLockSchritt_trifft_byteschritt m c _ rest m' hf h
+        | some tgt =>
+          by_cases hs : splitSperre tgt = true
+          · rw [hwLockFetchSchritt_split m c f len rest hf tgt hff hs] at h
+            cases h
+          · rw [hwLockFetchSchritt_ohne_split m c f len rest hf
+              (by simp only [hff]; simpa using hs)] at h
+            exact hwLockSchritt_trifft_byteschritt m c _ rest m' hf h
+
 /- CUTS:
      Skeleton only: fetched decode `hwLockFetch` as the 662 fetch on
      the core projection. NOT proved here: the fetched step, split-lock
