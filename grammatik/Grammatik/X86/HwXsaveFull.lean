@@ -66,7 +66,7 @@ def ymmOffsets : List Nat := (List.range 256).map (576 + ·)
 /-- Full footprint for the saved set (`sse`, `avx`): 220 bytes
     without any component, 480 with SSE, 736 with both.
     Parenthesised right-nested so the membership API below reads. -/
-def vollOffsets (sse avx : Bool) : List Nat :=
+def xsaveOffsets (sse avx : Bool) : List Nat :=
   x87Offsets ++ (maskOffsets ++ ((if sse then ctxOffsets else []) ++
     (kopfOffsets ++ (if avx then ymmOffsets else []))))
 
@@ -137,9 +137,9 @@ theorem bedingt_klein_ymm (avx : Bool) (i : Nat)
     simp at h
 
 /-- Every footprint offset fits the 832-byte area. -/
-theorem vollOffsets_klein (sse avx : Bool) (i : Nat)
-    (h : i ∈ vollOffsets sse avx) : i < 832 := by
-  unfold vollOffsets at h
+theorem xsaveOffsets_klein (sse avx : Bool) (i : Nat)
+    (h : i ∈ xsaveOffsets sse avx) : i < 832 := by
+  unfold xsaveOffsets at h
   rcases List.mem_append.mp h with h1 | hrest
   · exact Nat.lt_trans (x87Offsets_klein _ h1) (by decide)
   · rcases List.mem_append.mp hrest with h2 | hrest2
@@ -359,8 +359,8 @@ theorem disj_kopf_rest (avx : Bool) (x : Nat)
     exact nicht_mem_nil _ hm
 
 /-- The full footprint has no duplicate offset. -/
-theorem vollOffsets_nodup (sse avx : Bool) :
-    (vollOffsets sse avx).Nodup := by
+theorem xsaveOffsets_nodup (sse avx : Bool) :
+    (xsaveOffsets sse avx).Nodup := by
   have hDE : (kopfOffsets ++
       (if avx then ymmOffsets else [])).Nodup := by
     apply nodup_append_of _ _ kopfOffsets_nodup
@@ -375,7 +375,7 @@ theorem vollOffsets_nodup (sse avx : Bool) :
         exact List.nodup_nil
     · intro x hx hm
       exact disj_kopf_rest avx x hx hm
-  unfold vollOffsets
+  unfold xsaveOffsets
   apply nodup_append_of _ _ x87Offsets_nodup
   · apply nodup_append_of _ _ maskOffsets_nodup
     · by_cases hsse : sse = true
@@ -394,83 +394,83 @@ theorem vollOffsets_nodup (sse avx : Bool) :
     exact disj_x87_rest sse avx x hx hm
 
 /-- x87 low offsets are in the footprint. -/
-theorem vollOffsets_x87_lo (t : Nat) (ht : t < 24) (sse avx : Bool) :
-    t ∈ vollOffsets sse avx := by
+theorem xsaveOffsets_x87_lo (t : Nat) (ht : t < 24) (sse avx : Bool) :
+    t ∈ xsaveOffsets sse avx := by
   have h1 : t ∈ x87Offsets := by
     unfold x87Offsets
     exact List.mem_append.mpr
       (Or.inl (List.mem_range.mpr ht))
-  unfold vollOffsets
+  unfold xsaveOffsets
   exact List.mem_append.mpr (Or.inl h1)
 
 /-- x87 high offsets are in the footprint. -/
-theorem vollOffsets_x87_hi (t : Nat) (ht : t < 128) (sse avx : Bool) :
-    32 + t ∈ vollOffsets sse avx := by
+theorem xsaveOffsets_x87_hi (t : Nat) (ht : t < 128) (sse avx : Bool) :
+    32 + t ∈ xsaveOffsets sse avx := by
   have h1 : 32 + t ∈ x87Offsets := by
     unfold x87Offsets
     exact List.mem_append.mpr (Or.inr (List.mem_map.mpr
       ⟨t, List.mem_range.mpr ht, rfl⟩))
-  unfold vollOffsets
+  unfold xsaveOffsets
   exact List.mem_append.mpr (Or.inl h1)
 
 /-- Mask offsets are in the footprint. -/
-theorem vollOffsets_maske (j : Nat) (hj : j < 4) (sse avx : Bool) :
-    28 + j ∈ vollOffsets sse avx := by
+theorem xsaveOffsets_maske (j : Nat) (hj : j < 4) (sse avx : Bool) :
+    28 + j ∈ xsaveOffsets sse avx := by
   have h1 : 28 + j ∈ maskOffsets :=
     List.mem_map.mpr ⟨j, List.mem_range.mpr hj, rfl⟩
-  unfold vollOffsets
+  unfold xsaveOffsets
   exact List.mem_append.mpr
     (Or.inr (List.mem_append.mpr (Or.inl h1)))
 
 /-- MXCSR offsets are in the footprint where SSE is saved. -/
-theorem vollOffsets_mxcsr (j : Nat) (hj : j < 4) (hs : sse = true)
+theorem xsaveOffsets_mxcsr (j : Nat) (hj : j < 4) (hs : sse = true)
     (avx : Bool) :
-    24 + j ∈ vollOffsets sse avx := by
+    24 + j ∈ xsaveOffsets sse avx := by
   have e : (if sse then ctxOffsets else []) = ctxOffsets :=
     if_pos hs
   have h1 : 24 + j ∈ (if sse then ctxOffsets else []) := by
     rw [e]
     exact ctxOffsets_mxcsr j hj
-  unfold vollOffsets
+  unfold xsaveOffsets
   exact List.mem_append.mpr
     (Or.inr (List.mem_append.mpr (Or.inr (List.mem_append.mpr
       (Or.inl h1)))))
 
 /-- XMM slot offsets are in the footprint where SSE is saved. -/
-theorem vollOffsets_xmm (n j : Nat) (hn : n < 16) (hj : j < 16)
+theorem xsaveOffsets_xmm (n j : Nat) (hn : n < 16) (hj : j < 16)
     (hs : sse = true) (avx : Bool) :
-    160 + 16 * n + j ∈ vollOffsets sse avx := by
+    160 + 16 * n + j ∈ xsaveOffsets sse avx := by
   have e : (if sse then ctxOffsets else []) = ctxOffsets :=
     if_pos hs
   have h1 : 160 + 16 * n + j ∈ (if sse then ctxOffsets else []) := by
     rw [e]
     exact ctxOffsets_xmm n j hn hj
-  unfold vollOffsets
+  unfold xsaveOffsets
   exact List.mem_append.mpr
     (Or.inr (List.mem_append.mpr (Or.inr (List.mem_append.mpr
       (Or.inl h1)))))
 
 /-- Header offsets are in the footprint. -/
-theorem vollOffsets_kopf (t : Nat) (ht : t < 64) (sse avx : Bool) :
-    512 + t ∈ vollOffsets sse avx := by
+theorem xsaveOffsets_kopf (t : Nat) (ht : t < 64) (sse avx : Bool) :
+    512 + t ∈ xsaveOffsets sse avx := by
   have h1 : 512 + t ∈ kopfOffsets :=
     List.mem_map.mpr ⟨t, List.mem_range.mpr ht, rfl⟩
-  unfold vollOffsets
+  unfold xsaveOffsets
   exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inr
     (List.mem_append.mpr (Or.inr (List.mem_append.mpr
       (Or.inl h1)))))))
 
 /-- YMM slot offsets are in the footprint where AVX is saved. -/
-theorem vollOffsets_ymm (n j : Nat) (hn : n < 16) (hj : j < 16)
+theorem xsaveOffsets_ymm (n j : Nat) (hn : n < 16) (hj : j < 16)
     (sse : Bool) (ha : avx = true) :
-    576 + 16 * n + j ∈ vollOffsets sse avx := by
+    576 + 16 * n + j ∈ xsaveOffsets sse avx := by
   have e : (if avx then ymmOffsets else []) = ymmOffsets :=
     if_pos ha
   have h1 : 576 + 16 * n + j ∈ (if avx then ymmOffsets else []) := by
     rw [e]
     exact List.mem_map.mpr ⟨16 * n + j, List.mem_range.mpr (by omega),
       by omega⟩
-  unfold vollOffsets
+  unfold xsaveOffsets
   exact List.mem_append.mpr (Or.inr (List.mem_append.mpr (Or.inr
     (List.mem_append.mpr (Or.inr (List.mem_append.mpr
       (Or.inr h1)))))))
@@ -486,7 +486,7 @@ theorem vollOffsets_ymm (n j : Nat) (hn : n < 16) (hj : j < 16)
   16 upper-half bytes). Total standard SSE+AVX area: 832 bytes. -/
 
 /-- Full standard area length with SSE and AVX enabled. -/
-def vollLaenge : Nat := 832
+def xsaveLaenge : Nat := 832
 
 /-- Header image byte: BV low word, then the (zero) compaction word,
     then zero padding. -/
@@ -522,7 +522,7 @@ def ymmByteAt (y : YmmDatei) (i : Nat) : Byte :=
 
 /-- The full area image: x87 opaque bytes, legacy MXCSR/XMM via the
     accepted `ctxByte`, mask bytes, zero gaps, header, YMM. -/
-def vollByte (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+def xsaveByte (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) : Nat → Byte :=
   fun i =>
   if i < 24 then b i
@@ -536,19 +536,19 @@ def vollByte (k : FPKontext) (x : XmmDatei) (b : X87Bild)
   else BitVec.ofNat 8 0
 
 /-- Image at an x87 low offset is the opaque byte. -/
-theorem vollByte_x87_lo (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveByte_x87_lo (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (t : Nat)
     (ht : t < 24) :
-    vollByte k x b mm h y t = b t := by
-  unfold vollByte
+    xsaveByte k x b mm h y t = b t := by
+  unfold xsaveByte
   rw [if_pos ht]
 
 /-- Image at an x87 high offset is the opaque byte. -/
-theorem vollByte_x87_hi (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveByte_x87_hi (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (t : Nat)
     (ht : t < 128) :
-    vollByte k x b mm h y (32 + t) = b (24 + t) := by
-  unfold vollByte
+    xsaveByte k x b mm h y (32 + t) = b (24 + t) := by
+  unfold xsaveByte
   have e1 : ¬ (32 + t < 24) := by omega
   have e2 : ¬ (32 + t < 28) := by omega
   have e3 : ¬ (32 + t < 32) := by omega
@@ -557,11 +557,11 @@ theorem vollByte_x87_hi (k : FPKontext) (x : XmmDatei) (b : X87Bild)
   rw [if_neg e1, if_neg e2, if_neg e3, if_pos e4, e5]
 
 /-- Image at a mask offset is the mask byte. -/
-theorem vollByte_maske (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveByte_maske (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (j : Nat)
     (hj : j < 4) :
-    vollByte k x b mm h y (28 + j) = mxcsrByte mm j := by
-  unfold vollByte
+    xsaveByte k x b mm h y (28 + j) = mxcsrByte mm j := by
+  unfold xsaveByte
   have e1 : ¬ (28 + j < 24) := by omega
   have e2 : ¬ (28 + j < 28) := by omega
   have e3 : 28 + j < 32 := by omega
@@ -569,24 +569,24 @@ theorem vollByte_maske (k : FPKontext) (x : XmmDatei) (b : X87Bild)
   rw [if_neg e1, if_neg e2, if_pos e3, e4]
 
 /-- Image at an MXCSR offset is the control byte (legacy path). -/
-theorem vollByte_mxcsr (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveByte_mxcsr (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (j : Nat)
     (hj : j < 4) :
-    vollByte k x b mm h y (24 + j) = mxcsrByte k.mxcsr j := by
-  unfold vollByte
+    xsaveByte k x b mm h y (24 + j) = mxcsrByte k.mxcsr j := by
+  unfold xsaveByte
   have e1 : ¬ (24 + j < 24) := by omega
   have e2 : 24 + j < 28 := by omega
   rw [if_neg e1, if_pos e2]
   exact ctxByte_mxcsr k x j hj
 
 /-- Image at an XMM low-half offset (legacy path). -/
-theorem vollByte_xmm_lo (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveByte_xmm_lo (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (r : XmmReg)
     (j : Nat) (hj : j < 8) :
-    vollByte k x b mm h y (160 + 16 * xmmIdx r + j) =
+    xsaveByte k x b mm h y (160 + 16 * xmmIdx r + j) =
       wortByte (vLo (x r)) j := by
   have hn := xmmIdx_klein r
-  unfold vollByte
+  unfold xsaveByte
   have e1 : ¬ (160 + 16 * xmmIdx r + j < 24) := by omega
   have e2 : ¬ (160 + 16 * xmmIdx r + j < 28) := by omega
   have e3 : ¬ (160 + 16 * xmmIdx r + j < 32) := by omega
@@ -596,13 +596,13 @@ theorem vollByte_xmm_lo (k : FPKontext) (x : XmmDatei) (b : X87Bild)
   exact ctxByte_xmm_lo k x r j hj
 
 /-- Image at an XMM high-half offset (legacy path). -/
-theorem vollByte_xmm_hi (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveByte_xmm_hi (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (r : XmmReg)
     (j : Nat) (hj : j < 8) :
-    vollByte k x b mm h y (168 + 16 * xmmIdx r + j) =
+    xsaveByte k x b mm h y (168 + 16 * xmmIdx r + j) =
       wortByte (vHi (x r)) j := by
   have hn := xmmIdx_klein r
-  unfold vollByte
+  unfold xsaveByte
   have e1 : ¬ (168 + 16 * xmmIdx r + j < 24) := by omega
   have e2 : ¬ (168 + 16 * xmmIdx r + j < 28) := by omega
   have e3 : ¬ (168 + 16 * xmmIdx r + j < 32) := by omega
@@ -612,11 +612,11 @@ theorem vollByte_xmm_hi (k : FPKontext) (x : XmmDatei) (b : X87Bild)
   exact ctxByte_xmm_hi k x r j hj
 
 /-- Image at a header offset is the header byte. -/
-theorem vollByte_kopf (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveByte_kopf (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (t : Nat)
     (ht : t < 64) :
-    vollByte k x b mm h y (512 + t) = kopfByte h t := by
-  unfold vollByte
+    xsaveByte k x b mm h y (512 + t) = kopfByte h t := by
+  unfold xsaveByte
   have e1 : ¬ (512 + t < 24) := by omega
   have e2 : ¬ (512 + t < 28) := by omega
   have e3 : ¬ (512 + t < 32) := by omega
@@ -629,13 +629,13 @@ theorem vollByte_kopf (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     if_neg e6, if_pos e7, e8]
 
 /-- Image at a YMM low-half offset. -/
-theorem vollByte_ymm_lo (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveByte_ymm_lo (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (r : XmmReg)
     (j : Nat) (hj : j < 8) :
-    vollByte k x b mm h y (576 + 16 * xmmIdx r + j) =
+    xsaveByte k x b mm h y (576 + 16 * xmmIdx r + j) =
       wortByte (vLo (y r)) j := by
   have hn := xmmIdx_klein r
-  unfold vollByte
+  unfold xsaveByte
   have e1 : ¬ (576 + 16 * xmmIdx r + j < 24) := by omega
   have e2 : ¬ (576 + 16 * xmmIdx r + j < 28) := by omega
   have e3 : ¬ (576 + 16 * xmmIdx r + j < 32) := by omega
@@ -653,16 +653,16 @@ theorem vollByte_ymm_lo (k : FPKontext) (x : XmmDatei) (b : X87Bild)
   simp [xmmVonIdx_idx, hj]
 
 /-- Image at a YMM high-half offset. -/
-theorem vollByte_ymm_hi (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveByte_ymm_hi (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (r : XmmReg)
     (j : Nat) (hj : j < 8) :
-    vollByte k x b mm h y (584 + 16 * xmmIdx r + j) =
+    xsaveByte k x b mm h y (584 + 16 * xmmIdx r + j) =
       wortByte (vHi (y r)) j := by
   have e : 584 + 16 * xmmIdx r + j = 576 + 16 * xmmIdx r + (8 + j) := by
     omega
   have hn := xmmIdx_klein r
   rw [e]
-  unfold vollByte
+  unfold xsaveByte
   have e1 : ¬ (576 + 16 * xmmIdx r + (8 + j) < 24) := by omega
   have e2 : ¬ (576 + 16 * xmmIdx r + (8 + j) < 28) := by omega
   have e3 : ¬ (576 + 16 * xmmIdx r + (8 + j) < 32) := by omega
@@ -691,7 +691,7 @@ def x87AreaOff (t : Nat) : Nat := if t < 24 then t else 32 + (t - 24)
 /-- Decoded full state: legacy components share the accepted
     `fxDekodiere` shape; x87 is the opaque copy; mask, header and
     YMM decode from their fields. -/
-structure VollBild where
+structure XsaveBild where
   mxcsr : MXCSR
   xmm : XmmDatei
   x87img : X87Bild
@@ -700,7 +700,7 @@ structure VollBild where
   ymm : YmmDatei
 
 /-- Decode a full area image. -/
-def vollDekodiere (f : Nat → Byte) : VollBild :=
+def xsaveDekodiere (f : Nat → Byte) : XsaveBild :=
   ⟨mxcsrAusBytes (fun i => f (24 + i)),
    fun r => vecJoin
      (bytesWort (fun j : Fin 8 => f (160 + 16 * xmmIdx r + j.val)))
@@ -727,44 +727,44 @@ theorem x87AreaOff_hi (t : Nat) (ht : ¬ t < 24) :
 
 /-- Opaque x87 round trip: decoding the saved image recovers every
     opaque byte. -/
-theorem vollRundlauf_x87 (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+theorem xsaveRundlauf_x87 (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (t : Nat)
     (ht : t < 152) :
-    (vollDekodiere (vollByte k x b mm h y)).x87img t = b t := by
-  unfold vollDekodiere
+    (xsaveDekodiere (xsaveByte k x b mm h y)).x87img t = b t := by
+  unfold xsaveDekodiere
   simp only
   by_cases hl : t < 24
   · rw [x87AreaOff_lo t hl]
-    exact vollByte_x87_lo k x b mm h y t hl
+    exact xsaveByte_x87_lo k x b mm h y t hl
   · rw [x87AreaOff_hi t hl]
     have ht24 : t - 24 < 128 := by omega
-    have hrw := vollByte_x87_hi k x b mm h y (t - 24) ht24
+    have hrw := xsaveByte_x87_hi k x b mm h y (t - 24) ht24
     rw [hrw]
     have : 24 + (t - 24) = t := by omega
     rw [this]
 
 /-- Mask round trip (the accepted MXCSR image lemmas, reused). -/
-theorem vollRundlauf_maske (k : FPKontext) (x : XmmDatei)
+theorem xsaveRundlauf_maske (k : FPKontext) (x : XmmDatei)
     (b : X87Bild) (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) :
-    (vollDekodiere (vollByte k x b mm h y)).maske = mm := by
-  unfold vollDekodiere
+    (xsaveDekodiere (xsaveByte k x b mm h y)).maske = mm := by
+  unfold xsaveDekodiere
   simp only
   have hkong := mxcsrAusBytes_kongr _ _
-    (fun i hi => vollByte_maske k x b mm h y i hi)
+    (fun i hi => xsaveByte_maske k x b mm h y i hi)
   rw [hkong]
   exact mxcsr_rundlauf mm
 
 /-- Header round trip: BV and compaction word decode back. -/
-theorem vollRundlauf_kopf (k : FPKontext) (x : XmmDatei)
+theorem xsaveRundlauf_kopf (k : FPKontext) (x : XmmDatei)
     (b : X87Bild) (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) :
-    (vollDekodiere (vollByte k x b mm h y)).kopf = h := by
+    (xsaveDekodiere (xsaveByte k x b mm h y)).kopf = h := by
   have hbv : bytesWort (fun j : Fin 8 =>
-      vollByte k x b mm h y (512 + j.val)) = h.bv := by
-    have heq : (fun j : Fin 8 => vollByte k x b mm h y (512 + j.val)) =
+      xsaveByte k x b mm h y (512 + j.val)) = h.bv := by
+    have heq : (fun j : Fin 8 => xsaveByte k x b mm h y (512 + j.val)) =
         (fun j : Fin 8 => kopfByte h j.val) := by
       funext j
       have ht64 : j.val < 64 := by have h8 := j.isLt; omega
-      exact vollByte_kopf k x b mm h y j.val ht64
+      exact xsaveByte_kopf k x b mm h y j.val ht64
     rw [heq]
     have heq2 : (fun j : Fin 8 => kopfByte h j.val) =
         (fun j : Fin 8 => wortByte h.bv j.val) := by
@@ -773,14 +773,14 @@ theorem vollRundlauf_kopf (k : FPKontext) (x : XmmDatei)
     rw [heq2]
     exact bytesWort_wortByte h.bv
   have hcomp : bytesWort (fun j : Fin 8 =>
-      vollByte k x b mm h y (520 + j.val)) = h.comp := by
-    have heq : (fun j : Fin 8 => vollByte k x b mm h y (520 + j.val)) =
+      xsaveByte k x b mm h y (520 + j.val)) = h.comp := by
+    have heq : (fun j : Fin 8 => xsaveByte k x b mm h y (520 + j.val)) =
         (fun j : Fin 8 => kopfByte h (8 + j.val)) := by
       funext j
       have e : 520 + j.val = 512 + (8 + j.val) := by omega
       have ht64 : 8 + j.val < 64 := by have h8 := j.isLt; omega
       rw [e]
-      exact vollByte_kopf k x b mm h y (8 + j.val) ht64
+      exact xsaveByte_kopf k x b mm h y (8 + j.val) ht64
     rw [heq]
     have heq2 : (fun j : Fin 8 => kopfByte h (8 + j.val)) =
         (fun j : Fin 8 => wortByte h.comp j.val) := by
@@ -788,7 +788,7 @@ theorem vollRundlauf_kopf (k : FPKontext) (x : XmmDatei)
       exact kopfByte_hi h j.val j.isLt
     rw [heq2]
     exact bytesWort_wortByte h.comp
-  unfold vollDekodiere
+  unfold xsaveDekodiere
   simp only
   cases h with
   | mk bv comp =>
@@ -796,80 +796,80 @@ theorem vollRundlauf_kopf (k : FPKontext) (x : XmmDatei)
     rw [hbv, hcomp]
 
 /-- Legacy MXCSR/XMM round trip (the accepted pure identity). -/
-theorem vollRundlauf_legacy (k : FPKontext) (x : XmmDatei)
+theorem xsaveRundlauf_legacy (k : FPKontext) (x : XmmDatei)
     (b : X87Bild) (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) :
-    (vollDekodiere (vollByte k x b mm h y)).mxcsr = k.mxcsr ∧
+    (xsaveDekodiere (xsaveByte k x b mm h y)).mxcsr = k.mxcsr ∧
       ∀ r : XmmReg,
-        (vollDekodiere (vollByte k x b mm h y)).xmm r = x r := by
+        (xsaveDekodiere (xsaveByte k x b mm h y)).xmm r = x r := by
   refine ⟨?_, ?_⟩
-  · unfold vollDekodiere
+  · unfold xsaveDekodiere
     simp only
     have hkong := mxcsrAusBytes_kongr _ _
-      (fun i hi => vollByte_mxcsr k x b mm h y i hi)
+      (fun i hi => xsaveByte_mxcsr k x b mm h y i hi)
     rw [hkong]
     exact mxcsr_rundlauf k.mxcsr
   · intro r
-    unfold vollDekodiere
+    unfold xsaveDekodiere
     simp only
-    have hlo : (fun j : Fin 8 => vollByte k x b mm h y
+    have hlo : (fun j : Fin 8 => xsaveByte k x b mm h y
         (160 + 16 * xmmIdx r + j.val)) =
         (fun j : Fin 8 => wortByte (vLo (x r)) j.val) := by
       funext j
-      exact vollByte_xmm_lo k x b mm h y r j.val j.isLt
-    have hhi : (fun j : Fin 8 => vollByte k x b mm h y
+      exact xsaveByte_xmm_lo k x b mm h y r j.val j.isLt
+    have hhi : (fun j : Fin 8 => xsaveByte k x b mm h y
         (168 + 16 * xmmIdx r + j.val)) =
         (fun j : Fin 8 => wortByte (vHi (x r)) j.val) := by
       funext j
-      exact vollByte_xmm_hi k x b mm h y r j.val j.isLt
+      exact xsaveByte_xmm_hi k x b mm h y r j.val j.isLt
     rw [hlo, hhi, bytesWort_wortByte, bytesWort_wortByte]
     exact vecJoin_split (x r)
 
 /-- YMM round trip: decoding the saved upper halves recovers them. -/
-theorem vollRundlauf_ymm (k : FPKontext) (x : XmmDatei)
+theorem xsaveRundlauf_ymm (k : FPKontext) (x : XmmDatei)
     (b : X87Bild) (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei)
     (r : XmmReg) :
-    (vollDekodiere (vollByte k x b mm h y)).ymm r = y r := by
-  unfold vollDekodiere
+    (xsaveDekodiere (xsaveByte k x b mm h y)).ymm r = y r := by
+  unfold xsaveDekodiere
   simp only
-  have hlo : (fun j : Fin 8 => vollByte k x b mm h y
+  have hlo : (fun j : Fin 8 => xsaveByte k x b mm h y
       (576 + 16 * xmmIdx r + j.val)) =
       (fun j : Fin 8 => wortByte (vLo (y r)) j.val) := by
     funext j
-    exact vollByte_ymm_lo k x b mm h y r j.val j.isLt
-  have hhi : (fun j : Fin 8 => vollByte k x b mm h y
+    exact xsaveByte_ymm_lo k x b mm h y r j.val j.isLt
+  have hhi : (fun j : Fin 8 => xsaveByte k x b mm h y
       (584 + 16 * xmmIdx r + j.val)) =
       (fun j : Fin 8 => wortByte (vHi (y r)) j.val) := by
     funext j
-    exact vollByte_ymm_hi k x b mm h y r j.val j.isLt
+    exact xsaveByte_ymm_hi k x b mm h y r j.val j.isLt
   rw [hlo, hhi, bytesWort_wortByte, bytesWort_wortByte]
   exact vecJoin_split (y r)
 
 /-- MXCSR decoding depends only on the footprint bytes
     where SSE is saved. -/
-theorem vollKongr_mxcsr (f g : Nat → Byte) (sse avx : Bool)
+theorem xsaveKongr_mxcsr (f g : Nat → Byte) (sse avx : Bool)
     (hs : sse = true)
-    (h : ∀ i ∈ vollOffsets sse avx, f i = g i) :
-    (vollDekodiere f).mxcsr = (vollDekodiere g).mxcsr := by
-  unfold vollDekodiere
+    (h : ∀ i ∈ xsaveOffsets sse avx, f i = g i) :
+    (xsaveDekodiere f).mxcsr = (xsaveDekodiere g).mxcsr := by
+  unfold xsaveDekodiere
   simp only
   apply mxcsrAusBytes_kongr
   intro i hi
-  exact h (24 + i) (vollOffsets_mxcsr i hi hs avx)
+  exact h (24 + i) (xsaveOffsets_mxcsr i hi hs avx)
 
 /-- XMM decoding depends only on the footprint bytes
     where SSE is saved. -/
-theorem vollKongr_xmm (f g : Nat → Byte) (sse avx : Bool)
+theorem xsaveKongr_xmm (f g : Nat → Byte) (sse avx : Bool)
     (hs : sse = true)
-    (h : ∀ i ∈ vollOffsets sse avx, f i = g i) (r : XmmReg) :
-    (vollDekodiere f).xmm r = (vollDekodiere g).xmm r := by
-  unfold vollDekodiere
+    (h : ∀ i ∈ xsaveOffsets sse avx, f i = g i) (r : XmmReg) :
+    (xsaveDekodiere f).xmm r = (xsaveDekodiere g).xmm r := by
+  unfold xsaveDekodiere
   simp only
   have hn := xmmIdx_klein r
   have hlo : (fun j : Fin 8 => f (160 + 16 * xmmIdx r + j.val)) =
       (fun j : Fin 8 => g (160 + 16 * xmmIdx r + j.val)) := by
     funext j
     have hj16 : j.val < 16 := by have h8 := j.isLt; omega
-    exact h _ (vollOffsets_xmm (xmmIdx r) j.val hn hj16 hs avx)
+    exact h _ (xsaveOffsets_xmm (xmmIdx r) j.val hn hj16 hs avx)
   have hhi : (fun j : Fin 8 => f (168 + 16 * xmmIdx r + j.val)) =
       (fun j : Fin 8 => g (168 + 16 * xmmIdx r + j.val)) := by
     funext j
@@ -877,66 +877,66 @@ theorem vollKongr_xmm (f g : Nat → Byte) (sse avx : Bool)
     have e : 168 + 16 * xmmIdx r + j.val =
         160 + 16 * xmmIdx r + (8 + j.val) := by omega
     rw [e]
-    exact h _ (vollOffsets_xmm (xmmIdx r) (8 + j.val) hn hj16 hs avx)
+    exact h _ (xsaveOffsets_xmm (xmmIdx r) (8 + j.val) hn hj16 hs avx)
   rw [hlo, hhi]
 
 /-- x87 decoding depends only on the footprint bytes (always saved). -/
-theorem vollKongr_x87 (f g : Nat → Byte) (sse avx : Bool)
-    (h : ∀ i ∈ vollOffsets sse avx, f i = g i) (t : Nat)
+theorem xsaveKongr_x87 (f g : Nat → Byte) (sse avx : Bool)
+    (h : ∀ i ∈ xsaveOffsets sse avx, f i = g i) (t : Nat)
     (ht : t < 152) :
-    (vollDekodiere f).x87img t = (vollDekodiere g).x87img t := by
-  unfold vollDekodiere
+    (xsaveDekodiere f).x87img t = (xsaveDekodiere g).x87img t := by
+  unfold xsaveDekodiere
   simp only
   by_cases hl : t < 24
   · rw [x87AreaOff_lo t hl]
-    exact h t (vollOffsets_x87_lo t hl sse avx)
+    exact h t (xsaveOffsets_x87_lo t hl sse avx)
   · rw [x87AreaOff_hi t hl]
-    exact h _ (vollOffsets_x87_hi (t - 24) (by omega) sse avx)
+    exact h _ (xsaveOffsets_x87_hi (t - 24) (by omega) sse avx)
 
 /-- Mask decoding depends only on the footprint bytes. -/
-theorem vollKongr_maske (f g : Nat → Byte) (sse avx : Bool)
-    (h : ∀ i ∈ vollOffsets sse avx, f i = g i) :
-    (vollDekodiere f).maske = (vollDekodiere g).maske := by
-  unfold vollDekodiere
+theorem xsaveKongr_maske (f g : Nat → Byte) (sse avx : Bool)
+    (h : ∀ i ∈ xsaveOffsets sse avx, f i = g i) :
+    (xsaveDekodiere f).maske = (xsaveDekodiere g).maske := by
+  unfold xsaveDekodiere
   simp only
   apply mxcsrAusBytes_kongr
   intro i hi
-  exact h (28 + i) (vollOffsets_maske i hi sse avx)
+  exact h (28 + i) (xsaveOffsets_maske i hi sse avx)
 
 /-- Header decoding depends only on the footprint bytes. -/
-theorem vollKongr_kopf (f g : Nat → Byte) (sse avx : Bool)
-    (h : ∀ i ∈ vollOffsets sse avx, f i = g i) :
-    (vollDekodiere f).kopf = (vollDekodiere g).kopf := by
-  unfold vollDekodiere
+theorem xsaveKongr_kopf (f g : Nat → Byte) (sse avx : Bool)
+    (h : ∀ i ∈ xsaveOffsets sse avx, f i = g i) :
+    (xsaveDekodiere f).kopf = (xsaveDekodiere g).kopf := by
+  unfold xsaveDekodiere
   simp only
   have hbv : (fun j : Fin 8 => f (512 + j.val)) =
       (fun j : Fin 8 => g (512 + j.val)) := by
     funext j
     have ht64 : j.val < 64 := by have h8 := j.isLt; omega
-    exact h _ (vollOffsets_kopf j.val ht64 sse avx)
+    exact h _ (xsaveOffsets_kopf j.val ht64 sse avx)
   have hcomp : (fun j : Fin 8 => f (520 + j.val)) =
       (fun j : Fin 8 => g (520 + j.val)) := by
     funext j
     have e : 520 + j.val = 512 + (8 + j.val) := by omega
     have ht64 : 8 + j.val < 64 := by have h8 := j.isLt; omega
     rw [e]
-    exact h _ (vollOffsets_kopf (8 + j.val) ht64 sse avx)
+    exact h _ (xsaveOffsets_kopf (8 + j.val) ht64 sse avx)
   rw [hbv, hcomp]
 
 /-- YMM decoding depends only on the footprint bytes
     where AVX is saved. -/
-theorem vollKongr_ymm (f g : Nat → Byte) (sse avx : Bool)
+theorem xsaveKongr_ymm (f g : Nat → Byte) (sse avx : Bool)
     (ha : avx = true)
-    (h : ∀ i ∈ vollOffsets sse avx, f i = g i) (r : XmmReg) :
-    (vollDekodiere f).ymm r = (vollDekodiere g).ymm r := by
-  unfold vollDekodiere
+    (h : ∀ i ∈ xsaveOffsets sse avx, f i = g i) (r : XmmReg) :
+    (xsaveDekodiere f).ymm r = (xsaveDekodiere g).ymm r := by
+  unfold xsaveDekodiere
   simp only
   have hn := xmmIdx_klein r
   have hlo : (fun j : Fin 8 => f (576 + 16 * xmmIdx r + j.val)) =
       (fun j : Fin 8 => g (576 + 16 * xmmIdx r + j.val)) := by
     funext j
     have hj16 : j.val < 16 := by have h8 := j.isLt; omega
-    exact h _ (vollOffsets_ymm (xmmIdx r) j.val hn hj16 sse ha)
+    exact h _ (xsaveOffsets_ymm (xmmIdx r) j.val hn hj16 sse ha)
   have hhi : (fun j : Fin 8 => f (584 + 16 * xmmIdx r + j.val)) =
       (fun j : Fin 8 => g (584 + 16 * xmmIdx r + j.val)) := by
     funext j
@@ -944,7 +944,7 @@ theorem vollKongr_ymm (f g : Nat → Byte) (sse avx : Bool)
     have e : 584 + 16 * xmmIdx r + j.val =
         576 + 16 * xmmIdx r + (8 + j.val) := by omega
     rw [e]
-    exact h _ (vollOffsets_ymm (xmmIdx r) (8 + j.val) hn hj16 sse ha)
+    exact h _ (xsaveOffsets_ymm (xmmIdx r) (8 + j.val) hn hj16 sse ha)
   rw [hlo, hhi]
 
 /-! ## 3. Machine state, save entries, and the TSO bridge.
@@ -956,56 +956,56 @@ theorem vollKongr_ymm (f g : Nat → Byte) (sse avx : Bool)
 
 /-- Full XSAVE machine: coherent YMM machine plus per-core opaque
     x87 image and mask value. -/
-structure VollMaschine where
+structure XsaveMaschine where
   ym : YmmMaschine
   x87 : Nat → X87Bild
   maske : Nat → BitVec 32
 
 /-- The coherent machine inside the full state. -/
-def vollHw (v : VollMaschine) : HwMaschine := v.ym.hw
+def xsaveHw (v : XsaveMaschine) : HwMaschine := v.ym.hw
 
 /-- Well-formedness is the coherent well-formedness. -/
-def VollWf (v : VollMaschine) : Prop := HwWf v.ym.hw
+def XsaveWf (v : XsaveMaschine) : Prop := HwWf v.ym.hw
 
 /-- Memory/buffer update from a TSO successor: core data, x87
     images and masks are untouched. -/
-def setVollTso (v : VollMaschine) (s : TSOZustand) : VollMaschine :=
+def setXsaveTso (v : XsaveMaschine) (s : TSOZustand) : XsaveMaschine :=
   { v with ym := ⟨setTso v.ym.hw s, v.ym.ober⟩ }
 
 /-- The TSO view of a memory/buffer update is the successor state. -/
-theorem setVollTso_ansicht (v : VollMaschine) (s : TSOZustand) :
-    tsoAnsicht (vollHw (setVollTso v s)) = s := by
-  unfold vollHw setVollTso
+theorem setXsaveTso_ansicht (v : XsaveMaschine) (s : TSOZustand) :
+    tsoAnsicht (xsaveHw (setXsaveTso v s)) = s := by
+  unfold xsaveHw setXsaveTso
   simp only
   exact setTso_ansicht v.ym.hw s
 
 /-- A save changes no core data. -/
-theorem setVollTso_kern (v : VollMaschine) (s : TSOZustand)
+theorem setXsaveTso_kern (v : XsaveMaschine) (s : TSOZustand)
     (c : Nat) :
-    (vollHw (setVollTso v s)).kerne c = (vollHw v).kerne c := rfl
+    (xsaveHw (setXsaveTso v s)).kerne c = (xsaveHw v).kerne c := rfl
 
 /-- A save keeps the x87 images. -/
-theorem setVollTso_x87 (v : VollMaschine) (s : TSOZustand) :
-    (setVollTso v s).x87 = v.x87 := rfl
+theorem setXsaveTso_x87 (v : XsaveMaschine) (s : TSOZustand) :
+    (setXsaveTso v s).x87 = v.x87 := rfl
 
 /-- A save keeps the masks. -/
-theorem setVollTso_maske (v : VollMaschine) (s : TSOZustand) :
-    (setVollTso v s).maske = v.maske := rfl
+theorem setXsaveTso_maske (v : XsaveMaschine) (s : TSOZustand) :
+    (setXsaveTso v s).maske = v.maske := rfl
 
 /-- A save keeps the YMM upper files. -/
-theorem setVollTso_ober (v : VollMaschine) (s : TSOZustand) :
-    (setVollTso v s).ym.ober = v.ym.ober := rfl
+theorem setXsaveTso_ober (v : XsaveMaschine) (s : TSOZustand) :
+    (setXsaveTso v s).ym.ober = v.ym.ober := rfl
 
 /-- Memory/buffer updates preserve well-formedness. -/
-theorem setVollTso_wf (v : VollMaschine) (s : TSOZustand)
-    (h : VollWf v) : VollWf (setVollTso v s) :=
+theorem setXsaveTso_wf (v : XsaveMaschine) (s : TSOZustand)
+    (h : XsaveWf v) : XsaveWf (setXsaveTso v s) :=
   setTso_wf v.ym.hw s h
 
 /-- Install restored components on core `c`: FP context, XMM file,
     YMM upper file and the opaque x87 image. Masks are never
     installed (silicon leaves MXCSR_MASK unchanged on restore). -/
-def setVollKern (v : VollMaschine) (c : Nat) (k : FPKontext)
-    (x : XmmDatei) (y : YmmDatei) (b : X87Bild) : VollMaschine :=
+def setXsaveKern (v : XsaveMaschine) (c : Nat) (k : FPKontext)
+    (x : XmmDatei) (y : YmmDatei) (b : X87Bild) : XsaveMaschine :=
   ⟨⟨setKernDaten v.ym.hw c
       ⟨(v.ym.hw.kerne c).register, (v.ym.hw.kerne c).flags,
         (v.ym.hw.kerne c).rip, x, k⟩,
@@ -1013,57 +1013,57 @@ def setVollKern (v : VollMaschine) (c : Nat) (k : FPKontext)
    fun d => if d = c then b else v.x87 d, v.maske⟩
 
 /-- Installed core answers the restored control word. -/
-theorem setVollKern_fp (v : VollMaschine) (c : Nat) (k : FPKontext)
+theorem setXsaveKern_fp (v : XsaveMaschine) (c : Nat) (k : FPKontext)
     (x : XmmDatei) (y : YmmDatei) (b : X87Bild) :
-    (((vollHw (setVollKern v c k x y b)).kerne c).fp).mxcsr =
+    (((xsaveHw (setXsaveKern v c k x y b)).kerne c).fp).mxcsr =
       k.mxcsr := by
-  unfold vollHw setVollKern
+  unfold xsaveHw setXsaveKern
   rw [setKernDaten_fp]
 
 /-- Installed core answers the restored XMM file. -/
-theorem setVollKern_xmm (v : VollMaschine) (c : Nat) (k : FPKontext)
+theorem setXsaveKern_xmm (v : XsaveMaschine) (c : Nat) (k : FPKontext)
     (x : XmmDatei) (y : YmmDatei) (b : X87Bild) (r : XmmReg) :
-    ((vollHw (setVollKern v c k x y b)).kerne c).xmm r = x r := by
-  unfold vollHw setVollKern
+    ((xsaveHw (setXsaveKern v c k x y b)).kerne c).xmm r = x r := by
+  unfold xsaveHw setXsaveKern
   rw [setKernDaten_xmm]
 
 /-- Installed core answers the restored upper half. -/
-theorem setVollKern_ober (v : VollMaschine) (c : Nat) (k : FPKontext)
+theorem setXsaveKern_ober (v : XsaveMaschine) (c : Nat) (k : FPKontext)
     (x : XmmDatei) (y : YmmDatei) (b : X87Bild) (r : XmmReg) :
-    ((setVollKern v c k x y b).ym.ober c) r = y r := by
+    ((setXsaveKern v c k x y b).ym.ober c) r = y r := by
   show ((if c = c then y else v.ym.ober c)) r = y r
   rw [if_pos rfl]
 
 /-- Installed core answers the restored opaque byte. -/
-theorem setVollKern_x87 (v : VollMaschine) (c : Nat) (k : FPKontext)
+theorem setXsaveKern_x87 (v : XsaveMaschine) (c : Nat) (k : FPKontext)
     (x : XmmDatei) (y : YmmDatei) (b : X87Bild) (t : Nat) :
-    ((setVollKern v c k x y b).x87 c) t = b t := by
+    ((setXsaveKern v c k x y b).x87 c) t = b t := by
   show ((if c = c then b else v.x87 c)) t = b t
   rw [if_pos rfl]
 
 /-- An install keeps the mask (silicon ignores it on restore). -/
-theorem setVollKern_maske (v : VollMaschine) (c : Nat) (k : FPKontext)
+theorem setXsaveKern_maske (v : XsaveMaschine) (c : Nat) (k : FPKontext)
     (x : XmmDatei) (y : YmmDatei) (b : X87Bild) :
-    (setVollKern v c k x y b).maske = v.maske := rfl
+    (setXsaveKern v c k x y b).maske = v.maske := rfl
 
 /-- An install preserves well-formedness (profiles untouched). -/
-theorem setVollKern_wf (v : VollMaschine) (c : Nat) (k : FPKontext)
+theorem setXsaveKern_wf (v : XsaveMaschine) (c : Nat) (k : FPKontext)
     (x : XmmDatei) (y : YmmDatei) (b : X87Bild)
-    (h : VollWf v) : VollWf (setVollKern v c k x y b) :=
+    (h : XsaveWf v) : XsaveWf (setXsaveKern v c k x y b) :=
   setKernDaten_wf v.ym.hw c _ h
 
 /-- The save entries of a full state at area base `a`. -/
-def vollEintraege (k : FPKontext) (x : XmmDatei) (b : X87Bild)
+def xsaveEintraege (k : FPKontext) (x : XmmDatei) (b : X87Bild)
     (mm : BitVec 32) (h : XsaveKopf) (y : YmmDatei) (sse avx : Bool)
     (a : Adresse) : List TSOEintrag :=
-  fxEintraegeAux (vollByte k x b mm h y) a (vollOffsets sse avx)
+  fxEintraegeAux (xsaveByte k x b mm h y) a (xsaveOffsets sse avx)
 
 /-- Observed fault preconditions for one request. Each is a
     CHECKED input (oracle): its derivation (CR0.TS, CPUID
     FXSR/XSAVE, LOCK prefix, segment limits, paging, CPL/AC)
     belongs to the feature/paging apparatus, never assumed here.
     Priority in the step below is NM > UD > GP > SS > PF > AC. -/
-structure VollFehlerIn where
+structure XsaveFehlerIn where
   nm : Bool
   cpuidOk : Bool
   lock : Bool
@@ -1073,55 +1073,55 @@ structure VollFehlerIn where
 
 /-- Machine-level outcomes: successor, refusal, or the
     architectural fault class (the accepted `ArchFehler`). -/
-inductive VollAusgang where
-  | weiter : VollMaschine → VollAusgang
-  | verweigert : VollAusgang
-  | fehler : ArchFehler → VollAusgang
+inductive XsaveAusgang where
+  | weiter : XsaveMaschine → XsaveAusgang
+  | verweigert : XsaveAusgang
+  | fehler : ArchFehler → XsaveAusgang
 
 /-- 48-bit canonical address check (low half or sign-extended
     high half; a non-canonical XSAVE address raises #GP). -/
-def kanonisch (a : Adresse) : Bool :=
+def xsaveKanonisch (a : Adresse) : Bool :=
   decide (a.toNat < 2 ^ 47 ∨ 2 ^ 64 - 2 ^ 47 ≤ a.toNat)
 
 /-- One full save on core `c` at area base `a`: fault gates in
     priority order, XCR0/request gates, canonical and alignment
     gates, the permission gate over the footprint, then the
     buffered byte-issue fold. -/
-def vollSpeichern (v : VollMaschine) (c : Nat) (a : Adresse)
-    (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn) :
-    VollAusgang :=
+def xsaveSpeichern (v : XsaveMaschine) (c : Nat) (a : Adresse)
+    (xc : Xcr0Bild) (sse avx : Bool) (f : XsaveFehlerIn) :
+    XsaveAusgang :=
   if f.nm then .fehler .nm
   else if !f.cpuidOk || f.lock then .fehler .ud
   else if !xc.x87 then .fehler .gp
   else if sse && !xcr0SseBereit xc then .fehler .ud
   else if avx && !xcr0AvxBereit xc then .fehler .ud
   else if !sse && !avx then .verweigert
-  else if !kanonisch a then .fehler .gp
+  else if !xsaveKanonisch a then .fehler .gp
   else if !xAusgerichtet a then .fehler .gp
   else if f.ss then .fehler .ss
   else if f.pf then .fehler .pf
   else if f.ac then .fehler .ac
-  else if !ctxAlle (vollHw v).mem.schreibbar a
-      (vollOffsets sse avx) then .verweigert
-  else match issueListe (tsoAnsicht (vollHw v)) c
-      (vollEintraege ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+  else if !ctxAlle (xsaveHw v).mem.schreibbar a
+      (xsaveOffsets sse avx) then .verweigert
+  else match issueListe (tsoAnsicht (xsaveHw v)) c
+      (xsaveEintraege ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
         sse avx a) with
   | none => .verweigert
-  | some s' => .weiter (setVollTso v s')
+  | some s' => .weiter (setXsaveTso v s')
 
 /-- Success shape: a successful save is a successful issue fold. -/
-theorem vollSpeichern_erfolg (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_erfolg (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (m' : VollMaschine)
-    (h : vollSpeichern v c a xc sse avx f = .weiter m') :
+    (f : XsaveFehlerIn) (m' : XsaveMaschine)
+    (h : xsaveSpeichern v c a xc sse avx f = .weiter m') :
     ∃ s' : TSOZustand,
-      issueListe (tsoAnsicht (vollHw v)) c
-        (vollEintraege ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+      issueListe (tsoAnsicht (xsaveHw v)) c
+        (xsaveEintraege ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
           (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
           sse avx a) = some s' ∧
-      m' = setVollTso v s' := by
-  unfold vollSpeichern at h
+      m' = setXsaveTso v s' := by
+  unfold xsaveSpeichern at h
   cases hn : f.nm with
   | true => simp [hn] at h
   | false =>
@@ -1140,7 +1140,7 @@ theorem vollSpeichern_erfolg (v : VollMaschine) (c : Nat)
             cases hleer : (!sse && !avx) with
             | true => simp [hn, hc, hx, hsse, havx, hleer] at h
             | false =>
-              cases hkan : (!kanonisch a) with
+              cases hkan : (!xsaveKanonisch a) with
               | true => simp [hn, hc, hx, hsse, havx, hleer, hkan] at h
               | false =>
                 cases hal : (!xAusgerichtet a) with
@@ -1162,58 +1162,58 @@ theorem vollSpeichern_erfolg (v : VollMaschine) (c : Nat)
                         simp [hn, hc, hx, hsse, havx, hleer, hkan,
                           hal, hss, hpf, hac] at h
                       | false =>
-                        cases hp : (!ctxAlle (vollHw v).mem.schreibbar
-                            a (vollOffsets sse avx)) with
+                        cases hp : (!ctxAlle (xsaveHw v).mem.schreibbar
+                            a (xsaveOffsets sse avx)) with
                         | true =>
                           simp [hn, hc, hx, hsse, havx, hleer, hkan,
                             hal, hss, hpf, hac, hp] at h
                         | false =>
                           simp [hn, hc, hx, hsse, havx, hleer, hkan,
                             hal, hss, hpf, hac, hp] at h
-                          cases hs2 : issueListe (tsoAnsicht (vollHw v))
-                              c (vollEintraege ((vollHw v).kerne c).fp
-                                ((vollHw v).kerne c).xmm (v.x87 c)
+                          cases hs2 : issueListe (tsoAnsicht (xsaveHw v))
+                              c (xsaveEintraege ((xsaveHw v).kerne c).fp
+                                ((xsaveHw v).kerne c).xmm (v.x87 c)
                                 (v.maske c) (kopfStandard sse avx)
                                 (v.ym.ober c) sse avx a) with
                           | none =>
                             rw [hs2] at h
                             cases h
                           | some s' =>
-                            have hm : setVollTso v s' = m' := by
+                            have hm : setXsaveTso v s' = m' := by
                               simpa [hs2] using h
                             exact ⟨s', rfl, hm.symm⟩
 
 /-- SAVE GOES THROUGH THE TSO BUFFER: the acting core's buffer
     grows by exactly the footprint entries. -/
-theorem vollSpeichern_puffer (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_puffer (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (m' : VollMaschine)
-    (h : vollSpeichern v c a xc sse avx f = .weiter m') :
-    (vollHw m').puffer c = (vollHw v).puffer c ++
-      vollEintraege ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+    (f : XsaveFehlerIn) (m' : XsaveMaschine)
+    (h : xsaveSpeichern v c a xc sse avx f = .weiter m') :
+    (xsaveHw m').puffer c = (xsaveHw v).puffer c ++
+      xsaveEintraege ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
         sse avx a := by
-  obtain ⟨s', hs, rfl⟩ := vollSpeichern_erfolg v c a xc sse avx f m' h
-  exact issueListe_haengt_an (tsoAnsicht (vollHw v)) s' c _ hs
+  obtain ⟨s', hs, rfl⟩ := xsaveSpeichern_erfolg v c a xc sse avx f m' h
+  exact issueListe_haengt_an (tsoAnsicht (xsaveHw v)) s' c _ hs
 
 /-- A save changes no canonical byte (buffer only). -/
-theorem vollSpeichern_kein_speicher (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_kein_speicher (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (m' : VollMaschine)
-    (h : vollSpeichern v c a xc sse avx f = .weiter m')
+    (f : XsaveFehlerIn) (m' : XsaveMaschine)
+    (h : xsaveSpeichern v c a xc sse avx f = .weiter m')
     (x : Adresse) :
-    (vollHw m').mem.bytes x = (vollHw v).mem.bytes x := by
-  obtain ⟨s', hs, rfl⟩ := vollSpeichern_erfolg v c a xc sse avx f m' h
-  exact issueListe_kein_speicher (tsoAnsicht (vollHw v)) s' c _ hs x
+    (xsaveHw m').mem.bytes x = (xsaveHw v).mem.bytes x := by
+  obtain ⟨s', hs, rfl⟩ := xsaveSpeichern_erfolg v c a xc sse avx f m' h
+  exact issueListe_kein_speicher (tsoAnsicht (xsaveHw v)) s' c _ hs x
 
 /-- A save preserves well-formedness (profiles untouched). -/
-theorem vollSpeichern_wf (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_wf (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (hwf : VollWf v) (m' : VollMaschine)
-    (h : vollSpeichern v c a xc sse avx f = .weiter m') :
-    VollWf m' := by
-  obtain ⟨s', _, rfl⟩ := vollSpeichern_erfolg v c a xc sse avx f m' h
-  exact setVollTso_wf v s' hwf
+    (f : XsaveFehlerIn) (hwf : XsaveWf v) (m' : XsaveMaschine)
+    (h : xsaveSpeichern v c a xc sse avx f = .weiter m') :
+    XsaveWf m' := by
+  obtain ⟨s', _, rfl⟩ := xsaveSpeichern_erfolg v c a xc sse avx f m' h
+  exact setXsaveTso_wf v s' hwf
 
 /-- Footprint addresses stay distinct below 832 (the accepted
     `addrOff_inj512` argument, widened: the full area reaches the
@@ -1276,51 +1276,51 @@ theorem neuestens_einmal832 (f : Nat → Byte) (a : Adresse)
 
 /-- FORWARDING AT SAVE: after a successful save, every footprint
     offset loads the saved image byte through the owner's buffer. -/
-theorem vollWeiterleitung_gespeichert (v : VollMaschine) (c : Nat)
+theorem xsaveWeiterleitung_gespeichert (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (sse avx : Bool) (s1' : TSOZustand)
-    (hs : issueListe (tsoAnsicht (vollHw v)) c
-      (vollEintraege ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+    (hs : issueListe (tsoAnsicht (xsaveHw v)) c
+      (xsaveEintraege ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
         sse avx a) = some s1')
-    (hles : ctxAlle (vollHw v).mem.lesbar a (vollOffsets sse avx)
+    (hles : ctxAlle (xsaveHw v).mem.lesbar a (xsaveOffsets sse avx)
       = true)
-    (i : Nat) (hi : i ∈ vollOffsets sse avx) :
+    (i : Nat) (hi : i ∈ xsaveOffsets sse avx) :
     loadByte s1' c (addrOff a i) =
-      some (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+      some (xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
         i) := by
-  have hbuf := issueListe_haengt_an (tsoAnsicht (vollHw v)) s1' c _ hs
-  have hmem : s1'.mem = (tsoAnsicht (vollHw v)).mem :=
+  have hbuf := issueListe_haengt_an (tsoAnsicht (xsaveHw v)) s1' c _ hs
+  have hmem : s1'.mem = (tsoAnsicht (xsaveHw v)).mem :=
     issueListe_mem_still _ _ _ _ hs
-  have hmemHw : s1'.mem = (vollHw v).mem := hmem
+  have hmemHw : s1'.mem = (xsaveHw v).mem := hmem
   have hlesbar : s1'.mem.lesbar (addrOff a i) = true := by
     rw [hmemHw]
-    exact ctxAlle_holt (vollHw v).mem.lesbar a (vollOffsets sse avx)
+    exact ctxAlle_holt (xsaveHw v).mem.lesbar a (xsaveOffsets sse avx)
       i hi hles
   have hneu : neuestens (s1'.puffer c) (addrOff a i) =
-      some (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+      some (xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
         i) := by
     have he := neuestens_einmal832
-      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+      (xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
-      a (vollOffsets sse avx) i
-      (fun j hj => vollOffsets_klein sse avx j hj)
-      (vollOffsets_klein sse avx i hi) (vollOffsets_nodup sse avx) hi
-    have hentries : vollEintraege ((vollHw v).kerne c).fp
-        ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+      a (xsaveOffsets sse avx) i
+      (fun j hj => xsaveOffsets_klein sse avx j hj)
+      (xsaveOffsets_klein sse avx i hi) (xsaveOffsets_nodup sse avx) hi
+    have hentries : xsaveEintraege ((xsaveHw v).kerne c).fp
+        ((xsaveHw v).kerne c).xmm (v.x87 c) (v.maske c)
         (kopfStandard sse avx) (v.ym.ober c) sse avx a =
-        fxEintraegeAux (vollByte ((vollHw v).kerne c).fp
-          ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+        fxEintraegeAux (xsaveByte ((xsaveHw v).kerne c).fp
+          ((xsaveHw v).kerne c).xmm (v.x87 c) (v.maske c)
           (kopfStandard sse avx) (v.ym.ober c)) a
-          (vollOffsets sse avx) := rfl
+          (xsaveOffsets sse avx) := rfl
     rw [hbuf, hentries, neuestens_append, he]
   unfold loadByte
   rw [if_pos hlesbar, hneu]
 
 /-! ## 4. Machine restore and the save/restore round trip.
 
-  `vollWiederherstellen` loads the footprint through the TSO view
+  `xsaveWiederherstellen` loads the footprint through the TSO view
   (forwarding included), reassembles every saved component, and
   installs the enabled ones on the acting core, keeping
   registers/flags/RIP. The opaque x87 image is always installed;
@@ -1333,58 +1333,58 @@ theorem vollWeiterleitung_gespeichert (v : VollMaschine) (c : Nat)
   spurious is refused). -/
 
 /-- One full restore on core `c` from area base `a`. -/
-def vollWiederherstellen (v : VollMaschine) (c : Nat) (a : Adresse)
-    (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn) :
-    VollAusgang :=
+def xsaveWiederherstellen (v : XsaveMaschine) (c : Nat) (a : Adresse)
+    (xc : Xcr0Bild) (sse avx : Bool) (f : XsaveFehlerIn) :
+    XsaveAusgang :=
   if f.nm then .fehler .nm
   else if !f.cpuidOk || f.lock then .fehler .ud
   else if !xc.x87 then .fehler .gp
   else if sse && !xcr0SseBereit xc then .fehler .ud
   else if avx && !xcr0AvxBereit xc then .fehler .ud
   else if !sse && !avx then .verweigert
-  else if !kanonisch a then .fehler .gp
+  else if !xsaveKanonisch a then .fehler .gp
   else if !xAusgerichtet a then .fehler .gp
   else if f.ss then .fehler .ss
   else if f.pf then .fehler .pf
   else if f.ac then .fehler .ac
-  else if !ctxAlle (vollHw v).mem.lesbar a (vollOffsets sse avx) then
+  else if !ctxAlle (xsaveHw v).mem.lesbar a (xsaveOffsets sse avx) then
     .verweigert
-  else match ctxLadeAux (tsoAnsicht (vollHw v)) c a
-      (vollOffsets sse avx) with
+  else match ctxLadeAux (tsoAnsicht (xsaveHw v)) c a
+      (xsaveOffsets sse avx) with
   | none => .verweigert
   | some bs =>
     if !mxcsrReserviertFrei
         (mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i))) then
       .fehler .gp
-    else .weiter (setVollKern v c
+    else .weiter (setXsaveKern v c
       (if sse then
-        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
-       else ((vollHw v).kerne c).fp)
-      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
-       else ((vollHw v).kerne c).xmm)
-      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+        ⟨(xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((xsaveHw v).kerne c).fp)
+      (if sse then (xsaveDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((xsaveHw v).kerne c).xmm)
+      (if avx then (xsaveDekodiere (ctxFalte bs ctxNull)).ymm
        else v.ym.ober c)
-      (vollDekodiere (ctxFalte bs ctxNull)).x87img)
+      (xsaveDekodiere (ctxFalte bs ctxNull)).x87img)
 
 /-- Success shape: a successful restore is a successful footprint
     load with a reserved-free control word where SSE is restored. -/
-theorem vollWiederherstellen_erfolg (v : VollMaschine) (c : Nat)
+theorem xsaveWiederherstellen_erfolg (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (m' : VollMaschine)
-    (h : vollWiederherstellen v c a xc sse avx f = .weiter m') :
+    (f : XsaveFehlerIn) (m' : XsaveMaschine)
+    (h : xsaveWiederherstellen v c a xc sse avx f = .weiter m') :
     ∃ bs : List (Nat × Byte),
-      ctxLadeAux (tsoAnsicht (vollHw v)) c a (vollOffsets sse avx) =
+      ctxLadeAux (tsoAnsicht (xsaveHw v)) c a (xsaveOffsets sse avx) =
         some bs ∧
-      m' = setVollKern v c
+      m' = setXsaveKern v c
         (if sse then
-          ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
-         else ((vollHw v).kerne c).fp)
-        (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
-         else ((vollHw v).kerne c).xmm)
-        (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+          ⟨(xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+         else ((xsaveHw v).kerne c).fp)
+        (if sse then (xsaveDekodiere (ctxFalte bs ctxNull)).xmm
+         else ((xsaveHw v).kerne c).xmm)
+        (if avx then (xsaveDekodiere (ctxFalte bs ctxNull)).ymm
          else v.ym.ober c)
-        (vollDekodiere (ctxFalte bs ctxNull)).x87img := by
-  unfold vollWiederherstellen at h
+        (xsaveDekodiere (ctxFalte bs ctxNull)).x87img := by
+  unfold xsaveWiederherstellen at h
   cases hn : f.nm with
   | true => simp [hn] at h
   | false =>
@@ -1403,7 +1403,7 @@ theorem vollWiederherstellen_erfolg (v : VollMaschine) (c : Nat)
             cases hleer : (!sse && !avx) with
             | true => simp [hn, hc, hx, hsse, havx, hleer] at h
             | false =>
-              cases hkan : (!kanonisch a) with
+              cases hkan : (!xsaveKanonisch a) with
               | true => simp [hn, hc, hx, hsse, havx, hleer, hkan] at h
               | false =>
                 cases hal : (!xAusgerichtet a) with
@@ -1425,16 +1425,16 @@ theorem vollWiederherstellen_erfolg (v : VollMaschine) (c : Nat)
                         simp [hn, hc, hx, hsse, havx, hleer, hkan,
                           hal, hss, hpf, hac] at h
                       | false =>
-                        cases hp : (!ctxAlle (vollHw v).mem.lesbar
-                            a (vollOffsets sse avx)) with
+                        cases hp : (!ctxAlle (xsaveHw v).mem.lesbar
+                            a (xsaveOffsets sse avx)) with
                         | true =>
                           simp [hn, hc, hx, hsse, havx, hleer, hkan,
                             hal, hss, hpf, hac, hp] at h
                         | false =>
                           simp [hn, hc, hx, hsse, havx, hleer, hkan,
                             hal, hss, hpf, hac, hp] at h
-                          cases hbs : ctxLadeAux (tsoAnsicht (vollHw v))
-                              c a (vollOffsets sse avx) with
+                          cases hbs : ctxLadeAux (tsoAnsicht (xsaveHw v))
+                              c a (xsaveOffsets sse avx) with
                           | none =>
                             rw [hbs] at h
                             cases h
@@ -1450,14 +1450,14 @@ theorem vollWiederherstellen_erfolg (v : VollMaschine) (c : Nat)
                               exact ⟨bs, rfl, rfl⟩
 
 /-- A restore preserves well-formedness (profiles untouched). -/
-theorem vollWiederherstellen_wf (v : VollMaschine) (c : Nat)
+theorem xsaveWiederherstellen_wf (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (hwf : VollWf v) (m' : VollMaschine)
-    (h : vollWiederherstellen v c a xc sse avx f = .weiter m') :
-    VollWf m' := by
-  obtain ⟨bs, _, rfl⟩ := vollWiederherstellen_erfolg v c a xc sse avx
+    (f : XsaveFehlerIn) (hwf : XsaveWf v) (m' : XsaveMaschine)
+    (h : xsaveWiederherstellen v c a xc sse avx f = .weiter m') :
+    XsaveWf m' := by
+  obtain ⟨bs, _, rfl⟩ := xsaveWiederherstellen_erfolg v c a xc sse avx
     f m' h
-  exact setVollKern_wf v c _ _ _ _ hwf
+  exact setXsaveKern_wf v c _ _ _ _ hwf
 
 /-- SAVE THEN RESTORE IS THE IDENTITY on the enabled components:
     restoring a just-saved area on the same core with the same
@@ -1467,154 +1467,154 @@ theorem vollWiederherstellen_wf (v : VollMaschine) (c : Nat)
     construction. Needs read permission beside the save's write
     permission (the restore observes through `loadByte`, which
     checks readability). -/
-theorem vollRundlauf_maschine (v : VollMaschine) (c : Nat)
+theorem xsaveRundlauf_maschine (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (v1 v2 : VollMaschine)
-    (hles : ctxAlle (vollHw v).mem.lesbar a (vollOffsets sse avx)
+    (f : XsaveFehlerIn) (v1 v2 : XsaveMaschine)
+    (hles : ctxAlle (xsaveHw v).mem.lesbar a (xsaveOffsets sse avx)
       = true)
-    (h1 : vollSpeichern v c a xc sse avx f = .weiter v1)
-    (h2 : vollWiederherstellen v1 c a xc sse avx f = .weiter v2) :
+    (h1 : xsaveSpeichern v c a xc sse avx f = .weiter v1)
+    (h2 : xsaveWiederherstellen v1 c a xc sse avx f = .weiter v2) :
     (∀ t : Nat, t < 152 → (v2.x87 c) t = (v.x87 c) t) ∧
       v2.maske c = v.maske c ∧
       (sse = true →
-        (((vollHw v2).kerne c).fp).mxcsr =
-          (((vollHw v).kerne c).fp).mxcsr) ∧
+        (((xsaveHw v2).kerne c).fp).mxcsr =
+          (((xsaveHw v).kerne c).fp).mxcsr) ∧
       (sse = true → ∀ r : XmmReg,
-        ((vollHw v2).kerne c).xmm r =
-          ((vollHw v).kerne c).xmm r) ∧
+        ((xsaveHw v2).kerne c).xmm r =
+          ((xsaveHw v).kerne c).xmm r) ∧
       (avx = true → ∀ r : XmmReg,
         (v2.ym.ober c) r = (v.ym.ober c) r) := by
-  obtain ⟨s1', hs1, rfl⟩ := vollSpeichern_erfolg v c a xc sse avx f v1
+  obtain ⟨s1', hs1, rfl⟩ := xsaveSpeichern_erfolg v c a xc sse avx f v1
     h1
-  obtain ⟨bs, hbs, rfl⟩ := vollWiederherstellen_erfolg
-    (setVollTso v s1') c a xc sse avx f v2 h2
-  have hsicht : tsoAnsicht (vollHw (setVollTso v s1')) = s1' :=
-    setVollTso_ansicht v s1'
+  obtain ⟨bs, hbs, rfl⟩ := xsaveWiederherstellen_erfolg
+    (setXsaveTso v s1') c a xc sse avx f v2 h2
+  have hsicht : tsoAnsicht (xsaveHw (setXsaveTso v s1')) = s1' :=
+    setXsaveTso_ansicht v s1'
   rw [hsicht] at hbs
-  have hloads : ∀ i ∈ vollOffsets sse avx,
+  have hloads : ∀ i ∈ xsaveOffsets sse avx,
       loadByte s1' c (addrOff a i) =
-        some (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        some (xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
           (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
           i) :=
-    vollWeiterleitung_gespeichert v c a sse avx s1' hs1 hles
-  have hagree : ∀ i ∈ vollOffsets sse avx,
+    xsaveWeiterleitung_gespeichert v c a sse avx s1' hs1 hles
+  have hagree : ∀ i ∈ xsaveOffsets sse avx,
       ctxFalte bs ctxNull i =
-        vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
           (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
           i := by
     intro i hi
     exact ctxLade_geladen s1' c a
-      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+      (xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
-      (vollOffsets sse avx) ctxNull (vollOffsets_nodup sse avx)
+      (xsaveOffsets sse avx) ctxNull (xsaveOffsets_nodup sse avx)
       hloads bs hbs i hi
   have hx87id : ∀ t : Nat, t < 152 →
-      (vollDekodiere (ctxFalte bs ctxNull)).x87img t = (v.x87 c) t := by
+      (xsaveDekodiere (ctxFalte bs ctxNull)).x87img t = (v.x87 c) t := by
     intro t ht
-    have hk := vollKongr_x87 (ctxFalte bs ctxNull)
-      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+    have hk := xsaveKongr_x87 (ctxFalte bs ctxNull)
+      (xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
       sse avx (fun i hi => hagree i hi) t ht
     rw [hk]
-    exact vollRundlauf_x87 ((vollHw v).kerne c).fp
-      ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+    exact xsaveRundlauf_x87 ((xsaveHw v).kerne c).fp
+      ((xsaveHw v).kerne c).xmm (v.x87 c) (v.maske c)
       (kopfStandard sse avx) (v.ym.ober c) t ht
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro t ht
-    have e1 := setVollKern_x87 (setVollTso v s1') c
+    have e1 := setXsaveKern_x87 (setXsaveTso v s1') c
       (if sse then
-        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
-       else ((vollHw (setVollTso v s1')).kerne c).fp)
-      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
-       else ((vollHw (setVollTso v s1')).kerne c).xmm)
-      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
-       else (setVollTso v s1').ym.ober c)
-      (vollDekodiere (ctxFalte bs ctxNull)).x87img t
+        ⟨(xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).fp)
+      (if sse then (xsaveDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).xmm)
+      (if avx then (xsaveDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setXsaveTso v s1').ym.ober c)
+      (xsaveDekodiere (ctxFalte bs ctxNull)).x87img t
     rw [e1]
     exact hx87id t ht
-  · have e2 := setVollKern_maske (setVollTso v s1') c
+  · have e2 := setXsaveKern_maske (setXsaveTso v s1') c
       (if sse then
-        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
-       else ((vollHw (setVollTso v s1')).kerne c).fp)
-      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
-       else ((vollHw (setVollTso v s1')).kerne c).xmm)
-      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
-       else (setVollTso v s1').ym.ober c)
-      (vollDekodiere (ctxFalte bs ctxNull)).x87img
-    rw [e2, setVollTso_maske]
+        ⟨(xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).fp)
+      (if sse then (xsaveDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).xmm)
+      (if avx then (xsaveDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setXsaveTso v s1').ym.ober c)
+      (xsaveDekodiere (ctxFalte bs ctxNull)).x87img
+    rw [e2, setXsaveTso_maske]
   · intro hs
-    have e3 := setVollKern_fp (setVollTso v s1') c
+    have e3 := setXsaveKern_fp (setXsaveTso v s1') c
       (if sse then
-        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
-       else ((vollHw (setVollTso v s1')).kerne c).fp)
-      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
-       else ((vollHw (setVollTso v s1')).kerne c).xmm)
-      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
-       else (setVollTso v s1').ym.ober c)
-      (vollDekodiere (ctxFalte bs ctxNull)).x87img
+        ⟨(xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).fp)
+      (if sse then (xsaveDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).xmm)
+      (if avx then (xsaveDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setXsaveTso v s1').ym.ober c)
+      (xsaveDekodiere (ctxFalte bs ctxNull)).x87img
     rw [e3]
     have hksse : (if sse then
-        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
-        else ((vollHw (setVollTso v s1')).kerne c).fp) =
-        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩ :=
+        ⟨(xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+        else ((xsaveHw (setXsaveTso v s1')).kerne c).fp) =
+        ⟨(xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr⟩ :=
       if_pos hs
     rw [hksse]
-    show (vollDekodiere (ctxFalte bs ctxNull)).mxcsr = _
-    have hk := vollKongr_mxcsr (ctxFalte bs ctxNull)
-      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+    show (xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr = _
+    have hk := xsaveKongr_mxcsr (ctxFalte bs ctxNull)
+      (xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
       sse avx hs (fun i hi => hagree i hi)
     rw [hk]
-    exact (vollRundlauf_legacy ((vollHw v).kerne c).fp
-      ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+    exact (xsaveRundlauf_legacy ((xsaveHw v).kerne c).fp
+      ((xsaveHw v).kerne c).xmm (v.x87 c) (v.maske c)
       (kopfStandard sse avx) (v.ym.ober c)).1
   · intro hs r
-    have e4 := setVollKern_xmm (setVollTso v s1') c
+    have e4 := setXsaveKern_xmm (setXsaveTso v s1') c
       (if sse then
-        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
-       else ((vollHw (setVollTso v s1')).kerne c).fp)
-      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
-       else ((vollHw (setVollTso v s1')).kerne c).xmm)
-      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
-       else (setVollTso v s1').ym.ober c)
-      (vollDekodiere (ctxFalte bs ctxNull)).x87img r
+        ⟨(xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).fp)
+      (if sse then (xsaveDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).xmm)
+      (if avx then (xsaveDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setXsaveTso v s1').ym.ober c)
+      (xsaveDekodiere (ctxFalte bs ctxNull)).x87img r
     rw [e4]
-    have hxsse : (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
-        else ((vollHw (setVollTso v s1')).kerne c).xmm) =
-        (vollDekodiere (ctxFalte bs ctxNull)).xmm :=
+    have hxsse : (if sse then (xsaveDekodiere (ctxFalte bs ctxNull)).xmm
+        else ((xsaveHw (setXsaveTso v s1')).kerne c).xmm) =
+        (xsaveDekodiere (ctxFalte bs ctxNull)).xmm :=
       if_pos hs
     rw [hxsse]
-    have hk := vollKongr_xmm (ctxFalte bs ctxNull)
-      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+    have hk := xsaveKongr_xmm (ctxFalte bs ctxNull)
+      (xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
       sse avx hs (fun i hi => hagree i hi) r
     rw [hk]
-    exact (vollRundlauf_legacy ((vollHw v).kerne c).fp
-      ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+    exact (xsaveRundlauf_legacy ((xsaveHw v).kerne c).fp
+      ((xsaveHw v).kerne c).xmm (v.x87 c) (v.maske c)
       (kopfStandard sse avx) (v.ym.ober c)).2 r
   · intro ha r
-    have e5 := setVollKern_ober (setVollTso v s1') c
+    have e5 := setXsaveKern_ober (setXsaveTso v s1') c
       (if sse then
-        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
-       else ((vollHw (setVollTso v s1')).kerne c).fp)
-      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
-       else ((vollHw (setVollTso v s1')).kerne c).xmm)
-      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
-       else (setVollTso v s1').ym.ober c)
-      (vollDekodiere (ctxFalte bs ctxNull)).x87img r
+        ⟨(xsaveDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).fp)
+      (if sse then (xsaveDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((xsaveHw (setXsaveTso v s1')).kerne c).xmm)
+      (if avx then (xsaveDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setXsaveTso v s1').ym.ober c)
+      (xsaveDekodiere (ctxFalte bs ctxNull)).x87img r
     rw [e5]
-    have hxavx : (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
-        else (setVollTso v s1').ym.ober c) =
-        (vollDekodiere (ctxFalte bs ctxNull)).ymm :=
+    have hxavx : (if avx then (xsaveDekodiere (ctxFalte bs ctxNull)).ymm
+        else (setXsaveTso v s1').ym.ober c) =
+        (xsaveDekodiere (ctxFalte bs ctxNull)).ymm :=
       if_pos ha
     rw [hxavx]
-    have hk := vollKongr_ymm (ctxFalte bs ctxNull)
-      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+    have hk := xsaveKongr_ymm (ctxFalte bs ctxNull)
+      (xsaveByte ((xsaveHw v).kerne c).fp ((xsaveHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
       sse avx ha (fun i hi => hagree i hi) r
     rw [hk]
-    exact vollRundlauf_ymm ((vollHw v).kerne c).fp
-      ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+    exact xsaveRundlauf_ymm ((xsaveHw v).kerne c).fp
+      ((xsaveHw v).kerne c).xmm (v.x87 c) (v.maske c)
       (kopfStandard sse avx) (v.ym.ober c) r
 
 /-! ## 5. Fault gates: every class fires its outcome.
@@ -1626,246 +1626,246 @@ theorem vollRundlauf_maschine (v : VollMaschine) (c : Nat)
   by its `simp` (the gate it discharges). -/
 
 /-- #NM has priority: a set TS bit faults, whatever else holds. -/
-theorem vollSpeichern_fehlerNM (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_fehlerNM (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h : f.nm = true) :
-    vollSpeichern v c a xc sse avx f = .fehler .nm := by
-  unfold vollSpeichern
+    (f : XsaveFehlerIn) (h : f.nm = true) :
+    xsaveSpeichern v c a xc sse avx f = .fehler .nm := by
+  unfold xsaveSpeichern
   simp [h]
 
 /-- #UD for a missing CPUID XSAVE bit. -/
-theorem vollSpeichern_fehlerUD_ohne_cpuid (v : VollMaschine)
+theorem xsaveSpeichern_fehlerUD_ohne_cpuid (v : XsaveMaschine)
     (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = false) :
-    vollSpeichern v c a xc sse avx f = .fehler .ud := by
-  unfold vollSpeichern
+    xsaveSpeichern v c a xc sse avx f = .fehler .ud := by
+  unfold xsaveSpeichern
   simp [h1, h2]
 
 /-- #UD for a LOCK prefix. -/
-theorem vollSpeichern_fehlerUD_lock (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_fehlerUD_lock (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false) (h2 : f.lock = true) :
-    vollSpeichern v c a xc sse avx f = .fehler .ud := by
-  unfold vollSpeichern
+    (f : XsaveFehlerIn) (h1 : f.nm = false) (h2 : f.lock = true) :
+    xsaveSpeichern v c a xc sse avx f = .fehler .ud := by
+  unfold xsaveSpeichern
   simp [h1, h2]
 
 /-- #GP where the XCR0 x87 bit is clear. -/
-theorem vollSpeichern_fehlerGP_ohne_x87 (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_fehlerGP_ohne_x87 (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = false) :
-    vollSpeichern v c a xc sse avx f = .fehler .gp := by
-  unfold vollSpeichern
+    xsaveSpeichern v c a xc sse avx f = .fehler .gp := by
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4]
 
 /-- #UD where SSE is requested without XCR0 SSE readiness. -/
-theorem vollSpeichern_fehlerUD_ohne_sse (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_fehlerUD_ohne_sse (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = false) :
-    vollSpeichern v c a xc sse avx f = .fehler .ud := by
-  unfold vollSpeichern
+    xsaveSpeichern v c a xc sse avx f = .fehler .ud := by
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4, h5, h6]
 
 /-- #UD where AVX is requested without XCR0 AVX readiness. -/
-theorem vollSpeichern_fehlerUD_ohne_avx (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_fehlerUD_ohne_avx (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = false) (h6 : avx = true)
     (h7 : xcr0AvxBereit xc = false) :
-    vollSpeichern v c a xc sse avx f = .fehler .ud := by
-  unfold vollSpeichern
+    xsaveSpeichern v c a xc sse avx f = .fehler .ud := by
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4, h5, h6, h7]
 
 /-- An empty request is refused, never silently empty. -/
-theorem vollSpeichern_verweigert_leer (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_verweigert_leer (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = false) (h6 : avx = false) :
-    vollSpeichern v c a xc sse avx f = .verweigert := by
-  unfold vollSpeichern
+    xsaveSpeichern v c a xc sse avx f = .verweigert := by
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4, h5, h6]
 
 /-- #GP on a non-canonical address. -/
-theorem vollSpeichern_fehlerGP_nicht_kanonisch (v : VollMaschine)
+theorem xsaveSpeichern_fehlerGP_nicht_xsaveKanonisch (v : XsaveMaschine)
     (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = false) :
-    vollSpeichern v c a xc sse avx f = .fehler .gp := by
-  unfold vollSpeichern
+    (h8 : xsaveKanonisch a = false) :
+    xsaveSpeichern v c a xc sse avx f = .fehler .gp := by
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4, h5, h6, h7, h8]
 
 /-- #GP on a misaligned area. -/
-theorem vollSpeichern_fehlerGP_falsch_ausgerichtet (v : VollMaschine)
+theorem xsaveSpeichern_fehlerGP_falsch_ausgerichtet (v : XsaveMaschine)
     (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = false) :
-    vollSpeichern v c a xc sse avx f = .fehler .gp := by
-  unfold vollSpeichern
+    (h8 : xsaveKanonisch a = true) (h9 : xAusgerichtet a = false) :
+    xsaveSpeichern v c a xc sse avx f = .fehler .gp := by
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4, h5, h6, h7, h8, h9]
 
 /-- #SS fires ahead of the memory access. -/
-theorem vollSpeichern_fehlerSS (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_fehlerSS (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h8 : xsaveKanonisch a = true) (h9 : xAusgerichtet a = true)
     (h10 : f.ss = true) :
-    vollSpeichern v c a xc sse avx f = .fehler .ss := by
-  unfold vollSpeichern
+    xsaveSpeichern v c a xc sse avx f = .fehler .ss := by
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
 
 /-- #PF fires ahead of the memory access. -/
-theorem vollSpeichern_fehlerPF (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_fehlerPF (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h8 : xsaveKanonisch a = true) (h9 : xAusgerichtet a = true)
     (h10 : f.ss = false) (h11 : f.pf = true) :
-    vollSpeichern v c a xc sse avx f = .fehler .pf := by
-  unfold vollSpeichern
+    xsaveSpeichern v c a xc sse avx f = .fehler .pf := by
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11]
 
 /-- #AC fires last among the fault gates. -/
-theorem vollSpeichern_fehlerAC (v : VollMaschine) (c : Nat)
+theorem xsaveSpeichern_fehlerAC (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h8 : xsaveKanonisch a = true) (h9 : xAusgerichtet a = true)
     (h10 : f.ss = false) (h11 : f.pf = false)
     (h12 : f.ac = true) :
-    vollSpeichern v c a xc sse avx f = .fehler .ac := by
-  unfold vollSpeichern
+    xsaveSpeichern v c a xc sse avx f = .fehler .ac := by
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12]
 
 /-- A missing write permission refuses the whole save. -/
-theorem vollSpeichern_verweigert_ohne_schreibrecht (v : VollMaschine)
+theorem xsaveSpeichern_verweigert_ohne_schreibrecht (v : XsaveMaschine)
     (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h8 : xsaveKanonisch a = true) (h9 : xAusgerichtet a = true)
     (h10 : f.ss = false) (h11 : f.pf = false)
     (h12 : f.ac = false)
-    (h13 : ctxAlle (vollHw v).mem.schreibbar a
-      (vollOffsets sse avx) = false) :
-    vollSpeichern v c a xc sse avx f = .verweigert := by
+    (h13 : ctxAlle (xsaveHw v).mem.schreibbar a
+      (xsaveOffsets sse avx) = false) :
+    xsaveSpeichern v c a xc sse avx f = .verweigert := by
   rw [h5, h7] at h13
-  unfold vollSpeichern
+  unfold xsaveSpeichern
   simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13]
 
 /-- #NM on the restore path. -/
-theorem vollWiederherstellen_fehlerNM (v : VollMaschine) (c : Nat)
+theorem xsaveWiederherstellen_fehlerNM (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h : f.nm = true) :
-    vollWiederherstellen v c a xc sse avx f = .fehler .nm := by
-  unfold vollWiederherstellen
+    (f : XsaveFehlerIn) (h : f.nm = true) :
+    xsaveWiederherstellen v c a xc sse avx f = .fehler .nm := by
+  unfold xsaveWiederherstellen
   simp [h]
 
 /-- #UD on the restore path without XCR0 SSE readiness. -/
-theorem vollWiederherstellen_fehlerUD_ohne_sse (v : VollMaschine)
+theorem xsaveWiederherstellen_fehlerUD_ohne_sse (v : XsaveMaschine)
     (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = false) :
-    vollWiederherstellen v c a xc sse avx f = .fehler .ud := by
-  unfold vollWiederherstellen
+    xsaveWiederherstellen v c a xc sse avx f = .fehler .ud := by
+  unfold xsaveWiederherstellen
   simp [h1, h2, h3, h4, h5, h6]
 
 /-- #GP on the restore path for a misaligned area. -/
-theorem vollWiederherstellen_fehlerGP_falsch_ausgerichtet
-    (v : VollMaschine) (c : Nat) (a : Adresse) (xc : Xcr0Bild)
-    (sse avx : Bool) (f : VollFehlerIn) (h1 : f.nm = false)
+theorem xsaveWiederherstellen_fehlerGP_falsch_ausgerichtet
+    (v : XsaveMaschine) (c : Nat) (a : Adresse) (xc : Xcr0Bild)
+    (sse avx : Bool) (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = false) :
-    vollWiederherstellen v c a xc sse avx f = .fehler .gp := by
-  unfold vollWiederherstellen
+    (h8 : xsaveKanonisch a = true) (h9 : xAusgerichtet a = false) :
+    xsaveWiederherstellen v c a xc sse avx f = .fehler .gp := by
+  unfold xsaveWiederherstellen
   simp [h1, h2, h3, h4, h5, h6, h7, h8, h9]
 
 /-- #SS on the restore path. -/
-theorem vollWiederherstellen_fehlerSS (v : VollMaschine) (c : Nat)
+theorem xsaveWiederherstellen_fehlerSS (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h8 : xsaveKanonisch a = true) (h9 : xAusgerichtet a = true)
     (h10 : f.ss = true) :
-    vollWiederherstellen v c a xc sse avx f = .fehler .ss := by
-  unfold vollWiederherstellen
+    xsaveWiederherstellen v c a xc sse avx f = .fehler .ss := by
+  unfold xsaveWiederherstellen
   simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
 
 /-- An empty restore request is refused. -/
-theorem vollWiederherstellen_verweigert_leer (v : VollMaschine)
+theorem xsaveWiederherstellen_verweigert_leer (v : XsaveMaschine)
     (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = false) (h6 : avx = false) :
-    vollWiederherstellen v c a xc sse avx f = .verweigert := by
-  unfold vollWiederherstellen
+    xsaveWiederherstellen v c a xc sse avx f = .verweigert := by
+  unfold xsaveWiederherstellen
   simp [h1, h2, h3, h4, h5, h6]
 
 /-- A missing read permission refuses the whole restore. -/
-theorem vollWiederherstellen_verweigert_ohne_leserecht
-    (v : VollMaschine) (c : Nat) (a : Adresse) (xc : Xcr0Bild)
-    (sse avx : Bool) (f : VollFehlerIn) (h1 : f.nm = false)
+theorem xsaveWiederherstellen_verweigert_ohne_leserecht
+    (v : XsaveMaschine) (c : Nat) (a : Adresse) (xc : Xcr0Bild)
+    (sse avx : Bool) (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h8 : xsaveKanonisch a = true) (h9 : xAusgerichtet a = true)
     (h10 : f.ss = false) (h11 : f.pf = false)
     (h12 : f.ac = false)
-    (h13 : ctxAlle (vollHw v).mem.lesbar a
-      (vollOffsets sse avx) = false) :
-    vollWiederherstellen v c a xc sse avx f = .verweigert := by
+    (h13 : ctxAlle (xsaveHw v).mem.lesbar a
+      (xsaveOffsets sse avx) = false) :
+    xsaveWiederherstellen v c a xc sse avx f = .verweigert := by
   rw [h5, h7] at h13
-  unfold vollWiederherstellen
+  unfold xsaveWiederherstellen
   simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13]
 
 /-- A reserved MXCSR bit in the loaded image faults with #GP on
     restore (the accepted `ldmxcsrArchOk` refusal, lifted to the
     area restore). -/
-theorem vollWiederherstellen_fehlerGP_reserviert (v : VollMaschine)
+theorem xsaveWiederherstellen_fehlerGP_reserviert (v : XsaveMaschine)
     (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (h1 : f.nm = false)
+    (f : XsaveFehlerIn) (h1 : f.nm = false)
     (h2 : f.cpuidOk = true) (h3 : f.lock = false)
     (h4 : xc.x87 = true) (h5 : sse = true)
     (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
-    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h8 : xsaveKanonisch a = true) (h9 : xAusgerichtet a = true)
     (h10 : f.ss = false) (h11 : f.pf = false)
     (h12 : f.ac = false)
-    (h13 : ctxAlle (vollHw v).mem.lesbar a
-      (vollOffsets sse avx) = true)
+    (h13 : ctxAlle (xsaveHw v).mem.lesbar a
+      (xsaveOffsets sse avx) = true)
     (bs : List (Nat × Byte))
-    (h14 : ctxLadeAux (tsoAnsicht (vollHw v)) c a
-      (vollOffsets sse avx) = some bs)
+    (h14 : ctxLadeAux (tsoAnsicht (xsaveHw v)) c a
+      (xsaveOffsets sse avx) = some bs)
     (h15 : 65536 ≤ (mxcsrAusBytes
       (fun i => ctxFalte bs ctxNull (24 + i))).toNat) :
-    vollWiederherstellen v c a xc sse avx f = .fehler .gp := by
+    xsaveWiederherstellen v c a xc sse avx f = .fehler .gp := by
   rw [h5, h7] at h13 h14
-  unfold vollWiederherstellen
+  unfold xsaveWiederherstellen
   simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14]
   have hres : mxcsrReserviertFrei
       (mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i))) =
@@ -1875,90 +1875,90 @@ theorem vollWiederherstellen_fehlerGP_reserviert (v : VollMaschine)
 
 /-- AGREEMENT: the restore's reserved-bit #GP coincides with the
     accepted architectural load refusal `ldmxcsrArchOk`. -/
-theorem vollRestore_stimmt_ldmxcsr_ueberein (p : MxcsrProfil)
+theorem xsaveRestore_stimmt_ldmxcsr_ueberein (p : MxcsrProfil)
     (w : MXCSR) (h : 65536 ≤ w.toNat) :
     ldmxcsrArchOk p w = false :=
   ldmxcsrArchOk_reserviert_verweigert p w h
 
 /-! ## 6. FINIT: re-initialise the x87 image.
 
-  `vollFinit` resets the acting core's opaque image to the reset
+  `xsaveFinit` resets the acting core's opaque image to the reset
   constant. Everything else — control word, XMM/YMM files, masks,
   memory, buffers — is untouched, matching silicon FINIT, which
   affects only the x87 state (the FPU execution itself stays out
   of scope: only the stored image moves). -/
 
 /-- FINIT: reset the acting core's opaque x87 image. -/
-def vollFinit (v : VollMaschine) (c : Nat) : VollMaschine :=
+def xsaveFinit (v : XsaveMaschine) (c : Nat) : XsaveMaschine :=
   ⟨v.ym, fun d => if d = c then x87Reset else v.x87 d, v.maske⟩
 
 /-- FINIT installs the reset image on the acting core. -/
-theorem vollFinit_setzt_zurueck (v : VollMaschine) (c : Nat)
+theorem xsaveFinit_setzt_zurueck (v : XsaveMaschine) (c : Nat)
     (t : Nat) :
-    ((vollFinit v c).x87 c) t = x87Reset t := by
+    ((xsaveFinit v c).x87 c) t = x87Reset t := by
   show ((if c = c then x87Reset else v.x87 c)) t = x87Reset t
   rw [if_pos rfl]
 
 /-- FINIT keeps every other core's image. -/
-theorem vollFinit_fremd (v : VollMaschine) (c d : Nat)
+theorem xsaveFinit_fremd (v : XsaveMaschine) (c d : Nat)
     (h : d ≠ c) (t : Nat) :
-    ((vollFinit v c).x87 d) t = (v.x87 d) t := by
+    ((xsaveFinit v c).x87 d) t = (v.x87 d) t := by
   show ((if d = c then x87Reset else v.x87 d)) t = (v.x87 d) t
   rw [if_neg h]
 
 /-- FINIT preserves well-formedness (profiles untouched). -/
-theorem vollFinit_wf (v : VollMaschine) (c : Nat)
-    (hwf : VollWf v) : VollWf (vollFinit v c) :=
+theorem xsaveFinit_wf (v : XsaveMaschine) (c : Nat)
+    (hwf : XsaveWf v) : XsaveWf (xsaveFinit v c) :=
   hwf
 
 /-- FINIT keeps the coherent machine (registers, memory,
     buffers all untouched). -/
-theorem vollFinit_hw_still (v : VollMaschine) (c : Nat) :
-    vollHw (vollFinit v c) = vollHw v := rfl
+theorem xsaveFinit_hw_still (v : XsaveMaschine) (c : Nat) :
+    xsaveHw (xsaveFinit v c) = xsaveHw v := rfl
 
 /-- FINIT keeps the masks. -/
-theorem vollFinit_maske_still (v : VollMaschine) (c : Nat) :
-    (vollFinit v c).maske = v.maske := rfl
+theorem xsaveFinit_maske_still (v : XsaveMaschine) (c : Nat) :
+    (xsaveFinit v c).maske = v.maske := rfl
 
 /-- SAVE/RESTORE AFTER FINIT recovers the reset image: the
     identity theorem applied to the reinitialised state. -/
-theorem vollFinit_rundlauf (v : VollMaschine) (c : Nat)
+theorem xsaveFinit_rundlauf (v : XsaveMaschine) (c : Nat)
     (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (v1 v2 : VollMaschine)
-    (hles : ctxAlle (vollHw (vollFinit v c)).mem.lesbar a
-      (vollOffsets sse avx) = true)
-    (h1 : vollSpeichern (vollFinit v c) c a xc sse avx f =
+    (f : XsaveFehlerIn) (v1 v2 : XsaveMaschine)
+    (hles : ctxAlle (xsaveHw (xsaveFinit v c)).mem.lesbar a
+      (xsaveOffsets sse avx) = true)
+    (h1 : xsaveSpeichern (xsaveFinit v c) c a xc sse avx f =
       .weiter v1)
-    (h2 : vollWiederherstellen v1 c a xc sse avx f = .weiter v2) :
+    (h2 : xsaveWiederherstellen v1 c a xc sse avx f = .weiter v2) :
     ∀ t : Nat, t < 152 → (v2.x87 c) t = x87Reset t := by
   intro t ht
-  have hr := (vollRundlauf_maschine (vollFinit v c) c a xc sse avx f
+  have hr := (xsaveRundlauf_maschine (xsaveFinit v c) c a xc sse avx f
     v1 v2 hles h1 h2).1 t ht
   rw [hr]
-  exact vollFinit_setzt_zurueck v c t
+  exact xsaveFinit_setzt_zurueck v c t
 
 /-! ## 7. Family step relation and the TSO-leg embedding.
 
   The x87 image, mask and YMM upper file live beside `HwMaschine`
-  (in `VollMaschine`, like the accepted `YmmMaschine` wrapper),
+  (in `XsaveMaschine`, like the accepted `YmmMaschine` wrapper),
   so no `HwAdapter HwMaschine` plug can carry a save without
-  inventing that state. Instead `VollSchritt` runs on the full
+  inventing that state. Instead `XsaveSchritt` runs on the full
   machine: the checked save/restore/FINIT steps, the shared TSO
   legs with the EXACT coherent embedding, and outcome-tied
   refusals (never silent). -/
 
 /-- Observable family events on the full machine. -/
-inductive VollEreignis where
-  | saveReq : Nat → Adresse → Xcr0Bild → Bool → Bool → VollEreignis
-  | rstorReq : Nat → Adresse → Xcr0Bild → Bool → Bool → VollEreignis
-  | finitReq : Nat → VollEreignis
-  | leseBeob : Nat → Adresse → Byte → VollEreignis
-  | schreibAusgabe : Nat → Adresse → Byte → VollEreignis
-  | spülung : Nat → TSOEintrag → VollEreignis
-  | verweigert : Nat → VollEreignis
+inductive XsaveEreignis where
+  | saveReq : Nat → Adresse → Xcr0Bild → Bool → Bool → XsaveEreignis
+  | rstorReq : Nat → Adresse → Xcr0Bild → Bool → Bool → XsaveEreignis
+  | finitReq : Nat → XsaveEreignis
+  | leseBeob : Nat → Adresse → Byte → XsaveEreignis
+  | schreibAusgabe : Nat → Adresse → Byte → XsaveEreignis
+  | spülung : Nat → TSOEintrag → XsaveEreignis
+  | verweigert : Nat → XsaveEreignis
 
 /-- Project an outcome to a step successor. -/
-def vollOpt (o : VollAusgang) : Option VollMaschine :=
+def xsaveOpt (o : XsaveAusgang) : Option XsaveMaschine :=
   match o with
   | .weiter v' => some v'
   | _ => none
@@ -1966,99 +1966,99 @@ def vollOpt (o : VollAusgang) : Option VollMaschine :=
 /-- Family step relation: checked requests plus the shared TSO
     legs plus outcome-tied refusals. The fault-input oracle `f`
     rides in the request (checked inputs, never assumed). -/
-inductive VollSchritt : VollMaschine → VollMaschine → VollEreignis → Prop where
-  | save {v v' : VollMaschine} (c : Nat) (a : Adresse)
-      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
-      (h : vollSpeichern v c a xc sse avx f = .weiter v') :
-      VollSchritt v v' (.saveReq c a xc sse avx)
-  | rstor {v v' : VollMaschine} (c : Nat) (a : Adresse)
-      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
-      (h : vollWiederherstellen v c a xc sse avx f = .weiter v') :
-      VollSchritt v v' (.rstorReq c a xc sse avx)
-  | finit {v : VollMaschine} (c : Nat) :
-      VollSchritt v (vollFinit v c) (.finitReq c)
-  | lade {v : VollMaschine} (c : Nat) (a : Adresse) (w : Byte)
-      (h : loadByte (tsoAnsicht (vollHw v)) c a = some w) :
-      VollSchritt v v (.leseBeob c a w)
-  | gibAus {v : VollMaschine} (c : Nat) (a : Adresse) (w : Byte)
+inductive XsaveSchritt : XsaveMaschine → XsaveMaschine → XsaveEreignis → Prop where
+  | save {v v' : XsaveMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : XsaveFehlerIn)
+      (h : xsaveSpeichern v c a xc sse avx f = .weiter v') :
+      XsaveSchritt v v' (.saveReq c a xc sse avx)
+  | rstor {v v' : XsaveMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : XsaveFehlerIn)
+      (h : xsaveWiederherstellen v c a xc sse avx f = .weiter v') :
+      XsaveSchritt v v' (.rstorReq c a xc sse avx)
+  | finit {v : XsaveMaschine} (c : Nat) :
+      XsaveSchritt v (xsaveFinit v c) (.finitReq c)
+  | lade {v : XsaveMaschine} (c : Nat) (a : Adresse) (w : Byte)
+      (h : loadByte (tsoAnsicht (xsaveHw v)) c a = some w) :
+      XsaveSchritt v v (.leseBeob c a w)
+  | gibAus {v : XsaveMaschine} (c : Nat) (a : Adresse) (w : Byte)
       (s' : TSOZustand)
-      (h : issueByte (tsoAnsicht (vollHw v)) c a w = some s') :
-      VollSchritt v (setVollTso v s') (.schreibAusgabe c a w)
-  | spüle {v : VollMaschine} (c : Nat) (e : TSOEintrag)
+      (h : issueByte (tsoAnsicht (xsaveHw v)) c a w = some s') :
+      XsaveSchritt v (setXsaveTso v s') (.schreibAusgabe c a w)
+  | spüle {v : XsaveMaschine} (c : Nat) (e : TSOEintrag)
       (s' : TSOZustand)
-      (h : flushKern (tsoAnsicht (vollHw v)) c = some s')
-      (hkopf : ((vollHw v).puffer c).head? = some e) :
-      VollSchritt v (setVollTso v s') (.spülung c e)
-  | fehlerSave {v : VollMaschine} (c : Nat) (a : Adresse)
-      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
+      (h : flushKern (tsoAnsicht (xsaveHw v)) c = some s')
+      (hkopf : ((xsaveHw v).puffer c).head? = some e) :
+      XsaveSchritt v (setXsaveTso v s') (.spülung c e)
+  | fehlerSave {v : XsaveMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : XsaveFehlerIn)
       (g : ArchFehler)
-      (h : vollSpeichern v c a xc sse avx f = .fehler g) :
-      VollSchritt v v (.verweigert c)
-  | fehlerRstor {v : VollMaschine} (c : Nat) (a : Adresse)
-      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
+      (h : xsaveSpeichern v c a xc sse avx f = .fehler g) :
+      XsaveSchritt v v (.verweigert c)
+  | fehlerRstor {v : XsaveMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : XsaveFehlerIn)
       (g : ArchFehler)
-      (h : vollWiederherstellen v c a xc sse avx f = .fehler g) :
-      VollSchritt v v (.verweigert c)
-  | fehlerVerweigert {v : VollMaschine} (c : Nat) (a : Adresse)
-      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
-      (h : vollSpeichern v c a xc sse avx f = .verweigert) :
-      VollSchritt v v (.verweigert c)
+      (h : xsaveWiederherstellen v c a xc sse avx f = .fehler g) :
+      XsaveSchritt v v (.verweigert c)
+  | fehlerVerweigert {v : XsaveMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : XsaveFehlerIn)
+      (h : xsaveSpeichern v c a xc sse avx f = .verweigert) :
+      XsaveSchritt v v (.verweigert c)
 
 /-- (1) Every family step preserves well-formedness. -/
-theorem vollSchritt_wf (v v' : VollMaschine) (e : VollEreignis)
-    (h : VollSchritt v v' e) (hwf : VollWf v) : VollWf v' := by
+theorem xsaveSchritt_wf (v v' : XsaveMaschine) (e : XsaveEreignis)
+    (h : XsaveSchritt v v' e) (hwf : XsaveWf v) : XsaveWf v' := by
   cases h with
   | save c a xc sse avx f h =>
-    exact vollSpeichern_wf _ _ _ _ _ _ _ hwf _ h
+    exact xsaveSpeichern_wf _ _ _ _ _ _ _ hwf _ h
   | rstor c a xc sse avx f h =>
-    exact vollWiederherstellen_wf _ _ _ _ _ _ _ hwf _ h
-  | finit c => exact vollFinit_wf _ _ hwf
+    exact xsaveWiederherstellen_wf _ _ _ _ _ _ _ hwf _ h
+  | finit c => exact xsaveFinit_wf _ _ hwf
   | lade c a w h => exact hwf
-  | gibAus c a w s' h => exact setVollTso_wf _ _ hwf
-  | spüle c e s' h hkopf => exact setVollTso_wf _ _ hwf
+  | gibAus c a w s' h => exact setXsaveTso_wf _ _ hwf
+  | spüle c e s' h hkopf => exact setXsaveTso_wf _ _ hwf
   | fehlerSave c a xc sse avx f g h => exact hwf
   | fehlerRstor c a xc sse avx f g h => exact hwf
   | fehlerVerweigert c a xc sse avx f h => exact hwf
 
 /-- (2) The TSO observation leg IS the coherent TSO step. -/
-theorem vollLade_ist_hw (v v' : VollMaschine) (c : Nat)
+theorem xsaveLade_ist_hw (v v' : XsaveMaschine) (c : Nat)
     (a : Adresse) (w : Byte)
-    (h : VollSchritt v v' (.leseBeob c a w)) :
-    HwSchritt (vollHw v) (vollHw v') (.leseBeob c a w) := by
+    (h : XsaveSchritt v v' (.leseBeob c a w)) :
+    HwSchritt (xsaveHw v) (xsaveHw v') (.leseBeob c a w) := by
   cases h with
   | lade c a w h => exact HwSchritt.lade c a w h
 
 /-- (2) The TSO store-issue leg IS the coherent TSO step. -/
-theorem vollGibAus_ist_hw (v v' : VollMaschine) (c : Nat)
+theorem xsaveGibAus_ist_hw (v v' : XsaveMaschine) (c : Nat)
     (a : Adresse) (w : Byte)
-    (h : VollSchritt v v' (.schreibAusgabe c a w)) :
+    (h : XsaveSchritt v v' (.schreibAusgabe c a w)) :
     ∃ s' : TSOZustand,
-      issueByte (tsoAnsicht (vollHw v)) c a w = some s' ∧
-      HwSchritt (vollHw v) (vollHw v') (.schreibAusgabe c a w) := by
+      issueByte (tsoAnsicht (xsaveHw v)) c a w = some s' ∧
+      HwSchritt (xsaveHw v) (xsaveHw v') (.schreibAusgabe c a w) := by
   cases h with
   | gibAus c a w t ht =>
     exact ⟨t, ht, HwSchritt.gibAus c a w t ht⟩
 
 /-- (2) The TSO drain leg IS the coherent TSO step. -/
-theorem vollSpüle_ist_hw (v v' : VollMaschine) (c : Nat)
+theorem xsaveSpüle_ist_hw (v v' : XsaveMaschine) (c : Nat)
     (e : TSOEintrag)
-    (h : VollSchritt v v' (.spülung c e)) :
+    (h : XsaveSchritt v v' (.spülung c e)) :
     ∃ s' : TSOZustand,
-      flushKern (tsoAnsicht (vollHw v)) c = some s' ∧
-      HwSchritt (vollHw v) (vollHw v') (.spülung c e) := by
+      flushKern (tsoAnsicht (xsaveHw v)) c = some s' ∧
+      HwSchritt (xsaveHw v) (xsaveHw v') (.spülung c e) := by
   cases h with
   | spüle c e t ht hkopf =>
     exact ⟨t, ht, HwSchritt.spüle c e t ht hkopf⟩
 
 /-- BACKWARD embedding, exact: a drain step comes only from the
     coherent drain with the same head condition. -/
-theorem vollSpüle_ist_hw_zurueck (v v' : VollMaschine) (c : Nat)
+theorem xsaveSpüle_ist_hw_zurueck (v v' : XsaveMaschine) (c : Nat)
     (e : TSOEintrag)
-    (h : VollSchritt v v' (.spülung c e)) :
+    (h : XsaveSchritt v v' (.spülung c e)) :
     ∃ s' : TSOZustand,
-      flushKern (tsoAnsicht (vollHw v)) c = some s' ∧
-      ((vollHw v).puffer c).head? = some e ∧
-      v' = setVollTso v s' := by
+      flushKern (tsoAnsicht (xsaveHw v)) c = some s' ∧
+      ((xsaveHw v).puffer c).head? = some e ∧
+      v' = setXsaveTso v s' := by
   cases h with
   | spüle c e s' h hkopf => exact ⟨s', h, hkopf, rfl⟩
 
@@ -2106,114 +2106,114 @@ theorem fxEintraegeAux_laenge (f : Nat → Byte) (a : Adresse)
     simp only [fxEintraegeAux, List.length_cons, ih]
 
 /-- Witness area base, core 0 (64-aligned, canonical). -/
-def vollWitArea0 : Adresse := BitVec.ofNat 64 4096
+def xsaveWitArea0 : Adresse := BitVec.ofNat 64 4096
 
 /-- Witness area base, core 1. -/
-def vollWitArea1 : Adresse := BitVec.ofNat 64 8192
+def xsaveWitArea1 : Adresse := BitVec.ofNat 64 8192
 
 /-- Witness area base, reserved-bit probe. -/
-def vollWitAreaR : Adresse := BitVec.ofNat 64 12288
+def xsaveWitAreaR : Adresse := BitVec.ofNat 64 12288
 
 /-- Witness permission: exactly the two full 832-byte areas
     plus the reserved-bit probe area. -/
-def vollWitOk (a : Adresse) : Bool :=
+def xsaveWitOk (a : Adresse) : Bool :=
   decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 832) ||
     decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 832) ||
     decide (12288 ≤ a.toNat ∧ a.toNat < 12288 + 832)
 
 /-- Witness memory: zeroed bytes, footprint permissions. -/
-def vollWitMem : Speicher :=
-  { bytes := fun _ => BitVec.ofNat 8 0, lesbar := vollWitOk,
-    schreibbar := vollWitOk, ausfuehrbar := fun _ => false }
+def xsaveWitMem : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0, lesbar := xsaveWitOk,
+    schreibbar := xsaveWitOk, ausfuehrbar := fun _ => false }
 
 /-- Witness XMM file, core 0 (low halves 7). -/
-def vollWitX0 : XmmDatei :=
+def xsaveWitX0 : XmmDatei :=
   fun _ => vecJoin (BitVec.ofNat 64 7) (BitVec.ofNat 64 0)
 
 /-- Witness XMM file, core 1 (low halves 11). -/
-def vollWitX1 : XmmDatei :=
+def xsaveWitX1 : XmmDatei :=
   fun _ => vecJoin (BitVec.ofNat 64 11) (BitVec.ofNat 64 0)
 
 /-- Witness cores: distinct FP state per core. -/
-def vollWitKern : Nat → HwKern
+def xsaveWitKern : Nat → HwKern
   | 0 => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
-      BitVec.ofNat 64 0, vollWitX0, ⟨0x1F80⟩⟩
+      BitVec.ofNat 64 0, xsaveWitX0, ⟨0x1F80⟩⟩
   | 1 => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
-      BitVec.ofNat 64 0, vollWitX1, ⟨0x1FBF⟩⟩
+      BitVec.ofNat 64 0, xsaveWitX1, ⟨0x1FBF⟩⟩
   | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
       BitVec.ofNat 64 0, fun _ => BitVec.ofNat 128 0, kontextReset⟩
 
 /-- Witness x87 images: core 0 starts from the FINIT reset image,
     every other core carries the constant-`5` image (nonzero, so
     forwarding is observable against zeroed memory). -/
-def vollWitX87 : Nat → X87Bild
+def xsaveWitX87 : Nat → X87Bild
   | 0 => x87Reset
   | _ => fun _ => BitVec.ofNat 8 5
 
 /-- Witness masks: the `0xFFBF` constant everywhere. -/
-def vollWitMaske : Nat → BitVec 32 :=
+def xsaveWitMaske : Nat → BitVec 32 :=
   fun _ => BitVec.ofNat 32 0xFFBF
 
 /-- Witness upper files: low halves `9` on core 0, `13` elsewhere. -/
-def vollWitOber : Nat → YmmDatei
+def xsaveWitOber : Nat → YmmDatei
   | 0 => fun _ => vecJoin (BitVec.ofNat 64 9) (BitVec.ofNat 64 0)
   | _ => fun _ => vecJoin (BitVec.ofNat 64 13) (BitVec.ofNat 64 0)
 
 /-- Witness start machine: shared memory, two saving cores, empty
     buffers, full silicon, baseline readiness. -/
-def vollWitStart : VollMaschine :=
-  ⟨⟨⟨vollWitMem, vollWitKern, fun _ => [], basisHw,
-    fun _ => basisBereit⟩, vollWitOber⟩, vollWitX87, vollWitMaske⟩
+def xsaveWitStart : XsaveMaschine :=
+  ⟨⟨⟨xsaveWitMem, xsaveWitKern, fun _ => [], basisHw,
+    fun _ => basisBereit⟩, xsaveWitOber⟩, xsaveWitX87, xsaveWitMaske⟩
 
 /-- Witness XCR0: x87, SSE and AVX enabled. -/
-def vollWitXc : Xcr0Bild := ⟨true, true, true⟩
+def xsaveWitXc : Xcr0Bild := ⟨true, true, true⟩
 
 /-- Witness fault inputs: no fault fires. -/
-def vollWitF : VollFehlerIn :=
+def xsaveWitF : XsaveFehlerIn :=
   ⟨false, true, false, false, false, false⟩
 
 /-- The witness machine is well-formed. -/
-theorem vollWitStart_wf : VollWf vollWitStart := by
-  unfold VollWf
+theorem xsaveWitStart_wf : XsaveWf xsaveWitStart := by
+  unfold XsaveWf
   intro c f _
   cases f <;> rfl
 
 set_option maxRecDepth 10000 in
 /-- Witness permissions cover the full footprint, both ways. -/
-theorem vollWit_perm (a : Adresse)
-    (h : a = vollWitArea0 ∨ a = vollWitArea1) :
-    ctxAlle vollWitMem.schreibbar a (vollOffsets true true) = true ∧
-      ctxAlle vollWitMem.lesbar a (vollOffsets true true) = true := by
+theorem xsaveWit_perm (a : Adresse)
+    (h : a = xsaveWitArea0 ∨ a = xsaveWitArea1) :
+    ctxAlle xsaveWitMem.schreibbar a (xsaveOffsets true true) = true ∧
+      ctxAlle xsaveWitMem.lesbar a (xsaveOffsets true true) = true := by
   rcases h with rfl | rfl <;> decide
 
 /-- Witness addresses are canonical. -/
-theorem vollWit_kanonisch :
-    kanonisch vollWitArea0 = true ∧
-      kanonisch vollWitArea1 = true := by
+theorem xsaveWit_xsaveKanonisch :
+    xsaveKanonisch xsaveWitArea0 = true ∧
+      xsaveKanonisch xsaveWitArea1 = true := by
   decide
 
 /-- Witness addresses are save-aligned. -/
-theorem vollWit_ausgerichtet :
-    xAusgerichtet vollWitArea0 = true ∧
-      xAusgerichtet vollWitArea1 = true ∧
-      fxAusgerichtet vollWitArea0 = true := by
+theorem xsaveWit_ausgerichtet :
+    xAusgerichtet xsaveWitArea0 = true ∧
+      xAusgerichtet xsaveWitArea1 = true ∧
+      fxAusgerichtet xsaveWitArea0 = true := by
   decide
 
 /-- Witness XCR0 enables SSE and AVX. -/
-theorem vollWit_bereit :
-    xcr0SseBereit vollWitXc = true ∧
-      xcr0AvxBereit vollWitXc = true := by
+theorem xsaveWit_bereit :
+    xcr0SseBereit xsaveWitXc = true ∧
+      xcr0AvxBereit xsaveWitXc = true := by
   decide
 
 /-- FINIT facts on the witness: reset installs, everything else
     stays, and core 0 already starts from reset. -/
-theorem vollWit_finit :
-    ((vollFinit vollWitStart 1).x87 1) 0 = x87Reset 0 ∧
-      vollHw (vollFinit vollWitStart 1) = vollHw vollWitStart ∧
-      (vollFinit vollWitStart 1).maske = vollWitStart.maske ∧
-      (vollWitX87 0) 0 = x87Reset 0 := by
-  exact ⟨vollFinit_setzt_zurueck _ _ _,
-    vollFinit_hw_still _ _, vollFinit_maske_still _ _, rfl⟩
+theorem xsaveWit_finit :
+    ((xsaveFinit xsaveWitStart 1).x87 1) 0 = x87Reset 0 ∧
+      xsaveHw (xsaveFinit xsaveWitStart 1) = xsaveHw xsaveWitStart ∧
+      (xsaveFinit xsaveWitStart 1).maske = xsaveWitStart.maske ∧
+      (xsaveWitX87 0) 0 = x87Reset 0 := by
+  exact ⟨xsaveFinit_setzt_zurueck _ _ _,
+    xsaveFinit_hw_still _ _, xsaveFinit_maske_still _ _, rfl⟩
 
 /-! ## 9. Observed saves: buffers, forwarding, foreign view.
 
@@ -2224,16 +2224,16 @@ theorem vollWit_finit :
   kernel re-checks nothing across theorems. -/
 
 /-- Project a buffer length out of a save outcome. -/
-def witBuf (o : VollAusgang) (c : Nat) : Option Nat :=
+def witBuf (o : XsaveAusgang) (c : Nat) : Option Nat :=
   match o with
-  | .weiter m => some ((vollHw m).puffer c).length
+  | .weiter m => some ((xsaveHw m).puffer c).length
   | _ => none
 
 /-- Project one TSO-view byte out of a save outcome. -/
-def witByte (o : VollAusgang) (c : Nat)
+def witByte (o : XsaveAusgang) (c : Nat)
     (a : Adresse) : Option (Option Byte) :=
   match o with
-  | .weiter m => some (loadByte (tsoAnsicht (vollHw m)) c a)
+  | .weiter m => some (loadByte (tsoAnsicht (xsaveHw m)) c a)
   | _ => none
 
 set_option maxRecDepth 100000 in
@@ -2244,42 +2244,42 @@ set_option maxHeartbeats 1000000 in
     never evaluated in the kernel: it exceeds the kernel memory
     budget, so the two components are observed separately. -/
 theorem wit_buf :
-    witBuf (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
-      false true vollWitF) 0 = some 476 ∧
-      witBuf (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
-        true false vollWitF) 1 = some 480 := by
+    witBuf (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
+      false true xsaveWitF) 0 = some 476 ∧
+      witBuf (xsaveSpeichern xsaveWitStart 1 xsaveWitArea1 xsaveWitXc
+        true false xsaveWitF) 1 = some 480 := by
   decide
 
 /-- An empty request buffers nothing (refusal, observed). -/
 theorem wit_empty :
-    witBuf (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
-      false false vollWitF) 0 = none := by
+    witBuf (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
+      false false xsaveWitF) 0 = none := by
   decide
 
 /-- The machine after core 0 saves AVX, if reached. -/
-def witV1 : VollMaschine :=
-  match vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc false
-      true vollWitF with
+def witV1 : XsaveMaschine :=
+  match xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc false
+      true xsaveWitF with
   | .weiter m => m
-  | _ => vollWitStart
+  | _ => xsaveWitStart
 
 /-- The machine after core 1 saves SSE, if reached. -/
-def witV1b : VollMaschine :=
-  match vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc true
-      false vollWitF with
+def witV1b : XsaveMaschine :=
+  match xsaveSpeichern xsaveWitStart 1 xsaveWitArea1 xsaveWitXc true
+      false xsaveWitF with
   | .weiter m => m
-  | _ => vollWitStart
+  | _ => xsaveWitStart
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 1000000 in
 /-- Owner-only forwarding, core 0: mask `0xBF` and header
     `5` (XSTATE_BV bits 0 and 2 for the AVX-only request). -/
 theorem wit_fwd0 :
-    witByte (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
-        false true vollWitF) 0 (addrOff vollWitArea0 28) =
+    witByte (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
+        false true xsaveWitF) 0 (addrOff xsaveWitArea0 28) =
         some (some (BitVec.ofNat 8 191)) ∧
-      witByte (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
-          false true vollWitF) 0 (addrOff vollWitArea0 512) =
+      witByte (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
+          false true xsaveWitF) 0 (addrOff xsaveWitArea0 512) =
           some (some (BitVec.ofNat 8 5)) := by
   decide
 
@@ -2287,14 +2287,14 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 1000000 in
 /-- Owner-only forwarding, core 0 YMM and core 1 x87/MXCSR. -/
 theorem wit_fwd1 :
-    witByte (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
-        false true vollWitF) 0 (addrOff vollWitArea0 576) =
+    witByte (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
+        false true xsaveWitF) 0 (addrOff xsaveWitArea0 576) =
         some (some (BitVec.ofNat 8 9)) ∧
-      witByte (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
-          true false vollWitF) 1 (addrOff vollWitArea1 0) =
+      witByte (xsaveSpeichern xsaveWitStart 1 xsaveWitArea1 xsaveWitXc
+          true false xsaveWitF) 1 (addrOff xsaveWitArea1 0) =
           some (some (BitVec.ofNat 8 5)) ∧
-      witByte (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
-          true false vollWitF) 1 (addrOff vollWitArea1 24) =
+      witByte (xsaveSpeichern xsaveWitStart 1 xsaveWitArea1 xsaveWitXc
+          true false xsaveWitF) 1 (addrOff xsaveWitArea1 24) =
           some (some (BitVec.ofNat 8 191)) := by
   decide
 
@@ -2303,42 +2303,42 @@ set_option maxHeartbeats 1000000 in
 /-- No foreign forwarding: core 0 still reads zero at core 1's
     MXCSR cell after core 1 saves. -/
 theorem wit_fremd :
-    witByte (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
-        true false vollWitF) 0 (addrOff vollWitArea1 24) =
+    witByte (xsaveSpeichern xsaveWitStart 1 xsaveWitArea1 xsaveWitXc
+        true false xsaveWitF) 0 (addrOff xsaveWitArea1 24) =
         some (some (BitVec.ofNat 8 0)) := by
   decide
 
 /-! ## 10. Observed restore, drain, reserved bit and refusals. -/
 
 /-- Project the restored control word out of a restore outcome. -/
-def witFpNach (o : VollAusgang) (c : Nat) : Option Nat :=
+def witFpNach (o : XsaveAusgang) (c : Nat) : Option Nat :=
   match o with
-  | .weiter m => some ((((vollHw m).kerne c).fp).mxcsr.toNat)
+  | .weiter m => some ((((xsaveHw m).kerne c).fp).mxcsr.toNat)
   | _ => none
 
 /-- Project a restored XMM register out of a restore outcome. -/
-def witXmmNach (o : VollAusgang) (c : Nat) (r : XmmReg) :
+def witXmmNach (o : XsaveAusgang) (c : Nat) (r : XmmReg) :
     Option Nat :=
   match o with
-  | .weiter m => some ((((vollHw m).kerne c).xmm r).toNat)
+  | .weiter m => some ((((xsaveHw m).kerne c).xmm r).toNat)
   | _ => none
 
 /-- Project a restored YMM upper half out of a restore outcome. -/
-def witYmmNach (o : VollAusgang) (c : Nat) (r : XmmReg) :
+def witYmmNach (o : XsaveAusgang) (c : Nat) (r : XmmReg) :
     Option Nat :=
   match o with
   | .weiter m => some (((m.ym.ober c) r).toNat)
   | _ => none
 
 /-- Project a restored opaque byte out of a restore outcome. -/
-def witX87Nach (o : VollAusgang) (c t : Nat) : Option Byte :=
+def witX87Nach (o : XsaveAusgang) (c t : Nat) : Option Byte :=
   match o with
   | .weiter m => some ((m.x87 c) t)
   | _ => none
 
 /-- Outcome kind projection (outcomes carry functions, so no
     `DecidableEq`; kinds are plain numbers). -/
-def witArt (o : VollAusgang) : Nat :=
+def xsaveWitArt (o : XsaveAusgang) : Nat :=
   match o with
   | .weiter _ => 0
   | .verweigert => 1
@@ -2346,7 +2346,7 @@ def witArt (o : VollAusgang) : Nat :=
 
 /-- Fault class projection: 10 NM, 11 UD, 12 GP, 13 SS, 14 PF,
     15 AC, 16 DE, 17 XM, 0 no fault. -/
-def witFehler (o : VollAusgang) : Nat :=
+def xsaveWitFehler (o : XsaveAusgang) : Nat :=
   match o with
   | .fehler .nm => 10
   | .fehler .ud => 11
@@ -2359,21 +2359,21 @@ def witFehler (o : VollAusgang) : Nat :=
   | _ => 0
 
 /-- Core 0 restores AVX after its save, if reached. -/
-def witV2 : VollAusgang :=
-  match vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc false
-      true vollWitF with
+def witV2 : XsaveAusgang :=
+  match xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc false
+      true xsaveWitF with
   | .weiter m1 =>
-    vollWiederherstellen m1 0 vollWitArea0 vollWitXc false true
-      vollWitF
+    xsaveWiederherstellen m1 0 xsaveWitArea0 xsaveWitXc false true
+      xsaveWitF
   | _ => .verweigert
 
 /-- Core 1 restores SSE after its save, if reached. -/
-def witV2b : VollAusgang :=
-  match vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc true
-      false vollWitF with
+def witV2b : XsaveAusgang :=
+  match xsaveSpeichern xsaveWitStart 1 xsaveWitArea1 xsaveWitXc true
+      false xsaveWitF with
   | .weiter m1 =>
-    vollWiederherstellen m1 1 vollWitArea1 vollWitXc true false
-      vollWitF
+    xsaveWiederherstellen m1 1 xsaveWitArea1 xsaveWitXc true false
+      xsaveWitF
   | _ => .verweigert
 
 set_option maxRecDepth 100000 in
@@ -2398,11 +2398,11 @@ theorem wit_restore1 :
 
 /-- Core 1 drains its oldest entry into shared memory. -/
 def witNachFlush : Option Byte :=
-  match vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc true
-      false vollWitF with
+  match xsaveSpeichern xsaveWitStart 1 xsaveWitArea1 xsaveWitXc true
+      false xsaveWitF with
   | .weiter m =>
-    match flushKern (tsoAnsicht (vollHw m)) 1 with
-    | some s => some (s.mem.bytes (addrOff vollWitArea1 0))
+    match flushKern (tsoAnsicht (xsaveHw m)) 1 with
+    | some s => some (s.mem.bytes (addrOff xsaveWitArea1 0))
     | none => none
   | _ => none
 
@@ -2412,65 +2412,65 @@ set_option maxHeartbeats 1000000 in
     `5` (core 1's x87 byte) after one flush. -/
 theorem wit_drain :
     witNachFlush = some (BitVec.ofNat 8 5) ∧
-      vollWitMem.bytes (addrOff vollWitArea1 0) =
+      xsaveWitMem.bytes (addrOff xsaveWitArea1 0) =
         BitVec.ofNat 8 0 := by
   decide
 
 /-- Reserved-bit probe bytes: bit 18 set in the MXCSR image cell. -/
-def vollWitMemRBytes (a : Adresse) : Byte :=
-  if decide (a = addrOff vollWitAreaR 26) then BitVec.ofNat 8 4
+def xsaveWitMemRBytes (a : Adresse) : Byte :=
+  if decide (a = addrOff xsaveWitAreaR 26) then BitVec.ofNat 8 4
   else BitVec.ofNat 8 0
 
 /-- Reserved-bit probe memory. -/
-def vollWitMemR : Speicher :=
-  { bytes := vollWitMemRBytes, lesbar := vollWitOk,
-    schreibbar := vollWitOk, ausfuehrbar := fun _ => false }
+def xsaveWitMemR : Speicher :=
+  { bytes := xsaveWitMemRBytes, lesbar := xsaveWitOk,
+    schreibbar := xsaveWitOk, ausfuehrbar := fun _ => false }
 
 /-- Reserved-bit probe machine. -/
-def vollWitStartR : VollMaschine :=
-  { vollWitStart with ym :=
-    ⟨{ vollWitStart.ym.hw with mem := vollWitMemR },
-      vollWitStart.ym.ober⟩ }
+def xsaveWitStartR : XsaveMaschine :=
+  { xsaveWitStart with ym :=
+    ⟨{ xsaveWitStart.ym.hw with mem := xsaveWitMemR },
+      xsaveWitStart.ym.ober⟩ }
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 1000000 in
 /-- A reserved MXCSR image bit faults with #GP on restore. -/
 theorem wit_gp_reserviert :
-    witFehler (vollWiederherstellen vollWitStartR 0 vollWitAreaR
-      vollWitXc true false vollWitF) = 12 := by
+    xsaveWitFehler (xsaveWiederherstellen xsaveWitStartR 0 xsaveWitAreaR
+      xsaveWitXc true false xsaveWitF) = 12 := by
   decide
 
 set_option maxRecDepth 100000 in
 /-- Planted refusals, observed: every fault class fires its
     outcome, the empty request and the permission failure refuse. -/
 theorem wit_verweigert :
-    witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+    xsaveWitFehler (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
         true true ⟨true, true, false, false, false, false⟩) = 10 ∧
-      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
         true true ⟨false, false, false, false, false, false⟩) = 11 ∧
-      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
         true true ⟨false, true, true, false, false, false⟩) = 11 ∧
-      witFehler (vollSpeichern vollWitStart 0 vollWitArea0
-        ⟨true, false, false⟩ true true vollWitF) = 11 ∧
-      witFehler (vollSpeichern vollWitStart 0 vollWitArea0
-        ⟨true, true, false⟩ false true vollWitF) = 11 ∧
-      witFehler (vollSpeichern vollWitStart 0 vollWitArea0
-        ⟨false, true, true⟩ true true vollWitF) = 12 ∧
-      witArt (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
-        false false vollWitF) = 1 ∧
-      witFehler (vollSpeichern vollWitStart 0
-        (BitVec.ofNat 64 (2 ^ 47)) vollWitXc true true
-        vollWitF) = 12 ∧
-      witFehler (vollSpeichern vollWitStart 0
-        (BitVec.ofNat 64 4104) vollWitXc true true vollWitF) = 12 ∧
-      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0
+        ⟨true, false, false⟩ true true xsaveWitF) = 11 ∧
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0
+        ⟨true, true, false⟩ false true xsaveWitF) = 11 ∧
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0
+        ⟨false, true, true⟩ true true xsaveWitF) = 12 ∧
+      xsaveWitArt (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
+        false false xsaveWitF) = 1 ∧
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0
+        (BitVec.ofNat 64 (2 ^ 47)) xsaveWitXc true true
+        xsaveWitF) = 12 ∧
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0
+        (BitVec.ofNat 64 4104) xsaveWitXc true true xsaveWitF) = 12 ∧
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
         true true ⟨false, true, false, true, false, false⟩) = 13 ∧
-      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
         true true ⟨false, true, false, false, true, false⟩) = 14 ∧
-      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+      xsaveWitFehler (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
         true true ⟨false, true, false, false, false, true⟩) = 15 ∧
-      witArt (vollSpeichern vollWitStart 0 (BitVec.ofNat 64 0)
-        vollWitXc true true vollWitF) = 1 := by
+      xsaveWitArt (xsaveSpeichern xsaveWitStart 0 (BitVec.ofNat 64 0)
+        xsaveWitXc true true xsaveWitF) = 1 := by
   decide
 
 /-! ## 11. Witness steps: FINIT, single TSO steps, refusals.
@@ -2481,47 +2481,47 @@ theorem wit_verweigert :
   definitional or single-issue and cost nothing. -/
 
 /-- The witness TSO view. -/
-def witTso0 : TSOZustand := tsoAnsicht (vollHw vollWitStart)
+def witTso0 : TSOZustand := tsoAnsicht (xsaveHw xsaveWitStart)
 
 /-- Single-issue successor: one byte at the core-1 area. -/
 def witS1 : TSOZustand :=
-  ⟨vollWitMem, pufferSetze (fun _ => []) 0
+  ⟨xsaveWitMem, pufferSetze (fun _ => []) 0
     ((fun _ => []) 0 ++
-      [⟨vollWitArea1, BitVec.ofNat 8 42⟩])⟩
+      [⟨xsaveWitArea1, BitVec.ofNat 8 42⟩])⟩
 
 /-- The single issue goes through (one permission check, one
     append: no footprint fold). -/
 theorem wit_issue1 :
-    issueByte witTso0 0 vollWitArea1 (BitVec.ofNat 8 42) =
+    issueByte witTso0 0 xsaveWitArea1 (BitVec.ofNat 8 42) =
       some witS1 := by
   rfl
 
 /-- Single-issue step on the full machine. -/
 theorem wit_schritt_gibAus :
-    VollSchritt vollWitStart (setVollTso vollWitStart witS1)
-      (.schreibAusgabe 0 vollWitArea1
+    XsaveSchritt xsaveWitStart (setXsaveTso xsaveWitStart witS1)
+      (.schreibAusgabe 0 xsaveWitArea1
         (BitVec.ofNat 8 42)) :=
-  VollSchritt.gibAus 0 vollWitArea1 (BitVec.ofNat 8 42) witS1
+  XsaveSchritt.gibAus 0 xsaveWitArea1 (BitVec.ofNat 8 42) witS1
     wit_issue1
 
 /-- The issued byte forwards to its owner. -/
 theorem wit_schritt_lade_wert :
-    loadByte witS1 0 vollWitArea1 = some (BitVec.ofNat 8 42) := by
+    loadByte witS1 0 xsaveWitArea1 = some (BitVec.ofNat 8 42) := by
   decide
 
 /-- Observation step on the full machine. -/
 theorem wit_schritt_lade :
-    VollSchritt (setVollTso vollWitStart witS1)
-      (setVollTso vollWitStart witS1)
-      (.leseBeob 0 vollWitArea1 (BitVec.ofNat 8 42)) :=
-  VollSchritt.lade 0 vollWitArea1 (BitVec.ofNat 8 42)
+    XsaveSchritt (setXsaveTso xsaveWitStart witS1)
+      (setXsaveTso xsaveWitStart witS1)
+      (.leseBeob 0 xsaveWitArea1 (BitVec.ofNat 8 42)) :=
+  XsaveSchritt.lade 0 xsaveWitArea1 (BitVec.ofNat 8 42)
     wit_schritt_lade_wert
 
 /-- Single-flush successor: the byte lands in memory. -/
 def witS2 : TSOZustand :=
-  ⟨{ vollWitMem with bytes :=
-      fun x => if x = vollWitArea1 then BitVec.ofNat 8 42
-        else vollWitMem.bytes x },
+  ⟨{ xsaveWitMem with bytes :=
+      fun x => if x = xsaveWitArea1 then BitVec.ofNat 8 42
+        else xsaveWitMem.bytes x },
     pufferSetze witS1.puffer 0 []⟩
 
 /-- The single flush goes through. -/
@@ -2531,52 +2531,52 @@ theorem wit_flush1 :
 
 /-- Drain step on the full machine. -/
 theorem wit_schritt_spüle :
-    VollSchritt (setVollTso vollWitStart witS1)
-      (setVollTso vollWitStart witS2)
-      (.spülung 0 ⟨vollWitArea1, BitVec.ofNat 8 42⟩) :=
-  VollSchritt.spüle 0 ⟨vollWitArea1, BitVec.ofNat 8 42⟩ witS2
+    XsaveSchritt (setXsaveTso xsaveWitStart witS1)
+      (setXsaveTso xsaveWitStart witS2)
+      (.spülung 0 ⟨xsaveWitArea1, BitVec.ofNat 8 42⟩) :=
+  XsaveSchritt.spüle 0 ⟨xsaveWitArea1, BitVec.ofNat 8 42⟩ witS2
     wit_flush1 (by rfl)
 
 /-- FINIT steps on both cores (definitional). -/
 theorem wit_schritt_finit :
-    VollSchritt vollWitStart (vollFinit vollWitStart 0)
+    XsaveSchritt xsaveWitStart (xsaveFinit xsaveWitStart 0)
       (.finitReq 0) ∧
-      VollSchritt vollWitStart (vollFinit vollWitStart 1)
+      XsaveSchritt xsaveWitStart (xsaveFinit xsaveWitStart 1)
         (.finitReq 1) :=
-  ⟨VollSchritt.finit 0, VollSchritt.finit 1⟩
+  ⟨XsaveSchritt.finit 0, XsaveSchritt.finit 1⟩
 
 /-- The NM refusal as an outcome equality (gates only: cheap). -/
 theorem wit_nm_gleich :
-    vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc true true
+    xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc true true
       ⟨true, true, false, false, false, false⟩ =
       .fehler .nm := by
   rfl
 
 /-- NM refusal step. -/
 theorem wit_schritt_nm :
-    VollSchritt vollWitStart vollWitStart (.verweigert 0) :=
-  VollSchritt.fehlerSave 0 vollWitArea0 vollWitXc true true
+    XsaveSchritt xsaveWitStart xsaveWitStart (.verweigert 0) :=
+  XsaveSchritt.fehlerSave 0 xsaveWitArea0 xsaveWitXc true true
     ⟨true, true, false, false, false, false⟩ .nm wit_nm_gleich
 
 /-- The empty-request refusal as an outcome equality. -/
 theorem wit_leer_gleich :
-    vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc false
-      false vollWitF = .verweigert := by
+    xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc false
+      false xsaveWitF = .verweigert := by
   rfl
 
 /-- Empty-request refusal step. -/
 theorem wit_schritt_leer :
-    VollSchritt vollWitStart vollWitStart (.verweigert 0) :=
-  VollSchritt.fehlerVerweigert 0 vollWitArea0 vollWitXc false false
-    vollWitF wit_leer_gleich
+    XsaveSchritt xsaveWitStart xsaveWitStart (.verweigert 0) :=
+  XsaveSchritt.fehlerVerweigert 0 xsaveWitArea0 xsaveWitXc false false
+    xsaveWitF wit_leer_gleich
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- Core-1 save as an outcome equality (480-entry kernel
     evaluation through `rfl`). -/
 theorem wit_h1b :
-    vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc true false
-      vollWitF = .weiter witV1b := by
+    xsaveSpeichern xsaveWitStart 1 xsaveWitArea1 xsaveWitXc true false
+      xsaveWitF = .weiter witV1b := by
   rfl
 
 /-! ## 12. Applied identity and the joint witness.
@@ -2590,38 +2590,38 @@ set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- Core-0 save as an outcome equality. -/
 theorem wit_h1 :
-    vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc false true
-      vollWitF = .weiter witV1 := by
+    xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc false true
+      xsaveWitF = .weiter witV1 := by
   rfl
 
 /-- Core-0 restore target: the machine after restoring core 0. -/
-def witM2 : VollMaschine :=
-  match vollWiederherstellen witV1 0 vollWitArea0 vollWitXc false
-      true vollWitF with
+def witM2 : XsaveMaschine :=
+  match xsaveWiederherstellen witV1 0 xsaveWitArea0 xsaveWitXc false
+      true xsaveWitF with
   | .weiter m => m
-  | _ => vollWitStart
+  | _ => xsaveWitStart
 
 /-- Core-1 restore target: the machine after restoring core 1. -/
-def witM2b : VollMaschine :=
-  match vollWiederherstellen witV1b 1 vollWitArea1 vollWitXc true
-      false vollWitF with
+def witM2b : XsaveMaschine :=
+  match xsaveWiederherstellen witV1b 1 xsaveWitArea1 xsaveWitXc true
+      false xsaveWitF with
   | .weiter m => m
-  | _ => vollWitStart
+  | _ => xsaveWitStart
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- Core-0 restore as an outcome equality. -/
 theorem wit_h2 :
-    vollWiederherstellen witV1 0 vollWitArea0 vollWitXc false true
-      vollWitF = .weiter witM2 := by
+    xsaveWiederherstellen witV1 0 xsaveWitArea0 xsaveWitXc false true
+      xsaveWitF = .weiter witM2 := by
   rfl
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 2000000 in
 /-- Core-1 restore as an outcome equality. -/
 theorem wit_h2b :
-    vollWiederherstellen witV1b 1 vollWitArea1 vollWitXc true false
-      vollWitF = .weiter witM2b := by
+    xsaveWiederherstellen witV1b 1 xsaveWitArea1 xsaveWitXc true false
+      xsaveWitF = .weiter witM2b := by
   rfl
 
 set_option maxRecDepth 100000 in
@@ -2629,17 +2629,17 @@ set_option maxRecDepth 100000 in
     core 1's opaque image, control word and XMM file. -/
 theorem wit_rundlauf_anwendung1 :
     (∀ t : Nat, t < 152 → (witM2b.x87 1) t =
-      (vollWitStart.x87 1) t) ∧
-      witM2b.maske 1 = vollWitStart.maske 1 ∧
-      (((vollHw witM2b).kerne 1).fp).mxcsr =
-        (((vollHw vollWitStart).kerne 1).fp).mxcsr ∧
-      (∀ r : XmmReg, ((vollHw witM2b).kerne 1).xmm r =
-        ((vollHw vollWitStart).kerne 1).xmm r) := by
-  have hles : ctxAlle (vollHw vollWitStart).mem.lesbar vollWitArea1
-      (vollOffsets true false) = true :=
-    (vollWit_perm _ (Or.inr rfl)).2
-  have hrr := vollRundlauf_maschine vollWitStart 1 vollWitArea1
-    vollWitXc true false vollWitF witV1b witM2b hles wit_h1b wit_h2b
+      (xsaveWitStart.x87 1) t) ∧
+      witM2b.maske 1 = xsaveWitStart.maske 1 ∧
+      (((xsaveHw witM2b).kerne 1).fp).mxcsr =
+        (((xsaveHw xsaveWitStart).kerne 1).fp).mxcsr ∧
+      (∀ r : XmmReg, ((xsaveHw witM2b).kerne 1).xmm r =
+        ((xsaveHw xsaveWitStart).kerne 1).xmm r) := by
+  have hles : ctxAlle (xsaveHw xsaveWitStart).mem.lesbar xsaveWitArea1
+      (xsaveOffsets true false) = true :=
+    (xsaveWit_perm _ (Or.inr rfl)).2
+  have hrr := xsaveRundlauf_maschine xsaveWitStart 1 xsaveWitArea1
+    xsaveWitXc true false xsaveWitF witV1b witM2b hles wit_h1b wit_h2b
   exact ⟨hrr.1, hrr.2.1, hrr.2.2.1 rfl, hrr.2.2.2.1 rfl⟩
 
 set_option maxRecDepth 100000 in
@@ -2647,45 +2647,45 @@ set_option maxRecDepth 100000 in
     core 0's opaque image and YMM upper file. -/
 theorem wit_rundlauf_anwendung0 :
     (∀ t : Nat, t < 152 → (witM2.x87 0) t =
-      (vollWitStart.x87 0) t) ∧
+      (xsaveWitStart.x87 0) t) ∧
       (∀ r : XmmReg, (witM2.ym.ober 0) r =
-        (vollWitStart.ym.ober 0) r) := by
-  have hles : ctxAlle (vollHw vollWitStart).mem.lesbar vollWitArea0
-      (vollOffsets false true) = true :=
-    (vollWit_perm _ (Or.inl rfl)).2
-  have hrr := vollRundlauf_maschine vollWitStart 0 vollWitArea0
-    vollWitXc false true vollWitF witV1 witM2 hles wit_h1 wit_h2
+        (xsaveWitStart.ym.ober 0) r) := by
+  have hles : ctxAlle (xsaveHw xsaveWitStart).mem.lesbar xsaveWitArea0
+      (xsaveOffsets false true) = true :=
+    (xsaveWit_perm _ (Or.inl rfl)).2
+  have hrr := xsaveRundlauf_maschine xsaveWitStart 0 xsaveWitArea0
+    xsaveWitXc false true xsaveWitF witV1 witM2 hles wit_h1 wit_h2
   exact ⟨hrr.1, fun r => hrr.2.2.2.2 rfl r⟩
 
 /-- Save step on core 1 (reached). -/
 theorem wit_schritt_save1 :
-    VollSchritt vollWitStart witV1b
-      (.saveReq 1 vollWitArea1 vollWitXc true false) :=
-  VollSchritt.save 1 vollWitArea1 vollWitXc true false vollWitF
+    XsaveSchritt xsaveWitStart witV1b
+      (.saveReq 1 xsaveWitArea1 xsaveWitXc true false) :=
+  XsaveSchritt.save 1 xsaveWitArea1 xsaveWitXc true false xsaveWitF
     wit_h1b
 
 /-- Restore step on core 1 (reached). -/
 theorem wit_schritt_rstor1 :
-    VollSchritt witV1b witM2b
-      (.rstorReq 1 vollWitArea1 vollWitXc true false) :=
-  VollSchritt.rstor 1 vollWitArea1 vollWitXc true false vollWitF
+    XsaveSchritt witV1b witM2b
+      (.rstorReq 1 xsaveWitArea1 xsaveWitXc true false) :=
+  XsaveSchritt.rstor 1 xsaveWitArea1 xsaveWitXc true false xsaveWitF
     wit_h2b
 
 /-- Save step on core 0 (reached). -/
 theorem wit_schritt_save0 :
-    VollSchritt vollWitStart witV1
-      (.saveReq 0 vollWitArea0 vollWitXc false true) :=
-  VollSchritt.save 0 vollWitArea0 vollWitXc false true vollWitF
+    XsaveSchritt xsaveWitStart witV1
+      (.saveReq 0 xsaveWitArea0 xsaveWitXc false true) :=
+  XsaveSchritt.save 0 xsaveWitArea0 xsaveWitXc false true xsaveWitF
     wit_h1
 
 /-- Restore step on core 0 (reached). -/
 theorem wit_schritt_rstor0 :
-    VollSchritt witV1 witM2
-      (.rstorReq 0 vollWitArea0 vollWitXc false true) :=
-  VollSchritt.rstor 0 vollWitArea0 vollWitXc false true vollWitF
+    XsaveSchritt witV1 witM2
+      (.rstorReq 0 xsaveWitArea0 xsaveWitXc false true) :=
+  XsaveSchritt.rstor 0 xsaveWitArea0 xsaveWitXc false true xsaveWitF
     wit_h2
 
-/-- JOINT WITNESS for `vollRundlauf_maschine`: all premises
+/-- JOINT WITNESS for `xsaveRundlauf_maschine`: all premises
     instantiated jointly on a reached, non-degenerate two-core
     run. Two cores buffer full save images (476 AVX-only and 480
     SSE-only entries); each owner forwards its bytes while the
@@ -2698,31 +2698,31 @@ theorem wit_schritt_rstor0 :
     is well-formed. Non-degenerate: two cores touch memory, a
     buffered store is visible by forwarding to its owner only,
     and a drain changes actual shared memory. -/
-theorem vollRundlauf_maschine_zeuge :
-    witBuf (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
-      false true vollWitF) 0 = some 476 ∧
-      witBuf (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
-        true false vollWitF) 1 = some 480 ∧
+theorem xsaveRundlauf_maschine_zeuge :
+    witBuf (xsaveSpeichern xsaveWitStart 0 xsaveWitArea0 xsaveWitXc
+      false true xsaveWitF) 0 = some 476 ∧
+      witBuf (xsaveSpeichern xsaveWitStart 1 xsaveWitArea1 xsaveWitXc
+        true false xsaveWitF) 1 = some 480 ∧
       witYmmNach witV2 0 .xmm0 = some 9 ∧
       witX87Nach witV2 0 0 = some (BitVec.ofNat 8 0) ∧
       witFpNach witV2b 1 = some 0x1FBF ∧
       witXmmNach witV2b 1 .xmm0 = some 11 ∧
       witNachFlush = some (BitVec.ofNat 8 5) ∧
-      witFehler (vollWiederherstellen vollWitStartR 0 vollWitAreaR
-        vollWitXc true false vollWitF) = 12 ∧
-      VollWf vollWitStart ∧
+      xsaveWitFehler (xsaveWiederherstellen xsaveWitStartR 0 xsaveWitAreaR
+        xsaveWitXc true false xsaveWitF) = 12 ∧
+      XsaveWf xsaveWitStart ∧
       (∀ t : Nat, t < 152 → (witM2b.x87 1) t =
-        (vollWitStart.x87 1) t) ∧
+        (xsaveWitStart.x87 1) t) ∧
       (∀ r : XmmReg, (witM2.ym.ober 0) r =
-        (vollWitStart.ym.ober 0) r) ∧
-      VollSchritt vollWitStart witV1b
-        (.saveReq 1 vollWitArea1 vollWitXc true false) ∧
-      VollSchritt witV1b witM2b
-        (.rstorReq 1 vollWitArea1 vollWitXc true false) ∧
-      VollSchritt vollWitStart vollWitStart (.verweigert 0) := by
+        (xsaveWitStart.ym.ober 0) r) ∧
+      XsaveSchritt xsaveWitStart witV1b
+        (.saveReq 1 xsaveWitArea1 xsaveWitXc true false) ∧
+      XsaveSchritt witV1b witM2b
+        (.rstorReq 1 xsaveWitArea1 xsaveWitXc true false) ∧
+      XsaveSchritt xsaveWitStart xsaveWitStart (.verweigert 0) := by
   exact ⟨wit_buf.1, wit_buf.2, wit_restore0.1, wit_restore0.2,
     wit_restore1.1, wit_restore1.2, wit_drain.1, wit_gp_reserviert,
-    vollWitStart_wf, wit_rundlauf_anwendung1.1,
+    xsaveWitStart_wf, wit_rundlauf_anwendung1.1,
     wit_rundlauf_anwendung0.2, wit_schritt_save1,
     wit_schritt_rstor1, wit_schritt_nm⟩
 
@@ -2738,37 +2738,37 @@ theorem vollRundlauf_maschine_zeuge :
     `xcr0AvxBereit`), the accepted YMM file (`YmmDatei`,
     `xmmSet`, `vecJoin`, `vLo`, `vHi`) and the accepted fault
     vocabulary (`ArchFehler`), all lifted unchanged:
-    - full area image (`vollByte`: opaque x87 bytes 0-23/32-159,
+    - full area image (`xsaveByte`: opaque x87 bytes 0-23/32-159,
       MXCSR 24-27, mask 28-31, XMM 160-415, header 512-575 with
       zero XCOMP_BV in the standard form, YMM 576-831) with
-      decode (`vollDekodiere`) and per-component pure round
-      trips (`vollRundlauf_x87/_maske/_kopf/_legacy/_ymm`);
-    - RFBM-selective footprint (`vollOffsets`: x87/mask/header
+      decode (`xsaveDekodiere`) and per-component pure round
+      trips (`xsaveRundlauf_x87/_maske/_kopf/_legacy/_ymm`);
+    - RFBM-selective footprint (`xsaveOffsets`: x87/mask/header
       always, legacy iff SSE, YMM iff AVX) with `Nodup`
       (bound-proved: the 736-entry joint list exceeds the kernel
       memory budget, so no `decide` over it) and membership;
-    - `VollMaschine` (YMM machine plus opaque per-core x87
+    - `XsaveMaschine` (YMM machine plus opaque per-core x87
       images and carried masks) with footprint-checked buffered
-      save (`vollSpeichern`) and restore
-      (`vollWiederherstellen`): buffer growth, memory silence,
-      `VollWf` preservation, owner-only forwarding;
+      save (`xsaveSpeichern`) and restore
+      (`xsaveWiederherstellen`): buffer growth, memory silence,
+      `XsaveWf` preservation, owner-only forwarding;
     - ordered fault gates as outcomes (NM > UD-CPUID/LOCK/XCR0
       > empty-request refusal > GP-x87/canonical/alignment >
       SS > PF > AC > permission refusal), the reserved-bit #GP
       with exact `ldmxcsrArchOk` agreement;
     - SAVE THEN RESTORE IS THE IDENTITY on the enabled
-      components (`vollRundlauf_maschine`: opaque x87 always,
+      components (`xsaveRundlauf_maschine`: opaque x87 always,
       MXCSR/XMM where SSE, YMM where AVX, masks untouched),
       both generic and applied to reached states;
-    - FINIT (`vollFinit`: reset image, everything else kept)
+    - FINIT (`xsaveFinit`: reset image, everything else kept)
       with the finit round-trip corollary;
-    - the family step relation (`VollSchritt`) with `VollWf`
+    - the family step relation (`XsaveSchritt`) with `XsaveWf`
       preservation and the exact two-way coherent embedding of
       the TSO legs (no `HwAdapter` plug: x87/mask/YMM state
       lives beside `HwMaschine`, so no adapter over
       `HwMaschine` can carry a save without inventing state);
     - (4) a reached non-degenerate joint witness
-      (`vollRundlauf_maschine_zeuge`): two buffered saves with
+      (`xsaveRundlauf_maschine_zeuge`): two buffered saves with
       owner-only forwarding, a memory-changing drain, applied
       and observed round trips, planted refusals, FINIT facts
       and well-formedness.
@@ -2805,25 +2805,25 @@ theorem vollRundlauf_maschine_zeuge :
     - `gabbro_ziel` axioms are untouched.
 -/
 
-#print axioms vollRundlauf_x87
-#print axioms vollRundlauf_maske
-#print axioms vollRundlauf_kopf
-#print axioms vollRundlauf_legacy
-#print axioms vollRundlauf_ymm
-#print axioms vollOffsets_nodup
-#print axioms vollSpeichern_puffer
-#print axioms vollSpeichern_kein_speicher
-#print axioms vollWeiterleitung_gespeichert
-#print axioms vollRundlauf_maschine
-#print axioms vollWiederherstellen_fehlerGP_reserviert
-#print axioms vollRestore_stimmt_ldmxcsr_ueberein
-#print axioms vollSpeichern_wf
-#print axioms vollWiederherstellen_wf
-#print axioms vollFinit_rundlauf
-#print axioms vollSchritt_wf
-#print axioms vollLade_ist_hw
-#print axioms vollGibAus_ist_hw
-#print axioms vollSpüle_ist_hw_zurueck
-#print axioms vollRundlauf_maschine_zeuge
+#print axioms xsaveRundlauf_x87
+#print axioms xsaveRundlauf_maske
+#print axioms xsaveRundlauf_kopf
+#print axioms xsaveRundlauf_legacy
+#print axioms xsaveRundlauf_ymm
+#print axioms xsaveOffsets_nodup
+#print axioms xsaveSpeichern_puffer
+#print axioms xsaveSpeichern_kein_speicher
+#print axioms xsaveWeiterleitung_gespeichert
+#print axioms xsaveRundlauf_maschine
+#print axioms xsaveWiederherstellen_fehlerGP_reserviert
+#print axioms xsaveRestore_stimmt_ldmxcsr_ueberein
+#print axioms xsaveSpeichern_wf
+#print axioms xsaveWiederherstellen_wf
+#print axioms xsaveFinit_rundlauf
+#print axioms xsaveSchritt_wf
+#print axioms xsaveLade_ist_hw
+#print axioms xsaveGibAus_ist_hw
+#print axioms xsaveSpüle_ist_hw_zurueck
+#print axioms xsaveRundlauf_maschine_zeuge
 
 end Gabbro.Grammatik.X86

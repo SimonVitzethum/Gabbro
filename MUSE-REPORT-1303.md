@@ -1,5 +1,42 @@
 # MUSE-REPORT-1303: Extended context state (x87, MXCSR_MASK, XSAVE header, YMM)
 
+## Repair 2026-10-05 (integration gate failure, nothing merged)
+
+Gate evidence: `import Grammatik.X86.HwXsaveFull failed, environment
+already contains 'Gabbro.Grammatik.X86.VollEreignis.noConfusion'
+from Grammatik.X86.HwTranslateFull`. A sibling lane merged first
+and owns the `Voll*` namespace.
+
+Repair (owned files only, semantics and proofs untouched): every
+identifier starting with `Voll`/`voll` renamed to `Xsave`/`xsave`
+(two mechanical `replaceAll` passes, e.g. `VollMaschine` →
+`XsaveMaschine`, `vollSpeichern` → `xsaveSpeichern`,
+`vollRundlauf_maschine_zeuge` →
+`xsaveRundlauf_maschine_zeuge`). All name lists below read with
+that mapping. Additionally hardened three unprefixed generic
+names with no evidence against them but plausible collision
+surface: `kanonisch` → `xsaveKanonisch`, `witArt` →
+`xsaveWitArt`, `witFehler` → `xsaveWitFehler`.
+
+Verification after repair:
+
+- `./lean-probe grammatik/Grammatik/X86/HwXsaveFull.lean`:
+  `== 0 error(s) in the COMPLETE output; exit 0`.
+- `./lean-bau`: `Build completed successfully (677 jobs).`
+- `#print axioms`: unchanged standard subsets (all `[propext]`
+  or `[propext, Quot.sound]`); no new axioms, no `sorry`.
+- Residual risk, stated plainly: this clone does not contain
+  `HwTranslateFull`, so the local build cannot reproduce the
+  integration collision; the gate re-checks. Only the evidenced
+  family plus three generic names were moved. If the gate names
+  another collision, the same mechanical pattern applies.
+- No claim is made about the full source/binary chain; a fresh
+  independent review of the changed commit is required.
+
+Original report follows unchanged (names read as renamed above).
+
+---
+
 Lane 1303, branch `muse/1303`, clone `/home/simon/Dokumente/gabbro-muse/a1303`.
 Follow-up of lane 1247 (`HwContextState.lean`). All work in the NEW file
 `grammatik/Grammatik/X86/HwXsaveFull.lean` (~2830 lines) plus one import line
