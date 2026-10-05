@@ -1783,4 +1783,379 @@ theorem btMemEffekt_mem (m : HwMaschine) (c : Nat) (op : BtOp)
     have hmem := btMemSchreibe_mem _ s1 c _ _ hS x
     rw [setTso_mem, hmem, tsoAnsicht_speicher]
 
+/-! ## 16. Joint witness: two cores, family steps, memory change.
+
+    Core 0 runs BTS (sets a bit, CF keeps the old bit), core 1 runs
+    BTR, both through the adapter on one shared memory; both cores
+    also run a memory BTS through TSO events; a buffered byte store
+    is forwarded to the owner only and the drain changes actual
+    shared memory from 0 to 42. Decode pins, the LOCK refusal, the
+    value laws and well-formedness stand beside the run. Every claim
+    projects to plain values before `decide`. Non-degenerate: the
+    drain changes actual shared memory and both cores write. -/
+
+/-- Witness data window: readable and writable 8192..8200. -/
+def btWitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8200)
+
+/-- Witness shared memory: zeroed bytes, data window rw. -/
+def btWitMem : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0
+    lesbar := btWitDaten
+    schreibbar := btWitDaten
+    ausfuehrbar := fun _ => false }
+
+/-- Witness core-0 registers: rax holds 8, rcx the offset 1. -/
+def btWitReg0 : Register → Wort := fun q =>
+  if q = Register.rax then BitVec.ofNat 64 8
+  else if q = Register.rcx then BitVec.ofNat 64 1
+  else if q = Register.rbx then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness core-1 registers: rbx holds 15, rcx the offset 0. -/
+def btWitReg1 : Register → Wort := fun q =>
+  if q = Register.rbx then BitVec.ofNat 64 15
+  else BitVec.ofNat 64 0
+
+/-- Witness cores over shared memory. -/
+def btWitKern : Nat → HwKern
+  | 0 => ⟨btWitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨btWitReg1, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon. -/
+def btWitStartM : HwMaschine :=
+  ⟨btWitMem, btWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed: admission implies silicon
+    through the accepted profile lemma. -/
+theorem btWitStart_wf : HwWf btWitStartM := by
+  intro c f h
+  exact (merkmalZugelassen_heisst_beide _ _ f h).1
+
+/-- Core 0 runs BTS rax, rcx through the adapter. -/
+def btWitAd0 : Option HwMaschine :=
+  (adapterBitTest).schritt btWitStartM 0
+    ⟨.reg .bts .w64 .rax .rcx, 4⟩
+
+/-- Core 1 runs BTR rbx, rcx through the adapter. -/
+def btWitAd1 : Option HwMaschine :=
+  (adapterBitTest).schritt btWitStartM 1
+    ⟨.reg .btr .w64 .rbx .rcx, 4⟩
+
+/-- Read a core register out of a machine outcome. -/
+def btWitRegOut (o : Option HwMaschine) (c : Nat)
+    (q : Register) : Option Wort :=
+  match o with
+  | some m => some ((m.kerne c).register q)
+  | none => none
+
+/-- Read CF out of a machine outcome. -/
+def btWitCfOut (o : Option HwMaschine) (c : Nat) : Option Bool :=
+  match o with
+  | some m => some ((m.kerne c).flags.cf)
+  | none => none
+
+/-- Read a core RIP out of a machine outcome. -/
+def btWitRipOut (o : Option HwMaschine) (c : Nat) : Option Wort :=
+  match o with
+  | some m => some (m.kerne c).rip
+  | none => none
+
+/-- Core 0 sets bit 1 of 8: rax becomes 10, CF keeps the old 0. -/
+theorem btWit_ad0 :
+    btWitRegOut btWitAd0 0 .rax = some 10 ∧
+    btWitCfOut btWitAd0 0 = some false ∧
+    btWitRipOut btWitAd0 0 = some (BitVec.ofNat 64 4100) := by
+  decide
+
+/-- Core 1 clears bit 0 of 15: rbx becomes 14, CF keeps the old 1. -/
+theorem btWit_ad1 :
+    btWitRegOut btWitAd1 1 .rbx = some 14 ∧
+    btWitCfOut btWitAd1 1 = some true := by
+  decide
+
+/-- Witness TSO start: shared memory, empty buffers. -/
+def btWitTso0 : TSOZustand := ⟨btWitMem, fun _ => []⟩
+
+/-- Witness data address. -/
+def btWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Core 0 issues byte 42 at the data cell. -/
+def btWitTso1 : Option TSOZustand :=
+  issueByte btWitTso0 0 btWitAdr (BitVec.ofNat 8 42)
+
+/-- Core 0 observes its own byte (forwarding). -/
+def btWitEigen : Option (Option Byte) :=
+  match btWitTso1 with
+  | some s => some (loadByte s 0 btWitAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def btWitFremd : Option (Option Byte) :=
+  match btWitTso1 with
+  | some s => some (loadByte s 1 btWitAdr)
+  | none => none
+
+/-- Core 0 drains its oldest entry. -/
+def btWitTso2 : Option TSOZustand :=
+  match btWitTso1 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def btWitNachFlush : Option (Option Byte) :=
+  match btWitTso2 with
+  | some s => some (some (s.mem.bytes btWitAdr))
+  | none => none
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def btWitFremdNachFlush : Option (Option Byte) :=
+  match btWitTso2 with
+  | some s => some (loadByte s 1 btWitAdr)
+  | none => none
+
+/-- The data cell starts zeroed: the run really changes memory. -/
+theorem btWit_anfang_null :
+    btWitMem.bytes btWitAdr = BitVec.ofNat 8 0 := by
+  rfl
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem btWit_weiterleitung :
+    btWitEigen = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem btWit_fremd_alt :
+    btWitFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 42. -/
+theorem btWit_spuelung :
+    btWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem btWit_fremd_neu :
+    btWitFremdNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- Core 0 runs a memory BTS (word 32, bit 3) through TSO events. -/
+def btWitMemOut0 : Option HwMaschine :=
+  btMemEffekt btWitStartM 0 .bts .w32 (BitVec.ofNat 64 8192) 3 8
+
+/-- Core 1 runs a memory BTS (word 32, bit 0) through TSO events. -/
+def btWitMemOut1 : Option HwMaschine :=
+  btMemEffekt btWitStartM 1 .bts .w32 (BitVec.ofNat 64 8192) 0 8
+
+/-- Read a shared-memory byte out of a machine outcome. -/
+def btWitMemByte (o : Option HwMaschine) (a : Adresse) : Option Byte :=
+  match o with
+  | some m => some (m.mem.bytes a)
+  | none => none
+
+/-- Read a buffer length out of a machine outcome. -/
+def btWitBuflen (o : Option HwMaschine) (c : Nat) : Option Nat :=
+  match o with
+  | some m => some (m.puffer c).length
+  | none => none
+
+/-- Core 0 memory BTS: CF keeps the old 0, memory still reads 0
+    (buffered), four entries pending, RIP advanced by 8. -/
+theorem btWit_mem0 :
+    btWitCfOut btWitMemOut0 0 = some false ∧
+    btWitMemByte btWitMemOut0 (BitVec.ofNat 64 8192) =
+      some (BitVec.ofNat 8 0) ∧
+    btWitBuflen btWitMemOut0 0 = some 4 ∧
+    btWitRipOut btWitMemOut0 0 = some (BitVec.ofNat 64 4104) := by
+  decide
+
+/-- Core 1 memory BTS: CF keeps the old 0, four entries pending. -/
+theorem btWit_mem1 :
+    btWitCfOut btWitMemOut1 1 = some false ∧
+    btWitBuflen btWitMemOut1 1 = some 4 := by
+  decide
+
+/-- Effective-address register file with a given offset word. -/
+def btWitEffReg (off : Wort) : Register → Wort := fun q =>
+  if q = Register.rbx then BitVec.ofNat 64 8192
+  else if q = Register.rcx then off
+  else BitVec.ofNat 64 0
+
+/-- Effective-address state with offset 20. -/
+def btWitEffS : Zustand :=
+  ⟨btWitEffReg 20, zeugeFlags, BitVec.ofNat 64 0, btWitMem⟩
+
+/-- Effective-address state with offset -1. -/
+def btWitEffSNeg : Zustand :=
+  ⟨btWitEffReg (BitVec.ofNat 64 (2 ^ 64 - 1)), zeugeFlags,
+    BitVec.ofNat 64 0, btWitMem⟩
+
+/-- Offset 20 moves two bytes up: the address is 8194. -/
+theorem btWit_eff_pos :
+    btEffAddr btWitEffS .rbx .rcx (BitVec.ofNat 32 0) =
+      BitVec.ofNat 64 8194 := by
+  decide
+
+/-- Offset -1 moves one byte down: the address is 8191. -/
+theorem btWit_eff_neg :
+    btEffAddr btWitEffSNeg .rbx .rcx (BitVec.ofNat 32 0) =
+      BitVec.ofNat 64 8191 := by
+  decide
+
+/-- Register-offset target: address plus bit-in-byte. -/
+theorem btWit_zielReg :
+    btMemZielReg btWitEffS .rbx .rcx (BitVec.ofNat 32 0) =
+      (BitVec.ofNat 64 8194, 4) := by
+  decide
+
+/-- Imm-offset target: address plus bit-in-byte. -/
+theorem btWit_zielImm :
+    btMemZielImm btWitEffS .rbx (BitVec.ofNat 32 0) 20 =
+      (BitVec.ofNat 64 8194, 4) := by
+  decide
+
+/-- The joint witness: a reached two-core bit-test run (register
+    steps on both cores, memory steps on both cores through TSO
+    events, a buffered store forwarded to the owner only and drained
+    into shared memory with 0 becoming 42) beside decode pins, the
+    LOCK refusal, value laws and well-formedness. Non-degenerate:
+    both cores write and the drain changes actual shared memory. -/
+theorem btWit_zeuge :
+    btWitRegOut btWitAd0 0 .rax = some 10 ∧
+    btWitCfOut btWitAd0 0 = some false ∧
+    btWitRipOut btWitAd0 0 = some (BitVec.ofNat 64 4100) ∧
+    btWitRegOut btWitAd1 1 .rbx = some 14 ∧
+    btWitCfOut btWitAd1 1 = some true ∧
+    btWitMem.bytes btWitAdr = BitVec.ofNat 8 0 ∧
+    btWitEigen = some (some (BitVec.ofNat 8 42)) ∧
+    btWitFremd = some (some (BitVec.ofNat 8 0)) ∧
+    btWitNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+    btWitFremdNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+    btWitCfOut btWitMemOut0 0 = some false ∧
+    btWitMemByte btWitMemOut0 (BitVec.ofNat 64 8192) =
+      some (BitVec.ofNat 8 0) ∧
+    btWitBuflen btWitMemOut0 0 = some 4 ∧
+    btWitCfOut btWitMemOut1 1 = some false ∧
+    btWitBuflen btWitMemOut1 1 = some 4 ∧
+    btEffAddr btWitEffS .rbx .rcx (BitVec.ofNat 32 0) =
+      BitVec.ofNat 64 8194 ∧
+    btEffAddr btWitEffSNeg .rbx .rcx (BitVec.ofNat 32 0) =
+      BitVec.ofNat 64 8191 ∧
+    btMemZielReg btWitEffS .rbx .rcx (BitVec.ofNat 32 0) =
+      (BitVec.ofNat 64 8194, 4) ∧
+    decodeBtHw [natByte 72, natByte 15, natByte 187,
+        natByte 200] =
+      some (.bt ⟨.reg .btc .w64 .rax .rcx, 4⟩, []) ∧
+    decodeBt (natByte 240 :: []) = none ∧
+    btBit .b64 (btSchreibe .b64 8 (btRoh .bts .b64 8 3)) 3 = true ∧
+    btBit .b64 (btSchreibe .b64 15 (btRoh .btr .b64 15 3)) 3 = false ∧
+    HwWf btWitStartM := by
+  refine ⟨btWit_ad0.1, btWit_ad0.2.1, btWit_ad0.2.2, btWit_ad1.1,
+    btWit_ad1.2, btWit_anfang_null, btWit_weiterleitung,
+    btWit_fremd_alt, btWit_spuelung, btWit_fremd_neu,
+    btWit_mem0.1, btWit_mem0.2.1, btWit_mem0.2.2.1, btWit_mem1.1,
+    btWit_mem1.2, btWit_eff_pos, btWit_eff_neg, btWit_zielReg,
+    pin_btHw_reg64, decodeBt_lock [], bt_bts_setzt .b64 8 3,
+    bt_btr_loescht .b64 15 3, btWitStart_wf⟩
+
+/- CUTS:
+   Proved here: the BT/BTS/BTR/BTC family over canonical words --
+   value laws (set/reset/complement/frame, CF = old bit) through the
+   accepted `getLsbD` bridge; a canonical byte codec (REX/66 prefix,
+   0F A3/AB/B3/BB and 0F BA /4../7, register and base+disp32 memory
+   forms) with round trips over any suffix, lengths within 1..15 and
+   planted refusals (LOCK, 66+REX.W, REX.X, REX.R group, mod-0/1, bad
+   digit/opcode/SIB, truncation); a length-checked register step with
+   the flag class (CF pinned, ZF preserved, rest free) that never
+   touches memory; a dispatcher preferring the accepted unified
+   chain (no pilot or extension form shadowed, pinned per row); a
+   `HwAdapter` register plug with exact agreement and planted
+   refusals (memory forms never take it); the signed-offset memory
+   footprint with floor-division displacement, TSO load/store events
+   and a memory RMW effect (buffered write-back, CF set, RIP
+   advanced, well-formedness preserved); and a reached non-degenerate
+   two-core joint witness with owner-only forwarding and a
+   memory-changing drain.
+   NOT proved here, and not claimed:
+   - No hardware correspondence: encodings are a stated canonical
+     subset with self-consistency (round trip) only, not verified
+     against silicon. The SDM rows used (0F A3/AB/B3/BB, 0F BA
+     /4../7, CF = selected bit, ZF unaffected, rest undefined,
+     16/32/64-bit operand sizes, REX.W/66 prefix roles, LOCK RMW
+     semantics, signed memory offset with moving address) are
+     provenance in MUSE-REPORT-1277.md, not proofs. The imm8 memory
+     offset is modelled unsigned (canonical reading, open against
+     the SDM extracts).
+   - No SIB-addressed (modrm rm = 4 with index/scale), mod-0/mod-1,
+     RIP-relative or 8-bit forms (refused); no per-access
+     target-to-W/GX simulation and no whole-word atomicity beyond
+     byte drains; no source/IR/ABI/loader/entry/budget link.
+   - The word-level bit correspondence between the byte-level memory
+     path (`btByteRoh`) and the word-level evaluator (`btRoh`) is
+     stated only on instances (witness pins), not as a general
+     simulation.
+   - Timing/power behaviour is absent.
+-/
+
+#print axioms pin_bt_opcode
+#print axioms btIndex_schranke
+#print axioms btMaske_bit_gleich
+#print axioms btMaske_bit_anders
+#print axioms btMasken_bit
+#print axioms bt_bts_setzt
+#print axioms bt_btr_loescht
+#print axioms bt_btc_kehrt_um
+#print axioms btMasken_bit_lt
+#print axioms bt_bts_frame
+#print axioms bt_btr_frame
+#print axioms bt_btc_frame
+#print axioms probe_bt_index
+#print axioms probe_bt_werte
+#print axioms rexBt_rund
+#print axioms opcOp_btOpcode
+#print axioms gruppeOp_btGruppe
+#print axioms roundtripBtReg
+#print axioms roundtripBtMemReg16
+#print axioms roundtripBtMemReg32
+#print axioms roundtripBtMemReg64
+#print axioms roundtripBtImm
+#print axioms roundtripBtMemImm
+#print axioms btLaenge_encode
+#print axioms btLaenge_ok
+#print axioms pin_bt_dekode
+#print axioms sonde_bt_abgeschnitten
+#print axioms sonde_bt_verweigert
+#print axioms btSchritt_laenge
+#print axioms btSchritt_mem_verweigert
+#print axioms btSchritt_reg
+#print axioms btSchritt_speicher
+#print axioms btSchritt_cf_reg
+#print axioms btSchritt_erlaubt_reg
+#print axioms decodeBtHw_prefers_ext
+#print axioms decodeBtHw_bt
+#print axioms ext_weist_btreg64_zurueck
+#print axioms pin_btHw_reg64
+#print axioms btHwSchritt_bt_ok
+#print axioms adapterBitTest_wf
+#print axioms adapterBitTest_ok
+#print axioms adapterBitTest_verweigert_memReg
+#print axioms btVersatz_rekon
+#print axioms btEffAddr_null
+#print axioms btFuss_laenge
+#print axioms probe_bt_versatz
+#print axioms btLadeListe_verweigert
+#print axioms btMemSchreibe_mem
+#print axioms btMemSchreibe_puffer
+#print axioms btSetByte_laenge
+#print axioms decodeBt_lock
+#print axioms btMemEffekt_wf
+#print axioms btMemEffekt_cf
+#print axioms btMemEffekt_rip
+#print axioms btMemEffekt_mem
+#print axioms btWitStart_wf
+#print axioms btWit_zeuge
+
 end Gabbro.Grammatik.X86
