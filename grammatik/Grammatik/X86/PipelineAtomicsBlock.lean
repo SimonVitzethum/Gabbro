@@ -300,6 +300,49 @@ def abSigma : World abD where
 
 def abEnv : Env abD [] := .nil -- empty context
 
+/-! ## 7. Lock sections bracketed as the lowering emits them.
+
+    One concrete section run over the accepted two-core witness
+    states: entry drain, reached middle, exit drain. The exit drain
+    reuses drain idempotence on the emptied buffer (proved, not
+    assumed). -/
+
+/-- Draining an empty buffer is the identity (from the accepted
+    `drainKernN_null`, never restated). -/
+theorem ab_drain_leer_ident (s : TSOZustand) (c : Nat)
+    (h : s.puffer c = []) :
+    mfenceDrain s c = some s := by
+  unfold mfenceDrain drainVoll
+  rw [h]
+  exact drainKernN_null s c
+
+/-- The accepted witness state drains on core 0. -/
+theorem ab_drain1_some : (mfenceDrain fdS2 0).isSome = true := by
+  decide
+
+/-- **SECTION RUN.** One MFENCE-bracketed section chains to a reached
+    run ending drained with foreign buffers intact. -/
+theorem ab_sperrlauf_inst : ∃ sN : TSOZustand,
+    SperrLauf 0 [[PipelineAtomics.AtomQuelle.zaun]] fdS2 sN ∧
+    TSOErreichbar fdS2 sN ∧ sN.puffer 0 = [] ∧
+    (∀ d : Nat, d ≠ 0 → sN.puffer d = fdS2.puffer d) := by
+  obtain ⟨s3, h3⟩ := Option.isSome_iff_exists.mp ab_drain1_some
+  have hleer : s3.puffer 0 = [] := mfenceDrain_leert fdS2 s3 0 h3
+  have h4 : mfenceDrain s3 0 = some s3 := ab_drain_leer_ident s3 0 hleer
+  have hI : (PipelineAtomics.senkListe
+      [PipelineAtomics.AtomQuelle.zaun]).isSome = true := by
+    decide
+  have hStep : SperrSchritt 0
+      [PipelineAtomics.AtomQuelle.zaun] fdS2 s3 :=
+    ⟨s3, s3, h3, .start, fun d _ => rfl, h4, hI⟩
+  have hLauf : SperrLauf 0
+      [[PipelineAtomics.AtomQuelle.zaun]] fdS2 s3 :=
+    .cons _ [] _ _ _ hStep (.nil s3)
+  refine ⟨s3, hLauf, ?_, ?_, ?_⟩
+  · exact sperrlauf_erreichbar 0 _ _ _ hLauf
+  · exact sperrlauf_leer 0 _ _ _ hLauf (by decide)
+  · exact sperrlauf_fremd 0 _ _ _ hLauf
+
 /-! ## 6. CAS failure at register level, concretely.
 
     A concrete locked machine with the word 10 at `abGlobA`, rax
