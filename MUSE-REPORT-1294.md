@@ -78,10 +78,13 @@
 Full per-step fetched decoding through one dispatcher; the W/GX bridge; all
 items the candidate CUTS already names.
 
-## VERDICT: ACCEPT
+## Verdict
 
-CANDIDATE 1293 `63892bc7e994904469ff3402d6d5f3d7c8288fca`: ACCEPT. The run
-composes the 21 accepted family adapters into one reached, non-degenerate,
+CANDIDATE: 1293 63892bc7e994904469ff3402d6d5f3d7c8288fca
+
+VERDICT: ACCEPT
+
+The reviewed run composes the 21 accepted family adapters into one reached, non-degenerate,
 two-core `HwVollSchritt` chain with `HwWf` preservation and exact final
 memory, reusing every accepted definition unchanged, with standard axioms and
 honest CUTS. No unsupported desired-correctness premises, no weakened
