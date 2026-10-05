@@ -332,4 +332,260 @@ theorem rufExecOk_rahmen (b : Belegung) (rh : Rahmen) (nArgs : Nat)
   exact pipeline_ruf_rahmen b rh nArgs benutztRot m0 m1 m2 vs e v
     hruf hvs hret hrde hwr hrd hdis
 
+/-! ## Joint witness: one lowered assignment over concrete values. -/
+
+/-- Target configuration: `x` in `r10`; `rax`/`rcx` value work, `r11`
+    the address register (off the callee-saved set); code at 4096;
+    refusal exits from 12288. -/
+def cwCfg : PipeCfg :=
+  { regs := [.r10], dst := .rax, tmp := .rcx, adr := .r11, codeBase := 4096,
+    exitBase := 12288 }
+
+/-- THE CALLEE BODY: `T[0].f = x + 5;` -- one assignment, then `nil`. -/
+def cwBody : Block pwD pwV false pwCtx [] [] :=
+  .cons (.assignSlot () () pwIdx0 pwWert0 pwHw pwHL) .nil
+
+/-- THE CANDIDATE, written out as a producer would emit it. -/
+def cwProg : List Befehl :=
+  [ .movReg64 .rax .r10, .movImm64 .rcx (intWort 5), .addReg64 .rax .rcx,
+    .movImm64 .r11 (natAdresse 8192), .store64 .r11 .rax (BitVec.ofNat 32 0) ]
+
+def cwBytes : List Byte := encodeAll cwProg
+
+/-- The configuration is fresh: no variable lives in a working register. -/
+theorem cw_cfgOk : cfgOk cwCfg = true := by decide
+
+/-- Every callee-saved register lies off the working registers
+    (`r11` is caller-saved, unlike the witness `rbx` of lane 1157). -/
+theorem cw_fremd : calleeFremd cwCfg = true := by decide
+
+/-- The body has the proved single-assignment shape. -/
+theorem cw_einzel : istEinzelZuweisung cwBody = true := rfl
+
+/-- THE VALIDATOR ACCEPTS the joint call: admitted seven-argument frame,
+    single-assignment shape, recomputed bytes -- by computation. -/
+theorem cw_rufExec : rufExecOk rufWitBelegung rufWitRahmen 7 false cwCfg pwL
+    cwBody cwBytes = true := by decide
+
+/-- The memory: code at `[4096, 4096 + len)` (execute only), the two
+    slots at `[8192, 8208)` holding 7 and 9 (read/write, never execute). -/
+def cwMemBytes (a : Adresse) : Byte :=
+  if 4096 ≤ a.toNat ∧ a.toNat < 4096 + cwBytes.length then cwBytes.getD (a.toNat - 4096) 0
+  else if 8192 ≤ a.toNat ∧ a.toNat < 8200 then wortByte (BitVec.ofNat 64 7) (a.toNat - 8192)
+  else if 8200 ≤ a.toNat ∧ a.toNat < 8208 then wortByte (BitVec.ofNat 64 9) (a.toNat - 8200)
+  else 0
+
+def cwCode (a : Adresse) : Bool := decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + cwBytes.length)
+
+def cwDaten (a : Adresse) : Bool := decide (8192 ≤ a.toNat ∧ a.toNat < 8208)
+
+def cwMem : Speicher :=
+  { bytes := cwMemBytes, lesbar := cwDaten, schreibbar := cwDaten, ausfuehrbar := cwCode }
+
+/-- Registers: `x` in `r10`, everything else zero. -/
+def cwReg (x : Int) : Register → Wort := fun q => if q = .r10 then intWort x else 0
+
+def cwStart (x : Int) : Zustand :=
+  { register := cwReg x, flags := witnessFlags, rip := natAdresse 4096, speicher := cwMem }
+
+/-- The code fits far below the data: no wrap, no overlap. -/
+theorem cw_laenge : 4096 + cwBytes.length < 2 ^ 64 := by decide
+
+theorem cw_code : CodeAt cwMem (natAdresse 4096) cwBytes := by
+  apply codeAt_von cwMem 4096 cwBytes cw_laenge
+  intro a h1 h2
+  have hlen : cwBytes.length ≤ 64 := by decide
+  have hd : ¬ (8192 ≤ a.toNat ∧ a.toNat < 8208) := by omega
+  simp only [cwMem, cwCode, cwDaten, cwMemBytes, decide_eq_true_eq, decide_eq_false_iff_not]
+  exact ⟨⟨h1, h2⟩, hd, by rw [if_pos ⟨h1, h2⟩]⟩
+
+theorem cw_worldRep : WorldRep pwL cwMem pwSigma := by
+  intro t k f a h
+  cases t; cases f
+  simp only [pwL] at h
+  by_cases e1 : k = 0
+  · rw [if_pos e1] at h
+    cases h
+    subst e1
+    refine ⟨by decide, by decide, by decide, fun lo hi hT => ?_⟩
+    cases hT
+    unfold RepSlot
+    decide
+  · rw [if_neg e1] at h
+    by_cases e2 : k = 1
+    · rw [if_pos e2] at h
+      cases h
+      subst e2
+      refine ⟨by decide, by decide, by decide, fun lo hi hT => ?_⟩
+      cases hT
+      unfold RepSlot
+      decide
+    · rw [if_neg e2] at h; cases h
+
+theorem cw_envRepr : EnvRepr pwEnv30 (cwStart 30).register (abbOf cwCfg) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+theorem cw_rip : (cwStart 30).rip = natAdresse cwCfg.codeBase := rfl
+
+/-- `x = 30`: the store happens, row 0 becomes 35, row 1 keeps 9 --
+    the REAL `execBlock` run, which changes memory. -/
+theorem cw_quelle : ∃ σ' ρ', execBlock pwO 0 pwR cwBody pwSigma pwEnv30 = .ok σ' ρ' ∧
+    (σ'.slots () 0 ()).n = 35 ∧ (σ'.slots () 1 ()).n = 9 :=
+  ⟨_, _, rfl, rfl, rfl⟩
+
+/-- A body needing optimisation (`2 * 3`, no pilot lowering without a
+    fold certificate): the joint validator refuses it loudly. -/
+def cwBodyMul : Block pwD pwV false pwCtx [] [] :=
+  .cons (.assignSlot () () pwIdx1 pwWert1 pwHw pwHL) .nil
+
+theorem cwProbe_mul : validate cwCfg pwL [] cwBodyMul cwBytes = false := by decide
+
+/-- Planted refusal: a multi-statement source is not the proved shape. -/
+theorem cwProbe_form : istEinzelZuweisung pwSrc = false := rfl
+
+/-- Planted refusal: the shape gate fires inside the joint validator. -/
+theorem cwProbe_formRuf : rufExecOk rufWitBelegung rufWitRahmen 7 false cwCfg pwL
+    pwSrc cwBytes = false :=
+  rufExecOk_verweigert_form _ _ _ _ _ _ _ _ cwProbe_form
+
+/-- Planted refusal: a call that uses the red zone is not admitted. -/
+theorem cwProbe_rot : rufExecOk rufWitBelegung rufWitRahmen 7 true cwCfg pwL
+    cwBody cwBytes = false :=
+  rufExecOk_verweigert_rot _ _ _ _ _ _ _
+
+/-- JOINT WITNESS for `einzelRuf_korrekt`: every premise holds jointly
+    on concrete values -- the admitted seven-argument frame, the
+    disjoint working registers, the validated callee bytes, the code
+    region, the represented world and environment, the reached source
+    run (`T[0].f` 7 becomes 35), the reached byte run with every
+    callee-saved register preserved -- beside the reached frame saves,
+    whose result byte observably changes, and the reloaded argument
+    word. The program is non-degenerate: `pwV` writes its table
+    (`pwHw`), and both the source run and the frame saves change
+    memory. -/
+theorem einzelRuf_korrekt_zeuge :
+    pwV.schreibt () = true ∧
+    rufOk rufWitBelegung rufWitRahmen 7 false = true ∧
+    calleeFremd cwCfg = true ∧
+    rufExecOk rufWitBelegung rufWitRahmen 7 false cwCfg pwL
+      cwBody cwBytes = true ∧
+    LayoutSep pwL ∧
+    CodeAt (cwStart 30).speicher (natAdresse cwCfg.codeBase) cwBytes ∧
+    (cwStart 30).rip = natAdresse cwCfg.codeBase ∧
+    WorldRep pwL (cwStart 30).speicher pwSigma ∧
+    EnvRepr pwEnv30 (cwStart 30).register (abbOf cwCfg) ∧
+    (∃ σ' ρ', execBlock pwO 0 pwR cwBody pwSigma pwEnv30 = .ok σ' ρ' ∧
+      (σ'.slots () 0 ()).n = 35) ∧
+    (∃ n s', laufBytes n (cwStart 30) = .weiter s' ∧
+      s'.rip = natAdresse (cwCfg.codeBase + cwBytes.length) ∧
+      (∀ q, q ∈ calleeGerettet → s'.register q = (cwStart 30).register q)) ∧
+    speicherZeuge.bytes (rufWitRahmen.schlitzAddr 0) ≠
+      rufWitM1.bytes (rufWitRahmen.schlitzAddr 0) ∧
+    ladeWort rufWitM2 rufWitRahmen 7 = some 42 := by
+  obtain ⟨σW, ρW, hok, h35, -⟩ := cw_quelle
+  obtain ⟨-, n, s', hrun, hripW, -, -, hcallee⟩ :=
+    einzelRuf_korrekt rufWitBelegung rufWitRahmen 7 false cwCfg pwL
+      () () pwIdx0 pwWert0 pwHw pwHL cwBytes cw_rufExec pw_layoutSep cw_fremd
+      pwO 0 pwR pwSigma pwEnv30 (cwStart 30) cw_code cw_rip cw_worldRep cw_envRepr
+      σW ρW hok
+  exact ⟨pwHw, rufWit_ok, cw_fremd, cw_rufExec, pw_layoutSep, cw_code, cw_rip,
+    cw_worldRep, cw_envRepr, ⟨σW, ρW, hok, h35⟩, ⟨n, s', hrun, hripW, hcallee⟩,
+    rufWit_wechselt, rufWit_rundreise⟩
+
+/- CUTS (exactly what is NOT proved here):
+   Proved here (all over the REUSED canonical vocabulary and the accepted
+   `Stapel`, `Pipeline` and `PipelineCalls` theorems -- no new machine,
+   no new decoder row, no second source interpreter):
+   - the joint validator `rufExecOk` (admitted caller frame `rufOk`,
+     single-assignment shape `istEinzelZuweisung`, recomputed bytes
+     `validate` with no certificates) with its unpacking
+     (`rufExecOk_teile`) and the no-certificate identity
+     (`optimise_nil`);
+   - the decided working-register separation (`calleeFremd`,
+     `calleeFremd_mem`): every callee-saved register off
+     `dst`/`adr`/`tmp :: frei`;
+   - red-zone, shape and byte refusals (`rufExecOk_verweigert_rot`,
+     `rufExecOk_verweigert_form`, `rufExecOk_verweigert_bytes`) with
+     planted probes on every path (unfoldable body, multi-statement
+     source, red-zone use);
+   - the single-assignment chunk run (`einzelChunk_lauf`): the lowered
+     value code plus address materialisation plus store writes the
+     representation word of the exact source value, keeps the
+     environment, and preserves every register off the working set;
+   - callee correctness (`einzelRuf_korrekt`): from an admitted frame
+     and validated bytes, the fetched byte run reaches the end of the
+     code with the world of the REAL `execBlock` run represented, the
+     environment represented, and every callee-saved register
+     preserved -- the callee body is the real lowered block, not an
+     abstracted result-word write;
+   - caller-frame correctness under the joint validator
+     (`rufExecOk_rahmen`): argument transport, result-word round trip
+     and untouched callee-save slots, via `pipeline_ruf_rahmen`;
+   - a joint memory-changing witness (`einzelRuf_korrekt_zeuge`): the
+     source run turns row 0 from 7 to 35, the frame saves turn the
+     result byte, the byte run preserves all six callee-saved
+     registers.
+   NOT proved here, and not claimed:
+   - Only ONE straight-line assignment per callee body: longer blocks,
+     `ite`, checks, loops, calls, gates, floats and everything else
+     are REFUSED (`istEinzelZuweisung`, `rufExecOk_verweigert_form`,
+     `cwProbe_mul`), never guessed. Multi-statement callee bodies
+     stay OPEN.
+   - No optimiser certificates: `rufExecOk` fixes `certs = []`, since
+     a certificate could rewrite the body away from the proved shape
+     (`optimise_nil` pins the identity). Certified-optimised callee
+     bodies stay OPEN.
+   - No TSO/store-buffer/GX bridge: every fact is sequential over one
+     canonical `Speicher`; the per-access target-to-W/GX simulation
+     stays OPEN.
+   - No callee-saved push/pop code is emitted or verified here; the
+     push/pop restoration leg stays with `ComposeStackAbi_verbindung`
+     (cited, not redone). Preservation holds because the proved chunk
+     never touches a callee-saved register (`calleeFremd`), not
+     because spills are modelled.
+   - No silicon correspondence beyond the accepted producers; no
+     loader, entry, relocation, cost or time claim; the recursion
+     budget is cited from lane 1157 (`rekursionOk`), not re-enforced
+     at run time here.
+-/
+
+#print axioms istEinzelZuweisung
+#print axioms rufExecOk
+#print axioms calleeFremd
+#print axioms rufExecOk_teile
+#print axioms calleeFremd_mem
+#print axioms rufExecOk_verweigert_rot
+#print axioms rufExecOk_verweigert_form
+#print axioms rufExecOk_verweigert_bytes
+#print axioms optimise_nil
+#print axioms einzelChunk_lauf
+#print axioms einzelRuf_korrekt
+#print axioms rufExecOk_rahmen
+#print axioms cwCfg
+#print axioms cwBody
+#print axioms cwProg
+#print axioms cwBytes
+#print axioms cw_cfgOk
+#print axioms cw_fremd
+#print axioms cw_einzel
+#print axioms cw_rufExec
+#print axioms cwMemBytes
+#print axioms cwMem
+#print axioms cwStart
+#print axioms cw_laenge
+#print axioms cw_code
+#print axioms cw_worldRep
+#print axioms cw_envRepr
+#print axioms cw_rip
+#print axioms cw_quelle
+#print axioms cwBodyMul
+#print axioms cwProbe_mul
+#print axioms cwProbe_form
+#print axioms cwProbe_formRuf
+#print axioms cwProbe_rot
+#print axioms einzelRuf_korrekt_zeuge
+
 end Gabbro.Grammatik.X86.PipelineCallsExec
