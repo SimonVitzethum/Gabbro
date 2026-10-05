@@ -2213,4 +2213,97 @@ theorem vollWit_finit :
   exact ⟨vollFinit_setzt_zurueck _ _ _,
     vollFinit_hw_still _ _, vollFinit_maske_still _ _, rfl⟩
 
+/-! ## 9. Observed saves: buffers, forwarding, foreign view.
+
+  Outcomes carry machines (functions inside), so everything
+  observed goes through first-order projections (`Option Nat`,
+  `Option (Option Byte)`), exactly like the accepted lane-1247
+  witness. Each `decide` below evaluates its save once; the
+  kernel re-checks nothing across theorems. -/
+
+/-- Project a buffer length out of a save outcome. -/
+def witBuf (o : VollAusgang) (c : Nat) : Option Nat :=
+  match o with
+  | .weiter m => some ((vollHw m).puffer c).length
+  | _ => none
+
+/-- Project one TSO-view byte out of a save outcome. -/
+def witByte (o : VollAusgang) (c : Nat)
+    (a : Adresse) : Option (Option Byte) :=
+  match o with
+  | .weiter m => some (loadByte (tsoAnsicht (vollHw m)) c a)
+  | _ => none
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 1000000 in
+/-- Both cores buffer exactly their footprint entries: 476 with
+    AVX alone (x87, mask, header, YMM), 480 with SSE alone
+    (x87, mask, legacy, header). The 736-entry joint save is
+    never evaluated in the kernel: it exceeds the kernel memory
+    budget, so the two components are observed separately. -/
+theorem wit_buf :
+    witBuf (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+      false true vollWitF) 0 = some 476 ∧
+      witBuf (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
+        true false vollWitF) 1 = some 480 := by
+  decide
+
+/-- An empty request buffers nothing (refusal, observed). -/
+theorem wit_empty :
+    witBuf (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+      false false vollWitF) 0 = none := by
+  decide
+
+/-- The machine after core 0 saves AVX, if reached. -/
+def witV1 : VollMaschine :=
+  match vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc false
+      true vollWitF with
+  | .weiter m => m
+  | _ => vollWitStart
+
+/-- The machine after core 1 saves SSE, if reached. -/
+def witV1b : VollMaschine :=
+  match vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc true
+      false vollWitF with
+  | .weiter m => m
+  | _ => vollWitStart
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 1000000 in
+/-- Owner-only forwarding, core 0: mask `0xBF` and header
+    `5` (XSTATE_BV bits 0 and 2 for the AVX-only request). -/
+theorem wit_fwd0 :
+    witByte (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+        false true vollWitF) 0 (addrOff vollWitArea0 28) =
+        some (some (BitVec.ofNat 8 191)) ∧
+      witByte (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+          false true vollWitF) 0 (addrOff vollWitArea0 512) =
+          some (some (BitVec.ofNat 8 5)) := by
+  decide
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 1000000 in
+/-- Owner-only forwarding, core 0 YMM and core 1 x87/MXCSR. -/
+theorem wit_fwd1 :
+    witByte (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+        false true vollWitF) 0 (addrOff vollWitArea0 576) =
+        some (some (BitVec.ofNat 8 9)) ∧
+      witByte (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
+          true false vollWitF) 1 (addrOff vollWitArea1 0) =
+          some (some (BitVec.ofNat 8 5)) ∧
+      witByte (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
+          true false vollWitF) 1 (addrOff vollWitArea1 24) =
+          some (some (BitVec.ofNat 8 191)) := by
+  decide
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 1000000 in
+/-- No foreign forwarding: core 0 still reads zero at core 1's
+    MXCSR cell after core 1 saves. -/
+theorem wit_fremd :
+    witByte (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
+        true false vollWitF) 0 (addrOff vollWitArea1 24) =
+        some (some (BitVec.ofNat 8 0)) := by
+  decide
+
 end Gabbro.Grammatik.X86
