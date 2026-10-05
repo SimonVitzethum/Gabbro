@@ -21,6 +21,7 @@
   No second source interpreter, no new IEEE model, no optimiser edit.
 -/
 import Grammatik.X86.ScalarFloat
+import Grammatik.EinpassenVoll
 
 namespace Gabbro.Grammatik.X86.PipelineFloat
 
@@ -100,7 +101,9 @@ theorem pipelineFloat_seq (op : GleitOp) (dst a b : XmmReg) (t : FpZustand)
       ∧ t'.kern.rip = ripNach (ripNach t.kern.rip 4) 4
       ∧ xmmTief t'.xmm dst
           = muster64 (gleitRechne op (bites64 (xmmTief t.xmm a)) (bites64 (xmmTief t.xmm b)))
-      ∧ t'.fp = t.fp := by
+      ∧ t'.fp = t.fp
+      ∧ t'.kern.speicher = t.kern.speicher
+      ∧ t'.kern.register = t.kern.register := by
   have hmov : fpSchritt (⟨.movsdRR dst a, 4⟩ : FpDecodiert) t =
       some { t with kern := { t.kern with rip := ripNach t.kern.rip 4 }, xmm := xmmSchreibeTief t.xmm dst (xmmTief t.xmm a) } :=
     fpSchritt_movsdRR _ _ dst a hok hfp rfl
@@ -121,7 +124,7 @@ theorem pipelineFloat_seq (op : GleitOp) (dst a b : XmmReg) (t : FpZustand)
     have hrun : laufFp [⟨.movsdRR dst a, 4⟩, ⟨senkGleitOp .add dst b, 4⟩] t = some { kern := { register := t.kern.register, flags := t.kern.flags, rip := ripNach (ripNach t.kern.rip 4) 4, speicher := t.kern.speicher }, xmm := xmmSchreibeTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) dst (fpRechne .add (xmmTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) dst) (xmmTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) b)), fp := t.fp } := by
       simp only [laufFp_cons, laufFp_nil, hmov, h2f]
     refine ⟨_, hrun, rfl,
-      by simp only [xmmSchreibeTief_tief, hdst, hsrc, fpRechne_gleitRechne], rfl⟩
+      by simp only [xmmSchreibeTief_tief, hdst, hsrc, fpRechne_gleitRechne], rfl, rfl, rfl⟩
   | sub =>
     have h2 := fpSchritt_subsdRR (⟨senkGleitOp .sub dst b, 4⟩ : FpDecodiert)
       { t with kern := { t.kern with rip := ripNach t.kern.rip 4 }, xmm := xmmSchreibeTief t.xmm dst (xmmTief t.xmm a) }
@@ -130,7 +133,7 @@ theorem pipelineFloat_seq (op : GleitOp) (dst a b : XmmReg) (t : FpZustand)
     have hrun : laufFp [⟨.movsdRR dst a, 4⟩, ⟨senkGleitOp .sub dst b, 4⟩] t = some { kern := { register := t.kern.register, flags := t.kern.flags, rip := ripNach (ripNach t.kern.rip 4) 4, speicher := t.kern.speicher }, xmm := xmmSchreibeTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) dst (fpRechne .sub (xmmTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) dst) (xmmTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) b)), fp := t.fp } := by
       simp only [laufFp_cons, laufFp_nil, hmov, h2f]
     refine ⟨_, hrun, rfl,
-      by simp only [xmmSchreibeTief_tief, hdst, hsrc, fpRechne_gleitRechne], rfl⟩
+      by simp only [xmmSchreibeTief_tief, hdst, hsrc, fpRechne_gleitRechne], rfl, rfl, rfl⟩
   | mul =>
     have h2 := fpSchritt_mulsdRR (⟨senkGleitOp .mul dst b, 4⟩ : FpDecodiert)
       { t with kern := { t.kern with rip := ripNach t.kern.rip 4 }, xmm := xmmSchreibeTief t.xmm dst (xmmTief t.xmm a) }
@@ -139,7 +142,7 @@ theorem pipelineFloat_seq (op : GleitOp) (dst a b : XmmReg) (t : FpZustand)
     have hrun : laufFp [⟨.movsdRR dst a, 4⟩, ⟨senkGleitOp .mul dst b, 4⟩] t = some { kern := { register := t.kern.register, flags := t.kern.flags, rip := ripNach (ripNach t.kern.rip 4) 4, speicher := t.kern.speicher }, xmm := xmmSchreibeTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) dst (fpRechne .mul (xmmTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) dst) (xmmTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) b)), fp := t.fp } := by
       simp only [laufFp_cons, laufFp_nil, hmov, h2f]
     refine ⟨_, hrun, rfl,
-      by simp only [xmmSchreibeTief_tief, hdst, hsrc, fpRechne_gleitRechne], rfl⟩
+      by simp only [xmmSchreibeTief_tief, hdst, hsrc, fpRechne_gleitRechne], rfl, rfl, rfl⟩
   | div =>
     have h2 := fpSchritt_divsdRR (⟨senkGleitOp .div dst b, 4⟩ : FpDecodiert)
       { t with kern := { t.kern with rip := ripNach t.kern.rip 4 }, xmm := xmmSchreibeTief t.xmm dst (xmmTief t.xmm a) }
@@ -148,6 +151,76 @@ theorem pipelineFloat_seq (op : GleitOp) (dst a b : XmmReg) (t : FpZustand)
     have hrun : laufFp [⟨.movsdRR dst a, 4⟩, ⟨senkGleitOp .div dst b, 4⟩] t = some { kern := { register := t.kern.register, flags := t.kern.flags, rip := ripNach (ripNach t.kern.rip 4) 4, speicher := t.kern.speicher }, xmm := xmmSchreibeTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) dst (fpRechne .div (xmmTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) dst) (xmmTief (xmmSchreibeTief t.xmm dst (xmmTief t.xmm a)) b)), fp := t.fp } := by
       simp only [laufFp_cons, laufFp_nil, hmov, h2f]
     refine ⟨_, hrun, rfl,
-      by simp only [xmmSchreibeTief_tief, hdst, hsrc, fpRechne_gleitRechne], rfl⟩
+      by simp only [xmmSchreibeTief_tief, hdst, hsrc, fpRechne_gleitRechne], rfl, rfl, rfl⟩
+
+/-! ## 3. Comparisons: `ucomisd` with the unordered case.
+
+  Source `fllt`/`flle` evaluate to `gleitLt`/`gleitLe`
+  (`FloatSourceObservations.eval_fllt_ist_gleitLt`); the lowered
+  `ucomisd` sets exactly the `ucomiFlags` of the injected operand
+  words. NaN on either side takes the unordered row (ZF, PF, CF set);
+  off the NaN rows the flags are the two model comparisons
+  (`ucomiFlags_nichtNan`), and `<=` is the negated reverse `<`
+  (`fle_flt`). -/
+
+/-- Which source float comparison is lowered (both read the same
+    `ucomisd` flags; `lt` is the CF row, `le` the CF-or-ZF row). -/
+inductive FloatCmp where
+  | lt | le
+  deriving DecidableEq, Repr
+
+/-- Lower a source float comparison to the accepted unordered compare:
+    one source comparison = one `ucomisd`. -/
+def senkGleitCmp : FloatCmp → XmmReg → XmmReg → FpBefehl
+  | .lt, lhs, rhs => .ucomisdRR lhs rhs
+  | .le, lhs, rhs => .ucomisdRR lhs rhs
+
+/-- THE COMPARE STEP: the lowered comparison sets exactly the
+    architectural flags of the injected operand words. -/
+theorem pipelineFloat_cmp_schritt (c : FloatCmp) (lhs rhs : XmmReg) (d : FpDecodiert)
+    (t : FpZustand)
+    (hok : laengeOk d.laenge = true)
+    (hfp : fpEintritt t.fp = true)
+    (h : d.befehl = senkGleitCmp c lhs rhs) :
+    fpSchritt d t = some { t with kern := { t.kern with rip := ripNach t.kern.rip d.laenge, flags := ucomiFlags (bites64 (xmmTief t.xmm lhs)) (bites64 (xmmTief t.xmm rhs)) } } := by
+  cases c with
+  | lt => exact fpSchritt_ucomisdRR d t lhs rhs hok hfp h
+  | le => exact fpSchritt_ucomisdRR d t lhs rhs hok hfp h
+
+/-- UNORDERED WITNESS: `0.0 / 0.0` is NaN, so comparing it against
+    `1.0` sets ZF, PF and CF. -/
+theorem pipelineFloat_cmp_ungeordnet :
+    ucomiFlags (Gleitkomma.div Gleitkomma.f64 (Gleitkomma.ofInt Gleitkomma.f64 0) (Gleitkomma.ofInt Gleitkomma.f64 0)) (Gleitkomma.ofInt Gleitkomma.f64 1) = ⟨true, true, some false, true, false, false⟩ := by
+  exact ucomiFlags_ungeordnet_links _ _ Gleitkomma.zeuge_nullDurchNull
+
+/-- ORDERED LESS: a true source `fllt` (`gleitLt`) is exactly the CF row. -/
+theorem pipelineFloat_cmp_lt (a b : GFloat)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 a ≠ .nan)
+    (hb : Gleitkomma.klasse Gleitkomma.f64 b ≠ .nan)
+    (hlt : gleitLt a b = true) :
+    ucomiFlags a b = ⟨true, false, some false, false, false, false⟩ := by
+  have h : Gleitkomma.flt Gleitkomma.f64 a b = true := hlt
+  exact ucomiFlags_kleiner a b h ha hb
+
+/-- ORDERED LESS-OR-EQUAL: a true source `flle` (`gleitLe`) is the CF
+    row or the ZF row, never the unordered row. -/
+theorem pipelineFloat_cmp_le (a b : GFloat)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 a ≠ .nan)
+    (hb : Gleitkomma.klasse Gleitkomma.f64 b ≠ .nan)
+    (hle : gleitLe a b = true) :
+    (ucomiFlags a b).cf = true ∨ (ucomiFlags a b).zf = true := by
+  have hfle : Gleitkomma.fle Gleitkomma.f64 a b = true := hle
+  rw [fle_flt ha hb] at hfle
+  have hba : Gleitkomma.flt Gleitkomma.f64 b a = false := by
+    cases h : Gleitkomma.flt Gleitkomma.f64 b a with
+    | true => simp_all
+    | false => rfl
+  cases h : Gleitkomma.flt Gleitkomma.f64 a b with
+  | true =>
+    rw [ucomiFlags_kleiner a b h ha hb]
+    exact Or.inl rfl
+  | false =>
+    rw [ucomiFlags_gleich a b h hba ha hb]
+    exact Or.inr rfl
 
 end Gabbro.Grammatik.X86.PipelineFloat
