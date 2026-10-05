@@ -5,8 +5,11 @@ Clone verified: `/home/simon/Dokumente/gabbro-muse/a1286`, branch `muse/1286`
 Own file: this report only. No other file touched (`git status --short` clean
 before writing it).
 
-CANDIDATE: 1285, pinned HEAD `33b40c50ecb9c9964edd4b0a7a54f7c2fba4381e`,
-base `738366545afbddf7ac664db92804703db24f8868` (from
+CANDIDATE: 1285 33b40c50ecb9c9964edd4b0a7a54f7c2fba4381e
+
+Reviewed lane 1285 at pinned HEAD
+`33b40c50ecb9c9964edd4b0a7a54f7c2fba4381e`, base
+`738366545afbddf7ac664db92804703db24f8868` (from
 `.tmp/review/SNAPSHOT.json`). Files in candidate: `MUSE-REPORT-1285.md`,
 `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/HwSegTlb.lean` (new,
 711 lines). Reviewed from the exact snapshot diff only
@@ -92,4 +95,6 @@ clone itself was not accessed.
   `segPraefix_gs` pin. No reason to doubt.
 - Nothing in the lane task looked wrong.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
