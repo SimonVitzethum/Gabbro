@@ -34,7 +34,8 @@ namespace Gabbro.Grammatik.X86
 
 /-- Admitted event forms. `cbw`/`cwd` are the 16-bit preparations
     (opcodes `66 98`/`66 99`); `cwde`/`cdqe`/`cdq`/`cqo` lift the
-    accepted width preparations; `nop` is bare `90` (exactly the
+    accepted width preparations; `nop` is every `90H` encoding
+    resolving to the RAX self (bare and prefixed: exactly the
     architectural NOP, never a zero-extending self-exchange);
     `xchgReg`/`xchgRax16`/`xchgRax32`/`xchgRax64` are the register
     exchanges at an explicit width (`90+r` has no 8-bit form, so the
@@ -66,7 +67,8 @@ structure SxDecodiert where
     states one side of an exchange at an explicit width (8/16-bit
     merge, 32-bit zero-extends, 64-bit whole); both sides read the
     OLD values, so a same-register 87-form exchange keeps the
-    32-bit zero-extension while bare `90` stays `nop` (§3). -/
+    32-bit zero-extension while every self-resolving `90H` stays
+    `nop` (§3). -/
 
 /-- CBW value: AX takes the sign-extension of AL, RAX upper kept. -/
 def cbwWert (s : Zustand) : Wort :=
@@ -216,6 +218,28 @@ theorem sxXchg64_ist_reg (a c : Register) (s : Zustand)
   rw [sxXchgSchritt_eq]
   unfold xchgSchritt
   simp [sxXchgSeite]
+
+/-- The 16-bit RAX self-exchange event agrees with the `66 87 C0`
+    self-exchange event (the canonical bytes of the observable):
+    both run the same register update. -/
+theorem sxXchgRax16rax_ist (s : Zustand) (l : Nat) :
+    sxSchritt ⟨.xchgRax16 .rax, l⟩ s =
+      sxSchritt ⟨.xchgReg .b16 .rax .rax, l⟩ s := by
+  cases h : laengeOk l <;> simp [sxSchritt, h]
+
+/-- The 32-bit RAX self-exchange event agrees with the `87 C0`
+    self-exchange event: both zero-extend EAX. -/
+theorem sxXchgRax32rax_ist (s : Zustand) (l : Nat) :
+    sxSchritt ⟨.xchgRax32 .rax, l⟩ s =
+      sxSchritt ⟨.xchgReg .b32 .rax .rax, l⟩ s := by
+  cases h : laengeOk l <;> simp [sxSchritt, h]
+
+/-- The 64-bit RAX self-exchange event agrees with the
+    `REX.W 87 C0` self-exchange event. -/
+theorem sxXchgRax64rax_ist (s : Zustand) (l : Nat) :
+    sxSchritt ⟨.xchgRax64 .rax, l⟩ s =
+      sxSchritt ⟨.xchgReg .b64 .rax .rax, l⟩ s := by
+  cases h : laengeOk l <;> simp [sxSchritt, h]
 
 /-- CBW keeps the flags. -/
 theorem cbwSchritt_flags (s : Zustand) : (cbwSchritt s).flags = s.flags := rfl
@@ -508,18 +532,32 @@ theorem ext_weist_sxxchg87mem_zurueck :
     decodeExt [natByte 135, natByte 0] = none := by
   decide
 
+theorem ext_weist_sx4090_zurueck :
+    decodeExt [natByte 64, natByte 144] = none := by
+  decide
+
+theorem ext_weist_sx4c90_zurueck :
+    decodeExt [natByte 76, natByte 144] = none := by
+  decide
+
+theorem ext_weist_sx66rex90_zurueck :
+    decodeExt [natByte 102, natByte 72, natByte 144] = none := by
+  decide
+
 /-! ## 6. Decode: the accepted prefix parse, family opcodes after it.
 
     `decodeSx` reuses `nimmPraefix` (LOCK refusal, `66`/REX parse)
-    and `wdBits`/`codeReg` unchanged. SIB (`xb == 1`) refuses
-    everywhere (no addressed form lives here); every memory ModRM
-    refuses (an XCHG memory operand is implicitly LOCKed and stays
-    with the locked families; a MOVSXD memory source needs the TSO
-    read path, still open). Bare `90` with no prefix at all
-    (`npfx == 0`, which already forces `op16 = false`) is the
-    architectural NOP, never a zero-extending self-exchange: the
-    self-exchange event at 32 bits stays reachable through the
-    redundant-REX encoding `[0x40, 0x90]`. -/
+    and `wdBits`/`codeReg` unchanged. REX.X names no SIB anywhere
+    in this family (no addressed form lives here: every ModRM use
+    is register-direct and every other opcode is ModRM-free), so
+    it is ignored; every memory ModRM refuses (an XCHG memory
+    operand is implicitly LOCKed and stays with the locked
+    families; a MOVSXD memory source needs the TSO read path,
+    still open). Every `90H` encoding that resolves to the RAX
+    self -- bare `90` and every prefixed form (`66 90`, REX `90`,
+    REX.W `90`) -- is the architectural NOP at the consumed
+    length, never a zero-extending self-exchange: the observable
+    32-bit self-exchange is the `87 C0` form. -/
 
 /-- Preparation dispatch after the prefix (`98`/`99`): 16-bit with
     `66`, 32-bit default, 64-bit with REX.W. REX.R/B name no field
@@ -534,16 +572,18 @@ def decodeSx98 (op16 : Bool) (wb npfx : Nat) (is99 : Bool)
   else
     some (⟨if is99 then .cdq else .cwde, npfx + 1⟩, rest)
 
-/-- `90+r` dispatch after the prefix: bare `90` is NOP; otherwise
-    the width follows the prefix (default 32, `66` 16, REX.W 64)
-    and REX.B extends the opcode register. REX.R names no field
-    and is ignored. -/
-def decodeSx90 (op16 : Bool) (wb rb bb npfx : Nat) (op : Byte)
+/-- `90+r` dispatch after the prefix: any encoding resolving to
+    the RAX self (no B extension, low opcode bits zero) IS the
+    architectural NOP at the consumed length, under every prefix;
+    otherwise the width follows the prefix (default 32, `66` 16,
+    REX.W 64) and REX.B extends the opcode register. REX.R names
+    no field here and is ignored. -/
+def decodeSx90 (op16 : Bool) (wb _rb bb npfx : Nat) (op : Byte)
     (rest : List Byte) : Option (SxDecodiert × List Byte) :=
   if byteNat op / 8 == 18 then
     let lo := byteNat op % 8
-    if lo == 0 && npfx == 0 then
-      some (⟨.nop, 1⟩, rest)
+    if bb == 0 && lo == 0 then
+      some (⟨.nop, npfx + 1⟩, rest)
     else if !op16 && wb == 0 then
       match codeReg (bb * 8 + lo) with
       | some r => some (⟨.xchgRax32 r, npfx + 1⟩, rest)
@@ -552,7 +592,7 @@ def decodeSx90 (op16 : Bool) (wb rb bb npfx : Nat) (op : Byte)
       match codeReg (bb * 8 + lo) with
       | some r => some (⟨.xchgRax16 r, npfx + 1⟩, rest)
       | none => none
-    else if !op16 && wb == 1 && rb == 0 then
+    else if !op16 && wb == 1 then
       match codeReg (bb * 8 + lo) with
       | some r => some (⟨.xchgRax64 r, npfx + 1⟩, rest)
       | none => none
@@ -604,12 +644,11 @@ def decodeSx63 (op16 : Bool) (wb rb bb npfx : Nat)
 
 /-- Opcode dispatch after the prefix: `98`/`99`, `90+r`, `86`,
     `87`, `63`. Anything else refuses. -/
-def decodeSxNachPraefix (op16 : Bool) (wb rb xb bb npfx : Nat) :
+def decodeSxNachPraefix (op16 : Bool) (wb rb _xb bb npfx : Nat) :
     List Byte → Option (SxDecodiert × List Byte)
   | [] => none
   | op :: rest =>
-    if xb == 1 then none
-    else if byteNat op == 152 then decodeSx98 op16 wb npfx false rest
+    if byteNat op == 152 then decodeSx98 op16 wb npfx false rest
     else if byteNat op == 153 then decodeSx98 op16 wb npfx true rest
     else if byteNat op == 134 then
       match rest with
@@ -643,10 +682,10 @@ def decodeSx : List Byte → Option (SxDecodiert × List Byte)
 /-! ## 7. Encode: one canonical byte string per event.
 
     REX bytes reuse the accepted `wdRex` (empty exactly when no bit
-    is needed). The 32-bit RAX self-exchange cannot use bare `90`
-    (that IS the NOP), so its canonical encoding carries the
-    redundant all-zero REX `[0x40, 0x90]`, which the decoder takes
-    as the exchange arm. -/
+    is needed). No `90H` byte ever encodes a zero-extending event:
+    a RAX self-exchange canonicalizes to its `87 C0`-family bytes
+    (observably identical steps, see `sxXchgRax16rax_ist` and
+    siblings), which decode to the matching `xchgReg` self event. -/
 
 /-- Canonical bytes of one family event. -/
 def sxEncode : SxBefehl → List Byte
@@ -670,15 +709,18 @@ def sxEncode : SxBefehl → List Byte
     wdRex .w64 (regHigh a) (regHigh c) ++
       [natByte 135, modrmReg (regLow a) (regLow c)]
   | .xchgRax16 r =>
-    [natByte 102] ++ wdRex .w32 0 (regHigh r) ++
-      [natByte (144 + regLow r)]
+    if r == .rax then [natByte 102, natByte 135, natByte 192]
+    else
+      [natByte 102] ++ wdRex .w32 0 (regHigh r) ++
+        [natByte (144 + regLow r)]
   | .xchgRax32 r =>
-    if regHigh r == 0 && regLow r == 0 then
-      [natByte 64, natByte 144]
+    if r == .rax then [natByte 135, natByte 192]
     else
       wdRex .w32 0 (regHigh r) ++ [natByte (144 + regLow r)]
   | .xchgRax64 r =>
-    wdRex .w64 0 (regHigh r) ++ [natByte (144 + regLow r)]
+    if r == .rax then [natByte 72, natByte 135, natByte 192]
+    else
+      wdRex .w64 0 (regHigh r) ++ [natByte (144 + regLow r)]
   | .movsxd dst src =>
     wdRex .w64 (regHigh dst) (regHigh src) ++
       [natByte 99, modrmReg (regLow dst) (regLow src)]
@@ -733,11 +775,36 @@ theorem pin_sxxchg4890r8_dekode :
       some (⟨.xchgRax64 .r8, 2⟩, []) := by
   decide
 
-/-- Pinned decode: redundant-REX `90` is the 32-bit self-exchange
-    (the zero-extension surprise, kept distinct from NOP). -/
-theorem pin_sx4090_dekode :
+/-- Pinned decode: redundant-REX `90` resolving to the RAX self
+    is NOP (never a zero-extending self-exchange). -/
+theorem pin_sx4090_nop_dekode :
     decodeSx [natByte 64, natByte 144] =
-      some (⟨.xchgRax32 .rax, 2⟩, []) := by
+      some (⟨.nop, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: `66 90` is the 2-byte NOP. -/
+theorem pin_sx6690_nop_dekode :
+    decodeSx [natByte 102, natByte 144] =
+      some (⟨.nop, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: `REX.W 90` resolving to the RAX self is NOP. -/
+theorem pin_sx4890_nop_dekode :
+    decodeSx [natByte 72, natByte 144] =
+      some (⟨.nop, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: `REX.W+R 90` resolving to the RAX self is NOP
+    (the R bit names no field and changes nothing). -/
+theorem pin_sx4c90_nop_dekode :
+    decodeSx [natByte 76, natByte 144] =
+      some (⟨.nop, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: `66`+REX.W `90` is NOP at length 3. -/
+theorem pin_sx66rex90_nop_dekode :
+    decodeSx [natByte 102, natByte 72, natByte 144] =
+      some (⟨.nop, 3⟩, []) := by
   decide
 
 /-- Pinned decode: `86 C0` exchanges AL with itself at 8 bits. -/
@@ -829,9 +896,24 @@ theorem pin_sxcbw_bytes :
     sxEncode .cbw = [natByte 102, natByte 152] := by
   decide
 
-/-- Pinned bytes: the 32-bit RAX self-exchange needs its REX. -/
+/-- Pinned bytes: the 32-bit RAX self-exchange canonicalizes to
+    the `87 C0` form (no `90H` byte encodes a zero-extension). -/
 theorem pin_sxxchgRax32rax_bytes :
-    sxEncode (.xchgRax32 .rax) = [natByte 64, natByte 144] := by
+    sxEncode (.xchgRax32 .rax) = [natByte 135, natByte 192] := by
+  decide
+
+/-- Pinned bytes: the 16-bit RAX self-exchange canonicalizes to
+    the `66 87 C0` form. -/
+theorem pin_sxxchgRax16rax_bytes :
+    sxEncode (.xchgRax16 .rax) =
+      [natByte 102, natByte 135, natByte 192] := by
+  decide
+
+/-- Pinned bytes: the 64-bit RAX self-exchange canonicalizes to
+    the `REX.W 87 C0` form. -/
+theorem pin_sxxchgRax64rax_bytes :
+    sxEncode (.xchgRax64 .rax) =
+      [natByte 72, natByte 135, natByte 192] := by
   decide
 
 /-- Pinned bytes: MOVSXD r11, ecx. -/
@@ -916,27 +998,80 @@ theorem sxRoundtrip_xchgReg64 (a c : Register) (suffix : List Byte) :
         (sxEncode (.xchgReg .b64 a c)).length⟩, suffix) := by
   cases a <;> cases c <;> rfl
 
-/-- Round trip for the 16-bit RAX exchange. -/
-theorem sxRoundtrip_xchgRax16 (r : Register) (suffix : List Byte) :
+/-- Round trip for the 16-bit RAX exchange off the RAX self
+    (the self canonicalizes to the `66 87 C0` form). -/
+theorem sxRoundtrip_xchgRax16 (r : Register) (hne : r ≠ .rax)
+    (suffix : List Byte) :
     decodeSx (sxEncode (.xchgRax16 r) ++ suffix) =
       some (⟨.xchgRax16 r,
         (sxEncode (.xchgRax16 r)).length⟩, suffix) := by
-  cases r <;> rfl
+  cases r with
+  | rax => exact absurd rfl hne
+  | rcx => rfl
+  | rdx => rfl
+  | rbx => rfl
+  | rsp => rfl
+  | rbp => rfl
+  | rsi => rfl
+  | rdi => rfl
+  | r8 => rfl
+  | r9 => rfl
+  | r10 => rfl
+  | r11 => rfl
+  | r12 => rfl
+  | r13 => rfl
+  | r14 => rfl
+  | r15 => rfl
 
-/-- Round trip for the 32-bit RAX exchange (the self case rides
-    its redundant REX, never bare `90`). -/
-theorem sxRoundtrip_xchgRax32 (r : Register) (suffix : List Byte) :
+/-- Round trip for the 32-bit RAX exchange off the RAX self
+    (the self canonicalizes to the `87 C0` form, never bare `90`). -/
+theorem sxRoundtrip_xchgRax32 (r : Register) (hne : r ≠ .rax)
+    (suffix : List Byte) :
     decodeSx (sxEncode (.xchgRax32 r) ++ suffix) =
       some (⟨.xchgRax32 r,
         (sxEncode (.xchgRax32 r)).length⟩, suffix) := by
-  cases r <;> rfl
+  cases r with
+  | rax => exact absurd rfl hne
+  | rcx => rfl
+  | rdx => rfl
+  | rbx => rfl
+  | rsp => rfl
+  | rbp => rfl
+  | rsi => rfl
+  | rdi => rfl
+  | r8 => rfl
+  | r9 => rfl
+  | r10 => rfl
+  | r11 => rfl
+  | r12 => rfl
+  | r13 => rfl
+  | r14 => rfl
+  | r15 => rfl
 
-/-- Round trip for the 64-bit RAX exchange. -/
-theorem sxRoundtrip_xchgRax64 (r : Register) (suffix : List Byte) :
+/-- Round trip for the 64-bit RAX exchange off the RAX self
+    (the self canonicalizes to the `REX.W 87 C0` form). -/
+theorem sxRoundtrip_xchgRax64 (r : Register) (hne : r ≠ .rax)
+    (suffix : List Byte) :
     decodeSx (sxEncode (.xchgRax64 r) ++ suffix) =
       some (⟨.xchgRax64 r,
         (sxEncode (.xchgRax64 r)).length⟩, suffix) := by
-  cases r <;> rfl
+  cases r with
+  | rax => exact absurd rfl hne
+  | rcx => rfl
+  | rdx => rfl
+  | rbx => rfl
+  | rsp => rfl
+  | rbp => rfl
+  | rsi => rfl
+  | rdi => rfl
+  | r8 => rfl
+  | r9 => rfl
+  | r10 => rfl
+  | r11 => rfl
+  | r12 => rfl
+  | r13 => rfl
+  | r14 => rfl
+  | r15 => rfl
 
 /-- Round trip for register MOVSXD. -/
 theorem sxRoundtrip_movsxd (dst src : Register) (suffix : List Byte) :
@@ -1019,6 +1154,20 @@ theorem pin_sxHw_cbw :
 theorem pin_sxHw_nop :
     decodeSignXchg [natByte 144] = some (.sx ⟨.nop, 1⟩, []) :=
   decodeSignXchg_sx _ _ _ ext_weist_sxnop_zurueck pin_sxnop_dekode
+
+/-- Pin: `66 90` takes the family arm as the 2-byte NOP. -/
+theorem pin_sxHw_nop66 :
+    decodeSignXchg [natByte 102, natByte 144] =
+      some (.sx ⟨.nop, 2⟩, []) :=
+  decodeSignXchg_sx _ _ _ ext_weist_sxxchg6690_zurueck
+    pin_sx6690_nop_dekode
+
+/-- Pin: redundant-REX `90` takes the family arm as NOP. -/
+theorem pin_sxHw_nop40 :
+    decodeSignXchg [natByte 64, natByte 144] =
+      some (.sx ⟨.nop, 2⟩, []) :=
+  decodeSignXchg_sx _ _ _ ext_weist_sx4090_zurueck
+    pin_sx4090_nop_dekode
 
 /-- Pin: `91` takes the family arm as the 32-bit RAX exchange. -/
 theorem pin_sxHw_xchg91 :
@@ -1554,39 +1703,48 @@ theorem sxHw_zeuge :
 /- CUTS:
    Proved here: the sign-extend-accumulator family (CBW/CWDE/CDQE,
    CWD/CDQ/CQO), the register XCHG forms (`86`/`87` ModRM-reg and
-   `90+r`, with bare `90` exactly the architectural NOP) and the
-   register MOVSXD, connected to the coherent machine and the
-   unified byte dispatcher -- the dispatcher prefers the accepted
-   unified chain (16 rows proved refused, overlapping rows keep
-   their unified arm), one unified step selects the evaluators
-   exactly, the 32/64-bit preparations ARE the accepted
-   `vor98Schritt`/`vor99Schritt` arms (lifted, never redefined),
-   the 64-bit register exchange IS the accepted `XchgForm.reg`
-   swap of `XchgOrderNeed` (lifted, never a second swap; shared
-   bytes pinned in both decoders), every successful step keeps
-   flags and memory, no step halts,
-   the `HwAdapter SxDecodiert` plug preserves `HwWf` with exact
-   agreement and planted refusals, the machine outcome reuses the
-   accepted `HwRegAusgang`, and a reached two-core run with
-   owner-only forwarding and a memory-changing drain stands beside
-   refusal evidence.
+   `90+r`, with every `90H` resolving to the RAX self exactly the
+   architectural NOP) and the register MOVSXD, connected to the
+   coherent machine and the unified byte dispatcher -- the
+   dispatcher prefers the accepted unified chain (19 rows proved
+   refused, overlapping rows keep their unified arm), one unified
+   step selects the evaluators exactly, the 32/64-bit preparations
+   ARE the accepted `vor98Schritt`/`vor99Schritt` arms (lifted,
+   never redefined), the 64-bit register exchange IS the accepted
+   `XchgForm.reg` swap of `XchgOrderNeed` (lifted, never a second
+   swap; shared bytes pinned in both decoders), every RAX
+   self-exchange event agrees with its `87`-form twin
+   (`sxXchgRax16rax_ist` and siblings), every successful step
+   keeps flags and memory, no step halts, the `HwAdapter
+   SxDecodiert` plug preserves `HwWf` with exact agreement and
+   planted refusals, the machine outcome reuses the accepted
+   `HwRegAusgang`, and a reached two-core run with owner-only
+   forwarding and a memory-changing drain stands beside refusal
+   evidence.
    NOT proved here, and not claimed:
    - No hardware correspondence: encodings are self-consistent
      canonical subsets checked against the SDM opcodes cited in
      the accepted `MulDivWidthHardwareForms` file (preparations
-     `98`/`99`) and the standard `90+r`/`86`/`87`/`63` rows, not
+     `98`/`99`), the accepted `XchgOrderNeed` header (XCHG/LOCK
+     rows, including the `90H`-is-NOP alias NOTE now cited here
+     too), and the standard `90+r`/`86`/`87`/`63` rows, not
      x86 truth. Silicon assumptions named: CBW merges into AX
      (upper RAX kept), CWDE zero-extends EAX into RAX, CDQE takes
      the full sign-extension, CWD broadcasts the AX sign into DX
      (upper RDX kept), CDQ/CQO broadcast into the full register,
-     32-bit exchanges zero-extend both sides, bare `90` changes
-     nothing but RIP, XCHG-mem is implicitly LOCKed, MOVSXD needs
-     REX.W in 64-bit mode, REX.R names no field on `90+r` (it is
-     ignored), `66`+REX.W refuses as overdetermined.
+     32-bit exchanges zero-extend both sides, every `90H`
+     resolving to the RAX self (bare and every prefixed form,
+     REX.W included) changes nothing but RIP, the RAX
+     self-exchange events canonicalize to their `87`-form twins
+     (no `90H` byte encodes a zero-extension), XCHG-mem is
+     implicitly LOCKed, MOVSXD needs REX.W in 64-bit mode,
+     REX.R names no field on `90+r` (it is ignored), REX.X names
+     no SIB anywhere in this family (it is ignored; SIB-carrying
+     shapes refuse through the `mod` check).
    - Deliberate over-refusals (documented, never silent
      mis-execution): non-`0x48` REX on `98`/`99`, `66`+REX on
-     `98`/`99`/`87`, REX without W on `87` outside `66`, REX.X
-     anywhere here, MOVSXD without REX.W or with `66`.
+     `98`/`99`/`87`, REX without W on `87` outside `66`,
+     MOVSXD without REX.W or with `66`.
    - No memory-operand forms: XCHG-mem stays with the locked
      families (the accepted `XchgForm.mem` barrier is neither
      redefined nor rewired here); MOVSXD-mem needs the TSO read
