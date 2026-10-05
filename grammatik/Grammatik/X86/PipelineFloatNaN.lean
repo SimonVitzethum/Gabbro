@@ -294,6 +294,89 @@ theorem silizium_zweiNan_bleibtNan
   · rw [h]; exact ha
   · rw [h]; exact hb
 
+/-! ## 5. Pipeline sequence: the lowered NaN run computes the source word.
+
+  `senkNanSeq` is the accepted two-step sequence; `pipelineNaN_seq`
+  ties its run to the source model result bit for bit (in the style
+  of `pipeline_correct_entry`: source `execBlock`-level value related
+  to the run on the lowered forms). The payload corollaries resolve
+  the conclusion to the operand WORD: a NaN in `a` lands in `dst`
+  for every op; a NaN in `b` (healthy `a`) lands in `dst` for `add`
+  (the word level §2 covers `mul`/`div`, `sub` flips only the sign).
+  NaN operands are never a refusal reason: the sequence reaches
+  `some` under the admitted profile. -/
+
+/-- The NaN sequence IS the accepted two-step float sequence. -/
+theorem senkNanSeq_klingt (op : GleitOp) (dst a b : XmmReg) :
+    senkNanSeq op dst a b
+      = [⟨.movsdRR dst a, 4⟩, ⟨senkGleitOp op dst b, 4⟩] :=
+  rfl
+
+/-- The NaN admission check unpacks to the profile and the length. -/
+theorem nanPipeOk_zulaessig (k : FPKontext) (len : Nat)
+    (h : nanPipeOk k len = true) :
+    mxcsrGueltig k.mxcsr = true ∧ laengeOk len = true := by
+  unfold nanPipeOk floatPipeOk at h
+  cases hm : mxcsrGueltig k.mxcsr with
+  | false => simp [hm] at h
+  | true =>
+    cases hl : laengeOk len with
+    | false => simp [hl] at h
+    | true => exact ⟨rfl, rfl⟩
+
+/-- THE NaN SEQUENCE: the lowered two-step run reaches a successor
+    whose `dst` holds the exact source model result bit for bit. -/
+theorem pipelineNaN_seq (op : GleitOp) (dst a b : XmmReg) (t : FpZustand)
+    (hne : b ≠ dst)
+    (hok : laengeOk 4 = true)
+    (hfp : fpEintritt t.fp = true) :
+    ∃ t' : FpZustand,
+      laufFp (senkNanSeq op dst a b) t = some t'
+      ∧ t'.kern.rip = ripNach (ripNach t.kern.rip 4) 4
+      ∧ xmmTief t'.xmm dst
+          = muster64 (gleitRechne op (bites64 (xmmTief t.xmm a))
+              (bites64 (xmmTief t.xmm b)))
+      ∧ t'.fp = t.fp
+      ∧ t'.kern.speicher = t.kern.speicher
+      ∧ t'.kern.register = t.kern.register := by
+  rw [senkNanSeq_klingt]
+  exact pipelineFloat_seq op dst a b t hne hok hfp
+
+/-- PIPELINE PAYLOAD LEFT: with a NaN in `a` the run lands `a`'s word
+    in `dst`, for every op. -/
+theorem pipelineNaN_nutzlast_links (op : GleitOp) (dst a b : XmmReg)
+    (t : FpZustand)
+    (hne : b ≠ dst)
+    (hok : laengeOk 4 = true)
+    (hfp : fpEintritt t.fp = true)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 (bites64 (xmmTief t.xmm a))
+      = .nan) :
+    ∃ t' : FpZustand,
+      laufFp (senkNanSeq op dst a b) t = some t'
+      ∧ xmmTief t'.xmm dst = xmmTief t.xmm a := by
+  obtain ⟨t', hrun, -, hval, -, -, -⟩ :=
+    pipelineNaN_seq op dst a b t hne hok hfp
+  refine ⟨t', hrun, ?_⟩
+  rw [hval, ← fpRechne_gleitRechne, fpRechne_nan_links _ _ _ ha]
+
+/-- PIPELINE PAYLOAD RIGHT (`add`): with a NaN in `b` and a healthy
+    `a` the run lands `b`'s word in `dst`. -/
+theorem pipelineNaN_nutzlast_rechts_add (dst a b : XmmReg) (t : FpZustand)
+    (hne : b ≠ dst)
+    (hok : laengeOk 4 = true)
+    (hfp : fpEintritt t.fp = true)
+    (hb : Gleitkomma.klasse Gleitkomma.f64 (bites64 (xmmTief t.xmm b))
+      = .nan)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 (bites64 (xmmTief t.xmm a))
+      ≠ .nan) :
+    ∃ t' : FpZustand,
+      laufFp (senkNanSeq .add dst a b) t = some t'
+      ∧ xmmTief t'.xmm dst = xmmTief t.xmm b := by
+  obtain ⟨t', hrun, -, hval, -, -, -⟩ :=
+    pipelineNaN_seq .add dst a b t hne hok hfp
+  refine ⟨t', hrun, ?_⟩
+  rw [hval, ← fpRechne_gleitRechne, fpRechne_add_nan_rechts _ _ hb ha]
+
 /- CUTS: what is not proved here (filled as the file grows). -/
 
 #print axioms nanPipeOk_reset
