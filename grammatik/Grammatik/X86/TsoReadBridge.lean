@@ -1244,6 +1244,76 @@ theorem rd_hTgt : write64 rdM9 witA (zahlWort rdZero) = some rdM9' := by
   simp only [write64, rdM9']
   rw [if_pos (by decide : schreibbar8 rdM9 witA = true)]
 
+/-! ## 8. Witness machine and source-step facts. -/
+
+/-- Witness program over `rdD` (never consulted by the blatt step). -/
+def rdProg : Programm rdD where
+  invariante := fun i => nomatch i
+  requires := fun _ => Expr.wahr
+  ensures := fun _ => Expr.wahr
+  rumpf := fun _ => .ret .keine (List.Perm.refl _)
+
+/-- Witness statement: copy the read slot into the write slot. -/
+def rdS : Stmt rdD (vertragVon rdD ()) true [] [] [] :=
+  Stmt.assignSlot false () rdI rdE rdHwW rdHLW
+
+def rdRest : Endblock rdD (vertragVon rdD ()) true [] [] :=
+  Endblock.leave rfl
+
+def rdRahmen : RufRahmenG rdD :=
+  ⟨(), Env.nil, rdSigma,
+    ⟨true, [], [], Env.nil,
+      GRest.ende (Endblock.cons rdS rdRest)⟩⟩
+
+def rdFaden : RufFadenG rdD :=
+  ⟨[], rdRahmen, [], []⟩
+
+def rdMachine : RufMaschineG rdD :=
+  ⟨rdSigma.speicher, fun _ => rdFaden, [], rdSigma⟩
+
+/-- Head, world and lock facts compute. -/
+theorem rd_hhead : (rdMachine.faeden 0).kopf.rest =
+    ⟨true, [], [], Env.nil,
+      GRest.ende (Endblock.cons rdS rdRest)⟩ := rfl
+
+theorem rd_hwelt : rdMachine.weltVon 0 = rdSigma := rfl
+
+theorem rd_hΛ : HeldIn ([] : List (Res rdD)) (offen (rdMachine.faeden 0).spur) := by
+  simp [HeldIn]
+
+/-- The start W machine sits on the G machine. -/
+theorem rd_hWg : (RufStartW rdMachine).g = rdMachine := rfl
+
+/-- The copy fragment is admitted with full permissions. -/
+theorem rd_hOk : repOk (rdD.typ false ()) 4096 16 0 = true := by decide
+
+/-- The index evaluates to row 0. -/
+theorem rd_hk : (eval rdSL rdI rdSL Env.nil).n = 0 := rfl
+
+/-- The value expression reads the read slot: 0. -/
+theorem rd_hv : (cast (congrArg (Wert rdD) rdHTW)
+    (eval rdSL rdE rdSL Env.nil) : Wert rdD (.int 0 100)) =
+    rdZero := rfl
+
+/-- The source step runs: one reached step. -/
+theorem rd_hExecFull : ∃ σ' ρ', execStmt rdO 0 rdR
+    (Stmt.assignSlot (l := true) false () rdI rdE rdHwW rdHLW)
+    rdSigma Env.nil = .ok σ' ρ' := by
+  simp only [execStmt]
+  exact ⟨_, _, rfl⟩
+
+/-- The write slot holds 9 before the step. -/
+theorem rd_hBefore : (rdSigma.slots false 0 ()).n = 9 := rfl
+
+/-- The write-side footprint is fully readable. -/
+theorem rd_hRd : lesbar8 rdM9 witA = true := by decide
+
+/-- The read world is the named one. -/
+theorem rd_hLese : rdSL = rdSigma.lese [] (rdI.orte ++ rdE.orte) := rfl
+
+/-- The frame contract writes the written table. -/
+theorem rd_hWr : rdD.schreibt () false = true := rfl
+
 /-- The drain observably changes the canonical byte at the slot. -/
 theorem rd_hBytes : rdM9.bytes witA ≠ rdM9'.bytes witA := by
   have hByte : writeBytes rdM9 witA (zahlWort rdZero) witA =
