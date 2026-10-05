@@ -119,6 +119,13 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
   final-byte, entry, support-code and mapping validation. This is a requirement,
   not a claim that these targets are implemented.
 
+- **Vendor neutrality** (Simon, 2026-10-05): the hardware model holds on ALL x86-64 CPUs, Intel and AMD.
+  Software runs unchanged on both, so the model is the common architecture; the two differ only where
+  behaviour is architecturally undefined or model-specific, and correct software never depends on that.
+  Rule: whatever Intel or AMD calls undefined or model-specific stays FREE (all allowed results, never one
+  observed value, e.g. BSF/BSR with a zero source, undefined flags). No AMD provenance is claimed while the
+  AMD manuals are missing from the clones.
+
 - **Direct compiler progress record** (Simon, 2026-10-01):
   [`DIRECT-COMPILER.md`](DIRECT-COMPILER.md) is the central
   record for the direct x86-64 compiler, `-O3`-like/invariant optimisation, Lean-first
