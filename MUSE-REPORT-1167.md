@@ -80,7 +80,34 @@ fragment); TSO freshness of spill slots (covered at the composed level by
 - Name collisions avoided by measurement: `allocOk` (taken by
   `OptAllocLinear.lean`) became `pipeRegAllocOk`; two-arg `RahmenGetrennt`
   (taken by `Stapel.lean`) became `PipeRahmenGetrennt`.
-- Two toolchain facts worth recording: `∀ r : Register` has no
-  `Decidable` instance (bounded quantification over an explicit 16-list
-  was used), and `&&`-chains destruct left-nested (`h.1.1.1.2`, not
-  `h.2.2.2.1`).
+## Integration repair (post-review gate failure, no merge)
+
+- Exact evidence: integration Lean build failed at `[609/611] Building
+  Grammatik.X86.PipelineRegAlloc` with `libc++abi: terminating due to
+  uncaught exception of type lean::exception: failed to create thread`,
+  Lean exit code 134. The output contains zero Lean type errors; the
+  "2 error lines" are the libc++abi message and the exit notice.
+- Diagnosis: resource exhaustion at thread spawn under the 611-job
+  integration load, matching the documented apparatus signature
+  (virtual-address/thread ceiling; precedent lanes 556/557: resource
+  starvation is retried/serialized, never fixed by weakening proofs or
+  verdicts). Corroboration: the same module builds locally in ~173 ms
+  and the full local project builds 608 jobs green.
+- Repair: no semantic change. The owned module is bit-identical to the
+  independently reviewed candidate; re-verified locally after the gate
+  failure via the queued wrappers: `./lean-probe
+  grammatik/Grammatik/X86/PipelineRegAlloc.lean` reports
+  `== 0 error(s) in the COMPLETE output; exit 0`, and `./lean-bau`
+  reports `Build completed successfully (608 jobs).` Axioms unchanged
+  (max `[propext, Classical.choice, Quot.sound]`).
+- Notes: the integration tree contains `PipelineProfiles.lean`, which
+  does not exist in this clone — master moved on; lanes do not rebase,
+  so integration must re-run the gate. No acceptance of the full
+  source/binary chain is claimed. A fresh independent review of the
+  current commit is required before any merge.
+
+## Appendix: toolchain facts worth recording
+
+- `∀ r : Register` has no `Decidable` instance (bounded quantification
+  over an explicit 16-list was used), and `&&`-chains destruct
+  left-nested (`h.1.1.1.2`, not `h.2.2.2.1`).
