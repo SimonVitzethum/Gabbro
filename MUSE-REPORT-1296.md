@@ -1,6 +1,9 @@
 # MUSE-REPORT-1296: Exact review of candidate 1295 (TSO projection of classified union steps)
 
-## VERDICT: ACCEPT
+## Verdict
+
+CANDIDATE: 1295 5fe1dbb5d3b4f4cab471b7d2645ea09d00163cdf
+VERDICT: ACCEPT
 
 Candidate: lane 1295, pinned head `5fe1dbb5d3b4f4cab471b7d2645ea09d00163cdf`
 (base `63e2ec3543deec0c4cce21e9431dfffba157ebd6`), reviewed from delivered FILES
