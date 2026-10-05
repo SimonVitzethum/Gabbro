@@ -436,6 +436,142 @@ theorem avx2Eintraege_nodup_addr (a : Adresse) (h : OhneUmbruch32 a)
     subst hkk
     rfl
 
+/-! ## 6. The named-profile gate: Tier 3 is opt-in.
+
+  The 256-bit forms are enabled ONLY by the NAMED selected-CPU
+  profile (`avx2ProfilName`) AND the accepted CPUID/XCR0/OS-state
+  readiness (AVX silicon bit, XCR0 XMM+YMM, control freedom plus
+  OSXSAVE, finite packed-tier admission carrying OS vector state).
+  Absent form = refused encoding: every missing side refuses. -/
+
+/-- The one selected-CPU profile name that enables VEX.256 forms. -/
+def avx2ProfilName : Nat := 7
+
+/-- A named selected-CPU profile: its name is the whole claim. -/
+structure Avx2Profil where
+  name : Nat
+  deriving DecidableEq, Repr
+
+/-- The profile enables the tier exactly under its name. -/
+def avx2ProfilFreigegeben (p : Avx2Profil) : Bool :=
+  decide (p.name = avx2ProfilName)
+
+/-- Full admission for a 256-bit memory access: the named profile AND
+    AVX CPU/XCR0 readiness AND control freedom with OSXSAVE AND the
+    finite packed-tier admission. Either side alone admits nothing. -/
+def avx2MemZugelassen (hw : HwProfil) (b : BereitProfil)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) : Bool :=
+  avx2ProfilFreigegeben p && stufenCpuBereit cpu x .avx256 &&
+    kontrollSseFrei k && k.cr4Osxsave &&
+    merkmalZugelassen hw b .paketInt128
+
+/-- Admission needs the named profile. -/
+theorem avx2Mem_braucht_profil (hw : HwProfil) (b : BereitProfil)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil)
+    (h : avx2MemZugelassen hw b cpu x k p = true) :
+    avx2ProfilFreigegeben p = true := by
+  simp only [avx2MemZugelassen, Bool.and_eq_true] at h
+  exact h.1.1.1.1
+
+/-- Admission needs AVX CPU/XCR0 readiness. -/
+theorem avx2Mem_braucht_cpu (hw : HwProfil) (b : BereitProfil)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil)
+    (h : avx2MemZugelassen hw b cpu x k p = true) :
+    stufenCpuBereit cpu x .avx256 = true := by
+  simp only [avx2MemZugelassen, Bool.and_eq_true] at h
+  exact h.1.1.1.2
+
+/-- Admission needs control-register freedom. -/
+theorem avx2Mem_braucht_kontrolle (hw : HwProfil) (b : BereitProfil)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil)
+    (h : avx2MemZugelassen hw b cpu x k p = true) :
+    kontrollSseFrei k = true := by
+  simp only [avx2MemZugelassen, Bool.and_eq_true] at h
+  exact h.1.1.2
+
+/-- Admission needs the finite packed-tier admission. -/
+theorem avx2Mem_braucht_merkmal (hw : HwProfil) (b : BereitProfil)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil)
+    (h : avx2MemZugelassen hw b cpu x k p = true) :
+    merkmalZugelassen hw b .paketInt128 = true := by
+  simp only [avx2MemZugelassen, Bool.and_eq_true] at h
+  exact h.2
+
+/-- A foreign profile name refuses, whatever the rest claims. -/
+theorem avx2Mem_ohne_profil (hw : HwProfil) (b : BereitProfil)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (h : avx2ProfilFreigegeben p = false) :
+    avx2MemZugelassen hw b cpu x k p = false := by
+  simp [avx2MemZugelassen, h]
+
+/-- Missing AVX CPU/XCR0 readiness refuses. -/
+theorem avx2Mem_ohne_cpu (hw : HwProfil) (b : BereitProfil)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (h : stufenCpuBereit cpu x .avx256 = false) :
+    avx2MemZugelassen hw b cpu x k p = false := by
+  simp [avx2MemZugelassen, h]
+
+/-- Set control bits (emulation or task-switch) refuse. -/
+theorem avx2Mem_ohne_kontrolle (hw : HwProfil) (b : BereitProfil)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (h : kontrollSseFrei k = false) :
+    avx2MemZugelassen hw b cpu x k p = false := by
+  simp [avx2MemZugelassen, h]
+
+/-- A refused finite profile refuses, however ready the rest is. -/
+theorem avx2Mem_ohne_merkmal (hw : HwProfil) (b : BereitProfil)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil)
+    (h : merkmalZugelassen hw b .paketInt128 = false) :
+    avx2MemZugelassen hw b cpu x k p = false := by
+  simp [avx2MemZugelassen, h]
+
+/-- Witness silicon: SSE2 present AND AVX present (refused row
+    needs its bit). -/
+def avx2WitCpu : CpuMerkmal := ⟨true, true⟩
+
+/-- Witness XCR0: x87, SSE and AVX state set. -/
+def avx2WitXcr0 : Xcr0Bild := ⟨true, true, true⟩
+
+/-- The witness profile: exactly the named one. -/
+def avx2WitProfil : Avx2Profil := ⟨avx2ProfilName⟩
+
+/-- The named profile is enabled under its name. -/
+theorem avx2WitProfil_freigegeben :
+    avx2ProfilFreigegeben avx2WitProfil = true := by
+  decide
+
+/-- The full gate admits at the witness readiness. -/
+theorem avx2Wit_gate :
+    avx2MemZugelassen basisHw basisBereit avx2WitCpu avx2WitXcr0
+      basisKontrolle avx2WitProfil = true := by
+  decide
+
+/-- NEGATIVE: the baseline CPU (no AVX bit) refuses. -/
+theorem avx2Wit_neg_cpu :
+    avx2MemZugelassen basisHw basisBereit basisCpu avx2WitXcr0
+      basisKontrolle avx2WitProfil = false :=
+  avx2Mem_ohne_cpu _ _ _ _ _ _
+    (by simp [stufenCpuBereit, basisCpu])
+
+/-- NEGATIVE: the baseline XCR0 (no AVX state) refuses. -/
+theorem avx2Wit_neg_xcr0 :
+    avx2MemZugelassen basisHw basisBereit avx2WitCpu basisXcr0
+      basisKontrolle avx2WitProfil = false :=
+  avx2Mem_ohne_cpu _ _ _ _ _ _
+    (by simp [stufenCpuBereit, basisXcr0, xcr0AvxBereit])
+
+/-- NEGATIVE: a foreign profile name refuses. -/
+theorem avx2Wit_neg_profil :
+    avx2MemZugelassen basisHw basisBereit avx2WitCpu avx2WitXcr0
+      basisKontrolle ⟨0⟩ = false :=
+  avx2Mem_ohne_profil _ _ _ _ _ _ (by decide)
+
 /- CUTS:
    Skeleton only: forms are named, nothing is proved yet.
 -/
