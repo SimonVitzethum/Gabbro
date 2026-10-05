@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 17:33 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 17:37 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -679,13 +679,13 @@ Last ledger refresh: **2026-10-05 17:33 UTC**. This is an operational snapshot, 
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Merged after review/checks | 1244: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
-| 1247 | Extended context state across interrupts and context switches | Committed candidate; review/integration pending | 1248: Agent working | [task](lanes/1247.md) |
+| 1247 | Extended context state across interrupts and context switches | Committed candidate; review/integration pending | 1248: Committed candidate; review/integration pending | [task](lanes/1247.md) |
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Unresolved after agent rounds; not accepted | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Merged after review/checks | 1256: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1255.md) |
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Merged after review/checks | 1258: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1257.md) |
-| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Committed candidate; review/integration pending | 1260: Committed candidate; review/integration pending | [task](lanes/1259.md) |
+| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Merged after review/checks | 1260: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Merged after review/checks | 1264: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1263.md) |
 | 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Merged after review/checks | 1266: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1265.md) |
@@ -699,7 +699,7 @@ Last ledger refresh: **2026-10-05 17:33 UTC**. This is an operational snapshot, 
 | 1281 | Sign-extend-accumulator ops and register XCHG | Agent working | 1282: scheduled | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Agent working | 1284: scheduled | [task](lanes/1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Committed candidate; review/integration pending | 1286: Committed candidate; review/integration pending | [task](lanes/1285.md) |
-| 1287 | Memory types WC, WT, WP and the cache-control instructions | Agent working | 1288: scheduled | [task](lanes/1287.md) |
+| 1287 | Memory types WC, WT, WP and the cache-control instructions | Committed candidate; review/integration pending | 1288: scheduled | [task](lanes/1287.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1655,6 +1655,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1244**, Independent exact review of 1243, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1244.md). <!-- x86-merged:1244 -->
 - 2026-10-05: lane **1255**, Pipeline calls: three-or-more-statement callee bodies, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1255.md). <!-- x86-merged:1255 -->
 - 2026-10-05: lane **1256**, Independent exact review of 1255, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1256.md). <!-- x86-merged:1256 -->
+- 2026-10-05: lane **1259**, Pipeline work: taken-path bound and per-round loop correspondence, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1259.md). <!-- x86-merged:1259 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
