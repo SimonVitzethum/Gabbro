@@ -705,7 +705,15 @@ theorem spill_rundreise_privat_zeuge :
       across registers and spill slots (no live-range splitting here:
       the fragments save/reload whole words for named slots, and which
       variable homes where is lane 1167's allocation, reused only for
-      its frame vocabulary); callee-saved restore and argument passing
+      its frame vocabulary); the fragments clobber the address register
+      `c.adr`, and combining them with a register allocation needs the
+      allocator's working-register freshness (`cfgOk`), which this
+      validator does not re-check; the validator checks slots against
+      the DECLARED extent list `daten`, while privacy against the
+      ACTUAL placed tables comes from the separate `PipeRahmenGetrennt`
+      premise (discharged by computation on concrete layouts, as the
+      witness does) — agreement of `daten` with the placed tables is a
+      deployer obligation, not a decided fact here; callee-saved restore and argument passing
       (no calls in the fragment, inherited from the pipeline); TSO
       freshness of spill slots beyond the reused `SpillFrisch`
       vocabulary (`ComposeSpillPrivacy.lean` owns the composed level);

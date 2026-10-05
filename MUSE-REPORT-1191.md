@@ -50,9 +50,27 @@ no second IR, no second source interpreter. Rust out of scope.
 - CUTS block + `#print axioms` for every main theorem: all within
   `[propext, Classical.choice, Quot.sound]` (most use fewer).
 
-## Verification
+## Response to independent review 1192 (2026-10-05)
+- Review verdict REPAIR is purely procedural: the reviewer clone lacks the
+  pinned object `12cd3bc6` and could not read the diff. No substantive finding
+  against the deliverable was raised; there is nothing to weaken or repair in
+  the proofs.
+- Verified on my side for the pinned head: owned-files diff is exactly the
+  report + one import line + the new file; `pruefe-kein-sorry.py --rev
+  muse/1191 --diff master` passes (627 files, 0 violations); `./lean-probe`
+  0 errors; full `./lean-bau` green (see below).
+- The access block is coordinator infrastructure (object fetch into the reviewer
+  clone), not fixable from this lane under HARD RULES 1 (no network/push).
+- Self-review hardening in this update (comment-only, no proof touched): CUTS
+  now state explicitly that the fragments clobber `c.adr` (allocator freshness
+  `cfgOk` not re-checked here) and that `daten`-vs-placed-table agreement is a
+  deployer obligation discharged via the separate `PipeRahmenGetrennt` premise.
+
+## Verification (fresh)
 - `./lean-probe grammatik/Grammatik/X86/PipelineSpill.lean`: 0 errors.
 - `./lean-bau`: `Build completed successfully (620 jobs).` (whole project green)
+- `python3 instrumente/pruefe-kein-sorry.py --rev muse/1191 --diff master`:
+  `kein-sorry: 627 *.lean files, 1 axiom declarations (1 recorded), 0 violations`
 
 ## Open / not claimed
 As listed in the file CUTS: interleaved lowering with live-range splitting
