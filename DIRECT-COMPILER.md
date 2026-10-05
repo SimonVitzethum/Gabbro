@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 17:56 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 17:57 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -630,7 +630,7 @@ Last ledger refresh: **2026-10-05 17:56 UTC**. This is an operational snapshot, 
 | 1143 | TSO to W bridge: fragment READS | Merged after review/checks | 1144: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1143.md) |
 | 1145 | TSO to W bridge: LOCK/RMW steps | Merged after review/checks | 1146: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1145.md) |
 | 1147 | Whole-word atomicity of guarded aligned accesses | Merged after review/checks | 1148: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1147.md) |
-| 1149 | Capstone: one coherent machine over all accepted families | Committed candidate; review/integration pending | 1150: Committed candidate; review/integration pending | [task](lanes/1149.md) |
+| 1149 | Capstone: one coherent machine over all accepted families | Merged after review/checks | 1150: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1149.md) |
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Merged after review/checks | 1152: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1151.md) |
 | 1153 | Pipeline lowering onto the wider ISA | Merged after review/checks | 1154: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1153.md) |
 | 1155 | Pipeline: loops and branch layout with budget | Merged after review/checks | 1156: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1155.md) |
@@ -696,7 +696,7 @@ Last ledger refresh: **2026-10-05 17:56 UTC**. This is an operational snapshot, 
 | 1275 | ADC, SBB, INC, DEC | Agent working | 1276: scheduled | [task](lanes/1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Agent working | 1278: scheduled | [task](lanes/1277.md) |
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Agent working | 1280: scheduled | [task](lanes/1279.md) |
-| 1281 | Sign-extend-accumulator ops and register XCHG | Committed candidate; review/integration pending | 1282: Agent working | [task](lanes/1281.md) |
+| 1281 | Sign-extend-accumulator ops and register XCHG | Agent working | 1282: Committed candidate; review/integration pending | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Committed candidate; review/integration pending | 1284: Committed candidate; review/integration pending | [task](lanes/1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Committed candidate; review/integration pending | 1288: Agent working | [task](lanes/1287.md) |
@@ -1660,6 +1660,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1285**, FS/GS segment bases and the TLB, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1285.md). <!-- x86-merged:1285 -->
 - 2026-10-05: lane **1286**, Independent exact review of 1285, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1286.md). <!-- x86-merged:1286 -->
 - 2026-10-05: publication batch checks passed for `6a375b01`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1149**, Capstone: one coherent machine over all accepted families, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1149.md). <!-- x86-merged:1149 -->
+- 2026-10-05: checked master `9521b8d2` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:9521b8d2bd9b528778df3681d4bf4bc1003051d9 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
