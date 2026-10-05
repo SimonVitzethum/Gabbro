@@ -29,6 +29,7 @@ namespace Gabbro.Grammatik.X86.PipeRegAlloc
 open Gabbro.Grammatik
 open Gabbro.Grammatik.X86
 open Gabbro.Grammatik.X86.Pipeline
+open Gabbro.Grammatik.X86.OptimizationRules
 
 /-- An untrusted register allocator result for one block: one entry per
     source variable (`some r` = register home, `none` = spilled), one
@@ -213,5 +214,41 @@ theorem pipe_alloc_verweigert_kollision (A : PipeRegAlloc) (c : PipeCfg)
     exact hcon
   unfold pipeRegAllocOk
   simp [h2]
+
+/-! ## 5. The closing theorem: a validated allocation preserves the
+    source meaning of the lowered block. -/
+
+/-- **ALLOCATION PRESERVATION.** If the pipeline validator accepts
+    candidate bytes under the allocated configuration, then every real
+    source run of the original block is matched by a fetched byte run
+    with world and environment represented — and the allocation is
+    interference-free with private spill reserves. Composed from the
+    pipeline closing theorem (`pipeline_correct`) plus the allocator legs
+    (`pipe_alloc_interferenzFrei`, `pipe_alloc_spillPrivat`); every
+    premise is used. -/
+theorem pipe_alloc_haelt_bedeutung (c : PipeCfg) (L : Layout D) (A : PipeRegAlloc)
+    (certs : List (PassKind × BlockCert)) (src : Block D V l Γ Λ Λ')
+    (bytes : List Byte)
+    (hval : validate (pipeAllocCfg A c) L certs src bytes = true)
+    (hsep : LayoutSep L) (hzul : pipeRegAllocOk A c bytes.length = true)
+    (hrahmen : PipeRahmenGetrennt A.rahmen L)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse (pipeAllocCfg A c).codeBase) bytes)
+    (hrip : s.rip = natAdresse (pipeAllocCfg A c).codeBase)
+    (hW : WorldRep L s.speicher σ)
+    (hE : EnvRepr ρ s.register (abbOf (pipeAllocCfg A c)))
+    (σ' : World D) (ρ' : Env D Γ)
+    (hsrc : execBlock O passes R src σ ρ = .ok σ' ρ') :
+    (∃ n s', laufBytes n s = .weiter s' ∧
+      s'.rip = natAdresse ((pipeAllocCfg A c).codeBase + bytes.length) ∧
+      WorldRep L s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf (pipeAllocCfg A c))) ∧
+    PipeInterferenzFrei A ∧ PipeSpillPrivat A L := by
+  refine ⟨?_, pipe_alloc_interferenzFrei A c bytes.length hzul,
+    pipe_alloc_spillPrivat A L c bytes.length hzul hrahmen⟩
+  exact pipeline_correct (pipeAllocCfg A c) L certs src bytes hval hsep O passes R
+    σ ρ s hcode hrip hW hE σ' ρ' hsrc
 
 end Gabbro.Grammatik.X86.PipeRegAlloc
