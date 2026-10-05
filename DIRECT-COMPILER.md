@@ -719,7 +719,7 @@ Last ledger refresh: **2026-10-05 21:05 UTC**. This is an operational snapshot, 
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
 | 1325 | TSO projection: the locked and direct-memory tags | Committed candidate; review/integration pending | 1326: scheduled | [task](lanes/1325.md) |
-| 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Merged after review/checks | 1328: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1327.md) |
+| 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Merged after review/checks | 1328: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1327.md) |
 | 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Committed candidate; review/integration pending | 1330: Committed candidate; review/integration pending | [task](lanes/1329.md) |
 | 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1331.md) |
 | 1333 | Opcode ledger: one-byte opcodes 00-3F | Agent working | 1334: scheduled | [task](lanes/1333.md) |
@@ -1757,6 +1757,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `677371fd` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:677371fdc97b323460e7f76c0fdb6d2e7226e74d -->
 - 2026-10-05: lane **1312**, Independent exact review of 1311, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1312.md). <!-- x86-merged:1312 -->
 - 2026-10-05: lane **1327**, TSO projection: the issue-path tags isa, addr, muldiv, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1327.md). <!-- x86-merged:1327 -->
+- 2026-10-05: lane **1328**, Independent exact review of 1327, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1328.md). <!-- x86-merged:1328 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
