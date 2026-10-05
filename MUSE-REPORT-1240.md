@@ -2,13 +2,15 @@
 
 Lane 1240, clone `/home/simon/Dokumente/gabbro-muse/a1240`, branch `muse/1240`
 (verified). Owns only this report. Review object: clone-local snapshot
-`.tmp/review/author-1239/` — CANDIDATE: author 1239, HEAD
-`d4f4924c94988baa8d0781024fc3f706fde63399`, base `ca33ef1b`, files
-`MUSE-REPORT-1239.md`, `grammatik/Grammatik.lean` (one import line),
-`grammatik/Grammatik/X86/Avx2Ops.lean` (new, 757 lines). No author-clone
+`.tmp/review/author-1239/` (pinned `.tmp/review/SNAPSHOT.json`: author
+1239, HEAD `d4f4924c94988baa8d0781024fc3f706fde63399`, base `ca33ef1b`;
+files `MUSE-REPORT-1239.md`, `grammatik/Grammatik.lean` (one import line),
+`grammatik/Grammatik/X86/Avx2Ops.lean` (new, 757 lines)). No author-clone
 access was needed or used; the author clone was never touched.
 
-## VERDICT: ACCEPT
+CANDIDATE: 1239 d4f4924c94988baa8d0781024fc3f706fde63399
+
+VERDICT: ACCEPT
 
 ## What was checked
 
