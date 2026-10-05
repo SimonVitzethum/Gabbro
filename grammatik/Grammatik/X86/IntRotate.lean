@@ -2121,22 +2121,485 @@ theorem rotHwRegSchritt_weiter_wf (m : HwMaschine) (c : Nat)
     simp only at h
     cases h
 
-/- CUTS (checkpoint: value core only):    Proved here: rotate operation digits, Nat value core for ROL/ROR
-    and RCL/RCR with architectural count masking, single-step
-    inverses in both directions, and pinned values.
+/-! ## 11. Joint witness: two cores, family steps, buffered store.
+
+    Core 0 rotates ROL `0x81` by imm8 1 (value `0x03`, carry out,
+    one-count overflow); core 1 rotates ROR `0x01` by imm8 1
+    (value `0x80`, carry out, one-count overflow); a memory form
+    computes its evidence over a loaded word and both result bytes
+    issue through `rotMemIssue`, each visible only to its owner by
+    forwarding; the drain of core 0 changes actual shared memory
+    from 0 to 3. A bad length refuses the machine step and a
+    memory operand refuses the adapter beside the run. Every claim
+    projects to plain values before `decide` (machines contain
+    functions); the general equations pin the full states. -/
+
+/-- Witness registers core 0: ROL source in rax. -/
+def rotHwWitReg0 : Register → Wort := fun q =>
+  if q = Register.rax then 0x81
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness registers core 1: ROR source in rbx. -/
+def rotHwWitReg1 : Register → Wort := fun q =>
+  if q = Register.rbx then 0x01
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness cores over the register files: both cores run at 4096. -/
+def rotHwWitKern : Nat → HwKern
+  | 0 => ⟨rotHwWitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨rotHwWitReg1, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon. -/
+def rotHwWitStart : HwMaschine :=
+  ⟨zeugenSpeicher, rotHwWitKern, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem rotHwWitStart_wf : HwWf rotHwWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Core 0 ROLs `0x81` by imm8 1 through the machine outcome. -/
+def rotHwOutRol : HwRegAusgang :=
+  rotHwRegSchritt rotHwWitStart 0
+    ⟨⟨.rol, .b8, .imm8 1, .reg .rax⟩, 3⟩
+
+/-- Core 1 RORs `0x01` by imm8 1 through the machine outcome. -/
+def rotHwOutRor : HwRegAusgang :=
+  rotHwRegSchritt rotHwWitStart 1
+    ⟨⟨.ror, .b8, .imm8 1, .reg .rbx⟩, 3⟩
+
+/-- Read a core register out of a machine outcome. -/
+def rotHwRegOut (o : HwRegAusgang) (c : Nat) (q : Register) :
+    Option Wort :=
+  match o with
+  | .weiter m => some ((m.kerne c).register q)
+  | _ => none
+
+/-- Read a core carry out of a machine outcome. -/
+def rotHwCfOut (o : HwRegAusgang) (c : Nat) : Option Bool :=
+  match o with
+  | .weiter m => some ((m.kerne c).flags.cf)
+  | _ => none
+
+/-- Read a core overflow out of a machine outcome. -/
+def rotHwOfOut (o : HwRegAusgang) (c : Nat) : Option Bool :=
+  match o with
+  | .weiter m => some ((m.kerne c).flags.of)
+  | _ => none
+
+/-- Core 0 result: rax holds `0x03`. -/
+theorem rotHw_rol_rax :
+    rotHwRegOut rotHwOutRol 0 Register.rax = some 3 := by
+  decide
+
+/-- Core 0 carry: the wrapped bit comes out. -/
+theorem rotHw_rol_cf :
+    rotHwCfOut rotHwOutRol 0 = some true := by
+  decide
+
+/-- Core 0 overflow: sign change at count one. -/
+theorem rotHw_rol_of :
+    rotHwOfOut rotHwOutRol 0 = some true := by
+  decide
+
+/-- Core 1 result: rbx holds `0x80`. -/
+theorem rotHw_ror_rbx :
+    rotHwRegOut rotHwOutRor 1 Register.rbx = some 128 := by
+  decide
+
+/-- Core 1 carry: the sign comes out. -/
+theorem rotHw_ror_cf :
+    rotHwCfOut rotHwOutRor 1 = some true := by
+  decide
+
+/-- Core 1 overflow: top two bits differ at count one. -/
+theorem rotHw_ror_of :
+    rotHwOfOut rotHwOutRor 1 = some true := by
+  decide
+
+/-- Witness word for the memory form. -/
+def rotHwWitMemW : Wort := BitVec.ofNat 64 0x01020304
+
+/-- Memory form over the loaded word: RCR gives `0x00810182`
+    with the incoming flags kept (carry clear, no overflow). -/
+theorem rotHw_mem_wert :
+    rotMemNachweis
+      ⟨⟨.rcr, .b32, .eins, .mem .rbx (BitVec.ofNat 32 16)⟩, 6⟩
+      ⟨rotHwWitReg0, zeugeFlags, BitVec.ofNat 64 4096, zeugenSpeicher⟩
+      rotHwWitMemW =
+      some (BitVec.ofNat 64 0x00810182, zeugeFlags) := by
+  decide
+
+/-- Witness data addresses, one per acting core. -/
+def rotHwWitAdr0 : Adresse := BitVec.ofNat 64 8192
+
+def rotHwWitAdr1 : Adresse := BitVec.ofNat 64 8200
+
+/-- Witness TSO start: canonical memory, empty buffers. -/
+def rotHwWitTso0 : TSOZustand := ⟨zeugenSpeicher, fun _ => []⟩
+
+/-- Core 0 issues its ROL result byte at its cell. -/
+def rotHwWitTso1 : Option TSOZustand :=
+  rotMemIssue rotHwWitTso0 0 rotHwWitAdr0 .b8 0x03
+
+/-- Core 1 issues its ROR result byte at its cell. -/
+def rotHwWitTso1b : Option TSOZustand :=
+  match rotHwWitTso1 with
+  | some s => rotMemIssue s 1 rotHwWitAdr1 .b8 0x80
+  | none => none
+
+/-- Core 0 observes its own byte (forwarding). -/
+def rotHwWitEigen0 : Option (Option Byte) :=
+  match rotHwWitTso1b with
+  | some s => some (loadByte s 0 rotHwWitAdr0)
+  | none => none
+
+/-- Core 1 observes the old byte at core 0's cell. -/
+def rotHwWitFremd0 : Option (Option Byte) :=
+  match rotHwWitTso1b with
+  | some s => some (loadByte s 1 rotHwWitAdr0)
+  | none => none
+
+/-- Core 1 observes its own byte (forwarding). -/
+def rotHwWitEigen1 : Option (Option Byte) :=
+  match rotHwWitTso1b with
+  | some s => some (loadByte s 1 rotHwWitAdr1)
+  | none => none
+
+/-- Core 0 observes the old byte at core 1's cell. -/
+def rotHwWitFremd1 : Option (Option Byte) :=
+  match rotHwWitTso1b with
+  | some s => some (loadByte s 0 rotHwWitAdr1)
+  | none => none
+
+/-- Core 0 drains its oldest entry. -/
+def rotHwWitTso2 : Option TSOZustand :=
+  match rotHwWitTso1b with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def rotHwWitNachFlush : Option (Option Byte) :=
+  match rotHwWitTso2 with
+  | some s => some (some (s.mem.bytes rotHwWitAdr0))
+  | none => none
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def rotHwWitFremdNach : Option (Option Byte) :=
+  match rotHwWitTso2 with
+  | some s => some (loadByte s 1 rotHwWitAdr0)
+  | none => none
+
+/-- The data cells start zeroed. -/
+theorem rotHw_anfang_null :
+    zeugenSpeicher.bytes rotHwWitAdr0 = BitVec.ofNat 8 0 ∧
+    zeugenSpeicher.bytes rotHwWitAdr1 = BitVec.ofNat 8 0 := by
+  constructor <;> rfl
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem rotHw_weiterleitung0 :
+    rotHwWitEigen0 = some (some (BitVec.ofNat 8 3)) := by
+  decide
+
+/-- No foreign forwarding at core 0's cell. -/
+theorem rotHw_fremd_alt0 :
+    rotHwWitFremd0 = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- Forwarding: core 1 reads its own unflushed byte. -/
+theorem rotHw_weiterleitung1 :
+    rotHwWitEigen1 = some (some (BitVec.ofNat 8 128)) := by
+  decide
+
+/-- No foreign forwarding at core 1's cell. -/
+theorem rotHw_fremd_alt1 :
+    rotHwWitFremd1 = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 3. -/
+theorem rotHw_spuelung_aendert_speicher :
+    rotHwWitNachFlush = some (some (BitVec.ofNat 8 3)) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem rotHw_fremd_neu :
+    rotHwWitFremdNach = some (some (BitVec.ofNat 8 3)) := by
+  decide
+
+/-- A bad decode length refuses the machine step. -/
+theorem rotHw_schlechte_laenge_verweigert :
+    rotHwRegSchritt rotHwWitStart 0
+      (⟨⟨.rol, .b8, .eins, .reg .rax⟩, 0⟩ : RotDecodiert) =
+      .verweigert := by
+  have hstep := rot_laenge_misslungen
+    (⟨⟨.rol, .b8, .eins, .reg .rax⟩, 0⟩ : RotDecodiert)
+    (projZustand rotHwWitStart 0) (by decide)
+  exact rotHwRegSchritt_verweigert _ _ _ hstep
+
+/-- A memory operand refuses the adapter step. -/
+theorem rotHw_mem_adapter_verweigert :
+    (adapterRot).schritt rotHwWitStart 0
+      (⟨⟨.rcr, .b32, .eins, .mem .rbx (BitVec.ofNat 32 16)⟩, 6⟩ :
+        RotDecodiert) = none :=
+  adapterRot_verweigert_bei_mem _ _ _ _ _ rfl
+
+/-- The joint witness: a reached two-core rotate run (ROL on
+    core 0, ROR on core 1) beside a memory-form value, two
+    owner-only forwarded family bytes and a drain that changes
+    actual shared memory from 0 to 3 -- with the halt-free
+    outcome, the length refusal, the adapter memory refusal and
+    the decode refusals beside it. Non-degenerate: the drain
+    changes actual shared memory. -/
+theorem rotHw_zeuge :
+    rotHwRegOut rotHwOutRol 0 Register.rax = some 3 ∧
+      rotHwCfOut rotHwOutRol 0 = some true ∧
+      rotHwOfOut rotHwOutRol 0 = some true ∧
+      rotHwRegOut rotHwOutRor 1 Register.rbx = some 128 ∧
+      rotHwCfOut rotHwOutRor 1 = some true ∧
+      rotHwOfOut rotHwOutRor 1 = some true ∧
+      rotMemNachweis
+        ⟨⟨.rcr, .b32, .eins, .mem .rbx (BitVec.ofNat 32 16)⟩, 6⟩
+        ⟨rotHwWitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+          zeugenSpeicher⟩
+        rotHwWitMemW =
+        some (BitVec.ofNat 64 0x00810182, zeugeFlags) ∧
+      rotHwWitEigen0 = some (some (BitVec.ofNat 8 3)) ∧
+      rotHwWitFremd0 = some (some (BitVec.ofNat 8 0)) ∧
+      rotHwWitEigen1 = some (some (BitVec.ofNat 8 128)) ∧
+      rotHwWitFremd1 = some (some (BitVec.ofNat 8 0)) ∧
+      rotHwWitNachFlush = some (some (BitVec.ofNat 8 3)) ∧
+      rotHwWitFremdNach = some (some (BitVec.ofNat 8 3)) ∧
+      zeugenSpeicher.bytes rotHwWitAdr0 = BitVec.ofNat 8 0 ∧
+      HwWf rotHwWitStart ∧
+      rotHwRegSchritt rotHwWitStart 0
+        (⟨⟨.rol, .b8, .eins, .reg .rax⟩, 0⟩ : RotDecodiert) =
+        .verweigert ∧
+      (adapterRot).schritt rotHwWitStart 0
+        (⟨⟨.rcr, .b32, .eins, .mem .rbx (BitVec.ofNat 32 16)⟩, 6⟩ :
+          RotDecodiert) = none ∧
+      decodeRotHw [natByte 240, natByte 209, natByte 192] =
+        none := by
+  refine ⟨rotHw_rol_rax, rotHw_rol_cf, rotHw_rol_of,
+    rotHw_ror_rbx, rotHw_ror_cf, rotHw_ror_of, rotHw_mem_wert,
+    rotHw_weiterleitung0, rotHw_fremd_alt0, rotHw_weiterleitung1,
+    rotHw_fremd_alt1, rotHw_spuelung_aendert_speicher,
+    rotHw_fremd_neu, rotHw_anfang_null.1, rotHwWitStart_wf,
+    rotHw_schlechte_laenge_verweigert, rotHw_mem_adapter_verweigert,
+    rotHw_nichts_lock⟩
+
+/- CUTS:
+    Proved here: the rotate family ROL, ROR, RCL and RCR by 1, by
+    CL and by imm8 connected to the coherent machine and the
+    unified byte dispatcher --
+    - §0-§1: operation digits 0 to 3, Nat value core with the
+      architectural count mask (five bits below 64, six at 64,
+      RCL and RCR modulo width plus one) and pinned values;
+    - §2-§3: exact single-step shapes, single-step inverses both
+      ways, range preservation and iterated inverses over any
+      step count;
+    - §4: word-level zero-count and by-width identities, ROL and
+      ROR inversion, RCL and RCR inversion through the carry, with
+      exact truncation bridges;
+    - §5: CF pinned to the last rotated-out bit, OF defined only
+      at a masked count of one (free otherwise, never invented
+      false), SF, ZF, AF and PF kept, zero effective count keeps
+      every flag, with the executable snapshot and its validity
+      proof;
+    - §6-§7: canonical prefix, ModRM and immediate codec for D0,
+      D1, D2, D3, C0 and C1 with register and disp32 memory
+      forms, encoder length identity and bounds, generic register
+      and memory round trips with the suffix, pinned SDM byte
+      rows and named planted refusals;
+    - §8: the family step with per-arm equations (register forms
+      execute with the architectural merge, zero count advances
+      RIP only, memory forms and bad lengths refuse), generic
+      memory preservation, memory-form values through the same
+      evidence and the TSO issue chain;
+    - §9: the extension-first dispatcher with no-shadowing pins,
+      pilot preservation, shift overlap keeping the unified arm
+      and LOCK refusal;
+    - §10: the `HwAdapter RotDecodiert` plug with
+      well-formedness preservation and exact agreement, memory
+      refusal for memory operands, and the `HwRegAusgang`
+      outcome (rotates never halt);
+    - §11: a reached two-core run (ROL on core 0, ROR on core 1)
+      beside a memory-form value, two owner-only forwarded
+      family bytes and a drain that changes actual shared memory
+      from 0 to 3, with length, adapter and decode refusals
+      beside it.
     NOT proved here, and not claimed:
-    - Iterated inverses, word-level identities, flag effects,
-      decode/encode, family step, dispatcher, machine adapter,
-      TSO memory events and the joint witness are OPEN.
-    - No hardware correspondence: stated executable semantics with
-      self-consistency only, not x86 truth.
+    - No hardware correspondence: encodings are stated canonical
+      bytes with self-consistency only (round trips, pins), not
+      x86 truth. Named silicon assumptions: the 5 and 6 bit
+      count masks with REX.W, the RCL and RCR modulo width plus
+      one, CF as the last rotated-out bit, OF defined only at a
+      masked count of one (ROL sign change, ROR top-bit pair,
+      RCL sign change, RCR original sign), SF, ZF, AF and PF
+      unaffected, count 0 changing no flag, 8 and 16-bit merging
+      with 32-bit zero-extension, opcodes D0, D1, D2, D3, C0 and
+      C1 with digits 0 to 3. Provenance for the rows is the
+      accepted ShiftCodec layering (shared group opcodes with
+      disjoint digits) and the report; silicon re-check against
+      the supplied SDM extracts stays open.
+    - Canonical-subset refusals, each named: mod 0 and mod 1
+      memory (disp32 mod 2 only, the pilot shape), the ah, bh,
+      ch and dh high-byte registers (low bytes only), 66h and
+      REX.W on byte forms, REX.R over the digit, REX.X without
+      SIB, LOCK everywhere.
+    - No source, IR, ABI, loader, entry or budget link, no
+      per-access target-to-W and GX simulation, no whole-word
+      atomicity beyond byte drains, no timing or power claim.
+    - Multi-byte drain-to-`writeBreite` agreement for memory
+      rotates stays open (`rotMemIssue` issues the family bytes;
+      only single-byte forwarding and drain are pinned).
+    - The family is connected at the dispatcher and adapter
+      level only: rotate forms are not in `decodeExt` and
+      `stepExt`, and no W to GX bridge is claimed.
 -/
 
 #print axioms feldRotOp_rotOpFeld
+#print axioms rotMaske_periode_schmal
 #print axioms probe_rot_werte
 #print axioms rol1Nat_char
 #print axioms ror1Nat_rol1Nat
 #print axioms ror1Nat_char
 #print axioms rol1Nat_ror1Nat
+#print axioms divTopBit_lt_two
+#print axioms rcl1Nat_char
+#print axioms rcr1Nat_char
+#print axioms rcr1Nat_rcl1Nat
+#print axioms rcl1Nat_rcr1Nat
+#print axioms modTwo_mul_pow_le
+#print axioms rol1Nat_lt
+#print axioms ror1Nat_lt
+#print axioms rcl1Nat_lt
+#print axioms rcr1Nat_lt
+#print axioms rorNat_lt
+#print axioms rolNat_lt
+#print axioms rcrNat_lt
+#print axioms rclNat_lt
+#print axioms rorNat_rolNat
+#print axioms rolNat_rorNat
+#print axioms rcrNat_rclNat
+#print axioms rclNat_rcrNat
+#print axioms trunc_toNat_lt
+#print axioms breite_pos
+#print axioms trunc_ofNat_lt
+#print axioms trunc_ofNat_toNat
+#print axioms rolB_null
+#print axioms rorB_null
+#print axioms rolB_breite_ident
+#print axioms rorB_breite_ident
+#print axioms rclB_null
+#print axioms rol_ror_inverse
+#print axioms ror_rol_inverse
+#print axioms trunc_ofNat_toNat'
+#print axioms decide_div_eq_toNat
+#print axioms split_roundtrip_nat
+#print axioms rcrB_null
+#print axioms rcl_rcr_inverse
+#print axioms rcr_rcl_inverse
+#print axioms rotNachweis_wert
+#print axioms rotNachweis_ueberlauf
+#print axioms rotFlags_null
+#print axioms rotFlags_gueltig
+#print axioms probe_rot_flags
+#print axioms rotEncode_laenge
+#print axioms rotPraefixBytes_len
+#print axioms rotImmTail_len
+#print axioms rotSibTail_len
+#print axioms rotEncode_len_ok
+#print axioms rotLaenge_ok
+#print axioms rotRoundtrip_reg_eins
+#print axioms rotRoundtrip_reg_cl
+#print axioms rotRoundtrip_reg_imm8
+#print axioms rotRoundtrip_reg_imm16
+#print axioms rotRoundtrip_reg_imm32
+#print axioms rotRoundtrip_reg_imm64
+#print axioms rotRoundtrip_mem_eins8
+#print axioms rotRoundtrip_mem_eins16
+#print axioms rotRoundtrip_mem_eins32
+#print axioms rotRoundtrip_mem_eins64
+#print axioms rotRoundtrip_mem_cl8
+#print axioms rotRoundtrip_mem_cl16
+#print axioms rotRoundtrip_mem_cl32
+#print axioms rotRoundtrip_mem_cl64
+#print axioms rotRoundtrip_mem_imm8
+#print axioms rotRoundtrip_mem_imm16
+#print axioms rotRoundtrip_mem_imm32
+#print axioms rotRoundtrip_mem_imm64
+#print axioms pin_rot_rol8_eins
+#print axioms pin_rot_ror64_cl
+#print axioms pin_rot_rcl16_imm
+#print axioms pin_rot_rcr32_mem
+#print axioms pin_rot_rol64_weit
+#print axioms rot_nichts_lock
+#print axioms rot_nichts_digit_vier
+#print axioms rot_nichts_modus_null
+#print axioms rot_nichts_modus_eins
+#print axioms rot_nichts_sechzehn_bei_byte
+#print axioms rot_nichts_rex_w_bei_byte
+#print axioms rot_nichts_rex_r
+#print axioms rot_nichts_rex_x
+#print axioms rot_nichts_unbekannt
+#print axioms rot_nichts_leer
+#print axioms rot_nichts_opcode_allein
+#print axioms rot_nichts_imm_kurz
+#print axioms rot_reg_erfolg
+#print axioms rot_leer_rip
+#print axioms rot_mem_verweigert
+#print axioms rot_laenge_misslungen
+#print axioms rot_laenge_falsch
+#print axioms rotSchritt_speicher
+#print axioms rotMemNachweis_reg_nichts
+#print axioms rot_mem_erfolg
+#print axioms decodeRotHw_prefers_ext
+#print axioms decodeRotHw_rot
+#print axioms decodeRotHw_nichts
+#print axioms ext_weist_rotrol8_zurueck
+#print axioms ext_weist_rotror64_zurueck
+#print axioms ext_weist_rotrcl16_zurueck
+#print axioms ext_weist_rotmem32_zurueck
+#print axioms ext_weist_rotrol64_zurueck
+#print axioms pin_rotHw_pilot_ret
+#print axioms pin_rotHw_rol8
+#print axioms pin_rotHw_ror64
+#print axioms pin_rotHw_rcl16
+#print axioms pin_rotHw_rcr32
+#print axioms pin_rotHw_ext_shift
+#print axioms rotHw_nichts_lock
+#print axioms adapterRot_wf
+#print axioms adapterRot_ok
+#print axioms adapterRot_proj
+#print axioms adapterRot_verweigert_bei_laenge
+#print axioms adapterRot_verweigert_bei_mem
+#print axioms rotHwRegSchritt_weiter
+#print axioms rotHwRegSchritt_verweigert
+#print axioms rotHwRegSchritt_nie_halt
+#print axioms rotHwRegSchritt_weiter_wf
+#print axioms rotHwWitStart_wf
+#print axioms rotHw_rol_rax
+#print axioms rotHw_rol_cf
+#print axioms rotHw_rol_of
+#print axioms rotHw_ror_rbx
+#print axioms rotHw_ror_cf
+#print axioms rotHw_ror_of
+#print axioms rotHw_mem_wert
+#print axioms rotHw_anfang_null
+#print axioms rotHw_weiterleitung0
+#print axioms rotHw_fremd_alt0
+#print axioms rotHw_weiterleitung1
+#print axioms rotHw_fremd_alt1
+#print axioms rotHw_spuelung_aendert_speicher
+#print axioms rotHw_fremd_neu
+#print axioms rotHw_schlechte_laenge_verweigert
+#print axioms rotHw_mem_adapter_verweigert
+#print axioms rotHw_zeuge
 
 end Gabbro.Grammatik.X86
