@@ -1,6 +1,6 @@
 # MUSE-REPORT-1176: Exact review of lane 1175 (PipelineInfinite)
 
-CANDIDATE: 1175 5d9d800a38843cb83de734fe78f3f8f850191009
+CANDIDATE: 1175 d018126b4e5a0253f1810e75eaba4a80eeb8ed47
 VERDICT: REPAIR
 
 Scope note on the verdict line above (read before acting on it): this REPAIR is
@@ -10,34 +10,34 @@ any theorem of the candidate, and nothing here approves any claim. The candidate
 is NOT accepted on this review; the review itself must be re-run with candidate
 access. Do not route this to the author as theorem defects.
 
-## Substantive position (re-checked against the new snapshot)
+## Substantive position (re-checked against the newest snapshot)
 
 Lane 1176 (reviewer, clone /home/simon/Dokumente/gabbro-muse/a1176, branch
-muse/1176) could not perform the exact review. The NEW pinned identity from
+muse/1176) could not perform the exact review. The NEWEST pinned identity from
 `.tmp/review/SNAPSHOT.json` is author 1175, HEAD
-5d9d800a38843cb83de734fe78f3f8f850191009, base
+d018126b4e5a0253f1810e75eaba4a80eeb8ed47, base
 062b979a6271b7b3044ab06be3f3cde411a0d4f1, files MUSE-REPORT-1175.md,
 grammatik/Grammatik.lean, grammatik/Grammatik/X86/PipelineInfinite.lean. This
-report supersedes the previous lane-1176 verdict on the older snapshot; nothing
-from that round is reused as a claim about the new candidate, since neither
+report supersedes all previous lane-1176 verdicts on older snapshots; nothing
+from those rounds is reused as a claim about the new candidate, since no
 candidate was ever inspected. The verdict above records non-acceptance with the
 precise cause, exactly as found -- it approves nothing and invents no author
 defect.
 
 ## Previous findings reinspected
 
-The only prior finding was unobservability of the older snapshot: no candidate
-content reachable, hence no review content. That finding persists unchanged
-against the new snapshot (see B1) and is still not a claim about author proofs.
-No author defect has ever been asserted by lane 1176. Whatever the author
-repaired between the two snapshots -- including any changed proofs -- could not
+Every prior round ended on the same single finding: candidate content
+unreachable from this lane, hence no review content. That finding persists
+unchanged against the newest snapshot (see B1) and is still not a claim about
+author proofs. No author defect has ever been asserted by lane 1176. Whatever the
+author repaired between snapshots -- including any changed proofs -- could not
 be inspected from this lane, so this round neither confirms nor disputes the
 repairs.
 
 ## What was checked (this round)
 
 1. Task files re-read: `.tmp/LANE.md` (HARD RULES kept),
-   `.tmp/review/SNAPSHOT.json` (new values as quoted above), prior report.
+   `.tmp/review/SNAPSHOT.json` (newest values as quoted above), prior report.
 2. Searched this clone's worktree for the candidate again: the new Lean file and
    the author report are still absent; tree-wide grep for PipelineInfinite still
    finds zero files.
@@ -51,11 +51,11 @@ repairs.
 
 ## Precise blockers
 
-- B1 (candidate unobservable, persists against the new snapshot): pinned identity
-  known, content unreachable -- not in worktree, no shell for object inspection,
-  author clone off-limits under HARD RULES rule 1. The review checklist (banned
-  tokens, axioms, premise use, witness quality, CUTS honesty, silicon facts)
-  could not be executed against anything.
+- B1 (candidate unobservable, persists against the newest snapshot): pinned
+  identity known, content unreachable -- not in worktree, no shell for object
+  inspection, author clone off-limits under HARD RULES rule 1. The review
+  checklist (banned tokens, axioms, premise use, witness quality, CUTS honesty,
+  silicon facts) could not be executed against anything.
 - B2 (no shell for build/commit): no `./lean-bau` result line exists.
 
 ## New definitions/theorems
