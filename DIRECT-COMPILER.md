@@ -711,7 +711,7 @@ Last ledger refresh: **2026-10-05 21:03 UTC**. This is an operational snapshot, 
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
 | 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1307.md) |
 | 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Merged after review/checks | 1310: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1309.md) |
-| 1311 | Capstone, second step: add the families merged since the first union | Merged after review/checks | 1312: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1311.md) |
+| 1311 | Capstone, second step: add the families merged since the first union | Merged after review/checks | 1312: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1311.md) |
 | 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Agent working | 1314: scheduled | [task](lanes/1313.md) |
 | 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Merged after review/checks | 1316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1315.md) |
 | 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
@@ -1755,6 +1755,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: publication batch checks passed for `7e0c5b98`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: lane **1311**, Capstone, second step: add the families merged since the first union, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1311.md). <!-- x86-merged:1311 -->
 - 2026-10-05: checked master `677371fd` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:677371fdc97b323460e7f76c0fdb6d2e7226e74d -->
+- 2026-10-05: lane **1312**, Independent exact review of 1311, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1312.md). <!-- x86-merged:1312 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
