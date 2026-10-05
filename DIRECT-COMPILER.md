@@ -653,13 +653,13 @@ Last ledger refresh: **2026-10-05 14:17 UTC**. This is an operational snapshot, 
 | 1189 | Pipeline calls: real source execBlock correspondence | Merged after review/checks | 1190: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1189.md) |
 | 1191 | Pipeline: spill code generation with privacy | Merged after review/checks | 1192: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1191.md) |
 | 1193 | Linking: multi-unit convergence and operand kinds | Merged after review/checks | 1194: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1193.md) |
-| 1195 | Pipeline: block-size induction over multi-statement blocks | Committed candidate; review/integration pending | 1196: Committed candidate; review/integration pending | [task](lanes/1195.md) |
+| 1195 | Pipeline: block-size induction over multi-statement blocks | Merged after review/checks | 1196: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1195.md) |
 | 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Committed candidate; review/integration pending | 1200: Agent working | [task](lanes/1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Committed candidate; review/integration pending | 1202: Committed candidate; review/integration pending | [task](lanes/1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
 | 1205 | Loaded image: per-family reached fetch instances | Committed candidate; review/integration pending | 1206: Committed candidate; review/integration pending | [task](lanes/1205.md) |
-| 1207 | Generic drain-equals-write64 induction | Committed candidate; review/integration pending | 1208: Committed candidate; review/integration pending | [task](lanes/1207.md) |
+| 1207 | Generic drain-equals-write64 induction | Committed candidate; review/integration pending | 1208: Agent working | [task](lanes/1207.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1516,6 +1516,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1145**, TSO to W bridge: LOCK/RMW steps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1145.md). <!-- x86-merged:1145 -->
 - 2026-10-05: checked master `94e4eed3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:94e4eed33a5aecb72c36f14c82c238d220289fb0 -->
 - 2026-10-05: lane **1146**, Independent exact review of 1145, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1146.md). <!-- x86-merged:1146 -->
+- 2026-10-05: lane **1195**, Pipeline: block-size induction over multi-statement blocks, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1195.md). <!-- x86-merged:1195 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

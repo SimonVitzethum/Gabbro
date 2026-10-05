@@ -636,3 +636,4 @@ import Grammatik.X86.HwVector
 import Grammatik.X86.PipelineUnit
 import Grammatik.X86.HwNestedInterrupts
 import Grammatik.X86.TsoRmwBridge
+import Grammatik.X86.PipelineBlockInduct
