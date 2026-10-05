@@ -158,6 +158,88 @@ theorem valZaun_korrekt (z : ZaunArt) (bs : List Byte) :
   unfold valZaun
   simp [decide_eq_true_eq]
 
+/-! ## 3. Fence step correspondence: what each lowered fence does.
+
+    MFENCE drains the own buffer (`bind_mfence`, §1). SFENCE with
+    silicon SSE and an empty own buffer is TSO-observably the identity:
+    memory and every buffer are kept and later loads read what they
+    read before. LFENCE with a pending own store is state-preserving
+    with the narrow (non-MFENCE) fence event -- and the accepted MFENCE
+    gate refuses exactly there. Without SSE, SFENCE is the manual's
+    #UD; with a pending store, both full and narrow store fences
+    refuse: no silent skip over buffered stores. -/
+
+/-- **SFENCE CORRESPONDENCE.** The lowered SFENCE bytes decode to the
+    narrow-store form and step to the fence-only successor that keeps
+    the whole TSO projection and every later load. -/
+theorem zaun_sfence_korrekt (m m' : LockMaschine) (c : Nat) (sse : Bool)
+    (ev : LockEreignis)
+    (hstep : sfenceSchritt (.ok .sfence 3) c m sse = .ok m' ev) :
+    decodeSfence (zaunBytes .sfence) =
+      some (SfenceAnweisung.ok .sfence 3, []) ∧
+    sse = true ∧ m.puffer c = [] ∧
+    toTSO m' = toTSO m ∧
+    (∀ a : Adresse,
+      loadByte (toTSO m') c a = loadByte (toTSO m) c a) ∧
+    ev = ⟨c, [], [], none, none, false, true⟩ := by
+  have hdec := zaun_sfence_dekodiert []
+  simp only [List.append_nil] at hdec
+  have hform := sfence_erfolg_form m m' c sse ev hstep
+  exact ⟨hdec, hform.1, hform.2.1,
+    sfence_behaelt_tso m m' c sse ev hstep,
+    fun a => sfence_last_unveraendert m m' c sse ev hstep a,
+    hform.2.2.2⟩
+
+/-- **LFENCE CORRESPONDENCE.** With a pending own store the lowered
+    LFENCE bytes decode to the narrow-load form, the step preserves
+    buffers and memory with the narrow fence event, and the accepted
+    MFENCE gate refuses the same state. -/
+theorem zaun_lfence_korrekt (s : TSOZustand) (c : Nat) (a : Adresse)
+    (hne : s.puffer c ≠ []) :
+    decodeLfence (zaunBytes .lfence) = some ((), []) ∧
+    (lfenceSchritt s c).1.puffer = s.puffer ∧
+    (lfenceSchritt s c).1.mem.bytes = s.mem.bytes ∧
+    loadByte (lfenceSchritt s c).1 c a = loadByte s c a ∧
+    (lfenceSchritt s c).2.istZaun = true ∧
+    (lfenceSchritt s c).2.istMfence = false ∧
+    lockSchritt .mfence c s = none := by
+  have hdec := zaun_lfence_dekodiert []
+  simp only [List.append_nil] at hdec
+  obtain ⟨hpuff, hmem, hlast, hzaun, hschmal, hmfence⟩ :=
+    LfenceLoadNarrow_verbindung s c a hne
+  exact ⟨hdec, hpuff, hmem, hlast, hzaun, hschmal, hmfence⟩
+
+/-- SFENCE without silicon SSE is the manual's #UD, never a step. -/
+theorem zaun_sfence_ohne_sse (m : LockMaschine) (c : Nat) :
+    sfenceSchritt (.ok .sfence 3) c m false =
+      .udFehler .sseFehlt :=
+  sfence_ohne_sse m c false rfl sfence_len_ok
+
+/-- SFENCE over a pending own store refuses: no silent skip. -/
+theorem zaun_sfence_puffer_verweigert (m : LockMaschine) (c : Nat)
+    (e : TSOEintrag) (rest : List TSOEintrag)
+    (hbuf : m.puffer c = e :: rest) :
+    sfenceSchritt (.ok .sfence 3) c m true = .verweigert :=
+  sfence_puffer_verweigert m c true rfl e rest hbuf sfence_len_ok
+
+/-- POISON: the pilot decoder refuses the LFENCE pin. -/
+theorem gift_lfence_pilot : decode lfenceBytes = none :=
+  pilot_weist_lfence_zurueck
+
+/-- POISON: the locked decoder refuses the LFENCE pin. -/
+theorem gift_lfence_lock : decodeLock lfenceBytes = none :=
+  lock_weist_lfence_zurueck
+
+/-- POISON: the SFENCE decoder refuses the MFENCE neighbour. -/
+theorem gift_sfence_nachbar_mfence :
+    decodeSfence [natByte 15, natByte 174, natByte 240] = none :=
+  (pin_sfence_verweigert_nachbarn).1
+
+/-- POISON: the SFENCE decoder refuses the LFENCE neighbour. -/
+theorem gift_sfence_nachbar_lfence :
+    decodeSfence [natByte 15, natByte 174, natByte 232] = none :=
+  (pin_sfence_verweigert_nachbarn).2.1
+
 /- CUTS: what is not proved here (skeleton; extended with each piece)
     NOT proved here, and not claimed:
     - No seq_cst total order, no fairness, no CAS retry bound.
@@ -171,6 +253,10 @@ theorem valZaun_korrekt (z : ZaunArt) (bs : List Byte) :
 #print axioms zaun_sfence_dekodiert
 #print axioms zaun_lfence_dekodiert
 #print axioms valZaun_korrekt
+#print axioms zaun_sfence_korrekt
+#print axioms zaun_lfence_korrekt
+#print axioms zaun_sfence_ohne_sse
+#print axioms zaun_sfence_puffer_verweigert
 #print axioms bind_xadd
 #print axioms bind_cas_erfolg
 #print axioms bind_mfence
