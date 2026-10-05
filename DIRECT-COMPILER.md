@@ -696,7 +696,7 @@ Last ledger refresh: **2026-10-05 19:47 UTC**. This is an operational snapshot, 
 | 1275 | ADC, SBB, INC, DEC | Merged after review/checks | 1276: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Merged after review/checks | 1278: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1277.md) |
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Merged after review/checks | 1280: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1279.md) |
-| 1281 | Sign-extend-accumulator ops and register XCHG | Merged after review/checks | 1282: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1281.md) |
+| 1281 | Sign-extend-accumulator ops and register XCHG | Merged after review/checks | 1282: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1287.md) |
@@ -1728,6 +1728,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1323**, valX86 decode coverage over the capstone decoder chain, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1323.md). <!-- x86-merged:1323 -->
 - 2026-10-05: lane **1324**, Independent exact review of 1323, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1324.md). <!-- x86-merged:1324 -->
 - 2026-10-05: lane **1281**, Sign-extend-accumulator ops and register XCHG, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1281.md). <!-- x86-merged:1281 -->
+- 2026-10-05: lane **1282**, Independent exact review of 1281, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1282.md). <!-- x86-merged:1282 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
