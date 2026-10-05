@@ -1,9 +1,11 @@
 # MUSE-REPORT-1152: exact review of candidate 1151 (system forms)
 
-## VERDICT: ACCEPT
+## Verdict
 
-CANDIDATE: 1151, pinned HEAD `6b0a4e10da43c4ef9d22fba6dd3fd3c146508a9a`
-(base `062b979a6271b7b3044ab06be3f3cde411a0d4f1`, snapshot `clean: true`).
+CANDIDATE: 1151 6b0a4e10da43c4ef9d22fba6dd3fd3c146508a9a
+VERDICT: ACCEPT
+
+Pinned base `062b979a6271b7b3044ab06be3f3cde411a0d4f1` (snapshot `clean: true`).
 Reviewed from `.tmp/review/author-1151/` (PATCH.diff + snapshot file copy);
 no other source was read for the verdict. Identity verified first:
 clone `/home/simon/Dokumente/gabbro-muse/a1152`, branch `muse/1152`.
@@ -69,6 +71,5 @@ witness scaffolding, not a family effect) and need no action.
 
 ## Task correctness note
 
-The lane task's `CANDIDATE: 1151 <full pinned HEAD>` placeholder
-carries no hash; the hash above comes from
+The lane task's candidate placeholder carries no hash; the hash above comes from
 `.tmp/review/SNAPSHOT.json`. Everything else in the task is correct.
