@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 13:48 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 13:54 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -620,15 +620,15 @@ Last ledger refresh: **2026-10-05 13:48 UTC**. This is an operational snapshot, 
 | 1123 | Architectural faults as outcomes of the coherent machine | Merged after review/checks | 1124: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1123.md) |
 | 1125 | Asynchronous interrupt delivery on the coherent machine | Merged after review/checks | 1126: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1125.md) |
 | 1127 | Multiply/divide and narrow widths connected | Merged after review/checks | 1128: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1127.md) |
-| 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Agent working | 1130: Committed candidate; review/integration pending | [task](lanes/1129.md) |
+| 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Committed candidate; review/integration pending | 1130: Agent working | [task](lanes/1129.md) |
 | 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Committed candidate; review/integration pending | 1132: Incomplete; preserved | [task](lanes/1131.md) |
 | 1133 | Device/MMIO and memory types on the coherent machine | Agent working | 1134: scheduled | [task](lanes/1133.md) |
 | 1135 | CPUID/feature enabled-state gating inside HwSchritt | Merged after review/checks | 1136: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1135.md) |
 | 1137 | Coherent machine fetching from the loaded image | Merged after review/checks | 1138: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1137.md) |
 | 1139 | Stack, call and return per core through TSO | Merged after review/checks | 1140: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1139.md) |
-| 1141 | ISA-strand families (compact/core/cond) on the coherent machine | Committed candidate; review/integration pending | 1142: Agent working | [task](lanes/1141.md) |
+| 1141 | ISA-strand families (compact/core/cond) on the coherent machine | Committed candidate; review/integration pending | 1142: Committed candidate; review/integration pending | [task](lanes/1141.md) |
 | 1143 | TSO to W bridge: fragment READS | Merged after review/checks | 1144: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1143.md) |
-| 1145 | TSO to W bridge: LOCK/RMW steps | Waiting for accepted dependencies | 1146: scheduled | [task](lanes/1145.md) |
+| 1145 | TSO to W bridge: LOCK/RMW steps | Agent working | 1146: scheduled | [task](lanes/1145.md) |
 | 1147 | Whole-word atomicity of guarded aligned accesses | Committed candidate; review/integration pending | 1148: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1147.md) |
 | 1149 | Capstone: one coherent machine over all accepted families | Waiting for accepted dependencies | 1150: scheduled | [task](lanes/1149.md) |
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Merged after review/checks | 1152: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1151.md) |
@@ -1493,6 +1493,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1119**, LOCK/RMW on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1119.md). <!-- x86-merged:1119 -->
 - 2026-10-05: integration of candidate(s) [1147] failed the local proof/build gate after independent review 1148; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1148 -->
 - 2026-10-05: lane **1120**, Independent exact review of 1119, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1120.md). <!-- x86-merged:1120 -->
+- 2026-10-05: publication batch checks passed for `dade6cee`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
