@@ -685,7 +685,7 @@ Last ledger refresh: **2026-10-05 17:37 UTC**. This is an operational snapshot, 
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Merged after review/checks | 1256: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1255.md) |
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Merged after review/checks | 1258: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1257.md) |
-| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Merged after review/checks | 1260: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1259.md) |
+| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Merged after review/checks | 1260: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Merged after review/checks | 1264: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1263.md) |
 | 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Merged after review/checks | 1266: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1265.md) |
@@ -1656,6 +1656,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1255**, Pipeline calls: three-or-more-statement callee bodies, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1255.md). <!-- x86-merged:1255 -->
 - 2026-10-05: lane **1256**, Independent exact review of 1255, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1256.md). <!-- x86-merged:1256 -->
 - 2026-10-05: lane **1259**, Pipeline work: taken-path bound and per-round loop correspondence, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1259.md). <!-- x86-merged:1259 -->
+- 2026-10-05: lane **1260**, Independent exact review of 1259, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1260.md). <!-- x86-merged:1260 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
