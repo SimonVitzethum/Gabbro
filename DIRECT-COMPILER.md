@@ -673,7 +673,7 @@ Last ledger refresh: **2026-10-05 15:26 UTC**. This is an operational snapshot, 
 | 1229 | Pipeline calls: multi-statement callee bodies | Merged after review/checks | 1230: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1229.md) |
 | 1231 | Pipeline tables: byte slices | Committed candidate; review/integration pending | 1232: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1231.md) |
 | 1233 | Pipeline work bounds for branches and loops | Merged after review/checks | 1234: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1233.md) |
-| 1235 | Profiles: multi-step control flow and relocation re-decode | Committed candidate; review/integration pending | 1236: Committed candidate; review/integration pending | [task](lanes/1235.md) |
+| 1235 | Profiles: multi-step control flow and relocation re-decode | Committed candidate; review/integration pending | 1236: Agent working | [task](lanes/1235.md) |
 | 1237 | AVX2: VEX prefix decoder and encoder | Incomplete; preserved | 1238: scheduled | [task](lanes/1237.md) |
 | 1239 | AVX2: 256-bit integer operation semantics | Committed candidate; review/integration pending | 1240: Agent working | [task](lanes/1239.md) |
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Agent working | 1242: scheduled | [task](lanes/1241.md) |
@@ -682,7 +682,7 @@ Last ledger refresh: **2026-10-05 15:26 UTC**. This is an operational snapshot, 
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Agent working | 1250: scheduled | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Agent working | 1252: scheduled | [task](lanes/1251.md) |
-| 1253 | Start-anchored bridged run for the GX refinement | Committed candidate; review/integration pending | 1254: Committed candidate; review/integration pending | [task](lanes/1253.md) |
+| 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1253.md) |
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Agent working | 1256: scheduled | [task](lanes/1255.md) |
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Agent working | 1258: scheduled | [task](lanes/1257.md) |
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Agent working | 1260: scheduled | [task](lanes/1259.md) |
@@ -1591,6 +1591,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1217**, Pipeline atomics: execBlock correspondence, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1217.md). <!-- x86-merged:1217 -->
 - 2026-10-05: checked master `a8a12bcc` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a8a12bccbe1f3cdfcd582f33db98d12a50e111fb -->
 - 2026-10-05: lane **1218**, Independent exact review of 1217, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1218.md). <!-- x86-merged:1218 -->
+- 2026-10-05: lane **1253**, Start-anchored bridged run for the GX refinement, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1253.md). <!-- x86-merged:1253 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
