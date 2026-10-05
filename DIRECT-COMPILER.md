@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 14:29 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 14:41 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -661,19 +661,19 @@ Last ledger refresh: **2026-10-05 14:29 UTC**. This is an operational snapshot, 
 | 1205 | Loaded image: per-family reached fetch instances | Merged after review/checks | 1206: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1205.md) |
 | 1207 | Generic drain-equals-write64 induction | Merged after review/checks | 1208: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1207.md) |
 | 1209 | LOCK family: fetched-byte dispatch, narrower widths and split-lock | Agent working | 1210: scheduled | [task](lanes/1209.md) |
-| 1211 | FP s32/MXCSR rows in the unified dispatcher | Agent working | 1212: scheduled | [task](lanes/1211.md) |
-| 1213 | LOCK words to W history: timestamp and value link | Agent working | 1214: scheduled | [task](lanes/1213.md) |
-| 1215 | From W runs to the GX refinement: the missing target leg | Agent working | 1216: scheduled | [task](lanes/1215.md) |
+| 1211 | FP s32/MXCSR rows in the unified dispatcher | Committed candidate; review/integration pending | 1212: Agent working | [task](lanes/1211.md) |
+| 1213 | LOCK words to W history: timestamp and value link | Merged after review/checks | 1214: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1213.md) |
+| 1215 | From W runs to the GX refinement: the missing target leg | Committed candidate; review/integration pending | 1216: Agent working | [task](lanes/1215.md) |
 | 1217 | Pipeline atomics: execBlock correspondence | Agent working | 1218: scheduled | [task](lanes/1217.md) |
 | 1219 | Pipeline: derive per-chunk runs from the lowering alone | Agent working | 1220: scheduled | [task](lanes/1219.md) |
-| 1221 | Linking: rel8 selection convergence and fall-through coverage | Agent working | 1222: scheduled | [task](lanes/1221.md) |
+| 1221 | Linking: rel8 selection convergence and fall-through coverage | Incomplete; preserved | 1222: scheduled | [task](lanes/1221.md) |
 | 1223 | valX86_sound for the decidable part | Agent working | 1224: scheduled | [task](lanes/1223.md) |
-| 1225 | Faults and interrupts against the store buffer: precise exceptions | Scheduled | 1226: scheduled | [task](lanes/1225.md) |
-| 1227 | Pipeline spills: variable homing and live-range splitting | Scheduled | 1228: scheduled | [task](lanes/1227.md) |
-| 1229 | Pipeline calls: multi-statement callee bodies | Scheduled | 1230: scheduled | [task](lanes/1229.md) |
-| 1231 | Pipeline tables: byte slices | Scheduled | 1232: scheduled | [task](lanes/1231.md) |
-| 1233 | Pipeline work bounds for branches and loops | Scheduled | 1234: scheduled | [task](lanes/1233.md) |
-| 1235 | Profiles: multi-step control flow and relocation re-decode | Scheduled | 1236: scheduled | [task](lanes/1235.md) |
+| 1225 | Faults and interrupts against the store buffer: precise exceptions | Agent working | 1226: scheduled | [task](lanes/1225.md) |
+| 1227 | Pipeline spills: variable homing and live-range splitting | Committed candidate; review/integration pending | 1228: Agent working | [task](lanes/1227.md) |
+| 1229 | Pipeline calls: multi-statement callee bodies | Agent working | 1230: scheduled | [task](lanes/1229.md) |
+| 1231 | Pipeline tables: byte slices | Committed candidate; review/integration pending | 1232: Agent working | [task](lanes/1231.md) |
+| 1233 | Pipeline work bounds for branches and loops | Agent working | 1234: scheduled | [task](lanes/1233.md) |
+| 1235 | Profiles: multi-step control flow and relocation re-decode | Agent working | 1236: scheduled | [task](lanes/1235.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1540,6 +1540,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1200**, Independent exact review of 1199, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1200.md). <!-- x86-merged:1200 -->
 - 2026-10-05: lane **1207**, Generic drain-equals-write64 induction, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1207.md). <!-- x86-merged:1207 -->
 - 2026-10-05: lane **1208**, Independent exact review of 1207, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1208.md). <!-- x86-merged:1208 -->
+- 2026-10-05: lane **1213**, LOCK words to W history: timestamp and value link, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1213.md). <!-- x86-merged:1213 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
