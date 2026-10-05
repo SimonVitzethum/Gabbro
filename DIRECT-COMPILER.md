@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 16:17 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 16:18 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -686,7 +686,7 @@ Last ledger refresh: **2026-10-05 16:17 UTC**. This is an operational snapshot, 
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Committed candidate; review/integration pending | 1256: Agent working | [task](lanes/1255.md) |
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Merged after review/checks | 1258: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1257.md) |
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Committed candidate; review/integration pending | 1260: Agent working | [task](lanes/1259.md) |
-| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1261.md) |
+| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Agent working | 1264: scheduled | [task](lanes/1263.md) |
 | 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Agent working | 1266: scheduled | [task](lanes/1265.md) |
 | 1267 | AVX2: per-lane equation for arithmetic shift right | Committed candidate; review/integration pending | 1268: Agent working | [task](lanes/1267.md) |
@@ -1628,6 +1628,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: publication batch checks passed for `ad948eff`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: lane **1261**, Pipeline over TSO: store instructions on the issue/drain path, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1261.md). <!-- x86-merged:1261 -->
 - 2026-10-05: checked master `e762caa3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e762caa35e7bd9eebad4b40167acf235a5501c85 -->
+- 2026-10-05: lane **1262**, Independent exact review of 1261, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1262.md). <!-- x86-merged:1262 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
