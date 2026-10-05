@@ -693,8 +693,68 @@ theorem senkSkalLesen_nichtvar_slot (A : TabAnker D) (c : PipeCfg)
     the table-writing program and its memory-changing run. -/
 theorem senkSkalLesen_nichtvar_slot_zeuge :
     senkSkalLesen zeA zeCfg zeReadSlot = none ∧
-    zeV.schreibt false = true ∧
-    zeRunChange := by
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+/-- Anchor with nothing listed: every table access is out of extent. -/
+def ankerLeer : TabAnker zeD :=
+  { basis := [], zeile := [], felder := fun _ => [] }
+
+/-- Anchor with a base but no row length. -/
+def ankerOhneZeile : TabAnker zeD :=
+  { basis := [(false, 8192)], zeile := [], felder := fun _ => [(false, 0), (true, 8)] }
+
+/-- Anchor with base and row length but no fields. -/
+def ankerOhneFeld : TabAnker zeD :=
+  { basis := [(false, 8192)], zeile := [(false, 16)], felder := fun _ => [] }
+
+/-- REFUSAL, UNLISTED TABLE: a read of a table with no anchor base —
+    outside every declared extent — is refused. -/
+theorem senkSkalLesen_ohne_basis (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
+    (y : Var Γ (.index (D.count t))) (hL : darf D t Λ)
+    (hB : PipelineTables.ankerBasis A t = none) :
+    senkSkalLesen A c (.slot t f (.var y) hL) = none := by
+  simp only [senkSkalLesen, idxVarG?, hB]
+
+/-- JOINT WITNESS for `senkSkalLesen_ohne_basis`: the variable-index read
+    of the unanchored table is `none`; beside it the memory-changing run. -/
+theorem senkSkalLesen_ohne_basis_zeuge :
+    senkSkalLesen ankerLeer zeCfg zeReadVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+/-- REFUSAL, MISSING ROW LENGTH: a read of a table with no anchor row
+    length is refused. -/
+theorem senkSkalLesen_ohne_zeile (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
+    (y : Var Γ (.index (D.count t))) (hL : darf D t Λ) (B : Nat)
+    (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = none) :
+    senkSkalLesen A c (.slot t f (.var y) hL) = none := by
+  simp only [senkSkalLesen, idxVarG?, hB, hZ]
+
+/-- JOINT WITNESS for `senkSkalLesen_ohne_zeile`. -/
+theorem senkSkalLesen_ohne_zeile_zeuge :
+    senkSkalLesen ankerOhneZeile zeCfg zeReadVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+/-- REFUSAL, UNLISTED FIELD: a read of a field with no anchor offset is
+    refused. -/
+theorem senkSkalLesen_ohne_feld (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
+    (y : Var Γ (.index (D.count t))) (hL : darf D t Λ) (B Z : Nat)
+    (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = none) :
+    senkSkalLesen A c (.slot t f (.var y) hL) = none := by
+  simp only [senkSkalLesen, idxVarG?, hB, hZ, hO]
+
+/-- JOINT WITNESS for `senkSkalLesen_ohne_feld`. -/
+theorem senkSkalLesen_ohne_feld_zeuge :
+    senkSkalLesen ankerOhneFeld zeCfg zeReadVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
   refine ⟨rfl, zeHw, zeRunChangeProof⟩
 
 /- CUTS:
