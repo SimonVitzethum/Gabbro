@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 11:03 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 11:08 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -616,7 +616,7 @@ Last ledger refresh: **2026-10-05 11:03 UTC**. This is an operational snapshot, 
 | 1112 | Standing dynamic work planner, cycle 2 | Merged after review/checks | 1113: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1112.md) |
 | 1115 | Hardware completion: short-branch rel8 encoding rows (Nemotron author, Muse review) | Merged after review/checks | 1118: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1115.md) |
 | 1119 | LOCK/RMW on the coherent machine | Agent working | 1120: scheduled | [task](lanes/1119.md) |
-| 1121 | Addressed loads/stores of all widths through TSO | Committed candidate; review/integration pending | 1122: Agent working | [task](lanes/1121.md) |
+| 1121 | Addressed loads/stores of all widths through TSO | Committed candidate; review/integration pending | 1122: Committed candidate; review/integration pending | [task](lanes/1121.md) |
 | 1123 | Architectural faults as outcomes of the coherent machine | Merged after review/checks | 1124: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1123.md) |
 | 1125 | Asynchronous interrupt delivery on the coherent machine | Agent working | 1126: scheduled | [task](lanes/1125.md) |
 | 1127 | Multiply/divide and narrow widths connected | Agent working | 1128: scheduled | [task](lanes/1127.md) |
@@ -629,7 +629,7 @@ Last ledger refresh: **2026-10-05 11:03 UTC**. This is an operational snapshot, 
 | 1141 | ISA-strand families (compact/core/cond) on the coherent machine | Agent working | 1142: scheduled | [task](lanes/1141.md) |
 | 1143 | TSO to W bridge: fragment READS | Agent working | 1144: scheduled | [task](lanes/1143.md) |
 | 1145 | TSO to W bridge: LOCK/RMW steps | Waiting for accepted dependencies | 1146: scheduled | [task](lanes/1145.md) |
-| 1147 | Whole-word atomicity of guarded aligned accesses | Committed candidate; review/integration pending | 1148: scheduled | [task](lanes/1147.md) |
+| 1147 | Whole-word atomicity of guarded aligned accesses | Committed candidate; review/integration pending | 1148: Incomplete; preserved | [task](lanes/1147.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1394,6 +1394,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-04: checked master `d8106d5d` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d8106d5d065290e36909c5de16e3f79649b53831 -->
 - 2026-10-05: lane **1123**, Architectural faults as outcomes of the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1123.md). <!-- x86-merged:1123 -->
 - 2026-10-05: lane **1124**, Independent exact review of 1123, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1124.md). <!-- x86-merged:1124 -->
+- 2026-10-05: publication batch checks passed for `6914c7e8`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
