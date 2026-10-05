@@ -368,6 +368,110 @@ theorem hwLockFetchWit_sib_wort :
       (hwLockFetchSchritt hwLockFetchSib 0) = some 15 := by
   decide
 
+/-! ## 7. The fetched two-core run and its refusals.
+
+  Core 0 fetched-adds 5 (word 10 to 15) on the 1119 witness start;
+  the fetched step equals the parsed plug step, so words, registers,
+  buffers and TSO views transfer by rewriting. Core 1 fetched-adds
+  7 after the drain (word 15 to 22). The fence, the pending own
+  store, #UD shapes, missing SSE2, unreadable words and misaligned
+  bases refuse on the fetched path exactly as on the parsed plug. -/
+
+/-- Fetch on the witness start: the 9-byte word form. -/
+theorem hwLockFetchWit_start0 :
+    hwLockFetch hwLockWitStart 0 =
+      some (.ok (.xadd64 .rax .rbp 0) 9,
+        List.replicate 6 (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The witness footprint pins to the aligned word 8192. -/
+theorem hwLockFetchWit_start_fuss :
+    lockFuss hwLockWitStart 0 (.xadd64 .rax .rbp 0) =
+      some (BitVec.ofNat 64 8192) := by
+  decide
+
+/-- The fetched core-0 step is the parsed plug step. -/
+theorem hwLockFetchWit_nach1 :
+    hwLockFetchSchritt hwLockWitStart 0 = hwLockWitNach1 :=
+  hwLockFetchSchritt_ohne_split _ _ _ _ _ hwLockFetchWit_start0 (by
+    simp only [hwLockFetchWit_start_fuss, hwLockFetchWit_kein_split])
+
+/-- Fetched step one moves the word 10 to 15. -/
+theorem hwLockFetchWit_nach1_wort :
+    hwLockWort hwLockWitAdr (hwLockFetchSchritt hwLockWitStart 0) =
+      some 15 := by
+  rw [hwLockFetchWit_nach1]
+  exact hwLockWit_nach1_wort
+
+/-- Fetched step one returns the old word through rax. -/
+theorem hwLockFetchWit_nach1_rax :
+    hwLockReg 0 .rax (hwLockFetchSchritt hwLockWitStart 0) = some 10 := by
+  rw [hwLockFetchWit_nach1]
+  exact hwLockWit_nach1_rax
+
+/-- Fetched step one keeps the foreign pending byte. -/
+theorem hwLockFetchWit_nach1_fremd_buf :
+    hwLockBuf 1 (hwLockFetchSchritt hwLockWitStart 0) = some 1 := by
+  rw [hwLockFetchWit_nach1]
+  exact hwLockWit_nach1_fremd_buf
+
+/-- Owner-only forwarding through the fetched step. -/
+theorem hwLockFetchWit_nach1_sicht :
+    hwLockSicht (hwLockFetchSchritt hwLockWitStart 0) 1
+        hwLockWitFremdAdr =
+        some (some (BitVec.ofNat 8 99)) ∧
+      hwLockSicht (hwLockFetchSchritt hwLockWitStart 0) 0
+        hwLockWitFremdAdr =
+        some (some (BitVec.ofNat 8 0)) := by
+  rw [hwLockFetchWit_nach1]
+  exact ⟨hwLockWit_nach1_eigen_sicht, hwLockWit_nach1_fremd_sicht⟩
+
+/-- After the drain, the fetched core-1 step moves 15 to 22. -/
+theorem hwLockFetchWit_nach2_wort :
+    hwLockWort hwLockWitAdr
+      (match hwLockWitBereit2 with
+        | some m2 => hwLockFetchSchritt m2 1
+        | none => none) = some 22 := by
+  decide
+
+/-- After the drain, the fetched core-1 step returns 15 via rax. -/
+theorem hwLockFetchWit_nach2_rax1 :
+    hwLockReg 1 .rax
+      (match hwLockWitBereit2 with
+        | some m2 => hwLockFetchSchritt m2 1
+        | none => none) = some 15 := by
+  decide
+
+/-- The pending own byte refuses core 1 its fetched step. -/
+theorem hwLockFetchWit_puffer :
+    hwLockFetchSchritt hwLockWitStart 1 = none := by
+  have hf : hwLockFetch hwLockWitStart 1 =
+      some (.ok (.xadd64 .rax .rbp 0) 9,
+        List.replicate 6 (BitVec.ofNat 8 0)) := by
+    decide
+  have hff : lockFuss hwLockWitStart 1 (.xadd64 .rax .rbp 0) =
+      some (BitVec.ofNat 64 8192) := by
+    decide
+  have hplug : hwLockSchritt hwLockWitStart 1
+      (.ok (.xadd64 .rax .rbp 0) 9) = none :=
+    hwLock_puffer_bleibt_verweigert hwLockWitStart 1 .rax .rbp 0 9
+      ⟨hwLockWitFremdAdr, BitVec.ofNat 8 99⟩ [] (by decide) (by decide)
+  have hs : match lockFuss hwLockWitStart 1 (.xadd64 .rax .rbp 0) with
+      | some tgt => splitSperre tgt = false
+      | none => True := by
+    simp only [hff, hwLockFetchWit_kein_split]
+  rw [hwLockFetchSchritt_ohne_split _ _ _ _ _ hf hs, hplug]
+
+/-- Fetched LOCK on a register destination stays refused. -/
+theorem hwLockFetchWit_reg_ud :
+    hwLockFetchSchritt
+      (hwLockFetchCode pinRegUd) 0 = none := by
+  have hf : hwLockFetch (hwLockFetchCode pinRegUd) 0 =
+      some (.ud .lockAufRegister 5,
+        List.replicate 10 (BitVec.ofNat 8 0)) := by
+    decide
+  exact hwLockFetchSchritt_ud _ _ _ _ _ hf
+
 /- CUTS:
      Skeleton only: fetched decode `hwLockFetch` as the 662 fetch on
      the core projection. NOT proved here: the fetched step, split-lock
