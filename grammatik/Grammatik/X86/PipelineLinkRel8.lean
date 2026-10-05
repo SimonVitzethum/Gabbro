@@ -139,4 +139,292 @@ theorem adressenAux_mono (p q : List RelaxStueck) (b₁ b₂ : Nat)
         simp only [adressenAux, List.getElem?_cons_succ] at h ⊢
         exact htail n a h
 
+/-! ## 2. Displacement, selection, one relaxation step. -/
+
+/-- Displacement of a branch at laid-out address `addr` with total
+    instruction width `w` against absolute target `ziel`: the value
+    the relocation must encode. -/
+def dispAn (ziel addr w : Nat) : Int :=
+  (ziel : Int) - (((addr + w : Nat)) : Int)
+
+/-- One relaxation step over program, targets and laid-out addresses:
+    a short site whose displacement misses signed-8 widens; fixed
+    pieces, widened sites and fitting short sites stay. Targets
+    (`ziele`) and addresses run parallel to the program; on length
+    mismatch the tail is kept unchanged, never guessed. -/
+def relaxSchrittAux : List RelaxStueck → List (Option Nat) → List Nat →
+    List RelaxStueck
+  | [], _, _ => []
+  | st :: pr, z :: zr, a :: ar =>
+    match st, z with
+    | .kurz, some t =>
+      (if rel8Passt (dispAn t a 2) then .kurz else .weit) ::
+        relaxSchrittAux pr zr ar
+    | _, _ => st :: relaxSchrittAux pr zr ar
+  | st :: pr, _, _ => st :: relaxSchrittAux pr [] []
+
+/-- One relaxation step at load base: addresses are recomputed from
+    the current widths, then unfit short sites widen. -/
+def relaxSchritt (prog : List RelaxStueck) (ziele : List (Option Nat))
+    (basis : Nat) : List RelaxStueck :=
+  relaxSchrittAux prog ziele (adressen prog basis)
+
+/-- A step keeps the program length. -/
+theorem relaxSchrittAux_laenge (p : List RelaxStueck)
+    (z : List (Option Nat)) (a : List Nat) :
+    (relaxSchrittAux p z a).length = p.length := by
+  induction p generalizing z a with
+  | nil => simp [relaxSchrittAux]
+  | cons st pr ih =>
+    cases z with
+    | nil =>
+      cases a with
+      | nil => simp [relaxSchrittAux, ih]
+      | cons ah ar => simp [relaxSchrittAux, ih]
+    | cons zh zr =>
+      cases a with
+      | nil => simp [relaxSchrittAux, ih]
+      | cons ah ar =>
+        cases st with
+        | fest l =>
+          cases zh with
+          | none => simp [relaxSchrittAux, ih]
+          | some t => simp [relaxSchrittAux, ih]
+        | kurz =>
+          cases zh with
+          | none => simp [relaxSchrittAux, ih]
+          | some t =>
+            simp only [relaxSchrittAux]
+            simp [ih]
+        | weit =>
+          cases zh with
+          | none => simp [relaxSchrittAux, ih]
+          | some t => simp [relaxSchrittAux, ih]
+
+/-- A step only ever widens: the output covers the input in the
+    widening order. Every premise is used: the program shape drives
+    the induction, targets and addresses pick the arm, the fit check
+    picks the short-site case. -/
+theorem schrittWaechstAux (p : List RelaxStueck)
+    (z : List (Option Nat)) (a : List Nat) :
+    progLE p (relaxSchrittAux p z a) := by
+  induction p generalizing z a with
+  | nil => simp [progLE, relaxSchrittAux]
+  | cons st pr ih =>
+    cases z with
+    | nil =>
+      cases a with
+      | nil =>
+        simp only [relaxSchrittAux]
+        simp only [progLE]
+        constructor
+        · cases st with
+          | fest l => exact stueckLE.fest_eq l
+          | kurz => exact stueckLE.kurz_kurz
+          | weit => exact stueckLE.weit_weit
+        · exact ih [] []
+      | cons ah ar =>
+        simp only [relaxSchrittAux]
+        simp only [progLE]
+        constructor
+        · cases st with
+          | fest l => exact stueckLE.fest_eq l
+          | kurz => exact stueckLE.kurz_kurz
+          | weit => exact stueckLE.weit_weit
+        · exact ih [] []
+    | cons zh zr =>
+      cases a with
+      | nil =>
+        simp only [relaxSchrittAux]
+        simp only [progLE]
+        constructor
+        · cases st with
+          | fest l => exact stueckLE.fest_eq l
+          | kurz => exact stueckLE.kurz_kurz
+          | weit => exact stueckLE.weit_weit
+        · exact ih [] []
+      | cons ah ar =>
+        cases st with
+        | fest l =>
+          cases zh with
+          | none =>
+            simp only [relaxSchrittAux]
+            simp only [progLE]
+            exact ⟨stueckLE.fest_eq l, ih zr ar⟩
+          | some t =>
+            simp only [relaxSchrittAux]
+            simp only [progLE]
+            exact ⟨stueckLE.fest_eq l, ih zr ar⟩
+        | kurz =>
+          cases zh with
+          | none =>
+            simp only [relaxSchrittAux]
+            simp only [progLE]
+            exact ⟨stueckLE.kurz_kurz, ih zr ar⟩
+          | some t =>
+            simp only [relaxSchrittAux]
+            simp only [progLE]
+            constructor
+            · by_cases hc : rel8Passt (dispAn t ah 2) = true
+              · simp only [hc, if_true]
+                exact stueckLE.kurz_kurz
+              · simp only [hc]
+                exact stueckLE.kurz_weit
+            · exact ih zr ar
+        | weit =>
+          cases zh with
+          | none =>
+            simp only [relaxSchrittAux]
+            simp only [progLE]
+            exact ⟨stueckLE.weit_weit, ih zr ar⟩
+          | some t =>
+            simp only [relaxSchrittAux]
+            simp only [progLE]
+            exact ⟨stueckLE.weit_weit, ih zr ar⟩
+
+/-- A step at load base only ever widens. -/
+theorem relaxSchritt_waechst (prog : List RelaxStueck)
+    (ziele : List (Option Nat)) (basis : Nat) :
+    progLE prog (relaxSchritt prog ziele basis) := by
+  unfold relaxSchritt
+  exact schrittWaechstAux prog ziele (adressen prog basis)
+
+/-- FIXED-POINT FIT: where the step rests, every short site with a
+    listed target fits signed-8 at its laid-out address. Every
+    premise is used: `h` ties the output to the input (head and tail
+    projections), `hs`/`hz`/`ha` pick the site, target and address. -/
+theorem schrittFixpunkt_passtAux (p : List RelaxStueck)
+    (z : List (Option Nat)) (a : List Nat)
+    (h : relaxSchrittAux p z a = p)
+    (i : Nat) (t ad : Nat)
+    (hs : p[i]? = some .kurz) (hz : z[i]? = some (some t))
+    (ha : a[i]? = some ad) :
+    rel8Passt (dispAn t ad 2) = true := by
+  induction p generalizing z a i with
+  | nil =>
+    have hnil : (([] : List RelaxStueck)[i]? = none) :=
+      List.getElem?_eq_none (by simp)
+    rw [hnil] at hs
+    cases hs
+  | cons hd tl ih =>
+    cases z with
+    | nil =>
+      have hnil : (([] : List (Option Nat))[i]? = none) :=
+        List.getElem?_eq_none (by simp)
+      rw [hnil] at hz
+      cases hz
+    | cons zh zr =>
+      cases a with
+      | nil =>
+        have hnil : (([] : List Nat)[i]? = none) :=
+          List.getElem?_eq_none (by simp)
+        rw [hnil] at ha
+        cases ha
+      | cons ah ar =>
+        cases hd with
+        | fest l =>
+          cases zh with
+          | none =>
+            simp only [relaxSchrittAux] at h
+            have htail : relaxSchrittAux tl zr ar = tl := by
+              have h2 := congrArg List.tail h
+              simpa using h2
+            cases i with
+            | zero =>
+              simp only [List.getElem?_cons_zero] at hs
+              simp at hs
+            | succ n =>
+              simp only [List.getElem?_cons_succ] at hs hz ha
+              exact ih zr ar htail n hs hz ha
+          | some t₀ =>
+            simp only [relaxSchrittAux] at h
+            have htail : relaxSchrittAux tl zr ar = tl := by
+              have h2 := congrArg List.tail h
+              simpa using h2
+            cases i with
+            | zero =>
+              simp only [List.getElem?_cons_zero] at hs
+              simp at hs
+            | succ n =>
+              simp only [List.getElem?_cons_succ] at hs hz ha
+              exact ih zr ar htail n hs hz ha
+        | kurz =>
+          cases zh with
+          | none =>
+            simp only [relaxSchrittAux] at h
+            have htail : relaxSchrittAux tl zr ar = tl := by
+              have h2 := congrArg List.tail h
+              simpa using h2
+            cases i with
+            | zero =>
+              simp only [List.getElem?_cons_zero] at hz
+              simp at hz
+            | succ n =>
+              simp only [List.getElem?_cons_succ] at hs hz ha
+              exact ih zr ar htail n hs hz ha
+          | some t₀ =>
+            simp only [relaxSchrittAux] at h
+            have hhead : (if rel8Passt (dispAn t₀ ah 2) then
+                RelaxStueck.kurz else RelaxStueck.weit) =
+                RelaxStueck.kurz := by
+              have h2 := congrArg List.head? h
+              simpa using h2
+            have htail : relaxSchrittAux tl zr ar = tl := by
+              have h2 := congrArg List.tail h
+              simpa using h2
+            cases i with
+            | zero =>
+              simp only [List.getElem?_cons_zero] at hs hz ha
+              have ht : t₀ = t :=
+                Option.some_inj.mp (Option.some_inj.mp hz)
+              have had : ah = ad := Option.some_inj.mp ha
+              rw [ht] at hhead
+              rw [had] at hhead
+              by_cases hc : rel8Passt (dispAn t ad 2) = true
+              · exact hc
+              · simp only [hc] at hhead
+                simp at hhead
+            | succ n =>
+              simp only [List.getElem?_cons_succ] at hs hz ha
+              exact ih zr ar htail n hs hz ha
+        | weit =>
+          cases zh with
+          | none =>
+            simp only [relaxSchrittAux] at h
+            have htail : relaxSchrittAux tl zr ar = tl := by
+              have h2 := congrArg List.tail h
+              simpa using h2
+            cases i with
+            | zero =>
+              simp only [List.getElem?_cons_zero] at hs
+              simp at hs
+            | succ n =>
+              simp only [List.getElem?_cons_succ] at hs hz ha
+              exact ih zr ar htail n hs hz ha
+          | some t₀ =>
+            simp only [relaxSchrittAux] at h
+            have htail : relaxSchrittAux tl zr ar = tl := by
+              have h2 := congrArg List.tail h
+              simpa using h2
+            cases i with
+            | zero =>
+              simp only [List.getElem?_cons_zero] at hs
+              simp at hs
+            | succ n =>
+              simp only [List.getElem?_cons_succ] at hs hz ha
+              exact ih zr ar htail n hs hz ha
+
+/-- Fixed-point fit at load base: where the step rests, every short
+    site with a listed target fits signed-8. -/
+theorem relaxSchritt_fixpunkt_passt (prog : List RelaxStueck)
+    (ziele : List (Option Nat)) (basis : Nat)
+    (h : relaxSchritt prog ziele basis = prog)
+    (i : Nat) (t ad : Nat)
+    (hs : prog[i]? = some .kurz) (hz : ziele[i]? = some (some t))
+    (ha : (adressen prog basis)[i]? = some ad) :
+    rel8Passt (dispAn t ad 2) = true := by
+  unfold relaxSchritt at h
+  exact schrittFixpunkt_passtAux prog ziele (adressen prog basis)
+    h i t ad hs hz ha
+
 end Gabbro.Grammatik.X86
