@@ -701,3 +701,4 @@ import Grammatik.X86.ValidatorKapLength
 import Grammatik.X86.HwKapsteinZwei
 import Grammatik.X86.HwKapsteinTsoRest
 import Grammatik.X86.OpcodeLedger0F40
+import Grammatik.X86.OpcodeLedger0F80
