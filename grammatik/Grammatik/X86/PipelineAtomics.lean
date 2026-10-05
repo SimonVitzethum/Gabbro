@@ -179,3 +179,140 @@ theorem zielBytes_lock_rundweg (f : LockForm) (suffix : List Byte) :
       some (LockAnweisung.ok f (zielBytes (.lock f)).length, suffix) := by
   unfold zielBytes
   exact roundtripLock f suffix
+
+/-! ## 2. The NAMED hardware assumption: the plain-MOV reordering rule.
+
+    On x86-TSO only Store→Load may reorder; loads are not reordered
+    with loads and stores not with stores (Intel SDM Vol. 3A §9.2,
+    summarized by the accepted TSO model). Hence a relaxed or acquire
+    load and a release store lower to a plain aligned MOV: the three
+    packaged facts are (a) a release store is invisible off-core until
+    its drain, (b) a fence-ready load observes canonical memory, (c) a
+    drained store is visible through its own drain, (d) the issuing core
+    observes its own store with no fence. `TSOPlainRegel_gilt`
+    discharges the assumption against the accepted model, so every
+    per-access theorem below cites the NAME and never the silicon. -/
+
+/-- The plain-MOV reordering rule, as one named assumption. -/
+structure TSOPlainRegel : Prop where
+  unsichtbar : ∀ (s s' : TSOZustand) (c d : Nat) (a : Adresse) (v : Byte),
+    issueByte s c a v = some s' → d ≠ c →
+    neuestens (s.puffer d) a = none → s.mem.lesbar a = true →
+    loadByte s' d a = some (s.mem.bytes a)
+  zaunLiest : ∀ (s : TSOZustand) (c : Nat) (a : Adresse),
+    zaunBereit s c = true → s.mem.lesbar a = true →
+    loadByte s c a = some (s.mem.bytes a)
+  drainSichtbar : ∀ (s s1 s2 : TSOZustand) (c : Nat) (a : Adresse) (v : Byte),
+    s.puffer c = [] → issueByte s c a v = some s1 →
+    flushKern s1 c = some s2 → s2.mem.bytes a = v
+  eigenSichtbar : ∀ (s s' : TSOZustand) (c : Nat) (a : Adresse) (v : Byte),
+    issueByte s c a v = some s' → s.mem.lesbar a = true →
+    loadByte s' c a = some v
+
+/-- The named rule HOLDS of the accepted TSO model. -/
+theorem TSOPlainRegel_gilt : TSOPlainRegel :=
+  ⟨freigabe_braucht_flush, zaun_erwerb_liest_kanonisch,
+    freigabe_flush_sichtbar, load_nach_issue⟩
+
+/-- Fence readiness is the empty own buffer (reused, not restated). -/
+theorem zaunBereit_aus_leer (s : TSOZustand) (c : Nat)
+    (hbuf : s.puffer c = []) : zaunBereit s c = true :=
+  (zaunBereit_iff_leer s c).mpr hbuf
+
+/-! ## 3. Per-access correspondence: loads.
+
+    A lowered relaxed/acquire load runs the pilot `load64` step on the
+    effective address AND agrees with the TSO group load under the named
+    rule: with an empty own buffer the group observes canonical memory,
+    which is exactly what the step read. The ledger closes the access. -/
+
+/-- **LOAD CORRESPONDENCE.** The lowered plain MOV reads the word at the
+    effective address into the destination, keeps memory, agrees with
+    the TSO group load under `TSOPlainRegel`, and closes the ledger.
+    Every premise pins one guard; the named rule is cited, never the
+    silicon. -/
+theorem lese_korrekt (q : AtomQuelle) (ts : List ZielOp)
+    (s s' : Zustand) (t : TSOZustand) (c : Nat)
+    (a : Adresse) (o : Speichermodell.Ordnung)
+    (dst base : Register) (disp : BitVec 32) (w : Wort)
+    (hq : q = .lese a o dst base disp)
+    (hSen : senkAtom q = some ts)
+    (heff : effAddr s base disp = a)
+    (hmem : t.mem = s.speicher)
+    (hbuf : t.puffer c = [])
+    (hRd : lesbar8 s.speicher a = true)
+    (hrd : read64 s.speicher a = some w)
+    (hstep : schritt (Pipeline.kanon (.load64 dst base disp)) s = some s')
+    (hRegel : TSOPlainRegel) :
+    s'.register dst = w ∧ s'.speicher = s.speicher ∧
+      ladeWort8 t c a = read64 s.speicher a ∧
+      ts = [.movLoad dst base disp] ∧
+      ledgerDeckt (.lese a o) (ledgerEintrag (.lese a o)) = true := by
+  subst hq
+  rw [senk_lese] at hSen
+  cases hSen
+  have hrd' : read64 s.speicher (effAddr s base disp) = some w := heff ▸ hrd
+  obtain ⟨hreg, hspeicher, -⟩ := effAddr_load_schritt _ s s' dst base disp w
+    (laengeOk_encode _) rfl hrd' hstep
+  have hRd' : lesbar8 t.mem a = true := by rw [hmem]; exact hRd
+  have hzaun := zaunBereit_aus_leer t c hbuf
+  have hL : ∀ i : Fin 8,
+      loadByte t c (addrOff a i.val) = some ((readBytes t.mem a) i) := by
+    intro i
+    exact hRegel.zaunLiest t c _ hzaun
+      (lesbar8_hit t.mem a i.val hRd' i.isLt)
+  have hGrp := ladeWort8_aus_lesungen t c a (readBytes t.mem a) hL
+  have hRdT : read64 t.mem a = some (bytesWort (readBytes t.mem a)) := by
+    unfold read64
+    rw [if_pos hRd']
+  have hEq : ladeWort8 t c a = read64 s.speicher a := by
+    have hGrp2 : ladeWort8 t c a = read64 t.mem a := hGrp.trans hRdT.symm
+    rw [← hmem]
+    exact hGrp2
+  exact ⟨hreg, hspeicher, hEq, rfl, lese_schliesst a o⟩
+
+/-! ## 4. Per-access correspondence: stores.
+
+    A lowered release store runs the pilot `store64` step on the
+    effective address. Under the named rule the issued footprint byte
+    stays invisible off-core until its drain while the issuing core
+    observes it at once. The ledger closes the access. -/
+
+/-- **STORE CORRESPONDENCE.** The lowered plain MOV writes exactly the
+    footprint bytes, the issued byte is invisible off-core until
+    flushed and visible on-core at once (both under `TSOPlainRegel`),
+    and the ledger closes. Byte 0 links the issued byte to the stored
+    word (`wortByte`). -/
+theorem schreibe_korrekt (q : AtomQuelle) (ts : List ZielOp)
+    (s s' : Zustand) (t t' : TSOZustand) (c d : Nat) (m : Speicher)
+    (a : Adresse) (o : Speichermodell.Ordnung)
+    (base src : Register) (disp : BitVec 32) (b0 : Byte)
+    (hq : q = .schreibe a o base src disp)
+    (hSen : senkAtom q = some ts)
+    (heff : effAddr s base disp = a)
+    (hwr : write64 s.speicher a (s.register src) = some m)
+    (hstep : schritt (Pipeline.kanon (.store64 base src disp)) s = some s')
+    (hb : b0 = wortByte (s.register src) 0)
+    (hIssue : issueByte t c (addrOff a 0) b0 = some t')
+    (hne : d ≠ c)
+    (hmiss : neuestens (t.puffer d) (addrOff a 0) = none)
+    (hrd : t.mem.lesbar (addrOff a 0) = true)
+    (hRegel : TSOPlainRegel) :
+    (∀ x, s'.speicher.bytes x ≠ s.speicher.bytes x → x ∈ Fuss a) ∧
+      loadByte t' d (addrOff a 0) = some (t.mem.bytes (addrOff a 0)) ∧
+      loadByte t' c (addrOff a 0) = some (wortByte (s.register src) 0) ∧
+      ts = [.movStore base src disp] ∧
+      ledgerDeckt (.schreibe a (s.register src) o)
+        (ledgerEintrag (.schreibe a (s.register src) o)) = true := by
+  subst hq
+  rw [senk_schreibe] at hSen
+  cases hSen
+  have hwr' : write64 s.speicher (effAddr s base disp) (s.register src) =
+      some m := heff ▸ hwr
+  obtain ⟨hfuss, -, -⟩ := effAddr_store_schritt _ s s' base src disp m
+    (laengeOk_encode _) rfl hwr' hstep
+  rw [heff] at hfuss
+  refine ⟨hfuss, hRegel.unsichtbar t t' c d _ b0 hIssue hne hmiss hrd, ?_,
+    rfl, schreibe_schliesst _ _ _⟩
+  rw [← hb]
+  exact hRegel.eigenSichtbar t t' c _ b0 hIssue hrd
