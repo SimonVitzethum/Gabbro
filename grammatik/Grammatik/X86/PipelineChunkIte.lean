@@ -300,7 +300,7 @@ def witPruef1263 : _root_.Gabbro.Grammatik.Block pwD pwV false pwCtx [] [] :=
     premise is used: `h` drives the block equation, the check
     equation and every case split. -/
 theorem pruefChunk_inv_abgeleitet (c : PipeCfg) (L : Layout D)
-    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (cnd : Expr D Γ Λ .bool)
     (sonst : _root_.Gabbro.Grammatik.Endblock D V l Γ Λ)
     (pos : Nat) (prog : List Befehl)
@@ -402,7 +402,7 @@ theorem pruefChunk_inv_abgeleitet_zeuge :
         natAdresse (exitAdr pwCfg (⟨0, by decide⟩ : Fin pwV.gruende).val) ∧
       PipePaket := by
   obtain ⟨r, hΛ, hr, hor⟩ :=
-    pruefChunk_inv_abgeleitet (Λ' := ([] : List (Res pwD))) pwCfg pwL pwCheck
+    pruefChunk_inv_abgeleitet pwCfg pwL pwCheck
       (_root_.Gabbro.Grammatik.Endblock.retGrund ⟨0, by decide⟩ pwHΛ)
       0 witPruefProg1263 witPruefLowLit1263
   cases hr
@@ -502,7 +502,7 @@ theorem pruef_envRepr70_1263 :
     (`senkBlock_korrektC` as a black box). Every premise is used. -/
 theorem pruefChunk_lauf_abgeleitet (c : PipeCfg) (L : Layout D)
     (hc : cfgOk c = true) (hsep : LayoutSep L)
-    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (cnd : Expr D Γ Λ .bool)
     (sonst : _root_.Gabbro.Grammatik.Endblock D V l Γ Λ)
     (pre post flat : List Byte) (prog : List Befehl)
@@ -544,7 +544,7 @@ theorem pruefChunk_lauf_abgeleitet_zeuge :
     show natAdresse 4096 = addrOff (natAdresse 4096) 0
     exact (addrOff_null _).symm
   obtain ⟨n, st', hrun, hcode', hent⟩ :=
-    pruefChunk_lauf_abgeleitet (Λ' := ([] : List (Res pwD))) pwCfg pwL pw_cfgOk pw_layoutSep pwCheck
+    pruefChunk_lauf_abgeleitet pwCfg pwL pw_cfgOk pw_layoutSep pwCheck
       (_root_.Gabbro.Grammatik.Endblock.retGrund ⟨0, by decide⟩ pwHΛ)
       [] [] (encodeAll witPruefProg1263) witPruefProg1263 witPruefLowLit1263 pwO 0 pwR
       pwSigma pwEnv30 (pruefStart1263 30) pruef_code1263 (by simp) hrip
@@ -569,12 +569,141 @@ theorem pruefChunk_grund1263 :
     show natAdresse 4096 = addrOff (natAdresse 4096) 0
     exact (addrOff_null _).symm
   obtain ⟨n, st', hrun, hcode', hent⟩ :=
-    pruefChunk_lauf_abgeleitet (Λ' := ([] : List (Res pwD))) pwCfg pwL pw_cfgOk pw_layoutSep pwCheck
+    pruefChunk_lauf_abgeleitet pwCfg pwL pw_cfgOk pw_layoutSep pwCheck
       (_root_.Gabbro.Grammatik.Endblock.retGrund ⟨0, by decide⟩ pwHΛ)
       [] [] (encodeAll witPruefProg1263) witPruefProg1263 witPruefLowLit1263 pwO 0 pwR
       pwSigma pwEnv70 (pruefStart1263 70) pruef_code1263 (by simp) hrip
       pruef_worldRep1263 pruef_envRepr70_1263
   exact ⟨_, n, st', witPruefLowLit1263, hrun, hcode', hent, pipePaket_hold⟩
+
+/-! ## 5. Coverage, validator soundness and the jump layout.
+
+    Coverage of a closed ite/check chunk is the generic per-chunk
+    coverage at generated length (`deckung_chunk_generisch`, reused):
+    the lowering equation feeds the inversion, which fixes the
+    program. The validator recomputes the lowering, so an accepted
+    candidate re-checks every jump layout decision (`sprungOk` for
+    both ite jumps, the exit equation for checks). -/
+
+/-- CHUNK COVERAGE, DERIVED (ite): the lowered closed-ite chunk is
+    covered by the admitted pipeline summary over its own generated
+    length. Every premise is used: `hlow` feeds the inversion. -/
+theorem iteChunk_deckung_abgeleitet (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (cnd : Expr D Γ Λ .bool)
+    (t e : _root_.Gabbro.Grammatik.Block D V l Γ Λ Λ')
+    (pos : Nat) (prog : List Befehl)
+    (hlow : senkBlock c L pos
+      (_root_.Gabbro.Grammatik.Block.cons (Stmt.ite cnd t e)
+        _root_.Gabbro.Grammatik.Block.nil) = some prog) :
+    Deckung pipeSummary prog.length (decodiertZu prog) := by
+  obtain ⟨code, j, pt, pe, _hb, _ht, _he, _hk1, _hk2, hp⟩ :=
+    iteChunk_inv_abgeleitet c L cnd t e pos prog hlow
+  rw [hp]
+  exact deckung_chunk_generisch _
+
+/-- JOINT WITNESS for `iteChunk_deckung_abgeleitet`: the witness ite
+    lowering is covered at its generated length, with the shared
+    non-degenerate package (`PipePaket`). -/
+theorem iteChunk_deckung_abgeleitet_zeuge :
+    ∃ prog,
+      senkBlock pwCfg pwL 0 witIte1263 = some prog ∧
+      Deckung pipeSummary prog.length (decodiertZu prog) ∧
+      PipePaket := by
+  refine ⟨witIteProg1263, witIteLowLit1263, ?_, pipePaket_hold⟩
+  exact iteChunk_deckung_abgeleitet pwCfg pwL pwCheck witIteT1263 witIteE1263 0 _
+    witIteLowLit1263
+
+/-- CHUNK COVERAGE, DERIVED (check): the lowered closed-check chunk is
+    covered by the admitted pipeline summary over its own generated
+    length. Every premise is used: `hlow` feeds the inversion. -/
+theorem pruefChunk_deckung_abgeleitet (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (cnd : Expr D Γ Λ .bool)
+    (sonst : _root_.Gabbro.Grammatik.Endblock D V l Γ Λ)
+    (pos : Nat) (prog : List Befehl)
+    (hlow : senkBlock c L pos
+      (_root_.Gabbro.Grammatik.Block.pruefung cnd sonst
+        _root_.Gabbro.Grammatik.Block.nil) = some prog) :
+    Deckung pipeSummary prog.length (decodiertZu prog) := by
+  obtain ⟨r, hΛ, _hr, hor⟩ :=
+    pruefChunk_inv_abgeleitet c L cnd sonst pos prog hlow
+  exact deckung_chunk_generisch prog
+
+/-- JOINT WITNESS for `pruefChunk_deckung_abgeleitet`: the witness
+    check lowering is covered at its generated length, with the shared
+    non-degenerate package (`PipePaket`). -/
+theorem pruefChunk_deckung_abgeleitet_zeuge :
+    ∃ prog,
+      senkBlock pwCfg pwL 0 witPruef1263 = some prog ∧
+      Deckung pipeSummary prog.length (decodiertZu prog) ∧
+      PipePaket := by
+  refine ⟨witPruefProg1263, witPruefLowLit1263, ?_, pipePaket_hold⟩
+  exact pruefChunk_deckung_abgeleitet pwCfg pwL pwCheck
+    (_root_.Gabbro.Grammatik.Endblock.retGrund ⟨0, by decide⟩ pwHΛ) 0 _
+    witPruefLowLit1263
+
+/-- VALIDATOR SOUNDNESS: an accepted candidate is the Lean
+    recomputation. Every premise is used: `h` drives the split and
+    yields both conjuncts. -/
+theorem iteCheckValidate_sound (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (b : _root_.Gabbro.Grammatik.Block D V l Γ Λ Λ') (bytes : List Byte)
+    (h : iteCheckValidate c L b bytes = true) :
+    ∃ prog, senkBlock c L 0 b = some prog ∧ bytes = encodeAll prog := by
+  unfold iteCheckValidate at h
+  cases hc : senkBlock c L 0 b with
+  | none => simp [hc] at h
+  | some prog =>
+    simp only [hc] at h
+    simp only [decide_eq_true_eq] at h
+    exact ⟨prog, rfl, h⟩
+
+/-- JOINT WITNESS for `iteCheckValidate_sound`: the witness ite chunk
+    validates its own encoding, with the shared non-degenerate package
+    (`PipePaket`). -/
+theorem iteCheckValidate_sound_zeuge :
+    ∃ prog,
+      senkBlock pwCfg pwL 0 witIte1263 = some prog ∧
+      iteCheckValidate pwCfg pwL witIte1263 (encodeAll prog) = true ∧
+      PipePaket := by
+  refine ⟨witIteProg1263, witIteLowLit1263, ?_, pipePaket_hold⟩
+  unfold iteCheckValidate
+  rw [witIteLowLit1263]
+  decide
+
+/-- JUMP LAYOUT (ite): the two displacements are exactly the
+    `iteSprung`/`iteEnde` forms, and under the decided `sprungOk`
+    checks the taken jumps land on the else-branch start and the end.
+    No premise is syntax: no witness needed. -/
+theorem iteChunk_sprungZiele (base preLen : Nat) (code pt pe : List Befehl)
+    (j : Bedingung)
+    (hk1 : sprungOk ((encodeAll pt).length + 5) = true)
+    (hk2 : sprungOk (encodeAll pe).length = true) :
+    iteSprung j pt = .jumpIf32 j (BitVec.ofNat 32 ((encodeAll pt).length + 5)) ∧
+    iteEnde pe = .jump32 (BitVec.ofNat 32 (encodeAll pe).length) ∧
+    addrOff (natAdresse base) (preLen + (encodeAll code).length + 6) +
+        dispWort (BitVec.ofNat 32 ((encodeAll pt).length + 5)) =
+        addrOff (natAdresse base)
+          (preLen + (encodeAll code).length + 6 + (encodeAll pt).length + 5) ∧
+    addrOff (natAdresse base)
+        (preLen + (encodeAll code).length + 6 + (encodeAll pt).length + 5) +
+        dispWort (BitVec.ofNat 32 (encodeAll pe).length) =
+        addrOff (natAdresse base)
+          (preLen + (encodeAll code).length + 6 + (encodeAll pt).length + 5 +
+            (encodeAll pe).length) :=
+  ⟨rfl, rfl, sprungOk_addr _ _ _ hk1, sprungOk_addr _ _ _ hk2⟩
+
+/-- RELAXATION GATE: the decided `sprungOk` check is exactly the
+    32-bit displacement round trip. The lowering keeps the fixed-wide
+    jumps only when this holds and otherwise refuses (`none`); no
+    displacement is ever silently truncated, and no short (rel8) form
+    is silently substituted -- that layout lives in `ISARelax` and
+    stays OPEN here. No premise is syntax: no witness needed. -/
+theorem iteChunk_sprungOk_entscheidung (k : Nat) :
+    sprungOk k = true ↔
+      dispWort (BitVec.ofNat 32 k) = BitVec.ofNat 64 k := by
+  simp [sprungOk, decide_eq_true_eq]
 
 /- CUTS:
     - Proved here: closed-ite lowering inversion
