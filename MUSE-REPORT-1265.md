@@ -1,5 +1,30 @@
 # MUSE-REPORT-1265: AVX2 join (Vex/Ops/State/Mem on the coherent machine)
 
+## Repair after integration gate failure (NOT merged, fresh review required)
+
+- Integration evidence: `import Grammatik.X86.Avx2State failed, environment
+  already contains 'Gabbro.Grammatik.X86.avxWitS0_wf' from
+  Grammatik.X86.Avx2Join`. The sibling `Avx2State` piece landed after this
+  lane's base and owns the natural top-level witness name `avxWitS0_wf`
+  (likely further `avxWit*` names).
+- Repair: the entire module content now lives under `namespace Avx2Join`
+  (one-line addition + one `end` line; no statement, proof, or name
+  otherwise changed). Every declaration is now
+  `Gabbro.Grammatik.X86.Avx2Join.*` (confirmed in `./lean-probe`
+  output); the file adds ZERO top-level names to
+  `Gabbro.Grammatik.X86`, so this collision class is closed against all
+  present and future sibling pieces. Residual risk noted honestly: only
+  a sibling also opening `namespace Avx2Join` could collide, which no
+  sibling lane number suggests.
+- Local checks after repair: `./lean-probe` **0 errors** (axioms still
+  within `[propext, Quot.sound]`), `./lean-bau` **Build completed
+  successfully (658 jobs)**. Guarantees unchanged (no weakening, no new
+  axioms, no `sorry`). The integration-tree build with `Avx2State`
+  present cannot be reproduced in this clone (stale base, no network);
+  the namespacing argument above is structural, not empirical.
+- No claim about the full source/binary chain is made. Fresh
+  independent review of the changed commit is required.
+
 ## Status: DONE (green)
 
 - Last `./lean-probe grammatik/Grammatik/X86/Avx2Join.lean`: **0 errors**.

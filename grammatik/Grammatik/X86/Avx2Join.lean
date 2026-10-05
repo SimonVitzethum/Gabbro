@@ -39,6 +39,12 @@ import Grammatik.X86.Gleitprofil
 
 namespace Gabbro.Grammatik.X86
 
+/-! Lane-1265 join namespace: every declaration below lives under
+    `Avx2Join`, so the sibling AVX2 pieces (`Avx2Vex`, `Avx2State`,
+    `Avx2Mem`) can use the natural witness names without collision
+    (integration repair: `Avx2State` owns top-level `avxWitS0_wf`). -/
+namespace Avx2Join
+
 /-- The sixteen AVX2 vector registers. `HwKern` has no YMM slot, so the
     join carries its own file beside `HwMaschine` (see `Avx2Maschine`). -/
 inductive YmmReg where
@@ -1348,5 +1354,7 @@ theorem avx2Wit_zeuge :
 #print axioms avxWit_fehl_ausgerichtet
 #print axioms avxWit_sll_b8_aus
 #print axioms avx2Wit_zeuge
+
+end Avx2Join
 
 end Gabbro.Grammatik.X86
