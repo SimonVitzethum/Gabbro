@@ -278,4 +278,238 @@ theorem stapelLadeWort_still (s : TSOZustand) (c : Nat) (a : Adresse)
   rw [r0, r1, r2, r3, r4, r5, r6, r7]
   simp
 
+/-! ## 3. Exact byte embedding into `HwSchritt`.
+
+  Every buffered byte is one `gibAus` event, every observed byte one
+  `lade` event: the family rides the coherent machine step for step,
+  never beside it. -/
+
+/-- A buffered stack byte IS a machine store-issue event. -/
+theorem stapelByte_ausgabe (m : HwMaschine) (c : Nat) (a : Adresse)
+    (b : Byte) (s' : TSOZustand)
+    (h : issueByte (tsoAnsicht m) c a b = some s') :
+    HwSchritt m (setTso m s') (.schreibAusgabe c a b) :=
+  .gibAus c a b s' h
+
+/-- An observed stack byte IS a machine load event. -/
+theorem stapelByte_beob (m : HwMaschine) (c : Nat) (a : Adresse)
+    (b : Byte) (h : loadByte (tsoAnsicht m) c a = some b) :
+    HwSchritt m m (.leseBeob c a b) :=
+  .lade c a b h
+
+/-- Machine-step reachability: the reflexive-transitive closure of
+    `HwSchritt` over a silent event trace. -/
+inductive HwStern : HwMaschine → HwMaschine → Prop where
+  | refl (m : HwMaschine) : HwStern m m
+  | step (m m1 m2 : HwMaschine) (e : HwEreignis) :
+      HwSchritt m m1 e → HwStern m1 m2 → HwStern m m2
+
+/-- A folded word issue is a chain of machine store-issue steps: the
+    buffered word reaches the machine in eight `HwSchritt` events. -/
+theorem issueListe_stern (m : HwMaschine) (c : Nat) (l : List TSOEintrag)
+    (s s' : TSOZustand) (h : issueListe s c l = some s') :
+    HwStern (setTso m s) (setTso m s') := by
+  induction l generalizing s with
+  | nil =>
+    simp only [issueListe] at h
+    cases h
+    exact .refl _
+  | cons e rest ih =>
+    unfold issueListe at h
+    cases h1 : issueByte s c e.addr e.wert with
+    | none =>
+      rw [h1] at h
+      cases h
+    | some s1 =>
+      rw [h1] at h
+      have ihh := ih s1 h
+      have hstep : HwSchritt (setTso m s) (setTso m s1)
+          (.schreibAusgabe c e.addr e.wert) := by
+        apply HwSchritt.gibAus c e.addr e.wert s1
+        rw [setTso_ansicht]
+        exact h1
+      exact .step _ _ _ _ hstep ihh
+
+/-- A buffered push reaches the machine in eight store-issue steps. -/
+theorem stapelPush_stern (m : HwMaschine) (c : Nat) (v : Wort)
+    (m' : HwMaschine) (h : stapelPush m c v = some m') :
+    HwStern m m' := by
+  unfold stapelPush hwWortAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c
+      (wortEintraege (stapelSlot m c) v) with
+  | none =>
+    rw [h1] at h
+    cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    have hs := issueListe_stern m c (wortEintraege (stapelSlot m c) v)
+      (tsoAnsicht m) s' h1
+    have hrefl : setTso m (tsoAnsicht m) = m := by
+      cases m with
+      | mk mem kerne puffer hw bereit => rfl
+    rw [hrefl] at hs
+    exact hs
+
+/-- A buffered call spill reaches the machine in eight steps. -/
+theorem stapelCall_stern (m : HwMaschine) (c : Nat) (ret : Wort)
+    (m' : HwMaschine) (h : stapelCall m c ret = some m') :
+    HwStern m m' := by
+  unfold stapelCall hwWortAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c
+      (wortEintraege (stapelSlot m c) ret) with
+  | none =>
+    rw [h1] at h
+    cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    have hs := issueListe_stern m c (wortEintraege (stapelSlot m c) ret)
+      (tsoAnsicht m) s' h1
+    have hrefl : setTso m (tsoAnsicht m) = m := by
+      cases m with
+      | mk mem kerne puffer hw bereit => rfl
+    rw [hrefl] at hs
+    exact hs
+
+/-! ## 4. Duties and refusals.
+
+  The call gate is the accepted alignment duty as a stated premise: an
+  aligned site buffers the return word, a misaligned site refuses
+  loudly. The spill-privacy duty keeps the sequential fetch: a slot
+  spill foreign to the code window preserves the fetched bytes through
+  the accepted preservation lemma. A guard slot refuses the issue, an
+  unreadable slot refuses the observation. -/
+
+/-- ALIGNED CALL PASSES: at an aligned call site the adapter buffers
+    the return word. The alignment premise discharges the gate. -/
+theorem stapelRuf_ausgerichtet (m : HwMaschine) (c : Nat) (ret : Wort)
+    (hali : rufAlignOk (projZustand m c) = true) :
+    stapelAdapter.schritt m c (.ruf ret) = stapelCall m c ret := by
+  show (if rufAlignOk (projZustand m c) then stapelCall m c ret
+    else none) = _
+  rw [if_pos hali]
+
+/-- MISALIGNED CALL REFUSES: at a misaligned call site the adapter
+    loudly refuses instead of spilling. The misalignment feeds the
+    gate directly. -/
+theorem stapelRuf_fehlalign (m : HwMaschine) (c : Nat) (ret : Wort)
+    (hmis : rufAlignOk (projZustand m c) = false) :
+    stapelAdapter.schritt m c (.ruf ret) = none := by
+  show (if rufAlignOk (projZustand m c) then stapelCall m c ret
+    else none) = _
+  simp [hmis]
+
+/-- A successful pop observation moves no state. -/
+theorem stapelAdapter_pop_still (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Wort) (h : stapelLadeWort (tsoAnsicht m) c a = some v) :
+    stapelAdapter.schritt m c (.pop a) = some m := by
+  show (match stapelLadeWort (tsoAnsicht m) c a with
+    | some _ => some m | none => none) = _
+  rw [h]
+
+/-- A successful return observation moves no state. -/
+theorem stapelAdapter_ret_still (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Wort) (h : stapelLadeWort (tsoAnsicht m) c a = some v) :
+    stapelAdapter.schritt m c (.ret a) = some m := by
+  show (match stapelLadeWort (tsoAnsicht m) c a with
+    | some _ => some m | none => none) = _
+  rw [h]
+
+/-- SPILL PRIVACY KEEPS THE FETCH: the sequential shadow of a slot
+    store foreign to the code window preserves the fetched bytes, by
+    the accepted preservation lemma. The privacy premise is the
+    disjointness the lemma consumes. -/
+theorem stapelSpill_fetch_bleibt (s : Zustand) (a : Adresse) (v : Wort)
+    (m' : Speicher) (hwr : write64 s.speicher a v = some m')
+    (hpriv : CodeFremd s a) :
+    geholt { s with speicher := m' } = geholt s :=
+  geholt_nach_fremd_schreiben s m' a v hwr hpriv
+
+/-- A refused first byte refuses the whole word fold. -/
+theorem issueListe_cons_none (s : TSOZustand) (c : Nat) (e : TSOEintrag)
+    (rest : List TSOEintrag)
+    (h : issueByte s c e.addr e.wert = none) :
+    issueListe s c (e :: rest) = none := by
+  unfold issueListe
+  rw [h]
+
+/-- GUARD PUSH REFUSES: a slot whose first byte is not writable admits
+    no buffered push. The denial fails the very first byte issue, so
+    the whole word fold refuses. -/
+theorem stapelPush_wache (m : HwMaschine) (c : Nat) (v : Wort)
+    (hguard : m.mem.schreibbar (stapelSlot m c) = false) :
+    stapelPush m c v = none := by
+  unfold stapelPush hwWortAusgabe
+  have hfirst : issueByte (tsoAnsicht m) c (addrOff (stapelSlot m c) 0)
+      (wortByte v 0) = none :=
+    issue_verweigert _ _ _ _ (by rw [addrOff_null]; exact hguard)
+  have hcons : wortEintraege (stapelSlot m c) v =
+      ⟨addrOff (stapelSlot m c) 0, wortByte v 0⟩ ::
+      [⟨addrOff (stapelSlot m c) 1, wortByte v 1⟩,
+       ⟨addrOff (stapelSlot m c) 2, wortByte v 2⟩,
+       ⟨addrOff (stapelSlot m c) 3, wortByte v 3⟩,
+       ⟨addrOff (stapelSlot m c) 4, wortByte v 4⟩,
+       ⟨addrOff (stapelSlot m c) 5, wortByte v 5⟩,
+       ⟨addrOff (stapelSlot m c) 6, wortByte v 6⟩,
+       ⟨addrOff (stapelSlot m c) 7, wortByte v 7⟩] := rfl
+  have hfold : issueListe (tsoAnsicht m) c
+      (⟨addrOff (stapelSlot m c) 0, wortByte v 0⟩ ::
+      [⟨addrOff (stapelSlot m c) 1, wortByte v 1⟩,
+       ⟨addrOff (stapelSlot m c) 2, wortByte v 2⟩,
+       ⟨addrOff (stapelSlot m c) 3, wortByte v 3⟩,
+       ⟨addrOff (stapelSlot m c) 4, wortByte v 4⟩,
+       ⟨addrOff (stapelSlot m c) 5, wortByte v 5⟩,
+       ⟨addrOff (stapelSlot m c) 6, wortByte v 6⟩,
+       ⟨addrOff (stapelSlot m c) 7, wortByte v 7⟩]) = none :=
+    issueListe_cons_none _ _ _ _ hfirst
+  rw [hcons, hfold]
+
+/-- GUARD CALL REFUSES: a slot whose first byte is not writable admits
+    no buffered call spill, for the same first-byte reason. -/
+theorem stapelCall_wache (m : HwMaschine) (c : Nat) (ret : Wort)
+    (hguard : m.mem.schreibbar (stapelSlot m c) = false) :
+    stapelCall m c ret = none := by
+  unfold stapelCall hwWortAusgabe
+  have hfirst : issueByte (tsoAnsicht m) c (addrOff (stapelSlot m c) 0)
+      (wortByte ret 0) = none :=
+    issue_verweigert _ _ _ _ (by rw [addrOff_null]; exact hguard)
+  have hcons : wortEintraege (stapelSlot m c) ret =
+      ⟨addrOff (stapelSlot m c) 0, wortByte ret 0⟩ ::
+      [⟨addrOff (stapelSlot m c) 1, wortByte ret 1⟩,
+       ⟨addrOff (stapelSlot m c) 2, wortByte ret 2⟩,
+       ⟨addrOff (stapelSlot m c) 3, wortByte ret 3⟩,
+       ⟨addrOff (stapelSlot m c) 4, wortByte ret 4⟩,
+       ⟨addrOff (stapelSlot m c) 5, wortByte ret 5⟩,
+       ⟨addrOff (stapelSlot m c) 6, wortByte ret 6⟩,
+       ⟨addrOff (stapelSlot m c) 7, wortByte ret 7⟩] := rfl
+  have hfold : issueListe (tsoAnsicht m) c
+      (⟨addrOff (stapelSlot m c) 0, wortByte ret 0⟩ ::
+      [⟨addrOff (stapelSlot m c) 1, wortByte ret 1⟩,
+       ⟨addrOff (stapelSlot m c) 2, wortByte ret 2⟩,
+       ⟨addrOff (stapelSlot m c) 3, wortByte ret 3⟩,
+       ⟨addrOff (stapelSlot m c) 4, wortByte ret 4⟩,
+       ⟨addrOff (stapelSlot m c) 5, wortByte ret 5⟩,
+       ⟨addrOff (stapelSlot m c) 6, wortByte ret 6⟩,
+       ⟨addrOff (stapelSlot m c) 7, wortByte ret 7⟩]) = none :=
+    issueListe_cons_none _ _ _ _ hfirst
+  rw [hcons, hfold]
+
+/-- UNREADABLE POP REFUSES: a slot whose first byte is not readable
+    admits no pop observation. The denial fails the first byte load. -/
+theorem stapelPop_unlesbar (s : TSOZustand) (c : Nat) (a : Adresse)
+    (hguard : s.mem.lesbar (addrOff a 0) = false) :
+    stapelLadeWort s c a = none := by
+  unfold stapelLadeWort
+  have hfirst : loadByte s c (addrOff a 0) = none :=
+    load_verweigert s c (addrOff a 0) hguard
+  rw [hfirst]
+
+/-- UNREADABLE RETURN REFUSES: the same first-byte denial refuses the
+    return observation. -/
+theorem stapelRet_unlesbar (s : TSOZustand) (c : Nat) (a : Adresse)
+    (hguard : s.mem.lesbar (addrOff a 0) = false) :
+    stapelLadeWort s c a = none :=
+  stapelPop_unlesbar s c a hguard
+
 end Gabbro.Grammatik.X86
