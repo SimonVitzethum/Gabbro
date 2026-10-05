@@ -221,6 +221,271 @@ theorem uebersetze_frisch_flach_schreibbar (st : SeitenSteuerung)
   ⟨uebersetze_frisch_ok st tab tlb a physR hAlign hMiss hRead,
     gangOk_flach_schreibbar st tab m _ phys hcons h rfl⟩
 
+/-! ## 5. Machine connection: adapter plug and extended steps.
+
+  No translation admits a `HwMaschine` successor: faults have none
+  by construction (the same reason `adapterFehler1123` refuses), and
+  accessed/dirty updates touch the tables, which live outside
+  `HwMaschine`. Translation behaviour lives in
+  `HwUebersetzSchritt` over machine-plus-tables-plus-TLBs,
+  embedding `HwSchritt` exactly. -/
+
+/-- The translation adapter: the refused default. No translation
+    admits a machine successor state. -/
+def adapterUebersetz : HwAdapter SeitenAnfrage := verweigertAdapter _
+
+/-- The translation adapter admits nothing. -/
+theorem adapterUebersetz_verweigert (m : HwMaschine) (c : Nat)
+    (q : SeitenAnfrage) :
+    adapterUebersetz.schritt m c q = none := rfl
+
+/-- Joined state: the coherent machine plus control state, tables,
+    and per-core TLBs. -/
+structure UebersetzZustand where
+  hw : HwMaschine
+  steuer : SeitenSteuerung
+  tabellen : Nat → Wort
+  tlb : Nat → List TlbEintrag
+
+/-- Joined events: the old events, INVLPG, CR3 write, a fresh
+    walk-through access, a stale TLB-hit use, and a walk fault. -/
+inductive UebersetzEreignis where
+  | alt : HwEreignis → UebersetzEreignis
+  | invlpg : Nat → Adresse → UebersetzEreignis
+  | cr3 : Nat → UebersetzEreignis
+  | zugriffOk : Nat → SeitenAnfrage → Nat → UebersetzEreignis
+  | zugriffAlt : Nat → SeitenAnfrage → Nat → UebersetzEreignis
+  | zugriffPf : Nat → SeitenAnfrage → Nat → PfFehlerCode →
+      UebersetzEreignis
+  deriving DecidableEq, Repr
+
+/-- One joined step: the embedded old step (translation state kept),
+    INVLPG / CR3 write on one core's TLB, a fresh access (miss: the
+    walk runs and writes back accessed/dirty), a stale use (hit:
+    the walk is not consulted, tables kept), or a walk fault
+    (a self-loop carrying address and error code). -/
+inductive HwUebersetzSchritt :
+    UebersetzZustand → UebersetzZustand → UebersetzEreignis → Prop where
+  | einbettet {s : UebersetzZustand} {m' : HwMaschine} {e : HwEreignis}
+      (h : HwSchritt s.hw m' e) :
+      HwUebersetzSchritt s ⟨m', s.steuer, s.tabellen, s.tlb⟩ (.alt e)
+  | invlpg {s : UebersetzZustand} (c : Nat) (a : Adresse) :
+      HwUebersetzSchritt s
+        ⟨s.hw, s.steuer, s.tabellen,
+          fun d => if d = c then tlbEntfernen (s.tlb c) (seitenNr a)
+            else s.tlb d⟩
+        (.invlpg c a)
+  | cr3 {s : UebersetzZustand} (c : Nat) :
+      HwUebersetzSchritt s
+        ⟨s.hw, s.steuer, s.tabellen,
+          fun d => if d = c then tlbCr3Spuelung (s.tlb c)
+            else s.tlb d⟩
+        (.cr3 c)
+  | frisch {s : UebersetzZustand} {c : Nat} {q : SeitenAnfrage}
+      {phys : Nat} {tab' : Nat → Wort}
+      (hMiss : tlbSuche (s.tlb c) (q.linear / 4096) = none)
+      (h : (seitenGang s.steuer s.tabellen q).1 = .ok phys)
+      (ht : (seitenGang s.steuer s.tabellen q).2 = tab') :
+      HwUebersetzSchritt s ⟨s.hw, s.steuer, tab', s.tlb⟩
+        (.zugriffOk c q phys)
+  | veraltet {s : UebersetzZustand} {c : Nat} {q : SeitenAnfrage}
+      {r : Nat}
+      (hHit : tlbSuche (s.tlb c) (q.linear / 4096) = some r) :
+      HwUebersetzSchritt s s (.zugriffAlt c q r)
+  | fehler {s : UebersetzZustand} {c : Nat} {q : SeitenAnfrage}
+      {a : Nat} {code : PfFehlerCode}
+      (hMiss : tlbSuche (s.tlb c) (q.linear / 4096) = none)
+      (h : (seitenGang s.steuer s.tabellen q).1 = .seitenFehler a code) :
+      HwUebersetzSchritt s s (.zugriffPf c q a code)
+
+/-- FORWARD embedding: every old step is a joined step. -/
+theorem hwUebersetzSchritt_einbettung_vor (s : UebersetzZustand)
+    (m' : HwMaschine) (e : HwEreignis)
+    (h : HwSchritt s.hw m' e) :
+    HwUebersetzSchritt s ⟨m', s.steuer, s.tabellen, s.tlb⟩ (.alt e) :=
+  .einbettet h
+
+/-- BACKWARD embedding, exact: an `.alt` step comes only from the
+    old step with the same event. -/
+theorem hwUebersetzSchritt_alt_invert (s t : UebersetzZustand)
+    (e : HwEreignis) (h : HwUebersetzSchritt s t (.alt e)) :
+    ∃ m', t.hw = m' ∧ t.tabellen = s.tabellen ∧
+      HwSchritt s.hw m' e := by
+  cases h with
+  | einbettet hstep => exact ⟨_, rfl, rfl, hstep⟩
+
+/-- An `.alt` step over the reached target is the old step. -/
+theorem hwUebersetzSchritt_einbettung_zurueck (s : UebersetzZustand)
+    (m' : HwMaschine) (e : HwEreignis)
+    (h : HwUebersetzSchritt s ⟨m', s.steuer, s.tabellen, s.tlb⟩
+      (.alt e)) :
+    HwSchritt s.hw m' e := by
+  obtain ⟨m'', hm, _, hstep⟩ := hwUebersetzSchritt_alt_invert s _ e h
+  subst hm
+  exact hstep
+
+/-- A fresh step carries its walk equation. -/
+theorem zugriffOk_invert_gang (s t : UebersetzZustand) (c : Nat)
+    (q : SeitenAnfrage) (phys : Nat)
+    (h : HwUebersetzSchritt s t (.zugriffOk c q phys)) :
+    (seitenGang s.steuer s.tabellen q).1 = .ok phys := by
+  cases h with
+  | frisch hMiss h ht => exact h
+
+/-- A fresh step carries its miss. -/
+theorem zugriffOk_invert_miss (s t : UebersetzZustand) (c : Nat)
+    (q : SeitenAnfrage) (phys : Nat)
+    (h : HwUebersetzSchritt s t (.zugriffOk c q phys)) :
+    tlbSuche (s.tlb c) (q.linear / 4096) = none := by
+  cases h with
+  | frisch hMiss h ht => exact hMiss
+
+/-- A stale step carries its hit: the walk equation is absent. -/
+theorem zugriffAlt_invert_hit (s t : UebersetzZustand) (c : Nat)
+    (q : SeitenAnfrage) (r : Nat)
+    (h : HwUebersetzSchritt s t (.zugriffAlt c q r)) :
+    tlbSuche (s.tlb c) (q.linear / 4096) = some r := by
+  cases h with
+  | veraltet hHit => exact hHit
+
+/-- A stale step never moves the state. -/
+theorem hwUebersetzSchritt_veraltet_still (s s' : UebersetzZustand)
+    (c : Nat) (q : SeitenAnfrage) (r : Nat)
+    (h : HwUebersetzSchritt s s' (.zugriffAlt c q r)) : s' = s := by
+  cases h
+  rfl
+
+/-- A fault step carries its walk equation. -/
+theorem zugriffPf_invert_gang (s t : UebersetzZustand) (c : Nat)
+    (q : SeitenAnfrage) (a : Nat) (code : PfFehlerCode)
+    (h : HwUebersetzSchritt s t (.zugriffPf c q a code)) :
+    (seitenGang s.steuer s.tabellen q).1 = .seitenFehler a code := by
+  cases h with
+  | fehler hMiss h => exact h
+
+/-- A fault step carries its miss. -/
+theorem zugriffPf_invert_miss (s t : UebersetzZustand) (c : Nat)
+    (q : SeitenAnfrage) (a : Nat) (code : PfFehlerCode)
+    (h : HwUebersetzSchritt s t (.zugriffPf c q a code)) :
+    tlbSuche (s.tlb c) (q.linear / 4096) = none := by
+  cases h with
+  | fehler hMiss h => exact hMiss
+
+/-- A fault step never moves the state. -/
+theorem hwUebersetzSchritt_fehler_still (s s' : UebersetzZustand)
+    (c : Nat) (q : SeitenAnfrage) (a : Nat) (code : PfFehlerCode)
+    (h : HwUebersetzSchritt s s' (.zugriffPf c q a code)) :
+    s' = s := by
+  cases h
+  rfl
+
+/-- Every joined step preserves machine well-formedness: old steps
+    by the accepted preservation, all family steps because the
+    machine profiles are kept. -/
+theorem hwUebersetzSchritt_wf (s s' : UebersetzZustand)
+    (e : UebersetzEreignis) (h : HwUebersetzSchritt s s' e)
+    (hwf : HwWf s.hw) : HwWf s'.hw := by
+  cases h with
+  | einbettet hstep => exact hwSchritt_wf _ _ _ hstep hwf
+  | invlpg c a => exact hwf
+  | cr3 c => exact hwf
+  | frisch hMiss h ht => exact hwf
+  | veraltet hHit => exact hwf
+  | fehler hMiss h => exact hwf
+
+/-- A refused large page admits no joined access step at all. -/
+theorem uebersetzGross_verweigert (s s' : UebersetzZustand)
+    (c : Nat) (q : SeitenAnfrage) (a phys : Nat) (a' : Nat)
+    (code : PfFehlerCode)
+    (hg : (seitenGang s.steuer s.tabellen q).1 = .grossVerweigert a) :
+    ¬ HwUebersetzSchritt s s' (.zugriffOk c q phys) ∧
+      ¬ HwUebersetzSchritt s s' (.zugriffPf c q a' code) := by
+  refine ⟨?_, ?_⟩
+  · intro hstep
+    have hok := zugriffOk_invert_gang s s' c q phys hstep
+    rw [hg] at hok
+    cases hok
+  · intro hstep
+    have hpf := zugriffPf_invert_gang s s' c q a' code hstep
+    rw [hg] at hpf
+    cases hpf
+
+/-- An armed SMEP/SMAP configuration admits no joined access step. -/
+theorem uebersetzSteuer_verweigert (s s' : UebersetzZustand)
+    (c : Nat) (q : SeitenAnfrage) (phys : Nat) (a' : Nat)
+    (code : PfFehlerCode)
+    (hg : (seitenGang s.steuer s.tabellen q).1 = .steuerVerweigert) :
+    ¬ HwUebersetzSchritt s s' (.zugriffOk c q phys) ∧
+      ¬ HwUebersetzSchritt s s' (.zugriffPf c q a' code) := by
+  refine ⟨?_, ?_⟩
+  · intro hstep
+    have hok := zugriffOk_invert_gang s s' c q phys hstep
+    rw [hg] at hok
+    cases hok
+  · intro hstep
+    have hpf := zugriffPf_invert_gang s s' c q a' code hstep
+    rw [hg] at hpf
+    cases hpf
+
+/-- A noncanonical address admits no joined access step. -/
+theorem uebersetzGp_verweigert (s s' : UebersetzZustand) (c : Nat)
+    (q : SeitenAnfrage) (a phys : Nat) (a' : Nat) (code : PfFehlerCode)
+    (hg : (seitenGang s.steuer s.tabellen q).1 = .gpFehler a) :
+    ¬ HwUebersetzSchritt s s' (.zugriffOk c q phys) ∧
+      ¬ HwUebersetzSchritt s s' (.zugriffPf c q a' code) := by
+  refine ⟨?_, ?_⟩
+  · intro hstep
+    have hok := zugriffOk_invert_gang s s' c q phys hstep
+    rw [hg] at hok
+    cases hok
+  · intro hstep
+    have hpf := zugriffPf_invert_gang s s' c q a' code hstep
+    rw [hg] at hpf
+    cases hpf
+
+/-- A stale hit admits no FRESH step: the walk is not run twice. -/
+theorem uebersetzSchritt_frisch_braucht_miss (s t : UebersetzZustand)
+    (c : Nat) (q : SeitenAnfrage) (phys r : Nat)
+    (hHit : tlbSuche (s.tlb c) (q.linear / 4096) = some r) :
+    ¬ HwUebersetzSchritt s t (.zugriffOk c q phys) := by
+  intro hstep
+  have hMiss := zugriffOk_invert_miss s t c q phys hstep
+  rw [hHit] at hMiss
+  cases hMiss
+
+/-- A miss admits no STALE step: without a hit nothing is stale. -/
+theorem uebersetzSchritt_veraltet_braucht_treffer (s t : UebersetzZustand)
+    (c : Nat) (q : SeitenAnfrage) (r : Nat)
+    (hMiss : tlbSuche (s.tlb c) (q.linear / 4096) = none) :
+    ¬ HwUebersetzSchritt s t (.zugriffAlt c q r) := by
+  intro hstep
+  have hHit := zugriffAlt_invert_hit s t c q r hstep
+  rw [hMiss] at hHit
+  cases hHit
+
+/-- AGREEMENT: an INVLPG step drops exactly the page on its core
+    and keeps machine, control and tables. -/
+theorem uebersetz_invlpg_vereinbarung (s : UebersetzZustand)
+    (c : Nat) (a : Adresse) :
+    ∃ t, HwUebersetzSchritt s t (.invlpg c a) ∧
+      t.tlb c = tlbEntfernen (s.tlb c) (seitenNr a) ∧
+      t.hw = s.hw ∧ t.tabellen = s.tabellen := by
+  refine ⟨⟨s.hw, s.steuer, s.tabellen,
+    fun d => if d = c then tlbEntfernen (s.tlb c) (seitenNr a)
+      else s.tlb d⟩, .invlpg c a, ?_, rfl, rfl⟩
+  simp
+
+/-- AGREEMENT: a CR3 step flushes exactly its core and keeps the
+    rest. -/
+theorem uebersetz_cr3_vereinbarung (s : UebersetzZustand) (c : Nat) :
+    ∃ t, HwUebersetzSchritt s t (.cr3 c) ∧
+      t.tlb c = tlbCr3Spuelung (s.tlb c) ∧
+      t.hw = s.hw ∧ t.tabellen = s.tabellen := by
+  refine ⟨⟨s.hw, s.steuer, s.tabellen,
+    fun d => if d = c then tlbCr3Spuelung (s.tlb c) else s.tlb d⟩,
+    .cr3 c, ?_, rfl, rfl⟩
+  simp
+
 /- CUTS (skeleton):
    Proved here: the join definitions `walkLesen`/`uebersetzeMitTlb`.
    NOT proved yet: stale/fresh agreement, INVLPG/CR3 effects, flat
