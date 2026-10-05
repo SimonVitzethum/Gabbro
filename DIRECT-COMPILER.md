@@ -628,7 +628,7 @@ Last ledger refresh: **2026-10-05 14:17 UTC**. This is an operational snapshot, 
 | 1139 | Stack, call and return per core through TSO | Merged after review/checks | 1140: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1139.md) |
 | 1141 | ISA-strand families (compact/core/cond) on the coherent machine | Merged after review/checks | 1142: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1141.md) |
 | 1143 | TSO to W bridge: fragment READS | Merged after review/checks | 1144: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1143.md) |
-| 1145 | TSO to W bridge: LOCK/RMW steps | Committed candidate; review/integration pending | 1146: Committed candidate; review/integration pending | [task](lanes/1145.md) |
+| 1145 | TSO to W bridge: LOCK/RMW steps | Merged after review/checks | 1146: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1145.md) |
 | 1147 | Whole-word atomicity of guarded aligned accesses | Merged after review/checks | 1148: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1147.md) |
 | 1149 | Capstone: one coherent machine over all accepted families | Waiting for accepted dependencies | 1150: scheduled | [task](lanes/1149.md) |
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Merged after review/checks | 1152: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1151.md) |
@@ -1513,6 +1513,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1181**, Nested interrupt delivery, #DF and handler entry, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1181.md). <!-- x86-merged:1181 -->
 - 2026-10-05: lane **1182**, Independent exact review of 1181, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1182.md). <!-- x86-merged:1182 -->
 - 2026-10-05: publication batch checks passed for `de94b21c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1145**, TSO to W bridge: LOCK/RMW steps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1145.md). <!-- x86-merged:1145 -->
+- 2026-10-05: checked master `94e4eed3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:94e4eed33a5aecb72c36f14c82c238d220289fb0 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
