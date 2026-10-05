@@ -670,7 +670,7 @@ Last ledger refresh: **2026-10-05 15:11 UTC**. This is an operational snapshot, 
 | 1223 | valX86_sound for the decidable part | Merged after review/checks | 1224: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1223.md) |
 | 1225 | Faults and interrupts against the store buffer: precise exceptions | Merged after review/checks | 1226: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1225.md) |
 | 1227 | Pipeline spills: variable homing and live-range splitting | Committed candidate; review/integration pending | 1228: Unresolved after agent rounds; not accepted | [task](lanes/1227.md) |
-| 1229 | Pipeline calls: multi-statement callee bodies | Merged after review/checks | 1230: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1229.md) |
+| 1229 | Pipeline calls: multi-statement callee bodies | Merged after review/checks | 1230: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1229.md) |
 | 1231 | Pipeline tables: byte slices | Committed candidate; review/integration pending | 1232: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1231.md) |
 | 1233 | Pipeline work bounds for branches and loops | Committed candidate; review/integration pending | 1234: Committed candidate; review/integration pending | [task](lanes/1233.md) |
 | 1235 | Profiles: multi-step control flow and relocation re-decode | Committed candidate; review/integration pending | 1236: Incomplete; preserved | [task](lanes/1235.md) |
@@ -1584,6 +1584,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1225**, Faults and interrupts against the store buffer: precise exceptions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1225.md). <!-- x86-merged:1225 -->
 - 2026-10-05: lane **1226**, Independent exact review of 1225, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1226.md). <!-- x86-merged:1226 -->
 - 2026-10-05: lane **1229**, Pipeline calls: multi-statement callee bodies, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1229.md). <!-- x86-merged:1229 -->
+- 2026-10-05: lane **1230**, Independent exact review of 1229, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1230.md). <!-- x86-merged:1230 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
