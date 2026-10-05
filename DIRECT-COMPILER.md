@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 15:09 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 15:10 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -666,7 +666,7 @@ Last ledger refresh: **2026-10-05 15:09 UTC**. This is an operational snapshot, 
 | 1215 | From W runs to the GX refinement: the missing target leg | Merged after review/checks | 1216: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1215.md) |
 | 1217 | Pipeline atomics: execBlock correspondence | Committed candidate; review/integration pending | 1218: Committed candidate; review/integration pending | [task](lanes/1217.md) |
 | 1219 | Pipeline: derive per-chunk runs from the lowering alone | Merged after review/checks | 1220: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1219.md) |
-| 1221 | Linking: rel8 selection convergence and fall-through coverage | Committed candidate; review/integration pending | 1222: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1221.md) |
+| 1221 | Linking: rel8 selection convergence and fall-through coverage | Merged after review/checks | 1222: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1221.md) |
 | 1223 | valX86_sound for the decidable part | Committed candidate; review/integration pending | 1224: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1223.md) |
 | 1225 | Faults and interrupts against the store buffer: precise exceptions | Committed candidate; review/integration pending | 1226: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1225.md) |
 | 1227 | Pipeline spills: variable homing and live-range splitting | Committed candidate; review/integration pending | 1228: Unresolved after agent rounds; not accepted | [task](lanes/1227.md) |
@@ -686,7 +686,7 @@ Last ledger refresh: **2026-10-05 15:09 UTC**. This is an operational snapshot, 
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Agent working | 1256: scheduled | [task](lanes/1255.md) |
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Agent working | 1258: scheduled | [task](lanes/1257.md) |
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Agent working | 1260: scheduled | [task](lanes/1259.md) |
-| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Prepared | 1262: scheduled | [task](lanes/1261.md) |
+| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Agent working | 1262: scheduled | [task](lanes/1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Scheduled | 1264: scheduled | [task](lanes/1263.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1577,6 +1577,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1216**, Independent exact review of 1215, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1216.md). <!-- x86-merged:1216 -->
 - 2026-10-05: lane **1219**, Pipeline: derive per-chunk runs from the lowering alone, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1219.md). <!-- x86-merged:1219 -->
 - 2026-10-05: lane **1220**, Independent exact review of 1219, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1220.md). <!-- x86-merged:1220 -->
+- 2026-10-05: lane **1221**, Linking: rel8 selection convergence and fall-through coverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1221.md). <!-- x86-merged:1221 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
