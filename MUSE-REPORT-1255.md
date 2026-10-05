@@ -74,10 +74,37 @@ Two named predecessors do not exist in this tree: lane 1229's
 `istDreiPlus` covers every all-assignment body of length three or more
 (pairs only by refusal here), induction runs on the `Block` itself
 (fuel + `cases`, since `Block` is mutually inductive), and chunk-run
-composition reuses `PipelineBlockInduct.KetteLauf`/`ketteLauf_lauf`
+composition reuses `PipelineBlockInduct` (`KetteLauf`, `ketteLauf_lauf`)
 (load-bearing in the joint witness). A `pipeline_refuses_*` correspondence
 in the style of `pipeline_refuses` (failed-check route to a refusal exit)
 is not included: all-assignment bodies cannot fail a check
 (`senkBlock_ausgang` admits only `ok`/`grund`, and no `pruefung` lowers
 here), so there is no refusal exit to reach; the refusal side is covered
 by the four validator refusals plus four poison probes instead.
+
+## Addendum: independent review 1256 (procedural REPAIR, no substance)
+
+Review lane 1256 returned VERDICT: REPAIR against candidate
+`f51af8d268cf0416f1084c68cb9004a816f02785`, judging REVIEWABILITY only:
+the pinned commit had no objects inside the reviewer clone
+(`/home/simon/Dokumente/gabbro-muse/a1256`), so zero checklist items were
+executed and NO defect in `PipelineCallsN.lean`, its proofs, its witness,
+or this report is claimed there.
+
+Response from lane 1255:
+
+- No substantive finding exists to resolve, so no Lean change was made:
+  editing green proved code without a finding would be change for its own
+  sake. Source guarantees are unweakened (nothing touched), no desired
+  correctness is assumed, and no claim is overstated.
+- The candidate was re-verified fresh in its own clone/branch
+  (`/home/simon/Dokumente/gabbro-muse/a1255`, `muse/1255`):
+  `./lean-probe grammatik/Grammatik/X86/PipelineCallsN.lean` reports
+  `0 error(s)`; `./lean-bau` reports
+  `Build completed successfully (644 jobs).`
+- The fetchability blocker is coordinator infrastructure (shipping the
+  candidate objects into the reviewer clone before dispatching exact
+  reviews), outside this lane's owned files and unreachable under HARD
+  RULES (no push, no network, nothing outside this directory). Resubmission
+  with the pinned commit readable in the reviewer clone can proceed
+  straight to the content checklist; this candidate needs no repair first.
