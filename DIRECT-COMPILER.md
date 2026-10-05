@@ -669,7 +669,7 @@ Last ledger refresh: **2026-10-05 17:30 UTC**. This is an operational snapshot, 
 | 1221 | Linking: rel8 selection convergence and fall-through coverage | Merged after review/checks | 1222: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1221.md) |
 | 1223 | valX86_sound for the decidable part | Merged after review/checks | 1224: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1223.md) |
 | 1225 | Faults and interrupts against the store buffer: precise exceptions | Merged after review/checks | 1226: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1225.md) |
-| 1227 | Pipeline spills: variable homing and live-range splitting | Merged after review/checks | 1228: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1227.md) |
+| 1227 | Pipeline spills: variable homing and live-range splitting | Merged after review/checks | 1228: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1227.md) |
 | 1229 | Pipeline calls: multi-statement callee bodies | Merged after review/checks | 1230: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1229.md) |
 | 1231 | Pipeline tables: byte slices | Committed candidate; review/integration pending | 1232: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1231.md) |
 | 1233 | Pipeline work bounds for branches and loops | Merged after review/checks | 1234: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1233.md) |
@@ -1650,6 +1650,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1175**, Finite and infinite execution soundness of the pipeline, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1175.md). <!-- x86-merged:1175 -->
 - 2026-10-05: lane **1176**, Independent exact review of 1175, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1176.md). <!-- x86-merged:1176 -->
 - 2026-10-05: lane **1227**, Pipeline spills: variable homing and live-range splitting, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1227.md). <!-- x86-merged:1227 -->
+- 2026-10-05: lane **1228**, Independent exact review of 1227, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1228.md). <!-- x86-merged:1228 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
