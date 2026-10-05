@@ -1365,9 +1365,171 @@ theorem rotRoundtrip_reg_imm64 (o : RotOp) (dst : Register)
       rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
       rotOpcode, rotImmTail, rotLaenge, (byteNat_natByte_of_lt n h)]
 
+/-! ## 7b. Memory round trips through the displacement.
+
+    Register and memory share the ModRM layer; memory adds the
+    little-endian disp32 (and the pilot SIB byte) parsed back by
+    `parseLe32_cons`. One theorem per width and count source keeps
+    each command inside the heartbeat budget. -/
+
+/-- Round trip for by-one memory forms, 8-bit width. -/
+theorem rotRoundtrip_mem_eins8 (o : RotOp) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b8, .eins, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b8, .eins, .mem base d⟩,
+        rotLaenge ⟨o, .b8, .eins, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppe, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons]
+
+/-- Round trip for by-one memory forms, 16-bit width. -/
+theorem rotRoundtrip_mem_eins16 (o : RotOp) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b16, .eins, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b16, .eins, .mem base d⟩,
+        rotLaenge ⟨o, .b16, .eins, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppe, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons]
+
+/-- Round trip for by-one memory forms, 32-bit width. -/
+theorem rotRoundtrip_mem_eins32 (o : RotOp) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b32, .eins, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b32, .eins, .mem base d⟩,
+        rotLaenge ⟨o, .b32, .eins, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppe, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons]
+
+/-- Round trip for by-one memory forms, 64-bit width. -/
+theorem rotRoundtrip_mem_eins64 (o : RotOp) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b64, .eins, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b64, .eins, .mem base d⟩,
+        rotLaenge ⟨o, .b64, .eins, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppe, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons]
+
+/-- Round trip for by-CL memory forms, 8-bit width. -/
+theorem rotRoundtrip_mem_cl8 (o : RotOp) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b8, .cl, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b8, .cl, .mem base d⟩,
+        rotLaenge ⟨o, .b8, .cl, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppe, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons]
+
+/-- Round trip for by-CL memory forms, 16-bit width. -/
+theorem rotRoundtrip_mem_cl16 (o : RotOp) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b16, .cl, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b16, .cl, .mem base d⟩,
+        rotLaenge ⟨o, .b16, .cl, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppe, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons]
+
+/-- Round trip for by-CL memory forms, 32-bit width. -/
+theorem rotRoundtrip_mem_cl32 (o : RotOp) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b32, .cl, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b32, .cl, .mem base d⟩,
+        rotLaenge ⟨o, .b32, .cl, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppe, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons]
+
+/-- Round trip for by-CL memory forms, 64-bit width. -/
+theorem rotRoundtrip_mem_cl64 (o : RotOp) (base : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b64, .cl, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b64, .cl, .mem base d⟩,
+        rotLaenge ⟨o, .b64, .cl, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppe, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons]
+
+/-- Round trip for immediate memory forms, 8-bit width. -/
+theorem rotRoundtrip_mem_imm8 (o : RotOp) (base : Register)
+    (d : BitVec 32) (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b8, .imm8 n, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b8, .imm8 n, .mem base d⟩,
+        rotLaenge ⟨o, .b8, .imm8 n, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppeImm, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons, (byteNat_natByte_of_lt n h)]
+
+/-- Round trip for immediate memory forms, 16-bit width. -/
+theorem rotRoundtrip_mem_imm16 (o : RotOp) (base : Register)
+    (d : BitVec 32) (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b16, .imm8 n, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b16, .imm8 n, .mem base d⟩,
+        rotLaenge ⟨o, .b16, .imm8 n, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppeImm, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons, (byteNat_natByte_of_lt n h)]
+
+/-- Round trip for immediate memory forms, 32-bit width. -/
+theorem rotRoundtrip_mem_imm32 (o : RotOp) (base : Register)
+    (d : BitVec 32) (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b32, .imm8 n, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b32, .imm8 n, .mem base d⟩,
+        rotLaenge ⟨o, .b32, .imm8 n, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppeImm, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons, (byteNat_natByte_of_lt n h)]
+
+/-- Round trip for immediate memory forms, 64-bit width. -/
+theorem rotRoundtrip_mem_imm64 (o : RotOp) (base : Register)
+    (d : BitVec 32) (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeRot (rotEncode ⟨o, .b64, .imm8 n, .mem base d⟩ ++ suffix) =
+      some (⟨⟨o, .b64, .imm8 n, .mem base d⟩,
+        rotLaenge ⟨o, .b64, .imm8 n, .mem base d⟩⟩, suffix) := by
+  cases o <;> cases base <;>
+    simp [rotEncode, decodeRot, rotNimmPraefix, rotNimmRex,
+      rotNachOpcode, rotGruppeImm, rotModrm, rotBreite, feldRotOp,
+      rotOpFeld, codeReg, regHigh, regLow, regCode, rotPraefixBytes,
+      rotOpcode, rotImmTail, rotSibTail, rotLaenge, leBytes32,
+      parseLe32_cons, (byteNat_natByte_of_lt n h)]
+
 /-- Pinned bytes: ROL r/m8 by one over rax. -/
-theorem pin_rot_rol8_eins :
-    decodeRot [natByte 208, natByte 192] =
+theorem pin_rot_rol8_eins :    decodeRot [natByte 208, natByte 192] =
       some ((⟨⟨.rol, .b8, .eins, .reg .rax⟩, 2⟩ : RotDecodiert), []) := by
   decide
 
