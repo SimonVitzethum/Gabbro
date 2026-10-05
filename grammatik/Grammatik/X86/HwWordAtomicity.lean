@@ -245,7 +245,7 @@ theorem hw_overlap_keine_gruppe :
 
 /-- The witness address is aligned: the guard cases below run on an
     aligned word. -/
-theorem hw_ausrichtung_vA : ausgerichtet8 vA = true := by decide
+theorem hw_ausrichtung_vA : ausgerichtet8 vA = true := rfl
 
 /-! ## 7. Tearing: the byte path passes through a mixed word. -/
 
@@ -319,11 +319,11 @@ theorem hw_verflochten_zeuge :
   have hfwd0 : loadByte (tsoAnsicht (hwWortM wI0)) 0 (addrOff vA 0) =
       some (wortByte zeugenWort 0) := by
     rw [hwWortM_ansicht]
-    decide
+    rfl
   have hfwd1 : loadByte (tsoAnsicht (hwWortM wI0)) 1 (addrOff vA 0) =
       some ((tsoAnsicht (hwWortM wI0)).mem.bytes (addrOff vA 0)) := by
     rw [hwWortM_ansicht]
-    decide
+    rfl
   exact ⟨hwWortM wI0, wI_trace, wI10, hg, hl, hw_ausrichtung_vA,
     hs, wI_hend, wI_hempty, wI_hemptyF, wI_hstoer, herr, hbeob,
     wI_fremd_byte, hchgA, hchgB, hfwd0, hfwd1,

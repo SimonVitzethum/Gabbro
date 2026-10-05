@@ -41,6 +41,31 @@ accepted definitions unchanged (never redefined, never copied).
 `./lean-probe grammatik/Grammatik/X86/HwWordAtomicity.lean`:
 `== 0 error(s) in the COMPLETE output; exit 0`.
 
+## Repair after the failed integration gate (no merge happened)
+
+Integration evidence: the merge build failed ONLY on
+`Grammatik.X86.HwWordAtomicity` with `lean::exception: failed to create
+thread`, exit 134 — a resource-class failure (address-space/thread
+exhaustion under the integration build's `-j2 -M4096` budget), not a proof
+error. No unknown identifier, no unsolved goal, no axiom violation was
+reported; the candidate's `#print axioms` output stays within
+propext/Quot.sound.
+
+Repair inside the owned module (no guarantee touched, no theorem weakened,
+statements byte-identical): three kernel `decide` proofs replaced by
+definitional `rfl` (`hw_ausrichtung_vA`, the two forwarding facts in
+`hw_verflochten_zeuge`); the one genuine disequality keeps its `decide`
+(`rfl` cannot prove `≠`; attempted and reverted). Local `./lean-probe`
+0 errors and full `./lean-bau` 601 jobs green after the change.
+
+Honest status: the failure mode matches the known environment ceiling
+("failed to create thread even on unchanged source"); nothing in this
+module's elaboration plausibly exhausts 4 GiB (closed-term evaluations over
+8-entry buffers). If the gate fails again with the same signature, the
+blocker is environmental (parallel-build memory pressure), not this
+candidate. A fresh independent review is still required for the changed
+commit; no acceptance of any source/binary chain is claimed.
+
 ## What remains open
 
 Single-copy bridge to silicon and any per-access W/GX simulation
