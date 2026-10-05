@@ -490,4 +490,71 @@ theorem kap2_step_bitscan :
   | some m1 =>
     exact ⟨m1, (kap2_bitscan_embedded _ _ _ _ _).mp hS⟩
 
+/-- Exhibited FP-store union step: core 0 buffers `3.0f32` through
+    the family adapter. -/
+theorem kap2_step_fpstore :
+    ∃ m1, HwVollSchritt2 fp32WitM0 m1
+      (Kap2Ereignis.fpstore 0
+        (.speichere32 fp32WitAdr fp32WitWert)) := by
+  cases hA : fp32WitPush with
+  | none =>
+    have h := fp32Wit_puffer4
+    simp [hA, fp32WitBufLen] at h
+  | some m1 =>
+    have heq : fpStoreAdapter.schritt fp32WitM0 0
+        (.speichere32 fp32WitAdr fp32WitWert) = some m1 := hA
+    exact ⟨m1, (kap2_fpstore_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited page-fault-delivery union step: core 0 delivers the
+    witness fault under a cleared IF through the family plug. -/
+theorem kap2_step_pf :
+    ∃ m1, HwVollSchritt2 pfWitStart m1
+      (Kap2Ereignis.pf 0
+        { pfWitEv with
+          steuer := { pfWitSteuer with ifBit := false } }) := by
+  have hsome : (pfSchritt pfWitStart 0
+      { pfWitEv with steuer := { pfWitSteuer with ifBit := false } }).isSome =
+      true :=
+    pfWit_klar_liefert
+  cases hS : pfSchritt pfWitStart 0
+      { pfWitEv with steuer := { pfWitSteuer with ifBit := false } } with
+  | none =>
+    rw [hS] at hsome
+    cases hsome
+  | some r =>
+    have heq : adapterPf.schritt pfWitStart 0
+        { pfWitEv with steuer := { pfWitSteuer with ifBit := false } } =
+        some r.1 := by
+      simp [adapterPf_treue, hS]
+    exact ⟨r.1, (kap2_pf_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited context union step: core 0 saves its FP/vector
+    state through the family relation. -/
+theorem kap2_step_ctx :
+    ∃ m1, HwVollSchritt2 ctxWitStart m1
+      (Kap2Ereignis.ctx (.fxsaveReq 0 ctxArea0)) := by
+  cases hS : ctxSpeichern ctxWitStart 0 ctxArea0 with
+  | weiter m2 =>
+    exact ⟨m2, (kap2_ctx_embedded _ _ _).mp
+      (CtxSchritt.fxsave 0 ctxArea0 hS)⟩
+  | verweigert =>
+    have h := ctxWit_buf.1
+    simp [ctxWitBuf, hS] at h
+  | fehlerGP =>
+    have h := ctxWit_buf.1
+    simp [ctxWitBuf, hS] at h
+  | fehlerUD =>
+    have h := ctxWit_buf.1
+    simp [ctxWitBuf, hS] at h
+
+/-- Exhibited WC union step: the prefetch hint NOPs on the witness
+    machine through the family plug. -/
+theorem kap2_step_wc :
+    ∃ m1, HwVollSchritt2 hwWitStart m1
+      (Kap2Ereignis.wc 0
+        (.holeVor .nta (BitVec.ofNat 64 8192))) :=
+  ⟨_, (kap2_wc_embedded _ _ _ _).mp
+    (HwMemWC1287.wcAdapter_prefetch_nop hwWitStart 0 .nta
+      (BitVec.ofNat 64 8192))⟩
+
 end Gabbro.Grammatik.X86
