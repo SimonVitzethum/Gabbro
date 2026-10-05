@@ -15,6 +15,7 @@ import Grammatik.X86.HardwareExecution
 import Grammatik.X86.VectorIntegerHardwareForms
 import Grammatik.X86.VectorHardwareProfile
 import Grammatik.X86.VectorFootprints
+import Grammatik.X86.ConcurrentIntegerExecution
 
 namespace Gabbro.Grammatik.X86
 
@@ -157,75 +158,9 @@ theorem issueListe_erfolg (l : List TSOEintrag) (s : TSOZustand)
     rw [hfold]
     exact ⟨s', hs'⟩
 
-/-- A fold of issues keeps canonical memory exactly. -/
-theorem issueListe_mem (l : List TSOEintrag) (s s' : TSOZustand)
-    (c : Nat) (h : issueListe s c l = some s') : s'.mem = s.mem := by
-  induction l generalizing s with
-  | nil =>
-    have e : issueListe s c [] = some s := rfl
-    rw [e] at h
-    obtain rfl := Option.some_inj.mp h
-    rfl
-  | cons hd tl ih =>
-    have e : issueListe s c (hd :: tl) =
-        match issueByte s c hd.addr hd.wert with
-        | none => (none : Option TSOZustand)
-        | some s1 => issueListe s1 c tl := rfl
-    rw [e] at h
-    cases hb : issueByte s c hd.addr hd.wert with
-    | none =>
-      rw [hb] at h
-      dsimp only at h
-      cases h
-    | some s1 =>
-      rw [hb] at h
-      dsimp only at h
-      cases hperm : s.mem.schreibbar hd.addr with
-      | false =>
-        have hn : issueByte s c hd.addr hd.wert = none :=
-          issue_verweigert s c hd.addr hd.wert hperm
-        rw [hn] at hb
-        cases hb
-      | true =>
-        have hn : issueByte s c hd.addr hd.wert =
-            some ⟨s.mem, pufferSetze s.puffer c (s.puffer c ++ [hd])⟩ := by
-          unfold issueByte
-          rw [if_pos hperm]
-        rw [hn] at hb
-        obtain rfl := Option.some_inj.mp hb
-        have iht := ih
-          ⟨s.mem, pufferSetze s.puffer c (s.puffer c ++ [hd])⟩ h
-        exact iht
-
-/-- A fold of issues touches no other core's buffer. -/
-theorem issueListe_anderer_kern (l : List TSOEintrag) (s s' : TSOZustand)
-    (c : Nat) (h : issueListe s c l = some s') (d : Nat)
-    (hne : d ≠ c) :
-    s'.puffer d = s.puffer d := by
-  induction l generalizing s with
-  | nil =>
-    have e : issueListe s c [] = some s := rfl
-    rw [e] at h
-    obtain rfl := Option.some_inj.mp h
-    rfl
-  | cons hd tl ih =>
-    have e : issueListe s c (hd :: tl) =
-        match issueByte s c hd.addr hd.wert with
-        | none => (none : Option TSOZustand)
-        | some s1 => issueListe s1 c tl := rfl
-    rw [e] at h
-    cases hb : issueByte s c hd.addr hd.wert with
-    | none =>
-      rw [hb] at h
-      dsimp only at h
-      cases h
-    | some s1 =>
-      rw [hb] at h
-      dsimp only at h
-      have h1 := issue_anderer_kern s s1 c hd.addr hd.wert hb hne
-      have iht := ih s1 h
-      rw [iht]
-      exact h1
+/- Folded-issue memory and foreign-buffer facts (`issueListe_mem`,
+   `issueListe_anderer_kern`) are reused from
+   `ConcurrentIntegerExecution`, never duplicated here. -/
 
 /-- Vector store issue on the TSO view: sixteen buffered byte issues,
     never the direct `vecWrite` effect. `none` = a refused byte. -/
@@ -1913,7 +1848,7 @@ theorem hvecWit_issue :
     exact ha
   have hbufd : ∀ d : Nat, d ≠ 0 → s'.puffer d = [] := by
     intro d hd
-    have ha := issueListe_anderer_kern _ _ s' 0 hsI d hd
+    have ha := issueListe_anderer_kern _ s' 0 _ d hd hsI
     have hempty : (tsoAnsicht hvecWitM1).puffer d = [] := rfl
     rw [hempty] at ha
     exact ha
@@ -1928,7 +1863,7 @@ theorem hvecWit_issue :
     · rw [if_neg hd]
       exact hbufd d hd
   have hmemM : s'.mem = hvecWitMem := by
-    have hm := issueListe_mem _ _ s' 0 hsI
+    have hm := issueListe_mem _ s' 0 _ hsI
     have hme : (tsoAnsicht hvecWitM1).mem = hvecWitMem := rfl
     rw [hm]
     exact hme
@@ -2005,5 +1940,287 @@ theorem hvecWit_weiterleitung :
 theorem hvecWit_fremd_alt :
     hvecWitLoadFremd = some (some (BitVec.ofNat 8 0)) := by
   decide
+
+/-! ## 12. Drain stage: shared memory observably changes, torn halfway. -/
+
+/-- The full sixteen-drain over the explicit store successor. -/
+def hvecWitDrain : Option TSOZustand :=
+  drainListe (tsoAnsicht hvecWitM2) 0 (vecEintraege hvecWitAdr hvecWitC)
+
+/-- The low-eight drain: the torn halfway state. -/
+def hvecWitDrainLo : Option TSOZustand :=
+  drainListe (tsoAnsicht hvecWitM2) 0 (vecEintraegeLo hvecWitAdr hvecWitC)
+
+/-- Read a drained shared-memory byte. -/
+def hvecDrainMemOut (o : Option TSOZustand) (a : Adresse) :
+    Option Byte :=
+  match o with
+  | some s => some (s.mem.bytes a)
+  | none => none
+
+/-- Read a drained load observation. -/
+def hvecDrainLoad (o : Option TSOZustand) (c : Nat) (a : Adresse) :
+    Option (Option Byte) :=
+  match o with
+  | some s => some (loadByte s c a)
+  | none => none
+
+/-- The data cell starts zeroed: the run really changes memory. -/
+theorem hvecWit_anfang_null :
+    hvecWitMem.bytes hvecWitAdr = BitVec.ofNat 8 0 := by
+  decide
+
+/-- The drain changes shared memory: the cell reads `0x01`. -/
+theorem hvecWit_spuelung_aendert_speicher :
+    hvecDrainMemOut hvecWitDrain hvecWitAdr =
+      some (BitVec.ofNat 8 1) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem hvecWit_fremd_neu :
+    hvecDrainLoad hvecWitDrain 1 hvecWitAdr =
+      some (some (BitVec.ofNat 8 1)) := by
+  decide
+
+/-- Torn halfway: the low byte is new after eight drains. -/
+theorem hvecWit_teil_neu :
+    hvecDrainMemOut hvecWitDrainLo hvecWitAdr =
+      some (BitVec.ofNat 8 1) := by
+  decide
+
+/-- Torn halfway: the high byte still reads pre-drain. -/
+theorem hvecWit_teil_alt :
+    hvecDrainMemOut hvecWitDrainLo (addrOff hvecWitAdr 8) =
+      some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- OVERLAP: partially overlapping vector footprints classify unknown
+    and refuse alias admission (reused, not re-proved). -/
+theorem hvecWit_neg_alias :
+    klassifiziere (vecFuss (natAdresse 8192))
+        (vecFuss (natAdresse 8200)) = .unbekannt ∧
+      aliasZulassen (klassifiziere (vecFuss (natAdresse 8192))
+        (vecFuss (natAdresse 8200))) = false :=
+  vecFuss_teilueberlapp_verweigert
+
+/-- The 256-bit row always refuses: AVX2 is not implemented here. -/
+theorem hvecWit_neg_avx :
+    stufenZugelassenHw basisHw basisBereit basisCpu basisXcr0
+        basisKontrolle .avx256 = false :=
+  stufe_avx256_verweigert basisHw basisBereit basisCpu basisXcr0
+    basisKontrolle
+
+/-- The unified dispatcher refuses the selected row: no existing form
+    is shadowed and no selected row is re-decided. -/
+theorem hvecWit_ext_weist_paddb_zurueck :
+    decodeExt (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none :=
+  intVec_ext_weist_paddb_zurueck
+
+/-! ## 13. Joint witness: a reached two-core vector run. -/
+
+/-- A drain over a present buffer prefix succeeds. -/
+theorem drainListe_erfolg (l : List TSOEintrag) (s : TSOZustand)
+    (c : Nat) (rest : List TSOEintrag)
+    (hbuf : s.puffer c = l ++ rest) :
+    ∃ s', drainListe s c l = some s' := by
+  induction l generalizing s with
+  | nil =>
+    exact ⟨s, rfl⟩
+  | cons hd tl ih =>
+    have hne : s.puffer c ≠ [] := by
+      rw [hbuf]
+      simp
+    cases hb : s.puffer c with
+    | nil =>
+      simp [hb] at hne
+    | cons e rest' =>
+      have hhead : s.puffer c = hd :: (tl ++ rest) := hbuf
+      obtain ⟨s1, hs1⟩ : ∃ s1, flushKern s c = some s1 := by
+        refine ⟨⟨{ s.mem with bytes := fun x =>
+          if x = e.addr then e.wert else s.mem.bytes x },
+          pufferSetze s.puffer c rest'⟩, ?_⟩
+        unfold flushKern
+        simp [hb]
+      have hbuf1 : s1.puffer c = tl ++ rest :=
+        flush_entfernt_kopf s s1 c hs1 hd (tl ++ rest) hhead
+      obtain ⟨s', hs'⟩ := ih s1 hbuf1
+      have e : drainListe s c (hd :: tl) = match flushKern s c with
+        | none => (none : Option TSOZustand)
+        | some s1 => drainListe s1 c tl := rfl
+      rw [e, hs1]
+      exact ⟨s', hs'⟩
+
+/-- WITNESS for `vecRegSchritt_gleich`: the pinned `paddb` row steps
+    through the register plug. All premises are instantiated jointly. -/
+theorem vecRegSchritt_gleich_zeuge :
+    ∃ (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+      (k : KontrollBild) (d : IntVecDec) (t' : FpZustand),
+      istVecRegisterOp d.op = true ∧
+      stepIntVec d (projFp m c) m.hw (m.bereit c) cpu k = some t' ∧
+      vecRegSchritt m c cpu k d = some (setKernVonFp m c t') := by
+  exact ⟨hvecWitStart, 0, basisCpu, basisKontrolle, hvecWitD1,
+    hvecWitT1, rfl, hvecWit_paddb, hvecWit_r1⟩
+
+/-- WITNESS for `vecLaden_ist_vecRead`: the empty-buffer packed load
+    observes the accepted `vecRead` value. All premises are
+    instantiated jointly. -/
+theorem vecLaden_ist_vecRead_zeuge :
+    ∃ (s : TSOZustand) (c : Nat) (a : Adresse) (v : Vektor),
+      (∀ x ∈ vecFuss a, neuestens (s.puffer c) x = none) ∧
+      lesbar8 s.mem a = true ∧
+      lesbar8 s.mem (vecHiAddr a) = true ∧
+      vecLaden s c a = some v ∧ vecRead s.mem a = some v := by
+  refine ⟨tsoAnsicht hvecWitM1, 0, hvecWitAdr, 0, fun x _ => rfl, ?_,
+    ?_, ?_, ?_⟩
+  · decide
+  · decide
+  · decide
+  · decide
+
+/-- The sixteen entries sit apart: the witness no-wrap. -/
+theorem hvecWit_ohne_umbruch : OhneUmbruch16 hvecWitAdr := by
+  unfold OhneUmbruch16
+  decide
+
+/-- WITNESS for `vecDrain_schreibt`: the drained sixteen install every
+    entry byte. All premises are instantiated jointly, on the reached
+    store successor with a memory-changing drain. -/
+theorem vecDrain_schreibt_zeuge :
+    ∃ (s s' : TSOZustand) (c : Nat) (a : Adresse) (v : Vektor)
+      (rest : List TSOEintrag) (e : TSOEintrag),
+      s.puffer c = vecEintraege a v ++ rest ∧
+      drainListe s c (vecEintraege a v) = some s' ∧
+      (∀ e1 ∈ vecEintraege a v, ∀ e2 ∈ vecEintraege a v,
+        e1.addr = e2.addr → e1 = e2) ∧
+      e ∈ vecEintraege a v ∧ s'.mem.bytes e.addr = e.wert := by
+  have hbuf : (tsoAnsicht hvecWitM2).puffer 0 =
+      vecEintraege hvecWitAdr hvecWitC ++ [] := rfl
+  obtain ⟨s', hs'⟩ := drainListe_erfolg _ (tsoAnsicht hvecWitM2) 0 []
+    hbuf
+  have hdis := vecEintraege_nodup_addr hvecWitAdr hvecWitC
+    hvecWit_ohne_umbruch
+  have hmem : (⟨addrOff hvecWitAdr 0,
+      wortByte (vLo hvecWitC) 0⟩ : TSOEintrag) ∈
+      vecEintraege hvecWitAdr hvecWitC :=
+    List.Mem.head _
+  have hbyte := vecDrain_schreibt _ s' 0 _ _ [] hbuf hs' hdis _ hmem
+  exact ⟨tsoAnsicht hvecWitM2, s', 0, hvecWitAdr, hvecWitC, [],
+    ⟨addrOff hvecWitAdr 0, wortByte (vLo hvecWitC) 0⟩,
+    hbuf, hs', hdis, hmem, hbyte⟩
+
+/-- THE JOINT WITNESS: a reached two-core run that fetches real
+    bytes, separates lanes, forwards a buffered sixteen-byte store to
+    its owner only, drains it into shared memory (0 becomes `0x01`,
+    observed from both cores, torn halfway) -- with the
+    malformed/control/fault/overlap/AVX refusals beside it.
+    Non-degenerate: the drain changes ACTUAL shared memory. -/
+theorem hvecWit_zeuge :
+    hvecRipOut hvecWitR1 0 = some (BitVec.ofNat 64 4101) ∧
+      hvecLaneOut hvecWitR1 0 .xmm0 0 = some 1 ∧
+      hvecLaneOut hvecWitR1 0 .xmm0 1 = some 2 ∧
+      hvecWitMem.bytes hvecWitAdr = BitVec.ofNat 8 0 ∧
+      hvecWitLoadEigen = some (some (BitVec.ofNat 8 1)) ∧
+      hvecWitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+      hvecDrainMemOut hvecWitDrain hvecWitAdr =
+        some (BitVec.ofNat 8 1) ∧
+      hvecDrainLoad hvecWitDrain 1 hvecWitAdr =
+        some (some (BitVec.ofNat 8 1)) ∧
+      hvecDrainMemOut hvecWitDrainLo hvecWitAdr =
+        some (BitVec.ofNat 8 1) ∧
+      hvecDrainMemOut hvecWitDrainLo (addrOff hvecWitAdr 8) =
+        some (BitVec.ofNat 8 0) ∧
+      fetchIntVec (projFp hvecWitStart 1)
+        (geholt (projZustand hvecWitStart 1)) = none ∧
+      HwVecSchritt hvecWitStart hvecWitM1
+        (.vecReg 0 basisCpu basisKontrolle hvecWitD1) ∧
+      HwVecSchritt hvecWitM1 hvecWitM2
+        (.vecSpeichere 0 basisCpu basisKontrolle hvecWitD2) ∧
+      klassifiziere (vecFuss (natAdresse 8192))
+          (vecFuss (natAdresse 8200)) = .unbekannt ∧
+      stufenZugelassenHw basisHw basisBereit basisCpu basisXcr0
+          basisKontrolle .avx256 = false ∧
+      decodeExt (encodeIntVec (.paddbRR .xmm0 .xmm1)) = none := by
+  refine ⟨hvecWit_r1_rip, hvecWit_r1_lane0, hvecWit_r1_lane1,
+    hvecWit_anfang_null, hvecWit_weiterleitung, hvecWit_fremd_alt,
+    hvecWit_spuelung_aendert_speicher, hvecWit_fremd_neu,
+    hvecWit_teil_neu, hvecWit_teil_alt, hvecWit_kern1_verweigert,
+    hvecWit_reg_schritt, hvecWit_speichere_schritt,
+    hvecWit_neg_alias.1, hvecWit_neg_avx,
+    hvecWit_ext_weist_paddb_zurueck⟩
+
+/- CUTS: what is not proved here.
+
+   - No hardware correspondence: encodings, fault classes and lane
+     effects are the accepted canonical rows of lane 686
+     (`VectorIntegerHardwareForms`, whose CUTS cites Intel SDM
+     325462-093US September 2026 per entry); no new silicon fact is
+     claimed here, and nothing here re-checks the manual. Legacy YMM
+     upper bits (`MAXVL-1:128` unmodified) stay unmodelled, as in 686:
+     no YMM state exists in `FpZustand`. Timing, power, privilege,
+     paging, segments, interrupts, SMM, debug, perfmon and
+     virtualization state are absent; execute/read/write permissions
+     are per-byte data facts over the canonical `Speicher`.
+   - No whole-vector atomicity: every 16-byte memory row is sixteen
+     per-byte TSO events (oldest-first issues, oldest-first drains).
+     Torn intermediates stand (`vecDrain_teilt`, reused
+     `vecWrite_teilt` shape at sixteen bytes); footprint disjointness
+     never implies atomicity or reordering. Per-access TSO
+     granularity beyond bytes, the GX refinement and any source
+     correspondence stay open.
+   - No source/IR/ABI/loader/entry/budget link: no per-access
+     target-to-W/GX simulation, no budget transfer, no progress or
+     call-log effect is proved; `simdFreigabe` is untouched. The
+     full bridge to W/GX is not claimed.
+   - The extended relation takes decoded values: the no-forgery
+     discipline is the fetch bridge (`hvec_fetch_bruecke`,
+     `intVec_fetch_bridge`) and the adapter face, not a second
+     fetch inside every constructor. LOCK/RMW has no step here
+     (refused, as in the coherent machine); faults beyond the
+     carried divide halt are absent.
+   - The legacy admission is strictly weaker than the accepted
+     stronger XCR0 gate (`vektorLegacy_verfeinert`, reused): the old
+     gate stays valid as a safe over-approximation, never as a
+     hardware fault. The 256-bit AVX row always refuses
+     (`stufe_avx256_verweigert`, reused). OS configuration and
+     context-preservation code remain user logic: checked inputs,
+     never assumed-correct behaviour.
+   - Addresses reuse the accepted `effAddr` (no second address
+     model); the `0F 73` group still requires a zero REX.R bit
+     (canonical subset, as in 686); logical rows step at `.b64`
+     only (bitwise, hence width-free, as in 686).
+-/
+
+#print axioms vecEintraege_laenge
+#print axioms vecSpeichern_haengt_an
+#print axioms vecSpeichern_kein_speicher
+#print axioms vecSpeichern_erfolg
+#print axioms ladeAcht_ist_read64
+#print axioms vecLaden_ist_vecRead
+#print axioms drainListe_rahmen
+#print axioms drainListe_schreibt_allg
+#print axioms vecDrain_teilt
+#print axioms vecDrain_schreibt
+#print axioms vecRegSchritt_gleich
+#print axioms vecRegSchritt_speicher
+#print axioms hwVecSchritt_wf
+#print axioms hwVecSchritt_einbettet
+#print axioms hwVecSchritt_projiziert
+#print axioms adapterVec_reg
+#print axioms adapterVec_fremder_kern_reg
+#print axioms vecLade_ist_schritt
+#print axioms vecSpeichere_ist_schritt
+#print axioms vecReg_ist_schritt
+#print axioms vecReg_profil_verweigert
+#print axioms vecReg_ohne_cpu
+#print axioms vecSpeicherSchritt_gp_a
+#print axioms vecSpeicherSchritt_schreibrecht
+#print axioms vecLadeSchritt_leserecht
+#print axioms vecRegSchritt_pxor_agree
+#print axioms vecRegSchritt_paddq_agree
+#print axioms hvec_fetch_bruecke
+#print axioms hvecWit_zeuge
+#print axioms vecRegSchritt_gleich_zeuge
+#print axioms vecLaden_ist_vecRead_zeuge
+#print axioms vecDrain_schreibt_zeuge
 
 end Gabbro.Grammatik.X86
