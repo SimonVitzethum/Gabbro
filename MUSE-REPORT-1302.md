@@ -10,6 +10,8 @@ Candidate: lane 1301, pinned HEAD
 `grammatik/Grammatik.lean` (one import line),
 `grammatik/Grammatik/X86/HwWcOrdering.lean` (new, 1382 lines).
 
+CANDIDATE: 1301 be7b1559194fd2d7fb261e81125d5365e9b736a0
+
 ## Checks performed
 
 - `./lean-probe` on the delivered candidate file
@@ -78,7 +80,7 @@ not as results, and the connection theorem consumes them openly.
 The byte decoders cover exact 4-byte shapes only (no SIB/
 displacement); no wider decode coverage is claimed.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 Candidate 1301 `be7b1559194fd2d7fb261e81125d5365e9b736a0`: ACCEPT.
 No unsupported desired-correctness premises, no weakened
