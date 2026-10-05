@@ -404,6 +404,116 @@ theorem fwd_juengerer_mischt (s : TSOZustand) (c : Nat)
   simp only [Option.some.injEq] at lneu
   exact hne lneu.symm
 
+/-! ## 6. Negative cases: misalignment and overlap never group.
+
+  A word load one byte beside the stored word, a torn buffer and an
+  overlapping older or younger entry all fail the `WortGruppe` guard
+  structurally. Partial-shape refusals reuse the accepted
+  `hwTeilwort_keine_gruppe` and
+  `hwGruppe_verweigert_bei_fremdeintrag`; the misaligned and
+  extra-entry shapes are proved here. -/
+
+/-- Byte offsets compose (same two-rewrite proof as the accepted
+    `Pipeline.addrOff_addrOff`; local so this leaf stays light). -/
+theorem fwd_addrOff_add (a : Adresse) (i j : Nat) :
+    addrOff (addrOff a i) j = addrOff a (i + j) := by
+  unfold addrOff
+  rw [BitVec.ofNat_add, BitVec.add_assoc]
+
+/-- Offset eight lies outside every eight-footprint. -/
+theorem fwd_addrOff_acht_ne (a : Adresse) (k : Nat)
+    (hk : k < 8) : addrOff a 8 ≠ addrOff a k := by
+  intro heq
+  have h2 := congrArg BitVec.toNat heq
+  unfold addrOff at h2
+  rw [BitVec.toNat_add, BitVec.toNat_add,
+    BitVec.toNat_ofNat, BitVec.toNat_ofNat] at h2
+  have ha := a.isLt
+  omega
+
+/-- MISALIGNED LOAD NEVER GROUPS: the exact eight entries of a word
+    at `a` are no group at `a + 1`. The hypothesis feeds the shape,
+    the group the competing shape; the heads disagree by
+    `addrOff_inj8`. -/
+theorem fwd_fehlalign_keine_gruppe (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort)
+    (hbuf : s.puffer c = wortEintraege a v) :
+    ¬ WortGruppe s c (addrOff a 1) v := by
+  intro hgrp
+  obtain ⟨hbuf2, _⟩ := hgrp
+  have heq : wortEintraege a v = wortEintraege (addrOff a 1) v := by
+    rw [← hbuf, hbuf2]
+  have hhead : addrOff a 0 = addrOff (addrOff a 1) 0 := by
+    have hh := congrArg (fun l => l.head?) heq
+    simpa [wortEintraege] using hh
+  rw [addrOff_null (addrOff a 1)] at hhead
+  have h01 : (0 : Nat) = 1 :=
+    addrOff_inj8 (by decide) (by decide) hhead
+  exact absurd h01 (by decide)
+
+/-- An overlapping older entry breaks the group: nine entries are no
+    exact eight. Lengths feed the contradiction. -/
+theorem fwd_aelterer_keine_gruppe (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort) (bAlt : Byte)
+    (hbuf : s.puffer c =
+      [⟨addrOff a 3, bAlt⟩] ++ wortEintraege a v) :
+    ¬ WortGruppe s c a v := by
+  intro hgrp
+  obtain ⟨hbuf2, _⟩ := hgrp
+  rw [hbuf] at hbuf2
+  have hlen := congrArg List.length hbuf2
+  rw [List.length_append, wortEintraege_laenge] at hlen
+  simp at hlen
+
+/-- An overlapping younger entry breaks the group the same way. -/
+theorem fwd_juengerer_keine_gruppe (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort) (bNeu : Byte)
+    (hbuf : s.puffer c =
+      wortEintraege a v ++ [⟨addrOff a 3, bNeu⟩]) :
+    ¬ WortGruppe s c a v := by
+  intro hgrp
+  obtain ⟨hbuf2, _⟩ := hgrp
+  rw [hbuf] at hbuf2
+  have hlen := congrArg List.length hbuf2
+  rw [List.length_append, wortEintraege_laenge] at hlen
+  simp at hlen
+
+/-- MISALIGNED LOAD MIXES, byte zero: the first byte of the
+    shifted load forwards word byte one. The offset equation feeds
+    the address, the shape the resolution, readability the load. -/
+theorem fwd_fehlalign_byte0_weiter (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort)
+    (hbuf : s.puffer c = wortEintraege a v)
+    (hrd : s.mem.lesbar (addrOff (addrOff a 1) 0) = true) :
+    loadByte s c (addrOff (addrOff a 1) 0) =
+      some (wortByte v 1) := by
+  have e0 : addrOff (addrOff a 1) 0 = addrOff a 1 := addrOff_null _
+  rw [e0] at hrd ⊢
+  unfold loadByte
+  rw [if_pos hrd, hbuf, fwd_neuestens_wort a v 1 (by decide)]
+
+/-- MISALIGNED LOAD MIXES, byte seven: the last byte of the shifted
+    load falls outside the stored footprint and reads memory. The
+    composition feeds the outside address, membership plus
+    `fwd_addrOff_acht_ne` the miss, readability the memory byte. -/
+theorem fwd_fehlalign_byte7_speicher (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort)
+    (hbuf : s.puffer c = wortEintraege a v)
+    (hrd : s.mem.lesbar (addrOff (addrOff a 1) 7) = true) :
+    loadByte s c (addrOff (addrOff a 1) 7) =
+      some (s.mem.bytes (addrOff (addrOff a 1) 7)) := by
+  have e7 : addrOff (addrOff a 1) 7 = addrOff a 8 := by
+    simp only [fwd_addrOff_add]
+  have miss : neuestens (wortEintraege a v) (addrOff a 8) = none := by
+    apply fwd_neuestens_miss
+    intro e hm
+    obtain ⟨j, hj8, he⟩ := wortEintraege_mem a v e hm
+    subst he
+    show addrOff a j ≠ addrOff a 8
+    exact Ne.symm (fwd_addrOff_acht_ne a j hj8)
+  unfold loadByte
+  rw [if_pos hrd, hbuf, e7, miss]
+
 /- CUTS:
     Skeleton only: events and the adapter are stated, nothing proved.
 -/
