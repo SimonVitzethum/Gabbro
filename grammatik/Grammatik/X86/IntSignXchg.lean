@@ -125,6 +125,31 @@ def sxSchritt (d : SxDecodiert) (s : Zustand) : MulDivErgebnis :=
     | .xchgRax b r => .ok { (xchgSchritt b Register.rax r s) with rip := nach }
     | .movsxd dst src => .ok { (movsxdSchritt dst src s) with rip := nach }
 
+/-! ## 2. The old evaluator is lifted, never redefined.
+
+    At 32/64 bits the family step IS the accepted width step on
+    the same length. No competing preparation is defined here. -/
+
+/-- CWDE is the accepted 32-bit `vor98` step. -/
+theorem sx_cwde_ist_vor98 (l : Nat) (s : Zustand) :
+    sxSchritt ⟨.cwde, l⟩ s = wdSchritt ⟨.vor98 .w32, l⟩ s := by
+  cases h : laengeOk l <;> simp [sxSchritt, wdSchritt, h]
+
+/-- CDQE is the accepted 64-bit `vor98` step. -/
+theorem sx_cdqe_ist_vor98 (l : Nat) (s : Zustand) :
+    sxSchritt ⟨.cdqe, l⟩ s = wdSchritt ⟨.vor98 .w64, l⟩ s := by
+  cases h : laengeOk l <;> simp [sxSchritt, wdSchritt, h]
+
+/-- CDQ is the accepted 32-bit `vor99` step. -/
+theorem sx_cdq_ist_vor99 (l : Nat) (s : Zustand) :
+    sxSchritt ⟨.cdq, l⟩ s = wdSchritt ⟨.vor99 .w32, l⟩ s := by
+  cases h : laengeOk l <;> simp [sxSchritt, wdSchritt, h]
+
+/-- CQO is the accepted 64-bit `vor99` step. -/
+theorem sx_cqo_ist_vor99 (l : Nat) (s : Zustand) :
+    sxSchritt ⟨.cqo, l⟩ s = wdSchritt ⟨.vor99 .w64, l⟩ s := by
+  cases h : laengeOk l <;> simp [sxSchritt, wdSchritt, h]
+
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
    NOT proved here, and not claimed: everything (see task).
