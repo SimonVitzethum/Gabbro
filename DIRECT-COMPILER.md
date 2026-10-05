@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 19:27 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 19:29 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -706,7 +706,7 @@ Last ledger refresh: **2026-10-05 19:27 UTC**. This is an operational snapshot, 
 | 1295 | Capstone: every union step projects to the TSO store-buffer model | Merged after review/checks | 1296: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1295.md) |
 | 1297 | Paging follow-up: large pages and SMEP/SMAP | Merged after review/checks | 1298: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1297.md) |
 | 1299 | Translation: the page walk joined with the TLB and the flat memory model | Merged after review/checks | 1300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1299.md) |
-| 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Committed candidate; review/integration pending | 1302: Committed candidate; review/integration pending | [task](lanes/1301.md) |
+| 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Merged after review/checks | 1302: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1301.md) |
 | 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Agent working | 1304: scheduled | [task](lanes/1303.md) |
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
 | 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1307.md) |
@@ -717,7 +717,7 @@ Last ledger refresh: **2026-10-05 19:27 UTC**. This is an operational snapshot, 
 | 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Agent working | 1320: scheduled | [task](lanes/1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Agent working | 1322: scheduled | [task](lanes/1321.md) |
-| 1323 | valX86 decode coverage over the capstone decoder chain | Committed candidate; review/integration pending | 1324: Agent working | [task](lanes/1323.md) |
+| 1323 | valX86 decode coverage over the capstone decoder chain | Committed candidate; review/integration pending | 1324: Committed candidate; review/integration pending | [task](lanes/1323.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1719,6 +1719,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `4a3563f2` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:4a3563f217d0a64229d343983e35e0cb6565e00d -->
 - 2026-10-05: lane **1295**, Capstone: every union step projects to the TSO store-buffer model, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1295.md). <!-- x86-merged:1295 -->
 - 2026-10-05: lane **1296**, Independent exact review of 1295, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1296.md). <!-- x86-merged:1296 -->
+- 2026-10-05: lane **1301**, WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1301.md). <!-- x86-merged:1301 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

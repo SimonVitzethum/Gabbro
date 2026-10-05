@@ -689,3 +689,4 @@ import Grammatik.X86.IntRotate
 import Grammatik.X86.IntBitScan
 import Grammatik.X86.HwKapsteinRun
 import Grammatik.X86.HwKapsteinTso
+import Grammatik.X86.HwWcOrdering
