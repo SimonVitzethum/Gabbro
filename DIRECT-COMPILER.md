@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 16:35 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 16:36 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -688,8 +688,8 @@ Last ledger refresh: **2026-10-05 16:35 UTC**. This is an operational snapshot, 
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Committed candidate; review/integration pending | 1260: Unresolved after agent rounds; not accepted | [task](lanes/1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Merged after review/checks | 1264: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1263.md) |
-| 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Committed candidate; review/integration pending | 1266: Committed candidate; review/integration pending | [task](lanes/1265.md) |
-| 1267 | AVX2: per-lane equation for arithmetic shift right | Committed candidate; review/integration pending | 1268: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1267.md) |
+| 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Agent working | 1266: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1265.md) |
+| 1267 | AVX2: per-lane equation for arithmetic shift right | Merged after review/checks | 1268: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1267.md) |
 | 1269 | Cross-declaration lowering certificate for the GX refinement | Merged after review/checks | 1270: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1269.md) |
 | 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Merged after review/checks | 1272: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1271.md) |
 | 1273 | Rotates: ROL, ROR, RCL, RCR | Agent working | 1274: scheduled | [task](lanes/1273.md) |
@@ -1638,6 +1638,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1263**, Pipeline: per-chunk derivation for if/else and checks, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1263.md). <!-- x86-merged:1263 -->
 - 2026-10-05: checked master `a600170a` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:a600170af5bcd6f2bf279e1229520ee84514794a -->
 - 2026-10-05: lane **1264**, Independent exact review of 1263, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1264.md). <!-- x86-merged:1264 -->
+- 2026-10-05: lane **1267**, AVX2: per-lane equation for arithmetic shift right, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1267.md). <!-- x86-merged:1267 -->
+- 2026-10-05: integration of candidate(s) [1265] failed the local proof/build gate after independent review 1266; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1266 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
