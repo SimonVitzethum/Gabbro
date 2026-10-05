@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 11:55 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 12:02 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -642,7 +642,7 @@ Last ledger refresh: **2026-10-05 11:55 UTC**. This is an operational snapshot, 
 | 1167 | Pipeline: register allocation, spills and privacy validated | Agent working | 1168: scheduled | [task](lanes/1167.md) |
 | 1169 | Pipeline correctness over the multi-core TSO machine | Committed candidate; review/integration pending | 1170: Agent working | [task](lanes/1169.md) |
 | 1171 | Linking, relocations and the final mapping | Merged after review/checks | 1172: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1171.md) |
-| 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Committed candidate; review/integration pending | 1174: Agent working | [task](lanes/1173.md) |
+| 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Committed candidate; review/integration pending | 1174: Committed candidate; review/integration pending | [task](lanes/1173.md) |
 | 1175 | Finite and infinite execution soundness of the pipeline | Agent working | 1176: scheduled | [task](lanes/1175.md) |
 | 1177 | Source-computed units and duties feeding the pipeline | Agent working | 1178: scheduled | [task](lanes/1177.md) |
 
@@ -1434,6 +1434,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1171**, Linking, relocations and the final mapping, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1171.md). <!-- x86-merged:1171 -->
 - 2026-10-05: checked master `f6db5e6f` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:f6db5e6fc68587e77add3276cc11870982624760 -->
 - 2026-10-05: lane **1172**, Independent exact review of 1171, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1172.md). <!-- x86-merged:1172 -->
+- 2026-10-05: publication batch checks passed for `7a50d554`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
