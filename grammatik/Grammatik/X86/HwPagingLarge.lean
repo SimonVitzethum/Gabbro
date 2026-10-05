@@ -194,6 +194,151 @@ theorem grossBlatt_ohne_schutz (st : SeitenSteuerung) (ac : Bool)
     | grossVerweigert a => simp
     | steuerVerweigert => simp
 
+/-! ## 3. The large-page walks.
+
+  Each new function maps its large leaf (with the reserved-bit and
+  alignment rules of §2) and DEFERS to the accepted 4 KiB walk
+  `gangEbenen` wherever its leaf does not apply -- proved below. The
+  4 KiB path keeps the per-access SMEP/SMAP check through
+  `grossBlatt`, so armed control is enforced at every leaf. -/
+
+/-- 2 MiB walk: PD with PS maps; a PS at PDPT stays refused (the 1 GiB
+    function's job); without a PD large page the walk is the accepted
+    4 KiB walk with the per-access check at the leaf. -/
+def gangGross2M (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) : GangErgebnis :=
+  if !istKanonischNat q.linear then .gpFehler q.linear
+  else if !e3.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !gst.basis.nxe && e3.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e3.gross then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if !e2.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !gst.basis.nxe && e2.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e2.gross then .grossVerweigert q.linear
+  else if !e1.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !gst.basis.nxe && e1.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e1.gross then
+    if !grossAusgerichtet2M e1.rahmen then
+      .seitenFehler q.linear
+        ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+    else grossBlatt gst.basis gst.ac q
+      (e3.schreibbar && e2.schreibbar && e1.schreibbar)
+      (e3.benutzer && e2.benutzer && e1.benutzer)
+      (e3.noExec || e2.noExec || e1.noExec)
+      e1.rahmen (grossOffset2M q.linear)
+  else if !e0.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !gst.basis.nxe && e0.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e0.gross then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else grossBlatt gst.basis gst.ac q
+    (e3.schreibbar && e2.schreibbar && e1.schreibbar && e0.schreibbar)
+    (e3.benutzer && e2.benutzer && e1.benutzer && e0.benutzer)
+    (e3.noExec || e2.noExec || e1.noExec || e0.noExec)
+    e0.rahmen (gangOffset q.linear)
+
+/-- 1 GiB walk: PDPT with PS maps; a PS at PD stays refused (the 2 MiB
+    function's job); without a PDPT large page the walk is the accepted
+    4 KiB walk with the per-access check at the leaf. -/
+def gangGross1G (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) : GangErgebnis :=
+  if !istKanonischNat q.linear then .gpFehler q.linear
+  else if !e3.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !gst.basis.nxe && e3.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e3.gross then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if !e2.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !gst.basis.nxe && e2.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e2.gross then
+    if !grossAusgerichtet1G e2.rahmen then
+      .seitenFehler q.linear
+        ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+    else grossBlatt gst.basis gst.ac q
+      (e3.schreibbar && e2.schreibbar)
+      (e3.benutzer && e2.benutzer)
+      (e3.noExec || e2.noExec)
+      e2.rahmen (grossOffset1G q.linear)
+  else if !e1.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !gst.basis.nxe && e1.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e1.gross then .grossVerweigert q.linear
+  else if !e0.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !gst.basis.nxe && e0.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e0.gross then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else grossBlatt gst.basis gst.ac q
+    (e3.schreibbar && e2.schreibbar && e1.schreibbar && e0.schreibbar)
+    (e3.benutzer && e2.benutzer && e1.benutzer && e0.benutzer)
+    (e3.noExec || e2.noExec || e1.noExec || e0.noExec)
+    e0.rahmen (gangOffset q.linear)
+
+/-- Combined walk: a PDPT large page maps through the 1 GiB walk,
+    otherwise the 2 MiB walk decides (mapping a PD large page, else
+    the 4 KiB walk). The two functions agree on every earlier check,
+    so the priority is exact. -/
+def gangGross (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) : GangErgebnis :=
+  if e2.gross then gangGross1G gst q e3 e2 e1 e0
+  else gangGross2M gst q e3 e2 e1 e0
+
+/-- A PDPT large page walks through the 1 GiB function. -/
+theorem gangGross_bei_1G (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) (h : e2.gross = true) :
+    gangGross gst q e3 e2 e1 e0 = gangGross1G gst q e3 e2 e1 e0 := by
+  simp [gangGross, h]
+
+/-- Without a PDPT large page the combined walk is the 2 MiB walk. -/
+theorem gangGross_bei_2M (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) (h : e2.gross = false) :
+    gangGross gst q e3 e2 e1 e0 = gangGross2M gst q e3 e2 e1 e0 := by
+  simp [gangGross, h]
+
+/-- Without a PD large page and with disarmed SMEP/SMAP, the 2 MiB
+    walk IS the accepted 4 KiB walk. -/
+theorem gangGross2M_gleich (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag)
+    (h1 : gst.basis.smep = false) (h2 : gst.basis.smap = false)
+    (hg1 : e1.gross = false) :
+    gangGross2M gst q e3 e2 e1 e0 =
+      gangEbenen gst.basis q e3 e2 e1 e0 := by
+  simp [gangGross2M, gangEbenen, h1, h2, hg1, grossBlatt_ohne_schutz]
+
+/-- Without a PDPT large page and with disarmed SMEP/SMAP, the 1 GiB
+    walk IS the accepted 4 KiB walk (a PD large page refuses on both
+    sides). -/
+theorem gangGross1G_gleich (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag)
+    (h1 : gst.basis.smep = false) (h2 : gst.basis.smap = false)
+    (hg2 : e2.gross = false) :
+    gangGross1G gst q e3 e2 e1 e0 =
+      gangEbenen gst.basis q e3 e2 e1 e0 := by
+  simp [gangGross1G, gangEbenen, h1, h2, hg2, grossBlatt_ohne_schutz]
+
+/-- Without any large page and with disarmed SMEP/SMAP, the combined
+    walk IS the accepted 4 KiB walk. -/
+theorem gangGross_gleich (gst : GrossSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag)
+    (h1 : gst.basis.smep = false) (h2 : gst.basis.smap = false)
+    (hg2 : e2.gross = false) (hg1 : e1.gross = false) :
+    gangGross gst q e3 e2 e1 e0 =
+      gangEbenen gst.basis q e3 e2 e1 e0 := by
+  rw [gangGross_bei_2M gst q e3 e2 e1 e0 hg2]
+  exact gangGross2M_gleich gst q e3 e2 e1 e0 h1 h2 hg1
+
 /- CUTS:
    Skeleton only; full CUTS with the reviewed file.
 -/
