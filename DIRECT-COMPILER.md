@@ -702,7 +702,7 @@ Last ledger refresh: **2026-10-05 19:01 UTC**. This is an operational snapshot, 
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1287.md) |
 | 1289 | Capstone: union steps for the embedded-by-equation tags, and the two plug-less families | Merged after review/checks | 1290: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1289.md) |
 | 1291 | Capstone: byte-decoder disjointness across all families | Merged after review/checks | 1292: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1291.md) |
-| 1293 | Capstone: a reached multi-family program run on two cores from bytes | Committed candidate; review/integration pending | 1294: Committed candidate; review/integration pending | [task](lanes/1293.md) |
+| 1293 | Capstone: a reached multi-family program run on two cores from bytes | Merged after review/checks | 1294: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1293.md) |
 | 1295 | Capstone: every union step projects to the TSO store-buffer model | Committed candidate; review/integration pending | 1296: Incomplete; preserved | [task](lanes/1295.md) |
 | 1297 | Paging follow-up: large pages and SMEP/SMAP | Committed candidate; review/integration pending | 1298: Committed candidate; review/integration pending | [task](lanes/1297.md) |
 | 1299 | Translation: the page walk joined with the TLB and the flat memory model | Merged after review/checks | 1300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1299.md) |
@@ -1704,6 +1704,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1274**, Independent exact review of 1273, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1274.md). <!-- x86-merged:1274 -->
 - 2026-10-05: lane **1279**, Bit scan and count: BSF, BSR, POPCNT, BSWAP, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1279.md). <!-- x86-merged:1279 -->
 - 2026-10-05: lane **1280**, Independent exact review of 1279, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1280.md). <!-- x86-merged:1280 -->
+- 2026-10-05: lane **1293**, Capstone: a reached multi-family program run on two cores from bytes, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1293.md). <!-- x86-merged:1293 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
