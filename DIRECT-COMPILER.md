@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 20:37 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 20:38 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -711,7 +711,7 @@ Last ledger refresh: **2026-10-05 20:37 UTC**. This is an operational snapshot, 
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
 | 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1307.md) |
 | 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Merged after review/checks | 1310: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1309.md) |
-| 1311 | Capstone, second step: add the families merged since the first union | Committed candidate; review/integration pending | 1312: Agent working | [task](lanes/1311.md) |
+| 1311 | Capstone, second step: add the families merged since the first union | Committed candidate; review/integration pending | 1312: Committed candidate; review/integration pending | [task](lanes/1311.md) |
 | 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Agent working | 1314: scheduled | [task](lanes/1313.md) |
 | 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Merged after review/checks | 1316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1315.md) |
 | 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
@@ -721,7 +721,7 @@ Last ledger refresh: **2026-10-05 20:37 UTC**. This is an operational snapshot, 
 | 1325 | TSO projection: the locked and direct-memory tags | Agent working | 1326: scheduled | [task](lanes/1325.md) |
 | 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Committed candidate; review/integration pending | 1328: Committed candidate; review/integration pending | [task](lanes/1327.md) |
 | 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Committed candidate; review/integration pending | 1330: scheduled | [task](lanes/1329.md) |
-| 1331 | Per-row consumed length for the capstone decoder chain | Committed candidate; review/integration pending | 1332: Committed candidate; review/integration pending | [task](lanes/1331.md) |
+| 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1331.md) |
 | 1333 | Opcode ledger: one-byte opcodes 00-3F | Agent working | 1334: scheduled | [task](lanes/1333.md) |
 | 1335 | Opcode ledger: one-byte opcodes 40-7F | Agent working | 1336: scheduled | [task](lanes/1335.md) |
 | 1337 | Opcode ledger: one-byte opcodes 80-BF | Agent working | 1338: scheduled | [task](lanes/1337.md) |
@@ -1750,6 +1750,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1316**, Independent exact review of 1315, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1316.md). <!-- x86-merged:1316 -->
 - 2026-10-05: lane **1319**, 8-bit operand forms across the new integer families, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1319.md). <!-- x86-merged:1319 -->
 - 2026-10-05: lane **1320**, Independent exact review of 1319, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1320.md). <!-- x86-merged:1320 -->
+- 2026-10-05: lane **1331**, Per-row consumed length for the capstone decoder chain, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1331.md). <!-- x86-merged:1331 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
