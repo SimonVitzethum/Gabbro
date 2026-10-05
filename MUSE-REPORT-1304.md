@@ -9,7 +9,9 @@ BUILD-EVIDENCE.json, MUSE-REPORT-1303.md, the three changed files at
 their repository paths). The author clone and the pinned hash were never
 touched; no `git show/log/diff` on the pinned hash was used.
 
-## VERDICT: ACCEPT
+CANDIDATE: 1303 647ed0a679b54190f3431500a1d1052a9ee701a6
+
+VERDICT: ACCEPT
 
 ## What was checked
 
