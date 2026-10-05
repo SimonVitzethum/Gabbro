@@ -664,4 +664,189 @@ theorem kap2_step_avx2join :
     ((kap_basis_embedded _ _ _).mp
       (HwSchritt.lade 0 _ _ Avx2Join.avxWit_eigen))⟩
 
+/-! ## Joint witness: every exhibited premise together.
+
+  Fifteen reached union steps (ten flat-family steps through
+  their own adapters/relations, five boundary observations on the
+  extended families' own witness machines), the three paging
+  refusals, two-core value pins, owner-only forwarding with a
+  memory-changing drain, and well-formedness. Non-degenerate:
+  both cores compute (carry 22/12, context 260/260), buffered
+  stores forward to the owner only, drains change actual shared
+  memory observed from both cores (cited from the families'
+  own witnesses). -/
+
+/-- Joint second-capstone witness over the coherent machine. -/
+theorem kap2_zeuge :
+    (∃ m1, HwVollSchritt2 rotHwWitStart m1
+      (Kap2Ereignis.rot 0
+        ⟨⟨.rol, .b8, .imm8 1, .reg .rax⟩, 3⟩)) ∧
+    (∃ m1, HwVollSchritt2 carryWitStart m1
+      (Kap2Ereignis.carry 0
+        (.reg ⟨.adcReg .b64 .rax .rcx, 3⟩))) ∧
+    (∃ m1, HwVollSchritt2 btWitStartM m1
+      (Kap2Ereignis.bittest 0
+        ⟨.reg .bts .w64 .rax .rcx, 4⟩)) ∧
+    (∃ m1, HwVollSchritt2 bsHwWitStart m1
+      (Kap2Ereignis.bitscan 0 ⟨true⟩
+        ⟨.bsf .b32 .rax (.reg .rcx), 3⟩)) ∧
+    (∃ m1, HwVollSchritt2 fp32WitM0 m1
+      (Kap2Ereignis.fpstore 0
+        (.speichere32 fp32WitAdr fp32WitWert))) ∧
+    (∃ m1, HwVollSchritt2 pfWitStart m1
+      (Kap2Ereignis.pf 0
+        { pfWitEv with
+          steuer := { pfWitSteuer with ifBit := false } })) ∧
+    (∃ m1, HwVollSchritt2 ctxWitStart m1
+      (Kap2Ereignis.ctx (.fxsaveReq 0 ctxArea0))) ∧
+    (∃ m1, HwVollSchritt2 hwWitStart m1
+      (Kap2Ereignis.wc 0
+        (.holeVor .nta (BitVec.ofNat 64 8192)))) ∧
+    (∃ m1, HwVollSchritt2 avx2WitStart m1
+      (Kap2Ereignis.avx2mem
+        (.speichere 0 avx2WitCpu avx2WitXcr0 basisKontrolle
+          avx2WitProfil .unausgerichtet .rax (0 : BitVec 32)
+          avx2WitV))) ∧
+    (∃ m1, HwVollSchritt2 instStart_muldiv m1
+      (Kap2Ereignis.avx2tor avxZeugeCpu avxZeugeXcr0 basisKontrolle
+        0 (.muldiv ⟨.mulRax .rcx, 3⟩))) ∧
+    (∃ m1, HwVollSchritt2 hwWitStart m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 hwWitAdr (BitVec.ofNat 8 0))))) ∧
+    (∃ m1, HwVollSchritt2 hwWitStart m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 hwWitAdr (BitVec.ofNat 8 0))))) ∧
+    (∃ m1, HwVollSchritt2 witUebersetzM.hw m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 hwWitAdr (BitVec.ofNat 8 0))))) ∧
+    (∃ m1, HwVollSchritt2 segTlbHw m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 segTlbAddr (BitVec.ofNat 8 0))))) ∧
+    (∃ m1, HwVollSchritt2 Avx2Join.avxWitS2.hw m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 Avx2Join.avxWitAdr
+          (BitVec.ofNat 8 1))))) ∧
+    (∀ (m : HwMaschine) (c : Nat) (q : SeitenAnfrage),
+      adapterSeiten.schritt m c q = none) ∧
+    carryWitRegOut carryWitOutAdd 0 Register.rax = some 22 ∧
+    carryWitRegOut carryWitOutSub 1 Register.rax = some 12 ∧
+    rotHwRegOut rotHwOutRol 0 Register.rax = some 3 ∧
+    bsHwRegOut bsHwOutBsf 0 Register.rax = some 4 ∧
+    ctxWitBuf (ctxSpeichern ctxWitStart 0 ctxArea0) 0 = some 260 ∧
+    ctxWitBuf (ctxSpeichern ctxWitStart 1 ctxArea1) 1 = some 260 ∧
+    fp32WitLoadEigen = some (some (BitVec.ofNat 8 0x40)) ∧
+    fp32WitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+    fp32WitS0.mem.bytes (addrOff fp32WitAdr 2) ≠
+      fp32WitS4.mem.bytes (addrOff fp32WitAdr 2) ∧
+    loadByte (tsoAnsicht Avx2Join.avxWitS2.hw) 0
+      Avx2Join.avxWitAdr = some (BitVec.ofNat 8 1) ∧
+    HwWf rotHwWitStart ∧ HwWf carryWitStart ∧ HwWf btWitStartM ∧
+    HwWf bsHwWitStart ∧ HwWf fp32WitM0 ∧ HwWf pfWitStart ∧
+    HwWf ctxWitStart ∧ HwWf hwWitStart ∧ HwWf segTlbHw := by
+  refine ⟨kap2_step_rot, kap2_step_carry, kap2_step_bittest,
+    kap2_step_bitscan, kap2_step_fpstore, kap2_step_pf,
+    kap2_step_ctx, kap2_step_wc, kap2_step_avx2mem,
+    kap2_step_avx2tor, kap2_step_seiten, kap2_step_gross,
+    kap2_step_uebersetz, kap2_step_segtlb,
+    kap2_step_avx2join, kap2_verweigert.1, carryWit_add_rax,
+    carryWit_sub_rax, rotHw_rol_rax, bsHw_bsf_rax,
+    ctxWit_buf.1, ctxWit_buf.2, fp32Wit_weiterleitung,
+    fp32Wit_fremd_alt, fp32Wit_aendert, Avx2Join.avxWit_eigen,
+    rotHwWitStart_wf, carryWitStart_wf, btWitStart_wf,
+    bsHwWitStart_wf, fp32WitM0_wf, pfWitStart_wf, ctxWitStart_wf,
+    hwWitStart_wf, segTlbHw_wf⟩
+
+/- CUTS:
+    Proved here, over the reused accepted vocabulary only (every
+    definition lifted, never redefined):
+    - the second composed step `HwVollSchritt2` as the first union
+      plus one arm per family merged since: rot, carry, bittest,
+      bitscan, fpstore, pf, ctx, wc, avx2mem, avx2tor, seiten,
+      gross, uebersetz (14 tags, `alt` tag 0);
+    - exact embedding of the first union (`kap2_alt_embedded`) and
+      exact per-family embedding (14 iffs: each family step is a
+      second-union step and back, no new behaviour behind any tag;
+      the three paging iffs are vacuous through the accepted
+      refusals, stated exactly, not silently dropped);
+    - `HwWf` preservation by the second union (`kap2_wf`, via each
+      family's accepted lemma plus one small helper for the
+      gate-premise AVX2 plug);
+    - tag disjointness: the old union never coincides with any new
+      family tag (`kap2_tags_disjoint`, `kap2Tag`);
+    - refusals stay refused: all three paging adapters admit
+      nothing on the flat machine (`kap2_verweigert`, citing the
+      accepted `adapterSeiten/Gross/Uebersetz_verweigert`);
+    - joint witness `kap2_zeuge`: 15 exhibited union steps (ten
+      flat-family steps through their own adapters/relations, five
+      boundary observations on the extended families' own witness
+      machines), the paging refusal, two-core value pins, cited
+      owner-only forwarding with a memory-changing drain, and
+      well-formedness of every witness machine.
+    NOT proved here, and not claimed:
+    - walk/fault legs of paging, large paging and translation
+      (tables gain accessed/dirty, faults self-loop on extended
+      state), the segment/TLB legs beyond the coherent observation
+      (WRFSBASE/WRGSBASE/SWAPGS/INVLPG/CR3 move only segment/TLB
+      state), and the AVX2 register/memory YMM legs ride no closed
+      flat-machine step: each needs state the coherent machine
+      does not carry, the same reason the first union keeps async
+      delivery out of the closed step (see its CUTS). Their old
+      coherent legs compose through the `.alt` arm; the exhibited
+      boundary steps pin exactly that composition;
+    - `Avx2Ops` contributes no arm at all (FINDING, by its own
+      design: pure 256-bit evaluators with NO `HwAdapter`, NO
+      `HwSchritt` embedding and NO `HwWf` preservation in its file,
+      see its CUTS; the join/adapter coverage comes from
+      `Avx2Join`/`Avx2State`/`Avx2Mem`);
+    - the three paging boundary steps share one witness machine
+      (`hwWitStart`) and one observation: the strands' distinctive
+      content (walks, faults, stale steps, re-walks) lives on
+      extended state with the families' own witnesses, cited, not
+      re-stepped;
+    - byte-decoder priority for the new rows beyond what the
+      families pin locally stays open (rotate/shift overlap,
+      carry group-1 overlap, bit-test versus unified fetch);
+    - no hardware correspondence beyond self-consistency (silicon
+      and timing assumptions live in the family files, not
+      re-checked here); no W/GX bridge; no source, checker,
+      contract, entry, ABI, loader, budget or liveness claim.
+-/
+
+#print axioms kap2_alt_embedded
+#print axioms kap2_rot_embedded
+#print axioms kap2_carry_embedded
+#print axioms kap2_bittest_embedded
+#print axioms kap2_bitscan_embedded
+#print axioms kap2_fpstore_embedded
+#print axioms kap2_pf_embedded
+#print axioms kap2_ctx_embedded
+#print axioms kap2_wc_embedded
+#print axioms kap2_avx2mem_embedded
+#print axioms kap2_avx2tor_embedded
+#print axioms kap2_seiten_embedded
+#print axioms kap2_gross_embedded
+#print axioms kap2_uebersetz_embedded
+#print axioms kap2_adapterAvx2Tor_wf
+#print axioms kap2_wf
+#print axioms kap2_tags_disjoint
+#print axioms kap2_verweigert
+#print axioms kap2_hwWitStart_lade
+#print axioms kap2_segTlbHw_lade
+#print axioms kap2_step_rot
+#print axioms kap2_step_carry
+#print axioms kap2_step_bittest
+#print axioms kap2_step_bitscan
+#print axioms kap2_step_fpstore
+#print axioms kap2_step_pf
+#print axioms kap2_step_ctx
+#print axioms kap2_step_wc
+#print axioms kap2_step_avx2mem
+#print axioms kap2_step_avx2tor
+#print axioms kap2_step_seiten
+#print axioms kap2_step_gross
+#print axioms kap2_step_uebersetz
+#print axioms kap2_step_segtlb
+#print axioms kap2_step_avx2join
+#print axioms kap2_zeuge
+
 end Gabbro.Grammatik.X86
