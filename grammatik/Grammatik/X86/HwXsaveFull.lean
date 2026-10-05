@@ -1277,8 +1277,7 @@ theorem neuestens_einmal832 (f : Nat → Byte) (a : Adresse)
 /-- FORWARDING AT SAVE: after a successful save, every footprint
     offset loads the saved image byte through the owner's buffer. -/
 theorem vollWeiterleitung_gespeichert (v : VollMaschine) (c : Nat)
-    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
-    (f : VollFehlerIn) (s1' : TSOZustand)
+    (a : Adresse) (sse avx : Bool) (s1' : TSOZustand)
     (hs : issueListe (tsoAnsicht (vollHw v)) c
       (vollEintraege ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
         (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
@@ -1497,7 +1496,7 @@ theorem vollRundlauf_maschine (v : VollMaschine) (c : Nat)
         some (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
           (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
           i) :=
-    vollWeiterleitung_gespeichert v c a xc sse avx f s1' hs1 hles
+    vollWeiterleitung_gespeichert v c a sse avx s1' hs1 hles
   have hagree : ∀ i ∈ vollOffsets sse avx,
       ctxFalte bs ctxNull i =
         vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
@@ -1617,5 +1616,325 @@ theorem vollRundlauf_maschine (v : VollMaschine) (c : Nat)
     exact vollRundlauf_ymm ((vollHw v).kerne c).fp
       ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
       (kopfStandard sse avx) (v.ym.ober c) r
+
+/-! ## 5. Fault gates: every class fires its outcome.
+
+  Each gate below is one ordered row of the save/restore step:
+  #NM first, then #UD (CPUID, LOCK, XCR0), then the empty-request
+  refusal, then #GP (x87 bit, canonical, alignment), then
+  #SS/#PF/#AC, then the permission refusal. Every premise is used
+  by its `simp` (the gate it discharges). -/
+
+/-- #NM has priority: a set TS bit faults, whatever else holds. -/
+theorem vollSpeichern_fehlerNM (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h : f.nm = true) :
+    vollSpeichern v c a xc sse avx f = .fehler .nm := by
+  unfold vollSpeichern
+  simp [h]
+
+/-- #UD for a missing CPUID XSAVE bit. -/
+theorem vollSpeichern_fehlerUD_ohne_cpuid (v : VollMaschine)
+    (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = false) :
+    vollSpeichern v c a xc sse avx f = .fehler .ud := by
+  unfold vollSpeichern
+  simp [h1, h2]
+
+/-- #UD for a LOCK prefix. -/
+theorem vollSpeichern_fehlerUD_lock (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false) (h2 : f.lock = true) :
+    vollSpeichern v c a xc sse avx f = .fehler .ud := by
+  unfold vollSpeichern
+  simp [h1, h2]
+
+/-- #GP where the XCR0 x87 bit is clear. -/
+theorem vollSpeichern_fehlerGP_ohne_x87 (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = false) :
+    vollSpeichern v c a xc sse avx f = .fehler .gp := by
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4]
+
+/-- #UD where SSE is requested without XCR0 SSE readiness. -/
+theorem vollSpeichern_fehlerUD_ohne_sse (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = false) :
+    vollSpeichern v c a xc sse avx f = .fehler .ud := by
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4, h5, h6]
+
+/-- #UD where AVX is requested without XCR0 AVX readiness. -/
+theorem vollSpeichern_fehlerUD_ohne_avx (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = false) (h6 : avx = true)
+    (h7 : xcr0AvxBereit xc = false) :
+    vollSpeichern v c a xc sse avx f = .fehler .ud := by
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4, h5, h6, h7]
+
+/-- An empty request is refused, never silently empty. -/
+theorem vollSpeichern_verweigert_leer (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = false) (h6 : avx = false) :
+    vollSpeichern v c a xc sse avx f = .verweigert := by
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4, h5, h6]
+
+/-- #GP on a non-canonical address. -/
+theorem vollSpeichern_fehlerGP_nicht_kanonisch (v : VollMaschine)
+    (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = false) :
+    vollSpeichern v c a xc sse avx f = .fehler .gp := by
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4, h5, h6, h7, h8]
+
+/-- #GP on a misaligned area. -/
+theorem vollSpeichern_fehlerGP_falsch_ausgerichtet (v : VollMaschine)
+    (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = false) :
+    vollSpeichern v c a xc sse avx f = .fehler .gp := by
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4, h5, h6, h7, h8, h9]
+
+/-- #SS fires ahead of the memory access. -/
+theorem vollSpeichern_fehlerSS (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h10 : f.ss = true) :
+    vollSpeichern v c a xc sse avx f = .fehler .ss := by
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
+
+/-- #PF fires ahead of the memory access. -/
+theorem vollSpeichern_fehlerPF (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h10 : f.ss = false) (h11 : f.pf = true) :
+    vollSpeichern v c a xc sse avx f = .fehler .pf := by
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11]
+
+/-- #AC fires last among the fault gates. -/
+theorem vollSpeichern_fehlerAC (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h10 : f.ss = false) (h11 : f.pf = false)
+    (h12 : f.ac = true) :
+    vollSpeichern v c a xc sse avx f = .fehler .ac := by
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12]
+
+/-- A missing write permission refuses the whole save. -/
+theorem vollSpeichern_verweigert_ohne_schreibrecht (v : VollMaschine)
+    (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h10 : f.ss = false) (h11 : f.pf = false)
+    (h12 : f.ac = false)
+    (h13 : ctxAlle (vollHw v).mem.schreibbar a
+      (vollOffsets sse avx) = false) :
+    vollSpeichern v c a xc sse avx f = .verweigert := by
+  rw [h5, h7] at h13
+  unfold vollSpeichern
+  simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13]
+
+/-- #NM on the restore path. -/
+theorem vollWiederherstellen_fehlerNM (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h : f.nm = true) :
+    vollWiederherstellen v c a xc sse avx f = .fehler .nm := by
+  unfold vollWiederherstellen
+  simp [h]
+
+/-- #UD on the restore path without XCR0 SSE readiness. -/
+theorem vollWiederherstellen_fehlerUD_ohne_sse (v : VollMaschine)
+    (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = false) :
+    vollWiederherstellen v c a xc sse avx f = .fehler .ud := by
+  unfold vollWiederherstellen
+  simp [h1, h2, h3, h4, h5, h6]
+
+/-- #GP on the restore path for a misaligned area. -/
+theorem vollWiederherstellen_fehlerGP_falsch_ausgerichtet
+    (v : VollMaschine) (c : Nat) (a : Adresse) (xc : Xcr0Bild)
+    (sse avx : Bool) (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = false) :
+    vollWiederherstellen v c a xc sse avx f = .fehler .gp := by
+  unfold vollWiederherstellen
+  simp [h1, h2, h3, h4, h5, h6, h7, h8, h9]
+
+/-- #SS on the restore path. -/
+theorem vollWiederherstellen_fehlerSS (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h10 : f.ss = true) :
+    vollWiederherstellen v c a xc sse avx f = .fehler .ss := by
+  unfold vollWiederherstellen
+  simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10]
+
+/-- An empty restore request is refused. -/
+theorem vollWiederherstellen_verweigert_leer (v : VollMaschine)
+    (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = false) (h6 : avx = false) :
+    vollWiederherstellen v c a xc sse avx f = .verweigert := by
+  unfold vollWiederherstellen
+  simp [h1, h2, h3, h4, h5, h6]
+
+/-- A missing read permission refuses the whole restore. -/
+theorem vollWiederherstellen_verweigert_ohne_leserecht
+    (v : VollMaschine) (c : Nat) (a : Adresse) (xc : Xcr0Bild)
+    (sse avx : Bool) (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h10 : f.ss = false) (h11 : f.pf = false)
+    (h12 : f.ac = false)
+    (h13 : ctxAlle (vollHw v).mem.lesbar a
+      (vollOffsets sse avx) = false) :
+    vollWiederherstellen v c a xc sse avx f = .verweigert := by
+  rw [h5, h7] at h13
+  unfold vollWiederherstellen
+  simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13]
+
+/-- A reserved MXCSR bit in the loaded image faults with #GP on
+    restore (the accepted `ldmxcsrArchOk` refusal, lifted to the
+    area restore). -/
+theorem vollWiederherstellen_fehlerGP_reserviert (v : VollMaschine)
+    (c : Nat) (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (h1 : f.nm = false)
+    (h2 : f.cpuidOk = true) (h3 : f.lock = false)
+    (h4 : xc.x87 = true) (h5 : sse = true)
+    (h6 : xcr0SseBereit xc = true) (h7 : avx = false)
+    (h8 : kanonisch a = true) (h9 : xAusgerichtet a = true)
+    (h10 : f.ss = false) (h11 : f.pf = false)
+    (h12 : f.ac = false)
+    (h13 : ctxAlle (vollHw v).mem.lesbar a
+      (vollOffsets sse avx) = true)
+    (bs : List (Nat × Byte))
+    (h14 : ctxLadeAux (tsoAnsicht (vollHw v)) c a
+      (vollOffsets sse avx) = some bs)
+    (h15 : 65536 ≤ (mxcsrAusBytes
+      (fun i => ctxFalte bs ctxNull (24 + i))).toNat) :
+    vollWiederherstellen v c a xc sse avx f = .fehler .gp := by
+  rw [h5, h7] at h13 h14
+  unfold vollWiederherstellen
+  simp [h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14]
+  have hres : mxcsrReserviertFrei
+      (mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i))) =
+      false :=
+    mxcsrReserviertFrei_verweigert _ h15
+  simp [hres]
+
+/-- AGREEMENT: the restore's reserved-bit #GP coincides with the
+    accepted architectural load refusal `ldmxcsrArchOk`. -/
+theorem vollRestore_stimmt_ldmxcsr_ueberein (p : MxcsrProfil)
+    (w : MXCSR) (h : 65536 ≤ w.toNat) :
+    ldmxcsrArchOk p w = false :=
+  ldmxcsrArchOk_reserviert_verweigert p w h
+
+/-! ## 6. FINIT: re-initialise the x87 image.
+
+  `vollFinit` resets the acting core's opaque image to the reset
+  constant. Everything else — control word, XMM/YMM files, masks,
+  memory, buffers — is untouched, matching silicon FINIT, which
+  affects only the x87 state (the FPU execution itself stays out
+  of scope: only the stored image moves). -/
+
+/-- FINIT: reset the acting core's opaque x87 image. -/
+def vollFinit (v : VollMaschine) (c : Nat) : VollMaschine :=
+  ⟨v.ym, fun d => if d = c then x87Reset else v.x87 d, v.maske⟩
+
+/-- FINIT installs the reset image on the acting core. -/
+theorem vollFinit_setzt_zurueck (v : VollMaschine) (c : Nat)
+    (t : Nat) :
+    ((vollFinit v c).x87 c) t = x87Reset t := by
+  show ((if c = c then x87Reset else v.x87 c)) t = x87Reset t
+  rw [if_pos rfl]
+
+/-- FINIT keeps every other core's image. -/
+theorem vollFinit_fremd (v : VollMaschine) (c d : Nat)
+    (h : d ≠ c) (t : Nat) :
+    ((vollFinit v c).x87 d) t = (v.x87 d) t := by
+  show ((if d = c then x87Reset else v.x87 d)) t = (v.x87 d) t
+  rw [if_neg h]
+
+/-- FINIT preserves well-formedness (profiles untouched). -/
+theorem vollFinit_wf (v : VollMaschine) (c : Nat)
+    (hwf : VollWf v) : VollWf (vollFinit v c) :=
+  hwf
+
+/-- FINIT keeps the coherent machine (registers, memory,
+    buffers all untouched). -/
+theorem vollFinit_hw_still (v : VollMaschine) (c : Nat) :
+    vollHw (vollFinit v c) = vollHw v := rfl
+
+/-- FINIT keeps the masks. -/
+theorem vollFinit_maske_still (v : VollMaschine) (c : Nat) :
+    (vollFinit v c).maske = v.maske := rfl
+
+/-- SAVE/RESTORE AFTER FINIT recovers the reset image: the
+    identity theorem applied to the reinitialised state. -/
+theorem vollFinit_rundlauf (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (v1 v2 : VollMaschine)
+    (hles : ctxAlle (vollHw (vollFinit v c)).mem.lesbar a
+      (vollOffsets sse avx) = true)
+    (h1 : vollSpeichern (vollFinit v c) c a xc sse avx f =
+      .weiter v1)
+    (h2 : vollWiederherstellen v1 c a xc sse avx f = .weiter v2) :
+    ∀ t : Nat, t < 152 → (v2.x87 c) t = x87Reset t := by
+  intro t ht
+  have hr := (vollRundlauf_maschine (vollFinit v c) c a xc sse avx f
+    v1 v2 hles h1 h2).1 t ht
+  rw [hr]
+  exact vollFinit_setzt_zurueck v c t
 
 end Gabbro.Grammatik.X86
