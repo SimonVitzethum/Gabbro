@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 21:34 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 21:35 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -707,7 +707,7 @@ Last ledger refresh: **2026-10-05 21:34 UTC**. This is an operational snapshot, 
 | 1297 | Paging follow-up: large pages and SMEP/SMAP | Merged after review/checks | 1298: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1297.md) |
 | 1299 | Translation: the page walk joined with the TLB and the flat memory model | Merged after review/checks | 1300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1299.md) |
 | 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Merged after review/checks | 1302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1301.md) |
-| 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Committed candidate; review/integration pending | 1304: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1303.md) |
+| 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Merged after review/checks | 1304: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1303.md) |
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
 | 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1307.md) |
 | 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Merged after review/checks | 1310: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1309.md) |
@@ -1767,6 +1767,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1347**, Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1347.md). <!-- x86-merged:1347 -->
 - 2026-10-05: lane **1348**, Independent exact review of 1347, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1348.md). <!-- x86-merged:1348 -->
 - 2026-10-05: publication batch checks passed for `68d5fd6b`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1303**, Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1303.md). <!-- x86-merged:1303 -->
+- 2026-10-05: checked master `216ae362` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:216ae3628e31db46f65ebf667dadfaff060eb87c -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
