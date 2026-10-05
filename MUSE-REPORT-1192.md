@@ -1,44 +1,37 @@
-# MUSE-REPORT-1192: Exact review of candidate 1191 (Pipeline spill with privacy)
+# MUSE-REPORT-1192: Exact review of author lane 1191 (Pipeline spill with privacy)
+
+CANDIDATE: 1191 12cd3bc6ec1db173760a583018341b08b76ba8ed
 
 ## Identity
 - Clone: /home/simon/Dokumente/gabbro-muse/a1192 — verified via `pwd`.
 - Branch: muse/1192 — verified via `git branch --show-current`.
 - Status: `git status` clean; `git diff --stat master..HEAD` empty (no output).
+- Pinned snapshot: `.tmp/review/SNAPSHOT.json` lists author 1191 at head 12cd3bc6ec1db173760a583018341b08b76ba8ed on base 9b05e84a8377f2a718cecf9ca1a403d6c9c2b919 with files MUSE-REPORT-1191.md, grammatik/Grammatik.lean, grammatik/Grammatik/X86/PipelineSpill.lean, clean true.
 
-## Candidate under review
-- Task states: CANDIDATE: 1191 <full pinned HEAD>.
-- The pinned HEAD placeholder is empty in both `.tmp/LANE.md` and `lanes/1192.md`.
-- No candidate diff is present in this clone: `PipelineSpill.lean` does not exist here (glob over `grammatik/Grammatik/X86/Pipeline*.lean` lists Pipeline, PipelineImage, PipelineEntry, PipelineRegAlloc, etc., but no `PipelineSpill.lean` and no `ComposeSpillPrivacy.lean`).
-- The author clone (/home/simon/Dokumente/gabbro-muse/a1191) is outside this directory and was NOT read (HARD RULES 1: touch nothing outside this directory).
+## What was available in scope
+- Read `lanes/1191.md` (author task: spill/reload code in private frame region, decided validator, meaning-preservation plus privacy theorem, spill-into-table refusal with poison probe, non-degenerate zeuge) and `lanes/1192.md` (review task) inside this clone only.
+- The pinned head object is NOT present in this clone: `git show --stat` on the pinned head returns bad object. The author clone is outside this directory and was NOT read (HARD RULES 1).
+- The new file is absent here: glob over `grammatik/Grammatik/X86/Pipeline*.lean` shows Pipeline, PipelineImage, PipelineEntry, PipelineRegAlloc and others, but no PipelineSpill file.
+- Owned scope respected: only this report file created or modified; no Lean files added or edited.
 
 ## Checks performed
-- Read `lanes/1191.md` (author task) and `lanes/1192.md` (review task) inside this clone only.
-- Verified owned scope: only `MUSE-REPORT-1192.md` created; no Lean files added or edited.
-- Ran `./lean-bau` (baseline, without candidate):
+- Verified owned scope and branch identity as above.
+- Ran `./lean-bau` (baseline without the author diff, since the diff is not present locally):
   - First line: `== exit 0; 0 error line(s) in the COMPLETE output`
   - Last result line: `Build completed successfully (619 jobs).`
-- No `sorry`/`axiom`/`native_decide` check was possible on the candidate (no candidate code in scope). Baseline tree is green as reported above.
+- No author-diff checks were possible locally (no sorry/axiom/native_decide scan, no axioms print check, no import-scope check, no premise-use check, no evaluator-lift check, no refusal-probe run, no witness check, no silicon check, no CUTS check). Baseline tree is green as reported above.
 
-## Review checklist (could not be evaluated — no candidate in scope)
-- No sorry/axiom/native_decide: NOT CHECKED (no diff).
-- `#print axioms` standard: NOT CHECKED.
-- Existing files untouched except one import line: NOT CHECKED.
-- Every premise used: NOT CHECKED.
-- Family evaluator lifted not copied: NOT CHECKED.
-- Planted refusals really refuse: NOT CHECKED.
-- Witness non-degenerate: NOT CHECKED.
-- Silicon facts vs Intel SDM: NOT CHECKED.
-- CUTS honest, no claim larger than proof, no W/GX claim: NOT CHECKED.
+## Substantive finding (preserved)
+- The review is blocked on access, not on the merits. The exact pinned head is now known from SNAPSHOT.json (see above), but its content is not readable from this isolated clone, so none of the review checklist items could be evaluated. Approving on the task text alone would be fake closure, which the task forbids. The prior procedural finding stands unchanged; only the machine-readable format is fixed by this update.
 
-## VERDICT: REPAIR
-Reason is procedural, not on the merits: the review is blocked. The candidate identity (`<full pinned HEAD>`) was never supplied, the candidate diff is absent from this isolated clone (`git diff master..HEAD` empty, new file absent), and the author clone is out of bounds by HARD RULES 1. An ACCEPT would be fake closure (explicitly forbidden by the task). To make this review possible: re-issue lane 1192 with the full pinned 1191 HEAD (or merge/publish the candidate snapshot into a location this reviewer may legally read), and re-run the exact-review checklist against that snapshot.
+VERDICT: REPAIR
 
 ## New definitions/theorems
-- None (report-only review; OWN ONLY MUSE-REPORT-1192.md).
+- None (report-only review; own file only).
 
 ## Open
-- Entire exact review of 1191 remains open pending an accessible, pinned candidate snapshot.
+- Full exact review of the pinned 1191 head remains open pending a locally readable author snapshot (object present in this clone or attached diff).
 - No Lean or Rust work done; nothing to merge.
 
 ## Task issue
-- `lanes/1192.md` line 25 leaves the candidate hash as the literal `<full pinned HEAD>`. A reviewer in an isolated clone with no-network/no-outside-directory rules cannot resolve this. Either pin the hash or attach the exact diff/snapshot to the task.
+- `lanes/1192.md` left the author hash as a literal placeholder while the pin lives only in `.tmp/review/SNAPSHOT.json`. A reviewer following HARD RULES 1 cannot resolve the author diff from the lane file alone. Either pin the hash in the lane file or make the author objects fetchable inside the reviewer clone.
