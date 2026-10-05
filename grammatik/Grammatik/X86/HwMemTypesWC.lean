@@ -801,6 +801,204 @@ theorem adapterWc_stimmt_ueberein (w : HwWcMaschine1287) (c : Nat)
   by_cases hg : (speicherTyp w.profil a 1 == .wc &&
     w.masch.mem.schreibbar a) = true <;> simp [hg]
 
+/-- ADMITTED: a WP store under its gate writes the memory byte
+    (go-through, recorded as WP). -/
+theorem wcAdapter_wp_mem (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Byte) (profil : TypProfil)
+    (ht : speicherTyp profil a 1 = .wp)
+    (hw : m.mem.schreibbar a = true) :
+    ∃ m' : HwMaschine,
+      wcAdapterSchritt m c (.wpSpeichere a v profil) = some m' ∧
+        m'.mem.bytes a = v ∧ m'.puffer = m.puffer := by
+  have e1 : (speicherTyp profil a 1 == .wp) = true := by simp [ht]
+  have hgate : (speicherTyp profil a 1 == .wp &&
+    m.mem.schreibbar a) = true := by simp [e1, hw]
+  refine ⟨{ m with mem :=
+      { m.mem with bytes := fun x =>
+        if x = a then v else m.mem.bytes x } }, ?_, ?_, rfl⟩
+  · show (if speicherTyp profil a 1 == .wp && m.mem.schreibbar a
+      then some _ else none) = some _
+    rw [if_pos hgate]
+  · simp
+
+/-! ## 6. Step frame for CLFLUSH: log and kept entries.
+
+  The line drain keeps every entry outside the stated line pending
+  and records the flush; the drained bytes themselves enter the
+  connection of §7 as computed facts. -/
+
+/-- LINE FRAME: a CLFLUSH step keeps exactly the entries outside the
+    stated line pending and records the flush in the log. -/
+theorem hwClflush_rahmen (w w' : HwWcMaschine1287) (c : Nat)
+    (s : Bool) (a : Adresse)
+    (h : HwWcSchritt w w' (.clflush c s a)) :
+    w'.wc c =
+        (w.wc c).filter (fun e => !(inLinie a e.addr)) ∧
+      w'.wcLog = w.wcLog ++ [.clflush c s a] := by
+  cases h with
+  | clflush c s a w' h =>
+    unfold clflushZugriff at h
+    by_cases hg : (s &&
+      (w.masch.mem.lesbar a || w.masch.mem.ausfuehrbar a)) = true
+    · rw [if_pos hg] at h
+      cases h
+      refine ⟨?_, rfl⟩
+      show (pufferSetze w.wc c _) c = _
+      simp [pufferSetze]
+    · rw [if_neg hg] at h
+      cases h
+
+/-! ## 7. Joint witness: buffer, flush, go-through, hint, fence.
+
+  Two cores touch typed memory: core 0 buffers two WC stores -- one
+  flushed store-ordered by CLFLUSH, one drained by the fence -- while
+  core 1 still reads the old bytes; a WT store goes through at once;
+  PREFETCHh is a NOP even at an unreadable address. Non-degenerate:
+  canonical memory changes twice (the CLFLUSH line drain and the
+  fence drain), on two cores, beside planted refusals. -/
+
+/-- Witness WC region: two bytes at 8192 (one stated line). -/
+def witWcReg1287 : Region := ⟨8192, 2, true, true, false⟩
+
+/-- Witness WT region: one byte at 8194. -/
+def witWtReg1287 : Region := ⟨8194, 1, true, true, false⟩
+
+/-- Witness WP region: one byte at 8195. -/
+def witWpReg1287 : Region := ⟨8195, 1, true, true, false⟩
+
+/-- Witness type profile: disjoint typed regions over the accepted
+    witness image (data cells 8192..8199 stay readable/writable). -/
+def witProfil1287 : TypProfil :=
+  [(witWcReg1287, .wc), (witWtReg1287, .wt), (witWpReg1287, .wp)]
+
+/-- Witness addresses: two WC cells on one stated line, the WT cell,
+    and an unreadable address for the hint NOP. -/
+def witWc1287 : Adresse := BitVec.ofNat 64 8192
+def witWcB1287 : Adresse := BitVec.ofNat 64 8193
+def witWt1287 : Adresse := BitVec.ofNat 64 8194
+def witNo1287 : Adresse := BitVec.ofNat 64 0
+
+/-- The profile types the WC cells WC. -/
+theorem witTyp_wc1287 : speicherTyp witProfil1287 witWc1287 1 = .wc := by
+  decide
+
+/-- The profile types the WT cell WT. -/
+theorem witTyp_wt1287 : speicherTyp witProfil1287 witWt1287 1 = .wt := by
+  decide
+
+/-- The profile types 8195 WP. -/
+theorem witTyp_wp1287 :
+    speicherTyp witProfil1287 (BitVec.ofNat 64 8195) 1 = .wp := by
+  decide
+
+/-- Off-profile addresses stay WB. -/
+theorem witTyp_wb1287 :
+    speicherTyp witProfil1287 (BitVec.ofNat 64 8196) 1 = .wb := by
+  decide
+
+/-- Witness start: shared image, empty buffers, empty log. -/
+def witW01287 : HwWcMaschine1287 :=
+  ⟨hwWitStart, witProfil1287, fun _ => [], []⟩
+
+/-- The witness start is well-formed. -/
+theorem witW01287_wf : HwWcWf witW01287 := hwWitStart_wf
+
+/-- After the first WC store: core 0 buffers 42 at 8192. -/
+def witW11287 : HwWcMaschine1287 :=
+  ⟨witW01287.masch, witW01287.profil,
+    pufferSetze witW01287.wc 0
+      (witW01287.wc 0 ++ [⟨witWc1287, natByte 42⟩]),
+    witW01287.wcLog ++ [.wcSpeichern 0 witWc1287 (natByte 42)]⟩
+
+/-- Stage 1: the WC store retires (buffered, machine untouched). -/
+theorem wit_schritt11287 :
+    HwWcSchritt witW01287 witW11287
+      (.wcSpeichern 0 witWc1287 (natByte 42)) := by
+  have hgate : (speicherTyp witW01287.profil witWc1287 1 == .wc &&
+    witW01287.masch.mem.schreibbar witWc1287) = true := by decide
+  exact HwWcSchritt.wcSpeichern witW01287 0 witWc1287 (natByte 42)
+    witW11287 (by unfold wcStoreZugriff witW11287; rw [if_pos hgate])
+
+/-- After the CLFLUSH: the stated line drains to memory. -/
+def witW21287 : HwWcMaschine1287 :=
+  let (mem', rest) :=
+    wcLinieSpuele witW11287.masch.mem (witW11287.wc 0) witWc1287
+  ⟨{ witW11287.masch with mem := mem' }, witW11287.profil,
+    pufferSetze witW11287.wc 0 rest,
+    witW11287.wcLog ++ [.clflush 0 true witWc1287]⟩
+
+/-- Stage 2: CLFLUSH retires store-ordered over the line. -/
+theorem wit_schritt21287 :
+    HwWcSchritt witW11287 witW21287
+      (.clflush 0 true witWc1287) := by
+  have hgate : (true &&
+    (witW11287.masch.mem.lesbar witWc1287 ||
+      witW11287.masch.mem.ausfuehrbar witWc1287)) = true := by decide
+  exact HwWcSchritt.clflush witW11287 0 true witWc1287
+    witW21287 (by unfold clflushZugriff witW21287; rw [if_pos hgate])
+
+/-- After the second WC store: core 0 buffers 43 at 8193. -/
+def witW31287 : HwWcMaschine1287 :=
+  ⟨witW21287.masch, witW21287.profil,
+    pufferSetze witW21287.wc 0
+      (witW21287.wc 0 ++ [⟨witWcB1287, natByte 43⟩]),
+    witW21287.wcLog ++ [.wcSpeichern 0 witWcB1287 (natByte 43)]⟩
+
+/-- Stage 3: the second WC store retires (buffered). -/
+theorem wit_schritt31287 :
+    HwWcSchritt witW21287 witW31287
+      (.wcSpeichern 0 witWcB1287 (natByte 43)) := by
+  have hgate : (speicherTyp witW21287.profil witWcB1287 1 == .wc &&
+    witW21287.masch.mem.schreibbar witWcB1287) = true := by decide
+  exact HwWcSchritt.wcSpeichern witW21287 0 witWcB1287 (natByte 43)
+    witW31287 (by unfold wcStoreZugriff witW31287; rw [if_pos hgate])
+
+/-- After the WT store: memory carries 9 at 8194 at once. -/
+def witW41287 : HwWcMaschine1287 :=
+  ⟨{ witW31287.masch with mem :=
+      { witW31287.masch.mem with bytes := fun x =>
+        if x = witWt1287 then natByte 9
+        else witW31287.masch.mem.bytes x } },
+    witW31287.profil, witW31287.wc,
+    witW31287.wcLog ++ [.wtSpeichern witWt1287 (natByte 9)]⟩
+
+/-- Stage 4: the WT store retires (go-through). -/
+theorem wit_schritt41287 :
+    HwWcSchritt witW31287 witW41287
+      (.wtSpeichern witWt1287 (natByte 9)) := by
+  have hgate : (speicherTyp witW31287.profil witWt1287 1 == .wt &&
+    witW31287.masch.mem.schreibbar witWt1287) = true := by decide
+  exact HwWcSchritt.wtSpeichern witW31287 witWt1287 (natByte 9)
+    witW41287 (by unfold wtStoreZugriff witW41287; rw [if_pos hgate])
+
+/-- After the hint: nothing moves but the log. -/
+def witW51287 : HwWcMaschine1287 :=
+  ⟨witW41287.masch, witW41287.profil, witW41287.wc,
+    witW41287.wcLog ++ [.prefetch .t0 witNo1287]⟩
+
+/-- Stage 5: PREFETCHh retires as a NOP at an unreadable address. -/
+theorem wit_schritt51287 :
+    HwWcSchritt witW41287 witW51287
+      (.prefetch .t0 witNo1287) := by
+  exact HwWcSchritt.prefetch witW41287 .t0 witNo1287
+    witW51287 (by unfold prefetchZugriff; rfl)
+
+/-- After the fence: both own buffers drain to memory. -/
+def witW61287 : HwWcMaschine1287 :=
+  match drainVoll ⟨witW51287.masch.mem, witW51287.masch.puffer⟩ 0 with
+  | none => witW51287
+  | some s =>
+    ⟨⟨wcLeere s.mem (witW51287.wc 0), witW51287.masch.kerne, s.puffer,
+      witW51287.masch.hw, witW51287.masch.bereit⟩,
+    witW51287.profil, pufferSetze witW51287.wc 0 [],
+    witW51287.wcLog ++ [.zaun 0]⟩
+
+/-- Stage 6: the fence drains the second WC store to memory. -/
+theorem wit_schritt61287 :
+    HwWcSchritt witW51287 witW61287 (.zaun 0) := by
+  exact HwWcSchritt.zaun witW51287 0
+    witW61287 (by unfold wcZaunZustand; rfl)
+
 end HwMemWC1287
 
 end Gabbro.Grammatik.X86
