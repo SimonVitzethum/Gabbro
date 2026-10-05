@@ -123,3 +123,30 @@ lemma. No other name in the file collides (checked every new
   as explicit checked profile data (family CUTS: real silicon
   values come from the target); this is named in the file header
   and CUTS, not hidden.
+
+## Response to independent review 1130 (reviewability REPAIR)
+
+Review 1130 raised no content finding: its verdict REPAIR is
+solely that the pinned candidate commit `6032515d` was not
+reachable from the reviewer clone (`muse/1130`), so the checklist
+could not run. Status from the author side, re-verified just now:
+
+- HEAD here is exactly `6032515d21b2cd9730bc5baeaa1a197a1e392abb`
+  on `muse/1129`, tree clean; `git diff master..HEAD` is exactly
+  the three owned files (report + 1 import line + new module).
+- `./lean-probe` on the candidate file: 0 errors, axioms
+  `propext`/`Quot.sound` only. `./lean-bau` was green at this
+  exact Lean tree (601 jobs); no Lean file changed since.
+- The candidate itself is unchanged: there is no content fix to
+  apply because no content defect was reported.
+
+I cannot unblock the review myself: lane HARD RULES forbid
+`git push`, network, and touching anything outside this clone,
+so fetching my branch into the reviewer clone is not mine to do.
+The unblock path is the established coordinator-side mechanism
+(same one `muse-merge.sh` uses): fetch the local branch from
+this clone, same machine, no network, no push — e.g. from the
+coordinator, `git fetch /home/simon/Dokumente/gabbro-muse/a1129
+muse/1129` into the reviewer clone — then re-run review 1130
+against the pinned commit. Awaiting that re-review; no partial
+work is pending on the author side.
