@@ -713,7 +713,7 @@ Last ledger refresh: **2026-10-05 20:36 UTC**. This is an operational snapshot, 
 | 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Merged after review/checks | 1310: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1309.md) |
 | 1311 | Capstone, second step: add the families merged since the first union | Committed candidate; review/integration pending | 1312: Agent working | [task](lanes/1311.md) |
 | 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Agent working | 1314: scheduled | [task](lanes/1313.md) |
-| 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Merged after review/checks | 1316: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1315.md) |
+| 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Merged after review/checks | 1316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1315.md) |
 | 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Committed candidate; review/integration pending | 1320: Committed candidate; review/integration pending | [task](lanes/1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1321.md) |
@@ -1747,6 +1747,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1322**, Independent exact review of 1321, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1322.md). <!-- x86-merged:1322 -->
 - 2026-10-05: lane **1315**, Memory-operand addressing forms for rotates, carry forms and sign/xchg, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1315.md). <!-- x86-merged:1315 -->
 - 2026-10-05: integration of candidate(s) [1303] failed the local proof/build gate after independent review 1304; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1304 -->
+- 2026-10-05: lane **1316**, Independent exact review of 1315, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1316.md). <!-- x86-merged:1316 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
