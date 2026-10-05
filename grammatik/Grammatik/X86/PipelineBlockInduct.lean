@@ -45,4 +45,29 @@ inductive KetteLauf : List (List Befehl) → Zustand → Zustand → Prop where
     (hhead : lauf (decodiertZu p) s = some s₁)
     (htail : KetteLauf rest s₁ s₂) : KetteLauf (p :: rest) s s₂
 
+/-- Decoding distributes over chunk concatenation. -/
+theorem decodiertZu_append (p q : List Befehl) :
+    decodiertZu (p ++ q) = decodiertZu p ++ decodiertZu q := by
+  simp [decodiertZu]
+
+/-- CHAIN INDUCTION (runs): a run chain over the chunks is the run
+    over the flattened block. Every premise is used: `hhead` feeds
+    the head step through `lauf_anhang`, `htail` the induction. -/
+theorem ketteLauf_lauf (chunks : List (List Befehl)) (s s' : Zustand)
+    (h : KetteLauf chunks s s') :
+    lauf (decodiertZu chunks.flatten) s = some s' := by
+  induction h with
+  | nil s =>
+    simp [decodiertZu, lauf]
+  | cons p rest s s₁ s₂ hhead _ ih =>
+    rw [List.flatten_cons, decodiertZu_append, lauf_anhang _ _ _ _ hhead]
+    exact ih
+
+/-- CHAIN INDUCTION (work): retired work over the flattened block is
+    the sum of the chunk works. -/
+theorem ketteLaenge_sum (chunks : List (List Befehl)) :
+    targetWork chunks.flatten = (chunks.map targetWork).sum := by
+  unfold targetWork
+  rw [List.length_flatten]
+
 end Gabbro.Grammatik.X86.PipeBlock
