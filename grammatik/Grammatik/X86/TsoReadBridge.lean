@@ -1448,6 +1448,61 @@ theorem rd_hProjRFw : rdW1.sicht 0 (.inl true) ≤ sichtVon rdSF 0 rdA2 := by
 /-- The forwarding projection sits below timestamp 1. -/
 theorem rd_hTsRFw : sichtVon rdSF 0 rdA2 ≤ 1 := by decide
 
+/-! ## 11. Clock-2 projection of the drain end. -/
+
+/-- Start node over the last drain state (clock 1). -/
+def rdNA10 : SpurKnoten := spurStart rdS10
+
+/-- Second node: one flush later (clock 2), carrying the flushed byte as
+    a timestamp-1 release message. A real projected step, not a stub:
+    the history and views follow the accepted `SpurSchritt.flush`
+    equations. Only the last drain flush is traced; the earlier seven
+    stay with the `DrainSpur` witness. -/
+def rdNB11 : SpurKnoten :=
+  { tso := rdS11
+    hist := fun x => if x = addrOff witA 7 then rdNA10.hist x ++
+      [Speichermodell.nachricht Speichermodell.Ordnung.freigabe
+        (rdNA10.blick 0) (addrOff witA 7) rdNA10.frisch (wortByte rdV0 7)]
+      else rdNA10.hist x
+    blick := fun d => if d = 0 then
+      (rdNA10.blick 0).setze (addrOff witA 7) rdNA10.frisch else rdNA10.blick d
+    frisch := 2 }
+
+/-- The last flush as a projected trace step. -/
+theorem rd_stufe : SpurSchritt rdNA10 rdNB11 :=
+  SpurSchritt.flush rdNA10 rdNB11 0 ⟨addrOff witA 7, wortByte rdV0 7⟩
+    [] rd_step9 rfl rfl rfl rfl
+
+/-- The clock-2 node satisfies the trace invariant. -/
+theorem rd_hInvB : SpurInv rdNB11 :=
+  spurSchritt_inv _ _ rd_stufe (spurStart_inv _)
+
+/-- The inherited history over the clock-2 node: every reading timestamp
+    (0 or 1) sits below clock 2, and the write carrier's view (0) is
+    covered. -/
+theorem rd_hErbtFw :
+    ErbtW rdNB11 rdW1 0 0 (Sum.inl false) witA := by
+  refine ⟨?_, ?_⟩
+  · intro d m hm
+    show m.ts < 2
+    have hmem : m ∈ (if d = (Sum.inl true : rdD.Tab ⊕ rdD.Glob) then
+        [⟨0, rdSigma.speicher, Speichermodell.Sicht.null⟩,
+          ⟨1, rdSigma.speicher, Speichermodell.Sicht.null⟩]
+        else [⟨0, rdSigma.speicher, Speichermodell.Sicht.null⟩] :
+        List (NachrichtW rdD)) := hm
+    by_cases hd : d = (Sum.inl true : rdD.Tab ⊕ rdD.Glob)
+    · rw [if_pos hd] at hmem
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+      rcases hmem with rfl | rfl <;> decide
+    · rw [if_neg hd] at hmem
+      simp only [List.mem_singleton] at hmem
+      subst hmem
+      decide
+  · exact Nat.zero_le _
+
+/-- The clock-2 node stands over the drain-end state. -/
+theorem rd_hnodeFw : rdNB11.tso = rdS11 := rfl
+
 /-- **JOINT WITNESS for `schrittW_aus_lesefragment_gruppe`.** Every
     premise holds jointly on concrete values: the two-table declaration
     with a table the witness function writes, a reached one-step run that
