@@ -501,10 +501,353 @@ theorem chunks_flatten_gerade_zeuge :
   refine ⟨_, chunksAusListe_drei1219, ?_, pipePaket_hold⟩
   exact chunks_flatten_gerade pwCfg pwL _ _ chunksAusListe_drei1219
 
+/-! ## 5. Closing: source run, target run, coverage, work.
+
+    Everything below composes derived legs: the source run and run
+    chain (`ketteLauf_blockAusChunks`), the flattened target run
+    (`ketteLauf_lauf`), coverage (`deckung_blockAusChunks`), work
+    (`ketteLaenge_sum`) and the lowering equation
+    (`senkBlock_blockAusChunks`). Named hardware timing stays out --
+    it is a hardware assumption, never a software proof. -/
+
+/-- CLOSING (`lauf` level): over an n-chunk chain the source
+    `execBlock` run, the target `lauf` run over the flattened chunks,
+    coverage at the summed generated length, the work sum and the
+    lowering equation all hold -- every leg derived from the lowering
+    alone except the admitted representation. -/
+theorem pipelineChunkDerive_schluss (c : PipeCfg) (L : Layout D)
+    (hc : cfgOk c = true) (hsep : LayoutSep L)
+    (as : List (AssignChunk D V l Γ Λ)) (chunks : List (List Befehl))
+    (hchunks : chunksAusListe c L as = some chunks)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (st : Zustand)
+    (hW : WorldRep L st.speicher σ) (hE : EnvRepr ρ st.register (abbOf c)) :
+    ∃ (σ' : World D) (st' : Zustand),
+      execBlock O passes R (blockAusChunks as) σ ρ = .ok σ' ρ ∧
+      lauf (decodiertZu chunks.flatten) st = some st' ∧
+      Deckung pipeSummary (chunks.map List.length).sum
+        (decodiertZu chunks.flatten) ∧
+      targetWork chunks.flatten = (chunks.map targetWork).sum ∧
+      senkBlock c L 0 (blockAusChunks as) = some chunks.flatten ∧
+      WorldRep L st'.speicher σ' ∧ EnvRepr ρ st'.register (abbOf c) := by
+  obtain ⟨σ', st', hsrc, hrun, hW', hE'⟩ :=
+    ketteLauf_blockAusChunks c L hc hsep as chunks hchunks O passes R σ ρ
+      st hW hE
+  exact ⟨σ', st', hsrc, ketteLauf_lauf chunks st st' hrun,
+    deckung_blockAusChunks c L as chunks hchunks, ketteLaenge_sum chunks,
+    senkBlock_blockAusChunks c L 0 as chunks hchunks, hW', hE'⟩
+
+/-- JOINT WITNESS for `pipelineChunkDerive_schluss`: the whole
+    conjunction over three witness chunks, with the shared
+    non-degenerate package (`PipePaket`). -/
+theorem pipelineChunkDerive_schluss_zeuge :
+    ∃ (σ' : World pwD) (st' : Zustand),
+      chunksAusListe pwCfg pwL [witChunk1219, witChunk1219, witChunk1219] =
+        some [pwProg.take 5, pwProg.take 5, pwProg.take 5] ∧
+      execBlock pwO 0 pwR
+        (blockAusChunks [witChunk1219, witChunk1219, witChunk1219])
+        pwSigma pwEnv30 = .ok σ' pwEnv30 ∧
+      lauf (decodiertZu [pwProg.take 5, pwProg.take 5, pwProg.take 5].flatten)
+        (pwStart 30) = some st' ∧
+      Deckung pipeSummary
+        ([pwProg.take 5, pwProg.take 5, pwProg.take 5].map List.length).sum
+        (decodiertZu
+          [pwProg.take 5, pwProg.take 5, pwProg.take 5].flatten) ∧
+      targetWork [pwProg.take 5, pwProg.take 5, pwProg.take 5].flatten =
+        ([pwProg.take 5, pwProg.take 5, pwProg.take 5].map
+          targetWork).sum ∧
+      senkBlock pwCfg pwL 0
+        (blockAusChunks [witChunk1219, witChunk1219, witChunk1219]) =
+        some [pwProg.take 5, pwProg.take 5, pwProg.take 5].flatten ∧
+      WorldRep pwL st'.speicher σ' ∧
+      EnvRepr pwEnv30 st'.register (abbOf pwCfg) ∧
+      PipePaket := by
+  obtain ⟨σ', st', hsrc, hrun, hdeck, hwork, hlow, hW', hE'⟩ :=
+    pipelineChunkDerive_schluss pwCfg pwL pw_cfgOk pw_layoutSep _ _
+      chunksAusListe_drei1219 pwO 0 pwR pwSigma pwEnv30 (pwStart 30)
+      pw_worldRep pw_envRepr30
+  exact ⟨σ', st', chunksAusListe_drei1219, hsrc, hrun, hdeck, hwork, hlow,
+    hW', hE', pipePaket_hold⟩
+
+/-- CLOSING (byte level, in the style of `pipeline_correct`): the
+    derived run chain over straight-line chunks is the fetched-byte
+    run on the loaded image. The code region, its split and the entry
+    pointer are named admitted premises (witnessed); the straight-line
+    shape is derived from the lowering. Every premise is used. -/
+theorem pipelineChunkDerive_bytes (c : PipeCfg) (L : Layout D)
+    (as : List (AssignChunk D V l Γ Λ)) (chunks : List (List Befehl))
+    (hchunks : chunksAusListe c L as = some chunks)
+    (cs : Adresse) (flat pre post : List Byte) (st st' : Zustand)
+    (hcode : CodeAt st.speicher cs flat)
+    (hf : flat = pre ++ encodeAll chunks.flatten ++ post)
+    (hrip : st.rip = addrOff cs pre.length)
+    (hrun : KetteLauf chunks st st') :
+    laufBytes chunks.flatten.length st = .weiter st' ∧
+    st'.rip = addrOff cs (pre.length + (encodeAll chunks.flatten).length) ∧
+    CodeAt st'.speicher cs flat ∧
+    st'.speicher.lesbar = st.speicher.lesbar ∧
+    st'.speicher.schreibbar = st.speicher.schreibbar := by
+  have hall := chunks_flatten_gerade c L as chunks hchunks
+  have hlauf : lauf (chunks.flatten.map kanon) st = some st' := by
+    have hkl := ketteLauf_lauf chunks st st' hrun
+    rwa [decodiertZu_map_kanon] at hkl
+  obtain ⟨hb, hr, hc, hl, hs⟩ :=
+    lauf_zu_laufBytes cs flat chunks.flatten pre post st st' hall hlauf
+      hcode hf hrip
+  exact ⟨hb, hr, hc, hl, hs⟩
+
+/-- JOINT WITNESS for `pipelineChunkDerive_bytes`: one witness
+    chunk is the prefix of the accepted candidate bytes
+    (`pwBytes = chunk ++ rest`), so the fetched-byte run over the
+    five-instruction chunk reaches into the loaded image with the code
+    region intact -- with the shared non-degenerate package
+    (`PipePaket`). -/
+theorem pipelineChunkDerive_bytes_zeuge :
+    ∃ (st' : Zustand),
+      chunksAusListe pwCfg pwL [witChunk1219] =
+        some [pwProg.take 5] ∧
+      CodeAt (pwStart 30).speicher (natAdresse pwCfg.codeBase) pwBytes ∧
+      pwBytes = [] ++ encodeAll [pwProg.take 5].flatten ++
+        encodeAll (pwProg.drop 5) ∧
+      (pwStart 30).rip =
+        addrOff (natAdresse pwCfg.codeBase) ([] : List Byte).length ∧
+      KetteLauf [pwProg.take 5] (pwStart 30) st' ∧
+      laufBytes [pwProg.take 5].flatten.length (pwStart 30) =
+        .weiter st' ∧
+      st'.rip = addrOff (natAdresse pwCfg.codeBase)
+        (([] : List Byte).length +
+          (encodeAll [pwProg.take 5].flatten).length) ∧
+      CodeAt st'.speicher (natAdresse pwCfg.codeBase) pwBytes ∧
+      st'.speicher.lesbar = (pwStart 30).speicher.lesbar ∧
+      st'.speicher.schreibbar = (pwStart 30).speicher.schreibbar ∧
+      PipePaket := by
+  have hch1 : chunksAusListe pwCfg pwL [witChunk1219] =
+      some [pwProg.take 5] := rfl
+  obtain ⟨σ1, st1, -, hrun1, -, -⟩ :=
+    chunk_lauf_abgeleitet pwCfg pwL pw_cfgOk pw_layoutSep () () pwIdx0
+      pwWert0 pwHw pwHL _ pwChunkWit pwO 0 pwR pwSigma pwEnv30 (pwStart 30)
+      pw_worldRep pw_envRepr30
+  have hrun : KetteLauf [pwProg.take 5] (pwStart 30) st1 :=
+    KetteLauf.cons _ _ _ _ st1 hrun1 (.nil st1)
+  have hcode : CodeAt (pwStart 30).speicher (natAdresse pwCfg.codeBase)
+      pwBytes :=
+    pw_code
+  have hf : pwBytes = [] ++ encodeAll [pwProg.take 5].flatten ++
+      encodeAll (pwProg.drop 5) := by
+    have htake : pwProg.take 5 ++ pwProg.drop 5 = pwProg :=
+      List.take_append_drop 5 pwProg
+    simp only [List.flatten_cons, List.flatten_nil, List.append_nil,
+      List.nil_append]
+    rw [← encodeAll_append, htake]
+    rfl
+  have hrip : (pwStart 30).rip =
+      addrOff (natAdresse pwCfg.codeBase) ([] : List Byte).length := by
+    show natAdresse 4096 = addrOff (natAdresse 4096) 0
+    exact (addrOff_null _).symm
+  obtain ⟨hb, hr, hc, hl, hs⟩ :=
+    pipelineChunkDerive_bytes pwCfg pwL [witChunk1219] [pwProg.take 5] hch1
+      (natAdresse pwCfg.codeBase) pwBytes [] (encodeAll (pwProg.drop 5))
+      (pwStart 30) st1 hcode hf hrip hrun
+  exact ⟨st1, hch1, hcode, hf, hrip, hrun, hb, hr, hc, hl, hs,
+    pipePaket_hold⟩
+
+/-! ## 6. The validator, refusals and poison probes.
+
+    The validator recomputes the chunk list from the source chunks and
+    accepts the candidate bytes only if they ARE its encoding
+    (`chunksValidate_sound`). Unsupported shapes are refused, never
+    guessed: branches (`ite`), deep values past the scratch registers,
+    and every candidate for an unlowerable list. -/
+
+/-- The validator: recompute the chunk list and accept the candidate
+    bytes only if they are its encoding. -/
+def chunksValidate (c : PipeCfg) (L : Layout D)
+    (as : List (AssignChunk D V l Γ Λ)) (bytes : List Byte) : Bool :=
+  match chunksAusListe c L as with
+  | some chunks => decide (bytes = encodeAll chunks.flatten)
+  | none => false
+
+/-- VALIDATOR SOUNDNESS: an accepted candidate is the Lean
+    recomputation. Every premise is used: `h` drives the split and
+    yields both conjuncts. -/
+theorem chunksValidate_sound (c : PipeCfg) (L : Layout D)
+    (as : List (AssignChunk D V l Γ Λ)) (bytes : List Byte)
+    (h : chunksValidate c L as bytes = true) :
+    ∃ chunks, chunksAusListe c L as = some chunks ∧
+      bytes = encodeAll chunks.flatten := by
+  unfold chunksValidate at h
+  cases hc : chunksAusListe c L as with
+  | none => simp [hc] at h
+  | some chunks =>
+    simp only [hc] at h
+    simp only [decide_eq_true_eq] at h
+    exact ⟨chunks, rfl, h⟩
+
+/-- Witness for `chunksValidate_sound`: the single witness chunk
+    validates its own encoding, with the shared non-degenerate
+    package (`PipePaket`). -/
+theorem chunksValidate_sound_zeuge :
+    ∃ (chunks : List (List Befehl)),
+      chunksAusListe pwCfg pwL [witChunk1219] = some chunks ∧
+      chunksValidate pwCfg pwL [witChunk1219]
+        (encodeAll chunks.flatten) = true ∧
+      PipePaket := by
+  have hch1 : chunksAusListe pwCfg pwL [witChunk1219] =
+      some [pwProg.take 5] := rfl
+  refine ⟨_, hch1, ?_, pipePaket_hold⟩
+  decide
+
+/-- REFUSAL (branch): an `ite` statement has no chunk lowering -- it
+    matches the catch-all, never a guessed sequence. -/
+theorem chunkDerive_verweigert_ite (c : PipeCfg) (L : Layout D)
+    {Λ' : List (Res D)}
+    (cnd : Expr D Γ Λ .bool) (t e : Block D V l Γ Λ Λ') :
+    senkStmt c L (Stmt.ite (V := V) (l := l) cnd t e) = none :=
+  rfl
+
+/-- JOINT WITNESS for the branch refusal, firing on the witness check
+    with the shared non-degenerate package (`PipePaket`). -/
+theorem chunkDerive_verweigert_ite_zeuge :
+    ∃ (cnd : Expr pwD pwCtx [] .bool)
+      (t e : Block pwD pwV false pwCtx [] []),
+      senkStmt pwCfg pwL (Stmt.ite (V := pwV) (l := false) cnd t e) =
+        none ∧ PipePaket := by
+  refine ⟨pwCheck, Block.nil, Block.nil, ?_, pipePaket_hold⟩
+  exact chunkDerive_verweigert_ite _ _ _ _ _
+
+/-- Poison probe: the witness `ite` has no chunk lowering. -/
+theorem gift1219_ite :
+    senkStmt pwCfg pwL
+      (Stmt.ite (V := pwV) (l := false) pwCheck
+        (Block.nil : Block pwD pwV false pwCtx [] [])
+        (Block.nil : Block pwD pwV false pwCtx [] [])) = none :=
+  rfl
+
+/-- The deep-value chunk: admitted slot, but no lowering past `tmp`. -/
+def deepChunk1219 : AssignChunk pwD pwV false pwCtx [] :=
+  { t := (), f := (), i := pwIdx0, e := tiefWertFeld1195, hw := pwHw,
+    hL := pwHL }
+
+/-- REFUSAL (deep value at list level): the deep chunk has no
+    per-chunk lowering -- refused, not guessed. -/
+theorem chunksAusListe_verweigert_tief :
+    chunksAusListe pwCfg pwL [deepChunk1219] = none := by
+  have hs : senkStmt pwCfg pwL (chunkStmt deepChunk1219) = none :=
+    block_verweigert_tief_stmt
+  simp [chunksAusListe, hs]
+
+/-- Poison probe: the deep chunk list has no lowering. -/
+theorem gift1219_tief :
+    chunksAusListe pwCfg pwL [deepChunk1219] = none :=
+  chunksAusListe_verweigert_tief
+
+/-- REFUSAL (validator): the validator rejects every candidate for an
+    unlowerable chunk list. -/
+theorem chunksValidate_verweigert_tief (bytes : List Byte) :
+    chunksValidate pwCfg pwL [deepChunk1219] bytes = false := by
+  have hs : chunksAusListe pwCfg pwL [deepChunk1219] = none :=
+    chunksAusListe_verweigert_tief
+  unfold chunksValidate
+  rw [hs]
+
+/-- Poison probe: the validator rejects the empty candidate for the
+    deep chunk list. -/
+theorem gift1219_validate :
+    chunksValidate pwCfg pwL [deepChunk1219] [] = false :=
+  chunksValidate_verweigert_tief []
+
 /- CUTS:
-   - Skeleton green: `AssignChunk` (assignSlot-only chains, no case split).
-   - OPEN: everything in the task (derived runs, coverage, n-chunk
-     induction, closing theorem, refusals, witnesses).
+   - Proved here (generic): the canonical-decode bridge
+     (`decodiertZu_map_kanon`); the single-chunk lowering inversion
+     (`senkStmt_assign_inv`); the derived per-chunk run
+     (`chunk_lauf_abgeleitet`: source step AND target run from the
+     lowering plus the admitted layout/representation);
+     straight-line chunk code (`chunkCode_gerade`); generic chunk
+     coverage at generated length (`deckung_chunk_generisch`,
+     deep-safe) and budget-1 coverage for shallow chunks
+     (`chunk_deckung_eins_abgeleitet`, via 1165); n-chunk lowering
+     (`senkBlock_chunkStmt`, `senkBlock_blockAusChunks`), n-chunk
+     runs (`ketteLauf_blockAusChunks`), n-chunk coverage
+     (`deckung_blockAusChunks`) and n-chunk straight-line shape
+     (`chunks_flatten_gerade`), all by induction over the chunk list;
+     the `lauf`-level closing (`pipelineChunkDerive_schluss`) and the
+     byte-level closing (`pipelineChunkDerive_bytes`, via the accepted
+     `ketteLauf_lauf` and `lauf_zu_laufBytes`); the validator and its
+     soundness (`chunksValidate`, `chunksValidate_sound`); three
+     refusals (branch `ite`, deep value at list level, validator over
+     an unlowerable list) with three firing poison probes; joint
+     non-degenerate witnesses for every syntax-premise theorem (one
+     table its contract writes; reached source steps; target chunk
+     runs; fetched-byte run observably changing memory via the reused
+     `PipePaket`).
+   - Reused, not duplicated: `senkStmt`, `senkWertT`,
+     `senkWertT_gerade`, `senkBedT`-free (no checks in this fragment),
+     `assignT_lauf`, `worldRep_store`, `repOk_int`,
+     `constInt?_sound`, `execBlock_cons_stmtOk`, `senkBlock_assign`,
+     `decodiertZu`/`decodiertZu_append`/`arbeit_decodiert`,
+     `pipeSummary`/`pipeSummary_expand`/`deckung_pipeChunk`,
+     `deckung_append_pipe`, `deckung_leer`,
+     `budgetAusfuehrung_transfer`-free (no time claim here),
+     `ketteLauf_lauf`, `ketteLaenge_sum`, `lauf_zu_laufBytes`,
+     `validate`-free (own smaller validator), and the whole `pw`
+     witness package with its chunk/cost facts.
+   - OPEN (named timing): no `laufKosten`/`schrittKosten` aggregation
+     and no time-transfer bound is claimed here; per-step hardware
+     bounds stay hardware assumptions and compose through
+     `BudgetExecution` (1195's `block_zwei_korrekt` shows the shape).
+   - OPEN (fragment): only `assignSlot` chains lower here; `ite`
+     branches, checks (`pruefung`), loops, calls, binds, globals,
+     pointer and register statements are refused (`none`), never
+     guessed. Deep values past the scratch registers are refused.
+   - OPEN (machine): single core, model memory, no TSO/concurrency
+     claim (inherited from `Pipeline.lean`'s own CUTS); entry/image/
+     ABI mapping composes through `PipelineImage`/`PipelineEntry`;
+     no optimiser certificates are taken (direct lowering, composes
+     with `optimise_sound` upstream).
+   - No second IR, no second interpreter, no optimiser edit, no
+     weakened guarantee: unsupported shapes are refused, never
+     guessed.
 -/
+
+#print axioms decodiertZu_map_kanon
+#print axioms senkStmt_assign_inv
+#print axioms senkStmt_assign_inv_zeuge
+#print axioms chunk_lauf_abgeleitet
+#print axioms witStmt1219
+#print axioms chunk_lauf_abgeleitet_zeuge
+#print axioms chunkCode_gerade
+#print axioms deckung_chunk_generisch
+#print axioms chunk_deckung_eins_abgeleitet
+#print axioms chunk_deckung_eins_abgeleitet_zeuge
+#print axioms chunkStmt
+#print axioms blockAusChunks
+#print axioms chunksAusListe
+#print axioms senkBlock_chunkStmt
+#print axioms senkBlock_blockAusChunks
+#print axioms ketteLauf_blockAusChunks
+#print axioms deckung_blockAusChunks
+#print axioms chunks_flatten_gerade
+#print axioms witChunk1219
+#print axioms chunksAusListe_drei1219
+#print axioms senkBlock_blockAusChunks_zeuge
+#print axioms ketteLauf_blockAusChunks_zeuge
+#print axioms deckung_blockAusChunks_zeuge
+#print axioms chunks_flatten_gerade_zeuge
+#print axioms pipelineChunkDerive_schluss
+#print axioms pipelineChunkDerive_schluss_zeuge
+#print axioms pipelineChunkDerive_bytes
+#print axioms pipelineChunkDerive_bytes_zeuge
+#print axioms chunksValidate
+#print axioms chunksValidate_sound
+#print axioms chunksValidate_sound_zeuge
+#print axioms chunkDerive_verweigert_ite
+#print axioms chunkDerive_verweigert_ite_zeuge
+#print axioms gift1219_ite
+#print axioms deepChunk1219
+#print axioms chunksAusListe_verweigert_tief
+#print axioms gift1219_tief
+#print axioms chunksValidate_verweigert_tief
+#print axioms gift1219_validate
 
 end Gabbro.Grammatik.X86.PipeChunkDerive
