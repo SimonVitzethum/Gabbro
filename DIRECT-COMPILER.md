@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 21:35 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 21:36 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -718,7 +718,7 @@ Last ledger refresh: **2026-10-05 21:35 UTC**. This is an operational snapshot, 
 | 1319 | 8-bit operand forms across the new integer families | Merged after review/checks | 1320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
-| 1325 | TSO projection: the locked and direct-memory tags | Committed candidate; review/integration pending | 1326: Committed candidate; review/integration pending | [task](lanes/1325.md) |
+| 1325 | TSO projection: the locked and direct-memory tags | Merged after review/checks | 1326: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1325.md) |
 | 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Merged after review/checks | 1328: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1327.md) |
 | 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Merged after review/checks | 1330: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1329.md) |
 | 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1331.md) |
@@ -1770,6 +1770,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1303**, Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1303.md). <!-- x86-merged:1303 -->
 - 2026-10-05: checked master `216ae362` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:216ae3628e31db46f65ebf667dadfaff060eb87c -->
 - 2026-10-05: lane **1304**, Independent exact review of 1303, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1304.md). <!-- x86-merged:1304 -->
+- 2026-10-05: lane **1325**, TSO projection: the locked and direct-memory tags, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1325.md). <!-- x86-merged:1325 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

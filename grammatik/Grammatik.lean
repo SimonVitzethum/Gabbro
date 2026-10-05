@@ -704,3 +704,4 @@ import Grammatik.X86.OpcodeLedger0F40
 import Grammatik.X86.OpcodeLedger0F80
 import Grammatik.X86.OpcodeLedger0FC0
 import Grammatik.X86.HwXsaveFull
+import Grammatik.X86.HwKapsteinTsoLocked
