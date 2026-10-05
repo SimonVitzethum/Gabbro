@@ -384,6 +384,76 @@ theorem sxSchritt_memory (d : SxDecodiert) (s s' : Zustand)
       cases h
       rfl
 
+/-! ## 5. No shadowing: the unified chain refuses the new rows.
+
+    Each planned byte row is refused by the whole unified chain,
+    so the family arm takes it exactly once. Checked by evaluation;
+    a row accepted here would need a different encoding choice. -/
+
+theorem ext_weist_sxcbw_zurueck :
+    decodeExt [natByte 102, natByte 152] = none := by
+  decide
+
+theorem ext_weist_sxcwd_zurueck :
+    decodeExt [natByte 102, natByte 153] = none := by
+  decide
+
+theorem ext_weist_sxnop_zurueck :
+    decodeExt [natByte 144] = none := by
+  decide
+
+theorem ext_weist_sxxchg91_zurueck :
+    decodeExt [natByte 145] = none := by
+  decide
+
+theorem ext_weist_sxxchg4890_zurueck :
+    decodeExt [natByte 72, natByte 144] = none := by
+  decide
+
+theorem ext_weist_sxxchg6690_zurueck :
+    decodeExt [natByte 102, natByte 144] = none := by
+  decide
+
+theorem ext_weist_sxxchg4891_zurueck :
+    decodeExt [natByte 72, natByte 145] = none := by
+  decide
+
+theorem ext_weist_sxxchg86_zurueck :
+    decodeExt [natByte 134, natByte 192] = none := by
+  decide
+
+theorem ext_weist_sxxchg87_zurueck :
+    decodeExt [natByte 135, natByte 192] = none := by
+  decide
+
+theorem ext_weist_sxxchg6687_zurueck :
+    decodeExt [natByte 102, natByte 135, natByte 192] = none := by
+  decide
+
+theorem ext_weist_sxxchg4887_zurueck :
+    decodeExt [natByte 72, natByte 135, natByte 192] = none := by
+  decide
+
+theorem ext_weist_sxmovsxd_zurueck :
+    decodeExt [natByte 72, natByte 99, natByte 192] = none := by
+  decide
+
+theorem ext_weist_sxmovsxdR_zurueck :
+    decodeExt [natByte 76, natByte 99, natByte 193] = none := by
+  decide
+
+theorem ext_weist_sxlock90_zurueck :
+    decodeExt [natByte 240, natByte 144] = none := by
+  decide
+
+theorem ext_weist_sxlock98_zurueck :
+    decodeExt [natByte 240, natByte 152] = none := by
+  decide
+
+theorem ext_weist_sxxchg87mem_zurueck :
+    decodeExt [natByte 135, natByte 0] = none := by
+  decide
+
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
    NOT proved here, and not claimed: everything (see task).
