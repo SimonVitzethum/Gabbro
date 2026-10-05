@@ -280,6 +280,138 @@ theorem iteChunk_lauf_abgeleitet_zeuge :
       ite_worldRep1263 ite_envRepr30_1263
   exact ⟨_, n, st', witIteLowLit1263, hrun, hcode', hent, pipePaket_hold⟩
 
+/-! ## 3. Closed check chunks: lowering inversion.
+
+    A closed check chunk is one `pruefung` with `nil` rest. An
+    accepted lowering IS a `retGrund` reason exit with either the
+    literal-`true` empty code or the deep condition code plus the
+    conditional jump whose displacement equation lands exactly on the
+    reason's refusal exit (`senkPruef` checks it; otherwise `none`). -/
+
+/-- Witness closed check chunk: `check x < 50 else reason 0`. -/
+def witPruef1263 : _root_.Gabbro.Grammatik.Block pwD pwV false pwCtx [] [] :=
+  _root_.Gabbro.Grammatik.Block.pruefung pwCheck
+    (_root_.Gabbro.Grammatik.Endblock.retGrund ⟨0, by decide⟩ pwHΛ)
+    _root_.Gabbro.Grammatik.Block.nil
+
+/-- LOWERING INVERSION (closed check chunk): an accepted lowering is a
+    `retGrund` exit with the literal-`true` empty code or the deep
+    condition code plus the exit jump with its landing equation. Every
+    premise is used: `h` drives the block equation, the check
+    equation and every case split. -/
+theorem pruefChunk_inv_abgeleitet (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (cnd : Expr D Γ Λ .bool)
+    (sonst : _root_.Gabbro.Grammatik.Endblock D V l Γ Λ)
+    (pos : Nat) (prog : List Befehl)
+    (h : senkBlock c L pos
+      (_root_.Gabbro.Grammatik.Block.pruefung cnd sonst
+        _root_.Gabbro.Grammatik.Block.nil) = some prog) :
+    ∃ (r : Fin V.gruende) (hΛ : Λ.Perm V.ende), sonst = .retGrund r hΛ ∧
+      ((istWahr cnd = true ∧ prog = []) ∨
+        ∃ code j, senkBedT c cnd = some (code, j) ∧
+          prog = code ++
+            [.jumpIf32 j (sprungDisp c (pos + (encodeAll code).length) (exitAdr c r.val))] ∧
+          addrOff (natAdresse c.codeBase)
+            (pos + (encodeAll code).length +
+              (encode (.jumpIf32 j
+                (sprungDisp c (pos + (encodeAll code).length) (exitAdr c r.val)))).length) +
+            dispWort (sprungDisp c (pos + (encodeAll code).length) (exitAdr c r.val)) =
+            natAdresse (exitAdr c r.val)) := by
+  simp only [senkBlock] at h
+  cases hs : senkPruef c pos cnd sonst with
+  | none => simp [hs] at h
+  | some p =>
+    simp only [hs] at h
+    simp only [Option.map_some, Option.some.injEq] at h
+    subst h
+    cases sonst with
+    | retGrund r hΛ =>
+      simp only [senkPruef] at hs
+      by_cases hw : istWahr cnd = true
+      · rw [if_pos hw] at hs
+        simp only [Option.some.injEq] at hs
+        subst hs
+        exact ⟨r, hΛ, rfl, Or.inl ⟨hw, by simp⟩⟩
+      · rw [if_neg hw] at hs
+        cases hv : senkBedT c cnd with
+        | none => simp [hv] at hs
+        | some cj =>
+          obtain ⟨code, j⟩ := cj
+          simp only [hv] at hs
+          by_cases he : addrOff (natAdresse c.codeBase)
+              (pos + (encodeAll code).length +
+                (encode (.jumpIf32 j
+                  (sprungDisp c (pos + (encodeAll code).length) (exitAdr c r.val)))).length) +
+              dispWort (sprungDisp c (pos + (encodeAll code).length) (exitAdr c r.val)) =
+              natAdresse (exitAdr c r.val)
+          · rw [if_pos he] at hs
+            simp only [Option.some.injEq] at hs
+            subst hs
+            exact ⟨r, hΛ, rfl, Or.inr ⟨code, j, rfl, by simp, he⟩⟩
+          · rw [if_neg he] at hs
+            cases hs
+    | ret e hΛ => simp [senkPruef] at hs
+    | leave hh => simp [senkPruef] at hs
+    | next hh => simp [senkPruef] at hs
+    | cons s rest => simp [senkPruef] at hs
+    | bind e rest => simp [senkPruef] at hs
+    | bindAxiom a args he hw hg hd hgd rest => simp [senkPruef] at hs
+    | bindAxiomElse a args he hr hw hg hd hgd err rest => simp [senkPruef] at hs
+
+/-- The witness check chunk lowers (by computation). -/
+theorem witPruefLow1263 :
+    ∃ prog, senkBlock pwCfg pwL 0 witPruef1263 = some prog := by
+  have h : (senkBlock pwCfg pwL 0 witPruef1263).isSome = true := by decide
+  cases hm : senkBlock pwCfg pwL 0 witPruef1263 with
+  | none => simp [hm] at h
+  | some prog => exact ⟨prog, rfl⟩
+
+/-- The witness check lowering, written out literally (condition code
+    shared with `witIteProg1263`, exit jump to `12288`). Verified by
+    computation below. -/
+def witPruefProg1263 : List Befehl :=
+  [.movReg64 .rax .r10, .movImm64 .rcx (intWort 50), .cmpReg64 .rax .rcx,
+    .jumpIf32 .ge (sprungDisp pwCfg
+      (0 + (encodeAll
+        [.movReg64 .rax .r10, .movImm64 .rcx (intWort 50),
+          .cmpReg64 .rax .rcx]).length)
+      (exitAdr pwCfg 0))]
+
+/-- The literal check lowering is the Lean recomputation. -/
+theorem witPruefLowLit1263 :
+    senkBlock pwCfg pwL 0 witPruef1263 = some witPruefProg1263 := by
+  decide
+
+/-- JOINT WITNESS for `pruefChunk_inv_abgeleitet`: the exit jump with
+    its landing equation holds jointly on the witness chunk, with the
+    shared non-degenerate package (`PipePaket`). -/
+theorem pruefChunk_inv_abgeleitet_zeuge :
+    ∃ code j,
+      senkBlock pwCfg pwL 0 witPruef1263 = some witPruefProg1263 ∧
+      senkBedT pwCfg pwCheck = some (code, j) ∧
+      witPruefProg1263 = code ++
+        [.jumpIf32 j (sprungDisp pwCfg (0 + (encodeAll code).length)
+          (exitAdr pwCfg (⟨0, by decide⟩ : Fin pwV.gruende).val))] ∧
+      addrOff (natAdresse pwCfg.codeBase)
+        (0 + (encodeAll code).length +
+          (encode (.jumpIf32 j (sprungDisp pwCfg (0 + (encodeAll code).length)
+            (exitAdr pwCfg (⟨0, by decide⟩ : Fin pwV.gruende).val)))).length) +
+        dispWort (sprungDisp pwCfg (0 + (encodeAll code).length)
+          (exitAdr pwCfg (⟨0, by decide⟩ : Fin pwV.gruende).val)) =
+        natAdresse (exitAdr pwCfg (⟨0, by decide⟩ : Fin pwV.gruende).val) ∧
+      PipePaket := by
+  obtain ⟨r, hΛ, hr, hor⟩ :=
+    pruefChunk_inv_abgeleitet (Λ' := ([] : List (Res pwD))) pwCfg pwL pwCheck
+      (_root_.Gabbro.Grammatik.Endblock.retGrund ⟨0, by decide⟩ pwHΛ)
+      0 witPruefProg1263 witPruefLowLit1263
+  cases hr
+  rcases hor with ⟨hw, hp⟩ | ⟨code, j, hb, hp, he⟩
+  · have hfalse : istWahr pwCheck = false := by decide
+    rw [hfalse] at hw
+    cases hw
+  · exact ⟨code, j, witPruefLowLit1263, hb, hp, he, pipePaket_hold⟩
+
 /- CUTS:
     - Proved here: closed-ite lowering inversion
       (`iteChunk_inv_abgeleitet`) with joint non-degenerate witness.
