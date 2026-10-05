@@ -192,6 +192,69 @@ theorem chunk_lauf_abgeleitet_zeuge :
       pw_worldRep pw_envRepr30
   exact ⟨σ', st', pwChunkWit, hsrc, hrun, hW', hE', pipePaket_hold⟩
 
+/-! ## 3. Coverage, derived from the lowering alone.
+
+    Two forms. The generic one scales the admitted summary budget with
+    the generated size (`length` instructions fit in `length * 6`), so
+    deep values are safe. The budget-1 one reuses lane 1165's
+    `deckung_pipeChunk` for shallow chunks. -/
+
+/-- A lowered chunk is straight-line code: the value code plus address
+    materialisation plus slot store. Only code equations, no syntax. -/
+theorem chunkCode_gerade (pv code : List Befehl) (adr dst : Register)
+    (A : Nat) (hval : pv.all gerade = true)
+    (hcode : code = pv ++ [Befehl.movImm64 adr (natAdresse A),
+      Befehl.store64 adr dst (BitVec.ofNat 32 0)]) :
+    code.all gerade = true := by
+  rw [hcode]
+  simp [List.all_append, hval, gerade]
+
+/-- GENERIC CHUNK COVERAGE: any instruction list is covered by the
+    admitted pipeline summary over its own length as source budget.
+    No lowering premise is needed: the bound is pure arithmetic over
+    the admitted expansion (`pipeSummary_expand`) and the derived
+    work bridge (`arbeit_decodiert`). -/
+theorem deckung_chunk_generisch (p : List Befehl) :
+    Deckung pipeSummary p.length (decodiertZu p) := by
+  intro k hk
+  rw [pipeSummary_expand] at hk
+  cases hk
+  have hwork : targetWork ((decodiertZu p).map fun d => d.befehl) =
+      p.length :=
+    arbeit_decodiert p
+  omega
+
+/-- BUDGET-1 COVERAGE FOR SHALLOW CHUNKS: a chunk over a shallow
+    value is covered at source budget 1, reusing lane 1165's
+    `deckung_pipeChunk`. Every premise feeds it directly. -/
+theorem chunk_deckung_eins_abgeleitet (c : PipeCfg) (L : Layout D)
+    (t : D.Tab) (f : D.Feld t)
+    (i : Expr D Γ Λ (.index (D.count t)))
+    {τ : Ty} (e : Expr D Γ Λ τ) (hT : τ = D.typ t f)
+    (hw : V.schreibt t = true) (hL : darf D t Λ)
+    (p chunk : List Befehl)
+    (hflach : senkWert (abbOf c) e c.dst c.tmp = some p)
+    (hchunk : senkStmt c L (Stmt.assignSlot (V := V) (l := l) t f i
+      (cast (congrArg (Expr D Γ Λ) hT) e) hw hL) = some chunk) :
+    Deckung pipeSummary 1 (decodiertZu chunk) :=
+  deckung_pipeChunk c L l t f i e hT hw hL 1 p chunk hflach hchunk
+    (Nat.le_refl 1)
+
+/-- JOINT WITNESS for `chunk_deckung_eins_abgeleitet`: the shallow
+    witness chunk is covered at budget 1, with the shared
+    non-degenerate package (`PipePaket`). -/
+theorem chunk_deckung_eins_abgeleitet_zeuge :
+    ∃ (chunk : List Befehl),
+      senkStmt pwCfg pwL
+        (Stmt.assignSlot (V := pwV) (l := false) () () pwIdx0
+          (cast (congrArg (Expr pwD pwCtx []) pwHT0) pwWert0) pwHw pwHL) =
+        some chunk ∧
+      Deckung pipeSummary 1 (decodiertZu chunk) ∧
+      PipePaket := by
+  refine ⟨_, pwChunkCast, ?_, pipePaket_hold⟩
+  exact chunk_deckung_eins_abgeleitet pwCfg pwL () () pwIdx0 pwWert0 pwHT0
+    pwHw pwHL _ _ pw_senkWert0 pwChunkCast
+
 /- CUTS:
    - Skeleton green: `AssignChunk` (assignSlot-only chains, no case split).
    - OPEN: everything in the task (derived runs, coverage, n-chunk
