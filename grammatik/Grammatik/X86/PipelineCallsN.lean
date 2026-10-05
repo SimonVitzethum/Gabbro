@@ -442,12 +442,330 @@ theorem rufExecN_korrekt (b : Belegung) (rh : Rahmen) (nArgs : Nat)
   · intro q hq
     exact hcallee q hq
 
+/-! ## 5. Joint witness: a three-assignment callee body over concrete values.
+
+    `T[0].f = x + 5; T[1].f = 6; T[0].f = 42;` -- three lowered
+    assignments, then `nil`. With `x = 30` the REAL `execBlock` run
+    moves row 0 `7 -> 35 -> 42` and row 1 `9 -> 6`: every source step
+    changes memory. The candidate bytes are written out literally, as
+    an untrusted producer would emit them, and the validator accepts
+    them BY COMPUTATION. -/
+
+/-- `6`, widened to the witness field type. -/
+def nwV6 : Expr pwD pwCtx [] (pwD.typ () ()) :=
+  .weiter (lo := 6) (hi := 6) (by decide) (by decide) (.lit 6)
+
+/-- `42`, widened to the witness field type. -/
+def nwV42 : Expr pwD pwCtx [] (pwD.typ () ()) :=
+  .weiter (lo := 42) (hi := 42) (by decide) (by decide) (.lit 42)
+
+/-- THE CALLEE BODY: three assignments, then `nil`. -/
+def nwBody : Block pwD pwV false pwCtx [] [] :=
+  .cons (.assignSlot () () pwIdx0 pwWert0 pwHw pwHL)
+    (.cons (.assignSlot () () pwIdx1 nwV6 pwHw pwHL)
+      (.cons (.assignSlot () () pwIdx0 nwV42 pwHw pwHL) .nil))
+
+/-- THE CANDIDATE, written out as a producer would emit it: the `x+5`
+    chunk (five instructions), the `6` chunk (three), the `42` chunk
+    (three). -/
+def nwProg : List Befehl :=
+  [ .movReg64 .rax .r10, .movImm64 .rcx (intWort 5), .addReg64 .rax .rcx,
+    .movImm64 .r11 (natAdresse 8192), .store64 .r11 .rax (BitVec.ofNat 32 0),
+    .movImm64 .rax (intWort 6), .movImm64 .r11 (natAdresse 8200),
+    .store64 .r11 .rax (BitVec.ofNat 32 0),
+    .movImm64 .rax (intWort 42), .movImm64 .r11 (natAdresse 8192),
+    .store64 .r11 .rax (BitVec.ofNat 32 0) ]
+
+def nwBytes : List Byte := encodeAll nwProg
+
+/-- The body has three statements. -/
+theorem nw_laenge : blockLaenge nwBody = 3 := by decide
+
+/-- The body has the proved three-or-more shape. -/
+theorem nw_drei : istDreiPlus nwBody = true := by decide
+
+/-- THE VALIDATOR ACCEPTS the joint call: admitted seven-argument
+    frame, three-assignment shape, recomputed bytes -- by computation. -/
+theorem nw_rufExecN : rufExecN rufWitBelegung rufWitRahmen 7 false cwCfg pwL
+    nwBody nwBytes = true := by decide
+
+/-- The three lowered chunks (five, three, three instructions). -/
+def nwChunk1 : List Befehl := nwProg.take 5
+
+def nwChunk2 : List Befehl := (nwProg.drop 5).take 3
+
+def nwChunk3 : List Befehl := nwProg.drop 8
+
+/-- The memory: code at `[4096, 4096 + len)` (execute only), the two
+    slots at `[8192, 8208)` holding 7 and 9 (read/write, never execute). -/
+def nwMemBytes (a : Adresse) : Byte :=
+  if 4096 ≤ a.toNat ∧ a.toNat < 4096 + nwBytes.length then nwBytes.getD (a.toNat - 4096) 0
+  else if 8192 ≤ a.toNat ∧ a.toNat < 8200 then wortByte (BitVec.ofNat 64 7) (a.toNat - 8192)
+  else if 8200 ≤ a.toNat ∧ a.toNat < 8208 then wortByte (BitVec.ofNat 64 9) (a.toNat - 8200)
+  else 0
+
+def nwCode (a : Adresse) : Bool := decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + nwBytes.length)
+
+def nwDaten (a : Adresse) : Bool := decide (8192 ≤ a.toNat ∧ a.toNat < 8208)
+
+def nwMem : Speicher :=
+  { bytes := nwMemBytes, lesbar := nwDaten, schreibbar := nwDaten, ausfuehrbar := nwCode }
+
+/-- Start state: `x = 30` in `r10`, everything else zero, code at 4096. -/
+def nwStart : Zustand :=
+  { register := cwReg 30, flags := witnessFlags, rip := natAdresse 4096, speicher := nwMem }
+
+/-- The code fits far below the data: no wrap, no overlap. -/
+theorem nw_laenge_bytes : 4096 + nwBytes.length < 2 ^ 64 := by decide
+
+theorem nw_code : CodeAt nwMem (natAdresse 4096) nwBytes := by
+  apply codeAt_von nwMem 4096 nwBytes nw_laenge_bytes
+  intro a h1 h2
+  have hlen : nwBytes.length ≤ 128 := by decide
+  have hd : ¬ (8192 ≤ a.toNat ∧ a.toNat < 8208) := by omega
+  simp only [nwMem, nwCode, nwDaten, nwMemBytes, decide_eq_true_eq, decide_eq_false_iff_not]
+  exact ⟨⟨h1, h2⟩, hd, by rw [if_pos ⟨h1, h2⟩]⟩
+
+theorem nw_worldRep : WorldRep pwL nwMem pwSigma := by
+  intro t k f a h
+  cases t; cases f
+  simp only [pwL] at h
+  by_cases e1 : k = 0
+  · rw [if_pos e1] at h
+    cases h
+    subst e1
+    refine ⟨by decide, by decide, by decide, fun lo hi hT => ?_⟩
+    cases hT
+    unfold RepSlot
+    decide
+  · rw [if_neg e1] at h
+    by_cases e2 : k = 1
+    · rw [if_pos e2] at h
+      cases h
+      subst e2
+      refine ⟨by decide, by decide, by decide, fun lo hi hT => ?_⟩
+      cases hT
+      unfold RepSlot
+      decide
+    · rw [if_neg e2] at h; cases h
+
+theorem nw_envRepr : EnvRepr pwEnv30 nwStart.register (abbOf cwCfg) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+theorem nw_rip : nwStart.rip = natAdresse cwCfg.codeBase := rfl
+
+/-- `x = 30`: the three stores happen, row 0 ends at 42, row 1 at 6 --
+    the REAL `execBlock` run, which changes memory at every step. -/
+theorem nw_quelle : ∃ σ' ρ', execBlock pwO 0 pwR nwBody pwSigma pwEnv30 = .ok σ' ρ' ∧
+    (σ'.slots () 0 ()).n = 42 ∧ (σ'.slots () 1 ()).n = 6 :=
+  ⟨_, _, rfl, rfl, rfl⟩
+
+/-- The three chunk runs, reached by computation: each store lands. -/
+theorem nw_chunks_laufen :
+    ∃ s1 s2 s3, lauf (decodiertZu nwChunk1) nwStart = some s1 ∧
+      lauf (decodiertZu nwChunk2) s1 = some s2 ∧
+      lauf (decodiertZu nwChunk3) s2 = some s3 := ⟨_, _, _, rfl, rfl, rfl⟩
+
+/-! ## 6. Poison probes: every refusal fires on concrete data. -/
+
+/-- Planted refusal: a one-statement body is not the three-or-more shape
+    (it stays with the single-assignment validator). -/
+theorem nwProbe_kurz : rufExecN rufWitBelegung rufWitRahmen 7 false cwCfg pwL
+    cwBody cwBytes = false :=
+  rufExecN_verweigert_kurz _ _ _ _ _ _ _ _ (by decide)
+
+/-- Planted refusal: a body with a check (`pruefung`) is not
+    all-assignment. -/
+theorem nwProbe_form : rufExecN rufWitBelegung rufWitRahmen 7 false cwCfg pwL
+    pwSrc pwBytes = false :=
+  rufExecN_verweigert_form _ _ _ _ _ _ _ _ (by decide)
+
+/-- Planted refusal: a call that uses the red zone is not admitted. -/
+theorem nwProbe_rot : rufExecN rufWitBelegung rufWitRahmen 7 true cwCfg pwL
+    nwBody nwBytes = false :=
+  rufExecN_verweigert_rot _ _ _ _ _ _ _
+
+/-- Planted refusal: one tampered byte, and the recomputation fails. -/
+theorem nwProbe_bytes : rufExecN rufWitBelegung rufWitRahmen 7 false cwCfg pwL
+    nwBody (nwBytes.set 0 0) = false :=
+  rufExecN_verweigert_bytes _ _ _ _ _ _ _ _ (by decide)
+
+/-! ## 7. Joint witness: every premise holds jointly on concrete values. -/
+
+/-- JOINT WITNESS for `rufExecN_korrekt`: every premise holds jointly
+    on concrete values -- the admitted seven-argument frame, the
+    disjoint working registers, the validated three-assignment callee
+    bytes, the code region, the represented world and environment, the
+    reached source run (`T[0].f` 7 becomes 42 through 35, `T[1].f` 9
+    becomes 6), the reached byte run with every callee-saved register
+    preserved -- beside the reached frame saves, whose result byte
+    observably changes, and the reloaded argument word. The chunk runs
+    compose through the reused run-chain induction (`ketteLauf_lauf`
+    over `PipelineBlockInduct.KetteLauf`). The program is
+    non-degenerate: `pwV` writes its table (`pwHw`), and the source run,
+    the chunk runs and the frame saves all change memory. -/
+theorem rufExecN_korrekt_zeuge :
+    pwV.schreibt () = true ∧
+    rufOk rufWitBelegung rufWitRahmen 7 false = true ∧
+    calleeFremd cwCfg = true ∧
+    rufExecN rufWitBelegung rufWitRahmen 7 false cwCfg pwL
+      nwBody nwBytes = true ∧
+    istDreiPlus nwBody = true ∧
+    LayoutSep pwL ∧
+    CodeAt nwStart.speicher (natAdresse cwCfg.codeBase) nwBytes ∧
+    nwStart.rip = natAdresse cwCfg.codeBase ∧
+    WorldRep pwL nwStart.speicher pwSigma ∧
+    EnvRepr pwEnv30 nwStart.register (abbOf cwCfg) ∧
+    (∃ σ' ρ', execBlock pwO 0 pwR nwBody pwSigma pwEnv30 = .ok σ' ρ' ∧
+      (σ'.slots () 0 ()).n = 42 ∧ (σ'.slots () 1 ()).n = 6) ∧
+    (∃ n s', laufBytes n nwStart = .weiter s' ∧
+      s'.rip = natAdresse (cwCfg.codeBase + nwBytes.length) ∧
+      (∀ q, q ∈ calleeGerettet → s'.register q = nwStart.register q)) ∧
+    (∃ s1 s2 s3, lauf (decodiertZu nwChunk1) nwStart = some s1 ∧
+      lauf (decodiertZu nwChunk2) s1 = some s2 ∧
+      lauf (decodiertZu nwChunk3) s2 = some s3 ∧
+      lauf (decodiertZu [nwChunk1, nwChunk2, nwChunk3].flatten) nwStart = some s3) ∧
+    speicherZeuge.bytes (rufWitRahmen.schlitzAddr 0) ≠
+      rufWitM1.bytes (rufWitRahmen.schlitzAddr 0) ∧
+    ladeWort rufWitM2 rufWitRahmen 7 = some 42 := by
+  obtain ⟨σW, ρW, hok, h42, h6⟩ := nw_quelle
+  obtain ⟨hruf, n, s', hrun, hripW, hW', hE', hcallee⟩ :=
+    rufExecN_korrekt rufWitBelegung rufWitRahmen 7 false cwCfg pwL nwBody nwBytes
+      nw_rufExecN pw_layoutSep cw_fremd pwO 0 pwR pwSigma pwEnv30 nwStart
+      nw_code nw_rip nw_worldRep nw_envRepr σW ρW hok
+  obtain ⟨s1, s2, s3, hc1, hc2, hc3⟩ := nw_chunks_laufen
+  exact ⟨pwHw, rufWit_ok, cw_fremd, nw_rufExecN, nw_drei, pw_layoutSep, nw_code, nw_rip,
+    nw_worldRep, nw_envRepr, ⟨σW, ρW, hok, h42, h6⟩,
+    ⟨n, s', hrun, hripW, hcallee⟩,
+    ⟨s1, s2, s3, hc1, hc2, hc3,
+      ketteLauf_lauf [nwChunk1, nwChunk2, nwChunk3] nwStart s3
+        (.cons nwChunk1 [nwChunk2, nwChunk3] nwStart s1 s3 hc1
+          (.cons nwChunk2 [nwChunk3] s1 s2 s3 hc2
+            (.cons nwChunk3 [] s2 s3 s3 hc3 (.nil s3))))⟩,
+    rufWit_wechselt, rufWit_rundreise⟩
+
 /- CUTS (exactly what is NOT proved here):
-   - Skeleton only: shape predicates, validator, induction, witness
-     and refusals all stay OPEN in this skeleton commit.
+   Proved here (all over the REUSED canonical `Speicher`/`Zustand`
+   vocabulary and the accepted `Stapel`, `Pipeline`, `PipelineCalls`,
+   `PipelineCallsExec` and `PipelineBlockInduct` theorems -- no new
+   machine, no new decoder row, no second source interpreter):
+   - shape predicates (`istAssignStmt`, `istAssignBlock`,
+     `blockLaenge`, `istDreiPlus`: every statement an `assignSlot`,
+     at least three of them) and the joint validator `rufExecN`
+     (admitted caller frame `rufOk`, three-or-more shape,
+     recomputed bytes `validate` with no certificates) with its
+     unpacking (`rufExecN_teile`) and the no-certificate identity
+     (`optimise_nil`, reused);
+   - the decided working-register separation is reused unchanged
+     (`calleeFremd`, `calleeFremd_mem`): every callee-saved register
+     off `dst`/`adr`/`tmp :: frei`;
+   - red-zone, shape, length and byte refusals
+     (`rufExecN_verweigert_rot/form/kurz/bytes` with the shape-level
+     `istDreiPlus_verweigert_form/kurz`) with planted probes on every
+     path (one-statement body, body with a check, red-zone use,
+     tampered byte);
+   - the shape-split helper (`istAssignBlock_cons_inv`) and the
+     single-chunk run with callee-saved preservation
+     (`assignChunkN_lauf`, via reused `einzelChunk_lauf`);
+   - body induction (`assignBlockN_lauf_aux` by fuel with `cases`
+     splits -- `Block` is mutually inductive, so the `induction`
+     tactic does not apply; the `rumpfBlock_total_aux` pattern --
+     plus the fuel-free `assignBlockN_lauf`): for an all-assignment
+     body with an accepted lowering, the target run reaches the world
+     of the REAL `execBlock` run with the environment represented,
+     every callee-saved register preserved across the WHOLE body, and
+     straight-line code (head chunk run, `worldRep_store` threading,
+     source split through the real `execStmt` equation);
+   - callee correctness (`rufExecN_korrekt`): from an admitted frame
+     and validated bytes, the FETCHED byte run reaches the end of the
+     code with the world of the REAL `execBlock` run represented, the
+     environment represented, and every callee-saved register
+     preserved (body induction plus reused `validate_sound` and
+     `lauf_zu_laufBytes`);
+   - a joint memory-changing witness (`rufExecN_korrekt_zeuge`): three
+     stores (`7 -> 35 -> 42` on row 0, `9 -> 6` on row 1), the
+     validated literal candidate, the byte run preserving all six
+     callee-saved registers, the three chunk runs composed through
+     the reused run-chain induction (`ketteLauf_lauf` over
+     `PipeBlock.KetteLauf`), and the reached frame saves.
+   NOT proved here, and not claimed:
+   - Only all-`assignSlot` bodies of three or more statements: one-
+     and two-statement bodies are REFUSED here (they stay with the
+     earlier validators `rufExecOk` and whatever covers pairs);
+     `ite`, checks, loops, calls, gates, floats and everything else
+     are REFUSED (`istAssignBlock`, `rufExecN_verweigert_form`,
+     `nwProbe_form`), never guessed.
+   - The predecessor named in the task (`PipelineCallsBlock.lean`
+     with `istZweiZuweisung` from lane 1229, and
+     `PipelineChunkDerive.lean`) is NOT in this tree: shape
+     generalisation is done directly here (`istDreiPlus` covers every
+     all-assignment body of length three or more, hence pairs only by
+     refusal), and chunk composition reuses `PipelineBlockInduct`
+     (`KetteLauf`, `ketteLauf_lauf`) instead of the missing file.
+   - No optimiser certificates: `rufExecN` fixes `certs = []`, since
+     a certificate could rewrite the body away from the proved shape
+     (`optimise_nil` pins the identity). Certified-optimised callee
+     bodies stay OPEN.
+   - No TSO/store-buffer/GX bridge: every fact is sequential over one
+     canonical `Speicher`. No time or budget transfer: the byte-run
+     step count `n` is not related to any source budget.
+   - No callee-saved push/pop code is emitted or verified here;
+     preservation holds because the proved chunks never touch a
+     callee-saved register (`calleeFremd`), not because spills are
+     modelled.
+   - No silicon correspondence beyond the accepted producers; no
+     loader, entry, relocation, cost or time claim; the recursion
+     budget is cited from `PipelineCalls` (`rekursionOk`), not
+     re-enforced at run time here.
 -/
 
-#print axioms rufOk
-#print axioms calleeFremd
+#print axioms istAssignStmt
+#print axioms istAssignBlock
+#print axioms blockLaenge
+#print axioms istDreiPlus
+#print axioms rufExecN
+#print axioms rufExecN_teile
+#print axioms istDreiPlus_verweigert_form
+#print axioms istDreiPlus_verweigert_kurz
+#print axioms rufExecN_verweigert_rot
+#print axioms rufExecN_verweigert_form
+#print axioms rufExecN_verweigert_kurz
+#print axioms rufExecN_verweigert_bytes
+#print axioms istAssignBlock_cons_inv
+#print axioms assignChunkN_lauf
+#print axioms assignBlockN_lauf_aux
+#print axioms assignBlockN_lauf
+#print axioms rufExecN_korrekt
+#print axioms nwV6
+#print axioms nwV42
+#print axioms nwBody
+#print axioms nwProg
+#print axioms nwBytes
+#print axioms nw_laenge
+#print axioms nw_drei
+#print axioms nw_rufExecN
+#print axioms nwChunk1
+#print axioms nwChunk2
+#print axioms nwChunk3
+#print axioms nwMemBytes
+#print axioms nwCode
+#print axioms nwDaten
+#print axioms nwMem
+#print axioms nwStart
+#print axioms nw_laenge_bytes
+#print axioms nw_code
+#print axioms nw_worldRep
+#print axioms nw_envRepr
+#print axioms nw_rip
+#print axioms nw_quelle
+#print axioms nw_chunks_laufen
+#print axioms nwProbe_kurz
+#print axioms nwProbe_form
+#print axioms nwProbe_rot
+#print axioms nwProbe_bytes
+#print axioms rufExecN_korrekt_zeuge
 
 end Gabbro.Grammatik.X86.PipelineCallsN
