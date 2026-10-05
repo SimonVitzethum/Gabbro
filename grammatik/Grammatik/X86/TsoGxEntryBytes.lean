@@ -354,15 +354,175 @@ theorem gift_prolog_clobber_grund :
 theorem gift_prolog_clobber : prologOk giftPrologCfg [.rax, .rcx] 2 = false :=
   eintrittProlog_verweigert_ohne_frisch _ _ _ gift_prolog_clobber_grund
 
+/-- JOINT WITNESS (start-anchored entry/call linkage): the source-level
+    prefix from the start anchor reaches its fragment head on the accepted
+    witness program (a table `setze` writes, start world `konto[0] = 0`,
+    logged entry world `konto[0] = 5`), AND the byte-level entry/call
+    prefix runs four fetched steps whose call frame is written and restored
+    through memory (return word below the old top reads back, the same byte
+    differs from the pre-state, the stack pointer is restored). The
+    identity of the two heads (a lowering certificate `eP` to bytes) stays
+    OPEN in CUTS; proved here is joint reachability with an observably
+    changed, restored frame. -/
+theorem eintrittCallPrefix_zeuge :
+    (∃ M : RufMaschineG eD,
+      RufErreichbarG eP eO 0 startAnker M ∧
+      (eSp.slots () 0 ()).n = 0 ∧
+      (eD.signatur eSetze).schreibt () = true ∧
+      ∃ (rho : Env eD (eD.params ePruefe)) (ws : World eD),
+        RufEreignisF.eintritt ePruefe rho ws ∈ (M.faeden 0).log ∧
+        (ws.slots () 0 ()).n = 5) ∧
+    (∃ (s0 s4 : Zustand),
+      laufBytes 4 s0 = .weiter s4 ∧
+      s4.register Register.rsp = s0.register Register.rsp ∧
+      s4.rip = ripNach s0.rip (encode (.call32 nestDisp)).length ∧
+      read64 s4.speicher (s0.register Register.rsp - BitVec.ofNat 64 8) =
+        some (ripNach s0.rip (encode (.call32 nestDisp)).length) ∧
+      s0.speicher.bytes (s0.register Register.rsp - BitVec.ofNat 64 8) ≠
+        s4.speicher.bytes (s0.register Register.rsp - BitVec.ofNat 64 8)) := by
+  obtain ⟨M, hr, h0, hwr, rho, ws, hm, -, h5⟩ := startFragment_zeuge
+  have hrA : RufErreichbarG eP eO 0 startAnker M := by
+    rw [startAnker_gleich]
+    exact hr
+  have hwrc0 : write64 nestS0.speicher
+      (nestS0.register Register.rsp - BitVec.ofNat 64 8)
+      (ripNach nestS0.rip (encode (.call32 nestDisp)).length) =
+      some nestM1 := by
+    rw [nest_rsp0]
+    exact nest_call_schreibt
+  have hlesc0 : lesbar8 nestS0.speicher
+      (nestS0.register Register.rsp - BitVec.ofNat 64 8) = true := by
+    rw [nest_rsp0]
+    exact nest_oben0_lesbar
+  have hlenC0 : laengeOk (encode (.call32 nestDisp)).length = true := by
+    unfold laengeOk
+    simp only [decide_eq_true_eq]
+    exact encode_len _
+  have hstepc0 : schritt
+      (⟨.call32 nestDisp, (encode (.call32 nestDisp)).length⟩ : Decodiert)
+      nestS0 = some nestS1 :=
+    schritt_call32_erfolg _ _ _ _ hlenC0 rfl hwrc0
+  have hwrp0 : write64 nestS1.speicher
+      (nestS1.register Register.rsp - BitVec.ofNat 64 8)
+      (nestS1.register Register.rax) = some nestMp := by
+    rw [nest_rsp1]
+    exact nest_push_schreibt
+  have hlesp0 : lesbar8 nestS1.speicher
+      (nestS1.register Register.rsp - BitVec.ofNat 64 8) = true := by
+    rw [nest_rsp1]
+    exact nest_obenp_lesbar
+  have hlenP0 : laengeOk (encode (.push64 .rax)).length = true := by
+    unfold laengeOk
+    simp only [decide_eq_true_eq]
+    exact encode_len _
+  have hstepp0 : schritt
+      (⟨.push64 .rax, (encode (.push64 .rax)).length⟩ : Decodiert)
+      nestS1 = some nestS2 :=
+    schritt_push64_erfolg _ _ _ _ hlenP0 rfl hwrp0
+  have hlenQ0 : laengeOk (encode (.pop64 .rbx)).length = true := by
+    unfold laengeOk
+    simp only [decide_eq_true_eq]
+    exact encode_len _
+  have hstepq0 : schritt
+      (⟨.pop64 .rbx, (encode (.pop64 .rbx)).length⟩ : Decodiert)
+      nestS2 = some nestS3 :=
+    schritt_pop64_reg _ _ _ _ hlenQ0 rfl (by decide) nest_push_liest
+  have hlenR0 : laengeOk (encode .ret).length = true := by
+    unfold laengeOk
+    simp only [decide_eq_true_eq]
+    exact encode_len _
+  have hstepr0 : schritt
+      (⟨.ret, (encode .ret).length⟩ : Decodiert)
+      nestS3 = some nestS4 :=
+    schritt_ret_erfolg _ _ _ hlenR0 rfl nest_ret_liest
+  obtain ⟨hrun, hrsp, hrip, -, -, -, -⟩ := eintrittCallPrefix_lauf
+    nestS0 nestS0 nestS1 nestS2 nestS3 nestS4 0 nestDisp .rax .rbx _ _ _ _
+    nestM1 nestMp 42 (ripNach nestS0.rip 5) rfl rfl
+    nest_call_geholt nest_call_exe hwrc0 hlesc0 hstepc0
+    nest_push_geholt nest_push_exe hwrp0 hlesp0 hstepp0
+    nest_push_liest hstepq0 (by decide) (by decide)
+    nest_pop_geholt nest_pop_exe nest_ret_liest hstepr0
+    nest_ret_geholt nest_ret_exe nest_slots_disjunkt
+  have hrun4 : laufBytes 4 nestS0 = .weiter nestS4 := hrun
+  have hdisPN : Disjunkt nestObenP nestOben0 := by
+    have h := nest_slots_disjunkt
+    rw [nest_rsp0, nest_rsp1] at h
+    intro i j hi hj
+    exact Ne.symm (h j i hj hi)
+  have hmem4 : nestS4.speicher = nestMp := rfl
+  have hread : read64 nestS4.speicher
+      (nestS0.register Register.rsp - BitVec.ofNat 64 8) =
+      some (ripNach nestS0.rip (encode (.call32 nestDisp)).length) := by
+    rw [nest_rsp0, hmem4,
+      read64_rahmen nestM1 nestMp nestObenP nestOben0 _ nest_push_schreibt hdisPN]
+    exact read64_nach_write64 _ _ _ _ nest_call_schreibt nest_oben0_lesbar
+  have hframe : nestMp.bytes nestOben0 = nestM1.bytes nestOben0 := by
+    apply write64_rahmen nestM1 nestMp nestObenP nestOben0 _ nest_push_schreibt
+    intro k hk
+    have hne := hdisPN k 0 hk (by decide)
+    rw [addrOff_null] at hne
+    exact Ne.symm hne
+  have hmem : nestS0.speicher.bytes
+      (nestS0.register Register.rsp - BitVec.ofNat 64 8) ≠
+      nestS4.speicher.bytes
+        (nestS0.register Register.rsp - BitVec.ofNat 64 8) := by
+    rw [nest_rsp0, hmem4, hframe]
+    have hhit := writeBytesN_hit nestSpeicher nestOben0 (ripNach nestS0.rip 5) 8 0
+      (by decide) (by decide)
+    rw [addrOff_null] at hhit
+    show BitVec.ofNat 8 0 ≠ writeBytes nestSpeicher nestOben0 (ripNach nestS0.rip 5) nestOben0
+    unfold writeBytes
+    rw [hhit]
+    decide
+  exact ⟨⟨M, hrA, h0, hwr, rho, ws, hm, h5⟩,
+    nestS0, nestS4, hrun4, hrsp, hrip, hread, hmem⟩
+
 /- CUTS (exactly what is NOT proved here):
+   Proved here:
+   - `StapelLayoutFremd`: the admission predicate (both stack slots foreign
+     to every placed slot).
+   - `worldRep_schreiben_fremd`: one foreign word store keeps `WorldRep`.
+   - `eintrittCallPrefix_lauf`: entry run plus one fetched call/push/pop/ret
+     nest reaches the fragment-head byte state (stack pointer restored,
+     next-`rip` return word, inner value delivered, permissions kept).
+   - `byteKopf_antwortErhalten`: from an admitted entry the head state keeps
+     the entry world represented and every variable in its register.
+   - `eintrittCall_verweigert_wache/_ret_nicht_ausfuehrbar`: guard slot and
+     non-executable return refuse loudly.
+   - `eintrittProlog_verweigert_ohne_frisch`: interfering entry copies fail
+     the decided check.
+   - Poison probes `gift_wache_verweigert`, `gift_ret_verweigert`,
+     `gift_prolog_clobber` (with `giftPrologCfg`,
+     `gift_prolog_clobber_grund`).
+   - `eintrittCallPrefix_zeuge`: joint source-head and byte-head reachability
+     with a call frame written and restored through memory.
+   NOT proved here, and not claimed:
    - No lowering certificate from the source program `eP` to bytes: the
      identity of the source fragment head with the byte head is OPEN with
      the pipeline owners. Proved here is co-reachability plus transport.
    - No TSO/GX bridge: every fact is sequential over one canonical
-     `Speicher`; store buffers and refinement stay with the TSO work.
+     `Speicher`; store buffers, forwarding and GX refinement stay with the
+     TSO work (`TsoGxRefine` is reused by reference only through
+     `TsoGxStart`).
+   - One call nest only (call/push/pop/ret, `dst ≠ rsp`, `src ≠ rsp`,
+     disjoint slots); deeper nesting, callee-saved registers, stack-passed
+     or float/pointer/aggregate parameters, and interrupts or guard-page
+     behaviour beyond the two planted refusals are refused or open.
    - Pilot ISA, one core, model memory, no time (cuts of the reused modules).
 -/
 
 #print axioms StapelLayoutFremd
+#print axioms worldRep_schreiben_fremd
+#print axioms eintrittCallPrefix_lauf
+#print axioms byteKopf_antwortErhalten
+#print axioms eintrittCall_verweigert_wache
+#print axioms eintrittCall_verweigert_ret_nicht_ausfuehrbar
+#print axioms eintrittProlog_verweigert_ohne_frisch
+#print axioms gift_wache_verweigert
+#print axioms gift_ret_verweigert
+#print axioms giftPrologCfg
+#print axioms gift_prolog_clobber_grund
+#print axioms gift_prolog_clobber
+#print axioms eintrittCallPrefix_zeuge
 
 end Gabbro.Grammatik.X86.TsoGxEntryBytes
