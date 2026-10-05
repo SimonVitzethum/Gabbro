@@ -692,10 +692,10 @@ Last ledger refresh: **2026-10-05 19:00 UTC**. This is an operational snapshot, 
 | 1267 | AVX2: per-lane equation for arithmetic shift right | Merged after review/checks | 1268: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1267.md) |
 | 1269 | Cross-declaration lowering certificate for the GX refinement | Merged after review/checks | 1270: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1269.md) |
 | 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Merged after review/checks | 1272: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1271.md) |
-| 1273 | Rotates: ROL, ROR, RCL, RCR | Committed candidate; review/integration pending | 1274: Committed candidate; review/integration pending | [task](lanes/1273.md) |
+| 1273 | Rotates: ROL, ROR, RCL, RCR | Merged after review/checks | 1274: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1273.md) |
 | 1275 | ADC, SBB, INC, DEC | Merged after review/checks | 1276: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Merged after review/checks | 1278: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1277.md) |
-| 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Committed candidate; review/integration pending | 1280: Agent working | [task](lanes/1279.md) |
+| 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Committed candidate; review/integration pending | 1280: Committed candidate; review/integration pending | [task](lanes/1279.md) |
 | 1281 | Sign-extend-accumulator ops and register XCHG | Committed candidate; review/integration pending | 1282: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
@@ -1699,6 +1699,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1309**, Page-fault delivery: CR2, error code and the interrupt frame, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1309.md). <!-- x86-merged:1309 -->
 - 2026-10-05: lane **1310**, Independent exact review of 1309, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1310.md). <!-- x86-merged:1310 -->
 - 2026-10-05: publication batch checks passed for `50e9561b`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1273**, Rotates: ROL, ROR, RCL, RCR, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1273.md). <!-- x86-merged:1273 -->
+- 2026-10-05: checked master `0cb2d8f7` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:0cb2d8f7905f7750aefd58919f15621c6b3db8f0 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
