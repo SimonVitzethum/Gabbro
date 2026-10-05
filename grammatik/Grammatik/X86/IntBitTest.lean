@@ -706,4 +706,150 @@ def decodeBt : List Byte → Option (BtForm × List Byte)
       | some (1, rBit, bBit) => decodeBtNach .w64 rBit bBit rest
       | _ => none
 
+/-! ## 7. Round trips, lengths, planted refusals.
+
+    Decode inverts encode over any suffix; the operation stays
+    symbolic through the back-mapping lemmas. Lengths are checked
+    separately against `btLaenge` and the 1..15 bound. -/
+
+/-- The opcode byte survives its byte round trip, for every operation. -/
+theorem btOpcode_byte (op : BtOp) :
+    byteNat (natByte (btOpcode op)) = btOpcode op := by
+  cases op <;> decide
+
+set_option maxHeartbeats 4000000 in
+/-- Round trip for register forms, over any suffix: every case
+    closed by kernel computation (`rfl`), so the byte mapping is
+    checked on all 3072 register/width/operation combinations. -/
+theorem roundtripBtReg (op : BtOp) (w : BtWeite) (dst src : Register)
+    (suffix : List Byte) :
+    decodeBt (encodeBt (.reg op w dst src) ++ suffix) =
+      some ((.reg op w dst src), suffix) := by
+  cases op <;> cases w <;> cases dst <;> cases src <;> rfl
+
+/-- Canonical prefix length: 2 exactly for 16-bit, else 1. -/
+def btPrefLaenge : BtWeite → Nat
+  | .w16 => 2 | .w32 => 1 | .w64 => 1
+
+/-- Consumed length of one covered form. -/
+def btLaenge : BtForm → Nat
+  | .reg _ w _ _ => btPrefLaenge w + 3
+  | .imm _ w _ _ => btPrefLaenge w + 4
+  | .memReg _ w base _ _ =>
+    btPrefLaenge w + 7 + (if regLow base == 4 then 1 else 0)
+  | .memImm _ w base _ _ =>
+    btPrefLaenge w + 8 + (if regLow base == 4 then 1 else 0)
+
+/-- The consumed length is the encoded length, on every form (lengths
+    depend only on the width and the SIB need, never on the offset,
+    the displacement value or the operation). -/
+theorem btLaenge_encode (f : BtForm) :
+    btLaenge f = (encodeBt f).length := by
+  cases f with
+  | reg op w dst src =>
+    cases w <;> rfl
+  | imm op w dst n =>
+    cases w <;> rfl
+  | memReg op w base bitReg d =>
+    cases w <;> cases base <;> rfl
+  | memImm op w base d n =>
+    cases w <;> cases base <;> rfl
+
+/-- Every covered encoding fits the 1..15 instruction bound. -/
+theorem btLaenge_ok (f : BtForm) :
+    laengeOk (btLaenge f) = true := by
+  cases f with
+  | reg op w dst src =>
+    cases w <;> rfl
+  | imm op w dst n =>
+    cases w <;> rfl
+  | memReg op w base bitReg d =>
+    cases w <;> cases base <;> rfl
+  | memImm op w base d n =>
+    cases w <;> cases base <;> rfl
+
+/-- Pinned bytes: `btc rax, rcx` is REX.W, 0F, BB, C8. -/
+theorem pin_bt_btc_rax_rcx :
+    encodeBt (.reg .btc .w64 .rax .rcx) =
+      [natByte 72, natByte 15, natByte 187, natByte 200] := by
+  decide
+
+/-- Pinned bytes: 16-bit `bt rax, rcx` carries the 0x66 prefix. -/
+theorem pin_bt_w16_rax_rcx :
+    encodeBt (.reg .bt .w16 .rax .rcx) =
+      [natByte 102, natByte 64, natByte 15, natByte 163,
+        natByte 200] := by
+  decide
+
+/-- Pinned bytes: `bts edx, 5` is REX, 0F, BA, EA, 05. -/
+theorem pin_bt_bts_edx_5 :
+    encodeBt (.imm .bts .w32 .rdx 5) =
+      [natByte 64, natByte 15, natByte 186, natByte 234,
+        natByte 5] := by
+  decide
+
+/-- Pinned bytes: `btr [rbx+16], rcx` with disp32 16. -/
+theorem pin_bt_mem_btr :
+    encodeBt (.memReg .btr .w64 .rbx .rcx 16) =
+      [natByte 72, natByte 15, natByte 179, natByte 139,
+        natByte 16, natByte 0, natByte 0, natByte 0] := by
+  decide
+
+/-- Pinned bytes: `bt [rsp], rax` needs the SIB byte. -/
+theorem pin_bt_mem_sib :
+    encodeBt (.memReg .bt .w32 .rsp .rax 0) =
+      [natByte 64, natByte 15, natByte 163, natByte 132, natByte 36,
+        natByte 0, natByte 0, natByte 0, natByte 0] := by
+  decide
+
+/-- Pinned decodes: the canonical rows read back. -/
+theorem pin_bt_dekode :
+    decodeBt [natByte 72, natByte 15, natByte 187, natByte 200] =
+        some (((.reg .btc .w64 .rax .rcx) : BtForm), []) ∧
+      decodeBt [natByte 64, natByte 15, natByte 186, natByte 234,
+          natByte 5] =
+        some (((.imm .bts .w32 .rdx 5) : BtForm), []) ∧
+      decodeBt [natByte 64, natByte 15, natByte 163, natByte 132,
+          natByte 36, natByte 0, natByte 0, natByte 0, natByte 0] =
+        some (((.memReg .bt .w32 .rsp .rax 0) : BtForm), []) := by
+  decide
+
+/-- Truncated rows refuse: empty, lone prefix, opcode without ModRM,
+    group row without the immediate byte, memory row without disp32. -/
+theorem sonde_bt_abgeschnitten :
+    decodeBt [] = none ∧
+    decodeBt [natByte 102] = none ∧
+    decodeBt [natByte 72] = none ∧
+    decodeBt [natByte 72, natByte 15] = none ∧
+    decodeBt [natByte 72, natByte 15, natByte 163] = none ∧
+    decodeBt [natByte 72, natByte 15, natByte 186, natByte 228] =
+      none ∧
+    decodeBt [natByte 72, natByte 15, natByte 163, natByte 132] =
+      none := by
+  decide
+
+/-- Planted refusals, each with its named reason: LOCK (locked RMW
+    stays with the locked families), 0x66 + REX.W, REX.X, a REX.R
+    group row, mod-0/mod-1 memory, a bad group digit, a bad opcode,
+    and a wrong SIB byte. -/
+theorem sonde_bt_verweigert :
+    decodeBt [natByte 240, natByte 72, natByte 15, natByte 163,
+        natByte 195] = none ∧
+    decodeBt [natByte 102, natByte 72, natByte 15, natByte 163,
+        natByte 195] = none ∧
+    decodeBt [natByte 66, natByte 15, natByte 163,
+        natByte 195] = none ∧
+    decodeBt [natByte 76, natByte 15, natByte 186, natByte 228,
+        natByte 5] = none ∧
+    decodeBt [natByte 72, natByte 15, natByte 163,
+        natByte 3] = none ∧
+    decodeBt [natByte 72, natByte 15, natByte 163,
+        natByte 67] = none ∧
+    decodeBt [natByte 72, natByte 15, natByte 186,
+        natByte 192] = none ∧
+    decodeBt [natByte 72, natByte 15, natByte 200] = none ∧
+    decodeBt [natByte 72, natByte 15, natByte 163, natByte 132,
+        natByte 0] = none := by
+  decide
+
 end Gabbro.Grammatik.X86
