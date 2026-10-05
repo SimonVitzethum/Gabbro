@@ -734,34 +734,197 @@ theorem senkSchreiben_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = tru
         · rw [if_neg hok] at h; cases h
   | _ => simp [senkSchreiben] at h
 
-/-! ## 6. Refusals: out-of-extent indices lower to nothing -/
+/-! ## 6. Refusals: unplaced slots lower to nothing -/
 
-/-- READ REFUSAL: a read whose constant index lies outside the declared
-    extent is refused (`none`): the source's bounds duty is the checked
-    `idxOkB` premise, never silently assumed. Reads through region
-    pointers take the same path (their probes are concrete). -/
-theorem senkLesen_verweigert_oob (A : TabAnker D) (c : PipeCfg)
+/-- READ REFUSAL: a read whose slot has no computed address — an index
+    outside the declared extent, an unlisted table, a missing row
+    length, or an unlisted field — is refused (`none`): the source's
+    bounds duty is the checked premise, never silently assumed. Reads
+    through region pointers take the same path (their probes are
+    concrete). -/
+theorem senkLesen_verweigert_ausserhalb (A : TabAnker D) (c : PipeCfg)
     {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
     (i : Expr D Γ Λ (.index (D.count t)))
     (k : Int) (hk : constInt? i = some k)
-    (hoob : ¬ (0 ≤ k ∧ k < D.count t)) (hL : darf D t Λ) :
+    (hno : feldAdr A t k f = none) (hL : darf D t Λ) :
     senkLesen A c (.slot t f i hL) = none := by
-  have hnone : feldAdr A t k f = none := feldAdr_kein_oob A t k f hoob
-  simp only [senkLesen, hk, hnone]
+  simp only [senkLesen, hk, hno]
 
-/-- WRITE REFUSAL: a store whose constant index lies outside the
-    declared extent is refused (`none`), for direct and
-    pointer-through stores alike (the pointer path shares the check;
-    its probes are concrete). -/
-theorem senkSchreiben_verweigert_oob (A : TabAnker D) (c : PipeCfg)
+/-- READ REFUSAL, NON-CONSTANT INDEX: a read whose index is not a
+    constant (a variable index, with no scaled addressing in the pilot)
+    is refused (`none`). -/
+theorem senkLesen_verweigert_nichtkonstant (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
+    (i : Expr D Γ Λ (.index (D.count t)))
+    (hnc : constInt? i = none) (hL : darf D t Λ) :
+    senkLesen A c (.slot t f i hL) = none := by
+  simp only [senkLesen, hnc]
+
+/-- WRITE REFUSAL: a store whose slot has no computed address is
+    refused (`none`), for direct and pointer-through stores alike (the
+    pointer path shares the check; its probes are concrete). -/
+theorem senkSchreiben_verweigert_ausserhalb (A : TabAnker D) (c : PipeCfg)
     {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
     (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
     (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ)
     (k : Int) (hk : constInt? i = some k)
-    (hoob : ¬ (0 ≤ k ∧ k < D.count t)) :
+    (hno : feldAdr A t k f = none) :
     senkSchreiben A c (.assignSlot t f i e hw hL : Stmt D V l Γ Λ Λ) = none := by
-  have hnone : feldAdr A t k f = none := feldAdr_kein_oob A t k f hoob
-  simp only [senkSchreiben, hk, hnone]
+  simp only [senkSchreiben, hk, hno]
+
+/-- WRITE REFUSAL, NON-CONSTANT INDEX: a store whose index is not a
+    constant is refused (`none`). -/
+theorem senkSchreiben_verweigert_nichtkonstant (A : TabAnker D) (c : PipeCfg)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
+    (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ)
+    (hnc : constInt? i = none) :
+    senkSchreiben A c (.assignSlot t f i e hw hL : Stmt D V l Γ Λ Λ) = none := by
+  simp only [senkSchreiben, hnc]
+
+/-! ## 8. Witness declaration, anchor and programs -/
+
+/-- Witness signature: parameterless, no answer, writes tables. -/
+def zeSig : Signatur Bool Empty Empty Empty :=
+  { params := [], erg := none, gruende := 0, haelt := [],
+    schreibt := fun _ => true, gschreibt := fun g => (nomatch g),
+    konsumiert := [], produziert := [], boden := none }
+
+/-- One table family of two tables with two rows and two integer fields
+    each — a genuine two-field record per row. Only the first table is
+    anchored (the second is the unlisted-table probe). -/
+def zeD : Deklaration where
+  Tab := Bool
+  count := fun _ => 2
+  Feld := fun _ => Bool
+  typ := fun _ _ => .int 0 1000
+  erlaubt := fun _ _ _ _ => false
+  tabNr := fun | 0 => some false | _ => none
+  Glob := Empty
+  gtyp := fun g => nomatch g
+  nutzlast := fun g => nomatch g
+  atomar := fun g => nomatch g
+  geteilt := fun _ => false
+  ggeteilt := fun g => nomatch g
+  Lock := Empty
+  rang := fun L => nomatch L
+  maskiert := fun L => nomatch L
+  Marke := Empty
+  stufen := fun m => nomatch m
+  braucht := fun _ => []
+  gbraucht := fun g => nomatch g
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 0
+  sigNr := fun _ => zeSig
+  eigner_nie_erzeugt := fun _ _ _ _ h => by simp at h
+  Inv := Empty
+  traeger := fun i => nomatch i
+  invs := []
+  Ax := Empty
+  aparams := fun a => nomatch a
+  aerg := fun a => nomatch a
+  aschreibt := fun a => nomatch a
+  agschreibt := fun a => nomatch a
+  Reg := Empty
+  rtyp := fun r => nomatch r
+  rklasse := fun r => nomatch r
+  spiegel := fun r => nomatch r
+  rzusage := fun r => nomatch r
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun _ i => nomatch i
+  ggeteilt_bewacht := fun g => nomatch g
+
+/-- The contract: writes tables, one refusal reason. -/
+def zeV : Vertrag zeD :=
+  { schreibt := fun _ => true
+    gschreibt := fun g => nomatch g
+    erg := none
+    gruende := 1
+    haelt := []
+    produziert := []
+    boden := none }
+
+def zeO : Orakel zeD where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r => nomatch r
+  sichtbar := fun g => nomatch g
+
+def zeR : ∀ f : zeD.Fn, World zeD → Env zeD (zeD.params f) → RufAusgang f :=
+  fun _ σ _ => .ok σ ()
+
+/-- Target configuration: `r10` for a context variable; `rax`/`rcx`
+    working, `rbx` the address register; code at 4096. -/
+def zeCfg : PipeCfg :=
+  { regs := [.r10], dst := .rax, tmp := .rcx, adr := .rbx, codeBase := 4096,
+    exitBase := 12288 }
+
+theorem zeCfgOk : cfgOk zeCfg = true := by decide
+
+/-- The anchor: the first table at 8192, rows of 16 bytes, fields at
+    offsets 0 and 8. Row 1, second field is at 8216. -/
+def zeA : TabAnker zeD :=
+  { basis := [(false, 8192)], zeile := [(false, 16)],
+    felder := fun _ => [(false, 0), (true, 8)] }
+
+theorem zeSep : ankerSepB zeA = true := by decide
+
+theorem zeHw : zeV.schreibt false = true := rfl
+
+theorem zeHL : darf zeD false [] := fun _ h => False.elim (List.not_mem_nil h)
+
+theorem zeHL2 : darf zeD true [] := fun _ h => False.elim (List.not_mem_nil h)
+
+/-- Row `1` as an index. -/
+def zeIdx1 : Expr zeD [] [] (.index (zeD.count false)) :=
+  .weiter (by decide) (by decide) (.lit 1)
+
+/-- The stored value `42`, widened to the field type. -/
+def zeVal42 : Expr zeD [] [] (zeD.typ false true) :=
+  .weiter (by decide) (by decide) (.lit 42)
+
+/-- THE SOURCE WRITE: `T[1].f2 = 42;` -/
+def zeWrite : Stmt zeD zeV false [] [] [] :=
+  .assignSlot false true zeIdx1 zeVal42 zeHw zeHL
+
+/-- THE SOURCE READ: `T[1].f2`. -/
+def zeReadSlot : Expr zeD [] [] (zeD.typ false true) :=
+  .slot false true zeIdx1 zeHL
+
+/-- A region pointer to the anchored table. -/
+def zePtr : Expr zeD [] [] (.ptr 0 true) := .ptrOf false 0 rfl true
+
+/-- THE SOURCE READ THROUGH THE POINTER: `p->f2` at row 1. -/
+def zeReadDurch : Expr zeD [] [] (zeD.typ false true) :=
+  .durch zePtr false rfl true zeIdx1 zeHL
+
+/-- THE SOURCE WRITE THROUGH THE POINTER: `p->f2 = 42;` at row 1. -/
+def zeWriteDurch : Stmt zeD zeV false [] [] [] :=
+  .assignDurch zePtr false rfl true zeIdx1 zeVal42 zeHw zeHL
+
+/-- A read of the UNLISTED table (refused: no extent). -/
+def zeReadFremd : Expr zeD [] [] (zeD.typ true true) :=
+  .slot true true zeIdx1 zeHL2
+
+/-- THE LOWERED STORE, written out as a producer would emit it. -/
+def zeStoreProg : List Befehl :=
+  [.movImm64 .rax (intWort 42),
+    .movImm64 .rbx (natAdresse 8216), .store64 .rbx .rax (BitVec.ofNat 32 0)]
+
+theorem zeLowWrite : senkSchreiben zeA zeCfg zeWrite = some zeStoreProg := by decide
+
+/-- THE LOWERED LOAD, written out as a producer would emit it. -/
+def zeLoadProg : List Befehl :=
+  [.movImm64 .rbx (natAdresse 8216), .load64 .rax .rbx (BitVec.ofNat 32 0)]
+
+theorem zeLowRead : senkLesen zeA zeCfg zeReadSlot = some zeLoadProg := by decide
+
+theorem zeLowReadDurch : senkLesen zeA zeCfg zeReadDurch = some zeLoadProg := by decide
+
+theorem zeLowWriteDurch : senkSchreiben zeA zeCfg zeWriteDurch = some zeStoreProg := by decide
 
 /-! ## 7. The closing theorem over fetched bytes -/
 
