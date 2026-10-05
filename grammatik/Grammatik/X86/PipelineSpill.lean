@@ -677,4 +677,78 @@ theorem spill_rundreise_privat_zeuge :
     spillZeu_rundreise, zeugenU_schreibt, hmain.1, spillZeu_wechselt,
     hmain.2.1⟩
 
+/- CUTS:
+    - Proved here: spill save/reload fragments over the pilot address
+      materialisation plus zero-displacement `store64`/`load64` (the
+      shape the accepted `senkStmt` uses), with per-sequence `lauf`
+      meaning (`spillSave_lauf`, `spillLoad_lauf` against the canonical
+      `schritt` lemmas); the decided validator `spillPlanOk`
+      (in-frame slots, pairwise distinct slots, frame off the code and
+      inside 64 bits, every slot disjoint from every declared table
+      extent) with one projection per leg; slot no-wrap and distinct
+      slot footprint disjointness (`spill_slot_ohneUmbruch`,
+      `spill_schlitze_getrennt` via `disjunkt_von_intervallen`);
+      slot-vs-table privacy over an arbitrary layout
+      (`SpillVonTabellenGetrennt`, `spillPlan_tabellenGetrennt`);
+      round-trip under a validated plan composed from the accepted
+      `ComposeSpillPrivacy_verbindung` (`spill_rundreise_privat`); the
+      closing composition of validated pipeline bytes with a validated
+      spill plan (`spill_haelt_bedeutung` via `pipeline_correct`);
+      general refusals for table extent, out-of-frame slot and aliased
+      slots; one positive and five refusal probes (table also through
+      the refusal theorem); joint non-degenerate witnesses on the
+      pipeline witness program (`spill_haelt_bedeutung_zeuge`: rows
+      7 -> 35, 9 -> 6) and on a reached memory-changing spill run
+      beside the writer program `zeugenU`
+      (`spill_rundreise_privat_zeuge`).
+    - OPEN / not claimed: interleaved lowering that splits live ranges
+      across registers and spill slots (no live-range splitting here:
+      the fragments save/reload whole words for named slots, and which
+      variable homes where is lane 1167's allocation, reused only for
+      its frame vocabulary); callee-saved restore and argument passing
+      (no calls in the fragment, inherited from the pipeline); TSO
+      freshness of spill slots beyond the reused `SpillFrisch`
+      vocabulary (`ComposeSpillPrivacy.lean` owns the composed level);
+      read-trace representation (inherited from the pipeline); full
+      loaded-image connection (`pipeline_correct_loaded` shape, not
+      re-proved here).
+    - The refusal `Bool` is validator admission, never a hardware fault.
+    - No second IR and no second evaluator: only the accepted pipeline
+      lowering, validator and machine vocabulary are reused.
+-/
+
+#print axioms spillSaveCode
+#print axioms spillLoadCode
+#print axioms spillSave_gerade
+#print axioms spillLoad_gerade
+#print axioms spillSave_lauf
+#print axioms spillLoad_lauf
+#print axioms spillPlanOk
+#print axioms spillPlan_inRahmen
+#print axioms spillPlan_nodup
+#print axioms spillPlan_offCode
+#print axioms spillPlan_schranke
+#print axioms spillPlan_offDaten
+#print axioms spill_slot_ohneUmbruch
+#print axioms spill_schlitze_getrennt
+#print axioms SpillVonTabellenGetrennt
+#print axioms spillPlan_tabellenGetrennt
+#print axioms spill_rundreise_privat
+#print axioms spill_haelt_bedeutung
+#print axioms spill_verweigert_tabelle
+#print axioms spill_verweigert_aussen
+#print axioms spill_verweigert_kollision
+#print axioms spillP0
+#print axioms spillR0
+#print axioms spillD0
+#print axioms spill_probe_pos
+#print axioms spill_probe_tabelle
+#print axioms spill_probe_tabelle_satz
+#print axioms spill_probe_aussen
+#print axioms spill_probe_kollision
+#print axioms spill_probe_code
+#print axioms spillR0_getrennt
+#print axioms spill_haelt_bedeutung_zeuge
+#print axioms spill_rundreise_privat_zeuge
+
 end Gabbro.Grammatik.X86.PipeSpill
