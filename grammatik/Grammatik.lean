@@ -697,3 +697,4 @@ import Grammatik.X86.HwTranslateFull
 import Grammatik.X86.IntMemForms
 import Grammatik.X86.IntByteForms
 import Grammatik.X86.ValidatorKapLength
+import Grammatik.X86.HwKapsteinZwei
