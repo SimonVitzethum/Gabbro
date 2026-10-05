@@ -552,7 +552,95 @@ def ledger80 : List LEintrag :=
     [natByte 102, natByte 152],
    L .ops16 153 none "CWD-16" .verweigert "keine"
     "no 16-bit operand width in the model; refused by design" 255
-    [natByte 102, natByte 153]]
+    [natByte 102, natByte 153],
+   L .ohne 160 none "MOV AL,moffs8" .fehlt "keine"
+    "rare: absolute addressing, kernels only, PIC code never emits; no family" 255
+    [natByte 160, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .ohne 161 none "MOV rAX,moffs" .fehlt "keine"
+    "rare: absolute addressing, kernels only, PIC code never emits; no family" 255
+    [natByte 161, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .ohne 162 none "MOV moffs8,AL" .fehlt "keine"
+    "rare: absolute addressing, kernels only, PIC code never emits; no family" 255
+    [natByte 162, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .ohne 163 none "MOV moffs,rAX" .fehlt "keine"
+    "rare: absolute addressing, kernels only, PIC code never emits; no family" 255
+    [natByte 163, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .ohne 164 none "MOVS m8,m8" .fehlt "keine"
+    "occasional: REP MOVSB in memcpy expansions; no family" 255
+    [natByte 164],
+   L .ohne 165 none "MOVS m,m" .fehlt "keine"
+    "common: REP MOVSQ in memcpy; no family" 255
+    [natByte 165],
+   L .ohne 166 none "CMPS m8,m8" .fehlt "keine"
+    "occasional: REP CMPSB in memcmp; no family" 255
+    [natByte 166],
+   L .ohne 167 none "CMPS m,m" .fehlt "keine"
+    "occasional: REP CMPSQ in memcmp; no family" 255
+    [natByte 167],
+   L .ohne 168 none "TEST AL,Ib" .fehlt "keine"
+    "common: test al,imm bit tests; no family" 255
+    [natByte 168, natByte 5],
+   L .ohne 169 none "TEST rAX,Iz" .fehlt "keine"
+    "common: test eax,imm masks; no family" 255
+    [natByte 169, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .ohne 170 none "STOS m8" .fehlt "keine"
+    "occasional: REP STOSB in memset; no family" 255
+    [natByte 170],
+   L .ohne 171 none "STOS m" .fehlt "keine"
+    "common: REP STOSQ in memset; no family" 255
+    [natByte 171],
+   L .ohne 172 none "LODS m8" .fehlt "keine"
+    "rare: string loads; no family" 255
+    [natByte 172],
+   L .ohne 173 none "LODS m" .fehlt "keine"
+    "rare: string loads; no family" 255
+    [natByte 173],
+   L .ohne 174 none "SCAS m8" .fehlt "keine"
+    "occasional: REP SCASB in strlen/scan loops; no family" 255
+    [natByte 174],
+   L .ohne 175 none "SCAS m" .fehlt "keine"
+    "occasional: REP SCASQ in scan loops; no family" 255
+    [natByte 175],
+   L .ohne 176 none "MOV AL,imm8" .fehlt "keine"
+    "common: small constant materialization; no family" 255
+    [natByte 176, natByte 5],
+   L .ohne 177 none "MOV CL,imm8" .fehlt "keine"
+    "common: small constant materialization; no family" 255
+    [natByte 177, natByte 5],
+   L .ohne 178 none "MOV DL,imm8" .fehlt "keine"
+    "common: small constant materialization; no family" 255
+    [natByte 178, natByte 5],
+   L .ohne 179 none "MOV BL,imm8" .fehlt "keine"
+    "common: small constant materialization; no family" 255
+    [natByte 179, natByte 5],
+   L .ohne 180 none "MOV AH,imm8" .fehlt "keine"
+    "common: small constant materialization; no family" 255
+    [natByte 180, natByte 5],
+   L .ohne 181 none "MOV CH,imm8" .fehlt "keine"
+    "common: small constant materialization; no family" 255
+    [natByte 181, natByte 5],
+   L .ohne 182 none "MOV DH,imm8" .fehlt "keine"
+    "common: small constant materialization; no family" 255
+    [natByte 182, natByte 5],
+   L .ohne 183 none "MOV BH,imm8" .fehlt "keine"
+    "common: small constant materialization; no family" 255
+    [natByte 183, natByte 5],
+   L .ohne 184 none "MOV r32,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 184, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .ohne 185 none "MOV r32,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 185, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .ohne 186 none "MOV r32,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 186, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .ohne 187 none "MOV r32,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 187, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .ohne 188 none "MOV r32,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 188, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .ohne 189 none "MOV r32,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 189, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .ohne 190 none "MOV r32,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 190, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .ohne 191 none "MOV r32,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 191, natByte 5, natByte 0, natByte 0, natByte 0]]
 
 theorem t152o : kapFam [natByte 152] = 0 := by decide
 theorem t152w : kapFam [natByte 72, natByte 152] = 0 := by decide
@@ -722,6 +810,38 @@ theorem t134Lreg : kapDecode [natByte 240, natByte 134, natByte 192] = none := b
 theorem t135Lreg : kapDecode [natByte 240, natByte 135, natByte 192] = none := by decide
 theorem t152s : kapDecode [natByte 102, natByte 152] = none := by decide
 theorem t153s : kapDecode [natByte 102, natByte 153] = none := by decide
+theorem t160o : kapDecode [natByte 160, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t161o : kapDecode [natByte 161, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t162o : kapDecode [natByte 162, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t163o : kapDecode [natByte 163, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t164o : kapDecode [natByte 164] = none := by decide
+theorem t165o : kapDecode [natByte 165] = none := by decide
+theorem t166o : kapDecode [natByte 166] = none := by decide
+theorem t167o : kapDecode [natByte 167] = none := by decide
+theorem t168o : kapDecode [natByte 168, natByte 5] = none := by decide
+theorem t169o : kapDecode [natByte 169, natByte 5, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t170o : kapDecode [natByte 170] = none := by decide
+theorem t171o : kapDecode [natByte 171] = none := by decide
+theorem t172o : kapDecode [natByte 172] = none := by decide
+theorem t173o : kapDecode [natByte 173] = none := by decide
+theorem t174o : kapDecode [natByte 174] = none := by decide
+theorem t175o : kapDecode [natByte 175] = none := by decide
+theorem t176o : kapDecode [natByte 176, natByte 5] = none := by decide
+theorem t177o : kapDecode [natByte 177, natByte 5] = none := by decide
+theorem t178o : kapDecode [natByte 178, natByte 5] = none := by decide
+theorem t179o : kapDecode [natByte 179, natByte 5] = none := by decide
+theorem t180o : kapDecode [natByte 180, natByte 5] = none := by decide
+theorem t181o : kapDecode [natByte 181, natByte 5] = none := by decide
+theorem t182o : kapDecode [natByte 182, natByte 5] = none := by decide
+theorem t183o : kapDecode [natByte 183, natByte 5] = none := by decide
+theorem t184o : kapFam [natByte 184, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t185o : kapFam [natByte 185, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t186o : kapFam [natByte 186, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t187o : kapFam [natByte 187, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t188o : kapFam [natByte 188, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t189o : kapFam [natByte 189, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t190o : kapFam [natByte 190, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t191o : kapFam [natByte 191, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
 
 /-! CUTS (skeleton): rows 98/99 only; 236 keys outstanding. -/
 #print axioms t152o
