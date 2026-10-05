@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 14:25 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 14:29 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -668,6 +668,12 @@ Last ledger refresh: **2026-10-05 14:25 UTC**. This is an operational snapshot, 
 | 1219 | Pipeline: derive per-chunk runs from the lowering alone | Agent working | 1220: scheduled | [task](lanes/1219.md) |
 | 1221 | Linking: rel8 selection convergence and fall-through coverage | Agent working | 1222: scheduled | [task](lanes/1221.md) |
 | 1223 | valX86_sound for the decidable part | Agent working | 1224: scheduled | [task](lanes/1223.md) |
+| 1225 | Faults and interrupts against the store buffer: precise exceptions | Scheduled | 1226: scheduled | [task](lanes/1225.md) |
+| 1227 | Pipeline spills: variable homing and live-range splitting | Scheduled | 1228: scheduled | [task](lanes/1227.md) |
+| 1229 | Pipeline calls: multi-statement callee bodies | Scheduled | 1230: scheduled | [task](lanes/1229.md) |
+| 1231 | Pipeline tables: byte slices | Scheduled | 1232: scheduled | [task](lanes/1231.md) |
+| 1233 | Pipeline work bounds for branches and loops | Scheduled | 1234: scheduled | [task](lanes/1233.md) |
+| 1235 | Profiles: multi-step control flow and relocation re-decode | Scheduled | 1236: scheduled | [task](lanes/1235.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
