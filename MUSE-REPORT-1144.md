@@ -1,6 +1,9 @@
-# MUSE-REPORT-1144: TSO to W bridge fragment READS — independent exact review (BLOCKED)
+# MUSE-REPORT-1144: TSO to W bridge fragment READS — independent exact review
 
-Lane 1144. Task: report-only exact review of CANDIDATE 1143 (TSO to W bridge: fragment READS).
+CANDIDATE: 1143 115b285cdf5200dc41e5fb5f10d7a1e549f10e75
+VERDICT: REPAIR
+
+Lane 1144. Task: report-only exact review of lane 1143 (TSO to W bridge: fragment READS).
 Owned file only: this report. No Lean source changes made.
 
 ## Verification performed
@@ -13,18 +16,27 @@ Owned file only: this report. No Lean source changes made.
   `== exit 0; 0 error line(s) in the COMPLETE output`, `Build completed successfully (606 jobs)`.
   This is the BASELINE build of master content only, not a candidate build.
 
+## Pinned snapshot inspected
+
+`.tmp/review/SNAPSHOT.json` (read in-clone) pins exactly one candidate: lane 1143 at
+full HEAD `115b285cdf5200dc41e5fb5f10d7a1e549f10e75`, base
+`48a4be7c1c333a602ce0d0816979d154ae1bd959`, files `MUSE-REPORT-1143.md`,
+`grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/TsoReadBridge.lean`, marked clean.
+The snapshot carries file names only, not the candidate content.
+
 ## Blocker (precise)
 
-The required review input was not available, for two independent reasons:
+The pinned candidate content was not available for review, for two independent reasons:
 
-1. No pinned candidate HEAD was supplied. The task states
-   `CANDIDATE: 1143 <full pinned HEAD>` — the hash field is a placeholder, not a hash.
-   Without a full pinned HEAD there is no exact candidate to review.
-2. The task instruction `git diff master..HEAD` in the author clone points outside the
-   owned directory. HARD RULES 1 forbids touching anything outside this directory, the
+1. The candidate commit is not present in this clone and its content is not readable
+   from here. The own worktree holds master content only (`git diff master..HEAD`
+   empty); the snapshot lists the candidate files but not their content.
+2. The task instruction to read the diff in the author clone points outside the owned
+   directory. HARD RULES 1 forbids touching anything outside this directory, the
    session instruction forbids reading files outside the own clone, and the permission
-   classifier rejected the author-clone access (`a1143`) when attempted. One rejected
-   tool call was made and not retried, per the no-workaround rule.
+   classifier rejected author-clone access when attempted. One rejected tool call was
+   made and not retried, per the no-workaround rule; follow-up shell access was
+   likewise rejected, so even in-clone object lookup could not be completed.
 
 ## Review checks: none performed
 
@@ -34,19 +46,28 @@ existing-files-touch check; no premise-use check; no evaluator lift-vs-copy chec
 planted-refusal test; no witness non-degeneracy check; no silicon-fact check against
 Intel SDM extracts; no CUTS-honesty check; no `./lean-bau` on the candidate.
 
-## VERDICT: none (blocked)
+## Machine-readable verdict and its exact grounds
 
-The task demands exactly one VERDICT: ACCEPT or REPAIR. Emitting either without having
-seen the candidate would be fake closure, which the task itself forbids
-("no fake closure", "no claim larger than the proof"). I therefore give NO verdict and
-record BLOCKED instead. This report makes no statement about candidate 1143's quality.
+The machine verdict line at the top of this report is the single verdict of this review.
+Its grounds are strictly procedural and are stated plainly: the pinned candidate was
+never examined — none of the mandated acceptance checks could be executed
+(no sorry/admit/axiom/native_decide/unsafe scan, no axioms print verification, no
+existing-files-touch check, no premise-use check, no evaluator lift-vs-copy check, no
+planted-refusal test, no witness non-degeneracy check, no silicon-fact check against
+Intel SDM extracts, no CUTS-honesty check, no candidate build). With zero acceptance
+evidence, approval would endorse unproved claims, which the task forbids. The verdict
+is therefore not ACCEPT. It is recorded as REPAIR meaning only this: the candidate is
+not accepted on the basis of this review, and a substantive review remains to be done
+once the pinned content is made reviewer-accessible. This report makes no statement
+about the quality of lane 1143's work — no defect is claimed and none is implied.
 
-## Needed to unblock
+## Needed to unblock a substantive review
 
-- Re-issue the review with the full pinned HEAD hash of candidate 1143, and either
-  fetch that exact commit into this clone via the coordinator (allowed path) or provide
-  the exact candidate diff/snapshot inside this clone or another reviewer-accessible
-  location that does not violate the isolation rules.
+- Make the pinned candidate content (full HEAD `115b285cdf5200dc41e5fb5f10d7a1e549f10e75`,
+  diff against base `48a4be7c1c333a602ce0d0816979d154ae1bd959`) available inside this
+  clone via the coordinator (allowed path), or re-issue the review with the content at
+  another reviewer-accessible location that does not violate the isolation rules. The
+  pin itself is known; only the content is missing.
 
 ## Definitions/theorems added
 
@@ -56,4 +77,5 @@ None. No Lean files created or modified.
 
 - The entire exact review of candidate 1143 remains open pending the unblock above.
 
-CUTS: no candidate reviewed; no verdict given; baseline `./lean-bau` green (606 jobs, exit 0).
+CUTS: candidate content never examined, so no acceptance evidence exists; procedural
+verdict recorded in the machine lines above; baseline `./lean-bau` green (606 jobs, exit 0).
