@@ -371,4 +371,140 @@ theorem block_verweigert_bind_zeuge :
     ?_, pipePaket_hold⟩
   exact block_verweigert_bind _ _ _ _ _
 
+/-- Witness statement: the first witness assignment. The two-chunk
+    block runs it twice in a row. -/
+def witStmt1195 : Stmt pwD pwV false pwCtx [] [] :=
+  Stmt.assignSlot (V := pwV) (l := false) () () pwIdx0 pwWert0 pwHw pwHL
+
+/-- JOINT WITNESS for `block_zwei_korrekt`: every premise holds jointly
+    on the witness declaration -- one table its contract writes, two
+    reached one-step source runs, two target chunk runs over the
+    five-instruction chunk, derived coverage and named time `8` with
+    per-step bound `3` on both chunks -- and so do all seven
+    conclusions, with the fetched-byte run observably changing
+    memory (`PipePaket`). -/
+theorem block_zwei_korrekt_zeuge :
+    ∃ (σ₁ σ₂ : World pwD) (st₁ st₂ : Zustand),
+      senkStmt pwCfg pwL witStmt1195 = some (pwProg.take 5) ∧
+      senkStmt pwCfg pwL witStmt1195 = some (pwProg.take 5) ∧
+      execStmt pwO 0 pwR witStmt1195 pwSigma pwEnv30 = .ok σ₁ pwEnv30 ∧
+      execStmt pwO 0 pwR witStmt1195 σ₁ pwEnv30 = .ok σ₂ pwEnv30 ∧
+      lauf (decodiertZu (pwProg.take 5)) (pwStart 30) = some st₁ ∧
+      lauf (decodiertZu (pwProg.take 5)) st₁ = some st₂ ∧
+      Deckung pipeSummary 1 (decodiertZu (pwProg.take 5)) ∧
+      Deckung pipeSummary 1 (decodiertZu (pwProg.take 5)) ∧
+      laufKosten profilZeuge (decodiertZu (pwProg.take 5)) = some 8 ∧
+      laufKosten profilZeuge (decodiertZu (pwProg.take 5)) = some 8 ∧
+      (∀ dd ∈ decodiertZu (pwProg.take 5),
+        ∃ cc, schrittKosten profilZeuge dd = some cc ∧ cc ≤ 3) ∧
+      (∀ dd ∈ decodiertZu (pwProg.take 5),
+        ∃ cc, schrittKosten profilZeuge dd = some cc ∧ cc ≤ 3) ∧
+      execBlock pwO 0 pwR
+        (Block.cons witStmt1195 (Block.cons witStmt1195 Block.nil))
+        pwSigma pwEnv30 = .ok σ₂ pwEnv30 ∧
+      lauf (decodiertZu ((pwProg.take 5) ++ (pwProg.take 5)))
+        (pwStart 30) = some st₂ ∧
+      Deckung pipeSummary (1 + 1)
+        (decodiertZu ((pwProg.take 5) ++ (pwProg.take 5))) ∧
+      laufKosten profilZeuge
+        (decodiertZu ((pwProg.take 5) ++ (pwProg.take 5))) = some (8 + 8) ∧
+      targetWork ((pwProg.take 5) ++ (pwProg.take 5)) =
+        targetWork (pwProg.take 5) + targetWork (pwProg.take 5) ∧
+      senkBlock pwCfg pwL 0
+        (Block.cons witStmt1195 (Block.cons witStmt1195 Block.nil)) =
+        some ((pwProg.take 5) ++ (pwProg.take 5)) ∧
+      (∀ k, expandBound pipeSummary (1 + 1) = some k → (8 + 8) ≤ 3 * k) ∧
+      PipePaket := by
+  obtain ⟨σ₁, hsrc1⟩ : ∃ σ₁, execStmt pwO 0 pwR witStmt1195 pwSigma pwEnv30 =
+      .ok σ₁ pwEnv30 := ⟨_, rfl⟩
+  obtain ⟨σ₂, hsrc2⟩ : ∃ σ₂, execStmt pwO 0 pwR witStmt1195 σ₁ pwEnv30 =
+      .ok σ₂ pwEnv30 := ⟨_, rfl⟩
+  obtain ⟨st₁, st₂, hrun1, hrun2⟩ : ∃ st₁ st₂,
+      lauf (decodiertZu (pwProg.take 5)) (pwStart 30) = some st₁ ∧
+      lauf (decodiertZu (pwProg.take 5)) st₁ = some st₂ :=
+    ⟨_, _, rfl, rfl⟩
+  have hdeck : Deckung pipeSummary 1 (decodiertZu (pwProg.take 5)) :=
+    deckung_pipeChunk pwCfg pwL false () () pwIdx0 pwWert0 pwHT0
+      pwHw pwHL 1 _ _ pw_senkWert0 pwChunkCast (Nat.le_refl 1)
+  have hmain := block_zwei_korrekt pwCfg pwL () () pwIdx0 pwWert0 pwHw pwHL
+    () () pwIdx0 pwWert0 pwHw pwHL _ _ pwChunkWit pwChunkWit pwO 0 pwR
+    _ _ _ _ hsrc1 hsrc2 _ _ _ hrun1 hrun2 1 1 8 8 3 profilZeuge
+    hdeck hdeck kosten_chunkWit kosten_chunkWit hb_chunkWit hb_chunkWit 0
+  exact ⟨σ₁, σ₂, st₁, st₂, pwChunkWit, pwChunkWit, hsrc1, hsrc2, hrun1,
+    hrun2, hdeck, hdeck, kosten_chunkWit, kosten_chunkWit, hb_chunkWit,
+    hb_chunkWit, hmain.1, hmain.2.1, hmain.2.2.1, hmain.2.2.2.1,
+    hmain.2.2.2.2.1, hmain.2.2.2.2.2.1, hmain.2.2.2.2.2.2, pipePaket_hold⟩
+
+/- CUTS:
+    - Proved here (generic): decoding distribution over chunks
+      (`decodiertZu_append`); run-chain induction to the flattened
+      block run (`ketteLauf_lauf`) and work sum (`ketteLaenge_sum`);
+      coverage append at the sum budget (`deckung_append_pipe`,
+      honest zero spill/fence through `pipeSummary_expand`);
+      block coverage by induction over the chunk list
+      (`blockDeckung_eins`); time append (`zeit_append_pipe`,
+      reused `laufKosten_anhang_erfolg`); two-chunk block
+      correctness (`block_zwei_korrekt`: source `execBlock` run,
+      target `lauf` run, coverage, time, work, the `senkBlock`
+      lowering equation via reused `senkBlock_assign`, and the
+      time-transfer bound through reused
+      `budgetAusfuehrung_transfer`); four refusals (deep tree
+      beyond scratch at value and statement level, `onOption`
+      branch, `retry` loop head, `bind` block); four poison probes
+      firing by computation; joint non-degenerate witnesses for
+      every syntax-premise theorem (one table its contract writes;
+      reached source steps; target chunk runs; fetched-byte run
+      observably changing memory via reused `PipePaket`).
+    - Reused, not duplicated: `senkStmt`, `senkBlock_assign`,
+      `senkTief_verweigert_tief`, `pipeSummary`/`pipeSummary_expand`,
+      `decodiertZu`, `Deckung`, `lauf_anhang`,
+      `laufKosten_anhang_erfolg`, `arbeit_decodiert`,
+      `budgetAusfuehrung_transfer`, and the whole `pw` witness
+      package with its chunk/cost facts.
+    - OPEN (per-chunk derivation): each chunk run premise
+      (`hsrc`, `hrun`, `hdeck`) is ASSUMED here; deriving it from
+      the lowering alone stays with `senkBlock_korrekt` /
+      `pipeline_correct` (reused as black boxes, never
+      re-proved). No WorldRep threading is claimed here beyond
+      what the assumed runs carry.
+    - OPEN (n-chunk source blocks): target/budget induction is over
+      the chunk list; the dependent source `Block` chain beyond
+      two `assignSlot` conses (mixed `Λ` threading, checks,
+      branches) composes through `senkBlock_korrekt`, not here.
+    - OPEN (entry/image): admission beyond the concatenated chunks
+      (mapping, entry sequence, ABI duties, guards) composes
+      through `PipelineImage`/`PipelineEntry`; no TSO/concurrency
+      claim; named timing stays a hardware assumption; `forever`
+      loops and calls hit the same catch-all arms (stated in
+      prose, no theorem).
+    - No second IR, no second interpreter, no optimiser edit, no
+      weakened guarantee: unsupported shapes are refused, never
+      guessed.
+-/
+
+#print axioms decodiertZu_append
+#print axioms ketteLauf_lauf
+#print axioms ketteLaenge_sum
+#print axioms deckung_append_pipe
+#print axioms blockDeckung_eins
+#print axioms zeit_append_pipe
+#print axioms block_zwei_korrekt
+#print axioms tiefWert1195
+#print axioms tiefWertFeld1195
+#print axioms block_verweigert_tief
+#print axioms block_verweigert_tief_stmt
+#print axioms block_verweigert_verzweigung
+#print axioms block_verweigert_schleife
+#print axioms block_verweigert_bind
+#print axioms gift_block_tief_wert
+#print axioms gift_block_schleife
+#print axioms gift_block_bind
+#print axioms gift_block_verzweigung
+#print axioms block_verweigert_tief_zeuge
+#print axioms block_verweigert_verzweigung_zeuge
+#print axioms block_verweigert_schleife_zeuge
+#print axioms block_verweigert_bind_zeuge
+#print axioms witStmt1195
+#print axioms block_zwei_korrekt_zeuge
+
 end Gabbro.Grammatik.X86.PipeBlock
