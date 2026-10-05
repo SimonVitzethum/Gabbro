@@ -418,7 +418,199 @@ theorem pipelineNaN_probe_laenge :
   have hl : laengeOk 16 = false := by decide
   exact fpSchritt_laenge_verweigert _ _ hl
 
-/- CUTS: what is not proved here (filled as the file grows). -/
+/-! ## 7. Joint witness: a payload NaN computed, stored, read back.
+
+  `xmm0` holds the quiet payload word `0x7FF8000000000001`, `xmm1`
+  holds `1.0`; `rax` points at 8192 under the admitted profile. The
+  lowered add sequence lands the payload word in `xmm0` verbatim
+  (`pipelineNaN_nutzlast_links` via `pipelineNaN_seq`), the store
+  writes it at 8192, it reads back, and one memory byte observably
+  changed: a reached run with a real memory-changing step
+  (non-degenerate: the payload word is nonzero and the footprint top
+  byte moves `0x00` to `0x7F`). -/
+
+/-- Witness XMM file: `xmm0` holds the payload NaN, `xmm1` holds `1.0`. -/
+def nanZeugeXmm : XmmDatei :=
+  fun q => if q = XmmReg.xmm0 then vecJoin 0x7FF8000000000001 0
+    else if q = XmmReg.xmm1 then vecJoin 0x3FF0000000000000 0
+    else vecJoin 0 0
+
+/-- Witness state: `rax` at 8192, admitted profile. -/
+def nanZeugeT : FpZustand := ⟨fpZeugeKern, nanZeugeXmm, kontextReset⟩
+
+/-- The witness `xmm0` holds the payload NaN word. -/
+theorem nanZeuge_tief0 :
+    xmmTief nanZeugeT.xmm XmmReg.xmm0 = 0x7FF8000000000001 := by
+  decide
+
+/-- The witness `xmm1` holds `1.0`. -/
+theorem nanZeuge_tief1 :
+    xmmTief nanZeugeT.xmm XmmReg.xmm1 = 0x3FF0000000000000 := by
+  decide
+
+/-- Admitted profile on the witness state. -/
+theorem nanZeuge_fp : fpEintritt nanZeugeT.fp = true := by
+  decide
+
+/-- Witness memory after the store: the payload word at 8192. -/
+def nanZeugeSpeicherNach : Speicher :=
+  { zeugenSpeicher with bytes := writeBytes zeugenSpeicher (BitVec.ofNat 64 8192) 0x7FF8000000000001 }
+
+/-- The stored payload word reads back. -/
+theorem nanZeuge_liest :
+    read64 nanZeugeSpeicherNach (BitVec.ofNat 64 8192)
+      = some 0x7FF8000000000001 := by
+  have hrd : lesbar8 zeugenSpeicher (BitVec.ofNat 64 8192) = true := rfl
+  have hwr0 : write64 zeugenSpeicher (BitVec.ofNat 64 8192)
+      0x7FF8000000000001 = some nanZeugeSpeicherNach := by
+    unfold write64
+    have hc : schreibbar8 zeugenSpeicher (BitVec.ofNat 64 8192) = true := rfl
+    rw [if_pos hc]
+    rfl
+  exact read64_nach_write64 _ _ _ _ hwr0 hrd
+
+/-- The store observably changed memory (footprint top byte). -/
+theorem nanZeuge_speicher_aendert :
+    nanZeugeT.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ≠
+      nanZeugeSpeicherNach.bytes (addrOff (BitVec.ofNat 64 8192) 7) := by
+  decide
+
+/-- JOINT WITNESS: the lowered add sequence computes the payload NaN
+    into `xmm0`, the store writes it at 8192, it reads back, and one
+    memory byte observably changed -- a reached run with a real
+    memory-changing step under the admitted profile. -/
+theorem pipelineNaN_zeuge :
+    ∃ t' t'' : FpZustand,
+      laufFp (senkNanSeq .add XmmReg.xmm0 XmmReg.xmm0 XmmReg.xmm1)
+          nanZeugeT = some t'
+      ∧ fpSchritt ⟨.movsdSpeichere Register.rax XmmReg.xmm0 0, 4⟩ t'
+          = some t''
+      ∧ read64 t''.kern.speicher (BitVec.ofNat 64 8192)
+          = some 0x7FF8000000000001
+      ∧ nanZeugeT.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ≠
+          t''.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) := by
+  have hne : XmmReg.xmm1 ≠ XmmReg.xmm0 := by decide
+  obtain ⟨t', hrun, -, hval, hfp', hmem0, hreg0⟩ :=
+    pipelineNaN_seq GleitOp.add XmmReg.xmm0 XmmReg.xmm0 XmmReg.xmm1
+      nanZeugeT hne fpZeuge_laenge nanZeuge_fp
+  have hvalnan : xmmTief t'.xmm XmmReg.xmm0 = 0x7FF8000000000001 := by
+    rw [nanZeuge_tief0, nanZeuge_tief1] at hval
+    have hprop : muster64 (gleitRechne GleitOp.add
+        (bites64 0x7FF8000000000001) (bites64 0x3FF0000000000000))
+        = 0x7FF8000000000001 := by
+      show muster64 (Gleitkomma.add Gleitkomma.f64 _ _) = _
+      rw [nanAdd_links _ _ nanKlasse_quiet, muster64_bites64]
+    rw [hprop] at hval
+    exact hval
+  have hmem : t'.kern.speicher = zeugenSpeicher := hmem0.trans rfl
+  have hrax : t'.kern.register Register.rax =
+      nanZeugeT.kern.register Register.rax :=
+    congrArg (· Register.rax) hreg0
+  have heff : effAddr t'.kern Register.rax 0 = BitVec.ofNat 64 8192 := by
+    unfold effAddr
+    rw [hrax]
+    exact fpZeuge_effAddr
+  have hwr : write64 t'.kern.speicher (effAddr t'.kern Register.rax 0)
+      (xmmTief t'.xmm XmmReg.xmm0) = some nanZeugeSpeicherNach := by
+    rw [hmem, heff, hvalnan]
+    unfold write64
+    have hc : schreibbar8 zeugenSpeicher (BitVec.ofNat 64 8192) = true := rfl
+    rw [if_pos hc]
+    rfl
+  have hfp2 : fpEintritt t'.fp = true := by
+    rw [hfp']
+    exact nanZeuge_fp
+  have hstep2 := fpSchritt_movsdSpeichere_erfolg
+    ⟨.movsdSpeichere Register.rax XmmReg.xmm0 0, 4⟩ t'
+    Register.rax XmmReg.xmm0 0 nanZeugeSpeicherNach
+    fpZeuge_laenge hfp2 rfl hwr
+  refine ⟨t', _, hrun, hstep2, ?_, ?_⟩
+  · exact nanZeuge_liest
+  · exact nanZeuge_speicher_aendert
+
+/- CUTS: what is not proved here.
+  - No loaded image, no byte fetch, no relocation: runs go through
+    `laufFp` over constructed `FpDecodiert` values, never bytes
+    through a decoder. The byte connection stays owned by
+    `ScalarFloatCodec` and the source-to-final-loaded-byte closing
+    theorem stays open (same cut as lane 1161).
+  - No TSO/concurrency claim: `fpSchritt`/`laufFp` are sequential
+    over one `Speicher`; the per-access target-to-W/GX bridge stays
+    with the TSO-bridge lane.
+  - No f32 lowering: `Ty.fl` is widthless binary64 in the source
+    model, so there is no binary32 node to admit here.
+  - Silicon scope: the bit-exact agreement proved here is
+    source-model (`gleitRechne`) against SSE2-model (`fpRechne`) --
+    the SAME accepted model function on both sides, so payload
+    propagation is verbatim by construction (§1-§2). Silicon SNaN
+    quieting under a masked invalid exception is NOT modelled and
+    NOT claimed (the accepted codecs define no quiet-bit
+    discipline); the two-NaN operand-order choice is the named
+    assumption `HwZweiNanWahl`, used by
+    `silizium_zweiNan_bleibtNan` and never proved.
+  - `sub` with a right NaN flips only the sign: the payload travels
+    in `Gleitkomma.neg` (`nanNeg_nutzlast`), stated at model level
+    and as `muster64 (neg …)` at word level -- no bare-word
+    equation is claimed for it.
+  - Pipeline right-side payload is proved for `add`
+    (`pipelineNaN_nutzlast_rechts_add`); `mul`/`div`/`sub` right
+    sides live at word level (§2) through the same rewrite.
+  - No reassociation, contraction, fast-math or cross-op rewrite is
+    admitted: one source op is one machine form (`senkGleitOp`,
+    reused unchanged). Sticky MXCSR flags, SNaN traps, costs and
+    timing stay open (see the CUTS of `ScalarFloat`/`Gleitprofil`).
+  - No second source interpreter and no optimiser change: the source
+    side is named only through the accepted `gleitRechne`.
+  - Rule 13 (inhabitation): no theorem here quantifies over the
+    listed source-syntax types (`Vertrag`, `Stmt`, `Endblock`,
+    `ErgExpr`, `Expr`, `Args`); `GleitOp`/`FpBefehl` range over the
+    model op and the target form. The joint non-degenerate witness
+    with a real memory-changing step is `pipelineNaN_zeuge`
+    (payload NaN computed, stored at 8192, read back, one
+    observably changed byte).
+-/
+
+#print axioms nanPipeOk_reset
+#print axioms nanAdd_links
+#print axioms nanAdd_rechts
+#print axioms nanMul_links
+#print axioms nanMul_rechts
+#print axioms nanDiv_links
+#print axioms nanDiv_rechts
+#print axioms nanSub_links
+#print axioms nanSub_rechts
+#print axioms nanNeg_nutzlast
+#print axioms fpRechne_nan_links
+#print axioms fpRechne_add_nan_rechts
+#print axioms fpRechne_mul_nan_rechts
+#print axioms fpRechne_div_nan_rechts
+#print axioms fpRechne_sub_nan_rechts
+#print axioms nanStill_quiet
+#print axioms nanStill_signalisierend
+#print axioms nanKlasse_quiet
+#print axioms nanKlasse_signalisierend
+#print axioms nanKlasse_nutzlast2
+#print axioms nanKlasse_eins
+#print axioms nanNutzlast_quiet_add
+#print axioms nanNutzlast_signalisierend_add
+#print axioms nanNutzlast_rechts_mul
+#print axioms nanUcomi_signalisierend
+#print axioms silizium_zweiNan_bleibtNan
+#print axioms senkNanSeq_klingt
+#print axioms nanPipeOk_zulaessig
+#print axioms pipelineNaN_seq
+#print axioms pipelineNaN_nutzlast_links
+#print axioms pipelineNaN_nutzlast_rechts_add
+#print axioms pipelineNaN_refuses_profil
+#print axioms pipelineNaN_refuses_laenge
+#print axioms pipelineNaN_probe_profil
+#print axioms pipelineNaN_probe_laenge
+#print axioms nanZeuge_tief0
+#print axioms nanZeuge_tief1
+#print axioms nanZeuge_fp
+#print axioms nanZeuge_liest
+#print axioms nanZeuge_speicher_aendert
+#print axioms pipelineNaN_zeuge
 
 #print axioms nanPipeOk_reset
 
