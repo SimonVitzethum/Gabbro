@@ -618,6 +618,7 @@ structure CarryMem where
   breite : Breite
   speichernd : Bool
   modrm : Nat
+  basis : Nat
   disp : List Byte
   laenge : Nat
   deriving DecidableEq, Repr
@@ -770,7 +771,7 @@ def decodeGruppe1 (adc : Bool) (b : Breite) (immKind : Nat) (bBit : Nat)
         | d0 :: rest1 =>
           match immLies immKind b rest1 with
           | some (_, rest') =>
-            some (.mem ⟨k, b, true, byteNat m, [d0], len + 1 + immLenOf immKind⟩, rest')
+            some (.mem ⟨k, b, true, byteNat m, bBit * 8 + rm, [d0], len + 1 + immLenOf immKind⟩, rest')
           | none => none
         | _ => none
       | 2, _ =>
@@ -778,7 +779,7 @@ def decodeGruppe1 (adc : Bool) (b : Breite) (immKind : Nat) (bBit : Nat)
         | d0 :: d1 :: d2 :: d3 :: rest1 =>
           match immLies immKind b rest1 with
           | some (_, rest') =>
-            some (.mem ⟨k, b, true, byteNat m, [d0, d1, d2, d3], len + 4 + immLenOf immKind⟩, rest')
+            some (.mem ⟨k, b, true, byteNat m, bBit * 8 + rm, [d0, d1, d2, d3], len + 4 + immLenOf immKind⟩, rest')
           | none => none
         | _ => none
       | _, 5 =>
@@ -786,13 +787,13 @@ def decodeGruppe1 (adc : Bool) (b : Breite) (immKind : Nat) (bBit : Nat)
         | d0 :: d1 :: d2 :: d3 :: rest1 =>
           match immLies immKind b rest1 with
           | some (_, rest') =>
-            some (.mem ⟨k, b, true, byteNat m, [d0, d1, d2, d3], len + 4 + immLenOf immKind⟩, rest')
+            some (.mem ⟨k, b, true, byteNat m, bBit * 8 + rm, [d0, d1, d2, d3], len + 4 + immLenOf immKind⟩, rest')
           | none => none
         | _ => none
       | _, _ =>
         match immLies immKind b rest with
         | some (_, rest') =>
-          some (.mem ⟨k, b, true, byteNat m, [], len + immLenOf immKind⟩, rest')
+          some (.mem ⟨k, b, true, byteNat m, bBit * 8 + rm, [], len + immLenOf immKind⟩, rest')
         | none => none
 
 /-- ModRM dispatch for the `/r` forms: register-direct runs the
@@ -814,19 +815,19 @@ def decodeCarryModrm (alu : Bool) (b : Breite) (rBit bBit : Nat)
       | 1, _ =>
         match rest with
         | d0 :: rest' =>
-          some (.mem ⟨k, b, dstRm, byteNat m, [d0], len + 1⟩, rest')
+          some (.mem ⟨k, b, dstRm, byteNat m, bBit * 8 + rm, [d0], len + 1⟩, rest')
         | _ => none
       | 2, _ =>
         match rest with
         | d0 :: d1 :: d2 :: d3 :: rest' =>
-          some (.mem ⟨k, b, dstRm, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+          some (.mem ⟨k, b, dstRm, byteNat m, bBit * 8 + rm, [d0, d1, d2, d3], len + 4⟩, rest')
         | _ => none
       | _, 5 =>
         match rest with
         | d0 :: d1 :: d2 :: d3 :: rest' =>
-          some (.mem ⟨k, b, dstRm, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+          some (.mem ⟨k, b, dstRm, byteNat m, bBit * 8 + rm, [d0, d1, d2, d3], len + 4⟩, rest')
         | _ => none
-      | _, _ => some (.mem ⟨k, b, dstRm, byteNat m, [], len⟩, rest)
+      | _, _ => some (.mem ⟨k, b, dstRm, byteNat m, bBit * 8 + rm, [], len⟩, rest)
 
 /-- INC/DEC ModRM: `/0` is INC, `/1` is DEC, anything else refuses
     (FF `/2` to `/7` are CALL/JMP/PUSH, never INC/DEC). -/
@@ -845,19 +846,19 @@ def decodeCarryIncDecModrm (b : Breite) (bBit : Nat) (len : Nat)
         | 1, _ =>
           match rest with
           | d0 :: rest' =>
-            some (.mem ⟨.inc, b, true, byteNat m, [d0], len + 1⟩, rest')
+            some (.mem ⟨.inc, b, true, byteNat m, bBit * 8 + rm, [d0], len + 1⟩, rest')
           | _ => none
         | 2, _ =>
           match rest with
           | d0 :: d1 :: d2 :: d3 :: rest' =>
-            some (.mem ⟨.inc, b, true, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+            some (.mem ⟨.inc, b, true, byteNat m, bBit * 8 + rm, [d0, d1, d2, d3], len + 4⟩, rest')
           | _ => none
         | _, 5 =>
           match rest with
           | d0 :: d1 :: d2 :: d3 :: rest' =>
-            some (.mem ⟨.inc, b, true, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+            some (.mem ⟨.inc, b, true, byteNat m, bBit * 8 + rm, [d0, d1, d2, d3], len + 4⟩, rest')
           | _ => none
-        | _, _ => some (.mem ⟨.inc, b, true, byteNat m, [], len⟩, rest)
+        | _, _ => some (.mem ⟨.inc, b, true, byteNat m, bBit * 8 + rm, [], len⟩, rest)
     | 1 =>
       if mod == 3 then decodeCarryIndee false b (bBit * 8 + rm) len rest
       else
@@ -865,19 +866,19 @@ def decodeCarryIncDecModrm (b : Breite) (bBit : Nat) (len : Nat)
         | 1, _ =>
           match rest with
           | d0 :: rest' =>
-            some (.mem ⟨.dec, b, true, byteNat m, [d0], len + 1⟩, rest')
+            some (.mem ⟨.dec, b, true, byteNat m, bBit * 8 + rm, [d0], len + 1⟩, rest')
           | _ => none
         | 2, _ =>
           match rest with
           | d0 :: d1 :: d2 :: d3 :: rest' =>
-            some (.mem ⟨.dec, b, true, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+            some (.mem ⟨.dec, b, true, byteNat m, bBit * 8 + rm, [d0, d1, d2, d3], len + 4⟩, rest')
           | _ => none
         | _, 5 =>
           match rest with
           | d0 :: d1 :: d2 :: d3 :: rest' =>
-            some (.mem ⟨.dec, b, true, byteNat m, [d0, d1, d2, d3], len + 4⟩, rest')
+            some (.mem ⟨.dec, b, true, byteNat m, bBit * 8 + rm, [d0, d1, d2, d3], len + 4⟩, rest')
           | _ => none
-        | _, _ => some (.mem ⟨.dec, b, true, byteNat m, [], len⟩, rest)
+        | _, _ => some (.mem ⟨.dec, b, true, byteNat m, bBit * 8 + rm, [], len⟩, rest)
     | _ => none
 
 /-- Opcode dispatch after the prefix: every ADC/SBB/INC/DEC opcode
@@ -1371,19 +1372,19 @@ theorem pin_decode_incReg64 :
 /-- Pin: `11 /r` with a memory source decodes to a descriptor. -/
 theorem pin_decode_mem :
     decodeCarry [natByte 17, natByte 1] =
-      some (.mem ⟨.adc, .b32, true, 1, [], 2⟩, []) := by
+      some (.mem ⟨.adc, .b32, true, 1, 1, [], 2⟩, []) := by
   decide
 
 /-- Pin: `1B /r` SBB Gv,Ev with a memory source is a load. -/
 theorem pin_decode_sbbMemLoad :
     decodeCarry [natByte 27, natByte 1] =
-      some (.mem ⟨.sbb, .b32, false, 1, [], 2⟩, []) := by
+      some (.mem ⟨.sbb, .b32, false, 1, 1, [], 2⟩, []) := by
   decide
 
 /-- Pin: `FF /1` DEC Ev with a memory destination is a store. -/
 theorem pin_decode_decMem :
     decodeCarry [natByte 255, natByte 9] =
-      some (.mem ⟨.dec, .b32, true, 9, [], 2⟩, []) := by
+      some (.mem ⟨.dec, .b32, true, 9, 1, [], 2⟩, []) := by
   decide
 
 /-- Pin: REX prefix, no width change for 32-bit forms. -/
@@ -1704,6 +1705,188 @@ theorem ext_weist_carryREX11_zurueck :
 theorem ext_weist_carry6611_zurueck :
     decodeExt [natByte 102, natByte 17, natByte 193] = none := by
   decide
+
+/-! ## 4. Dispatcher and machine step: the family beside the chain.
+
+   The unified decoder runs first and keeps every accepted form (§3
+   proves the family rows refused there); the family arm takes exactly
+   those rows. The unified step runs Ext through `stepExt` and family
+   register forms through `carrySchritt` on the core half; family
+   memory forms refuse here and run the TSO path of §5. -/
+
+/-- Unified dispatcher instruction: the accepted chain first, the
+    family only where it refuses. -/
+inductive CarryHwInstr where
+  | ext : ExtInstr → CarryHwInstr
+  | carry : CarryInstr → CarryHwInstr
+  deriving DecidableEq, Repr
+
+/-- Dispatcher: the unified decoder first, the family decoder only
+    where the unified chain refuses. No accepted form is shadowed. -/
+def decodeCarryHw : List Byte → Option (CarryHwInstr × List Byte) :=
+  fun bs =>
+    match decodeExt bs with
+    | some (i, rest) => some (.ext i, rest)
+    | none =>
+      match decodeCarry bs with
+      | some (d, rest) => some (.carry d, rest)
+      | none => none
+
+/-- Consumed length of one dispatcher instruction (checked data). -/
+def carryHwLen : CarryHwInstr → Nat
+  | .ext i => extLen i
+  | .carry (.reg d) => d.laenge
+  | .carry (.mem m) => m.laenge
+
+/-- The dispatcher agrees with the unified chain wherever it accepts. -/
+theorem decodeCarryHw_prefers_ext (bs : List Byte) (i : ExtInstr)
+    (rest : List Byte) (h : decodeExt bs = some (i, rest)) :
+    decodeCarryHw bs = some (.ext i, rest) := by
+  unfold decodeCarryHw
+  rw [h]
+
+/-- Where the unified chain refuses, a covered family row is taken. -/
+theorem decodeCarryHw_carry (bs : List Byte) (d : CarryInstr)
+    (rest : List Byte) (h1 : decodeExt bs = none)
+    (h2 : decodeCarry bs = some (d, rest)) :
+    decodeCarryHw bs = some (.carry d, rest) := by
+  unfold decodeCarryHw
+  rw [h1, h2]
+
+/-- Where both chains refuse, the dispatcher refuses. -/
+theorem decodeCarryHw_nichts (bs : List Byte)
+    (h1 : decodeExt bs = none) (h2 : decodeCarry bs = none) :
+    decodeCarryHw bs = none := by
+  unfold decodeCarryHw
+  rw [h1, h2]
+
+/-- Pin: the pilot row goes through unchanged. -/
+theorem pin_hw_pilot_ret :
+    decodeCarryHw (encode .ret) =
+      some (.ext (.pilot ⟨.ret, 1⟩), []) :=
+  decodeCarryHw_prefers_ext _ _ _ pin_ext_pilot_ret
+
+/-- Pin: a family row takes the family arm. -/
+theorem pin_hw_adcReg32 :
+    decodeCarryHw [natByte 17, natByte 193] =
+      some (.carry (.reg ⟨.adcReg .b32 .rcx .rax, 2⟩), []) :=
+  decodeCarryHw_carry _ _ _ ext_weist_carry11_zurueck pin_decode_adcReg32
+
+/-- One unified step: Ext through `stepExt`, family register forms
+    through `carrySchritt` on the core half, family memory forms
+    refuse (TSO path only). -/
+def carryHwSchritt (i : CarryHwInstr) (t : FpZustand)
+    (b : BereitProfil) : ExtAusgang :=
+  match i with
+  | .ext j => stepExt j t b
+  | .carry (.reg d) =>
+    match carrySchritt d t.kern with
+    | .ok s' => .weiter { t with kern := s' }
+    | .misslungen => .verweigert
+  | .carry (.mem _) => .verweigert
+
+/-- Selection: the unified arm IS the accepted unified step. -/
+theorem carryHwSchritt_ext (j : ExtInstr) (t : FpZustand)
+    (b : BereitProfil) (o : ExtAusgang)
+    (h : stepExt j t b = o) :
+    carryHwSchritt (.ext j) t b = o := by
+  have e : carryHwSchritt (.ext j) t b = stepExt j t b := rfl
+  rw [e, h]
+
+/-- Selection: the family register arm IS the accepted family step. -/
+theorem carryHwSchritt_reg_ok (d : CarryDecodiert) (t : FpZustand)
+    (b : BereitProfil) (s' : Zustand)
+    (h : carrySchritt d t.kern = .ok s') :
+    carryHwSchritt (.carry (.reg d)) t b =
+      .weiter { t with kern := s' } := by
+  unfold carryHwSchritt
+  simp only [h]
+
+/-- Selection: family register refusal is unified refusal. -/
+theorem carryHwSchritt_reg_verweigert (d : CarryDecodiert)
+    (t : FpZustand) (b : BereitProfil)
+    (h : carrySchritt d t.kern = .misslungen) :
+    carryHwSchritt (.carry (.reg d)) t b = .verweigert := by
+  unfold carryHwSchritt
+  simp only [h]
+
+/-- Selection: family memory forms refuse the register step. -/
+theorem carryHwSchritt_mem_verweigert (mm : CarryMem) (t : FpZustand)
+    (b : BereitProfil) :
+    carryHwSchritt (.carry (.mem mm)) t b = .verweigert := rfl
+
+/-! ## 5. Machine adapter: the family on the coherent machine.
+
+   The producer plug instantiates `HwAdapter CarryInstr` with the
+   accepted API: a successful register step re-embeds core data over
+   the shared memory; refusals and memory descriptors admit no
+   successor state (memory runs the TSO path of §6). -/
+
+/-- The family plug: one checked family event step on the coherent
+    machine. `none` = refusal or memory form, never a silent step. -/
+def adapterCarry : HwAdapter CarryInstr :=
+  ⟨fun m c i =>
+    match i with
+    | .reg d =>
+      match carrySchritt d (projZustand m c) with
+      | .ok s' =>
+        some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .misslungen => none
+    | .mem _ => none⟩
+
+/-- Agreement: the adapter succeeds exactly where the accepted
+    family step succeeds, with the successor core data re-embedded. -/
+theorem adapterCarry_ok (m : HwMaschine) (c : Nat) (d : CarryDecodiert)
+    (s' : Zustand)
+    (h : carrySchritt d (projZustand m c) = .ok s') :
+    (adapterCarry).schritt m c (.reg d) =
+      some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩) := by
+  unfold adapterCarry
+  simp only [h]
+
+/-- A refused family step admits no adapter successor. -/
+theorem adapterCarry_verweigert (m : HwMaschine) (c : Nat)
+    (d : CarryDecodiert)
+    (h : carrySchritt d (projZustand m c) = .misslungen) :
+    (adapterCarry).schritt m c (.reg d) = none := by
+  unfold adapterCarry
+  simp only [h]
+
+/-- Memory descriptors never plug the register path. -/
+theorem adapterCarry_mem_none (m : HwMaschine) (c : Nat)
+    (mm : CarryMem) :
+    (adapterCarry).schritt m c (.mem mm) = none := rfl
+
+/-- A bad decode length admits no adapter step. -/
+theorem adapterCarry_verweigert_bei_laenge (m : HwMaschine) (c : Nat)
+    (d : CarryDecodiert)
+    (h : laengeOk d.laenge = false) :
+    (adapterCarry).schritt m c (.reg d) = none := by
+  have hstep := carry_laenge_misslungen d (projZustand m c) h
+  exact adapterCarry_verweigert m c d hstep
+
+/-- Every adapter step preserves well-formedness: only core data
+    moves, profiles are untouched. -/
+theorem adapterCarry_wf (m : HwMaschine) (c : Nat) (i : CarryInstr)
+    (m' : HwMaschine) (hwf : HwWf m)
+    (h : (adapterCarry).schritt m c i = some m') :
+    HwWf m' := by
+  cases i with
+  | reg d =>
+    cases hsch : carrySchritt d (projZustand m c) with
+    | ok s' =>
+      have h2 := adapterCarry_ok m c d s' hsch
+      rw [h2] at h
+      cases h
+      unfold setKernVonFp
+      exact setKernDaten_wf _ _ _ hwf
+    | misslungen =>
+      have h2 := adapterCarry_verweigert m c d hsch
+      rw [h2] at h
+      cases h
+  | mem mm =>
+    rw [adapterCarry_mem_none m c mm] at h
+    cases h
 
 /- CUTS:
     Value/flag layer (§1) and register step (§2) stand.
