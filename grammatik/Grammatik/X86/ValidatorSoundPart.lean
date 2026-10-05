@@ -201,6 +201,54 @@ theorem valSound_hw_schritt_gleich (m : HwMaschine) (c : Nat) (bild : Bild)
       byteschritt (bildZustand bild bias rip reg fl) :=
   hwBild_byteschritt_gleich m c bild bias rip reg fl hmem hrip hreg hfl
 
+/-- SOUNDNESS, entry-at-decoded-start leg: the strengthened entry
+    check (mapping AND containment AND execute byte AND successful
+    fetch from actual loaded bytes) yields the fetched covered pilot
+    form at its exact length with executable prefix. This packages
+    the accepted `valStark_gibt_deckung` as the soundness half the
+    plain `valX86` Bool does NOT supply (interior entries stay a
+    pinned gap below). The single premise is threaded through. -/
+theorem valSound_stark_gibt_deckung (p : Profil) (bild : Bild)
+    (bias e : Nat) (reg : Register → Wort) (fl : Flags)
+    (h : valEintrittStark p bild bias e reg fl = true) :
+    eintragEnthalten bias bild.abschnitte e = true ∧
+    ladenAusfuehrbar bild bias e = true ∧
+    ∃ (d : Decodiert) (rest : List Byte),
+      fetchDekodiert (bildZustand bild bias (BitVec.ofNat 64 e) reg fl) =
+        some (d, rest) ∧
+      decktAb d ∧
+      d.laenge + rest.length =
+        (geholt (bildZustand bild bias (BitVec.ofNat 64 e) reg fl)).length ∧
+      laengeOk d.laenge = true ∧
+      ausfuehrbarN (bildZustand bild bias (BitVec.ofNat 64 e) reg fl).speicher
+        (bildZustand bild bias (BitVec.ofNat 64 e) reg fl).rip d.laenge =
+        true :=
+  valStark_gibt_deckung p bild bias e reg fl h
+
+/-- SOUNDNESS, entry-at-decoded-start leg: the strengthened entry
+    check (mapping AND containment AND execute byte AND successful
+    fetch from actual loaded bytes) yields the fetched covered pilot
+    form at its exact length with executable prefix. This packages
+    the accepted `valStark_gibt_deckung` as the soundness half that
+    the plain `valX86` Bool does NOT supply (interior entries stay a
+    pinned gap below). The single premise is threaded through. -/
+theorem valSound_stark_gibt_deckung (p : Profil) (bild : Bild)
+    (bias e : Nat) (reg : Register → Wort) (fl : Flags)
+    (h : valEintrittStark p bild bias e reg fl = true) :
+    eintragEnthalten bias bild.abschnitte e = true ∧
+    ladenAusfuehrbar bild bias e = true ∧
+    ∃ (d : Decodiert) (rest : List Byte),
+      fetchDekodiert (bildZustand bild bias (BitVec.ofNat 64 e) reg fl) =
+        some (d, rest) ∧
+      decktAb d ∧
+      d.laenge + rest.length =
+        (geholt (bildZustand bild bias (BitVec.ofNat 64 e) reg fl)).length ∧
+      laengeOk d.laenge = true ∧
+      ausfuehrbarN (bildZustand bild bias (BitVec.ofNat 64 e) reg fl).speicher
+        (bildZustand bild bias (BitVec.ofNat 64 e) reg fl).rip d.laenge =
+        true :=
+  valStark_gibt_deckung p bild bias e reg fl h
+
 /- CUTS (partial; extended with each added leg):
     Proved here: mapping and coverage projections of `valX86`,
     per-section coverage, whole-section full decode from the base,
