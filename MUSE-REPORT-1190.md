@@ -1,6 +1,9 @@
 # MUSE-REPORT-1190: Exact review of candidate 1189 (PipelineCallsExec)
 
 Lane 1190, clone `/home/simon/Dokumente/gabbro-muse/a1190`, branch `muse/1190`.
+
+CANDIDATE: 1189 6af837f8dd7bb3f157a3a9be846ec525e048f040
+
 Report-only exact review of CANDIDATE 1189, pinned HEAD
 `6af837f8dd7bb3f157a3a9be846ec525e048f040` (base `81efbbddc54cc9c074deb23ef6733290ea4145f8`),
 via `.tmp/review/SNAPSHOT.json` + `author-1189/PATCH.diff` + `OWNER-TASK.md` +
@@ -68,7 +71,7 @@ not edited (only `open ...OptimizationRules` in the new file). Clean: true.
 Multi-statement callee bodies, optimiser certificates, TSO/GX bridge, push/pop
 emission, silicon beyond accepted producers, run-time recursion enforcement.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 Candidate 1189 meets the exact-review bar: real `execBlock` correspondence for
 the single-assignment callee with callee-saved preservation, recomputed bytes,
