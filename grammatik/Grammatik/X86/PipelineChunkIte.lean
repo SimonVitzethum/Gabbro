@@ -705,15 +705,306 @@ theorem iteChunk_sprungOk_entscheidung (k : Nat) :
       dispWort (BitVec.ofNat 32 k) = BitVec.ofNat 64 k := by
   simp [sprungOk, decide_eq_true_eq]
 
+/-! ## 6. Closing, and the remaining refusals.
+
+    The closing composes the validator soundness with the fetched-byte
+    run (`senkBlock_korrektC` as a black box): an accepted candidate is
+    the Lean recomputation, and the bytes run from the loaded image to
+    the corresponding `execBlock` outcome. Loops (`traverse`; `retry`
+    and `forever` are already refused in `PipeWorkBranches`) and calls
+    (`Stmt.call`) stay refused with named theorems and firing poison
+    probes. -/
+
+/-- CLOSING (in the style of `pipeline_correct`): a validated
+    candidate for any source block runs from the loaded image to the
+    corresponding REAL `execBlock` outcome with the code region
+    intact. Every premise is used. -/
+theorem pipelineChunkIte_schluss (c : PipeCfg) (L : Layout D)
+    (hc : cfgOk c = true) (hsep : LayoutSep L)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (b : _root_.Gabbro.Grammatik.Block D V l Γ Λ Λ') (bytes : List Byte)
+    (hval : iteCheckValidate c L b bytes = true)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (st : Zustand)
+    (hcode : Pipeline.CodeAt st.speicher (natAdresse c.codeBase) bytes)
+    (hrip : st.rip = natAdresse c.codeBase)
+    (hW : WorldRep L st.speicher σ) (hE : EnvRepr ρ st.register (abbOf c)) :
+    ∃ prog n st', senkBlock c L 0 b = some prog ∧ bytes = encodeAll prog ∧
+      laufBytes n st = .weiter st' ∧
+      Pipeline.CodeAt st'.speicher (natAdresse c.codeBase) bytes ∧
+      Entspricht c L (addrOff (natAdresse c.codeBase) (0 + (encodeAll prog).length))
+        (execBlock O passes R b σ ρ) st' := by
+  obtain ⟨prog, hlow, hb⟩ := iteCheckValidate_sound c L b bytes hval
+  obtain ⟨n, st', hrun, hcode', hent⟩ :=
+    senkBlock_korrektC c L hc hsep O passes R bytes b [] [] prog
+      (by exact hlow) σ ρ st hcode (by simp [hb])
+      (by rw [hrip]; exact (addrOff_null _).symm) hW hE
+  exact ⟨prog, n, st', hlow, hb, hrun, hcode', hent⟩
+
+/-- JOINT WITNESS for `pipelineChunkIte_schluss`: the witness ite
+    chunk validates its literal bytes, the `x = 30` fetched-byte run
+    agrees with the source run, with the shared non-degenerate package
+    (`PipePaket`). -/
+theorem pipelineChunkIte_schluss_zeuge :
+    ∃ prog n st',
+      iteCheckValidate pwCfg pwL witIte1263 (encodeAll witIteProg1263) = true ∧
+      senkBlock pwCfg pwL 0 witIte1263 = some prog ∧
+      encodeAll witIteProg1263 = encodeAll prog ∧
+      laufBytes n (iteStart1263 30) = .weiter st' ∧
+      Pipeline.CodeAt st'.speicher (natAdresse pwCfg.codeBase)
+        (encodeAll witIteProg1263) ∧
+      Entspricht pwCfg pwL
+        (addrOff (natAdresse pwCfg.codeBase) (0 + (encodeAll prog).length))
+        (execBlock pwO 0 pwR witIte1263 pwSigma pwEnv30) st' ∧
+      PipePaket := by
+  have hval : iteCheckValidate pwCfg pwL witIte1263
+      (encodeAll witIteProg1263) = true := by
+    unfold iteCheckValidate
+    rw [witIteLowLit1263]
+    decide
+  have hrip : (iteStart1263 30).rip = natAdresse pwCfg.codeBase := by rfl
+  obtain ⟨prog, n, st', hlow, hb, hrun, hcode', hent⟩ :=
+    pipelineChunkIte_schluss pwCfg pwL pw_cfgOk pw_layoutSep witIte1263
+      (encodeAll witIteProg1263) hval pwO 0 pwR pwSigma pwEnv30 (iteStart1263 30)
+      ite_code1263 hrip ite_worldRep1263 ite_envRepr30_1263
+  exact ⟨prog, n, st', hval, hlow, hb, hrun, hcode', hent, pipePaket_hold⟩
+
+/-- REFUSAL (loop): a `traverse` head has no `senkBlock` lowering at
+    any position -- refused, never guessed. -/
+theorem pipelineChunkIte_verweigert_traverse (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
+    (t : D.Tab) (inv : Expr D Γ Λ .bool)
+    (body : _root_.Gabbro.Grammatik.Block D V true
+      ((.index (D.count t)) :: Γ) Λ Λ)
+    (rest : _root_.Gabbro.Grammatik.Block D V l Γ Λ Λ'') (pos : Nat) :
+    senkBlock c L pos
+      (_root_.Gabbro.Grammatik.Block.cons (Stmt.traverse t inv body) rest) =
+      none := rfl
+
+/-- The witness writes the table (both sides write everything). -/
+theorem witCallHw1263 :
+    ∀ t, (pwD.signatur ()).schreibt t = true → pwV.schreibt t = true :=
+  fun _ _ => rfl
+
+/-- No marks move on the witness call. -/
+theorem witCallHk1263 : Untermulti
+    ((pwD.signatur ()).konsumiert.map (Res.vonMarke pwD)) [] :=
+  ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
+
+/-- No globals move on the witness call (no globals exist). -/
+theorem witCallHg1263 :
+    ∀ g : pwD.Glob, (pwD.signatur ()).gschreibt g = true → pwV.gschreibt g = true :=
+  fun g => nomatch g
+
+/-- No locks are required on the witness call (no locks exist). -/
+theorem witCallHh1263 :
+    ∀ L : pwD.Lock, L ∈ (pwD.signatur ()).haelt → Res.held L ∈ ([] : List (Res pwD)) :=
+  fun L => nomatch L
+
+/-- The call fitness on the witness declaration: parameterless, writes
+    the table, no held locks. -/
+theorem witCallHp1263 : RufPasst pwD pwV (pwD.signatur ()) [] :=
+  { hw := witCallHw1263, hg := witCallHg1263, hk := witCallHk1263,
+    hh := witCallHh1263 }
+
+/-- The witness callee takes no reason channel. -/
+theorem witCallHr1263 : pwD.gruende () = 0 := rfl
+
+/-- The witness call passes no arguments. -/
+def witCallArgs1263 : Args pwD pwCtx [] (pwD.params ()) := .nil
+
+/-- REFUSAL (call): a `call` head has no `senkBlock` lowering at any
+    position -- refused, never guessed. -/
+theorem pipelineChunkIte_verweigert_call (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
+    (f : D.Fn) (args : Args D Γ Λ (D.params f))
+    (hp : RufPasst D V (D.signatur f) Λ) (hr : D.gruende f = 0)
+    (rest : _root_.Gabbro.Grammatik.Block D V l Γ (nach D f Λ) Λ'') (pos : Nat) :
+    senkBlock c L pos
+      (_root_.Gabbro.Grammatik.Block.cons (Stmt.call f args hp hr) rest) =
+      none := rfl
+
+/-- Poison probe: a `traverse` head is refused. -/
+theorem gift1263_traverse :
+    senkBlock pwCfg pwL 0
+      (_root_.Gabbro.Grammatik.Block.cons
+        (Stmt.traverse (V := pwV) (l := false) () Expr.wahr
+          (_root_.Gabbro.Grammatik.Block.nil :
+            _root_.Gabbro.Grammatik.Block pwD pwV true
+              ((.index (pwD.count ())) :: pwCtx) [] []))
+        (_root_.Gabbro.Grammatik.Block.nil :
+          _root_.Gabbro.Grammatik.Block pwD pwV false pwCtx [] [])) =
+      none :=
+  pipelineChunkIte_verweigert_traverse _ _ _ _ _ _ _
+
+/-- Poison probe: a `call` head is refused. -/
+theorem gift1263_call :
+    senkBlock pwCfg pwL 0
+      (_root_.Gabbro.Grammatik.Block.cons
+        (Stmt.call (V := pwV) (l := false) (f := ()) witCallArgs1263
+          witCallHp1263 witCallHr1263)
+        (_root_.Gabbro.Grammatik.Block.nil :
+          _root_.Gabbro.Grammatik.Block pwD pwV false pwCtx (nach pwD () []) [])) =
+      none :=
+  pipelineChunkIte_verweigert_call _ _ _ _ _ _ _ _
+
+/-- JOINT WITNESS for the loop refusal, with the shared non-degenerate
+    package (`PipePaket`). -/
+theorem pipelineChunkIte_verweigert_traverse_zeuge :
+    senkBlock pwCfg pwL 0
+      (_root_.Gabbro.Grammatik.Block.cons
+        (Stmt.traverse (V := pwV) (l := false) () Expr.wahr
+          (_root_.Gabbro.Grammatik.Block.nil :
+            _root_.Gabbro.Grammatik.Block pwD pwV true
+              ((.index (pwD.count ())) :: pwCtx) [] []))
+        (_root_.Gabbro.Grammatik.Block.nil :
+          _root_.Gabbro.Grammatik.Block pwD pwV false pwCtx [] [])) =
+      none ∧ PipePaket :=
+  ⟨gift1263_traverse, pipePaket_hold⟩
+
+/-- JOINT WITNESS for the call refusal, with the shared non-degenerate
+    package (`PipePaket`). -/
+theorem pipelineChunkIte_verweigert_call_zeuge :
+    senkBlock pwCfg pwL 0
+      (_root_.Gabbro.Grammatik.Block.cons
+        (Stmt.call (V := pwV) (l := false) (f := ()) witCallArgs1263
+          witCallHp1263 witCallHr1263)
+        (_root_.Gabbro.Grammatik.Block.nil :
+          _root_.Gabbro.Grammatik.Block pwD pwV false pwCtx (nach pwD () []) [])) =
+      none ∧ PipePaket :=
+  ⟨gift1263_call, pipePaket_hold⟩
+
 /- CUTS:
-    - Proved here: closed-ite lowering inversion
-      (`iteChunk_inv_abgeleitet`) with joint non-degenerate witness.
-    - OPEN: derived runs, coverage, validator soundness, closings,
-      refusals; everything listed in the module header.
+    - Proved here (generic): closed-ite lowering inversion
+      (`iteChunk_inv_abgeleitet`); the witness ite lowering literally
+      (`witIteProg1263`, `witIteLowLit1263`); the witness ite memory
+      with code region, world representation and both environments
+      (`iteMemBytes1263`/`iteCode1263`/`iteMem1263`/`iteStart1263`,
+      `ite_len1263`, `ite_code1263`, `ite_worldRep1263`,
+      `ite_envRepr30_1263`, `ite_envRepr70_1263`); the derived ite
+      chunk run (`iteChunk_lauf_abgeleitet`, via the accepted
+      `senkBlock_korrektC`); closed-check lowering inversion with the
+      exit-jump landing equation (`pruefChunk_inv_abgeleitet`); the
+      witness check lowering literally (`witPruefProg1263`,
+      `witPruefLowLit1263`); the witness check memory with code
+      region, world representation and both environments
+      (`pruefMemBytes1263`/`pruefCode1263`/`pruefMem1263`/
+      `pruefStart1263`, `pruef_len1263`, `pruef_code1263`,
+      `pruef_worldRep1263`, `pruef_envRepr30_1263`,
+      `pruef_envRepr70_1263`); the derived check chunk run, both the
+      passing and the failing route (`pruefChunk_lauf_abgeleitet`,
+      `pruefChunk_grund1263` is the concrete failing route); chunk
+      coverage at generated length for both shapes
+      (`iteChunk_deckung_abgeleitet`,
+      `pruefChunk_deckung_abgeleitet`, via the accepted
+      `deckung_chunk_generisch`); the recomputing validator with
+      soundness (`iteCheckValidate`, `iteCheckValidate_sound`); the
+      ite jump layout (`iteChunk_sprungZiele`: `iteSprung`/`iteEnde`
+      displacements with the taken-jump landing facts from the decided
+      `sprungOk` checks) and the relaxation gate
+      (`iteChunk_sprungOk_entscheidung`: the check is exactly the
+      32-bit round trip; out-of-range is refused, never truncated; the
+      short rel8 layout of `ISARelax` stays OPEN); the closing in the
+      style of `pipeline_correct` (`pipelineChunkIte_schluss`); two
+      refusals (loop `traverse`,
+      `pipelineChunkIte_verweigert_traverse`; call,
+      `pipelineChunkIte_verweigert_call`) with two firing poison
+      probes (`gift1263_traverse`, `gift1263_call`); joint
+      non-degenerate witnesses for every syntax-premise theorem (one
+      table its contract writes; reached source runs; target
+      fetched-byte runs; the shared `PipePaket`) plus the concrete
+      witness fitness facts (`witCallHw1263`, `witCallHg1263`,
+      `witCallHk1263`, `witCallHh1263`, `witCallHp1263`,
+      `witCallHr1263`, `witCallArgs1263`).
+    - Reused, not duplicated: `senkBlock`/`senkBlock_ite_inv`/
+      `senkPruef`/`senkBedT`/`senkVergleich`/`iteCode`/`iteSprung`/
+      `iteEnde`/`sprungOk`/`sprungOk_addr`/`sprungDisp`/`exitAdr`/
+      `Entspricht`/`senkBlock_korrektC`, `pipeSummary`/
+      `pipeSummary_expand`, `decodiertZu`/`arbeit_decodiert`,
+      `Deckung`, `deckung_chunk_generisch`, `cfgOk`/`WorldRep`/
+      `LayoutSep`/`EnvRepr`/`RepSlot`/`repOk`, `addrOff_null`,
+      `codeAt_von`, and the whole `pw` witness package with
+      `PipePaket`/`pipePaket_hold`. No second IR, no second
+      interpreter, no optimiser edit, no checker change.
+    - OPEN (fragment): only closed single-ite and single-check chunks
+      are derived here; `assignSlot` chains compose through lane
+      1219, longer ite/check sequences through the accepted
+      `senkBlock_korrektC` directly; all other shapes (`bind`,
+      `bindCall*`, `narrow`, `gleit*`, `exchange`, `traverse`,
+      `retry`, `forever`, calls, device/register forms) are refused
+      (`none`), never guessed.
+    - OPEN (relaxation): short (rel8) branch forms are not introduced;
+      the fixed-wide layout with decided `sprungOk` gates is kept,
+      and the iterative `ISARelax` layout stays unconnected.
+    - OPEN (machine): single core, model memory, no TSO/concurrency
+      claim (inherited from `Pipeline.lean`'s own CUTS); entry/image/
+      ABI mapping composes through `PipelineImage`/`PipelineEntry`;
+      named hardware timing stays a hardware assumption.
+    - No weakened guarantee: unsupported shapes are refused, never
+      guessed.
 -/
 
 #print axioms iteCheckValidate
 #print axioms iteChunk_inv_abgeleitet
 #print axioms iteChunk_inv_abgeleitet_zeuge
+#print axioms witIteT1263
+#print axioms witIteE1263
+#print axioms witIte1263
+#print axioms witIteLow1263
+#print axioms witIteProg1263
+#print axioms witIteLowLit1263
+#print axioms iteMemBytes1263
+#print axioms iteCode1263
+#print axioms iteMem1263
+#print axioms iteStart1263
+#print axioms ite_len1263
+#print axioms ite_code1263
+#print axioms ite_worldRep1263
+#print axioms ite_envRepr30_1263
+#print axioms ite_envRepr70_1263
+#print axioms iteChunk_lauf_abgeleitet
+#print axioms iteChunk_lauf_abgeleitet_zeuge
+#print axioms witPruef1263
+#print axioms pruefChunk_inv_abgeleitet
+#print axioms witPruefLow1263
+#print axioms witPruefProg1263
+#print axioms witPruefLowLit1263
+#print axioms pruefChunk_inv_abgeleitet_zeuge
+#print axioms pruefMemBytes1263
+#print axioms pruefCode1263
+#print axioms pruefMem1263
+#print axioms pruefStart1263
+#print axioms pruef_len1263
+#print axioms pruef_code1263
+#print axioms pruef_worldRep1263
+#print axioms pruef_envRepr30_1263
+#print axioms pruef_envRepr70_1263
+#print axioms pruefChunk_lauf_abgeleitet
+#print axioms pruefChunk_lauf_abgeleitet_zeuge
+#print axioms pruefChunk_grund1263
+#print axioms iteChunk_deckung_abgeleitet
+#print axioms iteChunk_deckung_abgeleitet_zeuge
+#print axioms pruefChunk_deckung_abgeleitet
+#print axioms pruefChunk_deckung_abgeleitet_zeuge
+#print axioms iteCheckValidate_sound
+#print axioms iteCheckValidate_sound_zeuge
+#print axioms iteChunk_sprungZiele
+#print axioms iteChunk_sprungOk_entscheidung
+#print axioms pipelineChunkIte_schluss
+#print axioms pipelineChunkIte_schluss_zeuge
+#print axioms pipelineChunkIte_verweigert_traverse
+#print axioms witCallHw1263
+#print axioms witCallHk1263
+#print axioms witCallHg1263
+#print axioms witCallHh1263
+#print axioms witCallHp1263
+#print axioms witCallHr1263
+#print axioms witCallArgs1263
+#print axioms pipelineChunkIte_verweigert_call
+#print axioms gift1263_traverse
+#print axioms gift1263_call
+#print axioms pipelineChunkIte_verweigert_traverse_zeuge
+#print axioms pipelineChunkIte_verweigert_call_zeuge
 
 end Gabbro.Grammatik.X86.PipeChunkIte
