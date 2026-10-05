@@ -4,15 +4,19 @@ Lane 1230, clone `/home/simon/Dokumente/gabbro-muse/a1230`, branch `muse/1230`
 (verified: `git branch --show-current` = `muse/1230`).
 OWN ONLY `MUSE-REPORT-1230.md`. Report-only exact review, no Lean/Rust edits.
 
-CANDIDATE: 1229 39f795fc54ca317ef9e27db09b5220c0caaf486e
+CANDIDATE: 1229 dd2e8f5804e12ca9b9d2d78580e140892e4c51c0
 VERDICT: ACCEPT
 
 ## Candidate
 
-- Author lane 1229, pinned HEAD `39f795fc54ca317ef9e27db09b5220c0caaf486e`
+- Author lane 1229, pinned HEAD `dd2e8f5804e12ca9b9d2d78580e140892e4c51c0`
   (from `.tmp/review/SNAPSHOT.json`; base `cbc0afe00eeb8708961b13489750e41e998740d1`).
+  Re-review after the repair turn: the previous verdict on `39f795fc` is stale
+  and is NOT reused — every finding below was re-inspected on the NEW snapshot.
 - Reviewed material (in-clone, no outside touch): `.tmp/review/author-1229/PATCH.diff`
-  (680 lines, read in full), `MUSE-REPORT-1229.md`, `BUILD-EVIDENCE.json`,
+  (719 lines, read in full: report hunk +39 lines, `Grammatik.lean` hunk and
+  `.lean` hunk byte-identical to the previous snapshot), `MUSE-REPORT-1229.md`
+  (151 lines), `BUILD-EVIDENCE.json` (now with post-gate probe + repair commit),
   `OWNER-TASK.md`, snapshot file `grammatik/Grammatik/X86/PipelineCallsBlock.lean`.
 - Files touched by candidate (per SNAPSHOT.json): exactly 3 —
   `MUSE-REPORT-1229.md` (new), `grammatik/Grammatik.lean` (one appended import
@@ -72,8 +76,9 @@ VERDICT: ACCEPT
   OWN ONLY forbids it): last result line
   `== exit 0; 0 error line(s) in the COMPLETE output`
   (`Build completed successfully (641 jobs)`). Base is healthy.
-- Candidate's own builds (BUILD-EVIDENCE.json): `./lean-probe` on the complete
-  new file 4x `0 error(s)`, including axioms output; `./lean-bau` in the
+- Candidate's own builds (BUILD-EVIDENCE.json, re-read on the new snapshot):
+  `./lean-probe` on the complete new file 5x `0 error(s)` (4 pre-commit runs
+  plus 1 post-gate re-check with the full axioms listing), including axioms output; `./lean-bau` in the
   author clone RED with `failed to read file ...` for a DIFFERENT dependency
   artifact on each of 3 runs (toolchain `Init/Data/SInt` olean, then a present
   project olean, then a toolchain `Std/...RupAddResult` olean) while the probe
@@ -85,13 +90,39 @@ VERDICT: ACCEPT
 
 ## Substantive finding: accept the candidate
 
-Candidate 1229 at `39f795fc54ca317ef9e27db09b5220c0caaf486e` is accepted as
-reviewed: probe-green complete file, standard axioms, single import line,
+Candidate 1229 at `dd2e8f5804e12ca9b9d2d78580e140892e4c51c0` is accepted as
+re-reviewed: probe-green complete file, standard axioms, single import line,
 premises fully consumed, evaluator lifted not copied, refusals planted on every
 path, non-degenerate memory-changing witness, no silicon invention, honest
 CUTS with no hardware-correspondence or W/GX claim. Condition for the merger:
 rebuild `grammatik/` via `muse-merge.sh` and confirm green (author-clone
 apparatus red is documented above, not a candidate defect).
+
+## Re-review of the repair turn (what changed, what was re-checked)
+
+- The repair commit (`dd2e8f58`, message "repair turn: integration gate failed
+  environmentally, no code defect") is REPORT-ONLY. PATCH.diff growth 680 -> 719
+  lines is exactly the +39 added report lines (new "Integration gate" section,
+  lines 114-151 of `MUSE-REPORT-1229.md`); the `.lean` hunk keeps blob
+  `a15efb1e` over the same 547 lines, and the `Grammatik.lean` hunk keeps index
+  `acbd252b..eeff9509` with the same single import line. No proof changed.
+- Re-inspected on the NEW snapshot file (not carried over): banned-token grep
+  clean (same 8 "admitted" English-word hits, no `admit` tactic, no `axiom`
+  declaration, no `native_decide`/`unsafe`/`sorryAx`); same 5 imports (no
+  `PipelineChunkDerive`, no second interpreter); same theorems
+  (`rufBlockOk_teile`, three `rufBlockOk_verweigert_*`, `zweiRuf_korrekt`,
+  `zweiRuf_korrekt_zeuge` with the memory-changing 7/9 -> 35 run and
+  callee-saved preservation); file tail intact (CUTS + `#print axioms` +
+  `end`). All previous findings hold unchanged on the new hash.
+- New evidence entries: post-gate `./lean-probe` again
+  `== 0 error(s) in the COMPLETE output; exit 0` with the full axioms listing
+  (standard), and the integration-gate log quoted in the author report — `lean`
+  died in the dynamic loader (`libleanshared.so: failed to map segment`, exit
+  127, ~76ms, ZERO Lean errors for any module while sibling jobs completed).
+  That record supports the author's "no code repair indicated" analysis; the
+  decision to leave the green file untouched rather than churn it is correct,
+  and this review agrees — approving the new commit does not approve any
+  unproved claim (the report makes none beyond the module's proved statements).
 
 ## Open / notes
 
