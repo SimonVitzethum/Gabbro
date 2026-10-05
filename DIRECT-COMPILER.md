@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-04 11:20 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 10:54 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -615,6 +615,14 @@ Last ledger refresh: **2026-10-04 11:20 UTC**. This is an operational snapshot, 
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Merged after review/checks | 1111: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1110.md) |
 | 1112 | Standing dynamic work planner, cycle 2 | Merged after review/checks | 1113: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1112.md) |
 | 1115 | Hardware completion: short-branch rel8 encoding rows (Nemotron author, Muse review) | Merged after review/checks | 1118: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1115.md) |
+| 1119 | LOCK/RMW on the coherent machine | Scheduled | 1120: scheduled | [task](lanes/1119.md) |
+| 1121 | Addressed loads/stores of all widths through TSO | Scheduled | 1122: scheduled | [task](lanes/1121.md) |
+| 1123 | Architectural faults as outcomes of the coherent machine | Scheduled | 1124: scheduled | [task](lanes/1123.md) |
+| 1125 | Asynchronous interrupt delivery on the coherent machine | Scheduled | 1126: scheduled | [task](lanes/1125.md) |
+| 1127 | Multiply/divide and narrow widths connected | Scheduled | 1128: scheduled | [task](lanes/1127.md) |
+| 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Scheduled | 1130: scheduled | [task](lanes/1129.md) |
+| 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Scheduled | 1132: scheduled | [task](lanes/1131.md) |
+| 1133 | Device/MMIO and memory types on the coherent machine | Scheduled | 1134: scheduled | [task](lanes/1133.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1376,6 +1384,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-04: checked master `fe5f3062` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:fe5f3062c094bde0e758d97b31a5bc5ae81d44f3 -->
 - 2026-10-04: lane **1118**, Independent exact-candidate review of 1115, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1118.md). <!-- x86-merged:1118 -->
 - 2026-10-04: publication batch checks passed for `0ff93e6f`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-04: checked master `d8106d5d` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d8106d5d065290e36909c5de16e3f79649b53831 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
