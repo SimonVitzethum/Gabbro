@@ -2,10 +2,13 @@
 
 Lane: 1120. Reviewer lane, report-only. Owns only this file.
 
-## VERDICT: ACCEPT
+## Verdict
 
-Candidate: 1119, pinned HEAD `aea7085a53a6936270494df250fa961927c6ff3e`
-(base `8744590d77cbc7f31d809b4c62cd303bae4ed66f`, snapshot clean).
+CANDIDATE: 1119 aea7085a53a6936270494df250fa961927c6ff3e
+
+VERDICT: ACCEPT
+
+Pinned base `8744590d77cbc7f31d809b4c62cd303bae4ed66f`, snapshot clean.
 Reviewed from the coordinator snapshot in `.tmp/review/author-1119/`
 (`PATCH.diff`, 835 lines; `MUSE-REPORT-1119.md`; `OWNER-TASK.md`;
 `BUILD-EVIDENCE.json`), cross-checked against my own clone's accepted
