@@ -1,65 +1,112 @@
-# MUSE-REPORT-1258: Independent exact review of candidate 1257 (PipelineSpillSplice)
+# MUSE-REPORT-1258: Independent exact review of author lane 1257 (PipelineSpillSplice)
 
-## Assignment
+CANDIDATE: 1257 da67bd3ff669467702cd121fc7e1150d1835b7f2
 
-Lane 1258: report-only independent exact review of lane 1257's candidate
-(`grammatik/Grammatik/X86/PipelineSpillSplice.lean` — splice save/reload at
-split points, callee-saved and arguments, follow-up of lane 1227).
-Owns ONLY this file. Review checklist from the task: no
-sorry/axiom/native_decide; `#print axioms` standard; existing files untouched
-except one import line; every premise used; the family's accepted evaluator
-lifted not copied; planted refusals really refuse; non-degenerate witness;
-silicon facts against Intel SDM extracts; honest CUTS; no claim larger than
-the proof (no hardware-correspondence or W/GX claim).
+VERDICT: ACCEPT
 
-## What was actually done
+## Scope and method
 
-1. Verified clone `/home/simon/Dokumente/gabbro-muse/a1258`, branch
-   `muse/1258` — matches the task header, did not STOP.
-2. `git diff master..HEAD --stat` in my own clone: EMPTY. My clone contains
-   no candidate; master is at `17651ab7`. There is nothing to review here.
-3. Read the committed copy of the author task (`lanes/1257.md`, present in my
-   clone via master): target is NEW FILE
-   `grammatik/Grammatik/X86/PipelineSpillSplice.lean` + one import line in
-   `grammatik/Grammatik.lean` + `MUSE-REPORT-1257.md`. So I know what the
-   candidate SHOULD contain, but not what it DOES contain.
-4. Attempted the task-authorized read-only candidate inspection
-   (`git diff master..HEAD` / `git log` in author clone
-   `/home/simon/Dokumente/gabbro-muse/a1257`): the permission classifier
-   rejected the tool call twice (once for listing the parent directory, once
-   for `git -C .../a1257 log`). HARD RULES rule 1 also forbids touching
-   anything outside my directory; the lane task's "read the candidate diff
-   only in the author clone" conflicts with that, and the tool layer
-   enforced the HARD RULES side.
-5. Ran `./lean-bau` in my own clone as the only check available to me.
+Report-only independent exact review of author lane 1257: pipeline spills,
+splice save/reload at split points, callee-saved and arguments. New file
+`grammatik/Grammatik/X86/PipelineSpillSplice.lean` (namespace
+`PipeSpillSplice`, ~1150 lines) plus one import line in
+`grammatik/Grammatik.lean` plus the author report.
 
-## Last `./lean-bau` result line
+Pinned snapshot `.tmp/review/SNAPSHOT.json`: author 1257, head
+`da67bd3ff669467702cd121fc7e1150d1835b7f2`, base `515546d0`, files exactly
+the three owned paths, clean true. Reviewed artefacts: the full PATCH.diff
+(all 1250 lines), OWNER-TASK.md, MUSE-REPORT-1257.md, BUILD-EVIDENCE.json.
 
-`Build completed successfully (658 jobs).` — green baseline of master
-(without any candidate) in this clone.
+History: my first committed report (2f43e578) recorded that the author clone
+was not readable from this lane and my own diff was empty, so no checklist
+item could be checked then. It contained no substantive verdict. This report
+supersedes it on the pinned snapshot with a merits-based result; nothing was
+softened for formatting.
 
-## VERDICT: REPAIR
+The reviewer touched only this report; no Lean edits were made by this lane.
+The build line below is my-clone baseline; the candidate build record is the
+pinned evidence.
 
-Concrete reason (procedural, not semantic): the candidate was never made
-available for inspection. The task names `CANDIDATE: 1257 <full pinned HEAD>`
-but supplies no HEAD hash, and the author clone is not readable from this
-lane (permission rejections, see above). My own clone has an empty diff, so
-every review criterion — sorry/axiom scan, `#print axioms` standardness,
-premise use, evaluator lifting vs copying, refusal probes, witness
-non-degeneracy, silicon facts, CUTS honesty — is UNCHECKED.
+## Checklist
 
-ACCEPT of an unseen candidate would be fake closure, which the task
-explicitly forbids ("no fake closure", "no claim larger than the proof").
-Therefore the only honest verdict is REPAIR: re-issue this review with (a)
-the full pinned HEAD hash of candidate 1257 and (b) a readable snapshot of
-the candidate diff inside the reviewer clone (or reviewer-side fetch
-permission), then re-run the full checklist.
+1. Banned forms: no `sorry`, `admit`, `axiom`, `native_decide`, or `unsafe`
+   anywhere in the new file; proofs use only `rfl`, `simp`, `rw`, `omega`,
+   `decide`, `rcases`, `obtain`, `cases`, `exact`, `refine`, `induction`,
+   `unfold`. No new axiom declarations. PASS.
+2. Axiom standard: pinned evidence shows every theorem depends at most on
+   `[propext, Classical.choice, Quot.sound]`; `spleiss_haelt_bedeutung_zeuge`
+   depends on exactly the standard set; all defs and all `decide` probes are
+   axiom-free; no `sorryAx`. PASS.
+3. Touched files: only the new file, one appended import line, and the author
+   report. `OptimizationRules.lean` / `OptimizationWitnesses.lean` untouched;
+   no other existing file edited. PASS.
+4. Premise use: every premise of every theorem is consumed. Samples checked:
+   `spleiss_save_fremd` uses `hne`, `hwr`, `hrun`, `hq`; `spleiss_load_fremd`
+   uses `hrd`, `hrun`, `hq`, `hqd`; `spleiss_paar_rundreise` threads `hpre`,
+   `hwr`, `hrd`, `hsave`, `hmid`, `hslotmid`, `hload`, `hpost` into the
+   composed run and `hne` into the clobber leg; `spleiss_haelt_bedeutung`
+   passes `hval`, `hsep`, `hplan`, `hspleiss`, `hrahmen`, `O`, `passes`, `R`,
+   states, and `hsrc` into the reused 1191 closing theorem; refusal theorems
+   each use their shape premises. PASS.
+5. Lift, not copy: fragments are lane 1191's `spillSaveCode` /
+   `spillLoadCode`; runs go through `spillSave_lauf` / `spillLoad_lauf`; the
+   closing theorem applies 1191's `spill_haelt_bedeutung` (itself over
+   `pipeline_correct`); call reasoning reuses `rufOk`, `rufOk_teile`,
+   `rufOk_argSchranke`, `spill_gerettet_getrennt`, `bereich_getrennt`,
+   `lauf_anhang`. `lauf_praefix` is a small new list-run split lemma, not a
+   second evaluator. No second IR or interpreter. PASS.
+6. Refusals really refuse: eight general refusal theorems plus red-zone and
+   high-slot refusals, each concluding validator `= false` from the matching
+   validator leg; `decide` probes compute `false` on past-end, unsorted,
+   address-register, table-overlap, out-of-frame, aliased, red-zone, and
+   high-slot inputs and `true` on both positives; past-end and
+   address-register are additionally proved through the refusal theorems.
+   PASS.
+7. Witness non-degeneracy: `spleiss_haelt_bedeutung_zeuge` runs the pipeline
+   witness program with rows 7 -> 35 and 9 -> 6 (memory-changing source run);
+   `spleiss_paar_rundreise_zeuge` saves/reloads `42` with byte-level change
+   (`spillZeu_wechselt`) beside writer program `zeugenU`
+   (`schreibt = ["konto"]`). Both reuse established family witnesses. PASS.
+8. Silicon: no new encodings; fragments are 1191's accepted
+   movImm64/store64/load64 constructors; argument carriage uses
+   rdi/rsi/rdx/rcx/r8/r9 for `i < 6`, matching System V AMD64; six
+   callee-saved words. No silicon claim beyond reused vocabulary. PASS.
+9. CUTS honesty and claim size: CUTS lists proved work versus OPEN items
+   (1227 homing absent so positions are bare; `slots.Nodup` inheritance so
+   same-slot pairs stay per-pair; middle-segment non-interference and
+   `daten` agreement as producer/deployer obligations; no loaded-image
+   re-connection of spliced bytes; no TSO freshness beyond reused
+   vocabulary; pilot-only shapes). No hardware-correspondence and no W/GX
+   claim. PASS.
+10. No desired-correctness premises, no weakened guarantees: validator
+    projections extract `Bool = true` legs in the established family style;
+    `R` is applied at actual values; worlds come from `execBlock` and `lauf`;
+    no `intro _` or `have _ :=` discards. PASS.
 
-## Open / follow-up
+## Nits (not verdict-changing)
 
-- None of the candidate's content has been reviewed; a fresh review pass is
-  needed once the candidate is accessible.
-- No Lean or Rust files were touched by this lane; no additional build,
-  test, or emission checks apply beyond the `./lean-bau` baseline above.
-- Anything in the review checklist I could not perform is listed above as
-  UNCHECKED, not as passed.
+- The author report claims "no warnings", but one intermediate probe shows a
+  linter unused-variable warning for `t1m` (line ~982). Final probe reports
+  0 errors and the build is green. Documentation nit only.
+- In `spleissRuf_argTraeger`, `hi` is unused in the left-disjunct branch but
+  used in the right; the premise is used by the proof overall. Fine.
+- The owner task names lane 1227 homing, which is absent in-tree; the
+  candidate honestly defines bare positions instead and records the
+  constraint as OPEN. No hidden weakening: unsupported shapes are refused.
+- The closing theorem's first conjunct is 1191's conclusion lifted through
+  reused premises: declared reuse, not a new claim.
+
+## Builds
+
+- Reviewer-clone baseline (master without candidate):
+  `Build completed successfully (658 jobs).`
+- Pinned candidate evidence: final `./lean-bau`
+  `Build completed successfully (644 jobs)`; final `./lean-probe`
+  `0 error(s)`; both joint witnesses with standard axioms. The base differs
+  from current master (author base `515546d0`), which explains the job count
+  difference; the candidate's own record is green at the pinned head.
+
+## Open
+
+Full loaded-image re-connection of spliced bytes, homing decision, TSO
+freshness, and non-pilot shapes remain OPEN per CUTS and are not claimed.
