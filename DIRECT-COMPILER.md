@@ -722,7 +722,7 @@ Last ledger refresh: **2026-10-05 21:37 UTC**. This is an operational snapshot, 
 | 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Merged after review/checks | 1328: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1327.md) |
 | 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Merged after review/checks | 1330: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1329.md) |
 | 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1331.md) |
-| 1333 | Opcode ledger: one-byte opcodes 00-3F | Merged after review/checks | 1334: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1333.md) |
+| 1333 | Opcode ledger: one-byte opcodes 00-3F | Merged after review/checks | 1334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1333.md) |
 | 1335 | Opcode ledger: one-byte opcodes 40-7F | Committed candidate; review/integration pending | 1336: Incomplete; preserved | [task](lanes/1335.md) |
 | 1337 | Opcode ledger: one-byte opcodes 80-BF | Agent working | 1338: scheduled | [task](lanes/1337.md) |
 | 1339 | Opcode ledger: one-byte opcodes C0-FF | Committed candidate; review/integration pending | 1340: Committed candidate; review/integration pending | [task](lanes/1339.md) |
@@ -1773,6 +1773,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1325**, TSO projection: the locked and direct-memory tags, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1325.md). <!-- x86-merged:1325 -->
 - 2026-10-05: lane **1326**, Independent exact review of 1325, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1326.md). <!-- x86-merged:1326 -->
 - 2026-10-05: lane **1333**, Opcode ledger: one-byte opcodes 00-3F, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1333.md). <!-- x86-merged:1333 -->
+- 2026-10-05: lane **1334**, Independent exact review of 1333, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1334.md). <!-- x86-merged:1334 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
