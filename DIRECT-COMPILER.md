@@ -701,7 +701,7 @@ Last ledger refresh: **2026-10-05 18:53 UTC**. This is an operational snapshot, 
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1287.md) |
 | 1289 | Capstone: union steps for the embedded-by-equation tags, and the two plug-less families | Merged after review/checks | 1290: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1289.md) |
-| 1291 | Capstone: byte-decoder disjointness across all families | Merged after review/checks | 1292: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1291.md) |
+| 1291 | Capstone: byte-decoder disjointness across all families | Merged after review/checks | 1292: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1291.md) |
 | 1293 | Capstone: a reached multi-family program run on two cores from bytes | Committed candidate; review/integration pending | 1294: Agent working | [task](lanes/1293.md) |
 | 1295 | Capstone: every union step projects to the TSO store-buffer model | Committed candidate; review/integration pending | 1296: Incomplete; preserved | [task](lanes/1295.md) |
 | 1297 | Paging follow-up: large pages and SMEP/SMAP | Committed candidate; review/integration pending | 1298: Agent working | [task](lanes/1297.md) |
@@ -1691,6 +1691,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1289**, Capstone: union steps for the embedded-by-equation tags, and the two plug-less families, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1289.md). <!-- x86-merged:1289 -->
 - 2026-10-05: lane **1290**, Independent exact review of 1289, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1290.md). <!-- x86-merged:1290 -->
 - 2026-10-05: lane **1291**, Capstone: byte-decoder disjointness across all families, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1291.md). <!-- x86-merged:1291 -->
+- 2026-10-05: lane **1292**, Independent exact review of 1291, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1292.md). <!-- x86-merged:1292 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
