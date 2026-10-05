@@ -198,6 +198,92 @@ theorem laufBudget_stopp_stabil : ∀ (n j : Nat) (s : Zustand) (k : Nat) (s' : 
         simp only [laufBudget, hb]
         rw [ih]
 
+/-! ## 4. Prefix safety for lowered programs
+
+    For a validated block, the fetched byte run reaches a state
+    corresponding to the real `execBlock` outcome -- and EVERY finite
+    prefix of that run is safe: it succeeds with the code region intact
+    and the memory frame kept. Mid-run states get no source
+    correspondence (a half-executed assignment chunk has no source
+    meaning); the correspondence holds at the end. -/
+
+section PipelineSaetze
+variable {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+
+/-- SAFETY OF EVERY PREFIX: a validated block runs to its corresponding
+    end state, and every prefix succeeds with code and frame intact. -/
+theorem praefix_sicher (c : PipeCfg) (L : Layout D)
+    (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (hval : validate c L certs src bytes = true) (hsep : LayoutSep L)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) bytes)
+    (hrip : s.rip = natAdresse c.codeBase)
+    (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c)) :
+    ∃ n s', laufBytes n s = .weiter s' ∧
+      Entspricht c L (addrOff (natAdresse c.codeBase) (0 + bytes.length))
+        (execBlock O passes R (optimise certs src) σ ρ) s' ∧
+      (∀ k, k ≤ n → ∃ sk, laufBytes k s = .weiter sk ∧
+        CodeAt sk.speicher (natAdresse c.codeBase) bytes ∧
+        ByteRahmen s.speicher sk.speicher) := by
+  obtain ⟨prog, hc, hlow, hb, -, -⟩ := validate_sound c L certs src bytes hval
+  obtain ⟨n, s', hrun, -, hent⟩ := senkBlock_korrektC c L hc hsep O passes R bytes
+    (optimise certs src) [] [] prog hlow σ ρ s hcode (by simp [hb])
+    (by rw [hrip]; exact (addrOff_null _).symm) hW hE
+  rw [← hb] at hent
+  refine ⟨n, s', hrun, hent, fun k hk => ?_⟩
+  obtain ⟨sk, hsk⟩ := laufBytes_praefix_erfolg n k s s' hrun hk
+  exact ⟨sk, hsk, codeAt_lauf k s sk hsk _ _ hcode, laufBytes_rahmen k s sk hsk⟩
+
+/-- BUDGET-STOP ORDERING: the target stops only at or after the point the
+    source allows. A stop `sk` at step `k` (a state with no transition)
+    cannot come before the corresponding end `n`; at `k = n` it IS the
+    corresponding end state. Before `n` the run always continues. -/
+theorem erste_stop_ordnung (c : PipeCfg) (L : Layout D)
+    (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (hval : validate c L certs src bytes = true) (hsep : LayoutSep L)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) bytes)
+    (hrip : s.rip = natAdresse c.codeBase)
+    (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c))
+    (k : Nat) (sk : Zustand)
+    (hpre : laufBytes k s = .weiter sk) (hstop : byteschritt sk = .verweigert) :
+    ∃ n s', laufBytes n s = .weiter s' ∧
+      Entspricht c L (addrOff (natAdresse c.codeBase) (0 + bytes.length))
+        (execBlock O passes R (optimise certs src) σ ρ) s' ∧
+      n ≤ k ∧ (k = n → sk = s') := by
+  obtain ⟨prog, hc, hlow, hb, -, -⟩ := validate_sound c L certs src bytes hval
+  obtain ⟨n, s', hrun, -, hent⟩ := senkBlock_korrektC c L hc hsep O passes R bytes
+    (optimise certs src) [] [] prog hlow σ ρ s hcode (by simp [hb])
+    (by rw [hrip]; exact (addrOff_null _).symm) hW hE
+  rw [← hb] at hent
+  have hnk : n ≤ k := by
+    by_cases hle : n ≤ k
+    · exact hle
+    · have hlt : k < n := by omega
+      have hkp1 : laufBytes (k + 1) s = .verweigert := by
+        have h1' : laufBytes (k + 1) s = laufBytes (0 + 1) sk :=
+          laufBytes_add k 1 s sk hpre
+        rw [h1']
+        simp only [laufBytes, hstop]
+      have hcontra : laufBytes n s = .verweigert := by
+        have hplus := laufBytes_verweigert_plus (k + 1) (n - (k + 1)) s hkp1
+        rwa [show (k + 1) + (n - (k + 1)) = n by omega] at hplus
+      rw [hcontra] at hrun
+      cases hrun
+  refine ⟨n, s', hrun, hent, hnk, fun hkk => ?_⟩
+  cases hkk
+  rw [hrun] at hpre
+  cases hpre
+  rfl
+
+end PipelineSaetze
+
 /- CUTS (preliminary; extended with every addition):
     Infinite traces past the corresponding end, termination of the target
     run, progress/fairness of any scheduler: NOT claimed (see task). -/
