@@ -157,6 +157,76 @@ theorem issueListe_erfolg (l : List TSOEintrag) (s : TSOZustand)
     rw [hfold]
     exact ⟨s', hs'⟩
 
+/-- A fold of issues keeps canonical memory exactly. -/
+theorem issueListe_mem (l : List TSOEintrag) (s s' : TSOZustand)
+    (c : Nat) (h : issueListe s c l = some s') : s'.mem = s.mem := by
+  induction l generalizing s with
+  | nil =>
+    have e : issueListe s c [] = some s := rfl
+    rw [e] at h
+    obtain rfl := Option.some_inj.mp h
+    rfl
+  | cons hd tl ih =>
+    have e : issueListe s c (hd :: tl) =
+        match issueByte s c hd.addr hd.wert with
+        | none => (none : Option TSOZustand)
+        | some s1 => issueListe s1 c tl := rfl
+    rw [e] at h
+    cases hb : issueByte s c hd.addr hd.wert with
+    | none =>
+      rw [hb] at h
+      dsimp only at h
+      cases h
+    | some s1 =>
+      rw [hb] at h
+      dsimp only at h
+      cases hperm : s.mem.schreibbar hd.addr with
+      | false =>
+        have hn : issueByte s c hd.addr hd.wert = none :=
+          issue_verweigert s c hd.addr hd.wert hperm
+        rw [hn] at hb
+        cases hb
+      | true =>
+        have hn : issueByte s c hd.addr hd.wert =
+            some ⟨s.mem, pufferSetze s.puffer c (s.puffer c ++ [hd])⟩ := by
+          unfold issueByte
+          rw [if_pos hperm]
+        rw [hn] at hb
+        obtain rfl := Option.some_inj.mp hb
+        have iht := ih
+          ⟨s.mem, pufferSetze s.puffer c (s.puffer c ++ [hd])⟩ h
+        exact iht
+
+/-- A fold of issues touches no other core's buffer. -/
+theorem issueListe_anderer_kern (l : List TSOEintrag) (s s' : TSOZustand)
+    (c : Nat) (h : issueListe s c l = some s') (d : Nat)
+    (hne : d ≠ c) :
+    s'.puffer d = s.puffer d := by
+  induction l generalizing s with
+  | nil =>
+    have e : issueListe s c [] = some s := rfl
+    rw [e] at h
+    obtain rfl := Option.some_inj.mp h
+    rfl
+  | cons hd tl ih =>
+    have e : issueListe s c (hd :: tl) =
+        match issueByte s c hd.addr hd.wert with
+        | none => (none : Option TSOZustand)
+        | some s1 => issueListe s1 c tl := rfl
+    rw [e] at h
+    cases hb : issueByte s c hd.addr hd.wert with
+    | none =>
+      rw [hb] at h
+      dsimp only at h
+      cases h
+    | some s1 =>
+      rw [hb] at h
+      dsimp only at h
+      have h1 := issue_anderer_kern s s1 c hd.addr hd.wert hb hne
+      have iht := ih s1 h
+      rw [iht]
+      exact h1
+
 /-- Vector store issue on the TSO view: sixteen buffered byte issues,
     never the direct `vecWrite` effect. `none` = a refused byte. -/
 def vecSpeichern (s : TSOZustand) (c : Nat) (a : Adresse)
@@ -1575,5 +1645,365 @@ theorem vecSpeicherSchritt_gp_a (m : HwMaschine) (c : Nat)
     vecSpeicherSchritt m c cpu k ⟨.movdqaSt base src disp, n⟩ =
       none := by
   simp only [vecSpeicherSchritt, hok, hgate, if_pos hgp]
+
+/-! ## 9. Joint witness: two cores, fetched bytes, buffered vector store.
+
+  Core 0 fetches a `paddb` (lane-separated result, low byte wrapping
+  `0xFF + 0x02` to `0x01` while higher lanes add independently) then a
+  `movdqa` store of the whole packed word through sixteen TSO byte
+  issues; core 0 observes its bytes by forwarding while core 1 still
+  reads zero; the drain observably changes shared memory on both
+  cores, with the torn halfway state standing. Every claim below is a
+  closed decidable observation; no machine equality is ever decided. -/
+
+/-- Witness image: `paddb` (5 bytes) then `movdqa` store (9 bytes). -/
+def hvecWitBild : List Byte :=
+  encodeIntVec (.paddbRR .xmm0 .xmm1) ++
+    encodeIntVec (.movdqaSt .rax .xmm0 (0 : BitVec 32))
+
+/-- Witness bytes: the image at 4096, zeroes elsewhere. -/
+def hvecWitBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match hvecWitBild[a.toNat - 4096]? with
+    | some b => b
+    | none => BitVec.ofNat 8 0
+
+/-- Witness code permission: exactly the 14 image bytes. -/
+def hvecWitCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 14)
+
+/-- Witness data permission: sixteen bytes at 8192. -/
+def hvecWitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 16)
+
+/-- Witness shared memory: code is execute-only, data read/write. -/
+def hvecWitMem : Speicher :=
+  { bytes := hvecWitBytes, lesbar := hvecWitDaten,
+    schreibbar := hvecWitDaten, ausfuehrbar := hvecWitCode }
+
+/-- Witness packed operands: low byte wraps, higher lanes add cleanly. -/
+def hvecWitA : Vektor := BitVec.ofNat 128 0x010101010101010101010101010101FF
+
+/-- Witness packed operands: the low count byte is `0x02`. -/
+def hvecWitB : Vektor := BitVec.ofNat 128 0x0F0E0D0C0B0A09080706050403020102
+
+/-- Witness core-0 registers: data address in rax. -/
+def hvecWitReg0 : Register → Wort := fun q =>
+  if q = Register.rax then BitVec.ofNat 64 8192
+  else if q = Register.rsp then BitVec.ofNat 64 8704
+  else BitVec.ofNat 64 0
+
+/-- Witness core-0 XMM: the operands in xmm0/xmm1. -/
+def hvecWitXmm0 : XmmDatei := fun q =>
+  if q = .xmm0 then hvecWitA
+  else if q = .xmm1 then hvecWitB
+  else BitVec.ofNat 128 0
+
+/-- Witness core data: core 0 runs at 4096, core 1 idles on the
+    (non-executable) data page. -/
+def hvecWitKern : Nat → HwKern
+  | 0 => ⟨hvecWitReg0, zeugeFlags, BitVec.ofNat 64 4096, hvecWitXmm0,
+      kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon with OS vector state. -/
+def hvecWitStart : HwMaschine :=
+  ⟨hvecWitMem, hvecWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- Witness data address. -/
+def hvecWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- The legacy gate admits at the witness profiles. -/
+theorem hvecWit_gate :
+    vektorLegacyZugelassen basisHw basisBereit basisCpu
+      basisKontrolle = true := by
+  decide
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem hvecWitStart_wf : HwWf hvecWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- The decoded register form: `paddb` over five bytes. -/
+def hvecWitD1 : IntVecDec := ⟨.paddbRR .xmm0 .xmm1, 5⟩
+
+/-- The decoded store form: `movdqa` store over nine bytes. -/
+def hvecWitD2 : IntVecDec := ⟨.movdqaSt .rax .xmm0 (0 : BitVec 32), 9⟩
+
+/-- The explicit `paddb` successor: RIP past five bytes, destination
+    holding the accepted byte-lane sum. -/
+def hvecWitT1 : FpZustand :=
+  { projFp hvecWitStart 0 with kern := { (projFp hvecWitStart 0).kern with rip := ripNach (projFp hvecWitStart 0).kern.rip hvecWitD1.laenge }, xmm := xmmSet (projFp hvecWitStart 0).xmm .xmm0 (vecAdd .b8 hvecWitA hvecWitB) }
+
+/-- The explicit machine successor after the `paddb`. -/
+def hvecWitM1 : HwMaschine := setKernVonFp hvecWitStart 0 hvecWitT1
+
+/-- The stored packed word: the accepted byte-lane sum. -/
+def hvecWitC : Vektor := vecAdd .b8 hvecWitA hvecWitB
+
+/-- The explicit TSO state after the sixteen issues: shared memory
+    kept, acting buffer carrying exactly the sixteen entries. -/
+def hvecWitS2 : TSOZustand :=
+  ⟨hvecWitMem, fun d =>
+    if d = 0 then vecEintraege hvecWitAdr hvecWitC else []⟩
+
+/-- The explicit machine successor after the `movdqa` store. -/
+def hvecWitM2 : HwMaschine := setTso hvecWitM1 hvecWitS2
+
+/-! ## 10. Register stage: the `paddb` with lane separation. -/
+
+/-- A register plug success with checked gates IS an extended step. -/
+theorem vecReg_ist_schritt (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (k : KontrollBild) (d : IntVecDec) (t' : FpZustand)
+    (hreg : istVecRegisterOp d.op = true)
+    (hok : laengeOk d.laenge = true)
+    (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+    (hs : stepIntVec d (projFp m c) m.hw (m.bereit c) cpu k = some t')
+    (hmem : t'.kern.speicher = m.mem) :
+    HwVecSchritt m (setKernVonFp m c t') (.vecReg c cpu k d) :=
+  .reg hreg hok hgate hs hmem
+
+/-- First machine step: the register plug on core 0. -/
+def hvecWitR1 : Option HwMaschine :=
+  vecRegSchritt hvecWitStart 0 basisCpu basisKontrolle hvecWitD1
+
+/-- Read core RIP out of a machine outcome. -/
+def hvecRipOut (o : Option HwMaschine) (c : Nat) : Option Wort :=
+  match o with
+  | some m => some (m.kerne c).rip
+  | none => none
+
+/-- Read a byte lane out of a machine outcome. -/
+def hvecLaneOut (o : Option HwMaschine) (c : Nat) (q : XmmReg)
+    (i : Nat) : Option Nat :=
+  match o with
+  | some m => some (laneNat .b8 ((m.kerne c).xmm q) i)
+  | none => none
+
+/-- Read a shared-memory byte out of a machine outcome. -/
+def hvecMemOut (o : Option HwMaschine) (a : Adresse) : Option Byte :=
+  match o with
+  | some m => some (m.mem.bytes a)
+  | none => none
+
+/-- Read a buffer length out of a machine outcome. -/
+def hvecBufOut (o : Option HwMaschine) (c : Nat) : Option Nat :=
+  match o with
+  | some m => some (m.puffer c).length
+  | none => none
+
+/-- Step one advances RIP past the 5-byte `paddb`. -/
+theorem hvecWit_r1_rip :
+    hvecRipOut hvecWitR1 0 = some (BitVec.ofNat 64 4101) := by
+  decide
+
+/-- Step one wraps lane 0 (`0xFF + 0x02` to `0x01`): no carry out. -/
+theorem hvecWit_r1_lane0 :
+    hvecLaneOut hvecWitR1 0 .xmm0 0 = some 1 := by
+  decide
+
+/-- Step one adds lane 1 independently (`0x01 + 0x01`): no carry in. -/
+theorem hvecWit_r1_lane1 :
+    hvecLaneOut hvecWitR1 0 .xmm0 1 = some 2 := by
+  decide
+
+/-- Step one leaves shared memory alone. -/
+theorem hvecWit_r1_mem_still :
+    hvecMemOut hvecWitR1 hvecWitAdr =
+      some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Step one issues no buffer entry. -/
+theorem hvecWit_r1_puffer_leer : hvecBufOut hvecWitR1 0 = some 0 := by
+  decide
+
+/-- The accepted `paddb` equation reaches the explicit successor. -/
+theorem hvecWit_paddb :
+    stepIntVec hvecWitD1 (projFp hvecWitStart 0) basisHw basisBereit
+      basisCpu basisKontrolle = some hvecWitT1 :=
+  stepIntVec_paddb hvecWitD1 (projFp hvecWitStart 0) basisHw
+    basisBereit basisCpu basisKontrolle .xmm0 .xmm1 (by decide)
+    hvecWit_gate rfl
+
+/-- The `paddb` successor keeps shared memory. -/
+theorem hvecWit_t1_mem : hvecWitT1.kern.speicher = hvecWitMem := rfl
+
+/-- The plug reaches the explicit machine successor. -/
+theorem hvecWit_r1 :
+    hvecWitR1 = some hvecWitM1 :=
+  vecRegSchritt_gleich hvecWitStart 0 basisCpu basisKontrolle
+    hvecWitD1 hvecWitT1 rfl hvecWit_paddb
+
+/-- The `paddb` is an extended step on the coherent machine. -/
+theorem hvecWit_reg_schritt :
+    HwVecSchritt hvecWitStart hvecWitM1
+      (.vecReg 0 basisCpu basisKontrolle hvecWitD1) :=
+  vecReg_ist_schritt hvecWitStart 0 basisCpu basisKontrolle hvecWitD1
+    hvecWitT1 rfl (by decide) hvecWit_gate hvecWit_paddb hvecWit_t1_mem
+
+/-! ## 11. Store stage: sixteen buffered issues, owner-only forwarding. -/
+
+/-- FETCHED PIN: actual code bytes fetch to the `paddb` row with the
+    nine store bytes of rest. -/
+theorem hvecWit_fetch_pin :
+    fetchIntVec (projFp hvecWitStart 0)
+      (geholt (projZustand hvecWitStart 0)) =
+      some (hvecWitD1, hvecWitBild.drop 5) := by
+  decide
+
+/-- Core 1 refuses: its RIP points at non-executable memory. -/
+theorem hvecWit_kern1_verweigert :
+    fetchIntVec (projFp hvecWitStart 1)
+      (geholt (projZustand hvecWitStart 1)) = none := by
+  decide
+
+/-- Second machine step: the store plug on core 0 over the `paddb`
+    successor. -/
+def hvecWitS1 : Option HwMaschine :=
+  match hvecWitR1 with
+  | some m1 => vecSpeicherSchritt m1 0 basisCpu basisKontrolle hvecWitD2
+  | none => none
+
+/-- The store issues exactly sixteen buffer entries. -/
+theorem hvecWit_s1_buflen : hvecBufOut hvecWitS1 0 = some 16 := by
+  decide
+
+/-- The store changes no canonical byte (buffer only). -/
+theorem hvecWit_s1_mem_still :
+    hvecMemOut hvecWitS1 hvecWitAdr =
+      some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- RIP is untouched by the store (driver state, not core data). -/
+theorem hvecWit_s1_rip :
+    hvecRipOut hvecWitS1 0 = some (BitVec.ofNat 64 4101) := by
+  decide
+
+/-- The sixteen issues compute as claimed: shared memory kept, acting
+    buffer carrying exactly the sixteen entries. The folded buffer is
+    extensionally (not definitionally) the stipulated one, so this goes
+    through the fold lemmas. -/
+theorem hvecWit_issue :
+    vecSpeichern (tsoAnsicht hvecWitM1) 0
+      (effAddr (projZustand hvecWitM1 0) .rax 0)
+      ((projFp hvecWitM1 0).xmm .xmm0) = some hvecWitS2 := by
+  have ha_eff : effAddr (projZustand hvecWitM1 0) .rax
+      (0 : BitVec 32) = hvecWitAdr := by
+    decide
+  have hx_xmm : ((projFp hvecWitM1 0).xmm .xmm0) = hvecWitC := by
+    rfl
+  rw [ha_eff, hx_xmm]
+  have hperm1 : schreibbar8 (tsoAnsicht hvecWitM1).mem hvecWitAdr =
+      true := by
+    decide
+  have hperm2 : schreibbar8 (tsoAnsicht hvecWitM1).mem
+      (vecHiAddr hvecWitAdr) = true := by
+    decide
+  obtain ⟨s', hs'⟩ := vecSpeichern_erfolg (tsoAnsicht hvecWitM1) 0
+    hvecWitAdr hvecWitC hperm1 hperm2
+  have hsI : issueListe (tsoAnsicht hvecWitM1) 0
+      (vecEintraege hvecWitAdr hvecWitC) = some s' := hs'
+  have hbuf0 : s'.puffer 0 = vecEintraege hvecWitAdr hvecWitC := by
+    have ha := issueListe_haengt_an _ s' 0 _ hsI
+    have hempty : (tsoAnsicht hvecWitM1).puffer 0 = [] := rfl
+    rw [hempty] at ha
+    exact ha
+  have hbufd : ∀ d : Nat, d ≠ 0 → s'.puffer d = [] := by
+    intro d hd
+    have ha := issueListe_anderer_kern _ _ s' 0 hsI d hd
+    have hempty : (tsoAnsicht hvecWitM1).puffer d = [] := rfl
+    rw [hempty] at ha
+    exact ha
+  have hpuff : s'.puffer = hvecWitS2.puffer := by
+    funext d
+    show s'.puffer d =
+      (if d = 0 then vecEintraege hvecWitAdr hvecWitC else [])
+    by_cases hd : d = 0
+    · subst hd
+      rw [if_pos rfl]
+      exact hbuf0
+    · rw [if_neg hd]
+      exact hbufd d hd
+  have hmemM : s'.mem = hvecWitMem := by
+    have hm := issueListe_mem _ _ s' 0 hsI
+    have hme : (tsoAnsicht hvecWitM1).mem = hvecWitMem := rfl
+    rw [hm]
+    exact hme
+  have hsurj : s' = ⟨s'.mem, s'.puffer⟩ := rfl
+  rw [hs', hsurj, hmemM, hpuff]
+  rfl
+
+/-- No `#GP` at the witness store address (8192 is 16-aligned). -/
+theorem hvecWit_gg :
+    vektorGpFehler (effAddr (projZustand hvecWitM1 0) .rax 0)
+      .ausgerichtet = false := by
+  decide
+
+/-- The legacy gate still admits over the `paddb` successor: profiles
+    are untouched by core-data updates. -/
+theorem hvecWit_gate_m1 :
+    vektorLegacyZugelassen hvecWitM1.hw (hvecWitM1.bereit 0)
+      basisCpu basisKontrolle = true :=
+  hvecWit_gate
+
+/-- The plug reaches the explicit machine successor. -/
+theorem hvecWit_plug_s2 :
+    vecSpeicherSchritt hvecWitM1 0 basisCpu basisKontrolle hvecWitD2 =
+      some hvecWitM2 := by
+  have hok9 : laengeOk 9 = true := by decide
+  have hneg : ¬vektorGpFehler (effAddr (projZustand hvecWitM1 0) .rax 0)
+    .ausgerichtet = true := by
+    rw [hvecWit_gg]
+    exact Bool.false_ne_true
+  have eD : hvecWitD2 =
+      ⟨.movdqaSt .rax .xmm0 (0 : BitVec 32), 9⟩ := rfl
+  rw [eD]
+  simp only [vecSpeicherSchritt, hok9, hvecWit_gate_m1, if_neg hneg,
+    hvecWit_issue, hvecWitM2]
+
+/-- The option-level step reaches the explicit machine successor. -/
+theorem hvecWit_s1 :
+    hvecWitS1 = some hvecWitM2 := by
+  unfold hvecWitS1
+  rw [hvecWit_r1]
+  exact hvecWit_plug_s2
+
+/-- The `movdqa` store is an extended step on the coherent machine. -/
+theorem hvecWit_speichere_schritt :
+    HwVecSchritt hvecWitM1 hvecWitM2
+      (.vecSpeichere 0 basisCpu basisKontrolle hvecWitD2) :=
+  vecSpeichere_ist_schritt hvecWitM1 0 basisCpu basisKontrolle
+    hvecWitD2 hvecWitM2 hvecWit_plug_s2
+
+/-- The TSO view after the sixteen issues. -/
+def hvecWitTso : Option TSOZustand :=
+  match hvecWitS1 with
+  | some m => some (tsoAnsicht m)
+  | none => none
+
+/-- Core 0 observes its own byte (forwarding). -/
+def hvecWitLoadEigen : Option (Option Byte) :=
+  match hvecWitTso with
+  | some s => some (loadByte s 0 hvecWitAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def hvecWitLoadFremd : Option (Option Byte) :=
+  match hvecWitTso with
+  | some s => some (loadByte s 1 hvecWitAdr)
+  | none => none
+
+/-- Forwarding: core 0 reads its own unflushed byte (`0x01`). -/
+theorem hvecWit_weiterleitung :
+    hvecWitLoadEigen = some (some (BitVec.ofNat 8 1)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem hvecWit_fremd_alt :
+    hvecWitLoadFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
 
 end Gabbro.Grammatik.X86
