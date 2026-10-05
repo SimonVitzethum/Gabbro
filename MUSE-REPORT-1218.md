@@ -7,10 +7,12 @@ No Lean or Rust files touched.
 
 ## Candidate
 
+CANDIDATE: 1217 8b5ae874afa50216dfee107411603dae0ed30dd1
+
 - Author lane 1217, pinned HEAD `8b5ae874afa50216dfee107411603dae0ed30dd1`,
   base `988d75ef42521f5d437a0cb4b9d92b5d5c2e38f2`
-  (from `.tmp/review/SNAPSHOT.json`; the lane file carried only the
-  `CANDIDATE: 1217 <full pinned HEAD>` placeholder, the staged snapshot
+  (from `.tmp/review/SNAPSHOT.json`; the lane file carried only a
+  placeholder without the pinned hash, the staged snapshot
   supplied the exact hash; `clean: true`).
 - Reviewed material (inside my own clone only, hard rule 1): staged
   `.tmp/review/author-1217/PATCH.diff` (741 lines, read in full),
@@ -111,7 +113,7 @@ import-union at merge; its new file depends only on `PipelineAtomicsBind`
 and additive accepted definitions, so rebase risk is low, but the merged
 tree must rebuild (merger's gate, not this review).
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 Candidate 1217 at `8b5ae874afa50216dfee107411603dae0ed30dd1` is accepted as
 reviewed: exact scope kept (one new file + one import line + report), green
