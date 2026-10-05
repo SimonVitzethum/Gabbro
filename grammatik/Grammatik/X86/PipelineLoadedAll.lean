@@ -513,11 +513,220 @@ theorem arbeit_correct_loaded_zeuge :
     pw_decode, deckung_pwProg, kosten_pwProg, hb_pwProg, pipeSummary_expand 2,
     ⟨m, sW, hrun, hrip, hW2, hE2⟩, hbytes, hwork, htime, pipePaket_hold⟩
 
-/- CUTS (skeleton):
-   Only the shared loaded-code predicate so far. Per-family
-   correctness, refusals, probes and witnesses follow in pieces.
+/-! ## 5. Float family: IEEE sequences over a loaded Fp state.
+
+    Float correctness lives over `FpZustand`, never over pilot bytes:
+    one source op is one machine op under the checked control word.
+    The loaded leg is the state memory equation (`hst`): the run that
+    the accepted `pipelineFloat_seq` delivers keeps the loaded
+    mapping. A failed validator leg refuses step and run together
+    (`float_loaded_verweigert`); the byte-fetch connection stays
+    explicitly open (see CUTS). -/
+
+/-- FLOAT SEQUENCE OVER LOADED MEMORY: the lowered two-step run
+    computes the source model op bit for bit and keeps the loaded
+    mapping, the control word and the integer registers. -/
+theorem float_seq_geladen (op : GleitOp) (dst a b : XmmReg) (t : FpZustand)
+    (hne : b ≠ dst)
+    (hok : laengeOk 4 = true)
+    (hfp : fpEintritt t.fp = true)
+    (bild : Bild) (hst : t.kern.speicher = ladung bild) :
+    ∃ t' : FpZustand,
+      laufFp [⟨.movsdRR dst a, 4⟩, ⟨senkGleitOp op dst b, 4⟩] t = some t' ∧
+      t'.kern.rip = ripNach (ripNach t.kern.rip 4) 4 ∧
+      xmmTief t'.xmm dst =
+        muster64 (gleitRechne op (bites64 (xmmTief t.xmm a)) (bites64 (xmmTief t.xmm b))) ∧
+      t'.fp = t.fp ∧
+      t'.kern.speicher = ladung bild ∧
+      t'.kern.register = t.kern.register := by
+  obtain ⟨t', hrun, hrip, hval, hfp', hmem0, hreg0⟩ :=
+    pipelineFloat_seq op dst a b t hne hok hfp
+  exact ⟨t', hrun, hrip, hval, hfp', by rw [hmem0]; exact hst, hreg0⟩
+
+/-- FLOAT REFUSAL, LOADED: a failed validator leg refuses the step
+    and the one-step run together -- refused, never executed. -/
+theorem float_loaded_verweigert (d : FpDecodiert) (t : FpZustand)
+    (h : floatPipeOk t.fp d.laenge = false) :
+    fpSchritt d t = none ∧ laufFp [d] t = none := by
+  have hr := pipelineFloat_refuses_validator d t h
+  exact ⟨hr, by rw [laufFp_cons, hr]⟩
+
+/-- JOINT WITNESS for the float family: the lowered divide sequence
+    computes `1.0 / +0.0` on the witness state with the stored
+    infinity observably changing memory, under the admitted profile;
+    beside it the profile and length poison probes. -/
+theorem float_seq_geladen_zeuge :
+    ∃ t' t'' : FpZustand,
+      laufFp [⟨.movsdRR XmmReg.xmm0 XmmReg.xmm0, 4⟩,
+        ⟨senkGleitOp .div XmmReg.xmm0 XmmReg.xmm1, 4⟩] fpZeugeT = some t' ∧
+      fpSchritt ⟨.movsdSpeichere Register.rax XmmReg.xmm0 0, 4⟩ t' = some t'' ∧
+      read64 t''.kern.speicher (BitVec.ofNat 64 8192) =
+        some 0x7FF0000000000000 ∧
+      fpZeugeT.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ≠
+        t''.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ∧
+      floatPipeOk kontextReset 4 = true ∧
+      fpSchritt ⟨.addsdRR XmmReg.xmm0 XmmReg.xmm1, 4⟩
+        { fpZeugeT with fp := ⟨0x9F80⟩ } = none ∧
+      fpSchritt ⟨.addsdRR XmmReg.xmm0 XmmReg.xmm1, 16⟩ fpZeugeT = none := by
+  obtain ⟨t', t'', hrun, hstep, hliest, hwechselt⟩ := pipelineFloat_zeuge
+  exact ⟨t', t'', hrun, hstep, hliest, hwechselt, floatPipeOk_reset,
+    pipelineFloat_probe_profil, pipelineFloat_probe_laenge⟩
+
+/-! ## 6. Relocation leg, generic over the fragments.
+
+    Linking only concatenates, resolves, patches and re-checks: no
+    relocation changes a byte outside its operand (`linkPatch_rahmen`,
+    reused inside the accepted closing), and a patched rel32 jump
+    operand re-decodes to the patched displacement through the
+    accepted producer closing. The theorem below is that closing on
+    the witness link, so every fragment run above also holds over
+    patched bytes with the frame outside the operand untouched. -/
+
+/-- RELOCATION RE-DECODE OVER LINKED BYTES: displacement, fit,
+    coverage, coverage union, W^X, executed mapping, range and the
+    outside-operand frame, through the accepted link closing. -/
+theorem reloc_redecode_geladen :
+    dispSigned zeugenDispField = 16 ∧
+    rel32Passt 16 = true ∧
+    decktAb ⟨.jump32 zeugenDispField, 5⟩ ∧
+    bildDeckung (linkBildAus zeugenEinheitA zeugenEinheitB zeugenGepatcht 0x1000) =
+      (abschnittDeckung (linkBildAus zeugenEinheitA zeugenEinheitB zeugenGepatcht
+        0x1000) (linkAbschnittA zeugenEinheitA zeugenEinheitB) &&
+        abschnittDeckung (linkBildAus zeugenEinheitA zeugenEinheitB zeugenGepatcht
+          0x1000) (linkAbschnittB zeugenEinheitA zeugenEinheitB)) ∧
+    wxOk (linkAbschnittA zeugenEinheitA zeugenEinheitB) = true ∧
+    ladenByte (linkBildAus zeugenEinheitA zeugenEinheitB zeugenGepatcht 0x1000) 0
+      0x1000 =
+      dateiByte zeugenGepatcht
+        ((linkAbschnittA zeugenEinheitA zeugenEinheitB).dateiOff +
+          (0x1000 - (0 + (linkAbschnittA zeugenEinheitA zeugenEinheitB).vaddr))) ∧
+    0 + 1 + (feldBytes (.rel32 16)).length ≤ zeugenVerknuepft.length ∧
+    zeugenGepatcht[5]? = zeugenVerknuepft[5]? :=
+  verknuepft_korrekt zeugenEinheitA zeugenEinheitB 0x1000 0 16 zeugenGepatcht
+    zeugenDispField [natByte 195] (linkAbschnittA zeugenEinheitA zeugenEinheitB)
+    0x1000 5 zeugen_patch zeugen_opcode zeugen_dek zeugen_bild_wohlgeformt
+    zeugen_mem zeugen_find zeugen_innen zeugen_aussen
+
+/-! ## 7. Poison probes: every refusal fires on concrete data. -/
+
+/-- A spill frame over the code region is refused. -/
+theorem gift_spill_code :
+    spillPlanOk ⟨4096, 16⟩ [0] 4096 pwBytes.length spillD0 = false := by
+  decide
+
+/-- A call that uses the red zone is not admitted. -/
+theorem gift_ruf_rot :
+    rufOk rufWitBelegung rufWitRahmen 7 true = false := by
+  decide
+
+/-- A read of the unlisted table is refused. -/
+theorem gift_tabelle_fremd : senkLesen zeA zeCfg zeReadFremd = none := by
+  decide
+
+/-- Under flush-to-zero the admitted divide refuses. -/
+theorem gift_float_profil :
+    fpSchritt ⟨.addsdRR XmmReg.xmm0 XmmReg.xmm1, 4⟩
+      { fpZeugeT with fp := ⟨0x9F80⟩ } = none :=
+  pipelineFloat_probe_profil
+
+/-- A 16-byte float form refuses. -/
+theorem gift_float_laenge :
+    fpSchritt ⟨.addsdRR XmmReg.xmm0 XmmReg.xmm1, 16⟩ fpZeugeT = none :=
+  pipelineFloat_probe_laenge
+
+/-- An out-of-range displacement patches nothing. -/
+theorem gift_link_range :
+    linkPatch zeugenVerknuepft 1 (.rel32 2147483648) = none := by
+  decide
+
+/-- `2 * 3` has no deep lowering. -/
+theorem gift_arbeit_mul :
+    senkWertT (D := pwD) pwCfg
+      (Expr.mul (Expr.lit (Γ := pwCtx) (Λ := []) 2)
+        (Expr.lit (Γ := pwCtx) (Λ := []) 3)) = none := by
+  decide
+
+/- CUTS (exactly what is NOT proved here):
+
+   Covered (lowered, with correctness over the loaded image):
+   - spill: validated bytes plus a validated spill plan give the
+     fetched loaded run plus slot-vs-table privacy, pairwise slot
+     separation and slot-vs-extent separation
+     (`spill_correct_loaded`, joint witness on the pipeline witness
+     program with the transported frame separation);
+   - calls: the joint validator (admitted frame, single-assignment
+     shape, recomputed bytes) plus the loaded image give frame
+     admission and the fetched callee run with callee-saved
+     preservation (`ruf_correct_loaded`, joint witness on the
+     single-assignment callee with its own built image);
+   - tables: the lowered store over loaded memory with decided
+     anchor checks gives the fetched run with the real `execStmt`
+     outcome (`tabellen_correct_loaded`, joint witness on the
+     two-field record with a minimal two-section image);
+   - work: validated bytes over loaded memory give the fetched run
+     plus the validated-bytes equation and the retired-work and
+     named-time bounds (`arbeit_correct_loaded`, joint witness on
+     the accepted program over the witness loaded image);
+   - floats: the lowered sequence computes the source model op bit
+     for bit and keeps the loaded mapping (`float_seq_geladen`,
+     joint witness with a real memory change); a failed validator
+     leg refuses step and run (`float_loaded_verweigert`);
+   - relocations: the accepted link closing on the witness link
+     (`reloc_redecode_geladen`); one planted probe per refusal path.
+   Refused (`false`/`none`, never guessed), each with a poison
+   probe: spill frame over code, red-zone call, unlisted-table
+   read, refused MXCSR profile, bad float decode length,
+   out-of-range displacement, multiplication without lowering.
+   NOT covered, and not claimed:
+   - no byte-fetch connection for floats: `laufFp` runs constructed
+     `FpDecodiert` values through `fpSchritt`, never bytes through
+     the decoder (inherited from lane 1161); the scalar-codec bridge
+     stays with its owner;
+   - no multi-statement callee bodies, no optimiser certificates in
+     the call fragment (inherited from `einzelRuf_korrekt`);
+   - no block-level integration of table reads (inherited from the
+     tables lane);
+   - no per-access target-to-W/GX simulation, no TSO/store-buffer
+     claim, no second core, no time beyond named bounds (all
+     inherited from the fragment lanes);
+   - no silicon correspondence beyond the accepted producers; no
+     new interpreter, no second cost model, no IR.
 -/
 
 #print axioms fragmentBytesGeladen
+#print axioms spill_correct_loaded
+#print axioms spill_correct_loaded_zeuge
+#print axioms piSpillRahmen
+#print axioms ruf_correct_loaded
+#print axioms cwBild
+#print axioms cw_validate_pi
+#print axioms cw_imageOk
+#print axioms cw_weltOk
+#print axioms cw_rufExec_pi
+#print axioms ruf_correct_loaded_zeuge
+#print axioms tabellen_correct_loaded
+#print axioms zeBildCode
+#print axioms zeBildDaten
+#print axioms zeBildDatei
+#print axioms zeBild
+#print axioms zeBild_codeAtB
+#print axioms zeBild_codeAt
+#print axioms zeBild_okB
+#print axioms zeBild_weltB
+#print axioms zeBild_rip
+#print axioms tabellen_correct_loaded_zeuge
+#print axioms arbeit_correct_loaded
+#print axioms arbeit_correct_loaded_zeuge
+#print axioms float_seq_geladen
+#print axioms float_loaded_verweigert
+#print axioms float_seq_geladen_zeuge
+#print axioms reloc_redecode_geladen
+#print axioms gift_spill_code
+#print axioms gift_ruf_rot
+#print axioms gift_tabelle_fremd
+#print axioms gift_float_profil
+#print axioms gift_float_laenge
+#print axioms gift_link_range
+#print axioms gift_arbeit_mul
 
 end Gabbro.Grammatik.X86.PipelineLoadedAll
