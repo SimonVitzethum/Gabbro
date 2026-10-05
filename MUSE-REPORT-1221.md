@@ -3,6 +3,44 @@
 Lane 1221: Linking — rel8 selection convergence and fall-through coverage.
 Branch `muse/1221` in clone `/home/simon/Dokumente/gabbro-muse/a1221`.
 
+## Repair turn (integration gate FAILED, 2026-10-05)
+
+Gate evidence: merge build failed at `[640/642] Building
+Grammatik.X86.PipelineLinkRel8` with
+`PipelineLinkRel8.lean:29:0: failed to read file
+'.../Grammatik/KostenG.olean'`. No type error, no error in any
+theorem: the failure is at the import line, i.e. a transitive
+dependency's build artifact was unreadable at compile time.
+
+Diagnosis (no code defect, nothing repaired in the module because
+there is nothing to repair):
+
+- The owned file is unchanged by the merge; the failure precedes
+  typechecking. Re-ran the local queued check after the gate:
+  `./lean-probe` still 0 errors, axioms still standard.
+- `KostenG` (`Grammatik.KostenG`, cost model) enters only
+  transitively (via `CostSummary`, deep in the reused cone).
+  Narrowing my import is impossible without duplicating accepted
+  theorems (`multiPatchAlle_*`, `fenster_*`,
+  `feld_agreement_*` live in `PipelineLinkMulti`), which HARD
+  RULES and the task forbid. The cone is inherent to reuse.
+- The same missing-artifact class reproduced locally across runs
+  with a different victim each time: `ISASelect.olean`,
+  `HwFeatureGates.olean`, toolchain `Propagate.ir`, toolchain
+  `Std/Data/DTreeMap/Raw/Basic.olean.private` — the last one a
+  file inside the installed toolchain directory, which lane code
+  cannot influence in any way. My own module's `.olean` builds
+  fine in these runs.
+- Concrete blocker for the gate (outside lane reach — lanes may
+  not touch anything outside their clone, fetch, or push): the
+  integration checkout's incremental cache/toolchain reads are
+  flaky. Unblock by retrying the gate on a quiet machine, or by
+  rebuilding the missing artifact (`KostenG`, then whatever
+  comes next) in the integration checkout — no lane change
+  required. A fresh independent review is still required per the
+  repair-turn instruction; this turn makes no semantic change,
+  only this report.
+
 ## Task
 
 Follow-up of lane 1193 (`PipelineLinkMulti.lean`). Open were rel8-selection
