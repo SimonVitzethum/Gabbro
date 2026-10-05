@@ -998,8 +998,133 @@ theorem zeWriteRun :
     (zeStart.speicher.bytes (natAdresse 8216) = wortByte 7 0) := by
   refine ⟨by decide, by decide⟩
 
+/-- The run-change as a proposition (for witness conjuncts). -/
+def zeRunChange : Prop :=
+  ((lauf (zeStoreProg.map kanon) zeStart).map
+    (fun s => s.speicher.bytes (natAdresse 8216)) =
+    some (BitVec.ofNat 8 42)) ∧
+  (zeStart.speicher.bytes (natAdresse 8216) = wortByte 7 0)
+
+theorem zeRunChangeProof : zeRunChange := zeWriteRun
+
 /-- The source read evaluates to 7. -/
 theorem zeReadEval : (eval zeSigma zeReadSlot zeSigma Env.nil).n = 7 := rfl
+
+/-! ## 10. Joint witnesses -/
+
+/-- JOINT WITNESS for `senkLesen_korrekt`: every premise holds jointly
+    on the two-field record program — the checked configuration, the
+    represented environment and world, the recomputed load code — and
+    the load leaves the source value word in `dst` with memory kept;
+    beside it the table-writing program and its memory-changing run. -/
+theorem senkLesen_korrekt_zeuge :
+    ∃ s', cfgOk zeCfg = true ∧
+      EnvRepr (D := zeD) (Env.nil : Env zeD []) zeStart.register (abbOf zeCfg) ∧
+      WorldRep (tabLayout zeA) zeStart.speicher zeSigma ∧
+      senkLesen zeA zeCfg zeReadSlot = some zeLoadProg ∧
+      lauf (zeLoadProg.map kanon) zeStart = some s' ∧
+      s'.register zeCfg.dst = intWort (cast
+        (congrArg (Wert zeD) (rfl : zeD.typ false true = .int 0 1000))
+        (eval zeSigma zeReadSlot zeSigma Env.nil)).n ∧
+      s'.speicher = zeStart.speicher ∧
+      zeV.schreibt false = true ∧
+      zeRunChange := by
+  obtain ⟨s', hrun, hdst, hmem, -, -⟩ := senkLesen_korrekt zeA zeCfg zeCfgOk
+    zeReadSlot (rfl : zeD.typ false true = .int 0 1000) (Env.nil : Env zeD [])
+    zeSigma zeSigma zeStart zeEnvRepr zeWorldRep zeLoadProg zeLowRead
+  exact ⟨s', zeCfgOk, zeEnvRepr, zeWorldRep, zeLowRead, hrun, hdst, hmem,
+    zeHw, zeRunChangeProof⟩
+
+/-- JOINT WITNESS for `senkSchreiben_korrekt`: the checked
+    configuration and separation, the represented environment and
+    world, and the recomputed store code run the real `execStmt`
+    outcome with the world represented; beside it the memory-changing
+    run. -/
+theorem senkSchreiben_korrekt_zeuge :
+    ∃ s' σ', cfgOk zeCfg = true ∧ ankerSepB zeA = true ∧
+      EnvRepr (D := zeD) (Env.nil : Env zeD []) zeStart.register (abbOf zeCfg) ∧
+      WorldRep (tabLayout zeA) zeStart.speicher zeSigma ∧
+      senkSchreiben zeA zeCfg zeWrite = some zeStoreProg ∧
+      lauf (zeStoreProg.map kanon) zeStart = some s' ∧
+      execStmt zeO 0 zeR zeWrite zeSigma (Env.nil : Env zeD []) = .ok σ' Env.nil ∧
+      WorldRep (tabLayout zeA) s'.speicher σ' ∧
+      zeV.schreibt false = true ∧
+      zeRunChange := by
+  obtain ⟨s', σ', hrun, hsrc, hW, hE⟩ := senkSchreiben_korrekt zeA zeCfg zeCfgOk
+    zeSep zeWrite (Env.nil : Env zeD []) zeSigma zeStart zeEnvRepr zeWorldRep
+    zeO 0 zeR zeStoreProg zeLowWrite
+  exact ⟨s', σ', zeCfgOk, zeSep, zeEnvRepr, zeWorldRep, zeLowWrite, hrun, hsrc,
+    hW, zeHw, zeRunChangeProof⟩
+
+/-- JOINT WITNESS for `senkLesen_verweigert_ausserhalb`: the unlisted
+    table has no address, and its read is refused; beside it the
+    table-writing program and its memory-changing run. -/
+theorem senkLesen_verweigert_ausserhalb_zeuge :
+    feldAdr zeA true 1 true = none ∧
+    senkLesen zeA zeCfg zeReadFremd = none ∧
+    zeV.schreibt false = true ∧
+    zeRunChange := by
+  refine ⟨by decide, ?_, zeHw, zeRunChangeProof⟩
+  exact senkLesen_verweigert_ausserhalb zeA zeCfg true true zeIdx1 1 rfl
+    (by decide) zeHL2
+
+/-- JOINT WITNESS for `senkSchreiben_verweigert_ausserhalb`: a store
+    into the unlisted table is refused; beside it the memory-changing
+    run of the anchored store. -/
+theorem senkSchreiben_verweigert_ausserhalb_zeuge :
+    feldAdr zeA true 1 true = none ∧
+    senkSchreiben zeA zeCfg
+      (.assignSlot true true zeIdx1 zeVal42Fremd
+        (show zeV.schreibt true = true from rfl) zeHL2 :
+        Stmt zeD zeV false [] [] []) = none ∧
+    zeV.schreibt false = true ∧
+    zeRunChange := by
+  refine ⟨by decide, ?_, zeHw, zeRunChangeProof⟩
+  exact senkSchreiben_verweigert_ausserhalb zeA zeCfg true true zeIdx1
+    zeVal42Fremd (show zeV.schreibt true = true from rfl) zeHL2 1 rfl (by decide)
+
+/-- A variable index over a one-variable context (not constant, so no
+    scaled addressing lowers it). -/
+def zeIdxVar : Expr zeD [.int 0 1] [] (.index (zeD.count false)) := .var .hier
+
+theorem zeHLV : darf zeD false [] := fun _ h => False.elim (List.not_mem_nil h)
+
+/-- The stored value over the one-variable context. -/
+def zeVal42V : Expr zeD [.int 0 1] [] (zeD.typ false true) :=
+  .weiter (by decide) (by decide) (.lit 42)
+
+/-- A read at a variable index (refused: no constant address). -/
+def zeReadVar : Expr zeD [.int 0 1] [] (zeD.typ false true) :=
+  .slot false true zeIdxVar zeHLV
+
+/-- A store at a variable index (refused: no constant address). -/
+def zeWriteVar : Stmt zeD zeV false [.int 0 1] [] [] :=
+  .assignSlot false true zeIdxVar zeVal42V zeHw zeHLV
+
+/-- The value over the unlisted table's field. -/
+def zeVal42Fremd : Expr zeD [] [] (zeD.typ true true) :=
+  .weiter (by decide) (by decide) (.lit 42)
+
+/-- JOINT WITNESS for `senkLesen_verweigert_nichtkonstant`: a variable
+    index is no constant, and its read is refused. -/
+theorem senkLesen_verweigert_nichtkonstant_zeuge :
+    constInt? zeIdxVar = none ∧
+    senkLesen zeA zeCfg zeReadVar = none ∧
+    zeV.schreibt false = true ∧
+    zeRunChange := by
+  refine ⟨rfl, ?_, zeHw, zeRunChangeProof⟩
+  exact senkLesen_verweigert_nichtkonstant zeA zeCfg false true zeIdxVar rfl zeHLV
+
+/-- JOINT WITNESS for `senkSchreiben_verweigert_nichtkonstant`: a
+    variable index is no constant, and its store is refused. -/
+theorem senkSchreiben_verweigert_nichtkonstant_zeuge :
+    constInt? zeIdxVar = none ∧
+    senkSchreiben zeA zeCfg zeWriteVar = none ∧
+    zeV.schreibt false = true ∧
+    zeRunChange := by
+  refine ⟨rfl, ?_, zeHw, zeRunChangeProof⟩
+  exact senkSchreiben_verweigert_nichtkonstant zeA zeCfg false true zeIdxVar
+    zeVal42V zeHw zeHLV rfl
 
 /-! ## 7. The closing theorem over fetched bytes -/
 
