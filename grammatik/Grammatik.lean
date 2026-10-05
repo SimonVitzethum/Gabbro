@@ -691,3 +691,4 @@ import Grammatik.X86.HwKapsteinRun
 import Grammatik.X86.HwKapsteinTso
 import Grammatik.X86.HwWcOrdering
 import Grammatik.X86.ValidatorKapDecoder
+import Grammatik.X86.HwKapsteinTsoLocked
