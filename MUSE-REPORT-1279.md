@@ -1,4 +1,5 @@
 # MUSE-REPORT-1279: Bit scan and count — BSF, BSR, POPCNT, BSWAP
+# (with vendor-neutrality repair of 2026-10-05)
 
 Clone `/home/simon/Dokumente/gabbro-muse/a1279`, branch `muse/1279`
 (verified first; no mismatch). Owned files only:
@@ -64,7 +65,39 @@ from `ShiftLogic`/`MulDivCodec`/`ShiftCodec`:
 
 No diagnostic/gift/example numbers taken (pure Lean lane).
 
-## Verification
+## Repair of 2026-10-05 (vendor neutrality, standing rule)
+
+The three pinned vendor-specific facts were reworked; all
+architecturally DEFINED results stay exact:
+
+1. Zero-source destination is FREE: new relation
+   `BsScanZulaessig` (index write + exact ZF + frame pinned,
+   destination-on-zero and non-ZF flags free). The reference
+   (unchanged) is proved as one admitted member
+   (`bsScanNach_zulaessig`,
+   `bsScan_null_unveraendert_zulaessig`); universality over all
+   members proved (`bsScan_zf/index/rahmen_allgemein`); freedom
+   proved real (`bsScan_null_frei`: two admissible successors
+   disagree on the destination; `bsScan_flags_frei`: on CF).
+   Deleted: `bs_bsf/bsr_null_laesst_liegen` (pinned the free
+   choice). The witness drops the destination value and keeps
+   ZF (universal).
+2. Scan flags: only ZF defined. `BsScanZulaessig` pins exactly
+   `nach.flags.zf = scanZF`; CF/OF/SF/AF/PF unconstrained. The
+   SDM-093 cleared snapshot survives only as the reference
+   member inside `bsScanNach_zulaessig`.
+3. 16-bit BSWAP: refused, never valued — structurally
+   unstatable (`BswapBreite` has no 16-bit constructor, decoder
+   arm yields 32/64-bit only, 66H refused by pin
+   `bs_nichts_bswap66`). POPCNT (all flags defined) and 32/64-bit
+   BSWAP stay exact.
+- CUTS rewritten for neutrality; `#print axioms` extended to
+  the 8 new main theorems (all standard).
+- Previous verdict is stale: the changed candidate needs a fresh
+  independent review (coordinator assigns; lanes never review
+  themselves).
+
+## Verification (after repair)
 
 - `./lean-probe grammatik/Grammatik/X86/IntBitScan.lean`:
   `== 0 error(s) in the COMPLETE output; exit 0`.

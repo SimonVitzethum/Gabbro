@@ -576,15 +576,19 @@ theorem bs_nichts_ohne_disp :
 /-! ## 4. Value semantics and the family step.
 
   Values reuse the accepted helpers unchanged (`bsfIdx`/`bsrIdx`,
-  `popCount`/`popWort`, `bswap32`/`bswap64`); flag rows follow SDM 093
-  (BSF/BSR: ZF = source zero, PF = parity of the source popcount,
-  CF/OF/SF/AF cleared; POPCNT: everything cleared, ZF = source zero;
-  BSWAP: flags untouched). The destination discipline is the accepted
-  narrow merge (16-bit merges, 32-bit zero-extends); a zero scan
-  source leaves the destination register untouched (SDM: the
-  destination operand is unmodified). POPCNT without the CPUID bit is
-  the feature refusal (SDM: #UD); memory sources are refused by the
-  register plug (address computation is open: TSO events only). -/
+  `popCount`/`popWort`, `bswap32`/`bswap64`). The executable
+  reference follows SDM 093 (scan: ZF = source zero, PF = source
+  popcount parity, rest cleared, destination untouched on zero
+  source; POPCNT: everything cleared, ZF = source zero; BSWAP:
+  flags untouched). Vendor neutrality lives one level up, in
+  `BsScanZulaessig`: only the index write, the exact ZF and the
+  frame are pinned there; the zero-source destination and every
+  flag but ZF stay free, with the reference proved as one
+  admitted member and freedom proved real. The destination
+  discipline is the accepted narrow merge (16-bit merges, 32-bit
+  zero-extends). POPCNT without the CPUID bit is the feature
+  refusal (SDM: #UD); memory sources are refused by the register
+  plug (address computation is open: TSO events only). -/
 
 /-- BSF/BSR flag snapshot: ZF reads source-zero, PF the source
     popcount parity, the rest cleared. -/
@@ -801,15 +805,6 @@ theorem bs_bsf_schreibt_index (b : BsBreite) (dst src : Register)
   unfold bsScanNach
   simp [h, regSet_gleich]
 
-/-- A zero BSF source leaves the destination untouched. -/
-theorem bs_bsf_null_laesst_liegen (b : BsBreite) (dst src : Register)
-    (len : Nat) (s : Zustand)
-    (h : bsfIdx b.breite (s.register src) = none) :
-    (bsScanNach false b dst src len s).register dst =
-      s.register dst := by
-  unfold bsScanNach
-  simp [h, regSet_gleich]
-
 /-- A BSR success writes the accepted index under the narrow merge. -/
 theorem bs_bsr_schreibt_index (b : BsBreite) (dst src : Register)
     (len : Nat) (s : Zustand) (i : Nat)
@@ -819,14 +814,139 @@ theorem bs_bsr_schreibt_index (b : BsBreite) (dst src : Register)
   unfold bsScanNach
   simp [h, regSet_gleich]
 
-/-- A zero BSR source leaves the destination untouched. -/
-theorem bs_bsr_null_laesst_liegen (b : BsBreite) (dst src : Register)
+/-- Scan index dispatch: reverse or forward over the truncated source. -/
+def bsScanIdx (istBsr : Bool) (b : Breite) (v : Wort) : Option Nat :=
+  if istBsr then bsrIdx b v else bsfIdx b v
+
+/-- Admissible scan successor (vendor-neutral): the index write on a
+    nonzero source, the exact ZF and the frame are pinned; the
+    destination on a zero source and every flag but ZF stay free
+    (Intel documents the destination and the other flags as
+    undefined or model-specific; AMD keeps the destination). -/
+def BsScanZulaessig (istBsr : Bool) (b : BsBreite) (dst : Register)
+    (srcVal oldDst : Wort) (len : Nat) (s nach : Zustand) : Prop :=
+  (∀ i, bsScanIdx istBsr b.breite srcVal = some i →
+    nach.register dst =
+      mergeRegNarrow b.breite oldDst (BitVec.ofNat 64 i)) ∧
+  (nach.flags.zf = scanZF b.breite srcVal) ∧
+  (nach.rip = ripNach s.rip len) ∧
+  (nach.speicher = s.speicher) ∧
+  ∀ q, q ≠ dst → nach.register q = s.register q
+
+/-- The reference implementation (SDM-093 cleared flags, unchanged
+    destination) is one admitted member. -/
+theorem bsScanNach_zulaessig (istBsr : Bool) (b : BsBreite)
+    (dst src : Register) (len : Nat) (s : Zustand) :
+    BsScanZulaessig istBsr b dst (s.register src) (s.register dst)
+      len s (bsScanNach istBsr b dst src len s) := by
+  cases istBsr with
+  | false =>
+    refine ⟨fun i hi => bs_bsf_schreibt_index b dst src len s i hi, rfl,
+      rfl, rfl, fun q hq => regSet_fremd _ _ _ _ hq⟩
+  | true =>
+    refine ⟨fun i hi => bs_bsr_schreibt_index b dst src len s i hi, rfl,
+      rfl, rfl, fun q hq => regSet_fremd _ _ _ _ hq⟩
+
+/-- Every admissible successor carries the exact ZF. -/
+theorem bsScan_zf_allgemein (istBsr : Bool) (b : BsBreite)
+    (dst : Register) (srcVal oldDst : Wort) (len : Nat) (s nach : Zustand)
+    (h : BsScanZulaessig istBsr b dst srcVal oldDst len s nach) :
+    nach.flags.zf = scanZF b.breite srcVal :=
+  h.2.1
+
+/-- Every admissible successor writes the exact index on a nonzero
+    source. -/
+theorem bsScan_index_allgemein (istBsr : Bool) (b : BsBreite)
+    (dst : Register) (srcVal oldDst : Wort) (len : Nat) (s nach : Zustand)
+    (i : Nat)
+    (h : BsScanZulaessig istBsr b dst srcVal oldDst len s nach)
+    (hi : bsScanIdx istBsr b.breite srcVal = some i) :
+    nach.register dst =
+      mergeRegNarrow b.breite oldDst (BitVec.ofNat 64 i) :=
+  h.1 i hi
+
+/-- Every admissible successor keeps RIP, memory and other registers. -/
+theorem bsScan_rahmen_allgemein (istBsr : Bool) (b : BsBreite)
+    (dst : Register) (srcVal oldDst : Wort) (len : Nat) (s nach : Zustand)
+    (h : BsScanZulaessig istBsr b dst srcVal oldDst len s nach) :
+    nach.rip = ripNach s.rip len ∧ nach.speicher = s.speicher ∧
+      (∀ q, q ≠ dst → nach.register q = s.register q) :=
+  ⟨h.2.2.1, h.2.2.2.1, h.2.2.2.2⟩
+
+/-- Free-choice builder: any destination word with any carry bit is
+    admissible on a zero source. Only the pinned fields (destination
+    choice, carry choice, exact ZF, advanced RIP) are set; the rest
+    is inherited, which the relation leaves free anyway. -/
+def bsScanFreiBau (b : BsBreite) (dst src : Register) (len : Nat)
+    (s : Zustand) (w : Wort) (c : Bool) : Zustand :=
+  { s with
+    register := regSet s.register dst w,
+    rip := ripNach s.rip len,
+    flags :=
+      { s.flags with
+        cf := c,
+        zf := scanZF b.breite (s.register src) } }
+
+/-- The free-choice builder is admissible on a zero source. -/
+theorem bsScanFreiBau_zulaessig (istBsr : Bool) (b : BsBreite)
+    (dst src : Register) (len : Nat) (s : Zustand) (w : Wort)
+    (c : Bool)
+    (hnull : bsScanIdx istBsr b.breite (s.register src) = none) :
+    BsScanZulaessig istBsr b dst (s.register src) (s.register dst)
+      len s (bsScanFreiBau b dst src len s w c) := by
+  refine ⟨?_, rfl, rfl, rfl, ?_⟩
+  · intro i hi
+    rw [hnull] at hi
+    cases hi
+  · intro q hq
+    exact regSet_fremd _ _ _ _ hq
+
+/-- Freedom is real (destination): two admissible zero-source
+    successors disagree on the destination. -/
+theorem bsScan_null_frei (istBsr : Bool) (b : BsBreite) (dst src : Register)
     (len : Nat) (s : Zustand)
-    (h : bsrIdx b.breite (s.register src) = none) :
-    (bsScanNach true b dst src len s).register dst =
-      s.register dst := by
-  unfold bsScanNach
-  simp [h, regSet_gleich]
+    (hnull : bsScanIdx istBsr b.breite (s.register src) = none) :
+    ∃ n1 n2 : Zustand,
+      BsScanZulaessig istBsr b dst (s.register src) (s.register dst)
+        len s n1 ∧
+      BsScanZulaessig istBsr b dst (s.register src) (s.register dst)
+        len s n2 ∧
+      n1.register dst ≠ n2.register dst := by
+  refine ⟨_, _, bsScanFreiBau_zulaessig istBsr b dst src len s 0 false hnull,
+    bsScanFreiBau_zulaessig istBsr b dst src len s 1 false hnull, ?_⟩
+  simp [bsScanFreiBau, regSet_gleich]
+
+/-- Freedom is real (flags): two admissible successors disagree on CF. -/
+theorem bsScan_flags_frei (istBsr : Bool) (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand)
+    (hnull : bsScanIdx istBsr b.breite (s.register src) = none) :
+    ∃ n1 n2 : Zustand,
+      BsScanZulaessig istBsr b dst (s.register src) (s.register dst)
+        len s n1 ∧
+      BsScanZulaessig istBsr b dst (s.register src) (s.register dst)
+        len s n2 ∧
+      n1.flags.cf ≠ n2.flags.cf := by
+  refine ⟨_, _, bsScanFreiBau_zulaessig istBsr b dst src len s 0 false hnull,
+    bsScanFreiBau_zulaessig istBsr b dst src len s 0 true hnull, ?_⟩
+  simp [bsScanFreiBau]
+
+/-- The unchanged destination is one admitted zero-source member. -/
+theorem bsScan_null_unveraendert_zulaessig (istBsr : Bool) (b : BsBreite)
+    (dst src : Register) (len : Nat) (s : Zustand)
+    (hnull : bsScanIdx istBsr b.breite (s.register src) = none) :
+    (bsScanNach istBsr b dst src len s).register dst = s.register dst ∧
+    BsScanZulaessig istBsr b dst (s.register src) (s.register dst)
+      len s (bsScanNach istBsr b dst src len s) := by
+  refine ⟨?_, bsScanNach_zulaessig istBsr b dst src len s⟩
+  cases istBsr with
+  | false =>
+    have hnull' : bsfIdx b.breite (s.register src) = none := hnull
+    unfold bsScanNach
+    simp [hnull', regSet_gleich]
+  | true =>
+    have hnull' : bsrIdx b.breite (s.register src) = none := hnull
+    unfold bsScanNach
+    simp [hnull', regSet_gleich]
 
 /-- A POPCNT success writes the accepted count under the narrow merge. -/
 theorem bs_popcnt_schreibt_zaehlung (b : BsBreite) (dst src : Register)
@@ -1341,11 +1461,12 @@ theorem bsHwRegSchritt_weiter_wf (feat : PopcntMerkmal) (m : HwMaschine)
   (8, ZF clear), core 0 swaps `0x10` in place (flags untouched);
   afterwards core 0 issues a buffered byte store that only the owner
   observes by forwarding, and the drain changes actual shared memory
-  from 0 to 42. A zero scan source leaves its destination untouched
-  with ZF set; the missing CPUID bit, a bad length and a memory
-  source refuse beside the run. Every value claim projects to plain
-  values before `decide` (machines contain functions); the general
-  equations pin the full states. -/
+  from 0 to 42. The zero-source run sets ZF (universal over all
+  admissible destinations, which stay free per §4); the missing
+  CPUID bit, a bad length and a memory source refuse beside the run.
+  Every value claim projects to plain values before `decide`
+  (machines contain functions); the general equations pin the full
+  states. -/
 
 /-- Witness registers for core 0 (scan/swap): RAX sentinel, RCX `0x10`. -/
 def bsHwWitReg0 : Register → Wort := fun q =>
@@ -1458,12 +1579,8 @@ theorem bsHw_bswap_flags :
     bsHwZfOut bsHwOutBswap 0 = some zeugeFlags.zf := by
   decide
 
-/-- Zero scan: the destination sentinel survives. -/
-theorem bsHw_null_rax_liegt :
-    bsHwRegOut bsHwOutBsfNull 0 Register.rax = some 0xAB := by
-  decide
-
-/-- Zero scan sets ZF. -/
+/-- Zero scan sets ZF (universal: every admissible destination
+    agrees on ZF; destinations stay free per §4). -/
 theorem bsHw_null_zf :
     bsHwZfOut bsHwOutBsfNull 0 = some true := by
   decide
@@ -1564,9 +1681,10 @@ theorem bsHw_speicher_verweigert :
 /-- The joint witness: a reached two-core family run (scan on core 0,
     count on core 1, in-place swap) beside a buffered store that only
     the owner forwards and a drain that changes actual shared memory
-    from 0 to 42 -- with the zero-source, feature, length, memory and
-    decode refusals beside it. Non-degenerate: the drain changes
-    actual shared memory. -/
+    from 0 to 42 -- with the zero-source ZF fact (universal over all
+    admissible destinations), feature, length, memory and decode
+    refusals beside it. Non-degenerate: the drain changes actual
+    shared memory. -/
 theorem bsHw_zeuge :
     bsHwRegOut bsHwOutBsf 0 Register.rax = some 4 ∧
       bsHwZfOut bsHwOutBsf 0 = some false ∧
@@ -1590,7 +1708,6 @@ theorem bsHw_zeuge :
       bsHwRegSchritt ⟨true⟩ bsHwWitStart 0
         (⟨.bsf .b32 .rax (.mem (natByte 3) []), 3⟩ : BsDecodiert) =
         .verweigert ∧
-      bsHwRegOut bsHwOutBsfNull 0 Register.rax = some 0xAB ∧
       bsHwZfOut bsHwOutBsfNull 0 = some true ∧
       decodeBsHw [natByte 240, natByte 15, natByte 188,
         natByte 193] = none := by
@@ -1599,7 +1716,7 @@ theorem bsHw_zeuge :
     bsHw_spuelung_aendert_speicher, bsHw_fremd_neu, bsHw_anfang_null,
     bsHwWitStart_wf, bsHw_ohne_merkmal_verweigert,
     bsHw_schlechte_laenge_verweigert, bsHw_speicher_verweigert,
-    bsHw_null_rax_liegt, bsHw_null_zf, bsHw_nichts_lock⟩
+    bsHw_null_zf, bsHw_nichts_lock⟩
 
 /- CUTS: what is proved here and what stays open.
 
@@ -1619,12 +1736,20 @@ theorem bsHw_zeuge :
     representative shapes;
   - no shadowing: the unified chain refuses every new byte string,
     and the dispatcher prefers it with exact selection theorems;
-  - SDM-093 flag rows (scan: ZF = source zero, PF = source-popcount
-    parity over the accepted `popCount`, rest cleared; POPCNT: all
-    cleared, ZF = source zero; BSWAP: untouched), the narrow-merge
-    destination discipline, untouched destination on zero scan
-    source, the CPUID feature refusal and the memory/length
-    refusals;
+  - SDM-093 flag rows for the executable reference (scan:
+    ZF = source zero, PF = source-popcount parity, rest cleared;
+    POPCNT: everything cleared, ZF = source zero; BSWAP: flags
+    untouched), the narrow-merge destination discipline, the CPUID
+    feature refusal and the memory/length refusals;
+  - vendor-neutral admissibility (`BsScanZulaessig`): only the
+    index write on a nonzero source, the exact ZF and the frame
+    are pinned; the zero-source destination and every flag but ZF
+    stay free. The reference is proved as one admitted member
+    (`bsScanNach_zulaessig`, `bsScan_null_unveraendert_zulaessig`),
+    universality over all members is proved
+    (`bsScan_zf/index/rahmen_allgemein`), and freedom is proved
+    real (`bsScan_null_frei`, `bsScan_flags_frei`: two admissible
+    successors disagreeing on the destination, resp. on CF);
   - the `HwAdapter BsDecodiert` plug (CPUID bit as observed-answer
     parameter, mirroring `adapterFeatureTor`) with
     well-formedness preservation and exact agreement, the machine
@@ -1640,16 +1765,27 @@ theorem bsHw_zeuge :
   BSWAP p. 3-111 (0F C8+rd, REX.W, flags none, LOCK #UD), POPCNT
   pp. 4-405/4-406 (F3 0F B8, REX.W, all-cleared/ZF row, CPUID bit 23
   and LOCK #UD), EFLAGS cross-reference (BSF/BSR row).
-  Task-text corrections (silicon first): the task says the
-  destination is UNDEFINED on zero source; this SDM edition states
-  the destination operand is UNMODIFIED, which is what is modeled
-  (whole register kept, even for 32-bit rows: the older-processor
-  footnote that upper 32 bits may clear is modeled as unmodified,
-  a named choice). The task's POPCNT flag row overrides the
+  Task-text corrections (silicon first, vendor-neutral): the
+  original task text said the destination is UNDEFINED on zero
+  source and listed cleared scan flags; per the standing vendor
+  neutrality rule (AGENTS.md, repair of 2026-10-05) whatever
+  either vendor calls undefined or model-specific stays free --
+  never one pinned value. Hence the destination on a zero source
+  and CF/OF/SF/AF/PF are free in `BsScanZulaessig` (only ZF is
+  defined: set iff source is zero), the SDM-093 cleared snapshot
+  and the unchanged destination survive solely as the proved
+  reference member, and no downstream theorem pins a free choice
+  (the witness keeps ZF, which is universal, and drops the
+  destination value). The task's POPCNT flag row overrides the
   undefined-modeling of the accepted `BitCount` file (whose
   `popcntFlags` keeps CF/OF/SF/PF and leaves AF undefined):
   value agreement with `popWort`/`popCount` is exact, the flag row
-  follows the manual.
+  follows the manual (all cleared, ZF = source zero).
+  The 16-bit BSWAP form is refused, never valued: `BswapBreite`
+  has no 16-bit constructor (so no 16-bit swap value is
+  statable), the decoder arm yields 32/64-bit only, and the 66H
+  prefix is refused by pin `bs_nichts_bswap66`. POPCNT (all
+  flags defined) and 32/64-bit BSWAP stay exact.
   NOT proved here, and not claimed:
   - No hardware correspondence: encodings are self-consistent
     canonical rows checked against the manual text, not silicon
@@ -1666,8 +1802,10 @@ theorem bsHw_zeuge :
     event path, never the register plug). REX.X and memory REX.B
     are ignored (raw bytes round-trip).
   - No LOCK path (decode refusal; no fault-vocabulary connection),
-    no 8-bit scan/count and no 16-bit BSWAP rows (structural:
-    the architecture has none), no source/IR/ABI/loader/entry/
+    no 8-bit scan/count rows and no 16-bit BSWAP row (the 16-bit
+    swap is refused, never valued: unstatable in `BswapBreite`,
+    decoder arm 32/64-bit only, 66H refused by pin), no
+    source/IR/ABI/loader/entry/
     budget link, no per-access target-to-W/GX simulation, no
     whole-word atomicity beyond byte drains, no timing behaviour.
   - POPCNT ZF reads source-zero (`scanZF`); its equivalence with
@@ -1696,5 +1834,12 @@ theorem bsHw_zeuge :
 #print axioms encodeBsf_decodeBs
 #print axioms bsParseModrm_mem_ok
 #print axioms modrmMitDst_id
+#print axioms bsScanNach_zulaessig
+#print axioms bsScan_zf_allgemein
+#print axioms bsScan_index_allgemein
+#print axioms bsScanFreiBau_zulaessig
+#print axioms bsScan_null_frei
+#print axioms bsScan_flags_frei
+#print axioms bsScan_null_unveraendert_zulaessig
 
 end Gabbro.Grammatik.X86
