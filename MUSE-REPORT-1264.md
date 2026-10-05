@@ -4,6 +4,8 @@ Lane 1264, report-only independent exact review of candidate 1263.
 Clone `/home/simon/Dokumente/gabbro-muse/a1264`, branch `muse/1264`: verified.
 Owned file only: `MUSE-REPORT-1264.md` (this file). No other file touched.
 
+CANDIDATE: 1263 3ed024303887e47f65067e72ef6de4bd48c46080
+
 Candidate: author 1263, pinned HEAD `3ed024303887e47f65067e72ef6de4bd48c46080`
 (base `bd57fa7cff467a2c700a02b50775e6d14530ae9b`), snapshot files:
 `MUSE-REPORT-1263.md`, `grammatik/Grammatik.lean` (one appended import line),
@@ -90,10 +92,9 @@ Review read the candidate files only, from `.tmp/review/author-1263/`.
 
 ## Notes on the task
 
-- The task line `CANDIDATE: 1263 <full pinned HEAD>` omits the hash; the
-  pinned HEAD was taken from `.tmp/review/SNAPSHOT.json`
-  (`3ed02430...`). Suggest future review tasks spell the hash inline.
+- The review task named the author lane without spelling the hash inline; the
+  pinned HEAD was taken from `.tmp/review/SNAPSHOT.json` (`3ed02430...`).
 - No defect found in the candidate; no extra premise, no weakening, no
   fake closure.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
