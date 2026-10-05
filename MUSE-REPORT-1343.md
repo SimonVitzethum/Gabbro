@@ -13,7 +13,8 @@ New definitions/theorems: `LStatus`, `LEintrag`, `ledger`, `wit_cmov_o/no/b/
 ae/e/ne/be/a/s/ns/p/np/l/ge/le/g` (16), `cmovSecond_ops`, `wit_s32_addss/
 subss/mulss/divss/cvtss2sd` (5), `wit_intvec_6f/73/7f` (3), `intVecSecond_ops`,
 `anzahl_modelliert` (= 24), `anzahl_fehlt` (= 40), `anzahl_rest_leer`,
-`ledger_ops`, `ledger_nodup`.
+`ledger_ops`, `ledger_nodup`, plus repair pins `kap_cmov_alle`, 5 `kap_s32_*`,
+3 `kap_ohne_intvec_*`, 6 `kap_nichts_*`.
 
 ## Result
 - 24 rows `modelliert`: 0F 40-4F via `ControlCodec.decodeCmov`; 0F 58/59/5A/
@@ -30,20 +31,37 @@ subss/mulss/divss/cvtss2sd` (5), `wit_intvec_6f/73/7f` (3), `intVecSecond_ops`,
   (common in FP code); MIN/MAX 0F 5D/5F (clamps); HADD/HSUB 0F 7C/7D
   (reductions); EMMS 0F 77 (rare legacy); VMREAD/VMWRITE 0F 78/79
   (privileged, rare); reserved 0F 7A/7B (#UD, no fault path modelled).
-- Key structural finding: the `kapDecode` chain in `HwKapsteinDecoder.lean`
-  covers NONE of 0F 40-7F (no `decodeCmov`/`decodeIntVec` arm; s32 arm covers
-  only scalar prefix forms). All byte paths for this region are family
-  decoders outside the unified chain.
+- Key structural finding (CORRECTED after review 1344, which was right):
+  the `kapDecode` chain DOES take this region's CMOV rows (first arm
+  `decodeMulDivWidth` -> `decodeExt` -> `decodeCmov`, accepted pin
+  `pin_ext_cmov`) and its scalar-prefix FP rows (second arm `s32Decode`,
+  with `decodeMulDivWidth` refusing first). Checked in-file: `kap_cmov_alle`
+  (all 16 conditions x all registers, exact `breit (.ext (.cmov ...))` arm),
+  `kap_s32_addss/subss/mulss/divss/cvtss2sd` (exact `s32` arm).
+  Outside the chain (checked `= none` pins): the 3 IntVec rows
+  (`kap_ohne_intvec_6f/73/7f`) and 6 representative unmodelled shapes
+  (`kap_nichts_movmskps/addps/punpcklbw/pcmpeqb/emms/vmread`). The original
+  "covers NONE" claim was false; it is withdrawn.
 
 ## Verification status
-`./lean-probe grammatik/Grammatik/X86/OpcodeLedger0F40.lean`:
+`./lean-probe grammatik/Grammatik/X86/OpcodeLedger0F40.lean` after repair:
 `== 0 error(s) in the COMPLETE output; exit 0`. Axioms printed:
 `wit_cmov_e: [propext]`, `wit_s32_addss: [propext]`,
-`wit_intvec_6f: [propext, Classical.choice, Quot.sound]` (inherited from the
-accepted IntVec round trip via `simp`), counts/coverage axiom-free.
+`wit_intvec_6f: [propext, Classical.choice, Quot.sound]`,
+`kap_cmov_alle`, `kap_s32_addss`, `kap_ohne_intvec_6f`, `kap_nichts_emms`:
+each `[propext, Quot.sound]`; counts/coverage/nodup axiom-free.
 `./lean-bau` (full project) was NOT run from this lane (long serial slot,
 shared with other lanes); the merger rebuilds before committing per the
 merge script in AGENTS.md section 5.
+
+## Repair history (review 1344, verdict REPAIR)
+- Material defect accepted: the "kapDecode covers NONE of 0F 40-7F" finding was
+  false (missed the transitive `decodeMulDivWidth` -> `decodeExt` path and the
+  `s32Decode` arm). Fixed with checked pins, not prose: exact-arm membership
+  for all 16 CMOV + 5 scalar rows, `= none` pins for the 3 IntVec rows and 6
+  unmodelled shapes. File header and CUTS corrected in the same commit.
+- Minor: HADD/HSUB `grund` corrected to "F2/66 prefix" (HADDPS=F2, HADDPD=66;
+  no F3 form exists).
 
 ## What remains open / believed-wrong
 - Nothing in the task description looks wrong, but the pasted CONTEXT/

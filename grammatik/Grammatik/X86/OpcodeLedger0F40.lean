@@ -5,12 +5,17 @@
   Lane 1343: one row per second opcode byte in 0F 40-7F, with the status of
   each row against the accepted Lean families. Modelled rows name the
   family decoder and carry a checked witness (the accepted round trip);
-  every other row is a finding (`fehlt`). No `kapDecode` claim is made:
-  the capstone chain does not cover this region, which is itself a gap.
+  every other row is a finding (`fehlt`). Checked part 4 pins which
+  modelled rows the unified `kapDecode` chain takes: the CMOV rows (first
+  arm `decodeMulDivWidth` -> `decodeExt` -> `decodeCmov`) and the
+  scalar-prefix FP rows (second arm `s32Decode`); the IntVec rows and the
+  unmodelled rows are refused by the whole chain.
 -/
 import Grammatik.X86.ControlCodec
 import Grammatik.X86.ScalarFloat32HardwareForms
 import Grammatik.X86.VectorIntegerHardwareForms
+import Grammatik.X86.ExtendedExecution
+import Grammatik.X86.HwKapsteinDecoder
 
 namespace Gabbro.Grammatik.X86
 namespace OpcodeLedger0F40
@@ -98,8 +103,8 @@ def ledger : List LEintrag :=
   , ⟨121, "VMWRITE", .fehlt, "", "VMX write: privileged system form, no family"⟩
   , ⟨122, "reserved 0F 7A", .fehlt, "", "reserved, faults #UD: no fault path modelled"⟩
   , ⟨123, "reserved 0F 7B", .fehlt, "", "reserved, faults #UD: no fault path modelled"⟩
-  , ⟨124, "HADDPS/HADDPD", .fehlt, "", "horizontal add (F2/F3 prefix; bare form #UD): no family"⟩
-  , ⟨125, "HSUBPS/HSUBPD", .fehlt, "", "horizontal subtract (F2/F3 prefix; bare form #UD): no family"⟩
+  , ⟨124, "HADDPS/HADDPD", .fehlt, "", "horizontal add (F2/66 prefix; bare form #UD): no family"⟩
+  , ⟨125, "HSUBPS/HSUBPD", .fehlt, "", "horizontal subtract (F2/66 prefix; bare form #UD): no family"⟩
   , ⟨126, "MOVD/MOVQ 0F 7E", .fehlt, "", "dword/qword move XMM to GPR or memory: no family"⟩
   , ⟨127, "MOVQ/MOVDQA/MOVDQU 0F 7F", .modelliert, "VectorIntegerHardwareForms.decodeIntVec", "128-bit stores modelled (66/F3 prefixes); legacy MMX MOVQ missing"⟩
   ]
@@ -264,6 +269,121 @@ theorem intVecSecond_ops :
      intVecSecond (.movdqaSt .rax .xmm0 (BitVec.ofNat 32 0))] =
     [111, 115, 127] := rfl
 
+/-! ## Checked part 4: which modelled rows the unified `kapDecode`
+    chain takes (repair of review 1344).
+
+    The first submission wrongly claimed the chain covers none of this
+    region. In fact the CMOV rows enter through the first arm
+    (`decodeMulDivWidth` -> `decodeExt` -> `decodeCmov`, pin
+    `pin_ext_cmov`) and the scalar-prefix FP rows through the second arm
+    (`s32Decode`, with `decodeMulDivWidth` refusing first). The IntVec
+    rows (0F 6F/73/7F) and representative unmodelled rows are refused by
+    the whole chain. Every pin below is checked; each premise is used. -/
+
+set_option maxHeartbeats 32000000 in
+/-- Every canonical CMOVcc row is taken by the unified chain's first arm. -/
+theorem kap_cmov_alle (c : Bedingung) (dst src : Register) :
+    kapDecode (encodeCmov c dst src) =
+      some (KapDekodiert.breit (WdHwInstr.ext (ExtInstr.cmov c dst src 4)), []) := by
+  have h1 : decodeExt (encodeCmov c dst src) =
+      some (ExtInstr.cmov c dst src 4, []) := by
+    cases c <;> cases dst <;> cases src <;> rfl
+  have h2 := decodeMulDivWidth_prefers_ext _ _ _ h1
+  exact kapDecode_breit _ _ _ h2
+
+/-- The scalar ADDSS row is taken by the chain's `s32` arm. -/
+theorem kap_s32_addss :
+    kapDecode (s32EncodeAddssRR .xmm0 .xmm1) =
+      some (KapDekodiert.s32 ⟨.addssRR .xmm0 .xmm1, (s32EncodeAddssRR .xmm0 .xmm1).length⟩, []) := by
+  have h1 : decodeMulDivWidth (s32EncodeAddssRR .xmm0 .xmm1) = none := by decide
+  have h2 : s32Decode (s32EncodeAddssRR .xmm0 .xmm1) =
+      some (⟨.addssRR .xmm0 .xmm1, (s32EncodeAddssRR .xmm0 .xmm1).length⟩, []) := by
+    have h := s32Roundtrip_addssRR .xmm0 .xmm1 []
+    simpa using h
+  exact kapDecode_s32 _ _ _ h1 h2
+
+/-- The scalar SUBSS row is taken by the chain's `s32` arm. -/
+theorem kap_s32_subss :
+    kapDecode (s32EncodeSubssRR .xmm0 .xmm1) =
+      some (KapDekodiert.s32 ⟨.subssRR .xmm0 .xmm1, (s32EncodeSubssRR .xmm0 .xmm1).length⟩, []) := by
+  have h1 : decodeMulDivWidth (s32EncodeSubssRR .xmm0 .xmm1) = none := by decide
+  have h2 : s32Decode (s32EncodeSubssRR .xmm0 .xmm1) =
+      some (⟨.subssRR .xmm0 .xmm1, (s32EncodeSubssRR .xmm0 .xmm1).length⟩, []) := by
+    have h := s32Roundtrip_subssRR .xmm0 .xmm1 []
+    simpa using h
+  exact kapDecode_s32 _ _ _ h1 h2
+
+/-- The scalar MULSS row is taken by the chain's `s32` arm. -/
+theorem kap_s32_mulss :
+    kapDecode (s32EncodeMulssRR .xmm0 .xmm1) =
+      some (KapDekodiert.s32 ⟨.mulssRR .xmm0 .xmm1, (s32EncodeMulssRR .xmm0 .xmm1).length⟩, []) := by
+  have h1 : decodeMulDivWidth (s32EncodeMulssRR .xmm0 .xmm1) = none := by decide
+  have h2 : s32Decode (s32EncodeMulssRR .xmm0 .xmm1) =
+      some (⟨.mulssRR .xmm0 .xmm1, (s32EncodeMulssRR .xmm0 .xmm1).length⟩, []) := by
+    have h := s32Roundtrip_mulssRR .xmm0 .xmm1 []
+    simpa using h
+  exact kapDecode_s32 _ _ _ h1 h2
+
+/-- The scalar DIVSS row is taken by the chain's `s32` arm. -/
+theorem kap_s32_divss :
+    kapDecode (s32EncodeDivssRR .xmm0 .xmm1) =
+      some (KapDekodiert.s32 ⟨.divssRR .xmm0 .xmm1, (s32EncodeDivssRR .xmm0 .xmm1).length⟩, []) := by
+  have h1 : decodeMulDivWidth (s32EncodeDivssRR .xmm0 .xmm1) = none := by decide
+  have h2 : s32Decode (s32EncodeDivssRR .xmm0 .xmm1) =
+      some (⟨.divssRR .xmm0 .xmm1, (s32EncodeDivssRR .xmm0 .xmm1).length⟩, []) := by
+    have h := s32Roundtrip_divssRR .xmm0 .xmm1 []
+    simpa using h
+  exact kapDecode_s32 _ _ _ h1 h2
+
+/-- The scalar CVTSS2SD row is taken by the chain's `s32` arm. -/
+theorem kap_s32_cvtss2sd :
+    kapDecode (s32EncodeCvtss2sdRR .xmm0 .xmm1) =
+      some (KapDekodiert.s32 ⟨.cvtss2sdRR .xmm0 .xmm1, (s32EncodeCvtss2sdRR .xmm0 .xmm1).length⟩, []) := by
+  have h1 : decodeMulDivWidth (s32EncodeCvtss2sdRR .xmm0 .xmm1) = none := by decide
+  have h2 : s32Decode (s32EncodeCvtss2sdRR .xmm0 .xmm1) =
+      some (⟨.cvtss2sdRR .xmm0 .xmm1, (s32EncodeCvtss2sdRR .xmm0 .xmm1).length⟩, []) := by
+    have h := s32Roundtrip_cvtss2sdRR .xmm0 .xmm1 []
+    simpa using h
+  exact kapDecode_s32 _ _ _ h1 h2
+
+/-- The 0F 6F vector load is refused by the whole unified chain. -/
+theorem kap_ohne_intvec_6f :
+    kapDecode (encodeIntVec (.movdqaLd .xmm0 .rax (BitVec.ofNat 32 0))) = none := by
+  decide
+
+/-- The 0F 73 vector shift is refused by the whole unified chain. -/
+theorem kap_ohne_intvec_73 :
+    kapDecode (encodeIntVec (.psllqImm .xmm0 1)) = none := by decide
+
+/-- The 0F 7F vector store is refused by the whole unified chain. -/
+theorem kap_ohne_intvec_7f :
+    kapDecode (encodeIntVec (.movdqaSt .rax .xmm0 (BitVec.ofNat 32 0))) = none := by
+  decide
+
+/-- MOVMSKPS shape (REX.W 0F 50 /r): refused by the whole chain. -/
+theorem kap_nichts_movmskps :
+    kapDecode [natByte 72, natByte 15, natByte 80, natByte 200] = none := by decide
+
+/-- Bare packed ADDPS shape (0F 58 /r): refused by the whole chain. -/
+theorem kap_nichts_addps :
+    kapDecode [natByte 15, natByte 88, natByte 192] = none := by decide
+
+/-- PUNPCKLBW shape (66 0F 60 /r): refused by the whole chain. -/
+theorem kap_nichts_punpcklbw :
+    kapDecode [natByte 102, natByte 15, natByte 96, natByte 192] = none := by decide
+
+/-- PCMPEQB shape (66 0F 74 /r): refused by the whole chain. -/
+theorem kap_nichts_pcmpeqb :
+    kapDecode [natByte 102, natByte 15, natByte 116, natByte 192] = none := by decide
+
+/-- EMMS (0F 77): refused by the whole chain. -/
+theorem kap_nichts_emms :
+    kapDecode [natByte 15, natByte 119] = none := by decide
+
+/-- VMREAD shape (0F 78 /r): refused by the whole chain. -/
+theorem kap_nichts_vmread :
+    kapDecode [natByte 15, natByte 120, natByte 192] = none := by decide
+
 /-! ## Summary: counts per status and exact coverage of the region. -/
 
 /-- 24 ledger rows are modelled. -/
@@ -305,10 +425,12 @@ CUTS:
   AMD provenance is claimed. No entry is marked `herstellerabhaengig`
   because the region has no known Intel/AMD definition split.
 - `modelliert` means only: the named family decoder accepts the
-  canonical witness (proved above via accepted round trips). It does NOT
-  mean the `kapDecode` chain accepts the bytes (`kapDecode` covers none
-  of 0F 40-7F: no `decodeCmov`/`decodeIntVec` arm exists in
-  `HwKapsteinDecoder.lean`), nor full semantic/hardware correspondence.
+  canonical witness (proved above via accepted round trips). Whether the
+  unified `kapDecode` chain takes the bytes is pinned separately in
+  checked part 4: the CMOV rows (first arm) and the scalar-prefix FP rows
+  (`s32` arm) are inside the chain; the IntVec rows and the unmodelled
+  rows are refused by it. No full semantic/hardware correspondence is
+  claimed.
 - Partial rows (88/89/90/92/94 scalar-only, 111/115/127 selected
   rows-only) overstate by construction of the one-row-per-byte schema;
   the missing variants are named in `grund` and in MUSE-REPORT-1343.md.
@@ -322,6 +444,10 @@ CUTS:
 #print axioms wit_cmov_e
 #print axioms wit_s32_addss
 #print axioms wit_intvec_6f
+#print axioms kap_cmov_alle
+#print axioms kap_s32_addss
+#print axioms kap_ohne_intvec_6f
+#print axioms kap_nichts_emms
 #print axioms anzahl_modelliert
 #print axioms ledger_ops
 #print axioms ledger_nodup
