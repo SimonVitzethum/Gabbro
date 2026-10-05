@@ -82,8 +82,8 @@ defect, no silicon error: nothing was inspected).
 
 Author-side verification after the review (this clone, `muse/1271`):
 
-- HEAD is exactly the pinned hash (`git rev-parse HEAD` =
-  `c73645e2f3b678c7ecef169c917a1dcf989c936d`); the deliverable is intact:
+- The reviewed candidate commit (`c73645e2f3b678c7ecef169c917a1dcf989c936d`)
+  is intact in this branch's history; the deliverable is unchanged since:
   `grammatik/Grammatik/X86/TsoGxEntryBytes.lean`, the import line in
   `grammatik/Grammatik.lean`, `MUSE-REPORT-1271.md`.
 - Forbidden-token scan over the new file (`sorry`/`admit`/`native_decide`/
