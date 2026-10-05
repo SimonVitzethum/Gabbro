@@ -251,10 +251,161 @@ theorem witVoll_nichtkanonisch_hit :
       ⟨2 ^ 47, false, true, false⟩ = none := by
   decide
 
+/-! ## 4. Bridge to the flat byte-permission model, for the full walk.
+
+  `FlachStimmtGross` is the OS obligation for the FULL walk (user logic, as in lane
+  1283): every full-walk-admitted access -- 4 KiB, 2 MiB and 1 GiB leaves,
+  SMEP/SMAP-gated -- meets its flat permission at the physical byte. Where the full
+  walk agrees with the accepted 4 KiB walk, the lane-1283 obligation transfers
+  pointwise; fresh full-join admission meets the flat permission in both directions.
+-/
+
+/-- Flat consistency for the full walk: every full-walk-admitted read meets `lesbar`,
+    every full-walk-admitted write meets `schreibbar`, at the physical byte -- for
+    every leaf size and under armed SMEP/SMAP. -/
+def FlachStimmtGross (gst : GrossSteuerung) (tab : Nat → Wort)
+    (m : Speicher) : Prop :=
+  ∀ (q : SeitenAnfrage) (phys : Nat),
+    (seitenGangGross gst tab q).1 = .ok phys →
+    (q.schreiben = true → m.schreibbar (BitVec.ofNat 64 phys) = true) ∧
+    (q.schreiben = false → m.lesbar (BitVec.ofNat 64 phys) = true)
+
+/-- A full-walk-admitted write meets the flat write permission. -/
+theorem gangGross_flach_schreibbar (gst : GrossSteuerung) (tab : Nat → Wort)
+    (m : Speicher) (q : SeitenAnfrage) (phys : Nat)
+    (hcons : FlachStimmtGross gst tab m)
+    (h : (seitenGangGross gst tab q).1 = .ok phys)
+    (hs : q.schreiben = true) :
+    m.schreibbar (BitVec.ofNat 64 phys) = true :=
+  (hcons q phys h).1 hs
+
+/-- A full-walk-admitted read meets the flat read permission. -/
+theorem gangGross_flach_lesbar (gst : GrossSteuerung) (tab : Nat → Wort)
+    (m : Speicher) (q : SeitenAnfrage) (phys : Nat)
+    (hcons : FlachStimmtGross gst tab m)
+    (h : (seitenGangGross gst tab q).1 = .ok phys)
+    (hs : q.schreiben = false) :
+    m.lesbar (BitVec.ofNat 64 phys) = true :=
+  (hcons q phys h).2 hs
+
+/-- TRANSFER (write): where the full walk agrees with the accepted 4 KiB walk, the
+    lane-1283 obligation covers the full walk pointwise. Large leaves keep their own
+    obligation side. -/
+theorem flachGross_aus_flach_schreibbar (st : SeitenSteuerung) (ac : Bool)
+    (tab : Nat → Wort) (m : Speicher) (q : SeitenAnfrage) (phys : Nat)
+    (hcons : FlachStimmt st tab m)
+    (h1 : st.smep = false) (h2 : st.smap = false)
+    (hg2 : (seitenTabEintrag tab
+        (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+        (gangIndexPDPT q.linear)).gross = false)
+    (hg1 : (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+          (gangIndexPDPT q.linear)).rahmen
+        (gangIndexPD q.linear)).gross = false)
+    (h : (seitenGangGross ⟨st, ac⟩ tab q).1 = .ok phys)
+    (hs : q.schreiben = true) :
+    m.schreibbar (BitVec.ofNat 64 phys) = true := by
+  have hg : (seitenGangGross ⟨st, ac⟩ tab q).1 =
+      (seitenGang st tab q).1 :=
+    seitenGangGross_gleich ⟨st, ac⟩ tab q h1 h2 hg2 hg1
+  rw [hg] at h
+  exact gangOk_flach_schreibbar st tab m q phys hcons h hs
+
+/-- TRANSFER (read): the same for reads. -/
+theorem flachGross_aus_flach_lesbar (st : SeitenSteuerung) (ac : Bool)
+    (tab : Nat → Wort) (m : Speicher) (q : SeitenAnfrage) (phys : Nat)
+    (hcons : FlachStimmt st tab m)
+    (h1 : st.smep = false) (h2 : st.smap = false)
+    (hg2 : (seitenTabEintrag tab
+        (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+        (gangIndexPDPT q.linear)).gross = false)
+    (hg1 : (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab st.cr3 (gangIndexPML4 q.linear)).rahmen
+          (gangIndexPDPT q.linear)).rahmen
+        (gangIndexPD q.linear)).gross = false)
+    (h : (seitenGangGross ⟨st, ac⟩ tab q).1 = .ok phys)
+    (hs : q.schreiben = false) :
+    m.lesbar (BitVec.ofNat 64 phys) = true := by
+  have hg : (seitenGangGross ⟨st, ac⟩ tab q).1 =
+      (seitenGang st tab q).1 :=
+    seitenGangGross_gleich ⟨st, ac⟩ tab q h1 h2 hg2 hg1
+  rw [hg] at h
+  exact gangOk_flach_lesbar st tab m q phys hcons h hs
+
+/-- FRESH full-join read: miss plus full-walk success resolves through the walk
+    AND meets the flat read permission. -/
+theorem uebersetzeVoll_frisch_flach_lesbar (gst : GrossSteuerung)
+    (tab : Nat → Wort) (m : Speicher) (tlb : List TlbEintrag)
+    (q : SeitenAnfrage) (phys : Nat)
+    (hkan : istKanonischNat q.linear = true)
+    (hMiss : tlbSuche tlb (q.linear / 4096) = none)
+    (h : (seitenGangGross gst tab q).1 = .ok phys)
+    (hs : q.schreiben = false)
+    (hcons : FlachStimmtGross gst tab m) :
+    uebersetzeVoll gst tab tlb q = some phys ∧
+      m.lesbar (BitVec.ofNat 64 phys) = true :=
+  ⟨uebersetzeVoll_frisch_ok gst tab tlb q phys hkan hMiss h,
+    gangGross_flach_lesbar gst tab m q phys hcons h hs⟩
+
+/-- FRESH full-join write: miss plus full-walk success resolves through the walk
+    AND meets the flat write permission. -/
+theorem uebersetzeVoll_frisch_flach_schreibbar (gst : GrossSteuerung)
+    (tab : Nat → Wort) (m : Speicher) (tlb : List TlbEintrag)
+    (q : SeitenAnfrage) (phys : Nat)
+    (hkan : istKanonischNat q.linear = true)
+    (hMiss : tlbSuche tlb (q.linear / 4096) = none)
+    (h : (seitenGangGross gst tab q).1 = .ok phys)
+    (hs : q.schreiben = true)
+    (hcons : FlachStimmtGross gst tab m) :
+    uebersetzeVoll gst tab tlb q = some phys ∧
+      m.schreibbar (BitVec.ofNat 64 phys) = true :=
+  ⟨uebersetzeVoll_frisch_ok gst tab tlb q phys hkan hMiss h,
+    gangGross_flach_schreibbar gst tab m q phys hcons h hs⟩
+
+/-- The obligation is inhabited: the all-permissive flat memory meets every full walk,
+    so the bridge is never vacuous. -/
+theorem flachStimmtGross_allwahr (gst : GrossSteuerung) (tab : Nat → Wort) :
+    FlachStimmtGross gst tab allWahrSpeicher := by
+  intro q phys h
+  exact ⟨fun _ => rfl, fun _ => rfl⟩
+
+/-! ### Witness flat memory: the large pages with their permissions.
+
+  Frames 512..1023 (the 2 MiB page) and frame 262144 (the 1 GiB page) are readable
+  and writable; nothing else is. The witnessed large mappings meet it pointwise. -/
+
+/-- Witness flat memory: exactly the two large witness pages permit access. -/
+def witVollFlach : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0
+    lesbar := fun a =>
+      decide (512 ≤ a.toNat / 4096 ∧ a.toNat / 4096 < 1024 ∨
+        a.toNat / 4096 = 262144)
+    schreibbar := fun a =>
+      decide (512 ≤ a.toNat / 4096 ∧ a.toNat / 4096 < 1024 ∨
+        a.toNat / 4096 = 262144)
+    ausfuehrbar := fun _ => false }
+
+/-- The 2 MiB witness page is flat-readable at its base. -/
+theorem witVoll_flach_liest :
+    witVollFlach.lesbar (BitVec.ofNat 64 2097152) = true := by
+  decide
+
+/-- The 2 MiB witness page is flat-writable at its base. -/
+theorem witVoll_flach_schreibt :
+    witVollFlach.schreibbar (BitVec.ofNat 64 2097152) = true := by
+  decide
+
+/-- The 1 GiB witness page is flat-readable at its base. -/
+theorem witVoll_flach_liest_1G :
+    witVollFlach.lesbar (BitVec.ofNat 64 (2 ^ 30)) = true := by
+  decide
+
 /- CUTS:
-   Proved: §§1-3 (join, fresh/stale agreement, #GP-first, 1299 link, INVLPG/CR3
-   effects, caching closure, stale-rights witnesses).
-   Follow: flat bridge (§4), machine connection (§5), joint witness (§6).
+   Proved: §§1-4 (join, agreement, #GP-first, 1299 link, INVLPG/CR3, caching
+   closure with stale-rights witnesses, flat bridge with transfer and witness memory).
+   Follow: machine connection (§5), joint witness (§6).
    NOT proved: everything above; no hardware correspondence beyond self-consistency.
 -/
 
@@ -278,5 +429,17 @@ theorem witVoll_nichtkanonisch_hit :
 #print axioms witVoll_stal_smep
 #print axioms witVoll_nach_invlpg_fehl
 #print axioms witVoll_nichtkanonisch_hit
+#print axioms FlachStimmtGross
+#print axioms gangGross_flach_schreibbar
+#print axioms gangGross_flach_lesbar
+#print axioms flachGross_aus_flach_schreibbar
+#print axioms flachGross_aus_flach_lesbar
+#print axioms uebersetzeVoll_frisch_flach_lesbar
+#print axioms uebersetzeVoll_frisch_flach_schreibbar
+#print axioms flachStimmtGross_allwahr
+#print axioms witVollFlach
+#print axioms witVoll_flach_liest
+#print axioms witVoll_flach_schreibt
+#print axioms witVoll_flach_liest_1G
 
 end Gabbro.Grammatik.X86
