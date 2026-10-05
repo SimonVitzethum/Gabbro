@@ -729,12 +729,129 @@ theorem voll_cr3_vereinbarung (s : VollZustand) (c : Nat) :
     .cr3 c, ?_, rfl, rfl⟩
   simp
 
+/-! ## 6. Joint witness: large mappings, stale rights, INVLPG, faults, two cores.
+
+  Core 0 holds the stale 2 MiB entry (it still admits the revoked page while core 1
+  faults on it); core 1 walks fresh and writes back accessed/dirty. Beside the
+  accepted two-core TSO run (owner-only forwarding, drain 0 -> 42 observed from both
+  cores) and the flat permissions of the witnessed large pages. Non-degenerate: two
+  page sizes, two cores, real table changes and a real memory change.
+-/
+
+/-- Witness TLBs: core 0 holds the stale 2 MiB entry, core 1 walks fresh. -/
+def witVollTlbs : Nat → List TlbEintrag :=
+  fun c => if c = 0 then [⟨0, 512⟩] else []
+
+/-- Core 0 really holds the stale entry. -/
+theorem witVollTlbs_null : witVollTlbs 0 = [⟨0, 512⟩] := by
+  simp [witVollTlbs]
+
+/-- Witness full state: coherent witness machine, large-page control, witness
+    tables, stale TLB on core 0. -/
+def witVollM : VollZustand :=
+  ⟨hwWitStart, witGrossSteuer, witGrossTab, witVollTlbs⟩
+
+/-- The witness state is machine-well-formed. -/
+theorem witVollM_wf : HwWf witVollM.hw := hwWitStart_wf
+
+/-- The stale-use step is reached on core 0 (a self-loop on the witness). -/
+theorem witVoll_veraltet_schritt :
+    HwVollSchritt witVollM witVollM
+      (.zugriffAlt 0 ⟨0, false, false, false⟩ 512) := by
+  apply HwVollSchritt.veraltet
+  · exact kanonischNat_null
+  · decide
+
+/-- Witness address for INVLPG: linear zero. -/
+def witVollAdr : Adresse := BitVec.ofNat 64 0
+
+/-- The witness address lives on page 0. -/
+theorem witVollAdr_seite : seitenNr witVollAdr = 0 := by
+  decide
+
+/-- The INVLPG step is reached and its page misses afterwards. -/
+theorem witVoll_invlpg_schritt :
+    ∃ t, HwVollSchritt witVollM t (.invlpg 0 witVollAdr) ∧
+      tlbSuche (t.tlb 0) (seitenNr witVollAdr) = none := by
+  obtain ⟨t, hstep, htlb, _, _⟩ :=
+    voll_invlpg_vereinbarung witVollM 0 witVollAdr
+  refine ⟨t, hstep, ?_⟩
+  rw [htlb]
+  show tlbSuche (tlbEntfernen (witVollTlbs 0) (seitenNr witVollAdr))
+    (seitenNr witVollAdr) = none
+  rw [witVollAdr_seite, witVollTlbs_null]
+  exact tlbEntfernen_sucht_verfehlt [⟨0, 512⟩] 0
+
+/-- INVLPG on core 0 leaves core 1 alone on the witness. -/
+theorem witVoll_invlpg_lokal :
+    (fun d => if d = 0 then tlbEntfernen (witVollTlbs 0) 0
+      else witVollTlbs d) 1 = witVollTlbs 1 := by
+  decide
+
+/-- The witness user write walks to the 2 MiB page. -/
+theorem witVoll_schreib_ok :
+    (seitenGangGross witGrossSteuer witGrossTab ⟨0, true, true, false⟩).1 =
+      .ok 2097152 := by
+  decide
+
+/-- Witness state after the fresh user write: tables gain accessed/dirty. -/
+def witVollM1 : VollZustand :=
+  ⟨hwWitStart, witGrossSteuer,
+    (seitenGangGross witGrossSteuer witGrossTab ⟨0, true, true, false⟩).2,
+    witVollTlbs⟩
+
+/-- The fresh write step is reached on core 1 (empty TLB: miss). -/
+theorem witVoll_frisch_schritt :
+    HwVollSchritt witVollM witVollM1
+      (.zugriffOk 1 ⟨0, true, true, false⟩ 2097152) := by
+  have hMiss : tlbSuche (witVollM.tlb 1) (0 / 4096) = none := by
+    decide
+  exact HwVollSchritt.frisch kanonischNat_null hMiss witVoll_schreib_ok rfl
+
+/-- The non-canonical #GP step is reached (self-loop, cache never consulted). -/
+theorem witVoll_gp_schritt :
+    HwVollSchritt witVollM witVollM
+      (.zugriffGp 0 ⟨2 ^ 47, false, true, false⟩ (2 ^ 47)) := by
+  exact HwVollSchritt.gp wit_gross_nichtkanonisch_gp
+
+/-- Witness revoked state: the mapping revoked, the stale entry still cached. -/
+def witVollMrev : VollZustand :=
+  ⟨hwWitStart, witGrossSteuer, witVollTab1, witVollTlbs⟩
+
+/-- The revoked page faults on core 1 (empty TLB) while core 0 still admits it
+    (`witVoll_veraltet_schritt` runs on the same tables): the stale-rights
+    divergence as reached steps on two cores. -/
+theorem witVoll_pf_schritt :
+    HwVollSchritt witVollMrev witVollMrev
+      (.zugriffPf 1 ⟨0, false, false, false⟩ 0
+        ⟨false, false, false, false, false⟩) := by
+  apply HwVollSchritt.fehler
+  · exact kanonischNat_null
+  · decide
+  · exact witVollTab1_pf
+
+/-- The CR3 step is reached and its core TLB is empty afterwards. -/
+theorem witVoll_cr3_schritt :
+    ∃ t, HwVollSchritt witVollM t (.cr3 0) ∧ t.tlb 0 = [] := by
+  obtain ⟨t, hstep, htlb, _, _⟩ := voll_cr3_vereinbarung witVollM 0
+  refine ⟨t, hstep, ?_⟩
+  rw [htlb]
+  show tlbCr3Spuelung (witVollTlbs 0) = []
+  rw [witVollTlbs_null]
+  exact tlbCr3Spuelung_leert [⟨0, 512⟩]
+
+/-- Two-step chain: the stale use self-loops, then INVLPG drops the entry. -/
+theorem witVoll_kette :
+    ∃ t, HwVollSchritt witVollM witVollM
+      (.zugriffAlt 0 ⟨0, false, false, false⟩ 512) ∧
+      HwVollSchritt witVollM t (.invlpg 0 witVollAdr) ∧
+      tlbSuche (t.tlb 0) (seitenNr witVollAdr) = none := by
+  obtain ⟨t, hstep, hmiss⟩ := witVoll_invlpg_schritt
+  exact ⟨t, witVoll_veraltet_schritt, hstep, hmiss⟩
+
 /- CUTS:
-   Proved: §§1-5 (join, agreement, #GP-first, 1299 link, INVLPG/CR3, caching
-   closure with stale-rights witnesses, flat bridge, adapter plug, step relation
-   with exact embedding, inversions, stillness, wf, refusals, INVLPG/CR3
-   agreements).
-   Follow: joint witness (§6).
+   Proved: §§1-6a (all of the above; witness states and reached steps).
+   Follow: joint witness `voll_zeuge` (§6b).
    NOT proved: everything above; no hardware correspondence beyond self-consistency.
 -/
 
@@ -798,5 +915,22 @@ theorem voll_cr3_vereinbarung (s : VollZustand) (c : Nat) :
 #print axioms vollSchritt_veraltet_braucht_treffer
 #print axioms voll_invlpg_vereinbarung
 #print axioms voll_cr3_vereinbarung
+#print axioms witVollTlbs
+#print axioms witVollTlbs_null
+#print axioms witVollM
+#print axioms witVollM_wf
+#print axioms witVoll_veraltet_schritt
+#print axioms witVollAdr
+#print axioms witVollAdr_seite
+#print axioms witVoll_invlpg_schritt
+#print axioms witVoll_invlpg_lokal
+#print axioms witVoll_schreib_ok
+#print axioms witVollM1
+#print axioms witVoll_frisch_schritt
+#print axioms witVoll_gp_schritt
+#print axioms witVollMrev
+#print axioms witVoll_pf_schritt
+#print axioms witVoll_cr3_schritt
+#print axioms witVoll_kette
 
 end Gabbro.Grammatik.X86
