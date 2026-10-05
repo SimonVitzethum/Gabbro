@@ -150,8 +150,8 @@ theorem valAtom_korrekt (q : AtomQuelle) (ts : List ZielOp) :
     valAtom q ts = true ↔ senkAtom q = some ts := by
   unfold valAtom
   cases h : senkAtom q with
-  | none => simp [h]
-  | some ts' => simp only [h, decide_eq_true_eq, Option.some.injEq]
+  | none => simp
+  | some ts' => simp [decide_eq_true_eq, Option.some.injEq]
 
 /-- Every lowered plain MOV is straight-line pilot code. -/
 theorem zielOp_gerade : ∀ (t : ZielOp),
@@ -588,3 +588,211 @@ theorem rely_stabil {D : Deklaration}
       (((A X σw).speicher.slots) t k f)) = v :=
     havoc_erhaelt_gruppenwert (hT := hT) hA hTnot hV
   exact ⟨hstab, rfl, lese_schliesst a o⟩
+
+/-! ## 9. Refusals and poison probes.
+
+    Unsupported shapes are REFUSED, never guessed: nested lock sections
+    (no lock-order claim), unreadable loads and unaligned or
+    buffer-blocked LOCK steps (admission, never a fault claim),
+    truncated or neighbouring fence bytes (LFENCE-adjacent shapes and
+    LOCK-before-fence belong to their own decoders), and the fetched
+    buffer/alignment/permission pins (reused as poison probes). -/
+
+/-- An unreadable load admits no step. -/
+theorem lese_unlesbar_verweigert (d : Decodiert) (s s' : Zustand)
+    (dst base : Register) (disp : BitVec 32)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .load64 dst base disp)
+    (hrd : read64 s.speicher (effAddr s base disp) = none)
+    (hstep : schritt d s = some s') : False :=
+  effAddr_load_verweigert d s s' dst base disp hok h hrd hstep
+
+/-- A misaligned LOCK XADD admits no step (profile admission). -/
+theorem xadd_unaligned_verweigert (s : TSOZustand) (c : Nat) (a : Adresse)
+    (delta alt : Wort)
+    (hbuf : s.puffer c = [])
+    (hrd : read64 s.mem a = some alt)
+    (hali : ausgerichtet8 a = false) :
+    lockSchritt (.xadd64 a delta) c s = none := by
+  have hb : (s.puffer c).isEmpty = true := by rw [hbuf]; rfl
+  unfold lockSchritt
+  simp [hb, hrd, hali]
+
+/-- A pending own store refuses the LOCK XADD (admission). -/
+theorem xadd_puffer_verweigert (s : TSOZustand) (c : Nat) (a : Adresse)
+    (delta : Wort) (e : TSOEintrag) (rest : List TSOEintrag)
+    (hbuf : s.puffer c = e :: rest) :
+    lockSchritt (.xadd64 a delta) c s = none := by
+  have hb : (s.puffer c).isEmpty = false := by rw [hbuf]; rfl
+  unfold lockSchritt
+  simp [hb]
+
+/-- POISON: the lone escape byte is no fence. -/
+theorem gift_zaun_stumpf15 : decodeLock [natByte 15] = none :=
+  mfenceAbgeschnitten15_verweigert
+
+/-- POISON: the LFENCE-adjacent shape is no MFENCE. -/
+theorem gift_zaun_nachbar_lfence :
+    decodeLock [natByte 15, natByte 174, natByte 232] = none :=
+  mfenceNachbarLFENCE_verweigert
+
+/-- POISON: LOCK before MFENCE is the fence #UD marker, never a drain. -/
+theorem gift_zaun_mit_lock_ud :
+    decodeLock [natByte 240, natByte 15, natByte 174, natByte 240] =
+      some (LockAnweisung.ud .lockAufZaun 4, []) :=
+  mfenceMitLock_ist_ud
+
+/-- POISON: the byte step refuses the LFENCE-adjacent shape. -/
+theorem gift_zaun_byteseite_nachbar :
+    mfenceSchrittAusBytes [natByte 15, natByte 174, natByte 232]
+      fdS2 0 = none :=
+  mfenceSchrittAusBytes_nachbar_verweigert
+
+/-- POISON (fetched): a pending own store refuses the fetched LOCK. -/
+theorem gift_holt_puffer :
+    lockArt (lockByteschritt
+      (lockZeug pinXadd 10 lockCodeExec lockDataRW lockDataRW 5 8192 0
+        einEintrag)
+      0 basisHw basisBereit) = .verweigert :=
+  zeug_puffer_verweigert
+
+/-- POISON (fetched): a misaligned word refuses the fetched LOCK. -/
+theorem gift_holt_unaligned :
+    lockArt (lockByteschritt
+      (lockZeug pinXadd 10 lockCodeExec lockDataRW lockDataRW 5 8193 0 [])
+      0 basisHw basisBereit) = .verweigert :=
+  zeug_unaligned_verweigert
+
+/-- POISON (fetched): a failing comparison without write permission is
+    the memory class, never a silent stutter. -/
+theorem gift_holt_schreibfehler :
+    lockArt (lockByteschritt
+      (lockZeug pinCmpxchg 10 lockCodeExec lockDataRW lockDataNie 11 8192
+        7 [])
+      0 basisHw basisBereit) = .speicherFehler :=
+  zeug_schreibfehler_bei_fehlschlag
+
+/-- POSITIVE (fetched): the word moves 10 to 15, rax takes the old 10. -/
+theorem positiv_holt_xadd :
+    lockArt (lockByteschritt zeugXadd 0 basisHw basisBereit) = .ok ∧
+    lockWort (BitVec.ofNat 64 8192)
+      (lockByteschritt zeugXadd 0 basisHw basisBereit) = some 15 ∧
+    lockReg .rax (lockByteschritt zeugXadd 0 basisHw basisBereit) =
+      some 10 :=
+  ⟨zeug_xadd_fetch_ok.1, zeug_xadd_fetch_ok.2.1,
+    zeug_xadd_fetch_ok.2.2.1⟩
+
+/-! ## 10. Joint witness: every lowering with a reached memory change. -/
+
+/-- **JOINT WITNESS.** All five lowerings hold together with a reached
+    two-core drain run that observably changes memory, a foreign core
+    still pending, a table the witness declaration writes, and a fetched
+    LOCK XADD that moves the word 10 to 15 while returning the old 10
+    through rax. Non-degenerate on both sides. -/
+theorem senkAtom_zeuge :
+    ∃ (s2 s3 : TSOZustand),
+      senkAtom (.lese fdX .freigabe .rax .rbp 0) =
+        some [.movLoad .rax .rbp 0] ∧
+      senkAtom .zaun = some [.lock .mfence] ∧
+      senkAtom (.xadd .rax .rbp 0) =
+        some [.lock (.xadd64 .rax .rbp 0)] ∧
+      senkAtom (.cas .rcx .rbp 0) =
+        some [.lock (.cmpxchg64 .rcx .rbp 0)] ∧
+      senkAtom (.sperre [.zaun]) =
+        some ([.lock .mfence] ++ [.lock .mfence] ++ [.lock .mfence]) ∧
+      TSOErreichbar fdStart s2 ∧
+      mfenceSchrittAusBytes pinMfence s2 0 = some s3 ∧
+      s2.mem.bytes fdX ≠ s3.mem.bytes fdX ∧
+      s2.puffer 0 ≠ [] ∧ s2.puffer 1 ≠ [] ∧
+      witD.schreibt () () = true ∧
+      lockArt (lockByteschritt zeugXadd 0 basisHw basisBereit) = .ok ∧
+      lockWort (BitVec.ofNat 64 8192)
+        (lockByteschritt zeugXadd 0 basisHw basisBereit) = some 15 ∧
+      lockReg .rax (lockByteschritt zeugXadd 0 basisHw basisBereit) =
+        some 10 := by
+  obtain ⟨s2, s3, -, -, hreach, hdrain, hpend, hchg, hbufne⟩ :=
+    MfenceDrainOwn_verbindung_zeuge
+  exact ⟨s2, s3, rfl, rfl, rfl, rfl, rfl, hreach, hdrain, hchg, hbufne,
+    hpend, rfl, zeug_xadd_fetch_ok.1, zeug_xadd_fetch_ok.2.1,
+    zeug_xadd_fetch_ok.2.2.1⟩
+
+/- CUTS: what is not proved here
+    Proved here (all over REUSED accepted definitions -- no new machine,
+    no new decoder row, no second IR, no source/checker/goal change):
+    - lowering `senkAtom`/`senkListe` with the decided validator
+      `valAtom` (`valAtom_korrekt`): plain MOV for relaxed/acquire loads
+      and release stores, LOCK XADD / LOCK CMPXCHG for RMW, MFENCE for
+      fences and lock-section brackets; nested lock sections refused;
+    - the NAMED hardware assumption `TSOPlainRegel` (plain-MOV
+      reordering rule: off-core invisibility until drain, fence-ready
+      loads canonical, drains visible, own stores immediate),
+      discharged once (`TSOPlainRegel_gilt`) and cited by every
+      plain-access theorem;
+    - per-access correspondence with ledger closing: `lese_korrekt`
+      (pilot step + TSO group under the named rule), `schreibe_korrekt`
+      (footprint + off-core invisibility + on-core visibility),
+      `zaun_korrekt` (drain frame + gate + byte dispatch),
+      `xadd_korrekt` (single-RMW frame + bytes + ledger),
+      `cas_korrekt_erfolg`/`cas_korrekt_fehlschlag` (install/stutter +
+      bytes + decided ledger), `sperre_korrekt` (bracket frame + one
+      reached run via `erreichbar_kette`);
+    - GX legs `gx_lese_korrekt` (committed read simulates the W read)
+      and `rely_stabil` (plain values survive atomic havoc);
+    - refusals: unreadable loads, unaligned/buffer-blocked LOCK steps,
+      truncated/LFENCE-adjacent/LOCK-prefixed fence bytes, fetched
+      buffer/alignment/permission pins (reused as poison probes) plus
+      one fetched positive;
+    - joint non-degenerate witness `senkAtom_zeuge` (all lowerings, a
+      reached memory-changing drain, a written table, a fetched
+      memory-changing XADD).
+    NOT proved here, and not claimed:
+    - No `execBlock` correspondence for atomics: the pipeline fragment
+      (`Pipeline.lean` CUTS) covers integer slots only; atomics enter
+      through the per-access facts above, never through a block run.
+    - No register-address binding for RMW/fence byte forms: which
+      (base, disp) names which address needs the register file
+      (`effAddr`); the TSO facts speak about addresses, the byte facts
+      about registers, and the link between them is OPEN.
+    - No SFENCE/LFENCE lowering: only the full MFENCE fence is lowered;
+      the narrow forms stay with `SfenceStoreNarrow`/`LfenceLoadNarrow`
+      (their disjointness is a reused refusal here).
+    - No whole-word store install from bytes: stores correspond
+      per-footprint-byte for visibility and whole-word for the pilot
+      step; the 8-issue-plus-drain word install is OPEN (tearing guard
+      owned by `BridgeWrite`).
+    - No full `SchrittW`/`RufSchrittW`: `schwach_ist_gX` is cited, not
+      applied; forwarded-group values need the lowering certificate's
+      value link (cut of `BridgeRead` §5).
+    - No `seq_cst` total order: inherited from `ReleaseAcquire`
+      (`kein_seqcst_total`); `seq_cst` stays release/acquire.
+    - No fairness, progress, retry bound, timing or cost: CAS retry
+      stays unbounded, drains order but never pace; no interrupt,
+      device, MMIO or DMA claim.
+-/
+
+#print axioms senk_lese
+#print axioms senk_schreibe
+#print axioms senk_zaun
+#print axioms senk_xadd
+#print axioms senk_cas
+#print axioms senk_sperre
+#print axioms sperre_verschachtelt_verweigert
+#print axioms valAtom_korrekt
+#print axioms zielBytes_movLoad_rundweg
+#print axioms zielBytes_lock_rundweg
+#print axioms TSOPlainRegel_gilt
+#print axioms lese_korrekt
+#print axioms schreibe_korrekt
+#print axioms zaun_korrekt
+#print axioms xadd_korrekt
+#print axioms cas_korrekt_erfolg
+#print axioms cas_korrekt_fehlschlag
+#print axioms sperre_korrekt
+#print axioms erreichbar_kette
+#print axioms gx_lese_korrekt
+#print axioms rely_stabil
+#print axioms lese_unlesbar_verweigert
+#print axioms xadd_unaligned_verweigert
+#print axioms xadd_puffer_verweigert
+#print axioms senkAtom_zeuge
+
+end Gabbro.Grammatik.X86.PipelineAtomics
