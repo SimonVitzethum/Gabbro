@@ -176,3 +176,37 @@ unchanged axioms (`propext` / `propext + Quot.sound`). The
 reviewer's remaining notes (owner-task under-specification of
 prefixed `90H`, apparatus detail) are acknowledged, no action
 needed in this lane.
+
+## Integration gate failure (NOT a module defect; blocked)
+
+The merge build failed with NO error in the owned module. Exact
+evidence:
+
+- All 8 `info:` lines for `IntSignXchg.lean` show the standard
+  axioms (`propext` / `propext + Quot.sound`): the candidate
+  elaborated cleanly inside the merge build.
+- The single `error:` is at `Grammatik.lean:44:0` (an original
+  early import line; the lane's hunk is the appended import at
+  the file end) and reads: `failed to read file
+  '/home/simon/.elan/toolchains/leanprover--lean4---v4.33.1/lib/
+  lean/Lean/Meta/Tactic/FunInd.olean.private'`.
+- That is a damaged/unreadable Lean toolchain installation file
+  in the merge checkout's toolchain path — apparatus, same
+  family as the documented ELAN_TOOLCHAIN/cache pitfalls, not a
+  type error, not a merge conflict, and not reachable from any
+  definition or theorem in `IntSignXchg.lean`.
+
+There is nothing to repair in the owned deliverable against
+this evidence, and weakening anything to "fit" a broken
+toolchain would trade guarantees for green — refused. Local
+re-verification just now, same commit: `./lean-bau` `Build
+completed successfully (659 jobs)`, axioms unchanged.
+
+Concrete blocker for the coordinator: repair or replace the
+`leanprover--lean4---v4.33.1` toolchain installation used by the
+merge checkout (that path is outside this lane's clone and
+untouchable under HARD RULES), then re-run the merge build
+unchanged. The candidate needs no code change. No acceptance of
+the full source/binary chain is claimed; a fresh independent
+review remains required for any future changed commit (this
+turn changes Lean code not at all — report only).
