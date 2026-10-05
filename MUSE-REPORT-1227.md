@@ -86,3 +86,25 @@ closing theorem is stated in the style of `spill_haelt_bedeutung` /
 `pipeline_correct`), and refusals follow the `spill_verweigert_*` /
 `pipe_alloc_verweigert_kollision` pattern. The entry-level connection
 is inherited, not re-proved.
+
+## Repair response to MUSE-REPORT-1228 (REPAIR: candidate not readable)
+
+The 1228 exact review reports `bad object` for pinned candidate
+`638654c2736f9dfd6e0ed5d03af60c411d9261a5` in reviewer clone a1228 and
+performs no content checks. Verified in this clone (a1227):
+
+- branch is `muse/1227`, HEAD is `638654c2` (full hash above), tree clean;
+- `git show HEAD --stat` lists exactly the three snapshotted files
+  (`MUSE-REPORT-1227.md`, `grammatik/Grammatik.lean` +1 line,
+  `grammatik/Grammatik/X86/PipelineSpillHoming.lean` new, 394 lines).
+
+The finding identifies no defect in the deliverable content, so no Lean
+content was changed. The missing object is a fetch/availability matter
+between clones: HARD RULES rule 1 forbids this lane from touching
+anything outside its own directory (no push, no cross-clone copy, no
+network), so the repair on this side is to keep the candidate intact and
+fetchable at its canonical location (`muse/1227` in this clone) for the
+coordinator's `muse-merge.sh` fetch path. Re-verified green after the
+review: `./lean-probe` 0 errors, axioms at most
+`propext, Classical.choice, Quot.sound`; prior `./lean-bau` green at
+641 jobs on this exact tree.
