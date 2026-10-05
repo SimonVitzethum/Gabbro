@@ -264,6 +264,36 @@ theorem nanUcomi_signalisierend :
       = ⟨true, true, some false, true, false, false⟩ :=
   ucomiFlags_ungeordnet_links _ _ nanKlasse_signalisierend
 
+/-! ## 4. Named hardware assumption: the two-NaN operand-order choice.
+
+  The model resolves two NaN operands deterministically (first wins,
+  §1). Silicon leaves the choice open: with two NaN inputs the
+  answer is one of the two input words, but WHICH one is
+  implementation-defined. This is stated as the named assumption
+  `HwZweiNanWahl` over an abstract silicon function and USED (the
+  two-NaN answer still classifies NaN), never proved: no theorem
+  here concludes the assumption itself. -/
+
+/-- NAMED HARDWARE ASSUMPTION (never proved here): with two NaN
+    operands silicon answers one of the two input words. -/
+def HwZweiNanWahl (silizium : GleitOp → Wort → Wort → Wort) : Prop :=
+  ∀ op a b,
+    Gleitkomma.klasse Gleitkomma.f64 (bites64 a) = .nan →
+      Gleitkomma.klasse Gleitkomma.f64 (bites64 b) = .nan →
+        silizium op a b = a ∨ silizium op a b = b
+
+/-- Under the assumption a two-NaN silicon answer still classifies
+    NaN, whichever operand silicon picks. -/
+theorem silizium_zweiNan_bleibtNan
+    (silizium : GleitOp → Wort → Wort → Wort)
+    (hHw : HwZweiNanWahl silizium) (op : GleitOp) (a b : Wort)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 (bites64 a) = .nan)
+    (hb : Gleitkomma.klasse Gleitkomma.f64 (bites64 b) = .nan) :
+    Gleitkomma.klasse Gleitkomma.f64 (bites64 (silizium op a b)) = .nan := by
+  rcases hHw op a b ha hb with h | h
+  · rw [h]; exact ha
+  · rw [h]; exact hb
+
 /- CUTS: what is not proved here (filled as the file grows). -/
 
 #print axioms nanPipeOk_reset
