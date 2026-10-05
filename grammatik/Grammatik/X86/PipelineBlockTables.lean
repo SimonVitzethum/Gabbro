@@ -189,7 +189,7 @@ theorem skalAdresse_feldAdr (A : TabAnker D) (t : D.Tab) (k : Int) (f : D.Feld t
 /-- The scaled tail: index in `idx` (untouched) to the word at
     `B + idx * Z + O` in `dst`, through `adr`. -/
 def skalRest (c : PipeCfg) (idx : Register) (O Z : Nat) : List Befehl :=
-  [.movReg64 c.dst idx] ++ verdoppeln c.dst (skalExp Z) ++
+  [Befehl.movReg64 c.dst idx] ++ verdoppeln c.dst (skalExp Z) ++
     [.addReg64 c.adr c.dst, .movImm64 c.dst (natAdresse O),
      .addReg64 c.adr c.dst, .load64 c.dst c.adr (BitVec.ofNat 32 0)]
 
@@ -263,9 +263,9 @@ theorem skalRest_lauf (c : PipeCfg) (hc : cfgOk c = true)
   have had : c.adr ≠ c.dst := fun e => hda e.symm
   have hZ : Z = 2 ^ skalExp Z := skalExp_sound Z hsk
   -- step 1: `dst := idx`
-  have hmov := schritt_movReg64 (kanon (.movReg64 c.dst idx)) s1 c.dst idx
+  have hmov := schritt_movReg64 (kanon (Befehl.movReg64 c.dst idx)) s1 c.dst idx
     (laengeOk_encode _) rfl
-  let s2 := schrittRegister s1 (ripNach s1.rip (kanon (.movReg64 c.dst idx)).laenge)
+  let s2 := schrittRegister s1 (ripNach s1.rip (kanon (Befehl.movReg64 c.dst idx)).laenge)
     s1.flags c.dst (s1.register idx)
   have e2 : s2.register c.adr = natAdresse B := by
     show regSet (s1.register) c.dst (s1.register idx) c.adr = _
@@ -346,12 +346,12 @@ theorem skalRest_lauf (c : PipeCfg) (hc : cfgOk c = true)
       skaliertAddr s1 c.adr idx Z (BitVec.ofNat 32 0) + natAdresse O := by
     rw [ha6']
     exact (skaliertAddr_natAdresse s1 c.adr idx Z B M O hadr hidx).symm
-  have h12 : lauf ([kanon (.movReg64 c.dst idx)] ++
+  have h12 : lauf ([kanon (Befehl.movReg64 c.dst idx)] ++
       (verdoppeln c.dst (skalExp Z)).map kanon) s1 = some s3 := by
     rw [lauf_anhang _ _ _ s2 (by rw [lauf_einzeln_gleich]; exact hmov)]
     exact hr3
   have e1 : (skalRest c idx O Z).map kanon =
-      ([kanon (.movReg64 c.dst idx)] ++ (verdoppeln c.dst (skalExp Z)).map kanon) ++
+      ([kanon (Befehl.movReg64 c.dst idx)] ++ (verdoppeln c.dst (skalExp Z)).map kanon) ++
       [kanon (.addReg64 c.adr c.dst), kanon (.movImm64 c.dst (natAdresse O)),
        kanon (.addReg64 c.adr c.dst),
        kanon (.load64 c.dst c.adr (BitVec.ofNat 32 0))] := by
@@ -574,8 +574,8 @@ theorem senkSkalLesen_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = tru
               have hM : s.register (abbOf c _ y) = natAdresse k.toNat := by
                 rw [hEy]; exact intWort_nat k hk0 hltI
               have hev : eval σ₀ i σ ρ = ρ.get y := idxVarG?_eval i y σ₀ σ ρ hy
-              have heval : (eval σ₀ (.slot t f i hL) σ ρ) = σ.slots t k f := by
-                have hrfl : (eval σ₀ (.slot t f i hL) σ ρ) =
+              have heval : (eval σ₀ (Expr.slot t f i hL) σ ρ) = σ.slots t k f := by
+                have hrfl : (eval σ₀ (Expr.slot t f i hL) σ ρ) =
                   σ.slots t (eval σ₀ i σ ρ).n f := rfl
                 rw [hev, hkdef] at hrfl
                 exact hrfl
@@ -675,7 +675,7 @@ theorem senkSkalLesen_durch_slot (A : TabAnker D) (c : PipeCfg)
     (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t)
     (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
     senkSkalLesen A c (.durch p t ht f i hL) =
-      senkSkalLesen A c (.slot t f i hL) := rfl
+      senkSkalLesen A c (Expr.slot t f i hL) := rfl
 
 /-- REFUSAL, NON-VARIABLE INDEX: a read whose index is not a variable
     (a constant — lane 1159's domain — or any computed index) is refused.
@@ -685,7 +685,7 @@ theorem senkSkalLesen_nichtvar_slot (A : TabAnker D) (c : PipeCfg)
     {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
     (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ)
     (hnc : idxVarG? i = none) :
-    senkSkalLesen A c (.slot t f i hL) = none := by
+    senkSkalLesen A c (Expr.slot t f i hL) = none := by
   simp only [senkSkalLesen, hnc]
 
 /-- JOINT WITNESS for `senkSkalLesen_nichtvar_slot`: the constant read
@@ -1099,7 +1099,7 @@ def senkStmtSkal (A : TabAnker D) (c : PipeCfg) {V : Vertrag D} {l : Bool}
                 if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
                     adrOk (basisKeinForm c.adr) then
                   some (skalChunk c (abbOf c _ y) B O Z ++
-                    [.movReg64 (abbOf c _ x) c.dst])
+                    [Befehl.movReg64 (abbOf c _ x) c.dst])
                 else none
               | _ => none
     | .durch _ t _ f i _ =>
@@ -1120,7 +1120,7 @@ def senkStmtSkal (A : TabAnker D) (c : PipeCfg) {V : Vertrag D} {l : Bool}
                 if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
                     adrOk (basisKeinForm c.adr) then
                   some (skalChunk c (abbOf c _ y) B O Z ++
-                    [.movReg64 (abbOf c _ x) c.dst])
+                    [Befehl.movReg64 (abbOf c _ x) c.dst])
                 else none
               | _ => none
     | _ => none
@@ -1141,6 +1141,367 @@ def senkBlockSkal (A : TabAnker D) (c : PipeCfg) {V : Vertrag D} {l : Bool}
       | none => none
       | some q => some (p ++ q)
   | _ => none
+
+/-! ## 8. Statement correctness
+
+    A block-level read runs the scaled chunk (value in `dst`), publishes
+    the word to the target variable's register, and matches the real
+    `execStmt` outcome (environment updated, world only re-logged).
+    Slot and pointer-through reads share everything but the evaluation
+    equation, so each gets a helper and a thin dispatcher joins them. -/
+
+/-- STATEMENT CORRECTNESS, direct read: `x := T[k].f` at a variable
+    index runs the fetched chunk plus the publish move and matches the
+    real `execStmt` outcome with world and environment represented. -/
+theorem senkStmtSkal_korrekt_slot (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = true)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ)
+    (x : Var Γ (D.typ t f))
+    (y : Var Γ (.index (D.count t))) (hy : idxVarG? i = some y)
+    (B Z O : Nat)
+    (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = some O)
+    (ρ : Env D Γ) (σ : World D) (st : Zustand)
+    (hE : EnvRepr ρ st.register (abbOf c)) (hW : WorldRep (tabLayout A) st.speicher σ)
+    (hok : stmtSkalOk c ρ ((.assignVar x (Expr.slot t f i hL)) : Stmt D V l Γ Λ Λ))
+    (Ok : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (p : List Befehl)
+    (h : senkStmtSkal A c ((.assignVar x (Expr.slot t f i hL)) : Stmt D V l Γ Λ Λ) = some p) :
+    ∃ s' σ' ρ', lauf (p.map kanon) st = some s' ∧
+      execStmt Ok passes R ((.assignVar x (Expr.slot t f i hL)) : Stmt D V l Γ Λ Λ) σ ρ = .ok σ' ρ' ∧
+      WorldRep (tabLayout A) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf c) := by
+  simp only [stmtSkalOk, hy] at hok
+  obtain ⟨hbnd, hvars⟩ := hok
+  obtain ⟨k, hkdef⟩ : ∃ k, (ρ.get y).n = k := ⟨(ρ.get y).n, rfl⟩
+  rw [hkdef] at hbnd
+  have hA : PipelineTables.feldAdr A t k f =
+      some (B + k.toNat * Z + O) := by
+    unfold PipelineTables.feldAdr
+    simp only [hB, hZ, hO]
+    rw [if_pos hbnd]
+  have hloc : (tabLayout A).loc t k f = some (B + k.toNat * Z + O) := by
+    rw [tabLayout_loc]; exact hA
+  have hW' : WorldRep (tabLayout A) st.speicher (σ.lese Λ (Expr.slot t f i hL).orte) :=
+    (worldRep_lese _ _ _ _ _).mpr hW
+  obtain ⟨hrep, -, -, hword⟩ := hW' t k f _ hloc
+  obtain ⟨lo, hi, hT', hlo, hhi, hA8⟩ := repOk_int _ _ hrep
+  simp only [senkStmtSkal, hy, hB, hZ, hO, hT'] at h
+  by_cases hck : (skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+      adrOk (basisKeinForm c.adr)) = true
+  · rw [if_pos hck] at h
+    simp only [Option.some.injEq] at h
+    subst h
+    have hsk : skalaOk Z = true := by
+      simp only [Bool.and_eq_true] at hck
+      exact hck.1.1
+    have hEy : st.register (abbOf c _ y) = intWort k := by rw [← hkdef]; exact hE _ _ y
+    have hidxa : abbOf c _ y ≠ c.adr := (cfgOk_frei c hc y).2.2
+    have hk0 : 0 ≤ k := by
+      have h0 := (Val.int_bereich (ρ.get y)).1
+      rw [hkdef] at h0
+      exact h0
+    have hZ1 : 1 ≤ Z := skalaOk_pos Z hsk
+    have hk_le : k.toNat ≤ k.toNat * Z := by
+      have h1 : k.toNat * 1 ≤ k.toNat * Z :=
+        Nat.mul_le_mul (Nat.le_refl _) hZ1
+      rw [Nat.mul_one] at h1
+      exact h1
+    have hltN : k.toNat < 2 ^ 64 := by omega
+    have hcast : ((2 ^ 64 : Nat) : Int) = (2 ^ 64 : Int) := by decide
+    have hltI : k < ((2 ^ 64 : Nat) : Int) := (Int.toNat_lt hk0).mp hltN
+    rw [hcast] at hltI
+    have hM : st.register (abbOf c _ y) = natAdresse k.toNat := by
+      have hEyv : st.register (abbOf c _ y) = intWort k := hEy
+      rw [hEyv]; exact intWort_nat k hk0 hltI
+    have hev : eval (σ.lese Λ (Expr.slot t f i hL).orte) i
+        (σ.lese Λ (Expr.slot t f i hL).orte) ρ = ρ.get y :=
+      idxVarG?_eval i y _ _ ρ hy
+    have heval : (eval (σ.lese Λ (Expr.slot t f i hL).orte) (Expr.slot t f i hL)
+        (σ.lese Λ (Expr.slot t f i hL).orte) ρ) =
+        (σ.lese Λ (Expr.slot t f i hL).orte).slots t k f := by
+      have hrfl : (eval (σ.lese Λ (Expr.slot t f i hL).orte) (Expr.slot t f i hL)
+          (σ.lese Λ (Expr.slot t f i hL).orte) ρ) =
+          (σ.lese Λ (Expr.slot t f i hL).orte).slots t
+            (eval (σ.lese Λ (Expr.slot t f i hL).orte) i
+              (σ.lese Λ (Expr.slot t f i hL).orte) ρ).n f := rfl
+      rw [hev, hkdef] at hrfl
+      exact hrfl
+    have hrdW0 := hword lo hi hT'
+    unfold RepSlot at hrdW0
+    obtain ⟨s1, hrun1, hdst1, -, hmem1, hreg1⟩ :=
+      skalChunk_lauf c hc _ hidxa B O Z _ st hM hsk _ hrdW0
+    let s' := schrittRegister s1
+      (ripNach s1.rip (kanon (Befehl.movReg64 (abbOf c _ x) c.dst)).laenge)
+      s1.flags (abbOf c _ x) (s1.register c.dst)
+    have hmov : schritt (kanon (Befehl.movReg64 (abbOf c _ x) c.dst)) s1 = some s' :=
+      schritt_movReg64 _ _ _ _ (laengeOk_encode _) rfl
+    have heprog : ((skalChunk c (abbOf c _ y) B O Z ++
+        [Befehl.movReg64 (abbOf c _ x) c.dst]).map kanon) =
+        (skalChunk c (abbOf c _ y) B O Z).map kanon ++
+          [kanon (Befehl.movReg64 (abbOf c _ x) c.dst)] := by
+      rw [List.map_append, List.map_cons, List.map_nil]
+    have hrun : lauf (((skalChunk c (abbOf c _ y) B O Z ++
+        [Befehl.movReg64 (abbOf c _ x) c.dst]).map kanon)) st = some s' := by
+      rw [heprog, lauf_anhang _ _ _ s1 hrun1, lauf_einzeln_gleich]
+      exact hmov
+    have hmem : s'.speicher = st.speicher :=
+      (schrittRegister_speicher _ _ _ _ _).trans hmem1
+    have hsrc : execStmt Ok passes R ((.assignVar x (Expr.slot t f i hL)) : Stmt D V l Γ Λ Λ) σ ρ =
+        .ok (σ.lese Λ (Expr.slot t f i hL).orte)
+          (ρ.set x (eval (σ.lese Λ (Expr.slot t f i hL).orte) (Expr.slot t f i hL)
+            (σ.lese Λ (Expr.slot t f i hL).orte) ρ)) := rfl
+    have hW2 : WorldRep (tabLayout A) s'.speicher
+        (σ.lese Λ (Expr.slot t f i hL).orte) := by
+      rw [hmem]; exact hW'
+    have hE' : EnvRepr
+        (ρ.set x (eval (σ.lese Λ (Expr.slot t f i hL).orte) (Expr.slot t f i hL)
+          (σ.lese Λ (Expr.slot t f i hL).orte) ρ)) s'.register (abbOf c) := by
+      intro lo' hi' z
+      by_cases hidx : varIdx z = varIdx x
+      · have hab : abbOf c _ z = abbOf c _ x := abbOf_cong c x z hidx
+        have hgetN : (((ρ.set x (eval (σ.lese Λ (Expr.slot t f i hL).orte)
+            (Expr.slot t f i hL) (σ.lese Λ (Expr.slot t f i hL).orte) ρ)).get z).n) =
+            (cast (congrArg (Wert D) hT')
+              (eval (σ.lese Λ (Expr.slot t f i hL).orte) (Expr.slot t f i hL)
+                (σ.lese Λ (Expr.slot t f i hL).orte) ρ)).n :=
+          getN_idx_eq x lo hi lo' hi' z _ _ hT' hidx
+        have hreg : s'.register (abbOf c _ z) = s1.register c.dst := by
+          show regSet (s1.register) (abbOf c _ x) (s1.register c.dst) (abbOf c _ z) = _
+          rw [hab]
+          exact regSet_gleich _ _ _
+        rw [hreg, hdst1, hgetN, heval]
+        exact (intWort_zahlWort _ hlo hhi).symm
+      · have hget : (((ρ.set x (eval (σ.lese Λ (Expr.slot t f i hL).orte)
+            (Expr.slot t f i hL) (σ.lese Λ (Expr.slot t f i hL).orte) ρ)).get z)) =
+            ρ.get z :=
+          envGet_set_idx x z _ _ hidx
+        have habne : abbOf c _ z ≠ abbOf c _ x :=
+          fun heq => hidx (hvars _ _ heq)
+        have hdst_ne : abbOf c _ z ≠ c.dst := (cfgOk_frei c hc z).1
+        have hadr_ne : abbOf c _ z ≠ c.adr := (cfgOk_frei c hc z).2.2
+        have hreg : s'.register (abbOf c _ z) = st.register (abbOf c _ z) := by
+          have e1 : s'.register (abbOf c _ z) = s1.register (abbOf c _ z) := by
+            show regSet (s1.register) (abbOf c _ x) (s1.register c.dst) (abbOf c _ z) = _
+            rw [regSet_fremd _ _ _ _ habne]
+          rw [e1]; exact hreg1 _ hdst_ne hadr_ne
+        have hEold := hE lo' hi' z
+        rw [hreg, hget]; exact hEold
+    exact ⟨s', _, _, hrun, hsrc, hW2, hE'⟩
+  · rw [if_neg hck] at h; contradiction
+
+/-- STATEMENT CORRECTNESS, pointer-through read: `x := p->f` at a
+    variable index runs the same chunk plus publish move and matches the
+    real `execStmt` outcome. Mirrors the direct case; only the evaluation
+    equation and the logged read set differ (the pointer reads nothing). -/
+theorem senkStmtSkal_korrekt_durch (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = true)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {n : Nat} {rwP : Bool} (p : Expr D Γ Λ (.ptr n rwP))
+    (t : D.Tab) (ht : D.tabNr n = some t) (f : D.Feld t)
+    (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ)
+    (x : Var Γ (D.typ t f))
+    (y : Var Γ (.index (D.count t))) (hy : idxVarG? i = some y)
+    (B Z O : Nat)
+    (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = some O)
+    (ρ : Env D Γ) (σ : World D) (st : Zustand)
+    (hE : EnvRepr ρ st.register (abbOf c)) (hW : WorldRep (tabLayout A) st.speicher σ)
+    (hok : stmtSkalOk c ρ ((.assignVar x (Expr.durch p t ht f i hL)) : Stmt D V l Γ Λ Λ))
+    (Ok : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (prog : List Befehl)
+    (h : senkStmtSkal A c ((.assignVar x (Expr.durch p t ht f i hL)) : Stmt D V l Γ Λ Λ) = some prog) :
+    ∃ s' σ' ρ', lauf (prog.map kanon) st = some s' ∧
+      execStmt Ok passes R ((.assignVar x (Expr.durch p t ht f i hL)) : Stmt D V l Γ Λ Λ) σ ρ = .ok σ' ρ' ∧
+      WorldRep (tabLayout A) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf c) := by
+  simp only [stmtSkalOk, hy] at hok
+  obtain ⟨hbnd, hvars⟩ := hok
+  obtain ⟨k, hkdef⟩ : ∃ k, (ρ.get y).n = k := ⟨(ρ.get y).n, rfl⟩
+  rw [hkdef] at hbnd
+  have hA : PipelineTables.feldAdr A t k f =
+      some (B + k.toNat * Z + O) := by
+    unfold PipelineTables.feldAdr
+    simp only [hB, hZ, hO]
+    rw [if_pos hbnd]
+  have hloc : (tabLayout A).loc t k f = some (B + k.toNat * Z + O) := by
+    rw [tabLayout_loc]; exact hA
+  have hW' : WorldRep (tabLayout A) st.speicher
+      (σ.lese Λ (Expr.durch p t ht f i hL).orte) :=
+    (worldRep_lese _ _ _ _ _).mpr hW
+  obtain ⟨hrep, -, -, hword⟩ := hW' t k f _ hloc
+  obtain ⟨lo, hi, hT', hlo, hhi, hA8⟩ := repOk_int _ _ hrep
+  simp only [senkStmtSkal, hy, hB, hZ, hO, hT'] at h
+  by_cases hck : (skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+      adrOk (basisKeinForm c.adr)) = true
+  · rw [if_pos hck] at h
+    simp only [Option.some.injEq] at h
+    subst h
+    have hsk : skalaOk Z = true := by
+      simp only [Bool.and_eq_true] at hck
+      exact hck.1.1
+    have hEy : st.register (abbOf c _ y) = intWort k := by rw [← hkdef]; exact hE _ _ y
+    have hidxa : abbOf c _ y ≠ c.adr := (cfgOk_frei c hc y).2.2
+    have hk0 : 0 ≤ k := by
+      have h0 := (Val.int_bereich (ρ.get y)).1
+      rw [hkdef] at h0
+      exact h0
+    have hZ1 : 1 ≤ Z := skalaOk_pos Z hsk
+    have hk_le : k.toNat ≤ k.toNat * Z := by
+      have h1 : k.toNat * 1 ≤ k.toNat * Z :=
+        Nat.mul_le_mul (Nat.le_refl _) hZ1
+      rw [Nat.mul_one] at h1
+      exact h1
+    have hltN : k.toNat < 2 ^ 64 := by omega
+    have hcast : ((2 ^ 64 : Nat) : Int) = (2 ^ 64 : Int) := by decide
+    have hltI : k < ((2 ^ 64 : Nat) : Int) := (Int.toNat_lt hk0).mp hltN
+    rw [hcast] at hltI
+    have hM : st.register (abbOf c _ y) = natAdresse k.toNat := by
+      have hEyv : st.register (abbOf c _ y) = intWort k := hEy
+      rw [hEyv]; exact intWort_nat k hk0 hltI
+    have hev : eval (σ.lese Λ (Expr.durch p t ht f i hL).orte) i
+        (σ.lese Λ (Expr.durch p t ht f i hL).orte) ρ = ρ.get y :=
+      idxVarG?_eval i y _ _ ρ hy
+    have heval : (eval (σ.lese Λ (Expr.durch p t ht f i hL).orte)
+        (Expr.durch p t ht f i hL)
+        (σ.lese Λ (Expr.durch p t ht f i hL).orte) ρ) =
+        (σ.lese Λ (Expr.durch p t ht f i hL).orte).slots t k f := by
+      have hrfl : (eval (σ.lese Λ (Expr.durch p t ht f i hL).orte)
+          (Expr.durch p t ht f i hL)
+          (σ.lese Λ (Expr.durch p t ht f i hL).orte) ρ) =
+          (σ.lese Λ (Expr.durch p t ht f i hL).orte).slots t
+            (eval (σ.lese Λ (Expr.durch p t ht f i hL).orte) i
+              (σ.lese Λ (Expr.durch p t ht f i hL).orte) ρ).n f := rfl
+      rw [hev, hkdef] at hrfl
+      exact hrfl
+    have hrdW0 := hword lo hi hT'
+    unfold RepSlot at hrdW0
+    obtain ⟨s1, hrun1, hdst1, -, hmem1, hreg1⟩ :=
+      skalChunk_lauf c hc _ hidxa B O Z _ st hM hsk _ hrdW0
+    let s' := schrittRegister s1
+      (ripNach s1.rip (kanon (Befehl.movReg64 (abbOf c _ x) c.dst)).laenge)
+      s1.flags (abbOf c _ x) (s1.register c.dst)
+    have hmov : schritt (kanon (Befehl.movReg64 (abbOf c _ x) c.dst)) s1 = some s' :=
+      schritt_movReg64 _ _ _ _ (laengeOk_encode _) rfl
+    have heprog : ((skalChunk c (abbOf c _ y) B O Z ++
+        [Befehl.movReg64 (abbOf c _ x) c.dst]).map kanon) =
+        (skalChunk c (abbOf c _ y) B O Z).map kanon ++
+          [kanon (Befehl.movReg64 (abbOf c _ x) c.dst)] := by
+      rw [List.map_append, List.map_cons, List.map_nil]
+    have hrun : lauf (((skalChunk c (abbOf c _ y) B O Z ++
+        [Befehl.movReg64 (abbOf c _ x) c.dst]).map kanon)) st = some s' := by
+      rw [heprog, lauf_anhang _ _ _ s1 hrun1, lauf_einzeln_gleich]
+      exact hmov
+    have hmem : s'.speicher = st.speicher :=
+      (schrittRegister_speicher _ _ _ _ _).trans hmem1
+    have hsrc : execStmt Ok passes R
+        ((.assignVar x (Expr.durch p t ht f i hL)) : Stmt D V l Γ Λ Λ) σ ρ =
+        .ok (σ.lese Λ (Expr.durch p t ht f i hL).orte)
+          (ρ.set x (eval (σ.lese Λ (Expr.durch p t ht f i hL).orte)
+            (Expr.durch p t ht f i hL)
+            (σ.lese Λ (Expr.durch p t ht f i hL).orte) ρ)) := rfl
+    have hW2 : WorldRep (tabLayout A) s'.speicher
+        (σ.lese Λ (Expr.durch p t ht f i hL).orte) := by
+      rw [hmem]; exact hW'
+    have hE' : EnvRepr
+        (ρ.set x (eval (σ.lese Λ (Expr.durch p t ht f i hL).orte)
+          (Expr.durch p t ht f i hL)
+          (σ.lese Λ (Expr.durch p t ht f i hL).orte) ρ)) s'.register (abbOf c) := by
+      intro lo' hi' z
+      by_cases hidx : varIdx z = varIdx x
+      · have hab : abbOf c _ z = abbOf c _ x := abbOf_cong c x z hidx
+        have hgetN : (((ρ.set x (eval (σ.lese Λ (Expr.durch p t ht f i hL).orte)
+            (Expr.durch p t ht f i hL)
+            (σ.lese Λ (Expr.durch p t ht f i hL).orte) ρ)).get z).n) =
+            (cast (congrArg (Wert D) hT')
+              (eval (σ.lese Λ (Expr.durch p t ht f i hL).orte)
+                (Expr.durch p t ht f i hL)
+                (σ.lese Λ (Expr.durch p t ht f i hL).orte) ρ)).n :=
+          getN_idx_eq x lo hi lo' hi' z _ _ hT' hidx
+        have hreg : s'.register (abbOf c _ z) = s1.register c.dst := by
+          show regSet (s1.register) (abbOf c _ x) (s1.register c.dst) (abbOf c _ z) = _
+          rw [hab]
+          exact regSet_gleich _ _ _
+        rw [hreg, hdst1, hgetN, heval]
+        exact (intWort_zahlWort _ hlo hhi).symm
+      · have hget : (((ρ.set x (eval (σ.lese Λ (Expr.durch p t ht f i hL).orte)
+            (Expr.durch p t ht f i hL)
+            (σ.lese Λ (Expr.durch p t ht f i hL).orte) ρ)).get z)) =
+            ρ.get z :=
+          envGet_set_idx x z _ _ hidx
+        have habne : abbOf c _ z ≠ abbOf c _ x :=
+          fun heq => hidx (hvars _ _ heq)
+        have hdst_ne : abbOf c _ z ≠ c.dst := (cfgOk_frei c hc z).1
+        have hadr_ne : abbOf c _ z ≠ c.adr := (cfgOk_frei c hc z).2.2
+        have hreg : s'.register (abbOf c _ z) = st.register (abbOf c _ z) := by
+          have e1 : s'.register (abbOf c _ z) = s1.register (abbOf c _ z) := by
+            show regSet (s1.register) (abbOf c _ x) (s1.register c.dst) (abbOf c _ z) = _
+            rw [regSet_fremd _ _ _ _ habne]
+          rw [e1]; exact hreg1 _ hdst_ne hadr_ne
+        have hEold := hE lo' hi' z
+        rw [hreg, hget]; exact hEold
+    exact ⟨s', _, _, hrun, hsrc, hW2, hE'⟩
+  · rw [if_neg hck] at h; contradiction
+
+/-- DISPATCHER for block-level reads: routes each statement shape to its
+    helper (success) or refusal. The splits mirror the expression-level
+    inversion; the helpers own all the arithmetic. -/
+theorem senkStmtSkal_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = true)
+    {V : _} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ')
+    (ρ : Env D Γ) (σ : World D) (st : Zustand)
+    (hE : EnvRepr ρ st.register (abbOf c)) (hW : WorldRep (tabLayout A) st.speicher σ)
+    (hok : stmtSkalOk c ρ s)
+    (Ok : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (p : List Befehl) (h : senkStmtSkal A c s = some p) :
+    ∃ s' σ' ρ', lauf (p.map kanon) st = some s' ∧
+      execStmt Ok passes R s σ ρ = .ok σ' ρ' ∧
+      WorldRep (tabLayout A) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf c) := by
+  cases s with
+  | assignVar x e =>
+    cases e with
+    | slot t f i hL =>
+      cases hy : idxVarG? i with
+      | none =>
+        simp [senkStmtSkal, hy] at h
+      | some y =>
+        cases hB : PipelineTables.ankerBasis A t with
+        | none =>
+          simp [senkStmtSkal, hy, hB] at h
+        | some B =>
+          cases hZ : PipelineTables.ankerZeile A t with
+          | none =>
+            simp [senkStmtSkal, hy, hB, hZ] at h
+          | some Z =>
+            cases hO : PipelineTables.feldOff A t f with
+            | none =>
+              simp [senkStmtSkal, hy, hB, hZ, hO] at h
+            | some O =>
+              exact senkStmtSkal_korrekt_slot (Λ' := Λ) A c hc t f i hL x y hy B Z O
+                hB hZ hO ρ σ st hE hW hok Ok passes R p h
+    | durch q t ht f i hL =>
+      cases hy : idxVarG? i with
+      | none =>
+        simp [senkStmtSkal, hy] at h
+      | some y =>
+        cases hB : PipelineTables.ankerBasis A t with
+        | none =>
+          simp [senkStmtSkal, hy, hB] at h
+        | some B =>
+          cases hZ : PipelineTables.ankerZeile A t with
+          | none =>
+            simp [senkStmtSkal, hy, hB, hZ] at h
+          | some Z =>
+            cases hO : PipelineTables.feldOff A t f with
+            | none =>
+              simp [senkStmtSkal, hy, hB, hZ, hO] at h
+            | some O =>
+              exact senkStmtSkal_korrekt_durch A c hc q t ht f i hL x y hy B Z O
+                hB hZ hO ρ σ st hE hW hok Ok passes R p h
+    | _ => simp [senkStmtSkal] at h
+  | _ => simp [senkStmtSkal] at h
 
 /- CUTS:
    Environment get/set facts done. Statement/block lowering, the closing
