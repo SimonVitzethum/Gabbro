@@ -460,13 +460,150 @@ theorem ab_quelle : ∃ σ' ρ',
     (σ'.globs Unit.unit).n = 42 :=
   ⟨_, _, rfl, rfl, rfl, rfl⟩
 
+/-! ## 8. Block correspondence and joint witness.
+
+    `abblock_correct` (in the style of `pipeline_correct_entry`): any
+    source run of the block yields the computed values, and the atomic
+    access sequence lowers as emitted. `abblock_zeuge` instantiates
+    every generic theorem of this file jointly on non-degenerate runs:
+    the source run changes memory (row 0: 7 -> 42, row 1: 9 -> 17,
+    atomic 41 -> 42), the target run changes memory, a table is
+    written, the CAS failure stutters at its bound address, and one
+    lock section brackets as emitted. -/
+
+/-- **BLOCK CORRESPONDENCE.** Any source run of the block ends with
+    row 0 = 42 (the shared-atomic read), row 1 = 17, the atomic at 42,
+    while the access sequence lowers to the two plain MOVs. -/
+theorem abblock_correct (σ' : World abD) (ρ' : Env abD [])
+    (hsrc : execBlock abO 0 abR abSrc abSigma abEnv = .ok σ' ρ') :
+    (σ'.slots () 0 ()).n = 42 ∧ (σ'.slots () 1 ()).n = 17 ∧
+    (σ'.globs Unit.unit).n = 42 ∧
+    PipelineAtomics.senkListe abOps =
+      some [PipelineAtomics.ZielOp.movStore .rbp .rax 0,
+        PipelineAtomics.ZielOp.movLoad .rax .rbp 0] := by
+  obtain ⟨σq, ρq, hq, hq0, hq1, hqg⟩ := ab_quelle
+  rw [hq] at hsrc
+  cases hsrc
+  exact ⟨hq0, hq1, hqg, abOps_senk⟩
+
+/-- **JOINT WITNESS.** The source run, the lowering, the written
+    table, a reached memory-changing target run, the bracketed lock
+    section, the register-bound CAS failure, and the block refusal
+    hold together. Non-degenerate on both sides. -/
+theorem abblock_zeuge :
+    (∃ σ' ρ', execBlock abO 0 abR abSrc abSigma abEnv = .ok σ' ρ' ∧
+      (σ'.slots () 0 ()).n = 42 ∧ (σ'.slots () 1 ()).n = 17 ∧
+      (σ'.globs Unit.unit).n = 42 ∧
+      (abSigma.slots () 0 ()).n = 7 ∧ (abSigma.slots () 1 ()).n = 9 ∧
+      (abSigma.globs Unit.unit).n = 41 ∧
+      abV.schreibt () = true) ∧
+    PipelineAtomics.senkListe abOps =
+      some [PipelineAtomics.ZielOp.movStore .rbp .rax 0,
+        PipelineAtomics.ZielOp.movLoad .rax .rbp 0] ∧
+    (∃ s2 s3 : TSOZustand, TSOErreichbar fdStart s2 ∧
+      mfenceSchrittAusBytes pinMfence s2 0 = some s3 ∧
+      s2.mem.bytes fdX ≠ s3.mem.bytes fdX ∧ s2.puffer 0 ≠ [] ∧
+      witD.schreibt () () = true) ∧
+    (∃ sN : TSOZustand,
+      SperrLauf 0 [[PipelineAtomics.AtomQuelle.zaun]] fdS2 sN ∧
+      TSOErreichbar fdS2 sN ∧ sN.puffer 0 = [] ∧
+      (∀ d : Nat, d ≠ 0 → sN.puffer d = fdS2.puffer d)) ∧
+    casSchritt (natAdresse 8208) (abM.zu.register .rax)
+      (abM.zu.register .rcx) 0 (toTSO abM) =
+      some (toTSO abM, false) ∧
+    PipelineAtomics.senkListe ([] ++
+      [PipelineAtomics.AtomQuelle.sperre
+        [PipelineAtomics.AtomQuelle.sperre
+          [PipelineAtomics.AtomQuelle.zaun]]] ++
+      ([] : List PipelineAtomics.AtomQuelle)) = none := by
+  obtain ⟨σq, ρq, hq, hq0, hq1, hqg⟩ := ab_quelle
+  obtain ⟨s2, s3, _, _, _, _, _, hreach, hdrain, hchg, hbuf0, _,
+    hschreibt, _, _, _⟩ := PipelineAtomics.senkAtom_zeuge
+  obtain ⟨sN, hlauf, hreach2, hleer2, hfremd2⟩ := ab_sperrlauf_inst
+  obtain ⟨_, hstutter, _⟩ := ab_cas_fehlschlag_inst
+  refine ⟨⟨σq, ρq, hq, hq0, hq1, hqg, rfl, rfl, rfl, rfl⟩, abOps_senk,
+    ⟨s2, s3, hreach, hdrain, hchg, hbuf0, hschreibt⟩,
+    ⟨sN, hlauf, hreach2, hleer2, hfremd2⟩, hstutter,
+    abblock_refuses_nested [] []⟩
+
 /- CUTS: what is not proved here
-     Proved here so far: nothing beyond `SperrSchritt` (skeleton).
+     Proved here (all over REUSED accepted definitions -- no new machine,
+     no new decoder row, no second IR, no source/checker/goal change):
+     - block chaining (§1): `SperrSchritt` (one bracketed section step)
+       and `SperrLauf` (sections chained state to state) with
+       `sperrlauf_erreichbar` (one reached run via lane-1163
+       `sperre_korrekt` + `erreichbar_kette`), `sperrlauf_leer` (a
+       nonempty run ends drained) and `sperrlauf_fremd` (foreign
+       buffers intact);
+     - CAS failure at register level (§2): `bind_cas_fehlschlag` (the
+       twin of lane-1203 `bind_cas_erfolg`: the lowered LOCK CMPXCHG
+       whose rax comparison fails stutters at the address the register
+       pair names, decided `false` ledger), via the accepted
+       `lockVoll_cmpxchg_fehlschlag_adapter`;
+     - block refusals (§3) and the block access sequence (§5):
+       `block_nested_verweigert`, `block_leer_ok`,
+       `block_singleton_ok`, `gift_block_val_nested`,
+       `gift_block_val_ueberlang`, `abOps`/`abOps_senk` (release write
+       then acquire read lower to two plain MOVs),
+       `abblock_refuses_nested` (a nested section refuses anywhere in
+       a block);
+     - the real source block (§4): witness declaration `abD` (integer
+       table, shared-atomic global, one lock), the straight-line
+       program `abSrc` (`T[0] = 35; A = 42; locks L { T[1] = 17 };
+       T[0] = A;`) with its real `execBlock` run `ab_quelle`
+       (row 0 = 42, row 1 = 17, atomic 42);
+     - the concrete CAS machine (§6): `abM` (word 10 at the global,
+       rax 11) with `ab_cas_fehlschlag_inst` (register-bound stutter);
+     - the concrete section run (§7): `ab_sperrlauf_inst` (one
+       MFENCE-bracketed section over the accepted witness drains,
+       exit via proved drain idempotence);
+     - the correspondence (§8): `abblock_correct` (any source run
+       yields the computed values with the emitted lowering) and the
+       joint non-degenerate witness `abblock_zeuge` (source and target
+       memory change, a written table, the bound CAS failure, the
+       bracketed section, the refusal).
      NOT proved here, and not claimed:
-     - No block run yet; no CAS-failure binding; no source link.
-     - No seq_cst total order, no fairness, no retry bound.
+     - No TSO-store word install for the block's own writes: the two
+       plain MOVs correspond per access (lane 1163); the 8-issue word
+       install stays with lane 1203 (`wort_installation`).
+     - No integer-slot machine run for the block's plain writes: they
+       stay with the accepted `Pipeline` lowering (cited, never
+       redone); this file lowers exactly the atomic sequence.
+     - No SFENCE/LFENCE brackets for lock sections (sections stay
+       MFENCE-bracketed); no narrow-fence block claim.
+     - No per-step framing of ARBITRARY middle runs inside a section:
+       each `SperrSchritt` carries its foreign frame as an explicit
+       premise.
+     - No seq_cst total order (inherited `kein_seqcst_total`), no
+       fairness, no CAS retry bound, no timing or cost.
+     - No interrupt, device, MMIO or DMA claim.
 -/
 
-#print axioms SperrSchritt
+#print axioms sperrlauf_erreichbar
+#print axioms sperrlauf_leer
+#print axioms sperrlauf_fremd
+#print axioms bind_cas_fehlschlag
+#print axioms block_nested_verweigert
+#print axioms block_leer_ok
+#print axioms block_singleton_ok
+#print axioms gift_block_val_nested
+#print axioms gift_block_val_ueberlang
+#print axioms abDarf
+#print axioms abGDarf
+#print axioms ab_quelle
+#print axioms abOps_senk
+#print axioms abblock_refuses_nested
+#print axioms ab_hrd
+#print axioms ab_hali
+#print axioms ab_heff
+#print axioms ab_hfehl
+#print axioms ab_hbuf
+#print axioms ab_hwr_some
+#print axioms ab_cas_fehlschlag_inst
+#print axioms ab_drain_leer_ident
+#print axioms ab_drain1_some
+#print axioms ab_sperrlauf_inst
+#print axioms abblock_correct
+#print axioms abblock_zeuge
 
 end Gabbro.Grammatik.X86.PipelineAtomicsBlock
