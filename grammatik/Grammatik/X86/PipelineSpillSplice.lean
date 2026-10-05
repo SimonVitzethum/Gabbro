@@ -458,6 +458,219 @@ theorem spleiss_haelt_bedeutung (c : PipeCfg) (L : Layout D)
     exact spleissPlan_saveReg c r P pts c.codeBase bytes.length daten
       hspleiss p hp hdir
 
+/-! ## 6. Callee-saved and argument handling, consistent with
+    `PipelineCalls`.
+
+    The `Stapel` layout puts spills at bare indices below `b.spill`,
+    callee-saved words behind them, stack-passed arguments last.
+    Callee-saved saves ARE lane 1191 spill fragments at the reserved
+    callee indices (the canonical slot address is the same
+    `spillSlot`); every spill slot is proved disjoint from every
+    callee-saved slot (`spill_gerettet_getrennt`) and every
+    stack-argument slot (`bereich_getrennt`), and stack-passed
+    arguments are in-frame (`rufOk_argSchranke`). -/
+
+/-- THE CALL-SPLICE VALIDATOR: an admitted call layout (`rufOk`:
+    frame fit, 64-bit top, exact stack-word count, six callee-saved
+    words, no red zone) with an admitted spill plan whose slots all
+    live at bare spill indices below `b.spill`. -/
+def spleissRufOk (b : Belegung) (r : Rahmen) (slots : List Nat)
+    (nArgs : Nat) (benutztRot : Bool) (codeBase codeLen : Nat)
+    (daten : List Nat) : Bool :=
+  rufOk b r nArgs benutztRot &&
+  spillPlanOk r slots codeBase codeLen daten &&
+  slots.all (fun s => decide (s < b.spill))
+
+/-- The call layout is admitted. -/
+theorem spleissRuf_ruf (b : Belegung) (r : Rahmen) (slots : List Nat)
+    (nArgs : Nat) (benutztRot : Bool) (codeBase codeLen : Nat)
+    (daten : List Nat)
+    (h : spleissRufOk b r slots nArgs benutztRot codeBase codeLen daten
+      = true) :
+    rufOk b r nArgs benutztRot = true := by
+  unfold spleissRufOk at h
+  simp only [Bool.and_eq_true] at h
+  exact h.1.1
+
+/-- The spill plan is admitted. -/
+theorem spleissRuf_spill (b : Belegung) (r : Rahmen) (slots : List Nat)
+    (nArgs : Nat) (benutztRot : Bool) (codeBase codeLen : Nat)
+    (daten : List Nat)
+    (h : spleissRufOk b r slots nArgs benutztRot codeBase codeLen daten
+      = true) :
+    spillPlanOk r slots codeBase codeLen daten = true := by
+  unfold spleissRufOk at h
+  simp only [Bool.and_eq_true] at h
+  exact h.1.2
+
+/-- Every spill slot lives at a bare spill index. -/
+theorem spleissRuf_unten (b : Belegung) (r : Rahmen) (slots : List Nat)
+    (nArgs : Nat) (benutztRot : Bool) (codeBase codeLen : Nat)
+    (daten : List Nat)
+    (h : spleissRufOk b r slots nArgs benutztRot codeBase codeLen daten
+      = true)
+    (s : Nat) (hs : s ∈ slots) : s < b.spill := by
+  unfold spleissRufOk at h
+  simp only [Bool.and_eq_true] at h
+  have hall := (List.all_eq_true.mp h.2) s hs
+  exact of_decide_eq_true hall
+
+/-- SPILL VS CALLEE-SAVED: no spill slot shares a byte with a
+    callee-saved slot. -/
+theorem spleissRuf_spillGerettet (b : Belegung) (r : Rahmen)
+    (slots : List Nat) (nArgs : Nat) (benutztRot : Bool)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spleissRufOk b r slots nArgs benutztRot codeBase codeLen daten
+      = true)
+    (s : Nat) (hs : s ∈ slots) (j : Nat) (hj : j < b.gerettet) :
+    Disjunkt (spillSlot r s) (spillSlot r (b.gerettetIdx j)) := by
+  have hr := spleissRuf_ruf b r slots nArgs benutztRot codeBase codeLen
+    daten h
+  obtain ⟨hp, hle, -, -, -⟩ := rufOk_teile b r nArgs benutztRot hr
+  have hpasst : b.braucht * 8 ≤ r.tiefe := by
+    unfold Belegung.passt at hp
+    exact of_decide_eq_true hp
+  have hb : s < b.spill := spleissRuf_unten b r slots nArgs benutztRot
+    codeBase codeLen daten h s hs
+  exact spill_gerettet_getrennt b r s j hb hj hpasst hle
+
+/-- SPILL VS STACK ARGUMENTS: no spill slot shares a byte with a
+    stack-passed argument slot. -/
+theorem spleissRuf_spillStapel (b : Belegung) (r : Rahmen)
+    (slots : List Nat) (nArgs : Nat) (benutztRot : Bool)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spleissRufOk b r slots nArgs benutztRot codeBase codeLen daten
+      = true)
+    (s : Nat) (hs : s ∈ slots) (j : Nat) (hj : j < b.stapelArgs) :
+    Disjunkt (spillSlot r s) (spillSlot r (b.stapelArgIdx j)) := by
+  have hr := spleissRuf_ruf b r slots nArgs benutztRot codeBase codeLen
+    daten h
+  obtain ⟨hp, hle, -, -, -⟩ := rufOk_teile b r nArgs benutztRot hr
+  have hpasst : b.braucht * 8 ≤ r.tiefe := by
+    unfold Belegung.passt at hp
+    exact of_decide_eq_true hp
+  have hb : s < b.spill := spleissRuf_unten b r slots nArgs benutztRot
+    codeBase codeLen daten h s hs
+  have hbb : b.spill + b.gerettet + b.stapelArgs ≤ r.schlitzZahl := by
+    unfold Belegung.braucht at hpasst
+    unfold Rahmen.schlitzZahl
+    omega
+  unfold Belegung.stapelArgIdx
+  exact bereich_getrennt r 0 b.spill (b.spill + b.gerettet)
+    (b.spill + b.gerettet + b.stapelArgs) s (b.spill + b.gerettet + j)
+    (Nat.zero_le _) hb (by omega) (by omega) (Or.inl (by omega))
+    (by omega) hbb hle
+
+/-- SPILL VS STACK-PASSED ARGUMENT: at call-argument position `i ≥ 6`
+    the stack slot is disjoint from every spill slot. -/
+theorem spleissRuf_spillArg (b : Belegung) (r : Rahmen)
+    (slots : List Nat) (nArgs : Nat) (benutztRot : Bool)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spleissRufOk b r slots nArgs benutztRot codeBase codeLen daten
+      = true)
+    (s : Nat) (hs : s ∈ slots) (i : Nat) (hi : i < nArgs) (h6 : 6 ≤ i) :
+    Disjunkt (spillSlot r s) (r.schlitzAddr (argStapelIdx b i)) := by
+  have hr := spleissRuf_ruf b r slots nArgs benutztRot codeBase codeLen
+    daten h
+  obtain ⟨-, -, hfit, -, -⟩ := rufOk_teile b r nArgs benutztRot hr
+  have hj : i - 6 < b.stapelArgs := by omega
+  have hdis := spleissRuf_spillStapel b r slots nArgs benutztRot codeBase
+    codeLen daten h s hs (i - 6) hj
+  have heq : argStapelIdx b i = b.stapelArgIdx (i - 6) := rfl
+  rw [heq]
+  exact hdis
+
+/-- Every callee-saved register has an in-frame slot. -/
+theorem spleissRuf_rettetAlle (b : Belegung) (r : Rahmen)
+    (slots : List Nat) (nArgs : Nat) (benutztRot : Bool)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spleissRufOk b r slots nArgs benutztRot codeBase codeLen daten
+      = true)
+    (k : Nat) (hk : k < calleeGerettet.length) :
+    b.gerettetIdx k < r.schlitzZahl := by
+  have hr := spleissRuf_ruf b r slots nArgs benutztRot codeBase codeLen
+    daten h
+  obtain ⟨hp, -, -, hg, -⟩ := rufOk_teile b r nArgs benutztRot hr
+  have hpasst : b.braucht * 8 ≤ r.tiefe := by
+    unfold Belegung.passt at hp
+    exact of_decide_eq_true hp
+  have hbb : b.spill + b.gerettet + b.stapelArgs ≤ r.schlitzZahl := by
+    unfold Belegung.braucht at hpasst
+    unfold Rahmen.schlitzZahl
+    omega
+  rw [calleeGerettet_sechs] at hk
+  unfold Belegung.gerettetIdx
+  omega
+
+/-- ARGUMENT CARRIAGE: argument `i` travels in a register (`i < 6`)
+    or on the stack in-frame (`6 ≤ i`). -/
+theorem spleissRuf_argTraeger (b : Belegung) (r : Rahmen)
+    (slots : List Nat) (nArgs : Nat) (benutztRot : Bool)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spleissRufOk b r slots nArgs benutztRot codeBase codeLen daten
+      = true)
+    (i : Nat) (hi : i < nArgs) :
+    (∃ rg, argReg i = some rg) ∨
+      (6 ≤ i ∧ argStapelIdx b i < r.schlitzZahl) := by
+  have hr := spleissRuf_ruf b r slots nArgs benutztRot codeBase codeLen
+    daten h
+  rcases Nat.lt_or_ge i 6 with h6 | h6
+  · left
+    have h5 : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 := by omega
+    rcases h5 with rfl | rfl | rfl | rfl | rfl | rfl
+    · exact ⟨.rdi, by decide⟩
+    · exact ⟨.rsi, by decide⟩
+    · exact ⟨.rdx, by decide⟩
+    · exact ⟨.rcx, by decide⟩
+    · exact ⟨.r8, by decide⟩
+    · exact ⟨.r9, by decide⟩
+  · right
+    exact ⟨h6, rufOk_argSchranke b r nArgs benutztRot i hi h6 hr⟩
+
+/-- Callee-saved save fragment at the reserved callee index: a lane
+    1191 save at the `Belegung` slot. -/
+def rufRettFrag (c : PipeCfg) (r : Rahmen) (b : Belegung) (i : Nat)
+    (reg : Register) : List Befehl :=
+  spillSaveCode c r (b.gerettetIdx i) reg
+
+/-- Callee-saved reload fragment at the reserved callee index. -/
+def rufHolFrag (c : PipeCfg) (r : Rahmen) (b : Belegung) (i : Nat)
+    (reg : Register) : List Befehl :=
+  spillLoadCode c r (b.gerettetIdx i) reg
+
+theorem rufRettFrag_gerade (c : PipeCfg) (r : Rahmen) (b : Belegung)
+    (i : Nat) (reg : Register) :
+    (rufRettFrag c r b i reg).all gerade = true :=
+  spillSave_gerade c r (b.gerettetIdx i) reg
+
+theorem rufHolFrag_gerade (c : PipeCfg) (r : Rahmen) (b : Belegung)
+    (i : Nat) (reg : Register) :
+    (rufHolFrag c r b i reg).all gerade = true :=
+  spillLoad_gerade c r (b.gerettetIdx i) reg
+
+/-- CALLEE-SAVED SAVE RUNS: the reserved slot receives the register
+    word through the canonical slot store. -/
+theorem rufRett_lauf (c : PipeCfg) (r : Rahmen) (b : Belegung) (i : Nat)
+    (reg : Register) (s : Zustand) (m' : Speicher)
+    (hne : reg ≠ c.adr)
+    (hwr : write64 s.speicher (spillSlot r (b.gerettetIdx i))
+      (s.register reg) = some m') :
+    ∃ s2, lauf ((rufRettFrag c r b i reg).map kanon) s = some s2 ∧
+      s2.speicher = m' ∧
+      s2.register c.adr = natAdresse (r.schlitzNat (b.gerettetIdx i)) ∧
+      s2.register reg = s.register reg :=
+  spillSave_lauf c r (b.gerettetIdx i) reg s m' hne hwr
+
+/-- CALLEE-SAVED RELOAD RUNS: the reserved slot word reaches the
+    register through the canonical slot load. -/
+theorem rufHol_lauf (c : PipeCfg) (r : Rahmen) (b : Belegung) (i : Nat)
+    (reg : Register) (s : Zustand) (v : Wort)
+    (hrd : read64 s.speicher (spillSlot r (b.gerettetIdx i)) = some v) :
+    ∃ s2, lauf ((rufHolFrag c r b i reg).map kanon) s = some s2 ∧
+      s2.speicher = s.speicher ∧
+      s2.register reg = v :=
+  spillLoad_lauf c r (b.gerettetIdx i) reg s v hrd
+
 /- CUTS:
      - Skeleton only: split-point type and fragment selection over the
        accepted 1191 fragments. Run lemmas, multi-splice, validator,
