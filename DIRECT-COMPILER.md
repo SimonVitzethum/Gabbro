@@ -649,7 +649,7 @@ Last ledger refresh: **2026-10-05 13:39 UTC**. This is an operational snapshot, 
 | 1181 | Nested interrupt delivery, #DF and handler entry | Agent working | 1182: scheduled | [task](lanes/1181.md) |
 | 1183 | Feature gating enforced per step, not by wrapper | Merged after review/checks | 1184: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1183.md) |
 | 1185 | Generic word-forwarding theorem | Merged after review/checks | 1186: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1185.md) |
-| 1187 | TSO traces to W runs: run induction | Merged after review/checks | 1188: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1187.md) |
+| 1187 | TSO traces to W runs: run induction | Merged after review/checks | 1188: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1187.md) |
 | 1189 | Pipeline calls: real source execBlock correspondence | Committed candidate; review/integration pending | 1190: Committed candidate; review/integration pending | [task](lanes/1189.md) |
 | 1191 | Pipeline: spill code generation with privacy | Committed candidate; review/integration pending | 1192: Committed candidate; review/integration pending | [task](lanes/1191.md) |
 | 1193 | Linking: multi-unit convergence and operand kinds | Committed candidate; review/integration pending | 1194: Committed candidate; review/integration pending | [task](lanes/1193.md) |
@@ -1476,6 +1476,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1185**, Generic word-forwarding theorem, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1185.md). <!-- x86-merged:1185 -->
 - 2026-10-05: lane **1186**, Independent exact review of 1185, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1186.md). <!-- x86-merged:1186 -->
 - 2026-10-05: lane **1187**, TSO traces to W runs: run induction, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1187.md). <!-- x86-merged:1187 -->
+- 2026-10-05: lane **1188**, Independent exact review of 1187, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1188.md). <!-- x86-merged:1188 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
