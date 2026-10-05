@@ -1,9 +1,10 @@
 # MUSE-REPORT-1312: exact review of candidate 1311 (second capstone union)
 
-## VERDICT: ACCEPT
+CANDIDATE: 1311 984842f1f63dde5fc81d65e9054430405f5a3a0d
 
-CANDIDATE: 1311 `984842f1f63dde5fc81d65e9054430405f5a3a0d`
-(base `f92c2649c25c822f0ff7791f82dfecad9c7d4c31`).
+VERDICT: ACCEPT
+
+Base `f92c2649c25c822f0ff7791f82dfecad9c7d4c31` (from pinned SNAPSHOT).
 Files: `MUSE-REPORT-1311.md`, `grammatik/Grammatik.lean` (one import
 line), `grammatik/Grammatik/X86/HwKapsteinZwei.lean` (new, 852 lines).
 
