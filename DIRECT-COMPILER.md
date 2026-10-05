@@ -634,7 +634,7 @@ Last ledger refresh: **2026-10-05 12:16 UTC**. This is an operational snapshot, 
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Committed candidate; review/integration pending | 1152: Agent working | [task](lanes/1151.md) |
 | 1153 | Pipeline lowering onto the wider ISA | Committed candidate; review/integration pending | 1154: Agent working | [task](lanes/1153.md) |
 | 1155 | Pipeline: loops and branch layout with budget | Agent working | 1156: scheduled | [task](lanes/1155.md) |
-| 1157 | Pipeline: calls, stack-passed parameters, callee-saved registers, return values | Merged after review/checks | 1158: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1157.md) |
+| 1157 | Pipeline: calls, stack-passed parameters, callee-saved registers, return values | Merged after review/checks | 1158: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1157.md) |
 | 1159 | Pipeline: arrays, records and pointers beyond integer slots | Agent working | 1160: scheduled | [task](lanes/1159.md) |
 | 1161 | Pipeline: IEEE float expressions | Agent working | 1162: scheduled | [task](lanes/1161.md) |
 | 1163 | Pipeline: atomics and locks onto TSO | Agent working | 1164: scheduled | [task](lanes/1163.md) |
@@ -1444,6 +1444,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1157**, Pipeline: calls, stack-passed parameters, callee-saved registers, return values, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1157.md). <!-- x86-merged:1157 -->
 - 2026-10-05: integration of candidate(s) [1167] failed the local proof/build gate after independent review 1168; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1168 -->
 - 2026-10-05: checked master `81baf0f9` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:81baf0f9beda6f09242c9f6a9025b36a23b213c7 -->
+- 2026-10-05: lane **1158**, Independent exact review of 1157, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1158.md). <!-- x86-merged:1158 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
