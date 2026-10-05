@@ -296,12 +296,408 @@ theorem hwTorSchritt_ud_klasse (leaf1 : CpuOut) (xcrLo : BitVec 32)
   cases h with
   | ud c i hzu => exact hwTorFehler_ud _ _ _ _ _ hzu
 
-/- CUTS:
-   Skeleton only: the feature-row mapping. Gate predicates, generic
-   refusal over all dispatcher families, the #UD classification, the
-   adapter/embedding, planted refusals and the joint witness are OPEN.
+/-! ## 4. Witness forms, refusal machines and gate equations.
+
+  Concrete instances only: the canonical PXOR vector form and the
+  register MOVSD scalar-FP form, the two-core witness start
+  (`hwWitStart`: full silicon, OS vector state on), one refusal
+  machine per closed leg (OS state off, FTZ control word, absent
+  observed bit), and the TSO issue/drain states. Every equation is a
+  closed Bool computation. -/
+
+/-- Witness vector form: canonical PXOR, length 5. -/
+def hwTorWitV : VectorDec := ⟨.pxorRR .xmm0 .xmm1, 5⟩
+
+/-- Witness FP form: register MOVSD, length 4. -/
+def hwTorWitF : FpDecodiert := ⟨.movsdRR .xmm0 .xmm1, 4⟩
+
+/-- Witness vector successor: RIP + 5, destination lane-xored. -/
+def hwTorWitT' : FpZustand :=
+  { projFp hwWitStart 0 with
+    kern := { (projFp hwWitStart 0).kern with
+      rip := ripNach (projFp hwWitStart 0).kern.rip hwTorWitV.laenge }
+    xmm := xmmSet (projFp hwWitStart 0).xmm .xmm0
+      (vecXor .b64 ((projFp hwWitStart 0).xmm .xmm0)
+        ((projFp hwWitStart 0).xmm .xmm1)) }
+
+/-- Witness FP successor: RIP + 4, low double-word moved. -/
+def hwTorWitU' : FpZustand :=
+  { projFp hwWitStart 0 with
+    kern := { (projFp hwWitStart 0).kern with
+      rip := ripNach (projFp hwWitStart 0).kern.rip hwTorWitF.laenge }
+    xmm := xmmSchreibeTief (projFp hwWitStart 0).xmm .xmm0
+      (xmmTief (projFp hwWitStart 0).xmm .xmm1) }
+
+/-- Refusal machine: OS vector state off, all else as the start. -/
+def hwTorUnbereit : HwMaschine :=
+  { hwWitStart with bereit := fun _ => ⟨0x1F80, false⟩ }
+
+/-- Refusal machine: FTZ control word in core 0, all else as start. -/
+def hwTorFtz : HwMaschine :=
+  { hwWitStart with kerne := fun d =>
+    if d = 0 then { hwWitKern 0 with fp := ⟨0x9F80⟩ } else hwWitKern d }
+
+/-- Witness TSO issue state: core 0 holds byte 42 at the data cell. -/
+def hwTorS1 : TSOZustand :=
+  ⟨hwWitMem, fun d =>
+    if d = 0 then [⟨hwWitAdr, BitVec.ofNat 8 42⟩] else []⟩
+
+/-- Witness TSO drain state: the byte installed in shared memory. -/
+def hwTorS2 : TSOZustand :=
+  ⟨{ hwWitMem with bytes := fun x =>
+      if x = hwWitAdr then BitVec.ofNat 8 42 else hwWitMem.bytes x },
+   pufferSetze hwTorS1.puffer 0 []⟩
+
+/-- The baseline admits the vector form under observed SSE2 + XMM. -/
+theorem hwTor_basis_vec_offen :
+    hwTorOffen hwWitStart 0 zeugeOut1 (BitVec.ofNat 32 0x6)
+      (.vec hwTorWitV) = true := by
+  decide
+
+/-- The baseline admits the scalar-FP form under observed SSE2 + XMM. -/
+theorem hwTor_basis_fp_offen :
+    hwTorOffen hwWitStart 0 zeugeOut1 (BitVec.ofNat 32 0x6)
+      (.fp hwTorWitF) = true := by
+  decide
+
+/-- Without OS vector state the vector gate is closed. -/
+theorem hwTor_unbereit_vec_zu :
+    hwTorOffen hwTorUnbereit 0 zeugeOut1 (BitVec.ofNat 32 0x6)
+      (.vec hwTorWitV) = false := by
+  decide
+
+/-- Under the FTZ control word the scalar-FP gate is closed. -/
+theorem hwTor_ftz_fp_zu :
+    hwTorOffen hwTorFtz 0 zeugeOut1 (BitVec.ofNat 32 0x6)
+      (.fp hwTorWitF) = false := by
+  decide
+
+/-- With no observed silicon bit the vector gate is closed. -/
+theorem hwTor_ohne_bit_vec_zu :
+    hwTorOffen hwWitStart 0 ⟨0, 0, 0, 0⟩ (BitVec.ofNat 32 0)
+      (.vec hwTorWitV) = false := by
+  decide
+
+/-! ## 5. Executed steps, TSO facts and planted refusals.
+
+  The admitted vector and scalar-FP steps run through the accepted
+  evaluators (lifted, never redefined) with memory unchanged, so both
+  embed as `HwSchritt.reg`. The TSO issue/drain states are exactly
+  the accepted byte equations. Each refusal machine refuses its step
+  and takes the #UD leg, changing nothing. -/
+
+/-- The admitted vector step runs: destination lane-xored, RIP + 5. -/
+theorem hwTorWit_vec_schritt :
+    stepVector hwTorWitV (projFp hwWitStart 0) (hwWitStart.bereit 0)
+      = some hwTorWitT' :=
+  stepVector_pxor hwTorWitV _ _ .xmm0 .xmm1 (by decide) rfl rfl
+
+/-- The admitted vector step is a unified success. -/
+theorem hwTorWit_ext_vec :
+    stepExt (.vec hwTorWitV) (projFp hwWitStart 0)
+        (hwWitStart.bereit 0) = .weiter hwTorWitT' :=
+  stepExt_vec hwTorWitV _ _ _ hwTorWit_vec_schritt
+
+/-- The vector step leaves shared memory alone. -/
+theorem hwTorWit_vec_mem :
+    hwTorWitT'.kern.speicher = hwWitStart.mem := rfl
+
+/-- The admitted FP step runs: low double-word moved, RIP + 4. -/
+theorem hwTorWit_fp_schritt :
+    fpSchritt hwTorWitF (projFp hwWitStart 0) = some hwTorWitU' :=
+  fpSchritt_movsdRR hwTorWitF _ .xmm0 .xmm1 (by decide) rfl rfl
+
+/-- The admitted FP step is a unified success. -/
+theorem hwTorWit_ext_fp :
+    stepExt (.fp hwTorWitF) (projFp hwWitStart 0)
+        (hwWitStart.bereit 0) = .weiter hwTorWitU' :=
+  stepExt_fp hwTorWitF _ _ _ hwTorWit_fp_schritt
+
+/-- The FP step leaves shared memory alone. -/
+theorem hwTorWit_fp_mem :
+    hwTorWitU'.kern.speicher = hwWitStart.mem := rfl
+
+/-- Core 0 issues byte 42 at the data cell. -/
+theorem hwTor_issue :
+    issueByte (tsoAnsicht hwWitStart) 0 hwWitAdr
+        (BitVec.ofNat 8 42) = some hwTorS1 := rfl
+
+/-- The data cell is readable on the witness start view. -/
+theorem hwTor_hrd :
+    (tsoAnsicht hwWitStart).mem.lesbar hwWitAdr = true := by
+  decide
+
+/-- Core 0 drains its oldest entry into shared memory. -/
+theorem hwTor_flush : flushKern hwTorS1 0 = some hwTorS2 := rfl
+
+/-- The issue buffer holds exactly the one entry. -/
+theorem hwTor_buf :
+    hwTorS1.puffer 0
+      = ⟨hwWitAdr, BitVec.ofNat 8 42⟩ :: [] := rfl
+
+/-- No foreign forwarding: core 1 still reads the old byte. -/
+theorem hwTor_fremd_alt :
+    loadByte hwTorS1 1 hwWitAdr = some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- PLANTED REFUSAL: without OS vector state the vector step refuses. -/
+theorem hwTor_unbereit_schritt :
+    stepExt (.vec hwTorWitV) (projFp hwTorUnbereit 0)
+        (hwTorUnbereit.bereit 0) = .verweigert :=
+  hwTor_vec_zustand_verweigert _ _ _ rfl
+
+/-- PLANTED REFUSAL: without OS vector state the gate takes #UD. -/
+theorem hwTor_unbereit_ud :
+    HwTorSchritt zeugeOut1 (BitVec.ofNat 32 0x6)
+      hwTorUnbereit hwTorUnbereit
+      (.udTor 0 (.vec hwTorWitV) .ud) :=
+  .ud 0 _ hwTor_unbereit_vec_zu
+
+/-- PLANTED REFUSAL: under FTZ the scalar-FP step refuses. -/
+theorem hwTor_ftz_schritt :
+    stepExt (.fp hwTorWitF) (projFp hwTorFtz 0)
+        (hwTorFtz.bereit 0) = .verweigert :=
+  hwTor_fp_zustand_verweigert _ _ _ rfl
+
+/-- PLANTED REFUSAL: under FTZ the gate takes #UD. -/
+theorem hwTor_ftz_ud :
+    HwTorSchritt zeugeOut1 (BitVec.ofNat 32 0x6)
+      hwTorFtz hwTorFtz
+      (.udTor 0 (.fp hwTorWitF) .ud) :=
+  .ud 0 _ hwTor_ftz_fp_zu
+
+/-- PLANTED REFUSAL: with no observed bit the gate takes #UD. -/
+theorem hwTor_ohne_bit_ud :
+    HwTorSchritt ⟨0, 0, 0, 0⟩ (BitVec.ofNat 32 0)
+      hwWitStart hwWitStart
+      (.udTor 0 (.vec hwTorWitV) .ud) :=
+  .ud 0 _ hwTor_ohne_bit_vec_zu
+
+/-! ## 6. Two-core gating and the closing connection.
+
+  One machine, two cores, one family: core 0 keeps OS vector state
+  (gate open, the step executes), core 1 loses it (gate closed, the
+  same form refuses with #UD). The closing theorem ties the admitted
+  vector step, its exact `HwSchritt` embedding, well-formedness, the
+  gate classification, the step-level fault silence and a full TSO
+  issue/forward/drain leg into one conjunction. Every premise is used
+  by the proof. -/
+
+/-- Half-gated machine: core 1 without OS vector state, all else as
+    the witness start. -/
+def hwTorHalb : HwMaschine :=
+  { hwWitStart with bereit := fun d =>
+    if d = 1 then ⟨0x1F80, false⟩ else basisBereit }
+
+/-- Core 0 of the half-gated machine admits the vector form. -/
+theorem hwTor_halb_vec_0_offen :
+    hwTorOffen hwTorHalb 0 zeugeOut1 (BitVec.ofNat 32 0x6)
+      (.vec hwTorWitV) = true := by
+  decide
+
+/-- Core 1 of the half-gated machine refuses the vector form. -/
+theorem hwTor_halb_vec_1_zu :
+    hwTorOffen hwTorHalb 1 zeugeOut1 (BitVec.ofNat 32 0x6)
+      (.vec hwTorWitV) = false := by
+  decide
+
+/-- Core 1 of the half-gated machine takes the #UD leg. -/
+theorem hwTor_halb_ud_1 :
+    HwTorSchritt zeugeOut1 (BitVec.ofNat 32 0x6)
+      hwTorHalb hwTorHalb
+      (.udTor 1 (.vec hwTorWitV) .ud) :=
+  .ud 1 _ hwTor_halb_vec_1_zu
+
+/-- Core 0 of the half-gated machine runs the admitted vector step:
+    same core data and readiness as the witness start. -/
+theorem hwTor_halb_vec_0_schritt :
+    stepExt (.vec hwTorWitV) (projFp hwTorHalb 0)
+        (hwTorHalb.bereit 0) = .weiter hwTorWitT' :=
+  hwTorWit_ext_vec
+
+/-- CLOSING: an admitted vector step on the coherent machine executes
+    exactly as the coherent `reg` step, preserves well-formedness,
+    classifies no gate fault and no step fault, and its TSO leg
+    forwards to the owner and drains into shared memory. -/
+theorem hwTor_verbindung
+    (m : HwMaschine) (c : Nat) (leaf1 : CpuOut) (xcrLo : BitVec 32)
+    (v : VectorDec) (t' : FpZustand)
+    (hoff : hwTorOffen m c leaf1 xcrLo (.vec v) = true)
+    (hstep : stepExt (.vec v) (projFp m c) (m.bereit c)
+      = .weiter t')
+    (hmem : t'.kern.speicher = m.mem)
+    (hwf : HwWf m)
+    (s1 s2 : TSOZustand) (a : Adresse) (val : Byte)
+    (hrd : (tsoAnsicht m).mem.lesbar a = true)
+    (hissue : issueByte (tsoAnsicht m) c a val = some s1)
+    (e : TSOEintrag) (hrest : List TSOEintrag)
+    (hbuf : s1.puffer c = e :: hrest)
+    (hflush : flushKern s1 c = some s2) :
+    HwTorSchritt leaf1 xcrLo m (setKernVonFp m c t')
+        (.ausf c (.vec v))
+      ∧ HwSchritt m (setKernVonFp m c t') (.regAusf c (.vec v))
+      ∧ loadByte s1 c a = some val
+      ∧ s2.mem.bytes e.addr = e.wert
+      ∧ HwWf (setKernVonFp m c t')
+      ∧ hwTorFehler m c leaf1 xcrLo (.vec v) = none
+      ∧ klassifiziereExt (stepExt (.vec v) (projFp m c)
+        (m.bereit c)) = none := by
+  have hok : HwTorSchritt leaf1 xcrLo m (setKernVonFp m c t')
+      (.ausf c (.vec v)) := .ok c _ t' hoff hstep hmem
+  refine ⟨hok, hwTorSchritt_ok_reg _ _ _ _ _ _ hok, ?_, ?_, ?_,
+    ?_, ?_⟩
+  · exact load_nach_issue (tsoAnsicht m) s1 c a val hissue hrd
+  · exact flush_schreibt_kopf s1 s2 c hflush e hrest hbuf
+  · exact hwTorSchritt_wf _ _ _ _ _ hok hwf
+  · exact hwTorSchritt_ok_kein_fehler _ _ _ _ _ _ hok
+  · rw [hstep]
+    rfl
+
+/-! ## 7. Joint witness: admitted steps, two-core gating,
+  memory-changing run, planted refusals.
+
+  Every premise of `hwTor_verbindung` is instantiated jointly on the
+  concrete reached run, plus the memory-change evidence, the
+  owner-only foreign observation, the half-gated two-core fact (core 0
+  executes the same form core 1 refuses with #UD), the scalar-FP
+  admission and the planted state/observation refusals. Non-degenerate:
+  two family steps execute, the TSO leg changes ACTUAL shared memory
+  (0 becomes 42) with forwarding visible to the owner only, and three
+  closed gates refuse with #UD. -/
+
+/-- JOINT COMPANION WITNESS. -/
+theorem hwTor_verbindung_zeuge :
+    HwTorSchritt zeugeOut1 (BitVec.ofNat 32 0x6) hwWitStart
+        (setKernVonFp hwWitStart 0 hwTorWitT')
+        (.ausf 0 (.vec hwTorWitV))
+      ∧ HwSchritt hwWitStart (setKernVonFp hwWitStart 0 hwTorWitT')
+        (.regAusf 0 (.vec hwTorWitV))
+      ∧ loadByte hwTorS1 0 hwWitAdr = some (BitVec.ofNat 8 42)
+      ∧ hwTorS2.mem.bytes hwWitAdr = BitVec.ofNat 8 42
+      ∧ HwWf (setKernVonFp hwWitStart 0 hwTorWitT')
+      ∧ hwTorFehler hwWitStart 0 zeugeOut1 (BitVec.ofNat 32 0x6)
+        (.vec hwTorWitV) = none
+      ∧ klassifiziereExt (stepExt (.vec hwTorWitV)
+        (projFp hwWitStart 0) (hwWitStart.bereit 0)) = none
+      ∧ loadByte hwTorS1 1 hwWitAdr = some (BitVec.ofNat 8 0)
+      ∧ hwWitMem.bytes hwWitAdr = BitVec.ofNat 8 0
+      ∧ stepExt (.vec hwTorWitV) (projFp hwTorHalb 0)
+        (hwTorHalb.bereit 0) = .weiter hwTorWitT'
+      ∧ HwTorSchritt zeugeOut1 (BitVec.ofNat 32 0x6)
+        hwTorHalb hwTorHalb (.udTor 1 (.vec hwTorWitV) .ud)
+      ∧ stepExt (.vec hwTorWitV) (projFp hwTorUnbereit 0)
+        (hwTorUnbereit.bereit 0) = .verweigert
+      ∧ hwTorFehler hwTorUnbereit 0 zeugeOut1 (BitVec.ofNat 32 0x6)
+        (.vec hwTorWitV) = some .ud
+      ∧ stepExt (.fp hwTorWitF) (projFp hwWitStart 0)
+        (hwWitStart.bereit 0) = .weiter hwTorWitU'
+      ∧ hwTorOffen hwWitStart 0 zeugeOut1 (BitVec.ofNat 32 0x6)
+        (.fp hwTorWitF) = true := by
+  have hmain := hwTor_verbindung hwWitStart 0 zeugeOut1
+    (BitVec.ofNat 32 0x6) hwTorWitV hwTorWitT' hwTor_basis_vec_offen
+    hwTorWit_ext_vec hwTorWit_vec_mem hwWitStart_wf hwTorS1 hwTorS2
+    hwWitAdr (BitVec.ofNat 8 42) hwTor_hrd hwTor_issue
+    ⟨hwWitAdr, BitVec.ofNat 8 42⟩ [] hwTor_buf hwTor_flush
+  obtain ⟨hok, hreg, hfwd, hdrain, hwf', hkein, hklass⟩ := hmain
+  refine ⟨hok, hreg, hfwd, hdrain, hwf', hkein, hklass,
+    hwTor_fremd_alt, hwWit_anfang_null, hwTor_halb_vec_0_schritt,
+    hwTor_halb_ud_1, hwTor_unbereit_schritt, ?_, hwTorWit_ext_fp,
+    hwTor_basis_fp_offen⟩
+  exact hwTorSchritt_ud_klasse _ _ _ _ _ _ hwTor_unbereit_ud
+
+/- CUTS: what is not proved here.
+
+  Proved here (every accepted definition reused unchanged, never
+  copied: `HwMaschine`/`HwSchritt`/`HwWf`/`HwAdapter`/`projFp`/
+  `setKernVonFp`, `stepExt`/`ExtInstr`, `stepVector`/`fpSchritt`,
+  `merkmalZugelassen`/`beobachtungsTor`, `issueByte`/`loadByte`/
+  `flushKern` with `load_nach_issue`/`flush_schreibt_kopf`,
+  `ArchFehler` with `klassifiziereExt`, `zeugeOut1`, `hwWitStart`):
+  - the feature-row mapping per dispatcher family (§1);
+  - generic refusal: a closed state leg refuses EVERY admitted family
+    step on the coherent projection, proved by case split over the
+    dispatcher (not per example), with the `m.bereit c` profile leg
+    for the vector arm under present silicon (§2);
+  - the gate fault classifier (closed = architectural #UD, open = no
+    fault), the `HwAdapter` plug with refusal/admission equations, the
+    gated relation with exact `HwSchritt.reg` embedding and
+    well-formedness preservation (§3);
+  - gate equations, executed vector + scalar-FP steps with unchanged
+    memory, TSO issue/drain facts and planted refusals per closed leg
+    (OS state, FTZ word, absent observed bit) (§§4-5);
+  - half-gated two-core gating and the closing connection with its
+    joint non-degenerate witness (§§6-7).
+  Silicon and provenance (checked against the clone-local snapshot
+  `.tmp/HARDWARE-REFERENCES/`, REFERENCES.json sha256
+  `a4a62e6a7ba11a76c7753a195b825087306812aac39b930973f9168ee599f321`,
+  Intel SDM 325462-093US September 2026; no AMD snapshot exists and no
+  vendor-difference, timing or physical-silicon claim is made):
+  - no NEW hardware definition is introduced, so no new definition
+    could be silicon-wrong: every encoding, bit position, length and
+    fault class is the accepted producer's, with provenance in its
+    CUTS. The gate-closed to `ArchFehler.ud` mapping reuses the
+    accepted architectural #UD class for disabled-feature execution;
+    step-level refusal stays `klassifiziereExt`-silent (reused
+    `stepExt_verweigert_kein_de`), exactly as `HardwareFaults` demands.
+  NOT proved here, and not claimed:
+  - the scalar-FP `BereitProfil` leg and the CPUID-observation leg are
+    wrapper-enforced (`HwTorSchritt`/`adapterFeatureTor` refuse), not
+    step-enforced: the accepted FP step does not read `BereitProfil`
+    and no accepted step reads CPUID answers;
+  - silicon-absent profile refusal (feature bit off in `HwProfil`)
+    likewise refuses only through the wrapper, never through `stepExt`;
+  - memory-touching family forms (e.g. FP stores) cannot use the
+    register plug: they must use the §3/§6 issue events of
+    `HardwareExecution` (same discipline as `adapterInteger666`);
+  - no source/checker/emitter correspondence, no per-access target to
+    W/GX simulation, no whole-word atomicity beyond the reused TSO
+    byte equations, no image/loader/entry/budget link.
 -/
 
 #print axioms hwTorMerkmal
+#print axioms hwTorMerkmal_pilot
+#print axioms hwTorFehler_offen
+#print axioms hwTorFehler_ud
+#print axioms hwTor_vec_verweigert
+#print axioms hwTor_fp_verweigert
+#print axioms hwTor_vec_bereit_verweigert
+#print axioms hwTor_fp_zustand_verweigert
+#print axioms hwTor_vec_zustand_verweigert
+#print axioms hwTor_verweigert_bei_zustand
+#print axioms hwTor_offen_braucht_zustand
+#print axioms hwTor_offen_braucht_bereit
+#print axioms adapterFeatureTor_verweigert
+#print axioms adapterFeatureTor_weiter
+#print axioms hwTorSchritt_ok_reg
+#print axioms hwTorSchritt_wf
+#print axioms hwTorSchritt_ok_kein_fehler
+#print axioms hwTorSchritt_ud_klasse
+#print axioms hwTor_basis_vec_offen
+#print axioms hwTor_basis_fp_offen
+#print axioms hwTor_unbereit_vec_zu
+#print axioms hwTor_ftz_fp_zu
+#print axioms hwTor_ohne_bit_vec_zu
+#print axioms hwTorWit_vec_schritt
+#print axioms hwTorWit_ext_vec
+#print axioms hwTorWit_vec_mem
+#print axioms hwTorWit_fp_schritt
+#print axioms hwTorWit_ext_fp
+#print axioms hwTorWit_fp_mem
+#print axioms hwTor_issue
+#print axioms hwTor_hrd
+#print axioms hwTor_flush
+#print axioms hwTor_buf
+#print axioms hwTor_fremd_alt
+#print axioms hwTor_unbereit_schritt
+#print axioms hwTor_unbereit_ud
+#print axioms hwTor_ftz_schritt
+#print axioms hwTor_ftz_ud
+#print axioms hwTor_ohne_bit_ud
+#print axioms hwTor_halb_vec_0_offen
+#print axioms hwTor_halb_vec_1_zu
+#print axioms hwTor_halb_ud_1
+#print axioms hwTor_halb_vec_0_schritt
+#print axioms hwTor_verbindung
+#print axioms hwTor_verbindung_zeuge
 
 end Gabbro.Grammatik.X86
