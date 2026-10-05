@@ -27,14 +27,15 @@ from `ShiftLogic`/`MulDivCodec`/`ShiftCodec`:
   `encodePopcnt_decodeBs`, `encodeBswap_decodeBs`), `bsMemOk` with
   general parse lemma `bsParseModrm_mem_ok`, `modrmMitDst_id`,
   `nimmBytes_laenge`, kernel-checked positive pins (incl. mem
-  shapes), 7 no-shadow pins (`ext_weist_*_zurueck`), 17 planted
+  shapes), 7 no-shadow pins (`ext_weist_*_zurueck`), 16 planted
   decode refusals (`bs_nichts_*`: LOCK, TZCNT/LZCNT shapes incl.
   16-bit, bare B8, 66H/F3/F2 on BSWAP, SIB, doubled prefixes,
   truncation, missing displacement).
-- §4 value semantics + step: SDM-093 flag snapshots
-  (`bsFlagsScan`, `bsFlagsPopcnt`, BSWAP untouched), narrow-merge
-  destination discipline, untouched destination on zero scan
-  source, `bswap32_merge`, `bsSchritt` with length guard and the
+- §4 value semantics + step: SDM-093 reference snapshots
+  (`bsFlagsScan`, `bsFlagsPopcnt`, BSWAP untouched),
+  narrow-merge destination discipline (the untouched-destination
+  reference was superseded by FREE since the repair, see below),
+  `bswap32_merge`, `bsSchritt` with length guard and the
   reused `PopcntMerkmal` CPUID gate, per-constructor selection
   equations, feature/length/memory refusals
   (`bs_popcnt_verweigert`, `bs_ohne_merkmal_kein_ok`,
@@ -58,14 +59,18 @@ from `ShiftLogic`/`MulDivCodec`/`ShiftCodec`:
 - §8 joint witness `bsHw_zeuge`: scan on core 0 (index 4, ZF
   clear), count on core 1 (8, ZF clear), in-place swap (flags
   kept), owner-only forwarding of byte 42, drain changing actual
-  shared memory 0 → 42, zero-source preservation (sentinel +
-  ZF set), feature/length/memory/decode refusals beside it.
-- CUTS block + `#print axioms` for 22 main theorems (all within
-  propext/Classical.choice/Quot.sound; no new axioms).
+  shared memory 0 → 42, zero-source ZF set (universal over all
+  admissible destinations; the destination value was dropped
+  since the repair), feature/length/memory/decode refusals
+  beside it.
+- CUTS block + `#print axioms` for 29 main theorems (21 old +
+  8 new; all within propext/Classical.choice/Quot.sound; no new
+  axioms).
 
 No diagnostic/gift/example numbers taken (pure Lean lane).
 
-## Repair of 2026-10-05 (vendor neutrality, standing rule)
+## Repair of 2026-10-05 (FREE modeling as portability abstraction;
+revised after independent re-review 1280, verdict REPAIR)
 
 The three pinned vendor-specific facts were reworked; all
 architecturally DEFINED results stay exact:
@@ -97,6 +102,27 @@ architecturally DEFINED results stay exact:
   independent review (coordinator assigns; lanes never review
   themselves).
 
+## Re-review fixes (R1–R4 of report 1280, this commit)
+
+- R1: the admissibility comment no longer claims Intel leaves
+  the destination/flags undefined and no longer claims AMD
+  behavior. It states the Intel-defined facts with extract
+  lines (destination unmodified ll. 42739/42822; full flag row
+  ll. 42755-42758/42838-42840) and marks FREE an explicitly
+  beyond-evidence portability abstraction; no AMD reference is
+  claimed (`REFERENCES.json` bars it).
+- R2: the AGENTS.md standing-rule citation is removed from CUTS
+  and this report (no such rule exists in this tree); the FREE
+  modeling cites the repair instruction itself and no rule.
+- R3: this report now describes one candidate (current head):
+  superseded corrections above are marked historical.
+- R4: counts fixed — 29 `#print axioms` lines (21 old + 8 new,
+  incl. the added `bsScan_rahmen_allgemein`), 16 `bs_nichts_*`
+  decode refusals; `popNull` is now used in code (concrete
+  agreement pins `pin_popnull_scanZF_voll/null`: count-zero and
+  source-zero agree on `0xFF` and `0`, no general equivalence
+  claimed).
+
 ## Verification (after repair)
 
 - `./lean-probe grammatik/Grammatik/X86/IntBitScan.lean`:
@@ -123,22 +149,26 @@ architecturally DEFINED results stay exact:
 - No source/IR/loader/entry/budget link, no W/GX simulation, no
   timing, no hardware correspondence beyond self-consistency.
 - POPCNT ZF reads source-zero; equivalence with count-zero needs
-  the truncation mask bound (inherited open from `BitCount`).
+  the truncation mask bound (inherited open from `BitCount`);
+  concrete agreement on `0xFF`/`0` pinned
+  (`pin_popnull_scanZF_voll/null`).
 
-## Task-text corrections (silicon first)
+## Task-text corrections (historical: described commit cf407e52;
+superseded by the repair section above, which governs the
+current head)
 
-1. The task says the destination is UNDEFINED on zero source;
-   SDM 093 (BSF/BSR operation text, pp. 3-107–3-110) states the
-   destination operand is UNMODIFIED — modeled as kept (whole
-   register, even for 32-bit rows; the older-processor footnote
-   is named in CUTS).
+1. (Superseded.) For cf407e52 the destination was modeled as
+   UNMODIFIED per SDM 093 operation text; since the repair the
+   destination on a zero source is FREE (`BsScanZulaessig`),
+   with unchanged proved as one admitted member.
 2. The task's POPCNT flag row overrides the accepted `BitCount`
    undefined-modeling (`popcntFlags` keeps CF/OF/SF/PF, AF none):
    value agreement with `popWort`/`popCount` is exact, flags
    follow the manual (all cleared, ZF = source zero).
-3. BSF/BSR PF is DEFINED in this edition (parity of the source
-   popcount, computed over the whole word via the accepted
-   `popCount` — `parityEven` is low-byte only and not reused).
+3. (Superseded.) For cf407e52 BSF/BSR PF was modeled as DEFINED;
+   since the repair only ZF is defined and CF/OF/SF/AF/PF stay
+   free in `BsScanZulaessig`, with the cleared snapshot kept
+   solely as the reference member.
 4. 16-bit POPCNT carries 66H **and** F3 (found by a failing
    round-trip: the encoder emitted 66H alone and decode rightly
    refused); the legacy parser accepts both orders and refuses

@@ -580,10 +580,12 @@ theorem bs_nichts_ohne_disp :
   reference follows SDM 093 (scan: ZF = source zero, PF = source
   popcount parity, rest cleared, destination untouched on zero
   source; POPCNT: everything cleared, ZF = source zero; BSWAP:
-  flags untouched). Vendor neutrality lives one level up, in
+  flags untouched). Admissibility lives one level up, in
   `BsScanZulaessig`: only the index write, the exact ZF and the
   frame are pinned there; the zero-source destination and every
-  flag but ZF stay free, with the reference proved as one
+  flag but ZF stay free as a portability abstraction (beyond the
+  supplied Intel evidence, which defines them -- see the note at
+  `BsScanZulaessig`), with the reference proved as one
   admitted member and freedom proved real. The destination
   discipline is the accepted narrow merge (16-bit merges, 32-bit
   zero-extends). POPCNT without the CPUID bit is the feature
@@ -818,11 +820,16 @@ theorem bs_bsr_schreibt_index (b : BsBreite) (dst src : Register)
 def bsScanIdx (istBsr : Bool) (b : Breite) (v : Wort) : Option Nat :=
   if istBsr then bsrIdx b v else bsfIdx b v
 
-/-- Admissible scan successor (vendor-neutral): the index write on a
-    nonzero source, the exact ZF and the frame are pinned; the
-    destination on a zero source and every flag but ZF stay free
-    (Intel documents the destination and the other flags as
-    undefined or model-specific; AMD keeps the destination). -/
+/-- Admissible scan successor: the index write on a nonzero source,
+    the exact ZF and the frame are pinned; the destination on a zero
+    source and every flag but ZF stay free as a portability
+    abstraction. This goes beyond the supplied evidence on purpose:
+    the Intel extract defines the destination as unmodified on a
+    zero source (ll. 42739, 42822) and the full flag row as ZF/PF
+    by rule with CF/OF/SF/AF cleared (ll. 42755-42758,
+    42838-42840); no AMD reference is supplied
+    (`REFERENCES.json`: AMD URLs returned 404), so no vendor
+    difference is claimed and none is proved here. -/
 def BsScanZulaessig (istBsr : Bool) (b : BsBreite) (dst : Register)
     (srcVal oldDst : Wort) (len : Nat) (s nach : Zustand) : Prop :=
   (∀ i, bsScanIdx istBsr b.breite srcVal = some i →
@@ -1015,6 +1022,18 @@ theorem bs_popcnt_schranke (b : BsBreite) (src : Wort) :
 theorem bs_popcnt_wort_schranke (b : BsBreite) (src : Wort) :
     popCount b.breite src ≤ 64 :=
   popCount_wort_schranke b.breite src
+
+/-- Witness agreement (concrete only): count-zero and source-zero
+    agree on `0xFF` (both clear). No general equivalence is claimed
+    (it needs the truncation mask bound, open with `BitCount`). -/
+theorem pin_popnull_scanZF_voll :
+    popNull .b64 0xFF = false ∧ scanZF .b64 0xFF = false := by
+  decide
+
+/-- Witness agreement (concrete only): both read zero as zero. -/
+theorem pin_popnull_scanZF_null :
+    popNull .b64 0 = true ∧ scanZF .b64 0 = true := by
+  decide
 
 /-- The 64-bit swap is an involution: the accepted law, lifted. -/
 theorem bs_bswap64_invol (v : Wort) :
@@ -1765,17 +1784,20 @@ theorem bsHw_zeuge :
   BSWAP p. 3-111 (0F C8+rd, REX.W, flags none, LOCK #UD), POPCNT
   pp. 4-405/4-406 (F3 0F B8, REX.W, all-cleared/ZF row, CPUID bit 23
   and LOCK #UD), EFLAGS cross-reference (BSF/BSR row).
-  Task-text corrections (silicon first, vendor-neutral): the
-  original task text said the destination is UNDEFINED on zero
-  source and listed cleared scan flags; per the standing vendor
-  neutrality rule (AGENTS.md, repair of 2026-10-05) whatever
-  either vendor calls undefined or model-specific stays free --
-  never one pinned value. Hence the destination on a zero source
-  and CF/OF/SF/AF/PF are free in `BsScanZulaessig` (only ZF is
-  defined: set iff source is zero), the SDM-093 cleared snapshot
-  and the unchanged destination survive solely as the proved
-  reference member, and no downstream theorem pins a free choice
-  (the witness keeps ZF, which is universal, and drops the
+  Task-text corrections (silicon first): the original task text
+  said the destination is UNDEFINED on zero source and listed
+  cleared scan flags; the supplied Intel extract instead defines
+  the destination as unmodified (ll. 42739, 42822) and the full
+  flag row (ll. 42755-42758, 42838-42840). The FREE modeling in
+  `BsScanZulaessig` (destination on a zero source and
+  CF/OF/SF/AF/PF free; only ZF defined) was requested by the
+  repair instruction and goes beyond the supplied evidence on
+  purpose, as a portability abstraction: it cites no AGENTS.md
+  rule (none exists in this tree) and no AMD reference (none is
+  supplied per `REFERENCES.json`). Hence the SDM-093 cleared
+  snapshot and the unchanged destination survive solely as the
+  proved reference member, and no downstream theorem pins a free
+  choice (the witness keeps ZF, which is universal, and drops the
   destination value). The task's POPCNT flag row overrides the
   undefined-modeling of the accepted `BitCount` file (whose
   `popcntFlags` keeps CF/OF/SF/PF and leaves AF undefined):
@@ -1837,6 +1859,7 @@ theorem bsHw_zeuge :
 #print axioms bsScanNach_zulaessig
 #print axioms bsScan_zf_allgemein
 #print axioms bsScan_index_allgemein
+#print axioms bsScan_rahmen_allgemein
 #print axioms bsScanFreiBau_zulaessig
 #print axioms bsScan_null_frei
 #print axioms bsScan_flags_frei
