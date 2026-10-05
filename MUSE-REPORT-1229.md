@@ -110,3 +110,42 @@ errors, green probe, present-but-unreadable olean), and reverting would
 destroy the verified lane result the merge flow is designed to rebuild and
 check in its own tree. Reviewer: please rebuild `grammatik/` in a healthy
 tree; if it is green there, this note is moot.
+
+## Integration gate 2026-10-05 (evening): FAILED environmentally, nothing merged
+
+The coordinator integrated the lane branch into the main checkout
+(`/home/simon/Dokumente/Gabbro`) and ran the merge build there. Result:
+
+- `✖ [640/642] Building Grammatik.X86.PipelineCallsBlock (76ms)`
+- `info: stderr:`
+- `/home/simon/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean: error
+  while loading shared libraries: libleanshared.so: failed to map segment
+  from shared object`
+- `error: Lean exited with code 127`
+- `error: build failed`
+
+FINDING (repair analysis against this exact evidence): **no defect in the
+owned module; no code repair indicated or made.** The `lean` process died in
+the dynamic loader (`failed to map segment`, exit 127) ~76ms after start —
+before elaborating a single line of any Lean file. The log contains ZERO Lean
+errors for `PipelineCallsBlock` (or any other module; the sibling
+`TsoRmwLink.lean` job in the same run completed and printed axioms normally).
+This is a resource/environment failure of the same class as the merged
+556/557 diagnosis (bounded resource starvation under parallel builds — never
+a reason to weaken or churn proofs). Editing a green file to "repair" a
+loader mmap failure would be dishonest churn, so the owned files are
+UNCHANGED by this repair turn.
+
+Local re-check after the gate failure (this clone, queued wrapper):
+`./lean-probe grammatik/Grammatik/X86/PipelineCallsBlock.lean` →
+`== 0 error(s) in the COMPLETE output; exit 0`, axioms unchanged
+(`propext, Classical.choice, Quot.sound` at most). The candidate that the
+independent review accepted is intact.
+
+What the gate needs: a healthy re-run of the integration build (loader
+mmap failures are transient resource faults; AGENTS.md records `/tmp` as
+RAM-backed tmpfs and 10 opencode servers at ~1GB each as the RAM pressure
+sources). No claim is made here about the full source/binary chain beyond
+the module's own proved statements. A fresh independent review of the
+changed commit (this report-only commit) is required per the lane task —
+coordinator's assignment, noted, not claimed as done.
