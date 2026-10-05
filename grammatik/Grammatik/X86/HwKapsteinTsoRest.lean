@@ -521,4 +521,225 @@ theorem rest_int_verweigert :
   ⟨witNmi_maskiert_verweigert, witNmi_limit_verweigert,
     witNmi_dunkel_verweigert⟩
 
+/-! ## 7. Joint summary and witness.
+
+  Eight tags reach through the TSO projection (§§1-5); the two
+  interrupt tags are the proved FINDING of §6 (buffer-silence plus
+  the sharp memory-change exhibit, never a `TSOErreichbar` leg). -/
+
+/-- Joint summary: all eight reaching tags reach through the TSO
+    projection. Each premise is used by its own leg. -/
+theorem rest_acht_tso :
+    (∀ (m m' : HwMaschine) (c : Nat) (e : HwDev1133.UcZugriff1133),
+      HwVollSchritt m m' (.uc c e) →
+        TSOErreichbar (kapTso m) (kapTso m'))
+    ∧ (∀ (m m' : HwMaschine) (c : Nat) (e : HwDev1133.PortZugriff1133),
+      HwVollSchritt m m' (.port c e) →
+        TSOErreichbar (kapTso m) (kapTso m'))
+    ∧ (∀ (m m' : HwMaschine) (e : FpCtrlEreignis),
+      HwVollSchritt m m' (.fp e) →
+        TSOErreichbar (kapTso m) (kapTso m'))
+    ∧ (∀ (m m' : HwMaschine) (e : HwFehlerEreignis),
+      HwVollSchritt m m' (.fehler e) →
+        TSOErreichbar (kapTso m) (kapTso m'))
+    ∧ (∀ (m m' : HwMaschine) (leaf1 : CpuOut) (xcrLo : BitVec 32)
+      (e : HwTorEreignis),
+      HwVollSchritt m m' (.tor leaf1 xcrLo e) →
+        TSOErreichbar (kapTso m) (kapTso m'))
+    ∧ (∀ (m m' : HwMaschine) (e : HwVecEreignis),
+      HwVollSchritt m m' (.vec e) →
+        TSOErreichbar (kapTso m) (kapTso m'))
+    ∧ (∀ (m m' : HwMaschine) (c : Nat) (i : ExtInstr),
+      HwVollSchritt m m' (.bild c i) →
+        TSOErreichbar (kapTso m) (kapTso m'))
+    ∧ (∀ (m m' : HwMaschine) (c : Nat) (i : ExtInstr),
+      HwVollSchritt m m' (.instanzen c i) →
+        TSOErreichbar (kapTso m) (kapTso m')) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro m m' c e h
+    exact rest_union_uc m m' c e h
+  · intro m m' c e h
+    exact rest_union_port m m' c e h
+  · intro m m' e h
+    exact rest_union_fp m m' e h
+  · intro m m' e h
+    exact rest_union_fehler m m' e h
+  · intro m m' leaf1 xcrLo e h
+    exact rest_union_tor m m' leaf1 xcrLo e h
+  · intro m m' e h
+    exact rest_union_vec m m' e h
+  · intro m m' c i h
+    exact rest_union_bild m m' c i h
+  · intro m m' c i h
+    exact rest_union_instanzen m m' c i h
+
+/-- Joint witness: one exhibited union step per rest tag. The eight
+    reaching tags reach through the projection; the nested run keeps
+    every buffer still; the NMI run changes memory with still
+    buffers (the FINDING); owner-only forwarding, foreign stale
+    reads and drain-into-memory hold on the same TSO model; the
+    masked, over-limit and dark-stack deliveries refuse. -/
+theorem rest_zeuge :
+    (∃ m1, HwVollSchritt hwWitStart m1
+      (KapEreignis.uc 0
+        (.speichere .b64 HwDev1133.witDev1133 (BitVec.ofNat 64 7)
+          HwDev1133.witProfil1133)) ∧
+      TSOErreichbar (kapTso hwWitStart) (kapTso m1))
+    ∧ (∃ m1, HwVollSchritt kapPortStart m1
+      (KapEreignis.port 0 kapPortEv) ∧
+      TSOErreichbar (kapTso kapPortStart) (kapTso m1))
+    ∧ (∃ m1, HwVollSchritt stapelWitM0 m1
+      (KapEreignis.fp
+        (.schreibAusgabe 0 stapelWitSlotAddr (BitVec.ofNat 8 7))) ∧
+      TSOErreichbar (kapTso stapelWitM0) (kapTso m1))
+    ∧ (∃ m1, HwVollSchritt hwWitStart m1
+      (KapEreignis.fehler (HwFehlerEreignis.fehler 1 ⟨.abruf, .pf⟩)) ∧
+      TSOErreichbar (kapTso hwWitStart) (kapTso m1))
+    ∧ (∃ m1, HwVollSchritt hwWitStart m1
+      (KapEreignis.tor zeugeOut1 (BitVec.ofNat 32 0x6)
+        (.ausf 0 (.vec hwTorWitV))) ∧
+      TSOErreichbar (kapTso hwWitStart) (kapTso m1))
+    ∧ (∃ m1, HwVollSchritt hvecWitStart m1
+      (KapEreignis.vec
+        (.vecReg 0 basisCpu basisKontrolle hvecWitD1)) ∧
+      TSOErreichbar (kapTso hvecWitStart) (kapTso m1))
+    ∧ (∃ m1, HwVollSchritt instStart_muldiv m1
+      (KapEreignis.bild 0 (.muldiv ⟨.mulRax .rcx, 3⟩)) ∧
+      TSOErreichbar (kapTso instStart_muldiv) (kapTso m1))
+    ∧ (∃ m1, HwVollSchritt instStart_vec m1
+      (KapEreignis.instanzen 0
+        (.vec ⟨.pxorRR .xmm0 .xmm1, 5⟩)) ∧
+      TSOErreichbar (kapTso instStart_vec) (kapTso m1))
+    ∧ (∃ m2, HwVollSchritt nestStart m2
+      (KapEreignis.nested 0 evMask32 evMask33) ∧
+      ∀ d : Nat, m2.puffer d = nestStart.puffer d)
+    ∧ (∃ m', HwVollSchritt intWitStart m'
+      (KapEreignis.int 0 witNmi) ∧
+      m'.mem ≠ intWitStart.mem ∧
+      ∀ d : Nat, m'.puffer d = intWitStart.puffer d)
+    ∧ hwWitLoadEigen = some (some (BitVec.ofNat 8 42))
+    ∧ hwWitLoadFremd = some (some (BitVec.ofNat 8 0))
+    ∧ hwWitNachFlush = some (some (BitVec.ofNat 8 42))
+    ∧ asyncSchritt intWitStart 1 witMaskiert witSteuerNmi = none ∧
+      asyncSchritt intWitStart 1 witLimit witLimitSteuer = none ∧
+        asyncSchritt intWitDunkel 0 witNmi witSteuerNmi = none := by
+  obtain ⟨mPort, hsPort⟩ := kapStep_port
+  obtain ⟨mFp, hsFp⟩ := kap_step_fp
+  obtain ⟨mBild, hsBild⟩ := kapStep_bild
+  obtain ⟨mInst, hsInst⟩ := kapStep_instanzen
+  obtain ⟨mNest, ifNeu2, gew1, gew2, hplugNest, _⟩ := kapPlug_nested
+  obtain ⟨mInt, ifNeu, gew, hplugInt, _⟩ := kapPlug_int
+  have hNestUnion : HwVollSchritt nestStart mNest
+      (KapEreignis.nested 0 evMask32 evMask33) :=
+    (kap_nested_embedded _ _ _ _ _).mp hplugNest
+  have hIntUnion : HwVollSchritt intWitStart mInt
+      (KapEreignis.int 0 witNmi) :=
+    (kap_int_embedded _ _ _ _).mp hplugInt
+  have hIntBefund := rest_int_befund _ hplugInt
+  have hNestBuf : ∀ d : Nat, mNest.puffer d = nestStart.puffer d :=
+    fun d => rest_nested_puffer _ _ _ _ hplugNest d
+  refine ⟨⟨_, kap_step_uc, rest_union_uc _ _ _ _ kap_step_uc⟩,
+    ⟨mPort, hsPort, rest_union_port _ _ _ _ hsPort⟩,
+    ⟨mFp, hsFp, rest_union_fp _ _ _ hsFp⟩,
+    ⟨_, kap_step_fehler, rest_union_fehler _ _ _ kap_step_fehler⟩,
+    ⟨_, kap_step_tor, rest_union_tor _ _ _ _ _ kap_step_tor⟩,
+    ⟨_, kap_step_vec, rest_union_vec _ _ _ kap_step_vec⟩,
+    ⟨mBild, hsBild, rest_union_bild _ _ _ _ hsBild⟩,
+    ⟨mInst, hsInst, rest_union_instanzen _ _ _ _ hsInst⟩,
+    ⟨mNest, hNestUnion, hNestBuf⟩,
+    ⟨mInt, hIntUnion, hIntBefund.1, hIntBefund.2⟩,
+    hwWit_weiterleitung, hwWit_fremd_alt,
+    hwWit_spülung_aendert_speicher, rest_int_verweigert⟩
+
+/- CUTS:
+    Proved here, over the reused accepted vocabulary only (every
+    definition lifted, never redefined):
+    - UC projection `rest_uc_still`/`rest_union_uc`: admitted plug
+      stores step to the same machine (bypass), loads never admit;
+      device effect `rest_uc_geraet` (posted write plus log on the
+      extended machine, coherent machine unchanged);
+    - port projection `rest_port_still`/`rest_union_port`: the plug
+      re-embeds core data only; bus effect `rest_port_bus` (reached
+      generic bus step with the accepted latch answer); the drained-
+      buffer gate is cited, not re-proved
+      (`portAdapter_vollerPuffer_verweigert`);
+    - FP classification `rest_fp_tso`/`rest_union_fp`: register legs
+      silent, loads observe with forwarding, stores single
+      `issueByte`, drains single `flushKern`, refusals silent;
+    - fault classification `rest_fehler_tso`/`rest_union_fehler`:
+      embedded old steps reuse the base leg, fault outcomes are
+      silent self-loops;
+    - gate classification `rest_tor_still`/`rest_union_tor`:
+      admitted legs re-embed core data only, refused legs self-loop;
+    - vector classification `rest_vec_speicher_erreichbar`,
+      `rest_vec_tso`/`rest_union_vec`: register/load/refusal legs
+      silent, stores fold sixteen `issueByte` events
+      (`vecEintraege_laenge`), no whole-vector atomicity;
+    - image/instance classification `rest_integer666_still`,
+      `rest_union_bild`, `rest_union_instanzen`: the register-path
+      plug moves core data only;
+    - interrupt buffer silence `rest_asyncFertig_puffer`,
+      `rest_async_puffer_still`, `rest_int_puffer`,
+      `rest_nest_puffer_still`, `rest_nested_puffer`: every
+      successful single and nested delivery leaves every store
+      buffer byte-identical;
+    - sharp FINDING `rest_int_befund`: the exhibited NMI delivery
+      changes canonical memory through the direct-push path with
+      still buffers -- a memory write by a path other than the TSO
+      events, so no `TSOErreichbar` leg is claimed for the
+      `nested`/`int` tags;
+    - exhibited refusals `rest_int_verweigert` (masked, over-limit,
+      dark-stack);
+    - joint summary `rest_acht_tso` and joint witness `rest_zeuge`:
+      one exhibited union step per rest tag, reachability for the
+      eight reaching tags, buffer silence plus memory change for
+      delivery, owner-only forwarding with foreign staleness and
+      drain-into-memory on the same TSO model, and the delivery
+      refusals.
+    NOT proved here, and not claimed (FINDINGs for follow-ups):
+    - the `nested`/`int` tags have no `TSOErreichbar` leg: delivery
+      installs direct-pushed memory with untouched buffers, so the
+      per-access target-to-W/GX bridge needs a drained-own-buffer
+      guard for delivery (or delivery treated as a serialising
+      context switch); the task's "stack-push events" premise is
+      declined with reason (S3, `asyncMasch_puffer_still`,
+      `schiebeRahmen`/`write64` path, `witNmi_aendert_ss`);
+    - the remaining six union tags (lockRmw, isa, addr, muldiv,
+      lockFetch, system) belong to other lanes, not this file;
+    - no W/GX bridge (target-only reachability); no whole-word or
+      whole-vector atomicity beyond the guarded folds; no source,
+      checker, contract, entry, ABI, loader, budget or liveness
+      claim; no hardware correspondence beyond self-consistency
+      (silicon and timing assumptions live in the family files,
+      not re-checked here).
+-/
+
+#print axioms rest_uc_still
+#print axioms rest_union_uc
+#print axioms rest_uc_geraet
+#print axioms rest_port_still
+#print axioms rest_union_port
+#print axioms rest_port_bus
+#print axioms rest_fp_tso
+#print axioms rest_union_fp
+#print axioms rest_fehler_tso
+#print axioms rest_union_fehler
+#print axioms rest_tor_still
+#print axioms rest_union_tor
+#print axioms rest_vec_speicher_erreichbar
+#print axioms rest_vec_tso
+#print axioms rest_union_vec
+#print axioms rest_integer666_still
+#print axioms rest_union_bild
+#print axioms rest_union_instanzen
+#print axioms rest_asyncFertig_puffer
+#print axioms rest_async_puffer_still
+#print axioms rest_int_puffer
+#print axioms rest_nest_puffer_still
+#print axioms rest_nested_puffer
+#print axioms rest_int_befund
+#print axioms rest_int_verweigert
+#print axioms rest_acht_tso
+#print axioms rest_zeuge
+
 end Gabbro.Grammatik.X86
