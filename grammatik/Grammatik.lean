@@ -618,3 +618,4 @@ import Grammatik.X86.PipelineWide
 import Grammatik.X86.PipelineLoops
 import Grammatik.X86.PipelineTables
 import Grammatik.X86.PipelineFloat
+import Grammatik.X86.HwBildFamilien
