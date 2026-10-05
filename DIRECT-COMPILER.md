@@ -656,7 +656,7 @@ Last ledger refresh: **2026-10-05 14:18 UTC**. This is an operational snapshot, 
 | 1195 | Pipeline: block-size induction over multi-statement blocks | Merged after review/checks | 1196: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1195.md) |
 | 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Committed candidate; review/integration pending | 1200: Agent working | [task](lanes/1199.md) |
-| 1201 | Pipeline float: NaN payload and bit-exact agreement | Committed candidate; review/integration pending | 1202: Committed candidate; review/integration pending | [task](lanes/1201.md) |
+| 1201 | Pipeline float: NaN payload and bit-exact agreement | Merged after review/checks | 1202: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
 | 1205 | Loaded image: per-family reached fetch instances | Committed candidate; review/integration pending | 1206: Committed candidate; review/integration pending | [task](lanes/1205.md) |
 | 1207 | Generic drain-equals-write64 induction | Committed candidate; review/integration pending | 1208: Agent working | [task](lanes/1207.md) |
@@ -1518,6 +1518,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1146**, Independent exact review of 1145, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1146.md). <!-- x86-merged:1146 -->
 - 2026-10-05: lane **1195**, Pipeline: block-size induction over multi-statement blocks, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1195.md). <!-- x86-merged:1195 -->
 - 2026-10-05: lane **1196**, Independent exact review of 1195, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1196.md). <!-- x86-merged:1196 -->
+- 2026-10-05: lane **1201**, Pipeline float: NaN payload and bit-exact agreement, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1201.md). <!-- x86-merged:1201 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
