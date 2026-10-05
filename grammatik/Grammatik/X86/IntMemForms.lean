@@ -1030,6 +1030,413 @@ theorem xchgVollSchritt_lade_verweigert (m : HwMaschine) (c : Nat)
   unfold xchgVollSchritt
   simp [hok, hgate]
 
+/-! ## 5. Canonical lifted bytes: decode, encode, round trips.
+
+  The accepted decoders refuse SIB choice, RIP-relative and disp8/disp0
+  memory shapes, so the lifted bytes below are NEW canonical encodings
+  (one family tag byte plus a config byte, then the accepted
+  `encodeAdr` tail with its REX byte): tag 113 rotate, 114 carry, 115
+  sign-extend, 116 XCHG. They extend the addressed space without
+  shadowing any accepted row (no accepted decoder reads these tags).
+  Self-consistency only; no silicon correspondence is claimed. -/
+
+/-- Register carrying a rotate digit in its low three bits. -/
+def rotRegFeld : RotOp → Register
+  | .rol => .rax | .ror => .rcx | .rcl => .rdx | .rcr => .rbx
+
+/-- The field register carries its digit. -/
+theorem rotRegFeld_tief (o : RotOp) :
+    regLow (rotRegFeld o) = rotOpFeld o := by
+  cases o <;> rfl
+
+/-- Canonical lifted rotate bytes: tag, digit-plus-width config, count
+    byte, then the accepted address tail (REX first). -/
+def rotVollEncode (r : RotVoll) : Option (List Byte) :=
+  match encodeAdr (rotRegFeld r.op) r.form with
+  | none => none
+  | some tail =>
+    some ([natByte 113,
+      natByte (rotOpFeld r.op + 4 * breitenCode r.breite),
+      natByte r.zaehlung] ++ tail)
+
+/-- Lifted rotate decode: tag, config, count, REX check, then the
+    accepted address tail. LOCK (240) never matches the tag. -/
+def decodeRotVoll : List Byte → Option (RotVoll × List Byte)
+  | b0 :: b1 :: b2 :: rest =>
+    if byteNat b0 == 113 then
+      match feldRotOp (byteNat b1 % 4), codeBreite (byteNat b1 / 4) with
+      | some op, some b =>
+        match rest with
+        | rex :: rest2 =>
+          match parseAdrTail 0 0 0 rest2 with
+          | some (reg, f, rest') =>
+            if reg = rotRegFeld op then
+              if rex = rexFuer (rotRegFeld op) f then
+                some (RotVoll.mk op b (byteNat b2) f
+                  (3 + (rest.length - rest'.length)), rest')
+              else none
+            else none
+          | none => none
+        | [] => none
+      | _, _ => none
+    else none
+  | _ => none
+
+/-- An unadmitted form encodes to nothing. -/
+theorem encodeAdr_verweigert_ohne_ok (reg : Register) (f : AdrForm)
+    (h : adrOk f = false) :
+    encodeAdr reg f = none := by
+  unfold encodeAdr
+  simp [h]
+
+/-- An encoding needs an admitted address form. -/
+theorem rotVollEncode_braucht_ok (r : RotVoll) (bs : List Byte)
+    (h : rotVollEncode r = some bs) :
+    adrOk r.form = true := by
+  unfold rotVollEncode at h
+  cases ht : encodeAdr (rotRegFeld r.op) r.form with
+  | none => simp [ht] at h
+  | some tail => exact encodeAdr_braucht_ok _ _ _ ht
+
+/-- REFUSAL: `rsp` is never an index, so the lifted encode refuses. -/
+theorem rotVollEncode_rsp_verweigert (b : Breite) (n : Nat) (len : Nat) :
+    rotVollEncode ⟨.rol, b, n,
+      skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8, len⟩ = none := by
+  simp [rotVollEncode, encodeAdr_verweigert_ohne_ok,
+    skaliertForm_rsp_verweigert]
+
+/-- REFUSAL: `rbp` without displacement is refused. -/
+theorem rotVollEncode_rbp_verweigert (o : RotOp) (b : Breite) (n : Nat)
+    (len : Nat) :
+    rotVollEncode ⟨o, b, n, basisKeinForm .rbp, len⟩ = none := by
+  simp [rotVollEncode, encodeAdr_verweigert_ohne_ok,
+    basisKeinForm_rbp_verweigert]
+
+/-- ROUND TRIP (SIB): scaled index plus disp8 through lifted bytes. -/
+theorem rotVollRundweg_sib :
+    (rotVollEncode ⟨.rol, .b32, 1,
+      skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8, 7⟩).bind
+      decodeRotVoll =
+      some (⟨.rol, .b32, 1,
+        skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8, 7⟩, []) := by
+  decide
+
+/-- ROUND TRIP (RIP-relative): image reference through lifted bytes. -/
+theorem rotVollRundweg_rip :
+    (rotVollEncode ⟨.ror, .b64, 3,
+      ripForm (BitVec.ofNat 32 4089), 9⟩).bind decodeRotVoll =
+      some (⟨.ror, .b64, 3,
+        ripForm (BitVec.ofNat 32 4089), 9⟩, []) := by
+  decide
+
+/-- Class index of a lifted carry form. -/
+def carryVollKlasse : CarryVoll → Nat
+  | .adcV .. => 0 | .sbbV .. => 1 | .adcIV .. => 2
+  | .sbbIV .. => 3 | .incV .. => 4 | .decV .. => 5
+
+/-- Canonical lifted carry bytes: tag, class-plus-width config, source
+    code, the accepted address tail (REX first), immediate tail for the
+    imm forms. -/
+def carryVollEncode (v : CarryVoll) : Option (List Byte) :=
+  match encodeAdr .rax (carryVollForm v) with
+  | none => none
+  | some tail =>
+    let imm : List Byte :=
+      match v with
+      | .adcIV _ _ op _ => leBytes64 op
+      | .sbbIV _ _ op _ => leBytes64 op
+      | _ => []
+    let src : Nat :=
+      match v with
+      | .adcV _ _ s _ => regCode s
+      | .sbbV _ _ s _ => regCode s
+      | _ => 0
+    some ([natByte 114,
+      natByte (carryVollKlasse v + 6 * breitenCode (carryVollBreite v)),
+      natByte src] ++ tail ++ imm)
+
+/-- Lifted carry decode: tag, config, source, REX check, accepted tail,
+    immediate tail for the imm classes. -/
+def decodeCarryVoll : List Byte → Option (CarryVoll × List Byte)
+  | b0 :: b1 :: b2 :: rest =>
+    if byteNat b0 == 114 then
+      match codeBreite (byteNat b1 / 6), codeReg (byteNat b2) with
+      | some b, some src =>
+        match rest with
+        | rex :: rest2 =>
+          match parseAdrTail 0 0 0 rest2 with
+          | some (reg, f, rest') =>
+            if reg = .rax then
+              if rex = rexFuer .rax f then
+                let n := 3 + (rest.length - rest'.length)
+                match byteNat b1 % 6 with
+                | 0 => some (CarryVoll.adcV b f src n, rest')
+                | 1 => some (CarryVoll.sbbV b f src n, rest')
+                | 4 => some (CarryVoll.incV b f n, rest')
+                | 5 => some (CarryVoll.decV b f n, rest')
+                | 2 =>
+                  match parseLe64 rest' with
+                  | some (op, rest'') =>
+                    some (CarryVoll.adcIV b f op
+                      (3 + (rest.length - rest''.length)), rest'')
+                  | none => none
+                | 3 =>
+                  match parseLe64 rest' with
+                  | some (op, rest'') =>
+                    some (CarryVoll.sbbIV b f op
+                      (3 + (rest.length - rest''.length)), rest'')
+                  | none => none
+                | _ => none
+              else none
+            else none
+          | none => none
+        | [] => none
+      | _, _ => none
+    else none
+  | _ => none
+
+/-- An encoding needs an admitted address form. -/
+theorem carryVollEncode_braucht_ok (v : CarryVoll) (bs : List Byte)
+    (h : carryVollEncode v = some bs) :
+    adrOk (carryVollForm v) = true := by
+  unfold carryVollEncode at h
+  cases ht : encodeAdr .rax (carryVollForm v) with
+  | none => simp [ht] at h
+  | some tail => exact encodeAdr_braucht_ok _ _ _ ht
+
+/-- REFUSAL: `rsp` is never an index, so the lifted encode refuses. -/
+theorem carryVollEncode_rsp_verweigert (b : Breite) (len : Nat) :
+    carryVollEncode
+      (CarryVoll.adcV b
+        (skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8) .rcx
+        len) = none := by
+  have hnone : encodeAdr .rax
+      (skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8) = none :=
+    encodeAdr_verweigert_ohne_ok _ _
+      (skaliertForm_rsp_verweigert _ _ _ _)
+  have hform : carryVollForm
+      (CarryVoll.adcV b
+        (skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8) .rcx
+        len) =
+      skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8 := rfl
+  unfold carryVollEncode
+  rw [hform, hnone]
+
+/-- ROUND TRIP (SIB): ADC with register source through lifted bytes. -/
+theorem carryVollRundweg_sib :
+    (carryVollEncode (CarryVoll.adcV .b32
+      (skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8) .rcx
+      7)).bind decodeCarryVoll =
+      some (CarryVoll.adcV .b32
+        (skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8) .rcx 7, []) := by
+  decide
+
+/-- ROUND TRIP (RIP-relative): INC through lifted bytes. -/
+theorem carryVollRundweg_rip :
+    (carryVollEncode (CarryVoll.incV .b64
+      (ripForm (BitVec.ofNat 32 4089)) 9)).bind decodeCarryVoll =
+      some (CarryVoll.incV .b64
+        (ripForm (BitVec.ofNat 32 4089)) 9, []) := by
+  decide
+
+/-- ROUND TRIP (SIB immediate): ADC-immediate through lifted bytes. -/
+theorem carryVollRundweg_sibImm :
+    (carryVollEncode (CarryVoll.adcIV .b32
+      (skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8)
+      (BitVec.ofNat 64 5) 15)).bind decodeCarryVoll =
+      some (CarryVoll.adcIV .b32
+        (skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8)
+        (BitVec.ofNat 64 5) 15, []) := by
+  decide
+
+/-- Canonical lifted sign-extend bytes: tag, source-width config,
+    destination code, the accepted address tail (REX first). -/
+def signVollEncode (s : SignVoll) : Option (List Byte) :=
+  match encodeAdr .rax s.form with
+  | none => none
+  | some tail =>
+    some ([natByte 115, natByte (breitenCode s.quelle),
+      natByte (regCode s.ziel)] ++ tail)
+
+/-- Lifted sign-extend decode: tag, config, destination, REX check,
+    accepted tail. A 64-bit source refuses (no-op shape). -/
+def decodeSignVoll : List Byte → Option (SignVoll × List Byte)
+  | b0 :: b1 :: b2 :: rest =>
+    if byteNat b0 == 115 then
+      match codeBreite (byteNat b1), codeReg (byteNat b2) with
+      | some .b64, _ => none
+      | some sb, some dst =>
+        match rest with
+        | rex :: rest2 =>
+          match parseAdrTail 0 0 0 rest2 with
+          | some (reg, f, rest') =>
+            if reg = .rax then
+              if rex = rexFuer .rax f then
+                some (SignVoll.mk sb dst f
+                  (3 + (rest.length - rest'.length)), rest')
+              else none
+            else none
+          | none => none
+        | [] => none
+      | _, _ => none
+    else none
+  | _ => none
+
+/-- An encoding needs an admitted address form. -/
+theorem signVollEncode_braucht_ok (s : SignVoll) (bs : List Byte)
+    (h : signVollEncode s = some bs) :
+    adrOk s.form = true := by
+  unfold signVollEncode at h
+  cases ht : encodeAdr .rax s.form with
+  | none => simp [ht] at h
+  | some tail => exact encodeAdr_braucht_ok _ _ _ ht
+
+/-- REFUSAL: `rsp` is never an index, so the lifted encode refuses. -/
+theorem signVollEncode_rsp_verweigert (len : Nat) :
+    signVollEncode
+      ⟨.b8, .rax,
+        skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8, len⟩ = none := by
+  have hnone : encodeAdr .rax
+      (skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8) = none :=
+    encodeAdr_verweigert_ohne_ok _ _
+      (skaliertForm_rsp_verweigert _ _ _ _)
+  unfold signVollEncode
+  simp [hnone]
+
+/-- REFUSAL: a 64-bit source decodes to nothing. -/
+theorem decodeSignVoll_b64_verweigert :
+    decodeSignVoll [natByte 115, natByte 3, natByte 0, natByte 72,
+      natByte 3] = none := rfl
+
+/-- ROUND TRIP (SIB): byte source through lifted bytes. -/
+theorem signVollRundweg_sib :
+    (signVollEncode ⟨.b8, .rax,
+      skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8, 7⟩).bind
+      decodeSignVoll =
+      some (⟨.b8, .rax,
+        skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8, 7⟩, []) := by
+  decide
+
+/-- ROUND TRIP (RIP-relative): double-word source through lifted bytes. -/
+theorem signVollRundweg_rip :
+    (signVollEncode ⟨.b32, .rdx,
+      ripForm (BitVec.ofNat 32 4089), 9⟩).bind decodeSignVoll =
+      some (⟨.b32, .rdx,
+        ripForm (BitVec.ofNat 32 4089), 9⟩, []) := by
+  decide
+
+/-- Canonical lifted XCHG bytes: tag, width config, register code,
+    the accepted address tail (REX first). -/
+def xchgVollEncode (x : XchgVoll) : Option (List Byte) :=
+  match encodeAdr .rax x.form with
+  | none => none
+  | some tail =>
+    some ([natByte 116, natByte (breitenCode x.breite),
+      natByte (regCode x.reg)] ++ tail)
+
+/-- Lifted XCHG decode: tag, config, register, REX check, accepted tail. -/
+def decodeXchgVoll : List Byte → Option (XchgVoll × List Byte)
+  | b0 :: b1 :: b2 :: rest =>
+    if byteNat b0 == 116 then
+      match codeBreite (byteNat b1), codeReg (byteNat b2) with
+      | some b, some r =>
+        match rest with
+        | rex :: rest2 =>
+          match parseAdrTail 0 0 0 rest2 with
+          | some (reg, f, rest') =>
+            if reg = .rax then
+              if rex = rexFuer .rax f then
+                some (XchgVoll.mk b f r
+                  (3 + (rest.length - rest'.length)), rest')
+              else none
+            else none
+          | none => none
+        | [] => none
+      | _, _ => none
+    else none
+  | _ => none
+
+/-- An encoding needs an admitted address form. -/
+theorem xchgVollEncode_braucht_ok (x : XchgVoll) (bs : List Byte)
+    (h : xchgVollEncode x = some bs) :
+    adrOk x.form = true := by
+  unfold xchgVollEncode at h
+  cases ht : encodeAdr .rax x.form with
+  | none => simp [ht] at h
+  | some tail => exact encodeAdr_braucht_ok _ _ _ ht
+
+/-- REFUSAL: `rsp` is never an index, so the lifted encode refuses. -/
+theorem xchgVollEncode_rsp_verweigert (b : Breite) (len : Nat) :
+    xchgVollEncode
+      ⟨b, skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8, .rcx,
+        len⟩ = none := by
+  have hnone : encodeAdr .rax
+      (skaliertForm .rbx .rsp 8 (BitVec.ofNat 32 5) .d8) = none :=
+    encodeAdr_verweigert_ohne_ok _ _
+      (skaliertForm_rsp_verweigert _ _ _ _)
+  unfold xchgVollEncode
+  simp [hnone]
+
+/-- ROUND TRIP (SIB): word exchange through lifted bytes. -/
+theorem xchgVollRundweg_sib :
+    (xchgVollEncode ⟨.b64,
+      skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8, .rcx,
+      7⟩).bind decodeXchgVoll =
+      some (⟨.b64,
+        skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 5) .d8, .rcx, 7⟩,
+        []) := by
+  decide
+
+/-- ROUND TRIP (RIP-relative): word exchange through lifted bytes. -/
+theorem xchgVollRundweg_rip :
+    (xchgVollEncode ⟨.b64,
+      ripForm (BitVec.ofNat 32 4089), .rax, 9⟩).bind decodeXchgVoll =
+      some (⟨.b64,
+        ripForm (BitVec.ofNat 32 4089), .rax, 9⟩, []) := by
+  decide
+
+/-! ## 6. LOCK stays refused.
+
+  LOCK prefix (240) matches no lifted family tag, on any suffix: the
+  locked RMW path stays with the locked families. Each pin below is a
+  closed decidable observation. -/
+
+/-- LOCK-prefixed bytes refuse the lifted rotate decode. -/
+theorem decodeRotVoll_lock_verweigert (suffix : List Byte) :
+    decodeRotVoll ([natByte 240] ++ suffix) = none := by
+  match suffix with
+  | [] => rfl
+  | [_] => rfl
+  | [_, _] => rfl
+  | _ :: _ :: _ :: _ => rfl
+
+/-- LOCK-prefixed bytes refuse the lifted carry decode. -/
+theorem decodeCarryVoll_lock_verweigert (suffix : List Byte) :
+    decodeCarryVoll ([natByte 240] ++ suffix) = none := by
+  match suffix with
+  | [] => rfl
+  | [_] => rfl
+  | [_, _] => rfl
+  | _ :: _ :: _ :: _ => rfl
+
+/-- LOCK-prefixed bytes refuse the lifted sign-extend decode. -/
+theorem decodeSignVoll_lock_verweigert (suffix : List Byte) :
+    decodeSignVoll ([natByte 240] ++ suffix) = none := by
+  match suffix with
+  | [] => rfl
+  | [_] => rfl
+  | [_, _] => rfl
+  | _ :: _ :: _ :: _ => rfl
+
+/-- LOCK-prefixed bytes refuse the lifted XCHG decode. -/
+theorem decodeXchgVoll_lock_verweigert (suffix : List Byte) :
+    decodeXchgVoll ([natByte 240] ++ suffix) = none := by
+  match suffix with
+  | [] => rfl
+  | [_] => rfl
+  | [_, _] => rfl
+  | _ :: _ :: _ :: _ => rfl
+
 /- CUTS: skeleton only; full statement at the end of the file. -/
 
 end Gabbro.Grammatik.X86
