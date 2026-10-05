@@ -4619,7 +4619,7 @@ fi
 # and LINKED into the bare-metal image with NO C library** (Opus agent J, 2026-09-26).
 # Stage 9 asks the host's compiler with the host's headers; stage 11 boots a chosen handful.
 # This one asks every emitting unit: `-ffreestanding -nostdinc` (the compiler's own headers
-# plus `laufzeit/metall/include/`), then `ld -nostdlib` against `laufzeit/metall/`, every
+# plus the generated <math.h>/<string.h>), then `ld -nostdlib` against `laufzeit/metall/`, every
 # undefined symbol classified (runtime / lock / rcu / entry / the program's own foreign
 # body) and the hosted-only units NAMED: kernel gates (`syscall`), foreign bindings to
 # C-library names, and the hosted runtime files beside their bare-metal counterparts.

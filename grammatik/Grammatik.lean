@@ -187,6 +187,7 @@ import Grammatik.SchablonenOhneLibc
 import Grammatik.SchablonenArena
 import Grammatik.SchablonenFaden
 import Grammatik.SchablonenModul
+import Grammatik.SchablonenMetall
 import Grammatik.ZeugnisStmt104
 import Grammatik.ZeugnisIdent
 import Grammatik.ZeugnisStmt104b

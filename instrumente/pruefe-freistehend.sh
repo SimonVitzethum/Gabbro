@@ -16,13 +16,14 @@
 #   1. compile the unit INSIDE a generated link driver (the unit's roots are `static`, exactly
 #      as with the hosted and bare-metal drivers) with `-ffreestanding -fno-builtin -nostdlib
 #      -nostdinc`: the compiler's own headers (C11's freestanding set) plus
-#      `laufzeit/metall/include/` -- the two hosted headers the emitter writes (<math.h>,
+#      the generated <math.h>/<string.h> (`gabbro runtime metal-include`) -- the two hosted headers the emitter writes (<math.h>,
 #      <string.h>), reduced to exactly what the emitter uses. `-O0`: stage 9's level, and the
 #      level at which every `static` body is kept, so every call the unit can make reaches
 #      the linker (measured: the `-O2` undefined-symbol set is a SUBSET of the `-O0` one over
 #      all 311 units, 194 against 212 names, and adds no compiler-emitted helper).
 #   2. `nm -u` the driver object and CLASSIFY every undefined symbol:
-#        runtime   defined by the bare-metal runtime (`kern.c`, `arena.c`, `start.S`):
+#        runtime   defined by the bare-metal runtime (`kern.c`, `start.S`, the generated
+#                  memory functions; the generated arena runtime stands in the driver):
 #                  the thread interface, `memcpy`/`memset`/`memmove`/`memcmp`, the arena
 #        lock      `L_nimm`/`L_gib` (+ `_geteilt`) of a `lock L` the source declares -- the
 #                  driver defines it (`METALL_SPERRE`, `_GETEILT`, `_MASKIERT` for
@@ -36,7 +37,7 @@
 #                  missing. A foreign name that is a C-library or POSIX function is the
 #                  program binding to a hosted library by its own choice: HOSTED-ONLY (b).
 #        anything else: UNCLASSIFIED -- a finding.
-#   3. link: `ld -nostdlib -static -T metall.ld` over start.o kern.o arena.o, the driver and
+#   3. link: `ld -nostdlib -static -T metall.ld` over start.o kern.o speicher.o, the driver and
 #      the foreign stubs. `ld` refuses an undefined symbol, so a linked image IS the proof.
 #
 # HOSTED-ONLY, NAMED, NEVER SKIPPED. A unit that links freestanding can still be a program
@@ -86,6 +87,13 @@ for t in cc ld nm; do
 done
 
 GCCINC="$(cc -print-file-name=include)"
+# The two header names, the memory functions and the arena runtime are GENERATED since the
+# C-free lane's C3 slice 1 (2026-10-05): the same bytes `gabbro build` writes beside an image.
+RT="$ARB/rt-gen"
+mkdir -p "$RT"
+G runtime metal-include "$RT/include" || { echo "  FREESTANDING: gabbro runtime metal-include failed"; exit 1; }
+G runtime metal-memory > "$RT/speicher.c" || exit 1
+G runtime metal-arena > "$RT/arena.c" || exit 1
 if [ ! -f "$GCCINC/stdint.h" ] || [ ! -f "$GCCINC/stdatomic.h" ]; then
     echo "  FREESTANDING: NOT RUN -- the compiler's own header directory ($GCCINC) lacks"
     echo "  <stdint.h>/<stdatomic.h>; -nostdinc would measure the toolchain, not the units."
@@ -93,10 +101,10 @@ if [ ! -f "$GCCINC/stdint.h" ] || [ ! -f "$GCCINC/stdatomic.h" ]; then
 fi
 
 # The flag word of the bare-metal image (`pruefe-metall.sh`), plus -nostdinc and stage 9's -O0.
-CF="-std=c11 -O0 -ffreestanding -fno-builtin -nostdlib -nostdinc -isystem $GCCINC -isystem $M/include
+CF="-std=c11 -O0 -ffreestanding -fno-builtin -nostdlib -nostdinc -isystem $GCCINC -isystem $RT/include
     -fno-pic -fno-pie -mno-red-zone -mcmodel=small -fno-stack-protector
     -fno-asynchronous-unwind-tables -Wall -Wextra -Werror"
-CFR="-std=c11 -O2 -ffreestanding -fno-builtin -nostdlib -nostdinc -isystem $GCCINC -isystem $M/include
+CFR="-std=c11 -O2 -ffreestanding -fno-builtin -nostdlib -nostdinc -isystem $GCCINC -isystem $RT/include
     -fno-pic -fno-pie -mno-red-zone -mcmodel=small -fno-stack-protector
     -fno-asynchronous-unwind-tables -fno-tree-loop-distribute-patterns -Wall -Wextra -Werror"
 
@@ -104,11 +112,11 @@ CFR="-std=c11 -O2 -ffreestanding -fno-builtin -nostdlib -nostdinc -isystem $GCCI
 mkdir -p "$ARB/rt"
 # shellcheck disable=SC2086
 if ! { cc $CFR -c "$M/kern.c" -o "$ARB/rt/kern.o" \
-       && cc $CFR -c "$M/arena.c" -o "$ARB/rt/arena.o" \
+       && cc $CFR -c "$RT/speicher.c" -o "$ARB/rt/speicher.o" \
        && cc -fno-pie -c "$M/start.S" -o "$ARB/rt/start.o"; } 2> "$ARB/rt/cc.err"; then
     echo "  RUNTIME DOES NOT BUILD:"; head -20 "$ARB/rt/cc.err"; exit 1
 fi
-nm --defined-only "$ARB/rt/kern.o" "$ARB/rt/arena.o" "$ARB/rt/start.o" 2>/dev/null \
+nm --defined-only "$ARB/rt/kern.o" "$ARB/rt/speicher.o" "$ARB/rt/start.o" 2>/dev/null \
     | awk 'NF == 3 && $2 ~ /[TDBR]/ {print $3}' | sort -u > "$ARB/rt/definiert"
 
 # -- Sprechprobe: can this stage FALL? Two planted units, one per question it asks. -------
@@ -127,7 +135,7 @@ printf '#include "metall.h"\nint puts(const char *s);\nint gabbro_metall_haupt(v
 # shellcheck disable=SC2086
 cc $CF -I"$M" -c "$ARB/sprech/libc.c" -o "$ARB/sprech/libc.o" || exit 2
 if ld -nostdlib -static -no-pie -T "$M/metall.ld" -z max-page-size=0x1000 -o "$ARB/sprech/k.elf" \
-        "$ARB/rt/start.o" "$ARB/rt/kern.o" "$ARB/rt/arena.o" "$ARB/sprech/libc.o" 2> /dev/null; then
+        "$ARB/rt/start.o" "$ARB/rt/kern.o" "$ARB/rt/speicher.o" "$ARB/sprech/libc.o" 2> /dev/null; then
     echo "  Sprechprobe 2: GESCHEITERT -- a call to \`puts\` links; the link half measures nothing"
     exit 2
 fi
@@ -199,7 +207,7 @@ while IFS= read -r q; do
     fi
 
     # 1. Compile inside a driver: first the unit alone, for the symbol census.
-    printf '#include "metall.h"\n#include "einheit.c"\n' > "$e/drv0.c"
+    { printf '#include "metall.h"\n#include "einheit.c"\n'; cat "$RT/arena.c"; } > "$e/drv0.c"
     # shellcheck disable=SC2086
     if ! cc $CF -I"$M" -I"$e" -c "$e/drv0.c" -o "$e/drv0.o" 2> "$e/cc.err"; then
         echo "  DOES NOT COMPILE FREESTANDING: $d"
@@ -348,6 +356,7 @@ while IFS= read -r q; do
             fi
         done
         printf '    return 0;\n}\n'
+        cat "$RT/arena.c"
     } > "$e/drv.c"
     : > "$e/fremd.S"
     for s in $fremde; do
@@ -358,7 +367,7 @@ while IFS= read -r q; do
     if ! { cc $CF -I"$M" -I"$e" -c "$e/drv.c" -o "$e/drv.o" \
            && cc -fno-pie -c "$e/fremd.S" -o "$e/fremd.o" \
            && ld -nostdlib -static -no-pie -T "$M/metall.ld" -z max-page-size=0x1000 \
-                 -o "$e/k.elf" "$ARB/rt/start.o" "$ARB/rt/kern.o" "$ARB/rt/arena.o" \
+                 -o "$e/k.elf" "$ARB/rt/start.o" "$ARB/rt/kern.o" "$ARB/rt/speicher.o" \
                  "$e/drv.o" "$e/fremd.o"; } 2> "$e/ld.err"; then
         echo "  DOES NOT LINK FREESTANDING: $d"
         grep -m4 -E 'error|Fehler|undefined|nicht definiert' "$e/ld.err" | sed 's/^/      /'
@@ -432,7 +441,7 @@ echo "  the shape at check time, N561 -- a unit listed here was emitted without 
 printf '%b\n' "$bindung_liste" | sed '/^$/d'
 echo "  HOSTED runtime files, each with its bare-metal counterpart:"
 echo "    faden.laufzeit (driver) the thread runtime        -> laufzeit/metall/kern.c (gabbro_faden_*)"
-echo "    <unit>.treiber.c arena runtime (template arena.dyn) -> laufzeit/metall/arena.c"
+echo "    <unit>.treiber.c arena runtime (template arena.dyn) -> <unit>.metall.c (generated, arena.modul)"
 echo "    <unit>.treiber.c       the program's binding      -> <unit>.metall.c (generated)"
 echo "  NONE of them names an OS function since TODO section 0e K8, and none issues a raw"
 echo "  system call: they call names the PROGRAM defines in Gabbro (bibliothek/linux/linux.gab,"

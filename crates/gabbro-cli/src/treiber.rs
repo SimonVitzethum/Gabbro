@@ -100,7 +100,7 @@ pub struct MetallZusatz {
 /// with unchanged sources would otherwise leave a stale driver behind a
 /// valid record. Bump this on every template change; `bau.rs` mixes it into
 /// the fingerprint of every unit that owns a driver.
-pub const GENERATOR_KENNUNG: &str = "treiber-gen-10";
+pub const GENERATOR_KENNUNG: &str = "treiber-gen-11";
 
 /// **The unit's dynamic arenas, reserved before the first root runs** (server lane,
 /// 2026-09-28, TODO section 0e K8).
@@ -122,7 +122,7 @@ pub const GENERATOR_KENNUNG: &str = "treiber-gen-10";
 /// from it.
 ///
 /// No error check, and that differs from the module flavour on purpose: the hosted
-/// (`laufzeit/arena_dyn.c`) and bare-metal (`laufzeit/metall/arena.c`) reservations FAIL-STOP
+/// ([`ARENA_LAUFZEIT`]) and bare-metal ([`METALL_ARENA_FUSS`]) reservations FAIL-STOP
 /// inside themselves -- there is no program running yet that could take an `else`. A kernel
 /// module cannot stop the machine, so `kmodul.c` reads the outcome and refuses the load.
 fn arenen_reservieren(aus: &mut String) {
@@ -599,7 +599,10 @@ pub fn erzeuge_metall_voll(
     );
     aus.push_str("\n#include \"metall.h\"\n");
     aus.push_str("\n/* -- The emitted unit -------------------------------------------------- */\n\n");
-    aus.push_str("#include EINHEIT_INCLUDE\n");
+    aus.push_str("#include EINHEIT_INCLUDE\n\n");
+    // The arena runtime is the generator's since the C-free lane's C3 (templates `arena.modul`,
+    // `arena.metall`); a unit without a dynamic arena defines no `GABBRO_ARENEN` and gets none.
+    aus.push_str(&metall_arena());
     aus.push_str("\n/* -- Lock primitives: the ticket lock (CTicket.lean, SATZKARTE section 32). */\n");
     let mut sortiert: Vec<&Sperre> = sperren.iter().collect();
     sortiert.sort_by(|a, b| a.name.cmp(&b.name));
@@ -941,6 +944,175 @@ bool gabbro_arena_grow(gabbro_arena_desc *d, uint32_t n)\n\
     return true;\n\
 }\n\
 #endif\n";
+
+/// **The bare-metal arena runtime** (C-free lane, C3 slice 1, 2026-10-05; templates `arena.modul`
+/// and `arena.metall`). Until this text the image linked `laufzeit/metall/arena.c`, 119
+/// handwritten lines carving one shared reserve; now the bare-metal driver writes the SAME
+/// proved pool runtime the module driver writes ([`KMOD_ARENA`], `SchablonenModul.lean` §1),
+/// behind two pieces of its own:
+///
+/// * the head: the pool size (`GABBRO_MODUL_VORRAT`, 1 MiB per arena unless the build names
+///   another) and the report hook the template calls, over the image's serial channel -- a
+///   grow past the ceiling ENDS the machine (`N426` keeps it unreachable; the module flavour,
+///   which cannot stop a kernel, reads the stop back at load instead);
+/// * the foot: `gabbro_arena_reserve`, the name the driver and every harness call, which binds
+///   the descriptor to the pool of ITS position in the emitted list (`gabbro_modul_arenen`) and
+///   ends the machine on a refusal -- at load there is no program that could take an `else`.
+///   A descriptor the list does not hold, or one reserved twice (`base != 0`), refuses too.
+///
+/// It must stand AFTER the emitted unit (it reads `GABBRO_ARENEN` and `gabbro_arena_desc`) and
+/// is `#ifdef`-guarded, so a unit without an arena gets nothing.
+pub const METALL_ARENA_KOPF: &str = "\
+/* -- The bare-metal arena runtime (templates `arena.modul`, `arena.metall`). Each arena's\n\
+ *    storage is a static pool in `.bss`, zeroed by the loader. */\n\
+#ifdef GABBRO_ARENEN\n\
+#ifndef GABBRO_MODUL_VORRAT\n\
+#define GABBRO_MODUL_VORRAT (1024ull * 1024ull)\n\
+#endif\n\
+#ifndef GABBRO_ARENA_EXIT_RESERVE\n\
+#define GABBRO_ARENA_EXIT_RESERVE 3\n\
+#endif\n\
+static void gabbro_kern_melden(uint32_t code, uint64_t a, uint64_t b)\n\
+{\n\
+    metall_schreibe(\"gabbro: arena report \");\n\
+    metall_zahl(code);\n\
+    metall_schreibe(\" \");\n\
+    metall_zahl(a);\n\
+    metall_schreibe(\" \");\n\
+    metall_zahl(b);\n\
+    metall_schreibe(\"\\n\");\n\
+    if (code == GABBRO_KERN_M_UEBER_MAX) {\n\
+        /* Past the ceiling: the fail-stop. */\n\
+        metall_ende(4);\n\
+    }\n\
+}\n\
+#endif\n";
+
+/// The foot of [`metall_arena`]: the reservation by list position (see [`METALL_ARENA_KOPF`]).
+pub const METALL_ARENA_FUSS: &str = "\
+#ifdef GABBRO_ARENEN\n\
+void gabbro_arena_reserve(gabbro_arena_desc *d)\n\
+{\n\
+    uint32_t a;\n\
+    (void)gabbro_modul_stopp;\n\
+    for (a = 0u; a < (uint32_t)GABBRO_MODUL_N_ARENEN; a++) {\n\
+        if (gabbro_modul_arenen[a] == d) {\n\
+            if (gabbro_modul_reserve(d, gabbro_modul_lager[a]) == 0u) {\n\
+                return;\n\
+            }\n\
+            break;\n\
+        }\n\
+    }\n\
+    metall_schreibe(\"gabbro: arena reserve refused\\n\");\n\
+    metall_ende(GABBRO_ARENA_EXIT_RESERVE);\n\
+}\n\
+#endif\n";
+
+/// The whole bare-metal arena runtime as the driver writes it (and `gabbro runtime
+/// metal-arena` prints it for a harness that writes its own driver).
+pub fn metall_arena() -> String {
+    format!("{KMOD_MELDECODES}{METALL_ARENA_KOPF}{KMOD_ARENA}{METALL_ARENA_FUSS}")
+}
+
+/// **The compiler's four freestanding obligations** (C-free lane, C3 slice 1, 2026-10-05;
+/// template `metall.speicher`, `SchablonenMetall.lean` §1). GCC may emit calls to `memcpy`,
+/// `memmove`, `memset` and `memcmp` even under `-ffreestanding -fno-builtin` (struct copies,
+/// zero initialisation), and the emitted bounded strings call `memcpy`/`memcmp` themselves.
+/// With no C library they are defined here, one byte per step, each loop in exactly the
+/// shape the Lean model reads (the four recursions of `SchablonenMetall.lean` §1). Until this text they
+/// were the first 50 lines of `laufzeit/metall/kern.c`. The image must be compiled with
+/// `-fno-tree-loop-distribute-patterns`, or GCC turns these very loops back into calls to
+/// themselves (both flag words of the image carry it).
+pub const METALL_SPEICHER: &str = "\
+/* GENERATED by `gabbro build` -- the compiler's four memory functions for an image without a\n\
+ * C library (template `metall.speicher`). Do not edit. */\n\
+void *memcpy(void *d, const void *s, unsigned long n);\n\
+void *memmove(void *d, const void *s, unsigned long n);\n\
+void *memset(void *d, int c, unsigned long n);\n\
+int memcmp(const void *a, const void *b, unsigned long n);\n\
+\n\
+void *memcpy(void *d, const void *s, unsigned long n)\n\
+{\n\
+    unsigned char *dd = d;\n\
+    const unsigned char *ss = s;\n\
+    unsigned long i;\n\
+    for (i = 0; i < n; i++) {\n\
+        dd[i] = ss[i];\n\
+    }\n\
+    return d;\n\
+}\n\
+\n\
+void *memmove(void *d, const void *s, unsigned long n)\n\
+{\n\
+    unsigned char *dd = d;\n\
+    const unsigned char *ss = s;\n\
+    unsigned long i;\n\
+    if (dd < ss) {\n\
+        for (i = 0; i < n; i++) {\n\
+            dd[i] = ss[i];\n\
+        }\n\
+    } else {\n\
+        while (n > 0) {\n\
+            n--;\n\
+            dd[n] = ss[n];\n\
+        }\n\
+    }\n\
+    return d;\n\
+}\n\
+\n\
+void *memset(void *d, int c, unsigned long n)\n\
+{\n\
+    unsigned char *dd = d;\n\
+    unsigned long i;\n\
+    for (i = 0; i < n; i++) {\n\
+        dd[i] = (unsigned char)c;\n\
+    }\n\
+    return d;\n\
+}\n\
+\n\
+int memcmp(const void *a, const void *b, unsigned long n)\n\
+{\n\
+    const unsigned char *x = a;\n\
+    const unsigned char *y = b;\n\
+    unsigned long i;\n\
+    for (i = 0; i < n; i++) {\n\
+        if (x[i] != y[i]) {\n\
+            return x[i] < y[i] ? -1 : 1;\n\
+        }\n\
+    }\n\
+    return 0;\n\
+}\n";
+
+/// **The two hosted header names the emitted unit asks for, written for the bare-metal image**
+/// (C-free lane, C3 slice 1; until then `laufzeit/metall/include/`). The image is compiled with
+/// `-nostdinc`: the compiler's own headers (`<stdint.h>`, `<stdbool.h>`, `<stdatomic.h>`,
+/// `<stddef.h>`) plus these two. `<math.h>` holds exactly the one name the emitter lowers to
+/// (`isfinite`, a compiler builtin), `<string.h>` exactly the four functions of
+/// [`METALL_SPEICHER`] -- a unit that reached for more fails at compile time, loudly.
+pub fn metall_koepfe() -> Vec<(&'static str, String)> {
+    let kopf = |name: &str, rumpf: &str| {
+        let waechter = format!("GABBRO_METALL_{}_H", name.trim_end_matches(".h").to_uppercase());
+        format!(
+            "/* GENERATED by `gabbro build` -- <{name}> for the bare-metal image: no C library.\n\
+             \x20* Do not edit. */\n\
+             #ifndef {waechter}\n#define {waechter}\n{rumpf}#endif\n"
+        )
+    };
+    vec![
+        ("math.h", kopf("math.h", "#define isfinite(x) __builtin_isfinite(x)\n")),
+        (
+            "string.h",
+            kopf(
+                "string.h",
+                "#include <stddef.h>\n\
+                 void *memcpy(void *d, const void *s, size_t n);\n\
+                 void *memmove(void *d, const void *s, size_t n);\n\
+                 void *memset(void *d, int c, size_t n);\n\
+                 int memcmp(const void *a, const void *b, size_t n);\n",
+            ),
+        ),
+    ]
+}
 
 /// **`<stdatomic.h>` for a build without a C library: the COMPILER's C11 atomics** (C-free lane,
 /// C2). The emitter writes nine call forms (`atomic_load_explicit`, `atomic_store_explicit`,
@@ -1527,7 +1699,10 @@ mod treiber_tests {
                 .count();
             // The hosted driver guards a third time: the arena runtime it writes (template
             // `arena.dyn`, C-free lane 2026-09-30) stands only in a driver whose unit has arenas.
-            let soll = if welcher == "hosted" { 3 } else { 2 };
+            // The bare-metal driver writes its arena runtime since the C-free lane's C3 slice 1
+            // (templates `arena.modul`, `arena.metall`): three more guards and the pool list's
+            // initialiser, all reading the same list.
+            let soll = if welcher == "hosted" { 3 } else { 6 };
             assert_eq!(
                 im_code, soll,
                 "the {welcher} driver names the list in code only as guards and the \

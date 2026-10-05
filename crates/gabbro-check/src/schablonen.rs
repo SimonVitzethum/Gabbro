@@ -169,6 +169,8 @@ pub const RATSCHE: &[&str] = &[
     "arena.modul",
     "modul.lebenslauf",
     "faden.modul",
+    "metall.speicher",
+    "arena.metall",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -538,6 +540,66 @@ pub const SCHABLONEN: &[Schablone] = &[
         ],
         fundstelle: "grammatik/Grammatik/SchablonenModul.lean §3; crates/gabbro-cli/src/treiber.rs \
                      (`erzeuge_kmod`); instrumente/pruefe-kernelmodul.sh (probes `atomar`, `takt`)",
+    },
+    // **Entered 2026-10-05 by the C-free lane (C3 slice 1, the bare-metal image), PROVED in
+    // the same commit**: `laufzeit/metall/arena.c`, `include/` and the memory functions of
+    // `kern.c` became text the build writes.
+    Schablone {
+        name: "metall.speicher",
+        haengt_an: &[],
+        konstrukt: "every bare-metal image (`metal <dir>`): the compiler's four memory \
+                    functions the build writes beside it (`treiber.rs::METALL_SPEICHER`, \
+                    `<unit>.metall.speicher.c`)",
+        pflicht: "`memcpy`, `memmove`, `memset`, `memcmp`, one byte per step, each loop in the \
+                  shape the model reads. **Machine-checked as an ABSTRACT CORE** \
+                  (`Grammatik/SchablonenMetall.lean` §1, memory as a function from addresses to \
+                  bytes): under C's no-overlap premise `memcpy` leaves the source's bytes in the \
+                  destination and moves nothing else (`memcpy_korrekt`); `memmove` does so for \
+                  EVERY overlap (`memmove_korrekt`, forward when `d < s`, backward otherwise -- \
+                  and the forward loop alone would be wrong, `memmove_vorwaerts_waere_falsch`); \
+                  `memset` writes `c mod 256` and nothing else (`memset_korrekt`); `memcmp` \
+                  answers 0 exactly on equal ranges (`memcmp_null`) and -1 exactly at a first \
+                  difference with the smaller left byte (`memcmp_kleiner`); witness \
+                  `metall_speicher_zeuge`. **NOT proved: that the compiler calls them only with \
+                  ranges it owns** -- the C and the hardware, the trust every target names.",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the image is compiled with `-fno-tree-loop-distribute-patterns` (else GCC may turn the loops back into calls to themselves)", durch: Some("`bau.rs::METALL_FLAGGEN`, the build's one flag word for every C file of the image (and the same flag in `instrumente/pruefe-metall.sh`/`pruefe-freistehend.sh`)"), braeuchte: None },
+            Voraussetzung { was: "the four names are defined once per image, and no C library supplies another", durch: Some("`bau.rs::metall_bild_binden`: one `<unit>.metall.speicher.o`, linked with `ld -nostdlib -static` -- a second definition or a missing one is the linker's refusal"), braeuchte: None },
+            Voraussetzung { was: "a `memcpy` call's ranges do not overlap", durch: Some("C's own contract for `memcpy`, kept by the compiler's struct copies and by the emitter's two calls (bounded strings copy from a value into a fresh local, `emit.rs` string helpers); any other caller is the C, the trust named at every target"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenMetall.lean §1; crates/gabbro-cli/src/treiber.rs \
+                     (`METALL_SPEICHER`); instrumente/pruefe-metall.sh (metall161: bounded strings)",
+    },
+    Schablone {
+        name: "arena.metall",
+        haengt_an: &["arena.modul"],
+        konstrukt: "arena … max M in a unit built for the bare-metal image (the metal driver's \
+                    `gabbro_arena_reserve` in front of the `arena.modul` pool runtime: \
+                    `treiber.rs::METALL_ARENA_KOPF`, `METALL_ARENA_FUSS`)",
+        pflicht: "The image's arena runtime is the `arena.modul` text (a static pool of \
+                  `GABBRO_MODUL_VORRAT` bytes per arena, default 1 MiB) behind a report hook \
+                  over the serial channel that ENDS the machine on a grow past the ceiling, and \
+                  `gabbro_arena_reserve(d)`, which binds `d` to the pool of its position in the \
+                  emitted list and ends the machine when the list does not hold `d` or the pool \
+                  reservation refuses. **Machine-checked as an ABSTRACT CORE** \
+                  (`Grammatik/SchablonenMetall.lean` §2): a reservation that returns bound the \
+                  pool of the descriptor's own position (`arena_metall_eigene_stelle`); two \
+                  descriptors never share a pool (`arena_metall_getrennt`); a descriptor the list \
+                  does not hold gets none (`arena_metall_fremd`); the pools are disjoint byte \
+                  ranges (`arena_metall_lager_getrennt`) -- with `arena_modul_slot_im_lager` every \
+                  reachable slot lies inside its own arena's pool; witness `arena_metall_zeuge`. \
+                  **NOT proved: that the loader zeroes the pools** (`.bss`, the Multiboot \
+                  loader's assumption `lader` of the bare-metal block in `Spec.lean`).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the list holds exactly the unit's arena descriptors", durch: Some("`GABBRO_ARENEN`, written by the emitter beside the descriptors it emitted (`emit.rs`), the one list every driver reads"), braeuchte: None },
+            Voraussetzung { was: "every arena is reserved once, before any root runs", durch: Some("the metal driver's reservation loop at the head of `gabbro_metall_haupt` (`treiber.rs::arenen_reservieren`), and the pool reservation's own `base != 0` refusal for a second call"), braeuchte: None },
+            Voraussetzung { was: "a `grow` stays under the ceiling", durch: Some("`N426` statically, and the hook's fail-stop past it (`metall_ende(4)`)"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenMetall.lean §2; crates/gabbro-cli/src/treiber.rs \
+                     (`metall_arena`, `erzeuge_metall_voll`); instrumente/pruefe-metall.sh (metall153, \
+                     154, 158, 158-else with a pool of 8 bytes, 158-gift)",
     },
     // **Entered 2026-09-30 by the C-free lane (OFFEN O38), PROVED**: the lowering of the
     // gate+guard+`child` triple, which lane 260 wrote as a jump into the parent's function.

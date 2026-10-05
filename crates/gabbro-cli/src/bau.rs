@@ -41,6 +41,28 @@ pub fn faden_laufzeit() -> String {
     format!("{}{}", treiber::BINDUNG_KOPF, treiber::FADEN_LAUFZEIT)
 }
 
+/// The bare-metal arena runtime (`gabbro runtime metal-arena`), to stand after the emitted unit
+/// in a harness's own driver.
+pub fn metall_arena_laufzeit() -> String {
+    treiber::metall_arena()
+}
+
+/// The compiler's four memory functions for the bare-metal image (`gabbro runtime
+/// metal-memory`), one translation unit of their own.
+pub fn metall_speicher() -> &'static str {
+    treiber::METALL_SPEICHER
+}
+
+/// Write the image's two generated header names into `ziel` (`gabbro runtime metal-include
+/// <dir>`).
+pub fn metall_koepfe_schreiben(ziel: &str) -> Result<(), String> {
+    std::fs::create_dir_all(ziel).map_err(|err| format!("{ziel}: {err}"))?;
+    for (datei, text) in treiber::metall_koepfe() {
+        std::fs::write(PathBuf::from(ziel).join(datei), text).map_err(|err| format!("{datei}: {err}"))?;
+    }
+    Ok(())
+}
+
 /// What a unit becomes. **`object` compiles, `program` links** -- and the difference is not a
 /// language question, which is why it stands in the manifest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1096,9 +1118,9 @@ fn modulregel(
 /// masked pair because a kernel module can keep that promise and must.
 ///
 /// **Bare metal is exempt, and that is K8's own sentence.** A unit built for a `metal` target
-/// gets `laufzeit/metall/arena.c`, whose reservation is a slice of one static region and
-/// whose commit is a budget -- no operating system underneath, nothing to bind, and the
-/// machine access it does have (port I/O, `hlt`, MSRs) is allowed.
+/// gets the generated pool runtime (templates `arena.modul`, `arena.metall`): a static pool per
+/// arena and no operating system underneath, nothing to bind, and the machine access the image
+/// does have (port I/O, `hlt`, MSRs) is allowed.
 ///
 /// A unit may of course write its own bodies instead of the library's -- the check is that
 /// the DECLARATION stands, with its arity and its result, not that a particular file was
@@ -2678,7 +2700,8 @@ fn baue_einheit(
     // **The bare-metal image, linked by the build itself** (Opus agent J, OFFEN O32 residue).
     // With a `metal <dir>` line the unit's `<unit>.metall.c` is compiled freestanding (no
     // hosted header: `-nostdinc` + the compiler's own headers + `<dir>/include`), linked
-    // with the runtime (`start.S`, `kern.c`, `arena.c`) under `metall.ld` with NO C library,
+    // with the runtime (`start.S`, `kern.c`, the generated memory functions) under `metall.ld`
+    // with NO C library,
     // and handed over as `<unit>.metall.elf` (ELF64) plus `<unit>.metall.boot.elf` (the
     // ELF32 copy a Multiboot1 loader such as `qemu -kernel` takes). An undefined symbol --
     // a foreign body the unit calls and nothing supplies -- is the linker's refusal, and the
@@ -2721,15 +2744,12 @@ fn baue_einheit(
 
 /// The runtime files a bare-metal image is linked from, relative to the `metal` directory.
 /// Their bytes are part of the image's fingerprint.
-const METALL_QUELLEN: [&str; 7] = [
-    "start.S",
-    "kern.c",
-    "arena.c",
-    "metall.h",
-    "metall.ld",
-    "include/math.h",
-    "include/string.h",
-];
+/// The arena runtime, the compiler's memory functions and the two hosted header names are
+/// GENERATED since the C-free lane's C3 slice 1 (`treiber::metall_arena`,
+/// `treiber::METALL_SPEICHER`, `treiber::metall_koepfe`); `laufzeit/metall/arena.c` and
+/// `include/` are gone. `eintritt_asm.h` (included by `kern.c`) is listed since the same
+/// slice: until then neither the fingerprint nor C0's count saw it.
+const METALL_QUELLEN: [&str; 5] = ["start.S", "kern.c", "eintritt_asm.h", "metall.h", "metall.ld"];
 
 /// **Every handwritten file a unit's products contain** as `(origin, path)` (C-free lane,
 /// C0): the unit's own foreign `.c`/`.h`, the module runtime a `kmod` line names, the
@@ -2858,17 +2878,30 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
         Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         _ => return Err(format!("bare-metal image: `{cc} -print-file-name=include` failed")),
     };
+    // The two hosted header names the emitted unit asks for and the compiler's four memory
+    // functions are the build's generated text (C-free lane, C3 slice 1), written beside the
+    // image like the driver.
+    let koepfe = aus.join(format!("{name}.metall-include"));
+    std::fs::create_dir_all(&koepfe)
+        .map_err(|err| format!("bare-metal image: {}: {err}", koepfe.display()))?;
+    for (datei, text) in treiber::metall_koepfe() {
+        std::fs::write(koepfe.join(datei), text)
+            .map_err(|err| format!("bare-metal image: {datei}: {err}"))?;
+    }
+    let speicher = aus.join(format!("{name}.metall.speicher.c"));
+    std::fs::write(&speicher, treiber::METALL_SPEICHER)
+        .map_err(|err| format!("bare-metal image: {}: {err}", speicher.display()))?;
     let flaggen = |c: &mut std::process::Command| {
         c.args(METALL_FLAGGEN);
         c.arg("-isystem").arg(&gccinc);
-        c.arg("-isystem").arg(dir.join("include"));
+        c.arg("-isystem").arg(&koepfe);
     };
     let obj = |teil: &str| aus.join(format!("{name}.metall.{teil}.o"));
-    for (quelle, teil) in [("kern.c", "kern"), ("arena.c", "arena")] {
+    for (quelle, teil) in [(dir.join("kern.c"), "kern"), (speicher.clone(), "speicher")] {
         let mut c = std::process::Command::new(cc);
         flaggen(&mut c);
-        c.arg("-c").arg(dir.join(quelle)).arg("-o").arg(obj(teil));
-        lauf(c, quelle)?;
+        c.arg("-c").arg(&quelle).arg("-o").arg(obj(teil));
+        lauf(c, &quelle.display().to_string())?;
     }
     let mut c = std::process::Command::new(cc);
     c.arg("-fno-pie").arg("-c").arg(dir.join("start.S")).arg("-o").arg(obj("start"));
@@ -2883,7 +2916,7 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
     let mut c = std::process::Command::new("ld");
     c.args(["-nostdlib", "-static", "-no-pie", "-z", "max-page-size=0x1000", "-T"]);
     c.arg(dir.join("metall.ld")).arg("-o").arg(&bild);
-    for teil in ["start", "kern", "arena", "treiber"] {
+    for teil in ["start", "kern", "speicher", "treiber"] {
         c.arg(obj(teil));
     }
     lauf(c, "the link (`ld -nostdlib`: no C library)")?;

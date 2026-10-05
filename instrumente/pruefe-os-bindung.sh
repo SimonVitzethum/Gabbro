@@ -186,15 +186,15 @@ OSSYM_TOOLKETTE='^(__fentry__|__x86_return_thunk|__stack_chk_|__ubsan_handle_|__
 # the first run produced:
 #
 #   * `memcpy`, `memset`, `memmove`, `strlen` -- a FREESTANDING C implementation
-#     owes these to the compiler, and `laufzeit/metall/include/string.h` is where
-#     the machine layer defines its own. They are not an OS interface; a compiler
+#     owes these to the compiler, and the bare-metal image gets them from the build
+#     (generated since the C-free lane's C3 slice 1, template `metall.speicher`). They are not an OS interface; a compiler
 #     emits calls to them for a struct assignment.
 #   * `pause` -- on bare metal that is the `pause` INSTRUCTION in a spin loop
 #     (the ticket lock's backoff), hardware and allowed. It is libc's
 #     `pause(2)` only on the hosted side, where this stage does not look.
 #   * anything in a COMMENT. Prose naming the token is not a use -- the lesson
 #     `pruefe-osfrei.py` wrote down after `mmap` fired inside a German compound
-#     -- and `laufzeit/metall/arena.c` explains in its header what it does
+#     -- and the old bare-metal `arena.c` explained in its header what it did
 #     INSTEAD of `mmap`. Comment lines are dropped before the scan.
 METALL_OS_NAMEN='(pthread_[a-z_]+|mmap|munmap|mprotect|sbrk|brk|malloc|calloc|realloc|printf|fprintf|sprintf|snprintf|puts|putchar|fputs|fwrite|fflush|exit|_exit|abort|sysconf|getpid|gettimeofday|clock_gettime|nanosleep|usleep|sleep|read|write|open|close|ioctl|socket|bind|listen|accept|send|recv|sendto|recvfrom|select|poll|epoll_[a-z]+|signal|sigaction|kill|fork|execve|waitpid|dlopen|dlsym|getpid)'
 

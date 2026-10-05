@@ -326,6 +326,15 @@ generated driver, lock through the chain). Reviewers from 321.
     HARNESS): on kernel 6.8 the callback is a field of `struct hrtimer`; a question for Simon
     whether a probe's harness counts for acceptance (STAND-C).
   - [ ] Bare metal (C3).
+    - [x] Slice 1 (2026-10-05): `laufzeit/metall/arena.c`, `include/` and `kern.c`'s memory
+      functions are generated text -- the metal driver writes the proved `arena.modul` pool
+      runtime behind `arena.metall`'s reservation, the build writes `metall.speicher` (the four
+      memory functions) and the two header names; `gabbro runtime metal-arena`, `metal-memory`,
+      `metal-include <dir>` for harnesses (`SchablonenMetall.lean`, register 34 -> 36 entries,
+      23 -> 25 machine-checked). Metal C0 2090 -> 1879 lines, 7 -> 4 files (`eintritt_asm.h`
+      counted since this slice); `pruefe-metall.sh` 18 booted + 8 gifts, freestanding 338/338.
+    - [ ] The kernel proper: serial + report, IDT, LAPIC, ACPI/MADT, SMP bring-up, scheduler,
+      context switch (`kern.c`), `start.S`, `eintritt_asm.h`, `metall.h`.
 
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics
 and windows — is to be written in Gabbro itself**, not as `extern` with a named assumption. The

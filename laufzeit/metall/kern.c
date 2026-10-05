@@ -59,58 +59,13 @@
 #include <stdatomic.h>
 #include "metall.h"
 #include "eintritt_asm.h"
+#include <string.h>   /* the generated header: the four memory functions */
 
-/* -- The compiler's four freestanding obligations. --------------------------
- *
- * GCC may emit calls to memcpy/memset/memmove/memcmp even under
- * `-ffreestanding -fno-builtin` (struct copies, zero initialisation). There
- * is no libc to supply them, so the runtime does, byte by byte: the image is
- * a test harness for the thread runtime, not a place to be fast. */
-void *memcpy(void *d, const void *s, unsigned long n)
-{
-    unsigned char *dd = d;
-    const unsigned char *ss = s;
-    while (n--) {
-        *dd++ = *ss++;
-    }
-    return d;
-}
-
-void *memmove(void *d, const void *s, unsigned long n)
-{
-    unsigned char *dd = d;
-    const unsigned char *ss = s;
-    if (dd < ss) {
-        while (n--) {
-            *dd++ = *ss++;
-        }
-    } else {
-        while (n--) {
-            dd[n] = ss[n];
-        }
-    }
-    return d;
-}
-
-void *memset(void *d, int c, unsigned long n)
-{
-    unsigned char *dd = d;
-    while (n--) {
-        *dd++ = (unsigned char)c;
-    }
-    return d;
-}
-
-int memcmp(const void *a, const void *b, unsigned long n)
-{
-    const unsigned char *x = a, *y = b;
-    for (unsigned long i = 0; i < n; i++) {
-        if (x[i] != y[i]) {
-            return x[i] < y[i] ? -1 : 1;
-        }
-    }
-    return 0;
-}
+/* -- The compiler's four freestanding obligations (memcpy, memmove, memset,
+ * memcmp) are GENERATED text since the C-free lane's C3 slice 1: the build
+ * writes them beside the image (`treiber.rs::METALL_SPEICHER`, template
+ * `metall.speicher`), and a harness takes them from `gabbro runtime
+ * metal-memory`. */
 
 /* -- Ports, MSRs, flags. ---------------------------------------------------- */
 

@@ -1,6 +1,6 @@
 # C-FREI-REPORT -- no handwritten C in a finished Gabbro binary (C-free lane)
 
-*Interim state, 2026-10-01 (session 12, Opus 5.5). The assignment is `~/claude-lane/AUFTRAG-C.md`;
+*Interim state, 2026-10-05 (session 13, Opus 5.5). The assignment is `~/claude-lane/AUFTRAG-C.md`;
 the rule is AGENTS.md §3 (Simon, 2026-09-30). This file is rewritten at every milestone; the
 numbers carry the command that measured them.*
 
@@ -13,7 +13,7 @@ put into each finished product, per target.
 |---|---|---|---|
 | hosted | 1174 lines, 7 files | **0 lines, 0 files** | -- |
 | kmod | 1344 lines, 11 files (two probes; 1659 / 13 with the `atomar` probe the counter lists since C2) | **95 lines, 1 file; runtime and binding 0** | the `takt` probe's own hardirq timer `messung/proben/kmodul/takt.c` (95) -- its HARNESS, not product: on kernel 6.8 an hrtimer's callback is a field of `struct hrtimer` (a code address stored into a kernel layout) |
-| metal | 1962 lines, 6 files | 1962, 6 | C3 not started: `laufzeit/metall/*` |
+| metal | 1962 lines, 6 files counted -- **2090 / 7 in truth**: `eintritt_asm.h` (128, included by `kern.c`) was in neither the build's list nor the count until 2026-10-05 | **1879 lines, 4 files** | C3 slice 1 done (arena, memory functions, headers generated); left: the kernel proper -- `kern.c` 952, `start.S` 427, `metall.h` 372, `eintritt_asm.h` 128 |
 
 Hosted imports (`C0_ARBEIT=… python3 instrumente/zaehle-c.py --baue`, toolchain names removed):
 172, 173 and the os-probe 0; examples 63 (`putchar`) and 64 (`write`) bind the C library by their
@@ -41,7 +41,9 @@ startup file and no `__libc_start_main`, `nm -u` empty.
 
 | the kernel thread start in Gabbro (C2, slice 3) | (this merge) | `N575`-`N577`: the type `entry fn(…) -> R` -- code a generated driver hands in, the one shape in which code reaches a foreign body; `gabbro_kern_faden_start` is Gabbro over `kthread_create_on_node`/`wake_up_process` (the `ERR_PTR` decoded in Gabbro), the join a word per root and `msleep`; the core number and the holder record (probe instrumentation in product code) gone -- `linux-kmod.c` DELETED; example 184, gifts 1394-1397; OFFEN O39 closed but for the probe's timer, O40 recorded | `faden.modul` |
 
-Template register (`gabbro schablonen`): 34 entries, 23 machine-checked; `--tor` still names the 6
+| bare metal, slice 1 (C3) | (this merge) | `laufzeit/metall/arena.c`, `include/math.h`, `include/string.h` and the memory functions of `kern.c` gone: the metal driver writes the PROVED `arena.modul` pool runtime behind a reservation by list position, the build writes the four memory functions and the two header names beside the image; harnesses take them from `gabbro runtime metal-arena`/`metal-memory`/`metal-include` | `metall.speicher`, `arena.metall` |
+
+Template register (`gabbro schablonen`): 36 entries, 25 machine-checked; `--tor` still names the 6
 hanging premises it named before this lane (none of this lane's).
 
 ## Open, by name
@@ -54,7 +56,10 @@ hanging premises it named before this lane (none of this lane's).
   ARGUMENT. Kernels from 6.13 take it as an argument (`hrtimer_setup`). A question for Simon:
   is a probe's own harness C inside acceptance 3 ("0 handwritten C lines in the .ko")?
 * **Probe finding:** `atomar`'s "flag seen > 0" is scheduling-dependent -- 1 of 5 runs this
-  session saw the consumer finish before the producer's first store (`kratz/c/s11/kmod-b.log`). **C3** (bare metal): not started.
+  session saw the consumer finish before the producer's first store (`kratz/c/s11/kmod-b.log`).
+* **C3** (bare metal), what is left after slice 1: the kernel proper -- serial, IDT, LAPIC, ACPI
+  (MADT by physical address), SMP bring-up, scheduler, context switch (`kern.c`), the boot and
+  entry stubs (`start.S`, `eintritt_asm.h`), the driver macros (`metall.h`).
 * **Machine G has no byte pointers** (OFFEN O37): region programs stay UNCERTIFIED; nothing
   releases a region.
 * No Isabelle on the server: `abnahme.py --voll` has not been run by this lane.

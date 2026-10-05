@@ -4888,3 +4888,35 @@ NOT proved: the wrapper's instructions after its store run in module text (the u
 completion had too), and that the binding keeps `kern_faden_vertrag` (user logic, premise (c)).
 `Zielsatz/Spec.lean` unchanged: the goal's runtime premise (d) already says the declared starts
 run; what moved is who writes the start (the binding, in Gabbro) and the driver's join.
+
+## 70. The bare-metal image's generated pieces: `metall.speicher` and `arena.metall` (C-free lane, 2026-10-05, C3 slice 1)
+
+**The gap.** Every bare-metal image linked `laufzeit/metall/arena.c` (one shared static reserve
+carved by a counter, a commit budget), `include/math.h`, `include/string.h` and the four memory
+functions at the head of `kern.c` -- handwritten C. Now the metal driver writes the PROVED
+`arena.modul` pool runtime (§68) behind a reservation by list position, and the build writes the
+four memory functions (`<unit>.metall.speicher.c`) and the two header names beside the image
+(`treiber.rs::metall_arena`, `METALL_SPEICHER`, `metall_koepfe`; `gabbro runtime metal-arena`,
+`metal-memory`, `metal-include <dir>` for harnesses).
+
+| Lean name | File | What it says |
+|---|---|---|
+| `Sp`, `schreib`, `vor`, `rueck`, `setze`, `vgl` | SchablonenMetall §1 | memory as a function, and the four C loops |
+| **`memcpy_korrekt`** | SchablonenMetall §1 | without overlap the destination holds the source; nothing else moves |
+| **`memmove_korrekt`** | SchablonenMetall §1 | for EVERY overlap the destination holds the source's original bytes |
+| `memmove_vorwaerts_waere_falsch` | SchablonenMetall §1 | the backward branch is load-bearing |
+| `memset_korrekt` | SchablonenMetall §1 | every destination byte is `c mod 256`; nothing else moves |
+| **`memcmp_null`**, `memcmp_kleiner` | SchablonenMetall §1 | 0 exactly on equal ranges; -1 exactly at a first difference with the smaller left byte |
+| `metall_speicher_zeuge` | SchablonenMetall §1 | WITNESS: copy, both memmove branches on overlaps, set, compare both ways |
+| `stelle`, `reserviere` | SchablonenMetall §2 | `gabbro_arena_reserve` by list position |
+| **`arena_metall_eigene_stelle`**, **`arena_metall_getrennt`**, `arena_metall_fremd` | SchablonenMetall §2 | the pool of the descriptor's own position; two descriptors never share one; a descriptor outside the list gets none |
+| `arena_metall_lager_getrennt` | SchablonenMetall §2 | the pools are disjoint byte ranges (with `arena_modul_slot_im_lager`: every reachable slot inside its own arena's pool) |
+| `arena_metall_zeuge` | SchablonenMetall §2 | WITNESS: three descriptors, two pools granted, a refused third, a stranger |
+
+NOT proved: that the compiler calls the memory functions only with ranges it owns, and that the
+loader zeroes `.bss` (the bare-metal block's `lader`). `Zielsatz/Spec.lean` unchanged (the arena
+on metal is still the static storage premise (d) names; its parenthesis naming `arena.c` in the
+Opus agent L block is a dated remark). Measured: `instrumente/pruefe-metall.sh` 18 images booted
+on `qemu -smp 4`, every expectation held, 8 gifts bite (158-else with a pool of exactly the floor
+answers 1); `pruefe-freistehend.sh` 338 of 338; `zaehle-c.py` metal 2090 -> 1879 lines, 7 -> 4
+files.

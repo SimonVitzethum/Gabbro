@@ -31,8 +31,9 @@
 # (`-DMETALL_KOOPERATIV`: staffel hangs into the timeout).
 #
 # Opus agent J (2026-09-26) added the features beyond threads (details at the images):
-#   metall153/154/158(-else)  arenas on the bare-metal arena runtime (`arena.c`); the
-#               `else` of `grow` taken by the REAL runtime under a smaller commit budget
+#   metall153/154/158(-else)  arenas on the bare-metal arena runtime (generated, templates
+#               `arena.modul`/`arena.metall`); the `else` of `grow` taken by the REAL
+#               runtime under a smaller pool
 #   metall161   bounded strings (memcpy/memcmp from the runtime)
 #   metall59    the program's own `via idt` handler and entered entry in the metal IDT,
 #               fired by fixed IPIs while threads take the `masks irqs` lock
@@ -49,7 +50,7 @@
 # the error-code vector (165: `iretq` takes the code for the return address).
 # with gifts: `17 -> 18` (158) and the masked lock built unmasked (59: hangs, and the
 # handler reports that it landed on a core with a claim on the lock).
-# Every image compiles with `-nostdinc` (the compiler's headers + `laufzeit/metall/include`).
+# Every image compiles with `-nostdinc` (the compiler's headers + the generated two).
 #
 # QEMU MISSING IS NOT A PASS. Without `qemu-system-x86_64` every image is still BUILT
 # and LINKED (freestanding, `nm` shows no undefined symbol), and the script says
@@ -84,12 +85,20 @@ command -v qemu-system-x86_64 > /dev/null && QEMU=qemu-system-x86_64
 
 # The one flag word for every C file of an image. `-mno-red-zone`: the timer interrupt
 # pushes onto the running thread's stack, and a leaf function's red zone would be under it.
-# `-nostdinc` + the compiler's own headers + `laufzeit/metall/include/` (Opus agent J): the
+# `-nostdinc` + the compiler's own headers + the generated <math.h>/<string.h> (Opus agent J): the
 # emitted unit includes <math.h> (and strings <string.h>), which a freestanding toolchain
 # does not have; the image must not quietly borrow the host's C-library headers.
+# Since the C-free lane's C3 slice 1 (2026-10-05) the two header names, the compiler's four
+# memory functions and the arena runtime are GENERATED text: taken here from `gabbro runtime
+# metal-*`, the same bytes `gabbro build` writes beside an image.
 GCCINC="$(cc -print-file-name=include)"
+RT="$ARB/rt-gen"
+mkdir -p "$RT"
+G runtime metal-include "$RT/include"
+G runtime metal-memory > "$RT/speicher.c"
+G runtime metal-arena > "$RT/arena.c"
 CF="-std=c11 -O2 -ffreestanding -fno-builtin -nostdlib -nostdinc -isystem $GCCINC
-    -isystem $M/include -fno-pic -fno-pie -mno-red-zone
+    -isystem $RT/include -fno-pic -fno-pie -mno-red-zone
     -mcmodel=small -fno-stack-protector -fno-asynchronous-unwind-tables
     -fno-tree-loop-distribute-patterns -Wall -Wextra -Werror"
 
@@ -104,15 +113,19 @@ CF="-std=c11 -O2 -ffreestanding -fno-builtin -nostdlib -nostdinc -isystem $GCCIN
 baue() {
     local d="$ARB/$1" extra="$2" textra="${3:-}"
     # shellcheck disable=SC2086
+    # A harness's own driver gets the generated arena runtime behind it; a driver `gabbro
+    # build` wrote carries it already.
+    cp "$d/treiber.c" "$d/treiber-voll.c"
+    grep -q 'gabbro_modul_reserve' "$d/treiber.c" || cat "$RT/arena.c" >> "$d/treiber-voll.c"
     cc $CF $extra -c "$M/kern.c" -o "$d/kern.o" 2> "$d/cc.err" \
-      && cc $CF $extra -c "$M/arena.c" -o "$d/arena.o" 2>> "$d/cc.err" \
+      && cc $CF $extra -c "$RT/speicher.c" -o "$d/speicher.o" 2>> "$d/cc.err" \
       && cc -fno-pie -c "$M/start.S" -o "$d/start.o" 2>> "$d/cc.err" \
       && cc $CF $extra $textra -I"$M" -I"$d" -DEINHEIT_INCLUDE='"einheit.c"' \
-            -c "$d/treiber.c" -o "$d/treiber.o" 2>> "$d/cc.err" || {
+            -c "$d/treiber-voll.c" -o "$d/treiber.o" 2>> "$d/cc.err" || {
         echo "  $1: BUILD FAILED"; head -20 "$d/cc.err"; return 1; }
     : > "$d/fremd.S"
     if [ -f "$d/fremd.ok" ]; then
-        nm --defined-only "$d/kern.o" "$d/arena.o" "$d/start.o" | awk 'NF == 3 {print $3}' \
+        nm --defined-only "$d/kern.o" "$d/speicher.o" "$d/start.o" | awk 'NF == 3 {print $3}' \
             | sort -u > "$d/rt.def"
         nm -u "$d/treiber.o" | awk '{print $2}' | sort -u | comm -23 - "$d/rt.def" > "$d/fremd.namen"
         while IFS= read -r s; do
@@ -123,7 +136,7 @@ baue() {
     # shellcheck disable=SC2086
     cc -fno-pie -c "$d/fremd.S" -o "$d/fremd.o" 2>> "$d/cc.err" \
       && ld -nostdlib -static -no-pie -T "$M/metall.ld" -z max-page-size=0x1000 \
-            -o "$d/k.elf" "$d/start.o" "$d/kern.o" "$d/arena.o" "$d/treiber.o" "$d/fremd.o" \
+            -o "$d/k.elf" "$d/start.o" "$d/kern.o" "$d/speicher.o" "$d/treiber.o" "$d/fremd.o" \
             2>> "$d/cc.err" \
       && objcopy -O elf32-i386 "$d/k.elf" "$d/k32.elf" 2>> "$d/cc.err" || {
         echo "  $1: BUILD FAILED"; head -20 "$d/cc.err"; return 1; }
@@ -344,15 +357,15 @@ printf '%s' "$TREIBER_STAFFEL" > "$ARB/staffel-gift/treiber.c"
 # Opus agent J (2026-09-26): the features beyond threads, on the same bare metal.
 #
 #   metall153/154/158  dynamic arenas through the BARE-METAL arena runtime
-#                      (`laufzeit/metall/arena.c`: a static reserve, commit = bookkeeping
-#                      against a budget): the static twins 153/154 and the dynamic 158,
-#                      whose `grow` commits the upper half (118) --
-#   metall158-else     -- and the SAME source with a commit budget of exactly the floor
-#                      (`-DMETALL_ARENA_ZUSAGE=8`: 4 slots x 2 bytes): the runtime REFUSES
+#                      (generated since the C-free lane's C3: a static pool per arena,
+#                      span = min(ceiling, pool)): the static twins 153/154 and the dynamic
+#                      158, whose `grow` commits the upper half (118) --
+#   metall158-else     -- and the SAME source with a pool of exactly the floor
+#                      (`-DGABBRO_MODUL_VORRAT=8`: 4 slots x 2 bytes): the runtime REFUSES
 #                      the grow and the program's `else` answers 1. Not a stub: the real
 #                      runtime, with a smaller number.
 #   metall161          bounded strings (lane 261): `memcpy`/`memcmp` from the runtime,
-#                      <string.h> from `laufzeit/metall/include/`
+#                      <string.h> generated (`gabbro runtime metal-include`)
 #   metall59           the program's OWN `via idt` handler (`entry zeitgeber vector 32`)
 #                      and its entered entry (`systemruf vector 0x80`), installed in the
 #                      metal IDT, fired by real fixed IPIs from core 0 while three threads
@@ -702,7 +715,7 @@ baue staffel-gift "-DMETALL_KOOPERATIV" || exit 1
 baue metall153 "" || exit 1
 baue metall154 "" "-O0" || exit 1
 baue metall158 "" || exit 1
-baue metall158-else "-DMETALL_ARENA_ZUSAGE=8" || exit 1
+baue metall158-else "-DGABBRO_MODUL_VORRAT=8" || exit 1
 baue metall158-gift "" || exit 1
 baue metall161 "" || exit 1
 baue metall59 "" || exit 1
