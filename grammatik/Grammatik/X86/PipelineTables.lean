@@ -1200,3 +1200,137 @@ theorem tabellen_schreiben_laufBytes_zeuge :
     zeLowWrite zeGerade zeCodeAt' zeBytesEq zeRipEq
   exact ⟨n, s', σ', zeCfgOk, zeSep, zeEnvRepr, zeWorldRep, zeLowWrite, zeGerade,
     zeCodeAt', zeBytesEq, zeRipEq, hb, hr, hsrc, hW, hE, zeHw, zeRunChangeProof⟩
+
+/-! ## 12. Poison probes: every refusal, by computation -/
+
+/-- A write into the unlisted table (no extent). -/
+def zeWriteFremd : Stmt zeD zeV false [] [] [] :=
+  .assignSlot true true zeIdx1 zeVal42Fremd
+    (show zeV.schreibt true = true from rfl) zeHL2
+
+/-- UNLISTED-TABLE READ REFUSED. -/
+theorem zeProbe_fremd_lesen : senkLesen zeA zeCfg zeReadFremd = none := by decide
+
+/-- UNLISTED-TABLE WRITE REFUSED. -/
+theorem zeProbe_fremd_schreiben : senkSchreiben zeA zeCfg zeWriteFremd = none := by decide
+
+/-- VARIABLE-INDEX READ REFUSED. -/
+theorem zeProbe_var_lesen : senkLesen zeA zeCfg zeReadVar = none := by decide
+
+/-- VARIABLE-INDEX WRITE REFUSED. -/
+theorem zeProbe_var_schreiben : senkSchreiben zeA zeCfg zeWriteVar = none := by decide
+
+/-- `rbp` AS ADDRESS BASE REFUSED (`adrOk`: mod=00 r/m=101 is
+    RIP-relative, never a plain base). -/
+def zeCfgRbp : PipeCfg := { zeCfg with adr := .rbp }
+
+theorem zeProbe_rbp_lesen : senkLesen zeA zeCfgRbp zeReadSlot = none := by decide
+
+theorem zeProbe_rbp_schreiben : senkSchreiben zeA zeCfgRbp zeWrite = none := by decide
+
+/-- THE VALIDATOR ACCEPTS the anchored store block: the recomputed
+    program is the candidate, it decodes back, and the written slot
+    lies off the code. -/
+theorem zeProbe_validate : validate zeCfg (tabLayout zeA) []
+    (.cons zeWrite .nil : Block zeD zeV false [] [] []) zeBytes = true := by decide
+
+/-- THE VALIDATOR REFUSES the unlisted-table block: no placed slot, so
+    the accepted lowering answers `none`. -/
+theorem zeProbe_validate_fremd : validate zeCfg (tabLayout zeA) []
+    (.cons zeWriteFremd .nil : Block zeD zeV false [] [] []) zeBytes = false := by decide
+
+/- CUTS (exactly what is NOT proved here):
+
+   Covered (lowered, with correctness over the real semantics):
+   - `slot`/`durch` reads at a constant in-extent index of an
+     integer field, through the checked address form
+     (`senkLesen_korrekt`, joint witness on a two-field record);
+   - `assignSlot`/`assignDurch` stores at a constant in-extent index
+     of an integer field (`senkSchreiben_korrekt`, joint witness),
+     lifted to fetched byte runs (`tabellen_schreiben_laufBytes`,
+     joint witness with code region and bytes);
+   - the computed layout's separation (`ankerSep_sound`) and world
+     representation (`tabWorldRep`) from decided checks over finite
+     row/field enumerations.
+   Refused (`none`, never guessed), with generic theorems and poison
+   probes: out-of-extent indices, unlisted tables, missing row
+   lengths, unlisted fields, non-constant (variable) indices,
+   non-integer fields, unlowerable values, and the `rbp`/`r13`
+   address bases (`adrOk`, `basisKeinForm_ok`).
+   FINDING (vacuity, reported, not weakened): a CONSTANT index of a
+   well-typed program is always inside the extent — the index type
+   `.index (D.count t)` carries the bound (M103), so `constInt?`
+   recomputes only in-bounds values and the `idxOkB` leg can only
+   fire on ill-typed indices. The bound is rechecked anyway (defense
+   in depth, `feldAdr_kein_oob`); the fir-ing refusals are the
+   coverage ones (unlisted tables/fields, variable indices).
+   NOT covered, and not claimed:
+   - no block-level integration of reads: `senkBlock` (accepted,
+     elsewhere) lowers no slot reads, so read lowering is proved at
+     chunk level only; wiring it into blocks needs a `senkBlock`
+     extension, not done here;
+   - no scaled-index addressing: addresses are materialised whole
+     (`movImm64`); `skaliertAddr` has no pilot consumer
+     (`EffectiveAddress` §7);
+   - no multi-byte/byte-slice values (`leseBytes`/`schreibBytes`),
+     no `bool`/`sum`/`float`/`fnptr` slot representations
+     (`slotWort` stays 0 there, as in `PipelineImage`);
+   - no `durch` through a carrier the anchor does not list whose
+     `tabNr` equation is misproved (proof terms do not misprove);
+   - no TSO/GX bridge, no time, no second core, no optimiser
+     interaction beyond the recomputing validator;
+   - the `adrOk` guard is conservative: the model steps `rbp`-based
+     accesses normally (no encoding fault in `schritt`); the refusal
+     anticipates the encoder restriction, documented not derived.
+-/
+
+#print axioms feldAdr_some
+#print axioms feldAdr_kein_oob
+#print axioms idxOk_toNat
+#print axioms tabLayout_loc
+#print axioms ankerBasis_mem
+#print axioms ankerZeile_mem
+#print axioms feldOff_mem
+#print axioms ankerEintrag_inv
+#print axioms ankerSep_sound
+#print axioms tabWorldRep
+#print axioms lesChunk_lauf
+#print axioms senkLesen_korrekt
+#print axioms senkSchreiben_korrekt
+#print axioms senkLesen_verweigert_ausserhalb
+#print axioms senkLesen_verweigert_nichtkonstant
+#print axioms senkSchreiben_verweigert_ausserhalb
+#print axioms senkSchreiben_verweigert_nichtkonstant
+#print axioms tabellen_schreiben_laufBytes
+#print axioms zeCfgOk
+#print axioms zeSep
+#print axioms zeLowWrite
+#print axioms zeLowRead
+#print axioms zeLowReadDurch
+#print axioms zeLowWriteDurch
+#print axioms zeCodeAt
+#print axioms zeOkB
+#print axioms zeWeltB
+#print axioms zeWorldRep
+#print axioms zeEnvRepr
+#print axioms zeSrcWrite
+#print axioms zeWriteRun
+#print axioms zeReadEval
+#print axioms senkLesen_korrekt_zeuge
+#print axioms senkSchreiben_korrekt_zeuge
+#print axioms senkLesen_verweigert_ausserhalb_zeuge
+#print axioms senkLesen_verweigert_nichtkonstant_zeuge
+#print axioms senkSchreiben_verweigert_ausserhalb_zeuge
+#print axioms senkSchreiben_verweigert_nichtkonstant_zeuge
+#print axioms zeGerade
+#print axioms tabellen_schreiben_laufBytes_zeuge
+#print axioms zeProbe_fremd_lesen
+#print axioms zeProbe_fremd_schreiben
+#print axioms zeProbe_var_lesen
+#print axioms zeProbe_var_schreiben
+#print axioms zeProbe_rbp_lesen
+#print axioms zeProbe_rbp_schreiben
+#print axioms zeProbe_validate
+#print axioms zeProbe_validate_fremd
+
+end Gabbro.Grammatik.X86.PipelineTables
