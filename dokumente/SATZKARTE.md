@@ -4920,3 +4920,34 @@ Opus agent L block is a dated remark). Measured: `instrumente/pruefe-metall.sh` 
 on `qemu -smp 4`, every expectation held, 8 gifts bite (158-else with a pool of exactly the floor
 answers 1); `pruefe-freistehend.sh` 338 of 338; `zaehle-c.py` metal 2090 -> 1879 lines, 7 -> 4
 files.
+
+## 71. The bare-metal image's locks and rcu read sides: `sperre.metall`, `sperre.maskiert`, `rcu.metall` (C-free lane, 2026-10-05, C3 slice 2)
+
+**The gap.** The Gabbro-facing locks of a bare-metal image (`METALL_SPERRE`, `_GETEILT`,
+`_MASKIERT`, `_MASKIERT_GETEILT`), the rcu read side `METALL_RCU` and the flag helpers were 140
+handwritten lines of `laufzeit/metall/metall.h`. They are now the generator's header
+`<metall_sperren.h>` (`treiber.rs::METALL_SPERREN`), written by `gabbro build` and `gabbro runtime
+metal-include <dir>` beside `<math.h>`/`<string.h>` and included last by `metall.h`; the bytes of
+every macro are unchanged.
+
+| Lean name | File | What it says |
+|---|---|---|
+| `MSchritt` | SchablonenMetallSperre §1 | one step of the generated spin: a `CTicket` step, or the yield (only with `darf`, IF = 1 at the call) |
+| **`mschritt_ticket_oder_stotter`**, `metall_sichtbar_ist_ticket` | SchablonenMetallSperre §1 | the yield changes no lock word and is invisible; a visible step is a ticket step (so `ticketLP_sperrAbstrakt` covers it) |
+| **`metall_ausschluss`**, `minv_erreichbar` | SchablonenMetallSperre §1 | `TInv` and mutual exclusion on every reachable state of the generated lock |
+| **`abgabe_nur_mit_if`** | SchablonenMetallSperre §1 | with IF = 0 the spin takes no yield |
+| `sperre_metall_zeuge` | SchablonenMetallSperre §1 | WITNESS: two draws and a real yield on a reachable state |
+| `Kern`, `KSchritt`, `MInv` | SchablonenMetallSperre §2 | the holder's core: IF, the local flags, the lock's flag word; a delivery/yield/preemption needs IF = 1 |
+| **`maskiert_keine_zustellung`** | SchablonenMetallSperre §2 | IF = 0 from the clearing instruction through draw, spin, section and release |
+| **`maskiert_flaggen_zurueck`** | SchablonenMetallSperre §2 | after `L_gib` IF is the caller's |
+| **`flaggen_eigen`** | SchablonenMetallSperre §2 | the shared flag word hands every holder back its own store under the abstract lock |
+| `sperre_maskiert_zeuge`, `flaggen_zeuge` | SchablonenMetallSperre §2 | WITNESSES: a whole masked claim from IF = 1; two holders in turn |
+| **`rcu_gnade_korrekt`**, `rcu_inv_erreichbar` | SchablonenMetallSperre §3 | the count is the readers' total depth; a zero read means nobody inside |
+| `rcu_ende_ohne_start_waere_falsch` | SchablonenMetallSperre §3 | without the start/end pairing the count reads 0 under a live reader |
+| `rcu_zeuge` | SchablonenMetallSperre §3 | WITNESS: nested reads of two threads, reachable, count 3 |
+
+NOT proved: the C11 orderings (the C and the hardware), counter wrap at 2^32, starvation of a
+grace wait (OFFEN O32), and the runtime's own side of the yield (`metall_abgeben` and the
+scheduler stay `kern.c`, wall C of `messung/C3-WAENDE.md`). `Zielsatz/Spec.lean` unchanged: the
+goal's lock premise is `LaufzeitC.sperre`, which `ticketLP_sperrAbstrakt` discharges, and the
+generated lock refines it step for step.

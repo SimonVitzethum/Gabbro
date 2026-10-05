@@ -1,5 +1,8 @@
 # C3 -- what the bare-metal runtime still needs before it can be Gabbro
 
+*Slice 2 (session 14, same day) took the Gabbro-facing locks and rcu read sides out of
+`metall.h`: **1734 lines, 4 files** (`metall.h` 227). The rest of this map stands.*
+
 *C-free lane, session 13, 2026-10-05. A map, not a result: every line of handwritten C/asm the
 bare-metal image still links (`instrumente/zaehle-c.py`: **1879 lines, 4 files** -- `kern.c` 952,
 `start.S` 427, `metall.h` 372, `eintritt_asm.h` 128), the piece of the machine it serves, and
@@ -30,7 +33,7 @@ a decision.*
 | SMP bring-up (INIT-SIPI-SIPI, AP entry) | 70 | kern.c | wall A (ICR) + wall D (the trampoline it copies) |
 | BSP main (`metall_bsp`, the order of the above) | 40 | kern.c | Gabbro's `boot` form (`bootdecl`: steps, then dispatch) once the steps exist |
 | ticket lock for the runtime's own queues | 25 | metall.h | goes with wall C |
-| Gabbro-facing locks (`METALL_SPERRE*`, masked, shared), `METALL_RCU` | 140 | metall.h | GENERATED text like the hosted `sperre.ticket` (the yield taken only with IF = 1 is a stutter of `CTicket.lean`); the masked variant (IF cleared before the ticket is drawn, restored after the release) and the rcu grace wait each need an abstract-core proof. A Gabbro spelling needs lock OBJECTS: `laufzeit/sperre.gab` is one module-level lock, and module statics are singletons (network lane, wall 10) |
+| Gabbro-facing locks (`METALL_SPERRE*`, masked, shared), `METALL_RCU` | ~~140~~ 0 | ~~metall.h~~ | **DONE in slice 2 (2026-10-05)**: the generated `<metall_sperren.h>`, templates `sperre.metall` (the yield a stutter of `CTicket.lean`), `sperre.maskiert` (IF = 0 from before the draw until the restore), `rcu.metall` (the count is the readers' total depth), `SchablonenMetallSperre.lean`. A Gabbro spelling would still need lock OBJECTS: `laufzeit/sperre.gab` is one module-level lock, and module statics are singletons (network lane, wall 10) |
 | entry stubs (`METALL_EINTRITT*`, `eintritt_asm.h`) | 200 | metall.h, eintritt_asm.h | wall D, or a proved template over a named register-file assumption |
 | boot, page tables, GDT, long mode, context switch, entries, trampoline | 427 | start.S | wall D (and C for the switch) |
 

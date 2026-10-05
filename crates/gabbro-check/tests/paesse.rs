@@ -598,7 +598,10 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // **23 -> 25 on 2026-10-05 (C-free lane, C3 slice 1):** `metall.speicher` and
     // `arena.metall`, the bare-metal image's memory functions and arena reservation as
     // generated text, entered and proved in one commit (`SchablonenMetall.lean`).
-    assert_eq!(bewiesen(), 25);
+    // **25 -> 28 on 2026-10-05 (C-free lane, C3 slice 2):** `sperre.metall`, `sperre.maskiert`
+    // and `rcu.metall`, the bare-metal image's locks and rcu read sides as generated text
+    // (`<metall_sperren.h>`), entered and proved in one commit (`SchablonenMetallSperre.lean`).
+    assert_eq!(bewiesen(), 28);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

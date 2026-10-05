@@ -13,7 +13,7 @@ put into each finished product, per target.
 |---|---|---|---|
 | hosted | 1174 lines, 7 files | **0 lines, 0 files** | -- |
 | kmod | 1344 lines, 11 files (two probes; 1659 / 13 with the `atomar` probe the counter lists since C2) | **95 lines, 1 file; runtime and binding 0** | the `takt` probe's own hardirq timer `messung/proben/kmodul/takt.c` (95) -- its HARNESS, not product: on kernel 6.8 an hrtimer's callback is a field of `struct hrtimer` (a code address stored into a kernel layout) |
-| metal | 1962 lines, 6 files counted -- **2090 / 7 in truth**: `eintritt_asm.h` (128, included by `kern.c`) was in neither the build's list nor the count until 2026-10-05 | **1879 lines, 4 files** | C3 slice 1 done (arena, memory functions, headers generated); left: the kernel proper -- `kern.c` 952, `start.S` 427, `metall.h` 372, `eintritt_asm.h` 128 |
+| metal | 1962 lines, 6 files counted -- **2090 / 7 in truth**: `eintritt_asm.h` (128, included by `kern.c`) was in neither the build's list nor the count until 2026-10-05 | **1734 lines, 4 files** | C3 slices 1 and 2 done (arena, memory functions, headers, then the Gabbro-facing locks and rcu read sides generated); left: the kernel proper -- `kern.c` 952, `start.S` 427, `metall.h` 227, `eintritt_asm.h` 128 |
 
 Hosted imports (`C0_ARBEIT=… python3 instrumente/zaehle-c.py --baue`, toolchain names removed):
 172, 173 and the os-probe 0; examples 63 (`putchar`) and 64 (`write`) bind the C library by their
@@ -43,23 +43,27 @@ startup file and no `__libc_start_main`, `nm -u` empty.
 
 | bare metal, slice 1 (C3) | (this merge) | `laufzeit/metall/arena.c`, `include/math.h`, `include/string.h` and the memory functions of `kern.c` gone: the metal driver writes the PROVED `arena.modul` pool runtime behind a reservation by list position, the build writes the four memory functions and the two header names beside the image; harnesses take them from `gabbro runtime metal-arena`/`metal-memory`/`metal-include` | `metall.speicher`, `arena.metall` |
 
-Template register (`gabbro schablonen`): 36 entries, 25 machine-checked; `--tor` still names the 6
+| bare metal, slice 2 (C3) | (this merge) | the Gabbro-facing locks (`METALL_SPERRE`, `_GETEILT`, `_MASKIERT`, `_MASKIERT_GETEILT`), `METALL_RCU` and the flag helpers left `metall.h`: the generated `<metall_sperren.h>`, the same bytes, now proved -- the yield of the spin a stutter of `CTicket.lean`, the masked lock's IF = 0 from before the draw until the restore and its flag word the holder's own, the rcu count the readers' total depth | `sperre.metall`, `sperre.maskiert`, `rcu.metall` |
+
+Template register (`gabbro schablonen`): 39 entries, 28 machine-checked; `--tor` still names the 6
 hanging premises it named before this lane (none of this lane's).
 
 ## Open, by name
 
-* **Acceptance 0 (the network stack)**: the patch `~/claude-lane/C-FREI-FUER-NETZ.md` is on master
-  since session 8; the network lane has not reported its `tests/*.sh` on it. `N571` asked it for
-  74 sites.
+* **Acceptance 0 (the network stack)**: the network lane applied `C-FREI-FUER-NETZ.py` in its
+  real tree on 2026-10-05 (`~/gabbro-netz` `ac1f9f0`, branch `alltag-a`, WIP). Measured read-only
+  on a clone of its HEAD `9d67c01` with gabbro `f1b12316`: 30 manifests build, 0 C files each,
+  `nm -u` empty on all 29 ELF binaries (`~/claude-lane/kratz/c/netz8-mess.txt`). Open: its VM
+  suites GREEN on this build and the change in its `master`.
 * **Kernel module, the last 95 lines**: the `takt` probe's hrtimer (`takt.c`). Its callback is a
   FIELD of `struct hrtimer` on kernel 6.8; code reaches a foreign body only as an `entry fn`
   ARGUMENT. Kernels from 6.13 take it as an argument (`hrtimer_setup`). A question for Simon:
   is a probe's own harness C inside acceptance 3 ("0 handwritten C lines in the .ko")?
 * **Probe finding:** `atomar`'s "flag seen > 0" is scheduling-dependent -- 1 of 5 runs this
   session saw the consumer finish before the producer's first store (`kratz/c/s11/kmod-b.log`).
-* **C3** (bare metal), what is left after slice 1: the kernel proper -- serial, IDT, LAPIC, ACPI
-  (MADT by physical address), SMP bring-up, scheduler, context switch (`kern.c`), the boot and
-  entry stubs (`start.S`, `eintritt_asm.h`), the driver macros (`metall.h`).
+* **C3** (bare metal), what is left after slices 1 and 2: the kernel proper -- serial, IDT, LAPIC,
+  ACPI (MADT by physical address), SMP bring-up, scheduler, context switch (`kern.c`), the boot
+  and entry stubs (`start.S`, `eintritt_asm.h`), the entry macros and declarations (`metall.h`).
   Mapped piece by piece in `messung/C3-WAENDE.md`: four walls -- (A) a device at a fixed
   hardware address, (B) physical memory read by an address the machine hands over, (C) a thread
   as saved machine state, (D) code before any Gabbro can run -- and three questions for Simon

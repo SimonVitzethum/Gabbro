@@ -337,6 +337,11 @@ generated driver, lock through the chain). Reviewers from 321.
       `metal-include <dir>` for harnesses (`SchablonenMetall.lean`, register 34 -> 36 entries,
       23 -> 25 machine-checked). Metal C0 2090 -> 1879 lines, 7 -> 4 files (`eintritt_asm.h`
       counted since this slice); `pruefe-metall.sh` 18 booted + 8 gifts, freestanding 338/338.
+    - [x] Slice 2 (2026-10-05): the Gabbro-facing locks (`METALL_SPERRE`, `_GETEILT`,
+      `_MASKIERT`, `_MASKIERT_GETEILT`) and `METALL_RCU` are the generated `<metall_sperren.h>`
+      (templates `sperre.metall`, `sperre.maskiert`, `rcu.metall`, `SchablonenMetallSperre.lean`;
+      register 36 -> 39 entries, 25 -> 28 machine-checked). Metal C0 1879 -> 1734 lines
+      (`metall.h` 372 -> 227); `pruefe-metall.sh` 18 booted + 8 gifts, freestanding 338/338.
     - [ ] The kernel proper: serial + report, IDT, LAPIC, ACPI/MADT, SMP bring-up, scheduler,
       context switch (`kern.c`), `start.S`, `eintritt_asm.h`, `metall.h`.
       Mapped in `messung/C3-WAENDE.md` (2026-10-05): walls A (a device at a fixed hardware

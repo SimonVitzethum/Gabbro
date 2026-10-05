@@ -77,162 +77,9 @@ static inline void metall_ticket_gib(metall_ticket *t)
     atomic_store_explicit(&t->jetzt, (uint32_t)(n + 1u), memory_order_release);
 }
 
-/* THE GABBRO-FACING ACQUIRE: the same four instructions, and one scheduler
- * action in the spin. A thread whose ticket is not served yet gives its core
- * away every `METALL_SPIN` passes (`metall_abgeben`, kern.c). WHY: with more
- * threads than cores, the ticket that is served next may belong to a thread
- * that is not running -- preempted, or queued behind the spinner on the same
- * core. Pure spinning then waits a whole quantum per hand-over (measured
- * 2026-09-26: 8 threads x 20000 acquisitions on 4 cores did not finish in
- * 60 s; 8 x 500 took 1.5 s). Yielding hands the core to exactly the thread
- * the queue is waiting for. For the lock it changes nothing: the ticket stays
- * drawn, the order stays the ticket order, and a yield leaves the spinner's
- * C configuration where it was -- the stutter `spinnt_nur` of CTicket.lean.
- * The runtime-internal locks keep the pure spin: they are held with IF = 0
- * on the scheduler's own stack, where there is no one to yield to. */
+/* The yield a Gabbro lock's spin takes every `METALL_SPIN` passes with IF = 1
+ * (`<metall_sperren.h>`): hands the core to its scheduler (kern.c). */
 void metall_abgeben(void);
-
-#ifndef METALL_SPIN
-#define METALL_SPIN 64u
-#endif
-
-/* The interrupt flag of the caller, and the pair that clears and restores it
- * (Opus agent J). A yield is only taken with IF = 1: with IF = 0 the caller is
- * an interrupt handler (running on whatever it interrupted) or inside a
- * `masks irqs` section, and both must never give the core away -- the first
- * would run another thread on top of an unfinished handler, the second would
- * deschedule a masked holder, which is exactly what `masks irqs` rules out. */
-static inline uint64_t metall_flaggen(void)
-{
-    uint64_t f;
-    __asm__ __volatile__("pushfq; popq %0" : "=r"(f) :: "memory");
-    return f;
-}
-static inline uint64_t metall_ia_aus(void)
-{
-    uint64_t f;
-    __asm__ __volatile__("pushfq; popq %0; cli" : "=r"(f) :: "memory");
-    return f;
-}
-static inline void metall_ia_her(uint64_t f)
-{
-    __asm__ __volatile__("pushq %0; popfq" :: "r"(f) : "memory", "cc");
-}
-#define METALL_IF 0x200u
-
-static inline void metall_sperre_nimm(metall_ticket *t)
-{
-    uint32_t my = atomic_fetch_add_explicit(&t->naechste, 1u, memory_order_relaxed);
-    uint32_t n = 0;
-    int darf_abgeben = (metall_flaggen() & METALL_IF) != 0u;
-    while (atomic_load_explicit(&t->jetzt, memory_order_acquire) != my) {
-        __asm__ __volatile__("pause" ::: "memory");
-        if (++n == METALL_SPIN) {
-            n = 0;
-            if (darf_abgeben) {
-                metall_abgeben();
-            }
-        }
-    }
-}
-
-/* One exclusive Gabbro lock: defines exactly the two symbols the emitter
- * declares per lock. A misspelt name is an undefined reference at link time,
- * the same contract the hosted drivers keep. */
-#define METALL_SPERRE(L)                                                  \
-    static metall_ticket metall_sperre_##L;                               \
-    void L##_nimm(void) { metall_sperre_nimm(&metall_sperre_##L); }       \
-    void L##_gib(void) { metall_ticket_gib(&metall_sperre_##L); }
-
-/* A shared (`geteilt`) lock: its shared pair takes the SAME ticket, i.e. the
- * shared side is served exclusively. Stronger than asked (readers exclude
- * each other too), never weaker: no guarantee is traded for the simpler
- * lock. */
-#define METALL_SPERRE_GETEILT(L)                                          \
-    METALL_SPERRE(L)                                                      \
-    void L##_nimm_geteilt(void) { metall_sperre_nimm(&metall_sperre_##L); } \
-    void L##_gib_geteilt(void) { metall_ticket_gib(&metall_sperre_##L); }
-
-/* A `masks irqs` lock (Opus agent J, OFFEN O32 residue): the emitter writes
- * no `cli`/`sti` for the word (`beispiele/59`: "das Wort ist eine ZUSAGE ueber
- * die Umgebung"), so the runtime keeps the promise HERE. Taking the lock
- * clears IF first and keeps it clear until the matching release restores the
- * caller's flags: a thrown entry (`via idt`) can never arrive on the holder's
- * core while it holds, and since a spin with IF = 0 never yields (above), a
- * masked holder is never descheduled either. A handler that takes the lock
- * therefore waits only for a holder on ANOTHER core, which runs. The unmasked
- * spelling of the same lock inside a handler is the same-core deadlock the
- * checker refuses as `H102` (`beispiele/gift/460`); the harness of
- * `instrumente/pruefe-metall.sh` (image `metall59-gift`) shows it hang.
- *
- * A ticket lock adds one case a plain spinlock does not have: a thread that
- * has DRAWN its ticket and waits is part of the queue, and an entry that
- * interrupts it on its core and then takes a later ticket waits behind the
- * very thread it sits on. So IF is cleared BEFORE the ticket is drawn, and the
- * whole claim -- waiting and holding -- runs with IF = 0.
- *
- * `metall_anspruch_L[k]` is 1 while a thread on core k has a claim on L
- * (ticket drawn, or held), 0 otherwise: the observation the harness reads in
- * the handler ("did an entry ever land on a core with a claim on the masked
- * lock?"). It is written only with IF = 0 on its own core. */
-#define METALL_SPERRE_MASKIERT(L)                                         \
-    static metall_ticket metall_sperre_##L;                               \
-    static uint64_t metall_flaggen_##L;                                   \
-    volatile uint8_t metall_anspruch_##L[METALL_KERNE_MAX];               \
-    void L##_nimm(void)                                                   \
-    {                                                                     \
-        uint64_t f = metall_ia_aus();                                     \
-        metall_anspruch_##L[metall_kern_nr()] = 1u;                       \
-        metall_sperre_nimm(&metall_sperre_##L);                           \
-        metall_flaggen_##L = f;                                           \
-    }                                                                     \
-    void L##_gib(void)                                                    \
-    {                                                                     \
-        uint64_t f = metall_flaggen_##L;                                  \
-        metall_ticket_gib(&metall_sperre_##L);                            \
-        metall_anspruch_##L[metall_kern_nr()] = 0u;                       \
-        metall_ia_her(f);                                                 \
-    }
-
-/* The shared pair of a masked lock: the same masked ticket (stronger than
- * asked -- readers exclude each other -- never weaker), as `_GETEILT` above. */
-#define METALL_SPERRE_MASKIERT_GETEILT(L)                                 \
-    METALL_SPERRE_MASKIERT(L)                                             \
-    void L##_nimm_geteilt(void) { L##_nimm(); }                           \
-    void L##_gib_geteilt(void) { L##_gib(); }
-
-/* An `rcu R` read side (Opus agent J). The emitter declares
- * `R_lese_start`/`R_lese_ende` and nothing else: WHERE a slot may be given
- * back is checked at compile time (`H011`, `H012`), and "no reader is left
- * inside once the pointer is withdrawn" is an assumption about the
- * environment (`zeugnis.rs`, `rcu`: the body comes from outside). This is
- * that outside on bare metal: a reader count per domain (acq_rel in, release
- * out) and the grace-period wait an environment's writer calls,
- * `metall_rcu_gnade_R` -- it returns once the count was seen at zero, and a
- * spin with IF = 1 gives the core away between reads. Starvation under a
- * never-empty reader population is not excluded (named in OFFEN O32). */
-#define METALL_RCU(R)                                                     \
-    _Atomic uint32_t metall_rcu_leser_##R;                                \
-    void R##_lese_start(void)                                             \
-    {                                                                     \
-        atomic_fetch_add_explicit(&metall_rcu_leser_##R, 1u,              \
-                                  memory_order_acq_rel);                  \
-    }                                                                     \
-    void R##_lese_ende(void)                                              \
-    {                                                                     \
-        atomic_fetch_sub_explicit(&metall_rcu_leser_##R, 1u,              \
-                                  memory_order_release);                  \
-    }                                                                     \
-    void metall_rcu_gnade_##R(void);                                      \
-    void metall_rcu_gnade_##R(void)                                       \
-    {                                                                     \
-        while (atomic_load_explicit(&metall_rcu_leser_##R,                \
-                                    memory_order_acquire) != 0u) {        \
-            if (metall_flaggen() & METALL_IF) {                           \
-                metall_abgeben();                                         \
-            }                                                             \
-        }                                                                 \
-    }
 
 /* An entry whose `dispatch` target is not declared in the unit has nothing to
  * run (`erzeugernamen.rs`: the `_verteiler` reference exists only then); its
@@ -368,5 +215,13 @@ void metall_zahl(uint64_t v);
 uint32_t metall_kerne(void);        /* cores that checked in */
 uint32_t metall_kern_nr(void);      /* the calling thread's core */
 __attribute__((noreturn)) void metall_ende(int code);
+
+/* -- The Gabbro-facing locks and rcu read sides: GENERATED text since the C-free lane's
+ * C3 slice 2 (2026-10-05) -- `<metall_sperren.h>`, written by `gabbro build` (and by
+ * `gabbro runtime metal-include`) beside the image's <math.h>/<string.h>: `METALL_SPERRE`,
+ * `_GETEILT`, `_MASKIERT`, `_MASKIERT_GETEILT`, `METALL_RCU` and the flag helpers
+ * `metall_flaggen`/`metall_ia_aus`/`metall_ia_her` (templates `sperre.metall`,
+ * `sperre.maskiert`, `rcu.metall`, Grammatik/SchablonenMetall.lean section 3). */
+#include <metall_sperren.h>
 
 #endif

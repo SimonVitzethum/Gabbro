@@ -171,6 +171,9 @@ pub const RATSCHE: &[&str] = &[
     "faden.modul",
     "metall.speicher",
     "arena.metall",
+    "sperre.metall",
+    "sperre.maskiert",
+    "rcu.metall",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -600,6 +603,90 @@ pub const SCHABLONEN: &[Schablone] = &[
         fundstelle: "grammatik/Grammatik/SchablonenMetall.lean §2; crates/gabbro-cli/src/treiber.rs \
                      (`metall_arena`, `erzeuge_metall_voll`); instrumente/pruefe-metall.sh (metall153, \
                      154, 158, 158-else with a pool of 8 bytes, 158-gift)",
+    },
+    // **Entered 2026-10-05 by the C-free lane (C3 slice 2, the bare-metal image), PROVED in
+    // the same commit**: the Gabbro-facing locks and rcu read sides, until then 140 handwritten
+    // lines of `laufzeit/metall/metall.h`, became the generated `<metall_sperren.h>`.
+    Schablone {
+        name: "sperre.metall",
+        haengt_an: &["sperre.ticket"],
+        konstrukt: "lock L … (and its `shared` pair) in a unit built for the bare-metal image \
+                    (`METALL_SPERRE(L)`, `METALL_SPERRE_GETEILT(L)` of the generated \
+                    `<metall_sperren.h>`, `treiber.rs::METALL_SPERREN`)",
+        pflicht: "`L_nimm`/`L_gib` are the ticket lock of `CTicket.lean` (the relaxed draw, the \
+                  acquire spin, the release store) whose spin gives the core away every \
+                  `METALL_SPIN` passes -- only when the caller's IF was 1 at the call. A shared \
+                  pair takes the SAME ticket (stronger than asked, never weaker). \
+                  **Machine-checked** (`Grammatik/SchablonenMetallSperre.lean` §1): every step \
+                  of the generated spin is a ticket step or changes no lock word and is \
+                  invisible to the abstract semantics (`mschritt_ticket_oder_stotter`, \
+                  `metall_sichtbar_ist_ticket`), so the invariant and mutual exclusion hold on \
+                  every reachable state (`minv_erreichbar`, `metall_ausschluss`) and \
+                  `ticketLP_sperrAbstrakt` covers the visible steps unchanged; with IF = 0 the \
+                  spin takes no yield at all (`abgabe_nur_mit_if`); witness \
+                  `sperre_metall_zeuge` (a real yield on a reachable state). **NOT modelled:** \
+                  the C11 orderings (the C and the hardware), 2^32 outstanding tickets.",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "`L_gib` is called only by the holder of `L`", durch: Some("the checker's lock discipline, as for `sperre.ticket`: `locks L { … }` is the only form that takes a lock and the emitter pairs every `L_nimm` with its `L_gib` (`H006`, `geteilt.rs`)"), braeuchte: None },
+            Voraussetzung { was: "a zero `static` is the free lock", durch: Some("`static metall_ticket metall_sperre_L;` in `.bss`, zeroed by the loader (the bare-metal block's assumption `lader` in `Spec.lean`)"), braeuchte: None },
+            Voraussetzung { was: "the yield changes no lock word and no program memory", durch: Some("`metall_abgeben` (kern.c) saves and restores the caller's flags around a context switch to the core's scheduler, which touches only the runtime's own queues -- the runtime's side, named with the scheduler in `messung/C3-WAENDE.md` wall C"), braeuchte: None },
+            Voraussetzung { was: "the driver defines exactly the unit's locks, each with its flavour", durch: Some("`treiber.rs::erzeuge_metall_voll`, one macro per lock of `bau.rs::sperrenliste` (the same register the hosted and module drivers read); a missing or misspelt one is an undefined reference at link time"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenMetallSperre.lean §1; crates/gabbro-cli/src/treiber.rs \
+                     (`METALL_SPERREN`); instrumente/pruefe-metall.sh (metall159, stress, koop)",
+    },
+    Schablone {
+        name: "sperre.maskiert",
+        haengt_an: &["sperre.metall"],
+        konstrukt: "lock L masks irqs … in a unit built for the bare-metal image \
+                    (`METALL_SPERRE_MASKIERT(L)`, `_MASKIERT_GETEILT(L)` of `<metall_sperren.h>`)",
+        pflicht: "IF is cleared BEFORE the ticket is drawn (the old flags in a local), the \
+                  holder stores them in the lock's own word after the acquire, and the release \
+                  reads that word back, releases and restores them. **Machine-checked** \
+                  (`Grammatik/SchablonenMetallSperre.lean` §2): on the holder's core IF is 0 \
+                  from the clearing instruction until the restoring one -- through the draw, the \
+                  spin, the section and the release -- so no interrupt, yield or timer \
+                  preemption (each needs IF = 1) takes the core in between \
+                  (`maskiert_keine_zustellung`); after the release IF is the caller's again \
+                  (`maskiert_flaggen_zurueck`); and the lock's flag word, shared by all cores, \
+                  hands every holder back its OWN store under the abstract lock the ticket \
+                  refines (`flaggen_eigen`); witnesses `sperre_maskiert_zeuge`, `flaggen_zeuge`. \
+                  This is the runtime half of the promise `H102` demands (`kontexte.handlersperre`).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "nothing inside the masked section sets IF or gives the core away", durch: Some("the emitter writes no flag instruction; `N461` keeps a run-time `start` and its join out of a held lock; a spin on another lock inside the section reads IF = 0 and never yields (`abgabe_nur_mit_if`); a program's own `asm` body is foreign code whose effect is its declared contract, premise (c)"), braeuchte: None },
+            Voraussetzung { was: "every handler that takes a lock takes a masked one", durch: Some("`H102` (`kontexte.handlersperre`): an entry carrying a `via` path takes no lock that fails to declare `masks irqs`"), braeuchte: None },
+            Voraussetzung { was: "only the holder writes the flag word", durch: Some("the template itself: the store stands after the acquire and the read before the release, and mutual exclusion is `sperre.metall`'s (`metall_ausschluss`)"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenMetallSperre.lean §2; crates/gabbro-cli/src/treiber.rs \
+                     (`METALL_SPERREN`); instrumente/pruefe-metall.sh (metall59, metall59-gift)",
+    },
+    Schablone {
+        name: "rcu.metall",
+        haengt_an: &[],
+        konstrukt: "observes R { … } over an `rcu R` domain in a unit built for the bare-metal \
+                    image (`METALL_RCU(R)` of \
+                    `<metall_sperren.h>`: `R_lese_start`, `R_lese_ende`, the grace wait \
+                    `metall_rcu_gnade_R`)",
+        pflicht: "A reader count per domain, `+1` at the start of a read section, `-1` at its \
+                  end, and a grace wait that returns once it reads zero (giving the core away \
+                  between reads only with IF = 1). **Machine-checked** \
+                  (`Grammatik/SchablonenMetallSperre.lean` §3): in every reachable state the \
+                  count is the sum of the readers' nesting depths (`rcu_inv_erreichbar`), so a \
+                  grace wait that reads zero saw a moment with no reader inside any read section \
+                  (`rcu_gnade_korrekt`); without the pairing the count can read zero under a \
+                  live reader (`rcu_ende_ohne_start_waere_falsch`); witness `rcu_zeuge`. \
+                  **NOT proved:** the C11 orderings; starvation of the wait under a never-empty \
+                  reader population (OFFEN O32); that the writer withdrew the pointer before \
+                  waiting (the program's assumption, `H015`).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "every `R_lese_ende` closes a `R_lese_start` of the same thread", durch: Some("the emitter's lowering of `observes R { … }` (`emit.rs`, `StmtArt::Observiert`): the start at the block's entry, the end at its close and on every exit through it, an early `return` included (the exit list `freigaben`)"), braeuchte: None },
+            Voraussetzung { was: "no reclaim waits inside its own read section", durch: Some("`H011` (`geteilt.rs`): a `reclaims` inside one's own read of the same domain is refused"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenMetallSperre.lean §3; crates/gabbro-cli/src/treiber.rs \
+                     (`METALL_SPERREN`); instrumente/pruefe-freistehend.sh (the rcu driver stage)",
     },
     // **Entered 2026-09-30 by the C-free lane (OFFEN O38), PROVED**: the lowering of the
     // gate+guard+`child` triple, which lane 260 wrote as a jump into the parent's function.

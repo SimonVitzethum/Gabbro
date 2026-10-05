@@ -2547,6 +2547,13 @@ fn baue_einheit(
             if let Err(err) = std::fs::write(&metall_pfad, &metall_c) {
                 return Ergebnis::Abgesagt(format!("{}: {err}", metall_pfad.display()));
             }
+            // The driver's locks are the generator's header (C3 slice 2, templates
+            // `sperre.metall`, `sperre.maskiert`, `rcu.metall`), which `metall.h` includes:
+            // written beside the driver, so its documented recipe (`-I <ausgabe>`) finds it.
+            let sperren_pfad = metall_pfad.with_file_name("metall_sperren.h");
+            if let Err(err) = std::fs::write(&sperren_pfad, treiber::METALL_SPERREN) {
+                return Ergebnis::Abgesagt(format!("{}: {err}", sperren_pfad.display()));
+            }
         }
     }
 
