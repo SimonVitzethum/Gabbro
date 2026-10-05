@@ -271,13 +271,92 @@ theorem hwLock_mfence_stimmt (m : HwMaschine) (c : Nat) (len : Nat)
   · rfl
   · rfl
 
+/-! ## 4. Plug preservation and general refusals.
+
+  The plug preserves `HwWf` (profiles untouched). What is not
+  admitted stays refused: parsed #UD (LOCK on a register destination,
+  LOCK on the fence, missing SSE2 gate at `.ud`), a pending own
+  store, and a misaligned word. Each refusal cites its accepted
+  equation through the ok/none bridge. -/
+
+/-- Every admitted plug step preserves well-formedness. -/
+theorem adapterLockRmw_wf (m : HwMaschine) (c : Nat)
+    (a : LockAnweisung) (m' : HwMaschine)
+    (h : adapterLockRmw.schritt m c a = some m') (hwf : HwWf m) :
+    HwWf m' := by
+  have h2 : hwLockSchritt m c a = some m' := h
+  unfold hwLockSchritt at h2
+  cases h1 : lockSchrittVoll a c (lockMaschineVonHw m c) m.hw
+    (m.bereit c) with
+  | ok lm ev =>
+    rw [h1] at h2
+    cases h2
+    exact einbettenLock_wf _ _ _ hwf
+  | speicherFehler => rw [h1] at h2; cases h2
+  | udFehler g => rw [h1] at h2; cases h2
+  | verweigert => rw [h1] at h2; cases h2
+
+/-- Parsed architectural #UD never executes: LOCK on a register
+    destination, LOCK on the fence, and the control-state #UD marker
+    all refuse the plug step. -/
+theorem hwLock_ud_bleibt_verweigert (m : HwMaschine) (c : Nat)
+    (g : LockUdGrund) (len : Nat) :
+    hwLockSchritt m c (.ud g len) = none := by
+  apply hwLockSchritt_verweigert_bei
+  rw [lockSchrittVoll_ud]
+  intro h
+  cases h
+
+/-- A pending own store refuses the locked word step. -/
+theorem hwLock_puffer_bleibt_verweigert (m : HwMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (e : TSOEintrag) (rest : List TSOEintrag)
+    (hbuf : m.puffer c = e :: rest)
+    (hok : laengeOk len = true) :
+    hwLockSchritt m c (.ok (.xadd64 src base d) len) = none := by
+  apply hwLockSchritt_verweigert_bei
+  have h := lockSchrittVoll_xadd_puffer_verweigert (lockMaschineVonHw m c)
+    c src base d len m.hw (m.bereit c) e rest hbuf hok
+  rw [h]
+  decide
+
+/-- A misaligned word refuses the locked step as an unsupported
+    profile, never as a hardware fault claim. -/
+theorem hwLock_unaligned_bleibt_verweigert (m : HwMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (hbuf : m.puffer c = [])
+    (hok : laengeOk len = true)
+    (hfehl : ausgerichtet8 (effAddr (projZustand m c) base d) = false) :
+    hwLockSchritt m c (.ok (.xadd64 src base d) len) = none := by
+  apply hwLockSchritt_verweigert_bei
+  have h := lockSchrittVoll_xadd_unaligned_verweigert (lockMaschineVonHw m c)
+    c src base d len m.hw (m.bereit c) hbuf hok hfehl
+  rw [h]
+  decide
+
+/-- Without admitted SSE2 the fence refuses (parsed as #UD by 662,
+    gated here to `none`). -/
+theorem hwLock_mfence_ohne_sse2_verweigert (m : HwMaschine) (c : Nat)
+    (len : Nat)
+    (hok : laengeOk len = true)
+    (hfehlt : merkmalZugelassen m.hw (m.bereit c) .sseDoppel = false) :
+    hwLockSchritt m c (.ok .mfence len) = none := by
+  apply hwLockSchritt_verweigert_bei
+  have h := lockSchrittVoll_mfence_ohne_sse2 (lockMaschineVonHw m c) c
+    len m.hw (m.bereit c) hok hfehlt
+  rw [h]
+  decide
+
 /- CUTS:
     Proved here: projection with the shared TSO view, re-embedding with
     `HwWf` preservation, the admitted-step plug with its event-exposing
-    twin and ok/none bridge, decidable observers, and XADD exact
-    agreement (same guards, same successor and event, read-back, kept
-    buffers). NOT proved yet: CMPXCHG/MFENCE agreement, planted
-    refusals, two-core witness, no W/GX claim.
+    twin and ok/none bridge, decidable observers, XADD/CMPXCHG/MFENCE
+    exact agreement (same guards, same successor and event, read-back,
+    kept buffers, write permission pinned on the failure write-back),
+    plug `HwWf` preservation, and general refusals (#UD markers,
+    pending own store, misaligned word, fence without SSE2).
+    NOT proved yet: closed refusal pins (fault classes), two-core
+    witness, no W/GX claim.
 -/
 
 #print axioms lockMaschineVonHw_tso
@@ -289,3 +368,8 @@ theorem hwLock_mfence_stimmt (m : HwMaschine) (c : Nat) (len : Nat)
 #print axioms hwLock_cmpxchg_ok_stimmt
 #print axioms hwLock_cmpxchg_nein_stimmt
 #print axioms hwLock_mfence_stimmt
+#print axioms adapterLockRmw_wf
+#print axioms hwLock_ud_bleibt_verweigert
+#print axioms hwLock_puffer_bleibt_verweigert
+#print axioms hwLock_unaligned_bleibt_verweigert
+#print axioms hwLock_mfence_ohne_sse2_verweigert
