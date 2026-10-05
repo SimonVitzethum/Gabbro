@@ -138,6 +138,12 @@ def decFlags (b : Breite) (x : Wort) (f : Flags) : Flags :=
 theorem adcEingang_werte : adcEingang false = 0 ∧ adcEingang true = 1 :=
   ⟨rfl, rfl⟩
 
+/-- The set carry-in counts 1 (rewrite form). -/
+theorem adcEingang_true : adcEingang true = 1 := rfl
+
+/-- The clear carry-in counts 0 (rewrite form). -/
+theorem adcEingang_false : adcEingang false = 0 := rfl
+
 /-- Truncation at 64 bits keeps the unsigned value
     (`negB_b64` itself is reused from `ShiftLogic.lean`). -/
 theorem trunc_b64_nat (w : Wort) : (trunc .b64 w).toNat = w.toNat := by
@@ -258,9 +264,338 @@ theorem probe_incdec_wert :
         of := false }).cf = true := by
   decide
 
+/-! ## 2. Register step: the family over the canonical state.
+
+   `carrySchritt` handles ONLY register forms, reusing the canonical
+   `laengeOk`/`ripNach`/`regSet` shapes, the §1 value/flag layer and the
+   architectural merge discipline (`mergeRegNarrow`: 8/16-bit writes
+   merge, 32-bit writes zero-extend, 64-bit writes are full). Memory
+   operands are NOT admitted here: they are TSO byte-issue events (§5),
+   never the register plug. There is no trap: ADC/SBB/INC/DEC cannot
+   fault, so outcomes are successor or decode refusal. -/
+
+/-- Family operations over registers: ADC/SBB consume the incoming CF,
+    immediate forms carry the already-extended operand word (extension
+    per opcode form is pinned at decode, §3), INC/DEC keep the CF. -/
+inductive CarryBefehl where
+  | adcReg (b : Breite) (dst src : Register)
+  | sbbReg (b : Breite) (dst src : Register)
+  | adcImm (b : Breite) (dst : Register) (op : Wort)
+  | sbbImm (b : Breite) (dst : Register) (op : Wort)
+  | incReg (b : Breite) (dst : Register)
+  | decReg (b : Breite) (dst : Register)
+  deriving DecidableEq, Repr
+
+/-- Decoded family instruction: operation plus checked length data. -/
+structure CarryDecodiert where
+  befehl : CarryBefehl
+  laenge : Nat
+  deriving DecidableEq, Repr
+
+/-- Step outcome: successor or decode refusal. -/
+inductive CarryErgebnis where
+  | ok (nach : Zustand)
+  | misslungen
+
+/-- Destination write with the architectural merge discipline. -/
+def carrySchreibe (s : Zustand) (b : Breite) (dst : Register)
+    (v : Wort) : Register → Wort :=
+  regSet s.register dst (mergeRegNarrow b (s.register dst) v)
+
+/-- One family step over registers; memory is untouched by construction. -/
+def carrySchritt (d : CarryDecodiert) (s : Zustand) : CarryErgebnis :=
+  match laengeOk d.laenge with
+  | false => .misslungen
+  | true =>
+    let nach := ripNach s.rip d.laenge
+    match d.befehl with
+    | .adcReg b dst src =>
+      let v := adcWert b (s.register dst) (s.register src) s.flags.cf
+      .ok { s with register := carrySchreibe s b dst v, rip := nach, flags := adcFlags b (s.register dst) (s.register src) s.flags.cf }
+    | .sbbReg b dst src =>
+      let v := sbbWert b (s.register dst) (s.register src) s.flags.cf
+      .ok { s with register := carrySchreibe s b dst v, rip := nach, flags := sbbFlags b (s.register dst) (s.register src) s.flags.cf }
+    | .adcImm b dst op =>
+      let v := adcWert b (s.register dst) op s.flags.cf
+      .ok { s with register := carrySchreibe s b dst v, rip := nach, flags := adcFlags b (s.register dst) op s.flags.cf }
+    | .sbbImm b dst op =>
+      let v := sbbWert b (s.register dst) op s.flags.cf
+      .ok { s with register := carrySchreibe s b dst v, rip := nach, flags := sbbFlags b (s.register dst) op s.flags.cf }
+    | .incReg b dst =>
+      .ok { s with register := carrySchreibe s b dst (incWert b (s.register dst)), rip := nach, flags := incFlags b (s.register dst) s.flags }
+    | .decReg b dst =>
+      .ok { s with register := carrySchreibe s b dst (decWert b (s.register dst)), rip := nach, flags := decFlags b (s.register dst) s.flags }
+
+/-! ## Step equations for the six forms: each pins the full successor;
+    every premise is used. -/
+
+/-- `adcReg`: the destination takes the carry sum with the ADC flags. -/
+theorem carry_adc_erfolg (d : CarryDecodiert) (s : Zustand) (b : Breite)
+    (dst src : Register)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .adcReg b dst src) :
+    carrySchritt d s = .ok { s with register := carrySchreibe s b dst (adcWert b (s.register dst) (s.register src) s.flags.cf), rip := ripNach s.rip d.laenge, flags := adcFlags b (s.register dst) (s.register src) s.flags.cf } := by
+  unfold carrySchritt
+  rw [hok, h]
+
+/-- `sbbReg`: the destination takes the borrow difference with SBB flags. -/
+theorem carry_sbb_erfolg (d : CarryDecodiert) (s : Zustand) (b : Breite)
+    (dst src : Register)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .sbbReg b dst src) :
+    carrySchritt d s = .ok { s with register := carrySchreibe s b dst (sbbWert b (s.register dst) (s.register src) s.flags.cf), rip := ripNach s.rip d.laenge, flags := sbbFlags b (s.register dst) (s.register src) s.flags.cf } := by
+  unfold carrySchritt
+  rw [hok, h]
+
+/-- `adcImm`: the destination takes the sum with the extended operand. -/
+theorem carry_adcImm_erfolg (d : CarryDecodiert) (s : Zustand) (b : Breite)
+    (dst : Register) (op : Wort)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .adcImm b dst op) :
+    carrySchritt d s = .ok { s with register := carrySchreibe s b dst (adcWert b (s.register dst) op s.flags.cf), rip := ripNach s.rip d.laenge, flags := adcFlags b (s.register dst) op s.flags.cf } := by
+  unfold carrySchritt
+  rw [hok, h]
+
+/-- `sbbImm`: the destination takes the difference with the operand. -/
+theorem carry_sbbImm_erfolg (d : CarryDecodiert) (s : Zustand) (b : Breite)
+    (dst : Register) (op : Wort)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .sbbImm b dst op) :
+    carrySchritt d s = .ok { s with register := carrySchreibe s b dst (sbbWert b (s.register dst) op s.flags.cf), rip := ripNach s.rip d.laenge, flags := sbbFlags b (s.register dst) op s.flags.cf } := by
+  unfold carrySchritt
+  rw [hok, h]
+
+/-- `incReg`: the destination takes the successor with CF preserved. -/
+theorem carry_inc_erfolg (d : CarryDecodiert) (s : Zustand) (b : Breite)
+    (dst : Register)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .incReg b dst) :
+    carrySchritt d s = .ok { s with register := carrySchreibe s b dst (incWert b (s.register dst)), rip := ripNach s.rip d.laenge, flags := incFlags b (s.register dst) s.flags } := by
+  unfold carrySchritt
+  rw [hok, h]
+
+/-- `decReg`: the destination takes the predecessor with CF preserved. -/
+theorem carry_dec_erfolg (d : CarryDecodiert) (s : Zustand) (b : Breite)
+    (dst : Register)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .decReg b dst) :
+    carrySchritt d s = .ok { s with register := carrySchreibe s b dst (decWert b (s.register dst)), rip := ripNach s.rip d.laenge, flags := decFlags b (s.register dst) s.flags } := by
+  unfold carrySchritt
+  rw [hok, h]
+
+/-- A bad decode length refuses every form, unconditionally. -/
+theorem carry_laenge_misslungen (d : CarryDecodiert) (s : Zustand)
+    (h : laengeOk d.laenge = false) :
+    carrySchritt d s = .misslungen := by
+  unfold carrySchritt
+  simp [h]
+
+/-! ## Memory discipline and step-level agreements.
+
+    Every success arm carries `speicher := s.speicher`; refusals carry
+    no state. At 64 bits with CF=0 the ADC/SBB steps ARE the accepted
+    ADD/SUB steps; INC/DEC steps preserve CF. -/
+
+/-- A successful family step leaves canonical memory alone. -/
+theorem carrySchritt_speicher (d : CarryDecodiert) (s s' : Zustand)
+    (h : carrySchritt d s = CarryErgebnis.ok s') :
+    s'.speicher = s.speicher := by
+  unfold carrySchritt at h
+  cases hlen : laengeOk d.laenge with
+  | false =>
+    simp [hlen] at h
+  | true =>
+    simp [hlen] at h
+    cases hbef : d.befehl with
+    | adcReg b dst src =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | sbbReg b dst src =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | adcImm b dst op =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | sbbImm b dst op =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | incReg b dst =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | decReg b dst =>
+      simp [hbef] at h
+      cases h
+      rfl
+
+/-- STEP CF-PRESERVATION: a successful INC step keeps the carry. -/
+theorem carry_inc_schritt_cf (d : CarryDecodiert) (s : Zustand) (b : Breite)
+    (dst : Register) (s' : Zustand)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .incReg b dst)
+    (hstep : carrySchritt d s = .ok s') :
+    s'.flags.cf = s.flags.cf := by
+  rw [carry_inc_erfolg d s b dst hok h] at hstep
+  cases hstep
+  rfl
+
+/-- STEP CF-PRESERVATION: a successful DEC step keeps the carry. -/
+theorem carry_dec_schritt_cf (d : CarryDecodiert) (s : Zustand) (b : Breite)
+    (dst : Register) (s' : Zustand)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .decReg b dst)
+    (hstep : carrySchritt d s = .ok s') :
+    s'.flags.cf = s.flags.cf := by
+  rw [carry_dec_erfolg d s b dst hok h] at hstep
+  cases hstep
+  rfl
+
+/-- STEP AGREEMENT (64-bit): ADC with CF=0 runs the accepted ADD step. -/
+theorem carry_adc64_ohne_schritt (d : CarryDecodiert) (s : Zustand)
+    (dst src : Register)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .adcReg .b64 dst src)
+    (hcf : s.flags.cf = false) :
+    carrySchritt d s = .ok { s with register := regSet s.register dst (add64 (s.register dst) (s.register src)).1, rip := ripNach s.rip d.laenge, flags := (add64 (s.register dst) (s.register src)).2 } := by
+  have hstep := carry_adc_erfolg d s .b64 dst src hok h
+  simp only [carrySchreibe, hcf, adcWert_b64_ohne, adcFlags_b64_ohne, mergeRegNarrow_b64, add64] at hstep ⊢
+  exact hstep
+
+/-- STEP AGREEMENT (64-bit): SBB with CF=0 runs the accepted SUB step. -/
+theorem carry_sbb64_ohne_schritt (d : CarryDecodiert) (s : Zustand)
+    (dst src : Register)
+    (hok : laengeOk d.laenge = true) (h : d.befehl = .sbbReg .b64 dst src)
+    (hcf : s.flags.cf = false) :
+    carrySchritt d s = .ok { s with register := regSet s.register dst (sub64 (s.register dst) (s.register src)).1, rip := ripNach s.rip d.laenge, flags := (sub64 (s.register dst) (s.register src)).2 } := by
+  have hstep := carry_sbb_erfolg d s .b64 dst src hok h
+  simp only [carrySchreibe, hcf, sbbWert_b64_ohne, sbbFlags_b64_ohne, mergeRegNarrow_b64, sub64] at hstep ⊢
+  exact hstep
+
+/-! ## Word-level `toNat` bridges for the multiword chain.
+
+    Each bridge pins the 64-bit value/carry against unsigned `toNat`
+    arithmetic; the chain theorems below reuse them, never a second
+    adder. -/
+
+/-- The word added for the carry-in counts the `adcEingang` number. -/
+theorem eingang_wort_nat (c : Bool) :
+    ((if c then (1 : Wort) else 0)).toNat = adcEingang c := by
+  cases c <;> decide
+
+/-- ADC value at 64 bits as unsigned `toNat` arithmetic. -/
+theorem adcWert_b64_nat (x y : Wort) (c : Bool) :
+    (adcWert .b64 x y c).toNat =
+      (x.toNat + y.toNat + adcEingang c) % 2 ^ 64 := by
+  have hv : adcWert .b64 x y c = x + y + (if c then 1 else 0 : Wort) := by
+    simp [adcWert, addB, trunc_b64]
+  rw [hv, BitVec.toNat_add, BitVec.toNat_add, eingang_wort_nat,
+    Nat.mod_add_mod]
+
+/-- ADC carry at 64 bits as an unsigned range test. -/
+theorem adcTrag_b64_nat (x y : Wort) (c : Bool) :
+    adcTrag .b64 x y c =
+      decide (2 ^ 64 ≤ x.toNat + y.toNat + adcEingang c) := by
+  have hb : Breite.bits .b64 = 64 := rfl
+  simp [adcTrag, trunc_b64_nat, hb]
+
+/-- SBB value at 64 bits as unsigned `toNat` arithmetic. -/
+theorem sbbWert_b64_nat (x y : Wort) (c : Bool) :
+    (sbbWert .b64 x y c).toNat =
+      (x.toNat + 2 ^ 64 - y.toNat - adcEingang c) % 2 ^ 64 := by
+  have hv : sbbWert .b64 x y c = x - y - (if c then 1 else 0 : Wort) := by
+    simp [sbbWert, subB, trunc_b64]
+  have hx := x.isLt
+  have hy := y.isLt
+  rw [hv, BitVec.toNat_sub, BitVec.toNat_sub, eingang_wort_nat]
+  cases c <;> simp only [adcEingang_false, adcEingang_true] <;> omega
+
+/-- SBB borrow at 64 bits as an unsigned range test. -/
+theorem sbbEntleihn_b64_nat (x y : Wort) (c : Bool) :
+    sbbEntleihn .b64 x y c =
+      decide (x.toNat < y.toNat + adcEingang c) := by
+  simp [sbbEntleihn, trunc_b64_nat]
+
+/-! ## Multiword chain: ADD then ADC (SUB then SBB) over 128 bits.
+
+    The low words run through ADD/SUB (CF=0), the high words through
+    ADC/SBB with the low carry/borrow; the pair is the 128-bit modular
+    sum/difference (`u128` reused from `MulDiv.lean`) and the final
+    carry/borrow is the 128-bit carry out/borrow. -/
+
+/-- CHAIN (multiword ADD): ADD then ADC computes the 128-bit sum with
+    the 128-bit carry out. -/
+theorem adc_kette_128 (x0 x1 y0 y1 : Wort) :
+    u128 (adcWert .b64 x1 y1 (adcTrag .b64 x0 y0 false)) (adcWert .b64 x0 y0 false) = (u128 x1 x0 + u128 y1 y0) % 2 ^ 128 ∧
+    adcTrag .b64 x1 y1 (adcTrag .b64 x0 y0 false) = decide (2 ^ 128 ≤ u128 x1 x0 + u128 y1 y0) := by
+  have hfalse : adcEingang false = 0 := rfl
+  have hx0 := x0.isLt
+  have hx1 := x1.isLt
+  have hy0 := y0.isLt
+  have hy1 := y1.isLt
+  have hcNat := adcTrag_b64_nat x0 y0 false
+  simp only [u128]
+  rw [adcWert_b64_nat, adcWert_b64_nat, hfalse, hcNat]
+  cases hc : decide (2 ^ 64 ≤ x0.toNat + y0.toNat + adcEingang false) with
+  | false =>
+    have hP := of_decide_eq_false hc
+    rw [hfalse] at hP
+    simp only [adcTrag_b64_nat, hfalse] at ⊢
+    refine ⟨by omega, ?_⟩
+    have g2 : (2 ^ 64 ≤ x1.toNat + y1.toNat + 0) ↔
+        (2 ^ 128 ≤ x1.toNat * 2 ^ 64 + x0.toNat +
+          (y1.toNat * 2 ^ 64 + y0.toNat)) := by
+      constructor <;> intro h <;> omega
+    simp only [g2]
+    congr 1
+  | true =>
+    have hP := of_decide_eq_true hc
+    rw [hfalse] at hP
+    simp only [adcTrag_b64_nat, adcEingang_true] at ⊢
+    refine ⟨by omega, ?_⟩
+    have g2 : (2 ^ 64 ≤ x1.toNat + y1.toNat + 1) ↔
+        (2 ^ 128 ≤ x1.toNat * 2 ^ 64 + x0.toNat +
+          (y1.toNat * 2 ^ 64 + y0.toNat)) := by
+      constructor <;> intro h <;> omega
+    simp only [g2]
+    congr 1
+
+/-- CHAIN (multiword SUB): SUB then SBB computes the 128-bit difference
+    with the 128-bit borrow out. -/
+theorem sbb_kette_128 (x0 x1 y0 y1 : Wort) :
+    u128 (sbbWert .b64 x1 y1 (sbbEntleihn .b64 x0 y0 false)) (sbbWert .b64 x0 y0 false) = (u128 x1 x0 + 2 ^ 128 - u128 y1 y0) % 2 ^ 128 ∧
+    sbbEntleihn .b64 x1 y1 (sbbEntleihn .b64 x0 y0 false) = decide (u128 x1 x0 < u128 y1 y0) := by
+  have hfalse : adcEingang false = 0 := rfl
+  have hx0 := x0.isLt
+  have hx1 := x1.isLt
+  have hy0 := y0.isLt
+  have hy1 := y1.isLt
+  have hbNat := sbbEntleihn_b64_nat x0 y0 false
+  simp only [u128]
+  rw [sbbWert_b64_nat, sbbWert_b64_nat, hfalse, hbNat]
+  cases hb : decide (x0.toNat < y0.toNat + adcEingang false) with
+  | false =>
+    have hP := of_decide_eq_false hb
+    rw [hfalse] at hP
+    simp only [sbbEntleihn_b64_nat, hfalse] at ⊢
+    refine ⟨by omega, ?_⟩
+    have g2 : (x1.toNat < y1.toNat + 0) ↔
+        (x1.toNat * 2 ^ 64 + x0.toNat <
+          y1.toNat * 2 ^ 64 + y0.toNat) := by
+      constructor <;> intro h <;> omega
+    simp only [g2]
+    congr 1
+  | true =>
+    have hP := of_decide_eq_true hb
+    rw [hfalse] at hP
+    simp only [sbbEntleihn_b64_nat, adcEingang_true] at ⊢
+    refine ⟨by omega, ?_⟩
+    have g2 : (x1.toNat < y1.toNat + 1) ↔
+        (x1.toNat * 2 ^ 64 + x0.toNat <
+          y1.toNat * 2 ^ 64 + y0.toNat) := by
+      constructor <;> intro h <;> omega
+    simp only [g2]
+    congr 1
+
 /- CUTS:
-    Skeleton only: operation classes named, imports wired.
-    NOT proved here, and not claimed: everything (see lane task).
+    Value/flag layer (§1) and register step skeleton (§2) stand.
+    NOT proved here, and not claimed: memory discipline of the step,
+    64-bit step agreements, the multiword chain, decode/encode,
+    the machine adapter, the witness (see lane task).
 -/
 
 #print axioms CarryKlasse
