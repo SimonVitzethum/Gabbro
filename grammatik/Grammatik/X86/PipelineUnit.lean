@@ -238,6 +238,255 @@ theorem rumpfBlock_total (O : Orakel D) (passes : Nat)
     ∃ σ' ρ', execBlock O passes R b σ ρ = .ok σ' ρ' :=
   rumpfBlock_total_aux O passes R (sizeOf body) body b (Nat.le_refl _) hb σ ρ
 
+/-- BRIDGE (fuel): the full body run is the tail run at the world the
+    projected prefix reaches. Both sides step through the same real
+    `execStmt`; `assignSlot` always yields `.ok`, so prefix and body agree
+    on every step. -/
+theorem rumpfBruecke_aux (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (n : Nat) :
+    ∀ (body : Endblock D V l Γ Λ) (b : Block D V l Γ Λ Λ)
+    (tail : Endblock D V l Γ Λ),
+    sizeOf body ≤ n → rumpfBlock body = some b → rumpfEnde body = some tail →
+    ∀ (σ : World D) (ρ : Env D Γ) (σ' : World D) (ρ' : Env D Γ),
+    execBlock O passes R b σ ρ = .ok σ' ρ' →
+    execEnd O passes R body σ ρ = execEnd O passes R tail σ' ρ' := by
+  induction n with
+  | zero =>
+    intro body b tail
+    cases body with
+    | cons s rest =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      simp only [Endblock.cons.sizeOf_spec] at hle
+      omega
+    | ret e h =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.ret e h) =
+        some (Block.nil : Block D V l Γ Λ Λ) := by
+        simp [rumpfBlock]
+      have ht : rumpfEnde (D := D) (V := V) (.ret e h) =
+        some ((.ret e h) : Endblock D V l Γ Λ) := by
+        simp [rumpfEnde]
+      rw [h0] at hb
+      rw [ht] at he
+      obtain rfl := Option.some.inj hb
+      obtain rfl := Option.some.inj he
+      simp only [execBlock] at hsrc
+      cases hsrc
+      rfl
+    | retGrund r h =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.retGrund r h) =
+        some (Block.nil : Block D V l Γ Λ Λ) := by
+        simp [rumpfBlock]
+      have ht : rumpfEnde (D := D) (V := V) (.retGrund r h) =
+        some ((.retGrund r h) : Endblock D V l Γ Λ) := by
+        simp [rumpfEnde]
+      rw [h0] at hb
+      rw [ht] at he
+      obtain rfl := Option.some.inj hb
+      obtain rfl := Option.some.inj he
+      simp only [execBlock] at hsrc
+      cases hsrc
+      rfl
+    | leave h =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.leave h) =
+        some (Block.nil : Block D V l Γ Λ Λ) := by
+        simp [rumpfBlock]
+      have ht : rumpfEnde (D := D) (V := V) (.leave h) =
+        some ((.leave h) : Endblock D V l Γ Λ) := by
+        simp [rumpfEnde]
+      rw [h0] at hb
+      rw [ht] at he
+      obtain rfl := Option.some.inj hb
+      obtain rfl := Option.some.inj he
+      simp only [execBlock] at hsrc
+      cases hsrc
+      rfl
+    | next h =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.next h) =
+        some (Block.nil : Block D V l Γ Λ Λ) := by
+        simp [rumpfBlock]
+      have ht : rumpfEnde (D := D) (V := V) (.next h) =
+        some ((.next h) : Endblock D V l Γ Λ) := by
+        simp [rumpfEnde]
+      rw [h0] at hb
+      rw [ht] at he
+      obtain rfl := Option.some.inj hb
+      obtain rfl := Option.some.inj he
+      simp only [execBlock] at hsrc
+      cases hsrc
+      rfl
+    | bind e rest =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.bind e rest) = none := by
+        simp [rumpfBlock]
+      rw [h0] at hb
+      cases hb
+    | bindAxiom a args he hw hg hd hgd rest =>
+      intro hle hb hee σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V)
+        (.bindAxiom a args he hw hg hd hgd rest) = none := by
+        simp [rumpfBlock]
+      rw [h0] at hb
+      cases hb
+    | bindAxiomElse a args he hr hw hg hd hgd err rest =>
+      intro hle hb hee σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V)
+        (.bindAxiomElse a args he hr hw hg hd hgd err rest) = none := by
+        simp [rumpfBlock]
+      rw [h0] at hb
+      cases hb
+  | succ n ih =>
+    intro body b tail
+    cases body with
+    | cons s rest =>
+      cases s with
+      | assignSlot t f i e hw hL =>
+        intro hle hb he σ ρ σ' ρ' hsrc
+        cases hr : rumpfBlock rest with
+        | none =>
+          have h0 : rumpfBlock (D := D) (V := V)
+              (.cons (.assignSlot t f i e hw hL) rest) = none := by
+            simp [rumpfBlock, hr]
+          rw [h0] at hb
+          cases hb
+        | some b' =>
+          have h0 : rumpfBlock (D := D) (V := V)
+              (.cons (.assignSlot t f i e hw hL) rest) =
+              some (.cons (.assignSlot t f i e hw hL) b') := by
+            simp [rumpfBlock, hr]
+          rw [h0] at hb
+          obtain rfl := Option.some.inj hb
+          have hstep := execStmt_assignSlot (V := V) (l := l) O passes R
+            t f i e hw hL σ ρ
+          have ht : rumpfEnde (D := D) (V := V)
+              (.cons (.assignSlot t f i e hw hL) rest) = rumpfEnde rest := by
+            simp [rumpfEnde]
+          rw [ht] at he
+          have hcons : execBlock O passes R
+              (.cons (.assignSlot (V := V) t f i e hw hL) b') σ ρ =
+              execBlock O passes R b'
+                ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+                  (eval (σ.lese Λ (i.orte ++ e.orte)) i
+                    (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+                  (eval (σ.lese Λ (i.orte ++ e.orte)) e
+                    (σ.lese Λ (i.orte ++ e.orte)) ρ)) ρ := by
+            simp only [execBlock, hstep]
+          rw [hcons] at hsrc
+          have hend : execEnd O passes R
+              (.cons (.assignSlot (V := V) (l := l) t f i e hw hL) rest) σ ρ =
+              execEnd O passes R rest
+                ((σ.lese Λ (i.orte ++ e.orte)).schreibSlot t Λ
+                  (eval (σ.lese Λ (i.orte ++ e.orte)) i
+                    (σ.lese Λ (i.orte ++ e.orte)) ρ).n f
+                  (eval (σ.lese Λ (i.orte ++ e.orte)) e
+                    (σ.lese Λ (i.orte ++ e.orte)) ρ)) ρ := by
+            simp only [execEnd, hstep]
+          have hle' : sizeOf rest ≤ n := by
+            simp only [Endblock.cons.sizeOf_spec] at hle
+            omega
+          rw [hend]
+          exact ih rest b' tail hle' hr he _ _ _ _ hsrc
+      | _ =>
+        intro hle hb he σ ρ σ' ρ' hsrc
+        simp [rumpfBlock] at hb
+    | ret e h =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.ret e h) =
+        some (Block.nil : Block D V l Γ Λ Λ) := by
+        simp [rumpfBlock]
+      have ht : rumpfEnde (D := D) (V := V) (.ret e h) =
+        some ((.ret e h) : Endblock D V l Γ Λ) := by
+        simp [rumpfEnde]
+      rw [h0] at hb
+      rw [ht] at he
+      obtain rfl := Option.some.inj hb
+      obtain rfl := Option.some.inj he
+      simp only [execBlock] at hsrc
+      cases hsrc
+      rfl
+    | retGrund r h =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.retGrund r h) =
+        some (Block.nil : Block D V l Γ Λ Λ) := by
+        simp [rumpfBlock]
+      have ht : rumpfEnde (D := D) (V := V) (.retGrund r h) =
+        some ((.retGrund r h) : Endblock D V l Γ Λ) := by
+        simp [rumpfEnde]
+      rw [h0] at hb
+      rw [ht] at he
+      obtain rfl := Option.some.inj hb
+      obtain rfl := Option.some.inj he
+      simp only [execBlock] at hsrc
+      cases hsrc
+      rfl
+    | leave h =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.leave h) =
+        some (Block.nil : Block D V l Γ Λ Λ) := by
+        simp [rumpfBlock]
+      have ht : rumpfEnde (D := D) (V := V) (.leave h) =
+        some ((.leave h) : Endblock D V l Γ Λ) := by
+        simp [rumpfEnde]
+      rw [h0] at hb
+      rw [ht] at he
+      obtain rfl := Option.some.inj hb
+      obtain rfl := Option.some.inj he
+      simp only [execBlock] at hsrc
+      cases hsrc
+      rfl
+    | next h =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.next h) =
+        some (Block.nil : Block D V l Γ Λ Λ) := by
+        simp [rumpfBlock]
+      have ht : rumpfEnde (D := D) (V := V) (.next h) =
+        some ((.next h) : Endblock D V l Γ Λ) := by
+        simp [rumpfEnde]
+      rw [h0] at hb
+      rw [ht] at he
+      obtain rfl := Option.some.inj hb
+      obtain rfl := Option.some.inj he
+      simp only [execBlock] at hsrc
+      cases hsrc
+      rfl
+    | bind e rest =>
+      intro hle hb he σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V) (.bind e rest) = none := by
+        simp [rumpfBlock]
+      rw [h0] at hb
+      cases hb
+    | bindAxiom a args he hw hg hd hgd rest =>
+      intro hle hb hee σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V)
+        (.bindAxiom a args he hw hg hd hgd rest) = none := by
+        simp [rumpfBlock]
+      rw [h0] at hb
+      cases hb
+    | bindAxiomElse a args he hr hw hg hd hgd err rest =>
+      intro hle hb hee σ ρ σ' ρ' hsrc
+      have h0 : rumpfBlock (D := D) (V := V)
+        (.bindAxiomElse a args he hr hw hg hd hgd err rest) = none := by
+        simp [rumpfBlock]
+      rw [h0] at hb
+      cases hb
+
+/-- BRIDGE: the full body run is the tail run at the world the projected
+    prefix reaches. -/
+theorem rumpfBruecke (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (body : Endblock D V l Γ Λ) (b : Block D V l Γ Λ Λ)
+    (tail : Endblock D V l Γ Λ)
+    (hb : rumpfBlock body = some b) (he : rumpfEnde body = some tail)
+    (σ : World D) (ρ : Env D Γ) (σ' : World D) (ρ' : Env D Γ)
+    (hsrc : execBlock O passes R b σ ρ = .ok σ' ρ') :
+    execEnd O passes R body σ ρ = execEnd O passes R tail σ' ρ' :=
+  rumpfBruecke_aux O passes R (sizeOf body) body b tail (Nat.le_refl _) hb he
+    σ ρ σ' ρ' hsrc
+
 /- CUTS (exactly what is NOT proved here):
     Skeleton only: the projection above, nothing else yet.
 -/
