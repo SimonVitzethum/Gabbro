@@ -678,7 +678,7 @@ Last ledger refresh: **2026-10-05 15:48 UTC**. This is an operational snapshot, 
 | 1239 | AVX2: 256-bit integer operation semantics | Merged after review/checks | 1240: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1239.md) |
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Committed candidate; review/integration pending | 1242: Committed candidate; review/integration pending | [task](lanes/1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
-| 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1245.md) |
+| 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Agent working | 1250: scheduled | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Committed candidate; review/integration pending | 1252: Committed candidate; review/integration pending | [task](lanes/1251.md) |
@@ -1600,6 +1600,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1239**, AVX2: 256-bit integer operation semantics, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1239.md). <!-- x86-merged:1239 -->
 - 2026-10-05: lane **1240**, Independent exact review of 1239, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1240.md). <!-- x86-merged:1240 -->
 - 2026-10-05: lane **1245**, x86 address to source carrier mapping for the TSO-to-W bridges, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1245.md). <!-- x86-merged:1245 -->
+- 2026-10-05: lane **1246**, Independent exact review of 1245, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1246.md). <!-- x86-merged:1246 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
