@@ -969,4 +969,433 @@ theorem sysSchritt_sys_puffer (s s' : SysMaschine) (c d : Nat)
   cases h with
   | sys c ev h => exact sysAusfuehren_puffer s s' c d ev h
 
+/-! ## 10. Joint witness: two cores, real delivery, TSO stage.
+    Core 0 runs CLI/STI/CPUID/RDTSC/SYSCALL/INT on the accepted
+    IDT/TSS memory (`witMem`); core 1 delivers INT 2 as well and
+    then halts. Afterwards core 0 issues a buffered store the owner
+    forwards but core 1 does not see until the drain -- the drain
+    changes ACTUAL shared memory. Refusals (profile, CPL, TSD,
+    limit, sysret-at-3) stand beside the run. -/
+
+/-- Witness control: CPL 0, IOPL 0, IF set, running. -/
+def sysWitSteuer : SysSteuer :=
+  ⟨⟨0, 0, true, false⟩, false, 0x202⟩
+
+/-- Witness registers: stack at the accepted 20480, rest zero. -/
+def sysWitReg : Register → Wort := fun q =>
+  if q = Register.rsp then BitVec.ofNat 64 20480
+  else BitVec.ofNat 64 0
+
+/-- Witness cores: both start at 0x1000 with the witness stack. -/
+def sysWitKern : Nat → HwKern := fun _ =>
+  ⟨sysWitReg, zeugeFlags, BitVec.ofNat 64 0x1000,
+    fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start: accepted IDT/TSS/stack memory, empty buffers,
+    full silicon, CPL-0 control on every core. -/
+def sysWitStart : SysMaschine :=
+  ⟨⟨witMem, sysWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩,
+    fun _ => sysWitSteuer⟩
+
+/-- The witness machine is well-formed. -/
+theorem sysWitStart_wf : SysWf sysWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Witness inputs: hosted profile, SCE/64-bit on, vector 2 in the
+    accepted IDT window, the accepted TSS window. -/
+def sysWitEingaben : SysEingaben :=
+  { profil := .gehostet, sceLang := true, tsd := false,
+    lstar := BitVec.ofNat 64 0x3000,
+    fmask := BitVec.ofNat 64 0x400, op64 := true,
+    eaxIn := BitVec.ofNat 64 0, ecxIn := BitVec.ofNat 64 0,
+    cpuidOut := ⟨BitVec.ofNat 64 1, BitVec.ofNat 64 2,
+      BitVec.ofNat 64 3, BitVec.ofNat 64 4⟩,
+    tsc := BitVec.ofNat 64 0x123456789ABCDEF0,
+    vektor := 2, codeOk := true, wechsel := false, neuDpl := 0,
+    idtBasis := BitVec.ofNat 64 4096, idtLimit := 47,
+    tssBasis := BitVec.ofNat 64 12288, tssLimit := 103 }
+
+/-- Outcome projectors for closed observations. -/
+def sysIfOut (o : SysAusgang) (c : Nat) : Option Bool :=
+  match o with
+  | .ok s => some (s.sys c).steuer.ifBit
+  | _ => none
+
+/-- Core RIP out of a system outcome. -/
+def sysRipOut (o : SysAusgang) (c : Nat) : Option Wort :=
+  match o with
+  | .ok s => some (s.hw.kerne c).rip
+  | _ => none
+
+/-- Core register out of a system outcome. -/
+def sysRegOut (o : SysAusgang) (c : Nat) (q : Register) :
+    Option Wort :=
+  match o with
+  | .ok s => some ((s.hw.kerne c).register q)
+  | _ => none
+
+/-- Halt bit out of a system outcome. -/
+def sysHaltedOut (o : SysAusgang) (c : Nat) : Option Bool :=
+  match o with
+  | .ok s => some (s.sys c).halted
+  | _ => none
+
+/-- CPL out of a system outcome. -/
+def sysCplOut (o : SysAusgang) (c : Nat) : Option Nat :=
+  match o with
+  | .ok s => some (s.sys c).steuer.cpl
+  | _ => none
+
+/-- Fault class out of a system outcome. -/
+def sysKlasseOut (o : SysAusgang) : Option ArchFehler :=
+  match o with
+  | .fehler f => some f
+  | _ => none
+
+/-- Shared-memory byte out of a system outcome. -/
+def sysMemOut (o : SysAusgang) (a : Adresse) : Option Byte :=
+  match o with
+  | .ok s => some (s.hw.mem.bytes a)
+  | _ => none
+
+/-- Core-0 chain: CLI, STI, CPUID, RDTSC, SYSCALL, INT. -/
+def sysWitO_cli := sysAusfuehren sysWitStart 0 ⟨.cli, sysWitEingaben⟩
+def sysWitS1 : SysMaschine :=
+  match sysWitO_cli with | .ok s => s | _ => sysWitStart
+def sysWitO_sti := sysAusfuehren sysWitS1 0 ⟨.sti, sysWitEingaben⟩
+def sysWitS2 : SysMaschine :=
+  match sysWitO_sti with | .ok s => s | _ => sysWitS1
+def sysWitO_cpuid :=
+  sysAusfuehren sysWitS2 0 ⟨.cpuid, sysWitEingaben⟩
+def sysWitS3 : SysMaschine :=
+  match sysWitO_cpuid with | .ok s => s | _ => sysWitS2
+def sysWitO_rdtsc :=
+  sysAusfuehren sysWitS3 0 ⟨.rdtsc, sysWitEingaben⟩
+def sysWitS4 : SysMaschine :=
+  match sysWitO_rdtsc with | .ok s => s | _ => sysWitS3
+def sysWitO_syscall :=
+  sysAusfuehren sysWitS4 0 ⟨.syscall, sysWitEingaben⟩
+def sysWitS5 : SysMaschine :=
+  match sysWitO_syscall with | .ok s => s | _ => sysWitS4
+def sysWitO_int :=
+  sysAusfuehren sysWitS5 0 ⟨.intN, sysWitEingaben⟩
+def sysWitS6 : SysMaschine :=
+  match sysWitO_int with | .ok s => s | _ => sysWitS5
+
+/-- Core-1 run: INT delivery, then HLT. -/
+def sysWitO_int1 :=
+  sysAusfuehren sysWitStart 1 ⟨.intN, sysWitEingaben⟩
+def sysWitT1 : SysMaschine :=
+  match sysWitO_int1 with | .ok s => s | _ => sysWitStart
+def sysWitO_hlt1 := sysAusfuehren sysWitT1 1 ⟨.hlt, sysWitEingaben⟩
+
+/-- High-privilege machine for refusal probes: CPL 3. -/
+def sysWitHochM : SysMaschine :=
+  ⟨sysWitStart.hw, fun _ => ⟨⟨3, 0, true, false⟩, false, 0x202⟩⟩
+
+/-! ## 11. Closed observations: every step computes. -/
+
+/-- CLI clears IF past the 1-byte form. -/
+theorem sysWit_cli_if :
+    sysIfOut sysWitO_cli 0 = some false := by
+  decide
+
+/-- CLI advances RIP past one byte. -/
+theorem sysWit_cli_rip :
+    sysRipOut sysWitO_cli 0 = some (BitVec.ofNat 64 0x1001) := by
+  decide
+
+/-- STI restores IF. -/
+theorem sysWit_sti_if :
+    sysIfOut sysWitO_sti 0 = some true := by
+  decide
+
+/-- CPUID writes the zero-extended leaf answer to EAX. -/
+theorem sysWit_cpuid_rax :
+    sysRegOut sysWitO_cpuid 0 .rax = some (BitVec.ofNat 64 1) := by
+  decide
+
+/-- RDTSC splits the stamp: low half in EAX. -/
+theorem sysWit_rdtsc_rax :
+    sysRegOut sysWitO_rdtsc 0 .rax =
+      some (BitVec.ofNat 64 0x9ABCDEF0) := by
+  decide
+
+/-- RDTSC splits the stamp: high half in EDX. -/
+theorem sysWit_rdtsc_rdx :
+    sysRegOut sysWitO_rdtsc 0 .rdx =
+      some (BitVec.ofNat 64 0x12345678) := by
+  decide
+
+/-- SYSCALL saves the next RIP in RCX. -/
+theorem sysWit_syscall_rcx :
+    sysRegOut sysWitO_syscall 0 .rcx =
+      some (BitVec.ofNat 64 0x1008) := by
+  decide
+
+/-- SYSCALL targets LSTAR. -/
+theorem sysWit_syscall_rip :
+    sysRipOut sysWitO_syscall 0 = some (BitVec.ofNat 64 0x3000) := by
+  decide
+
+/-- SYSCALL saves RFLAGS in R11. -/
+theorem sysWit_syscall_r11 :
+    sysRegOut sysWitO_syscall 0 .r11 =
+      some (BitVec.ofNat 64 0x202) := by
+  decide
+
+/-- INT reaches the accepted handler. -/
+theorem sysWit_int_rip :
+    sysRipOut sysWitO_int 0 = some (BitVec.ofNat 64 0x2000) := by
+  decide
+
+/-- The interrupt gate clears IF on delivery. -/
+theorem sysWit_int_if :
+    sysIfOut sysWitO_int 0 = some false := by
+  decide
+
+/-- RSP descends past the five-word frame on the IST stack. -/
+theorem sysWit_int_rsp :
+    sysRegOut sysWitO_int 0 .rsp =
+      some (BitVec.ofNat 64 16344) := by
+  decide
+
+/-- The pushed return stack word lands little-endian in memory. -/
+theorem sysWit_int_frame_rsp :
+    sysMemOut sysWitO_int (BitVec.ofNat 64 16369) =
+      some (BitVec.ofNat 8 0x50) := by
+  decide
+
+/-- The pushed return RIP lands little-endian in memory. -/
+theorem sysWit_int_frame_rip :
+    sysMemOut sysWitO_int (BitVec.ofNat 64 16344) =
+      some (BitVec.ofNat 8 0x02) := by
+  decide
+
+/-- Core 1 delivers INT 2 as well: two cores touch memory. -/
+theorem sysWit_int1_rip :
+    sysRipOut sysWitO_int1 1 = some (BitVec.ofNat 64 0x2000) := by
+  decide
+
+/-- Core 1 halts after delivery. -/
+theorem sysWit_hlt1_halted :
+    sysHaltedOut sysWitO_hlt1 1 = some true := by
+  decide
+
+/-- Freestanding SYSCALL is #UD. -/
+theorem sysWit_ud_frei :
+    sysKlasseOut (sysAusfuehren sysWitStart 0
+      ⟨.syscall, { sysWitEingaben with profil := .freistehend }⟩) =
+      some .ud := by
+  decide
+
+/-- HLT at CPL 3 is #GP. -/
+theorem sysWit_gp_hlt :
+    sysKlasseOut
+      (sysAusfuehren sysWitHochM 0 ⟨.hlt, sysWitEingaben⟩) =
+      some .gp := by
+  decide
+
+/-- CLI at CPL 3 above IOPL is #GP. -/
+theorem sysWit_gp_cli :
+    sysKlasseOut
+      (sysAusfuehren sysWitHochM 0 ⟨.cli, sysWitEingaben⟩) =
+      some .gp := by
+  decide
+
+/-- TSD-gated RDTSC at CPL 3 is #GP. -/
+theorem sysWit_gp_rdtsc :
+    sysKlasseOut (sysAusfuehren sysWitHochM 0
+      ⟨.rdtsc, { sysWitEingaben with tsd := true }⟩) =
+      some .gp := by
+  decide
+
+/-- INT past the IDT limit is #GP. -/
+theorem sysWit_gp_int3 :
+    sysKlasseOut (sysAusfuehren sysWitStart 0
+      ⟨.intN, { sysWitEingaben with vektor := 3 }⟩) =
+      some .gp := by
+  decide
+
+/-- SYSRET at CPL 3 is #GP. -/
+theorem sysWit_gp_sysret :
+    sysKlasseOut
+      (sysAusfuehren sysWitHochM 0 ⟨.sysret, sysWitEingaben⟩) =
+      some .gp := by
+  decide
+
+/-- Joint TSO stage on the delivered machine: issue, forwarding,
+    foreign view, drain. -/
+def sysWitHw6 : HwMaschine :=
+  match sysWitO_int with | .ok s => s.hw | _ => sysWitStart.hw
+
+/-- Witness data cell on the delivered stack page. -/
+def sysWitAdr : Adresse := BitVec.ofNat 64 16336
+
+/-- Core 0 issues byte 42 at the data cell. -/
+def sysWitTso1 : Option TSOZustand :=
+  issueByte (tsoAnsicht sysWitHw6) 0 sysWitAdr (BitVec.ofNat 8 42)
+
+/-- Core 0 observes its own byte (forwarding). -/
+def sysWitLoadEigen : Option (Option Byte) :=
+  match sysWitTso1 with
+  | some s => some (loadByte s 0 sysWitAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def sysWitLoadFremd : Option (Option Byte) :=
+  match sysWitTso1 with
+  | some s => some (loadByte s 1 sysWitAdr)
+  | none => none
+
+/-- Core 0 drains its oldest entry. -/
+def sysWitTso2 : Option TSOZustand :=
+  match sysWitTso1 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def sysWitNachFlush : Option (Option Byte) :=
+  match sysWitTso2 with
+  | some s => some (some (s.mem.bytes sysWitAdr))
+  | none => none
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem sysWit_weiterleitung :
+    sysWitLoadEigen = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem sysWit_fremd_alt :
+    sysWitLoadFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 42. -/
+theorem sysWit_spuelung_aendert_speicher :
+    sysWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- The joint witness: a reached two-core system run -- CLI/STI
+    flip IF, CPUID/RDTSC answer in registers, SYSCALL saves and
+    targets, INT delivers the accepted frame on BOTH cores, HLT
+    halts -- beside profile/privilege/limit refusals and a TSO
+    issue/forward/drain that changes ACTUAL shared memory.
+    Non-degenerate: delivery pushes a real frame and the drain
+    moves 0 to 42, observed from both cores. -/
+theorem sysWit_zeuge :
+    sysIfOut sysWitO_cli 0 = some false ∧
+      sysRipOut sysWitO_cli 0 = some (BitVec.ofNat 64 0x1001) ∧
+      sysIfOut sysWitO_sti 0 = some true ∧
+      sysRegOut sysWitO_cpuid 0 .rax = some (BitVec.ofNat 64 1) ∧
+      sysRegOut sysWitO_rdtsc 0 .rax =
+        some (BitVec.ofNat 64 0x9ABCDEF0) ∧
+      sysRegOut sysWitO_rdtsc 0 .rdx =
+        some (BitVec.ofNat 64 0x12345678) ∧
+      sysRegOut sysWitO_syscall 0 .rcx =
+        some (BitVec.ofNat 64 0x1008) ∧
+      sysRipOut sysWitO_syscall 0 = some (BitVec.ofNat 64 0x3000) ∧
+      sysRegOut sysWitO_syscall 0 .r11 =
+        some (BitVec.ofNat 64 0x202) ∧
+      sysRipOut sysWitO_int 0 = some (BitVec.ofNat 64 0x2000) ∧
+      sysIfOut sysWitO_int 0 = some false ∧
+      sysRegOut sysWitO_int 0 .rsp =
+        some (BitVec.ofNat 64 16344) ∧
+      sysMemOut sysWitO_int (BitVec.ofNat 64 16369) =
+        some (BitVec.ofNat 8 0x50) ∧
+      sysMemOut sysWitO_int (BitVec.ofNat 64 16344) =
+        some (BitVec.ofNat 8 0x02) ∧
+      sysRipOut sysWitO_int1 1 = some (BitVec.ofNat 64 0x2000) ∧
+      sysHaltedOut sysWitO_hlt1 1 = some true ∧
+      sysKlasseOut (sysAusfuehren sysWitStart 0
+        ⟨.syscall, { sysWitEingaben with profil := .freistehend }⟩) =
+        some .ud ∧
+      sysKlasseOut
+        (sysAusfuehren sysWitHochM 0 ⟨.hlt, sysWitEingaben⟩) =
+        some .gp ∧
+      sysKlasseOut
+        (sysAusfuehren sysWitHochM 0 ⟨.cli, sysWitEingaben⟩) =
+        some .gp ∧
+      sysKlasseOut (sysAusfuehren sysWitHochM 0
+        ⟨.rdtsc, { sysWitEingaben with tsd := true }⟩) =
+        some .gp ∧
+      sysKlasseOut (sysAusfuehren sysWitStart 0
+        ⟨.intN, { sysWitEingaben with vektor := 3 }⟩) =
+        some .gp ∧
+      sysKlasseOut
+        (sysAusfuehren sysWitHochM 0 ⟨.sysret, sysWitEingaben⟩) =
+        some .gp ∧
+      sysWitLoadEigen = some (some (BitVec.ofNat 8 42)) ∧
+      sysWitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+      sysWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  refine ⟨sysWit_cli_if, sysWit_cli_rip, sysWit_sti_if,
+    sysWit_cpuid_rax, sysWit_rdtsc_rax, sysWit_rdtsc_rdx,
+    sysWit_syscall_rcx, sysWit_syscall_rip, sysWit_syscall_r11,
+    sysWit_int_rip, sysWit_int_if, sysWit_int_rsp,
+    sysWit_int_frame_rsp, sysWit_int_frame_rip, sysWit_int1_rip,
+    sysWit_hlt1_halted, sysWit_ud_frei, sysWit_gp_hlt,
+    sysWit_gp_cli, sysWit_gp_rdtsc, sysWit_gp_int3,
+    sysWit_gp_sysret, sysWit_weiterleitung, sysWit_fremd_alt,
+    sysWit_spuelung_aendert_speicher⟩
+
+/- CUTS:
+   Proved here: the ten privileged/system forms on the coherent
+   machine -- exact register/flag/IF/CPL/halted effects, CPL and
+   profile gates, fault classes #GP/#UD/#SS as outcomes over the
+   accepted `ArchFehler` vocabulary (never redefined); the
+   software-INT leg reuses the accepted `pruefeTor`/`waehleStapel`/
+   `schiebeRahmen` stages unchanged with agreement theorems; the
+   §11 plug `adapterSystem` and the extended relation `SysSchritt`
+   with exact sync embedding both ways; well-formedness
+   preservation and the proved machine side of serialisation (no
+   leg touches any TSO buffer); a reached two-core run with real
+   IDT/TSS delivery on both cores, HLT, and a TSO
+   issue/forward/drain moving 0 to 42 beside six planted refusals.
+   NOT proved here, and not claimed:
+   - No hardware correspondence beyond self-consistency: the SDM
+     rows cited in the ANNAHMEN block are provenance, not proofs.
+   - CLI/STI gate `cpl <= iopl` only; the PVI/VME/VIF refinement
+     of Table 1-1/1-14 is not modelled.
+   - Serialisation stays a named assumption (S-SERIAL-*): CPUID
+     serialises, SYSCALL/SYSRET/RDTSC/INT do not drain; the bridge
+     to W/GX ordering is OPEN.
+   - `#NP` (not-present gate) and `#TS` (TSS fault) have no member
+     in `ArchFehler` and map to #GP; unreadable gate bytes map to
+     #GP without paging disambiguation (consumer `SeitenInfo`
+     idiom stays open).
+   - IRET pops always the five-word software frame: no GDT
+     selector validation, no task switch, no error-code frames.
+   - SYSCALL/SYSRET cover the 64-bit non-FRED path only: no CET/
+     shadow-stack effects, LSTAR canonical by MSR-write
+     assumption, no SYSRET compatibility-mode (ECX) return.
+   - INT covers non-FRED software delivery with the INT1 DPL
+     exemption; INTO/INT3 are not separated.
+   - HLT `halted` is advisory state; wakeup and async clearing
+     belong to the interrupt lane.
+   - The RFLAGS word and the six-flag struct share no proved
+     coherence link (`archOK`-style); arithmetic flags are kept,
+     never synchronised.
+   - The TSC leaf answers and MSR snapshots are caller inputs
+     (environment user logic); no silicon values are claimed.
+-/
+
+#print axioms sysLaenge_pins
+#print axioms formFrei_gehostet
+#print axioms sysWitStart_wf
+#print axioms schrittHlt_ok
+#print axioms schrittIf_cli_ok
+#print axioms schrittCpuid_rax
+#print axioms schrittRdtsc_ok
+#print axioms schrittSyscall_ok
+#print axioms schrittSysret_ok
+#print axioms schrittInt_liefert
+#print axioms schrittIret_ok
+#print axioms sysAusfuehren_wf
+#print axioms sysAusfuehren_puffer
+#print axioms adapterSystem_ok
+#print axioms sysSchritt_sync_einbetten
+#print axioms sysSchritt_sync_nur
+#print axioms sysSchritt_wf
+#print axioms sysWit_zeuge
+
 end Gabbro.Grammatik.X86
