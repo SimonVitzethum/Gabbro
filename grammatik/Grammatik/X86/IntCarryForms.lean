@@ -980,16 +980,25 @@ def decodeCarryOp (rexW rexR rexB op66 : Bool) (plen : Nat) (op : Byte) :
       | _ => none
     | _ => none
 
-/-- One family decoder: an optional single 66H or REX prefix, then the
-    opcode. A second prefix byte reads as the opcode and refuses below
-    with a named reason. -/
+/-- One family decoder: an optional 66H prefix (which may itself be
+    followed by one REX prefix for extended 16-bit registers), or one
+    REX prefix, then the opcode. Anything else in a prefix slot reads
+    as the opcode and refuses below with a named reason. -/
 def decodeCarry : List Byte → Option (CarryInstr × List Byte)
   | [] => none
   | b :: rest =>
     if byteNat b == 102 then
       match rest with
       | [] => none
-      | op :: rest' => decodeCarryOp false false false true 1 op rest'
+      | b2 :: rest' =>
+        if decide (64 ≤ byteNat b2 ∧ byteNat b2 < 80) then
+          match rest' with
+          | [] => none
+          | op :: rest'' =>
+            decodeCarryOp (byteNat b2 / 8 % 2 == 1)
+              (byteNat b2 / 4 % 2 == 1) (byteNat b2 % 2 == 1) true 2 op
+              rest''
+        else decodeCarryOp false false false true 1 b2 rest'
     else if decide (64 ≤ byteNat b ∧ byteNat b < 80) then
       match rest with
       | [] => none
@@ -1016,15 +1025,206 @@ inductive AblehnGrund where
 def istPraefixByte (n : Nat) : Bool :=
   (n == 102) || decide (64 ≤ n ∧ n < 80)
 
-/-- The opcode-position byte after stripping one optional prefix. -/
+/-- The opcode-position byte after stripping prefixes: one 66H
+    (itself followed by at most one REX), or one REX. -/
 def opcodeNachPraefix : List Byte → Option Nat
   | [] => none
   | b :: rest =>
-    if istPraefixByte (byteNat b) then
+    if byteNat b == 102 then
+      match rest with
+      | [] => none
+      | b2 :: rest2 =>
+        if decide (64 ≤ byteNat b2 ∧ byteNat b2 < 80) then
+          match rest2 with
+          | [] => none
+          | op :: _ => some (byteNat op)
+        else some (byteNat b2)
+    else if decide (64 ≤ byteNat b ∧ byteNat b < 80) then
       match rest with
       | [] => none
       | op :: _ => some (byteNat op)
     else some (byteNat b)
+
+/-- Shallow reason from the opcode-position byte: LOCK, address-size,
+    a REX byte in the opcode slot (never one-byte INC/DEC in 64-bit),
+    a non-carry opcode, or nothing for family opcodes. -/
+def ablehnGrundOp (op : Nat) : Option AblehnGrund :=
+  if op == 240 then some .lock
+  else if op == 103 then some .adressGroesse
+  else if decide (64 ≤ op ∧ op < 80) then some .einByteIncDec
+  else if decide (op = 16 ∨ op = 17 ∨ op = 18 ∨ op = 19 ∨
+      op = 20 ∨ op = 21 ∨ op = 24 ∨ op = 25 ∨ op = 26 ∨ op = 27 ∨
+      op = 28 ∨ op = 29 ∨ op = 128 ∨ op = 129 ∨ op = 131 ∨
+      op = 254 ∨ op = 255) then none
+  else some .keinTrageform
+
+/-! ## Canonical encode and round trips.
+
+    The canonical encoding uses the `/r` ADC/SBB direction with the
+    destination in r/m, Group-1 `/2`/`/3` for immediates, and FF/FE
+    `/0`/`/1` for INC/DEC, with the minimal prefix (REX.W at 64, 66H
+    at 16, REX0 exactly where extended registers occur). At 8 bits
+    the high-byte codes 4-7 encode to the bytes the decoder refuses
+    (named asymmetry, pinned below): the vocabulary has no AH/SPL. -/
+
+/-- REX prefix without W (8/16/32-bit extended registers). -/
+def rexByte0 (rh bh : Nat) : Byte := natByte (64 + 4 * rh + bh)
+
+/-- Canonical prefix bytes for a width and extension bits. -/
+def carryPrefix (b : Breite) (rh bh : Nat) : List Byte :=
+  match b with
+  | .b64 => [rexByte rh bh]
+  | .b16 =>
+    if rh == 1 || bh == 1 then [natByte 102, rexByte0 rh bh]
+    else [natByte 102]
+  | _ =>
+    if rh == 1 || bh == 1 then [rexByte0 rh bh] else []
+
+/-- Canonical encoding of one register-form operation. -/
+def carryEncode : CarryBefehl → List Byte
+  | .adcReg b dst src =>
+    let pre := carryPrefix b (regHigh src) (regHigh dst)
+    let opc := if b = .b8 then natByte 16 else natByte 17
+    pre ++ [opc, modrmReg (regLow src) (regLow dst)]
+  | .sbbReg b dst src =>
+    let pre := carryPrefix b (regHigh src) (regHigh dst)
+    let opc := if b = .b8 then natByte 24 else natByte 25
+    pre ++ [opc, modrmReg (regLow src) (regLow dst)]
+  | .adcImm b dst op =>
+    let pre := carryPrefix b 0 (regHigh dst)
+    match b with
+    | .b8 => pre ++ [natByte 128, modrmReg 2 (regLow dst), wortByte op 0]
+    | .b16 => pre ++ [natByte 129, modrmReg 2 (regLow dst), wortByte op 0, wortByte op 1]
+    | _ => pre ++ [natByte 129, modrmReg 2 (regLow dst), wortByte op 0, wortByte op 1, wortByte op 2, wortByte op 3]
+  | .sbbImm b dst op =>
+    let pre := carryPrefix b 0 (regHigh dst)
+    match b with
+    | .b8 => pre ++ [natByte 128, modrmReg 3 (regLow dst), wortByte op 0]
+    | .b16 => pre ++ [natByte 129, modrmReg 3 (regLow dst), wortByte op 0, wortByte op 1]
+    | _ => pre ++ [natByte 129, modrmReg 3 (regLow dst), wortByte op 0, wortByte op 1, wortByte op 2, wortByte op 3]
+  | .incReg b dst =>
+    let pre := carryPrefix b 0 (regHigh dst)
+    let opc := if b = .b8 then natByte 254 else natByte 255
+    pre ++ [opc, modrmReg 0 (regLow dst)]
+  | .decReg b dst =>
+    let pre := carryPrefix b 0 (regHigh dst)
+    let opc := if b = .b8 then natByte 254 else natByte 255
+    pre ++ [opc, modrmReg 1 (regLow dst)]
+
+/-- Round trip for 64-bit ADC register forms, over any suffix. -/
+theorem roundtrip_adcReg64 (dst src : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.adcReg .b64 dst src) ++ suffix) =
+      some (.reg ⟨.adcReg .b64 dst src, (carryEncode (.adcReg .b64 dst src)).length⟩, suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Round trip for 32-bit ADC register forms. -/
+theorem roundtrip_adcReg32 (dst src : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.adcReg .b32 dst src) ++ suffix) =
+      some (.reg ⟨.adcReg .b32 dst src, (carryEncode (.adcReg .b32 dst src)).length⟩, suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Round trip for 16-bit ADC register forms. -/
+theorem roundtrip_adcReg16 (dst src : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.adcReg .b16 dst src) ++ suffix) =
+      some (.reg ⟨.adcReg .b16 dst src, (carryEncode (.adcReg .b16 dst src)).length⟩, suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Round trip for 64-bit SBB register forms. -/
+theorem roundtrip_sbbReg64 (dst src : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.sbbReg .b64 dst src) ++ suffix) =
+      some (.reg ⟨.sbbReg .b64 dst src, (carryEncode (.sbbReg .b64 dst src)).length⟩, suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Round trip for 32-bit SBB register forms. -/
+theorem roundtrip_sbbReg32 (dst src : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.sbbReg .b32 dst src) ++ suffix) =
+      some (.reg ⟨.sbbReg .b32 dst src, (carryEncode (.sbbReg .b32 dst src)).length⟩, suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Round trip for 16-bit SBB register forms. -/
+theorem roundtrip_sbbReg16 (dst src : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.sbbReg .b16 dst src) ++ suffix) =
+      some (.reg ⟨.sbbReg .b16 dst src, (carryEncode (.sbbReg .b16 dst src)).length⟩, suffix) := by
+  cases dst <;> cases src <;> rfl
+
+/-- Round trip for 64-bit INC forms. -/
+theorem roundtrip_incReg64 (dst : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.incReg .b64 dst) ++ suffix) =
+      some (.reg ⟨.incReg .b64 dst, (carryEncode (.incReg .b64 dst)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 32-bit INC forms. -/
+theorem roundtrip_incReg32 (dst : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.incReg .b32 dst) ++ suffix) =
+      some (.reg ⟨.incReg .b32 dst, (carryEncode (.incReg .b32 dst)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 16-bit INC forms. -/
+theorem roundtrip_incReg16 (dst : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.incReg .b16 dst) ++ suffix) =
+      some (.reg ⟨.incReg .b16 dst, (carryEncode (.incReg .b16 dst)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 64-bit DEC forms. -/
+theorem roundtrip_decReg64 (dst : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.decReg .b64 dst) ++ suffix) =
+      some (.reg ⟨.decReg .b64 dst, (carryEncode (.decReg .b64 dst)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 32-bit DEC forms. -/
+theorem roundtrip_decReg32 (dst : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.decReg .b32 dst) ++ suffix) =
+      some (.reg ⟨.decReg .b32 dst, (carryEncode (.decReg .b32 dst)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 16-bit DEC forms. -/
+theorem roundtrip_decReg16 (dst : Register) (suffix : List Byte) :
+    decodeCarry (carryEncode (.decReg .b16 dst) ++ suffix) =
+      some (.reg ⟨.decReg .b16 dst, (carryEncode (.decReg .b16 dst)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 64-bit ADC immediates: decode reads the canonical
+    operand back (`canonImm`). -/
+theorem roundtrip_adcImm64 (dst : Register) (op : Wort)
+    (suffix : List Byte) :
+    decodeCarry (carryEncode (.adcImm .b64 dst op) ++ suffix) =
+      some (.reg ⟨.adcImm .b64 dst (canonImm .b64 op), (carryEncode (.adcImm .b64 dst op)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 32-bit ADC immediates. -/
+theorem roundtrip_adcImm32 (dst : Register) (op : Wort)
+    (suffix : List Byte) :
+    decodeCarry (carryEncode (.adcImm .b32 dst op) ++ suffix) =
+      some (.reg ⟨.adcImm .b32 dst (canonImm .b32 op), (carryEncode (.adcImm .b32 dst op)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 16-bit ADC immediates. -/
+theorem roundtrip_adcImm16 (dst : Register) (op : Wort)
+    (suffix : List Byte) :
+    decodeCarry (carryEncode (.adcImm .b16 dst op) ++ suffix) =
+      some (.reg ⟨.adcImm .b16 dst (canonImm .b16 op), (carryEncode (.adcImm .b16 dst op)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 64-bit SBB immediates. -/
+theorem roundtrip_sbbImm64 (dst : Register) (op : Wort)
+    (suffix : List Byte) :
+    decodeCarry (carryEncode (.sbbImm .b64 dst op) ++ suffix) =
+      some (.reg ⟨.sbbImm .b64 dst (canonImm .b64 op), (carryEncode (.sbbImm .b64 dst op)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 32-bit SBB immediates. -/
+theorem roundtrip_sbbImm32 (dst : Register) (op : Wort)
+    (suffix : List Byte) :
+    decodeCarry (carryEncode (.sbbImm .b32 dst op) ++ suffix) =
+      some (.reg ⟨.sbbImm .b32 dst (canonImm .b32 op), (carryEncode (.sbbImm .b32 dst op)).length⟩, suffix) := by
+  cases dst <;> rfl
+
+/-- Round trip for 16-bit SBB immediates. -/
+theorem roundtrip_sbbImm16 (dst : Register) (op : Wort)
+    (suffix : List Byte) :
+    decodeCarry (carryEncode (.sbbImm .b16 dst op) ++ suffix) =
+      some (.reg ⟨.sbbImm .b16 dst (canonImm .b16 op), (carryEncode (.sbbImm .b16 dst op)).length⟩, suffix) := by
+  cases dst <;> rfl
 
 /-- Shallow refusal reason for a byte string. Family opcodes
     (16-19, 20-21, 24-29, 128-129, 131, 254-255) carry none here:
@@ -1034,20 +1234,17 @@ def ablehnGrund : List Byte → Option AblehnGrund
   | b :: rest =>
     if byteNat b == 240 then some .lock
     else if byteNat b == 103 then some .adressGroesse
-    else match opcodeNachPraefix (b :: rest) with
-    | none => some .unvollstaendig
-    | some op =>
-      if op == 240 then some .lock
-      else if op == 103 then some .adressGroesse
-      else if istPraefixByte (byteNat b) && op == 102 then
+    else match rest with
+    | b2 :: _ =>
+      if istPraefixByte (byteNat b) && byteNat b2 == 102 then
         some .doppelPraefix
-      else if istPraefixByte (byteNat b) &&
-          decide (64 ≤ op ∧ op < 80) then some .einByteIncDec
-      else if decide (op = 16 ∨ op = 17 ∨ op = 18 ∨ op = 19 ∨
-          op = 20 ∨ op = 21 ∨ op = 24 ∨ op = 25 ∨ op = 26 ∨ op = 27 ∨
-          op = 28 ∨ op = 29 ∨ op = 128 ∨ op = 129 ∨ op = 131 ∨
-          op = 254 ∨ op = 255) then none
-      else some .keinTrageform
+      else match opcodeNachPraefix (b :: rest) with
+      | none => some .unvollstaendig
+      | some op => ablehnGrundOp op
+    | _ =>
+      match opcodeNachPraefix (b :: rest) with
+      | none => some .unvollstaendig
+      | some op => ablehnGrundOp op
 
 /- CUTS:
     Value/flag layer (§1) and register step (§2) stand.
