@@ -398,7 +398,161 @@ def ledger80 : List LEintrag :=
     [natByte 72, natByte 143, natByte 240],
    L .rexW 143 (some 7) "POP (reserved ext)" .ungueltig64 "keine"
     "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
-    [natByte 72, natByte 143, natByte 248]]
+    [natByte 72, natByte 143, natByte 248],
+   L .ohne 132 none "TEST Eb,Gb" .fehlt "keine"
+    "pervasive: TEST r/m8,r8 (e.g. test-bit idioms); no family" 255
+    [natByte 132, natByte 192],
+   L .ohne 133 none "TEST Ev,Gv" .fehlt "keine"
+    "pervasive: test eax,eax after calls; no family takes bare 85" 255
+    [natByte 133, natByte 192],
+   L .ohne 134 none "XCHG Eb,Gb" .fehlt "keine"
+    "occasional: byte atomic_exchange; no family takes bare 86" 255
+    [natByte 134, natByte 192],
+   L .ohne 135 none "XCHG Ev,Gv" .fehlt "keine"
+    "common: atomic_exchange word forms; no family takes bare 87" 255
+    [natByte 135, natByte 192],
+   L .ohne 136 none "MOV Eb,Gb" .fehlt "keine"
+    "pervasive 8-bit MOV; no family models it" 255
+    [natByte 136, natByte 192],
+   L .ohne 137 none "MOV Ev,Gv" .fehlt "keine"
+    "pervasive 32-bit MOV; no family models it" 255
+    [natByte 137, natByte 192],
+   L .ohne 138 none "MOV Gb,Eb" .fehlt "keine"
+    "pervasive 8-bit loads; no family models them" 255
+    [natByte 138, natByte 192],
+   L .ohne 139 none "MOV Gv,Ev" .fehlt "keine"
+    "pervasive 32-bit loads; no family models them" 255
+    [natByte 139, natByte 192],
+   L .ohne 141 none "LEA Gv,M" .fehlt "keine"
+    "pervasive: every address computation; no family takes bare 8D" 255
+    [natByte 141, natByte 1],
+   L .ohne 144 none "NOP" .fehlt "keine"
+    "pervasive: alignment NOPs; no family models 90" 255
+    [natByte 144],
+   L .ohne 145 none "XCHG rCX,rAX" .fehlt "keine"
+    "rare: register XCHG outside atomics; no family" 255
+    [natByte 145],
+   L .ohne 146 none "XCHG rDX,rAX" .fehlt "keine"
+    "rare: register XCHG outside atomics; no family" 255
+    [natByte 146],
+   L .ohne 147 none "XCHG rBX,rAX" .fehlt "keine"
+    "rare: register XCHG outside atomics; no family" 255
+    [natByte 147],
+   L .ohne 148 none "XCHG rSP,rAX" .fehlt "keine"
+    "rare: register XCHG outside atomics; no family" 255
+    [natByte 148],
+   L .ohne 149 none "XCHG rBP,rAX" .fehlt "keine"
+    "rare: register XCHG outside atomics; no family" 255
+    [natByte 149],
+   L .ohne 150 none "XCHG rSI,rAX" .fehlt "keine"
+    "rare: register XCHG outside atomics; no family" 255
+    [natByte 150],
+   L .ohne 151 none "XCHG rDI,rAX" .fehlt "keine"
+    "rare: register XCHG outside atomics; no family" 255
+    [natByte 151],
+   L .ohne 153 none "CWD" .modelliert "MulDivWidthHardwareForms"
+    "" 0 [natByte 153],
+   L .ohne 154 none "CALLF ptr16:32" .ungueltig64 "keine"
+    "CALL entry: 9A Invalid in 64-bit mode" 255
+    [natByte 154, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .ohne 155 none "WAIT/FWAIT" .verweigert "keine"
+    "no wait/FPU-bus semantics in the model; refused by design" 255
+    [natByte 155],
+   L .ohne 156 none "PUSHF" .fehlt "keine"
+    "occasional: inline-asm CPUID fences push RFLAGS; no family" 255
+    [natByte 156],
+   L .ohne 157 none "POPF" .fehlt "keine"
+    "occasional: inline-asm CPUID fences pop RFLAGS; no family" 255
+    [natByte 157],
+   L .ohne 158 none "SAHF" .fehlt "keine"
+    "rare; herstellerabhaengig: CPUID LAHF_SAHF_64-gated; no family" 255
+    [natByte 158],
+   L .ohne 159 none "LAHF" .fehlt "keine"
+    "rare; herstellerabhaengig: CPUID LAHF_SAHF_64-gated; no family" 255
+    [natByte 159],
+   L .rexW 132 none "TEST Eb,Gb" .fehlt "keine"
+    "REX.W ignored on byte op; no family models it" 255
+    [natByte 72, natByte 132, natByte 192],
+   L .rexW 133 none "TEST Ev,Gv" .modelliert "IntegerCore"
+    "register-direct TEST only; memory TEST unmodelled" 6
+    [natByte 72, natByte 133, natByte 192],
+   L .rexW 134 none "XCHG Eb,Gb" .fehlt "keine"
+    "REX.W byte XCHG; no family (XchgOrderNeed is 87-only)" 255
+    [natByte 72, natByte 134, natByte 192],
+   L .rexW 135 none "XCHG Ev,Gv" .zurueckgestellt "XchgOrderNeed"
+    "family models it (pin_xchg_reg), chain unwired" 255
+    [natByte 72, natByte 135, natByte 192],
+   L .rexW 136 none "MOV Eb,Gb" .fehlt "keine"
+    "REX.W ignored on byte op; no family models it" 255
+    [natByte 72, natByte 136, natByte 192],
+   L .rexW 137 none "MOV Ev,Gv" .modelliert "Codec/Ausfuehrung"
+    "all ModRM.mod classes covered (reg pilot; disp0/8 kompakt; disp32 pilot)" 0
+    [natByte 72, natByte 137, natByte 192],
+   L .rexW 138 none "MOV Gb,Eb" .fehlt "keine"
+    "REX.W ignored on byte op; no family models it" 255
+    [natByte 72, natByte 138, natByte 192],
+   L .rexW 139 none "MOV Gv,Ev" .modelliert "CompactForms"
+    "memory-deref forms covered (disp0/8 kompakt, disp32 pilot); reg-reg missing" 5
+    [natByte 72, natByte 139, natByte 1],
+   L .rexW 141 none "LEA Gv,M" .zurueckgestellt "AddressEncoding"
+    "family models it (pin_lea), chain unwired" 255
+    [natByte 72, natByte 141, natByte 0],
+   L .rexW 144 none "NOP" .fehlt "keine"
+    "REX.W NOP used as alignment padding; no family models 90" 255
+    [natByte 72, natByte 144],
+   L .rexW 145 none "XCHG rCX,rAX" .fehlt "keine"
+    "rare: 64-bit register XCHG; no family" 255
+    [natByte 72, natByte 145],
+   L .rexW 146 none "XCHG rDX,rAX" .fehlt "keine"
+    "rare: 64-bit register XCHG; no family" 255
+    [natByte 72, natByte 146],
+   L .rexW 147 none "XCHG rBX,rAX" .fehlt "keine"
+    "rare: 64-bit register XCHG; no family" 255
+    [natByte 72, natByte 147],
+   L .rexW 148 none "XCHG rSP,rAX" .fehlt "keine"
+    "rare: 64-bit register XCHG; no family" 255
+    [natByte 72, natByte 148],
+   L .rexW 149 none "XCHG rBP,rAX" .fehlt "keine"
+    "rare: 64-bit register XCHG; no family" 255
+    [natByte 72, natByte 149],
+   L .rexW 150 none "XCHG rSI,rAX" .fehlt "keine"
+    "rare: 64-bit register XCHG; no family" 255
+    [natByte 72, natByte 150],
+   L .rexW 151 none "XCHG rDI,rAX" .fehlt "keine"
+    "rare: 64-bit register XCHG; no family" 255
+    [natByte 72, natByte 151],
+   L .rexW 153 none "CQO" .modelliert "MulDivWidthHardwareForms"
+    "" 0 [natByte 72, natByte 153],
+   L .rexW 154 none "CALLF ptr16:32" .ungueltig64 "keine"
+    "CALL entry: 9A Invalid in 64-bit mode, REX.W changes nothing" 255
+    [natByte 72, natByte 154, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 155 none "WAIT/FWAIT" .verweigert "keine"
+    "no wait/FPU-bus semantics in the model; refused by design" 255
+    [natByte 72, natByte 155],
+   L .rexW 156 none "PUSHFQ" .fehlt "keine"
+    "occasional: inline-asm CPUID fences push RFLAGS; no family" 255
+    [natByte 72, natByte 156],
+   L .rexW 157 none "POPFQ" .fehlt "keine"
+    "occasional: inline-asm CPUID fences pop RFLAGS; no family" 255
+    [natByte 72, natByte 157],
+   L .rexW 158 none "SAHF" .fehlt "keine"
+    "rare; herstellerabhaengig: CPUID LAHF_SAHF_64-gated; no family" 255
+    [natByte 72, natByte 158],
+   L .rexW 159 none "LAHF" .fehlt "keine"
+    "rare; herstellerabhaengig: CPUID LAHF_SAHF_64-gated; no family" 255
+    [natByte 72, natByte 159],
+   L .lock 134 none "LOCK XCHG m8,r8" .fehlt "keine"
+    "common: seq-cst byte stores; LOCK family takes no XCHG row (t134Lreg: reg form #UD)" 255
+    [natByte 240, natByte 134, natByte 1],
+   L .lock 135 none "LOCK XCHG m,r" .fehlt "keine"
+    "common: seq-cst stores and atomic_exchange; LOCK family takes no XCHG row (t135Lreg: reg form #UD)" 255
+    [natByte 240, natByte 135, natByte 1],
+   L .ops16 152 none "CBW" .verweigert "keine"
+    "no 16-bit operand width in the model; refused by design" 255
+    [natByte 102, natByte 152],
+   L .ops16 153 none "CWD-16" .verweigert "keine"
+    "no 16-bit operand width in the model; refused by design" 255
+    [natByte 102, natByte 153]]
 
 theorem t152o : kapFam [natByte 152] = 0 := by decide
 theorem t152w : kapFam [natByte 72, natByte 152] = 0 := by decide
@@ -514,6 +668,60 @@ theorem t143w4 : kapDecode [natByte 72, natByte 143, natByte 224] = none := by d
 theorem t143w5 : kapDecode [natByte 72, natByte 143, natByte 232] = none := by decide
 theorem t143w6 : kapDecode [natByte 72, natByte 143, natByte 240] = none := by decide
 theorem t143w7 : kapDecode [natByte 72, natByte 143, natByte 248] = none := by decide
+theorem t132o : kapDecode [natByte 132, natByte 192] = none := by decide
+theorem t133o : kapDecode [natByte 133, natByte 192] = none := by decide
+theorem t134o : kapDecode [natByte 134, natByte 192] = none := by decide
+theorem t135o : kapDecode [natByte 135, natByte 192] = none := by decide
+theorem t136o : kapDecode [natByte 136, natByte 192] = none := by decide
+theorem t137o : kapDecode [natByte 137, natByte 192] = none := by decide
+theorem t138o : kapDecode [natByte 138, natByte 192] = none := by decide
+theorem t139o : kapDecode [natByte 139, natByte 192] = none := by decide
+theorem t141o : kapDecode [natByte 141, natByte 1] = none := by decide
+theorem t144o : kapDecode [natByte 144] = none := by decide
+theorem t145o : kapDecode [natByte 145] = none := by decide
+theorem t146o : kapDecode [natByte 146] = none := by decide
+theorem t147o : kapDecode [natByte 147] = none := by decide
+theorem t148o : kapDecode [natByte 148] = none := by decide
+theorem t149o : kapDecode [natByte 149] = none := by decide
+theorem t150o : kapDecode [natByte 150] = none := by decide
+theorem t151o : kapDecode [natByte 151] = none := by decide
+theorem t153o : kapFam [natByte 153] = 0 := by decide
+theorem t154o : kapDecode [natByte 154, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t155o : kapDecode [natByte 155] = none := by decide
+theorem t156o : kapDecode [natByte 156] = none := by decide
+theorem t157o : kapDecode [natByte 157] = none := by decide
+theorem t158o : kapDecode [natByte 158] = none := by decide
+theorem t159o : kapDecode [natByte 159] = none := by decide
+theorem t132w : kapDecode [natByte 72, natByte 132, natByte 192] = none := by decide
+theorem t133w : kapFam [natByte 72, natByte 133, natByte 192] = 6 := by decide
+theorem t134w : kapDecode [natByte 72, natByte 134, natByte 192] = none := by decide
+theorem t135w : kapDecode [natByte 72, natByte 135, natByte 192] = none := by decide
+theorem t136w : kapDecode [natByte 72, natByte 136, natByte 192] = none := by decide
+theorem t137w : kapFam [natByte 72, natByte 137, natByte 192] = 0 := by decide
+theorem t138w : kapDecode [natByte 72, natByte 138, natByte 192] = none := by decide
+theorem t139w : kapFam [natByte 72, natByte 139, natByte 1] = 5 := by decide
+theorem t141w : kapDecode [natByte 72, natByte 141, natByte 0] = none := by decide
+theorem t144w : kapDecode [natByte 72, natByte 144] = none := by decide
+theorem t145w : kapDecode [natByte 72, natByte 145] = none := by decide
+theorem t146w : kapDecode [natByte 72, natByte 146] = none := by decide
+theorem t147w : kapDecode [natByte 72, natByte 147] = none := by decide
+theorem t148w : kapDecode [natByte 72, natByte 148] = none := by decide
+theorem t149w : kapDecode [natByte 72, natByte 149] = none := by decide
+theorem t150w : kapDecode [natByte 72, natByte 150] = none := by decide
+theorem t151w : kapDecode [natByte 72, natByte 151] = none := by decide
+theorem t153w : kapFam [natByte 72, natByte 153] = 0 := by decide
+theorem t154w : kapDecode [natByte 72, natByte 154, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t155w : kapDecode [natByte 72, natByte 155] = none := by decide
+theorem t156w : kapDecode [natByte 72, natByte 156] = none := by decide
+theorem t157w : kapDecode [natByte 72, natByte 157] = none := by decide
+theorem t158w : kapDecode [natByte 72, natByte 158] = none := by decide
+theorem t159w : kapDecode [natByte 72, natByte 159] = none := by decide
+theorem t134L : kapDecode [natByte 240, natByte 134, natByte 1] = none := by decide
+theorem t135L : kapDecode [natByte 240, natByte 135, natByte 1] = none := by decide
+theorem t134Lreg : kapDecode [natByte 240, natByte 134, natByte 192] = none := by decide
+theorem t135Lreg : kapDecode [natByte 240, natByte 135, natByte 192] = none := by decide
+theorem t152s : kapDecode [natByte 102, natByte 152] = none := by decide
+theorem t153s : kapDecode [natByte 102, natByte 153] = none := by decide
 
 /-! CUTS (skeleton): rows 98/99 only; 236 keys outstanding. -/
 #print axioms t152o
