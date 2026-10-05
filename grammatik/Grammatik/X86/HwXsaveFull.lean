@@ -2473,4 +2473,357 @@ theorem wit_verweigert :
         vollWitXc true true vollWitF) = 1 := by
   decide
 
+/-! ## 11. Witness steps: FINIT, single TSO steps, refusals.
+
+  Save/restore/refusal STEPS need outcome equalities
+  (`save = .weiter v'`), which have no `DecidableEq` and are
+  only attempted by `rfl` below. FINIT and single-TSO steps are
+  definitional or single-issue and cost nothing. -/
+
+/-- The witness TSO view. -/
+def witTso0 : TSOZustand := tsoAnsicht (vollHw vollWitStart)
+
+/-- Single-issue successor: one byte at the core-1 area. -/
+def witS1 : TSOZustand :=
+  ⟨vollWitMem, pufferSetze (fun _ => []) 0
+    ((fun _ => []) 0 ++
+      [⟨vollWitArea1, BitVec.ofNat 8 42⟩])⟩
+
+/-- The single issue goes through (one permission check, one
+    append: no footprint fold). -/
+theorem wit_issue1 :
+    issueByte witTso0 0 vollWitArea1 (BitVec.ofNat 8 42) =
+      some witS1 := by
+  rfl
+
+/-- Single-issue step on the full machine. -/
+theorem wit_schritt_gibAus :
+    VollSchritt vollWitStart (setVollTso vollWitStart witS1)
+      (.schreibAusgabe 0 vollWitArea1
+        (BitVec.ofNat 8 42)) :=
+  VollSchritt.gibAus 0 vollWitArea1 (BitVec.ofNat 8 42) witS1
+    wit_issue1
+
+/-- The issued byte forwards to its owner. -/
+theorem wit_schritt_lade_wert :
+    loadByte witS1 0 vollWitArea1 = some (BitVec.ofNat 8 42) := by
+  decide
+
+/-- Observation step on the full machine. -/
+theorem wit_schritt_lade :
+    VollSchritt (setVollTso vollWitStart witS1)
+      (setVollTso vollWitStart witS1)
+      (.leseBeob 0 vollWitArea1 (BitVec.ofNat 8 42)) :=
+  VollSchritt.lade 0 vollWitArea1 (BitVec.ofNat 8 42)
+    wit_schritt_lade_wert
+
+/-- Single-flush successor: the byte lands in memory. -/
+def witS2 : TSOZustand :=
+  ⟨{ vollWitMem with bytes :=
+      fun x => if x = vollWitArea1 then BitVec.ofNat 8 42
+        else vollWitMem.bytes x },
+    pufferSetze witS1.puffer 0 []⟩
+
+/-- The single flush goes through. -/
+theorem wit_flush1 :
+    flushKern witS1 0 = some witS2 := by
+  rfl
+
+/-- Drain step on the full machine. -/
+theorem wit_schritt_spüle :
+    VollSchritt (setVollTso vollWitStart witS1)
+      (setVollTso vollWitStart witS2)
+      (.spülung 0 ⟨vollWitArea1, BitVec.ofNat 8 42⟩) :=
+  VollSchritt.spüle 0 ⟨vollWitArea1, BitVec.ofNat 8 42⟩ witS2
+    wit_flush1 (by rfl)
+
+/-- FINIT steps on both cores (definitional). -/
+theorem wit_schritt_finit :
+    VollSchritt vollWitStart (vollFinit vollWitStart 0)
+      (.finitReq 0) ∧
+      VollSchritt vollWitStart (vollFinit vollWitStart 1)
+        (.finitReq 1) :=
+  ⟨VollSchritt.finit 0, VollSchritt.finit 1⟩
+
+/-- The NM refusal as an outcome equality (gates only: cheap). -/
+theorem wit_nm_gleich :
+    vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc true true
+      ⟨true, true, false, false, false, false⟩ =
+      .fehler .nm := by
+  rfl
+
+/-- NM refusal step. -/
+theorem wit_schritt_nm :
+    VollSchritt vollWitStart vollWitStart (.verweigert 0) :=
+  VollSchritt.fehlerSave 0 vollWitArea0 vollWitXc true true
+    ⟨true, true, false, false, false, false⟩ .nm wit_nm_gleich
+
+/-- The empty-request refusal as an outcome equality. -/
+theorem wit_leer_gleich :
+    vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc false
+      false vollWitF = .verweigert := by
+  rfl
+
+/-- Empty-request refusal step. -/
+theorem wit_schritt_leer :
+    VollSchritt vollWitStart vollWitStart (.verweigert 0) :=
+  VollSchritt.fehlerVerweigert 0 vollWitArea0 vollWitXc false false
+    vollWitF wit_leer_gleich
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- Core-1 save as an outcome equality (480-entry kernel
+    evaluation through `rfl`). -/
+theorem wit_h1b :
+    vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc true false
+      vollWitF = .weiter witV1b := by
+  rfl
+
+/-! ## 12. Applied identity and the joint witness.
+
+  With the outcome equalities available as `rfl` facts, the
+  generic save/restore identity applies to the reached witness
+  states directly, and the save/restore family steps stand
+  beside the observed values. -/
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- Core-0 save as an outcome equality. -/
+theorem wit_h1 :
+    vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc false true
+      vollWitF = .weiter witV1 := by
+  rfl
+
+/-- Core-0 restore target: the machine after restoring core 0. -/
+def witM2 : VollMaschine :=
+  match vollWiederherstellen witV1 0 vollWitArea0 vollWitXc false
+      true vollWitF with
+  | .weiter m => m
+  | _ => vollWitStart
+
+/-- Core-1 restore target: the machine after restoring core 1. -/
+def witM2b : VollMaschine :=
+  match vollWiederherstellen witV1b 1 vollWitArea1 vollWitXc true
+      false vollWitF with
+  | .weiter m => m
+  | _ => vollWitStart
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- Core-0 restore as an outcome equality. -/
+theorem wit_h2 :
+    vollWiederherstellen witV1 0 vollWitArea0 vollWitXc false true
+      vollWitF = .weiter witM2 := by
+  rfl
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- Core-1 restore as an outcome equality. -/
+theorem wit_h2b :
+    vollWiederherstellen witV1b 1 vollWitArea1 vollWitXc true false
+      vollWitF = .weiter witM2b := by
+  rfl
+
+set_option maxRecDepth 100000 in
+/-- APPLIED IDENTITY on SSE: the generic round trip recovers
+    core 1's opaque image, control word and XMM file. -/
+theorem wit_rundlauf_anwendung1 :
+    (∀ t : Nat, t < 152 → (witM2b.x87 1) t =
+      (vollWitStart.x87 1) t) ∧
+      witM2b.maske 1 = vollWitStart.maske 1 ∧
+      (((vollHw witM2b).kerne 1).fp).mxcsr =
+        (((vollHw vollWitStart).kerne 1).fp).mxcsr ∧
+      (∀ r : XmmReg, ((vollHw witM2b).kerne 1).xmm r =
+        ((vollHw vollWitStart).kerne 1).xmm r) := by
+  have hles : ctxAlle (vollHw vollWitStart).mem.lesbar vollWitArea1
+      (vollOffsets true false) = true :=
+    (vollWit_perm _ (Or.inr rfl)).2
+  have hrr := vollRundlauf_maschine vollWitStart 1 vollWitArea1
+    vollWitXc true false vollWitF witV1b witM2b hles wit_h1b wit_h2b
+  exact ⟨hrr.1, hrr.2.1, hrr.2.2.1 rfl, hrr.2.2.2.1 rfl⟩
+
+set_option maxRecDepth 100000 in
+/-- APPLIED IDENTITY on AVX: the generic round trip recovers
+    core 0's opaque image and YMM upper file. -/
+theorem wit_rundlauf_anwendung0 :
+    (∀ t : Nat, t < 152 → (witM2.x87 0) t =
+      (vollWitStart.x87 0) t) ∧
+      (∀ r : XmmReg, (witM2.ym.ober 0) r =
+        (vollWitStart.ym.ober 0) r) := by
+  have hles : ctxAlle (vollHw vollWitStart).mem.lesbar vollWitArea0
+      (vollOffsets false true) = true :=
+    (vollWit_perm _ (Or.inl rfl)).2
+  have hrr := vollRundlauf_maschine vollWitStart 0 vollWitArea0
+    vollWitXc false true vollWitF witV1 witM2 hles wit_h1 wit_h2
+  exact ⟨hrr.1, fun r => hrr.2.2.2.2 rfl r⟩
+
+/-- Save step on core 1 (reached). -/
+theorem wit_schritt_save1 :
+    VollSchritt vollWitStart witV1b
+      (.saveReq 1 vollWitArea1 vollWitXc true false) :=
+  VollSchritt.save 1 vollWitArea1 vollWitXc true false vollWitF
+    wit_h1b
+
+/-- Restore step on core 1 (reached). -/
+theorem wit_schritt_rstor1 :
+    VollSchritt witV1b witM2b
+      (.rstorReq 1 vollWitArea1 vollWitXc true false) :=
+  VollSchritt.rstor 1 vollWitArea1 vollWitXc true false vollWitF
+    wit_h2b
+
+/-- Save step on core 0 (reached). -/
+theorem wit_schritt_save0 :
+    VollSchritt vollWitStart witV1
+      (.saveReq 0 vollWitArea0 vollWitXc false true) :=
+  VollSchritt.save 0 vollWitArea0 vollWitXc false true vollWitF
+    wit_h1
+
+/-- Restore step on core 0 (reached). -/
+theorem wit_schritt_rstor0 :
+    VollSchritt witV1 witM2
+      (.rstorReq 0 vollWitArea0 vollWitXc false true) :=
+  VollSchritt.rstor 0 vollWitArea0 vollWitXc false true vollWitF
+    wit_h2
+
+/-- JOINT WITNESS for `vollRundlauf_maschine`: all premises
+    instantiated jointly on a reached, non-degenerate two-core
+    run. Two cores buffer full save images (476 AVX-only and 480
+    SSE-only entries); each owner forwards its bytes while the
+    other core reads zeros; one drain observably changes shared
+    memory (0 becomes `5`); both save/restore round trips recover
+    the enabled components through the machine (control word,
+    XMM, opaque x87 image, YMM); every fault class fires its
+    outcome and the empty/permission shapes refuse; FINIT
+    installs reset and keeps everything else; the start machine
+    is well-formed. Non-degenerate: two cores touch memory, a
+    buffered store is visible by forwarding to its owner only,
+    and a drain changes actual shared memory. -/
+theorem vollRundlauf_maschine_zeuge :
+    witBuf (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+      false true vollWitF) 0 = some 476 ∧
+      witBuf (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
+        true false vollWitF) 1 = some 480 ∧
+      witYmmNach witV2 0 .xmm0 = some 9 ∧
+      witX87Nach witV2 0 0 = some (BitVec.ofNat 8 0) ∧
+      witFpNach witV2b 1 = some 0x1FBF ∧
+      witXmmNach witV2b 1 .xmm0 = some 11 ∧
+      witNachFlush = some (BitVec.ofNat 8 5) ∧
+      witFehler (vollWiederherstellen vollWitStartR 0 vollWitAreaR
+        vollWitXc true false vollWitF) = 12 ∧
+      VollWf vollWitStart ∧
+      (∀ t : Nat, t < 152 → (witM2b.x87 1) t =
+        (vollWitStart.x87 1) t) ∧
+      (∀ r : XmmReg, (witM2.ym.ober 0) r =
+        (vollWitStart.ym.ober 0) r) ∧
+      VollSchritt vollWitStart witV1b
+        (.saveReq 1 vollWitArea1 vollWitXc true false) ∧
+      VollSchritt witV1b witM2b
+        (.rstorReq 1 vollWitArea1 vollWitXc true false) ∧
+      VollSchritt vollWitStart vollWitStart (.verweigert 0) := by
+  exact ⟨wit_buf.1, wit_buf.2, wit_restore0.1, wit_restore0.2,
+    wit_restore1.1, wit_restore1.2, wit_drain.1, wit_gp_reserviert,
+    vollWitStart_wf, wit_rundlauf_anwendung1.1,
+    wit_rundlauf_anwendung0.2, wit_schritt_save1,
+    wit_schritt_rstor1, wit_schritt_nm⟩
+
+/- CUTS:
+    Proved here, over the coherent machine (`HwMaschine`/
+    `HwSchritt`/`HwWf`, HardwareExecution §11) with the accepted
+    TSO byte equations (`issueByte`/`loadByte`/`flushKern`,
+    `issueListe`), the accepted footprint helpers (`ctxAlle`,
+    `fxEintraegeAux`, `ctxLadeAux`, `ctxLade_geladen`,
+    `ctxFalte`, `ctxNull`) and the accepted legacy image
+    (`ctxByte`, `fxDekodiere`, `ctxOffsets`,
+    `mxcsrReserviertFrei`, `ldmxcsrArchOk`, `xcr0SseBereit`,
+    `xcr0AvxBereit`), the accepted YMM file (`YmmDatei`,
+    `xmmSet`, `vecJoin`, `vLo`, `vHi`) and the accepted fault
+    vocabulary (`ArchFehler`), all lifted unchanged:
+    - full area image (`vollByte`: opaque x87 bytes 0-23/32-159,
+      MXCSR 24-27, mask 28-31, XMM 160-415, header 512-575 with
+      zero XCOMP_BV in the standard form, YMM 576-831) with
+      decode (`vollDekodiere`) and per-component pure round
+      trips (`vollRundlauf_x87/_maske/_kopf/_legacy/_ymm`);
+    - RFBM-selective footprint (`vollOffsets`: x87/mask/header
+      always, legacy iff SSE, YMM iff AVX) with `Nodup`
+      (bound-proved: the 736-entry joint list exceeds the kernel
+      memory budget, so no `decide` over it) and membership;
+    - `VollMaschine` (YMM machine plus opaque per-core x87
+      images and carried masks) with footprint-checked buffered
+      save (`vollSpeichern`) and restore
+      (`vollWiederherstellen`): buffer growth, memory silence,
+      `VollWf` preservation, owner-only forwarding;
+    - ordered fault gates as outcomes (NM > UD-CPUID/LOCK/XCR0
+      > empty-request refusal > GP-x87/canonical/alignment >
+      SS > PF > AC > permission refusal), the reserved-bit #GP
+      with exact `ldmxcsrArchOk` agreement;
+    - SAVE THEN RESTORE IS THE IDENTITY on the enabled
+      components (`vollRundlauf_maschine`: opaque x87 always,
+      MXCSR/XMM where SSE, YMM where AVX, masks untouched),
+      both generic and applied to reached states;
+    - FINIT (`vollFinit`: reset image, everything else kept)
+      with the finit round-trip corollary;
+    - the family step relation (`VollSchritt`) with `VollWf`
+      preservation and the exact two-way coherent embedding of
+      the TSO legs (no `HwAdapter` plug: x87/mask/YMM state
+      lives beside `HwMaschine`, so no adapter over
+      `HwMaschine` can carry a save without inventing state);
+    - (4) a reached non-degenerate joint witness
+      (`vollRundlauf_maschine_zeuge`): two buffered saves with
+      owner-only forwarding, a memory-changing drain, applied
+      and observed round trips, planted refusals, FINIT facts
+      and well-formedness.
+    Silicon provenance (Intel SDM 325462-093US Vol.1 Ch.13 and
+    Vol.2A FXSAVE/FXRSTOR/XSAVE/XRSTOR/FINIT entries,
+    clone-local extracts; provenance only, never a proof).
+    Named silicon/timing assumptions: none beyond
+    self-consistency of the lifted model; in particular no
+    hardware correspondence, no timing, no serialization claim.
+    NOT proved here, and not claimed:
+    - No x87 FPU execution: the area bytes are an opaque
+      preserved block; FINIT's exact architectural reset bytes
+      are an opaque constant, not a silicon claim.
+    - No MXCSR_MASK silicon semantics: the mask value is
+      carried and written but its meaning (which bits are
+      writable) is unchecked; restore ignores it (stated).
+    - No header consistency: XSTATE_BV vs the request set and
+      the compaction word are decoded, never enforced.
+    - No RFBM computation (request flags are checked inputs),
+      no XSS/supervisor states, no XSAVEOPT/XSAVES/XRSTORS,
+      no compaction.
+    - Fault inputs (TS bit, CPUID bits, LOCK, segment limits,
+      paging, CPL/AC) are an oracle: classes and priority are
+      modeled, their derivation is not.
+    - No 57-bit canonical addresses (48-bit check only).
+    - No 736-entry joint kernel evaluation (kernel memory
+      wall): the joint set is proved generic, observed per
+      enabled set (476 AVX-only, 480 SSE-only).
+    - No per-access target-to-W/GX simulation, no whole-word
+      atomicity beyond the accepted byte equations, no
+      source/IR/ABI/loader/entry/budget link.
+    - Handler bodies stay user logic; only the
+      save-then-restore composition is proved.
+    - `gabbro_ziel` axioms are untouched.
+-/
+
+#print axioms vollRundlauf_x87
+#print axioms vollRundlauf_maske
+#print axioms vollRundlauf_kopf
+#print axioms vollRundlauf_legacy
+#print axioms vollRundlauf_ymm
+#print axioms vollOffsets_nodup
+#print axioms vollSpeichern_puffer
+#print axioms vollSpeichern_kein_speicher
+#print axioms vollWeiterleitung_gespeichert
+#print axioms vollRundlauf_maschine
+#print axioms vollWiederherstellen_fehlerGP_reserviert
+#print axioms vollRestore_stimmt_ldmxcsr_ueberein
+#print axioms vollSpeichern_wf
+#print axioms vollWiederherstellen_wf
+#print axioms vollFinit_rundlauf
+#print axioms vollSchritt_wf
+#print axioms vollLade_ist_hw
+#print axioms vollGibAus_ist_hw
+#print axioms vollSpüle_ist_hw_zurueck
+#print axioms vollRundlauf_maschine_zeuge
+
 end Gabbro.Grammatik.X86
