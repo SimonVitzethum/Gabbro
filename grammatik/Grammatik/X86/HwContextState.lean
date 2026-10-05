@@ -781,4 +781,220 @@ theorem ctxRundlauf_maschine (m : HwMaschine) (c : Nat) (a : Adresse)
     rw [hxmm, hkong.2 r]
     exact hpure.2 r
 
+/-- A restore preserves well-formedness (profiles untouched). -/
+theorem ctxWiederherstellen_wf (m : HwMaschine) (c : Nat) (a : Adresse)
+    (hwf : HwWf m) (m' : HwMaschine)
+    (h : ctxWiederherstellen m c a = .weiter m') : HwWf m' := by
+  obtain ⟨bs, _, rfl⟩ := ctxWiederherstellen_erfolg m c a m' h
+  exact setKernDaten_wf m c _ hwf
+
+/-- Misaligned restore area faults with #GP. -/
+theorem ctxWiederherstellen_fehlerGP_falsch_ausgerichtet
+    (m : HwMaschine) (c : Nat) (a : Adresse)
+    (h : fxAusgerichtet a = false) :
+    ctxWiederherstellen m c a = .fehlerGP := by
+  unfold ctxWiederherstellen
+  simp [h]
+
+/-- A missing read permission refuses the whole restore. -/
+theorem ctxWiederherstellen_verweigert_ohne_leserecht (m : HwMaschine)
+    (c : Nat) (a : Adresse)
+    (h1 : fxAusgerichtet a = true)
+    (h2 : ctxAlle m.mem.lesbar a ctxOffsets = false) :
+    ctxWiederherstellen m c a = .verweigert := by
+  unfold ctxWiederherstellen
+  simp [h1, h2]
+
+/-- A reserved MXCSR bit in the image faults with #GP on restore
+    (SDM FXRSTOR/LDMXCSR: attempting to set reserved MXCSR bits
+    raises #GP; extract offsets 56403, 62467). This is the accepted
+    `ldmxcsrArchOk` refusal, lifted to the area restore. -/
+theorem ctxWiederherstellen_fehlerGP_reserviert (m : HwMaschine)
+    (c : Nat) (a : Adresse)
+    (h1 : fxAusgerichtet a = true)
+    (h2 : ctxAlle m.mem.lesbar a ctxOffsets = true)
+    (bs : List (Nat × Byte))
+    (h3 : ctxLadeAux (tsoAnsicht m) c a ctxOffsets = some bs)
+    (h4 : 65536 ≤ (mxcsrAusBytes
+      (fun i => ctxFalte bs ctxNull (24 + i))).toNat) :
+    ctxWiederherstellen m c a = .fehlerGP := by
+  unfold ctxWiederherstellen
+  simp [h1, h2, h3]
+  have hres : mxcsrReserviertFrei
+      (mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i))) = false :=
+    mxcsrReserviertFrei_verweigert _ h4
+  simp [hres]
+
+/-- AGREEMENT: the restore's reserved-bit #GP coincides with the
+    accepted architectural load refusal `ldmxcsrArchOk`. -/
+theorem ctxRestore_stimmt_ldmxcsr_ueberein (p : MxcsrProfil) (w : MXCSR)
+    (h : 65536 ≤ w.toNat) :
+    ldmxcsrArchOk p w = false :=
+  ldmxcsrArchOk_reserviert_verweigert p w h
+
+/-! ## 5. XSAVE/XRSTOR for the XCR0-enabled components.
+
+    RFBM is XCR0 AND the request mask (SDM XSAVE: component `i` is
+    saved iff RFBM[i] = 1; MXCSR/MXCSR_MASK belong to component 1
+    (SSE); extract offsets 13928, 13956). The tree models the SSE
+    family (MXCSR + XMM0-15); readiness reuses `xcr0SseBereit`
+    unchanged. XSAVE/XRSTOR run the SAME legacy image path where the
+    XCR0 side is ready and SSE is requested, need 64-byte alignment
+    (misaligned XSAVE operand raises #GP; extract offset 13950), and
+    refuse with #UD where XCR0 SSE readiness is missing (mirroring
+    `stepVectorHw_ohne_xcr0`) or with `.verweigert` where the request
+    names no modelled component (no silent no-op). The XSAVE header
+    and the extended region are outside the footprint (see CUTS). -/
+
+/-- One XSAVE on core `c` at area base `a`: XCR0 gate, request gate,
+    64-byte alignment gate, then the shared save path. -/
+def ctxXSave (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool) : CtxAusgang :=
+  if !xcr0SseBereit x then .fehlerUD
+  else if !frageSse then .verweigert
+  else if !xAusgerichtet a then .fehlerGP
+  else ctxSpeichern m c a
+
+/-- One XRSTOR: the same gates, then the shared restore path
+    (including its reserved-bit #GP). -/
+def ctxXRstor (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool) : CtxAusgang :=
+  if !xcr0SseBereit x then .fehlerUD
+  else if !frageSse then .verweigert
+  else if !xAusgerichtet a then .fehlerGP
+  else ctxWiederherstellen m c a
+
+/-- A successful XSAVE is a successful shared save. -/
+theorem ctxXSave_weiter (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool) (m' : HwMaschine)
+    (h : ctxXSave m c a x frageSse = .weiter m') :
+    ctxSpeichern m c a = .weiter m' := by
+  unfold ctxXSave at h
+  cases hx' : xcr0SseBereit x with
+  | false => simp [hx'] at h
+  | true =>
+    cases hq' : frageSse with
+    | false => simp [hx', hq'] at h
+    | true =>
+      cases hal' : xAusgerichtet a with
+      | false => simp [hx', hq', hal'] at h
+      | true =>
+        simp [hx', hq', hal'] at h
+        exact h
+
+/-- A successful XRSTOR is a successful shared restore. -/
+theorem ctxXRstor_weiter (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool) (m' : HwMaschine)
+    (h : ctxXRstor m c a x frageSse = .weiter m') :
+    ctxWiederherstellen m c a = .weiter m' := by
+  unfold ctxXRstor at h
+  cases hx' : xcr0SseBereit x with
+  | false => simp [hx'] at h
+  | true =>
+    cases hq' : frageSse with
+    | false => simp [hx', hq'] at h
+    | true =>
+      cases hal' : xAusgerichtet a with
+      | false => simp [hx', hq', hal'] at h
+      | true =>
+        simp [hx', hq', hal'] at h
+        exact h
+
+/-- SHARED LAYOUT: under admitted gates XSAVE is the FXSAVE path
+    (same legacy bytes for the enabled SSE component). -/
+theorem ctxXSave_ist_fxSave (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool)
+    (hx : xcr0SseBereit x = true) (hq : frageSse = true)
+    (hxa : xAusgerichtet a = true) :
+    ctxXSave m c a x frageSse = ctxSpeichern m c a := by
+  unfold ctxXSave
+  simp [hx, hq, hxa]
+
+/-- SHARED LAYOUT, restore direction. -/
+theorem ctxXRstor_ist_fxRstor (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool)
+    (hx : xcr0SseBereit x = true) (hq : frageSse = true)
+    (hxa : xAusgerichtet a = true) :
+    ctxXRstor m c a x frageSse = ctxWiederherstellen m c a := by
+  unfold ctxXRstor
+  simp [hx, hq, hxa]
+
+/-- 64-byte alignment implies the 16-byte legacy alignment. -/
+theorem xAusgerichtet_impliziert_fxAusgerichtet (a : Adresse)
+    (h : xAusgerichtet a = true) :
+    fxAusgerichtet a = true := by
+  have h64 : a.toNat % 64 = 0 := of_decide_eq_true h
+  have h16 : a.toNat % 16 = 0 := by omega
+  show decide (a.toNat % 16 = 0) = true
+  simp [h16]
+
+/-- Without XCR0 SSE readiness XSAVE faults with #UD. -/
+theorem ctxXSave_fehlerUD_ohne_xcr0 (m : HwMaschine) (c : Nat)
+    (a : Adresse) (x : Xcr0Bild) (frageSse : Bool)
+    (h : xcr0SseBereit x = false) :
+    ctxXSave m c a x frageSse = .fehlerUD := by
+  unfold ctxXSave
+  simp [h]
+
+/-- Without XCR0 SSE readiness XRSTOR faults with #UD. -/
+theorem ctxXRstor_fehlerUD_ohne_xcr0 (m : HwMaschine) (c : Nat)
+    (a : Adresse) (x : Xcr0Bild) (frageSse : Bool)
+    (h : xcr0SseBereit x = false) :
+    ctxXRstor m c a x frageSse = .fehlerUD := by
+  unfold ctxXRstor
+  simp [h]
+
+/-- A request naming no modelled component is refused, never
+    silently empty. -/
+theorem ctxXSave_verweigert_ohne_anfrage (m : HwMaschine) (c : Nat)
+    (a : Adresse) (x : Xcr0Bild)
+    (hx : xcr0SseBereit x = true) (hq : frageSse = false) :
+    ctxXSave m c a x frageSse = .verweigert := by
+  unfold ctxXSave
+  simp [hx, hq]
+
+/-- Misaligned XSAVE area faults with #GP. -/
+theorem ctxXSave_fehlerGP_falsch_ausgerichtet (m : HwMaschine)
+    (c : Nat) (a : Adresse) (x : Xcr0Bild) (frageSse : Bool)
+    (hx : xcr0SseBereit x = true) (hq : frageSse = true)
+    (h : xAusgerichtet a = false) :
+    ctxXSave m c a x frageSse = .fehlerGP := by
+  unfold ctxXSave
+  simp [hx, hq, h]
+
+/-- XSAVE preserves well-formedness (shared path). -/
+theorem ctxXSave_wf (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool)
+    (hwf : HwWf m) (m' : HwMaschine)
+    (h : ctxXSave m c a x frageSse = .weiter m') : HwWf m' :=
+  ctxSpeichern_wf m c a hwf m' (ctxXSave_weiter m c a x frageSse m' h)
+
+/-- XRSTOR preserves well-formedness (shared path). -/
+theorem ctxXRstor_wf (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool)
+    (hwf : HwWf m) (m' : HwMaschine)
+    (h : ctxXRstor m c a x frageSse = .weiter m') : HwWf m' :=
+  ctxWiederherstellen_wf m c a hwf m'
+    (ctxXRstor_weiter m c a x frageSse m' h)
+
+/-- XSAVE goes through the TSO buffer (shared path). -/
+theorem ctxXSave_puffer (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool) (m' : HwMaschine)
+    (h : ctxXSave m c a x frageSse = .weiter m') :
+    m'.puffer c = m.puffer c ++
+      fxEintraege (m.kerne c).fp (m.kerne c).xmm a :=
+  ctxSpeichern_puffer m c a m' (ctxXSave_weiter m c a x frageSse m' h)
+
+/-- XSAVE/RESTORE ROUND TRIP under one admitted XCR0 mask. -/
+theorem ctxXRundlauf_maschine (m : HwMaschine) (c : Nat) (a : Adresse)
+    (x : Xcr0Bild) (frageSse : Bool) (m1 m2 : HwMaschine)
+    (hles : ctxAlle m.mem.lesbar a ctxOffsets = true)
+    (h1 : ctxXSave m c a x frageSse = .weiter m1)
+    (h2 : ctxXRstor m1 c a x frageSse = .weiter m2) :
+    (m2.kerne c).fp = (m.kerne c).fp ∧
+      ∀ r : XmmReg, (m2.kerne c).xmm r = (m.kerne c).xmm r :=
+  ctxRundlauf_maschine m c a m1 m2 hles
+    (ctxXSave_weiter m c a x frageSse m1 h1)
+    (ctxXRstor_weiter m1 c a x frageSse m2 h2)
+
 end Gabbro.Grammatik.X86
