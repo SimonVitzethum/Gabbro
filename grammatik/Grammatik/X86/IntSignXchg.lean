@@ -1164,6 +1164,184 @@ theorem sxTabelle_verweigert (p : List Byte × SxGrund)
   rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
     decide
 
+/-! ## 13. Machine adapter: the family on the coherent machine.
+
+    The producer plug instantiates `HwAdapter SxDecodiert`: a
+    successful family step re-embeds core data over the shared
+    memory; halt and refusal admit no successor state (halt never
+    fires here by §11, so every adapter refusal is a decode
+    refusal). -/
+
+/-- A bad decode length admits no family step. -/
+theorem sx_laenge_misslungen (d : SxDecodiert) (s : Zustand)
+    (h : laengeOk d.laenge = false) :
+    sxSchritt d s = .misslungen := by
+  unfold sxSchritt
+  simp [h]
+
+/-- The family plug: one checked family event step on the coherent
+    machine. `none` = refusal, never a silent successor. -/
+def adapterSignXchg : HwAdapter SxDecodiert :=
+  ⟨fun m c d =>
+    match sxSchritt d (projZustand m c) with
+    | .ok s' =>
+      some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+    | .hardwareHalt => none
+    | .misslungen => none⟩
+
+/-- Every adapter step preserves well-formedness: only core data
+    moves, profiles are untouched. -/
+theorem adapterSignXchg_wf (m : HwMaschine) (c : Nat)
+    (d : SxDecodiert) (m' : HwMaschine) (hwf : HwWf m)
+    (h : (adapterSignXchg).schritt m c d = some m') :
+    HwWf m' := by
+  unfold adapterSignXchg at h
+  simp only at h
+  cases hsch : sxSchritt d (projZustand m c) with
+  | ok s' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    unfold setKernVonFp
+    exact setKernDaten_wf _ _ _ hwf
+  | hardwareHalt =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+  | misslungen =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
+/-- Agreement: the adapter succeeds exactly where the family step
+    succeeds, with the successor core data re-embedded. -/
+theorem adapterSignXchg_ok (m : HwMaschine) (c : Nat)
+    (d : SxDecodiert) (s' : Zustand)
+    (h : sxSchritt d (projZustand m c) = .ok s') :
+    (adapterSignXchg).schritt m c d =
+      some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩) := by
+  unfold adapterSignXchg
+  simp only [h]
+
+/-- The successor core sees the family successor registers over
+    the shared memory. -/
+theorem adapterSignXchg_proj (m : HwMaschine) (c : Nat)
+    (d : SxDecodiert) (s' : Zustand)
+    (h : sxSchritt d (projZustand m c) = .ok s') :
+    ((setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩).kerne c).register =
+      s'.register ∧
+    (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩).mem = m.mem ∧
+    s'.speicher = m.mem := by
+  refine ⟨setKernVonFp_register m c _,
+    setKernVonFp_speicher m c _, ?_⟩
+  have hmem := sxSchritt_memory d (projZustand m c) s' h
+  have hproj : (projZustand m c).speicher = m.mem := rfl
+  rw [hproj] at hmem
+  exact hmem
+
+/-- A bad decode length admits no adapter step. -/
+theorem adapterSignXchg_verweigert_bei_laenge (m : HwMaschine)
+    (c : Nat) (d : SxDecodiert)
+    (h : laengeOk d.laenge = false) :
+    (adapterSignXchg).schritt m c d = none := by
+  have hstep := sx_laenge_misslungen d (projZustand m c) h
+  unfold adapterSignXchg
+  simp only [hstep]
+
+/-! ## 14. Machine outcome: success continues, refusal refuses.
+
+    Reuses the accepted `HwRegAusgang` unchanged (never edited
+    here): success re-embeds core data, refusal is `verweigert`.
+    The halt arm is selected exactly where the family halts, which
+    never happens (§11), so it carries no register claim. -/
+
+/-- One family machine step on core `c`: the family step on the
+    core projection, re-embedded on success. -/
+def sxHwRegSchritt (m : HwMaschine) (c : Nat)
+    (d : SxDecodiert) : HwRegAusgang :=
+  match sxSchritt d (projZustand m c) with
+  | .ok s' => .weiter (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+  | .hardwareHalt => .halt
+  | .misslungen => .verweigert
+
+/-- Selection: a successful family step continues on the machine. -/
+theorem sxHwRegSchritt_weiter (m : HwMaschine) (c : Nat)
+    (d : SxDecodiert) (s' : Zustand)
+    (h : sxSchritt d (projZustand m c) = .ok s') :
+    sxHwRegSchritt m c d =
+      .weiter (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩) := by
+  have e : sxHwRegSchritt m c d =
+      match sxSchritt d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .hardwareHalt => .halt
+      | .misslungen => .verweigert := rfl
+  rw [e, h]
+
+/-- Selection: the halt arm fires exactly where the family halts
+    (which never happens, `sxSchritt_kein_halt`). -/
+theorem sxHwRegSchritt_halt (m : HwMaschine) (c : Nat)
+    (d : SxDecodiert)
+    (h : sxSchritt d (projZustand m c) = .hardwareHalt) :
+    sxHwRegSchritt m c d = .halt := by
+  have e : sxHwRegSchritt m c d =
+      match sxSchritt d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .hardwareHalt => .halt
+      | .misslungen => .verweigert := rfl
+  rw [e, h]
+
+/-- Selection: family refusal is machine refusal. -/
+theorem sxHwRegSchritt_verweigert (m : HwMaschine) (c : Nat)
+    (d : SxDecodiert)
+    (h : sxSchritt d (projZustand m c) = .misslungen) :
+    sxHwRegSchritt m c d = .verweigert := by
+  have e : sxHwRegSchritt m c d =
+      match sxSchritt d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .hardwareHalt => .halt
+      | .misslungen => .verweigert := rfl
+  rw [e, h]
+
+/-- A machine halt carries no successor. -/
+theorem sxHwRegSchritt_halt_ist_kein_weiter (m : HwMaschine)
+    (c : Nat) (d : SxDecodiert) (m' : HwMaschine)
+    (h : sxHwRegSchritt m c d = .halt) :
+    sxHwRegSchritt m c d ≠ .weiter m' := by
+  rw [h]
+  intro hc
+  cases hc
+
+/-- A machine continue preserves well-formedness. -/
+theorem sxHwRegSchritt_weiter_wf (m : HwMaschine) (c : Nat)
+    (d : SxDecodiert) (m' : HwMaschine) (hwf : HwWf m)
+    (h : sxHwRegSchritt m c d = .weiter m') :
+    HwWf m' := by
+  have e : sxHwRegSchritt m c d =
+      match sxSchritt d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .hardwareHalt => .halt
+      | .misslungen => .verweigert := rfl
+  rw [e] at h
+  cases hsch : sxSchritt d (projZustand m c) with
+  | ok s' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    unfold setKernVonFp
+    exact setKernDaten_wf _ _ _ hwf
+  | hardwareHalt =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+  | misslungen =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
    NOT proved here, and not claimed: everything (see task).
