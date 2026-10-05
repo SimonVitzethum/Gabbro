@@ -93,6 +93,19 @@ Fresh verification for this report:
 - No Lean change was needed or made for this review round; only this report
   section was appended.
 
+## Re-review response (lane 1260, second blocked review)
+
+The re-review pins the new head `231b3e93789ec55e20f01a847e8eedd2dcf790a4`
+(the previous review-response commit) and reports the same blocker: the
+candidate branch is still not readable in the reviewer clone, so again no
+candidate code was examined. Verdict REPAIR is again directed at dispatch,
+with explicitly zero substantive findings against `PipelineWorkPath.lean`,
+axioms, witnesses, silicon facts, or CUTS. There is again nothing to repair
+in the deliverable; no guarantee was weakened and no claim restated. Fresh
+gates for this note: `./lean-probe` 0 errors, `./lean-bau` green (644 jobs).
+Only this section was appended; the Lean code is byte-identical to the
+reviewed head.
+
 ## Task remarks (things believed wrong or imprecise)
 
 1. The task names lane 1233's file `PipelineWorkBranches.lean`; no such file
