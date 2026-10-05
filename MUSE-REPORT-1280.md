@@ -130,7 +130,8 @@ tree, so there is no overlap with the accepted `BitScan`/`BitCount`/
   above plus snapshot `clean: true`, and the merge gate rebuilds
   `grammatik/` mechanically before committing.
 
-## VERDICT: ACCEPT
+CANDIDATE: 1279 cf407e527e7b4053af372175670d6875cc446890
+VERDICT: ACCEPT
 
 The candidate meets every checkable requirement: exact owned scope,
 no forbidden tactics or new axioms (standard axioms only), accepted
