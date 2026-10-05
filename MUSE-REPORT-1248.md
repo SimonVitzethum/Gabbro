@@ -1,44 +1,40 @@
-# MUSE-REPORT-1248: Exact review of candidate 1247 — BLOCKED, no verdict possible
+# MUSE-REPORT-1248: Independent exact review of author lane 1247 (HwContextState)
 
-Lane: 1248 (reviewer). Clone verified: `/home/simon/Dokumente/gabbro-muse/a1248`, branch `muse/1248`, HEAD `e1eb505d`. Owns only this file.
+Reviewer lane 1248. Clone verified: `/home/simon/Dokumente/gabbro-muse/a1248`, branch `muse/1248`, reviewer HEAD `85eb28b13811e76d059e98e49b8f2142d22cc132` (prior report commit; working tree clean). Review-only lane: I own only this file, added no Lean code and touched no existing files. Pinned snapshot read from `.tmp/review/SNAPSHOT.json`: author 1247, head `acf96e9e8629b15fc5b4cf6124e091a7653f6e94`, base `ca33ef1b3eaa30c178343517c9fd20f32a914b58`, files `MUSE-REPORT-1247.md`, `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/HwContextState.lean`, clean true.
 
-## Assignment
+CANDIDATE: 1247 acf96e9e8629b15fc5b4cf6124e091a7653f6e94
 
-Independent exact review of lane 1247 (Extended context state across interrupts and context switches: `grammatik/Grammatik/X86/HwContextState.lean`). Report-only review with exactly one VERDICT: ACCEPT or REPAIR.
+VERDICT: REPAIR
 
-## Result: NO VERDICT — candidate not available in this clone
+## What this outcome means (read first)
 
-I cannot render an ACCEPT/REPAIR verdict because the candidate material is absent from everything I am allowed to touch:
+This is a PROCEDURAL repair outcome, not a technical finding against the author's work. The pinned author commit is not present anywhere the reviewer may legally inspect (evidence below), so the exact-review checklist could not be executed on any line of the candidate. The candidate therefore has NOT passed independent exact review and must not merge on this review's authority. No technical claim about the author's file — positive or negative — is made anywhere in this report; the author's definitions and proofs stand unjudged by this review. Approval of unproved claims is explicitly refused here: since nothing of the candidate was visible, nothing of it is approved.
 
-1. **No pinned HEAD supplied.** The lane task (`lanes/1247.md` line 25 equivalent / `.tmp/LANE.md` line 25) reads `CANDIDATE: 1247 <full pinned HEAD>` — the placeholder was never filled with a hash. There is no exact candidate to review.
-2. **No author branch locally.** `.git/refs/heads` contains only `master` and `muse/1248`. No `muse/1247` ref exists, so `git diff master..HEAD` in this clone shows nothing of the candidate.
-3. **No candidate files on disk.** `grammatik/Grammatik/X86/HwContext*.lean` does not exist here; no `MUSE-REPORT-1247.md` at root.
-4. **HARD RULES forbid reaching outside this directory** (no network, no fetch, no reading the author clone at `a1247`). The task text itself directs the diff to be read "in the author clone", which I may not touch. Reaching it would violate rule 1.
-5. Additionally, the permission classifier in this session rejects `git branch`/`git diff`-family invocations, so even local ref inspection beyond the `refs/heads` directory listing is unavailable.
+## Concrete reasons (each verified inside this clone)
 
-Rendering ACCEPT or REPAIR under these conditions would be a claim without evidence and would violate the review honesty requirements (CUTS honest, no claim larger than the proof). I therefore record NO VERDICT rather than a fabricated one.
+1. No local ref for the author branch exists: `.git/refs/heads` contains only `master` and `muse/1248`; `packed-refs` contains only release tags; there is no `FETCH_HEAD`.
+2. None of the three snapshot files exists on disk here: the glob for `grammatik/Grammatik/X86/HwContext*.lean` is empty and there is no `MUSE-REPORT-1247.md` at the repository root.
+3. HARD RULES rule 1 forbids network access, fetch, and any read outside this directory, so the author clone cannot be consulted to fill the gap.
+4. The session permission classifier rejected every candidate-inspection command attempted: the `master..HEAD` diff stat, the author-branch listing, and the pinned-hash object query were each refused, while ordinary single commands (`status`, `log`, `add`, `commit`, `lean-bau`) work. Hence no candidate bytes were viewable by any permitted means.
+5. Consequence for the checklist: sorry/admit/axiom/native_decide scan, standard-axioms confirmation, one-import-line-only, every-premise-used, evaluator-lifted-not-copied, planted-refusals-refuse, witness non-degeneracy, silicon facts against the SDM extracts, CUTS honesty, and no W/GX claim are ALL unchecked — not failed, unchecked. A repair outcome is the only gate-honest mapping of "not reviewed": the candidate returns to the queue, unapproved and uncondemned.
 
-## What was checked
+## Checks actually performed
 
-- Clone/branch identity: `muse/1248` at `e1eb505d`, working tree clean (`git status --short` empty).
-- Lane 1247 task file read (`lanes/1247.md`): scope is `HwContextState.lean` (FXSAVE/FXRSTOR/XSAVE/XRSTOR footprint-checked accesses, save/restore identity, TSO-buffer write path, interrupt-handler FP-state preservation via `HwInterrupts.lean`, MXCSR reserved-bit #GP, alignment faults as outcomes, no timing claim). None of this exists in this clone, confirming the candidate never landed here.
-- Base build health: `./lean-bau` run in this clone.
+- Clone/branch/HEAD identity and clean tree confirmed.
+- Author task file `lanes/1247.md` read: scope is the NEW file `grammatik/Grammatik/X86/HwContextState.lean` plus one import line (FXSAVE/FXRSTOR legacy 512-byte area and XSAVE/XRSTOR for XCR0-enabled components as footprint-checked accesses on the coherent machine; save/restore identity; save-area write through the TSO buffer; handler save/restore leaving interrupted-core FP/vector state unchanged via HwInterrupts; MXCSR reserved-bit write is #GP; alignment faults as outcomes; no timing claim). None of this exists in this clone, confirming the candidate never landed here.
+- Snapshot file, refs directory, packed-refs, missing FETCH_HEAD, and file globs inspected as listed above.
+- Base build health measured with `./lean-bau` in this clone (tree contained only master content plus my prior report commit; no candidate content).
 
 ## Last `./lean-bau` result line
 
-`== exit 0; 0 error line(s) in the COMPLETE output` — `Build completed successfully (665 jobs).` (base commit `e1eb505d`, without any 1247 candidate content).
+`== exit 0; 0 error line(s) in the COMPLETE output` — `Build completed successfully (665 jobs).` Base commit line `e1eb505d` plus the report commit; no candidate code was built because none is present.
 
 ## New definitions/theorems
 
-None. Review-only lane; per task I own only `MUSE-REPORT-1248.md` and added no Lean code, no import lines, no witnesses.
+None. Review-only lane; no Lean definitions, lemmas, witnesses, or import lines added.
 
-## What remains open / needed to unblock
+## What remains open / to unblock
 
-- Supply the full pinned HEAD hash for candidate 1247 (fill the `<full pinned HEAD>` placeholder).
-- Make the candidate available where the reviewer may legally read it: either fetch `muse/1247` into this clone via the coordinator (reviewer must not use network itself), or reassign the review to a session with legal access to the author clone.
-- Note a process defect: assigning an "exact review" against a placeholder HEAD guarantees this blocked outcome. The dispatch step should verify the candidate ref resolves locally before launching the reviewer.
-- A secondary defect: `git branch` and multi-part `git` invocations are rejected by the session permission classifier while single `git status`/`git log` calls pass; reviewers that depend on `git diff master..HEAD` should have that capability allow-listed or be given the diff as a file.
-
-## Task correctness note
-
-The review checklist itself (no sorry/axiom/native_decide, standard `#print axioms`, one import line only, evaluator lifted not copied, planted refusals refuse, non-degenerate witness, silicon facts vs SDM, honest CUTS, no W/GX claim) is sound and I endorse it. The defect is purely that the review subject was never delivered. If the candidate appears with a pinned HEAD, the review can proceed normally against that checklist.
+- Deliver the pinned author commit to a location the reviewer may legally read (coordinator fetches `muse/1247` into this clone, or the diff is handed over as a file), then re-run this exact review against the checklist. This procedural repair lapses automatically once a real review executes; it prejudges nothing technical.
+- Process defects worth fixing: (a) the first dispatch carried a `<full pinned HEAD>` placeholder, which guaranteed a blocked round; verify the ref resolves locally before launching a reviewer. (b) Allow-list read-only diff/object commands for reviewer sessions, or attach the candidate diff as a file, since the review task explicitly requires reading it.
+- Anything in the task believed wrong: the review checklist itself is sound and endorsed; the defect is purely that the review subject was never delivered to the reviewer.
