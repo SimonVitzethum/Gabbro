@@ -912,11 +912,265 @@ theorem witFwd_generisch_fremd :
   (fwdWeiterleitung_und_fremd _ _ _ _ _ witFwd_gruppe
     witFwd_lesbar_all (by decide)).2
 
+/-! ## 11. Refusal witnesses.
+
+  Guard memory denies the store, dark memory denies the observation,
+  and the shifted and overlapped buffers never group -- each through
+  the generic refusal it plants. -/
+
+/-- Guard witness memory: nothing is writable. -/
+def witFwdGuardMem : Speicher :=
+  { bytes := witFwdBytes, lesbar := witFwdDaten,
+    schreibbar := fun _ => false, ausfuehrbar := witFwdCode }
+
+/-- Guard witness machine: same cores, write-protected memory. -/
+def witFwdGuardM0 : HwMaschine :=
+  ⟨witFwdGuardMem, witFwdKern, fun _ => [], basisHw,
+    fun _ => basisBereit⟩
+
+/-- Dark witness memory: nothing is readable. -/
+def witFwdDarkMem : Speicher :=
+  { bytes := witFwdBytes, lesbar := fun _ => false,
+    schreibbar := witFwdDaten, ausfuehrbar := witFwdCode }
+
+/-- Older-overlap witness state: a differing older byte before the
+    word entries. -/
+def witFwdAlt : TSOZustand :=
+  ⟨witFwdMem, fun d => if d = 0
+    then [⟨addrOff witFwdAdr 3, BitVec.ofNat 8 1⟩] ++
+      wortEintraege witFwdAdr witFwdWort
+    else []⟩
+
+/-- Younger-overlap witness state: a differing younger byte after
+    the word entries (word byte three of 42 is zero, the younger
+    byte is one). -/
+def witFwdJung : TSOZustand :=
+  ⟨witFwdMem, fun d => if d = 0
+    then wortEintraege witFwdAdr witFwdWort ++
+      [⟨addrOff witFwdAdr 3, BitVec.ofNat 8 1⟩]
+    else []⟩
+
+/-- The guard denies the first footprint byte. -/
+theorem witFwd_guard_dicht :
+    witFwdGuardM0.mem.schreibbar (addrOff witFwdAdr 0) = false := by
+  decide
+
+/-- Guard store refuses on the witness, through the generic refusal. -/
+theorem witFwd_guard_speichere_verweigert :
+    fwdAdapter.schritt witFwdGuardM0 0
+      (.speichere witFwdAdr witFwdWort) = none :=
+  fwdSpeichere_wache _ _ _ _ witFwd_guard_dicht
+
+/-- The dark page denies the first footprint byte. -/
+theorem witFwd_dark_dicht :
+    witFwdDarkMem.lesbar (addrOff witFwdAdr 0) = false := by
+  decide
+
+/-- Dark observation refuses on the witness. -/
+theorem witFwd_dark_beob_verweigert :
+    stapelLadeWort ⟨witFwdDarkMem, fun _ => []⟩ 0 witFwdAdr = none :=
+  fwdBeobachte_dunkel _ _ _ witFwd_dark_dicht
+
+/-- The shifted load address never groups on the pushed shape. -/
+theorem witFwd_fehlalign_verweigert :
+    ¬ WortGruppe (tsoAnsicht witFwdM1) 0 (addrOff witFwdAdr 1)
+      witFwdWort :=
+  fwd_fehlalign_keine_gruppe _ _ _ _ witFwd_pufferform
+
+/-- The older-overlap buffer shape. -/
+theorem witFwd_alt_form : witFwdAlt.puffer 0 =
+    [⟨addrOff witFwdAdr 3, BitVec.ofNat 8 1⟩] ++
+      wortEintraege witFwdAdr witFwdWort := by
+  decide
+
+/-- The older overlap never groups. -/
+theorem witFwd_aelterer_verweigert :
+    ¬ WortGruppe witFwdAlt 0 witFwdAdr witFwdWort :=
+  fwd_aelterer_keine_gruppe _ _ _ _ _ witFwd_alt_form
+
+/-- The younger-overlap buffer shape. -/
+theorem witFwd_jung_form : witFwdJung.puffer 0 =
+    wortEintraege witFwdAdr witFwdWort ++
+      [⟨addrOff witFwdAdr 3, BitVec.ofNat 8 1⟩] := by
+  decide
+
+/-- The younger overlap never groups. -/
+theorem witFwd_juengerer_verweigert :
+    ¬ WortGruppe witFwdJung 0 witFwdAdr witFwdWort :=
+  fwd_juengerer_keine_gruppe _ _ _ _ _ witFwd_jung_form
+
+/-- Witness memory readability in `∀` form for the overlap state. -/
+theorem witFwdMem_lesbar_all (k : Nat) (hk : k < 8) :
+    witFwdMem.lesbar (addrOff witFwdAdr k) = true :=
+  witFwd_lesbar_all k hk
+
+/-- The younger byte mixes the word on the witness: the load is
+    observably not 42. -/
+theorem witFwd_juengerer_mischt_beispiel :
+    stapelLadeWort witFwdJung 0 witFwdAdr ≠ some witFwdWort :=
+  fwd_juengerer_mischt _ _ _ _ _ witFwd_jung_form (by decide)
+    (fun k hk => witFwdMem_lesbar_all k hk)
+
+/-! ## 12. Joint witness.
+
+  Every duty premise holds jointly on a reached, non-degenerate
+  two-core run: the group guard with readability, owner-only
+  forwarding of 42, foreign zero, a drain changing shared memory 0
+  to 42 observed from both cores -- beside the planted guard,
+  dark-read, misaligned and overlap refusals and the mixed-word
+  observation. -/
+
+/-- JOINT WITNESS. -/
+theorem fwdTso_zeuge :
+    HwWf witFwdM0 ∧
+      WortGruppe (tsoAnsicht witFwdM1) 0 witFwdAdr witFwdWort ∧
+      (∀ k, k < 8 →
+        (tsoAnsicht witFwdM1).mem.lesbar (addrOff witFwdAdr k) =
+          true) ∧
+      (1 : Nat) ≠ 0 ∧
+      witFwdBufLen = some 8 ∧
+      witFwdMemStill = some (BitVec.ofNat 8 0) ∧
+      witFwdLoadEigen = some (some witFwdWort) ∧
+      witFwdLoadFremd = some (some witFwdNull) ∧
+      witFwdNachRead = some (some witFwdWort) ∧
+      witFwdFremdNachFlush = some (some witFwdWort) ∧
+      witFwdMem.bytes witFwdAdr = BitVec.ofNat 8 0 ∧
+      stapelLadeWort (tsoAnsicht witFwdM1) 0 witFwdAdr =
+        some witFwdWort ∧
+      stapelLadeWort (tsoAnsicht witFwdM1) 1 witFwdAdr =
+        read64 (tsoAnsicht witFwdM1).mem witFwdAdr ∧
+      witFwdGuardM0.mem.schreibbar (addrOff witFwdAdr 0) = false ∧
+      fwdAdapter.schritt witFwdGuardM0 0
+        (.speichere witFwdAdr witFwdWort) = none ∧
+      witFwdDarkMem.lesbar (addrOff witFwdAdr 0) = false ∧
+      stapelLadeWort ⟨witFwdDarkMem, fun _ => []⟩ 0 witFwdAdr =
+        none ∧
+      ¬ WortGruppe (tsoAnsicht witFwdM1) 0 (addrOff witFwdAdr 1)
+        witFwdWort ∧
+      ¬ WortGruppe witFwdAlt 0 witFwdAdr witFwdWort ∧
+      ¬ WortGruppe witFwdJung 0 witFwdAdr witFwdWort ∧
+      stapelLadeWort witFwdJung 0 witFwdAdr ≠ some witFwdWort := by
+  exact ⟨witFwd_wf, witFwd_gruppe, witFwd_lesbar_all, by decide,
+    witFwd_puffer8, witFwd_mem_still, witFwd_weiterleitung,
+    witFwd_fremd_alt, witFwd_spuelung_aendert_speicher,
+    witFwd_fremd_neu, witFwd_anfang_null, witFwd_generisch_eigen,
+    witFwd_generisch_fremd, witFwd_guard_dicht,
+    witFwd_guard_speichere_verweigert, witFwd_dark_dicht,
+    witFwd_dark_beob_verweigert, witFwd_fehlalign_verweigert,
+    witFwd_aelterer_verweigert, witFwd_juengerer_verweigert,
+    witFwd_juengerer_mischt_beispiel⟩
+
 /- CUTS:
-    Skeleton only: events and the adapter are stated, nothing proved.
+    Proved here (all over the REUSED canonical `Zustand`/`Speicher`
+    vocabulary, the accepted `HwMaschine`/`HwSchritt`/`HwWf`,
+    `issueByte`/`loadByte`/`flushKern`, `wortEintraege`,
+    `WortGruppe`/`FremdFrei`, `hwWortAusgabe`, `stapelLadeWort`,
+    `read64` and `Fuss` -- no new machine, no new decoder row, no
+    new instruction, no source claim):
+    - family events `FwdEreignis` and the adapter `fwdAdapter`
+      (stores buffer a word, observations read one without moving
+      state); every adapter step preserves `HwWf`
+      (`fwdAdapter_wf`);
+    - buffer agreement: stores append exactly the canonical eight
+      entries (`fwdSpeichere_puffer`) and change no shared-memory
+      byte (`fwdSpeichere_kein_speicher`); observations move no
+      state (`fwdBeobachte_still`);
+    - exact byte embedding: a folded word store is eight
+      `HwSchritt.gibAus` events (`fwdSpeichere_stern` over the
+      `HwStern` closure), every observed byte one `lade` event
+      (`fwdByte_beob`);
+    - GENERIC WORD FORWARDING (`fwdWeiterleitung_generisch`): under
+      the `WortGruppe` guard a same-core word load returns the
+      stored word, for every core, address and buffer content;
+      per-byte resolution (`fwd_neuestens_wort` via `addrOff_ne8`),
+      reassembly (`bytesWort_wortByte`);
+    - foreign cores read canonical memory until drain
+      (`fwdFremd_liest_speicher` via `fwd_neuestens_miss` and the
+      accepted `stapelLadeWort_still`); joint guard theorem
+      (`fwdWeiterleitung_und_fremd`) using both guard halves;
+    - partial overlaps follow the byte rules: an older differing
+      entry is shadowed (`fwd_aelterer_beschattet`,
+      `fwd_aelterer_last_weiter`), a younger differing entry wins
+      (`fwd_juengerer_gewinnt`, `fwd_juengerer_last_neu`) and mixes
+      the word (`fwd_juengerer_mischt` via byte-three extraction
+      `fwd_ladeWort_byte3` and `fwd_wortByte_bytesWort3`);
+    - negative cases: misaligned loads never group
+      (`fwd_fehlalign_keine_gruppe` via `addrOff_inj8`), older and
+      younger overlaps never group (`fwd_aelterer_keine_gruppe`,
+      `fwd_juengerer_keine_gruppe` by length); the shifted load
+      mixes forwarded and memory bytes (`fwd_fehlalign_byte0_weiter`,
+      `fwd_fehlalign_byte7_speicher` via `fwd_addrOff_add` and
+      `fwd_addrOff_acht_ne`); partial-shape and foreign-footprint
+      refusals reuse `hwTeilwort_keine_gruppe` and
+      `hwGruppe_verweigert_bei_fremdeintrag` (cited);
+    - planted refusals: guard stores (`fwdSpeichere_wache` via
+      `issueListe_cons_none`) and dark observations
+      (`fwdBeobachte_dunkel` via `stapelPop_unlesbar`);
+    - joint non-degenerate two-core witness (`fwdTso_zeuge`):
+      adapter store of 42 with owner-only forwarding, foreign
+      zero, eight-drain changing shared memory 0 to 42 observed
+      from both cores, the generic theorems firing on the pushed
+      shape, beside guard, dark-read, misaligned and overlap
+      refusals and the mixed-word observation.
+    NOT proved here, and not claimed:
+    - No silicon correspondence: encodings are the accepted
+      canonical subsets with self-consistency only, not x86 truth.
+      Alignment carries no gate in this model (the byte drain is
+      alignment-agnostic by `WortGruppe` design); the misaligned
+      case is proved as group refusal plus byte mixing, not as a
+      hardware fault. The Intel SDM extracts supplied to the clone
+      were consulted for ordering (TSO store-issue FIFO,
+      youngest-own forwarding, no multi-byte atomicity); they are
+      provenance, not proofs.
+    - No drain-equals-`write64` theorem: the drained word is
+      witnessed (`witFwd_spuelung_aendert_speicher`); the generic
+      eight-flush induction stays with `wort_gruppe_liest_zurueck`
+      (cited, `DrainSpur`-based).
+    - No LOCK/RMW, fault, interrupt, addressed/SIB, FP-control or
+      SIMD path; no source/IR/ABI/loader/entry/budget link; no
+      target-to-W/GX simulation; no whole-word atomicity beyond
+      `WortGruppe`-guarded byte drains.
+    - `fwd_addrOff_add` mirrors the accepted
+      `Pipeline.addrOff_addrOff` with the same two-rewrite proof,
+      kept local so this leaf stays light; it states arithmetic
+      only, no model.
 -/
 
 #print axioms FwdEreignis
 #print axioms fwdAdapter
+#print axioms fwd_neuestens_miss
+#print axioms fwd_neuestens_angehaengt_list
+#print axioms fwd_neuestens_wort
+#print axioms fwdWeiterleitung_generisch
+#print axioms fwdFremd_liest_speicher
+#print axioms fwdWeiterleitung_und_fremd
+#print axioms fwd_aelterer_beschattet
+#print axioms fwd_juengerer_gewinnt
+#print axioms fwd_aelterer_last_weiter
+#print axioms fwd_juengerer_last_neu
+#print axioms fwd_wortByte_bytesWort3
+#print axioms fwd_ladeWort_byte3
+#print axioms fwd_juengerer_mischt
+#print axioms fwd_addrOff_add
+#print axioms fwd_addrOff_acht_ne
+#print axioms fwd_fehlalign_keine_gruppe
+#print axioms fwd_aelterer_keine_gruppe
+#print axioms fwd_juengerer_keine_gruppe
+#print axioms fwd_fehlalign_byte0_weiter
+#print axioms fwd_fehlalign_byte7_speicher
+#print axioms fwdAdapter_wf
+#print axioms fwdSpeichere_puffer
+#print axioms fwdSpeichere_kein_speicher
+#print axioms fwdBeobachte_still
+#print axioms fwdSpeichere_stern
+#print axioms fwdByte_beob
+#print axioms fwdSpeichere_wache
+#print axioms fwdBeobachte_dunkel
+#print axioms witFwd_gruppe
+#print axioms witFwd_lesbar_all
+#print axioms witFwd_weiterleitung
+#print axioms witFwd_generisch_eigen
+#print axioms witFwd_generisch_fremd
+#print axioms fwdTso_zeuge
 
 end Gabbro.Grammatik.X86
