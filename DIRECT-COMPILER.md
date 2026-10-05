@@ -718,7 +718,7 @@ Last ledger refresh: **2026-10-05 21:28 UTC**. This is an operational snapshot, 
 | 1319 | 8-bit operand forms across the new integer families | Merged after review/checks | 1320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
-| 1325 | TSO projection: the locked and direct-memory tags | Committed candidate; review/integration pending | 1326: Committed candidate; review/integration pending | [task](lanes/1325.md) |
+| 1325 | TSO projection: the locked and direct-memory tags | Committed candidate; review/integration pending | 1326: Agent working | [task](lanes/1325.md) |
 | 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Merged after review/checks | 1328: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1327.md) |
 | 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Merged after review/checks | 1330: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1329.md) |
 | 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1331.md) |
@@ -729,7 +729,7 @@ Last ledger refresh: **2026-10-05 21:28 UTC**. This is an operational snapshot, 
 | 1341 | Opcode ledger: two-byte opcodes 0F 00-3F | Agent working | 1342: scheduled | [task](lanes/1341.md) |
 | 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Merged after review/checks | 1344: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1343.md) |
 | 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
-| 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1347.md) |
+| 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1765,6 +1765,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1345**, Opcode ledger: two-byte opcodes 0F 80-BF, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1345.md). <!-- x86-merged:1345 -->
 - 2026-10-05: lane **1346**, Independent exact review of 1345, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1346.md). <!-- x86-merged:1346 -->
 - 2026-10-05: lane **1347**, Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1347.md). <!-- x86-merged:1347 -->
+- 2026-10-05: lane **1348**, Independent exact review of 1347, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1348.md). <!-- x86-merged:1348 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
