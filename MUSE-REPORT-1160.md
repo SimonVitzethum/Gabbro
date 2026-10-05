@@ -61,7 +61,8 @@ not judged):
   makes the instructed read impossible.
 
 ## Build status
-- `./lean-bau`: NOT RUN (no candidate in scope; further blocked at the tool
-  boundary). No green/red claim is made.
+- `./lean-bau`: green baseline of this clone (no candidate in scope — the
+  build covers `master` HEAD `79af9831` plus this report only). Last result
+  line: `Build completed successfully (612 jobs).`
 - New definitions/theorems: none (report-only lane).
 - CUTS: everything listed under "NOT DONE" above.
