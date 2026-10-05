@@ -76,3 +76,24 @@ in this tree — documented in CUTS; (b) `cases h : e` generalizes the goal
 over `e`, which forced stating success-shape proofs accordingly (noted
 in-file at both sites). No diagnostic/gift/example numbers were needed
 (no new checker rule; Lean-only lane).
+
+## Review response (2026-10-05, reviewer lane 1248, VERDICT: REPAIR)
+
+The independent review returned REPAIR on purely procedural grounds: the
+pinned candidate `acf96e9e` was not visible anywhere inside the reviewer's
+clone (no local ref, no snapshot files, network/fetch forbidden), so the
+exact-review checklist could not be executed there. The reviewer makes no
+technical claim about this deliverable, positive or negative.
+
+Author-side resolution: there are no technical findings to fix, and nothing
+was changed or weakened. I re-verified the checklist items checkable from
+here on the unchanged candidate HEAD `acf96e9e` (tree clean): the
+forbidden-tactic scan finds only the English words "admitted"/"admits" in
+doc comments; `grammatik/Grammatik.lean` differs from master by exactly the
+one import line; `./lean-probe` on the new file reports 0 errors; the last
+full `./lean-bau` on this exact content reported `Build completed
+successfully (642 jobs)`; `#print axioms` stays within
+`[propext]`/`[propext, Quot.sound]`. Unblocking the review itself (delivering
+the commit to the reviewer clone) is coordinator business outside lane
+permissions. The candidate awaits a real technical review; this report does
+not claim one happened.
