@@ -290,6 +290,70 @@ theorem byteKopf_antwortErhalten {D : Deklaration} {Γ : Ctx}
     hpro hrspP hwinc hexec hwrc hlesc hstepc hwinp hexep hwrp hlesp hstepp
     hrdp hstepq hdst hsrc hwinq hexeq hrdr hstepr hwinr hexer hdis
   exact ⟨b4, hrun, hWb4, hEnv4, hrspB⟩
+/-- REFUSAL (guard slot): actual call bytes fetch, but the
+    return-address store below the top hits a write-protected guard, so the
+    byte step loudly refuses. Every premise is consumed by the accepted
+    guard-refusal theorem. -/
+theorem eintrittCall_verweigert_wache (s : Zustand) (disp : BitVec 32)
+    (suffix : List Byte)
+    (hwin : StapelGeholt s (.call32 disp) suffix)
+    (hexe : ausfuehrbarN s.speicher s.rip
+      (encode (.call32 disp)).length = true)
+    (hguard : schreibbar8 s.speicher
+      (s.register Register.rsp - BitVec.ofNat 64 8) = false) :
+    byteschritt s = .verweigert :=
+  byteschritt_geholt_call_wache s disp suffix hwin hexe hguard
+
+/-- REFUSAL (non-executable return): an actual return byte steps to the
+    popped target, but the target carries no execute permission, so the
+    following byte step loudly refuses. -/
+theorem eintrittCall_verweigert_ret_nicht_ausfuehrbar (s s' : Zustand)
+    (suffix : List Byte) (ziel : Wort)
+    (hwin : StapelGeholt s .ret suffix)
+    (hexe : ausfuehrbarN s.speicher s.rip (encode .ret).length = true)
+    (hrd : read64 s.speicher (s.register Register.rsp) = some ziel)
+    (hstep : byteschritt s = .weiter s')
+    (hxe : s.speicher.ausfuehrbar ziel = false) :
+    byteschritt s' = .verweigert :=
+  byteschritt_geholt_ret_nicht_ausfuehrbar s s' suffix ziel hwin hexe hrd hstep hxe
+
+/-- REFUSAL (clobbering entry): two entry copies that interfere (the
+    earlier destination is a later source or destination) fail the decided
+    entry check, so no `EnvRepr` is established from this ABI. -/
+theorem eintrittProlog_verweigert_ohne_frisch (c : PipeCfg) (abi : List Register)
+    (n : Nat) (h : ¬ (prologPaare c abi n).Pairwise ZugOk) :
+    prologOk c abi n = false := by
+  cases hok : prologOk c abi n
+  · rfl
+  · exact absurd (prologOk_teile c abi n hok).1 h
+
+/-- POISON (guard slot): the guard witness fetches actual call bytes and
+    loudly refuses the return-address store. -/
+theorem gift_wache_verweigert : byteschritt wacheNestS = .verweigert :=
+  byteschritt_geholt_call_wache _ _ _ wacheNest_geholt wacheNest_exe wacheNest_guard
+
+/-- POISON (non-executable return): the return witness steps to a popped
+    target without execute permission, and the next byte step refuses. -/
+theorem gift_ret_verweigert :
+    ∃ (s s' : Zustand), byteschritt s = .weiter s' ∧ byteschritt s' = .verweigert := by
+  have hstep := byteschritt_geholt_ret _ _ _ retNest_geholt retNest_exe retNest_liest
+  exact ⟨retNestS, _, hstep,
+    byteschritt_geholt_ret_nicht_ausfuehrbar _ _ _ _ retNest_geholt retNest_exe
+      retNest_liest hstep retNest_kein_exec⟩
+
+/-- POISON (clobbering entry): two parameters aimed at one pipeline
+    register fail the decided entry check. -/
+def giftPrologCfg : PipeCfg :=
+  { regs := [.rbx, .rbx], dst := .rax, tmp := .rcx, adr := .rdx,
+    codeBase := 4096, exitBase := 12288 }
+
+theorem gift_prolog_clobber_grund :
+    ¬ (prologPaare giftPrologCfg [.rax, .rcx] 2).Pairwise ZugOk := by
+  decide
+
+theorem gift_prolog_clobber : prologOk giftPrologCfg [.rax, .rcx] 2 = false :=
+  eintrittProlog_verweigert_ohne_frisch _ _ _ gift_prolog_clobber_grund
+
 /- CUTS (exactly what is NOT proved here):
    - No lowering certificate from the source program `eP` to bytes: the
      identity of the source fragment head with the byte head is OPEN with
