@@ -1,8 +1,10 @@
 # MUSE-REPORT-1346: Exact review of candidate 1345 (opcode ledger 0F 80-BF)
 
-CANDIDATE: 1345 5f54e9f2ee705cbbdb3e051573fe2a0c42be2cdd
+RE-REVIEW after repairs (previous verdict REPAIR on `5f54e9f2` is stale).
 
-VERDICT: REPAIR
+CANDIDATE: 1345 783115dfcd77a73dbfa700d294991c61417f27dc
+
+VERDICT: ACCEPT
 
 ## What was checked
 
@@ -18,14 +20,18 @@ VERDICT: REPAIR
   `./lean-probe` was run on the delivered copy in place at
   `.tmp/review/author-1345/grammatik/Grammatik/X86/OpcodeLedger0F80.lean`.
   Imports resolve through the `grammatik/` package, so the check is valid.
-- `./lean-probe` result: `== 0 error(s) in the COMPLETE output; exit 0`.
-  Every `#print axioms` output is within `[propext, Classical.choice,
-  Quot.sound]` (goal-theorem standard): ledger/count/coverage theorems are
-  axiom-free; decode pins depend on `[propext]`, `[propext, Quot.sound]`, or
-  `[propext, Classical.choice, Quot.sound]` (CPUID only).
+- `./lean-probe` result on the NEW file: `== 0 error(s) in the COMPLETE
+  output; exit 0`. Every `#print axioms` output is within `[propext,
+  Classical.choice, Quot.sound]` (goal-theorem standard): ledger/count/
+  coverage theorems are axiom-free; decode pins depend on `[propext]` or
+  `[propext, Quot.sound]`; `cpuid_modelliert` and `gruppe8_alle` use the
+  full standard set; `popcnt_modelliert` and both deferral theorems are
+  axiom-free.
 - `./lean-bau` on the clean baseline (candidate not merged here):
-  `Build completed successfully (696 jobs).` The author's evidence shows the
-  full build green with the candidate merged (`694 jobs` there).
+  `Build completed successfully (696 jobs).` The author's evidence shows
+  the full build green with the NEW candidate merged (`694 jobs`), and
+  the evidence `git status`/`diff --stat` shows only the one import line
+  (`grammatik/Grammatik.lean | 1 +`).
 - Grep over the candidate file: no `sorry`, `admit`, `axiom`,
   `native_decide`, `unsafe` (only `#print axioms` lines match `axiom`).
 - Every reused name was verified to exist in this clone with a matching
@@ -40,6 +46,20 @@ VERDICT: REPAIR
   match). `Bedingung` has exactly the 16 conditions and `condCode` maps
   them bijectively onto 0-15 (`Codec.lean:35-47`), so the Jcc/SETcc
   generics cover all 32 rows. All four generic theorems use every premise.
+- New reuses verified with exact matching statements: `roundtripBtReg`
+  (`IntBitTest.lean:727`, generic over `op : BtOp`), reused as
+  `bts_reg_alle`/`btr_reg_alle` with all premises used; `encodeBsf_decodeBs`
+  (`IntBitScan.lean:326`), reused as `bsf_alle_modelliert`;
+  `roundtripBtImm (op) (w) (dst) (n) (h : n < 256) (suffix)`
+  (`IntBitTest.lean:910`), reused as `gruppe8_alle` with `5 < 256` closed
+  by `decide`; `BtOp` has exactly the four ctors `bt/bts/btr/btc` with
+  opcodes 163/171/179/187 (`IntBitTest.lean:31-37`), so the two reg
+  generics plus `gruppe8_alle` cover rows 171/179/186 fully;
+  `pin_popcnt_reg` (`IntBitScan.lean:404`, bytes `F3 0F B8 C1` and
+  conclusion match exactly); `bs_nichts_tzcnt`/`bs_nichts_lzcnt`
+  (`IntBitScan.lean:496/501`, `F3 0F BC/BD ... = none` match exactly);
+  `pin_lock_mfence_decodiert` over `pinMfence = [0F, AE, F0]`
+  (`LockedInstructionExecution.lean:735-766`), inlined exactly.
 - Silicon spot-checks against the supplied Intel snapshot
   (`.tmp/HARDWARE-REFERENCES/intel-instruction-reference.txt`,
   edition 325462-093US): POPCNT = `F3 0F B8 /r`; LZCNT = `F3 0F BD /r`;
@@ -57,63 +77,40 @@ VERDICT: REPAIR
   from the contradicted HwAdapter mechanism (see task issues) and is N/A
   for a ledger lane.
 
-## Reasons for REPAIR (concrete)
+## Re-review of the three REPAIR items (all closed)
 
-1. Required prefix/extension coverage is missing. The owner TASK demands
-   "every opcode byte (and every legal prefix/ModRM.reg extension)", the
-   FILE spec requires `LEintrag` to carry "the opcode bytes (and
-   prefix/reg extension)", and REGION explicitly names "POPCNT `F3 0F B8`",
-   "the `F3` TZCNT/LZCNT variants as `zurueckgestellt`", the Group 15
-   `0F AE` ModRM split, and Group 8 `0F BA`. The candidate's `LEintrag`
-   has only `op2 : Nat`; there is no row for `F3 0F B8` POPCNT even though
-   the accepted `IntBitScan` family models it (`encodePopcnt_decodeBs`,
-   `pin_popcnt_reg`, verified in tree); no rows for `F3 0F BC/BD`
-   TZCNT/LZCNT even though the family documents them as deferred with
-   planted refusals (`bs_nichts_tzcnt`, `bs_nichts_lzcnt`) and REGION
-   orders them `zurueckgestellt`; Groups 15/8/10 are collapsed to one row
-   each with no extension mapping. Byte 184 is marked `verweigert`
-   ("Itanium emulator op, #UD") while its `F3`-prefixed form is a real,
-   modelled instruction, so the row verdict misleads exactly where this
-   gap-finding ledger must not. (Supporting point: the SDM notes
-   unsupported LZCNT executes as BSR, unsupported TZCNT as BSF — the
-   model-dependent behaviour that per-row FREE marking exists for.)
-2. Two `modelliert` rows have no witness, against the CHECKED PART ("for
-   every `modelliert` entry give a canonical witness byte string and
-   prove ... it decodes"): rows 171 (BTS, `0F AB`) and 179 (BTR, `0F B3`)
-   appear in no theorem. The one-line generic `roundtripBtReg (op :
-   BtOp) ...` (`IntBitTest.lean:727-731`, `cases op <;> ... <;> rfl`,
-   covers all four ops) was available and matches the candidate's own
-   generic-reuse pattern for Jcc/SETcc/BSR, but was not used. The CUTS
-   claim "BT/BTS/BTR/BTC register ... rows" as proved is therefore an
-   overclaim.
-3. Minor corrections (not verdict-driving alone): row 191 mnemonic
-   "MOVSXD/MOVSX r, r/m16" — per the snapshot, `0F BF` is MOVSX and
-   MOVSXD is opcode `63`; the `bt_reg_modelliert` doc comment says
-   "`0F A3`" but the witnessed bytes are `0F BB` (BTC); row 174 names
-   only `LockedInstructionExecution.lean` while fence rows live across
-   modules (LFENCE in `LfenceLoadNarrow.lean`, MFENCE pin in
-   `LockedInstructionExecution.lean`); BSF has a single pin where the
-   accepted generic `encodeBsf_decodeBs` exists (sufficient at
-   byte granularity, asymmetric with BSR); SETcc rows say "r/m8" but the
-   reused decoder accepts register-direct only.
+1. Prefix/extension dimension: CLOSED. `LEintrag` now carries `praefix :
+   Option Nat` with key `schluessel` (prefix, byte) via `praefixNr`;
+   ledger has 67 rows (64 base + `F3 0F B8` POPCNT modelliert, `F3 0F BC`
+   TZCNT and `F3 0F BD` LZCNT zurueckgestellt); counts 43/3/5/0/16 sum
+   to 67; `ledger_opcodes` proves key coverage `[(0,128)..(0,191),
+   (243,184), (243,188), (243,189)]` and `ledger_nodup` key uniqueness,
+   both `decide`-closed and probe-green. POPCNT is witnessed by the
+   accepted pin, TZCNT/LZCNT by the family's planted refusals (statements
+   match exactly, verified above). Byte-184 `grund` now notes the F3
+   exception. Group rows are mapped per extension: Group 8 every /4../7
+   op in imm8 form (`gruppe8_alle`, `BtOp` exhausts the four), Group 15
+   the MFENCE /6 extension (`gruppe15_mfence`), Group 10 refusal
+   (`verw_b9`). Deferral grunds note the unsupported-CPU fallback,
+   keeping vendor-variable behaviour FREE.
+2. Rows 171/179 witnesses + CUTS: CLOSED. `bts_reg_alle` and
+   `btr_reg_alle` reuse `roundtripBtReg` generically (all premises used);
+   CUTS now says "generic round trips for BTS/BTR, pins for BTC" and
+   separately lists the group/extension mapping, the deferrals, and an
+   explicit rel16 non-witness note — no overclaim remains.
+3. Minors: CLOSED. Row 191 is plain "MOVSX r, r/m16"; `bt_reg`
+   comment says `0F BB`; row 174 names both fence modules; BSF has pin
+   plus generic; SETcc mnemonics say "reg-direct only".
 
-## Repair scope (small, concrete)
+## Remaining observations (not verdict-relevant)
 
-Add the prefix/extension dimension: at minimum rows for `F3 0F B8`
-POPCNT (via `decodeBs`) and `F3 0F BC/BD` TZCNT/LZCNT (`zurueckgestellt`,
-citing the family's planted refusals), with the byte-184 `grund`
-noting the `F3` exception; either split Groups 15/8/10 per extension or
-justify the collapsed rows with a per-extension witness mapping. Cover
-rows 171/179 with `roundtripBtReg`. Narrow the CUTS sentence to what is
-proved. Fix the row-191 mnemonic and the `bt_reg` comment.
-
-## Open / not claimed by this review
-
-No statement about `kapDecode` refusals beyond what `./lean-probe`
-kernel-checked (`verw_*` by `decide`); the rel16 Jcc forms named in the
-mnemonics were not separately verified; Isabelle, emission and Rust
-corpus checks are untouched (Rust-free lane, no Rust changes in
-candidate).
+- `gruppe8_alle` appends `++ []` (stylistic, harmless) and covers imm8
+  form only; other Group 8 operand shapes are family properties, not
+  ledger claims.
+- No statement about `kapDecode` refusals beyond what `./lean-probe`
+  kernel-checked (`verw_*` by `decide`); Isabelle, emission and Rust
+  corpus checks are untouched (Rust-free lane, no Rust changes in
+  candidate).
 
 ## Task issues
 
