@@ -735,4 +735,209 @@ theorem einheitSchluss_gibt_requires (P : Programm D) (f : D.Fn)
     einheitSchluss_legs P f c ps es certs bytes p bild abi σ ρ art z tore h
   exact hQ
 
+/-! ## 4. Refusals: every failing leg poisons the check. -/
+
+/-- Without a projection (calls, control, binders, locks) the check
+    refuses. -/
+theorem einheitSchluss_verweigert_ohne_projektion (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (h : rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = none) :
+    einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = false := by
+  simp [einheitSchluss, h]
+
+/-- Without a tail (same shapes) the check refuses. -/
+theorem einheitSchluss_verweigert_ohne_ende (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+    (hb : rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b)
+    (he : rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = none) :
+    einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = false := by
+  simp [einheitSchluss, hb, he]
+
+/-- Without a value-return tail the check refuses. -/
+theorem einheitSchluss_verweigert_ohne_endrueck (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+    (tail : Endblock D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)))
+    (hb : rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b)
+    (he : rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = some tail)
+    (hrt : istRueck tail = false) :
+    einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = false := by
+  simp [einheitSchluss, hb, he, hrt]
+
+/-- Without validator acceptance the check refuses. -/
+theorem einheitSchluss_verweigert_ohne_validate (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+    (tail : Endblock D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)))
+    (hb : rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b)
+    (he : rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = some tail)
+    (hval : validate c (layoutVon ps) certs b bytes = false) :
+    einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = false := by
+  simp [einheitSchluss, hb, he, hval]
+
+/-- Without the entry duty the check refuses. -/
+theorem einheitSchluss_verweigert_ohne_requires (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+    (tail : Endblock D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)))
+    (hb : rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b)
+    (he : rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = some tail)
+    (hreq : wahr? (eval (σ.lese (Signatur.anfang D (D.signatur f))
+      (P.requires f).orte) (P.requires f)
+      (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ) = false) :
+    einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = false := by
+  simp [einheitSchluss, hb, he, hreq]
+
+/-- Without the entry sequence the check refuses. -/
+theorem einheitSchluss_verweigert_ohne_prolog (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+    (tail : Endblock D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)))
+    (hb : rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b)
+    (he : rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = some tail)
+    (hpro : prologImageOk bild c abi (D.params f).length = false) :
+    einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = false := by
+  simp [einheitSchluss, hb, he, hpro]
+
+/-- Without the admitted entry the check refuses. -/
+theorem einheitSchluss_verweigert_ohne_eintritt (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+    (tail : Endblock D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)))
+    (hb : rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b)
+    (he : rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = some tail)
+    (hzul : eintrittZulassung p bild (effBias bild.modus) art z tore = false) :
+    einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = false := by
+  simp [einheitSchluss, hb, he, hzul]
+
+/-! ## 5. Execution: the closed check runs the loaded image. -/
+
+/-- A return tail is a value return. -/
+theorem istRueck_ret (tail : Endblock D V l Γ Λ) (h : istRueck tail = true) :
+    ∃ (e : ErgExpr D Γ Λ V.erg) (hΛ : Λ.Perm V.ende), tail = .ret e hΛ := by
+  cases tail with
+  | ret e hΛ =>
+    exact ⟨e, hΛ, rfl⟩
+  | retGrund r hΛ =>
+    simp [istRueck] at h
+  | leave h =>
+    simp [istRueck] at h
+  | next h =>
+    simp [istRueck] at h
+  | cons s rest =>
+    simp [istRueck] at h
+  | bind e rest =>
+    simp [istRueck] at h
+  | bindAxiom a args he0 hw hg hd hgd rest =>
+    simp [istRueck] at h
+  | bindAxiomElse a args he0 hr hw hg hd hgd err rest =>
+    simp [istRueck] at h
+
+/-- **UNIT CORRECTNESS FROM AN ADMITTED ENTRY.** From the closed unit
+    check and a source run of the body reaching a value return, the
+    fetched run from the admitted entry reaches the code end with the
+    prefix world and environment represented, stops there with the stack
+    word intact, carries the entry duty at the actual arguments, and the
+    reached prefix world is exactly where the source tail returns.
+    Composes the bridge (`rumpfBruecke`), the totality (`rumpfBlock_total`)
+    and the pipeline entry theorem (`pipeline_correct_entry`); nothing is
+    re-proved. -/
+theorem einheit_correct_entry (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (abi : List Register)
+    (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (reg : Register → Wort) (fl : Flags)
+    (hschluss : einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true)
+    (hz : z.zustand = eintrittStart bild c
+      (encodeAll (prolog c abi (D.params f).length)).length reg fl)
+    (hargs : AbiArgs abi ρ reg)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ g : D.Fn, World D → Env D (D.params g) → RufAusgang g)
+    (σ1 : World D) (v : ErgVal D (D.erg f))
+    (hsrc : execEnd O passes R (P.rumpf f) σ ρ = .zurueck σ1 v) :
+    ∃ (σ' : World D) (ρ' : Env D (D.params f))
+      (tail : Endblock D (vertragVon D f) false (D.params f)
+        (Signatur.anfang D (D.signatur f)))
+      (n : Nat) (s' : Zustand),
+      laufBytes n z.zustand = .weiter s' ∧
+      s'.rip = natAdresse (c.codeBase + bytes.length) ∧
+      WorldRep (layoutVon ps) s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf c) ∧
+      byteschritt s' = .verweigert ∧
+      lesbar8 s'.speicher (eintrittRsp z - BitVec.ofNat 64 8) = true ∧
+      schreibbar8 s'.speicher (eintrittRsp z - BitVec.ofNat 64 8) = true ∧
+      rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = some tail ∧
+      execEnd (V := vertragVon D f) (l := false) O passes R tail σ' ρ' =
+        .zurueck σ1 v ∧
+      ReqAmEintritt P f
+        (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ := by
+  obtain ⟨b, tail, hb, he, hR, hV, hI, hW, hP, hZ, hQ⟩ :=
+    einheitSchluss_legs P f c ps es certs bytes p bild abi σ ρ art z tore hschluss
+  obtain ⟨σp, ρp, hrun⟩ :=
+    rumpfBlock_total (V := vertragVon D f) (l := false) O passes R
+      (P.rumpf f) b hb σ ρ
+  have hbridge := rumpfBruecke (V := vertragVon D f) (l := false) O passes R
+    (P.rumpf f) b tail hb he σ ρ σp ρp hrun
+  have htailrun : execEnd (V := vertragVon D f) (l := false) O passes R
+      tail σp ρp = .zurueck σ1 v :=
+    hbridge.symm.trans hsrc
+  obtain ⟨n, s', hrunB, hrip, hW', hE', hstop, hles, hschr⟩ :=
+    pipeline_correct_entry p bild c abi ps es certs b bytes hV hI hP σ hW
+      art z tore hZ reg fl hz ρ hargs O passes R σp ρp hrun
+  have hreq := einheitSchluss_gibt_requires P f c ps es certs bytes p bild abi
+    σ ρ art z tore hschluss
+  exact ⟨σp, ρp, tail, n, s', hrunB, hrip, hW', hE', hstop, hles, hschr, he,
+    htailrun, hreq⟩
+
 end Gabbro.Grammatik.X86.PipelineUnit
