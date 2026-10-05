@@ -604,3 +604,4 @@ import Grammatik.X86.ISARelaxWitnesses
 import Grammatik.X86.HwFaults
 import Grammatik.X86.HwAddressed
 import Grammatik.X86.HwInterrupts
+import Grammatik.X86.HwMulDivWidth

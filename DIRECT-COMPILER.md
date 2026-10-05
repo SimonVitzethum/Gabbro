@@ -619,13 +619,13 @@ Last ledger refresh: **2026-10-05 11:18 UTC**. This is an operational snapshot, 
 | 1121 | Addressed loads/stores of all widths through TSO | Merged after review/checks | 1122: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1121.md) |
 | 1123 | Architectural faults as outcomes of the coherent machine | Merged after review/checks | 1124: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1123.md) |
 | 1125 | Asynchronous interrupt delivery on the coherent machine | Merged after review/checks | 1126: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1125.md) |
-| 1127 | Multiply/divide and narrow widths connected | Committed candidate; review/integration pending | 1128: Committed candidate; review/integration pending | [task](lanes/1127.md) |
+| 1127 | Multiply/divide and narrow widths connected | Merged after review/checks | 1128: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1127.md) |
 | 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Agent working | 1130: scheduled | [task](lanes/1129.md) |
 | 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Agent working | 1132: scheduled | [task](lanes/1131.md) |
 | 1133 | Device/MMIO and memory types on the coherent machine | Incomplete; preserved | 1134: scheduled | [task](lanes/1133.md) |
 | 1135 | CPUID/feature enabled-state gating inside HwSchritt | Committed candidate; review/integration pending | 1136: Committed candidate; review/integration pending | [task](lanes/1135.md) |
 | 1137 | Coherent machine fetching from the loaded image | Committed candidate; review/integration pending | 1138: Agent working | [task](lanes/1137.md) |
-| 1139 | Stack, call and return per core through TSO | Agent working | 1140: scheduled | [task](lanes/1139.md) |
+| 1139 | Stack, call and return per core through TSO | Committed candidate; review/integration pending | 1140: scheduled | [task](lanes/1139.md) |
 | 1141 | ISA-strand families (compact/core/cond) on the coherent machine | Agent working | 1142: scheduled | [task](lanes/1141.md) |
 | 1143 | TSO to W bridge: fragment READS | Agent working | 1144: scheduled | [task](lanes/1143.md) |
 | 1145 | TSO to W bridge: LOCK/RMW steps | Waiting for accepted dependencies | 1146: scheduled | [task](lanes/1145.md) |
@@ -1402,6 +1402,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1125**, Asynchronous interrupt delivery on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1125.md). <!-- x86-merged:1125 -->
 - 2026-10-05: checked master `1e1bf743` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:1e1bf7434ad55cbe5514c3111bc55b6b05a6ebb9 -->
 - 2026-10-05: lane **1126**, Independent exact review of 1125, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1126.md). <!-- x86-merged:1126 -->
+- 2026-10-05: lane **1127**, Multiply/divide and narrow widths connected, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1127.md). <!-- x86-merged:1127 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
