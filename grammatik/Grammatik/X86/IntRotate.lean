@@ -1617,6 +1617,212 @@ theorem rot_nichts_imm_kurz :
     decodeRot [natByte 193, natByte 224] = none := by
   decide
 
+/-! ## 8. Family step: register forms execute, memory forms refuse.
+
+    The register path installs the §5 snapshot with the
+    architectural merge (`mergeRegNarrow`: 8/16-bit merging,
+    32-bit zero-extension, 64-bit whole); a zero effective count
+    advances RIP with flags untouched; memory never moves here
+    (register plug only). Memory forms refuse: their values live
+    beside the step through the same evidence, carried to bytes
+    by `rotMemIssue` in §11, never by the register plug. -/
+
+/-- Raw count of a form in a state: one, the low CL byte, or the
+    immediate. -/
+def rotZaehler (f : RotForm) (s : Zustand) : Nat :=
+  match f.quelle with
+  | .eins => 1
+  | .cl => (s.register .rcx).toNat % 256
+  | .imm8 n => n
+
+/-- Family outcome: the successor state or explicit refusal.
+    Rotates take no fault: there is no halt arm. -/
+inductive RotErgebnis where
+  | ok : Zustand → RotErgebnis
+  | verweigert : RotErgebnis
+
+/-- One family step: refuse on bad or mismatched length; memory
+    forms refuse (register plug only); a zero effective count
+    advances RIP with flags untouched; otherwise the evidence
+    value merged with the §5 snapshot. -/
+def rotSchritt (d : RotDecodiert) (s : Zustand) : RotErgebnis :=
+  match laengeOk d.laenge with
+  | false => .verweigert
+  | true =>
+    if d.laenge == rotLaenge d.befehl then
+      match d.befehl.operand with
+      | .mem _ _ => .verweigert
+      | .reg dst =>
+        let c := rotZaehler d.befehl s
+        let n := rotNachweis d.befehl.op d.befehl.breite
+          (s.register dst) s.flags.cf c
+        let nach := ripNach s.rip d.laenge
+        if rotLeer d.befehl.op d.befehl.breite c then
+          .ok ({ s with rip := nach })
+        else
+          .ok (schrittRegister s nach
+            (rotFlags d.befehl.op d.befehl.breite (s.register dst)
+              s.flags.cf s.flags c)
+            dst (mergeRegNarrow d.befehl.breite (s.register dst)
+              n.ergebnis))
+    else .verweigert
+
+/-- Register success: merged value, snapshot flags, advanced RIP. -/
+theorem rot_reg_erfolg (d : RotDecodiert) (s : Zustand) (dst : Register)
+    (hok : laengeOk d.laenge = true)
+    (hlen : (d.laenge == rotLaenge d.befehl) = true)
+    (hop : d.befehl.operand = .reg dst)
+    (hne : rotLeer d.befehl.op d.befehl.breite (rotZaehler d.befehl s) =
+      false) :
+    rotSchritt d s = .ok (schrittRegister s (ripNach s.rip d.laenge)
+      (rotFlags d.befehl.op d.befehl.breite (s.register dst) s.flags.cf
+        s.flags (rotZaehler d.befehl s))
+      dst (mergeRegNarrow d.befehl.breite (s.register dst)
+        (rotNachweis d.befehl.op d.befehl.breite (s.register dst)
+          s.flags.cf (rotZaehler d.befehl s)).ergebnis)) := by
+  unfold rotSchritt
+  simp [hok, hlen, hop, hne]
+
+/-- Zero-count success: RIP advances, flags and registers kept. -/
+theorem rot_leer_rip (d : RotDecodiert) (s : Zustand) (dst : Register)
+    (hok : laengeOk d.laenge = true)
+    (hlen : (d.laenge == rotLaenge d.befehl) = true)
+    (hop : d.befehl.operand = .reg dst)
+    (hle : rotLeer d.befehl.op d.befehl.breite (rotZaehler d.befehl s) =
+      true) :
+    rotSchritt d s = .ok ({ s with rip := ripNach s.rip d.laenge }) := by
+  unfold rotSchritt
+  simp [hok, hlen, hop, hle]
+
+/-- A memory operand refuses the register step. -/
+theorem rot_mem_verweigert (d : RotDecodiert) (s : Zustand)
+    (base : Register) (disp : BitVec 32)
+    (hok : laengeOk d.laenge = true)
+    (hlen : (d.laenge == rotLaenge d.befehl) = true)
+    (hop : d.befehl.operand = .mem base disp) :
+    rotSchritt d s = .verweigert := by
+  unfold rotSchritt
+  simp [hok, hlen, hop]
+
+/-- A bad decode length refuses every rotate form. -/
+theorem rot_laenge_misslungen (d : RotDecodiert) (s : Zustand)
+    (h : laengeOk d.laenge = false) :
+    rotSchritt d s = .verweigert := by
+  unfold rotSchritt
+  simp [h]
+
+/-- A mismatched length refuses (checked data, never trusted). -/
+theorem rot_laenge_falsch (d : RotDecodiert) (s : Zustand)
+    (hok : laengeOk d.laenge = true)
+    (h : (d.laenge == rotLaenge d.befehl) = false) :
+    rotSchritt d s = .verweigert := by
+  unfold rotSchritt
+  simp [hok, h]
+
+/-- A successful rotate step leaves canonical memory alone. -/
+theorem rotSchritt_speicher (d : RotDecodiert) (s s' : Zustand)
+    (h : rotSchritt d s = .ok s') :
+    s'.speicher = s.speicher := by
+  by_cases hok : laengeOk d.laenge = true
+  · by_cases hlen : (d.laenge == rotLaenge d.befehl) = true
+    · cases hop : d.befehl.operand with
+      | reg dst =>
+        by_cases hle : rotLeer d.befehl.op d.befehl.breite
+            (rotZaehler d.befehl s) = true
+        · have e := rot_leer_rip d s dst hok hlen hop hle
+          rw [e] at h
+          cases h
+          rfl
+        · have hleF : rotLeer d.befehl.op d.befehl.breite
+              (rotZaehler d.befehl s) = false := by
+            cases hb : rotLeer d.befehl.op d.befehl.breite
+                (rotZaehler d.befehl s) with
+            | true => exact absurd hb hle
+            | false => rfl
+          have e := rot_reg_erfolg d s dst hok hlen hop hleF
+          rw [e] at h
+          cases h
+          exact schrittRegister_speicher _ _ _ _ _
+      | mem base disp =>
+        have e := rot_mem_verweigert d s base disp hok hlen hop
+        rw [e] at h
+        cases h
+    · have hlenF : (d.laenge == rotLaenge d.befehl) = false := by
+        cases hb : (d.laenge == rotLaenge d.befehl) with
+        | true => exact absurd hb hlen
+        | false => rfl
+      have e := rot_laenge_falsch d s hok hlenF
+      rw [e] at h
+      cases h
+  · have hokF : laengeOk d.laenge = false := by
+      cases hb : laengeOk d.laenge with
+      | true => exact absurd hb hok
+      | false => rfl
+    have e := rot_laenge_misslungen d s hokF
+    rw [e] at h
+    cases h
+
+/-! ## 8b. Memory values through the same evidence.
+
+    A memory form over an explicitly loaded word installs exactly
+    the evidence the register path installs, merged for writeback;
+    a zero effective count installs nothing. `rotMemIssue` carries
+    the merged bytes as TSO events (see §11); the register plug
+    never sees them. -/
+
+/-- One memory-form rotate over an explicitly loaded word. -/
+def rotMemNachweis (d : RotDecodiert) (s : Zustand)
+    (w : Wort) : Option (Wort × Flags) :=
+  match d.befehl.operand with
+  | .reg _ => none
+  | .mem _ _ =>
+    if d.laenge == rotLaenge d.befehl then
+      let c := rotZaehler d.befehl s
+      let n := rotNachweis d.befehl.op d.befehl.breite w s.flags.cf c
+      if rotLeer d.befehl.op d.befehl.breite c then none
+      else some (mergeRegNarrow d.befehl.breite w n.ergebnis,
+        rotFlags d.befehl.op d.befehl.breite w s.flags.cf s.flags c)
+    else none
+
+/-- A register operand is no memory form. -/
+theorem rotMemNachweis_reg_nichts (d : RotDecodiert) (s : Zustand)
+    (w : Wort) (dst : Register)
+    (hop : d.befehl.operand = .reg dst) :
+    rotMemNachweis d s w = none := by
+  unfold rotMemNachweis
+  simp [hop]
+
+/-- Memory success: merged value with the snapshot flags. -/
+theorem rot_mem_erfolg (d : RotDecodiert) (s : Zustand) (w : Wort)
+    (base : Register) (disp : BitVec 32)
+    (hlen : (d.laenge == rotLaenge d.befehl) = true)
+    (hop : d.befehl.operand = .mem base disp)
+    (hne : rotLeer d.befehl.op d.befehl.breite (rotZaehler d.befehl s) =
+      false) :
+    rotMemNachweis d s w = some (mergeRegNarrow d.befehl.breite w
+      (rotNachweis d.befehl.op d.befehl.breite w s.flags.cf
+        (rotZaehler d.befehl s)).ergebnis,
+      rotFlags d.befehl.op d.befehl.breite w s.flags.cf s.flags
+        (rotZaehler d.befehl s)) := by
+  unfold rotMemNachweis
+  simp [hop, hlen, hne]
+
+/-- Issue the low bytes of a word as TSO events, oldest first. -/
+def rotIssueKette (s : TSOZustand) (c : Nat)
+    (l : List TSOEintrag) : Option TSOZustand :=
+  match l with
+  | [] => some s
+  | e :: rest =>
+    match issueByte s c e.addr e.wert with
+    | none => none
+    | some s' => rotIssueKette s' c rest
+
+/-- A memory rotate result enters the TSO buffer byte by byte;
+    canonical memory moves only at drain, never here. -/
+def rotMemIssue (s : TSOZustand) (c : Nat) (a : Adresse) (b : Breite)
+    (v : Wort) : Option TSOZustand :=
+  rotIssueKette s c (List.take b.bytes (wortEintraege a v))
+
 /- CUTS (checkpoint: value core only):    Proved here: rotate operation digits, Nat value core for ROL/ROR
     and RCL/RCR with architectural count masking, single-step
     inverses in both directions, and pinned values.
