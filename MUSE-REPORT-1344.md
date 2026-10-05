@@ -1,11 +1,45 @@
 # MUSE-REPORT-1344: Exact review of candidate 1343 (opcode ledger 0F 40-7F)
 
-CANDIDATE: 1343 cc28bfa452dcb972cd3cb6bcb9435294c495edfa
-VERDICT: REPAIR
+CANDIDATE: 1343 2dcae9cbfdea7964fad721f29c63cd88af0adc5a
+VERDICT: ACCEPT
 
-## VERDICT: REPAIR
+## Re-review of the repaired candidate (new snapshot above): ACCEPT
 
-## Candidate
+The repair (author commit `2dcae9cb`) addresses every point of the REPAIR
+verdict with checked theorems instead of prose, all green per the author's
+new `./lean-probe` evidence (0 errors; new pins each
+`[propext, Quot.sound]`, standard):
+
+- `kap_cmov_alle (c : Bedingung) (dst src : Register)`: exact first-arm
+  membership for ALL 16 conditions x all registers
+  (`KapDekodiert.breit (WdHwInstr.ext (ExtInstr.cmov c dst src 4))`),
+  proved by `cases` + `rfl` over the accepted `decodeExt` cmov arm plus the
+  accepted agreement lemmas `decodeMulDivWidth_prefers_ext` /
+  `kapDecode_breit`. Every binder is used in the conclusion. This is the
+  precise transitive path the first submission missed.
+- Five `kap_s32_*` pins: exact `s32`-arm membership, each with a checked
+  `decodeMulDivWidth ... = none` (by `decide`) plus the accepted round trip
+  through `kapDecode_s32`.
+- Three `kap_ohne_intvec_*` and six `kap_nichts_*` whole-chain refusals
+  (`= none` by `decide` on closed bytes, which also settles the open
+  `decodeVector`-overlap question for the IntVec witnesses: the chain
+  refuses them).
+- File header, CUTS bullet and report finding corrected; the false
+  "covers NONE" claim is explicitly withdrawn with a repair history section.
+- Minor fixed: HADD/HSUB `grund` now reads "F2/66 prefix".
+- Re-verified on the new files: no banned tactics, existing-file diff still
+  exactly the one import line in `grammatik/Grammatik.lean`, same 3 owned
+  files, standard axioms only, no new claims beyond the checked pins
+  (still no hardware-correspondence / W-GX / timing / fault claim).
+- Observation, not a defect: the file is expensive (one 600 s probe timeout
+  in the author's evidence before the green run; `maxHeartbeats 32000000`,
+  4096-case split, whole-chain `decide`s). Merge-time build cost only.
+- Previously established PASS items (witnesses, counts, coverage, nodup,
+  opcode map, premise use) are unchanged by the repair diff.
+
+## First-round verdict history (superseded): REPAIR
+
+## First-round candidate (superseded by the repair above)
 
 - Author lane 1343, pinned head `cc28bfa4`, base `574ac3d7` (per `.tmp/review/SNAPSHOT.json`).
 - Changed files (3, all within the author's owned set): `MUSE-REPORT-1343.md` (new),
