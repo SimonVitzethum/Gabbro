@@ -209,6 +209,71 @@ theorem ruf_correct_loaded {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res
     hval hsep hfremd O passes R σ ρ (startZustand bild c reg fl) hcode hrip hW hE
     σ' ρ' hsrc
 
+/-! ## 2b. Call witness image and joint witness.
+
+    The single-assignment callee body gets its own built image
+    (placements and extents shared with the pipeline witness image);
+    validator, image and world checks all hold by computation. -/
+
+/-- The callee image: the built image of the single-assignment body. -/
+def cwBild : Bild := bildFuer cwCfg [] cwBody cwBytes piPs pwSigma piEs
+
+/-- The code validator accepts the callee over the placement layout. -/
+theorem cw_validate_pi : validate cwCfg (layoutVon piPs) [] cwBody cwBytes = true := by
+  decide
+
+/-- THE CALLEE IMAGE CHECK ACCEPTS, by computation. -/
+theorem cw_imageOk : imageOk .p48 cwBild cwCfg piPs piEs [] cwBody cwBytes = true := by
+  decide
+
+/-- The loaded callee image represents the initial world. -/
+theorem cw_weltOk : weltOk cwBild piPs pwSigma = true := by
+  decide
+
+/-- The joint validator accepts the callee over the placement layout. -/
+theorem cw_rufExec_pi :
+    rufExecOk rufWitBelegung rufWitRahmen 7 false cwCfg (layoutVon piPs)
+      cwBody cwBytes = true := by
+  decide
+
+/-- JOINT WITNESS for `ruf_correct_loaded`: every premise holds
+    jointly on the single-assignment callee (admitted seven-argument
+    frame, joint validator, image and world checks by computation,
+    working registers off the callee-saved set, the REAL source run
+    that changes row 7 -> 35); the theorem then gives frame admission
+    plus the fetched loaded run with callee-saved preservation,
+    beside the reached frame saves (observably changed result byte,
+    reloaded argument word). -/
+theorem ruf_correct_loaded_zeuge :
+    ∃ (σ' : World pwD) (ρ' : Env pwD pwCtx) (n : Nat) (s' : Zustand),
+      pwV.schreibt () = true ∧
+      rufExecOk rufWitBelegung rufWitRahmen 7 false cwCfg (layoutVon piPs)
+        cwBody cwBytes = true ∧
+      imageOk .p48 cwBild cwCfg piPs piEs [] cwBody cwBytes = true ∧
+      weltOk cwBild piPs pwSigma = true ∧
+      calleeFremd cwCfg = true ∧
+      EnvRepr pwEnv30 (cwReg 30) (abbOf cwCfg) ∧
+      execBlock pwO 0 pwR cwBody pwSigma pwEnv30 = .ok σ' ρ' ∧
+      (pwSigma.slots () 0 ()).n = 7 ∧ (σ'.slots () 0 ()).n = 35 ∧
+      rufOk rufWitBelegung rufWitRahmen 7 false = true ∧
+      laufBytes n (startZustand cwBild cwCfg (cwReg 30) witnessFlags) = .weiter s' ∧
+      s'.rip = natAdresse (cwCfg.codeBase + cwBytes.length) ∧
+      WorldRep (layoutVon piPs) s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf cwCfg) ∧
+      (∀ q, q ∈ calleeGerettet → s'.register q = (cwReg 30) q) ∧
+      speicherZeuge.bytes (rufWitRahmen.schlitzAddr 0) ≠
+        rufWitM1.bytes (rufWitRahmen.schlitzAddr 0) ∧
+      ladeWort rufWitM2 rufWitRahmen 7 = some 42 := by
+  obtain ⟨σW, ρW, hok, h35, -⟩ := cw_quelle
+  obtain ⟨hv0, -⟩ := pw_quelle_vorher
+  obtain ⟨hruf, m, sW, hrun, hrip', hW, hE', hcallee⟩ :=
+    ruf_correct_loaded .p48 cwBild cwCfg piPs piEs rufWitBelegung rufWitRahmen 7
+      false () () pwIdx0 pwWert0 pwHw pwHL cwBytes cw_rufExec_pi cw_imageOk pwSigma
+      cw_weltOk cw_fremd (cwReg 30) witnessFlags pwEnv30 cw_envRepr pwO 0 pwR σW ρW hok
+  exact ⟨σW, ρW, m, sW, pwHw, cw_rufExec_pi, cw_imageOk, cw_weltOk, cw_fremd,
+    cw_envRepr, hok, hv0, h35, hruf, hrun, hrip', hW, hE', hcallee,
+    rufWit_wechselt, rufWit_rundreise⟩
+
 /- CUTS (skeleton):
    Only the shared loaded-code predicate so far. Per-family
    correctness, refusals, probes and witnesses follow in pieces.
