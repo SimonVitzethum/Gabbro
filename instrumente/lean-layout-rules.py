@@ -111,3 +111,9 @@ rules('grammatik/Grammatik', [
     (r'^(Gleitkomma\w*|GleitZeuge)$', 'Bausteine/Gleitkomma'),
     (r'^(AuditFinal|AuditW5|AuditZiel|BitVecProben|BlattGegenbeispiel|ProbeD|SimPruef|SonstLeaveZeuge|HelferZeuge|InvZeuge)$', 'Proben'),
 ])
+
+# Compatibility shims at an OLD module path. They are never moved. The coordinator's merge gate still probes
+# `import Grammatik.Zielsatz.BeweisAtomar` for the goal-theorem axioms (it lives outside the repo, in .claude/).
+PINNED.update([
+    'grammatik/Grammatik/Zielsatz/BeweisAtomar.lean',
+])

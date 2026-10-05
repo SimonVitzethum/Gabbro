@@ -35,6 +35,7 @@ def rules(folder, table):
     RULES[folder] = [(re.compile(r), sub) for r, sub in table]
 
 
+PINNED = set()
 exec(open(ROOT / 'instrumente' / 'lean-layout-rules.py').read())
 
 # Lean projects: folders from the project root down to a folder holding Lean files are counted.
@@ -59,6 +60,8 @@ def lean_files(files):
 
 def target_of(path):
     """Repo-relative target path of one tracked Lean file under RULES, or the same path."""
+    if path in PINNED:
+        return path
     p = Path(path)
     folder = str(p.parent)
     name = p.stem
