@@ -11,9 +11,10 @@
              block lowering for `assignVar`-of-table-read statements with a
              VARIABLE index, where the address `B + k * Z + O` is computed at
              run time with pilot adds (scale doubling for `Z` in 1/2/4/8,
-             checked by the reused `skalaOk`), plus the correctness theorem
-             over fetched bytes and refusal theorems for every unsupported
-             shape. Rust is out of scope.
+             checked by the reused `skalaOk`), plus statement-level
+             correctness theorems (against the real `execStmt` outcome) and
+             refusal theorems for every unsupported shape. The fetched-bytes
+             block closing theorem is OPEN (see CUTS). Rust is out of scope.
 
   Reused, not duplicated:
     - anchor/layout/world: `TabAnker`, `ankerBasis/Zeile`, `feldOff`,
@@ -1609,6 +1610,241 @@ theorem senkStmtSkal_gerade (A : TabAnker D) (c : PipeCfg)
   | _ => simp [senkStmtSkal] at h
 
 
+/-! ## 9. Correctness witnesses
+
+    Joint inhabitants for the correctness theorems (HARD RULES 13): every
+    premise holds jointly on concrete values over the non-degenerate
+    lane-1159 witness program (table-writing `zeV`, memory-changing
+    `zeRunChange`). The scaled anchor `ankerSkala8` (stride 8, an admitted
+    scale) replaces the 16-byte `zeA`, so the variable-index read LOWERS
+    here; the memory and world are the lane-1159 ones, rechecked against
+    the stride-8 layout (the same four 8-byte cells at
+    8192/8200/8208/8216). -/
+
+/-- The witness row index: row 0, in extent for the two-row tables. -/
+def rhoSkal1 : Env zeD [.int 0 1] :=
+  .cons ⟨0, by decide, by decide⟩ .nil
+
+/-- The witness environment is represented in the witness registers. -/
+theorem envReprSkal1 :
+    EnvRepr (D := zeD) rhoSkal1 zeStart.register (abbOf zeCfg) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort a => cases a
+
+/-- Placement admission rechecked at the stride-8 anchor. -/
+theorem tabOkSkal8 : tabOkB ankerSkala8 zeMem = true := by decide
+
+/-- World check rechecked at the stride-8 anchor. -/
+theorem tabWeltSkal8 : tabWeltB ankerSkala8 zeMem zeSigma = true := by decide
+
+/-- The lane-1159 memory and world represent the stride-8 layout. -/
+theorem worldRepSkal8 : WorldRep (tabLayout ankerSkala8) zeMem zeSigma :=
+  tabWorldRep ankerSkala8 zeMem zeSigma tabOkSkal8 tabWeltSkal8
+
+/-- The checked bound holds at the witness index. -/
+theorem bndSkal1 : leseSkalOk (D := zeD) rhoSkal1 zeReadVar := by
+  unfold leseSkalOk
+  simp only [zeReadVar, zeIdxVar, idxVarG?, rhoSkal1]
+  decide
+
+/-- The witness read lowers (to an unnamed program). -/
+theorem lowSkal1 : ∃ p, senkSkalLesen ankerSkala8 zeCfg zeReadVar = some p :=
+  ⟨_, rfl⟩
+
+/-- JOINT WITNESS for `senkSkalLesen_korrekt`: the checked configuration,
+    the represented environment and world at the stride-8 anchor, the
+    checked bound, and the recomputed scaled load, which leaves the source
+    value word in `dst` with memory kept; beside it the table-writing
+    program and its memory-changing run. -/
+theorem senkSkalLesen_korrekt_zeuge :
+    ∃ s' p, cfgOk zeCfg = true ∧
+      EnvRepr (D := zeD) rhoSkal1 zeStart.register (abbOf zeCfg) ∧
+      WorldRep (tabLayout ankerSkala8) zeStart.speicher zeSigma ∧
+      leseSkalOk (D := zeD) rhoSkal1 zeReadVar ∧
+      senkSkalLesen ankerSkala8 zeCfg zeReadVar = some p ∧
+      lauf (p.map kanon) zeStart = some s' ∧
+      s'.register zeCfg.dst = intWort (cast (congrArg (Wert zeD)
+        (rfl : zeD.typ false true = .int 0 1000))
+        (eval zeSigma zeReadVar zeSigma rhoSkal1)).n ∧
+      s'.speicher = zeStart.speicher ∧
+      zeV.schreibt false = true ∧ zeRunChange := by
+  obtain ⟨p, hlow⟩ := lowSkal1
+  obtain ⟨s', hrun, hdst, hmem, -, -⟩ := senkSkalLesen_korrekt ankerSkala8
+    zeCfg zeCfgOk zeReadVar (rfl : zeD.typ false true = .int 0 1000) rhoSkal1
+    zeSigma zeSigma zeStart envReprSkal1 worldRepSkal8 bndSkal1 p hlow
+  exact ⟨s', p, zeCfgOk, envReprSkal1, worldRepSkal8, bndSkal1, hlow, hrun,
+    hdst, hmem, zeHw, zeRunChangeProof⟩
+
+/-- Two-variable witness context: the read target head, the row index. -/
+def ctxSkal2 : Ctx := [.int 0 1000, .int 0 1]
+
+/-- The read target variable. -/
+def xSkal2 : Var ctxSkal2 (zeD.typ false true) := .hier
+
+/-- The row-index variable. -/
+def ySkal2 : Var ctxSkal2 (.int 0 1) := .dort .hier
+
+/-- The witness row index expression. -/
+def idxSkal2 : Expr zeD ctxSkal2 [] (.index (zeD.count false)) := .var ySkal2
+
+/-- The witness read. -/
+def readSkal2 : Expr zeD ctxSkal2 [] (zeD.typ false true) :=
+  .slot false true idxSkal2 zeHLV
+
+/-- The witness region pointer to the anchored table. -/
+def ptrSkal2 : Expr zeD ctxSkal2 [] (.ptr 0 true) :=
+  .ptrOf false 0 rfl true
+
+/-- The witness read through the region pointer. -/
+def durchSkal2 : Expr zeD ctxSkal2 [] (zeD.typ false true) :=
+  .durch ptrSkal2 false rfl true idxSkal2 zeHLV
+
+/-- The witness statement `x := T[k].f`. -/
+def stmtSkal2 : Stmt zeD zeV false ctxSkal2 [] [] :=
+  .assignVar xSkal2 readSkal2
+
+/-- The witness statement through the region pointer. -/
+def stmtDurchSkal2 : Stmt zeD zeV false ctxSkal2 [] [] :=
+  .assignVar xSkal2 durchSkal2
+
+/-- Two variable registers: target in `r10`, index in `r11`. -/
+def cfgSkal2 : PipeCfg := { zeCfg with regs := [.r10, .r11] }
+
+theorem cfgSkal2Ok : cfgOk cfgSkal2 = true := by decide
+
+/-- The witness environment: target 0, row 0. -/
+def rhoSkal2 : Env zeD ctxSkal2 :=
+  .cons ⟨0, by decide, by decide⟩ (.cons ⟨0, by decide, by decide⟩ .nil)
+
+/-- The witness registers: target word in `r10`, index word in `r11`. -/
+def regSkal2 : Register → Wort :=
+  fun q => if q = .r10 then intWort 0 else if q = .r11 then intWort 0 else 0
+
+/-- The witness start state (lane-1159 flags, code base and memory). -/
+def stSkal2 : Zustand :=
+  { register := regSkal2, flags := zeStart.flags, rip := natAdresse 4096,
+    speicher := zeMem }
+
+/-- The two-variable witness environment is represented. -/
+theorem envReprSkal2 :
+    EnvRepr (D := zeD) rhoSkal2 stSkal2.register (abbOf cfgSkal2) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort y =>
+    cases y with
+    | hier => rfl
+    | dort z => cases z
+
+/-- The checked bound holds at the two-variable witness index. -/
+theorem hbSkal2 :
+    idxOkB ((rhoSkal2.get ySkal2).n) (zeD.count false) = true := by
+  decide
+
+/-- Register freshness at the witness: only `r10` maps to the target. -/
+theorem frSkal2 : ∀ (τ' : Ty) (z : Var ctxSkal2 τ'),
+    abbOf cfgSkal2 τ' z = abbOf cfgSkal2 _ xSkal2 →
+      varIdx z = varIdx xSkal2 := by
+  intro τ' z hz
+  have e1 : abbOf cfgSkal2 τ' z =
+      [.r10, .r11].getD (varIdx z) .rsp := rfl
+  have e2 : abbOf cfgSkal2 _ xSkal2 = .r10 := rfl
+  rw [e1, e2] at hz
+  cases hv : varIdx z with
+  | zero => rfl
+  | succ n =>
+    cases n with
+    | zero =>
+      rw [hv] at hz
+      have hz' : (.r11 : Register) = .r10 := hz
+      cases hz'
+    | succ m =>
+      rw [hv] at hz
+      have hz' : (.rsp : Register) = .r10 := hz
+      cases hz'
+
+/-- The per-read premises hold at the witness statement. -/
+theorem bndSkal2 : stmtSkalOk cfgSkal2 rhoSkal2 stmtSkal2 := by
+  exact ⟨hbSkal2, frSkal2⟩
+
+/-- The per-read premises hold at the witness pointer statement. -/
+theorem bndDurchSkal2 : stmtSkalOk cfgSkal2 rhoSkal2 stmtDurchSkal2 := by
+  exact ⟨hbSkal2, frSkal2⟩
+
+/-- The anchor lookups at the stride-8 anchor. -/
+theorem hB8 : ankerBasis ankerSkala8 false = some 8192 := by decide
+
+theorem hZ8 : ankerZeile ankerSkala8 false = some 8 := by decide
+
+theorem hO8 : PipelineTables.feldOff ankerSkala8 false true = some 8 := by
+  decide
+
+/-- The witness statement lowers (to an unnamed program). -/
+theorem lowStmtSkal2 :
+    ∃ q, senkStmtSkal ankerSkala8 cfgSkal2 stmtSkal2 = some q := ⟨_, rfl⟩
+
+/-- The witness pointer statement lowers (to an unnamed program). -/
+theorem lowDurchSkal2 :
+    ∃ q, senkStmtSkal ankerSkala8 cfgSkal2 stmtDurchSkal2 = some q :=
+  ⟨_, rfl⟩
+
+/-- JOINT WITNESS for `senkStmtSkal_korrekt_slot`: the checked
+    configuration, the represented two-variable environment and world at
+    the stride-8 anchor, the per-read premises, and the recomputed chunk
+    plus publish move run the real `execStmt` outcome with world and
+    environment represented; beside it the table-writing program and its
+    memory-changing run. -/
+theorem senkStmtSkal_korrekt_slot_zeuge :
+    ∃ s' σ' ρ' q, stmtSkalOk cfgSkal2 rhoSkal2 stmtSkal2 ∧
+      senkStmtSkal ankerSkala8 cfgSkal2 stmtSkal2 = some q ∧
+      lauf (q.map kanon) stSkal2 = some s' ∧
+      execStmt zeO 0 zeR stmtSkal2 zeSigma rhoSkal2 = .ok σ' ρ' ∧
+      WorldRep (tabLayout ankerSkala8) s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf cfgSkal2) ∧
+      zeV.schreibt false = true ∧ zeRunChange := by
+  obtain ⟨q, hlow⟩ := lowStmtSkal2
+  obtain ⟨s', σ', ρ', hrun, hsrc, hW', hE'⟩ := senkStmtSkal_korrekt_slot
+    (Λ' := []) ankerSkala8 cfgSkal2 cfgSkal2Ok false true idxSkal2 zeHLV
+    xSkal2 ySkal2 rfl 8192 8 8 hB8 hZ8 hO8 rhoSkal2 zeSigma stSkal2
+    envReprSkal2 worldRepSkal8 bndSkal2 zeO 0 zeR q hlow
+  exact ⟨s', σ', ρ', q, bndSkal2, hlow, hrun, hsrc, hW', hE', zeHw,
+    zeRunChangeProof⟩
+
+/-- JOINT WITNESS for `senkStmtSkal_korrekt_durch`: the same joint
+    premises through the region pointer. -/
+theorem senkStmtSkal_korrekt_durch_zeuge :
+    ∃ s' σ' ρ' q, stmtSkalOk cfgSkal2 rhoSkal2 stmtDurchSkal2 ∧
+      senkStmtSkal ankerSkala8 cfgSkal2 stmtDurchSkal2 = some q ∧
+      lauf (q.map kanon) stSkal2 = some s' ∧
+      execStmt zeO 0 zeR stmtDurchSkal2 zeSigma rhoSkal2 = .ok σ' ρ' ∧
+      WorldRep (tabLayout ankerSkala8) s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf cfgSkal2) ∧
+      zeV.schreibt false = true ∧ zeRunChange := by
+  obtain ⟨q, hlow⟩ := lowDurchSkal2
+  obtain ⟨s', σ', ρ', hrun, hsrc, hW', hE'⟩ := senkStmtSkal_korrekt_durch
+    ankerSkala8 cfgSkal2 cfgSkal2Ok ptrSkal2 false rfl true
+    idxSkal2 zeHLV xSkal2 ySkal2 rfl 8192 8 8 hB8 hZ8 hO8 rhoSkal2 zeSigma
+    stSkal2 envReprSkal2 worldRepSkal8 bndDurchSkal2 zeO 0 zeR q hlow
+  exact ⟨s', σ', ρ', q, bndDurchSkal2, hlow, hrun, hsrc, hW', hE', zeHw,
+    zeRunChangeProof⟩
+
+/-- JOINT WITNESS for the dispatcher `senkStmtSkal_korrekt`. -/
+theorem senkStmtSkal_korrekt_zeuge :
+    ∃ s' σ' ρ' q, stmtSkalOk cfgSkal2 rhoSkal2 stmtSkal2 ∧
+      senkStmtSkal ankerSkala8 cfgSkal2 stmtSkal2 = some q ∧
+      lauf (q.map kanon) stSkal2 = some s' ∧
+      execStmt zeO 0 zeR stmtSkal2 zeSigma rhoSkal2 = .ok σ' ρ' ∧
+      WorldRep (tabLayout ankerSkala8) s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf cfgSkal2) ∧
+      zeV.schreibt false = true ∧ zeRunChange := by
+  obtain ⟨q, hlow⟩ := lowStmtSkal2
+  obtain ⟨s', σ', ρ', hrun, hsrc, hW', hE'⟩ := senkStmtSkal_korrekt
+    ankerSkala8 cfgSkal2 cfgSkal2Ok stmtSkal2 rhoSkal2 zeSigma stSkal2
+    envReprSkal2 worldRepSkal8 bndSkal2 zeO 0 zeR q hlow
+  exact ⟨s', σ', ρ', q, bndSkal2, hlow, hrun, hsrc, hW', hE', zeHw,
+    zeRunChangeProof⟩
 /- CUTS:
    Done: scaled-index read lowering (senkSkalLesen), chunk runs
    (skalRest_lauf, skalChunk_lauf), statement correctness
@@ -1616,15 +1852,16 @@ theorem senkStmtSkal_gerade (A : TabAnker D) (c : PipeCfg)
    shape (senkStmtSkal_gerade), block lowering (senkStmtSkal,
    senkBlockSkal) with the written-guard predicate (blockSkalOk,
    blockSkalOkNil), and refusal theorems with joint witnesses for every
-   unsupported shape.
+   unsupported shape, and joint correctness witnesses
+   (senkSkalLesen_korrekt_zeuge, senkStmtSkal_korrekt_slot/durch_zeuge,
+   senkStmtSkal_korrekt_zeuge) over the stride-8 anchor with the
+   lane-1159 memory, world and memory-changing run.
    OPEN: the fetched-bytes block closing theorem: after one statement the
    rest-block premise is stated at the old environment and needs an
    environment-agreement transport lemma (from envGet_set_idx over indices
    outside the written set); the nested-match blockSkalOk needs per-shape
-   casing like the dispatcher.
-   OPEN: _zeuge companions for the correctness theorems
-   (senkSkalLesen_korrekt, senkStmtSkal_korrekt_slot/durch,
-   senkStmtSkal_korrekt) on a non-degenerate memory-changing witness.
+   casing like the dispatcher. Its future `_zeuge` needs a code region
+   holding the lowered chunk bytes with a `CodeAt` proof.
 -/
 #print axioms senkSkalLesen_korrekt
 #print axioms senkStmtSkal_korrekt_slot
@@ -1664,3 +1901,7 @@ theorem senkStmtSkal_gerade (A : TabAnker D) (c : PipeCfg)
 #print axioms senkSkalLesen_falsche_zeile_durch_zeuge
 #print axioms senkSkalLesen_rsp_index_durch_zeuge
 #print axioms senkSkalLesen_falsche_basis_durch_zeuge
+#print axioms senkSkalLesen_korrekt_zeuge
+#print axioms senkStmtSkal_korrekt_slot_zeuge
+#print axioms senkStmtSkal_korrekt_durch_zeuge
+#print axioms senkStmtSkal_korrekt_zeuge

@@ -3,8 +3,10 @@
 Lane 1197, clone `/home/simon/Dokumente/gabbro-muse/a1197`, branch `muse/1197`.
 Owns only `grammatik/Grammatik/X86/PipelineBlockTables.lean`,
 `grammatik/Grammatik.lean` (one appended import line), this report.
+Head after this turn: repair of review 1198 (R1 witnesses, R2 header
+narrowing, R3 fresh build evidence).
 
-## Result: green partial, committed
+## Result: green, committed
 
 - `./lean-probe grammatik/Grammatik/X86/PipelineBlockTables.lean`:
   `== 0 error(s) in the COMPLETE output; exit 0`
@@ -12,9 +14,15 @@ Owns only `grammatik/Grammatik/X86/PipelineBlockTables.lean`,
   `senkStmtSkal_korrekt_slot`; harmless).
 - `./lean-bau`: `== exit 0; 0 error line(s) in the COMPLETE output`,
   `Build completed successfully (627 jobs).`
-- `#print axioms` for every main theorem: only `propext`,
-  `Classical.choice`, `Quot.sound` (the goal-theorem standard). No `sorry`,
-  `admit`, `axiom`, `native_decide`, `unsafe` anywhere in the new file.
+  This clone's base predates current master (reviewer measures 687 jobs
+  without the candidate); rebase onto current master is the merge gate's
+  job — this lane has no fetch, and the candidate touches only its 3 owned
+  files.
+- `#print axioms` for every main theorem including the four new witnesses:
+  only `propext`, `Classical.choice`, `Quot.sound` (the goal-theorem
+  standard), machine-checked in the probe output above, not on word.
+  No `sorry`, `admit`, `axiom`, `native_decide`, `unsafe` anywhere in the
+  new file (grep: only prose "admitted" plus `#print axioms` lines).
 
 ## What was built (all in the new file, existing files untouched)
 
@@ -71,50 +79,76 @@ interpreter, no per-program rule. Everything reuses accepted definitions
    (against the real `execStmt` outcome, world and environment represented),
    `senkStmtSkal_korrekt` (dispatcher), `senkStmtSkal_gerade`
    (straight-line shape for the byte-level lift).
+7. Correctness witnesses (R1 repair, all joint over the non-degenerate
+   lane-1159 program plus the stride-8 anchor, all green with standard
+   axioms): `senkSkalLesen_korrekt_zeuge` (single-variable context,
+   `rhoSkal1`, `envReprSkal1`, `worldRepSkal8` via rechecked `tabOkSkal8`/
+   `tabWeltSkal8`, `bndSkal1`, `lowSkal1`), `senkStmtSkal_korrekt_slot_zeuge`
+   and `senkStmtSkal_korrekt_durch_zeuge` (two-variable context `ctxSkal2`
+   with target `xSkal2` in `r10` and index `ySkal2` in `r11` under
+   `cfgSkal2`/`cfgSkal2Ok`; `rhoSkal2`, `regSkal2`, `stSkal2`,
+   `envReprSkal2`, `hbSkal2`, `frSkal2`, `bndSkal2`/`bndDurchSkal2`,
+   `lowStmtSkal2`/`lowDurchSkal2`, anchor facts `hB8`/`hZ8`/`hO8`,
+   pointer `ptrSkal2`), `senkStmtSkal_korrekt_zeuge` (dispatcher on the
+   same joint premises). The lowered programs stay existential (`⟨_, rfl⟩`
+   closes the lowering equation by kernel reduction); every stated premise
+   is instantiated jointly, nothing weakened.
+
+## Review-1198 resolutions
+
+- R1 (missing `_zeuge` for correctness theorems): DONE, §7 above. Each of
+  `senkSkalLesen_korrekt`, `senkStmtSkal_korrekt_slot`,
+  `senkStmtSkal_korrekt_durch`, `senkStmtSkal_korrekt` now has a `_zeuge`
+  companion instantiating all premises jointly with the table-writing
+  program (`zeHw`) and the memory-changing run (`zeRunChangeProof`).
+- R2 (fetched-bytes closing theorem missing): header narrowed as the review
+  explicitly allows ("or narrow the header to what is proved"). The file
+  header now promises statement-level correctness only; the fetched-bytes
+  closing theorem stays OPEN in CUTS with the exact missing piece (see
+  §Open). No overclaim remains: `laufBytes`/`CodeAt` appear only in the
+  reuse-list prose for the straight-line shape lemma's purpose.
+- R3 (no full-build evidence, stale base): fresh `./lean-bau` result line
+  recorded above (exit 0, 627 jobs, this clone). Rebase onto current master
+  cannot be done from this lane (no fetch; `git checkout`/`reset` denied by
+  the lane permission profile) and belongs to the serial merge gate, which
+  re-checks build and axioms mechanically at integration.
+- R4 (axioms taken on word): addressed — the probe output carried all
+  `info:` axiom lines (standard axioms only, no `sorryAx`); the merge gate
+  still re-checks them at integration, as it should.
 
 ## Open (CUTS in the file says exactly this)
 
-1. The fetched-bytes block closing theorem (`senkBlockSkal_korrektBytes`
-   over `laufBytes`/`CodeAt` in the style of `pipeline_correct_entry`).
-   Attempted this turn and removed again while red (never committed red):
-   after one statement the rest-block premise is stated at the old
-   environment (`blockSkalOk c ρ w' rest`) but the induction hypothesis
-   needs it at the new environment (`ρ.set x v`). What is missing is an
-   environment-agreement transport lemma: `blockSkalOk c ρ₀ w b →
-   blockSkalOk c ρ₁ w b` when `ρ₁` agrees with `ρ₀` on all indices outside
-   `w` — provable from the already-committed `envGet_set_idx` (which is
-   polymorphic in the read variable's type) since the `¬written` guard
-   keeps every remaining read off the written set; plus per-shape casing
-   of the nested-match `blockSkalOk` in the style of the already-committed
-   dispatcher. Estimated: one agreement lemma plus the induction, 40-80
-   lines; each full-file probe takes 5-10 minutes, so budget 3-6 probes.
-2. `_zeuge` companions for the correctness theorems
-   (`senkSkalLesen_korrekt`, `senkStmtSkal_korrekt_slot/durch`,
-   `senkStmtSkal_korrekt`) on a non-degenerate memory-changing witness,
-   required by HARD RULES 13 for theorems with universal syntax premises.
-   The refusal witnesses exist; the correctness witnesses need concrete
-   `WorldRep`/`EnvRepr` proofs over a scaled anchor (`ankerSkala8`) and
-   are not attempted here. If they cannot be built, that is a finding
-   about the premises, reported per rule 13 — not silently weakened.
+- The fetched-bytes block closing theorem over `laufBytes`/`CodeAt` in the
+  style of `pipeline_correct_entry`. Attempted and removed again while red
+  (never committed red): after one statement the rest-block premise is
+  stated at the old environment (`blockSkalOk c ρ w' rest`) but the
+  induction hypothesis needs it at the new environment (`ρ.set x v`).
+  Missing: an environment-agreement transport lemma (`blockSkalOk c ρ₀ w
+  b → blockSkalOk c ρ₁ w b` when `ρ₁` agrees with `ρ₀` outside `w`,
+  provable from the committed `envGet_set_idx` since the `¬written` guard
+  keeps every remaining read off the written set) plus per-shape casing of
+  the nested-match `blockSkalOk` like the dispatcher; and, once proved, its
+  `_zeuge`, which needs a code region holding the lowered chunk bytes with
+  a `CodeAt` proof. Estimated 3-6 more full-file probes at 5-10 min each.
 
 ## Notes on the task and the apparatus
 
 - Nothing in the task statement looks wrong. The `written`-guard design
-  for `blockSkalOk` (read-after-write guard inside the predicate rather
-  than a plain conjunction) is my own addition over the first committed
-  `blockSkalOk` conjunction; it is what makes the transport lemma above
-  statable. It typechecks and is committed; only its consumer (the closing
-  theorem) is open.
-- Apparatus findings, no rule broken: (a) the file-edit tool could not
-  match two lines containing `Λ Λ'` (invisible character difference;
-  `grep`/`sed` saw them fine), so the `vertrag`→`Vertrag` typo repair and
-  the red-section removal were done with the explicitly allowed `sed`
-  fallback, then verified by `./lean-probe`; (b) `git checkout --`
-  (the HARD-RULES-8 revert path) is denied by the permission classifier
-  in this lane, so the revert-equivalent was a surgical `sed` line-range
-  deletion of only the uncommitted red section — no committed theorem was
-  deleted or weakened; (c) full-file probes take 5-10 minutes here
-  (first attempt exceeded a 300 s budget with no output; 600 s succeeded),
-  which bounds probe iteration speed for the follow-up work in §Open.
+  for `blockSkalOk` is my own addition; it typechecks and is committed;
+  only its consumer (the closing theorem) is open.
+- This turn's repair findings (for the next author): `leseSkalOk` is
+  Prop-valued, so its witness needs `unfold`+`simp only`+`decide`, not a
+  bare `by decide`; `senkStmtSkal_korrekt_durch` has no `Λ'` binder (reads
+  keep `Λ`) while the slot version does — pass `(Λ' := [])` only there;
+  inline `.ptrOf ...` leaves metavariables in the statement, so the witness
+  pointer is a named def (`ptrSkal2`); a second `feldOff` from another
+  namespace shadows the pipeline one here, so the anchor fact uses
+  `PipelineTables.feldOff` qualified. `⟨_, rfl⟩` closes all four lowering
+  equations and both `execStmt` outcomes are consumed from the theorems.
+- Standing apparatus notes: the file-edit tool cannot match two lines
+  containing `Λ Λ'` (invisible character difference), so byte-level
+  repairs use the explicitly allowed `sed` fallback, verified by probe;
+  `git checkout --` is denied in this lane, so red work is removed
+  surgically, never committed; full-file probes take 5-10 minutes.
 - Rust out of scope as instructed; no emission counters touched
   (lowering is Lean-only, no new `.gab` example was minted).
