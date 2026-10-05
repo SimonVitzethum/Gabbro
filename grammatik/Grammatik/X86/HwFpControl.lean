@@ -625,14 +625,196 @@ theorem fpCtrlMxcsrReset_stellt_her (m m' : HwMaschine) (c : Nat)
     exact mxcsr_standard
   exact hfin
 
-/- CUTS (control done):
-   Proved: s32/f64 steps keep the control word (hence RNE) on states
-   and on the machine; reset establishes RNE/admission; the FTZ split.
-   NOT proved yet: NaN/signed-zero/no-contraction, refusals, witness.
+/-! ## 6. IEEE observations: NaN, signed zero, no contraction.
+
+  All arithmetic is the accepted kernel, cited, never recomputed:
+  masked `0/0` classifies NaN (both widths), `+0 + -0 = +0` (both
+  widths), and binary32 is never silently promoted to binary64
+  (the `2^24` stall where binary64 advances). -/
+
+/-- Masked binary32 `0/0` classifies NaN. -/
+theorem fpCtrlS32_nan : Gleitkomma.klasse Gleitkomma.f32
+    (bites32 (s32Rechne .div 0 0)) = .nan :=
+  s32_null_durch_null_nan
+
+/-- Two distinct binary64 NaN payloads take the unordered row. -/
+theorem fpCtrlF64_nan_ungeordnet : ucomiFlags
+    (bites64 0x7FF0000000000001)
+    (bites64 0x7FF0000000000002) =
+    ⟨true, true, some false, true, false, false⟩ :=
+  fpHwNan_ungeordnet
+
+/-- Binary32 signed zero: `+0 + -0 = +0`. -/
+theorem fpCtrlS32_plusnull :
+    s32Rechne .add 0x00000000 0x80000000 = 0x00000000 :=
+  s32_plusnull_minusnull
+
+/-- Binary64 signed zero: `+0.0 + -0.0 = +0.0`. -/
+theorem fpCtrlF64_plusnull : fpRechne .add 0 0x8000000000000000 = 0 :=
+  add_plusnull_minusnull
+
+/-- NO CONTRACTION: binary32 stalls at `2^24` while binary64
+    advances -- a promoted implementation would agree with f64. -/
+theorem fpCtrlKeineKontraktion :
+    s32Rechne .add 0x4B800000 0x3F800000 = 0x4B800000 ∧
+      muster64 (fadd64 (bites64 0x4330000000000000)
+        (bites64 0x3FF0000000000000)) ≠ 0x4330000000000000 :=
+  ⟨s32_stallt_bei_2hoch24, s32_f64_steigt_weiter⟩
+
+/-! ## 7. Refusals and the 32-bit group discipline.
+
+  Bad lengths, refused profiles, LOCK-prefixed MXCSR (`#UD` in the
+  family, hence no `.weiter` and no machine step), unreadable loads
+  and unwritable issues all refuse explicitly. The 32-bit group
+  predicate pins coherence the other way: a partial buffer is no
+  group, a foreign footprint entry breaks it, and a successful
+  `fpCtrlAusgabe32` from an empty foreign-free buffer establishes
+  it. The 64-bit leg reuses `WortGruppe` unchanged. -/
+
+/-- A bad decode length admits no coherent s32 step. -/
+theorem fpCtrlS32_laenge_kein_schritt (m m' : HwMaschine) (c : Nat)
+    (d : S32Decodiert)
+    (hok : laengeOk d.laenge = false)
+    (h : FpCtrlSchritt m m' (.s32reg c d)) : False := by
+  cases h with
+  | s32reg c d t' hstep hmem =>
+    rw [s32Schritt_laenge_verweigert _ _ hok] at hstep
+    cases hstep
+
+/-- A refused profile admits no coherent f64 step. -/
+theorem fpCtrlF64_profil_kein_schritt (m m' : HwMaschine) (c : Nat)
+    (d : FpDecodiert)
+    (hfp : fpEintritt (projFp m c).fp = false)
+    (h : FpCtrlSchritt m m' (.f64reg c d)) : False := by
+  cases h with
+  | f64reg c d t' hstep hmem =>
+    have hok := (fpSchritt_zugelassen_heisst d (projFp m c) t' hstep).1
+    rw [fpSchritt_profil_verweigert _ _ hok hfp] at hstep
+    cases hstep
+
+/-- A LOCK-prefixed MXCSR form faults with `#UD` in the family, so
+    it never yields `.weiter` and admits no coherent load step. -/
+theorem fpCtrlMxcsrLock_kein_schritt (m m' : HwMaschine) (c : Nat)
+    (d : MxcsrDec)
+    (hok : laengeOk d.laenge = true)
+    (hlock : d.gesperrt = true)
+    (h : FpCtrlSchritt m m' (.mxcsrLd c d)) : False := by
+  cases h with
+  | mxcsrLd c d t' hstep hmem =>
+    rw [mxcsrSchritt_gesperrt_ud _ _ _ _ hok hlock] at hstep
+    cases hstep
+
+/-- An unreadable byte admits no coherent observation. -/
+theorem fpCtrlLaden_ohne_lesbar_kein_schritt (m m' : HwMaschine)
+    (c : Nat) (a : Adresse) (v : Byte)
+    (hperm : (tsoAnsicht m).mem.lesbar a = false)
+    (h : FpCtrlSchritt m m' (.leseBeob c a v)) : False := by
+  cases h with
+  | lade c a v hload =>
+    rw [load_verweigert _ _ _ hperm] at hload
+    cases hload
+
+/-- An unwritable byte admits no coherent store issue. -/
+theorem fpCtrlAusgabe_ohne_schreibbar_kein_schritt (m m' : HwMaschine)
+    (c : Nat) (a : Adresse) (v : Byte)
+    (hperm : (tsoAnsicht m).mem.schreibbar a = false)
+    (h : FpCtrlSchritt m m' (.schreibAusgabe c a v)) : False := by
+  cases h with
+  | gibAus c a v s' hissue =>
+    rw [issue_verweigert _ _ _ _ hperm] at hissue
+    cases hissue
+
+/-- The four footprint addresses of a 32-bit access. -/
+def fpFuss32 (a : Adresse) : List Adresse :=
+  (List.range 4).map (addrOff a)
+
+/-- Foreign-footprint freedom over the four bytes: no other core
+    holds a pending entry inside `fpFuss32 a`. -/
+def FpFremdFrei32 (s : TSOZustand) (c : Nat) (a : Adresse) : Prop :=
+  ∀ d : Nat, d ≠ c → ∀ e : TSOEintrag,
+    e ∈ s.puffer d → e.addr ∉ fpFuss32 a
+
+/-- The 32-bit group: the acting core carries exactly the four
+    canonical entries and no foreign entry touches the footprint. -/
+def FpGruppe32 (s : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Wort) : Prop :=
+  s.puffer c = fpEintraege32 a v ∧ FpFremdFrei32 s c a
+
+/-- A word fold touches no other core's buffer. -/
+theorem issueListe_anderer_kern (s s' : TSOZustand) (c : Nat)
+    (l : List TSOEintrag) (h : issueListe s c l = some s')
+    {d : Nat} (hd : d ≠ c) : s'.puffer d = s.puffer d := by
+  induction l generalizing s s' with
+  | nil =>
+    simp [issueListe] at h
+    subst h
+    rfl
+  | cons e rest ih =>
+    unfold issueListe at h
+    cases h1 : issueByte s c e.addr e.wert with
+    | none => rw [h1] at h; cases h
+    | some s1 =>
+      rw [h1] at h
+      rw [ih s1 s' h]
+      exact issue_anderer_kern s s1 c e.addr e.wert h1 hd
+
+/-- A partial 32-bit buffer is no group: tearing refused. -/
+theorem fpGruppe32_teilwort (s : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Wort)
+    (hne : s.puffer c ≠ fpEintraege32 a v) :
+    ¬ FpGruppe32 s c a v := by
+  intro hgrp
+  exact hne hgrp.1
+
+/-- A foreign footprint entry breaks the 32-bit group. -/
+theorem fpGruppe32_fremd (s : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Wort) (d : Nat) (hne : d ≠ c)
+    (e : TSOEintrag) (hmem : e ∈ s.puffer d)
+    (hfuss : e.addr ∈ fpFuss32 a) :
+    ¬ FpGruppe32 s c a v := by
+  intro hgrp
+  exact (hgrp.2 d hne e hmem) hfuss
+
+/-- A successful 32-bit FP store from an empty foreign-free buffer
+    establishes the group. -/
+theorem fpCtrlAusgabe32_gruppe (m m' : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Wort)
+    (hempty : m.puffer c = [])
+    (hfrei : FpFremdFrei32 (tsoAnsicht m) c a)
+    (h : fpCtrlAusgabe32 m c a v = some m') :
+    FpGruppe32 (tsoAnsicht m') c a v := by
+  have hbuf := fpCtrlAusgabe32_puffer m c a v m' h
+  unfold fpCtrlAusgabe32 at h
+  cases h1 : issueListe (tsoAnsicht m) c (fpEintraege32 a v) with
+  | none => rw [h1] at h; cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    constructor
+    · show s'.puffer c = fpEintraege32 a v
+      have hb := issueListe_haengt_an (tsoAnsicht m) s' c _ h1
+      show s'.puffer c = fpEintraege32 a v
+      rw [hb]
+      show m.puffer c ++ fpEintraege32 a v = fpEintraege32 a v
+      rw [hempty]
+      rfl
+    · intro d hne e hmem
+      have hfr := issueListe_anderer_kern (tsoAnsicht m) s' c _ h1
+        (d := d) hne
+      change e ∈ s'.puffer d at hmem
+      rw [hfr] at hmem
+      exact hfrei d hne e hmem
+
+/- CUTS (pins done):
+   Proved: NaN/signed-zero/no-contraction pins; length/profile/LOCK/
+   permission refusals; the 32-bit group with tearing/overlap
+   refusals and establishment.
+   NOT proved yet: the two-core joint witness.
 -/
 
-#print axioms s32Schritt_erhaelt_fp
-#print axioms fpCtrlS32_erhaelt_rneMaschine
-#print axioms fpCtrlMxcsrReset_stellt_her
+#print axioms fpCtrlKeineKontraktion
+#print axioms fpCtrlF64_profil_kein_schritt
+#print axioms fpCtrlMxcsrLock_kein_schritt
+#print axioms fpCtrlAusgabe32_gruppe
 
 end Gabbro.Grammatik.X86
