@@ -166,6 +166,140 @@ theorem deckung_pfad_chunk_zeuge :
   exact deckung_pfad_chunk pwCfg pwL false () () pwIdx0 pwWert0 pwHT0
     pwHw pwHL 1 _ _ _ _ pw_senkWert0 pwChunkCast hprefix (Nat.le_refl 1)
 
+/-! ## 4. Per-round loop correspondence: one source round is one segment.
+
+    The `n`-round theorem (`schleife_korrekt_endlich`) lifts a
+    one-round simulation to `n` rounds with budget accounting. Here
+    the anatomy of ONE round is explicit: the labelled run of
+    `schleifeSchritte 1 m` steps is one body segment of `m + 2`
+    steps back to the head plus the final exit step, and a single
+    continuing source round (`retryLauf ... 1`) is exactly that
+    shape. The bound predicate is read through `hBed` in both
+    branches, so the exit agreement steers the case split. -/
+
+/-- ROUND DECOMPOSITION: the `(n+1)`-round budget splits into one
+    body segment plus the `n`-round rest. -/
+theorem schleife_runde_zerlegung (koerper : List Instr) (c : Bedingung)
+    (adr : Nat → Adresse) (n : Nat) (x : Nat × Zustand) :
+    laufL adr (schleifeProg koerper c) (schleifeSchritte (n + 1) koerper.length) x =
+      (laufL adr (schleifeProg koerper c) (koerper.length + 2) x).bind
+        (laufL adr (schleifeProg koerper c) (schleifeSchritte n koerper.length)) := by
+  rw [schleifeSchritte_add, laufL_add]
+
+/-- SINGLE-ROUND CORRESPONDENCE: one continuing source round is the
+    one-round labelled segment to the end label, keeping `Rep`. -/
+theorem runde_einzel {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (koerper : List Instr) (c : Bedingung)
+    (adr : Nat → Adresse)
+    (Rep : World D → Env D Γ → Zustand → Prop)
+    (schritt : World D → Env D Γ → Ausgang V true Γ)
+    (bis : World D → Env D Γ → World D × Bool)
+    (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
+    (hLese : ∀ σ ρ s, Rep σ ρ s → Rep (bis σ ρ).1 ρ s)
+    (hBisStabil : ∀ σ ρ, bis (bis σ ρ).1 ρ = bis σ ρ)
+    (hBed : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = bedingung c s.flags)
+    (hWeiter : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = false →
+      ∃ σ₁ ρ₁ s₁, (schritt (bis σ ρ).1 ρ = .ok σ₁ ρ₁ ∨
+          (∃ h : true = true, schritt (bis σ ρ).1 ρ = .next h σ₁ ρ₁)) ∧
+        laufL adr (schleifeProg koerper c) (koerper.length + 2) (0, s)
+          = some (0, s₁) ∧
+        Rep σ₁ ρ₁ s₁)
+    (hEnde : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = true →
+      ∃ s', laufL adr (schleifeProg koerper c) 1 (0, s)
+        = some (koerper.length + 2, s') ∧ Rep (bis σ ρ).1 ρ s')
+    (hUeberlauf : ∀ σ ρ σ' ρ', (bis σ ρ).2 = false →
+      ueberlauf (bis σ ρ).1 ρ ≠ .ok σ' ρ') :
+    ∀ (σ : World D) (ρ : Env D Γ) (s : Zustand),
+      Rep σ ρ s →
+      ∀ σ' ρ', retryLauf schritt bis ueberlauf 1 σ ρ = .ok σ' ρ' →
+        ∃ s', laufL adr (schleifeProg koerper c)
+            (schleifeSchritte 1 koerper.length) (0, s)
+          = some (koerper.length + 2, s') ∧
+          Rep σ' ρ' s' := by
+  have hlen : (schleifeProg koerper c).length = koerper.length + 2 :=
+    schleifeProg_laenge koerper c
+  have hstop : ∀ (k : Nat) (t : Zustand),
+      laufL adr (schleifeProg koerper c) k (koerper.length + 2, t)
+        = some (koerper.length + 2, t) := by
+    intro k t
+    exact laufL_stop adr (schleifeProg koerper c) k _ (by simp [hlen])
+  intro σ ρ s hRep σ' ρ' hrun
+  have hbv : (bis σ ρ).2 = bedingung c s.flags := hBed σ ρ s hRep
+  cases heq : bedingung c s.flags with
+  | true =>
+    have he : (bis σ ρ).2 = true := by rw [hbv, heq]
+    have hrun' : retryLauf schritt bis ueberlauf (0 + 1) σ ρ = .ok σ' ρ' := hrun
+    rw [wiederhol_steht schritt bis ueberlauf 0 σ ρ he] at hrun'
+    cases hrun'
+    have hrepL := hLese σ ρ s hRep
+    have heL : (bis (bis σ ρ).1 ρ).2 = true := by
+      rw [hBisStabil]
+      exact he
+    obtain ⟨sx, hrunx, hrepx⟩ := hEnde _ _ _ hrepL heL
+    rw [hBisStabil] at hrepx
+    have hbud : schleifeSchritte 1 koerper.length = 1 + (koerper.length + 2) := by
+      unfold schleifeSchritte
+      omega
+    refine ⟨sx, ?_, hrepx⟩
+    rw [hbud, laufL_add, hrunx]
+    exact hstop _ _
+  | false =>
+    have he : (bis σ ρ).2 = false := by rw [hbv, heq]
+    obtain ⟨σ₁, ρ₁, s₁, hfort, hseg, hrep₁⟩ := hWeiter σ ρ s hRep he
+    have hbud : schleifeSchritte 1 koerper.length = (koerper.length + 2) + 1 := by
+      unfold schleifeSchritte
+      omega
+    have hrun' : retryLauf schritt bis ueberlauf (0 + 1) σ ρ = .ok σ' ρ' := hrun
+    have hrun0 : retryLauf schritt bis ueberlauf 0 σ₁ ρ₁ = .ok σ' ρ' := by
+      rcases hfort with hok | ⟨_, hnext⟩
+      · rw [wiederhol_schritt schritt bis ueberlauf 0 σ σ₁ ρ ρ₁ he hok] at hrun'
+        exact hrun'
+      · have hstep : retryLauf schritt bis ueberlauf (0 + 1) σ ρ
+            = retryLauf schritt bis ueberlauf 0 σ₁ ρ₁ := by
+          simp [retryLauf, he, hnext]
+        rw [hstep] at hrun'
+        exact hrun'
+    have hbv1 : (bis σ₁ ρ₁).2 = bedingung c s₁.flags := hBed σ₁ ρ₁ s₁ hrep₁
+    cases heq1 : bedingung c s₁.flags with
+    | true =>
+      have he1 : (bis σ₁ ρ₁).2 = true := by rw [hbv1, heq1]
+      simp only [retryLauf, he1] at hrun0
+      cases hrun0
+      obtain ⟨sx, hrunx, hrepx⟩ := hEnde _ _ _ hrep₁ he1
+      refine ⟨sx, ?_, hrepx⟩
+      rw [hbud, laufL_add, hseg]
+      exact hrunx
+    | false =>
+      have he1 : (bis σ₁ ρ₁).2 = false := by rw [hbv1, heq1]
+      simp only [retryLauf, he1] at hrun0
+      exact absurd hrun0 (hUeberlauf σ₁ ρ₁ σ' ρ' he1)
+
+/-- JOINT WITNESS for `runde_einzel`: the witness loop's single
+    memory-changing round is the one-round segment to the end label,
+    on a table the contract writes. -/
+theorem runde_einzel_zeuge :
+    ∃ (s' : Zustand),
+      zwRep zwSigma0 .nil zwS0 ∧
+      retryLauf zwSchritt zwBis zwUeberlauf 1 zwSigma0 .nil
+        = .ok (zwSigma1 zwSigma0) .nil ∧
+      laufL zwAdr (schleifeProg zwKoerper .e)
+        (schleifeSchritte 1 zwKoerper.length) (0, zwS0)
+        = some (zwKoerper.length + 2, s') ∧
+      zwRep (zwSigma1 zwSigma0) .nil s' ∧
+      zwV.schreibt () = true ∧
+      (zwSigma0.slots () 0 ()).n = 0 ∧
+      ((zwSigma1 zwSigma0).slots () 0 ()).n = 1 := by
+  have hRep0 : zwRep zwSigma0 .nil zwS0 := by
+    refine ⟨?_, Or.inl ⟨?_, rfl⟩⟩
+    · rfl
+    · rfl
+  have hrun : retryLauf zwSchritt zwBis zwUeberlauf 1 zwSigma0 .nil
+      = .ok (zwSigma1 zwSigma0) .nil := rfl
+  obtain ⟨s', hT, hrep'⟩ := runde_einzel zwKoerper .e zwAdr
+    zwRep zwSchritt zwBis zwUeberlauf zw_lese zw_stabil zw_bed zw_weiter
+    zw_ende zw_kein_ueberlauf zwSigma0 .nil zwS0 hRep0 _ _ hrun
+  exact ⟨s', hRep0, hrun, hT, hrep', rfl, rfl, rfl⟩
+
 /- CUTS:
    - Skeleton only: `genommenArbeit` names the taken-path count.
    - OPEN: the prefix-run bridge (`laufBytes_genommen`), the dynamic
