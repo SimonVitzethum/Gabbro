@@ -1823,6 +1823,141 @@ def rotMemIssue (s : TSOZustand) (c : Nat) (a : Adresse) (b : Breite)
     (v : Wort) : Option TSOZustand :=
   rotIssueKette s c (List.take b.bytes (wortEintraege a v))
 
+/-! ## 9. Unified dispatcher: the accepted chain first.
+
+    The dispatcher runs the unified `decodeExt` first and the
+    rotate decoder only where it refuses: no pilot or extension
+    form is shadowed, overlapping shift rows keep their unified
+    arm, new rotate rows take the rotate arm. -/
+
+/-- Unified dispatcher instruction: the accepted unified chain
+    first, the rotate family only where it refuses. -/
+inductive RotHwInstr where
+  | ext : ExtInstr → RotHwInstr
+  | rot : RotDecodiert → RotHwInstr
+  deriving DecidableEq, Repr
+
+/-- Dispatcher: the unified decoder first, the rotate decoder only
+    where the unified chain refuses. No pilot form is shadowed. -/
+def decodeRotHw : List Byte → Option (RotHwInstr × List Byte) :=
+  fun bs =>
+    match decodeExt bs with
+    | some (i, rest) => some (.ext i, rest)
+    | none =>
+      match decodeRot bs with
+      | some (d, rest) => some (.rot d, rest)
+      | none => none
+
+/-- Consumed length of one dispatcher instruction. -/
+def rotHwLen : RotHwInstr → Nat
+  | .ext i => extLen i
+  | .rot d => d.laenge
+
+/-- The dispatcher agrees with the unified chain wherever it
+    accepts: no pilot or extension form is shadowed. -/
+theorem decodeRotHw_prefers_ext (bs : List Byte) (i : ExtInstr)
+    (rest : List Byte) (h : decodeExt bs = some (i, rest)) :
+    decodeRotHw bs = some (.ext i, rest) := by
+  unfold decodeRotHw
+  rw [h]
+
+/-- Where the unified chain refuses, a covered rotate row is taken. -/
+theorem decodeRotHw_rot (bs : List Byte) (d : RotDecodiert)
+    (rest : List Byte) (h1 : decodeExt bs = none)
+    (h2 : decodeRot bs = some (d, rest)) :
+    decodeRotHw bs = some (.rot d, rest) := by
+  unfold decodeRotHw
+  rw [h1, h2]
+
+/-- Where both chains refuse, the dispatcher refuses. -/
+theorem decodeRotHw_nichts (bs : List Byte)
+    (h1 : decodeExt bs = none) (h2 : decodeRot bs = none) :
+    decodeRotHw bs = none := by
+  unfold decodeRotHw
+  rw [h1, h2]
+
+/-! ## 9b. No shadowing: the unified chain refuses the new rows.
+
+    The rotate rows below are refused by the whole unified chain,
+    so the rotate arm takes them exactly once; the overlapping
+    shift row keeps its unified arm. -/
+
+theorem ext_weist_rotrol8_zurueck :
+    decodeExt [natByte 208, natByte 192] = none := by
+  decide
+
+theorem ext_weist_rotror64_zurueck :
+    decodeExt [natByte 73, natByte 211, natByte 201] = none := by
+  decide
+
+theorem ext_weist_rotrcl16_zurueck :
+    decodeExt [natByte 102, natByte 193, natByte 210, natByte 5] = none := by
+  decide
+
+theorem ext_weist_rotmem32_zurueck :
+    decodeExt [natByte 209, natByte 155, natByte 16, natByte 0,
+      natByte 0, natByte 0] = none := by
+  decide
+
+theorem ext_weist_rotrol64_zurueck :
+    decodeExt [natByte 73, natByte 209, natByte 192] = none := by
+  decide
+
+/-! ## 9c. Dispatcher pins: new rows take the rotate arm.
+
+    The pilot row goes through unchanged, overlapping shift rows
+    keep the unified arm, planted refusals stay refused. -/
+
+/-- Pin: the pilot row goes through unchanged. -/
+theorem pin_rotHw_pilot_ret :
+    decodeRotHw (encode .ret) =
+      some (.ext (.pilot ⟨.ret, 1⟩), []) :=
+  decodeRotHw_prefers_ext _ _ _ pin_ext_pilot_ret
+
+/-- Pin: the 8-bit ROL row takes the rotate arm. -/
+theorem pin_rotHw_rol8 :
+    decodeRotHw [natByte 208, natByte 192] =
+      some (.rot (⟨⟨.rol, .b8, .eins, .reg .rax⟩, 2⟩ : RotDecodiert),
+        []) :=
+  decodeRotHw_rot _ _ _ ext_weist_rotrol8_zurueck pin_rot_rol8_eins
+
+/-- Pin: the 64-bit ROR-by-CL row takes the rotate arm. -/
+theorem pin_rotHw_ror64 :
+    decodeRotHw [natByte 73, natByte 211, natByte 201] =
+      some (.rot (⟨⟨.ror, .b64, .cl, .reg .r9⟩, 3⟩ : RotDecodiert),
+        []) :=
+  decodeRotHw_rot _ _ _ ext_weist_rotror64_zurueck pin_rot_ror64_cl
+
+/-- Pin: the 16-bit RCL-imm row takes the rotate arm. -/
+theorem pin_rotHw_rcl16 :
+    decodeRotHw [natByte 102, natByte 193, natByte 210, natByte 5] =
+      some (.rot (⟨⟨.rcl, .b16, .imm8 5, .reg .rdx⟩, 4⟩ : RotDecodiert),
+        []) :=
+  decodeRotHw_rot _ _ _ ext_weist_rotrcl16_zurueck pin_rot_rcl16_imm
+
+/-- Pin: the 32-bit RCR memory row takes the rotate arm. -/
+theorem pin_rotHw_rcr32 :
+    decodeRotHw [natByte 209, natByte 155, natByte 16, natByte 0,
+      natByte 0, natByte 0] =
+      some (.rot (⟨⟨.rcr, .b32, .eins,
+        .mem .rbx (BitVec.ofNat 32 16)⟩, 6⟩ : RotDecodiert), []) :=
+  decodeRotHw_rot _ _ _ ext_weist_rotmem32_zurueck
+    pin_rot_rcr32_mem
+
+/-- Pin: the overlapping shift row keeps the unified arm. -/
+theorem pin_rotHw_ext_shift :
+    decodeRotHw [natByte 72, natByte 193, natByte 224, natByte 1] =
+      some (.ext (.shift ⟨.imm .shl .rax 1, 4⟩), []) := by
+  apply decodeRotHw_prefers_ext
+  decide
+
+/-- Planted refusal: LOCK stays refused through the dispatcher. -/
+theorem rotHw_nichts_lock :
+    decodeRotHw [natByte 240, natByte 209, natByte 192] = none := by
+  apply decodeRotHw_nichts
+  · decide
+  · exact rot_nichts_lock
+
 /- CUTS (checkpoint: value core only):    Proved here: rotate operation digits, Nat value core for ROL/ROR
     and RCL/RCR with architectural count masking, single-step
     inverses in both directions, and pinned values.
