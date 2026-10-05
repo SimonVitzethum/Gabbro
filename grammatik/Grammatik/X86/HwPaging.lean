@@ -239,6 +239,217 @@ theorem gangGp_adrKlasse (lin : Nat) (h : lin < 2 ^ 64)
     rw [← kanonischNat_bruecke lin h, hk]
   simp [adrKlasse, hkan]
 
+/-! ## 3. The four-level walk over decoded entries.
+
+  `gangEbenen` runs the walk over four already-decoded entries
+  (PML4, PDPT, PD, PT). The effective rights are combined along the
+  path exactly as silicon does: R/W and U/S are ANDed (every level
+  must grant), XD is ORed (any level may forbid execution). -/
+
+/-- Leaf permission check: `effRW`/`effUS`/`effXD` are the combined
+    rights; `rahmen` is the leaf frame. Supervisor writes to a
+    read-only leaf fault only under CR0.WP. -/
+def blattPruefung (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (effRW effUS effXD : Bool) (rahmen : Nat) : GangErgebnis :=
+  if q.abruf then
+    if effXD then
+      .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, false, true⟩
+    else if q.benutzer && !effUS then
+      .seitenFehler q.linear ⟨true, q.schreiben, true, false, true⟩
+    else .ok (rahmen * 4096 + gangOffset q.linear)
+  else if q.benutzer && !effUS then
+    .seitenFehler q.linear ⟨true, q.schreiben, true, false, false⟩
+  else if q.schreiben && !effRW then
+    if q.benutzer || st.wp then
+      .seitenFehler q.linear ⟨true, true, q.benutzer, false, false⟩
+    else .ok (rahmen * 4096 + gangOffset q.linear)
+  else .ok (rahmen * 4096 + gangOffset q.linear)
+
+/-- The combined rights of one four-entry path: R/W ANDed, U/S ANDed,
+    XD ORed. -/
+def gangRechte (e3 e2 e1 e0 : SeitenEintrag) : Bool × Bool × Bool :=
+  (e3.schreibbar && e2.schreibbar && e1.schreibbar && e0.schreibbar,
+   e3.benutzer && e2.benutzer && e1.benutzer && e0.benutzer,
+   e3.noExec || e2.noExec || e1.noExec || e0.noExec)
+
+/-- The walk over four decoded entries. Order of checks at each
+    level: present, reserved-XD (when NXE is off), large-page rule;
+    then the leaf permission check. -/
+def gangEbenen (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) : GangErgebnis :=
+  if st.smep || st.smap then .steuerVerweigert
+  else if !istKanonischNat q.linear then .gpFehler q.linear
+  else if !e3.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !st.nxe && e3.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e3.gross then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if !e2.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !st.nxe && e2.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e2.gross then .grossVerweigert q.linear
+  else if !e1.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !st.nxe && e1.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e1.gross then .grossVerweigert q.linear
+  else if !e0.vorhanden then
+    .seitenFehler q.linear ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩
+  else if !st.nxe && e0.noExec then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else if e0.gross then
+    .seitenFehler q.linear ⟨true, q.schreiben, q.benutzer, true, q.abruf⟩
+  else
+    blattPruefung st q (e3.schreibbar && e2.schreibbar &&
+      e1.schreibbar && e0.schreibbar)
+      (e3.benutzer && e2.benutzer && e1.benutzer && e0.benutzer)
+      (e3.noExec || e2.noExec || e1.noExec || e0.noExec) e0.rahmen
+
+/-- An armed SMEP refuses the whole walk. -/
+theorem gangEbenen_smep (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) (h : st.smep = true) :
+    gangEbenen st q e3 e2 e1 e0 = .steuerVerweigert := by
+  simp [gangEbenen, h]
+
+/-- An armed SMAP refuses the whole walk. -/
+theorem gangEbenen_smap (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) (h : st.smap = true) :
+    gangEbenen st q e3 e2 e1 e0 = .steuerVerweigert := by
+  simp [gangEbenen, h]
+
+/-- A noncanonical address is #GP once control state is disarmed. -/
+theorem gangEbenen_gp (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) (h1 : st.smep = false)
+    (h2 : st.smap = false)
+    (hk : istKanonischNat q.linear = false) :
+    gangEbenen st q e3 e2 e1 e0 = .gpFehler q.linear := by
+  simp [gangEbenen, h1, h2, hk]
+
+/-- A missing PML4 entry faults non-present with the access bits. -/
+theorem gangEbenen_nichtvorhanden3 (st : SeitenSteuerung)
+    (q : SeitenAnfrage) (e3 e2 e1 e0 : SeitenEintrag)
+    (h1 : st.smep = false) (h2 : st.smap = false)
+    (hk : istKanonischNat q.linear = true)
+    (h : e3.vorhanden = false) :
+    gangEbenen st q e3 e2 e1 e0 =
+      .seitenFehler q.linear
+        ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩ := by
+  simp [gangEbenen, h1, h2, hk, h]
+
+/-- A missing leaf entry faults non-present with the access bits. -/
+theorem gangEbenen_nichtvorhanden0 (st : SeitenSteuerung)
+    (q : SeitenAnfrage) (e3 e2 e1 e0 : SeitenEintrag)
+    (h1 : st.smep = false) (h2 : st.smap = false)
+    (hk : istKanonischNat q.linear = true)
+    (h3 : e3.vorhanden = true) (hn3 : e3.noExec = false)
+    (hg3 : e3.gross = false)
+    (h2v : e2.vorhanden = true) (hn2 : e2.noExec = false)
+    (hg2 : e2.gross = false)
+    (h1v : e1.vorhanden = true) (hn1 : e1.noExec = false)
+    (hg1 : e1.gross = false)
+    (hnxe : st.nxe = true)
+    (h : e0.vorhanden = false) :
+    gangEbenen st q e3 e2 e1 e0 =
+      .seitenFehler q.linear
+        ⟨false, q.schreiben, q.benutzer, false, q.abruf⟩ := by
+  simp [gangEbenen, h1, h2, hk, h3, hn3, hg3, h2v, hn2, hg2, h1v, hn1,
+    hg1, hnxe, h]
+
+/-- A 1 GiB large page (PS at PDPT) is refused, not silently mapped. -/
+theorem gangEbenen_gross2 (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) (h1 : st.smep = false)
+    (h2 : st.smap = false)
+    (hk : istKanonischNat q.linear = true)
+    (h3 : e3.vorhanden = true) (hn3 : e3.noExec = false)
+    (hg3 : e3.gross = false)
+    (h2v : e2.vorhanden = true) (hn2 : e2.noExec = false)
+    (hnxe : st.nxe = true)
+    (h : e2.gross = true) :
+    gangEbenen st q e3 e2 e1 e0 = .grossVerweigert q.linear := by
+  simp [gangEbenen, h1, h2, hk, h3, hn3, hg3, h2v, hn2, hnxe, h]
+
+/-- A 2 MiB large page (PS at PD) is refused, not silently mapped. -/
+theorem gangEbenen_gross1 (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) (h1 : st.smep = false)
+    (h2 : st.smap = false)
+    (hk : istKanonischNat q.linear = true)
+    (h3 : e3.vorhanden = true) (hn3 : e3.noExec = false)
+    (hg3 : e3.gross = false)
+    (h2v : e2.vorhanden = true) (hn2 : e2.noExec = false)
+    (hg2 : e2.gross = false)
+    (h1v : e1.vorhanden = true) (hn1 : e1.noExec = false)
+    (hnxe : st.nxe = true)
+    (h : e1.gross = true) :
+    gangEbenen st q e3 e2 e1 e0 = .grossVerweigert q.linear := by
+  simp [gangEbenen, h1, h2, hk, h3, hn3, hg3, h2v, hn2, hg2, h1v, hn1,
+    hnxe, h]
+
+/-- A reached leaf runs the leaf check on the AND/OR-combined rights:
+    the combination is checked, not just written. -/
+theorem gangEbenen_rechte (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (e3 e2 e1 e0 : SeitenEintrag) (h1 : st.smep = false)
+    (h2 : st.smap = false)
+    (hk : istKanonischNat q.linear = true)
+    (h3 : e3.vorhanden = true) (hn3 : e3.noExec = false)
+    (hg3 : e3.gross = false)
+    (h2v : e2.vorhanden = true) (hn2 : e2.noExec = false)
+    (hg2 : e2.gross = false)
+    (h1v : e1.vorhanden = true) (hn1 : e1.noExec = false)
+    (hg1 : e1.gross = false)
+    (h0v : e0.vorhanden = true) (hn0 : e0.noExec = false)
+    (hg0 : e0.gross = false)
+    (hnxe : st.nxe = true) :
+    gangEbenen st q e3 e2 e1 e0 =
+      blattPruefung st q (gangRechte e3 e2 e1 e0).1
+        (gangRechte e3 e2 e1 e0).2.1
+        (gangRechte e3 e2 e1 e0).2.2 e0.rahmen := by
+  simp [gangEbenen, gangRechte, h1, h2, hk, h3, hn3, hg3, h2v, hn2, hg2,
+    h1v, hn1, hg1, h0v, hn0, hg0, hnxe]
+
+/-- CR0.WP protects a read-only leaf against supervisor writes. -/
+theorem blatt_wp_schuetzt (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (effRW effUS : Bool) (rahmen : Nat) (hwp : st.wp = true)
+    (hsch : q.schreiben = true) (hben : q.benutzer = false)
+    (hab : q.abruf = false) (hrw : effRW = false) :
+    blattPruefung st q effRW effUS false rahmen =
+      .seitenFehler q.linear ⟨true, true, false, false, false⟩ := by
+  simp [blattPruefung, hwp, hsch, hben, hab, hrw]
+
+/-- With WP off, the supervisor write to a read-only leaf succeeds. -/
+theorem blatt_wp_offen_erlaubt (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (effUS : Bool) (rahmen : Nat) (hwp : st.wp = false)
+    (hsch : q.schreiben = true) (hben : q.benutzer = false)
+    (hab : q.abruf = false) :
+    blattPruefung st q false effUS false rahmen =
+      .ok (rahmen * 4096 + gangOffset q.linear) := by
+  simp [blattPruefung, hwp, hsch, hben, hab]
+
+/-- A user write to a read-only leaf faults whatever WP says. -/
+theorem blatt_benutzer_schreibschutz (st : SeitenSteuerung)
+    (q : SeitenAnfrage) (rahmen : Nat) (hsch : q.schreiben = true)
+    (hben : q.benutzer = true) (hab : q.abruf = false) :
+    blattPruefung st q false true false rahmen =
+      .seitenFehler q.linear ⟨true, true, true, false, false⟩ := by
+  simp [blattPruefung, hsch, hben, hab]
+
+/-- A fetch through an execute-disabled path faults with I/D set. -/
+theorem blatt_abruf_xd (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (effRW effUS : Bool) (rahmen : Nat) (hab : q.abruf = true) :
+    blattPruefung st q effRW effUS true rahmen =
+      .seitenFehler q.linear
+        ⟨true, q.schreiben, q.benutzer, false, true⟩ := by
+  simp [blattPruefung, hab]
+
+/-- A user read of a user leaf succeeds. -/
+theorem blatt_lese_ok (st : SeitenSteuerung) (q : SeitenAnfrage)
+    (effRW effXD : Bool) (rahmen : Nat) (hsch : q.schreiben = false)
+    (hben : q.benutzer = true) (hab : q.abruf = false) :
+    blattPruefung st q effRW true effXD rahmen =
+      .ok (rahmen * 4096 + gangOffset q.linear) := by
+  simp [blattPruefung, hsch, hben, hab]
+
 /- CUTS (skeleton):
    NOT proved here, and not claimed:
    - Everything in the lane task: walk, permission combination, WP,
