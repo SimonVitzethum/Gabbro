@@ -92,6 +92,21 @@ memory-type aliasing reserved per SDM (WC-first read order stated);
 cross-core WC same-line eviction order and WC read ordering OPEN;
 no W/GX simulation; no source/checker/goal/emitter correspondence.
 
+## Independent review 1288 -- response
+
+Review lane 1288 returned `VERDICT: REPAIR` as an explicitly
+procedural verdict: the reviewer could not access the candidate diff
+from its clone and states "No claim is made about candidate 1287's
+correctness, axioms, witnesses, silicon accuracy, or mergeability."
+It contains zero semantic findings against this deliverable, so there
+is nothing to repair and no guarantee was weakened in response.
+Fresh re-check after the review, tree clean at `162a6d02`:
+`./lean-probe grammatik/Grammatik/X86/HwMemTypesWC.lean`:
+`== 0 error(s) in the COMPLETE output; exit 0`.
+Deliverable unchanged; the exact review remains open on the
+coordinator side (needs the candidate materialised in the reviewer
+clone, per the 1288 report's own diagnosis).
+
 ## Task feedback
 
 Nothing in the task is wrong. Two readings worth recording: (1) the
