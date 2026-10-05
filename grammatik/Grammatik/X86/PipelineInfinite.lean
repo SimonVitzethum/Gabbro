@@ -57,6 +57,147 @@ def laufBudget : Nat → Zustand → BudgetAusgang
       | .fertig k s'' => .fertig (k + 1) s''
       | .stopp k s'' => .stopp (k + 1) s''
 
+/-! ## 2. Prefixes of byte runs (machine level, no source)
+
+    A successful run succeeds on every prefix; a refused run stays refused
+    under more fuel. Pure facts of `laufBytes`, reused by the pipeline
+    theorems below. -/
+
+/-- PREFIX SUCCESS: every prefix of a successful byte run succeeds. -/
+theorem laufBytes_praefix_erfolg (n k : Nat) (s s' : Zustand)
+    (h : laufBytes n s = .weiter s') (hk : k ≤ n) :
+    ∃ sk, laufBytes k s = .weiter sk := by
+  induction n generalizing k s with
+  | zero =>
+    obtain rfl : k = 0 := Nat.le_zero.mp hk
+    exact ⟨s, rfl⟩
+  | succ n ih =>
+    cases hb : byteschritt s with
+    | verweigert =>
+      simp only [laufBytes, hb] at h
+      cases h
+    | weiter s1 =>
+      simp only [laufBytes, hb] at h
+      cases k with
+      | zero => exact ⟨s, rfl⟩
+      | succ j =>
+        obtain ⟨sk, hsk⟩ := ih j s1 h (by omega)
+        exact ⟨sk, by simp only [laufBytes, hb]; exact hsk⟩
+
+/-- REFUSAL MONOTONICITY: a refused run stays refused under more fuel. -/
+theorem laufBytes_verweigert_plus : ∀ (m j : Nat) (s : Zustand),
+    laufBytes m s = .verweigert → laufBytes (m + j) s = .verweigert
+  | 0, j, s, h => by
+    simp only [laufBytes] at h
+    cases h
+  | m + 1, j, s, h => by
+    cases hb : byteschritt s with
+    | verweigert =>
+      have he : m + 1 + j = (m + j) + 1 := by omega
+      rw [he]
+      simp only [laufBytes, hb]
+    | weiter s1 =>
+      have he : m + 1 + j = (m + j) + 1 := by omega
+      simp only [laufBytes, hb] at h
+      rw [he]
+      simp only [laufBytes, hb]
+      exact laufBytes_verweigert_plus m j s1 h
+
+/-! ## 3. The budgeted runner is faithful
+
+    `fertig` means the whole budget ran clean; `stopp` means a defined stop
+    after `k` steps. Both directions are proved from the definitions. -/
+
+/-- `fertig` ran the whole budget: `k = n` and the plain run succeeds. -/
+theorem laufBudget_fertig : ∀ (n : Nat) (s : Zustand) (k : Nat) (s' : Zustand),
+    laufBudget n s = .fertig k s' → k = n ∧ laufBytes n s = .weiter s'
+  | 0, s, k, s', h => by
+    simp only [laufBudget] at h
+    cases h
+    exact ⟨rfl, rfl⟩
+  | n + 1, s, k, s', h => by
+    cases hb : byteschritt s with
+    | verweigert =>
+      simp only [laufBudget, hb] at h
+      cases h
+    | weiter s1 =>
+      simp only [laufBudget, hb] at h
+      cases hl : laufBudget n s1 with
+      | fertig k1 s1' =>
+        rw [hl] at h
+        dsimp only at h
+        cases h
+        obtain ⟨hk1, hrun⟩ := laufBudget_fertig n s1 k1 s' hl
+        refine ⟨by omega, ?_⟩
+        simp only [laufBytes, hb]
+        exact hrun
+      | stopp k1 s1' =>
+        rw [hl] at h
+        dsimp only at h
+        cases h
+
+/-- `stopp` met a defined stop: `k ≤ n`, the `k`-prefix succeeds, and the
+    prefix state has no transition. -/
+theorem laufBudget_stopp : ∀ (n : Nat) (s : Zustand) (k : Nat) (s' : Zustand),
+    laufBudget n s = .stopp k s' →
+      k ≤ n ∧ laufBytes k s = .weiter s' ∧ byteschritt s' = .verweigert
+  | 0, s, k, s', h => by
+    simp only [laufBudget] at h
+    cases h
+  | n + 1, s, k, s', h => by
+    cases hb : byteschritt s with
+    | verweigert =>
+      simp only [laufBudget, hb] at h
+      cases h
+      exact ⟨Nat.zero_le _, rfl, hb⟩
+    | weiter s1 =>
+      simp only [laufBudget, hb] at h
+      cases hl : laufBudget n s1 with
+      | fertig k1 s1' =>
+        rw [hl] at h
+        dsimp only at h
+        cases h
+      | stopp k1 s1' =>
+        rw [hl] at h
+        dsimp only at h
+        cases h
+        obtain ⟨hk1, hrun, hst⟩ := laufBudget_stopp n s1 k1 s' hl
+        refine ⟨by omega, ?_, hst⟩
+        simp only [laufBytes, hb]
+        exact hrun
+
+/-- REFUSAL STABILITY: once the budgeted runner stops, more fuel stays
+    stopped at the same state. The runner refuses to step past a stop. -/
+theorem laufBudget_stopp_stabil : ∀ (n j : Nat) (s : Zustand) (k : Nat) (s' : Zustand),
+    laufBudget n s = .stopp k s' → laufBudget (n + j) s = .stopp k s'
+  | 0, j, s, k, s', h => by
+    simp only [laufBudget] at h
+    cases h
+  | n + 1, j, s, k, s', h => by
+    cases hb : byteschritt s with
+    | verweigert =>
+      simp only [laufBudget, hb] at h
+      cases h
+      have he : n + 1 + j = (n + j) + 1 := by omega
+      rw [he]
+      simp only [laufBudget, hb]
+    | weiter s1 =>
+      simp only [laufBudget, hb] at h
+      cases hl : laufBudget n s1 with
+      | fertig k1 s1' =>
+        rw [hl] at h
+        dsimp only at h
+        cases h
+      | stopp k1 s1' =>
+        rw [hl] at h
+        dsimp only at h
+        cases h
+        have he : n + 1 + j = (n + j) + 1 := by omega
+        have ih := laufBudget_stopp_stabil n j s1 k1 s' hl
+        rw [he]
+        simp only [laufBudget, hb]
+        rw [ih]
+
 /- CUTS (preliminary; extended with every addition):
     Infinite traces past the corresponding end, termination of the target
     run, progress/fairness of any scheduler: NOT claimed (see task). -/
