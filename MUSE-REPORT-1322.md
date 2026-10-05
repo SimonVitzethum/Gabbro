@@ -103,8 +103,11 @@ its delivered path instead; imports resolve against my clone's
 `grammatik/` and the output elaborates the candidate's own
 definitions and axioms, so the check is exact.
 
-## VERDICT: ACCEPT
+## Verdict
 
-CANDIDATE: 1321 32278d455bac0a4cf835fa2839abdf9d9ba7f68a — ACCEPT.
 No unsupported desired-correctness premises, no weakened
-guarantees, no fake closure.
+guarantees, no fake closure. Substantive verdict unchanged from
+the committed review: accept.
+
+CANDIDATE: 1321 32278d455bac0a4cf835fa2839abdf9d9ba7f68a
+VERDICT: ACCEPT
