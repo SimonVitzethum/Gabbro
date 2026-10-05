@@ -1253,10 +1253,327 @@ theorem vecSpeichere_ist_schritt (m : HwMaschine) (c : Nat)
           rw [hwr] at h
           dsimp only at h
           cases h
-        | some s' =>
-          rw [hwr] at h
-          dsimp only at h
-          obtain rfl := Option.some_inj.mp h
-          exact .speichereU hop hg1 hg2 hwr
+          | some s' =>
+            rw [hwr] at h
+            dsimp only at h
+            obtain rfl := Option.some_inj.mp h
+            exact .speichereU hop hg1 hg2 hwr
+
+/-! ## 8. Planted refusals: gates refuse, never guess.
+
+  Each enabled-state side (silicon SSE2, control freedom, OS vector
+  state, finite profile admission), the decode length, `#GP`
+  alignment and per-byte permissions refuse explicitly -- on the
+  machine plugs, reusing the accepted gate lemmas. -/
+
+/-- A bad decode length refuses the register plug. -/
+theorem vecReg_laenge_verweigert (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (hreg : istVecRegisterOp d.op = true)
+    (h : laengeOk d.laenge = false) :
+    vecRegSchritt m c cpu k d = none := by
+  have hn := stepIntVec_laenge_verweigert d (projFp m c) m.hw
+    (m.bereit c) cpu k h
+  simp only [vecRegSchritt, if_pos hreg, hn]
+
+/-- Refused legacy admission refuses the register plug (validator
+    admission, not a hardware fault). -/
+theorem vecReg_profil_verweigert (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (hok : laengeOk d.laenge = true)
+    (hreg : istVecRegisterOp d.op = true)
+    (h : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = false) :
+    vecRegSchritt m c cpu k d = none := by
+  have hn := stepIntVec_profil_verweigert d (projFp m c) m.hw
+    (m.bereit c) cpu k hok h
+  simp only [vecRegSchritt, if_pos hreg, hn]
+
+/-- No silicon SSE2 refuses, whatever the rest claims. -/
+theorem vecReg_ohne_cpu (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (k : KontrollBild) (d : IntVecDec)
+    (hok : laengeOk d.laenge = true)
+    (hreg : istVecRegisterOp d.op = true)
+    (hcpu : cpu.hatSse2 = false) :
+    vecRegSchritt m c cpu k d = none := by
+  have hg := vektorLegacy_ohne_cpu m.hw (m.bereit c) cpu k hcpu
+  exact vecReg_profil_verweigert m c cpu k d hok hreg hg
+
+/-- Set control bits (emulation or task-switch) refuse. -/
+theorem vecReg_ohne_kontrolle (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (hok : laengeOk d.laenge = true)
+    (hreg : istVecRegisterOp d.op = true)
+    (hk : kontrollSseLegacyFrei k = false) :
+    vecRegSchritt m c cpu k d = none := by
+  have hg := vektorLegacy_ohne_kontrolle m.hw (m.bereit c) cpu k hk
+  exact vecReg_profil_verweigert m c cpu k d hok hreg hg
+
+/-- A cleared OS vector-state bit refuses. -/
+theorem vecReg_ohne_osxmm (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (k : KontrollBild) (d : IntVecDec)
+    (hok : laengeOk d.laenge = true)
+    (hreg : istVecRegisterOp d.op = true)
+    (hos : (m.bereit c).osXmm = false) :
+    vecRegSchritt m c cpu k d = none := by
+  have hg := vektorLegacy_ohne_osxmm m.hw (m.bereit c) cpu k hos
+  exact vecReg_profil_verweigert m c cpu k d hok hreg hg
+
+/-- A refused finite profile refuses, however ready the rest is. -/
+theorem vecReg_ohne_merkmal (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (hok : laengeOk d.laenge = true)
+    (hreg : istVecRegisterOp d.op = true)
+    (hm : merkmalZugelassen m.hw (m.bereit c) .paketInt128 = false) :
+    vecRegSchritt m c cpu k d = none := by
+  have hg : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = false := by
+    unfold vektorLegacyZugelassen
+    simp [hm]
+  exact vecReg_profil_verweigert m c cpu k d hok hreg hg
+
+/-- SHARED ROW: the admitted PXOR rides the machine plug exactly as
+    the accepted gated step under the old (stronger) gate. -/
+theorem vecRegSchritt_pxor_agree (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (dst src : XmmReg) (n : Nat) (t' : FpZustand)
+    (hgate : vektorHwZugelassen m.hw (m.bereit c) cpu x k = true)
+    (hok : laengeOk n = true)
+    (hs : stepVector (⟨.pxorRR dst src, n⟩ : VectorDec) (projFp m c)
+      (m.bereit c) = some t') :
+    vecRegSchritt m c cpu k ⟨.pxorRR dst src, n⟩ =
+      some (setKernVonFp m c t') := by
+  have hs' := stepIntVec_pxor_agree_step (⟨.pxorRR dst src, n⟩ : VectorDec)
+    (projFp m c) t' m.hw (m.bereit c) cpu x k dst src hgate hok rfl hs
+  exact vecRegSchritt_gleich m c cpu k ⟨.pxorRR dst src, n⟩ t' rfl hs'
+
+/-- SHARED ROW: the admitted PADDQ rides the machine plug exactly as
+    the accepted gated step under the old (stronger) gate. -/
+theorem vecRegSchritt_paddq_agree (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (dst src : XmmReg) (n : Nat) (t' : FpZustand)
+    (hgate : vektorHwZugelassen m.hw (m.bereit c) cpu x k = true)
+    (hok : laengeOk n = true)
+    (hs : stepVector (⟨.paddqRR dst src, n⟩ : VectorDec) (projFp m c)
+      (m.bereit c) = some t') :
+    vecRegSchritt m c cpu k ⟨.paddqRR dst src, n⟩ =
+      some (setKernVonFp m c t') := by
+  have hs' := stepIntVec_paddq_agree_step (⟨.paddqRR dst src, n⟩ : VectorDec)
+    (projFp m c) t' m.hw (m.bereit c) cpu x k dst src hgate hok rfl hs
+  exact vecRegSchritt_gleich m c cpu k ⟨.paddqRR dst src, n⟩ t' rfl hs'
+
+/-- FETCH BRIDGE: a fetched selected form steps through the register
+    plug and through the fetched byte step together, with canonical
+    memory unchanged. A forged `IntVecDec` cannot inject an
+    instruction: only `fetchIntVec` over actual memory feeds the step;
+    the length guard comes from the fetch discipline itself and the
+    hardware gate is recovered from the successful selected step,
+    never assumed. -/
+theorem hvec_fetch_bruecke (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (k : KontrollBild) (d : IntVecDec) (rest : List Byte)
+    (t' : FpZustand)
+    (hf : fetchIntVec (projFp m c) (geholt (projZustand m c)) =
+      some (d, rest))
+    (hreg : istVecRegisterOp d.op = true)
+    (hs : stepIntVec d (projFp m c) m.hw (m.bereit c) cpu k =
+      some t') :
+    vecRegSchritt m c cpu k d = some (setKernVonFp m c t') ∧
+      intVecByteschritt (projFp m c) m.hw (m.bereit c) cpu k =
+        some t' ∧
+      t'.kern.speicher = m.mem := by
+  have hok : laengeOk d.laenge = true :=
+    (fetchIntVec_erfolg (projFp m c) (geholt (projZustand m c)) d rest
+      hf).2.2.1
+  have hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true := by
+    cases hg : vektorLegacyZugelassen m.hw (m.bereit c) cpu k with
+    | true => rfl
+    | false =>
+      have hn := stepIntVec_profil_verweigert d (projFp m c) m.hw
+        (m.bereit c) cpu k hok hg
+      rw [hn] at hs
+      cases hs
+  refine ⟨vecRegSchritt_gleich m c cpu k d t' hreg hs,
+    intVec_fetch_bridge _ _ _ _ _ _ _ _ hf hs, ?_⟩
+  exact vecRegSchritt_speicher d (projFp m c) t' m.hw (m.bereit c)
+    cpu k hreg hok hgate hs
+
+/-- A fold of issues refuses wherever any entry lacks write
+    permission: one refused byte fails the whole vector. Permissions
+    survive each issue, so the first refusal is reached. -/
+theorem issueListe_verweigert (l : List TSOEintrag) (s : TSOZustand)
+    (c : Nat) (e : TSOEintrag) (hmem : e ∈ l)
+    (h : s.mem.schreibbar e.addr = false) :
+    issueListe s c l = none := by
+  induction l generalizing s with
+  | nil =>
+    simp at hmem
+  | cons hd tl ih =>
+    have heq : issueListe s c (hd :: tl) =
+        match issueByte s c hd.addr hd.wert with
+        | none => (none : Option TSOZustand)
+        | some s1 => issueListe s1 c tl := rfl
+    rw [heq]
+    simp only [List.mem_cons] at hmem
+    rcases hmem with hhead | hmem2
+    · rw [hhead] at h
+      have hn : issueByte s c hd.addr hd.wert = none := by
+        unfold issueByte
+        simp [h]
+      rw [hn]
+    · cases hb : issueByte s c hd.addr hd.wert with
+      | none => rfl
+      | some s1 =>
+        have hperm : s1.mem.schreibbar e.addr = false := by
+          have hp := issue_erhaelt_berechtigungen s s1 c hd.addr
+            hd.wert hb
+          rw [hp.2.1]
+          exact h
+        exact ih s1 hmem2 hperm
+
+/-- A low-chunk entry is in the sixteen, by offset. -/
+theorem vecEintraege_mem_lo_entry (a : Adresse) (v : Vektor) (k : Nat)
+    (hk : k < 8) :
+    (⟨addrOff a k, wortByte (vLo v) k⟩ : TSOEintrag) ∈
+      vecEintraege a v := by
+  have hk8 : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨
+      k = 6 ∨ k = 7 := by
+    omega
+  rcases hk8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  · exact List.Mem.head _
+  · exact List.Mem.tail _ (List.Mem.head _)
+  · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
+  · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+      (List.Mem.head _)))
+  · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+      (List.Mem.tail _ (List.Mem.head _))))
+  · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+      (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))
+  · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+      (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+      (List.Mem.head _))))))
+  · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+      (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+      (List.Mem.tail _ (List.Mem.head _)))))))
+
+/-- A store without write permission at any low-chunk byte refuses on
+    the machine (the `#GP` classification passes; the byte issue
+    fails). -/
+theorem vecSpeicherSchritt_schreibrecht (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (base : Register)
+    (src : XmmReg) (disp : BitVec 32) (n k0 : Nat) (hk0 : k0 < 8)
+    (hok : laengeOk n = true)
+    (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+    (hperm : (tsoAnsicht m).mem.schreibbar
+      (addrOff (effAddr (projZustand m c) base disp) k0) = false) :
+    vecSpeicherSchritt m c cpu k ⟨.movdquSt base src disp, n⟩ =
+      none := by
+  have hn : vecSpeichern (tsoAnsicht m) c
+      (effAddr (projZustand m c) base disp) ((projFp m c).xmm src) =
+      none := by
+    have hmem := vecEintraege_mem_lo_entry
+      (effAddr (projZustand m c) base disp) ((projFp m c).xmm src) k0 hk0
+    exact issueListe_verweigert _ _ _ _ hmem hperm
+  simp only [vecSpeicherSchritt, hok, hgate, hn]
+
+/-- A chunk load with an unreadable byte refuses: one failed `loadByte`
+    fails the whole chunk. Cases on all eight bytes; the failing byte
+    contradicts its `some` equation. -/
+theorem ladeAcht_verweigert (s : TSOZustand) (c : Nat) (a : Adresse)
+    (k0 : Nat) (hk0 : k0 < 8)
+    (h : loadByte s c (addrOff a k0) = none) :
+    ladeAcht s c a = none := by
+  unfold ladeAcht
+  cases h0 : loadByte s c (addrOff a 0) with
+  | none => rfl
+  | some b0 =>
+    cases h1 : loadByte s c (addrOff a 1) with
+    | none => rfl
+    | some b1 =>
+      cases h2 : loadByte s c (addrOff a 2) with
+      | none => rfl
+      | some b2 =>
+        cases h3 : loadByte s c (addrOff a 3) with
+        | none => rfl
+        | some b3 =>
+          cases h4 : loadByte s c (addrOff a 4) with
+          | none => rfl
+          | some b4 =>
+            cases h5 : loadByte s c (addrOff a 5) with
+            | none => rfl
+            | some b5 =>
+              cases h6 : loadByte s c (addrOff a 6) with
+              | none => rfl
+              | some b6 =>
+                cases h7 : loadByte s c (addrOff a 7) with
+                | none => rfl
+                | some b7 =>
+                  have hk8 : k0 = 0 ∨ k0 = 1 ∨ k0 = 2 ∨ k0 = 3 ∨
+                      k0 = 4 ∨ k0 = 5 ∨ k0 = 6 ∨ k0 = 7 := by
+                    omega
+                  rcases hk8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+                  · rw [h0] at h
+                    cases h
+                  · rw [h1] at h
+                    cases h
+                  · rw [h2] at h
+                    cases h
+                  · rw [h3] at h
+                    cases h
+                  · rw [h4] at h
+                    cases h
+                  · rw [h5] at h
+                    cases h
+                  · rw [h6] at h
+                    cases h
+                  · rw [h7] at h
+                    cases h
+
+/-- A load without read permission at any low-chunk byte refuses on
+    the machine. -/
+theorem vecLadeSchritt_leserecht (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (dst : XmmReg)
+    (base : Register) (disp : BitVec 32) (n k0 : Nat) (hk0 : k0 < 8)
+    (hok : laengeOk n = true)
+    (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+    (hperm : loadByte (tsoAnsicht m) c
+      (addrOff (effAddr (projZustand m c) base disp) k0) = none) :
+    vecLadeSchritt m c cpu k ⟨.movdquLd dst base disp, n⟩ = none := by
+  have hn : ladeAcht (tsoAnsicht m) c
+      (effAddr (projZustand m c) base disp) = none :=
+    ladeAcht_verweigert _ _ _ k0 hk0 hperm
+  have hnV : vecLaden (tsoAnsicht m) c
+      (effAddr (projZustand m c) base disp) = none := by
+    have e : vecLaden (tsoAnsicht m) c
+        (effAddr (projZustand m c) base disp) =
+        match ladeAcht (tsoAnsicht m) c
+          (effAddr (projZustand m c) base disp),
+          ladeAcht (tsoAnsicht m) c
+            (vecHiAddr (effAddr (projZustand m c) base disp)) with
+        | some lo, some hi => some (vecJoin lo hi)
+        | _, _ => (none : Option Vektor) := rfl
+    rw [e, hn]
+  simp only [vecLadeSchritt, hok, hgate, hnV]
+
+/-- A `#GP` classification refuses the aligned machine load (the
+    decoder accepts these bytes; the step refuses them). -/
+theorem vecLadeSchritt_gp_a (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (dst : XmmReg)
+    (base : Register) (disp : BitVec 32) (n : Nat)
+    (hok : laengeOk n = true)
+    (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+    (hgp : vektorGpFehler (effAddr (projZustand m c) base disp)
+      .ausgerichtet = true) :
+    vecLadeSchritt m c cpu k ⟨.movdqaLd dst base disp, n⟩ = none := by
+  simp only [vecLadeSchritt, hok, hgate, if_pos hgp]
+
+/-- A `#GP` classification refuses the aligned machine store. -/
+theorem vecSpeicherSchritt_gp_a (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (base : Register)
+    (src : XmmReg) (disp : BitVec 32) (n : Nat)
+    (hok : laengeOk n = true)
+    (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+    (hgp : vektorGpFehler (effAddr (projZustand m c) base disp)
+      .ausgerichtet = true) :
+    vecSpeicherSchritt m c cpu k ⟨.movdqaSt base src disp, n⟩ =
+      none := by
+  simp only [vecSpeicherSchritt, hok, hgate, if_pos hgp]
 
 end Gabbro.Grammatik.X86
