@@ -1,5 +1,8 @@
 # MUSE-REPORT-1322
 
+CANDIDATE: 1321 32278d455bac0a4cf835fa2839abdf9d9ba7f68a
+VERDICT: ACCEPT
+
 Independent exact review of lane 1321 (candidate head
 32278d455bac0a4cf835fa2839abdf9d9ba7f68a, base f92c2649).
 
@@ -103,11 +106,9 @@ its delivered path instead; imports resolve against my clone's
 `grammatik/` and the output elaborates the candidate's own
 definitions and axioms, so the check is exact.
 
-## Verdict
+## Verdict rationale
 
 No unsupported desired-correctness premises, no weakened
 guarantees, no fake closure. Substantive verdict unchanged from
-the committed review: accept.
-
-CANDIDATE: 1321 32278d455bac0a4cf835fa2839abdf9d9ba7f68a
-VERDICT: ACCEPT
+the committed review: accept. Reasons are the findings and build
+results above.
