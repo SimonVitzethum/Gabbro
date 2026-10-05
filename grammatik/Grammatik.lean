@@ -679,3 +679,4 @@ import Grammatik.X86.HwPaging
 import Grammatik.X86.HwMemTypesWC
 import Grammatik.X86.IntCarryForms
 import Grammatik.X86.IntBitTest
+import Grammatik.X86.HwKapsteinSteps

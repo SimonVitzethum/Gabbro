@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 18:51 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 18:52 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -700,17 +700,17 @@ Last ledger refresh: **2026-10-05 18:51 UTC**. This is an operational snapshot, 
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1287.md) |
-| 1289 | Capstone: union steps for the embedded-by-equation tags, and the two plug-less families | Committed candidate; review/integration pending | 1290: Committed candidate; review/integration pending | [task](lanes/1289.md) |
+| 1289 | Capstone: union steps for the embedded-by-equation tags, and the two plug-less families | Merged after review/checks | 1290: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1289.md) |
 | 1291 | Capstone: byte-decoder disjointness across all families | Committed candidate; review/integration pending | 1292: Committed candidate; review/integration pending | [task](lanes/1291.md) |
 | 1293 | Capstone: a reached multi-family program run on two cores from bytes | Committed candidate; review/integration pending | 1294: Agent working | [task](lanes/1293.md) |
 | 1295 | Capstone: every union step projects to the TSO store-buffer model | Committed candidate; review/integration pending | 1296: Incomplete; preserved | [task](lanes/1295.md) |
-| 1297 | Paging follow-up: large pages and SMEP/SMAP | Committed candidate; review/integration pending | 1298: scheduled | [task](lanes/1297.md) |
+| 1297 | Paging follow-up: large pages and SMEP/SMAP | Committed candidate; review/integration pending | 1298: Agent working | [task](lanes/1297.md) |
 | 1299 | Translation: the page walk joined with the TLB and the flat memory model | Committed candidate; review/integration pending | 1300: Committed candidate; review/integration pending | [task](lanes/1299.md) |
 | 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Agent working | 1302: scheduled | [task](lanes/1301.md) |
 | 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Agent working | 1304: scheduled | [task](lanes/1303.md) |
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
 | 1307 | FP store forms: drain equals the 32-bit write | Committed candidate; review/integration pending | 1308: Committed candidate; review/integration pending | [task](lanes/1307.md) |
-| 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Committed candidate; review/integration pending | 1310: Agent working | [task](lanes/1309.md) |
+| 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Committed candidate; review/integration pending | 1310: Committed candidate; review/integration pending | [task](lanes/1309.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1688,6 +1688,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1277**, Bit test family: BT, BTS, BTR, BTC, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1277.md). <!-- x86-merged:1277 -->
 - 2026-10-05: checked master `73c27ac5` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:73c27ac5753b40009d00ebcc96ead031e839b8d8 -->
 - 2026-10-05: lane **1278**, Independent exact review of 1277, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1278.md). <!-- x86-merged:1278 -->
+- 2026-10-05: lane **1289**, Capstone: union steps for the embedded-by-equation tags, and the two plug-less families, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1289.md). <!-- x86-merged:1289 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
