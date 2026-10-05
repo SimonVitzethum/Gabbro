@@ -150,6 +150,94 @@ theorem sx_cqo_ist_vor99 (l : Nat) (s : Zustand) :
     sxSchritt ⟨.cqo, l⟩ s = wdSchritt ⟨.vor99 .w64, l⟩ s := by
   cases h : laengeOk l <;> simp [sxSchritt, wdSchritt, h]
 
+/-! ## 3. Read-back, flag silence and memory silence of the fresh arms.
+
+    No fresh arm changes flags (the manual rows for CBW/CWDE/CDQE,
+    CWD/CDQ/CQO, XCHG and MOVSXD all read "Flags Affected: None")
+    and no fresh arm touches memory. -/
+
+/-- The exchange shape as nested register updates (old values). -/
+theorem xchgSchritt_eq (b : Breite) (a c : Register) (s : Zustand) :
+    (xchgSchritt b a c s).register =
+      regSet (regSet s.register a (xchgSeite b (s.register a) (s.register c))) c
+        (xchgSeite b (s.register c) (s.register a)) := by
+  rfl
+
+/-- Read-back at the first side (distinct registers). -/
+theorem xchgSchritt_bei_a_neq (b : Breite) (a c : Register) (s : Zustand)
+    (hne : a ≠ c) :
+    (xchgSchritt b a c s).register a =
+      xchgSeite b (s.register a) (s.register c) := by
+  rw [xchgSchritt_eq]
+  rw [regSet_fremd _ c a _ hne]
+  exact regSet_gleich _ _ _
+
+/-- Read-back at the second side (no side condition). -/
+theorem xchgSchritt_bei_c (b : Breite) (a c : Register) (s : Zustand) :
+    (xchgSchritt b a c s).register c =
+      xchgSeite b (s.register c) (s.register a) := by
+  rw [xchgSchritt_eq]
+  exact regSet_gleich _ _ _
+
+/-- CBW keeps the flags. -/
+theorem cbwSchritt_flags (s : Zustand) : (cbwSchritt s).flags = s.flags := rfl
+
+/-- CBW keeps the memory. -/
+theorem cbwSchritt_memory (s : Zustand) : (cbwSchritt s).speicher = s.speicher := rfl
+
+/-- CWD keeps the flags. -/
+theorem cwdSchritt_flags (s : Zustand) : (cwdSchritt s).flags = s.flags := rfl
+
+/-- CWD keeps the memory. -/
+theorem cwdSchritt_memory (s : Zustand) : (cwdSchritt s).speicher = s.speicher := rfl
+
+/-- Exchanges keep the flags. -/
+theorem xchgSchritt_flags (b : Breite) (a c : Register) (s : Zustand) :
+    (xchgSchritt b a c s).flags = s.flags := rfl
+
+/-- Exchanges keep the memory. -/
+theorem xchgSchritt_memory (b : Breite) (a c : Register) (s : Zustand) :
+    (xchgSchritt b a c s).speicher = s.speicher := rfl
+
+/-- MOVSXD keeps the flags. -/
+theorem movsxdSchritt_flags (dst src : Register) (s : Zustand) :
+    (movsxdSchritt dst src s).flags = s.flags := rfl
+
+/-- MOVSXD keeps the memory. -/
+theorem movsxdSchritt_memory (dst src : Register) (s : Zustand) :
+    (movsxdSchritt dst src s).speicher = s.speicher := rfl
+
+/-- Pinned CBW: `AL = 0xFF` (-1) extends to `AX = 0xFFFF`. -/
+theorem probe_cbw_sext :
+    mergeRegNarrow .b16 0 (sext .b8 0xFF) = 0xFFFF := by
+  decide
+
+/-- Pinned CWD merge: a broadcast `0xFFFF` lands in DX, RDX kept. -/
+theorem probe_cwd_merge :
+    mergeRegNarrow .b16 0xABCDEF1234560000 0xFFFF =
+      0xABCDEF123456FFFF := by
+  decide
+
+/-- Pinned 32-bit exchange side: zero-extends the other word. -/
+theorem probe_xchgSeite_32 :
+    xchgSeite .b32 0xFFFFFFFFFFFFFFFF 0x11223344 = 0x11223344 := by
+  decide
+
+/-- Pinned 8-bit exchange side: merges the low byte, keeps upper. -/
+theorem probe_xchgSeite_8 :
+    xchgSeite .b8 0xABCDEF1234567890 0x11 = 0xABCDEF1234567811 := by
+  decide
+
+/-- Pinned MOVSXD: `-1` as doubleword extends to all ones. -/
+theorem probe_movsxd_neg1 :
+    sext .b32 0xFFFFFFFF = 0xFFFFFFFFFFFFFFFF := by
+  decide
+
+/-- Pinned MOVSXD: a positive doubleword is unchanged. -/
+theorem probe_movsxd_pos :
+    sext .b32 0x7FFFFFFF = 0x7FFFFFFF := by
+  decide
+
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
    NOT proved here, and not claimed: everything (see task).
