@@ -605,6 +605,202 @@ theorem hwWcZaun_fremdWc (w w' : HwWcMaschine1287) (c : Nat)
       cases h
       exact pufferSetze_anders _ _ hd
 
+/-! ## 5. The family plug as an `HwAdapter`, with planted refusals.
+
+  The type profile rides the event as checked input data (as 1133's
+  `UcZugriff1133` carries its `UcProfil`). WC stores are admitted
+  under their gate with the machine unchanged (the bypass content --
+  the WC buffer itself rides the extended relation of §3); WT/WP
+  stores write the memory byte on the bare machine (the go-through
+  content, in full); PREFETCHh is always a NOP. CLFLUSH and the fence
+  have no bare-machine plug: their effects need buffer state the
+  adapter cannot carry, so their machine-visible content rides §3
+  alone (documented, never silently admitted). -/
+
+/-- Access request on the bare coherent machine. -/
+inductive WcZugriff1287 where
+  | wcSpeichere : Adresse → Byte → TypProfil → WcZugriff1287
+  | wtSpeichere : Adresse → Byte → TypProfil → WcZugriff1287
+  | wpSpeichere : Adresse → Byte → TypProfil → WcZugriff1287
+  | holeVor : PrefetchHinweis → Adresse → WcZugriff1287
+
+/-- Adapter step on the bare machine. -/
+def wcAdapterSchritt (m : HwMaschine) (_ : Nat) :
+    WcZugriff1287 → Option HwMaschine
+  | .wcSpeichere a _ profil =>
+    if speicherTyp profil a 1 == .wc && m.mem.schreibbar a then some m
+    else none
+  | .wtSpeichere a v profil =>
+    if speicherTyp profil a 1 == .wt && m.mem.schreibbar a then
+      some { m with mem :=
+        { m.mem with bytes := fun x =>
+          if x = a then v else m.mem.bytes x } }
+    else none
+  | .wpSpeichere a v profil =>
+    if speicherTyp profil a 1 == .wp && m.mem.schreibbar a then
+      some { m with mem :=
+        { m.mem with bytes := fun x =>
+          if x = a then v else m.mem.bytes x } }
+    else none
+  | .holeVor _ _ => some m
+
+/-- The plug as a coherent-machine adapter. -/
+def adapterWc1287 : HwAdapter WcZugriff1287 := ⟨wcAdapterSchritt⟩
+
+/-- ADMITTED: a WC store under its gate steps to the same machine
+    (bypass, machine-visible content). -/
+theorem wcAdapter_wc_ok (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Byte) (profil : TypProfil)
+    (ht : speicherTyp profil a 1 = .wc)
+    (hw : m.mem.schreibbar a = true) :
+    wcAdapterSchritt m c (.wcSpeichere a v profil) = some m := by
+  have e1 : (speicherTyp profil a 1 == .wc) = true := by simp [ht]
+  have hgate : (speicherTyp profil a 1 == .wc &&
+    m.mem.schreibbar a) = true := by simp [e1, hw]
+  show (if speicherTyp profil a 1 == .wc && m.mem.schreibbar a
+    then some m else none) = some m
+  exact if_pos hgate
+
+/-- ADMITTED: a WT store under its gate writes the memory byte. -/
+theorem wcAdapter_wt_mem (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Byte) (profil : TypProfil)
+    (ht : speicherTyp profil a 1 = .wt)
+    (hw : m.mem.schreibbar a = true) :
+    ∃ m' : HwMaschine,
+      wcAdapterSchritt m c (.wtSpeichere a v profil) = some m' ∧
+        m'.mem.bytes a = v ∧ m'.puffer = m.puffer := by
+  have e1 : (speicherTyp profil a 1 == .wt) = true := by simp [ht]
+  have hgate : (speicherTyp profil a 1 == .wt &&
+    m.mem.schreibbar a) = true := by simp [e1, hw]
+  refine ⟨{ m with mem :=
+      { m.mem with bytes := fun x =>
+        if x = a then v else m.mem.bytes x } }, ?_, ?_, rfl⟩
+  · show (if speicherTyp profil a 1 == .wt && m.mem.schreibbar a
+      then some _ else none) = some _
+    rw [if_pos hgate]
+  · simp
+
+/-- ADMITTED: PREFETCHh is a NOP at every address -- no permission
+    check, no fault, machine unchanged. -/
+theorem wcAdapter_prefetch_nop (m : HwMaschine) (c : Nat)
+    (h0 : PrefetchHinweis) (a : Adresse) :
+    wcAdapterSchritt m c (.holeVor h0 a) = some m := rfl
+
+/-- REFUSED: a WC request at a WT address is no WC access. -/
+theorem wcAdapter_wc_falscherTyp (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte) (profil : TypProfil)
+    (ht : speicherTyp profil a 1 = .wt) :
+    wcAdapterSchritt m c (.wcSpeichere a v profil) = none := by
+  have hne : (speicherTyp profil a 1 == .wc) = false := by simp [ht]
+  have hgate : ¬(speicherTyp profil a 1 == .wc &&
+    m.mem.schreibbar a) = true := by simp [hne]
+  show (if speicherTyp profil a 1 == .wc && m.mem.schreibbar a
+    then (some m) else none) = none
+  exact if_neg hgate
+
+/-- REFUSED: a WC request at a UC address is no WC access (lane
+    1133 owns UC). -/
+theorem wcAdapter_wc_nichtUc (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte) (profil : TypProfil)
+    (ht : speicherTyp profil a 1 = .uc) :
+    wcAdapterSchritt m c (.wcSpeichere a v profil) = none := by
+  have hne : (speicherTyp profil a 1 == .wc) = false := by simp [ht]
+  have hgate : ¬(speicherTyp profil a 1 == .wc &&
+    m.mem.schreibbar a) = true := by simp [hne]
+  show (if speicherTyp profil a 1 == .wc && m.mem.schreibbar a
+    then (some m) else none) = none
+  exact if_neg hgate
+
+/-- REFUSED: without write permission no typed store is admitted. -/
+theorem wcAdapter_ohneSchreibrecht (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte) (profil : TypProfil)
+    (hw : m.mem.schreibbar a = false) :
+    wcAdapterSchritt m c (.wcSpeichere a v profil) = none ∧
+      wcAdapterSchritt m c (.wtSpeichere a v profil) = none ∧
+      wcAdapterSchritt m c (.wpSpeichere a v profil) = none := by
+  have g1 : ¬(speicherTyp profil a 1 == .wc &&
+    m.mem.schreibbar a) = true := by simp [hw]
+  have g2 : ¬(speicherTyp profil a 1 == .wt &&
+    m.mem.schreibbar a) = true := by simp [hw]
+  have g3 : ¬(speicherTyp profil a 1 == .wp &&
+    m.mem.schreibbar a) = true := by simp [hw]
+  refine ⟨?_, ?_, ?_⟩
+  · show (if speicherTyp profil a 1 == .wc && m.mem.schreibbar a
+      then (some m) else none) = none
+    exact if_neg g1
+  · show (if speicherTyp profil a 1 == .wt && m.mem.schreibbar a
+      then (some _) else none) = none
+    exact if_neg g2
+  · show (if speicherTyp profil a 1 == .wp && m.mem.schreibbar a
+      then (some _) else none) = none
+    exact if_neg g3
+
+/-- The plug preserves well-formedness: WC/prefetch keep the machine,
+    WT/WP move memory only (profiles untouched). -/
+theorem adapterWc1287_wf (m m' : HwMaschine) (c : Nat)
+    (e : WcZugriff1287)
+    (h : (adapterWc1287).schritt m c e = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  cases e with
+  | wcSpeichere a v profil =>
+    have h' : wcAdapterSchritt m c (.wcSpeichere a v profil) =
+        some m' := h
+    simp only [wcAdapterSchritt] at h'
+    by_cases hg : (speicherTyp profil a 1 == .wc &&
+      m.mem.schreibbar a) = true
+    · rw [if_pos hg] at h'
+      cases h'
+      exact hwf
+    · rw [if_neg hg] at h'
+      cases h'
+  | wtSpeichere a v profil =>
+    have h' : wcAdapterSchritt m c (.wtSpeichere a v profil) =
+        some m' := h
+    simp only [wcAdapterSchritt] at h'
+    by_cases hg : (speicherTyp profil a 1 == .wt &&
+      m.mem.schreibbar a) = true
+    · rw [if_pos hg] at h'
+      cases h'
+      exact hwf
+    · rw [if_neg hg] at h'
+      cases h'
+  | wpSpeichere a v profil =>
+    have h' : wcAdapterSchritt m c (.wpSpeichere a v profil) =
+        some m' := h
+    simp only [wcAdapterSchritt] at h'
+    by_cases hg : (speicherTyp profil a 1 == .wp &&
+      m.mem.schreibbar a) = true
+    · rw [if_pos hg] at h'
+      cases h'
+      exact hwf
+    · rw [if_neg hg] at h'
+      cases h'
+  | holeVor h0 a =>
+    have h' : wcAdapterSchritt m c (.holeVor h0 a) = some m' := h
+    have h'' : (some m : Option HwMaschine) = some m' := h'
+    cases h''
+    exact hwf
+
+/-- AGREEMENT (WT): the plug step is exactly the extended WT function
+    projected to the bare machine. -/
+theorem adapterWt_stimmt_ueberein (w : HwWcMaschine1287) (c : Nat)
+    (a : Adresse) (v : Byte) :
+    wcAdapterSchritt w.masch c (.wtSpeichere a v w.profil) =
+      (wtStoreZugriff w a v).map (fun w' => w'.masch) := by
+  simp only [wcAdapterSchritt, wtStoreZugriff]
+  by_cases hg : (speicherTyp w.profil a 1 == .wt &&
+    w.masch.mem.schreibbar a) = true <;> simp [hg]
+
+/-- AGREEMENT (WC): the plug step is exactly the extended WC function
+    projected to the bare machine (bypass: the machine is unchanged). -/
+theorem adapterWc_stimmt_ueberein (w : HwWcMaschine1287) (c : Nat)
+    (a : Adresse) (v : Byte) :
+    wcAdapterSchritt w.masch c (.wcSpeichere a v w.profil) =
+      (wcStoreZugriff w c a v).map (fun w' => w'.masch) := by
+  simp only [wcAdapterSchritt, wcStoreZugriff]
+  by_cases hg : (speicherTyp w.profil a 1 == .wc &&
+    w.masch.mem.schreibbar a) = true <;> simp [hg]
+
 end HwMemWC1287
 
 end Gabbro.Grammatik.X86
