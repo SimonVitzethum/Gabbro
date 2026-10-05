@@ -1253,7 +1253,7 @@ theorem neuestens_nicht_enthalten832 (f : Nat → Byte) (a : Adresse)
 theorem neuestens_einmal832 (f : Nat → Byte) (a : Adresse)
     (os : List Nat) (k : Nat) :
     ∀ (_hb : ∀ j ∈ os, j < 832) (_hk832 : k < 832),
-    ∀ (hnd : os.Nodup) (hm : k ∈ os),
+    ∀ (_hnd : os.Nodup) (_hm : k ∈ os),
     neuestens (fxEintraegeAux f a os) (addrOff a k) = some (f k) := by
   induction os with
   | nil =>
@@ -1318,5 +1318,304 @@ theorem vollWeiterleitung_gespeichert (v : VollMaschine) (c : Nat)
     rw [hbuf, hentries, neuestens_append, he]
   unfold loadByte
   rw [if_pos hlesbar, hneu]
+
+/-! ## 4. Machine restore and the save/restore round trip.
+
+  `vollWiederherstellen` loads the footprint through the TSO view
+  (forwarding included), reassembles every saved component, and
+  installs the enabled ones on the acting core, keeping
+  registers/flags/RIP. The opaque x87 image is always installed;
+  the mask is never installed (silicon leaves MXCSR_MASK
+  unchanged); the header is decoded but not enforced (see CUTS).
+  A set reserved MXCSR bit in the loaded image faults with
+  `.fehler .gp` (the accepted `mxcsrReserviertFrei` refusal,
+  lifted; where SSE is not restored the checked bytes are the
+  zero fold base, so the check passes vacuously and nothing
+  spurious is refused). -/
+
+/-- One full restore on core `c` from area base `a`. -/
+def vollWiederherstellen (v : VollMaschine) (c : Nat) (a : Adresse)
+    (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn) :
+    VollAusgang :=
+  if f.nm then .fehler .nm
+  else if !f.cpuidOk || f.lock then .fehler .ud
+  else if !xc.x87 then .fehler .gp
+  else if sse && !xcr0SseBereit xc then .fehler .ud
+  else if avx && !xcr0AvxBereit xc then .fehler .ud
+  else if !sse && !avx then .verweigert
+  else if !kanonisch a then .fehler .gp
+  else if !xAusgerichtet a then .fehler .gp
+  else if f.ss then .fehler .ss
+  else if f.pf then .fehler .pf
+  else if f.ac then .fehler .ac
+  else if !ctxAlle (vollHw v).mem.lesbar a (vollOffsets sse avx) then
+    .verweigert
+  else match ctxLadeAux (tsoAnsicht (vollHw v)) c a
+      (vollOffsets sse avx) with
+  | none => .verweigert
+  | some bs =>
+    if !mxcsrReserviertFrei
+        (mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i))) then
+      .fehler .gp
+    else .weiter (setVollKern v c
+      (if sse then
+        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((vollHw v).kerne c).fp)
+      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((vollHw v).kerne c).xmm)
+      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+       else v.ym.ober c)
+      (vollDekodiere (ctxFalte bs ctxNull)).x87img)
+
+/-- Success shape: a successful restore is a successful footprint
+    load with a reserved-free control word where SSE is restored. -/
+theorem vollWiederherstellen_erfolg (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (m' : VollMaschine)
+    (h : vollWiederherstellen v c a xc sse avx f = .weiter m') :
+    ∃ bs : List (Nat × Byte),
+      ctxLadeAux (tsoAnsicht (vollHw v)) c a (vollOffsets sse avx) =
+        some bs ∧
+      m' = setVollKern v c
+        (if sse then
+          ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+         else ((vollHw v).kerne c).fp)
+        (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
+         else ((vollHw v).kerne c).xmm)
+        (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+         else v.ym.ober c)
+        (vollDekodiere (ctxFalte bs ctxNull)).x87img := by
+  unfold vollWiederherstellen at h
+  cases hn : f.nm with
+  | true => simp [hn] at h
+  | false =>
+    cases hc : (!f.cpuidOk || f.lock) with
+    | true => simp [hn, hc] at h
+    | false =>
+      cases hx : (!xc.x87) with
+      | true => simp [hn, hc, hx] at h
+      | false =>
+        cases hsse : (sse && !xcr0SseBereit xc) with
+        | true => simp [hn, hc, hx, hsse] at h
+        | false =>
+          cases havx : (avx && !xcr0AvxBereit xc) with
+          | true => simp [hn, hc, hx, hsse, havx] at h
+          | false =>
+            cases hleer : (!sse && !avx) with
+            | true => simp [hn, hc, hx, hsse, havx, hleer] at h
+            | false =>
+              cases hkan : (!kanonisch a) with
+              | true => simp [hn, hc, hx, hsse, havx, hleer, hkan] at h
+              | false =>
+                cases hal : (!xAusgerichtet a) with
+                | true =>
+                  simp [hn, hc, hx, hsse, havx, hleer, hkan, hal] at h
+                | false =>
+                  cases hss : f.ss with
+                  | true =>
+                    simp [hn, hc, hx, hsse, havx, hleer, hkan, hal,
+                      hss] at h
+                  | false =>
+                    cases hpf : f.pf with
+                    | true =>
+                      simp [hn, hc, hx, hsse, havx, hleer, hkan, hal,
+                        hss, hpf] at h
+                    | false =>
+                      cases hac : f.ac with
+                      | true =>
+                        simp [hn, hc, hx, hsse, havx, hleer, hkan,
+                          hal, hss, hpf, hac] at h
+                      | false =>
+                        cases hp : (!ctxAlle (vollHw v).mem.lesbar
+                            a (vollOffsets sse avx)) with
+                        | true =>
+                          simp [hn, hc, hx, hsse, havx, hleer, hkan,
+                            hal, hss, hpf, hac, hp] at h
+                        | false =>
+                          simp [hn, hc, hx, hsse, havx, hleer, hkan,
+                            hal, hss, hpf, hac, hp] at h
+                          cases hbs : ctxLadeAux (tsoAnsicht (vollHw v))
+                              c a (vollOffsets sse avx) with
+                          | none =>
+                            rw [hbs] at h
+                            cases h
+                          | some bs =>
+                            cases hw : mxcsrReserviertFrei
+                                (mxcsrAusBytes (fun i =>
+                                  ctxFalte bs ctxNull (24 + i))) with
+                            | false =>
+                              simp [hbs, hw] at h
+                            | true =>
+                              simp [hbs, hw] at h
+                              cases h
+                              exact ⟨bs, rfl, rfl⟩
+
+/-- A restore preserves well-formedness (profiles untouched). -/
+theorem vollWiederherstellen_wf (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (hwf : VollWf v) (m' : VollMaschine)
+    (h : vollWiederherstellen v c a xc sse avx f = .weiter m') :
+    VollWf m' := by
+  obtain ⟨bs, _, rfl⟩ := vollWiederherstellen_erfolg v c a xc sse avx
+    f m' h
+  exact setVollKern_wf v c _ _ _ _ hwf
+
+/-- SAVE THEN RESTORE IS THE IDENTITY on the enabled components:
+    restoring a just-saved area on the same core with the same
+    request set recovers the opaque x87 image, the control word
+    and every XMM register where SSE was saved, and every YMM
+    upper half where AVX was saved. The mask is untouched by
+    construction. Needs read permission beside the save's write
+    permission (the restore observes through `loadByte`, which
+    checks readability). -/
+theorem vollRundlauf_maschine (v : VollMaschine) (c : Nat)
+    (a : Adresse) (xc : Xcr0Bild) (sse avx : Bool)
+    (f : VollFehlerIn) (v1 v2 : VollMaschine)
+    (hles : ctxAlle (vollHw v).mem.lesbar a (vollOffsets sse avx)
+      = true)
+    (h1 : vollSpeichern v c a xc sse avx f = .weiter v1)
+    (h2 : vollWiederherstellen v1 c a xc sse avx f = .weiter v2) :
+    (∀ t : Nat, t < 152 → (v2.x87 c) t = (v.x87 c) t) ∧
+      v2.maske c = v.maske c ∧
+      (sse = true →
+        (((vollHw v2).kerne c).fp).mxcsr =
+          (((vollHw v).kerne c).fp).mxcsr) ∧
+      (sse = true → ∀ r : XmmReg,
+        ((vollHw v2).kerne c).xmm r =
+          ((vollHw v).kerne c).xmm r) ∧
+      (avx = true → ∀ r : XmmReg,
+        (v2.ym.ober c) r = (v.ym.ober c) r) := by
+  obtain ⟨s1', hs1, rfl⟩ := vollSpeichern_erfolg v c a xc sse avx f v1
+    h1
+  obtain ⟨bs, hbs, rfl⟩ := vollWiederherstellen_erfolg
+    (setVollTso v s1') c a xc sse avx f v2 h2
+  have hsicht : tsoAnsicht (vollHw (setVollTso v s1')) = s1' :=
+    setVollTso_ansicht v s1'
+  rw [hsicht] at hbs
+  have hloads : ∀ i ∈ vollOffsets sse avx,
+      loadByte s1' c (addrOff a i) =
+        some (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+          (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
+          i) :=
+    vollWeiterleitung_gespeichert v c a xc sse avx f s1' hs1 hles
+  have hagree : ∀ i ∈ vollOffsets sse avx,
+      ctxFalte bs ctxNull i =
+        vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+          (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c)
+          i := by
+    intro i hi
+    exact ctxLade_geladen s1' c a
+      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
+      (vollOffsets sse avx) ctxNull (vollOffsets_nodup sse avx)
+      hloads bs hbs i hi
+  have hx87id : ∀ t : Nat, t < 152 →
+      (vollDekodiere (ctxFalte bs ctxNull)).x87img t = (v.x87 c) t := by
+    intro t ht
+    have hk := vollKongr_x87 (ctxFalte bs ctxNull)
+      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
+      sse avx (fun i hi => hagree i hi) t ht
+    rw [hk]
+    exact vollRundlauf_x87 ((vollHw v).kerne c).fp
+      ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+      (kopfStandard sse avx) (v.ym.ober c) t ht
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro t ht
+    have e1 := setVollKern_x87 (setVollTso v s1') c
+      (if sse then
+        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((vollHw (setVollTso v s1')).kerne c).fp)
+      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((vollHw (setVollTso v s1')).kerne c).xmm)
+      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setVollTso v s1').ym.ober c)
+      (vollDekodiere (ctxFalte bs ctxNull)).x87img t
+    rw [e1]
+    exact hx87id t ht
+  · have e2 := setVollKern_maske (setVollTso v s1') c
+      (if sse then
+        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((vollHw (setVollTso v s1')).kerne c).fp)
+      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((vollHw (setVollTso v s1')).kerne c).xmm)
+      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setVollTso v s1').ym.ober c)
+      (vollDekodiere (ctxFalte bs ctxNull)).x87img
+    rw [e2, setVollTso_maske]
+  · intro hs
+    have e3 := setVollKern_fp (setVollTso v s1') c
+      (if sse then
+        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((vollHw (setVollTso v s1')).kerne c).fp)
+      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((vollHw (setVollTso v s1')).kerne c).xmm)
+      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setVollTso v s1').ym.ober c)
+      (vollDekodiere (ctxFalte bs ctxNull)).x87img
+    rw [e3]
+    have hksse : (if sse then
+        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+        else ((vollHw (setVollTso v s1')).kerne c).fp) =
+        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩ :=
+      if_pos hs
+    rw [hksse]
+    show (vollDekodiere (ctxFalte bs ctxNull)).mxcsr = _
+    have hk := vollKongr_mxcsr (ctxFalte bs ctxNull)
+      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
+      sse avx hs (fun i hi => hagree i hi)
+    rw [hk]
+    exact (vollRundlauf_legacy ((vollHw v).kerne c).fp
+      ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+      (kopfStandard sse avx) (v.ym.ober c)).1
+  · intro hs r
+    have e4 := setVollKern_xmm (setVollTso v s1') c
+      (if sse then
+        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((vollHw (setVollTso v s1')).kerne c).fp)
+      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((vollHw (setVollTso v s1')).kerne c).xmm)
+      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setVollTso v s1').ym.ober c)
+      (vollDekodiere (ctxFalte bs ctxNull)).x87img r
+    rw [e4]
+    have hxsse : (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
+        else ((vollHw (setVollTso v s1')).kerne c).xmm) =
+        (vollDekodiere (ctxFalte bs ctxNull)).xmm :=
+      if_pos hs
+    rw [hxsse]
+    have hk := vollKongr_xmm (ctxFalte bs ctxNull)
+      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
+      sse avx hs (fun i hi => hagree i hi) r
+    rw [hk]
+    exact (vollRundlauf_legacy ((vollHw v).kerne c).fp
+      ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+      (kopfStandard sse avx) (v.ym.ober c)).2 r
+  · intro ha r
+    have e5 := setVollKern_ober (setVollTso v s1') c
+      (if sse then
+        ⟨(vollDekodiere (ctxFalte bs ctxNull)).mxcsr⟩
+       else ((vollHw (setVollTso v s1')).kerne c).fp)
+      (if sse then (vollDekodiere (ctxFalte bs ctxNull)).xmm
+       else ((vollHw (setVollTso v s1')).kerne c).xmm)
+      (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+       else (setVollTso v s1').ym.ober c)
+      (vollDekodiere (ctxFalte bs ctxNull)).x87img r
+    rw [e5]
+    have hxavx : (if avx then (vollDekodiere (ctxFalte bs ctxNull)).ymm
+        else (setVollTso v s1').ym.ober c) =
+        (vollDekodiere (ctxFalte bs ctxNull)).ymm :=
+      if_pos ha
+    rw [hxavx]
+    have hk := vollKongr_ymm (ctxFalte bs ctxNull)
+      (vollByte ((vollHw v).kerne c).fp ((vollHw v).kerne c).xmm
+        (v.x87 c) (v.maske c) (kopfStandard sse avx) (v.ym.ober c))
+      sse avx ha (fun i hi => hagree i hi) r
+    rw [hk]
+    exact vollRundlauf_ymm ((vollHw v).kerne c).fp
+      ((vollHw v).kerne c).xmm (v.x87 c) (v.maske c)
+      (kopfStandard sse avx) (v.ym.ober c) r
 
 end Gabbro.Grammatik.X86
