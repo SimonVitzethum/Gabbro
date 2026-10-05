@@ -450,6 +450,135 @@ theorem blatt_lese_ok (st : SeitenSteuerung) (q : SeitenAnfrage)
       .ok (rahmen * 4096 + gangOffset q.linear) := by
   simp [blattPruefung, hsch, hben, hab]
 
+/-! ## 4. Table memory and accessed/dirty updates.
+
+  Table memory holds raw entry words keyed by entry number
+  (`rahmen * 512 + index`). Accessed/dirty updates set only bit 5/6;
+  every other bit is preserved by the round-trip lemmas of §1. -/
+
+/-- Table memory: raw entry words keyed by entry number. -/
+def SeitenTabellen := Nat → Wort
+
+/-- Read one decoded entry: table at frame `rahmen`, slot `idx`. -/
+def tabEintrag (tab : Nat → Wort) (rahmen idx : Nat) : SeitenEintrag :=
+  eintragDekodieren (tab (rahmen * 512 + idx))
+
+/-- Set the accessed bit of a raw entry word. -/
+def wortZugriff (w : Wort) : Wort :=
+  eintragKodieren { eintragDekodieren w with zugegriffen := true }
+
+/-- Set the dirty bit of a raw entry word. -/
+def wortSchmutzig (w : Wort) : Wort :=
+  eintragKodieren { eintragDekodieren w with schmutzig := true }
+
+/-- Setting accessed keeps the present bit. -/
+theorem wortZugriff_vorhanden (w : Wort) :
+    (eintragDekodieren (wortZugriff w)).vorhanden =
+      (eintragDekodieren w).vorhanden := by
+  unfold wortZugriff
+  rw [kodieren_vorhanden]
+
+/-- Setting accessed keeps the R/W bit. -/
+theorem wortZugriff_schreibbar (w : Wort) :
+    (eintragDekodieren (wortZugriff w)).schreibbar =
+      (eintragDekodieren w).schreibbar := by
+  unfold wortZugriff
+  rw [kodieren_schreibbar]
+
+/-- Setting accessed keeps the U/S bit. -/
+theorem wortZugriff_benutzer (w : Wort) :
+    (eintragDekodieren (wortZugriff w)).benutzer =
+      (eintragDekodieren w).benutzer := by
+  unfold wortZugriff
+  rw [kodieren_benutzer]
+
+/-- Setting accessed keeps the PS bit. -/
+theorem wortZugriff_gross (w : Wort) :
+    (eintragDekodieren (wortZugriff w)).gross =
+      (eintragDekodieren w).gross := by
+  unfold wortZugriff
+  rw [kodieren_gross]
+
+/-- Setting accessed keeps the XD bit below the frame width. -/
+theorem wortZugriff_noExec (w : Wort)
+    (h : (eintragDekodieren w).rahmen < 2 ^ 40) :
+    (eintragDekodieren (wortZugriff w)).noExec =
+      (eintragDekodieren w).noExec := by
+  have h' : ({eintragDekodieren w with zugegriffen := true}).rahmen <
+      2 ^ 40 := h
+  unfold wortZugriff
+  rw [kodieren_noExec _ h']
+
+/-- Setting accessed keeps the frame below its field width. -/
+theorem wortZugriff_rahmen (w : Wort)
+    (h : (eintragDekodieren w).rahmen < 2 ^ 40) :
+    (eintragDekodieren (wortZugriff w)).rahmen =
+      (eintragDekodieren w).rahmen := by
+  have h' : ({eintragDekodieren w with zugegriffen := true}).rahmen <
+      2 ^ 40 := h
+  unfold wortZugriff
+  rw [kodieren_rahmen _ h']
+
+/-- Setting accessed really sets it. -/
+theorem wortZugriff_setzt (w : Wort) :
+    (eintragDekodieren (wortZugriff w)).zugegriffen = true := by
+  unfold wortZugriff
+  rw [kodieren_zugegriffen]
+
+/-- Setting dirty keeps the present bit. -/
+theorem wortSchmutzig_vorhanden (w : Wort) :
+    (eintragDekodieren (wortSchmutzig w)).vorhanden =
+      (eintragDekodieren w).vorhanden := by
+  unfold wortSchmutzig
+  rw [kodieren_vorhanden]
+
+/-- Setting dirty keeps the R/W bit. -/
+theorem wortSchmutzig_schreibbar (w : Wort) :
+    (eintragDekodieren (wortSchmutzig w)).schreibbar =
+      (eintragDekodieren w).schreibbar := by
+  unfold wortSchmutzig
+  rw [kodieren_schreibbar]
+
+/-- Setting dirty keeps the U/S bit. -/
+theorem wortSchmutzig_benutzer (w : Wort) :
+    (eintragDekodieren (wortSchmutzig w)).benutzer =
+      (eintragDekodieren w).benutzer := by
+  unfold wortSchmutzig
+  rw [kodieren_benutzer]
+
+/-- Setting dirty keeps the PS bit. -/
+theorem wortSchmutzig_gross (w : Wort) :
+    (eintragDekodieren (wortSchmutzig w)).gross =
+      (eintragDekodieren w).gross := by
+  unfold wortSchmutzig
+  rw [kodieren_gross]
+
+/-- Setting dirty keeps the XD bit below the frame width. -/
+theorem wortSchmutzig_noExec (w : Wort)
+    (h : (eintragDekodieren w).rahmen < 2 ^ 40) :
+    (eintragDekodieren (wortSchmutzig w)).noExec =
+      (eintragDekodieren w).noExec := by
+  have h' : ({eintragDekodieren w with schmutzig := true}).rahmen <
+      2 ^ 40 := h
+  unfold wortSchmutzig
+  rw [kodieren_noExec _ h']
+
+/-- Setting dirty keeps the frame below its field width. -/
+theorem wortSchmutzig_rahmen (w : Wort)
+    (h : (eintragDekodieren w).rahmen < 2 ^ 40) :
+    (eintragDekodieren (wortSchmutzig w)).rahmen =
+      (eintragDekodieren w).rahmen := by
+  have h' : ({eintragDekodieren w with schmutzig := true}).rahmen <
+      2 ^ 40 := h
+  unfold wortSchmutzig
+  rw [kodieren_rahmen _ h']
+
+/-- Setting dirty really sets it. -/
+theorem wortSchmutzig_setzt (w : Wort) :
+    (eintragDekodieren (wortSchmutzig w)).schmutzig = true := by
+  unfold wortSchmutzig
+  rw [kodieren_schmutzig]
+
 /- CUTS (skeleton):
    NOT proved here, and not claimed:
    - Everything in the lane task: walk, permission combination, WP,
