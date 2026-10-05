@@ -568,13 +568,13 @@ def ledger80 : List LEintrag :=
    L .ohne 164 none "MOVS m8,m8" .fehlt "keine"
     "occasional: REP MOVSB in memcpy expansions; no family" 255
     [natByte 164],
-   L .ohne 165 none "MOVS m,m" .fehlt "keine"
+   L .ohne 165 none "MOVSD" .fehlt "keine"
     "common: REP MOVSQ in memcpy; no family" 255
     [natByte 165],
    L .ohne 166 none "CMPS m8,m8" .fehlt "keine"
     "occasional: REP CMPSB in memcmp; no family" 255
     [natByte 166],
-   L .ohne 167 none "CMPS m,m" .fehlt "keine"
+   L .ohne 167 none "CMPSD" .fehlt "keine"
     "occasional: REP CMPSQ in memcmp; no family" 255
     [natByte 167],
    L .ohne 168 none "TEST AL,Ib" .fehlt "keine"
@@ -586,19 +586,19 @@ def ledger80 : List LEintrag :=
    L .ohne 170 none "STOS m8" .fehlt "keine"
     "occasional: REP STOSB in memset; no family" 255
     [natByte 170],
-   L .ohne 171 none "STOS m" .fehlt "keine"
+   L .ohne 171 none "STOSD" .fehlt "keine"
     "common: REP STOSQ in memset; no family" 255
     [natByte 171],
    L .ohne 172 none "LODS m8" .fehlt "keine"
     "rare: string loads; no family" 255
     [natByte 172],
-   L .ohne 173 none "LODS m" .fehlt "keine"
+   L .ohne 173 none "LODSD" .fehlt "keine"
     "rare: string loads; no family" 255
     [natByte 173],
    L .ohne 174 none "SCAS m8" .fehlt "keine"
     "occasional: REP SCASB in strlen/scan loops; no family" 255
     [natByte 174],
-   L .ohne 175 none "SCAS m" .fehlt "keine"
+   L .ohne 175 none "SCASD" .fehlt "keine"
     "occasional: REP SCASQ in scan loops; no family" 255
     [natByte 175],
    L .ohne 176 none "MOV AL,imm8" .fehlt "keine"
@@ -640,7 +640,111 @@ def ledger80 : List LEintrag :=
    L .ohne 190 none "MOV r32,imm32" .modelliert "CompactForms"
     "" 5 [natByte 190, natByte 5, natByte 0, natByte 0, natByte 0],
    L .ohne 191 none "MOV r32,imm32" .modelliert "CompactForms"
-    "" 5 [natByte 191, natByte 5, natByte 0, natByte 0, natByte 0]]
+    "" 5 [natByte 191, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .rexW 160 none "MOV AL,moffs8" .fehlt "keine"
+    "rare: absolute addressing; no family" 255
+    [natByte 72, natByte 160, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 161 none "MOV rAX,moffs" .fehlt "keine"
+    "rare: absolute addressing; no family" 255
+    [natByte 72, natByte 161, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 162 none "MOV moffs8,AL" .fehlt "keine"
+    "rare: absolute addressing; no family" 255
+    [natByte 72, natByte 162, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 163 none "MOV moffs,rAX" .fehlt "keine"
+    "rare: absolute addressing; no family" 255
+    [natByte 72, natByte 163, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 164 none "MOVS m8,m8" .fehlt "keine"
+    "REX.W ignored on byte string op; no family" 255
+    [natByte 72, natByte 164],
+   L .rexW 165 none "MOVSQ" .fehlt "keine"
+    "common: REP MOVSQ in memcpy; no family" 255
+    [natByte 72, natByte 165],
+   L .rexW 166 none "CMPS m8,m8" .fehlt "keine"
+    "REX.W ignored on byte string op; no family" 255
+    [natByte 72, natByte 166],
+   L .rexW 167 none "CMPSQ" .fehlt "keine"
+    "occasional: REP CMPSQ in memcmp; no family" 255
+    [natByte 72, natByte 167],
+   L .rexW 168 none "TEST AL,Ib" .fehlt "keine"
+    "REX.W ignored on byte op; no family" 255
+    [natByte 72, natByte 168, natByte 5],
+   L .rexW 169 none "TEST r64,Iz" .fehlt "keine"
+    "common: test rax,imm64 masks; only pilot TEST-reg is absent, no family" 255
+    [natByte 72, natByte 169, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .rexW 170 none "STOS m8" .fehlt "keine"
+    "REX.W ignored on byte string op; no family" 255
+    [natByte 72, natByte 170],
+   L .rexW 171 none "STOSQ" .fehlt "keine"
+    "common: REP STOSQ in memset; no family" 255
+    [natByte 72, natByte 171],
+   L .rexW 172 none "LODS m8" .fehlt "keine"
+    "REX.W ignored on byte string op; no family" 255
+    [natByte 72, natByte 172],
+   L .rexW 173 none "LODSQ" .fehlt "keine"
+    "rare: string loads; no family" 255
+    [natByte 72, natByte 173],
+   L .rexW 174 none "SCAS m8" .fehlt "keine"
+    "REX.W ignored on byte string op; no family" 255
+    [natByte 72, natByte 174],
+   L .rexW 175 none "SCASQ" .fehlt "keine"
+    "occasional: REP SCASQ in scan loops; no family" 255
+    [natByte 72, natByte 175],
+   L .rexW 176 none "MOV AL,imm8" .fehlt "keine"
+    "REX.W ignored on byte op; no family" 255
+    [natByte 72, natByte 176, natByte 5],
+   L .rexW 177 none "MOV CL,imm8" .fehlt "keine"
+    "REX.W ignored on byte op; no family" 255
+    [natByte 72, natByte 177, natByte 5],
+   L .rexW 178 none "MOV DL,imm8" .fehlt "keine"
+    "REX.W ignored on byte op; no family" 255
+    [natByte 72, natByte 178, natByte 5],
+   L .rexW 179 none "MOV BL,imm8" .fehlt "keine"
+    "REX.W ignored on byte op; no family" 255
+    [natByte 72, natByte 179, natByte 5],
+   L .rexW 180 none "MOV AH,imm8" .fehlt "keine"
+    "REX.W ignored on byte op; no family" 255
+    [natByte 72, natByte 180, natByte 5],
+   L .rexW 181 none "MOV CH,imm8" .fehlt "keine"
+    "REX.W ignored on byte op; no family" 255
+    [natByte 72, natByte 181, natByte 5],
+   L .rexW 182 none "MOV DH,imm8" .fehlt "keine"
+    "REX.W ignored on byte op; no family" 255
+    [natByte 72, natByte 182, natByte 5],
+   L .rexW 183 none "MOV BH,imm8" .fehlt "keine"
+    "REX.W ignored on byte op; no family" 255
+    [natByte 72, natByte 183, natByte 5],
+   L .rexW 184 none "MOV r64,imm64" .modelliert "Codec/Ausfuehrung"
+    "" 0 [natByte 72, natByte 184, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 185 none "MOV r64,imm64" .modelliert "Codec/Ausfuehrung"
+    "" 0 [natByte 72, natByte 185, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 186 none "MOV r64,imm64" .modelliert "Codec/Ausfuehrung"
+    "" 0 [natByte 72, natByte 186, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 187 none "MOV r64,imm64" .modelliert "Codec/Ausfuehrung"
+    "" 0 [natByte 72, natByte 187, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 188 none "MOV r64,imm64" .modelliert "Codec/Ausfuehrung"
+    "" 0 [natByte 72, natByte 188, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 189 none "MOV r64,imm64" .modelliert "Codec/Ausfuehrung"
+    "" 0 [natByte 72, natByte 189, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 190 none "MOV r64,imm64" .modelliert "Codec/Ausfuehrung"
+    "" 0 [natByte 72, natByte 190, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexW 191 none "MOV r64,imm64" .modelliert "Codec/Ausfuehrung"
+    "" 0 [natByte 72, natByte 191, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0],
+   L .rexB 184 none "MOV r8d,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 65, natByte 184, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .rexB 185 none "MOV r9d,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 65, natByte 185, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .rexB 186 none "MOV r10d,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 65, natByte 186, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .rexB 187 none "MOV r11d,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 65, natByte 187, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .rexB 188 none "MOV r12d,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 65, natByte 188, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .rexB 189 none "MOV r13d,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 65, natByte 189, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .rexB 190 none "MOV r14d,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 65, natByte 190, natByte 5, natByte 0, natByte 0, natByte 0],
+   L .rexB 191 none "MOV r15d,imm32" .modelliert "CompactForms"
+    "" 5 [natByte 65, natByte 191, natByte 5, natByte 0, natByte 0, natByte 0]]
 
 theorem t152o : kapFam [natByte 152] = 0 := by decide
 theorem t152w : kapFam [natByte 72, natByte 152] = 0 := by decide
@@ -842,7 +946,168 @@ theorem t188o : kapFam [natByte 188, natByte 5, natByte 0, natByte 0, natByte 0]
 theorem t189o : kapFam [natByte 189, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
 theorem t190o : kapFam [natByte 190, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
 theorem t191o : kapFam [natByte 191, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t160w : kapDecode [natByte 72, natByte 160, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t161w : kapDecode [natByte 72, natByte 161, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t162w : kapDecode [natByte 72, natByte 162, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t163w : kapDecode [natByte 72, natByte 163, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t164w : kapDecode [natByte 72, natByte 164] = none := by decide
+theorem t165w : kapDecode [natByte 72, natByte 165] = none := by decide
+theorem t166w : kapDecode [natByte 72, natByte 166] = none := by decide
+theorem t167w : kapDecode [natByte 72, natByte 167] = none := by decide
+theorem t168w : kapDecode [natByte 72, natByte 168, natByte 5] = none := by decide
+theorem t169w : kapDecode [natByte 72, natByte 169, natByte 5, natByte 0, natByte 0, natByte 0] = none := by decide
+theorem t170w : kapDecode [natByte 72, natByte 170] = none := by decide
+theorem t171w : kapDecode [natByte 72, natByte 171] = none := by decide
+theorem t172w : kapDecode [natByte 72, natByte 172] = none := by decide
+theorem t173w : kapDecode [natByte 72, natByte 173] = none := by decide
+theorem t174w : kapDecode [natByte 72, natByte 174] = none := by decide
+theorem t175w : kapDecode [natByte 72, natByte 175] = none := by decide
+theorem t176w : kapDecode [natByte 72, natByte 176, natByte 5] = none := by decide
+theorem t177w : kapDecode [natByte 72, natByte 177, natByte 5] = none := by decide
+theorem t178w : kapDecode [natByte 72, natByte 178, natByte 5] = none := by decide
+theorem t179w : kapDecode [natByte 72, natByte 179, natByte 5] = none := by decide
+theorem t180w : kapDecode [natByte 72, natByte 180, natByte 5] = none := by decide
+theorem t181w : kapDecode [natByte 72, natByte 181, natByte 5] = none := by decide
+theorem t182w : kapDecode [natByte 72, natByte 182, natByte 5] = none := by decide
+theorem t183w : kapDecode [natByte 72, natByte 183, natByte 5] = none := by decide
+theorem t184w : kapFam [natByte 72, natByte 184, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = 0 := by decide
+theorem t185w : kapFam [natByte 72, natByte 185, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = 0 := by decide
+theorem t186w : kapFam [natByte 72, natByte 186, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = 0 := by decide
+theorem t187w : kapFam [natByte 72, natByte 187, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = 0 := by decide
+theorem t188w : kapFam [natByte 72, natByte 188, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = 0 := by decide
+theorem t189w : kapFam [natByte 72, natByte 189, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = 0 := by decide
+theorem t190w : kapFam [natByte 72, natByte 190, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = 0 := by decide
+theorem t191w : kapFam [natByte 72, natByte 191, natByte 5, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0, natByte 0] = 0 := by decide
+theorem t184B : kapFam [natByte 65, natByte 184, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t185B : kapFam [natByte 65, natByte 185, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t186B : kapFam [natByte 65, natByte 186, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t187B : kapFam [natByte 65, natByte 187, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t188B : kapFam [natByte 65, natByte 188, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t189B : kapFam [natByte 65, natByte 189, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t190B : kapFam [natByte 65, natByte 190, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
+theorem t191B : kapFam [natByte 65, natByte 191, natByte 5, natByte 0, natByte 0, natByte 0] = 5 := by decide
 
-/-! CUTS (skeleton): rows 98/99 only; 236 keys outstanding. -/
-#print axioms t152o
-#print axioms t152w
+/-! ## 8. Deferred-family pins: an accepted family decoder takes the
+    witness while the chain refuses it (chain refusal is the row
+    theorem above; each pin below is checked). -/
+
+theorem pin_carry_128_e2 : (decodeCarry [natByte 128, natByte 208, natByte 5]).isSome = true := by decide
+theorem pin_carry_128_e3 : (decodeCarry [natByte 128, natByte 216, natByte 5]).isSome = true := by decide
+theorem pin_carry_129_e2 : (decodeCarry [natByte 129, natByte 208, natByte 5, natByte 0, natByte 0, natByte 0]).isSome = true := by decide
+theorem pin_carry_129_e3 : (decodeCarry [natByte 129, natByte 216, natByte 5, natByte 0, natByte 0, natByte 0]).isSome = true := by decide
+theorem pin_carry_131_e2 : (decodeCarry [natByte 131, natByte 208, natByte 5]).isSome = true := by decide
+theorem pin_carry_131_e3 : (decodeCarry [natByte 131, natByte 216, natByte 5]).isSome = true := by decide
+theorem pin_carry_w128_e2 : (decodeCarry [natByte 72, natByte 128, natByte 208, natByte 5]).isSome = true := by decide
+theorem pin_carry_w128_e3 : (decodeCarry [natByte 72, natByte 128, natByte 216, natByte 5]).isSome = true := by decide
+theorem pin_carry_w129_e2 : (decodeCarry [natByte 72, natByte 129, natByte 208, natByte 5, natByte 0, natByte 0, natByte 0]).isSome = true := by decide
+theorem pin_carry_w129_e3 : (decodeCarry [natByte 72, natByte 129, natByte 216, natByte 5, natByte 0, natByte 0, natByte 0]).isSome = true := by decide
+theorem pin_carry_w131_e2 : (decodeCarry [natByte 72, natByte 131, natByte 208, natByte 5]).isSome = true := by decide
+theorem pin_carry_w131_e3 : (decodeCarry [natByte 72, natByte 131, natByte 216, natByte 5]).isSome = true := by decide
+theorem pin_xchg_reg : (decodeXchg [natByte 72, natByte 135, natByte 192]).isSome = true := by decide
+theorem pin_xchg_mem : (decodeXchg [natByte 72, natByte 135, natByte 129, natByte 1, natByte 0, natByte 0, natByte 0]).isSome = true := by decide
+theorem pin_lea : (decodeLea [natByte 72, natByte 141, natByte 0]).isSome = true := by decide
+
+/-! ## 9. Summary: counts per status. -/
+
+theorem anz_modelliert : (ledger80.filter (fun e => e.status == .modelliert)).length = 43 := by decide
+theorem anz_zurueckgestellt : (ledger80.filter (fun e => e.status == .zurueckgestellt)).length = 14 := by decide
+theorem anz_verweigert : (ledger80.filter (fun e => e.status == .verweigert)).length = 28 := by decide
+theorem anz_ungueltig64 : (ledger80.filter (fun e => e.status == .ungueltig64)).length = 40 := by decide
+theorem anz_fehlt : (ledger80.filter (fun e => e.status == .fehlt)).length = 113 := by decide
+set_option maxRecDepth 100000 in
+theorem anz_gesamt : ledger80.length = 238 := by decide
+
+/-! ## 10. Coverage: the keys cover the region exactly once. -/
+
+/-- Ledger key: prefix tag (0 ohne, 1 rexW, 2 rexB, 3 lock, 4 ops16),
+    opcode byte, ModRM.reg extension. -/
+def schluessel (e : LEintrag) : Nat × Nat × Option Nat :=
+  match e.praefix with
+  | .ohne => (0, e.op, e.erw)
+  | .rexW => (1, e.op, e.erw)
+  | .rexB => (2, e.op, e.erw)
+  | .lock => (3, e.op, e.erw)
+  | .ops16 => (4, e.op, e.erw)
+
+/-- The complete key space: groups 80/81/82/83, 8C/8E, 8F with all
+    eight extensions, every other byte 84-9F and A0-BF bare and
+    REX.W, REX.B over B8-BF, LOCK over 86/87, 66-prefix over 98/99. -/
+def erwartetSchluessel : List (Nat × Nat × Option Nat) :=
+  let grp (t : Nat) (ops : List Nat) : List (Nat × Nat × Option Nat) :=
+    ops.flatMap (fun op => (List.range 8).map (fun e => (t, op, some e)))
+  let einzeln (t : Nat) : List (Nat × Nat × Option Nat) :=
+    ((List.range' 132 8) ++ [141] ++ (List.range' 144 48)).map
+      (fun op => (t, op, none))
+  grp 0 [128, 129, 130, 131] ++ grp 1 [128, 129, 130, 131]
+    ++ grp 0 [140, 142] ++ grp 1 [140, 142]
+    ++ grp 0 [143] ++ grp 1 [143]
+    ++ einzeln 0 ++ einzeln 1
+    ++ (List.range' 184 8).map (fun op => (2, op, none))
+    ++ [(3, 134, none), (3, 135, none), (4, 152, none), (4, 153, none)]
+
+set_option maxRecDepth 100000 in
+/-- Ledger keys are duplicate-free. -/
+theorem abdeckung_nodup : (ledger80.map schluessel).Nodup := by decide
+
+set_option maxRecDepth 100000 in
+/-- Every ledger key is an expected region key. -/
+theorem abdeckung_all :
+    (ledger80.map schluessel).all (fun k => k ∈ erwartetSchluessel) := by decide
+
+set_option maxRecDepth 100000 in
+/-- The expected key list is duplicate-free. -/
+theorem erwartet_nodup : erwartetSchluessel.Nodup := by decide
+
+/-- Exact-once coverage: duplicate-free ledger keys, 238 rows, every
+    key expected, duplicate-free expectation. -/
+theorem abdeckung_vollstaendig :
+    (ledger80.map schluessel).Nodup ∧ ledger80.length = 238 ∧
+    (ledger80.map schluessel).all (fun k => k ∈ erwartetSchluessel) ∧
+    erwartetSchluessel.Nodup :=
+  ⟨abdeckung_nodup, anz_gesamt, abdeckung_all, erwartet_nodup⟩
+
+/-! ## 11. Agreement: the row tags match the chain on every row. -/
+
+/-- Every modelled row decodes to its recorded family tag. -/
+theorem modelliert_tag_ok :
+    (ledger80.filter (fun e => e.status == .modelliert)).all
+      (fun e => kapFam e.zeuge == e.tag) := by decide
+
+/-- Every non-modelled row is refused by the chain (tag 255). -/
+theorem abgewiesen_tag_ok :
+    (ledger80.filter (fun e => e.status != .modelliert)).all
+      (fun e => kapFam e.zeuge == 255) := by decide
+
+/-! CUTS: what is not proved or not covered.
+  - Key scope: prefix classes ohne/REX.W over the whole region, plus
+    REX.B over B8-BF, LOCK over 86/87, 66-prefix over 98/99. Other
+    REX R/X/B bit combinations, 67/F2/F3 prefixes and VEX/EVEX forms
+    are not separately keyed; rexW rows witness the canonical 0x48 byte.
+  - ModRM.mod/SIB/displacement variants are covered only through the
+    witness plus the reason note (85/89/8B/81/83 register-vs-memory
+    splits are documented per row, not keyed).
+  - Provenance is the clone-local Intel SDM text 325462-093US; no AMD
+    manual is available, so no AMD claim is made. Rows marked
+    herstellerabhaengig (SAHF/LAHF availability) stay FREE in the model.
+  - Frequency grades (pervasive/common/occasional/rare) are engineering
+    judgement over compiler output, not measurements.
+  - This file is a decoder ledger only: no execution semantics, no
+    HwSchritt connection and no W/GX bridge are claimed.
+  - The lane task line 25 is truncated in the working copy ("Do no...");
+    the visible spec plus HARD RULES were followed and OWN ONLY honored.
+-/
+#print axioms anz_modelliert
+#print axioms anz_zurueckgestellt
+#print axioms anz_verweigert
+#print axioms anz_ungueltig64
+#print axioms anz_fehlt
+#print axioms anz_gesamt
+#print axioms abdeckung_vollstaendig
+#print axioms modelliert_tag_ok
+#print axioms abgewiesen_tag_ok
+#print axioms pin_carry_128_e2
+#print axioms pin_carry_131_e3
+#print axioms pin_carry_w131_e2
+#print axioms pin_xchg_reg
+#print axioms pin_xchg_mem
+#print axioms pin_lea
