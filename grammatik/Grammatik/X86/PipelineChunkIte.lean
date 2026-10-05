@@ -412,6 +412,170 @@ theorem pruefChunk_inv_abgeleitet_zeuge :
     cases hw
   · exact ⟨code, j, witPruefLowLit1263, hb, hp, he, pipePaket_hold⟩
 
+/-! ## 4. Witness memory for the check chunk, and its derived run.
+
+    Same shape as §2 with the check bytes: the passing route (`x = 30`)
+    falls through to the end of the code, the failing route (`x = 70`)
+    jumps to the refusal exit `12288`. -/
+
+/-- Witness memory bytes: the check bytes as code, `pwMemBytes` elsewhere. -/
+def pruefMemBytes1263 (a : Adresse) : Byte :=
+  if 4096 ≤ a.toNat ∧ a.toNat < 4096 + (encodeAll witPruefProg1263).length then
+    (encodeAll witPruefProg1263).getD (a.toNat - 4096) 0
+  else pwMemBytes a
+
+/-- Witness execute permission: exactly the check bytes. -/
+def pruefCode1263 (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + (encodeAll witPruefProg1263).length)
+
+/-- Witness memory: check code plus the `pwSigma` data slots. -/
+def pruefMem1263 : Speicher :=
+  { bytes := pruefMemBytes1263, lesbar := pwDaten, schreibbar := pwDaten,
+    ausfuehrbar := pruefCode1263 }
+
+/-- Witness start state: `x` in `r10`, check bytes at `rip`. -/
+def pruefStart1263 (x : Int) : Zustand :=
+  { register := pwReg x, flags := witnessFlags, rip := natAdresse 4096,
+    speicher := pruefMem1263 }
+
+/-- The check bytes are small enough to leave the data region alone. -/
+theorem pruef_len1263 : (encodeAll witPruefProg1263).length ≤ 4096 := by decide
+
+/-- The witness code region holds the witness check bytes. -/
+theorem pruef_code1263 :
+    Pipeline.CodeAt pruefMem1263 (natAdresse 4096)
+      (encodeAll witPruefProg1263) := by
+  apply codeAt_von pruefMem1263 4096 (encodeAll witPruefProg1263) (by decide)
+  intro a h1 h2
+  have hd : ¬ (8192 ≤ a.toNat ∧ a.toNat < 8208) := by
+    have hl := pruef_len1263
+    omega
+  simp only [pruefMem1263, pruefCode1263, pruefMemBytes1263, pwDaten, pwMemBytes,
+    decide_eq_true_eq, decide_eq_false_iff_not]
+  refine ⟨⟨h1, h2⟩, hd, ?_⟩
+  rw [if_pos ⟨h1, h2⟩]
+
+/-- The witness memory represents the witness world. -/
+theorem pruef_worldRep1263 : WorldRep pwL pruefMem1263 pwSigma := by
+  intro t k f a h
+  cases t; cases f
+  simp only [pwL] at h
+  by_cases e1 : k = 0
+  · rw [if_pos e1] at h
+    cases h
+    subst e1
+    refine ⟨by decide, by decide, by decide, fun lo hi hT => ?_⟩
+    cases hT
+    unfold RepSlot
+    decide
+  · rw [if_neg e1] at h
+    by_cases e2 : k = 1
+    · rw [if_pos e2] at h
+      cases h
+      subst e2
+      refine ⟨by decide, by decide, by decide, fun lo hi hT => ?_⟩
+      cases hT
+      unfold RepSlot
+      decide
+    · rw [if_neg e2] at h; cases h
+
+/-- The witness environments are represented (both check routes). -/
+theorem pruef_envRepr30_1263 :
+    EnvRepr pwEnv30 (pruefStart1263 30).register (abbOf pwCfg) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+theorem pruef_envRepr70_1263 :
+    EnvRepr pwEnv70 (pruefStart1263 70).register (abbOf pwCfg) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+/-- CHUNK RUN, DERIVED (check): from an accepted closed-check
+    lowering, a checked configuration, a separated layout and a
+    represented start state whose code region holds the lowered bytes,
+    the fetched-byte run reaches a state corresponding to the REAL
+    `execBlock` outcome -- normal fall-through or the reason exit
+    (`senkBlock_korrektC` as a black box). Every premise is used. -/
+theorem pruefChunk_lauf_abgeleitet (c : PipeCfg) (L : Layout D)
+    (hc : cfgOk c = true) (hsep : LayoutSep L)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (cnd : Expr D Γ Λ .bool)
+    (sonst : _root_.Gabbro.Grammatik.Endblock D V l Γ Λ)
+    (pre post flat : List Byte) (prog : List Befehl)
+    (hlow : senkBlock c L pre.length
+      (_root_.Gabbro.Grammatik.Block.pruefung cnd sonst
+        _root_.Gabbro.Grammatik.Block.nil) = some prog)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (st : Zustand)
+    (hcode : Pipeline.CodeAt st.speicher (natAdresse c.codeBase) flat)
+    (hf : flat = pre ++ encodeAll prog ++ post)
+    (hrip : st.rip = addrOff (natAdresse c.codeBase) pre.length)
+    (hW : WorldRep L st.speicher σ) (hE : EnvRepr ρ st.register (abbOf c)) :
+    ∃ n st', laufBytes n st = .weiter st' ∧
+      Pipeline.CodeAt st'.speicher (natAdresse c.codeBase) flat ∧
+      Entspricht c L (addrOff (natAdresse c.codeBase) (pre.length + (encodeAll prog).length))
+        (execBlock O passes R
+          (_root_.Gabbro.Grammatik.Block.pruefung cnd sonst
+            _root_.Gabbro.Grammatik.Block.nil) σ ρ) st' :=
+  senkBlock_korrektC c L hc hsep O passes R flat _ pre post prog hlow σ ρ st
+    hcode hf hrip hW hE
+
+/-- JOINT WITNESS for `pruefChunk_lauf_abgeleitet` (passing route):
+    the `x = 30` check passes, the fetched-byte run falls through to
+    the end of the code, with the shared non-degenerate package
+    (`PipePaket`). -/
+theorem pruefChunk_lauf_abgeleitet_zeuge :
+    ∃ prog n st',
+      senkBlock pwCfg pwL ([] : List Byte).length witPruef1263 = some prog ∧
+      laufBytes n (pruefStart1263 30) = .weiter st' ∧
+      Pipeline.CodeAt st'.speicher (natAdresse pwCfg.codeBase) (encodeAll prog) ∧
+      Entspricht pwCfg pwL
+        (addrOff (natAdresse pwCfg.codeBase)
+          (([] : List Byte).length + (encodeAll prog).length))
+        (execBlock pwO 0 pwR witPruef1263 pwSigma pwEnv30) st' ∧
+      PipePaket := by
+  have hrip : (pruefStart1263 30).rip =
+      addrOff (natAdresse pwCfg.codeBase) ([] : List Byte).length := by
+    show natAdresse 4096 = addrOff (natAdresse 4096) 0
+    exact (addrOff_null _).symm
+  obtain ⟨n, st', hrun, hcode', hent⟩ :=
+    pruefChunk_lauf_abgeleitet (Λ' := ([] : List (Res pwD))) pwCfg pwL pw_cfgOk pw_layoutSep pwCheck
+      (_root_.Gabbro.Grammatik.Endblock.retGrund ⟨0, by decide⟩ pwHΛ)
+      [] [] (encodeAll witPruefProg1263) witPruefProg1263 witPruefLowLit1263 pwO 0 pwR
+      pwSigma pwEnv30 (pruefStart1263 30) pruef_code1263 (by simp) hrip
+      pruef_worldRep1263 pruef_envRepr30_1263
+  exact ⟨_, n, st', witPruefLowLit1263, hrun, hcode', hent, pipePaket_hold⟩
+
+/-- The failing route on concrete data: the `x = 70` check fails, the
+    fetched-byte run reaches the refusal exit `12288` with the world
+    represented. -/
+theorem pruefChunk_grund1263 :
+    ∃ prog n st',
+      senkBlock pwCfg pwL ([] : List Byte).length witPruef1263 = some prog ∧
+      laufBytes n (pruefStart1263 70) = .weiter st' ∧
+      Pipeline.CodeAt st'.speicher (natAdresse pwCfg.codeBase) (encodeAll prog) ∧
+      Entspricht pwCfg pwL
+        (addrOff (natAdresse pwCfg.codeBase)
+          (([] : List Byte).length + (encodeAll prog).length))
+        (execBlock pwO 0 pwR witPruef1263 pwSigma pwEnv70) st' ∧
+      PipePaket := by
+  have hrip : (pruefStart1263 70).rip =
+      addrOff (natAdresse pwCfg.codeBase) ([] : List Byte).length := by
+    show natAdresse 4096 = addrOff (natAdresse 4096) 0
+    exact (addrOff_null _).symm
+  obtain ⟨n, st', hrun, hcode', hent⟩ :=
+    pruefChunk_lauf_abgeleitet (Λ' := ([] : List (Res pwD))) pwCfg pwL pw_cfgOk pw_layoutSep pwCheck
+      (_root_.Gabbro.Grammatik.Endblock.retGrund ⟨0, by decide⟩ pwHΛ)
+      [] [] (encodeAll witPruefProg1263) witPruefProg1263 witPruefLowLit1263 pwO 0 pwR
+      pwSigma pwEnv70 (pruefStart1263 70) pruef_code1263 (by simp) hrip
+      pruef_worldRep1263 pruef_envRepr70_1263
+  exact ⟨_, n, st', witPruefLowLit1263, hrun, hcode', hent, pipePaket_hold⟩
+
 /- CUTS:
     - Proved here: closed-ite lowering inversion
       (`iteChunk_inv_abgeleitet`) with joint non-degenerate witness.
