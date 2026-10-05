@@ -572,4 +572,339 @@ theorem bs_nichts_leer : decodeBs [] = none := by
 theorem bs_nichts_ohne_disp :
     decodeBs [natByte 15, natByte 188, natByte 5] = none := by
   decide
+
+/-! ## 4. Value semantics and the family step.
+
+  Values reuse the accepted helpers unchanged (`bsfIdx`/`bsrIdx`,
+  `popCount`/`popWort`, `bswap32`/`bswap64`); flag rows follow SDM 093
+  (BSF/BSR: ZF = source zero, PF = parity of the source popcount,
+  CF/OF/SF/AF cleared; POPCNT: everything cleared, ZF = source zero;
+  BSWAP: flags untouched). The destination discipline is the accepted
+  narrow merge (16-bit merges, 32-bit zero-extends); a zero scan
+  source leaves the destination register untouched (SDM: the
+  destination operand is unmodified). POPCNT without the CPUID bit is
+  the feature refusal (SDM: #UD); memory sources are refused by the
+  register plug (address computation is open: TSO events only). -/
+
+/-- BSF/BSR flag snapshot: ZF reads source-zero, PF the source
+    popcount parity, the rest cleared. -/
+def bsFlagsScan (b : Breite) (src : Wort) : Flags :=
+  { cf := false, pf := decide (popCount b src % 2 = 0), af := some false,
+    zf := scanZF b src, sf := false, of := false }
+
+/-- The scan snapshot sets ZF exactly on a zero source. -/
+theorem bsFlagsScan_zf (b : Breite) (src : Wort) :
+    (bsFlagsScan b src).zf = true ↔ trunc b src = 0 := by
+  simp [bsFlagsScan, scanZF]
+
+/-- POPCNT flag snapshot: everything cleared, ZF reads source-zero. -/
+def bsFlagsPopcnt (b : Breite) (src : Wort) : Flags :=
+  { cf := false, pf := false, af := some false,
+    zf := scanZF b src, sf := false, of := false }
+
+/-- The POPCNT snapshot sets ZF exactly on a zero source. -/
+theorem bsFlagsPopcnt_zf (b : Breite) (src : Wort) :
+    (bsFlagsPopcnt b src).zf = true ↔ trunc b src = 0 := by
+  simp [bsFlagsPopcnt, scanZF]
+
+/-- BSWAP value dispatch: the accepted helpers, 32/64 only. -/
+def bswapVal : BswapBreite → Wort → Wort
+  | .b32 => bswap32
+  | .b64 => bswap64
+
+/-- A 32-bit swap writes back exactly the swapped value (its upper
+    bytes are already clear, so the narrow merge is the identity). -/
+theorem bswap32_merge (oldVal v : Wort) :
+    mergeRegNarrow .b32 oldVal (bswap32 v) = bswap32 v := by
+  show trunc .b32 (bswap32 v) = bswap32 v
+  apply BitVec.eq_of_toNat_eq
+  have hmod := narrowTruncMod .b32 (bswap32 v)
+  have hb32 : Breite.bits Breite.b32 = 32 := rfl
+  rw [hb32] at hmod
+  have hzx := bswap32_zeroExt v
+  have e32 : (2 : Nat) ^ 32 = 4294967296 := by decide
+  omega
+
+/-- Step outcome: successor, feature refusal (POPCNT without the
+    CPUID bit, the #UD analogue), or no register step (bad length or
+    a memory source, which needs the TSO event path). -/
+inductive BsErgebnis where
+  | ok (nach : Zustand)
+  | verweigert
+  | misslungen
+
+/-- Scan successor: the accepted index under the narrow merge, or the
+    untouched destination on a zero source, with the scan flags. -/
+def bsScanNach (istBsr : Bool) (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand) : Zustand :=
+  let idx :=
+    if istBsr then bsrIdx b.breite (s.register src)
+    else bsfIdx b.breite (s.register src)
+  let wert :=
+    match idx with
+    | some i => mergeRegNarrow b.breite (s.register dst) (BitVec.ofNat 64 i)
+    | none => s.register dst
+  { s with
+    register := regSet s.register dst wert,
+    rip := ripNach s.rip len,
+    flags := bsFlagsScan b.breite (s.register src) }
+
+/-- POPCNT successor: the accepted count under the narrow merge, with
+    the cleared flags. -/
+def bsPopcntNach (b : BsBreite) (dst src : Register) (len : Nat)
+    (s : Zustand) : Zustand :=
+  { s with
+    register := regSet s.register dst
+      (mergeRegNarrow b.breite (s.register dst)
+        (popWort b.breite (s.register src))),
+    rip := ripNach s.rip len,
+    flags := bsFlagsPopcnt b.breite (s.register src) }
+
+/-- BSWAP successor: the accepted swap under the narrow merge, flags
+    untouched. -/
+def bsBswapNach (b : BswapBreite) (rd : Register) (len : Nat)
+    (s : Zustand) : Zustand :=
+  let bw := BswapBreite.breite b
+  { s with
+    register := regSet s.register rd
+      (mergeRegNarrow bw (s.register rd) (bswapVal b (s.register rd))),
+    rip := ripNach s.rip len }
+
+/-- One family step: the length guard, then the accepted value
+    helpers; the feature gate is never folded away. -/
+def bsSchritt (m : PopcntMerkmal) (d : BsDecodiert)
+    (s : Zustand) : BsErgebnis :=
+  match laengeOk d.laenge with
+  | false => .misslungen
+  | true =>
+    match d.befehl with
+    | .bsf b dst (.reg src) => .ok (bsScanNach false b dst src d.laenge s)
+    | .bsr b dst (.reg src) => .ok (bsScanNach true b dst src d.laenge s)
+    | .popcnt b dst (.reg src) =>
+      match m.popcnt with
+      | false => .verweigert
+      | true => .ok (bsPopcntNach b dst src d.laenge s)
+    | .bswap b rd => .ok (bsBswapNach b rd d.laenge s)
+    | .bsf _ _ (.mem _ _) => .misslungen
+    | .bsr _ _ (.mem _ _) => .misslungen
+    | .popcnt _ _ (.mem _ _) => .misslungen
+
+/-- Admitted BSF step: the accepted forward index with the scan snapshot. -/
+theorem bs_bsf_ok (m : PopcntMerkmal) (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand) (hok : laengeOk len = true) :
+    bsSchritt m ⟨.bsf b dst (.reg src), len⟩ s =
+      .ok (bsScanNach false b dst src len s) := by
+  unfold bsSchritt
+  rw [hok]
+
+/-- Admitted BSR step: the accepted reverse index with the scan snapshot. -/
+theorem bs_bsr_ok (m : PopcntMerkmal) (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand) (hok : laengeOk len = true) :
+    bsSchritt m ⟨.bsr b dst (.reg src), len⟩ s =
+      .ok (bsScanNach true b dst src len s) := by
+  unfold bsSchritt
+  rw [hok]
+
+/-- Admitted POPCNT step: the accepted count with the cleared flags. -/
+theorem bs_popcnt_ok (m : PopcntMerkmal) (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand) (hok : laengeOk len = true)
+    (hfeat : m.popcnt = true) :
+    bsSchritt m ⟨.popcnt b dst (.reg src), len⟩ s =
+      .ok (bsPopcntNach b dst src len s) := by
+  unfold bsSchritt
+  rw [hok, hfeat]
+
+/-- Admitted BSWAP step: the accepted swap, flags untouched. -/
+theorem bs_bswap_ok (m : PopcntMerkmal) (b : BswapBreite) (rd : Register)
+    (len : Nat) (s : Zustand) (hok : laengeOk len = true) :
+    bsSchritt m ⟨.bswap b rd, len⟩ s =
+      .ok (bsBswapNach b rd len s) := by
+  unfold bsSchritt
+  rw [hok]
+
+/-- Feature refusal: without the CPUID bit the count image is refused,
+    never a value. -/
+theorem bs_popcnt_verweigert (m : PopcntMerkmal) (b : BsBreite)
+    (dst src : Register) (len : Nat) (s : Zustand)
+    (hok : laengeOk len = true) (hfeat : m.popcnt = false) :
+    bsSchritt m ⟨.popcnt b dst (.reg src), len⟩ s = .verweigert := by
+  unfold bsSchritt
+  rw [hok, hfeat]
+
+/-- Without the feature no count step is a success. -/
+theorem bs_ohne_merkmal_kein_ok (m : PopcntMerkmal) (d : BsDecodiert)
+    (s : Zustand) (h : m.popcnt = false)
+    (hok : laengeOk d.laenge = true)
+    (hq : (∃ (b : BsBreite) (dst src : Register),
+        d.befehl = .popcnt b dst (.reg src)) ∨
+      (∃ (b : BsBreite) (dst : Register) (mm : Byte) (dd : List Byte),
+        d.befehl = .popcnt b dst (.mem mm dd)))
+    (z : BsErgebnis) (hstep : bsSchritt m d s = z) :
+    ∀ (t : Zustand), z ≠ .ok t := by
+  cases hq with
+  | inl hreg =>
+    obtain ⟨b, dst, src, hpop⟩ := hreg
+    have hver : bsSchritt m d s = .verweigert := by
+      unfold bsSchritt
+      rw [hok, hpop, h]
+    rw [hver] at hstep
+    subst z
+    intro t hcon
+    cases hcon
+  | inr hmem =>
+    obtain ⟨b, dst, mm, dd, hpop⟩ := hmem
+    have hmiss : bsSchritt m d s = .misslungen := by
+      unfold bsSchritt
+      rw [hok, hpop]
+    rw [hmiss] at hstep
+    subst z
+    intro t hcon
+    cases hcon
+
+/-- A bad decode length refuses every form, unconditionally. -/
+theorem bs_laenge_misslungen (m : PopcntMerkmal) (d : BsDecodiert)
+    (s : Zustand) (h : laengeOk d.laenge = false) :
+    bsSchritt m d s = .misslungen := by
+  unfold bsSchritt
+  rw [h]
+
+/-- A memory BSF source admits no register step. -/
+theorem bs_bsf_mem_misslungen (m : PopcntMerkmal) (b : BsBreite)
+    (dst : Register) (mm : Byte) (dd : List Byte) (len : Nat)
+    (s : Zustand) (hok : laengeOk len = true) :
+    bsSchritt m ⟨.bsf b dst (.mem mm dd), len⟩ s = .misslungen := by
+  unfold bsSchritt
+  rw [hok]
+
+/-- A memory BSR source admits no register step. -/
+theorem bs_bsr_mem_misslungen (m : PopcntMerkmal) (b : BsBreite)
+    (dst : Register) (mm : Byte) (dd : List Byte) (len : Nat)
+    (s : Zustand) (hok : laengeOk len = true) :
+    bsSchritt m ⟨.bsr b dst (.mem mm dd), len⟩ s = .misslungen := by
+  unfold bsSchritt
+  rw [hok]
+
+/-- A memory POPCNT source admits no register step. -/
+theorem bs_popcnt_mem_misslungen (m : PopcntMerkmal) (b : BsBreite)
+    (dst : Register) (mm : Byte) (dd : List Byte) (len : Nat)
+    (s : Zustand) (hok : laengeOk len = true) :
+    bsSchritt m ⟨.popcnt b dst (.mem mm dd), len⟩ s = .misslungen := by
+  unfold bsSchritt
+  rw [hok]
+
+/-- A BSF success writes the accepted index under the narrow merge. -/
+theorem bs_bsf_schreibt_index (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand) (i : Nat)
+    (h : bsfIdx b.breite (s.register src) = some i) :
+    (bsScanNach false b dst src len s).register dst =
+      mergeRegNarrow b.breite (s.register dst) (BitVec.ofNat 64 i) := by
+  unfold bsScanNach
+  simp [h, regSet_gleich]
+
+/-- A zero BSF source leaves the destination untouched. -/
+theorem bs_bsf_null_laesst_liegen (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand)
+    (h : bsfIdx b.breite (s.register src) = none) :
+    (bsScanNach false b dst src len s).register dst =
+      s.register dst := by
+  unfold bsScanNach
+  simp [h, regSet_gleich]
+
+/-- A BSR success writes the accepted index under the narrow merge. -/
+theorem bs_bsr_schreibt_index (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand) (i : Nat)
+    (h : bsrIdx b.breite (s.register src) = some i) :
+    (bsScanNach true b dst src len s).register dst =
+      mergeRegNarrow b.breite (s.register dst) (BitVec.ofNat 64 i) := by
+  unfold bsScanNach
+  simp [h, regSet_gleich]
+
+/-- A zero BSR source leaves the destination untouched. -/
+theorem bs_bsr_null_laesst_liegen (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand)
+    (h : bsrIdx b.breite (s.register src) = none) :
+    (bsScanNach true b dst src len s).register dst =
+      s.register dst := by
+  unfold bsScanNach
+  simp [h, regSet_gleich]
+
+/-- A POPCNT success writes the accepted count under the narrow merge. -/
+theorem bs_popcnt_schreibt_zaehlung (b : BsBreite) (dst src : Register)
+    (len : Nat) (s : Zustand) :
+    (bsPopcntNach b dst src len s).register dst =
+      mergeRegNarrow b.breite (s.register dst)
+        (popWort b.breite (s.register src)) := by
+  unfold bsPopcntNach
+  simp [regSet_gleich]
+
+/-- A BSWAP writes the accepted swap under the narrow merge, flags
+    untouched. -/
+theorem bs_bswap_schreibt_tausch (b : BswapBreite) (rd : Register)
+    (len : Nat) (s : Zustand) :
+    (bsBswapNach b rd len s).register rd =
+      mergeRegNarrow (BswapBreite.breite b) (s.register rd)
+        (bswapVal b (s.register rd)) ∧
+    (bsBswapNach b rd len s).flags = s.flags := by
+  unfold bsBswapNach
+  simp [regSet_gleich]
+
+/-- A BSF success index lies inside the operand width: the accepted
+    range law, lifted to the step vocabulary. -/
+theorem bs_bsf_bereich (b : BsBreite) (src : Wort) (i : Nat)
+    (h : bsfIdx b.breite src = some i) :
+    i < b.breite.bits :=
+  bsfIdx_schranke b.breite src i h
+
+/-- A BSF success index names a set bit of the truncated source. -/
+theorem bs_bsf_bit (b : BsBreite) (src : Wort) (i : Nat)
+    (h : bsfIdx b.breite src = some i) :
+    bitGesetzt b.breite src i = true :=
+  bsfIdx_bit b.breite src i h
+
+/-- A BSF success index is minimal: lower bits are clear. -/
+theorem bs_bsf_min (b : BsBreite) (src : Wort) (i j : Nat)
+    (h : bsfIdx b.breite src = some i) (hlt : j < i) :
+    bitGesetzt b.breite src j = false :=
+  bsfIdx_min b.breite src i j h hlt
+
+/-- A BSR success index lies inside the operand width. -/
+theorem bs_bsr_bereich (b : BsBreite) (src : Wort) (i : Nat)
+    (h : bsrIdx b.breite src = some i) :
+    i < b.breite.bits :=
+  bsrIdx_schranke b.breite src i h
+
+/-- A BSR success index names a set bit of the truncated source. -/
+theorem bs_bsr_bit (b : BsBreite) (src : Wort) (i : Nat)
+    (h : bsrIdx b.breite src = some i) :
+    bitGesetzt b.breite src i = true :=
+  bsrIdx_bit b.breite src i h
+
+/-- A BSR success index is maximal: higher in-width bits are clear. -/
+theorem bs_bsr_max (b : BsBreite) (src : Wort) (i j : Nat)
+    (h : bsrIdx b.breite src = some i)
+    (hhi : i < j) (hlt : j < b.breite.bits) :
+    bitGesetzt b.breite src j = false :=
+  bsrIdx_max b.breite src i j h hhi hlt
+
+/-- The fixed-width count never exceeds the named width. -/
+theorem bs_popcnt_schranke (b : BsBreite) (src : Wort) :
+    popCount b.breite src ≤ b.breite.bits :=
+  popCount_schranke b.breite src
+
+/-- The count fits in one word: at most 64. -/
+theorem bs_popcnt_wort_schranke (b : BsBreite) (src : Wort) :
+    popCount b.breite src ≤ 64 :=
+  popCount_wort_schranke b.breite src
+
+/-- The 64-bit swap is an involution: the accepted law, lifted. -/
+theorem bs_bswap64_invol (v : Wort) :
+    bswap64 (bswap64 v) = v :=
+  bswap64_invol v
+
+/-- The 32-bit swap is an involution on values that fit in four
+    bytes: the accepted bounded law, lifted. -/
+theorem bs_bswap32_invol (v : Wort)
+    (hv : v.toNat < 2 ^ 32) :
+    bswap32 (bswap32 v) = v :=
+  bswap32_invol_bounded v hv
 end Gabbro.Grammatik.X86
