@@ -225,40 +225,96 @@ theorem valSound_stark_gibt_deckung (p : Profil) (bild : Bild)
         true :=
   valStark_gibt_deckung p bild bias e reg fl h
 
-/-- SOUNDNESS, entry-at-decoded-start leg: the strengthened entry
-    check (mapping AND containment AND execute byte AND successful
-    fetch from actual loaded bytes) yields the fetched covered pilot
-    form at its exact length with executable prefix. This packages
-    the accepted `valStark_gibt_deckung` as the soundness half that
-    the plain `valX86` Bool does NOT supply (interior entries stay a
-    pinned gap below). The single premise is threaded through. -/
-theorem valSound_stark_gibt_deckung (p : Profil) (bild : Bild)
-    (bias e : Nat) (reg : Register → Wort) (fl : Flags)
-    (h : valEintrittStark p bild bias e reg fl = true) :
-    eintragEnthalten bias bild.abschnitte e = true ∧
-    ladenAusfuehrbar bild bias e = true ∧
-    ∃ (d : Decodiert) (rest : List Byte),
-      fetchDekodiert (bildZustand bild bias (BitVec.ofNat 64 e) reg fl) =
-        some (d, rest) ∧
-      decktAb d ∧
-      d.laenge + rest.length =
-        (geholt (bildZustand bild bias (BitVec.ofNat 64 e) reg fl)).length ∧
-      laengeOk d.laenge = true ∧
-      ausfuehrbarN (bildZustand bild bias (BitVec.ofNat 64 e) reg fl).speicher
-        (bildZustand bild bias (BitVec.ofNat 64 e) reg fl).rip d.laenge =
-        true :=
-  valStark_gibt_deckung p bild bias e reg fl h
+/-- PINNED REFUSAL, altered byte: flipping the witness `ret` byte to
+    a non-canonical opcode refuses admission. The mapping still
+    holds, so the refusal comes from decode coverage, reusing the
+    accepted pin. -/
+theorem valSound_mutiert_verweigert :
+    valX86 .p48 { valZeuge with datei := [natByte 0] } = false :=
+  valZeuge_mutiert_verweigert
 
-/- CUTS (partial; extended with each added leg):
-    Proved here: mapping and coverage projections of `valX86`,
-    per-section coverage, whole-section full decode from the base,
-    and its no-remainder traversal inversion.
-    OPEN (never a premise here): `valX86_sound_full`: no claim that
-    an admitted image is the emitted form of any source program, or
-    refines any contract, duty, cost, lock or budget; no hardware
-    claim (silicon, caches, TLBs, store buffers, interrupts, faults,
-    timing); no multi-step control-flow or TSO/GX bridge claim.
--/
+/-- PINNED REFUSAL, W^X: making the witness code section writable
+    refuses admission. Reuses the accepted permission pin; the
+    refusal Bool is validator admission, never a hardware fault. -/
+theorem valSound_wx_verweigert : valX86 .p48 valWx = false :=
+  valWx_verweigert
+
+/-- PINNED GAP, interior entry: the old skeleton admits the image with
+    its interior entry (whole-section decode from the base covers it),
+    containment admits the interior byte, yet fetching actual loaded
+    bytes at the interior entry refuses. Coverage is from section
+    bases only; `valX86 = true` never promises entry-at-decoded-start.
+    Reuses the accepted counterexample joint. -/
+theorem valSound_kein_innen_eintritt :
+    valX86 .p48 innenBild = true ∧
+    eintragEnthalten 0 innenBild.abschnitte 0x1001 = true ∧
+    fetchDekodiert
+      (bildZustand innenBild 0 (BitVec.ofNat 64 0x1001) storeReg storeFlags) =
+      none :=
+  ⟨innen_valX86, innen_eintrag_innen, innen_fetch_verweigert⟩
+
+/-- JOINT WITNESS: the minimal image is admitted, its one-byte
+    mutation is refused, the biased store image is admitted and its
+    loaded step moves 42 into the data section (zero before), a real
+    memory-changing write/read exists, and the interior entry of the
+    counterexample image is refused. Admission, execution and refusal
+    share the actual loaded bytes; nothing is a second model. -/
+theorem valSound_zeuge :
+    valX86 .p48 valZeuge = true ∧
+    valX86 .p48 { valZeuge with datei := [natByte 0] } = false ∧
+    wohlgeformt .p48 bildStore = true ∧
+    fetchDekodiert bildStoreStart =
+      some (⟨.store64 .rbx .rax 0, 7⟩, List.replicate 8 (natByte 0)) ∧
+    ausgangByte (BitVec.ofNat 64 0x102000) (byteschritt bildStoreStart) =
+      some (natByte 42) ∧
+    (∃ (m m' : Speicher) (a : Adresse) (v : Wort),
+      v ≠ 0 ∧ write64 m a v = some m' ∧ read64 m' a = some v ∧
+        m.bytes a ≠ m'.bytes a) ∧
+    valEintrittStark .p48 innenBild 0 0x1001 storeReg storeFlags =
+      false := by
+  exact ⟨valZeuge_akzeptiert, valZeuge_mutiert_verweigert,
+    bildStore_wohlgeformt, bildStore_fetch_store,
+    bildStore_schritt_speichert.1, schreibLese_zeuge,
+    innen_stark_verweigert⟩
+
+/- CUTS:
+    Proved here, over the ACTUAL accepted vocabulary
+    (`ValidatorSkeleton.valX86`/`bildDeckung`/`abschnittDeckung`,
+    `ValidationBudget.validAllFuel`/`decodeFuel`,
+    `Bild.wohlgeformt`/`geladen`/`abteilFinden`/`ladenByte`,
+    `LoadedExecution.bildZustand`/`bildStore`,
+    `Byteschritt.fetchDekodiert`/`byteschritt`,
+    `HwLoadedImage` projection identities,
+    `ValidatorExecution.valEintrittStark` and its consequences):
+    the decidable-part soundness of `valX86` -- mapping and coverage
+    projections, per-section full decode from the base with its
+    no-remainder traversal, W^X/size/file mapping inversions,
+    loaded-byte agreement with in-file index, BSS zero, the
+    outside-domain frame, execute-permission agreement, the W^X
+    consequence, the coherent-machine fetch/step identities under
+    explicit coincidence, the strengthened-entry consequence, the
+    altered-byte and W^X refusal pins, the interior-entry limit pin,
+    and the joint admission/execution/refusal witness.
+    This is NOT source refinement: nothing here claims an admitted
+    image is the emitted form of any source program, or refines any
+    contract, duty, cost, lock or budget.
+    OPEN, stated here as obligation and never as an assumed premise
+    of any delivered theorem:
+    - `valX86_sound_full`: the full closing theorem (source
+      correspondence and refinement) stays with its owner; the
+      shared IR it waits on is not invented here.
+    - No hardware claim: bytes are model `Byte` lists, memory the
+      model `Speicher`; silicon, caches, TLBs, store buffers
+      (per-byte TSO is not multi-byte atomicity), interrupts, faults
+      beyond the decoded refusal, and timing are open. Refusal `Bool`s
+      are validator admission, never hardware fault claims.
+    - No multi-step control-flow, relocation re-decode, gate/OS
+      contract (user logic, never an assumption), concurrency
+      (TSO/GX bridge stays with its owner), cost/time or termination
+      claim. Coverage is from section bases only, never
+      entry-at-decoded-start for interior offsets.
+- note: CUTS is documentation, not a Lean command; the name
+  `valX86_sound_full` above is an obligation label, not a premise. -/
 
 #print axioms valSound_mapping
 #print axioms valSound_deckung
@@ -274,6 +330,11 @@ theorem valSound_stark_gibt_deckung (p : Profil) (bild : Bild)
 #print axioms valSound_wx_kein_schreiben
 #print axioms valSound_hw_fetch_gleich
 #print axioms valSound_hw_schritt_gleich
+#print axioms valSound_stark_gibt_deckung
+#print axioms valSound_mutiert_verweigert
+#print axioms valSound_wx_verweigert
+#print axioms valSound_kein_innen_eintritt
+#print axioms valSound_zeuge
 #print axioms validAllFuel_gibt_traversierung
 #print axioms valSound_exec_traversierung
 
