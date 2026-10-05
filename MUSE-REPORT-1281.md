@@ -121,7 +121,58 @@ register MOVSXD (`REX.W 63 /r`).
 ## Open (not claimed)
 
 See CUTS: no silicon proof; documented over-refusals (non-`0x48`
-REX on 98/99, `66`+REX combos, REX-without-W on 87, REX.X,
+REX on 98/99, `66`+REX combos, REX-without-W on 87,
 MOVSXD without REX.W/with `66`); no XCHG-mem (locked
 families) and no MOVSXD-mem (TSO read path open); no
 source/IR/loader/entry/budget link; no W/GX bridge; no timing.
+
+## Repair after independent review (MUSE-REPORT-1282, REPAIR)
+
+The reviewer found a genuine silicon defect with green proofs:
+REX-prefixed `90H` resolving to the RAX self was decoded as the
+zero-extending `.xchgRax32 .rax` event, while the SDM XCHG NOTE
+makes every such `90H` (all prefixes, REX.W included) the NOP
+alias; `66 90` and `48 90` as labeled-but-identity exchanges had
+the same mislabeling. Concrete divergence from the report:
+RAX=`0x1122334455667788` stayed unchanged on silicon, the
+candidate yielded `0x0000000055667788`. Accepted as a wrong
+definition, not a proof-shape issue.
+
+Repair (commit `6d011bb2`, all in the owned file, no accepted
+file touched):
+
+- `decodeSx90` routes every `90H` with `bb == 0 && lo == 0` to
+  `.nop` at length `npfx + 1` under every prefix combination
+  (bare, `66`, REX, REX.W, `66`+REX.W); the REX.R==0 gate on the
+  64-bit arm is dropped (R names no field, uniformly ignored
+  now). Previously refused-but-valid `4C/4D 90` and `66`+REX.W
+  `90` rows become correct NOPs.
+- Top-level `xb == 1` refusal dropped: REX.X names no SIB
+  anywhere in this family (all ModRM uses are register-direct,
+  all other opcodes ModRM-free), so it is ignored; SIB-carrying
+  shapes still refuse through the `mod` check.
+- `sxEncode` never emits a `90H` byte for a zero-extending event:
+  RAX self-exchanges canonicalize to their `87`-family bytes
+  (`66 87 C0` / `87 C0` / `REX.W 87 C0`), justified by the new
+  step-equivalence theorems `sxXchgRax16rax_ist`,
+  `sxXchgRax32rax_ist`, `sxXchgRax64rax_ist` (same register
+  update, proved `cases <;> simp`).
+- All three `sxRoundtrip_xchgRax*` carry the honest premise
+  `r ≠ .rax` (self covered by the equivalence theorems, not by
+  a `90H` round-trip).
+- Pins: `[40,90]` re-pinned to NOP (`pin_sx4090_nop_dekode`),
+  new NOP pins for `[66,90]`, `[48,90]`, `[4C,90]`,
+  `[66,48,90]`; encoder self pins rewritten to the `87` forms.
+- No-shadow rows added for `[40,90]`, `[4C,90]`,
+  `[66,48,90]` (19 total); dispatcher NOP pins added for
+  `[66,90]` and `[40,90]`.
+- CUTS cites the NOP-alias NOTE and re-audits the over-refusal
+  list (REX.X removed from it; `4C/4D 90` and `66`+REX.W `90`
+  removed from it).
+
+Verification after repair: `./lean-probe` 0 errors;
+`./lean-bau` `Build completed successfully (659 jobs)` with
+unchanged axioms (`propext` / `propext + Quot.sound`). The
+reviewer's remaining notes (owner-task under-specification of
+prefixed `90H`, apparatus detail) are acknowledged, no action
+needed in this lane.
