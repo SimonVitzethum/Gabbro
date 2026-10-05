@@ -508,10 +508,8 @@ def decodeSx98 (op16 : Bool) (wb npfx : Nat) (is99 : Bool)
     and is ignored. -/
 def decodeSx90 (op16 : Bool) (wb rb bb npfx : Nat) (op : Byte)
     (rest : List Byte) : Option (SxDecodiert × List Byte) :=
-  let n := byteNat op
-  if n < 144 || 151 < n then none
-  else
-    let lo := n - 144
+  if byteNat op / 8 == 18 then
+    let lo := byteNat op % 8
     if lo == 0 && npfx == 0 then
       some (⟨.nop, 1⟩, rest)
     else if !op16 && wb == 0 then
@@ -527,6 +525,7 @@ def decodeSx90 (op16 : Bool) (wb rb bb npfx : Nat) (op : Byte)
       | some r => some (⟨.xchgRax64 r, npfx + 1⟩, rest)
       | none => none
     else none
+  else none
 
 /-- `86` ModRM (`mod = 3`): the 8-bit register exchange. Operand
     size and REX.W name nothing at one byte and are ignored. -/
@@ -592,7 +591,7 @@ def decodeSxNachPraefix (op16 : Bool) (wb rb xb bb npfx : Nat) :
       match rest with
       | [] => none
       | m :: rest2 => decodeSx63 op16 wb rb bb npfx m rest2
-    else if 144 ≤ byteNat op && byteNat op ≤ 151 then
+    else if byteNat op / 8 == 18 then
       decodeSx90 op16 wb rb bb npfx op rest
     else none
 
@@ -808,6 +807,111 @@ theorem pin_sxmovsxdR_bytes :
     sxEncode (.movsxd .r11 .rcx) =
       [natByte 76, natByte 99, natByte 217] := by
   decide
+
+/-! ## 9. Round trips: decoding inverts encoding.
+
+    Generic over every event and any suffix, in the accepted
+    `cases … <;> rfl` shape: each concrete case reduces by
+    evaluation. -/
+
+/-- Round trip for CBW. -/
+theorem sxRoundtrip_cbw (suffix : List Byte) :
+    decodeSx (sxEncode .cbw ++ suffix) =
+      some (⟨.cbw, (sxEncode .cbw).length⟩, suffix) := by
+  rfl
+
+/-- Round trip for CWDE. -/
+theorem sxRoundtrip_cwde (suffix : List Byte) :
+    decodeSx (sxEncode .cwde ++ suffix) =
+      some (⟨.cwde, (sxEncode .cwde).length⟩, suffix) := by
+  rfl
+
+/-- Round trip for CDQE. -/
+theorem sxRoundtrip_cdqe (suffix : List Byte) :
+    decodeSx (sxEncode .cdqe ++ suffix) =
+      some (⟨.cdqe, (sxEncode .cdqe).length⟩, suffix) := by
+  rfl
+
+/-- Round trip for CWD. -/
+theorem sxRoundtrip_cwd (suffix : List Byte) :
+    decodeSx (sxEncode .cwd ++ suffix) =
+      some (⟨.cwd, (sxEncode .cwd).length⟩, suffix) := by
+  rfl
+
+/-- Round trip for CDQ. -/
+theorem sxRoundtrip_cdq (suffix : List Byte) :
+    decodeSx (sxEncode .cdq ++ suffix) =
+      some (⟨.cdq, (sxEncode .cdq).length⟩, suffix) := by
+  rfl
+
+/-- Round trip for CQO. -/
+theorem sxRoundtrip_cqo (suffix : List Byte) :
+    decodeSx (sxEncode .cqo ++ suffix) =
+      some (⟨.cqo, (sxEncode .cqo).length⟩, suffix) := by
+  rfl
+
+/-- Round trip for NOP. -/
+theorem sxRoundtrip_nop (suffix : List Byte) :
+    decodeSx (sxEncode .nop ++ suffix) =
+      some (⟨.nop, (sxEncode .nop).length⟩, suffix) := by
+  rfl
+
+/-- Round trip for the 8-bit register exchange. -/
+theorem sxRoundtrip_xchgReg8 (a c : Register) (suffix : List Byte) :
+    decodeSx (sxEncode (.xchgReg .b8 a c) ++ suffix) =
+      some (⟨.xchgReg .b8 a c,
+        (sxEncode (.xchgReg .b8 a c)).length⟩, suffix) := by
+  cases a <;> cases c <;> rfl
+
+/-- Round trip for the 16-bit register exchange. -/
+theorem sxRoundtrip_xchgReg16 (a c : Register) (suffix : List Byte) :
+    decodeSx (sxEncode (.xchgReg .b16 a c) ++ suffix) =
+      some (⟨.xchgReg .b16 a c,
+        (sxEncode (.xchgReg .b16 a c)).length⟩, suffix) := by
+  cases a <;> cases c <;> rfl
+
+/-- Round trip for the 32-bit register exchange. -/
+theorem sxRoundtrip_xchgReg32 (a c : Register) (suffix : List Byte) :
+    decodeSx (sxEncode (.xchgReg .b32 a c) ++ suffix) =
+      some (⟨.xchgReg .b32 a c,
+        (sxEncode (.xchgReg .b32 a c)).length⟩, suffix) := by
+  cases a <;> cases c <;> rfl
+
+/-- Round trip for the 64-bit register exchange. -/
+theorem sxRoundtrip_xchgReg64 (a c : Register) (suffix : List Byte) :
+    decodeSx (sxEncode (.xchgReg .b64 a c) ++ suffix) =
+      some (⟨.xchgReg .b64 a c,
+        (sxEncode (.xchgReg .b64 a c)).length⟩, suffix) := by
+  cases a <;> cases c <;> rfl
+
+/-- Round trip for the 16-bit RAX exchange. -/
+theorem sxRoundtrip_xchgRax16 (r : Register) (suffix : List Byte) :
+    decodeSx (sxEncode (.xchgRax16 r) ++ suffix) =
+      some (⟨.xchgRax16 r,
+        (sxEncode (.xchgRax16 r)).length⟩, suffix) := by
+  cases r <;> rfl
+
+/-- Round trip for the 32-bit RAX exchange (the self case rides
+    its redundant REX, never bare `90`). -/
+theorem sxRoundtrip_xchgRax32 (r : Register) (suffix : List Byte) :
+    decodeSx (sxEncode (.xchgRax32 r) ++ suffix) =
+      some (⟨.xchgRax32 r,
+        (sxEncode (.xchgRax32 r)).length⟩, suffix) := by
+  cases r <;> rfl
+
+/-- Round trip for the 64-bit RAX exchange. -/
+theorem sxRoundtrip_xchgRax64 (r : Register) (suffix : List Byte) :
+    decodeSx (sxEncode (.xchgRax64 r) ++ suffix) =
+      some (⟨.xchgRax64 r,
+        (sxEncode (.xchgRax64 r)).length⟩, suffix) := by
+  cases r <;> rfl
+
+/-- Round trip for register MOVSXD. -/
+theorem sxRoundtrip_movsxd (dst src : Register) (suffix : List Byte) :
+    decodeSx (sxEncode (.movsxd dst src) ++ suffix) =
+      some (⟨.movsxd dst src,
+        (sxEncode (.movsxd dst src)).length⟩, suffix) := by
+  cases dst <;> cases src <;> rfl
 
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
