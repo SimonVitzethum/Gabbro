@@ -2,7 +2,9 @@
 
 CANDIDATE: 1333 9defeccd5c0085df59dfeda8527f34b01bfd63b6
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 ## What was checked
 
