@@ -339,6 +339,9 @@ generated driver, lock through the chain). Reviewers from 321.
       counted since this slice); `pruefe-metall.sh` 18 booted + 8 gifts, freestanding 338/338.
     - [ ] The kernel proper: serial + report, IDT, LAPIC, ACPI/MADT, SMP bring-up, scheduler,
       context switch (`kern.c`), `start.S`, `eintritt_asm.h`, `metall.h`.
+      Mapped in `messung/C3-WAENDE.md` (2026-10-05): walls A (a device at a fixed hardware
+      address), B (physical memory by an address the machine hands over), C (a thread as saved
+      machine state), D (code before any Gabbro can run); A, B and D wait for Simon.
 
 *Simon, 2026-09-16: **everything a standard library does — except networking, files, graphics
 and windows — is to be written in Gabbro itself**, not as `extern` with a named assumption. The

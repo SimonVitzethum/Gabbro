@@ -60,6 +60,10 @@ hanging premises it named before this lane (none of this lane's).
 * **C3** (bare metal), what is left after slice 1: the kernel proper -- serial, IDT, LAPIC, ACPI
   (MADT by physical address), SMP bring-up, scheduler, context switch (`kern.c`), the boot and
   entry stubs (`start.S`, `eintritt_asm.h`), the driver macros (`metall.h`).
+  Mapped piece by piece in `messung/C3-WAENDE.md`: four walls -- (A) a device at a fixed
+  hardware address, (B) physical memory read by an address the machine hands over, (C) a thread
+  as saved machine state, (D) code before any Gabbro can run -- and three questions for Simon
+  (A, B, and which asm stays asm).
 * **Machine G has no byte pointers** (OFFEN O37): region programs stay UNCERTIFIED; nothing
   releases a region.
 * No Isabelle on the server: `abnahme.py --voll` has not been run by this lane.

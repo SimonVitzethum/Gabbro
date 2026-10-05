@@ -183,8 +183,18 @@ fn verbraucher()
               reads BEREIT, reads NUTZLAST,
               reads gesehen, writes gesehen, reads schlecht, writes schlecht,
               reads ZAEHLER, writes ZAEHLER, reads TOR, writes TOR }
-    costs   <= 100000 ops
+    costs   <= 4295067295 ops
 {
+    -- **The first publication is waited for** (C-free lane, 2026-10-05): without it the
+    -- consumer could run all its rounds before the producer's first store -- one QEMU run in
+    -- five did (`kratz/c/s11/kmod-b.log`), and "the flag was seen" read 0 on a correct
+    -- program. The wait is bounded; a producer that never publishes ends the run loudly.
+    retry warte until BEREIT
+        bounded 4294967295 ops
+        on_exceeded aufgegeben
+        effects { reads BEREIT }
+    {
+    }
     traverse r over slots of RundenV by unvisited {
         RundenV.slots[r].getan = 1;
         let fertig = BEREIT awaits { NUTZLAST };
