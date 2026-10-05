@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 22:06 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 22:39 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -714,7 +714,7 @@ Last ledger refresh: **2026-10-05 22:06 UTC**. This is an operational snapshot, 
 | 1311 | Capstone, second step: add the families merged since the first union | Merged after review/checks | 1312: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1311.md) |
 | 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Incomplete; preserved | 1314: scheduled | [task](lanes/1313.md) |
 | 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Merged after review/checks | 1316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1315.md) |
-| 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
+| 1317 | Memory-operand addressing forms for bit test and bit scan | Incomplete; preserved | 1318: scheduled | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Merged after review/checks | 1320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
@@ -730,6 +730,14 @@ Last ledger refresh: **2026-10-05 22:06 UTC**. This is an operational snapshot, 
 | 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Merged after review/checks | 1344: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1343.md) |
 | 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
+| 1349 | Integer ALU in every width and form | Scheduled | 1350: scheduled | [task](lanes/1349.md) |
+| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Scheduled | 1352: scheduled | [task](lanes/1351.md) |
+| 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Scheduled | 1354: scheduled | [task](lanes/1353.md) |
+| 1355 | SSE/SSE2 moves, loads, stores and unpack | Scheduled | 1356: scheduled | [task](lanes/1355.md) |
+| 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Scheduled | 1358: scheduled | [task](lanes/1357.md) |
+| 1359 | SSE/SSE2 scalar and packed floating point | Scheduled | 1360: scheduled | [task](lanes/1359.md) |
+| 1361 | String instructions with REP prefixes and the direction flag | Scheduled | 1362: scheduled | [task](lanes/1361.md) |
+| 1363 | Wire the already-modelled families into the decoder chain | Scheduled | 1364: scheduled | [task](lanes/1363.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1785,6 +1793,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `bbbdbe2e` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:bbbdbe2e03ce2c576b583ab1d23060e9e60b1d1c -->
 - 2026-10-05: lane **1338**, Independent exact review of 1337, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1338.md). <!-- x86-merged:1338 -->
 - 2026-10-05: publication batch checks passed for `1c924cbf`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: checked master `6079641b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:6079641b9d111897e6eff908020cbab97d7f9ad9 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
