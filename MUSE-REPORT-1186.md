@@ -1,5 +1,7 @@
 # MUSE-REPORT-1186: Independent exact review of candidate 1185
 
+CANDIDATE: 1185 f95e81552256be451177d0a73ab8efa16e8687cc
+
 Clone `/home/simon/Dokumente/gabbro-muse/a1186`, branch `muse/1186`: assumed
 (the review snapshot is supplied in-clone; shell execution is blocked in this
 session, see blocker note below, so branch verification was by task file, not
@@ -124,7 +126,7 @@ failure (varying toolchain `.olean` read errors, reproducing with the
 import commented out). The merge gate MUST still re-verify the
 integrated build before merging the candidate.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 Candidate 1185 (HEAD `f95e81552256be451177d0a73ab8efa16e8687cc`):
 generic word forwarding, foreign-leg, overlap byte rules, negatives,
