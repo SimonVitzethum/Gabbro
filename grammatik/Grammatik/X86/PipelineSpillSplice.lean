@@ -918,10 +918,204 @@ def spleissS0 : Zustand :=
   { register := fun _ => 42, flags := witnessFlags, rip := natAdresse 0,
     speicher := speicherZeuge }
 
+/-! ## 9. Joint witnesses on non-degenerate programs.
+
+    The closing witness runs the pipeline witness program (memory
+    7 -> 35 and 9 -> 6, so the run is non-degenerate and
+    memory-changing) under the witness splice plan. The paired
+    witness threads a reached checked save of `42` through an empty
+    middle segment into its reload, beside the writer program
+    `zeugenU`. -/
+
+/-- JOINT WITNESS for `spleiss_haelt_bedeutung`: every premise holds
+    jointly on the pipeline witness program with the witness splice
+    plan; the source run changes memory (rows 7 -> 35, 9 -> 6). -/
+theorem spleiss_haelt_bedeutung_zeuge :
+    ∃ (σ' : World pwD) (ρ' : Env pwD pwCtx),
+      spleissPlanOk pwCfg spillR0 pwProg spleissPts0 pwCfg.codeBase
+        pwBytes.length spillD0 = true ∧
+      PipeRahmenGetrennt spillR0 pwL ∧
+      validate pwCfg pwL pwCerts pwSrc pwBytes = true ∧
+      LayoutSep pwL ∧
+      CodeAt (pwStart 30).speicher (natAdresse pwCfg.codeBase) pwBytes ∧
+      (pwStart 30).rip = natAdresse pwCfg.codeBase ∧
+      WorldRep pwL (pwStart 30).speicher pwSigma ∧
+      EnvRepr pwEnv30 (pwStart 30).register (abbOf pwCfg) ∧
+      execBlock pwO 0 pwR pwSrc pwSigma pwEnv30 = .ok σ' ρ' ∧
+      (pwSigma.slots () 0 ()).n = 7 ∧ (σ'.slots () 0 ()).n = 35 ∧
+      (pwSigma.slots () 1 ()).n = 9 ∧ (σ'.slots () 1 ()).n = 6 ∧
+      (∃ n s', laufBytes n (pwStart 30) = .weiter s' ∧
+        s'.rip = natAdresse (pwCfg.codeBase + pwBytes.length) ∧
+        WorldRep pwL s'.speicher σ' ∧
+        EnvRepr ρ' s'.register (abbOf pwCfg)) ∧
+      SpillVonTabellenGetrennt spillR0 (spleissPts0.map (·.schlitz))
+        pwL ∧
+      (∀ i j, i ∈ (spleissPts0.map (·.schlitz)) →
+        j ∈ (spleissPts0.map (·.schlitz)) → i ≠ j →
+        Disjunkt (spillSlot spillR0 i) (spillSlot spillR0 j)) ∧
+      (∀ a ∈ spillD0, ∀ q ∈ (spleissPts0.map (·.schlitz)),
+        a + 8 ≤ spillR0.schlitzNat q ∨
+          spillR0.schlitzNat q + 8 ≤ a) ∧
+      (∀ p ∈ spleissPts0, (spleissFrag pwCfg spillR0 p).all gerade
+        = true ∧ p.schlitz < spillR0.schlitzZahl ∧
+        (p.richtung = .sichern → p.reg ≠ pwCfg.adr)) := by
+  obtain ⟨σ', ρ', hsrc, h0, h1⟩ := pw_quelle30
+  obtain ⟨hv0, hv1⟩ := pw_quelle_vorher
+  have hplan : spillPlanOk spillR0 (spleissPts0.map (·.schlitz))
+      pwCfg.codeBase pwBytes.length spillD0 = true :=
+    spill_probe_pos
+  obtain ⟨hrun, hpriv, hsep2, hdat, hpts⟩ :=
+    spleiss_haelt_bedeutung pwCfg pwL pwCerts pwSrc pwBytes spillR0
+      pwProg spleissPts0 spillD0 pw_validate pw_layoutSep hplan
+      spleiss_probe_pos spillR0_getrennt pwO 0 pwR pwSigma pwEnv30
+      (pwStart 30) pw_code rfl pw_worldRep pw_envRepr30 σ' ρ' hsrc
+  exact ⟨σ', ρ', spleiss_probe_pos, spillR0_getrennt, pw_validate,
+    pw_layoutSep, pw_code, rfl, pw_worldRep, pw_envRepr30, hsrc, hv0, h0,
+    hv1, h1, hrun, hpriv, hsep2, hdat, hpts⟩
+
+/-- JOINT WITNESS for `spleiss_paar_rundreise`: every premise holds
+    jointly on concrete values — a reached checked save of `42` into
+    slot 0 through an empty middle segment into its reload, which
+    observably changed memory — beside the non-degenerate writer
+    program `zeugenU` (table `konto` written by `setze`). -/
+theorem spleiss_paar_rundreise_zeuge :
+    ∃ (t3 : Zustand),
+      (0 : Nat) < spillRahmenW.schlitzZahl ∧
+      (.rax : Register) ≠ pwCfg.adr ∧
+      write64 speicherZeuge (spillSlot spillRahmenW 0) 42 =
+        some spillZeuM1 ∧
+      lesbar8 speicherZeuge (spillSlot spillRahmenW 0) = true ∧
+      ladeWort spillZeuM1 spillRahmenW 0 = some 42 ∧
+      (zeugenU.fns.get ⟨0, by decide⟩).schreibt = ["konto"] ∧
+      t3.register .rax = 42 ∧
+      speicherZeuge.bytes (spillSlot spillRahmenW 0) ≠
+        spillZeuM1.bytes (spillSlot spillRahmenW 0) ∧
+      lauf ((([] ++ spillSaveCode pwCfg spillRahmenW 0 .rax) ++ [] ++
+        spillLoadCode pwCfg spillRahmenW 0 .rax ++ []).map kanon)
+        spleissS0 = some t3 := by
+  have hb : 0 < spillRahmenW.schlitzZahl := spillZeu_schranke
+  have hne : (.rax : Register) ≠ pwCfg.adr := by decide
+  have hwr : write64 speicherZeuge (spillSlot spillRahmenW 0) 42 =
+      some spillZeuM1 := by
+    have h := spillZeu_speichert
+    rw [spill_speichern_ist_write64] at h
+    rw [if_pos hb] at h
+    exact h
+  obtain ⟨t1m, hsave, hsaveMem, -, -⟩ :=
+    spillSave_lauf pwCfg spillRahmenW 0 .rax spleissS0 spillZeuM1 hne
+      hwr
+  have hrdm : read64 t1m.speicher (spillSlot spillRahmenW 0) =
+      some 42 := by
+    rw [hsaveMem]
+    have hround := spillZeu_rundreise
+    unfold ladeWort at hround
+    rw [if_pos hb] at hround
+    exact hround
+  obtain ⟨t3, hload, -, -⟩ :=
+    spillLoad_lauf pwCfg spillRahmenW 0 .rax t1m 42 hrdm
+  have hmain := spleiss_paar_rundreise pwCfg spillRahmenW 0 .rax [] []
+    [] spleissS0 spleissS0 t1m t1m t3 t3 spillZeuM1 hne hb rfl hwr
+    spillZeu_lesbar hsave rfl (by rw [hsaveMem]) hload rfl
+  exact ⟨t3, hb, hne, hwr, spillZeu_lesbar, spillZeu_rundreise,
+    zeugenU_schreibt, hmain.2.1, spillZeu_wechselt, hmain.1⟩
+
 /- CUTS:
-     - Interim: refusals, probes and witness values added; joint
-       witnesses for the closing and the paired round-trip OPEN.
+     - Proved here: split points over lane 1191's save/reload
+       fragments (`SpleissPunkt`/`spleissFrag`); single splice shape
+       and straight-line fragments (`spleissEins_gestalt`,
+       `spleissFrag_gerade`); the `lauf` prefix split (`lauf_praefix`);
+       exact clobber sets along any reached fragment run
+       (`spleiss_save_fremd`: only the address register;
+       `spleiss_load_fremd`: only address and destination); the
+       multi-splice over sorted points (`spleissSeg`/`spleissMehr`,
+       empty/single shapes) with the decided validator
+       (`spleissPlanOk`: 1191 plan over splice slots, positions in
+       bounds, strictly ascending positions, no save onto the address
+       register) and one projection per leg; the paired save/reload
+       round-trip across an explicit middle segment
+       (`spleiss_paar_rundreise`: the middle run and slot-byte
+       preservation are explicit premises in the established token
+       style); the closing composition of validated pipeline bytes
+       with a validated splice plan (`spleiss_haelt_bedeutung` over
+       `pipeline_correct` via `spill_haelt_bedeutung`: fetched run
+       with world and environment represented, slot-vs-table privacy,
+       pairwise slot separation, slot-vs-extent separation, and
+       per-point fragment admission); the call-splice validator
+       (`spleissRufOk`: `rufOk` with a spill plan at bare indices
+       below `b.spill`) with spill-vs-callee-saved
+       (`spill_gerettet_getrennt`), spill-vs-stack-argument
+       (`bereich_getrennt`) and spill-vs-argument-position separation,
+       in-frame slots for every callee-saved register, the
+       register/stack argument carriage, and callee-saved
+       save/reload fragments (1191 saves/loads at the reserved
+       `Belegung` indices) with their runs; general refusals for past-
+       end position, unsorted points, save onto the address register,
+       table extent, out-of-frame slot and aliased slots, plus
+       call-boundary red-zone and high-slot refusals; one positive
+       and eight refused probes (position and address-register also
+       through the refusal theorems); call-boundary positive and
+       refused probes; joint non-degenerate witnesses on the pipeline
+       witness program (`spleiss_haelt_bedeutung_zeuge`: rows 7 -> 35,
+       9 -> 6) and on a reached memory-changing save/reload pair
+       beside the writer program `zeugenU`
+       (`spleiss_paar_rundreise_zeuge`).
+     - OPEN / not claimed: lane 1227's homing (`PipelineSpillHoming`
+       is not merged in this tree) — split points are bare positions,
+       and which variable homes where is not decided here; the splice
+       validator inherits `slots.Nodup` from lane 1191, so a
+       same-slot save/reload pair is proved per pair
+       (`spleiss_paar_rundreise`), not plan-admitted; discharging a
+       middle segment's non-interference (`hmid`, `hslotmid`) is the
+       allocator/homing layer's job; agreement of the declared extent
+       list `daten` with the placed tables is a deployer obligation
+       (inherited from lane 1191); the fragments clobber the address
+       register, and splicing inside a materialise-use pair of the
+       lowered program is refused only by position discipline, not by
+       a checked liveness claim; full loaded-image connection of the
+       spliced bytes (`pipeline_correct_loaded` shape, re-decoding
+       after splicing) is not re-proved here; TSO freshness of spill
+       slots beyond the reused vocabulary; no float/pointer/aggregate
+       spill shapes (inherited pilot-only scope).
+     - The refusal `Bool`s are validator admission, never hardware
+       faults.
+     - No second IR and no second evaluator: only the accepted
+       pipeline lowering, validator and machine vocabulary are reused.
 -/
+
+#print axioms SpleissRichtung
+#print axioms spleissEins
+#print axioms spleissEins_gestalt
+#print axioms spleissFrag_gerade
+#print axioms lauf_praefix
+#print axioms spleiss_save_fremd
+#print axioms spleiss_load_fremd
+#print axioms spleissSeg
+#print axioms spleissMehr
+#print axioms spleissSortiert
+#print axioms spleissPlanOk
+#print axioms spleissPlan_spill
+#print axioms spleissPlan_pos
+#print axioms spleissPlan_sortiert
+#print axioms spleissPlan_saveReg
+#print axioms spleissMehr_nil
+#print axioms spleissMehr_einz
+#print axioms spleiss_paar_rundreise
+#print axioms spleiss_haelt_bedeutung
+#print axioms spleissRufOk
+#print axioms spleissRuf_ruf
+#print axioms spleissRuf_spill
+#print axioms spleissRuf_unten
+#print axioms spleissRuf_spillGerettet
+#print axioms spleissRuf_spillStapel
+#print axioms spleissRuf_spillArg
+#print axioms spleissRuf_rettetAlle
+#print axioms spleissRuf_argTraeger
+#print axioms rufRettFrag
+#print axioms rufHolFrag
+#print axioms rufRettFrag_gerade
+#print axioms rufHolFrag_gerade
+#print axioms rufRett_lauf
+#print axioms rufHol_lauf
 
 #print axioms spleiss_verweigert_pos
 #print axioms spleiss_verweigert_unsortiert
@@ -944,5 +1138,13 @@ def spleissS0 : Zustand :=
 #print axioms spleissRuf_probe_rot
 #print axioms spleissRuf_probe_hoch
 #print axioms spleissS0
+#print axioms spleissPts0
+#print axioms spleissPtsFern
+#print axioms spleissPtsUnsortiert
+#print axioms spleissPtsAdr
+#print axioms spleissR1
+#print axioms spleissB1
+#print axioms spleiss_haelt_bedeutung_zeuge
+#print axioms spleiss_paar_rundreise_zeuge
 
 end Gabbro.Grammatik.X86.PipeSpillSplice
