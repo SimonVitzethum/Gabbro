@@ -2005,10 +2005,383 @@ theorem avx2LadeSchritt_leserecht (m : HwMaschine) (c : Nat)
     simp [hgp]
   simp only [avx2LadeSchritt, hgate, if_neg hneg, hnV]
 
-/- CUTS:
-   Skeleton only: forms are named, nothing is proved yet.
+/-! ## 15. Joint witness: two cores, buffered 32-byte store.
+
+  Core 0 issues a buffered 32-byte store of a recognizable value
+  (chunk words 1, 2, 3, 4) at the 32-aligned address 8192; core 0
+  observes it by forwarding while core 1 still reads zero; the
+  full drain observably changes shared memory on both cores, with
+  the torn halfway state standing. Every claim below is a closed
+  decidable observation; no machine equality is ever decided. -/
+
+/-- Witness data address: 32-aligned. -/
+def avx2WitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness misaligned address: sixteen past the boundary. -/
+def avx2WitFehlAdr : Adresse := BitVec.ofNat 64 8208
+
+/-- Witness data permission: thirty-two bytes at 8192. -/
+def avx2WitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 32)
+
+/-- Witness memory: all zero bytes, data read/write. -/
+def avx2WitMem : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0, lesbar := avx2WitDaten,
+    schreibbar := avx2WitDaten, ausfuehrbar := fun _ => false }
+
+/-- Witness YMM value: chunk words 1, 2, 3, 4. -/
+def avx2WitV : Avx2Vektor := ⟨vecJoin 1 2, vecJoin 3 4⟩
+
+/-- The aligned form is clean at the witness address. -/
+theorem avx2Wit_gp_ok :
+    avx2GpFehler avx2WitAdr .ausgerichtet = false := by
+  decide
+
+/-- The aligned form faults sixteen past the boundary. -/
+theorem avx2Wit_gp_fehler :
+    avx2GpFehler avx2WitFehlAdr .ausgerichtet = true := by
+  decide
+
+/-- Witness start TSO state: zeroed memory, empty buffers. -/
+def avx2WitS0 : TSOZustand := ⟨avx2WitMem, fun _ => []⟩
+
+/-- Core 0 issues the thirty-two bytes. -/
+def avx2WitS1 : Option TSOZustand :=
+  avx2Speichern avx2WitS0 0 avx2WitAdr avx2WitV
+
+/-- Read a buffer length out of a TSO outcome. -/
+def avx2BufOut (o : Option TSOZustand) (c : Nat) : Option Nat :=
+  match o with
+  | some s => some (s.puffer c).length
+  | none => none
+
+/-- The store issues exactly thirty-two buffer entries. -/
+theorem avx2Wit_s1_buflen : avx2BufOut avx2WitS1 0 = some 32 := by
+  decide
+
+/-- Core 0 observes its own value (forwarding). -/
+def avx2WitLoadEigen : Option (Option Avx2Vektor) :=
+  match avx2WitS1 with
+  | some s => some (avx2Laden s 0 avx2WitAdr)
+  | none => none
+
+/-- Core 1 observes the old value (no foreign forwarding). -/
+def avx2WitLoadFremd : Option (Option Avx2Vektor) :=
+  match avx2WitS1 with
+  | some s => some (avx2Laden s 1 avx2WitAdr)
+  | none => none
+
+/-- Forwarding: core 0 reads its own unflushed value. -/
+theorem avx2Wit_weiterleitung :
+    avx2WitLoadEigen = some (some avx2WitV) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem avx2Wit_fremd_alt :
+    avx2WitLoadFremd = some (some ⟨0, 0⟩) := by
+  decide
+
+/-- The full thirty-two drain over the store successor. -/
+def avx2WitDrain : Option TSOZustand :=
+  match avx2WitS1 with
+  | some s => avx2Drain s 0 (avx2Eintraege avx2WitAdr avx2WitV)
+  | none => none
+
+/-- The low-sixteen drain: the torn halfway state. -/
+def avx2WitDrainLo : Option TSOZustand :=
+  match avx2WitS1 with
+  | some s => avx2Drain s 0 (avx2EintraegeLo avx2WitAdr avx2WitV)
+  | none => none
+
+/-- Read a drained shared-memory byte. -/
+def avx2DrainMemOut (o : Option TSOZustand) (a : Adresse) :
+    Option Byte :=
+  match o with
+  | some s => some (s.mem.bytes a)
+  | none => none
+
+/-- Read a drained load observation. -/
+def avx2DrainLoad (o : Option TSOZustand) (c : Nat) (a : Adresse) :
+    Option (Option Byte) :=
+  match o with
+  | some s => some (loadByte s c a)
+  | none => none
+
+/-- The data cell starts zeroed: the run really changes memory. -/
+theorem avx2Wit_anfang_null :
+    avx2WitMem.bytes avx2WitAdr = BitVec.ofNat 8 0 := rfl
+
+/-- The drain changes shared memory: the first byte reads `0x01`. -/
+theorem avx2Wit_spuelung_aendert_speicher :
+    avx2DrainMemOut avx2WitDrain avx2WitAdr =
+      some (BitVec.ofNat 8 1) := by
+  decide
+
+/-- The drain installs the last chunk: offset 24 reads `0x04`. -/
+theorem avx2Wit_spuelung_letzt :
+    avx2DrainMemOut avx2WitDrain (BitVec.ofNat 64 8216) =
+      some (BitVec.ofNat 8 4) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem avx2Wit_fremd_neu :
+    avx2DrainLoad avx2WitDrain 1 avx2WitAdr =
+      some (some (BitVec.ofNat 8 1)) := by
+  decide
+
+/-- Torn halfway: the first byte is new after sixteen drains. -/
+theorem avx2Wit_teil_neu :
+    avx2DrainMemOut avx2WitDrainLo avx2WitAdr =
+      some (BitVec.ofNat 8 1) := by
+  decide
+
+/-- Torn halfway: offset sixteen still reads pre-drain. -/
+theorem avx2Wit_teil_alt :
+    avx2DrainMemOut avx2WitDrainLo (BitVec.ofNat 64 8208) =
+      some (BitVec.ofNat 8 0) := by
+  decide
+
+/-! ## 16. Machine witness and the joint theorem.
+
+  The store plug runs on a two-core coherent machine over the
+  witness readiness; the reached successor carries thirty-two
+  buffer entries and is an extended step. A refused profile is an
+  explicit refusal step. -/
+
+/-- Witness core-0 registers: data address in rax. -/
+def avx2WitReg0 : Register → Wort := fun q =>
+  if q = Register.rax then BitVec.ofNat 64 8192
+  else if q = Register.rsp then BitVec.ofNat 64 8704
+  else BitVec.ofNat 64 0
+
+/-- Witness core data: core 0 runs the address, core 1 idles. -/
+def avx2WitKern : Nat → HwKern
+  | 0 => ⟨avx2WitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0,
+      kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    baseline silicon with OS vector state. -/
+def avx2WitStart : HwMaschine :=
+  ⟨avx2WitMem, avx2WitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem avx2WitStart_wf : HwWf avx2WitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- The effective address at the witness core is the data cell. -/
+theorem avx2Wit_eff :
+    effAddr (projZustand avx2WitStart 0) .rax (0 : BitVec 32) =
+      avx2WitAdr := by
+  decide
+
+/-- Write permission across all four witness chunks. -/
+theorem avx2Wit_perm0 :
+    schreibbar8 (tsoAnsicht avx2WitStart).mem avx2WitAdr = true := by
+  decide
+
+/-- Write permission across all four witness chunks. -/
+theorem avx2Wit_perm1 :
+    schreibbar8 (tsoAnsicht avx2WitStart).mem
+      (vecHiAddr avx2WitAdr) = true := by
+  decide
+
+/-- Write permission across all four witness chunks. -/
+theorem avx2Wit_perm2 :
+    schreibbar8 (tsoAnsicht avx2WitStart).mem
+      (addrOff avx2WitAdr 16) = true := by
+  decide
+
+/-- Write permission across all four witness chunks. -/
+theorem avx2Wit_perm3 :
+    schreibbar8 (tsoAnsicht avx2WitStart).mem
+      (vecHiAddr (addrOff avx2WitAdr 16)) = true := by
+  decide
+
+/-- The gate admits over the witness machine: profiles are the
+    baseline ones. -/
+theorem avx2Wit_gate_m :
+    avx2MemZugelassen avx2WitStart.hw (avx2WitStart.bereit 0)
+      avx2WitCpu avx2WitXcr0 basisKontrolle avx2WitProfil = true :=
+  avx2Wit_gate
+
+/-- The store plug reaches a successor with thirty-two buffer
+    entries, and it is an extended step. -/
+theorem avx2Wit_store_schritt :
+    ∃ m2 : HwMaschine,
+      avx2SpeicherSchritt avx2WitStart 0 avx2WitCpu avx2WitXcr0
+          basisKontrolle avx2WitProfil .unausgerichtet .rax
+          (0 : BitVec 32) avx2WitV = some m2 ∧
+        (m2.puffer 0).length = 32 ∧
+        HwAvx2Schritt avx2WitStart m2 (.speichere 0 avx2WitCpu
+          avx2WitXcr0 basisKontrolle avx2WitProfil .unausgerichtet
+          .rax (0 : BitVec 32) avx2WitV) := by
+  have hgp : avx2GpFehler
+      (effAddr (projZustand avx2WitStart 0) .rax (0 : BitVec 32))
+      .unausgerichtet = false :=
+    avx2Gp_nie_unausgerichtet _
+  have hneg : ¬ avx2GpFehler
+      (effAddr (projZustand avx2WitStart 0) .rax (0 : BitVec 32))
+      .unausgerichtet = true :=
+    fun hcon => Bool.false_ne_true (hgp.symm.trans hcon)
+  have heff := avx2Wit_eff
+  obtain ⟨s', hs'⟩ := avx2Speichern_erfolg (tsoAnsicht avx2WitStart)
+    0 avx2WitAdr avx2WitV avx2Wit_perm0 avx2Wit_perm1 avx2Wit_perm2
+    avx2Wit_perm3
+  have hsI : avx2Speichern (tsoAnsicht avx2WitStart) 0
+      (effAddr (projZustand avx2WitStart 0) .rax (0 : BitVec 32))
+      avx2WitV = some s' := by
+    rw [heff]
+    exact hs'
+  have hplug : avx2SpeicherSchritt avx2WitStart 0 avx2WitCpu
+      avx2WitXcr0 basisKontrolle avx2WitProfil .unausgerichtet .rax
+      (0 : BitVec 32) avx2WitV = some (setTso avx2WitStart s') := by
+    simp only [avx2SpeicherSchritt, avx2Wit_gate_m, if_neg hneg,
+      hsI]
+  have hbuf : (s'.puffer 0).length = 32 := by
+    have ha := avx2Speichern_haengt_an (tsoAnsicht avx2WitStart) s'
+      0 avx2WitAdr avx2WitV hs'
+    have hempty : (tsoAnsicht avx2WitStart).puffer 0 = [] := rfl
+    rw [hempty] at ha
+    have hl := avx2Eintraege_laenge avx2WitAdr avx2WitV
+    simp [ha, hl]
+  refine ⟨setTso avx2WitStart s', hplug, ?_, ?_⟩
+  · show (s'.puffer 0).length = 32
+    exact hbuf
+  · exact avx2Speichere_ist_schritt avx2WitStart 0 avx2WitCpu
+      avx2WitXcr0 basisKontrolle avx2WitProfil .unausgerichtet .rax
+      (0 : BitVec 32) avx2WitV _ hplug
+
+/-- A refused profile is an explicit refusal step on the machine. -/
+theorem avx2Wit_fehler_schritt :
+    HwAvx2Schritt avx2WitStart avx2WitStart (.verweigert 1) :=
+  .fehler avx2Wit_neg_cpu
+
+/-- THE JOINT WITNESS: a reached two-core run that buffers a
+    32-byte store under the named profile (thirty-two entries,
+    owner-only forwarding), drains it into shared memory (0
+    becomes `0x01` at the base and `0x04` at offset 24, observed
+    from both cores, torn halfway) -- with the alignment, gate and
+    profile refusals beside it. Non-degenerate: the drain changes
+    ACTUAL shared memory. -/
+theorem avx2Wit_zeuge :
+    avx2BufOut avx2WitS1 0 = some 32 ∧
+      avx2WitLoadEigen = some (some avx2WitV) ∧
+      avx2WitLoadFremd = some (some ⟨0, 0⟩) ∧
+      avx2WitMem.bytes avx2WitAdr = BitVec.ofNat 8 0 ∧
+      avx2DrainMemOut avx2WitDrain avx2WitAdr =
+        some (BitVec.ofNat 8 1) ∧
+      avx2DrainMemOut avx2WitDrain (BitVec.ofNat 64 8216) =
+        some (BitVec.ofNat 8 4) ∧
+      avx2DrainLoad avx2WitDrain 1 avx2WitAdr =
+        some (some (BitVec.ofNat 8 1)) ∧
+      avx2DrainMemOut avx2WitDrainLo avx2WitAdr =
+        some (BitVec.ofNat 8 1) ∧
+      avx2DrainMemOut avx2WitDrainLo (BitVec.ofNat 64 8208) =
+        some (BitVec.ofNat 8 0) ∧
+      avx2GpFehler avx2WitAdr .ausgerichtet = false ∧
+      avx2GpFehler avx2WitFehlAdr .ausgerichtet = true ∧
+      avx2MemZugelassen basisHw basisBereit basisCpu avx2WitXcr0
+        basisKontrolle avx2WitProfil = false ∧
+      (∃ m2 : HwMaschine,
+        avx2SpeicherSchritt avx2WitStart 0 avx2WitCpu avx2WitXcr0
+            basisKontrolle avx2WitProfil .unausgerichtet .rax
+            (0 : BitVec 32) avx2WitV = some m2 ∧
+          (m2.puffer 0).length = 32 ∧
+          HwAvx2Schritt avx2WitStart m2 (.speichere 0 avx2WitCpu
+            avx2WitXcr0 basisKontrolle avx2WitProfil .unausgerichtet
+            .rax (0 : BitVec 32) avx2WitV)) ∧
+      HwAvx2Schritt avx2WitStart avx2WitStart (.verweigert 1) ∧
+      HwWf avx2WitStart := by
+  refine ⟨avx2Wit_s1_buflen, avx2Wit_weiterleitung, avx2Wit_fremd_alt,
+    avx2Wit_anfang_null, avx2Wit_spuelung_aendert_speicher,
+    avx2Wit_spuelung_letzt, avx2Wit_fremd_neu, avx2Wit_teil_neu,
+    avx2Wit_teil_alt, avx2Wit_gp_ok, avx2Wit_gp_fehler,
+    avx2Wit_neg_cpu, avx2Wit_store_schritt, avx2Wit_fehler_schritt,
+    avx2WitStart_wf⟩
+
+/- CUTS: what is not proved here.
+
+   - No hardware correspondence: the two 256-bit shapes, the
+     32-byte #GP rule for the aligned form, the 32-byte footprint
+     order and the named-profile gate are stated architectural
+     facts in long-documented shape (DIRECT-COMPILER-DESIGN
+     §§2C/2D/6; Intel SDM 325462-093US September 2026 local
+     snapshot `.tmp/HARDWARE-REFERENCES/`, same edition the
+     accepted 128-bit rows cite). Silicon correspondence of the
+     alignment boundary, exception class and CPUID/XCR0 bit
+     positions against the official manuals stays OPEN and is
+     claimed nowhere. OS configuration and context-preservation
+     code remain user logic: checked inputs, never
+     assumed-correct behaviour.
+   - No whole-vector atomicity: every 32-byte memory row is
+     thirty-two per-byte TSO events (oldest-first issues,
+     oldest-first drains). Torn intermediates stand
+     (`avx2Drain_teilt16`, the accepted tearing shape at 32
+     bytes); footprint disjointness never implies atomicity or
+     reordering. Per-access TSO granularity beyond bytes, the GX
+     refinement and any source correspondence stay open.
+   - No YMM register file: store values are handed to the plug
+     and loads are state-unchanged observations; binding YMM
+     state (including upper-lane zeroing/VEX semantics) stays
+     with the State lane, decode/encode with the Vex lane, lane
+     arithmetic with the Ops lane. The plugs take effective
+     addresses through the accepted `effAddr` (no second address
+     model) but perform no fetch: the no-forgery discipline for
+     decoded AVX2 forms stays with the Vex lane.
+   - No source/IR/ABI/loader/entry/budget link: no per-access
+     target-to-W/GX simulation, no budget transfer, no progress
+     or call-log effect is proved; the full bridge to W/GX is not
+     claimed. Fault trap classes beyond the #GP/permission
+     refusal shapes (#NM, #UD, #PF ordering) are absent.
+   - The accepted 256-bit refusal rows elsewhere
+     (`stufe_avx256_verweigert`, `avx2_reihe_verweigert_immer`)
+     are untouched: this file's strictly stronger named-profile
+     gate admits a disjoint optional case and weakens no
+     existing refusal.
 -/
 
-#print axioms Avx2MemForm
+#print axioms avx2GpFehler
+#print axioms avx2Gp_ausgerichtet_fehler
+#print axioms avx2Gp_ausgerichtet_ok
+#print axioms avx2Eintraege_laenge
+#print axioms avx2Eintraege_zerlegt
+#print axioms avx2Fuss_halb
+#print axioms avx2Eintraege_mem_fuss
+#print axioms avx2Eintraege_nodup_addr
+#print axioms avx2MemZugelassen
+#print axioms avx2Mem_braucht_profil
+#print axioms avx2Mem_braucht_cpu
+#print axioms avx2Mem_ohne_profil
+#print axioms avx2Mem_ohne_cpu
+#print axioms avx2Wit_gate
+#print axioms avx2Speichern_haengt_an
+#print axioms avx2Speichern_kein_speicher
+#print axioms avx2Speichern_erfolg
+#print axioms avx2Speichern_verweigert_bei
+#print axioms avx2Acht_ist_read64
+#print axioms avx2Laden_ist_avx2Read
+#print axioms avx2Weiterleitung
+#print axioms avx2Drain_schreibt
+#print axioms avx2Drain_teilt16
+#print axioms avx2Teilwort_keine_gruppe
+#print axioms avx2Gruppe_verweigert_bei_fremdeintrag
+#print axioms hwAvx2Schritt_wf
+#print axioms hwAvx2Schritt_einbettet
+#print axioms hwAvx2Schritt_projiziert
+#print axioms adapterAvx2Mem_speichere
+#print axioms adapterAvx2Mem_fremder_kern_speichere
+#print axioms avx2Speichere_ist_schritt
+#print axioms avx2Lade_ist_schritt
+#print axioms avx2SpeicherSchritt_gp_a
+#print axioms avx2LadeSchritt_gp_a
+#print axioms avx2SpeicherSchritt_profil
+#print axioms avx2SpeicherSchritt_schreibrecht
+#print axioms avx2LadeSchritt_leserecht
+#print axioms avx2Wit_zeuge
+#print axioms avx2Wit_store_schritt
 
 end Gabbro.Grammatik.X86
