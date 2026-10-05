@@ -1,86 +1,73 @@
 # MUSE-REPORT-1274: Independent exact review, rotates ROL/ROR/RCL/RCR
 
-CANDIDATE: 1273 77780bb91164d02f09c8e9be61a344e96b82f149
+CANDIDATE: 1273 9341ac956e863b93c7b71bba56ff5303f67ec9eb
 
 ## Identity and material
-- Reviewer clone `a1274`, branch `muse/1274`, tree clean; this report is my only file.
-- Reviewed material (staged in-clone at `.tmp/review/author-1273`, pinned above):
-  `PATCH.diff` (2782 lines, 3 files), snapshot `grammatik/Grammatik/X86/IntRotate.lean`
-  (2605 lines), `MUSE-REPORT-1273.md`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`.
+- Reviewer clone `a1274`, branch `muse/1274`; this report is my only file.
+- This is a re-review. The previous head `77780bb9` got REPAIR with one finding R1;
+  that result is stale. The new pinned head `9341ac95` is one commit ahead
+  ("repair R1 - REX.W overrides 66h in rotBreite", evidence record line 328).
+- Reviewed material (staged in-clone at `.tmp/review/author-1273` for the new head):
+  `PATCH.diff` (3 files), snapshot `grammatik/Grammatik/X86/IntRotate.lean`
+  (2616 lines, +11 vs the previous snapshot), `MUSE-REPORT-1273.md` (notes the
+  repair and the earlier review outcome), `OWNER-TASK.md`, `BUILD-EVIDENCE.json`.
 - Base per snapshot: `738366545afbddf7ac664db92804703db24f8868`, snapshot flag clean.
 
-## Checks performed (all on the pinned snapshot text)
-1. Banned tokens: grep over the new Lean file for sorry/admit/native_decide/sorryAx/unsafe
-   finds only four English-word hits in doc comments ("admitted"/"admit no successor",
-   lines 1096, 1965, 2026, 2035). No `axiom` declarations anywhere. Pass.
-2. File touch audit via PATCH.diff: exactly three files — new `MUSE-REPORT-1273.md`,
-   one appended `import Grammatik.X86.IntRotate` line at the end of
-   `grammatik/Grammatik.lean`, new `grammatik/Grammatik/X86/IntRotate.lean`. Pass.
-3. Axiom ledger: a `#print axioms` line per main theorem (100+ entries, ending with
-   `rotHw_zeuge`), plus the CUTS block. Structural presence verified; kernel outputs
-   rely on author-recorded evidence (see limitation L1). Pass on structure.
-4. CUTS block (line 2396): honest — claims dispatcher/adapter-level connection only,
-   disclaims hardware correspondence and any W/GX bridge, names open subset refusals,
-   the multi-byte drain gap, and the missing decodeExt/stepExt hookup. Pass.
-5. Lift-not-copy: count mask is `schiebeZaehler` reused from Ganzzahl (line 59);
-   Breite/Wort/trunc/codeReg/regHigh/regLow/Flags/TSOZustand/HwWf/HwAdapter all reused
-   through imports; only family structs (RotOp, RotQuelle, RotOperand, RotForm,
-   RotDecodiert, RotPraefix, RotNachweis) are new. No duplicated machine, register
-   file, or TSO model. Pass.
-6. Premise hygiene: no `intro _` / `have _ :=` / wildcard-bind discards in the file.
-   Spot-read theorems use all hypotheses. Pass.
-7. Refusals that really refuse: 12 named decode refusals (lock, digit four, mod 0/1,
-   66h-on-byte, REX.W-on-byte, REX.R, REX.X, unknown, empty, lone-opcode, short-imm),
-   each a proven `= none` decide-statement; LOCK refused at dispatcher
-   (`rotHw_nichts_lock`, `[240, 209, 192]` pin); bad-length and memory-operand adapter
-   refusals proven (`rotHw_schlechte_laenge_verweigert`,
-   `rotHw_mem_adapter_verweigert`). Pass.
-8. Witness `rotHw_zeuge` (line 2359): joint over two cores (ROL on core 0 with
-   RAX/CF/OF pins, ROR on core 1 with RBX/CF/OF pins), a memory-form value pin, two
-   owner-only forwarded family bytes (owner sees 3/128, foreign sees 0), a drain that
-   changes real shared memory 0 to 3, HwWf of the start state, and three refusals
-   beside it. Non-degenerate with a memory-changing step. Pass.
-9. Silicon spot checks I could verify from architecture knowledge: opcode bytes
-   208/209/210/211/192/193 for D0/D1/D2/D3/C0/C1; digits 0-3 to ROL/ROR/RCL/RCR with
-   digit 4+ refused; masked counts via the accepted mask; RCL/RCR modulo bits-plus-one;
-   CF as last bit out; OF defined only at masked count 1 with incoming OF kept
-   otherwise (`getD vor.of`); count 0 keeps all flags (`rotFlags_null`); 8/16-bit
-   merge shape with 32-bit zero extension in the family step. Pass, except item R1.
-10. Encoder/decoder agreement: canonical encoder emits at most one prefix byte class
-    per form (66h for b16, REX.W for b64, never combined); generic register and memory
-    round trips per width and count source plus 5 SDM byte pins. Pass in-model.
+## Re-review of finding R1 (repaired, verified)
+- `rotBreite` wide case now tests `p.w == 1` first (line 1093, b64) and `p.op16`
+  second (line 1094, b16): REX.W takes precedence, the silicon direction. Byte
+  case unchanged (66h and REX.W both refused). Exact fix as requested.
+- New decide pin `pin_rot_rexw_ueber_66` (line 1566) with an explicit doc comment
+  crediting the review finding: `[102, 72, 209, 192]` decodes 64-bit, length 4.
+- CUTS updated (lines 2457-2459) to name the precedence and its pin; the axioms
+  ledger gained the matching `#print axioms` line (line 2552 in-file).
+- Author evidence: re-probed green and `./lean-bau` green (659 jobs) after the
+  repair, recorded in the evidence commands and the commit message. The encoder
+  never emits the combination, so no round trip or pin could break; the pin
+  proves the new behavior directly.
+- No other semantic change: the delta old-to-new head is the reorder, the pin,
+  its ledger line, and the CUTS/report notes.
 
-## R1 (the single repair item)
-`rotBreite` (line 1086) tests `p.op16` before `p.w`, so a byte stream carrying BOTH
-66h and REX.W decodes as 16-bit. On silicon REX.W overrides 66h (64-bit operand).
-This is the unsafe direction (mis-decode, not refusal), sits inside the task's
-explicit REX.W/legacy-prefix scope, and is not named in CUTS, which lists the other
-subset choices. All other subset choices refuse; only this combination silently
-disagrees. Concrete fix: give REX.W precedence in `rotBreite` (or refuse the
-combination explicitly) plus one decide probe pin; the encoder never emits the
-combination, so no round trip or pin breaks. This is a finding about the definition,
-not the proof shape, and the claim is not larger than the evidence.
+## Carried-over checklist (re-confirmed on the new snapshot text)
+1. Banned tokens: only the same four English-word doc-comment hits
+   ("admitted"/"admit no successor", now lines 1097, 1973, 2034, 2043). No `axiom`
+   declarations, no sorry/native_decide/sorryAx/unsafe. Pass.
+2. File touch audit via the new PATCH.diff: exactly the same three files — new
+   `MUSE-REPORT-1273.md`, one appended import line in `grammatik/Grammatik.lean`,
+   new `grammatik/Grammatik/X86/IntRotate.lean`. Pass.
+3. Axioms ledger per main theorem including the new pin, ending with
+   `rotHw_zeuge`; CUTS block present and honest (dispatcher/adapter level only,
+   no hardware correspondence, no W/GX bridge, open items named). Pass.
+4. Lift-not-copy unchanged: `rotMaske` reuses `schiebeZaehler`; machine, register
+   file, TSO, flags all reused; only family structs are new. Pass.
+5. Premise hygiene unchanged: no discarded-hypothesis patterns. Pass.
+6. Refusals unchanged and real (12 named decode refusals plus LOCK, length, and
+   adapter-memory refusals as proven statements). Pass.
+7. Witness `rotHw_zeuge` unchanged: joint over two cores with distinct family
+   steps and value/flag pins, memory-form value, owner-only forwarded bytes,
+   drain changing shared memory 0 to 3, HwWf, three refusals. Non-degenerate
+   with a memory-changing step. Pass.
+8. Silicon spots unchanged (opcodes, digits, masks, CF/OF-at-1, count-0 keeps
+   flags) plus the now-correct 66h+REX.W combination. Pass.
+9. Codec agreement unchanged (encoder emits no combined prefix; round trips and
+   pins intact). Pass.
 
-## Limitations (recorded, not verdict drivers)
-- L1: no independent kernel re-execution. The pinned files are not in my build tree
-  and my lane owns only this report, so `./lean-bau` was not run here; a green build
-  of my own clean master would evidence nothing about the pinned head. Author-recorded
-  evidence: final `./lean-probe` 0 errors, `./lean-bau` "Build completed successfully
-  (659 jobs)", snapshot clean true. The `decide` pins and axiom outputs rest on that
-  record, cross-checked structurally by me.
-- L2: no SDM extracts in this clone; silicon cross-checks above use stable
-  architecture facts (opcode map, REX.W precedence, count masks, CF/OF rules).
+## Limitations (recorded, not outcome drivers)
+- L1: no independent kernel re-execution. The pinned files are not in my build
+  tree and my lane owns only this report, so the build wrappers were not run
+  here; a green build of my own clean master would evidence nothing about the
+  pinned head. Kernel-checked claims rest on author-recorded evidence
+  (final probe 0 errors, full build 659 jobs green post-repair), cross-checked
+  structurally by me.
+- L2: no SDM extracts in this clone; silicon cross-checks use stable
+  architecture facts.
 
-## What remains open after this review
-- Author repair of R1, then re-stage of the snapshot for a closing check.
-- The CUTS-owned items (decodeExt/stepExt hookup, per-access bridge, multi-byte
-  drain agreement, silicon re-check against the supplied extracts) stay future work
-  by design.
+## What remains open
+- The CUTS-owned future work (decodeExt/stepExt hookup, per-access bridge,
+  multi-byte drain agreement, SDM re-check) stays future work by design.
 
 ## Task remarks
-- The first launch lacked the pinned hash and any in-clone candidate access, which
-  forced an honest blocked interim report (commit `fccc0d8d`, kept in history). The
-  staged snapshot plus pinned hash resolved it; recommend always staging both before
-  launching exact reviewers.
+- Nothing further wrong in the task. Staging the new snapshot with its pinned
+  hash made this re-review possible without touching any foreign directory.
 
-VERDICT: REPAIR
+VERDICT: ACCEPT
