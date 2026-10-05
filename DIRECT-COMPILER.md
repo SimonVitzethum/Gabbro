@@ -674,7 +674,7 @@ Last ledger refresh: **2026-10-05 18:51 UTC**. This is an operational snapshot, 
 | 1231 | Pipeline tables: byte slices | Committed candidate; review/integration pending | 1232: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1231.md) |
 | 1233 | Pipeline work bounds for branches and loops | Merged after review/checks | 1234: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1233.md) |
 | 1235 | Profiles: multi-step control flow and relocation re-decode | Merged after review/checks | 1236: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1235.md) |
-| 1237 | AVX2: VEX prefix decoder and encoder | Committed candidate; review/integration pending | 1238: Committed candidate; review/integration pending | [task](lanes/1237.md) |
+| 1237 | AVX2: VEX prefix decoder and encoder | Agent working | 1238: Committed candidate; review/integration pending | [task](lanes/1237.md) |
 | 1239 | AVX2: 256-bit integer operation semantics | Merged after review/checks | 1240: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1239.md) |
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Merged after review/checks | 1244: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1243.md) |
@@ -692,9 +692,9 @@ Last ledger refresh: **2026-10-05 18:51 UTC**. This is an operational snapshot, 
 | 1267 | AVX2: per-lane equation for arithmetic shift right | Merged after review/checks | 1268: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1267.md) |
 | 1269 | Cross-declaration lowering certificate for the GX refinement | Merged after review/checks | 1270: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1269.md) |
 | 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Merged after review/checks | 1272: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1271.md) |
-| 1273 | Rotates: ROL, ROR, RCL, RCR | Committed candidate; review/integration pending | 1274: Committed candidate; review/integration pending | [task](lanes/1273.md) |
+| 1273 | Rotates: ROL, ROR, RCL, RCR | Agent working | 1274: Committed candidate; review/integration pending | [task](lanes/1273.md) |
 | 1275 | ADC, SBB, INC, DEC | Merged after review/checks | 1276: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1275.md) |
-| 1277 | Bit test family: BT, BTS, BTR, BTC | Merged after review/checks | 1278: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1277.md) |
+| 1277 | Bit test family: BT, BTS, BTR, BTC | Merged after review/checks | 1278: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1277.md) |
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Agent working | 1280: Committed candidate; review/integration pending | [task](lanes/1279.md) |
 | 1281 | Sign-extend-accumulator ops and register XCHG | Committed candidate; review/integration pending | 1282: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1283.md) |
@@ -1687,6 +1687,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: publication batch checks passed for `698c1838`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: lane **1277**, Bit test family: BT, BTS, BTR, BTC, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1277.md). <!-- x86-merged:1277 -->
 - 2026-10-05: checked master `73c27ac5` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:73c27ac5753b40009d00ebcc96ead031e839b8d8 -->
+- 2026-10-05: lane **1278**, Independent exact review of 1277, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1278.md). <!-- x86-merged:1278 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
