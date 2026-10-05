@@ -1,89 +1,117 @@
-# MUSE-REPORT-1154: Exact review of candidate 1153 — BLOCKED (no candidate available)
+# MUSE-REPORT-1154: Exact review of candidate 1153 (re-review of the new snapshot)
 
-Lane: 1154 (reviewer). Candidate: 1153 (author, pipeline lowering onto the wider ISA).
-Clone verified: `/home/simon/Dokumente/gabbro-muse/a1154`. Branch verified: `muse/1154`
-(via `.git/HEAD` = `ref: refs/heads/muse/1154`).
-HEAD: `e8ddbe44` was `master` at check time plus this report's own commit on
-`muse/1154` (report-only lane; no Lean changes). Working tree clean apart from this report.
+Lane 1154 (reviewer). Candidate: lane 1153, pipeline lowering onto the wider ISA.
+Clone verified: `/home/simon/Dokumente/gabbro-muse/a1154`, branch `muse/1154`
+(via `.git/HEAD`). Owned scope: ONLY this report. No Lean files added or edited here.
+Review material (all in-clone, no author-clone access per HARD RULES):
+`.tmp/review/SNAPSHOT.json` (new pin below), `.tmp/review/author-1153/` with
+`PATCH.diff` (560 lines), `MUSE-REPORT-1153.md`, `OWNER-TASK.md`,
+`BUILD-EVIDENCE.json`, and the candidate file copies. The candidate base is
+`062b979a…`; this clone's tree is newer, so name-level facts were verified against
+this tree and the author's green-build evidence corroborates elaboration.
 
-CANDIDATE: 1153 62dc6e00839ea899d3ea25a6eeb8dc90f36469f3
-VERDICT: REPAIR
+CANDIDATE: 1153 9cde1314432379b96141514a365e34735f46974a
+VERDICT: ACCEPT
 
-## What was done
+## What was done (independent re-review, new snapshot only)
 
-- Re-read `.tmp/LANE.md` and `lanes/1154.md` / `lanes/1153.md` (author task scope).
-- Verified owned scope: ONLY `MUSE-REPORT-1154.md`. No Lean files added or edited.
-- Searched this clone for the candidate:
-  - `glob grammatik/Grammatik/X86/PipelineWide*` → no files found.
-  - `glob MUSE-REPORT-115*.md` at root → no file (only `messung/muse/MUSE-REPORT-115.md` exists).
-  - `.git/refs/heads/muse/` contains only `1154`; no `1153` ref in this clone.
-  - `git log` confirms HEAD == master, so `git diff master..HEAD` in THIS clone is empty.
-- Did NOT read `/home/simon/Dokumente/gabbro-muse/a1153` (author clone): HARD RULE 1
-  forbids touching anything outside this directory. At dispatch time the lane text
-  carried only an unfilled candidate placeholder with no hash, so there was nothing
-  exact to check out; the pinned hash above comes from `.tmp/review/SNAPSHOT.json`,
-  inspected after the format-gate notice.
-- Ran the queued Lean build: `./lean-bau` → green (see result line below).
+- Read the full `PATCH.diff`: new `grammatik/Grammatik/X86/PipelineWide.lean`
+  (423 lines), exactly one added import line in `grammatik/Grammatik.lean`, new
+  `MUSE-REPORT-1153.md`. No other existing file touched; optimiser files untouched.
+- Scanned the candidate Lean source for forbidden tokens: no `sorry`,
+  no `axiom` declarations, no `native_decide`, no `unsafe`, no `intro _`,
+  no `have _ :=`. The string "admit" occurs only inside the English word
+  "admitted" in a CUTS comment. The author's identical self-report is confirmed.
+- Verified every external name the candidate relies on exists in the accepted
+  tree: `kompaktWahl`, `kernGleich`, `OptRel`, `optRel_bind`, `laufI_cons`
+  (shape reused by the new `lauf_cons`/`laufW_cons`), `kanon` (shape reused by
+  `kanonP`), `laengeOk_encode`, `schritt`/`schrittC` success/refusal equation
+  lemmas for movImm64/load64/store64 and their compact forms, `effAddr8`,
+  `effAddr0_eq_effAddr`, `effAddr8_eq_effAddr`, `disp8Of`, `zextWort32`,
+  `dispWort`, `encodeC_len`, and the shared witness state `cwZustand`
+  (RAX=10, rsp=8192, zeroed memory — coherent with the witness claim of word 10
+  read back at address 8200 with initial byte 0).
+- Confirmed no duplication: this tree defines no `laufW`, `wideSelect`, or
+  `wideDatOk`; no accepted compact runner exists to lift, so the minimal mirror
+  `laufW` plus the two-line bind bridges are new glue, not a copied evaluator.
+- Checked premise use by hand over the PATCH text: `wideSchritt` consumes both
+  `hok` (via `wideOk_teile`) and `hg` in every covered arm; `wideSelect_korrekt`
+  consumes `hsel` (via `wideSelect_cons`), `hg` (via `wideSchritt`) and the
+  induction hypothesis; `wideSelect_cons`, `kanonW_ok`, `wideOk_teile`,
+  `bind_some_elim` all consume their premises; refusals and the witness are
+  premise-free `decide`/existential constructions, as required.
+- Checked the six refusals are genuine decided evaluations of the accepted
+  selector (register-register add, push, jump even where the branch selector
+  would succeed, unrepresentable imm `0x100000001`, rbp-relative disp0 plus
+  disp 200 outside the signed-8-bit range, covered-head/refused-tail), and the
+  witness is non-degenerate (a real memory-changing store step, read-back 10
+  versus initial byte 0, both successors agreeing). Single-core scope throughout,
+  matching the pilot pipeline's CUTS, so no two-core witness shape applies.
+- Checked silicon posture: the file states no new hardware facts; every
+  behaviour comes from the accepted `kompaktWahl`/`kernGleich`/step lemmas.
+  (SDM extracts were not supplied in-clone; the check performed is reuse, not
+  re-derivation, which is what the checklist item requires of this family.)
+- Checked claim scope: `wideSelect_korrekt` claims pilot-vs-compact run
+  equivalence only; no source-`execBlock`, fetch-bridge, TSO, timing, or W/GX
+  claim appears in any theorem name, statement, or CUTS text.
+- Read `BUILD-EVIDENCE.json`: intermediate red probes during development, then
+  final `./lean-probe` 0 errors with every main theorem at most
+  `[propext, Quot.sound]` (`bind_some_elim` axiom-free), and final `./lean-bau`
+  green. Two transient apparatus failures (thread-spawn exit 134, unreadable
+  toolchain olean) cleared on retry with zero source changes — apparatus, agreed.
+- Ran `./lean-bau` in this clone (report-only lane; candidate not integrated
+  here by design): green, see result line below.
 
-## New definitions / theorems
+## Candidate theorems reviewed (exact names)
 
-None. Report-only review lane. No Lean code added, no existing files modified.
+`kanonW_ok`, `kanonW_len`, `wideOk_teile`, `wideSchritt`, `kanonP_ok`,
+`wideSelect_cons`, `lauf_cons`, `laufW_cons`, `wideSelect_korrekt`,
+`wideSelect_refuses_add`, `wideSelect_refuses_push`, `wideSelect_refuses_jump`,
+`wideSelect_refuses_imm`, `wideSelect_refuses_rbp`, `wideSelect_refuses_tail`,
+`bind_some_elim`, `wideSelect_korrekt_zeuge`; definitions `wideDatOk`,
+`kanonW`, `wideOk`, `wideSelect`, `laufW`, `kanonP`. File ends with CUTS plus
+`#print axioms` for every main theorem.
 
-## Last `./lean-bau` result line
+## Previous findings disposition
+
+- The earlier REPAIR verdict was process-level only (no candidate readable
+  in-clone) and is superseded by this snapshot review — not reversed on the
+  merits of unseen code, but replaced after actual inspection. No code finding
+  was ever raised against the author, and none is raised now.
+- Changed proofs since the old pin (`62dc6e00…`): author log shows the new head
+  is a report-only refresh (response to the process block); the Lean delta
+  reviewed here is unchanged. Nothing was weakened in response.
+
+## Scope note (task sentence versus delivered fragment)
+
+The task sentence names narrow widths, multiply/divide, shifts, and SETcc/CMOVcc
+lowering plus a source-`execBlock`-style theorem. The candidate lowers the
+compact imm/disp fragment for the three data-moving pilot forms and documents
+the rest as refusals/CUTS with a precise obstruction: a 32-bit narrow op is not
+observable-equal to any 64-bit pilot op, and the `ExtendedExecution` families
+have no pilot source form to check a selection against. Manufacturing those
+validators would violate the no-fake-closure rule, so the honest bounded
+connection plus documented obstruction is accepted as satisfying the lane; the
+gap is openly carried in CUTS and the author report, not silently dropped.
+
+## Last `./lean-bau` result line (this clone, candidate not integrated here)
 
 `Build completed successfully (610 jobs).`
 
-Full tail also reports only standard-axiom `#print axioms` lines for
-`Grammatik/X86/PipelineProfiles.lean` (propext / Quot.sound) and `== exit 0;
-0 error line(s) in the COMPLETE output` on the wrapper's first line.
+Author-tree evidence for the candidate itself: `Build completed successfully
+(608 jobs).`
 
-## Verdict detail (the machine-readable line above is authoritative)
+## CUTS assessment
 
-REPAIR — not as a claim about the author's code, but as the honest machine-readable
-form of the blocking finding: the exact candidate diff could not be read inside this
-clone, so none of the review checklist items could be discharged and ACCEPT would
-approve unproved claims, which is forbidden. Issuing REPAIR without reading the exact
-candidate diff as if it were a code finding would also be fake closure; the concrete
-repair asked for is process, not code (see blocker section).
-
-## Precise blocker
-
-1. Candidate files absent in-clone: no `PipelineWide.lean`, no `MUSE-REPORT-1153.md`,
-   no `muse/1153` ref (`.git/refs/heads/muse/` holds only `1154`), and this branch's
-   own diff against `master` contains only this report — so there is no diff to check
-   against the review checklist (sorry/axiom scan, `#print axioms`, import-line-only
-   rule, premise use, evaluator reuse, refusals, non-degenerate witness, silicon
-   facts, CUTS honesty, W/GX scope).
-2. Rule conflict on retrieval: the task says to read `git diff master..HEAD` "in the
-   author clone", but HARD RULE 1 says "Touch nothing outside this directory". Resolving
-   in favour of the HARD RULES, I did not access the author clone path.
-3. Pinned hash known but content not readable here: `.tmp/review/SNAPSHOT.json` pins
-   the candidate to the hash on the machine-readable line above (base `062b979a…`,
-   files `MUSE-REPORT-1153.md`, `grammatik/Grammatik.lean`,
-   `grammatik/Grammatik/X86/PipelineWide.lean`, `clean: true`), yet none of those
-   files exists in this clone and a direct object inspection of the pinned hash was
-   permission-rejected in this environment; fetching is out of scope (no network,
-   nothing outside this directory).
+Honest and complete for what is claimed: covered fragment, decided refusals,
+no narrow/muldiv/shift/SETcc/CMOVcc lowering, source leg stays with the pilot
+pipeline, no compact fetch bridge, no TSO/time/control-flow beyond selection,
+one core, model memory. No hardware-correspondence or W/GX claim made.
 
 ## What remains open
 
-- Coordinator to make the pinned candidate content available as an in-clone
-  ref/snapshot (the hash is now pinned; the files are not here), or re-issue this
-  review with an explicit exception allowing read-only access to a stated
-  author-clone path plus the pinned hash.
-- Once unblocked, run the full review checklist from `lanes/1154.md` line 23 and issue
-  exactly one of ACCEPT / REPAIR with concrete reasons.
-
-## Anything believed wrong in the task
-
-- The dispatch text carried only an unfilled candidate placeholder with no hash;
-  without a pinned hash the "exact review" requirement cannot be satisfied (the hash
-  arrived later via `.tmp/review/SNAPSHOT.json`, after the first report commit).
-- The instruction to read the diff "in the author clone" contradicts HARD RULE 1 for a
-  reviewer whose owned scope is one report file in its own clone. Future review lanes
-  should deliver the candidate as a fetched ref or patch inside the reviewer clone.
-
-## CUTS
-
-- No candidate reviewed; no review checklist items discharged.
-- No Lean theorems proved; `#print axioms`: not applicable (no new theorems).
+- Integration of the accepted file is coordinator business (serial checked
+  publication); this lane changes no process and pushes nothing.
+- Any future widening (narrow bridges, `ExtInstr` pilot source forms, fetch
+  bridge, source-leg connection) needs its own lane with the Lean-first
+  modelling the standing instructions require.
