@@ -453,6 +453,153 @@ theorem code_smap_schreib :
     pfCodeBits ⟨true, true, false, false, false⟩ = 3 := by
   decide
 
+/-! ## 5. The full walk over table memory with write-back.
+
+  The four entries are looked up exactly as in the accepted
+  `seitenGang`; the outcome runs the combined walk `gangGross`. On
+  success only the touched entries gain accessed (the leaf gains
+  dirty for writes): two entries for a 1 GiB page, three for a
+  2 MiB page, four otherwise. Every other outcome leaves the tables
+  unchanged, through the accepted `seitenGangTab`. -/
+
+/-- Full walk: the accepted lookups, the combined outcome, and the
+    touched-only write-back. Written let-free so the lookup equations
+    rewrite directly, as in `seitenGang`. -/
+def seitenGangGross (gst : GrossSteuerung) (tab : Nat → Wort)
+    (q : SeitenAnfrage) : GangErgebnis × (Nat → Wort) :=
+  (gangGross gst q (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear))
+    (seitenTabEintrag tab
+      (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+      (gangIndexPDPT q.linear))
+    (seitenTabEintrag tab
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+        (gangIndexPDPT q.linear)).rahmen
+      (gangIndexPD q.linear))
+    (seitenTabEintrag tab
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+          (gangIndexPDPT q.linear)).rahmen
+        (gangIndexPD q.linear)).rahmen
+      (gangIndexPT q.linear)),
+   seitenGangTab tab
+    (if (seitenTabEintrag tab
+        (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+        (gangIndexPDPT q.linear)).gross then
+       [gst.basis.cr3 * 512 + gangIndexPML4 q.linear,
+        (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen *
+          512 + gangIndexPDPT q.linear]
+     else if (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+          (gangIndexPDPT q.linear)).rahmen
+        (gangIndexPD q.linear)).gross then
+       [gst.basis.cr3 * 512 + gangIndexPML4 q.linear,
+        (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen *
+          512 + gangIndexPDPT q.linear,
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+          (gangIndexPDPT q.linear)).rahmen * 512 + gangIndexPD q.linear]
+     else
+       [gst.basis.cr3 * 512 + gangIndexPML4 q.linear,
+        (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen *
+          512 + gangIndexPDPT q.linear,
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+          (gangIndexPDPT q.linear)).rahmen * 512 + gangIndexPD q.linear,
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab
+            (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+            (gangIndexPDPT q.linear)).rahmen
+          (gangIndexPD q.linear)).rahmen * 512 + gangIndexPT q.linear])
+    (if q.schreiben then
+       some (if (seitenTabEintrag tab
+           (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+           (gangIndexPDPT q.linear)).gross then
+          (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen *
+            512 + gangIndexPDPT q.linear
+        else if (seitenTabEintrag tab
+           (seitenTabEintrag tab
+             (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+             (gangIndexPDPT q.linear)).rahmen
+           (gangIndexPD q.linear)).gross then
+          (seitenTabEintrag tab
+            (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+            (gangIndexPDPT q.linear)).rahmen * 512 + gangIndexPD q.linear
+        else
+          (seitenTabEintrag tab
+            (seitenTabEintrag tab
+              (seitenTabEintrag tab gst.basis.cr3
+                (gangIndexPML4 q.linear)).rahmen
+              (gangIndexPDPT q.linear)).rahmen
+            (gangIndexPD q.linear)).rahmen * 512 + gangIndexPT q.linear)
+      else none)
+    (gangGross gst q (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear))
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+        (gangIndexPDPT q.linear))
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+          (gangIndexPDPT q.linear)).rahmen
+        (gangIndexPD q.linear))
+      (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab
+            (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+            (gangIndexPDPT q.linear)).rahmen
+          (gangIndexPD q.linear)).rahmen
+        (gangIndexPT q.linear))))
+
+/-- The walk outcome is the combined walk on the looked-up entries. -/
+theorem seitenGangGross_fst (gst : GrossSteuerung) (tab : Nat → Wort)
+    (q : SeitenAnfrage) :
+    (seitenGangGross gst tab q).1 =
+      gangGross gst q (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear))
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+          (gangIndexPDPT q.linear))
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab
+            (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+            (gangIndexPDPT q.linear)).rahmen
+          (gangIndexPD q.linear))
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab
+            (seitenTabEintrag tab
+              (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+              (gangIndexPDPT q.linear)).rahmen
+            (gangIndexPD q.linear)).rahmen
+          (gangIndexPT q.linear)) := rfl
+
+/-- Without large pages in the tables and with disarmed SMEP/SMAP,
+    the full walk IS the accepted 4 KiB walk. -/
+theorem seitenGangGross_gleich (gst : GrossSteuerung) (tab : Nat → Wort)
+    (q : SeitenAnfrage)
+    (h1 : gst.basis.smep = false) (h2 : gst.basis.smap = false)
+    (hg2 : (seitenTabEintrag tab
+        (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+        (gangIndexPDPT q.linear)).gross = false)
+    (hg1 : (seitenTabEintrag tab
+        (seitenTabEintrag tab
+          (seitenTabEintrag tab gst.basis.cr3 (gangIndexPML4 q.linear)).rahmen
+          (gangIndexPDPT q.linear)).rahmen
+        (gangIndexPD q.linear)).gross = false) :
+    (seitenGangGross gst tab q).1 = (seitenGang gst.basis tab q).1 := by
+  rw [seitenGangGross_fst, seitenGang_fst]
+  exact gangGross_gleich gst q _ _ _ _ h1 h2 hg2 hg1
+
+/-- A non-success walk leaves the tables unchanged. -/
+theorem seitenGangGross_nichtOk_still (gst : GrossSteuerung)
+    (tab : Nat → Wort) (q : SeitenAnfrage) (e : GangErgebnis)
+    (h1 : (seitenGangGross gst tab q).1 = e)
+    (h2 : ¬ ∃ phys, e = .ok phys) :
+    (seitenGangGross gst tab q).2 = tab := by
+  simp only [seitenGangGross] at h1 ⊢
+  rw [h1]
+  exact seitenGangTab_nichtOk _ _ _ _ h2
+
 /- CUTS:
    Skeleton only; full CUTS with the reviewed file.
 -/
