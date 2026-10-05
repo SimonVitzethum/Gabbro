@@ -638,6 +638,13 @@ Last ledger refresh: **2026-10-05 11:43 UTC**. This is an operational snapshot, 
 | 1159 | Pipeline: arrays, records and pointers beyond integer slots | Scheduled | 1160: scheduled | [task](lanes/1159.md) |
 | 1161 | Pipeline: IEEE float expressions | Scheduled | 1162: scheduled | [task](lanes/1161.md) |
 | 1163 | Pipeline: atomics and locks onto TSO | Scheduled | 1164: scheduled | [task](lanes/1163.md) |
+| 1165 | Pipeline: source budget to target work and time transfer | Scheduled | 1166: scheduled | [task](lanes/1165.md) |
+| 1167 | Pipeline: register allocation, spills and privacy validated | Scheduled | 1168: scheduled | [task](lanes/1167.md) |
+| 1169 | Pipeline correctness over the multi-core TSO machine | Waiting for accepted dependencies | 1170: scheduled | [task](lanes/1169.md) |
+| 1171 | Linking, relocations and the final mapping | Scheduled | 1172: scheduled | [task](lanes/1171.md) |
+| 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Scheduled | 1174: scheduled | [task](lanes/1173.md) |
+| 1175 | Finite and infinite execution soundness of the pipeline | Scheduled | 1176: scheduled | [task](lanes/1175.md) |
+| 1177 | Source-computed units and duties feeding the pipeline | Scheduled | 1178: scheduled | [task](lanes/1177.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
