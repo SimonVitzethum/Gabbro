@@ -322,4 +322,53 @@ theorem gift_block_verzweigung :
         (Block.nil : Block pwD pwV false pwCtx [] [])) = none :=
   rfl
 
+/-! ## 6. Joint witnesses: one table, real runs.
+
+    Every witness below shares the accepted pipeline package
+    (`PipePaket`/`pipePaket_hold` from lane 1165): one table its
+    contract writes, a source `execBlock` run moving the slots
+    `7 -> 35` and `9 -> 6`, and a fetched-byte run observably
+    changing memory. -/
+
+/-- Joint witness for the deep-tree refusals. -/
+theorem block_verweigert_tief_zeuge :
+    senkWertT pwCfg tiefWertFeld1195 = none ∧
+    senkStmt pwCfg pwL
+      (Stmt.assignSlot (V := pwV) (l := false) () ()
+        pwIdx0 tiefWertFeld1195 pwHw pwHL) = none ∧
+    PipePaket :=
+  ⟨gift_block_tief_wert, block_verweigert_tief_stmt, pipePaket_hold⟩
+
+/-- Joint witness for the branch refusal. -/
+theorem block_verweigert_verzweigung_zeuge :
+    ∃ (o : Expr pwD pwCtx [] (.opt 0))
+      (p : Block pwD pwV false ((.index 0) :: pwCtx) [] [])
+      (a : Block pwD pwV false pwCtx [] []),
+      senkStmt pwCfg pwL (Stmt.onOption o p a) = none ∧ PipePaket := by
+  refine ⟨(Expr.none 0 : Expr pwD pwCtx [] (.opt 0)),
+    (Block.nil : Block pwD pwV false ((.index 0) :: pwCtx) [] []),
+    (Block.nil : Block pwD pwV false pwCtx [] []), ?_, pipePaket_hold⟩
+  exact block_verweigert_verzweigung _ _ _ _ _
+
+/-- Joint witness for the loop refusal. -/
+theorem block_verweigert_schleife_zeuge :
+    ∃ (rest : Block pwD pwV false pwCtx [] []),
+      senkBlock pwCfg pwL 0
+        (Block.cons (Stmt.retry 5 (Expr.wahr : Expr pwD pwCtx [] .bool)
+          (Block.nil : Block pwD pwV true pwCtx [] [])
+          (Block.nil : Block pwD pwV false pwCtx [] [])) rest) = none ∧
+      PipePaket := by
+  refine ⟨(Block.nil : Block pwD pwV false pwCtx [] []), ?_, pipePaket_hold⟩
+  exact block_verweigert_schleife _ _ _ _
+
+/-- Joint witness for the bind refusal. -/
+theorem block_verweigert_bind_zeuge :
+    ∃ (e : Expr pwD pwCtx [] (.int 1 1))
+      (rest : Block pwD pwV false ((.int 1 1) :: pwCtx) [] []),
+      senkBlock pwCfg pwL 0 (Block.bind e rest) = none ∧ PipePaket := by
+  refine ⟨(Expr.lit 1 : Expr pwD pwCtx [] (.int 1 1)),
+    (Block.nil : Block pwD pwV false ((.int 1 1) :: pwCtx) [] []),
+    ?_, pipePaket_hold⟩
+  exact block_verweigert_bind _ _ _ _ _
+
 end Gabbro.Grammatik.X86.PipeBlock
