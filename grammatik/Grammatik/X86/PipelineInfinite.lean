@@ -198,6 +198,26 @@ theorem laufBudget_stopp_stabil : ∀ (n j : Nat) (s : Zustand) (k : Nat) (s' : 
         simp only [laufBudget, hb]
         rw [ih]
 
+/-- CONVERSE: a clean plain run is a `fertig` budgeted run. Used by the
+    positive probes below. -/
+theorem laufBudget_fertig_von : ∀ (n : Nat) (s s' : Zustand),
+    laufBytes n s = .weiter s' → ∃ k s'', laufBudget n s = .fertig k s'' ∧ k = n ∧ s'' = s'
+  | 0, s, s', h => by
+    simp only [laufBytes] at h
+    cases h
+    exact ⟨0, s, rfl, rfl, rfl⟩
+  | n + 1, s, s', h => by
+    cases hb : byteschritt s with
+    | verweigert =>
+      simp only [laufBytes, hb] at h
+      cases h
+    | weiter s1 =>
+      simp only [laufBytes, hb] at h
+      obtain ⟨k, s'', hfb, hkk, hss⟩ := laufBudget_fertig_von n s1 s' h
+      refine ⟨k + 1, s'', ?_, by omega, hss⟩
+      simp only [laufBudget, hb]
+      rw [hfb]
+
 /-! ## 4. Prefix safety for lowered programs
 
     For a validated block, the fetched byte run reaches a state
@@ -423,8 +443,219 @@ decreasing_by
 
 end PipelineSaetze
 
-/- CUTS (preliminary; extended with every addition):
-    Infinite traces past the corresponding end, termination of the target
-    run, progress/fairness of any scheduler: NOT claimed (see task). -/
+/-! ## 5. Joint witnesses on the non-degenerate pipeline program
+
+    All premises jointly on `pwSrc` (two slots written, one from a
+    variable, one from a folded constant; the source run changes memory
+    7 -> 35 and 9 -> 6). -/
+
+/-- JOINT WITNESS for `praefix_sicher`: every premise holds on the
+    witness program whose source run changes memory; the fetched run
+    ends with the slot bytes 35 and 6, and every prefix is safe. -/
+theorem praefix_sicher_zeuge :
+    ∃ (σ' : World pwD) (ρ' : Env pwD pwCtx),
+      validate pwCfg pwL pwCerts pwSrc pwBytes = true ∧ LayoutSep pwL ∧
+      CodeAt (pwStart 30).speicher (natAdresse pwCfg.codeBase) pwBytes ∧
+      (pwStart 30).rip = natAdresse pwCfg.codeBase ∧
+      WorldRep pwL (pwStart 30).speicher pwSigma ∧
+      EnvRepr pwEnv30 (pwStart 30).register (abbOf pwCfg) ∧
+      execBlock pwO 0 pwR pwSrc pwSigma pwEnv30 = .ok σ' ρ' ∧
+      (pwSigma.slots () 0 ()).n = 7 ∧ (σ'.slots () 0 ()).n = 35 ∧
+      (pwSigma.slots () 1 ()).n = 9 ∧ (σ'.slots () 1 ()).n = 6 ∧
+      ∃ n s', laufBytes n (pwStart 30) = .weiter s' ∧
+        (∀ k, k ≤ n → ∃ sk, laufBytes k (pwStart 30) = .weiter sk ∧
+          CodeAt sk.speicher (natAdresse pwCfg.codeBase) pwBytes ∧
+          ByteRahmen (pwStart 30).speicher sk.speicher) ∧
+        read64 s'.speicher (natAdresse 8192) = some (BitVec.ofNat 64 35) ∧
+        read64 s'.speicher (natAdresse 8200) = some (BitVec.ofNat 64 6) := by
+  obtain ⟨σ', ρ', hsrc, h0, h1⟩ := pw_quelle30
+  obtain ⟨n, s', hrun, hent, hpre⟩ := praefix_sicher pwCfg pwL pwCerts pwSrc pwBytes
+    pw_validate pw_layoutSep pwO 0 pwR pwSigma pwEnv30 (pwStart 30)
+    pw_code rfl pw_worldRep pw_envRepr30
+  rw [optimise_sound pwCerts pwSrc pwO 0 pwR pwSigma pwEnv30, hsrc] at hent
+  obtain ⟨-, hw, -⟩ := hent
+  refine ⟨σ', ρ', pw_validate, pw_layoutSep, pw_code, rfl, pw_worldRep, pw_envRepr30,
+    hsrc, rfl, h0, rfl, h1, n, s', hrun, hpre, ?_, ?_⟩
+  · exact read_von_worldRep _ σ' 0 8192 hw rfl 35 h0
+  · exact read_von_worldRep _ σ' 1 8200 hw rfl 6 h1
+
+/-- The computed 12-step run ends at the code end with no transition:
+    a genuine stop after a memory-changing run, not an immediate refusal.
+    Stated observably (`ausgangRip`/`ausgangByte` are decidable); the
+    `decide` evaluates the closed byte run. -/
+theorem laufBytes12_stop : ∃ s12, laufBytes 12 (pwStart 30) = .weiter s12 ∧
+    s12.rip = natAdresse 4178 ∧ byteschritt s12 = .verweigert := by
+  have hw : ∃ s12, laufBytes 12 (pwStart 30) = .weiter s12 := by
+    cases h12 : laufBytes 12 (pwStart 30) with
+    | weiter s12 => exact ⟨s12, rfl⟩
+    | verweigert =>
+      have h := pw_bytes30.1
+      simp [ausgangRip, h12] at h
+  obtain ⟨s12, h12⟩ := hw
+  have hrip : s12.rip = natAdresse 4178 := by
+    have h := pw_bytes30.1
+    rw [h12] at h
+    simpa [ausgangRip] using h
+  have hstop : ausgangRip (byteschritt s12) = none := by
+    have hall : ausgangRip (laufBytes 13 (pwStart 30)) = none := by decide
+    have h13 : laufBytes 13 (pwStart 30) = laufBytes 1 s12 :=
+      laufBytes_add 12 1 (pwStart 30) s12 h12
+    rw [h13] at hall
+    cases h : byteschritt s12 with
+    | verweigert => rfl
+    | weiter s' =>
+      have h1 : laufBytes 1 s12 = .weiter s' := by
+        show laufBytes (0 + 1) s12 = .weiter s'
+        simp only [laufBytes, h]
+      rw [h1] at hall
+      simp [ausgangRip] at hall
+  have hs : byteschritt s12 = .verweigert := by
+    cases h : byteschritt s12 with
+    | verweigert => rfl
+    | weiter s' =>
+      rw [h] at hstop
+      simp [ausgangRip] at hstop
+  exact ⟨s12, h12, hrip, hs⟩
+
+/-- JOINT WITNESS for `erste_stop_ordnung`: the concrete 12-step stop is
+    at/after the corresponding end, and at equal length it is the end
+    state; the source run changes memory 7 -> 35. -/
+theorem erste_stop_ordnung_zeuge :
+    ∃ (s12 : Zustand),
+      validate pwCfg pwL pwCerts pwSrc pwBytes = true ∧ LayoutSep pwL ∧
+      CodeAt (pwStart 30).speicher (natAdresse pwCfg.codeBase) pwBytes ∧
+      (pwStart 30).rip = natAdresse pwCfg.codeBase ∧
+      WorldRep pwL (pwStart 30).speicher pwSigma ∧
+      EnvRepr pwEnv30 (pwStart 30).register (abbOf pwCfg) ∧
+      (∃ σ' ρ', execBlock pwO 0 pwR pwSrc pwSigma pwEnv30 = .ok σ' ρ' ∧
+        (pwSigma.slots () 0 ()).n = 7 ∧ (σ'.slots () 0 ()).n = 35) ∧
+      laufBytes 12 (pwStart 30) = .weiter s12 ∧ s12.rip = natAdresse 4178 ∧
+      byteschritt s12 = .verweigert ∧
+      ∃ n s', laufBytes n (pwStart 30) = .weiter s' ∧ n ≤ 12 ∧ (12 = n → s12 = s') := by
+  obtain ⟨σ', ρ', hsrc, h0, -⟩ := pw_quelle30
+  obtain ⟨s12, h12, hrip12, hs12⟩ := laufBytes12_stop
+  obtain ⟨n, s', hrun, -, hnk, hfin⟩ := erste_stop_ordnung pwCfg pwL pwCerts pwSrc pwBytes
+    pw_validate pw_layoutSep pwO 0 pwR pwSigma pwEnv30 (pwStart 30)
+    pw_code rfl pw_worldRep pw_envRepr30 12 s12 h12 hs12
+  exact ⟨s12, pw_validate, pw_layoutSep, pw_code, rfl, pw_worldRep, pw_envRepr30,
+    ⟨σ', ρ', hsrc, rfl, h0⟩, h12, hrip12, hs12, n, s', hrun, hnk, hfin⟩
+
+/-- JOINT WITNESS for `budget_unabhaengig`: the optimised witness block
+    lowers (accepted), its source run changes memory 7 -> 35, and the
+    outcome at budget 0 is the outcome at budget 7. -/
+theorem budget_unabhaengig_zeuge :
+    ∃ (b : Block pwD pwV false pwCtx [] []) (prog : List Befehl),
+      senkBlock pwCfg pwL 0 b = some prog ∧
+      (∃ σ' ρ', execBlock pwO 0 pwR b pwSigma pwEnv30 = .ok σ' ρ' ∧
+        (pwSigma.slots () 0 ()).n = 7 ∧ (σ'.slots () 0 ()).n = 35) ∧
+      execBlock pwO 0 pwR b pwSigma pwEnv30 = execBlock pwO 7 pwR b pwSigma pwEnv30 := by
+  obtain ⟨σ', ρ', hsrc, h0, -⟩ := pw_quelle30
+  have hopt : execBlock pwO 0 pwR (optimise pwCerts pwSrc) pwSigma pwEnv30 = .ok σ' ρ' := by
+    rw [optimise_sound pwCerts pwSrc pwO 0 pwR pwSigma pwEnv30]
+    exact hsrc
+  exact ⟨optimise pwCerts pwSrc, pwProg, pw_senkBlock, ⟨σ', ρ', hopt, rfl, h0⟩,
+    budget_unabhaengig pwCfg pwL pwO pwR (optimise pwCerts pwSrc) 0 pwProg pw_senkBlock
+      pwSigma pwEnv30 0 7⟩
+
+/-! ## 6. Probes: the budgeted runner on honest and tampered states
+
+    The tampered memory (`pwMemFalsch`, one forged byte) stops the
+    budgeted runner at step zero; the honest program runs its whole
+    budget clean and stops only at the code end. -/
+
+/-- TAMPERED MEMORY STOPS AT STEP ZERO: the budgeted runner reports
+    `stopp`, never a silent divergence. -/
+theorem gift_stopp_ist_stopp :
+    laufBudget 5 { pwStart 30 with speicher := pwMemFalsch } =
+      .stopp 0 { pwStart 30 with speicher := pwMemFalsch } := by
+  have hb : byteschritt { pwStart 30 with speicher := pwMemFalsch } = .verweigert := by
+    cases h : byteschritt { pwStart 30 with speicher := pwMemFalsch } with
+    | verweigert => rfl
+    | weiter s' =>
+      have hgift := gift_lauf_verweigert
+      simp [ausgangRip, h] at hgift
+  simp only [laufBudget, hb]
+
+/-- THE HONEST PREFIX RUNS CLEAN: five budgeted steps finish without a
+    stop, on the same state the plain run reaches. -/
+theorem gift_fertig_laueft : ∃ s5, laufBudget 5 (pwStart 30) = .fertig 5 s5 ∧
+    laufBytes 5 (pwStart 30) = .weiter s5 := by
+  obtain ⟨s1, h5, -, -⟩ := laufBytes_add_zeuge
+  obtain ⟨k, s'', hfb, hkk, hss⟩ := laufBudget_fertig_von 5 (pwStart 30) s1 h5
+  cases hkk
+  cases hss
+  exact ⟨s1, hfb, h5⟩
+
+/-- NO STOP INSIDE HONEST CODE: the full twelve-step run finishes its
+    budget and ends exactly at the code end. The runner refuses to stop
+    early on an accepted program. -/
+theorem gift_budget_kein_stopp_im_code : ∃ s', laufBudget 12 (pwStart 30) = .fertig 12 s' ∧
+    s'.rip = natAdresse 4178 := by
+  obtain ⟨s12, h12, hrip12, -⟩ := laufBytes12_stop
+  obtain ⟨k, s'', hfb, hkk, hss⟩ := laufBudget_fertig_von 12 (pwStart 30) s12 h12
+  cases hkk
+  cases hss
+  exact ⟨s12, hfb, hrip12⟩
+
+/- CUTS (exactly what is NOT proved here):
+
+    Safety (proved). For a validated lowered block, every finite prefix
+    of the fetched byte run succeeds with the code region intact and the
+    memory frame kept (`praefix_sicher`); the budgeted runner is faithful
+    (`laufBudget_fertig`, `laufBudget_stopp`) and refuses to step past a
+    stop (`laufBudget_stopp_stabil`); the target never stops before the
+    corresponding end (`erste_stop_ordnung`); the source outcome is the
+    same at every budget (`budget_unabhaengig`), so with
+    `pipeline_ausgang` there is no budget stop on either side for
+    accepted programs.
+
+    Termination (not claimed here). That an accepted block's run ends at
+    all is inherited from `senkBlock_korrektC` per validated program;
+    this file adds no termination argument, and infinite traces past the
+    corresponding end are not modelled: past the end the byte machine
+    fetches whatever the memory holds there, which needs the image stop
+    premise (`PipelineImage`: non-executable byte after the code, checked
+    exit stubs). A stop strictly past the corresponding end (`k > n` in
+    `erste_stop_ordnung`) is accordingly unclaimed at pipeline level.
+
+    Correspondence granularity (not claimed). Mid-run states get no
+    source meaning: a half-executed assignment chunk (value code run,
+    store pending) corresponds to no `execBlock` prefix, and none is
+    invented -- there is no source small-step and no second interpreter
+    (architecture decision 594). Correspondence holds at the end
+    (`Entspricht`), exactly as in `Pipeline.lean`.
+
+    Progress/fairness (not claimed). The model is sequential single-core
+    (`laufBytes`); there is no scheduler, no fairness notion, and no
+    claim about concurrent or weak-memory behaviour beyond what
+    `Pipeline.lean` already states.
+
+    Fragment and machine (inherited). Everything of the CUTS of
+    `Pipeline.lean` still applies: pilot ISA only, integer slots only,
+    no loops, no calls, no TSO, no time, model memory. In particular
+    `budget_unabhaengig` covers only lowered blocks; that `passes` is
+    never consumed does NOT extend to loops or calls (`forever`/`rufAt`
+    consume it), which the lowering refuses.
+
+    Witness scope. `laufBytes12_stop` and the `gift_*` probes are
+    witness-only observations over `pwMem` by computation; they prove
+    nothing for other programs by themselves. -/
+
+#print axioms laufBytes_praefix_erfolg
+#print axioms laufBytes_verweigert_plus
+#print axioms laufBudget_fertig
+#print axioms laufBudget_stopp
+#print axioms laufBudget_stopp_stabil
+#print axioms laufBudget_fertig_von
+#print axioms praefix_sicher
+#print axioms erste_stop_ordnung
+#print axioms budget_unabhaengig
+#print axioms praefix_sicher_zeuge
+#print axioms laufBytes12_stop
+#print axioms erste_stop_ordnung_zeuge
+#print axioms budget_unabhaengig_zeuge
+#print axioms gift_stopp_ist_stopp
+#print axioms gift_fertig_laueft
+#print axioms gift_budget_kein_stopp_im_code
 
 end Gabbro.Grammatik.X86.PipelineInfinite
