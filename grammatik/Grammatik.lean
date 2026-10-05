@@ -630,3 +630,4 @@ import Grammatik.X86.PipelineLinkMulti
 import Grammatik.X86.HwLockRmw
 import Grammatik.X86.HwIsaFamilies
 import Grammatik.X86.HwWordAtomicity
+import Grammatik.X86.PipelineAtomicsBind
