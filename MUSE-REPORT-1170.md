@@ -1,59 +1,64 @@
-# MUSE-REPORT-1170: Exact review of candidate 1169 (Pipeline correctness over the multi-core TSO machine)
+# MUSE-REPORT-1170: Exact review of author 1169 (Pipeline correctness over the multi-core TSO machine)
 
-Clone: /home/simon/Dokumente/gabbro-muse/a1170, branch muse/1170 (verified via `git rev-parse --show-toplevel` + `git branch --show-current` + `git log --oneline -3` on 2026-10-05; toplevel and branch matched the task, so did not STOP).
+CANDIDATE: 1169 e6c872267c89f294bb495eb801747ea38a83869f
+
+Clone: /home/simon/Dokumente/gabbro-muse/a1170, branch muse/1170 (verified via earlier allowed git rev-parse plus branch and log calls; toplevel and branch matched the task, so did not STOP).
 Owns only: MUSE-REPORT-1170.md. No Lean file created or edited; no existing file touched.
+Pinned snapshot inspected: .tmp/review/SNAPSHOT.json names author 1169, head e6c872267c89f294bb495eb801747ea38a83869f, base 062b979a6271b7b3044ab06be3f3cde411a0d4f1, files MUSE-REPORT-1169.md, grammatik/Grammatik.lean, grammatik/Grammatik/X86/PipelineTso.lean, clean true.
 
-## Candidate under review
+## Author scope (from lanes/1169.md in this clone)
 
-- Author lane: 1169 (`lanes/1169.md` in this clone).
-- Task scope (from `lanes/1169.md`): NEW FILE `grammatik/Grammatik/X86/PipelineTso.lean` + one import line in `grammatik/Grammatik.lean`; single-core pipeline run embeds into `HwMaschine` on core c with `FremdFrei`, TSO buffering transparent by forwarding, drained memory outcome equals source; plus `pipeline_correct_entry`-style theorem, `pipeline_refuses_*` refusal theorem, poison probes, non-degenerate `_zeuge`, CUTS + `#print axioms`.
-- Pinned HEAD: NOT SUPPLIED. Both `.tmp/LANE.md` and `lanes/1170.md` in this clone say `CANDIDATE: 1169 <full pinned HEAD>` with the placeholder unfilled. No commit hash to pin the exact review to.
-- Candidate material in this clone: ABSENT. `grammatik/Grammatik/X86/Pipeline*.lean` glob in this clone returns only `Pipeline.lean`, `PipelineImage.lean`, `PipelineEntry.lean`, `PipelineWitnesses.lean`, `PipelineImageWitnesses.lean`; no `PipelineTso.lean`. No root `MUSE-REPORT-1169.md` (root glob for `MUSE-REPORT-1170.md` empty; author report not present in this clone at master `062b979a`-line state). This clone's `git diff master..HEAD` is empty (reviewer branch has no author changes by design).
+- New file grammatik/Grammatik/X86/PipelineTso.lean plus one import line in grammatik/Grammatik.lean.
+- Claim to prove: single-core pipeline run embeds into HwMaschine on core c with FremdFrei, TSO buffering transparent by forwarding, drained memory outcome equals source.
+- Required shape: lowering plus validator, entry-style correctness theorem over execBlock and loaded-image byte run, refusal theorem for uncovered shapes, poison probes per refusal, non-degenerate zeuge with memory-changing step, CUTS plus print-axioms lines. Reuse accepted definitions unchanged, no second source interpreter, reserved optimiser files untouched, unsupported shapes refused never guessed, Rust out of scope.
 
 ## What was checked
 
-- Read `.tmp/LANE.md`, `lanes/1170.md`, `lanes/1169.md` (all inside this clone).
+- Read .tmp/LANE.md, lanes/1170.md, lanes/1169.md and .tmp/review/SNAPSHOT.json, all inside this clone.
 - Verified clone path and branch (see above).
-- Confirmed owned-file scope: only `MUSE-REPORT-1170.md` created; nothing else written.
-- Attempted further `git` inspection (`git branch --list`, `git status`, `git diff master..HEAD --stat`): the `bash` tool calls were rejected by the permission classifier (`The user rejected permission to use this specific tool call`), so no git diff/status output can be reported. `./lean-bau` DID run successfully (see Build status).
+- Confirmed owned-file scope: only MUSE-REPORT-1170.md written; nothing else touched.
+- Globbed grammatik/Grammatik/X86/Pipeline files in this clone: only Pipeline.lean, PipelineImage.lean, PipelineEntry.lean, PipelineWitnesses.lean, PipelineImageWitnesses.lean. PipelineTso.lean absent here; author report absent at root. Reviewer branch holds no author changes by design.
+- Attempted in-clone git inspection of the pinned head and the base-to-head diff (cat-file, diff stat, branch list, status): each such bash call was rejected by the permission classifier, so the exact diff text could not be displayed in this session. The earlier allowed git rev-parse, branch show, log, add, and commit.sh calls worked.
+- Ran ./lean-bau in this clone (see Build status).
 
-## Checklist from the review task (all UNVERIFIABLE without the candidate)
+## Review checklist (all unverifiable without the diff text)
 
-- no `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`: NOT CHECKED (no candidate diff available).
-- `#print axioms` standard (propext, Classical.choice, Quot.sound): NOT CHECKED.
+- Banned tactics and axioms (sorry, admit, axiom, native_decide, unsafe) absent: NOT CHECKED, diff unavailable.
+- Print-axioms lines standard: NOT CHECKED.
 - Existing files untouched except one import line: NOT CHECKED.
-- Every premise used; no desired-correctness premises; no weakened guarantees: NOT CHECKED.
-- Family accepted evaluator lifted not copied: NOT CHECKED.
-- Planted refusals really refuse (`pipeline_refuses_*` + poison probes): NOT CHECKED.
-- Witness non-degenerate (memory-changing step, two cores where relevant for TSO): NOT CHECKED.
-- Silicon facts (encodings, fault classes, TSO ordering) against Intel SDM extracts: NOT CHECKED.
-- CUTS honest; no claim larger than proof (in particular no hardware-correspondence or W/GX claim): NOT CHECKED.
-- `./lean-bau` last result line: NOT AVAILABLE (wrapper could not be run; see blocker).
+- Every premise used, no desired-correctness premise, no weakened guarantee: NOT CHECKED.
+- Accepted family evaluator lifted not copied: NOT CHECKED.
+- Refusal theorems really refuse, poison probes present and positive probes pass: NOT CHECKED.
+- Witness non-degenerate with memory-changing step and two-core relevance where applicable: NOT CHECKED.
+- Silicon facts on encodings, fault classes, and ordering against Intel SDM extracts: NOT CHECKED.
+- CUTS honest, no claim larger than proof, in particular no hardware-correspondence or W/GX overclaim: NOT CHECKED.
 
-## VERDICT: REPAIR
+## Decision and reasons
 
-The candidate cannot be accepted on this evidence. Reasons, each concrete and actionable:
+VERDICT: REPAIR
 
-1. Missing pinned HEAD: the task names `CANDIDATE: 1169 <full pinned HEAD>` but supplies no hash. An exact review requires the full pinned HEAD; without it there is no defined `git diff master..HEAD` to review.
-2. Candidate diff not present in this clone and not readable under HARD RULES 1: `PipelineTso.lean` and the author report are absent here, and rule 1 (`Touch nothing outside this directory`) forbids reading the author clone at `../a1169`. The review instruction to read `git diff master..HEAD` in the author clone conflicts with rule 1 as written; either supply the candidate as a patch inside this clone or amend the rule for reviewers to allow read-only access to the exact pinned author clone path.
-3. No verification executed: `./lean-bau` was not run (tool denial), so there is no build result line and no independent confirmation of a green tree.
+The author work cannot be accepted on this evidence. Concrete actionable reasons:
 
-No Lean definitions or theorems were added by lane 1170 (report-only review), so there are no new names and no `_zeuge` obligation on this lane.
+1. Exact diff unavailable to this reviewer. The pinned head is known from SNAPSHOT.json, but the three pinned files are absent from this clone and every in-clone attempt to display the pinned commit or its diff was denied at the tool gate. HARD RULES 1 forbids touching anything outside this directory, so the author clone could not be consulted either. Without the diff text none of the checklist items above can be discharged.
+2. Earlier task text left the pinned head as an unfilled placeholder, which is now resolved by SNAPSHOT.json for any re-issue; the re-run should additionally make the diff text itself available inside the reviewer clone or grant an explicit read-only path for the exact pinned commit.
+3. No independent build of the author tree was possible here; ./lean-bau below covers only this reviewer clone (master plus this report, no author Lean code).
+
+No Lean definitions or theorems were added by lane 1170 (report-only review), so there are no new names and no zeuge obligation on this lane. Nothing here approves any unproved claim.
 
 ## What remains open
 
-- Re-issue lane 1170 (or a successor review lane) with: (a) the full pinned HEAD hash of candidate 1169, (b) the candidate diff made available inside the reviewer clone or an explicit read-only exception to HARD RULES 1 for the exact author clone path, (c) working `bash` permission for `./lean-bau` and `./commit.sh` so the build line can be reported and the report committed.
-- Then perform the full exact-review checklist above and replace this REPAIR with ACCEPT or a content-based REPAIR citing concrete file/line findings.
+- Re-run the exact review with the pinned head above and the diff text readable inside the reviewer clone, then replace this blocked decision with an ACCEPT or a content-based repair citing concrete file and line findings.
+- Suggested harness fix: the format gate should pass the snapshot path and the required plain-line format to reviewers up front (as this follow-up did), and reviewer git-read access to the exact pinned commit should be pre-authorized so display commands are not denied.
 
 ## Believed-wrong in the task
 
-- The candidate placeholder `<full pinned HEAD>` was left unfilled, which makes an "exact" review undefined.
-- The review instruction and HARD RULES 1 conflict: the reviewer is told to read the author clone while also told to touch nothing outside its own directory. One of the two must yield for reviews, with the read-only author-clone path stated explicitly.
+- The original lane text named the review target with an unfilled placeholder instead of the pinned head from SNAPSHOT.json.
+- The review instruction (read the diff in the author clone) conflicts with HARD RULES 1 (touch nothing outside this directory) as written for this blocked run.
 
 ## Build status
 
-- `./lean-bau` last result line: `Build completed successfully (607 jobs).` with header `== exit 0; 0 error line(s) in the COMPLETE output` (run 2026-10-05 in this clone; tree state = master plus this report only, no Lean changes by this lane). Note: the build output's `#print axioms` lines for `HwStackCalls.lean` witnesses are pre-existing master content, not candidate 1169 material.
-- New definitions/theorems by this lane: none (report-only review).
-- Commit: to be executed through `./commit.sh` on branch `muse/1170` (see below).
+- ./lean-bau last result line in this clone: Build completed successfully (607 jobs), header == exit 0 with 0 error lines in the COMPLETE output (run 2026-10-05; tree state master plus this report only). The print-axioms lines visible in that output belong to pre-existing HwStackCalls.lean master content, not to author 1169 material.
+- New definitions and theorems by this lane: none.
+- Commit: through ./commit.sh on branch muse/1170.
 
-CUTS: this report proves nothing; it is a blocked-review record. The full pipeline-TSO correctness claim (single-core embed into HwMaschine, FremdFrei, forwarding transparency, drain equality, refusals, witness, silicon correspondence, no W/GX overclaim) remains OPEN.
+CUTS: this report proves nothing; it is a blocked-review record. The pipeline-TSO correctness claim (single-core embed into HwMaschine, FremdFrei, forwarding transparency, drain equality, refusals, witness, silicon correspondence, no W/GX overclaim) remains OPEN.
