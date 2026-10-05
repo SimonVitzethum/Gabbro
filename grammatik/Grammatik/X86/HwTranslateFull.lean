@@ -402,10 +402,233 @@ theorem witVoll_flach_liest_1G :
     witVollFlach.lesbar (BitVec.ofNat 64 (2 ^ 30)) = true := by
   decide
 
+/-! ## 5. Machine connection: adapter plug and extended steps.
+
+  No full translation admits a `HwMaschine` successor: faults have none by construction,
+  and accessed/dirty updates touch the tables, which live outside `HwMaschine` (the same
+  reason both predecessors refuse). Translation behaviour lives in `HwVollSchritt` over
+  machine-plus-extended-control-plus-tables-plus-TLBs, embedding `HwSchritt` exactly.
+  Canonicality is a step premise for every table or cache access (fresh, stale, fault):
+  #GP precedes the walk AND the cache. Large pages are admitted here (no wholesale
+  `grossVerweigert` refusal); a misplaced large page refuses as in lane 1299.
+-/
+
+/-- The full-translation adapter: the refused default. No translation admits a machine
+    successor state. -/
+def adapterVoll : HwAdapter SeitenAnfrage := verweigertAdapter _
+
+/-- The full-translation adapter admits nothing. -/
+theorem adapterVoll_verweigert (m : HwMaschine) (c : Nat)
+    (q : SeitenAnfrage) :
+    adapterVoll.schritt m c q = none := rfl
+
+/-- Full joined state: the coherent machine plus extended control, tables,
+    and per-core TLBs. -/
+structure VollZustand where
+  hw : HwMaschine
+  steuer : GrossSteuerung
+  tabellen : Nat → Wort
+  tlb : Nat → List TlbEintrag
+
+/-- Full joined events: the old events, INVLPG, CR3 write, a fresh walk-through
+    access, a stale TLB-hit use, a walk fault, and a non-canonical #GP. -/
+inductive VollEreignis where
+  | alt : HwEreignis → VollEreignis
+  | invlpg : Nat → Adresse → VollEreignis
+  | cr3 : Nat → VollEreignis
+  | zugriffOk : Nat → SeitenAnfrage → Nat → VollEreignis
+  | zugriffAlt : Nat → SeitenAnfrage → Nat → VollEreignis
+  | zugriffPf : Nat → SeitenAnfrage → Nat → PfFehlerCode →
+      VollEreignis
+  | zugriffGp : Nat → SeitenAnfrage → Nat → VollEreignis
+  deriving DecidableEq, Repr
+
+/-- One full joined step: the embedded old step (translation state kept), INVLPG /
+    CR3 write on one core's TLB, a fresh access (canonical, miss: the full walk runs
+    and writes back accessed/dirty), a stale use (canonical, hit: the walk is not
+    consulted, tables kept), a walk fault (canonical, miss, self-loop), or a
+    non-canonical #GP (the walk equation, self-loop -- the cache is never consulted). -/
+inductive HwVollSchritt :
+    VollZustand → VollZustand → VollEreignis → Prop where
+  | einbettet {s : VollZustand} {m' : HwMaschine} {e : HwEreignis}
+      (h : HwSchritt s.hw m' e) :
+      HwVollSchritt s ⟨m', s.steuer, s.tabellen, s.tlb⟩ (.alt e)
+  | invlpg {s : VollZustand} (c : Nat) (a : Adresse) :
+      HwVollSchritt s
+        ⟨s.hw, s.steuer, s.tabellen,
+          fun d => if d = c then tlbEntfernen (s.tlb c) (seitenNr a)
+            else s.tlb d⟩
+        (.invlpg c a)
+  | cr3 {s : VollZustand} (c : Nat) :
+      HwVollSchritt s
+        ⟨s.hw, s.steuer, s.tabellen,
+          fun d => if d = c then tlbCr3Spuelung (s.tlb c)
+            else s.tlb d⟩
+        (.cr3 c)
+  | frisch {s : VollZustand} {c : Nat} {q : SeitenAnfrage}
+      {phys : Nat} {tab' : Nat → Wort}
+      (hkan : istKanonischNat q.linear = true)
+      (hMiss : tlbSuche (s.tlb c) (q.linear / 4096) = none)
+      (h : (seitenGangGross s.steuer s.tabellen q).1 = .ok phys)
+      (ht : (seitenGangGross s.steuer s.tabellen q).2 = tab') :
+      HwVollSchritt s ⟨s.hw, s.steuer, tab', s.tlb⟩
+        (.zugriffOk c q phys)
+  | veraltet {s : VollZustand} {c : Nat} {q : SeitenAnfrage}
+      {r : Nat}
+      (hkan : istKanonischNat q.linear = true)
+      (hHit : tlbSuche (s.tlb c) (q.linear / 4096) = some r) :
+      HwVollSchritt s s (.zugriffAlt c q r)
+  | fehler {s : VollZustand} {c : Nat} {q : SeitenAnfrage}
+      {a : Nat} {code : PfFehlerCode}
+      (hkan : istKanonischNat q.linear = true)
+      (hMiss : tlbSuche (s.tlb c) (q.linear / 4096) = none)
+      (h : (seitenGangGross s.steuer s.tabellen q).1 =
+        .seitenFehler a code) :
+      HwVollSchritt s s (.zugriffPf c q a code)
+  | gp {s : VollZustand} {c : Nat} {q : SeitenAnfrage} {a : Nat}
+      (h : (seitenGangGross s.steuer s.tabellen q).1 = .gpFehler a) :
+      HwVollSchritt s s (.zugriffGp c q a)
+
+/-- FORWARD embedding: every old step is a full joined step. -/
+theorem hwVollSchritt_einbettung_vor (s : VollZustand)
+    (m' : HwMaschine) (e : HwEreignis)
+    (h : HwSchritt s.hw m' e) :
+    HwVollSchritt s ⟨m', s.steuer, s.tabellen, s.tlb⟩ (.alt e) :=
+  .einbettet h
+
+/-- BACKWARD embedding, exact: an `.alt` step comes only from the old step
+    with the same event. -/
+theorem hwVollSchritt_alt_invert (s t : VollZustand)
+    (e : HwEreignis) (h : HwVollSchritt s t (.alt e)) :
+    ∃ m', t.hw = m' ∧ t.tabellen = s.tabellen ∧
+      HwSchritt s.hw m' e := by
+  cases h with
+  | einbettet hstep => exact ⟨_, rfl, rfl, hstep⟩
+
+/-- An `.alt` step over the reached target is the old step. -/
+theorem hwVollSchritt_einbettung_zurueck (s : VollZustand)
+    (m' : HwMaschine) (e : HwEreignis)
+    (h : HwVollSchritt s ⟨m', s.steuer, s.tabellen, s.tlb⟩
+      (.alt e)) :
+    HwSchritt s.hw m' e := by
+  obtain ⟨m'', hm, _, hstep⟩ := hwVollSchritt_alt_invert s _ e h
+  subst hm
+  exact hstep
+
+/-- A fresh step carries its walk equation. -/
+theorem vollZugriffOk_invert_gang (s t : VollZustand) (c : Nat)
+    (q : SeitenAnfrage) (phys : Nat)
+    (h : HwVollSchritt s t (.zugriffOk c q phys)) :
+    (seitenGangGross s.steuer s.tabellen q).1 = .ok phys := by
+  cases h with
+  | frisch hkan hMiss h ht => exact h
+
+/-- A fresh step carries its miss. -/
+theorem vollZugriffOk_invert_miss (s t : VollZustand) (c : Nat)
+    (q : SeitenAnfrage) (phys : Nat)
+    (h : HwVollSchritt s t (.zugriffOk c q phys)) :
+    tlbSuche (s.tlb c) (q.linear / 4096) = none := by
+  cases h with
+  | frisch hkan hMiss h ht => exact hMiss
+
+/-- A fresh step carries its canonicality. -/
+theorem vollZugriffOk_invert_kanon (s t : VollZustand) (c : Nat)
+    (q : SeitenAnfrage) (phys : Nat)
+    (h : HwVollSchritt s t (.zugriffOk c q phys)) :
+    istKanonischNat q.linear = true := by
+  cases h with
+  | frisch hkan hMiss h ht => exact hkan
+
+/-- A stale step carries its hit: the walk equation is absent. -/
+theorem vollZugriffAlt_invert_hit (s t : VollZustand) (c : Nat)
+    (q : SeitenAnfrage) (r : Nat)
+    (h : HwVollSchritt s t (.zugriffAlt c q r)) :
+    tlbSuche (s.tlb c) (q.linear / 4096) = some r := by
+  cases h with
+  | veraltet hkan hHit => exact hHit
+
+/-- A stale step carries its canonicality: #GP precedes the cache. -/
+theorem vollZugriffAlt_invert_kanon (s t : VollZustand) (c : Nat)
+    (q : SeitenAnfrage) (r : Nat)
+    (h : HwVollSchritt s t (.zugriffAlt c q r)) :
+    istKanonischNat q.linear = true := by
+  cases h with
+  | veraltet hkan hHit => exact hkan
+
+/-- A stale step never moves the state. -/
+theorem hwVollSchritt_veraltet_still (s s' : VollZustand)
+    (c : Nat) (q : SeitenAnfrage) (r : Nat)
+    (h : HwVollSchritt s s' (.zugriffAlt c q r)) : s' = s := by
+  cases h
+  rfl
+
+/-- A fault step carries its walk equation. -/
+theorem vollZugriffPf_invert_gang (s t : VollZustand) (c : Nat)
+    (q : SeitenAnfrage) (a : Nat) (code : PfFehlerCode)
+    (h : HwVollSchritt s t (.zugriffPf c q a code)) :
+    (seitenGangGross s.steuer s.tabellen q).1 = .seitenFehler a code := by
+  cases h with
+  | fehler hkan hMiss h => exact h
+
+/-- A fault step carries its miss. -/
+theorem vollZugriffPf_invert_miss (s t : VollZustand) (c : Nat)
+    (q : SeitenAnfrage) (a : Nat) (code : PfFehlerCode)
+    (h : HwVollSchritt s t (.zugriffPf c q a code)) :
+    tlbSuche (s.tlb c) (q.linear / 4096) = none := by
+  cases h with
+  | fehler hkan hMiss h => exact hMiss
+
+/-- A fault step carries its canonicality. -/
+theorem vollZugriffPf_invert_kanon (s t : VollZustand) (c : Nat)
+    (q : SeitenAnfrage) (a : Nat) (code : PfFehlerCode)
+    (h : HwVollSchritt s t (.zugriffPf c q a code)) :
+    istKanonischNat q.linear = true := by
+  cases h with
+  | fehler hkan hMiss h => exact hkan
+
+/-- A fault step never moves the state. -/
+theorem hwVollSchritt_fehler_still (s s' : VollZustand)
+    (c : Nat) (q : SeitenAnfrage) (a : Nat) (code : PfFehlerCode)
+    (h : HwVollSchritt s s' (.zugriffPf c q a code)) :
+    s' = s := by
+  cases h
+  rfl
+
+/-- A #GP step carries its walk equation. -/
+theorem vollZugriffGp_invert_gang (s t : VollZustand) (c : Nat)
+    (q : SeitenAnfrage) (a : Nat)
+    (h : HwVollSchritt s t (.zugriffGp c q a)) :
+    (seitenGangGross s.steuer s.tabellen q).1 = .gpFehler a := by
+  cases h with
+  | gp h => exact h
+
+/-- A #GP step never moves the state. -/
+theorem hwVollSchritt_gp_still (s s' : VollZustand)
+    (c : Nat) (q : SeitenAnfrage) (a : Nat)
+    (h : HwVollSchritt s s' (.zugriffGp c q a)) :
+    s' = s := by
+  cases h
+  rfl
+
+/-- Every full joined step preserves machine well-formedness: old steps by the
+    accepted preservation, all family steps because the machine is kept. -/
+theorem hwVollSchritt_wf (s s' : VollZustand)
+    (e : VollEreignis) (h : HwVollSchritt s s' e)
+    (hwf : HwWf s.hw) : HwWf s'.hw := by
+  cases h with
+  | einbettet hstep => exact hwSchritt_wf _ _ _ hstep hwf
+  | invlpg c a => exact hwf
+  | cr3 c => exact hwf
+  | frisch hkan hMiss h ht => exact hwf
+  | veraltet hkan hHit => exact hwf
+  | fehler hkan hMiss h => exact hwf
+  | gp h => exact hwf
+
 /- CUTS:
-   Proved: §§1-4 (join, agreement, #GP-first, 1299 link, INVLPG/CR3, caching
-   closure with stale-rights witnesses, flat bridge with transfer and witness memory).
-   Follow: machine connection (§5), joint witness (§6).
+   Proved: §§1-5a (join, agreement, #GP-first, 1299 link, INVLPG/CR3, caching
+   closure with stale-rights witnesses, flat bridge, adapter plug, step relation
+   with exact embedding, inversions, stillness, wf preservation).
+   Follow: step refusals and INVLPG/CR3 agreements (§5b), joint witness (§6).
    NOT proved: everything above; no hardware correspondence beyond self-consistency.
 -/
 
@@ -441,5 +664,26 @@ theorem witVoll_flach_liest_1G :
 #print axioms witVoll_flach_liest
 #print axioms witVoll_flach_schreibt
 #print axioms witVoll_flach_liest_1G
+#print axioms adapterVoll
+#print axioms adapterVoll_verweigert
+#print axioms VollZustand
+#print axioms VollEreignis
+#print axioms HwVollSchritt
+#print axioms hwVollSchritt_einbettung_vor
+#print axioms hwVollSchritt_alt_invert
+#print axioms hwVollSchritt_einbettung_zurueck
+#print axioms vollZugriffOk_invert_gang
+#print axioms vollZugriffOk_invert_miss
+#print axioms vollZugriffOk_invert_kanon
+#print axioms vollZugriffAlt_invert_hit
+#print axioms vollZugriffAlt_invert_kanon
+#print axioms hwVollSchritt_veraltet_still
+#print axioms vollZugriffPf_invert_gang
+#print axioms vollZugriffPf_invert_miss
+#print axioms vollZugriffPf_invert_kanon
+#print axioms hwVollSchritt_fehler_still
+#print axioms vollZugriffGp_invert_gang
+#print axioms hwVollSchritt_gp_still
+#print axioms hwVollSchritt_wf
 
 end Gabbro.Grammatik.X86
