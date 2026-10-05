@@ -92,7 +92,7 @@ def hwLockBuf (c : Nat) : Option HwMaschine → Option Nat
   | some m' => some (((m'.puffer c).length))
   | none => none
 
-/-! ## 5. Two-core witness: locked adds with a foreign buffered byte.
+/-! ## 3. Two-core witness: locked adds with a foreign buffered byte.
 
   Word 10 at 8192 (data window, readable and writable); core 0 adds 5,
   core 1 adds 7. Core 1 holds one pending buffered byte at 8200 --
@@ -175,7 +175,7 @@ theorem hwLockWitStart_zugelassen (f : PerfMerkmal) :
 theorem hwLockWitStart_wf : HwWf hwLockWitStart :=
   hwWf_aus_zugelassen _ fun _ => hwLockWitStart_zugelassen
 
-/-! ## 6. Closed pins: reached steps, forwarding, refusal outcomes.
+/-! ## 4. Closed pins: reached steps, forwarding, refusal outcomes.
 
   Every pin below evaluates the complete computation on closed
   machines (`decide`/`rfl`); no machine equality is ever decided.
@@ -279,7 +279,7 @@ theorem hwLockSchritt_ok_bei (m : HwMaschine) (c : Nat)
   unfold hwLockSchritt
   rw [h]
 
-/-! ## 3. Exact agreement: the accepted evaluator rides along.
+/-! ## 5. Exact agreement: the accepted evaluator rides along.
 
   Each admitted form is pinned by the accepted step equation with the
   SAME guards: empty own buffer, alignment, permissions, length. The
@@ -433,7 +433,7 @@ theorem hwLock_mfence_stimmt (m : HwMaschine) (c : Nat) (len : Nat)
   · rfl
   · rfl
 
-/-! ## 4. Plug preservation and general refusals.
+/-! ## 6. Plug preservation and general refusals.
 
   The plug preserves `HwWf` (profiles untouched). What is not
   admitted stays refused: parsed #UD (LOCK on a register destination,
@@ -509,16 +509,184 @@ theorem hwLock_mfence_ohne_sse2_verweigert (m : HwMaschine) (c : Nat)
   rw [h]
   decide
 
+/-! ## 7. Planted refusals: fault classes and control state.
+
+  Variants of the witness with one guard broken each: misaligned
+  base, missing SSE2 silicon, unreadable word, and a readable but
+  non-writable word under a failing comparison (the write-back needs
+  write permission). The failing comparison with permission is the
+  positive twin: the word stays, rax takes the word. -/
+
+/-- Witness registers for the failing comparison: rax 11 vs word 10. -/
+def hwLockWitRegNein : Register → Wort := lockZeugReg 11 8192 7
+
+/-- Witness core data with a replaced core-0 register file. -/
+def hwLockWitKernLesen (reg0 : Register → Wort) : Nat → HwKern
+  | 0 => ⟨reg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | c => hwLockWitKern c
+
+/-- Misaligned variant: base 8193 on core 0, buffers empty. -/
+def hwLockWitUnaligned : HwMaschine :=
+  ⟨lockZeugSpeicher pinXadd 10 lockCodeExec lockDataRW lockDataRW,
+    hwLockWitKernLesen (lockZeugReg 5 8193 7), fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- Silicon without SSE2: everything else like the fence witness. -/
+def hwLockWitOhneSse2 : HwMaschine :=
+  ⟨lockZeugSpeicher pinMfence 0 lockCodeExec lockDataRW lockDataRW,
+    hwLockWitKernLesen hwLockWitReg0, fun _ => [],
+    hwOhneSse2, fun _ => basisBereit⟩
+
+/-- Unreadable-word variant: data window without read permission. -/
+def hwLockWitOhneLesen : HwMaschine :=
+  ⟨lockZeugSpeicher pinXadd 10 lockCodeExec lockDataNie lockDataRW,
+    hwLockWitKernLesen hwLockWitReg0, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- Readable-but-not-writable variant under the failing comparison. -/
+def hwLockWitOhneSchreiben : HwMaschine :=
+  ⟨lockZeugSpeicher pinCmpxchg 10 lockCodeExec lockDataRW lockDataNie,
+    hwLockWitKernLesen hwLockWitRegNein, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- Failing-comparison variant with full permission: the positive twin. -/
+def hwLockWitCmpxchgNein : HwMaschine :=
+  ⟨lockZeugSpeicher pinCmpxchg 10 lockCodeExec lockDataRW lockDataRW,
+    hwLockWitKernLesen hwLockWitRegNein, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- LOCK on a register destination stays refused. -/
+theorem hwLockWit_reg_ud :
+    hwLockSchritt hwLockWitStart 0 (.ud .lockAufRegister 5) = none :=
+  hwLock_ud_bleibt_verweigert _ _ _ _
+
+/-- The pending own byte refuses core 1 its locked step. -/
+theorem hwLockWit_puffer :
+    hwLockSchritt hwLockWitStart 1 (.ok (.xadd64 .rax .rbp 0) 9) =
+      none :=
+  hwLock_puffer_bleibt_verweigert hwLockWitStart 1 .rax .rbp 0 9
+    ⟨hwLockWitFremdAdr, BitVec.ofNat 8 99⟩ [] (by decide) (by decide)
+
+/-- The misaligned base refuses as unsupported, never as a fault. -/
+theorem hwLockWit_unaligned :
+    hwLockSchritt hwLockWitUnaligned 0 (.ok (.xadd64 .rax .rbp 0) 9) =
+      none :=
+  hwLock_unaligned_bleibt_verweigert hwLockWitUnaligned 0 .rax .rbp 0 9
+    (by decide) (by decide) (by decide)
+
+/-- The fence without admitted SSE2 refuses. -/
+theorem hwLockWit_sse2 :
+    hwLockSchritt hwLockWitOhneSse2 0 (.ok .mfence 3) = none :=
+  hwLock_mfence_ohne_sse2_verweigert hwLockWitOhneSse2 0 3
+    (by decide) (by decide)
+
+/-- Read fault is the memory class, never #UD. -/
+theorem hwLockWit_lesefehler_art :
+    lockArt (lockSchrittVoll (.ok (.xadd64 .rax .rbp 0) 9) 0
+      (lockMaschineVonHw hwLockWitOhneLesen 0) hwLockWitOhneLesen.hw
+      (hwLockWitOhneLesen.bereit 0)) = .speicherFehler := by
+  decide
+
+/-- The unreadable word refuses the plug step. -/
+theorem hwLockWit_lesefehler :
+    hwLockSchritt hwLockWitOhneLesen 0 (.ok (.xadd64 .rax .rbp 0) 9) =
+      none := by
+  apply hwLockSchritt_verweigert_bei
+  rw [hwLockWit_lesefehler_art]
+  decide
+
+/-- Write-back fault on the failing comparison: the manual performs
+    the destination write cycle regardless, so a readable but
+    non-writable word refuses even the failed comparison. -/
+theorem hwLockWit_schreibfehler_art :
+    lockArt (lockSchrittVoll (.ok (.cmpxchg64 .rcx .rbp 0) 9) 0
+      (lockMaschineVonHw hwLockWitOhneSchreiben 0)
+      hwLockWitOhneSchreiben.hw
+      (hwLockWitOhneSchreiben.bereit 0)) = .speicherFehler := by
+  decide
+
+/-- The failing comparison without write permission refuses. -/
+theorem hwLockWit_schreibfehler :
+    hwLockSchritt hwLockWitOhneSchreiben 0
+      (.ok (.cmpxchg64 .rcx .rbp 0) 9) = none := by
+  apply hwLockSchritt_verweigert_bei
+  rw [hwLockWit_schreibfehler_art]
+  decide
+
+/-- Positive twin: with permission the failing comparison succeeds,
+    the word stays 10 and rax takes the observed 10. -/
+theorem hwLockWit_cmpxchg_nein_ok :
+    hwLockWort hwLockWitAdr (hwLockSchritt hwLockWitCmpxchgNein 0
+      (.ok (.cmpxchg64 .rcx .rbp 0) 9)) = some 10 ∧
+    hwLockReg 0 .rax (hwLockSchritt hwLockWitCmpxchgNein 0
+      (.ok (.cmpxchg64 .rcx .rbp 0) 9)) = some 10 := by
+  refine ⟨by decide, by decide⟩
+
+/-! ## 8. Joint witness: every premise together on reached runs.
+
+  Non-degenerate: two cores locked-add 10 to 15 to 22 in canonical
+  memory (memory-changing steps on both cores), a buffered store is
+  forwarded to its owner only, the drain lands it in shared memory,
+  and the malformed/fault/control refusals stand beside the run. -/
+
+/-- Joint LOCK/RMW witness on the coherent machine. -/
+theorem hwLock_zeuge :
+    read64 hwLockWitStart.mem hwLockWitAdr = some 10 ∧
+    hwLockWort hwLockWitAdr hwLockWitNach1 = some 15 ∧
+    hwLockReg 0 .rax hwLockWitNach1 = some 10 ∧
+    hwLockSicht hwLockWitNach1 1 hwLockWitFremdAdr =
+      some (some (BitVec.ofNat 8 99)) ∧
+    hwLockSicht hwLockWitNach1 0 hwLockWitFremdAdr =
+      some (some (BitVec.ofNat 8 0)) ∧
+    hwLockWort hwLockWitAdr hwLockWitNach2 = some 22 ∧
+    hwLockReg 1 .rax hwLockWitNach2 = some 15 ∧
+    hwLockBuf 1 hwLockWitNach1 = some 1 ∧
+    HwWf hwLockWitStart ∧
+    hwLockSchritt hwLockWitStart 0 (.ud .lockAufRegister 5) = none ∧
+    hwLockSchritt hwLockWitStart 1 (.ok (.xadd64 .rax .rbp 0) 9) =
+      none ∧
+    hwLockSchritt hwLockWitUnaligned 0 (.ok (.xadd64 .rax .rbp 0) 9) =
+      none ∧
+    hwLockSchritt hwLockWitOhneSse2 0 (.ok .mfence 3) = none ∧
+    hwLockSchritt hwLockWitOhneLesen 0 (.ok (.xadd64 .rax .rbp 0) 9) =
+      none ∧
+    hwLockSchritt hwLockWitOhneSchreiben 0
+      (.ok (.cmpxchg64 .rcx .rbp 0) 9) = none := by
+  refine ⟨hwLockWit_anfang, hwLockWit_nach1_wort, hwLockWit_nach1_rax,
+    hwLockWit_nach1_eigen_sicht, hwLockWit_nach1_fremd_sicht,
+    hwLockWit_nach2_wort, hwLockWit_nach2_rax1,
+    hwLockWit_nach1_fremd_buf, hwLockWitStart_wf, hwLockWit_reg_ud,
+    hwLockWit_puffer, hwLockWit_unaligned, hwLockWit_sse2,
+    hwLockWit_lesefehler, hwLockWit_schreibfehler⟩
+
 /- CUTS:
     Proved here: projection with the shared TSO view, re-embedding with
-    `HwWf` preservation, the admitted-step plug with its event-exposing
-    twin and ok/none bridge, decidable observers, XADD/CMPXCHG/MFENCE
-    exact agreement (same guards, same successor and event, read-back,
-    kept buffers, write permission pinned on the failure write-back),
-    plug `HwWf` preservation, and general refusals (#UD markers,
-    pending own store, misaligned word, fence without SSE2).
-    NOT proved yet: closed refusal pins (fault classes), two-core
-    witness, no W/GX claim.
+    `HwWf` preservation, the admitted-step plug (`adapterLockRmw`) with
+    its event-exposing twin and ok/none bridge, decidable observers,
+    XADD/CMPXCHG/MFENCE exact agreement (same guards, same successor
+    and event, read-back, kept buffers, write permission pinned on the
+    failure write-back), plug `HwWf` preservation, general refusals
+    (#UD markers, pending own store, misaligned word, fence without
+    SSE2), closed fault pins (read fault, write-back fault on the
+    failing comparison, with the permitted-failure positive twin), and
+    the reached non-degenerate two-core joint witness `hwLock_zeuge`
+    (word 10 to 15 to 22 across two cores, owner-only forwarding,
+    shared byte after drain, no footprint overlap, all refusals).
+    Silicon provenance: Intel SDM 325462-093US Sep 2026 Vol. 2A
+    3-565/3-566 (LOCK), 3-193/3-194 (CMPXCHG), Vol. 2B 4-15 (MFENCE),
+    Vol. 2D 6-27/6-28 (XADD), via the accepted 662 module -- this lane
+    adds no new silicon claim beyond reusing those rows.
+    NOT proved here, and not claimed:
+    - No hardware correspondence beyond self-consistency: encodings,
+      flag effects and ordering rules are the accepted 662 rows.
+    - No fetched-byte dispatch on `HwMaschine`: the plug takes parsed
+      `LockAnweisung`; fetch stays with 662 `lockByteschritt` on the
+      single-register-file `LockMaschine`.
+    - No W/GX refinement and no per-access linearisation: the bridge
+      owns them. No cycle, latency, progress or retry-bound claim.
+    - Narrower widths (8/16/32-bit), other addressing modes and
+      split-lock detection stay open with 662.
 -/
 
 #print axioms lockMaschineVonHw_tso
@@ -535,3 +703,19 @@ theorem hwLock_mfence_ohne_sse2_verweigert (m : HwMaschine) (c : Nat)
 #print axioms hwLock_puffer_bleibt_verweigert
 #print axioms hwLock_unaligned_bleibt_verweigert
 #print axioms hwLock_mfence_ohne_sse2_verweigert
+#print axioms hwLockWitStart_wf
+#print axioms hwLockWit_anfang
+#print axioms hwLockWit_nach1_wort
+#print axioms hwLockWit_nach2_wort
+#print axioms hwLockWit_nach1_eigen_sicht
+#print axioms hwLockWit_nach1_fremd_sicht
+#print axioms hwLockWit_fremd_ohne_fuss
+#print axioms hwLockWit_mfence_ok
+#print axioms hwLockWit_reg_ud
+#print axioms hwLockWit_puffer
+#print axioms hwLockWit_unaligned
+#print axioms hwLockWit_sse2
+#print axioms hwLockWit_lesefehler
+#print axioms hwLockWit_schreibfehler
+#print axioms hwLockWit_cmpxchg_nein_ok
+#print axioms hwLock_zeuge
