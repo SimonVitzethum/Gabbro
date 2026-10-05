@@ -1,8 +1,11 @@
 # MUSE-REPORT-1328: exact review of candidate 1327 (isa/addr/muldiv TSO projection)
 
-## VERDICT: ACCEPT
+## Verdict (machine-readable lines follow)
 
-CANDIDATE: lane 1327, pinned HEAD `c72c015cbe0408779d2fdac057596e3b08fd1d57`
+CANDIDATE: 1327 c72c015cbe0408779d2fdac057596e3b08fd1d57
+VERDICT: ACCEPT
+
+Reviewed pinned HEAD `c72c015cbe0408779d2fdac057596e3b08fd1d57`
 (base `10fb97f11ec29c426cf09f34b72433566a758c0b`, SNAPSHOT `clean: true`).
 
 ## What was checked
