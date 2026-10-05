@@ -1,6 +1,9 @@
 # MUSE-REPORT-1298: Exact review of candidate 1297 (paging: large pages, SMEP/SMAP)
 
-## Verdict: ACCEPT
+CANDIDATE: 1297 97599d0b512ea48a2c74ef9e3da70f865efbfb9b
+VERDICT: ACCEPT
+
+## Substantive verdict (unchanged from the first committed review)
 
 Candidate 1297 (`97599d0b512ea48a2c74ef9e3da70f865efbfb9b`, base `234f2728`,
 files `MUSE-REPORT-1297.md`, `grammatik/Grammatik.lean`,
