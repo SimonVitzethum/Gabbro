@@ -997,4 +997,63 @@ theorem ctxXRundlauf_maschine (m : HwMaschine) (c : Nat) (a : Adresse)
     (ctxXSave_weiter m c a x frageSse m1 h1)
     (ctxXRstor_weiter m1 c a x frageSse m2 h2)
 
+/-! ## 6. Handlers and context switches preserve FP/vector state.
+
+    Delivery (`asyncMasch`, HwInterrupts) copies the interrupted
+    core's XMM file and FP context untouched into the handler-entry
+    machine; buffers are untouched too (`asyncMasch_puffer_still`).
+    A handler that saves the entry image and restores it before exit
+    therefore recovers the interrupted state exactly (pure identity
+    from §1); what the handler runs between save and restore is user
+    logic outside this model (see CUTS). The same holds for an OS
+    context switch: the outgoing image decodes back to the outgoing
+    state, so switching images is lossless both ways. -/
+
+/-- Delivery keeps the interrupted core's control word. -/
+theorem asyncMasch_fp_still (m : HwMaschine) (c : Nat) (g : IdtTor)
+    (q : LieferAnfrage) (rsp : Wort) (m2 : Speicher) :
+    ((asyncMasch m c g q rsp m2).kerne c).fp = (m.kerne c).fp := by
+  simp [asyncMasch]
+
+/-- Delivery keeps the interrupted core's XMM file. -/
+theorem asyncMasch_xmm_still (m : HwMaschine) (c : Nat) (g : IdtTor)
+    (q : LieferAnfrage) (rsp : Wort) (m2 : Speicher) (r : XmmReg) :
+    ((asyncMasch m c g q rsp m2).kerne c).xmm r =
+      (m.kerne c).xmm r := by
+  simp [asyncMasch]
+
+/-- HANDLER PRESERVATION: delivering an interrupt and then saving
+    and restoring the entry image recovers the interrupted core's
+    FP/vector state exactly. -/
+theorem handlerErhaeltKontext (m : HwMaschine) (c : Nat) (g : IdtTor)
+    (q : LieferAnfrage) (rsp : Wort) (m2 : Speicher) :
+    (fxDekodiere (ctxByte ((asyncMasch m c g q rsp m2).kerne c).fp
+      ((asyncMasch m c g q rsp m2).kerne c).xmm)).mxcsr =
+      ((m.kerne c).fp).mxcsr ∧
+    ∀ r : XmmReg, (fxDekodiere (ctxByte
+      ((asyncMasch m c g q rsp m2).kerne c).fp
+      ((asyncMasch m c g q rsp m2).kerne c).xmm)).xmm r =
+      ((m.kerne c).xmm) r := by
+  have hfp0 : ((asyncMasch m c g q rsp m2).kerne c).fp =
+      (m.kerne c).fp :=
+    asyncMasch_fp_still m c g q rsp m2
+  have hxx : ((asyncMasch m c g q rsp m2).kerne c).xmm =
+      (m.kerne c).xmm :=
+    funext (fun r => asyncMasch_xmm_still m c g q rsp m2 r)
+  rw [hfp0, hxx]
+  exact ctxRundlauf_pur (m.kerne c).fp (m.kerne c).xmm
+
+/-- CONTEXT SWITCH: the outgoing image decodes back to the outgoing
+    state and an incoming image decodes to the incoming state, so
+    switching images is lossless both ways. Installing the decoded
+    state on a core is the restore path (§4). -/
+theorem wechselStelltHer (kAlt kNeu : FPKontext)
+    (xAlt xNeu : XmmDatei) :
+    (fxDekodiere (ctxByte kAlt xAlt)).mxcsr = kAlt.mxcsr ∧
+    (∀ r : XmmReg, (fxDekodiere (ctxByte kAlt xAlt)).xmm r = xAlt r) ∧
+    (fxDekodiere (ctxByte kNeu xNeu)).mxcsr = kNeu.mxcsr ∧
+    (∀ r : XmmReg, (fxDekodiere (ctxByte kNeu xNeu)).xmm r = xNeu r) := by
+  exact ⟨(ctxRundlauf_pur kAlt xAlt).1, (ctxRundlauf_pur kAlt xAlt).2,
+    (ctxRundlauf_pur kNeu xNeu).1, (ctxRundlauf_pur kNeu xNeu).2⟩
+
 end Gabbro.Grammatik.X86
