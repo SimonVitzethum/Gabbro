@@ -10,6 +10,8 @@ from `.tmp/review/SNAPSHOT.json`. Diff read only from
 `.tmp/review/author-1235/grammatik/...`, `MUSE-REPORT-1235.md`,
 `OWNER-TASK.md`, `BUILD-EVIDENCE.json`. No other clone touched.
 
+CANDIDATE: 1235 5a1c10c2bf09717032a9531870ba550ae664dc1a
+
 ## What was reviewed
 
 NEW FILE `grammatik/Grammatik/X86/PipelineProfilesReloc.lean` (617 lines)
@@ -131,7 +133,9 @@ decision 594 (no persistent SSA IR / second source interpreter) and the
 pending shared IR lane 287, inventing a substitute source leg would have
 been worse. The refusal to do so is correct; the gap is booked, not hidden.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1235 at pinned HEAD `5a1c10c2bf09717032a9531870ba550ae664dc1a`
 meets the exact-review gates: green-file evidence with standard axioms, no
