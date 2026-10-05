@@ -535,40 +535,186 @@ theorem kapVerbraucht_avx2_fuenf :
     kapVerbraucht kapW_avx2 [] = 5 := by
   decide
 
-/-! ## 7. Overlap lengths on the chain side.
+/-! ## 7. Overlap rows run through the real chain.
 
   The §5 overlaps of `HwKapsteinDecoder` keep the earlier chain level.
-  No chain-side length conflict is exhibited: each overlap row below
-  is consumed whole (empty rest) by the chain with the stated length,
-  matching the accepted length of the winning arm (3/3/4 for the
-  unified rows, 2 for the new width divide row). Whether the SHADOWED
-  decoder would consume a DIFFERENT length on these rows is unmeasured
-  (see CUTS): a row whose consumed length differs between two
-  decoders of an overlap is a finding, and none is recorded here. -/
+  Each overlap row below is run through the REAL chain
+  (`kapDecode`, reusing the accepted `kapUeber_*` evaluations, never
+  re-decided): the stated winning row with empty rest, the measured
+  consumed length equal to the winning arm's accepted length (3/3/4
+  for the unified rows, 2 for the new width divide row), and positive
+  progress on that row. Whether the SHADOWED decoder would consume a
+  DIFFERENT length on these rows is unmeasured (see CUTS): a row whose
+  consumed length differs between two decoders of an overlap is a
+  finding, and none is recorded here. -/
 
-/-- Overlap row (width vs unified, 64-bit multiply): the chain
-    consumes 3 bytes. -/
+/-- Overlap row (width vs unified, 64-bit multiply): the chain takes
+    the unified row whole (3 bytes, positive progress). -/
 theorem kapUeber_laenge_mul64 :
-    kapVerbraucht [natByte 73, natByte 247, natByte 224] [] = 3 := by
-  decide
+    kapDecode [natByte 73, natByte 247, natByte 224] =
+      some (KapDekodiert.breit (.ext (.muldiv ⟨.mulRax .r8, 3⟩)), []) ∧
+    kapVerbraucht [natByte 73, natByte 247, natByte 224] [] = 3 ∧
+    0 < kapVerbraucht [natByte 73, natByte 247, natByte 224] [] := by
+  refine ⟨kapUeber_wd_ext_mul64, by decide, by decide⟩
 
-/-- Overlap row (width vs unified, 64-bit divide): the chain consumes
-    3 bytes. -/
+/-- Overlap row (width vs unified, 64-bit divide): the chain takes
+    the unified row whole (3 bytes, positive progress). -/
 theorem kapUeber_laenge_div64 :
-    kapVerbraucht [natByte 73, natByte 247, natByte 251] [] = 3 := by
-  decide
+    kapDecode [natByte 73, natByte 247, natByte 251] =
+      some (KapDekodiert.breit (.ext (.muldiv ⟨.idivRax .r11, 3⟩)), []) ∧
+    kapVerbraucht [natByte 73, natByte 247, natByte 251] [] = 3 ∧
+    0 < kapVerbraucht [natByte 73, natByte 247, natByte 251] [] := by
+  refine ⟨kapUeber_wd_ext_div64, by decide, by decide⟩
 
 /-- Overlap row (width vs unified, two-operand multiply): the chain
-    consumes 4 bytes. -/
+    takes the unified row whole (4 bytes, positive progress). -/
 theorem kapUeber_laenge_imul2 :
+    kapDecode [natByte 77, natByte 15, natByte 175, natByte 207] =
+      some (KapDekodiert.breit
+        (.ext (.muldiv ⟨.imul2 .r9 .r15, 4⟩)), []) ∧
     kapVerbraucht [natByte 77, natByte 15, natByte 175, natByte 207] [] =
-      4 := by
-  decide
+      4 ∧
+    0 < kapVerbraucht [natByte 77, natByte 15, natByte 175, natByte 207] [] := by
+  refine ⟨kapUeber_wd_ext_imul2, by decide, by decide⟩
 
-/-- New width divide row: the chain consumes 2 bytes. -/
+/-- New width divide row: the chain takes the width row whole
+    (2 bytes, positive progress). -/
 theorem kapUeber_laenge_div32 :
-    kapVerbraucht [natByte 247, natByte 241] [] = 2 := by
-  decide
+    kapDecode [natByte 247, natByte 241] =
+      some (KapDekodiert.breit
+        (.wd (⟨WdBefehl.divWd WdBreite.w32 Register.rcx, 2⟩ :
+          WdDecodiert)), []) ∧
+    kapVerbraucht [natByte 247, natByte 241] [] = 2 ∧
+    0 < kapVerbraucht [natByte 247, natByte 241] [] := by
+  refine ⟨kapUeber_wd_neu_div32, by decide, by decide⟩
+
+/-! ## 8. Declared length agrees with measured length.
+
+  Wherever an accepted arbitrary-input length equation exists, the
+  declared row length (`kapZeilenLaenge`) is exactly the stated length
+  of that equation, and the measured length (`kapVerbraucht`) equals it
+  too. Each theorem reuses exactly one accepted equation; the
+  hypothesis feeds it. Arms without an accepted equation (s32, MXCSR,
+  LOCK, addressed-LOCK, unified FP/vector sub-arms, and the top-level
+  width dispatcher itself) stay open; see CUTS. -/
+
+/-- Declared and measured length agree on the compact arm. -/
+theorem kapLaenge_stimmt_kompakt (bs : List Byte) (d : CompactDecodiert)
+    (rest : List Byte) (h : decodeC bs = some (d, rest)) :
+    kapZeilenLaenge (KapDekodiert.kompakt d) = some d.laenge ∧
+      d.laenge + rest.length = bs.length ∧
+      kapVerbraucht bs rest = d.laenge := by
+  obtain ⟨heq, hlo, _⟩ := decodeC_verbraucht bs d rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
+
+/-- Declared and measured length agree on the core arm. -/
+theorem kapLaenge_stimmt_kern (bs : List Byte) (d : CoreDecodiert)
+    (rest : List Byte) (h : decodeCore bs = some (d, rest)) :
+    kapZeilenLaenge (KapDekodiert.kern d) = some d.laenge ∧
+      d.laenge + rest.length = bs.length ∧
+      kapVerbraucht bs rest = d.laenge := by
+  obtain ⟨heq, hlo, _⟩ := decodeCore_verbraucht bs d rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
+
+/-- Declared and measured length agree on the width rows. -/
+theorem kapLaenge_stimmt_breit_wd (bs : List Byte) (d : WdDecodiert)
+    (rest : List Byte) (h : decodeWd bs = some (d, rest)) :
+    kapZeilenLaenge (KapDekodiert.breit (.wd d)) = some d.laenge ∧
+      d.laenge + rest.length = bs.length ∧
+      kapVerbraucht bs rest = d.laenge := by
+  obtain ⟨heq, hlo, _⟩ := decodeWd_len_ok bs d rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
+
+/-- Declared and measured length agree on the pilot sub-arm. -/
+theorem kapLaenge_stimmt_breit_pilot (bs : List Byte) (d : Decodiert)
+    (rest : List Byte) (h : decode bs = some (d, rest)) :
+    kapZeilenLaenge (KapDekodiert.breit (.ext (.pilot d))) =
+        some d.laenge ∧
+      d.laenge + rest.length = bs.length ∧
+      kapVerbraucht bs rest = d.laenge := by
+  obtain ⟨heq, _, hlo, _⟩ := decode_verbraucht_praefix bs d rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
+
+/-- Declared and measured length agree on the narrow sub-arm. -/
+theorem kapLaenge_stimmt_breit_narrow (bs : List Byte) (d : NarrowDec)
+    (rest : List Byte) (h : decodeNarrow bs = some (d, rest)) :
+    kapZeilenLaenge (KapDekodiert.breit (.ext (.narrow d))) =
+        some d.laenge ∧
+      d.laenge + rest.length = bs.length ∧
+      kapVerbraucht bs rest = d.laenge := by
+  obtain ⟨heq, hlo, _⟩ := decodeNarrow_consumes bs d rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
+
+/-- Declared and measured length agree on the multiply/divide
+    sub-arm. -/
+theorem kapLaenge_stimmt_breit_muldiv (bs : List Byte)
+    (d : MulDivDecodiert) (rest : List Byte)
+    (h : decodeMulDiv bs = some (d, rest)) :
+    kapZeilenLaenge (KapDekodiert.breit (.ext (.muldiv d))) =
+        some d.laenge ∧
+      d.laenge + rest.length = bs.length ∧
+      kapVerbraucht bs rest = d.laenge := by
+  obtain ⟨heq, hlo, _⟩ := decodeMulDiv_len_ok bs d rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
+
+/-- Declared and measured length agree on the shift sub-arm (the
+    declared length is the accepted `shiftLaenge`). -/
+theorem kapLaenge_stimmt_breit_shift (bs : List Byte) (f : ShiftForm)
+    (rest : List Byte) (h : decodeShift bs = some (f, rest)) :
+    kapZeilenLaenge
+        (KapDekodiert.breit (.ext (.shift ⟨f, shiftLaenge f⟩))) =
+        some (shiftLaenge f) ∧
+      shiftLaenge f + rest.length = bs.length ∧
+      kapVerbraucht bs rest = shiftLaenge f := by
+  have heq := decodeShift_laenge bs f rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
+
+/-- Declared and measured length agree on the SETcc sub-arm (the
+    declared length is the accepted 4). -/
+theorem kapLaenge_stimmt_breit_setcc (bs : List Byte)
+    (v : Bedingung × Register) (rest : List Byte)
+    (h : decodeSetCC bs = some (v, rest)) :
+    kapZeilenLaenge
+        (KapDekodiert.breit (.ext (.setcc v.1 v.2 4))) = some 4 ∧
+      4 + rest.length = bs.length ∧
+      kapVerbraucht bs rest = 4 := by
+  obtain ⟨c, dst⟩ := v
+  have heq := decodeSetCC_verbraucht bs (c, dst) rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
+
+/-- Declared and measured length agree on the CMOVcc sub-arm (the
+    declared length is the accepted 4). -/
+theorem kapLaenge_stimmt_breit_cmov (bs : List Byte)
+    (v : Bedingung × Register × Register) (rest : List Byte)
+    (h : decodeCmov bs = some (v, rest)) :
+    kapZeilenLaenge
+        (KapDekodiert.breit (.ext (.cmov v.1 v.2.1 v.2.2 4))) =
+        some 4 ∧
+      4 + rest.length = bs.length ∧
+      kapVerbraucht bs rest = 4 := by
+  obtain ⟨c, dst, src⟩ := v
+  have heq := decodeCmov_verbraucht bs (c, dst, src) rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
+
+/-- Declared and measured length agree on the prefix VEX arm. -/
+theorem kapLaenge_stimmt_prefix_avx2 (bs : List Byte)
+    (z : Avx2Join.Avx2Zeile) (rest : List Byte)
+    (h : dekodiereAvx2Prefix bs = some (z, rest)) :
+    kapZeilenLaenge (KapDekodiert.avx2 z) = some z.laenge ∧
+      z.laenge + rest.length = bs.length ∧
+      kapVerbraucht bs rest = z.laenge := by
+  obtain ⟨heq, _⟩ := avxPrefix_verbraucht bs z rest h
+  unfold kapVerbraucht
+  exact ⟨rfl, heq, by omega⟩
 
 /- CUTS:
     Proved here, over the reused accepted vocabulary only (every
@@ -594,8 +740,11 @@ theorem kapUeber_laenge_div32 :
       hypothesis the `keinFortschritt` guard discharges and the walk
       recurses on the decoder's rest;
     - joint witness `kapVerbraucht_zeuge` (every chain arm consumes a
-      positive length) with three pinned lengths, and chain-side
-      overlap lengths (§7, no chain-side conflict exhibited).
+      positive length) with three pinned lengths, chain-tied overlap
+      rows (§7: each overlap row runs through the real `kapDecode`
+      with the winning row, the winning length, and positive
+      progress), and declared-vs-measured agreement for every arm
+      with an accepted equation (§8).
     NOT proved here, and not claimed:
     - arbitrary-input consumed-length (hence chain progress) for the
       s32, MXCSR, LOCK and addressed-LOCK arms and for the unified FP
@@ -604,6 +753,17 @@ theorem kapUeber_laenge_div32 :
       (only encoder round trips and refusals), so §4 has no wrapper
       for them and full `kapDecode` progress over arbitrary input
       stays OPEN;
+    - in particular there is NO progress wrapper for the top-level
+      width-dispatcher arm itself: `kapFortschritt_breit_wd` covers
+      `decodeWd`, a sub-decoder the chain never calls directly, while
+      `decodeMulDivWidth` and `decodeExt` (the actual first chain arm)
+      have no accepted arbitrary-input length lemma; a reader must not
+      mistake `breit_wd` for chain-arm progress;
+    - declared-vs-measured agreement (`kapZeilenLaenge` vs
+      `kapVerbraucht`) is proved in §8 only for the arms with an
+      accepted equation; it stays open for s32, MXCSR, LOCK,
+      addressed-LOCK, the unified FP/vector sub-arms, and the
+      top-level width dispatcher;
     - chain-level mid-section VEX coverage: the prefix arm takes a
       VEX-led list with its suffix (§3), but the seven earlier arms'
       refusal of a VEX-led list with trailing bytes is unmeasured
@@ -653,5 +813,15 @@ theorem kapUeber_laenge_div32 :
 #print axioms kapUeber_laenge_div64
 #print axioms kapUeber_laenge_imul2
 #print axioms kapUeber_laenge_div32
+#print axioms kapLaenge_stimmt_kompakt
+#print axioms kapLaenge_stimmt_kern
+#print axioms kapLaenge_stimmt_breit_wd
+#print axioms kapLaenge_stimmt_breit_pilot
+#print axioms kapLaenge_stimmt_breit_narrow
+#print axioms kapLaenge_stimmt_breit_muldiv
+#print axioms kapLaenge_stimmt_breit_shift
+#print axioms kapLaenge_stimmt_breit_setcc
+#print axioms kapLaenge_stimmt_breit_cmov
+#print axioms kapLaenge_stimmt_prefix_avx2
 
 end Gabbro.Grammatik.X86
