@@ -1445,4 +1445,143 @@ theorem ctxWit_int_fp :
       some 8064 := by
   decide
 
+/-- JOINT WITNESS: two cores buffer full save images (260 entries
+    each), the owner forwards its MXCSR/XMM bytes while the other
+    core reads zeros, one drain observably changes shared memory
+    (0 becomes `0x80`), the saved word restores through the machine,
+    the misaligned/no-request/no-XCR0/reserved-bit shapes refuse with
+    their faults, the NMI delivery preserves the control word, the
+    start machine is well-formed, and the pure image round-trips.
+    Non-degenerate: two cores touch memory, a buffered store is
+    visible by forwarding to its owner only, and a drain changes
+    actual shared memory. -/
+theorem ctxWit_zeuge :
+    ctxWitBuf (ctxSpeichern ctxWitStart 0 ctxArea0) 0 = some 260 ∧
+      ctxWitBuf (ctxSpeichern ctxWitStart 1 ctxArea1) 1 = some 260 ∧
+      ctxWitByte (ctxSpeichern ctxWitStart 0 ctxArea0) 0
+        (addrOff ctxArea0 24) = some (some (BitVec.ofNat 8 128)) ∧
+      ctxWitByte (ctxSpeichern ctxWitStart 0 ctxArea0) 1
+        (addrOff ctxArea0 24) = some (some (BitVec.ofNat 8 0)) ∧
+      ctxWitByte (ctxSpeichern ctxWitStart 0 ctxArea0) 0
+        (addrOff ctxArea0 160) = some (some (BitVec.ofNat 8 7)) ∧
+      ctxWitMem.bytes (addrOff ctxArea0 24) = BitVec.ofNat 8 0 ∧
+      ctxWitFlushByte ctxWitFlush1 (addrOff ctxArea0 24) =
+        some (BitVec.ofNat 8 128) ∧
+      ctxWitRestored = some 8064 ∧
+      ctxWitArt (ctxSpeichern ctxWitStart 0
+        (BitVec.ofNat 64 4104)) = 2 ∧
+      ctxWitArt (ctxXSave ctxWitStart 0 ctxArea0 ⟨true, true, false⟩
+        false) = 1 ∧
+      ctxWitArt (ctxXSave ctxWitStart 0 ctxArea0 ⟨true, false, false⟩
+        true) = 3 ∧
+      ctxWitArt (ctxXSave ctxWitStart 0 (BitVec.ofNat 64 4104)
+        ⟨true, true, false⟩ true) = 2 ∧
+      ctxWitArt (ctxWiederherstellen ctxWitStartR 0 ctxAreaR) = 2 ∧
+      ctxWitIntFp
+        (asyncSchritt intWitStart 0 witNmi witSteuerNmi) =
+        some 8064 ∧
+      HwWf ctxWitStart ∧
+      (fxDekodiere (ctxByte ctxWitK0 ctxWitX0)).mxcsr =
+        ctxWitK0.mxcsr ∧
+      ∀ r : XmmReg, (fxDekodiere (ctxByte ctxWitK0 ctxWitX0)).xmm r =
+        ctxWitX0 r := by
+  have hpure := ctxRundlauf_pur ctxWitK0 ctxWitX0
+  have hverw := ctxWit_verweigert
+  refine ⟨ctxWit_buf.1, ctxWit_buf.2, ctxWit_fwd.1, ctxWit_fwd.2,
+    ctxWit_xmm_fwd, ctxWit_spülung_aendert.1,
+    ctxWit_spülung_aendert.2, ctxWit_restore, hverw.1, hverw.2.1,
+    hverw.2.2.1, hverw.2.2.2, ctxWit_gp_reserviert, ctxWit_int_fp,
+    ctxWitStart_wf, hpure.1, hpure.2⟩
+
+/- CUTS:
+    Proved here, over the accepted coherent machine (`HwMaschine`/
+    `HwSchritt`/`HwWf`/`HwAdapter`, HardwareExecution §11) with the
+    accepted TSO byte equations (`issueByte`/`loadByte`/`flushKern`),
+    the accepted MXCSR load check (`mxcsrReserviertFrei`,
+    `ldmxcsrArchOk`), the accepted XCR0 SSE readiness
+    (`xcr0SseBereit`/`Xcr0Bild`) and the accepted delivery successor
+    (`asyncMasch`/`asyncSchritt`), all lifted unchanged:
+    - legacy area image (`ctxByte`: MXCSR at 24-27, XMM0-15 at
+      160-415) with decode (`fxDekodiere`) and the pure round trip
+      (`ctxRundlauf_pur`);
+    - footprint-checked TSO save (`ctxSpeichern`: alignment gate,
+      write-permission fold, buffered issue fold) with buffer-growth
+      (`ctxSpeichern_puffer`), memory silence
+      (`ctxSpeichern_kein_speicher`), `HwWf` preservation and the
+      misaligned/permission refusals;
+    - footprint-checked TSO restore (`ctxWiederherstellen`: alignment
+      gate, read-permission fold, forwarding load chain, reserved-bit
+      #GP, core install) with `HwWf` preservation, the
+      misaligned/permission/reserved-bit refusals and exact agreement
+      with `ldmxcsrArchOk`;
+    - save-then-restore identity on the same core
+      (`ctxRundlauf_maschine`: control word and every XMM register);
+    - XSAVE/XRSTOR under the XCR0 gate with 64-byte alignment on the
+      shared paths (`ctxXSave`/`ctxXRstor`), shared-layout agreement,
+      #UD/#GP/refusal outcomes, `HwWf` preservation and the mask
+      round trip (`ctxXRundlauf_maschine`);
+    - handler preservation (`handlerErhaeltKontext`: delivery keeps
+      FP/XMM, save/restore recovers them) and lossless switching
+      (`wechselStelltHer`);
+    - the family step relation (`CtxSchritt`) with `HwWf`
+      preservation, exact TSO-leg embedding into `HwSchritt`, the
+      `HwAdapter` plug (`adapterContext`) with core agreement and
+      `HwWf` projections;
+    - (4) a reached non-degenerate two-core joint witness
+      (`ctxWit_zeuge`): two buffered saves, owner-only forwarding, a
+      memory-changing drain, a machine round trip, planted refusals,
+      NMI control-word preservation and well-formedness.
+    Silicon provenance (Intel SDM 325462-093US, clone-local text
+    extract; provenance only, never a proof): FXSAVE64 map Table 1-42
+    (MXCSR at 24, XMM0-15 at 160-415, bytes 464-511 software
+    available, processor writes nothing there); FXSAVE/FXRSTOR
+    16-byte alignment #GP; FXRSTOR/LDMXCSR reserved-MXCSR-bit #GP;
+    XSAVE RFBM = XCR0 AND request with MXCSR in component 1,
+    64-byte alignment #GP, legacy bytes 464-511 untouched. Named
+    silicon/timing assumptions: none beyond self-consistency of the
+    lifted model; in particular no hardware correspondence, no
+    timing, no serialization claim.
+    NOT proved here, and not claimed:
+    - No x87 state: FCW/FSW/FTW/FOP/FIP/FDP/ST0-7 (bytes 0-23,
+      32-159) are outside the footprint (no x87 model exists in this
+      tree); the MXCSR_MASK field (28-31) is neither written nor
+      read; reserved bytes 416-463 are never touched (bytes 464-511
+      match silicon by staying untouched).
+    - No XSAVE header (XSTATE_BV/XINUSE), no extended/supervisor
+      regions, no RFBM components beyond SSE (AVX/YMM/ZMM absent),
+      no XSAVEOPT/XSAVES/XRSTORS compaction or supervisor forms, no
+      XSS-governed state.
+    - No #NM (CR0.TS/EM), no #UD for CPUID-FXSR/XSAVE/LOCK/OSXSAVE,
+      no #SS/#PF/#AC, no CPL/canonical-address checks: only the
+      alignment, XCR0-readiness and reserved-bit faults are modeled.
+    - No FINIT/reinit semantics (FXSAVE retains register contents on
+      silicon; the model neither clears nor claims clearing).
+    - What a handler runs between save and restore is user logic;
+      only the save-then-restore composition is proved.
+    - No per-access target-to-W/GX simulation, no whole-word
+      atomicity beyond the accepted byte equations, no source/IR/
+      ABI/loader/entry/budget link, no timing claim.
+    - `gabbro_ziel` axioms are untouched.
+-/
+
+#print axioms mxcsr_rundlauf
+#print axioms ctxRundlauf_pur
+#print axioms neuestens_append
+#print axioms ctxLade_geladen
+#print axioms fxDekodiere_kongr
+#print axioms ctxSpeichern_puffer
+#print axioms ctxSpeichern_kein_speicher
+#print axioms ctxRundlauf_maschine
+#print axioms ctxWiederherstellen_fehlerGP_reserviert
+#print axioms ctxXSave_ist_fxSave
+#print axioms ctxXRundlauf_maschine
+#print axioms asyncMasch_fp_still
+#print axioms handlerErhaeltKontext
+#print axioms wechselStelltHer
+#print axioms ctxSchritt_wf
+#print axioms ctxLade_ist_hw
+#print axioms adapterContext_fxsave_wf
+#print axioms ctxWitStart_wf
+#print axioms ctxWit_zeuge
+
 end Gabbro.Grammatik.X86
