@@ -239,6 +239,171 @@ theorem fwdWeiterleitung_generisch (s : TSOZustand) (c : Nat)
     else wortByte v 7)) = some v
   rw [hfun, bytesWort_wortByte]
 
+/-! ## 4. Foreign cores read canonical memory until drain.
+
+  `FremdFrei` keeps every foreign buffer off the footprint, so each
+  footprint byte misses (`fwd_neuestens_miss`) and the accepted
+  unbuffered word agreement (`stapelLadeWort_still`) applies. -/
+
+/-- FOREIGN CORE SEES CANONICAL MEMORY: with no foreign entry in the
+    footprint, a foreign word load is the accepted `read64`. The
+    exclusion premise feeds every byte miss, readability the memory
+    bytes, inequality the foreign core. -/
+theorem fwdFremd_liest_speicher (s : TSOZustand) (c d : Nat)
+    (a : Adresse)
+    (hff : FremdFrei s c a) (hd : d ≠ c)
+    (hles : ∀ k, k < 8 → s.mem.lesbar (addrOff a k) = true) :
+    stapelLadeWort s d a = read64 s.mem a := by
+  have miss : ∀ k, k < 8 →
+      neuestens (s.puffer d) (addrOff a k) = none := by
+    intro k hk
+    apply fwd_neuestens_miss
+    intro e hm
+    have hni : e.addr ∉ Fuss a := hff d hd e hm
+    intro heq
+    exact hni (heq ▸ fuss_mem_offset a k hk)
+  exact stapelLadeWort_still s d a
+    (miss 0 (by decide)) (miss 1 (by decide)) (miss 2 (by decide))
+    (miss 3 (by decide)) (miss 4 (by decide)) (miss 5 (by decide))
+    (miss 6 (by decide)) (miss 7 (by decide)) hles
+
+/-- JOINT GUARD THEOREM: under one `WortGruppe` guard the owner
+    core forwards the stored word while a foreign core reads canonical
+    memory. The shape half feeds the owner leg, the exclusion half the
+    foreign leg, readability both, inequality the foreign core. -/
+theorem fwdWeiterleitung_und_fremd (s : TSOZustand) (c d : Nat)
+    (a : Adresse) (v : Wort)
+    (hgrp : WortGruppe s c a v)
+    (hles : ∀ k, k < 8 → s.mem.lesbar (addrOff a k) = true)
+    (hd : d ≠ c) :
+    stapelLadeWort s c a = some v ∧
+      stapelLadeWort s d a = read64 s.mem a := by
+  obtain ⟨hbuf, hff⟩ := hgrp
+  exact ⟨fwdWeiterleitung_generisch s c a v ⟨hbuf, hff⟩ hles,
+    fwdFremd_liest_speicher s c d a hff hd hles⟩
+
+/-! ## 5. Partial overlaps follow the byte rules.
+
+  An older differing entry inside the footprint is shadowed by the
+  young word bytes; a younger differing entry wins and mixes the
+  word. Both are accepted `neuestens`/`loadByte` consequences. -/
+
+/-- An older differing entry is shadowed: the young word byte wins. -/
+theorem fwd_aelterer_beschattet (a : Adresse) (v : Wort)
+    (bAlt : Byte) :
+    neuestens ([⟨addrOff a 3, bAlt⟩] ++ wortEintraege a v)
+      (addrOff a 3) = some (wortByte v 3) :=
+  fwd_neuestens_angehaengt_list _ _ _ _
+    (fwd_neuestens_wort a v 3 (by decide))
+
+/-- A younger differing entry wins over the word byte. -/
+theorem fwd_juengerer_gewinnt (a : Adresse) (v : Wort)
+    (bNeu : Byte) :
+    neuestens (wortEintraege a v ++ [⟨addrOff a 3, bNeu⟩])
+      (addrOff a 3) = some bNeu :=
+  neuestens_angehaengt _ _ _
+
+/-- At load level: the shadowed older entry still forwards the young
+    word byte. The buffer shape feeds the resolution, readability the
+    load equation. -/
+theorem fwd_aelterer_last_weiter (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort) (bAlt : Byte)
+    (hbuf : s.puffer c =
+      [⟨addrOff a 3, bAlt⟩] ++ wortEintraege a v)
+    (hrd : s.mem.lesbar (addrOff a 3) = true) :
+    loadByte s c (addrOff a 3) = some (wortByte v 3) := by
+  unfold loadByte
+  rw [if_pos hrd, hbuf, fwd_aelterer_beschattet a v bAlt]
+
+/-- At load level: the younger differing entry wins the byte. The
+    buffer shape feeds the resolution, readability the load. -/
+theorem fwd_juengerer_last_neu (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort) (bNeu : Byte)
+    (hbuf : s.puffer c =
+      wortEintraege a v ++ [⟨addrOff a 3, bNeu⟩])
+    (hrd : s.mem.lesbar (addrOff a 3) = true) :
+    loadByte s c (addrOff a 3) = some bNeu := by
+  unfold loadByte
+  rw [if_pos hrd, hbuf, fwd_juengerer_gewinnt a v bNeu]
+
+/-- Byte three survives reassembly: splitting then reassembling
+    is the identity at every byte position, shown here for the
+    overlap position. Bounds feed the arithmetic. -/
+theorem fwd_wortByte_bytesWort3 (f : Fin 8 → Byte) :
+    wortByte (bytesWort f) 3 = f 3 := by
+  apply BitVec.eq_of_toNat_eq
+  unfold wortByte bytesWort
+  simp only [BitVec.toNat_ofNat]
+  have e3 : (256 : Nat) ^ 3 = 16777216 := by decide
+  rw [e3]
+  have b0 : (f 0).toNat < 256 := (f 0).isLt
+  have b1 : (f 1).toNat < 256 := (f 1).isLt
+  have b2 : (f 2).toNat < 256 := (f 2).isLt
+  have b3 : (f 3).toNat < 256 := (f 3).isLt
+  have b4 : (f 4).toNat < 256 := (f 4).isLt
+  have b5 : (f 5).toNat < 256 := (f 5).isLt
+  have b6 : (f 6).toNat < 256 := (f 6).isLt
+  have b7 : (f 7).toNat < 256 := (f 7).isLt
+  omega
+
+/-- A successful word load pins every observed byte: byte three
+    of the loaded word is the loaded third byte. Each refusal branch
+    fails the word match, so the hypothesis feeds every case. -/
+theorem fwd_ladeWort_byte3 (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort)
+    (h : stapelLadeWort s c a = some v) :
+    loadByte s c (addrOff a 3) = some (wortByte v 3) := by
+  unfold stapelLadeWort at h
+  cases h0 : loadByte s c (addrOff a 0) with
+  | none => rw [h0] at h; cases h
+  | some b0 =>
+    cases h1 : loadByte s c (addrOff a 1) with
+    | none => rw [h0, h1] at h; cases h
+    | some b1 =>
+      cases h2 : loadByte s c (addrOff a 2) with
+      | none => rw [h0, h1, h2] at h; cases h
+      | some b2 =>
+        cases h3 : loadByte s c (addrOff a 3) with
+        | none => rw [h0, h1, h2, h3] at h; cases h
+        | some b3 =>
+          cases h4 : loadByte s c (addrOff a 4) with
+          | none => rw [h0, h1, h2, h3, h4] at h; cases h
+          | some b4 =>
+            cases h5 : loadByte s c (addrOff a 5) with
+            | none => rw [h0, h1, h2, h3, h4, h5] at h; cases h
+            | some b5 =>
+              cases h6 : loadByte s c (addrOff a 6) with
+              | none => rw [h0, h1, h2, h3, h4, h5, h6] at h; cases h
+              | some b6 =>
+                cases h7 : loadByte s c (addrOff a 7) with
+                | none => rw [h0, h1, h2, h3, h4, h5, h6, h7] at h; cases h
+                | some b7 =>
+                  rw [h0, h1, h2, h3, h4, h5, h6, h7] at h
+                  simp only [Option.some.injEq] at h
+                  have hc := congrArg (fun w => wortByte w 3) h
+                  rw [fwd_wortByte_bytesWort3] at hc
+                  have e3 : b3 = wortByte v 3 := hc
+                  rw [e3]
+
+/-- A younger differing entry mixes the word: the load is observably
+    not the stored word. The equation feeds the byte extraction, the
+    shape the winning byte, readability the load, inequality the
+    observable difference. -/
+theorem fwd_juengerer_mischt (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Wort) (bNeu : Byte)
+    (hbuf : s.puffer c =
+      wortEintraege a v ++ [⟨addrOff a 3, bNeu⟩])
+    (hne : bNeu ≠ wortByte v 3)
+    (hles : ∀ k, k < 8 → s.mem.lesbar (addrOff a k) = true) :
+    stapelLadeWort s c a ≠ some v := by
+  intro heq
+  have lb := fwd_ladeWort_byte3 s c a v heq
+  have lneu := fwd_juengerer_last_neu s c a v bNeu hbuf
+    (hles 3 (by decide))
+  rw [lb] at lneu
+  simp only [Option.some.injEq] at lneu
+  exact hne lneu.symm
+
 /- CUTS:
     Skeleton only: events and the adapter are stated, nothing proved.
 -/
