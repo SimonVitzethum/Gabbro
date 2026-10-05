@@ -1651,9 +1651,9 @@ theorem setTso_kerne (m : HwMaschine) (s : TSOZustand) (c : Nat) :
 theorem setKernDaten_mem (m : HwMaschine) (c : Nat) (k : HwKern) :
     (setKernDaten m c k).mem = m.mem := rfl
 
-/-- Core-data register projection at the updated core. -/
-theorem setKernDaten_flags (m : HwMaschine) (c : Nat) (k : HwKern) :
-    ((setKernDaten m c k).kerne c).flags = k.flags := by
+/-- Core-data projection at the updated core. -/
+theorem setKernDaten_kerne_c (m : HwMaschine) (c : Nat) (k : HwKern) :
+    (setKernDaten m c k).kerne c = k := by
   unfold setKernDaten
   simp
 
@@ -1663,5 +1663,124 @@ theorem decodeBt_lock (bs : List Byte) :
     decodeBt (natByte 240 :: bs) = none := by
   show (none : Option (BtForm × List Byte)) = none
   rfl
+
+/-! ## 15. Memory RMW effect on the machine.
+
+    One memory-form machine step: load the exact footprint through
+    TSO byte events, modify exactly the byte holding the selected
+    bit, issue the bytes back (buffered -- canonical memory moves
+    only through the drain), set CF to the old bit and advance RIP.
+    No register is written. Well-formedness survives (only core data
+    moves, profiles untouched, memory/buffers through the accepted
+    TSO equations). -/
+
+/-- Read the operand word of a memory form through its footprint
+    events. -/
+def btMemLese (s : TSOZustand) (c : Nat) (w : BtWeite)
+    (eff : Adresse) : Option (List Byte) :=
+  btLadeListe s c (btFuss w eff)
+
+/-- One memory-form machine step on core `c` at the effective address
+    `eff` with bit-in-byte `bit`: footprint load, single-byte modify,
+    buffered write-back, CF set, RIP advanced. `none` is load refusal
+    or issue refusal -- never a partial word. -/
+def btMemEffekt (m : HwMaschine) (c : Nat) (op : BtOp) (w : BtWeite)
+    (eff : Adresse) (bit : Nat) (l : Nat) : Option HwMaschine :=
+  match btMemLese (tsoAnsicht m) c w eff with
+  | none => none
+  | some vs =>
+    let alt := (vs[0]?.getD 0).toNat.testBit bit
+    let vs' := btSetByte vs 0 (btByteRoh op (vs[0]?.getD 0) bit)
+    match btMemSchreibe (tsoAnsicht m) c (btFuss w eff) vs' with
+    | none => none
+    | some s1 =>
+      let k := m.kerne c
+      some (setTso (setKernDaten m c
+        ⟨k.register, btFlags k.flags alt, ripNach k.rip l, k.xmm,
+          k.fp⟩) s1)
+
+/-- Every memory effect preserves well-formedness. -/
+theorem btMemEffekt_wf (m : HwMaschine) (c : Nat) (op : BtOp)
+    (w : BtWeite) (eff : Adresse) (bit l : Nat) (m' : HwMaschine)
+    (hwf : HwWf m)
+    (h : btMemEffekt m c op w eff bit l = some m') :
+    HwWf m' := by
+  unfold btMemEffekt at h
+  cases hL : btMemLese (tsoAnsicht m) c w eff with
+  | none =>
+    simp only [hL] at h
+    cases h
+  | some vs =>
+    simp only [hL] at h
+    cases hS : btMemSchreibe (tsoAnsicht m) c (btFuss w eff)
+        (btSetByte vs 0 (btByteRoh op (vs[0]?.getD 0) bit)) with
+    | none =>
+      simp only [hS] at h
+      cases h
+    | some s1 =>
+      simp only [hS] at h
+      cases h
+      exact setTso_wf _ _ (setKernDaten_wf _ _ _ hwf)
+
+/-- CF of a memory effect is the old selected byte bit. -/
+theorem btMemEffekt_cf (m : HwMaschine) (c : Nat) (op : BtOp)
+    (w : BtWeite) (eff : Adresse) (bit l : Nat) (m' : HwMaschine)
+    (vs : List Byte)
+    (hL : btMemLese (tsoAnsicht m) c w eff = some vs)
+    (h : btMemEffekt m c op w eff bit l = some m') :
+    ((m'.kerne c).flags).cf =
+      ((vs[0]?.getD 0).toNat.testBit bit) := by
+  unfold btMemEffekt at h
+  simp only [hL] at h
+  cases hS : btMemSchreibe (tsoAnsicht m) c (btFuss w eff)
+      (btSetByte vs 0 (btByteRoh op (vs[0]?.getD 0) bit)) with
+  | none =>
+    simp only [hS] at h
+    cases h
+  | some s1 =>
+    simp only [hS] at h
+    cases h
+    simp only [setTso_kerne, setKernDaten_kerne_c]
+    rfl
+
+/-- A memory effect advances RIP past the consumed length. -/
+theorem btMemEffekt_rip (m : HwMaschine) (c : Nat) (op : BtOp)
+    (w : BtWeite) (eff : Adresse) (bit l : Nat) (m' : HwMaschine)
+    (vs : List Byte)
+    (hL : btMemLese (tsoAnsicht m) c w eff = some vs)
+    (h : btMemEffekt m c op w eff bit l = some m') :
+    (m'.kerne c).rip = ripNach (m.kerne c).rip l := by
+  unfold btMemEffekt at h
+  simp only [hL] at h
+  cases hS : btMemSchreibe (tsoAnsicht m) c (btFuss w eff)
+      (btSetByte vs 0 (btByteRoh op (vs[0]?.getD 0) bit)) with
+  | none =>
+    simp only [hS] at h
+    cases h
+  | some s1 =>
+    simp only [hS] at h
+    cases h
+    simp only [setTso_kerne, setKernDaten_kerne_c]
+
+/-- A memory effect changes no canonical byte: the write-back is
+    buffered, shared memory moves only through the drain. -/
+theorem btMemEffekt_mem (m : HwMaschine) (c : Nat) (op : BtOp)
+    (w : BtWeite) (eff : Adresse) (bit l : Nat) (m' : HwMaschine)
+    (vs : List Byte) (x : Adresse)
+    (hL : btMemLese (tsoAnsicht m) c w eff = some vs)
+    (h : btMemEffekt m c op w eff bit l = some m') :
+    m'.mem.bytes x = m.mem.bytes x := by
+  unfold btMemEffekt at h
+  simp only [hL] at h
+  cases hS : btMemSchreibe (tsoAnsicht m) c (btFuss w eff)
+      (btSetByte vs 0 (btByteRoh op (vs[0]?.getD 0) bit)) with
+  | none =>
+    simp only [hS] at h
+    cases h
+  | some s1 =>
+    simp only [hS] at h
+    cases h
+    have hmem := btMemSchreibe_mem _ s1 c _ _ hS x
+    rw [setTso_mem, hmem, tsoAnsicht_speicher]
 
 end Gabbro.Grammatik.X86
