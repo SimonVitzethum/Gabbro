@@ -148,6 +148,48 @@ theorem zweig_arbeit_korrekt (c : PipeCfg) (L : Layout D)
     hCost hb hDeck k hk
   exact ⟨hrun, hwork, htime⟩
 
+/-! ## 4. Bounded loops: source iteration budget to target step budget.
+
+    The target step budget is the accepted `schleifeSchritte` of
+    `PipelineLoops.lean` (one source round costs at most `m + 2`
+    labelled steps, the final exit check one more); a source run that
+    finishes within `n'` rounds with `n' ≤ n` fits the budget for `n`.
+    Unbounded loops (`retry`, `forever`) have no `senkBlock` lowering
+    at all: refused, never guessed. -/
+
+/-- BUDGET TRANSFER: fewer source rounds need fewer target steps, so a
+    source iteration budget covers every run finishing inside it. Both
+    premises are used. -/
+theorem schleife_budget_transfer (n n' m : Nat) (h : n' ≤ n) :
+    schleifeSchritte n' m ≤ schleifeSchritte n m := by
+  unfold schleifeSchritte
+  exact Nat.add_le_add_right (Nat.mul_le_mul_right (m + 2) h) 1
+
+/-- UNBOUNDED-LOOP REFUSAL (`retry`, every bound): a `retry` head has
+    no `senkBlock` lowering at any bound -- refused, never guessed.
+    (PipeBlock proves the bound-5 instance; this is the generic
+    statement over the same catch-all arm.) -/
+theorem senkBlock_verweigert_retry (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
+    (n : Nat) (bis : Expr D Γ Λ .bool)
+    (body : _root_.Gabbro.Grammatik.Block D V true Γ Λ Λ)
+    (ueber : _root_.Gabbro.Grammatik.Block D V l Γ Λ Λ)
+    (rest : _root_.Gabbro.Grammatik.Block D V l Γ Λ Λ'') (pos : Nat) :
+    senkBlock c L pos
+      (_root_.Gabbro.Grammatik.Block.cons (Stmt.retry n bis body ueber) rest) =
+      none := rfl
+
+/-- UNBOUNDED-LOOP REFUSAL (`forever`): an unbounded loop head has no
+    `senkBlock` lowering -- refused, never guessed. -/
+theorem senkBlock_verweigert_forever (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ'' : List (Res D)}
+    (a : D.Annahme) (inv : Expr D Γ Λ .bool)
+    (body : _root_.Gabbro.Grammatik.Block D V true Γ Λ Λ)
+    (rest : _root_.Gabbro.Grammatik.Block D V l Γ Λ Λ'') (pos : Nat) :
+    senkBlock c L pos
+      (_root_.Gabbro.Grammatik.Block.cons (Stmt.forever a inv body) rest) =
+      none := rfl
+
 /- CUTS (skeleton):
     - Proved here: `iteCode_laenge`.
     - OPEN: everything else of the task (validator, main theorem,
