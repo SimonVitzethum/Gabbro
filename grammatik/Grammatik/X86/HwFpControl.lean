@@ -981,14 +981,126 @@ theorem fpCtrlWit_gate1 :
     fpHwCvttZugelassen (.divsdRR .xmm0 .xmm1)
       (projFp fpCtrlWitM0 0) = true := rfl
 
-/- CUTS (witness defs done):
-   Proved: concrete two-core start machine with fetched REX image,
-   f32/f64 operand values, reset-word preload and all fetch pins.
-   NOT proved yet: the reached steps, TSO run, MXCSR install and
-   the joint `fpCtrl_zeuge`.
+/-! ## 9. Reached steps I: fetched divide and scalar add.
+
+  The fetched REX `DIVSD` runs the accepted divide special case
+  (`1.0 / +0.0 = +inf`); the register `ADDSS` runs the accepted
+  binary32 sum (`1.0f32 + 2.0f32 = 3.0f32`) with the upper 96 bits
+  preserved. Both ride `FpCtrlSchritt` with the memory-unchanged
+  gate discharged by the accepted frame lemmas. -/
+
+/-- State after the fetched divide: `xmm0` holds `+∞`. -/
+def fpCtrlWitT1 : FpZustand :=
+  { projFp fpCtrlWitM0 0 with
+    kern := { (projFp fpCtrlWitM0 0).kern with
+      rip := ripNach (projFp fpCtrlWitM0 0).kern.rip 5 },
+    xmm := xmmSchreibeTief (projFp fpCtrlWitM0 0).xmm .xmm0
+      0x7FF0000000000000 }
+
+/-- Machine after the divide. -/
+def fpCtrlWitM1 : HwMaschine := setKernVonFp fpCtrlWitM0 0 fpCtrlWitT1
+
+/-- The witness runs under the admitted profile. -/
+theorem fpCtrlWit_fp0 : fpEintritt (projFp fpCtrlWitM0 0).fp = true :=
+  fpEintritt_reset
+
+/-- Reached divide step on the coherent machine. -/
+theorem fpCtrlWit_schritt1 :
+    FpCtrlSchritt fpCtrlWitM0 fpCtrlWitM1
+      (.f64reg 0 ⟨.divsdRR .xmm0 .xmm1, 5⟩) := by
+  have ht0 : xmmTief (projFp fpCtrlWitM0 0).xmm .xmm0 =
+      0x3FF0000000000000 := fpCtrlWit_tief0
+  have ht1 : xmmTief (projFp fpCtrlWitM0 0).xmm .xmm1 = 0 :=
+    fpCtrlWit_tief1
+  have hs := fpSchritt_divsdRR ⟨.divsdRR .xmm0 .xmm1, 5⟩
+    (projFp fpCtrlWitM0 0) .xmm0 .xmm1 fpCtrlWit_laenge5 fpCtrlWit_fp0
+    rfl
+  rw [ht0, ht1, div_eins_durch_null] at hs
+  exact FpCtrlSchritt.f64reg 0 _ fpCtrlWitT1 hs rfl
+
+/-- After the divide, `xmm0` holds `+∞` on the machine. -/
+theorem fpCtrlWit_m1_inf :
+    xmmTief (fpCtrlWitM1.kerne 0).xmm .xmm0 = 0x7FF0000000000000 := by
+  simp only [fpCtrlWitM1, setKernVonFp_xmm, fpCtrlWitT1]
+  exact xmmSchreibeTief_tief _ _ _
+
+/-- After the divide, RIP stands past the 5-byte form. -/
+theorem fpCtrlWit_m1_rip :
+    (fpCtrlWitM1.kerne 0).rip = BitVec.ofNat 64 4101 := by
+  simp only [fpCtrlWitM1, setKernVonFp_rip, fpCtrlWitT1]
+  decide
+
+/-- The divide keeps the rounding mode on the machine. -/
+theorem fpCtrlWit_m1_rne :
+    mxcsrRundungRNE ((fpCtrlWitM1.kerne 0).fp).mxcsr =
+      mxcsrRundungRNE ((fpCtrlWitM0.kerne 0).fp).mxcsr :=
+  fpCtrlF64_erhaelt_rneMaschine _ _ _ _ fpCtrlWit_schritt1
+
+/-- State after the scalar add: low single `3.0f32`. -/
+def fpCtrlWitT2 : FpZustand :=
+  { projFp fpCtrlWitM1 0 with
+    kern := { (projFp fpCtrlWitM1 0).kern with
+      rip := ripNach (projFp fpCtrlWitM1 0).kern.rip 4 },
+    xmm := xmmSchreibeTief32 (projFp fpCtrlWitM1 0).xmm .xmm2
+      0x40400000 }
+
+/-- Machine after the scalar add. -/
+def fpCtrlWitM2 : HwMaschine := setKernVonFp fpCtrlWitM1 0 fpCtrlWitT2
+
+/-- The divide preserves the s32 operand singles. -/
+theorem fpCtrlWit_m1_tief32_2 :
+    xmmTief32 (projFp fpCtrlWitM1 0).xmm .xmm2 = 0x3F800000 := rfl
+
+/-- The divide preserves the s32 operand singles. -/
+theorem fpCtrlWit_m1_tief32_3 :
+    xmmTief32 (projFp fpCtrlWitM1 0).xmm .xmm3 = 0x40000000 := rfl
+
+/-- Reached scalar-add step on the coherent machine. -/
+theorem fpCtrlWit_schritt2 :
+    FpCtrlSchritt fpCtrlWitM1 fpCtrlWitM2
+      (.s32reg 0 ⟨.addssRR .xmm2 .xmm3, 4⟩) := by
+  have hfp : s32Eintritt (projFp fpCtrlWitM1 0).fp = true := by
+    have h1 : (projFp fpCtrlWitM1 0).fp = kontextReset := rfl
+    rw [h1]
+    exact s32Eintritt_reset
+  have h4 : laengeOk 4 = true := by decide
+  have hs := s32Schritt_addssRR ⟨.addssRR .xmm2 .xmm3, 4⟩
+    (projFp fpCtrlWitM1 0) .xmm2 .xmm3 h4 hfp rfl
+  rw [fpCtrlWit_m1_tief32_2, fpCtrlWit_m1_tief32_3,
+    s32_eins_plus_zwei] at hs
+  exact FpCtrlSchritt.s32reg 0 _ fpCtrlWitT2 hs rfl
+
+/-- After the add, the low single holds `3.0f32` on the machine. -/
+theorem fpCtrlWit_m2_tief32 :
+    xmmTief32 (fpCtrlWitM2.kerne 0).xmm .xmm2 = 0x40400000 := by
+  simp only [fpCtrlWitM2, setKernVonFp_xmm, fpCtrlWitT2]
+  exact xmmSchreibeTief32_tief _ _ _
+
+/-- After the add, the upper 96 bits survive on the machine. -/
+theorem fpCtrlWit_m2_hoch96 :
+    ((fpCtrlWitM2.kerne 0).xmm .xmm2).toNat / 2 ^ 32 = 1 := by
+  have hset : (fpCtrlWitM2.kerne 0).xmm =
+      xmmSchreibeTief32 (projFp fpCtrlWitM1 0).xmm .xmm2 0x40400000 := by
+    simp only [fpCtrlWitM2, setKernVonFp_xmm, fpCtrlWitT2]
+  rw [hset, xmmSchreibeTief32_hoch96]
+  have hb : ((projFp fpCtrlWitM1 0).xmm .xmm2).toNat / 2 ^ 32 = 1 := rfl
+  exact hb
+
+/-- The add keeps the rounding mode on the machine. -/
+theorem fpCtrlWit_m2_rne :
+    mxcsrRundungRNE ((fpCtrlWitM2.kerne 0).fp).mxcsr =
+      mxcsrRundungRNE ((fpCtrlWitM1.kerne 0).fp).mxcsr :=
+  fpCtrlS32_erhaelt_rneMaschine _ _ _ _ fpCtrlWit_schritt2
+
+/- CUTS (steps I done):
+   Proved: reached fetched REX divide and register s32 add on the
+   coherent machine, with value, upper-preservation, RIP and RNE
+   observations.
+   NOT proved yet: the TSO run, MXCSR install and `fpCtrl_zeuge`.
 -/
 
-#print axioms fpCtrlWitM0_wf
-#print axioms fpCtrlWit_fetch1
+#print axioms fpCtrlWit_schritt1
+#print axioms fpCtrlWit_schritt2
+#print axioms fpCtrlWit_m2_hoch96
 
 end Gabbro.Grammatik.X86
