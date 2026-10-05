@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 13:55 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 14:01 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -644,7 +644,7 @@ Last ledger refresh: **2026-10-05 13:55 UTC**. This is an operational snapshot, 
 | 1171 | Linking, relocations and the final mapping | Merged after review/checks | 1172: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1171.md) |
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
 | 1175 | Finite and infinite execution soundness of the pipeline | Committed candidate; review/integration pending | 1176: Unresolved after agent rounds; not accepted | [task](lanes/1175.md) |
-| 1177 | Source-computed units and duties feeding the pipeline | Agent working | 1178: scheduled | [task](lanes/1177.md) |
+| 1177 | Source-computed units and duties feeding the pipeline | Committed candidate; review/integration pending | 1178: Incomplete; preserved | [task](lanes/1177.md) |
 | 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Merged after review/checks | 1180: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1179.md) |
 | 1181 | Nested interrupt delivery, #DF and handler entry | Agent working | 1182: scheduled | [task](lanes/1181.md) |
 | 1183 | Feature gating enforced per step, not by wrapper | Merged after review/checks | 1184: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1183.md) |
@@ -657,7 +657,7 @@ Last ledger refresh: **2026-10-05 13:55 UTC**. This is an operational snapshot, 
 | 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Agent working | 1200: scheduled | [task](lanes/1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Agent working | 1202: scheduled | [task](lanes/1201.md) |
-| 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Committed candidate; review/integration pending | 1204: Agent working | [task](lanes/1203.md) |
+| 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Committed candidate; review/integration pending | 1204: Committed candidate; review/integration pending | [task](lanes/1203.md) |
 | 1205 | Loaded image: per-family reached fetch instances | Agent working | 1206: scheduled | [task](lanes/1205.md) |
 | 1207 | Generic drain-equals-write64 induction | Agent working | 1208: scheduled | [task](lanes/1207.md) |
 
@@ -1499,6 +1499,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1142**, Independent exact review of 1141, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1142.md). <!-- x86-merged:1142 -->
 - 2026-10-05: lane **1147**, Whole-word atomicity of guarded aligned accesses, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1147.md). <!-- x86-merged:1147 -->
 - 2026-10-05: lane **1148**, Independent exact review of 1147, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1148.md). <!-- x86-merged:1148 -->
+- 2026-10-05: publication batch checks passed for `c9e8e314`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
