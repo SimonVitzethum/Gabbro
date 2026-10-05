@@ -656,12 +656,496 @@ theorem adapterIsa_gibAus_kein_speicher (m m' : HwMaschine) (c : Nat)
     rw [e] at h
     cases h
 
+/-! ## 4. Agreement with the unified dispatcher on every shared form.
+
+  `stepExt` covers pilot, narrow, mul/div, shift, SETcc and CMOVcc --
+  six of the strand's seven families. On each of them the strand step
+  and the dispatcher step coincide, by the accepted selection lemmas;
+  the old evaluators are cited, never re-run. Compact and core forms
+  have NO `ExtInstr` counterpart (see CUTS): that gap is reported, not
+  papered over. -/
+
+/-- Shared form `pilot`: `stepI` success IS unified `weiter`. -/
+theorem isa_stepExt_pilot (b : Befehl) (l : Nat) (t : FpZustand)
+    (bp : BereitProfil) (s' : Zustand)
+    (h : stepI ⟨.pilot b, l⟩ t.kern = some s') :
+    stepExt (.pilot ⟨b, l⟩) t bp = .weiter { t with kern := s' } := by
+  have hl : laufAlt ⟨b, l⟩ t = some { t with kern := s' } := by
+    unfold laufAlt
+    rw [stepI_pilot] at h
+    rw [h]
+  exact stepExt_pilot ⟨b, l⟩ t _ bp hl
+
+/-- Shared form `pilot`: `stepI` refusal IS unified refusal. -/
+theorem isa_stepExt_pilot_verweigert (b : Befehl) (l : Nat)
+    (t : FpZustand) (bp : BereitProfil)
+    (h : stepI ⟨.pilot b, l⟩ t.kern = none) :
+    stepExt (.pilot ⟨b, l⟩) t bp = .verweigert := by
+  have hl : laufAlt ⟨b, l⟩ t = none := by
+    unfold laufAlt
+    rw [stepI_pilot] at h
+    rw [h]
+  exact stepExt_pilot_verweigert ⟨b, l⟩ t bp hl
+
+/-- Shared form `narrow`: `stepI` success IS unified `weiter`. -/
+theorem isa_stepExt_narrow (o : NarrowOp) (l : Nat) (t : FpZustand)
+    (bp : BereitProfil) (s' : Zustand)
+    (h : stepI ⟨.narrow o, l⟩ t.kern = some s') :
+    stepExt (.narrow ⟨o, l⟩) t bp = .weiter { t with kern := s' } := by
+  rw [stepI_narrow] at h
+  exact stepExt_narrow ⟨o, l⟩ t bp s' h
+
+/-- Shared form `narrow`: `stepI` refusal IS unified refusal. -/
+theorem isa_stepExt_narrow_verweigert (o : NarrowOp) (l : Nat)
+    (t : FpZustand) (bp : BereitProfil)
+    (h : stepI ⟨.narrow o, l⟩ t.kern = none) :
+    stepExt (.narrow ⟨o, l⟩) t bp = .verweigert := by
+  rw [stepI_narrow] at h
+  exact stepExt_narrow_verweigert ⟨o, l⟩ t bp h
+
+/-- Shared form `muldiv`: `stepI` success IS unified `weiter`. -/
+theorem isa_stepExt_muldiv_ok (b : MulDivBefehl) (l : Nat) (t : FpZustand)
+    (bp : BereitProfil) (s' : Zustand)
+    (h : stepI ⟨.muldiv b, l⟩ t.kern = some s') :
+    stepExt (.muldiv ⟨b, l⟩) t bp = .weiter { t with kern := s' } := by
+  rw [stepI_muldiv] at h
+  cases hmul : mulDivSchritt ⟨b, l⟩ t.kern with
+  | ok t' =>
+    simp [hmul, MulDivErgebnis.nachfolger] at h
+    subst h
+    exact stepExt_muldiv_ok ⟨b, l⟩ t bp t' hmul
+  | hardwareHalt =>
+    simp [hmul, MulDivErgebnis.nachfolger] at h
+  | misslungen =>
+    simp [hmul, MulDivErgebnis.nachfolger] at h
+
+/-- Shared form `muldiv`: the divide trap IS the unified halt. -/
+theorem isa_stepExt_muldiv_halt (b : MulDivBefehl) (l : Nat)
+    (t : FpZustand) (bp : BereitProfil)
+    (h : stepIE ⟨.muldiv b, l⟩ t.kern = .hardwareHalt) :
+    stepExt (.muldiv ⟨b, l⟩) t bp = .halt := by
+  have hmul : mulDivSchritt ⟨b, l⟩ t.kern = .hardwareHalt := by
+    simpa [stepIE] using h
+  exact stepExt_muldiv_halt ⟨b, l⟩ t bp hmul
+
+/-- Shared form `muldiv`: refusal IS unified refusal. -/
+theorem isa_stepExt_muldiv_misslungen (b : MulDivBefehl) (l : Nat)
+    (t : FpZustand) (bp : BereitProfil)
+    (h : stepIE ⟨.muldiv b, l⟩ t.kern = .misslungen) :
+    stepExt (.muldiv ⟨b, l⟩) t bp = .verweigert := by
+  have hmul : mulDivSchritt ⟨b, l⟩ t.kern = .misslungen := by
+    simpa [stepIE] using h
+  exact stepExt_muldiv_misslungen ⟨b, l⟩ t bp hmul
+
+/-- Shared form `muldiv`: `stepI` silence is exactly halt-or-refusal,
+    never a hidden successor. -/
+theorem isa_stepExt_muldiv_verweigert_oder_halt (b : MulDivBefehl)
+    (l : Nat) (t : FpZustand) (bp : BereitProfil)
+    (h : stepI ⟨.muldiv b, l⟩ t.kern = none) :
+    stepExt (.muldiv ⟨b, l⟩) t bp = .verweigert ∨
+      stepExt (.muldiv ⟨b, l⟩) t bp = .halt := by
+  rw [stepI_muldiv] at h
+  cases hmul : mulDivSchritt ⟨b, l⟩ t.kern with
+  | ok t' =>
+    simp [hmul, MulDivErgebnis.nachfolger] at h
+  | hardwareHalt =>
+    exact Or.inr (stepExt_muldiv_halt ⟨b, l⟩ t bp hmul)
+  | misslungen =>
+    exact Or.inl (stepExt_muldiv_misslungen ⟨b, l⟩ t bp hmul)
+
+/-- Shared form `shift`: `stepI` success IS unified `weiter`. -/
+theorem isa_stepExt_shift (f : ShiftForm) (l : Nat) (t : FpZustand)
+    (bp : BereitProfil) (s' : Zustand)
+    (h : stepI ⟨.shift f, l⟩ t.kern = some s') :
+    stepExt (.shift ⟨f, l⟩) t bp = .weiter { t with kern := s' } := by
+  rw [stepI_shift] at h
+  exact stepExt_shift ⟨f, l⟩ t bp s' h
+
+/-- Shared form `shift`: `stepI` refusal IS unified refusal. -/
+theorem isa_stepExt_shift_verweigert (f : ShiftForm) (l : Nat)
+    (t : FpZustand) (bp : BereitProfil)
+    (h : stepI ⟨.shift f, l⟩ t.kern = none) :
+    stepExt (.shift ⟨f, l⟩) t bp = .verweigert := by
+  rw [stepI_shift] at h
+  exact stepExt_shift_verweigert ⟨f, l⟩ t bp h
+
+/-- Shared form `setcc`: `stepI` success IS unified `weiter`. -/
+theorem isa_stepExt_setcc (c : Bedingung) (dst : Register) (l : Nat)
+    (t : FpZustand) (bp : BereitProfil) (s' : Zustand)
+    (h : stepI ⟨.cond (.setcc c dst), l⟩ t.kern = some s') :
+    stepExt (.setcc c dst l) t bp = .weiter { t with kern := s' } := by
+  rw [stepI_setcc] at h
+  exact stepExt_setcc c dst l t bp s' h
+
+/-- Shared form `setcc`: `stepI` refusal IS unified refusal. -/
+theorem isa_stepExt_setcc_verweigert (c : Bedingung) (dst : Register)
+    (l : Nat) (t : FpZustand) (bp : BereitProfil)
+    (h : stepI ⟨.cond (.setcc c dst), l⟩ t.kern = none) :
+    stepExt (.setcc c dst l) t bp = .verweigert := by
+  rw [stepI_setcc] at h
+  exact stepExt_setcc_verweigert c dst l t bp h
+
+/-- Shared form `cmov`: `stepI` success IS unified `weiter`. -/
+theorem isa_stepExt_cmov (c : Bedingung) (dst src : Register) (l : Nat)
+    (t : FpZustand) (bp : BereitProfil) (s' : Zustand)
+    (h : stepI ⟨.cond (.cmov c dst src), l⟩ t.kern = some s') :
+    stepExt (.cmov c dst src l) t bp = .weiter { t with kern := s' } := by
+  rw [stepI_cmov] at h
+  exact stepExt_cmov c dst src l t bp s' h
+
+/-- Shared form `cmov`: `stepI` refusal IS unified refusal. -/
+theorem isa_stepExt_cmov_verweigert (c : Bedingung) (dst src : Register)
+    (l : Nat) (t : FpZustand) (bp : BereitProfil)
+    (h : stepI ⟨.cond (.cmov c dst src), l⟩ t.kern = none) :
+    stepExt (.cmov c dst src l) t bp = .verweigert := by
+  rw [stepI_cmov] at h
+  exact stepExt_cmov_verweigert c dst src l t bp h
+
+/-! ## 5. Planted refusals: what is NOT admitted is refused.
+
+  The divide trap has no register successor, memory forms never take
+  the register path (even where their SC step succeeds), and the byte
+  events refuse without permission. Every refusal is explicit. -/
+
+/-- Poison probe: a zero decoded length refuses on the register path,
+    on every machine and core. -/
+theorem adapterIsa_schlechte_laenge (m : HwMaschine) (c : Nat) :
+    adapterIsa.schritt m c
+      (.reg ⟨.core (.lea64 .rdx .rbx none 16), 0⟩) = none := by
+  have hstep : stepI
+      (⟨.core (.lea64 .rdx .rbx none 16), 0⟩ : InstrDecoded)
+      (projZustand m c) = none := by
+    simp [stepI, coreSchritt, laengeOk]
+  exact adapterIsa_reg_verweigert_schritt m c _ hstep
+
+/-- The divide trap is refused on the register path: a trap is an
+    outcome, never a successor state. -/
+theorem adapterIsa_falle_verweigert (m : HwMaschine) (c : Nat)
+    (b : MulDivBefehl) (l : Nat)
+    (h : mulDivSchritt ⟨b, l⟩ (projZustand m c) = .hardwareHalt) :
+    adapterIsa.schritt m c (.reg ⟨.muldiv b, l⟩) = none := by
+  have hstep : stepI (⟨.muldiv b, l⟩ : InstrDecoded)
+      (projZustand m c) = none := by
+    rw [stepI_muldiv, h]
+    rfl
+  exact adapterIsa_reg_verweigert_schritt m c _ hstep
+
+/-- The trap refusal through the full outcome: `hardwareHalt` carries
+    no successor for the register path. -/
+theorem adapterIsa_falle_kein_nachfolger (m : HwMaschine) (c : Nat)
+    (b : MulDivBefehl) (l : Nat)
+    (h : stepIE ⟨.muldiv b, l⟩ (projZustand m c) = .hardwareHalt) :
+    adapterIsa.schritt m c (.reg ⟨.muldiv b, l⟩) = none := by
+  have hmul : mulDivSchritt ⟨b, l⟩ (projZustand m c) = .hardwareHalt := by
+    simpa [stepIE] using h
+  exact adapterIsa_falle_verweigert m c b l hmul
+
+/-- A compact store is refused on the register path even where its SC
+    step succeeds: stores travel buffered, never in place. -/
+theorem adapterIsa_speicherform_verweigert (m : HwMaschine) (c : Nat)
+    (base src : Register) (l : Nat) (s' : Zustand)
+    (hstep : stepI (⟨.compact (.store64Disp0 base src), l⟩ : InstrDecoded)
+      (projZustand m c) = some s') :
+    adapterIsa.schritt m c
+      (.reg ⟨.compact (.store64Disp0 base src), l⟩) = none := by
+  have hg : isaNurRegister
+      (Instr.compact (.store64Disp0 base src)) = false := rfl
+  exact adapterIsa_reg_verweigert_speicher m c _ s' hstep hg
+
+/-- A store issue without write permission refuses. -/
+theorem adapterIsa_ausgabe_ohne_schreibrecht (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte)
+    (h : (tsoAnsicht m).mem.schreibbar a = false) :
+    adapterIsa.schritt m c (.gibAus a v) = none := by
+  have hissue : issueByte (tsoAnsicht m) c a v = none :=
+    issue_verweigert (tsoAnsicht m) c a v h
+  exact adapterIsa_gibAus_verweigert m c a v hissue
+
+/-- A load without read permission refuses. -/
+theorem adapterIsa_laden_ohne_leserecht (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte)
+    (h : (tsoAnsicht m).mem.lesbar a = false) :
+    adapterIsa.schritt m c (.lade a v) = none := by
+  have hload : loadByte (tsoAnsicht m) c a = none :=
+    load_verweigert (tsoAnsicht m) c a h
+  exact adapterIsa_lade_verweigert m c a v hload
+
+/-! ## 6. Joint witness: two cores, family steps, buffered store.
+
+  Core 0 runs one step per new family over the shared witness memory
+  (compact immediate move, core LEA, conditional select), each through
+  the adapter register path with canonical lengths; then core 0 issues
+  a buffered byte that core 1 still observes as absent (forwarding to
+  the owner only), core 1 issues its own byte elsewhere, and core 0
+  drains into shared memory. The register path changes no memory and
+  issues nothing; the drain changes actual shared memory. -/
+
+/-- Witness cores: core 0 runs the family steps with `rbx` on the
+    data cells; core 1 idles on the data page. -/
+def isaFamKern : Nat → HwKern
+  | 0 => ⟨isaReg, witnessFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, witnessFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared witness memory, two cores, empty
+    buffers, full silicon. -/
+def isaFamM0 : HwMaschine :=
+  ⟨isaSpeicher, isaFamKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem isaFamM0_wf : HwWf isaFamM0 := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Step one: compact zero-extending immediate move into `rax`. -/
+def isaFamM1 : Option HwMaschine :=
+  adapterIsa.schritt isaFamM0 0
+    (.reg (canonI (.compact (.movImm32Zx .rax 42))))
+
+/-- Step two: core LEA of `rbx + 16` into `rdx`. -/
+def isaFamM2 : Option HwMaschine :=
+  match isaFamM1 with
+  | some m => adapterIsa.schritt m 0
+      (.reg (canonI (.core (.lea64 .rdx .rbx none 16))))
+  | none => none
+
+/-- Step three: conditional select from the witness flags. -/
+def isaFamM3 : Option HwMaschine :=
+  match isaFamM2 with
+  | some m => adapterIsa.schritt m 0
+      (.reg (canonI (.cond (.setcc .ne .rdx))))
+  | none => none
+
+/-- Read a core register out of an adapter outcome. -/
+def isaFamRegOut (o : Option HwMaschine) (c : Nat)
+    (q : Register) : Option Wort :=
+  match o with
+  | some m => some ((m.kerne c).register q)
+  | none => none
+
+/-- Read a core RIP out of an adapter outcome. -/
+def isaFamRipOut (o : Option HwMaschine) (c : Nat) : Option Wort :=
+  match o with
+  | some m => some (m.kerne c).rip
+  | none => none
+
+/-- Read a shared-memory byte out of an adapter outcome. -/
+def isaFamMemOut (o : Option HwMaschine) (a : Adresse) : Option Byte :=
+  match o with
+  | some m => some (m.mem.bytes a)
+  | none => none
+
+/-- Read a buffer length out of an adapter outcome. -/
+def isaFamBufOut (o : Option HwMaschine) (c : Nat) : Option Nat :=
+  match o with
+  | some m => some (m.puffer c).length
+  | none => none
+
+/-- Witness data address. -/
+def isaFamAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Step one moves 42 into `rax`. -/
+theorem isaFamM1_rax : isaFamRegOut isaFamM1 0 .rax = some 42 := by
+  decide
+
+/-- Step one advances RIP past the canonical compact move. -/
+theorem isaFamM1_rip : isaFamRipOut isaFamM1 0 =
+    some (ripNach (BitVec.ofNat 64 4096)
+      (encodeI (.compact (.movImm32Zx .rax 42))).length) := by
+  decide
+
+/-- Step one leaves shared memory alone. -/
+theorem isaFamM1_mem : isaFamMemOut isaFamM1 isaFamAdr =
+    some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Step one issues no buffer entry. -/
+theorem isaFamM1_puffer : isaFamBufOut isaFamM1 0 = some 0 := by
+  decide
+
+/-- Step two computes `rbx + 16 = 8208` into `rdx`. -/
+theorem isaFamM2_rdx : isaFamRegOut isaFamM2 0 .rdx =
+    some (BitVec.ofNat 64 8208) := by
+  decide
+
+/-- Step two advances RIP past the canonical LEA. -/
+theorem isaFamM2_rip : isaFamRipOut isaFamM2 0 =
+    some (ripNach (ripNach (BitVec.ofNat 64 4096)
+      (encodeI (.compact (.movImm32Zx .rax 42))).length)
+      (encodeI (.core (.lea64 .rdx .rbx none 16))).length) := by
+  decide
+
+/-- Steps one and two leave shared memory alone. -/
+theorem isaFamM2_mem : isaFamMemOut isaFamM2 isaFamAdr =
+    some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Steps one and two issue no buffer entry. -/
+theorem isaFamM2_puffer : isaFamBufOut isaFamM2 0 = some 0 := by
+  decide
+
+/-- Step three sets the low byte of `rdx` (`zf` is clear): `8208`
+    becomes `8193`, upper bytes preserved. -/
+theorem isaFamM3_rdx : isaFamRegOut isaFamM3 0 .rdx =
+    some (BitVec.ofNat 64 8193) := by
+  decide
+
+/-- Step three advances RIP past the 4-byte select. -/
+theorem isaFamM3_rip : isaFamRipOut isaFamM3 0 =
+    some (ripNach (ripNach (ripNach (BitVec.ofNat 64 4096)
+      (encodeI (.compact (.movImm32Zx .rax 42))).length)
+      (encodeI (.core (.lea64 .rdx .rbx none 16))).length) 4) := by
+  decide
+
+/-- All three register steps leave shared memory alone. -/
+theorem isaFamM3_mem : isaFamMemOut isaFamM3 isaFamAdr =
+    some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- All three register steps issue no buffer entry. -/
+theorem isaFamM3_puffer : isaFamBufOut isaFamM3 0 = some 0 := by
+  decide
+
+/-- Core 0 issues byte 42 at the data cell. -/
+def isaFamTso1 : Option TSOZustand :=
+  match isaFamM3 with
+  | some m => issueByte (tsoAnsicht m) 0 isaFamAdr (BitVec.ofNat 8 42)
+  | none => none
+
+/-- Core 0 observes its own byte (forwarding). -/
+def isaFamLoadEigen : Option (Option Byte) :=
+  match isaFamTso1 with
+  | some s => some (loadByte s 0 isaFamAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def isaFamLoadFremd : Option (Option Byte) :=
+  match isaFamTso1 with
+  | some s => some (loadByte s 1 isaFamAdr)
+  | none => none
+
+/-- Core 1 issues its own byte at the neighbouring cell. -/
+def isaFamTso2 : Option TSOZustand :=
+  match isaFamTso1 with
+  | some s => issueByte s 1 (BitVec.ofNat 64 8200) (BitVec.ofNat 8 7)
+  | none => none
+
+/-- Core 0 drains its oldest entry into shared memory. -/
+def isaFamTso3 : Option TSOZustand :=
+  match isaFamTso2 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def isaFamNachFlush : Option (Option Byte) :=
+  match isaFamTso3 with
+  | some s => some (some (s.mem.bytes isaFamAdr))
+  | none => none
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem isaFam_weiterleitung :
+    isaFamLoadEigen = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem isaFam_fremd_alt :
+    isaFamLoadFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 42. -/
+theorem isaFam_spuelung_aendert_speicher :
+    isaFamNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- Poison probe on the witness machine: the compact store is refused
+    on the register path even though its SC step succeeds. -/
+theorem isaFam_speicherform_verweigert :
+    adapterIsa.schritt isaFamM0 0
+      (.reg (canonI (.compact (.store64Disp0 .rbx .rax)))) = none := by
+  rfl
+
+/-- The joint witness: a reached two-core run that executes one step
+    per new family through the adapter (compact move, core LEA,
+    conditional select), refuses the compact store on the register
+    path, forwards a buffered store to its owner only, and drains it
+    into shared memory (0 becomes 42). Non-degenerate: the drain
+    changes ACTUAL shared memory, and every register step changes
+    core state. -/
+theorem isaFam_zeuge :
+    HwWf isaFamM0 ∧
+    isaFamRegOut isaFamM1 0 .rax = some 42 ∧
+    isaFamRegOut isaFamM2 0 .rdx = some (BitVec.ofNat 64 8208) ∧
+    isaFamRegOut isaFamM3 0 .rdx = some (BitVec.ofNat 64 8193) ∧
+    isaFamMemOut isaFamM3 isaFamAdr = some (BitVec.ofNat 8 0) ∧
+    isaFamBufOut isaFamM3 0 = some 0 ∧
+    adapterIsa.schritt isaFamM0 0
+      (.reg (canonI (.compact (.store64Disp0 .rbx .rax)))) = none ∧
+    isaFamLoadEigen = some (some (BitVec.ofNat 8 42)) ∧
+    isaFamLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+    isaFamNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  exact ⟨isaFamM0_wf, isaFamM1_rax, isaFamM2_rdx, isaFamM3_rdx,
+    isaFamM3_mem, isaFamM3_puffer, isaFam_speicherform_verweigert,
+    isaFam_weiterleitung, isaFam_fremd_alt,
+    isaFam_spuelung_aendert_speicher⟩
+
 /- CUTS:
-    Skeleton only: the event type and the re-embedding. The classifier,
-    the adapter, the stepI/stepExt agreement, the refusals and the
-    two-core witness are OPEN.
+    Proved here: the ISA strand (`Instr`/`stepI`) on the coherent
+    machine -- a `HwAdapter` whose register path lifts the accepted
+    `stepI` exactly for the classifier-admitted forms (frame proved
+    per family, never redefined), whose memory events are exactly the
+    accepted TSO byte equations (no SC word effect substituted), with
+    exact agreement with `stepExt` on all six shared families
+    (pilot, narrow, mul/div with the halt/refusal trichotomy, shift,
+    setcc, cmov), planted refusals (bad length, divide trap, memory
+    forms on the register path, missing permissions), and a reached
+    two-core witness joining all of it with a memory-changing drain.
+    NOT proved here, and not claimed:
+    - No hardware correspondence: encodings are the accepted
+      canonical subsets with self-consistency only, not x86 truth.
+      Intel SDM headings checked for the claimed rows are listed in
+      the file header; they are provenance, not proofs. In
+      particular the LEA/shift/flag/sign-extension facts are the
+      accepted Lean definitions, re-checked against the SDM text, not
+      against silicon.
+    - Compact and core forms have NO `ExtInstr`/`stepExt` counterpart:
+      `decodeExt`/`stepExt` cover pilot, narrow, mul/div, shift,
+      setcc, cmov, scalar FP and packed integer only. The byte-level
+      decoder agreement (`decodeI` vs `decodeExt`) is OPEN, as is any
+      fetched-byte (`Byteschritt`) connection for the new families.
+    - No per-access target-to-W/GX simulation and no whole-word
+      atomicity beyond the accepted byte-drain equations; the compact
+      word store/load decomposition into eight ordered byte issues
+      (with `WortGruppe`/`FremdFrei` discipline) is left to the
+      word-grouping owners (lanes 666/720 territory), not redone here.
+    - No LOCK RMW path (`Instr` has no lock vocabulary: refused by
+      type), no interrupts, no faults beyond the carried divide halt,
+      no timing/power behaviour.
+    - This plug does NOT complete the hardware model; it fills the
+      §11 producer slot for the ISA strand's compact/core/cond
+      families only.
 -/
 
-#print axioms setKernVonZustand_wf
+#print axioms stepI_nurRegister_speicher
+#print axioms adapterIsa_wf
+#print axioms adapterIsa_reg_stimmt
+#print axioms adapterIsa_gibAus_kein_speicher
+#print axioms isa_stepExt_pilot
+#print axioms isa_stepExt_narrow
+#print axioms isa_stepExt_muldiv_ok
+#print axioms isa_stepExt_muldiv_halt
+#print axioms isa_stepExt_muldiv_misslungen
+#print axioms isa_stepExt_muldiv_verweigert_oder_halt
+#print axioms isa_stepExt_shift
+#print axioms isa_stepExt_setcc
+#print axioms isa_stepExt_cmov
+#print axioms adapterIsa_schlechte_laenge
+#print axioms adapterIsa_falle_verweigert
+#print axioms adapterIsa_falle_kein_nachfolger
+#print axioms adapterIsa_speicherform_verweigert
+#print axioms adapterIsa_ausgabe_ohne_schreibrecht
+#print axioms adapterIsa_laden_ohne_leserecht
+#print axioms isaFamM0_wf
+#print axioms isaFam_zeuge
 
 end Gabbro.Grammatik.X86
