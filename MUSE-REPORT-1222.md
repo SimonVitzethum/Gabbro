@@ -6,7 +6,8 @@ Branch `muse/1222` in clone `/home/simon/Dokumente/gabbro-muse/a1222`.
 
 ## Candidate
 
-- CANDIDATE: 1221, pinned HEAD `6c92cf7406a9ca5f0fb41949d8ffc13d7676c3ac`
+- Candidate under review: author lane 1221, pinned HEAD
+  `6c92cf7406a9ca5f0fb41949d8ffc13d7676c3ac`
   (per `.tmp/review/SNAPSHOT.json`; base `988d75ef`, `clean: true`).
 - Files in candidate: `MUSE-REPORT-1221.md`,
   `grammatik/Grammatik.lean` (exactly one appended line
@@ -89,7 +90,10 @@ Branch `muse/1222` in clone `/home/simon/Dokumente/gabbro-muse/a1222`.
   (`988d75ef`); no conflicts are introduced by this report-only lane
   (it owns no source file).
 
-## VERDICT: ACCEPT
+## Verdict
+
+CANDIDATE: 1221 6c92cf7406a9ca5f0fb41949d8ffc13d7676c3ac
+VERDICT: ACCEPT
 
 Candidate 1221 at `6c92cf74` is accepted as reviewed: exact scope
 match, standard axioms, lifted (not copied) producer legs, refusing
