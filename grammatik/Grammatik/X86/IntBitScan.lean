@@ -102,13 +102,32 @@ def encodeBsReg (op : Nat) (b : BsBreite) (istPopcnt : Bool)
   bsLeg b istPopcnt ++ bsRexReg b dst src ++
     [natByte 15, natByte op, modrmReg (regLow dst) (regLow src)]
 
+/-- Set the ModRM reg field to a destination, keeping mode and r/m:
+    the architecture reads the destination from `ModRM:reg`. -/
+def modrmMitDst (dst : Register) (modrm : Byte) : Byte :=
+  natByte (byteNat modrm / 64 * 64 + regLow dst * 8 + byteNat modrm % 8)
+
+/-- Setting an already-correct reg field changes nothing. -/
+theorem modrmMitDst_id (dst : Register) (modrm : Byte)
+    (hfeld : byteNat modrm / 8 % 8 = regLow dst) :
+    modrmMitDst dst modrm = modrm := by
+  unfold modrmMitDst natByte byteNat at *
+  have h := modrm.isLt
+  have e8 : (2 : Nat) ^ 8 = 256 := by decide
+  have hlo := regLow_lt dst
+  have hlt : modrm.toNat < 256 := by omega
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_ofNat, e8]
+  omega
+
 /-- Canonical encoding of one memory-source family instruction: the
-    stored ModRM byte plus the stored displacement bytes. -/
+    stored ModRM byte (reg field: the destination) plus the stored
+    displacement bytes. -/
 def encodeBsMem (op : Nat) (b : BsBreite) (istPopcnt : Bool)
     (dst : Register) (modrm : Byte) (disp : List Byte) : List Byte :=
   bsLeg b istPopcnt ++
     bsRex (match b with | .b64 => 1 | _ => 0) (regHigh dst) 0 ++
-    [natByte 15, natByte op, modrm] ++ disp
+    [natByte 15, natByte op, modrmMitDst dst modrm] ++ disp
 
 /-- Canonical encoding of one BSWAP instruction. -/
 def encodeBswap (b : BswapBreite) (rd : Register) : List Byte :=
@@ -137,28 +156,36 @@ def encodeBs : BsBefehl → List Byte
   memory source whose address computation stays OPEN. LOCK (F0) has no
   rule, so it refuses (SDM: #UD). -/
 
-/-- Legacy prefix parse: 66H and/or F3, in either order; F2, a
-    doubled prefix and empty input refuse. 16-bit POPCNT carries both
-    (66H for the width, F3 for the POPCNT opcode). -/
-def bsParseLeg : List Byte → Option (Bool × Bool × List Byte)
+/-- Legacy prefix parse, at most one byte: 0 = none present, 1 = 66H,
+    2 = F3. F2 and empty input refuse. The decoder calls it twice, so
+    66H and F3 arrive in either order; doubled prefixes are refused by
+    the caller. Single-byte stages reduce independently. -/
+def bsParseLeg1 : List Byte → Option (Nat × List Byte)
   | b :: rest =>
-    if byteNat b == 102 then
-      match rest with
-      | c :: rest' =>
-        if byteNat c == 243 then some (true, true, rest')
-        else if byteNat c == 102 || byteNat c == 242 then none
-        else some (true, false, rest)
-      | [] => some (true, false, [])
-    else if byteNat b == 243 then
-      match rest with
-      | c :: rest' =>
-        if byteNat c == 102 then some (true, true, rest')
-        else if byteNat c == 243 || byteNat c == 242 then none
-        else some (false, true, rest)
-      | [] => some (false, true, [])
+    if byteNat b == 102 then some (1, rest)
+    else if byteNat b == 243 then some (2, rest)
     else if byteNat b == 242 then none
-    else some (false, false, b :: rest)
+    else some (0, b :: rest)
   | [] => none
+
+/-- Combine two parsed legacy bytes: doubled 66H or doubled F3 refuse;
+    otherwise 66H anywhere means 16-bit, F3 anywhere means POPCNT. -/
+def bsLegKombi : Nat → Nat → Option (Bool × Bool)
+  | 1, 1 => none
+  | 2, 2 => none
+  | l1, l2 => some (l1 == 1 || l2 == 1, l1 == 2 || l2 == 2)
+
+/-- Doubled 66H refuses. -/
+theorem bsLegKombi_11 : bsLegKombi 1 1 = none := rfl
+
+/-- Doubled F3 refuses. -/
+theorem bsLegKombi_22 : bsLegKombi 2 2 = none := rfl
+
+/-- 66H then F3 means 16-bit POPCNT. -/
+theorem bsLegKombi_12 : bsLegKombi 1 2 = some (true, true) := rfl
+
+/-- Absent prefixes mean 32-bit, non-POPCNT. -/
+theorem bsLegKombi_00 : bsLegKombi 0 0 = some (false, false) := rfl
 
 /-- REX parse: 40H..4FH yields (W, R, B); anything else means no REX.
     X is ignored (no SIB row is admitted). -/
@@ -251,22 +278,28 @@ def bsParseOp (p66 pF3 : Bool) (w r b : Nat) : List Byte →
     else none
   | [] => none
 
-/-- Decode one family instruction: legacy prefix, REX, 0F, opcode,
+/-- Decode one family instruction: legacy prefixes, REX, 0F, opcode,
     ModRM. The checked length is the consumed byte count. -/
 def decodeBs (bs : List Byte) : Option (BsDecodiert × List Byte) :=
-  match bsParseLeg bs with
+  match bsParseLeg1 bs with
   | none => none
-  | some (p66, pF3, rest1) =>
-    let (w, r, b, rest2) := bsParseRex rest1
-    match rest2 with
-    | f :: rest3 =>
-      if byteNat f == 15 then
-        match bsParseOp p66 pF3 w r b rest3 with
-        | some (befehl, rest') =>
-          some (⟨befehl, bs.length - rest'.length⟩, rest')
-        | none => none
-      else none
-    | [] => none
+  | some (l1, rest1) =>
+    match bsParseLeg1 rest1 with
+    | none => none
+    | some (l2, rest2) =>
+      match bsLegKombi l1 l2 with
+      | none => none
+      | some (p66, pF3) =>
+        let (w, r, b, rest3) := bsParseRex rest2
+        match rest3 with
+        | f :: rest4 =>
+          if byteNat f == 15 then
+            match bsParseOp p66 pF3 w r b rest4 with
+            | some (befehl, rest') =>
+              some (⟨befehl, bs.length - rest'.length⟩, rest')
+            | none => none
+          else none
+        | [] => none
 
 /-! ## 3. Round trips, dispatcher pins and planted refusals.
 
@@ -289,7 +322,6 @@ theorem encodeBswap_decodeBs (b : BswapBreite) (rd : Register) :
     decodeBs (encodeBswap b rd) =
       some (⟨.bswap b rd, (encodeBswap b rd).length⟩, []) := by
   cases b <;> cases rd <;> rfl
-
 /-- Decoding inverts encoding on every BSF register row. -/
 theorem encodeBsf_decodeBs (b : BsBreite) (dst src : Register) :
     decodeBs (encodeBs (.bsf b dst (.reg src))) =
@@ -339,4 +371,205 @@ theorem bsParseModrm_mem_ok (bBit : Nat) (m : Byte) (disp rest : List Byte)
     · next h => rw [if_pos (hlt.mp h)]
     · next h => rw [if_neg (fun hc => h (hlt.mpr hc))]
   simp [bsParseModrm, hmod, hsib, ← hlen', nimmBytes_laenge]
+
+/-- Memory-row pins: decoding inverts encoding on representative
+    well-formed memory shapes (kernel-checked). The general
+    composition over `decodeBs` stays open (see CUTS); the parse half
+    (`bsParseModrm_mem_ok`) and the reg-field half (`modrmMitDst_id`)
+    are proved generally. -/
+theorem pin_mem_bsf_disp8 :
+    decodeBs [natByte 15, natByte 188, natByte 64, natByte 7] =
+      some (⟨.bsf .b32 .rax (.mem (natByte 64) [natByte 7]), 4⟩, []) := by
+  decide
+
+/-- BSF r32, r/m32 register form: 0F BC C1. -/
+theorem pin_bsf_reg :
+    decodeBs [natByte 15, natByte 188, natByte 193] =
+      some (⟨.bsf .b32 .rax (.reg .rcx), 3⟩, []) := by
+  decide
+
+/-- BSF r64: REX.W 0F BC C1. -/
+theorem pin_bsf_reg64 :
+    decodeBs [natByte 72, natByte 15, natByte 188, natByte 193] =
+      some (⟨.bsf .b64 .rax (.reg .rcx), 4⟩, []) := by
+  decide
+
+/-- BSF r16: 66 0F BC C1. -/
+theorem pin_bsf_reg16 :
+    decodeBs [natByte 102, natByte 15, natByte 188, natByte 193] =
+      some (⟨.bsf .b16 .rax (.reg .rcx), 4⟩, []) := by
+  decide
+
+/-- POPCNT r32: F3 0F B8 C1. -/
+theorem pin_popcnt_reg :
+    decodeBs [natByte 243, natByte 15, natByte 184, natByte 193] =
+      some (⟨.popcnt .b32 .rax (.reg .rcx), 4⟩, []) := by
+  decide
+
+/-- POPCNT r16: 66 F3 0F B8 C1. -/
+theorem pin_popcnt_reg16 :
+    decodeBs [natByte 102, natByte 243, natByte 15, natByte 184,
+      natByte 193] =
+      some (⟨.popcnt .b16 .rax (.reg .rcx), 5⟩, []) := by
+  decide
+
+/-- BSWAP eax: 0F C8. -/
+theorem pin_bswap32 :
+    decodeBs [natByte 15, natByte 200] =
+      some (⟨.bswap .b32 .rax, 2⟩, []) := by
+  decide
+
+/-- BSWAP rbx: REX.W 0F CB. -/
+theorem pin_bswap64 :
+    decodeBs [natByte 72, natByte 15, natByte 203] =
+      some (⟨.bswap .b64 .rbx, 3⟩, []) := by
+  decide
+
+/-- BSR r32 over disp32 memory: 0F BD mod=10. -/
+theorem pin_mem_bsr_disp32 :
+    decodeBs [natByte 15, natByte 189, natByte 136, natByte 1,
+      natByte 2, natByte 3, natByte 4] =
+      some (⟨.bsr .b32 .rcx
+        (.mem (natByte 136) [natByte 1, natByte 2, natByte 3, natByte 4]),
+        7⟩, []) := by
+  decide
+
+/-- BSR r32 over no-displacement memory: 0F BD mod=00. -/
+theorem pin_mem_bsr_disp0 :
+    decodeBs [natByte 15, natByte 189, natByte 3] =
+      some (⟨.bsr .b32 .rax (.mem (natByte 3) []), 3⟩, []) := by
+  decide
+
+/-- BSF r64 over disp8 memory with REX.W. -/
+theorem pin_mem_bsf64_disp8 :
+    decodeBs [natByte 72, natByte 15, natByte 188, natByte 64,
+      natByte 16] =
+      some (⟨.bsf .b64 .rax (.mem (natByte 64) [natByte 16]), 5⟩, []) := by
+  decide
+
+/-- The unified chain refuses every new byte string: no pilot or
+    extension form is shadowed (SDM ground truth, measured). -/
+theorem ext_weist_bsf_zurueck :
+    decodeExt [natByte 15, natByte 188, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses BSR rows. -/
+theorem ext_weist_bsr_zurueck :
+    decodeExt [natByte 15, natByte 189, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses POPCNT rows. -/
+theorem ext_weist_popcnt_zurueck :
+    decodeExt [natByte 243, natByte 15, natByte 184, natByte 193] =
+      none := by
+  decide
+
+/-- The unified chain refuses 32-bit BSWAP. -/
+theorem ext_weist_bswap32_zurueck :
+    decodeExt [natByte 15, natByte 200] = none := by
+  decide
+
+/-- The unified chain refuses 64-bit BSWAP. -/
+theorem ext_weist_bswap64_zurueck :
+    decodeExt [natByte 72, natByte 15, natByte 200] = none := by
+  decide
+
+/-- The unified chain refuses 64-bit BSF. -/
+theorem ext_weist_bsf64_zurueck :
+    decodeExt [natByte 72, natByte 15, natByte 188, natByte 193] =
+      none := by
+  decide
+
+/-- The unified chain refuses 16-bit BSF. -/
+theorem ext_weist_bsf16_zurueck :
+    decodeExt [natByte 102, natByte 15, natByte 188, natByte 193] =
+      none := by
+  decide
+
+/-- Planted refusal: LOCK has no rule (SDM: #UD on BSF/BSR/POPCNT/BSWAP). -/
+theorem bs_nichts_lock :
+    decodeBs [natByte 240, natByte 15, natByte 188, natByte 193] =
+      none := by
+  decide
+
+/-- Planted refusal: F3 on BSF is the deferred TZCNT shape. -/
+theorem bs_nichts_tzcnt :
+    decodeBs [natByte 243, natByte 15, natByte 188, natByte 193] =
+      none := by
+  decide
+
+/-- Planted refusal: F3 on BSR is the deferred LZCNT shape. -/
+theorem bs_nichts_lzcnt :
+    decodeBs [natByte 243, natByte 15, natByte 189, natByte 193] =
+      none := by
+  decide
+
+/-- Planted refusal: 66H+F3 on BSF is 16-bit TZCNT, likewise deferred. -/
+theorem bs_nichts_tzcnt16 :
+    decodeBs [natByte 102, natByte 243, natByte 15, natByte 188,
+      natByte 193] = none := by
+  decide
+
+/-- Planted refusal: bare 0F B8 is no POPCNT (F3 required). -/
+theorem bs_nichts_ohne_f3 :
+    decodeBs [natByte 15, natByte 184, natByte 193] = none := by
+  decide
+
+/-- Planted refusal: 66H on BSWAP (no 16-bit form exists). -/
+theorem bs_nichts_bswap66 :
+    decodeBs [natByte 102, natByte 15, natByte 200] = none := by
+  decide
+
+/-- Planted refusal: F3 on BSWAP. -/
+theorem bs_nichts_bswapf3 :
+    decodeBs [natByte 243, natByte 15, natByte 200] = none := by
+  decide
+
+/-- Planted refusal: F2 on BSWAP. -/
+theorem bs_nichts_bswapf2 :
+    decodeBs [natByte 242, natByte 15, natByte 200] = none := by
+  decide
+
+/-- Planted refusal: SIB memory (rm = 100) is not admitted. -/
+theorem bs_nichts_sib :
+    decodeBs [natByte 15, natByte 188, natByte 4, natByte 200] =
+      none := by
+  decide
+
+/-- Planted refusal: F2 prefix anywhere. -/
+theorem bs_nichts_f2 :
+    decodeBs [natByte 242, natByte 15, natByte 188, natByte 193] =
+      none := by
+  decide
+
+/-- Planted refusal: doubled 66H. -/
+theorem bs_nichts_doppel66 :
+    decodeBs [natByte 102, natByte 102, natByte 15, natByte 188,
+      natByte 193] = none := by
+  decide
+
+/-- Planted refusal: doubled F3. -/
+theorem bs_nichts_doppelf3 :
+    decodeBs [natByte 243, natByte 243, natByte 15, natByte 184,
+      natByte 193] = none := by
+  decide
+
+/-- Planted refusal: truncated inputs. -/
+theorem bs_nichts_abgeschnitten_a :
+    decodeBs [natByte 15, natByte 188] = none := by
+  decide
+
+/-- Planted refusal: lone 0F. -/
+theorem bs_nichts_abgeschnitten_b :
+    decodeBs [natByte 15] = none := by
+  decide
+
+/-- Planted refusal: empty input. -/
+theorem bs_nichts_leer : decodeBs [] = none := by
+  decide
+
+/-- Planted refusal: disp32 mode without its four bytes. -/
+theorem bs_nichts_ohne_disp :
+    decodeBs [natByte 15, natByte 188, natByte 5] = none := by
+  decide
 end Gabbro.Grammatik.X86
