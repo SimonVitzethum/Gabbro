@@ -79,11 +79,9 @@ last result line. Exactly one VERDICT: ACCEPT or REPAIR.
 ## What remains open
 - The entire lane-1287 exact review (all checklist items in the Task
   section above) remains open pending the inputs named above.
-- Commit of this report: `bash`-based `./commit.sh` is unavailable in this
-  session (see above), so this file is WRITTEN but NOT YET COMMITTED from
-  here. The coordinator/merge path should commit it (`arbeitsprotokoll/.commitmsg`
-  + `./commit.sh` with `Co-Authored-By: muse-agent-1288
-  <muse-agent-1288@noreply.invalid>`) or record why it cannot.
+- Commit of this report: committed on branch `muse/1288` with the
+  `Co-Authored-By: muse-agent-1288` trailer (this paragraph updated after
+  the commit; see the commit log for the hash).
 
 ## Task issue believed wrong
 - The review task as delivered is unexecutable as stated: it orders the
