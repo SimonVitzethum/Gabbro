@@ -12,6 +12,7 @@
   Silicon provenance is cited from the family files, never restated.
 -/
 import Grammatik.X86.HardwareExecution
+import Grammatik.X86.ConcurrentIntegerExecution
 import Grammatik.X86.ScalarFloat32HardwareForms
 import Grammatik.X86.ScalarFloatHardwareForms
 import Grammatik.X86.FpControlHardwareForms
@@ -740,24 +741,6 @@ def FpGruppe32 (s : TSOZustand) (c : Nat) (a : Adresse)
     (v : Wort) : Prop :=
   s.puffer c = fpEintraege32 a v ∧ FpFremdFrei32 s c a
 
-/-- A word fold touches no other core's buffer. -/
-theorem issueListe_anderer_kern (s s' : TSOZustand) (c : Nat)
-    (l : List TSOEintrag) (h : issueListe s c l = some s')
-    {d : Nat} (hd : d ≠ c) : s'.puffer d = s.puffer d := by
-  induction l generalizing s s' with
-  | nil =>
-    simp [issueListe] at h
-    subst h
-    rfl
-  | cons e rest ih =>
-    unfold issueListe at h
-    cases h1 : issueByte s c e.addr e.wert with
-    | none => rw [h1] at h; cases h
-    | some s1 =>
-      rw [h1] at h
-      rw [ih s1 s' h]
-      exact issue_anderer_kern s s1 c e.addr e.wert h1 hd
-
 /-- A partial 32-bit buffer is no group: tearing refused. -/
 theorem fpGruppe32_teilwort (s : TSOZustand) (c : Nat) (a : Adresse)
     (v : Wort)
@@ -799,8 +782,7 @@ theorem fpCtrlAusgabe32_gruppe (m m' : HwMaschine) (c : Nat)
       rw [hempty]
       rfl
     · intro d hne e hmem
-      have hfr := issueListe_anderer_kern (tsoAnsicht m) s' c _ h1
-        (d := d) hne
+      have hfr := issueListe_anderer_kern (tsoAnsicht m) s' c _ d hne h1
       change e ∈ s'.puffer d at hmem
       rw [hfr] at hmem
       exact hfrei d hne e hmem
