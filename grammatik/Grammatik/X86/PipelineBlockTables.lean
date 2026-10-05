@@ -1503,6 +1503,80 @@ theorem senkStmtSkal_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = true
     | _ => simp [senkStmtSkal] at h
   | _ => simp [senkStmtSkal] at h
 
+/-- Every lowered block-read statement is straight-line code (for the
+    byte-level lift). -/
+theorem senkStmtSkal_gerade (A : TabAnker D) (c : PipeCfg)
+    {V : _} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ') (p : List Befehl)
+    (h : senkStmtSkal A c s = some p) : p.all gerade = true := by
+  cases s with
+  | assignVar x e =>
+    cases e with
+    | slot t f i hL =>
+      cases hy : idxVarG? i with
+      | none =>
+        simp [senkStmtSkal, hy] at h
+      | some y =>
+        cases hB : PipelineTables.ankerBasis A t with
+        | none =>
+          simp [senkStmtSkal, hy, hB] at h
+        | some B =>
+          cases hZ : PipelineTables.ankerZeile A t with
+          | none =>
+            simp [senkStmtSkal, hy, hB, hZ] at h
+          | some Z =>
+            cases hO : PipelineTables.feldOff A t f with
+            | none =>
+              simp [senkStmtSkal, hy, hB, hZ, hO] at h
+            | some O =>
+              cases hT : D.typ t f with
+              | int lo hi =>
+                simp only [senkStmtSkal, hy, hB, hZ, hO, hT] at h
+                by_cases hck : (skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                    adrOk (basisKeinForm c.adr)) = true
+                · rw [if_pos hck] at h
+                  simp only [Option.some.injEq] at h
+                  subst h
+                  simp [List.all_append, skalChunk_gerade, gerade]
+                · rw [if_neg hck] at h
+                  change none = some p at h
+                  contradiction
+              | _ =>
+                simp [senkStmtSkal, hy, hB, hZ, hO, hT] at h
+    | durch q t ht f i hL =>
+      cases hy : idxVarG? i with
+      | none =>
+        simp [senkStmtSkal, hy] at h
+      | some y =>
+        cases hB : PipelineTables.ankerBasis A t with
+        | none =>
+          simp [senkStmtSkal, hy, hB] at h
+        | some B =>
+          cases hZ : PipelineTables.ankerZeile A t with
+          | none =>
+            simp [senkStmtSkal, hy, hB, hZ] at h
+          | some Z =>
+            cases hO : PipelineTables.feldOff A t f with
+            | none =>
+              simp [senkStmtSkal, hy, hB, hZ, hO] at h
+            | some O =>
+              cases hT : D.typ t f with
+              | int lo hi =>
+                simp only [senkStmtSkal, hy, hB, hZ, hO, hT] at h
+                by_cases hck : (skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                    adrOk (basisKeinForm c.adr)) = true
+                · rw [if_pos hck] at h
+                  simp only [Option.some.injEq] at h
+                  subst h
+                  simp [List.all_append, skalChunk_gerade, gerade]
+                · rw [if_neg hck] at h
+                  change none = some p at h
+                  contradiction
+              | _ =>
+                simp [senkStmtSkal, hy, hB, hZ, hO, hT] at h
+    | _ => simp [senkStmtSkal] at h
+  | _ => simp [senkStmtSkal] at h
+
 /- CUTS:
    Environment get/set facts done. Statement/block lowering, the closing
    theorem, refusal theorems for blocks, witnesses and axioms output are OPEN.
