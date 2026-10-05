@@ -617,3 +617,4 @@ import Grammatik.X86.HwSystemForms
 import Grammatik.X86.PipelineWide
 import Grammatik.X86.PipelineLoops
 import Grammatik.X86.PipelineTables
+import Grammatik.X86.PipelineFloat

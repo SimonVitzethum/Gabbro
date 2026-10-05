@@ -636,7 +636,7 @@ Last ledger refresh: **2026-10-05 13:02 UTC**. This is an operational snapshot, 
 | 1155 | Pipeline: loops and branch layout with budget | Merged after review/checks | 1156: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1155.md) |
 | 1157 | Pipeline: calls, stack-passed parameters, callee-saved registers, return values | Merged after review/checks | 1158: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1157.md) |
 | 1159 | Pipeline: arrays, records and pointers beyond integer slots | Merged after review/checks | 1160: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1159.md) |
-| 1161 | Pipeline: IEEE float expressions | Committed candidate; review/integration pending | 1162: Committed candidate; review/integration pending | [task](lanes/1161.md) |
+| 1161 | Pipeline: IEEE float expressions | Merged after review/checks | 1162: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1161.md) |
 | 1163 | Pipeline: atomics and locks onto TSO | Committed candidate; review/integration pending | 1164: Committed candidate; review/integration pending | [task](lanes/1163.md) |
 | 1165 | Pipeline: source budget to target work and time transfer | Committed candidate; review/integration pending | 1166: Committed candidate; review/integration pending | [task](lanes/1165.md) |
 | 1167 | Pipeline: register allocation, spills and privacy validated | Merged after review/checks | 1168: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1167.md) |
@@ -1463,6 +1463,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1156**, Independent exact review of 1155, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1156.md). <!-- x86-merged:1156 -->
 - 2026-10-05: lane **1159**, Pipeline: arrays, records and pointers beyond integer slots, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1159.md). <!-- x86-merged:1159 -->
 - 2026-10-05: lane **1160**, Independent exact review of 1159, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1160.md). <!-- x86-merged:1160 -->
+- 2026-10-05: lane **1161**, Pipeline: IEEE float expressions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1161.md). <!-- x86-merged:1161 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
