@@ -1,14 +1,17 @@
 # MUSE-REPORT-1234 — Exact review of candidate 1233 (Pipeline work bounds for branches and loops)
 
 Lane 1234 (branch `muse/1234`, clone `/home/simon/Dokumente/gabbro-muse/a1234`).
-Report-only independent exact review. Candidate: lane 1233, pinned HEAD
-`25d2000a1621b70e133135714785e22cf4893240` (base `cbc0afe00eeb8708961b13489750e41e998740d1`,
-from `.tmp/review/SNAPSHOT.json`). Reviewed artefact: the snapshot
+Report-only independent exact review.
+
+CANDIDATE: 1233 25d2000a1621b70e133135714785e22cf4893240
+
+Reviewed artefact (base `cbc0afe00eeb8708961b13489750e41e998740d1`,
+from `.tmp/review/SNAPSHOT.json`): the snapshot
 `.tmp/review/author-1233/` (`PATCH.diff`, `PipelineWorkBranches.lean`,
 `MUSE-REPORT-1233.md`, `BUILD-EVIDENCE.json`, `OWNER-TASK.md`).
 Own file: only this report. No source files touched.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 ## What was checked (candidate diff only)
 
