@@ -81,3 +81,45 @@ evaluators are lifted, never redefined.
 
 Nothing in the task looks wrong; the "re-prove instead of cite" and
 disjointness requirements were implementable as stated.
+
+## Repair after failed integration gate (no merge happened)
+
+Integration evidence (exact): `Lean merge build failed`, lean output
+`== exit 1; 2 error line(s)`, the failing job
+`✖ [640/642] Building Grammatik.X86.HwFpDispatch (10s)` with stderr
+`libc++abi: terminating due to uncaught exception of type
+lean::exception: failed to create thread`, `Lean exited with code 134`.
+
+Classification: **resource failure, not a proof defect.** The log shows
+zero Lean error lines for the module (the 2 counted lines are the
+`failed to create thread` abort and the exit-code line); every other
+file's `#print axioms` output in the same log is clean. `failed to
+create thread` with exit 134 is pthread creation failing under a
+parallel integration build (642 jobs, per-file `-j2 -M4096`) — the
+documented symptom of virtual-address/thread exhaustion, not of a bad
+proof. No finding of an overlap, wrong encoding, or broken guarantee.
+
+Module-side repair assessment: no semantic change made, deliberately.
+The owned module was re-verified with zero changes to any definition,
+theorem, or proof:
+
+- `./lean-probe grammatik/Grammatik/X86/HwFpDispatch.lean`:
+  `== 0 error(s) in the COMPLETE output; exit 0` (same single linter
+  warning on the `∃ s'` binder as before, identical in shape to the
+  accepted `HwFpControl` file; warning-only, fails nothing).
+- `./lean-bau`: `Build completed successfully (640 jobs)`, whole
+  project green in this clone.
+- Banned-token scan still clean; `#print axioms` still standard
+  subsets only; all guarantees of the candidate unchanged.
+
+Deliberately NOT changed: weakening or restructuring proofs to chase a
+resource symptom would change the reviewed candidate without a defect
+to fix; the `decide` evaluations in the file are small closed
+evaluations (byte lists of 4–11 bytes, bounded fetch windows, 4-step
+drain chains), each green here twice (standalone probe and full
+build). If the gate fails again on the same file with the same
+signature, the concrete blocker to record is integration-side thread
+budget, not module content.
+
+Fresh independent review is required for the new commit (report-only
+change). No acceptance of the full source/binary chain is claimed.
