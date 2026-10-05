@@ -5,8 +5,8 @@ Clone `/home/simon/Dokumente/gabbro-muse/a1284`, branch `muse/1284`
 `6a375b01503b447d79432316778f9fdf09c39f31`, clean tree).
 Owned file only: this report. Report-only exact review; no source touched.
 
-CANDIDATE: 1283, pinned HEAD `ace95322c4245b3beb3c0fcaf3df3b743ad615ad`
-(base `738366545afbddf7ac664db92804703db24f8868`), reviewed from the
+CANDIDATE: 1283 ace95322c4245b3beb3c0fcaf3df3b743ad615ad
+Pinned base `738366545afbddf7ac664db92804703db24f8868`, reviewed from the
 harness snapshot `.tmp/review/author-1283/` (`SNAPSHOT.json`,
 `PATCH.diff` 1574 lines, file copies, `OWNER-TASK.md`, `MUSE-REPORT-1283.md`,
 `BUILD-EVIDENCE.json`). The author clone `a1283` was not entered (outside
@@ -101,7 +101,7 @@ one appended import line in `grammatik/Grammatik.lean`, report. No other file.
   the pinned snapshot, not rebuilt here, since applying it would exceed
   this lane's owned files; the merge gate rebuilds it.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 The candidate delivers the tasked paging model with the required walk,
 permission combination, WP handling, A/D rules, #PF codes, canonical/#GP
