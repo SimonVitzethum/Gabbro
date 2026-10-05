@@ -83,6 +83,124 @@ theorem valSound_exec_traversierung (p : Profil) (bild : Bild)
   validAllFuel_gibt_traversierung _ _
     (valSound_exec_vollex p bild s hmem hexe h)
 
+/-- SOUNDNESS, W^X leg: no member section of an admitted image is
+    writable and executable at once. Inversion of the checked mapping
+    through the member hypothesis; the mapping premise is discharged
+    from the validator premise, never assumed. -/
+theorem valSound_wx (p : Profil) (bild : Bild) (s : Abschnitt)
+    (hmem : s ∈ bild.abschnitte) (h : valX86 p bild = true) :
+    wxOk s = true :=
+  wohlgeformt_wx p bild s hmem (valSound_mapping p bild h)
+
+/-- SOUNDNESS, size leg: every member section of an admitted image
+    carries a non-negative BSS tail (`dateiLen <= memLen`). -/
+theorem valSound_groesse (p : Profil) (bild : Bild) (s : Abschnitt)
+    (hmem : s ∈ bild.abschnitte) (h : valX86 p bild = true) :
+    groesseOk s = true :=
+  wohlgeformt_groesse p bild s hmem (valSound_mapping p bild h)
+
+/-- SOUNDNESS, file-containment leg: every member section of an
+    admitted image lies inside the file bytes. -/
+theorem valSound_datei (p : Profil) (bild : Bild) (s : Abschnitt)
+    (hmem : s ∈ bild.abschnitte) (h : valX86 p bild = true) :
+    s.dateiOff + s.dateiLen ≤ bild.datei.length :=
+  wohlgeformt_datei p bild s hmem (valSound_mapping p bild h)
+
+/-- SOUNDNESS, loaded-byte agreement: inside the file-backed part of
+    a member section of an admitted image, the loaded byte IS the
+    mapped file byte, and the mapped index lies inside the file. The
+    equality reuses the accepted `geladenByte_datei`; the index bound
+    discharges the file containment from the validator premise, so
+    every premise is used. -/
+theorem valSound_lade_datei (p : Profil) (bild : Bild) (s : Abschnitt)
+    (hmem : s ∈ bild.abschnitte) (h : valX86 p bild = true)
+    (bias a : Nat)
+    (hfind : abteilFinden bild.abschnitte bias a = some s)
+    (hlo : bias + s.vaddr ≤ a)
+    (hhi : a < bias + s.vaddr + s.dateiLen) :
+    ladenByte bild bias a =
+      dateiByte bild.datei (s.dateiOff + (a - (bias + s.vaddr))) ∧
+      s.dateiOff + (a - (bias + s.vaddr)) < bild.datei.length := by
+  refine ⟨geladenByte_datei bild bias a s hfind hhi, ?_⟩
+  have hfile := valSound_datei p bild s hmem h
+  omega
+
+/-- SOUNDNESS, BSS-zero leg: past the file-backed part but inside the
+    found section, the loaded byte is defined zero. Reuses the
+    accepted construction; both premises shape the conclusion. -/
+theorem valSound_lade_bss (bild : Bild) (bias a : Nat) (s : Abschnitt)
+    (hfind : abteilFinden bild.abschnitte bias a = some s)
+    (hlo : bias + s.vaddr + s.dateiLen ≤ a) :
+    ladenByte bild bias a = BitVec.ofNat 8 0 :=
+  geladenByte_bss bild bias a s hfind hlo
+
+/-- SOUNDNESS, outside-domain leg: outside every section the loaded
+    byte is zero and nothing is readable, writable or executable.
+    Reuses the accepted outside frame; the single premise is the
+    conclusion's condition. -/
+theorem valSound_ausserhalb (bild : Bild) (bias a : Nat)
+    (hfind : abteilFinden bild.abschnitte bias a = none) :
+    ladenByte bild bias a = BitVec.ofNat 8 0 ∧
+    ladenLesbar bild bias a = false ∧
+    ladenSchreibbar bild bias a = false ∧
+    ladenAusfuehrbar bild bias a = false :=
+  ausserhalb_rahmen bild bias a hfind
+
+/-- SOUNDNESS, permission-agreement leg: the loaded execute
+    permission at an address is exactly its section's flag. The
+    mapping is permission-correct by construction; this reuses the
+    accepted agreement, with the lookup as the single premise. -/
+theorem valSound_perm_exec (bild : Bild) (bias a : Nat) (s : Abschnitt)
+    (hfind : abteilFinden bild.abschnitte bias a = some s) :
+    ladenAusfuehrbar bild bias a = s.ausfuehrbar :=
+  geladenAusfuehrbar_fund bild bias a s hfind
+
+/-- SOUNDNESS, W^X consequence: an executable member section of an
+    admitted image is not writable. Membership and validator premises
+    flow through the W^X leg; the executability premise selects the
+    refused shape in the case split. -/
+theorem valSound_wx_kein_schreiben (p : Profil) (bild : Bild)
+    (s : Abschnitt) (hmem : s ∈ bild.abschnitte)
+    (hexe : s.ausfuehrbar = true) (h : valX86 p bild = true) :
+    s.schreibbar = false := by
+  have hwx := valSound_wx p bild s hmem h
+  unfold wxOk at hwx
+  cases hsb : s.schreibbar with
+  | true =>
+    simp [hsb, hexe] at hwx
+  | false =>
+    rfl
+
+/-- SOUNDNESS, coherent-fetch leg: under memory coincidence (the
+    machine runs on the canonically loaded image) and core/fetch-input
+    agreement, the core projection fetches exactly what the loaded
+    image state fetches. Reuses the accepted `HwLoadedImage` identity
+    unchanged; coincidence stays an explicit premise, never derived
+    from `valX86` alone. -/
+theorem valSound_hw_fetch_gleich (m : HwMaschine) (c : Nat) (bild : Bild)
+    (bias : Nat) (rip : Adresse) (reg : Register → Wort) (fl : Flags)
+    (hmem : m.mem = geladen bild bias)
+    (hrip : (m.kerne c).rip = rip)
+    (hreg : (m.kerne c).register = reg)
+    (hfl : (m.kerne c).flags = fl) :
+    fetchDekodiert (projZustand m c) =
+      fetchDekodiert (bildZustand bild bias rip reg fl) :=
+  hwBild_fetchDekodiert_gleich m c bild bias rip reg fl hmem hrip hreg hfl
+
+/-- SOUNDNESS, coherent-step leg: under the same coincidence and
+    core agreement, the core projection takes exactly the loaded
+    image's byte step. Reuses the accepted `HwLoadedImage` identity;
+    coincidence stays a premise, never a validator conclusion. -/
+theorem valSound_hw_schritt_gleich (m : HwMaschine) (c : Nat) (bild : Bild)
+    (bias : Nat) (rip : Adresse) (reg : Register → Wort) (fl : Flags)
+    (hmem : m.mem = geladen bild bias)
+    (hrip : (m.kerne c).rip = rip)
+    (hreg : (m.kerne c).register = reg)
+    (hfl : (m.kerne c).flags = fl) :
+    byteschritt (projZustand m c) =
+      byteschritt (bildZustand bild bias rip reg fl) :=
+  hwBild_byteschritt_gleich m c bild bias rip reg fl hmem hrip hreg hfl
+
 /- CUTS (partial; extended with each added leg):
     Proved here: mapping and coverage projections of `valX86`,
     per-section coverage, whole-section full decode from the base,
@@ -98,6 +216,16 @@ theorem valSound_exec_traversierung (p : Profil) (bild : Bild)
 #print axioms valSound_deckung
 #print axioms valSound_abschnitt
 #print axioms valSound_exec_vollex
+#print axioms valSound_wx
+#print axioms valSound_groesse
+#print axioms valSound_datei
+#print axioms valSound_lade_datei
+#print axioms valSound_lade_bss
+#print axioms valSound_ausserhalb
+#print axioms valSound_perm_exec
+#print axioms valSound_wx_kein_schreiben
+#print axioms valSound_hw_fetch_gleich
+#print axioms valSound_hw_schritt_gleich
 #print axioms validAllFuel_gibt_traversierung
 #print axioms valSound_exec_traversierung
 
