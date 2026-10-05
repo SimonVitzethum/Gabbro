@@ -1,65 +1,97 @@
-# MUSE-REPORT-1168: Exact review of candidate 1167 — BLOCKED, no verdict possible
+# MUSE-REPORT-1168: Exact review of candidate 1167 (PipelineRegAlloc)
 
 Lane 1168 (reviewer) — Pipeline: register allocation, spills and privacy validated.
-Author candidate: lane 1167. Review type: report-only exact review.
+Report-only exact review of the pinned snapshot in `.tmp/review/` (read inside
+this clone only; the author clone was never touched). An earlier revision of
+this report recorded BLOCKED for lack of candidate material; the pinned
+`SNAPSHOT.json` plus `author-1167/` (`PATCH.diff`, candidate file, author
+report, build evidence) has since arrived in-clone, so the full review below
+was performed against the exact pinned bytes.
 
-## VERDICT: none — review BLOCKED (neither ACCEPT nor REPAIR can be honestly given)
+CANDIDATE: 1167 3bf5b44155c599c56f5ac5eaf7d035254dde89c6
 
-This report deliberately contains no ACCEPT/REPAIR verdict. Giving one without
-seeing the candidate would be fake closure, which the task itself forbids
-("no fake closure"). Reasons, each independently blocking:
+VERDICT: ACCEPT
 
-1. **No pinned candidate HEAD was ever supplied.** The task line reads
-   `CANDIDATE: 1167 <full pinned HEAD>` — a placeholder, not a hash.
-   There is no exact candidate to pin the review to.
-2. **The candidate diff is not readable from this clone.** The task says to read
-   `git diff master..HEAD` "in the author clone", but HARD RULES rule 1
-   ("Touch nothing outside this directory") and the tool permissions forbid
-   touching the author clone (`a1167`). An earlier attempt to inspect it was
-   denied.
-3. **The candidate material is absent from this clone.** Verified by file search
-   inside this clone only:
-   - `grammatik/Grammatik/X86/PipelineRegAlloc.lean` — NOT FOUND.
-   - `MUSE-REPORT-1167.md` — NOT FOUND.
-   - Own-clone `master..HEAD` diff — empty (reviewer clone holds no author work).
-   So there is nothing to check against any of the review criteria
-   (sorry/axiom scan, `#print axioms`, premise use, evaluator reuse, poison
-   probes, witness non-degeneracy, silicon facts, CUTS honesty).
+## What was reviewed (exact bytes)
 
-## Verification actually performed (inside this clone only)
+- `SNAPSHOT.json`: author 1167, head `3bf5b441…`, base `062b979a…`,
+  files `MUSE-REPORT-1167.md`, `grammatik/Grammatik.lean`,
+  `grammatik/Grammatik/X86/PipelineRegAlloc.lean`, `clean: true`.
+- `PATCH.diff` (541 lines): new 434-line `PipelineRegAlloc.lean`, exactly one
+  added import line in `grammatik/Grammatik.lean`, author report. No other
+  file touched — in particular no existing Lean file edited and no reserved
+  optimiser file touched.
+- `MUSE-REPORT-1167.md` and `BUILD-EVIDENCE.json` (full probe history plus
+  final `./lean-bau` green at 608 jobs).
 
-- Clone path verified: `/home/simon/Dokumente/gabbro-muse/a1168`.
-- Branch verified: `muse/1168`; HEAD `e891e016` at time of check.
-- Working tree clean (no output from `git status --short`).
-- Read the task copies `lanes/1167.md` and `lanes/1168.md` in this clone:
-  author owns `grammatik/Grammatik/X86/PipelineRegAlloc.lean`,
-  `grammatik/Grammatik.lean` (one import line), `MUSE-REPORT-1167.md`;
-  reviewer (this lane) owns ONLY `MUSE-REPORT-1168.md`. No owned file other
-  than this report was created or modified.
-- `./lean-bau` was NOT run to a reportable result line: with no candidate
-  material present, a green build of the unchanged base would say nothing about
-  the candidate, and shell access became unreliable during this turn
-  (one `git` call rejected after an earlier identical call succeeded).
-  No build-result claim is made.
+## Checklist findings
 
-## What the coordinator must supply for this review to proceed
+1. **Forbidden tokens:** `rg` over the pinned candidate file finds no `sorry`,
+   `admit`, `axiom`, `native_decide`, `unsafe`, no `^axiom` declaration, and
+   no discarded premise (`intro _`, `have _ :=`). Pass.
+2. **Axioms:** build evidence `#print axioms` shows defs on nothing or
+   `[propext]`, the closing theorems on exactly
+   `[propext, Classical.choice, Quot.sound]` (inherited from the accepted
+   `pipeline_correct`), one helper (`pipe_alloc_spillPrivat`) on
+   `[propext, Quot.sound]`. All within the standard triple. Pass.
+3. **Existing files:** only the single appended import line. Pass.
+4. **Evaluator lifted, not copied:** the file reuses accepted `PipeCfg`,
+   `cfgOk`, `abbOf`, `validate`, `pipeline_correct`, `Layout`/`LayoutSep`,
+   `WorldRep`/`EnvRepr`, canonical `spillSlot` vocabulary,
+   `Rahmen.schlitzNat`/`schlitzNat_schranke`, and the pipeline witnesses
+   (`pwCfg`, `pwL`, `pwSrc`, `pwBytes`, `pw_quelle30`, `pw_validate`,
+   `pw_layoutSep`, …). I confirmed each name exists in this clone's tree
+   (`Pipeline.lean`, `PipelineWitnesses.lean`, `Stapel.lean`). No second IR,
+   no second source interpreter (decision 594 respected). The `cfgOk`
+   statement in this tree matches the conjunction the candidate extracts in
+   `pipe_alloc_cfgOk` conjunct for conjunct, and `pwCfg.regs = [.r10]`
+   makes `pipeA0_cfg` hold by `rfl`. Pass.
+5. **Every premise used:** in `pipe_alloc_haelt_bedeutung` the validator
+   hypothesis feeds both allocator legs, the frame-separation hypothesis
+   feeds the privacy leg, and every source/pipeline premise is forwarded to
+   `pipeline_correct`. Pass.
+6. **Refusals really refuse:** five refusal probes by computation, each
+   targeting a distinct validator leg, all verified by hand against the
+   validator definition — clobbered registers (additionally through the
+   refusal theorem `pipe_alloc_verweigert_kollision`), `rsp` in the homes
+   (calling convention), a spilled live variable (`all Option.isSome`
+   fails), reserve 99 outside a 2-slot frame, frame `[4096,4112)` over code
+   `[4096,4178)`. One positive probe (`pipeA0_ok` by `decide`). Pass.
+7. **Witness non-degenerate:** `pipe_alloc_haelt_bedeutung_zeuge` instantiates
+   all premises jointly on `pwSrc` — a real `execBlock` run writing two
+   slots, memory 7 → 35 and 9 → 6 (confirmed against `pw_quelle30` /
+   `pw_quelle_vorher` in this tree). Memory-changing; single-core fragment,
+   so no second core is relevant. Pass.
+8. **Silicon facts:** `pipeAlleRegister` lists exactly the 16 x86-64 GPRs
+   (exhaustiveness proved by `cases` over `Register`); `rsp`/`rbp` reserved
+   as stack/frame pointers; frame `[16384,16400)` disjoint by computation
+   from code `[4096,4178)` (`pwBytes.length = 82`) and tables at 8192/8200.
+   Pass.
+9. **CUTS honest, no overclaim:** spill *code* generation, sub-block
+   liveness, callee-saved restore/argument passing, and TSO freshness are
+   explicitly OPEN; the refusal `Bool` is stated to be validator admission,
+   never a hardware fault; no W/GX or hardware-correspondence claim is made.
+   The whole-block liveness argument is soundness prose around an
+   unconditionally true proved statement (pairwise register disjointness),
+   with incompleteness declared, not hidden. Pass.
 
-1. The full pinned HEAD hash of candidate 1167.
-2. A way to read the exact candidate diff without violating lane isolation
-   (e.g. fetch `muse/1167` into this clone, or place an exact snapshot/diff
-   where this lane may legally read it).
-3. The author report `MUSE-REPORT-1167.md` with the last `./lean-bau` result
-   line and the claimed theorem/definition names.
+## Non-blocking notes (no repair demanded)
 
-## Anything believed wrong in the task
+- `open … OptimizationRules` in the candidate file appears unused; harmless.
+- `rbp` has no dedicated probe, but it shares the exact decided conjunct
+  with `rsp`, which is probed — coverage is by leg, and every leg is hit.
+- The first `./lean-bau` in the evidence needed a re-run after a stale
+  `RufAdaequatG.olean` read failure; documented as apparatus staleness with
+  the green re-run recorded. Plausible and consistent with the final state.
 
-- The review prompt template was sent with the candidate hash unfilled
-  (`<full pinned HEAD>`), and its "read the diff in the author clone"
-  instruction conflicts with HARD RULES rule 1 for an isolated reviewer lane.
-  One of the two must change for exact reviews to be performable.
+## Verification runs
 
-## Open work
+- Author pinned evidence: final `./lean-probe` 0 errors; `./lean-bau`
+  `Build completed successfully (608 jobs).`
+- Reviewer (this lane, this clone, no Lean changes of my own):
+  `./lean-bau` last result line: `Build completed successfully (609 jobs).`
 
-- The entire exact review of candidate 1167 (all checklist items unexamined).
-- New names defined by this lane: none. Theorems proved: none.
-- CUTS: everything — no candidate was available for review.
+## Owned content
+
+This report (`MUSE-REPORT-1168.md`) is the lane's only file. No Lean code
+was written and no claim beyond the snapshot is approved.
