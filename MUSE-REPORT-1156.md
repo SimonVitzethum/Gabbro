@@ -1,8 +1,10 @@
 # MUSE-REPORT-1156: exact review of candidate 1155 (pipeline loops + branch layout with budget)
 
-CANDIDATE: 1155, pinned HEAD `6fd346a61402414ac8f6ca8463b06543f4521d0f`
-(base `062b979a6271b7b3044ab06be3f3cde411a0d4f1`), per
-`.tmp/review/SNAPSHOT.json`. Files in candidate: `MUSE-REPORT-1155.md`,
+CANDIDATE: 1155 6fd346a61402414ac8f6ca8463b06543f4521d0f
+
+Review of the lane-1155 candidate (pipeline loops + branch layout with
+budget) at the pinned HEAD above (base `062b979a6271b7b3044ab06be3f3cde411a0d4f1`, per
+`.tmp/review/SNAPSHOT.json`). Files in candidate: `MUSE-REPORT-1155.md`,
 `grammatik/Grammatik.lean` (one appended import line),
 `grammatik/Grammatik/X86/PipelineLoops.lean` (new, 544 lines).
 
@@ -97,4 +99,4 @@ Per-round correspondence for arbitrary straight-line bodies via the
 loops have no finite budget; pilot ISA / one core / model memory / no TSO
 inherited.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
