@@ -1,5 +1,7 @@
 # MUSE-REPORT-1184: Exact review of candidate 1183 (feature gating per step)
 
+CANDIDATE: 1183 cd5eb23ee3a94da1b0e2fb0b47775b6f322381ac
+
 ## Task
 
 Report-only independent exact review of CANDIDATE 1183. The LANE.md text
@@ -111,7 +113,7 @@ access) pins the candidate exactly, and that pin is what I reviewed:
   clone-local `.tmp/review/author-1183/` snapshot resolves the conflict;
   the lane line should name the snapshot path instead.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 Candidate 1183 at pinned HEAD
 `cd5eb23e3a94da1b0e2fb0b47775b6f322381ac` is accepted on exact review:
