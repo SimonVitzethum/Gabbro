@@ -44,6 +44,82 @@ theorem zaunBytes_sfence : zaunBytes .sfence = pinSfence := rfl
 /-- LFENCE bytes are the accepted narrow-load pin. -/
 theorem zaunBytes_lfence : zaunBytes .lfence = lfenceBytes := rfl
 
+/-! ## 1. Register-address binding for the locked byte forms.
+
+    The accepted locked steps speak about ADDRESSES (`lockSchritt`,
+    `casSchritt`), the byte forms about REGISTERS (`LockForm.xadd64 src
+    base disp`). The link is the register file: `effAddr m.zu base d`
+    names the address the locked step runs at. Each theorem below states
+    the lane-1163 lowering together with the accepted projection at the
+    BOUND address -- the lowering and the address agree by the single
+    `heff` equation. Fences need no address: the MFENCE projection is
+    register-free. -/
+
+/-- **XADD BINDING.** The lowered LOCK XADD runs the accepted locked
+    add at exactly the address the register pair names. -/
+theorem bind_xadd (m : LockMaschine) (c : Nat) (a : Adresse)
+    (src base : Register) (d : BitVec 32)
+    (alt : Wort) (mem' : Speicher)
+    (heff : effAddr m.zu base d = a)
+    (hbuf : m.puffer c = [])
+    (hrd : read64 m.zu.speicher a = some alt)
+    (hali : ausgerichtet8 a = true)
+    (hwr : write64 m.zu.speicher a (alt + m.zu.register src) = some mem') :
+    PipelineAtomics.senkAtom (PipelineAtomics.AtomQuelle.xadd src base d) =
+      some [PipelineAtomics.ZielOp.lock (.xadd64 src base d)] ∧
+    ∃ ev : LockEreignis,
+      lockSchritt (.xadd64 a (m.zu.register src)) c (toTSO m) =
+        some (⟨mem', m.puffer⟩, ev) ∧
+      ev.gelesen = some alt ∧ ev.istRmw = true := by
+  have hrd' : read64 m.zu.speicher (effAddr m.zu base d) = some alt := by
+    rw [heff]; exact hrd
+  have hali' : ausgerichtet8 (effAddr m.zu base d) = true := by
+    rw [heff]; exact hali
+  have hwr' : write64 m.zu.speicher (effAddr m.zu base d)
+      (alt + m.zu.register src) = some mem' := by
+    rw [heff]; exact hwr
+  have h := lockVoll_xadd_adapter m c src base d alt mem' hbuf hrd' hali' hwr'
+  rw [heff] at h
+  exact ⟨PipelineAtomics.senk_xadd src base d, h⟩
+
+/-- **CAS BINDING.** The lowered LOCK CMPXCHG success runs the accepted
+    CAS success at exactly the address the register pair names
+    (comparison against rax, install of the src word). -/
+theorem bind_cas_erfolg (m : LockMaschine) (c : Nat) (a : Adresse)
+    (src base : Register) (d : BitVec 32)
+    (dest : Wort) (mem' : Speicher)
+    (heff : effAddr m.zu base d = a)
+    (hbuf : m.puffer c = [])
+    (hrd : read64 m.zu.speicher a = some dest)
+    (hali : ausgerichtet8 a = true)
+    (hgleich : (dest == m.zu.register .rax) = true)
+    (hwr : write64 m.zu.speicher a (m.zu.register src) = some mem') :
+    PipelineAtomics.senkAtom (PipelineAtomics.AtomQuelle.cas src base d) =
+      some [PipelineAtomics.ZielOp.lock (.cmpxchg64 src base d)] ∧
+    casSchritt a (m.zu.register .rax) (m.zu.register src) c (toTSO m) =
+      some (⟨mem', m.puffer⟩, true) := by
+  have hrd' : read64 m.zu.speicher (effAddr m.zu base d) = some dest := by
+    rw [heff]; exact hrd
+  have hali' : ausgerichtet8 (effAddr m.zu base d) = true := by
+    rw [heff]; exact hali
+  have hwr' : write64 m.zu.speicher (effAddr m.zu base d)
+      (m.zu.register src) = some mem' := by
+    rw [heff]; exact hwr
+  have h := lockVoll_cmpxchg_erfolg_adapter m c src base d dest mem'
+    hbuf hrd' hali' hgleich hwr'
+  rw [heff] at h
+  exact ⟨PipelineAtomics.senk_cas src base d, h⟩
+
+/-- **FENCE NEEDS NO BINDING.** The lowered fence is the accepted fence
+    gate with no register or address premise at all. -/
+theorem bind_mfence (m : LockMaschine) (c : Nat)
+    (hbuf : m.puffer c = []) :
+    PipelineAtomics.senkAtom PipelineAtomics.AtomQuelle.zaun =
+      some [PipelineAtomics.ZielOp.lock .mfence] ∧
+    lockSchritt .mfence c (toTSO m) =
+      some (toTSO m, ⟨c, [], [], none, none, false, true⟩) :=
+  ⟨PipelineAtomics.senk_zaun, lockVoll_mfence_adapter m c hbuf⟩
+
 /- CUTS: what is not proved here (skeleton; extended with each piece)
     NOT proved here, and not claimed:
     - No seq_cst total order, no fairness, no CAS retry bound.
@@ -53,5 +129,8 @@ theorem zaunBytes_lfence : zaunBytes .lfence = lfenceBytes := rfl
 #print axioms zaunBytes_mfence
 #print axioms zaunBytes_sfence
 #print axioms zaunBytes_lfence
+#print axioms bind_xadd
+#print axioms bind_cas_erfolg
+#print axioms bind_mfence
 
 end Gabbro.Grammatik.X86.PipelineAtomicsBind
