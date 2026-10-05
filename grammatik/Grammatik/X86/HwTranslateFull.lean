@@ -624,11 +624,117 @@ theorem hwVollSchritt_wf (s s' : VollZustand)
   | fehler hkan hMiss h => exact hwf
   | gp h => exact hwf
 
+/-! ### Refusals and the canonical boundary.
+
+  A non-canonical request admits no fresh, stale or fault step (only #GP): the
+  canonical check precedes the walk AND the cache. A misplaced large page and a
+  wholesale-refused configuration admit no fresh or fault step. A stale hit admits
+  no fresh step (the walk is not run twice); a miss admits no stale step.
+-/
+
+/-- A non-canonical request admits no fresh, stale or fault step: only #GP. -/
+theorem vollGp_verweigert (s s' : VollZustand) (c : Nat)
+    (q : SeitenAnfrage)
+    (hk : istKanonischNat q.linear = false) :
+    (∀ phys, ¬ HwVollSchritt s s' (.zugriffOk c q phys)) ∧
+      (∀ r, ¬ HwVollSchritt s s' (.zugriffAlt c q r)) ∧
+      (∀ a code, ¬ HwVollSchritt s s' (.zugriffPf c q a code)) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro phys hstep
+    have hkan := vollZugriffOk_invert_kanon s s' c q phys hstep
+    rw [hk] at hkan
+    cases hkan
+  · intro r hstep
+    have hkan := vollZugriffAlt_invert_kanon s s' c q r hstep
+    rw [hk] at hkan
+    cases hkan
+  · intro a code hstep
+    have hkan := vollZugriffPf_invert_kanon s s' c q a code hstep
+    rw [hk] at hkan
+    cases hkan
+
+/-- A misplaced large page admits no fresh or fault step. -/
+theorem vollGross_verweigert (s s' : VollZustand)
+    (c : Nat) (q : SeitenAnfrage) (a phys : Nat) (a' : Nat)
+    (code : PfFehlerCode)
+    (hg : (seitenGangGross s.steuer s.tabellen q).1 = .grossVerweigert a) :
+    ¬ HwVollSchritt s s' (.zugriffOk c q phys) ∧
+      ¬ HwVollSchritt s s' (.zugriffPf c q a' code) := by
+  refine ⟨?_, ?_⟩
+  · intro hstep
+    have hok := vollZugriffOk_invert_gang s s' c q phys hstep
+    rw [hg] at hok
+    cases hok
+  · intro hstep
+    have hpf := vollZugriffPf_invert_gang s s' c q a' code hstep
+    rw [hg] at hpf
+    cases hpf
+
+/-- A wholesale-refused configuration admits no fresh or fault step. -/
+theorem vollSteuer_verweigert (s s' : VollZustand)
+    (c : Nat) (q : SeitenAnfrage) (phys : Nat) (a' : Nat)
+    (code : PfFehlerCode)
+    (hg : (seitenGangGross s.steuer s.tabellen q).1 = .steuerVerweigert) :
+    ¬ HwVollSchritt s s' (.zugriffOk c q phys) ∧
+      ¬ HwVollSchritt s s' (.zugriffPf c q a' code) := by
+  refine ⟨?_, ?_⟩
+  · intro hstep
+    have hok := vollZugriffOk_invert_gang s s' c q phys hstep
+    rw [hg] at hok
+    cases hok
+  · intro hstep
+    have hpf := vollZugriffPf_invert_gang s s' c q a' code hstep
+    rw [hg] at hpf
+    cases hpf
+
+/-- A stale hit admits no FRESH step: the walk is not run twice. -/
+theorem vollSchritt_frisch_braucht_miss (s t : VollZustand)
+    (c : Nat) (q : SeitenAnfrage) (phys r : Nat)
+    (hHit : tlbSuche (s.tlb c) (q.linear / 4096) = some r) :
+    ¬ HwVollSchritt s t (.zugriffOk c q phys) := by
+  intro hstep
+  have hMiss := vollZugriffOk_invert_miss s t c q phys hstep
+  rw [hHit] at hMiss
+  cases hMiss
+
+/-- A miss admits no STALE step: without a hit nothing is stale. -/
+theorem vollSchritt_veraltet_braucht_treffer (s t : VollZustand)
+    (c : Nat) (q : SeitenAnfrage) (r : Nat)
+    (hMiss : tlbSuche (s.tlb c) (q.linear / 4096) = none) :
+    ¬ HwVollSchritt s t (.zugriffAlt c q r) := by
+  intro hstep
+  have hHit := vollZugriffAlt_invert_hit s t c q r hstep
+  rw [hMiss] at hHit
+  cases hHit
+
+/-- AGREEMENT: an INVLPG step drops exactly the page on its core and keeps
+    machine, control and tables. -/
+theorem voll_invlpg_vereinbarung (s : VollZustand)
+    (c : Nat) (a : Adresse) :
+    ∃ t, HwVollSchritt s t (.invlpg c a) ∧
+      t.tlb c = tlbEntfernen (s.tlb c) (seitenNr a) ∧
+      t.hw = s.hw ∧ t.tabellen = s.tabellen := by
+  refine ⟨⟨s.hw, s.steuer, s.tabellen,
+    fun d => if d = c then tlbEntfernen (s.tlb c) (seitenNr a)
+      else s.tlb d⟩, .invlpg c a, ?_, rfl, rfl⟩
+  simp
+
+/-- AGREEMENT: a CR3 step flushes exactly its core and keeps the rest. -/
+theorem voll_cr3_vereinbarung (s : VollZustand) (c : Nat) :
+    ∃ t, HwVollSchritt s t (.cr3 c) ∧
+      t.tlb c = tlbCr3Spuelung (s.tlb c) ∧
+      t.hw = s.hw ∧ t.tabellen = s.tabellen := by
+  refine ⟨⟨s.hw, s.steuer, s.tabellen,
+    fun d => if d = c then tlbCr3Spuelung (s.tlb c) else s.tlb d⟩,
+    .cr3 c, ?_, rfl, rfl⟩
+  simp
+
 /- CUTS:
-   Proved: §§1-5a (join, agreement, #GP-first, 1299 link, INVLPG/CR3, caching
+   Proved: §§1-5 (join, agreement, #GP-first, 1299 link, INVLPG/CR3, caching
    closure with stale-rights witnesses, flat bridge, adapter plug, step relation
-   with exact embedding, inversions, stillness, wf preservation).
-   Follow: step refusals and INVLPG/CR3 agreements (§5b), joint witness (§6).
+   with exact embedding, inversions, stillness, wf, refusals, INVLPG/CR3
+   agreements).
+   Follow: joint witness (§6).
    NOT proved: everything above; no hardware correspondence beyond self-consistency.
 -/
 
@@ -685,5 +791,12 @@ theorem hwVollSchritt_wf (s s' : VollZustand)
 #print axioms vollZugriffGp_invert_gang
 #print axioms hwVollSchritt_gp_still
 #print axioms hwVollSchritt_wf
+#print axioms vollGp_verweigert
+#print axioms vollGross_verweigert
+#print axioms vollSteuer_verweigert
+#print axioms vollSchritt_frisch_braucht_miss
+#print axioms vollSchritt_veraltet_braucht_treffer
+#print axioms voll_invlpg_vereinbarung
+#print axioms voll_cr3_vereinbarung
 
 end Gabbro.Grammatik.X86
