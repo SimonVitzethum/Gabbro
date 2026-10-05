@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 14:18 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 14:22 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -659,7 +659,15 @@ Last ledger refresh: **2026-10-05 14:18 UTC**. This is an operational snapshot, 
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Merged after review/checks | 1202: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
 | 1205 | Loaded image: per-family reached fetch instances | Merged after review/checks | 1206: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1205.md) |
-| 1207 | Generic drain-equals-write64 induction | Committed candidate; review/integration pending | 1208: Committed candidate; review/integration pending | [task](lanes/1207.md) |
+| 1207 | Generic drain-equals-write64 induction | Committed candidate; review/integration pending | 1208: Agent working | [task](lanes/1207.md) |
+| 1209 | LOCK family: fetched-byte dispatch, narrower widths and split-lock | Scheduled | 1210: scheduled | [task](lanes/1209.md) |
+| 1211 | FP s32/MXCSR rows in the unified dispatcher | Scheduled | 1212: scheduled | [task](lanes/1211.md) |
+| 1213 | LOCK words to W history: timestamp and value link | Scheduled | 1214: scheduled | [task](lanes/1213.md) |
+| 1215 | From W runs to the GX refinement: the missing target leg | Scheduled | 1216: scheduled | [task](lanes/1215.md) |
+| 1217 | Pipeline atomics: execBlock correspondence | Scheduled | 1218: scheduled | [task](lanes/1217.md) |
+| 1219 | Pipeline: derive per-chunk runs from the lowering alone | Scheduled | 1220: scheduled | [task](lanes/1219.md) |
+| 1221 | Linking: rel8 selection convergence and fall-through coverage | Scheduled | 1222: scheduled | [task](lanes/1221.md) |
+| 1223 | valX86_sound for the decidable part | Scheduled | 1224: scheduled | [task](lanes/1223.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
