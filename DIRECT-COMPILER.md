@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 13:03 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 13:38 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -645,14 +645,14 @@ Last ledger refresh: **2026-10-05 13:03 UTC**. This is an operational snapshot, 
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
 | 1175 | Finite and infinite execution soundness of the pipeline | Committed candidate; review/integration pending | 1176: Unresolved after agent rounds; not accepted | [task](lanes/1175.md) |
 | 1177 | Source-computed units and duties feeding the pipeline | Incomplete; preserved | 1178: scheduled | [task](lanes/1177.md) |
-| 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Agent working | 1180: scheduled | [task](lanes/1179.md) |
+| 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Merged after review/checks | 1180: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1179.md) |
 | 1181 | Nested interrupt delivery, #DF and handler entry | Agent working | 1182: scheduled | [task](lanes/1181.md) |
-| 1183 | Feature gating enforced per step, not by wrapper | Agent working | 1184: scheduled | [task](lanes/1183.md) |
-| 1185 | Generic word-forwarding theorem | Agent working | 1186: scheduled | [task](lanes/1185.md) |
-| 1187 | TSO traces to W runs: run induction | Agent working | 1188: scheduled | [task](lanes/1187.md) |
-| 1189 | Pipeline calls: real source execBlock correspondence | Agent working | 1190: scheduled | [task](lanes/1189.md) |
-| 1191 | Pipeline: spill code generation with privacy | Scheduled | 1192: scheduled | [task](lanes/1191.md) |
-| 1193 | Linking: multi-unit convergence and operand kinds | Scheduled | 1194: scheduled | [task](lanes/1193.md) |
+| 1183 | Feature gating enforced per step, not by wrapper | Committed candidate; review/integration pending | 1184: Committed candidate; review/integration pending | [task](lanes/1183.md) |
+| 1185 | Generic word-forwarding theorem | Committed candidate; review/integration pending | 1186: Committed candidate; review/integration pending | [task](lanes/1185.md) |
+| 1187 | TSO traces to W runs: run induction | Committed candidate; review/integration pending | 1188: Committed candidate; review/integration pending | [task](lanes/1187.md) |
+| 1189 | Pipeline calls: real source execBlock correspondence | Committed candidate; review/integration pending | 1190: Committed candidate; review/integration pending | [task](lanes/1189.md) |
+| 1191 | Pipeline: spill code generation with privacy | Committed candidate; review/integration pending | 1192: Committed candidate; review/integration pending | [task](lanes/1191.md) |
+| 1193 | Linking: multi-unit convergence and operand kinds | Committed candidate; review/integration pending | 1194: Committed candidate; review/integration pending | [task](lanes/1193.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1469,6 +1469,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1164**, Independent exact review of 1163, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1164.md). <!-- x86-merged:1164 -->
 - 2026-10-05: lane **1165**, Pipeline: source budget to target work and time transfer, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1165.md). <!-- x86-merged:1165 -->
 - 2026-10-05: lane **1166**, Independent exact review of 1165, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1166.md). <!-- x86-merged:1166 -->
+- 2026-10-05: lane **1179**, Loaded-image fetch: obstruction lemmas for all extension families, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1179.md). <!-- x86-merged:1179 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

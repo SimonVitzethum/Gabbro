@@ -620,3 +620,4 @@ import Grammatik.X86.PipelineTables
 import Grammatik.X86.PipelineFloat
 import Grammatik.X86.PipelineAtomics
 import Grammatik.X86.PipelineWork
+import Grammatik.X86.HwBildFamilien
