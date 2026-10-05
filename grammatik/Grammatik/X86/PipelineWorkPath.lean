@@ -300,6 +300,67 @@ theorem runde_einzel_zeuge :
     zw_ende zw_kein_ueberlauf zwSigma0 .nil zwS0 hRep0 _ _ hrun
   exact ⟨s', hRep0, hrun, hT, hrep', rfl, rfl, rfl⟩
 
+/-! ## 5. The labelled-to-bytes leg: source rounds to fetched bytes.
+
+    `schleife_pfad_bytes` is the leg the follow-up asks for:
+    `schleife_korrekt_endlich` (source run to the labelled run of
+    `schleifeSchritte n m` steps) followed by `schleife_bytes`
+    (`relax_laufBytes` at the loop schema: the labelled run is the
+    fetched-byte run of the relaxed image). The witness fixtures
+    below load the witness loop schema (`zwKoerper`, all-wide
+    layout) at 4096 in W^X memory with the post-round data word.
+ -/
+
+/-- The all-wide layout of the witness loop schema. -/
+def wpWs : List Bool := alleWeit (schleifeProg zwKoerper .e)
+
+/-- The witness loop image: the all-wide bytes of the schema. -/
+def wpBild : List Byte := bild wpWs (schleifeProg zwKoerper .e)
+
+/-- Witness memory: the loop image at 4096, the post-round word `1`
+    at 8192, zero elsewhere; data readable/writable, code execute
+    only (the `isaSpeicher` shape). -/
+def wpMem : Speicher :=
+  { isaSpeicher with bytes :=
+    fun a => if a.toNat = 8192 then 1 else bytesAusProg wpBild 4096 a }
+
+/-- The post-round witness state: `rax = 1`, flags say equal
+    (`zf`), instruction pointer at the image base. -/
+def wpPost : Zustand :=
+  { register := fun q => if q = .rax then 1 else isaReg q,
+    flags := { witnessFlags with zf := true },
+    rip := isaStart.rip,
+    speicher := wpMem }
+
+/-- The all-wide layout of the witness schema validates. -/
+theorem wp_allwide :
+    relaxLayoutOk (alleWeit (schleifeProg zwKoerper .e))
+      (schleifeProg zwKoerper .e) = true := by
+  decide
+
+/-- Relaxation answers the all-wide layout at zero fuel. -/
+theorem wp_relax :
+    relax 0 (schleifeProg zwKoerper .e) = some wpWs :=
+  relax_null (schleifeProg zwKoerper .e) wp_allwide
+
+/-- The witness memory is W^X. -/
+theorem wp_wx : WX wpMem := by
+  intro x hx
+  simp only [wpMem, isaSpeicher, isaExec, decide_eq_true_eq] at hx
+  show isaDaten x = false
+  simp only [isaDaten, decide_eq_false_iff_not]
+  omega
+
+/-- The witness image sits at the witness instruction pointer. -/
+theorem wp_code : CodeAt wpPost.speicher wpPost.rip wpBild := by
+  intro i hi
+  revert i
+  decide
+
+/-- The post-round data word reads back. -/
+theorem wp_read1 : read64 wpMem (natAdresse 8192) = some 1 := by
+  decide
+
 /- CUTS:
    - Skeleton only: `genommenArbeit` names the taken-path count.
    - OPEN: the prefix-run bridge (`laufBytes_genommen`), the dynamic
