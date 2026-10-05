@@ -1958,6 +1958,169 @@ theorem rotHw_nichts_lock :
   · decide
   · exact rot_nichts_lock
 
+/-! ## 10. Machine adapter: the rotate family on the coherent machine.
+
+    The producer plug instantiates `HwAdapter RotDecodiert`: a
+    successful register step re-embeds core data over the shared
+    memory; memory forms, traps and refusals admit no successor
+    state. The machine outcome reuses the accepted `HwRegAusgang`
+    (success re-embeds, refusal is `verweigert`); rotates take no
+    fault, so `halt` never occurs. -/
+
+/-- The rotate plug: one checked rotate event step on the coherent
+    machine. `none` = memory form, trap or refusal, never a silent
+    successor. -/
+def adapterRot : HwAdapter RotDecodiert :=
+  ⟨fun m c d =>
+    match rotSchritt d (projZustand m c) with
+    | .ok s' =>
+      some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+    | .verweigert => none⟩
+
+/-- Every adapter step preserves well-formedness: only core data
+    moves, profiles are untouched. -/
+theorem adapterRot_wf (m : HwMaschine) (c : Nat)
+    (d : RotDecodiert) (m' : HwMaschine) (hwf : HwWf m)
+    (h : (adapterRot).schritt m c d = some m') :
+    HwWf m' := by
+  unfold adapterRot at h
+  simp only at h
+  cases hsch : rotSchritt d (projZustand m c) with
+  | ok s' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    unfold setKernVonFp
+    exact setKernDaten_wf _ _ _ hwf
+  | verweigert =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
+/-- Agreement: the adapter succeeds exactly where the family step
+    succeeds, with the successor core data re-embedded. -/
+theorem adapterRot_ok (m : HwMaschine) (c : Nat)
+    (d : RotDecodiert) (s' : Zustand)
+    (h : rotSchritt d (projZustand m c) = .ok s') :
+    (adapterRot).schritt m c d =
+      some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩) := by
+  unfold adapterRot
+  simp only [h]
+
+/-- The successor core sees the family successor registers over
+    the shared memory. -/
+theorem adapterRot_proj (m : HwMaschine) (c : Nat)
+    (d : RotDecodiert) (s' : Zustand)
+    (h : rotSchritt d (projZustand m c) = .ok s') :
+    ((setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩).kerne c).register =
+      s'.register ∧
+    (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩).mem = m.mem ∧
+    s'.speicher = m.mem := by
+  refine ⟨setKernVonFp_register m c _,
+    setKernVonFp_speicher m c _, ?_⟩
+  have hmem := rotSchritt_speicher d (projZustand m c) s' h
+  have hproj : (projZustand m c).speicher = m.mem := rfl
+  rw [hproj] at hmem
+  exact hmem
+
+/-- A bad decode length admits no adapter step. -/
+theorem adapterRot_verweigert_bei_laenge (m : HwMaschine)
+    (c : Nat) (d : RotDecodiert)
+    (h : laengeOk d.laenge = false) :
+    (adapterRot).schritt m c d = none := by
+  have hstep := rot_laenge_misslungen d (projZustand m c) h
+  unfold adapterRot
+  simp only [hstep]
+
+/-- A memory operand admits no adapter step: memory forms are TSO
+    events (§8b, §11), never the register plug. -/
+theorem adapterRot_verweigert_bei_mem (m : HwMaschine) (c : Nat)
+    (d : RotDecodiert) (base : Register) (disp : BitVec 32)
+    (hop : d.befehl.operand = .mem base disp) :
+    (adapterRot).schritt m c d = none := by
+  have hstep : rotSchritt d (projZustand m c) = .verweigert := by
+    cases hok : laengeOk d.laenge with
+    | false => exact rot_laenge_misslungen d (projZustand m c) hok
+    | true =>
+      cases hlen : (d.laenge == rotLaenge d.befehl) with
+      | true =>
+        exact rot_mem_verweigert d (projZustand m c) base disp hok hlen hop
+      | false => exact rot_laenge_falsch d (projZustand m c) hok hlen
+  unfold adapterRot
+  simp only [hstep]
+
+/-- One rotate machine step on core `c`: the family step on the
+    core projection, re-embedded on success. -/
+def rotHwRegSchritt (m : HwMaschine) (c : Nat)
+    (d : RotDecodiert) : HwRegAusgang :=
+  match rotSchritt d (projZustand m c) with
+  | .ok s' => .weiter (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+  | .verweigert => .verweigert
+
+/-- Selection: a successful family step continues on the machine. -/
+theorem rotHwRegSchritt_weiter (m : HwMaschine) (c : Nat)
+    (d : RotDecodiert) (s' : Zustand)
+    (h : rotSchritt d (projZustand m c) = .ok s') :
+    rotHwRegSchritt m c d =
+      .weiter (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩) := by
+  have e : rotHwRegSchritt m c d =
+      match rotSchritt d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .verweigert => .verweigert := rfl
+  rw [e, h]
+
+/-- Selection: family refusal is machine refusal. -/
+theorem rotHwRegSchritt_verweigert (m : HwMaschine) (c : Nat)
+    (d : RotDecodiert)
+    (h : rotSchritt d (projZustand m c) = .verweigert) :
+    rotHwRegSchritt m c d = .verweigert := by
+  have e : rotHwRegSchritt m c d =
+      match rotSchritt d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .verweigert => .verweigert := rfl
+  rw [e, h]
+
+/-- Rotates never halt: the outcome has no fault arm. -/
+theorem rotHwRegSchritt_nie_halt (m : HwMaschine) (c : Nat)
+    (d : RotDecodiert) :
+    rotHwRegSchritt m c d ≠ .halt := by
+  cases h : rotSchritt d (projZustand m c) with
+  | ok s' =>
+    have e := rotHwRegSchritt_weiter m c d s' h
+    rw [e]
+    intro hc
+    cases hc
+  | verweigert =>
+    have e := rotHwRegSchritt_verweigert m c d h
+    rw [e]
+    intro hc
+    cases hc
+
+/-- A machine continue preserves well-formedness. -/
+theorem rotHwRegSchritt_weiter_wf (m : HwMaschine) (c : Nat)
+    (d : RotDecodiert) (m' : HwMaschine) (hwf : HwWf m)
+    (h : rotHwRegSchritt m c d = .weiter m') :
+    HwWf m' := by
+  have e : rotHwRegSchritt m c d =
+      match rotSchritt d (projZustand m c) with
+      | .ok s' => HwRegAusgang.weiter
+        (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+      | .verweigert => .verweigert := rfl
+  rw [e] at h
+  cases hsch : rotSchritt d (projZustand m c) with
+  | ok s' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    unfold setKernVonFp
+    exact setKernDaten_wf _ _ _ hwf
+  | verweigert =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
 /- CUTS (checkpoint: value core only):    Proved here: rotate operation digits, Nat value core for ROL/ROR
     and RCL/RCR with architectural count masking, single-step
     inverses in both directions, and pinned values.
