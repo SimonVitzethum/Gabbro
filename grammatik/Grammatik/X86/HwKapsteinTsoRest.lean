@@ -144,4 +144,197 @@ theorem rest_port_bus (m : HwMaschine) (c : Nat)
   (HwDev1133.portAdapter_aus_fetch m c dec g spur r k d rest b q
     hf heq hop hlen hperm hord).2
 
+/-! ## 2. Scalar FP: register legs are silent, memory legs are bytes.
+
+  The three register legs (`s32reg`, `f64reg`, `mxcsrLd`) re-embed
+  core data only; the load leg observes with forwarding and the
+  refusal leg steps to itself (both silent); the store leg is exactly
+  one `issueByte` event and the drain leg exactly one `flushKern`
+  event, each with its footprint named. -/
+
+/-- Every FP family step classifies on the TSO projection: register
+    and fault steps are silent, loads observe with forwarding, stores
+    are single `issueByte` events, drains single `flushKern` events. -/
+theorem rest_fp_tso (m m' : HwMaschine) (e : FpCtrlEreignis)
+    (h : FpCtrlSchritt m m' e) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | s32reg c d t' hstep hmem =>
+    rw [kapTso_setKernVonFp]
+    exact .start
+  | f64reg c d t' hstep hmem =>
+    rw [kapTso_setKernVonFp]
+    exact .start
+  | mxcsrLd c d t' hstep hmem =>
+    rw [kapTso_setKernVonFp]
+    exact .start
+  | lade c a v h =>
+    exact .start
+  | gibAus c a v s' h =>
+    have h' : issueByte (kapTso m) c a v = some s' := h
+    rw [kapTso_setTso]
+    exact kapTso_schritt_erreichbar _ _ (.issue _ s' c a v h')
+  | spüle c e s' h hkopf =>
+    have h' : flushKern (kapTso m) c = some s' := h
+    rw [kapTso_setTso]
+    exact kapTso_schritt_erreichbar _ _ (.flush _ s' c h')
+  | fehler c h =>
+    exact .start
+
+/-- A classified FP union step reaches through the projection. -/
+theorem rest_union_fp (m m' : HwMaschine) (e : FpCtrlEreignis)
+    (h : HwVollSchritt m m' (KapEreignis.fp e)) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | fp _ hstep => exact rest_fp_tso _ _ _ hstep
+
+/-! ## 3. Faults and feature gates: no buffer effect.
+
+  A fault step never moves the state (`hwFehlerSchritt_fehler_still`);
+  an embedded old step reuses the base classification. An admitted
+  gate step re-embeds core data only; the refused gate leg steps to
+  itself. All four shapes are projection-unchanged or base-reaching. -/
+
+/-- Every fault-family step reaches through the projection: embedded
+    old steps reuse the base leg, fault outcomes are silent
+    self-loops with the ordered fault named. -/
+theorem rest_fehler_tso (m m' : HwMaschine) (e : HwFehlerEreignis)
+    (h : HwFehlerSchritt m m' e) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | einbettet e hstep => exact kap_basis_reichbar _ _ _ hstep
+  | fehler c z pg st ill teiltFalle f hwahl => exact .start
+
+/-- A classified fault union step reaches through the projection. -/
+theorem rest_union_fehler (m m' : HwMaschine) (e : HwFehlerEreignis)
+    (h : HwVollSchritt m m' (KapEreignis.fehler e)) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | fehler _ hstep => exact rest_fehler_tso _ _ _ hstep
+
+/-- Gate steps leave the TSO projection unchanged: the admitted leg
+    re-embeds core data only, the refused leg steps to itself. -/
+theorem rest_tor_still (leaf1 : CpuOut) (xcrLo : BitVec 32)
+    (m m' : HwMaschine) (e : HwTorEreignis)
+    (h : HwTorSchritt leaf1 xcrLo m m' e) :
+    kapTso m' = kapTso m := by
+  cases h with
+  | ok c i t' hoff hstep hmem => exact kapTso_setKernVonFp _ _ _
+  | ud c i hzu => rfl
+
+/-- A classified gate union step reaches through the projection
+    silently. -/
+theorem rest_union_tor (m m' : HwMaschine) (leaf1 : CpuOut)
+    (xcrLo : BitVec 32) (e : HwTorEreignis)
+    (h : HwVollSchritt m m' (KapEreignis.tor leaf1 xcrLo e)) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | tor _ _ _ hstep =>
+    have hs := rest_tor_still _ _ _ _ _ hstep
+    rw [hs]
+    exact .start
+
+/-! ## 4. Packed vectors: loads observe, stores issue sixteen bytes.
+
+  Register rows and both load rows re-embed core data only (loads
+  observe through `vecLaden` but change no buffer); both store rows
+  fold sixteen `issueByte` events through `vecSpeichern`
+  (`vecEintraege_laenge`): no whole-vector atomicity. The refusal leg
+  steps to itself. -/
+
+/-- A buffered vector store reaches through the projection: sixteen
+    byte issues, never a direct memory write. -/
+theorem rest_vec_speicher_erreichbar (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Vektor) (s' : TSOZustand)
+    (h : vecSpeichern s c a v = some s') :
+    TSOErreichbar s s' := by
+  have h' : issueListe s c (vecEintraege a v) = some s' := h
+  exact kapTso_issueListe_erreichbar s c (vecEintraege a v) s' h'
+
+/-- Every vector-family step reaches through the projection:
+    register, load and refusal legs are silent, stores fold sixteen
+    single-byte issues with the footprint named. -/
+theorem rest_vec_tso (m m' : HwMaschine) (e : HwVecEreignis)
+    (h : HwVecSchritt m m' e) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | alt hstep => exact kap_basis_reichbar _ _ _ hstep
+  | reg hreg hok hgate hstep hmem =>
+    rw [kapTso_setKernVonFp]
+    exact .start
+  | ladeA hop hok hgate hgp hread =>
+    rw [kapTso_setKernVonFp]
+    exact .start
+  | ladeU hop hok hgate hread =>
+    rw [kapTso_setKernVonFp]
+    exact .start
+  | speichereA hop hok hgate hgp hwr =>
+    rw [kapTso_setTso]
+    exact rest_vec_speicher_erreichbar _ _ _ _ _ hwr
+  | speichereU hop hok hgate hwr =>
+    rw [kapTso_setTso]
+    exact rest_vec_speicher_erreichbar _ _ _ _ _ hwr
+  | fehler h =>
+    exact .start
+
+/-- A classified vector union step reaches through the projection. -/
+theorem rest_union_vec (m m' : HwMaschine) (e : HwVecEreignis)
+    (h : HwVollSchritt m m' (KapEreignis.vec e)) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | vec _ hstep => exact rest_vec_tso _ _ _ hstep
+
+/-! ## 5. Loaded image and loader instances: fetch changes nothing.
+
+  Both plugs ARE the accepted register-path plug (`adapterBild`
+  and `adapterInstanzen` are `adapterInteger666` by definition): an
+  admitted step re-embeds core data only, a fetch refusal or halt
+  admits nothing at all. -/
+
+/-- Register-path plug steps leave the TSO projection unchanged:
+    only core data moves, never memory or buffers. -/
+theorem rest_integer666_still (m m' : HwMaschine) (c : Nat)
+    (i : ExtInstr)
+    (h : adapterInteger666.schritt m c i = some m') :
+    kapTso m' = kapTso m := by
+  unfold adapterInteger666 at h
+  simp only at h
+  cases hs : stepExt i (projFp m c) (m.bereit c) with
+  | weiter t' =>
+    rw [hs] at h
+    simp only at h
+    cases h
+    exact kapTso_setKernVonFp _ _ _
+  | halt =>
+    rw [hs] at h
+    simp only at h
+    cases h
+  | verweigert =>
+    rw [hs] at h
+    simp only at h
+    cases h
+
+/-- A classified loaded-image union step reaches through the
+    projection silently. -/
+theorem rest_union_bild (m m' : HwMaschine) (c : Nat) (i : ExtInstr)
+    (h : HwVollSchritt m m' (KapEreignis.bild c i)) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | bild _ _ heq =>
+    have hs := rest_integer666_still _ _ _ _ heq
+    rw [hs]
+    exact .start
+
+/-- A classified loader-instance union step reaches through the
+    projection silently. -/
+theorem rest_union_instanzen (m m' : HwMaschine) (c : Nat)
+    (i : ExtInstr)
+    (h : HwVollSchritt m m' (KapEreignis.instanzen c i)) :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  cases h with
+  | instanzen _ _ heq =>
+    have hs := rest_integer666_still _ _ _ _ heq
+    rw [hs]
+    exact .start
+
 end Gabbro.Grammatik.X86
