@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 17:24 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 17:29 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -630,7 +630,7 @@ Last ledger refresh: **2026-10-05 17:24 UTC**. This is an operational snapshot, 
 | 1143 | TSO to W bridge: fragment READS | Merged after review/checks | 1144: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1143.md) |
 | 1145 | TSO to W bridge: LOCK/RMW steps | Merged after review/checks | 1146: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1145.md) |
 | 1147 | Whole-word atomicity of guarded aligned accesses | Merged after review/checks | 1148: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1147.md) |
-| 1149 | Capstone: one coherent machine over all accepted families | Committed candidate; review/integration pending | 1150: Agent working | [task](lanes/1149.md) |
+| 1149 | Capstone: one coherent machine over all accepted families | Committed candidate; review/integration pending | 1150: Committed candidate; review/integration pending | [task](lanes/1149.md) |
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Merged after review/checks | 1152: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1151.md) |
 | 1153 | Pipeline lowering onto the wider ISA | Merged after review/checks | 1154: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1153.md) |
 | 1155 | Pipeline: loops and branch layout with budget | Merged after review/checks | 1156: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1155.md) |
@@ -643,7 +643,7 @@ Last ledger refresh: **2026-10-05 17:24 UTC**. This is an operational snapshot, 
 | 1169 | Pipeline correctness over the multi-core TSO machine | Merged after review/checks | 1170: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1169.md) |
 | 1171 | Linking, relocations and the final mapping | Merged after review/checks | 1172: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1171.md) |
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
-| 1175 | Finite and infinite execution soundness of the pipeline | Committed candidate; review/integration pending | 1176: Committed candidate; review/integration pending | [task](lanes/1175.md) |
+| 1175 | Finite and infinite execution soundness of the pipeline | Merged after review/checks | 1176: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1175.md) |
 | 1177 | Source-computed units and duties feeding the pipeline | Merged after review/checks | 1178: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1177.md) |
 | 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Merged after review/checks | 1180: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1179.md) |
 | 1181 | Nested interrupt delivery, #DF and handler entry | Merged after review/checks | 1182: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1181.md) |
@@ -679,7 +679,7 @@ Last ledger refresh: **2026-10-05 17:24 UTC**. This is an operational snapshot, 
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Committed candidate; review/integration pending | 1244: Committed candidate; review/integration pending | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
-| 1247 | Extended context state across interrupts and context switches | Committed candidate; review/integration pending | 1248: Committed candidate; review/integration pending | [task](lanes/1247.md) |
+| 1247 | Extended context state across interrupts and context switches | Agent working | 1248: Committed candidate; review/integration pending | [task](lanes/1247.md) |
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Unresolved after agent rounds; not accepted | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
@@ -698,7 +698,7 @@ Last ledger refresh: **2026-10-05 17:24 UTC**. This is an operational snapshot, 
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Agent working | 1280: scheduled | [task](lanes/1279.md) |
 | 1281 | Sign-extend-accumulator ops and register XCHG | Agent working | 1282: scheduled | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Agent working | 1284: scheduled | [task](lanes/1283.md) |
-| 1285 | FS/GS segment bases and the TLB | Committed candidate; review/integration pending | 1286: scheduled | [task](lanes/1285.md) |
+| 1285 | FS/GS segment bases and the TLB | Committed candidate; review/integration pending | 1286: Agent working | [task](lanes/1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Agent working | 1288: scheduled | [task](lanes/1287.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1647,6 +1647,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1266**, Independent exact review of 1265, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1266.md). <!-- x86-merged:1266 -->
 - 2026-10-05: lane **1169**, Pipeline correctness over the multi-core TSO machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1169.md). <!-- x86-merged:1169 -->
 - 2026-10-05: lane **1170**, Independent exact review of 1169, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1170.md). <!-- x86-merged:1170 -->
+- 2026-10-05: lane **1175**, Finite and infinite execution soundness of the pipeline, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1175.md). <!-- x86-merged:1175 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
