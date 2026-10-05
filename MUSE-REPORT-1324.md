@@ -1,9 +1,12 @@
 # MUSE-REPORT-1324: exact review of candidate 1323 (valX86 decode coverage over the capstone chain)
 
+CANDIDATE: 1323 b8fa5c51b5d5fd0c510bb0ab3f858eda1e7592a4
+VERDICT: ACCEPT
+
 ## Scope
 
-Report-only independent exact review. CANDIDATE: lane 1323, pinned HEAD
-`b8fa5c51b5d5fd0c510bb0ab3f858eda1e7592a4` (base `f92c2649`,
+Report-only independent exact review of author lane 1323 at the pinned
+HEAD stated above (base `f92c2649`,
 SNAPSHOT.json `clean: true`). Reviewed strictly as delivered files under
 `.tmp/review/author-1323/` (SNAPSHOT.json, PATCH.diff, OWNER-TASK.md,
 BUILD-EVIDENCE.json, candidate file copy). No `git show/log/diff` on the
@@ -96,7 +99,7 @@ tail limitation; no per-row consumed-length theorem; no chain-tie facts
 beyond `kapDecode`; no silicon re-check; no loader/entry/relocation/
 control-flow claim. Nothing else is owed by this lane.
 
-## VERDICT: ACCEPT
+## Verdict (substance unchanged from review)
 
 Candidate 1323 `b8fa5c51b5d5fd0c510bb0ab3f858eda1e7592a4` is accepted as
 reviewed: sound coverage check over the accepted capstone chain with
