@@ -346,6 +346,135 @@ theorem kap_tor_embedded (m m' : HwMaschine) (leaf1 : CpuOut)
     cases h with
     | tor _ _ _ hstep => exact hstep
 
+/-- Packed integer vectors embed exactly. -/
+theorem kap_vec_embedded (m m' : HwMaschine) (e : HwVecEreignis) :
+    HwVecSchritt m m' e ↔ HwVollSchritt m m' (KapEreignis.vec e) := by
+  constructor
+  · intro h
+    exact .vec e h
+  · intro h
+    cases h with
+    | vec _ hstep => exact hstep
+
+/-- Generic drains embed exactly. -/
+theorem kap_drain_embedded (m m' : HwMaschine) (c : Nat)
+    (e : DrainEreignis) :
+    drainAdapter.schritt m c e = some m' ↔
+      HwVollSchritt m m' (KapEreignis.drain c e) := by
+  constructor
+  · intro h
+    exact .drain c e h
+  · intro h
+    cases h with
+    | drain _ _ heq => exact heq
+
+/-- Generic forwarding embeds exactly. -/
+theorem kap_fwd_embedded (m m' : HwMaschine) (c : Nat)
+    (e : FwdEreignis) :
+    fwdAdapter.schritt m c e = some m' ↔
+      HwVollSchritt m m' (KapEreignis.fwd c e) := by
+  constructor
+  · intro h
+    exact .fwd c e h
+  · intro h
+    cases h with
+    | fwd _ _ heq => exact heq
+
+/-- Nested delivery embeds exactly. -/
+theorem kap_nested_embedded (m m' : HwMaschine) (c : Nat)
+    (ev1 ev2 : AsyncEreignis) :
+    adapterVerschachtelt.schritt m c (ev1, ev2) = some m' ↔
+      HwVollSchritt m m' (KapEreignis.nested c ev1 ev2) := by
+  constructor
+  · intro h
+    exact .nested c ev1 ev2 h
+  · intro h
+    cases h with
+    | nested _ _ _ heq => exact heq
+
+/-- Single async delivery embeds exactly. -/
+theorem kap_int_embedded (m m' : HwMaschine) (c : Nat)
+    (ev : AsyncEreignis) :
+    adapterInterrupt1125.schritt m c ev = some m' ↔
+      HwVollSchritt m m' (KapEreignis.int c ev) := by
+  constructor
+  · intro h
+    exact .int c ev h
+  · intro h
+    cases h with
+    | int _ _ heq => exact heq
+
+/-- System forms embed exactly. -/
+theorem kap_system_embedded (m m' : HwMaschine) (c : Nat)
+    (st : SysSteuer) (e : SysEreignis) :
+    adapterSystem.schritt m c (st, e) = some m' ↔
+      HwVollSchritt m m' (KapEreignis.system c st e) := by
+  constructor
+  · intro h
+    exact .system c st e h
+  · intro h
+    cases h with
+    | system _ _ _ heq => exact heq
+
+/-- Loaded-image steps embed exactly (register-path plug). -/
+theorem kap_bild_embedded (m m' : HwMaschine) (c : Nat)
+    (i : ExtInstr) :
+    adapterBild.schritt m c i = some m' ↔
+      HwVollSchritt m m' (KapEreignis.bild c i) := by
+  constructor
+  · intro h
+    exact .bild c i h
+  · intro h
+    cases h with
+    | bild _ _ heq => exact heq
+
+/-- Loader instances embed exactly (register-path plug). -/
+theorem kap_instanzen_embedded (m m' : HwMaschine) (c : Nat)
+    (i : ExtInstr) :
+    adapterInstanzen.schritt m c i = some m' ↔
+      HwVollSchritt m m' (KapEreignis.instanzen c i) := by
+  constructor
+  · intro h
+    exact .instanzen c i h
+  · intro h
+    cases h with
+    | instanzen _ _ heq => exact heq
+
+/-- Exhibited vector union step: the `paddb` register row on core 0. -/
+theorem kap_step_vec :
+    HwVollSchritt hvecWitStart hvecWitM1
+      (KapEreignis.vec
+        (.vecReg 0 basisCpu basisKontrolle hvecWitD1)) :=
+  (kap_vec_embedded _ _ _).mp hvecWit_reg_schritt
+
+/-- Exhibited drain union step: the generic word store on core 0. -/
+theorem kap_step_drain :
+    ∃ m1, HwVollSchritt drainWitM0 m1
+      (KapEreignis.drain 0 (.speichere drainWitAdr drainWitWort)) := by
+  have hlen := drainWit_puffer8
+  cases hP : drainWitPush with
+  | none =>
+    rw [drainWitBufLen, hP] at hlen
+    cases hlen
+  | some m1 =>
+    have heq : drainAdapter.schritt drainWitM0 0
+        (.speichere drainWitAdr drainWitWort) = some m1 := hP
+    exact ⟨m1, (kap_drain_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited forwarding union step: the generic word store on core 0. -/
+theorem kap_step_fwd :
+    ∃ m1, HwVollSchritt witFwdM0 m1
+      (KapEreignis.fwd 0 (.speichere witFwdAdr witFwdWort)) := by
+  have hlen := witFwd_puffer8
+  cases hP : witFwdPush with
+  | none =>
+    rw [witFwdBufLen, hP] at hlen
+    cases hlen
+  | some m1 =>
+    have heq : fwdAdapter.schritt witFwdM0 0
+        (.speichere witFwdAdr witFwdWort) = some m1 := hP
+    exact ⟨m1, (kap_fwd_embedded _ _ _ _).mp heq⟩
+
 /-! ## 3. Refusals and the interrupt boundary.
 
   DMA, fault-as-state-step, the ISA/addressed refusal events and bare
@@ -446,8 +575,25 @@ theorem kap_tags_disjoint :
       KapEreignis.basis e ≠ KapEreignis.fehler f) ∧
     (∀ (e : HwEreignis) (leaf1 : CpuOut) (xcrLo : BitVec 32)
       (t : HwTorEreignis),
-      KapEreignis.basis e ≠ KapEreignis.tor leaf1 xcrLo t) := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      KapEreignis.basis e ≠ KapEreignis.tor leaf1 xcrLo t) ∧
+    (∀ (e : HwEreignis) (v : HwVecEreignis),
+      KapEreignis.basis e ≠ KapEreignis.vec v) ∧
+    (∀ (e : HwEreignis) (c : Nat) (d : DrainEreignis),
+      KapEreignis.basis e ≠ KapEreignis.drain c d) ∧
+    (∀ (e : HwEreignis) (c : Nat) (f : FwdEreignis),
+      KapEreignis.basis e ≠ KapEreignis.fwd c f) ∧
+    (∀ (e : HwEreignis) (c : Nat) (ev1 ev2 : AsyncEreignis),
+      KapEreignis.basis e ≠ KapEreignis.nested c ev1 ev2) ∧
+    (∀ (e : HwEreignis) (c : Nat) (ev : AsyncEreignis),
+      KapEreignis.basis e ≠ KapEreignis.int c ev) ∧
+    (∀ (e : HwEreignis) (c : Nat) (st : SysSteuer) (s : SysEreignis),
+      KapEreignis.basis e ≠ KapEreignis.system c st s) ∧
+    (∀ (e : HwEreignis) (c : Nat) (i : ExtInstr),
+      KapEreignis.basis e ≠ KapEreignis.bild c i) ∧
+    (∀ (e : HwEreignis) (c : Nat) (i : ExtInstr),
+      KapEreignis.basis e ≠ KapEreignis.instanzen c i) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+    ?_, ?_, ?_, ?_, ?_⟩
   · intro e c a h
     cases h
   · intro e c w h
@@ -471,6 +617,22 @@ theorem kap_tags_disjoint :
   · intro e f h
     cases h
   · intro e leaf1 xcrLo t h
+    cases h
+  · intro e v h
+    cases h
+  · intro e c d h
+    cases h
+  · intro e c f h
+    cases h
+  · intro e c ev1 ev2 h
+    cases h
+  · intro e c ev h
+    cases h
+  · intro e c st s h
+    cases h
+  · intro e c i h
+    cases h
+  · intro e c i h
     cases h
 
 /-- Byte-decoder priority, lifted: wherever the unified chain accepts,
@@ -717,6 +879,13 @@ theorem kap_zeuge :
       (KapEreignis.uc 0
         (.speichere .b64 HwDev1133.witDev1133 (BitVec.ofNat 64 7)
           HwDev1133.witProfil1133)) ∧
+    HwVollSchritt hvecWitStart hvecWitM1
+      (KapEreignis.vec
+        (.vecReg 0 basisCpu basisKontrolle hvecWitD1)) ∧
+    (∃ m1, HwVollSchritt drainWitM0 m1
+      (KapEreignis.drain 0 (.speichere drainWitAdr drainWitWort))) ∧
+    (∃ m1, HwVollSchritt witFwdM0 m1
+      (KapEreignis.fwd 0 (.speichere witFwdAdr witFwdWort))) ∧
     decodeMulDivWidth [natByte 247, natByte 225] =
       some (.wd (⟨WdBefehl.mul WdBreite.w32 Register.rcx, 2⟩ :
         WdDecodiert), []) ∧
@@ -744,6 +913,7 @@ theorem kap_zeuge :
   refine ⟨kap_step_lock, kap_step_stapel, kap_step_wort, kap_step_isa,
     kap_step_fp, kap_step_basis, kap_step_addr, kap_step_fehler,
     kap_step_lockFetch, kap_step_muldiv, kap_step_tor, kap_step_uc,
+    kap_step_vec, kap_step_drain, kap_step_fwd,
     pin_wdHw_wdmul32, pin_wdHw_ext_mul64,
     HwDev1133.adapterDma1133_verweigert _ _ _,
     adapterFehler1123_verweigert _ _ _, hwLockWit_reg_ud,
@@ -754,5 +924,100 @@ theorem kap_zeuge :
     stapelWit_fremd_alt, stapelWit_spuelung_aendert_speicher,
     hwWit_weiterleitung, hwWit_fremd_alt,
     hwWit_spülung_aendert_speicher⟩
+
+/- CUTS:
+    Proved here, over the reused accepted vocabulary only (every
+    definition lifted, never redefined):
+    - the single composed step `HwVollSchritt` as the union of ALL
+      merged `HwMaschine` adapters/relations: basis, lockRmw, wort,
+      stapel, isa, addr, muldiv, lockFetch, uc, port, fp, fehler,
+      tor, vec, drain, fwd, nested, int, system, bild, instanzen
+      (21 tags);
+    - exact per-family embedding (21 iffs: each family step is a
+      union step and back, no new behaviour behind any tag);
+    - `HwWf` preservation by the union (`kap_wf`, via each family's
+      accepted lemma plus three small helpers for single delivery,
+      the shared register-path plug and the system plug);
+    - tag disjointness: the base never coincides with any family tag
+      (`kap_tags_disjoint`); byte-decoder priority for the one checked
+      overlap, width-vs-unified (`kap_decode_prioritaet` with the
+      width-arm-takes-new-row and overlap-keeps-unified-arm pins in
+      `kap_zeuge`);
+    - refusals stay refused: DMA, fault-as-state-step, the
+      ISA/addressed refusal events, bare LOCK (`kap_verweigert`);
+    - interrupt sync side embeds through the union base
+      (`kap_interrupt_sync`);
+    - joint witness `kap_zeuge`: 15 exhibited union steps (lock,
+      stapel, wort, isa, fp, basis, addr, fehler, lockFetch, muldiv,
+      tor, uc, vec, drain, fwd), decoder pins, refusals,
+      well-formedness, and shared non-degeneracy (locked words move
+      10 to 15 on two cores, owner-only forwarding, drains change
+      actual shared memory observed from both cores).
+    NOT proved here, and not claimed:
+    - port, nested, int, system, bild, instanzen tags are embedded by
+      equation only: their successes are exhibited in their family
+      files (port selection, nest run, delivery runs, system run on
+      `SysMaschine`, loaded-image byteschritt equalities), not
+      re-exhibited as union steps here;
+    - async delivery carries its control snapshot in the event; no
+      independent control-state model is built here;
+    - `HwBildFamilien` (fetch/decoder family lemmas) and
+      `HwFeatureStep` (gate refinements of the tor arm) add no byte
+      step plug and have no separate tag; cited, not re-stepped;
+    - byte-decoder disjointness beyond width-vs-unified stays open
+      (LOCK fetch vs unified fetch overlap is family-local); no
+      unhandled overlap was found;
+    - no hardware correspondence beyond self-consistency (silicon and
+      timing assumptions live in the family files, not re-checked
+      here); no W/GX bridge; no source, checker, contract, entry,
+      ABI, loader, budget or liveness claim.
+-/
+
+#print axioms kap_wf
+#print axioms kap_basis_embedded
+#print axioms kap_lock_embedded
+#print axioms kap_wort_embedded
+#print axioms kap_stapel_embedded
+#print axioms kap_isa_embedded
+#print axioms kap_addr_embedded
+#print axioms kap_muldiv_embedded
+#print axioms kap_lockFetch_embedded
+#print axioms kap_uc_embedded
+#print axioms kap_port_embedded
+#print axioms kap_fp_embedded
+#print axioms kap_fehler_embedded
+#print axioms kap_tor_embedded
+#print axioms kap_vec_embedded
+#print axioms kap_drain_embedded
+#print axioms kap_fwd_embedded
+#print axioms kap_nested_embedded
+#print axioms kap_int_embedded
+#print axioms kap_system_embedded
+#print axioms kap_bild_embedded
+#print axioms kap_instanzen_embedded
+#print axioms kap_adapterAddr_wf
+#print axioms kap_adapterInterrupt_wf
+#print axioms kap_adapterInteger666_wf
+#print axioms kap_adapterSystem_wf
+#print axioms kap_verweigert
+#print axioms kap_interrupt_sync
+#print axioms kap_tags_disjoint
+#print axioms kap_decode_prioritaet
+#print axioms kap_step_lock
+#print axioms kap_step_stapel
+#print axioms kap_step_wort
+#print axioms kap_step_isa
+#print axioms kap_step_fp
+#print axioms kap_step_basis
+#print axioms kap_step_addr
+#print axioms kap_step_fehler
+#print axioms kap_step_lockFetch
+#print axioms kap_step_muldiv
+#print axioms kap_step_tor
+#print axioms kap_step_uc
+#print axioms kap_step_vec
+#print axioms kap_step_drain
+#print axioms kap_step_fwd
+#print axioms kap_zeuge
 
 end Gabbro.Grammatik.X86
