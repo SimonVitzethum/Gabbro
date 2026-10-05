@@ -9,6 +9,8 @@ Owns ONLY this report. Review-only lane: no Lean or Rust changes.
 - CANDIDATE 1181, pinned HEAD `816ec7c4898bb0f599b803cd333b5ac7d4ea57dc`,
   base `0ddf527d050ae9edced5f26e90172293b059eaf2` (from
   `.tmp/review/SNAPSHOT.json`, `"clean": true`).
+
+CANDIDATE: 1181 816ec7c4898bb0f599b803cd333b5ac7d4ea57dc
 - Files (3): `MUSE-REPORT-1181.md`,
   `grammatik/Grammatik.lean` (exactly ONE appended line
   `import Grammatik.X86.HwNestedInterrupts`, confirmed from
@@ -118,7 +120,9 @@ satisfied by `verschachtelt_zeuge` (joint, non-degenerate, two cores,
 memory-changing drain). Rule 12 does not apply (no TARGET statement;
 author added no unsupported desired-correctness premise).
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1181 at `816ec7c4898bb0f599b803cd333b5ac7d4ea57dc` is
 accepted for merge: hygiene clean, axioms standard, exactly one import
