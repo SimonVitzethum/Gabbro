@@ -620,7 +620,7 @@ Last ledger refresh: **2026-10-05 13:55 UTC**. This is an operational snapshot, 
 | 1123 | Architectural faults as outcomes of the coherent machine | Merged after review/checks | 1124: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1123.md) |
 | 1125 | Asynchronous interrupt delivery on the coherent machine | Merged after review/checks | 1126: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1125.md) |
 | 1127 | Multiply/divide and narrow widths connected | Merged after review/checks | 1128: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1127.md) |
-| 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Committed candidate; review/integration pending | 1130: Agent working | [task](lanes/1129.md) |
+| 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Committed candidate; review/integration pending | 1130: Committed candidate; review/integration pending | [task](lanes/1129.md) |
 | 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Committed candidate; review/integration pending | 1132: Incomplete; preserved | [task](lanes/1131.md) |
 | 1133 | Device/MMIO and memory types on the coherent machine | Agent working | 1134: scheduled | [task](lanes/1133.md) |
 | 1135 | CPUID/feature enabled-state gating inside HwSchritt | Merged after review/checks | 1136: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1135.md) |
@@ -629,7 +629,7 @@ Last ledger refresh: **2026-10-05 13:55 UTC**. This is an operational snapshot, 
 | 1141 | ISA-strand families (compact/core/cond) on the coherent machine | Merged after review/checks | 1142: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1141.md) |
 | 1143 | TSO to W bridge: fragment READS | Merged after review/checks | 1144: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1143.md) |
 | 1145 | TSO to W bridge: LOCK/RMW steps | Agent working | 1146: scheduled | [task](lanes/1145.md) |
-| 1147 | Whole-word atomicity of guarded aligned accesses | Committed candidate; review/integration pending | 1148: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1147.md) |
+| 1147 | Whole-word atomicity of guarded aligned accesses | Merged after review/checks | 1148: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1147.md) |
 | 1149 | Capstone: one coherent machine over all accepted families | Waiting for accepted dependencies | 1150: scheduled | [task](lanes/1149.md) |
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Merged after review/checks | 1152: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1151.md) |
 | 1153 | Pipeline lowering onto the wider ISA | Merged after review/checks | 1154: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1153.md) |
@@ -657,7 +657,7 @@ Last ledger refresh: **2026-10-05 13:55 UTC**. This is an operational snapshot, 
 | 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Agent working | 1200: scheduled | [task](lanes/1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Agent working | 1202: scheduled | [task](lanes/1201.md) |
-| 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Committed candidate; review/integration pending | 1204: scheduled | [task](lanes/1203.md) |
+| 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Committed candidate; review/integration pending | 1204: Agent working | [task](lanes/1203.md) |
 | 1205 | Loaded image: per-family reached fetch instances | Agent working | 1206: scheduled | [task](lanes/1205.md) |
 | 1207 | Generic drain-equals-write64 induction | Agent working | 1208: scheduled | [task](lanes/1207.md) |
 
@@ -1497,6 +1497,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1141**, ISA-strand families (compact/core/cond) on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1141.md). <!-- x86-merged:1141 -->
 - 2026-10-05: checked master `6a3a761b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:6a3a761b017f420830163c083aa4350a059c662e -->
 - 2026-10-05: lane **1142**, Independent exact review of 1141, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1142.md). <!-- x86-merged:1142 -->
+- 2026-10-05: lane **1147**, Whole-word atomicity of guarded aligned accesses, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1147.md). <!-- x86-merged:1147 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
