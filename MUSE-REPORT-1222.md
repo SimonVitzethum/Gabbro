@@ -7,8 +7,10 @@ Branch `muse/1222` in clone `/home/simon/Dokumente/gabbro-muse/a1222`.
 ## Candidate
 
 - Candidate under review: author lane 1221, pinned HEAD
-  `6c92cf7406a9ca5f0fb41949d8ffc13d7676c3ac`
+  `bbba63d860bd3ccda92d602483ce3f233a6f353f`
   (per `.tmp/review/SNAPSHOT.json`; base `988d75ef`, `clean: true`).
+  Re-review after the author's repair turn; the previous pinned HEAD
+  `6c92cf74` is superseded and no longer approved here.
 - Files in candidate: `MUSE-REPORT-1221.md`,
   `grammatik/Grammatik.lean` (exactly one appended line
   `import Grammatik.X86.PipelineLinkRel8`),
@@ -17,6 +19,48 @@ Branch `muse/1222` in clone `/home/simon/Dokumente/gabbro-muse/a1222`.
 - Review was read-only against the in-clone snapshot
   (`.tmp/review/author-1221/`) plus `BUILD-EVIDENCE.json`; nothing
   outside this clone was touched.
+
+## Repair-turn re-review (new pinned HEAD `bbba63d8`)
+
+The integration gate failed the previous HEAD at
+`[640/642] Building Grammatik.X86.PipelineLinkRel8` with
+`failed to read file '.../Grammatik/KostenG.olean'` at the import
+line — no type error, no error in any theorem. The author's repair
+turn changed NO Lean code: `MUSE-REPORT-1221.md` grew 121 to 159
+lines (new gate-diagnosis section); the module keeps all 42
+declarations at identical line numbers (verified: same
+`^theorem|^def|^inductive` inventory at lines
+36–803 as in the previous review, so no insertion, deletion or moved
+proof). `grammatik/Grammatik.lean` keeps the single appended import
+line. I re-ran every check against the NEW snapshot:
+
+- Banned forms: zero code hits again (only `#print axioms` lines).
+  No `intro _`, no discarded premises.
+- Axioms: the repair-turn `./lean-probe` re-run in `BUILD-EVIDENCE.json`
+  lists all theorems on subsets of
+  `[propext, Classical.choice, Quot.sound]` — unchanged, standard.
+- All previous findings stand unchanged: exact scope (one new file +
+  one import line), lifted-not-copied producer legs (all reused names
+  still resolve in this clone's tree), six `decide`-closed refusals,
+  non-degenerate `relaxLink_zeuge` (witness arithmetic rechecked:
+  disp 4093 widens, disp −11 fits), correct silicon bytes
+  (233/235/195 = 0xE9/0xEB/0xC3), honest CUTS with no
+  hardware-correspondence or W/GX claim.
+- Gate-failure assessment: the new evidence strengthens the
+  apparatus-flake diagnosis rather than weakening the candidate.
+  `KostenG.olean` demonstrably EXISTS in the author clone (`ls`
+  succeeded in the same evidence run), yet the integration gate
+  reported it unreadable; the author's local retry then failed on a
+  different victim inside the installed toolchain directory
+  (`Std/Data/DTreeMap/Raw/Basic.olean.private`), which lane code
+  cannot influence in any way. The failure precedes typechecking
+  (import/index line), the author's own `.olean` builds fine, and no
+  error line in any run points at `PipelineLinkRel8.lean`. This is a
+  build-cache/toolchain-read flake in the integration checkout, not
+  a code defect; there was nothing for the author to repair in the
+  module, and they repaired nothing there. Unblock by retrying the
+  gate on a quiet machine or rebuilding the missing artifact in the
+  integration checkout.
 
 ## Checks performed
 
@@ -73,11 +117,12 @@ Branch `muse/1222` in clone `/home/simon/Dokumente/gabbro-muse/a1222`.
 
 ## Build
 
-- `./lean-bau` in this clone (HEAD `45f6238d`): green,
+- `./lean-bau` in this clone, re-run for this re-review: green,
   `Build completed successfully (641 jobs).`
-- The candidate module itself: `./lean-probe` 0 errors at the pinned
-  HEAD per `BUILD-EVIDENCE.json` (final probe run lists all
-  `#print axioms` with standard subsets). Full `./lean-bau` in the
+- The candidate module itself: `./lean-probe` 0 errors at the NEW
+  pinned HEAD per the repair-turn entry in `BUILD-EVIDENCE.json`
+  (probe re-run with full `#print axioms` output, standard
+  subsets). Full `./lean-bau` in the
   author clone did not complete green, but every recorded failure is
   apparatus, not code: missing `.olean` artifacts for untouched
   modules (`ISASelect`, `HwFeatureGates`, toolchain `.ir` file, varying
@@ -92,10 +137,10 @@ Branch `muse/1222` in clone `/home/simon/Dokumente/gabbro-muse/a1222`.
 
 ## Verdict
 
-CANDIDATE: 1221 6c92cf7406a9ca5f0fb41949d8ffc13d7676c3ac
+CANDIDATE: 1221 bbba63d860bd3ccda92d602483ce3f233a6f353f
 VERDICT: ACCEPT
 
-Candidate 1221 at `6c92cf74` is accepted as reviewed: exact scope
+Candidate 1221 at `bbba63d8` is accepted as reviewed: exact scope
 match, standard axioms, lifted (not copied) producer legs, refusing
 poison probes, non-degenerate witness, honest CUTS, no weakened
 guarantee and no claim larger than the proof.
