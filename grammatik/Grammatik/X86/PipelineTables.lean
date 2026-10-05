@@ -409,3 +409,189 @@ theorem tabWorldRep (A : TabAnker D) (m : Speicher) (σ : World D)
   unfold RepSlot
   rw [slotWort_cast _ hT] at hreadW
   exact hreadW
+
+/-! ## 4. Lowering of source reads -/
+
+/-- READ LOWERING: a table read at a constant in-extent index becomes
+    the address materialisation plus a pilot `load64` through the
+    address register (the `basisKeinForm` shape with zero displacement;
+    `adrOk` is the checked premise, refused for `rbp`/`r13` bases).
+    Reads through region pointers (`durch`) lower to the same address:
+    the pointer value is `Unit`, so the pointer contributes no address,
+    only its carrier equation (reused, never rechecked). A
+    non-constant index, an out-of-extent index, an unlisted
+    table/field, a non-integer field, or a refused address form gives
+    `none`: unsupported shapes are refused, never guessed. -/
+def senkLesen (A : TabAnker D) (c : PipeCfg) {Γ : Ctx} {Λ : List (Res D)}
+    {τ : Ty} (e : Expr D Γ Λ τ) : Option (List Befehl) :=
+  match e with
+  | .slot t f i _ => match constInt? i with
+    | some k => match feldAdr A t k f with
+      | some Adr => if repOk (D.typ t f) Adr 8 0 &&
+          adrOk (basisKeinForm c.adr) then
+          some [.movImm64 c.adr (natAdresse Adr),
+            .load64 c.dst c.adr (BitVec.ofNat 32 0)]
+        else none
+      | none => none
+    | none => none
+  | .durch _ t _ f i _ => match constInt? i with
+    | some k => match feldAdr A t k f with
+      | some Adr => if repOk (D.typ t f) Adr 8 0 &&
+          adrOk (basisKeinForm c.adr) then
+          some [.movImm64 c.adr (natAdresse Adr),
+            .load64 c.dst c.adr (BitVec.ofNat 32 0)]
+        else none
+      | none => none
+    | none => none
+  | _ => none
+
+/-- LOAD CHUNK: materialise the computed address and load the word
+    through it. `effAddr_null` pins the effective address to the base
+    register, so the load reads exactly the computed slot address.
+    Memory and every register but the two working ones are kept. -/
+theorem lesChunk_lauf (c : PipeCfg) (hc : cfgOk c = true)
+    (Adr : Nat) (w : Wort) (s : Zustand)
+    (hrd : read64 s.speicher (natAdresse Adr) = some w) :
+    ∃ s', lauf ([Befehl.movImm64 c.adr (natAdresse Adr),
+      Befehl.load64 c.dst c.adr (BitVec.ofNat 32 0)].map kanon) s = some s' ∧
+      s'.register c.dst = w ∧ s'.speicher = s.speicher ∧
+      (∀ q, q ≠ c.dst → q ≠ c.adr → s'.register q = s.register q) := by
+  obtain ⟨-, hda, -, -, -, -⟩ := cfgOk_regs c hc
+  have hmov := schritt_movImm64 (kanon (.movImm64 c.adr (natAdresse Adr))) s c.adr
+    (natAdresse Adr) (laengeOk_encode _) rfl
+  let s1 : Zustand := schrittRegister s
+    (ripNach s.rip (kanon (.movImm64 c.adr (natAdresse Adr))).laenge)
+    s.flags c.adr (natAdresse Adr)
+  have heff : effAddr s1 c.adr (BitVec.ofNat 32 0) = natAdresse Adr := by
+    simp only [effAddr_null]
+    exact regSet_gleich _ _ _
+  have hrd1 : read64 s1.speicher (effAddr s1 c.adr (BitVec.ofNat 32 0)) = some w := by
+    rw [heff]
+    exact hrd
+  have hload := schritt_load64_erfolg (kanon (.load64 c.dst c.adr (BitVec.ofNat 32 0)))
+    s1 c.dst c.adr (BitVec.ofNat 32 0) w (laengeOk_encode _) rfl hrd1
+  let s' : Zustand := schrittRegister s1 (ripNach s1.rip
+    (kanon (.load64 c.dst c.adr (BitVec.ofNat 32 0))).laenge) s1.flags c.dst w
+  have hrun : lauf ([Befehl.movImm64 c.adr (natAdresse Adr),
+      Befehl.load64 c.dst c.adr (BitVec.ofNat 32 0)].map kanon) s = some s' := by
+    have e1 : ([Befehl.movImm64 c.adr (natAdresse Adr),
+        Befehl.load64 c.dst c.adr (BitVec.ofNat 32 0)].map kanon) =
+        [kanon (.movImm64 c.adr (natAdresse Adr))] ++
+        [kanon (.load64 c.dst c.adr (BitVec.ofNat 32 0))] := rfl
+    rw [e1, lauf_anhang _ _ _ _ (by rw [lauf_einzeln_gleich, hmov]),
+      lauf_einzeln_gleich, hload]
+  have hdst : s'.register c.dst = w :=
+    regSet_gleich _ _ _
+  have hmem : s'.speicher = s.speicher :=
+    (schrittRegister_speicher _ _ _ _ _).trans (schrittRegister_speicher _ _ _ _ _)
+  have hreg : ∀ q, q ≠ c.dst → q ≠ c.adr → s'.register q = s.register q := by
+    intro q hqd hqa
+    show regSet s1.register c.dst w q = s.register q
+    rw [regSet_fremd _ _ _ _ hqd]
+    show regSet s.register c.adr (natAdresse Adr) q = s.register q
+    rw [regSet_fremd _ _ _ _ hqa]
+  exact ⟨s', hrun, hdst, hmem, hreg⟩
+
+/-- READ CORRECTNESS: the lowered load code leaves the modular word of
+    the exact source value in `dst`, keeps memory and the environment,
+    and keeps every register but the two working ones. Stated at a
+    general type index with `τ = .int lo hi` (the stuck slot type
+    `D.typ t f`), in the style of `senkWert_korrekt`. -/
+theorem senkLesen_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = true)
+    {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {lo hi : Int}
+    (e : Expr D Γ Λ τ) (hτ : τ = .int lo hi)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hE : EnvRepr ρ s.register (abbOf c)) (hW : WorldRep (tabLayout A) s.speicher σ)
+    (p : List Befehl) (h : senkLesen A c e = some p) :
+    ∃ s', lauf (p.map kanon) s = some s' ∧
+      s'.register c.dst = intWort (cast (congrArg (Wert D) hτ) (eval σ₀ e σ ρ) :
+        Wert D (.int lo hi)).n ∧
+      s'.speicher = s.speicher ∧
+      EnvRepr ρ s'.register (abbOf c) ∧
+      (∀ q, q ≠ c.dst → q ≠ c.adr → s'.register q = s.register q) := by
+  cases e with
+  | slot t f i hL =>
+    simp only [senkLesen] at h
+    cases hk : constInt? i with
+    | none => rw [hk] at h; cases h
+    | some k =>
+      simp only [hk] at h
+      cases hA : feldAdr A t k f with
+      | none => simp [hA] at h
+      | some Adr =>
+        simp only [hA] at h
+        by_cases hok : (repOk (D.typ t f) Adr 8 0 &&
+            adrOk (basisKeinForm c.adr)) = true
+        · rw [if_pos hok] at h
+          simp only [Option.some.injEq] at h
+          subst h
+          simp only [Bool.and_eq_true] at hok
+          obtain ⟨hrep, hokRest⟩ := hok
+          obtain ⟨lo', hi', hT', hlo, hhi, -⟩ := repOk_int _ _ hrep
+          have hTT : (Ty.int lo hi) = (Ty.int lo' hi') := by rw [← hτ]; exact hT'
+          have hlo' : lo = lo' := by cases hTT; rfl
+          have hhi' : hi = hi' := by cases hTT; rfl
+          subst hlo'
+          subst hhi'
+          have hki : (eval σ₀ i σ ρ).n = k := by
+            have hci := constInt?_sound i σ₀ σ ρ k hk
+            simpa [intOf] using hci
+          have heval : (eval σ₀ (.slot t f i hL) σ ρ) = σ.slots t k f := by
+            have hrfl : (eval σ₀ (.slot t f i hL) σ ρ) =
+              σ.slots t (eval σ₀ i σ ρ).n f := rfl
+            rw [hki] at hrfl
+            exact hrfl
+          obtain ⟨-, -, -, hword⟩ := hW t k f Adr
+            (by rw [tabLayout_loc]; exact hA)
+          have hrdW := hword lo hi hT'
+          unfold RepSlot at hrdW
+          obtain ⟨s', hrun, hdst, hmem, hreg⟩ := lesChunk_lauf c hc Adr _ s hrdW
+          refine ⟨s', hrun, ?_, hmem, ?_, hreg⟩
+          · rw [hdst, heval]
+            exact (intWort_zahlWort _ hlo hhi).symm
+          · exact envRepr_fremd ρ _ _ _ hE
+              (fun _ x => hreg _ (cfgOk_frei c hc x).1 ((cfgOk_frei c hc x).2.2))
+        · rw [if_neg hok] at h; cases h
+  | durch p t ht f i hL =>
+    simp only [senkLesen] at h
+    cases hk : constInt? i with
+    | none => rw [hk] at h; cases h
+    | some k =>
+      simp only [hk] at h
+      cases hA : feldAdr A t k f with
+      | none => simp [hA] at h
+      | some Adr =>
+        simp only [hA] at h
+        by_cases hok : (repOk (D.typ t f) Adr 8 0 &&
+            adrOk (basisKeinForm c.adr)) = true
+        · rw [if_pos hok] at h
+          simp only [Option.some.injEq] at h
+          subst h
+          simp only [Bool.and_eq_true] at hok
+          obtain ⟨hrep, hokRest⟩ := hok
+          obtain ⟨lo', hi', hT', hlo, hhi, -⟩ := repOk_int _ _ hrep
+          have hTT : (Ty.int lo hi) = (Ty.int lo' hi') := by rw [← hτ]; exact hT'
+          have hlo' : lo = lo' := by cases hTT; rfl
+          have hhi' : hi = hi' := by cases hTT; rfl
+          subst hlo'
+          subst hhi'
+          have hki : (eval σ₀ i σ ρ).n = k := by
+            have hci := constInt?_sound i σ₀ σ ρ k hk
+            simpa [intOf] using hci
+          have heval : (eval σ₀ (.durch p t ht f i hL) σ ρ) = σ.slots t k f := by
+            have hrfl : (eval σ₀ (.durch p t ht f i hL) σ ρ) =
+              σ.slots t (eval σ₀ i σ ρ).n f := rfl
+            rw [hki] at hrfl
+            exact hrfl
+          obtain ⟨-, -, -, hword⟩ := hW t k f Adr
+            (by rw [tabLayout_loc]; exact hA)
+          have hrdW := hword lo hi hT'
+          unfold RepSlot at hrdW
+          obtain ⟨s', hrun, hdst, hmem, hreg⟩ := lesChunk_lauf c hc Adr _ s hrdW
+          refine ⟨s', hrun, ?_, hmem, ?_, hreg⟩
+          · rw [hdst, heval]
+            exact (intWort_zahlWort _ hlo hhi).symm
+          · exact envRepr_fremd ρ _ _ _ hE
+              (fun _ x => hreg _ (cfgOk_frei c hc x).1 ((cfgOk_frei c hc x).2.2))
+        · rw [if_neg hok] at h; cases h
+  | _ => simp [senkLesen] at h
