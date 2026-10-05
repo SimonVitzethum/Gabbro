@@ -685,3 +685,4 @@ import Grammatik.X86.HwTranslate
 import Grammatik.X86.HwFpStoreDrain
 import Grammatik.X86.HwPageFaultDelivery
 import Grammatik.X86.IntRotate
+import Grammatik.X86.IntBitScan
