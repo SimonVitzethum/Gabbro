@@ -1334,4 +1334,367 @@ theorem bsHwRegSchritt_weiter_wf (feat : PopcntMerkmal) (m : HwMaschine)
     rw [hsch] at h
     simp only at h
     cases h
+
+/-! ## 8. Joint witness: two cores, family steps, buffered store.
+
+  Core 0 scans `0x10` (index 4, ZF clear), core 1 counts `0xFF`
+  (8, ZF clear), core 0 swaps `0x10` in place (flags untouched);
+  afterwards core 0 issues a buffered byte store that only the owner
+  observes by forwarding, and the drain changes actual shared memory
+  from 0 to 42. A zero scan source leaves its destination untouched
+  with ZF set; the missing CPUID bit, a bad length and a memory
+  source refuse beside the run. Every value claim projects to plain
+  values before `decide` (machines contain functions); the general
+  equations pin the full states. -/
+
+/-- Witness registers for core 0 (scan/swap): RAX sentinel, RCX `0x10`. -/
+def bsHwWitReg0 : Register → Wort := fun q =>
+  if q = Register.rax then 0xAB
+  else if q = Register.rcx then 0x10
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness registers for core 1 (count): RCX `0xFF`. -/
+def bsHwWitReg1 : Register → Wort := fun q =>
+  if q = Register.rax then 0
+  else if q = Register.rcx then 0xFF
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness registers with a zero scan source: RCX zero, RAX sentinel. -/
+def bsHwWitRegNull : Register → Wort := fun q =>
+  if q = Register.rax then 0xAB
+  else if q = Register.rcx then 0
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness cores over a register file. -/
+def bsHwWitKern (r : Register → Wort) : Nat → HwKern
+  | 0 => ⟨r, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨r, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon. -/
+def bsHwWitStart : HwMaschine :=
+  ⟨zeugeSpeicher, bsHwWitKern bsHwWitReg0, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- Witness count machine: core 1 counts, core 0 idles. -/
+def bsHwWitStartCount : HwMaschine :=
+  ⟨zeugeSpeicher, bsHwWitKern bsHwWitReg1, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- Witness machine with a zero scan source on core 0. -/
+def bsHwWitStartNull : HwMaschine :=
+  ⟨zeugeSpeicher, bsHwWitKern bsHwWitRegNull, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem bsHwWitStart_wf : HwWf bsHwWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Core 0 scans `0x10` through the machine outcome. -/
+def bsHwOutBsf : HwRegAusgang :=
+  bsHwRegSchritt ⟨true⟩ bsHwWitStart 0 ⟨.bsf .b32 .rax (.reg .rcx), 3⟩
+
+/-- Core 1 counts `0xFF` through the machine outcome. -/
+def bsHwOutPopcnt : HwRegAusgang :=
+  bsHwRegSchritt ⟨true⟩ bsHwWitStartCount 1
+    ⟨.popcnt .b64 .rax (.reg .rcx), 4⟩
+
+/-- Core 0 swaps `0x10` in place through the machine outcome. -/
+def bsHwOutBswap : HwRegAusgang :=
+  bsHwRegSchritt ⟨true⟩ bsHwWitStart 0 ⟨.bswap .b64 .rcx, 3⟩
+
+/-- Core 0 scans zero through the machine outcome. -/
+def bsHwOutBsfNull : HwRegAusgang :=
+  bsHwRegSchritt ⟨true⟩ bsHwWitStartNull 0
+    ⟨.bsf .b32 .rax (.reg .rcx), 3⟩
+
+/-- Read a core register out of a machine outcome. -/
+def bsHwRegOut (o : HwRegAusgang) (c : Nat) (q : Register) :
+    Option Wort :=
+  match o with
+  | .weiter m => some ((m.kerne c).register q)
+  | _ => none
+
+/-- Read the zero flag out of a machine outcome. -/
+def bsHwZfOut (o : HwRegAusgang) (c : Nat) : Option Bool :=
+  match o with
+  | .weiter m => some ((m.kerne c).flags.zf)
+  | _ => none
+
+/-- Core 0 index: EAX holds 4. -/
+theorem bsHw_bsf_rax :
+    bsHwRegOut bsHwOutBsf 0 Register.rax = some 4 := by
+  decide
+
+/-- Core 0 scan clears ZF: the source is nonzero. -/
+theorem bsHw_bsf_zf :
+    bsHwZfOut bsHwOutBsf 0 = some false := by
+  decide
+
+/-- Core 1 count: RAX holds 8. -/
+theorem bsHw_popcnt_rax :
+    bsHwRegOut bsHwOutPopcnt 1 Register.rax = some 8 := by
+  decide
+
+/-- Core 1 count clears ZF. -/
+theorem bsHw_popcnt_zf :
+    bsHwZfOut bsHwOutPopcnt 1 = some false := by
+  decide
+
+/-- Core 0 swap: RCX holds the reversed bytes. -/
+theorem bsHw_bswap_rcx :
+    bsHwRegOut bsHwOutBswap 0 Register.rcx =
+      some 0x1000000000000000 := by
+  decide
+
+/-- The swap leaves the flags untouched. -/
+theorem bsHw_bswap_flags :
+    bsHwZfOut bsHwOutBswap 0 = some zeugeFlags.zf := by
+  decide
+
+/-- Zero scan: the destination sentinel survives. -/
+theorem bsHw_null_rax_liegt :
+    bsHwRegOut bsHwOutBsfNull 0 Register.rax = some 0xAB := by
+  decide
+
+/-- Zero scan sets ZF. -/
+theorem bsHw_null_zf :
+    bsHwZfOut bsHwOutBsfNull 0 = some true := by
+  decide
+
+/-- Witness data address. -/
+def bsHwWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness TSO start: canonical memory, empty buffers. -/
+def bsHwWitTso0 : TSOZustand := ⟨zeugeSpeicher, fun _ => []⟩
+
+/-- Core 0 issues byte 42 at the data cell. -/
+def bsHwWitTso1 : Option TSOZustand :=
+  issueByte bsHwWitTso0 0 bsHwWitAdr (BitVec.ofNat 8 42)
+
+/-- Core 0 observes its own byte (forwarding). -/
+def bsHwWitEigen : Option (Option Byte) :=
+  match bsHwWitTso1 with
+  | some s => some (loadByte s 0 bsHwWitAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def bsHwWitFremd : Option (Option Byte) :=
+  match bsHwWitTso1 with
+  | some s => some (loadByte s 1 bsHwWitAdr)
+  | none => none
+
+/-- Core 0 drains its oldest entry. -/
+def bsHwWitTso2 : Option TSOZustand :=
+  match bsHwWitTso1 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def bsHwWitNachFlush : Option (Option Byte) :=
+  match bsHwWitTso2 with
+  | some s => some (some (s.mem.bytes bsHwWitAdr))
+  | none => none
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def bsHwWitFremdNach : Option (Option Byte) :=
+  match bsHwWitTso2 with
+  | some s => some (loadByte s 1 bsHwWitAdr)
+  | none => none
+
+/-- The data cell starts zeroed. -/
+theorem bsHw_anfang_null :
+    zeugeSpeicher.bytes bsHwWitAdr = BitVec.ofNat 8 0 := by
+  rfl
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem bsHw_weiterleitung :
+    bsHwWitEigen = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem bsHw_fremd_alt :
+    bsHwWitFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 42. -/
+theorem bsHw_spuelung_aendert_speicher :
+    bsHwWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem bsHw_fremd_neu :
+    bsHwWitFremdNach = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- Without the CPUID bit the count step refuses with no successor. -/
+theorem bsHw_ohne_merkmal_verweigert :
+    bsHwRegSchritt ⟨false⟩ bsHwWitStartCount 1
+      (⟨.popcnt .b64 .rax (.reg .rcx), 4⟩ : BsDecodiert) =
+      .verweigert := by
+  have hstep := bs_popcnt_verweigert ⟨false⟩ .b64 .rax .rcx 4
+    (projZustand bsHwWitStartCount 1) (by decide) rfl
+  exact bsHwRegSchritt_verweigert _ _ _ _ hstep
+
+/-- A bad decode length refuses the machine step. -/
+theorem bsHw_schlechte_laenge_verweigert :
+    bsHwRegSchritt ⟨true⟩ bsHwWitStart 0
+      (⟨.bsf .b32 .rax (.reg .rcx), 0⟩ : BsDecodiert) =
+      .verweigert := by
+  have hstep := bs_laenge_misslungen ⟨true⟩
+    (⟨.bsf .b32 .rax (.reg .rcx), 0⟩ : BsDecodiert)
+    (projZustand bsHwWitStart 0) (by decide)
+  exact bsHwRegSchritt_misslungen _ _ _ _ hstep
+
+/-- A memory source refuses the machine step. -/
+theorem bsHw_speicher_verweigert :
+    bsHwRegSchritt ⟨true⟩ bsHwWitStart 0
+      (⟨.bsf .b32 .rax (.mem (natByte 3) []), 3⟩ : BsDecodiert) =
+      .verweigert := by
+  have hstep := bs_bsf_mem_misslungen ⟨true⟩ .b32 .rax (natByte 3) []
+    3 (projZustand bsHwWitStart 0) (by decide)
+  exact bsHwRegSchritt_misslungen _ _ _ _ hstep
+
+/-- The joint witness: a reached two-core family run (scan on core 0,
+    count on core 1, in-place swap) beside a buffered store that only
+    the owner forwards and a drain that changes actual shared memory
+    from 0 to 42 -- with the zero-source, feature, length, memory and
+    decode refusals beside it. Non-degenerate: the drain changes
+    actual shared memory. -/
+theorem bsHw_zeuge :
+    bsHwRegOut bsHwOutBsf 0 Register.rax = some 4 ∧
+      bsHwZfOut bsHwOutBsf 0 = some false ∧
+      bsHwRegOut bsHwOutPopcnt 1 Register.rax = some 8 ∧
+      bsHwZfOut bsHwOutPopcnt 1 = some false ∧
+      bsHwRegOut bsHwOutBswap 0 Register.rcx =
+        some 0x1000000000000000 ∧
+      bsHwZfOut bsHwOutBswap 0 = some zeugeFlags.zf ∧
+      bsHwWitEigen = some (some (BitVec.ofNat 8 42)) ∧
+      bsHwWitFremd = some (some (BitVec.ofNat 8 0)) ∧
+      bsHwWitNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+      bsHwWitFremdNach = some (some (BitVec.ofNat 8 42)) ∧
+      zeugeSpeicher.bytes bsHwWitAdr = BitVec.ofNat 8 0 ∧
+      HwWf bsHwWitStart ∧
+      bsHwRegSchritt ⟨false⟩ bsHwWitStartCount 1
+        (⟨.popcnt .b64 .rax (.reg .rcx), 4⟩ : BsDecodiert) =
+        .verweigert ∧
+      bsHwRegSchritt ⟨true⟩ bsHwWitStart 0
+        (⟨.bsf .b32 .rax (.reg .rcx), 0⟩ : BsDecodiert) =
+        .verweigert ∧
+      bsHwRegSchritt ⟨true⟩ bsHwWitStart 0
+        (⟨.bsf .b32 .rax (.mem (natByte 3) []), 3⟩ : BsDecodiert) =
+        .verweigert ∧
+      bsHwRegOut bsHwOutBsfNull 0 Register.rax = some 0xAB ∧
+      bsHwZfOut bsHwOutBsfNull 0 = some true ∧
+      decodeBsHw [natByte 240, natByte 15, natByte 188,
+        natByte 193] = none := by
+  refine ⟨bsHw_bsf_rax, bsHw_bsf_zf, bsHw_popcnt_rax, bsHw_popcnt_zf,
+    bsHw_bswap_rcx, bsHw_bswap_flags, bsHw_weiterleitung, bsHw_fremd_alt,
+    bsHw_spuelung_aendert_speicher, bsHw_fremd_neu, bsHw_anfang_null,
+    bsHwWitStart_wf, bsHw_ohne_merkmal_verweigert,
+    bsHw_schlechte_laenge_verweigert, bsHw_speicher_verweigert,
+    bsHw_null_rax_liegt, bsHw_null_zf, bsHw_nichts_lock⟩
+
+/- CUTS: what is proved here and what stays open.
+
+  Proved here (every accepted definition reused unchanged, never
+  copied: `bsfIdx`/`bsrIdx`/`scanZF`/`bitGesetzt`, `popCount`/
+  `popWort`/`popNull`/`PopcntMerkmal`, `bswap32`/`bswap64`,
+  `mergeRegNarrow`, `HwMaschine`/`HwSchritt`/`HwWf`/`HwAdapter`/
+  `projZustand`/`setKernVonFp`/`HwRegAusgang`, `decodeExt`/`stepExt`
+  is only refused, never re-decided):
+  - vocabulary, canonical encoding and a parsing decoder for
+    BSF/BSR (0F BC/BD, 16/32/64, REX.W wins over 66H), POPCNT
+    (F3 0F B8, 16/32/64, F3 required) and BSWAP (0F C8+r, 32/64);
+  - decode-inverts-encode generally for every register row and
+    BSWAP row; for memory rows the parse half
+    (`bsParseModrm_mem_ok` over `bsMemOk`) and the reg-field half
+    (`modrmMitDst_id`) generally plus kernel-checked pins on
+    representative shapes;
+  - no shadowing: the unified chain refuses every new byte string,
+    and the dispatcher prefers it with exact selection theorems;
+  - SDM-093 flag rows (scan: ZF = source zero, PF = source-popcount
+    parity over the accepted `popCount`, rest cleared; POPCNT: all
+    cleared, ZF = source zero; BSWAP: untouched), the narrow-merge
+    destination discipline, untouched destination on zero scan
+    source, the CPUID feature refusal and the memory/length
+    refusals;
+  - the `HwAdapter BsDecodiert` plug (CPUID bit as observed-answer
+    parameter, mirroring `adapterFeatureTor`) with
+    well-formedness preservation and exact agreement, the machine
+    outcome reusing `HwRegAusgang`, and a reached non-degenerate
+    two-core witness with owner-only forwarding and a
+    memory-changing drain beside planted refusals.
+  Silicon provenance (clone-local snapshot `.tmp/HARDWARE-REFERENCES`,
+  Intel SDM 325462-093US September 2026; no AMD snapshot exists and
+  no vendor-difference, timing or physical-silicon claim is made):
+  BSF pp. 3-107/3-108 (0F BC, RM encoding, REX.W/REX.R, default
+  32-bit, destination unmodified on zero source, ZF/PF row, LOCK
+  #UD, older-processor footnotes), BSR pp. 3-109/3-110 (same),
+  BSWAP p. 3-111 (0F C8+rd, REX.W, flags none, LOCK #UD), POPCNT
+  pp. 4-405/4-406 (F3 0F B8, REX.W, all-cleared/ZF row, CPUID bit 23
+  and LOCK #UD), EFLAGS cross-reference (BSF/BSR row).
+  Task-text corrections (silicon first): the task says the
+  destination is UNDEFINED on zero source; this SDM edition states
+  the destination operand is UNMODIFIED, which is what is modeled
+  (whole register kept, even for 32-bit rows: the older-processor
+  footnote that upper 32 bits may clear is modeled as unmodified,
+  a named choice). The task's POPCNT flag row overrides the
+  undefined-modeling of the accepted `BitCount` file (whose
+  `popcntFlags` keeps CF/OF/SF/PF and leaves AF undefined):
+  value agreement with `popWort`/`popCount` is exact, the flag row
+  follows the manual.
+  NOT proved here, and not claimed:
+  - No hardware correspondence: encodings are self-consistent
+    canonical rows checked against the manual text, not silicon
+    proofs. `parityEven` (low-byte parity) is NOT the BSF/BSR PF:
+    the snapshot uses whole-word `popCount` parity instead.
+  - No general `decodeBs ∘ encodeBs = id` for memory rows (pins
+    plus the two general halves stand; the composed simp unfolding
+    exceeds the tactic budget: deterministic heartbeat timeout at
+    `whnf` over the nested decoder matches, no rewrite cycle).
+  - No TZCNT/LZCNT (deferred to the BMI lane by design; the
+    profile rule decides ownership, both sides refuse here).
+  - No memory-source execution (address computation, SIB and
+    displacement addressing are open; memory forms need the TSO
+    event path, never the register plug). REX.X and memory REX.B
+    are ignored (raw bytes round-trip).
+  - No LOCK path (decode refusal; no fault-vocabulary connection),
+    no 8-bit scan/count and no 16-bit BSWAP rows (structural:
+    the architecture has none), no source/IR/ABI/loader/entry/
+    budget link, no per-access target-to-W/GX simulation, no
+    whole-word atomicity beyond byte drains, no timing behaviour.
+  - POPCNT ZF reads source-zero (`scanZF`); its equivalence with
+    count-zero (`popNull`) needs the truncation mask bound and is
+    inherited open from `BitCount`.
+-/
+
+#print axioms decodeBsHw
+#print axioms bsSchritt
+#print axioms bsFlagsScan
+#print axioms bsFlagsPopcnt
+#print axioms bswap32_merge
+#print axioms bs_bsf_ok
+#print axioms bs_popcnt_ok
+#print axioms bsSchritt_speicher
+#print axioms adapterBitScan
+#print axioms adapterBitScan_wf
+#print axioms adapterBitScan_ok
+#print axioms adapterBitScan_proj
+#print axioms bsHwRegSchritt_weiter
+#print axioms bsHwRegSchritt_weiter_wf
+#print axioms bsHwWitStart_wf
+#print axioms bsHw_zeuge
+#print axioms scanProfilUrteil
+#print axioms istVerzoegertScan
+#print axioms encodeBsf_decodeBs
+#print axioms bsParseModrm_mem_ok
+#print axioms modrmMitDst_id
+
 end Gabbro.Grammatik.X86
