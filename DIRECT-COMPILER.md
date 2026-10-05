@@ -684,7 +684,7 @@ Last ledger refresh: **2026-10-05 16:05 UTC**. This is an operational snapshot, 
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Committed candidate; review/integration pending | 1256: Agent working | [task](lanes/1255.md) |
-| 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Merged after review/checks | 1258: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1257.md) |
+| 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Merged after review/checks | 1258: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1257.md) |
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Agent working | 1260: Committed candidate; review/integration pending | [task](lanes/1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Committed candidate; review/integration pending | 1262: Agent working | [task](lanes/1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Agent working | 1264: scheduled | [task](lanes/1263.md) |
@@ -1620,6 +1620,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: publication batch checks passed for `38012ab5`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: checked master `93a086c1` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:93a086c1322acdfb470a68fd48d05b43fa224c50 -->
 - 2026-10-05: lane **1257**, Pipeline spills: splice save/reload at split points, callee-saved and arguments, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1257.md). <!-- x86-merged:1257 -->
+- 2026-10-05: lane **1258**, Independent exact review of 1257, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1258.md). <!-- x86-merged:1258 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
