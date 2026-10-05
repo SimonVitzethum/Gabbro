@@ -108,6 +108,64 @@ theorem laufBytes_genommen_zeuge :
   exact ⟨pwChunk, pwProg.drop 5, s', rfl, pw_chunk_gerade, hs', pw_code, hf,
     hrip, hb, hw, hle, pipePaket_hold⟩
 
+/-! ## 3. Dynamic coverage: the taken prefix is priced, not the list.
+
+    `deckung_pipeChunk` covers the STATIC chunk length. Here the
+    coverage is over the EXECUTED prefix `T` (`chunk = T ++ rest`):
+    the taken length is at most the shallow chunk bound (3 or 5),
+    hence covered by the admitted summary over any positive source
+    budget. Every premise is used: `hflach`/`hchunk`/`hT` bound the
+    static chunk, `hprefix` carries the taken length below it,
+    `hsrc` keeps the scaled bound above it. -/
+
+variable {D : Deklaration}
+
+/-- TAKEN-PATH COVERAGE: the executed prefix of a shallow lowered
+    chunk is covered by the admitted pipeline summary. -/
+theorem deckung_pfad_chunk (c : Pipeline.PipeCfg) (L : Pipeline.Layout D)
+    (l : Bool) {Γ : Ctx} {Λ : List (Res D)} {V : Vertrag D}
+    (t : D.Tab) (f : D.Feld t)
+    (i : Expr D Γ Λ (.index (D.count t)))
+    {τ : Ty} (e : Expr D Γ Λ τ) (hT : τ = D.typ t f)
+    (hw : V.schreibt t = true) (hL : darf D t Λ)
+    (src : Nat)
+    (p chunk T rest : List Befehl)
+    (hflach : Pipeline.senkWert (Pipeline.abbOf c) e c.dst c.tmp = some p)
+    (hchunk : Pipeline.senkStmt c L (Stmt.assignSlot (V := V) (l := l) t f i
+      (cast (congrArg (Expr D Γ Λ) hT) e) hw hL) = some chunk)
+    (hprefix : chunk = T ++ rest)
+    (hsrc : 1 ≤ src) :
+    Deckung pipeSummary src (decodiertZu T) := by
+  have hlen := senkStmt_flach_laenge c L l t f i e hT hw hL p chunk hflach hchunk
+  intro k hk
+  rw [pipeSummary_expand] at hk
+  cases hk
+  have hwork : targetWork ((decodiertZu T).map fun d => d.befehl) = T.length :=
+    arbeit_decodiert T
+  subst hprefix
+  rw [hwork]
+  simp only [List.length_append] at hlen
+  omega
+
+/-- JOINT WITNESS for `deckung_pfad_chunk`: the taken prefix is the
+    whole witness chunk, covered over source budget 1. -/
+theorem deckung_pfad_chunk_zeuge :
+    ∃ (p chunk T rest : List Befehl),
+      Pipeline.senkWert (Pipeline.abbOf pwCfg) pwWert0 .rax .rcx = some p ∧
+      Pipeline.senkStmt pwCfg pwL
+        (Stmt.assignSlot (V := pwV) (l := false) () () pwIdx0
+          (cast (congrArg (Expr pwD pwCtx []) pwHT0) pwWert0) pwHw pwHL) =
+        some chunk ∧
+      chunk = T ++ rest ∧
+      1 ≤ 1 ∧
+      Deckung pipeSummary 1 (decodiertZu T) ∧
+      PipePaket := by
+  have hprefix : pwProg.take 5 = pwChunk ++ [] := by simp [pwChunk]
+  refine ⟨_, _, _, _, pw_senkWert0, pwChunkCast, hprefix, Nat.le_refl 1, ?_,
+    pipePaket_hold⟩
+  exact deckung_pfad_chunk pwCfg pwL false () () pwIdx0 pwWert0 pwHT0
+    pwHw pwHL 1 _ _ _ _ pw_senkWert0 pwChunkCast hprefix (Nat.le_refl 1)
+
 /- CUTS:
    - Skeleton only: `genommenArbeit` names the taken-path count.
    - OPEN: the prefix-run bridge (`laufBytes_genommen`), the dynamic
