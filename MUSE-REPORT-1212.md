@@ -5,14 +5,16 @@ Lane 1212, report-only independent exact review. Clone
 (`.git/HEAD` = `refs/heads/muse/1212`; working tree `git status` clean).
 Owned file only: `MUSE-REPORT-1212.md`.
 
-CANDIDATE: 1211 fe97f2a15d3f0061cfe0d3deac836c62176b0d37
+CANDIDATE: 1211 339cb28b7a56ac8f7006d4575809422c1469d5d0
 (base `988d75ef`), reviewed from the exact snapshot in
-`.tmp/review/author-1211/` (`PATCH.diff`, 1411 lines; file snapshot;
+`.tmp/review/author-1211/` (`PATCH.diff`, 1453 lines; file snapshot;
 `BUILD-EVIDENCE.json`). The author clone `a1211` is outside this lane's
 allowed directory, so the pinned snapshot is the review basis; it lists
-exactly three files, `clean: true`.
+exactly three files, `clean: true`. This report re-reviews the NEW
+pinned HEAD after the author's repair commit; the previous verdict on
+`fe97f2a1` is superseded and is not reused below.
 
-## Verdict (substantive review result, unchanged)
+## Verdict
 
 VERDICT: ACCEPT
 
@@ -98,6 +100,51 @@ candidate-tree build itself (ownership forbids applying the patch
 here); I rely on the author's complete-output evidence log for that
 line, and everything re-checkable from the snapshot (tokens, axioms
 via the log, scope, lifting, pins, witness shape) passes.
+
+## Re-review after the author repair (new pinned HEAD)
+
+The repair commit `339cb28b` ("repair report: integration gate failed
+on resources") was inspected in full. It changes exactly one file:
+`MUSE-REPORT-1211.md` gains a 42-line repair section (report hunk
+`@@ -0,0 +1,125 @@`; total `PATCH.diff` 1453 lines vs 1411
+before). The Lean module `HwFpDispatch.lean` and the `Grammatik.lean`
+import line are untouched.
+
+Verification that the module is unchanged, not assumed:
+
+- Re-read the new snapshot's `HwFpDispatch.lean` end to end (all 1307
+  lines, same five chunks as the first review): identical content —
+  same imports, same `FpDispInstr`/`decodeFpDisp`/pins/fetch/gate/
+  state-dispatch/machine-step/agreement/refusal/witness sections,
+  same CUTS block, same 15 `#print axioms` lines, same
+  `end Gabbro.Grammatik.X86`.
+- Re-ran the banned-token grep on the new snapshot: the same 13
+  English "admit(s)/admitted" comment lines at the same line numbers;
+  no `sorry`/`admit`/`axiom`/`native_decide`/`sorryAx`/`unsafe`.
+- Re-ran the no-redefinition grep on the new snapshot: no
+  `s32Schritt`/`mxcsrSchritt`/`s32Decode`/`mxcsrDecode`/
+  `fpHwCvttZugelassen`/`stepExt`/`decodeExt`/`FpCtrlSchritt`
+  definition. All previous findings (scope, axioms, premise use,
+  lifting, disjointness, refusals, witness, silicon, CUTS) therefore
+  carry over unchanged to the new HEAD.
+- Fresh author evidence in `BUILD-EVIDENCE.json` (post-repair
+  entries): `./lean-probe` on the unchanged module gives
+  `== 0 error(s) in the COMPLETE output; exit 0` (same single `s'`
+  linter warning), and `./lean-bau` ends
+  `Build completed successfully (640 jobs)`.
+
+On the integration gate failure quoted in the author's repair
+section (`Lean merge build failed`, `failed to create thread`, exit
+134 on `HwFpDispatch` after 10s, zero Lean error lines): the quoted
+signature is a resource exhaustion (pthread creation under a
+parallel 642-job integration build), consistent with the project's
+documented virtual-address/thread-exhaustion failure mode — not a
+proof defect, and the module re-verified green twice afterwards in
+the author clone. I find the author's classification honest and I
+found no defect it could be masking: every `decide` in the file is
+a small closed evaluation over byte lists of 4–11 bytes. Integration
+green on retry (thread budget) remains the integrator's concern and
+is explicitly NOT claimed by this module verdict.
 
 ## Open / not claimed (carried from the candidate CUTS, agreed)
 
