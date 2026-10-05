@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 22:00 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 22:06 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -1784,6 +1784,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1337**, Opcode ledger: one-byte opcodes 80-BF, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1337.md). <!-- x86-merged:1337 -->
 - 2026-10-05: checked master `bbbdbe2e` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:bbbdbe2e03ce2c576b583ab1d23060e9e60b1d1c -->
 - 2026-10-05: lane **1338**, Independent exact review of 1337, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1338.md). <!-- x86-merged:1338 -->
+- 2026-10-05: publication batch checks passed for `1c924cbf`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
