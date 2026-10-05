@@ -54,4 +54,60 @@ def rufExecOk (b : Belegung) (r : Rahmen) (nArgs : Nat) (benutztRot : Bool)
 def calleeFremd (c : PipeCfg) : Bool :=
   calleeGerettet.all (fun q => decide (q ≠ c.dst ∧ q ≠ c.adr ∧ q ∉ c.tmp :: c.frei))
 
+/-- Unpacking the call-exec validator: frame, shape and recomputed bytes. -/
+theorem rufExecOk_teile (b : Belegung) (r : Rahmen) (nArgs : Nat) (benutztRot : Bool)
+    (c : PipeCfg) (L : Layout D)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (h : rufExecOk b r nArgs benutztRot c L body bytes = true) :
+    rufOk b r nArgs benutztRot = true ∧ istEinzelZuweisung body = true ∧
+      validate c L [] body bytes = true := by
+  unfold rufExecOk at h
+  simp only [Bool.and_eq_true] at h
+  exact ⟨h.1.1, h.1.2, h.2⟩
+
+/-- A callee-saved register lies off every working register. -/
+theorem calleeFremd_mem (c : PipeCfg) (h : calleeFremd c = true) (q : Register)
+    (hm : q ∈ calleeGerettet) : q ≠ c.dst ∧ q ≠ c.adr ∧ q ∉ c.tmp :: c.frei := by
+  unfold calleeFremd at h
+  have h2 := (List.all_eq_true.mp h) q hm
+  simpa using h2
+
+/-- RED-ZONE USE REFUSAL: no call that uses the red zone is admitted. -/
+theorem rufExecOk_verweigert_rot (b : Belegung) (r : Rahmen) (nArgs : Nat)
+    (c : PipeCfg) (L : Layout D)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (bytes : List Byte) :
+    rufExecOk b r nArgs true c L body bytes = false := by
+  unfold rufExecOk
+  rw [pipeline_ruf_verweigert_rot]
+  rfl
+
+/-- SHAPE REFUSAL: a body that is not one assignment is refused loudly. -/
+theorem rufExecOk_verweigert_form (b : Belegung) (r : Rahmen) (nArgs : Nat)
+    (benutztRot : Bool) (c : PipeCfg) (L : Layout D)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (h : istEinzelZuweisung body = false) :
+    rufExecOk b r nArgs benutztRot c L body bytes = false := by
+  unfold rufExecOk
+  rw [h]
+  cases rufOk b r nArgs benutztRot <;> rfl
+
+/-- BYTE REFUSAL: candidate bytes the Lean pipeline does not recompute
+    are refused loudly. -/
+theorem rufExecOk_verweigert_bytes (b : Belegung) (r : Rahmen) (nArgs : Nat)
+    (benutztRot : Bool) (c : PipeCfg) (L : Layout D)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (h : validate c L [] body bytes = false) :
+    rufExecOk b r nArgs benutztRot c L body bytes = false := by
+  unfold rufExecOk
+  rw [h]
+  cases rufOk b r nArgs benutztRot <;> cases istEinzelZuweisung body <;> rfl
+
+/-- With no certificates the optimiser stage is the identity. -/
+theorem optimise_nil {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (b : Block D V l Γ Λ Λ') : optimise [] b = b := rfl
+
 end Gabbro.Grammatik.X86.PipelineCallsExec
