@@ -23,6 +23,7 @@
 import Grammatik.X86.Pipeline
 import Grammatik.X86.SpillPrivate
 import Grammatik.X86.Stapel
+import Grammatik.X86.PipelineWitnesses
 
 namespace Gabbro.Grammatik.X86.PipeRegAlloc
 
@@ -30,6 +31,7 @@ open Gabbro.Grammatik
 open Gabbro.Grammatik.X86
 open Gabbro.Grammatik.X86.Pipeline
 open Gabbro.Grammatik.X86.OptimizationRules
+open Gabbro.Grammatik.X86.PipelineWitnesses
 
 /-- An untrusted register allocator result for one block: one entry per
     source variable (`some r` = register home, `none` = spilled), one
@@ -250,5 +252,183 @@ theorem pipe_alloc_haelt_bedeutung (c : PipeCfg) (L : Layout D) (A : PipeRegAllo
     pipe_alloc_spillPrivat A L c bytes.length hzul hrahmen⟩
   exact pipeline_correct (pipeAllocCfg A c) L certs src bytes hval hsep O passes R
     σ ρ s hcode hrip hW hE σ' ρ' hsrc
+
+/-! ## 6. Poison probes and the joint witness.
+
+    One positive probe (the witness allocation validates) and one refused
+    probe per validator leg: clobbered registers (also through the refusal
+    theorem), the stack pointer, a spilled live variable, an out-of-frame
+    reserve, and a frame over the code. -/
+
+/-- The witness allocation: `x` in `r10` (as `pwCfg` has it), one spill
+    reserve in a frame at 16384 (off the code at `[4096, 4178)` and off
+    the tables at 8192/8200). -/
+def pipeA0 : PipeRegAlloc :=
+  { belegung := [some .r10], spillVon := [0], rahmen := ⟨16384, 16⟩ }
+
+/-- The witness allocation keeps the witness configuration. -/
+theorem pipeA0_cfg : pipeAllocCfg pipeA0 pwCfg = pwCfg := rfl
+
+/-- POSITIVE PROBE: the witness allocation validates, by computation. -/
+theorem pipeA0_ok : pipeRegAllocOk pipeA0 pwCfg pwBytes.length = true := by decide
+
+/-- The witness frame holds no source table byte, by computation on the
+    two placed addresses. -/
+theorem pipeA0_getrennt : PipeRahmenGetrennt pipeA0.rahmen pwL := by
+  intro t k f a hloc
+  cases t
+  cases f
+  simp only [pwL] at hloc
+  by_cases e1 : k = 0
+  · rw [if_pos e1] at hloc
+    cases hloc
+    exact Or.inl (by decide)
+  · rw [if_neg e1] at hloc
+    by_cases e2 : k = 1
+    · rw [if_pos e2] at hloc
+      cases hloc
+      exact Or.inl (by decide)
+    · rw [if_neg e2] at hloc
+      cases hloc
+
+/-- CLOBBER: two variables in `r10` are refused, through the refusal theorem. -/
+def pipeBadClash : PipeRegAlloc :=
+  { belegung := [some .r10, some .r10], spillVon := [0, 1], rahmen := ⟨16384, 16⟩ }
+
+theorem pipe_probe_clash : pipeRegAllocOk pipeBadClash pwCfg pwBytes.length = false :=
+  pipe_alloc_verweigert_kollision pipeBadClash pwCfg pwBytes.length ⟨0, by decide⟩
+    ⟨1, by decide⟩ .r10 (by decide) rfl rfl
+
+/-- RSP: allocating the stack pointer is refused (calling convention). -/
+def pipeBadRsp : PipeRegAlloc :=
+  { belegung := [some .rsp], spillVon := [0], rahmen := ⟨16384, 16⟩ }
+
+theorem pipe_probe_rsp : pipeRegAllocOk pipeBadRsp pwCfg pwBytes.length = false := by
+  decide
+
+/-- SPILL: spilling the live variable is refused (no spill code). -/
+def pipeBadSpill : PipeRegAlloc :=
+  { belegung := [none], spillVon := [0], rahmen := ⟨16384, 16⟩ }
+
+theorem pipe_probe_spill :
+    pipeRegAllocOk pipeBadSpill pwCfg pwBytes.length = false := by
+  decide
+
+/-- OUT-OF-FRAME: a reserve past the frame is refused. -/
+def pipeBadAussen : PipeRegAlloc :=
+  { belegung := [some .r10], spillVon := [99], rahmen := ⟨16384, 16⟩ }
+
+theorem pipe_probe_aussen :
+    pipeRegAllocOk pipeBadAussen pwCfg pwBytes.length = false := by
+  decide
+
+/-- CODE OVERLAP: a frame over the code region is refused. -/
+def pipeBadCode : PipeRegAlloc :=
+  { belegung := [some .r10], spillVon := [0], rahmen := ⟨4096, 16⟩ }
+
+theorem pipe_probe_code :
+    pipeRegAllocOk pipeBadCode pwCfg pwBytes.length = false := by
+  decide
+
+/-- JOINT WITNESS for `pipe_alloc_haelt_bedeutung`: every premise holds
+    jointly on the pipeline witness program (one variable, two slots
+    written, check passed; memory 7 -> 35 and 9 -> 6, so the run is
+    non-degenerate and memory-changing); the closing theorem delivers the
+    fetched run plus interference freedom and spill privacy. -/
+theorem pipe_alloc_haelt_bedeutung_zeuge :
+    ∃ (σ' : World pwD) (ρ' : Env pwD pwCtx),
+      pipeRegAllocOk pipeA0 pwCfg pwBytes.length = true ∧
+      PipeRahmenGetrennt pipeA0.rahmen pwL ∧
+      validate (pipeAllocCfg pipeA0 pwCfg) pwL pwCerts pwSrc pwBytes = true ∧
+      LayoutSep pwL ∧
+      CodeAt (pwStart 30).speicher
+        (natAdresse (pipeAllocCfg pipeA0 pwCfg).codeBase) pwBytes ∧
+      (pwStart 30).rip = natAdresse (pipeAllocCfg pipeA0 pwCfg).codeBase ∧
+      WorldRep pwL (pwStart 30).speicher pwSigma ∧
+      EnvRepr pwEnv30 (pwStart 30).register (abbOf (pipeAllocCfg pipeA0 pwCfg)) ∧
+      execBlock pwO 0 pwR pwSrc pwSigma pwEnv30 = .ok σ' ρ' ∧
+      (pwSigma.slots () 0 ()).n = 7 ∧ (σ'.slots () 0 ()).n = 35 ∧
+      (pwSigma.slots () 1 ()).n = 9 ∧ (σ'.slots () 1 ()).n = 6 ∧
+      (∃ n s', laufBytes n (pwStart 30) = .weiter s' ∧
+        s'.rip = natAdresse ((pipeAllocCfg pipeA0 pwCfg).codeBase + pwBytes.length) ∧
+        WorldRep pwL s'.speicher σ' ∧
+        EnvRepr ρ' s'.register (abbOf (pipeAllocCfg pipeA0 pwCfg))) ∧
+      PipeInterferenzFrei pipeA0 ∧ PipeSpillPrivat pipeA0 pwL := by
+  obtain ⟨σ', ρ', hsrc, h0, h1⟩ := pw_quelle30
+  have hval : validate (pipeAllocCfg pipeA0 pwCfg) pwL pwCerts pwSrc pwBytes = true := by
+    rw [pipeA0_cfg]
+    exact pw_validate
+  have hcode : CodeAt (pwStart 30).speicher
+      (natAdresse (pipeAllocCfg pipeA0 pwCfg).codeBase) pwBytes := by
+    rw [pipeA0_cfg]
+    exact pw_code
+  have hrip : (pwStart 30).rip = natAdresse (pipeAllocCfg pipeA0 pwCfg).codeBase := by
+    rw [pipeA0_cfg]
+    rfl
+  have hE : EnvRepr pwEnv30 (pwStart 30).register
+      (abbOf (pipeAllocCfg pipeA0 pwCfg)) := by
+    rw [pipeA0_cfg]
+    exact pw_envRepr30
+  obtain ⟨⟨n, s', hrun, hrip', hW, hE'⟩, hfrei, hpriv⟩ :=
+    pipe_alloc_haelt_bedeutung pwCfg pwL pipeA0 pwCerts pwSrc pwBytes hval
+      pw_layoutSep pipeA0_ok pipeA0_getrennt pwO 0 pwR pwSigma pwEnv30 (pwStart 30)
+      hcode hrip pw_worldRep hE σ' ρ' hsrc
+  exact ⟨σ', ρ', pipeA0_ok, pipeA0_getrennt, hval, pw_layoutSep, hcode, hrip,
+    pw_worldRep, hE, hsrc, rfl, h0, rfl, h1,
+    ⟨n, s', hrun, hrip', hW, hE'⟩, hfrei, hpriv⟩
+
+/- CUTS:
+    - Proved here: decided validator `pipeRegAllocOk` over an untrusted
+      allocation (no spilled live variable, index-decided collision
+      freedom, `rsp`/`rbp` calling convention, working-register freshness
+      exactly `cfgOk`, in-frame reserves, reserves aligned with variables,
+      frame off the code); the validated configuration is the checked one
+      (`pipe_alloc_cfgOk`); decided collision check means interference
+      freedom (`pipe_kollisionsFrei_sound`, `pipe_alloc_interferenzFrei`);
+      validated reserves over a table-free frame are private against every
+      placed source slot (`pipe_alloc_spillPrivat`, canonical `spillSlot`
+      vocabulary); clobbering allocations are refused
+      (`pipe_alloc_verweigert_kollision`); preservation of the lowered
+      block meaning plus interference freedom and spill privacy
+      (`pipe_alloc_haelt_bedeutung`, via `pipeline_correct`); one positive
+      and five refusal probes (clash also through the refusal theorem);
+      joint non-degenerate memory-changing witness
+      (`pipe_alloc_haelt_bedeutung_zeuge` on `pwSrc`: rows 7 -> 35, 9 -> 6).
+    - OPEN / not claimed: spill CODE generation (a spilled live variable
+      is refused; the lowering has no spill code, as its own CUTS say);
+      liveness finer than whole-block (variables are never redefined, so
+      whole-block is sound but incomplete: an unused variable still needs
+      a register); callee-saved restore and argument passing (no calls in
+      the fragment); TSO freshness of spill slots (`SpillFrisch`,
+      covered at the composed level by `ComposeSpillPrivacy.lean`);
+      read-trace representation (inherited from the pipeline).
+    - The refusal `Bool` is validator admission, never a hardware fault.
+    - No second IR and no second evaluator: only the accepted pipeline
+      lowering, validator and machine vocabulary are reused.
+-/
+
+#print axioms pipeAllocRegs
+#print axioms pipeAllocCfg
+#print axioms pipeKollisionsFrei
+#print axioms pipeRegAllocOk
+#print axioms pipe_alloc_cfgOk
+#print axioms PipeInterferenzFrei
+#print axioms pipe_kollisionsFrei_sound
+#print axioms pipe_alloc_interferenzFrei
+#print axioms PipeRahmenGetrennt
+#print axioms PipeSpillPrivat
+#print axioms pipe_alloc_spillPrivat
+#print axioms pipe_alloc_verweigert_kollision
+#print axioms pipe_alloc_haelt_bedeutung
+#print axioms pipeA0
+#print axioms pipeA0_cfg
+#print axioms pipeA0_ok
+#print axioms pipeA0_getrennt
+#print axioms pipe_probe_clash
+#print axioms pipe_probe_rsp
+#print axioms pipe_probe_spill
+#print axioms pipe_probe_aussen
+#print axioms pipe_probe_code
+#print axioms pipe_alloc_haelt_bedeutung_zeuge
 
 end Gabbro.Grammatik.X86.PipeRegAlloc
