@@ -1,6 +1,6 @@
 # MUSE-REPORT-1256: Exact review of candidate 1255 — REPAIR (candidate not reviewable)
 
-CANDIDATE: 1255 abb24fbdc89fad0a9333aaa1bf44c7485d7cc576
+CANDIDATE: 1255 5723f622baa7a434d2064000c49d132bed7d93cb
 
 VERDICT: REPAIR
 
@@ -9,9 +9,10 @@ VERDICT: REPAIR
 Lane 1256: independent exact review of author lane 1255 ("Pipeline calls:
 three-or-more-statement callee bodies"). Current pinned snapshot
 `.tmp/review/SNAPSHOT.json`: head
-`abb24fbdc89fad0a9333aaa1bf44c7485d7cc576` (replaces the earlier pinned
-head `f51af8d268cf0416f1084c68cb9004a816f02785`; the old snapshot is NOT
-approved and NOT reviewed here), base
+`5723f622baa7a434d2064000c49d132bed7d93cb` (replaces the earlier pinned
+heads `f51af8d268cf0416f1084c68cb9004a816f02785` and
+`abb24fbdc89fad0a9333aaa1bf44c7485d7cc576`; neither old snapshot is
+approved nor reviewed here), base
 `515546d0e2430c0d416ede74e3add0166e88e2de`, files
 `MUSE-REPORT-1255.md`, `grammatik/Grammatik.lean`,
 `grammatik/Grammatik/X86/PipelineCallsN.lean`, clean flag true.
@@ -25,20 +26,22 @@ claim beyond the proof; plus the `./lean-bau` line.
 1. Verified work location: clone `/home/simon/Dokumente/gabbro-muse/a1256`,
    branch `muse/1256`. Matches the lane file. Proceeded.
 2. Read the NEW pinned snapshot above; it is the only candidate reference
-   used. The stale head from the previous round was not carried over.
+   used. Neither stale head from the previous rounds was carried over.
 3. Attempted the in-clone diff of pinned base versus NEW pinned head.
    Result: git reports the new pinned head object as missing in this clone
-   (bad object), so no candidate diff, file content, or commit metadata
-   could be read here. A glob for the candidate's new Lean file
-   (`grammatik/Grammatik/X86/PipelineCallsN.lean`) finds nothing in this
-   clone. Fetching is not available: HARD RULES forbid network and any
+   (bad object `5723f622...`), so no candidate diff, file content, or
+   commit metadata could be read here. A glob for the candidate's new Lean
+   file (`grammatik/Grammatik/X86/PipelineCallsN.lean`) finds nothing in
+   this clone. Fetching is not available: HARD RULES forbid network and any
    access outside this directory, and reads of the author clone are denied.
    Own `master..HEAD` diff remains just this lane's reports.
-4. Previous round's finding is therefore confirmed against the NEW
+4. Previous rounds' findings are therefore confirmed against the NEW
    snapshot, not bypassed: every prior finding (non-inspectability) was
    re-checked, and the changed proof artefacts could not be inspected for
    the same boundary reason. No previous verdict content is reused as a
-   verdict on the new code.
+   verdict on the new code. All three pinned heads to date
+   (`f51af8d2...`, `abb24fbd...`, `5723f622...`) were each checked
+   independently at their round; none was approved.
 5. Baseline check: `./lean-bau` on the clean master tree still ends with
    `Build completed successfully (658 jobs).` This line describes the
    master baseline only, NOT the candidate tree, which was never built here.
@@ -54,9 +57,9 @@ None. This lane owns only `MUSE-REPORT-1256.md` and adds no Lean or Rust work.
 ## Reasons for REPAIR (concrete)
 
 1. Zero checklist items could be executed on the NEW candidate: its pinned
-   commit `abb24fbd...` has no objects in the reviewer clone, and no
+   commit `5723f622...` has no objects in the reviewer clone, and no
    permitted channel exists to obtain them. A review that inspects nothing
-   is not a review, on the new snapshot exactly as on the stale one.
+   is not a review, on the new snapshot exactly as on the stale ones.
 2. ACCEPT is therefore impossible: it would approve unproved claims
    (sorry-freedom, axioms, witness, silicon facts) sight unseen, which the
    lane task explicitly forbids as fake closure.
