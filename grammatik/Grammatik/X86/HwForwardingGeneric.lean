@@ -514,6 +514,404 @@ theorem fwd_fehlalign_byte7_speicher (s : TSOZustand) (c : Nat)
   unfold loadByte
   rw [if_pos hrd, hbuf, e7, miss]
 
+/-! ## 7. Adapter duties: well-formedness, agreement, embedding.
+
+  Stores are the accepted `hwWortAusgabe` (buffer agreement and
+  memory silence reused); observations move no state; every buffered
+  byte is one `HwSchritt.gibAus` event and every observed byte one
+  `lade` event through the accepted byte embeddings. -/
+
+/-- Every adapter step preserves well-formedness: stores ride
+    `setTso`, observations are silent. -/
+theorem fwdAdapter_wf (m : HwMaschine) (c : Nat) (ev : FwdEreignis)
+    (m' : HwMaschine) (h : fwdAdapter.schritt m c ev = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  cases ev with
+  | speichere a v =>
+    have had : fwdAdapter.schritt m c (.speichere a v) =
+        hwWortAusgabe m c a v := rfl
+    rw [had] at h
+    unfold hwWortAusgabe at h
+    cases h1 : issueListe (tsoAnsicht m) c (wortEintraege a v) with
+    | none => rw [h1] at h; cases h
+    | some s' =>
+      rw [h1] at h
+      cases h
+      exact setTso_wf _ s' hwf
+  | beobachte a =>
+    cases hl : stapelLadeWort (tsoAnsicht m) c a with
+    | none =>
+      have hh : fwdAdapter.schritt m c (.beobachte a) = none := by
+        show (match stapelLadeWort (tsoAnsicht m) c a with
+          | some _ => some m | none => none) = none
+        rw [hl]
+      rw [hh] at h
+      cases h
+    | some w =>
+      have hh : fwdAdapter.schritt m c (.beobachte a) = some m := by
+        show (match stapelLadeWort (tsoAnsicht m) c a with
+          | some _ => some m | none => none) = some m
+        rw [hl]
+      rw [hh] at h
+      cases h
+      exact hwf
+
+/-- A buffered word store appends exactly the canonical eight
+    entries: the accepted `hwWortAusgabe_puffer`, lifted. -/
+theorem fwdSpeichere_puffer (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Wort) (m' : HwMaschine)
+    (h : fwdAdapter.schritt m c (.speichere a v) = some m') :
+    m'.puffer c = m.puffer c ++ wortEintraege a v :=
+  hwWortAusgabe_puffer m c a v m' h
+
+/-- A buffered word store changes no shared-memory byte: the accepted
+    `hwWortAusgabe_kein_speicher`, lifted. -/
+theorem fwdSpeichere_kein_speicher (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Wort) (m' : HwMaschine)
+    (h : fwdAdapter.schritt m c (.speichere a v) = some m')
+    (x : Adresse) :
+    m'.mem.bytes x = m.mem.bytes x :=
+  hwWortAusgabe_kein_speicher m c a v m' h x
+
+/-- A successful observation moves no state. -/
+theorem fwdBeobachte_still (m : HwMaschine) (c : Nat) (a : Adresse)
+    (w : Wort) (h : stapelLadeWort (tsoAnsicht m) c a = some w) :
+    fwdAdapter.schritt m c (.beobachte a) = some m := by
+  show (match stapelLadeWort (tsoAnsicht m) c a with
+    | some _ => some m | none => none) = _
+  rw [h]
+
+/-- A buffered word store reaches the machine in eight store-issue
+    steps: the accepted `issueListe_stern` fold, lifted. -/
+theorem fwdSpeichere_stern (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Wort) (m' : HwMaschine)
+    (h : fwdAdapter.schritt m c (.speichere a v) = some m') :
+    HwStern m m' := by
+  have had : fwdAdapter.schritt m c (.speichere a v) =
+      hwWortAusgabe m c a v := rfl
+  rw [had] at h
+  unfold hwWortAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c (wortEintraege a v) with
+  | none =>
+    rw [h1] at h
+    cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    have hs := issueListe_stern m c (wortEintraege a v)
+      (tsoAnsicht m) s' h1
+    have hrefl : setTso m (tsoAnsicht m) = m := by
+      cases m with
+      | mk mem kerne puffer hw bereit => rfl
+    rw [hrefl] at hs
+    exact hs
+
+/-- An observed word byte IS a machine load event: the accepted
+    `stapelByte_beob`, lifted. The observation feeds the event. -/
+theorem fwdByte_beob (m : HwMaschine) (c : Nat) (a : Adresse)
+    (b : Byte) (h : loadByte (tsoAnsicht m) c a = some b) :
+    HwSchritt m m (.leseBeob c a b) :=
+  stapelByte_beob m c a b h
+
+/-! ## 8. Planted refusals.
+
+  A word store at an address whose first byte is not writable admits
+  no issue; a word observation at an address whose first byte is not
+  readable admits no load. Both fail loudly (`none`) through the
+  accepted byte refusals. -/
+
+/-- GUARD STORE REFUSES: without write permission at the first byte
+    the whole word fold refuses. The denial fails the first byte
+    issue, the fold shape carries it. -/
+theorem fwdSpeichere_wache (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Wort)
+    (hguard : m.mem.schreibbar (addrOff a 0) = false) :
+    fwdAdapter.schritt m c (.speichere a v) = none := by
+  have had : fwdAdapter.schritt m c (.speichere a v) =
+      hwWortAusgabe m c a v := rfl
+  rw [had]
+  unfold hwWortAusgabe
+  have hfirst : issueByte (tsoAnsicht m) c (addrOff a 0)
+      (wortByte v 0) = none :=
+    issue_verweigert _ _ _ _
+      (by simpa [addrOff_null, tsoAnsicht_speicher] using hguard)
+  have hcons : wortEintraege a v =
+      ⟨addrOff a 0, wortByte v 0⟩ ::
+      [⟨addrOff a 1, wortByte v 1⟩,
+       ⟨addrOff a 2, wortByte v 2⟩,
+       ⟨addrOff a 3, wortByte v 3⟩,
+       ⟨addrOff a 4, wortByte v 4⟩,
+       ⟨addrOff a 5, wortByte v 5⟩,
+       ⟨addrOff a 6, wortByte v 6⟩,
+       ⟨addrOff a 7, wortByte v 7⟩] := rfl
+  have hfold : issueListe (tsoAnsicht m) c
+      (⟨addrOff a 0, wortByte v 0⟩ ::
+      [⟨addrOff a 1, wortByte v 1⟩,
+       ⟨addrOff a 2, wortByte v 2⟩,
+       ⟨addrOff a 3, wortByte v 3⟩,
+       ⟨addrOff a 4, wortByte v 4⟩,
+       ⟨addrOff a 5, wortByte v 5⟩,
+       ⟨addrOff a 6, wortByte v 6⟩,
+       ⟨addrOff a 7, wortByte v 7⟩]) = none :=
+    issueListe_cons_none _ _ _ _ hfirst
+  rw [hcons, hfold]
+
+/-- DARK OBSERVATION REFUSES: without read permission at the first
+    byte the whole word observation refuses. The denial fails the
+    first byte load. -/
+theorem fwdBeobachte_dunkel (s : TSOZustand) (c : Nat) (a : Adresse)
+    (hguard : s.mem.lesbar (addrOff a 0) = false) :
+    stapelLadeWort s c a = none :=
+  stapelPop_unlesbar s c a hguard
+
+/-! ## 9. Joint witness: two cores, store, forward, drain.
+
+  Core 0 buffers word 42 at address 8184 through the family adapter;
+  core 0 forwards it while core 1 still reads zero; after core 0
+  drains, shared memory holds 42 for both cores. The drain observably
+  changes memory (0 becomes 42). Beside it stand the planted guard,
+  dark-read, misaligned and overlap refusals. -/
+
+/-- Witness bytes: zeroed everywhere. -/
+def witFwdBytes (_ : Adresse) : Byte := BitVec.ofNat 8 0
+
+/-- Witness data permission: sixteen bytes at 8176. -/
+def witFwdDaten (a : Adresse) : Bool :=
+  decide (8176 ≤ a.toNat ∧ a.toNat < 8192)
+
+/-- Witness code permission: fifteen bytes at 4096. -/
+def witFwdCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4111)
+
+/-- Witness shared memory: zeroed bytes, data RW, code X-only. -/
+def witFwdMem : Speicher :=
+  { bytes := witFwdBytes, lesbar := witFwdDaten,
+    schreibbar := witFwdDaten, ausfuehrbar := witFwdCode }
+
+/-- Witness core-0 registers: top at 8192, `rax` holding 9. -/
+def witFwdReg0 : Register → Wort := fun q =>
+  if q = Register.rsp then BitVec.ofNat 64 8192
+  else if q = Register.rax then BitVec.ofNat 64 9
+  else BitVec.ofNat 64 0
+
+/-- Witness core-1 registers: top at 8184. -/
+def witFwdReg1 : Register → Wort := fun q =>
+  if q = Register.rsp then BitVec.ofNat 64 8184
+  else BitVec.ofNat 64 0
+
+/-- Witness core data: core 0 runs at 4096, core 1 idles at 8192. -/
+def witFwdKern : Nat → HwKern
+  | 0 => ⟨witFwdReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      (fun _ => BitVec.ofNat 128 0), kontextReset⟩
+  | _ => ⟨witFwdReg1, zeugeFlags, BitVec.ofNat 64 8192,
+      (fun _ => BitVec.ofNat 128 0), kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon with OS vector state. -/
+def witFwdM0 : HwMaschine :=
+  ⟨witFwdMem, witFwdKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- Witness word address. -/
+def witFwdAdr : Adresse := BitVec.ofNat 64 8184
+
+/-- Witness stored word. -/
+def witFwdWort : Wort := BitVec.ofNat 64 42
+
+/-- Witness zero word. -/
+def witFwdNull : Wort := BitVec.ofNat 64 0
+
+/-- Witness pushed machine: core 0 carries the exact eight entries,
+    core 1 is empty. The adapter reaches exactly this state. -/
+def witFwdM1 : HwMaschine :=
+  setTso witFwdM0 ⟨witFwdMem, fun d =>
+    if d = 0 then wortEintraege witFwdAdr witFwdWort else []⟩
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem witFwd_wf : HwWf witFwdM0 := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Core 0 stores word 42 at the witness address through the
+    family adapter. -/
+def witFwdPush : Option HwMaschine :=
+  fwdAdapter.schritt witFwdM0 0 (.speichere witFwdAdr witFwdWort)
+
+/-- Buffered entry count on core 0 after the store. -/
+def witFwdBufLen : Option Nat :=
+  match witFwdPush with
+  | some m1 => some (m1.puffer 0).length
+  | none => none
+
+/-- Shared-memory byte at the address right after the store. -/
+def witFwdMemStill : Option Byte :=
+  match witFwdPush with
+  | some m1 => some (m1.mem.bytes witFwdAdr)
+  | none => none
+
+/-- Core 0 observes its own buffered word (forwarding). -/
+def witFwdLoadEigen : Option (Option Wort) :=
+  match witFwdPush with
+  | some m1 => some (stapelLadeWort (tsoAnsicht m1) 0 witFwdAdr)
+  | none => none
+
+/-- Core 1 observes the old word (no foreign forwarding). -/
+def witFwdLoadFremd : Option (Option Wort) :=
+  match witFwdPush with
+  | some m1 => some (stapelLadeWort (tsoAnsicht m1) 1 witFwdAdr)
+  | none => none
+
+/-- Core 0 drains its oldest entry, eight times chained. -/
+def witFwdD1 : Option TSOZustand :=
+  match witFwdPush with
+  | some m1 => flushKern (tsoAnsicht m1) 0
+  | none => none
+
+def witFwdD2 : Option TSOZustand :=
+  match witFwdD1 with
+  | some s => flushKern s 0
+  | none => none
+
+def witFwdD3 : Option TSOZustand :=
+  match witFwdD2 with
+  | some s => flushKern s 0
+  | none => none
+
+def witFwdD4 : Option TSOZustand :=
+  match witFwdD3 with
+  | some s => flushKern s 0
+  | none => none
+
+def witFwdD5 : Option TSOZustand :=
+  match witFwdD4 with
+  | some s => flushKern s 0
+  | none => none
+
+def witFwdD6 : Option TSOZustand :=
+  match witFwdD5 with
+  | some s => flushKern s 0
+  | none => none
+
+def witFwdD7 : Option TSOZustand :=
+  match witFwdD6 with
+  | some s => flushKern s 0
+  | none => none
+
+def witFwdD8 : Option TSOZustand :=
+  match witFwdD7 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- Shared memory after the full drain. -/
+def witFwdNachFlush : Option Speicher :=
+  match witFwdD8 with
+  | some s => some s.mem
+  | none => none
+
+/-- The word read from shared memory after the drain. -/
+def witFwdNachRead : Option (Option Wort) :=
+  match witFwdNachFlush with
+  | some mem => some (read64 mem witFwdAdr)
+  | none => none
+
+/-- Core 1 reads the drained word from shared memory. -/
+def witFwdFremdNachFlush : Option (Option Wort) :=
+  match witFwdD8 with
+  | some s => some (stapelLadeWort s 1 witFwdAdr)
+  | none => none
+
+/-! ## 10. Witness facts: the reached run forwards, then drains.
+
+  The adapter run exhibits exactly the generic behaviour: eight
+  buffered entries, owner-only forwarding, foreign zero, and a drain
+  changing shared memory 0 to 42 observed from both cores. The
+  generic theorems fire on the pushed shape beside it. -/
+
+/-- The store buffers exactly eight entries on core 0. -/
+theorem witFwd_puffer8 : witFwdBufLen = some 8 := by
+  decide
+
+/-- The store leaves the shared address byte at zero. -/
+theorem witFwd_mem_still :
+    witFwdMemStill = some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Forwarding on the reached run: core 0 reads its own word 42. -/
+theorem witFwd_weiterleitung :
+    witFwdLoadEigen = some (some witFwdWort) := by
+  decide
+
+/-- No foreign forwarding on the reached run: core 1 reads zero. -/
+theorem witFwd_fremd_alt :
+    witFwdLoadFremd = some (some witFwdNull) := by
+  decide
+
+/-- The drain changes shared memory: the address reads 42. -/
+theorem witFwd_spuelung_aendert_speicher :
+    witFwdNachRead = some (some witFwdWort) := by
+  decide
+
+/-- After the drain core 1 observes the new word. -/
+theorem witFwd_fremd_neu :
+    witFwdFremdNachFlush = some (some witFwdWort) := by
+  decide
+
+/-- The address starts zeroed: the run really changes memory. -/
+theorem witFwd_anfang_null :
+    witFwdMem.bytes witFwdAdr = BitVec.ofNat 8 0 := by
+  decide
+
+/-- The pushed buffer carries exactly the word entries. -/
+theorem witFwd_pufferform :
+    (tsoAnsicht witFwdM1).puffer 0 =
+      wortEintraege witFwdAdr witFwdWort := by
+  decide
+
+/-- No foreign entry touches the footprint on the witness. -/
+theorem witFwd_fremdfrei :
+    FremdFrei (tsoAnsicht witFwdM1) 0 witFwdAdr := by
+  intro d hd e hm
+  have hbuf : (tsoAnsicht witFwdM1).puffer d = [] := by
+    simp only [tsoAnsicht, witFwdM1, setTso]
+    rw [if_neg hd]
+  rw [hbuf] at hm
+  cases hm
+
+/-- The pushed state satisfies the group guard. -/
+theorem witFwd_gruppe :
+    WortGruppe (tsoAnsicht witFwdM1) 0 witFwdAdr witFwdWort :=
+  ⟨witFwd_pufferform, witFwd_fremdfrei⟩
+
+/-- Every footprint byte is readable on the witness. -/
+theorem witFwd_lesbar_all (k : Nat) (hk : k < 8) :
+    (tsoAnsicht witFwdM1).mem.lesbar (addrOff witFwdAdr k) = true := by
+  have haddr : (addrOff witFwdAdr k).toNat = 8184 + k := by
+    unfold addrOff witFwdAdr
+    rw [BitVec.toNat_add]
+    have e1 : (BitVec.ofNat 64 8184).toNat = 8184 := by
+      rw [BitVec.toNat_ofNat]
+    have e2 : (BitVec.ofNat 64 k).toNat = k := by
+      rw [BitVec.toNat_ofNat]
+      exact Nat.mod_eq_of_lt (by omega)
+    rw [e1, e2]
+    exact Nat.mod_eq_of_lt (by omega)
+  show witFwdDaten (addrOff witFwdAdr k) = true
+  unfold witFwdDaten
+  rw [decide_eq_true_eq]
+  omega
+
+/-- The generic owner-forwarding fires on the pushed shape. -/
+theorem witFwd_generisch_eigen :
+    stapelLadeWort (tsoAnsicht witFwdM1) 0 witFwdAdr =
+      some witFwdWort :=
+  fwdWeiterleitung_generisch _ _ _ _ witFwd_gruppe witFwd_lesbar_all
+
+/-- The generic foreign leg fires on the pushed shape. -/
+theorem witFwd_generisch_fremd :
+    stapelLadeWort (tsoAnsicht witFwdM1) 1 witFwdAdr =
+      read64 (tsoAnsicht witFwdM1).mem witFwdAdr :=
+  (fwdWeiterleitung_und_fremd _ _ _ _ _ witFwd_gruppe
+    witFwd_lesbar_all (by decide)).2
+
 /- CUTS:
     Skeleton only: events and the adapter are stated, nothing proved.
 -/
