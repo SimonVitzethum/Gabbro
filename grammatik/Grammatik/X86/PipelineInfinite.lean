@@ -282,6 +282,145 @@ theorem erste_stop_ordnung (c : PipeCfg) (L : Layout D)
   cases hpre
   rfl
 
+/-- SOURCE BUDGET INDEPENDENCE: a lowered block runs the same at every
+    budget `passes`. The fragment has no loops and no calls, so `passes`
+    is threaded but never consumed; the induction mirrors
+    `senkBlock_ausgang`, using the definitional `execBlock` equations
+    (which never case on `passes`) at both budgets. Together with
+    `pipeline_ausgang` (only `ok`/`grund` at every budget) this is the
+    source side of the budget-stop ordering: no budget stop exists for
+    accepted programs, on either side. -/
+theorem budget_unabhaengig (c : PipeCfg) (L : Layout D) (O : Orakel D)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') (pos : Nat)
+    (prog : List Befehl) (h : senkBlock c L pos b = some prog) (σ : World D) (ρ : Env D Γ)
+    (p1 p2 : Nat) :
+    execBlock O p1 R b σ ρ = execBlock O p2 R b σ ρ := by
+  generalize hb0 : b = b0 at h
+  cases b0 with
+  | nil => rfl
+  | cons st rest =>
+    cases st with
+    | assignSlot t f i e hw hL =>
+      rw [senkBlock_assign] at h
+      cases hs : senkStmt c L (Stmt.assignSlot (V := V) t f i e hw hL) with
+      | none => rw [hs] at h; cases h
+      | some p =>
+        rw [hs] at h
+        dsimp only at h
+        cases hq : senkBlock c L (pos + (encodeAll p).length) rest with
+        | none => simp [hq] at h
+        | some q =>
+          simp only [senkStmt] at hs
+          cases hk : constInt? i with
+          | none => simp [hk] at hs
+          | some k =>
+            simp only [hk] at hs
+            cases hA : L.loc t k f with
+            | none => simp [hA] at hs
+            | some A =>
+              simp only [hA] at hs
+              by_cases hok : repOk (D.typ t f) A 8 0 = true
+              · rw [if_pos hok] at hs
+                cases hv : senkWertT c e with
+                | none => simp [hv] at hs
+                | some pv =>
+                  simp only [hv] at hs
+                  simp only [Option.map_some, Option.some.injEq] at hs
+                  subst hs
+                  let σL := σ.lese Λ (i.orte ++ e.orte)
+                  have hki : (eval σL i σL ρ).n = k := by
+                    have hci := constInt?_sound i σL σL ρ k hk
+                    simpa [intOf] using hci
+                  have e1 : execBlock O p1 R (.cons (.assignSlot t f i e hw hL) rest) σ ρ =
+                      execBlock O p1 R rest
+                        (σL.schreibSlot t Λ k f (eval σL e σL ρ)) ρ := by
+                    rw [← hki]
+                    rfl
+                  have e2 : execBlock O p2 R (.cons (.assignSlot t f i e hw hL) rest) σ ρ =
+                      execBlock O p2 R rest
+                        (σL.schreibSlot t Λ k f (eval σL e σL ρ)) ρ := by
+                    rw [← hki]
+                    rfl
+                  rw [e1, e2]
+                  exact budget_unabhaengig c L O R rest _ q hq _ ρ p1 p2
+              · rw [if_neg hok] at hs; cases hs
+    | ite cnd t e =>
+      obtain ⟨code, j, pt, pe, q, -, ht, he, -, -, hq, -⟩ :=
+        senkBlock_ite_inv c L cnd t e rest pos prog h
+      have hsrc1 := execStmt_ite O p1 R cnd t e σ ρ
+      have hsrc2 := execStmt_ite O p2 R cnd t e σ ρ
+      by_cases hc : wahr? (eval (σ.lese Λ cnd.orte) cnd (σ.lese Λ cnd.orte) ρ) = true
+      · have eqt : execBlock O p1 R t (σ.lese Λ cnd.orte) ρ =
+            execBlock O p2 R t (σ.lese Λ cnd.orte) ρ :=
+          budget_unabhaengig c L O R t _ pt ht _ ρ p1 p2
+        rcases senkBlock_ausgang c L O p1 R t _ pt ht _ ρ with ⟨σ', ρ', hx⟩ | ⟨σ', r, hx⟩
+        · have hs1 : execStmt O p1 R (.ite cnd t e) σ ρ = .ok σ' ρ' := by
+            rw [hsrc1, if_pos hc, hx]
+          have hs2 : execStmt O p2 R (.ite cnd t e) σ ρ = .ok σ' ρ' := by
+            rw [hsrc2, if_pos hc, ← eqt, hx]
+          rw [execBlock_cons_stmtOk O p1 R _ rest σ ρ σ' ρ' hs1,
+            execBlock_cons_stmtOk O p2 R _ rest σ ρ σ' ρ' hs2]
+          exact budget_unabhaengig c L O R rest _ q hq σ' ρ' p1 p2
+        · have hs1 : execStmt O p1 R (.ite cnd t e) σ ρ = .grund σ' r := by
+            rw [hsrc1, if_pos hc, hx]
+          have hs2 : execStmt O p2 R (.ite cnd t e) σ ρ = .grund σ' r := by
+            rw [hsrc2, if_pos hc, ← eqt, hx]
+          rw [execBlock_cons_stmtGrund O p1 R _ rest σ σ' ρ r hs1,
+            execBlock_cons_stmtGrund O p2 R _ rest σ σ' ρ r hs2]
+      · have eqe : execBlock O p1 R e (σ.lese Λ cnd.orte) ρ =
+            execBlock O p2 R e (σ.lese Λ cnd.orte) ρ :=
+          budget_unabhaengig c L O R e _ pe he _ ρ p1 p2
+        rcases senkBlock_ausgang c L O p1 R e _ pe he _ ρ with ⟨σ', ρ', hx⟩ | ⟨σ', r, hx⟩
+        · have hs1 : execStmt O p1 R (.ite cnd t e) σ ρ = .ok σ' ρ' := by
+            rw [hsrc1, if_neg hc, hx]
+          have hs2 : execStmt O p2 R (.ite cnd t e) σ ρ = .ok σ' ρ' := by
+            rw [hsrc2, if_neg hc, ← eqe, hx]
+          rw [execBlock_cons_stmtOk O p1 R _ rest σ ρ σ' ρ' hs1,
+            execBlock_cons_stmtOk O p2 R _ rest σ ρ σ' ρ' hs2]
+          exact budget_unabhaengig c L O R rest _ q hq σ' ρ' p1 p2
+        · have hs1 : execStmt O p1 R (.ite cnd t e) σ ρ = .grund σ' r := by
+            rw [hsrc1, if_neg hc, hx]
+          have hs2 : execStmt O p2 R (.ite cnd t e) σ ρ = .grund σ' r := by
+            rw [hsrc2, if_neg hc, ← eqe, hx]
+          rw [execBlock_cons_stmtGrund O p1 R _ rest σ σ' ρ r hs1,
+            execBlock_cons_stmtGrund O p2 R _ rest σ σ' ρ r hs2]
+    | _ => simp [senkBlock, senkStmt] at h
+  | pruefung cnd sonst rest =>
+    simp only [senkBlock] at h
+    cases hs : senkPruef c pos cnd sonst with
+    | none => simp [hs] at h
+    | some p =>
+      simp only [hs] at h
+      cases hq : senkBlock c L (pos + (encodeAll p).length) rest with
+      | none => simp [hq] at h
+      | some q =>
+        simp only [hq, Option.map_some, Option.some.injEq] at h
+        subst h
+        cases sonst with
+        | retGrund r hΛ =>
+          have hsrc1 : execBlock O p1 R (.pruefung cnd (.retGrund r hΛ) rest) σ ρ =
+              (if wahr? (eval (σ.lese Λ cnd.orte) cnd (σ.lese Λ cnd.orte) ρ)
+               then execBlock O p1 R rest (σ.lese Λ cnd.orte) ρ
+               else .grund (σ.lese Λ cnd.orte) r) := rfl
+          have hsrc2 : execBlock O p2 R (.pruefung cnd (.retGrund r hΛ) rest) σ ρ =
+              (if wahr? (eval (σ.lese Λ cnd.orte) cnd (σ.lese Λ cnd.orte) ρ)
+               then execBlock O p2 R rest (σ.lese Λ cnd.orte) ρ
+               else .grund (σ.lese Λ cnd.orte) r) := rfl
+          rw [hsrc1, hsrc2]
+          by_cases hc : wahr? (eval (σ.lese Λ cnd.orte) cnd (σ.lese Λ cnd.orte) ρ) = true
+          · rw [if_pos hc, if_pos hc]
+            exact budget_unabhaengig c L O R rest _ q hq _ ρ p1 p2
+          · rw [if_neg hc, if_neg hc]
+        | _ => simp [senkPruef] at hs
+  | _ => simp [senkBlock] at h
+termination_by sizeOf b
+decreasing_by
+  all_goals
+    subst hb0
+    simp only [Block.cons.sizeOf_spec, Block.pruefung.sizeOf_spec, Stmt.ite.sizeOf_spec]
+    omega
+
 end PipelineSaetze
 
 /- CUTS (preliminary; extended with every addition):
