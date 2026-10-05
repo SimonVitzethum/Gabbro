@@ -451,4 +451,259 @@ theorem probe_bt_werte :
     btBit .b64 7 3 = false := by
   decide
 
+/-! ## 6. Forms, canonical encoding, byte-parsing decoder.
+
+    Operand widths 16/32/64 as the architecture defines them: there
+    is no 8-bit BT form (SDM operand sizes 16/32/64), so the width
+    type admits nothing else by construction. Canonical subset (one
+    byte string per form, mirroring NarrowCodec): a REX byte is always
+    present (W selects 64 vs 32, R/B extend the reg/rm registers,
+    X = 0 always); 0x66 selects 16-bit (66 + REX.W refuses); 0xF0
+    (LOCK) refuses -- the locked RMW stays with the locked families;
+    ModRM mod = 3 is register-direct, mod = 2 is base + disp32 (with
+    the SIB byte exactly when the base needs it); mod = 0/1 refuse
+    (stay open). -/
+
+/-- Admitted operand widths: 16/32/64. No 8-bit form exists. -/
+inductive BtWeite where
+  | w16 | w32 | w64
+  deriving DecidableEq, Repr
+
+/-- Width as architectural `Breite`. -/
+def btWeiteBreite : BtWeite → Breite
+  | .w16 => .b16 | .w32 => .b32 | .w64 => .b64
+
+/-- Width in bits. -/
+def btWeiteBits : BtWeite → Nat
+  | .w16 => 16 | .w32 => 32 | .w64 => 64
+
+/-- The four covered shapes: register offset and imm8 offset, each on
+    a register or on base + disp32 memory. -/
+inductive BtForm where
+  | reg (op : BtOp) (w : BtWeite) (dst src : Register)
+  | imm (op : BtOp) (w : BtWeite) (dst : Register) (n : Nat)
+  | memReg (op : BtOp) (w : BtWeite) (base bitReg : Register)
+    (disp : BitVec 32)
+  | memImm (op : BtOp) (w : BtWeite) (base : Register)
+    (disp : BitVec 32) (n : Nat)
+  deriving DecidableEq, Repr
+
+/-- Canonical REX byte with X = 0: W = wBit, R = rBit, B = bBit. -/
+def rexBt (wBit rBit bBit : Nat) : Byte :=
+  natByte (64 + 8 * wBit + 4 * rBit + bBit)
+
+/-- Canonical prefix: 0x66 exactly for 16-bit, then the REX byte
+    (W exactly for 64-bit). -/
+def btPref (w : BtWeite) (rBit bBit : Nat) : List Byte :=
+  match w with
+  | .w16 => [natByte 102, rexBt 0 rBit bBit]
+  | .w32 => [rexBt 0 rBit bBit]
+  | .w64 => [rexBt 1 rBit bBit]
+
+/-- Canonical byte encoding of one covered form. -/
+def encodeBt : BtForm → List Byte
+  | .reg op w dst src =>
+    btPref w (regHigh src) (regHigh dst) ++
+      [natByte 15, natByte (btOpcode op),
+       modrmReg (regLow src) (regLow dst)]
+  | .imm op w dst n =>
+    btPref w 0 (regHigh dst) ++
+      [natByte 15, natByte 186,
+       natByte (192 + 8 * btGruppe op + regLow dst), natByte n]
+  | .memReg op w base bitReg d =>
+    btPref w (regHigh bitReg) (regHigh base) ++
+      [natByte 15, natByte (btOpcode op),
+       modrmMem (regLow bitReg) (regLow base)] ++
+      (if regLow base == 4 then [natByte 36] else []) ++ leBytes32 d
+  | .memImm op w base d n =>
+    btPref w 0 (regHigh base) ++
+      [natByte 15, natByte 186,
+       natByte (128 + 8 * btGruppe op + regLow base)] ++
+      (if regLow base == 4 then [natByte 36] else []) ++
+      leBytes32 d ++ [natByte n]
+
+/-- Admitted REX bytes (W/R/B free, X = 0): back to the three bits. -/
+def decodeBtRex : Byte → Option (Nat × Nat × Nat)
+  | b =>
+    match byteNat b with
+    | 64 => some (0, 0, 0) | 65 => some (0, 0, 1)
+    | 68 => some (0, 1, 0) | 69 => some (0, 1, 1)
+    | 72 => some (1, 0, 0) | 73 => some (1, 0, 1)
+    | 76 => some (1, 1, 0) | 77 => some (1, 1, 1)
+    | _ => none
+
+/-- The REX encoder lands in the admitted set. -/
+theorem rexBt_rund (wBit rBit bBit : Nat)
+    (hw : wBit < 2) (hr : rBit < 2) (hb : bBit < 2) :
+    decodeBtRex (rexBt wBit rBit bBit) = some (wBit, rBit, bBit) := by
+  have e1 : wBit = 0 ∨ wBit = 1 := by omega
+  have e2 : rBit = 0 ∨ rBit = 1 := by omega
+  have e3 : bBit = 0 ∨ bBit = 1 := by omega
+  cases e1 with
+  | inl h0 =>
+    cases e2 with
+    | inl h1 =>
+      cases e3 with
+      | inl h2 => subst h0; subst h1; subst h2; rfl
+      | inr h2 => subst h0; subst h1; subst h2; rfl
+    | inr h1 =>
+      cases e3 with
+      | inl h2 => subst h0; subst h1; subst h2; rfl
+      | inr h2 => subst h0; subst h1; subst h2; rfl
+  | inr h0 =>
+    cases e2 with
+    | inl h1 =>
+      cases e3 with
+      | inl h2 => subst h0; subst h1; subst h2; rfl
+      | inr h2 => subst h0; subst h1; subst h2; rfl
+    | inr h1 =>
+      cases e3 with
+      | inl h2 => subst h0; subst h1; subst h2; rfl
+      | inr h2 => subst h0; subst h1; subst h2; rfl
+
+/-- Register-form opcode back to the operation. -/
+def opcOp : Nat → Option BtOp
+  | 163 => some .bt | 171 => some .bts
+  | 179 => some .btr | 187 => some .btc
+  | _ => none
+
+/-- Decoding inverts encoding on every operation. -/
+theorem opcOp_btOpcode (op : BtOp) :
+    opcOp (btOpcode op) = some op := by
+  cases op <;> rfl
+
+/-- Group digit back to the operation. -/
+def gruppeOp : Nat → Option BtOp
+  | 4 => some .bt | 5 => some .bts | 6 => some .btr | 7 => some .btc
+  | _ => none
+
+/-- Decoding inverts encoding on every group digit. -/
+theorem gruppeOp_btGruppe (op : BtOp) :
+    gruppeOp (btGruppe op) = some op := by
+  cases op <;> rfl
+
+/-- Decode the register/memory tail after 0F and a register-form
+    opcode: mod = 3 is register-direct (reg field is the bit-offset
+    register), mod = 2 is base + disp32 memory (SIB exactly when the
+    base needs it); every other mode refuses. -/
+def decodeBtRegMem (op : BtOp) (w : BtWeite) (rBit bBit : Nat) :
+    List Byte → Option (BtForm × List Byte)
+  | [] => none
+  | m :: rest =>
+    let reg := byteNat m / 8 % 8
+    let rm := byteNat m % 8
+    match byteNat m / 64 with
+    | 3 =>
+      match codeReg (rBit * 8 + reg), codeReg (bBit * 8 + rm) with
+      | some src, some dst => some ((.reg op w dst src), rest)
+      | _, _ => none
+    | 2 =>
+      if rm == 4 then
+        match rest with
+        | sib :: rest' =>
+          if byteNat sib == 36 then
+            match parseLe32 rest' with
+            | some (d, rest'') =>
+              match codeReg (rBit * 8 + reg), codeReg (bBit * 8 + rm) with
+              | some bitReg, some base =>
+                some ((.memReg op w base bitReg d), rest'')
+              | _, _ => none
+            | none => none
+          else none
+        | [] => none
+      else
+        match parseLe32 rest with
+        | some (d, rest') =>
+          match codeReg (rBit * 8 + reg), codeReg (bBit * 8 + rm) with
+          | some bitReg, some base =>
+            some ((.memReg op w base bitReg d), rest')
+          | _, _ => none
+        | none => none
+    | _ => none
+
+/-- Decode the group tail after 0F BA: the reg field must be the
+    group digit (REX.R is 0 in the canonical subset), mod = 3 is the
+    imm8 form, mod = 2 the memory imm8 form. -/
+def decodeBtGruppe (w : BtWeite) (rBit bBit : Nat) :
+    List Byte → Option (BtForm × List Byte)
+  | [] => none
+  | m :: rest =>
+    if rBit == 0 then
+      match gruppeOp (byteNat m / 8 % 8) with
+      | some op =>
+        match codeReg (bBit * 8 + byteNat m % 8) with
+        | some dst =>
+          match byteNat m / 64 with
+          | 3 =>
+            match rest with
+            | i :: rest' => some ((.imm op w dst (byteNat i)), rest')
+            | [] => none
+          | 2 =>
+            let rm := byteNat m % 8
+            if rm == 4 then
+              match rest with
+              | sib :: rest' =>
+                if byteNat sib == 36 then
+                  match parseLe32 rest' with
+                  | some (d, rest'') =>
+                    match rest'' with
+                    | i :: rest3 =>
+                      some ((.memImm op w dst d (byteNat i)), rest3)
+                    | [] => none
+                  | none => none
+                else none
+              | [] => none
+            else
+              match parseLe32 rest with
+              | some (d, rest') =>
+                match rest' with
+                | i :: rest3 =>
+                  some ((.memImm op w dst d (byteNat i)), rest3)
+                | [] => none
+              | none => none
+          | _ => none
+        | none => none
+      | none => none
+    else none
+
+/-- Decode after the 0F prefix: a register-form opcode takes the
+    register/memory tail, 186 the group tail, anything else refuses. -/
+def decodeBt0F (w : BtWeite) (rBit bBit : Nat) :
+    List Byte → Option (BtForm × List Byte)
+  | [] => none
+  | o :: rest =>
+    match opcOp (byteNat o) with
+    | some op => decodeBtRegMem op w rBit bBit rest
+    | none =>
+      if byteNat o == 186 then decodeBtGruppe w rBit bBit rest
+      else none
+
+/-- Decode after the prefix: 0F plus the opcode tail. -/
+def decodeBtNach (w : BtWeite) (rBit bBit : Nat) :
+    List Byte → Option (BtForm × List Byte)
+  | [] => none
+  | p :: rest =>
+    if byteNat p == 15 then decodeBt0F w rBit bBit rest
+    else none
+
+/-- Top-level decoder: LOCK refuses; 0x66 selects 16-bit (with a W = 0
+    REX behind it, so 66 + REX.W refuses); otherwise the REX byte
+    selects 32 vs 64-bit. Anything else refuses. -/
+def decodeBt : List Byte → Option (BtForm × List Byte)
+  | [] => none
+  | b :: rest =>
+    if byteNat b == 240 then none
+    else if byteNat b == 102 then
+      match rest with
+      | r :: tail =>
+        match decodeBtRex r with
+        | some (0, rBit, bBit) => decodeBtNach .w16 rBit bBit tail
+        | _ => none
+      | [] => none
+    else
+      match decodeBtRex b with
+      | some (0, rBit, bBit) => decodeBtNach .w32 rBit bBit rest
+      | some (1, rBit, bBit) => decodeBtNach .w64 rBit bBit rest
+      | _ => none
+
 end Gabbro.Grammatik.X86
