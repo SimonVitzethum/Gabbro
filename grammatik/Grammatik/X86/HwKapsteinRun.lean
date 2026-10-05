@@ -349,6 +349,97 @@ theorem run_ende_beobachte_pin :
       some (some (BitVec.ofNat 8 99)) := by
   decide
 
+/-! ## 6. Runs: chains of union steps with their family tags. -/
+
+/-- A run: a chain of union steps carrying each step's family tag. -/
+inductive RunKap : HwMaschine → HwMaschine → List KapEreignis → Prop where
+  | nil (m : HwMaschine) : RunKap m m []
+  | cons {m m' m'' : HwMaschine} {k : KapEreignis}
+    {ks : List KapEreignis} :
+    HwVollSchritt m m' k → RunKap m' m'' ks → RunKap m m'' (k :: ks)
+
+/-- Runs append: the tag lists concatenate. -/
+theorem runKap_anhang {m1 m2 m3 : HwMaschine}
+    {ks js : List KapEreignis} :
+    RunKap m1 m2 ks → RunKap m2 m3 js → RunKap m1 m3 (ks ++ js) := by
+  intro h1
+  induction h1 with
+  | nil _ =>
+    intro h2
+    simpa using h2
+  | cons hstep _ ih =>
+    intro h2
+    exact .cons hstep (ih h2)
+
+/-- Well-formedness holds along every run. -/
+theorem runKap_wf {m m' : HwMaschine} {ks : List KapEreignis} :
+    RunKap m m' ks → HwWf m → HwWf m' := by
+  intro h
+  induction h with
+  | nil _ =>
+    intro hwf
+    exact hwf
+  | cons hstep _ ih =>
+    intro hwf
+    exact ih (kap_wf _ _ _ hstep hwf)
+
+/-- A uniform list of known length is the replicate. -/
+theorem liste_gleich_replicate (ks : List KapEreignis)
+    (e : KapEreignis) :
+    ∀ (n : Nat), ks.length = n → (∀ k ∈ ks, k = e) →
+      ks = List.replicate n e := by
+  induction ks with
+  | nil =>
+    intro n hlen _
+    cases n with
+    | zero => rfl
+    | succ _ => simp at hlen
+  | cons k rest ih =>
+    intro n hlen hmem
+    cases n with
+    | zero => simp at hlen
+    | succ n =>
+      have hk : k = e := hmem k (by simp)
+      have hrest : ∀ x ∈ rest, x = e :=
+        fun x hx => hmem x (by simp [hx])
+      have hlen2 : rest.length = n := by
+        simp at hlen
+        omega
+      rw [hk, ih n hlen2 hrest]
+      rfl
+
+/-- The core-0 drain loop yields a run of silent drain steps. -/
+theorem runDrain0_run (n : Nat) (m m' : HwMaschine)
+    (h : runDrain0 n (some m) = some m') :
+    ∃ ks, RunKap m m' ks ∧ ks.length = n ∧
+      ∀ k ∈ ks, k = KapEreignis.drain 0 .eigenSpuele := by
+  induction n generalizing m with
+  | zero =>
+    have hm : m = m' := by
+      simpa [runDrain0] using h
+    cases hm
+    exact ⟨[], .nil _, rfl, fun k hk => by simp at hk⟩
+  | succ n ih =>
+    cases hF : drainAdapter.schritt m 0 .eigenSpuele with
+    | none =>
+      have hred : runDrain0 (n + 1) (some m) = none := by
+        simp only [runDrain0, hF]
+      rw [hred] at h
+      cases h
+    | some mm =>
+      have hred : runDrain0 (n + 1) (some m) = runDrain0 n (some mm) := by
+        simp only [runDrain0, hF]
+      rw [hred] at h
+      obtain ⟨ks, hrun, hlen, hmem⟩ := ih mm h
+      refine ⟨KapEreignis.drain 0 .eigenSpuele :: ks,
+        .cons ((kap_drain_embedded _ _ _ _).mp hF) hrun, ?_, ?_⟩
+      · simp [hlen]
+      · intro k hk
+        simp at hk
+        cases hk with
+        | inl hkk => exact hkk
+        | inr hkr => exact hmem k hkr
+
 /- CUTS:
     Skeleton only: start machine plus well-formedness. The run steps,
     drains, observations and final memory are not yet built.
