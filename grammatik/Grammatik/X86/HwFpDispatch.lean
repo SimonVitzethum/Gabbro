@@ -798,4 +798,510 @@ theorem fpDispAusgabe_ohne_schreibbar_kein_schritt (m m' : HwMaschine)
     rw [issue_verweigert _ _ _ _ hperm] at hissue
     cases hissue
 
+/-! ## 8. Joint witness: fetched s32 add, MXCSR load, buffered store.
+
+  Core 0 fetches `ADDSS xmm2, xmm3` (`1.0f32 + 2.0f32 = 3.0f32`, upper
+  96 bits preserved) and `LDMXCSR [rax+4]` (reset word, admission
+  established) from actual executable bytes through the dispatcher,
+  issues the 32-bit result as four buffered TSO bytes (owner forwards,
+  foreign core still reads zero), and drains them into shared memory
+  (both cores observe the word). A NaN-sourced conversion is refused by
+  the re-proved gate beside it, and core 1 refuses the fetch
+  throughout. Every observation below is a closed decidable
+  evaluation. -/
+
+/-- Witness s32 bytes: `ADDSS xmm2, xmm3` (4 bytes). -/
+def fpDispWitS32 : List Byte := s32EncodeAddssRR .xmm2 .xmm3
+
+/-- Witness MXCSR bytes: `LDMXCSR [rax+4]` (7 bytes). -/
+def fpDispWitMxw : List Byte := mxcsrEncodeLd .rax (BitVec.ofNat 32 4)
+
+/-- Witness image: s32 add then MXCSR load, back to back. -/
+def fpDispWitBild : List Byte := fpDispWitS32 ++ fpDispWitMxw
+
+/-- Witness bytes: the image at 4096, the reset word `0x1F80`
+    little-endian at 8196, zeroes elsewhere. -/
+def fpDispWitBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match fpDispWitBild[a.toNat - 4096]? with
+    | some b => b
+    | none =>
+      if a.toNat = 8196 then BitVec.ofNat 8 0x80
+      else if a.toNat = 8197 then BitVec.ofNat 8 0x1F
+      else if a.toNat = 8198 then BitVec.ofNat 8 0
+      else if a.toNat = 8199 then BitVec.ofNat 8 0
+      else BitVec.ofNat 8 0
+
+/-- Witness code permission: exactly the 11 image bytes. -/
+def fpDispWitCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 11)
+
+/-- Witness data permission: eight bytes at 8192. -/
+def fpDispWitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 8)
+
+/-- Witness shared memory: code execute-only, data read/write. -/
+def fpDispWitMem : Speicher :=
+  { bytes := fpDispWitBytes, lesbar := fpDispWitDaten,
+    schreibbar := fpDispWitDaten, ausfuehrbar := fpDispWitCode }
+
+/-- Witness XMM: `xmm1` carries a NaN (gate probe), `xmm2`/`xmm3` carry
+    `1.0f32`/`2.0f32` in the low single with nonzero upper bits. -/
+def fpDispWitXmm : XmmDatei := fun q =>
+  if q = .xmm1 then vecJoin 0x7FF0000000000001 0
+  else if q = .xmm2 then 0x0000000000000000000000013F800000
+  else if q = .xmm3 then 0x00000000000000000000000240000000
+  else vecJoin 0 0
+
+/-- Witness core-0 registers: `rax` points at the data cell. -/
+def fpDispWitReg0 : Register → Wort := fun q =>
+  if q = Register.rax then BitVec.ofNat 64 8192 else BitVec.ofNat 64 0
+
+/-- Witness cores: core 0 runs at 4096, core 1 idles on the
+    (non-executable) data page. -/
+def fpDispWitKern : Nat → HwKern
+  | 0 => ⟨fpDispWitReg0, zeugeFlags, BitVec.ofNat 64 4096, fpDispWitXmm,
+      kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon with OS vector state. -/
+def fpDispWitM0 : HwMaschine :=
+  ⟨fpDispWitMem, fpDispWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- Witness data address. -/
+def fpDispWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem fpDispWitM0_wf : HwWf fpDispWitM0 := by
+  intro c f _
+  cases f <;> rfl
+
+/-- The s32 witness bytes are four bytes long. -/
+theorem fpDispWitS32_len : fpDispWitS32.length = 4 := by
+  decide
+
+/-- The MXCSR witness bytes are seven bytes long. -/
+theorem fpDispWitMxw_len : fpDispWitMxw.length = 7 := by
+  decide
+
+/-- The image is eleven bytes long. -/
+theorem fpDispWitBild_len : fpDispWitBild.length = 11 := by
+  decide
+
+/-- The fetch window on core 0 holds exactly the image. -/
+theorem fpDispWit_geholt0 :
+    geholt (projZustand fpDispWitM0 0) = fpDispWitBild := by
+  decide
+
+/-- The fetch window on core 1 is empty: no executable byte at 8192. -/
+theorem fpDispWit_fenster1_leer :
+    geholt (projZustand fpDispWitM0 1) = [] := by
+  decide
+
+/-- The witness `xmm2` low single holds `1.0f32`. -/
+theorem fpDispWit_tief32_2 :
+    xmmTief32 (projFp fpDispWitM0 0).xmm .xmm2 = 0x3F800000 := by
+  decide
+
+/-- The witness `xmm3` low single holds `2.0f32`. -/
+theorem fpDispWit_tief32_3 :
+    xmmTief32 (projFp fpDispWitM0 0).xmm .xmm3 = 0x40000000 := by
+  decide
+
+/-- The witness `xmm1` holds a NaN payload (gate probe). -/
+theorem fpDispWit_nan1 :
+    xmmTief (projFp fpDispWitM0 0).xmm .xmm1 = 0x7FF0000000000001 := by
+  decide
+
+/-- The data cell starts zeroed. -/
+theorem fpDispWit_anfang_null :
+    fpDispWitMem.bytes fpDispWitAdr = BitVec.ofNat 8 0 := by
+  decide
+
+/-- The reset word reads back through the real four-byte load. -/
+theorem fpDispWit_liest_reset :
+    read32 fpDispWitMem (BitVec.ofNat 64 8196) =
+      some (BitVec.ofNat 64 0x1F80) := by
+  decide
+
+/-! ## 9. Reached steps: fetched s32 add, MXCSR load, buffered drain.
+
+  Both register steps run from dispatcher fetches over actual bytes;
+  the store issues through `fpCtrlAusgabe32` and drains into shared
+  memory; the NaN conversion is refused by the re-proved gate. -/
+
+/-- The unified chain refuses the 11-byte image: the s32 head decides. -/
+theorem fpDispWit_bild_kein_ext : decodeExt fpDispWitBild = none := by
+  decide
+
+/-- Fetch on core 0 yields the s32 row with the MXCSR tail as suffix. -/
+theorem fpDispWit_fetch1 :
+    fetchFpDisp (projFp fpDispWitM0 0)
+      (geholt (projZustand fpDispWitM0 0)) =
+      some (.s32 ⟨.addssRR .xmm2 .xmm3, 4⟩, fpDispWitMxw) := by
+  have hlen4 : (s32EncodeAddssRR .xmm2 .xmm3).length = 4 := by
+    decide
+  have hround := s32Roundtrip_addssRR .xmm2 .xmm3 fpDispWitMxw
+  rw [hlen4] at hround
+  have hdec : decodeFpDisp fpDispWitBild =
+      some (.s32 ⟨.addssRR .xmm2 .xmm3, 4⟩, fpDispWitMxw) :=
+    decodeFpDisp_s32 _ _ _ fpDispWit_bild_kein_ext hround
+  have hzul : fpDispZugelassen (projFp fpDispWitM0 0) fpDispWitBild
+      (.s32 ⟨.addssRR .xmm2 .xmm3, 4⟩) fpDispWitMxw = true := by
+    decide
+  rw [fpDispWit_geholt0]
+  unfold fetchFpDisp
+  rw [hdec]
+  simp [hzul]
+
+/-- State after the scalar add: low single `3.0f32`. -/
+def fpDispWitT1 : FpZustand :=
+  { projFp fpDispWitM0 0 with
+    kern := { (projFp fpDispWitM0 0).kern with
+      rip := ripNach (projFp fpDispWitM0 0).kern.rip 4 },
+    xmm := xmmSchreibeTief32 (projFp fpDispWitM0 0).xmm .xmm2
+      0x40400000 }
+
+/-- Machine after the scalar add. -/
+def fpDispWitM1 : HwMaschine := setKernVonFp fpDispWitM0 0 fpDispWitT1
+
+/-- The witness runs under the admitted profile. -/
+theorem fpDispWit_fp0 : s32Eintritt (projFp fpDispWitM0 0).fp = true := by
+  have h1 : (projFp fpDispWitM0 0).fp = kontextReset := rfl
+  rw [h1]
+  exact s32Eintritt_reset
+
+/-- Reached scalar-add step through the dispatcher. -/
+theorem fpDispWit_schritt1 :
+    FpDispSchritt fpDispWitM0 fpDispWitM1
+      (.s32reg 0 ⟨.addssRR .xmm2 .xmm3, 4⟩) := by
+  have h4 : laengeOk 4 = true := by decide
+  have hs := s32Schritt_addssRR ⟨.addssRR .xmm2 .xmm3, 4⟩
+    (projFp fpDispWitM0 0) .xmm2 .xmm3 h4 fpDispWit_fp0 rfl
+  rw [fpDispWit_tief32_2, fpDispWit_tief32_3,
+    s32_eins_plus_zwei] at hs
+  exact FpDispSchritt.s32reg 0 _ fpDispWitT1 _ fpDispWit_fetch1 hs rfl
+
+/-- After the add, the low single holds `3.0f32` on the machine. -/
+theorem fpDispWit_m1_tief32 :
+    xmmTief32 (fpDispWitM1.kerne 0).xmm .xmm2 = 0x40400000 := by
+  simp only [fpDispWitM1, setKernVonFp_xmm, fpDispWitT1]
+  exact xmmSchreibeTief32_tief _ _ _
+
+/-- After the add, the upper 96 bits survive on the machine. -/
+theorem fpDispWit_m1_hoch96 :
+    ((fpDispWitM1.kerne 0).xmm .xmm2).toNat / 2 ^ 32 = 1 := by
+  have hset : (fpDispWitM1.kerne 0).xmm =
+      xmmSchreibeTief32 (projFp fpDispWitM0 0).xmm .xmm2 0x40400000 := by
+    simp only [fpDispWitM1, setKernVonFp_xmm, fpDispWitT1]
+  rw [hset, xmmSchreibeTief32_hoch96]
+  have hb : ((projFp fpDispWitM0 0).xmm .xmm2).toNat / 2 ^ 32 = 1 := by
+    decide
+  exact hb
+
+/-- After the add, RIP stands past the 4-byte form. -/
+theorem fpDispWit_m1_rip :
+    (fpDispWitM1.kerne 0).rip = BitVec.ofNat 64 4100 := by
+  simp only [fpDispWitM1, setKernVonFp_rip, fpDispWitT1]
+  decide
+
+/-- The unified chain refuses the 7-byte MXCSR tail. -/
+theorem fpDispWit_mxw_kein_ext : decodeExt fpDispWitMxw = none := by
+  decide
+
+/-- The s32 decoder refuses the 7-byte MXCSR tail. -/
+theorem fpDispWit_mxw_kein_s32 : s32Decode fpDispWitMxw = none := by
+  decide
+
+/-- Fetch past the add yields the LDMXCSR row with no suffix. -/
+theorem fpDispWit_fetch2 :
+    fetchFpDisp (projFp fpDispWitM1 0)
+      (geholt (projZustand fpDispWitM1 0)) =
+      some (.mxcsr ⟨.ldmxcsr .rax (BitVec.ofNat 32 4), 7, false⟩,
+        []) := by
+  have hwin : geholt (projZustand fpDispWitM1 0) = fpDispWitMxw := by
+    decide
+  have hlen7 : (mxcsrEncodeLd .rax (BitVec.ofNat 32 4)).length = 7 := by
+    decide
+  have hround :=
+    mxcsrRoundtrip_ld .rax (BitVec.ofNat 32 4) [] pin_disp_rax_code
+  simp only [List.append_nil] at hround
+  rw [hlen7] at hround
+  have hdec : decodeFpDisp fpDispWitMxw =
+      some (.mxcsr ⟨.ldmxcsr .rax (BitVec.ofNat 32 4), 7, false⟩,
+        []) :=
+    decodeFpDisp_mxcsr _ _ _ fpDispWit_mxw_kein_ext
+      fpDispWit_mxw_kein_s32 hround
+  have hzul : fpDispZugelassen (projFp fpDispWitM1 0) fpDispWitMxw
+      (.mxcsr ⟨.ldmxcsr .rax (BitVec.ofNat 32 4), 7, false⟩) [] = true := by
+    decide
+  rw [hwin]
+  unfold fetchFpDisp
+  rw [hdec]
+  simp [hzul]
+
+/-- State after the MXCSR reset-word load. -/
+def fpDispWitT2 : FpZustand :=
+  { projFp fpDispWitM1 0 with
+    kern := { (projFp fpDispWitM1 0).kern with
+      rip := ripNach (projFp fpDispWitM1 0).kern.rip 7 },
+    fp := ⟨0x1F80⟩ }
+
+/-- Machine after the MXCSR reset-word load. -/
+def fpDispWitM2 : HwMaschine := setKernVonFp fpDispWitM1 0 fpDispWitT2
+
+/-- Seven-byte decode lengths are checked data. -/
+theorem fpDispWit_laenge7 : laengeOk 7 = true := by
+  decide
+
+/-- Reached MXCSR reset-word load through the dispatcher. -/
+theorem fpDispWit_schritt2 :
+    FpDispSchritt fpDispWitM1 fpDispWitM2
+      (.mxcsrLd 0 ⟨.ldmxcsr .rax (BitVec.ofNat 32 4), 7, false⟩) := by
+  have heff : effAddr (projFp fpDispWitM1 0).kern Register.rax 4 =
+      BitVec.ofNat 64 8196 := by
+    decide
+  have hrd : read32 (projFp fpDispWitM1 0).kern.speicher
+      (effAddr (projFp fpDispWitM1 0).kern Register.rax 4) =
+      some (BitVec.ofNat 64 0x1F80) := by
+    rw [heff]
+    show read32 fpDispWitMem (BitVec.ofNat 64 8196) =
+      some (BitVec.ofNat 64 0x1F80)
+    decide
+  have hs := mxcsrSchritt_ld_erfolg
+    ⟨.ldmxcsr .rax (BitVec.ofNat 32 4), 7, false⟩
+    (projFp fpDispWitM1 0) mxcsrProfilModern mxcsrSteuerungOffen
+    .rax (BitVec.ofNat 32 4) (BitVec.ofNat 64 0x1F80) 0x1F80
+    fpDispWit_laenge7 rfl mxcsrSteuerungOffen_ok rfl hrd rfl
+    ldmxcsrArchOk_reset_modern
+  exact FpDispSchritt.mxcsrLd 0 _ fpDispWitT2 .rax _ _
+    fpDispWit_fetch2 rfl hs rfl
+
+/-- The reset-word load establishes admission on the core. -/
+theorem fpDispWit_m2_einlass :
+    fpEintritt (fpDispWitM2.kerne 0).fp = true := by
+  have h1 : (fpDispWitM2.kerne 0).fp = (⟨0x1F80⟩ : FPKontext) := rfl
+  rw [h1]
+  exact fpEintritt_reset
+
+/-- After the load, RIP stands past both fetched rows. -/
+theorem fpDispWit_m2_rip :
+    (fpDispWitM2.kerne 0).rip = BitVec.ofNat 64 4107 := by
+  simp only [fpDispWitM2, setKernVonFp_rip, fpDispWitT2]
+  decide
+
+/-- The stored 32-bit word: `3.0f32` as a target word. -/
+def fpDispWitWert : Wort := BitVec.ofNat 64 0x40400000
+
+/-- Core 0 issues the result word at the data cell. -/
+def fpDispWitM3 : Option HwMaschine :=
+  fpCtrlAusgabe32 fpDispWitM2 0 fpDispWitAdr fpDispWitWert
+
+/-- Core 0 observes its own third footprint byte (forwarding). -/
+def fpDispWitLoadEigen : Option (Option Byte) :=
+  match fpDispWitM3 with
+  | some m => some (loadByte (tsoAnsicht m) 0 (addrOff fpDispWitAdr 2))
+  | none => none
+
+/-- Core 1 observes the old third footprint byte (no forwarding). -/
+def fpDispWitLoadFremd : Option (Option Byte) :=
+  match fpDispWitM3 with
+  | some m => some (loadByte (tsoAnsicht m) 1 (addrOff fpDispWitAdr 2))
+  | none => none
+
+/-- Forwarding: core 0 reads its own unflushed `0x40`. -/
+theorem fpDispWit_weiterleitung :
+    fpDispWitLoadEigen = some (some (BitVec.ofNat 8 0x40)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem fpDispWit_fremd_alt :
+    fpDispWitLoadFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- Core 0 drains its oldest entry. -/
+def fpDispWitF1 : Option HwMaschine :=
+  match fpDispWitM3 with
+  | some m =>
+    match flushKern (tsoAnsicht m) 0 with
+    | some s => some (setTso m s)
+    | none => none
+  | none => none
+
+/-- Second drain. -/
+def fpDispWitF2 : Option HwMaschine :=
+  match fpDispWitF1 with
+  | some m =>
+    match flushKern (tsoAnsicht m) 0 with
+    | some s => some (setTso m s)
+    | none => none
+  | none => none
+
+/-- Third drain. -/
+def fpDispWitF3 : Option HwMaschine :=
+  match fpDispWitF2 with
+  | some m =>
+    match flushKern (tsoAnsicht m) 0 with
+    | some s => some (setTso m s)
+    | none => none
+  | none => none
+
+/-- Fourth drain: the footprint is fully installed. -/
+def fpDispWitF4 : Option HwMaschine :=
+  match fpDispWitF3 with
+  | some m =>
+    match flushKern (tsoAnsicht m) 0 with
+    | some s => some (setTso m s)
+    | none => none
+  | none => none
+
+/-- The shared word after the drain. -/
+def fpDispWitNachFlush : Option (Option Wort) :=
+  match fpDispWitF4 with
+  | some m => some (read32 m.mem fpDispWitAdr)
+  | none => none
+
+/-- The drain changes shared memory: the cell reads `3.0f32`. -/
+theorem fpDispWit_spuelung_aendert :
+    fpDispWitNachFlush = some (some fpDispWitWert) := by
+  decide
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def fpDispWitFremdNach : Option (Option Byte) :=
+  match fpDispWitF4 with
+  | some m => some (loadByte (tsoAnsicht m) 1 (addrOff fpDispWitAdr 2))
+  | none => none
+
+/-- After the drain core 1 observes the new byte. -/
+theorem fpDispWit_fremd_neu :
+    fpDispWitFremdNach = some (some (BitVec.ofNat 8 0x40)) := by
+  decide
+
+/-- The NaN-sourced conversion is refused by the re-proved gate at
+    dispatch step level. -/
+theorem fpDispWit_gate_verweigert :
+    fpDispGated (.ext (.fp ⟨.cvttsd2si .rax .xmm1, 4⟩))
+      (projFp fpDispWitM0 0) basisBereit = .verweigert := by
+  have hg : fpDispGate (.ext (.fp ⟨.cvttsd2si .rax .xmm1, 4⟩))
+      (projFp fpDispWitM0 0) = false :=
+    fpDispGate_cvtt_nan .rax .xmm1 _ fpDispWit_nan1
+  exact fpDispGated_gate_verweigert _ _ _ hg
+
+/-- Core 1 refuses: its window is empty, so the dispatcher refuses. -/
+theorem fpDispWit_kern1_verweigert :
+    fetchFpDisp (projFp fpDispWitM0 1)
+      (geholt (projZustand fpDispWitM0 1)) = none := by
+  rw [fpDispWit_fenster1_leer]
+  exact fetchFpDisp_verweigert _ _
+    (decodeFpDisp_nichts _ pin_ext_nichts_leer rfl rfl)
+
+/-! ## 10. Joint witness: a reached non-degenerate two-core run.
+
+  Fetched s32 add (`3.0f32`, upper preserved), fetched MXCSR
+  reset-word load (admission), RNE untouched, buffered 32-bit store
+  forwarded to the owner only, four-drain install (`0` becomes
+  `0x40400000`, observed from both cores), NaN conversion refused by
+  the gate, core-1 refusal. Non-degenerate: the drain changes actual
+  shared memory while both cores participate. -/
+
+/-- JOINT WITNESS (dispatched FP run on the coherent machine). -/
+theorem fpDisp_zeuge :
+    FpDispSchritt fpDispWitM0 fpDispWitM1
+        (.s32reg 0 ⟨.addssRR .xmm2 .xmm3, 4⟩) ∧
+      xmmTief32 (fpDispWitM1.kerne 0).xmm .xmm2 = 0x40400000 ∧
+      ((fpDispWitM1.kerne 0).xmm .xmm2).toNat / 2 ^ 32 = 1 ∧
+      (fpDispWitM1.kerne 0).rip = BitVec.ofNat 64 4100 ∧
+      FpDispSchritt fpDispWitM1 fpDispWitM2
+        (.mxcsrLd 0 ⟨.ldmxcsr .rax (BitVec.ofNat 32 4), 7, false⟩) ∧
+      fpEintritt (fpDispWitM2.kerne 0).fp = true ∧
+      (fpDispWitM2.kerne 0).rip = BitVec.ofNat 64 4107 ∧
+      fpDispWitLoadEigen = some (some (BitVec.ofNat 8 0x40)) ∧
+      fpDispWitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+      fpDispWitNachFlush = some (some fpDispWitWert) ∧
+      fpDispWitFremdNach = some (some (BitVec.ofNat 8 0x40)) ∧
+      fpDispGated (.ext (.fp ⟨.cvttsd2si .rax .xmm1, 4⟩))
+        (projFp fpDispWitM0 0) basisBereit = .verweigert ∧
+      fetchFpDisp (projFp fpDispWitM0 1)
+        (geholt (projZustand fpDispWitM0 1)) = none ∧
+      HwWf fpDispWitM0 := by
+  refine ⟨fpDispWit_schritt1, fpDispWit_m1_tief32, fpDispWit_m1_hoch96,
+    fpDispWit_m1_rip, fpDispWit_schritt2, fpDispWit_m2_einlass,
+    fpDispWit_m2_rip, fpDispWit_weiterleitung, fpDispWit_fremd_alt,
+    fpDispWit_spuelung_aendert, fpDispWit_fremd_neu,
+    fpDispWit_gate_verweigert, fpDispWit_kern1_verweigert,
+    fpDispWitM0_wf⟩
+
+/- CUTS: what is not proved here.
+
+   Proved here, over the reused accepted vocabulary (`HardwareExecution`:
+   `HwMaschine`/`HwSchritt`/`issueListe`/`setKernVonFp`/`setTso`;
+   `ExtendedExecution`: `decodeExt`/`stepExt`/`fetchExt`;
+   `ScalarFloat32HardwareForms`: `s32Schritt`/`s32Decode`;
+   `FpControlHardwareForms`: `mxcsrSchritt`/`mxcsrDecode`;
+   `ScalarFloatHardwareForms`: `fpHwCvttZugelassen`/`cvttHwGueltig`;
+   `HwFpControl`: `FpCtrlSchritt`/`fpCtrlAusgabe32`/`FpGruppe32`):
+   - the dispatcher `decodeFpDisp` trying the unified chain first and
+     the accepted s32/MXCSR decoders only on earlier refusal, with
+     closed-chain disjointness pins in every direction (no overlap
+     found: unified refuses the s32/LDMXCSR/STMXCSR rows, the new
+     decoders refuse each other and the old DOUBLE row, the old row
+     stays unified);
+   - fetch/execute permission in the `fetchExt_erfolg` discipline
+     (`fetchFpDisp_erfolg`: decode equation, length equation, length
+     guard, execute permission);
+   - the conversion gate re-proved at dispatch step level from the
+     gate definition (NaN refusal, `42.0` admission, gated-step and
+     byte-step refusal theorems citing no family gate theorem);
+   - state-level dispatch with per-leg selection (unified/s32/LD are
+     the accepted evaluators; STMXCSR has no register outcome);
+   - the coherent machine step with fetch evidence on every register
+     leg, the re-proved gate on the unified leg, and the LDMXCSR form
+     pinned on its leg; wf preservation; exact agreement (s32/LD
+     legs ARE `FpCtrlSchritt`, unified IS `HwSchritt.reg`, TSO legs
+     ARE the coherent TSO steps); stores (STMXCSR, MOVSS-store) as
+     four buffered byte issues of the accepted stored word with
+     group establishment;
+   - length/profile/LOCK-permission refusals, including STMXCSR on
+     the register path and the conversion domain on the unified leg;
+   - the reached two-core joint witness `fpDisp_zeuge`: fetched s32
+     add with upper preservation, fetched MXCSR reset install,
+     owner-only forwarding, four-drain install changing actual shared
+     memory observed from both cores, gate refusal, core-1 refusal.
+   NOT proved here, and not claimed:
+   - No hardware correspondence: encodings are the accepted canonical
+     subsets with self-consistency only. Silicon provenance is cited
+     from the family files, never restated; the Intel SDM extracts
+     are provenance, not proofs.
+   - `decodeFpDisp` is not yet wired into `fetchExt`/`HwSchritt`
+     itself: the unified dispatcher and the coherent `reg` step still
+     carry no s32/MXCSR rows; those legs plug in through
+     `FpDispSchritt` (fetch-evidenced), not through the unified step.
+   - No per-access target-to-W/GX simulation and no whole-word
+     atomicity beyond the byte-drain groups; the drain/write32 byte
+     correspondence for STMXCSR/MOVSS-store is open (value and
+     footprint are pinned at issue level); timing, power, interrupts
+     and faults beyond the carried divide halt are absent; sticky-flag
+     accumulation, SNaN/DAZ/FTZ execution and NaN payloads stay at the
+     inherited family cuts.
+-/
+
+#print axioms decodeFpDisp
+#print axioms fetchFpDisp_erfolg
+#print axioms fpDispGate_cvtt_nan
+#print axioms fpDispGated_gate_verweigert
+#print axioms fpDispByteschritt_gate_verweigert
+#print axioms fpDispSchritt_wf
+#print axioms fpDispS32_ist_fpCtrl
+#print axioms fpDispMxcsr_ist_fpCtrl
+#print axioms fpDispExt_ist_hwReg
+#print axioms fpDispSt_ist_ausgabe32
+#print axioms fpDispMxcsrSt_kein_register
+#print axioms fpDispExt_gate_kein_schritt
+#print axioms fpDispWit_schritt1
+#print axioms fpDispWit_schritt2
+#print axioms fpDisp_zeuge
+
 end Gabbro.Grammatik.X86
