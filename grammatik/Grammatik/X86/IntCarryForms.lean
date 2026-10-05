@@ -1599,6 +1599,112 @@ theorem pin_grund_ok :
 theorem pin_grund_okMem : ablehnGrund [natByte 17, natByte 1] = none := by
   decide
 
+/-! ## No shadowing: the unified chain refuses the family rows.
+
+    Every family opcode (with a representative tail) is refused by
+    the whole `decodeExt` chain, so the dispatcher below takes the
+    family arm exactly once and no pilot or extension form is
+    shadowed. Each pin evaluates the complete chain on concrete
+    bytes. -/
+
+/-- The unified chain refuses `10 /r`. -/
+theorem ext_weist_carry10_zurueck :
+    decodeExt [natByte 16, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses `11 /r`. -/
+theorem ext_weist_carry11_zurueck :
+    decodeExt [natByte 17, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses `12 /r`. -/
+theorem ext_weist_carry12_zurueck :
+    decodeExt [natByte 18, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses `13 /r`. -/
+theorem ext_weist_carry13_zurueck :
+    decodeExt [natByte 19, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses `14 ib`. -/
+theorem ext_weist_carry14_zurueck :
+    decodeExt [natByte 20, natByte 5] = none := by
+  decide
+
+/-- The unified chain refuses `15 iz`. -/
+theorem ext_weist_carry15_zurueck :
+    decodeExt [natByte 21, natByte 5, natByte 0, natByte 0, natByte 0] =
+      none := by
+  decide
+
+/-- The unified chain refuses `18 /r`. -/
+theorem ext_weist_carry18_zurueck :
+    decodeExt [natByte 24, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses `19 /r`. -/
+theorem ext_weist_carry19_zurueck :
+    decodeExt [natByte 25, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses `1A /r`. -/
+theorem ext_weist_carry1A_zurueck :
+    decodeExt [natByte 26, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses `1B /r`. -/
+theorem ext_weist_carry1B_zurueck :
+    decodeExt [natByte 27, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses `1C ib`. -/
+theorem ext_weist_carry1C_zurueck :
+    decodeExt [natByte 28, natByte 5] = none := by
+  decide
+
+/-- The unified chain refuses `1D iz`. -/
+theorem ext_weist_carry1D_zurueck :
+    decodeExt [natByte 29, natByte 5, natByte 0, natByte 0, natByte 0] =
+      none := by
+  decide
+
+/-- The unified chain refuses Group-1 `80 /2`. -/
+theorem ext_weist_carry80_zurueck :
+    decodeExt [natByte 128, natByte 208, natByte 1] = none := by
+  decide
+
+/-- The unified chain refuses Group-1 `81 /2`. -/
+theorem ext_weist_carry81_zurueck :
+    decodeExt [natByte 129, natByte 208, natByte 1, natByte 0, natByte 0,
+      natByte 0] = none := by
+  decide
+
+/-- The unified chain refuses Group-1 `83 /2`. -/
+theorem ext_weist_carry83_zurueck :
+    decodeExt [natByte 131, natByte 208, natByte 253] = none := by
+  decide
+
+/-- The unified chain refuses `FE /0`. -/
+theorem ext_weist_carryFE_zurueck :
+    decodeExt [natByte 254, natByte 192] = none := by
+  decide
+
+/-- The unified chain refuses `FF /0`. -/
+theorem ext_weist_carryFF_zurueck :
+    decodeExt [natByte 255, natByte 192] = none := by
+  decide
+
+/-- The unified chain refuses REX.W `11 /r`. -/
+theorem ext_weist_carryREX11_zurueck :
+    decodeExt [natByte 72, natByte 17, natByte 193] = none := by
+  decide
+
+/-- The unified chain refuses 66H `11 /r`. -/
+theorem ext_weist_carry6611_zurueck :
+    decodeExt [natByte 102, natByte 17, natByte 193] = none := by
+  decide
+
 /- CUTS:
     Value/flag layer (§1) and register step (§2) stand.
     NOT proved here, and not claimed: the opcode dispatch, encode,
