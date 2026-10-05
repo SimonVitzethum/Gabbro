@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 15:11 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 15:25 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -673,21 +673,21 @@ Last ledger refresh: **2026-10-05 15:11 UTC**. This is an operational snapshot, 
 | 1229 | Pipeline calls: multi-statement callee bodies | Merged after review/checks | 1230: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1229.md) |
 | 1231 | Pipeline tables: byte slices | Committed candidate; review/integration pending | 1232: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1231.md) |
 | 1233 | Pipeline work bounds for branches and loops | Merged after review/checks | 1234: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1233.md) |
-| 1235 | Profiles: multi-step control flow and relocation re-decode | Committed candidate; review/integration pending | 1236: Incomplete; preserved | [task](lanes/1235.md) |
+| 1235 | Profiles: multi-step control flow and relocation re-decode | Committed candidate; review/integration pending | 1236: Committed candidate; review/integration pending | [task](lanes/1235.md) |
 | 1237 | AVX2: VEX prefix decoder and encoder | Agent working | 1238: scheduled | [task](lanes/1237.md) |
-| 1239 | AVX2: 256-bit integer operation semantics | Agent working | 1240: scheduled | [task](lanes/1239.md) |
+| 1239 | AVX2: 256-bit integer operation semantics | Committed candidate; review/integration pending | 1240: Agent working | [task](lanes/1239.md) |
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Agent working | 1242: scheduled | [task](lanes/1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
-| 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Agent working | 1246: scheduled | [task](lanes/1245.md) |
+| 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Committed candidate; review/integration pending | 1246: Agent working | [task](lanes/1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Agent working | 1250: scheduled | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Agent working | 1252: scheduled | [task](lanes/1251.md) |
-| 1253 | Start-anchored bridged run for the GX refinement | Agent working | 1254: scheduled | [task](lanes/1253.md) |
+| 1253 | Start-anchored bridged run for the GX refinement | Committed candidate; review/integration pending | 1254: Committed candidate; review/integration pending | [task](lanes/1253.md) |
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Agent working | 1256: scheduled | [task](lanes/1255.md) |
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Agent working | 1258: scheduled | [task](lanes/1257.md) |
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Agent working | 1260: scheduled | [task](lanes/1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Agent working | 1262: scheduled | [task](lanes/1261.md) |
-| 1263 | Pipeline: per-chunk derivation for if/else and checks | Scheduled | 1264: scheduled | [task](lanes/1263.md) |
+| 1263 | Pipeline: per-chunk derivation for if/else and checks | Agent working | 1264: scheduled | [task](lanes/1263.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1587,6 +1587,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1230**, Independent exact review of 1229, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1230.md). <!-- x86-merged:1230 -->
 - 2026-10-05: lane **1233**, Pipeline work bounds for branches and loops, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1233.md). <!-- x86-merged:1233 -->
 - 2026-10-05: lane **1234**, Independent exact review of 1233, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1234.md). <!-- x86-merged:1234 -->
+- 2026-10-05: publication batch checks passed for `bd57fa7c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
