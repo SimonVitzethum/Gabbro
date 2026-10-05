@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 19:15 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 19:17 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -711,6 +711,13 @@ Last ledger refresh: **2026-10-05 19:15 UTC**. This is an operational snapshot, 
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
 | 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1307.md) |
 | 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Merged after review/checks | 1310: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1309.md) |
+| 1311 | Capstone, second step: add the families merged since the first union | Scheduled | 1312: scheduled | [task](lanes/1311.md) |
+| 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Scheduled | 1314: scheduled | [task](lanes/1313.md) |
+| 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Scheduled | 1316: scheduled | [task](lanes/1315.md) |
+| 1317 | Memory-operand addressing forms for bit test and bit scan | Scheduled | 1318: scheduled | [task](lanes/1317.md) |
+| 1319 | 8-bit operand forms across the new integer families | Scheduled | 1320: scheduled | [task](lanes/1319.md) |
+| 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Scheduled | 1322: scheduled | [task](lanes/1321.md) |
+| 1323 | valX86 decode coverage over the capstone decoder chain | Scheduled | 1324: scheduled | [task](lanes/1323.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1709,6 +1716,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1297**, Paging follow-up: large pages and SMEP/SMAP, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1297.md). <!-- x86-merged:1297 -->
 - 2026-10-05: lane **1298**, Independent exact review of 1297, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1298.md). <!-- x86-merged:1298 -->
 - 2026-10-05: publication batch checks passed for `0f064c80`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: checked master `4a3563f2` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:4a3563f217d0a64229d343983e35e0cb6565e00d -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
