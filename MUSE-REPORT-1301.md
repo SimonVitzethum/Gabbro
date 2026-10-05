@@ -90,6 +90,13 @@ weakly ordered.
 - No per-access target-to-W/GX simulation and no source/checker/
   Spec/goal/emitter correspondence (not attempted).
 
+## Fix after integration-gate refusal (whitespace only)
+
+The merge gate refused the candidate on `git diff --cached --check`:
+one trailing space in `HwWcOrdering.lean` (line 1043, in
+`wit_schritt6_1301`). Fixed whitespace-only, no theorem touched.
+`git diff --check` clean, `./lean-bau` green again (677 jobs).
+
 ## Task notes
 
 Nothing in the task looks wrong. One reading decision worth

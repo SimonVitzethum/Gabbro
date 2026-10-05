@@ -1040,7 +1040,7 @@ theorem wit_schritt6_1301 :
       (.evict 0 HwMemWC1287.witWcB1287 (natByte 43)) := by
   have hkopf : (witM5_1301.wc.wc 0).head? =
       some ⟨HwMemWC1287.witWcB1287, natByte 43⟩ := by rfl
-  exact HwWcOrdSchritt1301.evict witM5_1301 0 witM6_1301 _ 
+  exact HwWcOrdSchritt1301.evict witM5_1301 0 witM6_1301 _
     (by unfold wcEvictZugriff1301; rfl) hkopf
 
 /-- The eviction installs the second WC byte into memory. -/
