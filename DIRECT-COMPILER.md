@@ -636,7 +636,7 @@ Last ledger refresh: **2026-10-05 13:02 UTC**. This is an operational snapshot, 
 | 1155 | Pipeline: loops and branch layout with budget | Merged after review/checks | 1156: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1155.md) |
 | 1157 | Pipeline: calls, stack-passed parameters, callee-saved registers, return values | Merged after review/checks | 1158: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1157.md) |
 | 1159 | Pipeline: arrays, records and pointers beyond integer slots | Merged after review/checks | 1160: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1159.md) |
-| 1161 | Pipeline: IEEE float expressions | Merged after review/checks | 1162: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1161.md) |
+| 1161 | Pipeline: IEEE float expressions | Merged after review/checks | 1162: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1161.md) |
 | 1163 | Pipeline: atomics and locks onto TSO | Committed candidate; review/integration pending | 1164: Committed candidate; review/integration pending | [task](lanes/1163.md) |
 | 1165 | Pipeline: source budget to target work and time transfer | Committed candidate; review/integration pending | 1166: Committed candidate; review/integration pending | [task](lanes/1165.md) |
 | 1167 | Pipeline: register allocation, spills and privacy validated | Merged after review/checks | 1168: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1167.md) |
@@ -645,8 +645,8 @@ Last ledger refresh: **2026-10-05 13:02 UTC**. This is an operational snapshot, 
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
 | 1175 | Finite and infinite execution soundness of the pipeline | Committed candidate; review/integration pending | 1176: Unresolved after agent rounds; not accepted | [task](lanes/1175.md) |
 | 1177 | Source-computed units and duties feeding the pipeline | Incomplete; preserved | 1178: scheduled | [task](lanes/1177.md) |
-| 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Scheduled | 1180: scheduled | [task](lanes/1179.md) |
-| 1181 | Nested interrupt delivery, #DF and handler entry | Scheduled | 1182: scheduled | [task](lanes/1181.md) |
+| 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Agent working | 1180: scheduled | [task](lanes/1179.md) |
+| 1181 | Nested interrupt delivery, #DF and handler entry | Agent working | 1182: scheduled | [task](lanes/1181.md) |
 | 1183 | Feature gating enforced per step, not by wrapper | Scheduled | 1184: scheduled | [task](lanes/1183.md) |
 | 1185 | Generic word-forwarding theorem | Scheduled | 1186: scheduled | [task](lanes/1185.md) |
 | 1187 | TSO traces to W runs: run induction | Waiting for accepted dependencies | 1188: scheduled | [task](lanes/1187.md) |
@@ -1464,6 +1464,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1159**, Pipeline: arrays, records and pointers beyond integer slots, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1159.md). <!-- x86-merged:1159 -->
 - 2026-10-05: lane **1160**, Independent exact review of 1159, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1160.md). <!-- x86-merged:1160 -->
 - 2026-10-05: lane **1161**, Pipeline: IEEE float expressions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1161.md). <!-- x86-merged:1161 -->
+- 2026-10-05: lane **1162**, Independent exact review of 1161, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1162.md). <!-- x86-merged:1162 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
