@@ -708,3 +708,4 @@ import Grammatik.X86.HwKapsteinTsoLocked
 import Grammatik.X86.OpcodeLedger1Byte00
 import Grammatik.X86.OpcodeLedger1ByteC0
 import Grammatik.X86.OpcodeLedger0F00
+import Grammatik.X86.OpcodeLedger1Byte80
