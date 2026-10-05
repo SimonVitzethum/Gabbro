@@ -493,6 +493,246 @@ theorem rumpfBruecke (O : Orakel D) (passes : Nat)
 
 #print axioms rumpfBlock
 #print axioms rumpfEnde
+#print axioms rumpfBlock_total_aux
 #print axioms rumpfBlock_total
+#print axioms rumpfBruecke_aux
+#print axioms rumpfBruecke
+
+/-! ## 3. The per-function unit closing check.
+
+    One decided `Bool` per unit function: the body projects to a pipeline
+    block ending in a value return, the pipeline validator accepts the
+    candidate bytes, the loaded image and initial world check out, the entry
+    sequence and the admitted entry check out, and the entry duty
+    (`requires` at the actual arguments) holds. -/
+
+/-- The tail is a value return (the only tail the entry run can execute). -/
+def istRueck : Endblock D V l Γ Λ → Bool
+  | .ret _ _ => true
+  | _ => false
+
+/-- THE UNIT CLOSING CHECK for one function: projection, return tail, the
+    pipeline validator, the loaded image, the initial world, the entry
+    sequence, the admitted entry, and the entry duty at actual values. -/
+def einheitSchluss (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl) : Bool :=
+  match rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) with
+  | none => false
+  | some b =>
+    match rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) with
+    | none => false
+    | some tail =>
+      (istRueck tail &&
+        (validate c (layoutVon ps) certs b bytes &&
+        (imageOk p bild c ps es certs b bytes &&
+        (weltOk bild ps σ &&
+        (prologImageOk bild c abi (D.params f).length &&
+        (eintrittZulassung p bild (effBias bild.modus) art z tore &&
+        wahr? (eval (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte)
+          (P.requires f)
+          (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ)))))))
+
+/-- CLOSING: every leg jointly closes the check. Each premise is used by
+    the rewrite below. -/
+theorem einheitSchluss_verbindung (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+    (tail : Endblock D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)))
+    (hb : rumpfBlock (P.rumpf f) = some b)
+    (he : rumpfEnde (P.rumpf f) = some tail)
+    (hrt : istRueck tail = true)
+    (hval : validate c (layoutVon ps) certs b bytes = true)
+    (himg : imageOk p bild c ps es certs b bytes = true)
+    (hwelt : weltOk bild ps σ = true)
+    (hpro : prologImageOk bild c abi (D.params f).length = true)
+    (hzul : eintrittZulassung p bild (effBias bild.modus) art z tore = true)
+    (hreq : wahr? (eval (σ.lese (Signatur.anfang D (D.signatur f))
+      (P.requires f).orte) (P.requires f)
+      (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ) = true) :
+    einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true := by
+  simp [einheitSchluss, hb, he, hrt, hval, himg, hwelt, hpro, hzul, hreq]
+
+/-- A closed check carries its projection and return tail. -/
+theorem einheitSchluss_gibt_projektion (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (h : einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true) :
+    ∃ (b : Block D (vertragVon D f) false (D.params f)
+        (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+      (tail : Endblock D (vertragVon D f) false (D.params f)
+        (Signatur.anfang D (D.signatur f))),
+      rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b ∧
+        rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = some tail ∧
+        istRueck tail = true := by
+  unfold einheitSchluss at h
+  generalize rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = ob at h ⊢
+  generalize rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = oe at h ⊢
+  cases ob with
+  | none =>
+    simp at h
+  | some b0 =>
+    cases oe with
+    | none =>
+      simp at h
+    | some t0 =>
+      dsimp only at h
+      exact ⟨b0, t0, rfl, rfl, (Bool.and_eq_true_iff.mp h).1⟩
+
+/-- A closed check carries all seven legs (right-nested, so every later
+    projection is structural). -/
+theorem einheitSchluss_legs (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (h : einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true) :
+    ∃ (b : Block D (vertragVon D f) false (D.params f)
+        (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+      (tail : Endblock D (vertragVon D f) false (D.params f)
+        (Signatur.anfang D (D.signatur f))),
+      rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b ∧
+      (rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = some tail ∧
+      (istRueck tail = true ∧
+      (validate c (layoutVon ps) certs b bytes = true ∧
+      (imageOk p bild c ps es certs b bytes = true ∧
+      (weltOk bild ps σ = true ∧
+      (prologImageOk bild c abi (D.params f).length = true ∧
+      (eintrittZulassung p bild (effBias bild.modus) art z tore = true ∧
+      wahr? (eval (σ.lese (Signatur.anfang D (D.signatur f))
+        (P.requires f).orte) (P.requires f)
+        (σ.lese (Signatur.anfang D (D.signatur f))
+          (P.requires f).orte) ρ) = true))))))) := by
+  unfold einheitSchluss at h
+  generalize rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = ob at h ⊢
+  generalize rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = oe at h ⊢
+  cases ob with
+  | none =>
+    simp at h
+  | some b0 =>
+    cases oe with
+    | none =>
+      simp at h
+    | some t0 =>
+      dsimp only at h
+      have hR := (Bool.and_eq_true_iff.mp h).1
+      have hr1 := (Bool.and_eq_true_iff.mp h).2
+      have hV := (Bool.and_eq_true_iff.mp hr1).1
+      have hr2 := (Bool.and_eq_true_iff.mp hr1).2
+      have hI := (Bool.and_eq_true_iff.mp hr2).1
+      have hr3 := (Bool.and_eq_true_iff.mp hr2).2
+      have hW := (Bool.and_eq_true_iff.mp hr3).1
+      have hr4 := (Bool.and_eq_true_iff.mp hr3).2
+      have hP := (Bool.and_eq_true_iff.mp hr4).1
+      have hr5 := (Bool.and_eq_true_iff.mp hr4).2
+      have hZ := (Bool.and_eq_true_iff.mp hr5).1
+      have hQ := (Bool.and_eq_true_iff.mp hr5).2
+      exact ⟨b0, t0, rfl, rfl, hR, hV, hI, hW, hP, hZ, hQ⟩
+
+/-- A closed check carries a validated pipeline block. -/
+theorem einheitSchluss_gibt_validate (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (h : einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true) :
+    ∃ (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f))),
+      validate c (layoutVon ps) certs b bytes = true := by
+  obtain ⟨b, tail, hb, he, hR, hV, hI, hW, hP, hZ, hQ⟩ :=
+    einheitSchluss_legs P f c ps es certs bytes p bild abi σ ρ art z tore h
+  exact ⟨b, hV⟩
+
+/-- A closed check carries an accepted loaded image for its block. -/
+theorem einheitSchluss_gibt_imageOk (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (h : einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true) :
+    ∃ (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f))),
+      imageOk p bild c ps es certs b bytes = true := by
+  obtain ⟨b, tail, hb, he, hR, hV, hI, hW, hP, hZ, hQ⟩ :=
+    einheitSchluss_legs P f c ps es certs bytes p bild abi σ ρ art z tore h
+  exact ⟨b, hI⟩
+
+/-- A closed check carries the initial-world check. -/
+theorem einheitSchluss_gibt_weltOk (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (h : einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true) :
+    weltOk bild ps σ = true := by
+  obtain ⟨b, tail, hb, he, hR, hV, hI, hW, hP, hZ, hQ⟩ :=
+    einheitSchluss_legs P f c ps es certs bytes p bild abi σ ρ art z tore h
+  exact hW
+
+/-- A closed check carries the entry-sequence check. -/
+theorem einheitSchluss_gibt_prolog (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (h : einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true) :
+    prologImageOk bild c abi (D.params f).length = true := by
+  obtain ⟨b, tail, hb, he, hR, hV, hI, hW, hP, hZ, hQ⟩ :=
+    einheitSchluss_legs P f c ps es certs bytes p bild abi σ ρ art z tore h
+  exact hP
+
+/-- A closed check carries the admitted entry. -/
+theorem einheitSchluss_gibt_zulassung (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (h : einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true) :
+    eintrittZulassung p bild (effBias bild.modus) art z tore = true := by
+  obtain ⟨b, tail, hb, he, hR, hV, hI, hW, hP, hZ, hQ⟩ :=
+    einheitSchluss_legs P f c ps es certs bytes p bild abi σ ρ art z tore h
+  exact hZ
+
+/-- A closed check carries the entry duty at the actual arguments. -/
+theorem einheitSchluss_gibt_requires (P : Programm D) (f : D.Fn)
+    (c : PipeCfg) (ps : List (Platz D)) (es : List TabLayout)
+    (certs : List (OptimizationRules.PassKind × OptimizationRules.BlockCert))
+    (bytes : List Byte)
+    (p : Profil) (bild : Bild) (abi : List Register)
+    (σ : World D) (ρ : Env D (D.params f))
+    (art : EintrittArt) (z : EintrittZustand) (tore : List TorDekl)
+    (h : einheitSchluss P f c ps es certs bytes p bild abi σ ρ art z tore = true) :
+    ReqAmEintritt P f
+      (σ.lese (Signatur.anfang D (D.signatur f)) (P.requires f).orte) ρ := by
+  obtain ⟨b, tail, hb, he, hR, hV, hI, hW, hP, hZ, hQ⟩ :=
+    einheitSchluss_legs P f c ps es certs bytes p bild abi σ ρ art z tore h
+  exact hQ
 
 end Gabbro.Grammatik.X86.PipelineUnit
