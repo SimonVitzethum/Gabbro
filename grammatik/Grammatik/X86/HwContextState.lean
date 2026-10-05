@@ -414,4 +414,106 @@ theorem ctxLade_geladen (s : TSOZustand) (c : Nat) (a : Adresse)
         · unfold ctxFalte
           exact ih (ctxAktual base j b) hndr hrest bs' hrec i hir
 
+/-! ## 3. Machine save: footprint-checked buffered store.
+
+    `ctxSpeichern` reads the acting core's FP/vector state and issues
+    one buffered byte per footprint offset through `issueListe`
+    (never a canonical word effect). Misalignment is `.fehlerGP`;
+    a missing write permission is `.verweigert`. -/
+
+/-- Permission fold over the footprint: every accessed byte must pass. -/
+def ctxAlle (p : Adresse → Bool) (a : Adresse) : List Nat → Bool
+  | [] => true
+  | i :: rest => p (addrOff a i) && ctxAlle p a rest
+
+/-- Machine-level context outcomes: successor, refusal, #GP, #UD. -/
+inductive CtxAusgang where
+  | weiter : HwMaschine → CtxAusgang
+  | verweigert : CtxAusgang
+  | fehlerGP : CtxAusgang
+  | fehlerUD : CtxAusgang
+
+/-- One context save on core `c` at area base `a`: alignment gate,
+    write-permission gate over the footprint, then the buffered
+    byte-issue fold. -/
+def ctxSpeichern (m : HwMaschine) (c : Nat) (a : Adresse) : CtxAusgang :=
+  if !fxAusgerichtet a then .fehlerGP
+  else if !ctxAlle m.mem.schreibbar a ctxOffsets then .verweigert
+  else match issueListe (tsoAnsicht m) c
+      (fxEintraege (m.kerne c).fp (m.kerne c).xmm a) with
+  | none => .verweigert
+  | some s' => .weiter (setTso m s')
+
+/-- Success shape: a successful save is a successful issue fold. -/
+theorem ctxSpeichern_erfolg (m : HwMaschine) (c : Nat) (a : Adresse)
+    (m' : HwMaschine)
+    (h : ctxSpeichern m c a = .weiter m') :
+    ∃ s' : TSOZustand,
+      issueListe (tsoAnsicht m) c
+        (fxEintraege (m.kerne c).fp (m.kerne c).xmm a) = some s' ∧
+      m' = setTso m s' := by
+  unfold ctxSpeichern at h
+  cases ha : fxAusgerichtet a with
+  | false =>
+    simp [ha] at h
+  | true =>
+    cases hp : ctxAlle m.mem.schreibbar a ctxOffsets with
+    | false =>
+      simp [ha, hp] at h
+    | true =>
+      simp [ha, hp] at h
+      cases hs : issueListe (tsoAnsicht m) c
+          (fxEintraege (m.kerne c).fp (m.kerne c).xmm a) with
+      | none =>
+        rw [hs] at h
+        cases h
+      | some s' =>
+        -- NOTE: `cases hs : e` generalizes the goal over `e`, so the
+        -- goal here reads `some s'` where the statement has the fold.
+        have hm : setTso m s' = m' := by simpa [hs] using h
+        exact ⟨s', rfl, hm.symm⟩
+
+/-- SAVE GOES THROUGH THE TSO BUFFER: the acting core's buffer grows
+    by exactly the footprint entries. -/
+theorem ctxSpeichern_puffer (m : HwMaschine) (c : Nat) (a : Adresse)
+    (m' : HwMaschine)
+    (h : ctxSpeichern m c a = .weiter m') :
+    m'.puffer c = m.puffer c ++
+      fxEintraege (m.kerne c).fp (m.kerne c).xmm a := by
+  obtain ⟨s', hs, rfl⟩ := ctxSpeichern_erfolg m c a m' h
+  exact issueListe_haengt_an (tsoAnsicht m) s' c _ hs
+
+/-- A save changes no canonical byte (buffer only). -/
+theorem ctxSpeichern_kein_speicher (m : HwMaschine) (c : Nat)
+    (a : Adresse) (m' : HwMaschine)
+    (h : ctxSpeichern m c a = .weiter m') (x : Adresse) :
+    m'.mem.bytes x = m.mem.bytes x := by
+  obtain ⟨s', hs, rfl⟩ := ctxSpeichern_erfolg m c a m' h
+  exact issueListe_kein_speicher (tsoAnsicht m) s' c _ hs x
+
+/-- A save preserves well-formedness (profiles untouched). -/
+theorem ctxSpeichern_wf (m : HwMaschine) (c : Nat) (a : Adresse)
+    (hwf : HwWf m) (m' : HwMaschine)
+    (h : ctxSpeichern m c a = .weiter m') : HwWf m' := by
+  obtain ⟨s', _, rfl⟩ := ctxSpeichern_erfolg m c a m' h
+  exact setTso_wf m s' hwf
+
+/-- Misaligned save area faults with #GP (SDM: a misaligned operand
+    raises #GP; extract offset 56533). -/
+theorem ctxSpeichern_fehlerGP_falsch_ausgerichtet (m : HwMaschine)
+    (c : Nat) (a : Adresse)
+    (h : fxAusgerichtet a = false) :
+    ctxSpeichern m c a = .fehlerGP := by
+  unfold ctxSpeichern
+  simp [h]
+
+/-- A missing write permission refuses the whole save. -/
+theorem ctxSpeichern_verweigert_ohne_schreibrecht (m : HwMaschine)
+    (c : Nat) (a : Adresse)
+    (h1 : fxAusgerichtet a = true)
+    (h2 : ctxAlle m.mem.schreibbar a ctxOffsets = false) :
+    ctxSpeichern m c a = .verweigert := by
+  unfold ctxSpeichern
+  simp [h1, h2]
+
 end Gabbro.Grammatik.X86
