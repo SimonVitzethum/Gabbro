@@ -1,8 +1,53 @@
 # MUSE-REPORT-1366: Exact review of lane 1365 (system/privileged decoder rows)
 
-CANDIDATE: 1365 6a67cc7ff3f608f00abed250c4261ff40012aa1d
+CANDIDATE: 1365 63cebeb231d12b34d284261c1dba4f6b4f14b5cd
 
 VERDICT: ACCEPT
+
+## Re-review after author repair (new pinned HEAD)
+
+The previous verdict on `6a67cc7f` is superseded; this section records
+the independent re-review of the NEW pinned HEAD `63cebeb2` (same base
+`880e7439`, same 3 files, `clean: true`).
+
+What changed between the snapshots: the author added a "Repair analysis
+after the failed integration gate" section to `MUSE-REPORT-1365.md`
+only. The Lean sources are untouched — I re-read the delivered
+`SystemDecode.lean` (all 707 lines) against the previous review and it
+is identical; PATCH.diff confirms the scope (report at `@@ -0,0 +1,139
+@@`, one `+import Grammatik.X86.SystemDecode` line at
+`Grammatik.lean @@ -709,3 +709,4 @@`, new module at `@@ -0,0 +1,707
+@@`). No silent proof change exists to miss.
+
+Fresh checks on the NEW delivered files (not carried over):
+
+1. Forbidden patterns (`sorry`, `native_decide`, `sorryAx`, `unsafe`,
+   `intro _`, `have _ :=`): no matches. (`admit` appears only inside
+   the English words "admitted"/"admits" in prose comments, verified in
+   the prior pass.)
+2. `./lean-probe` on the new file in place: `== 0 error(s) in the
+   COMPLETE output; exit 0`, with the same 9 `#print axioms` lines, all
+   `[propext]` or `[propext, Quot.sound]`. Matches the new
+   BUILD-EVIDENCE.json, which additionally shows a green `./lean-bau`
+   (709 jobs) after the report edit plus one honestly disclosed
+   slot-busy timeout with a clean retry (known single-slot contention,
+   no duplicate builds left behind).
+3. Every previous finding re-inspected against the new files: row pins,
+   23 old-chain refusal decides, schematic `sysDecode_intN` /
+   `sysEreignis_extra`, adapter agreement and refusal, `HwWf`
+   preservation, the joint two-core memory-changing witness, silicon
+   encodings, honest CUTS. All stand unchanged, since the file is
+   unchanged.
+
+On the author's gate-failure diagnosis: the gate error (`goal axiom
+check failed` — `BeweisAtomar.olean` missing in the gate environment)
+concerns `Zielsatz/` artifacts this lane cannot affect (additive leaf
+module plus one import; `Zielsatz/` untouched; the lane's own build was
+green). I judge the diagnosis plausible and the response correct: no
+Lean change was applied against an infrastructure failure, so no
+guarantee was risked to chase apparatus. What the gate needs (cache
+rebuild/refresh on the integration host, then re-run) is outside both
+lanes' owned paths and is correctly not claimed as done here.
 
 ## What was done
 
