@@ -522,103 +522,190 @@ theorem tlbCr3Spuelung_pin :
   shared memory 0 to 42; INVLPG on core 0 re-walks. -/
 
 /-- Witness bytes: zero everywhere (the drain installs 42). -/
-def witBytes : Adresse → Byte := fun _ => BitVec.ofNat 8 0
+def segTlbBytes : Adresse → Byte := fun _ => BitVec.ofNat 8 0
 
 /-- Witness data window: sixteen bytes at 8192, read/write. -/
-def witFenster (a : Adresse) : Bool :=
+def segTlbFenster (a : Adresse) : Bool :=
   decide (8192 ≤ a.toNat ∧ a.toNat < 8208)
 
 /-- Witness memory: the window is read/write, nothing executable. -/
-def witMem : Speicher :=
-  { bytes := witBytes, lesbar := witFenster,
-    schreibbar := witFenster, ausfuehrbar := fun _ => false }
+def segTlbMem : Speicher :=
+  { bytes := segTlbBytes, lesbar := segTlbFenster,
+    schreibbar := segTlbFenster, ausfuehrbar := fun _ => false }
 
 /-- Witness core-0 registers: `rbx = 8` (offset into the window). -/
-def witReg0 : Register → Wort
+def segTlbReg0 : Register → Wort
   | .rbx => BitVec.ofNat 64 8
   | .rsp => BitVec.ofNat 64 8704
   | _ => BitVec.ofNat 64 0
 
 /-- Witness core data: core 0 runs at 4096, core 1 idles on the data. -/
-def witKern : Nat → HwKern
-  | 0 => ⟨witReg0, zeugeFlags, BitVec.ofNat 64 4096,
+def segTlbKern : Nat → HwKern
+  | 0 => ⟨segTlbReg0, zeugeFlags, BitVec.ofNat 64 4096,
       fun _ => BitVec.ofNat 128 0, kontextReset⟩
   | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
       BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0, kontextReset⟩
 
 /-- Witness coherent machine: shared window memory, two cores, empty
     buffers, full silicon. -/
-def witHw : HwMaschine :=
-  ⟨witMem, witKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+def segTlbHw : HwMaschine :=
+  ⟨segTlbMem, segTlbKern, fun _ => [], basisHw, fun _ => basisBereit⟩
 
 /-- The witness machine is well-formed. -/
-theorem witHw_wf : HwWf witHw := by
+theorem segTlbHw_wf : HwWf segTlbHw := by
   intro c f _
   cases f <;> rfl
 
 /-- Witness segment state: core 0 carries FS base 8192 enabled, core 1
     carries nothing. -/
-def witSeg : Nat → SegKern
+def segTlbSeg : Nat → SegKern
   | 0 => ⟨BitVec.ofNat 64 8192, BitVec.ofNat 64 0, BitVec.ofNat 64 0,
       true, true⟩
   | _ => ⟨BitVec.ofNat 64 0, BitVec.ofNat 64 0, BitVec.ofNat 64 0,
       false, false⟩
 
 /-- Witness TLBs: core 0 caches page 2 to frame 2, core 1 is empty. -/
-def witTlb : Nat → List TlbEintrag
+def segTlbTlb : Nat → List TlbEintrag
   | 0 => [⟨2, 2⟩]
   | _ => []
 
 /-- Witness extended machine. -/
-def witM : SegTlbMaschine := ⟨witHw, witSeg, witTlb⟩
+def segTlbM : SegTlbMaschine := ⟨segTlbHw, segTlbSeg, segTlbTlb⟩
 
 /-- The witness is well-formed. -/
-theorem witM_wf : SegTlbWf witM := witHw_wf
+theorem segTlbM_wf : SegTlbWf segTlbM := segTlbHw_wf
 
 /-- Witness walk: page 2 maps to frame 2 (identity on the window). -/
-def witWalk : SeitenDurchlauf :=
+def segTlbWalk : SeitenDurchlauf :=
   fun s => if s == 2 then some 2 else none
 
 /-- Witness address: segmented `rbx + FS = 8 + 8192 = 8200`. -/
-def witAddr : Adresse := BitVec.ofNat 64 8200
+def segTlbAddr : Adresse := BitVec.ofNat 64 8200
 
 /-- JOINT WITNESS joining every leg: segmented address, TLB hit,
     owner-only forwarding of the buffered store, drain changing shared
     memory 0 to 42, and a reached INVLPG step with re-walk. -/
 theorem segTlb_zeuge :
-    SegTlbWf witM ∧
-    adrEffSeg (projZustand witM.hw 0) (BitVec.ofNat 64 0)
-      (basisKeinForm .rbx) .fs (witM.seg 0) = witAddr ∧
-    tlbAufloesung (witM.tlb 0) witWalk witAddr = some witAddr ∧
-    (issueByte (tsoAnsicht witM.hw) 0 witAddr
-      (BitVec.ofNat 8 42)).map (fun s => loadByte s 0 witAddr) =
+    SegTlbWf segTlbM ∧
+    adrEffSeg (projZustand segTlbM.hw 0) (BitVec.ofNat 64 0)
+      (basisKeinForm .rbx) .fs (segTlbM.seg 0) = segTlbAddr ∧
+    tlbAufloesung (segTlbM.tlb 0) segTlbWalk segTlbAddr =
+      some segTlbAddr ∧
+    (issueByte (tsoAnsicht segTlbM.hw) 0 segTlbAddr
+      (BitVec.ofNat 8 42)).map (fun s => loadByte s 0 segTlbAddr) =
       some (some (BitVec.ofNat 8 42)) ∧
-    (issueByte (tsoAnsicht witM.hw) 0 witAddr
-      (BitVec.ofNat 8 42)).map (fun s => loadByte s 1 witAddr) =
+    (issueByte (tsoAnsicht segTlbM.hw) 0 segTlbAddr
+      (BitVec.ofNat 8 42)).map (fun s => loadByte s 1 segTlbAddr) =
       some (some (BitVec.ofNat 8 0)) ∧
-    ((issueByte (tsoAnsicht witM.hw) 0 witAddr
+    ((issueByte (tsoAnsicht segTlbM.hw) 0 segTlbAddr
       (BitVec.ofNat 8 42)).bind
-      (fun s => flushKern s 0)).map (fun s => s.mem.bytes witAddr) =
+      (fun s => flushKern s 0)).map
+      (fun s => s.mem.bytes segTlbAddr) =
       some (BitVec.ofNat 8 42) ∧
-    witM.hw.mem.bytes witAddr = BitVec.ofNat 8 0 ∧
-    ∃ m2, SegTlbSchritt witM m2 (.invlpg 0 witAddr) ∧
-      tlbAufloesung (m2.tlb 0) witWalk witAddr = some witAddr := by
-  refine ⟨witM_wf, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    segTlbM.hw.mem.bytes segTlbAddr = BitVec.ofNat 8 0 ∧
+    ∃ m2, SegTlbSchritt segTlbM m2 (.invlpg 0 segTlbAddr) ∧
+      tlbAufloesung (m2.tlb 0) segTlbWalk segTlbAddr =
+        some segTlbAddr := by
+  refine ⟨segTlbM_wf, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · decide
   · decide
   · decide
   · decide
   · decide
   · decide
-  · refine ⟨⟨witHw, witM.seg,
-      fun d => if d = 0 then tlbEntfernen (witM.tlb 0) (seitenNr witAddr)
-        else witM.tlb d⟩, .invlpg 0 witAddr, ?_⟩
+  · refine ⟨⟨segTlbHw, segTlbM.seg,
+      fun d => if d = 0 then
+        tlbEntfernen (segTlbM.tlb 0) (seitenNr segTlbAddr)
+        else segTlbM.tlb d⟩, .invlpg 0 segTlbAddr, ?_⟩
     decide
 
 /- CUTS:
-   Skeleton only. NOT proved here, and not claimed: everything.
+   Proved here:
+   - §1: FS/GS base MSRs as distinct addresses; override-prefix decoding
+     (0x64 FS, 0x65 GS; CS/DS/ES/SS name no base); CPUID+CR4-gated
+     RD/WRxxBASE with write-then-read round trips and four planted
+     gate-closed refusals; SWAPGS exchange with involution.
+   - §2: the NEW segmented address `adrEffSeg` over the accepted
+     `adrEff` (lifted, never redefined): no-override and zero-base
+     agreement, plus closed shift pins (`100 → 8292` with FS 8192).
+   - §3: page-granular per-core TLB over a walk PARAMETER (never
+     defined here): hit-answers-from-cache (the stale-entry rule),
+     miss-walks, INVLPG removal with miss-after-invalidate, re-walk
+     after INVLPG, CR3 non-global flush (empty with PCID off), and
+     core locality of invalidation.
+   - §4: the extended machine beside the coherent one with exact
+     `HwSchritt` embedding, `HwWf` preservation on every step (the
+     coherent leg reuses `hwSchritt_wf`), forward agreements for
+     WRFSBASE/INVLPG/CR3, and no-step refusals for gate-closed writes.
+   - §§5-6: closed arithmetic pins and the reached two-core joint
+     witness `segTlb_zeuge` (segmented + translated issue, owner-only
+     forwarding, drain 0 → 42 in shared memory, reached INVLPG with
+     re-walk).
+   Named silicon assumptions (never discharged here, no hardware
+   correspondence claimed): MSR addresses C0000100/101/102, prefix
+   opcodes 64/65 (and 2E/26/36/3E naming no base), FSGSBASE gating by
+   CPUID.(07,0):EBX[0] and CR4[16] with #UD otherwise, SWAPGS exchange
+   semantics, INVLPG current-core-only invalidation with no implied
+   cross-core shootdown (software duty), CR3-write non-global flush,
+   PCID off (no global entry survives), stale entries usable until
+   invalidated, CS/DS/ES/SS bases ignored in 64-bit mode. Provenance
+   gap: the clone's `.tmp/HARDWARE-REFERENCES/` extracts could not be
+   opened in this lane (access denied by the permission classifier on
+   two attempts), so unlike lane 660 no SDM edition/offset is cited;
+   the facts above are assumptions, not checked provenance.
+   NOT proved here, and not claimed:
+   - No page walk: `SeitenDurchlauf` is a parameter (lane HwPaging).
+   - No privilege model: SWAPGS has no CPL-0 gate here; #GP/#UD faults
+     are not wired into `HwSchritt.fehler`.
+   - No global pages: with PCID on, global entries would survive CR3;
+     `tlbGlobal` is constantly false (PCID off).
+   - No segment limits, no 16/32-bit compatibility modes, no task
+     switching, no canonical-address check on the base addition.
+   - No per-access W/GX simulation, no source/checker/contract/entry/
+     ABI/loader/budget link; axioms stay within the standard goal set
+     (propext, Classical.choice, Quot.sound).
 -/
 
 #print axioms SegWahl
+#print axioms msr_basis_verschieden
+#print axioms segPraefix_fs
+#print axioms segPraefix_gs
+#print axioms segPraefix_ignoriert
+#print axioms schreibeLiesFsBasis
+#print axioms schreibeLiesGsBasis
+#print axioms schreibeFsBasis_verweigert_ohne_cpuid
+#print axioms schreibeFsBasis_verweigert_ohne_cr4
+#print axioms schreibeGsBasis_verweigert_ohne_cpuid
+#print axioms schreibeGsBasis_verweigert_ohne_cr4
+#print axioms tauscheGs_involution
+#print axioms tauscheGs_tauscht
+#print axioms adrEffSeg_ohne
+#print axioms adrEffSeg_basis_null
+#print axioms segPin_fs_verschiebt
+#print axioms segPin_ohne_bleibt
+#print axioms tlbAufloesung_trifft
+#print axioms tlbAufloesung_verfehlt
+#print axioms tlbEntfernen_sucht_verfehlt
+#print axioms tlbNachEntfernen_geht_durch
+#print axioms tlbGlobal_aus
+#print axioms tlbCr3Spuelung_leert
+#print axioms tlbEntfernen_lokal
+#print axioms segTlbSchritt_hw_einbettung
+#print axioms segTlbSchritt_wf
+#print axioms segTlb_wrFs_vereinbarung
+#print axioms segTlb_invlpg_vereinbarung
+#print axioms segTlb_cr3_vereinbarung
+#print axioms segTlb_wrFs_verweigert
+#print axioms segTlb_wrGs_verweigert
+#print axioms seitenNr_pin_8197
+#print axioms seitenOffset_pin_8197
+#print axioms physAddr_pin
+#print axioms tlbAufloesung_veraltet_pin
+#print axioms tlbEntfernen_pin
+#print axioms tlbNachEntfernen_pin
+#print axioms tlbCr3Spuelung_pin
+#print axioms segTlbHw_wf
+#print axioms segTlbM_wf
+#print axioms segTlb_zeuge
 
 end Gabbro.Grammatik.X86
