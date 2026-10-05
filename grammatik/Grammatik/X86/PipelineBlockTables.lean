@@ -993,6 +993,113 @@ theorem envGet_set_idx {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :
         have h' : varIdx z' ≠ varIdx x := fun he => h (congrArg Nat.succ he)
         exact ih _ _ _ h'
 
+/-- Per-read premises for a block-level read statement: the checked
+    runtime bound plus register freshness (equal registers mean equal
+    variables, so the environment update is exact). Reads at a
+    non-variable index are vacuously `True` (their lowering is `none`
+    anyway). -/
+def stmtSkalOk (c : PipeCfg) {Γ : Ctx} (ρ : Env D Γ)
+    {V : Vertrag D} {l : Bool} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ') : Prop :=
+  match s with
+  | .assignVar x e =>
+    match e with
+    | .slot t f i _ =>
+      match idxVarG? i with
+      | some y =>
+        idxOkB (ρ.get y).n (D.count t) = true ∧
+        ∀ (τ' : Ty) (z : Var Γ τ'), abbOf c τ' z = abbOf c _ x → HEq z x
+      | none => True
+    | .durch _ t _ f i _ =>
+      match idxVarG? i with
+      | some y =>
+        idxOkB (ρ.get y).n (D.count t) = true ∧
+        ∀ (τ' : Ty) (z : Var Γ τ'), abbOf c τ' z = abbOf c _ x → HEq z x
+      | none => True
+    | _ => True
+  | _ => True
+
+/-- Per-read premises over a whole block (conjunction over `cons`;
+    `True` for shapes the lowering refuses — those are `none` anyway). -/
+def blockSkalOk (c : PipeCfg) {Γ : Ctx} (ρ : Env D Γ)
+    {V : Vertrag D} {l : Bool} {Λ Λ' : List (Res D)}
+    (b : Block D V l Γ Λ Λ') : Prop :=
+  match b with
+  | .nil => True
+  | .cons s rest => stmtSkalOk c ρ s ∧ blockSkalOk c ρ rest
+  | _ => True
+
+/-- STATEMENT LOWERING for block-level reads: `x := T[k].f` (or through
+    a region pointer) at a variable index becomes the scaled chunk (value
+    in `dst`) plus the publish move to the target variable's register.
+    Constants go through lane 1159; everything else is `none`. -/
+def senkStmtSkal (A : TabAnker D) (c : PipeCfg) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} (s : Stmt D V l Γ Λ Λ') :
+    Option (List Befehl) :=
+  match s with
+  | .assignVar x e =>
+    match e with
+    | .slot t f i _ =>
+      match idxVarG? i with
+      | none => none
+      | some y =>
+        match PipelineTables.ankerBasis A t with
+        | none => none
+        | some B =>
+          match PipelineTables.ankerZeile A t with
+          | none => none
+          | some Z =>
+            match PipelineTables.feldOff A t f with
+            | none => none
+            | some O =>
+              match D.typ t f with
+              | .int _ _ =>
+                if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                    adrOk (basisKeinForm c.adr) then
+                  some (skalChunk c (abbOf c _ y) B O Z ++
+                    [.movReg64 (abbOf c _ x) c.dst])
+                else none
+              | _ => none
+    | .durch _ t _ f i _ =>
+      match idxVarG? i with
+      | none => none
+      | some y =>
+        match PipelineTables.ankerBasis A t with
+        | none => none
+        | some B =>
+          match PipelineTables.ankerZeile A t with
+          | none => none
+          | some Z =>
+            match PipelineTables.feldOff A t f with
+            | none => none
+            | some O =>
+              match D.typ t f with
+              | .int _ _ =>
+                if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                    adrOk (basisKeinForm c.adr) then
+                  some (skalChunk c (abbOf c _ y) B O Z ++
+                    [.movReg64 (abbOf c _ x) c.dst])
+                else none
+              | _ => none
+    | _ => none
+  | _ => none
+
+/-- BLOCK LOWERING for read blocks (`senkBlock`-style): `nil` is empty,
+    a read-assign `cons` prepends its chunk, everything else is `none`. -/
+def senkBlockSkal (A : TabAnker D) (c : PipeCfg) {V : Vertrag D} {l : Bool}
+    {Γ : Ctx} {Λ Λ' : List (Res D)} (b : Block D V l Γ Λ Λ') :
+    Option (List Befehl) :=
+  match b with
+  | .nil => some []
+  | .cons s rest =>
+    match senkStmtSkal A c s with
+    | none => none
+    | some p =>
+      match senkBlockSkal A c rest with
+      | none => none
+      | some q => some (p ++ q)
+  | _ => none
+
 /- CUTS:
    Environment get/set facts done. Statement/block lowering, the closing
    theorem, refusal theorems for blocks, witnesses and axioms output are OPEN.
