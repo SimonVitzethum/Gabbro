@@ -289,4 +289,170 @@ theorem pipelineFloat_lit_rund (q : Int × Int)
     bites64 (senkGleitLit q) = bruch q :=
   bites64_muster64 _ hwf
 
+/-! ## 5. Refusals: unsupported shapes never execute.
+
+  A refused MXCSR profile, a bad decode length, an unreadable memory
+  source, or a non-64 conversion width refuses the step (`none`).
+  `pipelineFloat_refuses_validator` ties both `floatPipeOk` legs to
+  the step refusal. -/
+
+/-- A refused profile refuses every lowered form. -/
+theorem pipelineFloat_refuses_profil (d : FpDecodiert) (t : FpZustand)
+    (hok : laengeOk d.laenge = true)
+    (h : fpEintritt t.fp = false) :
+    fpSchritt d t = none :=
+  fpSchritt_profil_verweigert d t hok h
+
+/-- A bad decode length refuses every lowered form. -/
+theorem pipelineFloat_refuses_laenge (d : FpDecodiert) (t : FpZustand)
+    (h : laengeOk d.laenge = false) :
+    fpSchritt d t = none :=
+  fpSchritt_laenge_verweigert d t h
+
+/-- A failed validator refuses: either `floatPipeOk` leg stops the run. -/
+theorem pipelineFloat_refuses_validator (d : FpDecodiert) (t : FpZustand)
+    (h : floatPipeOk t.fp d.laenge = false) :
+    fpSchritt d t = none := by
+  unfold floatPipeOk at h
+  cases hl : laengeOk d.laenge with
+  | false => exact fpSchritt_laenge_verweigert d t hl
+  | true =>
+    cases hm : mxcsrGueltig t.fp.mxcsr with
+    | false =>
+      have hf : fpEintritt t.fp = false := hm
+      exact fpSchritt_profil_verweigert d t hl hf
+    | true => simp_all
+
+/-- An unreadable memory source refuses the load. -/
+theorem pipelineFloat_refuses_lade (d : FpDecodiert) (t : FpZustand) (dst : XmmReg)
+    (base : Register) (disp : BitVec 32)
+    (hok : laengeOk d.laenge = true)
+    (hfp : fpEintritt t.fp = true)
+    (h : d.befehl = .movsdLade dst base disp)
+    (hrd : read64 t.kern.speicher (effAddr t.kern base disp) = none) :
+    fpSchritt d t = none :=
+  fpSchritt_movsdLade_verweigert d t dst base disp hok hfp h hrd
+
+/-- POISON PROBE (profile): under flush-to-zero the admitted divide refuses. -/
+theorem pipelineFloat_probe_profil :
+    fpSchritt ⟨.addsdRR XmmReg.xmm0 XmmReg.xmm1, 4⟩ { fpZeugeT with fp := ⟨0x9F80⟩ } = none := by
+  have hf : fpEintritt ((⟨0x9F80⟩ : FPKontext)) = false := mxcsr_ftz_verweigert
+  exact fpSchritt_profil_verweigert _ _ fpZeuge_laenge hf
+
+/-- POISON PROBE (length): a 16-byte form refuses. -/
+theorem pipelineFloat_probe_laenge :
+    fpSchritt ⟨.addsdRR XmmReg.xmm0 XmmReg.xmm1, 16⟩ fpZeugeT = none := by
+  have hl : laengeOk 16 = false := by decide
+  exact fpSchritt_laenge_verweigert _ _ hl
+
+/-! ## 6. Signed-zero and conversion witnesses, joint `_zeuge`.
+
+  `+0.0 + -0.0` is `+0.0` at the source model, bit for bit; `42`
+  converts to the `42.0` pattern. The joint witness instantiates
+  every premise of `pipelineFloat_seq` (`div`, `xmm0`, `xmm1`, the
+  witness state, `xmm1 ≠ xmm0`, checked length, admitted profile)
+  and extends the reached run with a memory-changing store: the
+  computed `+∞` lands at 8192 and reads back, with one observably
+  changed byte. -/
+
+/-- SIGNED-ZERO WITNESS: `+0.0 + -0.0` is `+0.0` in the source model,
+    bit for bit. -/
+theorem pipelineFloat_nullzeichen :
+    muster64 (gleitRechne .add (bites64 0) (bites64 0x8000000000000000)) = 0 := by
+  rw [← fpRechne_gleitRechne]
+  exact add_plusnull_minusnull
+
+/-- CONVERSION WITNESS: `42` converts to the `42.0` pattern. -/
+theorem pipelineFloat_konv_zeuge :
+    muster64 (gleitAusInt (42 : Wort).toInt) = 0x4045000000000000 :=
+  cvtsiErg_42
+
+/-- JOINT WITNESS: the lowered divide sequence computes `1.0 / +0.0`
+    on the witness state, and the stored `+∞` observably changes
+    memory -- two reached steps under the admitted profile. -/
+theorem pipelineFloat_zeuge :
+    ∃ t' t'' : FpZustand,
+      laufFp [⟨.movsdRR XmmReg.xmm0 XmmReg.xmm0, 4⟩, ⟨senkGleitOp .div XmmReg.xmm0 XmmReg.xmm1, 4⟩] fpZeugeT = some t'
+      ∧ fpSchritt ⟨.movsdSpeichere Register.rax XmmReg.xmm0 0, 4⟩ t' = some t''
+      ∧ read64 t''.kern.speicher (BitVec.ofNat 64 8192) = some 0x7FF0000000000000
+      ∧ fpZeugeT.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) ≠ t''.kern.speicher.bytes (addrOff (BitVec.ofNat 64 8192) 7) := by
+  have hne : XmmReg.xmm1 ≠ XmmReg.xmm0 := by decide
+  obtain ⟨t', hrun, hrip, hval, hfp', hmem0, hreg0⟩ :=
+    pipelineFloat_seq GleitOp.div XmmReg.xmm0 XmmReg.xmm0 XmmReg.xmm1 fpZeugeT hne fpZeuge_laenge fpZeuge_fp
+  have hvalinf : xmmTief t'.xmm XmmReg.xmm0 = 0x7FF0000000000000 := by
+    rw [fpZeuge_tief0, fpZeuge_tief1] at hval
+    have hinf : muster64 (gleitRechne .div (bites64 0x3FF0000000000000) (bites64 0)) = 0x7FF0000000000000 := by
+      rw [← fpRechne_gleitRechne]
+      exact div_eins_durch_null
+    rw [hinf] at hval
+    exact hval
+  have hmem : t'.kern.speicher = zeugenSpeicher := hmem0.trans rfl
+  have hrax : t'.kern.register Register.rax = fpZeugeT.kern.register Register.rax :=
+    congrArg (· Register.rax) hreg0
+  have heff : effAddr t'.kern Register.rax 0 = BitVec.ofNat 64 8192 := by
+    unfold effAddr
+    rw [hrax]
+    exact fpZeuge_effAddr
+  have hwr : write64 t'.kern.speicher (effAddr t'.kern Register.rax 0) (xmmTief t'.xmm XmmReg.xmm0) = some fpZeugeSpeicherNach := by
+    rw [hmem, heff, hvalinf]
+    unfold write64
+    have hc : schreibbar8 zeugenSpeicher (BitVec.ofNat 64 8192) = true := rfl
+    rw [if_pos hc]
+    rfl
+  have hfp2 : fpEintritt t'.fp = true := by
+    rw [hfp']
+    exact fpZeuge_fp
+  have hstep2 := fpSchritt_movsdSpeichere_erfolg ⟨.movsdSpeichere Register.rax XmmReg.xmm0 0, 4⟩ t' Register.rax XmmReg.xmm0 0 fpZeugeSpeicherNach fpZeuge_laenge hfp2 rfl hwr
+  have hliest : read64 fpZeugeSpeicherNach (BitVec.ofNat 64 8192) = some 0x7FF0000000000000 :=
+    fpZeuge_liest
+  refine ⟨t', _, hrun, hstep2, hliest, fpZeuge_speicher_aendert⟩
+
+/- CUTS: what is not proved here.
+  - No loaded image, no byte fetch, no relocation: `laufFp` runs
+    constructed `FpDecodiert` values through `fpSchritt`, never bytes
+    through a decoder. The byte connection is owned by
+    `ScalarFloatCodec` (MOVSD/ADDSD subset) and the full
+    source-to-final-loaded-byte closing theorem stays open.
+  - No TSO/concurrency claim: `fpSchritt`/`laufFp` are sequential over
+    one `Speicher`; the per-access target-to-W/GX bridge stays with
+    the TSO-bridge lane.
+  - No f32 lowering: `Ty.fl` is widthless binary64 in the source model
+    (the named cut of GLEITKOMMA.md section 7), so a genuine binary32
+    op has no source semantics to meet here; `konvBreiteOk` admits
+    64-bit conversions only. NaN agreement is class-level
+    (`fpRechne_klasse`); payload-bit equality of computed NaNs is
+    never concluded.
+  - No reassociation, contraction, fast-math, value-range propagation
+    or cross-op rewrite is admitted: one source op is one machine op
+    (`senkGleitOp`), one source comparison one `ucomisd`
+    (`senkGleitCmp`). Sticky MXCSR flags, SNaN, costs and timing stay
+    open (see the CUTS of `ScalarFloat` and `Gleitprofil`).
+  - No second source interpreter and no optimiser change: the source
+    side is named only through the accepted `gleitRechne`,
+    `gleitAusInt`, `gleitRoh`, `gleitLt`/`gleitLe`, `bruch` and the
+    `eval_fllt_ist_gleitLt` observation.
+  - Rule 13 (inhabitation): no theorem here quantifies over the listed
+    source-syntax types (`Vertrag`, `Stmt`, `Endblock`, `ErgExpr`,
+    `Expr`, `Args`); `GleitOp`/`FloatCmp` range over the model op and
+    the joint non-degenerate witness with a real memory change is
+    `pipelineFloat_zeuge`.
+-/
+
+#print axioms pipelineFloat_seq
+#print axioms pipelineFloat_cmp_schritt
+#print axioms pipelineFloat_cmp_ungeordnet
+#print axioms pipelineFloat_cmp_lt
+#print axioms pipelineFloat_cmp_le
+#print axioms pipelineFloat_von
+#print axioms pipelineFloat_nach
+#print axioms pipelineFloat_lit_rund
+#print axioms konvBreiteOk_nur64
+#print axioms pipelineFloat_refuses_profil
+#print axioms pipelineFloat_refuses_laenge
+#print axioms pipelineFloat_refuses_validator
+#print axioms pipelineFloat_refuses_lade
+#print axioms pipelineFloat_nullzeichen
+#print axioms pipelineFloat_konv_zeuge
+#print axioms pipelineFloat_zeuge
+
 end Gabbro.Grammatik.X86.PipelineFloat
