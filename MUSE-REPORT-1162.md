@@ -77,4 +77,6 @@ with the pipeline family, not with this candidate.
   `Build completed successfully (612 jobs).` (612 vs 608: this base is newer;
   zero errors, green).
 
-## VERDICT: ACCEPT
+CANDIDATE: 1161 e1737519eb03c8f2bb1de67b35e31a78b76a2446
+
+VERDICT: ACCEPT
