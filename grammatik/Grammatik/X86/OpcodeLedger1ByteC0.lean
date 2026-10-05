@@ -415,4 +415,308 @@ theorem lmod_FF1 :
       some (.reg ⟨.decReg .b64 .rax, 3⟩, []) := by
   decide
 
+/-! ## Refusals: every `verweigert` row is refused by the chain,
+    and every `ungueltig64` byte decodes to nothing. -/
+
+/-- C1 /6: the silicon SHL alias is refused by the chain. -/
+theorem lver_C1_6 :
+    kapDecode [natByte 72, natByte 193, natByte 240, natByte 1] = none := by
+  decide
+
+/-- D3 /6: the silicon SHL alias is refused by the chain. -/
+theorem lver_D3_6 :
+    kapDecode [natByte 72, natByte 211, natByte 240] = none := by
+  decide
+
+/-- F6 /0: byte TEST is refused by the chain. -/
+theorem lver_F6_0 :
+    kapDecode [natByte 246, natByte 192, natByte 0] = none := by
+  decide
+
+/-- F6 /1: byte TEST alias is refused by the chain. -/
+theorem lver_F6_1 :
+    kapDecode [natByte 246, natByte 200, natByte 0] = none := by
+  decide
+
+/-- F6 /2: byte NOT is refused by the chain. -/
+theorem lver_F6_2 :
+    kapDecode [natByte 246, natByte 208] = none := by
+  decide
+
+/-- F6 /3: byte NEG is refused by the chain. -/
+theorem lver_F6_3 :
+    kapDecode [natByte 246, natByte 216] = none := by
+  decide
+
+/-- F6 /4: byte MUL is refused by the chain. -/
+theorem lver_F6_4 :
+    kapDecode [natByte 246, natByte 224] = none := by
+  decide
+
+/-- F6 /5: byte IMUL is refused by the chain. -/
+theorem lver_F6_5 :
+    kapDecode [natByte 246, natByte 232] = none := by
+  decide
+
+/-- F6 /6: byte DIV is refused by the chain. -/
+theorem lver_F6_6 :
+    kapDecode [natByte 246, natByte 240] = none := by
+  decide
+
+/-- F6 /7: byte IDIV is refused by the chain. -/
+theorem lver_F6_7 :
+    kapDecode [natByte 246, natByte 248] = none := by
+  decide
+
+/-- F7 /0: word TEST is refused by the chain. -/
+theorem lver_F7_0 :
+    kapDecode [natByte 247, natByte 192, natByte 0, natByte 0,
+      natByte 0, natByte 0] = none := by
+  decide
+
+/-- F7 /1: word TEST alias is refused by the chain. -/
+theorem lver_F7_1 :
+    kapDecode [natByte 247, natByte 200, natByte 0, natByte 0,
+      natByte 0, natByte 0] = none := by
+  decide
+
+/-- F7 /2: word NOT is refused by the chain. -/
+theorem lver_F7_2 :
+    kapDecode [natByte 247, natByte 208] = none := by
+  decide
+
+/-- F7 /3: word NEG is refused by the chain. -/
+theorem lver_F7_3 :
+    kapDecode [natByte 247, natByte 216] = none := by
+  decide
+
+/-- F7 /5: one-operand IMUL is refused by the chain. -/
+theorem lver_F7_5 :
+    kapDecode [natByte 247, natByte 232] = none := by
+  decide
+
+/-- FE /2: invalid Group 4 extension is refused by the chain. -/
+theorem lver_FE_2 :
+    kapDecode [natByte 254, natByte 211] = none := by
+  decide
+
+/-- FE /3: invalid Group 4 extension is refused by the chain. -/
+theorem lver_FE_3 :
+    kapDecode [natByte 254, natByte 219] = none := by
+  decide
+
+/-- FE /4: invalid Group 4 extension is refused by the chain. -/
+theorem lver_FE_4 :
+    kapDecode [natByte 254, natByte 227] = none := by
+  decide
+
+/-- FE /5: invalid Group 4 extension is refused by the chain. -/
+theorem lver_FE_5 :
+    kapDecode [natByte 254, natByte 235] = none := by
+  decide
+
+/-- FE /6: invalid Group 4 extension is refused by the chain. -/
+theorem lver_FE_6 :
+    kapDecode [natByte 254, natByte 243] = none := by
+  decide
+
+/-- FE /7: invalid Group 4 extension is refused by the chain. -/
+theorem lver_FE_7 :
+    kapDecode [natByte 254, natByte 251] = none := by
+  decide
+
+/-- FF /7: invalid Group 5 extension is refused by the chain. -/
+theorem lver_FF_7 :
+    kapDecode [natByte 255, natByte 251] = none := by
+  decide
+
+/-- CE (INTO): invalid in 64-bit mode, decodes to nothing. -/
+theorem lung_CE : kapDecode [natByte 206] = none := by
+  decide
+
+/-- D4 (AAM): invalid in 64-bit mode, decodes to nothing. -/
+theorem lung_D4 : kapDecode [natByte 212] = none := by
+  decide
+
+/-- D5 (AAD): invalid in 64-bit mode, decodes to nothing. -/
+theorem lung_D5 : kapDecode [natByte 213] = none := by
+  decide
+
+/-- D6 (SALC): invalid in 64-bit mode, decodes to nothing. -/
+theorem lung_D6 : kapDecode [natByte 214] = none := by
+  decide
+
+/-- EA (JMP far): invalid in 64-bit mode, decodes to nothing. -/
+theorem lung_EA : kapDecode [natByte 234] = none := by
+  decide
+
+/-! ## Summary: counts per status and exact-once coverage. -/
+
+/-- 32 ledger rows are modeled. -/
+theorem lzahl_modelliert :
+    (tabelleC0FF.filter (fun e => e.status == .modelliert)).length = 32 := by
+  decide
+
+/-- 22 ledger rows are refused by design. -/
+theorem lzahl_verweigert :
+    (tabelleC0FF.filter (fun e => e.status == .verweigert)).length = 22 := by
+  decide
+
+/-- 5 ledger rows are invalid in 64-bit mode. -/
+theorem lzahl_ungueltig64 :
+    (tabelleC0FF.filter (fun e => e.status == .ungueltig64)).length = 5 := by
+  decide
+
+/-- 42 ledger rows are gaps: real instructions no family models. -/
+theorem lzahl_fehlt :
+    (tabelleC0FF.filter (fun e => e.status == .fehlt)).length = 42 := by
+  decide
+
+/-- 33 ledger rows are deferred: valid but rare or legacy. -/
+theorem lzahl_zurueckgestellt :
+    (tabelleC0FF.filter
+      (fun e => e.status == .zurueckgestellt)).length = 33 := by
+  decide
+
+set_option maxRecDepth 10000 in
+/-- The ledger holds 134 rows in total. -/
+theorem lzahl_gesamt : tabelleC0FF.length = 134 := by
+  decide
+
+set_option maxRecDepth 10000 in
+/-- Every opcode byte C0-FF appears in the ledger. -/
+theorem labdeckung_alle :
+    ((List.range 64).map (fun n => n + 192)).all
+      (fun n => tabelleC0FF.any (fun e => e.opcode == n)) = true := by
+  decide
+
+/-- All-pairs check that no (opcode, extension) pair repeats:
+    every later pair differs from the head in the opcode or in the
+    extension. (`List.pairwise` does not exist in this toolchain.) -/
+def paareVerschieden : List (Nat × Option Nat) → Bool
+  | [] => true
+  | (o, e) :: rest =>
+    rest.all (fun p => p.1 != o || p.2 != e) && paareVerschieden rest
+
+set_option maxRecDepth 10000 in
+/-- No (opcode, extension) pair is listed twice. -/
+theorem lkein_duplikat :
+    paareVerschieden
+      (tabelleC0FF.map (fun e => (e.opcode, e.ext))) = true := by
+  decide
+
+/- CUTS:
+    Proved here, over the Intel SDM snapshot
+    `.tmp/HARDWARE-REFERENCES/intel-instruction-reference.txt`
+    (edition 325462-093US, verified 2026-10-02 per REFERENCES.json):
+    - a 134-row ledger over primary opcodes C0-FF, group opcodes
+      expanded by ModRM.reg extension (C0/C1/D0-D3/F6/F7/FE/FF x8),
+      with the counts 32 modelliert / 22 verweigert / 5 ungueltig64 /
+      42 fehlt / 33 zurueckgestellt (all by decide), full coverage of
+      bytes 192-255 and no duplicate (opcode, extension) pair;
+    - for every modelliert row a canonical witness decoded by the
+      named family decoder (accepted pins reused where they exist,
+      closed decide evaluations otherwise), including one capstone
+      chain witness (lmod_C4 through kapKette_avx2);
+    - for every verweigert row a checked chain refusal
+      (kapDecode ... = none), including the silicon SHL-alias rows
+      C1/6 and D3/6 refused by the ShiftCodec digit whitelist and
+      the byte Group 3 rows explicitly refused by decodeWd;
+    - for every ungueltig64 row (INTO, AAM, AAD, SALC, far JMP) a
+      checked decode-to-nothing.
+    Toolchain notes: `set_option maxRecDepth 10000` stands before
+    the three whole-table decides; the no-duplicate check is the
+    local all-pairs boolean `paareVerschieden` because this
+    toolchain has no `List.pairwise`/`List.eraseDup`.
+    NOT proved here, and not claimed:
+    - no kapDecode-level witness for most modelliert rows: family
+      decoders outside the chain (carry, indirect, ports, width,
+      scalar FP, LOCK) are not connected to kapDecode, so their
+      rows are witnessed at family level only;
+    - the fehlt rows are a literature-and-code reading (SDM map vs
+      the accepted decoder set), not a proved absence: absence of a
+      decoder arm is argued per row in the report, not in Lean;
+    - frequency notes in the report (common/rare) are estimates
+      from compiler-output knowledge, not measurements;
+    - no vendor-difference row was found in C0-FF, so no
+      herstellerabhaengig marking was needed; with no AMD manual
+      in the clone no AMD fact is claimed either way (rule 17);
+    - the Group 2 /6 and Group 3 /1 alias facts are Intel SDM
+      text (Appendix AORI note at intel-instruction-reference.txt
+      line 207955), cited, not re-proved;
+    - no silicon re-check beyond the accepted pins; no W/GX
+      bridge; no source, checker, contract, entry, ABI, loader,
+      budget or liveness claim.
+-/
+
+#print axioms lmod_C1_4
+#print axioms lmod_D3_7
+#print axioms lmod_F0
+#print axioms lmod_C4
+#print axioms lmod_FE0
+#print axioms lmod_FF0
+#print axioms lmod_FF1mem
+#print axioms lmod_F3
+#print axioms lmod_EB
+#print axioms lmod_FF2
+#print axioms lmod_FF4
+#print axioms lmod_C3
+#print axioms lmod_C1_5
+#print axioms lmod_C1_7
+#print axioms lmod_D3_4
+#print axioms lmod_D3_5
+#print axioms lmod_C7
+#print axioms lmod_E8
+#print axioms lmod_E9
+#print axioms lmod_E4
+#print axioms lmod_E5
+#print axioms lmod_E6
+#print axioms lmod_E7
+#print axioms lmod_EC
+#print axioms lmod_ED
+#print axioms lmod_EE
+#print axioms lmod_EF
+#print axioms lmod_F2
+#print axioms lmod_F7_4
+#print axioms lmod_F7_4_64
+#print axioms lmod_F7_6
+#print axioms lmod_F7_7
+#print axioms lmod_FE1
+#print axioms lmod_FF1
+#print axioms lver_C1_6
+#print axioms lver_D3_6
+#print axioms lver_F6_0
+#print axioms lver_F6_1
+#print axioms lver_F6_2
+#print axioms lver_F6_3
+#print axioms lver_F6_4
+#print axioms lver_F6_5
+#print axioms lver_F6_6
+#print axioms lver_F6_7
+#print axioms lver_F7_0
+#print axioms lver_F7_1
+#print axioms lver_F7_2
+#print axioms lver_F7_3
+#print axioms lver_F7_5
+#print axioms lver_FE_2
+#print axioms lver_FE_3
+#print axioms lver_FE_4
+#print axioms lver_FE_5
+#print axioms lver_FE_6
+#print axioms lver_FE_7
+#print axioms lver_FF_7
+#print axioms lung_CE
+#print axioms lung_D4
+#print axioms lung_D5
+#print axioms lung_D6
+#print axioms lung_EA
+#print axioms lzahl_modelliert
+#print axioms lzahl_verweigert
+#print axioms lzahl_ungueltig64
+#print axioms lzahl_fehlt
+#print axioms lzahl_zurueckgestellt
+#print axioms lzahl_gesamt
+#print axioms labdeckung_alle
+#print axioms lkein_duplikat
+
 end Gabbro.Grammatik.X86.LedgerC0
