@@ -1,8 +1,9 @@
 # MUSE-REPORT-1342: Exact review of candidate 1341 (opcode ledger 0F 00-3F)
 
-CANDIDATE: 1341, pinned HEAD `6d18b4b4655655195dd4d25146ef4aade859fa2a`
-(base `574ac3d75180a53907fa28302e3af11cf2d9f2db`), per `.tmp/review/SNAPSHOT.json`
-(`clean: true`). Changed files: `MUSE-REPORT-1341.md`,
+CANDIDATE: 1341 6d18b4b4655655195dd4d25146ef4aade859fa2a
+
+Reviewed author lane 1341 at the pinned HEAD above
+(base 574ac3d75180a53907fa28302e3af11cf2d9f2db, snapshot `clean: true`). Changed files: `MUSE-REPORT-1341.md`,
 `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/OpcodeLedger0F00.lean`.
 
 ## Method
@@ -80,7 +81,9 @@ the last result line.
 2. The owner-task text is truncated after "Do no..." (author report item 2);
    all visible requirements are met.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 CANDIDATE 1341 is accepted for checked serial integration. No REPAIR items.
 Integration order versus the sibling ledger lanes and any import-line
