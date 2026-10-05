@@ -637,6 +637,7 @@ import Grammatik.X86.PipelineUnit
 import Grammatik.X86.HwNestedInterrupts
 import Grammatik.X86.TsoRmwBridge
 import Grammatik.X86.PipelineBlockInduct
+import Grammatik.X86.PipelineChunkDerive
 import Grammatik.X86.PipelineFloatNaN
 import Grammatik.X86.HwBildInstanzen
 import Grammatik.X86.PipelineLoadedAll
