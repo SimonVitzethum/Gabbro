@@ -852,6 +852,176 @@ theorem hwNestSchritt_wf (s s' : HwIntMaschine) (e : NestEreignis)
     exact asyncSchritt_wf_allgemein _ _ _ _ _ h2
       (asyncSchritt_wf_allgemein _ _ _ _ _ h1 hwf)
 
+/-! ## 7. Joint witness: two maskable gates, nested delivery, #DF.
+
+   IDT at 4096 with 34 entries (limit 543): vector 2 is the reused
+   NMI interrupt gate (handler `0x2000`), vector 32 a TRAP gate
+   (handler `0x2100`, keeps IF) and vector 33 an INTERRUPT gate
+   (handler `0x2200`, clears IF). TSS and stack mirror the accepted
+   witness (IST1 holds `0x4000`, frame window 16336-16384). Every
+   claim below is a closed decidable observation. -/
+
+/-- Witness trap-gate low word (vector 32): offset `0x2100`,
+    selector `0x08`, IST 1, `P/DPL/type = 0x8F` (trap). -/
+def loWit32Nat : Nat :=
+  33 * 256 + 8 * 65536 + 1 * 4294967296 + 143 * 1099511627776
+
+/-- Witness trap-gate low word. -/
+def loWit32 : Wort := BitVec.ofNat 64 loWit32Nat
+
+/-- Witness interrupt-gate low word (vector 33): offset `0x2200`,
+    selector `0x08`, IST 1, `P/DPL/type = 0x8E` (interrupt). -/
+def loWit33Nat : Nat :=
+  34 * 256 + 8 * 65536 + 1 * 4294967296 + 142 * 1099511627776
+
+/-- Witness interrupt-gate low word. -/
+def loWit33 : Wort := BitVec.ofNat 64 loWit33Nat
+
+/-- IDT image bytes relative to 4096: the vector-2 gate at +32, the
+    vector-32 trap gate at +512, the vector-33 interrupt gate at +528. -/
+def nestIdtByte (n : Nat) : Byte :=
+  match n with
+  | 32 => natByte 0
+  | 33 => natByte 32
+  | 34 => natByte 8
+  | 35 => natByte 0
+  | 36 => natByte 1
+  | 37 => natByte 142
+  | 512 => natByte 0
+  | 513 => natByte 33
+  | 514 => natByte 8
+  | 515 => natByte 0
+  | 516 => natByte 1
+  | 517 => natByte 143
+  | 528 => natByte 0
+  | 529 => natByte 34
+  | 530 => natByte 8
+  | 531 => natByte 0
+  | 532 => natByte 1
+  | 533 => natByte 142
+  | _ => BitVec.ofNat 8 0
+
+/-- TSS image bytes relative to 12288: IST1 (`0x4000`) at +36. -/
+def nestTssByte (n : Nat) : Byte :=
+  match n with
+  | 36 => natByte 0
+  | 37 => natByte 64
+  | _ => BitVec.ofNat 8 0
+
+/-- Witness bytes: IDT and TSS images, zero elsewhere. -/
+def nestBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else if a.toNat < 4096 + 544 then nestIdtByte (a.toNat - 4096)
+  else if a.toNat < 12288 then BitVec.ofNat 8 0
+  else if a.toNat < 12288 + 48 then nestTssByte (a.toNat - 12288)
+  else BitVec.ofNat 8 0
+
+/-- Witness memory: IDT/TSS/stack readable, stack writable. -/
+def nestMem : Speicher :=
+  { bytes := nestBytes
+    lesbar := fun a =>
+      decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 544) ||
+        decide (12288 ≤ a.toNat ∧ a.toNat < 12288 + 48) ||
+        decide (16336 ≤ a.toNat ∧ a.toNat < 16384)
+    schreibbar := fun a => decide (16336 ≤ a.toNat ∧ a.toNat < 16384)
+    ausfuehrbar := fun _ => false }
+
+/-- Witness control: IDT limit 543, TSS limit 103, CPL 0, IF set. -/
+def nestSteuer : Steuerstand :=
+  ⟨BitVec.ofNat 64 4096, 543, BitVec.ofNat 64 12288, 103, 0, true⟩
+
+/-- First event: maskable vector 32 (trap gate) under IF set. -/
+def evMask32 : AsyncEreignis :=
+  ⟨32, .maskierbar, nestSteuer, true, false, 0,
+    BitVec.ofNat 64 16, BitVec.ofNat 64 514, BitVec.ofNat 64 8,
+    BitVec.ofNat 64 4660, none⟩
+
+/-- Second event: maskable vector 33 (interrupt gate) with the
+    post-trap snapshot (IF still set). -/
+def evMask33 : AsyncEreignis :=
+  ⟨33, .maskierbar, { nestSteuer with ifBit := true }, true, false, 0,
+    BitVec.ofNat 64 16, BitVec.ofNat 64 514, BitVec.ofNat 64 8,
+    BitVec.ofNat 64 4660, none⟩
+
+/-- Masked probe: maskable vector 32 under cleared IF. -/
+def evMaskiert32 : AsyncEreignis :=
+  ⟨32, .maskierbar, { nestSteuer with ifBit := false }, true, false, 0,
+    BitVec.ofNat 64 16, BitVec.ofNat 64 514, BitVec.ofNat 64 8,
+    BitVec.ofNat 64 4660, none⟩
+
+/-- NMI probe: vector 2 under cleared IF (must bypass). -/
+def evNmi2 : AsyncEreignis :=
+  ⟨2, .nichtMaskierbar, { nestSteuer with ifBit := false }, true,
+    false, 0, BitVec.ofNat 64 16, BitVec.ofNat 64 514,
+    BitVec.ofNat 64 8, BitVec.ofNat 64 4660, none⟩
+
+/-- Witness cores: core 0 runs with RSP 20480, core 1 idles. -/
+def nestKern : Nat → HwKern
+  | 0 => ⟨fun q => if q = Register.rsp then BitVec.ofNat 64 20480
+      else BitVec.ofNat 64 0,
+      zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun q => if q = Register.rsp then BitVec.ofNat 64 8192
+      else BitVec.ofNat 64 0,
+      zeugeFlags, BitVec.ofNat 64 8192,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: two-gate IDT/TSS/stack memory, empty
+    buffers, full silicon. -/
+def nestStart : HwMaschine :=
+  ⟨nestMem, nestKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- Witness control for every core. -/
+def nestSteuerAlle : Nat → Steuerstand := fun _ => nestSteuer
+
+/-- The witness machine is well-formed. -/
+theorem nestStart_wf : HwWf nestStart := by
+  intro c f h
+  exact (merkmalZugelassen_heisst_beide nestStart.hw
+    (nestStart.bereit c) f h).1
+
+/-- The vector-32 gate bytes read back as the trap words. -/
+theorem nestTor32_liest :
+    liesTorBytes nestMem (torAdresse (BitVec.ofNat 64 4096) 32) =
+      some (loWit32, 0) := by
+  decide
+
+/-- The vector-33 gate bytes read back as the interrupt words. -/
+theorem nestTor33_liest :
+    liesTorBytes nestMem (torAdresse (BitVec.ofNat 64 4096) 33) =
+      some (loWit33, 0) := by
+  decide
+
+/-- The vector-2 gate bytes read back as the reused NMI words. -/
+theorem nestTor2_liest :
+    liesTorBytes nestMem (torAdresse (BitVec.ofNat 64 4096) 2) =
+      some (loWit, 0) := by
+  decide
+
+/-- The trap gate is admitted (handler `0x2100`, trap kind). -/
+theorem nestTor32_bereit :
+    pruefeTor 32 543 (loWit32, (0 : Wort)) .extern 0 true =
+      .bereit ⟨BitVec.ofNat 64 8448, 8, 1, 0, false⟩ := by
+  decide
+
+/-- The interrupt gate is admitted (handler `0x2200`). -/
+theorem nestTor33_bereit :
+    pruefeTor 33 543 (loWit33, (0 : Wort)) .extern 0 true =
+      .bereit ⟨BitVec.ofNat 64 8704, 8, 1, 0, true⟩ := by
+  decide
+
+/-- The witness TSS slot loads the IST stack. -/
+theorem nestStapel :
+    waehleStapel nestMem nestSteuer 1 0 false
+      (BitVec.ofNat 64 20480) =
+      .wechseln (BitVec.ofNat 64 16384) := by
+  decide
+
+/-- The selected stack pointer is canonical. -/
+theorem nestKanonisch :
+    istKanonisch (BitVec.ofNat 64 16384) = true := by
+  decide
+
 /- CUTS:
    Proved here: SKELETON ONLY so far -- the double-fault vector
    constant. Nested delivery, #DF escalation, the TSO-buffered
