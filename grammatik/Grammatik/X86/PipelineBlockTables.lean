@@ -403,6 +403,57 @@ theorem skalChunk_lauf (c : PipeCfg) (hc : cfgOk c = true)
     rw [regSet_fremd _ _ _ _ ha]
   exact ⟨s', hrunC, hd', ha', hmemC, hpC⟩
 
+/-! ## 5. Variable-index read lowering
+
+    `senkSkalLesen` lowers `.slot`/`.durch` reads at a VARIABLE index
+    (constant indices are lane 1159's domain and refused here): the anchor
+    must list base, stride and offset, the stride must be an admitted
+    scale (`skalaOk`: 1/2/4/8), the field an integer field, the index
+    register not `rsp` (the SIB index legality, decided), and the pilot
+    load admitted (`adrOk (basisKeinForm c.adr)`, as in lane 1159). The
+    code is the scaled chunk. Every other shape is `none`: unsupported
+    shapes are refused, never guessed. -/
+
+/-- READ LOWERING AT A VARIABLE INDEX. -/
+def senkSkalLesen (A : TabAnker D) (c : PipeCfg) {Γ : Ctx} {Λ : List (Res D)}
+    {τ : Ty} (e : Expr D Γ Λ τ) : Option (List Befehl) :=
+  match e with
+  | .slot t f (.var y) _ =>
+    match PipelineTables.ankerBasis A t with
+    | none => none
+    | some B =>
+      match PipelineTables.ankerZeile A t with
+      | none => none
+      | some Z =>
+        match PipelineTables.feldOff A t f with
+        | none => none
+        | some O =>
+          match D.typ t f with
+          | .int _ _ =>
+            if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                adrOk (basisKeinForm c.adr) then
+              some (skalChunk c (abbOf c _ y) B O Z)
+            else none
+          | _ => none
+  | .durch _ t _ f (.var y) _ =>
+    match PipelineTables.ankerBasis A t with
+    | none => none
+    | some B =>
+      match PipelineTables.ankerZeile A t with
+      | none => none
+      | some Z =>
+        match PipelineTables.feldOff A t f with
+        | none => none
+        | some O =>
+          match D.typ t f with
+          | .int _ _ =>
+            if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                adrOk (basisKeinForm c.adr) then
+              some (skalChunk c (abbOf c _ y) B O Z)
+            else none
+          | _ => none
+  | _ => none
+
 /- CUTS:
    Skeleton only: scale exponent stub. The chunk, lowering, correctness,
    refusals and witnesses are OPEN.
