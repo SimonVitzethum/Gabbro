@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 17:32 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 17:33 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -683,7 +683,7 @@ Last ledger refresh: **2026-10-05 17:32 UTC**. This is an operational snapshot, 
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Unresolved after agent rounds; not accepted | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
-| 1255 | Pipeline calls: three-or-more-statement callee bodies | Committed candidate; review/integration pending | 1256: Committed candidate; review/integration pending | [task](lanes/1255.md) |
+| 1255 | Pipeline calls: three-or-more-statement callee bodies | Merged after review/checks | 1256: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1255.md) |
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Merged after review/checks | 1258: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1257.md) |
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Committed candidate; review/integration pending | 1260: Committed candidate; review/integration pending | [task](lanes/1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1261.md) |
@@ -1653,6 +1653,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1228**, Independent exact review of 1227, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1228.md). <!-- x86-merged:1228 -->
 - 2026-10-05: lane **1243**, AVX2: 32-byte memory accesses on the TSO machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1243.md). <!-- x86-merged:1243 -->
 - 2026-10-05: lane **1244**, Independent exact review of 1243, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1244.md). <!-- x86-merged:1244 -->
+- 2026-10-05: lane **1255**, Pipeline calls: three-or-more-statement callee bodies, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1255.md). <!-- x86-merged:1255 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
