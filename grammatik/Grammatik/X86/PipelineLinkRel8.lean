@@ -427,4 +427,218 @@ theorem relaxSchritt_fixpunkt_passt (prog : List RelaxStueck)
   exact schrittFixpunkt_passtAux prog ziele (adressen prog basis)
     h i t ad hs hz ha
 
+/-! ## 3. Termination: at most one widening per short site. -/
+
+/-- Number of remaining short sites: the termination measure. -/
+def anzahlKurz : List RelaxStueck → Nat
+  | [] => 0
+  | .kurz :: r => 1 + anzahlKurz r
+  | _ :: r => anzahlKurz r
+
+/-- The widening order is reflexive. -/
+theorem progLE_refl (p : List RelaxStueck) : progLE p p := by
+  induction p with
+  | nil => simp [progLE]
+  | cons hd tl ih =>
+    simp only [progLE]
+    constructor
+    · cases hd with
+      | fest l => exact stueckLE.fest_eq l
+      | kurz => exact stueckLE.kurz_kurz
+      | weit => exact stueckLE.weit_weit
+    · exact ih
+
+/-- Widening composes on pieces. -/
+theorem stueckLE_trans {a b c : RelaxStueck}
+    (h₁ : stueckLE a b) (h₂ : stueckLE b c) : stueckLE a c := by
+  cases h₁ with
+  | fest_eq l =>
+    cases h₂ with
+    | fest_eq _ => exact stueckLE.fest_eq l
+  | kurz_kurz =>
+    cases h₂ with
+    | kurz_kurz => exact stueckLE.kurz_kurz
+    | kurz_weit => exact stueckLE.kurz_weit
+  | kurz_weit =>
+    cases h₂ with
+    | weit_weit => exact stueckLE.kurz_weit
+  | weit_weit =>
+    cases h₂ with
+    | weit_weit => exact stueckLE.weit_weit
+
+/-- The widening order is transitive. Every premise is used: `h₁`
+    and `h₂` split into head and tail, heads compose through
+    `stueckLE_trans`, tails through the induction hypothesis. -/
+theorem progLE_trans {p q r : List RelaxStueck}
+    (h₁ : progLE p q) (h₂ : progLE q r) : progLE p r := by
+  induction p generalizing q r with
+  | nil =>
+    cases q with
+    | nil =>
+      cases r with
+      | nil => simp [progLE]
+      | cons _ _ => simp [progLE] at h₂
+    | cons _ _ => simp [progLE] at h₁
+  | cons hd tl ih =>
+    cases q with
+    | nil => simp [progLE] at h₁
+    | cons hd' tl' =>
+      cases r with
+      | nil => simp [progLE] at h₂
+      | cons hd'' tl'' =>
+        simp only [progLE] at h₁ h₂ ⊢
+        obtain ⟨hhd₁, htl₁⟩ := h₁
+        obtain ⟨hhd₂, htl₂⟩ := h₂
+        exact ⟨stueckLE_trans hhd₁ hhd₂, ih htl₁ htl₂⟩
+
+/-- Widening never creates short sites. -/
+theorem progLE_anzahl {p q : List RelaxStueck}
+    (h : progLE p q) : anzahlKurz q ≤ anzahlKurz p := by
+  induction p generalizing q with
+  | nil =>
+    cases q with
+    | nil => simp [anzahlKurz]
+    | cons _ _ => simp [progLE] at h
+  | cons hd tl ih =>
+    cases q with
+    | nil => simp [progLE] at h
+    | cons hd' tl' =>
+      simp only [progLE] at h
+      obtain ⟨hhd, htl⟩ := h
+      have hle := ih htl
+      cases hhd with
+      | fest_eq l => simp only [anzahlKurz]; exact hle
+      | kurz_kurz => simp only [anzahlKurz]; omega
+      | kurz_weit => simp only [anzahlKurz]; omega
+      | weit_weit => simp only [anzahlKurz]; exact hle
+
+/-- Same short count under widening means no step happened. -/
+theorem progLE_gleich {p q : List RelaxStueck}
+    (h : progLE p q) (hc : anzahlKurz p = anzahlKurz q) : p = q := by
+  induction p generalizing q with
+  | nil =>
+    cases q with
+    | nil => rfl
+    | cons _ _ => simp [progLE] at h
+  | cons hd tl ih =>
+    cases q with
+    | nil => simp [progLE] at h
+    | cons hd' tl' =>
+      simp only [progLE] at h
+      obtain ⟨hhd, htl⟩ := h
+      cases hhd with
+      | fest_eq l =>
+        simp only [anzahlKurz] at hc
+        have hte := ih htl hc
+        simp [hte]
+      | kurz_kurz =>
+        simp only [anzahlKurz] at hc
+        have hte : tl = tl' := ih htl (by omega)
+        simp [hte]
+      | kurz_weit =>
+        simp only [anzahlKurz] at hc
+        have hle := progLE_anzahl htl
+        omega
+      | weit_weit =>
+        simp only [anzahlKurz] at hc
+        have hte := ih htl hc
+        simp [hte]
+
+/-- Without short sites the step rests. -/
+theorem schrittOhneKurzAux (p : List RelaxStueck)
+    (z : List (Option Nat)) (a : List Nat)
+    (h : anzahlKurz p = 0) : relaxSchrittAux p z a = p := by
+  induction p generalizing z a with
+  | nil => simp [relaxSchrittAux]
+  | cons hd tl ih =>
+    have htl : anzahlKurz tl = 0 := by
+      cases hd with
+      | fest l => simpa [anzahlKurz] using h
+      | kurz => simp [anzahlKurz] at h
+      | weit => simpa [anzahlKurz] using h
+    cases hd with
+    | fest l =>
+      cases z <;> cases a <;> simp [relaxSchrittAux, ih _ _ htl]
+    | kurz =>
+      simp only [anzahlKurz] at h
+      omega
+    | weit =>
+      cases z <;> cases a <;> simp [relaxSchrittAux, ih _ _ htl]
+
+/-- Without short sites the step rests at load base. -/
+theorem relaxSchrittOhneKurz (p : List RelaxStueck)
+    (z : List (Option Nat)) (b : Nat)
+    (h : anzahlKurz p = 0) : relaxSchritt p z b = p :=
+  schrittOhneKurzAux p z (adressen p b) h
+
+/-- A changing step strictly reduces the short count. Every premise
+    is used: the order gives the inequality, the disequality (through
+    `progLE_gleich`) makes it strict. -/
+theorem schrittAendertZahl (p : List RelaxStueck)
+    (z : List (Option Nat)) (a : List Nat)
+    (hne : relaxSchrittAux p z a ≠ p) :
+    anzahlKurz (relaxSchrittAux p z a) < anzahlKurz p := by
+  have hle1 := schrittWaechstAux p z a
+  have hle2 := progLE_anzahl hle1
+  have hne2 : anzahlKurz p ≠ anzahlKurz (relaxSchrittAux p z a) := by
+    intro hcon
+    exact hne (progLE_gleich hle1 hcon).symm
+  omega
+
+/-- A changing step at load base strictly reduces the short count. -/
+theorem relaxSchrittAendertZahl (p : List RelaxStueck)
+    (z : List (Option Nat)) (b : Nat)
+    (hne : relaxSchritt p z b ≠ p) :
+    anzahlKurz (relaxSchritt p z b) < anzahlKurz p :=
+  schrittAendertZahl p z (adressen p b) hne
+
+/-- Fuelled relaxation: iterate until the step rests. -/
+def relaxMitFuel : Nat → List RelaxStueck → List (Option Nat) → Nat →
+    List RelaxStueck
+  | 0, p, _, _ => p
+  | f + 1, p, z, b =>
+    if relaxSchritt p z b = p then p
+    else relaxMitFuel f (relaxSchritt p z b) z b
+
+/-- Fuelled iteration rests within the short-site count, only ever
+    widening. The fuel hypothesis bounds the measure, the step
+    hypothesis splits rest from progress. -/
+theorem relaxKonvAux (f : Nat) (p : List RelaxStueck)
+    (z : List (Option Nat)) (b : Nat)
+    (hle : anzahlKurz p ≤ f) :
+    relaxSchritt (relaxMitFuel f p z b) z b = relaxMitFuel f p z b ∧
+    progLE p (relaxMitFuel f p z b) := by
+  induction f generalizing p with
+  | zero =>
+    have h0 : anzahlKurz p = 0 := by omega
+    have hfix : relaxSchritt p z b = p :=
+      relaxSchrittOhneKurz p z b h0
+    simp only [relaxMitFuel]
+    exact ⟨hfix, progLE_refl p⟩
+  | succ f ih =>
+    by_cases hfix : relaxSchritt p z b = p
+    · simp only [relaxMitFuel, if_pos hfix]
+      exact ⟨hfix, progLE_refl p⟩
+    · have hlt := relaxSchrittAendertZahl p z b hfix
+      have hle2 : anzahlKurz (relaxSchritt p z b) ≤ f := by omega
+      have ihc := ih (relaxSchritt p z b) hle2
+      simp only [relaxMitFuel, if_neg hfix]
+      exact ⟨ihc.1, progLE_trans (relaxSchritt_waechst p z b) ihc.2⟩
+
+/-- CONVERGENCE (termination and fixed point): fuelled iteration
+    with the short-site count as fuel rests at a widened program
+    where every short site with a listed target fits signed-8 at its
+    laid-out address. -/
+theorem relaxKonvergiert (p : List RelaxStueck)
+    (z : List (Option Nat)) (b : Nat) :
+    ∃ q, relaxSchritt q z b = q ∧ progLE p q ∧
+      ∀ (i : Nat) (t ad : Nat), q[i]? = some .kurz →
+        z[i]? = some (some t) → (adressen q b)[i]? = some ad →
+        rel8Passt (dispAn t ad 2) = true := by
+  obtain ⟨hfix, hle⟩ :=
+    relaxKonvAux (anzahlKurz p) p z b (by omega)
+  refine ⟨relaxMitFuel (anzahlKurz p) p z b, hfix, hle, ?_⟩
+  intro i t ad hs hz ha
+  exact relaxSchritt_fixpunkt_passt _ _ _ hfix i t ad hs hz ha
+
 end Gabbro.Grammatik.X86
