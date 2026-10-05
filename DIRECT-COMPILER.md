@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 20:26 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 20:29 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -716,12 +716,12 @@ Last ledger refresh: **2026-10-05 20:26 UTC**. This is an operational snapshot, 
 | 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Committed candidate; review/integration pending | 1316: Agent working | [task](lanes/1315.md) |
 | 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Committed candidate; review/integration pending | 1320: Agent working | [task](lanes/1319.md) |
-| 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Committed candidate; review/integration pending | 1322: Committed candidate; review/integration pending | [task](lanes/1321.md) |
+| 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
 | 1325 | TSO projection: the locked and direct-memory tags | Agent working | 1326: scheduled | [task](lanes/1325.md) |
 | 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Agent working | 1328: scheduled | [task](lanes/1327.md) |
 | 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Agent working | 1330: scheduled | [task](lanes/1329.md) |
-| 1331 | Per-row consumed length for the capstone decoder chain | Committed candidate; review/integration pending | 1332: Agent working | [task](lanes/1331.md) |
+| 1331 | Per-row consumed length for the capstone decoder chain | Agent working | 1332: Committed candidate; review/integration pending | [task](lanes/1331.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1734,6 +1734,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `cde66b5e` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:cde66b5e95b13a42b7d3f8f1b49f6c5e19cf7ad8 -->
 - 2026-10-05: lane **1198**, Independent exact review of 1197, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1198.md). <!-- x86-merged:1198 -->
 - 2026-10-05: publication batch checks passed for `f49f7549`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1321**, Translation: large pages, SMEP/SMAP per access, permission caching, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1321.md). <!-- x86-merged:1321 -->
+- 2026-10-05: checked master `50f14a25` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:50f14a259ec724cc535663121eb9be5dd4f03bf8 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

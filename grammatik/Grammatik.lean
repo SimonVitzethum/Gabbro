@@ -693,3 +693,4 @@ import Grammatik.X86.HwWcOrdering
 import Grammatik.X86.ValidatorKapDecoder
 import Grammatik.X86.IntSignXchg
 import Grammatik.X86.PipelineBlockTables
+import Grammatik.X86.HwTranslateFull
