@@ -1,6 +1,9 @@
 # MUSE-REPORT-1290: Exact review of candidate 1289 (capstone union steps)
 
-## VERDICT: ACCEPT
+## Verdict
+
+CANDIDATE: 1289 27d7ccc4b2d704eee96b6cc53433e38f40698f99
+VERDICT: ACCEPT
 
 Candidate 1289 (`27d7ccc4b2d704eee96b6cc53433e38f40698f99`, base
 `63e2ec3543deec0c4cce21e9431dfffba157ebd6`) is accepted as reviewed.
