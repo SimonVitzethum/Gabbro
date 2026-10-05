@@ -1,10 +1,12 @@
 # MUSE-REPORT-1252: Exact review of candidate 1251 (TsoGxChecker)
 
+CANDIDATE: 1251 83738fee920549a89dfc333ebf1aa75532993acc
+
 ## Clone / branch
 
 - Clone: `/home/simon/Dokumente/gabbro-muse/a1252`, branch `muse/1252` (verified).
 - Owned file only: `MUSE-REPORT-1252.md` (this report). No other file touched.
-- Candidate: lane 1251, pinned HEAD `83738fee920549a89dfc333ebf1aa75532932993acc`,
+- Candidate: lane 1251, pinned HEAD `83738fee920549a89dfc333ebf1aa75532993acc`,
   base `515546d0e2430c0d416ede74e3add0166e88e2de`
   (from `.tmp/review/SNAPSHOT.json`).
 - Reviewed artefact: `.tmp/review/author-1251/PATCH.diff` (215 lines, read in full),
@@ -102,4 +104,6 @@ Review criteria:
   discharge, as the author report already records. Judged against the TASK
   paragraph (discharge or FINDING, assume nothing), which is fully delivered.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
