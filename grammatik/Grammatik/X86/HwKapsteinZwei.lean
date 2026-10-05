@@ -144,6 +144,18 @@ theorem kap2_bittest_embedded (m m' : HwMaschine) (c : Nat)
     cases h with
     | bittest _ _ heq => exact heq
 
+/-- Bit-scan embeds exactly, at every feature setting. -/
+theorem kap2_bitscan_embedded (m m' : HwMaschine) (c : Nat)
+    (feat : PopcntMerkmal) (d : BsDecodiert) :
+    (adapterBitScan feat).schritt m c d = some m' ↔
+      HwVollSchritt2 m m' (.bitscan c feat d) := by
+  constructor
+  · intro h
+    exact .bitscan c feat d h
+  · intro h
+    cases h with
+    | bitscan _ _ _ heq => exact heq
+
 /-- FP-store drain embeds exactly. -/
 theorem kap2_fpstore_embedded (m m' : HwMaschine) (c : Nat)
     (e : FpStoreEreignis) :
@@ -302,5 +314,180 @@ theorem kap2_wf (m m' : HwMaschine) (k : Kap2Ereignis)
   | uebersetz c q hstep =>
     rw [adapterUebersetz_verweigert] at hstep
     cases hstep
+
+/-! ## Disjointness and refusals.
+
+  Union tags are pairwise distinct by construction (one number per
+  family). The three paging adapters admit nothing on the flat
+  machine, by their accepted refusals. -/
+
+/-- Second-union tag: one number per family. -/
+def kap2Tag : Kap2Ereignis → Nat
+  | .alt _ => 0
+  | .rot _ _ => 1
+  | .carry _ _ => 2
+  | .bittest _ _ => 3
+  | .bitscan _ _ _ => 4
+  | .fpstore _ _ => 5
+  | .pf _ _ => 6
+  | .ctx _ => 7
+  | .wc _ _ => 8
+  | .avx2mem _ => 9
+  | .avx2tor _ _ _ _ _ => 10
+  | .seiten _ _ => 11
+  | .gross _ _ => 12
+  | .uebersetz _ _ => 13
+
+/-- The old union never coincides with a new-family tag: no new
+    family shadows the first union, and families are pairwise
+    distinct by the same tag argument. -/
+theorem kap2_tags_disjoint :
+    (∀ (k : KapEreignis) (c : Nat) (d : RotDecodiert),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.rot c d) ∧
+    (∀ (k : KapEreignis) (c : Nat) (i : CarryInstr),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.carry c i) ∧
+    (∀ (k : KapEreignis) (c : Nat) (d : BtDecodiert),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.bittest c d) ∧
+    (∀ (k : KapEreignis) (c : Nat) (feat : PopcntMerkmal)
+      (d : BsDecodiert),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.bitscan c feat d) ∧
+    (∀ (k : KapEreignis) (c : Nat) (e : FpStoreEreignis),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.fpstore c e) ∧
+    (∀ (k : KapEreignis) (c : Nat) (e : PfEreignis),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.pf c e) ∧
+    (∀ (k : KapEreignis) (e : CtxEreignis),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.ctx e) ∧
+    (∀ (k : KapEreignis) (c : Nat) (e : HwMemWC1287.WcZugriff1287),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.wc c e) ∧
+    (∀ (k : KapEreignis) (e : Avx2MemEreignis),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.avx2mem e) ∧
+    (∀ (k : KapEreignis) (cpu : CpuMerkmal) (x : Xcr0Bild)
+      (ko : KontrollBild) (c : Nat) (i : ExtInstr),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.avx2tor cpu x ko c i) ∧
+    (∀ (k : KapEreignis) (c : Nat) (q : SeitenAnfrage),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.seiten c q) ∧
+    (∀ (k : KapEreignis) (c : Nat) (q : SeitenAnfrage),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.gross c q) ∧
+    (∀ (k : KapEreignis) (c : Nat) (q : SeitenAnfrage),
+      Kap2Ereignis.alt k ≠ Kap2Ereignis.uebersetz c q) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro k c d h
+    cases h
+  · intro k c i h
+    cases h
+  · intro k c d h
+    cases h
+  · intro k c feat d h
+    cases h
+  · intro k c e h
+    cases h
+  · intro k c e h
+    cases h
+  · intro k e h
+    cases h
+  · intro k c e h
+    cases h
+  · intro k e h
+    cases h
+  · intro k cpu x ko c i h
+    cases h
+  · intro k c q h
+    cases h
+  · intro k c q h
+    cases h
+  · intro k c q h
+    cases h
+
+/-- What is NOT admitted stays refused: the three paging adapters
+    admit no flat-machine successor, by their accepted refusals. -/
+theorem kap2_verweigert :
+    (∀ (m : HwMaschine) (c : Nat) (q : SeitenAnfrage),
+      adapterSeiten.schritt m c q = none) ∧
+    (∀ (m : HwMaschine) (c : Nat) (q : SeitenAnfrage),
+      adapterGross.schritt m c q = none) ∧
+    (∀ (m : HwMaschine) (c : Nat) (q : SeitenAnfrage),
+      adapterUebersetz.schritt m c q = none) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro m c q
+    exact adapterSeiten_verweigert m c q
+  · intro m c q
+    exact adapterGross_verweigert m c q
+  · intro m c q
+    exact adapterUebersetz_verweigert m c q
+
+/-! ## Exhibited steps: one reached union step per new family.
+
+  Each step reuses its family's own witness machine and accepted
+  witness equation: option-machine witnesses by case analysis (the
+  value lemmas rule out `none`), register-outcome witnesses by a
+  projected `decide` (machines contain functions, so only plain
+  values are decided), the gate plug through the accepted MUL row,
+  the refused-paging and extended families through a base
+  observation on their own witness machine. -/
+
+/-- Exhibited carry union step: core 0 adds `17 + 5` through the
+    family adapter. -/
+theorem kap2_step_carry :
+    ∃ m1, HwVollSchritt2 carryWitStart m1
+      (Kap2Ereignis.carry 0
+        (.reg ⟨.adcReg .b64 .rax .rcx, 3⟩)) := by
+  cases hA : carryWitOutAdd with
+  | none =>
+    have h := carryWit_add_rax
+    simp [hA, carryWitRegOut] at h
+  | some m1 =>
+    have heq : (adapterCarry).schritt carryWitStart 0
+        (.reg ⟨.adcReg .b64 .rax .rcx, 3⟩) = some m1 := hA
+    exact ⟨m1, (kap2_carry_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited bit-test union step: core 0 runs BTS through the
+    family adapter. -/
+theorem kap2_step_bittest :
+    ∃ m1, HwVollSchritt2 btWitStartM m1
+      (Kap2Ereignis.bittest 0 ⟨.reg .bts .w64 .rax .rcx, 4⟩) := by
+  cases hA : btWitAd0 with
+  | none =>
+    have h := btWit_ad0.1
+    simp [hA, btWitRegOut] at h
+  | some m1 =>
+    have heq : (adapterBitTest).schritt btWitStartM 0
+        ⟨.reg .bts .w64 .rax .rcx, 4⟩ = some m1 := hA
+    exact ⟨m1, (kap2_bittest_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited rotate union step: core 0 ROLs `0x81` by imm8 1
+    through the family adapter. -/
+theorem kap2_step_rot :
+    ∃ m1, HwVollSchritt2 rotHwWitStart m1
+      (Kap2Ereignis.rot 0
+        ⟨⟨.rol, .b8, .imm8 1, .reg .rax⟩, 3⟩) := by
+  have hproj : ((adapterRot).schritt rotHwWitStart 0
+      ⟨⟨.rol, .b8, .imm8 1, .reg .rax⟩, 3⟩).map
+      (fun m => (m.kerne 0).register .rax) = some 3 := by
+    decide
+  cases hS : (adapterRot).schritt rotHwWitStart 0
+      ⟨⟨.rol, .b8, .imm8 1, .reg .rax⟩, 3⟩ with
+  | none =>
+    rw [hS] at hproj
+    cases hproj
+  | some m1 =>
+    exact ⟨m1, (kap2_rot_embedded _ _ _ _).mp hS⟩
+
+/-- Exhibited bit-scan union step: core 0 scans `0x10` through the
+    family adapter at the witness feature setting. -/
+theorem kap2_step_bitscan :
+    ∃ m1, HwVollSchritt2 bsHwWitStart m1
+      (Kap2Ereignis.bitscan 0 ⟨true⟩
+        ⟨.bsf .b32 .rax (.reg .rcx), 3⟩) := by
+  have hproj : ((adapterBitScan ⟨true⟩).schritt bsHwWitStart 0
+      ⟨.bsf .b32 .rax (.reg .rcx), 3⟩).map
+      (fun m => (m.kerne 0).register .rax) = some 4 := by
+    decide
+  cases hS : (adapterBitScan ⟨true⟩).schritt bsHwWitStart 0
+      ⟨.bsf .b32 .rax (.reg .rcx), 3⟩ with
+  | none =>
+    rw [hS] at hproj
+    cases hproj
+  | some m1 =>
+    exact ⟨m1, (kap2_bitscan_embedded _ _ _ _ _).mp hS⟩
 
 end Gabbro.Grammatik.X86
