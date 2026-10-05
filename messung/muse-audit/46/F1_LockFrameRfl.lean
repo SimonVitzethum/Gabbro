@@ -15,8 +15,7 @@
   two traces, `Rahmen` between `s.welt e1` and `s.welt e2` holds by `rfl` at
   each projection -- the frame proof never inspects which lock event fired.
 -/
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

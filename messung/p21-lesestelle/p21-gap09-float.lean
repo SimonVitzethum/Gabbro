@@ -16,8 +16,7 @@
   two, so `rounded` is owed. The model below is the exactness test on the
   reduced pair; the carrier link is `Block.gleitLit`.
 -/
-import Grammatik.Syntax
-
+import Grammatik.Kern.Syntax.Syntax
 namespace P21.Gap09Float
 
 /-- Denominator `den` divides some power of two (fuel bounds the search). -/

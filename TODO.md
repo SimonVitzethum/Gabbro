@@ -498,7 +498,7 @@ counts is statically linkable, bucket-bounded, refuse-on-full.*
   calls are all the kernel EXPORTS, so the ceiling reads there as it does on metal
   (`Spec.lean` (M10)), and refuse-on-full is deterministic rather than practically unreachable.
   **The Lean half LANDED 2026-09-28** (server lane, session 3, `messung/SERVER-0E-REPORT.md`
-  §9): `grammatik/Grammatik/ArenaDyn.lean` section `Form` carries `DynForm` (the table spans
+  §9): `grammatik/Grammatik/Bausteine/Arena/ArenaDyn.lean` section `Form` carries `DynForm` (the table spans
   the ceiling, the committed prefix is a second `stand`-style word `komSt`), the four
   PLAN-DYNAMISCH §9 theorems in `Block` form — `dynGrow_commit` with its frame (the used
   counter and every slot stay put), `dynCommit_monoton`, `dynAlloc_unter_commit`,
@@ -869,7 +869,7 @@ lines per code line, `messung/GABBROV-PROOF-RATIO.md`). What is open, in the ord
   Certificates regenerated (release header text changed).
 - [x] **The C read correspondence for nested arrays** — lane 205, reviewed
   (reviewer 212, r1) and merged (`1198a0b9`, 2026-09-17).
-  `grammatik/Grammatik/CFormNested.lean`: `cform_nested_read` for the
+  `grammatik/Grammatik/CBackend/Formen/CFormNested.lean`: `cform_nested_read` for the
   emitted reads of `[[T; n]; m]` plus `cform_nested_read_zeuge`, standard
   three axioms, planted-defect check (a swapped stride fails red). **Fix
   lane F8 (2026-09-22, review G01 F1):** the witness was degenerate (no
@@ -884,7 +884,7 @@ lines per code line, `messung/GABBROV-PROOF-RATIO.md`). What is open, in the ord
   `corrcert.rs::SimCert124` prints the four R124 position tables as JSON
   (`.simcert`) and as the Lean literal `cert124_printed`, with unit tests
   (every forged table fails, both spellings pinned);
-  `grammatik/Grammatik/SimPruef.lean` checks the printed certificate into
+  `grammatik/Grammatik/Proben/SimPruef.lean` checks the printed certificate into
   a simulation (`simpruef_liefert`, `simpruef_124_zeuge`). **Fix lane F8
   (2026-09-22, review G01 F2/F3 + integration):** `pruefeSim` compares with
   `gOfA`/`heldGA`/`gOfB`/`heldGB` themselves; the simulation's relation is
@@ -972,7 +972,7 @@ by those updates.
 - [ ] **Take the `Einheit` of a chain from the exporter** (depends on lane 198) instead of the
   chain author writing it.
 - [ ] **Export the arena** (`OFFEN.md` O14, `SATZKARTE.md` §32). The specification carries
-  `alloc`/`reset` since 2026-09-15 (`Grammatik/ArenaZucker.lean`: a table of `count = hi` slots
+  `alloc`/`reset` since 2026-09-15 (`Grammatik/Bausteine/Arena/ArenaZucker.lean`: a table of `count = hi` slots
   beside a `used` global); `lean_g.rs` refuses the DECLARATION by name instead of building that
   pair, so `beispiele/98` and `99` stop at sieve (b). Read an `ArenaDecl` into a `TableModel` +
   `GlobModel` and lower the two statements. *The reservation `lo` does not travel — it is the

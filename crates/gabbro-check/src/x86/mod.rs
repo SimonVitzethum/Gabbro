@@ -1,7 +1,7 @@
 //! **The direct-x86 target vocabulary (wave A, lane 273).**
 //!
 //! Internal foundation for the direct x86-64 target, mirroring the canonical
-//! `grammatik/Grammatik/X86/Typen.lean`. The actual vocabulary lives in
+//! `grammatik/Grammatik/X86/Kern/Typen.lean`. The actual vocabulary lives in
 //! [`typen`]; this module only re-exports it and records the boundary.
 //!
 //! Unwired: no checker pass, no emitter template and no CLI reads this

@@ -1632,7 +1632,7 @@ refusing it. Re-check with `./cargo-pruef` (zero failures) and
 rule stays a proposal in `messung/muse/MUSE-REPORT-204.md`, not built.
 
 **Nested-array read correspondence, lane 205** (`1198a0b9`).
-`grammatik/Grammatik/CFormNested.lean`: `cform_nested_read` for emitted
+`grammatik/Grammatik/CBackend/Formen/CFormNested.lean`: `cform_nested_read` for emitted
 reads of `[[T; n]; m]` plus `cform_nested_read_zeuge`, standard three
 axioms, planted-defect check (a swapped stride fails red). Import added
 by the merger. Re-build with `lake build` in `grammatik/`.
@@ -1640,7 +1640,7 @@ by the merger. Re-build with `lake build` in `grammatik/`.
 **Stage-(b) simulation-certificate printer, lane 206** (`71c5eaea`).
 `crates/gabbro-check/src/corrcert.rs` prints `SimCert124` as JSON and as
 the Lean literal `cert124_printed` (unit tests: every forged table fails,
-both spellings pinned); `grammatik/Grammatik/SimPruef.lean` checks the
+both spellings pinned); `grammatik/Grammatik/Proben/SimPruef.lean` checks the
 printed certificate into the `sim124` conclusion. Round trip measured on
 124 in `messung/muse/MUSE-REPORT-206.md`. Re-check with `./cargo-pruef`
 and `lake build` in `grammatik/`.

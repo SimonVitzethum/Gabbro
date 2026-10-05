@@ -31,7 +31,7 @@ section references), never re-typed measurements.
 ## Registers and records
 
 - Goal statement and its one assumption / NOT-CLAIMED list:
-  `grammatik/Grammatik/Zielsatz/Spec.lean` (proof `Zielsatz/BeweisAtomar.lean`,
+  `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` (proof `Zielsatz/BeweisAtomar.lean`,
   single-concurrency statement derived in `Zielsatz/Beweis.lean`).
 - Certificate register: `grammatik/Grammatik/Zertifikat/REGISTER.txt` — every
   accepted program is either certified or listed by name as not claimed.

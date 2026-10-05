@@ -23,7 +23,7 @@ The selected path removes the C compiler from the intended trust base; it has no
   `bruecke/Bruecke/Quelle.lean`; GabbroV: `programmlogik/`.
 - Existing concurrent source model: `grammatik/Grammatik/Speichermodell/`, especially
   `Sicht.lean`, `MaschineW.lean`, `GXMaschine.lean`, `AtomarW.lean`.
-- Goal statement and proof: `grammatik/Grammatik/Zielsatz/Spec.lean` and
+- Goal statement and proof: `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` and
   `BeweisAtomar.lean`. Read `SchwachX`, `ZielX`, `GabbroZiel` and the named gap list.
 - Generic correspondence/certificate architecture and abstract ticket-lock proofs may supply
   reusable techniques. C-specific semantics and closing theorems remain C-specific evidence.

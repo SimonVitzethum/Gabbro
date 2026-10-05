@@ -12,7 +12,7 @@
 --   (`Zielsatz/Spec.lean`, header block "end-block gate");
 -- * the stub the emitter writes -- `bool write(…, uint64_t *_wert, IoError *_grund)`,
 --   the errno table, `__builtin_unreachable()` for anything else -- is the PROVED
---   template `tor.fehlbar` (`grammatik/Grammatik/SchablonenOhneLibc.lean` §3): its
+--   template `tor.fehlbar` (`grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean` §3): its
 --   decoding, packed into the machine's word, is exactly G's decoding, for every word.
 --
 -- This unit is CERTIFIED (`grammatik/Grammatik/Zertifikat/`). The call stands at the

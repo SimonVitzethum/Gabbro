@@ -23,9 +23,9 @@ judge gathered into it and nothing else.*
 
 | File | Content | Size budget | Who reads it |
 |---|---|---|---|
-| `grammatik/Grammatik/Zielsatz/Spec.lean` | ONLY definitions and the statement `gabbro_ziel` (as `def GabbroZiel : Prop`); imports only the model's DEFINITION files, never a proof file | ≤ 300 lines of its own | the human reviewer |
-| `grammatik/Grammatik/Zielsatz/Beweis.lean` | `theorem gabbro_ziel : GabbroZiel`, assembled from the existing flagship theorems | any | the kernel |
-| `grammatik/Grammatik/Zielsatz/Proben.lean` | the anti-vacuity obligations (§4) | any | the kernel |
+| `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` | ONLY definitions and the statement `gabbro_ziel` (as `def GabbroZiel : Prop`); imports only the model's DEFINITION files, never a proof file | ≤ 300 lines of its own | the human reviewer |
+| `grammatik/Grammatik/Zielsatz/Kern/Beweis.lean` | `theorem gabbro_ziel : GabbroZiel`, assembled from the existing flagship theorems | any | the kernel |
+| `grammatik/Grammatik/Zielsatz/Kern/Proben.lean` | the anti-vacuity obligations (§4) | any | the kernel |
 
 `Spec.lean` compiles without `Beweis.lean`. A reviewer therefore reads the statement and the
 definitions it names, and nothing that merely proves. §5 lists those definitions.

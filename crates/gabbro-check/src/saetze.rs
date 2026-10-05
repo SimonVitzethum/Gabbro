@@ -322,7 +322,7 @@ pub const NAMEN: &[Satz] = &[
                       emitter refuses by name.",
         fundstelle: "crates/gabbro-check/src/namen.rs (`asm_versiegelt`); \
                      crates/gabbro-check/src/emit.rs (the `asm` arm); \
-                     grammatik/Grammatik/Zielsatz/NeverAsm.lean",
+                     grammatik/Grammatik/Zielsatz/Eigenschaften/NeverAsm.lean",
     },
     Satz {
         name: "namen.asm_never_angenommen",
@@ -675,7 +675,7 @@ pub const NAMEN: &[Satz] = &[
                   and in `requires profile` alike. Duplicates with one value \
                   are silent: a set holds them once.",
         vorbehalt: "The `einigung` half of `Profil.gut` \
-                    (`grammatik/Grammatik/Profil.lean`): contradictory modes \
+                    (`grammatik/Grammatik/Kern/Syntax/Profil.lean`): contradictory modes \
                     make every proof over the combined program vacuous, so the \
                     refusal stands at the profile itself, never at the use.",
         stand: Satzstand::Gemessen,
@@ -1000,7 +1000,7 @@ pub const NAMEN: &[Satz] = &[
                       passes, a lock without an own primitive is silent). Corpus diff: no \
                       other file under `beispiele/` draws `N323`.",
         fundstelle: "crates/gabbro-check/src/namen.rs::sperrprimitiv_vertrag; \
-                     grammatik/Grammatik/SperrImpl.lean (`LockImplVertrag`, `LockGiltAn`, \
+                     grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperrImpl.lean (`LockImplVertrag`, `LockGiltAn`, \
                      `lockVertrag_atomar`, `lockVertrag_ordnung_nimm`, \
                      `lockVertrag_ordnung_gib`, `lockVertrag_halte_nimm`, \
                      `lockVertrag_halte_gib`, `rohLP_verletzt`); laufzeit/sperre.gab (the \
@@ -1044,8 +1044,8 @@ pub const NAMEN: &[Satz] = &[
                       `zwei_worte_faellt_mit_n483`). Corpus diff: no other file under \
                       `beispiele/` draws `N481`-`N483`.",
         fundstelle: "crates/gabbro-check/src/namen.rs::sperrprimitiv_ordnung; \
-                     grammatik/Grammatik/Speichermodell/Atomar.lean (`hb_uebergabe`, \
-                     `schrittW_freigabe`); grammatik/Grammatik/Speichermodell/MaschineW.lean \
+                     grammatik/Grammatik/Speichermodell/Atomar/Atomar.lean (`hb_uebergabe`, \
+                     `schrittW_freigabe`); grammatik/Grammatik/Speichermodell/Maschine/MaschineW.lean \
                      (`locksicht`, the lock view W joins at a take and a give)",
     },
     Satz {
@@ -1102,9 +1102,9 @@ pub const NAMEN: &[Satz] = &[
                       foreign function `N505`, contracts as trees, the composed text, \
                       two targets `N568` beside one target linking clean).",
         fundstelle: "crates/gabbro-check/src/verbund.rs::verbinde_alle; \
-                     grammatik/Grammatik/Zielsatz/Spec.lean (`Verbindbar`, \
+                     grammatik/Grammatik/Zielsatz/Kern/Spec.lean (`Verbindbar`, \
                      `SchnittstelleSpec`, `GabbroZielVerbund`); \
-                     grammatik/Grammatik/Zielsatz/Verbund.lean (`gabbro_ziel_verbund`)",
+                     grammatik/Grammatik/Zielsatz/Faeden/Verbund.lean (`gabbro_ziel_verbund`)",
     },
 ];
 
@@ -1489,7 +1489,7 @@ pub const D1D2: &[Satz] = &[
                     the parser: the touch rule of a carrier (`H007`, and `Syntax.lean` under \
                     it) is CONJUNCTIVE, so N locks over ONE carrier are held together at \
                     every access, never chosen between \
-                    (`Grammatik/Sperrstreifen.lean`, `zugriff_haelt_jeden_waechter` and \
+                    (`Grammatik/Nebenlaeufigkeit/Sperren/Sperrstreifen.lean`, `zugriff_haelt_jeden_waechter` and \
                     `streifensperren_kosten_alle`; `ziel_haelt_jeden_waechter` says the \
                     same over the conclusion of `gabbro_ziel`). The scaling shape is N \
                     TABLES with one lock each and a dispatch naming constant locks, and it \
@@ -1510,7 +1510,7 @@ pub const D1D2: &[Satz] = &[
                       shared-strength form `Held(L, shared)` in `beispiele/13`, and the new \
                       `beispiele/146-sperrstreifen.gab` (four tables, four locks, a \
                       dispatch) -- the rule falls in none of them.",
-        fundstelle: "crates/gabbro-check/src/domaene.rs; grammatik/Grammatik/Sperrstreifen.lean; \
+        fundstelle: "crates/gabbro-check/src/domaene.rs; grammatik/Grammatik/Nebenlaeufigkeit/Sperren/Sperrstreifen.lean; \
                      messung/muse/OPUS-BERICHT-SPERRSTREIFEN.md",
     },
     Satz {
@@ -2756,7 +2756,7 @@ pub const M1: &[Satz] = &[
                       gift (the lane report's fallout table).",
         fundstelle: "crates/gabbro-check/src/m1.rs (`fn_gestalt_genau`, \
                      `enthaelt_unbekannt`, `pruefe_axiom_ruf`); \
-                     grammatik/Grammatik/EinpassenVoll.lean (`antwortB`, `antwortB_iff`)",
+                     grammatik/Grammatik/Logik/Vertraege/EinpassenVoll.lean (`antwortB`, `antwortB_iff`)",
     },
     Satz {
         name: "consts.evaluable",
@@ -2895,7 +2895,7 @@ pub const M1: &[Satz] = &[
                       `1123` (declaration plus `lenof`), `1124` (5+3 into 8) \
                       and `1159` (all four guard forms).",
         fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`ziel_regel`, \
-                     `index_regel`, `fakten`); `grammatik/Grammatik/ZeichenfolgeGebunden.lean` \
+                     `index_regel`, `fakten`); `grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeGebunden.lean` \
                      (`bconcat_max_summe`, `bindex_geschuetzt`, \
                      `bindex_max_beweist_nichts`)",
     },
@@ -2935,7 +2935,7 @@ pub const M1: &[Satz] = &[
                       names have no emitter type.",
         fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (`ziel_regel`, \
                      `wert_ohne_kette`, `expr_regel`, `ort_regel`, `ruf_regel`, \
-                     `Zustand`); `grammatik/Grammatik/ZeichenfolgeGebunden.lean` \
+                     `Zustand`); `grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeGebunden.lean` \
                      (`bkopie_max`, `bkopie_kuerzer_scheitert`)",
     },
     Satz {
@@ -2968,7 +2968,7 @@ pub const M1: &[Satz] = &[
                       clean side: `beispiele/09`, `17`, and \
                       `tests/invarianten_buchung.rs`.",
         fundstelle: "crates/gabbro-check/src/m1.rs (`invarianten_buchen`, \
-                     `sammle_inv_traeger`); grammatik/Grammatik/Zielsatz/Invarianten.lean",
+                     `sammle_inv_traeger`); grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean",
     },
     Satz {
         name: "zeichenfolge.orte",
@@ -3095,7 +3095,7 @@ pub const M1: &[Satz] = &[
                       scrutinee, `INT64_MIN`/`u64::MAX` labels, all compiled under \
                       `cc -Werror`).",
         fundstelle: "crates/gabbro-check/src/intmatch.rs (`pruefe`), called from the \
-                     `Match` arm of `m1.rs`; grammatik/Grammatik/CFormMatch.lean \
+                     `Match` arm of `m1.rs`; grammatik/Grammatik/CBackend/Formen/CFormMatch.lean \
                      (`erschoepfend`, `erschoepfendB_richtig`)",
     },
 ];
@@ -3861,9 +3861,9 @@ pub const WIRKUNGEN: &[Satz] = &[
                       atomic, a shared atomic read in a body only, and a single thread stay \
                       silent). Corpus diff: no file under `beispiele/` draws `N484`.",
         fundstelle: "crates/gabbro-check/src/fusswache2.rs::vertrag_atomar; \
-                     grammatik/Grammatik/Zielsatz/AtomarAkzeptiert.lean (`vertragsFreiB`, \
+                     grammatik/Grammatik/Zielsatz/Atomar/AtomarAkzeptiert.lean (`vertragsFreiB`, \
                      `fussWXB`, `AkzeptiertX`, `akzeptiertSpecX_of`); \
-                     grammatik/Grammatik/Zielsatz/AtomarAkzeptiertZeuge.lean \
+                     grammatik/Grammatik/Zielsatz/Atomar/AtomarAkzeptiertZeuge.lean \
                      (`vertrag_atomar_abgelehnt`)",
     },
     Satz {
@@ -3926,12 +3926,12 @@ pub const WIRKUNGEN: &[Satz] = &[
                       pool that exports; Rust and the Lean Bool both accept it, \
                       `pruefe-akzeptiert-diff.py`).",
         fundstelle: "crates/gabbro-check/src/fusswache2.rs (`renn`); \
-                     grammatik/Grammatik/Zielsatz/Akzeptiert.lean (`rennB`, \
+                     grammatik/Grammatik/Zielsatz/Kern/Akzeptiert.lean (`rennB`, \
                      `SchreibGetrennt`, `wurzelnB`, `ruheB`, `einzelnPoolB`, \
                      `poolSicherWB`, `schreibGetrenntK_of`); \
-                     grammatik/Grammatik/Zielsatz/Spec.lean (`SchreibGetrennt`, `Ruhig`, \
+                     grammatik/Grammatik/Zielsatz/Kern/Spec.lean (`SchreibGetrennt`, `Ruhig`, \
                      `Mehrfach`, `PoolSicher`, `EinzelnPool`); \
-                     grammatik/Grammatik/Zielsatz/PoolZeuge.lean (`pool_ziel_zeuge`, \
+                     grammatik/Grammatik/Zielsatz/Faeden/PoolZeuge.lean (`pool_ziel_zeuge`, \
                      `pool_abgelehnt`)",
     },
 ];
@@ -4403,7 +4403,7 @@ pub const PHASEN: &[Satz] = &[
                       region answer (a page from the kernel, a store through it, `write`); beispiele/74 runs the value path \
                       (a `write(1, \"ok\\n\", 3)` returns 3), beispiele/90 the `EBADF` path.",
         fundstelle: "crates/gabbro-check/src/emit.rs (`syscall_stumpf`); \
-                     dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Erhaltung.lean",
+                     dokumente/SYNTAX.md §12.1; grammatik/Grammatik/Kern/Semantik/Erhaltung.lean",
     },
     Satz {
         name: "zeiger.index_in_der_ausdehnung",
@@ -5601,7 +5601,7 @@ pub const SPERREN: &[Satz] = &[
                       function, and `beispiele/41` rings the bell from behind an \
                       `extern fn`.",
         fundstelle: "crates/gabbro-check/src/geteilt.rs; \
-                     grammatik/Grammatik/Geraet.lean (`GeraetWache`, C1)",
+                     grammatik/Grammatik/Kern/Semantik/Geraet.lean (`GeraetWache`, C1)",
     },
     Satz {
         name: "sperren effects-locks-zeile",
@@ -6643,8 +6643,8 @@ pub const SPERREN: &[Satz] = &[
                       dispatch roots). A start holding ANY signature lock, shared \
                       or not, falls under `N303` (`wurzelnB`, gift/967).",
         fundstelle: "crates/gabbro-check/src/startexklusiv.rs; \
-                     grammatik/Grammatik/RufMaschineG.lean (`StartExklusiv`); \
-                     grammatik/Grammatik/AuditZiel.lean (probe B)",
+                     grammatik/Grammatik/Logik/Ruf/RufMaschineG.lean (`StartExklusiv`); \
+                     grammatik/Grammatik/Proben/AuditZiel.lean (probe B)",
     },
 ];
 

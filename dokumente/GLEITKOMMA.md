@@ -1,7 +1,7 @@
 # GLEITKOMMA: a kernel-computable IEEE-754 model and its assumption
 
 Lane 166, 2026-09-14. The model lives in
-`grammatik/Grammatik/Gleitkomma.lean`; the differential check is
+`grammatik/Grammatik/Bausteine/Gleitkomma/Gleitkomma.lean`; the differential check is
 `instrumente/pruefe-gleitkomma.py`. English throughout. **Since the lane
 after 166 (same day) the semantics computes with this model (section 7),
 the emitted C float forms have a semantics and correspondence lemmas

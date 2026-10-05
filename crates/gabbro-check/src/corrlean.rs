@@ -734,7 +734,7 @@ pub fn gzertifiziere(baum: &Programm) -> GUnitCert {
 // ==================== general rows (T2 general) ====================
 //
 // Renders every `impl fn` body as general `GRow` data
-// (`grammatik/Grammatik/Korrespondenz.lean`): `void`, `storeSlot`,
+// (`grammatik/Grammatik/Korrespondenz/Allgemein/Korrespondenz.lean`): `void`, `storeSlot`,
 // `setVar`, `setOp`, `bindLet`, `ite`, `call`, `ret`. The expression
 // renderer covers exactly the Lean `exprOk` families (literals,
 // locals, `+`/`-`/`*`, `==`/`<`/`<=`/`>`, slot loads); everything else
@@ -1439,7 +1439,7 @@ pub fn gzeige(baum: &Programm, datei: &str) -> String {
     aus
 }
 
-/// Render the GENERIC certificate (`KCert`, `grammatik/Grammatik/KorrespondenzAllg.lean`,
+/// Render the GENERIC certificate (`KCert`, `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean`,
 /// checked by `korrOk` and consumed by the closing theorem `schlusssatz`): per `impl fn`,
 /// in source order (entry `n` is C function `n`), its C parameters, its rows and the
 /// EXPORTER'S locals map -- Gabbro variable `j` is C local `j`, a table pointer is an

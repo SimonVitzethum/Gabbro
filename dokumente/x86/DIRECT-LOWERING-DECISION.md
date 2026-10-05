@@ -8,7 +8,7 @@ follow-up compiler tasks once accepted; until then it is a proposal.*
 ## 0. Question and method
 
 Simon's question: can the direct x86-64 backend lower from the existing
-typed source model (`grammatik/Grammatik/Syntax.lean` + `Semantik.lean`)
+typed source model (`grammatik/Grammatik/Kern/Syntax/Syntax.lean` + `Semantik.lean`)
 or from `programmlogik/Gabbro/Body.lean` plus its established source
 bridge (`bruecke/Bruecke/Quelle.lean`, `Pflichten.lean`, `Simulation.lean`),
 without adding another SSA IR — and if so, what is the smallest reusable
@@ -311,7 +311,7 @@ refusals, precise CUTS, and standard `#print axioms`.
   not migrate. The old draft file/snapshot is preserved, never
   deleted; this document records the decision so a future lane does
   not re-fork it silently.
-- Optimiser friend: `grammatik/Grammatik/X86/OptimizationRules.lean`
+- Optimiser friend: `grammatik/Grammatik/X86/Opt/Regeln/OptimizationRules.lean`
   and `OptimizationWitnesses.lean` stay reserved and untouched; the
   complete planned optimiser specification stays in
   `grammatik/OPTIMIZER.md`. Optimisation certificates speak about

@@ -33,7 +33,7 @@ models and are not covered here.*
   boundaries.
 
 Canonical vocabulary throughout: `Gabbro.Grammatik.X86` in
-`../../grammatik/Grammatik/X86/Typen.lean`. Image and loader contract:
+`../../grammatik/Grammatik/X86/Kern/Typen.lean`. Image and loader contract:
 [IMAGE-ABI](IMAGE-ABI.md). Source bridge: [QUELLBRUECKE](QUELLBRUECKE.md).
 IR and certificates: [IR-VALIDIERUNG](IR-VALIDIERUNG.md). Optimiser
 specification: `../../grammatik/OPTIMIZER.md`. Active plan:
@@ -188,8 +188,8 @@ Two binding kinds, both user logic with contracts, never assumptions:
 - **System-call gates (`syscall` items).** Declared in Gabbro with the
   machine side (`abi ... number`, `regs in`, `regs out`, `clobbers`),
   the errno table, cost promise, named assumption reference, and
-  falsifier (groundwork: `Grammatik/Syscall.lean` `SysAbi`/`sysAbiGutB`,
-  `dekodiere`; pairing: `Grammatik/SyscallPaarung.lean`). Generic
+  falsifier (groundwork: `Grammatik/Kern/Semantik/Syscall.lean` `SysAbi`/`sysAbiGutB`,
+  `dekodiere`; pairing: `Grammatik/Kern/Semantik/SyscallPaarung.lean`). Generic
   lowering emits the caller-side stub sequence for the DECLARED
   register map; the declared map varies per profile and per target
   (`via V` rebinding per `zielbindung.rs` N562–N567). Region answers
@@ -452,7 +452,7 @@ unchanged to every profile.
   assumptions only, and the call-order leg. No lane weakens any of
   them for portability or speed.
 - The friend-reserved optimiser files
-  (`grammatik/Grammatik/X86/OptimizationRules.lean`,
+  (`grammatik/Grammatik/X86/Opt/Regeln/OptimizationRules.lean`,
   `OptimizationWitnesses.lean`, planned specification in
   `../../grammatik/OPTIMIZER.md`) stay untouched by portability work:
   this document reserves profiles and bindings only and waits on the

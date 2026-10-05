@@ -26,10 +26,9 @@
   F5 (pattern d): stale line references in the §11/§12 headers -- on-file
   evidence only, UNVERIFIED (no Lean demonstration possible).
 -/
-import Grammatik.Wettlauf
-import Grammatik.InterferenzAllgemein
-import Grammatik.Zeugnis
-
+import Grammatik.Nebenlaeufigkeit.Allgemein.Wettlauf
+import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
+import Grammatik.Korrespondenz.Zeugnis.Zeugnis
 namespace MuseAudit20
 
 open Gabbro.Grammatik

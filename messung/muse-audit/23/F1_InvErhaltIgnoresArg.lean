@@ -8,8 +8,7 @@
   at nach", repackaged as an iff. Demonstrated below by rebuilding the same
   conclusion from the two membership facts alone.
 -/
-import Grammatik.InterferenzAllgemein
-
+import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

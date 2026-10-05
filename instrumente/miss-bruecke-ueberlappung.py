@@ -5,7 +5,7 @@
 
 For every `beispiele/*.gab` it records
   * G   : `gabbro lean-g` exits 0 (the unit is a G program term), and which G constructors
-          (`Stmt`/`Block`/`Endblock`/`Expr`, names read from `Grammatik/Syntax.lean`) the term uses;
+          (`Stmt`/`Block`/`Endblock`/`Expr`, names read from `Grammatik/Kern/Syntax/Syntax.lean`) the term uses;
   * Body: a duty file `programmlogik/Duty/*.lean` carries the unit (the `@duty N <file>` line,
           with `goals`/`refused` counts), and which `Body` constructors (names read from
           `Gabbro/Body.lean`) its datum uses;
@@ -41,7 +41,7 @@ def main():
     ap.add_argument('--binary', default=str(ROOT / 'target/release/gabbro'))
     ap.add_argument('--out')
     a = ap.parse_args()
-    syn = ROOT / 'grammatik/Grammatik/Syntax.lean'
+    syn = ROOT / 'grammatik/Grammatik/Kern/Syntax/Syntax.lean'
     gnames = {'Stmt': set(), 'Expr': set()}
     for ind in ('Stmt', 'Block', 'Endblock'):
         gnames['Stmt'] |= ctors(syn, ind)

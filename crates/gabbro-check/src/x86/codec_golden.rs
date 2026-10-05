@@ -1,5 +1,5 @@
 //! **Golden byte vectors computed BY LEAN, cross-checking the untrusted
-//! Rust codec (`codec.rs`) against `grammatik/Grammatik/X86/Codec.lean`.**
+//! Rust codec (`codec.rs`) against `grammatik/Grammatik/X86/Kern/Codec.lean`.**
 //!
 //! Generated data, not hand-written: every line in [`GOLDEN_DATA`] is the
 //! verbatim filtered stdout of running the canonical Lean `encode`/

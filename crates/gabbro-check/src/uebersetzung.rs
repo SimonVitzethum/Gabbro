@@ -53,7 +53,7 @@
 //!   TYPING, not the call's Hoare triple.
 //! * The certificate is printed, never shipped: like lanes 111/121 the
 //!   printer below is pinned by tests against the Lean mirror
-//!   (`grammatik/Grammatik/Uebersetzung.lean`), and no production path
+//!   (`grammatik/Grammatik/Logik/Vertraege/Uebersetzung.lean`), and no production path
 //!   writes it anywhere.
 
 use gabbro_syntax::ast::*;
@@ -524,7 +524,7 @@ impl Einsatz {
 
 /// Print the payload of one accepted call as a Lean certificate: the
 /// values as a `List Nat` literal applied to the `nutzlastZert` predicate
-/// of `grammatik/Grammatik/Uebersetzung.lean` (encoding N of the
+/// of `grammatik/Grammatik/Logik/Vertraege/Uebersetzung.lean` (encoding N of the
 /// certificate measurement), closed by `decide` -- so Lean checks the
 /// payload's TYPING, every entry in its field range, without ever seeing
 /// the translator. The three definition lines stand verbatim in that

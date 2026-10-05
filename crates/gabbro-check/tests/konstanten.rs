@@ -350,6 +350,8 @@ fn certificate_meets_witness() {
         .join("..")
         .join("grammatik")
         .join("Grammatik")
+        .join("Kern")
+        .join("Syntax")
         .join("Konstanten.lean");
     let lean =
         std::fs::read_to_string(&wurzel).unwrap_or_else(|e| panic!("{}: {e}", wurzel.display()));

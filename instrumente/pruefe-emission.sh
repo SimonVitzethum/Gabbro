@@ -2410,7 +2410,7 @@ lauf "beispiel90" "$W/beispiele/90-syscall-errno.gab" "$TREIBER90" "777" \
 # -- 22. The reference fixture as a running program (lane 126) ---------------------------
 #
 # `beispiele/104-referenz.gab` is the Lean reference fixture
-# (`grammatik/Grammatik/ReferenzB.lean`: `refD`/`refP`) in surface syntax: one
+# (`grammatik/Grammatik/Korrespondenz/Allgemein/ReferenzB.lean`: `refD`/`refP`) in surface syntax: one
 # table `Konto` of 2 slots with one `0 .. 100` field, one guarding lock `M`,
 # `einzahlen` (writes the slot to the cap 100, then calls `lies`) and `lies`
 # (reads the slot back). Both run under the held lock (`requires Held(M)`).

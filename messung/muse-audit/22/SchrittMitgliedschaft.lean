@@ -1,5 +1,4 @@
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 /-! ## Step-membership wrappers (pattern a: conclusion restates a cased premise)

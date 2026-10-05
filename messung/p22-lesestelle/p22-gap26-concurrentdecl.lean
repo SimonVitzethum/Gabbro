@@ -7,8 +7,7 @@
   Witness: `miniNb`, one declared pair set, with a checked membership.
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
-import Grammatik.Extraktion
-
+import Grammatik.Kern.Syntax.Extraktion
 open Gabbro.Grammatik
 
 /-- Gap #26: a declared-concurrent pair set holds its declared pair. -/

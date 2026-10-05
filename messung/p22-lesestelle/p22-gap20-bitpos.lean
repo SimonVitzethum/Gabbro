@@ -8,8 +8,7 @@
   below is the evidence (no position syntax in the signature).
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
-import Grammatik.Zucker
-
+import Grammatik.Kern.Syntax.Zucker
 open Gabbro.Grammatik
 
 #check @Expr.bitfeld

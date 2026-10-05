@@ -12,7 +12,6 @@
   in `Parser/Ausdruck.lean`.
 -/
 import Grammatik.Parser.Ausdruck
-
 namespace Gabbro.Grammatik.Parser
 
 

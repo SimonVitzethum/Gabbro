@@ -1,7 +1,7 @@
 //! Lane 126 -- the reference fixture as a real Gabbro program.
 //!
 //! `beispiele/104-referenz.gab` is the Lean reference fixture
-//! (`grammatik/Grammatik/ReferenzB.lean`: `refD`/`refP`) in surface syntax.
+//! (`grammatik/Grammatik/Korrespondenz/Allgemein/ReferenzB.lean`: `refD`/`refP`) in surface syntax.
 //! These tests print the checker's Lean view of it (whatever `lean.rs`
 //! produces: the duty register `module` and the program datum `program`)
 //! and hold its declaration shape against `refD`: the same tables, the same

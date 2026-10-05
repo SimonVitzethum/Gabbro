@@ -11,7 +11,7 @@
 -- language: it checks with `0 errors, 0 hints`.
 --
 -- WHY per-carrier striping is not merely unimplemented but MEANINGLESS here, and
--- this is proved and not asserted (`grammatik/Grammatik/Sperrstreifen.lean`):
+-- this is proved and not asserted (`grammatik/Grammatik/Nebenlaeufigkeit/Sperren/Sperrstreifen.lean`):
 -- `darf` is CONJUNCTIVE (`Syntax.lean`) -- an access must hold EVERY guard of its
 -- carrier, not one of them. So N locks over ONE table are not N choices, they are
 -- one conjunction: `zugriff_haelt_jeden_waechter` says every good access records

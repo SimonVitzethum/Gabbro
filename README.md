@@ -15,7 +15,7 @@ with declared contracts — but loader, runtime thread creation and foreign
 behaviour are still named assumed premises (c)/(d), their correspondence unproved.
 
 Proved today is narrower than the goal; exactly one place states it: the
-header of [`Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Spec.lean). Where
+header of [`Zielsatz/Spec.lean`](grammatik/Grammatik/Zielsatz/Kern/Spec.lean). Where
 they disagree, the header wins. The honest sentence is **"the goal theorem is
 proved over the model, with a witness and non-degeneracy"** — not "Gabbro is
 verified" ([details](#5-proved-and-not-proved)).
@@ -116,7 +116,7 @@ hold 3512 lines of Isar; new proofs go to Lean only.
 ## 5. Proved and not proved
 
 - **Proved over the model:** `theorem gabbro_ziel : GabbroZiel`
-  ([statement](grammatik/Grammatik/Zielsatz/Spec.lean), proof
+  ([statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean), proof
   `Zielsatz/BeweisAtomar.lean`, tags `milestone-2026-09-15-gabbro-ziel` and
   `-zielsatz-bestaetigt`), six review rounds; round 6: *"the goal with named
   gaps — no unnamed gap found"*. The checker inside is the **Lean** checker.
@@ -135,7 +135,7 @@ the exporter and listed by name as not claimed in
 ## 6. Documents
 
 - [DIRECT-COMPILER.md](DIRECT-COMPILER.md) — direct x86-64 compiler record ([design](DIRECT-COMPILER-DESIGN.md), [optimiser](grammatik/OPTIMIZER.md), [portability](dokumente/x86/TARGET-PORTABILITY.md))
-- [Tutorial](dokumente/TUTORIAL.md), [open items](TODO.md), [goal statement](grammatik/Grammatik/Zielsatz/Spec.lean), [provenance](dokumente/PROJECT-STATUS.md)
+- [Tutorial](dokumente/TUTORIAL.md), [open items](TODO.md), [goal statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean), [provenance](dokumente/PROJECT-STATUS.md)
 
 > **How this repository is written — AI agents, and where the human stands.**
 > Agents do implementation, checking and coordination; Simon decides what counts

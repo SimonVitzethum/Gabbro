@@ -35,7 +35,7 @@ import subprocess
 import sys
 import tempfile
 
-DRIVER_SRC = r"""import Grammatik.Gleitkomma
+DRIVER_SRC = r"""import Grammatik.Bausteine.Gleitkomma.Gleitkomma
 
 open Gabbro.Grammatik.Gleitkomma
 

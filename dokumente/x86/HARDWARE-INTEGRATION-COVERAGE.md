@@ -30,7 +30,7 @@ remaining gap. Columns per row:
   (`Wort`, `Ganzzahl`, `logikFlags`, `Gleitprofil` kernel, `stepExt`).
 - **Common fetched dispatcher**: whether the row executes through the shared
   `HwMaschine`/`HwSchritt` composition
-  (`grammatik/Grammatik/X86/HardwareExecution.lean`) via fetched bytes.
+  (`grammatik/Grammatik/X86/Hw/Grundlage/HardwareExecution.lean`) via fetched bytes.
 - **TSO/per-access effects**: buffered-issue/forward/flush treatment, word
   grouping, atomicity posture.
 - **Control/fault/flags**: raw observable register/flag/FP/fault treatment.

@@ -1,12 +1,12 @@
 //! **Lane 132: `Geteilt.Bau`, built from this unit -- beside `H013`, not instead.**
 //!
-//! The proof (`grammatik/Grammatik/Geteilt.lean`) speaks about one closed-world
+//! The proof (`grammatik/Grammatik/Nebenlaeufigkeit/Allgemein/Geteilt.lean`) speaks about one closed-world
 //! declaration per unit -- `Bau`: who starts (`eintritt`), who calls whom
 //! (`ruft`), who touches what (`schreibtFn`), what is shared (`geteilt`), the
 //! carrier domain (`traeger`), and which pairs run together (`neben`). The
 //! checker never built it: `H013` answers the shared question by hand, from the
 //! same declarations. This module computes the `Bau` out of the bodies, field
-//! by field the way `grammatik/Grammatik/Extraktion.lean` prescribes it (read-only
+//! by field the way `grammatik/Grammatik/Kern/Syntax/Extraktion.lean` prescribes it (read-only
 //! reference -- every shape below names its section):
 //!
 //! | `Bau` field | Lean shape | Rust source, each line read, none written |

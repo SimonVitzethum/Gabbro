@@ -1,6 +1,6 @@
 -- 104 -- The reference fixture as a real Gabbro program (lane 126).
 --
--- This is `grammatik/Grammatik/ReferenzB.lean` (`refD`/`refP`) in surface
+-- This is `grammatik/Grammatik/Korrespondenz/Allgemein/ReferenzB.lean` (`refD`/`refP`) in surface
 -- syntax: one table `Konto` of 2 slots with one `0 .. 100` field, guarded by
 -- the single lock `M`; `einzahlen` (one `0 .. 10` parameter, no result,
 -- writes the table, ensures the slot did not decrease) and `lies` (no

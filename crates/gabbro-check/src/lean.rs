@@ -2506,7 +2506,7 @@ fn stmt_term(s: &Stmt, c: &mut Ctx) -> Result<Carried, LeanReason> {
         // any call the unit does not declare (checker: `N057`/`N069`).
         StmtArt::LibraryCall(_) => Err(LeanReason::CallStatement),
         // **«E4»:** the monotone arena has no term in this channel -- the
-        // generations live in `grammatik/Grammatik/Arena.lean`, not in the
+        // generations live in `grammatik/Grammatik/Bausteine/Arena/Arena.lean`, not in the
         // program-logic body model, so both statements lower to no term.
         // **Lane 257:** the commit request is the third such statement --
         // the committed prefix lives in the checker's flow, not here.

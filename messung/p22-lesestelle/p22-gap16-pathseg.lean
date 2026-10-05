@@ -7,8 +7,7 @@
   `#check` output below is the evidence (no `String` argument).
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
-import Grammatik.Syntax
-
+import Grammatik.Kern.Syntax.Syntax
 open Gabbro.Grammatik
 
 #check @Expr.fnref

@@ -56,7 +56,7 @@ branches, SIMD where the workload justifies it), chosen by measurement among
 valid translations. No GCC
 parity promise. Runtime, bindings and OS surfaces are user-logic bodies with
 checked contracts; only named silicon, device and timing behaviour are
-hardware assumptions ([Spec header](grammatik/Grammatik/Zielsatz/Spec.lean),
+hardware assumptions ([Spec header](grammatik/Grammatik/Zielsatz/Kern/Spec.lean),
 [QUELLBRUECKE §2](dokumente/x86/QUELLBRUECKE.md)).
 
 Chain (see [plan §§0–5](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md)):
@@ -89,7 +89,7 @@ duty/effect mismatch) refuses outright — never a warning, never silent skip.
 
 ## 2. EXACT current pilot (CHECKED against tree)
 
-Canonical vocabulary: [Typen.lean](grammatik/Grammatik/X86/Typen.lean)
+Canonical vocabulary: [Typen.lean](grammatik/Grammatik/X86/Kern/Typen.lean)
 (`Gabbro.Grammatik.X86`); canonical encoding contract:
 [BYTE-PILOT](dokumente/x86/BYTE-PILOT.md); scope inventory:
 [EMITTER-INVENTAR](dokumente/x86/EMITTER-INVENTAR.md). All 14 `Befehl`
@@ -365,7 +365,7 @@ tiles (each OPEN until its rule lemma closes):
 ## 4. FP scalar baseline SSE2 binary64 (PROPOSED)
 
 Source surface is binary64 throughout (`GFloat = GBits f64`,
-[Typen.lean](grammatik/Grammatik/Typen.lean); full map in
+[Typen.lean](grammatik/Grammatik/Kern/Syntax/Typen.lean); full map in
 [FLOAT-ZEIT §§1–4](dokumente/x86/FLOAT-ZEIT.md)). Baseline target: scalar
 SSE/SSE2 only. Native `f32` and its conversion bridge are NOT closed: the
 model computes every `Ty.fl` node in binary64, so genuine `f32` single-rounding

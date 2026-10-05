@@ -6,7 +6,7 @@
 **every failure of a body is the writer's logic or a named hardware assumption**, and nothing
 else.*
 
-> **The principle.** `grammatik/Grammatik/Syntax.lean` is the specification of the checker,
+> **The principle.** `grammatik/Grammatik/Kern/Syntax/Syntax.lean` is the specification of the checker,
 > and `Semantik.lean` is the specification of the emitter. A program is accepted when it IS a
 > term of `Syntax.lean`; the C the emitter writes is correct when it does what `exec` does.
 > Both are checkable: the first by printing the term and letting Lean typecheck it, the second

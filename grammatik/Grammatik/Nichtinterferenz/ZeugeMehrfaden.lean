@@ -21,8 +21,7 @@
   schedule; the checker proposal `I005` would refuse the shared lock.
 -/
 import Grammatik.Nichtinterferenz.Fluss
-import Grammatik.MehrfadenLauf
-
+import Grammatik.Nebenlaeufigkeit.Allgemein.MehrfadenLauf
 namespace Gabbro.Grammatik
 
 namespace NIZeuge

@@ -1,5 +1,4 @@
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 /-! ## Docstring overclaim check (pattern d): what the headers promise

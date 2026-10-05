@@ -235,7 +235,7 @@ reach `fehler .index` under `exec` — today they reach a value.
 Cheapest form, if `Body.lean` may not move: a *second* evaluator `evalF` beside `eval`
 with the fault, and one theorem that `evalF = eval` wherever `evalF` reports no fault.
 
-> **S3 status 2026-09-10: THREADED** (`grammatik/Grammatik/Fehler.lean`: `evalF` with `evalF_ok_halt`/`evalF_stimmt_halt`, `AusF.folge` with its fault/logic/hardware cases, `schrittFolge` with `schrittFolge_vorn`/`hinten`, `schleifeF` with `schleifeF_fehler`/`spaeter`; fault outcome threaded through parallel execution, end-to-end agreement with `Ausgang` untouched). The `Body.lean` fault coordination with O1 above stands as stated and is unchanged by this carry.
+> **S3 status 2026-09-10: THREADED** (`grammatik/Grammatik/Kern/Syntax/Fehler.lean`: `evalF` with `evalF_ok_halt`/`evalF_stimmt_halt`, `AusF.folge` with its fault/logic/hardware cases, `schrittFolge` with `schrittFolge_vorn`/`hinten`, `schleifeF` with `schleifeF_fehler`/`spaeter`; fault outcome threaded through parallel execution, end-to-end agreement with `Ausgang` untouched). The `Body.lean` fault coordination with O1 above stands as stated and is unchanged by this carry.
 
 **S4 — The seam (Finding 6): witness pairs, not a proof.** *Build + measurement.* The
 form `PLAN-VERIFIKATION.md` §3 chose for the export, for the same reason (size):

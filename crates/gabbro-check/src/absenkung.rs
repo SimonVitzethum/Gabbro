@@ -1,6 +1,6 @@
 //! Per-primitive C statement budget enforcement.
 //!
-//! The lowering contract in `grammatik/Grammatik/Ziel.lean` carries the
+//! The lowering contract in `grammatik/Grammatik/Kern/Syntax/Ziel.lean` carries the
 //! assumption that every Gabbro primitive lowers to a BOUNDED list of C
 //! forms:
 //!

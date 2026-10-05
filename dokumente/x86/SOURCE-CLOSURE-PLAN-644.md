@@ -315,7 +315,7 @@ not a build-system afterthought:
   per-form codec APIs directly, so they stand whether or not 575 lands;
   where the unified step applies they cite it as an optional consumer,
 never as a premise. No lane duplicates the 575-reserved path
-`grammatik/Grammatik/X86/ExtendedExecution.lean` (path string, not a
+`grammatik/Grammatik/X86/Hw/Grundlage/ExtendedExecution.lean` (path string, not a
 link: the candidate is committed but pending review and not in this
 tree).
 

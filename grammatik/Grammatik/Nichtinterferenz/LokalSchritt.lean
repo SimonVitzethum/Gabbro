@@ -14,7 +14,6 @@
   the device carriers of a register the head reads lie in `S`.
 -/
 import Grammatik.Nichtinterferenz.Lokal
-
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

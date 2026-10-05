@@ -42,7 +42,7 @@ This document is productive closure management, not a proof claim:
 
 ## 1. Accepted ground truth in this clone
 
-- **Pilot vocabulary** (`grammatik/Grammatik/X86/Typen.lean`, 87 lines):
+- **Pilot vocabulary** (`grammatik/Grammatik/X86/Kern/Typen.lean`, 87 lines):
   16 GP registers in architectural encoding order, `Breite`
   (b8/b16/b32/b64), `Flags` with `af : Option Bool` (undefined, not
   false), byte-addressed `Speicher` with per-address R/W/X bits, and

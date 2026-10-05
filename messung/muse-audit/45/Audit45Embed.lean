@@ -4,8 +4,7 @@
 -- `ContrAtom D -> ContrAtom D` proved by `id`. No PCAtom appears.
 -- Demonstration: `rfl` unfolding and one entry atom the "embedding"
 -- cannot come from a three-case PC atom (there is no PCAtom argument).
-import Grammatik.VertragOrtB
-
+import Grammatik.Logik.Vertraege.VertragOrtB
 namespace GabbroAudit45A
 
 open Gabbro.Grammatik

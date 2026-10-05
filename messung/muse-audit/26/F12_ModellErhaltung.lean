@@ -10,8 +10,7 @@
   does not depend on validity). This demo shows the count leg needs no
   validity at all.
 -/
-import Grammatik.Budget
-
+import Grammatik.Kern.Semantik.Budget
 open Gabbro.Grammatik
 
 /-- F12: the count leg holds without any certificate validity. -/

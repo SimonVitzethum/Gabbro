@@ -1,4 +1,4 @@
-import Grammatik.Zielsatz.BeweisAtomar
+import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Gabbro.Body
 
 /-! S0: one project sees both models. -/

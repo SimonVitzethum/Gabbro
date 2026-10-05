@@ -34,7 +34,7 @@ CHECKS -- each a mirror of one Lean recomputation:
                   `ruledB`). The list is WRITTEN OUT here, not imported: the
                   checkfat lesson (BEWEIS.md §4) says the recomputer carries
                   its OWN table. It names the same 19 `CForm` shapes as
-                  `grammatik/Grammatik/Ziel.lean`.
+                  `grammatik/Grammatik/Kern/Syntax/Ziel.lean`.
   [no-extra]      every row's Gabbro site is in the ledger inventory (mirrors
                   `ohneExtraB`), every C marker has a certificate row, and
                   every certificate C id is marked in the image.
@@ -88,7 +88,7 @@ FRIST = 300
 
 # The ruled list, written out, not imported: the recomputer carries its OWN
 # table (BEWEIS.md §4, the checkfat lesson). The 19 `CForm` shapes named in
-# `grammatik/Grammatik/Ziel.lean`; a certificate form outside this list is a
+# `grammatik/Grammatik/Kern/Syntax/Ziel.lean`; a certificate form outside this list is a
 # [closure] finding, not a parse error.
 REGELFORMEN = frozenset({
     "statisch", "extern", "zuweisung", "wenn", "schalter", "zaehlSchleife",
@@ -671,7 +671,7 @@ def check_c1_probe(pfad):
     """C1 witness check over one machine-readable correspondence probe.
 
     A probe mirrors the emitted certificate rows word for word (Lean
-    `emittedRowFields` / `cformWort` in `grammatik/Grammatik/Erhaltung.lean`
+    `emittedRowFields` / `cformWort` in `grammatik/Grammatik/Kern/Semantik/Erhaltung.lean`
     section 6b, witnessed by `messung/proben/corrcert/korr-*.json`):
       {"gabbro_sites": [g, ...],
        "sites": [{"gabbroSite": g, "cSite": c, "form": "<CForm>"}],

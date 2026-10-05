@@ -10,8 +10,7 @@
   premise, not by sampling. This demo shows the shape: spacing directly
   contradicts the miss arm.
 -/
-import Grammatik.Fristlauf
-
+import Grammatik.Kern.Semantik.Fristlauf
 open Gabbro.Grammatik
 
 /-- F10: spacing contradicts the miss arm on its own (no clock needed). -/

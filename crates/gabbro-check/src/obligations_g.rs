@@ -29,7 +29,7 @@ use crate::lean_g::{export_ns, namespace_of, Refusal};
 /// every command, so they are inserted beside the lean-g imports rather
 /// than appended.
 const MEHR_IMPORT: &str =
-    "import Grammatik.Zielsatz.Akzeptiert\nimport Grammatik.Zielsatz.Beweis\nimport Grammatik.Zielsatz.BeweisAtomar\n";
+    "import Grammatik.Zielsatz.Kern.Akzeptiert\nimport Grammatik.Zielsatz.Kern.Beweis\nimport Grammatik.Zielsatz.Atomar.BeweisAtomar\n";
 
 /// Export the checked unit as a Lean file with the user's obligations
 /// stated, or refuse it by name exactly where `lean-g` refuses it.
@@ -46,7 +46,7 @@ pub fn export(source_name: &str, tree: &Programm) -> Result<String, Refusal> {
     );
     let text = text.replacen(lean_zeile.as_str(), oblig_zeile.as_str(), 1);
     // The anchor is written unconditionally by the lean-g export above.
-    let anchor = "import Grammatik.SperreSem\n";
+    let anchor = "import Grammatik.Nebenlaeufigkeit.Sperren.SperreSem\n";
     let mut text = text.replacen(anchor, &format!("{anchor}{MEHR_IMPORT}"), 1);
     let schluss = format!("end {ns}\n\nend Gabbro.Grammatik\n");
     let rumpf = text

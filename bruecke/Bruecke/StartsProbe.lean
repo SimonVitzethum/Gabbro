@@ -1,6 +1,5 @@
 import Bruecke.Quelle
 import Grammatik.Parser.UebersetzeProben2
-
 /-! Wall 7 witness on the bridge side: an `entry` really becomes a declared start of `einheitAllg`
 (the statement of `nutzer_aus_quelle` is then about a unit WITH a thread root, not about the empty
 start list), and a unit without an entry keeps none. -/

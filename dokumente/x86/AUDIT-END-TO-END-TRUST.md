@@ -83,7 +83,7 @@ measured against it.
 
 ## 1. Focus module 1: `Bild.lean` (lane 283) — CORRECT within claim
 
-Read: `grammatik/Grammatik/X86/Bild.lean` (578 lines).
+Read: `grammatik/Grammatik/X86/Kern/Bild.lean` (578 lines).
 
 What it proves (generic over every image, all premises used):
 
@@ -149,7 +149,7 @@ No defect found. No invented bug: the OPEN items are OPEN by statement.
 
 ## 2. Focus module 2: `Byteschritt.lean` (lane 319) — CORRECT within claim
 
-Read: `grammatik/Grammatik/X86/Byteschritt.lean` (510 lines).
+Read: `grammatik/Grammatik/X86/Kern/Byteschritt.lean` (510 lines).
 
 What it proves:
 
@@ -210,7 +210,7 @@ No defect found.
 
 ## 3. Focus module 3: `InvariantenOpt.lean` (lane 288) — CORRECT within claim
 
-Read: `grammatik/Grammatik/X86/InvariantenOpt.lean` (550 lines).
+Read: `grammatik/Grammatik/X86/Opt/Schleifen/InvariantenOpt.lean` (550 lines).
 
 What it proves — over ACTUAL source syntax and ACTUAL
 `eval/execBlock/execStmt` (header lines 5-10), no toy model:

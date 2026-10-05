@@ -10,7 +10,7 @@
 -- region to `write` holds the length against it too (`N463`).
 --
 -- What the emitter writes is the proved template `tor.region`
--- (`grammatik/Grammatik/SchablonenOhneLibc.lean` §4): the sign leg of every fallible gate,
+-- (`grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean` §4): the sign leg of every fallible gate,
 -- then the word zero as the hardware stop, then the address. No expression of the language
 -- turns a number into a pointer (`M140`, `beispiele/gift/1386`).
 --

@@ -1,4 +1,4 @@
-import Grammatik.Schlusssatz
+import Grammatik.Korrespondenz.Kette.Schlusssatz
 import Bruecke.Pruefung
 import Bruecke.Start
 import Bruecke.Atomar

@@ -12,7 +12,7 @@
 -- `N291`/`N300`/`N301`: unwritten carriers; `W001`: reads overlap freely).
 -- The refused root shape lives in `beispiele/gift/967`, the pair side in
 -- gifts 910-915. The G export of this file is pinned in
--- `grammatik/Grammatik/Export108.lean`.
+-- `grammatik/Grammatik/Korrespondenz/Korpus/Export108.lean`.
 --
 -- Evidence: the pre-183 program this file replaces, kept verbatim as a
 -- comment. It is refused since lane 183 at both starts by `N303`

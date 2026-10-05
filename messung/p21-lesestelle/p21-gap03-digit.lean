@@ -12,8 +12,7 @@
   `a` starts an `ident` instead. The model below is the class test;
   the value it guards feeds `Expr.lit` through GAP-05 (`int`).
 -/
-import Grammatik.Syntax
-
+import Grammatik.Kern.Syntax.Syntax
 namespace P21.Gap03Digit
 
 /-- The lexer class: exactly "0" through "9". -/

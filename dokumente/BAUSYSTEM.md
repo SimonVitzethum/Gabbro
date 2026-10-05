@@ -112,7 +112,7 @@ unit lager program
 The unit becomes a loadable Linux kernel module: `gabbro build` writes the `Kbuild`, the module
 DRIVER (`treiber.rs::erzeuge_kmod`: the loader's two entry points, the arena pools, the lock
 primitives, one thread per root; templates `modul.lebenslauf` and `arena.modul`, proved in
-`grammatik/Grammatik/SchablonenModul.lean`) and the C type headers the kernel's `-nostdinc`
+`grammatik/Grammatik/Bausteine/Schablonen/SchablonenModul.lean`) and the C type headers the kernel's `-nostdinc`
 build lacks (generated from the compiler's predefined types; `<stdatomic.h>` over its C11
 builtins), copies the emitted C beside them, and calls `make -C <kernel build dir> M=<dir>
 modules`. The artefact is `<unit>.ko`. **No handwritten C of Gabbro's is in it** (C-free lane,

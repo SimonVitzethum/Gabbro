@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # `pruefe-akzeptiert-diff.py` -- DIFFERENTIAL TEST: the Rust checker computes
 # the whole Lean checker Bool of the goal theorem (`AkzeptiertX` since Opus
-# lane O25c: `Akzeptiert`, `grammatik/Grammatik/Zielsatz/Akzeptiert.lean`,
+# lane O25c: `Akzeptiert`, `grammatik/Grammatik/Zielsatz/Kern/Akzeptiert.lean`,
 # with the footprint component `fussWXB` of `Zielsatz/AtomarAkzeptiert.lean`
 # admitting the unit's shared atomics).
 #
@@ -472,9 +472,9 @@ def lean_lauf(sondentext, exporttext, frist):
         # The export carries its own imports; the Akzeptiert import joins them.
         imp = [l for l in exporttext.splitlines() if l.startswith("import ")]
         if not any("Zielsatz/Akzeptiert" in l for l in imp):
-            imp.append("import Grammatik.Zielsatz.Akzeptiert")
+            imp.append("import Grammatik.Zielsatz.Kern.Akzeptiert")
         # `AkzeptiertX`/`fussWXB`, the goal's checker since Opus lane O25c.
-        imp.append("import Grammatik.Zielsatz.AtomarAkzeptiert")
+        imp.append("import Grammatik.Zielsatz.Atomar.AtomarAkzeptiert")
         rest = [l for l in exporttext.splitlines()
                 if not l.startswith("import ")]
         text = "\n".join(imp) + "\n" + "\n".join(rest) + "\n" + sondentext

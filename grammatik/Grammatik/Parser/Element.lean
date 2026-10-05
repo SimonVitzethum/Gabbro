@@ -8,7 +8,6 @@
   `Parser/AnweisungProben.lean`.
 -/
 import Grammatik.Parser.Anweisung
-
 namespace Gabbro.Grammatik.Parser
 
 /- A surface item: SYNTAX.md section 1 `item` without types, spans

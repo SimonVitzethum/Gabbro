@@ -193,7 +193,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   emitter writes `static _Noreturn void g(…)`, the `syscall` instruction and \
                   `__builtin_unreachable()`, and the call site continues with nothing. \
                   **Machine-checked over the real block semantics** \
-                  (`nie_tor_kehrt_nicht_zurueck`, `Grammatik/SchablonenOhneLibc.lean`): an \
+                  (`nie_tor_kehrt_nicht_zurueck`, `Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean`): an \
                   axiom whose declared answer is `never` ends the block at that axiom under \
                   EVERY oracle -- no raw word decodes as `never` -- and its head is the goal \
                   theorem's NAMED stop `nieZurueck` (`nie_tor_halt_benannt`). Witness on the \
@@ -206,7 +206,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the gate is declared `-> never`, so its `D.Ax` answers `some .never`", durch: Some("the parse of the declaration, carried by `lean_g.rs::read_gate` (`GateErg::Nie`) and by `emit.rs::syscall_stumpf` (`Antwort::Nie`) from the same field; a `-> never` routine that returns falls at `S009`"), braeuchte: None },
             Voraussetzung { was: "the kernel does not come back from the call (what `__builtin_unreachable()` hands the C compiler)", durch: Some("the gate's declared contract -- `assume … falsifier …` or a `kernel` pairing, without which the gate does not parse (`parse.rs`); user logic in the program's source, premise (c) of the goal"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §1; beispiele/173, 174; \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean §1; beispiele/173, 174; \
                      crates/gabbro-check/src/emit.rs (`Antwort::Nie`)",
     },
     Schablone {
@@ -221,7 +221,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   envp stay intact), hands the end exactly the low 32 bits of `main`'s answer, \
                   and never executes its `ud2`. **Machine-checked as an ABSTRACT CORE** \
                   (`start_nolibc`, and since 2026-09-30 `start_nolibc_haken` with the two hooks, \
-                  `Grammatik/SchablonenOhneLibc.lean` §2) -- machine G has no process entry; \
+                  `Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean` §2) -- machine G has no process entry; \
                   the loader and the thread start are the runtime premise (d), `Laufzeit`. The \
                   stub knows no system call: the program ends itself, through its own `-> \
                   never` gate (`tor.nie`) or its binding's `gabbro_os_ende`; and without a C \
@@ -233,7 +233,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the end `gabbro_os_ende` does not return", durch: Some("the entry calls it only in its exact shape (`nolibc_haken`: one parameter, no value) -- a Gabbro function the program declares `-> never`, held by `S009`; a C body is refused beside `nolibc` (no foreign object links without the C library it would need)"), braeuchte: None },
             Voraussetzung { was: "the kernel hands a stack of at least 16 bytes", durch: Some("the loader: the runtime premise (d) of the goal (`Laufzeit.lader`), the named assumption every hosted unit already runs under"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §2; crates/gabbro-cli/src/bau.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean §2; crates/gabbro-cli/src/bau.rs \
                      (`prozess_start`, `eintrittsregel`, `treiber_ist_eintritt`); beispiele/172, \
                      173; the os-probe as a `nolibc` program (`tests/bausystem.rs`)",
     },
@@ -248,7 +248,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   decodes the raw answer of `bindAxiomElse`: an in-range value to the value, a \
                   listed `-errno` to its reason, anything else to the point the stub hands to \
                   `__builtin_unreachable()`. **Machine-checked for EVERY word and every errno \
-                  table** (`tor_fehlbar`, `Grammatik/SchablonenOhneLibc.lean` §3): the stub's \
+                  table** (`tor_fehlbar`, `Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean` §3): the stub's \
                   outcome (`dekodiere`, Syscall.lean), packed into the machine's word (`packe`, \
                   the `tagged` convention of `summePasst`), decodes in G (`sonstPasst`) to the \
                   same value, the same reason, or nothing -- and nothing is the goal theorem's \
@@ -263,7 +263,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the errno table the stub compares maps each listed errno to one case of `R`, first entry wins", durch: Some("`emit.rs::syscall_stumpf`'s error-map rules (an errno outside 1..4095, a name no case of `R` carries, a map without an `or R` channel -- each refused by name), which is `dekodiere`'s `FehlerTabelle`"), braeuchte: None },
             Voraussetzung { was: "the kernel answers a listed errno or an in-range value (else the stub's `__builtin_unreachable()`)", durch: Some("the gate's declared contract -- `assume … falsifier …` or a `kernel` pairing (`parse.rs`); user logic in the program's source, premise (c) of the goal"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §3; grammatik/Grammatik/Syscall.lean \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean §3; grammatik/Grammatik/Kern/Semantik/Syscall.lean \
                      (`dekodiere`); crates/gabbro-check/src/emit.rs (`syscall_stumpf`)",
     },
     // **Entered 2026-09-30 by the C-free lane (the region gate, Simon's decision 1), PROVED in
@@ -279,7 +279,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   fence and the word ZERO to the point it hands to `__builtin_unreachable()`, \
                   and every other word to the address `(uint8_t *)(uintptr_t)raw`. \
                   **Machine-checked for EVERY word and every errno table** (`tor_region`, \
-                  `Grammatik/SchablonenOhneLibc.lean` §4) -- the decoding `tor.fehlbar` is \
+                  `Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean` §4) -- the decoding `tor.fehlbar` is \
                   proved against machine G's reason channel; the address is the kernel's word \
                   itself and never zero (`tor_region_adresse`), and no error word becomes an \
                   address (`tor_region_fehler_kein_zeiger`). The generic form of the gate's \
@@ -297,7 +297,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "every index through the bound answer satisfies `i + 1 <= n` for the extent `n` of the gate's `ensures n <= lenof(result)`", durch: Some("`N571` (`m1.rs::zeigerindex_pruefen`) over the clause `let … else` books for a name bound once and never assigned, and `N463` at every call the region is passed to"), braeuchte: None },
             Voraussetzung { was: "the kernel answers a listed errno or a fresh region of at least `n` bytes, disjoint from every live one (else the stub's `__builtin_unreachable()`)", durch: Some("the gate's declared contract -- `ensures … <= lenof(result)` plus `assume … falsifier …` (`parse.rs`); user logic in the program's source, premise (c) of the goal"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §4; grammatik/Grammatik/Syscall.lean \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean §4; grammatik/Grammatik/Kern/Semantik/Syscall.lean \
                      (`dekodiere`); crates/gabbro-check/src/emit.rs (`Antwort::Region`); \
                      crates/gabbro-check/src/m1.rs (`ergebnis_ausdehnung`); beispiele/183",
     },
@@ -312,7 +312,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   `ceil(max * elem / page) * page` from the program's binding and, at every \
                   `grow` below the ceiling, commits the page range from `floor(committed * \
                   elem / page) * page` to `ceil((committed + n) * elem / page) * page`. \
-                  **Machine-checked** (`Grammatik/SchablonenArena.lean`): the span covers every \
+                  **Machine-checked** (`Grammatik/Bausteine/Schablonen/SchablonenArena.lean`): the span covers every \
                   slot, is whole pages, and no `uint64_t` intermediate wraps for 32-bit `max`, \
                   `elem` and a page of at most `2^32` (`arena_spanne_passt`); the commit range \
                   covers every byte of the new slots, starts and ends on a page and lies inside \
@@ -331,7 +331,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "a `grow` stays under the ceiling (`committed + n <= max`)", durch: Some("`N426` (the whole run's committed upper bound against `max`) statically, and the template's own test before any commit, which fail-stops past it"), braeuchte: None },
             Voraussetzung { was: "the binding answers a region of at least the span and commits a range it is given", durch: Some("the program's binding in Gabbro (`bibliothek/linux/linux.gab`: `gabbro_os_reserve` over a region gate with `ensures len <= lenof(result)`, `gabbro_os_commit` under `requires bytes <= lenof(stelle)`), whose gates' contracts are user logic, premise (c); `bau.rs::bindungsregel_gehostet` refuses a unit with an arena and no such binding"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenArena.lean; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenArena.lean; crates/gabbro-cli/src/treiber.rs \
                      (`ARENA_LAUFZEIT`); bibliothek/linux/linux.gab; instrumente/pruefe-os-bindung.sh",
     },
     // **Entered 2026-09-30 by the C-free lane (hosted locks without pthread), PROVED**: the
@@ -345,7 +345,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         pflicht: "The generated `L_nimm`/`L_gib` are the ticket lock over two 32-bit counters, \
                   the four instructions of `CTicket.lean` word for word (`zieht`: a relaxed \
                   `fetch_add`; `dreht`/`tritt`: the acquire spin; `gibt`: the release store). \
-                  **Machine-checked** (`Grammatik/CTicket.lean`): mutual exclusion on every \
+                  **Machine-checked** (`Grammatik/CBackend/Semantik/CTicket.lean`): mutual exclusion on every \
                   reachable state (`ticket_ausschluss`, `erreichbarT_exklusiv`), FIFO \
                   (`ticket_fifo`), every step a `sperrAbstrakt` step (`ticketLP_sperrAbstrakt` \
                   -- the clause `LaufzeitC.sperre`), a spin a stutter of the program \
@@ -363,7 +363,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the yield changes no program memory", durch: Some("the binding's declared contract: `gabbro_os_nachgeben` is `effects { pure }` over a gate with `effects { pure }` (`linux.gab`), checked like any user code; the kernel's side is the gate's assumption, premise (c)"), braeuchte: None },
             Voraussetzung { was: "fewer than 2^32 tickets outstanding on one lock (the counters are compared equal, and wrap)", durch: Some("the thread count: a thread draws one ticket per `L_nimm` and spins until it is served, so the outstanding tickets never exceed the live threads -- the driver starts exactly its declared starts (`N_WURZELN`, `treiber.rs::erzeuge`, held by the pin probe), and a run-time `start` starts only declared, pool-checked roots (`N458`-`N462`); both are counts of declarations, far below 2^32"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/CTicket.lean; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/CBackend/Semantik/CTicket.lean; crates/gabbro-cli/src/treiber.rs \
                      (`SPERRE_TICKET`); laufzeit/metall/metall.h (the same lock on bare metal)",
     },
     // **Entered 2026-09-30 by the C-free lane (the page return in Gabbro), PROVED**: the
@@ -378,7 +378,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   to the program's `gabbro_os_seiten_zurueck(p + von, bis - von)`, and clears \
                   them by hand when that answers other than 0; without a binding, or when no \
                   whole page lies inside, it clears every byte. **Machine-checked** \
-                  (`Grammatik/SchablonenArena.lean` §2, `leeren_teilung`): the three pieces \
+                  (`Grammatik/Bausteine/Schablonen/SchablonenArena.lean` §2, `leeren_teilung`): the three pieces \
                   cover the range exactly, the pages fit the rest of the range (`bis - von <= \
                   bytes - von`, the binding's `requires`), and they start and end on a page; \
                   witness `leeren_zeuge`, boundary `leeren_ohne_seite`. **NOT proved:** that the \
@@ -390,7 +390,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the page is `0 < s <= 2^32` and `a + bytes + s` does not wrap", durch: Some("the helper's own test before any arithmetic; any other answer takes the byte loop"), braeuchte: None },
             Voraussetzung { was: "the binding's answer 0 means the pages read as zero", durch: Some("the binding's declared contract (`linux.gab`: `gabbro_os_seiten_zurueck` over a gate with its assumption), user logic, premise (c); a unit that binds nothing gets the byte loop (both calls are weak)"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenArena.lean §2; crates/gabbro-check/src/emit.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenArena.lean §2; crates/gabbro-check/src/emit.rs \
                      (`REGION_LEEREN`); bibliothek/linux/linux.gab; instrumente/pruefe-seiten-zurueck.sh",
     },
     // **Entered 2026-09-30 by the C-free lane (hosted threads without pthread), PROVED**: the
@@ -405,7 +405,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   the raw answer. Root and end are C function DESIGNATORS at every call site \
                   (the generated thread runtime names them), carried in two callee-saved \
                   registers the gate neither binds nor destroys. **Machine-checked as an \
-                  ABSTRACT CORE** (`Grammatik/SchablonenFaden.lean` §1): the child calls the \
+                  ABSTRACT CORE** (`Grammatik/Bausteine/Schablonen/SchablonenFaden.lean` §1): the child calls the \
                   root and then the end, each entered with `rsp + 8` 16-aligned and inside the \
                   24 bytes below the handed top, and reaches `ud2` only if the end returns \
                   (`trampolin_kind`); a gate that destroyed the two registers would send the \
@@ -419,7 +419,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the thread end never returns", durch: Some("its declaration `-> never` (`gabbro_os_faden_ende`) and `S009`, checked like any user code"), braeuchte: None },
             Voraussetzung { was: "the root and the end are functions, not numbers", durch: Some("the only callers are generated C (`faden.laufzeit`, the driver, the `start` lowering) that name them as designators; no Gabbro item can reach the entry (`N572`)"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenFaden.lean §1; crates/gabbro-check/src/emit.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenFaden.lean §1; crates/gabbro-check/src/emit.rs \
                      (`syscall_stumpf`, the trampoline)",
     },
     Schablone {
@@ -431,7 +431,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   starts the root through the program's stack gate's trampoline with the join \
                   word as the kernel's parent and child word; `gabbro_faden_warte(&word)` loops \
                   until the word reads 0, waiting through the program's word wait in between. \
-                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenFaden.lean` \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/Bausteine/Schablonen/SchablonenFaden.lean` \
                   §2): over every prefix of the gate contract's trace that holds the id, a word \
                   reading 0 means the thread's END is in it (`faden_warte_korrekt`) -- the \
                   join returns only after the root's last step; without the id stored before \
@@ -444,7 +444,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the waiter starts after the start returned", durch: Some("the template's order: every `gabbro_faden_warte` stands after its `gabbro_faden_start` (the driver's `main`, the `start` lowering in `emit.rs`)"), braeuchte: None },
             Voraussetzung { was: "the stack is deep enough for the root", durch: Some("NOT CLAIMED by the goal statement (stack depth); the guard page below each driver stack turns an overflow into a fault"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenFaden.lean §2; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenFaden.lean §2; crates/gabbro-cli/src/treiber.rs \
                      (`FADEN_LAUFZEIT`, `erzeuge`); instrumente/pruefe-os-bindung.sh",
     },
     // **Entered 2026-09-30 by the C-free lane (C2, the kernel-module runtime), PROVED in the
@@ -461,7 +461,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   span cannot hold refuses the LOAD, a `grow` past the ceiling is a fail-stop \
                   the load function reads back, and one past the span answers `false` with \
                   `committed` unchanged. **Machine-checked as an ABSTRACT CORE** \
-                  (`Grammatik/SchablonenModul.lean` §1): a successful reservation establishes \
+                  (`Grammatik/Bausteine/Schablonen/SchablonenModul.lean` §1): a successful reservation establishes \
                   and every `grow` keeps `committed <= max` and `committed * elem <= span <= V` \
                   (`arena_modul_inv_reserve`, `arena_modul_inv_grow`), so every slot the unit \
                   can reach lies inside its pool (`arena_modul_slot_im_lager`); no 64-bit \
@@ -477,7 +477,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the pool has `V` bytes, a positive multiple of the page", durch: Some("the manifest's `provision` (`bau.rs::lies_manifest` refuses any other number) and the build's refusal of a `module` with an arena and no provision (`bau.rs::bindungsregel`); the pool is a static array of exactly that size"), braeuchte: None },
             Voraussetzung { was: "a `grow` stays under the ceiling (`committed + n <= max`)", durch: Some("`N426` statically, and the template's own test before any commit, which fail-stops past it -- the load function reads the stop back (`modul.lebenslauf`)"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenModul.lean §1; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenModul.lean §1; crates/gabbro-cli/src/treiber.rs \
                      (`KMOD_ARENA`); instrumente/pruefe-kernelmodul.sh (probe `halde`, gifts 2, 4)",
     },
     Schablone {
@@ -490,7 +490,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   during it, then hands one thread per declared root to the binding -- and if \
                   one start fails, waits for every root and refuses. The unload waits for every \
                   root, then calls the unit's exit. **Machine-checked as an ABSTRACT CORE** \
-                  (`Grammatik/SchablonenModul.lean` §2): a load that answers 0 ran bind, lock, \
+                  (`Grammatik/Bausteine/Schablonen/SchablonenModul.lean` §2): a load that answers 0 ran bind, lock, \
                   init, start in that order with every outcome good (`laden_erfolg`); the init \
                   runs only after every arena is bound (`laden_init_erst_nach_bindung`); the \
                   load never calls the exit (`laden_ruft_kein_exit`); roots start only after an \
@@ -508,7 +508,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the binding defines every name the driver calls, with the arity and result it calls them with", durch: Some("`bau.rs::bindungsregel` before any C is written, and the C compiler over the driver's prototypes against the emitted declarations in one translation unit"), braeuchte: None },
             Voraussetzung { was: "a started thread runs its root once and a failed start leaves the join word in a state the wait returns from", durch: Some("template `faden.modul` (the word is 1 before the start, 0 from the wrapper after the root or from the driver after a failed start) over the program's binding (`bibliothek/linux-kmod`: `gabbro_kern_faden_start`), whose declared contract is user logic, premise (c)"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenModul.lean §2; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenModul.lean §2; crates/gabbro-cli/src/treiber.rs \
                      (`erzeuge_kmod`); instrumente/pruefe-kernelmodul.sh (three probes, 12 gifts)",
     },
     // **Entered 2026-10-01 by the C-free lane (C2 slice 3, OFFEN O39), PROVED in the same
@@ -525,7 +525,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   to the binding's `gabbro_kern_faden_start` as an `entry fn`; a start that \
                   answers an errno makes the driver store the 0 itself. The wait re-reads the \
                   word (acquire) and sleeps through `gabbro_kern_schlafe` until it reads 0. \
-                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenModul.lean` \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/Bausteine/Schablonen/SchablonenModul.lean` \
                   §3): a wait that begins after the start returned and reads 0 saw the root's \
                   whole run with its last step, or a failed start and no step of the root \
                   (`faden_modul_warte_korrekt`); without the store of 1 it would return before \
@@ -543,7 +543,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "every wait stands after its start, and the word is 1 from before the start", durch: Some("the template's own order (`erzeuge_kmod`: the store of 1, the start, the waits in the refusal path and in the unload)"), braeuchte: None },
             Voraussetzung { was: "each root of the driver is a declared `concurrent` root of the unit", durch: Some("the driver plan (`bau.rs::treiberregel`, `TreiberPlan::wurzeln`)"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenModul.lean §3; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenModul.lean §3; crates/gabbro-cli/src/treiber.rs \
                      (`erzeuge_kmod`); instrumente/pruefe-kernelmodul.sh (probes `atomar`, `takt`)",
     },
     // **Entered 2026-10-05 by the C-free lane (C3 slice 1, the bare-metal image), PROVED in
@@ -557,7 +557,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                     `<unit>.metall.speicher.c`)",
         pflicht: "`memcpy`, `memmove`, `memset`, `memcmp`, one byte per step, each loop in the \
                   shape the model reads. **Machine-checked as an ABSTRACT CORE** \
-                  (`Grammatik/SchablonenMetall.lean` §1, memory as a function from addresses to \
+                  (`Grammatik/Bausteine/Schablonen/SchablonenMetall.lean` §1, memory as a function from addresses to \
                   bytes): under C's no-overlap premise `memcpy` leaves the source's bytes in the \
                   destination and moves nothing else (`memcpy_korrekt`); `memmove` does so for \
                   EVERY overlap (`memmove_korrekt`, forward when `d < s`, backward otherwise -- \
@@ -573,7 +573,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the four names are defined once per image, and no C library supplies another", durch: Some("`bau.rs::metall_bild_binden`: one `<unit>.metall.speicher.o`, linked with `ld -nostdlib -static` -- a second definition or a missing one is the linker's refusal"), braeuchte: None },
             Voraussetzung { was: "a `memcpy` call's ranges do not overlap", durch: Some("C's own contract for `memcpy`, kept by the compiler's struct copies and by the emitter's two calls (bounded strings copy from a value into a fresh local, `emit.rs` string helpers); any other caller is the C, the trust named at every target"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenMetall.lean §1; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenMetall.lean §1; crates/gabbro-cli/src/treiber.rs \
                      (`METALL_SPEICHER`); instrumente/pruefe-metall.sh (metall161: bounded strings)",
     },
     Schablone {
@@ -588,7 +588,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   `gabbro_arena_reserve(d)`, which binds `d` to the pool of its position in the \
                   emitted list and ends the machine when the list does not hold `d` or the pool \
                   reservation refuses. **Machine-checked as an ABSTRACT CORE** \
-                  (`Grammatik/SchablonenMetall.lean` §2): a reservation that returns bound the \
+                  (`Grammatik/Bausteine/Schablonen/SchablonenMetall.lean` §2): a reservation that returns bound the \
                   pool of the descriptor's own position (`arena_metall_eigene_stelle`); two \
                   descriptors never share a pool (`arena_metall_getrennt`); a descriptor the list \
                   does not hold gets none (`arena_metall_fremd`); the pools are disjoint byte \
@@ -602,7 +602,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "every arena is reserved once, before any root runs", durch: Some("the metal driver's reservation loop at the head of `gabbro_metall_haupt` (`treiber.rs::arenen_reservieren`), and the pool reservation's own `base != 0` refusal for a second call"), braeuchte: None },
             Voraussetzung { was: "a `grow` stays under the ceiling", durch: Some("`N426` statically, and the hook's fail-stop past it (`metall_ende(4)`)"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenMetall.lean §2; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenMetall.lean §2; crates/gabbro-cli/src/treiber.rs \
                      (`metall_arena`, `erzeuge_metall_voll`); instrumente/pruefe-metall.sh (metall153, \
                      154, 158, 158-else with a pool of 8 bytes, 158-gift)",
     },
@@ -619,7 +619,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   acquire spin, the release store) whose spin gives the core away every \
                   `METALL_SPIN` passes -- only when the caller's IF was 1 at the call. A shared \
                   pair takes the SAME ticket (stronger than asked, never weaker). \
-                  **Machine-checked** (`Grammatik/SchablonenMetallSperre.lean` §1): every step \
+                  **Machine-checked** (`Grammatik/Bausteine/Schablonen/SchablonenMetallSperre.lean` §1): every step \
                   of the generated spin is a ticket step or changes no lock word and is \
                   invisible to the abstract semantics (`mschritt_ticket_oder_stotter`, \
                   `metall_sichtbar_ist_ticket`), so the invariant and mutual exclusion hold on \
@@ -635,7 +635,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the yield changes no lock word and no program memory", durch: Some("`metall_abgeben` (kern.c) saves and restores the caller's flags around a context switch to the core's scheduler, which touches only the runtime's own queues -- the runtime's side, named with the scheduler in `messung/C3-WAENDE.md` wall C"), braeuchte: None },
             Voraussetzung { was: "the driver defines exactly the unit's locks, each with its flavour", durch: Some("`treiber.rs::erzeuge_metall_voll`, one macro per lock of `bau.rs::sperrenliste` (the same register the hosted and module drivers read); a missing or misspelt one is an undefined reference at link time"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenMetallSperre.lean §1; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenMetallSperre.lean §1; crates/gabbro-cli/src/treiber.rs \
                      (`METALL_SPERREN`); instrumente/pruefe-metall.sh (metall159, stress, koop)",
     },
     Schablone {
@@ -646,7 +646,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         pflicht: "IF is cleared BEFORE the ticket is drawn (the old flags in a local), the \
                   holder stores them in the lock's own word after the acquire, and the release \
                   reads that word back, releases and restores them. **Machine-checked** \
-                  (`Grammatik/SchablonenMetallSperre.lean` §2): on the holder's core IF is 0 \
+                  (`Grammatik/Bausteine/Schablonen/SchablonenMetallSperre.lean` §2): on the holder's core IF is 0 \
                   from the clearing instruction until the restoring one -- through the draw, the \
                   spin, the section and the release -- so no interrupt, yield or timer \
                   preemption (each needs IF = 1) takes the core in between \
@@ -661,7 +661,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "every handler that takes a lock takes a masked one", durch: Some("`H102` (`kontexte.handlersperre`): an entry carrying a `via` path takes no lock that fails to declare `masks irqs`"), braeuchte: None },
             Voraussetzung { was: "only the holder writes the flag word", durch: Some("the template itself: the store stands after the acquire and the read before the release, and mutual exclusion is `sperre.metall`'s (`metall_ausschluss`)"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenMetallSperre.lean §2; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenMetallSperre.lean §2; crates/gabbro-cli/src/treiber.rs \
                      (`METALL_SPERREN`); instrumente/pruefe-metall.sh (metall59, metall59-gift)",
     },
     Schablone {
@@ -674,7 +674,7 @@ pub const SCHABLONEN: &[Schablone] = &[
         pflicht: "A reader count per domain, `+1` at the start of a read section, `-1` at its \
                   end, and a grace wait that returns once it reads zero (giving the core away \
                   between reads only with IF = 1). **Machine-checked** \
-                  (`Grammatik/SchablonenMetallSperre.lean` §3): in every reachable state the \
+                  (`Grammatik/Bausteine/Schablonen/SchablonenMetallSperre.lean` §3): in every reachable state the \
                   count is the sum of the readers' nesting depths (`rcu_inv_erreichbar`), so a \
                   grace wait that reads zero saw a moment with no reader inside any read section \
                   (`rcu_gnade_korrekt`); without the pairing the count can read zero under a \
@@ -687,7 +687,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "every `R_lese_ende` closes a `R_lese_start` of the same thread", durch: Some("the emitter's lowering of `observes R { … }` (`emit.rs`, `StmtArt::Observiert`): the start at the block's entry, the end at its close and on every exit through it, an early `return` included (the exit list `freigaben`)"), braeuchte: None },
             Voraussetzung { was: "no reclaim waits inside its own read section", durch: Some("`H011` (`geteilt.rs`): a `reclaims` inside one's own read of the same domain is refused"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenMetallSperre.lean §3; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenMetallSperre.lean §3; crates/gabbro-cli/src/treiber.rs \
                      (`METALL_SPERREN`); instrumente/pruefe-freistehend.sh (the rcu driver stage)",
     },
     // **Entered 2026-10-05 by the C-free lane (C3 slice 3), PROVED in the same commit**: the
@@ -703,7 +703,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   stubs, the timer `0x40`, the wake vector `0x41`, the kernel service entry \
                   `0x80`, the spurious vector `0xFF`), and two installers for the program's \
                   entries that end the machine rather than install the wrong thing. \
-                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenMetallIdt.lean`): \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/Bausteine/Schablonen/SchablonenMetallIdt.lean`): \
                   the three address fields put back together are the stub's address for every \
                   64-bit address (`kodiere_dekodiere`); the type byte is a present DPL-0 \
                   interrupt gate (`art_ist_interrupt_gate`); the C test for an error-code \
@@ -722,7 +722,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "a program entry is installed through the installer of its kind, before any root runs", durch: Some("the metal driver (`treiber.rs::erzeuge_metall_voll`): `metall_idt_setze_fc` exactly for the vectors `hat_fehlercode` names, `metall_idt_setze` otherwise, all at the head of `gabbro_metall_haupt`; a wrong pairing ends the machine (`installieren_passt` is about the calls that return)"), braeuchte: None },
             Voraussetzung { was: "the entry's vector is a number the table has", durch: Some("the template itself: both installers end the machine before writing a slot for a vector above `0xFE` (`nimmt`, `nimmtFc` of the model), so no write lands beyond the 256 gates"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenMetallIdt.lean; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenMetallIdt.lean; crates/gabbro-cli/src/treiber.rs \
                      (`METALL_IDT`); instrumente/pruefe-metall.sh (metall57, metall59, metall163-165, \
                      165-gift)",
     },
@@ -742,7 +742,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   places round robin over the cores that checked in and sets the join word \
                   BEFORE the thread is queued, and a join that re-reads the word until zero \
                   (stored from the core's own stack after the thread left its stack). \
-                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenMetallFaden.lean`): \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/Bausteine/Schablonen/SchablonenMetallFaden.lean`): \
                   the linked queue refines a list -- append behind the tail keeping it \
                   duplicate-free, take the head (`haenge_kette`, `nimm_kette`, `nimm_leer`, \
                   `schlange_fifo`); a thread at position `p` runs after `p` passes of the loop \
@@ -762,7 +762,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the stack top handed to a start is 16-aligned and the stack the unit's own", durch: Some("the template's own refusal (`EINVAL` for an unaligned or null top), and the starters: the metal driver's `stapel_<i>` and the emitter's `gabbro_stapel_<lo>_<i>` are `aligned(16)` file-scope arrays of 64 KiB"), braeuchte: None },
             Voraussetzung { was: "at least one core has checked in before any start", durch: Some("the bring-up (`kern.c`, `metall_bsp`): the count starts at 1 (the BSP) and only grows"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenMetallFaden.lean; crates/gabbro-cli/src/treiber.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenMetallFaden.lean; crates/gabbro-cli/src/treiber.rs \
                      (`METALL_FADEN`); instrumente/pruefe-metall.sh (every image: 4 cores, \
                      METALL-VERTEILUNG; stress, staffel, koop)",
     },
@@ -779,7 +779,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   of its own taking the handed value, so none of its statements addresses the \
                   parent's frame (OFFEN O38: until 2026-09-30 the child jumped to a label inside \
                   the parent's function and read the handed value through the parent's frame). \
-                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenFaden.lean` \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/Bausteine/Schablonen/SchablonenFaden.lean` \
                   §3): the child calls the region with exactly the handed value, SysV-aligned \
                   and strictly below the handed top, and never runs `ud2` when the region does \
                   not return (`kind_region`; boundary `kind_region_rueckkehr`; witness).",
@@ -791,7 +791,7 @@ pub const SCHABLONEN: &[Schablone] = &[
             Voraussetzung { was: "the call dominates exactly this region, and every stack-gate call has one", durch: Some("`N450` and `N572` (`clone.rs::torpfade`, `stapelrufe`)"), braeuchte: None },
             Voraussetzung { was: "the kernel starts the child on the handed top with `rax == 0` and the caller's other registers", durch: Some("the gate's declared contract (`stack r`, `clobbers`, its assumption), user logic, premise (c)"), braeuchte: None },
         ],
-        fundstelle: "grammatik/Grammatik/SchablonenFaden.lean §3; crates/gabbro-check/src/emit.rs \
+        fundstelle: "grammatik/Grammatik/Bausteine/Schablonen/SchablonenFaden.lean §3; crates/gabbro-check/src/emit.rs \
                      (`kind_tor_falle`, `kind_funktionen`); crates/gabbro-check/tests/klon_faden.rs",
     },
     Schablone {

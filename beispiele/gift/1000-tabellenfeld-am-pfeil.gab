@@ -36,7 +36,7 @@
 -- named as one**; this file measures the emitter half.
 --
 -- Found on 2026-09-15 by walking the constructors of
--- `grammatik/Grammatik/Syntax.lean` and compiling what came out.
+-- `grammatik/Grammatik/Kern/Syntax/Syntax.lean` and compiling what came out.
 module gift::tabellenfeldampfeil {
 
 table T count 4 {

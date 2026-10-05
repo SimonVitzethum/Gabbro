@@ -32,9 +32,8 @@
   and the fragment/footprint checks on the Lean-parsed program
   (`u104fragment`, `u104fuss`).
 -/
-import Grammatik.Export104
+import Grammatik.Korrespondenz.Korpus.Export104
 import Grammatik.Parser.ElementTief
-
 namespace Gabbro.Grammatik.Parser.Uebersetze
 
 set_option maxRecDepth 100000

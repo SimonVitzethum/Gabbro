@@ -1,5 +1,4 @@
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 -- Finding 1 (pattern a): zaehler_zeigt_atom concludes its own premise.

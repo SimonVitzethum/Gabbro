@@ -189,6 +189,8 @@ fn payload_certificate_mirrors_lean_file() {
         .join("..")
         .join("grammatik")
         .join("Grammatik")
+        .join("Logik")
+        .join("Vertraege")
         .join("Uebersetzung.lean");
     let text = std::fs::read_to_string(&lean)
         .unwrap_or_else(|e| panic!("{}: {e}", lean.display()));

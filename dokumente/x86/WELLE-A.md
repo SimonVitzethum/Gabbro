@@ -14,7 +14,7 @@ and selective SIMD. These are generic mechanisms; no acceptance or compiler rule
 an example or function name. Actual performance must be measured. Preserve faults, IEEE
 behaviour, concurrent observations, progress and cost guarantees.
 
-`grammatik/Grammatik/X86/Typen.lean` is the canonical pilot vocabulary. Namespace:
+`grammatik/Grammatik/X86/Kern/Typen.lean` is the canonical pilot vocabulary. Namespace:
 `Gabbro.Grammatik.X86`. The 16 registers are in their architectural encoding order.
 `Byte`, `Wort` and `Adresse` are BitVec 8/64/64. Memory includes byte contents and explicit
 read/write/execute permissions. Arithmetic is modular at machine level; source-side range and
@@ -39,9 +39,9 @@ separate obligations. W/GX and the existing goal theorem remain the source-side 
 | Lane | Owner files | Deliverable |
 |---|---|---|
 | 269 | `dokumente/x86/EMITTER-INVENTAR.md` | Exhaustive source/emitter/runtime-path inventory, widths/orders and target obligations |
-| 270 | `grammatik/Grammatik/X86/Wort.lean` | Modular integer operations, architectural flag helpers and generic lemmas |
-| 271 | `grammatik/Grammatik/X86/Speicher.lean` | Permission-checked little-endian reads/writes, frame and read-after-write facts |
-| 272 | `grammatik/Grammatik/X86/Ausfuehrung.lean` | Real pilot instruction state transitions, memory-changing witnesses and explicit gaps |
+| 270 | `grammatik/Grammatik/X86/Kern/Wort.lean` | Modular integer operations, architectural flag helpers and generic lemmas |
+| 271 | `grammatik/Grammatik/X86/Speicher/Speicher.lean` | Permission-checked little-endian reads/writes, frame and read-after-write facts |
+| 272 | `grammatik/Grammatik/X86/Kern/Ausfuehrung.lean` | Real pilot instruction state transitions, memory-changing witnesses and explicit gaps |
 | 273 | `crates/gabbro-check/src/x86/{mod.rs,typen.rs}`, `lib.rs` module export | Canonical Rust mirror and checked architectural register/width conventions |
 | 274 | `dokumente/x86/TSO-GX-BRUECKE.md` | Existing-model audit, exact refinement obligations and granularity counterexamples |
 | 275 | `dokumente/x86/IR-VALIDIERUNG.md` | Shared SSA/certificate architecture and legality requirements for starter optimisations |

@@ -4,7 +4,7 @@
 goal-statement change, no diagnostic/gift/example/CLI/MARKE numbers.
 Base: branch `muse/408` at `0b3132b7`. All file:line references were read
 at this HEAD and are part of the claim. Audited implementations:
-`grammatik/Grammatik/X86/TSO.lean`, `Zugriffe.lean`, `AccessList.lean`,
+`grammatik/Grammatik/X86/TSO/Kern/TSO.lean`, `Zugriffe.lean`, `AccessList.lean`,
 `LockedOps.lean`, `OverlapRefusal.lean`, `SpillPrivate.lean`, against the
 bridge design `TSO-GX-BRUECKE.md`, its review `REVIEW-TSO.md`, the wave plan
 `WORK-ALLOCATION.md`, and the source legs (`MaschineW.lean`, `AtomarW.lean`).

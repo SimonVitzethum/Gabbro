@@ -3,9 +3,8 @@
 -- cannot be expressed; and the degenerate Q = True slips through on any
 -- invariant whose predicate is constantly True. Pattern (b) at Ziel.lean:522
 -- (`hForm` shape) and (d) in the section-7 docstring ("same conclusion").
-import Grammatik.Ziel
-import Grammatik.Satz
-
+import Grammatik.Kern.Syntax.Ziel
+import Grammatik.Kern.Syntax.Satz
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

@@ -13,8 +13,7 @@
   surface `42`. The model below is the hexdigit-sequence valuation over
   digit VALUES (the `hexdigit` class itself is p22's even gap).
 -/
-import Grammatik.Syntax
-
+import Grammatik.Kern.Syntax.Syntax
 namespace P21.Gap07Hex
 
 /-- Value of a hexdigit-value sequence, head = most significant. -/

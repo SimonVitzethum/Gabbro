@@ -195,7 +195,7 @@ work order by §§0–5 above; none is evidence of a direct x86 machine-code cha
 ## 6. Chain count: 2 -- beispiele/104 and beispiele/108, theorem schlusssatz (generic)
 
 *Added 2026-09-15. Stage (a) of §3 item 2, GENERIC: one theorem for every single-threaded
-program whose chain data check. Files: `grammatik/Grammatik/KorrespondenzAllg.lean` (T2
+program whose chain data check. Files: `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` (T2
 proper), `Schlusssatz.lean` (the theorem), `Kette104.lean` + `Kette104Satz.lean` and
 `Kette108.lean` (the two chains), `SchlusssatzZeuge.lean` (witnesses). Axioms of every theorem
 named here: `propext`, `Classical.choice`, `Quot.sound` (`korrOk_faellt`: `propext`,
@@ -350,7 +350,7 @@ the emitted text is stale in SPELLING (not in meaning) -- one more reason for a 
 
 ### 6.4 The by-hand theorem of one program: `schlusssatz_104` (2026-09-14)
 
-*File: `grammatik/Grammatik/Schlusssatz104.lean`, unchanged; it stands beside the generic
+*File: `grammatik/Grammatik/Korrespondenz/Kette/Schlusssatz104.lean`, unchanged; it stands beside the generic
 theorem (it speaks about `gP` over `G104_referenz.gD`, the 104-keyed lowering, and carries the
 three-step machine witness). The text below is the 2026-09-14 booking.*
 
@@ -476,7 +476,7 @@ proof. The adequacy cut (part 4 vs part 5) and stage (b) stand as they did.
   exercised only by the probes.
 - **The arena stops at the EXPORTER, no longer at the specification** (2026-09-15,
   `OFFEN.md` O14, `SATZKARTE.md` §33). `alloc`/`reset` had no `Stmt` constructor at all; since
-  `Grammatik/ArenaZucker.lean` they are sugar over `Block.narrow` + `Stmt.assignSlot` +
+  `Grammatik/Bausteine/Arena/ArenaZucker.lean` they are sugar over `Block.narrow` + `Stmt.assignSlot` +
   `Stmt.assignGlob` over a table of `count = hi` slots and a `used` global -- the pair the
   emitter itself writes. ~~**What is missing is `lean_g.rs`**, which refuses an arena declaration
   BY NAME instead of synthesising that pair~~ — **the exporter builds the pair since
@@ -587,8 +587,8 @@ unfolding once, at a variable. The whole library now builds from an empty build 
 
 ### 6.7 The certificate's BLOCK structure: `if`, `let` of a call, `traverse` (2026-09-15)
 
-*Files: `grammatik/Grammatik/KorrespondenzAllg.lean` (the staged check and its soundness),
-`grammatik/Grammatik/KorrespondenzBlockZeuge.lean` (new: the probes). Theorem map:
+*Files: `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` (the staged check and its soundness),
+`grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzBlockZeuge.lean` (new: the probes). Theorem map:
 SATZKARTE §30. Report: `messung/muse/OPUS-BERICHT-BLOCK.md`.*
 
 **What was missing was the recursion, not a lemma.** `scorr_ite`, `scorr_traverse` and
@@ -631,7 +631,7 @@ probe AND a planted defect.
 
 ### 6.8 Part 4's condition, halved: no hardware error, and the residue named (2026-09-15)
 
-*Opus lane `staerker`. Files: `grammatik/Grammatik/RufOhneHardware.lean` (new),
+*Opus lane `staerker`. Files: `grammatik/Grammatik/Logik/Ruf/RufOhneHardware.lean` (new),
 `RufOhneHardwareZeuge.lean` (new), `KorrOkAdaequat.lean` (new), `KorrespondenzAllg.lean` §5,
 `Schlusssatz.lean`, `Kette104Satz.lean`, `CParser/Bruecke.lean`, `Kette108.lean`,
 `CText108.lean`. Theorem map: SATZKARTE §35. Report:
@@ -687,7 +687,7 @@ TAG carried. It would also give `rufAt`'s depth monotonicity (an outcome that is
 
 ### 6.9 The handler congruence, and part 4's `logik` condition (2026-09-15)
 
-*Files: `grammatik/Grammatik/HandlerKongruenz.lean`, `RufTiefe.lean`, `RufLogik.lean`,
+*Files: `grammatik/Grammatik/Logik/Vertraege/HandlerKongruenz.lean`, `RufTiefe.lean`, `RufLogik.lean`,
 `KorrOkOhneLocks.lean`, `RufLogikZeuge.lean` (all new), `Schlusssatz.lean`,
 `CParser/Bruecke.lean`. Theorem map: SATZKARTE §36. Report:
 `messung/muse/OPUS-BERICHT-KONGRUENZ.md`.*
@@ -739,7 +739,7 @@ depth half of the `Tief` residue (4e(i)).
 
 ### 6.10 A chain for a program that touches a DEVICE (2026-09-15)
 
-*Opus lane `geraet`. Files: `grammatik/Grammatik/KorrespondenzGeraetZeuge.lean` (new),
+*Opus lane `geraet`. Files: `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzGeraetZeuge.lean` (new),
 `Korrespondenz.lean` (three rows), `KorrespondenzAllg.lean` (`GerTafel`, `regAdrOk`,
 `GerAnnahme`, the three device judgements, the arms, §5 guarded), `CSpeicher.lean`
 (`EmitLay.devs`, `corrW`'s third clause), `CFormen.lean` (`DecidableEq CX`),
@@ -873,7 +873,7 @@ could not move either way: sieve (a) passes 2 (`104`, `108`), both aggregate-fre
 
 ### 6.12 The frame at every world: the last piece of part 4's condition (2026-09-15)
 
-*Files: `grammatik/Grammatik/RahmenTreu.lean` (new), `RufLogik.lean`, `RufLogikZeuge.lean`,
+*Files: `grammatik/Grammatik/Logik/Vertraege/RahmenTreu.lean` (new), `RufLogik.lean`, `RufLogikZeuge.lean`,
 `Schlusssatz.lean`, `CParser/Bruecke.lean`. Theorem map: SATZKARTE §37. Report:
 `messung/muse/OPUS-BERICHT-RAHMEN.md`.*
 
@@ -923,7 +923,7 @@ could have happened.
 
 ## 7. Stage (b), the concurrent closing theorem -- beispiele/124, theorem schlusssatz_124
 
-*Added 2026-09-15. Files: `grammatik/Grammatik/CNebenlaeufig.lean` (generic: semantics,
+*Added 2026-09-15. Files: `grammatik/Grammatik/CBackend/Semantik/CNebenlaeufig.lean` (generic: semantics,
 premises, transfer theorems), `Korpus124.lean` (the G program of 124 and the goal theorem on
 it), `Schlusssatz124.lean` (the emitted C, the simulation, the theorem, the witness),
 `CTicket.lean` + `Schlusssatz124Ticket.lean` (the runtime's ticket lock, which turns the lock
@@ -1106,8 +1106,8 @@ hand-written model and C data at those two ends.
 
 ### 7.7 The lock primitive stops being a premise (2026-09-15)
 
-*Files: `grammatik/Grammatik/CTicket.lean` (the lock, generic),
-`grammatik/Grammatik/Schlusssatz124Ticket.lean` (124 with the lock inlined, and the contended
+*Files: `grammatik/Grammatik/CBackend/Semantik/CTicket.lean` (the lock, generic),
+`grammatik/Grammatik/Korrespondenz/Kette/Schlusssatz124Ticket.lean` (124 with the lock inlined, and the contended
 witness). Axioms of every theorem: `propext`, `Classical.choice`, `Quot.sound` or less; no
 `sorry`, no `native_decide`, no new `axiom`.*
 

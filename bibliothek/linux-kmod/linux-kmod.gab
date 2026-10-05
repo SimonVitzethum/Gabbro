@@ -62,7 +62,7 @@
 -- primitive's OWN work -- the instructions between entry and return once it
 -- runs. **Waiting is not in it**, and that is not a hole in these numbers but
 -- the language's standing position: waiting bounds are NOT CLAIMED
--- (`grammatik/Grammatik/Zielsatz/Spec.lean`, the header's list), and a `lock`
+-- (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, the header's list), and a `lock`
 -- declares the time it is HELD (`held <= N ops`) rather than the time it is
 -- waited for. A binding whose acquire spun for a millisecond would break no
 -- number below and no theorem above it; it would break the `held` clause of

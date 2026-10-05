@@ -2,7 +2,7 @@
 //!
 //! `lock L protects { A, B } rank 0 invariant <pred>;` states what holds
 //! whenever `L` is free: the sequential face of `SperrInv` in
-//! `grammatik/Grammatik/SperreSem.lean`. The checker carries three decidable
+//! `grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperreSem.lean`. The checker carries three decidable
 //! thirds of `SperrInvOk` and records the rest:
 //!
 //! * **`N275`** -- the invariant reads a carrier the lock does not protect.

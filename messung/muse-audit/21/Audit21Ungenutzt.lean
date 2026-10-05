@@ -12,8 +12,7 @@
   (3) `genInv_gibt` takes `_hhaelt : L ∈ offen (M.spuren f)` (underscore:
       explicitly unused) — releasing needs no held-proof for the invariant.
 -/
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 variable {D : Deklaration}

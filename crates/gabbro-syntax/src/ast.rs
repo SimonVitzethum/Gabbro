@@ -2504,7 +2504,7 @@ pub enum SyscallPaarung {
 
 /// **The fixed key set of the hardware profile (lane E6, «E6»).**
 ///
-/// Mirrors `ProfilSchluessel` in `grammatik/Grammatik/Profil.lean`
+/// Mirrors `ProfilSchluessel` in `grammatik/Grammatik/Kern/Syntax/Profil.lean`
 /// (`PLAN-ERWEITUNG.md` §0c, point 3): an assumption fixing a mode or a
 /// resource names its key and value. `arch` reuses the existing word; the
 /// other four are words of their own so a typo falls at the reader, not in

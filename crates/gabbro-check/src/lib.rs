@@ -82,7 +82,7 @@ pub mod abgeleitet;
 pub mod syscall;
 pub mod zielbindung;
 /// **Wave A, lane 273 -- the direct-x86 target vocabulary.** A safe,
-/// dependency-free Rust mirror of `grammatik/Grammatik/X86/Typen.lean`.
+/// dependency-free Rust mirror of `grammatik/Grammatik/X86/Kern/Typen.lean`.
 /// Unwired foundation: no checker pass, emitter template or CLI reads it,
 /// and representation fidelity to Lean is unproved (see `x86::typen`).
 pub mod x86;

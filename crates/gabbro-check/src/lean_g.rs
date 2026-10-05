@@ -1,7 +1,7 @@
 //! **Export `.gab` to a G program term (Lean 4).**
 //!
 //! The only certified corpus program today is a HAND translation (`r4P`/`r4D`
-//! in `grammatik/Grammatik/Referenz104.lean`). This module is the mechanical
+//! in `grammatik/Grammatik/Korrespondenz/Allgemein/Referenz104.lean`). This module is the mechanical
 //! path: it reads a checked `.gab` unit and prints a Lean file defining the
 //! declaration `gD`, the program `gP : Programm gD` (the G program syntax of
 //! `RufMaschineG.lean`, which is `Programm` of `Syntax.lean`), the function
@@ -75,7 +75,7 @@
 //!   A record field that is no `Ty` (an array, a nested record, a float, a
 //!   function pointer) is refused naming the FIELD and its record (LG002).
 //! * `arena A capacity lo .. hi of T` -- **O14**, closed 2026-09-15: the
-//!   PAIR `Grammatik/ArenaZucker.lean` names, synthesised here. A table `A`
+//!   PAIR `Grammatik/Bausteine/Arena/ArenaZucker.lean` names, synthesised here. A table `A`
 //!   of `count = hi` with one field `wert : T`, a global `A_used : int 0 hi`
 //!   starting at zero, and `def gArena_A : ArenaForm gD` beside them.
 //!   `reset A;` is `Stmt.arenaReset`, `let i = alloc A (v) else { … };` is
@@ -370,7 +370,7 @@ pub(crate) struct Model {
     pub(crate) globs: Vec<GlobModel>,
     /// `arena A capacity lo .. hi of T` -- **O14**: the specification carries
     /// `alloc`/`reset` as SUGAR over a table of `count = hi` slots beside a
-    /// `used` global (`Grammatik/ArenaZucker.lean`), and this is the pair the
+    /// `used` global (`Grammatik/Bausteine/Arena/ArenaZucker.lean`), and this is the pair the
     /// exporter synthesises. The reservation `lo` does NOT travel: it is the
     /// checker's static count (`N212`).
     pub(crate) arenas: Vec<ArenaModel>,
@@ -916,7 +916,7 @@ fn collect(source_name: &str, tree: &Programm) -> Result<Model, Refusal> {
                     }
                 }
                 // **The arena travels as its PAIR** (O14, closed here
-                // 2026-09-15): `Grammatik/ArenaZucker.lean` carries `alloc`
+                // 2026-09-15): `Grammatik/Bausteine/Arena/ArenaZucker.lean` carries `alloc`
                 // and `reset` as sugar over a table of `count = hi` slots
                 // beside a global `used` counter, and `read_arena` builds
                 // exactly that pair. The reservation `lo` does not travel --
@@ -5256,9 +5256,9 @@ fn emit(source_name: &str, ns: &str, model: &Model, fns: &[CheckedFn], scope: &S
     for (n, i) in gestartet.iter().enumerate() {
         out.push_str(&format!("-- run-time root {n}: {}\n", fns[*i].name));
     }
-    out.push_str("import Grammatik.ZielOrtGeraetSem\nimport Grammatik.SperreSem\nimport Grammatik.Zielsatz.Spec\n");
+    out.push_str("import Grammatik.Zielsatz.ZielOrt.Geraet.ZielOrtGeraetSem\nimport Grammatik.Nebenlaeufigkeit.Sperren.SperreSem\nimport Grammatik.Zielsatz.Kern.Spec\n");
     if !model.arenas.is_empty() {
-        out.push_str("import Grammatik.ArenaZucker\n");
+        out.push_str("import Grammatik.Bausteine.Arena.ArenaZucker\n");
     }
     out.push_str("\nnamespace Gabbro.Grammatik\n\nnamespace ");
     out.push_str(ns);

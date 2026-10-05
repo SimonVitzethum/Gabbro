@@ -36,8 +36,8 @@ speaks about source-anchored blocks plus validator-recomputed claims
 
 *Update 2026-10-02 (friend handoff, first delivery, PENDING REVIEW): the two
 reserved files now exist —
-[OptimizationRules.lean](Grammatik/X86/OptimizationRules.lean) and
-[OptimizationWitnesses.lean](Grammatik/X86/OptimizationWitnesses.lean). They
+[OptimizationRules.lean](Grammatik/X86/Opt/Regeln/OptimizationRules.lean) and
+[OptimizationWitnesses.lean](Grammatik/X86/Opt/Regeln/OptimizationWitnesses.lean). They
 implement the §11.4 starting set over the existing typed source (no IR,
 §11.5, decision 594/606): certificates, executable Lean validators and their
 generic soundness for constant folding, range-decided check removal,
@@ -78,12 +78,12 @@ history.*
 
 | # | Item | Source |
 |---|---|---|
-| G1 | Goal theorem `gabbro_ziel` over model G/GX with standard axioms only (`propext`, `Classical.choice`, `Quot.sound`) | [Zielsatz/Spec.lean](Grammatik/Zielsatz/Spec.lean), [BeweisAtomar.lean](Grammatik/Zielsatz/BeweisAtomar.lean) |
-| G2 | User logic = `LogikPflicht` + `StartPflicht` for every budget; runtime/OS/binding contracts are user logic, proved, never assumed | [Spec.lean](Grammatik/Zielsatz/Spec.lean) header block, standing instruction 2026-09-30 |
-| G3 | Only named hardware behaviour is an assumption (`HardwareAnnahmen`); silicon/device/timing beyond the named list is NOT CLAIMED | [Spec.lean](Grammatik/Zielsatz/Spec.lean) header |
-| G4 | Source semantics = real `execStmt`/`exec` over `Expr`/`Stmt`/`Block`/`Endblock`; worlds come from execution, never from metadata | [Semantik.lean](Grammatik/Semantik.lean) |
-| G5 | Source concurrency = W / GX; atomics carry the ATOMIC RELY (`PrueferX`, `NutzerPflichtA`, `ZielFX`/`ZielX`) | [BeweisAtomar.lean](Grammatik/Zielsatz/BeweisAtomar.lean) |
-| G6 | Checker verdict = Lean `Bool` `Akzeptiert`; the Rust checker is evidence, the Bool is the claim | [Akzeptiert.lean](Grammatik/Zielsatz/Akzeptiert.lean) |
+| G1 | Goal theorem `gabbro_ziel` over model G/GX with standard axioms only (`propext`, `Classical.choice`, `Quot.sound`) | [Zielsatz/Spec.lean](Grammatik/Zielsatz/Kern/Spec.lean), [BeweisAtomar.lean](Grammatik/Zielsatz/Atomar/BeweisAtomar.lean) |
+| G2 | User logic = `LogikPflicht` + `StartPflicht` for every budget; runtime/OS/binding contracts are user logic, proved, never assumed | [Spec.lean](Grammatik/Zielsatz/Kern/Spec.lean) header block, standing instruction 2026-09-30 |
+| G3 | Only named hardware behaviour is an assumption (`HardwareAnnahmen`); silicon/device/timing beyond the named list is NOT CLAIMED | [Spec.lean](Grammatik/Zielsatz/Kern/Spec.lean) header |
+| G4 | Source semantics = real `execStmt`/`exec` over `Expr`/`Stmt`/`Block`/`Endblock`; worlds come from execution, never from metadata | [Semantik.lean](Grammatik/Kern/Semantik/Semantik.lean) |
+| G5 | Source concurrency = W / GX; atomics carry the ATOMIC RELY (`PrueferX`, `NutzerPflichtA`, `ZielFX`/`ZielX`) | [BeweisAtomar.lean](Grammatik/Zielsatz/Atomar/BeweisAtomar.lean) |
+| G6 | Checker verdict = Lean `Bool` `Akzeptiert`; the Rust checker is evidence, the Bool is the claim | [Akzeptiert.lean](Grammatik/Zielsatz/Kern/Akzeptiert.lean) |
 
 ### 1.2 What the optimiser must preserve (PROPOSED obligation list)
 
@@ -135,17 +135,17 @@ or a timed-out optional pass yields refusal or the conservative route
 
 | Helper file | Covers | Does NOT cover |
 |---|---|---|
-| [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean) (550 lines) | executable rewrites on source syntax + correspondence over `eval`/`execBlock`: literal folding helpers (`alsLitOpt`, `litLeBool`, `litEqBool`, `isWahrAll`), branch pruning at decidable conditions | full CFG/GVN/LICM; memory rules; any IR |
-| [AufrufOpt.lean](Grammatik/X86/AufrufOpt.lean) (288 lines) | inlining ghost obligation: `GeistAntwort`, `geistPaar` (entry/return pair with ACTUAL `rho`/`v`/`s0`/`s1`), `FolgeLog` preservation lemmas | physical inlining decision, budget transfer for inlined bodies |
-| [StaerkeReduktion.lean](Grammatik/X86/StaerkeReduktion.lean) (296 lines) | `mul`/`div`/`rem` by `2^k` to shifts/masks (`shlW`, `shrW`, `maskW`, `mod_pow2_and_mask`) with nonneg/never-zero/width side conditions; `sdiv`/`srem` REFUSED | reassociation, FMA, float reduction, vector reduction |
-| [Wort.lean](Grammatik/X86/Wort.lean) (407 lines) / [Ganzzahl.lean](Grammatik/X86/Ganzzahl.lean) (584 lines) | canonical `Wort` (BitVec 64) arithmetic, `trunc`/`sext`, `addB`/`subB`/`xorB`/`andB`/`orB`, checked div/rem, masked shifts, `Bedingung` tests, flag definitions (AF `none` = undefined, never false) | source range/fault bridge (lane 277 business) |
-| [Speicher.lean](Grammatik/X86/Speicher.lean) (761 lines) / [SpeicherKommutation.lean](Grammatik/X86/SpeicherKommutation.lean) (342 lines) / [Zugriffe.lean](Grammatik/X86/Zugriffe.lean) (696 lines) | permission-checked little-endian byte memory, `Fuss` byte footprints, single-owner per-instruction access extraction (`Zugriff`), commutation facts | atomicity for unaligned concurrent use; TSO visibility; grouping |
-| [Ausfuehrung.lean](Grammatik/X86/Ausfuehrung.lean) (869 lines) / [Byteschritt.lean](Grammatik/X86/Byteschritt.lean) (510 lines) / [Codec.lean](Grammatik/X86/Codec.lean) (806 lines) | 14-form pilot instruction execution, byte step, independent encode/decode | full ISA; SIMD/FP instructions; LOCK/RMW |
-| [Bild.lean](Grammatik/X86/Bild.lean) (578 lines) / [Relokation.lean](Grammatik/X86/Relokation.lean) (669 lines) / [Regionen.lean](Grammatik/X86/Regionen.lean) (631 lines) / [Stapel.lean](Grammatik/X86/Stapel.lean) (673 lines) | checked images, relocations, regions, stack/ABI fragments | final linked-image closure; all reachable-bytes coverage |
-| [TSO.lean](Grammatik/X86/TSO.lean) (622 lines) | per-core FIFO store buffers, forwarding, flush onto canonical `Speicher`, local-fence readiness, byte-level `Sicht` link | aligned multi-byte atomicity; LOCK RMW; cross-granularity W/GX simulation (OPEN) |
-| [FlagBeweis.lean](Grammatik/X86/FlagBeweis.lean) (550 lines) | flag-level correspondence facts | full condition-code optimisation licence |
-| [Gleitprofil.lean](Grammatik/X86/Gleitprofil.lean) (653 lines) | MXCSR checks (RNE, FTZ/DAZ off, masks), per-context FP state, f32/f64 projection, f32-vs-f64 counterexample, NaN/sticky/SSE gaps | hardware correspondence; any FP optimisation admission |
-| [Vektor.lean](Grammatik/X86/Vektor.lean) (651 lines) | packed-integer data/operation foundation (128-bit, lane widths, two-chunk memory carriage); NO `Befehl` extension, NO FP SIMD | SIMD optimisation admission (refused until correspondence proved) |
+| [InvariantenOpt.lean](Grammatik/X86/Opt/Schleifen/InvariantenOpt.lean) (550 lines) | executable rewrites on source syntax + correspondence over `eval`/`execBlock`: literal folding helpers (`alsLitOpt`, `litLeBool`, `litEqBool`, `isWahrAll`), branch pruning at decidable conditions | full CFG/GVN/LICM; memory rules; any IR |
+| [AufrufOpt.lean](Grammatik/X86/Opt/Schleifen/AufrufOpt.lean) (288 lines) | inlining ghost obligation: `GeistAntwort`, `geistPaar` (entry/return pair with ACTUAL `rho`/`v`/`s0`/`s1`), `FolgeLog` preservation lemmas | physical inlining decision, budget transfer for inlined bodies |
+| [StaerkeReduktion.lean](Grammatik/X86/Opt/Schleifen/StaerkeReduktion.lean) (296 lines) | `mul`/`div`/`rem` by `2^k` to shifts/masks (`shlW`, `shrW`, `maskW`, `mod_pow2_and_mask`) with nonneg/never-zero/width side conditions; `sdiv`/`srem` REFUSED | reassociation, FMA, float reduction, vector reduction |
+| [Wort.lean](Grammatik/X86/Kern/Wort.lean) (407 lines) / [Ganzzahl.lean](Grammatik/X86/Kern/Ganzzahl.lean) (584 lines) | canonical `Wort` (BitVec 64) arithmetic, `trunc`/`sext`, `addB`/`subB`/`xorB`/`andB`/`orB`, checked div/rem, masked shifts, `Bedingung` tests, flag definitions (AF `none` = undefined, never false) | source range/fault bridge (lane 277 business) |
+| [Speicher.lean](Grammatik/X86/Speicher/Speicher.lean) (761 lines) / [SpeicherKommutation.lean](Grammatik/X86/Speicher/SpeicherKommutation.lean) (342 lines) / [Zugriffe.lean](Grammatik/X86/Speicher/Zugriffe.lean) (696 lines) | permission-checked little-endian byte memory, `Fuss` byte footprints, single-owner per-instruction access extraction (`Zugriff`), commutation facts | atomicity for unaligned concurrent use; TSO visibility; grouping |
+| [Ausfuehrung.lean](Grammatik/X86/Kern/Ausfuehrung.lean) (869 lines) / [Byteschritt.lean](Grammatik/X86/Kern/Byteschritt.lean) (510 lines) / [Codec.lean](Grammatik/X86/Kern/Codec.lean) (806 lines) | 14-form pilot instruction execution, byte step, independent encode/decode | full ISA; SIMD/FP instructions; LOCK/RMW |
+| [Bild.lean](Grammatik/X86/Kern/Bild.lean) (578 lines) / [Relokation.lean](Grammatik/X86/Laden/Relokation.lean) (669 lines) / [Regionen.lean](Grammatik/X86/Speicher/Regionen.lean) (631 lines) / [Stapel.lean](Grammatik/X86/Kern/Stapel.lean) (673 lines) | checked images, relocations, regions, stack/ABI fragments | final linked-image closure; all reachable-bytes coverage |
+| [TSO.lean](Grammatik/X86/TSO/Kern/TSO.lean) (622 lines) | per-core FIFO store buffers, forwarding, flush onto canonical `Speicher`, local-fence readiness, byte-level `Sicht` link | aligned multi-byte atomicity; LOCK RMW; cross-granularity W/GX simulation (OPEN) |
+| [FlagBeweis.lean](Grammatik/X86/Flags/FlagBeweis.lean) (550 lines) | flag-level correspondence facts | full condition-code optimisation licence |
+| [Gleitprofil.lean](Grammatik/X86/Kern/Gleitprofil.lean) (653 lines) | MXCSR checks (RNE, FTZ/DAZ off, masks), per-context FP state, f32/f64 projection, f32-vs-f64 counterexample, NaN/sticky/SSE gaps | hardware correspondence; any FP optimisation admission |
+| [Vektor.lean](Grammatik/X86/Kern/Vektor.lean) (651 lines) | packed-integer data/operation foundation (128-bit, lane widths, two-chunk memory carriage); NO `Befehl` extension, NO FP SIMD | SIMD optimisation admission (refused until correspondence proved) |
 
 Exact cuts: no persistent SSA IR exists and none is required (decision
 594/606: direct source-anchored lowering, IR287 superseded); no
@@ -206,10 +206,10 @@ Required block content (acceptance checklist for each lowering/certificate row):
 
 | Element | Requirement |
 |---|---|
-| Types/widths | every value carries its source type and target width (`Ty` × `Breite`); widths from [Typen.lean](Grammatik/X86/Typen.lean); no widthless temporaries |
+| Types/widths | every value carries its source type and target width (`Ty` × `Breite`); widths from [Typen.lean](Grammatik/X86/Kern/Typen.lean); no widthless temporaries |
 | Blocks + CFG | explicit control labels, edges, terminators; definition/use references over SSA-style value names (block-list identities, validator-recomputed); block arguments with φ-nodes where merges need them; dominators recomputed by the validator (checked, not trusted) |
 | Effect nodes | explicit nodes for memory read/write, atomic access (per-width ordering token), lock acquire/release, call (with callee identity + actual args), budget consume, fault/stop (`or R` channel, `nieZurueck`) |
-| Region ownership | every memory node names its region; footprints as byte sets reusing `Fuss` ([Speicher.lean](Grammatik/X86/Speicher.lean)); alias relations explicit (§2.3) |
+| Region ownership | every memory node names its region; footprints as byte sets reusing `Fuss` ([Speicher.lean](Grammatik/X86/Speicher/Speicher.lean)); alias relations explicit (§2.3) |
 | Source anchors | every node carries its source-unit anchor (function, statement index) for contract-place (§4) and call-log (§4.6) reconstruction |
 | Well-formedness | decided block-list predicate (`Bool`): closed uses, typed φ-nodes, single terminator per block, reachable exit or declared-divergent; a validator check, never a trusted `irWF` |
 | Checked meaning | NO new interpreter: meaning comes from source `exec` on one side and decoded-byte execution (`Byteschritt`, `Ausfuehrung.schritt`) on the other; any auxiliary block interpretation used inside a proof must change real canonical `Speicher` bytes to count as a semantics |
@@ -218,13 +218,13 @@ Required block content (acceptance checklist for each lowering/certificate row):
 
 The lowering refinement (source-anchored blocks to decoded bytes) must cover, jointly:
 
-- registers (the 16 `Register` of [Typen.lean](Grammatik/X86/Typen.lean)),
+- registers (the 16 `Register` of [Typen.lean](Grammatik/X86/Kern/Typen.lean)),
   flags (`Flags`, AF `Option`-undefined), FP control (`MXCSR` per
-  [Gleitprofil.lean](Grammatik/X86/Gleitprofil.lean));
+  [Gleitprofil.lean](Grammatik/X86/Kern/Gleitprofil.lean));
 - memory (canonical `Speicher`, permission-checked, little-endian);
 - observable concurrency events (per-access events compatible with the
-  `Zugriff` extraction of [Zugriffe.lean](Grammatik/X86/Zugriffe.lean)
-  and the TSO buffers of [TSO.lean](Grammatik/X86/TSO.lean));
+  `Zugriff` extraction of [Zugriffe.lean](Grammatik/X86/Speicher/Zugriffe.lean)
+  and the TSO buffers of [TSO.lean](Grammatik/X86/TSO/Kern/TSO.lean));
 - contracts and source call logs (`RufEreignisF`, `rufAt`,
   `FolgeLog`/`FolgeG`);
 - finite AND infinite runs (divergence is a behaviour, not an absence);
@@ -271,9 +271,9 @@ explicitly withheld), PROVED-PENDING-REVIEW (certificate + validator
 
 | # | Rule | Status |
 |---|---|---|
-| C1 | literal `lit a ⊕ lit b` → `lit (a⊕b)` where `⊕` is total at the type (bool ops, int add within proved range) | ACCEPTED-HELPER (`alsLitOpt`, `litLeBool`, `litEqBool` in [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)); general integer/boolean fold PROVED-PENDING-REVIEW (`foldInt`, `foldBool`, §13) |
+| C1 | literal `lit a ⊕ lit b` → `lit (a⊕b)` where `⊕` is total at the type (bool ops, int add within proved range) | ACCEPTED-HELPER (`alsLitOpt`, `litLeBool`, `litEqBool` in [InvariantenOpt.lean](Grammatik/X86/Opt/Schleifen/InvariantenOpt.lean)); general integer/boolean fold PROVED-PENDING-REVIEW (`foldInt`, `foldBool`, §13) |
 | C2 | copy `x = y; …x…` → substitute where `y` is SSA-single-def, same type/width, no intervening write to `y` | PROPOSED |
-| C3 | checked op with Decidable side condition proved `true` (e.g. `x ≤ y` by `litLeBool`) → unchecked body with the check retained as a ghost precondition | ACCEPTED-HELPER (`isWahrAll`, `holdsBool` in [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)) |
+| C3 | checked op with Decidable side condition proved `true` (e.g. `x ≤ y` by `litLeBool`) → unchecked body with the check retained as a ghost precondition | ACCEPTED-HELPER (`isWahrAll`, `holdsBool` in [InvariantenOpt.lean](Grammatik/X86/Opt/Schleifen/InvariantenOpt.lean)) |
 
 Example (C1): `lit 2 + lit 3` folds to `lit 5`. Fact source: literal
 syntax itself. Certificate: the two input literals + recomputed
@@ -284,13 +284,13 @@ channel preserved (C4).
 
 | # | Rule | Status |
 |---|---|---|
-| C4 | wrapping vs checked arithmetic selected exactly by the source range/type: `M102`/`M137` side conditions carried by the syntax decide | PROPOSED (bridge owned by lane 277; helpers in [Wort.lean](Grammatik/X86/Wort.lean)/[Ganzzahl.lean](Grammatik/X86/Ganzzahl.lean)) |
+| C4 | wrapping vs checked arithmetic selected exactly by the source range/type: `M102`/`M137` side conditions carried by the syntax decide | PROPOSED (bridge owned by lane 277; helpers in [Wort.lean](Grammatik/X86/Kern/Wort.lean)/[Ganzzahl.lean](Grammatik/X86/Kern/Ganzzahl.lean)) |
 
 ### 3.2 SCCP / CFG simplification
 
 | # | Rule | Status |
 |---|---|---|
-| S1 | `if isWahrAll(c) = true then A else B` → `A` (condition kept as ghost) | ACCEPTED-HELPER (truth checker + correspondence in [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)); exact decider incl. `not`/false side + condition fold PROVED-PENDING-REVIEW (`constBool?`, `foldBool`, §13) |
+| S1 | `if isWahrAll(c) = true then A else B` → `A` (condition kept as ghost) | ACCEPTED-HELPER (truth checker + correspondence in [InvariantenOpt.lean](Grammatik/X86/Opt/Schleifen/InvariantenOpt.lean)); exact decider incl. `not`/false side + condition fold PROVED-PENDING-REVIEW (`constBool?`, `foldBool`, §13) |
 | S2 | unreachable block (no predecessor after S1) removed; φ-nodes re-typed | PROPOSED |
 | S3 | sparse conditional propagation of C1 facts along decided edges | PROPOSED (local part — deciding a condition from constants and operand TYPE ranges — PROVED-PENDING-REVIEW, `constBool?`, §13) |
 
@@ -343,7 +343,7 @@ the certificate must name the SSA version and the entailment proof.
 
 | # | Rule | Status |
 |---|---|---|
-| R1 | `x * 2^k` → `x << k` for nonneg `x` (source range proves `0 ≤ x`), `k < width` | ACCEPTED-HELPER ([StaerkeReduktion.lean](Grammatik/X86/StaerkeReduktion.lean): `shlW`, side conditions); certified target-word selection, both operand orders, PROVED-PENDING-REVIEW (`checkStrength`, §13) |
+| R1 | `x * 2^k` → `x << k` for nonneg `x` (source range proves `0 ≤ x`), `k < width` | ACCEPTED-HELPER ([StaerkeReduktion.lean](Grammatik/X86/Opt/Schleifen/StaerkeReduktion.lean): `shlW`, side conditions); certified target-word selection, both operand orders, PROVED-PENDING-REVIEW (`checkStrength`, §13) |
 | R2 | `x / 2^k` → `x >> k` for nonneg `x`, divisor never zero (`2^k ≠ 0` by `k` bound) | ACCEPTED-HELPER (`shrW` + divisor lemma); certified selection PROVED-PENDING-REVIEW (§13) |
 | R3 | `x % 2^k` → `x &&& (2^k - 1)` (`maskW`, `mod_pow2_and_mask`) | ACCEPTED-HELPER; certified selection PROVED-PENDING-REVIEW (§13) |
 | R4 | signed `sdiv`/`srem` → shift: REFUSED (truncation ≠ shift for negative numerators) | REFUSED (in the helper file itself; the validator refuses it by construction, `checkStrength_sdiv`/`_srem`, §13) |
@@ -359,7 +359,7 @@ reduce under R1; signed-negative multiplication is not a left shift.
 
 | # | Rule | Status |
 |---|---|---|
-| A1 | two accesses with proved-`Disjoint` footprints commute / the first load reuses across the second | PROPOSED over [SpeicherKommutation.lean](Grammatik/X86/SpeicherKommutation.lean) facts |
+| A1 | two accesses with proved-`Disjoint` footprints commute / the first load reuses across the second | PROPOSED over [SpeicherKommutation.lean](Grammatik/X86/Speicher/SpeicherKommutation.lean) facts |
 | A2 | load after store to `Same` address, no intervening invalidation → forward stored value | PROPOSED |
 | A3 | any pair answering `Unknown` → no motion, no reuse | REQUIRED (absence of a rule, enforced by the validator) |
 
@@ -386,7 +386,7 @@ the reverse without revalidation.
 
 ### 3.9 Floating point (bridge incomplete — default REFUSE)
 
-Status: the FP bridge is incomplete. [Gleitprofil.lean](Grammatik/X86/Gleitprofil.lean)
+Status: the FP bridge is incomplete. [Gleitprofil.lean](Grammatik/X86/Kern/Gleitprofil.lean)
 gives the target profile (MXCSR RNE, FTZ/DAZ off, masks set, per-context
 state, f32/f64 projection, the f32-vs-f64 counterexample, NaN/sticky/SSE
 gaps) but NO hardware correspondence and NO optimisation admission.
@@ -402,7 +402,7 @@ gaps) but NO hardware correspondence and NO optimisation admission.
 
 | # | Rule | Status |
 |---|---|---|
-| P1 | flag-consumer fusion (`cmp; jcc` → fused test where `Bedingung` evaluation over the REAL flag defs agrees) | PROPOSED over [FlagBeweis.lean](Grammatik/X86/FlagBeweis.lean) + [Wort.lean](Grammatik/X86/Wort.lean) flag defs |
+| P1 | flag-consumer fusion (`cmp; jcc` → fused test where `Bedingung` evaluation over the REAL flag defs agrees) | PROPOSED over [FlagBeweis.lean](Grammatik/X86/Flags/FlagBeweis.lean) + [Wort.lean](Grammatik/X86/Kern/Wort.lean) flag defs |
 | P2 | address-mode selection (`base + i*scale + disp` formation) with no-wrap proof | PROPOSED |
 | P3 | branch layout (fall-through, alignment) that changes no semantics, only code positions | PROPOSED (positions revalidated against final image, §8.7) |
 | P4 | allocation interaction: spill/fill insertion is semantics-preserving by construction (private spill slots, §9.5) | PROPOSED |
@@ -422,7 +422,7 @@ atomic may return different values — no local token makes them equal
 
 | # | Rule | Status |
 |---|---|---|
-| I1 | direct call to a known body inlined with ghost pair spliced at the site (entry + return with ACTUAL `rho`/`v`/`s0`/`s1`), `FolgeLog` preserved | PROPOSED over ACCEPTED-HELPER ([AufrufOpt.lean](Grammatik/X86/AufrufOpt.lean): `geistPaar`, `geistPaar_laenge`, order lemmas) |
+| I1 | direct call to a known body inlined with ghost pair spliced at the site (entry + return with ACTUAL `rho`/`v`/`s0`/`s1`), `FolgeLog` preserved | PROPOSED over ACCEPTED-HELPER ([AufrufOpt.lean](Grammatik/X86/Opt/Schleifen/AufrufOpt.lean): `geistPaar`, `geistPaar_laenge`, order lemmas) |
 | I2 | devirtualisation (indirect → direct) only through a legal-entry proof (the callee set at this call site is proved singleton) | PROPOSED |
 | I3 | inlining that drops contracts, budget consumption, or the reason channel | REFUSED |
 
@@ -436,7 +436,7 @@ over-budget program fit by forgetting the call cost.
 | # | Rule | Status |
 |---|---|---|
 | U1 | loop unrolled by factor `k` with proved trip-count multiple-or-remainder structure (remainder loop retained) | PROPOSED |
-| U2 | tail-call / tail-jump with stack discipline preserved ([Stapel.lean](Grammatik/X86/Stapel.lean)) | PROPOSED |
+| U2 | tail-call / tail-jump with stack discipline preserved ([Stapel.lean](Grammatik/X86/Kern/Stapel.lean)) | PROPOSED |
 
 Caps are MEASURE-THEN-CHOOSE (§9.7): no invented constants in this
 file. Unrolling preserves the source budget refusal: unrolling a loop
@@ -445,7 +445,7 @@ whose source budget refuses at iteration `n` still refuses at `n`
 
 ### 3.13 SIMD (planned — default REFUSE)
 
-[Vektor.lean](Grammatik/X86/Vektor.lean) is data operations only: no XMM
+[Vektor.lean](Grammatik/X86/Kern/Vektor.lean) is data operations only: no XMM
 file, no `Befehl` extension, no FP SIMD. Admission needs, jointly:
 source correspondence per lane, fault order across lanes (first-faulting
 lane matches scalar order), tearing rules for concurrent observers,
@@ -479,7 +479,7 @@ downgrades to a warning.
 
 Facts come from source invariants at guaranteed locations. The location
 model (entry / return / `ruhe` / holder-observed / lock moves) is part of
-the goal statement ([Spec.lean](Grammatik/Zielsatz/Spec.lean): `VertragAmOrtG`,
+the goal statement ([Spec.lean](Grammatik/Zielsatz/Kern/Spec.lean): `VertragAmOrtG`,
 `InvAmOrtG`, `InvAmGrundG`, `InvRuheG`, `InvSichtG`, `SperrWechselG`,
 `SperrSichtG`); the optimiser reuses it and adds nothing.
 
@@ -510,7 +510,7 @@ what some invariant says.
 ### 4.2 Writer blackout and SSA versions
 
 Inside a running writer or a held section, global invariants are NOT
-available (NOT CLAIMED list in [Spec.lean](Grammatik/Zielsatz/Spec.lean)).
+available (NOT CLAIMED list in [Spec.lean](Grammatik/Zielsatz/Kern/Spec.lean)).
 Consequences for facts:
 
 - Every range/alias/stable fact is versioned by SSA definition: a fact
@@ -568,7 +568,7 @@ turned into a warning to "optimise anyway".
 
 ### 4.6 Call ghosts carry actuals
 
-Per [AufrufOpt.lean](Grammatik/X86/AufrufOpt.lean): an inlined call's
+Per [AufrufOpt.lean](Grammatik/X86/Opt/Schleifen/AufrufOpt.lean): an inlined call's
 ghost pair uses the ACTUAL argument environment `rho`, the ACTUAL
 result/reason value, and the ACTUAL entry/return worlds `s0`/`s1`.
 `geistPaar_laenge` (length 2) and the `FolgeLog` order lemmas are the
@@ -579,9 +579,9 @@ the same generic construction.
 
 ## 5. Concurrency and per-width atomics (PROPOSED; TSO bridge OPEN)
 
-Source model: GA/GA-runs/GX/W per [BeweisAtomar.lean](Grammatik/Zielsatz/BeweisAtomar.lean)
+Source model: GA/GA-runs/GX/W per [BeweisAtomar.lean](Grammatik/Zielsatz/Atomar/BeweisAtomar.lean)
 (ATOMIC RELY). Target model: per-core FIFO byte store buffers over
-canonical memory per [TSO.lean](Grammatik/X86/TSO.lean) (`TSOZustand`:
+canonical memory per [TSO.lean](Grammatik/X86/TSO/Kern/TSO.lean) (`TSOZustand`:
 memory + per-core buffers; oldest-first flush; youngest own-buffer
 forwarding; local fence ready iff own buffer empty).
 
@@ -591,7 +591,7 @@ The per-access x86-TSO refinement into W/GX does NOT exist. Reusing W/GX
 lemmas for target steps without the bridge is unsound and forbidden.
 What exists: byte-level helpers (not word-atomic proofs), one proved
 target-side link to `Sicht` (`Lesbar`/`Frisch` at bytes,
-[TSO.lean](Grammatik/X86/TSO.lean) §8), and the precise cross-granularity
+[TSO.lean](Grammatik/X86/TSO/Kern/TSO.lean) §8), and the precise cross-granularity
 obligation. Until the bridge is proved, concurrency-affecting
 optimisations run under the conservative discipline of §5.2–§5.4.
 
@@ -628,7 +628,7 @@ missing proof still owes.
   no "local token" fact makes them equal.
 - Bytewise helpers prove byte facts only: the per-byte TSO link says
   nothing about aligned multi-byte single-copy atomicity or LOCK RMW
-  (explicitly OPEN in [TSO.lean](Grammatik/X86/TSO.lean) §7).
+  (explicitly OPEN in [TSO.lean](Grammatik/X86/TSO/Kern/TSO.lean) §7).
 
 ### 5.4 Local reasoning limits
 
@@ -642,7 +642,7 @@ missing proof still owes.
 
 ### 5.5 FP under concurrency
 
-FP state is per-context ([Gleitprofil.lean](Grammatik/X86/Gleitprofil.lean)).
+FP state is per-context ([Gleitprofil.lean](Grammatik/X86/Kern/Gleitprofil.lean)).
 MXCSR is not shared memory: no atomicity, no cross-thread visibility
 rules apply to it. A context switch preserves it; the optimiser never
 moves MXCSR writes across calls that may switch context.
@@ -662,7 +662,7 @@ Three separate quantities, three separate obligations:
 | Quantity | Meaning | Decided by |
 |---|---|---|
 | source budget | abstract execution fuel; refusal is a behaviour (`FortschrittG` stop kinds: hardware / flag / budget / `nieZurueck`) | source semantics + duties |
-| machine work | actual target steps/bytes executed | target execution ([Ausfuehrung.lean](Grammatik/X86/Ausfuehrung.lean), [Byteschritt.lean](Grammatik/X86/Byteschritt.lean)) |
+| machine work | actual target steps/bytes executed | target execution ([Ausfuehrung.lean](Grammatik/X86/Kern/Ausfuehrung.lean), [Byteschritt.lean](Grammatik/X86/Kern/Byteschritt.lean)) |
 | hardware time | silicon/device/timing behaviour | named hardware assumptions ONLY |
 
 ### 6.1 Source-stop correspondence
@@ -730,7 +730,7 @@ existed.
 | Pass | Certificate carries | Validator recomputes |
 |---|---|---|
 | fold (C1–C4) | input literals + result literal + range side proof | `decide` on the literal equation + range entailment |
-| simplify (S1–S3) | condition + `isWahrAll`-style truth trace | re-runs the truth `Bool` (cf. [InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean): nothing trusted from Rust) |
+| simplify (S1–S3) | condition + `isWahrAll`-style truth trace | re-runs the truth `Bool` (cf. [InvariantenOpt.lean](Grammatik/X86/Opt/Schleifen/InvariantenOpt.lean): nothing trusted from Rust) |
 | GVN/CSE (V1–V2) | value numbers + dominator path + purity trace | dominator check + purity re-derivation |
 | DCE (D1–D2) | liveness summary + footprint non-observation proof | liveness recomputation incl. flags/concurrency/device |
 | checks (B1–B3) | SSA versions + range entailment | entailment `decide` at the cited versions |
@@ -769,7 +769,7 @@ may-call set, contract reuse). Linking checks summaries at every call
 edge (callee summary ⊇ actual behaviour — computed from the callee
 source, not its claim). Final-image obligations (every executed byte
 validated, relocations resolved, load mapping matches — cf.
-[Bild.lean](Grammatik/X86/Bild.lean)/[Relokation.lean](Grammatik/X86/Relokation.lean))
+[Bild.lean](Grammatik/X86/Kern/Bild.lean)/[Relokation.lean](Grammatik/X86/Laden/Relokation.lean))
 are never skipped: a per-function validated result with an unchecked
 link is a refusal.
 
@@ -856,8 +856,8 @@ with a fuel cap; overflow falls back to keeping the check.
 ### 8.7 Final revalidation
 
 After relocation and load: revalidate the FETCHED bytes (decoded from
-the final image at final addresses, cf. [Codec.lean](Grammatik/X86/Codec.lean)
-round-trip + [Bild.lean](Grammatik/X86/Bild.lean)) against the validated
+the final image at final addresses, cf. [Codec.lean](Grammatik/X86/Kern/Codec.lean)
+round-trip + [Bild.lean](Grammatik/X86/Kern/Bild.lean)) against the validated
 IR: every executed byte covered, file offsets/virtual addresses/load
 bias/relocation operands checked against the executed mapping,
 including runtime/binding/entry bytes (no unchecked entry stubs).
@@ -988,9 +988,9 @@ as those land — never with a separate IR graph.
 
 ### 11.2 Reserved English files (NOT YET EXISTING — do not link as present)
 
-- `Grammatik/X86/OptimizationRules.lean` — rule statements + certificate
+- `Grammatik/X86/Opt/Regeln/OptimizationRules.lean` — rule statements + certificate
   schemas + validator `Bool`s (PROPOSED, reserved for the friend).
-- `Grammatik/X86/OptimizationWitnesses.lean` — `_zeuge` companions +
+- `Grammatik/X86/Opt/Regeln/OptimizationWitnesses.lean` — `_zeuge` companions +
   poison/positive probe theorems (PROPOSED, reserved for the friend).
 
 Muse lanes do NOT edit these paths (standing instruction). They did not
@@ -1011,10 +1011,10 @@ the accepted decision 594/606 (report-only, reviewer 303 ACCEPT).
 ### 11.4 Starting order and acceptance contract
 
 Start: arithmetic/constant-fold/strength-reduction rules against the
-ACTUAL existing helpers ([Wort.lean](Grammatik/X86/Wort.lean),
-[Ganzzahl.lean](Grammatik/X86/Ganzzahl.lean),
-[StaerkeReduktion.lean](Grammatik/X86/StaerkeReduktion.lean),
-[InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean)) — inspect live
+ACTUAL existing helpers ([Wort.lean](Grammatik/X86/Kern/Wort.lean),
+[Ganzzahl.lean](Grammatik/X86/Kern/Ganzzahl.lean),
+[StaerkeReduktion.lean](Grammatik/X86/Opt/Schleifen/StaerkeReduktion.lean),
+[InvariantenOpt.lean](Grammatik/X86/Opt/Schleifen/InvariantenOpt.lean)) — inspect live
 flags, faults, overflow behaviour first. Then: CSE/LICM/inlining rules
 only after the corresponding lowering rows (L1 representation + L2
 statement coverage) and the source-cost/effect interface for those rows
@@ -1031,9 +1031,9 @@ counterexample for each refusal the rule claims.
 
 Do NOT invent a second IR. Useful work that needs no IR: extend the
 accepted helper families (more literal/fold lemmas in the style of
-[InvariantenOpt.lean](Grammatik/X86/InvariantenOpt.lean), more
+[InvariantenOpt.lean](Grammatik/X86/Opt/Schleifen/InvariantenOpt.lean), more
 range-justified reductions in the style of
-[StaerkeReduktion.lean](Grammatik/X86/StaerkeReduktion.lean)), more
+[StaerkeReduktion.lean](Grammatik/X86/Opt/Schleifen/StaerkeReduktion.lean)), more
 `geistPaar`-style ghost lemmas, more probe/poison programs, more
 lowering rows in the accepted `SourceMemory` pattern. Anything shaped
 like a second language with its own runner goes nowhere near the
@@ -1063,9 +1063,9 @@ no delivered line is asserted anywhere in this file.
 | O1 | direct lowering representation rows (L1 pattern: `repOk`-style admission + value roundtrips + `layoutOk`/`regionDisjunkt`), extended per width/object, never forked | source syntax/semantics (ACCEPTED), `SourceMemory` (ACCEPTED, lane 570) |
 | O2 | per-pass certificates + validator `Bool`s + generic soundness | O1 |
 | O3 | lowering full source → machine blocks/bytes, checked, with refusal catalogue | O1 |
-| O4 | per-access target execution + x86-TSO refinement into W/GX | [TSO.lean](Grammatik/X86/TSO.lean) + W/GX (ACCEPTED helpers only) |
-| O5 | stack/ABI/entries/regions/runtime/binding coverage of all reachable bytes | [Stapel.lean](Grammatik/X86/Stapel.lean)/[Regionen.lean](Grammatik/X86/Regionen.lean) fragments |
-| O6 | IEEE/control-state correspondence | [Gleitprofil.lean](Grammatik/X86/Gleitprofil.lean) profile only |
+| O4 | per-access target execution + x86-TSO refinement into W/GX | [TSO.lean](Grammatik/X86/TSO/Kern/TSO.lean) + W/GX (ACCEPTED helpers only) |
+| O5 | stack/ABI/entries/regions/runtime/binding coverage of all reachable bytes | [Stapel.lean](Grammatik/X86/Kern/Stapel.lean)/[Regionen.lean](Grammatik/X86/Speicher/Regionen.lean) fragments |
+| O6 | IEEE/control-state correspondence | [Gleitprofil.lean](Grammatik/X86/Kern/Gleitprofil.lean) profile only |
 | O7 | source budget accounting + machine-work/hardware-time transfer | source `FortschrittG`/stop model (ACCEPTED) |
 | O8 | closing validator soundness + finite/infinite coverage + witnesses + negative probes | O2–O7 |
 | O9 | Rust implementation of reviewed Lean interfaces | O1–O8 (Lean first) |
@@ -1087,15 +1087,15 @@ waiting bounds, stack depth, weak memory beyond DRF-SC, unguarded
 payloads, floats beyond the kernel IEEE model, starvation freedom,
 invariants inside a running writer/held section, and CPU-silicon claims
 beyond the named hardware assumptions stay NOT CLAIMED per
-[Spec.lean](Grammatik/Zielsatz/Spec.lean). The optimiser preserves
+[Spec.lean](Grammatik/Zielsatz/Kern/Spec.lean). The optimiser preserves
 claimed guarantees; it proves none about silicon.
 
 ## 13. First friend delivery: the rule library over source syntax (PROVED-PENDING-REVIEW)
 
 *2026-10-02. Files:
-[OptimizationRules.lean](Grammatik/X86/OptimizationRules.lean) (rules,
+[OptimizationRules.lean](Grammatik/X86/Opt/Regeln/OptimizationRules.lean) (rules,
 certificates, validators, soundness) and
-[OptimizationWitnesses.lean](Grammatik/X86/OptimizationWitnesses.lean)
+[OptimizationWitnesses.lean](Grammatik/X86/Opt/Regeln/OptimizationWitnesses.lean)
 (joint `_zeuge` witnesses, positive and poison probes). Both are imported
 by the umbrella `Grammatik.lean` (two import lines, so the project build
 checks them; the umbrella stays coordinator-owned, §11.3). Nothing here is
@@ -1221,7 +1221,7 @@ out of §9 order; certificates filed under the wrong pass.
   re-checks them): `../DIRECT-COMPILER.md`,
   `../DIRECT-COMPILER-DESIGN.md`,
   `../dokumente/x86/DIRECT-LOWERING-DECISION.md`,
-  `Grammatik/X86/*.lean` and `Grammatik/Zielsatz/Spec.lean` all
+  `Grammatik/X86/*.lean` and `Grammatik/Zielsatz/Kern/Spec.lean` all
   resolve (the numeric lane task files `../lanes/287.md`/`334.md` were
   removed after integration and are no longer linked); the two
   reserved friend files were deliberately NOT hyperlinked because they

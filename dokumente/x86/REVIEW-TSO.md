@@ -7,7 +7,7 @@ branch `muse/293` (base `f4958150`); file:line references are part of the
 claim. Audited documents: `dokumente/x86/TSO-GX-BRUECKE.md` (lane 274),
 `dokumente/x86/IMAGE-ABI.md` (lane 276), `dokumente/x86/IR-VALIDIERUNG.md`
 (lane 275). Canonical vocabularies: `Gabbro.Grammatik` (source model),
-`Gabbro.Grammatik.X86` (pilot target, `grammatik/Grammatik/X86/Typen.lean`).
+`Gabbro.Grammatik.X86` (pilot target, `grammatik/Grammatik/X86/Kern/Typen.lean`).
 Wave contract: `dokumente/x86/WELLE-A.md`. Lean-first plan:
 `dokumente/x86/LEAN-ZUERST.md`.*
 
@@ -16,8 +16,8 @@ Wave contract: `dokumente/x86/WELLE-A.md`. Lean-first plan:
 1. **The claimed reuse direction is correct as stated.** The bridge
    direction `x86 behaviours ⊆ W behaviours` (per-access forward
    simulation into W), followed by `schwach_ist_gX`
-   (`grammatik/Grammatik/Speichermodell/AtomarW.lean:279`), lands in the
-   existing `SchwachX` leg (`grammatik/Grammatik/Zielsatz/Spec.lean:2200`),
+   (`grammatik/Grammatik/Speichermodell/Atomar/AtomarW.lean:279`), lands in the
+   existing `SchwachX` leg (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean:2200`),
    whose conclusion is already `RufSchrittGX ... /\ σ agrees outside Tg`.
    Both theorems exist with the premises the bridge document claims (see
    §1). No premise is invented, no conclusion is weakened in prose.

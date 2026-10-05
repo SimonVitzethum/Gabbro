@@ -25,7 +25,7 @@
 //! The sentence stands at `saetze::SPERREN` as `sperren.freigabe`.
 //!
 //! Model correspondence (stated, not proved -- OFFEN O12): this refusal discharges the
-//! release half of `SperrWechselG` (`grammatik/Grammatik/Zielsatz/Spec.lean`: every
+//! release half of `SperrWechselG` (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`: every
 //! release leaves a memory where the lock invariant holds), with the acquire half as
 //! the frame premise. The bridge from the Rust verdict to the G term is open: the
 //! analysis runs on surface syntax, the leg on `RufMaschineG` memories.

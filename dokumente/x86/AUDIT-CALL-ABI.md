@@ -14,17 +14,17 @@ by this lane. Do not read a helper as claiming its explicitly OPEN bridge.*
 
 Audited (accepted, merged):
 
-- `grammatik/Grammatik/X86/Stapel.lean` (lane 309) — frame extents, 16-byte
+- `grammatik/Grammatik/X86/Kern/Stapel.lean` (lane 309) — frame extents, 16-byte
   call-boundary alignment, slot layout, argument/result carriage.
-- `grammatik/Grammatik/X86/AufrufOpt.lean` (lane 310) — ghost call-event
+- `grammatik/Grammatik/X86/Opt/Schleifen/AufrufOpt.lean` (lane 310) — ghost call-event
   reconstruction for inlining over the real source model.
-- `grammatik/Grammatik/X86/Ausfuehrung.lean` (lane 272) — `call32`/`ret` plus
+- `grammatik/Grammatik/X86/Kern/Ausfuehrung.lean` (lane 272) — `call32`/`ret` plus
   `push64`/`pop64` steps over canonical `Speicher`.
-- `grammatik/Grammatik/X86/Zugriffe.lean` (lane 317) — per-instruction
+- `grammatik/Grammatik/X86/Speicher/Zugriffe.lean` (lane 317) — per-instruction
   footprint extraction, including call/push/pop/ret rows.
-- `grammatik/Grammatik/X86/ControlFlow.lean` (lane 338) — `direktZiel`
+- `grammatik/Grammatik/X86/Befehle/Kontrolle/ControlFlow.lean` (lane 338) — `direktZiel`
   equation and `direktZielOk` admission.
-- `grammatik/Grammatik/X86/SpillPrivate.lean` (lane 343) — TSO-side private
+- `grammatik/Grammatik/X86/Opt/Register/SpillPrivate.lean` (lane 343) — TSO-side private
   spill producer half.
 - Consumers/read-only: `Typen.lean`, `Byteschritt.lean`, `Bild.lean`,
   `Syscall.lean`, `FremdRuf.lean`, `Folge.lean`, `IMAGE-ABI.md` secs. 5–8, 11.

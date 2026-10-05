@@ -6,8 +6,7 @@
   vacuity is total: production costKept holds even with DIVERGING counts,
   while the CerCo twin with the same counts FAILS.
 -/
-import Grammatik.Erhaltung
-
+import Grammatik.Kern.Semantik.Erhaltung
 open Gabbro.Grammatik
 
 /-- F1: production `costKept` holds with diverging counts (vacuous). -/

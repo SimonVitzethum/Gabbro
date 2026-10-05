@@ -347,7 +347,7 @@ def modul(pfad):
 
 # ---------------------------------------------------------------- the Lean measurements
 
-LEAN_MESSUNG = """import Grammatik.Schlusssatz
+LEAN_MESSUNG = """import Grammatik.Korrespondenz.Kette.Schlusssatz
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze
 open Gabbro.Grammatik.Parser.UebersetzeAllg Gabbro.Grammatik.Parser.UebersetzeAllg2
 

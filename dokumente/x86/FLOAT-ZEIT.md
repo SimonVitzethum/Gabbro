@@ -7,7 +7,7 @@ cost summaries and hardware-profile data with unproved bounds marked. No
 source-guarantee change, no new checker rule, no emitted-C change.*
 
 *Wave-A contract (dokumente/x86/WELLE-A.md): the canonical pilot vocabulary
-is `grammatik/Grammatik/X86/Typen.lean` (`Gabbro.Grammatik.X86`); it
+is `grammatik/Grammatik/X86/Kern/Typen.lean` (`Gabbro.Grammatik.X86`); it
 currently admits only integer/control `Befehl` constructors — **no float
 instruction is in the pilot**. Everything in §§4–5 below is therefore a
 proposal with explicit gaps, not a completed correspondence. The Rust
@@ -104,7 +104,7 @@ Emitter lowering today (`emit.rs`, `CFormenF.lean:8-22` header):
 
 ## 2. The IEEE model (what the target must match)
 
-`grammatik/Grammatik/Gleitkomma.lean` (kernel-computable; replaces opaque
+`grammatik/Grammatik/Bausteine/Gleitkomma/Gleitkomma.lean` (kernel-computable; replaces opaque
 `Float` since 2026-09-14):
 
 - Formats as data: `Format` (`p`, `emax`), `f32 = (24,127)`,

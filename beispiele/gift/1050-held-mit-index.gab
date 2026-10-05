@@ -35,7 +35,7 @@
 -- WHAT TO WRITE INSTEAD is not a different guard but a different shape: stripe
 -- the TABLES, not the locks -- `beispiele/146-sperrstreifen.gab`. Why that is the
 -- only honest answer here and not a matter of taste:
--- `grammatik/Grammatik/Sperrstreifen.lean` proves that `darf` is CONJUNCTIVE, so
+-- `grammatik/Grammatik/Nebenlaeufigkeit/Sperren/Sperrstreifen.lean` proves that `darf` is CONJUNCTIVE, so
 -- N locks over ONE carrier are held TOGETHER at every access and never chosen
 -- between (`zugriff_haelt_jeden_waechter`, `streifensperren_kosten_alle`), and
 -- `ziel_haelt_jeden_waechter` says the same over the conclusion of `gabbro_ziel`.

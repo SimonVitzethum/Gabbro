@@ -12,8 +12,7 @@
   premise and concludes environment preservation: the conclusion is the
   premise restricted to two worlds.
 -/
-import Grammatik.InterferenzAllgemein
-
+import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

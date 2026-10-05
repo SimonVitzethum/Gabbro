@@ -1,7 +1,7 @@
 //! **The direct-x86 pilot byte codec (wave B/C, Rust mirror).**
 //!
 //! Untrusted Rust producer mirroring the canonical
-//! `grammatik/Grammatik/X86/Codec.lean` exactly, per
+//! `grammatik/Grammatik/X86/Kern/Codec.lean` exactly, per
 //! `dokumente/x86/BYTE-PILOT.md`: one canonical encoding per `Befehl`
 //! constructor, and a decoder that parses bytes (never encode-equality)
 //! and refuses every non-canonical form the Lean decoder refuses.

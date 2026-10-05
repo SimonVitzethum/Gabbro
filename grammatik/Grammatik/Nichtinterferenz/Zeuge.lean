@@ -35,7 +35,6 @@
      run and `0` in the other.
 -/
 import Grammatik.Nichtinterferenz.Fluss
-
 namespace Gabbro.Grammatik
 
 namespace NIZeuge

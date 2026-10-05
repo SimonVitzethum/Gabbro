@@ -8,7 +8,7 @@
 -- lock orders NOTHING: `HALTER` is `relaxed`, so the emitter lowers the swap
 -- and the store with `memory_order_relaxed`, and the next holder may see the
 -- previous holder's `konto` write late or not at all (`mp_rlx_erlaubt`,
--- `grammatik/Grammatik/Speichermodell/Sicht.lean`). The weak-memory leg of
+-- `grammatik/Grammatik/Speichermodell/Maschine/Sicht.lean`). The weak-memory leg of
 -- the goal theorem reads every lock as a mutex (assumption (3) of
 -- `Zielsatz/Spec.lean`).
 --

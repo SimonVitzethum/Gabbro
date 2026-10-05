@@ -10,8 +10,7 @@
   (the writer's logic, C2) is assumed in each. This demo shows the
   definitional identity.
 -/
-import Grammatik.Terminierung
-
+import Grammatik.Kern.Semantik.Terminierung
 open Gabbro.Grammatik
 
 /-- F9: `traverse_fallend_terminiert` IS `mass_faellt_schranke`. -/

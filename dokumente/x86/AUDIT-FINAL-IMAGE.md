@@ -7,7 +7,7 @@ No Lean, Rust, checker, emitter, goal or ledger change is made or claimed here.
 Full source-to-final-byte validation remains OPEN.*
 
 Reviewed tree state: files as read in this clone (branch `muse/407`;
-`grammatik/Grammatik/X86/Bild.lean` 578 lines,
+`grammatik/Grammatik/X86/Kern/Bild.lean` 578 lines,
 `Relokation.lean` 669 lines, `Byteschritt.lean` 510 lines,
 `IMAGE-ABI.md` 675 lines). Line numbers below are as-read and may drift.
 No behaviour is invented: every claim cites a file/theorem/line.
@@ -53,19 +53,19 @@ concrete consumer gaps between them.
 
 ## 1. What was read (and what was deliberately not re-read)
 
-- `grammatik/Grammatik/X86/Bild.lean` (full, 578 lines).
-- `grammatik/Grammatik/X86/Relokation.lean` (full, 669 lines).
-- `grammatik/Grammatik/X86/Byteschritt.lean` (full, 510 lines).
+- `grammatik/Grammatik/X86/Kern/Bild.lean` (full, 578 lines).
+- `grammatik/Grammatik/X86/Laden/Relokation.lean` (full, 669 lines).
+- `grammatik/Grammatik/X86/Kern/Byteschritt.lean` (full, 510 lines).
 - `dokumente/x86/IMAGE-ABI.md` (full, 675 lines; the consumer contract).
-- `grammatik/Grammatik/X86/Typen.lean` (87 lines: `Byte`/`Wort`/`Adresse`,
+- `grammatik/Grammatik/X86/Kern/Typen.lean` (87 lines: `Byte`/`Wort`/`Adresse`,
   `Speicher` 41–45, `Befehl` pilot-14 53–68, `Decodiert` 70–73).
-- `grammatik/Grammatik/X86/Speicher.lean` header + `lesbar8`/`schreibbar8`/
+- `grammatik/Grammatik/X86/Speicher/Speicher.lean` header + `lesbar8`/`schreibbar8`/
   `read64` (lines 21–48) and `addrOff` group facts (lines 52–72).
-- `grammatik/Grammatik/X86/Codec.lean` header + `regCode`/`codeReg` (lines
+- `grammatik/Grammatik/X86/Kern/Codec.lean` header + `regCode`/`codeReg` (lines
   11–32) — only to confirm the decoder is the independent party both
   `Byteschritt` and IMAGE-ABI cite; no codec internals re-audited
   (lane 406 owns decode boundaries).
-- `grammatik/Grammatik/X86/OverlapRefusal.lean` lines 1–120 (checker shape:
+- `grammatik/Grammatik/X86/Validierung/OverlapRefusal.lean` lines 1–120 (checker shape:
   `zugriffOk` takes a `Region`, not an `Abschnitt`) — only for the
   section/region seam (F5 consumer side).
 - `grammatik/Grammatik.lean` lines 373–390 (all six names imported:

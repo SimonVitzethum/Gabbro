@@ -5,8 +5,8 @@ Status: adversarial implementation audit, not a proof and not a design change.
 No Lean module, checker, Spec, goal, Rust, emitter, Typen/execution/codec or
 friend path is touched here. Full source-to-final-byte validation remains OPEN.*
 
-Scope: the two accepted modules `grammatik/Grammatik/X86/Gleitprofil.lean`
-(lane 286, review 302) and `grammatik/Grammatik/X86/Vektor.lean` (lane 290,
+Scope: the two accepted modules `grammatik/Grammatik/X86/Kern/Gleitprofil.lean`
+(lane 286, review 302) and `grammatik/Grammatik/X86/Kern/Vektor.lean` (lane 290,
 review 306), read against the actual source float surface
 (`Typen.lean`, `Semantik.lean`, `Gleitkomma.lean`), the canonical pilot
 (`X86/Typen.lean`: 14 integer/control `Befehl` constructors, no float form),

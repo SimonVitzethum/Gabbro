@@ -18,8 +18,7 @@
       (two indices differ) uses only the `abschnittWache` values, not any
       discipline.
 -/
-import Grammatik.InterferenzAllgemein
-
+import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

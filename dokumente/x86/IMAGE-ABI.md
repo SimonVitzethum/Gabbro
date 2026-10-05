@@ -8,7 +8,7 @@ plus generated C drivers; the selected target is direct x86-64 machine bytes
 a future image backend must produce and what the Lean validator must check, so
 wave B can build against a frozen interface.*
 
-*Canonical ground: `grammatik/Grammatik/X86/Typen.lean` (`Gabbro.Grammatik.X86`).
+*Canonical ground: `grammatik/Grammatik/X86/Kern/Typen.lean` (`Gabbro.Grammatik.X86`).
 `Byte`/`Wort`/`Adresse` are `BitVec 8/64/64`. The 16 registers are in architectural
 encoding order. `Speicher` carries byte contents plus explicit
 read/write/execute permissions. `Befehl` is the pilot subset only; displacements

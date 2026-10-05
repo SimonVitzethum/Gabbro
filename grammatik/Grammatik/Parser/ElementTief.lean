@@ -8,7 +8,6 @@
   Probes live in `Parser/ElementTiefProben.lean`.
 -/
 import Grammatik.Parser.Element
-
 namespace Gabbro.Grammatik.Parser
 
 set_option maxRecDepth 100000

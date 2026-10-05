@@ -20,7 +20,6 @@
   need.
 -/
 import Grammatik.Nichtinterferenz.Grundlagen
-
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

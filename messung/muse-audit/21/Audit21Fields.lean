@@ -7,8 +7,7 @@
   fields. This file demonstrates the representation-change case for the
   W3/W4-bearing wrappers.
 -/
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 variable {D : Deklaration}

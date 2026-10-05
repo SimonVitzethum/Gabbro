@@ -11,7 +11,6 @@
              memories that agree on `T`.
 -/
 import Grammatik.Nichtinterferenz.SchrittTreu
-
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

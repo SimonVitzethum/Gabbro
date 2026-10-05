@@ -3,9 +3,8 @@
 -- `Brav`; in particular `b`'s memory need not come from any `exec` run.
 -- Pattern (e)/(d): the docstring says "per-thread Brav provenance from
 -- exec traces", but any Brav pair counts. Ziel.lean:218-232.
-import Grammatik.Ziel
-import Grammatik.Satz
-
+import Grammatik.Kern.Syntax.Ziel
+import Grammatik.Kern.Syntax.Satz
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

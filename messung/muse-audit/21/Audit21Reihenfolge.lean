@@ -11,8 +11,7 @@
   presentation, and the discharge itself still replaces the declaration-side
   premise `hungeteilt` with a new program-text premise `PCUnsharedSep`.
 -/
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 variable {D : Deklaration}

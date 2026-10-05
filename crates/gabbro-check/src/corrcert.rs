@@ -6,7 +6,7 @@
 //! Every emission lowers Gabbro evaluation sites to C sites. This module collects one
 //! row per lowered site — `(gabbro_site, c_site, form)` — into the certificate that
 //! travels beside the emitted C. It mirrors the Lean shapes in
-//! `grammatik/Grammatik/Erhaltung.lean` §1 and §6 (read-only reference, not imported):
+//! `grammatik/Grammatik/Kern/Semantik/Erhaltung.lean` §1 and §6 (read-only reference, not imported):
 //!
 //! | Lean | Here |
 //! |---|---|
@@ -396,9 +396,9 @@ pub fn pruefe(gabbro_sites: &[u32], cert: &CorrCert) -> CorrPruefung {
 // ---------------------------------------------------------------------------
 // Stage (b): the printed simulation certificate for 124 (lane 206).
 //
-// `sim124` (`grammatik/Grammatik/Schlusssatz124.lean`) is built by hand. This
+// `sim124` (`grammatik/Grammatik/Korrespondenz/Kette/Schlusssatz124.lean`) is built by hand. This
 // section prints its relation tables as data so the Lean checker
-// (`grammatik/Grammatik/SimPruef.lean`: `SimCert`, `pruefeSim`) can re-check
+// (`grammatik/Grammatik/Proben/SimPruef.lean`: `SimCert`, `pruefeSim`) can re-check
 // them: per C position the G residue (`gOfA`/`gOfB`), and per G residue
 // whether the thread holds the lock (`heldGA`/`heldGB`, `1` = holds `lL`).
 // The per-step G segments (`gBlatt`, `gNimm`, `gSetze`, `gGib`, `gPruefe`)
@@ -726,7 +726,7 @@ mod tests {
     /// The Lean checker file, read at compile time: the round trip below
     /// compares the printer with the literal that Lean's `pruefeSim`
     /// actually decides, not with a copy typed into this test.
-    const SIMPRUEF_LEAN: &str = include_str!("../../../grammatik/Grammatik/SimPruef.lean");
+    const SIMPRUEF_LEAN: &str = include_str!("../../../grammatik/Grammatik/Proben/SimPruef.lean");
 
     /// The body of `def cert124_printed : SimCert :=` in `SimPruef.lean`,
     /// from the opening `⟨` to the matching `⟩`.

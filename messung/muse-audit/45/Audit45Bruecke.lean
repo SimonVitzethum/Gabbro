@@ -6,8 +6,7 @@
 -- Demonstration: the same conclusion shape follows with the ensures check
 -- supplied ONLY as the conclusion's own first conjunct source, and the
 -- no-`nachbedingung` half needs no ensures premise at all.
-import Grammatik.VertragOrtB
-
+import Grammatik.Logik.Vertraege.VertragOrtB
 namespace GabbroAudit45C
 
 open Gabbro.Grammatik

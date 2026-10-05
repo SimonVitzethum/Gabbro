@@ -4,9 +4,8 @@
 -- :125 (`ziel_zwei_fehler`/`ziel`), :132 (`ziel_total`), :139
 -- (`ziel_deterministisch`), and the Absenkung leg `hLowering.begrenzt`
 -- inside `ziel_nutzer_last` (line 388).
-import Grammatik.Ziel
-import Grammatik.Satz
-
+import Grammatik.Kern.Syntax.Ziel
+import Grammatik.Kern.Syntax.Satz
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

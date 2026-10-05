@@ -245,7 +245,7 @@ __attribute__((noreturn)) void metall_ende(int code);
  * `gabbro runtime metal-include`) beside the image's <math.h>/<string.h>: `METALL_SPERRE`,
  * `_GETEILT`, `_MASKIERT`, `_MASKIERT_GETEILT`, `METALL_RCU` and the flag helpers
  * `metall_flaggen`/`metall_ia_aus`/`metall_ia_her` (templates `sperre.metall`,
- * `sperre.maskiert`, `rcu.metall`, Grammatik/SchablonenMetall.lean section 3). */
+ * `sperre.maskiert`, `rcu.metall`, Grammatik/Bausteine/Schablonen/SchablonenMetall.lean section 3). */
 #include <metall_sperren.h>
 
 #endif

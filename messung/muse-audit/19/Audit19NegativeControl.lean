@@ -5,8 +5,7 @@
 -- leg, `hspace` feeds `sampling_closes_frist`. This demo PASSES (no
 -- finding): it bounds demos D/H by showing what "load-bearing" means here
 -- and what it does not (semantic independence, shown in H).
-import Grammatik.Ziel
-
+import Grammatik.Kern.Syntax.Ziel
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

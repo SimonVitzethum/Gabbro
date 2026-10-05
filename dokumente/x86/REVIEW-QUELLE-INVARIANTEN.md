@@ -14,7 +14,7 @@ source side can justify today.*
 
 ## 0. Files actually read (anchors)
 
-Front end: `grammatik/Grammatik/Schlusssatz.lean` (`uebersetzeAllg` 58-71,
+Front end: `grammatik/Grammatik/Korrespondenz/Kette/Schlusssatz.lean` (`uebersetzeAllg` 58-71,
 `uebersetzeAllg_von_zeichen` 93-108, `Kette` 264-284, `schlusssatz` 365ff),
 `grammatik/Grammatik/Parser/Uebersetze.lean` (`USide` 52-71, `UEns` 75-86,
 `UStmt` 101-114, `URet` 118-123, `UTab` 127-135, `UFn` 182-194,
@@ -32,14 +32,14 @@ Bridge: `bruecke/Bruecke/Quelle.lean` (full, 238 lines),
 `bruecke/Bruecke/Nachbedingung.lean` (`wfU` 160, `post_iff` 164-204),
 `bruecke/Bruecke/Realisierung.lean` (`postP` 249-251, `Rang` 244-246,
 `stmt_statisch` 34-114).
-Goal: `grammatik/Grammatik/Zielsatz/Spec.lean` (`Einheit` 1509-1515,
+Goal: `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` (`Einheit` 1509-1515,
 `Einheit.ws` 1522, `AkzeptiertSpec` 1606-1617, `LogikPflicht` 1653-1656,
 `StartPflicht` 1665-1667, `NutzerPflicht` 1671-1673,
-NOT CLAIMED 1360-1462), `grammatik/Grammatik/SperreSem.lean`
-(`SperrInv.leer` 58), `grammatik/Grammatik/ZielOrtRahmenBeweis.lean`
-(`axWahr` 70), `grammatik/Grammatik/ZielOrtInv.lean` (`invGutS_leer` 273),
-`grammatik/Grammatik/KorrespondenzAllg.lean` (`korrOk` 558,
-`korrOk_fnCorr` 1910), `grammatik/Grammatik/Budget.lean` (`totalCost` 109).
+NOT CLAIMED 1360-1462), `grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperreSem.lean`
+(`SperrInv.leer` 58), `grammatik/Grammatik/Zielsatz/ZielOrt/Rahmen/ZielOrtRahmenBeweis.lean`
+(`axWahr` 70), `grammatik/Grammatik/Zielsatz/ZielOrt/Rahmen/ZielOrtInv.lean` (`invGutS_leer` 273),
+`grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` (`korrOk` 558,
+`korrOk_fnCorr` 1910), `grammatik/Grammatik/Kern/Semantik/Budget.lean` (`totalCost` 109).
 
 ## 1. QUELLBRUECKE §1 audit: accurate with the exceptions below
 

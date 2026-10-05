@@ -8,8 +8,7 @@
   the demo pins the shape: the `True` half proves itself and the whole
   is exactly `Nonempty`.
 -/
-import Grammatik.Zeugnis
-
+import Grammatik.Korrespondenz.Zeugnis.Zeugnis
 open Gabbro.Grammatik
 
 /-- F11: the conclusion is exactly `Nonempty` of the judgment. -/

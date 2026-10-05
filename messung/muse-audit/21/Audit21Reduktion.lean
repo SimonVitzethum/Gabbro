@@ -7,8 +7,7 @@
   the same premises. The HB disjunction is inherited, not derived: the proof
   term mentions no mover, no commutativity, no order construction of its own.
 -/
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 variable {D : Deklaration}

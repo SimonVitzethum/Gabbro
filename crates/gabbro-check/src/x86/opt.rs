@@ -1,8 +1,8 @@
 //! **The certified optimiser's Rust certificate PRODUCER (wave, optimiser rule library).**
 //!
-//! Mirrors `grammatik/Grammatik/X86/OptimizationRules.lean` (certificate
+//! Mirrors `grammatik/Grammatik/X86/Opt/Regeln/OptimizationRules.lean` (certificate
 //! schemas, `PassKind`, the validators and their soundness) and the probes of
-//! `grammatik/Grammatik/X86/OptimizationWitnesses.lean`. **Rust proposes, Lean
+//! `grammatik/Grammatik/X86/Opt/Regeln/OptimizationWitnesses.lean`. **Rust proposes, Lean
 //! disposes**: this module's job is to walk a source fragment, find places
 //! where a rule of `OptimizationRules.lean` applies, and emit a certificate
 //! (`ExprCert` / `StmtCert` / `BlockCert`, or a `(PassKind, BlockCert)`

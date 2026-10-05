@@ -33,7 +33,6 @@
   a program-counter label per thread and is outside this proof.
 -/
 import Grammatik.Nichtinterferenz.Invariante
-
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

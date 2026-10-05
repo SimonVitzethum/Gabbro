@@ -22,8 +22,7 @@
   Contrast: `kette_zwei_aus_lauf` genuinely DERIVES the equations by induction
   (worlds/run/trace by construction at each level) -- not challenged here.
 -/
-import Grammatik.KetteMehrfadenC
-
+import Grammatik.Korrespondenz.Kette.KetteMehrfadenC
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

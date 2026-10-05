@@ -6,7 +6,7 @@
 -- the top level of a body -- stood outside the model (LG004).
 --
 -- Since the C-free lane's Lean slice of that day, `Endblock.bindAxiom` carries a
--- gate call whose rest is an end block (`grammatik/Grammatik/Syntax.lean`), the
+-- gate call whose rest is an end block (`grammatik/Grammatik/Kern/Syntax/Syntax.lean`), the
 -- machine runs it with the rule `endeBindAxiom` (`RufMaschineG.lean`), and the
 -- goal statement names the two stops that can stand there, the same ones it names
 -- at `Block.bindAxiom` (`Zielsatz/Spec.lean`, `RestHalt`; header block

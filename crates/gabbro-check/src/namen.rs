@@ -235,7 +235,7 @@ fn erzeugter_name_zweimal(baum: &Programm, absagen: &mut Absagen) {
 /// `N042` next door refuses the NAME: `lock TOR` beside any `TOR_nimm` is one C
 /// symbol for two declarations. This rule reads the BODY where there is one to
 /// read -- a bodied `TOR_nimm`/`TOR_gib` (an `impl fn` with a block) is a LOCK
-/// IMPLEMENTATION, and `grammatik/Grammatik/SperrImpl.lean` says what it owes:
+/// IMPLEMENTATION, and `grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperrImpl.lean` says what it owes:
 /// every behaviour of the primitive is a behaviour of `sperrAbstrakt`
 /// (`LockImplVertrag`), demanded per lock as `LockGiltAn`.
 ///
@@ -389,7 +389,7 @@ fn sperrprimitiv_vertrag(baum: &Programm, absagen: &mut Absagen) {
         for (ort, _) in &fakten.fremd {
             absage = absage.mit_notiz(format!(
                 "it stores `{ort}` -- program memory outside the lock (`lockVertrag_atomar` \
-                 in `grammatik/Grammatik/SperrImpl.lean`: a contract-faithful step changes \
+                 in `grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperrImpl.lean`: a contract-faithful step changes \
                  only its own lock's holder entry)"
             ));
         }
@@ -412,7 +412,7 @@ fn sperrprimitiv_vertrag(baum: &Programm, absagen: &mut Absagen) {
         if !fakten.liest {
             absage = absage.mit_notiz(format!(
                 "it never reads a declared atomic -- {} (`lockVertrag_ordnung_{}` in \
-                 `grammatik/Grammatik/SperrImpl.lean`); a body that never consults the \
+                 `grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperrImpl.lean`); a body that never consults the \
                  holder state can show neither",
                 if nimmt {
                     "`nimm` fires only on a free lock"
@@ -513,7 +513,7 @@ fn sperrprimitiv_ordnung(primitive: &BTreeMap<String, Vec<PrimOrdnung>>, absagen
                         "a take must synchronise with the give before it -- the next holder \
                          has to see what the previous one wrote inside the section; a relaxed \
                          load orders nothing (`mp_rlx_erlaubt` in \
-                         `grammatik/Grammatik/Speichermodell/Sicht.lean`)",
+                         `grammatik/Grammatik/Speichermodell/Maschine/Sicht.lean`)",
                     )
                     .mit_notiz(
                         "declare the word the take spins or swaps on `acquire` (or `release`, \
@@ -540,7 +540,7 @@ fn sperrprimitiv_ordnung(primitive: &BTreeMap<String, Vec<PrimOrdnung>>, absagen
                     .mit_notiz(
                         "a give must publish the section's writes to the next holder; a \
                          relaxed store carries no view (`nachricht` in \
-                         `grammatik/Grammatik/Speichermodell/Sicht.lean`: a relaxed message \
+                         `grammatik/Grammatik/Speichermodell/Maschine/Sicht.lean`: a relaxed message \
                          knows only its own location)",
                     )
                     .mit_notiz(
@@ -5445,7 +5445,7 @@ fn bibliothek_pruefen(baum: &Programm, absagen: &mut Absagen) {
 /// library REQUIRES profile entries by reference (`requires profile { … }`),
 /// never by a copy of their text (`PLAN-ERWEITUNG.md` §0c). Consistency is a
 /// subset check against the one set -- decidable and cheap -- plus the two
-/// halves of `Profil.gut` (`grammatik/Grammatik/Profil.lean`): key agreement
+/// halves of `Profil.gut` (`grammatik/Grammatik/Kern/Syntax/Profil.lean`): key agreement
 /// (`einigung`, `N215`) and same-name content agreement
 /// (`namensGleichheit`, `N216`).
 ///
@@ -6282,7 +6282,7 @@ fn asm_versiegelt(baum: &Programm, absagen: &mut Absagen) {
         // `out { result }` lowers to `return result;` -- together not C. The checker
         // accepted it: `S009` (schleifen.rs) returns early on every non-`Block` body,
         // so an `asm` body was never held against its `-> never` declaration. The
-        // model side (`grammatik/Grammatik/Zielsatz/NeverAsm.lean`, `AxNeverGut`) says
+        // model side (`grammatik/Grammatik/Zielsatz/Eigenschaften/NeverAsm.lean`, `AxNeverGut`) says
         // the same from the other end: a `never` axiom delivers no out value.
         // `beispiele/36-asm.gab` (`schreiben -> u64` with `out`) is the
         // counter-direction and stays green; `beispiele/gift/984` is the probe.

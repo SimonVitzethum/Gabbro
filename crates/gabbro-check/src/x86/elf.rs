@@ -1,6 +1,6 @@
 //! **A minimal ELF64 container for the pipeline image (`pipeline::Bild`).**
 //!
-//! `grammatik/Grammatik/X86/Bild.lean` models an ELF-like image: exact file
+//! `grammatik/Grammatik/X86/Kern/Bild.lean` models an ELF-like image: exact file
 //! bytes, sections mapping a file range to a virtual range with read/write/
 //! execute permissions and an alignment, an entry vector and a fixed load
 //! mode. This file writes that image as a static ELF64 executable file

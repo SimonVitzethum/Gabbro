@@ -539,7 +539,7 @@ numbering, i.e. strip accordingly when applying to the real
 +
 +
 +def _locked_pin_checkpoint():
-     paths=['grammatik/Grammatik/CText104.lean','grammatik/Grammatik/CText108.lean','lanes/VORSPANN.md','DIRECT-COMPILER.md']
+     paths=['grammatik/Grammatik/CBackend/Semantik/CText104.lean','grammatik/Grammatik/CBackend/Semantik/CText108.lean','lanes/VORSPANN.md','DIRECT-COMPILER.md']
      changed=subprocess.run(['git','status','--porcelain'],cwd=ROOT,text=True,capture_output=True,check=True).stdout.splitlines()
      if any(row[3:] not in paths for row in changed):raise RuntimeError('unexpected pin refresh files')
 @@ -810,6 +967,12 @@

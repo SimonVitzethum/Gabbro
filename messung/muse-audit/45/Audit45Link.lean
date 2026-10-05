@@ -7,8 +7,7 @@
 -- the proof never extracts content from `h` beyond its rewrite form.
 -- Demonstration: from `w` alone (plus the world equation) the same equality
 -- `wahr? ... = true` follows; `h` contributes only the transport.
-import Grammatik.VertragOrtB
-
+import Grammatik.Logik.Vertraege.VertragOrtB
 namespace GabbroAudit45D
 
 open Gabbro.Grammatik

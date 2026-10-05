@@ -6,7 +6,7 @@
 -- writer's body, `spur` goes from 0 to 7, `nutz` is written, **and no lock was
 -- ever taken.** `N042` refuses the name -- one C symbol, two declarations.
 -- `N323` (`namen.rs::sperrprimitiv_vertrag`) reads the body against
--- `LockGiltAn` (`grammatik/Grammatik/SperrImpl.lean`): this one stores program
+-- `LockGiltAn` (`grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperrImpl.lean`): this one stores program
 -- memory (`spur`), never reads a declared atomic (no order to show:
 -- `lockVertrag_ordnung_nimm`) and never writes one (no hold time to show:
 -- `lockVertrag_halte_nimm`) -- all three legs fail on one body.

@@ -16,7 +16,6 @@
 -/
 
 import Grammatik.Parser.Lexer
-
 namespace Gabbro.Grammatik.Parser
 
 /-- The gate's own refusals: the four source-trust classes, plus whatever the

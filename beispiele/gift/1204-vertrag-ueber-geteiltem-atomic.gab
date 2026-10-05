@@ -4,7 +4,7 @@
 -- `loescher` stores 0 into it on another thread; `leser` reads it with no lock. The promise is
 -- a claim about a value another thread may change at any moment: `loescher` can run between
 -- `setzer`'s store and its return. `AkzeptiertX` (the Lean checker with the atomic rely,
--- `grammatik/Grammatik/Zielsatz/AtomarAkzeptiert.lean`) refuses exactly this at `fussWXB`
+-- `grammatik/Grammatik/Zielsatz/Atomar/AtomarAkzeptiert.lean`) refuses exactly this at `fussWXB`
 -- (`vertragsFreiB`, witness `vertrag_atomar_abgelehnt`); the Rust checker refuses it at `N484`
 -- (`fusswache2.rs::vertrag_atomar`). Before `N484` it passed with 0 errors: the footprint legs
 -- `N290`-`N294` never counted atomics as carriers.

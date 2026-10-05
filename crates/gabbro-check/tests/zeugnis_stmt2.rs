@@ -1,6 +1,6 @@
 //! **The census counts the origins of the nine second-batch constructors.**
 //!
-//! `grammatik/Grammatik/ZeugnisStmt2.lean` (lane 146, T1 part 2) certifies nine
+//! `grammatik/Grammatik/Korrespondenz/Zeugnis/ZeugnisStmt2.lean` (lane 146, T1 part 2) certifies nine
 //! more statement/block constructors: `assignDurch`, `callInd`, `onTag`,
 //! `onGrund`, `bindCallInd`, `gleit`, `gleitLit`, `gleitVon`, `gleitNarrow`.
 //! The [`zeugnis`](gabbro_check::zeugnis) census is a surface-form count, not a

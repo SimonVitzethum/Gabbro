@@ -1,6 +1,6 @@
 -- laufzeit/sperre.gab -- THE RUNTIME'S TICKET LOCK, WRITTEN IN GABBRO.
 --
--- The shape of `grammatik/Grammatik/CTicket.lean`: two counters (`next`,
+-- The shape of `grammatik/Grammatik/CBackend/Semantik/CTicket.lean`: two counters (`next`,
 -- `now`); `nimm` draws a ticket with a fetch-add (relaxed) then spins until
 -- the served ticket is its own (acquire); `gib` advances the served counter
 -- (release). The counters are 32-bit words that wrap: the Lean model

@@ -15,7 +15,7 @@
 --   * and no pass refuses either of them.
 --
 -- **The specification has no constructor for it either.** `Ty.ptr` in
--- `grammatik/Grammatik/Syntax.lean` carries `(t : Nat)` and `(rw : Bool)` -- a
+-- `grammatik/Grammatik/Kern/Syntax/Syntax.lean` carries `(t : Nat)` and `(rw : Bool)` -- a
 -- target and a write bit, and no mark.
 --
 -- The corpus asks for the form ZERO times (`grep -rn "own@" --include=*.gab` is

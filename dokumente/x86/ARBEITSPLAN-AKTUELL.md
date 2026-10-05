@@ -171,7 +171,7 @@ newly cleared/added holds are gating inputs, not assumptions).
 - **A — defined auxiliary-carry rows (1100 author / 1101 review): MERGED**
   (`071d4a37`, `657d178e`; `DIRECT-COMPILER.md` `x86-merged:1100`,
   `x86-merged:1101`; file
-  `grammatik/Grammatik/X86/AuxiliaryCarryRows.lean` in tree;
+  `grammatik/Grammatik/X86/Flags/AuxiliaryCarryRows.lean` in tree;
   `messung/muse/MUSE-REPORT-1100.md` / `-1101.md`). Covers the admitted
   720 load/store rows on the AF non-observability leg only; the report
   names the follow-up explicitly (ADD/SUB/NEG families need their own

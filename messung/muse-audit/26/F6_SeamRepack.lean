@@ -8,8 +8,7 @@
   This demo shows the isomorphism is definitional in both directions on
   the field level.
 -/
-import Grammatik.Geraet
-
+import Grammatik.Kern.Semantik.Geraet
 open Gabbro.Grammatik
 
 /-- F6: every pair is a window (the filed bridge). -/

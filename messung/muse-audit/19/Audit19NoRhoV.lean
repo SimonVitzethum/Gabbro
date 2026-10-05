@@ -6,8 +6,7 @@
 -- `requires` at entry ρ and `ensures` at return (v, ρ); `SpecTriple`
 -- (InterferenzAllgemein.lean:1078) never mentions ρ or v.
 -- Slice anchor: Ziel.lean:454 (`ziel_seqLogic_aus_spec`) consumes `hSpec`.
-import Grammatik.Ziel
-
+import Grammatik.Kern.Syntax.Ziel
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

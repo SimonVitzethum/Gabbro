@@ -5,7 +5,7 @@
 
 WHY THIS EXISTS
 ---------------
-`grammatik/Grammatik/CText104.lean` and `CText108.lean` pin the emitted C of a chain
+`grammatik/Grammatik/CBackend/Semantik/CText104.lean` and `CText108.lean` pin the emitted C of a chain
 program as Lean data and prove, by kernel reduction, that the Lean C parser reads it as
 the very unit the correspondence certificate elaborates to (assumption A2 of
 `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.4, discharged). That proof is about the
@@ -30,7 +30,7 @@ and, around the definition of `<name>`, the two block markers
 
 The text is the concatenation of the string literals in the block, in order. The text is
 a LIST OF LINES and not one literal for a measured reason (the kernel cost note in
-`Grammatik/CParser/CLexer.lean`); the guardian does not care how it is cut, only what the
+`Grammatik/CBackend/Parser/CLexer.lean`); the guardian does not care how it is cut, only what the
 bytes are.
 
 THE VERDICT, AND THE THREE EXITS

@@ -3,8 +3,7 @@
 
   No existing file is modified.
 -/
-import Grammatik.Marken
-
+import Grammatik.Kern.Syntax.Marken
 open Gabbro.Grammatik.Marken
 
 namespace Audit25.Marken

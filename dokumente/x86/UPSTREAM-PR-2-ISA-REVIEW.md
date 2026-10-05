@@ -33,7 +33,7 @@ none of it weakens a guarantee.
 
 Companion dependency verdict (PR 1, optimizer rules): same shape --
 technically sound and honestly scoped, but it writes the two
-friend-reserved paths (`grammatik/Grammatik/X86/OptimizationRules.lean`,
+friend-reserved paths (`grammatik/Grammatik/X86/Opt/Regeln/OptimizationRules.lean`,
 `OptimizationWitnesses.lean`, AGENTS.md §3). Its own commit message says
 it "re-applies the first friend delivery", i.e. it claims to BE the
 authorized friend content. Accepting that claim is an owner decision,
@@ -298,10 +298,10 @@ like this") reads as if they were one path -- scope wording fix (M4).
 - **I0. The pinned tree is RED: two exact-name collisions.** Reproduced
   on the exact snapshot (§9): full `./lean-bau` fails the root
   `Grammatik` target, first with
-  `import Grammatik.X86.ISASelect failed, environment already contains
+  `import Grammatik.X86.Befehle.ISA.ISASelect failed, environment already contains
   'Gabbro.Grammatik.X86.waehle' from Grammatik.X86.FeatureProfile`,
   then (after renaming that) with
-  `import Grammatik.X86.ISARelax failed, environment already contains
+  `import Grammatik.X86.Befehle.ISA.ISARelax failed, environment already contains
   'Gabbro.Grammatik.X86.layoutOk' from Grammatik.X86.TableLayout`.
   (a) `def waehle`: `FeatureProfile.lean:72` (pre-existing in the PR
   base: `waehle (hw : HwProfil) (b : BereitProfil)`) vs
@@ -381,7 +381,7 @@ snapshot trees + copied queued wrappers + warm clone-local
 
 1. **Exact snapshot: RED.** Full `./lean-bau` (PID 800662) ends
    `== exit 1; 3 error line(s) in the COMPLETE output` with the root
-   failure `Grammatik.lean: import Grammatik.X86.ISASelect failed,
+   failure `Grammatik.lean: import Grammatik.X86.Befehle.ISA.ISASelect failed,
    environment already contains 'Gabbro.Grammatik.X86.waehle' from
    Grammatik.X86.FeatureProfile` (full log
    `.tmp/fixture-pr2/leanbau.log`). The `.lake` copy cannot cause a

@@ -1,6 +1,6 @@
 //! **The working Rust compiler path that mirrors the proved Lean pipeline.**
 //!
-//! Rust mirror of `grammatik/Grammatik/X86/Pipeline.lean` (`PipeCfg`,
+//! Rust mirror of `grammatik/Grammatik/X86/Pipeline/Kern/Pipeline.lean` (`PipeCfg`,
 //! `senkTief`, `senkWertT`, `senkBedT`, `senkPruef`, `senkStmt`, `senkBlock`
 //! (including its `ite` case), `optimise`, `compileProg`, `compile`,
 //! `decodeAll`, `datenGetrennt`, `validate`),

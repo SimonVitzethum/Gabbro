@@ -7,9 +7,8 @@
 -- Also pattern (d): the §5 docstring books this leg as the "probe leg"
 -- discharging the deadline, while the file itself (Fristlauf.lean:388)
 -- says sampling alone never discharges `hspace`.
-import Grammatik.Ziel
-import Grammatik.Fristlauf
-
+import Grammatik.Kern.Syntax.Ziel
+import Grammatik.Kern.Semantik.Fristlauf
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

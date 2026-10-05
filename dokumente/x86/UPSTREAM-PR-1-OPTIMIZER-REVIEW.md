@@ -13,8 +13,8 @@ Four files (`PATCH.diff`, 2162 lines):
 
 | File | Change |
 |---|---|
-| `grammatik/Grammatik/X86/OptimizationRules.lean` (new, 1302 lines) | certificates, executable validators, generic soundness theorems |
-| `grammatik/Grammatik/X86/OptimizationWitnesses.lean` (new, 615 lines) | joint `_zeuge` witnesses, positive and poison probes |
+| `grammatik/Grammatik/X86/Opt/Regeln/OptimizationRules.lean` (new, 1302 lines) | certificates, executable validators, generic soundness theorems |
+| `grammatik/Grammatik/X86/Opt/Regeln/OptimizationWitnesses.lean` (new, 615 lines) | joint `_zeuge` witnesses, positive and poison probes |
 | `grammatik/Grammatik.lean` | two import lines only |
 | `grammatik/OPTIMIZER.md` | status updates plus new honest-scope section 13 |
 
@@ -30,7 +30,7 @@ request, which is the only basis on which the reservation is lifted.
 
 - Read both new files in full, plus the complete `OPTIMIZER.md` diff.
 - Checked the constant evaluator against the real operations in
-  `grammatik/Grammatik/Typen.lean` (`Zahl.add/sub/neg/mul/div/rem/sdiv/srem/
+  `grammatik/Grammatik/Kern/Syntax/Typen.lean` (`Zahl.add/sub/neg/mul/div/rem/sdiv/srem/
   band/bor/bxor/shl/shr/weiter`): every `constInt?` arm uses exactly the
   operation `eval` uses, including the `toNat` bitwise/shift treatment.
 - Checked the zero-divisor boundary: `Zahl.div` requires `1 <= l2` and

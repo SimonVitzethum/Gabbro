@@ -1,6 +1,5 @@
-import Grammatik.Zielsatz.Spec
+import Grammatik.Zielsatz.Kern.Spec
 import Grammatik.Parser.UebersetzeAllg2
-
 /-!
 # S4 (start part): `StartPflicht` for a unit whose starts owe nothing
 

@@ -9,7 +9,7 @@
 
 *Written 2026-09-13. This is step 1 of `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §3: the memory
 model is decided before any of the hard C forms gets a semantics. The Lean core is
-`grammatik/Grammatik/CSpeicher.lean`; it supersedes the memory of `CSemantik.lean`
+`grammatik/Grammatik/CBackend/Semantik/CSpeicher.lean`; it supersedes the memory of `CSemantik.lean`
 (lane 128) and carries lane 128's results over as a refinement.*
 
 ## 0. The decision in five lines

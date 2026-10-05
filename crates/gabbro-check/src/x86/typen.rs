@@ -1,7 +1,7 @@
 //! **The direct-x86 pilot vocabulary, as Rust data (wave A, lane 273).**
 //!
 //! A safe, dependency-free mirror of the canonical
-//! `grammatik/Grammatik/X86/Typen.lean` (`Gabbro.Grammatik.X86`): machine
+//! `grammatik/Grammatik/X86/Kern/Typen.lean` (`Gabbro.Grammatik.X86`): machine
 //! words, the 16 registers in architectural encoding order, widths,
 //! conditions, flags, sparse byte memory with explicit permissions, machine
 //! state, the pilot `Befehl` set and `Decodiert`.

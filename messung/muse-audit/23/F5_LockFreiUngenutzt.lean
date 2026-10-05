@@ -11,8 +11,7 @@
   hypothesis erased, plus the corollary that `interferenceFree_wo_frei`'s
   `hFreiVor`/`hFreiNach` are dead premises.
 -/
-import Grammatik.InterferenzAllgemein
-
+import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

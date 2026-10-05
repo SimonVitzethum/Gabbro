@@ -40,7 +40,7 @@
 -- WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each is the primitive's
 -- own work once it runs. **Waiting is not in it**: a `futex` wait or a `mmap` of
 -- 32 GiB of `PROT_NONE` is kernel work the program cannot count, and waiting
--- bounds are NOT CLAIMED (`grammatik/Grammatik/Zielsatz/Spec.lean`).
+-- bounds are NOT CLAIMED (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`).
 module linux::hosted {
 
 -- **The reservation reads as zero, and that is its own assumption** -- because

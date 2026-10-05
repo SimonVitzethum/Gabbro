@@ -9,7 +9,7 @@ Today an `arena A capacity lo .. hi of T` (`dokumente/SYNTAX.md` §9.1) is a sta
 object: the emitter writes `buf[hi]` beside `uint32_t used` (`crates/gabbro-check/src/emit.rs`,
 `fn arena`), `alloc` bumps `used`, `reset` stores zero. The reservation `lo` emits
 nothing; it is the checker's static count (`N212`). The Lean form is sugar over existing
-constructors (`grammatik/Grammatik/ArenaZucker.lean`): a table of `count = hi` slots
+constructors (`grammatik/Grammatik/Bausteine/Arena/ArenaZucker.lean`): a table of `count = hi` slots
 beside a `used` global; `lo` travels nowhere, on purpose.
 
 The missing piece: `hi` is two things at once — the storage the C touches AND the
@@ -330,7 +330,7 @@ _Static_assert(64 <= UINT32_MAX, "ceiling namable");
 
 ## 9. Lean model sketch (lane 244 builds exactly this)
 
-New file `grammatik/Grammatik/ArenaDyn.lean` (name fixed; contents sketched, lane 244
+New file `grammatik/Grammatik/Bausteine/Arena/ArenaDyn.lean` (name fixed; contents sketched, lane 244
 proves). It extends `ArenaZucker.lean`, it does not modify it:
 
 - `DynForm`: an `ArenaForm D` (table `count = M` — note: the Lean table spans the
@@ -376,7 +376,7 @@ proves). It extends `ArenaZucker.lean`, it does not modify it:
 ## 10. Builder lanes 240–244: exact inputs
 
 Common to all five: read this plan, `dokumente/SYNTAX.md` §9.1, `dokumente/OFFEN.md`
-O14, `crates/gabbro-check/src/arena.rs` (module head + `N210`–`N214`), `grammatik/Grammatik/ArenaZucker.lean`
+O14, `crates/gabbro-check/src/arena.rs` (module head + `N210`–`N214`), `grammatik/Grammatik/Bausteine/Arena/ArenaZucker.lean`
 (header + §4), `crates/gabbro-check/src/emit.rs` `fn arena` + the `Alloc`/`ResetArena`
 lowering arms, and `crates/gabbro-check/src/kosten.rs` (the `Alloc`/`ResetArena` arms).
 Do not touch MARKE_EMIT. English only. Report as `MUSE-REPORT-NN.md`. Number
@@ -392,7 +392,7 @@ not even in tests (§1.1).
 | 241 | checker obligations R-max/R-commit/R-grow-else/R-grow-const/R-grow-form (§4) | `arena.rs` full, `saetze.rs` sentence pattern of `N212`, `umgebung.rs` arena sigs | `(count, committed)` flow + the five rules with sentences in `saetze.rs` in the same commit; poison probe per rule + one positive probe (grow-covered allocs clean); corpus diff measured, zero unintended diffs | 240 (AST shape) |
 | 242 | emitter + runtime interface (§6) | `emit.rs` arena arms, `laufzeit/start.c` (A4 precedent), `pruefe-emission.sh` counters | descriptor + `grow`/`alloc`/`reset` lowerings; `laufzeit/reserve.c` + `laufzeit/grow.c` (hosted first); OS-token guardian (fails on `MAP_\|mmap\|mprotect\|sbrk\|VirtualAlloc` outside `laufzeit/`); one executed probe (grow, fill past old `hi`, read back); §8 fast-path tally input for 243 | 240 (AST), 241 (rule names for refusal arms) |
 | 243 | costs + budget proof (§§7–8) | `kosten.rs` full (`Alloc` arm, `sperrbloecke`/K002, callee-costs/K003), `gabbro kosten` output on 98/99 | `grow` cost arm (1 op + declared per-slot commit × const `n` + else); `K002`-falls probe for `grow` inside `locks`; §8 measurement table (static vs dynamic op tally, ghost-bytes row = 2 words + 0 proof bytes); reconcile-or-report row against `messung/SPEICHER-CENSUS.md` if present | 242 (lowered C to tally) |
-| 244 | Lean sketch + assumption texts (§9) | `ArenaZucker.lean` full, `Arena.lean` (`alloc_innerhalb_reserve`, `keine_fragmentierung`), `Zielsatz/Spec.lean` ONE-list header, `ReferenzB.lean` fixture | `grammatik/Grammatik/ArenaDyn.lean` with `DynForm`, the four theorems, the refinement statement + proofs; `_zeuge` companions on the reference fixture (non-degenerate, per the inhabitation rule); the two (d) assumption texts inserted in the `Spec.lean` header as a reviewed diff; `#print axioms` standard, `./lean-bau` green | 241 (rule names the lemmas mirror) |
+| 244 | Lean sketch + assumption texts (§9) | `ArenaZucker.lean` full, `Arena.lean` (`alloc_innerhalb_reserve`, `keine_fragmentierung`), `Zielsatz/Spec.lean` ONE-list header, `ReferenzB.lean` fixture | `grammatik/Grammatik/Bausteine/Arena/ArenaDyn.lean` with `DynForm`, the four theorems, the refinement statement + proofs; `_zeuge` companions on the reference fixture (non-degenerate, per the inhabitation rule); the two (d) assumption texts inserted in the `Spec.lean` header as a reviewed diff; `#print axioms` standard, `./lean-bau` green | 241 (rule names the lemmas mirror) |
 
 Order: 240 first; 241 after 240; 242 after 240 (+241 rule names); 243 after 242;
 244 after 241. 240 and the 244 proof sketch can start in parallel (244 works against

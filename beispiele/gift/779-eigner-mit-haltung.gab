@@ -7,7 +7,7 @@
 -- refuses the table by name. The holding is correct and the refusal stands
 -- beside it, because the unwritten part was never the holding but the FIRST
 -- mark: with no initial holder there is nothing to hold first
--- (`eigner_aus_leer_nie` in `grammatik/Grammatik/Typen.lean` §5). Measured
+-- (`eigner_aus_leer_nie` in `grammatik/Grammatik/Kern/Syntax/Typen.lean` §5). Measured
 -- against the unchanged checker: falls with `D026`, and nothing else.
 module gift::eigner_mit_haltung {
 

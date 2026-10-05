@@ -19,7 +19,7 @@ arithmetic and DIRECT-COMPILER.md workflow notes, which are historical).
 - Goal and concurrency: `gabbro_ziel` over GX with exactly
   `propext, Classical.choice, Quot.sound`; `PrueferX`/`AkzeptiertSpecX`,
   `NutzerPflichtA`, `schwach_ist_gX`, W/GX legs. Nothing in the goal moves.
-- Canonical pilot vocabulary `grammatik/Grammatik/X86/Typen.lean`
+- Canonical pilot vocabulary `grammatik/Grammatik/X86/Kern/Typen.lean`
   (`Gabbro.Grammatik.X86`): 16 registers in architectural encoding order,
   `Byte`/`Wort`/`Adresse` as `BitVec 8/64/64`, `Breite`, `Flags`
   (`af : Option Bool`), per-byte `Speicher` with R/W/X bits, `Zustand`,

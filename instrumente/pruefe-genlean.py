@@ -6,7 +6,7 @@
 WHY THIS EXISTS
 ---------------
 `gabbro lean-g` and `gabbro obligations --g` write Lean files, and some of them are
-COMMITTED and proved against: `grammatik/Grammatik/GenOblig104.lean` carries the exported
+COMMITTED and proved against: `grammatik/Grammatik/Korrespondenz/Korpus/GenOblig104.lean` carries the exported
 unit `gE` of `beispiele/104-referenz.gab` and the theorem `gP_gabbro`, and
 `Pflicht104.lean` proves the user's duty for exactly that unit (`GenOblig108`/`Pflicht108`
 the same for 108). The proof is about the COMMITTED TEXT. If the exporter changes and the

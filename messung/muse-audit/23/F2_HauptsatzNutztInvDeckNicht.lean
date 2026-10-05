@@ -12,8 +12,7 @@
   Consequence: nothing in the conclusion depends on lock discipline, the
   invariant context, or shared-carrier coverage.
 -/
-import Grammatik.InterferenzAllgemein
-
+import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

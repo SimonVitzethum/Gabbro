@@ -9,8 +9,7 @@
   (§§7-11) escapes this shape by going through `execStmt`; this probe pins
   the negative fact for the OLD fold so the two are not confused.
 -/
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 variable {D : Deklaration}

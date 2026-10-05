@@ -79,7 +79,7 @@ use std::collections::{BTreeMap, BTreeSet};
 ///
 /// The module computes the closed-world declaration (`eintritt`, `ruft`,
 /// `schreibtFn`, `geteilt`, `traeger`, `neben`) out of the bodies, following
-/// `grammatik/Grammatik/Extraktion.lean` shape for shape. It is wired here and
+/// `grammatik/Grammatik/Kern/Syntax/Extraktion.lean` shape for shape. It is wired here and
 /// not in `lib.rs` on purpose: the Bau answers the question of THIS pass, and
 /// a central registration would make it look like a thirteenth pass, which it
 /// is not -- it decides nothing, it only accompanies the verdict below.
@@ -538,7 +538,7 @@ pub fn pass_mit(
 
     // **H018 -- the driver handoff without a held guard across it** (2026-09-10).
     //
-    // `grammatik/Grammatik/Geraet.lean` proves race-freedom for a DMA window UNDER a
+    // `grammatik/Grammatik/Kern/Semantik/Geraet.lean` proves race-freedom for a DMA window UNDER a
     // guard premise (`GeraetWache` plus `haussen`): handoff (`gibt W`) before the device
     // write, take-back (`nimmt W`) after, and the CPU side ordered against the window
     // endpoints. The checker never asked for the driver half of that premise: a

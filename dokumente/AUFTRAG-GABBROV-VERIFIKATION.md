@@ -12,7 +12,7 @@ one closes the OTHER open end of the project's central claim.*
 The project's sentence: **a person who wants to verify a Gabbro program proves only their own
 logic plus named hardware assumptions.** Two pieces exist:
 
-- **The goal theorem** `gabbro_ziel` (`grammatik/Grammatik/Zielsatz/Spec.lean`): if the checker
+- **The goal theorem** `gabbro_ziel` (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`): if the checker
   accepts a unit `E` and **premise (b)** `NutzerPflicht E` / `NutzerPflichtA E` holds (the user's
   logic and start obligations, `Spec.lean:1590` ff., `:2078`), then every reachable machine
   satisfies the goal. Premise (b) is stated over **machine G** (`Programm D`, `execEndH`,
@@ -51,7 +51,7 @@ bruecke : uebersetzeAllg src = .ok ⟨u, P, fs0⟩              -- the Lean pars
 
 Two things make it strong:
 - **Everything is anchored at the source text in Lean.** The G program comes from the Lean parser
-  (`uebersetzeAllg`, `grammatik/Grammatik/Schlusssatz.lean`), not from `lean_g.rs`; the `Body`
+  (`uebersetzeAllg`, `grammatik/Grammatik/Korrespondenz/Kette/Schlusssatz.lean`), not from `lean_g.rs`; the `Body`
   program and the duty statements are computed from it by **Lean functions** (`zuBody`,
   `pflichten`). The Rust exporters are demoted to printers: their output must be *equal* to the
   Lean computation, checked per unit by `rfl`/`decide`, so a wrong Rust print is a failed check,
@@ -149,10 +149,10 @@ medium. Opus-class work; the per-unit checks and widening afterwards are schemat
 ## 7. Reading list
 
 1. This file; `messung/GABBROV-SERVER-REPORT.md` §4 (the gap, measured, part by part).
-2. `grammatik/Grammatik/Zielsatz/Spec.lean` — the header, then `LogikPflicht`, `NutzerPflicht`,
+2. `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` — the header, then `LogikPflicht`, `NutzerPflicht`,
    `NutzerPflichtA`; `SperreFuss.lean` `KoerperGutS`.
 3. `programmlogik/PLAN.md` §1–§3, `programmlogik/Gabbro/Body.lean`, one generated Duty file
    (`programmlogik/Duty/Duty01Tabelle.lean`) and one proof (`programmlogik/Proofs/`).
-4. `grammatik/Grammatik/Schlusssatz.lean` (`Kette`, `uebersetzeAllg`) and
+4. `grammatik/Grammatik/Korrespondenz/Kette/Schlusssatz.lean` (`Kette`, `uebersetzeAllg`) and
    `instrumente/zaehle-kette.py` (how an instance is counted — the model for the bridge counter).
 5. `crates/gabbro-check/src/lean.rs` (the printer to be checked) and `beweis.rs` (the gate).

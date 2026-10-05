@@ -8,7 +8,6 @@
   the function, and both sides are the same term.
 -/
 import Grammatik.Nichtinterferenz.Schritt
-
 namespace Gabbro.Grammatik
 
 variable {D : Deklaration}

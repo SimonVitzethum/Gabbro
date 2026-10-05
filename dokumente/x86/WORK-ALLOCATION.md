@@ -16,7 +16,7 @@ only named silicon, device and timing behaviour is a hardware assumption.
 - Goal and concurrency: `gabbro_ziel` over GX with exactly
   `propext, Classical.choice, Quot.sound`; `PrueferX`/`AkzeptiertSpecX`,
   `NutzerPflichtA`, `schwach_ist_gX`, W/GX legs. Nothing in the goal moves.
-- Canonical pilot vocabulary: `grammatik/Grammatik/X86/Typen.lean`
+- Canonical pilot vocabulary: `grammatik/Grammatik/X86/Kern/Typen.lean`
   (`Gabbro.Grammatik.X86`): 16 registers in architectural encoding order,
   `Byte`/`Wort`/`Adresse` as `BitVec 8/64/64`, `Breite`, `Flags`
   (`af : Option Bool`, undefined not false), per-byte `Speicher` with
@@ -51,8 +51,8 @@ only named silicon, device and timing behaviour is a hardware assumption.
   spec in `grammatik/OPTIMIZER.md`; reviewer 334). Lane 280 (Rust codec)
   stays stopped; the Rust mirror stays unwired.
 - Friend-reserved paths are OFF LIMITS to Muse authors:
-  `grammatik/Grammatik/X86/OptimizationRules.lean`,
-  `grammatik/Grammatik/X86/OptimizationWitnesses.lean`.
+  `grammatik/Grammatik/X86/Opt/Regeln/OptimizationRules.lean`,
+  `grammatik/Grammatik/X86/Opt/Regeln/OptimizationWitnesses.lean`.
   The optimiser spec is owner 331; friend stack/source-TSO/final-image
   pipelines already owned are not assigned below.
 
@@ -104,7 +104,7 @@ integration; authors never edit the same central file concurrently.
 
 ### A. Selected ISA (practical safe profile; costly extensions deferred)
 
-**A1 — author 335: `grammatik/Grammatik/X86/NarrowOps.lean`.**
+**A1 — author 335: `grammatik/Grammatik/X86/Befehle/Arithmetik/NarrowOps.lean`.**
 Dep: `Typen` (`Breite`, `Speicher`), `Wort` (masks/extension), `Speicher`
 (`lesbar8`), `Codec` (REX/modrm patterns).
 Target direction: 8/16/32-bit load/store/move definitions with
@@ -117,7 +117,7 @@ Policy: widths explicit at every op; unknown signedness keeps the loud
 review finding: 64-bit covering access IS cross-carrier overlap).
 Closes: narrow-carrier gap (review §3.1). Reviewer: 373.
 
-**A2 — author 336: `grammatik/Grammatik/X86/MulDiv.lean`.**
+**A2 — author 336: `grammatik/Grammatik/X86/Befehle/Arithmetik/MulDiv.lean`.**
 Dep: `Wort` (modular ops), `Ausfuehrung` (`schritt` shape), `FlagBeweis`.
 Target direction: 64-bit MUL/IMUL/DIV/IDIV with defined-when checks;
 division by zero and overflow trap to the `hardware` stop class the source
@@ -127,7 +127,7 @@ Refusal: divisor-zero image refused by the decided guard, never folded away.
 Policy: trapping ops are never "pure" for DCE/motion. Profile: ESSENTIAL
 (emitter `Binaer` mul/div). Closes: integer-family gap. Reviewer: 374.
 
-**A3 — author 337: `grammatik/Grammatik/X86/ShiftLogic.lean`.**
+**A3 — author 337: `grammatik/Grammatik/X86/Befehle/Arithmetik/ShiftLogic.lean`.**
 Dep: `Wort`, `FlagBeweis` (carry/overflow characterisation).
 Target direction: SHL/SHR/SAR/AND/OR/NOT/NEG with count-masking
 (count mod 64) and per-op flag facts; signed-division-vs-shift mismatch
@@ -137,7 +137,7 @@ Refusal: oversized-count behaviour pinned; `x-x -> 0` on floats refused.
 Policy: no strength reduction without range evidence (consumer: existing
 `StaerkeReduktion`). Profile: ESSENTIAL. Closes: shift/logic gap. Reviewer: 375.
 
-**A4 — author 338: `grammatik/Grammatik/X86/ControlFlow.lean`.**
+**A4 — author 338: `grammatik/Grammatik/X86/Befehle/Kontrolle/ControlFlow.lean`.**
 Dep: `Codec`, `Byteschritt` (`fetchDekodiert`), `Bild` (`kanonischBereich`).
 Target direction: SETcc/CMOVcc/LEA definitions; direct-target theorem
 `target = virtual_next_RIP + sign_extend(disp)` with the target proved a
@@ -149,7 +149,7 @@ Policy: length from decoding only, never an emitter annotation.
 Profile: ESSENTIAL (branches, address modes). Closes: IMAGE-ABI §6 direct
 half; jump-table certificates stay with image work. Reviewer: 376.
 
-**A5 — author 339: `grammatik/Grammatik/X86/LockedOps.lean`.**
+**A5 — author 339: `grammatik/Grammatik/X86/TSO/Verriegelt/LockedOps.lean`.**
 Dep: `TSO` (`TSOZustand`, `TSOSchritt`), `Ausfuehrung`, `Zugriffe`.
 Target direction: LOCK-prefixed single-op RMW (XADD shape) and MFENCE as
 machine definitions with per-event access records and full-barrier order
@@ -160,7 +160,7 @@ Refusal: split load-then-store without LOCK never satisfies the `rmw` shape.
 Policy: failure-as-stutter is safety-only; cost needs shape-(i) bound.
 Profile: ESSENTIAL (every `exchange` lowering needs it). Reviewer: 377.
 
-**A6 — author 340: `grammatik/Grammatik/X86/ScalarFloat.lean`.**
+**A6 — author 340: `grammatik/Grammatik/X86/Befehle/Gleitkomma/ScalarFloat.lean`.**
 Dep: `Gleitprofil` (`mxcsrGueltig`, `muster64`/`bites64`), `Ausfuehrung`.
 Target direction: scalar SSE2 DOUBLE forms only
 (ADDSD/SUBSD/MULSD/DIVSD/UCOMISD/CVTSI2SD/CVTTSD2SI+wrapper/MOVSD) under a
@@ -175,7 +175,7 @@ Closes: FLOAT-ZEIT §4 f64 halves. Reviewer: 378.
 
 ### B. Memory and concurrency (per-access, no block atomicity)
 
-**B1 — author 341: `grammatik/Grammatik/X86/AccessList.lean`.**
+**B1 — author 341: `grammatik/Grammatik/X86/Speicher/AccessList.lean`.**
 Dep: `RennfreiVoll` (`zugriffe`/`ereignisse`), `RMW`
 (`exchange_liest_schreibt` pattern), all ~70 `RufSchrittG` rules.
 Target direction: SINGLE-owner `accessList(rule)` function
@@ -188,7 +188,7 @@ Refusal: a rule with an uncovered access shape is an explicit constructor,
 never a silent drop. Policy: incompleteness = unsoundness, recorded OPEN.
 Closes: O-access/D-access. Reviewer: 379.
 
-**B2 — author 342: `grammatik/Grammatik/X86/OverlapRefusal.lean`.**
+**B2 — author 342: `grammatik/Grammatik/X86/Validierung/OverlapRefusal.lean`.**
 Dep: `Zugriffe` (`Zugriff`), `Regionen` (`Region`/`Vorrat`),
 `Bild` (`Abschnitt`), `Speicher` (little-endian coefficients).
 Target direction: decided alignment/containment/non-overlap checker over
@@ -200,7 +200,7 @@ Refusal: unaligned/cross-carrier shared access refused (counterexample-C
 shape as negative probe). Policy: conservative `unknown-overlap => refuse`.
 Closes: O-align decidable half. Reviewer: 380.
 
-**B3 — author 343: `grammatik/Grammatik/X86/SpillPrivate.lean`.**
+**B3 — author 343: `grammatik/Grammatik/X86/Opt/Register/SpillPrivate.lean`.**
 Dep: `TSO` (per-access relation), `Stapel` (`Rahmen`/`Belegung`),
 `SpeicherKommutation`.
 Target direction: TSO-side freshness => disjointness => commutation lemma
@@ -212,7 +212,7 @@ Refusal: address-taken or named-by-extent slot never fresh.
 Policy: spills are ordinary validated accesses, never invisible.
 Closes: O-spill producer half. Reviewer: 381.
 
-**B4 — author 344: `grammatik/Grammatik/X86/FenceDrain.lean`.**
+**B4 — author 344: `grammatik/Grammatik/X86/TSO/Kern/FenceDrain.lean`.**
 Dep: `TSO` (`zaunBereit`, `flushKern`, `fifo_reihenfolge`).
 Target direction: local-drain definitions and per-core FIFO facts with the
 explicit NON-theorem: a local fence does not drain other cores' buffers
@@ -225,7 +225,7 @@ Closes: O-irq/O-spawn local half only. Reviewer: 382.
 
 ### C. Source, image and cost (validator-facing, SCFG-gated where marked)
 
-**C1 — author 345: `grammatik/Grammatik/X86/TableLayout.lean`.**
+**C1 — author 345: `grammatik/Grammatik/X86/Speicher/TableLayout.lean`.**
 Dep: `declOf`/`fieldRangeO`/`typAt` (Parser front end), `Bild`
 (`Abschnitt`), `Regionen`.
 Target direction: computed table/global layout (extents, widths,
@@ -236,7 +236,7 @@ Refusal: overlapping extents or unaligned `aligned N` placement refused.
 Policy: layout facts are Lean theorems or refusals (no C `sizeof` facts).
 Closes: QUELLBRUECKE §3.1 tables. Reviewer: 383.
 
-**C2 — author 346: `grammatik/Grammatik/X86/GateStub.lean`.**
+**C2 — author 346: `grammatik/Grammatik/X86/Befehle/Kontrolle/GateStub.lean`.**
 Dep: `Bild`, `Codec`, gate declaration shape (N063-N066).
 Target direction: decided gate-declaration checks (distinct in-registers,
 out-register unclobbered, arity, clobbers incl. rcx/r11, total `errors`
@@ -247,7 +247,7 @@ Refusal: region answer without `or R`; stack gate without trampoline
 registers; forged int->ptr at any site (M140). Policy: declaration alone
 admits nothing. Closes: IMAGE-ABI §7 caller half. Reviewer: 384.
 
-**C3 — author 347: `grammatik/Grammatik/X86/CostSummary.lean`.**
+**C3 — author 347: `grammatik/Grammatik/X86/Kosten/CostSummary.lean`.**
 Dep: `Budget.lean` (`Op.cost`, `totalCost`), `KostenG` (`kostenTiefF`).
 Target direction: cost-summary SCHEMA (`kostenSummeOk` Bool,
 `expandBound`, `targetWork` skeleton, per-site attempt bounds, waiting
@@ -260,7 +260,7 @@ without source correspondence refused. Policy: source steps, machine work
 and cycles never conflated. Profile: ESSENTIAL schema; cycle bounds
 DEFERRED. Closes: FLOAT-ZEIT §8.1 framework. Reviewer: 385.
 
-**C4 — author 348: `grammatik/Grammatik/X86/EntryState.lean`.**
+**C4 — author 348: `grammatik/Grammatik/X86/Laden/EntryState.lean`.**
 Dep: `Bild` (`Bild`/`Modus`/entries), `Stapel` (`ausgerichtet16`).
 Target direction: checked entry predicates (hosted main, nolibc
 `anfang`/`ende` handoff, module init/exit, bare-metal `_start`, thread
@@ -272,7 +272,7 @@ promised; non-entry external transfer. Policy: manifest row without
 validated save/restore bytes admits nothing. Closes: IMAGE-ABI §5
 predicates. Reviewer: 386.
 
-**C5 — author 349: `grammatik/Grammatik/X86/ValidatorSkeleton.lean`.**
+**C5 — author 349: `grammatik/Grammatik/X86/Validierung/ValidatorSkeleton.lean`.**
 Dep: `Bild` (`groesseOk`/`dateiOk`/`virtuellOk`), `Codec`,
 `Byteschritt` (`byteschritt`), C1/C2 outputs.
 Target direction: decided `valX86` SKELETON (section mapping, decode
@@ -287,7 +287,7 @@ Policy: untrusted backend output re-read as bytes and re-validated.
 Closes: validator framework; the soundness proof WAITS on IR+TSO+decoder
 coupling. Reviewer: 387.
 
-**C6 — author 350: `grammatik/Grammatik/X86/AtomicPayload.lean`.**
+**C6 — author 350: `grammatik/Grammatik/X86/TSO/Kern/AtomicPayload.lean`.**
 Dep: `Spec` (`AkzeptiertSpecX`/`FussSX`/`GeteiltV`/`GeteiltA`),
 `AtomarSem` (`HavocA`), bridge `nutzerA_aus_quelle`.
 Target direction: decided footprint-membership checks for admitted shared

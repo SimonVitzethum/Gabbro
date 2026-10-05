@@ -1189,7 +1189,7 @@ fn fremde_lesung(stmts: &[Stmt], at: &str, l: &Torlage) -> Option<(String, Span)
 
 /// **V012 -- the unguarded user-copy handoff.**
 ///
-/// The Adressraum shape (`Grammatik/Adressraum.lean`): a validated copy is a region, a
+/// The Adressraum shape (`Grammatik/Kern/Semantik/Adressraum.lean`): a validated copy is a region, a
 /// copy, and the check over the SAME triple -- inseparable by shape, because check and
 /// copy name the same region, address, and length (`GepruefteKopie`). A check over one
 /// triple paired with a copy over another is not of that shape; it is the TOCTOU

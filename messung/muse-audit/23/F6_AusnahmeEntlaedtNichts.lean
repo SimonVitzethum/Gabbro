@@ -11,8 +11,7 @@
   stuende" admits this: the conclusion is `hA` repackaged, not a discharge
   of an obligation.
 -/
-import Grammatik.InterferenzAllgemein
-
+import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

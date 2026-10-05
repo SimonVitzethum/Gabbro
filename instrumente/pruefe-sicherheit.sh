@@ -193,7 +193,7 @@ if [ "$N_FUNDE" -gt "$RATCHET_FUNDE" ]; then
 fi
 
 # --- 6. The one named axiom outside the safety theorem ---------------------------
-# `grammatik/Grammatik/Geraet.lean` carries exactly one `axiom` line: the DMA
+# `grammatik/Grammatik/Kern/Semantik/Geraet.lean` carries exactly one `axiom` line: the DMA
 # content assumption `dma_inhalt`, named per window, never derived (2026-09-10,
 # R3 of the design review). This step teaches the ratchet that line: a SECOND
 # axiom anywhere in the grammar is a RED, and the fix is a sentence beside

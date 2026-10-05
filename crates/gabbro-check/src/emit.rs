@@ -8350,7 +8350,7 @@ fn funktion(
                 // `ptr<normal, own> u32` emit the same C to the byte, book the same
                 // obligations, and draw the same refusals: none.
                 //
-                // **`Ty.ptr` in `grammatik/Grammatik/Syntax.lean` carries `(t : Nat)` and
+                // **`Ty.ptr` in `grammatik/Grammatik/Kern/Syntax/Syntax.lean` carries `(t : Nat)` and
                 // `(rw : Bool)` and nothing else**, so the mark has no constructor in the
                 // specification either. It is a form the grammar admits and no side of the
                 // compiler answers for -- a promise nobody keeps, which looks kept.
@@ -9466,7 +9466,7 @@ fn syscall_stumpf(
         Ganz { ctyp: String, unter: Option<i128>, ober: Option<i128> },
         /// `-> ptr<normal, …> u8 or R`: the gate hands over a REGION (Simon's decision 1,
         /// 2026-09-30) -- the kernel's word is its base address. The proved template
-        /// `tor.region` (`Grammatik/SchablonenOhneLibc.lean` §4): a listed `-errno` is its
+        /// `tor.region` (`Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean` §4): a listed `-errno` is its
         /// reason, a word at or below zero or past the `-4095` fence is the hardware stop, and
         /// every other word is the address -- never a number the program could compute (no
         /// int->ptr conversion enters the language; only this stub turns a word into one).
@@ -15390,7 +15390,7 @@ void gabbro_arena_release(gabbro_arena_desc *d, uint32_t i);\n\
 /// binds nothing still gets its zeroes. What the binding is handed is a REGION: the whole pages
 /// inside the range, as a pointer and a length -- the helper, not the binding, decides where a
 /// page begins (`gabbro_os_seiten_zurueck(stelle, bytes)`, a Gabbro function under `requires
-/// bytes <= lenof(stelle)`). **The arithmetic is proved** (`Grammatik/SchablonenArena.lean` §2,
+/// bytes <= lenof(stelle)`). **The arithmetic is proved** (`Grammatik/Bausteine/Schablonen/SchablonenArena.lean` §2,
 /// `leeren_teilung`): the edge loops and the returned pages cover the range exactly, the pages
 /// lie inside it and start on a page. *A binding that answers 0 has promised the pages read as
 /// zero afterwards* (the assumption of its gate); any other answer clears them by hand.

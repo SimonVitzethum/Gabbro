@@ -49,7 +49,7 @@ MUTATIONS = [
 ]
 
 
-I104 = BR / 'Bruecke/Instanz104.lean'
+I104 = BR / 'Bruecke/Instanzen/Instanz104.lean'
 LAUF = BR / 'Bruecke/Lauf.lean'
 
 # S3: defects the CLOSED-bridge count must not pass (`zaehle-bruecke.py`'s `geschlossen`):

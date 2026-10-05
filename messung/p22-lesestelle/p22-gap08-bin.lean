@@ -7,8 +7,7 @@
   Witness: the tree node for the token `0b101` (value 5).
   Check with: LEAN_PATH=grammatik/.lake/build/lib/lean lean <this file>.
 -/
-import Grammatik.Syntax
-
+import Grammatik.Kern.Syntax.Syntax
 open Gabbro.Grammatik
 
 variable (D : Deklaration)

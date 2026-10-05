@@ -1338,7 +1338,7 @@ fn grundname_im_praedikat(
 ///
 /// So the form is refused where it is written. **The way out is not a rule, it is a
 /// shape:** stripe the TABLES, not the locks -- N tables with one lock each, picked by a
-/// dispatch whose branches name CONSTANT locks. `Grammatik/Sperrstreifen.lean` proves why
+/// dispatch whose branches name CONSTANT locks. `Grammatik/Nebenlaeufigkeit/Sperren/Sperrstreifen.lean` proves why
 /// that is the only honest answer at this granularity: `darf` (`Syntax.lean`) is
 /// CONJUNCTIVE, so N locks over ONE carrier are held TOGETHER at every access, never
 /// chosen between (`zugriff_haelt_jeden_waechter`, `streifensperren_kosten_alle`).

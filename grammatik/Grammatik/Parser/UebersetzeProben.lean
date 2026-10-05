@@ -16,8 +16,7 @@
   the range of the result computed like `Expr.add`/`sub`/`mul` carry it; the built-in widths
   `uN`/`iN`; an omitted `effects` (derived by the checker) read as the empty set.
 -/
-import Grammatik.Schlusssatz
-
+import Grammatik.Korrespondenz.Kette.Schlusssatz
 namespace Gabbro.Grammatik.Parser.UebersetzeProben
 
 open Gabbro.Grammatik Gabbro.Grammatik.Parser Gabbro.Grammatik.Parser.Uebersetze

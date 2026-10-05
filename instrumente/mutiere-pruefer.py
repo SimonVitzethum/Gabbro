@@ -4502,7 +4502,7 @@ MUTATIONEN = [
     ),
     # -- emit.rs: the five rules of the lane "grammar into the emitter" (2026-09-15) -------
     #
-    # All five were found by walking the constructors of `grammatik/Grammatik/Syntax.lean`
+    # All five were found by walking the constructors of `grammatik/Grammatik/Kern/Syntax/Syntax.lean`
     # one by one and COMPILING what came out. Three of them were silently wrong lowerings
     # (checker green, `gabbro emit` returning 0, `cc -Werror` refusing at both levels), one
     # closed a form no pass reads, and one made a written promise true.

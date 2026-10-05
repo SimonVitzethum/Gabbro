@@ -1,7 +1,7 @@
 //! **`gabbro link` -- separately compiled units, and whether they make ONE program.**
 //!
 //! Opus agent E, 2026-09-26. The Lean side is `GabbroZielVerbund`
-//! (`grammatik/Grammatik/Zielsatz/Spec.lean`, proved as `gabbro_ziel_verbund` in
+//! (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, proved as `gabbro_ziel_verbund` in
 //! `Zielsatz/Verbund.lean`): two units over ONE link declaration, each accepted ALONE, the
 //! link check, the SAME hardware assumptions -- then every leg of the goal holds on the linked
 //! program. This module is the checker's half of that statement's premises that the per-unit

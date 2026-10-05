@@ -3,7 +3,7 @@
 *Owner: lane 277. Scope: audit only — no model, goal, parser, checker,
 emitter, or ledger edits. The coordinator integrates central imports and
 status. Companion wave contract: `dokumente/x86/WELLE-A.md`. Canonical
-machine vocabulary: `grammatik/Grammatik/X86/Typen.lean`
+machine vocabulary: `grammatik/Grammatik/X86/Kern/Typen.lean`
 (`Gabbro.Grammatik.X86`). Active plan:
 `dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md` §§0–5; §§6–7 are the dated
 C-backend record and are not evidence for x86 bytes.*
@@ -36,7 +36,7 @@ against the computed form; it never enters a premise.
 ### 1.1 Front end: text to program
 
 - `uebersetzeAllg : String → Except String (Σ u : UProg, Programm
-  (declOf u) × List (declOf u).Fn)` (`grammatik/Grammatik/Schlusssatz.lean`):
+  (declOf u) × List (declOf u).Fn)` (`grammatik/Grammatik/Korrespondenz/Kette/Schlusssatz.lean`):
   lex (`lex` / `lexL`), deep parse (`parseTopTief`), preprocessing
   (`pre108`: `concurrent` items stripped, bare `u32` as its full range),
   elaboration (`elabU`), generic lowering (`lowerAllg`).
@@ -64,7 +64,7 @@ against the computed form; it never enters a premise.
 
 ### 1.2 The unit (goal-theorem shape, computed from the source)
 
-`Zielsatz.Einheit (D : Deklaration)` (`grammatik/Grammatik/Zielsatz/Spec.lean`):
+`Zielsatz.Einheit (D : Deklaration)` (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`):
 `P : Programm D`, `S : SperrInv D`, `Q : AxEns D`, `starts : List (Σ w :
 D.Fn, Env D (D.params w))`, `sp0 : Speicher D`, `gestartet` (default `[]`).
 `Einheit.ws` is `starts ++ gestartet ++ gestartet` mapped to functions.
@@ -204,7 +204,7 @@ Bridge theorems (`bruecke/Bruecke/Quelle.lean`, over
 
 - `EmitLay (D)` (table/global layout), `KCert (D)` (the generic
   certificate `gabbro corr-lean` prints), `korrOk EL fnNr zert P fs :
-  Bool` (`grammatik/Grammatik/KorrespondenzAllg.lean`) with soundness
+  Bool` (`grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean`) with soundness
   `korrOk_fnCorr` at every call depth. Covered C forms: slot stores
   through a pointer or at a named table, local stores, direct calls with
   arguments, `let`, `(void)x;`, `return` of an expression or nothing,

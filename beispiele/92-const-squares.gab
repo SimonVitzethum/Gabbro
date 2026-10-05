@@ -3,7 +3,7 @@
 -- A `const fn` over a bounded parameter (`effects { pure }`, single return)
 -- applied element-wise: the checker folds all 64 calls at translation time
 -- (`konstanten.rs`), the emitter writes one `static const` C array, and the
--- Lean certificate (`grammatik/Grammatik/Konstanten.lean`, `squares64`)
+-- Lean certificate (`grammatik/Grammatik/Kern/Syntax/Konstanten.lean`, `squares64`)
 -- closes the same 64 values by `decide`. Entry 63 is 3969.
 
 module beispiel::const_squares {

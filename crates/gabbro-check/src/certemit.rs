@@ -2,7 +2,7 @@
 //!
 //! This module prints derivation certificates per checked expression: a `CertExpr`
 //! term plus the claimed range plus the side conditions, mirroring the shapes of
-//! `CertExpr` and `certRange` in `grammatik/Grammatik/Zeugnis.lean` (read-only
+//! `CertExpr` and `certRange` in `grammatik/Grammatik/Korrespondenz/Zeugnis/Zeugnis.lean` (read-only
 //! reference; the Lean side is never edited from here).
 //!
 //! ## What the emitter covers

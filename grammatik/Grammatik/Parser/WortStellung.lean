@@ -15,7 +15,6 @@
   refusal to it.
 -/
 import Grammatik.Parser.Ausdruck
-
 namespace Gabbro.Grammatik.Parser
 
 /-- The seventeen reserved words: the `res` column of `kw.rs`, in

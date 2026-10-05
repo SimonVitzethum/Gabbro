@@ -32,7 +32,7 @@
 //!   match over it could. (Measured 2026-09-21, gcc 16.2.1: `switch` over a `bool`
 //!   VARIABLE draws no `-Wswitch-bool`, so this is a choice, not a `cc` backstop.)
 //!
-//! The Lean side is `grammatik/Grammatik/CFormMatch.lean`: `erschoepfend m lo hi` is the
+//! The Lean side is `grammatik/Grammatik/CBackend/Formen/CFormMatch.lean`: `erschoepfend m lo hi` is the
 //! predicate `N411` decides with `lo`/`hi` = M1's range, by an interval sweep instead of the
 //! value enumeration of `erschoepfendB` (the two agree on every input; the sweep does not
 //! enumerate `2^64` values). The correspondence is by reading, not by a proof over this

@@ -8,7 +8,7 @@
  * bare x86_64 machine: no libc, no kernel, no loader beyond Multiboot1.
  *
  * WHAT STANDS HERE, AND WHAT EACH PIECE RESTS ON (every item is a named
- * assumption in `grammatik/Grammatik/Zielsatz/Spec.lean`, hunk "BARE-METAL
+ * assumption in `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`, hunk "BARE-METAL
  * RUNTIME", and in OFFEN O30):
  *
  *   serial      16550 at port 0x3F8, polled (LSR bit 5). The report channel.
@@ -212,7 +212,7 @@ __attribute__((noreturn)) void metall_ausnahme(uint64_t vektor, uint64_t fehler,
 }
 
 /* -- The IDT: GENERATED text since the C-free lane's C3 slice 3 (2026-10-05) -- --------
- * `<unit>.metall.idt.c` (template `idt.metall`, Grammatik/SchablonenMetallIdt.lean):
+ * `<unit>.metall.idt.c` (template `idt.metall`, Grammatik/Bausteine/Schablonen/SchablonenMetallIdt.lean):
  * `metall_idt_bau`, `metall_idt_lade`, `metall_idt_setze`, `metall_idt_setze_fc`. */
 
 /* -- The LAPIC. ------------------------------------------------------------- */
@@ -270,7 +270,7 @@ void metall_ipi_senden(uint32_t apic_id, uint32_t wort)
 }
 
 /* -- Cores and threads: GENERATED text since the C-free lane's C3 slice 4 (2026-10-05) --
- * `<unit>.metall.faden.c` (template `faden.metall`, Grammatik/SchablonenMetallFaden.lean):
+ * `<unit>.metall.faden.c` (template `faden.metall`, Grammatik/Bausteine/Schablonen/SchablonenMetallFaden.lean):
  * the run queues, the scheduler loop, the thread start and join, `metall_abgeben`,
  * `metall_takt`, `metall_kerne`, `metall_kern_nr`. What the bring-up below needs of it is
  * declared in metall.h. */

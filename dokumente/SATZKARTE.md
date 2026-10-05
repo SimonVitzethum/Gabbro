@@ -3,7 +3,7 @@
 Replaces the class column of SATZKARTE-A (§2) with the four binding classes:
 (a) USER obligation, (b) HARDWARE assumption, (c) DISCHARGED by a merged
 theorem (named), (d) STILL OPEN language duty. Covers every premise of every
-theorem in the goal family (`grammatik/Grammatik/Ziel.lean`: `ziel_nutzer_last`,
+theorem in the goal family (`grammatik/Grammatik/Kern/Syntax/Ziel.lean`: `ziel_nutzer_last`,
 `ziel_seqLogic_aus_spec`, `ziel_seqLogic_aus_spec_invariantForm`,
 `ziel_nutzer_last_aus_disziplin`, `ziel_nutzer_last_aus_maschine`,
 `ziel_nutzer_last_aus_pc`, `ziel_nutzer_last_aus_pc_stabil`,
@@ -170,17 +170,17 @@ carried by the theorems named in the (c) column.
 Prior map follows (draft A §§1-5, wave-1 verdicts §6 — kept for history).
 
 Draft A (lane 16). Independent draft; no Lean changes.
-Target: `Gabbro.Grammatik.ziel_nutzer_last_aus_pc_Q`, `grammatik/Grammatik/Ziel.lean:2324`.
+Target: `Gabbro.Grammatik.ziel_nutzer_last_aus_pc_Q`, `grammatik/Grammatik/Kern/Syntax/Ziel.lean:2324`.
 All claims verified by reading the Lean sources cited as `file:line`.
 Line numbers refer to the current working tree on branch `muse/16`.
 
 Q-binder instantiation: `Pre := Extraktion.QRequires P`, `Post := Extraktion.QEnsures P`,
-where `QRequires` (`grammatik/Grammatik/Extraktion.lean:1437`) is `requires` as a world
+where `QRequires` (`grammatik/Grammatik/Kern/Syntax/Extraktion.lean:1437`) is `requires` as a world
 predicate (holds for every parameter environment) and `QEnsures`
-(`grammatik/Grammatik/Extraktion.lean:1442`) is `ensures` as a world predicate
+(`grammatik/Grammatik/Kern/Syntax/Extraktion.lean:1442`) is `ensures` as a world predicate
 (for every return value and every parameter environment). The per-thread assertion is
 `SpecQ Pre Post Nb J f σ := Pre (J.code f) σ ∧ Post (J.code f) σ`
-(`grammatik/Grammatik/InterferenzAllgemein.lean:1069`).
+(`grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/InterferenzAllgemein.lean:1069`).
 
 ## 1. Conclusion: one sentence per conjunct
 
@@ -212,16 +212,16 @@ The conclusion (`Ziel.lean:2394-2416`) is a 12-way conjunction:
   happens-before ordered in one direction or the other.
 
 Leg-to-lemma wiring (read off the proof term, `Ziel.lean:2417-2428`):
-C1 by `pc_gesittet` (`grammatik/Grammatik/Maschine.lean:1743`);
+C1 by `pc_gesittet` (`grammatik/Grammatik/Kern/Semantik/Maschine.lean:1743`);
 C2 by `pc_konsistent` (`Maschine.lean:1426`) and `pc_gut_obs` (`Maschine.lean:1433`);
 C3 by `stabil_aus_lauf` (`Maschine.lean:3879`), whose `hFree` argument is derived inside from
-`hForm` via `interferenceFree_of_invariantForm` (`grammatik/Grammatik/InterferenzAllgemein.lean:1213`)
+`hForm` via `interferenceFree_of_invariantForm` (`grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/InterferenzAllgemein.lean:1213`)
 over the discipline-derived context from `invariantenKontext_aus_disziplin`
 (`InterferenzAllgemein.lean:1530`), with memory via `speicherVertrag_aus_Q`
 (`Extraktion.lean:3924`) and frame via `haengtAb_vertrag_gesamt` (`Extraktion.lean:1568`);
-C4 by `sampling_closes_frist` (`grammatik/Grammatik/Fristlauf.lean:395`);
+C4 by `sampling_closes_frist` (`grammatik/Grammatik/Kern/Semantik/Fristlauf.lean:395`);
 C5 by the `begrenzt` field of the supplied `Absenkung` (structure field, not a theorem);
-C6 by `zwei_fehler` (`grammatik/Grammatik/Satz.lean:50`, proved by case split, unconditional);
+C6 by `zwei_fehler` (`grammatik/Grammatik/Kern/Syntax/Satz.lean:50`, proved by case split, unconditional);
 C7 by `pc_discharge_einfaedig` (`Maschine.lean:1619`) over `pcReach_markInv` (`Maschine.lean:1582`);
 C8 by `pc_discharge_unshared` (`Maschine.lean:1704`) over `pcReach_carrierInv` (`Maschine.lean:1591`);
 C9 by `genWelten_laenge` (`Maschine.lean:1158`) via `pcReach_gen` (`Maschine.lean:1396`);
@@ -239,7 +239,7 @@ DATA = object binder, not a proof obligation (no class applies).
 
 Non-premise object binders (meaning only, no class):
 `P` (the program), `O` (the oracle answering `axiomCall`/registers,
-`grammatik/Grammatik/Semantik.lean:355`), `passes` (execution bound), `fcode` (thread-to-function
+`grammatik/Grammatik/Kern/Semantik/Semantik.lean:355`), `passes` (execution bound), `fcode` (thread-to-function
 map), `tabs`/`globs` (carrier lists the extraction flattens over), `sp` (start memory),
 `M`/`pc` (reached machine and program counters), `code` (mark-to-nat projection),
 `Nb` (which thread pairs are co-declared), `J` (the joint chain), `I` (the carrier invariants),
@@ -391,16 +391,16 @@ and no merged theorem discharges it.
 
 | # | Merged result | Exact Lean names and locations | Effect |
 |---|---|---|---|
-| R1 | QLeer (lane 15) | `qRequires_nowhere` (`grammatik/Grammatik/QLeer.lean:133`), `qEnsures_nowhere` (`QLeer.lean:142`), `qSeedAll_unmoeglich_req` (`QLeer.lean:154`), `qSeedAll_unmoeglich_ens` (`QLeer.lean:170`) over `QRequires` (`grammatik/Grammatik/Extraktion.lean:1437`) / `QEnsures` (`Extraktion.lean:1442`) | Proved theorems on a concrete one-function program, not a reading |
-| R2 | BlattGegenbeispiel (lane 14) | `hblatt_post_falsch` (`grammatik/Grammatik/BlattGegenbeispiel.lean:242`), `hblatt_konj_falsch` (`BlattGegenbeispiel.lean:262`), `hblattall_falsch_schreibend` (`BlattGegenbeispiel.lean:286`) | Proved counterexample to `hBlattAll` for a writing leaf |
-| R3 | VertragOrtB (lane 02, attempt B) | `ReqAmEintritt` (`grammatik/Grammatik/VertragOrtB.lean:114`), `EnsAmRueck` (`VertragOrtB.lean:120`), `VertragAmOrtB` (`VertragOrtB.lean:137`), `rufAt_ok_of_gates` (`VertragOrtB.lean:406`), `rueck_ohne_nachbedingung` (`VertragOrtB.lean:444`) | Proved place-check construction plus one-direction bridge; not wired into the goal theorem (import-cycle remainder) |
-| R4 | KetteMehrfadenC (lane 11, attempt C) | `KettenSpurDeckung` (`grammatik/Grammatik/KetteMehrfadenC.lean:115`), `kette_zwei_aus_lauf` (`KetteMehrfadenC.lean:766`), `kette_aus_deckung` (`KetteMehrfadenC.lean:879`), `deckung_strikt_schwaecher` (`KetteMehrfadenC.lean:909`) | Proved chain-from-run for the two-thread lock-only fragment; N-thread discharge open |
-| R5 | Audit muse/23, F2 (HIGH) | Filed: `allgemeinStabil` (`grammatik/Grammatik/InterferenzAllgemein.lean:498`) never consumes `hInv`/`hDeck`. Demo: `audit_allgemeinStabil_ohne_InvDeck` (`messung/muse-audit/23/F2_HauptsatzNutztInvDeckNicht.lean:25`), `audit_allgemeinStabil_forget` (`F2_HauptsatzNutztInvDeckNicht.lean:61`) | Checked demonstration, not a `Grammatik` theorem |
-| R6 | Audit muse/23, F4 (HIGH) | Filed: `serial_chain_from_run` (`grammatik/Grammatik/InterferenzAllgemein.lean:1816`) proves its HB half from `SerialLink` + `reduktion_seriell` alone. Demo: `audit_hb_sidecar_ohne_kette` (`messung/muse-audit/23/F4_ReduktionOhneKette.lean:31`), `audit_kette_ohne_run` (`F4_ReduktionOhneKette.lean:47`) | Checked demonstration, not a `Grammatik` theorem |
-| R7 | Audit muse/23, F5 (HIGH) | Filed: `hinv_aus_disziplin` (`grammatik/Grammatik/InterferenzAllgemein.lean:1502`) discards `LockFrei` (`intro k σ h _`), so `interferenceFree_wo_frei` (`InterferenzAllgemein.lean:1597`) restricts nothing. Demo: `audit_hinv_ohne_frei` (`messung/muse-audit/23/F5_LockFreiUngenutzt.lean:23`), `audit_hinv_forget_frei` (`F5_LockFreiUngenutzt.lean:47`) | Checked demonstration, not a `Grammatik` theorem |
-| R8 | Audit muse/24, F9 (HIGH) | Filed: `QRequires` (`grammatik/Grammatik/Extraktion.lean:1437`) / `QEnsures` (`Extraktion.lean:1442`) quantify over all envs/values at one world fed twice as entry and present (`eval σ e σ ρ`). Demo: `audit_QRequires_unfold` (`messung/muse-audit/24/Audit24.lean:80`), `audit_QEnsures_unfold` (`Audit24.lean:85`), both `rfl` | Checked demonstration, not a `Grammatik` theorem |
-| R9 | Audit muse/24, F11 (HIGH) | Filed: `hmem_all` of `hwit_aus_lauf` (`grammatik/Grammatik/Extraktion.lean:3829`, premise at `:3840`) and `hwit_alt_faltung` (`Extraktion.lean:3609`, premise at `:3621`) demands `.inl t₀ ∈ stmtTraeger tabs globs s` for every leaf, but `stmtTraeger` (`Extraktion.lean:2421`) returns `[]` for `assignVar` (`:2428`), `ite`, calls, locks, registers, marks, terminals. Demo: `assignVar`-implies-`False` example (`messung/muse-audit/24/Audit24.lean:107-112`) | Checked demonstration, not a `Grammatik` theorem |
-| R10 | Audit muse/26, F7 (HIGH) | Filed: `handler_wettlauf_frei` (`grammatik/Grammatik/Unterbrechung.lean:103`) and `handler_wettlauf_frei_global` (`Unterbrechung.lean:120`) discard the handler/boundary premises (`have _ :=`, `rcases hH with _ \| _`). Demo: `audit26_handler_premise_discarded` (`messung/muse-audit/26/F7_HandlerPremise.lean:17`) | Checked demonstration, not a `Grammatik` theorem |
+| R1 | QLeer (lane 15) | `qRequires_nowhere` (`grammatik/Grammatik/Logik/Vertraege/QLeer.lean:133`), `qEnsures_nowhere` (`QLeer.lean:142`), `qSeedAll_unmoeglich_req` (`QLeer.lean:154`), `qSeedAll_unmoeglich_ens` (`QLeer.lean:170`) over `QRequires` (`grammatik/Grammatik/Kern/Syntax/Extraktion.lean:1437`) / `QEnsures` (`Extraktion.lean:1442`) | Proved theorems on a concrete one-function program, not a reading |
+| R2 | BlattGegenbeispiel (lane 14) | `hblatt_post_falsch` (`grammatik/Grammatik/Proben/BlattGegenbeispiel.lean:242`), `hblatt_konj_falsch` (`BlattGegenbeispiel.lean:262`), `hblattall_falsch_schreibend` (`BlattGegenbeispiel.lean:286`) | Proved counterexample to `hBlattAll` for a writing leaf |
+| R3 | VertragOrtB (lane 02, attempt B) | `ReqAmEintritt` (`grammatik/Grammatik/Logik/Vertraege/VertragOrtB.lean:114`), `EnsAmRueck` (`VertragOrtB.lean:120`), `VertragAmOrtB` (`VertragOrtB.lean:137`), `rufAt_ok_of_gates` (`VertragOrtB.lean:406`), `rueck_ohne_nachbedingung` (`VertragOrtB.lean:444`) | Proved place-check construction plus one-direction bridge; not wired into the goal theorem (import-cycle remainder) |
+| R4 | KetteMehrfadenC (lane 11, attempt C) | `KettenSpurDeckung` (`grammatik/Grammatik/Korrespondenz/Kette/KetteMehrfadenC.lean:115`), `kette_zwei_aus_lauf` (`KetteMehrfadenC.lean:766`), `kette_aus_deckung` (`KetteMehrfadenC.lean:879`), `deckung_strikt_schwaecher` (`KetteMehrfadenC.lean:909`) | Proved chain-from-run for the two-thread lock-only fragment; N-thread discharge open |
+| R5 | Audit muse/23, F2 (HIGH) | Filed: `allgemeinStabil` (`grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/InterferenzAllgemein.lean:498`) never consumes `hInv`/`hDeck`. Demo: `audit_allgemeinStabil_ohne_InvDeck` (`messung/muse-audit/23/F2_HauptsatzNutztInvDeckNicht.lean:25`), `audit_allgemeinStabil_forget` (`F2_HauptsatzNutztInvDeckNicht.lean:61`) | Checked demonstration, not a `Grammatik` theorem |
+| R6 | Audit muse/23, F4 (HIGH) | Filed: `serial_chain_from_run` (`grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/InterferenzAllgemein.lean:1816`) proves its HB half from `SerialLink` + `reduktion_seriell` alone. Demo: `audit_hb_sidecar_ohne_kette` (`messung/muse-audit/23/F4_ReduktionOhneKette.lean:31`), `audit_kette_ohne_run` (`F4_ReduktionOhneKette.lean:47`) | Checked demonstration, not a `Grammatik` theorem |
+| R7 | Audit muse/23, F5 (HIGH) | Filed: `hinv_aus_disziplin` (`grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/InterferenzAllgemein.lean:1502`) discards `LockFrei` (`intro k σ h _`), so `interferenceFree_wo_frei` (`InterferenzAllgemein.lean:1597`) restricts nothing. Demo: `audit_hinv_ohne_frei` (`messung/muse-audit/23/F5_LockFreiUngenutzt.lean:23`), `audit_hinv_forget_frei` (`F5_LockFreiUngenutzt.lean:47`) | Checked demonstration, not a `Grammatik` theorem |
+| R8 | Audit muse/24, F9 (HIGH) | Filed: `QRequires` (`grammatik/Grammatik/Kern/Syntax/Extraktion.lean:1437`) / `QEnsures` (`Extraktion.lean:1442`) quantify over all envs/values at one world fed twice as entry and present (`eval σ e σ ρ`). Demo: `audit_QRequires_unfold` (`messung/muse-audit/24/Audit24.lean:80`), `audit_QEnsures_unfold` (`Audit24.lean:85`), both `rfl` | Checked demonstration, not a `Grammatik` theorem |
+| R9 | Audit muse/24, F11 (HIGH) | Filed: `hmem_all` of `hwit_aus_lauf` (`grammatik/Grammatik/Kern/Syntax/Extraktion.lean:3829`, premise at `:3840`) and `hwit_alt_faltung` (`Extraktion.lean:3609`, premise at `:3621`) demands `.inl t₀ ∈ stmtTraeger tabs globs s` for every leaf, but `stmtTraeger` (`Extraktion.lean:2421`) returns `[]` for `assignVar` (`:2428`), `ite`, calls, locks, registers, marks, terminals. Demo: `assignVar`-implies-`False` example (`messung/muse-audit/24/Audit24.lean:107-112`) | Checked demonstration, not a `Grammatik` theorem |
+| R10 | Audit muse/26, F7 (HIGH) | Filed: `handler_wettlauf_frei` (`grammatik/Grammatik/Nebenlaeufigkeit/Allgemein/Unterbrechung.lean:103`) and `handler_wettlauf_frei_global` (`Unterbrechung.lean:120`) discard the handler/boundary premises (`have _ :=`, `rcases hH with _ \| _`). Demo: `audit26_handler_premise_discarded` (`messung/muse-audit/26/F7_HandlerPremise.lean:17`) | Checked demonstration, not a `Grammatik` theorem |
 
 Flag-by-flag verdicts for §§3 and 5:
 
@@ -3057,8 +3057,8 @@ A1/A3/A4 stay outside; the adequacy chain and stage (b) are untouched (PLAN §6.
 
 ## 28. `korrOk` widened to its own lemma stock — 23 arms, chain count unchanged (2026-09-15)
 
-*Files: `grammatik/Grammatik/KorrespondenzAllg.lean` (the check and its soundness),
-`grammatik/Grammatik/KorrespondenzWeitZeuge.lean` (new: the fixture, the probes, the witness).
+*Files: `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` (the check and its soundness),
+`grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzWeitZeuge.lean` (new: the fixture, the probes, the witness).
 Report: `messung/muse/OPUS-BERICHT-KORROK.md`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG §6.2, §6.5.*
 
 ### 28.1 The finding
@@ -3120,7 +3120,7 @@ kernel), and the note there says how to build it without a mutual block.
 
 ## 29. A2 discharged: a Lean parser for the emitted C subset (2026-09-15)
 
-*Files: `grammatik/Grammatik/CParser/CLexer.lean` (the C lexer), `CParser/CParse.lean`
+*Files: `grammatik/Grammatik/CBackend/Parser/CLexer.lean` (the C lexer), `CParser/CParse.lean`
 (`parseC`), `CParser/CProben.lean` (the refusals), `CParser/Bruecke.lean` (`A2`, `kFuns`,
 `schlusssatz_text`), `CText104.lean` + `CText104Zeuge.lean`, `CText108.lean`, and the two
 theorems added at the end of `Kette104Satz.lean`. Guardian:
@@ -3212,8 +3212,8 @@ peak of 6,86 GB**, and `Kette104`/`Kette108` cost **0,92 GB** and **0,87 GB**.
 
 ## 30. `korrOk` gets its BLOCK structure: `if`, `let` of a call, `traverse` (2026-09-15)
 
-*Files: `grammatik/Grammatik/KorrespondenzAllg.lean` (the staged check and its soundness),
-`grammatik/Grammatik/KorrespondenzBlockZeuge.lean` (new: two fixtures and the probes).
+*Files: `grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` (the staged check and its soundness),
+`grammatik/Grammatik/Korrespondenz/Allgemein/KorrespondenzBlockZeuge.lean` (new: two fixtures and the probes).
 Report: `messung/muse/OPUS-BERICHT-BLOCK.md`. Plan: PLAN-UEBERSETZUNGSVALIDIERUNG §6.5, §6.7.*
 
 ### 30.1 The finding
@@ -3281,10 +3281,10 @@ are reported separately.*
 ## 31. O13 closed -- the chain source pinned as characters, the pipeline unfolded at a variable
 
 *Added 2026-09-15 (Opus lane `o13`). Files: `Grammatik/Parser/Lexer.lean` (`lexL`,
-`lex_ofList`), `Grammatik/Schlusssatz.lean` (`uebersetzeAllg_von_zeichen`),
-`Grammatik/Parser/UebersetzeAllg2.lean` (the `SRC-BEGIN` pins), `Grammatik/Kette104.lean`,
-`Grammatik/Kette108.lean`, `Grammatik/Parser/Uebersetze.lean` (`u104lexL`/`u104lex`),
-`Grammatik/Schlusssatz104.lean` (`uebersetze104_von_zeichen`), `instrumente/zaehle-kette.py`.
+`lex_ofList`), `Grammatik/Korrespondenz/Kette/Schlusssatz.lean` (`uebersetzeAllg_von_zeichen`),
+`Grammatik/Parser/UebersetzeAllg2.lean` (the `SRC-BEGIN` pins), `Grammatik/Korrespondenz/Kette/Kette104.lean`,
+`Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/Parser/Uebersetze.lean` (`u104lexL`/`u104lex`),
+`Grammatik/Korrespondenz/Kette/Schlusssatz104.lean` (`uebersetze104_von_zeichen`), `instrumente/zaehle-kette.py`.
 Report: `messung/muse/OPUS-BERICHT-O13.md`.*
 
 | Theorem | What it says |
@@ -3312,8 +3312,8 @@ in every file touched. No `sorry`, no `native_decide`, no new `axiom`.
 ## 32. The runtime's ticket lock: a named premise becomes a theorem (2026-09-15)
 
 PLAN-UEBERSETZUNGSVALIDIERUNG §7.7 is the long form; §7.6 item 3 is the item it closes. Files:
-`grammatik/Grammatik/CTicket.lean` (the lock, generic over the unit),
-`grammatik/Grammatik/Schlusssatz124Ticket.lean` (`beispiele/124` with the lock inlined, and
+`grammatik/Grammatik/CBackend/Semantik/CTicket.lean` (the lock, generic over the unit),
+`grammatik/Grammatik/Korrespondenz/Kette/Schlusssatz124Ticket.lean` (`beispiele/124` with the lock inlined, and
 the contended witness).
 
 ### 32.1 What was assumed, and what is proved
@@ -3416,7 +3416,7 @@ interleaving of them is SC remains the named premise `DRFSC`.
 
 ## 33. `alloc` and `reset` get a form in the specification -- as sugar, not as constructors
 
-*Added 2026-09-15 (Opus lane `alloc`). File: `Grammatik/ArenaZucker.lean` (new), imported by
+*Added 2026-09-15 (Opus lane `alloc`). File: `Grammatik/Bausteine/Arena/ArenaZucker.lean` (new), imported by
 `Grammatik.lean`. Rust: `crates/gabbro-check/src/lean_g.rs` (the arena refusal by name).
 Report: `messung/muse/OPUS-BERICHT-ALLOC.md`. Ledger: `dokumente/OFFEN.md` O14.*
 
@@ -3464,9 +3464,9 @@ so no arena program closes a chain yet. The form exists; the export does not.
 
 ## 34. The transfer chain CLOSED on two real programs -- the user's duty, proved, over the exported unit
 
-*Added 2026-09-15 (Opus lane `pflicht`). Files: `Grammatik/GenOblig104.lean` (REGENERATED),
-`Grammatik/Pflicht104.lean` (migrated), `Grammatik/GenOblig108.lean` (new, generated),
-`Grammatik/Pflicht108.lean` (new), imported by `Grammatik.lean`. Guardian:
+*Added 2026-09-15 (Opus lane `pflicht`). Files: `Grammatik/Korrespondenz/Korpus/GenOblig104.lean` (REGENERATED),
+`Grammatik/Korrespondenz/Allgemein/Pflicht104.lean` (migrated), `Grammatik/Korrespondenz/Korpus/GenOblig108.lean` (new, generated),
+`Grammatik/Korrespondenz/Allgemein/Pflicht108.lean` (new), imported by `Grammatik.lean`. Guardian:
 `instrumente/pruefe-genlean.py`. Report: `messung/muse/OPUS-BERICHT-PFLICHT.md`.*
 
 **What was missing.** Lane 198 made `gabbro lean-g` produce a full `Zielsatz.Einheit gE` and
@@ -3520,11 +3520,11 @@ bytes; and red on a single changed byte, green again after restoring.
 
 ## 35. Part 4's condition, halved: a certified program cannot end a call in a HARDWARE outcome
 
-*Added 2026-09-15 (Opus lane `staerker`). Files: `Grammatik/RufOhneHardware.lean` (new),
-`Grammatik/RufOhneHardwareZeuge.lean` (new), `Grammatik/KorrOkAdaequat.lean` (new),
-`Grammatik/KorrespondenzAllg.lean` §5, `Grammatik/Schlusssatz.lean`,
-`Grammatik/Kette104Satz.lean`; index sites in `Grammatik/CParser/Bruecke.lean`,
-`Grammatik/Kette108.lean`, `Grammatik/CText108.lean`. Plan:
+*Added 2026-09-15 (Opus lane `staerker`). Files: `Grammatik/Logik/Ruf/RufOhneHardware.lean` (new),
+`Grammatik/Logik/Ruf/RufOhneHardwareZeuge.lean` (new), `Grammatik/Korrespondenz/Allgemein/KorrOkAdaequat.lean` (new),
+`Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean` §5, `Grammatik/Korrespondenz/Kette/Schlusssatz.lean`,
+`Grammatik/Korrespondenz/Kette/Kette104Satz.lean`; index sites in `Grammatik/CBackend/Parser/Bruecke.lean`,
+`Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/CBackend/Semantik/CText108.lean`. Plan:
 `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.8. Report: `messung/muse/OPUS-BERICHT-STAERKER.md`.*
 
 **The statement that changed.** `schlusssatz` (the generic closing theorem, §27) kept every
@@ -3585,11 +3585,11 @@ green, no `sorry`, no `native_decide`, no new `axiom`.
 
 ## 36. The handler congruence, and part 4's `logik` condition reduced to ONE frame fact
 
-*Added 2026-09-15 (Opus lane `kongruenz`). Files: `Grammatik/HandlerKongruenz.lean` (new),
-`Grammatik/RufTiefe.lean` (new), `Grammatik/RufLogik.lean` (new),
-`Grammatik/KorrOkOhneLocks.lean` (new), `Grammatik/RufLogikZeuge.lean` (new),
-`Grammatik/Schlusssatz.lean`, `Grammatik/CParser/Bruecke.lean`; index sites in
-`Grammatik/Kette108.lean`, `Grammatik/CText108.lean`, `Grammatik/Kette104Satz.lean`. Plan:
+*Added 2026-09-15 (Opus lane `kongruenz`). Files: `Grammatik/Logik/Vertraege/HandlerKongruenz.lean` (new),
+`Grammatik/Logik/Ruf/RufTiefe.lean` (new), `Grammatik/Logik/Ruf/RufLogik.lean` (new),
+`Grammatik/Korrespondenz/Allgemein/KorrOkOhneLocks.lean` (new), `Grammatik/Logik/Ruf/RufLogikZeuge.lean` (new),
+`Grammatik/Korrespondenz/Kette/Schlusssatz.lean`, `Grammatik/CBackend/Parser/Bruecke.lean`; index sites in
+`Grammatik/Korrespondenz/Kette/Kette108.lean`, `Grammatik/CBackend/Semantik/CText108.lean`, `Grammatik/Korrespondenz/Kette/Kette104Satz.lean`. Plan:
 `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.9. Report:
 `messung/muse/OPUS-BERICHT-KONGRUENZ.md`.*
 
@@ -3676,12 +3676,12 @@ unchanged, whole library **262 jobs** green, no `sorry`, no `native_decide`, no 
 
 ## 37. A chain for a program that touches a DEVICE: `korrOk` carries the register
 
-*Added 2026-09-16 (Opus lane `geraet`). Files: `Grammatik/KorrespondenzGeraetZeuge.lean`
-(new), `Grammatik/Korrespondenz.lean` (three `GRow` rows), `Grammatik/KorrespondenzAllg.lean`
+*Added 2026-09-16 (Opus lane `geraet`). Files: `Grammatik/Korrespondenz/Allgemein/KorrespondenzGeraetZeuge.lean`
+(new), `Grammatik/Korrespondenz/Allgemein/Korrespondenz.lean` (three `GRow` rows), `Grammatik/Korrespondenz/Allgemein/KorrespondenzAllg.lean`
 (`GerTafel`, `regAdrOk`, `GerAnnahme`, `gerLies_step`, `gerSchreib_step`, `bsem_regLies`,
-`bsem_regLiesElse`, the arms and §5's guard), `Grammatik/CSpeicher.lean` (`EmitLay.devs` and
-`corrW`'s third clause), `Grammatik/CFormen.lean` (`DecidableEq CX`),
-`Grammatik/Schlusssatz.lean`, `Grammatik/KorrOkAdaequat.lean`. Plan:
+`bsem_regLiesElse`, the arms and §5's guard), `Grammatik/CBackend/Semantik/CSpeicher.lean` (`EmitLay.devs` and
+`corrW`'s third clause), `Grammatik/CBackend/Formen/CFormen.lean` (`DecidableEq CX`),
+`Grammatik/Korrespondenz/Kette/Schlusssatz.lean`, `Grammatik/Korrespondenz/Allgemein/KorrOkAdaequat.lean`. Plan:
 `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §5 and §6.10. Report:
 `messung/muse/OPUS-BERICHT-GERAET.md`.*
 
@@ -3751,9 +3751,9 @@ no new `axiom`.
 
 ## 38. The frame at every world: `rufAt` is in `RespektiertRahmen`, and part 4's condition is the depth alone
 
-*Added 2026-09-15 (Opus lane `rahmen`). Files: `Grammatik/RahmenTreu.lean` (new, 668
-lines), `Grammatik/RufLogik.lean`, `Grammatik/RufLogikZeuge.lean`,
-`Grammatik/Schlusssatz.lean`, `Grammatik/CParser/Bruecke.lean`, `Grammatik.lean`. Plan:
+*Added 2026-09-15 (Opus lane `rahmen`). Files: `Grammatik/Logik/Vertraege/RahmenTreu.lean` (new, 668
+lines), `Grammatik/Logik/Ruf/RufLogik.lean`, `Grammatik/Logik/Ruf/RufLogikZeuge.lean`,
+`Grammatik/Korrespondenz/Kette/Schlusssatz.lean`, `Grammatik/CBackend/Parser/Bruecke.lean`, `Grammatik.lean`. Plan:
 `PLAN-UEBERSETZUNGSVALIDIERUNG.md` §6.10. Report:
 `messung/muse/OPUS-BERICHT-RAHMEN.md`.*
 
@@ -3874,7 +3874,7 @@ green; no `sorry`, no `native_decide`, no new `axiom`; chain count unchanged.
 *Opus lane O-1 (K-1). Rust: `crates/gabbro-syntax` (`SyscallDecl.stapel`,
 `StmtArt::Child`), `crates/gabbro-check/src/clone.rs` (new, `N446`-`N450`),
 `emit.rs` (`C185`), `saetze.rs` (`klon.uebergabe`); probes `beispiele/gift/1107`-`1112`,
-examples `155`/`156`. Lean: `Grammatik/CloneHandoff.lean` (new),
+examples `155`/`156`. Lean: `Grammatik/CBackend/Semantik/CloneHandoff.lean` (new),
 `Deklaration.klon`, `Laufzeit.klon`, `CloneAssume` in `Spec.lean`. Report:
 `messung/muse/OPUS-BERICHT-CLONE.md`.*
 
@@ -3924,7 +3924,7 @@ the emitter-code class, booked in the tool's comment).
 
 ## 40. Integer `match`: coverage denoted in Lean, refused in Rust (lane 228; fix lane F1, 2026-09-21)
 
-**File:** `grammatik/Grammatik/CFormMatch.lean` (lane 228, corrected by fix lane F1 after
+**File:** `grammatik/Grammatik/CBackend/Formen/CFormMatch.lean` (lane 228, corrected by fix lane F1 after
 review G07 F3). **Rust:** `crates/gabbro-check/src/intmatch.rs` (`N411`-`N414`, called from
 `m1.rs`).
 
@@ -3958,8 +3958,8 @@ witness: the standard three); `#print axioms gabbro_ziel` unchanged.
 
 ## 41. Dynamic arenas: the past-ceiling stop over a run, and reset reuse (lanes 241/243; fix lane F2, 2026-09-21)
 
-**Files:** `grammatik/Grammatik/ArenaDyn.lean` (lane 241, reworked by fix lane F2 after review
-G08 F4), `grammatik/Grammatik/ArenaReset.lean` (lane 243, CUTS corrected after G08 F2).
+**Files:** `grammatik/Grammatik/Bausteine/Arena/ArenaDyn.lean` (lane 241, reworked by fix lane F2 after review
+G08 F4), `grammatik/Grammatik/Bausteine/Arena/ArenaReset.lean` (lane 243, CUTS corrected after G08 F2).
 **Rust:** `crates/gabbro-check/src/arena.rs` (`N426` against the whole-run upper bound, `N211`
 across calls and parameters). **Runtime:** `laufzeit/arena_dyn.c` (`gabbro_arena_grow`).
 
@@ -3990,7 +3990,7 @@ gabbro_ziel` unchanged.
 
 ## 42. Gate contracts split: the caller's precondition and the hardware's ensures (lane 233; fix lane F5, 2026-09-22)
 
-**File:** `grammatik/Grammatik/FremdRuf.lean` §9 (lane 233's fixture, section added by fix lane
+**File:** `grammatik/Grammatik/Logik/Ruf/FremdRuf.lean` §9 (lane 233's fixture, section added by fix lane
 F5 after reviews G04 F2 and G10 F5). **Rust:** `crates/gabbro-check/src/rahmenlaenge.rs`,
 `m1.rs` (`transfer_bound_at_call`, `N463`), `syscall.rs` (`buffer_bound`, `N464`); `beispiele/149`
 (`path_nul_terminated`), `beispiele/150`.
@@ -4018,7 +4018,7 @@ fixture's preconditions (a terminator slot, the handed-out descriptor) are analo
 
 ## 43. Bounded strings: the value model the checker's length rules rest on (lane 256; fix lane F6, 2026-09-22)
 
-**File:** `grammatik/Grammatik/ZeichenfolgeGebunden.lean` (lane 256's value model; the
+**File:** `grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeGebunden.lean` (lane 256's value model; the
 theorems below `bkopie` added by fix lane F6 after review G12 F4/F6). **Rust:**
 `crates/gabbro-check/src/zeichenfolge.rs` (`N453`-`N455`, `N465`); gifts 1118-1127,
 1159-1168; `crates/gabbro-check/tests/zeichenfolge.rs`.
@@ -4043,7 +4043,7 @@ no longer imports `ReferenzB`. `#print axioms gabbro_ziel` unchanged.
 
 ## 44. Nested arrays: the emitted read `A[i][j]` is the flat read at `i * N + j` (lane 205; fix lane F8, 2026-09-22)
 
-**File:** `grammatik/Grammatik/CFormNested.lean` (on `Verschachtelt.lean`, `CFormen.lean`,
+**File:** `grammatik/Grammatik/CBackend/Formen/CFormNested.lean` (on `Verschachtelt.lean`, `CFormen.lean`,
 `CSpeicher.lean`).
 
 | Theorem | What it says | Tied to |
@@ -4060,7 +4060,7 @@ static-array read inherits the uncovered `expr:array-read`.
 
 ## 45. The stage-(b) simulation certificate for 124: the relation read from the certificate (lane 206; fix lane F8, 2026-09-22)
 
-**File:** `grammatik/Grammatik/SimPruef.lean` (on `Schlusssatz124.lean`). **Rust:**
+**File:** `grammatik/Grammatik/Proben/SimPruef.lean` (on `Schlusssatz124.lean`). **Rust:**
 `crates/gabbro-check/src/corrcert.rs` (`SimCert124`; the test
 `sim124_lean_literal_stimmt_mit_simpruef_ueberein` reads `SimPruef.lean` itself).
 
@@ -4085,7 +4085,7 @@ certificate; only the shape (tables, relation-from-tables, printer) carries over
 
 ## 46. Divergence of accepted never-bodies, and `KeinLogikHaltG` at the spin (lane 231; fix lane F8, 2026-09-22)
 
-**File:** `grammatik/Grammatik/Zielsatz/Divergenz.lean` (on `NeverAsm.lean`,
+**File:** `grammatik/Grammatik/Zielsatz/Eigenschaften/Divergenz.lean` (on `NeverAsm.lean`,
 `RufMaschineF.lean`, `ZielOrtGanz.lean`).
 
 | Theorem | What it says | Tied to |
@@ -4158,7 +4158,7 @@ steps; `Ziel` at every other reachable machine is `gabbro_ziel`'s, not the witne
 
 ## 48. Same-core interrupt preemption: the leg `keinKernHalt` of `Ziel` (fix lane F11, 2026-09-22)
 
-*Files: `grammatik/Grammatik/Zielsatz/Spec.lean` (`KernPlan`, `KernHaltG`, the leg),
+*Files: `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` (`KernPlan`, `KernHaltG`, the leg),
 `Zielsatz/Masken.lean` (the proofs and the discipline Bool), `Zielsatz/MaskenZeuge.lean`
 (the witnesses on `Korpus59.lean`). Reviews G02 F1 and G12 F1, OFFEN O19.*
 
@@ -4191,7 +4191,7 @@ masking at all (no `cli`/`sti`).
 
 ## 49. Threads created at run time: the thread machine in the goal theorem (Opus agent A, 2026-09-26)
 
-*Files: `grammatik/Grammatik/FadenMaschine.lean` (the machine, its invariant, both bridges),
+*Files: `grammatik/Grammatik/Nebenlaeufigkeit/Allgemein/FadenMaschine.lean` (the machine, its invariant, both bridges),
 `Zielsatz/Spec.lean` (`Einheit.gestartet`, `Einheit.ws`, `ZielF`, the new `GabbroZiel`),
 `Zielsatz/Faeden.lean` (the join legs), `Zielsatz/Beweis.lean` (`zielF_aus`, `gabbro_ziel`,
 `gabbro_ziel_g`), `Zielsatz/FaedenVor.lean` (nothing weakened), `Zielsatz/FaedenZeuge.lean`
@@ -4235,7 +4235,7 @@ wait, the handed stack, and the C side of the spawn (lane 260's lowering).
 
 ## 50. The memory model beyond DRF-SC: machine W and the leg `schwach` of `Ziel` (Opus agent B, 2026-09-26)
 
-*Files: `grammatik/Grammatik/Speichermodell/Sicht.lean` (the view discipline, litmus facts),
+*Files: `grammatik/Grammatik/Speichermodell/Maschine/Sicht.lean` (the view discipline, litmus facts),
 `Speichermodell/MaschineW.lean` (machine W over G, `w_aus_g`), `Speichermodell/DRF.lean` (the DRF
 theorem), `Speichermodell/Zeuge.lean` (witnesses, OFFEN O17), `Zielsatz/Spec.lean` (`SchwachSC`,
 the leg), `Zielsatz/Beweis.lean` (the leg proved), `Zielsatz/Schwach.lean` (the goal over W).
@@ -4292,7 +4292,7 @@ as release/acquire, no promises).
 ## 51. What a green build covers: one certificate per exported program, one list for the rest (Opus agent C, 2026-09-26)
 
 *Files: `grammatik/Grammatik/Zertifikat/*.lean` (generated certificates), `Zertifikat/REGISTER.txt`
-(the one list), `Grammatik/Zertifikate.lean` (umbrella), `crates/gabbro-check/tests/zertifikate.rs`
+(the one list), `Grammatik/Korrespondenz/Zeugnis/Zertifikate.lean` (umbrella), `crates/gabbro-check/tests/zertifikate.rs`
 (the guard), `Zielsatz/Spec.lean` header "WHAT A GREEN BUILD COVERS". Report
 `messung/OPUS-C-TRAGWEITE.md`.*
 
@@ -4367,7 +4367,7 @@ racing atomics. RMW atomicity in W (`zaehler_verloren`). The payload hand-off to
 
 ## 53. Invariants beyond the returns: four legs of `Ziel`, one of `ZielF`, and `N496` (Opus agent D, 2026-09-26)
 
-*Files: `grammatik/Grammatik/Zielsatz/Invarianten.lean` (proofs), `Zielsatz/InvariantenZeuge.lean`
+*Files: `grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean` (proofs), `Zielsatz/InvariantenZeuge.lean`
 (witnesses), `Zielsatz/Spec.lean` (definitions, the invariant block of the header),
 `Zielsatz/Beweis.lean` (`ziel_aus`, `zielF_aus`); Rust `crates/gabbro-check/src/m1.rs`
 (`invarianten_buchen`), `tests/invarianten_buchung.rs`, `beispiele/gift/1231`-`1234`. Report
@@ -4558,7 +4558,7 @@ block's end) -- G unfolds the block without the name; which `Φ` a source progra
 
 ## 57. Handlers in the unit: the leg `keinKernHalt` carried by (a) (Opus agent H, 2026-09-26)
 
-*Files: `grammatik/Grammatik/Syntax.lean` (`Programm.unterbricht`), `Zielsatz/Spec.lean`
+*Files: `grammatik/Grammatik/Kern/Syntax/Syntax.lean` (`Programm.unterbricht`), `Zielsatz/Spec.lean`
 (`NurMaskiert`, `MaskenDisziplin`, `AkzeptiertSpec.masken`, `HandlerVon`, `KernHaltE`, the leg,
 `Verbindbar.unterbricht`, `SchnittstelleSpec.masken`), `Zielsatz/Akzeptiert.lean` (`maskenB`),
 `Zielsatz/Masken.lean` (the discharge), `MitRuheStatisch.lean` (`mE_und`),

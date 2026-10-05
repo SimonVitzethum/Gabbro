@@ -14,8 +14,7 @@
       equations (`intro ... _ _` twice). Demonstrated: the same close works
       for ANY two predicates of thread pairs — the step equations are unused.
 -/
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 variable {D : Deklaration}

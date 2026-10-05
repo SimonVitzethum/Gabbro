@@ -14,8 +14,7 @@
   digit-sequence valuation; the hex and binary arms are GAP-07 and p22's
   even gap respectively and agree on the value by the same rule.
 -/
-import Grammatik.Syntax
-
+import Grammatik.Kern.Syntax.Syntax
 namespace P21.Gap05Int
 
 /-- Value of a decimal digit sequence, head = most significant. -/

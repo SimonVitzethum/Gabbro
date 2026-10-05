@@ -5,8 +5,7 @@
 -- Demonstration: a rule over entries/returns is trivially inhabited by a
 -- run with NO non-contract steps, and the converse direction (atom lists
 -- constraining steps) is not stated at all.
-import Grammatik.VertragOrtB
-
+import Grammatik.Logik.Vertraege.VertragOrtB
 namespace GabbroAudit45B
 
 open Gabbro.Grammatik

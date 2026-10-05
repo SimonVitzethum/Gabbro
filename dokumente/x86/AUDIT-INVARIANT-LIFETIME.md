@@ -2,7 +2,7 @@
 
 *Owner: lane 409. Owns only this file plus `MUSE-REPORT-409.md`.
 Method: read the two accepted modules line by line against the actual
-goal-leg definitions in `grammatik/Grammatik/Zielsatz/Spec.lean`
+goal-leg definitions in `grammatik/Grammatik/Zielsatz/Kern/Spec.lean`
 (`InvTraeger` 1922, `InvZu` 1929, `InvRuheG` 1939, `InvSichtG` 1946,
 `SperrWechselG` 1956, `SperrSichtG` 1970, `Ziel` 1983-2000) and against
 the consumer claims in `grammatik/OPTIMIZER.md`. Two Lean probes
@@ -17,9 +17,9 @@ re-deriving it.*
 
 ## 0. Files actually read (anchors)
 
-- `grammatik/Grammatik/X86/InvariantenOpt.lean` (full, 550 lines).
-- `grammatik/Grammatik/X86/AufrufOpt.lean` (full, 288 lines).
-- `grammatik/Grammatik/Zielsatz/Spec.lean` 1915-2000 (invariant legs),
+- `grammatik/Grammatik/X86/Opt/Schleifen/InvariantenOpt.lean` (full, 550 lines).
+- `grammatik/Grammatik/X86/Opt/Schleifen/AufrufOpt.lean` (full, 288 lines).
+- `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` 1915-2000 (invariant legs),
   2157-2230 (GX lock-leg variants).
 - `grammatik/OPTIMIZER.md` rows C1/C3/S1/I1 (114-115, 212-214, 231,
   363, 496, 658, 935, 950, 1029-1030) — checked for overclaim, §6.

@@ -291,7 +291,7 @@ wortschatz! {
     // Fixes interrupt routing by key and value. The fifth key of the
     // fixed set beside `arch`, `rounding`, `fp_contract` and
     // `memory_model` (`PLAN-ERWEITUNG.md` §0c, point 3, mirrors
-    // `ProfilSchluessel` in `grammatik/Grammatik/Profil.lean`).
+    // `ProfilSchluessel` in `grammatik/Grammatik/Kern/Syntax/Profil.lean`).
     // CONTEXTUAL: elsewhere it stays a name.
     InterruptRouting => "interrupt_routing", ctx;
     // **«E4» (2026-09-12): the monotone arena, `PLAN-ERWEITUNG.md` §3.**

@@ -1,7 +1,7 @@
 //! **Export `.gab` to a G program term (`gabbro lean-g`), over snippets.**
 //!
 //! The file half is `beispiele/104-referenz.gab` (mechanical export checks
-//! with `./lean-probe`, pinned in `grammatik/Grammatik/Export104.lean`) and
+//! with `./lean-probe`, pinned in `grammatik/Grammatik/Korrespondenz/Korpus/Export104.lean`) and
 //! `beispiele/108-disjoint-start-locks.gab` (`Export108.lean`); what stands
 //! here pins the same exporter over snippets -- the two positives and every
 //! refusal code (`LG001`-`LG005`), so a form that stops being refused fails
@@ -140,7 +140,7 @@ fn exports_arena_as_its_pair() {
     ))
     .expect("an arena must export");
     for teil in [
-        "import Grammatik.ArenaZucker",
+        "import Grammatik.Bausteine.Arena.ArenaZucker",
         "inductive GTab where",
         "| Log",
         "| wert",
@@ -1099,7 +1099,7 @@ fn refuses_bare_call_of_reason_fn() {
 fn export_104_carries_the_unit() {
     let text = export_file("104-referenz.gab");
     for teil in [
-        "import Grammatik.Zielsatz.Spec",
+        "import Grammatik.Zielsatz.Kern.Spec",
         "def gLs : List gD.Lock",
         "def gCs : List (gD.Tab ⊕ gD.Glob)",
         "def gSp0 : Speicher gD",

@@ -1,7 +1,7 @@
 -- 133 -- **two forms the checker passed and the C compiler did not.**
 --
 -- Both were found by walking the constructors of
--- `grammatik/Grammatik/Syntax.lean` one by one and COMPILING what came out.
+-- `grammatik/Grammatik/Kern/Syntax/Syntax.lean` one by one and COMPILING what came out.
 -- Both were zero checker errors, `gabbro emit` returning 0, and `cc -std=c11
 -- -Wall -Wextra -Werror` refusing at both -O0 and -O2.
 --

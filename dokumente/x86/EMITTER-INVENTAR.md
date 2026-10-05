@@ -10,7 +10,7 @@ All scope below is derived from implementation branches and source
 constructs, never from corpus frequencies or example binaries.
 
 1. Read the canonical pilot vocabulary once:
-   `grammatik/Grammatik/X86/Typen.lean` (87 lines; namespace
+   `grammatik/Grammatik/X86/Kern/Typen.lean` (87 lines; namespace
    `Gabbro.Grammatik.X86`). It defines `Byte`/`Wort`/`Adresse` as
    `BitVec 8/64/64`, 16 registers in architectural encoding order,
    `Breite = b8|b16|b32|b64`, `Flags` (with `af : Option Bool`,

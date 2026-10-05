@@ -758,7 +758,7 @@ ask and does not answer.
 ## O12 — `beispiele/124`'s `setze` promises too little for its own locked section
 
 *Found 2026-09-15 by the stage (b) Opus agent while writing a G model for the program
-(`messung/OPUS-BERICHT-STUFE-B.md`, `grammatik/Grammatik/Korpus124.lean`), not by a guardian.*
+(`messung/OPUS-BERICHT-STUFE-B.md`, `grammatik/Grammatik/Korrespondenz/Korpus/Korpus124.lean`), not by a guardian.*
 
 > **STATUS 2026-09-17 (lane 204, merge `5ececd63`, `messung/muse/MUSE-REPORT-204.md`): half
 > (1) is DONE, half (2) is still OPEN.** The corpus file now promises both slots
@@ -915,7 +915,7 @@ an array underneath (`String.toList s = (String.Internal.toArray s).toList`), an
 of `Parser/Lexer.lean` and of every `src…real` pin -- pays that conversion twice. Splitting
 the literal at the `String` level does NOT help; `String.append` goes through the array too.
 **What helps is pinning the text as a `List Char` built from short `"…".toList` pieces**, and
-having the lexer take `List Char`. That is what `Grammatik/CText104.lean` and
+having the lexer take `List Char`. That is what `Grammatik/CBackend/Semantik/CText104.lean` and
 `CParser/CLexer.lean` do, and it is a factor of 13 in memory and 18 in time on the same
 theorem.
 
@@ -962,7 +962,7 @@ arithmetic of the monotone region with no tie to the syntax at all.
 
 | | |
 |---|---|
-| **what is NOT open since 2026-09-15** | **the specification has a form.** `Grammatik/ArenaZucker.lean` gives `reset` and `alloc` as SUGAR over the existing constructors — an arena is a table of `count = hi` slots beside a global `used` counter, `reset` is `Stmt.assignGlob`, `alloc` is `Block.narrow` + `Stmt.assignSlot` + `Stmt.assignGlob`. Because it is sugar, an arena program is an ordinary `Block` term, so `theorem gabbro_ziel` covers it with **no new case and no re-proof** (`#print axioms gabbro_ziel` unchanged, whole library green). The `else` semantics are proved on both sides of the bound, and the bridge to `Arena.lean` is proved |
+| **what is NOT open since 2026-09-15** | **the specification has a form.** `Grammatik/Bausteine/Arena/ArenaZucker.lean` gives `reset` and `alloc` as SUGAR over the existing constructors — an arena is a table of `count = hi` slots beside a global `used` counter, `reset` is `Stmt.assignGlob`, `alloc` is `Block.narrow` + `Stmt.assignSlot` + `Stmt.assignGlob`. Because it is sugar, an arena program is an ordinary `Block` term, so `theorem gabbro_ziel` covers it with **no new case and no re-proof** (`#print axioms gabbro_ziel` unchanged, whole library green). The `else` semantics are proved on both sides of the bound, and the bridge to `Arena.lean` is proved |
 | **what is NOT open since 2026-09-15, second half** | **the exporter builds the pair.** `gabbro lean-g` synthesises a table `A` of `count = hi` with one field `wert : T`, a global `A_used : int 0 hi` starting at zero, and `def gArena_A : ArenaForm gD` beside them; `reset A;` lowers to `Stmt.arenaReset`, `let i = alloc A (v) else { … };` to `Block.arenaAlloc`, and `A[i]` to the slot read of the one field. *Measured:* a probe unit with all four forms exports and **compiles under `lake env lean`.* The reservation `lo` travels nowhere, as planned (Opus lane `export`, `messung/muse/OPUS-BERICHT-EXPORT.md`) |
 | **what IS STILL open, and it is not the declaration** | **two statement SHAPES, each refused by name.** (1) An `alloc` **without `else`**: `Block.arenaAlloc` always carries a full-arena branch, the emitted C carries none (`buf[used++] = v;`, no bound check), and what makes the branch dead is the checker's static count `N212`, which does **not** travel into the term. Inventing a `return` the user did not write would put a guard into the exported term that neither the source nor the C has, and the chain would then compare two different programs. (2) An `alloc` at the **top level of a body**: `Block.arenaAlloc` is a `Block` former (its first half is `Block.narrow`) and a body is an `Endblock` — the same wall `let x = f()` and `let … else` hit there. **`beispiele/98` and `99` stop at (2)**, and both refusals name the shape and the reason. Closing (1) needs a decision about the emitted C, not about the exporter; closing (2) needs an `Endblock` form for the `Block` binders, which is a change to `Syntax.lean` |
 | **what is NOT the gap, measured** | *"nothing says so at the site"* was the original wording, and it is **false for the chain tools**: all four refuse BY NAME, in every statement context probed (top level, inside an `if`, inside a `traverse`, `reset` alone). What was missing is this ledger entry and a refusal that names a reason a reader can act on — the arena arm of `lean_g.rs` was a CATCH-ALL (`"{} has no G form"`), and a catch-all that happens to fire stops firing, without a word, the day an arm is added above it. It is by name since 2026-09-15 |
@@ -1699,7 +1699,7 @@ this line's business … `N463`/`N464` hold the length at the call site."* Nothi
 
 Simon's decision 1 (2026-09-30): *memory from outside comes as a REGION, never from a number.* Since
 this commit a `syscall` may answer `ptr<normal, …> u8 or R`: the stub is the proved template
-`tor.region` (`Grammatik/SchablonenOhneLibc.lean` §4), and the gate's `ensures n <= lenof(result)`
+`tor.region` (`Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean` §4), and the gate's `ensures n <= lenof(result)`
 is the extent `N571`/`N463` hold every index and every length through the bound name against
 (`beispiele/183`, gifts `1383`-`1387`). Three things stay open, each by name:
 

@@ -1,7 +1,6 @@
 import Bruecke.Simulation
 import Bruecke.Pruefung
-import Grammatik.Schlusssatz
-
+import Grammatik.Korrespondenz.Kette.Schlusssatz
 /-!
 # Finding F2, measured: without a rank of the call graph the bridge would be FALSE
 

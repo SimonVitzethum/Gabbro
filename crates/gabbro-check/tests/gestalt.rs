@@ -216,7 +216,7 @@ fn ein_feldfeld_bekommt_seine_klammern() {
 ///
 /// Until this lane `&` named a function and nothing else: `&X` for a non-function fell at
 /// `M127` (`beispiele/gift/244`). The model has long had the second producer
-/// (`Expr.ptrOf` / `Ty.ptr`, `ptrTypB` in `grammatik/Grammatik/ReferenzZeuge.lean`), so the
+/// (`Expr.ptrOf` / `Ty.ptr`, `ptrTypB` in `grammatik/Grammatik/Korrespondenz/Allgemein/ReferenzZeuge.lean`), so the
 /// checker takes it too: where the path names no function but a TABLE, the value is a
 /// pointer to that table, lowered to `&T_speicher`. The nominal half at the slot is
 /// `M140`'s and needs no new code -- pointers compare at their pointee, and two tables

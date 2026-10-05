@@ -5,8 +5,7 @@
 -- on every carrier invariant -- by construction of the premise, not by
 -- any step reasoning. Slice anchor: Ziel.lean:581-666 consumes this via
 -- `interferenceFree_of_invariantForm` in the §8 leg.
-import Grammatik.Ziel
-
+import Grammatik.Kern.Syntax.Ziel
 namespace GabbroAudit19
 
 open Gabbro.Grammatik

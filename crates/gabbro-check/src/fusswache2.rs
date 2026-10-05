@@ -1,6 +1,6 @@
 //! **The flagship's decidable footprint premise as a checker rule (lane 175).**
 //!
-//! The goal theorem is now `ziel_ort_mehrfaden` (`grammatik/Grammatik/ZielOrtMehrfaden.lean`,
+//! The goal theorem is now `ziel_ort_mehrfaden` (`grammatik/Grammatik/Zielsatz/ZielOrt/Rahmen/ZielOrtMehrfaden.lean`,
 //! SATZKARTE §16.1), and its footprint premise is no longer the old `fussOrtGB` --
 //! `E245`-`E249` in `wirkungen.rs` compute that older, stricter check and stay hints.
 //! Today the premise is `FussS P S (lokK P K)`:
@@ -1167,7 +1167,7 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
 /// at any moment; no proof against the sequential body makes it true.
 ///
 /// The Lean side is the checker with the atomic rely, `AkzeptiertX`
-/// (`grammatik/Grammatik/Zielsatz/AtomarAkzeptiert.lean`): its footprint component
+/// (`grammatik/Grammatik/Zielsatz/Atomar/AtomarAkzeptiert.lean`): its footprint component
 /// `fussWXB` admits an unguarded footprint carrier that is not thread-local only when it is
 /// an atomic in NO contract (`geteiltVB`, `vertragsFreiB`, over `GeteiltV` in the spec
 /// `AkzeptiertSpecX`); witness `vertrag_atomar_abgelehnt`. The goal theorem with shared

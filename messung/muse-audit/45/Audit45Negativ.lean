@@ -5,9 +5,8 @@
 -- values and computing by `rfl` reproduces the proofs.
 -- (E2) `qensures_ist_slot` genuinely observes memory: flipping the slot
 -- flips the Q, so the predicate is not constant on ordinary programs.
-import Grammatik.QLeer
-import Grammatik.BlattGegenbeispiel
-
+import Grammatik.Logik.Vertraege.QLeer
+import Grammatik.Proben.BlattGegenbeispiel
 namespace GabbroAudit45E
 
 open Gabbro.Grammatik

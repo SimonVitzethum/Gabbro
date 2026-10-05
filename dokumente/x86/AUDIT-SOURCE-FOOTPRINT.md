@@ -36,32 +36,32 @@ per-access requirements are openly marked OPEN where unproved.
 
 Source side (G/GX):
 
-- `grammatik/Grammatik/Semantik.lean:61-118` — `Ereignis`,
+- `grammatik/Grammatik/Kern/Semantik/Semantik.lean:61-118` — `Ereignis`,
   `World.lese` (read events), `World.schreibSlot/schreibGlob`
   (write events), `World.storeSlot/storeGlob` (silent writes);
   `execStmt` `Semantik.lean:699-786`, `execBlock` `:788-878`,
   `execEnd` `:880-...`; `axiomAntwort(Sonst)` `:665-695`;
   `Orakel` `:454-462`.
-- `grammatik/Grammatik/RennfreiG.lean:19-29` — `zugriffVon`,
+- `grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/RennfreiG.lean:19-29` — `zugriffVon`,
   `zugriffe` (trace-delta access set, no atomicity bit, whole-carrier
   keys).
-- `grammatik/Grammatik/RennfreiVoll.lean:498-523` — `ereignisse`,
+- `grammatik/Grammatik/Nebenlaeufigkeit/Rennfreiheit/RennfreiVoll.lean:498-523` — `ereignisse`,
   `ZugriffG`/`SchreibG` (with `¬ TraegerGleich` disjunct),
   `LiestG` (recorded-read-only).
-- `grammatik/Grammatik/RufMaschineG.lean:263` — `RufSchrittG`,
+- `grammatik/Grammatik/Logik/Ruf/RufMaschineG.lean:263` — `RufSchrittG`,
   **75 constructors** (counted `^  | <name> (M :` at HEAD; the
   "≈70 rules" figure in older docs is stale by two).
-- `grammatik/Grammatik/ZielOrt.lean:138-206` — `stmtOrteP`,
+- `grammatik/Grammatik/Zielsatz/ZielOrt/Grundlage/ZielOrt.lean:138-206` — `stmtOrteP`,
   `blockOrteP`, `endblockOrteP`; `fussOrte` `:251-256`,
   `fussOrtB`/`FussOrtOk` `:283-296`.
-- `grammatik/Grammatik/ZielOrtGeraetSem.lean:186-...` —
+- `grammatik/Grammatik/Zielsatz/ZielOrt/Geraet/ZielOrtGeraetSem.lean:186-...` —
   `Stmt.regs`/`Block.regs`/`Endblock.regs`; `fussOrteG`,
   `fussOrtGB` (`:471-...`).
-- `grammatik/Grammatik/SperreFuss.lean:140` — `FussS`;
+- `grammatik/Grammatik/Nebenlaeufigkeit/Sperren/SperreFuss.lean:140` — `FussS`;
   `Speichermodell/AtomarReplay.lean:29` — `FussSX` (+`Tg` disjunct);
   `Satz.lean:904-967` — `axiomSpur`, `GutO`; `Syntax.lean:166-175`
   — `D.Ax` fields (no read declaration).
-- `grammatik/Grammatik/Speichermodell/RMW.lean:117` —
+- `grammatik/Grammatik/Speichermodell/Maschine/RMW.lean:117` —
   `exchange_liest_schreibt` (the only per-rule access lemma).
 
 Target side (X86):

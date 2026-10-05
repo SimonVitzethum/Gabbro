@@ -9,7 +9,7 @@
 -- mentions (`GeteiltV`), the user's proof meets every value such a read may
 -- return (the rely, `NutzerPflichtA`), and the conclusion covers the weak
 -- runs (machine GX). The certificate
--- `grammatik/Grammatik/Zertifikat/G162_geteilte_flagge.lean` decides the
+-- `grammatik/Grammatik/Zertifikat/Reihe01/G162_geteilte_flagge.lean` decides the
 -- checker premise in Lean for this unit and states `GabbroZiel` on it.
 module beispiel162 {
 

@@ -28,7 +28,7 @@ BLOCKING item to list.
   some duplicated reviewer reading effort across the batch, but that is an
   efficiency observation, not a gate defect.
 - N3 — Reserved optimiser paths. AGENTS.md reserves
-  `grammatik/Grammatik/X86/OptimizationRules.lean` and
+  `grammatik/Grammatik/X86/Opt/Regeln/OptimizationRules.lean` and
   `OptimizationWitnesses.lean` for the friend handoff. Neither file exists in
   this tree (checked: no `Optimization*.lean` under `grammatik/Grammatik/X86/`,
   which holds 143 other modules). The review briefs pin no author file list,

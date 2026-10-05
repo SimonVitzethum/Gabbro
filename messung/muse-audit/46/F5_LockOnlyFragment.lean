@@ -18,8 +18,7 @@
   `hlock_prog`-shaped program text is carrier-free; and a one-`leaf` text
   cannot satisfy the lock-only predicate. Both use every binder.
 -/
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

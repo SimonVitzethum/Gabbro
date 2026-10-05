@@ -1,5 +1,4 @@
-import Grammatik.Maschine
-
+import Grammatik.Kern.Semantik.Maschine
 open Gabbro.Grammatik
 
 /-! ## Wrapper folding (pattern a): conclusion = premise under another name

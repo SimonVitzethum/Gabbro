@@ -15,7 +15,7 @@
 //! `N465` (a string where the discipline does not follow it).
 //!
 //! The pure length arithmetic below mirrors
-//! `grammatik/Grammatik/ZeichenfolgeGebunden.lean`
+//! `grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeGebunden.lean`
 //! (`BString`, `bliteral`, `bconcat`, `bkopie`, `bindex`).
 //!
 //! ## Where a string may stand (fix lane F6, review G12 F4/F5)

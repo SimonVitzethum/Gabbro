@@ -163,7 +163,7 @@ becomes provable once S4's facts exist in G).
 
 Measured 2026-10-05: a new `Expr` constructor reaches 19 Lean files (62 `leseBytes` sites as
 the yardstick), a new `Stmt` constructor more (176 `assignDurch` sites), and **both inductives
-are read by the direct x86-64 compiler's modules** (`Grammatik/X86/ExpressionLowering.lean`,
+are read by the direct x86-64 compiler's modules** (`Grammatik/X86/Quelle/ExpressionLowering.lean`,
 `X86/OptDceDead.lean` among the `leseBytes` sites) -- the area where the laptop's Muse lanes
 integrate dozens of branches a day. A change of `Syntax.lean`'s core inductives breaks every
 open branch that matches on them at its merge. S1 therefore needs a coordinated slot from the

@@ -297,7 +297,7 @@ def sprechprobe_text():
     """
     fehler = ("E_x.lean:138:2: error: Insufficient number of fields for `⟨...⟩` "
               "constructor\n")
-    hinweis = ("info: Grammatik/CText108.lean:177:0: 'kette_108' depends on axioms: "
+    hinweis = ("info: Grammatik/CBackend/Semantik/CText108.lean:177:0: 'kette_108' depends on axioms: "
                "[propext]\n")
     return [
         ("an `error:` line is read as a finding",
@@ -350,7 +350,7 @@ def sprechprobe_text():
 #
 # *One direction alone would pass with an elaborator that refuses everything, and the other
 # alone with one that is never asked.*
-PROBE_GUT = """import Grammatik.Zielsatz.Spec
+PROBE_GUT = """import Grammatik.Zielsatz.Kern.Spec
 namespace Gabbro.Grammatik.ProbeExportLean
 structure Zwei where
   a : Empty -> Nat
@@ -361,7 +361,7 @@ end Gabbro.Grammatik.ProbeExportLean
 """
 PROBE_KAPUTT = PROBE_GUT.replace("⟨(fun t => nomatch t), (fun g => nomatch g)⟩",
                                  "⟨fun t => nomatch t, (fun g => nomatch g)⟩")
-PROBE_SORRY = """import Grammatik.Zielsatz.Spec
+PROBE_SORRY = """import Grammatik.Zielsatz.Kern.Spec
 namespace Gabbro.Grammatik.ProbeExportLeanSorry
 example : 1 = 1 := by sorry
 end Gabbro.Grammatik.ProbeExportLeanSorry

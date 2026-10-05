@@ -1,6 +1,6 @@
 import Grammatik.Parser.UebersetzeAllg2
-import Grammatik.CSLInvarianteC
-import Grammatik.Satz
+import Grammatik.CBackend.Semantik.CSLInvarianteC
+import Grammatik.Kern.Syntax.Satz
 import Gabbro.Body
 import Bruecke.Pflichten
 

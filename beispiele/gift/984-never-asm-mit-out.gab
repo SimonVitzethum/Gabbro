@@ -7,7 +7,7 @@
 -- (`let FnRumpf::Block(b) = &f.rumpf else { return };`), so an `asm` body was
 -- never held against its `-> never` declaration -- phase 2 reported 0 errors.
 --
--- The model side (`grammatik/Grammatik/Zielsatz/NeverAsm.lean`, `AxNeverGut`)
+-- The model side (`grammatik/Grammatik/Zielsatz/Eigenschaften/NeverAsm.lean`, `AxNeverGut`)
 -- says the same from the other end: a `never` axiom delivers no out value,
 -- and the call never continues (`execBlock_bindAxiom_never`, head
 -- `nieZurueck`). Forbidding the contradictory `out` is the checker's job --

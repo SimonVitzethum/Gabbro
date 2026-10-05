@@ -9,8 +9,7 @@
   disjunct is irrelevant: the conclusion follows from `kein_wettlauf`
   alone, for handler and non-handler threads alike.
 -/
-import Grammatik.Unterbrechung
-
+import Grammatik.Nebenlaeufigkeit.Allgemein.Unterbrechung
 open Gabbro.Grammatik
 
 /-- F7: the handler premise is discarded -- plain threads suffice. -/

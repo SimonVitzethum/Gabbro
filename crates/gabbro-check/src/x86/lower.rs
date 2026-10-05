@@ -2,7 +2,7 @@
 //!
 //! Mirrors `senkAtom`/`senkFrag` (`grammatik/Grammatik/X86/
 //! ExpressionLowering.lean`) and `senkAssign`
-//! (`grammatik/Grammatik/X86/SourceAssignmentLowering.lean`) over a small
+//! (`grammatik/Grammatik/X86/Quelle/SourceAssignmentLowering.lean`) over a small
 //! Rust input type ([`Fragment`]) standing in for the covered slice of
 //! the typed source `Expr`: integer literals, integer variables already
 //! bound to a register, and ONE bounded ADD/SUB level over atomic

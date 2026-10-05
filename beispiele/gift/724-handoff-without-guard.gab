@@ -1,7 +1,7 @@
 -- erwartet: H018
 -- **The driver handoff without a held guard falls.**
 --
--- `grammatik/Grammatik/Geraet.lean` proves race-freedom for a DMA window UNDER a guard
+-- `grammatik/Grammatik/Kern/Semantik/Geraet.lean` proves race-freedom for a DMA window UNDER a guard
 -- premise (`GeraetWache` plus `haussen`): handoff before the device write, take-back
 -- after, and the CPU side ordered against the window endpoints. The checker never asked
 -- for the driver half -- until this probe a function that filled a DMA-visible buffer AND

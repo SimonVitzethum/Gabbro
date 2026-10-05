@@ -7,8 +7,7 @@
   certificate for the EMPTY run, so it cannot distinguish "checked" from
   "nothing happened".
 -/
-import Grammatik.Erhaltung
-
+import Grammatik.Kern.Semantik.Erhaltung
 open Gabbro.Grammatik
 
 /-- F3: the empty certificate satisfies completeness (nothing owed). -/

@@ -1,6 +1,6 @@
 -- 124 -- **Two active threads with private tables and one shared lock (lane 175).**
 --
--- The witness shape of `grammatik/Grammatik/MehrfadenZeuge.lean` in surface
+-- The witness shape of `grammatik/Grammatik/Nebenlaeufigkeit/Allgemein/MehrfadenZeuge.lean` in surface
 -- syntax: thread 0 (`hauptA`) writes its private table `privA` unguarded, thread 1
 -- (`hauptB`) its private table `privB` unguarded, and both update the shared table
 -- `konto` under the lock `L` with the non-trivial invariant

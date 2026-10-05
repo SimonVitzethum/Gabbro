@@ -224,7 +224,7 @@ fragment; `opt.rs` proposes source-level certificates). Consequences:
    `FeatureProfile.lean:72` (`HwProfil → BereitProfil → PerfMerkmal → Option …`)
    vs new `ISASelect.lean:703` (peephole `S fe p → Option q`), same namespace, both
    imported by `Grammatik.lean` (lines 422, 476). Fixture full build fails with
-   `import Grammatik.X86.ISASelect failed, environment already contains
+   `import Grammatik.X86.Befehle.ISA.ISASelect failed, environment already contains
    'Gabbro.Grammatik.X86.waehle' from Grammatik.X86.FeatureProfile`.
    Minimum repair: rename the NEW one (e.g. `waehleInstr`) and update its uses,
    which are contained to `ISASelect.lean` + `ISASelectWitnesses.lean` (incl. the
@@ -322,7 +322,7 @@ wording repair.
   queued `./lean-bau` (shared `lean-slot`), backgrounded 2026-10-03 ~00:52 UTC
   behind two other lanes' queued jobs. RESULT (2026-10-03, complete output first
   line): `== exit 1; 3 error line(s) in the COMPLETE output` —
-  `error: Grammatik.lean:44:0: import Grammatik.X86.ISASelect failed, environment
+  `error: Grammatik.lean:44:0: import Grammatik.X86.Befehle.ISA.ISASelect failed, environment
   already contains 'Gabbro.Grammatik.X86.waehle' from Grammatik.X86.FeatureProfile`
   (plus the Lean-exited/build-failed summary lines); 475/476 jobs built, i.e. every
   dependency module is green standalone and only the `Grammatik` aggregator fails.

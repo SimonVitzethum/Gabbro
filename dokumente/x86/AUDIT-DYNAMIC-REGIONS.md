@@ -15,36 +15,36 @@ path touches them.*
 
 ## 0. Files actually read (anchors with line numbers as-read)
 
-- Target regions: `grammatik/Grammatik/X86/Regionen.lean` (full, 631 lines;
+- Target regions: `grammatik/Grammatik/X86/Speicher/Regionen.lean` (full, 631 lines;
   header 1-14, `Region`/`Vorrat` 20-33, `reserviere` 92-104, freshness/
   disjointness 186-206/281-299, `initialisiere` 231-239, ceiling-free
   `FreiStand`/`freiReserviere` 426-442, no-static-bound 477-488, witnesses
   490-570, CUTS 572-595).
-- Target byte memory: `grammatik/Grammatik/X86/Speicher.lean`
+- Target byte memory: `grammatik/Grammatik/X86/Speicher/Speicher.lean`
   (`Speicher` fields from `Typen.lean` 41-45, `read64`/`write64` 47-136,
   no-wrap/footprints 156-193, read-back/frames 324-373, width-indexed
   377-661, joint witness 663-710, CUTS 712-727).
-- Target overlap admission: `grammatik/Grammatik/X86/OverlapRefusal.lean`
+- Target overlap admission: `grammatik/Grammatik/X86/Validierung/OverlapRefusal.lean`
   (`zugriffOk` 44-47, policy 95-98, agreement lemma 143-179, adjacent-carrier
   witnesses 183-274, counterexample-C 281-291, joint witnesses 299-355,
   CUTS 357-380).
-- Single access owner: `grammatik/Grammatik/X86/AccessList.lean`
+- Single access owner: `grammatik/Grammatik/X86/Speicher/AccessList.lean`
   (`ZugriffBefund.luecke`, generic completeness lemmas, CUTS 238-250).
-- Source heap ceiling: `grammatik/Grammatik/ArenaDyn.lean`
+- Source heap ceiling: `grammatik/Grammatik/Bausteine/Arena/ArenaDyn.lean`
   (`DynArena` 24-31, `dynGrow` 36-39, `dynGrow_isSome` 64-71,
   `dynGrow1_gdw_alloc` 83-98, `dynGrowListe` 141-146, `Form` section
   `DynForm` from line 271).
-- Goal statement: `grammatik/Grammatik/Zielsatz/Spec.lean` (arena-runtime
+- Goal statement: `grammatik/Grammatik/Zielsatz/Kern/Spec.lean` (arena-runtime
   comment block 676-686, premise (d) `Laufzeit.reserve` 899-915, (d)
   `Laufzeit.commit` 916-928, budget (M10) 1045-1047, `DynForm` coverage
   note 1443-1444).
-- Region gate template: `grammatik/Grammatik/SchablonenOhneLibc.lean`
+- Region gate template: `grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean`
   §4 `tor.region` (~359-412: `regionStumpf`, `tor_region`,
   `tor_region_adresse`, `region_zugriff`, and the explicit NOT-proved list).
 - Checker sentences: `crates/gabbro-check/src/saetze.rs`
   (`syscall.stub` ~4319-4360, `zeiger.index_in_der_ausdehnung` ~4409-4457,
   `fremd.ohne_code` ~4511, `klon.uebergabe` ~4651, `M140` nominal rule).
-- Canonical vocabulary: `grammatik/Grammatik/X86/Typen.lean`
+- Canonical vocabulary: `grammatik/Grammatik/X86/Kern/Typen.lean`
   (`Speicher` 41-45, `Befehl` pilot 14 constructors 53-68, CUTS 81-86).
 - Source layout front end: `grammatik/Grammatik/Parser/UebersetzeAllg.lean`
   (`fieldRangeO` 72, `typAt` 84, `declOf` 147).
@@ -250,7 +250,7 @@ Read-only verification (no file written):
 - `zeugenReserviere_erfolg` / `zeugenReserviere_voll` (`Regionen.lean`
   511-522): positive allocation at the range base and refusal past the
   ceiling, both by `decide`. Stated as theorems; re-check via
-  `./lean-probe grammatik/Grammatik/X86/Regionen.lean` (full-file green
+  `./lean-probe grammatik/Grammatik/X86/Speicher/Regionen.lean` (full-file green
   expected; run recorded in `MUSE-REPORT-411.md`).
 - `region_schreibLese_zeuge` (534-570): nonzero write through the
   initialised witness region reads back with an observed byte change.

@@ -15,7 +15,6 @@
   so (`{ }` bodies stand for the corpus block at the cited site).
 -/
 import Grammatik.Parser.Element
-
 namespace Gabbro.Grammatik.Parser
 
 set_option maxRecDepth 100000

@@ -16,8 +16,7 @@
       `stabil` with one extra application node -- the per-thread premise is
       never combined across threads.
 -/
-import Grammatik.InterferenzAllgemein
-
+import Grammatik.Nebenlaeufigkeit.Rennfreiheit.InterferenzAllgemein
 namespace Gabbro.Grammatik
 
 open Gabbro.Grammatik

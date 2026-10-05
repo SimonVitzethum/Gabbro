@@ -9,7 +9,7 @@
  *
  * WHY A RUNTIME AND NOT EMITTED C. Reservation is the runtime's, not the
  * program's: the goal theorem books it as assumption (d) `Laufzeit`
- * (`grammatik/Grammatik/Zielsatz/Spec.lean`), the same shelf `laufzeit/`
+ * (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`), the same shelf `laufzeit/`
  * `start.c` stands on. A generator that printed the reserve call into the
  * unit would move a runtime fact into the program text.
  *

@@ -1,7 +1,7 @@
 //! **`arena` -- the monotone region with two bounds** («E4»,
 //! `PLAN-ERWEITUNG.md` §3, checker half).
 //!
-//! The Lean model (`grammatik/Grammatik/Arena.lean`, lane E4 model half)
+//! The Lean model (`grammatik/Grammatik/Bausteine/Arena/Arena.lean`, lane E4 model half)
 //! proves the mathematics: allocation within the reservation never fails
 //! (`alloc_innerhalb_reserve`), indices are contiguous (`keine_fragmentierung`),
 //! a reset empties the arena (`reset_used`), and no index survives a reset

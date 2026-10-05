@@ -19,7 +19,7 @@ attributes are satisfied. With that reading the sentence at the head of the seco
 > **Logic** the programmer writes anyway, in every language.
 
 — is no longer a demand on the rules but a **theorem about them**: the attributed grammar is a
-typed inductive family in [`grammatik/Grammatik/Syntax.lean`](../grammatik/Grammatik/Syntax.lean),
+typed inductive family in [`grammatik/Grammatik/Kern/Syntax/Syntax.lean`](../grammatik/Grammatik/Kern/Syntax/Syntax.lean),
 its meaning a **total** function in `Semantik.lean`, and the outcome type of that function has
 exactly two error constructors — `logik` (a clause the writer wrote does not hold) and
 `hardware` (an assumption about the machine does not hold). `Satz.lean` states it as
@@ -572,7 +572,7 @@ the handle alone; the value part holds under the single-copy-atomicity
 premise (both snapshots agree at the checked address), named explicitly
 and satisfiable, never vacuous. Without the premise the goal is unwritable:
 a run whose snapshots differ exhibits the hazard. Lean:
-`Grammatik/Adressraum.lean` (`Seite`, `UserRegion`, `Kopie`,
+`Grammatik/Kern/Semantik/Adressraum.lean` (`Seite`, `UserRegion`, `Kopie`,
 `GepruefteKopie`, `PruefDannKopie`, `ohneToctou`, `EinSnapshot`).
 
 #### What stays future work
@@ -1040,7 +1040,7 @@ enclosing `locks` blocks and the statements before the position:
 | `if c blk else blk` | | — | `Stmt.ite` |
 | `match e { arms }` | one arm per case (see production) | — | `Stmt.onTag`, `Stmt.onOption`, `Stmt.onGrund`; `Arms`, `GrundArms` |
 | `narrow x to lo .. hi else endblock` | the `else` does not fall off; after it `x : lo .. hi` | — | `Block.narrow e lo hi sonst rest` |
-| `let i = alloc A (v) else blk` | `i : index into A` of the current generation; `v` has the element type; `writes A`; the `else` is owed past the reservation (`N212`) | — (the `else` runs when the arena is full) | **SUGAR since 2026-09-15**: `Block.arenaAlloc` (`grammatik/Grammatik/ArenaZucker.lean`) = `Block.narrow` on the `used` counter + `Stmt.assignSlot` + `Stmt.assignGlob`; theorems `arenaAlloc_unter_schranke`/`_an_schranke`, bridge `arenaAlloc_gdw_modell` to `Arena.alloc`. *The generation stays checker state (`N211`); the exporter does not build the form yet — `OFFEN.md` O14* |
+| `let i = alloc A (v) else blk` | `i : index into A` of the current generation; `v` has the element type; `writes A`; the `else` is owed past the reservation (`N212`) | — (the `else` runs when the arena is full) | **SUGAR since 2026-09-15**: `Block.arenaAlloc` (`grammatik/Grammatik/Bausteine/Arena/ArenaZucker.lean`) = `Block.narrow` on the `used` counter + `Stmt.assignSlot` + `Stmt.assignGlob`; theorems `arenaAlloc_unter_schranke`/`_an_schranke`, bridge `arenaAlloc_gdw_modell` to `Arena.alloc`. *The generation stays checker state (`N211`); the exporter does not build the form yet — `OFFEN.md` O14* |
 | `reset A;` | `A` is a declared arena; `writes A` | — | **SUGAR since 2026-09-15**: `Stmt.arenaReset` = `Stmt.assignGlob zaehl 0`; theorem `arenaReset_stand`. The model function `Arena.reset` keeps the generation half: every older index is stale by typing |
 | `narrow x to finite` / a float range | | — | `Block.gleitNarrow` |
 | `let y = a op b;` on floats, `let y = 1.5 rounded;`, `let y = f64(n);` | the result **range is declared** (by the type of `y`); the machine computes | **`logik bereich`** if the result is outside or not finite — the program's own logic under the kernel IEEE model, which the user proves never happens (`hardware ieee` until 2026-09-15, `messung/URTEIL-OPUS-2026-09-15b.md` F1) | `Block.gleit`, `gleitLit`, `gleitVon` («SG-17») |
@@ -1087,7 +1087,7 @@ another thread.
 Single-threadedness (W4) is the shape every mark step preserves: two events
 naming stages `s`, `s'` of the SAME mark name the SAME thread — stages may
 differ (advance changes the stage, never the owner), threads may not.
-Lean: `Grammatik/Marken.lean` (`Stand`, `MarkenSchritt`, `Verlauf`,
+Lean: `Grammatik/Kern/Syntax/Marken.lean` (`Stand`, `MarkenSchritt`, `Verlauf`,
 `Einfaedig`); the projection into `Gesittet.marke_eindeutig` is the wiring
 lane's work.
 
@@ -1187,7 +1187,7 @@ plus the four things only a library declaration can fail:
 *Lean:* a library call is an `Ax` whose parameter list is the ordinary
 parameters with the payload appended — no new statement constructor.
 Theorem `bibliotheksruf_ist_ax`
-(`grammatik/Grammatik/Bibliothek.lean`): the typing and effect obligations
+(`grammatik/Grammatik/Bausteine/Arena/Bibliothek.lean`): the typing and effect obligations
 of such a call are exactly the `Stmt.axiomCall` premises for the serving
 axiom, as an equivalence; witnessed on a one-table declaration with a
 reached two-step run that moves memory
@@ -1302,7 +1302,7 @@ A region with any non-integer token stays `N069`: the region is captured,
 not interpreted, exactly as before. The translator itself is never
 verified -- the certificate is the payload's TYPING, every entry in its
 field range as a `List.all` predicate (encoding N), closed by `decide`
-(`grammatik/Grammatik/Uebersetzung.lean`, printed by
+(`grammatik/Grammatik/Logik/Vertraege/Uebersetzung.lean`, printed by
 `uebersetzung::payload_certificate`).
 
 ```gabbro
@@ -1487,7 +1487,7 @@ versions; two `format`s of one name in one scope fall to `N001`, and `@version` 
 | declaration | reading | Lean |
 |---|---|---|
 | `table T count N { slot { f : τ } }` | a carrier with `N` slots; every access carries `i : index into T` and the guards of `T` | `D.Tab`, `D.count`, `D.Feld`, `D.typ`, `D.braucht` |
-| `arena A capacity lo .. hi of T` | a monotone region: `lo` the reservation, `hi` the hard bound (`0 <= lo <= hi`, both constants — `N210`); `A[i]` reads `T`, `alloc` stores it, `reset` starts a fresh generation | `Arena k g`, `ArenaIdx g n`, `Marke g` (`grammatik/Grammatik/Arena.lean`); theorems `alloc_innerhalb_reserve`, `keine_fragmentierung`, `reset_used`. **In the SYNTAX since 2026-09-15**: `ArenaForm D` (`ArenaZucker.lean`) — a table of `count = hi` slots beside a global `used` counter, which is what the emitter writes |
+| `arena A capacity lo .. hi of T` | a monotone region: `lo` the reservation, `hi` the hard bound (`0 <= lo <= hi`, both constants — `N210`); `A[i]` reads `T`, `alloc` stores it, `reset` starts a fresh generation | `Arena k g`, `ArenaIdx g n`, `Marke g` (`grammatik/Grammatik/Bausteine/Arena/Arena.lean`); theorems `alloc_innerhalb_reserve`, `keine_fragmentierung`, `reset_used`. **In the SYNTAX since 2026-09-15**: `ArenaForm D` (`ArenaZucker.lean`) — a table of `count = hi` slots beside a global `used` counter, which is what the emitter writes |
 | `arena A capacity lo .. hi max M of T` | the dynamic form (lane 257): address reserved for `M` slots, storage committed up to `hi` (`0 <= lo <= hi <= M`, all three constants — `N210`) | the static `ArenaForm` of `hi` slots beside `used` is exactly the committed-prefix behavior, so the static lowering is sound where no `grow` stands; the dynamic form is future work, not a second model |
 | `reset X at i count n;` | (M-ALLTAG C) gives `n` elements of the zero-initialised `static mut` array `X` back, from element `i`: they read as zero afterwards, and whole pages of the range go back to the operating system through the program's own `gabbro_os_leeren` (weak: unbound, the emitted loop still zeroes). `N569` refuses any other carrier; the END of the range is held against the length (`M103`); it is a store (`writes X`) | none: `lean-g` refuses the statement by name (`LG005`) — the exporter has no model of a released page |
 | `grow A by n else { … };` | commit `n` constant slots below the ceiling, or run the `else` (OOM below the ceiling); the `else` always stands (`N426` refuses the uncountable amount and the past-ceiling request, branch or no branch; `N213` the undeclared arena) | no constructor yet: the committed prefix is checker flow, and the emitter and the G exporter refuse the statement by name until the dynamic arm lands |
@@ -1890,7 +1890,7 @@ set starts and written by nobody inside it). What the shape costs is
 stated beside it: the read-only claim is a whole-set claim, so adding a
 writer anywhere in the set moves the carrier out of this subsection and
 under a lock, an atomic, or a pairing rule. Lean:
-`Grammatik/LesenStabil.lean` (`RequiresLiestIn`, `EnsuresLiestIn`,
+`Grammatik/Nebenlaeufigkeit/Allgemein/LesenStabil.lean` (`RequiresLiestIn`, `EnsuresLiestIn`,
 `InvarianteLiestIn` via hull bridges; `LesenStabilKette` folds the
 whole-set claim to the last world; `requiresStabil_kette`,
 `ensuresStabil_kette`, `invarianteStabil_kette`).
@@ -1916,7 +1916,7 @@ ARE `Bau.neben`. What the computation drops (a call outside the domain, an
 effect outside the carriers, a pair outside the entries, any indirect or
 foreign call) the checker REFUSES — the fidelity shapes state exactly
 that. Unknown carriers count as `shared`: the loud direction, demanding
-the guard. Lean: `Grammatik/Extraktion.lean` (`bauAus`, `bauLaufSpiegel`,
+the guard. Lean: `Grammatik/Kern/Syntax/Extraktion.lean` (`bauAus`, `bauLaufSpiegel`,
 `kantenTreue`, `fussTreue`, `paarTreue`, `paarVoll`); premises consumed:
 `Geteilt.Bau`/`BauLauf`/`traegerBis`, `Nebeneinander` (`Wettlauf.lean` §6).
 
@@ -2172,7 +2172,7 @@ every requirement with its library and the calls relying on it
 *Lean:* the program theorem takes one assumption set, the profile; a
 library's set is required to be a subset, so linking adds no premise. For
 keyed mode assumptions the profile induces its own model
-(`modusVonProfil`). All in `grammatik/Grammatik/Profil.lean`, witnessed.
+(`modusVonProfil`). All in `grammatik/Grammatik/Kern/Syntax/Profil.lean`, witnessed.
 
 ---
 
@@ -2378,7 +2378,7 @@ cannot be written. `Satz.lean` §4 shows one (`x / x`: `.div` demands `1 ≤ 0`)
 
 ### 16.1 The theorems as they stand
 
-**`ziel_ort_geraet`** (`grammatik/Grammatik/ZielOrtGeraet.lean`). Over machine G —
+**`ziel_ort_geraet`** (`grammatik/Grammatik/Zielsatz/ZielOrt/Geraet/ZielOrtGeraet.lean`). Over machine G —
 no bare lock steps, every memory step carrying `HeldGenau`, every live frame's
 static holdings held by its thread (`rufG_haelt_statisch`, `RufHaeltG.lean`) and
 two threads never holding one lock (`exklusivG`, `ZielOrt.lean`) — every machine
@@ -2562,7 +2562,7 @@ measures (`assume`/`axiom` with `falsifier`, `progress`, a register promise, the
 memory model A10) — **and nothing else**. Everything else is carried by Gabbro
 and CompCert, assuming Gabbro is formally verified. The Lean body that states
 this independently of the current `.rs` code is
-`grammatik/Grammatik/Ziel.lean`: it imports only the grammar, defines the
+`grammatik/Grammatik/Kern/Syntax/Ziel.lean`: it imports only the grammar, defines the
 lowering contract to a closed C subset explicitly, and its `#print axioms`
 shows nothing but `propext`/`Classical.choice`/`Quot.sound`.
 
@@ -2603,7 +2603,7 @@ by the grammar (§15, §16.2).
 
 A deadline names by when, in cycles on a named machine, with a probe that
 can refute it. The Lean side gives that statement named shapes
-(`Grammatik/Fristlauf.lean`): a check-use pair with carried order, a
+(`Grammatik/Kern/Semantik/Fristlauf.lean`): a check-use pair with carried order, a
 deadline as named assumption plus probe, expiry as the strict betweenness
 of check, moment and use, and an answer mapping expiry onto `Hardware.fortschritt`
 (the `Ziel.lean` `fristAlsAnnahme` mapping, mirrored by shape). Time never
@@ -2659,7 +2659,7 @@ row); sample `sonde_tick.c`, row 39 PROGRAM. Time stays a hardware outcome.
 - [ ] The four marks of the second version stand: `narrow` count ≤ 24 sites; the 17 logic
       obligations against `by induction over`; cost truth per compiled module; the ten
       fragments on this syntax, guardians green.
-- [ ] **The user-memory region check** — `grammatik/Grammatik/Adressraum.lean` proves the
+- [ ] **The user-memory region check** — `grammatik/Grammatik/Kern/Semantik/Adressraum.lean` proves the
       validated copy under the named snapshot premise, but the region check stands beside
       the run: no range check inside the run, no user partition in the world (§16.3). Until
       both stand, check-then-copy across the user/kernel boundary has shapes but no
@@ -2716,7 +2716,7 @@ loop rule inside.
 have no row and hence no duty; their contracts remain hypotheses about the
 environment, threaded through rather than closed.
 
-Lean: `Grammatik/Komposition.lean` (shapes as `def`s, proofs later).
+Lean: `Grammatik/Logik/Vertraege/Komposition.lean` (shapes as `def`s, proofs later).
 
 ## 20. Fault outcomes — named, beside the semantics, not in it
 
@@ -2741,7 +2741,7 @@ out-of-range index reaches `fehler .index` by definition
 Cuts: no threading through `execStmt`/`execBlock` (propagation lemmas for
 `evalAll`, step sequence, loop iteration are named, not built); `evalF`
 delegates every call to `eval`; not wired into `Grammatik.lean`.
-Lean: `Grammatik/Fehler.lean` (`Fehlerklasse`, `ErgebnisF`, `evalF`,
+Lean: `Grammatik/Kern/Syntax/Fehler.lean` (`Fehlerklasse`, `ErgebnisF`, `evalF`,
 `evalF_ok`, `evalF_stimmt`, `IndexFalle`, `FehlerFall`).
 
 ## 21. The producer contract — what the emitter must uphold
@@ -2750,7 +2750,7 @@ Lean: `Grammatik/Fehler.lean` (`Fehlerklasse`, `ErgebnisF`, `evalF`,
 A closed list is not a contract until somebody says what upholding it
 takes, per run, in checkable form. That is this section. It claims no
 verified emitter: every sentence below is specified in
-`Grammatik/Erhaltung.lean` as a `Prop`-valued `def` — the SHAPE of a
+`Grammatik/Kern/Semantik/Erhaltung.lean` as a `Prop`-valued `def` — the SHAPE of a
 later proof, not the proof. The five later sentences are named
 `satz_korrespondenz`, `satz_alias`, `satz_kosten`, `satz_tafel`, and
 their conjunction `satz_erzeugervertrag`.
@@ -2861,7 +2861,7 @@ conditions (M102, SG-3, M137, width), reads (variables, globals, slots
 with exact index types and recomputed guards), straight-line int blocks
 with linear balance; CUT shapes for floats, options, sums, grounds,
 quantifiers, `reaches`, pointer reads and `RufPasst`-carrying calls.
-Lean: `Grammatik/Zeugnis.lean`. The printer stays trust base.
+Lean: `Grammatik/Korrespondenz/Zeugnis/Zeugnis.lean`. The printer stays trust base.
 
 ### 21.7 What this section does NOT move
 

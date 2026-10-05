@@ -1,7 +1,7 @@
 # Audit: decode boundary (lane 406)
 
-*Scope: `grammatik/Grammatik/X86/Codec.lean` (byte codec, lane 279),
-`grammatik/Grammatik/X86/Byteschritt.lean` (fetch/decode/step, lane 319),
+*Scope: `grammatik/Grammatik/X86/Kern/Codec.lean` (byte codec, lane 279),
+`grammatik/Grammatik/X86/Kern/Byteschritt.lean` (fetch/decode/step, lane 319),
 and their consumers, as merged at `0b3132b7`.
 Read against `dokumente/x86/BYTE-PILOT.md`, `DIRECT-COMPILER-DESIGN.md` §§2-3,
 `dokumente/x86/WORK-ALLOCATION.md` and the accepted `X86/Typen.lean` +

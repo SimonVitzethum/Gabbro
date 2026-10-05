@@ -571,7 +571,7 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // **10 seit dem 2026-08-20** -- `restrict.alleinzugriff` ist in Isabelle und baut.
     // **10 -> 12 on 2026-09-30 (C-free lane):** the two templates of a program without a C
     // library (the `-> never` gate stub and the process entry), entered and
-    // proved in one commit (`grammatik/Grammatik/SchablonenOhneLibc.lean`). The live surface
+    // proved in one commit (`grammatik/Grammatik/Bausteine/Schablonen/SchablonenOhneLibc.lean`). The live surface
     // and the unproved count do not move: neither entry was ever carried unproved.
     // **12 -> 13 on 2026-09-30 (C-free lane, second Lean slice):** `tor.fehlbar`, the stub of a
     // fallible gate, entered and proved in one commit (`SchablonenOhneLibc.lean` §3) -- again

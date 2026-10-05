@@ -59,7 +59,7 @@ Optimisations sit entirely in the untrusted middle arrow. This document fixes:
 
 What this document is NOT: a second source language, a second concurrency
 model, a new register/instruction model (canonical vocabulary stays
-`grammatik/Grammatik/X86/Typen.lean`, namespace `Gabbro.Grammatik.X86`), or a
+`grammatik/Grammatik/X86/Kern/Typen.lean`, namespace `Gabbro.Grammatik.X86`), or a
 theorem about a self-invented mini-language presented as source correspondence.
 Any Lean formalisation of §§1–2 must refine against `P` (via `rufAt` /
 `execStmt` / `exec`) and against the per-access TSO bridge (lane 274), never

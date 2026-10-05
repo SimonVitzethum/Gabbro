@@ -29,7 +29,6 @@
   level-6 goal. Statements are NOT entered here.
 -/
 import Grammatik.Parser.Rundlauf3
-
 namespace Gabbro.Grammatik.Parser
 
 -- The four new primary layers, one level each.
