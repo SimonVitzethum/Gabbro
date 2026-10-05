@@ -1,5 +1,7 @@
 # MUSE-REPORT-1242: exact review of candidate 1241 (AVX2 YMM state)
 
+CANDIDATE: 1241 8f34e3f83e5c6543266bf3d5b0eb2ed9be488259
+
 Clone `/home/simon/Dokumente/gabbro-muse/a1242`, branch `muse/1242`: verified
 (`pwd` + `git branch --show-current`). Own file only: this report.
 
@@ -102,7 +104,9 @@ clearing effects only and claims no byte executes. Any future consumer
 wiring these steps to fetched `VEX.128.0F.WIG 77` / `VEX.256...77` bytes must
 add the Type 8 gate there (sibling Vex/Ops/Mem lanes own bytes).
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1241 at `8f34e3f83e5c6543266bf3d5b0eb2ed9be488259` is accepted as
 reviewed: green build evidence at the pinned HEAD, standard axioms, honest
