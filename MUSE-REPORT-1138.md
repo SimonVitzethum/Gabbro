@@ -1,8 +1,11 @@
 # MUSE-REPORT-1138: Exact review of candidate 1137 (coherent machine fetching from the loaded image)
 
-## VERDICT: ACCEPT
+## Independent verdict
 
-CANDIDATE: lane 1137, HEAD `485dd06fde7b75f0381245508dd5926b0dd80e79`, base `48a4be7c1c333a602ce0d0816979d154ae1bd959`
+CANDIDATE: 1137 485dd06fde7b75f0381245508dd5926b0dd80e79
+VERDICT: ACCEPT
+
+Candidate under review: lane 1137, HEAD `485dd06fde7b75f0381245508dd5926b0dd80e79`, base `48a4be7c1c333a602ce0d0816979d154ae1bd959`
 (reviewed from the staged exact snapshot `.tmp/review/author-1137/`: `PATCH.diff`, `OWNER-TASK.md`,
 `MUSE-REPORT-1137.md`, `BUILD-EVIDENCE.json`; author clone itself not touched).
 
