@@ -1,5 +1,7 @@
 # MUSE-REPORT-1214: Independent exact review of candidate 1213
 
+CANDIDATE: 1213 255c9ec93e60ad2430f7e15b6be7697661e1d17f
+
 ## Candidate
 
 - Author lane 1213, pinned HEAD `255c9ec93e60ad2430f7e15b6be7697661e1d17f`,
@@ -135,7 +137,9 @@
   clone is the correct resolution and is what was used (pinned HEAD
   recorded above).
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1213 at `255c9ec93e60ad2430f7e15b6be7697661e1d17f` is accepted:
 exact diff reviewed, all nine review bullets pass, axioms standard, CUTS
