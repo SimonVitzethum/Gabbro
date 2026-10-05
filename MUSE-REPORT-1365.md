@@ -98,3 +98,42 @@ entries; all 851 Lean files placed.
   theorems are closed byte equations plus one joint closed witness
   (`sysDecode_zeuge` joins all rows with the reached run); no theorem
   quantifies over program syntax and the task names no `ZEUGE:` target.
+
+## Repair analysis after the failed integration gate (2026-10-06)
+
+Gate evidence: `RuntimeError: goal axiom check failed`. The integration
+lean build itself was green (`Build completed successfully (709 jobs)`)
+and every `SystemDecode` axiom line is standard (`[propext]` or
+`[propext, Quot.sound]`). The single error is infrastructural: the
+gate's axiom-check step could not load
+`Grammatik/Zielsatz/BeweisAtomar.olean` because that object file
+`does not exist` in the gate's environment
+(`/home/fisch/gabbro-lean-heute/...`).
+
+Diagnosis: apparatus failure, not a module defect. A missing build
+artifact on the integration host cannot be caused by this lane (a new
+leaf module plus one import line; the gate's own build was green), and
+nothing in the owned files can repair it. This matches the documented
+stale-cache pitfall class (missing/incompatible `.lake` artifacts
+produce errors about the apparatus, not the tree).
+
+Local re-verification in this clone (unchanged tree since `6a67cc7f`):
+- `./lean-probe grammatik/Grammatik/X86/SystemDecode.lean`:
+  `== 0 error(s) ...; exit 0`, axioms standard (see above).
+- `./lean-bau`: `== exit 0; 0 error line(s)` /
+  `Build completed successfully (709 jobs)`.
+- `grammatik/.lake/build/lib/lean/Grammatik/Zielsatz/BeweisAtomar.olean`
+  exists here (full local builds produce it).
+- `git status` shows only the three owned paths; `Zielsatz/` untouched,
+  so `gabbro_ziel` and its axiom set are unaffected by this lane.
+- (One `./lean-bau` attempt timed out with no output while the Lean
+  slot was busy elsewhere; no slot lock remained and the retry passed.
+  No duplicate builds were launched.)
+
+Repair applied: none to the Lean sources (a code change against an
+infra failure would be dishonest and could only risk guarantees).
+What the gate needs: rebuild/refresh the build cache on the
+integration host so the axiom check can load every module, then
+re-run; a fresh independent review of the changed commit is still
+required. No acceptance of the full source/binary chain is claimed
+here.
