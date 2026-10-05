@@ -1,17 +1,17 @@
 # MUSE-REPORT-1174: exact review of candidate 1173 (hosted/freestanding profiles)
 
-CANDIDATE: 1173 c6677edd11818267cb85b19caa3eb38ce5a0043f
+CANDIDATE: 1173 bca0204c54ac73b1c58cd03a1401b3c174f13064
 VERDICT: ACCEPT
 
 ## Verdict
 
-Substantive verdict ACCEPT, unchanged from the prior commit `5db9dc24`; this
-update only adds the machine-readable lines above. Reviewed author lane 1173
-at pinned HEAD `c6677edd11818267cb85b19caa3eb38ce5a0043f`
-(base `062b979a6271b7b3044ab06be3f3cde411a0d4f1`), reviewed from the exact
+Substantive verdict ACCEPT on the NEW pinned HEAD
+`bca0204c54ac73b1c58cd03a1401b3c174f13064`
+(base `062b979a6271b7b3044ab06be3f3cde411a0d4f1`), reviewed from the exact new
 snapshot `.tmp/review/author-1173/` (`SNAPSHOT.json`, `PATCH.diff`, full new
 file, `MUSE-REPORT-1173.md`, `BUILD-EVIDENCE.json`). No other source was read
-for the verdict.
+for the verdict. The prior ACCEPT on `c6677edd` is superseded, not reused:
+every finding below was re-checked against the new snapshot.
 
 ## What was checked
 
@@ -99,6 +99,33 @@ defs, 22 named theorems) plus exactly one appended import line in
   `TsoReadBridge` where the candidate base has `PipelineProfiles`, hence the
   same job count with a different tail file — expected base drift, not a
   candidate defect; merge must take the import union).
+- New-HEAD evidence (`BUILD-EVIDENCE.json` tail entries): fresh `./lean-probe`
+  on the new file `0 error(s)` with the full axiom list, and fresh
+  `./lean-bau` `Build completed successfully (608 jobs).` at `bca0204c`.
+
+## Re-review of the repair (new HEAD only)
+
+Diff old HEAD `c6677edd` vs new HEAD `bca0204c`: `PATCH.diff` (now 584 lines,
+was 555) shows the ONLY change is `MUSE-REPORT-1173.md` 78 -> 107 lines (the
+repair section). Both code hunks are byte-identical: `Grammatik.lean`
+`01b21133..96d400d6` (one import line) and `PipelineProfiles.lean`
+`00000000..6aa9f070` (456 lines, tail verified identical through `#print
+axioms pipeline_profil_verbindung_zeuge` + `end`). Zero semantic change, so
+all findings of the prior review carry over unchanged; they were still
+re-verified above against the new snapshot (forbidden-pattern scan, axiom
+list, import-only touch, premise threading, lift-not-copy, refusals,
+witness, silicon, CUTS).
+
+Repair-claim assessment: the quoted integration failure (`[609/610] Building
+Grammatik`, `failed to create thread`, exit 134, all of the module's axiom
+prints emitted BEFORE the abort, no error line in any owned file) matches the
+documented apparatus resource-exhaustion shape (AGENTS.md thread-spawn /
+virtual-address pitfalls at the aggregate target), not a Lean elaboration
+error. The repair weakens nothing (no premise added, no conclusion touched —
+verified, not taken on trust), which is the only correct response under the
+safety rule. Full source-to-binary chain acceptance is explicitly NOT claimed.
+The apparatus reading is accepted as reasonable; a rerun of the integration
+gate itself is outside a report-only review and remains the merger's check.
 
 ## Follow-ups (not blockers)
 
