@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 19:30 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 19:32 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -680,7 +680,7 @@ Last ledger refresh: **2026-10-05 19:30 UTC**. This is an operational snapshot, 
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Merged after review/checks | 1244: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Merged after review/checks | 1248: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1247.md) |
-| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Unresolved after agent rounds; not accepted | [task](lanes/1249.md) |
+| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Agent working | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Merged after review/checks | 1256: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1255.md) |
@@ -696,7 +696,7 @@ Last ledger refresh: **2026-10-05 19:30 UTC**. This is an operational snapshot, 
 | 1275 | ADC, SBB, INC, DEC | Merged after review/checks | 1276: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Merged after review/checks | 1278: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1277.md) |
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Merged after review/checks | 1280: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1279.md) |
-| 1281 | Sign-extend-accumulator ops and register XCHG | Committed candidate; review/integration pending | 1282: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1281.md) |
+| 1281 | Sign-extend-accumulator ops and register XCHG | Committed candidate; review/integration pending | 1282: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1287.md) |
@@ -717,7 +717,7 @@ Last ledger refresh: **2026-10-05 19:30 UTC**. This is an operational snapshot, 
 | 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Agent working | 1320: scheduled | [task](lanes/1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Agent working | 1322: scheduled | [task](lanes/1321.md) |
-| 1323 | valX86 decode coverage over the capstone decoder chain | Committed candidate; review/integration pending | 1324: Committed candidate; review/integration pending | [task](lanes/1323.md) |
+| 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1323.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1721,6 +1721,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1296**, Independent exact review of 1295, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1296.md). <!-- x86-merged:1296 -->
 - 2026-10-05: lane **1301**, WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1301.md). <!-- x86-merged:1301 -->
 - 2026-10-05: lane **1302**, Independent exact review of 1301, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1302.md). <!-- x86-merged:1302 -->
+- 2026-10-05: lane **1323**, valX86 decode coverage over the capstone decoder chain, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1323.md). <!-- x86-merged:1323 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
