@@ -71,11 +71,13 @@ theorem pipe_reg_mem (r : Register) : r ∈ pipeAlleRegister := by
   cases r <;> decide
 
 /-- Collision freedom, decided over variable indices: two distinct
-    variables never share a register. -/
+    variables never share a register. The conclusion is a `Nat` equation,
+    so no `Fin` injectivity lemma is needed downstream. -/
 def pipeKollisionsFrei (A : PipeRegAlloc) : Bool :=
   decide (∀ i : Fin A.belegung.length, ∀ j : Fin A.belegung.length,
     ∀ r ∈ pipeAlleRegister,
-      A.belegung[↑i]? = some (some r) → A.belegung[↑j]? = some (some r) → i = j)
+      A.belegung[↑i]? = some (some r) → A.belegung[↑j]? = some (some r) →
+        (↑i : Nat) = ↑j)
 
 /-- THE VALIDATOR: an untrusted allocation is accepted only if every
     check below computes to `true`. -/
@@ -112,5 +114,104 @@ theorem pipe_alloc_cfgOk (A : PipeRegAlloc) (c : PipeCfg) (codeLen : Nat)
     ∀ r ∈ c.frei, r ∉ pipeAllocRegs A ∧ r ≠ c.dst ∧ r ≠ c.tmp ∧ r ≠ c.adr ∧
       r ≠ .rsp) = true
   exact hcfg
+
+/-! ## 2. Interference freedom from the decided check.
+
+    Liveness is whole-block and structural: source context variables are
+    never redefined, so every variable index below the assignment length
+    is live across the whole block and any two distinct variables
+    interfere. The validator's decided index check therefore means
+    interference freedom. -/
+
+/-- Interference freedom: no two distinct variables share a register. -/
+def PipeInterferenzFrei (A : PipeRegAlloc) : Prop :=
+  ∀ i j : Nat, ∀ r : Register, i < A.belegung.length → j < A.belegung.length →
+    i ≠ j → A.belegung[i]? = some (some r) → A.belegung[j]? = some (some r) →
+      False
+
+/-- The decided collision check means interference freedom. -/
+theorem pipe_kollisionsFrei_sound (A : PipeRegAlloc)
+    (h : pipeKollisionsFrei A = true) : PipeInterferenzFrei A := by
+  intro i j r hi hj hne e1 e2
+  unfold pipeKollisionsFrei at h
+  simp only [decide_eq_true_eq] at h
+  have hfin := h ⟨i, hi⟩ ⟨j, hj⟩ r (pipe_reg_mem r) e1 e2
+  exact hne hfin
+
+/-- A validated allocation is interference-free. -/
+theorem pipe_alloc_interferenzFrei (A : PipeRegAlloc) (c : PipeCfg) (codeLen : Nat)
+    (h : pipeRegAllocOk A c codeLen = true) : PipeInterferenzFrei A := by
+  unfold pipeRegAllocOk at h
+  simp only [Bool.and_eq_true] at h
+  exact pipe_kollisionsFrei_sound A h.1.1.1.1.1.2
+
+/-! ## 3. Spill privacy against every source table.
+
+    The frame holds no source table byte (`PipeRahmenGetrennt`, a
+    per-program obligation discharged by computation on concrete layouts);
+    every validated reserve slot then lies disjoint from every placed slot
+    (eight-byte footprints at the canonical `spillSlot` addresses, the
+    vocabulary of `SpillPrivate.lean`). -/
+
+variable {D : Deklaration}
+
+/-- The frame region holds no source table byte: every placed slot lies
+    fully outside `[basis, basis + tiefe)`. -/
+def PipeRahmenGetrennt (r : Rahmen) (L : Layout D) : Prop :=
+  ∀ (t : D.Tab) (k : Int) (f : D.Feld t) (a : Nat),
+    L.loc t k f = some a → a + 8 ≤ r.basis ∨ r.basis + r.tiefe ≤ a
+
+/-- Spill privacy: every named reserve slot footprint is disjoint from
+    every placed source slot footprint. -/
+def PipeSpillPrivat (A : PipeRegAlloc) (L : Layout D) : Prop :=
+  ∀ (i s : Nat), A.spillVon[i]? = some s →
+    ∀ (t : D.Tab) (k : Int) (f : D.Feld t) (a : Nat),
+      L.loc t k f = some a →
+        a + 8 ≤ A.rahmen.schlitzNat s ∨ A.rahmen.schlitzNat s + 8 ≤ a
+
+/-- A validated allocation over a table-free frame is spill-private: the
+    validator keeps every reserve slot in-frame, and the frame keeps every
+    source table out. -/
+theorem pipe_alloc_spillPrivat (A : PipeRegAlloc) (L : Layout D) (c : PipeCfg)
+    (codeLen : Nat) (h : pipeRegAllocOk A c codeLen = true)
+    (hsep : PipeRahmenGetrennt A.rahmen L) : PipeSpillPrivat A L := by
+  intro i s hs t k f a hloc
+  have hframe : s < A.rahmen.schlitzZahl := by
+    unfold pipeRegAllocOk at h
+    simp only [Bool.and_eq_true] at h
+    have hall := (List.all_eq_true.mp h.1.1.2) s (List.mem_of_getElem? hs)
+    exact of_decide_eq_true hall
+  have hslot : A.rahmen.schlitzNat s + 8 ≤ A.rahmen.spitzeNat :=
+    schlitzNat_schranke _ _ hframe
+  have hge : A.rahmen.basis ≤ A.rahmen.schlitzNat s := by
+    unfold Rahmen.schlitzNat
+    omega
+  unfold Rahmen.spitzeNat at hslot
+  rcases hsep t k f a hloc with hlo | hhi
+  · exact Or.inl (by omega)
+  · exact Or.inr (by omega)
+
+/-! ## 4. Refusal: a clobbering allocation is refused loudly. -/
+
+/-- A clobbering allocation (two distinct variables in one register) is
+    refused: the validator answers `false`. -/
+theorem pipe_alloc_verweigert_kollision (A : PipeRegAlloc) (c : PipeCfg)
+    (codeLen : Nat) (i j : Fin A.belegung.length) (r : Register)
+    (hne : (↑i : Nat) ≠ ↑j)
+    (hi : A.belegung[↑i]? = some (some r))
+    (hj : A.belegung[↑j]? = some (some r)) :
+    pipeRegAllocOk A c codeLen = false := by
+  have hcon : ¬ ∀ i : Fin A.belegung.length, ∀ j : Fin A.belegung.length,
+      ∀ r ∈ pipeAlleRegister,
+        A.belegung[↑i]? = some (some r) → A.belegung[↑j]? = some (some r) →
+          (↑i : Nat) = ↑j := by
+    intro hall
+    exact hne (hall i j r (pipe_reg_mem r) hi hj)
+  have h2 : pipeKollisionsFrei A = false := by
+    unfold pipeKollisionsFrei
+    rw [decide_eq_false_iff_not]
+    exact hcon
+  unfold pipeRegAllocOk
+  simp [h2]
 
 end Gabbro.Grammatik.X86.PipeRegAlloc
