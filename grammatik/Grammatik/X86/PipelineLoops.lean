@@ -183,6 +183,134 @@ theorem ewig_ein_schritt {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
       = foreverLauf (l := l) a schritt inv n σ' ρ' := by
   simp [foreverLauf, hinv, hs]
 
+/-! ## 5. Finite-run correctness: source budget to target steps -/
+
+/-- THE LOOP THEOREM (finite runs): if every executed body round continues
+    (`.ok` or `.next`) and the labelled round of `m + 2` steps simulates it
+    while keeping `Rep`, the condition agrees with the exit jump, the exit
+    step leaves the schema, and the overflow block never answers `.ok`
+    (it refuses loudly, the refuse-on-full discipline), then a source run
+    that finishes `.ok` within `n` rounds is the labelled run of
+    `schleifeSchritte n m` steps to the end label, keeping `Rep`.
+    The one-round simulation (`hWeiter`) is proved per body by its
+    producer; this lifts it to `n` rounds with budget accounting. -/
+theorem schleife_korrekt_endlich {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (koerper : List Instr) (c : Bedingung)
+    (adr : Nat → Adresse)
+    (Rep : World D → Env D Γ → Zustand → Prop)
+    (schritt : World D → Env D Γ → Ausgang V true Γ)
+    (bis : World D → Env D Γ → World D × Bool)
+    (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
+    (hLese : ∀ σ ρ s, Rep σ ρ s → Rep (bis σ ρ).1 ρ s)
+    (hBisStabil : ∀ σ ρ, (bis (bis σ ρ).1 ρ).2 = (bis σ ρ).2)
+    (hBed : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = bedingung c s.flags)
+    (hWeiter : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = false →
+      ∃ σ₁ ρ₁ s₁, (schritt (bis σ ρ).1 ρ = .ok σ₁ ρ₁ ∨
+          (∃ h : true = true, schritt (bis σ ρ).1 ρ = .next h σ₁ ρ₁)) ∧
+        laufL adr (schleifeProg koerper c) (koerper.length + 2) (0, s)
+          = some (0, s₁) ∧
+        Rep σ₁ ρ₁ s₁)
+    (hEnde : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = true →
+      laufL adr (schleifeProg koerper c) 1 (0, s)
+        = some (koerper.length + 2, { s with rip := adr (koerper.length + 2) }))
+    (hRepRip : ∀ σ ρ s a, Rep σ ρ s → Rep σ ρ { s with rip := a })
+    (hUeberlauf : ∀ σ ρ σ' ρ', (bis σ ρ).2 = false →
+      ueberlauf (bis σ ρ).1 ρ ≠ .ok σ' ρ') :
+    ∀ (n : Nat) (σ : World D) (ρ : Env D Γ) (s : Zustand),
+      Rep σ ρ s →
+      ∀ σ' ρ', retryLauf schritt bis ueberlauf n σ ρ = .ok σ' ρ' →
+        ∃ s', laufL adr (schleifeProg koerper c)
+            (schleifeSchritte n koerper.length) (0, s)
+          = some (koerper.length + 2, s') ∧
+          Rep σ' ρ' s' := by
+  have hlen : (schleifeProg koerper c).length = koerper.length + 2 :=
+    schleifeProg_laenge koerper c
+  have hstop : ∀ (k : Nat) (t : Zustand),
+      laufL adr (schleifeProg koerper c) k (koerper.length + 2, t)
+        = some (koerper.length + 2, t) := by
+    intro k t
+    exact laufL_stop adr (schleifeProg koerper c) k _ (by simp [hlen])
+  intro n
+  induction n with
+  | zero =>
+    intro σ ρ s hRep σ' ρ' hrun
+    have hb := hBed σ ρ s hRep
+    cases he : (bis σ ρ).2 with
+    | true =>
+      simp only [retryLauf, he] at hrun
+      cases hrun
+      have hrepL := hLese σ ρ s hRep
+      have heL : (bis (bis σ ρ).1 ρ).2 = true := by
+        rw [hBisStabil]
+        exact he
+      have hexit := hEnde _ _ _ hrepL heL
+      have hb0 : schleifeSchritte 0 koerper.length = 1 := by
+        simp [schleifeSchritte]
+      refine ⟨{ s with rip := adr (koerper.length + 2) }, ?_, hRepRip _ _ _ _ hrepL⟩
+      rw [hb0]
+      exact hexit
+    | false =>
+      simp only [retryLauf, he] at hrun
+      exact absurd hrun (hUeberlauf σ ρ σ' ρ' he)
+  | succ n ih =>
+    intro σ ρ s hRep σ' ρ' hrun
+    have hb := hBed σ ρ s hRep
+    cases he : (bis σ ρ).2 with
+    | true =>
+      rw [wiederhol_steht schritt bis ueberlauf n σ ρ he] at hrun
+      cases hrun
+      have hrepL := hLese σ ρ s hRep
+      have heL : (bis (bis σ ρ).1 ρ).2 = true := by
+        rw [hBisStabil]
+        exact he
+      have hexit := hEnde _ _ _ hrepL heL
+      have hm2 : koerper.length + 2 = 1 + (koerper.length + 1) := by omega
+      have hseg1 : laufL adr (schleifeProg koerper c) (koerper.length + 2) (0, s)
+          = some (koerper.length + 2, { s with rip := adr (koerper.length + 2) }) := by
+        have e1 : laufL adr (schleifeProg koerper c) (1 + (koerper.length + 1)) (0, s)
+            = some (koerper.length + 2, { s with rip := adr (koerper.length + 2) }) := by
+          rw [laufL_add, hexit]
+          exact hstop _ _
+        rwa [← hm2] at e1
+      refine ⟨{ s with rip := adr (koerper.length + 2) }, ?_, hRepRip _ _ _ _ hrepL⟩
+      rw [schleifeSchritte_add, laufL_add, hseg1]
+      exact hstop _ _
+    | false =>
+      obtain ⟨σ₁, ρ₁, s₁, hfort, hseg, hrep₁⟩ := hWeiter σ ρ s hRep he
+      have hbud : schleifeSchritte (n + 1) koerper.length
+          = (koerper.length + 2) + schleifeSchritte n koerper.length :=
+        schleifeSchritte_add n koerper.length
+      rcases hfort with hok | ⟨_, hnext⟩
+      · rw [wiederhol_schritt schritt bis ueberlauf n σ σ₁ ρ ρ₁ he hok] at hrun
+        obtain ⟨s', hT, hrep'⟩ := ih σ₁ ρ₁ s₁ hrep₁ σ' ρ' hrun
+        exact ⟨s', by rw [hbud, laufL_add, hseg]; simpa using hT, hrep'⟩
+      · have hstep : retryLauf schritt bis ueberlauf (n + 1) σ ρ
+            = retryLauf schritt bis ueberlauf n σ₁ ρ₁ := by
+          simp [retryLauf, he, hnext]
+        rw [hstep] at hrun
+        obtain ⟨s', hT, hrep'⟩ := ih σ₁ ρ₁ s₁ hrep₁ σ' ρ' hrun
+        exact ⟨s', by rw [hbud, laufL_add, hseg]; simpa using hT, hrep'⟩
+
+/-! ## 6. From the labelled run to fetched bytes -/
+
+/-- THE BYTE COROLLARY: a relaxed schema whose image sits at the current
+    RIP in W^X memory runs under fetched-bytes execution exactly as the
+    labelled program: the same successor state after exactly the steps the
+    bounded labelled run executes, with RIP at the reached label's
+    address. This is `relax_laufBytes` at the loop schema. -/
+theorem schleife_bytes (treibstoff : Nat) (koerper : List Instr) (c : Bedingung)
+    (ws : List Bool) (hr : relax treibstoff (schleifeProg koerper c) = some ws)
+    (s : Zustand) (hwx : WX s.speicher)
+    (hcode : CodeAt s.speicher s.rip (bild ws (schleifeProg koerper c))) (n : Nat) :
+    laufBytesI (schritteL (adrL s.rip ws (schleifeProg koerper c))
+        (schleifeProg koerper c) n (0, s)) s =
+        ausgangVon ((laufL (adrL s.rip ws (schleifeProg koerper c))
+          (schleifeProg koerper c) n (0, s)).map Prod.snd) ∧
+      ∀ y, laufL (adrL s.rip ws (schleifeProg koerper c))
+          (schleifeProg koerper c) n (0, s) = some y →
+        y.2.rip = adrL s.rip ws (schleifeProg koerper c) y.1 :=
+  relax_laufBytes treibstoff (schleifeProg koerper c) ws hr s hwx hcode n
+
 /-
 CUTS:
 - Pilot ISA only through `Instr`; one core, model memory, no time, no TSO:
