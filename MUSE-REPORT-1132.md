@@ -1,9 +1,9 @@
 # MUSE-REPORT-1132: Exact review of candidate 1131 (SIMD integer forms / enabled-state gates)
 
-## VERDICT: ACCEPT
+CANDIDATE: 1131 7168f0ad31dbdb9e2ad0649e2fa644cea22d1f62
+VERDICT: ACCEPT
 
-CANDIDATE: lane 1131, HEAD `7168f0ad31dbdb9e2ad0649e2fa644cea22d1f62`
-(base `8744590d77cbc7f31d809b4c62cd303bae4ed66f`), reviewed as the exact
+Pinned base `8744590d77cbc7f31d809b4c62cd303bae4ed66f`, reviewed as the exact
 snapshot `.tmp/review/author-1131/` (`SNAPSHOT.json`: files
 `MUSE-REPORT-1131.md`, `grammatik/Grammatik.lean`,
 `grammatik/Grammatik/X86/HwVector.lean`, `clean: true`).
