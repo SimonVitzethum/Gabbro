@@ -1045,6 +1045,244 @@ theorem wit_spuelung61287 :
     witW61287.masch.mem.bytes witWcB1287 = natByte 43 := by
   decide
 
+/-! ## 8. Connection: WC/WT/WP ordering end to end.
+
+  On a reached six-step run -- WC store with owner-only forwarding,
+  store-ordered CLFLUSH of the line, second WC store with owner-only
+  forwarding, WT go-through, PREFETCHh NOP, fence drain -- the model
+  discharges: bypass (machine kept, own buffer grown), the
+  owner/foreign observation split, the line frame with the memory
+  change, the wrong-type refusal, go-through bytes with kept buffers,
+  the NOP frame, the fence frame with the memory change, the
+  permission refusal, pins running with the log, and preserved
+  well-formedness. Every silicon correspondence stays a named
+  assumption (`WcBusAnnahme`, `WtWpBusAnnahme`). -/
+
+/-- **Connection (WC/WT/WP ordering, end to end).** -/
+theorem hwWc_verbindung1287
+    (w0 w1 w2 w3 w4 w5 w6 : HwWcMaschine1287)
+    (pins : List WcEreignis1287)
+    (hbus : WcBusAnnahme w6.wcLog pins)
+    (hwf : HwWcWf w0)
+    (h1 : HwWcSchritt w0 w1 (.wcSpeichern 0 witWc1287 (natByte 42)))
+    (heigen1 : wcLesbar w1 0 witWc1287 = some (natByte 42))
+    (hfremd1 : wcLesbar w1 1 witWc1287 = some (natByte 0))
+    (hstill1 : w1.masch.mem.bytes witWc1287 = natByte 0)
+    (h2 : HwWcSchritt w1 w2 (.clflush 0 true witWc1287))
+    (hflush : w2.masch.mem.bytes witWc1287 = natByte 42)
+    (htypWt : speicherTyp w0.profil witWt1287 1 = .wt)
+    (h3 : HwWcSchritt w2 w3 (.wcSpeichern 0 witWcB1287 (natByte 43)))
+    (heigen3 : wcLesbar w3 0 witWcB1287 = some (natByte 43))
+    (hfremd3 : wcLesbar w3 1 witWcB1287 = some (natByte 0))
+    (h4 : HwWcSchritt w3 w4 (.wtSpeichern witWt1287 (natByte 9)))
+    (hdurch : WtWpBusAnnahme w4 witWt1287 (natByte 9))
+    (h5 : HwWcSchritt w4 w5 (.prefetch .t0 witNo1287))
+    (h6 : HwWcSchritt w5 w6 (.zaun 0))
+    (hspuel : w6.masch.mem.bytes witWcB1287 = natByte 43)
+    (hnull : w5.masch.mem.bytes witWcB1287 = natByte 0)
+    (hnoRd : w0.masch.mem.lesbar witNo1287 = false)
+    (hnoEx : w0.masch.mem.ausfuehrbar witNo1287 = false) :
+    (w1.masch = w0.masch ∧
+      w1.wc 0 = w0.wc 0 ++ [⟨witWc1287, natByte 42⟩]) ∧
+    (wcLesbar w1 0 witWc1287 ≠ wcLesbar w1 1 witWc1287) ∧
+    (w2.wc 0 =
+        (w1.wc 0).filter (fun e => !(inLinie witWc1287 e.addr)) ∧
+      w2.wcLog = w1.wcLog ++ [.clflush 0 true witWc1287]) ∧
+    (w2.masch.mem.bytes witWc1287 ≠
+      w1.masch.mem.bytes witWc1287) ∧
+    (wcStoreZugriff w0 0 witWt1287 (natByte 9) = none) ∧
+    (w3.masch = w2.masch ∧
+      w3.wc 0 = w2.wc 0 ++ [⟨witWcB1287, natByte 43⟩]) ∧
+    (wcLesbar w3 0 witWcB1287 ≠ wcLesbar w3 1 witWcB1287) ∧
+    (w4.masch.mem.bytes witWt1287 = natByte 9 ∧
+      w4.masch.puffer = w3.masch.puffer ∧ w4.wc = w3.wc) ∧
+    (w5.masch = w4.masch ∧ w5.wc = w4.wc) ∧
+    (w6.masch.puffer 0 = [] ∧ w6.wc 0 = [] ∧
+      zaunBereit ⟨w6.masch.mem, w6.masch.puffer⟩ 0 = true) ∧
+    (w6.masch.mem.bytes witWcB1287 ≠
+      w5.masch.mem.bytes witWcB1287) ∧
+    (clflushZugriff w0 0 true witNo1287 = none) ∧
+    (pins.length = w6.wcLog.length) ∧
+    (HwWcWf w6) := by
+  have hbypass1 := hwWcStore_bypass w0 w1 0 witWc1287 (natByte 42) h1
+  have hrahmen2 := hwClflush_rahmen w1 w2 0 true witWc1287 h2
+  have hbypass3 := hwWcStore_bypass w2 w3 0 witWcB1287 (natByte 43) h3
+  have hdurch4 := hwWtStore_durch w3 w4 witWt1287 (natByte 9) h4
+  have hnop5 := hwPrefetch_nop w4 w5 .t0 witNo1287 h5
+  have hwb6 := hwWcZaun_wbLeer w5 w6 0 h6
+  have hwc6 := hwWcZaun_wcLeer w5 w6 0 h6
+  have hne : (speicherTyp w0.profil witWt1287 1 == .wc) = false := by
+    simp [htypWt]
+  have hg1 : ¬(speicherTyp w0.profil witWt1287 1 == .wc &&
+    w0.masch.mem.schreibbar witWt1287) = true := by simp [hne]
+  have hgift1 : wcStoreZugriff w0 0 witWt1287 (natByte 9) = none := by
+    unfold wcStoreZugriff
+    rw [if_neg hg1]
+  have hg2 : ¬(true &&
+    (w0.masch.mem.lesbar witNo1287 ||
+      w0.masch.mem.ausfuehrbar witNo1287)) = true := by
+    simp [hnoRd, hnoEx]
+  have hgift2 : clflushZugriff w0 0 true witNo1287 = none := by
+    unfold clflushZugriff
+    rw [if_neg hg2]
+  have hwf1 := hwWcSchritt_wf w0 w1 _ h1 hwf
+  have hwf2 := hwWcSchritt_wf w1 w2 _ h2 hwf1
+  have hwf3 := hwWcSchritt_wf w2 w3 _ h3 hwf2
+  have hwf4 := hwWcSchritt_wf w3 w4 _ h4 hwf3
+  have hwf5 := hwWcSchritt_wf w4 w5 _ h5 hwf4
+  have hwf6 := hwWcSchritt_wf w5 w6 _ h6 hwf5
+  refine ⟨⟨hbypass1.1, hbypass1.2.1⟩, ?_, hrahmen2, ?_, hgift1,
+    ⟨hbypass3.1, hbypass3.2.1⟩, ?_,
+    ⟨wtWpBus_liest w4 witWt1287 (natByte 9) hdurch,
+      hdurch4.2.1, hdurch4.2.2.1⟩,
+    ⟨hnop5.1, hnop5.2.1⟩, ⟨hwb6.1, hwc6, hwb6.2⟩, ?_, hgift2,
+    wcPinsLaenge w6.wcLog pins hbus, hwf6⟩
+  · rw [heigen1, hfremd1]
+    decide
+  · rw [hflush, hstill1]
+    decide
+  · rw [heigen3, hfremd3]
+    decide
+  · rw [hspuel, hnull]
+    decide
+
+/-- Joint witness for `hwWc_verbindung1287`: all twenty premises
+    together on the reached non-degenerate two-core run -- two WC
+    stores with owner-only forwarding, a memory-changing CLFLUSH
+    line drain, a WT go-through, a hint NOP at an unreadable address
+    and a memory-changing fence drain, beside the kind and permission
+    refusals, with both named assumptions discharged. Non-degenerate:
+    canonical memory changes twice, on two cores. -/
+theorem hwWc_verbindung_zeuge1287 :
+    ∃ (w0 w1 w2 w3 w4 w5 w6 : HwWcMaschine1287)
+      (pins : List WcEreignis1287),
+      WcBusAnnahme w6.wcLog pins ∧
+      HwWcWf w0 ∧
+      HwWcSchritt w0 w1 (.wcSpeichern 0 witWc1287 (natByte 42)) ∧
+      wcLesbar w1 0 witWc1287 = some (natByte 42) ∧
+      wcLesbar w1 1 witWc1287 = some (natByte 0) ∧
+      w1.masch.mem.bytes witWc1287 = natByte 0 ∧
+      HwWcSchritt w1 w2 (.clflush 0 true witWc1287) ∧
+      w2.masch.mem.bytes witWc1287 = natByte 42 ∧
+      speicherTyp w0.profil witWt1287 1 = .wt ∧
+      HwWcSchritt w2 w3 (.wcSpeichern 0 witWcB1287 (natByte 43)) ∧
+      wcLesbar w3 0 witWcB1287 = some (natByte 43) ∧
+      wcLesbar w3 1 witWcB1287 = some (natByte 0) ∧
+      HwWcSchritt w3 w4 (.wtSpeichern witWt1287 (natByte 9)) ∧
+      WtWpBusAnnahme w4 witWt1287 (natByte 9) ∧
+      HwWcSchritt w4 w5 (.prefetch .t0 witNo1287) ∧
+      HwWcSchritt w5 w6 (.zaun 0) ∧
+      w6.masch.mem.bytes witWcB1287 = natByte 43 ∧
+      w5.masch.mem.bytes witWcB1287 = natByte 0 ∧
+      w0.masch.mem.lesbar witNo1287 = false ∧
+      w0.masch.mem.ausfuehrbar witNo1287 = false := by
+  refine ⟨witW01287, witW11287, witW21287, witW31287, witW41287,
+    witW51287, witW61287, witW61287.wcLog, rfl, witW01287_wf,
+    wit_schritt11287, wit_eigen11287, wit_fremd11287, wit_still11287,
+    wit_schritt21287, wit_spuelung21287, witTyp_wt1287,
+    wit_schritt31287, wit_eigen31287, wit_fremd31287,
+    wit_schritt41287, wit_durch41287, wit_schritt51287,
+    wit_schritt61287, wit_spuelung61287, wit_null51287, ?_, ?_⟩
+  · show witW01287.masch.mem.lesbar witNo1287 = false
+    decide
+  · show witW01287.masch.mem.ausfuehrbar witNo1287 = false
+    decide
+
+/- CUTS:
+   Proved here, over the REUSED accepted vocabulary
+   (`HardwareExecution`: `HwMaschine/HwWf/HwAdapter`,
+   `projZustand/projFp/tsoAnsicht`, `hwWitMem/hwWitStart/hwWitStart_wf`,
+   `basisHw/basisBereit`; `MemoryTypeHardwareExecution`: `Region`;
+   `TSO`: `TSOEintrag/pufferSetze/neuestens`; `FenceDrain`:
+   `drainVoll/drain_voll_leer/drain_voll_bereit`; `MfenceDrainOwn`:
+   `mfenceDrain_fremd` (no fence-everywhere); `SfenceStoreNarrow`:
+   ordering-vocabulary neighbour; no second decoder for older rows,
+   no copied machine arithmetic, no new core model):
+   - the software-established type profile (PAT/MTRR/page-table
+     combination reduced to first-wins lookup, WB default) with its
+     lookup lemmas;
+   - the per-type store path as a stated table (WC buffered, WT/WP
+     go-through) with the bus appearance as named assumptions
+     (`WcBusAnnahme`: pins present the drained log in order;
+     `WtWpBusAnnahme`: a retired WT/WP store is memory-visible);
+     WB rides the accepted TSO model, never restated;
+   - the extended coherent WC machine (per-core write-combining
+     second buffer beside the WB TSO buffer) with six step functions
+     and the `HwWcSchritt` relation, `HwWf` preservation, and
+     bypass/go-through/NOP/line-frame/fence-frame agreement;
+   - the family plug as an `HwAdapter` (WC bypass, WT/WP go-through,
+     PREFETCHh NOP) with wf preservation, planted refusals (wrong
+     type, UC exclusion, missing write permission) and exact plug
+     agreement for WT and WC;
+   - PREFETCHh/NTA-T0-T2 byte decoders (0F 18 memory forms; register
+     forms and LOCK refuse) and the CLFLUSH decoder (NP 0F AE /7
+     memory form; the SFENCE mod=3 row refuses);
+   - a reached joint witness (WC store with owner-only forwarding,
+     store-ordered CLFLUSH line drain, second WC store with
+     owner-only forwarding, WT go-through, hint NOP at an unreadable
+     address, fence drain) with both named assumptions discharged
+     and canonical memory changed twice on two cores.
+   NOT proved here, and not claimed:
+   - No hardware correspondence beyond the cited Intel SDM entries
+     (provenance in the file header, not proofs); profile population
+     (MTRR/PAT/page tables) is software user logic; the stated line
+     size (64) and the CLFLUSH CPUID bit are named, never probed.
+   - No CLFLUSHOPT/CLWB forms, no non-temporal store forms, no WP
+     invalidation traffic beyond the shared memory effect (no data
+     cache is modelled, so WT and WP share their memory equation by
+     construction), no UC-overlap stepping (lane 1133 owns UC).
+   - Memory-type aliasing (one address under two types) is reserved
+     per the SDM: WC-first read order is stated, no cross-type
+     ordering is claimed; cross-core WC same-line eviction order and
+     WC read ordering stay OPEN.
+   - The CLFLUSH/fence plugs have no bare-machine adapter (their
+     effects need buffer state); their content rides the extended
+     relation. No per-access target-to-W/GX simulation, no
+     source/checker/Spec/goal/emitter correspondence, no
+     syscall/interrupt scope, no timing/fairness/progress claim.
+-/
+
+#print axioms speicherTyp_kopf
+#print axioms speicherTyp_ueberspringe
+#print axioms wc_allein_gepuffert
+#print axioms wtwp_schreiben_durch
+#print axioms wcPinsLaenge
+#print axioms wtWpBus_liest
+#print axioms hwWcSchritt_wf
+#print axioms hwWcStore_bypass
+#print axioms hwWtStore_durch
+#print axioms hwWpStore_durch
+#print axioms hwPrefetch_nop
+#print axioms hwClflush_rahmen
+#print axioms hwWcZaun_wbLeer
+#print axioms hwWcZaun_wcLeer
+#print axioms hwWcZaun_fremdWb
+#print axioms hwWcZaun_fremdWc
+#print axioms wcAdapter_wc_ok
+#print axioms wcAdapter_wt_mem
+#print axioms wcAdapter_wp_mem
+#print axioms wcAdapter_prefetch_nop
+#print axioms wcAdapter_wc_falscherTyp
+#print axioms wcAdapter_wc_nichtUc
+#print axioms wcAdapter_ohneSchreibrecht
+#print axioms adapterWc1287_wf
+#print axioms adapterWt_stimmt_ueberein
+#print axioms adapterWc_stimmt_ueberein
+#print axioms pin_prefetch_t0
+#print axioms pin_prefetch_nta
+#print axioms pin_clflush
+#print axioms pin_clflush_kein_sfence
+#print axioms pin_prefetch_register_verweigert
+#print axioms pin_lock_praefix_verweigert
+#print axioms wit_schritt11287
+#print axioms wit_schritt21287
+#print axioms wit_schritt31287
+#print axioms wit_schritt41287
+#print axioms wit_schritt51287
+#print axioms wit_schritt61287
+#print axioms hwWc_verbindung1287
+#print axioms hwWc_verbindung_zeuge1287
+
 end HwMemWC1287
 
 end Gabbro.Grammatik.X86
