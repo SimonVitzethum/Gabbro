@@ -667,7 +667,7 @@ Last ledger refresh: **2026-10-05 15:10 UTC**. This is an operational snapshot, 
 | 1217 | Pipeline atomics: execBlock correspondence | Committed candidate; review/integration pending | 1218: Committed candidate; review/integration pending | [task](lanes/1217.md) |
 | 1219 | Pipeline: derive per-chunk runs from the lowering alone | Merged after review/checks | 1220: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1219.md) |
 | 1221 | Linking: rel8 selection convergence and fall-through coverage | Merged after review/checks | 1222: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1221.md) |
-| 1223 | valX86_sound for the decidable part | Merged after review/checks | 1224: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1223.md) |
+| 1223 | valX86_sound for the decidable part | Merged after review/checks | 1224: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1223.md) |
 | 1225 | Faults and interrupts against the store buffer: precise exceptions | Committed candidate; review/integration pending | 1226: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1225.md) |
 | 1227 | Pipeline spills: variable homing and live-range splitting | Committed candidate; review/integration pending | 1228: Unresolved after agent rounds; not accepted | [task](lanes/1227.md) |
 | 1229 | Pipeline calls: multi-statement callee bodies | Committed candidate; review/integration pending | 1230: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1229.md) |
@@ -1580,6 +1580,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1221**, Linking: rel8 selection convergence and fall-through coverage, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1221.md). <!-- x86-merged:1221 -->
 - 2026-10-05: lane **1222**, Independent exact review of 1221, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1222.md). <!-- x86-merged:1222 -->
 - 2026-10-05: lane **1223**, valX86_sound for the decidable part, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1223.md). <!-- x86-merged:1223 -->
+- 2026-10-05: lane **1224**, Independent exact review of 1223, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1224.md). <!-- x86-merged:1224 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
