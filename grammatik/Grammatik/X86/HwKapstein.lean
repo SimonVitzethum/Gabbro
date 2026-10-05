@@ -20,6 +20,13 @@ import Grammatik.X86.HwFpControl
 import Grammatik.X86.HwFaults
 import Grammatik.X86.HwFeatureGates
 import Grammatik.X86.HwInterrupts
+import Grammatik.X86.HwVector
+import Grammatik.X86.HwSystemForms
+import Grammatik.X86.HwNestedInterrupts
+import Grammatik.X86.HwDrainGeneric
+import Grammatik.X86.HwForwardingGeneric
+import Grammatik.X86.HwLoadedImage
+import Grammatik.X86.HwBildInstanzen
 
 namespace Gabbro.Grammatik.X86
 
@@ -38,6 +45,14 @@ inductive KapEreignis where
   | fp : FpCtrlEreignis → KapEreignis
   | fehler : HwFehlerEreignis → KapEreignis
   | tor : CpuOut → BitVec 32 → HwTorEreignis → KapEreignis
+  | vec : HwVecEreignis → KapEreignis
+  | drain : Nat → DrainEreignis → KapEreignis
+  | fwd : Nat → FwdEreignis → KapEreignis
+  | nested : Nat → AsyncEreignis → AsyncEreignis → KapEreignis
+  | int : Nat → AsyncEreignis → KapEreignis
+  | system : Nat → SysSteuer → SysEreignis → KapEreignis
+  | bild : Nat → ExtInstr → KapEreignis
+  | instanzen : Nat → ExtInstr → KapEreignis
 
 /-- The single composed machine step: union of the merged adapters/relations. -/
 inductive HwVollSchritt : HwMaschine → HwMaschine → KapEreignis → Prop where
@@ -54,6 +69,14 @@ inductive HwVollSchritt : HwMaschine → HwMaschine → KapEreignis → Prop whe
   | fp {m m' : HwMaschine} (e : FpCtrlEreignis) (h : FpCtrlSchritt m m' e) : HwVollSchritt m m' (KapEreignis.fp e)
   | fehler {m m' : HwMaschine} (e : HwFehlerEreignis) (h : HwFehlerSchritt m m' e) : HwVollSchritt m m' (KapEreignis.fehler e)
   | tor {m m' : HwMaschine} (leaf1 : CpuOut) (xcrLo : BitVec 32) (e : HwTorEreignis) (h : HwTorSchritt leaf1 xcrLo m m' e) : HwVollSchritt m m' (KapEreignis.tor leaf1 xcrLo e)
+  | vec {m m' : HwMaschine} (e : HwVecEreignis) (h : HwVecSchritt m m' e) : HwVollSchritt m m' (KapEreignis.vec e)
+  | drain {m m' : HwMaschine} (c : Nat) (e : DrainEreignis) (h : drainAdapter.schritt m c e = some m') : HwVollSchritt m m' (KapEreignis.drain c e)
+  | fwd {m m' : HwMaschine} (c : Nat) (e : FwdEreignis) (h : fwdAdapter.schritt m c e = some m') : HwVollSchritt m m' (KapEreignis.fwd c e)
+  | nested {m m' : HwMaschine} (c : Nat) (ev1 ev2 : AsyncEreignis) (h : adapterVerschachtelt.schritt m c (ev1, ev2) = some m') : HwVollSchritt m m' (KapEreignis.nested c ev1 ev2)
+  | int {m m' : HwMaschine} (c : Nat) (ev : AsyncEreignis) (h : adapterInterrupt1125.schritt m c ev = some m') : HwVollSchritt m m' (KapEreignis.int c ev)
+  | system {m m' : HwMaschine} (c : Nat) (st : SysSteuer) (e : SysEreignis) (h : adapterSystem.schritt m c (st, e) = some m') : HwVollSchritt m m' (KapEreignis.system c st e)
+  | bild {m m' : HwMaschine} (c : Nat) (i : ExtInstr) (h : adapterBild.schritt m c i = some m') : HwVollSchritt m m' (KapEreignis.bild c i)
+  | instanzen {m m' : HwMaschine} (c : Nat) (i : ExtInstr) (h : adapterInstanzen.schritt m c i = some m') : HwVollSchritt m m' (KapEreignis.instanzen c i)
 
 /-! ## 1. Well-formedness: every union step preserves `HwWf`.
 
@@ -77,6 +100,72 @@ theorem kap_adapterAddr_wf (m m' : HwMaschine) (c : Nat)
     rw [adapterAddr_verweigert] at h
     cases h
 
+/-! ## 1b. Well-formedness helpers for the extended arms.
+
+  Single async delivery, the shared register-path plug behind the
+  loaded-image/instance tags, and the system snapshot plug all keep
+  profiles untouched; each lifts its accepted preservation shape. -/
+
+/-- Every single async delivery preserves well-formedness. -/
+theorem kap_adapterInterrupt_wf (m m' : HwMaschine) (c : Nat)
+    (ev : AsyncEreignis)
+    (h : adapterInterrupt1125.schritt m c ev = some m') (hwf : HwWf m) :
+    HwWf m' := by
+  unfold adapterInterrupt1125 at h
+  cases hr : asyncSchritt m c ev ev.steuer with
+  | none => simp [hr] at h
+  | some r =>
+    simp [hr] at h
+    cases h
+    exact asyncSchritt_wf_allgemein m c ev ev.steuer r hr hwf
+
+/-- The shared register-path plug preserves well-formedness: only
+    core data moves, profiles are untouched. Behind both the
+    loaded-image and the instance tags. -/
+theorem kap_adapterInteger666_wf (m m' : HwMaschine) (c : Nat)
+    (i : ExtInstr)
+    (h : adapterInteger666.schritt m c i = some m') (hwf : HwWf m) :
+    HwWf m' := by
+  unfold adapterInteger666 at h
+  simp only at h
+  cases hs : stepExt i (projFp m c) (m.bereit c) with
+  | weiter t' =>
+    rw [hs] at h
+    simp only at h
+    cases h
+    exact setKernDaten_wf _ _ _ hwf
+  | halt =>
+    rw [hs] at h
+    simp only at h
+    cases h
+  | verweigert =>
+    rw [hs] at h
+    simp only at h
+    cases h
+
+/-- The system snapshot plug preserves well-formedness: an admitted
+    leg installs core data and memory only, both profiles untouched. -/
+theorem kap_adapterSystem_wf (m m' : HwMaschine) (c : Nat)
+    (st : SysSteuer) (e : SysEreignis)
+    (h : adapterSystem.schritt m c (st, e) = some m') (hwf : HwWf m) :
+    HwWf m' := by
+  unfold adapterSystem at h
+  simp only at h
+  cases hs : sysSnapSchritt m c st e with
+  | ok k' stp mem' =>
+    rw [hs] at h
+    simp only at h
+    cases h
+    exact hwf
+  | fehler f =>
+    rw [hs] at h
+    simp only at h
+    cases h
+  | verweigert =>
+    rw [hs] at h
+    simp only at h
+    cases h
+
 /-- Every union step preserves well-formedness. -/
 theorem kap_wf (m m' : HwMaschine) (k : KapEreignis)
     (h : HwVollSchritt m m' k) (hwf : HwWf m) : HwWf m' := by
@@ -94,6 +183,14 @@ theorem kap_wf (m m' : HwMaschine) (k : KapEreignis)
   | fp e hstep => exact fpCtrlSchritt_wf m m' e hstep hwf
   | fehler e hstep => exact hwFehlerSchritt_wf m m' e hstep hwf
   | tor leaf1 xcrLo e hstep => exact hwTorSchritt_wf leaf1 xcrLo m m' e hstep hwf
+  | vec e hstep => exact hwVecSchritt_wf m m' e hstep hwf
+  | drain c e hstep => exact drainAdapter_wf m c e m' hstep hwf
+  | fwd c e hstep => exact fwdAdapter_wf m c e m' hstep hwf
+  | nested c ev1 ev2 hstep => exact adapterVerschachtelt_wf m c (ev1, ev2) m' hstep hwf
+  | int c ev hstep => exact kap_adapterInterrupt_wf m m' c ev hstep hwf
+  | system c st e hstep => exact kap_adapterSystem_wf m m' c st e hstep hwf
+  | bild c i hstep => exact kap_adapterInteger666_wf m m' c i hstep hwf
+  | instanzen c i hstep => exact kap_adapterInteger666_wf m m' c i hstep hwf
 
 /-! ## 2. Exact embedding: each family step is a union step and back.
 
@@ -312,6 +409,14 @@ def kapTag : KapEreignis → Nat
   | .fp _ => 10
   | .fehler _ => 11
   | .tor _ _ _ => 12
+  | .vec _ => 13
+  | .drain _ _ => 14
+  | .fwd _ _ => 15
+  | .nested _ _ _ => 16
+  | .int _ _ => 17
+  | .system _ _ _ => 18
+  | .bild _ _ => 19
+  | .instanzen _ _ => 20
 
 /-- The base tag never coincides with a family tag: no family shadows
     the coherent base, and families are pairwise distinct by the same
@@ -375,5 +480,279 @@ theorem kap_decode_prioritaet (bs : List Byte) (i : ExtInstr)
     (rest : List Byte) (h : decodeExt bs = some (i, rest)) :
     decodeMulDivWidth bs = some (.ext i, rest) :=
   decodeMulDivWidth_prefers_ext bs i rest h
+
+/-! ## 5. Joint witness: reached union steps on two cores.
+
+  One exhibited union step per family with a computable adapter (the
+  equation is closed and decided or extracted from the family's own
+  reached witness), beside the families' joint witnesses. Non-degenerate:
+  locked words move 10 to 15, buffered stores forward to the owner only
+  and drain into shared memory, all observed from both cores. -/
+
+/-- Exhibited LOCK/RMW union step: core 0 locked-adds 5 to word 10. -/
+theorem kap_step_lock :
+    ∃ m1, HwVollSchritt hwLockWitStart m1
+      (KapEreignis.lockRmw 0 (.ok (.xadd64 .rax .rbp 0) 9)) := by
+  cases hN : hwLockWitNach1 with
+  | none =>
+    have hwort := hwLockWit_nach1_wort
+    rw [hN] at hwort
+    cases hwort
+  | some m1 =>
+    have heq : adapterLockRmw.schritt hwLockWitStart 0
+        (.ok (.xadd64 .rax .rbp 0) 9) = some m1 := hN
+    exact ⟨m1, (kap_lock_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited stack union step: core 0 buffers word 42 at its slot. -/
+theorem kap_step_stapel :
+    ∃ m1, HwVollSchritt stapelWitM0 m1
+      (KapEreignis.stapel 0 (.push stapelWitWort)) := by
+  have hlen := stapelWit_puffer8
+  cases hP : stapelWitPush with
+  | none =>
+    rw [stapelWitBufLen, hP] at hlen
+    cases hlen
+  | some m1 =>
+    have heq : stapelAdapter.schritt stapelWitM0 0
+        (.push stapelWitWort) = some m1 := hP
+    exact ⟨m1, (kap_stapel_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited word union step: the same buffered word through the
+    whole-word adapter at the acting core's slot. -/
+theorem kap_step_wort :
+    ∃ m1, HwVollSchritt stapelWitM0 m1
+      (KapEreignis.wort 0
+        (.wortAusgabe (stapelSlot stapelWitM0 0) stapelWitWort)) := by
+  have hlen := stapelWit_puffer8
+  cases hP : stapelWitPush with
+  | none =>
+    rw [stapelWitBufLen, hP] at hlen
+    cases hlen
+  | some m1 =>
+    have heq : adapterWort1147.schritt stapelWitM0 0
+        (.wortAusgabe (stapelSlot stapelWitM0 0) stapelWitWort) =
+        some m1 := hP
+    exact ⟨m1, (kap_wort_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited ISA union step: core 0 issues one byte at the stack slot. -/
+theorem kap_step_isa :
+    ∃ m', HwVollSchritt stapelWitM0 m'
+      (KapEreignis.isa 0
+        (.gibAus stapelWitSlotAddr (BitVec.ofNat 8 7))) := by
+  have hlen : (adapterIsa.schritt stapelWitM0 0
+      (.gibAus stapelWitSlotAddr (BitVec.ofNat 8 7))).map
+      (fun m => (m.puffer 0).length) = some 1 := by
+    decide
+  cases hA : adapterIsa.schritt stapelWitM0 0
+      (.gibAus stapelWitSlotAddr (BitVec.ofNat 8 7)) with
+  | none =>
+    rw [hA] at hlen
+    cases hlen
+  | some m' =>
+    exact ⟨m', (kap_isa_embedded _ _ _ _).mp hA⟩
+
+/-- Exhibited FP union step: core 0 issues one byte at the stack slot
+    through the shared TSO byte event. -/
+theorem kap_step_fp :
+    ∃ m', HwVollSchritt stapelWitM0 m'
+      (KapEreignis.fp
+        (.schreibAusgabe 0 stapelWitSlotAddr (BitVec.ofNat 8 7))) := by
+  have hlen : (issueByte (tsoAnsicht stapelWitM0) 0 stapelWitSlotAddr
+      (BitVec.ofNat 8 7)).map (fun s => (s.puffer 0).length) =
+      some 1 := by
+    decide
+  cases hI : issueByte (tsoAnsicht stapelWitM0) 0 stapelWitSlotAddr
+      (BitVec.ofNat 8 7) with
+  | none =>
+    rw [hI] at hlen
+    cases hlen
+  | some s' =>
+    exact ⟨setTso stapelWitM0 s',
+      .fp _ (FpCtrlSchritt.gibAus 0 _ _ s' hI)⟩
+
+/-- Exhibited base union step: core 0 observes the zeroed slot byte. -/
+theorem kap_step_basis :
+    HwVollSchritt stapelWitM0 stapelWitM0
+      (KapEreignis.basis
+        (.leseBeob 0 stapelWitSlotAddr (BitVec.ofNat 8 0))) := by
+  have hload : loadByte (tsoAnsicht stapelWitM0) 0 stapelWitSlotAddr =
+      some (BitVec.ofNat 8 0) := by
+    decide
+  exact (kap_basis_embedded _ _ _).mp (HwSchritt.lade 0 _ _ hload)
+
+/-- Exhibited addressed union step: the SIB 32-bit store on core 0. -/
+theorem kap_step_addr :
+    ∃ m1, HwVollSchritt hwAddrWitM0 m1
+      (KapEreignis.addr 0
+        (.store .b32 hwAddrWitForm hwAddrWitNext .rax 7)) := by
+  have hlen := hwAddrWit_store_buf
+  cases hM : hwAddrWitM1 with
+  | none =>
+    rw [hM] at hlen
+    cases hlen
+  | some m1 =>
+    have heq : adapterAddr.schritt hwAddrWitM0 0
+        (.store .b32 hwAddrWitForm hwAddrWitNext .rax 7) = some m1 := hM
+    exact ⟨m1, (kap_addr_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited fault union step: core 1 carries the ordered fetch #PF
+    and steps to itself with the fault event. -/
+theorem kap_step_fehler :
+    HwVollSchritt hwWitStart hwWitStart
+      (KapEreignis.fehler (HwFehlerEreignis.fehler 1 ⟨.abruf, .pf⟩)) := by
+  exact .fehler _
+    (HwFehlerSchritt.fehler 1 hwFehlerZLeer hwFehlerPgDunkel ⟨false⟩
+      ⟨fun _ => false⟩ false ⟨.abruf, .pf⟩ hwFehler_wit_wahl)
+
+/-- Exhibited fetched-LOCK union step: the fetch decides, core 0 adds. -/
+theorem kap_step_lockFetch :
+    ∃ m1, HwVollSchritt hwLockWitStart m1
+      (KapEreignis.lockFetch 0 ()) := by
+  cases hN : hwLockWitNach1 with
+  | none =>
+    have hwort := hwLockWit_nach1_wort
+    rw [hN] at hwort
+    cases hwort
+  | some m1 =>
+    have hfetch : hwLockFetchSchritt hwLockWitStart 0 = some m1 := by
+      rw [hwLockFetchWit_nach1]
+      exact hN
+    have heq : adapterLockFetch.schritt hwLockWitStart 0 () =
+        some m1 := hfetch
+    exact ⟨m1, (kap_lockFetch_embedded _ _ _ _).mp heq⟩
+
+/-- Exhibited width union step: core 0 divides 17 by 5 (quotient 3). -/
+theorem kap_step_muldiv :
+    ∃ m', HwVollSchritt wdHwWitStart m'
+      (KapEreignis.muldiv 0 ⟨WdBefehl.divWd .w32 .rcx, 2⟩) := by
+  have hdiv := wdHw_div_rax
+  cases hS : wdSchritt (⟨WdBefehl.divWd .w32 .rcx, 2⟩ : WdDecodiert)
+      (projZustand wdHwWitStart 0) with
+  | hardwareHalt =>
+    have ho : wdHwOutDiv = .halt :=
+      wdHwRegSchritt_halt _ _ _ hS
+    rw [ho] at hdiv
+    simp [wdHwRegOut] at hdiv
+  | misslungen =>
+    have ho : wdHwOutDiv = .verweigert :=
+      wdHwRegSchritt_verweigert _ _ _ hS
+    rw [ho] at hdiv
+    simp [wdHwRegOut] at hdiv
+  | ok s' =>
+    exact ⟨_, (kap_muldiv_embedded _ _ _ _).mp
+      (adapterMulDivWidth_ok _ _ _ _ hS)⟩
+
+/-- Exhibited gate union step: the admitted vector step under observed
+    SSE2 and OS vector state. -/
+theorem kap_step_tor :
+    HwVollSchritt hwWitStart (setKernVonFp hwWitStart 0 hwTorWitT')
+      (KapEreignis.tor zeugeOut1 (BitVec.ofNat 32 0x6)
+        (.ausf 0 (.vec hwTorWitV))) := by
+  exact .tor _ _ _
+    (HwTorSchritt.ok 0 _ _ hwTor_basis_vec_offen hwTorWit_ext_vec
+      hwTorWit_vec_mem)
+
+/-- Exhibited uncached union step: the UC store retires under the
+    triple gate, changing nothing on the machine. -/
+theorem kap_step_uc :
+    HwVollSchritt hwWitStart hwWitStart
+      (KapEreignis.uc 0
+        (.speichere .b64 HwDev1133.witDev1133 (BitVec.ofNat 64 7)
+          HwDev1133.witProfil1133)) := by
+  have hz : breiteZugelassen hwWitStart.hw (hwWitStart.bereit 0)
+      Breite.b64 = true := by
+    decide
+  have hu : istUc HwDev1133.witProfil1133 HwDev1133.witDev1133 8 =
+      true := by
+    decide
+  have hf : imFenster HwDev1133.witDev1133 8 = true := by
+    decide
+  exact (kap_uc_embedded _ _ _ _).mp
+    (HwDev1133.ucAdapterSchritt_speichern hwWitStart 0 .b64
+      HwDev1133.witDev1133 (BitVec.ofNat 64 7) HwDev1133.witProfil1133
+      hz hu hf)
+
+/-! ## 6. Joint witness: every exhibited premise together.
+
+  One reached union step per tag with a computable adapter, the two
+  decoder pins (new width row takes the width arm, overlapping rows
+  keep the unified arm), the planted refusals, well-formedness, and
+  the shared non-degeneracy: locked words move 10 to 15 on two cores,
+  buffered stores forward to the owner only, drains change actual
+  shared memory observed from both cores. Family-internal joint
+  inhabitation stays in each family's own `_zeuge`; the port tag is
+  embedded by equation only (see CUTS). -/
+
+/-- Joint capstone witness over the coherent machine. -/
+theorem kap_zeuge :
+    (∃ m1, HwVollSchritt hwLockWitStart m1
+      (KapEreignis.lockRmw 0 (.ok (.xadd64 .rax .rbp 0) 9))) ∧
+    (∃ m1, HwVollSchritt stapelWitM0 m1
+      (KapEreignis.stapel 0 (.push stapelWitWort))) ∧
+    (∃ m1, HwVollSchritt stapelWitM0 m1
+      (KapEreignis.wort 0
+        (.wortAusgabe (stapelSlot stapelWitM0 0) stapelWitWort))) ∧
+    (∃ m', HwVollSchritt stapelWitM0 m'
+      (KapEreignis.isa 0
+        (.gibAus stapelWitSlotAddr (BitVec.ofNat 8 7)))) ∧
+    (∃ m', HwVollSchritt stapelWitM0 m'
+      (KapEreignis.fp
+        (.schreibAusgabe 0 stapelWitSlotAddr (BitVec.ofNat 8 7)))) ∧
+    HwVollSchritt stapelWitM0 stapelWitM0
+      (KapEreignis.basis
+        (.leseBeob 0 stapelWitSlotAddr (BitVec.ofNat 8 0))) ∧
+    (∃ m1, HwVollSchritt hwAddrWitM0 m1
+      (KapEreignis.addr 0
+        (.store .b32 hwAddrWitForm hwAddrWitNext .rax 7))) ∧
+    HwVollSchritt hwWitStart hwWitStart
+      (KapEreignis.fehler (HwFehlerEreignis.fehler 1 ⟨.abruf, .pf⟩)) ∧
+    (∃ m1, HwVollSchritt hwLockWitStart m1
+      (KapEreignis.lockFetch 0 ())) ∧
+    (∃ m', HwVollSchritt wdHwWitStart m'
+      (KapEreignis.muldiv 0 ⟨WdBefehl.divWd .w32 .rcx, 2⟩)) ∧
+    HwVollSchritt hwWitStart (setKernVonFp hwWitStart 0 hwTorWitT')
+      (KapEreignis.tor zeugeOut1 (BitVec.ofNat 32 0x6)
+        (.ausf 0 (.vec hwTorWitV))) ∧
+    HwVollSchritt hwWitStart hwWitStart
+      (KapEreignis.uc 0
+        (.speichere .b64 HwDev1133.witDev1133 (BitVec.ofNat 64 7)
+          HwDev1133.witProfil1133)) ∧
+    decodeMulDivWidth [natByte 247, natByte 225] =
+      some (.wd (⟨WdBefehl.mul WdBreite.w32 Register.rcx, 2⟩ :
+        WdDecodiert), []) ∧
+    decodeMulDivWidth [natByte 73, natByte 247, natByte 224] =
+      some (.ext (.muldiv ⟨.mulRax .r8, 3⟩), []) ∧
+    HwDev1133.adapterDma1133.schritt hwWitStart 0
+      (HwDev1133.DmaZugriff1133.lese hwWitAdr 8) = none ∧
+    adapterFehler1123.schritt hwWitStart 1 ⟨.abruf, .pf⟩ = none ∧
+    hwLockSchritt hwLockWitStart 0 (.ud .lockAufRegister 5) = none ∧
+    stapelAdapter.schritt stapelWitM0 1
+      (.ruf (BitVec.ofNat 64 4101)) = none ∧
+    HwWf hwWitStart ∧ HwWf hwLockWitStart ∧ HwWf stapelWitM0 ∧
+    read64 hwLockWitStart.mem hwLockWitAdr = some 10 ∧
+    hwLockWort hwLockWitAdr hwLockWitNach1 = some 15 ∧
+    hwLockSicht hwLockWitNach1 1 hwLockWitFremdAdr =
+      some (some (BitVec.ofNat 8 99)) ∧
+    hwLockSicht hwLockWitNach1 0 hwLockWitFremdAdr =
+      some (some (BitVec.ofNat 8 0)) ∧
+    stapelWitLoadEigen = some (some stapelWitWort) ∧
+    stapelWitLoadFremd = some (some stapelWitNull) ∧
+    stapelWitNachRead = some (some stapelWitWort) ∧
+    hwWitLoadEigen = some (some (BitVec.ofNat 8 42)) ∧
+    hwWitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+    hwWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  refine ⟨kap_step_lock, kap_step_stapel, kap_step_wort, kap_step_isa,
+    kap_step_fp, kap_step_basis, kap_step_addr, kap_step_fehler,
+    kap_step_lockFetch, kap_step_muldiv, kap_step_tor, kap_step_uc,
+    pin_wdHw_wdmul32, pin_wdHw_ext_mul64,
+    HwDev1133.adapterDma1133_verweigert _ _ _,
+    adapterFehler1123_verweigert _ _ _, hwLockWit_reg_ud,
+    stapelWit_ruf_fehlalign_verweigert, hwWitStart_wf,
+    hwLockWitStart_wf, stapelWit_wf, hwLockWit_anfang,
+    hwLockWit_nach1_wort, hwLockWit_nach1_eigen_sicht,
+    hwLockWit_nach1_fremd_sicht, stapelWit_weiterleitung,
+    stapelWit_fremd_alt, stapelWit_spuelung_aendert_speicher,
+    hwWit_weiterleitung, hwWit_fremd_alt,
+    hwWit_spülung_aendert_speicher⟩
 
 end Gabbro.Grammatik.X86
