@@ -661,6 +661,42 @@ theorem senkSkalLesen_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = tru
             · rw [if_neg hok] at h; contradiction
   | _ => change none = some p at h; contradiction
 
+/-! ## 6. Refusals
+
+    Every unsupported shape lowers to `none`. Pointer-through reads lower
+    exactly like direct reads (the pointer contributes no address, as in
+    lane 1159), so their refusals follow by rewriting. -/
+
+/-- POINTER-THROUGH READS lower exactly like direct reads at the same
+    index: the pointer value is `Unit`, only its carrier equation is
+    reused. Both arms of `senkSkalLesen` compute identically. -/
+theorem senkSkalLesen_durch_slot (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {rw : Bool}
+    (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t)
+    (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ) :
+    senkSkalLesen A c (.durch p t ht f i hL) =
+      senkSkalLesen A c (.slot t f i hL) := rfl
+
+/-- REFUSAL, NON-VARIABLE INDEX: a read whose index is not a variable
+    (a constant — lane 1159's domain — or any computed index) is refused.
+    In particular a constant out-of-extent index never reaches the
+    scaled addressing. -/
+theorem senkSkalLesen_nichtvar_slot (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
+    (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ)
+    (hnc : idxVarG? i = none) :
+    senkSkalLesen A c (.slot t f i hL) = none := by
+  simp only [senkSkalLesen, hnc]
+
+/-- JOINT WITNESS for `senkSkalLesen_nichtvar_slot`: the constant read
+    `T[1].f2` (lowered by lane 1159, refused here) is `none`; beside it
+    the table-writing program and its memory-changing run. -/
+theorem senkSkalLesen_nichtvar_slot_zeuge :
+    senkSkalLesen zeA zeCfg zeReadSlot = none ∧
+    zeV.schreibt false = true ∧
+    zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
 /- CUTS:
    Skeleton only: scale exponent stub. The chunk, lowering, correctness,
    refusals and witnesses are OPEN.
