@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 15:08 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 15:09 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -630,7 +630,7 @@ Last ledger refresh: **2026-10-05 15:08 UTC**. This is an operational snapshot, 
 | 1143 | TSO to W bridge: fragment READS | Merged after review/checks | 1144: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1143.md) |
 | 1145 | TSO to W bridge: LOCK/RMW steps | Merged after review/checks | 1146: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1145.md) |
 | 1147 | Whole-word atomicity of guarded aligned accesses | Merged after review/checks | 1148: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1147.md) |
-| 1149 | Capstone: one coherent machine over all accepted families | Waiting for accepted dependencies | 1150: scheduled | [task](lanes/1149.md) |
+| 1149 | Capstone: one coherent machine over all accepted families | Prepared | 1150: scheduled | [task](lanes/1149.md) |
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Merged after review/checks | 1152: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1151.md) |
 | 1153 | Pipeline lowering onto the wider ISA | Merged after review/checks | 1154: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1153.md) |
 | 1155 | Pipeline: loops and branch layout with budget | Merged after review/checks | 1156: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1155.md) |
@@ -661,7 +661,7 @@ Last ledger refresh: **2026-10-05 15:08 UTC**. This is an operational snapshot, 
 | 1205 | Loaded image: per-family reached fetch instances | Merged after review/checks | 1206: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1205.md) |
 | 1207 | Generic drain-equals-write64 induction | Merged after review/checks | 1208: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1207.md) |
 | 1209 | LOCK family: fetched-byte dispatch, narrower widths and split-lock | Merged after review/checks | 1210: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1209.md) |
-| 1211 | FP s32/MXCSR rows in the unified dispatcher | Committed candidate; review/integration pending | 1212: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1211.md) |
+| 1211 | FP s32/MXCSR rows in the unified dispatcher | Merged after review/checks | 1212: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1211.md) |
 | 1213 | LOCK words to W history: timestamp and value link | Merged after review/checks | 1214: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1213.md) |
 | 1215 | From W runs to the GX refinement: the missing target leg | Committed candidate; review/integration pending | 1216: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1215.md) |
 | 1217 | Pipeline atomics: execBlock correspondence | Committed candidate; review/integration pending | 1218: Agent working | [task](lanes/1217.md) |
@@ -680,13 +680,13 @@ Last ledger refresh: **2026-10-05 15:08 UTC**. This is an operational snapshot, 
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Agent working | 1246: scheduled | [task](lanes/1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
-| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Scheduled | 1250: scheduled | [task](lanes/1249.md) |
-| 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Scheduled | 1252: scheduled | [task](lanes/1251.md) |
-| 1253 | Start-anchored bridged run for the GX refinement | Scheduled | 1254: scheduled | [task](lanes/1253.md) |
-| 1255 | Pipeline calls: three-or-more-statement callee bodies | Scheduled | 1256: scheduled | [task](lanes/1255.md) |
-| 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Scheduled | 1258: scheduled | [task](lanes/1257.md) |
-| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Scheduled | 1260: scheduled | [task](lanes/1259.md) |
-| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Scheduled | 1262: scheduled | [task](lanes/1261.md) |
+| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Prepared | 1250: scheduled | [task](lanes/1249.md) |
+| 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Prepared | 1252: scheduled | [task](lanes/1251.md) |
+| 1253 | Start-anchored bridged run for the GX refinement | Prepared | 1254: scheduled | [task](lanes/1253.md) |
+| 1255 | Pipeline calls: three-or-more-statement callee bodies | Prepared | 1256: scheduled | [task](lanes/1255.md) |
+| 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Prepared | 1258: scheduled | [task](lanes/1257.md) |
+| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Prepared | 1260: scheduled | [task](lanes/1259.md) |
+| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Prepared | 1262: scheduled | [task](lanes/1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Scheduled | 1264: scheduled | [task](lanes/1263.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1571,6 +1571,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1133**, Device/MMIO and memory types on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1133.md). <!-- x86-merged:1133 -->
 - 2026-10-05: checked master `8e37bab1` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:8e37bab17052c567fc094d00211da675714346df -->
 - 2026-10-05: lane **1134**, Independent exact review of 1133, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1134.md). <!-- x86-merged:1134 -->
+- 2026-10-05: lane **1211**, FP s32/MXCSR rows in the unified dispatcher, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1211.md). <!-- x86-merged:1211 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
