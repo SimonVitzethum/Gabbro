@@ -4779,6 +4779,36 @@ pub const PHASEN: &[Satz] = &[
                      dokumente/SYNTAX.md §12.1",
     },
     Satz {
+        name: "klon.stapel_zahl",
+        kennungen: &["N578"],
+        aussage: "The parameter a gate's `stack` clause binds is declared as an \
+                  integer type. Its argument is the one value that travels into the \
+                  `child` region (`klon.spill`), and the parent runs on beside the \
+                  child: a pointer there reached the parent's memory from the child. \
+                  Measured before the rule (C-free lane, 2026-10-05): a region bound \
+                  from a gate answer (`ensures 4096 <= lenof(result)`) handed at a \
+                  `stack` parameter of type `ptr<normal, rw> u8` kept its extent \
+                  clause on both paths, and `seite[5] = 1` in the child beside \
+                  `seite[5] = 2` in the parent checked with 0 errors -- two threads, \
+                  one byte, no order, and no declared carrier for `N457` to guard. \
+                  An integer carries no extent and names no carrier, so the child \
+                  cannot index it; that it is a valid stack top is the gate's \
+                  contract (user logic), as before.",
+        vorbehalt: "Fail-closed on the spelling: only a written integer type passes \
+                    (`u64`, `u64 in a .. b`); a type alias is refused even when it \
+                    names an integer, because this pass reads the declaration and \
+                    no alias map -- an alias could name a pointer. The rule says \
+                    nothing about which integer is a good stack; that stays the \
+                    gate's assumption and the runtime's template (`tor.trampolin`).",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1399 (`-- erwartet: N578 allein`: the region \
+                      handed as the stack, indexed on both paths -- 0 errors before \
+                      the rule). The clean side is every stack gate in the tree, all \
+                      of them `u64`: beispiele/155, /156, /160 and \
+                      bibliothek/linux/linux.gab's `gabbro_os_klon_tor` (`spitze : u64`).",
+        fundstelle: "crates/gabbro-check/src/clone.rs (`stapelklausel`)",
+    },
+    Satz {
         name: "klon.faden",
         kennungen: &["N456", "N457"],
         aussage: "The `child` path is a thread of its own from its first statement, \

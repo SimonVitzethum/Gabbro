@@ -329,6 +329,11 @@ generated driver, lock through the chain). Reviewers from 321.
     modules (one of them private) are one C symbol -- refused by name before any C (`N042`
     widened, `gift/1398`); the module-qualified C name that would let such a program build stays
     open in O40.
+  - [x] The handed stack is a number (2026-10-05, found while scoping OFFEN O37): a region
+    pointer handed at a gate's `stack` parameter kept its extent in the `child` region AND in
+    the parent -- both indexed one byte, 0 errors, no carrier for `N457`. `N578`
+    (`klon.stapel_zahl`): the stack parameter is a written integer type; gift 1399; no other
+    tracked `.gab` falls.
   - [ ] Bare metal (C3).
     - [x] Slice 1 (2026-10-05): `laufzeit/metall/arena.c`, `include/` and `kern.c`'s memory
       functions are generated text -- the metal driver writes the proved `arena.modul` pool

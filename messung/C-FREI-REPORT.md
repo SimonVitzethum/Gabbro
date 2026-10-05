@@ -49,6 +49,8 @@ startup file and no `__libc_start_main`, `nm -u` empty.
 
 | bare metal, slice 4 (C3) | (this merge) | the thread runtime left `kern.c`: the generated `<unit>.metall.faden.c` (run queues, scheduler loop, first frame, start, join), `gabbro runtime metal-threads`; `kern.c` keeps the bring-up and reaches the cores through `metall.h` | `faden.metall` |
 
+| the handed stack is a number | `6d872282` | found while designing byte regions for machine G: a region handed at a gate's `stack` parameter kept its extent in the `child` region and in the parent, and both indexed one byte with 0 errors -- a race on bytes no declared carrier covers. `N578` (`klon.stapel_zahl`): the stack parameter is a written integer type; gift 1399; no other tracked `.gab` falls | -- |
+
 Template register (`gabbro schablonen`): 41 entries, 30 machine-checked; `--tor` still names the 6
 hanging premises it named before this lane (none of this lane's).
 
@@ -73,5 +75,8 @@ hanging premises it named before this lane (none of this lane's).
   as saved machine state, (D) code before any Gabbro can run -- and three questions for Simon
   (A, B, and which asm stays asm).
 * **Machine G has no byte pointers** (OFFEN O37): region programs stay UNCERTIFIED; nothing
-  releases a region.
+  releases a region. Designed in `dokumente/ENTWURF-BYTEREGIONEN.md` (2026-10-05: `Ty.bytes`,
+  byte places, a per-thread region store, the stop `Logik.ausdehnung`, five slices); slice S1
+  changes the core inductives the direct x86 compiler's modules match on, so it waits for a
+  coordinated slot (question for Simon).
 * No Isabelle on the server: `abnahme.py --voll` has not been run by this lane.
