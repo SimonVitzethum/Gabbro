@@ -231,4 +231,155 @@ theorem spillLoad_lauf (c : PipeCfg) (r : Rahmen) (slot : Nat)
   show regSet (regSet s.register c.adr (natAdresse (r.schlitzNat slot))) dst v dst = v
   exact regSet_gleich _ _ _
 
+/-! ## 2. The decided validator.
+
+    An untrusted spill plan (slot list, frame, code range, declared
+    table extents) is admitted only if every check computes to `true`:
+    every slot lies in the frame, slots are pairwise distinct (no slot
+    aliases another), the frame lies off the code region and inside
+    64 bits, and every slot footprint is disjoint from every declared
+    table extent. -/
+
+/-- THE VALIDATOR: an untrusted spill plan is accepted only if every
+    check below computes to `true`. -/
+def spillPlanOk (r : Rahmen) (slots : List Nat) (codeBase codeLen : Nat)
+    (daten : List Nat) : Bool :=
+  slots.all (fun s => decide (s < r.schlitzZahl)) &&
+  decide slots.Nodup &&
+  decide (r.basis + r.tiefe ≤ codeBase ∨ codeBase + codeLen ≤ r.basis) &&
+  decide (r.spitzeNat ≤ 2 ^ 64) &&
+  daten.all (fun a => slots.all (fun s =>
+    decide (a + 8 ≤ r.schlitzNat s ∨ r.schlitzNat s + 8 ≤ a)))
+
+/-- A validated plan keeps every listed slot in-frame. -/
+theorem spillPlan_inRahmen (r : Rahmen) (slots : List Nat)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spillPlanOk r slots codeBase codeLen daten = true)
+    (s : Nat) (hmem : s ∈ slots) : s < r.schlitzZahl := by
+  unfold spillPlanOk at h
+  simp only [Bool.and_eq_true] at h
+  have hall := (List.all_eq_true.mp h.1.1.1.1) s hmem
+  have hall2 : decide (s < r.schlitzZahl) = true := hall
+  exact of_decide_eq_true hall2
+
+/-- A validated plan has pairwise distinct slots: no spill slot
+    aliases another. -/
+theorem spillPlan_nodup (r : Rahmen) (slots : List Nat)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spillPlanOk r slots codeBase codeLen daten = true) :
+    slots.Nodup := by
+  unfold spillPlanOk at h
+  simp only [Bool.and_eq_true] at h
+  exact of_decide_eq_true h.1.1.1.2
+
+/-- A validated plan keeps the frame off the code region. -/
+theorem spillPlan_offCode (r : Rahmen) (slots : List Nat)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spillPlanOk r slots codeBase codeLen daten = true) :
+    r.basis + r.tiefe ≤ codeBase ∨ codeBase + codeLen ≤ r.basis := by
+  unfold spillPlanOk at h
+  simp only [Bool.and_eq_true] at h
+  exact of_decide_eq_true h.1.1.2
+
+/-- A validated plan keeps the frame inside 64 bits. -/
+theorem spillPlan_schranke (r : Rahmen) (slots : List Nat)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spillPlanOk r slots codeBase codeLen daten = true) :
+    r.spitzeNat ≤ 2 ^ 64 := by
+  unfold spillPlanOk at h
+  simp only [Bool.and_eq_true] at h
+  exact of_decide_eq_true h.1.2
+
+/-- A validated plan keeps every slot footprint disjoint from every
+    declared table extent. -/
+theorem spillPlan_offDaten (r : Rahmen) (slots : List Nat)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spillPlanOk r slots codeBase codeLen daten = true)
+    (a : Nat) (hmem : a ∈ daten) (s : Nat) (hs : s ∈ slots) :
+    a + 8 ≤ r.schlitzNat s ∨ r.schlitzNat s + 8 ≤ a := by
+  unfold spillPlanOk at h
+  simp only [Bool.and_eq_true] at h
+  have hall := (List.all_eq_true.mp h.2) a hmem
+  have hall2 : (slots.all fun s =>
+    decide (a + 8 ≤ r.schlitzNat s ∨ r.schlitzNat s + 8 ≤ a)) = true := hall
+  have hslot := (List.all_eq_true.mp hall2) s hs
+  have hslot2 : decide (a + 8 ≤ r.schlitzNat s ∨ r.schlitzNat s + 8 ≤ a) = true :=
+    hslot
+  exact of_decide_eq_true hslot2
+
+/-! ## 3. Spill privacy: no slot touches a source table or another slot.
+
+    An in-frame slot of a 64-bit-contained frame has no address
+    wrap, so Nat-interval disjointness gives footprint disjointness
+    (`disjunkt_von_intervallen`). Distinct slots are eight bytes apart
+    by construction (`schlitzNat`), and every slot lies disjoint from
+    every placed source slot of a table-free frame. -/
+
+/-- An in-frame slot of a contained frame has no address wrap. -/
+theorem spill_slot_ohneUmbruch (r : Rahmen) (s : Nat)
+    (hle : r.spitzeNat ≤ 2 ^ 64) (hi : s < r.schlitzZahl) :
+    OhneUmbruch (spillSlot r s) := by
+  have hsch := schlitzNat_schranke r s hi
+  have hto : (spillSlot r s).toNat = r.schlitzNat s :=
+    schlitz_toNat r s hle hi
+  unfold OhneUmbruch
+  rw [hto]
+  omega
+
+/-- Two distinct in-frame slots share no byte: slots sit eight bytes
+    apart by construction, so Nat-interval order gives footprint
+    disjointness on both sides. -/
+theorem spill_schlitze_getrennt (r : Rahmen) (i j : Nat)
+    (hle : r.spitzeNat ≤ 2 ^ 64)
+    (hi : i < r.schlitzZahl) (hj : j < r.schlitzZahl) (hne : i ≠ j) :
+    Disjunkt (spillSlot r i) (spillSlot r j) := by
+  have hUi := spill_slot_ohneUmbruch r i hle hi
+  have hUj := spill_slot_ohneUmbruch r j hle hj
+  have hti : (spillSlot r i).toNat = r.schlitzNat i :=
+    schlitz_toNat r i hle hi
+  have htj : (spillSlot r j).toNat = r.schlitzNat j :=
+    schlitz_toNat r j hle hj
+  have hnat : r.schlitzNat i + 8 ≤ r.schlitzNat j ∨
+      r.schlitzNat j + 8 ≤ r.schlitzNat i := by
+    unfold Rahmen.schlitzNat
+    rcases Nat.lt_or_ge i j with h | h
+    · exact Or.inl (by omega)
+    · exact Or.inr (by omega)
+  have hdis : (spillSlot r i).toNat + 8 ≤ (spillSlot r j).toNat ∨
+      (spillSlot r j).toNat + 8 ≤ (spillSlot r i).toNat := by
+    rw [hti, htj]
+    exact hnat
+  exact disjunkt_von_intervallen _ _ hUi hUj hdis
+
+variable {D : Deklaration}
+
+/-- Spill-table privacy: every listed slot footprint is disjoint from
+    every placed source slot footprint. -/
+def SpillVonTabellenGetrennt (r : Rahmen) (slots : List Nat)
+    (L : Layout D) : Prop :=
+  ∀ (s : Nat), s ∈ slots →
+    ∀ (t : D.Tab) (k : Int) (f : D.Feld t) (a : Nat),
+      L.loc t k f = some a →
+        a + 8 ≤ r.schlitzNat s ∨ r.schlitzNat s + 8 ≤ a
+
+/-- A validated plan over a table-free frame is spill-private: the
+    validator keeps every slot in-frame, and the frame keeps every
+    source table out. -/
+theorem spillPlan_tabellenGetrennt (r : Rahmen) (slots : List Nat)
+    (L : Layout D) (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spillPlanOk r slots codeBase codeLen daten = true)
+    (hrahmen : PipeRahmenGetrennt r L) :
+    SpillVonTabellenGetrennt r slots L := by
+  intro s hs t k f a hloc
+  have hslot : s < r.schlitzZahl :=
+    spillPlan_inRahmen r slots codeBase codeLen daten h s hs
+  have hbound := schlitzNat_schranke r s hslot
+  have hsp : r.spitzeNat = r.basis + r.tiefe := rfl
+  have hge : r.basis ≤ r.schlitzNat s := by
+    unfold Rahmen.schlitzNat
+    omega
+  rcases hrahmen t k f a hloc with hlo | hhi
+  · exact Or.inl (by omega)
+  · exact Or.inr (by omega)
+
 end Gabbro.Grammatik.X86.PipeSpill
