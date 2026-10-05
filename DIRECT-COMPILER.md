@@ -615,7 +615,7 @@ Last ledger refresh: **2026-10-05 13:48 UTC**. This is an operational snapshot, 
 | 1110 | Packed-integer fetched steps with a dispatch-slot API | Merged after review/checks | 1111: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1110.md) |
 | 1112 | Standing dynamic work planner, cycle 2 | Merged after review/checks | 1113: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1112.md) |
 | 1115 | Hardware completion: short-branch rel8 encoding rows (Nemotron author, Muse review) | Merged after review/checks | 1118: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1115.md) |
-| 1119 | LOCK/RMW on the coherent machine | Merged after review/checks | 1120: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1119.md) |
+| 1119 | LOCK/RMW on the coherent machine | Merged after review/checks | 1120: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1119.md) |
 | 1121 | Addressed loads/stores of all widths through TSO | Merged after review/checks | 1122: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1121.md) |
 | 1123 | Architectural faults as outcomes of the coherent machine | Merged after review/checks | 1124: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1123.md) |
 | 1125 | Asynchronous interrupt delivery on the coherent machine | Merged after review/checks | 1126: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1125.md) |
@@ -1492,6 +1492,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1194**, Independent exact review of 1193, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1194.md). <!-- x86-merged:1194 -->
 - 2026-10-05: lane **1119**, LOCK/RMW on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1119.md). <!-- x86-merged:1119 -->
 - 2026-10-05: integration of candidate(s) [1147] failed the local proof/build gate after independent review 1148; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1148 -->
+- 2026-10-05: lane **1120**, Independent exact review of 1119, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1120.md). <!-- x86-merged:1120 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
