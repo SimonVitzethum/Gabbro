@@ -907,6 +907,8 @@ theorem einheit_correct_entry (P : Programm D) (f : D.Fn)
     (σ1 : World D) (v : ErgVal D (D.erg f))
     (hsrc : execEnd O passes R (P.rumpf f) σ ρ = .zurueck σ1 v) :
     ∃ (σ' : World D) (ρ' : Env D (D.params f))
+      (b : Block D (vertragVon D f) false (D.params f)
+        (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
       (tail : Endblock D (vertragVon D f) false (D.params f)
         (Signatur.anfang D (D.signatur f)))
       (n : Nat) (s' : Zustand),
@@ -917,6 +919,9 @@ theorem einheit_correct_entry (P : Programm D) (f : D.Fn)
       byteschritt s' = .verweigert ∧
       lesbar8 s'.speicher (eintrittRsp z - BitVec.ofNat 64 8) = true ∧
       schreibbar8 s'.speicher (eintrittRsp z - BitVec.ofNat 64 8) = true ∧
+      rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b ∧
+      execBlock (V := vertragVon D f) (l := false) O passes R b σ ρ =
+        .ok σ' ρ' ∧
       rumpfEnde (V := vertragVon D f) (l := false) (P.rumpf f) = some tail ∧
       execEnd (V := vertragVon D f) (l := false) O passes R tail σ' ρ' =
         .zurueck σ1 v ∧
@@ -937,8 +942,8 @@ theorem einheit_correct_entry (P : Programm D) (f : D.Fn)
       art z tore hZ reg fl hz ρ hargs O passes R σp ρp hrun
   have hreq := einheitSchluss_gibt_requires P f c ps es certs bytes p bild abi
     σ ρ art z tore hschluss
-  exact ⟨σp, ρp, tail, n, s', hrunB, hrip, hW', hE', hstop, hles, hschr, he,
-    htailrun, hreq⟩
+  exact ⟨σp, ρp, b, tail, n, s', hrunB, hrip, hW', hE', hstop, hles, hschr,
+    hb, hrun, he, htailrun, hreq⟩
 
 /-! ## 6. Call-site duties carried through the accepted producers. -/
 
@@ -1368,5 +1373,204 @@ theorem euSchluss : einheitSchluss euP false euCfg euPs euEs [] euBytes .p48
       ((euD).params false) (Signatur.anfang euD ((euD).signatur false)))
     euProj euEnde euRueck euValidate
     euImageOk euWeltOk euPrologOk euZulassung euReq
+
+/-- The placement layout puts row 0 at 8192. -/
+theorem euLoc : (layoutVon euPs).loc () 0 () = some 8192 := rfl
+
+/-- A represented placed slot reads back its source number as a word. -/
+theorem euLesen (m : Speicher) (σ : World euD) (n : Int)
+    (hW : WorldRep (layoutVon euPs) m σ) (hn : (σ.slots () 0 ()).n = n) :
+    read64 m (natAdresse 8192) = some (BitVec.ofNat 64 n.toNat) := by
+  obtain ⟨-, -, -, hrep⟩ := hW () 0 () 8192 euLoc
+  have hT : (euD).typ () () = .int 0 1000 := rfl
+  have hrd := hrep 0 1000 hT
+  unfold RepSlot zahlWort at hrd
+  rw [hrd]
+  show some (BitVec.ofNat 64 (σ.slots () 0 ()).n.toNat) = _
+  rw [hn]
+
+/-- The projected run writes 42 into row 0. -/
+theorem euSlot42 (σp : World euD) (ρp : Env euD ((euD).params false))
+    (hrun : execBlock euO 0 euR euBlk euSigma Env.nil = .ok σp ρp) :
+    (σp.slots () 0 ()).n = 42 := by
+  simp only [euBlk, execBlock] at hrun
+  cases hrun
+  decide
+
+/-! ## 9. Joint witnesses: every main theorem on one non-degenerate program.
+
+    One table that the entry function writes, one reached source run
+    changing the slot `7 → 42`, one reached fetched run changing the
+    target bytes. -/
+
+/-- JOINT WITNESS for `rumpfBlock_total`: projection, clean run and the
+    memory change. -/
+theorem rumpfBlock_total_zeuge :
+    ∃ (σ' : World euD) (ρ' : Env euD ((euD).params false)),
+      rumpfBlock euBodyCal = some euBlk ∧
+      execBlock euO 0 euR euBlk euSigma Env.nil = .ok σ' ρ' ∧
+      (euSigma.slots () 0 ()).n = 7 ∧
+      (σ'.slots () 0 ()).n = 42 := by
+  obtain ⟨σp, ρp, hrun⟩ :=
+    rumpfBlock_total (V := vertragVon euD false) (l := false) euO 0 euR
+      euBodyCal euBlk euProj euSigma Env.nil
+  exact ⟨σp, ρp, euProj, hrun, rfl, euSlot42 σp ρp hrun⟩
+
+/-- JOINT WITNESS for `rumpfBruecke`: the body run is the tail run at the
+    reached world, with the memory change. -/
+theorem rumpfBruecke_zeuge :
+    ∃ (σ' : World euD) (ρ' : Env euD ((euD).params false))
+      (tail : Endblock euD (vertragVon euD false) false
+        ((euD).params false) (Signatur.anfang euD ((euD).signatur false))),
+      rumpfBlock euBodyCal = some euBlk ∧
+      rumpfEnde euBodyCal = some tail ∧
+      execBlock euO 0 euR euBlk euSigma Env.nil = .ok σ' ρ' ∧
+      execEnd euO 0 euR euBodyCal euSigma Env.nil =
+        execEnd euO 0 euR tail σ' ρ' ∧
+      (euSigma.slots () 0 ()).n = 7 ∧
+      (σ'.slots () 0 ()).n = 42 := by
+  obtain ⟨σp, ρp, hrun⟩ :=
+    rumpfBlock_total (V := vertragVon euD false) (l := false) euO 0 euR
+      euBodyCal euBlk euProj euSigma Env.nil
+  have hbridge := rumpfBruecke (V := vertragVon euD false) (l := false) euO 0
+    euR euBodyCal euBlk _ euProj euEnde euSigma Env.nil σp ρp hrun
+  exact ⟨σp, ρp, _, euProj, euEnde, hrun, hbridge, rfl,
+    euSlot42 σp ρp hrun⟩
+
+/-- JOINT WITNESS for `einheitSchluss_legs`: the closed check with a
+    clean run and the memory change. -/
+theorem einheitSchluss_legs_zeuge :
+    ∃ (σ' : World euD) (ρ' : Env euD ((euD).params false)),
+      einheitSchluss euP false euCfg euPs euEs [] euBytes .p48 euBild []
+        euSigma (Env.nil : Env euD ((euD).params false)) .nolibcMain euZ
+        [] = true ∧
+      execBlock euO 0 euR euBlk euSigma Env.nil = .ok σ' ρ' ∧
+      (euSigma.slots () 0 ()).n = 7 ∧
+      (σ'.slots () 0 ()).n = 42 := by
+  obtain ⟨σp, ρp, hrun⟩ :=
+    rumpfBlock_total (V := vertragVon euD false) (l := false) euO 0 euR
+      euBodyCal euBlk euProj euSigma Env.nil
+  exact ⟨σp, ρp, euSchluss, hrun, rfl, euSlot42 σp ρp hrun⟩
+
+/-- JOINT WITNESS for `einheit_correct_entry`: the closed check runs the
+    loaded image to the code end, the slot reads 42, the source slot
+    changed `7 → 42`. -/
+theorem einheit_correct_entry_zeuge :
+    ∃ (σ' : World euD) (ρ' : Env euD ((euD).params false))
+      (b : Block euD (vertragVon euD false) false
+        ((euD).params false) (Signatur.anfang euD ((euD).signatur false))
+        (Signatur.anfang euD ((euD).signatur false)))
+      (tail : Endblock euD (vertragVon euD false) false
+        ((euD).params false) (Signatur.anfang euD ((euD).signatur false)))
+      (n : Nat) (s' : Zustand),
+      einheitSchluss euP false euCfg euPs euEs [] euBytes .p48 euBild []
+        euSigma (Env.nil : Env euD ((euD).params false)) .nolibcMain euZ
+        [] = true ∧
+      laufBytes n euZ.zustand = .weiter s' ∧
+      s'.rip = natAdresse (euCfg.codeBase + euBytes.length) ∧
+      WorldRep (layoutVon euPs) s'.speicher σ' ∧
+      EnvRepr ρ' s'.register (abbOf euCfg) ∧
+      byteschritt s' = .verweigert ∧
+      read64 s'.speicher (natAdresse 8192) = some (BitVec.ofNat 64 42) ∧
+      (euSigma.slots () 0 ()).n = 7 ∧
+      (σ'.slots () 0 ()).n = 42 := by
+  obtain ⟨σ1, v, hExec, hPre, _hPost⟩ := euQuelle
+  obtain ⟨σp, ρp, b0, tail0, n, s', hrunB, hrip, hW, hE, hstop, hles, hschr,
+    hb, hrun, he, htail, hreq⟩ :=
+    einheit_correct_entry euP false euCfg [] euPs euEs [] euBytes .p48 euBild
+      euSigma Env.nil .nolibcMain euZ [] euReg witnessFlags euSchluss rfl
+      euAbi euO 0 euR σ1 v hExec
+  have hb' : rumpfBlock euBodyCal = some b0 := hb
+  have hbb : b0 = euBlk := Option.some.inj (hb'.symm.trans euProj)
+  rw [hbb] at hrun hb
+  have hPost42 := euSlot42 σp ρp hrun
+  have hByte42 := euLesen s'.speicher σp 42 hW hPost42
+  exact ⟨σp, ρp, euBlk, tail0, n, s', euSchluss, hrunB, hrip, hW, hE, hstop,
+    hByte42, hPre, hPost42⟩
+
+/-! ## 10. Call-site witnesses: the duties at actual values, reached. -/
+
+/-- The empty call arguments. -/
+def euArgsNil : Args euD [] [] ((euD).params false) := .nil
+
+/-- The call-site read world. -/
+def euSreadCall : World euD :=
+  (euSigma.lese [] euArgsNil.orte).lese
+    (Signatur.anfang euD ((euD).signatur false)) ((euP.requires false).orte)
+
+/-- The call-site argument environment. -/
+def euRhoCall : Env euD ((euD).params false) :=
+  evalArgs (euSigma.lese [] euArgsNil.orte) euArgsNil
+    (euSigma.lese [] euArgsNil.orte) Env.nil
+
+/-- JOINT WITNESS for `einheit_ruf_req`: the caller runs clean, the entry
+    duty holds at the actual arguments, the callee prefix runs clean, and
+    the call changes the slot `7 → 42`. -/
+theorem einheit_ruf_req_zeuge :
+    ∃ (σ' : World euD) (ρ' : Env euD [])
+      (σp : World euD) (ρp : Env euD ((euD).params false)),
+      execStmt (V := vertragVon euD true) euO 0 (rufAt euP euO 0 1)
+        (Stmt.call (V := vertragVon euD true) (l := false) false
+          euArgsNil euHpCall rfl)
+        euSigma Env.nil = .ok σ' ρ' ∧
+      ReqAmEintritt euP false euSreadCall euRhoCall ∧
+      execBlock (V := vertragVon euD false) (l := false) euO 0
+        (rufAt euP euO 0 1) euBlk euSreadCall euRhoCall = .ok σp ρp ∧
+      (euSigma.slots () 0 ()).n = 7 ∧
+      (σ'.slots () 0 ()).n = 42 := by
+  have hexecFull : ∃ σ' ρ',
+      execStmt (V := vertragVon euD true) euO 0 (rufAt euP euO 0 1)
+        (Stmt.call (V := vertragVon euD true) (l := false) false
+          euArgsNil euHpCall rfl)
+        euSigma Env.nil = .ok σ' ρ' := by
+    exact ⟨_, _, rfl⟩
+  obtain ⟨σ', ρ', hexec⟩ := hexecFull
+  have hbproj : rumpfBlock (euP.rumpf false) = some euBlk := euProj
+  obtain ⟨hreq, σp, ρp, hrun⟩ :=
+    einheit_ruf_req euP euO 0 1 hexec euBlk hbproj
+  refine ⟨σ', ρ', σp, ρp, hexec, hreq, hrun, rfl, ?_⟩
+  cases hexec
+  rfl
+
+/-- JOINT WITNESS for `einheit_ruf_ens`: the body returns, the call
+    returns, the return duty holds at the actual result, the callee prefix
+    runs clean, and the slot changed `7 → 42`. -/
+theorem einheit_ruf_ens_zeuge :
+    ∃ (σ1 : World euD) (v : ErgVal euD ((euD).erg false)) (σ' : World euD)
+      (σp : World euD) (ρp : Env euD ((euD).params false)),
+      execEnd (V := vertragVon euD false) euO 0 (rufAt euP euO 0 0)
+        (euP.rumpf false)
+        (euSigma.lese (Signatur.anfang euD ((euD).signatur false))
+          ((euP.requires false).orte))
+        Env.nil = .zurueck σ1 v ∧
+      rufAt euP euO 0 1 false euSigma Env.nil = .ok σ' v ∧
+      RufEnsCheck euP false
+        (euSigma.lese (Signatur.anfang euD ((euD).signatur false))
+          ((euP.requires false).orte))
+        (σ1.lese (vertragVon euD false).ende ((euP.ensures false).orte))
+        Env.nil v ∧
+      execBlock (V := vertragVon euD false) (l := false) euO 0
+        (rufAt euP euO 0 0) euBlk
+        (euSigma.lese (Signatur.anfang euD ((euD).signatur false))
+          ((euP.requires false).orte))
+        Env.nil = .ok σp ρp ∧
+      (euSigma.slots () 0 ()).n = 7 ∧
+      (σ1.slots () 0 ()).n = 42 := by
+  have hboth : ∃ σ1 v σ',
+      execEnd (V := vertragVon euD false) euO 0 (rufAt euP euO 0 0)
+        (euP.rumpf false)
+        (euSigma.lese (Signatur.anfang euD ((euD).signatur false))
+          ((euP.requires false).orte))
+        Env.nil = .zurueck σ1 v ∧
+      rufAt euP euO 0 1 false euSigma Env.nil = .ok σ' v := by
+    refine ⟨_, _, _, rfl, rfl⟩
+  obtain ⟨σ1, v, σ', hbody, hok⟩ := hboth
+  have hbproj : rumpfBlock (euP.rumpf false) = some euBlk := euProj
+  obtain ⟨hens, heq, σp, ρp, hrun⟩ :=
+    einheit_ruf_ens euP euO 0 0 false euSigma Env.nil _ rfl rfl σ1 v hbody _ rfl
+      _ rfl rfl _ hok euBlk hbproj
+  refine ⟨σ1, v, σ', σp, ρp, hbody, hok, hens, hrun, rfl, ?_⟩
+  cases hbody
+  rfl
 
 end Gabbro.Grammatik.X86.PipelineUnit
