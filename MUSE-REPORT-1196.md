@@ -1,5 +1,7 @@
 # MUSE-REPORT-1196: Exact review of candidate 1195 (Pipeline block-size induction)
 
+CANDIDATE: 1195 6cfe01cad7ab5664b78fab6227422fa02ddf1aec
+
 ## Scope
 
 - Review-only lane. Own file: `MUSE-REPORT-1196.md`.
@@ -30,6 +32,8 @@
 - Author evidence: `./lean-probe .../PipelineBlockInduct.lean` `== 0 error(s)`; `./lean-bau` `Build completed successfully (627 jobs).`
 - Independent run in this clone (clean base, candidate not applied per report-only scope): `./lean-bau` ends `Build completed successfully (630 jobs).`
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1195 at `6cfe01cad7ab5664b78fab6227422fa02ddf1aec` is accepted as reviewed. Follow-up (not a repair condition): n-chunk dependent source `Block` composition beyond two `assignSlot` conses.
