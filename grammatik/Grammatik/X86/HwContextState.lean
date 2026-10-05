@@ -1226,4 +1226,223 @@ theorem adapterContext_fxrstor_wf (m : HwMaschine) (c : Nat)
   | fehlerGP => simp [ho, ctxOpt] at h1
   | fehlerUD => simp [ho, ctxOpt] at h1
 
+/-! ## 8. Joint witness: two cores save, forward, drain; refusals;
+    interrupt FP preservation.
+
+    Core 0 saves at `0x1000`, core 1 at `0x2000` (both 16- and
+    64-aligned). Memory starts zeroed; permissions cover exactly the
+    two save footprints plus the reserved-bit probe area. Core 0
+    carries MXCSR `0x1F80` (low byte `0x80`) and XMM low halves `7`;
+    core 1 carries `0x1FBF` (sticky bits set, still profile-valid:
+    `mxcsr_sticky_egal_gueltig`) and low halves `11`. -/
+
+/-- Witness area base, core 0 (16- and 64-aligned). -/
+def ctxArea0 : Adresse := BitVec.ofNat 64 4096
+
+/-- Witness area base, core 1. -/
+def ctxArea1 : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness area base, reserved-bit probe. -/
+def ctxAreaR : Adresse := BitVec.ofNat 64 12288
+
+/-- Witness permission: exactly the footprint ranges. -/
+def ctxWitOk (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 416) ||
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 416) ||
+  decide (12288 ≤ a.toNat ∧ a.toNat < 12288 + 416)
+
+/-- Witness memory: zeroed bytes, footprint permissions, no execute. -/
+def ctxWitMem : Speicher :=
+  { bytes := fun _ => BitVec.ofNat 8 0, lesbar := ctxWitOk,
+    schreibbar := ctxWitOk, ausfuehrbar := fun _ => false }
+
+/-- Witness control word, core 0: reset. -/
+def ctxWitK0 : FPKontext := ⟨0x1F80⟩
+
+/-- Witness control word, core 1: sticky-set, still valid. -/
+def ctxWitK1 : FPKontext := ⟨0x1FBF⟩
+
+/-- Witness XMM file, core 0 (low halves 7). -/
+def ctxWitX0 : XmmDatei :=
+  fun _ => vecJoin (BitVec.ofNat 64 7) (BitVec.ofNat 64 0)
+
+/-- Witness XMM file, core 1 (low halves 11). -/
+def ctxWitX1 : XmmDatei :=
+  fun _ => vecJoin (BitVec.ofNat 64 11) (BitVec.ofNat 64 0)
+
+/-- Witness cores: distinct FP/vector state per core. -/
+def ctxWitKern : Nat → HwKern
+  | 0 => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 0, ctxWitX0, ctxWitK0⟩
+  | 1 => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 0, ctxWitX1, ctxWitK1⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 0, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two saving cores, empty
+    buffers, full silicon, baseline readiness. -/
+def ctxWitStart : HwMaschine :=
+  ⟨ctxWitMem, ctxWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem ctxWitStart_wf : HwWf ctxWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Area bases are save-aligned. -/
+theorem ctxWit_ausgerichtet :
+    fxAusgerichtet ctxArea0 = true ∧ fxAusgerichtet ctxArea1 = true ∧
+      xAusgerichtet ctxArea0 = true := by
+  decide
+
+/-- A misaligned base is refused alignment. -/
+theorem ctxWit_schief :
+    fxAusgerichtet (BitVec.ofNat 64 4104) = false ∧
+      xAusgerichtet (BitVec.ofNat 64 4104) = false := by
+  decide
+
+/-- Project a buffer length out of a save outcome. -/
+def ctxWitBuf (o : CtxAusgang) (c : Nat) : Option Nat :=
+  match o with
+  | .weiter m => some (m.puffer c).length
+  | _ => none
+
+/-- Project one TSO-view byte out of a save outcome. -/
+def ctxWitByte (o : CtxAusgang) (c : Nat)
+    (a : Adresse) : Option (Option Byte) :=
+  match o with
+  | .weiter m => some (loadByte (tsoAnsicht m) c a)
+  | _ => none
+
+set_option maxRecDepth 100000 in
+/-- Both cores buffer exactly the 260 footprint entries
+    (elaboration-only depth budget for the kernel `decide`). -/
+theorem ctxWit_buf :
+    ctxWitBuf (ctxSpeichern ctxWitStart 0 ctxArea0) 0 = some 260 ∧
+      ctxWitBuf (ctxSpeichern ctxWitStart 1 ctxArea1) 1 = some 260 := by
+  decide
+
+set_option maxRecDepth 100000 in
+/-- Owner-only forwarding: core 0 reads its MXCSR low byte `0x80`,
+    core 1 still reads the zeroed cell. -/
+theorem ctxWit_fwd :
+    ctxWitByte (ctxSpeichern ctxWitStart 0 ctxArea0) 0
+        (addrOff ctxArea0 24) =
+        some (some (BitVec.ofNat 8 128)) ∧
+      ctxWitByte (ctxSpeichern ctxWitStart 0 ctxArea0) 1
+        (addrOff ctxArea0 24) =
+        some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+set_option maxRecDepth 100000 in
+/-- The XMM slot byte forwards to its owner. -/
+theorem ctxWit_xmm_fwd :
+    ctxWitByte (ctxSpeichern ctxWitStart 0 ctxArea0) 0
+        (addrOff ctxArea0 160) =
+        some (some (BitVec.ofNat 8 7)) := by
+  decide
+
+/-- The machine after core 0 saves, if reached. -/
+def ctxWitM1 : Option HwMaschine :=
+  match ctxSpeichern ctxWitStart 0 ctxArea0 with
+  | .weiter m => some m
+  | _ => none
+
+/-- Core 0 drains its oldest entry (the MXCSR low byte). -/
+def ctxWitFlush1 : Option TSOZustand :=
+  match ctxWitM1 with
+  | some m => flushKern (tsoAnsicht m) 0
+  | none => none
+
+/-- Project a shared-memory byte out of a drained state. -/
+def ctxWitFlushByte (o : Option TSOZustand)
+    (a : Adresse) : Option Byte :=
+  match o with
+  | some s => some (s.mem.bytes a)
+  | none => none
+
+set_option maxRecDepth 100000 in
+/-- THE DRAIN CHANGES MEMORY: the cell starts zeroed and reads
+    `0x80` after one flush. -/
+theorem ctxWit_spülung_aendert :
+    ctxWitMem.bytes (addrOff ctxArea0 24) = BitVec.ofNat 8 0 ∧
+      ctxWitFlushByte ctxWitFlush1 (addrOff ctxArea0 24) =
+        some (BitVec.ofNat 8 128) := by
+  decide
+
+/-- Project the restored control word out of a restore outcome. -/
+def ctxWitFpNach (o : CtxAusgang) : Option Nat :=
+  match o with
+  | .weiter m => some (((m.kerne 0).fp).mxcsr.toNat)
+  | _ => none
+
+/-- Restore chained onto the save: the control word comes back. -/
+def ctxWitRestored : Option Nat :=
+  match ctxWitM1 with
+  | some m1 => ctxWitFpNach (ctxWiederherstellen m1 0 ctxArea0)
+  | none => none
+
+set_option maxRecDepth 100000 in
+/-- MACHINE ROUND TRIP, observed: `0x1F80` saved and restored. -/
+theorem ctxWit_restore : ctxWitRestored = some 8064 := by
+  decide
+
+/-- Outcome kind projection (outcomes carry functions, so no
+    `DecidableEq`; kinds are plain numbers). -/
+def ctxWitArt (o : CtxAusgang) : Nat :=
+  match o with
+  | .weiter _ => 0
+  | .verweigert => 1
+  | .fehlerGP => 2
+  | .fehlerUD => 3
+
+set_option maxRecDepth 100000 in
+/-- Planted refusals, observed: misaligned save is #GP, a request
+    with no modelled component is refused, XSAVE without XCR0 SSE
+    readiness is #UD, misaligned XSAVE is #GP. -/
+theorem ctxWit_verweigert :
+    ctxWitArt (ctxSpeichern ctxWitStart 0 (BitVec.ofNat 64 4104)) = 2 ∧
+      ctxWitArt (ctxXSave ctxWitStart 0 ctxArea0 ⟨true, true, false⟩
+        false) = 1 ∧
+      ctxWitArt (ctxXSave ctxWitStart 0 ctxArea0 ⟨true, false, false⟩
+        true) = 3 ∧
+      ctxWitArt (ctxXSave ctxWitStart 0 (BitVec.ofNat 64 4104)
+        ⟨true, true, false⟩ true) = 2 := by
+  decide
+
+/-- Reserved-bit probe bytes: bit 18 set in the MXCSR image cell. -/
+def ctxWitMemRBytes (a : Adresse) : Byte :=
+  if decide (a = addrOff ctxAreaR 26) then BitVec.ofNat 8 4
+  else BitVec.ofNat 8 0
+
+/-- Reserved-bit probe memory. -/
+def ctxWitMemR : Speicher :=
+  { bytes := ctxWitMemRBytes, lesbar := ctxWitOk,
+    schreibbar := ctxWitOk, ausfuehrbar := fun _ => false }
+
+/-- Reserved-bit probe machine. -/
+def ctxWitStartR : HwMaschine :=
+  { ctxWitStart with mem := ctxWitMemR }
+
+set_option maxRecDepth 100000 in
+/-- A reserved MXCSR image bit faults with #GP on restore. -/
+theorem ctxWit_gp_reserviert :
+    ctxWitArt (ctxWiederherstellen ctxWitStartR 0 ctxAreaR) = 2 := by
+  decide
+
+/-- Project the delivered control word out of a delivery outcome. -/
+def ctxWitIntFp (o : Option (HwMaschine × Bool × Bool)) :
+    Option Nat :=
+  match o with
+  | some (m, _, _) => some (((m.kerne 0).fp).mxcsr.toNat)
+  | none => none
+
+/-- INTERRUPT DELIVERY preserves the core's control word (NMI under
+    IF=false over the accepted IDT image, reused from HwInterrupts). -/
+theorem ctxWit_int_fp :
+    ctxWitIntFp
+      (asyncSchritt intWitStart 0 witNmi witSteuerNmi) =
+      some 8064 := by
+  decide
+
 end Gabbro.Grammatik.X86
