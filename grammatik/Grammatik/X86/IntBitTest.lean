@@ -21,6 +21,7 @@ import Grammatik.X86.Ganzzahl
 import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
 import Grammatik.X86.NarrowOps
+import Grammatik.X86.ExtendedExecution
 
 namespace Gabbro.Grammatik.X86
 
@@ -924,5 +925,418 @@ theorem roundtripBtMemImm (op : BtOp) (w : BtWeite) (base : Register)
       decodeBtGruppe, decodeBtRex, gruppeOp, opcOp, btPref, rexBt,
       regHigh, regLow, regCode, codeReg, btGruppe, byteNat, natByte,
       btImmByte n h, parseLe32_leBytes32]
+
+/-! ## 8. Register step, flag class, unified dispatcher.
+
+    The register step reuses the §1-§5 value semantics unchanged: CF
+    is the selected (old) bit, ZF is preserved (unaffected), and
+    OF/SF/AF/PF keep their incoming values -- a modelling choice the
+    `btErlaubt` class leaves free (undefined, never false), so no
+    consumer can depend on the kept values. Memory forms refuse here
+    (they are TSO events, §9); a length mismatch refuses. The
+    dispatcher prefers the accepted unified chain, like
+    `decodeMulDivWidth`. -/
+
+/-- A decoded bit-test instruction with its consumed length. -/
+structure BtDecodiert where
+  befehl : BtForm
+  laenge : Nat
+  deriving DecidableEq, Repr
+
+/-- Width projection of a form. -/
+def btFormWeite : BtForm → BtWeite
+  | .reg _ w _ _ => w
+  | .imm _ w _ _ => w
+  | .memReg _ w _ _ _ => w
+  | .memImm _ w _ _ _ => w
+
+/-- Operation projection of a form. -/
+def btFormOp : BtForm → BtOp
+  | .reg op _ _ _ => op
+  | .imm op _ _ _ => op
+  | .memReg op _ _ _ _ => op
+  | .memImm op _ _ _ _ => op
+
+/-- Flag update: CF is the selected bit, everything else preserved. -/
+def btFlags (f : Flags) (cf : Bool) : Flags := { f with cf := cf }
+
+/-- The bit-test flag class: CF is the selected bit, ZF is the
+    incoming ZF, OF/SF/AF/PF are free. -/
+def btErlaubt (vor : Flags) (cf : Bool) (nach : Flags) : Prop :=
+  nach.cf = cf ∧ nach.zf = vor.zf
+
+/-- One register step: refuse on length mismatch; BT/BTS/BTR/BTC on
+    registers write back the routed value with CF set to the old
+    selected bit; memory forms refuse (TSO events in §9). -/
+def btSchritt (d : BtDecodiert) (s : Zustand) : Option Zustand :=
+  if d.laenge == btLaenge d.befehl then
+    match d.befehl with
+    | .reg op w dst src =>
+      let base := s.register dst
+      let off := (s.register src).toNat
+      let bw := btWeiteBreite w
+      some (schrittRegister s (ripNach s.rip d.laenge)
+        (btFlags s.flags (btBit bw base off)) dst
+        (btSchreibe bw base (btRoh op bw base off)))
+    | .imm op w dst n =>
+      let base := s.register dst
+      let bw := btWeiteBreite w
+      some (schrittRegister s (ripNach s.rip d.laenge)
+        (btFlags s.flags (btBit bw base n)) dst
+        (btSchreibe bw base (btRoh op bw base n)))
+    | .memReg _ _ _ _ _ => none
+    | .memImm _ _ _ _ _ => none
+  else none
+
+/-- Length mismatch refuses: the consumed length is checked data. -/
+theorem btSchritt_laenge (d : BtDecodiert) (s : Zustand)
+    (h : d.laenge ≠ btLaenge d.befehl) :
+    btSchritt d s = none := by
+  unfold btSchritt
+  rw [if_neg (by simpa [beq_iff_eq] using h)]
+
+/-- Memory forms refuse the register step, even at the right length:
+    they are TSO events (§9), never the register plug. -/
+theorem btSchritt_mem_verweigert (d : BtDecodiert) (s : Zustand)
+    (op : BtOp) (w : BtWeite) (base bitReg : Register)
+    (disp : BitVec 32)
+    (hform : d.befehl = .memReg op w base bitReg disp)
+    (h : d.laenge == btLaenge d.befehl) :
+    btSchritt d s = none := by
+  unfold btSchritt
+  rw [if_pos h, hform]
+
+/-- Memory imm8 forms refuse the register step as well. -/
+theorem btSchritt_memImm_verweigert (d : BtDecodiert) (s : Zustand)
+    (op : BtOp) (w : BtWeite) (base : Register)
+    (disp : BitVec 32) (n : Nat)
+    (hform : d.befehl = .memImm op w base disp n)
+    (h : d.laenge == btLaenge d.befehl) :
+    btSchritt d s = none := by
+  unfold btSchritt
+  rw [if_pos h, hform]
+
+/-- Register step: the routed value with CF set to the old bit. -/
+theorem btSchritt_reg (op : BtOp) (w : BtWeite) (dst src : Register)
+    (l : Nat) (s : Zustand)
+    (h : l == btLaenge (.reg op w dst src)) :
+    btSchritt ⟨.reg op w dst src, l⟩ s =
+      some (schrittRegister s (ripNach s.rip l)
+        (btFlags s.flags
+          (btBit (btWeiteBreite w) (s.register dst)
+            ((s.register src).toNat))) dst
+        (btSchreibe (btWeiteBreite w) (s.register dst)
+          (btRoh op (btWeiteBreite w) (s.register dst)
+            ((s.register src).toNat)))) := by
+  unfold btSchritt
+  rw [if_pos h]
+
+/-- Imm8 step: the routed value with CF set to the old bit. -/
+theorem btSchritt_imm (op : BtOp) (w : BtWeite) (dst : Register)
+    (n : Nat) (l : Nat) (s : Zustand)
+    (h : l == btLaenge (.imm op w dst n)) :
+    btSchritt ⟨.imm op w dst n, l⟩ s =
+      some (schrittRegister s (ripNach s.rip l)
+        (btFlags s.flags
+          (btBit (btWeiteBreite w) (s.register dst) n)) dst
+        (btSchreibe (btWeiteBreite w) (s.register dst)
+          (btRoh op (btWeiteBreite w) (s.register dst) n))) := by
+  unfold btSchritt
+  rw [if_pos h]
+
+/-- A successful step never touches memory. -/
+theorem btSchritt_speicher (d : BtDecodiert) (s s' : Zustand)
+    (h : btSchritt d s = some s') : s'.speicher = s.speicher := by
+  unfold btSchritt at h
+  by_cases hl : d.laenge == btLaenge d.befehl
+  · rw [if_pos hl] at h
+    cases df : d.befehl with
+    | reg op w dst src =>
+      rw [df] at h
+      cases h
+      rfl
+    | imm op w dst n =>
+      rw [df] at h
+      cases h
+      rfl
+    | memReg op w base bitReg disp =>
+      rw [df] at h
+      cases h
+    | memImm op w base disp n =>
+      rw [df] at h
+      cases h
+  · rw [if_neg hl] at h
+    cases h
+
+/-- A successful step advances RIP past the decoded length. -/
+theorem btSchritt_rip (d : BtDecodiert) (s s' : Zustand)
+    (h : btSchritt d s = some s') :
+    s'.rip = ripNach s.rip d.laenge := by
+  unfold btSchritt at h
+  by_cases hl : d.laenge == btLaenge d.befehl
+  · rw [if_pos hl] at h
+    cases df : d.befehl with
+    | reg op w dst src =>
+      rw [df] at h
+      cases h
+      rfl
+    | imm op w dst n =>
+      rw [df] at h
+      cases h
+      rfl
+    | memReg op w base bitReg disp =>
+      rw [df] at h
+      cases h
+    | memImm op w base disp n =>
+      rw [df] at h
+      cases h
+  · rw [if_neg hl] at h
+    cases h
+
+/-- CF of a register step is the old selected bit. -/
+theorem btSchritt_cf_reg (op : BtOp) (w : BtWeite) (dst src : Register)
+    (l : Nat) (s s' : Zustand)
+    (h : l == btLaenge (.reg op w dst src))
+    (hs : btSchritt ⟨.reg op w dst src, l⟩ s = some s') :
+    s'.flags.cf =
+      btBit (btWeiteBreite w) (s.register dst)
+        ((s.register src).toNat) := by
+  have heq := btSchritt_reg op w dst src l s h
+  rw [heq] at hs
+  cases hs
+  rfl
+
+/-- CF of an imm8 step is the old selected bit. -/
+theorem btSchritt_cf_imm (op : BtOp) (w : BtWeite) (dst : Register)
+    (n : Nat) (l : Nat) (s s' : Zustand)
+    (h : l == btLaenge (.imm op w dst n))
+    (hs : btSchritt ⟨.imm op w dst n, l⟩ s = some s') :
+    s'.flags.cf = btBit (btWeiteBreite w) (s.register dst) n := by
+  have heq := btSchritt_imm op w dst n l s h
+  rw [heq] at hs
+  cases hs
+  rfl
+
+/-- ZF is unaffected by a register step. -/
+theorem btSchritt_zf_reg (op : BtOp) (w : BtWeite) (dst src : Register)
+    (l : Nat) (s s' : Zustand)
+    (h : l == btLaenge (.reg op w dst src))
+    (hs : btSchritt ⟨.reg op w dst src, l⟩ s = some s') :
+    s'.flags.zf = s.flags.zf := by
+  have heq := btSchritt_reg op w dst src l s h
+  rw [heq] at hs
+  cases hs
+  rfl
+
+/-- ZF is unaffected by an imm8 step. -/
+theorem btSchritt_zf_imm (op : BtOp) (w : BtWeite) (dst : Register)
+    (n : Nat) (l : Nat) (s s' : Zustand)
+    (h : l == btLaenge (.imm op w dst n))
+    (hs : btSchritt ⟨.imm op w dst n, l⟩ s = some s') :
+    s'.flags.zf = s.flags.zf := by
+  have heq := btSchritt_imm op w dst n l s h
+  rw [heq] at hs
+  cases hs
+  rfl
+
+/-- A register step meets the flag class: CF pinned, ZF kept. -/
+theorem btSchritt_erlaubt_reg (op : BtOp) (w : BtWeite)
+    (dst src : Register) (l : Nat) (s s' : Zustand)
+    (h : l == btLaenge (.reg op w dst src))
+    (hs : btSchritt ⟨.reg op w dst src, l⟩ s = some s') :
+    btErlaubt s.flags
+      (btBit (btWeiteBreite w) (s.register dst)
+        ((s.register src).toNat)) s'.flags :=
+  ⟨btSchritt_cf_reg op w dst src l s s' h hs,
+    btSchritt_zf_reg op w dst src l s s' h hs⟩
+
+/-- An imm8 step meets the flag class: CF pinned, ZF kept. -/
+theorem btSchritt_erlaubt_imm (op : BtOp) (w : BtWeite) (dst : Register)
+    (n : Nat) (l : Nat) (s s' : Zustand)
+    (h : l == btLaenge (.imm op w dst n))
+    (hs : btSchritt ⟨.imm op w dst n, l⟩ s = some s') :
+    btErlaubt s.flags
+      (btBit (btWeiteBreite w) (s.register dst) n) s'.flags :=
+  ⟨btSchritt_cf_imm op w dst n l s s' h hs,
+    btSchritt_zf_imm op w dst n l s s' h hs⟩
+
+/-- A register step keeps every other register. -/
+theorem btSchritt_fremd_reg (op : BtOp) (w : BtWeite)
+    (dst src : Register) (l : Nat) (s s' : Zustand) (q : Register)
+    (h : l == btLaenge (.reg op w dst src))
+    (hs : btSchritt ⟨.reg op w dst src, l⟩ s = some s')
+    (hq : q ≠ dst) :
+    s'.register q = s.register q := by
+  have heq := btSchritt_reg op w dst src l s h
+  rw [heq] at hs
+  cases hs
+  exact regSet_fremd s.register dst q _ hq
+
+/-- An imm8 step keeps every other register. -/
+theorem btSchritt_fremd_imm (op : BtOp) (w : BtWeite) (dst : Register)
+    (n : Nat) (l : Nat) (s s' : Zustand) (q : Register)
+    (h : l == btLaenge (.imm op w dst n))
+    (hs : btSchritt ⟨.imm op w dst n, l⟩ s = some s')
+    (hq : q ≠ dst) :
+    s'.register q = s.register q := by
+  have heq := btSchritt_imm op w dst n l s h
+  rw [heq] at hs
+  cases hs
+  exact regSet_fremd s.register dst q _ hq
+
+/-! ## 9. Unified dispatcher, no-shadowing pins, unified step.
+
+    The dispatcher prefers the accepted unified chain
+    (`decodeExt`), taking the bit-test arm only where it refuses --
+    no pilot or extension form is shadowed (mirroring
+    `decodeMulDivWidth`). The unified step runs Ext through `stepExt`
+    and bit-test through `btSchritt` on the core half; BT never
+    traps, so refusal is `verweigert`. -/
+
+/-- Unified dispatcher instruction: the accepted unified chain first,
+    the bit-test family only where it refuses. -/
+inductive BtHwInstr where
+  | ext : ExtInstr → BtHwInstr
+  | bt : BtDecodiert → BtHwInstr
+  deriving DecidableEq, Repr
+
+/-- Dispatcher: the unified decoder first, the bit-test decoder only
+    where the unified chain refuses. -/
+def decodeBtHw : List Byte → Option (BtHwInstr × List Byte) :=
+  fun bs =>
+    match decodeExt bs with
+    | some (i, rest) => some (.ext i, rest)
+    | none =>
+      match decodeBt bs with
+      | some (f, rest) => some (.bt ⟨f, btLaenge f⟩, rest)
+      | none => none
+
+/-- The dispatcher agrees with the unified chain wherever it accepts:
+    no pilot or extension form is shadowed. -/
+theorem decodeBtHw_prefers_ext (bs : List Byte) (i : ExtInstr)
+    (rest : List Byte) (h : decodeExt bs = some (i, rest)) :
+    decodeBtHw bs = some (.ext i, rest) := by
+  unfold decodeBtHw
+  rw [h]
+
+/-- Where the unified chain refuses, a covered bit-test row is taken. -/
+theorem decodeBtHw_bt (bs : List Byte) (f : BtForm)
+    (rest : List Byte) (h1 : decodeExt bs = none)
+    (h2 : decodeBt bs = some (f, rest)) :
+    decodeBtHw bs = some (.bt ⟨f, btLaenge f⟩, rest) := by
+  unfold decodeBtHw
+  rw [h1, h2]
+
+/-- Where both chains refuse, the dispatcher refuses. -/
+theorem decodeBtHw_nichts (bs : List Byte)
+    (h1 : decodeExt bs = none) (h2 : decodeBt bs = none) :
+    decodeBtHw bs = none := by
+  unfold decodeBtHw
+  rw [h1, h2]
+
+/-! ## 10. No-shadowing pins: the unified chain refuses every new row.
+
+    Each pin is a closed `decide`: if any fails, the canonical subset
+    collides with an accepted row -- a finding, never silently kept. -/
+
+/-- The unified chain refuses the 64-bit register row. -/
+theorem ext_weist_btreg64_zurueck :
+    decodeExt [natByte 72, natByte 15, natByte 187,
+      natByte 200] = none := by
+  decide
+
+/-- The unified chain refuses the 32-bit register row. -/
+theorem ext_weist_btreg32_zurueck :
+    decodeExt [natByte 65, natByte 15, natByte 171,
+      natByte 200] = none := by
+  decide
+
+/-- The unified chain refuses the 16-bit register row. -/
+theorem ext_weist_btreg16_zurueck :
+    decodeExt [natByte 102, natByte 64, natByte 15, natByte 163,
+      natByte 200] = none := by
+  decide
+
+/-- The unified chain refuses the imm8 row. -/
+theorem ext_weist_btimm_zurueck :
+    decodeExt [natByte 64, natByte 15, natByte 186, natByte 234,
+      natByte 5] = none := by
+  decide
+
+/-- The unified chain refuses the memory row. -/
+theorem ext_weist_btmem_zurueck :
+    decodeExt [natByte 72, natByte 15, natByte 179, natByte 139,
+      natByte 16, natByte 0, natByte 0, natByte 0] = none := by
+  decide
+
+/-- The 64-bit register row takes the bit-test arm. -/
+theorem pin_btHw_reg64 :
+    decodeBtHw [natByte 72, natByte 15, natByte 187,
+      natByte 200] =
+      some (.bt ⟨.reg .btc .w64 .rax .rcx, 4⟩, []) := by
+  decide
+
+/-- The imm8 row takes the bit-test arm. -/
+theorem pin_btHw_imm32 :
+    decodeBtHw [natByte 64, natByte 15, natByte 186, natByte 234,
+      natByte 5] =
+      some (.bt ⟨.imm .bts .w32 .rdx 5, 5⟩, []) := by
+  decide
+
+/-- The memory row takes the bit-test arm. -/
+theorem pin_btHw_mem64 :
+    decodeBtHw [natByte 72, natByte 15, natByte 179, natByte 139,
+      natByte 16, natByte 0, natByte 0, natByte 0] =
+      some (.bt ⟨.memReg .btr .w64 .rbx .rcx 16, 8⟩, []) := by
+  decide
+
+/-! ## 11. One unified step: exact evaluation selection. -/
+
+/-- Consumed length of one dispatcher instruction. -/
+def btHwLen : BtHwInstr → Nat
+  | .ext i => extLen i
+  | .bt d => d.laenge
+
+/-- One unified step: Ext through `stepExt`, bit-test through
+    `btSchritt` on the core half. BT never traps. -/
+def btHwSchritt (i : BtHwInstr) (t : FpZustand)
+    (b : BereitProfil) : ExtAusgang :=
+  match i with
+  | .ext j => stepExt j t b
+  | .bt d =>
+    match btSchritt d t.kern with
+    | some s' => .weiter { t with kern := s' }
+    | none => .verweigert
+
+/-- Selection: the unified arm IS the accepted unified step. -/
+theorem btHwSchritt_ext (j : ExtInstr) (t : FpZustand)
+    (b : BereitProfil) (o : ExtAusgang)
+    (h : stepExt j t b = o) :
+    btHwSchritt (.ext j) t b = o := by
+  have e : btHwSchritt (.ext j) t b = stepExt j t b := rfl
+  rw [e, h]
+
+/-- Selection: the bit-test arm IS the accepted family step on the
+    core half, re-embedded on success. -/
+theorem btHwSchritt_bt_ok (d : BtDecodiert) (t : FpZustand)
+    (b : BereitProfil) (s' : Zustand)
+    (h : btSchritt d t.kern = some s') :
+    btHwSchritt (.bt d) t b = .weiter { t with kern := s' } := by
+  have e : btHwSchritt (.bt d) t b =
+      match btSchritt d t.kern with
+      | some s' => ExtAusgang.weiter { t with kern := s' }
+      | none => .verweigert := rfl
+  rw [e, h]
+
+/-- Selection: bit-test refusal is unified refusal (never a halt). -/
+theorem btHwSchritt_bt_verweigert (d : BtDecodiert) (t : FpZustand)
+    (b : BereitProfil)
+    (h : btSchritt d t.kern = none) :
+    btHwSchritt (.bt d) t b = .verweigert := by
+  have e : btHwSchritt (.bt d) t b =
+      match btSchritt d t.kern with
+      | some s' => ExtAusgang.weiter { t with kern := s' }
+      | none => .verweigert := rfl
+  rw [e, h]
 
 end Gabbro.Grammatik.X86
