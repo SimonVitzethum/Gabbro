@@ -40,6 +40,10 @@ rules('grammatik/Grammatik/X86', [
     (r'^(Vector\w+|Avx2\w+)$', 'Befehle/Vektor'),
     (r'^(ControlCodec|ControlFlow|IndirectCallProv|IndirectControlHardwareForms|JumpTableCert|Rel8Reach|BranchLayout|FetchedCondBranch|CallAlign16|BlockSequence646|DecodeFault|GateStub)$', 'Befehle/Kontrolle'),
     (r'^ISA\w*$', 'Befehle/ISA'),
+    (r'^Sse\w+$', 'Befehle/Sse'),
+    (r'^String\w+$', 'Befehle/Zeichenketten'),
+    (r'^System\w+$', 'Befehle/System'),
+    (r'^Locked\w+$', 'TSO/Verriegelt'),
     # --- foundations
     (r'^(Typen|Wort|Ganzzahl|Stapel|Vektor|Gleitprofil|Bild|Codec|Ausfuehrung|Byteschritt)$', 'Kern'),
     (r'^(ArchitecturalFlags|FlagBeweis|FlagDependencies|AuxiliaryCarryRows|ConditionalMove|FeatureProfile|CpuFeatureHardwareForms)$', 'Flags'),
