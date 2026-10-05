@@ -108,3 +108,33 @@ cost/time, termination. Nothing of that is claimed here.
    over `Vertrag`/`Stmt`/`Endblock`/`ErgExpr`/`Expr`/`Args`, and the
    task names no `ZEUGE:` target. The joint `valSound_zeuge` (with a
    real memory-changing step) is provided anyway.
+
+## Repair diagnosis after the failed integration gate (2026-10-05)
+
+The integration gate failed while building
+`Grammatik.X86.ValidatorSoundPart` as job 640/642 in the main
+checkout (`-j2 -M4096`):
+
+- `libc++abi: terminating due to uncaught exception of type
+  lean::exception: failed to create thread`, Lean exit 134.
+- This is the documented apparatus failure (AGENTS.md section 9: the
+  virtual-address/thread ceiling causes exactly `failed to create
+  thread` even on unchanged source), NOT a defect in this module:
+  - the file contains zero `decide` calls; every proof is cheap
+    term-mode reuse (`exact` of accepted theorems), `omega`, `simp`,
+    `rfl`, or a `generalize`/`cases` inversion;
+  - it builds green standalone (`./lean-probe`: 0 errors, all 21
+    theorems, standard axioms only) and inside the full local build
+    (`./lean-bau`: exit 0, 640 jobs), re-verified after the gate
+    failure on the unchanged content;
+  - the crash hit this module only because it was next in the build
+    queue; any module could have crashed instead.
+- Repair action taken: NONE in the Lean sources -- manufacturing a
+  change (let alone weakening a theorem) to "fix" a resource crash
+  would violate the safety rules. The module is unchanged and green.
+- Concrete blocker for the coordinator: the integration environment
+  needs resources (or a retry when the machine is quiet) -- thread
+  creation failed under `-j2 -M4096` with many concurrent agents and
+  builds on the machine. A fresh independent review of the changed
+  commit and a fresh integration run are still required; nothing was
+  merged. No push, no network (HARD RULES).
