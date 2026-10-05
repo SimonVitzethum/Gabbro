@@ -909,7 +909,7 @@ def nestTssByte (n : Nat) : Byte :=
   | _ => BitVec.ofNat 8 0
 
 /-- Witness bytes: IDT and TSS images, zero elsewhere. -/
-def nestBytes (a : Adresse) : Byte :=
+def nestIntBytes (a : Adresse) : Byte :=
   if a.toNat < 4096 then BitVec.ofNat 8 0
   else if a.toNat < 4096 + 544 then nestIdtByte (a.toNat - 4096)
   else if a.toNat < 12288 then BitVec.ofNat 8 0
@@ -918,7 +918,7 @@ def nestBytes (a : Adresse) : Byte :=
 
 /-- Witness memory: IDT/TSS/stack readable, stack writable. -/
 def nestMem : Speicher :=
-  { bytes := nestBytes
+  { bytes := nestIntBytes
     lesbar := fun a =>
       decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 544) ||
         decide (12288 ≤ a.toNat ∧ a.toNat < 12288 + 48) ||
@@ -1489,12 +1489,213 @@ theorem verschachtelt_zeuge :
     nestIret_rsp, nestIret_if, nestStart_wf, hstep.1, hstep.2⟩
 
 /- CUTS:
-   Proved here: SKELETON ONLY so far -- the double-fault vector
-   constant. Nested delivery, #DF escalation, the TSO-buffered
-   handler frame, IRET and the two-gate maskable witness are OPEN.
-   NOT proved here, and not claimed: everything in the lane task.
+   Proved here, over the accepted coherent machine (HardwareExecution
+   §11: `HwMaschine`/`HwSchritt`/`HwAdapter`/`HwWf`/`HwStern`), the
+   accepted descriptor-layer evaluator (`liefere` and its stage
+   lemmas), the accepted single delivery (`asyncSchritt`,
+   HwInterrupts.lean) and the accepted buffered word effects
+   (`hwWortAusgabe`/`issueListe`, HwStackCalls.lean) -- nothing
+   redefined, everything lifted:
+   - nested delivery (`verschachteltSchritt`: second event under the
+     first delivery's new IF, snapshot must track) with refusal of a
+     failed first leg, a stale snapshot and a masked second leg
+     after an IF-clearing delivery (S1+S5), the success equation,
+     general single-delivery wf preservation and nested wf
+     preservation (§2);
+   - nested wechseln/wechseln agreement with both accepted
+     `liefere` legs -- same frame memories, handler RIPs, IF values
+     and switch flags, over the descended RSP link (§2);
+   - double fault as outcome (`DfErgebnis`/`liefereMitDf`): first
+     fault reported, two successes deliver, a nested fault while
+     entering the handler escalates to #DF with vector 8 and code
+     zero (S4) (§3);
+   - the TSO-buffered handler frame (`puffereRahmen` at the same
+     descending slots `schiebeRahmen` writes): wf preservation, no
+     shared-memory change, eight entries per word, every byte one
+     `HwSchritt.gibAus` event, the folded frame as a `HwStern`
+     chain, byte echo against `write64` (§4);
+   - IRET return (`iretLese`/`iretFertig`/`iretSchritt`): five-word
+     pop, RIP/RSP restore, IF from RFLAGS bit 9 (S6), NULL-selector
+     and code-row checks, wf preservation, success and all five
+     planted refusals (§5);
+   - the family adapter (`adapterVerschachtelt`) with wf
+     preservation and planted-refusal projection, and the extended
+     relation (`HwNestSchritt`) with the EXACT two-way sync
+     embedding of `HwSchritt` and wf preservation (§6);
+   - joint non-degenerate witness (`verschachtelt_zeuge`): TWO
+     maskable gates over byte-populated canonical memory -- trap
+     vector 32 delivers (handler `0x2100`, IF kept, IST switch,
+     empty buffers, frame read-back), nested interrupt vector 33
+     delivers (handler `0x2200`, IF cleared), a masked third
+     refuses, NMI vector 2 bypasses cleared IF (handler `0x2000`);
+     DF escalation observed (vector 8, code zero) with leg
+     statuses (first delivers, nested faults #GP-vector); a
+     core-1 buffered store with owner-only forwarding and a drain
+     changing shared memory observed from both cores; the five-word
+     frame as 40 buffer entries with owner-only word forwarding;
+     IRET restoring RIP/RSP/IF; well-formedness; the reached
+     machine-level nest and the reached extended-relation step.
+   NOT proved here, and not claimed:
+   - No hardware correspondence: S1-S6 cite the Intel SDM extracts
+     as provenance (MUSE-REPORT-660 catalogue); the proofs show
+     self-consistency of the lifted model only.
+   - No APIC/priority arbitration, SMI, timing, power or thermal
+     paths; no serialising-drain claim beyond S3.
+   - No per-access target-to-W/GX simulation and no whole-word
+     atomicity beyond the accepted `WortGruppe` guard; the TSO
+     stage reuses the accepted byte equations only.
+   - DF is witnessed observationally (outcome vector/code
+     projections plus both leg fault-vector statuses beside the
+     abstract escalation theorem): memory has no `DecidableEq`,
+     so no concrete `liefereMitDf_doppelt` application is stated.
+   - IRET covers the five-word same-frame return only: no
+     privilege-level switch reversal, no error-code pop
+     semantics, no segment state beyond the NULL checks (the
+     machine has no segment registers).
+   - Nested agreement is proved for the wechseln/wechseln stack
+     path only; other path combinations follow the same accepted
+     lemmas and stay open.
+   - No handler EXECUTION: what runs after delivery stays
+     downstream (entry lane); no CPL change, no task gates, no
+     shadow-stack/CET/FRED paths.
+   - `gabbro_ziel` axioms are untouched.
 -/
 
 #print axioms dfVektor
+#print axioms dfCode
+#print axioms verschachteltSchritt
+#print axioms verschachtelt_verweigert_erster
+#print axioms verschachtelt_verweigert_abbild
+#print axioms verschachtelt_erfolg
+#print axioms verschachtelt_maskiert_verweigert
+#print axioms asyncSchritt_wf_allgemein
+#print axioms verschachteltSchritt_wf
+#print axioms DfErgebnis
+#print axioms dfVektorVon
+#print axioms dfCodeVon
+#print axioms liefereMitDf
+#print axioms liefereMitDf_erste_fehlschlaegt
+#print axioms liefereMitDf_doppelt
+#print axioms liefereMitDf_zugestellt
+#print axioms verschachtelt_vereinbarung
+#print axioms puffereRahmen
+#print axioms hwWortAusgabe_wf
+#print axioms puffereRahmen_wf
+#print axioms puffereRahmen_kein_speicher
+#print axioms puffereRahmen_zaehlt
+#print axioms rahmenByte_ausgabe
+#print axioms HwStern_verkettet
+#print axioms hwWortAusgabe_stern
+#print axioms puffereRahmen_stern
+#print axioms rahmenEcho_schreiben
+#print axioms iretLese
+#print axioms iretIf
+#print axioms iretHwNeu
+#print axioms iretSteuerNeu
+#print axioms iretFertig
+#print axioms iretSchritt
+#print axioms intWf1181
+#print axioms iretSchritt_wf
+#print axioms iretSchritt_erfolg
+#print axioms iretSchritt_verweigert_lesung
+#print axioms iretSchritt_verweigert_nichtkanonisch
+#print axioms iretSchritt_verweigert_cs
+#print axioms iretSchritt_verweigert_ss
+#print axioms iretSchritt_verweigert_code
+#print axioms adapterVerschachtelt
+#print axioms adapterVerschachtelt_verweigert_erster
+#print axioms adapterVerschachtelt_verweigert_maskiert
+#print axioms adapterVerschachtelt_wf
+#print axioms NestEreignis
+#print axioms HwNestSchritt
+#print axioms hwNestSchritt_sync_einbetten
+#print axioms hwNestSchritt_sync_nur
+#print axioms hwNestSchritt_wf
+#print axioms nullSelektor
+#print axioms nullSelektor_null
+#print axioms nullSelektor_acht
+#print axioms loWit32
+#print axioms loWit33
+#print axioms nestIdtByte
+#print axioms nestTssByte
+#print axioms nestIntBytes
+#print axioms nestMem
+#print axioms nestSteuer
+#print axioms evMask32
+#print axioms evMask33
+#print axioms evMaskiert32
+#print axioms evNmi2
+#print axioms nestKern
+#print axioms nestStart
+#print axioms nestSteuerAlle
+#print axioms nestStart_wf
+#print axioms nestTor32_liest
+#print axioms nestTor33_liest
+#print axioms nestTor2_liest
+#print axioms nestTor32_bereit
+#print axioms nestTor33_bereit
+#print axioms nestStapel
+#print axioms nestKanonisch
+#print axioms nestD1
+#print axioms nestVerschachtelt
+#print axioms nestRipOut
+#print axioms nestIfOut
+#print axioms nestBufOut
+#print axioms nestMemOut
+#print axioms nestD1_rip
+#print axioms nestD1_if
+#print axioms nestD1_gew
+#print axioms nestD1_puffer_0
+#print axioms nestD1_puffer_1
+#print axioms nestD1_rahmen_ss
+#print axioms nestD1_rahmen_rip
+#print axioms nestV_rip
+#print axioms nestV_if
+#print axioms nestV_puffer_0
+#print axioms nestV_puffer_1
+#print axioms nestM2
+#print axioms nestDritt
+#print axioms nestDritt_verweigert
+#print axioms nestNmi
+#print axioms nestNmi_rip
+#print axioms nestNmi_if
+#print axioms dfQ1
+#print axioms dfQ2
+#print axioms nestDf_h1vektor
+#print axioms nestDf_h2vektor
+#print axioms nestDf_vektor
+#print axioms nestDf_code
+#print axioms nestZelle
+#print axioms nestTsoM1
+#print axioms nestTso1
+#print axioms nestTsoLoadEigen
+#print axioms nestTsoLoadFremd
+#print axioms nestTso2
+#print axioms nestTsoNachFlush
+#print axioms nestTsoFremdNachFlush
+#print axioms nestTso_anfang_null
+#print axioms nestTso_weiterleitung
+#print axioms nestTso_fremd_alt
+#print axioms nestTso_spuelung_aendert
+#print axioms nestTso_fremd_neu
+#print axioms nestRahmenWorte
+#print axioms nestPuffer
+#print axioms nestPufferLen
+#print axioms nestPufferMemStill
+#print axioms nestPufferWortEigen
+#print axioms nestPufferWortFremd
+#print axioms nestPuffer_40
+#print axioms nestPuffer_mem_still
+#print axioms nestPuffer_wort_eigen
+#print axioms nestPuffer_wort_fremd
+#print axioms nestIret
+#print axioms nestIretRip
+#print axioms nestIretRsp
+#print axioms nestIretIf
+#print axioms nestIret_rip
+#print axioms nestIret_rsp
+#print axioms nestIret_if
+#print axioms nestH1ex
+#print axioms verschachtelt_zeuge
 
 end Gabbro.Grammatik.X86
