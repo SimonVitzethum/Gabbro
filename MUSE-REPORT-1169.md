@@ -92,7 +92,44 @@ Self-verification after the review (this clone, unchanged tree):
 Nothing was weakened and no finding required a code change; the
 deliverable stands as reviewed-pending-content. CUTS in
 `PipelineTso.lean` unchanged and honest.
-## Task remarks (kept)
+
+## Integration-gate response (2026-10-05, gate FAILED, nothing merged)
+
+Gate evidence: `Grammatik.X86.PipelineTso` (and in the merge log the
+same module) dies with `lean::exception: failed to create thread`,
+exit 134 — a resource failure, with zero Lean errors. No proof
+defect is evidenced.
+
+Local reproduction (this clone, twice, unchanged tree): the module
+itself compiles — all 21 `#print axioms` lines emit, `./lean-probe`
+reports `0 error(s)` — then the final `Grammatik` aggregator step
+(607/608) dies with `failed to create thread` once and
+`std::bad_alloc` once. The aggregator loads all 600+ modules; my file
+adds no new transitive dependency (`HardwareExecution`,
+`WordAccessGrouping`, `FenceDrain` are pre-existing aggregator
+imports), only 277 lines of elaboration. This matches the documented
+apparatus failure (AGENTS.md §9/§11: virtual-address exhaustion kills
+builds even on unchanged source under concurrent-lane memory
+pressure). Conclusion: environmental OOM, not a deliverable defect;
+no guarantee weakened, no proof changed.
+
+Repair attempted within the module: replaced the single kernel
+`decide` in `pipeTso_probe_tear` by a length-based proof
+(`congrArg List.length` + `simp [List.length_take,
+wortEintraege_laenge]`), which passed `./lean-probe` with 0 errors.
+Per HARD RULES 8 (never commit on a red `./lean-bau`) this hunk was
+reverted and is NOT in the tree — the tree stands at its
+probe-green, last-full-green state. Verbatim hunk recorded here for
+re-application when memory allows; a fresh independent review is then
+required for the changed commit either way.
+
+Concrete blocker: machine out of memory/address space while building
+the `Grammatik` import-all aggregator, reproduced locally. Unblocks
+when a serial low-contention build slot is available (nothing in the
+owned module evidences any other cause). No acceptance of the full
+source/binary chain is claimed.
+
+## Task remarks
 
 Nothing in the task appears wrong. One scoping note: the task asks for
 "the memory outcome observed by the other cores after drain equals the
