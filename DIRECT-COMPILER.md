@@ -643,7 +643,7 @@ Last ledger refresh: **2026-10-05 17:29 UTC**. This is an operational snapshot, 
 | 1169 | Pipeline correctness over the multi-core TSO machine | Merged after review/checks | 1170: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1169.md) |
 | 1171 | Linking, relocations and the final mapping | Merged after review/checks | 1172: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1171.md) |
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
-| 1175 | Finite and infinite execution soundness of the pipeline | Merged after review/checks | 1176: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1175.md) |
+| 1175 | Finite and infinite execution soundness of the pipeline | Merged after review/checks | 1176: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1175.md) |
 | 1177 | Source-computed units and duties feeding the pipeline | Merged after review/checks | 1178: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1177.md) |
 | 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Merged after review/checks | 1180: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1179.md) |
 | 1181 | Nested interrupt delivery, #DF and handler entry | Merged after review/checks | 1182: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1181.md) |
@@ -1648,6 +1648,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1169**, Pipeline correctness over the multi-core TSO machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1169.md). <!-- x86-merged:1169 -->
 - 2026-10-05: lane **1170**, Independent exact review of 1169, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1170.md). <!-- x86-merged:1170 -->
 - 2026-10-05: lane **1175**, Finite and infinite execution soundness of the pipeline, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1175.md). <!-- x86-merged:1175 -->
+- 2026-10-05: lane **1176**, Independent exact review of 1175, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1176.md). <!-- x86-merged:1176 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
