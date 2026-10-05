@@ -377,6 +377,47 @@ theorem pipelineNaN_nutzlast_rechts_add (dst a b : XmmReg) (t : FpZustand)
   refine ⟨t', hrun, ?_⟩
   rw [hval, ← fpRechne_gleitRechne, fpRechne_add_nan_rechts _ _ hb ha]
 
+/-! ## 6. Refusals: a NaN never saves a refused run.
+
+  What this pipeline does NOT cover refuses explicitly: a refused
+  MXCSR profile or a bad decode length stops the NaN sequence with
+  `none`. Unsupported shapes are REFUSED, never guessed; NaN
+  operands change nothing about admission. -/
+
+/-- A refused profile refuses the NaN sequence at the first step. -/
+theorem pipelineNaN_refuses_profil (op : GleitOp) (dst a b : XmmReg)
+    (t : FpZustand)
+    (hok : laengeOk 4 = true)
+    (h : fpEintritt t.fp = false) :
+    laufFp (senkNanSeq op dst a b) t = none := by
+  have h1 : fpSchritt (⟨.movsdRR dst a, 4⟩ : FpDecodiert) t = none :=
+    fpSchritt_profil_verweigert _ t hok h
+  rw [senkNanSeq_klingt, laufFp_cons, h1]
+
+/-- A bad decode length refuses the NaN sequence at the first step. -/
+theorem pipelineNaN_refuses_laenge (op : GleitOp) (dst a b : XmmReg)
+    (t : FpZustand)
+    (h : laengeOk 4 = false) :
+    laufFp (senkNanSeq op dst a b) t = none := by
+  have h1 : fpSchritt (⟨.movsdRR dst a, 4⟩ : FpDecodiert) t = none :=
+    fpSchritt_laenge_verweigert _ t h
+  rw [senkNanSeq_klingt, laufFp_cons, h1]
+
+/-- POISON PROBE (profile): the NaN sequence under flush-to-zero
+    refuses -- the payload does not admit the run. -/
+theorem pipelineNaN_probe_profil :
+    laufFp (senkNanSeq .add XmmReg.xmm0 XmmReg.xmm0 XmmReg.xmm1)
+      { fpZeugeT with fp := ⟨0x9F80⟩ } = none := by
+  have hf : fpEintritt ((⟨0x9F80⟩ : FPKontext)) = false :=
+    mxcsr_ftz_verweigert
+  exact pipelineNaN_refuses_profil .add _ _ _ _ fpZeuge_laenge hf
+
+/-- POISON PROBE (length): a 16-byte divide form refuses. -/
+theorem pipelineNaN_probe_laenge :
+    fpSchritt ⟨.divsdRR XmmReg.xmm0 XmmReg.xmm1, 16⟩ fpZeugeT = none := by
+  have hl : laengeOk 16 = false := by decide
+  exact fpSchritt_laenge_verweigert _ _ hl
+
 /- CUTS: what is not proved here (filled as the file grows). -/
 
 #print axioms nanPipeOk_reset
