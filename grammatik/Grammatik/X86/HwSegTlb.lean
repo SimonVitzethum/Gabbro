@@ -329,6 +329,147 @@ theorem tlbEntfernen_lokal (tlb : Nat → List TlbEintrag) (c d s : Nat)
       tlb d := by
   simp [h]
 
+/-! ## 4. Machine connection: segment/TLB state beside the machine.
+
+  The extended machine keeps the coherent `HwMaschine` untouched and
+  carries per-core segment state plus per-core TLBs beside it. Every
+  extended step preserves the coherent well-formedness, and every
+  coherent step embeds exactly. -/
+
+/-- Extended machine: the coherent machine plus per-core segment state
+    and per-core TLBs. Profiles and core data stay inside `hw`. -/
+structure SegTlbMaschine where
+  hw : HwMaschine
+  seg : Nat → SegKern
+  tlb : Nat → List TlbEintrag
+
+/-- Well-formedness is the coherent well-formedness. -/
+def SegTlbWf (m : SegTlbMaschine) : Prop := HwWf m.hw
+
+/-- Family events: gated base writes, SWAPGS, INVLPG, CR3 write, plus a
+    lifted coherent step. -/
+inductive SegTlbEreignis where
+  | wrFs : Nat → Wort → SegTlbEreignis
+  | wrGs : Nat → Wort → SegTlbEreignis
+  | swapgs : Nat → SegTlbEreignis
+  | invlpg : Nat → Adresse → SegTlbEreignis
+  | cr3 : Nat → SegTlbEreignis
+  | hwSchritt : HwEreignis → SegTlbEreignis
+  deriving DecidableEq, Repr
+
+/-- Extended steps: the family moves only its own state; the coherent
+    step rides along with segment/TLB state kept. -/
+inductive SegTlbSchritt :
+    SegTlbMaschine → SegTlbMaschine → SegTlbEreignis → Prop where
+  | wrFs {m : SegTlbMaschine} (c : Nat) (v : Wort) (k' : SegKern)
+      (h : schreibeFsBasis (m.seg c) v = some k') :
+      SegTlbSchritt m
+        ⟨m.hw, fun d => if d = c then k' else m.seg d, m.tlb⟩
+        (.wrFs c v)
+  | wrGs {m : SegTlbMaschine} (c : Nat) (v : Wort) (k' : SegKern)
+      (h : schreibeGsBasis (m.seg c) v = some k') :
+      SegTlbSchritt m
+        ⟨m.hw, fun d => if d = c then k' else m.seg d, m.tlb⟩
+        (.wrGs c v)
+  | swapgs {m : SegTlbMaschine} (c : Nat) :
+      SegTlbSchritt m
+        ⟨m.hw, fun d => if d = c then tauscheGs (m.seg c) else m.seg d,
+          m.tlb⟩
+        (.swapgs c)
+  | invlpg {m : SegTlbMaschine} (c : Nat) (a : Adresse) :
+      SegTlbSchritt m
+        ⟨m.hw, m.seg,
+          fun d => if d = c then tlbEntfernen (m.tlb c) (seitenNr a)
+            else m.tlb d⟩
+        (.invlpg c a)
+  | cr3 {m : SegTlbMaschine} (c : Nat) :
+      SegTlbSchritt m
+        ⟨m.hw, m.seg,
+          fun d => if d = c then tlbCr3Spuelung (m.tlb c) else m.tlb d⟩
+        (.cr3 c)
+  | hw {m : SegTlbMaschine} (m' : HwMaschine) (e : HwEreignis)
+      (h : HwSchritt m.hw m' e) :
+      SegTlbSchritt m ⟨m', m.seg, m.tlb⟩ (.hwSchritt e)
+
+/-- EXACT EMBEDDING: every coherent step lifts with segment/TLB state
+    kept. The old machine is lifted, never redefined. -/
+theorem segTlbSchritt_hw_einbettung (m : SegTlbMaschine)
+    (m' : HwMaschine) (e : HwEreignis)
+    (h : HwSchritt m.hw m' e) :
+    SegTlbSchritt m ⟨m', m.seg, m.tlb⟩ (.hwSchritt e) :=
+  .hw m' e h
+
+/-- Every extended step preserves well-formedness: no case touches
+    profiles or core data. -/
+theorem segTlbSchritt_wf (m m' : SegTlbMaschine) (e : SegTlbEreignis)
+    (h : SegTlbSchritt m m' e) (hwf : SegTlbWf m) : SegTlbWf m' := by
+  cases h with
+  | wrFs c v k' h => exact hwf
+  | wrGs c v k' h => exact hwf
+  | swapgs c => exact hwf
+  | invlpg c a => exact hwf
+  | cr3 c => exact hwf
+  | hw m' e h => exact hwSchritt_wf m.hw m' e h hwf
+
+/-- AGREEMENT: a WRFSBASE step installs exactly the gated successor on
+    its core and keeps machine and TLBs. -/
+theorem segTlb_wrFs_vereinbarung (m : SegTlbMaschine) (c : Nat)
+    (v : Wort) (k' : SegKern)
+    (h : schreibeFsBasis (m.seg c) v = some k') :
+    ∃ m', SegTlbSchritt m m' (.wrFs c v) ∧
+      m'.seg c = k' ∧ m'.hw = m.hw ∧ m'.tlb = m.tlb := by
+  refine ⟨⟨m.hw, fun d => if d = c then k' else m.seg d, m.tlb⟩,
+    .wrFs c v k' h, ?_, rfl, rfl⟩
+  simp
+
+/-- AGREEMENT: an INVLPG step drops exactly the page on its core and
+    keeps machine and segments. -/
+theorem segTlb_invlpg_vereinbarung (m : SegTlbMaschine) (c : Nat)
+    (a : Adresse) :
+    ∃ m', SegTlbSchritt m m' (.invlpg c a) ∧
+      m'.tlb c = tlbEntfernen (m.tlb c) (seitenNr a) ∧
+      m'.hw = m.hw ∧ m'.seg = m.seg := by
+  refine ⟨⟨m.hw, m.seg,
+    fun d => if d = c then tlbEntfernen (m.tlb c) (seitenNr a)
+      else m.tlb d⟩, .invlpg c a, ?_, rfl, rfl⟩
+  simp
+
+/-- AGREEMENT: a CR3 step flushes exactly its core and keeps the rest. -/
+theorem segTlb_cr3_vereinbarung (m : SegTlbMaschine) (c : Nat) :
+    ∃ m', SegTlbSchritt m m' (.cr3 c) ∧
+      m'.tlb c = tlbCr3Spuelung (m.tlb c) ∧
+      m'.hw = m.hw ∧ m'.seg = m.seg := by
+  refine ⟨⟨m.hw, m.seg,
+    fun d => if d = c then tlbCr3Spuelung (m.tlb c) else m.tlb d⟩,
+    .cr3 c, ?_, rfl, rfl⟩
+  simp
+
+/-- REFUSAL: with the gate closed no WRFSBASE step exists. -/
+theorem segTlb_wrFs_verweigert (m : SegTlbMaschine) (c : Nat)
+    (v : Wort)
+    (h : fsgsbaseFreigabe (m.seg c) = false) :
+    ∀ m', ¬ SegTlbSchritt m m' (.wrFs c v) := by
+  intro m' hstep
+  cases hstep with
+  | wrFs d w k' h2 =>
+    have hnone : schreibeFsBasis (m.seg c) v = none := by
+      simp [schreibeFsBasis, h]
+    rw [hnone] at h2
+    cases h2
+
+/-- REFUSAL: with the gate closed no WRGSBASE step exists. -/
+theorem segTlb_wrGs_verweigert (m : SegTlbMaschine) (c : Nat)
+    (v : Wort)
+    (h : fsgsbaseFreigabe (m.seg c) = false) :
+    ∀ m', ¬ SegTlbSchritt m m' (.wrGs c v) := by
+  intro m' hstep
+  cases hstep with
+  | wrGs d w k' h2 =>
+    have hnone : schreibeGsBasis (m.seg c) v = none := by
+      simp [schreibeGsBasis, h]
+    rw [hnone] at h2
+    cases h2
+
 /- CUTS:
    Skeleton only. NOT proved here, and not claimed: everything.
 -/
