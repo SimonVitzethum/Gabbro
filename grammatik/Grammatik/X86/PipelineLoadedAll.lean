@@ -416,6 +416,103 @@ theorem tabellen_correct_loaded_zeuge :
     zeGerade, zeBild_codeAt, zeBytesEq, hsrc, h42, hrun, hrip, hW, hE2, zeHw,
     zeRunChangeProof⟩
 
+/-! ## 4. Work family: validated bytes with retired-work and
+    named-time bounds, over loaded memory.
+
+    The validator closing (`pipeline_arbeit_korrekt`: fetched run
+    agreement plus validated-bytes equation plus work/time bounds)
+    runs from a state whose memory IS the loaded mapping (`hst`);
+    the code, representation and entry premises are the loaded ones.
+    Named timing stays a hardware assumption. Every premise is
+    consumed. -/
+
+/-- WORK CORRECTNESS OVER LOADED MEMORY: the fetched run reaches the
+    code end with world and environment represented, the bytes are
+    the encoding of the counted program, and retired work and named
+    time are bounded. -/
+theorem arbeit_correct_loaded {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (bild : Bild) (c : PipeCfg) (L : Layout D)
+    (certs : List (PassKind × BlockCert))
+    (src : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (prog : List Befehl)
+    (hval : validate c L certs src bytes = true)
+    (hsep : LayoutSep L)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (st : Zustand)
+    (hst : st.speicher = ladung bild)
+    (hrip0 : st.rip = natAdresse c.codeBase)
+    (hcode : CodeAt (ladung bild) (natAdresse c.codeBase) bytes)
+    (hW : WorldRep L (ladung bild) σ) (hE : EnvRepr ρ st.register (abbOf c))
+    (σ' : World D) (ρ' : Env D Γ)
+    (hsrc : execBlock O passes R src σ ρ = .ok σ' ρ')
+    (hdec : decodeAll bytes.length bytes = some prog)
+    (prof : HardwareProfil) (srcB B tt k : Nat)
+    (hDeck : Deckung pipeSummary srcB (decodiertZu prog))
+    (hCost : laufKosten prof (decodiertZu prog) = some tt)
+    (hb : ∀ dd ∈ decodiertZu prog,
+      ∃ cc, schrittKosten prof dd = some cc ∧ cc ≤ B)
+    (hk : expandBound pipeSummary srcB = some k) :
+    (∃ n s', laufBytes n st = .weiter s' ∧
+      s'.rip = natAdresse (c.codeBase + bytes.length) ∧
+      WorldRep L s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf c)) ∧
+    bytes = encodeAll prog ∧
+    targetWork prog ≤ k ∧ tt ≤ B * k := by
+  have hcode' : CodeAt st.speicher (natAdresse c.codeBase) bytes := by
+    rw [hst]
+    exact hcode
+  have hW' : WorldRep L st.speicher σ := by
+    rw [hst]
+    exact hW
+  exact pipeline_arbeit_korrekt c L certs src bytes prog hval hsep O passes R σ ρ
+    st hcode' hrip0 hW' hE σ' ρ' hsrc hdec prof srcB B tt k hDeck hCost hb hk
+
+/-- JOINT WITNESS for `arbeit_correct_loaded`: every premise holds
+    jointly on the accepted program over the witness loaded image
+    (validator, image and world checks, priced steps, two written
+    slots with the source run 7 -> 35 and 9 -> 6); the theorem then
+    gives the fetched loaded run plus the validated-bytes equation
+    and the retired-work and named-time bounds. -/
+theorem arbeit_correct_loaded_zeuge :
+    ∃ (σ' : World pwD) (ρ' : Env pwD pwCtx),
+      validate pwCfg (layoutVon piPs) pwCerts pwSrc pwBytes = true ∧
+      LayoutSep (layoutVon piPs) ∧
+      CodeAt (ladung piBild) (natAdresse pwCfg.codeBase) pwBytes ∧
+      (piStart 30).rip = natAdresse pwCfg.codeBase ∧
+      WorldRep (layoutVon piPs) (ladung piBild) pwSigma ∧
+      EnvRepr pwEnv30 (piStart 30).register (abbOf pwCfg) ∧
+      execBlock pwO 0 pwR pwSrc pwSigma pwEnv30 = .ok σ' ρ' ∧
+      decodeAll pwBytes.length pwBytes = some pwProg ∧
+      Deckung pipeSummary 2 (decodiertZu pwProg) ∧
+      laufKosten profilZeuge (decodiertZu pwProg) = some 18 ∧
+      (∀ dd ∈ decodiertZu pwProg,
+        ∃ cc, schrittKosten profilZeuge dd = some cc ∧ cc ≤ 3) ∧
+      expandBound pipeSummary 2 = some 12 ∧
+      (∃ k s2, laufBytes k (piStart 30) = .weiter s2 ∧
+        s2.rip = natAdresse (pwCfg.codeBase + pwBytes.length) ∧
+        WorldRep (layoutVon piPs) s2.speicher σ' ∧
+        EnvRepr ρ' s2.register (abbOf pwCfg)) ∧
+      pwBytes = encodeAll pwProg ∧
+      targetWork pwProg ≤ 12 ∧ 18 ≤ 3 * 12 ∧
+      PipePaket := by
+  obtain ⟨σ', ρ', hsrc, h0, h1⟩ := pw_quelle30
+  have hst : (piStart 30).speicher = ladung piBild := rfl
+  have hrip0 : (piStart 30).rip = natAdresse pwCfg.codeBase := rfl
+  have hcode := imageOk_codeAt .p48 piBild pwCfg piPs piEs pwCerts pwSrc pwBytes
+    pi_imageOk
+  have hsep := imageOk_layoutSep .p48 piBild pwCfg piPs piEs pwCerts pwSrc pwBytes
+    pi_imageOk
+  have hW := imageOk_worldRep .p48 piBild pwCfg piPs piEs pwCerts pwSrc pwBytes
+    pi_imageOk pwSigma pi_weltOk
+  obtain ⟨⟨m, sW, hrun, hrip, hW2, hE2⟩, hbytes, hwork, htime⟩ :=
+    arbeit_correct_loaded piBild pwCfg (layoutVon piPs) pwCerts pwSrc pwBytes pwProg
+      pi_validate hsep pwO 0 pwR pwSigma pwEnv30 (piStart 30) hst hrip0 hcode hW
+      pi_envRepr30 σ' ρ' hsrc pw_decode profilZeuge 2 3 18 12 deckung_pwProg
+      kosten_pwProg hb_pwProg (pipeSummary_expand 2)
+  exact ⟨σ', ρ', pi_validate, hsep, hcode, hrip0, hW, pi_envRepr30, hsrc,
+    pw_decode, deckung_pwProg, kosten_pwProg, hb_pwProg, pipeSummary_expand 2,
+    ⟨m, sW, hrun, hrip, hW2, hE2⟩, hbytes, hwork, htime, pipePaket_hold⟩
+
 /- CUTS (skeleton):
    Only the shared loaded-code predicate so far. Per-family
    correctness, refusals, probes and witnesses follow in pieces.
