@@ -680,18 +680,18 @@ Last ledger refresh: **2026-10-05 16:17 UTC**. This is an operational snapshot, 
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
-| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Agent working | [task](lanes/1249.md) |
+| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Committed candidate; review/integration pending | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
-| 1255 | Pipeline calls: three-or-more-statement callee bodies | Committed candidate; review/integration pending | 1256: Committed candidate; review/integration pending | [task](lanes/1255.md) |
+| 1255 | Pipeline calls: three-or-more-statement callee bodies | Committed candidate; review/integration pending | 1256: Agent working | [task](lanes/1255.md) |
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Merged after review/checks | 1258: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1257.md) |
-| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Agent working | 1260: Committed candidate; review/integration pending | [task](lanes/1259.md) |
-| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Committed candidate; review/integration pending | 1262: Committed candidate; review/integration pending | [task](lanes/1261.md) |
+| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Committed candidate; review/integration pending | 1260: Agent working | [task](lanes/1259.md) |
+| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Agent working | 1264: scheduled | [task](lanes/1263.md) |
 | 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Agent working | 1266: scheduled | [task](lanes/1265.md) |
-| 1267 | AVX2: per-lane equation for arithmetic shift right | Committed candidate; review/integration pending | 1268: scheduled | [task](lanes/1267.md) |
+| 1267 | AVX2: per-lane equation for arithmetic shift right | Committed candidate; review/integration pending | 1268: Agent working | [task](lanes/1267.md) |
 | 1269 | Cross-declaration lowering certificate for the GX refinement | Merged after review/checks | 1270: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1269.md) |
-| 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Agent working | 1272: Committed candidate; review/integration pending | [task](lanes/1271.md) |
+| 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Committed candidate; review/integration pending | 1272: Agent working | [task](lanes/1271.md) |
 | 1273 | Rotates: ROL, ROR, RCL, RCR | Agent working | 1274: scheduled | [task](lanes/1273.md) |
 | 1275 | ADC, SBB, INC, DEC | Agent working | 1276: scheduled | [task](lanes/1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Agent working | 1278: scheduled | [task](lanes/1277.md) |
@@ -1626,6 +1626,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `d89e8c94` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:d89e8c94c2aa3f77252e028b16502eb8fc961bb5 -->
 - 2026-10-05: lane **1270**, Independent exact review of 1269, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1270.md). <!-- x86-merged:1270 -->
 - 2026-10-05: publication batch checks passed for `ad948eff`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1261**, Pipeline over TSO: store instructions on the issue/drain path, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1261.md). <!-- x86-merged:1261 -->
+- 2026-10-05: checked master `e762caa3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e762caa35e7bd9eebad4b40167acf235a5501c85 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
