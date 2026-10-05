@@ -616,7 +616,7 @@ Last ledger refresh: **2026-10-05 11:08 UTC**. This is an operational snapshot, 
 | 1112 | Standing dynamic work planner, cycle 2 | Merged after review/checks | 1113: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1112.md) |
 | 1115 | Hardware completion: short-branch rel8 encoding rows (Nemotron author, Muse review) | Merged after review/checks | 1118: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1115.md) |
 | 1119 | LOCK/RMW on the coherent machine | Agent working | 1120: scheduled | [task](lanes/1119.md) |
-| 1121 | Addressed loads/stores of all widths through TSO | Committed candidate; review/integration pending | 1122: Committed candidate; review/integration pending | [task](lanes/1121.md) |
+| 1121 | Addressed loads/stores of all widths through TSO | Merged after review/checks | 1122: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1121.md) |
 | 1123 | Architectural faults as outcomes of the coherent machine | Merged after review/checks | 1124: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1123.md) |
 | 1125 | Asynchronous interrupt delivery on the coherent machine | Agent working | 1126: scheduled | [task](lanes/1125.md) |
 | 1127 | Multiply/divide and narrow widths connected | Agent working | 1128: scheduled | [task](lanes/1127.md) |
@@ -1395,6 +1395,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1123**, Architectural faults as outcomes of the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1123.md). <!-- x86-merged:1123 -->
 - 2026-10-05: lane **1124**, Independent exact review of 1123, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1124.md). <!-- x86-merged:1124 -->
 - 2026-10-05: publication batch checks passed for `6914c7e8`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1121**, Addressed loads/stores of all widths through TSO, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1121.md). <!-- x86-merged:1121 -->
+- 2026-10-05: checked master `983a292b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:983a292b0cc5b60bd80186e71d1d5bba6b1ab3b6 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
