@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 19:29 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 19:30 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -706,7 +706,7 @@ Last ledger refresh: **2026-10-05 19:29 UTC**. This is an operational snapshot, 
 | 1295 | Capstone: every union step projects to the TSO store-buffer model | Merged after review/checks | 1296: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1295.md) |
 | 1297 | Paging follow-up: large pages and SMEP/SMAP | Merged after review/checks | 1298: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1297.md) |
 | 1299 | Translation: the page walk joined with the TLB and the flat memory model | Merged after review/checks | 1300: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1299.md) |
-| 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Merged after review/checks | 1302: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1301.md) |
+| 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Merged after review/checks | 1302: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1301.md) |
 | 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Agent working | 1304: scheduled | [task](lanes/1303.md) |
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
 | 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1307.md) |
@@ -1720,6 +1720,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1295**, Capstone: every union step projects to the TSO store-buffer model, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1295.md). <!-- x86-merged:1295 -->
 - 2026-10-05: lane **1296**, Independent exact review of 1295, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1296.md). <!-- x86-merged:1296 -->
 - 2026-10-05: lane **1301**, WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1301.md). <!-- x86-merged:1301 -->
+- 2026-10-05: lane **1302**, Independent exact review of 1301, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1302.md). <!-- x86-merged:1302 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
