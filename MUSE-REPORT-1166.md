@@ -1,10 +1,11 @@
 # MUSE-REPORT-1166: Exact review of candidate 1165 (pipeline source-budget to target work/time transfer)
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
-CANDIDATE: lane 1165, HEAD `b0aef4880dd96fba84c165f392d983133a538c0c`
-("Lane 1165: pipeline source-budget to target work/time transfer"),
-base `062b979a`, snapshot clean, exactly 3 files.
+CANDIDATE: 1165 b0aef4880dd96fba84c165f392d983133a538c0c
+
+Candidate detail: ("Lane 1165: pipeline source-budget to target work/time
+transfer"), base `062b979a`, snapshot clean, exactly 3 files.
 
 ## What was reviewed
 
