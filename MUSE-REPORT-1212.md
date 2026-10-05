@@ -5,14 +5,16 @@ Lane 1212, report-only independent exact review. Clone
 (`.git/HEAD` = `refs/heads/muse/1212`; working tree `git status` clean).
 Owned file only: `MUSE-REPORT-1212.md`.
 
-CANDIDATE: 1211, pinned HEAD `fe97f2a15d3f0061cfe0d3deac836c62176b0d37`
+CANDIDATE: 1211 fe97f2a15d3f0061cfe0d3deac836c62176b0d37
 (base `988d75ef`), reviewed from the exact snapshot in
 `.tmp/review/author-1211/` (`PATCH.diff`, 1411 lines; file snapshot;
 `BUILD-EVIDENCE.json`). The author clone `a1211` is outside this lane's
 allowed directory, so the pinned snapshot is the review basis; it lists
 exactly three files, `clean: true`.
 
-## VERDICT: ACCEPT
+## Verdict (substantive review result, unchanged)
+
+VERDICT: ACCEPT
 
 ## What was checked
 
