@@ -4,7 +4,7 @@ Lane 1310, clone `/home/simon/Dokumente/gabbro-muse/a1310`, branch `muse/1310`
 (verified: `pwd` + `git branch --show-current`; `git status --short` clean
 before writing this report).
 
-CANDIDATE: 1309, pinned HEAD `6954375bb72b1d4bf81a72e105adb07988324ecc`
+Candidate under review: lane 1309, pinned HEAD `6954375bb72b1d4bf81a72e105adb07988324ecc`
 (from `.tmp/review/SNAPSHOT.json`; base `234f2728a718157cba0e1f9e0ef300874b34ea6a`).
 Changed files per SNAPSHOT: `MUSE-REPORT-1309.md`,
 `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/HwPageFaultDelivery.lean`.
@@ -13,7 +13,10 @@ ran against the delivered FILES under `.tmp/review/author-1309/`
 (`PATCH.diff`, the copied tree, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`).
 No `git show/log/diff` on the pinned hash was used.
 
-## VERDICT: ACCEPT
+CANDIDATE: 1309 6954375bb72b1d4bf81a72e105adb07988324ecc
+VERDICT: ACCEPT
+
+## Substantive verdict (unchanged): ACCEPT
 
 ## What was checked
 
