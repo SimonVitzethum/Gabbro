@@ -300,6 +300,75 @@ def abSigma : World abD where
 
 def abEnv : Env abD [] := .nil -- empty context
 
+/-! ## 6. CAS failure at register level, concretely.
+
+    A concrete locked machine with the word 10 at `abGlobA`, rax
+    holding 11: the lowered LOCK CMPXCHG fails its comparison against
+    rax and stutters, with the decided failure ledger. -/
+
+/-- Memory with the word 10 at `[8208, 8216)`, data-only. -/
+def abMemBytes (a : Adresse) : Byte :=
+  if 8208 ≤ a.toNat ∧ a.toNat < 8216 then
+    wortByte (BitVec.ofNat 64 10) (a.toNat - 8208)
+  else 0
+
+def abMemDaten (a : Adresse) : Bool :=
+  decide (8208 ≤ a.toNat ∧ a.toNat < 8216)
+
+def abMem : Speicher :=
+  { bytes := abMemBytes, lesbar := abMemDaten, schreibbar := abMemDaten,
+    ausfuehrbar := fun _ => false }
+
+/-- Registers: `rbp` names the global, `rax` holds 11, else zero. -/
+def abReg : Register → Wort := fun q =>
+  if q = .rbp then natAdresse 8208 else if q = .rax then 11 else 0
+
+/-- Base state: registers, flags, entry rip, data memory. -/
+def abZu0 : Zustand :=
+  { register := abReg, flags := witnessFlags, rip := natAdresse 4096,
+    speicher := abMem }
+
+/-- The machine: buffers empty. -/
+def abM : LockMaschine where
+  zu := abZu0
+  puffer := fun _ => []
+
+theorem ab_hrd : read64 abMem (natAdresse 8208) = some 10 := by
+  decide
+
+theorem ab_hali : ausgerichtet8 (natAdresse 8208) = true := by
+  decide
+
+theorem ab_heff : effAddr abM.zu .rbp 0 = natAdresse 8208 := by
+  decide
+
+theorem ab_hfehl : ((10 : Wort) == abM.zu.register .rax) = false := by
+  decide
+
+theorem ab_hbuf : abM.puffer 0 = [] := rfl
+
+theorem ab_hwr_some :
+    (write64 abMem (natAdresse 8208) 10).isSome = true := by
+  decide
+
+/-- **CAS FAILURE, REGISTER-BOUND.** The lowered LOCK CMPXCHG at the
+    address `rbp` names stutters: memory reads 10, rax expects 11. -/
+theorem ab_cas_fehlschlag_inst :
+    PipelineAtomics.senkAtom
+      (PipelineAtomics.AtomQuelle.cas .rcx .rbp 0) =
+      some [PipelineAtomics.ZielOp.lock
+        (.cmpxchg64 .rcx .rbp 0)] ∧
+    casSchritt (natAdresse 8208) (abM.zu.register .rax)
+      (abM.zu.register .rcx) 0 (toTSO abM) =
+      some (toTSO abM, false) ∧
+    ledgerDeckt
+      (.cas (natAdresse 8208) (abM.zu.register .rax)
+        (abM.zu.register .rcx))
+      (ledgerCasOk (natAdresse 8208) false) = true := by
+  obtain ⟨mem', hwr⟩ := Option.isSome_iff_exists.mp ab_hwr_some
+  exact bind_cas_fehlschlag abM 0 (natAdresse 8208) .rcx .rbp 0 10 mem'
+    ab_heff ab_hbuf ab_hrd ab_hali ab_hfehl hwr
+
 /-! ## 5. The block access sequence and its refusal.
 
     The atomic contents of `abSrc` as one access sequence: the shared
