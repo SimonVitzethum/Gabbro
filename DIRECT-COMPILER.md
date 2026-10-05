@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 17:57 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 17:58 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -679,7 +679,7 @@ Last ledger refresh: **2026-10-05 17:57 UTC**. This is an operational snapshot, 
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Merged after review/checks | 1244: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
-| 1247 | Extended context state across interrupts and context switches | Merged after review/checks | 1248: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1247.md) |
+| 1247 | Extended context state across interrupts and context switches | Merged after review/checks | 1248: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1247.md) |
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Unresolved after agent rounds; not accepted | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
@@ -1664,6 +1664,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `9521b8d2` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:9521b8d2bd9b528778df3681d4bf4bc1003051d9 -->
 - 2026-10-05: lane **1150**, Independent exact review of 1149, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1150.md). <!-- x86-merged:1150 -->
 - 2026-10-05: lane **1247**, Extended context state across interrupts and context switches, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1247.md). <!-- x86-merged:1247 -->
+- 2026-10-05: lane **1248**, Independent exact review of 1247, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1248.md). <!-- x86-merged:1248 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
