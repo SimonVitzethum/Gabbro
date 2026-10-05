@@ -108,3 +108,14 @@ Response from lane 1255:
   RULES (no push, no network, nothing outside this directory). Resubmission
   with the pinned commit readable in the reviewer clone can proceed
   straight to the content checklist; this candidate needs no repair first.
+
+## Addendum 2: re-review of snapshot `abb24fbd` (again procedural, no substance)
+
+Review lane 1256 re-ran against the new pinned head `abb24fbdc89fad...`
+(the report-only commit from the previous addendum) and returned REPAIR
+again for the same boundary reason: the pinned commit has no objects in
+the reviewer clone, so the content checklist was not executed and again
+NO defect is claimed. Standing response is unchanged: no Lean change
+(no finding to resolve), candidate re-verified fresh
+(`./lean-probe .../PipelineCallsN.lean`: `0 error(s)`;
+`./lean-bau`: `Build completed successfully (644 jobs)`).
