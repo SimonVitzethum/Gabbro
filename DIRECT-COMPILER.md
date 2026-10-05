@@ -662,7 +662,7 @@ Last ledger refresh: **2026-10-05 14:41 UTC**. This is an operational snapshot, 
 | 1207 | Generic drain-equals-write64 induction | Merged after review/checks | 1208: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1207.md) |
 | 1209 | LOCK family: fetched-byte dispatch, narrower widths and split-lock | Agent working | 1210: scheduled | [task](lanes/1209.md) |
 | 1211 | FP s32/MXCSR rows in the unified dispatcher | Committed candidate; review/integration pending | 1212: Agent working | [task](lanes/1211.md) |
-| 1213 | LOCK words to W history: timestamp and value link | Merged after review/checks | 1214: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1213.md) |
+| 1213 | LOCK words to W history: timestamp and value link | Merged after review/checks | 1214: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1213.md) |
 | 1215 | From W runs to the GX refinement: the missing target leg | Committed candidate; review/integration pending | 1216: Agent working | [task](lanes/1215.md) |
 | 1217 | Pipeline atomics: execBlock correspondence | Agent working | 1218: scheduled | [task](lanes/1217.md) |
 | 1219 | Pipeline: derive per-chunk runs from the lowering alone | Agent working | 1220: scheduled | [task](lanes/1219.md) |
@@ -1541,6 +1541,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1207**, Generic drain-equals-write64 induction, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1207.md). <!-- x86-merged:1207 -->
 - 2026-10-05: lane **1208**, Independent exact review of 1207, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1208.md). <!-- x86-merged:1208 -->
 - 2026-10-05: lane **1213**, LOCK words to W history: timestamp and value link, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1213.md). <!-- x86-merged:1213 -->
+- 2026-10-05: lane **1214**, Independent exact review of 1213, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1214.md). <!-- x86-merged:1214 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
