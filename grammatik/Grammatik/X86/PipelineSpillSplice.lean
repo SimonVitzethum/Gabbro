@@ -216,6 +216,104 @@ theorem spleiss_load_fremd (c : PipeCfg) (r : Rahmen) (slot : Nat)
   rw [regSet_fremd _ _ _ _ hqd]
   exact regSet_fremd _ _ _ _ hq
 
+/-! ## 3. Multi-splice over sorted split points, and the validator.
+
+    Segments of the original program with each point's fragment
+    inserted at its position; `verbraucht` counts original
+    instructions already emitted. Positions are original-program
+    positions, so strictly ascending positions keep every segment
+    well formed. -/
+
+/-- MULTI-SPLICE segments over sorted points. -/
+def spleissSeg (c : PipeCfg) (r : Rahmen) (P : List Befehl)
+    (pts : List SpleissPunkt) (verbraucht : Nat) : List Befehl :=
+  match pts with
+  | [] => P.drop verbraucht
+  | p :: rest =>
+    ((P.drop verbraucht).take (p.pos - verbraucht)) ++ spleissFrag c r p ++
+      spleissSeg c r P rest p.pos
+
+/-- Multi-splice of a whole program: no instruction consumed yet. -/
+def spleissMehr (c : PipeCfg) (r : Rahmen) (P : List Befehl)
+    (pts : List SpleissPunkt) : List Befehl :=
+  spleissSeg c r P pts 0
+
+/-- Decided strictly ascending positions. -/
+def spleissSortiert : List SpleissPunkt → Bool
+  | [] => true
+  | [_] => true
+  | a :: b :: rest => decide (a.pos < b.pos) && spleissSortiert (b :: rest)
+
+/-- THE SPLICE VALIDATOR: lane 1191's plan over the splice slots, plus
+    every position inside the program, strictly ascending positions,
+    and no save onto the address register (lane 1191's save needs
+    `src ≠ adr`; a reload may target any register). -/
+def spleissPlanOk (c : PipeCfg) (r : Rahmen) (P : List Befehl)
+    (pts : List SpleissPunkt) (codeBase codeLen : Nat)
+    (daten : List Nat) : Bool :=
+  spillPlanOk r (pts.map (·.schlitz)) codeBase codeLen daten &&
+  (pts.all fun p => decide (p.pos ≤ P.length)) &&
+  spleissSortiert pts &&
+  (pts.all fun p => match p.richtung with
+    | .sichern => decide (p.reg ≠ c.adr)
+    | .laden => true)
+
+/-- The 1191 plan over the splice slots holds. -/
+theorem spleissPlan_spill (c : PipeCfg) (r : Rahmen) (P : List Befehl)
+    (pts : List SpleissPunkt) (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spleissPlanOk c r P pts codeBase codeLen daten = true) :
+    spillPlanOk r (pts.map (·.schlitz)) codeBase codeLen daten = true := by
+  unfold spleissPlanOk at h
+  simp only [Bool.and_eq_true] at h
+  exact h.1.1.1
+
+/-- Every split position lies inside the program. -/
+theorem spleissPlan_pos (c : PipeCfg) (r : Rahmen) (P : List Befehl)
+    (pts : List SpleissPunkt) (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spleissPlanOk c r P pts codeBase codeLen daten = true)
+    (p : SpleissPunkt) (hmem : p ∈ pts) : p.pos ≤ P.length := by
+  unfold spleissPlanOk at h
+  simp only [Bool.and_eq_true] at h
+  have hall := (List.all_eq_true.mp h.1.1.2) p hmem
+  exact of_decide_eq_true hall
+
+/-- The points are strictly ascending. -/
+theorem spleissPlan_sortiert (c : PipeCfg) (r : Rahmen) (P : List Befehl)
+    (pts : List SpleissPunkt) (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spleissPlanOk c r P pts codeBase codeLen daten = true) :
+    spleissSortiert pts = true := by
+  unfold spleissPlanOk at h
+  simp only [Bool.and_eq_true] at h
+  exact h.1.2
+
+/-- No save targets the address register. -/
+theorem spleissPlan_saveReg (c : PipeCfg) (r : Rahmen) (P : List Befehl)
+    (pts : List SpleissPunkt) (codeBase codeLen : Nat) (daten : List Nat)
+    (h : spleissPlanOk c r P pts codeBase codeLen daten = true)
+    (p : SpleissPunkt) (hmem : p ∈ pts) (hdir : p.richtung = .sichern) :
+    p.reg ≠ c.adr := by
+  unfold spleissPlanOk at h
+  simp only [Bool.and_eq_true] at h
+  have hall := (List.all_eq_true.mp h.2) p hmem
+  cases hrt : p.richtung with
+  | sichern =>
+    rw [hrt] at hall
+    exact of_decide_eq_true hall
+  | laden =>
+    rw [hrt] at hdir
+    exact absurd hdir (by decide)
+
+/-- Empty plan: the program is unchanged. -/
+theorem spleissMehr_nil (c : PipeCfg) (r : Rahmen) (P : List Befehl) :
+    spleissMehr c r P [] = P := rfl
+
+/-- Single point: prefix, fragment, suffix. -/
+theorem spleissMehr_einz (c : PipeCfg) (r : Rahmen) (P : List Befehl)
+    (p : SpleissPunkt) :
+    spleissMehr c r P [p] =
+      (P.take p.pos) ++ spleissFrag c r p ++ (P.drop p.pos) := by
+  simp [spleissMehr, spleissSeg]
+
 /- CUTS:
      - Skeleton only: split-point type and fragment selection over the
        accepted 1191 fragments. Run lemmas, multi-splice, validator,
