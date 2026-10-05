@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 15:52 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 15:55 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -676,7 +676,7 @@ Last ledger refresh: **2026-10-05 15:52 UTC**. This is an operational snapshot, 
 | 1235 | Profiles: multi-step control flow and relocation re-decode | Merged after review/checks | 1236: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1235.md) |
 | 1237 | AVX2: VEX prefix decoder and encoder | Agent working | 1238: scheduled | [task](lanes/1237.md) |
 | 1239 | AVX2: 256-bit integer operation semantics | Merged after review/checks | 1240: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1239.md) |
-| 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Committed candidate; review/integration pending | 1242: Committed candidate; review/integration pending | [task](lanes/1241.md) |
+| 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
@@ -688,10 +688,10 @@ Last ledger refresh: **2026-10-05 15:52 UTC**. This is an operational snapshot, 
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Agent working | 1260: scheduled | [task](lanes/1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Agent working | 1262: scheduled | [task](lanes/1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Agent working | 1264: scheduled | [task](lanes/1263.md) |
-| 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Scheduled | 1266: scheduled | [task](lanes/1265.md) |
-| 1267 | AVX2: per-lane equation for arithmetic shift right | Scheduled | 1268: scheduled | [task](lanes/1267.md) |
-| 1269 | Cross-declaration lowering certificate for the GX refinement | Scheduled | 1270: scheduled | [task](lanes/1269.md) |
-| 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Scheduled | 1272: scheduled | [task](lanes/1271.md) |
+| 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Agent working | 1266: scheduled | [task](lanes/1265.md) |
+| 1267 | AVX2: per-lane equation for arithmetic shift right | Agent working | 1268: scheduled | [task](lanes/1267.md) |
+| 1269 | Cross-declaration lowering certificate for the GX refinement | Agent working | 1270: scheduled | [task](lanes/1269.md) |
+| 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Agent working | 1272: scheduled | [task](lanes/1271.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1607,6 +1607,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1246**, Independent exact review of 1245, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1246.md). <!-- x86-merged:1246 -->
 - 2026-10-05: lane **1251**, Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1251.md). <!-- x86-merged:1251 -->
 - 2026-10-05: lane **1252**, Independent exact review of 1251, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1252.md). <!-- x86-merged:1252 -->
+- 2026-10-05: lane **1241**, AVX2: YMM state, XCR0 gating and upper-half rules, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1241.md). <!-- x86-merged:1241 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
