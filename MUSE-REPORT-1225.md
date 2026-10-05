@@ -89,4 +89,42 @@ branch in the model, because the accepted `asyncSchritt` has no drain
 path at all. If silicon ever showed a draining delivery form, it would
 be a new accepted evaluator, not a case of this file.
 
+## Integration gate 2026-10-05: FAILED environmentally, nothing merged
+
+Exact evidence (integration lean output, exit 1): every listed line is an
+informational `#print axioms` line from other modules; the only failure is
+my target aborting at worker startup:
+
+- `✖ [640/642] Building Grammatik.X86.HwPreciseFault`
+- `libc++abi: terminating due to uncaught exception of type
+  lean::exception: failed to create thread`
+- `error: Lean exited with code 134`
+
+There are **zero Lean elaboration errors and zero proof errors** in the
+evidence: no unknown identifier, no type mismatch, no unsolved goal, no
+sorry/axiom complaint against any of the 27 names in `HwPreciseFault.lean`.
+
+Analysis: `failed to create thread` at process startup is virtual-address
+exhaustion in the integration checkout, independent of proof content. The
+identical signature hit this clone twice during local publication (once as
+a transient `Codec.olean` read failure, once as exit 134 at job 639/641),
+and the unchanged retry then passed (`Build completed successfully
+(641 jobs)`); the committed module re-probes at 0 errors today. The crash
+lands on whichever target is being spawned when the address space runs
+out -- here mine.
+
+Repair decision: **no module change**. There is no proof defect to repair,
+and editing green reviewed proofs to chase a resource crash would weaken
+guarantees for nothing (HARD RULES 4/5). No footprint mitigation exists on
+the module side: the file elaborates in seconds locally, and thread
+creation fails before proof cost matters. The fix belongs to the
+integration environment (retry under less load, as succeeded locally).
+
+Concrete blocker for the coordinator: the merge build needs a retry in
+the integration checkout; if `failed to create thread` recurs there
+deterministically, that is an apparatus issue (worker count / address
+ceiling), not a lane finding. A fresh independent review is still required
+for the changed commit once integration goes green; nothing here claims
+acceptance of the full source/binary chain.
+
 Co-Authored-By: muse-agent-1225 <muse-agent-1225@noreply.invalid>
