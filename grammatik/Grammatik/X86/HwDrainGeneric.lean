@@ -963,10 +963,12 @@ theorem drainGeneric_zeuge :
    - No silicon correspondence: encodings are the accepted
      canonical subsets with self-consistency only, not x86 truth.
      Alignment carries no gate in this model (the byte drain is
-     alignment-agnostic by `WortGruppe` design). The Intel SDM
-     extracts supplied to the clone were consulted for ordering
+     alignment-agnostic by `WortGruppe` design). No SDM extracts
+     were consulted in this lane; ordering and packaging facts
      (TSO store-issue FIFO, youngest-own forwarding, no multi-byte
-     atomicity); they are provenance, not proofs.
+     atomicity) are reused unchanged from the accepted modules
+     (`TSO`, `WordAccessGrouping`, `HwStackCalls`,
+     `HwForwardingGeneric`); nothing here is a silicon proof.
    - No global memory equality with `write64`: foreign flushes
      satisfying `FremdFrei` are real steps that change disjoint
      bytes, so equality holds on the grouped footprint (and, via
