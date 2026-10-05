@@ -680,6 +680,14 @@ Last ledger refresh: **2026-10-05 15:08 UTC**. This is an operational snapshot, 
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Agent working | 1246: scheduled | [task](lanes/1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
+| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Scheduled | 1250: scheduled | [task](lanes/1249.md) |
+| 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Scheduled | 1252: scheduled | [task](lanes/1251.md) |
+| 1253 | Start-anchored bridged run for the GX refinement | Scheduled | 1254: scheduled | [task](lanes/1253.md) |
+| 1255 | Pipeline calls: three-or-more-statement callee bodies | Scheduled | 1256: scheduled | [task](lanes/1255.md) |
+| 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Scheduled | 1258: scheduled | [task](lanes/1257.md) |
+| 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Scheduled | 1260: scheduled | [task](lanes/1259.md) |
+| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Scheduled | 1262: scheduled | [task](lanes/1261.md) |
+| 1263 | Pipeline: per-chunk derivation for if/else and checks | Scheduled | 1264: scheduled | [task](lanes/1263.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
