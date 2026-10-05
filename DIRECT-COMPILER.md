@@ -705,7 +705,7 @@ Last ledger refresh: **2026-10-05 18:53 UTC**. This is an operational snapshot, 
 | 1293 | Capstone: a reached multi-family program run on two cores from bytes | Committed candidate; review/integration pending | 1294: Agent working | [task](lanes/1293.md) |
 | 1295 | Capstone: every union step projects to the TSO store-buffer model | Committed candidate; review/integration pending | 1296: Incomplete; preserved | [task](lanes/1295.md) |
 | 1297 | Paging follow-up: large pages and SMEP/SMAP | Committed candidate; review/integration pending | 1298: Agent working | [task](lanes/1297.md) |
-| 1299 | Translation: the page walk joined with the TLB and the flat memory model | Committed candidate; review/integration pending | 1300: Committed candidate; review/integration pending | [task](lanes/1299.md) |
+| 1299 | Translation: the page walk joined with the TLB and the flat memory model | Merged after review/checks | 1300: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1299.md) |
 | 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Agent working | 1302: scheduled | [task](lanes/1301.md) |
 | 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Agent working | 1304: scheduled | [task](lanes/1303.md) |
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
@@ -1692,6 +1692,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1290**, Independent exact review of 1289, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1290.md). <!-- x86-merged:1290 -->
 - 2026-10-05: lane **1291**, Capstone: byte-decoder disjointness across all families, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1291.md). <!-- x86-merged:1291 -->
 - 2026-10-05: lane **1292**, Independent exact review of 1291, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1292.md). <!-- x86-merged:1292 -->
+- 2026-10-05: lane **1299**, Translation: the page walk joined with the TLB and the flat memory model, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1299.md). <!-- x86-merged:1299 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

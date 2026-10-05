@@ -681,3 +681,4 @@ import Grammatik.X86.HwMemTypesWC
 import Grammatik.X86.IntCarryForms
 import Grammatik.X86.IntBitTest
 import Grammatik.X86.HwKapsteinSteps
+import Grammatik.X86.HwTranslate
