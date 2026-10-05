@@ -6,6 +6,13 @@ Lane 1207, clone `/home/simon/Dokumente/gabbro-muse/a1207`, branch `muse/1207`
 
 ## Status: PROVED (probe-green), NOT bau-green — apparatus blocker
 
+**UPDATE (after review 1208, same tree `b903e3cf`, no Lean change): `./lean-bau`
+is now GREEN — `Build completed successfully (627 jobs).` The box-pressure
+blocker has lifted; the deliverable below is fully verified (probe + full
+build). The 1208 verdict REPAIR is dispatch-side (the pinned diff was
+unreachable inside the reviewer clone) and raises no finding against this
+deliverable, so nothing in the owned files was changed or weakened.
+
 The deliverable is complete in `grammatik/Grammatik/X86/HwDrainGeneric.lean`
 (~1020 lines) plus the one import line in `grammatik/Grammatik.lean`
 (committed). `./lean-probe` reports **0 errors 5 times** (skeleton, each
@@ -74,7 +81,17 @@ over program syntax, so rule 13's syntax clause does not trigger; the joint
 `_zeuge` is provided per the task MECHANISM (4) anyway, and it is
 non-degenerate (two cores, 8-entry buffer, memory-changing run 0→42).
 
-## Last `./lean-bau` result (3 identical failures)
+## Last `./lean-bau` result
+
+Superseded: a fourth run on the unchanged tree passes:
+
+```text
+✔ [626/627] Built Grammatik (2.0s)
+Build completed successfully (627 jobs).
+```
+
+The three earlier identical failures (below) were box thread pressure, now
+dipped. Failing tail, for the record:
 
 Tail of output (module 625/627, others cached/built):
 
@@ -99,9 +116,10 @@ around it).
 
 ## What remains open
 
-1. `./lean-bau` green for the whole project when box pressure dips, then
-   normal merge (`muse-merge.sh` rebuilds anyway). No proof work is missing.
-2. Merge + publication are coordinator business (§5/§11), not this lane's.
+1. Merge + publication are coordinator business (§5/§11), not this lane's.
+   The candidate builds green here; the 1208 re-review needs the pinned
+   diff fetchable inside the reviewer clone (dispatch-side repair, explicitly
+   not author-side — no change was required or made here).
 
 ## Task critique (rule 4/12 honesty)
 
