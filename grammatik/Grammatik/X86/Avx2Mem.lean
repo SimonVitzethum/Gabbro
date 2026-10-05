@@ -1352,6 +1352,208 @@ theorem avx2Gruppe_verweigert_bei_fremdeintrag (s : TSOZustand)
   obtain ⟨_, hff⟩ := hgrp
   exact (hff d hne e hmem) hfuss
 
+/-! ## 11. Drains: byte-wise flushes with an explicit tearing table.
+
+  A drain flushes one oldest entry at a time: after flushing a
+  prefix of the thirty-two, the flushed bytes are new while the
+  rest still reads the pre-drain bytes. No whole-vector atomicity
+  is claimed anywhere. -/
+
+/-- Flush the oldest entries of core `c` named by `l`, in order:
+    `none` = the buffer ran dry. -/
+def avx2Drain (s : TSOZustand) (c : Nat) : List TSOEintrag →
+    Option TSOZustand
+  | [] => some s
+  | _e :: rest =>
+    match flushKern s c with
+    | none => none
+    | some s1 => avx2Drain s1 c rest
+
+/-- A drain changes nothing outside the drained entries (frame). -/
+theorem avx2Drain_rahmen (l : List TSOEintrag) (s s' : TSOZustand)
+    (c : Nat) (rest : List TSOEintrag)
+    (hbuf : s.puffer c = l ++ rest)
+    (h : avx2Drain s c l = some s')
+    (x : Adresse) (hxa : ∀ e ∈ l, e.addr ≠ x) :
+    s'.mem.bytes x = s.mem.bytes x := by
+  induction l generalizing s with
+  | nil =>
+    have e : avx2Drain s c [] = some s := rfl
+    rw [e] at h
+    obtain rfl := Option.some_inj.mp h
+    rfl
+  | cons hd tl ih =>
+    have e : avx2Drain s c (hd :: tl) = match flushKern s c with
+      | none => (none : Option TSOZustand)
+      | some s1 => avx2Drain s1 c tl := rfl
+    rw [e] at h
+    cases hk : flushKern s c with
+    | none =>
+      rw [hk] at h
+      dsimp only at h
+      cases h
+    | some s1 =>
+      rw [hk] at h
+      dsimp only at h
+      have hhead : s.puffer c = hd :: (tl ++ rest) := hbuf
+      have hbuf1 : s1.puffer c = tl ++ rest :=
+        flush_entfernt_kopf s s1 c hk hd (tl ++ rest) hhead
+      have hfr := ih s1 hbuf1 h (fun e hm => hxa e (by simp [hm]))
+      have hhx : x ≠ hd.addr := Ne.symm (hxa hd (by simp))
+      have hkeep := flush_rahmen s s1 c hk hd (tl ++ rest) hhead x hhx
+      rw [hfr, hkeep]
+
+/-- A drain installs the latest drained byte at every touched
+    address. -/
+theorem avx2Drain_schreibt_allg (l : List TSOEintrag)
+    (s s' : TSOZustand) (c : Nat) (rest : List TSOEintrag)
+    (hbuf : s.puffer c = l ++ rest)
+    (h : avx2Drain s c l = some s')
+    (x : Adresse) (w : Byte)
+    (hw : ∀ e ∈ l, e.addr = x → e.wert = w)
+    (hmem : ∃ e ∈ l, e.addr = x) :
+    s'.mem.bytes x = w := by
+  induction l generalizing s with
+  | nil =>
+    simp at hmem
+  | cons hd tl ih =>
+    have e : avx2Drain s c (hd :: tl) = match flushKern s c with
+      | none => (none : Option TSOZustand)
+      | some s1 => avx2Drain s1 c tl := rfl
+    rw [e] at h
+    cases hk : flushKern s c with
+    | none =>
+      rw [hk] at h
+      dsimp only at h
+      cases h
+    | some s1 =>
+      rw [hk] at h
+      dsimp only at h
+      have hhead : s.puffer c = hd :: (tl ++ rest) := hbuf
+      have hbuf1 : s1.puffer c = tl ++ rest :=
+        flush_entfernt_kopf s s1 c hk hd (tl ++ rest) hhead
+      have hwt : ∀ e ∈ tl, e.addr = x → e.wert = w :=
+        fun e hm had => hw e (by simp [hm]) had
+      by_cases heq : hd.addr = x
+      · have hwv : hd.wert = w := hw hd (by simp) heq
+        have hinst := flush_schreibt_kopf s s1 c hk hd (tl ++ rest)
+          hhead
+        rw [heq] at hinst
+        by_cases hex : ∃ e ∈ tl, e.addr = x
+        · obtain ⟨e2, hm2, had2⟩ := hex
+          exact ih s1 hbuf1 h hwt ⟨e2, hm2, had2⟩
+        · have hxa : ∀ e ∈ tl, e.addr ≠ x := by
+            intro e hm had
+            exact hex ⟨e, hm, had⟩
+          have hfr := avx2Drain_rahmen tl s1 s' c rest hbuf1 h x hxa
+          rw [hfr, hinst, hwv]
+      · obtain ⟨e, hmeml, hadr⟩ := hmem
+        simp only [List.mem_cons] at hmeml
+        have hmem2 : e ∈ tl := by
+          rcases hmeml with rfl | hm
+          · exact absurd hadr heq
+          · exact hm
+        exact ih s1 hbuf1 h hwt ⟨e, hmem2, hadr⟩
+
+/-- FULL DRAIN: draining all thirty-two installs every entry byte. -/
+theorem avx2Drain_schreibt (s s' : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Avx2Vektor) (rest : List TSOEintrag)
+    (hbuf : s.puffer c = avx2Eintraege a v ++ rest)
+    (h : avx2Drain s c (avx2Eintraege a v) = some s')
+    (hdis : ∀ e1 ∈ avx2Eintraege a v, ∀ e2 ∈ avx2Eintraege a v,
+      e1.addr = e2.addr → e1 = e2)
+    (e : TSOEintrag) (hmem : e ∈ avx2Eintraege a v) :
+    s'.mem.bytes e.addr = e.wert := by
+  exact avx2Drain_schreibt_allg (avx2Eintraege a v) s s' c rest hbuf h
+    e.addr e.wert
+    (fun e' hm' had => by
+      have heq := hdis e' hm' e hmem had
+      rw [heq])
+    ⟨e, hmem, rfl⟩
+
+/-- Low-half entries are chunk-zero or chunk-one bytes. -/
+theorem avx2Eintrag_klass_lo (a : Adresse) (v : Avx2Vektor)
+    (e : TSOEintrag) (hmem : e ∈ avx2EintraegeLo a v) :
+    (∃ k, k < 8 ∧ e = ⟨addrOff a k, wortByte (vLo v.lo) k⟩) ∨
+    (∃ k, k < 8 ∧
+      e = ⟨addrOff (vecHiAddr a) k, wortByte (vHi v.lo) k⟩) := by
+  unfold avx2EintraegeLo at hmem
+  have h := List.mem_append.mp hmem
+  rcases h with h0 | h1
+  · exact Or.inl (avx2Eintrag_klass_c0 a v e h0)
+  · exact Or.inr (avx2Eintrag_klass_c1 a v e h1)
+
+/-- A chunk-zero byte entry is in the low sixteen, by offset. -/
+theorem avx2Lo_mem_c0_entry (a : Adresse) (v : Avx2Vektor)
+    (k : Nat) (hk : k < 8) :
+    (⟨addrOff a k, wortByte (vLo v.lo) k⟩ : TSOEintrag) ∈
+      avx2EintraegeLo a v := by
+  have hk8 : k = 0 ∨ k = 1 ∨ k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5 ∨
+      k = 6 ∨ k = 7 := by
+    omega
+  have h0 : (⟨addrOff a k, wortByte (vLo v.lo) k⟩ : TSOEintrag) ∈
+      avx2EintraegeC0 a v := by
+    unfold avx2EintraegeC0
+    rcases hk8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact List.Mem.head _
+    · exact List.Mem.tail _ (List.Mem.head _)
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _)))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _)))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.head _))))))
+    · exact List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.tail _ (List.Mem.tail _
+        (List.Mem.tail _ (List.Mem.head _)))))))
+  unfold avx2EintraegeLo
+  apply List.mem_append.mpr; apply Or.inl
+  exact h0
+
+/-- TEARING: draining the low sixteen installs the low-half bytes
+    while the high-half bytes still read pre-drain. No
+    whole-vector atomicity is claimed anywhere. -/
+theorem avx2Drain_teilt16 (s s1 : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Avx2Vektor) (rest : List TSOEintrag)
+    (hno : OhneUmbruch32 a)
+    (hbuf : s.puffer c = avx2Eintraege a v ++ rest)
+    (h : avx2Drain s c (avx2EintraegeLo a v) = some s1)
+    (k : Nat) (hk : k < 8) :
+    s1.mem.bytes (addrOff a k) = wortByte (vLo v.lo) k ∧
+      s1.mem.bytes (addrOff (addrOff a 16) k) =
+        s.mem.bytes (addrOff (addrOff a 16) k) := by
+  rw [avx2Eintraege_zerlegt, List.append_assoc] at hbuf
+  have hmemLo : ∀ k : Nat, k < 8 →
+      ∃ e ∈ avx2EintraegeLo a v, e.addr = addrOff a k := by
+    intro k hk
+    exact ⟨_, avx2Lo_mem_c0_entry a v k hk, rfl⟩
+  refine ⟨?_, ?_⟩
+  · exact avx2Drain_schreibt_allg (avx2EintraegeLo a v) s s1 c
+      (avx2EintraegeHi a v ++ rest) hbuf h (addrOff a k)
+      (wortByte (vLo v.lo) k)
+      (fun e hm had => by
+        rcases avx2Eintrag_klass_lo a v e hm with
+            ⟨k', hk', rfl⟩ | ⟨k', hk', rfl⟩
+        · have hkk : k' = k := addrOff_inj8 hk' hk had
+          subst hkk
+          rfl
+        · exact absurd had (Ne.symm (avx2Chunk_disjunkt a hno 0 1
+            (by decide) (by decide) (by decide) k k' hk hk')))
+      (hmemLo k hk)
+  · exact avx2Drain_rahmen (avx2EintraegeLo a v) s s1 c
+      (avx2EintraegeHi a v ++ rest) hbuf h
+      (addrOff (addrOff a 16) k) (fun e hm => by
+        rcases avx2Eintrag_klass_lo a v e hm with
+            ⟨k', hk', rfl⟩ | ⟨k', hk', rfl⟩
+        · exact avx2Chunk_disjunkt a hno 0 2
+            (by decide) (by decide) (by decide) k' k hk' hk
+        · exact avx2Chunk_disjunkt a hno 1 2
+            (by decide) (by decide) (by decide) k' k hk' hk)
+
 /- CUTS:
    Skeleton only: forms are named, nothing is proved yet.
 -/
