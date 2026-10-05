@@ -161,6 +161,54 @@ theorem spill_correct_loaded_zeuge :
     piSpillRahmen, hsrc, hv0, h0, hv1, h1,
     ⟨n, s', hrun, hrip', hW, hE⟩, hpriv, hsep2, hdat⟩
 
+/-! ## 2. Call family: the admitted caller frame plus validated callee
+    bytes, over the loaded image.
+
+    The joint validator (`rufExecOk`: admitted frame, single-assignment
+    shape, recomputed bytes) and the loaded premises (`imageOk` over
+    the same layout and certificate list, `weltOk`) feed the accepted
+    `einzelRuf_korrekt`: the fetched run from the loader's state
+    reaches the code end with the REAL `execBlock` outcome represented
+    and every callee-saved register preserved. Every premise is
+    consumed. -/
+
+/-- CALL CORRECTNESS OVER THE LOADED IMAGE: frame admission plus the
+    fetched callee run with callee-saved preservation. -/
+theorem ruf_correct_loaded {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (p : Profil) (bild : Bild) (c : PipeCfg)
+    (ps : List (Platz D)) (es : List TabLayout)
+    (b : Belegung) (rh : Rahmen) (nArgs : Nat) (benutztRot : Bool)
+    (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
+    (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ)
+    (bytes : List Byte)
+    (hval : rufExecOk b rh nArgs benutztRot c (layoutVon ps)
+      ((.cons (.assignSlot t f i e hw hL) .nil : Block D V l Γ Λ Λ)) bytes = true)
+    (himg : imageOk p bild c ps es []
+      ((.cons (.assignSlot t f i e hw hL) .nil : Block D V l Γ Λ Λ)) bytes = true)
+    (σ : World D) (hwelt : weltOk bild ps σ = true)
+    (hfremd : calleeFremd c = true)
+    (reg : Register → Wort) (fl : Flags) (ρ : Env D Γ)
+    (hE : EnvRepr ρ reg (abbOf c))
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (σ' : World D) (ρ' : Env D Γ)
+    (hsrc : execBlock O passes R
+      ((.cons (.assignSlot t f i e hw hL) .nil : Block D V l Γ Λ Λ)) σ ρ =
+      (.ok σ' ρ' : Ausgang V l Γ)) :
+    rufOk b rh nArgs benutztRot = true ∧
+    ∃ n s', laufBytes n (startZustand bild c reg fl) = .weiter s' ∧
+      s'.rip = natAdresse (c.codeBase + bytes.length) ∧
+      WorldRep (layoutVon ps) s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf c) ∧
+      (∀ q, q ∈ calleeGerettet →
+        s'.register q = (startZustand bild c reg fl).register q) := by
+  have hsep := imageOk_layoutSep p bild c ps es [] _ _ himg
+  have hcode := imageOk_codeAt p bild c ps es [] _ _ himg
+  have hW := imageOk_worldRep p bild c ps es [] _ _ himg σ hwelt
+  have hrip : (startZustand bild c reg fl).rip = natAdresse c.codeBase := rfl
+  exact einzelRuf_korrekt b rh nArgs benutztRot c (layoutVon ps) t f i e hw hL bytes
+    hval hsep hfremd O passes R σ ρ (startZustand bild c reg fl) hcode hrip hW hE
+    σ' ρ' hsrc
+
 /- CUTS (skeleton):
    Only the shared loaded-code predicate so far. Per-family
    correctness, refusals, probes and witnesses follow in pieces.
