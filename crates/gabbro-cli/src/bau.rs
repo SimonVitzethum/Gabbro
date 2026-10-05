@@ -53,6 +53,12 @@ pub fn metall_speicher() -> &'static str {
     treiber::METALL_SPEICHER
 }
 
+/// The bare-metal image's thread runtime (`gabbro runtime metal-threads`), one translation unit
+/// of its own (template `faden.metall`).
+pub fn metall_faden() -> &'static str {
+    treiber::METALL_FADEN
+}
+
 /// The bare-metal image's interrupt descriptor table (`gabbro runtime metal-idt`), one
 /// translation unit of its own (template `idt.metall`).
 pub fn metall_idt() -> &'static str {
@@ -2907,13 +2913,16 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
     let idt = aus.join(format!("{name}.metall.idt.c"));
     std::fs::write(&idt, treiber::METALL_IDT)
         .map_err(|err| format!("bare-metal image: {}: {err}", idt.display()))?;
+    let faden = aus.join(format!("{name}.metall.faden.c"));
+    std::fs::write(&faden, treiber::METALL_FADEN)
+        .map_err(|err| format!("bare-metal image: {}: {err}", faden.display()))?;
     let flaggen = |c: &mut std::process::Command| {
         c.args(METALL_FLAGGEN);
         c.arg("-isystem").arg(&gccinc);
         c.arg("-isystem").arg(&koepfe);
     };
     let obj = |teil: &str| aus.join(format!("{name}.metall.{teil}.o"));
-    for (quelle, teil) in [(dir.join("kern.c"), "kern"), (speicher.clone(), "speicher"), (idt.clone(), "idt")] {
+    for (quelle, teil) in [(dir.join("kern.c"), "kern"), (speicher.clone(), "speicher"), (idt.clone(), "idt"), (faden.clone(), "faden")] {
         let mut c = std::process::Command::new(cc);
         flaggen(&mut c);
         c.arg("-I").arg(&dir);
@@ -2933,7 +2942,7 @@ fn metall_bild_binden(manifest: &Manifest, dir: &str, name: &str) -> Result<(), 
     let mut c = std::process::Command::new("ld");
     c.args(["-nostdlib", "-static", "-no-pie", "-z", "max-page-size=0x1000", "-T"]);
     c.arg(dir.join("metall.ld")).arg("-o").arg(&bild);
-    for teil in ["start", "kern", "speicher", "idt", "treiber"] {
+    for teil in ["start", "kern", "speicher", "idt", "faden", "treiber"] {
         c.arg(obj(teil));
     }
     lauf(c, "the link (`ld -nostdlib`: no C library)")?;

@@ -13,7 +13,7 @@ put into each finished product, per target.
 |---|---|---|---|
 | hosted | 1174 lines, 7 files | **0 lines, 0 files** | -- |
 | kmod | 1344 lines, 11 files (two probes; 1659 / 13 with the `atomar` probe the counter lists since C2) | **95 lines, 1 file; runtime and binding 0** | the `takt` probe's own hardirq timer `messung/proben/kmodul/takt.c` (95) -- its HARNESS, not product: on kernel 6.8 an hrtimer's callback is a field of `struct hrtimer` (a code address stored into a kernel layout) |
-| metal | 1962 lines, 6 files counted -- **2090 / 7 in truth**: `eintritt_asm.h` (128, included by `kern.c`) was in neither the build's list nor the count until 2026-10-05 | **1630 lines, 4 files** | C3 slices 1-3 done (arena, memory functions, headers; the Gabbro-facing locks and rcu read sides; the IDT -- all generated, proved text); left: the kernel proper -- `kern.c` 838, `start.S` 427, `metall.h` 237, `eintritt_asm.h` 128 |
+| metal | 1962 lines, 6 files counted -- **2090 / 7 in truth**: `eintritt_asm.h` (128, included by `kern.c`) was in neither the build's list nor the count until 2026-10-05 | **1377 lines, 4 files** | C3 slices 1-4 done (arena, memory functions, headers; the Gabbro-facing locks and rcu read sides; the IDT; the thread runtime -- all generated, proved text); left: serial, LAPIC, ACPI, SMP bring-up (`kern.c` 571), boot/switch/entries (`start.S` 427, `eintritt_asm.h` 128), the entry macros (`metall.h` 251) |
 
 Hosted imports (`C0_ARBEIT=… python3 instrumente/zaehle-c.py --baue`, toolchain names removed):
 172, 173 and the os-probe 0; examples 63 (`putchar`) and 64 (`write`) bind the C library by their
@@ -47,7 +47,9 @@ startup file and no `__libc_start_main`, `nm -u` empty.
 
 | bare metal, slice 3 (C3) | (this merge) | the IDT left `kern.c`: the generated `<unit>.metall.idt.c` (table, gate encoding, the runtime's slots, `lidt`, the two installers), `gabbro runtime metal-idt` for harnesses; `pruefe-os-bindung.sh` scans the generated machine layer for OS names too | `idt.metall` |
 
-Template register (`gabbro schablonen`): 40 entries, 29 machine-checked; `--tor` still names the 6
+| bare metal, slice 4 (C3) | (this merge) | the thread runtime left `kern.c`: the generated `<unit>.metall.faden.c` (run queues, scheduler loop, first frame, start, join), `gabbro runtime metal-threads`; `kern.c` keeps the bring-up and reaches the cores through `metall.h` | `faden.metall` |
+
+Template register (`gabbro schablonen`): 41 entries, 30 machine-checked; `--tor` still names the 6
 hanging premises it named before this lane (none of this lane's).
 
 ## Open, by name

@@ -4976,3 +4976,35 @@ and wake vectors are one register (`METALL_TAKT_VEKTOR`, `METALL_WECK_VEKTOR` in
 NOT proved: the SDM's gate format on real silicon (the hardware assumption every metal image
 names), that every core executes `lidt` before its first interrupt (the runtime's bring-up order,
 `kern.c`), and the stubs (`start.S`, `eintritt_asm.h`, wall D). `Zielsatz/Spec.lean` unchanged.
+
+## 73. The bare-metal thread runtime: `faden.metall` (C-free lane, 2026-10-05, C3 slice 4)
+
+**The gap.** The section "Cores and threads" of `laufzeit/metall/kern.c` -- per-core run queues,
+the scheduler loop, the yield and the timer's C half, the first frame of a new thread, the
+thread start and the join -- was handwritten C. It is now the generator's
+`<unit>.metall.faden.c` (`treiber.rs::METALL_FADEN`; `gabbro runtime metal-threads`), a
+translation unit of its own; `kern.c` keeps the bring-up (LAPIC, ACPI, SMP) and reaches the
+cores through the interface in `metall.h` (`metall_kern_setze`, `metall_kern_apic_setze`,
+`metall_kern_stapel_oben`, `metall_kern_angekommen`, `metall_kern_schleife`,
+`metall_faden_anlegen`; the thread runtime wakes a core through `metall_ipi_senden`).
+
+| Lean name | File | What it says |
+|---|---|---|
+| `Q`, `Folge`, `Kette`, `haenge`, `nimm` | SchablonenMetallFaden §1 | a core's queue: head, tail, links; the list it holds; the two C operations |
+| **`haenge_kette`**, **`nimm_kette`**, `nimm_leer`, `schlange_fifo` | SchablonenMetallFaden §1 | the linked queue refines a list: append behind the tail (duplicate-free), take the head; FIFO |
+| `schlange_zeuge` | SchablonenMetallFaden §1 | WITNESS: three threads queued on a fresh core, one taken, a fourth queued |
+| `schritt`, `nachSchritten`, **`schleife_fair`** | SchablonenMetallFaden §1 | a pass of the loop takes the head, buries or re-queues it; a thread at position `p` runs after `p` passes |
+| `schleife_zeuge` | SchablonenMetallFaden §1 | WITNESS: a thread that ends and three that do not |
+| `rahmen`, `schalteAuf`, **`rahmen_korrekt`** | SchablonenMetallFaden §2 | the first frame, popped by `metall_schalte`: zero registers, reset MXCSR/FCW, the entry, SysV alignment |
+| `platz_im_bereich` | SchablonenMetallFaden §3 | round robin names a core that checked in |
+| `Ereignis`, `wort`, `spur`, **`warte_korrekt`** | SchablonenMetallFaden §4 | a join that begins after the start and reads zero saw the whole run and the burial |
+| `warte_ohne_vorbelegung_waere_falsch` | SchablonenMetallFaden §4 | without the store before the queueing a join reads zero with every step still ahead |
+| `faden_metall_zeuge` | SchablonenMetallFaden §4 | WITNESS: a thread of five steps read midway, before the burial and at the end; a frame; a placement |
+
+NOT proved: the switch (`metall_schalte`, `start.S`: the register file and stack as the hardware
+keeps them -- wall D), the C11 orderings of the join word, and preemption's timing (the LAPIC
+timer in `kern.c`, wall A). `Zielsatz/Spec.lean` unchanged: the goal's runtime premise (d) says
+the declared starts run, each on its own thread; what moved is who writes the scheduler.
+*Lesson of the proof:* `decide` on 64-bit literal arithmetic (`(0x1F80 + 0x037F * 2^32) % 2^32`)
+drove the elaborator past 4 GB and was killed (exit 137); `simp` with the literal simprocs
+proves the same in milliseconds.

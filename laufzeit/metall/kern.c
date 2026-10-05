@@ -262,298 +262,31 @@ static void icr_warte(void)
     }
 }
 
-static void ipi(uint32_t apic_id, uint32_t wort)
+void metall_ipi_senden(uint32_t apic_id, uint32_t wort)
 {
     lapic_schreib(LAPIC_ICR_HI, apic_id << 24);
     lapic_schreib(LAPIC_ICR_LO, wort);
     icr_warte();
 }
 
-/* -- Cores and threads. ----------------------------------------------------- */
+/* -- Cores and threads: GENERATED text since the C-free lane's C3 slice 4 (2026-10-05) --
+ * `<unit>.metall.faden.c` (template `faden.metall`, Grammatik/SchablonenMetallFaden.lean):
+ * the run queues, the scheduler loop, the thread start and join, `metall_abgeben`,
+ * `metall_takt`, `metall_kerne`, `metall_kern_nr`. What the bring-up below needs of it is
+ * declared in metall.h. */
 
 #define KERNE_MAX METALL_KERNE_MAX
-#define FAEDEN_MAX 64
-#define KERN_STAPEL 16384
-
-enum { FREI = 0, BEREIT, LAEUFT, TOT };
-
-struct faden {
-    uint64_t rsp;                /* saved stack pointer while switched out */
-    void (*fn)(void);
-    uint32_t *wort;              /* the join word the starter waits on */
-    int zustand;
-    struct faden *naechster;     /* run-queue link */
-};
-
-struct kern {
-    struct kern *selbst;         /* %gs:0 -- must stay the first field */
-    uint32_t nr;                 /* index 0..n-1 */
-    uint32_t apic_id;
-    uint64_t sched_rsp;          /* the scheduler loop's saved rsp */
-    struct faden *laufend;
-    metall_ticket schlange_sperre;
-    struct faden *kopf, *schwanz;
-    uint64_t gelaufen;           /* threads this core has run to their end */
-};
-
-static struct kern kerne[KERNE_MAX];
-static _Atomic uint32_t n_kerne = 1;
-static uint8_t kern_stapel[KERNE_MAX][KERN_STAPEL] __attribute__((aligned(16)));
-
-static struct faden faeden[FAEDEN_MAX];
-static metall_ticket faeden_sperre;
-static _Atomic uint32_t naechster_kern = 1;   /* round robin, from core 1 */
 
 static void verteilung_melden(void)
 {
-    uint32_t n = atomic_load_explicit(&n_kerne, memory_order_acquire);
+    uint32_t n = metall_kerne();
     schreibe_roh("METALL-VERTEILUNG");
     for (uint32_t i = 0; i < n; i++) {
         seriell_zeichen(' ');
-        zahl_roh(kerne[i].gelaufen);
+        zahl_roh(metall_kern_gelaufen(i));
     }
     seriell_zeichen('\n');
 }
-
-static inline struct kern *ich(void)
-{
-    struct kern *k;
-    __asm__ __volatile__("movq %%gs:0, %0" : "=r"(k));
-    return k;
-}
-
-uint32_t metall_kerne(void) { return atomic_load_explicit(&n_kerne, memory_order_acquire); }
-uint32_t metall_kern_nr(void) { return ich()->nr; }
-
-static void kern_setze(uint32_t nr)
-{
-    kerne[nr].selbst = &kerne[nr];
-    kerne[nr].nr = nr;
-    wrmsr(0xC0000101u, (uint64_t)&kerne[nr]);   /* IA32_GS_BASE */
-}
-
-/* Run queue, FIFO. Caller holds IF = 0. */
-static void schlange_haenge(struct kern *k, struct faden *f)
-{
-    metall_ticket_nimm(&k->schlange_sperre);
-    f->naechster = 0;
-    if (k->schwanz) {
-        k->schwanz->naechster = f;
-    } else {
-        k->kopf = f;
-    }
-    k->schwanz = f;
-    metall_ticket_gib(&k->schlange_sperre);
-}
-
-static struct faden *schlange_nimm(struct kern *k)
-{
-    struct faden *f;
-    metall_ticket_nimm(&k->schlange_sperre);
-    f = k->kopf;
-    if (f) {
-        k->kopf = f->naechster;
-        if (!k->kopf) {
-            k->schwanz = 0;
-        }
-    }
-    metall_ticket_gib(&k->schlange_sperre);
-    return f;
-}
-
-void metall_schalte(uint64_t *alt_rsp, uint64_t neu_rsp);   /* start.S */
-
-/* Give the core back to its scheduler. Callable from thread context with any
- * IF: the switch itself runs with IF = 0 (see start.S), and the old flags
- * come back when the thread is resumed. */
-static void abgeben(void)
-{
-    uint64_t f = ia_aus();
-    struct kern *k = ich();
-    struct faden *t = k->laufend;
-    metall_schalte(&t->rsp, k->sched_rsp);
-    ia_her(f);
-}
-
-/* The public yield (metall.h): the Gabbro lock's spin calls it. A call from
- * the scheduler's own context (an entry that landed on an idle core) has no
- * thread to give away and returns: the spin goes on. */
-void metall_abgeben(void)
-{
-    uint64_t f = ia_aus();
-    int hat_faden = ich()->laufend != 0;
-    ia_her(f);
-    if (hat_faden) {
-        abgeben();
-    }
-}
-
-/* The timer's C half (start.S `metall_takt_eintritt`, IF = 0, all of the
- * thread's registers saved on its own stack). Acknowledge, then yield: the
- * preempted thread goes to the tail of its core's queue. */
-void metall_takt(void);
-void metall_takt(void)
-{
-    lapic_schreib(LAPIC_EOI, 0);
-    if (ich()->laufend) {
-        abgeben();
-    }
-}
-
-/* The first instruction a new thread executes (reached by the `ret` of
- * `metall_schalte`, rsp = top - 8, the post-call alignment). It runs the root,
- * marks itself dead and leaves its stack for good. The word is NOT cleared
- * here: the thread is still standing on the unit's stack, and the starter may
- * reuse that stack the moment the join returns. The scheduler clears it
- * from the core's own stack (`begrabe`). */
-static __attribute__((noreturn)) void faden_eintritt(void)
-{
-    struct kern *k = ich();
-    struct faden *t = k->laufend;
-    __asm__ __volatile__("sti" ::: "memory");
-    t->fn();
-    (void)ia_aus();
-    k = ich();
-    t->zustand = TOT;
-    metall_schalte(&t->rsp, k->sched_rsp);
-    __builtin_trap();   /* a dead thread is never resumed */
-}
-
-static void begrabe(struct faden *t)
-{
-    uint32_t *w = t->wort;
-    metall_ticket_nimm(&faeden_sperre);
-    t->zustand = FREI;
-    metall_ticket_gib(&faeden_sperre);
-    /* The join edge: everything the thread wrote happens-before this store,
-     * and the waiter's acquire load of zero synchronises with it. */
-    atomic_store_explicit((_Atomic uint32_t *)w, 0u, memory_order_release);
-}
-
-/* The scheduler loop of one core, on the core's own stack, IF = 0 throughout
- * except inside the idle wait. An empty queue is the idle root: touch nothing,
- * sleep until an interrupt, look again.
- *
- * WHY `hlt` IS SAFE HERE (Opus agent J; Opus I used `pause`). `sti; hlt` is
- * one window: `sti` takes effect after the NEXT instruction, so an interrupt
- * that became pending before the `sti` is taken at the `hlt` and wakes it --
- * there is no gap in which a wake-up is lost. What can make this queue
- * non-empty while the core sleeps: a start on another core (`faden_anlegen`
- * sends the wake IPI, vector 0x41, after the enqueue) -- nothing else, since
- * a thread never changes core. And the timer (vector 0x40) ticks on every
- * core anyway, so even a lost IPI would cost at most one quantum, never
- * liveness. The idle root still touches no Gabbro carrier (`none` of
- * `mitRuhe`); a program entry (`via idt`) that lands here runs on this
- * scheduler stack and returns to the `hlt` loop. */
-static __attribute__((noreturn)) void kern_schleife(void)
-{
-    struct kern *k = ich();
-    for (;;) {
-        struct faden *t = schlange_nimm(k);
-        if (!t) {
-#ifdef METALL_PAUSE_LEERLAUF
-            pause();
-#else
-            __asm__ __volatile__("sti; hlt; cli" ::: "memory");
-#endif
-            continue;
-        }
-        t->zustand = LAEUFT;
-        k->laufend = t;
-        metall_schalte(&k->sched_rsp, t->rsp);
-        k->laufend = 0;
-        if (t->zustand == TOT) {
-            k->gelaufen++;
-            begrabe(t);
-        } else {
-            t->zustand = BEREIT;
-            schlange_haenge(k, t);
-        }
-    }
-}
-
-/* The frame `metall_schalte` pops for a thread that has never run: MXCSR and
- * x87 control word at their reset values, six zero callee-saved registers,
- * the entry as return address, a zero fake return address above it. */
-static uint64_t rahmen_neu(void *spitze)
-{
-    uint64_t *s = (uint64_t *)spitze;
-    *--s = 0;                              /* faden_eintritt's "return address" */
-    *--s = (uint64_t)faden_eintritt;       /* ret target */
-    for (int i = 0; i < 6; i++) {
-        *--s = 0;                          /* rbp rbx r12 r13 r14 r15 */
-    }
-    *--s = 0x1F80u | ((uint64_t)0x037Fu << 32);  /* MXCSR | FCW << 32 */
-    return (uint64_t)s;
-}
-
-static int faden_anlegen(void (*fn)(void), void *spitze, uint32_t *wort, uint32_t kern_nr)
-{
-    struct faden *t = 0;
-    uint64_t f;
-    if (fn == 0 || spitze == 0 || wort == 0) {
-        return 22;
-    }
-    if (((uintptr_t)spitze & 15u) != 0u) {
-        return 22;
-    }
-    f = ia_aus();
-    metall_ticket_nimm(&faeden_sperre);
-    for (int i = 0; i < FAEDEN_MAX; i++) {
-        if (faeden[i].zustand == FREI) {
-            t = &faeden[i];
-            t->zustand = BEREIT;
-            break;
-        }
-    }
-    metall_ticket_gib(&faeden_sperre);
-    if (!t) {
-        ia_her(f);
-        return 11;
-    }
-    t->fn = fn;
-    t->wort = wort;
-    t->rsp = rahmen_neu(spitze);
-    /* The word is nonzero BEFORE the thread can run: a join that starts after
-     * this call returns can never read a stale zero, and a thread that ends
-     * before the starter looks again clears a word that already says "alive"
-     * (the order the Linux runtime needs CLONE_PARENT_SETTID for). */
-    atomic_store_explicit((_Atomic uint32_t *)wort, (uint32_t)(t - faeden) + 1u, memory_order_release);
-    schlange_haenge(&kerne[kern_nr], t);
-    /* Wake the target core if it sleeps in its idle `hlt` (after the enqueue:
-     * the woken loop must find the thread). Harmless when it is busy -- the
-     * wake entry only acknowledges. Before the APs are up (the BSP places the
-     * driver thread on itself) there is nobody to wake. */
-    if (kern_nr != ich()->nr) {
-        ipi(kerne[kern_nr].apic_id, 0x4000u | WECK_VEKTOR);
-    }
-    ia_her(f);
-    return 0;
-}
-
-int gabbro_faden_start(void (*fn)(void), void *spitze, uint32_t *wort)
-{
-    uint32_t n = metall_kerne();
-    uint32_t k = atomic_fetch_add_explicit(&naechster_kern, 1u, memory_order_relaxed) % n;
-    return faden_anlegen(fn, spitze, wort, k);
-}
-
-/* THE JOIN: re-read with acquire until zero; between reads, give the core
- * away. WHY NOT hlt + IPI: a sleeping waiter needs a wake list per word and
- * an IPI from the ending thread's core, i.e. a second protocol with its own
- * lost-wakeup race to prove; the yield loop has none -- every path re-reads
- * the word, exactly the shape of the hosted futex loop. Its cost is a waiter
- * that stays in its core's queue, which with a round-robin queue costs the
- * other threads of that core one short turn per round and costs a core with
- * nothing else to do nothing at all. */
-void gabbro_faden_warte(uint32_t *wort)
-{
-    while (atomic_load_explicit((_Atomic uint32_t *)wort, memory_order_acquire) != 0u) {
-        abgeben();
-        pause();
-    }
-}
-
 /* -- The program's own entries (Opus agent J; metall.h METALL_EINTRITT). -- */
 
 void metall_wecken(void);
@@ -624,7 +357,7 @@ __attribute__((noreturn)) void metall_fremd_fehlt(const char *name)
 uint32_t gabbro_kern(void);
 uint32_t gabbro_kern(void)
 {
-    return ich()->nr;
+    return metall_kern_nr();
 }
 
 /* A fixed IPI to one core (by runtime core number). IF = 0 around the two
@@ -636,7 +369,7 @@ void metall_ipi_fest(uint32_t kern_nr, uint32_t vektor)
         return;
     }
     uint64_t f = ia_aus();
-    ipi(kerne[kern_nr].apic_id, 0x4000u | vektor);
+    metall_ipi_senden(metall_kern_apic(kern_nr), 0x4000u | vektor);
     ia_her(f);
 }
 
@@ -649,7 +382,7 @@ void metall_ipi_nmi(uint32_t kern_nr)
         return;
     }
     uint64_t f = ia_aus();
-    ipi(kerne[kern_nr].apic_id, 0x4400u);
+    metall_ipi_senden(metall_kern_apic(kern_nr), 0x4400u);
     ia_her(f);
 }
 
@@ -751,13 +484,13 @@ static uint32_t ap_nr;
 static __attribute__((noreturn)) void metall_ap(void);
 static __attribute__((noreturn)) void metall_ap(void)
 {
-    kern_setze(ap_nr);
+    metall_kern_setze(ap_nr);
     metall_idt_lade();
     lapic_an();
-    kerne[ap_nr].apic_id = lapic_lies(LAPIC_ID) >> 24;
+    metall_kern_apic_setze(ap_nr, lapic_lies(LAPIC_ID) >> 24);
     takt_an();
     atomic_store_explicit(&ap_angekommen, 1u, memory_order_release);
-    kern_schleife();
+    metall_kern_schleife();
 }
 
 #define TRAMP 0x8000u
@@ -769,21 +502,21 @@ static void aps_starten(void)
     memcpy(phys(TRAMP), tramp_anfang, (unsigned long)(tramp_ende - tramp_anfang));
     for (uint32_t i = 0; i < n_apic; i++) {
         uint32_t id = apic_ids[i];
-        uint32_t nr = atomic_load_explicit(&n_kerne, memory_order_relaxed);
+        uint32_t nr = metall_kerne();
         if (id == selbst || nr >= KERNE_MAX || nr >= kerne_grenze()) {
             continue;
         }
         ap_nr = nr;
         *TRAMP_WORT(tramp_cr3) = (uint64_t)pml4;
-        *TRAMP_WORT(tramp_stapel) = (uint64_t)&kern_stapel[nr][KERN_STAPEL];
+        *TRAMP_WORT(tramp_stapel) = (uint64_t)metall_kern_stapel_oben(nr);
         *TRAMP_WORT(tramp_ziel) = (uint64_t)metall_ap;
         atomic_store_explicit(&ap_angekommen, 0u, memory_order_release);
-        ipi(id, 0x4500u);                 /* INIT, assert */
+        metall_ipi_senden(id, 0x4500u);                 /* INIT, assert */
         io_warte(10000);
-        ipi(id, 0x4600u | (TRAMP >> 12)); /* STARTUP, vector 0x08 */
+        metall_ipi_senden(id, 0x4600u | (TRAMP >> 12)); /* STARTUP, vector 0x08 */
         io_warte(200);
         if (!atomic_load_explicit(&ap_angekommen, memory_order_acquire)) {
-            ipi(id, 0x4600u | (TRAMP >> 12));
+            metall_ipi_senden(id, 0x4600u | (TRAMP >> 12));
         }
         for (uint32_t w = 0; w < 1000000u; w++) {
             if (atomic_load_explicit(&ap_angekommen, memory_order_acquire)) {
@@ -792,7 +525,7 @@ static void aps_starten(void)
             io_warte(1);
         }
         if (atomic_load_explicit(&ap_angekommen, memory_order_acquire)) {
-            atomic_store_explicit(&n_kerne, nr + 1u, memory_order_release);
+            metall_kern_angekommen(nr + 1u);
         } else {
             schreibe_roh("METALL: core with APIC id ");
             zahl_roh(id);
@@ -817,12 +550,12 @@ __attribute__((noreturn)) void metall_bsp(void)
     seriell_init();
     outb(0x21, 0xFF);                     /* mask both 8259s */
     outb(0xA1, 0xFF);
-    kern_setze(0);
+    metall_kern_setze(0);
     metall_idt_bau();
     metall_idt_lade();
     madt_lies();
     lapic_an();
-    kerne[0].apic_id = lapic_lies(LAPIC_ID) >> 24;
+    metall_kern_apic_setze(0, lapic_lies(LAPIC_ID) >> 24);
     aps_starten();
     schreibe_roh("METALL-KERNE ");
     zahl_roh(metall_kerne());
@@ -830,9 +563,9 @@ __attribute__((noreturn)) void metall_bsp(void)
     /* The driver's thread starts on core 0; its roots go round robin from
      * core 1, so with more than one core the declared starts run on other
      * cores than their starter. */
-    if (faden_anlegen(haupt_huelle, &haupt_stapel[sizeof(haupt_stapel)], &haupt_wort, 0) != 0) {
+    if (metall_faden_anlegen(haupt_huelle, &haupt_stapel[sizeof(haupt_stapel)], &haupt_wort, 0) != 0) {
         metall_ende(3);
     }
     takt_an();
-    kern_schleife();
+    metall_kern_schleife();
 }

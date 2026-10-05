@@ -1,8 +1,8 @@
 # C3 -- what the bare-metal runtime still needs before it can be Gabbro
 
 *Slice 2 (session 14, same day) took the Gabbro-facing locks and rcu read sides out of
-`metall.h`, slice 3 the IDT out of `kern.c`: **1630 lines, 4 files** (`kern.c` 838, `metall.h`
-237). The rest of this map stands.*
+`metall.h`, slice 3 the IDT out of `kern.c`, slice 4 the thread runtime (wall C's software
+half): **1377 lines, 4 files** (`kern.c` 571, `metall.h` 251). The rest of this map stands.*
 
 *C-free lane, session 13, 2026-10-05. A map, not a result: every line of handwritten C/asm the
 bare-metal image still links (`instrumente/zaehle-c.py`: **1879 lines, 4 files** -- `kern.c` 952,
@@ -29,7 +29,7 @@ a decision.*
 | `metall_ende` (report + `isa-debug-exit` + `cli; hlt`) | 20 | kern.c | wall A; a `-> never` Gabbro function after it |
 | exceptions report + IDT (`idt_setze`, `idt_bau`, `idt_lade`, `metall_idt_setze*`) | ~~90~~ 15 | kern.c | **IDT DONE in slice 3 (2026-10-05)**: the generated `<unit>.metall.idt.c`, template `idt.metall` (`SchablonenMetallIdt.lean`: the gate encoding, the error-code list, the runtime's vectors kept and every stub on a vector of its kind). Left: the exception REPORT (`metall_ausnahme`, behind wall A's serial port) |
 | LAPIC (timer, EOI, IPIs, `ipi`, `icr_warte`, `metall_ipi_*`) | 80 | kern.c | wall A (`mmio` at `0xFEE00000`) |
-| cores, threads, scheduler, preemption, join, idle | 260 | kern.c | wall C |
+| cores, threads, scheduler, preemption, join, idle | ~~260~~ 0 | ~~kern.c~~ | **DONE in slice 4 (2026-10-05)**: the generated `<unit>.metall.faden.c`, template `faden.metall` (`SchablonenMetallFaden.lean`: the linked run queue refines a FIFO list, the loop is round robin, the first frame, the placement, the join). Left of wall C: the switch `metall_schalte` (start.S, wall D) and the timer that preempts (LAPIC, wall A) |
 | ACPI / MADT | 90 | kern.c | wall B |
 | SMP bring-up (INIT-SIPI-SIPI, AP entry) | 70 | kern.c | wall A (ICR) + wall D (the trampoline it copies) |
 | BSP main (`metall_bsp`, the order of the above) | 40 | kern.c | Gabbro's `boot` form (`bootdecl`: steps, then dispatch) once the steps exist |

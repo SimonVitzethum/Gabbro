@@ -604,7 +604,10 @@ fn die_lebende_vertrauensflaeche_ist_gebucht() {
     // **28 -> 29 on 2026-10-05 (C-free lane, C3 slice 3):** `idt.metall`, the bare-metal
     // image's interrupt descriptor table as generated text, entered and proved in one commit
     // (`SchablonenMetallIdt.lean`).
-    assert_eq!(bewiesen(), 29);
+    // **29 -> 30 on 2026-10-05 (C-free lane, C3 slice 4):** `faden.metall`, the bare-metal
+    // thread runtime as generated text, entered and proved in one commit
+    // (`SchablonenMetallFaden.lean`).
+    assert_eq!(bewiesen(), 30);
 
     // **Und die Zustaende muessen sich addieren** -- sonst fuehrt jemand einen vierten ein,
     // und die beiden Zahlen sagen ploetzlich nichts mehr ueber dieselbe Menge.

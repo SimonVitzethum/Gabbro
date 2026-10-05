@@ -175,6 +175,7 @@ pub const RATSCHE: &[&str] = &[
     "sperre.maskiert",
     "rcu.metall",
     "idt.metall",
+    "faden.metall",
 ];
 
 /// **Die Liste.** Jeder Eintrag ist eine Beweispflicht, die der Erzeuger schuldet — einmal,
@@ -724,6 +725,46 @@ pub const SCHABLONEN: &[Schablone] = &[
         fundstelle: "grammatik/Grammatik/SchablonenMetallIdt.lean; crates/gabbro-cli/src/treiber.rs \
                      (`METALL_IDT`); instrumente/pruefe-metall.sh (metall57, metall59, metall163-165, \
                      165-gift)",
+    },
+    // **Entered 2026-10-05 by the C-free lane (C3 slice 4, wall C's first half), PROVED in the
+    // same commit**: the bare-metal thread runtime, until then the section "Cores and threads"
+    // of `laufzeit/metall/kern.c`.
+    Schablone {
+        name: "faden.metall",
+        haengt_an: &["sperre.metall"],
+        konstrukt: "concurrent { … } and `start { … }` in a unit built for the bare-metal image \
+                    (the generated `<unit>.metall.faden.c`, `treiber.rs::METALL_FADEN`: \
+                    `gabbro_faden_start`, `gabbro_faden_warte`, the per-core run queues and \
+                    scheduler loop, `metall_abgeben`, `metall_takt`)",
+        pflicht: "Per core a FIFO run queue (a linked list with head and tail under the core's \
+                  queue lock), a scheduler loop that runs the head and re-queues it at the tail \
+                  or buries it, the first frame of a thread that has never run, a start that \
+                  places round robin over the cores that checked in and sets the join word \
+                  BEFORE the thread is queued, and a join that re-reads the word until zero \
+                  (stored from the core's own stack after the thread left its stack). \
+                  **Machine-checked as an ABSTRACT CORE** (`Grammatik/SchablonenMetallFaden.lean`): \
+                  the linked queue refines a list -- append behind the tail keeping it \
+                  duplicate-free, take the head (`haenge_kette`, `nimm_kette`, `nimm_leer`, \
+                  `schlange_fifo`); a thread at position `p` runs after `p` passes of the loop \
+                  (`schleife_fair`); the frame popped by `metall_schalte` gives zero registers, \
+                  the reset MXCSR and x87 control word, the entry as return address and the SysV \
+                  entry alignment (`rahmen_korrekt`); the placement names a core that checked in \
+                  (`platz_im_bereich`); a join that begins after the start and reads zero saw the \
+                  whole run and the burial (`warte_korrekt`), which fails without the early store \
+                  (`warte_ohne_vorbelegung_waere_falsch`); witnesses `schlange_zeuge`, \
+                  `schleife_zeuge`, `faden_metall_zeuge`. **NOT proved:** the switch itself \
+                  (`metall_schalte`, `start.S`, wall D), the C11 orderings of the join word, \
+                  and preemption's timing (the LAPIC timer, kern.c).",
+        stand: Stand::Bewiesen,
+        voraussetzungen: &[
+            Voraussetzung { was: "the two queue operations of one core run one at a time", durch: Some("the template itself: both take the core's `schlange_sperre` (the runtime-internal ticket lock of `CTicket.lean`, `ticket_ausschluss`) with IF = 0"), braeuchte: None },
+            Voraussetzung { was: "a thread is queued only while it is in no queue", durch: Some("the template itself: a thread is queued by its start (a slot claimed FREI under `faeden_sperre`) or by the loop of the one core it lives on, after it was taken from that queue -- a thread never changes core"), braeuchte: None },
+            Voraussetzung { was: "the stack top handed to a start is 16-aligned and the stack the unit's own", durch: Some("the template's own refusal (`EINVAL` for an unaligned or null top), and the starters: the metal driver's `stapel_<i>` and the emitter's `gabbro_stapel_<lo>_<i>` are `aligned(16)` file-scope arrays of 64 KiB"), braeuchte: None },
+            Voraussetzung { was: "at least one core has checked in before any start", durch: Some("the bring-up (`kern.c`, `metall_bsp`): the count starts at 1 (the BSP) and only grows"), braeuchte: None },
+        ],
+        fundstelle: "grammatik/Grammatik/SchablonenMetallFaden.lean; crates/gabbro-cli/src/treiber.rs \
+                     (`METALL_FADEN`); instrumente/pruefe-metall.sh (every image: 4 cores, \
+                     METALL-VERTEILUNG; stress, staffel, koop)",
     },
     // **Entered 2026-09-30 by the C-free lane (OFFEN O38), PROVED**: the lowering of the
     // gate+guard+`child` triple, which lane 260 wrote as a jump into the parent's function.

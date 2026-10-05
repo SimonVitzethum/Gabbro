@@ -37,7 +37,7 @@
 #                  missing. A foreign name that is a C-library or POSIX function is the
 #                  program binding to a hosted library by its own choice: HOSTED-ONLY (b).
 #        anything else: UNCLASSIFIED -- a finding.
-#   3. link: `ld -nostdlib -static -T metall.ld` over start.o kern.o speicher.o idt.o, the driver and
+#   3. link: `ld -nostdlib -static -T metall.ld` over start.o kern.o speicher.o idt.o faden.o, the driver and
 #      the foreign stubs. `ld` refuses an undefined symbol, so a linked image IS the proof.
 #
 # HOSTED-ONLY, NAMED, NEVER SKIPPED. A unit that links freestanding can still be a program
@@ -94,6 +94,7 @@ mkdir -p "$RT"
 G runtime metal-include "$RT/include" || { echo "  FREESTANDING: gabbro runtime metal-include failed"; exit 1; }
 G runtime metal-memory > "$RT/speicher.c" || exit 1
 G runtime metal-idt > "$RT/idt.c" || exit 1
+G runtime metal-threads > "$RT/faden.c" || exit 1
 G runtime metal-arena > "$RT/arena.c" || exit 1
 if [ ! -f "$GCCINC/stdint.h" ] || [ ! -f "$GCCINC/stdatomic.h" ]; then
     echo "  FREESTANDING: NOT RUN -- the compiler's own header directory ($GCCINC) lacks"
@@ -115,10 +116,11 @@ mkdir -p "$ARB/rt"
 if ! { cc $CFR -c "$M/kern.c" -o "$ARB/rt/kern.o" \
        && cc $CFR -c "$RT/speicher.c" -o "$ARB/rt/speicher.o" \
        && cc $CFR -I"$M" -c "$RT/idt.c" -o "$ARB/rt/idt.o" \
+       && cc $CFR -I"$M" -c "$RT/faden.c" -o "$ARB/rt/faden.o" \
        && cc -fno-pie -c "$M/start.S" -o "$ARB/rt/start.o"; } 2> "$ARB/rt/cc.err"; then
     echo "  RUNTIME DOES NOT BUILD:"; head -20 "$ARB/rt/cc.err"; exit 1
 fi
-nm --defined-only "$ARB/rt/kern.o" "$ARB/rt/speicher.o" "$ARB/rt/idt.o" "$ARB/rt/start.o" 2>/dev/null \
+nm --defined-only "$ARB/rt/kern.o" "$ARB/rt/speicher.o" "$ARB/rt/idt.o" "$ARB/rt/faden.o" "$ARB/rt/start.o" 2>/dev/null \
     | awk 'NF == 3 && $2 ~ /[TDBR]/ {print $3}' | sort -u > "$ARB/rt/definiert"
 
 # -- Sprechprobe: can this stage FALL? Two planted units, one per question it asks. -------
@@ -137,7 +139,7 @@ printf '#include "metall.h"\nint puts(const char *s);\nint gabbro_metall_haupt(v
 # shellcheck disable=SC2086
 cc $CF -I"$M" -c "$ARB/sprech/libc.c" -o "$ARB/sprech/libc.o" || exit 2
 if ld -nostdlib -static -no-pie -T "$M/metall.ld" -z max-page-size=0x1000 -o "$ARB/sprech/k.elf" \
-        "$ARB/rt/start.o" "$ARB/rt/kern.o" "$ARB/rt/speicher.o" "$ARB/rt/idt.o" "$ARB/sprech/libc.o" 2> /dev/null; then
+        "$ARB/rt/start.o" "$ARB/rt/kern.o" "$ARB/rt/speicher.o" "$ARB/rt/idt.o" "$ARB/rt/faden.o" "$ARB/sprech/libc.o" 2> /dev/null; then
     echo "  Sprechprobe 2: GESCHEITERT -- a call to \`puts\` links; the link half measures nothing"
     exit 2
 fi
@@ -369,7 +371,7 @@ while IFS= read -r q; do
     if ! { cc $CF -I"$M" -I"$e" -c "$e/drv.c" -o "$e/drv.o" \
            && cc -fno-pie -c "$e/fremd.S" -o "$e/fremd.o" \
            && ld -nostdlib -static -no-pie -T "$M/metall.ld" -z max-page-size=0x1000 \
-                 -o "$e/k.elf" "$ARB/rt/start.o" "$ARB/rt/kern.o" "$ARB/rt/speicher.o" "$ARB/rt/idt.o" \
+                 -o "$e/k.elf" "$ARB/rt/start.o" "$ARB/rt/kern.o" "$ARB/rt/speicher.o" "$ARB/rt/idt.o" "$ARB/rt/faden.o" \
                  "$e/drv.o" "$e/fremd.o"; } 2> "$e/ld.err"; then
         echo "  DOES NOT LINK FREESTANDING: $d"
         grep -m4 -E 'error|Fehler|undefined|nicht definiert' "$e/ld.err" | sed 's/^/      /'

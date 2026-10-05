@@ -224,6 +224,20 @@ void metall_schreibe(const char *s);
 void metall_zahl(uint64_t v);
 uint32_t metall_kerne(void);        /* cores that checked in */
 uint32_t metall_kern_nr(void);      /* the calling thread's core */
+
+/* -- Between the bring-up (kern.c) and the generated thread runtime (`<unit>.metall.faden.c`,
+ * template `faden.metall`). The bring-up names a core (`%gs` base), records its APIC id, hands
+ * an AP its scheduler stack, counts it in, and enters the core's scheduler loop; the thread
+ * runtime wakes another core through the bring-up's IPI. */
+void metall_kern_setze(uint32_t nr);
+void metall_kern_apic_setze(uint32_t nr, uint32_t apic_id);
+uint32_t metall_kern_apic(uint32_t nr);
+void *metall_kern_stapel_oben(uint32_t nr);
+void metall_kern_angekommen(uint32_t n);
+uint64_t metall_kern_gelaufen(uint32_t nr);
+__attribute__((noreturn)) void metall_kern_schleife(void);
+int metall_faden_anlegen(void (*fn)(void), void *spitze, uint32_t *wort, uint32_t kern_nr);
+void metall_ipi_senden(uint32_t apic_id, uint32_t wort);
 __attribute__((noreturn)) void metall_ende(int code);
 
 /* -- The Gabbro-facing locks and rcu read sides: GENERATED text since the C-free lane's

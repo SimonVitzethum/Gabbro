@@ -531,6 +531,7 @@ metall_pruefe() {   # $1 = work dir
     "$GABBRO" runtime metal-memory > "$dir/erzeugt/speicher.c" \
         && "$GABBRO" runtime metal-arena > "$dir/erzeugt/arena.c" \
         && "$GABBRO" runtime metal-idt > "$dir/erzeugt/idt.c" \
+        && "$GABBRO" runtime metal-threads > "$dir/erzeugt/faden.c" \
         && "$GABBRO" runtime metal-include "$dir/erzeugt/include" \
         || { echo "HARNESS: bare metal FAILED -- the generated machine layer could not be written"; return 0; }
     n="$(metall_os_funde "$dir" | grep -c '' | tr -d ' ')"

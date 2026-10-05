@@ -348,6 +348,11 @@ generated driver, lock through the chain). Reviewers from 321.
       `gabbro runtime metal-idt`). `pruefe-os-bindung.sh`'s bare-metal OS-name scan now reads the
       generated machine layer too (it read only `laufzeit/metall/`, so every slice shrank what it
       measured).
+    - [x] Slice 4 (2026-10-05): the thread runtime ("Cores and threads" of `kern.c`: run queues,
+      scheduler loop, first frame, start, join) is the generated `<unit>.metall.faden.c`
+      (template `faden.metall`, `SchablonenMetallFaden.lean`; register 40 -> 41 entries, 29 -> 30
+      machine-checked; `gabbro runtime metal-threads`). Metal C0 1630 -> 1377 lines
+      (`kern.c` 838 -> 571).
     - [ ] The kernel proper: serial + report, IDT, LAPIC, ACPI/MADT, SMP bring-up, scheduler,
       context switch (`kern.c`), `start.S`, `eintritt_asm.h`, `metall.h`.
       Mapped in `messung/C3-WAENDE.md` (2026-10-05): walls A (a device at a fixed hardware
