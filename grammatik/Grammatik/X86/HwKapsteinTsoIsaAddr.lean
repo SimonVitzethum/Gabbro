@@ -93,6 +93,59 @@ theorem kap_isa_tso_klass (m m' : HwMaschine) (c : Nat)
     rw [he] at h
     cases h
 
+/-- Every ISA adapter step reaches through the projection: silent
+    steps reuse `.start`, stores use one TSO issue step. -/
+theorem kap_isa_tso (m m' : HwMaschine) (c : Nat)
+    (e : IsaEreignis)
+    (h : adapterIsa.schritt m c e = some m') :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  rcases kap_isa_tso_klass m m' c e h with
+    ⟨d, s', _, _, _, heq⟩ | ⟨a, v, w, _, heq, _, _⟩
+      | ⟨a, v, s', _, hissue, heq⟩
+  · rw [heq]; exact .start
+  · rw [heq]; exact .start
+  · rw [heq]
+    exact kapTso_schritt_erreichbar _ _
+      (.issue _ s' c a v hissue)
+
+/-! ## 2. Muldiv tag: every step is silent (register-only). -/
+
+/-- Every muldiv adapter step leaves the TSO projection unchanged: a
+    success re-embeds core data only (the accepted width step never
+    touches memory, `wdSchritt_speicher`); traps and refusals admit no
+    successor at all. The footprint is the accepted width step itself. -/
+theorem kap_muldiv_tso_still (m m' : HwMaschine) (c : Nat)
+    (d : WdDecodiert)
+    (h : adapterMulDivWidth.schritt m c d = some m') :
+    kapTso m' = kapTso m ∧ ∃ s' : Zustand,
+      wdSchritt d (projZustand m c) = .ok s'
+      ∧ m' = setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩ := by
+  unfold adapterMulDivWidth at h
+  simp only at h
+  cases hsch : wdSchritt d (projZustand m c) with
+  | ok s' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    exact ⟨kapTso_setKernVonFp m c _, s', rfl, rfl⟩
+  | hardwareHalt =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+  | misslungen =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
+/-- Every muldiv adapter step reaches through the projection (silently). -/
+theorem kap_muldiv_tso (m m' : HwMaschine) (c : Nat)
+    (d : WdDecodiert)
+    (h : adapterMulDivWidth.schritt m c d = some m') :
+    TSOErreichbar (kapTso m) (kapTso m') := by
+  have heq := (kap_muldiv_tso_still m m' c d h).1
+  rw [heq]
+  exact .start
+
 /- CUTS:
     Proved here so far: `kapTso_setKernVonZustand` (ISA register
     re-embedding is silent on the TSO projection) and the exact ISA
@@ -104,5 +157,8 @@ theorem kap_isa_tso_klass (m m' : HwMaschine) (c : Nat)
 
 #print axioms kapTso_setKernVonZustand
 #print axioms kap_isa_tso_klass
+#print axioms kap_isa_tso
+#print axioms kap_muldiv_tso_still
+#print axioms kap_muldiv_tso
 
 end Gabbro.Grammatik.X86
