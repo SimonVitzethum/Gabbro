@@ -1,49 +1,53 @@
 # MUSE-REPORT-1170: Independent exact re-review of author 1169 (Pipeline correctness over the multi-core TSO machine)
 
-CANDIDATE: 1169 c14c2ef2ded9b965f182ba64e62a5bed6ba7fcc9
+CANDIDATE: 1169 0c5f2ec6f4e45fdb424f535fc57c1f6ad7684252
 
 Clone: /home/simon/Dokumente/gabbro-muse/a1170, branch muse/1170 (re-verified this session via allowed git calls; toplevel and branch match the lane task, so did not STOP).
 Owns only: MUSE-REPORT-1170.md. No Lean file created or edited; no existing file touched.
-Pinned snapshot for this re-review: author 1169, head c14c2ef2ded9b965f182ba64e62a5bed6ba7fcc9, base 062b979a6271b7b3044ab06be3f3cde411a0d4f1, files MUSE-REPORT-1169.md, grammatik/Grammatik.lean, grammatik/Grammatik/X86/PipelineTso.lean, clean true. Review material was read inside this clone under .tmp/review/author-1169 (PATCH.diff, module copy, author report, owner task, build evidence). Nothing outside this directory was touched.
+Pinned snapshot for this re-review: author 1169, head 0c5f2ec6f4e45fdb424f535fc57c1f6ad7684252, base 062b979a6271b7b3044ab06be3f3cde411a0d4f1, files MUSE-REPORT-1169.md, grammatik/Grammatik.lean, grammatik/Grammatik/X86/PipelineTso.lean, clean true. Review material was read inside this clone under .tmp/review/author-1169 (PATCH.diff, module copy, author report, owner task, build evidence). Nothing outside this directory was touched.
 
 ## Relation to the previous decision
 
-The prior decision on the older head was a blocked REPAIR on purely apparatus grounds (no pinned diff text available then, every checklist item NOT CHECKED, zero content findings raised). That decision is now stale and superseded. The author delta between the older head and this head is report-only (review-response plus self-verification section in MUSE-REPORT-1169.md; commit message states no code change needed). This report is a full content review of the new head, not an approval of a stale snapshot.
+The previous ACCEPT on the prior head stands reviewed, not stale-approved: the author delta to this head is report-only. Evidence: the pre-commit `git diff --stat` in BUILD-EVIDENCE shows only MUSE-REPORT-1169.md changed (35 insertions, 1 deletion); the Lean files are byte-identical to the accepted state. The added report section is the integration-gate response (gate FAILED on resource grounds, nothing merged; attempted length-proof hunk recorded verbatim but reverted per the no-red-commit rule, so NOT in the tree). No changed proof is in the tree, and the recorded hunk will need a fresh review if ever re-applied. Every previous content finding was re-inspected against the new snapshot and carries over.
 
 ## Evidence inspected (all inside this clone)
 
-- PATCH.diff, 400 lines: exactly the 3 snapshotted files. Grammatik.lean delta is one appended import line for the new module. No other existing file touched; reserved optimiser files untouched.
-- PipelineTso.lean, all 277 lines read: 1 definition (pipeHw) plus 21 theorems with closing print-axioms lines and a CUTS block.
-- MUSE-REPORT-1169.md (author report with task, theorem list, verification log, open-items, scoping note on word/byte agreement vs whole-memory equality).
-- BUILD-EVIDENCE.json: staged lean-probe runs ending at 0 errors, full lean-bau 608 jobs green on the final tree, plus the two commit records.
-- OWNER-TASK.md (author task text, unchanged requirements).
+- PATCH.diff: exactly the 3 snapshotted files. Grammatik.lean delta is one appended import line for the new module. No other existing file touched; reserved optimiser files untouched.
+- PipelineTso.lean copy, re-checked: banned-token scan finds nothing (no sorry, admit, axiom declarations, native_decide, unsafe, split_ifs, discarded-premise patterns; the decide-based probe_tear is intact and no length-proof hunk is present).
+- MUSE-REPORT-1169.md including the new gate-response section.
+- BUILD-EVIDENCE.json in full: development probes with intermediate errors honestly shown, final module probe 0 errors with standard axioms, one full lean-bau 608 green, then two aggregator-only failures (exit 134, bad_alloc and failed-to-create-thread at step 607/608 with zero Lean errors), a confirming probe 0 errors, and the report-only commit for this head.
+- OWNER-TASK.md (requirements unchanged).
 
-## Checklist findings
+## Checklist findings (re-verified on the new head)
 
-- Banned constructs: clean. Grep over the snapshotted module for sorry, admit, axiom declarations, native_decide, unsafe, split_ifs, discarded-premise patterns finds only the 21 print-axioms lines (substring hits on the word axioms). No Prop-typed premises; every theorem premise is a specific proposition.
-- Axioms: standard only. Build evidence lists every theorem at no axioms, propext, or propext plus Quot.sound. No Classical.choice needed, no extras.
-- Scope discipline: exactly the 3 owned files; the one existing-file edit is the single import line. Nothing else in the tree is modified.
-- Premise use: every theorem-level premise is consumed by its proof. Underscore-prefixed names (_hff, _hk0, _hk8) appear only on components of destructured auxiliary-lemma outputs, never as discarded theorem premises; _hbufN from the same tuple is used in a rewrite. No intro-underscore or have-underscore discards.
-- Lifted, not copied: the module is thin over accepted results. Spot-verified present in this tree: load_nach_issue, issue_kein_speicher, hwGibAus_kein_speicher, hwWortAusgabe_puffer, hwWortAusgabe_kein_speicher, wort_gruppe_liest_zurueck, drain_installiert_aux, hwPilot_weiter, read64_nach_write64, writeBytesN_hit, hwLock_verweigert, kein_lock_schritt, hwTeilwort_keine_gruppe, hwGruppe_verweigert_bei_fremdeintrag, the hwWit witness family (anfang_null, weiterleitung, fremd_alt, spuelung_aendert_speicher, fremd_neu, Start, Adr, Mem, Wort, Overlap, LoadEigen, LoadFremd, NachFlush, FremdNachFlush, Overlap_keine_gruppe), plus canonical defs (tsoAnsicht, projZustand, setKernVonFp, FremdFrei, WortGruppe, DrainSpur, lesbar8, schreibbar8, issueByte, loadByte, hwWortAusgabe, hwLockAnfrage, SperrBefehl with xadd64, wortEintraege_laenge). The three substantial proofs (drain_bytes, write64_bytes, write64_trifft_drain) compose these with explicit byte-level reasoning; no second interpreter, no new IR, no duplicated model.
-- Refusals genuine: four refusal theorems over LOCK, tearing, foreign footprint, and LOCK steps, each a direct application of an accepted refusal lemma. Three poison probes: probe_lock closes by rfl on a concrete xadd64 request (valid since hwLockAnfrage is a defined refusal in this model stage), probe_tear closes by decide on a 2-of-8 buffer, probe_overlap applies the accepted overlap no-group lemma.
-- Witness non-degenerate: pipeTso_zeuge is a five-part conjunction over the accepted two-core witness run — initial byte 0, own-core forwarding of 42, foreign-core stale 0, post-drain 42 in actual shared memory observed from both cores. Memory-changing, two-core, joint premises.
-- Silicon: no new hardware facts stated. Encodings, word shape, and drain equations all come from the accepted canonical definitions; the file adds no opcode, flag, or ordering claim of its own.
-- CUTS honest, claim matches proof: the joint theorem claims word plus per-footprint-byte agreement between the SC store and the exclusion-checked grouped drain, explicitly not whole-memory equality. The CUTS block disclaims a full pipeline_correct lift, whole-word atomicity beyond grouped drains, LOCK paths, shared-atomic contracts, per-access W/GX simulation, fairness, progress, timing, budget, interrupts, devices, and anything beyond the pilot ISA and accepted definitions. No hardware-correspondence or W/GX overclaim. The register-path embedding excludes memory-changing steps by its hmem premise, as documented.
+- Banned constructs: clean as above. No Prop-typed premises; every theorem premise is a specific proposition.
+- Axioms: standard only (no axioms, propext, or propext plus Quot.sound per the recorded probe output).
+- Scope discipline: exactly the 3 owned files; the one existing-file edit is the single import line.
+- Premise use: every theorem-level premise is consumed; underscore-prefixed names appear only on destructured auxiliary-lemma outputs, never as discarded theorem premises.
+- Lifted, not copied: thin wrappers over accepted results, previously spot-verified present in this tree (load_nach_issue, issue_kein_speicher, hwGibAus_kein_speicher, hwWortAusgabe_puffer, hwWortAusgabe_kein_speicher, wort_gruppe_liest_zurueck, drain_installiert_aux, hwPilot_weiter, read64_nach_write64, writeBytesN_hit, hwLock_verweigert, kein_lock_schritt, hwTeilwort_keine_gruppe, hwGruppe_verweigert_bei_fremdeintrag, the hwWit witness family, canonical defs). No second interpreter, no new IR, no duplicated model.
+- Refusals genuine: four refusal theorems plus three deciding probes (rfl on a concrete xadd64 request against the defined LOCK refusal, decide on a 2-of-8 buffer, accepted overlap no-group lemma).
+- Witness non-degenerate: five-part conjunction over the accepted two-core run (initial 0, own-core forwarding of 42, foreign stale 0, post-drain 42 in actual shared memory from both cores). Memory-changing and joint.
+- Silicon: no new hardware facts; everything reused from accepted canonical definitions.
+- CUTS honest, claim matches proof: word plus per-footprint-byte agreement between the SC store and the exclusion-checked grouped drain, explicitly not whole-memory equality; full pipeline_correct lift, whole-word atomicity beyond grouped drains, LOCK paths, shared-atomic contracts, per-access W/GX simulation, fairness, progress, timing, budget, interrupts, devices, and anything beyond pilot ISA disclaimed. No hardware-correspondence or W/GX overclaim.
+
+## Integration-gate status (new since last review, stated plainly)
+
+The integration gate FAILED for this head on environmental resource grounds: the final Grammatik aggregator step died twice locally (bad_alloc, failed-to-create-thread, exit 134) with zero Lean errors, and nothing was merged. The module itself compiles (probe 0 errors, all 21 print-axioms lines emit). This matches the documented apparatus failure mode under concurrent-lane memory pressure. My content verdict below is not a claim that integration or publication passed; the merger must still clear a serial low-contention build. Downgrading content to REPAIR over an evidenced resource failure with no proof defect would be dishonest in the other direction, so the substantive content verdict is preserved.
 
 ## Decision and reasons
 
 VERDICT: ACCEPT
 
-The new head meets the exact-review bar on every checklist item above: clean banned-token scan, standard axioms, exact 3-file scope with a one-line import, all premises used, accepted evaluator lifted rather than copied, refusals that genuinely refuse with deciding probes, a non-degenerate two-core memory-changing witness, no new silicon claims, and CUTS that state precisely what is and is not proved. The prior apparatus-only objection is resolved by the in-clone snapshot material reviewed here. No weakened guarantee and no desired-correctness premise was found.
+The new head meets the exact-review bar: clean scans, standard axioms, exact 3-file scope with a one-line import, all premises used, accepted evaluator lifted rather than copied, refusals that genuinely refuse with deciding probes, a non-degenerate two-core memory-changing witness, no new silicon claims, and CUTS that state precisely what is and is not proved. The Lean content is identical to the previously accepted state; the only delta is the honest gate-failure report. No weakened guarantee and no desired-correctness premise was found.
 
 ## Build status
 
-- This reviewer clone ./lean-bau: Build completed successfully (607 jobs), exit 0 with 0 error lines (run 2026-10-05; tree is base plus reviewer reports only, no author Lean code, hence 607 vs the author tree 608).
-- Author evidence for the reviewed head: final ./lean-probe 0 errors with standard axioms; ./lean-bau 608 jobs green. The last full build ran on the exact Lean tree the pinned head contains (only the author report was committed afterwards).
+- This reviewer clone ./lean-bau: Build completed successfully (607 jobs), exit 0 with 0 error lines (run 2026-10-05; tree is base plus reviewer reports only, hence 607 vs the author tree 608).
+- Author evidence for the reviewed head: module ./lean-probe 0 errors with standard axioms; one full ./lean-bau 608 green on this exact Lean tree; two later aggregator-only resource failures (exit 134, zero Lean errors) leaving nothing merged.
 - New definitions or theorems by lane 1170: none (report-only review). Reviewed author theorems are listed in the checklist above.
 
 ## Task remarks
 
-Nothing in the author task appears wrong. The author scoping note is sound: post-drain agreement is word plus per-byte over the footprint rather than whole-memory equality, which would be false in general.
+Nothing in the author task appears wrong. The word plus per-byte scoping note remains sound.
 
-CUTS of this review: this report re-verifies the author claims by reading the pinned diff text and cross-checking every reused name against the accepted tree in this clone; it does not re-execute the author build (relying on the recorded 608-job green run) and proves nothing new about the pipeline itself.
+CUTS of this review: content re-verified against the new pinned snapshot by reading the diff text and re-running the scans; the author build was not re-executed here (recorded runs relied upon as quoted); nothing new about the pipeline itself is proved by this report.
