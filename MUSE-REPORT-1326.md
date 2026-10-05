@@ -1,6 +1,6 @@
 # MUSE-REPORT-1326: exact review of candidate 1325 (TSO projection, locked + direct-memory tags)
 
-CANDIDATE: 1325, pinned head `38ceb6efe3e261ee33460e9dbcb5492a4ad34b19`
+CANDIDATE: 1325 38ceb6efe3e261ee33460e9dbcb5492a4ad34b19
 (base `10fb97f11ec29c426cf09f34b72433566a758c0b`, from `.tmp/review/SNAPSHOT.json`).
 Reviewed the delivered FILES only (never the author clone or its objects):
 `.tmp/review/author-1325/PATCH.diff`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`,
@@ -94,4 +94,6 @@ Reviewed the delivered FILES only (never the author clone or its objects):
   executed literally (shell file writes blocked); probing the delivered copy with
   this clone's toolchain/env is equivalent and was done.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
