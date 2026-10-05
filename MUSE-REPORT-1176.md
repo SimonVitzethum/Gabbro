@@ -1,77 +1,121 @@
 # MUSE-REPORT-1176: Exact review of lane 1175 (PipelineInfinite)
 
 CANDIDATE: 1175 d018126b4e5a0253f1810e75eaba4a80eeb8ed47
-VERDICT: REPAIR
+VERDICT: ACCEPT
 
-Scope note on the verdict line above (read before acting on it): this REPAIR is
-addressed to the review apparatus, NOT to the author's proofs. No author file was
-observable from this lane (details below), so there is no finding for or against
-any theorem of the candidate, and nothing here approves any claim. The candidate
-is NOT accepted on this review; the review itself must be re-run with candidate
-access. Do not route this to the author as theorem defects.
+This report supersedes all previous lane-1176 rounds on older snapshots. Those
+rounds recorded non-acceptance addressed to the review apparatus because no
+candidate content was observable; per the corrected delivery (candidate as
+files under `.tmp/review/author-1175/`) a full substantive review was now
+performed, and no concrete defect in the candidate was found.
 
-## Substantive position (re-checked against the newest snapshot)
+## Reviewed material
 
-Lane 1176 (reviewer, clone /home/simon/Dokumente/gabbro-muse/a1176, branch
-muse/1176) could not perform the exact review. The NEWEST pinned identity from
-`.tmp/review/SNAPSHOT.json` is author 1175, HEAD
-d018126b4e5a0253f1810e75eaba4a80eeb8ed47, base
-062b979a6271b7b3044ab06be3f3cde411a0d4f1, files MUSE-REPORT-1175.md,
-grammatik/Grammatik.lean, grammatik/Grammatik/X86/PipelineInfinite.lean. This
-report supersedes all previous lane-1176 verdicts on older snapshots; nothing
-from those rounds is reused as a claim about the new candidate, since no
-candidate was ever inspected. The verdict above records non-acceptance with the
-precise cause, exactly as found -- it approves nothing and invents no author
-defect.
+- `.tmp/review/SNAPSHOT.json`: author 1175, HEAD
+  d018126b4e5a0253f1810e75eaba4a80eeb8ed47, base
+  062b979a6271b7b3044ab06be3f3cde411a0d4f1, files MUSE-REPORT-1175.md,
+  grammatik/Grammatik.lean, grammatik/Grammatik/X86/PipelineInfinite.lean.
+- `.tmp/review/author-1175/PATCH.diff`: the exact base...head diff (new
+  661-line `PipelineInfinite.lean`; `Grammatik.lean` delta is exactly one
+  appended `import Grammatik.X86.PipelineInfinite` line; report text).
+- Delivered file copies of the same three files; delivered `.lean` is 661
+  lines with head/tail identical to the PATCH text.
+- `OWNER-TASK.md` (author task) and `BUILD-EVIDENCE.json` (author probe/build
+  log, including intermediate red states and the final green runs).
+- Packaging note (apparatus, not a candidate defect): the delivered report
+  copy and the PATCH-embedded report end at the 5d9d800a response section;
+  per BUILD-EVIDENCE the pinned d018126b commit is report-only
+  (`git add MUSE-REPORT-1175.md`), and the `.lean` file is unchanged since
+  5df87940. The proof content reviewed here is therefore identical to the
+  pinned HEAD's proof content.
 
-## Previous findings reinspected
+## Checklist results (all clean)
 
-Every prior round ended on the same single finding: candidate content
-unreachable from this lane, hence no review content. That finding persists
-unchanged against the newest snapshot (see B1) and is still not a claim about
-author proofs. No author defect has ever been asserted by lane 1176. Whatever the
-author repaired between snapshots -- including any changed proofs -- could not
-be inspected from this lane, so this round neither confirms nor disputes the
-repairs.
+- Banned constructs: grep over the delivered `.lean` for
+  sorry/admit/native_decide/sorryAx/unsafe/split_ifs/by_contra/`intro _`/
+  `have _ :=`/leading-`axiom` finds nothing (hits elsewhere in the delivery
+  are prose in the reports/task and one intermediate author build log, all
+  superseded by the final green runs).
+- Axioms: file ends with `#print axioms` for all 16 new theorems/lemmas;
+  author evidence lists only standard axioms (`propext`, `Quot.sound`, and
+  `Classical.choice` where family witness lemmas are used). No `axiom`
+  declaration in the file. Proofs use only `simp`/`rw`/`omega`/`decide`/
+  `cases`/`obtain`/`by_cases`/`rfl`/`exact`/`refine`/`subst`/`rcases`.
+- Existing files untouched except the single import line (PATCH-verified);
+  `OptimizationRules.lean`/`OptimizationWitnesses.lean` untouched; no second
+  IR, no second source interpreter, no per-program rule.
+- Accepted evaluator lifted, not copied: the only new semantics are
+  `BudgetAusgang`/`laufBudget` (file lines 45-58) over the accepted
+  `byteschritt`/`laufBytes`/`ByteAusgang` (`Byteschritt.lean`); correspondence
+  goes through accepted `senkBlock_korrektC`, `validate_sound`, `Entspricht`,
+  `CodeAt`, `WorldRep`, `LayoutSep`, `EnvRepr`, `ByteRahmen`,
+  `laufBytes_rahmen`, `codeAt_lauf`, `execStmt_ite`,
+  `execBlock_cons_stmtOk/Grund`, `constInt?_sound`, `optimise_sound` and the
+  `pw*` witness data. Every cross-file name was resolved in this clone with a
+  matching signature and compatible use (spot-verified call shapes: the
+  `senkBlock_korrektC` application with `[] []` contexts, the
+  `validate_sound` 6-pattern, `codeAt_lauf`/`laufBytes_rahmen` applications,
+  the `sizeOf_spec` simp set mirroring `Pipeline.lean`, the
+  `execBlock_cons_*` rewrites).
+- Every premise used: each proof read; all hypotheses consumed, no discarded
+  premises; `ρ`/`σ` stay concrete environments at actual values, and the
+  generic theorems quantify exactly as the family theorems they build on.
+  No conclusion restates a premise; no unsupported desired-correctness
+  premise; no weakened guarantee.
+- Refusals are genuine: `laufBudget_stopp_stabil` (file lines 171-199) proves
+  a stop is sticky under more fuel; `erste_stop_ordnung` (264-303) proves no
+  stop before the corresponding end. Probes compute: `gift_stopp_ist_stopp`
+  (tampered `pwMemFalsch` stops the budgeted runner at step zero),
+  `gift_fertig_laueft` (honest 5-step prefix runs clean),
+  `gift_budget_kein_stopp_im_code` (honest 12-step run finishes at rip 4178).
+- Witnesses joint and non-degenerate: `praefix_sicher_zeuge`,
+  `erste_stop_ordnung_zeuge`, `budget_unabhaengig_zeuge` (file lines 455-558)
+  instantiate all premises jointly on `pwSrc` (two slots written; source run
+  changes memory 7 -> 35 and 9 -> 6; target 12-step computed run to the code
+  end with a real stop, via `laufBytes12_stop`). Machine-level lemmas quantify
+  only over `Nat`/`Zustand`, so no further companions are owed.
+- Silicon: the file states no hardware facts (no encodings, extension or flag
+  claims); the machine is reused unchanged. Single-core sequential model, no
+  concurrency or weak-memory claim.
+- CUTS honest and narrow (file lines 600-642): safety proved; termination,
+  past-the-end stops (`k > n`), per-step source correspondence,
+  progress/fairness, and all inherited fragment limits explicitly not claimed.
+  The author's plainly-stated deviations from the task text (no second
+  loaded-image closing theorem for lack of a witnessable `Bild`; prefixes
+  proved safe rather than source-corresponding by design decision 594) are
+  sound scope decisions, not hidden weakenings.
 
-## What was checked (this round)
+## Theorem inventory (delivered file lines)
 
-1. Task files re-read: `.tmp/LANE.md` (HARD RULES kept),
-   `.tmp/review/SNAPSHOT.json` (newest values as quoted above), prior report.
-2. Searched this clone's worktree for the candidate again: the new Lean file and
-   the author report are still absent; tree-wide grep for PipelineInfinite still
-   finds zero files.
-3. Shell still unavailable: the `bash` tool rejects calls in this session
-   (read-only git probes included), so the pinned commit objects cannot be
-   inspected and `./lean-bau` cannot be run. Commit of this update is attempted;
-   its outcome is recorded in the commit log / follow-up message.
-4. Only the owned file is touched: this report (plus the gitignored
-   commit-message scratch file the commit wrapper requires). No Lean file added
-   or modified.
+`BudgetAusgang` 45-48; `laufBudget` 50-58; `laufBytes_praefix_erfolg` 67-85;
+`laufBytes_verweigert_plus` 88-104; `laufBudget_fertig` 112-138;
+`laufBudget_stopp` 141-167; `laufBudget_stopp_stabil` 171-199;
+`laufBudget_fertig_von` 203-219; `praefix_sicher` 235-258;
+`erste_stop_ordnung` 264-303; `budget_unabhaengig` 313-442 (with
+`termination_by`/`decreasing_by`); three `_zeuge` companions plus
+`laufBytes12_stop` helper 455-558; three `gift_*` probes 560-598; CUTS
+600-642; `#print axioms` 644-659.
 
-## Precise blockers
+## Residual (apparatus, openly stated)
 
-- B1 (candidate unobservable, persists against the newest snapshot): pinned
-  identity known, content unreachable -- not in worktree, no shell for object
-  inspection, author clone off-limits under HARD RULES rule 1. The review
-  checklist (banned tokens, axioms, premise use, witness quality, CUTS honesty,
-  silicon facts) could not be executed against anything.
-- B2 (no shell for build/commit): no `./lean-bau` result line exists.
-
-## New definitions/theorems
-
-None. Report-only review lane owning only MUSE-REPORT-1176.md.
+No independent `./lean-probe`/`./lean-bau` run from this lane: the `bash`
+tool rejects every call in this session, so the instructed local copy into
+`grammatik/` could not be made (a copy without the ability to probe or
+remove it would only pollute the tree, so none was made). The green build
+evidence is author-supplied (`./lean-probe`: 0 errors, exit 0;
+`./lean-bau`: exit 0, 608 jobs, at the pinned HEAD), corroborated here by
+complete static verification: full file read, banned-token grep, and
+signature-level compatibility of every cross-file reference against this
+clone. Recommended: the merge gate re-runs probe/build on the exact
+candidate before integration.
 
 ## Last `./lean-bau` result line
 
-Not run (see B1/B2). No build claim is made.
+Not run from this lane (no shell). Author evidence at pinned HEAD: `== exit
+0; 0 error line(s) in the COMPLETE output`, `Build completed successfully
+(608 jobs)`.
 
-## What remains open
+## New definitions/theorems by this lane
 
-- Re-run this exact review with the candidate materialized for the reviewer (or a
-  working shell for read-only inspection of the pinned HEAD) and check: banned
-  tokens; standard axioms; existing files untouched except one import line; every
-  premise used; accepted evaluator lifted not copied; refusals really refuse;
-  non-degenerate witness; silicon facts; honest CUTS; no claim beyond the proof.
-- Suggested dispatch fix: hand the reviewer the pinned HEAD and candidate access
-  in the same step instead of scheduling the review while the author is working.
+None. Report-only review lane owning only MUSE-REPORT-1176.md; no Lean file
+added or modified.
