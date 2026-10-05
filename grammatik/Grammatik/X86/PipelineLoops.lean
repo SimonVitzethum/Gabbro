@@ -477,14 +477,68 @@ theorem zw_weiter (σ : World zwD) (ρ : Env zwD []) (s : Zustand)
     rw [htrue] at he
     cases he
 
+/-- THE WITNESS EXIT: with a true bound the head `jcc` leaves the schema
+    to the end label, keeping the post-round relation. -/
+theorem zw_ende (σ : World zwD) (ρ : Env zwD []) (s : Zustand)
+    (hRep : zwRep σ ρ s) (hb : (zwBis σ ρ).2 = true) :
+    ∃ s', laufL zwAdr (schleifeProg zwKoerper .e) 1 (0, s)
+      = some (zwKoerper.length + 2, s') ∧ zwRep (zwBis σ ρ).1 ρ s' := by
+  rcases hRep.2 with ⟨hslot0, _⟩ | ⟨hslot1, hrax, hmem⟩
+  · have hfalse : (zwBis σ ρ).2 = false := by
+      simp [zwBis, hslot0]
+    rw [hfalse] at hb
+    cases hb
+  · have hflag : bedingung .e s.flags = true := by
+      rw [← hRep.1]
+      exact hb
+    refine ⟨{ s with rip := zwAdr (zwKoerper.length + 2) }, ?_, ?_⟩
+    · simp only [laufL, stepL, schleifeProg_kopf, hflag]
+      rfl
+    · refine ⟨hRep.1, Or.inr ⟨hslot1, hrax, hmem⟩⟩
+
+/-- THE JOINT WITNESS: the loop theorem's premises hold jointly on a
+    non-degenerate program (one table, written by the step), and the
+    one-round source run — which changes memory — is the labelled run of
+    `schleifeSchritte 1 6` steps to the end label. -/
+theorem zw_zeuge :
+    ∃ σ' ρ' s', retryLauf zwSchritt zwBis zwUeberlauf 1 zwSigma0 .nil
+        = .ok σ' ρ' ∧
+      laufL zwAdr (schleifeProg zwKoerper .e)
+          (schleifeSchritte 1 zwKoerper.length) (0, zwS0)
+        = some (zwKoerper.length + 2, s') ∧
+      zwRep σ' ρ' s' := by
+  have hRep0 : zwRep zwSigma0 .nil zwS0 := by
+    refine ⟨?_, Or.inl ⟨?_, rfl⟩⟩
+    · rfl
+    · rfl
+  have hrun : retryLauf zwSchritt zwBis zwUeberlauf 1 zwSigma0 .nil
+      = .ok (zwSigma1 zwSigma0) .nil := rfl
+  obtain ⟨s', hT, hrep'⟩ := schleife_korrekt_endlich zwKoerper .e zwAdr
+    zwRep zwSchritt zwBis zwUeberlauf zw_lese zw_stabil zw_bed zw_weiter
+    zw_ende zw_kein_ueberlauf 1 zwSigma0 .nil zwS0 hRep0 _ _ hrun
+  exact ⟨_, _, s', hrun, hT, hrep'⟩
+
 /-
 CUTS:
 - Pilot ISA only through `Instr`; one core, model memory, no time, no TSO:
   inherited from `ISARelax.lean`.
 - No unbounded-loop budget: `forever` at any positive pass count unfolds
-  one step (`ewig_ein_schritt` below); exhaustion is loud at zero passes
+  one step (`ewig_ein_schritt`); exhaustion is loud at zero passes
   (`BudgetExecution.forever_erschoepft_benannt`, not restated here).
-- Per-iteration body correspondence (`hSeg` of `schleife_korrekt_endlich`)
-  is a premise proved per body by its producer (straight-line bodies by
-  the `Pipeline.lean` lemmas); this file lifts it to `n` rounds.
+  Infinite runs are not validated to any finite target budget.
+- Per-iteration body correspondence (`hWeiter` of
+  `schleife_korrekt_endlich`) is a premise proved per body by its
+  producer (straight-line bodies by the `Pipeline.lean` lemmas); this file
+  lifts it to `n` rounds with budget accounting. The re-read stability
+  (`hBisStabil`: the bound read changes neither world nor outcome) and
+  the loud overflow (`hUeberlauf`) are the other named premises.
+- Bodies with internal control flow (`ret`, jumps, calls) are REFUSED
+  (`schleife_verweigert_schlechten_koerper`), never guessed.
+- `zw_zeuge` instantiates the loop theorem jointly on one table written
+  by the step, with a memory-changing round on both sides.
 -/
+
+#print axioms schleife_korrekt_endlich
+#print axioms schleife_bytes
+#print axioms schleife_verweigert_schlechten_koerper
+#print axioms zw_zeuge
