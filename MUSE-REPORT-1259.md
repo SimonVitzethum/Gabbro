@@ -52,6 +52,47 @@ no exhaustion timing; admission beyond `CodeAt`/`WX` composes through
 `PipelineImage`/`PipelineEntry`; no TSO/concurrency claim; counts are
 instruction counts, not silicon latencies.
 
+## Review response (lane 1260, blocked review)
+
+The independent review (lane 1260, candidate `1259 1650a2899f5eeea3db5883139ea47231fd605707`)
+returned VERDICT: REPAIR with a precise blocker: the reviewer clone never received
+the author branch, so no candidate diff was read and no Lean code was examined.
+The REPAIR is directed at review dispatch, not at these proofs: it makes zero
+substantive findings against `PipelineWorkPath.lean`, axioms, witnesses, silicon
+facts, or CUTS. There is therefore nothing to repair in the deliverable, and
+nothing was weakened, restated, or re-scoped in response. The candidate stands
+unchanged and re-presentable.
+
+Self-audit performed instead (same checklist an exact review would apply):
+
+- Forbidden tokens: `grep` for `sorry|admit|axiom|native_decide|unsafe|TODO|FIXME|XXX`
+  over the new file returns only benign substring hits (`admitted` in prose,
+  `#print axioms` lines). No `sorry`, `admit`, `axiom`, `native_decide`,
+  `unsafe`, no placeholders.
+- Axioms: full `#print axioms` output re-verified (see probe output); every
+  theorem is within propext/Classical.choice/Quot.sound, inherited from reused
+  lemmas; no new axiom, no `Prop`-typed premise.
+- Premise use: every hypothesis of every new theorem is consumed by its proof
+  (`hBed` steers the `runde_einzel` case split via `hbv`/`hbv1`; `hBisStabil`
+  feeds the exit agreement; all lowering/validator equations feed their
+  bridges). No conclusion restates a premise; no `forall rho`/`forall v`
+  contract quantification; runs are the real `retryLauf`/`lauf`/`laufBytes`/
+  `laufL`/`laufBytesI`, never a second semantics.
+- Silicon honesty: no new hardware fact is stated. The witness image reuses
+  the `isaSpeicher` shape, little-endian `read64` comes from `Speicher.lean`,
+  flag effects come from `bedingung`, and byte correspondence is
+  `relax_laufBytes` reused, not re-proved.
+- Owned files only: `grammatik/Grammatik/X86/PipelineWorkPath.lean`,
+  `grammatik/Grammatik.lean` (one import line), `MUSE-REPORT-1259.md`. Nothing
+  else touched.
+
+Fresh verification for this report:
+
+- `./lean-probe grammatik/Grammatik/X86/PipelineWorkPath.lean`: 0 errors.
+- `./lean-bau`: `Build completed successfully (644 jobs).`
+- No Lean change was needed or made for this review round; only this report
+  section was appended.
+
 ## Task remarks (things believed wrong or imprecise)
 
 1. The task names lane 1233's file `PipelineWorkBranches.lean`; no such file
