@@ -609,6 +609,49 @@ def decodeSx : List Byte → Option (SxDecodiert × List Byte)
       decodeSxNachPraefix pfx.op16 bits.1 bits.2.1 bits.2.2.1
         bits.2.2.2 pfx.n tail
 
+/-! ## 7. Encode: one canonical byte string per event.
+
+    REX bytes reuse the accepted `wdRex` (empty exactly when no bit
+    is needed). The 32-bit RAX self-exchange cannot use bare `90`
+    (that IS the NOP), so its canonical encoding carries the
+    redundant all-zero REX `[0x40, 0x90]`, which the decoder takes
+    as the exchange arm. -/
+
+/-- Canonical bytes of one family event. -/
+def sxEncode : SxBefehl → List Byte
+  | .cbw => [natByte 102, natByte 152]
+  | .cwde => [natByte 152]
+  | .cdqe => [natByte 72, natByte 152]
+  | .cwd => [natByte 102, natByte 153]
+  | .cdq => [natByte 153]
+  | .cqo => [natByte 72, natByte 153]
+  | .nop => [natByte 144]
+  | .xchgReg .b8 a c =>
+    wdRex .w32 (regHigh a) (regHigh c) ++
+      [natByte 134, modrmReg (regLow a) (regLow c)]
+  | .xchgReg .b16 a c =>
+    [natByte 102] ++ wdRex .w32 (regHigh a) (regHigh c) ++
+      [natByte 135, modrmReg (regLow a) (regLow c)]
+  | .xchgReg .b32 a c =>
+    wdRex .w32 (regHigh a) (regHigh c) ++
+      [natByte 135, modrmReg (regLow a) (regLow c)]
+  | .xchgReg .b64 a c =>
+    wdRex .w64 (regHigh a) (regHigh c) ++
+      [natByte 135, modrmReg (regLow a) (regLow c)]
+  | .xchgRax16 r =>
+    [natByte 102] ++ wdRex .w32 0 (regHigh r) ++
+      [natByte (144 + regLow r)]
+  | .xchgRax32 r =>
+    if regHigh r == 0 && regLow r == 0 then
+      [natByte 64, natByte 144]
+    else
+      wdRex .w32 0 (regHigh r) ++ [natByte (144 + regLow r)]
+  | .xchgRax64 r =>
+    wdRex .w64 0 (regHigh r) ++ [natByte (144 + regLow r)]
+  | .movsxd dst src =>
+    wdRex .w64 (regHigh dst) (regHigh src) ++
+      [natByte 99, modrmReg (regLow dst) (regLow src)]
+
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
    NOT proved here, and not claimed: everything (see task).
