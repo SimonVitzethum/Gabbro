@@ -1,5 +1,7 @@
 # MUSE-REPORT-1216: Exact review of candidate 1215 (W runs to GX refinement)
 
+CANDIDATE: 1215 0f31f20a2c0682dd15ceb04a0709f87a74c244e7
+
 ## Scope and inputs
 
 - Review lane. Added no Lean code and changed no existing file. Owned deliverable is this report only.
@@ -68,7 +70,9 @@
   machine GX, same as lane 1187 for W); reusing accepted `tsoRmwAdapter` for the LOCK leg respects
   rule 16.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 The candidate proves what it claims and claims only what it proves: the unconditional GX embedding,
 the conditional bridged step/run refinement over the admitted shared atomics with the DRF/checker
