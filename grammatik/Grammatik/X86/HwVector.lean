@@ -706,4 +706,557 @@ theorem vecDrain_schreibt (s s' : TSOZustand) (c : Nat) (a : Adresse)
       rw [heq])
     ⟨e, hmem, rfl⟩
 
+/-! ## 6. Register rows on the coherent machine.
+
+  The eleven register rows ride the accepted `stepIntVec` over the
+  machine core projection; the adapter refuses the four memory rows
+  (they use the TSO path of §3-§5) and every refused evaluation.
+  Profiles are untouched, so `HwWf` survives by the accepted lemmas. -/
+
+/-- Register successor on the machine: the accepted selected step over
+    the core projection, re-embedded as core data. Memory rows are
+    refused here (their TSO path is `vecLadeSchritt`/`vecSpeicherSchritt`
+    below); `none` is a refused gate, a bad length, or a failed
+    evaluation. -/
+def vecRegSchritt (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (k : KontrollBild) (d : IntVecDec) : Option HwMaschine :=
+  if istVecRegisterOp d.op then
+    match stepIntVec d (projFp m c) m.hw (m.bereit c) cpu k with
+    | some t' => some (setKernVonFp m c t')
+    | none => none
+  else none
+
+/-- Register rows change no memory byte: both store shapes are
+    constructor-distinct from every register row, so the accepted
+    memory-preservation covers them. -/
+theorem vecRegSchritt_speicher (d : IntVecDec) (t t' : FpZustand)
+    (hw : HwProfil) (b : BereitProfil) (cpu : CpuMerkmal)
+    (k : KontrollBild)
+    (hreg : istVecRegisterOp d.op = true)
+    (hok : laengeOk d.laenge = true)
+    (hgate : vektorLegacyZugelassen hw b cpu k = true)
+    (hstep : stepIntVec d t hw b cpu k = some t') :
+    t'.kern.speicher = t.kern.speicher := by
+  have hA : ∀ (base : Register) (src : XmmReg) (disp : BitVec 32),
+      d.op ≠ .movdqaSt base src disp := by
+    intro base src disp hcon
+    have hred : istVecRegisterOp (.movdqaSt base src disp) = false := rfl
+    rw [← hcon] at hred
+    rw [hred] at hreg
+    cases hreg
+  have hU : ∀ (base : Register) (src : XmmReg) (disp : BitVec 32),
+      d.op ≠ .movdquSt base src disp := by
+    intro base src disp hcon
+    have hred : istVecRegisterOp (.movdquSt base src disp) = false := rfl
+    rw [← hcon] at hred
+    rw [hred] at hreg
+    cases hreg
+  exact stepIntVec_speicher d t t' hw b cpu k hok hgate hstep hA hU
+
+/-- The register plug IS the accepted step: success unfolds to the
+    accepted equation over the machine projection (lifted, never
+    redefined). -/
+theorem vecRegSchritt_gleich (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (t' : FpZustand)
+    (hreg : istVecRegisterOp d.op = true)
+    (hs : stepIntVec d (projFp m c) m.hw (m.bereit c) cpu k =
+      some t') :
+    vecRegSchritt m c cpu k d = some (setKernVonFp m c t') := by
+  unfold vecRegSchritt
+  rw [if_pos hreg, hs]
+
+/-- Machine vector load: gates (length, legacy admission, `#GP`
+    alignment for the `movdqa` shape) then sixteen TSO byte
+    observations with forwarding; the destination XMM holds the
+    observed word and RIP advances. Memory and buffers are kept. -/
+def vecLadeSchritt (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (k : KontrollBild) (d : IntVecDec) : Option HwMaschine :=
+  match d.op with
+  | .movdqaLd dst base disp =>
+    match laengeOk d.laenge, vektorLegacyZugelassen m.hw (m.bereit c)
+      cpu k with
+    | true, true =>
+      if vektorGpFehler (effAddr (projZustand m c) base disp)
+        .ausgerichtet then none
+      else
+        match vecLaden (tsoAnsicht m) c (effAddr (projZustand m c) base disp) with
+        | some v =>
+          some (setKernVonFp m c { projFp m c with kern := { (projFp m c).kern with rip := ripNach (projFp m c).kern.rip d.laenge }, xmm := xmmSet (projFp m c).xmm dst v })
+        | none => none
+    | _, _ => none
+  | .movdquLd dst base disp =>
+    match laengeOk d.laenge, vektorLegacyZugelassen m.hw (m.bereit c)
+      cpu k with
+    | true, true =>
+      match vecLaden (tsoAnsicht m) c (effAddr (projZustand m c) base disp) with
+      | some v =>
+        some (setKernVonFp m c { projFp m c with kern := { (projFp m c).kern with rip := ripNach (projFp m c).kern.rip d.laenge }, xmm := xmmSet (projFp m c).xmm dst v })
+      | none => none
+    | _, _ => none
+  | _ => none
+
+/-- Machine vector store: gates (length, legacy admission, `#GP`
+    alignment for the `movdqa` shape) then sixteen buffered TSO byte
+    issues of the source XMM word. Canonical memory is unchanged
+    (buffer only); the accepted direct `vecWrite` effect is never
+    substituted. -/
+def vecSpeicherSchritt (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (k : KontrollBild) (d : IntVecDec) : Option HwMaschine :=
+  match d.op with
+  | .movdqaSt base src disp =>
+    match laengeOk d.laenge, vektorLegacyZugelassen m.hw (m.bereit c)
+      cpu k with
+    | true, true =>
+      if vektorGpFehler (effAddr (projZustand m c) base disp)
+        .ausgerichtet then none
+      else
+        match vecSpeichern (tsoAnsicht m) c (effAddr (projZustand m c) base disp) ((projFp m c).xmm src) with
+        | some s' => some (setTso m s')
+        | none => none
+    | _, _ => none
+  | .movdquSt base src disp =>
+    match laengeOk d.laenge, vektorLegacyZugelassen m.hw (m.bereit c)
+      cpu k with
+    | true, true =>
+      match vecSpeichern (tsoAnsicht m) c (effAddr (projZustand m c) base disp) ((projFp m c).xmm src) with
+      | some s' => some (setTso m s')
+      | none => none
+    | _, _ => none
+  | _ => none
+
+/-! ## 7. Events, adapter plug, and the extended step relation.
+
+  The family's event type carries the checked CPU/control inputs, so
+  the adapter checks them per step, never assuming them. The extended
+  relation embeds `HwSchritt` exactly (`alt`, with projection back)
+  and adds the register rows plus the four TSO memory rows. -/
+
+/-- Vector family events on the coherent machine: register execution,
+    TSO loads/stores of whole packed words, the old machine events,
+    and explicit refusal. -/
+inductive HwVecEreignis where
+  | hwAlt : HwEreignis → HwVecEreignis
+  | vecReg : Nat → CpuMerkmal → KontrollBild → IntVecDec → HwVecEreignis
+  | vecLade : Nat → CpuMerkmal → KontrollBild → IntVecDec → HwVecEreignis
+  | vecSpeichere : Nat → CpuMerkmal → KontrollBild → IntVecDec →
+      HwVecEreignis
+  | verweigert : Nat → HwVecEreignis
+  deriving DecidableEq, Repr
+
+/-- The vector producer plug: register rows through the accepted
+    evaluator, memory rows through the TSO path, everything else
+    refused. A mismatched core is refused, never rerouted. -/
+def adapterVec : HwAdapter HwVecEreignis :=
+  ⟨fun m c e => match e with
+    | .vecReg c' cpu k d =>
+      if c' = c then vecRegSchritt m c cpu k d else none
+    | .vecLade c' cpu k d =>
+      if c' = c then vecLadeSchritt m c cpu k d else none
+    | .vecSpeichere c' cpu k d =>
+      if c' = c then vecSpeicherSchritt m c cpu k d else none
+    | _ => none⟩
+
+/-- The extended step relation: the old coherent steps exactly
+    (`alt`), the eleven register rows over the accepted evaluator
+    (`reg`, memory-unchanged gate like `HwSchritt.reg`), the two
+    aligned/unaligned TSO loads (`ladeA`/`ladeU`) and the two TSO
+    stores (`speichereA`/`speichereU`), plus explicit fetch refusal
+    (`fehler`). -/
+inductive HwVecSchritt : HwMaschine → HwMaschine → HwVecEreignis → Prop where
+  | alt {m m' : HwMaschine} {e : HwEreignis} (h : HwSchritt m m' e) :
+      HwVecSchritt m m' (.hwAlt e)
+  | reg {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {k : KontrollBild} {d : IntVecDec} {t' : FpZustand}
+      (hreg : istVecRegisterOp d.op = true)
+      (hok : laengeOk d.laenge = true)
+      (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+      (hstep : stepIntVec d (projFp m c) m.hw (m.bereit c) cpu k =
+        some t')
+      (hmem : t'.kern.speicher = m.mem) :
+      HwVecSchritt m (setKernVonFp m c t') (.vecReg c cpu k d)
+  | ladeA {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {k : KontrollBild} {d : IntVecDec} {dst : XmmReg}
+      {base : Register} {disp : BitVec 32} {v : Vektor}
+      (hop : d.op = .movdqaLd dst base disp)
+      (hok : laengeOk d.laenge = true)
+      (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+      (hgp : vektorGpFehler (effAddr (projZustand m c) base disp)
+        .ausgerichtet = false)
+      (hread : vecLaden (tsoAnsicht m) c
+        (effAddr (projZustand m c) base disp) = some v) :
+      HwVecSchritt m (setKernVonFp m c { projFp m c with kern := { (projFp m c).kern with rip := ripNach (projFp m c).kern.rip d.laenge }, xmm := xmmSet (projFp m c).xmm dst v }) (.vecLade c cpu k d)
+  | ladeU {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {k : KontrollBild} {d : IntVecDec} {dst : XmmReg}
+      {base : Register} {disp : BitVec 32} {v : Vektor}
+      (hop : d.op = .movdquLd dst base disp)
+      (hok : laengeOk d.laenge = true)
+      (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+      (hread : vecLaden (tsoAnsicht m) c
+        (effAddr (projZustand m c) base disp) = some v) :
+      HwVecSchritt m (setKernVonFp m c { projFp m c with kern := { (projFp m c).kern with rip := ripNach (projFp m c).kern.rip d.laenge }, xmm := xmmSet (projFp m c).xmm dst v }) (.vecLade c cpu k d)
+  | speichereA {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {k : KontrollBild} {d : IntVecDec} {base : Register}
+      {src : XmmReg} {disp : BitVec 32} {s' : TSOZustand}
+      (hop : d.op = .movdqaSt base src disp)
+      (hok : laengeOk d.laenge = true)
+      (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+      (hgp : vektorGpFehler (effAddr (projZustand m c) base disp)
+        .ausgerichtet = false)
+      (hwr : vecSpeichern (tsoAnsicht m) c
+        (effAddr (projZustand m c) base disp) ((projFp m c).xmm src) =
+        some s') :
+      HwVecSchritt m (setTso m s') (.vecSpeichere c cpu k d)
+  | speichereU {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {k : KontrollBild} {d : IntVecDec} {base : Register}
+      {src : XmmReg} {disp : BitVec 32} {s' : TSOZustand}
+      (hop : d.op = .movdquSt base src disp)
+      (hok : laengeOk d.laenge = true)
+      (hgate : vektorLegacyZugelassen m.hw (m.bereit c) cpu k = true)
+      (hwr : vecSpeichern (tsoAnsicht m) c
+        (effAddr (projZustand m c) base disp) ((projFp m c).xmm src) =
+        some s') :
+      HwVecSchritt m (setTso m s') (.vecSpeichere c cpu k d)
+  | fehler {m : HwMaschine} {c : Nat}
+      (h : fetchIntVec (projFp m c) (geholt (projZustand m c)) = none) :
+      HwVecSchritt m m (.verweigert c)
+
+/-- Every extended step preserves well-formedness: core-data and
+    memory/buffer updates alike leave the checked profiles untouched. -/
+theorem hwVecSchritt_wf (m m' : HwMaschine) (e : HwVecEreignis)
+    (h : HwVecSchritt m m' e) (hwf : HwWf m) : HwWf m' := by
+  cases h with
+  | alt h => exact hwSchritt_wf _ _ _ h hwf
+  | reg hreg hok hgate hstep hmem => exact setKernDaten_wf _ _ _ hwf
+  | ladeA hop hok hgate hgp hread => exact setKernDaten_wf _ _ _ hwf
+  | ladeU hop hok hgate hread => exact setKernDaten_wf _ _ _ hwf
+  | speichereA hop hok hgate hgp hwr => exact setTso_wf _ _ hwf
+  | speichereU hop hok hgate hwr => exact setTso_wf _ _ hwf
+  | fehler h => exact hwf
+
+/-- Exact embedding: every old coherent step is an extended step. -/
+theorem hwVecSchritt_einbettet (m m' : HwMaschine) (e : HwEreignis)
+    (h : HwSchritt m m' e) : HwVecSchritt m m' (.hwAlt e) :=
+  .alt h
+
+/-- Exact projection: an embedded step is the old step back. -/
+theorem hwVecSchritt_projiziert (m m' : HwMaschine) (e : HwEreignis)
+    (h : HwVecSchritt m m' (.hwAlt e)) : HwSchritt m m' e := by
+  cases h with
+  | alt h => exact h
+
+/-- The adapter refuses old events: nothing is admitted silently. -/
+theorem adapterVec_verweigert_alt (m : HwMaschine) (c : Nat)
+    (e : HwEreignis) :
+    adapterVec.schritt m c (.hwAlt e) = none := rfl
+
+/-- The adapter refuses bare refusals. -/
+theorem adapterVec_verweigert_fehler (m : HwMaschine) (c d : Nat) :
+    adapterVec.schritt m c (.verweigert d) = none := rfl
+
+/-- A mismatched core is refused on the register path, never rerouted. -/
+theorem adapterVec_fremder_kern_reg (m : HwMaschine) (c c' : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (hne : c' ≠ c) :
+    adapterVec.schritt m c (.vecReg c' cpu k d) = none := by
+  show (if c' = c then vecRegSchritt m c cpu k d else none) = none
+  exact if_neg hne
+
+/-- A mismatched core is refused on the load path. -/
+theorem adapterVec_fremder_kern_lade (m : HwMaschine) (c c' : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (hne : c' ≠ c) :
+    adapterVec.schritt m c (.vecLade c' cpu k d) = none := by
+  show (if c' = c then vecLadeSchritt m c cpu k d else none) = none
+  exact if_neg hne
+
+/-- A mismatched core is refused on the store path. -/
+theorem adapterVec_fremder_kern_speichere (m : HwMaschine) (c c' : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (hne : c' ≠ c) :
+    adapterVec.schritt m c (.vecSpeichere c' cpu k d) = none := by
+  show (if c' = c then vecSpeicherSchritt m c cpu k d else none) = none
+  exact if_neg hne
+
+/-- On its own core the adapter IS the register plug. -/
+theorem adapterVec_reg (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (k : KontrollBild) (d : IntVecDec) :
+    adapterVec.schritt m c (.vecReg c cpu k d) =
+      vecRegSchritt m c cpu k d := by
+  show (if c = c then vecRegSchritt m c cpu k d else none) = _
+  rw [if_pos rfl]
+
+/-- On its own core the adapter IS the load plug. -/
+theorem adapterVec_lade (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (k : KontrollBild) (d : IntVecDec) :
+    adapterVec.schritt m c (.vecLade c cpu k d) =
+      vecLadeSchritt m c cpu k d := by
+  show (if c = c then vecLadeSchritt m c cpu k d else none) = _
+  rw [if_pos rfl]
+
+/-- On its own core the adapter IS the store plug. -/
+theorem adapterVec_speichere (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec) :
+    adapterVec.schritt m c (.vecSpeichere c cpu k d) =
+      vecSpeicherSchritt m c cpu k d := by
+  show (if c = c then vecSpeicherSchritt m c cpu k d else none) = _
+  rw [if_pos rfl]
+
+/-- A successful machine load IS an extended step: the equation
+    unfolds to the structured premises. -/
+theorem vecLade_ist_schritt (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (m' : HwMaschine)
+    (h : vecLadeSchritt m c cpu k d = some m') :
+    HwVecSchritt m m' (.vecLade c cpu k d) := by
+  unfold vecLadeSchritt at h
+  cases hop : d.op with
+  | paddbRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | paddwRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | padddRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | paddqRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | pandRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | porRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | pxorRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | psllqRR dst cnt =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | psrlqRR dst cnt =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | psllqImm dst imm =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | psrlqImm dst imm =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | movdqaLd dst base disp =>
+    rw [hop] at h
+    dsimp only at h
+    cases hg1 : laengeOk d.laenge with
+    | false =>
+      rw [hg1] at h
+      dsimp only at h
+      cases h
+    | true =>
+      cases hg2 : vektorLegacyZugelassen m.hw (m.bereit c) cpu k with
+      | false =>
+        rw [hg1, hg2] at h
+        dsimp only at h
+        cases h
+      | true =>
+        rw [hg1, hg2] at h
+        dsimp only at h
+        cases hgp : vektorGpFehler (effAddr (projZustand m c) base disp)
+            .ausgerichtet with
+        | true =>
+          rw [if_pos hgp] at h
+          cases h
+        | false =>
+          have hneg : ¬vektorGpFehler (effAddr (projZustand m c) base disp)
+            .ausgerichtet = true := by
+            simp [hgp]
+          rw [if_neg hneg] at h
+          cases hrd : vecLaden (tsoAnsicht m) c
+              (effAddr (projZustand m c) base disp) with
+          | none =>
+            rw [hrd] at h
+            dsimp only at h
+            cases h
+          | some v =>
+            rw [hrd] at h
+            dsimp only at h
+            obtain rfl := Option.some_inj.mp h
+            exact .ladeA hop hg1 hg2 hgp hrd
+  | movdqaSt base src disp =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | movdquLd dst base disp =>
+    rw [hop] at h
+    dsimp only at h
+    cases hg1 : laengeOk d.laenge with
+    | false =>
+      rw [hg1] at h
+      dsimp only at h
+      cases h
+    | true =>
+      cases hg2 : vektorLegacyZugelassen m.hw (m.bereit c) cpu k with
+      | false =>
+        rw [hg1, hg2] at h
+        dsimp only at h
+        cases h
+      | true =>
+        rw [hg1, hg2] at h
+        dsimp only at h
+        cases hrd : vecLaden (tsoAnsicht m) c
+            (effAddr (projZustand m c) base disp) with
+        | none =>
+          rw [hrd] at h
+          dsimp only at h
+          cases h
+        | some v =>
+          rw [hrd] at h
+          dsimp only at h
+          obtain rfl := Option.some_inj.mp h
+          exact .ladeU hop hg1 hg2 hrd
+  | movdquSt base src disp =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+
+/-- A successful machine store IS an extended step. -/
+theorem vecSpeichere_ist_schritt (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (k : KontrollBild) (d : IntVecDec)
+    (m' : HwMaschine)
+    (h : vecSpeicherSchritt m c cpu k d = some m') :
+    HwVecSchritt m m' (.vecSpeichere c cpu k d) := by
+  unfold vecSpeicherSchritt at h
+  cases hop : d.op with
+  | paddbRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | paddwRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | padddRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | paddqRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | pandRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | porRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | pxorRR dst src =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | psllqRR dst cnt =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | psrlqRR dst cnt =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | psllqImm dst imm =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | psrlqImm dst imm =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | movdqaLd dst base disp =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | movdqaSt base src disp =>
+    rw [hop] at h
+    dsimp only at h
+    cases hg1 : laengeOk d.laenge with
+    | false =>
+      rw [hg1] at h
+      dsimp only at h
+      cases h
+    | true =>
+      cases hg2 : vektorLegacyZugelassen m.hw (m.bereit c) cpu k with
+      | false =>
+        rw [hg1, hg2] at h
+        dsimp only at h
+        cases h
+      | true =>
+        rw [hg1, hg2] at h
+        dsimp only at h
+        cases hgp : vektorGpFehler (effAddr (projZustand m c) base disp)
+            .ausgerichtet with
+        | true =>
+          rw [if_pos hgp] at h
+          cases h
+        | false =>
+          have hneg : ¬vektorGpFehler (effAddr (projZustand m c) base disp)
+            .ausgerichtet = true := by
+            simp [hgp]
+          rw [if_neg hneg] at h
+          cases hwr : vecSpeichern (tsoAnsicht m) c
+              (effAddr (projZustand m c) base disp)
+              ((projFp m c).xmm src) with
+          | none =>
+            rw [hwr] at h
+            dsimp only at h
+            cases h
+          | some s' =>
+            rw [hwr] at h
+            dsimp only at h
+            obtain rfl := Option.some_inj.mp h
+            exact .speichereA hop hg1 hg2 hgp hwr
+  | movdquLd dst base disp =>
+    rw [hop] at h
+    dsimp only at h
+    cases h
+  | movdquSt base src disp =>
+    rw [hop] at h
+    dsimp only at h
+    cases hg1 : laengeOk d.laenge with
+    | false =>
+      rw [hg1] at h
+      dsimp only at h
+      cases h
+    | true =>
+      cases hg2 : vektorLegacyZugelassen m.hw (m.bereit c) cpu k with
+      | false =>
+        rw [hg1, hg2] at h
+        dsimp only at h
+        cases h
+      | true =>
+        rw [hg1, hg2] at h
+        dsimp only at h
+        cases hwr : vecSpeichern (tsoAnsicht m) c
+            (effAddr (projZustand m c) base disp)
+            ((projFp m c).xmm src) with
+        | none =>
+          rw [hwr] at h
+          dsimp only at h
+          cases h
+        | some s' =>
+          rw [hwr] at h
+          dsimp only at h
+          obtain rfl := Option.some_inj.mp h
+          exact .speichereU hop hg1 hg2 hwr
+
 end Gabbro.Grammatik.X86
