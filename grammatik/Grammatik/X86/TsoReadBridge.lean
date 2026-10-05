@@ -791,6 +791,472 @@ theorem gruppe_kein_globaler_wert :
 
 /-! ## 6. Joint witness: two tables, one copy, growing drain. -/
 
+/-- Witness signature: parameterless, no answer, writes every table. -/
+def rdSig : Signatur Bool Empty Empty Empty :=
+  { params := [], erg := none, gruende := 0, haelt := [],
+    schreibt := fun _ => true, gschreibt := fun g => (nomatch g),
+    konsumiert := [], produziert := [], boden := none }
+
+/-- Witness declaration: two tables (`false` written, `true` read) with one
+    `.int 0 100` field each, one parameterless function whose contract
+    writes both, nothing else. -/
+def rdD : Deklaration where
+  Tab := Bool
+  count := fun _ => 1
+  Feld := fun _ => Unit
+  typ := fun _ _ => .int 0 100
+  erlaubt := fun _ _ _ _ => true
+  tabNr := fun _ => some false
+  Glob := Empty
+  gtyp := fun g => nomatch g
+  nutzlast := fun g => nomatch g
+  atomar := fun g => nomatch g
+  geteilt := fun _ => false
+  ggeteilt := fun g => nomatch g
+  Lock := Empty
+  rang := fun L => nomatch L
+  maskiert := fun L => nomatch L
+  Marke := Empty
+  stufen := fun m => nomatch m
+  braucht := fun _ => []
+  gbraucht := fun g => nomatch g
+  eigner := fun _ => []
+  Fn := Unit
+  sig := fun _ => 0
+  sigNr := fun _ => rdSig
+  eigner_nie_erzeugt := fun n t m s _ => nomatch m
+  Inv := Empty
+  traeger := fun i => nomatch i
+  invs := []
+  Ax := Empty
+  aparams := fun a => nomatch a
+  aerg := fun a => nomatch a
+  aschreibt := fun a => nomatch a
+  agschreibt := fun a => nomatch a
+  Reg := Empty
+  rtyp := fun r => nomatch r
+  rklasse := fun r => nomatch r
+  spiegel := fun r => nomatch r
+  rzusage := fun r => nomatch r
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun n i _ => nomatch i
+  ggeteilt_bewacht := fun g => nomatch g
+
+/-- The witness contract: writes every table. -/
+def rdV : Vertrag rdD :=
+  { schreibt := fun _ => true
+    gschreibt := fun g => nomatch g
+    erg := none
+    gruende := 0
+    haelt := []
+    produziert := []
+    boden := none }
+
+/-- The witness oracle: no axioms, registers or globals to answer. -/
+def rdO : Orakel rdD where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r => nomatch r
+  sichtbar := fun g => nomatch g
+
+/-- The witness callee table: every call succeeds without moving memory. -/
+def rdR : ∀ f : rdD.Fn, World rdD → Env rdD (rdD.params f) →
+    RufAusgang f :=
+  fun _ σ _ => .ok σ ()
+
+/-- The witness index: row 0 (of the read table). -/
+def rdI : Expr rdD [] [] (.index (rdD.count true)) := Expr.lit 0
+
+/-- The witness read permission: the read table needs no guards. -/
+theorem rdHLread : darf rdD true [] :=
+  fun _ h => False.elim (List.not_mem_nil h)
+
+/-- The witness value: the read slot of the read table (one read event). -/
+def rdE : Expr rdD [] [] (rdD.typ false ()) := Expr.slot true () rdI rdHLread
+
+/-- The witness write permission: the written table needs no guards. -/
+theorem rdHLW : darf rdD false [] :=
+  fun _ h => False.elim (List.not_mem_nil h)
+
+/-- The frame contract writes the written table. -/
+theorem rdHwW : (vertragVon rdD ()).schreibt false = true := rfl
+
+/-- The witness world: the written slot holds 9, the read slot holds 0,
+    no trace yet. The copy stores 0 over 9: both sides change. -/
+def rdSigma : World rdD where
+  slots := fun t _ f => by
+    cases t with
+    | false => cases f; exact ⟨9, by decide, by decide⟩
+    | true => cases f; exact ⟨0, by decide, by decide⟩
+  globs := fun g => nomatch g
+  spur := []
+
+/-- The witness read world: the trace entry of the one read. -/
+def rdSL : World rdD := rdSigma.lese [] (rdI.orte ++ rdE.orte)
+
+/-- The witness footprint of the one read: layout base 4096, offset 8
+    (disjoint from the write footprint at offset 0). -/
+def rdA2 : Adresse := slotAddr 4096 8
+
+/-- The witness read value: 0. -/
+def rdZero : Zahl 0 100 := ⟨0, by decide, by decide⟩
+
+/-- The witness overwritten value: 9. -/
+def rdNine : Zahl 0 100 := ⟨9, by decide, by decide⟩
+
+/-- The witness target memory: the write word is 9, everything else zero;
+    full R/W, never executable. -/
+def rdM9bytes (x : Adresse) : Byte :=
+  if x = addrOff witA 0 then wortByte (zahlWort rdNine) 0
+  else if x = addrOff witA 1 then wortByte (zahlWort rdNine) 1
+  else if x = addrOff witA 2 then wortByte (zahlWort rdNine) 2
+  else if x = addrOff witA 3 then wortByte (zahlWort rdNine) 3
+  else if x = addrOff witA 4 then wortByte (zahlWort rdNine) 4
+  else if x = addrOff witA 5 then wortByte (zahlWort rdNine) 5
+  else if x = addrOff witA 6 then wortByte (zahlWort rdNine) 6
+  else if x = addrOff witA 7 then wortByte (zahlWort rdNine) 7
+  else BitVec.ofNat 8 0
+
+/-- The witness target memory: 9 at the write footprint, zero elsewhere. -/
+def rdM9 : Speicher :=
+  { bytes := rdM9bytes, lesbar := fun _ => true,
+    schreibbar := fun _ => true, ausfuehrbar := fun _ => false }
+
+/-- The witness target memory after the zero-word write. -/
+def rdM9' : Speicher :=
+  { rdM9 with bytes := writeBytes rdM9 witA (zahlWort rdZero) }
+
+/-- The footprint reads the read table: the index and value footprints are
+    exactly the one read. -/
+theorem rdOrte : rdI.orte ++ rdE.orte = [.inl true] := rfl
+
+/-- The witness field types. -/
+theorem rdHTW : rdD.typ false () = .int 0 100 := rfl
+
+/-- The witness read field type. -/
+theorem rdHTR : rdD.typ true () = .int 0 100 := rfl
+
+/-! ## 7. Witness drain: the zero word over the nine word. -/
+
+/-- The word the drain installs: zero (overwriting the witness nine). -/
+def rdV0 : Wort := zahlWort rdZero
+
+/-- Drain start: nine-word memory, core 0 carries the exact eight-entry
+    group for the zero word at the slot address, all other buffers
+    empty. -/
+def rdS2 : TSOZustand :=
+  ⟨rdM9, fun d => if d = 0 then wortEintraege witA rdV0 else []⟩
+
+/-- After own flush 1: byte 0 installed. -/
+def rdS3 : TSOZustand :=
+  ⟨{ rdM9 with bytes := fun x =>
+      if x = addrOff witA 0 then wortByte rdV0 0 else rdS2.mem.bytes x },
+    pufferSetze rdS2.puffer 0 ((wortEintraege witA rdV0).drop 1)⟩
+
+/-- Foreign issue on core 1 outside the footprint (real foreign
+    activity inside the drain). -/
+def rdS4 : TSOZustand :=
+  ⟨rdS3.mem,
+    pufferSetze rdS3.puffer 1 (rdS3.puffer 1 ++ [⟨ctF, ctFv⟩])⟩
+
+/-- After own flush 2: bytes 0–1 installed. -/
+def rdS5 : TSOZustand :=
+  ⟨{ rdS4.mem with bytes := fun x =>
+      if x = addrOff witA 1 then wortByte rdV0 1 else rdS4.mem.bytes x },
+    pufferSetze rdS4.puffer 0 ((wortEintraege witA rdV0).drop 2)⟩
+
+/-- After own flush 3: bytes 0–2 installed. -/
+def rdS6 : TSOZustand :=
+  ⟨{ rdS5.mem with bytes := fun x =>
+      if x = addrOff witA 2 then wortByte rdV0 2 else rdS5.mem.bytes x },
+    pufferSetze rdS5.puffer 0 ((wortEintraege witA rdV0).drop 3)⟩
+
+/-- After own flush 4: bytes 0–3 installed. -/
+def rdS7 : TSOZustand :=
+  ⟨{ rdS6.mem with bytes := fun x =>
+      if x = addrOff witA 3 then wortByte rdV0 3 else rdS6.mem.bytes x },
+    pufferSetze rdS6.puffer 0 ((wortEintraege witA rdV0).drop 4)⟩
+
+/-- After own flush 5: bytes 0–4 installed. -/
+def rdS8 : TSOZustand :=
+  ⟨{ rdS7.mem with bytes := fun x =>
+      if x = addrOff witA 4 then wortByte rdV0 4 else rdS7.mem.bytes x },
+    pufferSetze rdS7.puffer 0 ((wortEintraege witA rdV0).drop 5)⟩
+
+/-- After own flush 6: bytes 0–5 installed. -/
+def rdS9 : TSOZustand :=
+  ⟨{ rdS8.mem with bytes := fun x =>
+      if x = addrOff witA 5 then wortByte rdV0 5 else rdS8.mem.bytes x },
+    pufferSetze rdS8.puffer 0 ((wortEintraege witA rdV0).drop 6)⟩
+
+/-- After own flush 7: bytes 0–6 installed. -/
+def rdS10 : TSOZustand :=
+  ⟨{ rdS9.mem with bytes := fun x =>
+      if x = addrOff witA 6 then wortByte rdV0 6 else rdS9.mem.bytes x },
+    pufferSetze rdS9.puffer 0 ((wortEintraege witA rdV0).drop 7)⟩
+
+/-- After own flush 8: all bytes installed, own buffer empty;
+    the foreign byte stays pending. -/
+def rdS11 : TSOZustand :=
+  ⟨{ rdS10.mem with bytes := fun x =>
+      if x = addrOff witA 7 then wortByte rdV0 7 else rdS10.mem.bytes x },
+    pufferSetze rdS10.puffer 0 ((wortEintraege witA rdV0).drop 8)⟩
+
+/-- Each recorded drain step computes as claimed. -/
+theorem rd_step1 : flushKern rdS2 0 = some rdS3 := by rfl
+
+theorem rd_step2 : issueByte rdS3 1 ctF ctFv = some rdS4 := by rfl
+
+theorem rd_step3 : flushKern rdS4 0 = some rdS5 := by rfl
+
+theorem rd_step4 : flushKern rdS5 0 = some rdS6 := by rfl
+
+theorem rd_step5 : flushKern rdS6 0 = some rdS7 := by rfl
+
+theorem rd_step6 : flushKern rdS7 0 = some rdS8 := by rfl
+
+theorem rd_step7 : flushKern rdS8 0 = some rdS9 := by rfl
+
+theorem rd_step8 : flushKern rdS9 0 = some rdS10 := by rfl
+
+theorem rd_step9 : flushKern rdS10 0 = some rdS11 := by rfl
+
+/-- Foreign buffers start empty off core 0. -/
+theorem rdS2leer : ∀ d : Nat, d ≠ 0 → rdS2.puffer d = [] := by
+  intro d hne
+  show (if d = 0 then wortEintraege witA rdV0 else []) = []
+  rw [if_neg hne]
+
+/-- Foreign-buffer emptiness survives the first own flush. -/
+theorem rdS3leer : ∀ d : Nat, d ≠ 0 → rdS3.puffer d = [] :=
+  fremd_leer_eigen_erhalten rdS2 rdS3 rd_step1 rdS2leer
+
+/-- The foreign entry lands on core 1. -/
+theorem rdBuf1_4 : rdS4.puffer 1 = [⟨ctF, ctFv⟩] := by rfl
+
+/-- Off-core buffers stay empty except core 1 after the foreign issue. -/
+theorem rdOff01_4 : ∀ d : Nat, d ≠ 0 → d ≠ 1 → rdS4.puffer d = [] := by
+  intro d h0 h1
+  show pufferSetze rdS3.puffer 1 (rdS3.puffer 1 ++ [⟨ctF, ctFv⟩]) d = []
+  rw [pufferSetze_anders _ _ h1]
+  show rdS3.puffer d = []
+  show pufferSetze rdS2.puffer 0 ((wortEintraege witA rdV0).drop 1) d = []
+  rw [pufferSetze_anders _ _ h0]
+  show rdS2.puffer d = []
+  show (if d = 0 then wortEintraege witA rdV0 else []) = []
+  rw [if_neg h0]
+
+/-- The foreign entry rides every later own flush untouched. -/
+theorem rdBuf1_5 : rdS5.puffer 1 = [⟨ctF, ctFv⟩] := by
+  rw [eigen_fremd_gleich rdS4 rdS5 rd_step3 1 (by decide)]
+  exact rdBuf1_4
+
+theorem rdBuf1_6 : rdS6.puffer 1 = [⟨ctF, ctFv⟩] := by
+  rw [eigen_fremd_gleich rdS5 rdS6 rd_step4 1 (by decide)]
+  exact rdBuf1_5
+
+theorem rdBuf1_7 : rdS7.puffer 1 = [⟨ctF, ctFv⟩] := by
+  rw [eigen_fremd_gleich rdS6 rdS7 rd_step5 1 (by decide)]
+  exact rdBuf1_6
+
+theorem rdBuf1_8 : rdS8.puffer 1 = [⟨ctF, ctFv⟩] := by
+  rw [eigen_fremd_gleich rdS7 rdS8 rd_step6 1 (by decide)]
+  exact rdBuf1_7
+
+theorem rdBuf1_9 : rdS9.puffer 1 = [⟨ctF, ctFv⟩] := by
+  rw [eigen_fremd_gleich rdS8 rdS9 rd_step7 1 (by decide)]
+  exact rdBuf1_8
+
+theorem rdBuf1_10 : rdS10.puffer 1 = [⟨ctF, ctFv⟩] := by
+  rw [eigen_fremd_gleich rdS9 rdS10 rd_step8 1 (by decide)]
+  exact rdBuf1_9
+
+theorem rdBuf1_11 : rdS11.puffer 1 = [⟨ctF, ctFv⟩] := by
+  rw [eigen_fremd_gleich rdS10 rdS11 rd_step9 1 (by decide)]
+  exact rdBuf1_10
+
+/-- Off-core emptiness rides every later own flush untouched. -/
+theorem rdOff01_5 : ∀ d : Nat, d ≠ 0 → d ≠ 1 → rdS5.puffer d = [] := by
+  intro d h0 h1
+  rw [eigen_fremd_gleich rdS4 rdS5 rd_step3 d h0]
+  exact rdOff01_4 d h0 h1
+
+theorem rdOff01_6 : ∀ d : Nat, d ≠ 0 → d ≠ 1 → rdS6.puffer d = [] := by
+  intro d h0 h1
+  rw [eigen_fremd_gleich rdS5 rdS6 rd_step4 d h0]
+  exact rdOff01_5 d h0 h1
+
+theorem rdOff01_7 : ∀ d : Nat, d ≠ 0 → d ≠ 1 → rdS7.puffer d = [] := by
+  intro d h0 h1
+  rw [eigen_fremd_gleich rdS6 rdS7 rd_step5 d h0]
+  exact rdOff01_6 d h0 h1
+
+theorem rdOff01_8 : ∀ d : Nat, d ≠ 0 → d ≠ 1 → rdS8.puffer d = [] := by
+  intro d h0 h1
+  rw [eigen_fremd_gleich rdS7 rdS8 rd_step6 d h0]
+  exact rdOff01_7 d h0 h1
+
+theorem rdOff01_9 : ∀ d : Nat, d ≠ 0 → d ≠ 1 → rdS9.puffer d = [] := by
+  intro d h0 h1
+  rw [eigen_fremd_gleich rdS8 rdS9 rd_step7 d h0]
+  exact rdOff01_8 d h0 h1
+
+theorem rdOff01_10 : ∀ d : Nat, d ≠ 0 → d ≠ 1 → rdS10.puffer d = [] := by
+  intro d h0 h1
+  rw [eigen_fremd_gleich rdS9 rdS10 rd_step8 d h0]
+  exact rdOff01_9 d h0 h1
+
+theorem rdOff01_11 : ∀ d : Nat, d ≠ 0 → d ≠ 1 → rdS11.puffer d = [] := by
+  intro d h0 h1
+  rw [eigen_fremd_gleich rdS10 rdS11 rd_step9 d h0]
+  exact rdOff01_10 d h0 h1
+
+/-- Exclusion from the fixed foreign entry: core 1 holds exactly one
+    pending byte outside the footprint, every other foreign buffer is
+    empty. -/
+theorem rdFremdFF (s : TSOZustand) (h1 : s.puffer 1 = [⟨ctF, ctFv⟩])
+    (hO : ∀ d : Nat, d ≠ 0 → d ≠ 1 → s.puffer d = []) :
+    FremdFrei s 0 witA := by
+  intro d hne e he
+  by_cases h1d : d = 1
+  · subst h1d
+    rw [h1] at he
+    simp only [List.mem_singleton] at he
+    subst he
+    show ctF ∉ Fuss witA
+    exact ctFfresh
+  · have h2 := hO d hne h1d
+    rw [h2] at he
+    simp at he
+
+/-- Every visited state is foreign-free at the slot footprint. -/
+theorem rd_ff2 : FremdFrei rdS2 0 witA :=
+  fremdFrei_aus_leer rdS2 0 witA rdS2leer
+
+theorem rd_ff3 : FremdFrei rdS3 0 witA :=
+  fremdFrei_aus_leer rdS3 0 witA rdS3leer
+
+theorem rd_ff4 : FremdFrei rdS4 0 witA :=
+  rdFremdFF rdS4 rdBuf1_4 rdOff01_4
+
+theorem rd_ff5 : FremdFrei rdS5 0 witA :=
+  rdFremdFF rdS5 rdBuf1_5 rdOff01_5
+
+theorem rd_ff6 : FremdFrei rdS6 0 witA :=
+  rdFremdFF rdS6 rdBuf1_6 rdOff01_6
+
+theorem rd_ff7 : FremdFrei rdS7 0 witA :=
+  rdFremdFF rdS7 rdBuf1_7 rdOff01_7
+
+theorem rd_ff8 : FremdFrei rdS8 0 witA :=
+  rdFremdFF rdS8 rdBuf1_8 rdOff01_8
+
+theorem rd_ff9 : FremdFrei rdS9 0 witA :=
+  rdFremdFF rdS9 rdBuf1_9 rdOff01_9
+
+theorem rd_ff10 : FremdFrei rdS10 0 witA :=
+  rdFremdFF rdS10 rdBuf1_10 rdOff01_10
+
+theorem rd_ff11 : FremdFrei rdS11 0 witA :=
+  rdFremdFF rdS11 rdBuf1_11 rdOff01_11
+
+/-- The witness start carries the exact group. -/
+theorem rd_hgrp : WortGruppe rdS2 0 witA rdV0 := by
+  refine ⟨rfl, ?_⟩
+  exact fremdFrei_aus_leer rdS2 0 witA rdS2leer
+
+/-- The witness start reads the grouped footprint. -/
+theorem rd_hles : lesbar8 rdS2.mem witA = true := by rfl
+
+/-- Each recorded step is a drain step (eight own flushes around one
+    foreign issue). -/
+theorem rd_e1 : DrainSchritt 0 rdS2 rdS3 := .eigen rd_step1
+
+theorem rd_e2 : DrainSchritt 0 rdS3 rdS4 :=
+  .fremdAusgabe 1 ⟨ctF, ctFv⟩ (by decide) rd_step2
+
+theorem rd_e3 : DrainSchritt 0 rdS4 rdS5 := .eigen rd_step3
+
+theorem rd_e4 : DrainSchritt 0 rdS5 rdS6 := .eigen rd_step4
+
+theorem rd_e5 : DrainSchritt 0 rdS6 rdS7 := .eigen rd_step5
+
+theorem rd_e6 : DrainSchritt 0 rdS7 rdS8 := .eigen rd_step6
+
+theorem rd_e7 : DrainSchritt 0 rdS8 rdS9 := .eigen rd_step7
+
+theorem rd_e8 : DrainSchritt 0 rdS9 rdS10 := .eigen rd_step8
+
+theorem rd_e9 : DrainSchritt 0 rdS10 rdS11 := .eigen rd_step9
+
+/-- The full drain trace with its visited states. -/
+theorem rd_spur : DrainSpur 0 rdS2 rdS11
+    [rdS2, rdS3, rdS4, rdS5, rdS6, rdS7, rdS8, rdS9, rdS10, rdS11] :=
+  .schritt _ _ _ _ rd_e1 (.schritt _ _ _ _ rd_e2 (.schritt _ _ _ _ rd_e3
+    (.schritt _ _ _ _ rd_e4 (.schritt _ _ _ _ rd_e5 (.schritt _ _ _ _ rd_e6
+      (.schritt _ _ _ _ rd_e7 (.schritt _ _ _ _ rd_e8 (.schritt _ _ _ _ rd_e9
+        (.leer rdS11)))))))))
+
+/-- The drain end is visited. -/
+theorem rd_hend :
+    rdS11 ∈ [rdS2, rdS3, rdS4, rdS5, rdS6, rdS7, rdS8, rdS9, rdS10,
+      rdS11] := by
+  simp
+
+/-- The drain ends with an empty own buffer. -/
+theorem rd_hempty : rdS11.puffer 0 = [] := by rfl
+
+/-- Every visited state is foreign-free at the slot footprint. -/
+theorem rd_hstoer :
+    ∀ x ∈ [rdS2, rdS3, rdS4, rdS5, rdS6, rdS7, rdS8, rdS9, rdS10, rdS11],
+      FremdFrei x 0 witA := by
+  intro x hx
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+  rcases hx with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+  · exact rd_ff2
+  · exact rd_ff3
+  · exact rd_ff4
+  · exact rd_ff5
+  · exact rd_ff6
+  · exact rd_ff7
+  · exact rd_ff8
+  · exact rd_ff9
+  · exact rd_ff10
+  · exact rd_ff11
+
+/-- The grouped word reads back whole at the drain end. -/
+theorem rd_hread : read64 rdS11.mem witA = some rdV0 :=
+  wort_gruppe_liest_zurueck rdS2 rdS11 _ 0 witA rdV0 rd_hgrp rd_hles
+    rd_spur rd_hend rd_hempty rd_hstoer
+
+/-- Stale-view divergence at the foreign address: core 0 still reads
+    canonical zero while core 1 forwards its pending seven. -/
+theorem rd_stale0 : loadByte rdS4 0 ctF = some (BitVec.ofNat 8 0) := by
+  decide
+
+theorem rd_stale1 : loadByte rdS4 1 ctF = some ctFv := by
+  decide
+
+/-- The zero word lands where the nine stood: the target write. -/
+theorem rd_hTgt : write64 rdM9 witA (zahlWort rdZero) = some rdM9' := by
+  simp only [write64, rdM9']
+  rw [if_pos (by decide : schreibbar8 rdM9 witA = true)]
+
+/-- The drain observably changes the canonical byte at the slot. -/
+theorem rd_hBytes : rdM9.bytes witA ≠ rdM9'.bytes witA := by
+  have hByte : writeBytes rdM9 witA (zahlWort rdZero) witA =
+      wortByte (zahlWort rdZero) 0 := by
+    have h := writeBytesN_hit rdM9 witA (zahlWort rdZero) 8 0
+      (by decide) (by decide)
+    rw [addrOff_null] at h
+    unfold writeBytes
+    exact h
+  show rdM9bytes witA ≠ writeBytes rdM9 witA (zahlWort rdZero) witA
+  rw [hByte]
+  decide
+
 /- CUTS:
     - Proved here (§§1-5): read-case preservation (`hwLade_erhaelt_wf`),
       the committed machine-read value (`hwLade_trifft_speicher`), the
