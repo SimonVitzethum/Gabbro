@@ -993,6 +993,46 @@ theorem envGet_set_idx {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :
         have h' : varIdx z' ≠ varIdx x := fun he => h (congrArg Nat.succ he)
         exact ih _ _ _ h'
 
+/-- Address congruence: equal indices address equal registers (no
+    injectivity needed — the same function of equal numbers). -/
+theorem abbOf_cong {Γ : Ctx} {τ τ' : Ty} (c : PipeCfg)
+    (x : Var Γ τ) (z : Var Γ τ') (h : varIdx z = varIdx x) :
+    abbOf c _ z = abbOf c _ x := by
+  simp only [abbOf, h]
+
+/-- Stored number read back at an index-equal variable. All casing is on
+    free or constructor-headed indices, so no index equation ever needs
+    solving; the type equation is eliminated once per arm by `subst`. -/
+theorem getN_idx_eq {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :
+    ∀ (lo hi lo' hi' : Int) (z : Var Γ (.int lo' hi')) (v : Wert D τ)
+      (ρ : Env D Γ) (hT : τ = .int lo hi),
+      varIdx z = varIdx x → ((ρ.set x v).get z).n = (cast (congrArg (Wert D) hT) v).n := by
+  induction x with
+  | hier =>
+    intro lo hi lo' hi' z v ρ hT h
+    subst hT
+    cases ρ with
+    | cons w ρ' =>
+      cases z with
+      | hier => rfl
+      | dort z' =>
+        simp only [varIdx] at h
+        exact False.elim (by omega)
+  | dort x ih =>
+    intro lo hi lo' hi' z v ρ hT h
+    subst hT
+    cases ρ with
+    | cons w ρ' =>
+      cases z with
+      | hier =>
+        simp only [varIdx] at h
+        exact False.elim (by omega)
+      | dort z' =>
+        simp only [varIdx] at h
+        simp only [Env.set, Env.get]
+        have h' : varIdx z' = varIdx x := by omega
+        exact ih lo hi lo' hi' z' v ρ' rfl h'
+
 /-- Per-read premises for a block-level read statement: the checked
     runtime bound plus register freshness (equal registers mean equal
     variables, so the environment update is exact). Reads at a
@@ -1008,13 +1048,15 @@ def stmtSkalOk (c : PipeCfg) {Γ : Ctx} (ρ : Env D Γ)
       match idxVarG? i with
       | some y =>
         idxOkB (ρ.get y).n (D.count t) = true ∧
-        ∀ (τ' : Ty) (z : Var Γ τ'), abbOf c τ' z = abbOf c _ x → HEq z x
+        ∀ (τ' : Ty) (z : Var Γ τ'), abbOf c τ' z = abbOf c _ x →
+          varIdx z = varIdx x
       | none => True
     | .durch _ t _ f i _ =>
       match idxVarG? i with
       | some y =>
         idxOkB (ρ.get y).n (D.count t) = true ∧
-        ∀ (τ' : Ty) (z : Var Γ τ'), abbOf c τ' z = abbOf c _ x → HEq z x
+        ∀ (τ' : Ty) (z : Var Γ τ'), abbOf c τ' z = abbOf c _ x →
+          varIdx z = varIdx x
       | none => True
     | _ => True
   | _ => True
