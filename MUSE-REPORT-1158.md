@@ -7,6 +7,8 @@
 
 ## Candidate under review
 
+CANDIDATE: 1157 f80385f004b27cd3ef4c4ff1542c96f86b44e1c7
+
 - Author lane 1157, pinned HEAD `f80385f004b27cd3ef4c4ff1542c96f86b44e1c7`, base `062b979a6271b7b3044ab06be3f3cde411a0d4f1` (per `.tmp/review/SNAPSHOT.json`).
 - Files (per snapshot): `MUSE-REPORT-1157.md`, `grammatik/Grammatik.lean` (one import line), `grammatik/Grammatik/X86/PipelineCalls.lean` (new, 542 lines).
 - Review basis: exact snapshot under `.tmp/review/author-1157/` (`PATCH.diff`, `MUSE-REPORT-1157.md`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`, candidate `grammatik/` files). No author clone was touched; nothing outside this directory was read.
@@ -27,7 +29,9 @@
 
 `Build completed successfully (610 jobs).` (608 at the candidate base + 2 from newer accepted modules since; no failure.)
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 The candidate is exactly what it claims: a frame/byte-gate extension over reused accepted vocabulary with an honest, weaker-than-task statement and a non-degenerate memory-changing witness. No banned tactics, no standard-axiom violation, no scope violation, no copied evaluator, refusals that genuinely refuse, silicon facts inherited from accepted producers, and CUTS that draw the boundary where the proof actually ends (notably: no source correspondence claimed). The disclosed weakness (abstracted callee body instead of a real `execBlock`-to-bytes call correspondence) is a documented OPEN gap, not a hidden one — it is correctly sized as follow-up work, not as a reason to repair this candidate.
 
