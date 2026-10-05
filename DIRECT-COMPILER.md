@@ -687,11 +687,11 @@ Last ledger refresh: **2026-10-05 16:25 UTC**. This is an operational snapshot, 
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Merged after review/checks | 1258: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1257.md) |
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Committed candidate; review/integration pending | 1260: Unresolved after agent rounds; not accepted | [task](lanes/1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1261.md) |
-| 1263 | Pipeline: per-chunk derivation for if/else and checks | Committed candidate; review/integration pending | 1264: Agent working | [task](lanes/1263.md) |
+| 1263 | Pipeline: per-chunk derivation for if/else and checks | Committed candidate; review/integration pending | 1264: Committed candidate; review/integration pending | [task](lanes/1263.md) |
 | 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Agent working | 1266: scheduled | [task](lanes/1265.md) |
 | 1267 | AVX2: per-lane equation for arithmetic shift right | Agent working | 1268: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1267.md) |
 | 1269 | Cross-declaration lowering certificate for the GX refinement | Merged after review/checks | 1270: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1269.md) |
-| 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Merged after review/checks | 1272: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1271.md) |
+| 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Merged after review/checks | 1272: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1271.md) |
 | 1273 | Rotates: ROL, ROR, RCL, RCR | Agent working | 1274: scheduled | [task](lanes/1273.md) |
 | 1275 | ADC, SBB, INC, DEC | Agent working | 1276: scheduled | [task](lanes/1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Agent working | 1278: scheduled | [task](lanes/1277.md) |
@@ -1633,6 +1633,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1271**, Byte-level entry/call linkage for the start-anchored bridged run, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1271.md). <!-- x86-merged:1271 -->
 - 2026-10-05: integration of candidate(s) [1267] failed the local proof/build gate after independent review 1268; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1268 -->
 - 2026-10-05: checked master `e7361bb2` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e7361bb21b290cfc28ac795970cc3c3fbdc10a7a -->
+- 2026-10-05: lane **1272**, Independent exact review of 1271, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1272.md). <!-- x86-merged:1272 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
