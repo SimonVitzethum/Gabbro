@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 17:37 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 17:39 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -696,10 +696,10 @@ Last ledger refresh: **2026-10-05 17:37 UTC**. This is an operational snapshot, 
 | 1275 | ADC, SBB, INC, DEC | Agent working | 1276: scheduled | [task](lanes/1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Agent working | 1278: scheduled | [task](lanes/1277.md) |
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Agent working | 1280: scheduled | [task](lanes/1279.md) |
-| 1281 | Sign-extend-accumulator ops and register XCHG | Agent working | 1282: scheduled | [task](lanes/1281.md) |
+| 1281 | Sign-extend-accumulator ops and register XCHG | Committed candidate; review/integration pending | 1282: scheduled | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Agent working | 1284: scheduled | [task](lanes/1283.md) |
-| 1285 | FS/GS segment bases and the TLB | Committed candidate; review/integration pending | 1286: Committed candidate; review/integration pending | [task](lanes/1285.md) |
-| 1287 | Memory types WC, WT, WP and the cache-control instructions | Committed candidate; review/integration pending | 1288: scheduled | [task](lanes/1287.md) |
+| 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1285.md) |
+| 1287 | Memory types WC, WT, WP and the cache-control instructions | Committed candidate; review/integration pending | 1288: Incomplete; preserved | [task](lanes/1287.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1657,6 +1657,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1256**, Independent exact review of 1255, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1256.md). <!-- x86-merged:1256 -->
 - 2026-10-05: lane **1259**, Pipeline work: taken-path bound and per-round loop correspondence, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1259.md). <!-- x86-merged:1259 -->
 - 2026-10-05: lane **1260**, Independent exact review of 1259, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1260.md). <!-- x86-merged:1260 -->
+- 2026-10-05: lane **1285**, FS/GS segment bases and the TLB, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1285.md). <!-- x86-merged:1285 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
