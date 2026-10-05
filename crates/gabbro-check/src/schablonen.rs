@@ -221,13 +221,14 @@ pub const SCHABLONEN: &[Schablone] = &[
                   library no constructor runs, which is what the start hook replaces.",
         stand: Stand::Bewiesen,
         voraussetzungen: &[
-            Voraussetzung { was: "the unit has exactly ONE entry, a public nullary `main`", durch: Some("`bau.rs::eintrittsregel` (`Art::Programm`: none, two, private, with parameters -- each refused by name)"), braeuchte: None },
+            Voraussetzung { was: "the unit has exactly ONE entry, a public nullary `main`", durch: Some("`bau.rs::eintrittsregel` (`Art::Programm`: none, two, private, with parameters -- each refused by name); for a `program` with declared roots the entry is the generated driver's `int main(void)` (since 2026-10-01, `treiber_ist_eintritt`), which starts and joins exactly the roots (templates `faden.laufzeit`, `arena.dyn`, `sperre.ticket`) and answers 0 or 2 -- a `main` of the unit's own beside it is refused"), braeuchte: None },
             Voraussetzung { was: "`main` does not return, or returns its status and the unit binds `gabbro_os_ende(code)` (else the `ud2` would run)", durch: Some("`bau.rs::eintrittsregel` under `nolibc` with `nolibc_haken` (a `main` that is not `-> never` must answer a value and the unit must define the end in its exact shape) and `S009` (a `-> never` body that returns or falls off its end), `schleifen.rs::nie_rueckkehr`"), braeuchte: None },
             Voraussetzung { was: "the end `gabbro_os_ende` does not return", durch: Some("the entry calls it only in its exact shape (`nolibc_haken`: one parameter, no value) -- a Gabbro function the program declares `-> never`, held by `S009`; a C body is refused beside `nolibc` (no foreign object links without the C library it would need)"), braeuchte: None },
             Voraussetzung { was: "the kernel hands a stack of at least 16 bytes", durch: Some("the loader: the runtime premise (d) of the goal (`Laufzeit.lader`), the named assumption every hosted unit already runs under"), braeuchte: None },
         ],
         fundstelle: "grammatik/Grammatik/SchablonenOhneLibc.lean §2; crates/gabbro-cli/src/bau.rs \
-                     (`prozess_start`, `eintrittsregel`); beispiele/172, 173",
+                     (`prozess_start`, `eintrittsregel`, `treiber_ist_eintritt`); beispiele/172, \
+                     173; the os-probe as a `nolibc` program (`tests/bausystem.rs`)",
     },
     // **Entered 2026-09-30 by the C-free lane (second Lean slice), PROVED in the same commit**:
     // the reason channel of a gate reached machine G (`Block`/`Endblock.bindAxiomElse`), and the

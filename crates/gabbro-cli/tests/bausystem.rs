@@ -1194,6 +1194,55 @@ fn ein_prozess_ohne_libc_endet_ueber_gabbro_os_ende_und_faengt_mit_dem_haken_an(
     assert_eq!(String::from_utf8_lossy(&nm.stdout).trim(), "", "and it imports nothing");
 }
 
+/// **A concurrent program without a C library: its generated driver is the entry** (C-free
+/// lane, 2026-10-01). The os-probe declares two roots, a lock and an arena; as a `program`
+/// under `nolibc` the build compiles its driver (which includes the emitted unit) and links it
+/// behind the generated `_start` -- no `__libc_start_main`, no startup file, no import. The run
+/// starts and joins both roots and answers 0.
+#[test]
+fn ein_nebenlaeufiges_programm_ohne_libc_tritt_ueber_seinen_treiber_ein() {
+    let d = kratz("nolibc-treiber-eintritt");
+    let w = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+    let manifest = format!(
+        "compiler cc -std=c11 -O0 -ffreestanding -fno-stack-protector -fno-pie -Wall -Wextra -Werror\n\
+         out {}\nnolibc\nunit osprobe program\n  {w}/messung/proben/os-bindung/os-probe.gab\n  \
+         {w}/bibliothek/linux/linux.gab\n",
+        d.join("bau").display()
+    );
+    std::fs::write(d.join("m.bau"), manifest).expect("manifest");
+    let (aus, fehler, code) = lauf(&["build", d.join("m.bau").to_str().expect("utf8")]);
+    assert_eq!(code, 0, "the unit builds:\n{aus}\n{fehler}");
+    let lauf_aus = Command::new(d.join("bau").join("osprobe")).output().expect("the binary runs");
+    assert_eq!(lauf_aus.status.code(), Some(0), "both roots started, joined, and main answered 0");
+    let nm = Command::new("nm").arg("-u").arg(d.join("bau").join("osprobe")).output().expect("nm runs");
+    assert_eq!(String::from_utf8_lossy(&nm.stdout).trim(), "", "and it imports nothing");
+}
+
+/// **Its refused twin: a `main` of the unit's own beside the roots.** The linker would take the
+/// unit's `main` and the declared roots would never run -- the build refuses before any C.
+#[test]
+fn ein_programm_mit_wurzeln_und_eigenem_main_faellt() {
+    let d = kratz("treiber-und-main");
+    let w = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+    std::fs::write(
+        d.join("zweit.gab"),
+        "module zweit {\npub fn main() -> i32 in 0 .. 1\n    effects { pure }\n{\n    return 0;\n}\n\n}\n",
+    )
+    .expect("unit");
+    let manifest = format!(
+        "compiler cc -std=c11 -O0 -Wall -Wextra -Werror\nout {}\nunit osprobe program\n  \
+         {w}/messung/proben/os-bindung/os-probe.gab\n  {w}/bibliothek/linux/linux.gab\n  {}\n",
+        d.join("bau").display(),
+        d.join("zweit.gab").display()
+    );
+    std::fs::write(d.join("m.bau"), manifest).expect("manifest");
+    let (aus, fehler, code) = lauf(&["build", d.join("m.bau").to_str().expect("utf8")]);
+    let alles = format!("{aus}{fehler}");
+    assert_ne!(code, 0, "refused:\n{alles}");
+    assert!(alles.contains("under which the declared roots would never run"), "with its reason:\n{alles}");
+    assert!(!d.join("bau").join("osprobe").exists(), "no binary is written");
+}
+
 const NOLIBC_HAKEN: &str = r#"module t::ende {
 
 assume linux_exit_group

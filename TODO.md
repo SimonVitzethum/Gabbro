@@ -297,8 +297,11 @@ generated driver, lock through the chain). Reviewers from 321.
     (`gabbro_os_schreibe`, `_schreibe_zahl`). **Hosted C0: 0 lines, 0 files**; hosted imports
     (`zaehle-c.py --baue`): 0 for 172, 173 and the os-probe; `putchar`/`write` for examples
     63/64, which bind the C library by their own `extern fn` (their libc-free twins are 172/173).
-  - [ ] A hosted `nolibc` DRIVER (its `main` returns into the C runtime's start code:
-    `__libc_start_main`, the toolchain's names only).
+  - [x] A hosted `nolibc` DRIVER (2026-10-01): a `program` with declared roots is entered by
+    its generated driver, which the build compiles and links -- under `nolibc` behind the
+    generated `_start`. The os-probe builds as a `nolibc` program: `nm -u` empty, no
+    `__libc_start_main` (`zaehle-c.py --baue`: osprobe 0 imports); a unit `main` beside roots is
+    refused (the roots would never run). 2 CLI tests.
   - [x] C2, slice 1 -- the kernel-module RUNTIME generated: `laufzeit/kmodul/` (driver,
     `vzalloc` arena, lock macros, `bindung.h`, type shims) and the LKMM table
     `bibliothek/linux-kmod/stdatomic.h` deleted; `gabbro build` writes the module driver

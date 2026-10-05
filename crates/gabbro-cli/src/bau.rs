@@ -822,14 +822,50 @@ fn nolibc_haken(funktionen: &BTreeMap<String, Vec<FunktionsForm>>) -> (bool, boo
     (gestalt("gabbro_os_anfang", 0), gestalt("gabbro_os_ende", 1))
 }
 
+/// **Is the generated hosted driver this unit's process entry?** A `program` with declared
+/// roots, in a hosted manifest (no `metal`, no `kmod` line): the driver's `main` starts and
+/// joins the roots, and `gabbro build` compiles and links it (C-free lane, 2026-10-01).
+fn treiber_ist_eintritt(manifest: &Manifest, e: &Einheit, wurzeln: &[TreiberFund]) -> bool {
+    e.art == Art::Programm && !wurzeln.is_empty() && manifest.metall.is_none() && manifest.kmod.is_none()
+}
+
 fn eintrittsregel(
     art: Art,
     ohne_libc: bool,
     eintritte: &[Eintritt],
     haken: (bool, bool),
+    treiber: bool,
 ) -> Option<String> {
     let ort = |e: &Eintritt| format!("`{}::{EINTRITT}` in {}", e.modul, e.datei);
     match art {
+        // **A program whose unit declares roots is entered by its GENERATED driver** (C-free
+        // lane, 2026-10-01): the driver's `{EINTRITT}` starts exactly the declared roots and
+        // joins them, and the build links it as the process entry -- under `nolibc` behind the
+        // generated `_start` (template `start.nolibc`), so a concurrent program needs no C
+        // library either. A `{EINTRITT}` of the unit's own beside it would be a second entry,
+        // and the one the linker took would leave the declared roots unstarted.
+        Art::Programm if treiber => {
+            if let Some(e) = eintritte.first() {
+                return Some(format!(
+                    "this `program` declares roots (`concurrent`), so its entry is the generated \
+                     driver's `{EINTRITT}`, which starts and joins them -- and {} is a second \
+                     entry, under which the declared roots would never run\n\
+                     \x20        = remove it (the driver is the entry), or declare this unit \
+                     `object` and link its driver by hand",
+                    ort(e)
+                ));
+            }
+            if ohne_libc && !haken.1 {
+                return Some(format!(
+                    "this `program` is entered by its generated driver, whose `{EINTRITT}` \
+                     returns a status -- and under `nolibc` the unit binds no \
+                     `gabbro_os_ende(code)` to hand it to\n\
+                     \x20        = bind it (a `-> never` function of the program's binding; \
+                     `bibliothek/linux/linux.gab` has one)"
+                ));
+            }
+            None
+        }
         Art::Programm => match eintritte.len() {
             0 => Some(format!(
                 "this `program` declares no `{EINTRITT}` -- the hosted entry is a \
@@ -1891,6 +1927,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
                 manifest.ohne_libc,
                 &eintritte_je_einheit[name],
                 nolibc_haken(&funktionen_je_einheit[name]),
+                treiber_ist_eintritt(&manifest, e, &treiber_funde_je_einheit[name]),
             ) {
                 befunde += 1;
                 println!("  REFUSED  {name}: {befund}");
@@ -2060,6 +2097,7 @@ pub fn befehl(argumente: &[String]) -> std::process::ExitCode {
             manifest.ohne_libc,
             &eintritte_je_einheit[name],
             nolibc_haken(&funktionen_je_einheit[name]),
+            treiber_ist_eintritt(&manifest, e, &treiber_funde_je_einheit[name]),
         ) {
             abgesagt += 1;
             println!("REFUSED  {name}: {befund}");
@@ -2553,9 +2591,40 @@ fn baue_einheit(
     // an `object`, and a program needs a `main`. What it needs besides is exactly the closure
     // computed by `geschlossene_grundlage` -- the objects of everything it rests on.
     if e.art == Art::Programm {
+        // **A program with declared roots is entered by its generated driver** (C-free lane,
+        // 2026-10-01; `treiber_ist_eintritt`): the driver INCLUDES the emitted unit, so its
+        // object takes the unit object's place in the link -- compiled with the manifest's own
+        // compiler line, like everything else of the program.
+        let mut eintritt_objekt = objekt.clone();
+        if treiber_plan.is_some_and(|p| p.hat_gehostet())
+            && manifest.metall.is_none()
+            && manifest.kmod.is_none()
+        {
+            let treiber_o =
+                PathBuf::from(&manifest.ausgabe).join(format!("{}.treiber.o", e.name));
+            let mut ruf = std::process::Command::new(&manifest.compiler[0]);
+            ruf.args(&manifest.compiler[1..]);
+            ruf.arg("-I").arg(&manifest.ausgabe);
+            ruf.arg(format!("-DEINHEIT_INCLUDE=\"{}.c\"", e.name));
+            ruf.arg("-c").arg("-o").arg(&treiber_o).arg(&treiber_pfad);
+            match ruf.output() {
+                Ok(a) if a.status.success() => {}
+                Ok(a) => {
+                    eprint!("{}", String::from_utf8_lossy(&a.stderr));
+                    return Ergebnis::Abgesagt(format!(
+                        "{} refused the generated driver",
+                        manifest.compiler[0]
+                    ));
+                }
+                Err(err) => {
+                    return Ergebnis::Abgesagt(format!("{} did not run: {err}", manifest.compiler[0]))
+                }
+            }
+            eintritt_objekt = treiber_o;
+        }
         let mut binde = std::process::Command::new(&manifest.compiler[0]);
         binde.args(&manifest.compiler[1..]);
-        binde.arg("-o").arg(&erzeugnis).arg(&objekt);
+        binde.arg("-o").arg(&erzeugnis).arg(&eintritt_objekt);
         for o in &fremd_objekte {
             binde.arg(o);
         }

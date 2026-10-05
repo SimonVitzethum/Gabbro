@@ -18,8 +18,9 @@ put into each finished product, per target.
 Hosted imports (`C0_ARBEIT=… python3 instrumente/zaehle-c.py --baue`, toolchain names removed):
 172, 173 and the os-probe 0; examples 63 (`putchar`) and 64 (`write`) bind the C library by their
 OWN `extern fn` -- the documented point of those two examples; their libc-free twins are 172/173
-(a reading for Simon to confirm). The os-probe's binary still starts through the toolchain's
-`__libc_start_main` (the driver's `int main` returns into it): the hosted `nolibc` driver is open.
+(a reading for Simon to confirm). The os-probe -- two roots, a lock, an arena -- builds as a
+`nolibc` `program` whose entry is its generated driver (2026-10-01): a static binary with no
+startup file and no `__libc_start_main`, `nm -u` empty.
 
 ## What moved, in order (each merged green: `cargo test --no-fail-fast`, `pruefe-emission.sh`, `lake build`, standard axioms)
 
@@ -48,7 +49,6 @@ hanging premises it named before this lane (none of this lane's).
 * **Acceptance 0 (the network stack)**: the patch `~/claude-lane/C-FREI-FUER-NETZ.md` is on master
   since session 8; the network lane has not reported its `tests/*.sh` on it. `N571` asked it for
   74 sites.
-* **Hosted**: a `nolibc` driver (`main` returns into the C runtime's start code).
 * **Kernel module, the last 95 lines**: the `takt` probe's hrtimer (`takt.c`). Its callback is a
   FIELD of `struct hrtimer` on kernel 6.8; code reaches a foreign body only as an `entry fn`
   ARGUMENT. Kernels from 6.13 take it as an argument (`hrtimer_setup`). A question for Simon:

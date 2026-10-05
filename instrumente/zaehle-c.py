@@ -66,8 +66,10 @@ SZENARIEN = {
         ("puffer", CC + "unit puffer program\n  {W}/beispiele/64-writes-a-whole-buffer.gab\n", "puffer"),
         ("prozess172", NOLIBC + "unit prozess program\n  {W}/beispiele/172-prozess-ohne-libc.gab\n", "prozess"),
         ("abbruch173", NOLIBC + "unit abbruch program\n  {W}/beispiele/173-abbruch-ohne-libc.gab\n", "abbruch"),
-        ("osprobe", CC +
-         "unit osprobe object\n  {W}/messung/proben/os-bindung/os-probe.gab\n" + BINDUNG_LINUX,
+        # A concurrent program: its generated driver is the entry, linked by the build under
+        # `nolibc` (C-free lane, 2026-10-01) -- no C library and no `__libc_start_main`.
+        ("osprobe", NOLIBC +
+         "unit osprobe program\n  {W}/messung/proben/os-bindung/os-probe.gab\n" + BINDUNG_LINUX,
          "osprobe"),
     ],
     "kmod": [
