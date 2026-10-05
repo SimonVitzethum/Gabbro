@@ -1,5 +1,7 @@
 # MUSE-REPORT-1126: Exact review of candidate 1125 (async interrupt delivery)
 
+CANDIDATE: 1125 93bde9090d73053943fcbe9d24d166d871895e11
+
 Clone `/home/simon/Dokumente/gabbro-muse/a1126`, branch `muse/1126` — verified,
 clean tree. Report-only review; no Lean files added or changed by this lane.
 New definitions/theorems by lane 1126: none.
@@ -121,4 +123,4 @@ pin was recovered from the in-clone `.tmp/review/SNAPSHOT.json`
 (`93bde9090d73053943fcbe9d24d166d871895e11`). Future review lanes should
 carry the full hash in the lane file itself.
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
