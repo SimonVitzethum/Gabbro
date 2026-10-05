@@ -652,6 +652,163 @@ def sxEncode : SxBefehl → List Byte
     wdRex .w64 (regHigh dst) (regHigh src) ++
       [natByte 99, modrmReg (regLow dst) (regLow src)]
 
+/-! ## 8. Pinned bytes: one canonical encoding per admitted form,
+    planted refusals beside them. -/
+
+/-- Pinned decode: CBW. -/
+theorem pin_sxcbw_dekode :
+    decodeSx [natByte 102, natByte 152] =
+      some (⟨.cbw, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: CWDE. -/
+theorem pin_sxcwde_dekode :
+    decodeSx [natByte 152] = some (⟨.cwde, 1⟩, []) := by
+  decide
+
+/-- Pinned decode: CDQE. -/
+theorem pin_sxcdqe_dekode :
+    decodeSx [natByte 72, natByte 152] = some (⟨.cdqe, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: CWD. -/
+theorem pin_sxcwd_dekode :
+    decodeSx [natByte 102, natByte 153] = some (⟨.cwd, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: CDQ. -/
+theorem pin_sxcdq_dekode :
+    decodeSx [natByte 153] = some (⟨.cdq, 1⟩, []) := by
+  decide
+
+/-- Pinned decode: CQO. -/
+theorem pin_sxcqo_dekode :
+    decodeSx [natByte 72, natByte 153] = some (⟨.cqo, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: bare `90` is NOP (never a self-exchange). -/
+theorem pin_sxnop_dekode :
+    decodeSx [natByte 144] = some (⟨.nop, 1⟩, []) := by
+  decide
+
+/-- Pinned decode: `91` exchanges ECX with EAX at 32 bits. -/
+theorem pin_sxxchg91_dekode :
+    decodeSx [natByte 145] = some (⟨.xchgRax32 .rcx, 1⟩, []) := by
+  decide
+
+/-- Pinned decode: `REX.W+B 90` exchanges r8 with RAX at 64 bits. -/
+theorem pin_sxxchg4890r8_dekode :
+    decodeSx [natByte 73, natByte 144] =
+      some (⟨.xchgRax64 .r8, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: redundant-REX `90` is the 32-bit self-exchange
+    (the zero-extension surprise, kept distinct from NOP). -/
+theorem pin_sx4090_dekode :
+    decodeSx [natByte 64, natByte 144] =
+      some (⟨.xchgRax32 .rax, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: `86 C0` exchanges AL with itself at 8 bits. -/
+theorem pin_sx86c0_dekode :
+    decodeSx [natByte 134, natByte 192] =
+      some (⟨.xchgReg .b8 .rax .rax, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: `87 C1` exchanges EAX with ECX at 32 bits. -/
+theorem pin_sx87c1_dekode :
+    decodeSx [natByte 135, natByte 193] =
+      some (⟨.xchgReg .b32 .rax .rcx, 2⟩, []) := by
+  decide
+
+/-- Pinned decode: `66 87 C1` is the 16-bit exchange. -/
+theorem pin_sx6687c1_dekode :
+    decodeSx [natByte 102, natByte 135, natByte 193] =
+      some (⟨.xchgReg .b16 .rax .rcx, 3⟩, []) := by
+  decide
+
+/-- Pinned decode: `REX.W+R 87 C1` exchanges r8 with ECX. -/
+theorem pin_sx4c87c1_dekode :
+    decodeSx [natByte 76, natByte 135, natByte 193] =
+      some (⟨.xchgReg .b64 .r8 .rcx, 3⟩, []) := by
+  decide
+
+/-- Pinned decode: `REX.W 63 C0` moves EAX sign-extended into RAX. -/
+theorem pin_sx63c0_dekode :
+    decodeSx [natByte 72, natByte 99, natByte 192] =
+      some (⟨.movsxd .rax .rax, 3⟩, []) := by
+  decide
+
+/-- Pinned decode: `REX.W+R 63 D9` moves ECX into r11 extended. -/
+theorem pin_sx4c63d9_dekode :
+    decodeSx [natByte 76, natByte 99, natByte 217] =
+      some (⟨.movsxd .r11 .rcx, 3⟩, []) := by
+  decide
+
+/-- Planted refusal: LOCK on the NOP byte. -/
+theorem sxNichts_lock90 :
+    decodeSx [natByte 240, natByte 144] = none := by
+  decide
+
+/-- Planted refusal: LOCK on the CWDE byte. -/
+theorem sxNichts_lock98 :
+    decodeSx [natByte 240, natByte 152] = none := by
+  decide
+
+/-- Planted refusal: `87` with a memory ModRM (implicitly LOCKed,
+    stays with the locked families). -/
+theorem sxNichts_xchg87mem :
+    decodeSx [natByte 135, natByte 4] = none := by
+  decide
+
+/-- Planted refusal: `86` with a memory ModRM. -/
+theorem sxNichts_xchg86mem :
+    decodeSx [natByte 134, natByte 0] = none := by
+  decide
+
+/-- Planted refusal: `63` without REX.W is no MOVSXD here. -/
+theorem sxNichts_movsxdOhneRex :
+    decodeSx [natByte 99, natByte 192] = none := by
+  decide
+
+/-- Planted refusal: `66`+REX.W on `63` (overdetermined). -/
+theorem sxNichts_movsxd66rex :
+    decodeSx [natByte 102, natByte 72, natByte 99, natByte 192] =
+      none := by
+  decide
+
+/-- Planted refusal: `66`+REX.W on `87` (overdetermined). -/
+theorem sxNichts_xchg87_66rex :
+    decodeSx [natByte 102, natByte 72, natByte 135, natByte 192] =
+      none := by
+  decide
+
+/-- Planted refusal: `66`+REX.W on `98` (overdetermined). -/
+theorem sxNichts_cbw66rex :
+    decodeSx [natByte 102, natByte 72, natByte 152] = none := by
+  decide
+
+/-- Planted refusal: truncated `87` without its ModRM byte. -/
+theorem sxNichts_xchg87kurz :
+    decodeSx [natByte 135] = none := by
+  decide
+
+/-- Pinned bytes: CBW. -/
+theorem pin_sxcbw_bytes :
+    sxEncode .cbw = [natByte 102, natByte 152] := by
+  decide
+
+/-- Pinned bytes: the 32-bit RAX self-exchange needs its REX. -/
+theorem pin_sxxchgRax32rax_bytes :
+    sxEncode (.xchgRax32 .rax) = [natByte 64, natByte 144] := by
+  decide
+
+/-- Pinned bytes: MOVSXD r11, ecx. -/
+theorem pin_sxmovsxdR_bytes :
+    sxEncode (.movsxd .r11 .rcx) =
+      [natByte 76, natByte 99, natByte 217] := by
+  decide
+
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
    NOT proved here, and not claimed: everything (see task).
