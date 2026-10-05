@@ -1,6 +1,6 @@
-# MUSE-REPORT-1260: Exact review of candidate 1259 — review blocked
+# MUSE-REPORT-1260: Exact review of candidate 1259 — re-review blocked
 
-CANDIDATE: 1259 1650a2899f5eeea3db5883139ea47231fd605707
+CANDIDATE: 1259 231b3e93789ec55e20f01a847e8eedd2dcf790a4
 
 VERDICT: REPAIR
 
@@ -17,21 +17,33 @@ MUSE-REPORT-1260.md only.
 - `./lean-bau` on this clone (unchanged tree): last result line
   `Build completed successfully (658 jobs).` — green.
 
-## Blocker (precise)
+## Re-review note (new snapshot)
 
-The lane task names the candidate as `1259 <full pinned HEAD>` with the hash
-left as a placeholder. The pinned hash is since on file in
-`.tmp/review/SNAPSHOT.json` (head
-`1650a2899f5eeea3db5883139ea47231fd605707`, recorded in the machine-readable
+The previous report pinned the superseded head `1650a2899f5eeea3db5883139ea47231fd605707`.
+That verdict is stale: the author has since repaired and the coordinator pinned a
+NEW head `231b3e93789ec55e20f01a847e8eedd2dcf790a4` (same base
+`515546d0e2430c0d416ede74e3add0166e88e2de`, same file list:
+`MUSE-REPORT-1259.md`, `grammatik/Grammatik.lean`,
+`grammatik/Grammatik/X86/PipelineWorkPath.lean`, clean true). This report
+re-inspects the new pointer and re-checks availability: the candidate file
+`grammatik/Grammatik/X86/PipelineWorkPath.lean` does NOT exist in this clone,
+so the re-review below is against the new snapshot and reaches its own
+finding. The stale head is not approved anywhere in this report.
+
+## Blocker (precise, re-verified for the new head)
+
+The lane task names the candidate with a `<full pinned HEAD>` placeholder. The
+pinned hash is on file in `.tmp/review/SNAPSHOT.json` (new head
+`231b3e93789ec55e20f01a847e8eedd2dcf790a4`, recorded in the machine-readable
 line at the top of this report).
 
 The candidate material itself is still not present in this clone: the author
-branch does not exist here (`git rev-parse muse/1259` fails), and
-`git log master..HEAD` on this clone is empty (HEAD is at master `17651ab7`).
-The review instruction says to read the diff in the author clone, but HARD
-RULES 1 forbids touching anything outside this directory, so the author clone
-cannot be read. Shell probing beyond the queued wrappers is currently refused
-by the permission classifier; per HARD RULES this is not worked around.
+branch does not exist here, and the candidate's new Lean file is absent from
+this tree (verified by file search inside this clone). The review instruction
+says to read the diff in the author clone, but HARD RULES 1 forbids touching
+anything outside this directory, so the author clone cannot be read. Shell
+probing beyond the queued wrappers is refused by the permission classifier;
+per HARD RULES this is not worked around.
 
 ## Result
 
@@ -51,18 +63,22 @@ the review re-dispatched). No finding about `PipelineWorkPath.lean`,
 `Grammatik.lean`, axioms, witnesses, silicon facts, or CUTS is made here,
 because none of that material was read. Anything else would be fabrication.
 
-Pinned snapshot (`.tmp/review/SNAPSHOT.json`): author 1259, base
+Pinned snapshot (`.tmp/review/SNAPSHOT.json`, re-read for this re-review):
+author 1259, new head `231b3e93789ec55e20f01a847e8eedd2dcf790a4`, base
 `515546d0e2430c0d416ede74e3add0166e88e2de`, files `MUSE-REPORT-1259.md`,
 `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/PipelineWorkPath.lean`,
 clean true. None of these objects is present in this clone: the author branch
 does not exist here and HARD RULES 1 forbids reading outside this directory.
+Every previous finding stands unexamined — no prior refusal, axiom, witness,
+silicon, or CUTS claim was inspected then or now.
 
 ## What is needed to unblock
 
-1. The full pinned HEAD hash of candidate 1259.
-2. A way to read the candidate diff that stays inside this clone (e.g. fetch
-   the author branch into this clone by the coordinator, or a re-issued task
-   with the diff attached).
+1. The candidate diff readable inside this clone (e.g. the coordinator fetches
+   the author branch / pinned commit into this clone, or re-issues the task
+   with the diff attached). The pinned hash alone is not reviewable material.
+2. Then the full exact review of candidate 1259 (checklist in `.tmp/LANE.md`
+   lines 23/25) can be performed against the new head.
 
 ## Believed-wrong in the task
 
