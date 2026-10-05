@@ -383,6 +383,11 @@ theorem runKap_wf {m m' : HwMaschine} {ks : List KapEreignis} :
     intro hwf
     exact ih (kap_wf _ _ _ hstep hwf)
 
+/-- A single union step is a one-step run. -/
+theorem runKap_einzel {m m' : HwMaschine} {k : KapEreignis} :
+    HwVollSchritt m m' k → RunKap m m' [k] :=
+  fun h => .cons h (RunKap.nil _)
+
 /-- A uniform list of known length is the replicate. -/
 theorem liste_gleich_replicate (ks : List KapEreignis)
     (e : KapEreignis) :
@@ -440,11 +445,341 @@ theorem runDrain0_run (n : Nat) (m m' : HwMaschine)
         | inl hkk => exact hkk
         | inr hkr => exact hmem k hkr
 
+/-! ## 7. The run: thirty-eight union steps on two cores. -/
+
+/-- The vector row moves no buffer: core 0 still holds 24 bytes. -/
+theorem run_vec_puffer_pin :
+    (runNachVec.map fun m => (m.puffer 0).length) = some 24 := by
+  decide
+
+theorem run_haupt :
+    ∃ (m8 : HwMaschine) (ks : List KapEreignis),
+      runNachFlush1 = some m8 ∧
+      RunKap runStart m8 ks ∧
+      ks = [KapEreignis.lockRmw 0 (.ok (.xadd64 .rax .rbp 0) 9),
+        KapEreignis.fwd 0 (.speichere runStoreAdr runStoreWort),
+        KapEreignis.fwd 0 (.beobachte runStoreAdr),
+        KapEreignis.basis (.leseBeob 1 runStoreAdr (BitVec.ofNat 8 0)),
+        KapEreignis.stapel 0 (.push runPushWort),
+        KapEreignis.stapel 0 (.pop (BitVec.ofNat 64 8200)),
+        KapEreignis.stapel 0 (.ruf runRufWort),
+        KapEreignis.stapel 0 (.pop (BitVec.ofNat 64 8200)),
+        KapEreignis.stapel 0 (.ret (BitVec.ofNat 64 8200)),
+        KapEreignis.fp (.s32reg 0 runFpD),
+        KapEreignis.vec (.vecReg 0 basisCpu basisKontrolle runVecD)] ++
+        List.replicate 24 (KapEreignis.drain 0 .eigenSpuele) ++
+        [KapEreignis.drain 1 .eigenSpuele,
+        KapEreignis.basis
+          (.leseBeob 0 (BitVec.ofNat 64 8216) (BitVec.ofNat 8 99)),
+        KapEreignis.basis
+          (.leseBeob 1 (BitVec.ofNat 64 8216) (BitVec.ofNat 8 99))] ∧
+      HwWf m8 ∧
+      (m8.puffer 0).length = 0 ∧ (m8.puffer 1).length = 0 ∧
+      read64 m8.mem (BitVec.ofNat 64 8192) = some 15 ∧
+      read64 m8.mem runStoreAdr = some runStoreWort ∧
+      read64 m8.mem (BitVec.ofNat 64 8200) = some runRufWort ∧
+      m8.mem.bytes (BitVec.ofNat 64 8216) = BitVec.ofNat 8 99 := by
+  cases h1 : runNachLock with
+  | none =>
+    have hwort := run_lock_wort
+    rw [h1] at hwort
+    cases hwort
+  | some m1 =>
+    have eLock : adapterLockRmw.schritt runStart 0
+        (.ok (.xadd64 .rax .rbp 0) 9) = some m1 := h1
+    have s1 : HwVollSchritt runStart m1
+        (KapEreignis.lockRmw 0 (.ok (.xadd64 .rax .rbp 0) 9)) :=
+      (kap_lock_embedded _ _ _ _).mp eLock
+    cases h2 : runNachStore with
+    | none =>
+      have hpin := run_puffer_zensus.1
+      rw [h2] at hpin
+      cases hpin
+    | some m2 =>
+      have hE2 : fwdAdapter.schritt m1 0
+          (.speichere runStoreAdr runStoreWort) = some m2 := by
+        simpa [runNachStore, h1] using h2
+      have s2 : HwVollSchritt m1 m2
+          (KapEreignis.fwd 0 (.speichere runStoreAdr runStoreWort)) :=
+        (kap_fwd_embedded _ _ _ _).mp hE2
+      have hL2 : stapelLadeWort (tsoAnsicht m2) 0 runStoreAdr =
+          some runStoreWort := by
+        simpa [runNachStore, h1, hE2] using run_fwd_beobachte_pin
+      have oFwd : HwVollSchritt m2 m2
+          (KapEreignis.fwd 0 (.beobachte runStoreAdr)) := by
+        have heq : fwdAdapter.schritt m2 0
+            (.beobachte runStoreAdr) = some m2 := by
+          show (match stapelLadeWort (tsoAnsicht m2) 0 runStoreAdr with
+            | some _ => some m2 | none => none) = some m2
+          rw [hL2]
+        exact (kap_fwd_embedded _ _ _ _).mp heq
+      have hB2 : loadByte (tsoAnsicht m2) 1 runStoreAdr =
+          some (BitVec.ofNat 8 0) := by
+        simpa [runNachStore, h1, hE2] using run_basis_fremd_pin
+      have oBasis : HwVollSchritt m2 m2 (KapEreignis.basis
+          (.leseBeob 1 runStoreAdr (BitVec.ofNat 8 0))) :=
+        (kap_basis_embedded _ _ _).mp (HwSchritt.lade 1 _ _ hB2)
+      cases h3 : runNachPush with
+      | none =>
+        have hpin := run_puffer_zensus.2.1
+        rw [h3] at hpin
+        cases hpin
+      | some m3 =>
+        have hE3 : stapelAdapter.schritt m2 0
+            (.push runPushWort) = some m3 := by
+          simpa [runNachPush, h2] using h3
+        have s3 : HwVollSchritt m2 m3
+            (KapEreignis.stapel 0 (.push runPushWort)) :=
+          (kap_stapel_embedded _ _ _ _).mp hE3
+        have hL3 : stapelLadeWort (tsoAnsicht m3) 0
+            (BitVec.ofNat 64 8200) = some runPushWort := by
+          simpa [runNachPush, h2, hE3] using run_pop_pin
+        have oPop : HwVollSchritt m3 m3 (KapEreignis.stapel 0
+            (.pop (BitVec.ofNat 64 8200))) := by
+          have heq : stapelAdapter.schritt m3 0
+              (.pop (BitVec.ofNat 64 8200)) = some m3 := by
+            show (match stapelLadeWort (tsoAnsicht m3) 0
+                (BitVec.ofNat 64 8200) with
+              | some _ => some m3 | none => none) = some m3
+            rw [hL3]
+          exact (kap_stapel_embedded _ _ _ _).mp heq
+        cases h4 : runNachRuf with
+        | none =>
+          have hpin := run_puffer_zensus.2.2.1
+          rw [h4] at hpin
+          cases hpin
+        | some m4 =>
+          have hgate : rufAlignOk (projZustand m3 0) = true := by
+            simpa [runNachPush, h2, hE3] using run_ruf_gate
+          have hruf : stapelAdapter.schritt m3 0
+              (.ruf runRufWort) = stapelCall m3 0 runRufWort := by
+            show (if rufAlignOk (projZustand m3 0) then
+              stapelCall m3 0 runRufWort else none) = _
+            rw [if_pos hgate]
+          have hC4 : stapelCall m3 0 runRufWort = some m4 := by
+            have h := h4
+            simp only [runNachRuf, h3] at h
+            rw [hruf] at h
+            exact h
+          have s4 : HwVollSchritt m3 m4
+              (KapEreignis.stapel 0 (.ruf runRufWort)) := by
+            have heq : stapelAdapter.schritt m3 0
+                (.ruf runRufWort) = some m4 := by
+              rw [hruf]
+              exact hC4
+            exact (kap_stapel_embedded _ _ _ _).mp heq
+          have hL4 : stapelLadeWort (tsoAnsicht m4) 0
+              (BitVec.ofNat 64 8200) = some runRufWort := by
+            simpa [runNachRuf, h3, hruf, hC4] using run_ruf_liest_pin
+          have oPop2 : HwVollSchritt m4 m4 (KapEreignis.stapel 0
+              (.pop (BitVec.ofNat 64 8200))) := by
+            have heq : stapelAdapter.schritt m4 0
+                (.pop (BitVec.ofNat 64 8200)) = some m4 := by
+              show (match stapelLadeWort (tsoAnsicht m4) 0
+                  (BitVec.ofNat 64 8200) with
+                | some _ => some m4 | none => none) = some m4
+              rw [hL4]
+            exact (kap_stapel_embedded _ _ _ _).mp heq
+          have oRet : HwVollSchritt m4 m4 (KapEreignis.stapel 0
+              (.ret (BitVec.ofNat 64 8200))) := by
+            have heq : stapelAdapter.schritt m4 0
+                (.ret (BitVec.ofNat 64 8200)) = some m4 := by
+              show (match stapelLadeWort (tsoAnsicht m4) 0
+                  (BitVec.ofNat 64 8200) with
+                | some _ => some m4 | none => none) = some m4
+              rw [hL4]
+            exact (kap_stapel_embedded _ _ _ _).mp heq
+          cases h5 : runNachFp with
+          | none =>
+            have hpin := run_vec_gate
+            rw [h5] at hpin
+            cases hpin
+          | some m5 =>
+            have hfp : s32Eintritt (projFp m4 0).fp = true := by
+              have h := run_fp_eintritt
+              rw [h4] at h
+              simpa using h
+            have hEq5 : setKernVonFp m4 0 (runFpT m4) = m5 := by
+              have h := h5
+              unfold runNachFp at h
+              rw [h4] at h
+              simpa using h
+            have hmem5 : (runFpT m4).kern.speicher = m4.mem :=
+              projFp_speicher m4 0
+            have s10 : HwVollSchritt m4 m5
+                (KapEreignis.fp (.s32reg 0 runFpD)) := by
+              rw [← hEq5]
+              exact (kap_fp_embedded _ _ _).mp
+                (FpCtrlSchritt.s32reg 0 runFpD (runFpT m4)
+                  (runFp_eq m4 hfp) hmem5)
+            cases h6 : runNachVec with
+            | none =>
+              have hpin := run_vec_puffer_pin
+              rw [h6] at hpin
+              cases hpin
+            | some m6 =>
+              have hgateV : vektorLegacyZugelassen m5.hw (m5.bereit 0)
+                  basisCpu basisKontrolle = true := by
+                have h := run_vec_gate
+                rw [h5] at h
+                simpa using h
+              have hEq6 : setKernVonFp m5 0 (runVecT m5) = m6 := by
+                have h := h6
+                unfold runNachVec at h
+                rw [h5] at h
+                simpa using h
+              have s11 : HwVollSchritt m5 m6 (KapEreignis.vec
+                  (.vecReg 0 basisCpu basisKontrolle runVecD)) := by
+                rw [← hEq6]
+                exact (kap_vec_embedded _ _ _).mp
+                  (vecReg_ist_schritt m5 0 basisCpu basisKontrolle
+                    runVecD (runVecT m5) (by decide) (by decide)
+                    hgateV (runVec_eq m5 hgateV)
+                    (projFp_speicher m5 0))
+              cases h7 : runNachFlush0 with
+              | none =>
+                have hpin := run_puffer_zensus.2.2.2.2.1
+                rw [h7] at hpin
+                cases hpin
+              | some m7 =>
+                have hLoop : runDrain0 24 (some m6) = some m7 := by
+                  have h := h7
+                  unfold runNachFlush0 at h
+                  rw [h6] at h
+                  simpa using h
+                obtain ⟨ksLoop, hRunLoop, hLenLoop, hMemLoop⟩ :=
+                  runDrain0_run 24 m6 m7 hLoop
+                have hRep : ksLoop = List.replicate 24
+                    (KapEreignis.drain 0 .eigenSpuele) :=
+                  liste_gleich_replicate ksLoop _ 24 hLenLoop hMemLoop
+                cases h8 : runNachFlush1 with
+                | none =>
+                  have hpin := run_puffer_zensus.2.2.2.2.2.2.1
+                  rw [h8] at hpin
+                  cases hpin
+                | some m8 =>
+                  have hF1 : drainAdapter.schritt m7 1
+                      .eigenSpuele = some m8 := by
+                    have h := h8
+                    unfold runNachFlush1 at h
+                    rw [h7] at h
+                    simpa using h
+                  have sF1 : HwVollSchritt m7 m8
+                      (KapEreignis.drain 1 .eigenSpuele) :=
+                    (kap_drain_embedded _ _ _ _).mp hF1
+                  have hO0 : loadByte (tsoAnsicht m8) 0
+                      (BitVec.ofNat 64 8216) =
+                      some (BitVec.ofNat 8 99) := by
+                    have h := run_ende_beobachte_pin.1
+                    rw [h8] at h
+                    simpa using h
+                  have hO1 : loadByte (tsoAnsicht m8) 1
+                      (BitVec.ofNat 64 8216) =
+                      some (BitVec.ofNat 8 99) := by
+                    have h := run_ende_beobachte_pin.2
+                    rw [h8] at h
+                    simpa using h
+                  have oEnd0 : HwVollSchritt m8 m8 (KapEreignis.basis
+                      (.leseBeob 0 (BitVec.ofNat 64 8216)
+                        (BitVec.ofNat 8 99))) :=
+                    (kap_basis_embedded _ _ _).mp
+                      (HwSchritt.lade 0 _ _ hO0)
+                  have oEnd1 : HwVollSchritt m8 m8 (KapEreignis.basis
+                      (.leseBeob 1 (BitVec.ofNat 64 8216)
+                        (BitVec.ofNat 8 99))) :=
+                    (kap_basis_embedded _ _ _).mp
+                      (HwSchritt.lade 1 _ _ hO1)
+                  have p1 := runKap_einzel s1
+                  have p2 := runKap_anhang p1 (runKap_einzel s2)
+                  have p3 := runKap_anhang p2 (runKap_einzel oFwd)
+                  have p4 := runKap_anhang p3 (runKap_einzel oBasis)
+                  have p5 := runKap_anhang p4 (runKap_einzel s3)
+                  have p6 := runKap_anhang p5 (runKap_einzel oPop)
+                  have p7 := runKap_anhang p6 (runKap_einzel s4)
+                  have p8 := runKap_anhang p7 (runKap_einzel oPop2)
+                  have p9 := runKap_anhang p8 (runKap_einzel oRet)
+                  have p10 := runKap_anhang p9 (runKap_einzel s10)
+                  have hPre := runKap_anhang p10 (runKap_einzel s11)
+                  rw [hRep] at hRunLoop
+                  have q1 := runKap_einzel sF1
+                  have q2 := runKap_anhang q1 (runKap_einzel oEnd0)
+                  have hSuf := runKap_anhang q2 (runKap_einzel oEnd1)
+                  have hFull :=
+                    runKap_anhang (runKap_anhang hPre hRunLoop) hSuf
+                  have hBuf0 : (m8.puffer 0).length = 0 := by
+                    have h := run_puffer_zensus.2.2.2.2.2.2.1
+                    rw [h8] at h
+                    simpa using h
+                  have hBuf1 : (m8.puffer 1).length = 0 := by
+                    have h := run_puffer_zensus.2.2.2.2.2.2.2
+                    rw [h8] at h
+                    simpa using h
+                  have hWort : read64 m8.mem
+                      (BitVec.ofNat 64 8192) = some 15 := by
+                    have h := run_speicher_ende.1
+                    rw [h8] at h
+                    simpa using h
+                  have hStore : read64 m8.mem runStoreAdr =
+                      some runStoreWort := by
+                    have h := run_speicher_ende.2.1
+                    rw [h8] at h
+                    simpa using h
+                  have hSlot : read64 m8.mem
+                      (BitVec.ofNat 64 8200) = some runRufWort := by
+                    have h := run_speicher_ende.2.2.1
+                    rw [h8] at h
+                    simpa using h
+                  have hByte : m8.mem.bytes
+                      (BitVec.ofNat 64 8216) =
+                      BitVec.ofNat 8 99 := by
+                    have h := run_speicher_ende.2.2.2
+                    rw [h8] at h
+                    simpa using h
+                  refine ⟨m8, _, rfl, hFull, rfl, runKap_wf hFull
+                    runStart_wf, hBuf0, hBuf1, hWort, hStore,
+                    hSlot, hByte⟩
+
 /- CUTS:
-    Skeleton only: start machine plus well-formedness. The run steps,
-    drains, observations and final memory are not yet built.
+    Proved here, over the reused accepted vocabulary only (every
+    definition lifted, never redefined):
+    - `RunKap`: runs as chains of the capstone union step
+      `HwVollSchritt` with one family tag per step, plus append
+      (`runKap_anhang`), preservation (`runKap_wf`, via `kap_wf`),
+      the drain-loop induction (`runDrain0_run`) and the uniform-list
+      helper (`liste_gleich_replicate`);
+    - `run_haupt`: a reached 38-step run on two cores from the mapped
+      `pinXadd` bytes: LOCK XADD (fetched decode, word 10 to 15),
+      plain store, owner-only forwarding observation plus foreign
+      canonical observation, push, pop, call, pop, ret, scalar `addss`,
+      packed `paddb`, twenty-four core-0 drains, the core-1 drain, and
+      both-core end observations; `HwWf` along the run and the exact
+      final memory (locked word 15, stored word, younger call word at
+      the slot, foreign byte 99; both buffers empty).
+    NOT proved here, and not claimed:
+    - fetched decoding per step: only the LOCK step runs through
+      fetched bytes in this run (`pin_lock_xadd_decodiert` names the
+      same row; `zeug_xadd_fetch_ok` is the accepted fetched shape).
+      The FP/vector rows cite their families' accepted byte pins
+      (`hvecWit_fetch_pin` for `paddb`; `mxcsrWit_fetch1` and the
+      `s32Byteschritt` fetch lemmas for the scalar lane) and execute
+      here as direct family events at named addresses. Full
+      per-step fetched decoding through one dispatcher stays open
+      (decoder disjointness beyond width-vs-unified is already open
+      in the capstone CUTS);
+    - the MECHANISM paragraph of the lane task describes connecting
+      ONE family with a new `HwAdapter` (a stale copy of an earlier
+      single-family lane); this lane instead builds the capstone run
+      named in its TASK paragraph, reusing all 21 adapters unchanged;
+    - no hardware correspondence beyond self-consistency (silicon
+      and timing assumptions live in the family files); no W/GX
+      bridge; no source, checker, contract, entry, ABI, loader,
+      budget or liveness claim.
 -/
 
 #print axioms runStart_wf
+#print axioms run_haupt
+#print axioms runDrain0_run
+#print axioms runKap_anhang
+#print axioms runKap_wf
 
 end Gabbro.Grammatik.X86
