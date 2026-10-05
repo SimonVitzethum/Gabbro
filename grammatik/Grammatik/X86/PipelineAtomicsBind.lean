@@ -120,6 +120,44 @@ theorem bind_mfence (m : LockMaschine) (c : Nat)
       some (toTSO m, ⟨c, [], [], none, none, false, true⟩) :=
   ⟨PipelineAtomics.senk_zaun, lockVoll_mfence_adapter m c hbuf⟩
 
+/-! ## 2. SFENCE/LFENCE lowering: canonical bytes with decode facts.
+
+    Lane 1163 lowered only the full MFENCE fence. Each narrow form
+    lowers to its own accepted pin: SFENCE to `pinSfence` (decoded by
+    `decodeSfence`, never by the pilot or locked decoders), LFENCE to
+    `lfenceBytes` (decoded by `decodeLfence`, refused by both older
+    decoders). MFENCE keeps its lane-1163 lowering; its byte fact is
+    restated here through `zaunBytes` so all three fences share one
+    validator. -/
+
+/-- MFENCE bytes decode to the fence form (reused round trip). -/
+theorem zaun_mfence_dekodiert (suffix : List Byte) :
+    decodeLock (zaunBytes .mfence ++ suffix) =
+      some (LockAnweisung.ok .mfence 3, suffix) :=
+  roundtrip_lock_mfence suffix
+
+/-- SFENCE bytes decode to the narrow-store fence form. -/
+theorem zaun_sfence_dekodiert (suffix : List Byte) :
+    decodeSfence (zaunBytes .sfence ++ suffix) =
+      some (SfenceAnweisung.ok .sfence 3, suffix) :=
+  roundtrip_sfence suffix
+
+/-- LFENCE bytes decode to the narrow-load fence form. -/
+theorem zaun_lfence_dekodiert (suffix : List Byte) :
+    decodeLfence (zaunBytes .lfence ++ suffix) = some ((), suffix) :=
+  roundtrip_lfence suffix
+
+/-- Decided validator: `bs` is accepted for `z` exactly when it is the
+    canonical pin. Bytes are checked data, never trusted. -/
+def valZaun (z : ZaunArt) (bs : List Byte) : Bool :=
+  decide (zaunBytes z = bs)
+
+/-- The validator accepts exactly the canonical pins. -/
+theorem valZaun_korrekt (z : ZaunArt) (bs : List Byte) :
+    valZaun z bs = true ↔ zaunBytes z = bs := by
+  unfold valZaun
+  simp [decide_eq_true_eq]
+
 /- CUTS: what is not proved here (skeleton; extended with each piece)
     NOT proved here, and not claimed:
     - No seq_cst total order, no fairness, no CAS retry bound.
@@ -129,6 +167,10 @@ theorem bind_mfence (m : LockMaschine) (c : Nat)
 #print axioms zaunBytes_mfence
 #print axioms zaunBytes_sfence
 #print axioms zaunBytes_lfence
+#print axioms zaun_mfence_dekodiert
+#print axioms zaun_sfence_dekodiert
+#print axioms zaun_lfence_dekodiert
+#print axioms valZaun_korrekt
 #print axioms bind_xadd
 #print axioms bind_cas_erfolg
 #print axioms bind_mfence
