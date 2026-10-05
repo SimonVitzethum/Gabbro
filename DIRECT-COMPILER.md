@@ -709,7 +709,7 @@ Last ledger refresh: **2026-10-05 18:54 UTC**. This is an operational snapshot, 
 | 1301 | WC ordering: cross-core eviction order and CLFLUSHOPT/CLWB | Agent working | 1302: scheduled | [task](lanes/1301.md) |
 | 1303 | Extended context state: x87 area, MXCSR_MASK, XSAVE header and YMM component | Agent working | 1304: scheduled | [task](lanes/1303.md) |
 | 1305 | AVX2: fetch pinning and the unified decoder row | Waiting for accepted dependencies | 1306: scheduled | [task](lanes/1305.md) |
-| 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1307.md) |
+| 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1307.md) |
 | 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Committed candidate; review/integration pending | 1310: Committed candidate; review/integration pending | [task](lanes/1309.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1695,6 +1695,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1299**, Translation: the page walk joined with the TLB and the flat memory model, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1299.md). <!-- x86-merged:1299 -->
 - 2026-10-05: lane **1300**, Independent exact review of 1299, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1300.md). <!-- x86-merged:1300 -->
 - 2026-10-05: lane **1307**, FP store forms: drain equals the 32-bit write, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1307.md). <!-- x86-merged:1307 -->
+- 2026-10-05: lane **1308**, Independent exact review of 1307, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1308.md). <!-- x86-merged:1308 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
