@@ -736,6 +736,122 @@ theorem iretSchritt_verweigert_code (s : HwIntMaschine)
   unfold iretSchritt iretFertig
   simp [hles, hkan, hcs, hss, hok]
 
+/-! ## 6. Family adapter and extended step relation.
+
+   The nested family plugs into §11 two ways: single async events
+   keep the accepted plug shape, and the extended relation embeds
+   `HwSchritt` exactly -- forward and backward. -/
+
+/-- The nested family adapter: a pair of async events delivered as a
+    nest under the first event's control snapshot; the machine
+    projection is the final machine. -/
+def adapterVerschachtelt : HwAdapter (AsyncEreignis × AsyncEreignis) :=
+  ⟨fun m c ev =>
+    match verschachteltSchritt m c ev.1 ev.2 ev.1.steuer with
+    | none => none
+    | some (m2, _, _, _) => some m2⟩
+
+/-- The adapter refuses whatever the nest refuses: failed first leg. -/
+theorem adapterVerschachtelt_verweigert_erster (m : HwMaschine)
+    (c : Nat) (ev : AsyncEreignis × AsyncEreignis)
+    (h1 : asyncSchritt m c ev.1 ev.1.steuer = none) :
+    adapterVerschachtelt.schritt m c ev = none := by
+  have h := verschachtelt_verweigert_erster m c ev.1 ev.2
+    ev.1.steuer h1
+  simp [adapterVerschachtelt, h]
+
+/-- The adapter refuses whatever the nest refuses: masked second leg
+    after an IF-clearing first delivery. -/
+theorem adapterVerschachtelt_verweigert_maskiert (m : HwMaschine)
+    (c : Nat) (ev : AsyncEreignis × AsyncEreignis)
+    (r1 : HwMaschine × Bool × Bool)
+    (h1 : asyncSchritt m c ev.1 ev.1.steuer = some r1)
+    (hif : r1.2.1 = false)
+    (hmatch : ev.2.steuer = { ev.1.steuer with ifBit := r1.2.1 })
+    (hart : ev.2.art = .maskierbar)
+    (hv : asyncVektorOk ev.2 = true) :
+    adapterVerschachtelt.schritt m c ev = none := by
+  have h := verschachtelt_maskiert_verweigert m c ev.1 ev.2
+    ev.1.steuer r1 h1 hif hmatch hart hv
+  simp [adapterVerschachtelt, h]
+
+/-- Every adapter step preserves well-formedness. -/
+theorem adapterVerschachtelt_wf (m : HwMaschine) (c : Nat)
+    (ev : AsyncEreignis × AsyncEreignis) (m' : HwMaschine)
+    (h : adapterVerschachtelt.schritt m c ev = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  unfold adapterVerschachtelt at h
+  cases hn : verschachteltSchritt m c ev.1 ev.2 ev.1.steuer with
+  | none => simp [hn] at h
+  | some r =>
+    obtain ⟨m2, ifNeu2, gew1, gew2⟩ := r
+    simp only [hn] at h
+    cases h
+    exact verschachteltSchritt_wf m c ev.1 ev.2 ev.1.steuer _ hn hwf
+
+/-- Extended events: synchronous machine steps, single async delivery,
+    or nested delivery of two events. -/
+inductive NestEreignis where
+  | syncEv : HwEreignis → NestEreignis
+  | asyncEv : AsyncEreignis → NestEreignis
+  | nestEv : AsyncEreignis → AsyncEreignis → NestEreignis
+  deriving DecidableEq, Repr
+
+/-- Extended step: `HwSchritt` embedded unchanged (control kept),
+    single delivery via `asyncSchritt`, nested delivery via the two
+    chained legs with the snapshot tracking the first new IF. -/
+inductive HwNestSchritt :
+    HwIntMaschine → HwIntMaschine → NestEreignis → Prop where
+  | sync {s : HwIntMaschine} {m' : HwMaschine} {e : HwEreignis}
+      (h : HwSchritt s.hw m' e) :
+      HwNestSchritt s ⟨m', s.steuer⟩ (.syncEv e)
+  | async {s : HwIntMaschine} (c : Nat) (ev : AsyncEreignis)
+      {m' : HwMaschine} {ifNeu : Bool} {gew : Bool}
+      (hst : ev.steuer = s.steuer c)
+      (h : asyncSchritt s.hw c ev (s.steuer c) = some (m', ifNeu, gew)) :
+      HwNestSchritt s ⟨m', fun d =>
+        if d = c then { s.steuer c with ifBit := ifNeu }
+        else s.steuer d⟩ (.asyncEv ev)
+  | nest {s : HwIntMaschine} (c : Nat) (ev1 ev2 : AsyncEreignis)
+      {r1 : HwMaschine × Bool × Bool}
+      {m2 : HwMaschine} {ifNeu2 : Bool} {gew2 : Bool}
+      (hst1 : ev1.steuer = s.steuer c)
+      (h1 : asyncSchritt s.hw c ev1 (s.steuer c) = some r1)
+      (hst2 : ev2.steuer = { s.steuer c with ifBit := r1.2.1 })
+      (h2 : asyncSchritt r1.1 c ev2 { s.steuer c with ifBit := r1.2.1 } =
+        some (m2, ifNeu2, gew2)) :
+      HwNestSchritt s ⟨m2, fun d =>
+        if d = c then { s.steuer c with ifBit := ifNeu2 }
+        else s.steuer d⟩ (.nestEv ev1 ev2)
+
+/-- EMBEDDING IN: every coherent step rides along unchanged. -/
+theorem hwNestSchritt_sync_einbetten (s : HwIntMaschine)
+    (m' : HwMaschine) (e : HwEreignis)
+    (h : HwSchritt s.hw m' e) :
+    HwNestSchritt s ⟨m', s.steuer⟩ (.syncEv e) :=
+  .sync h
+
+/-- EMBEDDING ONLY: a sync-labelled extended step IS a coherent step
+    with untouched control. -/
+theorem hwNestSchritt_sync_nur (s s' : HwIntMaschine) (e : HwEreignis)
+    (h : HwNestSchritt s s' (.syncEv e)) :
+    ∃ m', s'.hw = m' ∧ s'.steuer = s.steuer ∧ HwSchritt s.hw m' e := by
+  cases h with
+  | sync h => exact ⟨_, rfl, rfl, h⟩
+
+/-- Every extended step preserves well-formedness: old steps by the
+    accepted preservation, delivery steps because profiles are never
+    touched. -/
+theorem hwNestSchritt_wf (s s' : HwIntMaschine) (e : NestEreignis)
+    (h : HwNestSchritt s s' e) (hwf : HwWf s.hw) : HwWf s'.hw := by
+  cases h with
+  | sync hstep => exact hwSchritt_wf s.hw _ _ hstep hwf
+  | async c ev hst h =>
+    exact asyncSchritt_wf_allgemein _ _ _ _ _ h hwf
+  | nest c ev1 ev2 hst1 h1 hst2 h2 =>
+    exact asyncSchritt_wf_allgemein _ _ _ _ _ h2
+      (asyncSchritt_wf_allgemein _ _ _ _ _ h1 hwf)
+
 /- CUTS:
    Proved here: SKELETON ONLY so far -- the double-fault vector
    constant. Nested delivery, #DF escalation, the TSO-buffered
