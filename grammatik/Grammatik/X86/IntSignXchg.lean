@@ -27,6 +27,7 @@ import Grammatik.X86.FeatureProfile
 import Grammatik.X86.Gleitprofil
 import Grammatik.X86.ScalarFloat
 import Grammatik.X86.HardwareExecution
+import Grammatik.X86.HwMulDivWidth
 
 namespace Gabbro.Grammatik.X86
 
@@ -912,6 +913,97 @@ theorem sxRoundtrip_movsxd (dst src : Register) (suffix : List Byte) :
       some (⟨.movsxd dst src,
         (sxEncode (.movsxd dst src)).length⟩, suffix) := by
   cases dst <;> cases src <;> rfl
+
+/-! ## 10. Dispatcher: the accepted unified chain first.
+
+    `decodeSignXchg` tries `decodeExt` first and the family decoder
+    only where the unified chain refuses: no pilot or extension
+    form is shadowed, and each new row below is taken exactly once
+    (§5 pins supply the refusal evidence). -/
+
+/-- Unified dispatcher instruction: the accepted unified chain
+    first, the family only where it refuses. -/
+inductive SxHwInstr where
+  | ext : ExtInstr → SxHwInstr
+  | sx : SxDecodiert → SxHwInstr
+  deriving DecidableEq, Repr
+
+/-- Dispatcher: the unified decoder first, the family decoder only
+    where the unified chain refuses. No pilot form is shadowed. -/
+def decodeSignXchg : List Byte → Option (SxHwInstr × List Byte) :=
+  fun bs =>
+    match decodeExt bs with
+    | some (i, rest) => some (.ext i, rest)
+    | none =>
+      match decodeSx bs with
+      | some (d, rest) => some (.sx d, rest)
+      | none => none
+
+/-- Consumed length of one dispatcher instruction (checked data). -/
+def sxHwLen : SxHwInstr → Nat
+  | .ext i => extLen i
+  | .sx d => d.laenge
+
+/-- The dispatcher agrees with the unified chain wherever it
+    accepts: no pilot or extension form is shadowed. -/
+theorem decodeSignXchg_prefers_ext (bs : List Byte) (i : ExtInstr)
+    (rest : List Byte) (h : decodeExt bs = some (i, rest)) :
+    decodeSignXchg bs = some (.ext i, rest) := by
+  unfold decodeSignXchg
+  rw [h]
+
+/-- Where the unified chain refuses, a covered family row is taken. -/
+theorem decodeSignXchg_sx (bs : List Byte) (d : SxDecodiert)
+    (rest : List Byte) (h1 : decodeExt bs = none)
+    (h2 : decodeSx bs = some (d, rest)) :
+    decodeSignXchg bs = some (.sx d, rest) := by
+  unfold decodeSignXchg
+  rw [h1, h2]
+
+/-- Where both chains refuse, the dispatcher refuses. -/
+theorem decodeSignXchg_nichts (bs : List Byte)
+    (h1 : decodeExt bs = none) (h2 : decodeSx bs = none) :
+    decodeSignXchg bs = none := by
+  unfold decodeSignXchg
+  rw [h1, h2]
+
+/-- Pin: the pilot row goes through unchanged. -/
+theorem pin_sxHw_pilot_ret :
+    decodeSignXchg (encode .ret) =
+      some (.ext (.pilot ⟨.ret, 1⟩), []) :=
+  decodeSignXchg_prefers_ext _ _ _ pin_ext_pilot_ret
+
+/-- Pin: CWDE takes the family arm. -/
+theorem pin_sxHw_cwde :
+    decodeSignXchg [natByte 152] = some (.sx ⟨.cwde, 1⟩, []) :=
+  decodeSignXchg_sx _ _ _ ext_weist_wdvor98_zurueck pin_sxcwde_dekode
+
+/-- Pin: CBW takes the family arm. -/
+theorem pin_sxHw_cbw :
+    decodeSignXchg [natByte 102, natByte 152] =
+      some (.sx ⟨.cbw, 2⟩, []) :=
+  decodeSignXchg_sx _ _ _ ext_weist_sxcbw_zurueck pin_sxcbw_dekode
+
+/-- Pin: bare `90` takes the family arm as NOP. -/
+theorem pin_sxHw_nop :
+    decodeSignXchg [natByte 144] = some (.sx ⟨.nop, 1⟩, []) :=
+  decodeSignXchg_sx _ _ _ ext_weist_sxnop_zurueck pin_sxnop_dekode
+
+/-- Pin: `91` takes the family arm as the 32-bit RAX exchange. -/
+theorem pin_sxHw_xchg91 :
+    decodeSignXchg [natByte 145] = some (.sx ⟨.xchgRax32 .rcx, 1⟩, []) :=
+  decodeSignXchg_sx _ _ _ ext_weist_sxxchg91_zurueck pin_sxxchg91_dekode
+
+/-- Pin: `REX.W 63 C0` takes the family arm as MOVSXD. -/
+theorem pin_sxHw_movsxd :
+    decodeSignXchg [natByte 72, natByte 99, natByte 192] =
+      some (.sx ⟨.movsxd .rax .rax, 3⟩, []) :=
+  decodeSignXchg_sx _ _ _ ext_weist_sxmovsxd_zurueck pin_sx63c0_dekode
+
+/-- Planted refusal: LOCK stays refused through the dispatcher. -/
+theorem sxHw_nichts_lock90 :
+    decodeSignXchg [natByte 240, natByte 144] = none :=
+  decodeSignXchg_nichts _ ext_weist_sxlock90_zurueck sxNichts_lock90
 
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
