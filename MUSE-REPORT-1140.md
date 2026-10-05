@@ -3,10 +3,11 @@
 Lane 1140, clone `/home/simon/Dokumente/gabbro-muse/a1140`, branch `muse/1140` (verified via `.git/HEAD`: `ref: refs/heads/muse/1140`).
 Owned file only: `MUSE-REPORT-1140.md`. No Lean source touched.
 
-CANDIDATE: 1139, pinned HEAD `fbc0c2d6b2216933e3bd52e79f7858a6288816ca` (base `48a4be7c1c333a602ce0d0816979d154ae1bd959`), from `.tmp/review/SNAPSHOT.json`.
+Reviewed author lane 1139 at pinned HEAD `fbc0c2d6b2216933e3bd52e79f7858a6288816ca` (base `48a4be7c1c333a602ce0d0816979d154ae1bd959`), per `.tmp/review/SNAPSHOT.json`.
 Review scope: candidate diff only — `.tmp/review/author-1139/PATCH.diff` (3 files) plus the full new file `.tmp/review/author-1139/grammatik/Grammatik/X86/HwStackCalls.lean` (945 lines), `MUSE-REPORT-1139.md`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`.
 
-## VERDICT: ACCEPT
+CANDIDATE: 1139 fbc0c2d6b2216933e3bd52e79f7858a6288816ca
+VERDICT: ACCEPT
 
 ## Checks (all performed on the pinned candidate content)
 
