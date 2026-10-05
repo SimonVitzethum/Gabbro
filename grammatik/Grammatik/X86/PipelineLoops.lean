@@ -420,6 +420,63 @@ def zwSigma0 : World zwD where
   globs := fun g => nomatch g
   spur := []
 
+/-- The witness relation: exit-flag agreement plus the slot/counter/memory
+    correspondence, before the round (pinned start state) and after one
+    round (counter set, word stored and reloaded). -/
+def zwRep (σ : World zwD) (ρ : Env zwD []) (s : Zustand) : Prop :=
+  (zwBis σ ρ).2 = bedingung .e s.flags ∧
+  (((σ.slots () 0 ()).n = 0 ∧ s = zwS0) ∨
+   ((σ.slots () 0 ()).n = 1 ∧ s.register .rax = 1 ∧
+    read64 s.speicher (natAdresse 8192) = some 1))
+
+/-- Reading changes nothing observable: stability by `rfl`. -/
+theorem zw_stabil (σ : World zwD) (ρ : Env zwD []) :
+    zwBis (zwBis σ ρ).1 ρ = zwBis σ ρ := rfl
+
+/-- The representation survives the (empty) read. -/
+theorem zw_lese (σ : World zwD) (ρ : Env zwD []) (s : Zustand) :
+    zwRep σ ρ s → zwRep (zwBis σ ρ).1 ρ s := fun h => h
+
+/-- The condition agrees with the exit jump, by definition of the relation. -/
+theorem zw_bed (σ : World zwD) (ρ : Env zwD []) (s : Zustand) :
+    zwRep σ ρ s → (zwBis σ ρ).2 = bedingung .e s.flags := fun h => h.1
+
+/-- The overflow block never answers `.ok`: it is loudly `.logik`. -/
+theorem zw_kein_ueberlauf (σ : World zwD) (ρ : Env zwD [])
+    (σ' : World zwD) (ρ' : Env zwD []) (h : (zwBis σ ρ).2 = false) :
+    zwUeberlauf (zwBis σ ρ).1 ρ ≠ .ok σ' ρ' := by
+  cases he : (zwBis σ ρ).2 with
+  | true => rw [he] at h; cases h
+  | false => simp [zwUeberlauf]
+
+/-- The written world: row 0 holds 1. -/
+def zwSigma1 (σ : World zwD) : World zwD :=
+  σ.schreibSlot () [] 0 () ⟨1, by decide, by decide⟩
+
+/-- ONE WITNESS ROUND: from the start state the eight labelled steps run
+    the body and return to the head, while the source writes row 0. The
+    target segment holds by computation (`rfl` evaluates the closed run). -/
+theorem zw_weiter (σ : World zwD) (ρ : Env zwD []) (s : Zustand)
+    (hRep : zwRep σ ρ s) (he : (zwBis σ ρ).2 = false) :
+    ∃ σ₁ ρ₁ s₁, (zwSchritt (zwBis σ ρ).1 ρ = .ok σ₁ ρ₁ ∨
+        (∃ h : true = true, zwSchritt (zwBis σ ρ).1 ρ = .next h σ₁ ρ₁)) ∧
+      laufL zwAdr (schleifeProg zwKoerper .e) (zwKoerper.length + 2) (0, s)
+        = some (0, s₁) ∧
+      zwRep σ₁ ρ₁ s₁ := by
+  rcases hRep.2 with ⟨_, rfl⟩ | ⟨hslot1, _, _⟩
+  · refine ⟨zwSigma1 σ, ρ, _, Or.inl rfl, rfl, ?_⟩
+    have hsl1 : ((zwSigma1 σ).slots () 0 ()).n = 1 := rfl
+    have hbis1 : (zwBis (zwSigma1 σ) ρ).2 = true := by
+      simp [zwBis, hsl1]
+    refine ⟨hbis1.trans ?_, Or.inr ⟨hsl1, ?_, ?_⟩⟩
+    · rfl
+    · rfl
+    · rfl
+  · have htrue : (zwBis σ ρ).2 = true := by
+      simp [zwBis, hslot1]
+    rw [htrue] at he
+    cases he
+
 /-
 CUTS:
 - Pilot ISA only through `Instr`; one core, model memory, no time, no TSO:
