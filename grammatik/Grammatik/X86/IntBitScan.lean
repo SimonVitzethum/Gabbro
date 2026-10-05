@@ -907,4 +907,193 @@ theorem bs_bswap32_invol (v : Wort)
     (hv : v.toNat < 2 ^ 32) :
     bswap32 (bswap32 v) = v :=
   bswap32_invol_bounded v hv
+
+/-! ## 5. Dispatcher, deferred scans and the profile rule.
+
+  The dispatcher prefers the accepted unified chain (no pilot or
+  extension form is shadowed); new rows take the family arm.
+  TZCNT/LZCNT (F3 on a scan opcode) are BMI/ABM and deferred: the
+  profile rule names who owns them, and they never execute here. -/
+
+/-- Unified dispatcher instruction: the accepted unified chain first,
+    the scan/count family only where it refuses. -/
+inductive BsHwInstr where
+  | ext : ExtInstr → BsHwInstr
+  | bs : BsDecodiert → BsHwInstr
+  deriving DecidableEq, Repr
+
+/-- Dispatcher: the unified decoder first, the family decoder only
+    where the unified chain refuses. No pilot form is shadowed. -/
+def decodeBsHw : List Byte → Option (BsHwInstr × List Byte) :=
+  fun bs =>
+    match decodeExt bs with
+    | some (i, rest) => some (.ext i, rest)
+    | none =>
+      match decodeBs bs with
+      | some (d, rest) => some (.bs d, rest)
+      | none => none
+
+/-- Consumed length of one dispatcher instruction (checked data). -/
+def bsHwLen : BsHwInstr → Nat
+  | .ext i => extLen i
+  | .bs d => d.laenge
+
+/-- The dispatcher agrees with the unified chain wherever it accepts:
+    no pilot or extension form is shadowed. -/
+theorem decodeBsHw_prefers_ext (bs : List Byte) (i : ExtInstr)
+    (rest : List Byte) (h : decodeExt bs = some (i, rest)) :
+    decodeBsHw bs = some (.ext i, rest) := by
+  unfold decodeBsHw
+  rw [h]
+
+/-- Where the unified chain refuses, a covered family row is taken. -/
+theorem decodeBsHw_bs (bs : List Byte) (d : BsDecodiert)
+    (rest : List Byte) (h1 : decodeExt bs = none)
+    (h2 : decodeBs bs = some (d, rest)) :
+    decodeBsHw bs = some (.bs d, rest) := by
+  unfold decodeBsHw
+  rw [h1, h2]
+
+/-- Where both chains refuse, the dispatcher refuses. -/
+theorem decodeBsHw_nichts (bs : List Byte)
+    (h1 : decodeExt bs = none) (h2 : decodeBs bs = none) :
+    decodeBsHw bs = none := by
+  unfold decodeBsHw
+  rw [h1, h2]
+
+/-- Pin: the pilot row goes through unchanged. -/
+theorem pin_bsHw_pilot_ret :
+    decodeBsHw (encode .ret) =
+      some (.ext (.pilot ⟨.ret, 1⟩), []) :=
+  decodeBsHw_prefers_ext _ _ _ pin_ext_pilot_ret
+
+/-- Pin: the BSF row takes the family arm. -/
+theorem pin_bsHw_bsf :
+    decodeBsHw [natByte 15, natByte 188, natByte 193] =
+      some (.bs ⟨.bsf .b32 .rax (.reg .rcx), 3⟩, []) :=
+  decodeBsHw_bs _ _ _ ext_weist_bsf_zurueck pin_bsf_reg
+
+/-- Pin: the POPCNT row takes the family arm. -/
+theorem pin_bsHw_popcnt :
+    decodeBsHw [natByte 243, natByte 15, natByte 184, natByte 193] =
+      some (.bs ⟨.popcnt .b32 .rax (.reg .rcx), 4⟩, []) :=
+  decodeBsHw_bs _ _ _ ext_weist_popcnt_zurueck pin_popcnt_reg
+
+/-- Pin: the BSWAP row takes the family arm. -/
+theorem pin_bsHw_bswap :
+    decodeBsHw [natByte 15, natByte 200] =
+      some (.bs ⟨.bswap .b32 .rax, 2⟩, []) := by
+  exact decodeBsHw_bs _ _ _ ext_weist_bswap32_zurueck pin_bswap32
+
+/-- The unified chain refuses the LOCK shape too. -/
+theorem ext_weist_lock_zurueck :
+    decodeExt [natByte 240, natByte 15, natByte 188, natByte 193] =
+      none := by
+  decide
+
+/-- Planted refusal: LOCK stays refused through the dispatcher. -/
+theorem bsHw_nichts_lock :
+    decodeBsHw [natByte 240, natByte 15, natByte 188, natByte 193] =
+      none :=
+  decodeBsHw_nichts _ ext_weist_lock_zurueck bs_nichts_lock
+
+/-- The unified chain refuses the deferred TZCNT shape. -/
+theorem ext_weist_tzcnt_zurueck :
+    decodeExt [natByte 243, natByte 15, natByte 188, natByte 193] =
+      none := by
+  decide
+
+/-- Planted refusal: the deferred shape stays refused through the
+    dispatcher. -/
+theorem bsHw_nichts_tzcnt :
+    decodeBsHw [natByte 243, natByte 15, natByte 188, natByte 193] =
+      none :=
+  decodeBsHw_nichts _ ext_weist_tzcnt_zurueck bs_nichts_tzcnt
+
+/- Deferred-scan recognizer: F3 on a scan opcode, with optional 66H
+   and at most one REX between F3 and 0F. TZCNT/LZCNT country. -/
+mutual
+def istVerzoegertScan : List Byte → Bool
+  | b :: rest =>
+    if byteNat b == 243 then bsVerzF3 rest
+    else if byteNat b == 102 then
+      match rest with
+      | c :: rest' =>
+        if byteNat c == 243 then bsVerzF3 rest' else false
+      | [] => false
+    else false
+  | [] => false
+
+def bsVerzF3 : List Byte → Bool
+  | r :: rest =>
+    if 64 ≤ byteNat r ∧ byteNat r < 80 then bsVerz0F rest
+    else bsVerz0F (r :: rest)
+  | [] => false
+
+def bsVerz0F : List Byte → Bool
+  | f :: rest =>
+    if byteNat f == 15 then
+      match rest with
+      | op :: _ => byteNat op == 188 || byteNat op == 189
+      | [] => false
+    else false
+  | [] => false
+end
+
+/-- The recognizer fires on the TZCNT shape. -/
+theorem verzoegert_anerkennt_tzcnt :
+    istVerzoegertScan [natByte 243, natByte 15, natByte 188,
+      natByte 193] = true := by
+  decide
+
+/-- The recognizer fires on the LZCNT shape. -/
+theorem verzoegert_anerkennt_lzcnt :
+    istVerzoegertScan [natByte 243, natByte 15, natByte 189,
+      natByte 193] = true := by
+  decide
+
+/-- The recognizer fires on the 16-bit TZCNT shape. -/
+theorem verzoegert_anerkennt_tzcnt16 :
+    istVerzoegertScan [natByte 102, natByte 243, natByte 15,
+      natByte 188, natByte 193] = true := by
+  decide
+
+/-- The recognizer stays silent on plain BSF. -/
+theorem verzoegert_schweigt_bsf :
+    istVerzoegertScan [natByte 15, natByte 188, natByte 193] =
+      false := by
+  decide
+
+/-- The recognizer stays silent on POPCNT (F3 on B8, not on a scan). -/
+theorem verzoegert_schweigt_popcnt :
+    istVerzoegertScan [natByte 243, natByte 15, natByte 184,
+      natByte 193] = false := by
+  decide
+
+/-- The profile rule that decides the deferred shapes: with TZCNT
+    support they belong to the BMI lane (never executed here);
+    without support they are #UD (never executed here either).
+    `true` means deferred-to-BMI on this profile. -/
+def scanProfilUrteil (hatTzcnt : Bool) (bs : List Byte) : Bool :=
+  istVerzoegertScan bs && hatTzcnt
+
+/-- On a supporting profile the TZCNT shape defers to BMI. -/
+theorem profil_urteilt_tzcnt_mit (hatTzcnt : Bool)
+    (h : hatTzcnt = true) :
+    scanProfilUrteil hatTzcnt [natByte 243, natByte 15, natByte 188,
+      natByte 193] = true := by
+  simp [scanProfilUrteil, verzoegert_anerkennt_tzcnt, h]
+
+/-- On a profile without support the shape is no BMI case either. -/
+theorem profil_urteilt_tzcnt_ohne (hatTzcnt : Bool)
+    (h : hatTzcnt = false) :
+    scanProfilUrteil hatTzcnt [natByte 243, natByte 15, natByte 188,
+      natByte 193] = false := by
+  simp [scanProfilUrteil, verzoegert_anerkennt_tzcnt, h]
+
+/-- Plain BSF never defers, on any profile. -/
+theorem profil_urteilt_bsf_nie (hatTzcnt : Bool) :
+    scanProfilUrteil hatTzcnt [natByte 15, natByte 188,
+      natByte 193] = false := by
+  simp [scanProfilUrteil, verzoegert_schweigt_bsf]
 end Gabbro.Grammatik.X86
