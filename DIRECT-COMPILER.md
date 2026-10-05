@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 16:23 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 16:25 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -689,16 +689,16 @@ Last ledger refresh: **2026-10-05 16:23 UTC**. This is an operational snapshot, 
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Committed candidate; review/integration pending | 1264: Agent working | [task](lanes/1263.md) |
 | 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Agent working | 1266: scheduled | [task](lanes/1265.md) |
-| 1267 | AVX2: per-lane equation for arithmetic shift right | Committed candidate; review/integration pending | 1268: Committed candidate; review/integration pending | [task](lanes/1267.md) |
+| 1267 | AVX2: per-lane equation for arithmetic shift right | Agent working | 1268: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1267.md) |
 | 1269 | Cross-declaration lowering certificate for the GX refinement | Merged after review/checks | 1270: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1269.md) |
-| 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Committed candidate; review/integration pending | 1272: Agent working | [task](lanes/1271.md) |
+| 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Merged after review/checks | 1272: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1271.md) |
 | 1273 | Rotates: ROL, ROR, RCL, RCR | Agent working | 1274: scheduled | [task](lanes/1273.md) |
 | 1275 | ADC, SBB, INC, DEC | Agent working | 1276: scheduled | [task](lanes/1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Agent working | 1278: scheduled | [task](lanes/1277.md) |
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Agent working | 1280: scheduled | [task](lanes/1279.md) |
 | 1281 | Sign-extend-accumulator ops and register XCHG | Agent working | 1282: scheduled | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Agent working | 1284: scheduled | [task](lanes/1283.md) |
-| 1285 | FS/GS segment bases and the TLB | Prepared | 1286: scheduled | [task](lanes/1285.md) |
+| 1285 | FS/GS segment bases and the TLB | Agent working | 1286: scheduled | [task](lanes/1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Prepared | 1288: scheduled | [task](lanes/1287.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1630,6 +1630,9 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `e762caa3` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e762caa35e7bd9eebad4b40167acf235a5501c85 -->
 - 2026-10-05: lane **1262**, Independent exact review of 1261, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1262.md). <!-- x86-merged:1262 -->
 - 2026-10-05: publication batch checks passed for `25c560f7`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1271**, Byte-level entry/call linkage for the start-anchored bridged run, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1271.md). <!-- x86-merged:1271 -->
+- 2026-10-05: integration of candidate(s) [1267] failed the local proof/build gate after independent review 1268; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1268 -->
+- 2026-10-05: checked master `e7361bb2` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e7361bb21b290cfc28ac795970cc3c3fbdc10a7a -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

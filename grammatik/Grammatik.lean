@@ -662,3 +662,4 @@ import Grammatik.X86.Avx2State
 import Grammatik.X86.PipelineSpillSplice
 import Grammatik.X86.TsoGxCrossDecl
 import Grammatik.X86.PipelineTsoStore
+import Grammatik.X86.TsoGxEntryBytes
