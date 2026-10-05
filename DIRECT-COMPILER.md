@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 12:07 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 12:13 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -632,15 +632,15 @@ Last ledger refresh: **2026-10-05 12:07 UTC**. This is an operational snapshot, 
 | 1147 | Whole-word atomicity of guarded aligned accesses | Committed candidate; review/integration pending | 1148: Incomplete; preserved | [task](lanes/1147.md) |
 | 1149 | Capstone: one coherent machine over all accepted families | Waiting for accepted dependencies | 1150: scheduled | [task](lanes/1149.md) |
 | 1151 | Privileged/system instructions for OS and freestanding profiles | Agent working | 1152: scheduled | [task](lanes/1151.md) |
-| 1153 | Pipeline lowering onto the wider ISA | Agent working | 1154: scheduled | [task](lanes/1153.md) |
+| 1153 | Pipeline lowering onto the wider ISA | Committed candidate; review/integration pending | 1154: Agent working | [task](lanes/1153.md) |
 | 1155 | Pipeline: loops and branch layout with budget | Agent working | 1156: scheduled | [task](lanes/1155.md) |
-| 1157 | Pipeline: calls, stack-passed parameters, callee-saved registers, return values | Committed candidate; review/integration pending | 1158: scheduled | [task](lanes/1157.md) |
+| 1157 | Pipeline: calls, stack-passed parameters, callee-saved registers, return values | Committed candidate; review/integration pending | 1158: Agent working | [task](lanes/1157.md) |
 | 1159 | Pipeline: arrays, records and pointers beyond integer slots | Agent working | 1160: scheduled | [task](lanes/1159.md) |
 | 1161 | Pipeline: IEEE float expressions | Agent working | 1162: scheduled | [task](lanes/1161.md) |
 | 1163 | Pipeline: atomics and locks onto TSO | Agent working | 1164: scheduled | [task](lanes/1163.md) |
 | 1165 | Pipeline: source budget to target work and time transfer | Agent working | 1166: scheduled | [task](lanes/1165.md) |
-| 1167 | Pipeline: register allocation, spills and privacy validated | Committed candidate; review/integration pending | 1168: Agent working | [task](lanes/1167.md) |
-| 1169 | Pipeline correctness over the multi-core TSO machine | Committed candidate; review/integration pending | 1170: Agent working; integration gate rejected; repair/re-review required | [task](lanes/1169.md) |
+| 1167 | Pipeline: register allocation, spills and privacy validated | Committed candidate; review/integration pending | 1168: Committed candidate; review/integration pending | [task](lanes/1167.md) |
+| 1169 | Pipeline correctness over the multi-core TSO machine | Committed candidate; review/integration pending | 1170: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1169.md) |
 | 1171 | Linking, relocations and the final mapping | Merged after review/checks | 1172: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1171.md) |
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
 | 1175 | Finite and infinite execution soundness of the pipeline | Agent working | 1176: scheduled | [task](lanes/1175.md) |
@@ -1440,6 +1440,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: integration of candidate(s) [1173] failed the local proof/build gate after independent review 1174; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1174 -->
 - 2026-10-05: checked master `e891e016` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:e891e01633b3e0875313ada95ab66f72a2d069c2 -->
 - 2026-10-05: lane **1174**, Independent exact review of 1173, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1174.md). <!-- x86-merged:1174 -->
+- 2026-10-05: publication batch checks passed for `e8ddbe44`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
