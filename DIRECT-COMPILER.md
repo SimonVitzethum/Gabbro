@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 15:55 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 16:00 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -654,7 +654,7 @@ Last ledger refresh: **2026-10-05 15:55 UTC**. This is an operational snapshot, 
 | 1191 | Pipeline: spill code generation with privacy | Merged after review/checks | 1192: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1191.md) |
 | 1193 | Linking: multi-unit convergence and operand kinds | Merged after review/checks | 1194: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1193.md) |
 | 1195 | Pipeline: block-size induction over multi-statement blocks | Merged after review/checks | 1196: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1195.md) |
-| 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
+| 1197 | Pipeline: block-level table reads and scaled-index addressing | Incomplete; preserved | 1198: scheduled | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Merged after review/checks | 1200: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Merged after review/checks | 1202: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
@@ -680,13 +680,13 @@ Last ledger refresh: **2026-10-05 15:55 UTC**. This is an operational snapshot, 
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
-| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Agent working | [task](lanes/1249.md) |
+| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Agent working | 1250: Committed candidate; review/integration pending | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Agent working | 1256: scheduled | [task](lanes/1255.md) |
 | 1257 | Pipeline spills: splice save/reload at split points, callee-saved and arguments | Agent working | 1258: scheduled | [task](lanes/1257.md) |
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Agent working | 1260: scheduled | [task](lanes/1259.md) |
-| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Agent working | 1262: scheduled | [task](lanes/1261.md) |
+| 1261 | Pipeline over TSO: store instructions on the issue/drain path | Committed candidate; review/integration pending | 1262: Agent working | [task](lanes/1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Agent working | 1264: scheduled | [task](lanes/1263.md) |
 | 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Agent working | 1266: scheduled | [task](lanes/1265.md) |
 | 1267 | AVX2: per-lane equation for arithmetic shift right | Agent working | 1268: scheduled | [task](lanes/1267.md) |
@@ -1609,6 +1609,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1252**, Independent exact review of 1251, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1252.md). <!-- x86-merged:1252 -->
 - 2026-10-05: lane **1241**, AVX2: YMM state, XCR0 gating and upper-half rules, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1241.md). <!-- x86-merged:1241 -->
 - 2026-10-05: lane **1242**, Independent exact review of 1241, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1242.md). <!-- x86-merged:1242 -->
+- 2026-10-05: publication batch checks passed for `38012ab5`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
