@@ -805,16 +805,190 @@ theorem fpCtrlAusgabe32_gruppe (m m' : HwMaschine) (c : Nat)
       rw [hfr] at hmem
       exact hfrei d hne e hmem
 
-/- CUTS (pins done):
-   Proved: NaN/signed-zero/no-contraction pins; length/profile/LOCK/
-   permission refusals; the 32-bit group with tearing/overlap
-   refusals and establishment.
-   NOT proved yet: the two-core joint witness.
+/-! ## 8. Joint witness: two cores, fetched REX divide, s32 add,
+   buffered FP store, forward-only-to-owner, drain, MXCSR reset.
+
+  Core 0 fetches a REX `DIVSD xmm0, xmm1` (`1.0 / +0.0 = +inf`)
+  from actual executable bytes, runs a register `ADDSS` (`1.0f32 +
+  2.0f32 = 3.0f32`, upper 96 bits preserved), issues the 32-bit
+  result as four buffered TSO bytes (owner forwards, foreign core
+  still reads zero), drains them into shared memory (both cores
+  observe the word), and loads the reset MXCSR word (admission
+  established). Core 1 idles on non-executable memory and refuses.
+  Every observation below is a closed decidable evaluation. -/
+
+/-- Witness image: REX `DIVSD xmm0, xmm1` (5 bytes). -/
+def fpCtrlWitBild : List Byte := fpHwEncodeArithRR .div .xmm0 .xmm1
+
+/-- Witness bytes: the image at 4096, the reset word `0x1F80`
+    little-endian at 8196, zeroes elsewhere. -/
+def fpCtrlWitBytes (a : Adresse) : Byte :=
+  if a.toNat < 4096 then BitVec.ofNat 8 0
+  else
+    match fpCtrlWitBild[a.toNat - 4096]? with
+    | some b => b
+    | none =>
+      if a.toNat = 8196 then BitVec.ofNat 8 0x80
+      else if a.toNat = 8197 then BitVec.ofNat 8 0x1F
+      else if a.toNat = 8198 then BitVec.ofNat 8 0
+      else if a.toNat = 8199 then BitVec.ofNat 8 0
+      else BitVec.ofNat 8 0
+
+/-- Witness code permission: exactly the 5 image bytes. -/
+def fpCtrlWitCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 5)
+
+/-- Witness data permission: eight bytes at 8192. -/
+def fpCtrlWitDaten (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 8)
+
+/-- Witness shared memory: code execute-only, data read/write. -/
+def fpCtrlWitMem : Speicher :=
+  { bytes := fpCtrlWitBytes, lesbar := fpCtrlWitDaten,
+    schreibbar := fpCtrlWitDaten, ausfuehrbar := fpCtrlWitCode }
+
+/-- Witness XMM: `xmm0 = 1.0f64`, `xmm1 = +0.0`, `xmm2/xmm3` carry
+    `1.0f32`/`2.0f32` in the low single with nonzero upper bits. -/
+def fpCtrlWitXmm : XmmDatei := fun q =>
+  if q = .xmm0 then vecJoin 0x3FF0000000000000 0
+  else if q = .xmm1 then vecJoin 0 0
+  else if q = .xmm2 then 0x0000000000000000000000013F800000
+  else if q = .xmm3 then 0x00000000000000000000000240000000
+  else vecJoin 0 0
+
+/-- Witness core-0 registers: `rax` points at the data cell. -/
+def fpCtrlWitReg0 : Register → Wort := fun q =>
+  if q = Register.rax then BitVec.ofNat 64 8192 else BitVec.ofNat 64 0
+
+/-- Witness cores: core 0 runs at 4096, core 1 idles on the
+    (non-executable) data page. -/
+def fpCtrlWitKern : Nat → HwKern
+  | 0 => ⟨fpCtrlWitReg0, zeugeFlags, BitVec.ofNat 64 4096, fpCtrlWitXmm,
+      kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon with OS vector state. -/
+def fpCtrlWitM0 : HwMaschine :=
+  ⟨fpCtrlWitMem, fpCtrlWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- Witness data address. -/
+def fpCtrlWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem fpCtrlWitM0_wf : HwWf fpCtrlWitM0 := by
+  intro c f _
+  cases f <;> rfl
+
+/-- The image is five bytes long. -/
+theorem fpCtrlWitBild_len : fpCtrlWitBild.length = 5 :=
+  fpHwLen_rr .div .xmm0 .xmm1
+
+/-- The fetch window holds exactly the image. -/
+theorem fpCtrlWit_geholt :
+    fpHwGeholt (projFp fpCtrlWitM0 0) = fpCtrlWitBild := by
+  decide
+
+/-- The five image bytes carry execute permission. -/
+theorem fpCtrlWit_perm5 :
+    ausfuehrbarN (projFp fpCtrlWitM0 0).kern.speicher
+      (projFp fpCtrlWitM0 0).kern.rip 5 = true := by
+  decide
+
+/-- Five-byte decode lengths are checked data. -/
+theorem fpCtrlWit_laenge5 : laengeOk 5 = true := by
+  decide
+
+/-- Seven-byte decode lengths are checked data. -/
+theorem fpCtrlWit_laenge7 : laengeOk 7 = true := by
+  decide
+
+/-- The witness `xmm0` holds `1.0f64`. -/
+theorem fpCtrlWit_tief0 :
+    xmmTief fpCtrlWitXmm XmmReg.xmm0 = 0x3FF0000000000000 := by
+  decide
+
+/-- The witness `xmm1` holds `+0.0`. -/
+theorem fpCtrlWit_tief1 : xmmTief fpCtrlWitXmm XmmReg.xmm1 = 0 := by
+  decide
+
+/-- The witness `xmm2` low single holds `1.0f32`. -/
+theorem fpCtrlWit_tief32_2 :
+    xmmTief32 fpCtrlWitXmm XmmReg.xmm2 = 0x3F800000 := by
+  decide
+
+/-- The witness `xmm3` low single holds `2.0f32`. -/
+theorem fpCtrlWit_tief32_3 :
+    xmmTief32 fpCtrlWitXmm XmmReg.xmm3 = 0x40000000 := by
+  decide
+
+/-- The witness `xmm2` upper 96 bits are nonzero (value 1). -/
+theorem fpCtrlWit_hoch96_2 :
+    (fpCtrlWitXmm XmmReg.xmm2).toNat / 2 ^ 32 = 1 := by
+  decide
+
+/-- The data cell starts zeroed. -/
+theorem fpCtrlWit_anfang_null :
+    fpCtrlWitMem.bytes fpCtrlWitAdr = BitVec.ofNat 8 0 := by
+  decide
+
+/-- The reset word reads back through the real four-byte load. -/
+theorem fpCtrlWit_liest_reset :
+    read32 fpCtrlWitMem (BitVec.ofNat 64 8196) =
+      some (BitVec.ofNat 64 0x1F80) := by
+  decide
+
+/-- The MXCSR witness address: `rax + 4` is `8196`. -/
+theorem fpCtrlWit_effAddr4 :
+    effAddr (projFp fpCtrlWitM0 0).kern Register.rax 4 =
+      BitVec.ofNat 64 8196 := by
+  decide
+
+/-- The store witness address: `rax + 0` is `8192`. -/
+theorem fpCtrlWit_effAddr0 :
+    effAddr (projFp fpCtrlWitM0 0).kern Register.rax 0 =
+      fpCtrlWitAdr := by
+  decide
+
+/-- Fetch from the actual image yields the REX DIVSD form. -/
+theorem fpCtrlWit_fetch1 :
+    fpHwFetchDekodiert (projFp fpCtrlWitM0 0) =
+      some (⟨.divsdRR .xmm0 .xmm1, 5⟩, []) := by
+  have hbytes : fpHwGeholt (projFp fpCtrlWitM0 0) =
+      fpHwEncodeArithRR .div .xmm0 .xmm1 := by
+    rw [fpCtrlWit_geholt, fpCtrlWitBild]
+  have hrt := fpHwRoundtrip_arithRR .div .xmm0 .xmm1 []
+  have hred : fpHwArithRR .div .xmm0 .xmm1 = .divsdRR .xmm0 .xmm1 := rfl
+  have hlen : (fpHwEncodeArithRR .div .xmm0 .xmm1).length = 5 :=
+    fpHwLen_rr .div .xmm0 .xmm1
+  rw [hlen, hred] at hrt
+  have hdec : fpHwDecode (fpHwGeholt (projFp fpCtrlWitM0 0)) =
+      some (⟨.divsdRR .xmm0 .xmm1, 5⟩, []) := by
+    rw [hbytes]
+    exact hrt
+  have hlenBild : (fpHwGeholt (projFp fpCtrlWitM0 0)).length = 5 := by
+    rw [fpCtrlWit_geholt, fpCtrlWitBild_len]
+  have hnil : (([] : List Byte).length : Nat) = 0 := rfl
+  unfold fpHwFetchDekodiert
+  rw [hdec]
+  simp only
+  rw [hlenBild, hnil, fpCtrlWit_laenge5, fpCtrlWit_perm5]
+  decide
+
+/-- The conversion gate is open on the DIVSD form. -/
+theorem fpCtrlWit_gate1 :
+    fpHwCvttZugelassen (.divsdRR .xmm0 .xmm1)
+      (projFp fpCtrlWitM0 0) = true := rfl
+
+/- CUTS (witness defs done):
+   Proved: concrete two-core start machine with fetched REX image,
+   f32/f64 operand values, reset-word preload and all fetch pins.
+   NOT proved yet: the reached steps, TSO run, MXCSR install and
+   the joint `fpCtrl_zeuge`.
 -/
 
-#print axioms fpCtrlKeineKontraktion
-#print axioms fpCtrlF64_profil_kein_schritt
-#print axioms fpCtrlMxcsrLock_kein_schritt
-#print axioms fpCtrlAusgabe32_gruppe
+#print axioms fpCtrlWitM0_wf
+#print axioms fpCtrlWit_fetch1
 
 end Gabbro.Grammatik.X86
