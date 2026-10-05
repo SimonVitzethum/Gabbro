@@ -733,3 +733,32 @@ theorem senkSchreiben_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = tru
             exact ⟨s1, _, hrun1, hsrc, hW1, hE1⟩
         · rw [if_neg hok] at h; cases h
   | _ => simp [senkSchreiben] at h
+
+/-! ## 6. Refusals: out-of-extent indices lower to nothing -/
+
+/-- READ REFUSAL: a read whose constant index lies outside the declared
+    extent is refused (`none`): the source's bounds duty is the checked
+    `idxOkB` premise, never silently assumed. Reads through region
+    pointers take the same path (their probes are concrete). -/
+theorem senkLesen_verweigert_oob (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} (t : D.Tab) (f : D.Feld t)
+    (i : Expr D Γ Λ (.index (D.count t)))
+    (k : Int) (hk : constInt? i = some k)
+    (hoob : ¬ (0 ≤ k ∧ k < D.count t)) (hL : darf D t Λ) :
+    senkLesen A c (.slot t f i hL) = none := by
+  have hnone : feldAdr A t k f = none := feldAdr_kein_oob A t k f hoob
+  simp only [senkLesen, hk, hnone]
+
+/-- WRITE REFUSAL: a store whose constant index lies outside the
+    declared extent is refused (`none`), for direct and
+    pointer-through stores alike (the pointer path shares the check;
+    its probes are concrete). -/
+theorem senkSchreiben_verweigert_oob (A : TabAnker D) (c : PipeCfg)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (t : D.Tab) (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t)))
+    (e : Expr D Γ Λ (D.typ t f)) (hw : V.schreibt t = true) (hL : darf D t Λ)
+    (k : Int) (hk : constInt? i = some k)
+    (hoob : ¬ (0 ≤ k ∧ k < D.count t)) :
+    senkSchreiben A c (.assignSlot t f i e hw hL : Stmt D V l Γ Λ Λ) = none := by
+  have hnone : feldAdr A t k f = none := feldAdr_kein_oob A t k f hoob
+  simp only [senkSchreiben, hk, hnone]
