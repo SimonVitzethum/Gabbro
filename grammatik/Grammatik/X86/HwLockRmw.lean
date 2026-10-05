@@ -162,6 +162,115 @@ theorem hwLock_xadd_stimmt (m : HwMaschine) (c : Nat)
       (effAddr (projZustand m c) base d) (alt + sval) hwr hles
   · rfl
 
+/-- CMPXCHG success agreement: the source installs, RAX is untouched,
+    ZF is set through the comparison flags, buffers are kept. -/
+theorem hwLock_cmpxchg_ok_stimmt (m : HwMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (dest sval : Wort) (mem' : Speicher)
+    (hbuf : m.puffer c = [])
+    (hali : ausgerichtet8 (effAddr (projZustand m c) base d) = true)
+    (hrd : read64 m.mem (effAddr (projZustand m c) base d) = some dest)
+    (hgleich : (dest == (m.kerne c).register .rax) = true)
+    (hsrc : (m.kerne c).register src = sval)
+    (hok : laengeOk len = true)
+    (hwr : write64 m.mem (effAddr (projZustand m c) base d) sval =
+      some mem')
+    (hles : lesbar8 m.mem (effAddr (projZustand m c) base d) = true) :
+    hwLockSchrittEv m c (.ok (.cmpxchg64 src base d) len) =
+      some (einbettenLock m c ⟨{ { { (lockMaschineVonHw m c).zu
+        with rip := ripNach (lockMaschineVonHw m c).zu.rip len }
+        with speicher := mem' }
+        with flags := (sub64 dest ((lockMaschineVonHw m c).zu.register
+          .rax)).2 }, (lockMaschineVonHw m c).puffer⟩,
+      ⟨c, Fuss (effAddr (lockMaschineVonHw m c).zu base d),
+        Fuss (effAddr (lockMaschineVonHw m c).zu base d),
+        some dest, some sval, true, false⟩) ∧
+    read64 (einbettenLock m c ⟨{ { { (lockMaschineVonHw m c).zu
+      with rip := ripNach (lockMaschineVonHw m c).zu.rip len }
+      with speicher := mem' }
+      with flags := (sub64 dest ((lockMaschineVonHw m c).zu.register
+        .rax)).2 }, (lockMaschineVonHw m c).puffer⟩).mem
+      (effAddr (projZustand m c) base d) = some sval ∧
+    (einbettenLock m c ⟨{ { { (lockMaschineVonHw m c).zu
+      with rip := ripNach (lockMaschineVonHw m c).zu.rip len }
+      with speicher := mem' }
+      with flags := (sub64 dest ((lockMaschineVonHw m c).zu.register
+        .rax)).2 }, (lockMaschineVonHw m c).puffer⟩).puffer =
+      m.puffer := by
+  have hstep := lockSchrittVoll_cmpxchg_erfolg (lockMaschineVonHw m c) c
+    src base d len m.hw (m.bereit c) dest sval mem'
+    hbuf hali hrd hgleich hsrc hok hwr
+  refine ⟨?_, ?_, ?_⟩
+  · unfold hwLockSchrittEv
+    rw [hstep]
+  · exact read64_nach_write64 m.mem mem'
+      (effAddr (projZustand m c) base d) sval hwr hles
+  · rfl
+
+/-- CMPXCHG failure agreement (the resolved mismatch): the word is
+    written back unchanged, RAX takes the word, ZF is cleared -- and
+    the write-back pins full write permission of the footprint, so a
+    readable-but-not-writable word refuses even the failing
+    comparison. Buffers are kept. -/
+theorem hwLock_cmpxchg_nein_stimmt (m : HwMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (dest : Wort) (mem' : Speicher)
+    (hbuf : m.puffer c = [])
+    (hali : ausgerichtet8 (effAddr (projZustand m c) base d) = true)
+    (hrd : read64 m.mem (effAddr (projZustand m c) base d) = some dest)
+    (hfehl : (dest == (m.kerne c).register .rax) = false)
+    (hok : laengeOk len = true)
+    (hwr : write64 m.mem (effAddr (projZustand m c) base d) dest =
+      some mem') :
+    hwLockSchrittEv m c (.ok (.cmpxchg64 src base d) len) =
+      some (einbettenLock m c ⟨{ schrittRegister (lockMaschineVonHw m c).zu
+        (ripNach (lockMaschineVonHw m c).zu.rip len)
+        (sub64 dest ((lockMaschineVonHw m c).zu.register .rax)).2 .rax dest
+        with speicher := mem' }, (lockMaschineVonHw m c).puffer⟩,
+      ⟨c, Fuss (effAddr (lockMaschineVonHw m c).zu base d),
+        Fuss (effAddr (lockMaschineVonHw m c).zu base d),
+        some dest, some dest, true, false⟩) ∧
+    schreibbar8 m.mem (effAddr (projZustand m c) base d) = true ∧
+    (einbettenLock m c ⟨{ schrittRegister (lockMaschineVonHw m c).zu
+      (ripNach (lockMaschineVonHw m c).zu.rip len)
+      (sub64 dest ((lockMaschineVonHw m c).zu.register .rax)).2 .rax dest
+      with speicher := mem' }, (lockMaschineVonHw m c).puffer⟩).puffer =
+      m.puffer := by
+  have hstep := lockSchrittVoll_cmpxchg_fehlschlag (lockMaschineVonHw m c) c
+    src base d len m.hw (m.bereit c) dest mem'
+    hbuf hali hrd hfehl hok hwr
+  refine ⟨?_, ?_, ?_⟩
+  · unfold hwLockSchrittEv
+    rw [hstep]
+  · exact write64_braucht_schreibbar m.mem
+      (effAddr (projZustand m c) base d) dest mem' hwr
+  · rfl
+
+/-- MFENCE agreement: only RIP advances, memory and every buffer are
+    untouched, the event is fence-only. -/
+theorem hwLock_mfence_stimmt (m : HwMaschine) (c : Nat) (len : Nat)
+    (hzulaessig : merkmalZugelassen m.hw (m.bereit c) .sseDoppel = true)
+    (hbuf : m.puffer c = [])
+    (hok : laengeOk len = true) :
+    hwLockSchrittEv m c (.ok .mfence len) =
+      some (einbettenLock m c ⟨{ (lockMaschineVonHw m c).zu
+        with rip := ripNach (lockMaschineVonHw m c).zu.rip len },
+        (lockMaschineVonHw m c).puffer⟩,
+      ⟨c, [], [], none, none, false, true⟩) ∧
+    (einbettenLock m c ⟨{ (lockMaschineVonHw m c).zu
+      with rip := ripNach (lockMaschineVonHw m c).zu.rip len },
+      (lockMaschineVonHw m c).puffer⟩).mem.bytes = m.mem.bytes ∧
+    (einbettenLock m c ⟨{ (lockMaschineVonHw m c).zu
+      with rip := ripNach (lockMaschineVonHw m c).zu.rip len },
+      (lockMaschineVonHw m c).puffer⟩).puffer = m.puffer := by
+  have hstep := lockSchrittVoll_mfence_erfolg (lockMaschineVonHw m c) c
+    len m.hw (m.bereit c) hzulaessig hbuf hok
+  refine ⟨?_, ?_, ?_⟩
+  · unfold hwLockSchrittEv
+    rw [hstep]
+  · rfl
+  · rfl
+
 /- CUTS:
     Proved here: projection with the shared TSO view, re-embedding with
     `HwWf` preservation, the admitted-step plug with its event-exposing
@@ -177,3 +286,6 @@ theorem hwLock_xadd_stimmt (m : HwMaschine) (c : Nat)
 #print axioms hwLockSchritt_verweigert_bei
 #print axioms hwLockSchritt_ok_bei
 #print axioms hwLock_xadd_stimmt
+#print axioms hwLock_cmpxchg_ok_stimmt
+#print axioms hwLock_cmpxchg_nein_stimmt
+#print axioms hwLock_mfence_stimmt
