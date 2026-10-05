@@ -300,6 +300,15 @@ def abSigma : World abD where
 
 def abEnv : Env abD [] := .nil -- empty context
 
+/-- THE SOURCE RUN: `T[0] = 35; A = 42; locks L { T[1] = 17 };
+    T[0] = A;` gives row 0 = 42 (the atomic read), row 1 = 17, atomic
+    42. Row 0 changes 7 -> 35 -> 42; the atomic changes 41 -> 42. -/
+theorem ab_quelle : ∃ σ' ρ',
+    execBlock abO 0 abR abSrc abSigma abEnv = .ok σ' ρ' ∧
+    (σ'.slots () 0 ()).n = 42 ∧ (σ'.slots () 1 ()).n = 17 ∧
+    (σ'.globs Unit.unit).n = 42 :=
+  ⟨_, _, rfl, rfl, rfl, rfl⟩
+
 /- CUTS: what is not proved here
      Proved here so far: nothing beyond `SperrSchritt` (skeleton).
      NOT proved here, and not claimed:
