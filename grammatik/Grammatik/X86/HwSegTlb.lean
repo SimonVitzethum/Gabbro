@@ -470,6 +470,151 @@ theorem segTlb_wrGs_verweigert (m : SegTlbMaschine) (c : Nat)
     rw [hnone] at h2
     cases h2
 
+/-! ## 5. Closed pins: pages, stale use, INVLPG, CR3. -/
+
+/-- Pin: address 8197 lives on page 2 with offset 5. -/
+theorem seitenNr_pin_8197 :
+    seitenNr (BitVec.ofNat 64 8197) = 2 := by
+  decide
+
+/-- Pin: offset of 8197 inside its page is 5. -/
+theorem seitenOffset_pin_8197 :
+    seitenOffset (BitVec.ofNat 64 8197) = 5 := by
+  decide
+
+/-- Pin: frame 7 with offset 5 names 28677. -/
+theorem physAddr_pin :
+    physAddr 7 (BitVec.ofNat 64 8197) = BitVec.ofNat 64 28677 := by
+  decide
+
+/-- PIN: stale use -- the walk moved page 2 to frame 7, but the cached
+    frame 3 still answers. -/
+theorem tlbAufloesung_veraltet_pin :
+    tlbAufloesung [⟨2, 3⟩] (fun s => if s == 2 then some 7 else none)
+      (BitVec.ofNat 64 8197) =
+      some (physAddr 3 (BitVec.ofNat 64 8197)) := by
+  decide
+
+/-- PIN: INVLPG drops the page entries and keeps the rest. -/
+theorem tlbEntfernen_pin :
+    tlbEntfernen [⟨2, 3⟩, ⟨2, 5⟩, ⟨4, 9⟩] 2 = [⟨4, 9⟩] := by
+  decide
+
+/-- PIN: after INVLPG the walk (frame 7) answers. -/
+theorem tlbNachEntfernen_pin :
+    tlbAufloesung
+      (tlbEntfernen [⟨2, 3⟩] 2)
+      (fun s => if s == 2 then some 7 else none)
+      (BitVec.ofNat 64 8197) =
+      some (physAddr 7 (BitVec.ofNat 64 8197)) := by
+  decide
+
+/-- PIN: a CR3 write empties the core TLB. -/
+theorem tlbCr3Spuelung_pin :
+    tlbCr3Spuelung [⟨2, 3⟩, ⟨4, 9⟩] = [] := by
+  decide
+
+/-! ## 6. Reached two-core witness.
+
+  Core 0 accesses the window through FS (`rbx + FS = 8 + 8192 = 8200`)
+  with page 2 cached; core 1 idles with an empty TLB. The buffered
+  store is visible by forwarding to the owner only; the drain changes
+  shared memory 0 to 42; INVLPG on core 0 re-walks. -/
+
+/-- Witness bytes: zero everywhere (the drain installs 42). -/
+def witBytes : Adresse → Byte := fun _ => BitVec.ofNat 8 0
+
+/-- Witness data window: sixteen bytes at 8192, read/write. -/
+def witFenster (a : Adresse) : Bool :=
+  decide (8192 ≤ a.toNat ∧ a.toNat < 8208)
+
+/-- Witness memory: the window is read/write, nothing executable. -/
+def witMem : Speicher :=
+  { bytes := witBytes, lesbar := witFenster,
+    schreibbar := witFenster, ausfuehrbar := fun _ => false }
+
+/-- Witness core-0 registers: `rbx = 8` (offset into the window). -/
+def witReg0 : Register → Wort
+  | .rbx => BitVec.ofNat 64 8
+  | .rsp => BitVec.ofNat 64 8704
+  | _ => BitVec.ofNat 64 0
+
+/-- Witness core data: core 0 runs at 4096, core 1 idles on the data. -/
+def witKern : Nat → HwKern
+  | 0 => ⟨witReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness coherent machine: shared window memory, two cores, empty
+    buffers, full silicon. -/
+def witHw : HwMaschine :=
+  ⟨witMem, witKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem witHw_wf : HwWf witHw := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Witness segment state: core 0 carries FS base 8192 enabled, core 1
+    carries nothing. -/
+def witSeg : Nat → SegKern
+  | 0 => ⟨BitVec.ofNat 64 8192, BitVec.ofNat 64 0, BitVec.ofNat 64 0,
+      true, true⟩
+  | _ => ⟨BitVec.ofNat 64 0, BitVec.ofNat 64 0, BitVec.ofNat 64 0,
+      false, false⟩
+
+/-- Witness TLBs: core 0 caches page 2 to frame 2, core 1 is empty. -/
+def witTlb : Nat → List TlbEintrag
+  | 0 => [⟨2, 2⟩]
+  | _ => []
+
+/-- Witness extended machine. -/
+def witM : SegTlbMaschine := ⟨witHw, witSeg, witTlb⟩
+
+/-- The witness is well-formed. -/
+theorem witM_wf : SegTlbWf witM := witHw_wf
+
+/-- Witness walk: page 2 maps to frame 2 (identity on the window). -/
+def witWalk : SeitenDurchlauf :=
+  fun s => if s == 2 then some 2 else none
+
+/-- Witness address: segmented `rbx + FS = 8 + 8192 = 8200`. -/
+def witAddr : Adresse := BitVec.ofNat 64 8200
+
+/-- JOINT WITNESS joining every leg: segmented address, TLB hit,
+    owner-only forwarding of the buffered store, drain changing shared
+    memory 0 to 42, and a reached INVLPG step with re-walk. -/
+theorem segTlb_zeuge :
+    SegTlbWf witM ∧
+    adrEffSeg (projZustand witM.hw 0) (BitVec.ofNat 64 0)
+      (basisKeinForm .rbx) .fs (witM.seg 0) = witAddr ∧
+    tlbAufloesung (witM.tlb 0) witWalk witAddr = some witAddr ∧
+    (issueByte (tsoAnsicht witM.hw) 0 witAddr
+      (BitVec.ofNat 8 42)).map (fun s => loadByte s 0 witAddr) =
+      some (some (BitVec.ofNat 8 42)) ∧
+    (issueByte (tsoAnsicht witM.hw) 0 witAddr
+      (BitVec.ofNat 8 42)).map (fun s => loadByte s 1 witAddr) =
+      some (some (BitVec.ofNat 8 0)) ∧
+    ((issueByte (tsoAnsicht witM.hw) 0 witAddr
+      (BitVec.ofNat 8 42)).bind
+      (fun s => flushKern s 0)).map (fun s => s.mem.bytes witAddr) =
+      some (BitVec.ofNat 8 42) ∧
+    witM.hw.mem.bytes witAddr = BitVec.ofNat 8 0 ∧
+    ∃ m2, SegTlbSchritt witM m2 (.invlpg 0 witAddr) ∧
+      tlbAufloesung (m2.tlb 0) witWalk witAddr = some witAddr := by
+  refine ⟨witM_wf, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · decide
+  · decide
+  · decide
+  · decide
+  · decide
+  · decide
+  · refine ⟨⟨witHw, witM.seg,
+      fun d => if d = 0 then tlbEntfernen (witM.tlb 0) (seitenNr witAddr)
+        else witM.tlb d⟩, .invlpg 0 witAddr, ?_⟩
+    decide
+
 /- CUTS:
    Skeleton only. NOT proved here, and not claimed: everything.
 -/
