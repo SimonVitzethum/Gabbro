@@ -613,3 +613,4 @@ import Grammatik.X86.PipelineLink
 import Grammatik.X86.PipelineProfiles
 import Grammatik.X86.PipelineCalls
 import Grammatik.X86.PipelineRegAlloc
+import Grammatik.X86.HwSystemForms

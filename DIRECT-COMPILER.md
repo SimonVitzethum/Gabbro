@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 12:17 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 13:01 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -631,20 +631,20 @@ Last ledger refresh: **2026-10-05 12:17 UTC**. This is an operational snapshot, 
 | 1145 | TSO to W bridge: LOCK/RMW steps | Waiting for accepted dependencies | 1146: scheduled | [task](lanes/1145.md) |
 | 1147 | Whole-word atomicity of guarded aligned accesses | Committed candidate; review/integration pending | 1148: Incomplete; preserved | [task](lanes/1147.md) |
 | 1149 | Capstone: one coherent machine over all accepted families | Waiting for accepted dependencies | 1150: scheduled | [task](lanes/1149.md) |
-| 1151 | Privileged/system instructions for OS and freestanding profiles | Committed candidate; review/integration pending | 1152: Agent working | [task](lanes/1151.md) |
-| 1153 | Pipeline lowering onto the wider ISA | Agent working | 1154: Committed candidate; review/integration pending | [task](lanes/1153.md) |
-| 1155 | Pipeline: loops and branch layout with budget | Committed candidate; review/integration pending | 1156: scheduled | [task](lanes/1155.md) |
+| 1151 | Privileged/system instructions for OS and freestanding profiles | Merged after review/checks | 1152: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1151.md) |
+| 1153 | Pipeline lowering onto the wider ISA | Committed candidate; review/integration pending | 1154: Committed candidate; review/integration pending | [task](lanes/1153.md) |
+| 1155 | Pipeline: loops and branch layout with budget | Committed candidate; review/integration pending | 1156: Committed candidate; review/integration pending | [task](lanes/1155.md) |
 | 1157 | Pipeline: calls, stack-passed parameters, callee-saved registers, return values | Merged after review/checks | 1158: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1157.md) |
-| 1159 | Pipeline: arrays, records and pointers beyond integer slots | Agent working | 1160: scheduled | [task](lanes/1159.md) |
-| 1161 | Pipeline: IEEE float expressions | Agent working | 1162: scheduled | [task](lanes/1161.md) |
-| 1163 | Pipeline: atomics and locks onto TSO | Committed candidate; review/integration pending | 1164: scheduled | [task](lanes/1163.md) |
-| 1165 | Pipeline: source budget to target work and time transfer | Committed candidate; review/integration pending | 1166: Agent working | [task](lanes/1165.md) |
+| 1159 | Pipeline: arrays, records and pointers beyond integer slots | Committed candidate; review/integration pending | 1160: Committed candidate; review/integration pending | [task](lanes/1159.md) |
+| 1161 | Pipeline: IEEE float expressions | Committed candidate; review/integration pending | 1162: Committed candidate; review/integration pending | [task](lanes/1161.md) |
+| 1163 | Pipeline: atomics and locks onto TSO | Committed candidate; review/integration pending | 1164: Committed candidate; review/integration pending | [task](lanes/1163.md) |
+| 1165 | Pipeline: source budget to target work and time transfer | Committed candidate; review/integration pending | 1166: Committed candidate; review/integration pending | [task](lanes/1165.md) |
 | 1167 | Pipeline: register allocation, spills and privacy validated | Merged after review/checks | 1168: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1167.md) |
 | 1169 | Pipeline correctness over the multi-core TSO machine | Committed candidate; review/integration pending | 1170: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1169.md) |
 | 1171 | Linking, relocations and the final mapping | Merged after review/checks | 1172: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1171.md) |
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
-| 1175 | Finite and infinite execution soundness of the pipeline | Agent working | 1176: scheduled | [task](lanes/1175.md) |
-| 1177 | Source-computed units and duties feeding the pipeline | Agent working | 1178: scheduled | [task](lanes/1177.md) |
+| 1175 | Finite and infinite execution soundness of the pipeline | Committed candidate; review/integration pending | 1176: Unresolved after agent rounds; not accepted | [task](lanes/1175.md) |
+| 1177 | Source-computed units and duties feeding the pipeline | Incomplete; preserved | 1178: scheduled | [task](lanes/1177.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1447,6 +1447,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1158**, Independent exact review of 1157, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1158.md). <!-- x86-merged:1158 -->
 - 2026-10-05: lane **1167**, Pipeline: register allocation, spills and privacy validated, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1167.md). <!-- x86-merged:1167 -->
 - 2026-10-05: lane **1168**, Independent exact review of 1167, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1168.md). <!-- x86-merged:1168 -->
+- 2026-10-05: lane **1151**, Privileged/system instructions for OS and freestanding profiles, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1151.md). <!-- x86-merged:1151 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
