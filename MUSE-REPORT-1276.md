@@ -21,8 +21,11 @@
 
 - No `./lean-bau` / `./lean-probe` run by the reviewer: report-only exact review over the pinned snapshot (author clone `a1275` untouched by rule). Clone path and branch verified (`muse/1276`); this report is the only owned file and is committed below via `./commit.sh`.
 
-## VERDICT: ACCEPT
+## Verdict
 
-CANDIDATE 1275 at `ea0dcb4376dbf3aef8cb9fe781d8b7d4db393ade`: ACCEPT. No `sorry`/axiom issue, no existing-file edit beyond the single import, evaluator lifted not copied, refusals pinned with reasons, non-degenerate two-core memory-changing witness, silicon-checked encodings/flags, honest CUTS with no hardware-correspondence or W/GX claim. The missing independent `./lean-bau` run is a reviewer-apparatus gap recorded above; integration should still require the serial checked publication gate (source build + axioms + emission + key scan) before merge/push.
+Candidate 1275 at `ea0dcb4376dbf3aef8cb9fe781d8b7d4db393ade`: accept. No `sorry`/axiom issue, no existing-file edit beyond the single import, evaluator lifted not copied, refusals pinned with reasons, non-degenerate two-core memory-changing witness, silicon-checked encodings/flags, honest CUTS with no hardware-correspondence or W/GX claim. The missing independent `./lean-bau` run is a reviewer-apparatus gap recorded above; integration should still require the serial checked publication gate (source build + axioms + emission + key scan) before merge/push.
+
+CANDIDATE: 1275 ea0dcb4376dbf3aef8cb9fe781d8b7d4db393ade
+VERDICT: ACCEPT
 
 Co-Authored-By: muse-agent-1276 <muse-agent-1276@noreply.invalid>
