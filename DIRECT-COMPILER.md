@@ -721,7 +721,7 @@ Last ledger refresh: **2026-10-05 20:38 UTC**. This is an operational snapshot, 
 | 1325 | TSO projection: the locked and direct-memory tags | Agent working | 1326: scheduled | [task](lanes/1325.md) |
 | 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Committed candidate; review/integration pending | 1328: Committed candidate; review/integration pending | [task](lanes/1327.md) |
 | 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Committed candidate; review/integration pending | 1330: scheduled | [task](lanes/1329.md) |
-| 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1331.md) |
+| 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1331.md) |
 | 1333 | Opcode ledger: one-byte opcodes 00-3F | Agent working | 1334: scheduled | [task](lanes/1333.md) |
 | 1335 | Opcode ledger: one-byte opcodes 40-7F | Agent working | 1336: scheduled | [task](lanes/1335.md) |
 | 1337 | Opcode ledger: one-byte opcodes 80-BF | Agent working | 1338: scheduled | [task](lanes/1337.md) |
@@ -1751,6 +1751,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1319**, 8-bit operand forms across the new integer families, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1319.md). <!-- x86-merged:1319 -->
 - 2026-10-05: lane **1320**, Independent exact review of 1319, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1320.md). <!-- x86-merged:1320 -->
 - 2026-10-05: lane **1331**, Per-row consumed length for the capstone decoder chain, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1331.md). <!-- x86-merged:1331 -->
+- 2026-10-05: lane **1332**, Independent exact review of 1331, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1332.md). <!-- x86-merged:1332 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
