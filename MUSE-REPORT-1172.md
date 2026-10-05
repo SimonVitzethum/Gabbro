@@ -3,8 +3,8 @@
 ## Scope and identity
 
 - Reviewer clone verified: `/home/simon/Dokumente/gabbro-muse/a1172`, branch `muse/1172` (clean).
-- Candidate: lane 1171, pinned HEAD `91eff7e4363c251cd0ce2324c6654c55a626de35`, base `062b979a6271b7b3044ab06be3f3cde411a0d4f1` (from `.tmp/review/SNAPSHOT.json`).
-- Candidate files (from snapshot + `PATCH.diff`): `MUSE-REPORT-1171.md` (new), `grammatik/Grammatik.lean` (+1 import line), `grammatik/Grammatik/X86/PipelineLink.lean` (new, 587 lines).
+- Author lane 1171, pinned HEAD `91eff7e4363c251cd0ce2324c6654c55a626de35`, base `062b979a6271b7b3044ab06be3f3cde411a0d4f1` (from `.tmp/review/SNAPSHOT.json`).
+- Reviewed files (from snapshot + `PATCH.diff`): `MUSE-REPORT-1171.md` (new), `grammatik/Grammatik.lean` (+1 import line), `grammatik/Grammatik/X86/PipelineLink.lean` (new, 587 lines).
 - Method: read the candidate diff only (snapshot `PATCH.diff` + `grammatik/` copy under `.tmp/review/author-1171/`); no code copied into this clone; no new Lean definitions by the reviewer.
 
 ## Checks performed
@@ -34,4 +34,7 @@
 
 Nothing blocking this candidate. The candidate's own CUTS list stays open by design (source correspondence, `valX86_sound`, silicon correspondence, TSO/GX, concurrency, budget/work, wider link scope) for follow-up lanes.
 
-## VERDICT: ACCEPT
+## Verdict
+
+CANDIDATE: 1171 91eff7e4363c251cd0ce2324c6654c55a626de35
+VERDICT: ACCEPT
