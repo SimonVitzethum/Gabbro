@@ -1005,6 +1005,165 @@ theorem sxHw_nichts_lock90 :
     decodeSignXchg [natByte 240, natByte 144] = none :=
   decodeSignXchg_nichts _ ext_weist_sxlock90_zurueck sxNichts_lock90
 
+/-! ## 11. One step: exact evaluation selection over the accepted helpers.
+
+    The unified arm IS the accepted unified evaluator; the family
+    arm IS the family evaluator on the core half. A divide-style
+    trap cannot fire here (proved below: no family step halts),
+    and refusal is unified refusal. -/
+
+/-- One unified step: Ext through `stepExt`, the family through
+    `sxSchritt` on the core half. -/
+def sxHwSchritt (i : SxHwInstr) (t : FpZustand)
+    (b : BereitProfil) : ExtAusgang :=
+  match i with
+  | .ext j => stepExt j t b
+  | .sx d =>
+    match sxSchritt d t.kern with
+    | .ok s' => .weiter { t with kern := s' }
+    | .hardwareHalt => .halt
+    | .misslungen => .verweigert
+
+/-- Selection: the unified arm IS the accepted unified step. -/
+theorem sxHwSchritt_ext (j : ExtInstr) (t : FpZustand)
+    (b : BereitProfil) (o : ExtAusgang)
+    (h : stepExt j t b = o) :
+    sxHwSchritt (.ext j) t b = o := by
+  have e : sxHwSchritt (.ext j) t b = stepExt j t b := rfl
+  rw [e, h]
+
+/-- Selection: the family arm IS the family evaluator on success. -/
+theorem sxHwSchritt_sx_ok (d : SxDecodiert) (t : FpZustand)
+    (b : BereitProfil) (s' : Zustand)
+    (h : sxSchritt d t.kern = .ok s') :
+    sxHwSchritt (.sx d) t b = .weiter { t with kern := s' } := by
+  have e : sxHwSchritt (.sx d) t b =
+      match sxSchritt d t.kern with
+      | .ok s' => ExtAusgang.weiter { t with kern := s' }
+      | .hardwareHalt => .halt
+      | .misslungen => .verweigert := rfl
+  rw [e, h]
+
+/-- Selection: the halt arm fires exactly where the family halts. -/
+theorem sxHwSchritt_sx_halt (d : SxDecodiert) (t : FpZustand)
+    (b : BereitProfil)
+    (h : sxSchritt d t.kern = .hardwareHalt) :
+    sxHwSchritt (.sx d) t b = .halt := by
+  have e : sxHwSchritt (.sx d) t b =
+      match sxSchritt d t.kern with
+      | .ok s' => ExtAusgang.weiter { t with kern := s' }
+      | .hardwareHalt => .halt
+      | .misslungen => .verweigert := rfl
+  rw [e, h]
+
+/-- Selection: family refusal is unified refusal. -/
+theorem sxHwSchritt_sx_verweigert (d : SxDecodiert) (t : FpZustand)
+    (b : BereitProfil)
+    (h : sxSchritt d t.kern = .misslungen) :
+    sxHwSchritt (.sx d) t b = .verweigert := by
+  have e : sxHwSchritt (.sx d) t b =
+      match sxSchritt d t.kern with
+      | .ok s' => ExtAusgang.weiter { t with kern := s' }
+      | .hardwareHalt => .halt
+      | .misslungen => .verweigert := rfl
+  rw [e, h]
+
+/-- No family step halts: these operations have no fault class
+    (no divide, no memory access on the admitted forms). -/
+theorem sxSchritt_kein_halt (d : SxDecodiert) (s : Zustand) :
+    sxSchritt d s ≠ .hardwareHalt := by
+  unfold sxSchritt
+  cases hlen : laengeOk d.laenge with
+  | false =>
+    simp [hlen]
+  | true =>
+    simp only [hlen]
+    cases hbef : d.befehl with
+    | cbw => simp [hbef]
+    | cwde => simp [hbef, wdSchritt, hlen]
+    | cdqe => simp [hbef, wdSchritt, hlen]
+    | cwd => simp [hbef]
+    | cdq => simp [hbef, wdSchritt, hlen]
+    | cqo => simp [hbef, wdSchritt, hlen]
+    | nop => simp [hbef]
+    | xchgReg b a c => simp [hbef]
+    | xchgRax16 r => simp [hbef]
+    | xchgRax32 r => simp [hbef]
+    | xchgRax64 r => simp [hbef]
+    | movsxd dst src => simp [hbef]
+
+/-! ## 12. Named refusals: every refused shape carries its reason.
+
+    `SxGrund` names the refusal classes. LOCK refusal follows
+    generically from the accepted prefix parse; memory-ModRM
+    refusal is generic over the failing `mod` values; the
+    prefix-combination refusals stand in the checked table below
+    (each tabled input provably refuses). -/
+
+/-- Named refusal reasons for this family. -/
+inductive SxGrund where
+  | lockPrefix
+  | memoryOperand
+  | overdetermined
+  | movsxdWithoutRexW
+  | truncated
+  deriving DecidableEq, Repr
+
+/-- LOCK refusal is generic: where the accepted prefix parse
+    refuses, the family decoder refuses. -/
+theorem decodeSx_lock (bs : List Byte)
+    (h : nimmPraefix bs = none) :
+    decodeSx bs = none := by
+  cases bs with
+  | nil => rfl
+  | cons b rest => simp [decodeSx, h]
+
+/-- `87` with a memory ModRM refuses, for every failing `mod`. -/
+theorem decodeSx87_mem (op16 : Bool) (wb rb bb npfx : Nat)
+    (m : Byte) (rest : List Byte)
+    (hmod : byteNat m / 64 = 0 ∨ byteNat m / 64 = 1 ∨
+      byteNat m / 64 = 2) :
+    decodeSx87 op16 wb rb bb npfx m rest = none := by
+  unfold decodeSx87
+  rcases hmod with h | h | h <;> simp [h]
+
+/-- `86` with a memory ModRM refuses, for every failing `mod`. -/
+theorem decodeSx86_mem (rb bb npfx : Nat)
+    (m : Byte) (rest : List Byte)
+    (hmod : byteNat m / 64 = 0 ∨ byteNat m / 64 = 1 ∨
+      byteNat m / 64 = 2) :
+    decodeSx86 rb bb npfx m rest = none := by
+  unfold decodeSx86
+  rcases hmod with h | h | h <;> simp [h]
+
+/-- `63` with a memory ModRM refuses, for every failing `mod`. -/
+theorem decodeSx63_mem (op16 : Bool) (wb rb bb npfx : Nat)
+    (m : Byte) (rest : List Byte)
+    (hmod : byteNat m / 64 = 0 ∨ byteNat m / 64 = 1 ∨
+      byteNat m / 64 = 2) :
+    decodeSx63 op16 wb rb bb npfx m rest = none := by
+  unfold decodeSx63
+  rcases hmod with h | h | h <;> simp [h]
+
+/-- Reason table: every planted refusal input with its name. -/
+def sxGrundTabelle : List (List Byte × SxGrund) :=
+  [([natByte 240, natByte 144], .lockPrefix),
+   ([natByte 240, natByte 152], .lockPrefix),
+   ([natByte 135, natByte 4], .memoryOperand),
+   ([natByte 134, natByte 0], .memoryOperand),
+   ([natByte 99, natByte 192], .movsxdWithoutRexW),
+   ([natByte 102, natByte 72, natByte 99, natByte 192], .overdetermined),
+   ([natByte 102, natByte 72, natByte 135, natByte 192], .overdetermined),
+   ([natByte 102, natByte 72, natByte 152], .overdetermined),
+   ([natByte 135], .truncated)]
+
+/-- Every tabled input refuses. -/
+theorem sxTabelle_verweigert (p : List Byte × SxGrund)
+    (h : p ∈ sxGrundTabelle) : decodeSx p.1 = none := by
+  simp [sxGrundTabelle] at h
+  rcases h with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    decide
+
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
    NOT proved here, and not claimed: everything (see task).
