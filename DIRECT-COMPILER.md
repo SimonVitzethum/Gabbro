@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 21:05 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 21:08 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -718,17 +718,17 @@ Last ledger refresh: **2026-10-05 21:05 UTC**. This is an operational snapshot, 
 | 1319 | 8-bit operand forms across the new integer families | Merged after review/checks | 1320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
-| 1325 | TSO projection: the locked and direct-memory tags | Committed candidate; review/integration pending | 1326: scheduled | [task](lanes/1325.md) |
+| 1325 | TSO projection: the locked and direct-memory tags | Committed candidate; review/integration pending | 1326: Agent working | [task](lanes/1325.md) |
 | 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Merged after review/checks | 1328: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1327.md) |
-| 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Committed candidate; review/integration pending | 1330: Committed candidate; review/integration pending | [task](lanes/1329.md) |
+| 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Merged after review/checks | 1330: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1329.md) |
 | 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1331.md) |
 | 1333 | Opcode ledger: one-byte opcodes 00-3F | Agent working | 1334: scheduled | [task](lanes/1333.md) |
 | 1335 | Opcode ledger: one-byte opcodes 40-7F | Agent working | 1336: scheduled | [task](lanes/1335.md) |
 | 1337 | Opcode ledger: one-byte opcodes 80-BF | Agent working | 1338: scheduled | [task](lanes/1337.md) |
 | 1339 | Opcode ledger: one-byte opcodes C0-FF | Agent working | 1340: scheduled | [task](lanes/1339.md) |
 | 1341 | Opcode ledger: two-byte opcodes 0F 00-3F | Agent working | 1342: scheduled | [task](lanes/1341.md) |
-| 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Agent working | 1344: Committed candidate; review/integration pending | [task](lanes/1343.md) |
-| 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Agent working | 1346: Committed candidate; review/integration pending | [task](lanes/1345.md) |
+| 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Committed candidate; review/integration pending | 1344: Agent working | [task](lanes/1343.md) |
+| 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Committed candidate; review/integration pending | 1346: Agent working | [task](lanes/1345.md) |
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Committed candidate; review/integration pending | 1348: Agent working | [task](lanes/1347.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1758,6 +1758,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1312**, Independent exact review of 1311, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1312.md). <!-- x86-merged:1312 -->
 - 2026-10-05: lane **1327**, TSO projection: the issue-path tags isa, addr, muldiv, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1327.md). <!-- x86-merged:1327 -->
 - 2026-10-05: lane **1328**, Independent exact review of 1327, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1328.md). <!-- x86-merged:1328 -->
+- 2026-10-05: lane **1329**, TSO projection: device, FP, vector, fault, gate, interrupt and image tags, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1329.md). <!-- x86-merged:1329 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
