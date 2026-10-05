@@ -92,3 +92,33 @@ correspondence beyond the cited SDM lines stays OPEN.
   `sraFolge` with `let`-bindings plus `have ... := rfl` + `rw` fixed all
   three errors at once.
 - No credentials touched; only the three owned paths were written.
+
+## Integration-gate failure analysis (2026-10-05, repair turn)
+
+The independent review accepted the isolated candidate, but the
+integration build failed. The exact evidence shows the failure is NOT in
+this module:
+
+- The integration log prints my file's `#print axioms` output through
+  line 708 (`hsraWit_zeuge`), the LAST line of `Avx2SraLanes.lean` --
+  the module fully elaborated in the integration build with 0 errors.
+- The failure is `✖ [661/662] Building Grammatik` with
+  `libc++abi: terminating due to uncaught exception of type
+  lean::exception: failed to create thread`, exit 134: a C++-level
+  thread-creation failure at the final aggregation target, i.e. resource
+  exhaustion on the integration machine, not a proof or statement defect.
+- Local re-verification in this clone after the failure: `./lean-bau`
+  `Build completed successfully (658 jobs)` including the same
+  aggregation target, `./lean-probe` 0 errors, sorry gate 0 violations.
+  This matches the documented apparatus signature (thread-creation
+  failure even on unchanged source under parallel load; heavy builds
+  share one memory lease).
+
+Repair decision: NO Lean change. Editing green, accepted proofs to work
+around a resource failure would risk weakening guarantees for nothing,
+and no owned line is implicated by the evidence. The deliverable is
+unchanged (`ec962685`); this report is the fresh commit. Concrete
+blocker for integration: coordinator-side build resources/retry for the
+final `Grammatik` aggregation step. A fresh independent review of the
+changed commit (this report) is still required per the instruction; the
+Lean content it covers is byte-identical to the accepted candidate.
