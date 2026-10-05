@@ -658,7 +658,7 @@ Last ledger refresh: **2026-10-05 14:18 UTC**. This is an operational snapshot, 
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Committed candidate; review/integration pending | 1200: Committed candidate; review/integration pending | [task](lanes/1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Merged after review/checks | 1202: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
-| 1205 | Loaded image: per-family reached fetch instances | Merged after review/checks | 1206: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1205.md) |
+| 1205 | Loaded image: per-family reached fetch instances | Merged after review/checks | 1206: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1205.md) |
 | 1207 | Generic drain-equals-write64 induction | Committed candidate; review/integration pending | 1208: Committed candidate; review/integration pending | [task](lanes/1207.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1521,6 +1521,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1201**, Pipeline float: NaN payload and bit-exact agreement, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1201.md). <!-- x86-merged:1201 -->
 - 2026-10-05: lane **1202**, Independent exact review of 1201, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1202.md). <!-- x86-merged:1202 -->
 - 2026-10-05: lane **1205**, Loaded image: per-family reached fetch instances, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1205.md). <!-- x86-merged:1205 -->
+- 2026-10-05: lane **1206**, Independent exact review of 1205, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1206.md). <!-- x86-merged:1206 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
