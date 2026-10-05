@@ -557,4 +557,111 @@ theorem kap2_step_wc :
     (HwMemWC1287.wcAdapter_prefetch_nop hwWitStart 0 .nta
       (BitVec.ofNat 64 8192))⟩
 
+/-- Exhibited AVX2-memory union step: core 0 buffers the 32-byte
+    witness store through the family relation. -/
+theorem kap2_step_avx2mem :
+    ∃ m1, HwVollSchritt2 avx2WitStart m1
+      (Kap2Ereignis.avx2mem
+        (.speichere 0 avx2WitCpu avx2WitXcr0 basisKontrolle
+          avx2WitProfil .unausgerichtet .rax (0 : BitVec 32)
+          avx2WitV)) := by
+  obtain ⟨m2, _, _, hstep⟩ := avx2Wit_store_schritt
+  have hrel : HwAvx2Schritt avx2WitStart m2
+      (.speichere 0 avx2WitCpu avx2WitXcr0 basisKontrolle
+        avx2WitProfil .unausgerichtet .rax (0 : BitVec 32)
+        avx2WitV) :=
+    hstep
+  exact ⟨m2, (kap2_avx2mem_embedded _ _ _).mp hrel⟩
+
+/-- Exhibited AVX2-gate union step: the admitted MUL row steps
+    through the gate plug on the muldiv instance machine. -/
+theorem kap2_step_avx2tor :
+    ∃ m1, HwVollSchritt2 instStart_muldiv m1
+      (Kap2Ereignis.avx2tor avxZeugeCpu avxZeugeXcr0 basisKontrolle
+        0 (.muldiv ⟨.mulRax .rcx, 3⟩)) := by
+  have hgate : avx2ZustandBereit avxZeugeCpu avxZeugeXcr0
+      basisKontrolle (instStart_muldiv.bereit 0) = true := by
+    decide
+  have hplug : (adapterAvx2Tor avxZeugeCpu avxZeugeXcr0
+      basisKontrolle).schritt instStart_muldiv 0
+      (.muldiv ⟨.mulRax .rcx, 3⟩) =
+      some (setKernVonFp instStart_muldiv 0 instT_muldiv) := by
+    rw [adapterAvx2Tor_gleich _ _ _ _ _ _ hgate]
+    exact adapterBild_vereinbarung _ _ _ _ inst_schritt_muldiv
+  exact ⟨_, (kap2_avx2tor_embedded _ _ _ _ _ _ _).mp hplug⟩
+
+/-! ## Boundary steps: the extended families through the base.
+
+  Paging, large paging, translation, segment/TLB and the AVX2 join
+  keep their distinctive state (tables, TLBs, YMM) outside the
+  coherent machine, so no closed flat-machine step carries their
+  walk/fault/vector legs (the same reason the first union keeps
+  async delivery out of the closed step). What lifts is the old
+  coherent leg: each exhibited step is a base observation on the
+  family's own witness machine, hence a second-union step through
+  the `.alt` arm. -/
+
+/-- The shared witness cell reads zero on the paging witness. -/
+theorem kap2_hwWitStart_lade :
+    loadByte (tsoAnsicht hwWitStart) 0 hwWitAdr =
+      some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Exhibited paging boundary step: core 0 observes the zeroed
+    witness cell on the paging witness machine. -/
+theorem kap2_step_seiten :
+    ∃ m1, HwVollSchritt2 hwWitStart m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 hwWitAdr (BitVec.ofNat 8 0)))) :=
+  ⟨_, (kap2_alt_embedded _ _ _).mp
+    ((kap_basis_embedded _ _ _).mp
+      (HwSchritt.lade 0 _ _ kap2_hwWitStart_lade))⟩
+
+/-- Exhibited large-paging boundary step: the same observation on
+    the shared witness machine both large-page legs reuse. -/
+theorem kap2_step_gross :
+    ∃ m1, HwVollSchritt2 hwWitStart m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 hwWitAdr (BitVec.ofNat 8 0)))) :=
+  ⟨_, (kap2_alt_embedded _ _ _).mp
+    ((kap_basis_embedded _ _ _).mp
+      (HwSchritt.lade 0 _ _ kap2_hwWitStart_lade))⟩
+
+/-- Exhibited translation boundary step: the same observation on
+    the joined translate witness machine's coherent leg. -/
+theorem kap2_step_uebersetz :
+    ∃ m1, HwVollSchritt2 witUebersetzM.hw m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 hwWitAdr (BitVec.ofNat 8 0)))) :=
+  ⟨_, (kap2_alt_embedded _ _ _).mp
+    ((kap_basis_embedded _ _ _).mp
+      (HwSchritt.lade 0 _ _ kap2_hwWitStart_lade))⟩
+
+/-- The segment witness cell reads zero on its own machine. -/
+theorem kap2_segTlbHw_lade :
+    loadByte (tsoAnsicht segTlbHw) 0 segTlbAddr =
+      some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Exhibited segment/TLB boundary step: core 0 observes the
+    zeroed window cell on the segment witness machine. -/
+theorem kap2_step_segtlb :
+    ∃ m1, HwVollSchritt2 segTlbHw m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 segTlbAddr (BitVec.ofNat 8 0)))) :=
+  ⟨_, (kap2_alt_embedded _ _ _).mp
+    ((kap_basis_embedded _ _ _).mp
+      (HwSchritt.lade 0 _ _ kap2_segTlbHw_lade))⟩
+
+/-- Exhibited AVX2-join boundary step: core 0 observes its
+    forwarded witness byte on the join witness machine. -/
+theorem kap2_step_avx2join :
+    ∃ m1, HwVollSchritt2 Avx2Join.avxWitS2.hw m1
+      (Kap2Ereignis.alt
+        (.basis (.leseBeob 0 Avx2Join.avxWitAdr
+          (BitVec.ofNat 8 1)))) :=
+  ⟨_, (kap2_alt_embedded _ _ _).mp
+    ((kap_basis_embedded _ _ _).mp
+      (HwSchritt.lade 0 _ _ Avx2Join.avxWit_eigen))⟩
+
 end Gabbro.Grammatik.X86
