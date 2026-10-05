@@ -695,7 +695,7 @@ Last ledger refresh: **2026-10-05 19:01 UTC**. This is an operational snapshot, 
 | 1273 | Rotates: ROL, ROR, RCL, RCR | Merged after review/checks | 1274: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1273.md) |
 | 1275 | ADC, SBB, INC, DEC | Merged after review/checks | 1276: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Merged after review/checks | 1278: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1277.md) |
-| 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Merged after review/checks | 1280: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1279.md) |
+| 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Merged after review/checks | 1280: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1279.md) |
 | 1281 | Sign-extend-accumulator ops and register XCHG | Committed candidate; review/integration pending | 1282: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
@@ -1703,6 +1703,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `0cb2d8f7` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:0cb2d8f7905f7750aefd58919f15621c6b3db8f0 -->
 - 2026-10-05: lane **1274**, Independent exact review of 1273, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1274.md). <!-- x86-merged:1274 -->
 - 2026-10-05: lane **1279**, Bit scan and count: BSF, BSR, POPCNT, BSWAP, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1279.md). <!-- x86-merged:1279 -->
+- 2026-10-05: lane **1280**, Independent exact review of 1279, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1280.md). <!-- x86-merged:1280 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
