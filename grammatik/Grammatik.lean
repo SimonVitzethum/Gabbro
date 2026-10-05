@@ -694,3 +694,4 @@ import Grammatik.X86.ValidatorKapDecoder
 import Grammatik.X86.IntSignXchg
 import Grammatik.X86.PipelineBlockTables
 import Grammatik.X86.HwTranslateFull
+import Grammatik.X86.OpcodeLedger1Byte80
