@@ -325,6 +325,10 @@ generated driver, lock through the chain). Reviewers from 321.
   - [ ] The `takt` probe's own hrtimer (`messung/proben/kmodul/takt.c`, 95 lines, the probe's
     HARNESS): on kernel 6.8 the callback is a field of `struct hrtimer`; a question for Simon
     whether a probe's harness counts for acceptance (STAND-C).
+  - [x] OFFEN O40, the refusal half (2026-10-05): two function bodies of one name in two
+    modules (one of them private) are one C symbol -- refused by name before any C (`N042`
+    widened, `gift/1398`); the module-qualified C name that would let such a program build stays
+    open in O40.
   - [ ] Bare metal (C3).
     - [x] Slice 1 (2026-10-05): `laufzeit/metall/arena.c`, `include/` and `kern.c`'s memory
       functions are generated text -- the metal driver writes the proved `arena.modul` pool

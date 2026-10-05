@@ -41,10 +41,96 @@ pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     fnptr_traegt_seinen_vertrag(baum, absagen);
     name_gehoert_schon_c(baum, absagen);
     erzeugter_name_zweimal(baum, absagen);
+    zwei_ruempfe_ein_name(baum, absagen);
     sperrprimitiv_vertrag(baum, absagen);
     bibliothek_pruefen(baum, absagen);
     profil_pruefen(baum, absagen);
     intrinsik_name_vergeben(baum, absagen);
+}
+
+/// **`N042`, the second shape -- two function BODIES of one name in two modules** (C-free lane,
+/// 2026-10-05, OFFEN O40).
+///
+/// The emitter writes a function under its bare name (`static uint32_t f(void)` for a private
+/// one, `uint32_t f(void)` for a `pub` one) and the whole unit into ONE translation unit. Two
+/// modules that each give `f` a body therefore write two definitions of one C symbol.
+/// `geltungsbereich` does not see it -- the names are distinct in Gabbro, `a::f` and `b::f` --
+/// and [`erzeugter_name_zweimal`] steps aside for two plain declared names. *Measured with the
+/// release binary of `ffce2d5d` on a two-module file: `gabbro pruefe` 0 errors, `gabbro emit`
+/// exit 0, `cc` "redefinition of `f`".* The network stack met it with three private watchdogs
+/// of one name.
+///
+/// **What stays out, and why each:** a body-less declaration (`extern fn`, a `syscall`, a
+/// prototype that names another module's body -- `beispiele/29`) defines nothing; a `spec fn`
+/// and a `const fn` write no C; two bodies whose `arch` words differ are never emitted together
+/// (`messung/fragmente/F05.gab`); a body under `when` is emitted only where its condition holds,
+/// which this rule does not decide -- `cc` stays loud there. Two bodies in ONE module are
+/// `geltungsbereich`'s duplicate already, and two `pub` bodies are `N039`'s (W7: what one
+/// register holds, a second does not hold again) -- so this shape needs a private side.
+///
+/// **Why a refusal and not a renaming:** the emitter's per-unit maps are keyed by the bare name
+/// too (`emit.rs`, `Namen::funktionen`), so a qualified C name is a change through the whole
+/// generator; OFFEN O40 keeps that as the open half. Until then the writer gets the clash by
+/// name, at the second body, before any C.
+fn zwei_ruempfe_ein_name(baum: &Programm, absagen: &mut Absagen) {
+    use std::collections::BTreeMap;
+    // name -> (module, arch word, `pub`, span) of every body that writes a C definition
+    let mut nach_namen: BTreeMap<String, Vec<(String, Option<String>, bool, Span)>> =
+        BTreeMap::new();
+    crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
+        let ItemArt::Funktion(f) = &item.art else { return };
+        if item.when.is_some() || f.when.is_some() {
+            return;
+        }
+        if matches!(f.klasse, Some(FnKlasse::Spec) | Some(FnKlasse::Konst)) {
+            return;
+        }
+        if !matches!(f.rumpf, FnRumpf::Block(_) | FnRumpf::Asm(_)) {
+            return;
+        }
+        nach_namen.entry(f.name.text.clone()).or_default().push((
+            modul.to_string(),
+            f.arch.as_ref().map(|a| a.text.clone()),
+            f.oeffentlich,
+            f.name.span,
+        ));
+    });
+    for (name, ruempfe) in nach_namen {
+        for (i, (modul, arch, oeffentlich, ort)) in ruempfe.iter().enumerate() {
+            // The FIRST earlier body this one meets: another module, an `arch` word that does
+            // not keep the two apart (equal, or missing on either side), and not two `pub`
+            // ones -- two exported bodies of one C name are `N039`'s already (W7).
+            let frueher = ruempfe[..i].iter().find(|(m, a, p, _)| {
+                m != modul
+                    && (a.is_none() || arch.is_none() || a == arch)
+                    && !(*p && *oeffentlich)
+            });
+            let Some((erst_modul, _, _, _)) = frueher else { continue };
+            let zeige = |m: &str| if m.is_empty() { "the unit's top level".to_string() } else { format!("`{m}`") };
+            absagen.schiebe(
+                Absage::fehler(
+                    "N042",
+                    *ort,
+                    format!("`{name}` is the C name of two different declarations"),
+                )
+                .mit_notiz(format!(
+                    "this body in {} and the body of `{name}` in {} are both written as the C \
+                     function `{name}` -- the emitter writes a function under its bare name, \
+                     and the whole unit into one C file",
+                    zeige(modul),
+                    zeige(erst_modul)
+                ))
+                .mit_notiz(
+                    "two definitions of one C symbol: `cc` refuses the unit after the checker \
+                     said nothing (OFFEN O40; a module-qualified C name is the open half)",
+                )
+                .mit_notiz(
+                    "rename one of the two -- e.g. after its module; a body-less `extern fn` \
+                     beside a body is not this shape and stays allowed",
+                ),
+            );
+        }
+    }
 }
 
 /// **`N042` -- two declarations, one C name, and the generator formed both.**

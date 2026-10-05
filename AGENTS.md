@@ -368,7 +368,7 @@ opus/…:opus/…` first.
 | Kind | Next free |
 |---|---|
 | Diagnostic codes | **N578** (highest issued: N577, C-free lane, 2026-10-01; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
-| Gift (poison-probe) numbers | **1398** (highest file: `beispiele/gift/1397`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
+| Gift (poison-probe) numbers | **1399** (highest file: `beispiele/gift/1398`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
 | Example numbers | **185** (highest file: `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
 | Lane numbers | **1114** next free; allocate unique IDs from the actual live coordinator registry. |
 
@@ -447,6 +447,7 @@ What was reserved in TODO §-1/§0 and what was actually taken:*
 | C-free lane, the kernel-module binding in Gabbro (C2 slice 2, 2026-09-30) | **not reserved** | **N573** (`extern.variadik`: the variadic marker `...` of an `extern fn` parameter list), gifts **1390** (the marker at a Gabbro function), **1391** (a record behind it); no example (the positive side is `bibliothek/linux-kmod/linux-kmod.gab`: `_printk`, `panic`). `linux-kmod.c` keeps only the thread pair; `messung/proben/kmodul/melde.c`, `atomar.c` DELETED (the probes report through `gabbro_kern_zeige`/`_halt`). Also **N574** (`fremd.ohne_code`: a foreign body takes no parameter whose type carries a function pointer; OFFEN O39), gifts **1392**, **1393**
 
 | C-free lane, the kernel thread start in Gabbro (C2 slice 3, 2026-10-01, OFFEN O39) | **not reserved** | **N575**-**N577** (`eintritt.code`: the type `entry fn(…) -> R` -- where it stands, no Gabbro caller of a function taking one, one whole hand-over outside every loop), gifts **1394**-**1397**, example **184** (`code-vom-treiber`). `bibliothek/linux-kmod/linux-kmod.gab`'s thread start and join sleep are Gabbro (`kthread_create_on_node`, `wake_up_process`, `msleep`); `linux-kmod.c` keeps the core number only. PROVED template `faden.modul` (`SchablonenModul.lean` §3; register 33 -> 34 entries, 22 -> 23 machine-checked). Emitter repair: a function-pointer PARAMETER is written with its name inside the declarator (it was `T (*)(…) name`, a C error). OFFEN O40 (private functions of one name in two modules share a C name)
+| C-free lane, OFFEN O40 half closed (2026-10-05) | **not reserved** | gift **1398** (`zwei-private-gleichen-namens`); **no code**: `N042` widened to two function bodies of one name in two modules with a private side (`namen.rs::zwei_ruempfe_ein_name`); no example (clean twins `beispiele/29`, `messung/fragmente/F05.gab`). Also C3 slice 1 the same day (no number: templates `metall.speicher`, `arena.metall`) |
 - Unused parts of a reserved block stay with the follow-up work of the same wall (for example
   N411–415 for the integer-match exhaustiveness refusal that lane 227 left open, review G07);
   they are never handed to another topic. Next free is always above the highest number in use,

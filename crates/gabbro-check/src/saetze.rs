@@ -6240,6 +6240,16 @@ pub const SPERREN: &[Satz] = &[
                     `-- erwartet: N042 allein`: the checker must refuse AND `cc` must \
                     ACCEPT -- the day a second guard appears, the probe goes red and asks to \
                     be re-classified.*\n\
+                    **And a second shape since 2026-10-05 (C-free lane, OFFEN O40): two \
+                    function BODIES of one name in two modules, at least one of them private.** \
+                    The emitter writes a function under its bare name and the whole unit into \
+                    one C file, so `a::f` and `b::f` are two definitions of `f`; scope has \
+                    nothing to say (two names in Gabbro) and two `pub` bodies are `N039`'s. \
+                    Measured: 0 errors, `gabbro emit` exit 0, `cc` refuses with a redefinition. A body-less \
+                    `extern fn` beside a body, two bodies under different `arch` words, and a \
+                    body under `when` stay outside it (`gift/1398`; clean twins \
+                    `beispiele/29`, `messung/fragmente/F05.gab`). The module-qualified C name \
+                    that would make the program build is OFFEN O40's open half.\n\
                     **What it deliberately does NOT enumerate** (W10): `{T}_speicher`, \
                     because the generator writes it only where the source addresses the table \
                     BY NAME and that set lives in the generator's `Namen`, not in the tree -- \

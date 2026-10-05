@@ -1,0 +1,45 @@
+-- erwartet: N042
+-- **Two private functions of one name in two modules are ONE C symbol.**
+--
+-- `a::f` and `b::f` are two names in Gabbro, so the scope rule has nothing to say, and two
+-- `pub` bodies would be `N039`'s. But the emitter writes a function under its bare name and
+-- the whole unit into one C file: two `static uint32_t f(void)` definitions, and `cc`
+-- answers "redefinition of `f`" after the checker said 0 errors (OFFEN O40, measured with the
+-- release binary of `ffce2d5d`). The network stack met it with three private watchdogs of one
+-- name. Its clean twins: a body-less `extern fn` beside a body (`beispiele/29`), and two
+-- bodies under different `arch` words (`messung/fragmente/F05.gab`).
+module gift::zwei_private::a {
+
+fn f() -> u32
+    effects { pure }
+    costs <= 4 ops
+{
+    return 1;
+}
+
+pub fn g() -> u32
+    effects { pure }
+    costs <= 16 ops
+{
+    return f();
+}
+
+}
+
+module gift::zwei_private::b {
+
+fn f() -> u32
+    effects { pure }
+    costs <= 4 ops
+{
+    return 2;
+}
+
+pub fn h() -> u32
+    effects { pure }
+    costs <= 16 ops
+{
+    return f();
+}
+
+}
