@@ -3,6 +3,8 @@
 ## Candidate
 
 - Author lane 1149, pinned HEAD `8097310de1eebe2b20bf1fa3f590d2ae7e668a53`, base `515546d0`.
+
+CANDIDATE: 1149 8097310de1eebe2b20bf1fa3f590d2ae7e668a53
 - Snapshot files (`.tmp/review/SNAPSHOT.json`, `clean: true`): exactly 3 —
   `MUSE-REPORT-1149.md`, `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/HwKapstein.lean` (1023 lines).
 - Review source: staged exact snapshot `.tmp/review/author-1149/` (`PATCH.diff`, `BUILD-EVIDENCE.json`,
@@ -69,7 +71,9 @@
 - N3: one `./lean-bau | grep` re-run for the exact summary first-line was refused by the
   permission classifier; the completed-run last line above is reported instead.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1149 at `8097310de1eebe2b20bf1fa3f590d2ae7e668a53` is accepted as stated:
 21-arm coherent union with exact per-family embeddings, `HwWf` preservation, proved refusals,
