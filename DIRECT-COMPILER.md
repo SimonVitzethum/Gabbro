@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 22:39 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 22:40 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -730,14 +730,17 @@ Last ledger refresh: **2026-10-05 22:39 UTC**. This is an operational snapshot, 
 | 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Merged after review/checks | 1344: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1343.md) |
 | 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
-| 1349 | Integer ALU in every width and form | Scheduled | 1350: scheduled | [task](lanes/1349.md) |
-| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Scheduled | 1352: scheduled | [task](lanes/1351.md) |
-| 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Scheduled | 1354: scheduled | [task](lanes/1353.md) |
-| 1355 | SSE/SSE2 moves, loads, stores and unpack | Scheduled | 1356: scheduled | [task](lanes/1355.md) |
-| 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Scheduled | 1358: scheduled | [task](lanes/1357.md) |
-| 1359 | SSE/SSE2 scalar and packed floating point | Scheduled | 1360: scheduled | [task](lanes/1359.md) |
-| 1361 | String instructions with REP prefixes and the direction flag | Scheduled | 1362: scheduled | [task](lanes/1361.md) |
-| 1363 | Wire the already-modelled families into the decoder chain | Scheduled | 1364: scheduled | [task](lanes/1363.md) |
+| 1349 | Integer ALU in every width and form | Agent working | 1350: scheduled | [task](lanes/1349.md) |
+| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Agent working | 1352: scheduled | [task](lanes/1351.md) |
+| 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Agent working | 1354: scheduled | [task](lanes/1353.md) |
+| 1355 | SSE/SSE2 moves, loads, stores and unpack | Agent working | 1356: scheduled | [task](lanes/1355.md) |
+| 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Agent working | 1358: scheduled | [task](lanes/1357.md) |
+| 1359 | SSE/SSE2 scalar and packed floating point | Agent working | 1360: scheduled | [task](lanes/1359.md) |
+| 1361 | String instructions with REP prefixes and the direction flag | Agent working | 1362: scheduled | [task](lanes/1361.md) |
+| 1363 | Wire the already-modelled families into the decoder chain | Agent working | 1364: scheduled | [task](lanes/1363.md) |
+| 1365 | Decoder rows for the system and privileged instructions | Scheduled | 1366: scheduled | [task](lanes/1365.md) |
+| 1367 | Every LOCK-prefixed read-modify-write instruction | Scheduled | 1368: scheduled | [task](lanes/1367.md) |
+| 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Scheduled | 1370: scheduled | [task](lanes/1369.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
