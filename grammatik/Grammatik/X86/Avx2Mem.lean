@@ -1182,6 +1182,176 @@ theorem avx2Laden_ist_avx2Read (s : TSOZustand) (c : Nat)
           unfold avx2Read
           rw [rlo, rhi]
 
+/-! ## 9. Forwarding for the owner, old bytes for everyone else.
+
+  Byte-level, general: after a successful thirty-two issue fold,
+  every entry byte forwards to its owner (youngest own entry wins,
+  older shadowed entries lose, later other-address issues do not
+  disturb); another core without footprint entries still reads
+  canonical memory. Whole-value assembly is witnessed, not
+  re-arithmetised here. -/
+
+/-- Appending a later list keeps an already-youngest match. -/
+theorem avx2Neuestens_append_rechts (l r : List TSOEintrag)
+    (x : Adresse) (w : Byte)
+    (h : neuestens r x = some w) :
+    neuestens (l ++ r) x = some w := by
+  induction l with
+  | nil => simpa
+  | cons hd tl ih =>
+    have e2 : (hd :: tl) ++ r = hd :: (tl ++ r) := rfl
+    rw [e2]
+    unfold neuestens
+    rw [ih]
+
+/-- A youngest match comes from a list member carrying it. -/
+theorem avx2Neuestens_mem (l : List TSOEintrag) (x : Adresse)
+    (w : Byte) (h : neuestens l x = some w) :
+    ∃ e ∈ l, e.addr = x ∧ e.wert = w := by
+  induction l with
+  | nil =>
+    simp [neuestens] at h
+  | cons hd tl ih =>
+    unfold neuestens at h
+    cases ht : neuestens tl x with
+    | some w' =>
+      rw [ht] at h
+      dsimp only at h
+      obtain rfl := Option.some_inj.mp h
+      obtain ⟨e, hm, had, hw⟩ := ih ht
+      exact ⟨e, List.mem_cons.mpr (Or.inr hm), had, hw⟩
+    | none =>
+      rw [ht] at h
+      dsimp only at h
+      by_cases heq : hd.addr = x
+      · rw [if_pos heq] at h
+        obtain rfl := Option.some_inj.mp h
+        exact ⟨hd, List.mem_cons.mpr (Or.inl rfl), heq, rfl⟩
+      · rw [if_neg heq] at h
+        cases h
+
+/-- After issuing any sublist of the thirty-two, every issued byte
+    forwards to its owner. Induction over the issued list; the new
+    byte forwards (a later same-address match carries the same value
+    by address uniqueness), older bytes are undisturbed. -/
+theorem avx2Weiterleitung_sub (l : List TSOEintrag)
+    (s s' : TSOZustand) (c : Nat) (a : Adresse) (v : Avx2Vektor)
+    (hno : OhneUmbruch32 a)
+    (hsub : ∀ e ∈ l, e ∈ avx2Eintraege a v)
+    (hfold : issueListe s c l = some s') :
+    ∀ e ∈ l, neuestens (s'.puffer c) e.addr = some e.wert := by
+  induction l generalizing s s' with
+  | nil =>
+    intro e hmem
+    simp at hmem
+  | cons hd tl ih =>
+    have hmem_hd : hd ∈ avx2Eintraege a v :=
+      hsub hd (List.mem_cons.mpr (Or.inl rfl))
+    have hsub_tl : ∀ e ∈ tl, e ∈ avx2Eintraege a v := by
+      intro e hm
+      exact hsub e (List.mem_cons.mpr (Or.inr hm))
+    have heq : issueListe s c (hd :: tl) =
+        match issueByte s c hd.addr hd.wert with
+        | none => (none : Option TSOZustand)
+        | some s1 => issueListe s1 c tl := rfl
+    rw [heq] at hfold
+    cases hb : issueByte s c hd.addr hd.wert with
+    | none =>
+      rw [hb] at hfold
+      dsimp only at hfold
+      cases hfold
+    | some s1 =>
+      rw [hb] at hfold
+      dsimp only at hfold
+      have ihh := ih s1 s' hsub_tl hfold
+      have hbuf : s'.puffer c = s.puffer c ++ (hd :: tl) := by
+        have ha := issueListe_haengt_an s1 s' c tl hfold
+        have hb1 := issue_haengt_an s s1 c hd.addr hd.wert hb
+        rw [ha, hb1, List.append_assoc]
+        rfl
+      intro e hmem2
+      simp only [List.mem_cons] at hmem2
+      rcases hmem2 with rfl | hmem2
+      · rw [hbuf]
+        have hnodup := avx2Eintraege_nodup_addr a hno v
+        cases ht : neuestens tl e.addr with
+        | some w' =>
+          obtain ⟨e2, hm2, had2, hw2⟩ := avx2Neuestens_mem tl
+            e.addr w' ht
+          have heq2 := hnodup e2 (hsub_tl e2 hm2) e hmem_hd had2
+          have e3 : neuestens (e :: tl) e.addr = some w' := by
+            unfold neuestens
+            rw [ht]
+          have hhd : neuestens (e :: tl) e.addr = some e.wert := by
+            rw [e3, ← hw2, heq2]
+          exact avx2Neuestens_append_rechts (s.puffer c) (e :: tl)
+            e.addr e.wert hhd
+        | none =>
+          have hhd : neuestens (e :: tl) e.addr = some e.wert := by
+            unfold neuestens
+            rw [ht]
+            dsimp only
+            rw [if_pos rfl]
+          exact avx2Neuestens_append_rechts (s.puffer c) (e :: tl)
+            e.addr e.wert hhd
+      · exact ihh e hmem2
+
+/-- After a successful thirty-two issue fold, every entry byte
+    forwards to the acting core. -/
+theorem avx2Weiterleitung (s s' : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Avx2Vektor) (hno : OhneUmbruch32 a)
+    (h : avx2Speichern s c a v = some s') :
+    ∀ e ∈ avx2Eintraege a v,
+      neuestens (s'.puffer c) e.addr = some e.wert :=
+  avx2Weiterleitung_sub _ s s' c a v hno (fun e hm => hm) h
+
+/-- Another core without footprint entries in its buffer still reads
+    canonical memory at every footprint byte. -/
+theorem avx2FremdAlt_byte (s : TSOZustand) (c d : Nat) (a : Adresse)
+    (x : Adresse) (hx : x ∈ avx2Fuss a)
+    (hmiss : ∀ x ∈ avx2Fuss a, neuestens (s.puffer d) x = none)
+    (hrd : s.mem.lesbar x = true) :
+    loadByte s d x = some (s.mem.bytes x) :=
+  load_ohne_eintrag s d x (hmiss x hx) hrd
+
+/-! ## 10. Grouping: exact buffers group, partial and foreign do not.
+
+  A grouped thirty-two drains to one unsplit value exactly under a
+  structural exclusion check; tearing beyond it is refused
+  structurally. No whole-vector atomicity is claimed. -/
+
+/-- Foreign-footprint freedom over the 32-byte footprint: no other
+    core holds a pending entry inside `avx2Fuss a`. -/
+def Avx2FremdFrei (s : TSOZustand) (c : Nat) (a : Adresse) : Prop :=
+  ∀ d : Nat, d ≠ c → ∀ e : TSOEintrag, e ∈ s.puffer d →
+    e.addr ∉ avx2Fuss a
+
+/-- Start-state grouping check: the acting core carries exactly the
+    thirty-two canonical entries and no foreign entry touches the
+    footprint. -/
+def Avx2Gruppe (s : TSOZustand) (c : Nat) (a : Adresse)
+    (v : Avx2Vektor) : Prop :=
+  s.puffer c = avx2Eintraege a v ∧ Avx2FremdFrei s c a
+
+/-- A partial buffer is no group: tearing is refused structurally. -/
+theorem avx2Teilwort_keine_gruppe (s : TSOZustand) (c : Nat)
+    (a : Adresse) (v : Avx2Vektor)
+    (hne : s.puffer c ≠ avx2Eintraege a v) :
+    ¬ Avx2Gruppe s c a v := by
+  intro hgrp
+  obtain ⟨hbufl, _⟩ := hgrp
+  exact hne hbufl
+
+/-- A foreign footprint entry refuses the group. -/
+theorem avx2Gruppe_verweigert_bei_fremdeintrag (s : TSOZustand)
+    (c : Nat) (a : Adresse) (v : Avx2Vektor) (d : Nat) (hne : d ≠ c)
+    (e : TSOEintrag) (hmem : e ∈ s.puffer d)
+    (hfuss : e.addr ∈ avx2Fuss a) :
+    ¬ Avx2Gruppe s c a v := by
+  intro hgrp
+  obtain ⟨_, hff⟩ := hgrp
+  exact (hff d hne e hmem) hfuss
+
 /- CUTS:
    Skeleton only: forms are named, nothing is proved yet.
 -/
