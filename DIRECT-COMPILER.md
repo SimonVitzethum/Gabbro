@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 18:01 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 18:02 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -700,6 +700,10 @@ Last ledger refresh: **2026-10-05 18:01 UTC**. This is an operational snapshot, 
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1287.md) |
+| 1289 | Capstone: union steps for the embedded-by-equation tags, and the two plug-less families | Scheduled | 1290: scheduled | [task](lanes/1289.md) |
+| 1291 | Capstone: byte-decoder disjointness across all families | Scheduled | 1292: scheduled | [task](lanes/1291.md) |
+| 1293 | Capstone: a reached multi-family program run on two cores from bytes | Scheduled | 1294: scheduled | [task](lanes/1293.md) |
+| 1295 | Capstone: every union step projects to the TSO store-buffer model | Scheduled | 1296: scheduled | [task](lanes/1295.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
