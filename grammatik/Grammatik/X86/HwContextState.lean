@@ -656,4 +656,129 @@ theorem ctxSpeichern_verweigert_ohne_schreibrecht (m : HwMaschine)
   unfold ctxSpeichern
   simp [h1, h2]
 
+/-! ## 4. Machine restore and the save/restore round trip.
+
+    `ctxWiederherstellen` loads the footprint through the TSO view
+    (forwarding included), reassembles the control word and the XMM
+    file, and installs them on the acting core, keeping
+    registers/flags/RIP. A set reserved MXCSR bit (SDM: writing a 1
+    in a reserved bit from the image raises #GP; extract offset 56379)
+    faults with `.fehlerGP`. -/
+
+/-- The zero base image a restore folds loaded bytes over. -/
+def ctxNull : Nat → Byte := fun _ => BitVec.ofNat 8 0
+
+/-- One context restore on core `c` from area base `a`. -/
+def ctxWiederherstellen (m : HwMaschine) (c : Nat)
+    (a : Adresse) : CtxAusgang :=
+  if !fxAusgerichtet a then .fehlerGP
+  else if !ctxAlle m.mem.lesbar a ctxOffsets then .verweigert
+  else match ctxLadeAux (tsoAnsicht m) c a ctxOffsets with
+  | none => .verweigert
+  | some bs =>
+    if !mxcsrReserviertFrei
+        (mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i))) then
+      .fehlerGP
+    else .weiter (setKernDaten m c ⟨(m.kerne c).register,
+      (m.kerne c).flags, (m.kerne c).rip,
+      (fxDekodiere (ctxFalte bs ctxNull)).xmm,
+      ⟨mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i))⟩⟩)
+
+/-- Success shape: a successful restore is a successful footprint
+    load with a reserved-free control word. -/
+theorem ctxWiederherstellen_erfolg (m : HwMaschine) (c : Nat)
+    (a : Adresse) (m' : HwMaschine)
+    (h : ctxWiederherstellen m c a = .weiter m') :
+    ∃ bs : List (Nat × Byte),
+      ctxLadeAux (tsoAnsicht m) c a ctxOffsets = some bs ∧
+      m' = setKernDaten m c ⟨(m.kerne c).register,
+        (m.kerne c).flags, (m.kerne c).rip,
+        (fxDekodiere (ctxFalte bs ctxNull)).xmm,
+        ⟨mxcsrAusBytes
+          (fun i => ctxFalte bs ctxNull (24 + i))⟩⟩ := by
+  unfold ctxWiederherstellen at h
+  cases ha : fxAusgerichtet a with
+  | false =>
+    simp [ha] at h
+  | true =>
+    cases hp : ctxAlle m.mem.lesbar a ctxOffsets with
+    | false =>
+      simp [ha, hp] at h
+    | true =>
+      simp [ha, hp] at h
+      cases hbs : ctxLadeAux (tsoAnsicht m) c a ctxOffsets with
+      | none =>
+        rw [hbs] at h
+        cases h
+      | some bs =>
+        -- NOTE: `cases hbs : e` generalizes the goal over `e`.
+        cases hw : mxcsrReserviertFrei
+            (mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i))) with
+        | false =>
+          simp [hbs, hw] at h
+        | true =>
+          simp [hbs, hw] at h
+          cases h
+          exact ⟨bs, rfl, rfl⟩
+
+/-- SAVE THEN RESTORE IS THE IDENTITY on the saved components:
+    restoring a just-saved area on the same core recovers the control
+    word and every XMM register. Needs read permission beside the
+    save's write permission (the restore observes through `loadByte`,
+    which checks readability). -/
+theorem ctxRundlauf_maschine (m : HwMaschine) (c : Nat) (a : Adresse)
+    (m1 m2 : HwMaschine)
+    (hles : ctxAlle m.mem.lesbar a ctxOffsets = true)
+    (h1 : ctxSpeichern m c a = .weiter m1)
+    (h2 : ctxWiederherstellen m1 c a = .weiter m2) :
+    (m2.kerne c).fp = (m.kerne c).fp ∧
+      ∀ r : XmmReg, (m2.kerne c).xmm r = (m.kerne c).xmm r := by
+  obtain ⟨s1', hs1, rfl⟩ := ctxSpeichern_erfolg m c a m1 h1
+  obtain ⟨bs, hbs, rfl⟩ :=
+    ctxWiederherstellen_erfolg (setTso m s1') c a m2 h2
+  have hsicht : tsoAnsicht (setTso m s1') = s1' := setTso_ansicht m s1'
+  rw [hsicht] at hbs
+  have hloads : ∀ i ∈ ctxOffsets,
+      loadByte s1' c (addrOff a i) =
+        some (ctxByte (m.kerne c).fp (m.kerne c).xmm i) := by
+    intro i hi
+    exact ctxWeiterleitung_gespeichert m c a s1' hs1 hles i hi
+  have hagree : ∀ i ∈ ctxOffsets,
+      ctxFalte bs ctxNull i =
+        ctxByte (m.kerne c).fp (m.kerne c).xmm i := by
+    intro i hi
+    exact ctxLade_geladen s1' c a (ctxByte (m.kerne c).fp (m.kerne c).xmm)
+      ctxOffsets ctxNull ctxOffsets_nodup hloads bs hbs i hi
+  have hkong := fxDekodiere_kongr (ctxFalte bs ctxNull)
+    (ctxByte (m.kerne c).fp (m.kerne c).xmm)
+    (fun i hi => hagree i hi)
+  have hpure := ctxRundlauf_pur (m.kerne c).fp (m.kerne c).xmm
+  have hw : mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i)) =
+      ((m.kerne c).fp).mxcsr := by
+    have e1 : mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i)) =
+        (fxDekodiere (ctxFalte bs ctxNull)).mxcsr := rfl
+    rw [e1, hkong.1]
+    exact hpure.1
+  refine ⟨?_, ?_⟩
+  · have hfp : ((setKernDaten (setTso m s1') c
+        ⟨((setTso m s1').kerne c).register,
+          ((setTso m s1').kerne c).flags, ((setTso m s1').kerne c).rip,
+          (fxDekodiere (ctxFalte bs ctxNull)).xmm,
+          ⟨mxcsrAusBytes
+            (fun i => ctxFalte bs ctxNull (24 + i))⟩⟩).kerne c).fp =
+        ⟨mxcsrAusBytes (fun i => ctxFalte bs ctxNull (24 + i))⟩ :=
+      setKernDaten_fp _ _ _
+    rw [hfp, hw]
+  · intro r
+    have hxmm : ((setKernDaten (setTso m s1') c
+        ⟨((setTso m s1').kerne c).register,
+          ((setTso m s1').kerne c).flags, ((setTso m s1').kerne c).rip,
+          (fxDekodiere (ctxFalte bs ctxNull)).xmm,
+          ⟨mxcsrAusBytes
+            (fun i => ctxFalte bs ctxNull (24 + i))⟩⟩).kerne c).xmm r =
+        (fxDekodiere (ctxFalte bs ctxNull)).xmm r := by
+      rw [setKernDaten_xmm]
+    rw [hxmm, hkong.2 r]
+    exact hpure.2 r
+
 end Gabbro.Grammatik.X86
