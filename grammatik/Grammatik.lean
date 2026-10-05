@@ -628,6 +628,7 @@ import Grammatik.X86.PipelineCallsExec
 import Grammatik.X86.PipelineSpill
 import Grammatik.X86.PipelineLinkMulti
 import Grammatik.X86.HwLockRmw
+import Grammatik.X86.HwLockFetch
 import Grammatik.X86.HwIsaFamilies
 import Grammatik.X86.HwWordAtomicity
 import Grammatik.X86.PipelineAtomicsBind
