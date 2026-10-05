@@ -1516,4 +1516,152 @@ theorem probe_bt_versatz :
     btByteVersatz (-9) = -2 ∧ btBitImByte (-9) = 7 := by
   decide
 
+/-! ## 14. Memory forms as TSO events: load, modify, write back.
+
+    A memory form never touches canonical memory directly: it loads
+    its exact footprint through one `loadByte` event per byte (any
+    unreadable byte refuses the whole word, never a partial word),
+    modifies exactly the byte holding the selected bit, and issues
+    the bytes back through `issueByte` (buffered, observed by the
+    owner through forwarding). -/
+
+/-- Load a footprint through TSO byte events: every byte must be
+    readable; `none` is refusal, never a partial word. -/
+def btLadeListe (s : TSOZustand) (c : Nat) :
+    List Adresse → Option (List Byte)
+  | [] => some []
+  | a :: rest =>
+    match loadByte s c a, btLadeListe s c rest with
+    | some v, some vs => some (v :: vs)
+    | _, _ => none
+
+/-- An unreadable footprint byte refuses the whole load. -/
+theorem btLadeListe_verweigert (s : TSOZustand) (c : Nat)
+    (addrs : List Adresse) (a : Adresse)
+    (hmem : a ∈ addrs) (h : loadByte s c a = none) :
+    btLadeListe s c addrs = none := by
+  revert hmem
+  induction addrs with
+  | nil =>
+    intro hm
+    simp at hm
+  | cons b rest ih =>
+    intro hm
+    simp only [btLadeListe]
+    simp only [List.mem_cons] at hm
+    cases hm with
+    | inl heq =>
+      subst heq
+      simp [h]
+    | inr hm' =>
+      have ihr := ih hm'
+      simp [ihr]
+
+/-- The issued entries of a write-back: address/value pairs. -/
+def btEintraege (addrs : List Adresse) (vs : List Byte) :
+    List TSOEintrag :=
+  (addrs.zip vs).map (fun p => ⟨p.1, p.2⟩)
+
+/-- Write bytes back through TSO issues (buffered, never a direct
+    store); a length mismatch refuses instead of truncating. -/
+def btMemSchreibe (s : TSOZustand) (c : Nat) (addrs : List Adresse)
+    (vs : List Byte) : Option TSOZustand :=
+  if addrs.length == vs.length then
+    issueListe s c (btEintraege addrs vs)
+  else none
+
+/-- A successful write-back changes no canonical byte (buffer only). -/
+theorem btMemSchreibe_mem (s s1 : TSOZustand) (c : Nat)
+    (addrs : List Adresse) (vs : List Byte)
+    (h : btMemSchreibe s c addrs vs = some s1) (x : Adresse) :
+    s1.mem.bytes x = s.mem.bytes x := by
+  unfold btMemSchreibe at h
+  by_cases hl : (addrs.length == vs.length) = true
+  · rw [if_pos hl] at h
+    exact issueListe_kein_speicher s s1 c _ h x
+  · rw [if_neg hl] at h
+    cases h
+
+/-- A successful write-back appends exactly its entries, oldest
+    first, to the acting core's buffer. -/
+theorem btMemSchreibe_puffer (s s1 : TSOZustand) (c : Nat)
+    (addrs : List Adresse) (vs : List Byte)
+    (h : btMemSchreibe s c addrs vs = some s1) :
+    s1.puffer c = s.puffer c ++ btEintraege addrs vs := by
+  unfold btMemSchreibe at h
+  by_cases hl : (addrs.length == vs.length) = true
+  · rw [if_pos hl] at h
+    exact issueListe_haengt_an s s1 c _ h
+  · rw [if_neg hl] at h
+    cases h
+
+/-- One-bit mask inside a byte. -/
+def btByteMaske (bit : Nat) : Byte := BitVec.ofNat 8 (2 ^ bit)
+
+/-- Raw new byte value: BT keeps, BTS sets, BTR clears, BTC
+    complements the selected bit of the byte. -/
+def btByteRoh (op : BtOp) (base : Byte) (bit : Nat) : Byte :=
+  match op with
+  | .bt => base
+  | .bts => base ||| btByteMaske bit
+  | .btr => base &&& ~~~(btByteMaske bit)
+  | .btc => if base.toNat.testBit bit then base &&& ~~~(btByteMaske bit)
+      else base ||| btByteMaske bit
+
+/-- Replace one byte (total: out-of-range keeps the list). -/
+def btSetByte : List Byte → Nat → Byte → List Byte
+  | [], _, _ => []
+  | _ :: vs, 0, v => v :: vs
+  | b :: vs, n + 1, v => b :: btSetByte vs n v
+
+/-- Replacement keeps the length. -/
+theorem btSetByte_laenge (vs : List Byte) (i : Nat) (v : Byte) :
+    (btSetByte vs i v).length = vs.length := by
+  induction vs generalizing i with
+  | nil =>
+    cases i <;> rfl
+  | cons b rest ih =>
+    cases i with
+    | zero => rfl
+    | succ k => simp [btSetByte, ih]
+
+/-- Register-offset target: effective address plus bit-in-byte. -/
+def btMemZielReg (s : Zustand) (base bitReg : Register)
+    (disp : BitVec 32) : Adresse × Nat :=
+  (btEffAddr s base bitReg disp, btBitImByte (btOffsetInt s bitReg))
+
+/-- Imm-offset target: unsigned byte displacement plus bit-in-byte. -/
+def btMemZielImm (s : Zustand) (base : Register)
+    (disp : BitVec 32) (n : Nat) : Adresse × Nat :=
+  (effAddr s base disp + BitVec.ofNat 64 (n / 8), n % 8)
+
+/-- Machine-memory projection: re-embedding helpers read back. -/
+theorem setTso_mem (m : HwMaschine) (s : TSOZustand) :
+    (setTso m s).mem = s.mem := rfl
+
+/-- Machine-buffer projection. -/
+theorem setTso_puffer (m : HwMaschine) (s : TSOZustand) (c : Nat) :
+    (setTso m s).puffer c = s.puffer c := rfl
+
+/-- Machine-core projection. -/
+theorem setTso_kerne (m : HwMaschine) (s : TSOZustand) (c : Nat) :
+    (setTso m s).kerne c = m.kerne c := rfl
+
+/-- Core-data memory projection. -/
+theorem setKernDaten_mem (m : HwMaschine) (c : Nat) (k : HwKern) :
+    (setKernDaten m c k).mem = m.mem := rfl
+
+/-- Core-data register projection at the updated core. -/
+theorem setKernDaten_flags (m : HwMaschine) (c : Nat) (k : HwKern) :
+    ((setKernDaten m c k).kerne c).flags = k.flags := by
+  unfold setKernDaten
+  simp
+
+/-- A LOCK-prefixed row never decodes, on any suffix: the locked RMW
+    stays with the locked families. -/
+theorem decodeBt_lock (bs : List Byte) :
+    decodeBt (natByte 240 :: bs) = none := by
+  show (none : Option (BtForm × List Byte)) = none
+  rfl
+
 end Gabbro.Grammatik.X86
