@@ -1,4 +1,6 @@
-# MUSE-REPORT-1128: Exact review of candidate 1127 (Multiply/divide and narrow widths connected)
+# MUSE-REPORT-1128: Exact review of author lane 1127 (Multiply/divide and narrow widths connected)
+
+CANDIDATE: 1127 28c3af544cc83f25823b4ad675eaf7c24ea4bae8
 
 ## Scope and method
 
@@ -6,19 +8,24 @@
 - Verified clone: `/home/simon/Dokumente/gabbro-muse/a1128`, branch `muse/1128`
   (checked via `.git/HEAD` -> `ref: refs/heads/muse/1128`; local ref
   `.git/refs/heads/muse/1128` present, `.git/refs/heads/master` = `d0be108c1da169cc1f616dfd096c9f86d691bc13`).
-- Task text: "Read the candidate diff only (`git diff master..HEAD` in the author
-  clone, pinned HEAD)". Candidate line: `CANDIDATE: 1127 <full pinned HEAD>`.
+- Pinned snapshot inspected: `.tmp/review/SNAPSHOT.json` names author 1127,
+  head `28c3af544cc83f25823b4ad675eaf7c24ea4bae8`,
+  base `8744590d77cbc7f31d809b4c62cd303bae4ed66f`, files
+  `MUSE-REPORT-1127.md`, `grammatik/Grammatik.lean`,
+  `grammatik/Grammatik/X86/HwMulDivWidth.lean`, clean true.
 - Author task (from `lanes/1127.md` in this clone): NEW FILE
-  `grammatik/Grammatik/X86/HwMulDivWidth.lean` + one import line in
+  `grammatik/Grammatik/X86/HwMulDivWidth.lean` plus one import line in
   `grammatik/Grammatik.lean`; connect `MulDivWidthHardwareForms.lean` /
-  `MulDiv.lean` narrow/width rows into `ExtendedExecution` unified byte
+  `MulDiv.lean` narrow/width rows into the `ExtendedExecution` unified byte
   dispatcher and a `HwAdapter`, reusing `HwRegAusgang`, with proofs of
   (1) `HwWf` preservation, (2) exact agreement with the family evaluator,
-  (3) refusals, (4) non-degenerate multi-step `_zeuge` witness.
+  (3) refusals, (4) non-degenerate multi-step witness with joint theorem.
+- This update keeps the prior substantive finding and only repairs the
+  machine-readable format gate. No claim is approved without proof.
 
 ## What was checked
 
-- Searched this clone for the candidate artefact:
+- Searched this clone for the author artefact:
   `grammatik/Grammatik/X86/HwMulDivWidth.lean` — NOT FOUND.
 - Grepped `grammatik/` for `HwMulDivWidth|MulDivWidthHardwareForms`: only two
   hits — the `import Grammatik.X86.MulDivWidthHardwareForms` line in
@@ -27,72 +34,69 @@
 - Local refs contain only `master` and `muse/1128`; there is no local
   `muse/1127` branch to diff. HARD RULES rule 1 forbids touching anything
   outside this directory (no access to the author clone, no network/fetch),
-  so the prescribed `git diff master..HEAD` in the author clone could not be
-  performed from here.
-- A `git branch` probe for further refs was rejected by the permission
-  classifier; directory/ref inspection above was done with read-only file
-  tools instead.
-- Ran the queued build wrapper: `./lean-bau` (base tree, without candidate).
-  Result line: `Build completed successfully (602 jobs).` with header
-  `== exit 0; 0 error line(s) in the COMPLETE output`.
-- No `sorry`/`axiom`/`native_decide` review, no `#print axioms` check, no
-  premise-use check, no evaluator-lift check, no refusal-probe check, no
-  witness/silicon/CUTS check was possible: there is no candidate content in
-  this clone to check.
+  so the prescribed diff in the author clone could not be performed from here.
+- The pinned snapshot metadata above was inspected, but the full pinned diff
+  was not verified line by line inside this clone in this pass.
+- Ran the queued build wrapper: `./lean-bau` (base tree, without author
+  content). Result line: `Build completed successfully (602 jobs).` with
+  header `== exit 0; 0 error line(s) in the COMPLETE output`.
+- None of the mandated exact-review checks could be completed on the author
+  content from inside this clone: banned-tactic scan, standard axioms print,
+  one-import-line discipline, premise use, evaluator lift (not copy), planted
+  refusals, non-degenerate witness (memory-changing step, two cores where
+  relevant), silicon facts against Intel SDM extracts, honest CUTS, and no
+  overclaim beyond self-consistency (in particular no hardware-correspondence
+  or W/GX claim). The prior report stands on all of these as unverified.
 
 ## New definitions/theorems
 
 - None. This lane owns no Lean file and added none.
 
-## VERDICT: REPAIR
+## Substantive outcome
 
-Concrete reasons (each sufficient to withhold ACCEPT):
+VERDICT: REPAIR
 
-1. No pinned candidate HEAD. The task gives `CANDIDATE: 1127 <full pinned HEAD>`
-   with the hash unfilled, so there is no exact, verifiable review target.
-2. No candidate diff available inside the owned clone under the HARD RULES.
-   The expected file `grammatik/Grammatik/X86/HwMulDivWidth.lean` is absent,
-   no `HwMulDivWidth` symbol is referenced anywhere in `grammatik/`, and no
-   `muse/1127` ref exists locally. Reading the author clone at
-   `/home/simon/Dokumente/gabbro-muse/a1127` would violate HARD RULES rule 1.
-3. Consequently none of the mandated exact-review checks could be executed:
-   no-sorry/axiom/native_decide, standard `#print axioms`, one-import-line
-   discipline, premise use, evaluator lift (not copy), planted refusals,
-   non-degenerate witness (memory-changing step, two cores where relevant),
-   silicon facts against Intel SDM extracts, honest CUTS, no W/GX or
-   hardware-correspondence overclaim. An ACCEPT on this evidence would be
-   exactly the fake closure the task forbids.
+Concrete reasons (each sufficient to withhold acceptance):
+
+1. The exact author diff at the pinned head was not available for line-by-line
+   verification inside the owned clone under the HARD RULES. The expected
+   file `grammatik/Grammatik/X86/HwMulDivWidth.lean` is absent here, no
+   `HwMulDivWidth` symbol is referenced anywhere in `grammatik/`, and no
+   `muse/1127` ref exists locally.
+2. Consequently none of the mandated exact-review checks listed above could
+   be executed against the author content. Accepting on snapshot metadata
+   alone would be exactly the fake closure the task forbids, so the honest
+   outcome remains repair, not approval.
+3. Format history (not substance): the previous revision of this report was
+   rejected by the format gate for lacking a unique machine-readable outcome
+   line. This revision adds the required plain lines without changing the
+   substantive finding.
 
 ## What remains open
 
-- Supply a complete pinned HEAD for candidate 1127 (full 40-hex hash) and make
-  the exact diff available to the reviewer without breaking clone isolation
-  (e.g. fetch the author branch into the review clone through the coordinator
-  channel, or re-issue the review with the candidate merged to a staging ref).
-- Re-run this exact review against that pinned diff through the full checklist
-  above, including `./lean-bau` on the candidate tree.
+- Make the exact author diff at the pinned head available to the reviewer
+  without breaking clone isolation (for example stage the pinned files or the
+  pinned diff through the coordinator channel into the review clone), then
+  re-run this exact review against that pinned content through the full
+  checklist above, including the build on the author tree.
+- The base-tree build here is green at 602 jobs; nothing about author lane
+  1127 follows from that.
 
 ## Task correctness notes
 
-- The review task is internally inconsistent as issued: it orders `git diff
-  master..HEAD` "in the author clone" while HARD RULES rule 1 restricts the
-  reviewer to its own directory. With the literal placeholder pin, the only
-  honest outcome is REPAIR. This is a task/apparatus defect, not a verdict on
-  the author's work, which was not visible here.
-- Base-tree note (not a candidate finding): `./lean-bau` on this clone is
-  green at 602 jobs, so the family-disconnected baseline described in
-  `lanes/1127.md` still builds; nothing about candidate 1127 follows from that.
+- The review task as issued orders a diff in the author clone while HARD
+  RULES rule 1 restricts the reviewer to its own directory. The pinned
+  snapshot resolves the missing-pin part, but the isolation conflict remains
+  for the diff itself. This is an apparatus defect, not a finding about the
+  author's work, which was not visible here.
+- No hardware-correspondence or W/GX bridge claim is made or assessed here.
 
 ## CUTS
 
-- Candidate 1127 unreviewed: all four required properties (HwWf preservation,
-  exact family-evaluator agreement, refusals, non-degenerate witness) plus
-  silicon, axioms, premise-use, CUTS-honesty and no-overclaim checks remain
-  unverified by this lane.
-- No hardware-correspondence or W/GX bridge claim is made or assessed here.
-
-## Axioms
-
-- No new theorems, hence no `#print axioms` output for this lane. Base build
-  `./lean-bau` reports `== exit 0; 0 error line(s) in the COMPLETE output`
-  and `Build completed successfully (602 jobs).`
+- Author lane 1127 unverified by this lane: all four required properties (HwWf
+  preservation, exact family-evaluator agreement, refusals, non-degenerate
+  witness) plus silicon, axioms, premise-use, CUTS-honesty and no-overclaim
+  checks remain unverified here.
+- No new theorems in this lane, hence no axioms print for this lane. Base
+  build `./lean-bau` reports `== exit 0; 0 error line(s) in the COMPLETE
+  output` and `Build completed successfully (602 jobs).`
