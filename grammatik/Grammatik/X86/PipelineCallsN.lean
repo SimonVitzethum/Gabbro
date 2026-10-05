@@ -389,6 +389,59 @@ theorem assignBlockN_lauf (c : PipeCfg) (hc : cfgOk c = true) (L : Layout D)
   exact assignBlockN_lauf_aux c hc L hsep hfremd O passes R ρ (sizeOf b) b pos prog σ st σ'
     ρ' (Nat.le_refl _) hassign hlow hW hE hsrc
 
+/-! ## 4. Callee correctness for three-or-more-statement bodies. -/
+
+/-- CALLEE CORRECTNESS (real source correspondence): for an admitted
+    caller frame and validated callee bytes of an all-assignment body
+    of three or more statements, the fetched byte run reaches the end
+    of the code with the world of the REAL `execBlock` run represented,
+    the environment represented, and every callee-saved register
+    preserved across the WHOLE body. The callee body is the real
+    lowered block (body induction over `senkBlock`, per-chunk value runs
+    and store preservation), not an abstracted result write. Every
+    premise is consumed: `hval` for frame admission, shape and
+    recomputed bytes; `hsep` for the stores; `hfremd` for callee-saved
+    preservation; `hcode` and `hrip` for the fetch; `hW` and `hE` for
+    the representation; `hsrc` for the source outcome. -/
+theorem rufExecN_korrekt (b : Belegung) (rh : Rahmen) (nArgs : Nat)
+    (benutztRot : Bool) (c : PipeCfg) (L : Layout D)
+    (body : Block D V l Γ Λ Λ)
+    (bytes : List Byte)
+    (hval : rufExecN b rh nArgs benutztRot c L body bytes = true)
+    (hsep : LayoutSep L) (hfremd : calleeFremd c = true)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ fn : D.Fn, World D → Env D (D.params fn) → RufAusgang fn)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : CodeAt s.speicher (natAdresse c.codeBase) bytes)
+    (hrip : s.rip = natAdresse c.codeBase)
+    (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c))
+    (σ' : World D) (ρ' : Env D Γ)
+    (hsrc : execBlock O passes R body σ ρ = .ok σ' ρ') :
+    rufOk b rh nArgs benutztRot = true ∧
+    ∃ n s', laufBytes n s = .weiter s' ∧
+      s'.rip = natAdresse (c.codeBase + bytes.length) ∧
+      WorldRep L s'.speicher σ' ∧ EnvRepr ρ' s'.register (abbOf c) ∧
+      (∀ q, q ∈ calleeGerettet → s'.register q = s.register q) := by
+  obtain ⟨hruf, hshape, hval2⟩ :=
+    rufExecN_teile b rh nArgs benutztRot c L body bytes hval
+  obtain ⟨prog, hc, hlow, hb, -, -⟩ := validate_sound c L [] body bytes hval2
+  have hassign : istAssignBlock body = true := by
+    unfold istDreiPlus at hshape
+    simp only [Bool.and_eq_true] at hshape
+    exact hshape.1
+  rw [optimise_nil] at hlow
+  obtain ⟨s1, hrun1, hW1, hE1, hcallee, hger⟩ :=
+    assignBlockN_lauf c hc L hsep hfremd O passes R ρ body 0 prog σ s σ' ρ'
+      hassign hlow hW hE hsrc
+  obtain ⟨hb1, hr1, -, -, -⟩ := lauf_zu_laufBytes (natAdresse c.codeBase) bytes
+    prog [] [] s s1 hger hrun1 hcode
+    (by simp [hb]) (by rw [hrip]; exact (addrOff_null _).symm)
+  refine ⟨hruf, _, s1, hb1, ?_, hW1, hE1, ?_⟩
+  · rw [hr1, hb, addrOff_natAdresse]
+    simp
+  · intro q hq
+    exact hcallee q hq
+
 /- CUTS (exactly what is NOT proved here):
    - Skeleton only: shape predicates, validator, induction, witness
      and refusals all stay OPEN in this skeleton commit.
