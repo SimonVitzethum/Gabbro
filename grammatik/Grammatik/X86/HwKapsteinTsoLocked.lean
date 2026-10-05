@@ -842,13 +842,416 @@ theorem kapLocked_sys_alle_still :
       kap_system_iret_still _ _ _ _ rfl 0 0 0 0 0
         h0 h1 h2 h3 h4 hk _ hplugI⟩
 
+/-! ## 6. Joint witness: locked events, silent legs, the INT n
+    obstruction, refusals and two-core non-degeneracy, together. -/
+
+/-- Joint TSO witness for the locked and direct-memory tags: an
+    exhibited LOCK XADD union step equals the accepted TSO locked
+    event with the footprint named (word 10 to 15, own buffer
+    drained); MFENCE and the fetched XADD join it; all nine silent
+    system legs stand beside them (the helper); the core-1 INT
+    delivery is exhibited and is no single TSO event; the failing
+    comparison is admitted while a readable-but-not-writable word
+    refuses it; the own-buffer, split-lock, register-#UD and
+    freestanding-syscall refusals stand beside the run; both cores
+    locked-add 10 to 15 to 22 with owner-only forwarding. -/
+theorem kapLocked_zeuge :
+    (∃ m1 : HwMaschine, ∃ ev : LockEreignis,
+      HwVollSchritt hwLockWitStart m1
+        (KapEreignis.lockRmw 0 (.ok (.xadd64 .rax .rbp 0) 9)) ∧
+      lockSchritt
+        (.xadd64 (effAddr (projZustand hwLockWitStart 0) .rbp 0)
+          ((hwLockWitStart.kerne 0).register .rax)) 0
+        (kapTso hwLockWitStart) = some (kapTso m1, ev) ∧
+      ev.lesen = Fuss (effAddr (projZustand hwLockWitStart 0) .rbp 0) ∧
+      ev.schreiben =
+        Fuss (effAddr (projZustand hwLockWitStart 0) .rbp 0) ∧
+      ev.istRmw = true ∧
+      (∀ dd, dd ≠ 0 → (kapTso m1).puffer dd =
+        (kapTso hwLockWitStart).puffer dd) ∧
+      hwLockWitStart.puffer 0 = [] ∧
+      read64 hwLockWitStart.mem hwLockWitAdr = some 10 ∧
+      read64 m1.mem hwLockWitAdr = some 15)
+    ∧ (∃ mF : HwMaschine,
+      HwVollSchritt hwLockWitStart mF
+        (KapEreignis.lockRmw 0 (.ok .mfence 3)) ∧
+      kapTso mF = kapTso hwLockWitStart)
+    ∧ (∃ m1 : HwMaschine, ∃ ev : LockEreignis,
+      HwVollSchritt hwLockWitStart m1 (KapEreignis.lockFetch 0 ()) ∧
+      lockSchritt
+        (.xadd64 (effAddr (projZustand hwLockWitStart 0) .rbp 0)
+          ((hwLockWitStart.kerne 0).register .rax)) 0
+        (kapTso hwLockWitStart) = some (kapTso m1, ev) ∧
+      ev.istRmw = true)
+    ∧ (∃ mI : HwMaschine,
+      HwVollSchritt sysWitStart.hw mI
+        (KapEreignis.system 1 sysWitSteuer ⟨.intN, sysWitEingaben⟩) ∧
+      ¬ TSOSchritt (kapTso sysWitStart.hw) (kapTso mI))
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.cli, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw ∧
+      ∀ d, m1.puffer d = sysWitStart.hw.puffer d)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.hlt, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.sti, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.pause, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.cpuid, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.rdtsc, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer
+          ⟨.syscall, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer
+          ⟨.sysret, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt kapIretHw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.iret, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso kapIretHw)
+    ∧ (hwLockWort hwLockWitAdr
+        (hwLockSchritt hwLockWitCmpxchgNein 0
+          (.ok (.cmpxchg64 .rcx .rbp 0) 9)) = some 10 ∧
+      hwLockReg 0 .rax
+        (hwLockSchritt hwLockWitCmpxchgNein 0
+          (.ok (.cmpxchg64 .rcx .rbp 0) 9)) = some 10 ∧
+      hwLockSchritt hwLockWitOhneSchreiben 0
+        (.ok (.cmpxchg64 .rcx .rbp 0) 9) = none)
+    ∧ (hwLockSicht hwLockWitNach1 1 hwLockWitFremdAdr =
+        some (some (BitVec.ofNat 8 99)) ∧
+      hwLockSicht hwLockWitNach1 0 hwLockWitFremdAdr =
+        some (some (BitVec.ofNat 8 0)) ∧
+      hwLockWort hwLockWitAdr hwLockWitNach2 = some 22)
+    ∧ (hwLockSchritt hwLockWitStart 1
+        (.ok (.xadd64 .rax .rbp 0) 9) = none ∧
+      hwLockFetchSchritt hwLockFetchSplit 0 = none ∧
+      hwLockSchritt hwLockWitStart 0 (.ud .lockAufRegister 5) = none ∧
+      adapterSystem.schritt sysWitStart.hw 0
+        (sysWitSteuer,
+          ⟨.syscall, { sysWitEingaben with sceLang := false }⟩) =
+        none)
+    ∧ (HwWf hwLockWitStart ∧ HwWf sysWitStart.hw ∧ HwWf kapIretHw) := by
+  have legLock : (∃ m1 : HwMaschine, ∃ ev : LockEreignis,
+      HwVollSchritt hwLockWitStart m1
+        (KapEreignis.lockRmw 0 (.ok (.xadd64 .rax .rbp 0) 9)) ∧
+      lockSchritt
+        (.xadd64 (effAddr (projZustand hwLockWitStart 0) .rbp 0)
+          ((hwLockWitStart.kerne 0).register .rax)) 0
+        (kapTso hwLockWitStart) = some (kapTso m1, ev) ∧
+      ev.lesen = Fuss (effAddr (projZustand hwLockWitStart 0) .rbp 0) ∧
+      ev.schreiben =
+        Fuss (effAddr (projZustand hwLockWitStart 0) .rbp 0) ∧
+      ev.istRmw = true ∧
+      (∀ dd, dd ≠ 0 → (kapTso m1).puffer dd =
+        (kapTso hwLockWitStart).puffer dd) ∧
+      hwLockWitStart.puffer 0 = [] ∧
+      read64 hwLockWitStart.mem hwLockWitAdr = some 10 ∧
+      read64 m1.mem hwLockWitAdr = some 15) := by
+    obtain ⟨mL, hUL⟩ := kap_step_lock
+    have hplugL : hwLockSchritt hwLockWitStart 0
+        (.ok (.xadd64 .rax .rbp 0) 9) = some mL :=
+      (kap_lock_embedded _ _ _ _).mpr hUL
+    obtain ⟨tgtL, deltaL, evL, htgtL, hdeltaL, hbufL, hTsoL,
+        hfussLL, hfussSL, hrmwL, hforeignL, hownL⟩ :=
+      kapLockTso_xadd_geerbt _ _ _ _ _ _ _ hplugL
+    have hTsoL' : lockSchritt
+        (.xadd64 (effAddr (projZustand hwLockWitStart 0) .rbp 0)
+          ((hwLockWitStart.kerne 0).register .rax)) 0
+        (kapTso hwLockWitStart) = some (kapTso mL, evL) := by
+      rw [← htgtL, ← hdeltaL]
+      exact hTsoL
+    have hfussLL' : evL.lesen =
+        Fuss (effAddr (projZustand hwLockWitStart 0) .rbp 0) := by
+      rw [← htgtL]
+      exact hfussLL
+    have hfussSL' : evL.schreiben =
+        Fuss (effAddr (projZustand hwLockWitStart 0) .rbp 0) := by
+      rw [← htgtL]
+      exact hfussSL
+    have hN1 : hwLockWitNach1 = some mL := hplugL
+    have hnach1 : read64 mL.mem hwLockWitAdr = some 15 := by
+      have hw15 := hwLockWit_nach1_wort
+      rw [hN1] at hw15
+      exact hw15
+    exact ⟨mL, evL, hUL, hTsoL', hfussLL', hfussSL', hrmwL,
+      hforeignL, hbufL, hwLockWit_anfang, hnach1⟩
+  have legFence : (∃ mF : HwMaschine,
+      HwVollSchritt hwLockWitStart mF
+        (KapEreignis.lockRmw 0 (.ok .mfence 3)) ∧
+      kapTso mF = kapTso hwLockWitStart) := by
+    cases hMF : hwLockSchritt hwLockWitStart 0 (.ok .mfence 3) with
+    | none =>
+      have hnein := hwLockWit_mfence_ok.1
+      rw [hMF] at hnein
+      simp only [hwLockRip] at hnein
+      cases hnein
+    | some mF =>
+      have hMFplug : adapterLockRmw.schritt hwLockWitStart 0
+          (.ok .mfence 3) = some mF := hMF
+      have hUF := (kap_lock_embedded _ _ _ _).mp hMFplug
+      have hstillF := kapLockTso_mfence_still _ _ _ _ hMF
+      exact ⟨mF, hUF, hstillF⟩
+  have legFetch : (∃ m1 : HwMaschine, ∃ ev : LockEreignis,
+      HwVollSchritt hwLockWitStart m1 (KapEreignis.lockFetch 0 ()) ∧
+      lockSchritt
+        (.xadd64 (effAddr (projZustand hwLockWitStart 0) .rbp 0)
+          ((hwLockWitStart.kerne 0).register .rax)) 0
+        (kapTso hwLockWitStart) = some (kapTso m1, ev) ∧
+      ev.istRmw = true) := by
+    cases hN : hwLockWitNach1 with
+    | none =>
+      have hw10 := hwLockWit_nach1_wort
+      rw [hN] at hw10
+      simp only [hwLockWort] at hw10
+      cases hw10
+    | some mFL =>
+      have hF : hwLockFetchSchritt hwLockWitStart 0 = some mFL := by
+        rw [hwLockFetchWit_nach1, hN]
+      obtain ⟨tgtF, deltaF, evF, htgtF, hdeltaF, _, hTsoF, _, _,
+          hrmwF, _, _⟩ :=
+        kap_lockFetch_xadd_geerbt hwLockWitStart 0 .rax .rbp 0 9
+          (List.replicate 6 (BitVec.ofNat 8 0)) mFL
+          hwLockFetchWit_start0
+          (by simp only [hwLockFetchWit_start_fuss,
+            hwLockFetchWit_kein_split]) hF
+      have hTsoF' : lockSchritt
+          (.xadd64 (effAddr (projZustand hwLockWitStart 0) .rbp 0)
+            ((hwLockWitStart.kerne 0).register .rax)) 0
+          (kapTso hwLockWitStart) = some (kapTso mFL, evF) := by
+        rw [← htgtF, ← hdeltaF]
+        exact hTsoF
+      have hFplug : adapterLockFetch.schritt hwLockWitStart 0 () =
+          some mFL := hF
+      have hUFfetch : HwVollSchritt hwLockWitStart mFL
+          (KapEreignis.lockFetch 0 ()) :=
+        (kap_lockFetch_embedded _ _ _ _).mp hFplug
+      exact ⟨mFL, evF, hUFfetch, hTsoF', hrmwF⟩
+  have legIntN : (∃ mI : HwMaschine,
+      HwVollSchritt sysWitStart.hw mI
+        (KapEreignis.system 1 sysWitSteuer ⟨.intN, sysWitEingaben⟩) ∧
+      ¬ TSOSchritt (kapTso sysWitStart.hw) (kapTso mI)) := by
+    cases hS : sysSnapSchritt sysWitStart.hw 1 (sysWitStart.sys 1)
+        ⟨.intN, sysWitEingaben⟩ with
+    | ok k1 st1 mem1 =>
+      have hsys1 : sysWitStart.sys 1 = sysWitSteuer := rfl
+      rw [hsys1] at hS
+      have hleg : schrittInt sysWitStart.hw 1 sysWitSteuer
+          sysWitEingaben = .ok k1 st1 mem1 := by
+        have hred : sysSnapSchritt sysWitStart.hw 1 sysWitSteuer
+            ⟨.intN, sysWitEingaben⟩ =
+            schrittInt sysWitStart.hw 1 sysWitSteuer sysWitEingaben := by
+          simp [sysSnapSchritt]
+        have hS' := hS
+        rw [hred] at hS'
+        exact hS'
+      obtain ⟨mI, hplugI⟩ : ∃ mI, adapterSystem.schritt sysWitStart.hw 1
+          (sysWitSteuer, ⟨.intN, sysWitEingaben⟩) = some mI :=
+        ⟨_, adapterSystem_ok sysWitStart.hw 1
+          (sysWitSteuer, ⟨.intN, sysWitEingaben⟩) k1 st1 mem1 hS⟩
+      have hUI := (kap_system_embedded _ _ _ _ _).mp hplugI
+      have hcond : formFrei
+          (⟨.intN, sysWitEingaben⟩ : SysEreignis).eingaben.profil
+          (⟨.intN, sysWitEingaben⟩ : SysEreignis).form = true :=
+        formFrei_gehostet _
+      have hAusOk : sysAusfuehren sysWitStart 1 ⟨.intN, sysWitEingaben⟩ =
+          .ok (sysInstalliert sysWitStart 1 k1 st1 mem1) := by
+        simp [sysAusfuehren, hcond, hsys1, hS]
+      have hT1 : sysWitT1 =
+          sysInstalliert sysWitStart 1 k1 st1 mem1 := by
+        simp [sysWitT1, sysWitO_int1, hAusOk]
+      have hT1mem : sysWitT1.hw.mem = mem1 := by
+        rw [hT1]
+        rfl
+      have hx0 : sysWitT1.hw.mem.bytes (BitVec.ofNat 64 16344) ≠
+          sysWitStart.hw.mem.bytes (BitVec.ofNat 64 16344) := by
+        decide
+      have hy0 : sysWitT1.hw.mem.bytes (BitVec.ofNat 64 16369) ≠
+          sysWitStart.hw.mem.bytes (BitVec.ofNat 64 16369) := by
+        decide
+      have hx : mem1.bytes (BitVec.ofNat 64 16344) ≠
+          sysWitStart.hw.mem.bytes (BitVec.ofNat 64 16344) := by
+        rw [← hT1mem]
+        exact hx0
+      have hy : mem1.bytes (BitVec.ofNat 64 16369) ≠
+          sysWitStart.hw.mem.bytes (BitVec.ofNat 64 16369) := by
+        rw [← hT1mem]
+        exact hy0
+      have hxy : (BitVec.ofNat 64 16344) ≠
+          (BitVec.ofNat 64 16369) := by
+        decide
+      have hkein := kap_system_intN_kein_tso_ereignis sysWitStart.hw mI 1
+        sysWitSteuer ⟨.intN, sysWitEingaben⟩ k1 st1 mem1 rfl hleg hplugI
+        _ _ hx hy hxy
+      exact ⟨mI, hUI, hkein⟩
+    | fehler f =>
+      have hcond : formFrei
+          (⟨.intN, sysWitEingaben⟩ : SysEreignis).eingaben.profil
+          (⟨.intN, sysWitEingaben⟩ : SysEreignis).form = true :=
+        formFrei_gehostet _
+      have hfee : sysAusfuehren sysWitStart 1 ⟨.intN, sysWitEingaben⟩ =
+          .fehler f := by
+        simp [sysAusfuehren, hcond, hS]
+      have hrip := sysWit_int1_rip
+      rw [show sysWitO_int1 =
+          sysAusfuehren sysWitStart 1 ⟨.intN, sysWitEingaben⟩ from rfl,
+        hfee] at hrip
+      simp only [sysRipOut] at hrip
+      cases hrip
+    | verweigert =>
+      have hcond : formFrei
+          (⟨.intN, sysWitEingaben⟩ : SysEreignis).eingaben.profil
+          (⟨.intN, sysWitEingaben⟩ : SysEreignis).form = true :=
+        formFrei_gehostet _
+      have hverw : sysAusfuehren sysWitStart 1 ⟨.intN, sysWitEingaben⟩ =
+          .verweigert := by
+        simp [sysAusfuehren, hcond, hS]
+      have hrip := sysWit_int1_rip
+      rw [show sysWitO_int1 =
+          sysAusfuehren sysWitStart 1 ⟨.intN, sysWitEingaben⟩ from rfl,
+        hverw] at hrip
+      simp only [sysRipOut] at hrip
+      cases hrip
+  have legUD : adapterSystem.schritt sysWitStart.hw 0
+      (sysWitSteuer,
+        ⟨.syscall, { sysWitEingaben with sceLang := false }⟩) =
+      none := by
+    have hudLeg : schrittSyscall sysWitStart.hw 0 sysWitSteuer
+        { sysWitEingaben with sceLang := false } = .fehler .ud :=
+      schrittSyscall_ud _ _ _ _ rfl
+    have hsnapUD : sysSnapSchritt sysWitStart.hw 0 sysWitSteuer
+        ⟨.syscall, { sysWitEingaben with sceLang := false }⟩ =
+        .fehler .ud := by
+      simp [sysSnapSchritt, hudLeg]
+    exact adapterSystem_fehler _ _ _ _ hsnapUD
+  obtain ⟨sCli, sHlt, sSti, sPause, sCpuid, sRdtsc, sSyscall, sSysret,
+      sIret⟩ := kapLocked_sys_alle_still
+  exact ⟨legLock, legFence, legFetch, legIntN, sCli, sHlt, sSti, sPause,
+    sCpuid, sRdtsc, sSyscall, sSysret, sIret,
+    ⟨hwLockWit_cmpxchg_nein_ok.1, hwLockWit_cmpxchg_nein_ok.2,
+      hwLockWit_schreibfehler⟩,
+    ⟨hwLockWit_nach1_eigen_sicht, hwLockWit_nach1_fremd_sicht,
+      hwLockWit_nach2_wort⟩,
+    ⟨hwLockWit_puffer, hwLockFetchWit_split, hwLockWit_reg_ud, legUD⟩,
+    ⟨hwLockWitStart_wf, sysWitStart_wf, kapIretHw_wf⟩⟩
+
 /- CUTS:
-    Skeleton only: the generic silent-leg transport
-    `kap_system_still_of_mem`. Per-form legs, the locked-RMW event,
-    lockFetch inheritance, the INT n FINDING, union lifts and the
-    joint witness follow.
+    Proved here, over the reused accepted vocabulary only (every
+    definition lifted, never redefined):
+    - LOCK XADD is the accepted TSO locked event
+      (`kapLockTso_xadd_geerbt`): an admitted `hwLockSchritt` XADD
+      step equals `lockSchritt` (`LockedOps`, over `TSOZustand`) on
+      the projection `kapTso`, with the word footprint `Fuss tgt`
+      named on both sides, old/new words named, `istRmw` set, the
+      own buffer drained (`m.puffer c = []` as a separate leg) and
+      foreign buffers untouched. The union lift is
+      `kap_union_lockRmw_xadd_tso`;
+    - MFENCE is silent (`kapLockTso_mfence_still`, union lift
+      `kap_union_lockRmw_mfence_still`): only RIP advances;
+    - fetched LOCK inherits the classification off-split
+      (`kap_lockFetch_xadd_geerbt`, `kap_lockFetch_mfence_still`,
+      union lift `kap_union_lockFetch_xadd_tso`); split words,
+      parsed #UD and absent fetches refuse (accepted pins, joined
+      in the witness);
+    - the nine memory-unchanged system legs are silent
+      (`kap_system_hlt/cli/sti/pause/cpuid/rdtsc/syscall/sysret/iret_still`
+      via the generic transport `kap_system_still_of_mem`, union
+      lift `kap_union_system_still`); every admitted plug step keeps
+      every buffer (`kap_system_puffer_bleibt`: SYSCALL/SYSRET/INT
+      perform no drain, the plug-level form of S-SYSCALL-KEIN-DRAIN
+      and S-INT-KEIN-DRAIN);
+    - joint witnesses `kapLocked_sys_alle_still` (all nine legs as
+      reached union steps silent on the projection; IRET runs on the
+      parked-RSP variant `kapIretHw` since the start RSP points at
+      unreadable memory) and `kapLocked_zeuge` (LOCK XADD union step
+      with its TSO event and footprint, MFENCE, fetched XADD,
+      exhibited core-1 INT delivery with its two changed frame bytes,
+      the failing-comparison twin with the write-permission refusal,
+      own-buffer/split/#UD/freestanding-syscall refusals,
+      well-formedness, two-core non-degeneracy 10 to 15 to 22 with
+      owner-only forwarding).
+    NOT proved here, and not claimed (FINDINGs):
+    - CMPXCHG (`kapLockTso_cmpxchg_befund`): no single accepted TSO
+      locked event matches the coherent compare-exchange step. On a
+      failing comparison the coherent step still performs the
+      manual's write cycle (needs `write64`, refused on a
+      readable-but-not-writable word) while the accepted TSO CAS
+      (`casSchritt_fehlschlag`) stutters with the projection
+      unchanged and needs no write; `lockSchritt` has no cmpxchg
+      arm at all. Success-only correspondence with `casSchritt`
+      (plus flags/RAX effects, which have no TSO-level form) stays
+      open;
+    - INT n delivery (`kap_system_intN_schreibt_direkt`,
+      `kap_system_intN_kein_tso_ereignis`, high priority): an
+      admitted delivery installs its pushed-frame memory directly
+      (accepted `schiebeRahmen` path) while every buffer is kept; a
+      delivery changing two distinct canonical bytes is no single
+      accepted TSO event (issue keeps memory, flush touches exactly
+      its head address). The exhibited core-1 delivery changes
+      bytes 16344 and 16369. A multi-step `TSOErreichbar`
+      characterisation of the frame push is not attempted;
+    - the remaining 13 union tags (isa, addr, muldiv, uc, port, fp,
+      fehler, tor, vec, nested, int, bild, instanzen) are NOT
+      classified here;
+    - no W/GX bridge (target-only reachability; `tso_last_lesbar`
+      is cited, not re-proved); no whole-word atomicity beyond the
+      guarded drains; no source, checker, contract, entry, ABI,
+      loader, budget or liveness claim; no hardware correspondence
+      beyond self-consistency (silicon and timing assumptions live
+      in the family files, not re-checked here; cache-line size 64
+      for the split-lock refusal is the accepted 1209 assumption).
 -/
 
 #print axioms kap_system_still_of_mem
+#print axioms kapLockTso_xadd_geerbt
+#print axioms kapLockTso_mfence_still
+#print axioms kapLockTso_cmpxchg_befund
+#print axioms kap_lockFetch_xadd_geerbt
+#print axioms kap_lockFetch_mfence_still
+#print axioms kap_system_hlt_still
+#print axioms kap_system_cli_still
+#print axioms kap_system_sti_still
+#print axioms kap_system_pause_still
+#print axioms kap_system_cpuid_still
+#print axioms kap_system_rdtsc_still
+#print axioms kap_system_syscall_still
+#print axioms kap_system_sysret_still
+#print axioms kap_system_iret_still
+#print axioms kap_system_puffer_bleibt
+#print axioms kap_system_intN_schreibt_direkt
+#print axioms kap_system_intN_kein_tso_ereignis
+#print axioms kap_union_lockRmw_xadd_tso
+#print axioms kap_union_lockRmw_mfence_still
+#print axioms kap_union_lockFetch_xadd_tso
+#print axioms kap_union_system_still
+#print axioms kapIretReg
+#print axioms kapIretHw
+#print axioms kapIret_rsp
+#print axioms kapIret_mem
+#print axioms kapIret_liest0
+#print axioms kapIret_liest1
+#print axioms kapIret_liest2
+#print axioms kapIret_liest3
+#print axioms kapIret_liest4
+#print axioms kapIret_kanonisch
+#print axioms kapIretHw_wf
+#print axioms kapLocked_sys_alle_still
+#print axioms kapLocked_zeuge
 
 end Gabbro.Grammatik.X86
