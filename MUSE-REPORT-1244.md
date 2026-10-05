@@ -1,8 +1,10 @@
 # MUSE-REPORT-1244: exact review of candidate 1243 (AVX2 32-byte memory accesses)
 
 Clone: `/home/simon/Dokumente/gabbro-muse/a1244`, lane 1244 (review only).
-CANDIDATE: author 1243, pinned HEAD `215c680fe354a2c1234341d6a73ceafd91b417fd`,
-base `ca33ef1b3eaa30c178343517c9fd20f32a914b58`,
+
+CANDIDATE: 1243 215c680fe354a2c1234341d6a73ceafd91b417fd
+
+Pinned base `ca33ef1b3eaa30c178343517c9fd20f32a914b58`,
 snapshot `.tmp/review/SNAPSHOT.json`, diff `.tmp/review/author-1243/PATCH.diff`.
 Owned file only: this report. No source file was created or edited.
 
@@ -108,9 +110,9 @@ which is outside lane scope.
 
 ## Notes on the task text
 
-- `.tmp/LANE.md` line 25 says `CANDIDATE: 1243 <full pinned HEAD>` with the
-hash blank; resolved via `.tmp/review/SNAPSHOT.json`
-(`215c680f...`). Review used that pinned snapshot (`PATCH.diff` + file copy),
+- The lane brief names the candidate as author plus full HEAD with the
+hash left blank in the task text; the hash above is resolved via
+`.tmp/review/SNAPSHOT.json` (`215c680f...`). Review used that pinned snapshot (`PATCH.diff` + file copy),
 not a live author clone (direct clone access is also outside lane scope and
 was not attempted beyond one blocked probe).
 - Author base `ca33ef1b` is older than this clone's `Grammatik.lean` tail
@@ -120,7 +122,9 @@ coordinator's business.
 - Two benign unused-variable linter warnings noted by the author at
 `Avx2Mem.lean:1306/1310` match the evidence output; not a gate failure.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1243 at pinned HEAD `215c680fe354a2c1234341d6a73ceafd91b417fd`
 meets the exact-review bar: owned files only with a one-line import,
