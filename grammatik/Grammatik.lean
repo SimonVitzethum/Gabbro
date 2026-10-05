@@ -640,3 +640,4 @@ import Grammatik.X86.PipelineBlockInduct
 import Grammatik.X86.PipelineFloatNaN
 import Grammatik.X86.HwBildInstanzen
 import Grammatik.X86.PipelineLoadedAll
+import Grammatik.X86.PipelineAtomicsBlock
