@@ -133,6 +133,67 @@ theorem nanNeg_nutzlast (b : GFloat) :
   unfold Gleitkomma.neg
   exact ⟨rfl, rfl⟩
 
+/-! ## 2. Word-level bit-exact agreement: the SSE2 word IS the source word.
+
+  `fpRechne_gleitRechne` already ties every word op to the source
+  model op; here the NaN cases resolve to the operand WORD itself:
+  payload, quiet bit and sign travel bit-exactly (`add`/`mul`/`div`
+  on both sides, `sub` on the left; `sub` on the right flips only
+  the sign, `nanNeg_nutzlast`). -/
+
+/-- BIT-EXACT LEFT: with a NaN left word every lowered op returns the
+    left word unchanged. -/
+theorem fpRechne_nan_links (op : GleitOp) (a b : Wort)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 (bites64 a) = .nan) :
+    fpRechne op a b = a := by
+  cases op with
+  | add =>
+    show muster64 (Gleitkomma.add Gleitkomma.f64 (bites64 a) (bites64 b)) = a
+    rw [nanAdd_links _ _ ha, muster64_bites64]
+  | sub =>
+    show muster64 (Gleitkomma.sub Gleitkomma.f64 (bites64 a) (bites64 b)) = a
+    rw [nanSub_links _ _ ha, muster64_bites64]
+  | mul =>
+    show muster64 (Gleitkomma.mul Gleitkomma.f64 (bites64 a) (bites64 b)) = a
+    rw [nanMul_links _ _ ha, muster64_bites64]
+  | div =>
+    show muster64 (Gleitkomma.div Gleitkomma.f64 (bites64 a) (bites64 b)) = a
+    rw [nanDiv_links _ _ ha, muster64_bites64]
+
+/-- BIT-EXACT RIGHT (`add`): a NaN right word comes back unchanged. -/
+theorem fpRechne_add_nan_rechts (a b : Wort)
+    (hb : Gleitkomma.klasse Gleitkomma.f64 (bites64 b) = .nan)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 (bites64 a) ≠ .nan) :
+    fpRechne .add a b = b := by
+  show muster64 (Gleitkomma.add Gleitkomma.f64 (bites64 a) (bites64 b)) = b
+  rw [nanAdd_rechts _ _ hb ha, muster64_bites64]
+
+/-- BIT-EXACT RIGHT (`mul`): a NaN right word comes back unchanged. -/
+theorem fpRechne_mul_nan_rechts (a b : Wort)
+    (hb : Gleitkomma.klasse Gleitkomma.f64 (bites64 b) = .nan)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 (bites64 a) ≠ .nan) :
+    fpRechne .mul a b = b := by
+  show muster64 (Gleitkomma.mul Gleitkomma.f64 (bites64 a) (bites64 b)) = b
+  rw [nanMul_rechts _ _ hb ha, muster64_bites64]
+
+/-- BIT-EXACT RIGHT (`div`): a NaN right word comes back unchanged. -/
+theorem fpRechne_div_nan_rechts (a b : Wort)
+    (hb : Gleitkomma.klasse Gleitkomma.f64 (bites64 b) = .nan)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 (bites64 a) ≠ .nan) :
+    fpRechne .div a b = b := by
+  show muster64 (Gleitkomma.div Gleitkomma.f64 (bites64 a) (bites64 b)) = b
+  rw [nanDiv_rechts _ _ hb ha, muster64_bites64]
+
+/-- SUB RIGHT: the SSE2 word is the injected sign-flipped right
+    operand (payload intact by `nanNeg_nutzlast`). -/
+theorem fpRechne_sub_nan_rechts (a b : Wort)
+    (hb : Gleitkomma.klasse Gleitkomma.f64 (bites64 b) = .nan)
+    (ha : Gleitkomma.klasse Gleitkomma.f64 (bites64 a) ≠ .nan) :
+    fpRechne .sub a b
+      = muster64 (Gleitkomma.neg Gleitkomma.f64 (bites64 b)) := by
+  show muster64 (Gleitkomma.sub Gleitkomma.f64 (bites64 a) (bites64 b)) = _
+  rw [nanSub_rechts _ _ hb ha]
+
 /- CUTS: what is not proved here (filled as the file grows). -/
 
 #print axioms nanPipeOk_reset
