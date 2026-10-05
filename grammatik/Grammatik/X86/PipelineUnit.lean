@@ -1117,4 +1117,256 @@ theorem t3Einheit_verweigert (u : UProg) (h : t3EinheitOk u = false) :
   obtain ⟨x, hx, hfx⟩ := all_verweigert_aux _ _ h
   exact ⟨x, hx, hfx⟩
 
+/-! ## 8. Witnesses: one writing function, one calling function.
+
+    `euD` has two nullary functions over one table: `false` writes row 0
+    (the entry, projected to the pipeline), `true` calls `false` (the
+    call-site duties). The source run changes the slot `7 → 42`: a reached
+    memory-changing step on a table some function writes. -/
+
+/-- Witness signature: parameterless, no answer, writes the table. -/
+def euSig : Signatur Unit Empty Empty Empty :=
+  { params := [], erg := none, gruende := 0, haelt := [],
+    schreibt := fun _ => true, gschreibt := fun g => (nomatch g),
+    konsumiert := [], produziert := [], boden := none }
+
+/-- Witness declaration: one table with one `.int 0 1000` field, two
+    nullary functions. -/
+def euD : Deklaration where
+  Tab := Unit
+  count := fun _ => 1
+  Feld := fun _ => Unit
+  typ := fun _ _ => .int 0 1000
+  erlaubt := fun _ _ _ _ => true
+  tabNr := fun _ => some ()
+  Glob := Empty
+  gtyp := fun g => nomatch g
+  nutzlast := fun g => nomatch g
+  atomar := fun g => nomatch g
+  geteilt := fun _ => false
+  ggeteilt := fun g => nomatch g
+  Lock := Empty
+  rang := fun L => nomatch L
+  maskiert := fun L => nomatch L
+  Marke := Empty
+  stufen := fun m => nomatch m
+  braucht := fun _ => []
+  gbraucht := fun g => nomatch g
+  eigner := fun _ => []
+  Fn := Bool
+  sig := fun _ => 0
+  sigNr := fun _ => euSig
+  eigner_nie_erzeugt := fun n t m s _ => nomatch m
+  Inv := Empty
+  traeger := fun i => nomatch i
+  invs := []
+  Ax := Empty
+  aparams := fun a => nomatch a
+  aerg := fun a => nomatch a
+  aschreibt := fun a => nomatch a
+  agschreibt := fun a => nomatch a
+  Reg := Empty
+  rtyp := fun r => nomatch r
+  rklasse := fun r => nomatch r
+  spiegel := fun r => nomatch r
+  rzusage := fun r => nomatch r
+  Annahme := Unit
+  a10 := ()
+  geteilt_bewacht := fun t h => by simp at h
+  invarianten_gehalten := fun n i _ => nomatch i
+  ggeteilt_bewacht := fun g => nomatch g
+
+/-- Row 0 as an index. -/
+def euIdx : Expr euD [] [] (.index ((euD).count ())) :=
+  .weiter (by decide) (by decide) (.lit 0)
+
+/-- The value 42 in `0 .. 1000`. -/
+def euVal : Expr euD [] [] ((euD).typ () ()) :=
+  Expr.weiter (by decide) (by decide) (Expr.lit 42)
+
+/-- The witness world: the slot holds 7, no trace yet. -/
+def euSigma : World euD where
+  slots := fun t _ f => by cases t; cases f; exact ⟨7, by decide, by decide⟩
+  globs := fun g => nomatch g
+  spur := []
+
+/-- The witness oracle: no axioms, registers or globals to answer. -/
+def euO : Orakel euD where
+  wirkt := fun a => nomatch a
+  regLies := fun r => nomatch r
+  regSchreib := fun r => nomatch r
+  sichtbar := fun g => nomatch g
+
+/-- The witness callee table: every call succeeds without moving memory. -/
+def euR : ∀ f : euD.Fn, World euD → Env euD (euD.params f) →
+    RufAusgang f :=
+  fun _ σ _ => .ok σ ()
+
+/-- The witness contract writes the table. -/
+theorem euHw : (vertragVon euD false).schreibt () = true := rfl
+
+/-- The witness table needs no guards. -/
+theorem euHL : darf euD () [] :=
+  fun _ h => False.elim (List.not_mem_nil h)
+
+/-- The callee body: `T[0] = 42; return`. -/
+def euBodyCal : Endblock euD (vertragVon euD false) false
+    ((euD).params false) (Signatur.anfang euD ((euD).signatur false)) :=
+  .cons (.assignSlot () () euIdx euVal euHw euHL)
+    (.ret .keine List.Perm.nil)
+
+/-- The nullary call fits at empty resources. -/
+theorem euHpCall :
+    RufPasst euD (vertragVon euD true) ((euD).signatur false) [] where
+  hw := fun _ _ => rfl
+  hg := fun g => nomatch g
+  hk := ⟨[], List.Perm.refl _, List.Sublist.refl _⟩
+  hh := fun L hL => False.elim (List.not_mem_nil hL)
+  hx := RufPasst.hx_von fun L => iff_of_false List.not_mem_nil List.not_mem_nil
+
+/-- The caller body: `callee(); return`. -/
+def euBodyCaller : Endblock euD (vertragVon euD true) false
+    ((euD).params true) (Signatur.anfang euD ((euD).signatur true)) :=
+  .cons (.call false .nil euHpCall rfl)
+    (.ret .keine List.Perm.nil)
+
+/-- The witness program: trivial contracts, the two bodies. -/
+def euP : Programm euD where
+  invariante := fun i => nomatch i
+  requires := fun _ => Expr.wahr
+  ensures := fun _ => Expr.wahr
+  rumpf
+    | false => euBodyCal
+    | true => euBodyCaller
+
+/-- The source run: `T[0]` goes `7 → 42`, the body returns. -/
+theorem euQuelle :
+    ∃ (σ1 : World euD) (v : ErgVal euD (euD.erg false)),
+      execEnd euO 0 euR euBodyCal euSigma Env.nil = .zurueck σ1 v ∧
+      (euSigma.slots () 0 ()).n = 7 ∧
+      (σ1.slots () 0 ()).n = 42 := by
+  have hExecFull : ∃ σ1 v,
+      execEnd euO 0 euR euBodyCal euSigma Env.nil = .zurueck σ1 v := by
+    exact ⟨_, _, rfl⟩
+  obtain ⟨σ1, v, hExec⟩ := hExecFull
+  refine ⟨σ1, v, hExec, rfl, ?_⟩
+  cases hExec
+  rfl
+
+/-- The projected block: the single store. -/
+def euBlk : Block euD (vertragVon euD false) false
+    ((euD).params false) (Signatur.anfang euD ((euD).signatur false))
+    (Signatur.anfang euD ((euD).signatur false)) :=
+  .cons (.assignSlot () () euIdx euVal euHw euHL) .nil
+
+/-- The projection computes to the store block. -/
+theorem euProj : rumpfBlock euBodyCal = some euBlk := by
+  simp [rumpfBlock, euBodyCal, euBlk]
+
+/-- The tail is the value return. -/
+theorem euEnde : rumpfEnde euBodyCal =
+    some ((.ret .keine List.Perm.nil) :
+      Endblock euD (vertragVon euD false) false
+        ((euD).params false)
+        (Signatur.anfang euD ((euD).signatur false))) := by
+  simp [rumpfEnde, euBodyCal]
+
+/-- The tail is a value return. -/
+theorem euRueck : istRueck ((.ret .keine List.Perm.nil) :
+    Endblock euD (vertragVon euD false) false
+      ((euD).params false)
+      (Signatur.anfang euD ((euD).signatur false))) = true := rfl
+
+/-- Target configuration: no parameters, `rax`/`rcx` working, `rbx` the
+    address register, code at 4096. -/
+def euCfg : PipeCfg :=
+  { regs := [], dst := .rax, tmp := .rcx, adr := .rbx, codeBase := 4096,
+    exitBase := 12288 }
+
+/-- The placed slot: row 0 at 8192. -/
+def euPs : List (Platz euD) := [⟨(), 0, (), 8192⟩]
+
+/-- The table extents plus a stack extent (no placement in it). -/
+def euEs : List TabLayout :=
+  [{ tab := 0, basis := 8192, len := 8, ausr := 8 },
+   { tab := 1, basis := 16384, len := 64, ausr := 16 }]
+
+/-- The candidate bytes from the compiler. -/
+def euBytes : List Byte :=
+  (compile euCfg (layoutVon euPs) [] euBlk).getD []
+
+/-- The configuration check passes. -/
+theorem euCfgOk : cfgOk euCfg = true := by
+  decide
+
+/-- The compiler produces bytes. -/
+theorem euCompileSome : (compile euCfg (layoutVon euPs) [] euBlk).isSome = true := by
+  decide
+
+/-- The validator accepts the compiler output. -/
+theorem euValidate : validate euCfg (layoutVon euPs) [] euBlk euBytes = true := by
+  decide
+
+/-- The image, built from the pipeline output and the initial world. -/
+def euBild : Bild := bildFuerP euCfg [] [] euBlk euBytes euPs euSigma euEs
+
+/-- The image check accepts, by computation. -/
+theorem euImageOk :
+    imageOk .p48 euBild euCfg euPs euEs [] euBlk euBytes = true := by
+  decide
+
+/-- The loaded image represents the initial world, by computation. -/
+theorem euWeltOk : weltOk euBild euPs euSigma = true := by
+  decide
+
+/-- Entry registers: `rsp` at the top of the stack extent, else zero. -/
+def euReg : Register → Wort := fun q =>
+  if q = .rsp then natAdresse 16448 else 0
+
+/-- The admitted entry state. -/
+def euZ : EintrittZustand :=
+  { zustand := eintrittStart euBild euCfg 0 euReg witnessFlags
+    mxcsr := 0x1F80
+    xmmBeruehrt := false
+    mxcsrGesichert := false
+    ifBit := true
+    guardOk := false }
+
+/-- The entry-sequence check passes (empty prolog). -/
+theorem euPrologOk :
+    prologImageOk euBild euCfg [] ((euD).params false).length = true := by
+  decide
+
+/-- The loaded entry is admitted, by computation. -/
+theorem euZulassung :
+    eintrittZulassung .p48 euBild (effBias euBild.modus) .nolibcMain euZ [] =
+      true := by
+  decide
+
+/-- The caller's ABI duty is vacuous (no parameters). -/
+theorem euAbi : AbiArgs ([] : List Register)
+    (Env.nil : Env euD ((euD).params false)) euReg :=
+  fun _ _ x => nomatch x
+
+/-- The entry duty holds (trivial contract). -/
+theorem euReq : wahr? (eval
+    (euSigma.lese (Signatur.anfang euD ((euD).signatur false))
+      (euP.requires false).orte)
+    (euP.requires false)
+    (euSigma.lese (Signatur.anfang euD ((euD).signatur false))
+      (euP.requires false).orte)
+    (Env.nil : Env euD ((euD).params false))) = true := by
+  decide
+
+/-- The unit check closes on the witness. -/
+theorem euSchluss : einheitSchluss euP false euCfg euPs euEs [] euBytes .p48
+    euBild [] euSigma (Env.nil : Env euD ((euD).params false)) .nolibcMain euZ
+    [] = true :=
+  einheitSchluss_verbindung euP false euCfg euPs euEs [] euBytes .p48 euBild []
+    euSigma (Env.nil : Env euD ((euD).params false)) .nolibcMain euZ [] euBlk
+    ((.ret .keine List.Perm.nil) : Endblock euD (vertragVon euD false) false
+      ((euD).params false) (Signatur.anfang euD ((euD).signatur false)))
+    euProj euEnde euRueck euValidate
+    euImageOk euWeltOk euPrologOk euZulassung euReq
+
 end Gabbro.Grammatik.X86.PipelineUnit
