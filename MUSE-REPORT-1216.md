@@ -1,15 +1,17 @@
 # MUSE-REPORT-1216: Exact review of candidate 1215 (W runs to GX refinement)
 
-CANDIDATE: 1215 0f31f20a2c0682dd15ceb04a0709f87a74c244e7
+CANDIDATE: 1215 80c758cd3212b725469a4f9402488b5d1a16ff68
 
-## Scope and inputs
+## Scope and inputs (re-review; supersedes the stale 0f31f20a pin below)
 
 - Review lane. Added no Lean code and changed no existing file. Owned deliverable is this report only.
 - Clone verified: `/home/simon/Dokumente/gabbro-muse/a1216`, branch `muse/1216`, clean tree at `cbc0afe0`.
-- Candidate: lane 1215, pinned HEAD `0f31f20a2c0682dd15ceb04a0709f87a74c244e7` over base `988d75ef`
-  (from `.tmp/review/SNAPSHOT.json`). Reviewed the exact snapshot diff (`PATCH.diff`, 428 lines),
-  the snapshot file copy, `MUSE-REPORT-1215.md` and `BUILD-EVIDENCE.json`. The author clone was not
+- Candidate: lane 1215, pinned HEAD `80c758cd3212b725469a4f9402488b5d1a16ff68` over base `988d75ef`
+  (from the NEW `.tmp/review/SNAPSHOT.json`). Re-reviewed the exact new snapshot diff (`PATCH.diff`,
+  now 458 lines), the snapshot file copy, the updated `MUSE-REPORT-1215.md` (now 118 lines) and the
+  extended `BUILD-EVIDENCE.json` (repair-pass entries). The author clone was not
   accessible, so per the task ("Read the candidate diff only") no author-tree commands were run.
+  The previous pin `0f31f20a` is stale and is NOT approved by this report.
 - Candidate diff content: new file `grammatik/Grammatik/X86/TsoGxRefine.lean` (319 lines),
   exactly one added `import Grammatik.X86.TsoGxRefine` line in `grammatik/Grammatik.lean`,
   plus `MUSE-REPORT-1215.md`. No other file touched.
@@ -69,6 +71,41 @@ CANDIDATE: 1215 0f31f20a2c0682dd15ceb04a0709f87a74c244e7
 - The MECHANISM paragraph's `HwAdapter` demand is correctly identified as inapplicable (consumer is
   machine GX, same as lane 1187 for W); reusing accepted `tsoRmwAdapter` for the LOCK leg respects
   rule 16.
+
+## Re-review after the author repair pass (new pin 80c758cd)
+
+What changed between the pins: commit `80c758cd` ("repair pass: integration-gate failure analysis")
+modifies ONLY `MUSE-REPORT-1215.md` (evidence trail in `BUILD-EVIDENCE.json` shows `M
+MUSE-REPORT-1215.md` as the sole change). Git-level proof that no Lean code moved: the new
+`PATCH.diff` carries the new `.lean` file under the byte-identical blob hash `92a1d5a5`
+(same as the old snapshot) and the identical `Grammatik.lean` hunk (`924a2df9..96c88636`,
+same one import line); only the report blob changed (`637ea3e7` -> `5b04ae07`, 88 -> 118 lines).
+Every previous finding therefore carries over unchanged: the line-by-line proof checks, the
+signature cross-checks, the witness assessment and the rule-13 analysis in this report were done
+against byte-identical Lean content.
+
+New material reviewed (report-only addition, "Integration-gate failure 2026-10-05"):
+
+1. The author reports the merge build failed with exactly one owned-file error: a missing
+   `Grammatik/RufAdaequatG.olean` at the import block, zero elaboration errors. I verified the
+   load-bearing part of this diagnosis against the accepted tree: `CarrierTraceBridge.lean:28`
+   does import `Grammatik.RufAdaequatG`, an accepted file this lane neither owns nor touches,
+   reached transitively via the candidate's `TsoRunInduction` import. A missing dependency
+   artifact with no source-level errors is consistent with a stale/incomplete integration cache,
+   not with a source defect — and the unchanged-blob proof above rules out a source-side repair
+   need independently of that diagnosis.
+2. The author's "no repair applies" reasoning (dropping the `Zielsatz.Spec` import or adding a
+   direct `RufAdaequatG` import cannot create the missing artifact; `Grammatik.lean` import order
+   is irrelevant to Lake) is sound.
+3. The author re-verified locally after the failure (probe 0 errors, full build 640 jobs green);
+   the new evidence entries match the earlier green pattern including the full axiom table.
+4. Residual, not verdict-blocking: the merge-side build log itself is not among my inputs, so the
+   stale-cache attribution rests on the author's quoted error plus my import-chain check. The
+   author's requested next step — re-run the merge build from a correct cache, then merge — is
+   exactly what settles it; either outcome (green, or a reproduced error pointing elsewhere) is
+   actionable without touching this candidate's sources.
+
+Fresh baseline on my clean tree: `./lean-bau` ends `Build completed successfully (640 jobs).`
 
 ## Verdict
 
