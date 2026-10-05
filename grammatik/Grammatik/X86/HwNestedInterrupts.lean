@@ -415,6 +415,161 @@ theorem verschachtelt_vereinbarung (m : HwMaschine) (c : Nat)
     (if g1.unterbrechung then false else st1.ifBit),
   true), hnest, hlief1, hlief2⟩
 
+/-! ## 4. Handler entry through the TSO store buffer.
+
+   The accepted `schiebeRahmen` frame lands via `write64`; the same
+   words ride the acting core's TSO buffer here as eight
+   `wortEintraege` bytes each at the SAME descending slots
+   (`HwStackCalls.lean` discipline: buffered issue, owner-only
+   forwarding, drain into shared memory). Every buffered byte IS one
+   `HwSchritt.gibAus` event; the folded frame is a `HwStern` chain. -/
+
+/-- Buffered frame push: the words as `hwWortAusgabe` folds at the
+    same descending slots `schiebeRahmen` writes. `none` = at least
+    one slot byte refused. -/
+def puffereRahmen (m : HwMaschine) (c : Nat) (top : Adresse) :
+    List Wort → Option HwMaschine
+  | [] => some m
+  | w :: rest =>
+    match hwWortAusgabe m c (top - BitVec.ofNat 64 8) w with
+    | none => none
+    | some m1 => puffereRahmen m1 c (top - BitVec.ofNat 64 8) rest
+
+/-- A buffered word issue preserves well-formedness. -/
+theorem hwWortAusgabe_wf (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Wort) (m' : HwMaschine)
+    (h : hwWortAusgabe m c a v = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  unfold hwWortAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c (wortEintraege a v) with
+  | none => rw [h1] at h; cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    exact setTso_wf _ s' hwf
+
+/-- A buffered frame preserves well-formedness. -/
+theorem puffereRahmen_wf (m : HwMaschine) (c : Nat) (top : Adresse)
+    (l : List Wort) (m' : HwMaschine)
+    (h : puffereRahmen m c top l = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  induction l generalizing m top m' with
+  | nil =>
+    simp [puffereRahmen] at h
+    cases h
+    exact hwf
+  | cons w rest ih =>
+    unfold puffereRahmen at h
+    cases h1 : hwWortAusgabe m c (top - BitVec.ofNat 64 8) w with
+    | none => rw [h1] at h; cases h
+    | some m1 =>
+      rw [h1] at h
+      exact ih m1 _ _ h (hwWortAusgabe_wf m c _ w m1 h1 hwf)
+
+/-- A buffered frame changes no shared-memory byte. -/
+theorem puffereRahmen_kein_speicher (m : HwMaschine) (c : Nat)
+    (top : Adresse) (l : List Wort) (m' : HwMaschine)
+    (h : puffereRahmen m c top l = some m') (x : Adresse) :
+    m'.mem.bytes x = m.mem.bytes x := by
+  induction l generalizing m top m' with
+  | nil =>
+    simp [puffereRahmen] at h
+    cases h
+    rfl
+  | cons w rest ih =>
+    unfold puffereRahmen at h
+    cases h1 : hwWortAusgabe m c (top - BitVec.ofNat 64 8) w with
+    | none => rw [h1] at h; cases h
+    | some m1 =>
+      rw [h1] at h
+      rw [ih m1 _ _ h]
+      exact hwWortAusgabe_kein_speicher m c _ w m1 h1 x
+
+/-- A buffered frame appends exactly eight entries per word on the
+    acting core. -/
+theorem puffereRahmen_zaehlt (m : HwMaschine) (c : Nat)
+    (top : Adresse) (l : List Wort) (m' : HwMaschine)
+    (h : puffereRahmen m c top l = some m') :
+    (m'.puffer c).length = (m.puffer c).length + 8 * l.length := by
+  induction l generalizing m top m' with
+  | nil =>
+    simp [puffereRahmen] at h
+    cases h
+    simp
+  | cons w rest ih =>
+    unfold puffereRahmen at h
+    cases h1 : hwWortAusgabe m c (top - BitVec.ofNat 64 8) w with
+    | none => rw [h1] at h; cases h
+    | some m1 =>
+      rw [h1] at h
+      have hp := hwWortAusgabe_puffer m c (top - BitVec.ofNat 64 8) w
+        m1 h1
+      have ihh := ih m1 _ _ h
+      have hlen : (wortEintraege (top - BitVec.ofNat 64 8) w).length
+          = 8 := rfl
+      rw [ihh, hp, List.length_append, hlen, List.length_cons]
+      omega
+
+/-- BYTE ECHO: every buffered frame byte IS a machine store-issue
+    event -- the family rides `HwSchritt`, never beside it. -/
+theorem rahmenByte_ausgabe (m : HwMaschine) (c : Nat) (a : Adresse)
+    (b : Byte) (s' : TSOZustand)
+    (h : issueByte (tsoAnsicht m) c a b = some s') :
+    HwSchritt m (setTso m s') (.schreibAusgabe c a b) :=
+  .gibAus c a b s' h
+
+/-- Transitivity of the machine-step closure. -/
+theorem HwStern_verkettet : HwStern m m1 → HwStern m1 m2 → HwStern m m2
+  | .refl _, h2 => h2
+  | .step _ b _ e hs hr, h2 =>
+    .step _ b _ e hs (HwStern_verkettet hr h2)
+
+/-- A buffered word reaches the machine in eight store-issue
+    steps (the accepted fold, lifted). -/
+theorem hwWortAusgabe_stern (m : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Wort) (m' : HwMaschine)
+    (h : hwWortAusgabe m c a v = some m') : HwStern m m' := by
+  unfold hwWortAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c (wortEintraege a v) with
+  | none => rw [h1] at h; cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    have hs := issueListe_stern m c (wortEintraege a v)
+      (tsoAnsicht m) s' h1
+    have hrefl : setTso m (tsoAnsicht m) = m := by
+      cases m with
+      | mk mem kerne puffer hw bereit => rfl
+    rw [hrefl] at hs
+    exact hs
+
+/-- A buffered frame reaches the machine as a chain of store-issue
+    steps. -/
+theorem puffereRahmen_stern (m : HwMaschine) (c : Nat)
+    (top : Adresse) (l : List Wort) (m' : HwMaschine)
+    (h : puffereRahmen m c top l = some m') :
+    HwStern m m' := by
+  induction l generalizing m top m' with
+  | nil =>
+    simp [puffereRahmen] at h
+    cases h
+    exact .refl _
+  | cons w rest ih =>
+    unfold puffereRahmen at h
+    cases h1 : hwWortAusgabe m c (top - BitVec.ofNat 64 8) w with
+    | none => rw [h1] at h; cases h
+    | some m1 =>
+      rw [h1] at h
+      exact HwStern_verkettet
+        (hwWortAusgabe_stern m c _ w m1 h1) (ih m1 _ _ h)
+
+/-- The pushed entry carries its `write64` footprint byte: the
+    buffered frame and the accepted store agree byte for byte. -/
+theorem rahmenEcho_schreiben (m : Speicher) (a : Adresse) (v : Wort)
+    (k : Nat) (hk : k < 8) :
+    writeBytes m a v (addrOff a k) = wortByte v k :=
+  stapelEcho_schreiben m a v k hk
+
 /- CUTS:
    Proved here: SKELETON ONLY so far -- the double-fault vector
    constant. Nested delivery, #DF escalation, the TSO-buffered
