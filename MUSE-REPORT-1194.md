@@ -5,7 +5,9 @@ Lane 1194, clone `/home/simon/Dokumente/gabbro-muse/a1194`, branch `muse/1194`
 not possible in this session — shell tool calls were permission-denied, see
 blocker below; no files outside this clone were touched).
 
-CANDIDATE: 1193, pinned HEAD `fd0c78c793bd054acfc9b81b94b4124c5f6389bf`
+CANDIDATE: 1193 fd0c78c793bd054acfc9b81b94b4124c5f6389bf
+
+Candidate 1193, pinned HEAD `fd0c78c793bd054acfc9b81b94b4124c5f6389bf`
 (base `9b05e84a8377f2a718cecf9ca1a403d6c9c2b919`), reviewed from the exact
 snapshot `.tmp/review/author-1193/` (`PATCH.diff`, `PipelineLinkMulti.lean`
 1663 lines, `MUSE-REPORT-1193.md`, `BUILD-EVIDENCE.json`). Files in candidate:
@@ -104,7 +106,9 @@ session was permission-denied by the tool gate, so `./lean-bau` /
 rests on the exact pinned snapshot + complete file read + author build
 evidence, not on a fresh reviewer build; the merge gate rebuilds anyway.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1193 meets the exact-review bar: no forbidden tactics/axioms,
 standard axiom profile, minimal existing-file footprint (one import line),
