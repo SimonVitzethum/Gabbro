@@ -671,13 +671,278 @@ theorem rufHol_lauf (c : PipeCfg) (r : Rahmen) (b : Belegung) (i : Nat)
       s2.register reg = v :=
   spillLoad_lauf c r (b.gerettetIdx i) reg s v hrd
 
+/-! ## 7. Refusals: loud on every path.
+
+    A split past the program end, unsorted points, a save onto the
+    address register, a slot overlapping a declared table extent, a
+    slot past the frame, and aliased slots are all refused (`false`),
+    never guessed. Each general refusal goes through the
+    corresponding validator leg. -/
+
+/-- POSITION REFUSAL: a split past the program end is never admitted. -/
+theorem spleiss_verweigert_pos (c : PipeCfg) (r : Rahmen)
+    (P : List Befehl) (pts : List SpleissPunkt) (codeBase codeLen : Nat)
+    (daten : List Nat)
+    (p : SpleissPunkt) (hmem : p ∈ pts) (h : P.length < p.pos) :
+    spleissPlanOk c r P pts codeBase codeLen daten = false := by
+  cases heq : spleissPlanOk c r P pts codeBase codeLen daten with
+  | true =>
+    have hle := spleissPlan_pos c r P pts codeBase codeLen daten heq p
+      hmem
+    omega
+  | false => rfl
+
+/-- ORDER REFUSAL: unsorted points are never admitted. -/
+theorem spleiss_verweigert_unsortiert (c : PipeCfg) (r : Rahmen)
+    (P : List Befehl) (pts : List SpleissPunkt) (codeBase codeLen : Nat)
+    (daten : List Nat)
+    (h : spleissSortiert pts = false) :
+    spleissPlanOk c r P pts codeBase codeLen daten = false := by
+  cases heq : spleissPlanOk c r P pts codeBase codeLen daten with
+  | true =>
+    have hsort := spleissPlan_sortiert c r P pts codeBase codeLen daten
+      heq
+    rw [hsort] at h
+    cases h
+  | false => rfl
+
+/-- ADDRESS-REGISTER REFUSAL: a save onto the address register is
+    never admitted. -/
+theorem spleiss_verweigert_adr (c : PipeCfg) (r : Rahmen)
+    (P : List Befehl) (pts : List SpleissPunkt) (codeBase codeLen : Nat)
+    (daten : List Nat)
+    (p : SpleissPunkt) (hmem : p ∈ pts)
+    (hdir : p.richtung = .sichern) (heq : p.reg = c.adr) :
+    spleissPlanOk c r P pts codeBase codeLen daten = false := by
+  cases hval : spleissPlanOk c r P pts codeBase codeLen daten with
+  | true =>
+    have hne := spleissPlan_saveReg c r P pts codeBase codeLen daten
+      hval p hmem hdir
+    exact absurd heq hne
+  | false => rfl
+
+/-- TABLE REFUSAL: a slot overlapping a declared table extent is never
+    admitted. -/
+theorem spleiss_verweigert_tabelle (c : PipeCfg) (r : Rahmen)
+    (P : List Befehl) (pts : List SpleissPunkt) (codeBase codeLen : Nat)
+    (daten : List Nat)
+    (a : Nat) (ha : a ∈ daten) (s : Nat)
+    (hs : s ∈ (pts.map (·.schlitz)))
+    (hdis : ¬ (a + 8 ≤ r.schlitzNat s ∨ r.schlitzNat s + 8 ≤ a)) :
+    spleissPlanOk c r P pts codeBase codeLen daten = false := by
+  cases heq : spleissPlanOk c r P pts codeBase codeLen daten with
+  | true =>
+    have hsp := spleissPlan_spill c r P pts codeBase codeLen daten heq
+    have hcon := spill_verweigert_tabelle r (pts.map (·.schlitz))
+      codeBase codeLen daten a ha s hs hdis
+    rw [hsp] at hcon
+    cases hcon
+  | false => rfl
+
+/-- OUT-OF-FRAME REFUSAL: a listed slot past the frame is never
+    admitted. -/
+theorem spleiss_verweigert_aussen (c : PipeCfg) (r : Rahmen)
+    (P : List Befehl) (pts : List SpleissPunkt) (codeBase codeLen : Nat)
+    (daten : List Nat)
+    (s : Nat) (hs : s ∈ (pts.map (·.schlitz)))
+    (h : r.schlitzZahl ≤ s) :
+    spleissPlanOk c r P pts codeBase codeLen daten = false := by
+  cases heq : spleissPlanOk c r P pts codeBase codeLen daten with
+  | true =>
+    have hsp := spleissPlan_spill c r P pts codeBase codeLen daten heq
+    have hcon := spill_verweigert_aussen r (pts.map (·.schlitz))
+      codeBase codeLen daten s hs h
+    rw [hsp] at hcon
+    cases hcon
+  | false => rfl
+
+/-- COLLISION REFUSAL: aliased slots are never admitted. -/
+theorem spleiss_verweigert_kollision (c : PipeCfg) (r : Rahmen)
+    (P : List Befehl) (pts : List SpleissPunkt) (codeBase codeLen : Nat)
+    (daten : List Nat)
+    (h : ¬ (pts.map (·.schlitz)).Nodup) :
+    spleissPlanOk c r P pts codeBase codeLen daten = false := by
+  cases heq : spleissPlanOk c r P pts codeBase codeLen daten with
+  | true =>
+    have hsp := spleissPlan_spill c r P pts codeBase codeLen daten heq
+    have hnod := spillPlan_nodup r (pts.map (·.schlitz)) codeBase codeLen
+      daten hsp
+    exact absurd hnod h
+  | false => rfl
+
+/-- RED-ZONE REFUSAL at the call boundary: any red-zone use is
+    refused loudly. -/
+theorem spleissRuf_verweigert_rot (b : Belegung) (r : Rahmen)
+    (slots : List Nat) (nArgs : Nat) (codeBase codeLen : Nat)
+    (daten : List Nat) :
+    spleissRufOk b r slots nArgs true codeBase codeLen daten = false := by
+  cases heq : spleissRufOk b r slots nArgs true codeBase codeLen daten with
+  | true =>
+    have hr := spleissRuf_ruf b r slots nArgs true codeBase codeLen
+      daten heq
+    have hcon : rufOk b r nArgs true = false := by
+      unfold rufOk
+      simp
+    rw [hr] at hcon
+    cases hcon
+  | false => rfl
+
+/-- HIGH-SLOT REFUSAL at the call boundary: a spill slot at or past
+    the callee-reserved indices is never admitted. -/
+theorem spleissRuf_verweigert_hoch (b : Belegung) (r : Rahmen)
+    (slots : List Nat) (nArgs : Nat) (benutztRot : Bool)
+    (codeBase codeLen : Nat) (daten : List Nat)
+    (s : Nat) (hs : s ∈ slots) (h : b.spill ≤ s) :
+    spleissRufOk b r slots nArgs benutztRot codeBase codeLen daten
+      = false := by
+  cases heq : spleissRufOk b r slots nArgs benutztRot codeBase codeLen
+      daten with
+  | true =>
+    have hlo := spleissRuf_unten b r slots nArgs benutztRot codeBase
+      codeLen daten heq s hs
+    omega
+  | false => rfl
+
+/-! ## 8. Poison probes and witness values.
+
+    The witness split points save slot 0 at the entry of the witness
+    program and reload slot 1 at its end (twelve instructions); the
+    call-boundary witness frame holds two spill words, six
+    callee-saved words and no stack argument. -/
+
+/-- Witness split points on the witness program. -/
+def spleissPts0 : List SpleissPunkt :=
+  [{ pos := 0, schlitz := 0, reg := .rax, richtung := .sichern },
+   { pos := 12, schlitz := 1, reg := .rax, richtung := .laden }]
+
+/-- POSITIVE PROBE: the witness plan validates, by computation. -/
+theorem spleiss_probe_pos :
+    spleissPlanOk pwCfg spillR0 pwProg spleissPts0 4096 pwBytes.length
+      spillD0 = true := by
+  decide
+
+/-- A split past the program end is refused. -/
+def spleissPtsFern : List SpleissPunkt :=
+  [{ pos := 13, schlitz := 0, reg := .rax, richtung := .sichern }]
+
+theorem spleiss_probe_fern :
+    spleissPlanOk pwCfg spillR0 pwProg spleissPtsFern 4096
+      pwBytes.length spillD0 = false := by
+  decide
+
+/-- POSITION REFUSAL through the theorem. -/
+theorem spleiss_probe_fern_satz :
+    spleissPlanOk pwCfg spillR0 pwProg spleissPtsFern 4096
+      pwBytes.length spillD0 = false :=
+  spleiss_verweigert_pos pwCfg spillR0 pwProg spleissPtsFern 4096
+    pwBytes.length spillD0
+    { pos := 13, schlitz := 0, reg := .rax, richtung := .sichern }
+    (by decide) (by decide)
+
+/-- Unsorted points are refused. -/
+def spleissPtsUnsortiert : List SpleissPunkt :=
+  [{ pos := 12, schlitz := 0, reg := .rax, richtung := .sichern },
+   { pos := 0, schlitz := 1, reg := .rax, richtung := .laden }]
+
+theorem spleiss_probe_unsortiert :
+    spleissPlanOk pwCfg spillR0 pwProg spleissPtsUnsortiert 4096
+      pwBytes.length spillD0 = false := by
+  decide
+
+/-- A save onto the address register is refused. -/
+def spleissPtsAdr : List SpleissPunkt :=
+  [{ pos := 0, schlitz := 0, reg := .rbx, richtung := .sichern }]
+
+theorem spleiss_probe_adr :
+    spleissPlanOk pwCfg spillR0 pwProg spleissPtsAdr 4096
+      pwBytes.length spillD0 = false := by
+  decide
+
+/-- ADDRESS-REGISTER REFUSAL through the theorem. -/
+theorem spleiss_probe_adr_satz :
+    spleissPlanOk pwCfg spillR0 pwProg spleissPtsAdr 4096
+      pwBytes.length spillD0 = false :=
+  spleiss_verweigert_adr pwCfg spillR0 pwProg spleissPtsAdr 4096
+    pwBytes.length spillD0
+    { pos := 0, schlitz := 0, reg := .rbx, richtung := .sichern }
+    (by decide) (by decide) (by decide)
+
+/-- A slot overlapping a declared table extent is refused. -/
+theorem spleiss_probe_tabelle :
+    spleissPlanOk pwCfg spillR0 pwProg spleissPts0 4096 pwBytes.length
+      [16384] = false := by
+  decide
+
+/-- A slot past the frame is refused. -/
+theorem spleiss_probe_aussen :
+    spleissPlanOk pwCfg spillR0 pwProg
+      [{ pos := 0, schlitz := 7, reg := .rax, richtung := .sichern }]
+      4096 pwBytes.length spillD0 = false := by
+  decide
+
+/-- Aliased slots are refused. -/
+theorem spleiss_probe_kollision :
+    spleissPlanOk pwCfg spillR0 pwProg
+      [{ pos := 0, schlitz := 0, reg := .rax, richtung := .sichern },
+       { pos := 1, schlitz := 0, reg := .rax, richtung := .laden }]
+      4096 pwBytes.length spillD0 = false := by
+  decide
+
+/-- Call-boundary witness frame: two spill words, six callee-saved
+    words, no stack argument. -/
+def spleissR1 : Rahmen := ⟨16384, 80⟩
+
+def spleissB1 : Belegung := ⟨2, 6, 0⟩
+
+/-- CALL POSITIVE PROBE: the call-boundary witness validates. -/
+theorem spleissRuf_probe_pos :
+    spleissRufOk spleissB1 spleissR1 [0, 1] 6 false 4096 pwBytes.length
+      [8192, 8200] = true := by
+  decide
+
+/-- Red-zone use at the call boundary is refused. -/
+theorem spleissRuf_probe_rot :
+    spleissRufOk spleissB1 spleissR1 [0, 1] 6 true 4096 pwBytes.length
+      [8192, 8200] = false := by
+  decide
+
+/-- A spill slot inside the callee-reserved indices is refused. -/
+theorem spleissRuf_probe_hoch :
+    spleissRufOk spleissB1 spleissR1 [0, 5] 6 false 4096 pwBytes.length
+      [8192, 8200] = false := by
+  decide
+
+/-- Concrete entry state over the witness memory for the paired
+    round-trip witness: every register holds `42`. -/
+def spleissS0 : Zustand :=
+  { register := fun _ => 42, flags := witnessFlags, rip := natAdresse 0,
+    speicher := speicherZeuge }
+
 /- CUTS:
-     - Skeleton only: split-point type and fragment selection over the
-       accepted 1191 fragments. Run lemmas, multi-splice, validator,
-       closing, call handling, refusals, probes and witnesses OPEN.
+     - Interim: refusals, probes and witness values added; joint
+       witnesses for the closing and the paired round-trip OPEN.
 -/
 
-#print axioms SpleissPunkt
-#print axioms spleissFrag
+#print axioms spleiss_verweigert_pos
+#print axioms spleiss_verweigert_unsortiert
+#print axioms spleiss_verweigert_adr
+#print axioms spleiss_verweigert_tabelle
+#print axioms spleiss_verweigert_aussen
+#print axioms spleiss_verweigert_kollision
+#print axioms spleissRuf_verweigert_rot
+#print axioms spleissRuf_verweigert_hoch
+#print axioms spleiss_probe_pos
+#print axioms spleiss_probe_fern
+#print axioms spleiss_probe_fern_satz
+#print axioms spleiss_probe_unsortiert
+#print axioms spleiss_probe_adr
+#print axioms spleiss_probe_adr_satz
+#print axioms spleiss_probe_tabelle
+#print axioms spleiss_probe_aussen
+#print axioms spleiss_probe_kollision
+#print axioms spleissRuf_probe_pos
+#print axioms spleissRuf_probe_rot
+#print axioms spleissRuf_probe_hoch
+#print axioms spleissS0
 
 end Gabbro.Grammatik.X86.PipeSpillSplice
