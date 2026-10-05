@@ -999,6 +999,52 @@ theorem wit_schritt61287 :
   exact HwWcSchritt.zaun witW51287 0
     witW61287 (by unfold wcZaunZustand; rfl)
 
+/-- Owner forwarding after stage 1: core 0 reads its own WC byte. -/
+theorem wit_eigen11287 :
+    wcLesbar witW11287 0 witWc1287 = some (natByte 42) := by
+  decide
+
+/-- No foreign forwarding after stage 1: core 1 reads the old byte. -/
+theorem wit_fremd11287 :
+    wcLesbar witW11287 1 witWc1287 = some (natByte 0) := by
+  decide
+
+/-- The first cell is still zero after stage 1 (buffered, bypassed). -/
+theorem wit_still11287 :
+    witW11287.masch.mem.bytes witWc1287 = natByte 0 := by
+  decide
+
+/-- The CLFLUSH installs the line byte into memory. -/
+theorem wit_spuelung21287 :
+    witW21287.masch.mem.bytes witWc1287 = natByte 42 := by
+  decide
+
+/-- Owner forwarding after stage 3: core 0 reads its second WC byte. -/
+theorem wit_eigen31287 :
+    wcLesbar witW31287 0 witWcB1287 = some (natByte 43) := by
+  decide
+
+/-- No foreign forwarding after stage 3: core 1 reads the old byte. -/
+theorem wit_fremd31287 :
+    wcLesbar witW31287 1 witWcB1287 = some (natByte 0) := by
+  decide
+
+/-- The WT store is visible in memory: the go-through assumption. -/
+theorem wit_durch41287 :
+    WtWpBusAnnahme witW41287 witWt1287 (natByte 9) := by
+  show witW41287.masch.mem.bytes witWt1287 = natByte 9
+  decide
+
+/-- The second cell is still zero before the fence (buffered). -/
+theorem wit_null51287 :
+    witW51287.masch.mem.bytes witWcB1287 = natByte 0 := by
+  decide
+
+/-- The fence installs the second WC byte into memory. -/
+theorem wit_spuelung61287 :
+    witW61287.masch.mem.bytes witWcB1287 = natByte 43 := by
+  decide
+
 end HwMemWC1287
 
 end Gabbro.Grammatik.X86
