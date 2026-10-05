@@ -828,6 +828,125 @@ theorem senkSkalLesen_falsche_basis_zeuge :
     zeV.schreibt false = true ∧ zeRunChange := by
   refine ⟨rfl, zeHw, zeRunChangeProof⟩
 
+/-- Pointer-through read at a variable index over the witness context. -/
+def zeReadDurchVar : Expr zeD [.int 0 1] [] (zeD.typ false true) :=
+  .durch (.ptrOf false 0 rfl true) false rfl true zeIdxVar zeHLV
+
+/-- Pointer-through refusals follow from direct refusals by rewriting
+    with the bridge; the pointer contributes nothing. -/
+theorem senkSkalLesen_nichtvar_durch (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {rw : Bool}
+    (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t)
+    (f : D.Feld t) (i : Expr D Γ Λ (.index (D.count t))) (hL : darf D t Λ)
+    (hnc : idxVarG? i = none) :
+    senkSkalLesen A c (.durch p t ht f i hL) = none := by
+  rw [senkSkalLesen_durch_slot]
+  exact senkSkalLesen_nichtvar_slot A c t f i hL hnc
+
+theorem senkSkalLesen_nichtvar_durch_zeuge :
+    senkSkalLesen zeA zeCfg zeReadDurch = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+theorem senkSkalLesen_ohne_basis_durch (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {rw : Bool}
+    (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t)
+    (f : D.Feld t) (y : Var Γ (.index (D.count t))) (hL : darf D t Λ)
+    (hB : PipelineTables.ankerBasis A t = none) :
+    senkSkalLesen A c (.durch p t ht f (.var y) hL) = none := by
+  rw [senkSkalLesen_durch_slot]
+  exact senkSkalLesen_ohne_basis A c t f y hL hB
+
+theorem senkSkalLesen_ohne_basis_durch_zeuge :
+    senkSkalLesen ankerLeer zeCfg zeReadDurchVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+theorem senkSkalLesen_ohne_zeile_durch (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {rw : Bool}
+    (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t)
+    (f : D.Feld t) (y : Var Γ (.index (D.count t))) (hL : darf D t Λ) (B : Nat)
+    (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = none) :
+    senkSkalLesen A c (.durch p t ht f (.var y) hL) = none := by
+  rw [senkSkalLesen_durch_slot]
+  exact senkSkalLesen_ohne_zeile A c t f y hL B hB hZ
+
+theorem senkSkalLesen_ohne_zeile_durch_zeuge :
+    senkSkalLesen ankerOhneZeile zeCfg zeReadDurchVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+theorem senkSkalLesen_ohne_feld_durch (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {rw : Bool}
+    (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t)
+    (f : D.Feld t) (y : Var Γ (.index (D.count t))) (hL : darf D t Λ) (B Z : Nat)
+    (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = none) :
+    senkSkalLesen A c (.durch p t ht f (.var y) hL) = none := by
+  rw [senkSkalLesen_durch_slot]
+  exact senkSkalLesen_ohne_feld A c t f y hL B Z hB hZ hO
+
+theorem senkSkalLesen_ohne_feld_durch_zeuge :
+    senkSkalLesen ankerOhneFeld zeCfg zeReadDurchVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+theorem senkSkalLesen_falsche_zeile_durch (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {rw : Bool}
+    (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t)
+    (f : D.Feld t) (y : Var Γ (.index (D.count t))) (hL : darf D t Λ)
+    (B Z O : Nat) (lo hi : Int)
+    (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = some O)
+    (hT : D.typ t f = .int lo hi) (hS : skalaOk Z = false) :
+    senkSkalLesen A c (.durch p t ht f (.var y) hL) = none := by
+  rw [senkSkalLesen_durch_slot]
+  exact senkSkalLesen_falsche_zeile A c t f y hL B Z O lo hi hB hZ hO hT hS
+
+theorem senkSkalLesen_falsche_zeile_durch_zeuge :
+    senkSkalLesen zeA zeCfg zeReadDurchVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+theorem senkSkalLesen_rsp_index_durch (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {rw : Bool}
+    (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t)
+    (f : D.Feld t) (y : Var Γ (.index (D.count t))) (hL : darf D t Λ)
+    (B Z O : Nat) (lo hi : Int)
+    (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = some O)
+    (hT : D.typ t f = .int lo hi) (hrsp : abbOf c _ y = .rsp) :
+    senkSkalLesen A c (.durch p t ht f (.var y) hL) = none := by
+  rw [senkSkalLesen_durch_slot]
+  exact senkSkalLesen_rsp_index A c t f y hL B Z O lo hi hB hZ hO hT hrsp
+
+theorem senkSkalLesen_rsp_index_durch_zeuge :
+    senkSkalLesen ankerSkala8 cfgRsp zeReadDurchVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
+theorem senkSkalLesen_falsche_basis_durch (A : TabAnker D) (c : PipeCfg)
+    {Γ : Ctx} {Λ : List (Res D)} {n : Nat} {rw : Bool}
+    (p : Expr D Γ Λ (.ptr n rw)) (t : D.Tab) (ht : D.tabNr n = some t)
+    (f : D.Feld t) (y : Var Γ (.index (D.count t))) (hL : darf D t Λ)
+    (B Z O : Nat) (lo hi : Int)
+    (hB : PipelineTables.ankerBasis A t = some B)
+    (hZ : PipelineTables.ankerZeile A t = some Z)
+    (hO : PipelineTables.feldOff A t f = some O)
+    (hT : D.typ t f = .int lo hi) (hadr : c.adr = .rbp) :
+    senkSkalLesen A c (.durch p t ht f (.var y) hL) = none := by
+  rw [senkSkalLesen_durch_slot]
+  exact senkSkalLesen_falsche_basis A c t f y hL B Z O lo hi hB hZ hO hT hadr
+
+theorem senkSkalLesen_falsche_basis_durch_zeuge :
+    senkSkalLesen ankerSkala8 cfgRbp zeReadDurchVar = none ∧
+    zeV.schreibt false = true ∧ zeRunChange := by
+  refine ⟨rfl, zeHw, zeRunChangeProof⟩
+
 /- CUTS:
    Skeleton only: scale exponent stub. The chunk, lowering, correctness,
    refusals and witnesses are OPEN.
