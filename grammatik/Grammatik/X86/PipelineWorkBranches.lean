@@ -103,6 +103,51 @@ theorem deckung_ite (code : List Befehl) (j : Bedingung) (pt pe : List Befehl)
     Deckung pipeSummary src (decodiertZu (iteCode code j pt pe)) :=
   deckung_von_laenge _ _ h
 
+/-! ## 3. Work/time correctness over validated programs.
+
+    In the style of `pipeline_arbeit_korrekt`: the source `execBlock`
+    result is related to the fetched-byte run on the loaded image
+    (`senkBlock_korrektC`, reused as a black box -- no second
+    interpreter), and the validated bytes carry retired-work and
+    named-time bounds through the validator-derived coverage (never
+    an assumed `Deckung`). Every premise is used. -/
+
+/-- BRANCH WORK CORRECTNESS: a validated program runs from the loaded
+    image with world and environment represented, and retired work
+    and named time are bounded over the source budget. -/
+theorem zweig_arbeit_korrekt (c : PipeCfg) (L : Layout D)
+    (hc : cfgOk c = true) (hsep : LayoutSep L)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (flat : List Byte)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (b : _root_.Gabbro.Grammatik.Block D V l Γ Λ Λ') (pre post : List Byte) (prog : List Befehl)
+    (h : senkBlock c L pre.length b = some prog)
+    (σ : World D) (ρ : Env D Γ) (s : Zustand)
+    (hcode : Pipeline.CodeAt s.speicher (natAdresse c.codeBase) flat)
+    (hf : flat = pre ++ encodeAll prog ++ post)
+    (hrip : s.rip = addrOff (natAdresse c.codeBase) pre.length)
+    (hW : WorldRep L s.speicher σ) (hE : EnvRepr ρ s.register (abbOf c))
+    (prof : HardwareProfil) (srcB B tt k : Nat)
+    (hval : pruefeZweig prog srcB = true)
+    (hCost : laufKosten prof (decodiertZu prog) = some tt)
+    (hb : ∀ dd ∈ decodiertZu prog,
+      ∃ cc, schrittKosten prof dd = some cc ∧ cc ≤ B)
+    (hk : expandBound pipeSummary srcB = some k) :
+    (∃ n s', laufBytes n s = .weiter s' ∧
+      Pipeline.CodeAt s'.speicher (natAdresse c.codeBase) flat ∧
+      Entspricht c L (addrOff (natAdresse c.codeBase) (pre.length + (encodeAll prog).length))
+        (execBlock O passes R b σ ρ) s') ∧
+    targetWork prog ≤ k ∧ tt ≤ B * k := by
+  have hrun := senkBlock_korrektC c L hc hsep O passes R flat b pre post prog h σ ρ s
+    hcode hf hrip hW hE
+  have hDeck := pruefeZweig_korrekt prog srcB hval
+  have hwork := hDeck k hk
+  rw [arbeit_decodiert] at hwork
+  have htime := budgetAusfuehrung_transfer pipeSummary prof (decodiertZu prog) srcB B tt
+    hCost hb hDeck k hk
+  exact ⟨hrun, hwork, htime⟩
+
 /- CUTS (skeleton):
     - Proved here: `iteCode_laenge`.
     - OPEN: everything else of the task (validator, main theorem,
