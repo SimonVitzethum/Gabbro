@@ -1,6 +1,6 @@
 # MUSE-REPORT-1260: Exact review of candidate 1259 — re-review blocked
 
-CANDIDATE: 1259 231b3e93789ec55e20f01a847e8eedd2dcf790a4
+CANDIDATE: 1259 9fd9fe2603bdfec61d70b0bb92ad7e1e9338c0e4
 
 VERDICT: REPAIR
 
@@ -19,22 +19,23 @@ MUSE-REPORT-1260.md only.
 
 ## Re-review note (new snapshot)
 
-The previous report pinned the superseded head `1650a2899f5eeea3db5883139ea47231fd605707`.
-That verdict is stale: the author has since repaired and the coordinator pinned a
-NEW head `231b3e93789ec55e20f01a847e8eedd2dcf790a4` (same base
+The previous report pinned the superseded head `231b3e93789ec55e20f01a847e8eedd2dcf790a4`
+(itself superseding `1650a2899f5eeea3db5883139ea47231fd605707`). Those verdicts
+are stale: the author has repaired again and the coordinator pinned a NEW head
+`9fd9fe2603bdfec61d70b0bb92ad7e1e9338c0e4` (same base
 `515546d0e2430c0d416ede74e3add0166e88e2de`, same file list:
 `MUSE-REPORT-1259.md`, `grammatik/Grammatik.lean`,
 `grammatik/Grammatik/X86/PipelineWorkPath.lean`, clean true). This report
 re-inspects the new pointer and re-checks availability: the candidate file
 `grammatik/Grammatik/X86/PipelineWorkPath.lean` does NOT exist in this clone,
 so the re-review below is against the new snapshot and reaches its own
-finding. The stale head is not approved anywhere in this report.
+finding. Neither stale head is approved anywhere in this report.
 
 ## Blocker (precise, re-verified for the new head)
 
 The lane task names the candidate with a `<full pinned HEAD>` placeholder. The
-pinned hash is on file in `.tmp/review/SNAPSHOT.json` (new head
-`231b3e93789ec55e20f01a847e8eedd2dcf790a4`, recorded in the machine-readable
+pinned hash is on file in `.tmp/review/SNAPSHOT.json` (current head
+`9fd9fe2603bdfec61d70b0bb92ad7e1e9338c0e4`, recorded in the machine-readable
 line at the top of this report).
 
 The candidate material itself is still not present in this clone: the author
@@ -64,7 +65,7 @@ the review re-dispatched). No finding about `PipelineWorkPath.lean`,
 because none of that material was read. Anything else would be fabrication.
 
 Pinned snapshot (`.tmp/review/SNAPSHOT.json`, re-read for this re-review):
-author 1259, new head `231b3e93789ec55e20f01a847e8eedd2dcf790a4`, base
+author 1259, current head `9fd9fe2603bdfec61d70b0bb92ad7e1e9338c0e4`, base
 `515546d0e2430c0d416ede74e3add0166e88e2de`, files `MUSE-REPORT-1259.md`,
 `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/PipelineWorkPath.lean`,
 clean true. None of these objects is present in this clone: the author branch
