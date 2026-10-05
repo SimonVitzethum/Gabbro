@@ -2,7 +2,7 @@
 
 CANDIDATE: 1365 6a67cc7ff3f608f00abed250c4261ff40012aa1d
 
-## VERDICT: ACCEPT
+VERDICT: ACCEPT
 
 ## What was done
 
