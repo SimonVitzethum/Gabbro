@@ -520,6 +520,328 @@ theorem kap_system_intN_kein_tso_ereignis (m m' : HwMaschine)
         rw [e1x, e0x] at hfr
         exact hx hfr
 
+/-! ## 4. Union lifts: the classified tags reach the TSO level.
+
+    Each lift inverts its union constructor (the 1295 pattern) and
+    applies the plug-level classification. LOCK XADD reaches the
+    accepted TSO locked event; MFENCE and the memory-unchanged system
+    legs are silent; fetched XADD inherits the locked event
+    off-split. -/
+
+/-- A classified LOCK XADD union step is the accepted TSO locked
+    event on the projection. -/
+theorem kap_union_lockRmw_xadd_tso (m m' : HwMaschine) (c : Nat)
+    (src base : Register) (d : BitVec 32) (len : Nat)
+    (h : HwVollSchritt m m'
+      (KapEreignis.lockRmw c (.ok (.xadd64 src base d) len))) :
+    ∃ tgt : Adresse, ∃ delta : Wort, ∃ ev : LockEreignis,
+      tgt = effAddr (projZustand m c) base d ∧
+      delta = (m.kerne c).register src ∧
+      m.puffer c = [] ∧
+      lockSchritt (.xadd64 tgt delta) c (kapTso m) =
+        some (kapTso m', ev) ∧
+      ev.lesen = Fuss tgt ∧ ev.schreiben = Fuss tgt ∧
+      ev.istRmw = true ∧
+      (∀ dd, dd ≠ c → (kapTso m').puffer dd = (kapTso m).puffer dd) ∧
+      (kapTso m').puffer c = [] := by
+  cases h with
+  | lockRmw _ _ heq =>
+    have h2 : hwLockSchritt m c (.ok (.xadd64 src base d) len) =
+        some m' := heq
+    exact kapLockTso_xadd_geerbt m c src base d len m' h2
+
+/-- A classified LOCK MFENCE union step is silent on the
+    projection. -/
+theorem kap_union_lockRmw_mfence_still (m m' : HwMaschine) (c : Nat)
+    (len : Nat)
+    (h : HwVollSchritt m m'
+      (KapEreignis.lockRmw c (.ok .mfence len))) :
+    kapTso m' = kapTso m := by
+  cases h with
+  | lockRmw _ _ heq =>
+    have h2 : hwLockSchritt m c (.ok .mfence len) = some m' := heq
+    exact kapLockTso_mfence_still m c len m' h2
+
+/-- A classified fetched LOCK XADD union step is the accepted TSO
+    locked event on the projection. -/
+theorem kap_union_lockFetch_xadd_tso (m m' : HwMaschine) (c : Nat)
+    (u : Unit) (src base : Register) (d : BitVec 32) (len : Nat)
+    (rest : List Byte)
+    (hfetch : hwLockFetch m c =
+      some (.ok (.xadd64 src base d) len, rest))
+    (hs : match lockFuss m c (.xadd64 src base d) with
+      | some tgt => splitSperre tgt = false
+      | none => True)
+    (h : HwVollSchritt m m' (KapEreignis.lockFetch c u)) :
+    ∃ tgt : Adresse, ∃ delta : Wort, ∃ ev : LockEreignis,
+      tgt = effAddr (projZustand m c) base d ∧
+      delta = (m.kerne c).register src ∧
+      m.puffer c = [] ∧
+      lockSchritt (.xadd64 tgt delta) c (kapTso m) =
+        some (kapTso m', ev) ∧
+      ev.lesen = Fuss tgt ∧ ev.schreiben = Fuss tgt ∧
+      ev.istRmw = true ∧
+      (∀ dd, dd ≠ c → (kapTso m').puffer dd = (kapTso m).puffer dd) ∧
+      (kapTso m').puffer c = [] := by
+  cases h with
+  | lockFetch _ _ heq =>
+    have h2 : hwLockFetchSchritt m c = some m' := heq
+    exact kap_lockFetch_xadd_geerbt m c src base d len rest m'
+      hfetch hs h2
+
+/-- A classified system union step over a memory-unchanged leg is
+    silent on the projection. -/
+theorem kap_union_system_still (m m' : HwMaschine) (c : Nat)
+    (st : SysSteuer) (ev : SysEreignis) (k' : HwKern)
+    (st' : SysSteuer)
+    (hsnap : sysSnapSchritt m c st ev = .ok k' st' m.mem)
+    (h : HwVollSchritt m m' (KapEreignis.system c st ev)) :
+    kapTso m' = kapTso m := by
+  cases h with
+  | system _ _ _ heq =>
+    exact kap_system_still_of_mem m c st ev k' st' hsnap m' heq
+
+/-! ## 5. IRET witness machine and the joint silent-system witness.
+
+    `sysWitStart` parks RSP at 20480, where `witMem` is unreadable,
+    so no admitted IRET leg exists on it. The variant below parks
+    core 0 RSP at 16336 -- five readable zero words inside the
+    accepted stack window -- and is otherwise the witness start. -/
+
+/-- IRET witness registers: RSP parked at 16336, rest as the system
+    witness. -/
+def kapIretReg : Register → Wort := fun q =>
+  if q = Register.rsp then BitVec.ofNat 64 16336 else sysWitReg q
+
+/-- IRET witness machine: the witness memory, parked RSP on core 0,
+    empty buffers, full silicon. -/
+def kapIretHw : HwMaschine :=
+  ⟨witMem, fun _ => ⟨kapIretReg, zeugeFlags,
+    BitVec.ofNat 64 0x1000, fun _ => BitVec.ofNat 128 0,
+    kontextReset⟩,
+    fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The parked RSP reads back. -/
+theorem kapIret_rsp :
+    (kapIretHw.kerne 0).register .rsp =
+      BitVec.ofNat 64 16336 := by
+  decide
+
+/-- The parked machine carries the witness memory. -/
+theorem kapIret_mem : kapIretHw.mem = witMem := rfl
+
+/-- The five frame words read back as zero. -/
+theorem kapIret_liest0 :
+    read64 witMem (BitVec.ofNat 64 16336) =
+      some (BitVec.ofNat 64 0) := by
+  decide
+
+/-- The five frame words read back as zero. -/
+theorem kapIret_liest1 :
+    read64 witMem (BitVec.ofNat 64 16344) =
+      some (BitVec.ofNat 64 0) := by
+  decide
+
+/-- The five frame words read back as zero. -/
+theorem kapIret_liest2 :
+    read64 witMem (BitVec.ofNat 64 16352) =
+      some (BitVec.ofNat 64 0) := by
+  decide
+
+/-- The five frame words read back as zero. -/
+theorem kapIret_liest3 :
+    read64 witMem (BitVec.ofNat 64 16360) =
+      some (BitVec.ofNat 64 0) := by
+  decide
+
+/-- The five frame words read back as zero. -/
+theorem kapIret_liest4 :
+    read64 witMem (BitVec.ofNat 64 16368) =
+      some (BitVec.ofNat 64 0) := by
+  decide
+
+/-- The popped zero RIP is canonical. -/
+theorem kapIret_kanonisch :
+    istKanonisch (BitVec.ofNat 64 0) = true := by
+  decide
+
+/-- The IRET witness machine is well-formed. -/
+theorem kapIretHw_wf : HwWf kapIretHw := by
+  apply hwWf_aus_zugelassen
+  intro c f
+  cases f with
+  | skalar64 => rfl
+  | skalar32 => rfl
+  | sseDoppel =>
+    show merkmalZugelassen basisHw basisBereit .sseDoppel = true
+    decide
+  | paketInt128 => rfl
+
+/-- Joint silent-system witness: all nine memory-unchanged legs as
+    reached union steps silent on the projection. Eight run on the
+    witness start machine, IRET on the parked-RSP variant; the CLI
+    leg additionally keeps every buffer. -/
+theorem kapLocked_sys_alle_still :
+    (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.cli, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw ∧
+      ∀ d, m1.puffer d = sysWitStart.hw.puffer d)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.hlt, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.sti, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.pause, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.cpuid, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.rdtsc, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer
+          ⟨.syscall, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt sysWitStart.hw m1
+        (KapEreignis.system 0 sysWitSteuer
+          ⟨.sysret, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso sysWitStart.hw)
+    ∧ (∃ m1 : HwMaschine,
+      HwVollSchritt kapIretHw m1
+        (KapEreignis.system 0 sysWitSteuer ⟨.iret, sysWitEingaben⟩) ∧
+      kapTso m1 = kapTso kapIretHw) := by
+  have hpriv : sysWitSteuer.steuer.cpl ≤ sysWitSteuer.steuer.iopl := by
+    decide
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · obtain ⟨mCli, hplugCli⟩ := kapPlug_system
+    exact ⟨mCli, (kap_system_embedded _ _ _ _ _).mp hplugCli,
+      kap_system_cli_still _ _ _ _ rfl hpriv _ hplugCli,
+      fun d => kap_system_puffer_bleibt _ _ _ _ d hplugCli⟩
+  · obtain ⟨kH, stH, hrestH⟩ :=
+      schrittHlt_ok sysWitStart.hw 0 sysWitSteuer rfl
+    have hsnapH : sysSnapSchritt sysWitStart.hw 0 sysWitSteuer
+        ⟨.hlt, sysWitEingaben⟩ = .ok kH stH sysWitStart.hw.mem := by
+      simp [sysSnapSchritt, hrestH.1]
+    have hplugH := adapterSystem_ok sysWitStart.hw 0
+      (sysWitSteuer, ⟨.hlt, sysWitEingaben⟩) kH stH _ hsnapH
+    exact ⟨_, (kap_system_embedded _ _ _ _ _).mp hplugH,
+      kap_system_hlt_still _ _ _ _ rfl rfl _ hplugH⟩
+  · obtain ⟨kS, stS, hrestS⟩ :=
+      schrittIf_sti_ok sysWitStart.hw 0 sysWitSteuer hpriv
+    have hsnapS : sysSnapSchritt sysWitStart.hw 0 sysWitSteuer
+        ⟨.sti, sysWitEingaben⟩ = .ok kS stS sysWitStart.hw.mem := by
+      simp [sysSnapSchritt, hrestS.1]
+    have hplugS := adapterSystem_ok sysWitStart.hw 0
+      (sysWitSteuer, ⟨.sti, sysWitEingaben⟩) kS stS _ hsnapS
+    exact ⟨_, (kap_system_embedded _ _ _ _ _).mp hplugS,
+      kap_system_sti_still _ _ _ _ rfl hpriv _ hplugS⟩
+  · obtain ⟨kP, stP, memP, hrestP⟩ :=
+      schrittPause_still sysWitStart.hw 0 sysWitSteuer
+    have hmemP := hrestP.2.2.2.1
+    subst hmemP
+    have hsnapP : sysSnapSchritt sysWitStart.hw 0 sysWitSteuer
+        ⟨.pause, sysWitEingaben⟩ = .ok kP stP sysWitStart.hw.mem := by
+      simp [sysSnapSchritt, hrestP.1]
+    have hplugP := adapterSystem_ok sysWitStart.hw 0
+      (sysWitSteuer, ⟨.pause, sysWitEingaben⟩) kP stP _ hsnapP
+    exact ⟨_, (kap_system_embedded _ _ _ _ _).mp hplugP,
+      kap_system_pause_still _ _ _ _ rfl _ hplugP⟩
+  · obtain ⟨kC, stC, hrestC⟩ := schrittCpuid_rax sysWitStart.hw 0
+      sysWitSteuer sysWitEingaben.cpuidOut
+    have hsnapC : sysSnapSchritt sysWitStart.hw 0 sysWitSteuer
+        ⟨.cpuid, sysWitEingaben⟩ = .ok kC stC sysWitStart.hw.mem := by
+      simp [sysSnapSchritt, hrestC.1]
+    have hplugC := adapterSystem_ok sysWitStart.hw 0
+      (sysWitSteuer, ⟨.cpuid, sysWitEingaben⟩) kC stC _ hsnapC
+    exact ⟨_, (kap_system_embedded _ _ _ _ _).mp hplugC,
+      kap_system_cpuid_still _ _ _ _ rfl _ hplugC⟩
+  · obtain ⟨kR, stR, hrestR⟩ := schrittRdtsc_ok sysWitStart.hw 0
+      sysWitSteuer sysWitEingaben.tsc
+    have htsd : sysWitEingaben.tsd = false := rfl
+    have hsnapR : sysSnapSchritt sysWitStart.hw 0 sysWitSteuer
+        ⟨.rdtsc, sysWitEingaben⟩ = .ok kR stR sysWitStart.hw.mem := by
+      simp [sysSnapSchritt, htsd, hrestR.1]
+    have hplugR := adapterSystem_ok sysWitStart.hw 0
+      (sysWitSteuer, ⟨.rdtsc, sysWitEingaben⟩) kR stR _ hsnapR
+    exact ⟨_, (kap_system_embedded _ _ _ _ _).mp hplugR,
+      kap_system_rdtsc_still _ _ _ _ rfl htsd _ hplugR⟩
+  · obtain ⟨kY, stY, hrestY⟩ := schrittSyscall_ok sysWitStart.hw 0
+      sysWitSteuer sysWitEingaben rfl
+    have hsnapY : sysSnapSchritt sysWitStart.hw 0 sysWitSteuer
+        ⟨.syscall, sysWitEingaben⟩ =
+        .ok kY stY sysWitStart.hw.mem := by
+      simp [sysSnapSchritt, hrestY.1]
+    have hplugY := adapterSystem_ok sysWitStart.hw 0
+      (sysWitSteuer, ⟨.syscall, sysWitEingaben⟩) kY stY _ hsnapY
+    have hsce : sysWitEingaben.sceLang = true := rfl
+    exact ⟨_, (kap_system_embedded _ _ _ _ _).mp hplugY,
+      kap_system_syscall_still _ _ _ _ rfl hsce _ hplugY⟩
+  · have hcanon : istKanonisch
+        ((sysWitStart.hw.kerne 0).register .rcx) = true := by
+      decide
+    have hk (h64 : sysWitEingaben.op64 = true) :
+        istKanonisch ((sysWitStart.hw.kerne 0).register .rcx) =
+          true := hcanon
+    obtain ⟨kT, stT, hrestT⟩ := schrittSysret_ok sysWitStart.hw 0
+      sysWitSteuer sysWitEingaben rfl rfl hk
+    have hsnapT : sysSnapSchritt sysWitStart.hw 0 sysWitSteuer
+        ⟨.sysret, sysWitEingaben⟩ =
+        .ok kT stT sysWitStart.hw.mem := by
+      simp [sysSnapSchritt, hrestT.1]
+    have hplugT := adapterSystem_ok sysWitStart.hw 0
+      (sysWitSteuer, ⟨.sysret, sysWitEingaben⟩) kT stT _ hsnapT
+    have hsce : sysWitEingaben.sceLang = true := rfl
+    exact ⟨_, (kap_system_embedded _ _ _ _ _).mp hplugT,
+      kap_system_sysret_still _ _ _ _ rfl hsce rfl hk _ hplugT⟩
+  · have h0 : read64 kapIretHw.mem
+        ((kapIretHw.kerne 0).register .rsp) =
+        some (BitVec.ofNat 64 0) := by
+      rw [kapIret_mem, kapIret_rsp]
+      exact kapIret_liest0
+    have h1 : read64 kapIretHw.mem
+        (addrOff ((kapIretHw.kerne 0).register .rsp) 8) =
+        some (BitVec.ofNat 64 0) := by
+      rw [kapIret_mem, kapIret_rsp]
+      exact kapIret_liest1
+    have h2 : read64 kapIretHw.mem
+        (addrOff ((kapIretHw.kerne 0).register .rsp) 16) =
+        some (BitVec.ofNat 64 0) := by
+      rw [kapIret_mem, kapIret_rsp]
+      exact kapIret_liest2
+    have h3 : read64 kapIretHw.mem
+        (addrOff ((kapIretHw.kerne 0).register .rsp) 24) =
+        some (BitVec.ofNat 64 0) := by
+      rw [kapIret_mem, kapIret_rsp]
+      exact kapIret_liest3
+    have h4 : read64 kapIretHw.mem
+        (addrOff ((kapIretHw.kerne 0).register .rsp) 32) =
+        some (BitVec.ofNat 64 0) := by
+      rw [kapIret_mem, kapIret_rsp]
+      exact kapIret_liest4
+    have hk : istKanonisch (BitVec.ofNat 64 0) = true :=
+      kapIret_kanonisch
+    obtain ⟨kI, stI, hrestI⟩ := schrittIret_ok kapIretHw 0
+      sysWitSteuer 0 0 0 0 0 h0 h1 h2 h3 h4 hk
+    have hsnapI : sysSnapSchritt kapIretHw 0 sysWitSteuer
+        ⟨.iret, sysWitEingaben⟩ = .ok kI stI kapIretHw.mem := by
+      simp [sysSnapSchritt, hrestI.1]
+    have hplugI := adapterSystem_ok kapIretHw 0
+      (sysWitSteuer, ⟨.iret, sysWitEingaben⟩) kI stI _ hsnapI
+    exact ⟨_, (kap_system_embedded _ _ _ _ _).mp hplugI,
+      kap_system_iret_still _ _ _ _ rfl 0 0 0 0 0
+        h0 h1 h2 h3 h4 hk _ hplugI⟩
+
 /- CUTS:
     Skeleton only: the generic silent-leg transport
     `kap_system_still_of_mem`. Per-form legs, the locked-RMW event,
