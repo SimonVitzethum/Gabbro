@@ -305,6 +305,50 @@ theorem run_speicher_ende :
       some (BitVec.ofNat 8 99) := by
   decide
 
+/-! ## 5. In-run observations: forwarding, slot reads, both-core loads.
+
+  Every observation is a silent union step (state unchanged): the owner
+  forwards its buffered word, the foreign core reads canonical memory
+  until the drain, pop/ret read the slot, and after the drains both
+  cores read the flushed bytes from shared memory. -/
+
+/-- Owner forwarding: core 0 reads its buffered store word. -/
+theorem run_fwd_beobachte_pin :
+    (runNachStore.map fun m =>
+      stapelLadeWort (tsoAnsicht m) 0 runStoreAdr) =
+      some (some runStoreWort) := by
+  decide
+
+/-- No foreign forwarding: core 1 reads canonical memory (zero). -/
+theorem run_basis_fremd_pin :
+    (runNachStore.map fun m => loadByte (tsoAnsicht m) 1 runStoreAdr) =
+      some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- Pop reads the pushed word at the slot. -/
+theorem run_pop_pin :
+    (runNachPush.map fun m =>
+      stapelLadeWort (tsoAnsicht m) 0 (BitVec.ofNat 64 8200)) =
+      some (some runPushWort) := by
+  decide
+
+/-- Pop and ret read the younger call word at the slot. -/
+theorem run_ruf_liest_pin :
+    (runNachRuf.map fun m =>
+      stapelLadeWort (tsoAnsicht m) 0 (BitVec.ofNat 64 8200)) =
+      some (some runRufWort) := by
+  decide
+
+/-- After the drains both cores read the flushed byte from memory. -/
+theorem run_ende_beobachte_pin :
+    (runNachFlush1.map fun m =>
+      loadByte (tsoAnsicht m) 0 (BitVec.ofNat 64 8216)) =
+      some (some (BitVec.ofNat 8 99)) ∧
+    (runNachFlush1.map fun m =>
+      loadByte (tsoAnsicht m) 1 (BitVec.ofNat 64 8216)) =
+      some (some (BitVec.ofNat 8 99)) := by
+  decide
+
 /- CUTS:
     Skeleton only: start machine plus well-formedness. The run steps,
     drains, observations and final memory are not yet built.
