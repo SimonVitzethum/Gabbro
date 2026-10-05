@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 19:47 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 20:11 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -654,7 +654,7 @@ Last ledger refresh: **2026-10-05 19:47 UTC**. This is an operational snapshot, 
 | 1191 | Pipeline: spill code generation with privacy | Merged after review/checks | 1192: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1191.md) |
 | 1193 | Linking: multi-unit convergence and operand kinds | Merged after review/checks | 1194: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1193.md) |
 | 1195 | Pipeline: block-size induction over multi-statement blocks | Merged after review/checks | 1196: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1195.md) |
-| 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: Committed candidate; review/integration pending | [task](lanes/1197.md) |
+| 1197 | Pipeline: block-level table reads and scaled-index addressing | Committed candidate; review/integration pending | 1198: Committed candidate; review/integration pending | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Merged after review/checks | 1200: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Merged after review/checks | 1202: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
@@ -674,13 +674,13 @@ Last ledger refresh: **2026-10-05 19:47 UTC**. This is an operational snapshot, 
 | 1231 | Pipeline tables: byte slices | Committed candidate; review/integration pending | 1232: Unresolved after agent rounds; not accepted; integration gate rejected; repair/re-review required | [task](lanes/1231.md) |
 | 1233 | Pipeline work bounds for branches and loops | Merged after review/checks | 1234: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1233.md) |
 | 1235 | Profiles: multi-step control flow and relocation re-decode | Merged after review/checks | 1236: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1235.md) |
-| 1237 | AVX2: VEX prefix decoder and encoder | Agent working | 1238: Committed candidate; review/integration pending | [task](lanes/1237.md) |
+| 1237 | AVX2: VEX prefix decoder and encoder | Committed candidate; review/integration pending | 1238: Committed candidate; review/integration pending | [task](lanes/1237.md) |
 | 1239 | AVX2: 256-bit integer operation semantics | Merged after review/checks | 1240: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1239.md) |
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Merged after review/checks | 1244: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Merged after review/checks | 1248: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1247.md) |
-| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Incomplete; preserved | [task](lanes/1249.md) |
+| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Unresolved after agent rounds; not accepted | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Merged after review/checks | 1256: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1255.md) |
@@ -714,9 +714,9 @@ Last ledger refresh: **2026-10-05 19:47 UTC**. This is an operational snapshot, 
 | 1311 | Capstone, second step: add the families merged since the first union | Agent working | 1312: scheduled | [task](lanes/1311.md) |
 | 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Agent working | 1314: scheduled | [task](lanes/1313.md) |
 | 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Agent working | 1316: scheduled | [task](lanes/1315.md) |
-| 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: scheduled | [task](lanes/1317.md) |
+| 1317 | Memory-operand addressing forms for bit test and bit scan | Incomplete; preserved | 1318: scheduled | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Agent working | 1320: scheduled | [task](lanes/1319.md) |
-| 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Agent working | 1322: scheduled | [task](lanes/1321.md) |
+| 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Committed candidate; review/integration pending | 1322: Agent working | [task](lanes/1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
 | 1325 | TSO projection: the locked and direct-memory tags | Agent working | 1326: scheduled | [task](lanes/1325.md) |
 | 1327 | TSO projection: the issue-path tags isa, addr, muldiv | Agent working | 1328: scheduled | [task](lanes/1327.md) |
@@ -1729,6 +1729,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1324**, Independent exact review of 1323, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1324.md). <!-- x86-merged:1324 -->
 - 2026-10-05: lane **1281**, Sign-extend-accumulator ops and register XCHG, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1281.md). <!-- x86-merged:1281 -->
 - 2026-10-05: lane **1282**, Independent exact review of 1281, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1282.md). <!-- x86-merged:1282 -->
+- 2026-10-05: publication batch checks passed for `ac5c6b0d`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
