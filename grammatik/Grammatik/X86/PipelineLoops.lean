@@ -115,6 +115,74 @@ theorem schleife_verweigert_sprung (treibstoff : Nat) (c : Bedingung)
   schleife_verweigert_schlechten_koerper treibstoff [.pilot (.jump32 d)] c 0
     (by simp) (by rfl)
 
+/-! ## 3. The target step budget: source rounds to labelled steps -/
+
+/-- One source round is at most `m + 2` labelled steps (head `jcc`, `m`
+    body rows, back `jmp`); the final exit check costs one more step. -/
+def schleifeSchritte (runden : Nat) (m : Nat) : Nat := runden * (m + 2) + 1
+
+/-- One more round costs one more body segment. -/
+theorem schleifeSchritte_succ (n m : Nat) :
+    schleifeSchritte (n + 1) m = schleifeSchritte n m + (m + 2) := by
+  unfold schleifeSchritte
+  rw [Nat.add_mul, Nat.one_mul]
+  omega
+
+/-- The budget splits into one round plus the rest (the shape `laufL_add`
+    consumes). -/
+theorem schleifeSchritte_add (n m : Nat) :
+    schleifeSchritte (n + 1) m = (m + 2) + schleifeSchritte n m := by
+  rw [schleifeSchritte_succ]
+  omega
+
+/-- Past the end the bounded labelled run stays put. -/
+theorem laufL_stop (adr : Nat → Adresse) (p : LProg) (k : Nat) (x : Nat × Zustand)
+    (h : p.length ≤ x.1) : laufL adr p k x = some x := by
+  induction k with
+  | zero => rfl
+  | succ k _ =>
+    simp only [laufL]
+    rw [if_neg (by omega)]
+
+/-! ## 4. The source side: the real `retry`/`forever` runners, unfolded -/
+
+/-- `retry` stops loudly-successfully when the bound predicate holds: no
+    body step runs. -/
+theorem wiederhol_steht {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (schritt : World D → Env D Γ → Ausgang V true Γ)
+    (bis : World D → Env D Γ → World D × Bool)
+    (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
+    (n : Nat) (σ : World D) (ρ : Env D Γ)
+    (h : (bis σ ρ).2 = true) :
+    retryLauf schritt bis ueberlauf (n + 1) σ ρ = .ok (bis σ ρ).1 ρ := by
+  simp [retryLauf, h]
+
+/-- `retry` with a false bound runs one body step and continues with `n`. -/
+theorem wiederhol_schritt {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (schritt : World D → Env D Γ → Ausgang V true Γ)
+    (bis : World D → Env D Γ → World D × Bool)
+    (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
+    (n : Nat) (σ σ' : World D) (ρ ρ' : Env D Γ)
+    (h : (bis σ ρ).2 = false)
+    (hs : schritt (bis σ ρ).1 ρ = .ok σ' ρ') :
+    retryLauf schritt bis ueberlauf (n + 1) σ ρ
+      = retryLauf schritt bis ueberlauf n σ' ρ' := by
+  simp [retryLauf, h, hs]
+
+/-- FINITE-PREFIX CLAIM for unbounded loops: `forever` at `n + 1` passes
+    with a true invariant runs one body step and continues with `n`. What
+    is NOT claimed: any finite budget covering all runs. -/
+theorem ewig_ein_schritt {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (a : D.Annahme)
+    (schritt : World D → Env D Γ → Ausgang V true Γ)
+    (inv : World D → Env D Γ → World D × Bool)
+    (n : Nat) (σ σ' : World D) (ρ ρ' : Env D Γ)
+    (hinv : (inv σ ρ).2 = true)
+    (hs : schritt (inv σ ρ).1 ρ = .ok σ' ρ') :
+    foreverLauf (l := l) a schritt inv (n + 1) σ ρ
+      = foreverLauf (l := l) a schritt inv n σ' ρ' := by
+  simp [foreverLauf, hinv, hs]
+
 /-
 CUTS:
 - Pilot ISA only through `Instr`; one core, model memory, no time, no TSO:
