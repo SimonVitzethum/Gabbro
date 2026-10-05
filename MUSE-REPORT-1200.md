@@ -1,6 +1,9 @@
 # MUSE-REPORT-1200: exact review of candidate 1199 (PipelineLoadedAll)
 
-## VERDICT: ACCEPT
+CANDIDATE: 1199 046e4d94f36b2ad8d91e9a3e1f1f509f86f61004
+VERDICT: ACCEPT
+
+## Verdict rationale (substantive verdict unchanged: ACCEPT)
 
 Candidate: lane 1199, pinned HEAD `046e4d94f36b2ad8d91e9a3e1f1f509f86f61004`
 (base `4ed3590d85cf770cb098132aed8ee9752e29e013`), reviewed from the
