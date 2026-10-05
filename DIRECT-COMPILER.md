@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 17:30 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 17:32 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -677,7 +677,7 @@ Last ledger refresh: **2026-10-05 17:30 UTC**. This is an operational snapshot, 
 | 1237 | AVX2: VEX prefix decoder and encoder | Agent working | 1238: scheduled | [task](lanes/1237.md) |
 | 1239 | AVX2: 256-bit integer operation semantics | Merged after review/checks | 1240: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1239.md) |
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1241.md) |
-| 1243 | AVX2: 32-byte memory accesses on the TSO machine | Committed candidate; review/integration pending | 1244: Committed candidate; review/integration pending | [task](lanes/1243.md) |
+| 1243 | AVX2: 32-byte memory accesses on the TSO machine | Merged after review/checks | 1244: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Committed candidate; review/integration pending | 1248: Agent working | [task](lanes/1247.md) |
 | 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Unresolved after agent rounds; not accepted | [task](lanes/1249.md) |
@@ -698,7 +698,7 @@ Last ledger refresh: **2026-10-05 17:30 UTC**. This is an operational snapshot, 
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Agent working | 1280: scheduled | [task](lanes/1279.md) |
 | 1281 | Sign-extend-accumulator ops and register XCHG | Agent working | 1282: scheduled | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Agent working | 1284: scheduled | [task](lanes/1283.md) |
-| 1285 | FS/GS segment bases and the TLB | Committed candidate; review/integration pending | 1286: Agent working | [task](lanes/1285.md) |
+| 1285 | FS/GS segment bases and the TLB | Committed candidate; review/integration pending | 1286: Committed candidate; review/integration pending | [task](lanes/1285.md) |
 | 1287 | Memory types WC, WT, WP and the cache-control instructions | Agent working | 1288: scheduled | [task](lanes/1287.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1651,6 +1651,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1176**, Independent exact review of 1175, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1176.md). <!-- x86-merged:1176 -->
 - 2026-10-05: lane **1227**, Pipeline spills: variable homing and live-range splitting, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1227.md). <!-- x86-merged:1227 -->
 - 2026-10-05: lane **1228**, Independent exact review of 1227, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1228.md). <!-- x86-merged:1228 -->
+- 2026-10-05: lane **1243**, AVX2: 32-byte memory accesses on the TSO machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1243.md). <!-- x86-merged:1243 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
