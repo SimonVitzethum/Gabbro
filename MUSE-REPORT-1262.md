@@ -72,4 +72,7 @@
   issues, `HwSchritt` embedding, post-drain outcome, foreign core sees old
   value, two-core witness) is fully met.
 
-## VERDICT: ACCEPT
+## Machine-readable verdict
+
+CANDIDATE: 1261 f89f0c1ad4a4bf70eefb25ce936b8487c2ff9c16
+VERDICT: ACCEPT
