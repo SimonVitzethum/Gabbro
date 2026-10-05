@@ -654,7 +654,7 @@ Last ledger refresh: **2026-10-05 20:14 UTC**. This is an operational snapshot, 
 | 1191 | Pipeline: spill code generation with privacy | Merged after review/checks | 1192: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1191.md) |
 | 1193 | Linking: multi-unit convergence and operand kinds | Merged after review/checks | 1194: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1193.md) |
 | 1195 | Pipeline: block-size induction over multi-statement blocks | Merged after review/checks | 1196: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1195.md) |
-| 1197 | Pipeline: block-level table reads and scaled-index addressing | Merged after review/checks | 1198: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1197.md) |
+| 1197 | Pipeline: block-level table reads and scaled-index addressing | Merged after review/checks | 1198: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Merged after review/checks | 1200: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Merged after review/checks | 1202: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
@@ -1732,6 +1732,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: publication batch checks passed for `ac5c6b0d`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: lane **1197**, Pipeline: block-level table reads and scaled-index addressing, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1197.md). <!-- x86-merged:1197 -->
 - 2026-10-05: checked master `cde66b5e` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:cde66b5e95b13a42b7d3f8f1b49f6c5e19cf7ad8 -->
+- 2026-10-05: lane **1198**, Independent exact review of 1197, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1198.md). <!-- x86-merged:1198 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
