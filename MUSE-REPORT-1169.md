@@ -67,7 +67,33 @@ Axioms: every `#print axioms` is `[]`, `[propext]`, or
   pilot ISA only, no silicon correspondence beyond accepted canonical
   definitions. See CUTS in the file.
 
-## Task remarks
+## Review response (2026-10-05, reviewer lane 1170)
+
+Reviewer verdict: REPAIR, but on purely apparatus grounds — the
+reviewer clone could not display the pinned diff (tool-gate denials),
+so every checklist item stands at NOT CHECKED. No content finding
+against any definition, theorem, proof step, axiom, refusal, probe,
+witness, or CUTS sentence of this lane was raised.
+
+Self-verification after the review (this clone, unchanged tree):
+- Banned scan `rg "sorry|admit|native_decide|sorryAx|unsafe|^axiom "`
+  over `PipelineTso.lean`: no hits.
+- Diff scope `git diff --stat 062b979a..HEAD`: exactly the 3 owned
+  files (new `PipelineTso.lean`, 1 import line in `Grammatik.lean`,
+  this report). Reserved optimiser files untouched.
+- `./lean-probe`: 0 errors; all `#print axioms` are `[]`,
+  `[propext]`, or `[propext, Quot.sound]`; no linter warnings on this
+  file (every premise used — the one unused premise found during
+  development was removed, not worked around).
+- `./lean-bau`: exit 0, 0 error lines, 608 jobs green (the one
+  visible linter note belongs to pre-existing master file
+  `G719_lock_taken_nowhere.lean`, not to this lane).
+
+Nothing was weakened and no finding required a code change; the
+deliverable stands as reviewed-pending-content. CUTS in
+`PipelineTso.lean` unchanged and honest.
+## Task remarks (kept)
+
 Nothing in the task appears wrong. One scoping note: the task asks for
 "the memory outcome observed by the other cores after drain equals the
 source's" — delivered as word + per-byte agreement between SC
