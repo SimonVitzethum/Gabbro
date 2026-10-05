@@ -595,3 +595,141 @@ theorem senkLesen_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = true)
               (fun _ x => hreg _ (cfgOk_frei c hc x).1 ((cfgOk_frei c hc x).2.2))
         · rw [if_neg hok] at h; cases h
   | _ => simp [senkLesen] at h
+
+/-! ## 5. Lowering of source writes -/
+
+/-- WRITE LOWERING: an array/record store at a constant in-extent index
+    becomes the deep value code plus the address materialisation and a
+    pilot `store64` (same shape as the accepted `senkStmt`, with the
+    bound checked here instead of silently assumed). Stores through
+    region pointers (`assignDurch`) lower identically: the pointer value
+    is `Unit`, so only its carrier equation is reused. A non-constant
+    index, an out-of-extent index, an unlisted table/field, a
+    non-integer field, an unlowerable value, or a refused address form
+    gives `none`. -/
+def senkSchreiben (A : TabAnker D) (c : PipeCfg) {V : Vertrag D}
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ') : Option (List Befehl) :=
+  match s with
+  | .assignSlot t f i e _ _ => match constInt? i with
+    | some k => match feldAdr A t k f with
+      | some Adr => if repOk (D.typ t f) Adr 8 0 &&
+          adrOk (basisKeinForm c.adr) then
+          (senkWertT c e).map fun pv => pv ++
+            [.movImm64 c.adr (natAdresse Adr),
+              .store64 c.adr c.dst (BitVec.ofNat 32 0)]
+        else none
+      | none => none
+    | none => none
+  | .assignDurch _ t _ f i e _ _ => match constInt? i with
+    | some k => match feldAdr A t k f with
+      | some Adr => if repOk (D.typ t f) Adr 8 0 &&
+          adrOk (basisKeinForm c.adr) then
+          (senkWertT c e).map fun pv => pv ++
+            [.movImm64 c.adr (natAdresse Adr),
+              .store64 c.adr c.dst (BitVec.ofNat 32 0)]
+        else none
+      | none => none
+    | none => none
+  | _ => none
+
+/-- WRITE CORRECTNESS: the lowered store runs the real `execStmt`
+    outcome — the source world with the slot written — keeps the world
+    represented and the environment, in the style of
+    `senkBlock_korrektC` for one statement. -/
+theorem senkSchreiben_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = true)
+    (hsep : ankerSepB A = true)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (s : Stmt D V l Γ Λ Λ')
+    (ρ : Env D Γ) (σ : World D) (st : Zustand)
+    (hE : EnvRepr ρ st.register (abbOf c)) (hW : WorldRep (tabLayout A) st.speicher σ)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (p : List Befehl) (h : senkSchreiben A c s = some p) :
+    ∃ s' σ', lauf (p.map kanon) st = some s' ∧
+      execStmt O passes R s σ ρ = .ok σ' ρ ∧
+      WorldRep (tabLayout A) s'.speicher σ' ∧ EnvRepr ρ s'.register (abbOf c) := by
+  cases s with
+  | assignSlot t f i e hw hL =>
+    simp only [senkSchreiben] at h
+    cases hk : constInt? i with
+    | none => rw [hk] at h; cases h
+    | some k =>
+      simp only [hk] at h
+      cases hA : feldAdr A t k f with
+      | none => simp [hA] at h
+      | some Adr =>
+        simp only [hA] at h
+        by_cases hok : (repOk (D.typ t f) Adr 8 0 &&
+            adrOk (basisKeinForm c.adr)) = true
+        · rw [if_pos hok] at h
+          cases hpv : senkWertT c e with
+          | none => simp [hpv] at h
+          | some pv =>
+            simp only [hpv, Option.map_some, Option.some.injEq] at h
+            subst h
+            simp only [Bool.and_eq_true] at hok
+            obtain ⟨hrep, -⟩ := hok
+            obtain ⟨lo, hi, hT, hlo, hhi, -⟩ := repOk_int _ _ hrep
+            let σL := σ.lese Λ (i.orte ++ e.orte)
+            have hki : (eval σL i σL ρ).n = k := by
+              have hci := constInt?_sound i σL σL ρ k hk
+              simpa [intOf] using hci
+            have hsrc : execStmt O passes R
+                ((.assignSlot t f i e hw hL : Stmt D V l Γ Λ Λ)) σ ρ =
+                .ok (σL.schreibSlot t Λ k f (eval σL e σL ρ)) ρ := by
+              rw [← hki]; rfl
+            obtain ⟨-, -, hwrA, -⟩ := hW t k f Adr
+              (by rw [tabLayout_loc]; exact hA)
+            obtain ⟨s1, hrun1, hw1, hE1⟩ :=
+              assignT_lauf c hc e hT hlo hhi pv hpv Adr ρ σL σL st hE hwrA
+            have hloc : (tabLayout A).loc t k f = some Adr := by
+              rw [tabLayout_loc]; exact hA
+            have hW1 : WorldRep (tabLayout A) s1.speicher
+                (σL.schreibSlot t Λ k f (eval σL e σL ρ)) :=
+              worldRep_store (tabLayout A) (ankerSep_sound A hsep) st.speicher s1.speicher
+                σL t k f Adr hloc hW lo hi hT _ hw1 Λ
+            exact ⟨s1, _, hrun1, hsrc, hW1, hE1⟩
+        · rw [if_neg hok] at h; cases h
+  | assignDurch q t ht f i e hw hL =>
+    simp only [senkSchreiben] at h
+    cases hk : constInt? i with
+    | none => rw [hk] at h; cases h
+    | some k =>
+      simp only [hk] at h
+      cases hA : feldAdr A t k f with
+      | none => simp [hA] at h
+      | some Adr =>
+        simp only [hA] at h
+        by_cases hok : (repOk (D.typ t f) Adr 8 0 &&
+            adrOk (basisKeinForm c.adr)) = true
+        · rw [if_pos hok] at h
+          cases hpv : senkWertT c e with
+          | none => simp [hpv] at h
+          | some pv =>
+            simp only [hpv, Option.map_some, Option.some.injEq] at h
+            subst h
+            simp only [Bool.and_eq_true] at hok
+            obtain ⟨hrep, -⟩ := hok
+            obtain ⟨lo, hi, hT, hlo, hhi, -⟩ := repOk_int _ _ hrep
+            let σL := σ.lese Λ (q.orte ++ i.orte ++ e.orte)
+            have hki : (eval σL i σL ρ).n = k := by
+              have hci := constInt?_sound i σL σL ρ k hk
+              simpa [intOf] using hci
+            have hsrc : execStmt O passes R
+                ((.assignDurch q t ht f i e hw hL : Stmt D V l Γ Λ Λ)) σ ρ =
+                .ok (σL.schreibSlot t Λ k f (eval σL e σL ρ)) ρ := by
+              rw [← hki]; rfl
+            obtain ⟨-, -, hwrA, -⟩ := hW t k f Adr
+              (by rw [tabLayout_loc]; exact hA)
+            obtain ⟨s1, hrun1, hw1, hE1⟩ :=
+              assignT_lauf c hc e hT hlo hhi pv hpv Adr ρ σL σL st hE hwrA
+            have hloc : (tabLayout A).loc t k f = some Adr := by
+              rw [tabLayout_loc]; exact hA
+            have hW1 : WorldRep (tabLayout A) s1.speicher
+                (σL.schreibSlot t Λ k f (eval σL e σL ρ)) :=
+              worldRep_store (tabLayout A) (ankerSep_sound A hsep) st.speicher s1.speicher
+                σL t k f Adr hloc hW lo hi hT _ hw1 Λ
+            exact ⟨s1, _, hrun1, hsrc, hW1, hE1⟩
+        · rw [if_neg hok] at h; cases h
+  | _ => simp [senkSchreiben] at h
