@@ -940,4 +940,181 @@ theorem einheit_correct_entry (P : Programm D) (f : D.Fn)
   exact ⟨σp, ρp, tail, n, s', hrunB, hrip, hW', hE', hstop, hles, hschr, he,
     htailrun, hreq⟩
 
+/-! ## 6. Call-site duties carried through the accepted producers. -/
+
+/-- A successful direct call carries the entry duty at the actual
+    arguments (reused `callSite_vorOk`) and the callee prefix runs clean
+    from the call's entry worlds (reused totality). -/
+theorem einheit_ruf_req (P : Programm D) (O : Orakel D) (passes fuel : Nat)
+    {V : Vertrag D} {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    {f : D.Fn} {args : Args D Γ Λ (D.params f)}
+    {hp : RufPasst D V (D.signatur f) Λ} {hr : D.gruende f = 0}
+    {σ : World D} {ρ : Env D Γ} {σ' : World D} {ρ' : Env D Γ}
+    (h : execStmt (V := V) O passes (rufAt P O passes fuel)
+      (Stmt.call (V := V) (l := l) f args hp hr) σ ρ = .ok σ' ρ')
+    (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+    (hb : rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b) :
+    ReqAmEintritt P f
+      ((σ.lese Λ args.orte).lese (Signatur.anfang D (D.signatur f))
+        (P.requires f).orte)
+      (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) ∧
+    ∃ (σp : World D) (ρp : Env D (D.params f)),
+      execBlock (V := vertragVon D f) (l := false) O passes
+        (rufAt P O passes fuel) b
+        ((σ.lese Λ args.orte).lese (Signatur.anfang D (D.signatur f))
+          (P.requires f).orte)
+        (evalArgs (σ.lese Λ args.orte) args (σ.lese Λ args.orte) ρ) =
+        .ok σp ρp := by
+  refine ⟨callSite_vorOk P O passes fuel h, ?_⟩
+  obtain ⟨σp, ρp, hrun⟩ := rumpfBlock_total (V := vertragVon D f) (l := false)
+    O passes (rufAt P O passes fuel) (P.rumpf f) b hb _ _
+  exact ⟨σp, ρp, hrun⟩
+
+/-- A successful returning call carries the return duty at the actual
+    result (reused `rufAt_ok_gibt_ens`) and the callee prefix runs clean
+    from the entry worlds (reused totality). -/
+theorem einheit_ruf_ens (P : Programm D) (O : Orakel D)
+    (passes : Nat)
+    (fuel : Nat) (f : D.Fn) (σ : World D) (ρ : Env D (D.params f))
+    (sread : World D)
+    (hread : sread = σ.lese (Signatur.anfang D (D.signatur f))
+      (P.requires f).orte)
+    (hreq : wahr? (eval sread (P.requires f) sread ρ) = true)
+    (σ1 : World D) (v : ErgVal D (D.erg f))
+    (hbody : execEnd (V := vertragVon D f) O passes (rufAt P O passes fuel)
+      (P.rumpf f) sread ρ = EndAusgang.zurueck σ1 v)
+    (sret : World D)
+    (hret : sret = σ1.lese (vertragVon D f).ende (P.ensures f).orte)
+    (sinv : World D)
+    (hsinv : sinv = (D.invs.filter (schuldet f)).foldl
+      (fun σ' i => σ'.lese (invSicht D i) (P.invariante i).orte) sret)
+    (hinv : D.invs.find? (fun i => schuldet f i &&
+      !wahr? (eval sinv (P.invariante i) sinv .nil)) = none)
+    (σ' : World D)
+    (h : rufAt P O passes (fuel + 1) f σ ρ =
+      RufAusgang.ok (D := D) (f := f) σ' v)
+    (b : Block D (vertragVon D f) false (D.params f)
+      (Signatur.anfang D (D.signatur f)) (Signatur.anfang D (D.signatur f)))
+    (hb : rumpfBlock (V := vertragVon D f) (l := false) (P.rumpf f) = some b) :
+    RufEnsCheck P f sread sret ρ v ∧ σ' = sinv ∧
+    ∃ (σp : World D) (ρp : Env D (D.params f)),
+      execBlock (V := vertragVon D f) (l := false) O passes
+        (rufAt P O passes fuel) b sread ρ = .ok σp ρp := by
+  obtain ⟨hens, heq⟩ := rufAt_ok_gibt_ens P O passes fuel f σ ρ sread hread
+    hreq σ1 v hbody sret hret sinv hsinv hinv σ' h
+  refine ⟨hens, heq, ?_⟩
+  obtain ⟨σp, ρp, hrun⟩ := rumpfBlock_total (V := vertragVon D f) (l := false)
+    O passes (rufAt P O passes fuel) (P.rumpf f) b hb sread ρ
+  exact ⟨σp, ρp, hrun⟩
+
+/-! ## 7. The source-computed unit check: every function lowered or refused.
+
+    Over the generic T3 lowering (`UProg`, `lowerFnAt`, `lowerAllg`): the
+    decided per-function verdict is lowering success plus a projected
+    pipeline block; the whole-unit check covers every function
+    (`List.finRange`, the same coverage `lowerAllg` itself uses). -/
+
+/-- Per-function unit verdict: the T3 lowering succeeds and the body
+    projects to a pipeline block. -/
+def t3Stand (u : UProg) (f : Fin u.fns.length) : Bool :=
+  match lowerFnAt u f with
+  | .error _ => false
+  | .ok v => (rumpfBlock v.2).isSome
+
+/-- Whole-unit check: every function of the elaborated unit is lowered to
+    a pipeline block (or the check refuses). -/
+def t3EinheitOk (u : UProg) : Bool :=
+  (List.finRange u.fns.length).all (t3Stand u)
+
+/-- The verdict reason, as data. -/
+def t3Grund (u : UProg) (f : Fin u.fns.length) : String :=
+  match lowerFnAt u f with
+  | .error _ => "lowering-failed"
+  | .ok v =>
+    match rumpfBlock v.2 with
+    | some _ => "lowered"
+    | none => "body-outside-fragment"
+
+/-- COVERING: an accepted whole-unit check gives every function its
+    lowered body and pipeline block. -/
+theorem t3Einheit_gedeckt (u : UProg) (f : Fin u.fns.length)
+    (h : t3EinheitOk u = true) :
+    ∃ (v : EnsTy u f × RumpTy u f)
+      (b : Block (declOf u) (vertragVon (declOf u) f) false
+        ((declOf u).params f)
+        (Signatur.anfang (declOf u) ((declOf u).signatur f))
+        (Signatur.anfang (declOf u) ((declOf u).signatur f))),
+      lowerFnAt u f = .ok v ∧ rumpfBlock v.2 = some b := by
+  have hmem : t3Stand u f = true :=
+    List.all_eq_true.mp h f (List.mem_finRange f)
+  unfold t3Stand at hmem
+  cases hfn : lowerFnAt u f with
+  | error e =>
+    rw [hfn] at hmem
+    change (false = true) at hmem
+    cases hmem
+  | ok v =>
+    rw [hfn] at hmem
+    change ((rumpfBlock v.2).isSome = true) at hmem
+    cases hr : rumpfBlock v.2 with
+    | none =>
+      rw [hr] at hmem
+      change (false = true) at hmem
+      cases hmem
+    | some b =>
+      exact ⟨v, b, rfl, hr⟩
+
+/-- A refused verdict is either a failed lowering or a body outside the
+    fragment, with its reason. -/
+theorem t3Stand_verweigert (u : UProg) (f : Fin u.fns.length)
+    (h : t3Stand u f = false) :
+    (∃ e : String, lowerFnAt u f = .error e ∧
+      t3Grund u f = "lowering-failed") ∨
+    (∃ v : EnsTy u f × RumpTy u f, lowerFnAt u f = .ok v ∧
+      rumpfBlock v.2 = none ∧ t3Grund u f = "body-outside-fragment") := by
+  unfold t3Stand at h
+  cases hfn : lowerFnAt u f with
+  | error e =>
+    rw [hfn] at h
+    exact Or.inl ⟨e, rfl, by unfold t3Grund; rw [hfn]⟩
+  | ok v =>
+    rw [hfn] at h
+    change ((rumpfBlock v.2).isSome = false) at h
+    cases hr : rumpfBlock v.2 with
+    | some b =>
+      rw [hr] at h
+      change (true = false) at h
+      cases h
+    | none =>
+      exact Or.inr ⟨v, rfl, hr, by unfold t3Grund; rw [hfn]; dsimp only; rw [hr]⟩
+
+/-- Decided lists: a refused `all` names its witness. -/
+theorem all_verweigert_aux {α : Type _} (l : List α) (p : α → Bool)
+    (h : l.all p = false) : ∃ x ∈ l, p x = false := by
+  revert h
+  induction l with
+  | nil =>
+    intro h
+    simp at h
+  | cons y ys ih =>
+    intro h
+    cases hp : p y with
+    | true =>
+      have h2 : (p y && ys.all p) = false := h
+      rw [hp] at h2
+      change (ys.all p) = false at h2
+      obtain ⟨x, hx, hfx⟩ := ih h2
+      exact ⟨x, List.mem_cons_of_mem _ hx, hfx⟩
+    | false =>
+      exact ⟨y, List.mem_cons.mpr (Or.inl rfl), hp⟩
+
+/-- A refused whole-unit check names its function. -/
+theorem t3Einheit_verweigert (u : UProg) (h : t3EinheitOk u = false) :
+    ∃ f : Fin u.fns.length,
+      f ∈ List.finRange u.fns.length ∧ t3Stand u f = false := by
+  unfold t3EinheitOk at h
+  obtain ⟨x, hx, hfx⟩ := all_verweigert_aux _ _ h
+  exact ⟨x, hx, hfx⟩
+
 end Gabbro.Grammatik.X86.PipelineUnit
