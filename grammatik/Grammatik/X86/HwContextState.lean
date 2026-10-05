@@ -1056,4 +1056,174 @@ theorem wechselStelltHer (kAlt kNeu : FPKontext)
   exact ⟨(ctxRundlauf_pur kAlt xAlt).1, (ctxRundlauf_pur kAlt xAlt).2,
     (ctxRundlauf_pur kNeu xNeu).1, (ctxRundlauf_pur kNeu xNeu).2⟩
 
+/-! ## 7. Family events, step relation, and the `HwAdapter` plug.
+
+    `CtxSchritt` runs the four request shapes through their checked
+    computable steps and carries the shared TSO byte legs unchanged;
+    refusals are self-loops tied to computed refusal outcomes (never
+    silent). `adapterContext` instantiates the §11 `HwAdapter`
+    interface for the request events. -/
+
+/-- Observable family events on the coherent machine. -/
+inductive CtxEreignis where
+  | fxsaveReq : Nat → Adresse → CtxEreignis
+  | fxrstorReq : Nat → Adresse → CtxEreignis
+  | xsaveReq : Nat → Adresse → Xcr0Bild → Bool → CtxEreignis
+  | xrstorReq : Nat → Adresse → Xcr0Bild → Bool → CtxEreignis
+  | leseBeob : Nat → Adresse → Byte → CtxEreignis
+  | schreibAusgabe : Nat → Adresse → Byte → CtxEreignis
+  | spülung : Nat → TSOEintrag → CtxEreignis
+  | verweigert : Nat → CtxEreignis
+  deriving DecidableEq, Repr
+
+/-- Project an outcome to an adapter successor. -/
+def ctxOpt (o : CtxAusgang) : Option HwMaschine :=
+  match o with
+  | .weiter m' => some m'
+  | _ => none
+
+/-- Family step relation: checked requests plus the shared TSO legs
+    plus outcome-tied refusals. -/
+inductive CtxSchritt : HwMaschine → HwMaschine → CtxEreignis → Prop where
+  | fxsave {m m' : HwMaschine} (c : Nat) (a : Adresse)
+      (h : ctxSpeichern m c a = .weiter m') :
+      CtxSchritt m m' (.fxsaveReq c a)
+  | fxrstor {m m' : HwMaschine} (c : Nat) (a : Adresse)
+      (h : ctxWiederherstellen m c a = .weiter m') :
+      CtxSchritt m m' (.fxrstorReq c a)
+  | xsave {m m' : HwMaschine} (c : Nat) (a : Adresse)
+      (x : Xcr0Bild) (q : Bool)
+      (h : ctxXSave m c a x q = .weiter m') :
+      CtxSchritt m m' (.xsaveReq c a x q)
+  | xrstor {m m' : HwMaschine} (c : Nat) (a : Adresse)
+      (x : Xcr0Bild) (q : Bool)
+      (h : ctxXRstor m c a x q = .weiter m') :
+      CtxSchritt m m' (.xrstorReq c a x q)
+  | lade {m : HwMaschine} (c : Nat) (a : Adresse) (v : Byte)
+      (h : loadByte (tsoAnsicht m) c a = some v) :
+      CtxSchritt m m (.leseBeob c a v)
+  | gibAus {m : HwMaschine} (c : Nat) (a : Adresse) (v : Byte)
+      (s' : TSOZustand)
+      (h : issueByte (tsoAnsicht m) c a v = some s') :
+      CtxSchritt m (setTso m s') (.schreibAusgabe c a v)
+  | spüle {m : HwMaschine} (c : Nat) (e : TSOEintrag)
+      (s' : TSOZustand)
+      (h : flushKern (tsoAnsicht m) c = some s')
+      (hkopf : (m.puffer c).head? = some e) :
+      CtxSchritt m (setTso m s') (.spülung c e)
+  | fehlerGPsave {m : HwMaschine} (c : Nat) (a : Adresse)
+      (h : ctxSpeichern m c a = .fehlerGP) :
+      CtxSchritt m m (.verweigert c)
+  | fehlerUDxsave {m : HwMaschine} (c : Nat) (a : Adresse)
+      (x : Xcr0Bild) (q : Bool)
+      (h : ctxXSave m c a x q = .fehlerUD) :
+      CtxSchritt m m (.verweigert c)
+  | fehlerVerweigert {m : HwMaschine} (c : Nat) (a : Adresse)
+      (h : ctxSpeichern m c a = .verweigert) :
+      CtxSchritt m m (.verweigert c)
+
+/-- (1) Every family step preserves well-formedness. -/
+theorem ctxSchritt_wf (m m' : HwMaschine) (e : CtxEreignis)
+    (h : CtxSchritt m m' e) (hwf : HwWf m) : HwWf m' := by
+  cases h with
+  | fxsave c a h => exact ctxSpeichern_wf _ _ _ hwf _ h
+  | fxrstor c a h => exact ctxWiederherstellen_wf _ _ _ hwf _ h
+  | xsave c a x q h => exact ctxXSave_wf _ _ _ _ _ hwf _ h
+  | xrstor c a x q h => exact ctxXRstor_wf _ _ _ _ _ hwf _ h
+  | lade c a v h => exact hwf
+  | gibAus c a v s' h => exact setTso_wf _ s' hwf
+  | spüle c e s' h hkopf => exact setTso_wf _ s' hwf
+  | fehlerGPsave c a h => exact hwf
+  | fehlerUDxsave c a x q h => exact hwf
+  | fehlerVerweigert c a h => exact hwf
+
+/-- (2) The TSO observation leg IS the coherent TSO step. -/
+theorem ctxLade_ist_hw (m m' : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Byte)
+    (h : CtxSchritt m m' (.leseBeob c a v)) :
+    HwSchritt m m' (.leseBeob c a v) := by
+  cases h with
+  | lade c a v h => exact HwSchritt.lade c a v h
+
+/-- (2) The TSO store-issue leg IS the coherent TSO step. -/
+theorem ctxGibAus_ist_hw (m m' : HwMaschine) (c : Nat) (a : Adresse)
+    (v : Byte)
+    (h : CtxSchritt m m' (.schreibAusgabe c a v)) :
+    HwSchritt m m' (.schreibAusgabe c a v) := by
+  cases h with
+  | gibAus c a v s' h => exact HwSchritt.gibAus c a v s' h
+
+/-- (2) The TSO drain leg IS the coherent TSO step. -/
+theorem ctxSpüle_ist_hw (m m' : HwMaschine) (c : Nat)
+    (e : TSOEintrag)
+    (h : CtxSchritt m m' (.spülung c e)) :
+    ∃ s' : TSOZustand, HwSchritt m m' (.spülung c e) := by
+  cases h with
+  | spüle c e s' h hkopf => exact ⟨s', HwSchritt.spüle c e s' h hkopf⟩
+
+/-- The lane-1247 producer plug over the §11 `HwAdapter` interface:
+    the four request events ride the checked steps; anything else
+    (observations, mismatched cores, refusals) admits nothing. -/
+def adapterContext : HwAdapter CtxEreignis :=
+  ⟨fun m c ev => match ev with
+  | .fxsaveReq c' a =>
+    if c = c' then ctxOpt (ctxSpeichern m c a) else none
+  | .fxrstorReq c' a =>
+    if c = c' then ctxOpt (ctxWiederherstellen m c a) else none
+  | .xsaveReq c' a x q =>
+    if c = c' then ctxOpt (ctxXSave m c a x q) else none
+  | .xrstorReq c' a x q =>
+    if c = c' then ctxOpt (ctxXRstor m c a x q) else none
+  | _ => none⟩
+
+/-- The adapter runs the save request where the core agrees. -/
+theorem adapterContext_fxsave (m : HwMaschine) (c : Nat) (a : Adresse) :
+    adapterContext.schritt m c (.fxsaveReq c a) =
+      ctxOpt (ctxSpeichern m c a) := by
+  simp [adapterContext]
+
+/-- The adapter refuses a mismatched core. -/
+theorem adapterContext_fxsave_fremd (m : HwMaschine) (c c' : Nat)
+    (a : Adresse) (h : c ≠ c') :
+    adapterContext.schritt m c (.fxsaveReq c' a) = none := by
+  simp [adapterContext, h]
+
+/-- The adapter admits no observation step. -/
+theorem adapterContext_ohne_beob (m : HwMaschine) (c : Nat)
+    (a : Adresse) (v : Byte) :
+    adapterContext.schritt m c (.leseBeob c a v) = none := by
+  rfl
+
+/-- Adapter success preserves well-formedness (save leg). -/
+theorem adapterContext_fxsave_wf (m : HwMaschine) (c : Nat)
+    (a : Adresse) (hwf : HwWf m) (m' : HwMaschine)
+    (h : adapterContext.schritt m c (.fxsaveReq c a) = some m') :
+    HwWf m' := by
+  have h1 : ctxOpt (ctxSpeichern m c a) = some m' := by
+    simpa [adapterContext] using h
+  cases ho : ctxSpeichern m c a with
+  | weiter m2 =>
+    have h2 : m2 = m' := Option.some_inj.mp (by simpa [ho, ctxOpt] using h1)
+    rw [←h2]
+    exact ctxSpeichern_wf m c a hwf m2 ho
+  | verweigert => simp [ho, ctxOpt] at h1
+  | fehlerGP => simp [ho, ctxOpt] at h1
+  | fehlerUD => simp [ho, ctxOpt] at h1
+
+/-- Adapter success preserves well-formedness (restore leg). -/
+theorem adapterContext_fxrstor_wf (m : HwMaschine) (c : Nat)
+    (a : Adresse) (hwf : HwWf m) (m' : HwMaschine)
+    (h : adapterContext.schritt m c (.fxrstorReq c a) = some m') :
+    HwWf m' := by
+  have h1 : ctxOpt (ctxWiederherstellen m c a) = some m' := by
+    simpa [adapterContext] using h
+  cases ho : ctxWiederherstellen m c a with
+  | weiter m2 =>
+    have h2 : m2 = m' := Option.some_inj.mp (by simpa [ho, ctxOpt] using h1)
+    rw [←h2]
+    exact ctxWiederherstellen_wf m c a hwf m2 ho
+  | verweigert => simp [ho, ctxOpt] at h1
+  | fehlerGP => simp [ho, ctxOpt] at h1
+  | fehlerUD => simp [ho, ctxOpt] at h1
+
 end Gabbro.Grammatik.X86
