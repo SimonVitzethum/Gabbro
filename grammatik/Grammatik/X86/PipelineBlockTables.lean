@@ -947,7 +947,53 @@ theorem senkSkalLesen_falsche_basis_durch_zeuge :
     zeV.schreibt false = true ∧ zeRunChange := by
   refine ⟨rfl, zeHw, zeRunChangeProof⟩
 
+/-! ## 7. Block-level reads: statements and blocks
+
+    A block-level read is `x := T[k].f;` (`assignVar` of a variable-index
+    slot read): the scaled chunk loads the word into `dst`, then one
+    `movReg64` publishes it to the target variable's register. Region
+    reads (`assignDurch`) share the lowering. Every other statement is
+    refused. The per-read premises are the checked bound (`readBoundSkal`)
+    and register freshness (`hvarsSkal`: equal registers mean equal
+    variables, so the environment update is exact). -/
+
+/-- Environment read after its own write. -/
+theorem envGet_set_eq {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :
+    ∀ (v : Wert D τ) (ρ : Env D Γ), (ρ.set x v).get x = v := by
+  induction x with
+  | hier =>
+    intro v ρ
+    cases ρ with
+    | cons w ρ' => rfl
+  | dort x ih =>
+    intro v ρ
+    cases ρ with
+    | cons w ρ' => exact ih v ρ'
+
+/-- Environment read of another variable after a write: the index
+    inequality (plain `Nat`, no injectivity needed) suffices. -/
+theorem envGet_set_idx {Γ : Ctx} {τ : Ty} (x : Var Γ τ) :
+    ∀ {τ' : Ty} (z : Var Γ τ') (v : Wert D τ) (ρ : Env D Γ),
+      varIdx z ≠ varIdx x → (ρ.set x v).get z = ρ.get z := by
+  induction x with
+  | hier =>
+    intro τ' z v ρ h
+    cases ρ with
+    | cons w ρ' =>
+      cases z with
+      | hier => exact False.elim (h rfl)
+      | dort z' => rfl
+  | dort x ih =>
+    intro τ' z v ρ h
+    cases ρ with
+    | cons w ρ' =>
+      cases z with
+      | hier => rfl
+      | dort z' =>
+        have h' : varIdx z' ≠ varIdx x := fun he => h (congrArg Nat.succ he)
+        exact ih _ _ _ h'
+
 /- CUTS:
-   Skeleton only: scale exponent stub. The chunk, lowering, correctness,
-   refusals and witnesses are OPEN.
+   Environment get/set facts done. Statement/block lowering, the closing
+   theorem, refusal theorems for blocks, witnesses and axioms output are OPEN.
 -/
