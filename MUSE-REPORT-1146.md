@@ -2,8 +2,8 @@
 
 ## Candidate identity
 
-- CANDIDATE: lane 1145, pinned HEAD `798e1e427252dcae33ffe50b9a6dd61f2d914e9a`
-  (from `.tmp/review/SNAPSHOT.json`; base `f011761c7ab88ff57f9d7e684f0c57a2dd1b2b49`).
+CANDIDATE: 1145 798e1e427252dcae33ffe50b9a6dd61f2d914e9a
+Pinned head from `.tmp/review/SNAPSHOT.json`; base `f011761c7ab88ff57f9d7e684f0c57a2dd1b2b49`.
 - Files in snapshot: `MUSE-REPORT-1145.md`, `grammatik/Grammatik.lean`,
   `grammatik/Grammatik/X86/TsoRmwBridge.lean` (`clean: true`).
 - Review source inside this clone only: `.tmp/review/author-1145/PATCH.diff`
@@ -93,9 +93,11 @@ witness `tsoRmw_bruecke_zeuge` (word 10 to 15 to 22).
   (report-only review owns no Lean file); the candidate's own green evidence
   plus 0-error `lean-probe` lines stand uncontradicted.
 
-## VERDICT: ACCEPT
+## Decision
 
-Candidate 1145 at pinned HEAD `798e1e42` is accepted as reviewed: exact
+VERDICT: ACCEPT
+
+Author lane 1145 at pinned head `798e1e42` is accepted as reviewed: exact
 scope, lifted (not copied) producer API, all premises consumed, standard
 axioms, refusals and non-degenerate two-core witness present, CUTS honest
 with no W/GX or hardware-correspondence over-claim. Integration note: re-anchor
