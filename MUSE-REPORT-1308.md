@@ -1,8 +1,10 @@
 # MUSE-REPORT-1308: exact review of candidate 1307 (FP store drain = write32)
 
+CANDIDATE: 1307 c1d8ca610e923288ee5cced7d5a6fbcec62746bf
+
 Review lane. Clone `/home/simon/Dokumente/gabbro-muse/a1308`, branch `muse/1308`
 (read-only for this review; no author-clone or pinned-hash git access used).
-CANDIDATE: lane 1307, head `c1d8ca610e923288ee5cced7d5a6fbcec62746bf`
+Review subject is lane 1307, head `c1d8ca610e923288ee5cced7d5a6fbcec62746bf`
 (base `234f2728a718157cba0e1f9e0ef300874b34ea6a`), files per
 `.tmp/review/SNAPSHOT.json` (clean): `MUSE-REPORT-1307.md`,
 `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/HwFpStoreDrain.lean`.
@@ -77,7 +79,9 @@ No premise of the owner task looks wrong; the structural-overlap reading of
 the "misaligned store crossing a group boundary" requirement is sound given
 the accepted alignment-free byte drain, and is documented in §5/CUTS.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 Candidate 1307 (`c1d8ca610e923288ee5cced7d5a6fbcec62746bf`) is accepted for
 integration: green probe with standard axioms, one-import-line hygiene,
