@@ -693,17 +693,17 @@ Last ledger refresh: **2026-10-05 18:02 UTC**. This is an operational snapshot, 
 | 1269 | Cross-declaration lowering certificate for the GX refinement | Merged after review/checks | 1270: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1269.md) |
 | 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Merged after review/checks | 1272: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1271.md) |
 | 1273 | Rotates: ROL, ROR, RCL, RCR | Agent working | 1274: scheduled | [task](lanes/1273.md) |
-| 1275 | ADC, SBB, INC, DEC | Agent working | 1276: scheduled | [task](lanes/1275.md) |
+| 1275 | ADC, SBB, INC, DEC | Incomplete; preserved | 1276: scheduled | [task](lanes/1275.md) |
 | 1277 | Bit test family: BT, BTS, BTR, BTC | Agent working | 1278: scheduled | [task](lanes/1277.md) |
 | 1279 | Bit scan and count: BSF, BSR, POPCNT, BSWAP | Agent working | 1280: scheduled | [task](lanes/1279.md) |
 | 1281 | Sign-extend-accumulator ops and register XCHG | Agent working | 1282: Committed candidate; review/integration pending | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
-| 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1287.md) |
-| 1289 | Capstone: union steps for the embedded-by-equation tags, and the two plug-less families | Scheduled | 1290: scheduled | [task](lanes/1289.md) |
-| 1291 | Capstone: byte-decoder disjointness across all families | Scheduled | 1292: scheduled | [task](lanes/1291.md) |
-| 1293 | Capstone: a reached multi-family program run on two cores from bytes | Scheduled | 1294: scheduled | [task](lanes/1293.md) |
-| 1295 | Capstone: every union step projects to the TSO store-buffer model | Scheduled | 1296: scheduled | [task](lanes/1295.md) |
+| 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1287.md) |
+| 1289 | Capstone: union steps for the embedded-by-equation tags, and the two plug-less families | Prepared | 1290: scheduled | [task](lanes/1289.md) |
+| 1291 | Capstone: byte-decoder disjointness across all families | Prepared | 1292: scheduled | [task](lanes/1291.md) |
+| 1293 | Capstone: a reached multi-family program run on two cores from bytes | Prepared | 1294: scheduled | [task](lanes/1293.md) |
+| 1295 | Capstone: every union step projects to the TSO store-buffer model | Prepared | 1296: scheduled | [task](lanes/1295.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1672,6 +1672,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1283**, Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1283.md). <!-- x86-merged:1283 -->
 - 2026-10-05: lane **1284**, Independent exact review of 1283, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1284.md). <!-- x86-merged:1284 -->
 - 2026-10-05: lane **1287**, Memory types WC, WT, WP and the cache-control instructions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1287.md). <!-- x86-merged:1287 -->
+- 2026-10-05: lane **1288**, Independent exact review of 1287, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1288.md). <!-- x86-merged:1288 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
