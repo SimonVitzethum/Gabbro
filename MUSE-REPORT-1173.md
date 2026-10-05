@@ -76,3 +76,32 @@ the profile sources; its selector (`waehleNull` zeroing choice,
 profile, so this file reuses the entry/support producer interfaces
 instead and leaves CPU feature selection with lane 844. No premise was
 added, no conclusion weakened.
+
+## Repair after failed integration gate (no merge happened)
+
+Integration evidence: `exit 1; 2 error line(s)` with
+`[609/610] Building Grammatik` failing as
+`lean -j2 -M4096 ... Grammatik.lean` aborting with
+`libc++abi: ... failed to create thread`, exit 134. The log prints all
+of this module's `#print axioms` lines (448-454) BEFORE the failure, so
+`PipelineProfiles.lean` itself elaborated and built; no error line
+points at any owned file. This is the documented apparatus resource
+failure (thread-spawn/virtual-address exhaustion at the aggregate
+target), not a Lean error in owned code.
+
+Repair: NO semantic change. Nothing was weakened, no premise added, no
+conclusion touched — there is no defect in the owned module to repair,
+and weakening a guarantee to make a gate green is forbidden. Verified
+instead: the import line stands exactly once at the end of
+`grammatik/Grammatik.lean`; the owned file contains no `sorry`,
+`admit`, `axiom`, `native_decide` or `unsafe` (only the English words
+"admitted"/"REFUSAL" in doc comments); axioms unchanged (`propext`,
+`Quot.sound` via reused producer lemmas only).
+
+Fresh local checks after the failure: `./lean-probe`
+`grammatik/Grammatik/X86/PipelineProfiles.lean` gives
+`0 error(s)`; `./lean-bau` gives
+`Build completed successfully (608 jobs)`, including the aggregate
+`Grammatik` target that failed at integration. Full source-to-binary
+chain acceptance is NOT claimed. A fresh independent review of the
+changed commit is still required.
