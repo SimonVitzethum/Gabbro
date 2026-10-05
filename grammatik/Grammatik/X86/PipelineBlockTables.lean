@@ -414,45 +414,252 @@ theorem skalChunk_lauf (c : PipeCfg) (hc : cfgOk c = true)
     code is the scaled chunk. Every other shape is `none`: unsupported
     shapes are refused, never guessed. -/
 
+/-- Variable projection: `some y` for `.var y`, `none` otherwise.
+    Splitting on this computation (an `Option` equation, as lane 1159
+    splits on `constInt?`) avoids casing on a fixed-index `Expr`
+    in proofs, which needs per-constructor index equations. -/
+def idxVarG? {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (i : Expr D Γ Λ τ) :
+    Option (Var Γ τ) :=
+  match i with
+  | .var y => some y
+  | _ => none
+
+/-- SOUNDNESS of the variable projection: a projected variable evaluates
+    to the environment value. Proved by `Expr.rec` induction with a
+    uniform goal (the `constInt?_sound` pattern): every arm is
+    self-contained at its own index, so no index equation is needed. -/
+theorem idxVarG?_eval {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} (i : Expr D Γ Λ τ)
+    (y : Var Γ τ) (σ₀ σ : World D) (ρ : Env D Γ) (hy : idxVarG? i = some y) :
+    eval σ₀ i σ ρ = ρ.get y := by
+  revert y hy
+  induction i using Expr.rec (motive_2 := fun _ _ _ _ => True) with
+  | var y' => intro y hy; simp only [idxVarG?, Option.some.injEq] at hy; subst hy; rfl
+  | keine => trivial
+  | zahl e ih => trivial
+  | _ => intro y hy; simp [idxVarG?] at hy
+
 /-- READ LOWERING AT A VARIABLE INDEX. -/
 def senkSkalLesen (A : TabAnker D) (c : PipeCfg) {Γ : Ctx} {Λ : List (Res D)}
     {τ : Ty} (e : Expr D Γ Λ τ) : Option (List Befehl) :=
   match e with
-  | .slot t f (.var y) _ =>
-    match PipelineTables.ankerBasis A t with
+  | .slot t f i _ =>
+    match idxVarG? i with
     | none => none
-    | some B =>
-      match PipelineTables.ankerZeile A t with
+    | some y =>
+      match PipelineTables.ankerBasis A t with
       | none => none
-      | some Z =>
-        match PipelineTables.feldOff A t f with
+      | some B =>
+        match PipelineTables.ankerZeile A t with
         | none => none
-        | some O =>
-          match D.typ t f with
-          | .int _ _ =>
-            if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
-                adrOk (basisKeinForm c.adr) then
-              some (skalChunk c (abbOf c _ y) B O Z)
-            else none
-          | _ => none
-  | .durch _ t _ f (.var y) _ =>
-    match PipelineTables.ankerBasis A t with
+        | some Z =>
+          match PipelineTables.feldOff A t f with
+          | none => none
+          | some O =>
+            match D.typ t f with
+            | .int _ _ =>
+              if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                  adrOk (basisKeinForm c.adr) then
+                some (skalChunk c (abbOf c _ y) B O Z)
+              else none
+            | _ => none
+  | .durch _ t _ f i _ =>
+    match idxVarG? i with
     | none => none
-    | some B =>
-      match PipelineTables.ankerZeile A t with
+    | some y =>
+      match PipelineTables.ankerBasis A t with
       | none => none
-      | some Z =>
-        match PipelineTables.feldOff A t f with
+      | some B =>
+        match PipelineTables.ankerZeile A t with
         | none => none
-        | some O =>
-          match D.typ t f with
-          | .int _ _ =>
-            if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
-                adrOk (basisKeinForm c.adr) then
-              some (skalChunk c (abbOf c _ y) B O Z)
-            else none
-          | _ => none
+        | some Z =>
+          match PipelineTables.feldOff A t f with
+          | none => none
+          | some O =>
+            match D.typ t f with
+            | .int _ _ =>
+              if skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                  adrOk (basisKeinForm c.adr) then
+                some (skalChunk c (abbOf c _ y) B O Z)
+              else none
+            | _ => none
   | _ => none
+
+/-- The checked bound premise for a scaled read: the runtime index value
+    lies in `0 ..< count`. For non-reads it is vacuous (their lowering is
+    `none` anyway). -/
+def leseSkalOk {Γ : Ctx} (ρ : Env D Γ)
+    {Λ : List (Res D)} {τ : Ty} (e : Expr D Γ Λ τ) : Prop :=
+  match e with
+  | .slot t f i _ =>
+    match idxVarG? i with
+    | some y => idxOkB (ρ.get y).n (D.count t) = true
+    | none => True
+  | .durch _ t _ f i _ =>
+    match idxVarG? i with
+    | some y => idxOkB (ρ.get y).n (D.count t) = true
+    | none => True
+  | _ => True
+
+/-- READ CORRECTNESS: the scaled chunk leaves the modular word of the
+    exact source value in `dst`, keeps memory and the environment, and
+    keeps every register but the two working ones. Stated at a general
+    type index with `τ = .int lo hi` (the stuck slot type `D.typ t f`),
+    in the style of `senkLesen_korrekt`. The checked bound premise is
+    `leseSkalOk`: the runtime index value lies in the extent. -/
+theorem senkSkalLesen_korrekt (A : TabAnker D) (c : PipeCfg) (hc : cfgOk c = true)
+    {Γ : Ctx} {Λ : List (Res D)} {τ : Ty} {lo hi : Int}
+    (e : Expr D Γ Λ τ) (hτ : τ = .int lo hi)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hE : EnvRepr ρ s.register (abbOf c)) (hW : WorldRep (tabLayout A) s.speicher σ)
+    (hbnd : leseSkalOk ρ e)
+    (p : List Befehl) (h : senkSkalLesen A c e = some p) :
+    ∃ s', lauf (p.map kanon) s = some s' ∧
+      s'.register c.dst = intWort (cast (congrArg (Wert D) hτ) (eval σ₀ e σ ρ) :
+        Wert D (.int lo hi)).n ∧
+      s'.speicher = s.speicher ∧
+      EnvRepr ρ s'.register (abbOf c) ∧
+      (∀ q, q ≠ c.dst → q ≠ c.adr → s'.register q = s.register q) := by
+  cases e with
+  | slot t f i hL =>
+    simp only [senkSkalLesen] at h
+    cases hy : idxVarG? i with
+    | none => rw [hy] at h; change none = some p at h; contradiction
+    | some y =>
+      simp only [hy] at h
+      cases hB : PipelineTables.ankerBasis A t with
+      | none => rw [hB] at h; change none = some p at h; contradiction
+      | some B =>
+        cases hZ : PipelineTables.ankerZeile A t with
+        | none => rw [hB, hZ] at h; change none = some p at h; contradiction
+        | some Z =>
+          cases hO : PipelineTables.feldOff A t f with
+          | none => rw [hB, hZ, hO] at h; change none = some p at h; contradiction
+          | some O =>
+            simp only [leseSkalOk, hy] at hbnd
+            obtain ⟨k, hkdef⟩ : ∃ k, (ρ.get y).n = k := ⟨(ρ.get y).n, rfl⟩
+            rw [hkdef] at hbnd
+            have hA : PipelineTables.feldAdr A t k f =
+                some (B + k.toNat * Z + O) := by
+              unfold PipelineTables.feldAdr
+              simp only [hB, hZ, hO]
+              rw [if_pos hbnd]
+            have hloc : (tabLayout A).loc t k f = some (B + k.toNat * Z + O) := by
+              rw [tabLayout_loc]; exact hA
+            obtain ⟨hrep, -, -, hword⟩ := hW t k f _ hloc
+            obtain ⟨lo'', hi'', hT', hlo, hhi, hA8⟩ := repOk_int _ _ hrep
+            simp only [hB, hZ, hO, hT'] at h
+            by_cases hok : (skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                adrOk (basisKeinForm c.adr)) = true
+            · rw [if_pos hok] at h
+              simp only [Option.some.injEq] at h
+              subst h
+              simp only [Bool.and_eq_true] at hok
+              have hsk : skalaOk Z = true := hok.1.1
+              have hEy : s.register (abbOf c _ y) = intWort k := by rw [← hkdef]; exact hE _ _ y
+              have hidxa : abbOf c _ y ≠ c.adr := (cfgOk_frei c hc y).2.2
+              have hTT : (Ty.int lo hi) = (Ty.int lo'' hi'') := by rw [← hτ]; exact hT'
+              simp only [Ty.int.injEq] at hTT
+              obtain ⟨rfl, rfl⟩ := hTT
+              have hk0 : 0 ≤ k := by rw [← hkdef]; exact (Val.int_bereich (ρ.get y)).1
+              have hZ1 : 1 ≤ Z := skalaOk_pos Z hsk
+              have hk_le : k.toNat ≤ k.toNat * Z := by
+                have h1 : k.toNat * 1 ≤ k.toNat * Z :=
+                  Nat.mul_le_mul (Nat.le_refl _) hZ1
+                rw [Nat.mul_one] at h1
+                exact h1
+              have hltN : k.toNat < 2 ^ 64 := by omega
+              have hcast : ((2 ^ 64 : Nat) : Int) = (2 ^ 64 : Int) := by decide
+              have hltI : k < ((2 ^ 64 : Nat) : Int) := (Int.toNat_lt hk0).mp hltN
+              rw [hcast] at hltI
+              have hM : s.register (abbOf c _ y) = natAdresse k.toNat := by
+                rw [hEy]; exact intWort_nat k hk0 hltI
+              have hev : eval σ₀ i σ ρ = ρ.get y := idxVarG?_eval i y σ₀ σ ρ hy
+              have heval : (eval σ₀ (.slot t f i hL) σ ρ) = σ.slots t k f := by
+                have hrfl : (eval σ₀ (.slot t f i hL) σ ρ) =
+                  σ.slots t (eval σ₀ i σ ρ).n f := rfl
+                rw [hev, hkdef] at hrfl
+                exact hrfl
+              have hrdW0 := hword lo hi hT'
+              unfold RepSlot at hrdW0
+              obtain ⟨s', hrun, hdst, -, hmem, hreg⟩ :=
+                skalChunk_lauf c hc _ hidxa B O Z _ s hM hsk _ hrdW0
+              refine ⟨s', hrun, ?_, hmem, ?_, hreg⟩
+              · rw [hdst, heval]
+                exact (intWort_zahlWort _ hlo hhi).symm
+              · exact envRepr_fremd ρ _ _ _ hE
+                  (fun _ x => hreg _ (cfgOk_frei c hc x).1 ((cfgOk_frei c hc x).2.2))
+            · rw [if_neg hok] at h; contradiction
+  | durch q t ht f i hL =>
+    simp only [senkSkalLesen] at h
+    cases hy : idxVarG? i with
+    | none => rw [hy] at h; change none = some p at h; contradiction
+    | some y =>
+      simp only [hy] at h
+      cases hB : PipelineTables.ankerBasis A t with
+      | none => rw [hB] at h; change none = some p at h; contradiction
+      | some B =>
+        cases hZ : PipelineTables.ankerZeile A t with
+        | none => rw [hB, hZ] at h; change none = some p at h; contradiction
+        | some Z =>
+          cases hO : PipelineTables.feldOff A t f with
+          | none => rw [hB, hZ, hO] at h; change none = some p at h; contradiction
+          | some O =>
+            simp only [leseSkalOk, hy] at hbnd
+            obtain ⟨k, hkdef⟩ : ∃ k, (ρ.get y).n = k := ⟨(ρ.get y).n, rfl⟩
+            rw [hkdef] at hbnd
+            have hA : PipelineTables.feldAdr A t k f =
+                some (B + k.toNat * Z + O) := by
+              unfold PipelineTables.feldAdr
+              simp only [hB, hZ, hO]
+              rw [if_pos hbnd]
+            have hloc : (tabLayout A).loc t k f = some (B + k.toNat * Z + O) := by
+              rw [tabLayout_loc]; exact hA
+            obtain ⟨hrep, -, -, hword⟩ := hW t k f _ hloc
+            obtain ⟨lo'', hi'', hT', hlo, hhi, hA8⟩ := repOk_int _ _ hrep
+            simp only [hB, hZ, hO, hT'] at h
+            by_cases hok : (skalaOk Z && decide (abbOf c _ y ≠ .rsp) &&
+                adrOk (basisKeinForm c.adr)) = true
+            · rw [if_pos hok] at h
+              simp only [Option.some.injEq] at h
+              subst h
+              simp only [Bool.and_eq_true] at hok
+              have hsk : skalaOk Z = true := hok.1.1
+              have hEy : s.register (abbOf c _ y) = intWort k := by rw [← hkdef]; exact hE _ _ y
+              have hidxa : abbOf c _ y ≠ c.adr := (cfgOk_frei c hc y).2.2
+              have hTT : (Ty.int lo hi) = (Ty.int lo'' hi'') := by rw [← hτ]; exact hT'
+              simp only [Ty.int.injEq] at hTT
+              obtain ⟨rfl, rfl⟩ := hTT
+              have hk0 : 0 ≤ k := by rw [← hkdef]; exact (Val.int_bereich (ρ.get y)).1
+              have hZ1 : 1 ≤ Z := skalaOk_pos Z hsk
+              have hk_le : k.toNat ≤ k.toNat * Z := by
+                have h1 : k.toNat * 1 ≤ k.toNat * Z :=
+                  Nat.mul_le_mul (Nat.le_refl _) hZ1
+                rw [Nat.mul_one] at h1
+                exact h1
+              have hltN : k.toNat < 2 ^ 64 := by omega
+              have hcast : ((2 ^ 64 : Nat) : Int) = (2 ^ 64 : Int) := by decide
+              have hltI : k < ((2 ^ 64 : Nat) : Int) := (Int.toNat_lt hk0).mp hltN
+              rw [hcast] at hltI
+              have hM : s.register (abbOf c _ y) = natAdresse k.toNat := by
+                rw [hEy]; exact intWort_nat k hk0 hltI
+              have hev : eval σ₀ i σ ρ = ρ.get y := idxVarG?_eval i y σ₀ σ ρ hy
+              have heval : (eval σ₀ (.durch q t ht f i hL) σ ρ) =
+                  σ.slots t k f := by
+                have hrfl : (eval σ₀ (.durch q t ht f i hL) σ ρ) =
+                  σ.slots t (eval σ₀ i σ ρ).n f := rfl
+                rw [hev, hkdef] at hrfl
+                exact hrfl
+              have hrdW0 := hword lo hi hT'
+              unfold RepSlot at hrdW0
+              obtain ⟨s', hrun, hdst, -, hmem, hreg⟩ :=
+                skalChunk_lauf c hc _ hidxa B O Z _ s hM hsk _ hrdW0
+              refine ⟨s', hrun, ?_, hmem, ?_, hreg⟩
+              · rw [hdst, heval]
+                exact (intWort_zahlWort _ hlo hhi).symm
+              · exact envRepr_fremd ρ _ _ _ hE
+                  (fun _ x => hreg _ (cfgOk_frei c hc x).1 ((cfgOk_frei c hc x).2.2))
+            · rw [if_neg hok] at h; contradiction
+  | _ => change none = some p at h; contradiction
 
 /- CUTS:
    Skeleton only: scale exponent stub. The chunk, lowering, correctness,
