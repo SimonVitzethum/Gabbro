@@ -1,58 +1,92 @@
-# MUSE-REPORT-1268: exact review of candidate 1267 — BLOCKED, no verdict
+# MUSE-REPORT-1268: exact review of candidate 1267 (AVX2 SRA per-lane equation)
 
-Lane: 1268. Clone verified: `/home/simon/Dokumente/gabbro-muse/a1268`,
-branch `muse/1268` (HEAD `e762caa3` at verification time, clean, no diff
-against master). I own only this report file.
+CANDIDATE: 1267 ec962685795634fce434a0260902d82abae39cc1
 
-Task: report-only independent exact review of CANDIDATE 1267 (AVX2:
-per-lane equation for arithmetic shift right), ending in exactly one
-VERDICT: ACCEPT or REPAIR.
+Lane 1268, clone `/home/simon/Dokumente/gabbro-muse/a1268`, branch
+`muse/1268`. Review-only lane: I own only this report; existing files
+untouched. The lane file initially carried an unfilled HEAD placeholder;
+the pinned snapshot (`.tmp/review/SNAPSHOT.json`, base `c8bb4208`,
+`clean: true`, exactly the three files `MUSE-REPORT-1267.md`,
+`grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/Avx2SraLanes.lean`)
+supplied the exact hash and the full diff, which is everything this
+review is based on, plus the author's build evidence and the owner's
+task from the same snapshot directory.
 
-## Status: BLOCKED — candidate unavailable, no VERDICT given
+## What was checked
 
-I did not read the candidate diff, ran no candidate checks, and give no
-verdict, for these concrete reasons:
+- Banned tokens: word-boundary grep over the new file for
+  sorry/admit/axiom/native_decide/unsafe/split_ifs/norm_num/ring_nf/
+  sorryAx finds nothing. No new `axiom` declaration; the file ends with
+  `#print axioms` for every main theorem and an honest CUTS block.
+- Axioms (author build evidence at the pinned HEAD): every theorem
+  depends on nothing, `[propext]`, or `[propext, Quot.sound]` — a subset
+  of the standard goal axioms. `hsraWit_zeuge` is `[propext,
+  Quot.sound]`.
+- Scope: `Grammatik.lean` gains exactly one appended import line; all
+  other work is in the one new file (709 lines). Nothing redefined.
+- Lift, not copy: `vecSraImm`, `sraLane`, `ymmSra`,
+  `avx2TierZugelassen`, `HwAdapter`/`HwSchritt`/`HwWf`/`HwMaschine`
+  machinery (`setKernVonFp`, `projFp`, `setTso`, `tsoAnsicht`,
+  `issueByte`, `loadByte`, `hwSchritt_wf`, `setKernDaten_wf`,
+  `xmmSet_gleich/fremd`, `laneGet_mk`, `laneMod_pos`,
+  `avx2Tier_basis_zugelassen`, witness constants) are all referenced,
+  never redefined — each name verified present in `grammatik/`.
+- Premise use: every premise of every new theorem is used by its proof
+  (checked by reading each proof: `hc`/`hi` discharge the `if`s,
+  `hgate`/`h` discharge the gate/core tests, `hsign` selects the fill,
+  `hstep`/`hmem` build the `.sra` constructor). No `Prop`-typed
+  premise, no discarded hypothesis, no conclusion restating a premise.
+- Refusals refuse: `.b8`/`.b64` have no `SraBreite` constructor
+  (proved by `cases` + `decide`); the Tier-3 gate refusal, foreign-core
+  refusal, and old-event/bare-refusal adapter arms all compute to
+  `none` (`rfl`/`simp`).
+- Witness `hsraWit_zeuge` is non-degenerate: an admitted word shift on
+  core 0 (`0xFF00 >> 4 = 0xFFF0`, XMM-changing, `decide`-pinned), a
+  saturating shift on core 1 (all-ones/zero, `decide`-pinned), and a
+  memory-changing embedded base-machine byte issue through `alt` with
+  owner-only forwarding and unchanged canonical memory. The family
+  itself is register-only, so the memory step is honestly attributed to
+  the base machine, never claimed as an SRA effect.
+- Silicon against the clone-local Intel SDM extract: COUNT > 15 clamps
+  to 16 (PSRAW) and COUNT > 31 to 32 (PSRAD), each lane shifting
+  independently with sign fill — exactly the saturation the equation
+  states at count >= width. The VEX-has-no-VPSRAQ refusal is inherited
+  from accepted lane 1239 with provenance; the file's CUTS keeps silicon
+  correspondence beyond the cited lines OPEN.
+- The author's two "task is wrong" notes check out: (1) confirmed by
+  grep — `VectorIntegerHardwareForms.lean` defines only `vecShlQ`/
+  `vecShrQ`, no packed arithmetic shift exists, so SSE2 agreement is
+  indeed vacuous and the proved half-identity (`ymmSra_halb`,
+  `sraFolge_ymm_lo/hi`) is the correct substitute, disclosed in CUTS;
+  (2) the register-only family genuinely admits no family-level memory
+  witness, and the `alt`-attributed issue is the honest substitute,
+  disclosed in CUTS.
+- No claim larger than the proof: no VEX decoder/encoder, no RIP
+  advance, no YMM file (two-XMM modelling disclosed as a choice), no
+  W/GX bridge, no source/budget/timing correspondence.
 
-1. **No pinned HEAD supplied.** The lane file (`/.tmp/LANE.md`, line 25)
-   reads `CANDIDATE: 1267 <full pinned HEAD>` — the placeholder was never
-   filled with a commit hash, so there is no exact candidate to pin the
-   review to.
-2. **Author clone inaccessible.** The task instructs reading
-   `git diff master..HEAD` "in the author clone", i.e.
-   `/home/simon/Dokumente/gabbro-muse/a1267`. Access there is denied
-   (tool permission `external_directory ... deny`), and HARD RULES rule 1
-   forbids touching anything outside my own clone directory. Fetching or
-   copying from that path would violate both.
-3. **No local copy of the candidate.** `git rev-parse muse/1267` in my
-   clone answers "unknown commit"; my branch has an empty diff against
-   master, so the candidate's changes are not present here under any ref
-   I can resolve.
+## Last build result
 
-A VERDICT without the exact candidate diff would be fabrication, so I
-give none. This is not a REPAIR finding against the author: I have seen
-none of the author's work and make no claim about its quality.
+Author-supplied evidence at the pinned HEAD: `./lean-probe
+grammatik/Grammatik/X86/Avx2SraLanes.lean` ends at `== 0 error(s) in
+the COMPLETE output; exit 0`, and `./lean-bau` ends at `Build completed
+successfully (658 jobs).` I did not independently rebuild: the
+candidate is not checked out in my clone (ownership is this report
+only, and my base differs), so a local build would not be evidence
+about the candidate. The `pruefe-kein-sorry` 0-violation claim is the
+author's; my independent token grep over the exact new file confirms
+it.
 
-## Checks not run, and why
+## What remains open
 
-- `./lean-bau`: not run. My tree contains none of the candidate's
-  changes, so a green build here would say nothing about the candidate
-  and quoting its result line in a review would be misleading.
-- sorry/axiom/native_decide scan, `#print axioms` review, premise-use
-  check, evaluator-lift check, refusal/witness/silicon/CUTS checks: all
-  require the candidate diff; none performed.
+Nothing for this lane: the per-lane equation, saturation, separation,
+half agreement, adapter/embedding, refusals, and joint witness are all
+proved with standard axioms. Silicon correspondence beyond
+self-consistency, the VEX decoder, and any W/GX bridge stay OPEN by
+design and are named in CUTS.
 
-## What is needed to unblock
+## Substantive outcome
 
-One of: (a) the full pinned HEAD hash of candidate 1267 made resolvable
-from inside clone a1268 (e.g. fetched ref), with the lane file updated;
-or (b) re-issue of this review with lawful access to the exact candidate
-snapshot. On unblock, the review proceeds per the lane checklist
-(sorry/axiom scan, axioms standard, one-import-line rule, premise use,
-lift-not-copy, refusals, non-degenerate witness, silicon facts vs Intel
-SDM extracts, honest CUTS, `./lean-bau` result line, exactly one
-VERDICT).
+Exactly one machine-readable line follows.
 
-## Names of new definitions/theorems
-
-None added by this lane (review-only lane; no Lean work done, existing
-files untouched).
+VERDICT: ACCEPT
