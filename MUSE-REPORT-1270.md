@@ -8,6 +8,8 @@
 - Candidate files: `grammatik/Grammatik/X86/TsoGxCrossDecl.lean` (new, 267 lines),
   `grammatik/Grammatik.lean` (+1 import line), `MUSE-REPORT-1269.md`. Clean tree.
 
+CANDIDATE: 1269 885ced69f3d7730ca4e45db33662f3de2813db8a
+
 ## Checks performed
 
 - Forbidden tokens: `PATCH.diff` contains `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`
@@ -56,7 +58,9 @@ Candidate-side build per evidence: `lean-bau` green (658 jobs), `lean-probe` on 
 file `== 0 error(s) in the COMPLETE output`. Own-tree checks above corroborate every
 name the candidate depends on.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 ## What remains open / follow-ups (not merge blockers)
 
