@@ -1,15 +1,22 @@
 # MUSE-REPORT-1273: Rotates ROL, ROR, RCL, RCR
 
 Lane 1273, clone `/home/simon/Dokumente/gabbro-muse/a1273`, branch `muse/1273`.
-Owned files: `grammatik/Grammatik/X86/IntRotate.lean` (new, ~2600 lines),
+Owned files: `grammatik/Grammatik/X86/IntRotate.lean` (new, ~2610 lines),
 `grammatik/Grammatik.lean` (one import line appended), this report.
 No other file touched.
 
-## Status: complete, green
+## Status: complete, green, review repair applied
 
 - Last `./lean-probe grammatik/Grammatik/X86/IntRotate.lean`: **0 errors**.
 - Last `./lean-bau`: **Build completed successfully (659 jobs)**,
   including the new `import Grammatik.X86.IntRotate`.
+- Independent exact review (lane 1274, candidate 77780bb9):
+  VERDICT REPAIR with one finding R1 (REX.W precedence over 66h
+  in `rotBreite`). Repaired: REX.W now takes precedence for wide
+  forms (silicon direction), pinned by `pin_rot_rexw_ueber_66`
+  (`[102, 72, 209, 192]` decodes 64-bit, length 4); the encoder
+  never emits the combination, so no round trip or pin breaks.
+  Re-probed green and re-built green after the repair.
 - `#print axioms` for every new theorem: only `propext`, `Quot.sound`,
   or no axioms. No `sorry`, `admit`, `axiom`, `native_decide`, `unsafe`
   (the four `admit` substrings in the file are English words inside

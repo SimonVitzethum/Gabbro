@@ -1082,15 +1082,16 @@ def rotNimmPraefix : List Byte → Option (RotPraefix × List Byte)
     else rotNimmRex false 0 (b1 :: rest)
 
 /-- Width from the prefix: byte forms take no 66h and no REX.W,
-    wide forms take 16 bits on 66h, 64 on REX.W, else 32. -/
+    wide forms take 64 bits on REX.W (which overrides 66h on
+    silicon), 16 on 66h alone, else 32. -/
 def rotBreite (is8 : Bool) (p : RotPraefix) : Option Breite :=
   if is8 then
     if p.op16 then none
     else if p.w == 1 then none
     else some .b8
   else
-    if p.op16 then some .b16
-    else if p.w == 1 then some .b64
+    if p.w == 1 then some .b64
+    else if p.op16 then some .b16
     else some .b32
 
 /-- ModRM body after an admitted prefix and width: register-direct
@@ -1558,6 +1559,13 @@ theorem pin_rot_rcr32_mem :
 theorem pin_rot_rol64_weit :
     decodeRot [natByte 73, natByte 209, natByte 192] =
       some ((⟨⟨.rol, .b64, .eins, .reg .r8⟩, 3⟩ : RotDecodiert), []) := by
+  decide
+
+/-- Pinned bytes: REX.W overrides 66h (64-bit operand on silicon,
+    review finding R1 of lane 1274). -/
+theorem pin_rot_rexw_ueber_66 :
+    decodeRot [natByte 102, natByte 72, natByte 209, natByte 192] =
+      some ((⟨⟨.rol, .b64, .eins, .reg .rax⟩, 4⟩ : RotDecodiert), []) := by
   decide
 
 /-- Planted refusal: LOCK stays refused. -/
@@ -2446,7 +2454,9 @@ theorem rotHw_zeuge :
       C1 with digits 0 to 3. Provenance for the rows is the
       accepted ShiftCodec layering (shared group opcodes with
       disjoint digits) and the report; silicon re-check against
-      the supplied SDM extracts stays open.
+      the supplied SDM extracts stays open. REX.W overrides 66h
+      (review finding R1 of lane 1274, pinned by
+      `pin_rot_rexw_ueber_66`).
     - Canonical-subset refusals, each named: mod 0 and mod 1
       memory (disp32 mod 2 only, the pilot shape), the ah, bh,
       ch and dh high-byte registers (low bytes only), 66h and
@@ -2539,6 +2549,7 @@ theorem rotHw_zeuge :
 #print axioms pin_rot_rcl16_imm
 #print axioms pin_rot_rcr32_mem
 #print axioms pin_rot_rol64_weit
+#print axioms pin_rot_rexw_ueber_66
 #print axioms rot_nichts_lock
 #print axioms rot_nichts_digit_vier
 #print axioms rot_nichts_modus_null
