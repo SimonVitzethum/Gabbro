@@ -1,8 +1,10 @@
 # MUSE-REPORT-1330: exact review of candidate 1329 (HwKapsteinTsoRest)
 
+CANDIDATE: 1329 2d172a46beef1263453cc180591a5db102067412
+
 Lane 1330, clone `/home/simon/Dokumente/gabbro-muse/a1330`, branch `muse/1330`
 (verified: pwd + branch match; tree clean before and after).
-CANDIDATE: 1329 `2d172a46beef1263453cc180591a5db102067412`
+Candidate under review: lane 1329 at the pinned HEAD above
 (from `.tmp/review/SNAPSHOT.json`; author files used AS DELIVERED, pinned
 hash never touched: no `git show/log/diff` on it).
 
@@ -79,7 +81,9 @@ classify as stack-push events") is factually wrong about the accepted model
 right to decline it with reason, and the coordinator should correct that
 line for any follow-up lane. Otherwise the review task is sound.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 CANDIDATE 1329 `2d172a46beef1263453cc180591a5db102067412` is accepted for
 merge: green independent probe (0 errors), standard axioms, scope-exact
