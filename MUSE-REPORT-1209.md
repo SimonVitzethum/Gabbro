@@ -77,3 +77,54 @@ small pieces, each `./lean-probe` checked, green partials committed
 Complete: owned files are `grammatik/Grammatik/X86/HwLockFetch.lean`,
 the one import line in `grammatik/Grammatik.lean`, and this report.
 Full project build green.
+
+## Integration gate failure -- analysis (repair turn, 2026-10-05)
+
+The merge build failed with (verbatim):
+
+> `error: Grammatik.lean:44:0: failed to read file
+> '/home/simon/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean/Std/
+> Tactic/BVDecide/Bitblast/BVExpr/Circuit/Impl/Operations/
+> ZeroExtend.olean.private'`
+> at step `[641/642] Building Grammatik`. Nothing was merged.
+
+Finding, measured before the lane's shell access was revoked:
+
+- My module compiled INSIDE the merge build: all 8 `info:` lines in
+  the integration log are `HwLockFetch.lean` `#print axioms` outputs
+  with the standard set (`propext`, `Quot.sound`). The failure is
+  the step after, the final root `Grammatik.lean` link.
+- The error is a file-READ failure of a toolchain installation
+  artifact, not a Lean type error, not an axiom violation, not a
+  missing or circular import. My diff introduces no new import
+  (only `Grammatik.X86.HwLockRmw`, already in the tree) and no new
+  toolchain dependency, so it cannot cause a missing
+  `Std/...ZeroExtend.olean.private`.
+- Local re-verification in clone a1209 at `424bd9b9`, clean tree:
+  `./lean-probe grammatik/Grammatik/X86/HwLockFetch.lean` gives
+  `== 0 error(s)`, exit 0; full `./lean-bau` gives
+  `Build completed successfully (640 jobs)`.
+
+Repair performed on owned files: NONE -- no source change exists
+that addresses a missing toolchain file, and inventing one (e.g.
+dropping stock `decide`, which the whole tree uses and which did
+not cause this) would be churn, not a repair, and is refused under
+the no-weakening rule. The module is unchanged since the accepted
+isolated candidate.
+
+Requested remedy, owned by the coordinator (outside lane scope, not
+done here): verify/repair the `leanprover--lean4---v4.33.1`
+toolchain installation serving the integration checkout
+(`ZeroExtend.olean.private` present and readable; no concurrent
+writer on shared toolchain/caches; see AGENTS.md section 9
+apparatus notes), then re-run the merge gate on the UNCHANGED
+candidate. A fresh independent review of the (unchanged) commit is
+still required. No acceptance of the full source/binary chain is
+claimed.
+
+Blocker at report-writing time: lane shell access (`bash`,
+therefore `./lean-probe` re-runs, `./commit.sh`, `git`) is refused
+by the permission classifier, so this report update is written but
+could not be committed from inside the lane. The working tree
+contains exactly this file as the uncommitted change; everything
+else is at committed `424bd9b9`, verified green as stated above.
