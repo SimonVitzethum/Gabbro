@@ -535,62 +535,124 @@ def sysIntAnfrage (m : HwMaschine) (c : Nat) (st : SysSteuer)
     0, st.rflagsW, 0,
     k.rip + BitVec.ofNat 64 (sysLaenge .intN), none⟩
 
-/-- INT n leg: gate bytes from machine memory, then the accepted
-    delivery; faults classify through `torFehlerKlasse`. -/
+/-- INT push stage: canonical-pointer check, then the accepted
+    frame chain; a refused push is #SS and changes nothing. -/
+def schrittIntFertig (m : HwMaschine) (c : Nat) (st : SysSteuer)
+    (ev : SysEingaben) (req : LieferAnfrage) (g : IdtTor)
+    (rsp : Wort) (gew : Bool) : SysSnapAusgang :=
+  if !istKanonisch rsp then .fehler .ss
+  else match schiebeRahmen m.mem rsp (rahmenWorte req) with
+  | none => .fehler .ss
+  | some m' =>
+    let k := m.kerne c
+    let ifNeu := if g.unterbrechung then false
+      else (sysSteuerstand st ev).ifBit
+    let rspNeu := rsp -
+      BitVec.ofNat 64 (8 * (rahmenWorte req).length)
+    let reg : Register → Wort := fun q =>
+      if q = Register.rsp then rspNeu else k.register q
+    .ok (kernMitRegRip k reg g.offset)
+      ⟨⟨(if gew then ev.neuDpl else st.steuer.cpl),
+        st.steuer.iopl, ifNeu, st.steuer.vm⟩,
+        st.halted, st.rflagsW⟩ m'
+
+/-- INT n leg: gate bytes from machine memory, then the
+    accepted check/stack/push stages in order; faults classify
+    through `torFehlerKlasse`. RSP descends past the frame on the
+    SELECTED stack (kept or switched). -/
 def schrittInt (m : HwMaschine) (c : Nat) (st : SysSteuer)
     (ev : SysEingaben) : SysSnapAusgang :=
   match liesTorBytes m.mem (torAdresse ev.idtBasis ev.vektor) with
   | none => .fehler .gp
   | some t =>
-    match liefere m.mem (sysSteuerstand st ev)
-        (sysIntAnfrage m c st ev t) with
-    | .zugestellt m' ripNeu ifNeu gew =>
-      let k := m.kerne c
-      let rspNeu := k.register .rsp -
-        BitVec.ofNat 64
-          (8 * (rahmenWorte (sysIntAnfrage m c st ev t)).length)
-      let reg : Register → Wort := fun q =>
-        if q = Register.rsp then rspNeu else k.register q
-      .ok (kernMitRegRip k reg ripNeu)
-        ⟨⟨(if gew then ev.neuDpl else st.steuer.cpl),
-          st.steuer.iopl, ifNeu, st.steuer.vm⟩,
-          st.halted, st.rflagsW⟩ m'
-    | .lieferFehler f _ => .fehler (torFehlerKlasse f)
+    match pruefeTor ev.vektor ev.idtLimit t
+        (Herkunft.softwareInt (decide (ev.vektor = 1)))
+        st.steuer.cpl ev.codeOk with
+    | .fehler f => .fehler (torFehlerKlasse f)
+    | .bereit g =>
+      let sst := sysSteuerstand st ev
+      let req := sysIntAnfrage m c st ev t
+      match waehleStapel m.mem sst g.ist ev.neuDpl ev.wechsel
+          ((m.kerne c).register .rsp) with
+      | .stapelFehler f => .fehler (torFehlerKlasse f)
+      | .behalten rsp => schrittIntFertig m c st ev req g rsp false
+      | .wechseln rsp => schrittIntFertig m c st ev req g rsp true
 
 /-- INT delivery agrees with the accepted pipeline: the same
-    request delivers the same memory, handler RIP and IF. -/
+    gate, stack choice and push give the same memory, handler RIP,
+    descended RSP and IF. -/
 theorem schrittInt_liefert (m : HwMaschine) (c : Nat) (st : SysSteuer)
-    (ev : SysEingaben) (t : Wort × Wort) (m' : Speicher)
-    (ripNeu : Adresse) (ifNeu gew : Bool)
+    (ev : SysEingaben) (t : Wort × Wort) (g : IdtTor)
+    (rsp : Wort) (gew : Bool) (m' : Speicher)
     (hbytes : liesTorBytes m.mem (torAdresse ev.idtBasis ev.vektor) =
       some t)
-    (h : liefere m.mem (sysSteuerstand st ev)
-        (sysIntAnfrage m c st ev t) =
-        .zugestellt m' ripNeu ifNeu gew) :
+    (hp : pruefeTor ev.vektor ev.idtLimit t
+      (Herkunft.softwareInt (decide (ev.vektor = 1)))
+      st.steuer.cpl ev.codeOk = .bereit g)
+    (hs : waehleStapel m.mem (sysSteuerstand st ev) g.ist
+      ev.neuDpl ev.wechsel ((m.kerne c).register .rsp) =
+      if gew then .wechseln rsp else .behalten rsp)
+    (hk : istKanonisch rsp = true)
+    (hpush : schiebeRahmen m.mem rsp
+      (rahmenWorte (sysIntAnfrage m c st ev t)) = some m') :
     ∃ k' : HwKern, ∃ st' : SysSteuer,
-      schrittInt m c st ev = .ok k' st' m' ∧ k'.rip = ripNeu ∧
-        st'.steuer.ifBit = ifNeu := by
+      schrittInt m c st ev = .ok k' st' m' ∧
+        k'.rip = g.offset ∧
+        k'.register .rsp = rsp -
+          BitVec.ofNat 64
+            (8 * (rahmenWorte (sysIntAnfrage m c st ev t)).length) ∧
+        st'.steuer.ifBit =
+          (if g.unterbrechung then false
+            else (sysSteuerstand st ev).ifBit) := by
   refine ⟨kernMitRegRip (m.kerne c)
-    (fun q => if q = Register.rsp then
-      (m.kerne c).register .rsp - BitVec.ofNat 64
-        (8 * (rahmenWorte (sysIntAnfrage m c st ev t)).length)
+    (fun q => if q = Register.rsp then rsp -
+        BitVec.ofNat 64
+          (8 * (rahmenWorte (sysIntAnfrage m c st ev t)).length)
       else (m.kerne c).register q)
-    ripNeu,
+    g.offset,
     ⟨⟨(if gew then ev.neuDpl else st.steuer.cpl),
-      st.steuer.iopl, ifNeu, st.steuer.vm⟩,
-      st.halted, st.rflagsW⟩, ?_, rfl, rfl⟩
-  simp [schrittInt, hbytes, h]
+      st.steuer.iopl,
+      (if g.unterbrechung then false
+        else (sysSteuerstand st ev).ifBit),
+      st.steuer.vm⟩, st.halted, st.rflagsW⟩, ?_, rfl, ?_, rfl⟩
+  · simp only [schrittInt, hbytes, hp]
+    cases hgew : gew with
+    | true =>
+      simp only [hgew, ite_true] at hs
+      simp only [hs]
+      simp [schrittIntFertig, hk, hpush]
+    | false =>
+      simp only [hgew] at hs
+      simp only [hs]
+      simp [schrittIntFertig, hk, hpush]
+  · simp [kernMitRegRip]
 
-/-- INT faults agree with the accepted pipeline's fault. -/
-theorem schrittInt_fehler (m : HwMaschine) (c : Nat) (st : SysSteuer)
-    (ev : SysEingaben) (t : Wort × Wort) (f : TorFehler)
-    (code : Wort)
+/-- INT gate-check faults agree with the accepted check. -/
+theorem schrittInt_torfehler (m : HwMaschine) (c : Nat)
+    (st : SysSteuer) (ev : SysEingaben) (t : Wort × Wort)
+    (f : TorFehler)
     (hbytes : liesTorBytes m.mem (torAdresse ev.idtBasis ev.vektor) =
       some t)
-    (h : liefere m.mem (sysSteuerstand st ev)
-        (sysIntAnfrage m c st ev t) = .lieferFehler f code) :
+    (hp : pruefeTor ev.vektor ev.idtLimit t
+      (Herkunft.softwareInt (decide (ev.vektor = 1)))
+      st.steuer.cpl ev.codeOk = .fehler f) :
     schrittInt m c st ev = .fehler (torFehlerKlasse f) := by
-  simp [schrittInt, hbytes, h]
+  simp [schrittInt, hbytes, hp]
+
+/-- INT stack-choice faults agree with the accepted choice. -/
+theorem schrittInt_stapelfehler (m : HwMaschine) (c : Nat)
+    (st : SysSteuer) (ev : SysEingaben) (t : Wort × Wort)
+    (g : IdtTor) (f : TorFehler)
+    (hbytes : liesTorBytes m.mem (torAdresse ev.idtBasis ev.vektor) =
+      some t)
+    (hp : pruefeTor ev.vektor ev.idtLimit t
+      (Herkunft.softwareInt (decide (ev.vektor = 1)))
+      st.steuer.cpl ev.codeOk = .bereit g)
+    (hs : waehleStapel m.mem (sysSteuerstand st ev) g.ist
+      ev.neuDpl ev.wechsel ((m.kerne c).register .rsp) =
+      .stapelFehler f) :
+    schrittInt m c st ev = .fehler (torFehlerKlasse f) := by
+  simp [schrittInt, hbytes, hp, hs]
 
 /-- INT at CPL 3 against a DPL-0 gate is #GP (accepted DPL rule). -/
 theorem schrittInt_dpl_gp (m : HwMaschine) (c : Nat) (st : SysSteuer)
@@ -599,32 +661,20 @@ theorem schrittInt_dpl_gp (m : HwMaschine) (c : Nat) (st : SysSteuer)
       some t)
     (hlim : torImLimit ev.idtLimit ev.vektor = true)
     (hz : zerlegeTor t = .ok g)
-    (hd : dplZugelassen (.softwareInt false) g.dpl st.steuer.cpl =
-      false)
+    (hd : dplZugelassen (Herkunft.softwareInt false) g.dpl
+      st.steuer.cpl = false)
     (h1 : ¬ ev.vektor = 1) :
     schrittInt m c st ev = .fehler .gp := by
+  have hd1 : decide (ev.vektor = 1) = false := by
+    simp [h1]
   have hp : pruefeTor ev.vektor ev.idtLimit t
-      (Herkunft.softwareInt (decide (ev.vektor = 1))) st.steuer.cpl
-      ev.codeOk = .fehler (.dplFehler ev.vektor) := by
-    have hd1 : decide (ev.vektor = 1) = false := by
-      simp [h1]
-    have hd2 : (Herkunft.softwareInt (decide (ev.vektor = 1))) =
-        (Herkunft.softwareInt false) := by
-      rw [hd1]
-    rw [hd2]
+      (Herkunft.softwareInt (decide (ev.vektor = 1)))
+      st.steuer.cpl ev.codeOk = .fehler (.dplFehler ev.vektor) := by
+    rw [hd1]
     exact pruefeTor_dpl ev.vektor ev.idtLimit t st.steuer.cpl
       ev.codeOk g hlim hz hd
-  have hl : liefere m.mem (sysSteuerstand st ev)
-      (sysIntAnfrage m c st ev t) =
-      .lieferFehler (.dplFehler ev.vektor)
-        (torFehlerCode (.dplFehler ev.vektor)
-          (Herkunft.softwareInt (decide (ev.vektor = 1)))) := by
-    apply liefere_prueft_zuerst
-    simp only [sysIntAnfrage, sysSteuerstand]
-    exact hp
-  have hs := schrittInt_fehler m c st ev t (.dplFehler ev.vektor)
-    (torFehlerCode (.dplFehler ev.vektor)
-      (Herkunft.softwareInt (decide (ev.vektor = 1)))) hbytes hl
+  have hs := schrittInt_torfehler m c st ev t
+    (.dplFehler ev.vektor) hbytes hp
   simp [torFehlerKlasse] at hs
   exact hs
 
@@ -720,5 +770,203 @@ theorem schrittIret_ok (m : HwMaschine) (c : Nat) (st : SysSteuer)
       st.steuer.vm⟩, st.halted, rflagsGesp⟩, ?_, rfl, ?_, rfl⟩
   · simp [schrittIret, h0, h1, h2, h3, h4, hk]
   · simp [kernMitRegRip]
+
+/-! ## 8. Dispatcher, machine lift, adapter and step relation.
+    The dispatcher runs the leg its form names; the machine lift
+    installs core data, control and memory while buffers and both
+    profiles stay untouched by construction. -/
+
+/-- Dispatcher: the leg its form names over stored control. -/
+def sysSnapSchritt (m : HwMaschine) (c : Nat) (st : SysSteuer)
+    (ev : SysEreignis) : SysSnapAusgang :=
+  match ev.form with
+  | .hlt => schrittHlt m c st
+  | .cli => schrittIf m c st false (sysLaenge .cli)
+  | .sti => schrittIf m c st true (sysLaenge .sti)
+  | .pause => schrittPause m c st
+  | .cpuid => schrittCpuid m c st ev.eingaben.cpuidOut
+  | .rdtsc => schrittRdtsc m c st ev.eingaben.tsd ev.eingaben.tsc
+  | .intN => schrittInt m c st ev.eingaben
+  | .iret => schrittIret m c st
+  | .syscall => schrittSyscall m c st ev.eingaben
+  | .sysret => schrittSysret m c st ev.eingaben
+
+/-- Install one single-core outcome on the extended machine:
+    core data, control and memory move; buffers and both profiles
+    are kept. -/
+def sysInstalliert (s : SysMaschine) (c : Nat) (k' : HwKern)
+    (st' : SysSteuer) (mem' : Speicher) : SysMaschine :=
+  { hw := { s.hw with kerne := fun d =>
+      if d = c then k' else s.hw.kerne d, mem := mem' },
+    sys := fun d => if d = c then st' else s.sys d }
+
+/-- The install keeps every buffer. -/
+theorem sysInstalliert_puffer (s : SysMaschine) (c : Nat)
+    (k' : HwKern) (st' : SysSteuer) (mem' : Speicher) (d : Nat) :
+    (sysInstalliert s c k' st' mem').hw.puffer d =
+      s.hw.puffer d := rfl
+
+/-- The install keeps both profiles. -/
+theorem sysInstalliert_profile (s : SysMaschine) (c : Nat)
+    (k' : HwKern) (st' : SysSteuer) (mem' : Speicher) :
+    (sysInstalliert s c k' st' mem').hw.hw = s.hw.hw ∧
+      (sysInstalliert s c k' st' mem').hw.bereit = s.hw.bereit :=
+  ⟨rfl, rfl⟩
+
+/-- The install preserves machine well-formedness. -/
+theorem sysInstalliert_wf (s : SysMaschine) (c : Nat)
+    (k' : HwKern) (st' : SysSteuer) (mem' : Speicher)
+    (h : SysWf s) : SysWf (sysInstalliert s c k' st' mem') := h
+
+/-- Machine lift: profile-absent forms fault #UD; otherwise the
+    dispatched leg installs. -/
+def sysAusfuehren (s : SysMaschine) (c : Nat)
+    (ev : SysEreignis) : SysAusgang :=
+  if formFrei ev.eingaben.profil ev.form = false then
+    .fehler .ud
+  else match sysSnapSchritt s.hw c (s.sys c) ev with
+  | .ok k' st' mem' => .ok (sysInstalliert s c k' st' mem')
+  | .fehler f => .fehler f
+  | .verweigert => .verweigert
+
+/-- A profile-absent form is #UD and changes nothing. -/
+theorem sysAusfuehren_ud (s : SysMaschine) (c : Nat)
+    (ev : SysEreignis)
+    (h : formFrei ev.eingaben.profil ev.form = false) :
+    sysAusfuehren s c ev = .fehler .ud := by
+  simp [sysAusfuehren, h]
+
+/-- Freestanding SYSCALL is #UD. -/
+theorem sysAusfuehren_syscall_freistehend (s : SysMaschine)
+    (c : Nat) (ev : SysEreignis)
+    (hf : ev.form = .syscall)
+    (hp : ev.eingaben.profil = .freistehend) :
+    sysAusfuehren s c ev = .fehler .ud := by
+  apply sysAusfuehren_ud
+  simp [formFrei, hf, hp]
+
+/-- Every installed step preserves well-formedness. -/
+theorem sysAusfuehren_wf (s s' : SysMaschine) (c : Nat)
+    (ev : SysEreignis)
+    (h : sysAusfuehren s c ev = .ok s') (hwf : SysWf s) :
+    SysWf s' := by
+  unfold sysAusfuehren at h
+  by_cases hf : formFrei ev.eingaben.profil ev.form = false
+  · simp [hf] at h
+  · simp only [hf] at h
+    cases ho : sysSnapSchritt s.hw c (s.sys c) ev with
+    | ok k' st' mem' =>
+      simp [ho] at h
+      rw [← h]
+      exact sysInstalliert_wf s c k' st' mem' hwf
+    | fehler f => simp [ho] at h
+    | verweigert => simp [ho] at h
+
+/-- Every installed step keeps every buffer (S-SERIAL machine
+    side: no system leg drains the TSO store buffer). -/
+theorem sysAusfuehren_puffer (s s' : SysMaschine) (c d : Nat)
+    (ev : SysEreignis)
+    (h : sysAusfuehren s c ev = .ok s') :
+    s'.hw.puffer d = s.hw.puffer d := by
+  unfold sysAusfuehren at h
+  by_cases hf : formFrei ev.eingaben.profil ev.form = false
+  · simp [hf] at h
+  · simp only [hf] at h
+    cases ho : sysSnapSchritt s.hw c (s.sys c) ev with
+    | ok k' st' mem' =>
+      simp [ho] at h
+      rw [← h]
+      exact sysInstalliert_puffer s c k' st' mem' d
+    | fehler f => simp [ho] at h
+    | verweigert => simp [ho] at h
+
+/-! ## 9. The §11 producer plug and the extended step relation.
+    The adapter carries snapshot control in its event (the coherent
+    machine stores none); the extended relation embeds `HwSchritt`
+    exactly and runs system legs through `sysAusfuehren`. -/
+
+/-- The system112x producer plug: snapshot control rides in the
+    event; the machine projection installs core data and memory.
+    Control changes (IF/CPL/halted) live only in the extended
+    relation below, never in the plug. -/
+def adapterSystem : HwAdapter (SysSteuer × SysEreignis) :=
+  ⟨fun m c p => match sysSnapSchritt m c p.1 p.2 with
+    | .ok k' _ mem' =>
+      some { m with kerne := fun d =>
+        if d = c then k' else m.kerne d, mem := mem' }
+    | _ => none⟩
+
+/-- An admitted leg installs through the plug. -/
+theorem adapterSystem_ok (m : HwMaschine) (c : Nat)
+    (p : SysSteuer × SysEreignis) (k' : HwKern) (st' : SysSteuer)
+    (mem' : Speicher)
+    (h : sysSnapSchritt m c p.1 p.2 = .ok k' st' mem') :
+    adapterSystem.schritt m c p =
+      some { m with kerne := fun d =>
+        if d = c then k' else m.kerne d, mem := mem' } := by
+  simp [adapterSystem, h]
+
+/-- A faulting leg admits nothing through the plug. -/
+theorem adapterSystem_fehler (m : HwMaschine) (c : Nat)
+    (p : SysSteuer × SysEreignis) (f : ArchFehler)
+    (h : sysSnapSchritt m c p.1 p.2 = .fehler f) :
+    adapterSystem.schritt m c p = none := by
+  simp [adapterSystem, h]
+
+/-- Unreadable gate bytes refuse delivery with #GP (descriptor
+    load without paging disambiguation; cf. `SeitenInfo`). -/
+theorem schrittInt_gate_unlesbar (m : HwMaschine) (c : Nat)
+    (st : SysSteuer) (ev : SysEingaben)
+    (h : liesTorBytes m.mem (torAdresse ev.idtBasis ev.vektor) =
+      none) :
+    schrittInt m c st ev = .fehler .gp := by
+  simp [schrittInt, h]
+
+/-- Extended events: coherent steps or system steps. -/
+inductive SysIntEreignis where
+  | syncEv : HwEreignis → SysIntEreignis
+  | sysEv : Nat → SysEreignis → SysIntEreignis
+  deriving DecidableEq, Repr
+
+/-- Extended step: `HwSchritt` embedded unchanged (control kept),
+    or a checked system leg (control moves with it). -/
+inductive SysSchritt :
+    SysMaschine → SysMaschine → SysIntEreignis → Prop where
+  | sync {s : SysMaschine} {m' : HwMaschine} {e : HwEreignis}
+      (h : HwSchritt s.hw m' e) :
+      SysSchritt s ⟨m', s.sys⟩ (.syncEv e)
+  | sys {s s' : SysMaschine} (c : Nat) (ev : SysEreignis)
+      (h : sysAusfuehren s c ev = .ok s') :
+      SysSchritt s s' (.sysEv c ev)
+
+/-- EMBEDDING IN: every coherent step rides along unchanged. -/
+theorem sysSchritt_sync_einbetten (s : SysMaschine)
+    (m' : HwMaschine) (e : HwEreignis)
+    (h : HwSchritt s.hw m' e) :
+    SysSchritt s ⟨m', s.sys⟩ (.syncEv e) :=
+  .sync h
+
+/-- EMBEDDING ONLY: a sync-labelled step IS a coherent step with
+    untouched control -- no new behaviour hides behind it. -/
+theorem sysSchritt_sync_nur (s s' : SysMaschine) (e : HwEreignis)
+    (h : SysSchritt s s' (.syncEv e)) :
+    ∃ m', s'.hw = m' ∧ s'.sys = s.sys ∧ HwSchritt s.hw m' e := by
+  cases h with
+  | sync h => exact ⟨_, rfl, rfl, h⟩
+
+/-- Every extended step preserves well-formedness. -/
+theorem sysSchritt_wf (s s' : SysMaschine) (e : SysIntEreignis)
+    (h : SysSchritt s s' e) (hwf : SysWf s) : SysWf s' := by
+  cases h with
+  | sync h => exact hwSchritt_wf s.hw _ _ h hwf
+  | sys c ev h => exact sysAusfuehren_wf s s' c ev h hwf
+
+/-- Every system-labelled step keeps every buffer. -/
+theorem sysSchritt_sys_puffer (s s' : SysMaschine) (c d : Nat)
+    (ev : SysEreignis)
+    (h : SysSchritt s s' (.sysEv c ev)) :
+    s'.hw.puffer d = s.hw.puffer d := by
+  cases h with
+  | sys c ev h => exact sysAusfuehren_puffer s s' c d ev h
 
 end Gabbro.Grammatik.X86
