@@ -22,6 +22,8 @@ import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
 import Grammatik.X86.NarrowOps
 import Grammatik.X86.ExtendedExecution
+import Grammatik.X86.TSO
+import Grammatik.X86.HardwareExecution
 
 namespace Gabbro.Grammatik.X86
 
@@ -1338,5 +1340,180 @@ theorem btHwSchritt_bt_verweigert (d : BtDecodiert) (t : FpZustand)
       | some s' => ExtAusgang.weiter { t with kern := s' }
       | none => .verweigert := rfl
   rw [e, h]
+
+/-! ## 12. Machine adapter: the register plug.
+
+    The producer plug instantiates `HwAdapter BtDecodiert` with the
+    accepted API: a successful register step re-embeds core data over
+    the shared memory; traps and refusals admit no successor state.
+    Memory forms never take the register plug (§13 routes them
+    through TSO events instead). -/
+
+/-- The bit-test plug: one checked register event step on the
+    coherent machine. `none` = length mismatch, memory form, or
+    refusal -- never a silent successor. -/
+def adapterBitTest : HwAdapter BtDecodiert :=
+  ⟨fun m c d =>
+    match btSchritt d (projZustand m c) with
+    | some s' =>
+      some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩)
+    | none => none⟩
+
+/-- Every adapter step preserves well-formedness: only core data
+    moves, profiles are untouched. -/
+theorem adapterBitTest_wf (m : HwMaschine) (c : Nat)
+    (d : BtDecodiert) (m' : HwMaschine) (hwf : HwWf m)
+    (h : (adapterBitTest).schritt m c d = some m') :
+    HwWf m' := by
+  unfold adapterBitTest at h
+  simp only at h
+  cases hsch : btSchritt d (projZustand m c) with
+  | some s' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    unfold setKernVonFp
+    exact setKernDaten_wf _ _ _ hwf
+  | none =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
+/-- Agreement: the adapter succeeds exactly where the accepted family
+    step succeeds, with the successor core data re-embedded. -/
+theorem adapterBitTest_ok (m : HwMaschine) (c : Nat)
+    (d : BtDecodiert) (s' : Zustand)
+    (h : btSchritt d (projZustand m c) = some s') :
+    (adapterBitTest).schritt m c d =
+      some (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩) := by
+  unfold adapterBitTest
+  simp only [h]
+
+/-- The successor core sees the accepted successor registers over
+    the shared memory. -/
+theorem adapterBitTest_proj (m : HwMaschine) (c : Nat)
+    (d : BtDecodiert) (s' : Zustand)
+    (h : btSchritt d (projZustand m c) = some s') :
+    ((setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩).kerne c).register =
+      s'.register ∧
+    (setKernVonFp m c ⟨s', (m.kerne c).xmm, (m.kerne c).fp⟩).mem = m.mem ∧
+    s'.speicher = m.mem := by
+  refine ⟨setKernVonFp_register m c _,
+    setKernVonFp_speicher m c _, ?_⟩
+  have hmem := btSchritt_speicher d (projZustand m c) s' h
+  have hproj : (projZustand m c).speicher = m.mem := rfl
+  rw [hproj] at hmem
+  exact hmem
+
+/-- A bad decode length admits no adapter step. -/
+theorem adapterBitTest_verweigert_bei_laenge (m : HwMaschine)
+    (c : Nat) (d : BtDecodiert)
+    (h : d.laenge ≠ btLaenge d.befehl) :
+    (adapterBitTest).schritt m c d = none := by
+  have hstep := btSchritt_laenge d (projZustand m c) h
+  unfold adapterBitTest
+  simp only [hstep]
+
+/-- A memory form admits no adapter successor at any length: the
+    register plug never serves memory. -/
+theorem adapterBitTest_verweigert_memReg (m : HwMaschine) (c : Nat)
+    (op : BtOp) (w : BtWeite) (base bitReg : Register)
+    (disp : BitVec 32) (d : BtDecodiert)
+    (hform : d.befehl = .memReg op w base bitReg disp) :
+    (adapterBitTest).schritt m c d = none := by
+  by_cases hl : d.laenge == btLaenge d.befehl
+  · have hstep := btSchritt_mem_verweigert d (projZustand m c)
+      op w base bitReg disp hform hl
+    unfold adapterBitTest
+    simp only [hstep]
+  · have hne : d.laenge ≠ btLaenge d.befehl := by
+      simpa [beq_iff_eq] using hl
+    have hstep := btSchritt_laenge d (projZustand m c) hne
+    unfold adapterBitTest
+    simp only [hstep]
+
+/-- A memory imm8 form admits no adapter successor either. -/
+theorem adapterBitTest_verweigert_memImm (m : HwMaschine) (c : Nat)
+    (op : BtOp) (w : BtWeite) (base : Register)
+    (disp : BitVec 32) (n : Nat) (d : BtDecodiert)
+    (hform : d.befehl = .memImm op w base disp n) :
+    (adapterBitTest).schritt m c d = none := by
+  by_cases hl : d.laenge == btLaenge d.befehl
+  · have hstep := btSchritt_memImm_verweigert d (projZustand m c)
+      op w base disp n hform hl
+    unfold adapterBitTest
+    simp only [hstep]
+  · have hne : d.laenge ≠ btLaenge d.befehl := by
+      simpa [beq_iff_eq] using hl
+    have hstep := btSchritt_laenge d (projZustand m c) hne
+    unfold adapterBitTest
+    simp only [hstep]
+
+/-! ## 13. Memory footprint: the signed offset moves the address.
+
+    A register bit offset is SIGNED: the effective address is base +
+    disp32 plus the byte displacement (floor division by 8), wrapping
+    modulo 2^64 like hardware. The footprint is exactly the
+    operand-size bytes at that address. -/
+
+/-- Signed bit offset held by the offset register. -/
+def btOffsetInt (s : Zustand) (bitReg : Register) : Int :=
+  (s.register bitReg).toInt
+
+/-- Byte displacement of a signed bit offset (`/` floors, so negative
+    offsets move to lower bytes). -/
+def btByteVersatz (off : Int) : Int := off / 8
+
+/-- Bit position inside the addressed byte. -/
+def btBitImByte (off : Int) : Nat := (off % 8).toNat
+
+/-- Reconstruction: offset = 8 * displacement + bit. -/
+theorem btVersatz_rekon (off : Int) :
+    8 * (off / 8) + off % 8 = off := by
+  omega
+
+/-- The bit position lies inside its byte. -/
+theorem btBitImByte_schranke (off : Int) :
+    0 ≤ off % 8 ∧ off % 8 < 8 := by
+  omega
+
+/-- Effective address of a memory form: base + disp32 plus the signed
+    byte displacement, wrapping modulo 2^64 like hardware. -/
+def btEffAddr (s : Zustand) (base bitReg : Register)
+    (disp : BitVec 32) : Adresse :=
+  effAddr s base disp +
+    BitVec.ofNat 64 (((s.register bitReg).toInt / 8) % 2 ^ 64).toNat
+
+/-- Zero offset: the effective address is base + disp32. -/
+theorem btEffAddr_null (s : Zustand) (base bitReg : Register)
+    (disp : BitVec 32) (h : s.register bitReg = 0) :
+    btEffAddr s base bitReg disp = effAddr s base disp := by
+  have hz : (0 : Wort).toInt = 0 := by decide
+  have h0 : (((0 : Int) / 8) % 2 ^ 64).toNat = 0 := by decide
+  unfold btEffAddr
+  rw [h, hz, h0]
+  simp
+
+/-- Operand size in bytes. -/
+def btWeiteBytes : BtWeite → Nat
+  | .w16 => 2 | .w32 => 4 | .w64 => 8
+
+/-- The footprint of a memory form: the operand-size bytes at the
+    effective address -- exactly the addressed unit, never more. -/
+def btFuss (w : BtWeite) (eff : Adresse) : List Adresse :=
+  (List.range (btWeiteBytes w)).map (fun i => eff + BitVec.ofNat 64 i)
+
+/-- Footprint length is the operand size. -/
+theorem btFuss_laenge (w : BtWeite) (eff : Adresse) :
+    (btFuss w eff).length = btWeiteBytes w := by
+  cases w <;> rfl
+
+/-- Displacement pins: positive offsets move up, negative down, with
+    floor division (bit 7 of the byte below for -1). -/
+theorem probe_bt_versatz :
+    btByteVersatz 20 = 2 ∧ btBitImByte 20 = 4 ∧
+    btByteVersatz (-1) = -1 ∧ btBitImByte (-1) = 7 ∧
+    btByteVersatz (-9) = -2 ∧ btBitImByte (-9) = 7 := by
+  decide
 
 end Gabbro.Grammatik.X86
