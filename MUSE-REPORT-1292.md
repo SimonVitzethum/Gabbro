@@ -1,8 +1,10 @@
 # MUSE-REPORT-1292: Exact review of candidate 1291 (capstone byte-decoder disjointness)
 
 Lane 1292, clone `/home/simon/Dokumente/gabbro-muse/a1292`, branch `muse/1292` (verified, clean).
-Report-only exact review. CANDIDATE: 1291, pinned HEAD `5589ece657df46cc4141d6631a98f672f2eed39b`
-(taken from `.tmp/review/SNAPSHOT.json`; never inspected via git, per task rule).
+Report-only exact review. Pinned head taken from `.tmp/review/SNAPSHOT.json`
+(never inspected via git, per task rule):
+
+CANDIDATE: 1291 5589ece657df46cc4141d6631a98f672f2eed39b
 Owned file: only this report. No other file in this clone was modified.
 
 ## What was checked
@@ -69,7 +71,9 @@ witness-level only); system forms have no byte decoder; AVX2 covers four pinned 
 no silicon re-check and no W/GX bridge. The result is weaker than the literal "every
 ordered pair" ask and says so plainly; no fake closure.
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
 
 No unsupported premises, no weakened guarantees, no closure beyond what is proved.
 The known width/unified overlap keeps one evaluator meaning by cited accepted lemmas;
