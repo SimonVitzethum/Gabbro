@@ -24,16 +24,27 @@ inductive LStatus where
   | fehlt
   deriving DecidableEq, Repr
 
-/-- One ledger row: second opcode byte, mnemonic, status, modelling
-    family (existing Lean module as a string) and a one-line reason
-    for every non-`modelliert` entry. -/
+/-- One ledger row: legacy prefix (none, or e.g. F3 = 243), second
+    opcode byte, mnemonic, status, modelling family (existing Lean
+    module as a string) and a one-line reason for every non-`modelliert`
+    entry. Base rows carry no prefix; prefixed forms (POPCNT, TZCNT,
+    LZCNT) are own rows sharing the second byte. -/
 structure LEintrag where
+  praefix : Option Nat := none
   op2 : Nat
   mnem : String
   status : LStatus
   familie : String
   grund : String
   deriving DecidableEq, Repr
+
+/-- Prefix as a key number: no prefix is 0. -/
+def praefixNr : Option Nat → Nat
+  | none => 0 | some p => p
+
+/-- Full key of a row: prefix plus second opcode byte. -/
+def schluessel (e : LEintrag) : Nat × Nat :=
+  (praefixNr e.praefix, e.op2)
 
 /-- The full ledger: one row per second-opcode byte 0F 80-BF
     (128-191). Opcode map: Intel SDM Vol 2 Appendix A, Table A-3
@@ -74,37 +85,37 @@ def ledger : List LEintrag :=
      familie := "Codec.lean", grund := "" },
    { op2 := 143, mnem := "JG/JNLE rel16/32", status := .modelliert,
      familie := "Codec.lean", grund := "" },
-   { op2 := 144, mnem := "SETO r/m8", status := .modelliert,
+   { op2 := 144, mnem := "SETO r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 145, mnem := "SETNO r/m8", status := .modelliert,
+   { op2 := 145, mnem := "SETNO r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 146, mnem := "SETB/SETC/SETNAE r/m8", status := .modelliert,
+   { op2 := 146, mnem := "SETB/SETC/SETNAE r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 147, mnem := "SETAE/SETNB/SETNC r/m8", status := .modelliert,
+   { op2 := 147, mnem := "SETAE/SETNB/SETNC r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 148, mnem := "SETE/SETZ r/m8", status := .modelliert,
+   { op2 := 148, mnem := "SETE/SETZ r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 149, mnem := "SETNE/SETNZ r/m8", status := .modelliert,
+   { op2 := 149, mnem := "SETNE/SETNZ r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 150, mnem := "SETBE/SETNA r/m8", status := .modelliert,
+   { op2 := 150, mnem := "SETBE/SETNA r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 151, mnem := "SETA/SETNBE r/m8", status := .modelliert,
+   { op2 := 151, mnem := "SETA/SETNBE r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 152, mnem := "SETS r/m8", status := .modelliert,
+   { op2 := 152, mnem := "SETS r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 153, mnem := "SETNS r/m8", status := .modelliert,
+   { op2 := 153, mnem := "SETNS r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 154, mnem := "SETP/SETPE r/m8", status := .modelliert,
+   { op2 := 154, mnem := "SETP/SETPE r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 155, mnem := "SETNP/SETPO r/m8", status := .modelliert,
+   { op2 := 155, mnem := "SETNP/SETPO r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 156, mnem := "SETL/SETNGE r/m8", status := .modelliert,
+   { op2 := 156, mnem := "SETL/SETNGE r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 157, mnem := "SETGE/SETNL r/m8", status := .modelliert,
+   { op2 := 157, mnem := "SETGE/SETNL r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 158, mnem := "SETLE/SETNG r/m8", status := .modelliert,
+   { op2 := 158, mnem := "SETLE/SETNG r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
-   { op2 := 159, mnem := "SETG/SETNLE r/m8", status := .modelliert,
+   { op2 := 159, mnem := "SETG/SETNLE r8 (reg-direct only)", status := .modelliert,
      familie := "ControlCodec.lean", grund := "" },
    { op2 := 160, mnem := "PUSH FS", status := .fehlt,
      familie := "", grund := "no family models segment pushes; rare in user code" },
@@ -135,7 +146,7 @@ def ledger : List LEintrag :=
    { op2 := 173, mnem := "SHRD r/m, r, CL", status := .fehlt,
      familie := "", grund := "no family models double shifts; emitted for wide rotates" },
    { op2 := 174, mnem := "Group 15 (FXSAVE/SFENCE/...) ", status := .zurueckgestellt,
-     familie := "LockedInstructionExecution.lean",
+     familie := "LockedInstructionExecution.lean + LfenceLoadNarrow.lean",
      grund := "fence rows modelled, FXSAVE/XRSTOR/CLFLUSH deferred" },
    { op2 := 175, mnem := "IMUL r, r/m", status := .modelliert,
      familie := "MulDivWidthHardwareForms.lean", grund := "" },
@@ -156,7 +167,8 @@ def ledger : List LEintrag :=
    { op2 := 183, mnem := "MOVZX r, r/m16", status := .fehlt,
      familie := "", grund := "no family models zero extension; very common in output" },
    { op2 := 184, mnem := "JMPE (IA-64)", status := .verweigert,
-     familie := "HwKapsteinDecoder.lean", grund := "Itanium emulator op, #UD on x86-64" },
+     familie := "HwKapsteinDecoder.lean",
+     grund := "bare form is the Itanium JMPE op, #UD; with F3 it is POPCNT (prefix row below)" },
    { op2 := 185, mnem := "UD1/Group 10", status := .verweigert,
      familie := "HwKapsteinDecoder.lean", grund := "reserved, #UD by definition" },
    { op2 := 186, mnem := "Group 8 BT imm8", status := .modelliert,
@@ -169,21 +181,30 @@ def ledger : List LEintrag :=
      familie := "IntBitScan.lean", grund := "" },
    { op2 := 190, mnem := "MOVSX r, r/m8", status := .fehlt,
      familie := "", grund := "no family models sign extension; very common in output" },
-   { op2 := 191, mnem := "MOVSXD/MOVSX r, r/m16", status := .fehlt,
-     familie := "", grund := "no family models sign extension; very common in output" }]
+   { op2 := 191, mnem := "MOVSX r, r/m16", status := .fehlt,
+     familie := "", grund := "no family models sign extension; very common in output" },
+   { praefix := some 243, op2 := 184, mnem := "F3 0F B8 POPCNT",
+     status := .modelliert, familie := "IntBitScan.lean", grund := "" },
+   { praefix := some 243, op2 := 188, mnem := "F3 0F BC TZCNT",
+     status := .zurueckgestellt, familie := "IntBitScan.lean",
+     grund := "family plants refusal, executes as BSF where unsupported" },
+   { praefix := some 243, op2 := 189, mnem := "F3 0F BD LZCNT",
+     status := .zurueckgestellt, familie := "IntBitScan.lean",
+     grund := "family plants refusal, executes as BSR where unsupported" }]
 
 /-- Status count over the ledger. -/
 def statusZaehlt (s : LStatus) : Nat :=
   (ledger.filter (fun e => e.status == s)).length
 
-/-- The ledger has one row per opcode byte in the region. -/
-theorem ledger_laenge : ledger.length = 64 := rfl
+/-- The ledger has one row per opcode byte in the region, plus the
+    three prefixed rows. -/
+theorem ledger_laenge : ledger.length = 67 := rfl
 
-/-- Count per status: 42 modelled. -/
-theorem ledger_modelliert : statusZaehlt .modelliert = 42 := by decide
+/-- Count per status: 43 modelled (42 base + POPCNT). -/
+theorem ledger_modelliert : statusZaehlt .modelliert = 43 := by decide
 
-/-- Count per status: 1 deferred (group 15). -/
-theorem ledger_zurueckgestellt : statusZaehlt .zurueckgestellt = 1 := by decide
+/-- Count per status: 3 deferred (group 15 + TZCNT + LZCNT). -/
+theorem ledger_zurueckgestellt : statusZaehlt .zurueckgestellt = 3 := by decide
 
 /-- Count per status: 5 refused (invalid/privileged/reserved). -/
 theorem ledger_verweigert : statusZaehlt .verweigert = 5 := by decide
@@ -194,12 +215,15 @@ theorem ledger_ungueltig64 : statusZaehlt .ungueltig64 = 0 := by decide
 /-- Count per status: 16 missing. -/
 theorem ledger_fehlt : statusZaehlt .fehlt = 16 := by decide
 
-/-- The ledger opcodes are exactly the region bytes 128-191. -/
+/-- The ledger keys are exactly the region bytes 128-191 at prefix 0,
+    plus the three F3-prefixed rows. -/
 theorem ledger_opcodes :
-    (ledger.map LEintrag.op2) = List.range' 128 64 := by decide
+    (ledger.map schluessel) =
+      ((List.range' 128 64).map fun b => (0, b)) ++
+        [(243, 184), (243, 188), (243, 189)] := by decide
 
-/-- No opcode byte is listed twice. -/
-theorem ledger_nodup : (ledger.map LEintrag.op2).Nodup := by decide
+/-- No (prefix, opcode) key is listed twice. -/
+theorem ledger_nodup : (ledger.map schluessel).Nodup := by decide
 
 /-! ## Checked part: every `modelliert` row decodes, every
     `verweigert` row is refused by the capstone chain. -/
@@ -220,7 +244,7 @@ theorem setcc_alle_modelliert (c : Bedingung) (dst : Register)
       some ((c, dst), suffix) :=
   roundtrip_setCC c dst suffix
 
-/-- BT register row 0F A3 decodes (reused accepted pin). -/
+/-- BTC register row 0F BB decodes (reused accepted pin). -/
 theorem bt_reg_modelliert :
     decodeBt [natByte 72, natByte 15, natByte 187, natByte 200] =
       some (((.reg .btc .w64 .rax .rcx) : BtForm), []) :=
@@ -281,6 +305,63 @@ theorem cmpxchg_modelliert :
       some (LockAnweisung.ok (.cmpxchg64 .rcx .rbp 0) 9, []) :=
   pin_lock_cmpxchg_decodiert
 
+/-- Every BTS register row decodes (reused generic round trip; all
+    premises are used). -/
+theorem bts_reg_alle (w : BtWeite) (dst src : Register)
+    (suffix : List Byte) :
+    decodeBt (encodeBt (.reg .bts w dst src) ++ suffix) =
+      some (((.reg .bts w dst src) : BtForm), suffix) :=
+  roundtripBtReg .bts w dst src suffix
+
+/-- Every BTR register row decodes (reused generic round trip; all
+    premises are used). -/
+theorem btr_reg_alle (w : BtWeite) (dst src : Register)
+    (suffix : List Byte) :
+    decodeBt (encodeBt (.reg .btr w dst src) ++ suffix) =
+      some (((.reg .btr w dst src) : BtForm), suffix) :=
+  roundtripBtReg .btr w dst src suffix
+
+/-- Every BSF register row decodes (reused generic round trip; all
+    premises are used). -/
+theorem bsf_alle_modelliert (b : BsBreite) (dst src : Register) :
+    decodeBs (encodeBs (.bsf b dst (.reg src))) =
+      some (⟨.bsf b dst (.reg src),
+        (encodeBs (.bsf b dst (.reg src))).length⟩, []) :=
+  encodeBsf_decodeBs b dst src
+
+/-- POPCNT row F3 0F B8 decodes (reused accepted pin). -/
+theorem popcnt_modelliert :
+    decodeBs [natByte 243, natByte 15, natByte 184, natByte 193] =
+      some (⟨.popcnt .b32 .rax (.reg .rcx), 4⟩, []) :=
+  pin_popcnt_reg
+
+/-- TZCNT shape F3 0F BC is deferred: the family decoder refuses it
+    (reused planted refusal). -/
+theorem tzcnt_zurueckgestellt :
+    decodeBs [natByte 243, natByte 15, natByte 188, natByte 193] =
+      none :=
+  bs_nichts_tzcnt
+
+/-- LZCNT shape F3 0F BD is deferred: the family decoder refuses it
+    (reused planted refusal). -/
+theorem lzcnt_zurueckgestellt :
+    decodeBs [natByte 243, natByte 15, natByte 189, natByte 193] =
+      none :=
+  bs_nichts_lzcnt
+
+/-- Group 8 extension mapping: every /4../7 op decodes in imm8 form
+    (reused generic round trip; the premise is used). -/
+theorem gruppe8_alle (op : BtOp) :
+    decodeBt (encodeBt (.imm op .w32 .rdx 5) ++ []) =
+      some ((((.imm op .w32 .rdx 5) : BtForm)), []) :=
+  roundtripBtImm op .w32 .rdx 5 (by decide) []
+
+/-- Group 15 modelled extension: MFENCE /6 decodes (reused pin). -/
+theorem gruppe15_mfence :
+    decodeLock [natByte 15, natByte 174, natByte 240] =
+      some (LockAnweisung.ok .mfence 3, []) :=
+  pin_lock_mfence_decodiert
+
 /-- Refused: XBTS 0F A6 decodes to nothing on the capstone chain. -/
 theorem verw_a6 : kapDecode [natByte 15, natByte 166] = none := by
   decide
@@ -304,16 +385,26 @@ theorem verw_b9 : kapDecode [natByte 15, natByte 185] = none := by
 /- CUTS:
    Proved here, over the reused accepted decoders only (every decoder
    lifted, never redefined):
-   - the full 64-entry ledger over 0F 80-BF, one row per second-opcode
-     byte, with counts 42 modelliert / 1 zurueckgestellt / 5 verweigert /
-     0 ungueltig64 / 16 fehlt, opcode coverage exactly the region bytes
-     128-191 with no duplicate;
+   - the full 67-row ledger over 0F 80-BF: one row per second-opcode
+     byte plus the three F3-prefixed rows (POPCNT, TZCNT, LZCNT), with
+     counts 43 modelliert / 3 zurueckgestellt / 5 verweigert /
+     0 ungueltig64 / 16 fehlt, key coverage exactly the region bytes
+     128-191 at prefix 0 plus the three prefixed keys, with no
+     duplicate key;
    - checked decodes for every modelled family: all 16 near-Jcc rows
-     (pilot `decode`), all 16 SETcc rows (`decodeSetCC`), BT/BTS/BTR/BTC
-     register, imm8, memory and memory-imm8 rows (`decodeBt`), BSF
-     (`decodeBs` pin) and all BSR register rows (generic round trip),
-     CPUID (`decodeCpuFeature`), IMUL (`kapDecode` unified arm),
-     LOCK CMPXCHG (`decodeLock`);
+     (pilot `decode`), all 16 SETcc rows in register-direct form
+     (`decodeSetCC`), BT/BTS/BTR/BTC register rows (generic round
+     trips for BTS/BTR, pins for BTC), imm8, memory and memory-imm8
+     rows (`decodeBt`), BSF pin and generic plus all BSR register rows
+     (`decodeBs`), POPCNT (`decodeBs` pin), CPUID (`decodeCpuFeature`),
+     IMUL (`kapDecode` unified arm), LOCK CMPXCHG (`decodeLock`);
+   - checked deferrals: TZCNT/LZCNT shapes refused by the family
+     decoder (planted refusals reused);
+   - group/extension mapping for the collapsed rows: Group 8 0F BA
+     every /4../7 op in imm8 form, Group 15 0F AE the MFENCE /6
+     extension, Group 10 0F B9 the single reserved extension refused;
+     byte 184 carries the F3 exception (bare form refused, F3 form
+     modelled);
    - checked refusals: the 5 verweigert rows decode to nothing on the
      capstone chain `kapDecode`.
    NOT proved here, and not claimed:
@@ -321,11 +412,14 @@ theorem verw_b9 : kapDecode [natByte 15, natByte 185] = none := by
      assumption (local snapshot `.tmp/HARDWARE-REFERENCES/`,
      edition 325462-093US); no AMD provenance claimed (no AMD manual
      snapshotted); vendor-differing behaviour (e.g. BSF/BSR
-     zero-input destination, CPUID leaf answers) stays FREE in the
-     model and is not pinned here;
+     zero-input destination, CPUID leaf answers, LZCNT/TZCNT fallback
+     to BSR/BSF where unsupported) stays FREE in the model and is not
+     pinned here;
    - the `fehlt` rows have no decoder proof (that is the finding);
-     the `zurueckgestellt` group-15 row has no single witness (fence
-     rows are proved where they live);
+     the `zurueckgestellt` group-15 remainder (FXSAVE/XRSTOR/CLFLUSH)
+     has no witness here;
+   - rel16 Jcc forms are named in mnemonics but not separately
+     witnessed (near-Jcc proof is rel32/rel16-shared `jumpIf32`);
    - no execution, flag, fault-class or timing claim beyond decoding;
      no W/GX bridge; no source, checker, contract, entry, ABI, loader,
      budget or liveness claim.
@@ -346,7 +440,15 @@ theorem verw_b9 : kapDecode [natByte 15, natByte 185] = none := by
 #print axioms bt_mem_modelliert
 #print axioms bt_memimm_modelliert
 #print axioms bsf_modelliert
+#print axioms bsf_alle_modelliert
 #print axioms bsr_alle_modelliert
+#print axioms bts_reg_alle
+#print axioms btr_reg_alle
+#print axioms popcnt_modelliert
+#print axioms tzcnt_zurueckgestellt
+#print axioms lzcnt_zurueckgestellt
+#print axioms gruppe8_alle
+#print axioms gruppe15_mfence
 #print axioms cpuid_modelliert
 #print axioms imul_modelliert
 #print axioms cmpxchg_modelliert
