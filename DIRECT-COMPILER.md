@@ -688,7 +688,7 @@ Last ledger refresh: **2026-10-05 17:13 UTC**. This is an operational snapshot, 
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Committed candidate; review/integration pending | 1260: Agent working | [task](lanes/1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Merged after review/checks | 1262: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Merged after review/checks | 1264: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1263.md) |
-| 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Merged after review/checks | 1266: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1265.md) |
+| 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Merged after review/checks | 1266: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1265.md) |
 | 1267 | AVX2: per-lane equation for arithmetic shift right | Merged after review/checks | 1268: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1267.md) |
 | 1269 | Cross-declaration lowering certificate for the GX refinement | Merged after review/checks | 1270: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1269.md) |
 | 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Merged after review/checks | 1272: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1271.md) |
@@ -1644,6 +1644,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: publication batch checks passed for `40290e1d`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: lane **1265**, AVX2: join Vex, Ops, State and Mem on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1265.md). <!-- x86-merged:1265 -->
 - 2026-10-05: checked master `fbfc380d` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:fbfc380d836f43027ce97e8cf4883c2ef70355a2 -->
+- 2026-10-05: lane **1266**, Independent exact review of 1265, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1266.md). <!-- x86-merged:1266 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
