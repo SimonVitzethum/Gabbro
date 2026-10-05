@@ -512,4 +512,324 @@ theorem stapelRet_unlesbar (s : TSOZustand) (c : Nat) (a : Adresse)
     stapelLadeWort s c a = none :=
   stapelPop_unlesbar s c a hguard
 
+/-! ## 5. Joint witness: two cores, buffered push, forward, drain.
+
+  Core 0 (aligned top at 8192, running at 4096) buffers word 42 at its
+  slot 8184; core 0 forwards it while core 1 (misaligned top at 8184)
+  still reads zero; after core 0 drains, shared memory holds 42 for
+  both cores. The drain observably changes memory (0 becomes 42). -/
+
+/-- Witness bytes: zeroed everywhere. -/
+def witBytes (_ : Adresse) : Byte := BitVec.ofNat 8 0
+
+/-- Witness data permission: sixteen stack bytes at 8176. -/
+def witDaten (a : Adresse) : Bool :=
+  decide (8176 ≤ a.toNat ∧ a.toNat < 8192)
+
+/-- Witness code permission: fifteen bytes at 4096. -/
+def witCode (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4111)
+
+/-- Witness shared memory: zeroed bytes, stack RW, code X-only. -/
+def witMem : Speicher :=
+  { bytes := witBytes, lesbar := witDaten,
+    schreibbar := witDaten, ausfuehrbar := witCode }
+
+/-- Witness core-0 registers: aligned top at 8192, `rax` holding 9. -/
+def witReg0 : Register → Wort := fun q =>
+  if q = Register.rsp then BitVec.ofNat 64 8192
+  else if q = Register.rax then BitVec.ofNat 64 9
+  else BitVec.ofNat 64 0
+
+/-- Witness core-1 registers: misaligned top at 8184. -/
+def witReg1 : Register → Wort := fun q =>
+  if q = Register.rsp then BitVec.ofNat 64 8184
+  else BitVec.ofNat 64 0
+
+/-- Witness core data: core 0 runs at 4096, core 1 idles at 8192. -/
+def witKern : Nat → HwKern
+  | 0 => ⟨witReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      (fun _ => BitVec.ofNat 128 0), kontextReset⟩
+  | _ => ⟨witReg1, zeugeFlags, BitVec.ofNat 64 8192,
+      (fun _ => BitVec.ofNat 128 0), kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon with OS vector state. -/
+def witM0 : HwMaschine :=
+  ⟨witMem, witKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- Witness slot address: one word below core 0's top. -/
+def witSlotAddr : Adresse := BitVec.ofNat 64 8184
+
+/-- Witness pushed word. -/
+def witWort : Wort := BitVec.ofNat 64 42
+
+/-- Witness zero word. -/
+def witNull : Wort := BitVec.ofNat 64 0
+
+/-- Core 0 buffers word 42 at its slot. -/
+def witPush : Option HwMaschine := stapelPush witM0 0 witWort
+
+/-- Buffered entry count on core 0 after the push. -/
+def witBufLen : Option Nat :=
+  match witPush with
+  | some m1 => some (m1.puffer 0).length
+  | none => none
+
+/-- Shared-memory byte at the slot right after the push. -/
+def witMemStill : Option Byte :=
+  match witPush with
+  | some m1 => some (m1.mem.bytes witSlotAddr)
+  | none => none
+
+/-- Core 0 observes its own buffered word (forwarding). -/
+def witLoadEigen : Option (Option Wort) :=
+  match witPush with
+  | some m1 => some (stapelLadeWort (tsoAnsicht m1) 0 witSlotAddr)
+  | none => none
+
+/-- Core 1 observes the old word (no foreign forwarding). -/
+def witLoadFremd : Option (Option Wort) :=
+  match witPush with
+  | some m1 => some (stapelLadeWort (tsoAnsicht m1) 1 witSlotAddr)
+  | none => none
+
+/-- Core 0 drains its oldest entry, eight times chained. -/
+def witD1 : Option TSOZustand :=
+  match witPush with
+  | some m1 => flushKern (tsoAnsicht m1) 0
+  | none => none
+
+def witD2 : Option TSOZustand :=
+  match witD1 with
+  | some s => flushKern s 0
+  | none => none
+
+def witD3 : Option TSOZustand :=
+  match witD2 with
+  | some s => flushKern s 0
+  | none => none
+
+def witD4 : Option TSOZustand :=
+  match witD3 with
+  | some s => flushKern s 0
+  | none => none
+
+def witD5 : Option TSOZustand :=
+  match witD4 with
+  | some s => flushKern s 0
+  | none => none
+
+def witD6 : Option TSOZustand :=
+  match witD5 with
+  | some s => flushKern s 0
+  | none => none
+
+def witD7 : Option TSOZustand :=
+  match witD6 with
+  | some s => flushKern s 0
+  | none => none
+
+def witD8 : Option TSOZustand :=
+  match witD7 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- Shared memory after the full drain. -/
+def witNachFlush : Option Speicher :=
+  match witD8 with
+  | some s => some s.mem
+  | none => none
+
+/-- The word read from shared memory after the drain. -/
+def witNachRead : Option (Option Wort) :=
+  match witNachFlush with
+  | some mem => some (read64 mem witSlotAddr)
+  | none => none
+
+/-- Core 1 reads the drained word from shared memory. -/
+def witFremdNachFlush : Option (Option Wort) :=
+  match witD8 with
+  | some s => some (stapelLadeWort s 1 witSlotAddr)
+  | none => none
+
+/-- Guard witness memory: nothing is writable. -/
+def witGuardMem : Speicher :=
+  { bytes := witBytes, lesbar := witDaten,
+    schreibbar := fun _ => false, ausfuehrbar := witCode }
+
+/-- Guard witness machine: same cores, write-protected memory. -/
+def witGuardM0 : HwMaschine :=
+  ⟨witGuardMem, witKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- Dark witness memory: nothing is readable. -/
+def witDarkMem : Speicher :=
+  { bytes := witBytes, lesbar := fun _ => false,
+    schreibbar := witDaten, ausfuehrbar := witCode }
+
+/-! ## 6. Witness facts and the joint `_zeuge`.
+
+  Every duty premise holds on the witness: core 0 is aligned, core 1
+  is misaligned, the slot spill is foreign to the code window, the
+  guard denies the first slot byte, the dark page denies the read.
+  The run is non-degenerate: two cores touch the slot, the drain
+  observably changes shared memory from 0 to 42. -/
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem wit_wf : HwWf witM0 := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Core 0's slot is one word below its top: address 8184. -/
+theorem wit_slot : stapelSlot witM0 0 = witSlotAddr := by
+  decide
+
+/-- Core 0 sits at an aligned call site. -/
+theorem wit_align0 : rufAlignOk (projZustand witM0 0) = true := by
+  decide
+
+/-- Core 1 sits at a misaligned call site. -/
+theorem wit_misalign1 : rufAlignOk (projZustand witM0 1) = false := by
+  decide
+
+/-- The slot spill is foreign to core 0's code window. -/
+theorem wit_priv : CodeFremd (projZustand witM0 0) (stapelSlot witM0 0) := by
+  rw [wit_slot]
+  apply codeFremd_von_intervallen
+  · decide
+  · decide
+  · exact Or.inl (by decide)
+
+/-- The push buffers exactly eight entries on core 0. -/
+theorem wit_puffer8 : witBufLen = some 8 := by
+  decide
+
+/-- The push leaves the shared slot byte at zero. -/
+theorem wit_mem_still : witMemStill = some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Forwarding: core 0 reads its own unflushed word 42. -/
+theorem wit_weiterleitung :
+    witLoadEigen = some (some witWort) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem wit_fremd_alt :
+    witLoadFremd = some (some witNull) := by
+  decide
+
+/-- The drain changes shared memory: the slot reads 42. -/
+theorem wit_spuelung_aendert_speicher :
+    witNachRead = some (some witWort) := by
+  decide
+
+/-- After the drain core 1 observes the new word. -/
+theorem wit_fremd_neu :
+    witFremdNachFlush = some (some witWort) := by
+  decide
+
+/-- The slot starts zeroed: the run really changes memory. -/
+theorem wit_anfang_null :
+    witMem.bytes witSlotAddr = BitVec.ofNat 8 0 := by
+  decide
+
+/-- Core 1's buffer holds no entry at the slot's first byte. -/
+theorem wit_fremd_kein_eintrag :
+    neuestens ((tsoAnsicht witM0).puffer 1) (addrOff witSlotAddr 0) =
+      none := by
+  decide
+
+/-- The slot's first byte is readable on the witness. -/
+theorem wit_slot_lesbar :
+    (tsoAnsicht witM0).mem.lesbar (addrOff witSlotAddr 0) = true := by
+  decide
+
+/-- Every slot footprint byte is readable on the witness. -/
+theorem wit_slot_lesbar_all (k : Nat) (hk : k < 8) :
+    (tsoAnsicht witM0).mem.lesbar (addrOff witSlotAddr k) = true := by
+  have haddr : (addrOff witSlotAddr k).toNat = 8184 + k := by
+    unfold addrOff witSlotAddr
+    rw [BitVec.toNat_add]
+    have e1 : (BitVec.ofNat 64 8184).toNat = 8184 := by
+      rw [BitVec.toNat_ofNat]
+    have e2 : (BitVec.ofNat 64 k).toNat = k := by
+      rw [BitVec.toNat_ofNat]
+      exact Nat.mod_eq_of_lt (by omega)
+    rw [e1, e2]
+    exact Nat.mod_eq_of_lt (by omega)
+  show witDaten (addrOff witSlotAddr k) = true
+  unfold witDaten
+  rw [decide_eq_true_eq]
+  omega
+
+/-- Unbuffered foreign load is the accepted load on the witness. -/
+theorem wit_still_beispiel :
+    stapelLadeWort (tsoAnsicht witM0) 1 witSlotAddr =
+      read64 (tsoAnsicht witM0).mem witSlotAddr :=
+  stapelLadeWort_still _ _ _ (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) (by decide)
+    wit_slot_lesbar_all
+
+/-- The guard denies the first slot byte. -/
+theorem wit_guard_dicht :
+    witGuardM0.mem.schreibbar (stapelSlot witGuardM0 0) = false := by
+  decide
+
+/-- Guard push refuses on the witness. -/
+theorem wit_guard_push_verweigert :
+    stapelPush witGuardM0 0 witWort = none := by
+  decide
+
+/-- The dark page denies the first slot byte. -/
+theorem wit_dark_dicht :
+    witDarkMem.lesbar (addrOff witSlotAddr 0) = false := by
+  decide
+
+/-- Dark pop refuses on the witness. -/
+theorem wit_dark_pop_verweigert :
+    stapelLadeWort ⟨witDarkMem, fun _ => []⟩ 0 witSlotAddr = none := by
+  decide
+
+/-- Misaligned call refuses on the witness. -/
+theorem wit_ruf_fehlalign_verweigert :
+    stapelAdapter.schritt witM0 1
+      (.ruf (BitVec.ofNat 64 4101)) = none := by
+  decide
+
+/-- Aligned call buffers on the witness. -/
+theorem wit_ruf_ausgerichtet_puffert :
+    stapelAdapter.schritt witM0 0
+      (.ruf (BitVec.ofNat 64 4101)) =
+      stapelCall witM0 0 (BitVec.ofNat 64 4101) :=
+  stapelRuf_ausgerichtet _ _ _ wit_align0
+
+/-- JOINT WITNESS: every duty premise holds jointly on a reached,
+    non-degenerate two-core run -- aligned push with owner-only
+    forwarding, foreign zero, drain changing shared memory 0 to 42,
+    foreign observation of the drained word -- beside the planted
+    guard, dark-read and misaligned-call refusals. -/
+theorem stapelTso_zeuge :
+    HwWf witM0 ∧
+      rufAlignOk (projZustand witM0 0) = true ∧
+      rufAlignOk (projZustand witM0 1) = false ∧
+      CodeFremd (projZustand witM0 0) (stapelSlot witM0 0) ∧
+      witBufLen = some 8 ∧
+      witMemStill = some (BitVec.ofNat 8 0) ∧
+      witLoadEigen = some (some witWort) ∧
+      witLoadFremd = some (some witNull) ∧
+      witNachRead = some (some witWort) ∧
+      witFremdNachFlush = some (some witWort) ∧
+      witMem.bytes witSlotAddr = BitVec.ofNat 8 0 ∧
+      witGuardM0.mem.schreibbar (stapelSlot witGuardM0 0) = false ∧
+      stapelPush witGuardM0 0 witWort = none ∧
+      witDarkMem.lesbar (addrOff witSlotAddr 0) = false ∧
+      stapelLadeWort ⟨witDarkMem, fun _ => []⟩ 0 witSlotAddr = none ∧
+      stapelAdapter.schritt witM0 1
+        (.ruf (BitVec.ofNat 64 4101)) = none := by
+  exact ⟨wit_wf, wit_align0, wit_misalign1, wit_priv, wit_puffer8,
+    wit_mem_still, wit_weiterleitung, wit_fremd_alt,
+    wit_spuelung_aendert_speicher, wit_fremd_neu, wit_anfang_null,
+    wit_guard_dicht, wit_guard_push_verweigert, wit_dark_dicht,
+    wit_dark_pop_verweigert, wit_ruf_fehlalign_verweigert⟩
+
 end Gabbro.Grammatik.X86
