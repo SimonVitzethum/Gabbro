@@ -676,7 +676,7 @@ Last ledger refresh: **2026-10-05 15:55 UTC**. This is an operational snapshot, 
 | 1235 | Profiles: multi-step control flow and relocation re-decode | Merged after review/checks | 1236: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1235.md) |
 | 1237 | AVX2: VEX prefix decoder and encoder | Agent working | 1238: scheduled | [task](lanes/1237.md) |
 | 1239 | AVX2: 256-bit integer operation semantics | Merged after review/checks | 1240: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1239.md) |
-| 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1241.md) |
+| 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Merged after review/checks | 1242: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
@@ -1608,6 +1608,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1251**, Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1251.md). <!-- x86-merged:1251 -->
 - 2026-10-05: lane **1252**, Independent exact review of 1251, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1252.md). <!-- x86-merged:1252 -->
 - 2026-10-05: lane **1241**, AVX2: YMM state, XCR0 gating and upper-half rules, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1241.md). <!-- x86-merged:1241 -->
+- 2026-10-05: lane **1242**, Independent exact review of 1241, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1242.md). <!-- x86-merged:1242 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
