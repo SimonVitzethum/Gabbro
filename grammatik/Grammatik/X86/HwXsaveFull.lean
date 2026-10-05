@@ -1937,4 +1937,127 @@ theorem vollFinit_rundlauf (v : VollMaschine) (c : Nat)
   rw [hr]
   exact vollFinit_setzt_zurueck v c t
 
+/-! ## 7. Family step relation and the TSO-leg embedding.
+
+  The x87 image, mask and YMM upper file live beside `HwMaschine`
+  (in `VollMaschine`, like the accepted `YmmMaschine` wrapper),
+  so no `HwAdapter HwMaschine` plug can carry a save without
+  inventing that state. Instead `VollSchritt` runs on the full
+  machine: the checked save/restore/FINIT steps, the shared TSO
+  legs with the EXACT coherent embedding, and outcome-tied
+  refusals (never silent). -/
+
+/-- Observable family events on the full machine. -/
+inductive VollEreignis where
+  | saveReq : Nat → Adresse → Xcr0Bild → Bool → Bool → VollEreignis
+  | rstorReq : Nat → Adresse → Xcr0Bild → Bool → Bool → VollEreignis
+  | finitReq : Nat → VollEreignis
+  | leseBeob : Nat → Adresse → Byte → VollEreignis
+  | schreibAusgabe : Nat → Adresse → Byte → VollEreignis
+  | spülung : Nat → TSOEintrag → VollEreignis
+  | verweigert : Nat → VollEreignis
+
+/-- Project an outcome to a step successor. -/
+def vollOpt (o : VollAusgang) : Option VollMaschine :=
+  match o with
+  | .weiter v' => some v'
+  | _ => none
+
+/-- Family step relation: checked requests plus the shared TSO
+    legs plus outcome-tied refusals. The fault-input oracle `f`
+    rides in the request (checked inputs, never assumed). -/
+inductive VollSchritt : VollMaschine → VollMaschine → VollEreignis → Prop where
+  | save {v v' : VollMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
+      (h : vollSpeichern v c a xc sse avx f = .weiter v') :
+      VollSchritt v v' (.saveReq c a xc sse avx)
+  | rstor {v v' : VollMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
+      (h : vollWiederherstellen v c a xc sse avx f = .weiter v') :
+      VollSchritt v v' (.rstorReq c a xc sse avx)
+  | finit {v : VollMaschine} (c : Nat) :
+      VollSchritt v (vollFinit v c) (.finitReq c)
+  | lade {v : VollMaschine} (c : Nat) (a : Adresse) (w : Byte)
+      (h : loadByte (tsoAnsicht (vollHw v)) c a = some w) :
+      VollSchritt v v (.leseBeob c a w)
+  | gibAus {v : VollMaschine} (c : Nat) (a : Adresse) (w : Byte)
+      (s' : TSOZustand)
+      (h : issueByte (tsoAnsicht (vollHw v)) c a w = some s') :
+      VollSchritt v (setVollTso v s') (.schreibAusgabe c a w)
+  | spüle {v : VollMaschine} (c : Nat) (e : TSOEintrag)
+      (s' : TSOZustand)
+      (h : flushKern (tsoAnsicht (vollHw v)) c = some s')
+      (hkopf : ((vollHw v).puffer c).head? = some e) :
+      VollSchritt v (setVollTso v s') (.spülung c e)
+  | fehlerSave {v : VollMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
+      (g : ArchFehler)
+      (h : vollSpeichern v c a xc sse avx f = .fehler g) :
+      VollSchritt v v (.verweigert c)
+  | fehlerRstor {v : VollMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
+      (g : ArchFehler)
+      (h : vollWiederherstellen v c a xc sse avx f = .fehler g) :
+      VollSchritt v v (.verweigert c)
+  | fehlerVerweigert {v : VollMaschine} (c : Nat) (a : Adresse)
+      (xc : Xcr0Bild) (sse avx : Bool) (f : VollFehlerIn)
+      (h : vollSpeichern v c a xc sse avx f = .verweigert) :
+      VollSchritt v v (.verweigert c)
+
+/-- (1) Every family step preserves well-formedness. -/
+theorem vollSchritt_wf (v v' : VollMaschine) (e : VollEreignis)
+    (h : VollSchritt v v' e) (hwf : VollWf v) : VollWf v' := by
+  cases h with
+  | save c a xc sse avx f h =>
+    exact vollSpeichern_wf _ _ _ _ _ _ _ hwf _ h
+  | rstor c a xc sse avx f h =>
+    exact vollWiederherstellen_wf _ _ _ _ _ _ _ hwf _ h
+  | finit c => exact vollFinit_wf _ _ hwf
+  | lade c a w h => exact hwf
+  | gibAus c a w s' h => exact setVollTso_wf _ _ hwf
+  | spüle c e s' h hkopf => exact setVollTso_wf _ _ hwf
+  | fehlerSave c a xc sse avx f g h => exact hwf
+  | fehlerRstor c a xc sse avx f g h => exact hwf
+  | fehlerVerweigert c a xc sse avx f h => exact hwf
+
+/-- (2) The TSO observation leg IS the coherent TSO step. -/
+theorem vollLade_ist_hw (v v' : VollMaschine) (c : Nat)
+    (a : Adresse) (w : Byte)
+    (h : VollSchritt v v' (.leseBeob c a w)) :
+    HwSchritt (vollHw v) (vollHw v') (.leseBeob c a w) := by
+  cases h with
+  | lade c a w h => exact HwSchritt.lade c a w h
+
+/-- (2) The TSO store-issue leg IS the coherent TSO step. -/
+theorem vollGibAus_ist_hw (v v' : VollMaschine) (c : Nat)
+    (a : Adresse) (w : Byte)
+    (h : VollSchritt v v' (.schreibAusgabe c a w)) :
+    ∃ s' : TSOZustand, HwSchritt (vollHw v) (vollHw v')
+      (.schreibAusgabe c a w) := by
+  cases h with
+  | gibAus c a w t ht =>
+    exact ⟨t, HwSchritt.gibAus c a w t ht⟩
+
+/-- (2) The TSO drain leg IS the coherent TSO step. -/
+theorem vollSpüle_ist_hw (v v' : VollMaschine) (c : Nat)
+    (e : TSOEintrag)
+    (h : VollSchritt v v' (.spülung c e)) :
+    ∃ s' : TSOZustand, HwSchritt (vollHw v) (vollHw v')
+      (.spülung c e) := by
+  cases h with
+  | spüle c e t ht hkopf =>
+    exact ⟨t, HwSchritt.spüle c e t ht hkopf⟩
+
+/-- BACKWARD embedding, exact: a drain step comes only from the
+    coherent drain with the same head condition. -/
+theorem vollSpüle_ist_hw_zurueck (v v' : VollMaschine) (c : Nat)
+    (e : TSOEintrag)
+    (h : VollSchritt v v' (.spülung c e)) :
+    ∃ s' : TSOZustand,
+      flushKern (tsoAnsicht (vollHw v)) c = some s' ∧
+      ((vollHw v).puffer c).head? = some e ∧
+      v' = setVollTso v s' := by
+  cases h with
+  | spüle c e s' h hkopf => exact ⟨s', h, hkopf, rfl⟩
+
 end Gabbro.Grammatik.X86
