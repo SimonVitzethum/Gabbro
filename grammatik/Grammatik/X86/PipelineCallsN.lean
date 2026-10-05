@@ -100,6 +100,116 @@ theorem rufExecN_teile (b : Belegung) (r : Rahmen) (nArgs : Nat) (benutztRot : B
   simp only [Bool.and_eq_true] at h
   exact ⟨h.1.1, h.1.2, h.2⟩
 
+/-! ## 2. Refusals: everything outside the three-or-more-assignment shape.
+
+    Shorter bodies (nil, one, two statements -- the earlier validators'
+    scope), non-assignment statements anywhere in the body, red-zone
+    use and candidate bytes the Lean pipeline does not recompute are
+    all refused loudly. -/
+
+/-- SHAPE REFUSAL (non-assignment): a body containing a non-assignment
+    statement is not the proved shape. -/
+theorem istDreiPlus_verweigert_form {Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (h : istAssignBlock body = false) :
+    istDreiPlus body = false := by
+  unfold istDreiPlus
+  rw [h, Bool.false_and]
+
+/-- LENGTH REFUSAL (short body): fewer than three statements are not
+    the proved shape (nil, one and two stay with the earlier validators). -/
+theorem istDreiPlus_verweigert_kurz {Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (h : blockLaenge body < 3) :
+    istDreiPlus body = false := by
+  unfold istDreiPlus
+  have hd : decide (3 ≤ blockLaenge body) = false :=
+    (decide_eq_false_iff_not).mpr (by omega)
+  rw [hd]
+  cases istAssignBlock body <;> rfl
+
+/-- RED-ZONE USE REFUSAL: no call that uses the red zone is admitted. -/
+theorem rufExecN_verweigert_rot (b : Belegung) (r : Rahmen) (nArgs : Nat)
+    (c : PipeCfg) (L : Layout D)
+    {Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (bytes : List Byte) :
+    rufExecN b r nArgs true c L body bytes = false := by
+  unfold rufExecN
+  rw [pipeline_ruf_verweigert_rot]
+  rfl
+
+/-- SHAPE REFUSAL: a body that is not all assignments is refused loudly. -/
+theorem rufExecN_verweigert_form (b : Belegung) (r : Rahmen) (nArgs : Nat)
+    (benutztRot : Bool) (c : PipeCfg) (L : Layout D)
+    {Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (h : istAssignBlock body = false) :
+    rufExecN b r nArgs benutztRot c L body bytes = false := by
+  unfold rufExecN
+  have hd := istDreiPlus_verweigert_form body h
+  rw [hd]
+  cases rufOk b r nArgs benutztRot <;> cases validate c L [] body bytes <;> rfl
+
+/-- LENGTH REFUSAL: a body of fewer than three statements is refused loudly. -/
+theorem rufExecN_verweigert_kurz (b : Belegung) (r : Rahmen) (nArgs : Nat)
+    (benutztRot : Bool) (c : PipeCfg) (L : Layout D)
+    {Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (h : blockLaenge body < 3) :
+    rufExecN b r nArgs benutztRot c L body bytes = false := by
+  unfold rufExecN
+  have hd := istDreiPlus_verweigert_kurz body h
+  rw [hd]
+  cases rufOk b r nArgs benutztRot <;> cases validate c L [] body bytes <;> rfl
+
+/-- BYTE REFUSAL: candidate bytes the Lean pipeline does not recompute
+    are refused loudly. -/
+theorem rufExecN_verweigert_bytes (b : Belegung) (r : Rahmen) (nArgs : Nat)
+    (benutztRot : Bool) (c : PipeCfg) (L : Layout D)
+    {Λ' : List (Res D)}
+    (body : Block D V l Γ Λ Λ') (bytes : List Byte)
+    (h : validate c L [] body bytes = false) :
+    rufExecN b r nArgs benutztRot c L body bytes = false := by
+  unfold rufExecN
+  rw [h]
+  cases rufOk b r nArgs benutztRot <;> cases istDreiPlus body <;> rfl
+
+/-! ## 3. Body induction: run, world, environment, callee-saved
+    preservation and straight-line code across the whole body. -/
+
+/-- Splitting the shape conjunction of a `cons` block (no casing:
+    the `cons` equation of `istAssignBlock` rewrites under `simp`). -/
+theorem istAssignBlock_cons_inv {Λ₂ Λ₃ : List (Res D)}
+    (s : Stmt D V l Γ Λ₂ Λ₃) (rest : Block D V l Γ Λ₃ Λ')
+    (h : istAssignBlock (.cons s rest) = true) :
+    istAssignStmt s = true ∧ istAssignBlock rest = true := by
+  simpa [istAssignBlock, Bool.and_eq_true] using h
+
+/-- SINGLE-CHUNK RUN with callee-saved preservation: the reused
+    single-chunk run (`einzelChunk_lauf`) never touches a working
+    register outside `dst`/`adr`/`tmp :: frei`, so under the decided
+    `calleeFremd` disjointness every callee-saved register survives the
+    chunk. Every premise is consumed. -/
+theorem assignChunkN_lauf (c : PipeCfg) (hc : cfgOk c = true)
+    (hfremd : calleeFremd c = true)
+    {Γ : Ctx} {Λ : List (Res D)} {τ : Ty}
+    (e : Expr D Γ Λ τ) {lo hi : Int} (hτ : τ = .int lo hi)
+    (hlo : 0 ≤ lo) (hhi : hi < 2 ^ 64) (pv : List Befehl)
+    (hp : senkWertT c e = some pv) (A : Nat)
+    (ρ : Env D Γ) (σ₀ σ : World D) (s : Zustand)
+    (hE : EnvRepr ρ s.register (abbOf c))
+    (hwr : schreibbar8 s.speicher (natAdresse A) = true) :
+    ∃ s', lauf ((pv ++ [Befehl.movImm64 c.adr (natAdresse A),
+        Befehl.store64 c.adr c.dst (BitVec.ofNat 32 0)]).map kanon) s = some s' ∧
+      write64 s.speicher (natAdresse A)
+        (zahlWort (cast (congrArg (Wert D) hτ) (eval σ₀ e σ ρ) : Wert D (.int lo hi))) =
+        some s'.speicher ∧
+      EnvRepr ρ s'.register (abbOf c) ∧
+      (∀ q, q ∈ calleeGerettet → s'.register q = s.register q) := by
+  obtain ⟨s', hrun, hw, hE', hreg⟩ :=
+    einzelChunk_lauf c hc e hτ hlo hhi pv hp A ρ σ₀ σ s hE hwr
+  refine ⟨s', hrun, hw, hE', fun q hq => ?_⟩
+  obtain ⟨hne1, hne2, hne3⟩ := calleeFremd_mem c hfremd q hq
+  exact hreg q hne1 hne2 hne3
+
 /- CUTS (exactly what is NOT proved here):
    - Skeleton only: shape predicates, validator, induction, witness
      and refusals all stay OPEN in this skeleton commit.
