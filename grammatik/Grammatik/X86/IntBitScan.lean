@@ -57,7 +57,7 @@ def BswapBreite.breite : BswapBreite → Breite
     its raw ModRM byte and raw displacement bytes. -/
 inductive BsQuelle where
   | reg : Register → BsQuelle
-  | mem : (modrm : Nat) → (disp : List Byte) → BsQuelle
+  | mem : (modrm : Byte) → (disp : List Byte) → BsQuelle
   deriving DecidableEq, Repr
 
 /-- The family: BSF/BSR/POPCNT over a width, destination and source;
@@ -84,11 +84,11 @@ def bsRexByte (w r b : Nat) : Byte := natByte (64 + 8 * w + 4 * r + b)
 def bsRex (w r b : Nat) : List Byte :=
   if w == 1 || r == 1 || b == 1 then [bsRexByte w r b] else []
 
-/-- Canonical legacy prefix: 16-bit forms carry 66H; POPCNT carries F3;
-    BSWAP carries none. -/
+/-- Canonical legacy prefix: 16-bit forms carry 66H; POPCNT carries
+    F3 on top (16-bit POPCNT carries both); BSWAP carries none. -/
 def bsLeg (b : BsBreite) (istPopcnt : Bool) : List Byte :=
   match b with
-  | .b16 => [natByte 102]
+  | .b16 => if istPopcnt then [natByte 102, natByte 243] else [natByte 102]
   | _ => if istPopcnt then [natByte 243] else []
 
 /-- Canonical REX prefix for a scan/count register form. -/
@@ -105,10 +105,10 @@ def encodeBsReg (op : Nat) (b : BsBreite) (istPopcnt : Bool)
 /-- Canonical encoding of one memory-source family instruction: the
     stored ModRM byte plus the stored displacement bytes. -/
 def encodeBsMem (op : Nat) (b : BsBreite) (istPopcnt : Bool)
-    (dst : Register) (modrm : Nat) (disp : List Byte) : List Byte :=
+    (dst : Register) (modrm : Byte) (disp : List Byte) : List Byte :=
   bsLeg b istPopcnt ++
     bsRex (match b with | .b64 => 1 | _ => 0) (regHigh dst) 0 ++
-    [natByte 15, natByte op, natByte modrm] ++ disp
+    [natByte 15, natByte op, modrm] ++ disp
 
 /-- Canonical encoding of one BSWAP instruction. -/
 def encodeBswap (b : BswapBreite) (rd : Register) : List Byte :=
@@ -137,11 +137,25 @@ def encodeBs : BsBefehl → List Byte
   memory source whose address computation stays OPEN. LOCK (F0) has no
   rule, so it refuses (SDM: #UD). -/
 
-/-- Legacy prefix parse: 66H, F3, or none. F2 and empty input refuse. -/
+/-- Legacy prefix parse: 66H and/or F3, in either order; F2, a
+    doubled prefix and empty input refuse. 16-bit POPCNT carries both
+    (66H for the width, F3 for the POPCNT opcode). -/
 def bsParseLeg : List Byte → Option (Bool × Bool × List Byte)
   | b :: rest =>
-    if byteNat b == 102 then some (true, false, rest)
-    else if byteNat b == 243 then some (false, true, rest)
+    if byteNat b == 102 then
+      match rest with
+      | c :: rest' =>
+        if byteNat c == 243 then some (true, true, rest')
+        else if byteNat c == 102 || byteNat c == 242 then none
+        else some (true, false, rest)
+      | [] => some (true, false, [])
+    else if byteNat b == 243 then
+      match rest with
+      | c :: rest' =>
+        if byteNat c == 102 then some (true, true, rest')
+        else if byteNat c == 243 || byteNat c == 242 then none
+        else some (false, true, rest)
+      | [] => some (false, true, [])
     else if byteNat b == 242 then none
     else some (false, false, b :: rest)
   | [] => none
@@ -172,19 +186,19 @@ def bsParseModrm (bBit : Nat) : List Byte →
     Option (Nat × BsQuelle × List Byte)
   | m :: rest =>
     let n := byteNat m
-    if n / 64 == 3 then
+    if n / 64 = 3 then
       match codeReg (bBit * 8 + n % 8) with
       | some src => some (n / 8 % 8, .reg src, rest)
       | none => none
     else
       let rm := n % 8
-      if rm == 4 then none
+      if rm = 4 then none
       else
         let need :=
-          if n / 64 == 0 then (if rm == 5 then 4 else 0)
-          else if n / 64 == 1 then 1 else 4
+          if n / 64 = 0 then (if rm = 5 then 4 else 0)
+          else if n / 64 = 1 then 1 else 4
         match nimmBytes need rest with
-        | some (disp, rest') => some (n / 8 % 8, .mem n disp, rest')
+        | some (disp, rest') => some (n / 8 % 8, .mem m disp, rest')
         | none => none
   | [] => none
 
@@ -254,4 +268,75 @@ def decodeBs (bs : List Byte) : Option (BsDecodiert × List Byte) :=
       else none
     | [] => none
 
+/-! ## 3. Round trips, dispatcher pins and planted refusals.
+
+  Decoding inverts encoding on every admitted row; the unified chain
+  refuses every new byte string (no pilot or extension form is
+  shadowed); malformed, deferred and privileged shapes refuse with
+  `none`. -/
+
+/-- Well-formed raw memory operand: no register-direct mode, no SIB,
+    and exactly the displacement bytes the mode demands. -/
+def bsMemOk (modrm : Byte) (disp : List Byte) : Prop :=
+  let n := byteNat modrm
+  n / 64 ≠ 3 ∧ n % 8 ≠ 4 ∧
+  disp.length =
+    (if n / 64 = 0 then (if n % 8 = 5 then 4 else 0)
+     else if n / 64 = 1 then 1 else 4)
+
+/-- Decoding inverts encoding on every BSWAP row. -/
+theorem encodeBswap_decodeBs (b : BswapBreite) (rd : Register) :
+    decodeBs (encodeBswap b rd) =
+      some (⟨.bswap b rd, (encodeBswap b rd).length⟩, []) := by
+  cases b <;> cases rd <;> rfl
+
+/-- Decoding inverts encoding on every BSF register row. -/
+theorem encodeBsf_decodeBs (b : BsBreite) (dst src : Register) :
+    decodeBs (encodeBs (.bsf b dst (.reg src))) =
+      some (⟨.bsf b dst (.reg src),
+        (encodeBs (.bsf b dst (.reg src))).length⟩, []) := by
+  cases b <;> cases dst <;> cases src <;> rfl
+
+/-- Decoding inverts encoding on every BSR register row. -/
+theorem encodeBsr_decodeBs (b : BsBreite) (dst src : Register) :
+    decodeBs (encodeBs (.bsr b dst (.reg src))) =
+      some (⟨.bsr b dst (.reg src),
+        (encodeBs (.bsr b dst (.reg src))).length⟩, []) := by
+  cases b <;> cases dst <;> cases src <;> rfl
+
+/-- Decoding inverts encoding on every POPCNT register row. -/
+theorem encodePopcnt_decodeBs (b : BsBreite) (dst src : Register) :
+    decodeBs (encodeBs (.popcnt b dst (.reg src))) =
+      some (⟨.popcnt b dst (.reg src),
+        (encodeBs (.popcnt b dst (.reg src))).length⟩, []) := by
+  cases b <;> cases dst <;> cases src <;> rfl
+
+/-- Taking exactly the stored prefix returns it. -/
+theorem nimmBytes_laenge (ds rest : List Byte) :
+    nimmBytes ds.length (ds ++ rest) = some (ds, rest) := by
+  induction ds generalizing rest with
+  | nil => rfl
+  | cons d ds ih =>
+    simp only [List.length_cons, List.cons_append, nimmBytes, ih]
+
+/-- A well-formed raw memory operand parses back to itself. -/
+theorem bsParseModrm_mem_ok (bBit : Nat) (m : Byte) (disp rest : List Byte)
+    (h : bsMemOk m disp) :
+    bsParseModrm bBit (m :: disp ++ rest) =
+      some (byteNat m / 8 % 8, .mem m disp, rest) := by
+  unfold bsMemOk at h
+  simp only at h
+  obtain ⟨hmod, hsib, hlen⟩ := h
+  have hlt : byteNat m / 64 = 0 ↔ byteNat m < 64 := by
+    constructor
+    · intro h; omega
+    · intro h; omega
+  have hlen' : disp.length =
+      (if byteNat m < 64 then (if byteNat m % 8 = 5 then 4 else 0)
+       else if byteNat m / 64 = 1 then 1 else 4) := by
+    rw [hlen]
+    split
+    · next h => rw [if_pos (hlt.mp h)]
+    · next h => rw [if_neg (fun hc => h (hlt.mpr hc))]
+  simp [bsParseModrm, hmod, hsib, ← hlen', nimmBytes_laenge]
 end Gabbro.Grammatik.X86
