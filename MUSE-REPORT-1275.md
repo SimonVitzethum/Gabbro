@@ -158,4 +158,40 @@ high-byte reason; no 8-bit generic encode round trip; no full
   if-chains, and `rw` cannot rewrite under `decide` (dependent
   instance) — `simp` + `congr 1` closes `decide R = decide R`.
 
+## Integration gate 2026-10-05 (evening): FAILED, not merged
+
+Independent review accepted the isolated candidate, but the serial
+integration gate failed and nothing was merged. Exact evidence (gate
+log tail): 676/677 targets built in the main checkout, including the
+whole of `IntCarryForms.lean` (axiom prints run through
+`carryHw_zeuge`, standard axioms only), then the root `Grammatik`
+target failed with:
+
+`error: Grammatik.lean:44:0: failed to read file
+'…/grammatik/.lake/build/lib/lean/Grammatik/X86/OptimizationRules.olean'`
+
+Assessment against my owned files: `OptimizationRules.lean` is
+friend-reserved (my lane must not touch it), my module neither
+imports nor mentions it, and the missing artifact is an unrelated
+module's build product in the integration tree's `.lake`. This is
+the same failure class as the local root failure documented above
+(three runs, three different missing files, plus a clean no-import
+control run failing identically). There is NO defect in my owned
+module for this evidence to repair: re-running `./lean-probe` on
+the unchanged candidate HEAD still ends with `== 0 error(s) …
+exit 0`.
+
+Concrete blocker (not assumed away): the integration tree's `.lake`
+cannot supply `OptimizationRules.olean` (and previously, in this
+clone, toolchain `.ir`/`.olean.private`/own-`.olean` files went
+missing nondeterministically). Repair belongs to the apparatus
+(stale/poisoned build cache, concurrent interference, or disk
+pressure in the building tree), not to lane 1275's source. I did
+not touch, read, or diagnose outside my clone.
+
+No acceptance of the full source/binary chain is claimed. A fresh
+independent review is required for the changed commit (this
+report); the Lean source itself is unchanged since the accepted
+isolated candidate.
+
 Co-Authored-By: muse-agent-1275 <muse-agent-1275@noreply.invalid>
