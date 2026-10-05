@@ -128,6 +128,158 @@ theorem iteChunk_inv_abgeleitet_zeuge :
     iteChunk_inv_abgeleitet pwCfg pwL pwCheck witIteT1263 witIteE1263 0 prog hlow
   exact ⟨code, j, pt, pe, prog, hlow, hb, ht, he, hk1, hk2, hp, pipePaket_hold⟩
 
+/-- The witness ite lowering, written out literally (condition code
+    shared with the accepted `pwProg` check part, `take 5` then-branch,
+    empty else-branch). Verified by computation below. -/
+def witIteProg1263 : List Befehl :=
+  [.movReg64 .rax .r10, .movImm64 .rcx (intWort 50), .cmpReg64 .rax .rcx,
+    .jumpIf32 .ge (BitVec.ofNat 32 ((encodeAll (pwProg.take 5)).length + 5))] ++
+  pwProg.take 5 ++
+  [.jump32 (BitVec.ofNat 32 (encodeAll ([] : List Befehl)).length)]
+
+/-- The literal lowering is the Lean recomputation. -/
+theorem witIteLowLit1263 : senkBlock pwCfg pwL 0 witIte1263 = some witIteProg1263 := by
+  decide
+
+/-! ## 2. Witness memory for the ite chunk, and its derived run.
+
+    The start state holds the witness ite bytes as the code region
+    (execute only) and the two `pwSigma` slots as the data region
+    (read/write, never execute) -- the `pwMem` shape with the code
+    bytes swapped. `WorldRep`/`EnvRepr` follow the `pw` proofs: the
+    data bytes are unchanged. -/
+
+/-- Witness memory bytes: the ite bytes as code, `pwMemBytes` elsewhere. -/
+def iteMemBytes1263 (a : Adresse) : Byte :=
+  if 4096 ≤ a.toNat ∧ a.toNat < 4096 + (encodeAll witIteProg1263).length then
+    (encodeAll witIteProg1263).getD (a.toNat - 4096) 0
+  else pwMemBytes a
+
+/-- Witness execute permission: exactly the ite bytes. -/
+def iteCode1263 (a : Adresse) : Bool :=
+  decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + (encodeAll witIteProg1263).length)
+
+/-- Witness memory: ite code plus the `pwSigma` data slots. -/
+def iteMem1263 : Speicher :=
+  { bytes := iteMemBytes1263, lesbar := pwDaten, schreibbar := pwDaten,
+    ausfuehrbar := iteCode1263 }
+
+/-- Witness start state: `x` in `r10`, ite bytes at `rip`. -/
+def iteStart1263 (x : Int) : Zustand :=
+  { register := pwReg x, flags := witnessFlags, rip := natAdresse 4096,
+    speicher := iteMem1263 }
+
+/-- The ite bytes are small enough to leave the data region alone. -/
+theorem ite_len1263 : (encodeAll witIteProg1263).length ≤ 4096 := by decide
+
+/-- The witness code region holds the witness ite bytes. -/
+theorem ite_code1263 :
+    Pipeline.CodeAt iteMem1263 (natAdresse 4096) (encodeAll witIteProg1263) := by
+  apply codeAt_von iteMem1263 4096 (encodeAll witIteProg1263) (by decide)
+  intro a h1 h2
+  have hd : ¬ (8192 ≤ a.toNat ∧ a.toNat < 8208) := by
+    have hl := ite_len1263
+    omega
+  simp only [iteMem1263, iteCode1263, iteMemBytes1263, pwDaten, pwMemBytes,
+    decide_eq_true_eq, decide_eq_false_iff_not]
+  refine ⟨⟨h1, h2⟩, hd, ?_⟩
+  rw [if_pos ⟨h1, h2⟩]
+
+/-- The witness memory represents the witness world. -/
+theorem ite_worldRep1263 : WorldRep pwL iteMem1263 pwSigma := by
+  intro t k f a h
+  cases t; cases f
+  simp only [pwL] at h
+  by_cases e1 : k = 0
+  · rw [if_pos e1] at h
+    cases h
+    subst e1
+    refine ⟨by decide, by decide, by decide, fun lo hi hT => ?_⟩
+    cases hT
+    unfold RepSlot
+    decide
+  · rw [if_neg e1] at h
+    by_cases e2 : k = 1
+    · rw [if_pos e2] at h
+      cases h
+      subst e2
+      refine ⟨by decide, by decide, by decide, fun lo hi hT => ?_⟩
+      cases hT
+      unfold RepSlot
+      decide
+    · rw [if_neg e2] at h; cases h
+
+/-- The witness environments are represented (both check routes). -/
+theorem ite_envRepr30_1263 :
+    EnvRepr pwEnv30 (iteStart1263 30).register (abbOf pwCfg) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+theorem ite_envRepr70_1263 :
+    EnvRepr pwEnv70 (iteStart1263 70).register (abbOf pwCfg) := by
+  intro lo hi x
+  cases x with
+  | hier => rfl
+  | dort x => exact nomatch x
+
+/-- CHUNK RUN, DERIVED (ite): from an accepted closed-ite lowering, a
+    checked configuration, a separated layout and a represented start
+    state whose code region holds the lowered bytes, the fetched-byte
+    run reaches a state corresponding to the REAL `execBlock` outcome
+    (`senkBlock_korrektC` as a black box -- no second interpreter).
+    Every premise is used. -/
+theorem iteChunk_lauf_abgeleitet (c : PipeCfg) (L : Layout D)
+    (hc : cfgOk c = true) (hsep : LayoutSep L)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (cnd : Expr D Γ Λ .bool)
+    (t e : _root_.Gabbro.Grammatik.Block D V l Γ Λ Λ')
+    (pre post flat : List Byte) (prog : List Befehl)
+    (hlow : senkBlock c L pre.length
+      (_root_.Gabbro.Grammatik.Block.cons (Stmt.ite cnd t e)
+        _root_.Gabbro.Grammatik.Block.nil) = some prog)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ : World D) (ρ : Env D Γ) (st : Zustand)
+    (hcode : Pipeline.CodeAt st.speicher (natAdresse c.codeBase) flat)
+    (hf : flat = pre ++ encodeAll prog ++ post)
+    (hrip : st.rip = addrOff (natAdresse c.codeBase) pre.length)
+    (hW : WorldRep L st.speicher σ) (hE : EnvRepr ρ st.register (abbOf c)) :
+    ∃ n st', laufBytes n st = .weiter st' ∧
+      Pipeline.CodeAt st'.speicher (natAdresse c.codeBase) flat ∧
+      Entspricht c L (addrOff (natAdresse c.codeBase) (pre.length + (encodeAll prog).length))
+        (execBlock O passes R
+          (_root_.Gabbro.Grammatik.Block.cons (Stmt.ite cnd t e)
+            _root_.Gabbro.Grammatik.Block.nil) σ ρ) st' :=
+  senkBlock_korrektC c L hc hsep O passes R flat _ pre post prog hlow σ ρ st
+    hcode hf hrip hW hE
+
+/-- JOINT WITNESS for `iteChunk_lauf_abgeleitet`: the `x = 30` run
+    takes the then-branch (memory-changing store of `35`), the
+    fetched-byte run agrees, with the shared non-degenerate package
+    (`PipePaket`). -/
+theorem iteChunk_lauf_abgeleitet_zeuge :
+    ∃ prog n st',
+      senkBlock pwCfg pwL ([] : List Byte).length witIte1263 = some prog ∧
+      laufBytes n (iteStart1263 30) = .weiter st' ∧
+      Pipeline.CodeAt st'.speicher (natAdresse pwCfg.codeBase) (encodeAll prog) ∧
+      Entspricht pwCfg pwL
+        (addrOff (natAdresse pwCfg.codeBase)
+          (([] : List Byte).length + (encodeAll prog).length))
+        (execBlock pwO 0 pwR witIte1263 pwSigma pwEnv30) st' ∧
+      PipePaket := by
+  have hrip : (iteStart1263 30).rip =
+      addrOff (natAdresse pwCfg.codeBase) ([] : List Byte).length := by
+    show natAdresse 4096 = addrOff (natAdresse 4096) 0
+    exact (addrOff_null _).symm
+  obtain ⟨n, st', hrun, hcode', hent⟩ :=
+    iteChunk_lauf_abgeleitet pwCfg pwL pw_cfgOk pw_layoutSep pwCheck witIteT1263
+      witIteE1263 [] [] (encodeAll witIteProg1263) witIteProg1263 witIteLowLit1263 pwO 0 pwR
+      pwSigma pwEnv30 (iteStart1263 30) ite_code1263 (by simp) hrip
+      ite_worldRep1263 ite_envRepr30_1263
+  exact ⟨_, n, st', witIteLowLit1263, hrun, hcode', hent, pipePaket_hold⟩
+
 /- CUTS:
     - Proved here: closed-ite lowering inversion
       (`iteChunk_inv_abgeleitet`) with joint non-degenerate witness.
