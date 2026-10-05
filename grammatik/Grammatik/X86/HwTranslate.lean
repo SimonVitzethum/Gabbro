@@ -486,13 +486,283 @@ theorem uebersetz_cr3_vereinbarung (s : UebersetzZustand) (c : Nat) :
     .cr3 c, ?_, rfl, rfl⟩
   simp
 
-/- CUTS (skeleton):
-   Proved here: the join definitions `walkLesen`/`uebersetzeMitTlb`.
-   NOT proved yet: stale/fresh agreement, INVLPG/CR3 effects, flat
-   bridge, adapter plug, extended steps, witness.
+/-! ## 6. Witness: mapping changed, stale use, INVLPG, fault.
+
+  Linear page 1 (address 4096) maps read-write onto frame 32 in the
+  lane-1283 witness tables. The witness clears that leaf in memory
+  (the mapping change), keeps the old frame cached (the stale
+  entry), accesses through it, then invalidates and faults. -/
+
+/-- Changed tables: the RW leaf of page 1 cleared in memory. -/
+def witUebersetzTab1 : Nat → Wort :=
+  fun n => if n = 16 * 512 + 1 then 0 else witTab n
+
+/-- Stale entry: page 1 still cached to frame 32. -/
+def witUebersetzTlb : List TlbEintrag := [⟨1, 32⟩]
+
+/-- Witness address: first byte of linear page 1. -/
+def witUebersetzAdr : Adresse := BitVec.ofNat 64 4096
+
+/-- The witness address lives on page 1. -/
+theorem witUebersetz_seite : seitenNr witUebersetzAdr = 1 := by
+  decide
+
+/-- The witness address is page-aligned. -/
+theorem witUebersetz_offset_null : seitenOffset witUebersetzAdr = 0 := by
+  decide
+
+/-- The cached frame with zero offset names 131072. -/
+theorem witUebersetz_phys :
+    physAddr 32 witUebersetzAdr = BitVec.ofNat 64 131072 := by
+  decide
+
+/-- STALE USE: the changed tables are never consulted -- the cached
+    frame 32 still answers. -/
+theorem witUebersetz_veraltet :
+    uebersetzeMitTlb witSeitenSteuer witUebersetzTab1 witUebersetzTlb
+      witUebersetzAdr =
+      some (physAddr 32 witUebersetzAdr) := by
+  decide
+
+/-- The stale use IS the lifted lane-1285 hit rule. -/
+theorem witUebersetz_veraltet_ist_trifft :
+    uebersetzeMitTlb witSeitenSteuer witUebersetzTab1 witUebersetzTlb
+      witUebersetzAdr =
+      some (physAddr 32 witUebersetzAdr) :=
+  uebersetze_trifft witSeitenSteuer witUebersetzTab1 witUebersetzTlb
+    witUebersetzAdr 32 (by decide)
+
+/-- The fresh walk through the changed tables faults non-present
+    with the access bits. -/
+theorem witUebersetz_neu_pf :
+    (seitenGang witSeitenSteuer witUebersetzTab1
+      ⟨4096, false, true, false⟩).1 =
+      .seitenFehler 4096 ⟨false, false, true, false, false⟩ := by
+  decide
+
+/-- The instantiated walk misses page 1 after the change. -/
+theorem witUebersetz_walk_fehl :
+    walkLesen witSeitenSteuer witUebersetzTab1 1 = none := by
+  apply walkLesen_keinOk
+  intro hEx
+  obtain ⟨phys, hok⟩ := hEx
+  have hok4096 :
+      (seitenGang witSeitenSteuer witUebersetzTab1
+        ⟨4096, false, true, false⟩).1 = .ok phys := hok
+  rw [witUebersetz_neu_pf] at hok4096
+  cases hok4096
+
+/-- After INVLPG the joined access re-walks into the fault. -/
+theorem witUebersetz_nach_invlpg_fehl :
+    uebersetzeMitTlb witSeitenSteuer witUebersetzTab1
+      (tlbEntfernen witUebersetzTlb 1) witUebersetzAdr = none := by
+  decide
+
+/-! ## 7. Joint witness: changed mapping, stale use, INVLPG, fault.
+
+  Beside the accepted two-core TSO run: owner-only forwarding, a
+  drain that changes actual shared memory, and the flat agreement
+  on the lane-1283 shared page. -/
+
+/-- Witness TLBs: core 0 holds the stale entry, core 1 is empty. -/
+def witUebersetzTlbs : Nat → List TlbEintrag :=
+  fun c => if c = 0 then witUebersetzTlb else []
+
+/-- Core 0 really holds the stale entry. -/
+theorem witUebersetzTlbs_null :
+    witUebersetzTlbs 0 = witUebersetzTlb := by
+  simp [witUebersetzTlbs]
+
+/-- Witness joined state: coherent witness machine, witness
+    control, changed tables, stale TLB on core 0. -/
+def witUebersetzM : UebersetzZustand :=
+  ⟨hwWitStart, witSeitenSteuer, witUebersetzTab1, witUebersetzTlbs⟩
+
+/-- The witness joined state is machine-well-formed. -/
+theorem witUebersetzM_wf : HwWf witUebersetzM.hw := hwWitStart_wf
+
+/-- The stale-use step is reached (a self-loop on the witness). -/
+theorem witUebersetz_veraltet_schritt :
+    HwUebersetzSchritt witUebersetzM witUebersetzM
+      (.zugriffAlt 0 ⟨4096, false, true, false⟩ 32) := by
+  apply HwUebersetzSchritt.veraltet
+  decide
+
+/-- The INVLPG step is reached and its page misses afterwards. -/
+theorem witUebersetz_invlpg_schritt :
+    ∃ t, HwUebersetzSchritt witUebersetzM t
+      (.invlpg 0 witUebersetzAdr) ∧
+      tlbSuche (t.tlb 0) (seitenNr witUebersetzAdr) = none := by
+  obtain ⟨t, hstep, htlb, _, _⟩ :=
+    uebersetz_invlpg_vereinbarung witUebersetzM 0 witUebersetzAdr
+  refine ⟨t, hstep, ?_⟩
+  rw [htlb]
+  show tlbSuche
+    (tlbEntfernen (witUebersetzTlbs 0) (seitenNr witUebersetzAdr))
+    (seitenNr witUebersetzAdr) = none
+  rw [witUebersetz_seite, witUebersetzTlbs_null]
+  exact tlbEntfernen_sucht_verfehlt witUebersetzTlb 1
+
+/-- INVLPG on core 0 leaves core 1 alone on the witness. -/
+theorem witUebersetz_invlpg_lokal :
+    (fun d => if d = 0 then
+      tlbEntfernen (witUebersetzTlbs 0) (seitenNr witUebersetzAdr)
+      else witUebersetzTlbs d) 1 = witUebersetzTlbs 1 := by
+  decide
+
+/-- JOINT WITNESS: the old mapping admits, the changed mapping
+    faults, the stale entry still admits, INVLPG re-faults (both as
+    pure resolution and as reached steps), beside owner-only
+    forwarding and the memory-changing drain on two cores.
+    Non-degenerate: a real mapping change in memory, a real memory
+    change through the drain. -/
+theorem hwUebersetz_zeuge :
+    HwWf witUebersetzM.hw ∧
+      (seitenGang witSeitenSteuer witTab
+        ⟨4096, false, true, false⟩).1 = .ok 131072 ∧
+      (seitenGang witSeitenSteuer witUebersetzTab1
+        ⟨4096, false, true, false⟩).1 =
+        .seitenFehler 4096 ⟨false, false, true, false, false⟩ ∧
+      uebersetzeMitTlb witSeitenSteuer witUebersetzTab1
+        witUebersetzTlb witUebersetzAdr =
+        some (physAddr 32 witUebersetzAdr) ∧
+      uebersetzeMitTlb witSeitenSteuer witUebersetzTab1
+        (tlbEntfernen witUebersetzTlb 1) witUebersetzAdr = none ∧
+      HwUebersetzSchritt witUebersetzM witUebersetzM
+        (.zugriffAlt 0 ⟨4096, false, true, false⟩ 32) ∧
+      (∃ t, HwUebersetzSchritt witUebersetzM t
+        (.invlpg 0 witUebersetzAdr) ∧
+        tlbSuche (t.tlb 0) (seitenNr witUebersetzAdr) = none) ∧
+      hwWitLoadEigen = some (some (BitVec.ofNat 8 42)) ∧
+      hwWitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+      hwWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  exact ⟨witUebersetzM_wf, wit_lese_rw_ok, witUebersetz_neu_pf,
+    witUebersetz_veraltet, witUebersetz_nach_invlpg_fehl,
+    witUebersetz_veraltet_schritt, witUebersetz_invlpg_schritt,
+    hwWit_weiterleitung, hwWit_fremd_alt,
+    hwWit_spülung_aendert_speicher⟩
+
+/- CUTS:
+   Proved here (all over the REUSED accepted definitions -- the
+   lane-1283 walk, the lane-1285 TLB rules, the coherent machine and
+   its two-core TSO run -- lifted, never redefined):
+   - §1: the walk as a TLB function `walkLesen` with its unfolding
+     (`walkLesen_ok`, `walkLesen_keinOk`); the joined resolution
+     `uebersetzeMitTlb` with the lifted stale rule
+     (`uebersetze_trifft`, from `tlbAufloesung_trifft`) and miss rule
+     (`uebersetze_verfehlt`, from `tlbAufloesung_verfehlt`).
+   - §2: page-alignment bridge (`seitenNr_mal_basis`,
+     `walkLesen_ausgerichtet`); fresh access runs the walk
+     (`uebersetze_frisch_ok`) and every admitted fresh access comes
+     from it (`uebersetze_frisch_braucht_gang`); on a hit the tables
+     are never consulted (`uebersetze_stal_unabhaengig`).
+   - §3: INVLPG re-walk (`uebersetze_nach_invlpg`, from
+     `tlbNachEntfernen_geht_durch`), CR3 flush
+     (`uebersetze_cr3_leert`, from `tlbCr3Spuelung_leert`), core
+     locality (`uebersetze_invlpg_lokal`, from
+     `tlbEntfernen_lokal`).
+   - §4: flat bridge -- fresh walk-or-TLB admission meets the flat
+     byte permission in both directions
+     (`uebersetze_frisch_flach_lesbar`,
+     `uebersetze_frisch_flach_schreibbar` over the lane-1283
+     obligation `FlachStimmt`); the stale hit is the proved
+     exception (§2 independence plus the §6 exhibit).
+   - §5: machine connection -- the refused adapter plug
+     (`adapterUebersetz`), the extended step `HwUebersetzSchritt`
+     with the EXACT two-way `HwSchritt` embedding, inversion and
+     stillness facts, `HwWf` preservation, planted refusals for
+     large pages, armed SMEP/SMAP, noncanonical addresses, and the
+     hit-vs-fresh / miss-vs-stale exclusions, plus forward INVLPG /
+     CR3 agreements.
+   - §§6-7: closed `decide` pins (page, offset, cached frame, stale
+     use as the lifted hit rule, changed-walk fault, walk miss,
+     post-INVLPG fault) and the reached two-core joint witness
+     `hwUebersetz_zeuge` (old walk admits, changed walk faults,
+     stale entry admits, INVLPG re-faults as pure resolution and as
+     reached steps, owner-only forwarding, drain 0 -> 42).
+   Named silicon assumptions (never discharged here, no hardware
+   correspondence claimed): INVLPG invalidates the TLB entries for
+   the page of its operand (Intel SDM 325462-093US Vol 2 INVLPG;
+   Vol 3A Section 5.10.4.1); with CR4.PCIDE = 0 the current PCID is
+   000H; MOV to CR3 then invalidates all non-global entries for
+   PCID 000H (Vol 3A Section 5.10.4.1) -- hence the model runs with
+   PCID off and no global entries (lane-1285 `tlbGlobal`), so a CR3
+   write empties the core TLB. Page-table bit layout, error-code
+   meanings and the 48-bit canonical width are lane-1283
+   assumptions, reused here. Cross-core shootdown stays a
+   user-logic (OS) duty.
+   NOT proved here, and not claimed:
+   - No write-probe walk: `walkLesen` probes pages as user reads;
+     write permission comes from the write walk plus `FlachStimmt`.
+   - No per-entry permission caching: a hit reuses the frame with
+     no rights re-check (this IS the stale exception, stated).
+   - No large pages (refused, from lane 1283), no SMEP/SMAP
+     per-access semantics (refused wholesale), no fault DELIVERY
+     (address plus error code only, no IDT path).
+   - `FlachStimmt` for a REAL OS is user logic (only the bridge
+     directions are proved here).
+   - No per-access target-to-W/GX simulation, no timing, no source
+     stop-class transfer; axioms stay within the standard goal set
+     (propext, Classical.choice, Quot.sound).
 -/
 
 #print axioms walkLesen
 #print axioms uebersetzeMitTlb
+#print axioms walkLesen_ok
+#print axioms walkLesen_keinOk
+#print axioms uebersetze_trifft
+#print axioms uebersetze_verfehlt
+#print axioms seitenNr_mal_basis
+#print axioms walkLesen_ausgerichtet
+#print axioms uebersetze_frisch_ok
+#print axioms uebersetze_frisch_braucht_gang
+#print axioms uebersetze_stal_unabhaengig
+#print axioms uebersetze_nach_invlpg
+#print axioms uebersetze_cr3_leert
+#print axioms uebersetze_invlpg_lokal
+#print axioms uebersetze_frisch_flach_lesbar
+#print axioms uebersetze_frisch_flach_schreibbar
+#print axioms adapterUebersetz
+#print axioms adapterUebersetz_verweigert
+#print axioms UebersetzZustand
+#print axioms UebersetzEreignis
+#print axioms HwUebersetzSchritt
+#print axioms hwUebersetzSchritt_einbettung_vor
+#print axioms hwUebersetzSchritt_alt_invert
+#print axioms hwUebersetzSchritt_einbettung_zurueck
+#print axioms zugriffOk_invert_gang
+#print axioms zugriffOk_invert_miss
+#print axioms zugriffAlt_invert_hit
+#print axioms hwUebersetzSchritt_veraltet_still
+#print axioms zugriffPf_invert_gang
+#print axioms zugriffPf_invert_miss
+#print axioms hwUebersetzSchritt_fehler_still
+#print axioms hwUebersetzSchritt_wf
+#print axioms uebersetzGross_verweigert
+#print axioms uebersetzSteuer_verweigert
+#print axioms uebersetzGp_verweigert
+#print axioms uebersetzSchritt_frisch_braucht_miss
+#print axioms uebersetzSchritt_veraltet_braucht_treffer
+#print axioms uebersetz_invlpg_vereinbarung
+#print axioms uebersetz_cr3_vereinbarung
+#print axioms witUebersetzTab1
+#print axioms witUebersetzTlb
+#print axioms witUebersetzAdr
+#print axioms witUebersetz_seite
+#print axioms witUebersetz_offset_null
+#print axioms witUebersetz_phys
+#print axioms witUebersetz_veraltet
+#print axioms witUebersetz_veraltet_ist_trifft
+#print axioms witUebersetz_neu_pf
+#print axioms witUebersetz_walk_fehl
+#print axioms witUebersetz_nach_invlpg_fehl
+#print axioms witUebersetzTlbs
+#print axioms witUebersetzTlbs_null
+#print axioms witUebersetzM
+#print axioms witUebersetzM_wf
+#print axioms witUebersetz_veraltet_schritt
+#print axioms witUebersetz_invlpg_schritt
+#print axioms witUebersetz_invlpg_lokal
+#print axioms hwUebersetz_zeuge
 
 end Gabbro.Grammatik.X86
