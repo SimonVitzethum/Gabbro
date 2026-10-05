@@ -81,3 +81,28 @@ bounds duty is therefore discharged twice: once by typing, once by
 the decided lowering check (defense in depth). The fir-ing refusals
 are the coverage ones (unlisted tables/fields, variable indices —
 no scaled addressing in the pilot ISA), all probed by computation.
+
+## Repair round (review 1160)
+
+Independent review lane 1160 returned VERDICT: REPAIR but its body is
+exclusively procedural: the reviewer clone held no candidate objects
+(HEAD == master, empty diff), so none of the checklist items
+(sorry/axiom scan, axiom standardness, file-scope, premise-use,
+witness non-degeneracy, CUTS honesty) was executed on this code.
+It lists zero semantic findings against the deliverable.
+
+Disposition: nothing to repair — no code change was made, and none is
+owed. Making unprompted edits to satisfy a verdict with no findings
+would risk exactly what the repair instruction forbids (weakening
+guarantees or overstating proof). Self-verification in place of the
+missed review, on candidate HEAD `087c4695`:
+- `pruefe-kein-sorry.py --rev muse/1159 --diff master`: 0 violations
+  (615 files, 1 recorded axiom declaration elsewhere).
+- `git diff --stat master..HEAD`: exactly the 3 owned files, 1420
+  insertions, 0 deletions (no existing theorem touched).
+- `./lean-probe`: 0 errors; `./lean-bau`: 608 jobs green.
+- `#print axioms`: every theorem within propext/Classical.choice/
+  Quot.sound; no sorryAx.
+The deliverable stands unchanged; re-review against the code (not the
+empty clone) remains the review lane's open item, not this lane's.
+
