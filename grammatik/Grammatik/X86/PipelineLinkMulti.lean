@@ -1205,4 +1205,459 @@ theorem mehrere_korrekt
               mBild_byte_geladen us out eintrag 0 va s hfind hhi,
               hrangej, hrangec, hranged, hframe⟩
 
+/-! ## 9. Joint witness: four units, five operands, one closing.
+
+    Unit A is a five-byte jump, unit B a five-byte call, unit C
+    nine data bytes (abs64 value plus rel8 byte), unit D a six-byte
+    conditional jump. The five operands apply at disjoint sites;
+    every window re-decodes or reads back through the closing. -/
+
+/-- Witness unit A: a five-byte jump with zero displacement. -/
+def zeugenMultiA : MEinheit :=
+  { bytes := [natByte 233, natByte 0, natByte 0, natByte 0, natByte 0]
+    vaddr := 0x1000, code := true }
+
+/-- Witness unit B: a five-byte call with zero displacement. -/
+def zeugenMultiB : MEinheit :=
+  { bytes := [natByte 232, natByte 0, natByte 0, natByte 0, natByte 0]
+    vaddr := 0x2000, code := true }
+
+/-- Witness unit C: nine data bytes (abs64 site plus rel8 site). -/
+def zeugenMultiC : MEinheit :=
+  { bytes := [natByte 0, natByte 0, natByte 0, natByte 0, natByte 0,
+      natByte 0, natByte 0, natByte 0, natByte 0]
+    vaddr := 0x3000, code := false }
+
+/-- Witness unit D: a six-byte conditional jump (`e`) with zero
+    displacement. -/
+def zeugenMultiD : MEinheit :=
+  { bytes := [natByte 15, natByte 132, natByte 0, natByte 0, natByte 0,
+      natByte 0]
+    vaddr := 0x4000, code := true }
+
+/-- Witness units in link order. -/
+def zeugenMultiUnits : List MEinheit :=
+  [zeugenMultiA, zeugenMultiB, zeugenMultiC, zeugenMultiD]
+
+/-- Witness linked file: the four units' bytes in order. -/
+def zeugenMultiDatei : List Byte :=
+  [natByte 233, natByte 0, natByte 0, natByte 0, natByte 0,
+    natByte 232, natByte 0, natByte 0, natByte 0, natByte 0,
+    natByte 0, natByte 0, natByte 0, natByte 0, natByte 0,
+    natByte 0, natByte 0, natByte 0, natByte 0,
+    natByte 15, natByte 132, natByte 0, natByte 0, natByte 0,
+    natByte 0]
+
+/-- Witness patched file: jump `+16`, call `-5`, abs64 value,
+    rel8 `+16`, conditional `+16`. -/
+def zeugenMultiOut : List Byte :=
+  [natByte 233, natByte 16, natByte 0, natByte 0, natByte 0,
+    natByte 232, natByte 251, natByte 255, natByte 255, natByte 255,
+    natByte 8, natByte 7, natByte 6, natByte 5, natByte 4,
+    natByte 3, natByte 2, natByte 1, natByte 16,
+    natByte 15, natByte 132, natByte 16, natByte 0, natByte 0,
+    natByte 0]
+
+/-- Witness jump field: `+16`. -/
+def zeugenMultiF16 : BitVec 32 := BitVec.ofNat 32 16
+
+/-- Witness call field: `-5`. -/
+def zeugenMultiFM5 : BitVec 32 := BitVec.ofNat 32 4294967291
+
+/-- Witness abs64 value. -/
+def zeugenMultiV : Wort := 0x0102030405060708
+
+/-- The linked file is the units' bytes in order. -/
+theorem zeugenMulti_datei : mDatei zeugenMultiUnits = zeugenMultiDatei := by
+  decide
+
+/-- All five operands apply: the patched bytes at every site. -/
+theorem zeugenMulti_patch :
+    multiPatchAlle zeugenMultiDatei
+      [(1, .rel32 16), (6, .rel32 (-5)), (21, .rel32 16),
+        (10, .abs64 zeugenMultiV), (18, .rel8 16)] =
+      some zeugenMultiOut := by
+  decide
+
+/-- The opcode bytes survive in the unpatched file. -/
+theorem zeugenMulti_opcodes :
+    zeugenMultiDatei[0]? = some (natByte 233) ∧
+    zeugenMultiDatei[5]? = some (natByte 232) ∧
+    zeugenMultiDatei[19]? = some (natByte 15) ∧
+    zeugenMultiDatei[20]? = some (natByte (128 + condCode .e)) := by
+  decide
+
+/-- The patched jump window re-decodes to `jump32 +16`. -/
+theorem zeugenMulti_dek_sprung :
+    decode (zeugenMultiOut.drop 0) =
+      some ((⟨.jump32 zeugenMultiF16, 5⟩, zeugenMultiOut.drop 5)) := by
+  decide
+
+/-- The patched call window re-decodes to `call32 -5`. -/
+theorem zeugenMulti_dek_ruf :
+    decode (zeugenMultiOut.drop 5) =
+      some ((⟨.call32 zeugenMultiFM5, 5⟩, zeugenMultiOut.drop 10)) := by
+  decide
+
+/-- The patched conditional window re-decodes to `jumpIf32 e +16`. -/
+theorem zeugenMulti_dek_bedingt :
+    decode (zeugenMultiOut.drop 19) =
+      some ((⟨.jumpIf32 .e zeugenMultiF16, 6⟩, [])) := by
+  decide
+
+/-- The displacement fields carry the site displacements. -/
+theorem zeugenMulti_felder :
+    dispSigned zeugenMultiF16 = 16 ∧
+    dispSigned zeugenMultiFM5 = -5 := by
+  decide
+
+/-- The checked linked image over the PATCHED bytes is well-formed. -/
+theorem zeugenMulti_bild_wohlgeformt : wohlgeformt .p48
+    (mBild zeugenMultiUnits zeugenMultiOut 0x1000) = true := by
+  decide
+
+/-- The linked image's decode coverage holds (all code units decode,
+    the data unit is not decoded). -/
+theorem zeugenMulti_deckung : bildDeckung
+    (mBild zeugenMultiUnits zeugenMultiOut 0x1000) = true := by
+  decide
+
+/-- Unit A's section is found at its linked virtual address. -/
+theorem zeugenMulti_find : abteilFinden
+    (mBild zeugenMultiUnits zeugenMultiOut 0x1000).abschnitte 0 0x1000 =
+    some (mAbschnitt 0 zeugenMultiA) := by
+  decide
+
+/-- The witness address lies in the file-backed part of A's section. -/
+theorem zeugenMulti_innen : 0x1000 <
+    0 + (mAbschnitt 0 zeugenMultiA).vaddr +
+      (mAbschnitt 0 zeugenMultiA).dateiLen := by
+  decide
+
+/-- Unit A's section is a member of the linked image. -/
+theorem zeugenMulti_mem : mAbschnitt 0 zeugenMultiA ∈
+    (mBild zeugenMultiUnits zeugenMultiOut 0x1000).abschnitte := by
+  decide
+
+/-- The five witness operand ranges are pairwise separated (jump
+    against its tail). -/
+theorem zeugenMulti_hdisj :
+    ∀ op' ∈ [(6, .rel32 (-5 : Int)), (21, .rel32 (16 : Int)),
+      (10, .abs64 zeugenMultiV), (18, .rel8 (16 : Int))],
+      ∀ k, k < opWeite (1, .rel32 (16 : Int)) →
+      ∀ j, j < opWeite op' →
+      opStelle (1, .rel32 (16 : Int)) + k ≠ opStelle op' + j := by
+  decide
+
+/-- The five witness operand ranges are pairwise separated (call
+    against its tail). -/
+theorem zeugenMulti_hdisc :
+    ∀ op' ∈ [(21, .rel32 (16 : Int)), (10, .abs64 zeugenMultiV),
+      (18, .rel8 (16 : Int))],
+      ∀ k, k < opWeite (6, .rel32 (-5 : Int)) →
+      ∀ j, j < opWeite op' →
+      opStelle (6, .rel32 (-5 : Int)) + k ≠ opStelle op' + j := by
+  decide
+
+/-- The five witness operand ranges are pairwise separated
+    (conditional against its tail). -/
+theorem zeugenMulti_hdisd :
+    ∀ op' ∈ [(10, .abs64 zeugenMultiV), (18, .rel8 (16 : Int))],
+      ∀ k, k < opWeite (21, .rel32 (16 : Int)) →
+      ∀ j, j < opWeite op' →
+      opStelle (21, .rel32 (16 : Int)) + k ≠ opStelle op' + j := by
+  decide
+
+/-- The five witness operand ranges are pairwise separated (abs64
+    against its tail). -/
+theorem zeugenMulti_hdisa :
+    ∀ op' ∈ [(18, .rel8 (16 : Int))],
+      ∀ k, k < opWeite (10, .abs64 zeugenMultiV) →
+      ∀ j, j < opWeite op' →
+      opStelle (10, .abs64 zeugenMultiV) + k ≠ opStelle op' + j := by
+  decide
+
+/-- The decided check agrees: the witness closing is disjoint. -/
+theorem zeugenMulti_disjunkt :
+    opsDisjunktB [(1, .rel32 (16 : Int)), (6, .rel32 (-5 : Int)),
+      (21, .rel32 (16 : Int)), (10, .abs64 zeugenMultiV),
+      (18, .rel8 (16 : Int))] = true := by
+  decide
+
+/-- Every opcode byte lies outside every witness operand. -/
+theorem zeugenMulti_hrahmen :
+    ∀ p ∈ [0, 5, 19, 20],
+      ∀ op ∈ [(1, .rel32 (16 : Int)), (6, .rel32 (-5 : Int)),
+        (21, .rel32 (16 : Int)), (10, .abs64 zeugenMultiV),
+        (18, .rel8 (16 : Int))],
+      ∀ k, k < opWeite op → p ≠ opStelle op + k := by
+  decide
+
+/-- Byte 0 (the jump opcode) lies outside every witness operand. -/
+theorem zeugenMulti_haussen :
+    ∀ op ∈ [(1, .rel32 (16 : Int)), (6, .rel32 (-5 : Int)),
+      (21, .rel32 (16 : Int)), (10, .abs64 zeugenMultiV),
+      (18, .rel8 (16 : Int))],
+      ∀ k, k < opWeite op → 0 ≠ opStelle op + k := by
+  decide
+
+/-! ## 10. Planted refusals: overlap, overrun, ranges, symbol, W^X,
+    forged opcode, non-site shapes. Unsupported shapes are REFUSED,
+    never guessed. -/
+
+/-- OVERLAP REFUSAL: the decided disjointness check refuses
+    overlapping sites, never merges them. -/
+theorem multiUeberlapp_verweigert :
+    opsDisjunktB [(1, .rel32 (16 : Int)), (2, .rel32 16)] = false := by
+  decide
+
+/-- OVERRUN REFUSAL: a four-byte operand two bytes before the end of
+    a three-byte image is refused, never wrapped. -/
+theorem multiUeberlauf_verweigert :
+    multiPatchAlle [natByte 233, natByte 0, natByte 0]
+      [(2, .rel32 (16 : Int))] = none := by
+  decide
+
+/-- RANGE REFUSAL (rel32): an out-of-range displacement patches
+    nothing. -/
+theorem multiAussen32_verweigert :
+    multiPatch zeugenMultiDatei 1 (.rel32 2147483648) = none := by
+  decide
+
+/-- RANGE REFUSAL (rel8): a short displacement past `+127` patches
+    nothing. -/
+theorem multiAussen8_verweigert :
+    multiPatch zeugenMultiDatei 18 (.rel8 128) = none := by
+  decide
+
+/-- SYMBOL REFUSAL: an unlisted relocation id resolves nothing. -/
+theorem multiSymbol_verweigert :
+    loeseSymbol [(0, 0x1000)] 7 = none := by
+  decide
+
+/-- FORGED-OPCODE REFUSAL: a non-canonical head byte refuses
+    re-decode. -/
+theorem multiOpcode_falsch_verweigert :
+    decode ([natByte 6] ++ rel32Bytes 16) = none := by
+  decide
+
+/-- NON-JUMP/CALL/CONDITIONAL SITE: a `ret` window decodes to `ret`,
+    never to a relocation site -- other instructions are refused
+    as sites, never guessed into one. -/
+theorem multiKeinSprung_verweigert :
+    decode [natByte 195, natByte 16, natByte 0, natByte 0, natByte 0] =
+      some ((⟨.ret, 1⟩,
+        [natByte 16, natByte 0, natByte 0, natByte 0])) := by
+  decide
+
+/-- SHORT FORM NEVER DECODES: a rel8 operand has no decoder row, so
+    short re-decode is byte read-back only (`multi_rel8_liest`). -/
+theorem multiRel8_nicht_dekodiert :
+    decode [natByte 235, natByte 16] = none := by
+  decide
+
+/-! ## 11. Joint inhabitation: premises jointly held, run reached. -/
+
+/-- JOINT WITNESS for `mehrere_korrekt`: all premises instantiated
+    jointly on the non-degenerate four-unit link (jump unit, call
+    unit, data unit carrying the abs64 value and the rel8 byte,
+    conditional-jump unit), the closing's conclusions derived
+    through it, a reached memory-changing run through actual bytes
+    (`ruf_schritt_zeuge`: return address stored, byte observably
+    changed), and the planted refusals. -/
+theorem mehrere_korrekt_zeuge :
+    ∃ (us : List MEinheit) (datei out : List Byte) (eintrag : Nat)
+      (pj pc pd pa pr ij ic id : Nat)
+      (dj dc dd : Int) (v : Wort) (dr : Int) (c : Bedingung)
+      (ej ec ed : BitVec 32) (restj restc restd : List Byte)
+      (s : Abschnitt) (va i : Nat),
+      multiPatchAlle datei [(pj, .rel32 dj), (pc, .rel32 dc),
+        (pd, .rel32 dd), (pa, .abs64 v), (pr, .rel8 dr)] = some out ∧
+      (∀ op' ∈ [(pc, .rel32 dc), (pd, .rel32 dd), (pa, .abs64 v),
+        (pr, .rel8 dr)], ∀ k, k < opWeite (pj, .rel32 dj) →
+        ∀ j, j < opWeite op' →
+        opStelle (pj, .rel32 dj) + k ≠ opStelle op' + j) ∧
+      (∀ op' ∈ [(pd, .rel32 dd), (pa, .abs64 v), (pr, .rel8 dr)],
+        ∀ k, k < opWeite (pc, .rel32 dc) →
+        ∀ j, j < opWeite op' →
+        opStelle (pc, .rel32 dc) + k ≠ opStelle op' + j) ∧
+      (∀ op' ∈ [(pa, .abs64 v), (pr, .rel8 dr)],
+        ∀ k, k < opWeite (pd, .rel32 dd) →
+        ∀ j, j < opWeite op' →
+        opStelle (pd, .rel32 dd) + k ≠ opStelle op' + j) ∧
+      (∀ op' ∈ [(pr, .rel8 dr)],
+        ∀ k, k < opWeite (pa, .abs64 v) →
+        ∀ j, j < opWeite op' →
+        opStelle (pa, .abs64 v) + k ≠ opStelle op' + j) ∧
+      datei[ij]? = some (natByte 233) ∧
+      datei[ic]? = some (natByte 232) ∧
+      datei[id]? = some (natByte 15) ∧
+      datei[id + 1]? = some (natByte (128 + condCode c)) ∧
+      pj = ij + 1 ∧ pc = ic + 1 ∧ pd = id + 2 ∧
+      decode (out.drop ij) = some ((⟨.jump32 ej, 5⟩, restj)) ∧
+      decode (out.drop ic) = some ((⟨.call32 ec, 5⟩, restc)) ∧
+      decode (out.drop id) = some ((⟨.jumpIf32 c ed, 6⟩, restd)) ∧
+      wohlgeformt .p48 (mBild us out eintrag) = true ∧
+      s ∈ (mBild us out eintrag).abschnitte ∧
+      abteilFinden (mBild us out eintrag).abschnitte 0 va = some s ∧
+      va < 0 + s.vaddr + s.dateiLen ∧
+      (∀ op ∈ [(pj, .rel32 dj), (pc, .rel32 dc),
+        (pd, .rel32 dd), (pa, .abs64 v), (pr, .rel8 dr)],
+        ∀ k, k < opWeite op → i ≠ opStelle op + k) ∧
+      dispSigned ej = dj ∧
+      dispSigned ec = dc ∧
+      dispSigned ed = dd ∧
+      decktAb ⟨.jump32 ej, 5⟩ ∧
+      decktAb ⟨.call32 ec, 5⟩ ∧
+      decktAb ⟨.jumpIf32 c ed, 6⟩ ∧
+      decode ((out.drop ij).take 5 ++ restj) =
+        some ((⟨.jump32 ej, 5⟩, restj)) ∧
+      decode ((out.drop ic).take 5 ++ restc) =
+        some ((⟨.call32 ec, 5⟩, restc)) ∧
+      decode ((out.drop id).take 6 ++ restd) =
+        some ((⟨.jumpIf32 c ed, 6⟩, restd)) ∧
+      abs64Wort ((out.drop pa).take 8) = some v ∧
+      out[pr]? = some (rel8Byte dr) ∧
+      disp8Signed (rel8Byte dr) = dr ∧
+      wxOk s = true ∧
+      ladenByte (mBild us out eintrag) 0 va =
+        dateiByte out (s.dateiOff + (va - (0 + s.vaddr))) ∧
+      pj + 4 ≤ datei.length ∧
+      pc + 4 ≤ datei.length ∧
+      pd + 4 ≤ datei.length ∧
+      out[i]? = datei[i]? ∧
+      (∃ m : Speicher, byteschritt zustandRuf =
+        .weiter (schrittCall zustandRuf Register.rsp m
+          (zustandRuf.register Register.rsp - BitVec.ofNat 64 8)
+          (BitVec.ofNat 64 0x1015)) ∧
+        read64 m (BitVec.ofNat 64 0x1FF8) =
+          some (BitVec.ofNat 64 0x1005) ∧
+        m.bytes (BitVec.ofNat 64 0x1FF8) ≠
+          zustandRuf.speicher.bytes (BitVec.ofNat 64 0x1FF8)) ∧
+      multiPatchAlle [natByte 233, natByte 0, natByte 0]
+        [(2, .rel32 (16 : Int))] = none ∧
+      multiPatch zeugenMultiDatei 1 (.rel32 2147483648) = none ∧
+      multiPatch zeugenMultiDatei 18 (.rel8 128) = none ∧
+      loeseSymbol [(0, 0x1000)] 7 = none ∧
+      wohlgeformt .p48 wxVerletzt = false ∧
+      decode ([natByte 6] ++ rel32Bytes 16) = none := by
+  have hconn := mehrere_korrekt zeugenMultiUnits zeugenMultiDatei
+    zeugenMultiOut 0x1000 1 6 21 10 18 0 5 19
+    16 (-5) 16 zeugenMultiV 16 .e
+    zeugenMultiF16 zeugenMultiFM5 zeugenMultiF16
+    (zeugenMultiOut.drop 5) (zeugenMultiOut.drop 10) []
+    (mAbschnitt 0 zeugenMultiA) 0x1000 0
+    zeugenMulti_patch zeugenMulti_hdisj zeugenMulti_hdisc
+    zeugenMulti_hdisd zeugenMulti_hdisa zeugenMulti_hrahmen
+    zeugenMulti_opcodes.1 zeugenMulti_opcodes.2.1
+    zeugenMulti_opcodes.2.2.1 zeugenMulti_opcodes.2.2.2
+    rfl rfl rfl
+    zeugenMulti_dek_sprung zeugenMulti_dek_ruf zeugenMulti_dek_bedingt
+    zeugenMulti_bild_wohlgeformt zeugenMulti_mem zeugenMulti_find
+    zeugenMulti_innen zeugenMulti_haussen
+  obtain ⟨hagj, hagc, hagd, hdecktj, hdecktc, hdecktd,
+    hregj, hregc, hregd, habs, hbyter, hrund, hwx, hmap,
+    hrangej, hrangec, hranged, hframe⟩ := hconn
+  exact ⟨zeugenMultiUnits, zeugenMultiDatei, zeugenMultiOut, 0x1000,
+    1, 6, 21, 10, 18, 0, 5, 19,
+    16, (-5), 16, zeugenMultiV, 16, .e,
+    zeugenMultiF16, zeugenMultiFM5, zeugenMultiF16,
+    (zeugenMultiOut.drop 5), (zeugenMultiOut.drop 10), [],
+    (mAbschnitt 0 zeugenMultiA), 0x1000, 0,
+    zeugenMulti_patch, zeugenMulti_hdisj, zeugenMulti_hdisc,
+    zeugenMulti_hdisd, zeugenMulti_hdisa,
+    zeugenMulti_opcodes.1, zeugenMulti_opcodes.2.1,
+    zeugenMulti_opcodes.2.2.1, zeugenMulti_opcodes.2.2.2,
+    rfl, rfl, rfl,
+    zeugenMulti_dek_sprung, zeugenMulti_dek_ruf, zeugenMulti_dek_bedingt,
+    zeugenMulti_bild_wohlgeformt, zeugenMulti_mem, zeugenMulti_find,
+    zeugenMulti_innen, zeugenMulti_haussen,
+    hagj, hagc, hagd, hdecktj, hdecktc, hdecktd,
+    hregj, hregc, hregd, habs, hbyter, hrund, hwx, hmap,
+    hrangej, hrangec, hranged, hframe,
+    ruf_schritt_zeuge, multiUeberlauf_verweigert,
+    multiAussen32_verweigert, multiAussen8_verweigert,
+    multiSymbol_verweigert, verknuepft_wx_verweigert,
+    multiOpcode_falsch_verweigert⟩
+
+/- CUTS:
+   - Proved here: one-operand application for three kinds
+     (`multiPatch_bereich`/`_stelle`/`_rahmen`/`_laenge`, rel32/abs64
+     by reuse of the two-unit `linkPatch_*` facts, rel8 directly
+     through the accepted `patchAt_*` producer facts); the rel8
+     byte round-trip (`rel8Byte_rundgang`); field agreement for
+     jump, call and conditional (`feld_agreement_sprung`/`_ruf`/
+     `_bedingt`: re-decoded displacement equals the patched value,
+     the conditional keeps the patched condition, through the
+     accepted byte bridge and decoder determinism); patched-window
+     take equations (`fenster_*`); single-patch re-decode legs
+     (`multi_ruf_schliesst`, `multi_bedingt_schliesst`,
+     `multi_abs64_liest`, `multi_rel8_liest`; the jump leg is the
+     reused `verknuepft_rel32_schliesst`); n-unit concatenation
+     (`verknuepfeAlle_*`) with tiling sections (`mAbschnitteAux_tiling`)
+     and the checked n-unit image (`mBild_*`: W^X, executed
+     mapping); the multi-operand fold (`multiPatchAlle_*`: length,
+     the frame invariant -- no relocation changes a byte outside
+     its operand -- head-site survival, disjointness soundness);
+     the five-operand closing (`mehrere_korrekt`); planted
+     refusals for overlap, overrun, out-of-range rel32/rel8,
+     unlisted symbol, W^X violation, forged opcode,
+     non-jump/call/conditional sites and short forms without a
+     decoder row; the joint `_zeuge` witness with a reached
+     memory-changing run.
+   - Explicitly OPEN (never assumed here): source correspondence --
+     units arrive already lowered, nothing here claims the bytes are
+     the emitted form of any source block or that duties, contracts,
+     costs, locks or call logs refine anything (consumer: pipeline
+     and validator lanes); `valX86_sound` and any full
+     source-to-final-loaded-byte closing theorem; hardware
+     correspondence -- fetch runs over the model `Speicher`
+     function, not silicon; TSO/GX bridge, concurrency, budget/work
+     transfer, allocator behaviour (other lanes).
+   - Explicitly OPEN link scope: exactly the five operand shapes of
+     one closing (jump/call/conditional rel32, abs64 data, rel8
+     short); fall-through coverage across unit boundaries beyond
+     the re-decoded windows, rel8 short selection convergence,
+     conditional-field agreement outside jump/call/conditional,
+     overlapping sites (refused by `opsDisjunktB`, never merged),
+     and any instruction outside jump/call/conditional stay with
+     the extension codec lanes. abs64 and rel8 operands are data
+     and one byte respectively: they read back through
+     `abs64Wort`/`disp8Signed`, never through `decode`.
+   - No loader execution, entry handoff or OS interaction is
+     modelled: `geladen` stays the pure mapping function; entries
+     are contained by `wohlgeformt`, never executed here.
+   - No second decoder, loader, executor, ISA model or IR is created
+     here: every fact reuses the named producer theorems.
+-/
+
+#print axioms multiPatch_bereich
+#print axioms multiPatch_stelle
+#print axioms multiPatch_rahmen
+#print axioms multiPatch_laenge
+#print axioms rel8Byte_rundgang
+#print axioms feld_agreement_sprung
+#print axioms feld_agreement_ruf
+#print axioms feld_agreement_bedingt
+#print axioms fenster_sprung
+#print axioms fenster_ruf
+#print axioms fenster_bedingt
+#print axioms fenster_abs64
+#print axioms fenster_rel8
+#print axioms multi_ruf_schliesst
+#print axioms multi_bedingt_schliesst
+#print axioms multi_abs64_liest
+#print axioms multi_rel8_liest
+#print axioms verknuepfeAlle_laenge
+#print axioms mAbschnitteAux_tiling
+#print axioms mAbschnitt_wx
+#print axioms mBild_byte_geladen
+#print axioms mBild_wx
+#print axioms multiPatchAlle_laenge
+#print axioms multiPatchAlle_rahmen
+#print axioms multiPatchAlle_kopf_stelle
+#print axioms opsDisjunktB_gilt
+#print axioms mehrere_korrekt
+#print axioms mehrere_korrekt_zeuge
+
 end Gabbro.Grammatik.X86
