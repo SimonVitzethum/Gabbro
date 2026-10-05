@@ -361,6 +361,150 @@ theorem wp_code : CodeAt wpPost.speicher wpPost.rip wpBild := by
 theorem wp_read1 : read64 wpMem (natAdresse 8192) = some 1 := by
   decide
 
+/-! ## 6. The round simulation at the loaded map.
+
+    `zw_weiter`/`zw_ende` run at the constant map `zwAdr`. The
+    labelled-to-bytes leg needs the same one-round simulation at
+    the relaxed layout's address map (`adrL` over the witness
+    image): the body rows are map-independent (`stepI`), only the
+    head/exit addresses come from the layout. The proofs mirror
+    `zw_weiter`/`zw_ende` row for row. -/
+
+/-- ONE WITNESS ROUND AT THE LOADED MAP: the eight labelled steps
+    run the body and return to the head, keeping the post-round
+    relation. The segment holds by computation. -/
+theorem wpWeiter (σ : World zwD) (ρ : Env zwD []) (s : Zustand)
+    (hRep : zwRep σ ρ s) (he : (zwBis σ ρ).2 = false) :
+    ∃ σ₁ ρ₁ s₁, (zwSchritt (zwBis σ ρ).1 ρ = .ok σ₁ ρ₁ ∨
+        (∃ h : true = true, zwSchritt (zwBis σ ρ).1 ρ = .next h σ₁ ρ₁)) ∧
+      laufL (adrL wpPost.rip wpWs (schleifeProg zwKoerper .e))
+        (schleifeProg zwKoerper .e) (zwKoerper.length + 2) (0, s)
+        = some (0, s₁) ∧
+      zwRep σ₁ ρ₁ s₁ := by
+  rcases hRep.2 with ⟨_, rfl⟩ | ⟨hslot1, _, _⟩
+  · refine ⟨zwSigma1 σ, ρ, _, Or.inl rfl, rfl, ?_⟩
+    have hsl1 : ((zwSigma1 σ).slots () 0 ()).n = 1 := rfl
+    have hbis1 : (zwBis (zwSigma1 σ) ρ).2 = true := by
+      simp [zwBis, hsl1]
+    refine ⟨hbis1.trans ?_, Or.inr ⟨hsl1, ?_, ?_⟩⟩
+    · rfl
+    · rfl
+    · rfl
+  · have htrue : (zwBis σ ρ).2 = true := by
+      simp [zwBis, hslot1]
+    rw [htrue] at he
+    cases he
+
+/-- THE WITNESS EXIT AT THE LOADED MAP: with a true bound the head
+    `jcc` leaves the schema to the end label, keeping the
+    post-round relation. -/
+theorem wpEnde (σ : World zwD) (ρ : Env zwD []) (s : Zustand)
+    (hRep : zwRep σ ρ s) (hb : (zwBis σ ρ).2 = true) :
+    ∃ s', laufL (adrL wpPost.rip wpWs (schleifeProg zwKoerper .e))
+      (schleifeProg zwKoerper .e) 1 (0, s)
+      = some (zwKoerper.length + 2, s') ∧ zwRep (zwBis σ ρ).1 ρ s' := by
+  rcases hRep.2 with ⟨hslot0, _⟩ | ⟨hslot1, hrax, hmem⟩
+  · have hfalse : (zwBis σ ρ).2 = false := by
+      simp [zwBis, hslot0]
+    rw [hfalse] at hb
+    cases hb
+  · have hflag : bedingung .e s.flags = true := by
+      rw [← hRep.1]
+      exact hb
+    refine ⟨{ s with rip := adrL wpPost.rip wpWs (schleifeProg zwKoerper .e) (zwKoerper.length + 2) }, ?_, ?_⟩
+    · simp only [laufL, stepL, schleifeProg_kopf, hflag]
+      rfl
+    · refine ⟨hRep.1, Or.inr ⟨hslot1, hrax, hmem⟩⟩
+
+/-! ## 7. The labelled-to-bytes leg.
+
+    A source `retry` run that finishes `.ok` within `n` rounds is
+    the fetched-byte run of the relaxed loop image: the source run
+    is the labelled run (`schleife_korrekt_endlich`), and the
+    labelled run is the fetched run (`schleife_bytes`, i.e.
+    `relax_laufBytes` at the schema). Every premise is used. -/
+
+/-- LABELLED-TO-BYTES LEG: a finished source loop run is the
+    fetched-byte run of its relaxed image, ending at the end label
+    with `Rep` kept. -/
+theorem schleife_pfad_bytes {D : Deklaration} {V : Vertrag D} {l : Bool} {Γ : Ctx}
+    (koerper : List Instr) (c : Bedingung)
+    (Rep : World D → Env D Γ → Zustand → Prop)
+    (schritt : World D → Env D Γ → Ausgang V true Γ)
+    (bis : World D → Env D Γ → World D × Bool)
+    (ueberlauf : World D → Env D Γ → Ausgang V l Γ)
+    (treibstoff : Nat) (ws : List Bool)
+    (hr : relax treibstoff (schleifeProg koerper c) = some ws)
+    (s : Zustand)
+    (hwx : WX s.speicher)
+    (hcode : CodeAt s.speicher s.rip (bild ws (schleifeProg koerper c)))
+    (hLese : ∀ σ ρ s, Rep σ ρ s → Rep (bis σ ρ).1 ρ s)
+    (hBisStabil : ∀ σ ρ, bis (bis σ ρ).1 ρ = bis σ ρ)
+    (hBed : ∀ σ ρ s, Rep σ ρ s → (bis σ ρ).2 = bedingung c s.flags)
+    (hWeiter : ∀ σ ρ st, Rep σ ρ st → (bis σ ρ).2 = false →
+      ∃ σ₁ ρ₁ s₁, (schritt (bis σ ρ).1 ρ = .ok σ₁ ρ₁ ∨
+          (∃ h : true = true, schritt (bis σ ρ).1 ρ = .next h σ₁ ρ₁)) ∧
+        laufL (adrL s.rip ws (schleifeProg koerper c)) (schleifeProg koerper c)
+          (koerper.length + 2) (0, st) = some (0, s₁) ∧
+        Rep σ₁ ρ₁ s₁)
+    (hEnde : ∀ σ ρ st, Rep σ ρ st → (bis σ ρ).2 = true →
+      ∃ s', laufL (adrL s.rip ws (schleifeProg koerper c)) (schleifeProg koerper c)
+        1 (0, st) = some (koerper.length + 2, s') ∧ Rep (bis σ ρ).1 ρ s')
+    (hUeberlauf : ∀ σ ρ σ' ρ', (bis σ ρ).2 = false →
+      ueberlauf (bis σ ρ).1 ρ ≠ .ok σ' ρ') :
+    ∀ (n : Nat) (σ : World D) (ρ : Env D Γ),
+      Rep σ ρ s →
+      ∀ σ' ρ', retryLauf schritt bis ueberlauf n σ ρ = .ok σ' ρ' →
+        ∃ s', laufBytesI
+            (schritteL (adrL s.rip ws (schleifeProg koerper c))
+              (schleifeProg koerper c) (schleifeSchritte n koerper.length) (0, s)) s
+            = ausgangVon (some s') ∧
+          s'.rip = adrL s.rip ws (schleifeProg koerper c) (koerper.length + 2) ∧
+          Rep σ' ρ' s' := by
+  intro n σ ρ hRep σ' ρ' hrun
+  obtain ⟨t', hT, hrep'⟩ := schleife_korrekt_endlich koerper c
+    (adrL s.rip ws (schleifeProg koerper c)) Rep schritt bis ueberlauf
+    hLese hBisStabil hBed hWeiter hEnde hUeberlauf n σ ρ s hRep σ' ρ' hrun
+  obtain ⟨hb, hrip⟩ := schleife_bytes treibstoff koerper c ws hr s hwx hcode
+    (schleifeSchritte n koerper.length)
+  rw [hT] at hb
+  simp only [Option.map_some] at hb
+  exact ⟨t', hb, hrip _ hT, hrep'⟩
+
+/-- JOINT WITNESS for `schleife_pfad_bytes`: the finished
+    zero-round witness run (slot already `1`) is the fetched-byte
+    run of the loaded image, on a table the contract writes with a
+    memory-changing round behind it. -/
+theorem schleife_pfad_bytes_zeuge :
+    ∃ (s' : Zustand),
+      relax 0 (schleifeProg zwKoerper .e) = some wpWs ∧
+      WX wpMem ∧
+      CodeAt wpPost.speicher wpPost.rip wpBild ∧
+      zwRep (zwSigma1 zwSigma0) .nil wpPost ∧
+      retryLauf zwSchritt zwBis zwUeberlauf 0 (zwSigma1 zwSigma0) .nil
+        = .ok (zwSigma1 zwSigma0) .nil ∧
+      laufBytesI
+        (schritteL (adrL wpPost.rip wpWs (schleifeProg zwKoerper .e))
+          (schleifeProg zwKoerper .e) (schleifeSchritte 0 zwKoerper.length)
+          (0, wpPost)) wpPost
+        = ausgangVon (some s') ∧
+      s'.rip = adrL wpPost.rip wpWs (schleifeProg zwKoerper .e)
+        (zwKoerper.length + 2) ∧
+      zwRep (zwSigma1 zwSigma0) .nil s' ∧
+      zwV.schreibt () = true ∧
+      (zwSigma0.slots () 0 ()).n = 0 ∧
+      ((zwSigma1 zwSigma0).slots () 0 ()).n = 1 := by
+  have hrun0 : retryLauf zwSchritt zwBis zwUeberlauf 0 (zwSigma1 zwSigma0) .nil
+      = .ok (zwSigma1 zwSigma0) .nil := rfl
+  have hRepP : zwRep (zwSigma1 zwSigma0) .nil wpPost :=
+    ⟨rfl, Or.inr ⟨rfl, rfl, wp_read1⟩⟩
+  obtain ⟨s', hbytes, hrip, hrep'⟩ := schleife_pfad_bytes zwKoerper .e
+    zwRep zwSchritt zwBis zwUeberlauf 0 wpWs wp_relax wpPost wp_wx wp_code
+    zw_lese zw_stabil zw_bed wpWeiter wpEnde zw_kein_ueberlauf
+    0 (zwSigma1 zwSigma0) .nil hRepP _ _ hrun0
+  exact ⟨s', wp_relax, wp_wx, wp_code, hRepP, hrun0, hbytes, hrip, hrep',
+    rfl, rfl, rfl⟩
+
 /- CUTS:
    - Skeleton only: `genommenArbeit` names the taken-path count.
    - OPEN: the prefix-run bridge (`laufBytes_genommen`), the dynamic
