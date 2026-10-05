@@ -570,6 +570,172 @@ theorem rahmenEcho_schreiben (m : Speicher) (a : Adresse) (v : Wort)
     writeBytes m a v (addrOff a k) = wortByte v k :=
   stapelEcho_schreiben m a v k hk
 
+/-! ## 5. IRET return (S6).
+
+   The five-word frame is read back upward from the handler stack
+   top (RIP, CS, RFLAGS, old RSP, old SS); RIP is installed, RSP is
+   restored, IF comes from RFLAGS bit 9, and the NULL-selector and
+   code-row checks refuse loudly. Segment state beyond the checks
+   has no machine field (see CUTS). -/
+
+/-- IRET frame read: five words upward from the handler stack top. -/
+def iretLese (m : Speicher) (top : Adresse) :
+    Option (Wort × Wort × Wort × Wort × Wort) :=
+  match read64 m top, read64 m (addrOff top 8),
+    read64 m (addrOff top 16), read64 m (addrOff top 24),
+    read64 m (addrOff top 32) with
+  | some rip, some cs, some fl, some rsp, some ss =>
+    some (rip, cs, fl, rsp, ss)
+  | _, _, _, _, _ => none
+
+/-- IF restored from RFLAGS bit 9 (S6). -/
+def iretIf (fl : Wort) : Bool := decide (fl.toNat / 512 % 2 = 1)
+
+/-- IRET core update: RIP installed, RSP restored, flags/XMM/FP
+    kept -- via the accepted `setKernDaten`. -/
+def iretHwNeu (s : HwIntMaschine) (c : Nat) (rip rsp : Wort) :
+    HwMaschine :=
+  setKernDaten s.hw c { s.hw.kerne c with
+    register := fun q =>
+      if q = Register.rsp then rsp else (s.hw.kerne c).register q,
+    rip := rip }
+
+/-- IRET control update: IF from RFLAGS bit 9 on the acting core. -/
+def iretSteuerNeu (s : HwIntMaschine) (c : Nat) (fl : Wort) :
+    Nat → Steuerstand :=
+  fun d => if d = c then { s.steuer c with ifBit := iretIf fl }
+  else s.steuer d
+
+/-- NULL-selector check: the word is the zero selector. Kept
+    folded in proofs (like `istKanonisch`): branch on its value,
+    never on the underlying byte equality. -/
+def nullSelektor (w : Wort) : Bool := w == 0
+
+/-- A zero word fails the check. -/
+theorem nullSelektor_null : nullSelektor 0 = true := rfl
+
+/-- A nonzero witness word passes the check. -/
+theorem nullSelektor_acht : nullSelektor 8 = false := rfl
+
+/-- IRET finish stage over the popped words (mirrors `asyncFertig`):
+    canonical-pointer check first, then the selector and code-row
+    checks. The first failure refuses with `none`. -/
+def iretFertig (s : HwIntMaschine) (c : Nat) (rip cs fl rsp ss : Wort)
+    (codeOk : Bool) : Option HwIntMaschine :=
+  if !istKanonisch rip then none
+  else if nullSelektor cs then none
+  else if nullSelektor ss then none
+  else if !codeOk then none
+  else some ⟨iretHwNeu s c rip rsp, iretSteuerNeu s c fl⟩
+
+/-- IRET step on the extended machine: five-word pop, then
+    `iretFertig`. A failed read or check refuses with `none` and
+    changes nothing. -/
+def iretSchritt (s : HwIntMaschine) (c : Nat) (codeOk : Bool) :
+    Option HwIntMaschine :=
+  match iretLese s.hw.mem ((s.hw.kerne c).register Register.rsp) with
+  | none => none
+  | some (rip, cs, fl, rsp, ss) =>
+    iretFertig s c rip cs fl rsp ss codeOk
+
+/-- Extended well-formedness: the coherent machine is well-formed. -/
+def intWf1181 (s : HwIntMaschine) : Prop := HwWf s.hw
+
+/-- IRET preserves extended well-formedness (profiles untouched). -/
+theorem iretSchritt_wf (s : HwIntMaschine) (c : Nat) (codeOk : Bool)
+    (s' : HwIntMaschine)
+    (h : iretSchritt s c codeOk = some s')
+    (hwf : intWf1181 s) : intWf1181 s' := by
+  unfold iretSchritt iretFertig at h
+  cases hles : iretLese s.hw.mem ((s.hw.kerne c).register Register.rsp) with
+  | none => simp [hles] at h
+  | some p =>
+    obtain ⟨rip, cs, fl, rsp, ss⟩ := p
+    cases hkan : istKanonisch rip with
+    | false => simp [hles, hkan] at h
+    | true =>
+      cases hcs : nullSelektor cs with
+      | true => simp [hles, hkan, hcs] at h
+      | false =>
+        cases hss : nullSelektor ss with
+        | true => simp [hles, hkan, hcs, hss] at h
+        | false =>
+          cases hok : codeOk with
+          | false => simp [hles, hkan, hcs, hss, hok] at h
+          | true =>
+            simp [hles, hkan, hcs, hss, hok] at h
+            cases h
+            show HwWf (iretHwNeu s c rip rsp)
+            unfold iretHwNeu
+            exact setKernDaten_wf s.hw c _ hwf
+
+/-- SUCCESS: the frame pops, RIP/RSP/IF are restored. -/
+theorem iretSchritt_erfolg (s : HwIntMaschine) (c : Nat)
+    (codeOk : Bool) (rip cs fl rsp ss : Wort)
+    (hles : iretLese s.hw.mem ((s.hw.kerne c).register Register.rsp) =
+      some (rip, cs, fl, rsp, ss))
+    (hkan : istKanonisch rip = true)
+    (hcs : nullSelektor cs = false) (hss : nullSelektor ss = false)
+    (hok : codeOk = true) :
+    iretSchritt s c codeOk =
+      some ⟨iretHwNeu s c rip rsp, iretSteuerNeu s c fl⟩ := by
+  unfold iretSchritt iretFertig
+  simp [hles, hkan, hcs, hss, hok]
+
+/-- A failed frame read refuses the return. -/
+theorem iretSchritt_verweigert_lesung (s : HwIntMaschine) (c : Nat)
+    (codeOk : Bool)
+    (h : iretLese s.hw.mem ((s.hw.kerne c).register Register.rsp) =
+      none) :
+    iretSchritt s c codeOk = none := by
+  unfold iretSchritt iretFertig
+  simp [h]
+
+/-- A noncanonical frame RIP refuses the return. -/
+theorem iretSchritt_verweigert_nichtkanonisch (s : HwIntMaschine)
+    (c : Nat) (codeOk : Bool) (rip cs fl rsp ss : Wort)
+    (hles : iretLese s.hw.mem ((s.hw.kerne c).register Register.rsp) =
+      some (rip, cs, fl, rsp, ss))
+    (hkan : istKanonisch rip = false) :
+    iretSchritt s c codeOk = none := by
+  unfold iretSchritt iretFertig
+  simp [hles, hkan]
+
+/-- A NULL code selector refuses the return. -/
+theorem iretSchritt_verweigert_cs (s : HwIntMaschine)
+    (c : Nat) (codeOk : Bool) (rip cs fl rsp ss : Wort)
+    (hles : iretLese s.hw.mem ((s.hw.kerne c).register Register.rsp) =
+      some (rip, cs, fl, rsp, ss))
+    (hkan : istKanonisch rip = true)
+    (hcs : nullSelektor cs = true) :
+    iretSchritt s c codeOk = none := by
+  unfold iretSchritt iretFertig
+  simp [hles, hkan, hcs]
+
+/-- A NULL stack selector refuses the return. -/
+theorem iretSchritt_verweigert_ss (s : HwIntMaschine)
+    (c : Nat) (codeOk : Bool) (rip cs fl rsp ss : Wort)
+    (hles : iretLese s.hw.mem ((s.hw.kerne c).register Register.rsp) =
+      some (rip, cs, fl, rsp, ss))
+    (hkan : istKanonisch rip = true)
+    (hcs : nullSelektor cs = false)
+    (hss : nullSelektor ss = true) :
+    iretSchritt s c codeOk = none := by
+  unfold iretSchritt iretFertig
+  simp [hles, hkan, hcs, hss]
+
+/-- A failed code-row check refuses the return. -/
+theorem iretSchritt_verweigert_code (s : HwIntMaschine)
+    (c : Nat) (codeOk : Bool) (rip cs fl rsp ss : Wort)
+    (hles : iretLese s.hw.mem ((s.hw.kerne c).register Register.rsp) =
+      some (rip, cs, fl, rsp, ss))
+    (hkan : istKanonisch rip = true)
+    (hcs : nullSelektor cs = false) (hss : nullSelektor ss = false)
+    (hok : codeOk = false) :
+    iretSchritt s c codeOk = none := by
+  unfold iretSchritt iretFertig
+  simp [hles, hkan, hcs, hss, hok]
+
 /- CUTS:
    Proved here: SKELETON ONLY so far -- the double-fault vector
    constant. Nested delivery, #DF escalation, the TSO-buffered
