@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 15:49 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 15:52 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -680,7 +680,7 @@ Last ledger refresh: **2026-10-05 15:49 UTC**. This is an operational snapshot, 
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Merged after review/checks | 1246: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1245.md) |
 | 1247 | Extended context state across interrupts and context switches | Agent working | 1248: scheduled | [task](lanes/1247.md) |
-| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Agent working | 1250: scheduled | [task](lanes/1249.md) |
+| 1249 | Wire the FP s32/MXCSR decoder into fetchExt and HwSchritt | Committed candidate; review/integration pending | 1250: Agent working | [task](lanes/1249.md) |
 | 1251 | Discharge the DRF/checker premises of the W-to-GX refinement for a lowered program | Merged after review/checks | 1252: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1251.md) |
 | 1253 | Start-anchored bridged run for the GX refinement | Merged after review/checks | 1254: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1253.md) |
 | 1255 | Pipeline calls: three-or-more-statement callee bodies | Agent working | 1256: scheduled | [task](lanes/1255.md) |
@@ -688,6 +688,10 @@ Last ledger refresh: **2026-10-05 15:49 UTC**. This is an operational snapshot, 
 | 1259 | Pipeline work: taken-path bound and per-round loop correspondence | Agent working | 1260: scheduled | [task](lanes/1259.md) |
 | 1261 | Pipeline over TSO: store instructions on the issue/drain path | Agent working | 1262: scheduled | [task](lanes/1261.md) |
 | 1263 | Pipeline: per-chunk derivation for if/else and checks | Agent working | 1264: scheduled | [task](lanes/1263.md) |
+| 1265 | AVX2: join Vex, Ops, State and Mem on the coherent machine | Scheduled | 1266: scheduled | [task](lanes/1265.md) |
+| 1267 | AVX2: per-lane equation for arithmetic shift right | Scheduled | 1268: scheduled | [task](lanes/1267.md) |
+| 1269 | Cross-declaration lowering certificate for the GX refinement | Scheduled | 1270: scheduled | [task](lanes/1269.md) |
+| 1271 | Byte-level entry/call linkage for the start-anchored bridged run | Scheduled | 1272: scheduled | [task](lanes/1271.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
