@@ -725,8 +725,263 @@ theorem grossSeitenGp_verweigert (s s' : GrossZustand)
     rw [hg] at hpf
     cases hpf
 
+/-! ## 7. Witness: a 2 MiB page, a 1 GiB page, and their faults.
+
+  Tables at frames 40/41/42: PML4[0] chains to frame 41, PDPT[0]
+  chains to frame 42, PD[0] is an aligned 2 MiB leaf onto frame 512,
+  PD[1] is a MISALIGNED 2 MiB leaf (frame 513), and PDPT[1] is an
+  aligned 1 GiB leaf onto frame 512 * 512. All other slots are
+  absent. -/
+
+/-- Witness control: CR3 at frame 40, WP armed, SMEP/SMAP off. -/
+def witGrossBasis : SeitenSteuerung :=
+  { cr3 := 40, wp := true, smep := false, smap := false, nxe := true }
+
+/-- Witness extended control: AC clear. -/
+def witGrossSteuer : GrossSteuerung := ⟨witGrossBasis, false⟩
+
+/-- Witness control with SMEP armed. -/
+def witGrossSteuerSmep : GrossSteuerung :=
+  ⟨{ witGrossBasis with smep := true }, false⟩
+
+/-- Witness control with SMAP armed and AC clear. -/
+def witGrossSteuerSmap : GrossSteuerung :=
+  ⟨{ witGrossBasis with smap := true }, false⟩
+
+/-- Witness control with SMAP armed but AC set: access is allowed. -/
+def witGrossSteuerAc : GrossSteuerung :=
+  ⟨{ witGrossBasis with smap := true }, true⟩
+
+/-- Intermediate entry chaining to the next frame. -/
+def witGrossZwischen (rahmen : Nat) : SeitenEintrag :=
+  { vorhanden := true, schreibbar := true, benutzer := true,
+    gross := false, zugegriffen := false, schmutzig := false,
+    noExec := false, rahmen := rahmen }
+
+/-- Aligned 2 MiB leaf onto frame 512. -/
+def witGross2M : SeitenEintrag :=
+  { vorhanden := true, schreibbar := true, benutzer := true,
+    gross := true, zugegriffen := false, schmutzig := false,
+    noExec := false, rahmen := 512 }
+
+/-- Misaligned 2 MiB leaf: frame 513 breaks the 512-alignment. -/
+def witGross2MFehl : SeitenEintrag :=
+  { vorhanden := true, schreibbar := true, benutzer := true,
+    gross := true, zugegriffen := false, schmutzig := false,
+    noExec := false, rahmen := 513 }
+
+/-- Aligned 1 GiB leaf onto frame 512 * 512. -/
+def witGross1G : SeitenEintrag :=
+  { vorhanden := true, schreibbar := true, benutzer := true,
+    gross := true, zugegriffen := false, schmutzig := false,
+    noExec := false, rahmen := 512 * 512 }
+
+/-- Witness tables: the 40/41/42 chain, the two large leaves, and the
+    misaligned twin. -/
+def witGrossTab : Nat → Wort :=
+  fun n =>
+    if n = 40 * 512 + 0 then eintragKodieren (witGrossZwischen 41)
+    else if n = 41 * 512 + 0 then eintragKodieren (witGrossZwischen 42)
+    else if n = 41 * 512 + 1 then eintragKodieren witGross1G
+    else if n = 42 * 512 + 0 then eintragKodieren witGross2M
+    else if n = 42 * 512 + 1 then eintragKodieren witGross2MFehl
+    else 0
+
+/-- User read of linear page 0 lands on the 2 MiB page at frame 512. -/
+theorem wit_gross2M_ok :
+    (seitenGangGross witGrossSteuer witGrossTab
+      ⟨0, false, true, false⟩).1 = .ok 2097152 := by
+  decide
+
+/-- User read of linear 1 GiB lands on the 1 GiB page: identity. -/
+theorem wit_gross1G_ok :
+    (seitenGangGross witGrossSteuer witGrossTab
+      ⟨2 ^ 30, false, true, false⟩).1 = .ok (2 ^ 30) := by
+  decide
+
+/-- User read through the misaligned leaf faults with RSVD set. -/
+theorem wit_gross_fehl_rsvd :
+    (seitenGangGross witGrossSteuer witGrossTab
+      ⟨2 ^ 21, false, true, false⟩).1 =
+      .seitenFehler (2 ^ 21) ⟨true, false, true, true, false⟩ := by
+  decide
+
+/-- Supervisor fetch from the user large page faults under SMEP. -/
+theorem wit_gross_smep :
+    (seitenGangGross witGrossSteuerSmep witGrossTab
+      ⟨0, false, false, true⟩).1 =
+      .seitenFehler 0 ⟨true, false, false, false, true⟩ := by
+  decide
+
+/-- Supervisor data read of the user large page faults under SMAP. -/
+theorem wit_gross_smap :
+    (seitenGangGross witGrossSteuerSmap witGrossTab
+      ⟨0, false, false, false⟩).1 =
+      .seitenFehler 0 ⟨true, false, false, false, false⟩ := by
+  decide
+
+/-- With AC set, the same SMAP-armed access succeeds onto frame 512. -/
+theorem wit_gross_ac_erlaubt :
+    (seitenGangGross witGrossSteuerAc witGrossTab
+      ⟨0, false, false, false⟩).1 = .ok 2097152 := by
+  decide
+
+/-- A noncanonical address is #GP in the large walk. -/
+theorem wit_gross_nichtkanonisch_gp :
+    (seitenGangGross witGrossSteuer witGrossTab
+      ⟨2 ^ 47, false, true, false⟩).1 = .gpFehler (2 ^ 47) := by
+  decide
+
+/-- The write sets accessed on the touched PML4 entry. -/
+theorem wit_gross_zugriff_gesetzt :
+    (eintragDekodieren
+      ((seitenGangGross witGrossSteuer witGrossTab
+        ⟨0, true, true, false⟩).2 (40 * 512 + 0))).zugegriffen = true := by
+  decide
+
+/-- The write sets dirty on the 2 MiB leaf entry. -/
+theorem wit_gross_schmutzig_gesetzt :
+    (eintragDekodieren
+      ((seitenGangGross witGrossSteuer witGrossTab
+        ⟨0, true, true, false⟩).2 (42 * 512 + 0))).schmutzig = true := by
+  decide
+
+/-- An untouched entry keeps its exact word through the write-back. -/
+theorem wit_gross_unberuehrt_still :
+    (seitenGangGross witGrossSteuer witGrossTab
+      ⟨0, true, true, false⟩).2 (40 * 512 + 7) =
+      witGrossTab (40 * 512 + 7) := by
+  decide
+
+/-- JOINT WITNESS: well-formedness, the 2 MiB and 1 GiB mappings, the
+    misalignment/SMEP/SMAP faults with their classes, beside the
+    accepted two-core run: owner-only forwarding and the
+    memory-changing drain (0 becomes 42, observed from both cores).
+    Non-degenerate: large pages with different sizes, two cores, a
+    real memory change. -/
+theorem hwGross_zeuge :
+    HwWf hwWitStart ∧
+      (seitenGangGross witGrossSteuer witGrossTab
+        ⟨0, false, true, false⟩).1 = .ok 2097152 ∧
+      (seitenGangGross witGrossSteuer witGrossTab
+        ⟨2 ^ 30, false, true, false⟩).1 = .ok (2 ^ 30) ∧
+      (seitenGangGross witGrossSteuer witGrossTab
+        ⟨2 ^ 21, false, true, false⟩).1 =
+        .seitenFehler (2 ^ 21) ⟨true, false, true, true, false⟩ ∧
+      (seitenGangGross witGrossSteuerSmep witGrossTab
+        ⟨0, false, false, true⟩).1 =
+        .seitenFehler 0 ⟨true, false, false, false, true⟩ ∧
+      (seitenGangGross witGrossSteuerSmap witGrossTab
+        ⟨0, false, false, false⟩).1 =
+        .seitenFehler 0 ⟨true, false, false, false, false⟩ ∧
+      hwWitLoadEigen = some (some (BitVec.ofNat 8 42)) ∧
+      hwWitLoadFremd = some (some (BitVec.ofNat 8 0)) ∧
+      hwWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  exact ⟨hwWitStart_wf, wit_gross2M_ok, wit_gross1G_ok,
+    wit_gross_fehl_rsvd, wit_gross_smep, wit_gross_smap,
+    hwWit_weiterleitung, hwWit_fremd_alt,
+    hwWit_spülung_aendert_speicher⟩
+
 /- CUTS:
-   Skeleton only; full CUTS with the reviewed file.
+   Proved here (all over the REUSED coherent machine, the REUSED
+   accepted fault vocabulary and the REUSED 4 KiB walk -- no new
+   machine, no new decoder row, no silicon re-verification):
+   - extended control `GrossSteuerung` (accepted control plus
+     EFLAGS.AC) and the decided per-access SMEP/SMAP checks
+     `smepVerletzt`/`smapVerletzt` with their off/user/fetch/AC
+     shape lemmas (§1);
+   - large-page alignment `grossAusgerichtet2M/1G` (frame multiples of
+     512 / 512*512) with examples and counterexamples, the 21/30-bit
+     offsets, and the shared leaf check `grossBlatt` that runs the
+     ACCEPTED `blattPruefung` after the SMEP/SMAP gate, with
+     `blatt_ok_payload` and `grossBlatt_ohne_schutz` (§2);
+   - the 2 MiB walk `gangGross2M` (PD with PS maps, PDPT with PS
+     stays refused), the 1 GiB walk `gangGross1G` (PDPT with PS maps,
+     PD with PS stays refused), and the dispatcher `gangGross` (PDPT
+     large pages through 1G, else 2M), each EQUAL to the accepted 4
+     KiB walk where it applies (`gangGross2M_gleich`,
+     `gangGross1G_gleich`, `gangGross_gleich`, `gangGross_bei_1G/2M`)
+     (§3);
+   - fault behaviour: misaligned leaves fault with RSVD set
+     (2M and 1G), SMEP/SMAP violations fault as protection with live
+     access bits, AC-set access falls through to the accepted leaf
+     (`grossBlatt_ac_gleich`), and the pinned error-code values
+     13/17/3 (§4);
+   - the full walk `seitenGangGross` over the accepted lookups with
+     touched-only write-back (2 entries for 1 GiB, 3 for 2 MiB, 4
+     otherwise), its outcome equation, its agreement with the
+     accepted walk without large pages (`seitenGangGross_gleich`),
+     and stillness of every non-success walk (§5);
+   - machine connection: the refusing adapter `adapterGross`, the
+     extended step `HwGrossSchritt` with the EXACT two-way embedding
+     of `HwSchritt`, fault steps that never move state, wf
+     preservation, and the planted noncanonical refusal (§6);
+   - witness: a 2 MiB page and a 1 GiB page mapped, the misaligned
+     RSVD fault, the SMEP/SMAP faults and the AC-set allowance, the
+     noncanonical #GP, accessed set on touched entries and dirty on
+     the large leaf (§7);
+   - joint witness `hwGross_zeuge`: large mappings and faults beside
+     the accepted two-core memory-changing TSO run (owner-only
+     forwarding, drain 0 to 42 observed from both cores).
+   NOT proved here, and not claimed:
+   - No hardware verification: entry bit positions (P/RW/US/A/D/PS/XD
+     per Vol 3A §4.5 Table 4-18), the 512/512*512 alignment rules,
+     the SMEP/SMAP/AC rule shape, index shifts, the error-code bit
+     meanings (Vol 3A §4.7 Table 4-7) and the 48-bit canonical width
+     are NAMED silicon assumptions. No Vol 3A paging text was
+     supplied to this lane, so bit-level correspondence is assumed,
+     never claimed.
+   - No TLB, no PAT/memory-type behaviour on large pages, no fault
+     DELIVERY (IDT/stack/handler/error-code push stays with its
+     lane): fault outcomes carry address plus code only.
+   - The 1 GiB/2 MiB choice of reserved-bit STATUS (RSVD fault vs
+     refusal) follows the 4 KiB walk's reserved-XD precedent; the
+     silicon's exact reserved-bit reporting on large leaves stays a
+     named assumption.
+   - No per-access target-to-W/GX simulation, no timing, no source
+     stop-class transfer.
 -/
 
 #print axioms GrossSteuerung
+#print axioms smepVerletzt
+#print axioms smapVerletzt
+#print axioms grossAusgerichtet2M
+#print axioms grossAusgerichtet1G
+#print axioms grossBlatt
+#print axioms blatt_ok_payload
+#print axioms grossBlatt_ohne_schutz
+#print axioms gangGross2M
+#print axioms gangGross1G
+#print axioms gangGross
+#print axioms gangGross2M_gleich
+#print axioms gangGross1G_gleich
+#print axioms gangGross_gleich
+#print axioms gangGross2M_fehlaligniert
+#print axioms gangGross1G_fehlaligniert
+#print axioms gangGross2M_smep
+#print axioms gangGross2M_smap
+#print axioms grossBlatt_ac_gleich
+#print axioms seitenGangGross
+#print axioms seitenGangGross_gleich
+#print axioms seitenGangGross_nichtOk_still
+#print axioms adapterGross
+#print axioms adapterGross_verweigert
+#print axioms HwGrossSchritt
+#print axioms hwGrossSchritt_einbettung_vor
+#print axioms hwGrossSchritt_alt_invert
+#print axioms hwGrossSchritt_einbettung_zurueck
+#print axioms grossGangOk_invert
+#print axioms grossGangPf_invert
+#print axioms hwGrossSchritt_fehler_still
+#print axioms hwGrossSchritt_wf
+#print axioms grossSeitenGp_verweigert
+#print axioms witGrossTab
+#print axioms wit_gross2M_ok
+#print axioms wit_gross1G_ok
+#print axioms wit_gross_fehl_rsvd
+#print axioms wit_gross_smep
+#print axioms wit_gross_smap
+#print axioms wit_gross_ac_erlaubt
+#print axioms hwGross_zeuge
+
+end Gabbro.Grammatik.X86
