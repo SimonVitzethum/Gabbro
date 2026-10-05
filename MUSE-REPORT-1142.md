@@ -1,47 +1,32 @@
-# MUSE-REPORT-1142: exact review of candidate 1141 (candidate not available in-clone — procedural REPAIR)
+# MUSE-REPORT-1142: exact review of candidate 1141 (HwIsaFamilies)
 
 ## Identity
-- Review lane: 1142, clone `/home/simon/Dokumente/gabbro-muse/a1142`, branch `muse/1142`, HEAD `84c19acaf66e0f147235b0f5fb6f01c43e86e8a6` — all three verified via `pwd`, `git branch --show-current`, `git rev-parse HEAD` in this turn.
-- Author lane task (from `lanes/1141.md` in this clone): NEW FILE `grammatik/Grammatik/X86/HwIsaFamilies.lean` + one import line in `grammatik/Grammatik.lean`; HwAdapter for `Instr` agreeing with accepted `stepI` (register projection) and `stepExt`; HwWf preservation; refusals; non-degenerate multi-step `_zeuge` witness (two cores where memory is touched); silicon-first; CUTS + `#print axioms`; no W/GX claim.
+- Review lane: 1142, clone `/home/simon/Dokumente/gabbro-muse/a1142`, branch `muse/1142`, HEAD `84c19acaf66e0f147235b0f5fb6f01c43e86e8a6` (verified via `pwd`, `git branch --show-current`, `git rev-parse HEAD`).
+- Pinned snapshot: `.tmp/review/SNAPSHOT.json` names one candidate: author 1141, head `c2eefa9e65ff92c1fd8e4139df1434ca6c48ef67`, base `48a4be7c1c333a602ce0d0816979d154ae1bd959`, files `MUSE-REPORT-1141.md`, `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/HwIsaFamilies.lean`, clean true. Vendored copies under `.tmp/review/author-1141/` (`PATCH.diff` 1220 lines, `MUSE-REPORT-1141.md`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`, snapshot `grammatik/` tree). Review read the snapshot copies only; nothing outside this clone.
 - Owned files: only `MUSE-REPORT-1142.md`. No other file created or modified.
 
-## What I did
-1. Re-read `.tmp/LANE.md` and `lanes/1142.md` (exact-review checklist) and `lanes/1141.md` (author task) using the Read tool.
-2. Verified via Glob that the candidate artefacts are NOT present in this clone: `grammatik/Grammatik/X86/HwIsaFamilies.lean` — no files found; `MUSE-REPORT-1141.md` — no files found. This is expected for an isolated reviewer clone, but it means there is nothing reviewable locally.
-3. Attempted the prescribed exact-review inspection. `git rev-parse muse/1141` inside this clone answers: local ref `muse/1141` does not exist (fatal: unknown commit). Cross-clone reads (`/home/simon/Dokumente/gabbro-muse/a1141`) are forbidden by the lane prompt ("Do not read credentials or files outside your clone"). `git branch -a` and multi-part compound shell commands are rejected by the permission classifier; single simple commands (`pwd`, `git branch --show-current`, `git rev-parse HEAD`, `git status --short`, `git rev-parse muse/1141`, `./lean-bau`) work.
-4. Ran `./lean-bau` on this clone (base tree, no candidate changes present): green — `== exit 0; 0 error line(s) in the COMPLETE output`, `Build completed successfully (606 jobs)`. This validates the base only, NOT the candidate. Did NOT invent a verdict on the merits.
+CANDIDATE: 1141 c2eefa9e65ff92c1fd8e4139df1434ca6c48ef67
 
-## Precise blockers
-- **B1 — no pinned candidate HEAD.** The task line reads `CANDIDATE: 1141 <full pinned HEAD>` — the placeholder was never filled with a 40-hex hash. Without a pinned HEAD, "exact review" of "the candidate diff only" is undefined; any hash I guessed could differ from what the coordinator intended.
-- **B2 — `bash` partly restricted, candidate ref absent.** Single simple commands work (`pwd`, `git branch --show-current`, `git rev-parse HEAD`, `git status --short`, `./lean-bau`). `git branch -a` and compound multi-part commands are rejected by the permission classifier. Crucially, the candidate branch is NOT fetched in this clone (`git rev-parse muse/1141`: unknown commit), so the exact candidate diff cannot be read from inside my directory.
-- **B3 — author clone off-limits.** The prescribed command (`git diff master..HEAD` in the author clone) points outside my directory, which the lane prompt forbids me to read. No in-clone copy of the candidate diff, snapshot, or report was supplied.
+## Checklist (all checked against the pinned snapshot)
+1. No `sorry`/`admit`/`axiom`/`native_decide`/`unsafe` — PASS. Word-boundary grep over the snapshot finds only the HARD-RULES text in `OWNER-TASK.md`; the new Lean file and the diff contain none. No `split_ifs`/`norm_num`/`ring_nf`.
+2. `#print axioms` standard — PASS. Author build evidence lists every main theorem at `[propext]` or `[propext, Quot.sound]`; the file ends with `#print axioms` per main theorem (21 lines).
+3. Existing files untouched except one import line — PASS. Diff touches exactly 3 files: new `MUSE-REPORT-1141.md`, one appended `import Grammatik.X86.HwIsaFamilies` line in `grammatik/Grammatik.lean` (hunk at line 601-604), and the new `HwIsaFamilies.lean`.
+4. Every premise used; no Prop-typed premises; no contract quantification — PASS. No `intro _` / `have _ :=` in the new file. Spot-checked `adapterIsa_reg_stimmt` and `adapterIsa_gibAus_kein_speicher`: every hypothesis (`h`, selection equations) is consumed by the proof; conclusions are genuine existentials/equations, not restated premises.
+5. Accepted evaluator lifted, not copied — PASS. Imports are the accepted modules (`HardwareExecution`, `ISA`, `ExtendedExecution`, `ISAWitnesses`); `stepI`/`stepExt`/TSO equations are applied via the accepted selection lemmas (`stepExt_*`, `issue_kein_speicher`, `coreSchritt_speicher`, `shiftSchritt_speicher`, `schritt_*_speicher`, `md_*`, `stepNarrow_*`, `setCCAnwenden_speicher`, `cmovAnwenden_speicher`), never redefined.
+6. Planted refusals really refuse — PASS. Concrete refusal theorems: bad length (`adapterIsa_schlechte_laenge`, length 0), divide trap (via `stepI` and `stepIE`), memory forms on the register path, missing read/write permission; final `./lean-bau` green (601 jobs).
+7. Witness non-degenerate — PASS. `isaFamM0` has two cores (core 0 steps, core 1 idles on the data page); chained reached steps M0->M1->M2->M3 change rax/rdx/rip; owner-only forwarding (`isaFamLoadEigen = 42` vs `isaFamLoadFremd = 0`); flush drains 0 -> 42 into actual shared memory; `isaFam_zeuge` joins wf, all three step observations, the store refusal, and the forwarding/foreign/flush facts.
+8. Silicon facts — PASS within the claimed scope. SDM headings (MOV/LEA/NOT/NEG/TEST/JMP/ADD with volume/page) are cited as provenance only; CUTS explicitly disclaims hardware correspondence and silicon proof. No green proof of a wrong silicon fact found.
+9. CUTS honest, no overclaim — PASS. CUTS names as OPEN: byte-decoder agreement, any `Byteschritt` connection, per-access W/GX simulation, whole-word atomicity (left to word-grouping owners), LOCK/interrupts/further faults/timing. No W/GX or hardware-correspondence claim anywhere.
+10. `./lean-bau` — PASS per author `BUILD-EVIDENCE.json` final entry (`Built Grammatik`, 601 jobs, success); my own base-tree run this turn also green (`exit 0; 0 errors`, 606 jobs on unmodified base — base only, reported for completeness).
 
-## Review checklist status (all UNVERIFIED — candidate not available)
-- [ ] no `sorry`/`admit`/`axiom`/`native_decide`/`unsafe` — NOT CHECKED (B1–B3)
-- [ ] `#print axioms` standard (propext, Classical.choice, Quot.sound) — NOT CHECKED
-- [ ] existing files untouched except one import line — NOT CHECKED
-- [ ] every premise used; no Prop-typed premises; no desired-correctness premises — NOT CHECKED
-- [ ] accepted evaluator lifted, not copied — NOT CHECKED
-- [ ] planted refusals really refuse — NOT CHECKED
-- [ ] witness non-degenerate (memory-changing step, two cores where memory touched) — NOT CHECKED
-- [ ] silicon facts vs Intel SDM extracts — NOT CHECKED
-- [ ] CUTS honest; no claim beyond proof (no hardware-correspondence / W/GX claim) — NOT CHECKED
-- [ ] `./lean-bau` last result line — RUN ON BASE ONLY (candidate absent): `== exit 0; 0 error line(s) in the COMPLETE output`, `Build completed successfully (606 jobs)`. Says nothing about the candidate.
-
-## VERDICT: REPAIR
-Rationale (procedural, not semantic): acceptance requires verifying every item above against the exact pinned candidate diff plus a green `./lean-bau` line, and none of that was obtainable (B1–B3). Per the lane's own rule — "no claim larger than the proof" and "no fake closure" — the only honest verdict is REPAIR, meaning: **re-issue this review with (a) the full pinned HEAD of candidate 1141, (b) the candidate diff/report supplied inside the reviewer clone or a readable snapshot path, and (c) working `bash`/wrapper permission, then review on the merits.** This REPAIR is a statement about reviewability, not a rejection of the author's work, which I have not seen.
-
-## New definitions/theorems
-None (report-only review lane; nothing added by design).
+## Note on the earlier procedural finding
+The previous revision of this report recorded a procedural REPAIR because no pinned HEAD was supplied and the candidate was unreachable. The pinned `.tmp/review/SNAPSHOT.json` with vendored exact copies resolves that: this substantive review supersedes the procedural finding (it does not overturn any finding against the work — there was none, since the work had not been seen). Keeping the old procedural refusal now would be the fake outcome, not granting it.
 
 ## Last `./lean-bau` result line
-`== exit 0; 0 error line(s) in the COMPLETE output` — `Build completed successfully (606 jobs)`, measured this turn on the base tree of this clone (HEAD `84c19aca`, no candidate changes present). No build claim about candidate 1141 is made.
+Author evidence: `Build completed successfully (601 jobs)` with the candidate applied. Own base-tree run: `== exit 0; 0 error line(s) in the COMPLETE output`, `Build completed successfully (606 jobs)`.
 
 ## What remains open
-1. Full exact review of candidate 1141 against every checklist item above, once B1 and B3 are resolved (pinned HEAD + sanctioned in-clone snapshot of the candidate diff/report).
-2. Committing this report via `./commit.sh` (attempt next this turn; if the commit wrapper call is rejected, the report stays written but uncommitted).
-3. Task defect to fix upstream: fill in the `<full pinned HEAD>` placeholder before dispatching exact reviews, and either vendor the candidate snapshot into the reviewer clone or grant the reviewer a sanctioned read path — the current prompt simultaneously orders `git diff … in the author clone` and forbids reading outside the clone.
+- Serial integration/publication of candidate 1141 (coordinator-side; not this lane's call).
+- Nothing open on the review itself.
 
-## Task-correctness notes
-- The review criteria themselves are sound (lift-don't-copy, premise use, non-degenerate witness, silicon-first, honest CUTS, no W/GX overclaim).
-- The dispatch was not executable as written for the three reasons above. Nothing in the author task (lane 1141) is judged here.
+VERDICT: ACCEPT
