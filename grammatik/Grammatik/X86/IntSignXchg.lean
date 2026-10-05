@@ -238,6 +238,152 @@ theorem probe_movsxd_pos :
     sext .b32 0x7FFFFFFF = 0x7FFFFFFF := by
   decide
 
+/-! ## 4. Step-level flag and memory silence.
+
+    Every successful family step keeps flags and memory: the fresh
+    arms by their shapes (§3), the lifted arms by the accepted
+    preparation shapes below. -/
+
+/-- An accepted `vor98` success keeps the flags. -/
+theorem wdVor98_flags (w : WdBreite) (l : Nat) (s s' : Zustand)
+    (h : wdSchritt ⟨.vor98 w, l⟩ s = .ok s') : s'.flags = s.flags := by
+  unfold wdSchritt at h
+  cases hlen : laengeOk l with
+  | false => simp [hlen] at h
+  | true =>
+    simp [hlen] at h
+    cases h
+    cases w <;> rfl
+
+/-- An accepted `vor98` success keeps the memory. -/
+theorem wdVor98_memory (w : WdBreite) (l : Nat) (s s' : Zustand)
+    (h : wdSchritt ⟨.vor98 w, l⟩ s = .ok s') :
+    s'.speicher = s.speicher := by
+  unfold wdSchritt at h
+  cases hlen : laengeOk l with
+  | false => simp [hlen] at h
+  | true =>
+    simp [hlen] at h
+    cases h
+    cases w <;> rfl
+
+/-- An accepted `vor99` success keeps the flags. -/
+theorem wdVor99_flags (w : WdBreite) (l : Nat) (s s' : Zustand)
+    (h : wdSchritt ⟨.vor99 w, l⟩ s = .ok s') : s'.flags = s.flags := by
+  unfold wdSchritt at h
+  cases hlen : laengeOk l with
+  | false => simp [hlen] at h
+  | true =>
+    simp [hlen] at h
+    cases h
+    cases w <;> rfl
+
+/-- An accepted `vor99` success keeps the memory. -/
+theorem wdVor99_memory (w : WdBreite) (l : Nat) (s s' : Zustand)
+    (h : wdSchritt ⟨.vor99 w, l⟩ s = .ok s') :
+    s'.speicher = s.speicher := by
+  unfold wdSchritt at h
+  cases hlen : laengeOk l with
+  | false => simp [hlen] at h
+  | true =>
+    simp [hlen] at h
+    cases h
+    cases w <;> rfl
+
+/-- Every successful family step keeps the flags. -/
+theorem sxSchritt_flags (d : SxDecodiert) (s s' : Zustand)
+    (h : sxSchritt d s = .ok s') : s'.flags = s.flags := by
+  unfold sxSchritt at h
+  cases hlen : laengeOk d.laenge with
+  | false =>
+    simp [hlen] at h
+  | true =>
+    simp [hlen] at h
+    cases hbef : d.befehl with
+    | cbw =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | cwde =>
+      simp [hbef] at h
+      exact wdVor98_flags _ _ _ _ h
+    | cdqe =>
+      simp [hbef] at h
+      exact wdVor98_flags _ _ _ _ h
+    | cwd =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | cdq =>
+      simp [hbef] at h
+      exact wdVor99_flags _ _ _ _ h
+    | cqo =>
+      simp [hbef] at h
+      exact wdVor99_flags _ _ _ _ h
+    | nop =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | xchgReg b a c =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | xchgRax b r =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | movsxd dst src =>
+      simp [hbef] at h
+      cases h
+      rfl
+
+/-- Every successful family step keeps the memory. -/
+theorem sxSchritt_memory (d : SxDecodiert) (s s' : Zustand)
+    (h : sxSchritt d s = .ok s') : s'.speicher = s.speicher := by
+  unfold sxSchritt at h
+  cases hlen : laengeOk d.laenge with
+  | false =>
+    simp [hlen] at h
+  | true =>
+    simp [hlen] at h
+    cases hbef : d.befehl with
+    | cbw =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | cwde =>
+      simp [hbef] at h
+      exact wdVor98_memory _ _ _ _ h
+    | cdqe =>
+      simp [hbef] at h
+      exact wdVor98_memory _ _ _ _ h
+    | cwd =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | cdq =>
+      simp [hbef] at h
+      exact wdVor99_memory _ _ _ _ h
+    | cqo =>
+      simp [hbef] at h
+      exact wdVor99_memory _ _ _ _ h
+    | nop =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | xchgReg b a c =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | xchgRax b r =>
+      simp [hbef] at h
+      cases h
+      rfl
+    | movsxd dst src =>
+      simp [hbef] at h
+      cases h
+      rfl
+
 /- CUTS:
    Skeleton only: event vocabulary without semantics.
    NOT proved here, and not claimed: everything (see task).
