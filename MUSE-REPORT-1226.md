@@ -2,14 +2,27 @@
 
 Lane 1226, clone `/home/simon/Dokumente/gabbro-muse/a1226`, branch `muse/1226`.
 Report-only exact review. Candidate read from the coordinator-staged exact
-snapshot (no author-clone access from this lane):
+snapshot (no author-clone access from this lane).
 
-- CANDIDATE 1225, HEAD `b34a68e3a076237b4e90224b09ca16a7c456398e`,
+Re-review 2026-10-05: the previous verdict (ACCEPT of `b34a68e3`) is
+superseded by the NEW pinned snapshot below. The author repair commit
+changed NO Lean module: `HwPreciseFault.lean` is content-identical to the
+previously reviewed version (same 471 lines, same 26 theorems + plug +
+witness defs + 27 `#print axioms`, verified name-by-name and body-by-body
+for the previously repaired proofs `przFertig_erhaelt`,
+`przHandler_weiterleitung`, `prz_zeuge`). The delta is the author report
+(a new integration-gate evidence section) plus a fresh 0-error
+`lean-probe` run. All findings below were re-checked against the new
+snapshot; every previous finding stands unchanged.
+
+- CANDIDATE 1225, HEAD `4050ebbd7b2442f4fecb14a66d13693a5c66f6eb`,
   base `cbc0afe00eeb8708961b13489750e41e998740d1`, clean.
-- Files: `MUSE-REPORT-1225.md` (new), `grammatik/Grammatik.lean` (+1 import),
-  `grammatik/Grammatik/X86/HwPreciseFault.lean` (new, 469 lines).
+- Files: `MUSE-REPORT-1225.md` (extended by gate section),
+  `grammatik/Grammatik.lean` (+1 import),
+  `grammatik/Grammatik/X86/HwPreciseFault.lean` (new, 469 lines, unchanged
+  since the previous review).
 
-CANDIDATE: 1225 b34a68e3a076237b4e90224b09ca16a7c456398e
+CANDIDATE: 1225 4050ebbd7b2442f4fecb14a66d13693a5c66f6eb
 
 ## Checks performed
 
@@ -63,12 +76,25 @@ CANDIDATE: 1225 b34a68e3a076237b4e90224b09ca16a7c456398e
 - Builds: author evidence shows `lean-probe` 0 errors and `lean-bau`
   `Build completed successfully (641 jobs).` at the pinned commit (two
   earlier failures were environmental: transient olean read, resource
-  exhaustion exit 134 — documented, retry green unchanged). Own baseline
-  `./lean-bau` in this clone: `Build completed successfully (641 jobs).`
+  exhaustion exit 134 — documented, retry green unchanged), plus a fresh
+  0-error re-probe on the new commit. Own baseline `./lean-bau` in this
+  clone: `Build completed successfully (641 jobs).`
+- Integration gate (new author-report section, reviewed not re-run): the
+  merge build failed environmentally — `failed to create thread`, Lean
+  exit 134 at `[640/642] Building Grammatik.X86.HwPreciseFault`, with zero
+  elaboration/proof errors in the quoted evidence. This matches the known
+  apparatus failure mode (virtual-address ceiling; the author's own clone
+  hit the identical signature twice and passed unchanged on retry). The
+  author's repair decision — no module change, retry in the integration
+  checkout — is correct under HARD RULES 4/5; editing green reviewed
+  proofs to chase a worker-spawn crash would weaken guarantees for
+  nothing. Consequence for this verdict: ACCEPT covers proof content at
+  the pinned commit; the merge still needs one green integration retry,
+  which is the merger's gate, not a lane finding.
 
 VERDICT: ACCEPT
 
-Candidate 1225 at `b34a68e3` meets the lane 1225 task: precise fault as
+Candidate 1225 at `4050ebbd` meets the lane 1225 task: precise fault as
 no-effect self-loop, delivery-is-not-a-drain (S3, named), handler forwarding
 with foreign-visibility-only-after-drain, and a non-degenerate two-core #PF
 witness — all by lifting accepted evaluators, with standard axioms and
