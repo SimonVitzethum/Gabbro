@@ -297,6 +297,151 @@ theorem neuestens_nicht_enthalten (f : Nat → Byte) (a : Adresse)
     simp only [fxEintraegeAux, neuestens, ihr]
     simp [hni]
 
+/-- A footprint offset reads its own entry byte (younger entries for
+    other offsets do not shadow it). -/
+theorem neuestens_einmal (f : Nat → Byte) (a : Adresse)
+    (os : List Nat) (k : Nat) :
+    ∀ (hb : ∀ j ∈ os, j < 512) (hk512 : k < 512),
+    ∀ (hnd : os.Nodup) (hm : k ∈ os),
+    neuestens (fxEintraegeAux f a os) (addrOff a k) = some (f k) := by
+  induction os with
+  | nil =>
+    intro _hb _hk512 _hnd hm
+    simp at hm
+  | cons i rest ih =>
+    intro hb hk512 hnd hm
+    have hni : i ∉ rest := (List.nodup_cons.mp hnd).1
+    have hmem : k = i ∨ k ∈ rest := by simpa using hm
+    rcases hmem with heq | hmr
+    · have hmiss : ∀ j ∈ rest, j ≠ k :=
+        fun j hj hjeq => hni (heq ▸ (hjeq ▸ hj))
+      have hnone := neuestens_nicht_enthalten f a rest k hk512
+        (fun j hj => hb j (by simp [hj])) hmiss
+      simp only [fxEintraegeAux, neuestens, hnone]
+      rw [if_pos (by rw [heq]), heq]
+    · have ihr := ih (fun j hj => hb j (by simp [hj])) hk512
+        ((List.nodup_cons.mp hnd).2) hmr
+      simp only [fxEintraegeAux, neuestens, ihr]
+
+/-- Decoding depends only on the footprint bytes. -/
+theorem fxDekodiere_kongr (f g : Nat → Byte)
+    (h : ∀ i ∈ ctxOffsets, f i = g i) :
+    (fxDekodiere f).mxcsr = (fxDekodiere g).mxcsr ∧
+      ∀ r : XmmReg, (fxDekodiere f).xmm r = (fxDekodiere g).xmm r := by
+  refine ⟨?_, ?_⟩
+  · unfold fxDekodiere
+    simp only
+    apply mxcsrAusBytes_kongr
+    intro i hi
+    exact h (24 + i) (ctxOffsets_mxcsr i hi)
+  · intro r
+    unfold fxDekodiere
+    simp only
+    have hn := xmmIdx_klein r
+    have hlo : (fun j : Fin 8 => f (160 + 16 * xmmIdx r + j.val)) =
+        (fun j : Fin 8 => g (160 + 16 * xmmIdx r + j.val)) := by
+      funext j
+      have hj16 : j.val < 16 := by have h8 := j.isLt; omega
+      exact h _ (ctxOffsets_xmm (xmmIdx r) j.val hn hj16)
+    have hhi : (fun j : Fin 8 => f (168 + 16 * xmmIdx r + j.val)) =
+        (fun j : Fin 8 => g (168 + 16 * xmmIdx r + j.val)) := by
+      funext j
+      have hj16 : 8 + j.val < 16 := by have := j.isLt; omega
+      have e : 168 + 16 * xmmIdx r + j.val =
+          160 + 16 * xmmIdx r + (8 + j.val) := by omega
+      rw [e]
+      exact h _ (ctxOffsets_xmm (xmmIdx r) (8 + j.val) hn hj16)
+    rw [hlo, hhi]
+
+/-- Permission fold over the footprint: every accessed byte must pass. -/
+def ctxAlle (p : Adresse → Bool) (a : Adresse) : List Nat → Bool
+  | [] => true
+  | i :: rest => p (addrOff a i) && ctxAlle p a rest
+
+/-- An issue fold changes no memory at all (only buffers grow). -/
+theorem issueListe_mem_still (s s' : TSOZustand) (c : Nat)
+    (l : List TSOEintrag) (h : issueListe s c l = some s') :
+    s'.mem = s.mem := by
+  induction l generalizing s s' with
+  | nil =>
+    simp [issueListe] at h
+    subst h
+    rfl
+  | cons e rest ih =>
+    unfold issueListe at h
+    cases h1 : issueByte s c e.addr e.wert with
+    | none => rw [h1] at h; cases h
+    | some s1 =>
+      rw [h1] at h
+      have hm : s1.mem = s.mem := by
+        unfold issueByte at h1
+        by_cases hc : s.mem.schreibbar e.addr = true
+        · rw [if_pos hc] at h1
+          cases h1
+          rfl
+        · rw [if_neg hc] at h1
+          cases h1
+      rw [ih s1 s' h]
+      exact hm
+
+/-- The permission fold yields each offset's permission. -/
+theorem ctxAlle_holt (p : Adresse → Bool) (a : Adresse) (os : List Nat)
+    (i : Nat) (hi : i ∈ os) (h : ctxAlle p a os = true) :
+    p (addrOff a i) = true := by
+  induction os with
+  | nil => simp at hi
+  | cons j rest ih =>
+    unfold ctxAlle at h
+    simp only [Bool.and_eq_true] at h
+    have hmem : i = j ∨ i ∈ rest := by simpa using hi
+    rcases hmem with rfl | hir
+    · exact h.1
+    · exact ih hir h.2
+
+/-- `setTso` keeps every core's data. -/
+theorem setTso_kerne (m : HwMaschine) (s : TSOZustand) (c : Nat) :
+    (setTso m s).kerne c = m.kerne c := rfl
+
+/-- Re-embedded core answers the installed control word. -/
+theorem setKernDaten_fp (m : HwMaschine) (c : Nat) (k : HwKern) :
+    ((setKernDaten m c k).kerne c).fp = k.fp := by
+  unfold setKernDaten
+  simp
+
+/-- Re-embedded core answers the installed XMM file. -/
+theorem setKernDaten_xmm (m : HwMaschine) (c : Nat) (k : HwKern) :
+    ((setKernDaten m c k).kerne c).xmm = k.xmm := by
+  unfold setKernDaten
+  simp
+
+/-- FORWARDING AT SAVE: after a successful save, every footprint
+    offset loads the saved image byte through the owner's buffer. -/
+theorem ctxWeiterleitung_gespeichert (m : HwMaschine) (c : Nat)
+    (a : Adresse) (s1' : TSOZustand)
+    (hs : issueListe (tsoAnsicht m) c
+      (fxEintraege (m.kerne c).fp (m.kerne c).xmm a) = some s1')
+    (hles : ctxAlle m.mem.lesbar a ctxOffsets = true)
+    (i : Nat) (hi : i ∈ ctxOffsets) :
+    loadByte s1' c (addrOff a i) =
+      some (ctxByte (m.kerne c).fp (m.kerne c).xmm i) := by
+  have hbuf := issueListe_haengt_an (tsoAnsicht m) s1' c _ hs
+  have hmem : s1'.mem = (tsoAnsicht m).mem :=
+    issueListe_mem_still _ _ _ _ hs
+  have hlesbar : s1'.mem.lesbar (addrOff a i) = true := by
+    rw [hmem]
+    exact ctxAlle_holt m.mem.lesbar a ctxOffsets i hi hles
+  have hneu : neuestens (s1'.puffer c) (addrOff a i) =
+      some (ctxByte (m.kerne c).fp (m.kerne c).xmm i) := by
+    have he := neuestens_einmal (ctxByte (m.kerne c).fp (m.kerne c).xmm)
+      a ctxOffsets i (fun j hj => ctxOffsets_klein j hj)
+      (ctxOffsets_klein i hi) ctxOffsets_nodup hi
+    have hentries : fxEintraege (m.kerne c).fp (m.kerne c).xmm a =
+        fxEintraegeAux (ctxByte (m.kerne c).fp (m.kerne c).xmm) a
+          ctxOffsets := rfl
+    rw [hbuf, hentries, neuestens_append, he]
+  unfold loadByte
+  rw [if_pos hlesbar, hneu]
+
 /-- Point update of a byte image at one offset. -/
 def ctxAktual (g : Nat → Byte) (k : Nat) (v : Byte) : Nat → Byte :=
   fun i => if i = k then v else g i
@@ -420,11 +565,6 @@ theorem ctxLade_geladen (s : TSOZustand) (c : Nat) (a : Adresse)
     one buffered byte per footprint offset through `issueListe`
     (never a canonical word effect). Misalignment is `.fehlerGP`;
     a missing write permission is `.verweigert`. -/
-
-/-- Permission fold over the footprint: every accessed byte must pass. -/
-def ctxAlle (p : Adresse → Bool) (a : Adresse) : List Nat → Bool
-  | [] => true
-  | i :: rest => p (addrOff a i) && ctxAlle p a rest
 
 /-- Machine-level context outcomes: successor, refusal, #GP, #UD. -/
 inductive CtxAusgang where
