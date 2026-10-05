@@ -20,6 +20,7 @@ import Grammatik.X86.Speicher
 import Grammatik.X86.Ganzzahl
 import Grammatik.X86.Ausfuehrung
 import Grammatik.X86.Codec
+import Grammatik.X86.AddressEncoding
 import Grammatik.X86.NarrowOps
 import Grammatik.X86.ArchitecturalFlags
 import Grammatik.X86.TSO
@@ -1196,11 +1197,15 @@ theorem roundtrip_sbbImm16 (dst : Register) (op : Wort)
       some (.reg ⟨.sbbImm .b16 dst (canonImm .b16 op), (carryEncode (.sbbImm .b16 dst op)).length⟩, suffix) := by
   cases dst <;> rfl
 
-/-- Displacement length from ModRM mode bits: disp8/disp32/none. -/
-def dispLaenge (mod rm : Nat) : Nat :=
-  if mod == 1 then 1
-  else if mod == 2 || (mod == 0 && rm == 5) then 4
-  else 0
+/-- Displacement kind from ModRM mode bits, reusing the canonical
+    `DispArt` vocabulary (`AddressEncoding.lean`): disp8, disp32
+    (including the mod=0/rm=5 RIP-relative slot), or absent. The
+    canonical `dispLaenge` turns the kind into the byte count, so no
+    second length table is defined here. -/
+def dispArtVonMod (mod rm : Nat) : DispArt :=
+  if mod == 1 then .d8
+  else if mod == 2 || (mod == 0 && rm == 5) then .d32
+  else .kein
 
 /-- Immediate kind by Group-1 opcode and 66H prefix. -/
 def immKindVon (op : Nat) (op66 : Bool) : Nat :=
@@ -1274,7 +1279,7 @@ def ablehnGrundTief (bs : List Byte) (op66 : Bool) (op : Nat)
     | m :: tail2 =>
       let ext := byteNat m / 8 % 8
       if ext == 2 || ext == 3 then
-        let need := dispLaenge (byteNat m / 64) (byteNat m % 8) +
+        let need := dispLaenge (dispArtVonMod (byteNat m / 64) (byteNat m % 8)) +
           immLenOf (immKindVon op op66)
         if tail2.length < need then some .unvollstaendig
         else hochbyteGrund op (ohneRexForm bs) (byteNat m)
@@ -1285,7 +1290,7 @@ def ablehnGrundTief (bs : List Byte) (op66 : Bool) (op : Nat)
     | m :: tail2 =>
       let ext := byteNat m / 8 % 8
       if ext == 0 || ext == 1 then
-        let need := dispLaenge (byteNat m / 64) (byteNat m % 8)
+        let need := dispLaenge (dispArtVonMod (byteNat m / 64) (byteNat m % 8))
         if tail2.length < need then some .unvollstaendig
         else hochbyteGrund op (ohneRexForm bs) (byteNat m)
       else some .falscheErweiterung
@@ -1296,7 +1301,7 @@ def ablehnGrundTief (bs : List Byte) (op66 : Bool) (op : Nat)
     | m :: tail2 =>
       let need :=
         if byteNat m / 64 == 3 then 0
-        else dispLaenge (byteNat m / 64) (byteNat m % 8)
+        else dispLaenge (dispArtVonMod (byteNat m / 64) (byteNat m % 8))
       if tail2.length < need then some .unvollstaendig
       else hochbyteGrund op (ohneRexForm bs) (byteNat m)
   else if decide (op = 20 ∨ op = 28) then
@@ -1888,12 +1893,401 @@ theorem adapterCarry_wf (m : HwMaschine) (c : Nat) (i : CarryInstr)
     rw [adapterCarry_mem_none m c mm] at h
     cases h
 
+/-! ## 6. Memory forms as TSO byte-issue events.
+
+   A memory ADC/SBB/INC/DEC never runs the register plug
+   (`adapterCarry_mem_none`): it issues its footprint bytes through
+   `issueListe`, leaving canonical memory unchanged until the drain.
+   The footprint is taken over the width-correct word by
+   construction. Address resolution refuses SIB and RIP-relative
+   shapes; the rest resolve base-plus-displacement from the pre-state
+   register file (reused `effAddr`). -/
+
+/-- Width footprint as TSO entries over the width-correct word. -/
+def breitenEintraege (a : Adresse) (b : Breite) (v : Wort) :
+    List TSOEintrag :=
+  (wortEintraege a (trunc b v)).take b.bytes
+
+/-- Memory store issue on the machine: the footprint bytes are issued,
+    never written directly. `none` = a byte refused. -/
+def carryMemAusgabe (m : HwMaschine) (c : Nat) (a : Adresse)
+    (b : Breite) (v : Wort) : Option HwMaschine :=
+  match issueListe (tsoAnsicht m) c (breitenEintraege a b v) with
+  | none => none
+  | some s' => some (setTso m s')
+
+/-- A memory issue appends exactly the footprint entries. -/
+theorem carryMemAusgabe_puffer (m : HwMaschine) (c : Nat) (a : Adresse)
+    (b : Breite) (v : Wort) (m' : HwMaschine)
+    (h : carryMemAusgabe m c a b v = some m') :
+    m'.puffer c = m.puffer c ++ breitenEintraege a b v := by
+  unfold carryMemAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c (breitenEintraege a b v) with
+  | none => rw [h1] at h; cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    exact issueListe_haengt_an (tsoAnsicht m) s' c _ h1
+
+/-- A memory issue changes no canonical byte. -/
+theorem carryMemAusgabe_kein_speicher (m : HwMaschine) (c : Nat)
+    (a : Adresse) (b : Breite) (v : Wort) (m' : HwMaschine)
+    (h : carryMemAusgabe m c a b v = some m') (x : Adresse) :
+    m'.mem.bytes x = m.mem.bytes x := by
+  unfold carryMemAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c (breitenEintraege a b v) with
+  | none => rw [h1] at h; cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    exact issueListe_kein_speicher (tsoAnsicht m) s' c _ h1 x
+
+/-- A memory issue preserves well-formedness. -/
+theorem carryMemAusgabe_wf (m : HwMaschine) (c : Nat) (a : Adresse)
+    (b : Breite) (v : Wort) (m' : HwMaschine) (hwf : HwWf m)
+    (h : carryMemAusgabe m c a b v = some m') :
+    HwWf m' := by
+  unfold carryMemAusgabe at h
+  cases h1 : issueListe (tsoAnsicht m) c (breitenEintraege a b v) with
+  | none => rw [h1] at h; cases h
+  | some s' =>
+    rw [h1] at h
+    cases h
+    exact setTso_wf _ s' hwf
+
+/-- One-byte displacement sign-extended to 32 bits. -/
+def disp8zu32 (d : Byte) : BitVec 32 :=
+  BitVec.ofNat 32 ((sext .b8 (BitVec.ofNat 64 (byteNat d))).toNat % 2 ^ 32)
+
+/-- Descriptor displacement as a 32-bit word. -/
+def carryDisp32 (mm : CarryMem) : Option (BitVec 32) :=
+  match mm.disp with
+  | [] => some (BitVec.ofNat 32 0)
+  | [d0] => some (disp8zu32 d0)
+  | [d0, d1, d2, d3] =>
+    some (BitVec.ofNat 32 (byteNat d0 + byteNat d1 * 256 +
+      byteNat d2 * 65536 + byteNat d3 * 16777216))
+  | _ => none
+
+/-- Address resolution for a memory descriptor over a state: SIB
+    (`rm=4`), RIP-relative (`mod=0,rm=5`) and register-direct shapes
+    refuse with `none`; the rest resolve base-plus-displacement from
+    the pre-state register file (reused `effAddr`). -/
+def carryMemAdr (s : Zustand) (mm : CarryMem) : Option Adresse :=
+  let mod := mm.modrm / 64
+  let rm := mm.modrm % 8
+  if mod == 3 then none
+  else if rm == 4 then none
+  else if mod == 0 && rm == 5 then none
+  else
+    match codeReg mm.basis with
+    | some base =>
+      match carryDisp32 mm with
+      | some d => some (effAddr s base d)
+      | none => none
+    | none => none
+
+/-- Resolution refuses register-direct descriptors. -/
+theorem carryMemAdr_verweigert_mod3 (s : Zustand) (mm : CarryMem)
+    (hmod : (mm.modrm / 64 == 3) = true) :
+    carryMemAdr s mm = none := by
+  unfold carryMemAdr
+  simp [hmod]
+
+/-- Resolution refuses SIB descriptors. -/
+theorem carryMemAdr_verweigert_sib (s : Zustand) (mm : CarryMem)
+    (hmod : (mm.modrm / 64 == 3) = false)
+    (hrm : (mm.modrm % 8 == 4) = true) :
+    carryMemAdr s mm = none := by
+  unfold carryMemAdr
+  simp [hmod, hrm]
+
+/-- Resolution refuses RIP-relative descriptors. -/
+theorem carryMemAdr_verweigert_ripRel (s : Zustand) (mm : CarryMem)
+    (hmod : (mm.modrm / 64 == 3) = false)
+    (hrm : (mm.modrm % 8 == 4) = false)
+    (hrip : (mm.modrm / 64 == 0 && mm.modrm % 8 == 5) = true) :
+    carryMemAdr s mm = none := by
+  unfold carryMemAdr
+  simp [hmod, hrm, hrip]
+
+/-- Resolution succeeds exactly on plain base-plus-displacement
+    shapes with a known base register and parsed displacement. -/
+theorem carryMemAdr_ok (s : Zustand) (mm : CarryMem) (base : Register)
+    (d : BitVec 32)
+    (hmod : (mm.modrm / 64 == 3) = false)
+    (hrm : (mm.modrm % 8 == 4) = false)
+    (hrip : (mm.modrm / 64 == 0 && mm.modrm % 8 == 5) = false)
+    (hbase : codeReg mm.basis = some base)
+    (hdisp : carryDisp32 mm = some d) :
+    carryMemAdr s mm = some (effAddr s base d) := by
+  unfold carryMemAdr
+  simp [hmod, hrm, hrip, hbase, hdisp]
+
+/-! ## 7. Joint witness: two cores, family steps, buffered store.
+
+   Both cores run accepted family steps over one shared canonical
+   memory (core 0 adds `17 + 5`, core 1 subtracts `17 - 5`); core 0
+   then issues a buffered store through the family memory path that
+   only the owner observes by forwarding, and the drain changes
+   actual shared memory from 0 to 42. A memory descriptor plugs
+   nothing and a bad length refuses beside the run. Every claim
+   projects to plain values before `decide` (machines contain
+   functions); the general equations pin the full states. -/
+
+/-- Witness registers: RAX holds 17, RCX holds 5. -/
+def carryWitReg : Register → Wort := fun q =>
+  if q = Register.rax then 17
+  else if q = Register.rcx then 5
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness cores over shared memory, both running at 4096. -/
+def carryWitKern : Nat → HwKern
+  | 0 => ⟨carryWitReg, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨carryWitReg, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers. -/
+def carryWitStart : HwMaschine :=
+  ⟨zeugeSpeicher, carryWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem carryWitStart_wf : HwWf carryWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Core 0 adds `17 + 5` through the adapter. -/
+def carryWitOutAdd : Option HwMaschine :=
+  (adapterCarry).schritt carryWitStart 0
+    (.reg ⟨.adcReg .b64 .rax .rcx, 3⟩)
+
+/-- Core 1 subtracts `17 - 5` through the adapter. -/
+def carryWitOutSub : Option HwMaschine :=
+  (adapterCarry).schritt carryWitStart 1
+    (.reg ⟨.sbbReg .b64 .rax .rcx, 3⟩)
+
+/-- Read a core register out of an adapter outcome. -/
+def carryWitRegOut (o : Option HwMaschine) (c : Nat)
+    (q : Register) : Option Wort :=
+  match o with
+  | some m => some ((m.kerne c).register q)
+  | none => none
+
+/-- Read the carry flag out of an adapter outcome. -/
+def carryWitCfOut (o : Option HwMaschine) (c : Nat) : Option Bool :=
+  match o with
+  | some m => some ((m.kerne c).flags.cf)
+  | none => none
+
+/-- Core 0 sum: RAX holds 22. -/
+theorem carryWit_add_rax :
+    carryWitRegOut carryWitOutAdd 0 Register.rax = some 22 := by
+  decide
+
+/-- Core 0 addition raises no carry. -/
+theorem carryWit_add_cf :
+    carryWitCfOut carryWitOutAdd 0 = some false := by
+  decide
+
+/-- Core 1 difference: RAX holds 12. -/
+theorem carryWit_sub_rax :
+    carryWitRegOut carryWitOutSub 1 Register.rax = some 12 := by
+  decide
+
+/-- Core 1 subtraction raises no borrow. -/
+theorem carryWit_sub_cf :
+    carryWitCfOut carryWitOutSub 1 = some false := by
+  decide
+
+/-- Witness data address. -/
+def carryWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Core 0 issues byte 42 through the family memory path. -/
+def carryWitMem1 : Option HwMaschine :=
+  carryMemAusgabe carryWitStart 0 carryWitAdr .b8 42
+
+/-- Read a buffer length out of a machine outcome. -/
+def carryWitBufLen (o : Option HwMaschine) (c : Nat) : Option Nat :=
+  match o with
+  | some m => some (m.puffer c).length
+  | none => none
+
+/-- Read a shared-memory byte out of a machine outcome. -/
+def carryWitMemByte (o : Option HwMaschine) : Option Byte :=
+  match o with
+  | some m => some (m.mem.bytes carryWitAdr)
+  | none => none
+
+/-- The family memory issue buffers exactly one entry. -/
+theorem carryWit_mem_puffer :
+    carryWitBufLen carryWitMem1 0 = some 1 := by
+  decide
+
+/-- The family memory issue leaves shared memory still. -/
+theorem carryWit_mem_still :
+    carryWitMemByte carryWitMem1 = some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- Witness TSO start: canonical memory, empty buffers. -/
+def carryWitTso0 : TSOZustand := ⟨zeugeSpeicher, fun _ => []⟩
+
+/-- Core 0 issues byte 42 at the data cell. -/
+def carryWitTso1 : Option TSOZustand :=
+  issueByte carryWitTso0 0 carryWitAdr (BitVec.ofNat 8 42)
+
+/-- Core 0 observes its own byte (forwarding). -/
+def carryWitEigen : Option (Option Byte) :=
+  match carryWitTso1 with
+  | some s => some (loadByte s 0 carryWitAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def carryWitFremd : Option (Option Byte) :=
+  match carryWitTso1 with
+  | some s => some (loadByte s 1 carryWitAdr)
+  | none => none
+
+/-- Core 0 drains its oldest entry. -/
+def carryWitTso2 : Option TSOZustand :=
+  match carryWitTso1 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def carryWitNachFlush : Option (Option Byte) :=
+  match carryWitTso2 with
+  | some s => some (some (s.mem.bytes carryWitAdr))
+  | none => none
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def carryWitFremdNach : Option (Option Byte) :=
+  match carryWitTso2 with
+  | some s => some (loadByte s 1 carryWitAdr)
+  | none => none
+
+/-- The data cell starts zeroed: the run really changes memory. -/
+theorem carryWit_anfang_null :
+    zeugeSpeicher.bytes carryWitAdr = BitVec.ofNat 8 0 := by
+  rfl
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem carryWit_weiterleitung :
+    carryWitEigen = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem carryWit_fremd_alt :
+    carryWitFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 42. -/
+theorem carryWit_spuelung_aendert_speicher :
+    carryWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem carryWit_fremd_neu :
+    carryWitFremdNach = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- The joint witness: a reached two-core family run (add on core 0
+    with no carry, subtract on core 1 with no borrow) beside a family
+    memory issue (one buffered entry, shared memory still), owner-only
+    forwarding and a drain that changes actual shared memory from 0
+    to 42 -- with the memory-plug, length and high-byte refusals
+    beside it. Non-degenerate: the drain changes actual memory. -/
+theorem carryHw_zeuge :
+    carryWitRegOut carryWitOutAdd 0 Register.rax = some 22 ∧
+      carryWitCfOut carryWitOutAdd 0 = some false ∧
+      carryWitRegOut carryWitOutSub 1 Register.rax = some 12 ∧
+      carryWitCfOut carryWitOutSub 1 = some false ∧
+      carryWitBufLen carryWitMem1 0 = some 1 ∧
+      carryWitMemByte carryWitMem1 = some (BitVec.ofNat 8 0) ∧
+      carryWitEigen = some (some (BitVec.ofNat 8 42)) ∧
+      carryWitFremd = some (some (BitVec.ofNat 8 0)) ∧
+      carryWitNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+      carryWitFremdNach = some (some (BitVec.ofNat 8 42)) ∧
+      zeugeSpeicher.bytes carryWitAdr = BitVec.ofNat 8 0 ∧
+      HwWf carryWitStart ∧
+      (adapterCarry).schritt carryWitStart 0
+        (.mem ⟨.adc, .b32, true, 1, 1, [], 2⟩) = none ∧
+      (adapterCarry).schritt carryWitStart 0
+        (.reg ⟨.adcReg .b32 .rax .rcx, 0⟩) = none ∧
+      decodeCarry [natByte 16, natByte 224] = none := by
+  refine ⟨carryWit_add_rax, carryWit_add_cf, carryWit_sub_rax,
+    carryWit_sub_cf, carryWit_mem_puffer, carryWit_mem_still,
+    carryWit_weiterleitung, carryWit_fremd_alt,
+    carryWit_spuelung_aendert_speicher, carryWit_fremd_neu,
+    carryWit_anfang_null, carryWitStart_wf, ?_, ?_,
+    pin_nichts_hoch10⟩
+  · exact adapterCarry_mem_none _ _ _
+  · exact adapterCarry_verweigert_bei_laenge _ _ _ (by decide)
+
 /- CUTS:
-    Value/flag layer (§1) and register step (§2) stand.
-    NOT proved here, and not claimed: the opcode dispatch, encode,
-    round trips, refusal reasons, the machine adapter, the witness.
+    Proved here: the ADC/SBB/INC/DEC family over canonical words --
+    width-indexed values with carry/borrow (§1, 64-bit CF=0 agreement
+    against the accepted ADD/SUB snapshots, CF preservation of
+    INC/DEC), the register step with memory discipline and 64-bit
+    step agreements (§2, ADD-then-ADC / SUB-then-SBB 128-bit chains
+    with the 128-bit carry/borrow out), the SDM-checked codec (§3:
+    canonical encode with generic 16/32/64-bit round trips, named
+    refusal for every refused shape, no accepted form shadowed),
+    the unified dispatcher and step selection (§4), the `HwAdapter`
+    plug with exact agreement and well-formedness (§5), the TSO
+    memory path with footprint discipline and address resolution
+    (§6), and a reached two-core joint witness with owner-only
+    forwarding and a memory-changing drain (§7).
+    NOT proved here, and not claimed:
+    - No hardware correspondence: encodings are self-consistent
+      against the SDM opcode map cited in §3 (provenance in the
+      lane report), not verified against silicon. Silicon
+      assumptions named: REX.W/66H width selection, 8/16-bit merge
+      with 32-bit zero-extension, OF/SF/ZF/AF/CF/PF update rows
+      for ADC/SBB and CF-preserving INC/DEC rows, `#DE`-free
+      (no trap exists in this family), Group-1/4/5 opcode
+      extensions, high-byte register naming, sign extension of
+      imm8 (83H) and imm32 (REX.W 81H/15H), disp8 sign extension.
+    - No LOCK/RMW path (the LOCK prefix is refused), no SIB or
+      RIP-relative addressing (refused at resolution), no
+      REX-involved high-byte reason (refused in decode, no computed
+      reason), no 8-bit generic encode round trip (high-byte codes
+      encode but never decode, by silicon necessity).
+    - No source/IR/ABI/loader/entry/budget link, no per-access
+      target-to-W/GX simulation, no whole-word atomicity beyond
+      byte drains, no timing/power behaviour.
+    - `ablehnGrund` names the reason for every planted shape;
+      full classifier agreement (decode refuses iff a reason
+      exists) stays open.
 -/
 
-#print axioms CarryKlasse
+#print axioms adcFlags_b64_ohne
+#print axioms sbbFlags_b64_ohne
+#print axioms incFlags_cf
+#print axioms decFlags_cf
+#print axioms adc_kette_128
+#print axioms sbb_kette_128
+#print axioms carrySchritt_speicher
+#print axioms carry_adc64_ohne_schritt
+#print axioms carry_sbb64_ohne_schritt
+#print axioms carry_inc_schritt_cf
+#print axioms carry_dec_schritt_cf
+#print axioms roundtrip_adcReg64
+#print axioms roundtrip_adcImm32
+#print axioms roundtrip_incReg64
+#print axioms decodeCarryHw_prefers_ext
+#print axioms decodeCarryHw_carry
+#print axioms pin_hw_adcReg32
+#print axioms carryHwSchritt_reg_ok
+#print axioms carryHwSchritt_mem_verweigert
+#print axioms adapterCarry_wf
+#print axioms adapterCarry_ok
+#print axioms adapterCarry_mem_none
+#print axioms carryMemAusgabe_puffer
+#print axioms carryMemAusgabe_kein_speicher
+#print axioms carryMemAdr_ok
+#print axioms carryMemAdr_verweigert_sib
+#print axioms carryHw_zeuge
 
 end Gabbro.Grammatik.X86
