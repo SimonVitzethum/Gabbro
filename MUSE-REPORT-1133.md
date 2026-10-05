@@ -71,6 +71,31 @@ chipset-posting model, no liveness/timing. The port plug is stateless
 across steps by construction; the UC-load leg refuses on the bare
 machine. No target-to-W/GX simulation, no source/checker/goal links.
 
+## Integration-gate failure analysis (repair turn, candidate d9e7092f)
+
+- The integration gate failed with `exit 1; 3 error line(s)` whose only
+  hard error is:
+  `Grammatik.lean:44:0: failed to read file
+  '/home/simon/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean/
+  Lean/Elab/Tactic/Do/ProofMode/Assumption.olean.private'`.
+- This is an apparatus failure in the integration environment
+  (`/home/simon/Dokumente/Gabbro`, not this clone): a corrupt/missing
+  toolchain-private olean at the final umbrella link step. It matches the
+  known AGENTS.md §9 toolchain-incident class, not a defect in this lane.
+- Evidence it is not this module: the same integration log prints all of
+  this module's `#print axioms` lines (983-990), i.e. `HwDevices.lean`
+  compiled successfully there too; the failure comes after, when Lean
+  loads the toolchain file for the umbrella `Grammatik` target.
+- Repair: no semantic change to the owned module (a green candidate is
+  not edited to chase an apparatus fault). Re-verified locally on the
+  exact candidate: `./lean-probe` 0 errors, `./lean-bau` exit 0, 601 jobs
+  green. Coordinator-side fix needed: repair/replace the corrupt elan
+  toolchain (or its poisoned cache) in the integration environment, then
+  re-run the gate. Fresh independent review of the changed commit (this
+  report) is still required; acceptance of the full source/binary chain
+  is not claimed.
+
+
 ## Notes on the task
 
 - The task names `DeviceCommonExecution.lean` as family, but that file is
