@@ -237,6 +237,137 @@ theorem hwLockFetchSchritt_trifft_lockByteschritt (m : HwMaschine)
               (by simp only [hff]; simpa using hs)] at h
             exact hwLockSchritt_trifft_byteschritt m c _ rest m' hf h
 
+/-! ## 5. Closed pins: split-lock and the aligned baseline.
+
+  The witness word 8192 sits at a line start (no split); the split
+  machine aims at 8188, whose 8-byte footprint meets lines 127
+  and 128. -/
+
+/-- Split-machine registers: delta 5 in rax, base 8188 in rbp. -/
+def hwLockFetchSplitReg : Register → Wort := lockZeugReg 5 8188 7
+
+/-- Split-machine data window: 8184..8200, covering the crossing word. -/
+def fetchSplitData (a : Adresse) : Bool :=
+  decide (8184 ≤ a.toNat ∧ a.toNat < 8200)
+
+/-- Split machine: LOCK XADD bytes at 4096, crossing word at 8188. -/
+def hwLockFetchSplit : HwMaschine :=
+  ⟨lockZeugSpeicher pinXadd 10 lockCodeExec fetchSplitData fetchSplitData,
+    hwLockWitKernLesen hwLockFetchSplitReg, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- The split word really crosses a line: 8188 + 7 reaches line 128. -/
+theorem hwLockFetchWit_split_wahr :
+    splitSperre (BitVec.ofNat 64 8188) = true := by
+  decide
+
+/-- The aligned witness word never splits. -/
+theorem hwLockFetchWit_kein_split :
+    splitSperre (BitVec.ofNat 64 8192) = false := by
+  decide
+
+/-- Fetch on the split machine: the 9-byte word form with a 6-byte
+    zero suffix. -/
+theorem hwLockFetchWit_split_fetch :
+    hwLockFetch hwLockFetchSplit 0 =
+      some (.ok (.xadd64 .rax .rbp 0) 9,
+        List.replicate 6 (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The split footprint pins to 8188. -/
+theorem hwLockFetchWit_split_fuss :
+    lockFuss hwLockFetchSplit 0 (.xadd64 .rax .rbp 0) =
+      some (BitVec.ofNat 64 8188) := by
+  decide
+
+/-- Split-lock refuses the fetched step, although the parsed plug
+    would admit the same bytes: the fetched path is stricter. -/
+theorem hwLockFetchWit_split :
+    hwLockFetchSchritt hwLockFetchSplit 0 = none :=
+  hwLockFetchSchritt_split _ _ _ _ _ hwLockFetchWit_split_fetch
+    _ hwLockFetchWit_split_fuss hwLockFetchWit_split_wahr
+
+/-! ## 6. Narrower widths and other addressing modes: refused.
+
+  662 models only the 64-bit word rows (REX.W) in mod=2
+  base-plus-disp32. A 32-bit XADD without REX.W, a 16-bit shape with
+  the operand-size prefix, and a mod=0 disp32-only shape have no 662
+  row: the fetched path refuses them at the decoder, never executing
+  a truncated or mis-decoded form. The SIB shape 662 accepts
+  (base with low bits 4) dispatches and runs. -/
+
+/-- 32-bit XADD bytes: LOCK prefix but no REX.W. -/
+def pinXadd32 : List Byte :=
+  [natByte 240, natByte 15, natByte 193, natByte 133,
+   natByte 0, natByte 0, natByte 0, natByte 0]
+
+/-- mod=0 shape: disp32 without base register. -/
+def pinXaddMod0 : List Byte :=
+  [natByte 240, natByte 72, natByte 15, natByte 193, natByte 5,
+   natByte 0, natByte 0, natByte 0, natByte 0]
+
+/-- 16-bit shape: operand-size prefix before LOCK. -/
+def pinXadd16 : List Byte :=
+  [natByte 102, natByte 240, natByte 72, natByte 15, natByte 193,
+   natByte 133, natByte 0, natByte 0, natByte 0, natByte 0]
+
+/-- Machine over given code bytes: word 10, delta 5, base 8192. -/
+def hwLockFetchCode (prog : List Byte) : HwMaschine :=
+  ⟨lockZeugSpeicher prog 10 lockCodeExec lockDataRW lockDataRW,
+    hwLockWitKernLesen hwLockWitReg0, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- The 32-bit shape has no fetched decode. -/
+theorem hwLockFetchWit_schmal32 :
+    hwLockFetch (hwLockFetchCode pinXadd32) 0 = none := by
+  decide
+
+/-- The mod=0 shape has no fetched decode. -/
+theorem hwLockFetchWit_mod0 :
+    hwLockFetch (hwLockFetchCode pinXaddMod0) 0 = none := by
+  decide
+
+/-- The 16-bit shape has no fetched decode. -/
+theorem hwLockFetchWit_schmal16 :
+    hwLockFetch (hwLockFetchCode pinXadd16) 0 = none := by
+  decide
+
+/-- The refused decodes refuse the fetched step. -/
+theorem hwLockFetchWit_schmal32_schritt :
+    hwLockFetchSchritt (hwLockFetchCode pinXadd32) 0 = none :=
+  hwLockFetchSchritt_ohne_fetch _ _ hwLockFetchWit_schmal32
+
+/-- The refused mod=0 decode refuses the fetched step. -/
+theorem hwLockFetchWit_mod0_schritt :
+    hwLockFetchSchritt (hwLockFetchCode pinXaddMod0) 0 = none :=
+  hwLockFetchSchritt_ohne_fetch _ _ hwLockFetchWit_mod0
+
+/-- SIB registers: delta 5 in rax, base 8192 in rsp. -/
+def hwLockFetchSibReg : Register → Wort := fun q =>
+  if q = .rax then 5
+  else if q = .rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- SIB machine: the 10-byte SIB XADD at 4096 over word 10. -/
+def hwLockFetchSib : HwMaschine :=
+  ⟨lockZeugSpeicher (encodeLock (.xadd64 .rax .rsp 0)) 10 lockCodeExec
+      lockDataRW lockDataRW,
+    hwLockWitKernLesen hwLockFetchSibReg, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- Fetch on the SIB machine: the 10-byte form with a 5-byte suffix. -/
+theorem hwLockFetchWit_sib_fetch :
+    hwLockFetch hwLockFetchSib 0 =
+      some (.ok (.xadd64 .rax .rsp 0) 10,
+        List.replicate 5 (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The fetched SIB step moves the word 10 to 15. -/
+theorem hwLockFetchWit_sib_wort :
+    hwLockWort (BitVec.ofNat 64 8192)
+      (hwLockFetchSchritt hwLockFetchSib 0) = some 15 := by
+  decide
+
 /- CUTS:
      Skeleton only: fetched decode `hwLockFetch` as the 662 fetch on
      the core projection. NOT proved here: the fetched step, split-lock
