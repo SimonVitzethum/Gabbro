@@ -655,3 +655,4 @@ import Grammatik.X86.PipelineWorkBranches
 import Grammatik.X86.PipelineAtomicsBlock
 import Grammatik.X86.TsoGxStart
 import Grammatik.X86.PipelineProfilesReloc
+import Grammatik.X86.Avx2Ops

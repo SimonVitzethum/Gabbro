@@ -675,7 +675,7 @@ Last ledger refresh: **2026-10-05 15:47 UTC**. This is an operational snapshot, 
 | 1233 | Pipeline work bounds for branches and loops | Merged after review/checks | 1234: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1233.md) |
 | 1235 | Profiles: multi-step control flow and relocation re-decode | Merged after review/checks | 1236: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1235.md) |
 | 1237 | AVX2: VEX prefix decoder and encoder | Agent working | 1238: scheduled | [task](lanes/1237.md) |
-| 1239 | AVX2: 256-bit integer operation semantics | Committed candidate; review/integration pending | 1240: Committed candidate; review/integration pending | [task](lanes/1239.md) |
+| 1239 | AVX2: 256-bit integer operation semantics | Merged after review/checks | 1240: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1239.md) |
 | 1241 | AVX2: YMM state, XCR0 gating and upper-half rules | Committed candidate; review/integration pending | 1242: Agent working | [task](lanes/1241.md) |
 | 1243 | AVX2: 32-byte memory accesses on the TSO machine | Agent working | 1244: scheduled | [task](lanes/1243.md) |
 | 1245 | x86 address to source carrier mapping for the TSO-to-W bridges | Committed candidate; review/integration pending | 1246: Committed candidate; review/integration pending | [task](lanes/1245.md) |
@@ -1597,6 +1597,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1235**, Profiles: multi-step control flow and relocation re-decode, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1235.md). <!-- x86-merged:1235 -->
 - 2026-10-05: checked master `949035fc` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:949035fca18e80e1eed98c84ba4f9aed3a4e3f24 -->
 - 2026-10-05: lane **1236**, Independent exact review of 1235, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1236.md). <!-- x86-merged:1236 -->
+- 2026-10-05: lane **1239**, AVX2: 256-bit integer operation semantics, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1239.md). <!-- x86-merged:1239 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
