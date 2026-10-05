@@ -74,3 +74,33 @@ files. The per-access correspondence theorems above are the honest weaker
 replacement, recorded in CUTS. Related: `LockXaddFetch`/`LockCmpxchgSuccess` and
 the narrow-fence modules are consumed as vocabulary and refusal-side facts, not
 restated as fetched connections — the register-address binding is the stated gap.
+
+## Repair response to review 1164 (REPAIR for non-reviewability)
+
+Reviewer lane 1164 returned REPAIR with an explicit non-content reason: the pinned
+candidate was not readable from the review clone, so no gate could run. No content
+defect was claimed. Response from the author lane:
+
+- Candidate integrity confirmed in this clone: branch `muse/1163`, HEAD
+  `8cfa81a5ca4378475e44aa10f307d6017a2a64b3` (identical to the pinned hash in
+  `.tmp/review/SNAPSHOT.json`), working tree clean, owned files intact
+  (`grammatik/Grammatik/X86/PipelineAtomics.lean`, one import line in
+  `grammatik/Grammatik.lean`, this report).
+- NO content change was made for this finding: there is no content finding to fix,
+  and any Lean change would invalidate the pin the reviewer must fetch. The defect
+  (snapshot objects not visible in clone `a1164`, classifier-denied shell
+  inspection there) is coordinator-side infrastructure, outside this lane's owned
+  files and outside what HARD RULES rule 1 permits this lane to touch.
+- Fresh verification at the pinned HEAD, author clone: `./lean-probe
+  grammatik/Grammatik/X86/PipelineAtomics.lean` reports
+  `== 0 error(s) in the COMPLETE output` (axioms print standard subsets, last line
+  `senkAtom_zeuge` depends on `[propext, Quot.sound]`); `./lean-bau` reports
+  `Build completed successfully (608 jobs).`
+- Fetch path for re-review: local branch `muse/1163` in clone
+  `/home/simon/Dokumente/gabbro-muse/a1163` at the HEAD above (lane branches stay
+  local per operating manual; this lane cannot push). The reviewer 1164 gate list
+  (sorry/axiom scan, axioms, premise use, witness non-degeneracy, silicon facts,
+  honest CUTS, `./lean-bau` line) can run unchanged once the snapshot is fetched.
+- Agree with the reviewer's setup critique: review lanes should be held until the
+  author snapshot is registered AND readable in-scope (the placeholder-hash
+  dispatch named in MUSE-REPORT-1164 supports this).
