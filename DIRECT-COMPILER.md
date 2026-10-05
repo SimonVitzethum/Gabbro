@@ -652,7 +652,7 @@ Last ledger refresh: **2026-10-05 13:40 UTC**. This is an operational snapshot, 
 | 1187 | TSO traces to W runs: run induction | Merged after review/checks | 1188: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1187.md) |
 | 1189 | Pipeline calls: real source execBlock correspondence | Merged after review/checks | 1190: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1189.md) |
 | 1191 | Pipeline: spill code generation with privacy | Merged after review/checks | 1192: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1191.md) |
-| 1193 | Linking: multi-unit convergence and operand kinds | Committed candidate; review/integration pending | 1194: Committed candidate; review/integration pending | [task](lanes/1193.md) |
+| 1193 | Linking: multi-unit convergence and operand kinds | Merged after review/checks | 1194: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1193.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1481,6 +1481,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1190**, Independent exact review of 1189, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1190.md). <!-- x86-merged:1190 -->
 - 2026-10-05: lane **1191**, Pipeline: spill code generation with privacy, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1191.md). <!-- x86-merged:1191 -->
 - 2026-10-05: lane **1192**, Independent exact review of 1191, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1192.md). <!-- x86-merged:1192 -->
+- 2026-10-05: lane **1193**, Linking: multi-unit convergence and operand kinds, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1193.md). <!-- x86-merged:1193 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
