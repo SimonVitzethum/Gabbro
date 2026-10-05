@@ -125,4 +125,105 @@ theorem zeit_append_pipe (prof : HardwareProfil) (p q : List Befehl)
   rw [decodiertZu_append]
   exact laufKosten_anhang_erfolg prof _ _ t1 t2 h1 h2
 
+/-! ## 3. Two-chunk block correctness.
+
+    Two lowered-correct assignment chunks compose: the source
+    `execBlock` over the two-statement block reaches the second
+    world's update, the target `lauf` over the concatenated chunks
+    reaches the second state, and budget/work/time are additive.
+    The per-step hardware bounds feed the transfer bound, so every
+    premise is used. -/
+
+variable {D : Deklaration} {V : Vertrag D}
+
+/-- TWO-CHUNK BLOCK CORRECTNESS: source run, target run, coverage,
+    time and work compose over a two-statement block. -/
+theorem block_zwei_korrekt (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ : List (Res D)}
+    (t1 : D.Tab) (f1 : D.Feld t1)
+    (i1 : Expr D Γ Λ (.index (D.count t1)))
+    (e1 : Expr D Γ Λ (D.typ t1 f1))
+    (hw1 : V.schreibt t1 = true) (hL1 : darf D t1 Λ)
+    (t2 : D.Tab) (f2 : D.Feld t2)
+    (i2 : Expr D Γ Λ (.index (D.count t2)))
+    (e2 : Expr D Γ Λ (D.typ t2 f2))
+    (hw2 : V.schreibt t2 = true) (hL2 : darf D t2 Λ)
+    (p1 p2 : List Befehl)
+    (hlow1 : senkStmt c L
+      (Stmt.assignSlot (V := V) (l := l) t1 f1 i1 e1 hw1 hL1) = some p1)
+    (hlow2 : senkStmt c L
+      (Stmt.assignSlot (V := V) (l := l) t2 f2 i2 e2 hw2 hL2) = some p2)
+    (O : Orakel D) (passes : Nat)
+    (R : ∀ f : D.Fn, World D → Env D (D.params f) → RufAusgang f)
+    (σ σ₁ σ₂ : World D) (ρ : Env D Γ)
+    (hsrc1 : execStmt O passes R
+      (Stmt.assignSlot (V := V) (l := l) t1 f1 i1 e1 hw1 hL1) σ ρ = .ok σ₁ ρ)
+    (hsrc2 : execStmt O passes R
+      (Stmt.assignSlot (V := V) (l := l) t2 f2 i2 e2 hw2 hL2) σ₁ ρ = .ok σ₂ ρ)
+    (st st₁ st₂ : Zustand)
+    (hrun1 : lauf (decodiertZu p1) st = some st₁)
+    (hrun2 : lauf (decodiertZu p2) st₁ = some st₂)
+    (n1 n2 t1' t2' B : Nat) (prof : HardwareProfil)
+    (hdeck1 : Deckung pipeSummary n1 (decodiertZu p1))
+    (hdeck2 : Deckung pipeSummary n2 (decodiertZu p2))
+    (hcost1 : laufKosten prof (decodiertZu p1) = some t1')
+    (hcost2 : laufKosten prof (decodiertZu p2) = some t2')
+    (hb1 : ∀ dd ∈ decodiertZu p1,
+      ∃ cc, schrittKosten prof dd = some cc ∧ cc ≤ B)
+    (hb2 : ∀ dd ∈ decodiertZu p2,
+      ∃ cc, schrittKosten prof dd = some cc ∧ cc ≤ B)
+    (pos : Nat) :
+    execBlock O passes R
+      (Block.cons (Stmt.assignSlot (V := V) (l := l) t1 f1 i1 e1 hw1 hL1)
+        (Block.cons (Stmt.assignSlot (V := V) (l := l) t2 f2 i2 e2 hw2 hL2)
+          Block.nil)) σ ρ = .ok σ₂ ρ
+    ∧ lauf (decodiertZu (p1 ++ p2)) st = some st₂
+    ∧ Deckung pipeSummary (n1 + n2) (decodiertZu (p1 ++ p2))
+    ∧ laufKosten prof (decodiertZu (p1 ++ p2)) = some (t1' + t2')
+    ∧ targetWork (p1 ++ p2) = targetWork p1 + targetWork p2
+    ∧ senkBlock c L pos
+        (Block.cons (Stmt.assignSlot (V := V) (l := l) t1 f1 i1 e1 hw1 hL1)
+          (Block.cons (Stmt.assignSlot (V := V) (l := l) t2 f2 i2 e2 hw2 hL2)
+            Block.nil)) = some (p1 ++ p2)
+    ∧ ∀ k, expandBound pipeSummary (n1 + n2) = some k →
+        (t1' + t2') ≤ B * k := by
+  have hsrc : execBlock O passes R
+      (Block.cons (Stmt.assignSlot (V := V) (l := l) t1 f1 i1 e1 hw1 hL1)
+        (Block.cons (Stmt.assignSlot (V := V) (l := l) t2 f2 i2 e2 hw2 hL2)
+          Block.nil)) σ ρ = .ok σ₂ ρ := by
+    simp [execBlock, hsrc1, hsrc2]
+  have hrun : lauf (decodiertZu (p1 ++ p2)) st = some st₂ := by
+    rw [decodiertZu_append, lauf_anhang _ _ _ _ hrun1]
+    exact hrun2
+  have hdeck : Deckung pipeSummary (n1 + n2) (decodiertZu (p1 ++ p2)) := by
+    rw [decodiertZu_append]
+    exact deckung_append_pipe n1 n2 _ _ hdeck1 hdeck2
+  have hcost := zeit_append_pipe prof p1 p2 t1' t2' hcost1 hcost2
+  have hwork : targetWork (p1 ++ p2) = targetWork p1 + targetWork p2 := by
+    simp [targetWork]
+  have hlow : senkBlock c L pos
+        (Block.cons (Stmt.assignSlot (V := V) (l := l) t1 f1 i1 e1 hw1 hL1)
+          (Block.cons (Stmt.assignSlot (V := V) (l := l) t2 f2 i2 e2 hw2 hL2)
+            Block.nil)) = some (p1 ++ p2) := by
+    rw [senkBlock_assign c L _ _ _ _ _ _ _ pos, hlow1]
+    simp only
+    rw [senkBlock_assign c L _ _ _ _ _ _ _ _, hlow2]
+    simp only
+    have hnil : ∀ pos' : Nat,
+        senkBlock c L pos' (Block.nil : Block D V l Γ Λ Λ) = some [] :=
+      fun _ => rfl
+    rw [hnil]
+    simp
+  have hball : ∀ dd ∈ decodiertZu (p1 ++ p2),
+      ∃ cc, schrittKosten prof dd = some cc ∧ cc ≤ B := by
+    rw [decodiertZu_append]
+    intro dd hd
+    rcases List.mem_append.mp hd with hm | hm
+    · exact hb1 dd hm
+    · exact hb2 dd hm
+  have htime : ∀ k, expandBound pipeSummary (n1 + n2) = some k →
+      (t1' + t2') ≤ B * k :=
+    budgetAusfuehrung_transfer pipeSummary prof _ _ _ _ hcost hball hdeck
+  exact ⟨hsrc, hrun, hdeck, hcost, hwork, hlow, htime⟩
+
 end Gabbro.Grammatik.X86.PipeBlock
