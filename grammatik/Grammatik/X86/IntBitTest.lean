@@ -712,9 +712,9 @@ def decodeBt : List Byte → Option (BtForm × List Byte)
     symbolic through the back-mapping lemmas. Lengths are checked
     separately against `btLaenge` and the 1..15 bound. -/
 
-/-- The opcode byte survives its byte round trip, for every operation. -/
-theorem btOpcode_byte (op : BtOp) :
-    byteNat (natByte (btOpcode op)) = btOpcode op := by
+/-- The opcode byte survives unfolding, for every operation. -/
+theorem btOpcode_toNat (op : BtOp) :
+    (BitVec.ofNat 8 (btOpcode op)).toNat = btOpcode op := by
   cases op <;> decide
 
 set_option maxHeartbeats 4000000 in
@@ -851,5 +851,78 @@ theorem sonde_bt_verweigert :
     decodeBt [natByte 72, natByte 15, natByte 163, natByte 132,
         natByte 0] = none := by
   decide
+
+/-- The opcode back-mapping survives the `%`-form the simplifier
+    produces, for every operation. -/
+theorem opcOp_modpow (op : BtOp) :
+    opcOp (btOpcode op % 2 ^ 8) = some op := by
+  cases op <;> decide
+
+/-- The opcode back-mapping in `% 256` form, for every operation. -/
+theorem opcOp_mod256 (op : BtOp) :
+    opcOp (btOpcode op % 256) = some op := by
+  cases op <;> decide
+
+/-- The immediate byte survives unfolding below 256. -/
+theorem btImmByte (n : Nat) (h : n < 256) :
+    (BitVec.ofNat 8 n).toNat = n :=
+  byteNat_natByte_of_lt n h
+
+set_option maxHeartbeats 8000000 in
+/-- Round trip for 16-bit memory forms, over any suffix (the operation
+    stays symbolic through the back-mapping lemmas). -/
+theorem roundtripBtMemReg16 (op : BtOp) (base bitReg : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeBt (encodeBt (.memReg op .w16 base bitReg d) ++ suffix) =
+      some (((.memReg op .w16 base bitReg d) : BtForm), suffix) := by
+  cases base <;> cases bitReg <;>
+    simp [encodeBt, decodeBt, decodeBtNach, decodeBt0F,
+      decodeBtRegMem, btPref, rexBt, decodeBtRex, modrmMem, regHigh,
+      regLow, regCode, codeReg, byteNat, natByte,
+      opcOp_mod256, parseLe32_leBytes32]
+
+/-- Round trip for 32-bit memory forms, over any suffix. -/
+theorem roundtripBtMemReg32 (op : BtOp) (base bitReg : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeBt (encodeBt (.memReg op .w32 base bitReg d) ++ suffix) =
+      some (((.memReg op .w32 base bitReg d) : BtForm), suffix) := by
+  cases base <;> cases bitReg <;>
+    simp [encodeBt, decodeBt, decodeBtNach, decodeBt0F,
+      decodeBtRegMem, btPref, rexBt, decodeBtRex, modrmMem, regHigh,
+      regLow, regCode, codeReg, byteNat, natByte,
+      opcOp_mod256, parseLe32_leBytes32]
+
+/-- Round trip for 64-bit memory forms, over any suffix. -/
+theorem roundtripBtMemReg64 (op : BtOp) (base bitReg : Register)
+    (d : BitVec 32) (suffix : List Byte) :
+    decodeBt (encodeBt (.memReg op .w64 base bitReg d) ++ suffix) =
+      some (((.memReg op .w64 base bitReg d) : BtForm), suffix) := by
+  cases base <;> cases bitReg <;>
+    simp [encodeBt, decodeBt, decodeBtNach, decodeBt0F,
+      decodeBtRegMem, btPref, rexBt, decodeBtRex, modrmMem, regHigh,
+      regLow, regCode, codeReg, byteNat, natByte,
+      opcOp_mod256, parseLe32_leBytes32]
+
+/-- Round trip for imm8 forms, over any suffix. -/
+theorem roundtripBtImm (op : BtOp) (w : BtWeite) (dst : Register)
+    (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeBt (encodeBt (.imm op w dst n) ++ suffix) =
+      some ((.imm op w dst n), suffix) := by
+  cases op <;> cases w <;> cases dst <;>
+    simp [encodeBt, decodeBt, decodeBtNach, decodeBt0F,
+      decodeBtGruppe, decodeBtRex, gruppeOp, opcOp, btPref, rexBt,
+      regHigh, regLow, regCode, codeReg, btGruppe, byteNat, natByte,
+      btImmByte n h]
+
+/-- Round trip for memory imm8 forms, over any suffix. -/
+theorem roundtripBtMemImm (op : BtOp) (w : BtWeite) (base : Register)
+    (d : BitVec 32) (n : Nat) (h : n < 256) (suffix : List Byte) :
+    decodeBt (encodeBt (.memImm op w base d n) ++ suffix) =
+      some ((.memImm op w base d n), suffix) := by
+  cases op <;> cases w <;> cases base <;>
+    simp [encodeBt, decodeBt, decodeBtNach, decodeBt0F,
+      decodeBtGruppe, decodeBtRex, gruppeOp, opcOp, btPref, rexBt,
+      regHigh, regLow, regCode, codeReg, btGruppe, byteNat, natByte,
+      btImmByte n h, parseLe32_leBytes32]
 
 end Gabbro.Grammatik.X86
