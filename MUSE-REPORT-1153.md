@@ -54,7 +54,50 @@ Theorems (all reuse accepted lemmas, nothing duplicated):
   unreadable toolchain `Grind` olean on the second); both cleared on
   retry with zero source changes -- apparatus, not the tree.
 
-## What remains open / what I believe is wrong or limited
+## Response to independent review 1154 (REPAIR-as-blocked)
+
+Review lane 1154 reports it could not read the candidate in its own
+clone (no `PipelineWide.lean`, no `muse/1153` ref there) and therefore
+discharged none of its checklist items; its REPAIR verdict is
+explicitly process-level, NOT a code finding against this
+deliverable. There are no code findings to resolve, and nothing is
+weakened in response.
+
+Self-verification of the review checklist inside this clone, against
+commit `62dc6e00` (this lane's candidate):
+- No `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`, no `intro _`
+  / `have _ :=`: content search over `PipelineWide.lean` finds only
+  the English word "admitted" in a CUTS comment.
+- `#print axioms` for every main theorem: at most
+  `[propext, Quot.sound]` (subset of the goal standard).
+- Owned files only: new `PipelineWide.lean`, one import line in
+  `Grammatik.lean`, this report. Optimiser files untouched, no
+  second IR or source interpreter.
+- Every theorem premise is used by its proof (checked by hand;
+  `wideSchritt` consumes both `hok` and `hg`; split byproducts are
+  context, not premises).
+- Six decided refusals plus a non-degenerate memory-changing
+  witness (`wideSelect_korrekt_zeuge`: word 10 read back at 8200,
+  initial byte 0, successors agreeing).
+- Silicon facts reused, not redefined (`kompaktWahl`,
+  `kernGleich`, step equations, `optRel_bind`, `cwZustand`);
+  `kanonP`/`laufW`/`lauf_cons`/`laufW_cons` are the documented
+  minimal bridges with no accepted counterpart to import
+  (compact runs exist nowhere else in the tree).
+- CUTS states exactly what is not proved (narrow/muldiv/shift/
+  SETcc/CMOVcc refused without lowering; source-`execBlock` leg
+  stays with the pilot pipeline; no compact fetch bridge; no TSO).
+
+Fresh full check: `./lean-bau` → `Build completed successfully
+(608 jobs)` (see below). Candidate availability in the reviewer
+clone is coordinator business; this lane changes no process and
+pushes nothing (HARD RULES: no push, no network).
+
+## Last `./lean-bau` result line (re-verified after review 1154)
+
+`Build completed successfully (608 jobs).`
+
+## What remains open / what I believe is wrong or limited (unchanged)
 
 - Narrow widths, multiply/divide, shifts, SETcc/CMOVcc have NO
   lowering here, only documented refusals in CUTS. This is honest
