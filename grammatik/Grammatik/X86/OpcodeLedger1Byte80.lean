@@ -254,7 +254,151 @@ def ledger80 : List LEintrag :=
     [natByte 72, natByte 131, natByte 240, natByte 5],
    L .rexW 131 (some 7) "CMP Gv,Ib" .modelliert "CompactForms"
     "register-direct aluImm8 only; memory ALU unmodelled" 5
-    [natByte 72, natByte 131, natByte 248, natByte 5]]
+    [natByte 72, natByte 131, natByte 248, natByte 5],
+   L .ohne 140 (some 0) "MOV Ev,Sreg-ES" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 140, natByte 192],
+   L .ohne 140 (some 1) "MOV Ev,Sreg-CS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 140, natByte 200],
+   L .ohne 140 (some 2) "MOV Ev,Sreg-SS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 140, natByte 208],
+   L .ohne 140 (some 3) "MOV Ev,Sreg-DS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 140, natByte 216],
+   L .ohne 140 (some 4) "MOV Ev,Sreg-FS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 140, natByte 224],
+   L .ohne 140 (some 5) "MOV Ev,Sreg-GS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 140, natByte 232],
+   L .ohne 140 (some 6) "MOV Ev,sreg-reserved" .ungueltig64 "keine"
+    "Table B-8 sreg3 110 reserved: do not use" 255
+    [natByte 140, natByte 240],
+   L .ohne 140 (some 7) "MOV Ev,sreg-reserved" .ungueltig64 "keine"
+    "Table B-8 sreg3 111 reserved: do not use" 255
+    [natByte 140, natByte 248],
+   L .ohne 142 (some 0) "MOV Sreg-ES,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 142, natByte 192],
+   L .ohne 142 (some 1) "MOV Sreg-CS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 142, natByte 200],
+   L .ohne 142 (some 2) "MOV Sreg-SS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 142, natByte 208],
+   L .ohne 142 (some 3) "MOV Sreg-DS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 142, natByte 216],
+   L .ohne 142 (some 4) "MOV Sreg-FS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 142, natByte 224],
+   L .ohne 142 (some 5) "MOV Sreg-GS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 142, natByte 232],
+   L .ohne 142 (some 6) "MOV sreg-reserved,Ev" .ungueltig64 "keine"
+    "Table B-8 sreg3 110 reserved: do not use" 255
+    [natByte 142, natByte 240],
+   L .ohne 142 (some 7) "MOV sreg-reserved,Ev" .ungueltig64 "keine"
+    "Table B-8 sreg3 111 reserved: do not use" 255
+    [natByte 142, natByte 248],
+   L .ohne 143 (some 0) "POP Ev" .fehlt "keine"
+    "common: callee-saved restores and stack cleanup; no family" 255
+    [natByte 143, natByte 192],
+   L .ohne 143 (some 1) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 143, natByte 200],
+   L .ohne 143 (some 2) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 143, natByte 208],
+   L .ohne 143 (some 3) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 143, natByte 216],
+   L .ohne 143 (some 4) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 143, natByte 224],
+   L .ohne 143 (some 5) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 143, natByte 232],
+   L .ohne 143 (some 6) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 143, natByte 240],
+   L .ohne 143 (some 7) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 143, natByte 248],
+   L .rexW 140 (some 0) "MOV Ev,Sreg-ES" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 140, natByte 192],
+   L .rexW 140 (some 1) "MOV Ev,Sreg-CS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 140, natByte 200],
+   L .rexW 140 (some 2) "MOV Ev,Sreg-SS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 140, natByte 208],
+   L .rexW 140 (some 3) "MOV Ev,Sreg-DS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 140, natByte 216],
+   L .rexW 140 (some 4) "MOV Ev,Sreg-FS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 140, natByte 224],
+   L .rexW 140 (some 5) "MOV Ev,Sreg-GS" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 140, natByte 232],
+   L .rexW 140 (some 6) "MOV Ev,sreg-reserved" .ungueltig64 "keine"
+    "Table B-8 sreg3 110 reserved: do not use" 255
+    [natByte 72, natByte 140, natByte 240],
+   L .rexW 140 (some 7) "MOV Ev,sreg-reserved" .ungueltig64 "keine"
+    "Table B-8 sreg3 111 reserved: do not use" 255
+    [natByte 72, natByte 140, natByte 248],
+   L .rexW 142 (some 0) "MOV Sreg-ES,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 142, natByte 192],
+   L .rexW 142 (some 1) "MOV Sreg-CS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 142, natByte 200],
+   L .rexW 142 (some 2) "MOV Sreg-SS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 142, natByte 208],
+   L .rexW 142 (some 3) "MOV Sreg-DS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 142, natByte 216],
+   L .rexW 142 (some 4) "MOV Sreg-FS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 142, natByte 224],
+   L .rexW 142 (some 5) "MOV Sreg-GS,Ev" .verweigert "keine"
+    "no segment-register state in the model; refused by design" 255
+    [natByte 72, natByte 142, natByte 232],
+   L .rexW 142 (some 6) "MOV sreg-reserved,Ev" .ungueltig64 "keine"
+    "Table B-8 sreg3 110 reserved: do not use" 255
+    [natByte 72, natByte 142, natByte 240],
+   L .rexW 142 (some 7) "MOV sreg-reserved,Ev" .ungueltig64 "keine"
+    "Table B-8 sreg3 111 reserved: do not use" 255
+    [natByte 72, natByte 142, natByte 248],
+   L .rexW 143 (some 0) "POP Ev" .fehlt "keine"
+    "common: callee-saved restores and stack cleanup; no family" 255
+    [natByte 72, natByte 143, natByte 192],
+   L .rexW 143 (some 1) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 72, natByte 143, natByte 200],
+   L .rexW 143 (some 2) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 72, natByte 143, natByte 208],
+   L .rexW 143 (some 3) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 72, natByte 143, natByte 216],
+   L .rexW 143 (some 4) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 72, natByte 143, natByte 224],
+   L .rexW 143 (some 5) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 72, natByte 143, natByte 232],
+   L .rexW 143 (some 6) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 72, natByte 143, natByte 240],
+   L .rexW 143 (some 7) "POP (reserved ext)" .ungueltig64 "keine"
+    "Appendix A Group 1A defines only /0 POP; POP lists 8F /0 only" 255
+    [natByte 72, natByte 143, natByte 248]]
 
 theorem t152o : kapFam [natByte 152] = 0 := by decide
 theorem t152w : kapFam [natByte 72, natByte 152] = 0 := by decide
@@ -322,6 +466,54 @@ theorem t131w4 : kapFam [natByte 72, natByte 131, natByte 224, natByte 5] = 5 :=
 theorem t131w5 : kapFam [natByte 72, natByte 131, natByte 232, natByte 5] = 5 := by decide
 theorem t131w6 : kapFam [natByte 72, natByte 131, natByte 240, natByte 5] = 5 := by decide
 theorem t131w7 : kapFam [natByte 72, natByte 131, natByte 248, natByte 5] = 5 := by decide
+theorem t140o0 : kapDecode [natByte 140, natByte 192] = none := by decide
+theorem t140o1 : kapDecode [natByte 140, natByte 200] = none := by decide
+theorem t140o2 : kapDecode [natByte 140, natByte 208] = none := by decide
+theorem t140o3 : kapDecode [natByte 140, natByte 216] = none := by decide
+theorem t140o4 : kapDecode [natByte 140, natByte 224] = none := by decide
+theorem t140o5 : kapDecode [natByte 140, natByte 232] = none := by decide
+theorem t140o6 : kapDecode [natByte 140, natByte 240] = none := by decide
+theorem t140o7 : kapDecode [natByte 140, natByte 248] = none := by decide
+theorem t142o0 : kapDecode [natByte 142, natByte 192] = none := by decide
+theorem t142o1 : kapDecode [natByte 142, natByte 200] = none := by decide
+theorem t142o2 : kapDecode [natByte 142, natByte 208] = none := by decide
+theorem t142o3 : kapDecode [natByte 142, natByte 216] = none := by decide
+theorem t142o4 : kapDecode [natByte 142, natByte 224] = none := by decide
+theorem t142o5 : kapDecode [natByte 142, natByte 232] = none := by decide
+theorem t142o6 : kapDecode [natByte 142, natByte 240] = none := by decide
+theorem t142o7 : kapDecode [natByte 142, natByte 248] = none := by decide
+theorem t143o0 : kapDecode [natByte 143, natByte 192] = none := by decide
+theorem t143o1 : kapDecode [natByte 143, natByte 200] = none := by decide
+theorem t143o2 : kapDecode [natByte 143, natByte 208] = none := by decide
+theorem t143o3 : kapDecode [natByte 143, natByte 216] = none := by decide
+theorem t143o4 : kapDecode [natByte 143, natByte 224] = none := by decide
+theorem t143o5 : kapDecode [natByte 143, natByte 232] = none := by decide
+theorem t143o6 : kapDecode [natByte 143, natByte 240] = none := by decide
+theorem t143o7 : kapDecode [natByte 143, natByte 248] = none := by decide
+theorem t140w0 : kapDecode [natByte 72, natByte 140, natByte 192] = none := by decide
+theorem t140w1 : kapDecode [natByte 72, natByte 140, natByte 200] = none := by decide
+theorem t140w2 : kapDecode [natByte 72, natByte 140, natByte 208] = none := by decide
+theorem t140w3 : kapDecode [natByte 72, natByte 140, natByte 216] = none := by decide
+theorem t140w4 : kapDecode [natByte 72, natByte 140, natByte 224] = none := by decide
+theorem t140w5 : kapDecode [natByte 72, natByte 140, natByte 232] = none := by decide
+theorem t140w6 : kapDecode [natByte 72, natByte 140, natByte 240] = none := by decide
+theorem t140w7 : kapDecode [natByte 72, natByte 140, natByte 248] = none := by decide
+theorem t142w0 : kapDecode [natByte 72, natByte 142, natByte 192] = none := by decide
+theorem t142w1 : kapDecode [natByte 72, natByte 142, natByte 200] = none := by decide
+theorem t142w2 : kapDecode [natByte 72, natByte 142, natByte 208] = none := by decide
+theorem t142w3 : kapDecode [natByte 72, natByte 142, natByte 216] = none := by decide
+theorem t142w4 : kapDecode [natByte 72, natByte 142, natByte 224] = none := by decide
+theorem t142w5 : kapDecode [natByte 72, natByte 142, natByte 232] = none := by decide
+theorem t142w6 : kapDecode [natByte 72, natByte 142, natByte 240] = none := by decide
+theorem t142w7 : kapDecode [natByte 72, natByte 142, natByte 248] = none := by decide
+theorem t143w0 : kapDecode [natByte 72, natByte 143, natByte 192] = none := by decide
+theorem t143w1 : kapDecode [natByte 72, natByte 143, natByte 200] = none := by decide
+theorem t143w2 : kapDecode [natByte 72, natByte 143, natByte 208] = none := by decide
+theorem t143w3 : kapDecode [natByte 72, natByte 143, natByte 216] = none := by decide
+theorem t143w4 : kapDecode [natByte 72, natByte 143, natByte 224] = none := by decide
+theorem t143w5 : kapDecode [natByte 72, natByte 143, natByte 232] = none := by decide
+theorem t143w6 : kapDecode [natByte 72, natByte 143, natByte 240] = none := by decide
+theorem t143w7 : kapDecode [natByte 72, natByte 143, natByte 248] = none := by decide
 
 /-! CUTS (skeleton): rows 98/99 only; 236 keys outstanding. -/
 #print axioms t152o
