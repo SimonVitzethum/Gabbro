@@ -249,4 +249,131 @@ theorem kap_tor_embedded (m m' : HwMaschine) (leaf1 : CpuOut)
     cases h with
     | tor _ _ _ hstep => exact hstep
 
+/-! ## 3. Refusals and the interrupt boundary.
+
+  DMA, fault-as-state-step, the ISA/addressed refusal events and bare
+  LOCK requests admit nothing: each cites its accepted refusal. Async
+  interrupt delivery is not a closed `HwMaschine` step (the machine
+  stores no IDT/TSS/IF state); its sync side embeds exactly through
+  the accepted extended machine. -/
+
+/-- What is NOT admitted stays refused. -/
+theorem kap_verweigert :
+    (∀ (m : HwMaschine) (c : Nat) (e : HwDev1133.DmaZugriff1133),
+      HwDev1133.adapterDma1133.schritt m c e = none) ∧
+    (∀ (m : HwMaschine) (c : Nat) (f : PrioritaetsFehler),
+      adapterFehler1123.schritt m c f = none) ∧
+    (∀ (m : HwMaschine) (c : Nat),
+      adapterIsa.schritt m c .verweigert = none) ∧
+    (∀ (m : HwMaschine) (c : Nat),
+      adapterAddr.schritt m c .verweigert = none) ∧
+    (∀ (m : HwMaschine) (c : Nat) (b : SperrBefehl),
+      hwLockAnfrage m c b = none) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro m c e
+    exact HwDev1133.adapterDma1133_verweigert m c e
+  · intro m c f
+    exact adapterFehler1123_verweigert m c f
+  · intro m c
+    exact adapterIsa_verweigert m c
+  · intro m c
+    exact adapterAddr_verweigert m c
+  · intro m c b
+    exact hwLock_verweigert m c b
+
+/-- Interrupts: the sync side embeds exactly through the union base.
+    Async delivery needs the extended control machine and is no closed
+    union step (see CUTS). -/
+theorem kap_interrupt_sync (s s' : HwIntMaschine) (e : HwEreignis)
+    (h : HwIntSchritt s s' (IntEreignis.syncEv e)) :
+    ∃ m', s'.hw = m' ∧ s'.steuer = s.steuer ∧
+      HwVollSchritt s.hw m' (KapEreignis.basis e) := by
+  obtain ⟨m', hm1, hm2, hstep⟩ := hwIntSchritt_sync_nur s s' e h
+  exact ⟨m', hm1, hm2, (kap_basis_embedded s.hw m' e).mp hstep⟩
+
+/-! ## 4. Disjointness: no family shadows another.
+
+  Union tags are pairwise distinct by construction (one number per
+  family); on bytes, the width dispatcher defers to the unified chain
+  wherever it accepts (the accepted priority lemma, lifted). -/
+
+/-- Union tag: one number per family. -/
+def kapTag : KapEreignis → Nat
+  | .basis _ => 0
+  | .lockRmw _ _ => 1
+  | .wort _ _ => 2
+  | .stapel _ _ => 3
+  | .isa _ _ => 4
+  | .addr _ _ => 5
+  | .muldiv _ _ => 6
+  | .lockFetch _ _ => 7
+  | .uc _ _ => 8
+  | .port _ _ => 9
+  | .fp _ => 10
+  | .fehler _ => 11
+  | .tor _ _ _ => 12
+
+/-- The base tag never coincides with a family tag: no family shadows
+    the coherent base, and families are pairwise distinct by the same
+    tag argument (see CUTS for the byte-decoder side). -/
+theorem kap_tags_disjoint :
+    (∀ (e : HwEreignis) (c : Nat) (a : LockAnweisung),
+      KapEreignis.basis e ≠ KapEreignis.lockRmw c a) ∧
+    (∀ (e : HwEreignis) (c : Nat) (w : HwWortZugriff),
+      KapEreignis.basis e ≠ KapEreignis.wort c w) ∧
+    (∀ (e : HwEreignis) (c : Nat) (s : StapelEreignis),
+      KapEreignis.basis e ≠ KapEreignis.stapel c s) ∧
+    (∀ (e : HwEreignis) (c : Nat) (i : IsaEreignis),
+      KapEreignis.basis e ≠ KapEreignis.isa c i) ∧
+    (∀ (e : HwEreignis) (c : Nat) (a : HwAddrEreignis),
+      KapEreignis.basis e ≠ KapEreignis.addr c a) ∧
+    (∀ (e : HwEreignis) (c : Nat) (d : WdDecodiert),
+      KapEreignis.basis e ≠ KapEreignis.muldiv c d) ∧
+    (∀ (e : HwEreignis) (c : Nat) (u : Unit),
+      KapEreignis.basis e ≠ KapEreignis.lockFetch c u) ∧
+    (∀ (e : HwEreignis) (c : Nat) (u : HwDev1133.UcZugriff1133),
+      KapEreignis.basis e ≠ KapEreignis.uc c u) ∧
+    (∀ (e : HwEreignis) (c : Nat) (p : HwDev1133.PortZugriff1133),
+      KapEreignis.basis e ≠ KapEreignis.port c p) ∧
+    (∀ (e : HwEreignis) (f : FpCtrlEreignis),
+      KapEreignis.basis e ≠ KapEreignis.fp f) ∧
+    (∀ (e : HwEreignis) (f : HwFehlerEreignis),
+      KapEreignis.basis e ≠ KapEreignis.fehler f) ∧
+    (∀ (e : HwEreignis) (leaf1 : CpuOut) (xcrLo : BitVec 32)
+      (t : HwTorEreignis),
+      KapEreignis.basis e ≠ KapEreignis.tor leaf1 xcrLo t) := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro e c a h
+    cases h
+  · intro e c w h
+    cases h
+  · intro e c s h
+    cases h
+  · intro e c i h
+    cases h
+  · intro e c a h
+    cases h
+  · intro e c d h
+    cases h
+  · intro e c u h
+    cases h
+  · intro e c u h
+    cases h
+  · intro e c p h
+    cases h
+  · intro e f h
+    cases h
+  · intro e f h
+    cases h
+  · intro e leaf1 xcrLo t h
+    cases h
+
+/-- Byte-decoder priority, lifted: wherever the unified chain accepts,
+    the width dispatcher answers the unified form -- no pilot or
+    extension form is shadowed by the width arm. -/
+theorem kap_decode_prioritaet (bs : List Byte) (i : ExtInstr)
+    (rest : List Byte) (h : decodeExt bs = some (i, rest)) :
+    decodeMulDivWidth bs = some (.ext i, rest) :=
+  decodeMulDivWidth_prefers_ext bs i rest h
+
 end Gabbro.Grammatik.X86
