@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 18:00 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 18:01 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -654,7 +654,7 @@ Last ledger refresh: **2026-10-05 18:00 UTC**. This is an operational snapshot, 
 | 1191 | Pipeline: spill code generation with privacy | Merged after review/checks | 1192: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1191.md) |
 | 1193 | Linking: multi-unit convergence and operand kinds | Merged after review/checks | 1194: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1193.md) |
 | 1195 | Pipeline: block-size induction over multi-statement blocks | Merged after review/checks | 1196: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1195.md) |
-| 1197 | Pipeline: block-level table reads and scaled-index addressing | Incomplete; preserved | 1198: scheduled | [task](lanes/1197.md) |
+| 1197 | Pipeline: block-level table reads and scaled-index addressing | Agent working | 1198: scheduled | [task](lanes/1197.md) |
 | 1199 | Pipeline: loaded-image correctness for spill, call, table, float and work fragments | Merged after review/checks | 1200: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1199.md) |
 | 1201 | Pipeline float: NaN payload and bit-exact agreement | Merged after review/checks | 1202: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1201.md) |
 | 1203 | Pipeline atomics: register-address binding, fences, word-install proof | Merged after review/checks | 1204: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1203.md) |
@@ -699,7 +699,7 @@ Last ledger refresh: **2026-10-05 18:00 UTC**. This is an operational snapshot, 
 | 1281 | Sign-extend-accumulator ops and register XCHG | Agent working | 1282: Committed candidate; review/integration pending | [task](lanes/1281.md) |
 | 1283 | Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code | Merged after review/checks | 1284: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1283.md) |
 | 1285 | FS/GS segment bases and the TLB | Merged after review/checks | 1286: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1285.md) |
-| 1287 | Memory types WC, WT, WP and the cache-control instructions | Committed candidate; review/integration pending | 1288: Committed candidate; review/integration pending | [task](lanes/1287.md) |
+| 1287 | Memory types WC, WT, WP and the cache-control instructions | Merged after review/checks | 1288: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1287.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1667,6 +1667,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1248**, Independent exact review of 1247, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1248.md). <!-- x86-merged:1248 -->
 - 2026-10-05: lane **1283**, Paging: 4-level page walk, permission bits, accessed/dirty, #PF error code, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1283.md). <!-- x86-merged:1283 -->
 - 2026-10-05: lane **1284**, Independent exact review of 1283, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1284.md). <!-- x86-merged:1284 -->
+- 2026-10-05: lane **1287**, Memory types WC, WT, WP and the cache-control instructions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1287.md). <!-- x86-merged:1287 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references

@@ -676,3 +676,4 @@ import Grammatik.X86.HwSegTlb
 import Grammatik.X86.HwKapstein
 import Grammatik.X86.HwContextState
 import Grammatik.X86.HwPaging
+import Grammatik.X86.HwMemTypesWC
