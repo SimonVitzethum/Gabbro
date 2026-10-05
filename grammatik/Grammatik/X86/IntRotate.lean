@@ -868,8 +868,151 @@ theorem rcr_rcl_inverse (b : Breite) (x : Wort) (cf : Bool) (c : Nat) :
     have e0 : (decide ((false.toNat : Nat) = 1)) = false := rfl
     rw [e0, trunc_ofNat_toNat b x]
 
-/- CUTS (checkpoint: value core only):
-    Proved here: rotate operation digits, Nat value core for ROL/ROR
+/-! ## 5. Flag effects: CF pinned, OF at masked count one, rest kept.
+
+    CF is the last bit rotated out (ROL: the wrapped low bit, ROR:
+    the sign bit, RCL and RCR: the new carry). OF is defined only
+    for a masked count of one and stays free otherwise (the `getD`
+    idiom of `schiebErlaubt`, never invented false). SF, ZF, AF and
+    PF are unaffected (kept from the incoming snapshot), and a zero
+    effective count changes no flag at all. The executable snapshot
+    keeps the incoming OF bit where the architecture leaves it
+    undefined (one admissible member, documented, not hardware
+    truth). -/
+
+/-- Defined rotate evidence: value, carry out, optional overflow. -/
+structure RotNachweis where
+  ergebnis : Wort
+  trag : Bool
+  ueberlauf : Option Bool
+
+/-- Defined evidence of one rotate: value from §1 and §4, carry out,
+    overflow exactly at a masked count of one. -/
+def rotNachweis (o : RotOp) (b : Breite) (x : Wort) (cfAlt : Bool)
+    (c : Nat) : RotNachweis :=
+  match o with
+  | .rol =>
+    let r := rolB b x c
+    let cf := r.toNat.testBit 0
+    ⟨r, cf, if rotMaske b c = 1 then some (negB b r != cf) else none⟩
+  | .ror =>
+    let r := rorB b x c
+    let cf := negB b r
+    ⟨r, cf, if rotMaske b c = 1 then
+      some (negB b r != r.toNat.testBit (b.bits - 2)) else none⟩
+  | .rcl =>
+    let p := rclB b x cfAlt c
+    ⟨p.1, p.2, if rotMaske b c = 1 then some (negB b p.1 != p.2)
+      else none⟩
+  | .rcr =>
+    let p := rcrB b x cfAlt c
+    ⟨p.1, p.2, if rotMaske b c = 1 then some (negB b x != p.2)
+      else none⟩
+
+/-- The evidence carries the §1 and §4 value. -/
+theorem rotNachweis_wert (o : RotOp) (b : Breite) (x : Wort)
+    (cfAlt : Bool) (c : Nat) :
+    (match o with
+      | .rol => (rotNachweis .rol b x cfAlt c).ergebnis = rolB b x c
+      | .ror => (rotNachweis .ror b x cfAlt c).ergebnis = rorB b x c
+      | .rcl => (rotNachweis .rcl b x cfAlt c).ergebnis = (rclB b x cfAlt c).1
+      | .rcr => (rotNachweis .rcr b x cfAlt c).ergebnis = (rcrB b x cfAlt c).1) := by
+  cases o <;> rfl
+
+/-- Overflow evidence is defined exactly at a masked count of one. -/
+theorem rotNachweis_ueberlauf (o : RotOp) (b : Breite) (x : Wort)
+    (cfAlt : Bool) (c : Nat) :
+    (rotMaske b c = 1 →
+      (rotNachweis o b x cfAlt c).ueberlauf ≠ none) ∧
+    (rotMaske b c ≠ 1 →
+      (rotNachweis o b x cfAlt c).ueberlauf = none) := by
+  cases o with
+  | rol =>
+    unfold rotNachweis
+    constructor <;> intro hcond <;> simp [hcond]
+  | ror =>
+    unfold rotNachweis
+    constructor <;> intro hcond <;> simp [hcond]
+  | rcl =>
+    unfold rotNachweis
+    constructor <;> intro hcond <;> simp [hcond]
+  | rcr =>
+    unfold rotNachweis
+    constructor <;> intro hcond <;> simp [hcond]
+
+/-- A zero effective count rotates nothing (per operation kind). -/
+def rotLeer (o : RotOp) (b : Breite) (c : Nat) : Bool :=
+  match o with
+  | .rol | .ror => decide (rotEff b c = 0)
+  | .rcl | .rcr => decide (rclEff b c = 0)
+
+/-- Validity of a rotate flag snapshot against the incoming flags:
+    a zero effective count keeps every flag; otherwise CF is pinned
+    to the evidence, SF, ZF, AF and PF are kept, and OF is pinned
+    exactly at a masked count of one (free otherwise). -/
+def RotGueltig (o : RotOp) (b : Breite) (n : RotNachweis) (c : Nat)
+    (vor nach : Flags) : Prop :=
+  if rotLeer o b c then nach = vor
+  else nach.cf = n.trag ∧ nach.sf = vor.sf ∧ nach.zf = vor.zf ∧
+    nach.af = vor.af ∧ nach.pf = vor.pf ∧
+    (rotMaske b c = 1 → nach.of = n.ueberlauf.getD nach.of) ∧
+    (n.ueberlauf = none → rotMaske b c ≠ 1)
+
+/-- The executable flag snapshot: nothing on a zero count, else the
+    evidence with the incoming OF bit where undefined. -/
+def rotFlags (o : RotOp) (b : Breite) (x : Wort) (cfAlt : Bool)
+    (vor : Flags) (c : Nat) : Flags :=
+  if rotLeer o b c then vor
+  else
+    let n := rotNachweis o b x cfAlt c
+    { cf := n.trag, pf := vor.pf, af := vor.af, zf := vor.zf,
+      sf := vor.sf, of := n.ueberlauf.getD vor.of }
+
+/-- A zero effective count keeps every flag. -/
+theorem rotFlags_null (o : RotOp) (b : Breite) (x : Wort)
+    (cfAlt : Bool) (vor : Flags) (c : Nat) (h : rotLeer o b c = true) :
+    rotFlags o b x cfAlt vor c = vor := by
+  unfold rotFlags
+  rw [if_pos h]
+
+/-- The snapshot satisfies its validity relation. -/
+theorem rotFlags_gueltig (o : RotOp) (b : Breite) (x : Wort)
+    (cfAlt : Bool) (vor : Flags) (c : Nat) :
+    RotGueltig o b (rotNachweis o b x cfAlt c) c vor
+      (rotFlags o b x cfAlt vor c) := by
+  unfold RotGueltig rotFlags
+  by_cases hleer : rotLeer o b c = true
+  · rw [if_pos hleer, if_pos hleer]
+  · rw [if_neg hleer, if_neg hleer]
+    have hue := rotNachweis_ueberlauf o b x cfAlt c
+    refine ⟨rfl, rfl, rfl, rfl, rfl, ?_, ?_⟩
+    · intro h1
+      have hne : (rotNachweis o b x cfAlt c).ueberlauf ≠ none :=
+        hue.1 h1
+      cases hueb : (rotNachweis o b x cfAlt c).ueberlauf with
+      | some v =>
+        simp only [hueb, Option.getD_some]
+      | none => exact absurd hueb hne
+    · intro hnone hcon
+      exact hue.1 hcon hnone
+
+/-- Pinned flag snapshots: ROL carries the wrapped bit out with the
+    sign-change overflow, ROR carries the sign out, RCL and RCR carry
+    the new through-carry with their one-count overflow rows. -/
+theorem probe_rot_flags :
+    (rotNachweis .rol .b8 0x81 false 1).trag = true ∧
+    (rotNachweis .rol .b8 0x81 false 1).ueberlauf = some true ∧
+    (rotNachweis .ror .b8 0x01 false 1).trag = true ∧
+    (rotNachweis .ror .b8 0x01 false 1).ueberlauf = some true ∧
+    (rotNachweis .rcl .b8 0xFF true 1).trag = true ∧
+    (rotNachweis .rcl .b8 0xFF true 1).ueberlauf = some false ∧
+    (rotNachweis .rcr .b8 0x01 false 1).trag = true ∧
+    (rotNachweis .rcr .b8 0x01 false 1).ueberlauf = some true ∧
+    (rotNachweis .rol .b8 0x81 false 2).ueberlauf = none ∧
+    rotFlags .rol .b8 0x81 false zeugeFlags 0 = zeugeFlags := by
+  decide
+
+/- CUTS (checkpoint: value core only):    Proved here: rotate operation digits, Nat value core for ROL/ROR
     and RCL/RCR with architectural count masking, single-step
     inverses in both directions, and pinned values.
     NOT proved here, and not claimed:
