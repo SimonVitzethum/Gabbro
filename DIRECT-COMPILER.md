@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-05 11:08 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-05 11:13 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -619,7 +619,7 @@ Last ledger refresh: **2026-10-05 11:08 UTC**. This is an operational snapshot, 
 | 1121 | Addressed loads/stores of all widths through TSO | Merged after review/checks | 1122: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1121.md) |
 | 1123 | Architectural faults as outcomes of the coherent machine | Merged after review/checks | 1124: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1123.md) |
 | 1125 | Asynchronous interrupt delivery on the coherent machine | Agent working | 1126: scheduled | [task](lanes/1125.md) |
-| 1127 | Multiply/divide and narrow widths connected | Agent working | 1128: scheduled | [task](lanes/1127.md) |
+| 1127 | Multiply/divide and narrow widths connected | Committed candidate; review/integration pending | 1128: Agent working | [task](lanes/1127.md) |
 | 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Agent working | 1130: scheduled | [task](lanes/1129.md) |
 | 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Agent working | 1132: scheduled | [task](lanes/1131.md) |
 | 1133 | Device/MMIO and memory types on the coherent machine | Incomplete; preserved | 1134: scheduled | [task](lanes/1133.md) |
@@ -1398,6 +1398,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1121**, Addressed loads/stores of all widths through TSO, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1121.md). <!-- x86-merged:1121 -->
 - 2026-10-05: checked master `983a292b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:983a292b0cc5b60bd80186e71d1d5bba6b1ab3b6 -->
 - 2026-10-05: lane **1122**, Independent exact review of 1121, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1122.md). <!-- x86-merged:1122 -->
+- 2026-10-05: publication batch checks passed for `d0be108c`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 <!-- X86-HISTORY -->
 
 ## Detailed references
