@@ -108,3 +108,16 @@ coordinator's `muse-merge.sh` fetch path. Re-verified green after the
 review: `./lean-probe` 0 errors, axioms at most
 `propext, Classical.choice, Quot.sound`; prior `./lean-bau` green at
 641 jobs on this exact tree.
+
+## Second identical finding (new pin 875988f0)
+
+The follow-up 1228 review pins the new head
+`875988f01065ed5f6c320e170023e31ace131a74` and reports the same
+`bad object` in reviewer clone a1228, again with no content check and
+no defect identified in the deliverable. Verified: branch `muse/1227`,
+HEAD is exactly the new pin, tree clean; both pins (`638654c2`,
+`875988f0`) exist in this clone with the full three-file content.
+Same standing repair as above: cross-clone transfer is outside this
+lane's permissions (HARD RULES rule 1); the candidate stays intact and
+fetchable here via the coordinator's `muse-merge.sh` fetch path. No
+Lean content changed.
