@@ -1554,6 +1554,457 @@ theorem avx2Drain_teilt16 (s s1 : TSOZustand) (c : Nat)
         · exact avx2Chunk_disjunkt a hno 1 2
             (by decide) (by decide) (by decide) k' k hk' hk)
 
+/-! ## 12. Events, plugs and adapter on the coherent machine.
+
+  The family's event type carries the checked CPU/XCR0/control
+  inputs plus the named profile, so every plug checks them per
+  step, never assuming them. Store values are handed to the plug
+  (YMM register-file binding stays with the State lane); loads are
+  state-unchanged observations. -/
+
+/-- AVX2 memory family events on the coherent machine: TSO stores
+    of whole YMM words, TSO load observations, the old machine
+    events, and explicit refusal. -/
+inductive Avx2MemEreignis where
+  | hwAlt : HwEreignis → Avx2MemEreignis
+  | speichere : Nat → CpuMerkmal → Xcr0Bild → KontrollBild →
+      Avx2Profil → Avx2MemForm → Register → BitVec 32 →
+      Avx2Vektor → Avx2MemEreignis
+  | lade : Nat → CpuMerkmal → Xcr0Bild → KontrollBild → Avx2Profil →
+      Avx2MemForm → Register → BitVec 32 → Avx2MemEreignis
+  | verweigert : Nat → Avx2MemEreignis
+  deriving DecidableEq, Repr
+
+/-- Machine YMM store: gates (named profile, AVX readiness, `#GP`
+    alignment for the `ausgerichtet` shape) then thirty-two buffered
+    TSO byte issues of the handed value. Canonical memory is
+    unchanged (buffer only); no direct memory effect is ever
+    substituted. -/
+def avx2SpeicherSchritt (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (x : Xcr0Bild) (k : KontrollBild) (p : Avx2Profil)
+    (f : Avx2MemForm) (base : Register) (disp : BitVec 32)
+    (v : Avx2Vektor) : Option HwMaschine :=
+  match avx2MemZugelassen m.hw (m.bereit c) cpu x k p with
+  | true =>
+    if avx2GpFehler (effAddr (projZustand m c) base disp) f then none
+    else
+      match avx2Speichern (tsoAnsicht m) c
+          (effAddr (projZustand m c) base disp) v with
+      | some s' => some (setTso m s')
+      | none => none
+  | false => none
+
+/-- Machine YMM load: gates as above, then thirty-two TSO byte
+    observations with forwarding; the observation succeeds exactly
+    where `avx2Laden` succeeds. Memory and buffers are kept. -/
+def avx2LadeSchritt (m : HwMaschine) (c : Nat) (cpu : CpuMerkmal)
+    (x : Xcr0Bild) (k : KontrollBild) (p : Avx2Profil)
+    (f : Avx2MemForm) (base : Register) (disp : BitVec 32) :
+    Option HwMaschine :=
+  match avx2MemZugelassen m.hw (m.bereit c) cpu x k p with
+  | true =>
+    if avx2GpFehler (effAddr (projZustand m c) base disp) f then none
+    else
+      match avx2Laden (tsoAnsicht m) c
+          (effAddr (projZustand m c) base disp) with
+      | some _ => some m
+      | none => none
+  | false => none
+
+/-- The AVX2 memory producer plug: stores through the issue fold,
+    loads through the observation, everything else refused. A
+    mismatched core is refused, never rerouted. -/
+def adapterAvx2Mem : HwAdapter Avx2MemEreignis :=
+  ⟨fun m c e => match e with
+    | .speichere c' cpu x k p f base disp v =>
+      if c' = c then avx2SpeicherSchritt m c cpu x k p f base disp v
+      else none
+    | .lade c' cpu x k p f base disp =>
+      if c' = c then avx2LadeSchritt m c cpu x k p f base disp
+      else none
+    | _ => none⟩
+
+/-- The adapter refuses old events: nothing is admitted silently. -/
+theorem adapterAvx2Mem_verweigert_alt (m : HwMaschine) (c : Nat)
+    (e : HwEreignis) :
+    adapterAvx2Mem.schritt m c (.hwAlt e) = none := rfl
+
+/-- The adapter refuses bare refusals. -/
+theorem adapterAvx2Mem_verweigert_fehler (m : HwMaschine) (c d : Nat) :
+    adapterAvx2Mem.schritt m c (.verweigert d) = none := rfl
+
+/-- A mismatched core is refused on the store path, never rerouted. -/
+theorem adapterAvx2Mem_fremder_kern_speichere (m : HwMaschine)
+    (c c' : Nat) (cpu : CpuMerkmal) (x : Xcr0Bild)
+    (k : KontrollBild) (p : Avx2Profil) (f : Avx2MemForm)
+    (base : Register) (disp : BitVec 32) (v : Avx2Vektor)
+    (hne : c' ≠ c) :
+    adapterAvx2Mem.schritt m c
+      (.speichere c' cpu x k p f base disp v) = none := by
+  show (if c' = c then
+    avx2SpeicherSchritt m c cpu x k p f base disp v else none) = none
+  exact if_neg hne
+
+/-- A mismatched core is refused on the load path. -/
+theorem adapterAvx2Mem_fremder_kern_lade (m : HwMaschine)
+    (c c' : Nat) (cpu : CpuMerkmal) (x : Xcr0Bild)
+    (k : KontrollBild) (p : Avx2Profil) (f : Avx2MemForm)
+    (base : Register) (disp : BitVec 32) (hne : c' ≠ c) :
+    adapterAvx2Mem.schritt m c
+      (.lade c' cpu x k p f base disp) = none := by
+  show (if c' = c then avx2LadeSchritt m c cpu x k p f base disp
+    else none) = none
+  exact if_neg hne
+
+/-- On its own core the adapter IS the store plug. -/
+theorem adapterAvx2Mem_speichere (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (f : Avx2MemForm) (base : Register)
+    (disp : BitVec 32) (v : Avx2Vektor) :
+    adapterAvx2Mem.schritt m c
+      (.speichere c cpu x k p f base disp v) =
+      avx2SpeicherSchritt m c cpu x k p f base disp v := by
+  show (if c = c then avx2SpeicherSchritt m c cpu x k p f base disp v
+    else none) = _
+  rw [if_pos rfl]
+
+/-- On its own core the adapter IS the load plug. -/
+theorem adapterAvx2Mem_lade (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (f : Avx2MemForm) (base : Register)
+    (disp : BitVec 32) :
+    adapterAvx2Mem.schritt m c (.lade c cpu x k p f base disp) =
+      avx2LadeSchritt m c cpu x k p f base disp := by
+  show (if c = c then avx2LadeSchritt m c cpu x k p f base disp
+    else none) = _
+  rw [if_pos rfl]
+
+/-! ## 13. The extended step relation: old steps plus YMM rows.
+
+  The old coherent steps embed exactly (`alt`, with projection
+  back); the two aligned/unaligned TSO stores and the two TSO load
+  observations join them, plus explicit gate refusal. -/
+
+/-- The extended step relation: the old coherent steps exactly
+    (`alt`), the aligned/unaligned TSO stores (`speichereA`/
+    `speichereU`), the aligned/unaligned TSO load observations
+    (`ladeA`/`ladeU`, state unchanged), and explicit gate refusal
+    (`fehler`). -/
+inductive HwAvx2Schritt :
+    HwMaschine → HwMaschine → Avx2MemEreignis → Prop where
+  | alt {m m' : HwMaschine} {e : HwEreignis} (h : HwSchritt m m' e) :
+      HwAvx2Schritt m m' (.hwAlt e)
+  | speichereA {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {x : Xcr0Bild} {k : KontrollBild} {p : Avx2Profil}
+      {base : Register} {disp : BitVec 32} {v : Avx2Vektor}
+      {s' : TSOZustand}
+      (hgate : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = true)
+      (hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+        .ausgerichtet = false)
+      (hwr : avx2Speichern (tsoAnsicht m) c
+        (effAddr (projZustand m c) base disp) v = some s') :
+      HwAvx2Schritt m (setTso m s')
+        (.speichere c cpu x k p .ausgerichtet base disp v)
+  | speichereU {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {x : Xcr0Bild} {k : KontrollBild} {p : Avx2Profil}
+      {base : Register} {disp : BitVec 32} {v : Avx2Vektor}
+      {s' : TSOZustand}
+      (hgate : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = true)
+      (hwr : avx2Speichern (tsoAnsicht m) c
+        (effAddr (projZustand m c) base disp) v = some s') :
+      HwAvx2Schritt m (setTso m s')
+        (.speichere c cpu x k p .unausgerichtet base disp v)
+  | ladeA {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {x : Xcr0Bild} {k : KontrollBild} {p : Avx2Profil}
+      {base : Register} {disp : BitVec 32} {v : Avx2Vektor}
+      (hgate : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = true)
+      (hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+        .ausgerichtet = false)
+      (hread : avx2Laden (tsoAnsicht m) c
+        (effAddr (projZustand m c) base disp) = some v) :
+      HwAvx2Schritt m m
+        (.lade c cpu x k p .ausgerichtet base disp)
+  | ladeU {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {x : Xcr0Bild} {k : KontrollBild} {p : Avx2Profil}
+      {base : Register} {disp : BitVec 32} {v : Avx2Vektor}
+      (hgate : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = true)
+      (hread : avx2Laden (tsoAnsicht m) c
+        (effAddr (projZustand m c) base disp) = some v) :
+      HwAvx2Schritt m m
+        (.lade c cpu x k p .unausgerichtet base disp)
+  | fehler {m : HwMaschine} {c : Nat} {cpu : CpuMerkmal}
+      {x : Xcr0Bild} {k : KontrollBild} {p : Avx2Profil}
+      (h : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = false) :
+      HwAvx2Schritt m m (.verweigert c)
+
+/-- Every extended step preserves well-formedness: memory/buffer
+    updates leave the checked profiles untouched, observations and
+    refusals change nothing. -/
+theorem hwAvx2Schritt_wf (m m' : HwMaschine) (e : Avx2MemEreignis)
+    (h : HwAvx2Schritt m m' e) (hwf : HwWf m) : HwWf m' := by
+  cases h with
+  | alt h => exact hwSchritt_wf _ _ _ h hwf
+  | speichereA hgate hgp hwr => exact setTso_wf _ _ hwf
+  | speichereU hgate hwr => exact setTso_wf _ _ hwf
+  | ladeA hgate hgp hread => exact hwf
+  | ladeU hgate hread => exact hwf
+  | fehler h => exact hwf
+
+/-- Exact embedding: every old coherent step is an extended step. -/
+theorem hwAvx2Schritt_einbettet (m m' : HwMaschine) (e : HwEreignis)
+    (h : HwSchritt m m' e) : HwAvx2Schritt m m' (.hwAlt e) :=
+  .alt h
+
+/-- Exact projection: an embedded step is the old step back. -/
+theorem hwAvx2Schritt_projiziert (m m' : HwMaschine) (e : HwEreignis)
+    (h : HwAvx2Schritt m m' (.hwAlt e)) : HwSchritt m m' e := by
+  cases h with
+  | alt h => exact h
+
+/-- A successful machine store IS an extended step: the equation
+    unfolds to the structured premises. -/
+theorem avx2Speichere_ist_schritt (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (f : Avx2MemForm) (base : Register)
+    (disp : BitVec 32) (v : Avx2Vektor) (m' : HwMaschine)
+    (h : avx2SpeicherSchritt m c cpu x k p f base disp v =
+      some m') :
+    HwAvx2Schritt m m' (.speichere c cpu x k p f base disp v) := by
+  unfold avx2SpeicherSchritt at h
+  cases hf : f with
+  | ausgerichtet =>
+    rw [hf] at h
+    cases hg : avx2MemZugelassen m.hw (m.bereit c) cpu x k p with
+    | false =>
+      rw [hg] at h
+      dsimp only at h
+      cases h
+    | true =>
+      rw [hg] at h
+      dsimp only at h
+      cases hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+          .ausgerichtet with
+      | true =>
+        rw [if_pos hgp] at h
+        cases h
+      | false =>
+        have hneg : ¬ avx2GpFehler (effAddr (projZustand m c) base disp)
+            .ausgerichtet = true := by
+          simp [hgp]
+        rw [if_neg hneg] at h
+        cases hwr : avx2Speichern (tsoAnsicht m) c
+            (effAddr (projZustand m c) base disp) v with
+        | none =>
+          rw [hwr] at h
+          dsimp only at h
+          cases h
+        | some s' =>
+          rw [hwr] at h
+          dsimp only at h
+          obtain rfl := Option.some_inj.mp h
+          exact .speichereA hg hgp hwr
+  | unausgerichtet =>
+    rw [hf] at h
+    cases hg : avx2MemZugelassen m.hw (m.bereit c) cpu x k p with
+    | false =>
+      rw [hg] at h
+      dsimp only at h
+      cases h
+    | true =>
+      rw [hg] at h
+      dsimp only at h
+      have hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+          .unausgerichtet = false :=
+        avx2Gp_nie_unausgerichtet _
+      have hneg : ¬ avx2GpFehler (effAddr (projZustand m c) base disp)
+          .unausgerichtet = true := by
+        simp [hgp]
+      rw [if_neg hneg] at h
+      cases hwr : avx2Speichern (tsoAnsicht m) c
+          (effAddr (projZustand m c) base disp) v with
+      | none =>
+        rw [hwr] at h
+        dsimp only at h
+        cases h
+        | some s' =>
+          rw [hwr] at h
+          dsimp only at h
+          obtain rfl := Option.some_inj.mp h
+          exact .speichereU hg hwr
+
+/-- A successful machine load IS an extended step. -/
+theorem avx2Lade_ist_schritt (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (f : Avx2MemForm) (base : Register)
+    (disp : BitVec 32) (m' : HwMaschine)
+    (h : avx2LadeSchritt m c cpu x k p f base disp = some m') :
+    HwAvx2Schritt m m' (.lade c cpu x k p f base disp) := by
+  unfold avx2LadeSchritt at h
+  cases hf : f with
+  | ausgerichtet =>
+    rw [hf] at h
+    cases hg : avx2MemZugelassen m.hw (m.bereit c) cpu x k p with
+    | false =>
+      rw [hg] at h
+      dsimp only at h
+      cases h
+    | true =>
+      rw [hg] at h
+      dsimp only at h
+      cases hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+          .ausgerichtet with
+      | true =>
+        rw [if_pos hgp] at h
+        cases h
+      | false =>
+        have hneg : ¬ avx2GpFehler (effAddr (projZustand m c) base disp)
+            .ausgerichtet = true := by
+          simp [hgp]
+        rw [if_neg hneg] at h
+        cases hrd : avx2Laden (tsoAnsicht m) c
+            (effAddr (projZustand m c) base disp) with
+        | none =>
+          rw [hrd] at h
+          dsimp only at h
+          cases h
+        | some v =>
+          rw [hrd] at h
+          dsimp only at h
+          obtain rfl := Option.some_inj.mp h
+          exact .ladeA hg hgp hrd
+  | unausgerichtet =>
+    rw [hf] at h
+    cases hg : avx2MemZugelassen m.hw (m.bereit c) cpu x k p with
+    | false =>
+      rw [hg] at h
+      dsimp only at h
+      cases h
+    | true =>
+      rw [hg] at h
+      dsimp only at h
+      have hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+          .unausgerichtet = false :=
+        avx2Gp_nie_unausgerichtet _
+      have hneg : ¬ avx2GpFehler (effAddr (projZustand m c) base disp)
+          .unausgerichtet = true := by
+        simp [hgp]
+      rw [if_neg hneg] at h
+      cases hrd : avx2Laden (tsoAnsicht m) c
+          (effAddr (projZustand m c) base disp) with
+      | none =>
+        rw [hrd] at h
+        dsimp only at h
+        cases h
+      | some v =>
+        rw [hrd] at h
+        dsimp only at h
+        obtain rfl := Option.some_inj.mp h
+        exact .ladeU hg hrd
+
+/-! ## 14. Planted refusals: gates refuse, never guess.
+
+  Each enabled-state side (named profile, AVX CPU/XCR0, control
+  freedom, finite profile admission), `#GP` alignment and per-byte
+  permissions refuse explicitly -- on the machine plugs, reusing
+  the accepted gate lemmas. -/
+
+/-- A `#GP` classification refuses the aligned machine store. -/
+theorem avx2SpeicherSchritt_gp_a (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (base : Register) (src : Avx2Vektor)
+    (disp : BitVec 32)
+    (hgate : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = true)
+    (hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+      .ausgerichtet = true) :
+    avx2SpeicherSchritt m c cpu x k p .ausgerichtet base disp src =
+      none := by
+  simp only [avx2SpeicherSchritt, hgate, if_pos hgp]
+
+/-- A `#GP` classification refuses the aligned machine load. -/
+theorem avx2LadeSchritt_gp_a (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (base : Register) (disp : BitVec 32)
+    (hgate : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = true)
+    (hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+      .ausgerichtet = true) :
+    avx2LadeSchritt m c cpu x k p .ausgerichtet base disp = none := by
+  simp only [avx2LadeSchritt, hgate, if_pos hgp]
+
+/-- Refused admission refuses the store plug (validator admission,
+    not a hardware fault). -/
+theorem avx2SpeicherSchritt_profil (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (f : Avx2MemForm) (base : Register)
+    (disp : BitVec 32) (v : Avx2Vektor)
+    (h : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = false) :
+    avx2SpeicherSchritt m c cpu x k p f base disp v = none := by
+  simp only [avx2SpeicherSchritt, h]
+
+/-- Refused admission refuses the load plug. -/
+theorem avx2LadeSchritt_profil (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (f : Avx2MemForm) (base : Register)
+    (disp : BitVec 32)
+    (h : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = false) :
+    avx2LadeSchritt m c cpu x k p f base disp = none := by
+  simp only [avx2LadeSchritt, h]
+
+/-- A store without write permission at any chunk-zero byte refuses
+    on the machine (the `#GP` classification passes; the byte issue
+    fails). -/
+theorem avx2SpeicherSchritt_schreibrecht (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (base : Register) (disp : BitVec 32)
+    (v : Avx2Vektor) (k0 : Nat) (hk0 : k0 < 8)
+    (hgate : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = true)
+    (hperm : (tsoAnsicht m).mem.schreibbar
+      (addrOff (effAddr (projZustand m c) base disp) k0) = false) :
+    avx2SpeicherSchritt m c cpu x k p .unausgerichtet base disp v =
+      none := by
+  have hn : avx2Speichern (tsoAnsicht m) c
+      (effAddr (projZustand m c) base disp) v = none := by
+    have hmem := avx2Eintraege_mem_c0_entry
+      (effAddr (projZustand m c) base disp) v k0 hk0
+    exact avx2Speichern_verweigert_bei _ _ _ _ _ hmem hperm
+  have hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+      .unausgerichtet = false :=
+    avx2Gp_nie_unausgerichtet _
+  have hneg : ¬ avx2GpFehler (effAddr (projZustand m c) base disp)
+      .unausgerichtet = true := by
+    simp [hgp]
+  simp only [avx2SpeicherSchritt, hgate, if_neg hneg, hn]
+
+/-- A YMM load fails wherever its low chunk load fails. -/
+theorem avx2Laden_verweigert_lo (s : TSOZustand) (c : Nat)
+    (a : Adresse) (h : avx2Acht s c a = none) :
+    avx2Laden s c a = none := by
+  unfold avx2Laden
+  rw [h]
+
+/-- A load without read permission at any chunk-zero byte refuses
+    on the machine. -/
+theorem avx2LadeSchritt_leserecht (m : HwMaschine) (c : Nat)
+    (cpu : CpuMerkmal) (x : Xcr0Bild) (k : KontrollBild)
+    (p : Avx2Profil) (base : Register) (disp : BitVec 32)
+    (k0 : Nat) (hk0 : k0 < 8)
+    (hgate : avx2MemZugelassen m.hw (m.bereit c) cpu x k p = true)
+    (hperm : loadByte (tsoAnsicht m) c
+      (addrOff (effAddr (projZustand m c) base disp) k0) = none) :
+    avx2LadeSchritt m c cpu x k p .unausgerichtet base disp = none := by
+  have hnA : avx2Acht (tsoAnsicht m) c
+      (effAddr (projZustand m c) base disp) = none :=
+    avx2Acht_verweigert _ _ _ k0 hk0 hperm
+  have hnV : avx2Laden (tsoAnsicht m) c
+      (effAddr (projZustand m c) base disp) = none :=
+    avx2Laden_verweigert_lo _ _ _ hnA
+  have hgp : avx2GpFehler (effAddr (projZustand m c) base disp)
+      .unausgerichtet = false :=
+    avx2Gp_nie_unausgerichtet _
+  have hneg : ¬ avx2GpFehler (effAddr (projZustand m c) base disp)
+      .unausgerichtet = true := by
+    simp [hgp]
+  simp only [avx2LadeSchritt, hgate, if_neg hneg, hnV]
+
 /- CUTS:
    Skeleton only: forms are named, nothing is proved yet.
 -/
