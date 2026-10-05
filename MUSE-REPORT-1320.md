@@ -2,7 +2,7 @@
 
 Lane 1320, clone `/home/simon/Dokumente/gabbro-muse/a1320`, branch `muse/1320`
 (verified via `git rev-parse --show-toplevel` + `git branch --show-current`).
-Owns ONLY this file. Review of CANDIDATE: 1319,
+Owns ONLY this file. Review of author lane 1319 (pinned HEAD see below).
 pinned HEAD `77be369eac8c3794ce296f7f5398efb6b4a9f40b`
 (base `f92c2649c25c822f0ff7791f82dfecad9c7d4c31`, SNAPSHOT clean:true).
 The author clone and the pinned commit were never touched; only the delivered
@@ -10,7 +10,11 @@ FILES under `.tmp/review/author-1319/` were read
 (`SNAPSHOT.json`, `PATCH.diff`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`,
 the candidate Lean file at its repository path).
 
-## VERDICT: ACCEPT
+## Verdict
+
+VERDICT: ACCEPT
+
+CANDIDATE: 1319 77be369eac8c3794ce296f7f5398efb6b4a9f40b
 
 ## What was checked
 
