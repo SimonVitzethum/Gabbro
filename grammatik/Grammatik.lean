@@ -610,3 +610,4 @@ import Grammatik.X86.HwLoadedImage
 import Grammatik.X86.HwStackCalls
 import Grammatik.X86.TsoReadBridge
 import Grammatik.X86.PipelineLink
+import Grammatik.X86.PipelineProfiles
