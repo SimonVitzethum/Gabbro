@@ -2114,10 +2114,12 @@ def vollWitArea1 : Adresse := BitVec.ofNat 64 8192
 /-- Witness area base, reserved-bit probe. -/
 def vollWitAreaR : Adresse := BitVec.ofNat 64 12288
 
-/-- Witness permission: exactly the two full 832-byte areas. -/
+/-- Witness permission: exactly the two full 832-byte areas
+    plus the reserved-bit probe area. -/
 def vollWitOk (a : Adresse) : Bool :=
   decide (4096 ≤ a.toNat ∧ a.toNat < 4096 + 832) ||
-    decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 832)
+    decide (8192 ≤ a.toNat ∧ a.toNat < 8192 + 832) ||
+    decide (12288 ≤ a.toNat ∧ a.toNat < 12288 + 832)
 
 /-- Witness memory: zeroed bytes, footprint permissions. -/
 def vollWitMem : Speicher :=
@@ -2304,6 +2306,171 @@ theorem wit_fremd :
     witByte (vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc
         true false vollWitF) 0 (addrOff vollWitArea1 24) =
         some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-! ## 10. Observed restore, drain, reserved bit and refusals. -/
+
+/-- Project the restored control word out of a restore outcome. -/
+def witFpNach (o : VollAusgang) (c : Nat) : Option Nat :=
+  match o with
+  | .weiter m => some ((((vollHw m).kerne c).fp).mxcsr.toNat)
+  | _ => none
+
+/-- Project a restored XMM register out of a restore outcome. -/
+def witXmmNach (o : VollAusgang) (c : Nat) (r : XmmReg) :
+    Option Nat :=
+  match o with
+  | .weiter m => some ((((vollHw m).kerne c).xmm r).toNat)
+  | _ => none
+
+/-- Project a restored YMM upper half out of a restore outcome. -/
+def witYmmNach (o : VollAusgang) (c : Nat) (r : XmmReg) :
+    Option Nat :=
+  match o with
+  | .weiter m => some (((m.ym.ober c) r).toNat)
+  | _ => none
+
+/-- Project a restored opaque byte out of a restore outcome. -/
+def witX87Nach (o : VollAusgang) (c t : Nat) : Option Byte :=
+  match o with
+  | .weiter m => some ((m.x87 c) t)
+  | _ => none
+
+/-- Outcome kind projection (outcomes carry functions, so no
+    `DecidableEq`; kinds are plain numbers). -/
+def witArt (o : VollAusgang) : Nat :=
+  match o with
+  | .weiter _ => 0
+  | .verweigert => 1
+  | .fehler _ => 2
+
+/-- Fault class projection: 10 NM, 11 UD, 12 GP, 13 SS, 14 PF,
+    15 AC, 16 DE, 17 XM, 0 no fault. -/
+def witFehler (o : VollAusgang) : Nat :=
+  match o with
+  | .fehler .nm => 10
+  | .fehler .ud => 11
+  | .fehler .gp => 12
+  | .fehler .ss => 13
+  | .fehler .pf => 14
+  | .fehler .ac => 15
+  | .fehler .de => 16
+  | .fehler .xm => 17
+  | _ => 0
+
+/-- Core 0 restores AVX after its save, if reached. -/
+def witV2 : VollAusgang :=
+  match vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc false
+      true vollWitF with
+  | .weiter m1 =>
+    vollWiederherstellen m1 0 vollWitArea0 vollWitXc false true
+      vollWitF
+  | _ => .verweigert
+
+/-- Core 1 restores SSE after its save, if reached. -/
+def witV2b : VollAusgang :=
+  match vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc true
+      false vollWitF with
+  | .weiter m1 =>
+    vollWiederherstellen m1 1 vollWitArea1 vollWitXc true false
+      vollWitF
+  | _ => .verweigert
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- MACHINE ROUND TRIP, observed on AVX: the YMM upper half
+    comes back `9` and the opaque byte comes back `0`, the FINIT
+    reset value core 0 started from. -/
+theorem wit_restore0 :
+    witYmmNach witV2 0 .xmm0 = some 9 ∧
+      witX87Nach witV2 0 0 = some (BitVec.ofNat 8 0) := by
+  decide
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
+/-- MACHINE ROUND TRIP, observed on SSE: the control word comes
+    back `0x1FBF` and XMM0 comes back whole (`11` in the low
+    word, zero above). -/
+theorem wit_restore1 :
+    witFpNach witV2b 1 = some 0x1FBF ∧
+      witXmmNach witV2b 1 .xmm0 = some 11 := by
+  decide
+
+/-- Core 1 drains its oldest entry into shared memory. -/
+def witNachFlush : Option Byte :=
+  match vollSpeichern vollWitStart 1 vollWitArea1 vollWitXc true
+      false vollWitF with
+  | .weiter m =>
+    match flushKern (tsoAnsicht (vollHw m)) 1 with
+    | some s => some (s.mem.bytes (addrOff vollWitArea1 0))
+    | none => none
+  | _ => none
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 1000000 in
+/-- THE DRAIN CHANGES MEMORY: the cell starts zeroed and reads
+    `5` (core 1's x87 byte) after one flush. -/
+theorem wit_drain :
+    witNachFlush = some (BitVec.ofNat 8 5) ∧
+      vollWitMem.bytes (addrOff vollWitArea1 0) =
+        BitVec.ofNat 8 0 := by
+  decide
+
+/-- Reserved-bit probe bytes: bit 18 set in the MXCSR image cell. -/
+def vollWitMemRBytes (a : Adresse) : Byte :=
+  if decide (a = addrOff vollWitAreaR 26) then BitVec.ofNat 8 4
+  else BitVec.ofNat 8 0
+
+/-- Reserved-bit probe memory. -/
+def vollWitMemR : Speicher :=
+  { bytes := vollWitMemRBytes, lesbar := vollWitOk,
+    schreibbar := vollWitOk, ausfuehrbar := fun _ => false }
+
+/-- Reserved-bit probe machine. -/
+def vollWitStartR : VollMaschine :=
+  { vollWitStart with ym :=
+    ⟨{ vollWitStart.ym.hw with mem := vollWitMemR },
+      vollWitStart.ym.ober⟩ }
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 1000000 in
+/-- A reserved MXCSR image bit faults with #GP on restore. -/
+theorem wit_gp_reserviert :
+    witFehler (vollWiederherstellen vollWitStartR 0 vollWitAreaR
+      vollWitXc true false vollWitF) = 12 := by
+  decide
+
+set_option maxRecDepth 100000 in
+/-- Planted refusals, observed: every fault class fires its
+    outcome, the empty request and the permission failure refuse. -/
+theorem wit_verweigert :
+    witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+        true true ⟨true, true, false, false, false, false⟩) = 10 ∧
+      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+        true true ⟨false, false, false, false, false, false⟩) = 11 ∧
+      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+        true true ⟨false, true, true, false, false, false⟩) = 11 ∧
+      witFehler (vollSpeichern vollWitStart 0 vollWitArea0
+        ⟨true, false, false⟩ true true vollWitF) = 11 ∧
+      witFehler (vollSpeichern vollWitStart 0 vollWitArea0
+        ⟨true, true, false⟩ false true vollWitF) = 11 ∧
+      witFehler (vollSpeichern vollWitStart 0 vollWitArea0
+        ⟨false, true, true⟩ true true vollWitF) = 12 ∧
+      witArt (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+        false false vollWitF) = 1 ∧
+      witFehler (vollSpeichern vollWitStart 0
+        (BitVec.ofNat 64 (2 ^ 47)) vollWitXc true true
+        vollWitF) = 12 ∧
+      witFehler (vollSpeichern vollWitStart 0
+        (BitVec.ofNat 64 4104) vollWitXc true true vollWitF) = 12 ∧
+      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+        true true ⟨false, true, false, true, false, false⟩) = 13 ∧
+      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+        true true ⟨false, true, false, false, true, false⟩) = 14 ∧
+      witFehler (vollSpeichern vollWitStart 0 vollWitArea0 vollWitXc
+        true true ⟨false, true, false, false, false, true⟩) = 15 ∧
+      witArt (vollSpeichern vollWitStart 0 (BitVec.ofNat 64 0)
+        vollWitXc true true vollWitF) = 1 := by
   decide
 
 end Gabbro.Grammatik.X86
