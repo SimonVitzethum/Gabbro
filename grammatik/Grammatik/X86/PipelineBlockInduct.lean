@@ -260,4 +260,66 @@ theorem block_verweigert_tief_stmt :
         pwIdx0 tiefWertFeld1195 pwHw pwHL) = none := by
   decide
 
+/-- BRANCH REFUSAL: `onOption` case analysis has no chunk lowering --
+    the statement matches the catch-all, never a guessed sequence. -/
+theorem block_verweigert_verzweigung (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {n : Int}
+    (o : Expr D Γ Λ (.opt n))
+    (p : Block D V l (.index n :: Γ) Λ Λ')
+    (a : Block D V l Γ Λ Λ') :
+    senkStmt c L (Stmt.onOption o p a) = none :=
+  rfl
+
+/-- LOOP REFUSAL (block level): a `retry` head gives no block lowering,
+    so no concatenated block is produced for it. -/
+theorem block_verweigert_schleife (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)}
+    (rest : Block D V l Γ Λ Λ') (pos : Nat) :
+    senkBlock c L pos
+      (Block.cons (Stmt.retry 5 Expr.wahr Block.nil Block.nil) rest) = none :=
+  rfl
+
+/-- BIND REFUSAL (block level): a `bind` block has no lowering in this
+    fragment -- refused, not unfolded into the block. -/
+theorem block_verweigert_bind (c : PipeCfg) (L : Layout D)
+    {l : Bool} {Γ : Ctx} {Λ Λ' : List (Res D)} {τ : Ty}
+    (e : Expr D Γ Λ τ) (rest : Block D V l (τ :: Γ) Λ Λ')
+    (pos : Nat) :
+    senkBlock c L pos (Block.bind e rest) = none :=
+  rfl
+
+/-! ## 5. Poison probes: every refusal fires on concrete data. -/
+
+/-- The widened deep value has no lowering on the witness configuration. -/
+theorem gift_block_tief_wert :
+    senkWertT pwCfg tiefWertFeld1195 = none := by
+  decide
+
+/-- A `retry` head gives no block lowering on witness data. -/
+theorem gift_block_schleife :
+    senkBlock pwCfg pwL 0
+      (Block.cons
+        (Stmt.retry (V := pwV) 5 (Expr.wahr : Expr pwD pwCtx [] .bool)
+          (Block.nil : Block pwD pwV true pwCtx [] [])
+          (Block.nil : Block pwD pwV false pwCtx [] []))
+        (Block.nil : Block pwD pwV false pwCtx [] [])) = none :=
+  rfl
+
+/-- A `bind` block has no lowering on witness data. -/
+theorem gift_block_bind :
+    senkBlock pwCfg pwL 0
+      (Block.bind (Expr.lit 1 : Expr pwD pwCtx [] (.int 1 1))
+        (Block.nil : Block pwD pwV false ((.int 1 1) :: pwCtx) [] [])) =
+      none :=
+  rfl
+
+/-- An `onOption` branch has no chunk lowering on witness data. -/
+theorem gift_block_verzweigung :
+    senkStmt pwCfg pwL
+      (Stmt.onOption (V := pwV) (l := false)
+        (Expr.none 0 : Expr pwD pwCtx [] (.opt 0))
+        (Block.nil : Block pwD pwV false ((.index 0) :: pwCtx) [] [])
+        (Block.nil : Block pwD pwV false pwCtx [] [])) = none :=
+  rfl
+
 end Gabbro.Grammatik.X86.PipeBlock
