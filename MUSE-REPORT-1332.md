@@ -1,94 +1,71 @@
 # MUSE-REPORT-1332: Exact review of candidate 1331 (ValidatorKapLength)
 
 Lane 1332, report-only exact review. Clone `/home/simon/Dokumente/gabbro-muse/a1332`,
-branch `muse/1332` (verified). Candidate 1331, pinned HEAD
-`f1f508185e471d45ed03e525cab1afdb8e5201d8` (from `.tmp/review/SNAPSHOT.json`;
+branch `muse/1332` (verified). Candidate 1331, NEW pinned HEAD
+`b3de736b6ff1a647eebf51455400966d76bc6c6e` (from the NEW `.tmp/review/SNAPSHOT.json`;
 hash itself never inspected per HARD RULE 1 -- review is over the delivered FILES only:
 `PATCH.diff`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`, copied sources).
+This supersedes my review of the stale snapshot (`f1f50818`), whose two bounded repair
+items R1/R2 the author has now closed; every previous finding was re-inspected below
+against the new files. Substantive verdict changed on new evidence, not for formatting.
 
-CANDIDATE: 1331 f1f508185e471d45ed03e525cab1afdb8e5201d8
+CANDIDATE: 1331 b3de736b6ff1a647eebf51455400966d76bc6c6e
 
-VERDICT: REPAIR
+VERDICT: ACCEPT
 
-The candidate is green and its theorems are true, but two points need bounded repair
-before integration (concrete items R1/R2 below). This is not a rejection of the approach:
-the VEX-prefix core (§2-§3) and the per-sub-arm progress wrappers (§4) are solid and should
-be kept as-is.
+## Re-review: R1/R2 closure verified
 
-## What I checked (independent)
+- R1 (vacuous §7) closed per option (a). The four `kapUeber_laenge_*` are now genuine
+  chain-tied triples: first conjunct reuses the accepted chain evaluations VERBATIM --
+  `kapUeber_wd_ext_mul64`, `kapUeber_wd_ext_div64`, `kapUeber_wd_ext_imul2`,
+  `kapUeber_wd_neu_div32` -- whose statements in my clone's accepted
+  `HwKapsteinDecoder.lean` (lines 539-570) match the candidate's claims byte-for-byte
+  (same rows, same winning arms, same rests). Measured length = stated length (3/3/4/2)
+  and positivity are closed `decide` evaluations. This also discharges chain progress
+  for those four rows. The header claim ("run through the REAL chain") is now true.
+  Nit (not verdict-relevant): the author's report writes `_neu_div32` once where the
+  accepted name -- used correctly in the code -- is `kapUeber_wd_neu_div32`.
+- R2 (CUTS gaps + unproved agreement) closed. CUTS now names both gaps explicitly: no
+  progress wrapper for the top-level width-dispatcher arm (`breit_wd` covers only the
+  `decodeWd` sub-decoder; `decodeMulDivWidth`/`decodeExt` have no accepted
+  arbitrary-input lemma), and agreement open only for s32/MXCSR/LOCK/lockAdr/FP/vector/
+  top-level-breit. New §8 proves declared-vs-measured agreement for all ten arms with an
+  accepted equation (`kapLaenge_stimmt_kompakt/kern/breit_wd/breit_pilot/breit_narrow/
+  breit_muldiv/breit_shift/breit_setcc/breit_cmov/prefix_avx2`; each: declared `= some
+  stated`, stated `+ rest = input`, measured `= stated`, each reusing exactly one accepted
+  equation with the hypothesis consumed). New `#print axioms` lines cover all of them.
+
+## Independent checks on the NEW snapshot
 
 - `./lean-probe .tmp/review/author-1331/grammatik/Grammatik/X86/ValidatorKapLength.lean`
   (candidate file probed unmodified against my clone's accepted modules):
-  `== 0 error(s) in the COMPLETE output; exit 0`.
+  `== 0 error(s) in the COMPLETE output; exit 0`. All 43 theorems depend only on subsets
+  of `propext` / `Classical.choice` / `Quot.sound`; no `sorryAx`. The strengthened
+  `kapUeber_laenge_*` sit on `[propext, Quot.sound]`, consistent with real chain reuse.
 - `./lean-bau` on my clean tree (candidate not applied; OWN ONLY report):
   `== exit 0; 0 error line(s) in the COMPLETE output`, `Build completed successfully (692 jobs).`
-- `#print axioms` (reproduced by my probe): every theorem depends only on subsets of
-  `propext` / `Classical.choice` / `Quot.sound`; no `sorryAx`. Most `decide`/`rfl` facts
-  on no axioms at all.
-- Forbidden tokens: grep over the candidate file for `\bsorry\b|\badmit\b|`
-  `\bnative_decide\b|\bunsafe\b|^axiom ` finds nothing (the only `admit`/`axiom`
-  substrings are the English word "admits" and `#print axioms` lines). No `split_ifs`,
-  no `intro _`, no `have _ :=` discards.
-- Existing files: PATCH touches only `grammatik/Grammatik.lean` (+1 import line) plus the
-  NEW file and the report. No existing theorem edited, weakened, or deleted.
-- Premise use: read every proof. `avxPrefix_genau` / `avxPrefix_verbraucht` drive their
-  four-way splits off the hypothesis and consume it in each branch; `kapDecodePrefix_genau`
-  rewrites all seven `none` hypotheses and feeds `h8` into `avxPrefix_genau`; every §4
-  wrapper feeds its hypothesis into exactly one accepted length lemma (`have`-bound
-  equations are consumed by the closing `omega`); `kapDeckt_schritt_verbraucht` uses
-  `hdec` for the step rewrite, `hprog` for `if_pos`, and both for the arithmetic.
-- Lift-not-copy: `kapDecodePrefix` mirrors accepted `kapDecode` arm-for-arm with only the
-  VEX arm changed; `dekodiereAvx2Prefix` is the task-mandated NEW prefix function. The four
-  pinned rows are byte-identical to accepted `dekodiereAvx2` (checked against
-  `Avx2Join.lean` lines 123-132: same bytes, same ops, same lengths 5/5/6/6), and
-  `avxPrefix_genau` proves exact-list agreement. No accepted evaluator redefined.
-- Planted refusals really refuse: `avxPrefix_vex128_verweigert`,
-  `avxPrefix_fremd_verweigert`, `kapZeilenLaenge_lockAdr_verweigert` are closed
-  `decide`/`rfl` evaluations -- my green probe means they evaluate as claimed.
-- Witness: `kapVerbraucht_zeuge` covers all eight chain arms with strictly positive
-  measured lengths over the accepted non-empty `kapW_*` byte witnesses. Rule 13 needs no
-  `_zeuge` (no premise quantifies over program syntax); the joint witness is provided
-  anyway. The "two cores / memory-changing step" criterion is not relevant here: this lane
-  is decoder-level (byte lists), involves no `HwSchritt`, and claims none.
-- Silicon/vendor neutrality: no new hardware fact stated; rows restate accepted pins;
-  CUTS disclaims silicon re-check and W/GX. Clean.
+- Forbidden tokens over the new file (`sorry|admit|native_decide|unsafe|^axiom |intro _|
+  have _ :=|split_ifs`, word-boundary): no matches.
+- PATCH scope: exactly the same three files; `Grammatik.lean` hunk is still the single
+  `+import Grammatik.X86.ValidatorKapLength` line. No existing theorem touched.
+- Premise use re-verified for all NEW proofs: §7 first conjuncts reuse accepted
+  evaluations (closed theorems, no premises needed); §8 hypotheses each feed one accepted
+  equation, with the obtained equations consumed by the closing `rfl`/`omega`.
+- Earlier findings (§§1-6, refusals, witness, silicon neutrality, premise use) re-read
+  against the new file: unchanged and still holding; the §3/§5 limitations remain exactly
+  as honestly cut (chain-level mid-section VEX, conditional coverage advance, shadow-side
+  comparison open). No claim exceeds its proof now.
 
-## Repair items (concrete, bounded)
+## What remains open (all explicitly in CUTS, not claimed)
 
-- R1 (§7 `kapUeber_laenge_*` are vacuous as "chain-side" evidence). `kapVerbraucht bs [] =
-  bs.length` holds BY DEFINITION for any `bs` (`kapVerbraucht_voll`), so the four theorems
-  prove list-length arithmetic without running any decoder. The §7 header claim -- "each
-  overlap row below is consumed whole (empty rest) by the chain with the stated length" --
-  is therefore not established by these theorems, and the task's overlap clause ("a row
-  whose consumed length differs between two decoders of an overlap is a FINDING") is
-  unaddressed: no two decoders' consumptions are ever compared. Genuine chain facts are
-  within reach (e.g. `pin_ext_wdmul64` shows `decodeExt` decides `[73,247,224]`), so this is
-  left work, not obstruction. Fix EITHER (a) run the real chain on each overlap row
-  (`kapDecode <row> = some (<winning row>, <rest>)` by `decide`, then measured length =
-  stated length), which would also discharge chain progress for those rows; OR (b) restate
-  §7 as byte-length pins of the overlap rows with no "consumed by the chain" language and
-  move conflict-exhibition to CUTS-open. Until then, "no chain-side conflict exhibited"
-  overclaims what was measured.
-- R2 (CUTS omits two gaps a follow-up reader needs). (i) There is NO progress wrapper for
-  the top-level breit arm: `kapFortschritt_breit_wd` covers `decodeWd`, a sub-decoder the
-  chain never calls directly, while `decodeMulDivWidth`/`decodeExt` (the actual first chain
-  arm) have no accepted arbitrary-input length lemma (verified by grep over `grammatik/`)
-  and no wrapper. CUTS lists the open arms but never names this one, so a reader can
-  mistake `breit_wd` for chain-arm progress. (ii) Declared-vs-measured agreement
-  (`kapZeilenLaenge` vs `kapVerbraucht`) is proved for NO arm -- e.g. the avx2 case would
-  follow directly from `avxPrefix_verbraucht`. Both need explicit CUTS lines (proof work
-  only where the author chooses (a) in R1).
-
-## What remains open (unchanged, already honest in CUTS)
-
-Arbitrary-input progress for s32/MXCSR/LOCK/lockAdr/FP/vector arms; chain-level mid-section
-VEX (seven earlier arms' refusal of VEX-led lists with trailing bytes unmeasured);
-cross-decoder comparison; no silicon/W-GX/source/checker/contract/entry/ABI/loader/budget
-claim. The author correctly notes the MECHANISM paragraph (`HwAdapter`) is boilerplate
-conflicting with the specific TASK; the specific task was implemented.
+Arbitrary-input progress/agreement for s32/MXCSR/LOCK/lockAdr/FP/vector arms and the
+top-level width dispatcher; chain-level mid-section VEX (seven earlier arms' refusal of
+VEX-led lists with trailing bytes unmeasured); shadow-decoder length comparison (a
+differing row would be a finding; none recorded). No silicon re-check; no W/GX bridge; no
+source/checker/contract/entry/ABI/loader/budget/liveness claim. Vendor-neutral.
 
 ## Note on the lane file
 
-Nothing in the task text is wrong; the TARGET-equivalent deliverables (consumed length,
-progress, coverage advance, VEX prefix, refusal of unfixed rows) are well-posed. The gap
-is between the delivered §7/CUTS text and the proofs, fixed by R1/R2 above.
+Nothing in the task text is wrong. The MECHANISM paragraph (`HwAdapter`) remains generic
+boilerplate beside the specific TASK, as the author also notes; the specific task is what
+was implemented and reviewed.
