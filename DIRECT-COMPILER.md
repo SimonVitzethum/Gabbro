@@ -622,7 +622,7 @@ Last ledger refresh: **2026-10-05 14:11 UTC**. This is an operational snapshot, 
 | 1127 | Multiply/divide and narrow widths connected | Merged after review/checks | 1128: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1127.md) |
 | 1129 | Scalar FP32/FP64 and MXCSR on the coherent machine | Merged after review/checks | 1130: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1129.md) |
 | 1131 | SIMD integer forms and enabled-state gates on the coherent machine | Merged after review/checks | 1132: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1131.md) |
-| 1133 | Device/MMIO and memory types on the coherent machine | Agent working | 1134: scheduled | [task](lanes/1133.md) |
+| 1133 | Device/MMIO and memory types on the coherent machine | Committed candidate; review/integration pending | 1134: scheduled | [task](lanes/1133.md) |
 | 1135 | CPUID/feature enabled-state gating inside HwSchritt | Merged after review/checks | 1136: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1135.md) |
 | 1137 | Coherent machine fetching from the loaded image | Merged after review/checks | 1138: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1137.md) |
 | 1139 | Stack, call and return per core through TSO | Merged after review/checks | 1140: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1139.md) |
@@ -644,7 +644,7 @@ Last ledger refresh: **2026-10-05 14:11 UTC**. This is an operational snapshot, 
 | 1171 | Linking, relocations and the final mapping | Merged after review/checks | 1172: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1171.md) |
 | 1173 | Profiles: hosted OS and freestanding entry/ABI/image | Merged after review/checks | 1174: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1173.md) |
 | 1175 | Finite and infinite execution soundness of the pipeline | Committed candidate; review/integration pending | 1176: Unresolved after agent rounds; not accepted | [task](lanes/1175.md) |
-| 1177 | Source-computed units and duties feeding the pipeline | Committed candidate; review/integration pending | 1178: Committed candidate; review/integration pending | [task](lanes/1177.md) |
+| 1177 | Source-computed units and duties feeding the pipeline | Merged after review/checks | 1178: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1177.md) |
 | 1179 | Loaded-image fetch: obstruction lemmas for all extension families | Merged after review/checks | 1180: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1179.md) |
 | 1181 | Nested interrupt delivery, #DF and handler entry | Committed candidate; review/integration pending | 1182: Committed candidate; review/integration pending | [task](lanes/1181.md) |
 | 1183 | Feature gating enforced per step, not by wrapper | Merged after review/checks | 1184: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1183.md) |
@@ -1508,6 +1508,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1130**, Independent exact review of 1129, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1130.md). <!-- x86-merged:1130 -->
 - 2026-10-05: lane **1131**, SIMD integer forms and enabled-state gates on the coherent machine, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1131.md). <!-- x86-merged:1131 -->
 - 2026-10-05: lane **1132**, Independent exact review of 1131, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1132.md). <!-- x86-merged:1132 -->
+- 2026-10-05: lane **1177**, Source-computed units and duties feeding the pipeline, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1177.md). <!-- x86-merged:1177 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
