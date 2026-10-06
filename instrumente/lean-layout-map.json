@@ -525,6 +525,7 @@
  "Grammatik.X86.StackUnwind": "Grammatik.X86.Laden.StackUnwind",
  "Grammatik.X86.StaerkeReduktion": "Grammatik.X86.Opt.Schleifen.StaerkeReduktion",
  "Grammatik.X86.Stapel": "Grammatik.X86.Kern.Stapel",
+ "Grammatik.X86.SystemDecode": "Grammatik.X86.Befehle.System.SystemDecode",
  "Grammatik.X86.TSO": "Grammatik.X86.TSO.Kern.TSO",
  "Grammatik.X86.TSOHistory": "Grammatik.X86.TSO.Kern.TSOHistory",
  "Grammatik.X86.TSOTrace": "Grammatik.X86.TSO.Kern.TSOTrace",
