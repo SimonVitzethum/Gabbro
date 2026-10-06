@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-06 18:52 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-06 19:46 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -731,7 +731,7 @@ Last ledger refresh: **2026-10-06 18:52 UTC**. This is an operational snapshot, 
 | 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
 | 1349 | Integer ALU in every width and form | Agent working | 1350: scheduled | [task](lanes/1349.md) |
-| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Committed candidate; review/integration pending | 1352: Agent working | [task](lanes/1351.md) |
+| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Committed candidate; review/integration pending | 1352: Committed candidate; review/integration pending | [task](lanes/1351.md) |
 | 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Merged after review/checks | 1354: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1353.md) |
 | 1355 | SSE/SSE2 moves, loads, stores and unpack | Committed candidate; review/integration pending | 1356: Committed candidate; review/integration pending | [task](lanes/1355.md) |
 | 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Committed candidate; review/integration pending | 1358: Committed candidate; review/integration pending | [task](lanes/1357.md) |
@@ -746,14 +746,15 @@ Last ledger refresh: **2026-10-06 18:52 UTC**. This is an operational snapshot, 
 | 1375 | Evaluators for the system rows that `SystemDecode` could only refuse | Merged after review/checks | 1376: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1375.md) |
 | 1377 | Memory operands, MMX and REX.W forms of the three-byte maps | Agent working | 1378: scheduled | [task](lanes/1377.md) |
 | 1379 | SSE4.2: string compares, PCMPGTQ and CRC32 | Agent working | 1380: scheduled | [task](lanes/1379.md) |
-| 1381 | SSE4.1 rows that SseFourOne left open | Agent working | 1382: scheduled | [task](lanes/1381.md) |
+| 1381 | SSE4.1 rows that SseFourOne left open | Agent working | 1382: Committed candidate; review/integration pending | [task](lanes/1381.md) |
 | 1383 | Shift and rotate on memory operands and 8-bit high registers | Agent working | 1384: scheduled | [task](lanes/1383.md) |
-| 1385 | GabbroV bridge: the shared-atomic rely | Agent working | 1386: scheduled | [task](lanes/1385.md) |
-| 1387 | GabbroV bridge: StartPflicht without the Initially assumption | Agent working | 1388: scheduled | [task](lanes/1387.md) |
+| 1385 | GabbroV bridge: the shared-atomic rely | Committed candidate; review/integration pending | 1386: scheduled | [task](lanes/1385.md) |
+| 1387 | GabbroV bridge: StartPflicht without the Initially assumption | Committed candidate; review/integration pending | 1388: scheduled | [task](lanes/1387.md) |
 | 1389 | GabbroV bridge: widen the elaborated fragment | Agent working | 1390: scheduled | [task](lanes/1389.md) |
 | 1391 | GabbroV: a traversal index is a member of its domain | Agent working | 1392: scheduled | [task](lanes/1391.md) |
-| 1393 | GabbroV: does a tree declaration imply parent consistency? | Agent working | 1394: scheduled | [task](lanes/1393.md) |
-| 1395 | Language gaps: what cannot be written today | Merged after review/checks | 1396: Agent working | [report](messung/muse/MUSE-REPORT-1395.md) |
+| 1393 | GabbroV: does a tree declaration imply parent consistency? | Committed candidate; review/integration pending | 1394: scheduled | [task](lanes/1393.md) |
+| 1395 | Language gaps: what cannot be written today | Merged after review/checks | 1396: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1395.md) |
+| 1397 | Language gaps against the Lean model (second run) | Scheduled | 1398: scheduled | [task](lanes/1397.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
