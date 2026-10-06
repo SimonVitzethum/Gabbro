@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-06 01:56 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-06 02:03 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -741,6 +741,10 @@ Last ledger refresh: **2026-10-06 01:56 UTC**. This is an operational snapshot, 
 | 1365 | Decoder rows for the system and privileged instructions | Merged after review/checks | 1366: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1365.md) |
 | 1367 | Every LOCK-prefixed read-modify-write instruction | Merged after review/checks | 1368: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1367.md) |
 | 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Merged after review/checks | 1370: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1369.md) |
+| 1371 | SSE4.1 and SSE4.2 on the three-byte maps | Scheduled | 1372: scheduled | [task](lanes/1371.md) |
+| 1373 | AES-NI, PCLMULQDQ and MOVBE | Scheduled | 1374: scheduled | [task](lanes/1373.md) |
+| 1375 | Evaluators for the system rows that `SystemDecode` could only refuse | Scheduled | 1376: scheduled | [task](lanes/1375.md) |
+| 1377 | Memory operands, MMX and REX.W forms of the three-byte maps | Scheduled | 1378: scheduled | [task](lanes/1377.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
