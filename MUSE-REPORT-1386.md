@@ -4,7 +4,8 @@ Lane 1386, clone `/home/simon/Dokumente/gabbro-muse/a1386`, branch `muse/1386`
 (verified: `.git/HEAD` = `ref: refs/heads/muse/1385` replaced by `muse/1386`;
 `git status` clean at review time). No push (lane rule). No other agent/model calls.
 
-CANDIDATE: 1385, pinned HEAD `e6dade7fca32c712bc41badcf94ee220533e7705`
+Reviewed candidate: author lane 1385, pinned HEAD
+`e6dade7fca32c712bc41badcf94ee220533e7705`
 (read from `.tmp/review/SNAPSHOT.json` only; author clone never touched).
 Delivered files reviewed: `PATCH.diff`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`,
 `MUSE-REPORT-1385.md`, `grammatik/Grammatik.lean`,
