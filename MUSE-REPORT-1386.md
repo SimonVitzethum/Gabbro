@@ -10,7 +10,9 @@ Delivered files reviewed: `PATCH.diff`, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`,
 `MUSE-REPORT-1385.md`, `grammatik/Grammatik.lean`,
 `grammatik/Grammatik/X86/GvAtomRely.lean` (148 lines).
 
-## VERDICT: REPAIR
+CANDIDATE: 1385 e6dade7fca32c712bc41badcf94ee220533e7705
+
+VERDICT: REPAIR
 
 The candidate is **UNMEASURED**: no green `./lean-probe` first line and no
 `./lean-bau` result line exist for the exact candidate. Author (BUILD-EVIDENCE)
