@@ -1,12 +1,15 @@
 # MUSE-REPORT-1388: Exact review of candidate 1387 (GabbroV StartPflicht bridge)
 
 Lane 1388, clone `/home/simon/Dokumente/gabbro-muse/a1388`.
-Role: report-only independent exact review. CANDIDATE: author lane 1387,
+Role: report-only independent exact review of author lane 1387,
 pinned HEAD `7369fb68f86facf5126fae27bbc01feb37a0553c`
 (base `c943db2aff49c64e2b606310eb9aecc4bd94dddf` per `.tmp/review/SNAPSHOT.json`).
 Owned deliverable of this lane: this file only.
 
-## VERDICT: REPAIR
+CANDIDATE: 1387 7369fb68f86facf5126fae27bbc01feb37a0553c
+VERDICT: REPAIR
+
+## Substantive verdict (unchanged: REPAIR)
 
 The candidate is an honest blocked report plus an unchecked 48-line skeleton.
 Nothing in it is false, but there is nothing verified to accept, and the
