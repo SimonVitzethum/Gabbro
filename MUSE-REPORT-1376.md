@@ -1,8 +1,10 @@
 # MUSE-REPORT-1376: Exact review of candidate 1375 (SystemEvaluators)
 
+CANDIDATE: 1375 9030c336f0a2d7f44d77af1717b24649527add0e
+
 ## Scope
 
-Independent exact review of CANDIDATE: 1375 `9030c336f0a2d7f44d77af1717b24649527add0e`
+Independent exact review of the author lane 1375 pinned HEAD quoted above
 (base `b1082d447e14f0dfdb98aaf507a91f4ee5590eb4`, files: `MUSE-REPORT-1375.md`,
 `grammatik/Grammatik.lean`, `grammatik/Grammatik/X86/SystemEvaluators.lean`).
 Review clone `/home/simon/Dokumente/gabbro-muse/a1376`, branch `muse/1376` verified.
@@ -70,11 +72,13 @@ Own file: only this report. No Lean or existing-file edits in this lane.
   (Candidate's own evidence reports 712 jobs green on its base; the +1 here is
   master having moved on. The candidate file itself probes green above.)
 
-## VERDICT: ACCEPT
+## Verdict
 
-CANDIDATE 1375 `9030c336f0a2d7f44d77af1717b24649527add0e` — exactly one verdict:
-ACCEPT. No unsupported desired-correctness premises, no weakened guarantees,
-no fake closure found.
+VERDICT: ACCEPT
+
+The lane 1375 pinned HEAD quoted above is accepted with no change to the
+substantive findings: no unsupported desired-correctness premises, no weakened
+guarantees, no fake closure found.
 
 ## What remains open (not a defect of this candidate)
 
