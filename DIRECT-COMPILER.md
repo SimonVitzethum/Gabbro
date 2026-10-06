@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-06 01:43 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-06 01:56 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -733,14 +733,14 @@ Last ledger refresh: **2026-10-06 01:43 UTC**. This is an operational snapshot, 
 | 1349 | Integer ALU in every width and form | Agent working | 1350: scheduled | [task](lanes/1349.md) |
 | 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Agent working | 1352: scheduled | [task](lanes/1351.md) |
 | 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Agent working | 1354: scheduled | [task](lanes/1353.md) |
-| 1355 | SSE/SSE2 moves, loads, stores and unpack | Incomplete; preserved | 1356: scheduled | [task](lanes/1355.md) |
+| 1355 | SSE/SSE2 moves, loads, stores and unpack | Agent working | 1356: scheduled | [task](lanes/1355.md) |
 | 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Agent working | 1358: scheduled | [task](lanes/1357.md) |
 | 1359 | SSE/SSE2 scalar and packed floating point | Agent working | 1360: scheduled | [task](lanes/1359.md) |
 | 1361 | String instructions with REP prefixes and the direction flag | Agent working | 1362: scheduled | [task](lanes/1361.md) |
 | 1363 | Wire the already-modelled families into the decoder chain | Committed candidate; review/integration pending | 1364: Committed candidate; review/integration pending | [task](lanes/1363.md) |
 | 1365 | Decoder rows for the system and privileged instructions | Merged after review/checks | 1366: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1365.md) |
 | 1367 | Every LOCK-prefixed read-modify-write instruction | Merged after review/checks | 1368: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1367.md) |
-| 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Committed candidate; review/integration pending | 1370: Committed candidate; review/integration pending | [task](lanes/1369.md) |
+| 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Merged after review/checks | 1370: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1369.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1804,6 +1804,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: lane **1367**, Every LOCK-prefixed read-modify-write instruction, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1367.md). <!-- x86-merged:1367 -->
 - 2026-10-06: checked master `795bf9a6` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:795bf9a6acb8c2b95e1f27f61b111cb851617bdc -->
 - 2026-10-06: lane **1368**, Independent exact review of 1367, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1368.md). <!-- x86-merged:1368 -->
+- 2026-10-06: lane **1369**, The three-byte opcode maps 0F 38 and 0F 3A, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1369.md). <!-- x86-merged:1369 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
