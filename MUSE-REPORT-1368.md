@@ -1,8 +1,12 @@
 # MUSE-REPORT-1368: Exact review of candidate 1367 (LOCK RMW family)
 
-## VERDICT: ACCEPT
+## Result (independent substantive review)
 
-CANDIDATE: lane 1367, pinned HEAD `27dc0244c18bde40021726249ab809bc1bcf65d9`
+CANDIDATE: 1367 27dc0244c18bde40021726249ab809bc1bcf65d9
+
+VERDICT: ACCEPT
+
+Candidate details: lane 1367, pinned HEAD `27dc0244c18bde40021726249ab809bc1bcf65d9`
 (base `880e743912590626f26a6b17faa22b2a40071077`, from `.tmp/review/SNAPSHOT.json`;
 hash itself never inspected per lane rule). Changed files: `MUSE-REPORT-1367.md`,
 `grammatik/Grammatik.lean` (one appended import line), new
