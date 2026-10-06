@@ -730,16 +730,16 @@ Last ledger refresh: **2026-10-06 01:43 UTC**. This is an operational snapshot, 
 | 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Merged after review/checks | 1344: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1343.md) |
 | 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
-| 1349 | Integer ALU in every width and form | Incomplete; preserved | 1350: scheduled | [task](lanes/1349.md) |
-| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Incomplete; preserved | 1352: scheduled | [task](lanes/1351.md) |
-| 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Incomplete; preserved | 1354: scheduled | [task](lanes/1353.md) |
+| 1349 | Integer ALU in every width and form | Agent working | 1350: scheduled | [task](lanes/1349.md) |
+| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Agent working | 1352: scheduled | [task](lanes/1351.md) |
+| 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Agent working | 1354: scheduled | [task](lanes/1353.md) |
 | 1355 | SSE/SSE2 moves, loads, stores and unpack | Incomplete; preserved | 1356: scheduled | [task](lanes/1355.md) |
-| 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Incomplete; preserved | 1358: scheduled | [task](lanes/1357.md) |
-| 1359 | SSE/SSE2 scalar and packed floating point | Incomplete; preserved | 1360: scheduled | [task](lanes/1359.md) |
-| 1361 | String instructions with REP prefixes and the direction flag | Incomplete; preserved | 1362: scheduled | [task](lanes/1361.md) |
+| 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Agent working | 1358: scheduled | [task](lanes/1357.md) |
+| 1359 | SSE/SSE2 scalar and packed floating point | Agent working | 1360: scheduled | [task](lanes/1359.md) |
+| 1361 | String instructions with REP prefixes and the direction flag | Agent working | 1362: scheduled | [task](lanes/1361.md) |
 | 1363 | Wire the already-modelled families into the decoder chain | Committed candidate; review/integration pending | 1364: Committed candidate; review/integration pending | [task](lanes/1363.md) |
 | 1365 | Decoder rows for the system and privileged instructions | Merged after review/checks | 1366: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1365.md) |
-| 1367 | Every LOCK-prefixed read-modify-write instruction | Committed candidate; review/integration pending | 1368: Committed candidate; review/integration pending | [task](lanes/1367.md) |
+| 1367 | Every LOCK-prefixed read-modify-write instruction | Merged after review/checks | 1368: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1367.md) |
 | 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Committed candidate; review/integration pending | 1370: Committed candidate; review/integration pending | [task](lanes/1369.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1801,6 +1801,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-06: integration of candidate(s) [1365] failed the local proof/build gate after independent review 1366; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1366 -->
 - 2026-10-05: lane **1366**, Independent exact review of 1365, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1366.md). <!-- x86-merged:1366 -->
 - 2026-10-06: publication batch checks passed for `2ab47ed9`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-05: lane **1367**, Every LOCK-prefixed read-modify-write instruction, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1367.md). <!-- x86-merged:1367 -->
+- 2026-10-06: checked master `795bf9a6` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:795bf9a6acb8c2b95e1f27f61b111cb851617bdc -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
