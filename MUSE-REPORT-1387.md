@@ -113,3 +113,13 @@ produced by this lane. The draft file is unchecked-in and uncommitted by design
 - OPEN: every executable step; the `Initially`-follows-from-declarations theorem;
   the exact obstruction classes as machine-checked proofs.
 - `#print axioms`: never run (no build completed).
+
+## 7. Addendum (reviewability commit)
+
+The 48-line skeleton `grammatik/Grammatik/X86/GvStartPflicht.lean` (imports +
+`Sp0Ok` only, no `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`) is committed
+as-is so the tree is clean and the reviewer reads exactly what was written.
+It is STILL UNCHECKED: no `./lean-probe` or `./lean-bau` line has been produced
+for it (see section 2). The `import Grammatik.X86.GvStartPflicht` line for
+`grammatik/Grammatik.lean` is NOT added yet — it comes with the first
+machine-checked step, so the committed tree builds exactly as before.
