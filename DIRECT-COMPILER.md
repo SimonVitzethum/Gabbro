@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-06 02:03 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-06 03:14 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -734,17 +734,17 @@ Last ledger refresh: **2026-10-06 02:03 UTC**. This is an operational snapshot, 
 | 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Agent working | 1352: scheduled | [task](lanes/1351.md) |
 | 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Agent working | 1354: scheduled | [task](lanes/1353.md) |
 | 1355 | SSE/SSE2 moves, loads, stores and unpack | Agent working | 1356: scheduled | [task](lanes/1355.md) |
-| 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Agent working | 1358: scheduled | [task](lanes/1357.md) |
+| 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Agent working | 1358: Committed candidate; review/integration pending | [task](lanes/1357.md) |
 | 1359 | SSE/SSE2 scalar and packed floating point | Agent working | 1360: scheduled | [task](lanes/1359.md) |
-| 1361 | String instructions with REP prefixes and the direction flag | Agent working | 1362: scheduled | [task](lanes/1361.md) |
+| 1361 | String instructions with REP prefixes and the direction flag | Committed candidate; review/integration pending | 1362: Committed candidate; review/integration pending | [task](lanes/1361.md) |
 | 1363 | Wire the already-modelled families into the decoder chain | Committed candidate; review/integration pending | 1364: Committed candidate; review/integration pending | [task](lanes/1363.md) |
 | 1365 | Decoder rows for the system and privileged instructions | Merged after review/checks | 1366: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1365.md) |
 | 1367 | Every LOCK-prefixed read-modify-write instruction | Merged after review/checks | 1368: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1367.md) |
 | 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Merged after review/checks | 1370: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1369.md) |
-| 1371 | SSE4.1 and SSE4.2 on the three-byte maps | Scheduled | 1372: scheduled | [task](lanes/1371.md) |
-| 1373 | AES-NI, PCLMULQDQ and MOVBE | Scheduled | 1374: scheduled | [task](lanes/1373.md) |
-| 1375 | Evaluators for the system rows that `SystemDecode` could only refuse | Scheduled | 1376: scheduled | [task](lanes/1375.md) |
-| 1377 | Memory operands, MMX and REX.W forms of the three-byte maps | Scheduled | 1378: scheduled | [task](lanes/1377.md) |
+| 1371 | SSE4.1 and SSE4.2 on the three-byte maps | Merged after review/checks | 1372: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1371.md) |
+| 1373 | AES-NI, PCLMULQDQ and MOVBE | Agent working | 1374: scheduled | [task](lanes/1373.md) |
+| 1375 | Evaluators for the system rows that `SystemDecode` could only refuse | Agent working | 1376: scheduled | [task](lanes/1375.md) |
+| 1377 | Memory operands, MMX and REX.W forms of the three-byte maps | Incomplete; preserved | 1378: scheduled | [task](lanes/1377.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1810,6 +1810,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-06: lane **1368**, Independent exact review of 1367, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1368.md). <!-- x86-merged:1368 -->
 - 2026-10-06: lane **1369**, The three-byte opcode maps 0F 38 and 0F 3A, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1369.md). <!-- x86-merged:1369 -->
 - 2026-10-06: lane **1370**, Independent exact review of 1369, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1370.md). <!-- x86-merged:1370 -->
+- 2026-10-06: lane **1371**, SSE4.1 and SSE4.2 on the three-byte maps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1371.md). <!-- x86-merged:1371 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
