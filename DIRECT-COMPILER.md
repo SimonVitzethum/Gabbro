@@ -743,7 +743,7 @@ Last ledger refresh: **2026-10-06 04:17 UTC**. This is an operational snapshot, 
 | 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Merged after review/checks | 1370: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1369.md) |
 | 1371 | SSE4.1 and SSE4.2 on the three-byte maps | Merged after review/checks | 1372: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1371.md) |
 | 1373 | AES-NI, PCLMULQDQ and MOVBE | Agent working | 1374: scheduled | [task](lanes/1373.md) |
-| 1375 | Evaluators for the system rows that `SystemDecode` could only refuse | Merged after review/checks | 1376: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1375.md) |
+| 1375 | Evaluators for the system rows that `SystemDecode` could only refuse | Merged after review/checks | 1376: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1375.md) |
 | 1377 | Memory operands, MMX and REX.W forms of the three-byte maps | Agent working | 1378: scheduled | [task](lanes/1377.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1817,6 +1817,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-06: checked master `aefb59e1` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:aefb59e1f9d3de819e69590ed88d34e6d34aad3f -->
 - 2026-10-06: lane **1354**, Independent exact review of 1353, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1354.md). <!-- x86-merged:1354 -->
 - 2026-10-06: lane **1375**, Evaluators for the system rows that `SystemDecode` could only refuse, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1375.md). <!-- x86-merged:1375 -->
+- 2026-10-06: lane **1376**, Independent exact review of 1375, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1376.md). <!-- x86-merged:1376 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
