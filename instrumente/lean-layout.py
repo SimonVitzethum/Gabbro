@@ -264,7 +264,20 @@ def rewrite_text(files, moves, mapping):
     return n
 
 
+def in_lane_clone():
+    """A lane works in a clone on branch muse/<N>; there the tool must not move anything: the merge gate checks
+    ownership by the flat path of the task, and the coordinator places new modules after the merge."""
+    try:
+        return re.fullmatch(r'muse/\d+', git('rev-parse', '--abbrev-ref', 'HEAD').strip()) is not None
+    except Exception:
+        return False
+
+
 def main():
+    if in_lane_clone() and (len(sys.argv) < 2 or sys.argv[1] in ('--apply', '--check')):
+        print('lean-layout: lane clone -- nothing moved. Keep your new module at the path of your task; '
+              'the coordinator places it after the merge (a NOT PLACED message is expected and harmless).')
+        return 0
     mode = sys.argv[1] if len(sys.argv) > 1 else '--check'
     return {'--check': cmd_check, '--plan': cmd_plan, '--apply': cmd_apply}.get(mode, cmd_check)()
 
