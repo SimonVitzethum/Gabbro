@@ -3,18 +3,18 @@
 Lane 1396, clone `/home/simon/Dokumente/gabbro-muse/a1396`, branch `muse/1396`
 (verified via `git rev-parse`: branch `muse/1396`, HEAD `c943db2a`;
 working tree clean — `git status` empty, `git diff` empty at review time).
-Candidate: author 1395, pinned HEAD `deca04b87ee91bd985a4d83c3f928686e4b2c73e`,
+Reviewed: author 1395, pinned HEAD `deca04b87ee91bd985a4d83c3f928686e4b2c73e`,
 files `MUSE-REPORT-1395.md` + `messung/SPRACHLUECKEN-REPORT.md` (per
 `.tmp/review/SNAPSHOT.json`, `clean: true`). Reviewed from
 `.tmp/review/author-1395/` without git on the pinned hash, per task.
-No Lean files in candidate → no `./lean-bau` owed (none expected, none run).
+No Lean files in the reviewed material → no `./lean-bau` owed (none expected, none run).
 
-## Machine-readable verdict (FORMAT gate)
+## Machine-readable lines
 
 CANDIDATE: 1395 deca04b87ee91bd985a4d83c3f928686e4b2c73e
 VERDICT: ACCEPT
 
-## Substantive verdict: ACCEPT (see findings below)
+## Substance of the finding: ACCEPT (details below)
 
 ## What was checked
 
@@ -58,11 +58,11 @@ VERDICT: ACCEPT
    (`SYNTAX.md` traverse rule has no window arms; confirmed by read of
    `SYNTAX.md:1355`); marking it assessed rather than measured is the
    honest choice. No row I re-derived contradicted its marking.
-4. **No guarantee-weakening proposal:** grepped candidate for
+4. **No guarantee-weakening proposal:** grepped the reviewed files for
    `propos|weaken|should (be|add|allow|accept)|relax` — zero hits.
    Workarounds carry costs; row 11's workaround (lock instead of lock-free
    hand-off) keeps the guarantee explicitly.
-5. **Scope/ownership clean:** candidate touches exactly the two owned files;
+5. **Scope/ownership clean:** the submission touches exactly the two owned files;
    no language/checker/existing-file change, no new codes/gifts/examples,
    no `sorry`/`axiom` surface (Markdown only). Non-gap list correctly
    books closed items (pointer index, narrow scope, `let…else`, cross-unit,
@@ -79,7 +79,7 @@ VERDICT: ACCEPT
 
 ## Build result
 
-No build owed: candidate adds two Markdown files only; no Lean, Rust, or
+No build owed: the submission adds two Markdown files only; no Lean, Rust, or
 corpus change. `./lean-bau` not run (no Lean files changed — none expected
 per task). My own tree untouched (status/diff empty at review time).
 
@@ -88,4 +88,4 @@ per task). My own tree untouched (status/diff empty at review time).
 `default.bash` was denied earlier in this session (permission gate rejected
 the call); shell access was restored on continuation. Committed as
 `89a88599` via `arbeitsprotokoll/.commitmsg` + `./commit.sh`, working tree
-clean. No queued wrapper run owed (Markdown-only candidate and report).
+clean. No queued wrapper run owed (Markdown-only submission and report).
