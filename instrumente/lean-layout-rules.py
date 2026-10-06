@@ -3,6 +3,8 @@
 # Keep every resulting folder well under 20 entries: new lanes add files, and the check is a hard gate.
 
 rules('grammatik/Grammatik/X86', [
+    # --- GabbroV bridge modules (lanes write them under X86/ because lane ownership allows only that tree)
+    (r'^Gv[A-Z]\w*$', '../GabbroV'),
     # --- the coherent multi-core machine and its families
     (r'^HwKapstein', 'Hw/Kapstein'),
     (r'^Hw(Paging|PagingLarge|Translate|TranslateFull|SegTlb|MemTypesWC|WcOrdering|DrainGeneric|ForwardingGeneric)$', 'Hw/Speicher'),
