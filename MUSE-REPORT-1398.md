@@ -3,9 +3,9 @@
 Branch: `muse/1398`, clone `/home/simon/Dokumente/gabbro-muse/a1398` (verified at
 start: pwd and `git rev-parse --abbrev-ref HEAD` matched before file review).
 Owned file: `MUSE-REPORT-1398.md` (this file) — nothing else touched.
-CANDIDATE: 1397, pinned HEAD `845b6e14d5984c28955c5b0f201adcc5d7b74920`
-(SNAPSHOT.json: base `e5ed4d2c`, files `MUSE-REPORT-1397.md` +
-`messung/SPRACHLUECKEN-LEAN-REPORT.md`, clean).
+CANDIDATE: 1397 845b6e14d5984c28955c5b0f201adcc5d7b74920
+Pinned snapshot (SNAPSHOT.json): base `e5ed4d2c`, files `MUSE-REPORT-1397.md` +
+`messung/SPRACHLUECKEN-LEAN-REPORT.md`, clean.
 
 ## What was done
 
