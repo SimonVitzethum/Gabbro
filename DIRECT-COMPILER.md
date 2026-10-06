@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-06 04:39 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-06 04:41 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -745,6 +745,9 @@ Last ledger refresh: **2026-10-06 04:39 UTC**. This is an operational snapshot, 
 | 1373 | AES-NI, PCLMULQDQ and MOVBE | Agent working | 1374: scheduled | [task](lanes/1373.md) |
 | 1375 | Evaluators for the system rows that `SystemDecode` could only refuse | Merged after review/checks | 1376: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1375.md) |
 | 1377 | Memory operands, MMX and REX.W forms of the three-byte maps | Agent working | 1378: scheduled | [task](lanes/1377.md) |
+| 1379 | SSE4.2: string compares, PCMPGTQ and CRC32 | Scheduled | 1380: scheduled | [task](lanes/1379.md) |
+| 1381 | SSE4.1 rows that SseFourOne left open | Scheduled | 1382: scheduled | [task](lanes/1381.md) |
+| 1383 | Shift and rotate on memory operands and 8-bit high registers | Scheduled | 1384: scheduled | [task](lanes/1383.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1819,6 +1822,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-06: lane **1375**, Evaluators for the system rows that `SystemDecode` could only refuse, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1375.md). <!-- x86-merged:1375 -->
 - 2026-10-06: lane **1376**, Independent exact review of 1375, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1376.md). <!-- x86-merged:1376 -->
 - 2026-10-06: publication batch checks passed for `d332f8c5`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-06: checked master `74f83b76` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:74f83b76c1dd4fecab48e59f3fae11d334b33496 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
