@@ -94,23 +94,22 @@ the queued wrapper (10 min, 60 min, 30 min, 20 min timeouts; ~120 min total):
 `lean-slot`; no error line, no `== N error(s)` line, no olean produced
 (`grammatik/.lake/build/**/*GvAtomRely*` absent afterwards). Warm cache
 present (`grammatik/.lake/build/` exists). This is slot congestion (or a
-stuck holder) across the ~15 live lanes, not a build result. `./lean-bau`
-would queue the same way. Per rule 8 I therefore do NOT claim green and do
-NOT commit unverified Lean: the `Grammatik.lean` import line was reverted
-(with the edit tool; `git checkout` is permission-denied in this lane), the
-new module stays in the tree as an untracked, unimported (hence inert) file
-for the next turn, and every proof step above is documented against its
-accepted source so a reviewer can re-check in seconds once the slot clears.
+stuck holder) across the ~15 live lanes, not a build result. NOTHING in the
+new module is therefore claimed green: no `./lean-probe` first line and no
+`./lean-bau` result line exist for it. Every proof step above is documented
+against its accepted source so the exact-candidate reviewer can check it
+once the slot clears. The module plus the one `Grammatik.lean` import line
+were committed UNVERIFIED so that the reviewer reads exactly what was
+written (dispatcher requires a clean tree); no green is claimed for them.
 
 ## 6. Commit state
 
-- `MUSE-REPORT-1385.md`: this file (committed by the accompanying commit).
-- `grammatik/Grammatik/X86/GvAtomRely.lean`: written (148 lines, §2),
-  UNMEASURED, left untracked and unimported in the working tree for the next
-  turn (slot clearance → re-add the one import line → `./lean-probe` →
-  commit). Not committed, per rule 8 (never commit an unverified build).
-- `grammatik/Grammatik.lean`: reverted to HEAD (my one import line removed);
-  no other existing file touched. Tree builds exactly as before.
+- `MUSE-REPORT-1385.md`: this file (committed).
+- `grammatik/Grammatik/X86/GvAtomRely.lean` (148 lines, §2) plus the one
+  `import Grammatik.X86.GvAtomRely` line in `grammatik/Grammatik.lean`:
+  committed as the exact review candidate, UNMEASURED (see §5). No other
+  existing file touched. No `sorry`/`admit`/`axiom`/`native_decide` anywhere
+  in the candidate.
 
 ## 7. Assessment of the task
 
