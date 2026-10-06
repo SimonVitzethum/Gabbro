@@ -78,10 +78,9 @@ No build owed: candidate adds two Markdown files only; no Lean, Rust, or
 corpus change. `./lean-bau` not run (no Lean files changed — none expected
 per task). My own tree untouched (status/diff empty at review time).
 
-## Blocker
+## Blocker (resolved 2026-10-06)
 
-`default.bash` is denied in this session (permission gate rejects the call),
-so `./commit.sh` cannot run and `MUSE-REPORT-1396.md` is WRITTEN BUT
-UNCOMMITTED. Request: from a session with shell access,
-`git add MUSE-REPORT-1396.md && ./commit.sh` with message ending
-`Co-Authored-By: muse-agent-1396 <muse-agent-1396@noreply.invalid>`.
+`default.bash` was denied earlier in this session (permission gate rejected
+the call); shell access was restored on continuation. Committed as
+`89a88599` via `arbeitsprotokoll/.commitmsg` + `./commit.sh`, working tree
+clean. No queued wrapper run owed (Markdown-only candidate and report).
