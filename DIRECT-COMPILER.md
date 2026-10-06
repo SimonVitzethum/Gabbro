@@ -739,7 +739,7 @@ Last ledger refresh: **2026-10-06 01:43 UTC**. This is an operational snapshot, 
 | 1361 | String instructions with REP prefixes and the direction flag | Agent working | 1362: scheduled | [task](lanes/1361.md) |
 | 1363 | Wire the already-modelled families into the decoder chain | Committed candidate; review/integration pending | 1364: Committed candidate; review/integration pending | [task](lanes/1363.md) |
 | 1365 | Decoder rows for the system and privileged instructions | Merged after review/checks | 1366: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1365.md) |
-| 1367 | Every LOCK-prefixed read-modify-write instruction | Merged after review/checks | 1368: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1367.md) |
+| 1367 | Every LOCK-prefixed read-modify-write instruction | Merged after review/checks | 1368: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1367.md) |
 | 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Committed candidate; review/integration pending | 1370: Committed candidate; review/integration pending | [task](lanes/1369.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
@@ -1803,6 +1803,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-06: publication batch checks passed for `2ab47ed9`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-05: lane **1367**, Every LOCK-prefixed read-modify-write instruction, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1367.md). <!-- x86-merged:1367 -->
 - 2026-10-06: checked master `795bf9a6` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:795bf9a6acb8c2b95e1f27f61b111cb851617bdc -->
+- 2026-10-06: lane **1368**, Independent exact review of 1367, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1368.md). <!-- x86-merged:1368 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
