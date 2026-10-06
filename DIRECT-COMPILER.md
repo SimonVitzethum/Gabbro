@@ -738,7 +738,7 @@ Last ledger refresh: **2026-10-06 00:04 UTC**. This is an operational snapshot, 
 | 1359 | SSE/SSE2 scalar and packed floating point | Agent working | 1360: scheduled | [task](lanes/1359.md) |
 | 1361 | String instructions with REP prefixes and the direction flag | Agent working | 1362: scheduled | [task](lanes/1361.md) |
 | 1363 | Wire the already-modelled families into the decoder chain | Agent working | 1364: scheduled | [task](lanes/1363.md) |
-| 1365 | Decoder rows for the system and privileged instructions | Merged after review/checks | 1366: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1365.md) |
+| 1365 | Decoder rows for the system and privileged instructions | Merged after review/checks | 1366: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1365.md) |
 | 1367 | Every LOCK-prefixed read-modify-write instruction | Committed candidate; review/integration pending | 1368: Agent working | [task](lanes/1367.md) |
 | 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Agent working | 1370: scheduled | [task](lanes/1369.md) |
 
@@ -1799,6 +1799,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-05: checked master `6079641b` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:6079641b9d111897e6eff908020cbab97d7f9ad9 -->
 - 2026-10-05: lane **1365**, Decoder rows for the system and privileged instructions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1365.md). <!-- x86-merged:1365 -->
 - 2026-10-06: integration of candidate(s) [1365] failed the local proof/build gate after independent review 1366; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1366 -->
+- 2026-10-05: lane **1366**, Independent exact review of 1365, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1366.md). <!-- x86-merged:1366 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
