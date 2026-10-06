@@ -709,7 +709,8 @@ import Grammatik.X86.Opcode.OpcodeLedger1Byte00
 import Grammatik.X86.Opcode.OpcodeLedger1ByteC0
 import Grammatik.X86.Opcode.OpcodeLedger0F00
 import Grammatik.X86.Opcode.OpcodeLedger1Byte80
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.X86.Befehle.System.SystemDecode
 import Grammatik.X86.TSO.Verriegelt.LockedAllRmw
 import Grammatik.X86.Befehle.Sse.SseThreeByte
+import Grammatik.X86.Hw.Kapstein.HwKapsteinDrei
+import Grammatik.Zielsatz.Atomar.BeweisAtomar
