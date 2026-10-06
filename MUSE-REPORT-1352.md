@@ -1,7 +1,9 @@
 # MUSE-REPORT-1352: exact review of candidate 1351 (MOV/TEST/LEA/PUSH/POP/NOP/frame)
 
 Reviewer lane 1352, clone /home/simon/Dokumente/gabbro-muse/a1352, branch muse/1352
-(verified). CANDIDATE: 1351 @ c120e7310f15b54081b340c5a7ab3a989b71dd6b.
+(verified). Under review: author lane 1351 at pinned head
+c120e7310f15b54081b340c5a7ab3a989b71dd6b (machine-readable lines in the
+verdict section below).
 Delivered files reviewed: `.tmp/review/SNAPSHOT.json`,
 `.tmp/review/author-1351/PATCH.diff`,
 `.tmp/review/author-1351/grammatik/Grammatik/X86/IntMovTest.lean` (1993 lines),
@@ -20,9 +22,9 @@ Delivered files reviewed: `.tmp/review/SNAPSHOT.json`,
   no `Classical.choice`. (An intermediate `sorryAx` on `mt_zeuge` is explained
   in the author report as error-recovery after a `-` + `/` block-comment parse
   break, fixed by rewording; final list is clean.)
-- Existing-file diff: candidate `Grammatik.lean` is base + exactly one appended
-  line 712 `import Grammatik.X86.IntMovTest`. Nothing else touched.
-- Evaluator reuse, not copies: candidate imports the accepted producers
+- Existing-file diff: the delivered `Grammatik.lean` is base + exactly one
+  appended line 712 `import Grammatik.X86.IntMovTest`. Nothing else touched.
+- Evaluator reuse, not copies: the new file imports the accepted producers
   (NarrowOps, ShiftLogic, AddressEncoding, HwAddressed, HwStackCalls,
   Ausfuehrung, HardwareExecution, HwKapsteinDecoder) and calls `mergeRegNarrow`,
   `moveNarrow`, `andW`, `adrEff`, `parseAdrTail`/`encodeAdr`, `hwAddrStore`/
@@ -67,40 +69,42 @@ Delivered files reviewed: `.tmp/review/SNAPSHOT.json`,
   budget. No hardware-correspondence or W/GX claim anywhere (only disclaimer
   mentions). Maintainer wiring point named (kapDecode last arm).
 
-## Known residuals (disclosed, not REPAIR-grade)
+## Known residuals (disclosed, not repair-grade)
 
 - 90H (XCHG 90+r, 1-byte NOP 90) and 86/87 decode nowhere in the extended
-  chain (candidate refuses with pin; `kapDecode` has no Sx/XCHG arm).
+  chain (the new decoder refuses with pin; `kapDecode` has no Sx/XCHG arm).
   Refusal is the correct call: XCHG carries implicit-LOCK semantics and the
   coherent machine under construction refuses LOCK/RMW; forcing it here would
   duplicate `decodeSx` or drag LOCK scope into this lane. Follow-up belongs
   to the locked-RMW connection, not this family.
-- General REX.W / 66H LEA likewise unconnected (candidate takes bare 8D
+- General REX.W / 66H LEA likewise unconnected (the new decoder takes bare 8D
   only; old chain takes only the mod-2-SIB REX.W slice via `decodeCoreLea`,
   and accepted `leaGemeinsam_verweigert` shows `decodeExt` refusing one
   REX.W form). Disclosed in CUTS; maintainer work at the named wiring point.
 - Layout conflict documented by the author: task mandates
   `grammatik/Grammatik/X86/IntMovTest.lean`, rule 36 would place `Int*`
   under `Befehle/Ganzzahl`; merge gate runs `--apply`. Not a defect.
-- My clone base is newer than the candidate base (own `Grammatik.lean` has
-  721 lines vs candidate-base 711); the candidate's one-line append will need
-  its usual trivial rebase at merge.
+- My clone base is newer than the pinned base (own `Grammatik.lean` has
+  721 lines vs pinned-base 711); the one-line append will need its usual
+  trivial rebase at merge.
 
 ## Build status (honest)
 
-- `./lean-probe .tmp/review/author-1351/.../IntMovTest.lean`: exceeded 600 s,
-  no result (cold `.lake`, serial slot shared with other lanes).
+- `./lean-probe` on the delivered file: exceeded 600 s, no result
+  (cold `.lake`, serial slot shared with other lanes).
 - `./lean-bau` in own clone: exceeded 3600 s with no result line (same cause).
 - Author BUILD-EVIDENCE final entries: `./lean-bau` exit 0, 0 error lines,
   `Build completed successfully (709 jobs).`; `./lean-probe` 0 errors.
-  Verdict below rests on the complete static verification above plus that
+  The finding below rests on the complete static verification above plus that
   evidence; the merge gate rebuilds `grammatik/` locally before committing,
   which covers the missed independent re-execution.
 
-## VERDICT: ACCEPT
+## Machine-readable verdict
 
-CANDIDATE 1351 @ c120e7310f15b54081b340c5a7ab3a989b71dd6b: ACCEPT.
-No unsupported desired-correctness premise, no weakened guarantee, no fake
-closure found. New definitions/theorems added by this reviewer: none
-(report-only review; no Lean changes made, working tree left clean except
-this report).
+CANDIDATE: 1351 c120e7310f15b54081b340c5a7ab3a989b71dd6b
+VERDICT: ACCEPT
+
+The accepted state carries no unsupported desired-correctness premise, no
+weakened guarantee, no fake closure. New definitions/theorems added by this
+reviewer: none (report-only review; no Lean changes made, working tree left
+clean except this report).
