@@ -1680,4 +1680,314 @@ theorem mtAdapterReg_laenge_verweigert (m : HwMaschine) (c : Nat)
   unfold mtAdapterReg mtSchritt
   rfl
 
+/-! ## 10. Reached witness: a two-core run with a memory-changing
+  drain, owner-only forwarding, register MOV and TEST flags.
+
+  Core 0 pushes a word (buffered, RIP advances), pops it back
+  through owner-only forwarding, and drains it into shared memory
+  (0 becomes the word, both cores observe). Core 1 observes the old
+  value before the drain. All claims are closed decidable
+  observations projecting to `Wort`/`Byte`/`Nat`, never whole states. -/
+
+/-- Witness value (low byte `0x08`). -/
+def mtWitV : Wort := BitVec.ofNat 64 0x0102030405060708
+
+/-- Witness stack top: the pushed slot stays inside the accepted
+    data window. -/
+def mtWitTop : Adresse := BitVec.ofNat 64 8208
+
+/-- Witness slot: one word below the top. -/
+def mtWitSlot : Adresse := BitVec.ofNat 64 8200
+
+/-- Witness core-0 registers: value, stack top, frame. -/
+def mtWitReg0 : Register → Wort := fun q =>
+  if q = .rax then mtWitV
+  else if q = .rsp then mtWitTop
+  else if q = .rbp then mtWitTop
+  else BitVec.ofNat 64 0
+
+/-- Witness cores: core 0 runs at 4096, core 1 idles on the data page. -/
+def mtWitKern : Nat → HwKern
+  | 0 => ⟨mtWitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: accepted shared memory, two cores, empty
+    buffers, full silicon. -/
+def mtWitM0 : HwMaschine :=
+  ⟨hwAddrWitMem, mtWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed: full silicon admits all. -/
+theorem mtWitM0_wf : HwWf mtWitM0 := by
+  intro c f _
+  cases f <;> rfl
+
+/-- The machine after the adapter push of the witness word. -/
+def mtWitM1 : Option HwMaschine :=
+  adapterMt.schritt mtWitM0 0 (.pushW .b64 mtWitV 1)
+
+/-- The machine after popping the word into `rbx` through forwarding. -/
+def mtWitM2 : Option HwMaschine :=
+  mtWitM1.bind (fun m => adapterMt.schritt m 0 (.popW .b64 .rbx 1))
+
+/-- The shared TSO state after the push issue. -/
+def mtWitT1 : Option TSOZustand := mtWitM1.map tsoAnsicht
+
+/-- The push buffers exactly eight entries on core 0. -/
+theorem mtWit_puffer8 :
+    mtWitM1.map (fun m => (m.puffer 0).length) = some 8 := by
+  decide
+
+/-- The push drops the stack pointer to the slot. -/
+theorem mtWit_rsp_slot :
+    mtWitM1.map (fun m => (m.kerne 0).register .rsp) =
+      some mtWitSlot := by
+  decide
+
+/-- The push advances RIP past its length. -/
+theorem mtWit_rip_weitet :
+    mtWitM1.map (fun m => (m.kerne 0).rip) =
+      some (BitVec.ofNat 64 4097) := by
+  decide
+
+/-- The push leaves the shared slot byte at zero (buffer only). -/
+theorem mtWit_mem_still :
+    mtWitT1.map (fun s => s.mem.bytes mtWitSlot) =
+      some (BitVec.ofNat 8 0) := by
+  decide
+
+/-- The forwarded pop observes the pushed word in `rbx`. -/
+theorem mtWit_pop_wert :
+    mtWitM2.map (fun m => (m.kerne 0).register .rbx) =
+      some mtWitV := by
+  decide
+
+/-- The pop restores the stack pointer to the top. -/
+theorem mtWit_pop_rsp :
+    mtWitM2.map (fun m => (m.kerne 0).register .rsp) =
+      some mtWitTop := by
+  decide
+
+/-- Core 0 drains its eight entries, one flush per state. -/
+def mtWitF1 : Option TSOZustand :=
+  mtWitT1.bind (fun s => flushKern s 0)
+
+def mtWitF2 : Option TSOZustand :=
+  mtWitF1.bind (fun s => flushKern s 0)
+
+def mtWitF3 : Option TSOZustand :=
+  mtWitF2.bind (fun s => flushKern s 0)
+
+def mtWitF4 : Option TSOZustand :=
+  mtWitF3.bind (fun s => flushKern s 0)
+
+def mtWitF5 : Option TSOZustand :=
+  mtWitF4.bind (fun s => flushKern s 0)
+
+def mtWitF6 : Option TSOZustand :=
+  mtWitF5.bind (fun s => flushKern s 0)
+
+def mtWitF7 : Option TSOZustand :=
+  mtWitF6.bind (fun s => flushKern s 0)
+
+def mtWitF8 : Option TSOZustand :=
+  mtWitF7.bind (fun s => flushKern s 0)
+
+/-- Forwarding: core 0 reads its own unflushed word. -/
+theorem mtWit_weiterleitung :
+    mtWitT1.map (fun s => concLoad s 0 .b64 mtWitSlot) =
+      some (some mtWitV) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem mtWit_fremd_alt :
+    mtWitT1.map (fun s => concLoad s 1 .b64 mtWitSlot) =
+      some (some (BitVec.ofNat 64 0)) := by
+  decide
+
+/-- The drain changes shared memory: the slot reads `0x08`. -/
+theorem mtWit_spuelung :
+    mtWitF8.map (fun s => s.mem.bytes mtWitSlot) =
+      some (BitVec.ofNat 8 8) := by
+  decide
+
+/-- After the drain core 1 observes the new word. -/
+theorem mtWit_fremd_neu :
+    mtWitF8.map (fun s => concLoad s 1 .b64 mtWitSlot) =
+      some (some mtWitV) := by
+  decide
+
+/-- Closed memory round trip: store through `[rbp + 5]`. -/
+theorem roundtrip_mt_movRM_mem :
+    (encodeMt (.movRM .b32 fMT .rax)).bind
+      (fun bs => decodeMovTest bs) =
+      some ((⟨.movRM .b32 fMT .rax, 3⟩, [])) := by
+  decide
+
+/-- Closed memory round trip: load through `[rbp + 5]`. -/
+theorem roundtrip_mt_movMR_mem :
+    (encodeMt (.movMR .b32 .rax fMT)).bind
+      (fun bs => decodeMovTest bs) =
+      some ((⟨.movMR .b32 .rax fMT, 3⟩, [])) := by
+  decide
+
+/-- Closed memory round trip: bare LEA through `[rbp + 5]`. -/
+theorem roundtrip_mt_leaBare_mem :
+    (encodeMt (.leaBare .rax fMT)).bind
+      (fun bs => decodeMovTest bs) =
+      some ((⟨.leaBare .rax fMT, 3⟩, [])) := by
+  decide
+
+/-- The witness MOV writes the zero-extended low half to `rcx`. -/
+theorem mtWit_mov_wert :
+    (mtSchritt ⟨.movRR .b32 .rcx .rax, 3⟩
+      (projZustand mtWitM0 0)).map (fun s => s.register .rcx) =
+      some (BitVec.ofNat 64 0x05060708) := by
+  decide
+
+/-- The witness TEST of zero sets ZF on the idle core. -/
+theorem mtWit_test_zf :
+    (mtSchritt ⟨.testRR .b64 .rax .rax, 3⟩
+      (projZustand mtWitM0 1)).map (fun s => s.flags.zf) =
+      some true := by
+  decide
+
+/-- The adapter register event moves the MOV into core data. -/
+theorem mtWit_adapter_reg :
+    (adapterMt.schritt mtWitM0 0
+      (.reg ⟨.movRR .b32 .rcx .rax, 3⟩)).map
+      (fun m => (m.kerne 0).register .rcx) =
+      some (BitVec.ofNat 64 0x05060708) := by
+  decide
+
+/-- JOINT WITNESS: well-formedness, buffered push with stack-pointer
+    drop and RIP advance, memory still at zero, forwarded pop with
+    stack-pointer restore, owner-only forwarding, observable drain
+    (0 becomes `0x08`, both cores observe), register MOV value, TEST
+    zero flag, adapter register lift, beside the planted refusal. The
+    run is reached (push then pop through the adapter, eight
+    drain flushes) and non-degenerate (two cores, memory change). -/
+theorem mt_zeuge :
+    HwWf mtWitM0 ∧
+    mtWitM1.map (fun m => (m.puffer 0).length) = some 8 ∧
+    mtWitM1.map (fun m => (m.kerne 0).register .rsp) =
+      some mtWitSlot ∧
+    mtWitM1.map (fun m => (m.kerne 0).rip) =
+      some (BitVec.ofNat 64 4097) ∧
+    mtWitT1.map (fun s => s.mem.bytes mtWitSlot) =
+      some (BitVec.ofNat 8 0) ∧
+    mtWitM2.map (fun m => (m.kerne 0).register .rbx) =
+      some mtWitV ∧
+    mtWitM2.map (fun m => (m.kerne 0).register .rsp) =
+      some mtWitTop ∧
+    mtWitT1.map (fun s => concLoad s 0 .b64 mtWitSlot) =
+      some (some mtWitV) ∧
+    mtWitT1.map (fun s => concLoad s 1 .b64 mtWitSlot) =
+      some (some (BitVec.ofNat 64 0)) ∧
+    mtWitF8.map (fun s => s.mem.bytes mtWitSlot) =
+      some (BitVec.ofNat 8 8) ∧
+    mtWitF8.map (fun s => concLoad s 1 .b64 mtWitSlot) =
+      some (some mtWitV) ∧
+    (mtSchritt ⟨.movRR .b32 .rcx .rax, 3⟩
+      (projZustand mtWitM0 0)).map (fun s => s.register .rcx) =
+      some (BitVec.ofNat 64 0x05060708) ∧
+    (mtSchritt ⟨.testRR .b64 .rax .rax, 3⟩
+      (projZustand mtWitM0 1)).map (fun s => s.flags.zf) =
+      some true ∧
+    (adapterMt.schritt mtWitM0 0
+      (.reg ⟨.movRR .b32 .rcx .rax, 3⟩)).map
+      (fun m => (m.kerne 0).register .rcx) =
+      some (BitVec.ofNat 64 0x05060708) ∧
+    adapterMt.schritt mtWitM0 0 .verweigert = none := by
+  exact ⟨mtWitM0_wf, mtWit_puffer8, mtWit_rsp_slot, mtWit_rip_weitet,
+    mtWit_mem_still, mtWit_pop_wert, mtWit_pop_rsp, mtWit_weiterleitung,
+    mtWit_fremd_alt, mtWit_spuelung, mtWit_fremd_neu, mtWit_mov_wert,
+    mtWit_test_zf, mtWit_adapter_reg, adapterMt_verweigert _ _⟩
+
+/- CUTS:
+   Proved here, layering over (never editing) the accepted producers:
+   - Family decoder `decodeMovTest` with ownership verdicts against
+     `kapDecode`: bare/66/REX MOV 88/8A/8B (modrm), B0-B7, 66-B8,
+  A8/A9 (REX.W A9 included), C6/C7 digit 0 (minus REX.W C7-reg),
+      F6/F7 digits 0 and 1, 84/bare-85/66-85, bare 8D, 0F 1F NOP (bare/66),
+     ENDBR64, 8F /0, FF /6, LEAVE, RET imm16, INT3, UD2.
+     Rows owned elsewhere refuse here and stay with their owners:
+     REX.W 85-reg (decodeCore/decodeIntHw), 90+r/86/87 (decodeSx),
+     REX.W B8-imm64 and REX.W 89-reg (pilot), bare/REX B8-imm32 and
+     REX.W C7-reg (decodeC), REX.W 89/8B memory (accepted memory
+     rows), REX 89 mod 2/3 (decodeNarrow).
+   - Canonical encoder `encodeMt` with befehl round trips (general,
+     suffix-threaded, for the finite rows; closed instances for
+     memory rows over `fMT`, including bare LEA).
+   - Register semantics `mtSchritt` reusing `mergeRegNarrow`
+     (8/16-merge, 32-zero-extend), `andW` (AF free), `adrEff`
+     (truncated for bare LEA), `schrittRegister`; agreement with
+     `moveNarrow`, the AND flag snapshot, frame preservation.
+   - Extended chain `kapDecodeMitMt` (old chain first): exact
+     agreement, take-where-refused, joint refusal.
+   - Adapter `adapterMt` over `MtEreignis`: register lift,
+     exact store/load delegation to `hwAddrStore`/`hwAddrLoad`,
+     buffered push/pop/leave/return through `concIssue`/`concLoad`,
+     `HwWf` preservation of every step, planted length refusals
+     and the refused event. INT3/UD2 decode but admit no event.
+   - Reached two-core witness `mt_zeuge`: push/pop through the
+     adapter, eight-flush drain changing memory 0 to `0x08`,
+     owner-only forwarding, MOV value, TEST zero flag.
+   NOT proved here, and not claimed:
+   - No silicon correspondence: encodings and width discipline
+     follow the accepted canonical subsets with self-consistency
+     only; Intel SDM extracts are provenance, not proofs.
+   - No general memory round trip (needs a
+     parseAdrTail∘encodeAdr inversion lemma); no per-access
+     target-to-W/GX simulation; no LOCK/RMW path; no interrupts;
+     no source/ABI/loader/entry/budget claim.
+   - A maintainer wires the family rows into `kapDecode`
+     (HwKapsteinDecoder.lean) behind its last arm; the extended
+     chain above states the contract.
+-/
+
+#print axioms roundtrip_mt_movRR
+#print axioms roundtrip_mt_testRR
+#print axioms roundtrip_mt_nopReg
+#print axioms roundtrip_mt_pushR
+#print axioms roundtrip_mt_popR
+#print axioms roundtrip_mt_endbr64
+#print axioms roundtrip_mt_leave
+#print axioms roundtrip_mt_int3
+#print axioms roundtrip_mt_ud2
+#print axioms roundtrip_mt_movRM_mem
+#print axioms roundtrip_mt_movMR_mem
+#print axioms roundtrip_mt_leaBare_mem
+#print axioms mtSchritt_movRR_ist_moveNarrow
+#print axioms mtSchritt_testRR_flags
+#print axioms mtSchritt_movRR_rahmen
+#print axioms kapDecodeMitMt_kap
+#print axioms kapDecodeMitMt_mt
+#print axioms kapDecodeMitMt_nichts
+#print axioms adapterMt_store
+#print axioms adapterMt_load
+#print axioms adapterMt_verweigert
+#print axioms adapterMt_reg
+#print axioms adapterMt_pushW
+#print axioms adapterMt_popW
+#print axioms adapterMt_leaveW
+#print axioms adapterMt_retW
+#print axioms adapterMt_wf
+#print axioms mtAdapterReg_wf
+#print axioms mtPushW_wf
+#print axioms mtPopW_wf
+#print axioms mtLeaveW_wf
+#print axioms mtRetW_wf
+#print axioms mtWitM0_wf
+#print axioms mtWit_puffer8
+#print axioms mtWit_weiterleitung
+#print axioms mtWit_fremd_alt
+#print axioms mtWit_spuelung
+#print axioms mtWit_fremd_neu
+#print axioms mtWit_mov_wert
+#print axioms mtWit_test_zf
+#print axioms mtWit_adapter_reg
+#print axioms mt_zeuge
+
 end Gabbro.Grammatik.X86
