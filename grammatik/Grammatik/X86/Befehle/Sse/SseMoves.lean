@@ -870,7 +870,7 @@ theorem roundtrip_movntiSt (base src : Register)
 /-! ## 4. Capstone agreement: the accepted chain first, moves where
     it refuses.
 
-  `kapDecodeSse` is a NEW definition over the accepted `kapDecode`
+  `kapDecodeSseMoves` is a NEW definition over the accepted `kapDecode`
   (never edited here): the old chain decides every byte string it
   accepts, the move decoder only where it refuses. The ledger-1341
   `fehlt` rows are exactly the new arm; a maintainer extends the
@@ -879,7 +879,7 @@ theorem roundtrip_movntiSt (base src : Register)
 
 /-- Extended chain: the accepted capstone chain first, the move
     decoder only where the whole accepted chain refuses. -/
-def kapDecodeSse : List Byte →
+def kapDecodeSseMoves : List Byte →
     Option ((KapDekodiert ⊕ SseDecodiert) × List Byte) :=
   fun bs =>
     match kapDecode bs with
@@ -893,23 +893,23 @@ def kapDecodeSse : List Byte →
     string the accepted chain decodes: nothing is shadowed. -/
 theorem kapDecodeSse_kanonisch (bs : List Byte) (k : KapDekodiert)
     (rest : List Byte) (h : kapDecode bs = some (k, rest)) :
-    kapDecodeSse bs = some (.inl k, rest) := by
-  unfold kapDecodeSse
+    kapDecodeSseMoves bs = some (.inl k, rest) := by
+  unfold kapDecodeSseMoves
   rw [h]
 
 /-- Where the accepted chain refuses, a covered move row is taken. -/
 theorem kapDecodeSse_erweitert (bs : List Byte) (n : SseDecodiert)
     (rest : List Byte) (h1 : kapDecode bs = none)
     (h2 : decodeSse bs = some (n, rest)) :
-    kapDecodeSse bs = some (.inr n, rest) := by
-  unfold kapDecodeSse
+    kapDecodeSseMoves bs = some (.inr n, rest) := by
+  unfold kapDecodeSseMoves
   rw [h1, h2]
 
 /-- Where both refuse, the extended chain refuses. -/
-theorem kapDecodeSse_nichts (bs : List Byte)
+theorem kapDecodeSseMoves_nichts (bs : List Byte)
     (h1 : kapDecode bs = none) (h2 : decodeSse bs = none) :
-    kapDecodeSse bs = none := by
-  unfold kapDecodeSse
+    kapDecodeSseMoves bs = none := by
+  unfold kapDecodeSseMoves
   rw [h1, h2]
 
 /-- The accepted chain refuses the MOVUPS load (ledger 1341 `fehlt`). -/
@@ -944,7 +944,7 @@ theorem pin_kap_movssSt_s32 :
 /-- Overlap through the extended chain: the `F3 0F 11` store keeps
     the accepted `s32` arm. -/
 theorem pin_kapSse_movssSt_s32 :
-    kapDecodeSse [natByte 64, natByte 243, natByte 15, natByte 17,
+    kapDecodeSseMoves [natByte 64, natByte 243, natByte 15, natByte 17,
       natByte 153, natByte 0, natByte 0, natByte 0, natByte 0] =
       some (.inl (.s32 ⟨.movssSpeichere .rcx .xmm3
         (BitVec.ofNat 32 0), 9⟩), []) :=
@@ -985,7 +985,7 @@ theorem kap_weist_movntdq_zurueck :
 
 /-- New row through the extended chain: MOVUPS load. -/
 theorem pin_kapSse_movupsLd :
-    kapDecodeSse (encodeSse (.movupsLd .xmm0 .rax (BitVec.ofNat 32 0))) =
+    kapDecodeSseMoves (encodeSse (.movupsLd .xmm0 .rax (BitVec.ofNat 32 0))) =
       some (.inr ⟨.movupsLd .xmm0 .rax (BitVec.ofNat 32 0),
         (encodeSse (.movupsLd .xmm0 .rax
           (BitVec.ofNat 32 0))).length⟩, []) :=
@@ -1412,7 +1412,7 @@ def sseWitReg : Register → Wort :=
     else BitVec.ofNat 64 0
 
 /-- Witness cores over the register file: both cores run at 4096. -/
-def sseWitKern : Nat → HwKern
+def sseMovesWitKern : Nat → HwKern
   | 0 => ⟨sseWitReg, zeugeFlags, BitVec.ofNat 64 4096, sseWitXmm,
       kontextReset⟩
   | _ => ⟨sseWitReg, zeugeFlags, BitVec.ofNat 64 4096, sseWitXmm,
@@ -1420,21 +1420,21 @@ def sseWitKern : Nat → HwKern
 
 /-- Witness start machine: shared memory, two cores, empty buffers,
     full silicon. -/
-def sseWitStart : HwMaschine :=
-  ⟨zeugeSpeicher, sseWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+def sseMovesWitStart : HwMaschine :=
+  ⟨zeugeSpeicher, sseMovesWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
 
 /-- The witness machine is well-formed. -/
-theorem sseWitStart_wf : HwWf sseWitStart := by
+theorem sseMovesWitStart_wf : HwWf sseMovesWitStart := by
   intro c f _
   cases f <;> rfl
 
 /-- Core 0 interleaves through the machine adapter. -/
 def sseWitOutUnpck : Option HwMaschine :=
-  adapterSseMoves.schritt sseWitStart 0 ⟨.unpcklpsRR .xmm0 .xmm1, 4⟩
+  adapterSseMoves.schritt sseMovesWitStart 0 ⟨.unpcklpsRR .xmm0 .xmm1, 4⟩
 
 /-- Core 1 moves a low half high through the machine adapter. -/
 def sseWitOutMovlh : Option HwMaschine :=
-  adapterSseMoves.schritt sseWitStart 1 ⟨.movlhpsRR .xmm2 .xmm3, 4⟩
+  adapterSseMoves.schritt sseMovesWitStart 1 ⟨.movlhpsRR .xmm2 .xmm3, 4⟩
 
 /-- Read an XMM register out of a machine outcome. -/
 def sseXmmOut (o : Option HwMaschine) (c : Nat) (q : XmmReg) :
@@ -1486,79 +1486,79 @@ theorem sseWit_movlh_hi :
   vHi_vecJoin _ _
 
 /-- Witness data address. -/
-def sseWitAdr : Adresse := BitVec.ofNat 64 8192
+def sseMovesWitAdr : Adresse := BitVec.ofNat 64 8192
 
 /-- Witness TSO start: canonical memory, empty buffers. -/
-def sseWitTso0 : TSOZustand := ⟨zeugeSpeicher, fun _ => []⟩
+def sseMovesWitTso0 : TSOZustand := ⟨zeugeSpeicher, fun _ => []⟩
 
 /-- Core 0 issues byte 42 at the data cell. -/
-def sseWitTso1 : Option TSOZustand :=
-  issueByte sseWitTso0 0 sseWitAdr (BitVec.ofNat 8 42)
+def sseMovesWitTso1 : Option TSOZustand :=
+  issueByte sseMovesWitTso0 0 sseMovesWitAdr (BitVec.ofNat 8 42)
 
 /-- Core 0 observes its own byte (forwarding). -/
-def sseWitEigen : Option (Option Byte) :=
-  match sseWitTso1 with
-  | some s => some (loadByte s 0 sseWitAdr)
+def sseMovesWitEigen : Option (Option Byte) :=
+  match sseMovesWitTso1 with
+  | some s => some (loadByte s 0 sseMovesWitAdr)
   | none => none
 
 /-- Core 1 observes the old byte (no foreign forwarding). -/
-def sseWitFremd : Option (Option Byte) :=
-  match sseWitTso1 with
-  | some s => some (loadByte s 1 sseWitAdr)
+def sseMovesWitFremd : Option (Option Byte) :=
+  match sseMovesWitTso1 with
+  | some s => some (loadByte s 1 sseMovesWitAdr)
   | none => none
 
 /-- Core 0 drains its oldest entry. -/
-def sseWitTso2 : Option TSOZustand :=
-  match sseWitTso1 with
+def sseMovesWitTso2 : Option TSOZustand :=
+  match sseMovesWitTso1 with
   | some s => flushKern s 0
   | none => none
 
 /-- The shared byte after the drain. -/
-def sseWitNachFlush : Option (Option Byte) :=
-  match sseWitTso2 with
-  | some s => some (some (s.mem.bytes sseWitAdr))
+def sseMovesWitNachFlush : Option (Option Byte) :=
+  match sseMovesWitTso2 with
+  | some s => some (some (s.mem.bytes sseMovesWitAdr))
   | none => none
 
 /-- Core 1 reads the drained byte from shared memory. -/
-def sseWitFremdNach : Option (Option Byte) :=
-  match sseWitTso2 with
-  | some s => some (loadByte s 1 sseWitAdr)
+def sseMovesWitFremdNach : Option (Option Byte) :=
+  match sseMovesWitTso2 with
+  | some s => some (loadByte s 1 sseMovesWitAdr)
   | none => none
 
 /-- The data cell starts zeroed. -/
-theorem sseWit_anfang_null :
-    zeugeSpeicher.bytes sseWitAdr = BitVec.ofNat 8 0 := by
+theorem sseMovesWit_anfang_null :
+    zeugeSpeicher.bytes sseMovesWitAdr = BitVec.ofNat 8 0 := by
   rfl
 
 /-- Forwarding: core 0 reads its own unflushed byte. -/
-theorem sseWit_weiterleitung :
-    sseWitEigen = some (some (BitVec.ofNat 8 42)) := by
+theorem sseMovesWit_weiterleitung :
+    sseMovesWitEigen = some (some (BitVec.ofNat 8 42)) := by
   decide
 
 /-- No foreign forwarding: core 1 still reads zero. -/
-theorem sseWit_fremd_alt :
-    sseWitFremd = some (some (BitVec.ofNat 8 0)) := by
+theorem sseMovesWit_fremd_alt :
+    sseMovesWitFremd = some (some (BitVec.ofNat 8 0)) := by
   decide
 
 /-- The drain changes shared memory: the cell reads 42. -/
-theorem sseWit_spuelung_aendert_speicher :
-    sseWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+theorem sseMovesWit_spuelung_aendert_speicher :
+    sseMovesWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
   decide
 
 /-- After the drain core 1 observes the new byte. -/
-theorem sseWit_fremd_neu :
-    sseWitFremdNach = some (some (BitVec.ofNat 8 42)) := by
+theorem sseMovesWit_fremd_neu :
+    sseMovesWitFremdNach = some (some (BitVec.ofNat 8 42)) := by
   decide
 
 /-- A memory row refuses the machine step. -/
 theorem sseWit_speicher_verweigert :
-    adapterSseMoves.schritt sseWitStart 0
+    adapterSseMoves.schritt sseMovesWitStart 0
       ⟨.movupsLd .xmm0 .rax (BitVec.ofNat 32 0), 8⟩ = none :=
   adapterSseMoves_verweigert_speicher _ _ _ rfl
 
 /-- A bad decode length refuses the machine step. -/
-theorem sseWit_schlechte_laenge_verweigert :
-    adapterSseMoves.schritt sseWitStart 0
+theorem sseMovesWit_schlechte_laenge_verweigert :
+    adapterSseMoves.schritt sseMovesWitStart 0
       ⟨.unpcklpsRR .xmm0 .xmm1, 0⟩ = none :=
   adapterSseMoves_verweigert_bei_laenge _ _ _ (by decide)
 
@@ -1579,22 +1579,22 @@ theorem sseHw_zeuge :
       laneNat .b32 (sseUnpckLo32 sseWitA sseWitB) 3 = 6 ∧
       vLo (vecJoin (vLo sseWitA) (vLo sseWitB)) = vLo sseWitA ∧
       vHi (vecJoin (vLo sseWitA) (vLo sseWitB)) = vLo sseWitB ∧
-      sseWitEigen = some (some (BitVec.ofNat 8 42)) ∧
-      sseWitFremd = some (some (BitVec.ofNat 8 0)) ∧
-      sseWitNachFlush = some (some (BitVec.ofNat 8 42)) ∧
-      sseWitFremdNach = some (some (BitVec.ofNat 8 42)) ∧
-      zeugeSpeicher.bytes sseWitAdr = BitVec.ofNat 8 0 ∧
-      HwWf sseWitStart ∧
-      adapterSseMoves.schritt sseWitStart 0
+      sseMovesWitEigen = some (some (BitVec.ofNat 8 42)) ∧
+      sseMovesWitFremd = some (some (BitVec.ofNat 8 0)) ∧
+      sseMovesWitNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+      sseMovesWitFremdNach = some (some (BitVec.ofNat 8 42)) ∧
+      zeugeSpeicher.bytes sseMovesWitAdr = BitVec.ofNat 8 0 ∧
+      HwWf sseMovesWitStart ∧
+      adapterSseMoves.schritt sseMovesWitStart 0
         ⟨.movupsLd .xmm0 .rax (BitVec.ofNat 32 0), 8⟩ = none ∧
-      adapterSseMoves.schritt sseWitStart 0
+      adapterSseMoves.schritt sseMovesWitStart 0
         ⟨.unpcklpsRR .xmm0 .xmm1, 0⟩ = none := by
   refine ⟨sseWit_unpck, sseWit_movlh, sseWit_unpck_lane0,
     sseWit_unpck_lane1, sseWit_unpck_lane2, sseWit_unpck_lane3,
-    sseWit_movlh_lo, sseWit_movlh_hi, sseWit_weiterleitung,
-    sseWit_fremd_alt, sseWit_spuelung_aendert_speicher,
-    sseWit_fremd_neu, sseWit_anfang_null, sseWitStart_wf,
-    sseWit_speicher_verweigert, sseWit_schlechte_laenge_verweigert⟩
+    sseWit_movlh_lo, sseWit_movlh_hi, sseMovesWit_weiterleitung,
+    sseMovesWit_fremd_alt, sseMovesWit_spuelung_aendert_speicher,
+    sseMovesWit_fremd_neu, sseMovesWit_anfang_null, sseMovesWitStart_wf,
+    sseWit_speicher_verweigert, sseMovesWit_schlechte_laenge_verweigert⟩
 
 /- CUTS:
    Proved here: the 27-row SSE/SSE2 move family (MOVUPS/MOVUPD/
@@ -1637,13 +1637,13 @@ theorem sseHw_zeuge :
 -/
 
 #print axioms decodeSse
-#print axioms kapDecodeSse
+#print axioms kapDecodeSseMoves
 #print axioms kapDecodeSse_kanonisch
 #print axioms sseRegSchritt
 #print axioms adapterSseMoves
 #print axioms adapterSseMoves_wf
 #print axioms adapterSseMoves_ok
-#print axioms sseWitStart_wf
+#print axioms sseMovesWitStart_wf
 #print axioms sseHw_zeuge
 
 end Gabbro.Grammatik.X86
