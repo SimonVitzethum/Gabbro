@@ -1335,4 +1335,349 @@ theorem mtSchritt_movRR_rahmen (b : Breite) (dst src : Register)
     cases h
     exact ⟨rfl, rfl, rfl⟩
 
+/-! ## 8. Extended chain: the old chain first, the family only where
+  it refuses, so dispatch agrees with the old chain on every byte
+  string the old chain decodes. A maintainer wires the family rows
+  into `kapDecode` (HwKapsteinDecoder.lean) behind its last arm. -/
+
+/-- One decoded row of the extended chain. -/
+inductive MtKap where
+  | kap : KapDekodiert → MtKap
+  | mt : MtDecodiert → MtKap
+  deriving DecidableEq, Repr
+
+/-- The extended priority chain. -/
+def kapDecodeMitMt : List Byte → Option (MtKap × List Byte) :=
+  fun bs =>
+    match kapDecode bs with
+    | some (k, rest) => some (.kap k, rest)
+    | none =>
+      match decodeMovTest bs with
+      | some (d, rest) => some (.mt d, rest)
+      | none => none
+
+/-- The extended chain agrees with the old chain wherever it accepts:
+    no previously decoded form is shadowed. -/
+theorem kapDecodeMitMt_kap (bs : List Byte) (k : KapDekodiert)
+    (rest : List Byte) (h : kapDecode bs = some (k, rest)) :
+    kapDecodeMitMt bs = some (.kap k, rest) := by
+  unfold kapDecodeMitMt
+  rw [h]
+
+/-- Where the old chain refuses, a covered family row is taken. -/
+theorem kapDecodeMitMt_mt (bs : List Byte) (d : MtDecodiert)
+    (rest : List Byte) (h1 : kapDecode bs = none)
+    (h2 : decodeMovTest bs = some (d, rest)) :
+    kapDecodeMitMt bs = some (.mt d, rest) := by
+  unfold kapDecodeMitMt
+  rw [h1, h2]
+
+/-- Where both chains refuse, the extended chain refuses. -/
+theorem kapDecodeMitMt_nichts (bs : List Byte)
+    (h1 : kapDecode bs = none) (h2 : decodeMovTest bs = none) :
+    kapDecodeMitMt bs = none := by
+  unfold kapDecodeMitMt
+  rw [h1, h2]
+
+/-! ## 9. Adapter plug on the coherent machine.
+
+  Register steps lift `mtSchritt` over the acting core's projection;
+  memory MOV/TEST delegate the accepted `hwAddrStore`/`hwAddrLoad`
+  exactly; stack words issue/observe through the acting core's TSO
+  buffer with owner-only forwarding; INT3/UD2 decode but admit no
+  event (faults are outcomes, never successors). -/
+
+/-- Family events on the coherent machine. -/
+inductive MtEreignis where
+  | reg (d : MtDecodiert)
+  | store (b : Breite) (f : AdrForm) (ripNext : Adresse) (src : Register)
+    (len : Nat)
+  | load (b : Breite) (f : AdrForm) (ripNext : Adresse) (dst : Register)
+    (len : Nat)
+  | pushW (b : Breite) (v : Wort) (len : Nat)
+  | popW (b : Breite) (dst : Register) (len : Nat)
+  | leaveW (len : Nat)
+  | retW (n : BitVec 16)
+  | verweigert
+  deriving DecidableEq, Repr
+
+/-- Core-data update from a canonical successor: registers, flags and
+    RIP move; XMM/FP context is kept. -/
+def setKernVonZustandMt (m : HwMaschine) (c : Nat)
+    (s' : Zustand) : HwMaschine :=
+  setKernDaten m c
+    ⟨s'.register, s'.flags, s'.rip, (m.kerne c).xmm, (m.kerne c).fp⟩
+
+/-- Register event: the accepted family step on the acting core's
+    projection, lifted back with kept XMM/FP context. -/
+def mtAdapterReg (m : HwMaschine) (c : Nat)
+    (d : MtDecodiert) : Option HwMaschine :=
+  match mtSchritt d (projZustand m c) with
+  | some s' => some (setKernVonZustandMt m c s')
+  | none => none
+
+/-- A register event preserves well-formedness (profiles untouched). -/
+theorem mtAdapterReg_wf (m : HwMaschine) (c : Nat) (d : MtDecodiert)
+    (m' : HwMaschine) (h : mtAdapterReg m c d = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  unfold mtAdapterReg setKernVonZustandMt at h
+  cases hs : mtSchritt d (projZustand m c) with
+  | none => rw [hs] at h; cases h
+  | some s' =>
+    rw [hs] at h
+    cases h
+    exact setKernDaten_wf _ _ _ hwf
+
+/-- Pushed core data: the stack pointer drops by the width, RIP
+    advances past `len`; XMM/FP context is kept. -/
+def mtPushKern (m : HwMaschine) (c : Nat) (b : Breite)
+    (len : Nat) : HwKern :=
+  ⟨regSet (m.kerne c).register .rsp
+    ((m.kerne c).register .rsp - BitVec.ofNat 64 b.bytes),
+    (m.kerne c).flags, ripNach (m.kerne c).rip len,
+    (m.kerne c).xmm, (m.kerne c).fp⟩
+
+/-- The pushed slot: one width below the top. -/
+def mtPushOben (m : HwMaschine) (c : Nat) (b : Breite) : Adresse :=
+  (m.kerne c).register .rsp - BitVec.ofNat 64 b.bytes
+
+/-- Buffered push: the word issues into the acting core's buffer at
+    the pushed slot, RIP advances past `len`. -/
+def mtPushW (m : HwMaschine) (c : Nat) (b : Breite) (v : Wort)
+    (len : Nat) : Option HwMaschine :=
+  match laengeOk len with
+  | false => none
+  | true =>
+    match concIssue (tsoAnsicht (setKernDaten m c (mtPushKern m c b len)))
+        c b (mtPushOben m c b) v with
+    | some s' => some (setTso (setKernDaten m c (mtPushKern m c b len)) s')
+    | none => none
+
+/-- A buffered push preserves well-formedness. -/
+theorem mtPushW_wf (m : HwMaschine) (c : Nat) (b : Breite) (v : Wort)
+    (len : Nat) (m' : HwMaschine) (h : mtPushW m c b v len = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  unfold mtPushW at h
+  cases hlen : laengeOk len with
+  | false => simp [hlen] at h
+  | true =>
+    simp only [hlen] at h
+    cases hi : concIssue (tsoAnsicht (setKernDaten m c (mtPushKern m c b len)))
+        c b (mtPushOben m c b) v with
+    | none => simp [hi] at h
+    | some s' =>
+      simp [hi] at h
+      cases h
+      exact hwf
+
+/-- Popped core data for an observed word: the stack pointer advances
+    past the width, the destination merges at the width, RIP advances
+    past `len`; flags and XMM/FP context are kept. -/
+def mtPopKern (m : HwMaschine) (c : Nat) (b : Breite) (dst : Register)
+    (len : Nat) (w : Wort) : HwKern :=
+  ⟨regSet (regSet (m.kerne c).register .rsp
+    ((m.kerne c).register .rsp + BitVec.ofNat 64 b.bytes)) dst
+    (mergeRegNarrow b ((m.kerne c).register dst) w),
+    (m.kerne c).flags, ripNach (m.kerne c).rip len,
+    (m.kerne c).xmm, (m.kerne c).fp⟩
+
+/-- Forwarded pop: the word at the top is observed with owner-only
+    forwarding. -/
+def mtPopW (m : HwMaschine) (c : Nat) (b : Breite) (dst : Register)
+    (len : Nat) : Option HwMaschine :=
+  match laengeOk len with
+  | false => none
+  | true =>
+    match concLoad (tsoAnsicht m) c b ((m.kerne c).register .rsp) with
+    | none => none
+    | some w => some (setKernDaten m c (mtPopKern m c b dst len w))
+
+/-- A forwarded pop preserves well-formedness (core data only). -/
+theorem mtPopW_wf (m : HwMaschine) (c : Nat) (b : Breite) (dst : Register)
+    (len : Nat) (m' : HwMaschine) (h : mtPopW m c b dst len = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  unfold mtPopW at h
+  cases hlen : laengeOk len with
+  | false => simp [hlen] at h
+  | true =>
+    simp only [hlen] at h
+    cases hl : concLoad (tsoAnsicht m) c b ((m.kerne c).register .rsp) with
+    | none => simp [hl] at h
+    | some w =>
+      simp [hl] at h
+      cases h
+      exact setKernDaten_wf _ _ _ hwf
+
+/-- Left core data for an observed word: the stack pointer takes the
+    frame pointer plus a word, the frame pointer takes the word, RIP
+    advances past `len`. -/
+def mtLeaveKern (m : HwMaschine) (c : Nat) (len : Nat)
+    (w : Wort) : HwKern :=
+  ⟨regSet (regSet (m.kerne c).register .rsp
+    ((m.kerne c).register .rbp + BitVec.ofNat 64 8)) .rbp w,
+    (m.kerne c).flags, ripNach (m.kerne c).rip len,
+    (m.kerne c).xmm, (m.kerne c).fp⟩
+
+/-- LEAVE: the stack pointer takes the frame pointer, the word there
+    is observed into the frame pointer. -/
+def mtLeaveW (m : HwMaschine) (c : Nat) (len : Nat) :
+    Option HwMaschine :=
+  match laengeOk len with
+  | false => none
+  | true =>
+    match concLoad (tsoAnsicht m) c .b64 ((m.kerne c).register .rbp) with
+    | none => none
+    | some w => some (setKernDaten m c (mtLeaveKern m c len w))
+
+/-- A LEAVE preserves well-formedness (core data only). -/
+theorem mtLeaveW_wf (m : HwMaschine) (c : Nat) (len : Nat)
+    (m' : HwMaschine) (h : mtLeaveW m c len = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  unfold mtLeaveW at h
+  cases hlen : laengeOk len with
+  | false => simp [hlen] at h
+  | true =>
+    simp only [hlen] at h
+    cases hl : concLoad (tsoAnsicht m) c .b64
+        ((m.kerne c).register .rbp) with
+    | none => simp [hl] at h
+    | some w =>
+      simp [hl] at h
+      cases h
+      exact setKernDaten_wf _ _ _ hwf
+
+/-- Returned core data for an observed target: the stack pointer
+    advances past the word and the named count, RIP takes the word. -/
+def mtRetKern (m : HwMaschine) (c : Nat) (n : BitVec 16)
+    (ziel : Wort) : HwKern :=
+  ⟨regSet (m.kerne c).register .rsp
+    ((m.kerne c).register .rsp + BitVec.ofNat 64 (8 + n.toNat)),
+    (m.kerne c).flags, ziel, (m.kerne c).xmm, (m.kerne c).fp⟩
+
+/-- RET with pop count: the word at the top becomes RIP. -/
+def mtRetW (m : HwMaschine) (c : Nat) (n : BitVec 16) :
+    Option HwMaschine :=
+  match concLoad (tsoAnsicht m) c .b64 ((m.kerne c).register .rsp) with
+  | none => none
+  | some ziel => some (setKernDaten m c (mtRetKern m c n ziel))
+
+/-- A RET preserves well-formedness (core data only). -/
+theorem mtRetW_wf (m : HwMaschine) (c : Nat) (n : BitVec 16)
+    (m' : HwMaschine) (h : mtRetW m c n = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  unfold mtRetW at h
+  cases hl : concLoad (tsoAnsicht m) c .b64
+      ((m.kerne c).register .rsp) with
+  | none => simp [hl] at h
+  | some ziel =>
+    simp [hl] at h
+    cases h
+    exact setKernDaten_wf _ _ _ hwf
+
+/-- The family adapter: one checked event step on the coherent
+    machine, reusing the accepted evaluators. All event
+    implementations are declared above, so dispatch is exact. -/
+def adapterMt : HwAdapter MtEreignis :=
+  ⟨fun m c e =>
+    match e with
+    | .reg d => mtAdapterReg m c d
+    | .store b f ripNext src len => hwAddrStore m c b f ripNext src len
+    | .load b f ripNext dst len => hwAddrLoad m c b f ripNext dst len
+    | .pushW b v len => mtPushW m c b v len
+    | .popW b dst len => mtPopW m c b dst len
+    | .leaveW len => mtLeaveW m c len
+    | .retW n => mtRetW m c n
+    | .verweigert => none⟩
+
+/-- An adapter store step is an addressed store step. -/
+theorem adapterMt_store (m : HwMaschine) (c : Nat)
+    (b : Breite) (f : AdrForm) (ripNext : Adresse) (src : Register)
+    (len : Nat) :
+    adapterMt.schritt m c (.store b f ripNext src len) =
+      hwAddrStore m c b f ripNext src len := rfl
+
+/-- An adapter load step is an addressed load step. -/
+theorem adapterMt_load (m : HwMaschine) (c : Nat)
+    (b : Breite) (f : AdrForm) (ripNext : Adresse) (dst : Register)
+    (len : Nat) :
+    adapterMt.schritt m c (.load b f ripNext dst len) =
+      hwAddrLoad m c b f ripNext dst len := rfl
+
+/-- The refused event admits nothing. -/
+theorem adapterMt_verweigert (m : HwMaschine) (c : Nat) :
+    adapterMt.schritt m c .verweigert = none := rfl
+
+/-- Adapter dispatch on each event is the event implementation. -/
+theorem adapterMt_reg (m : HwMaschine) (c : Nat) (d : MtDecodiert) :
+    adapterMt.schritt m c (.reg d) = mtAdapterReg m c d := rfl
+
+theorem adapterMt_pushW (m : HwMaschine) (c : Nat) (b : Breite)
+    (v : Wort) (len : Nat) :
+    adapterMt.schritt m c (.pushW b v len) = mtPushW m c b v len := rfl
+
+theorem adapterMt_popW (m : HwMaschine) (c : Nat) (b : Breite)
+    (dst : Register) (len : Nat) :
+    adapterMt.schritt m c (.popW b dst len) = mtPopW m c b dst len := rfl
+
+theorem adapterMt_leaveW (m : HwMaschine) (c : Nat) (len : Nat) :
+    adapterMt.schritt m c (.leaveW len) = mtLeaveW m c len := rfl
+
+theorem adapterMt_retW (m : HwMaschine) (c : Nat) (n : BitVec 16) :
+    adapterMt.schritt m c (.retW n) = mtRetW m c n := rfl
+
+/-- Every adapter step preserves well-formedness. -/
+theorem adapterMt_wf (m : HwMaschine) (c : Nat) (e : MtEreignis)
+    (m' : HwMaschine) (h : adapterMt.schritt m c e = some m')
+    (hwf : HwWf m) : HwWf m' := by
+  cases e with
+  | reg d =>
+    rw [adapterMt_reg] at h
+    exact mtAdapterReg_wf m c d m' h hwf
+  | store b f ripNext src len =>
+    rw [adapterMt_store] at h
+    exact hwAddrStore_wf m m' c b f ripNext src len h hwf
+  | load b f ripNext dst len =>
+    rw [adapterMt_load] at h
+    exact hwAddrLoad_wf m m' c b f ripNext dst len h hwf
+  | pushW b v len =>
+    rw [adapterMt_pushW] at h
+    exact mtPushW_wf m c b v len m' h hwf
+  | popW b dst len =>
+    rw [adapterMt_popW] at h
+    exact mtPopW_wf m c b dst len m' h hwf
+  | leaveW len =>
+    rw [adapterMt_leaveW] at h
+    exact mtLeaveW_wf m c len m' h hwf
+  | retW n =>
+    rw [adapterMt_retW] at h
+    exact mtRetW_wf m c n m' h hwf
+  | verweigert =>
+    rw [adapterMt_verweigert] at h
+    cases h
+
+/-- Planted refusals: bad lengths refuse on every machine. -/
+theorem mtPushW_laenge_verweigert (m : HwMaschine) (c : Nat) (b : Breite)
+    (v : Wort) (len : Nat) (h : laengeOk len = false) :
+    mtPushW m c b v len = none := by
+  unfold mtPushW
+  simp [h]
+
+theorem mtPopW_laenge_verweigert (m : HwMaschine) (c : Nat) (b : Breite)
+    (dst : Register) (len : Nat) (h : laengeOk len = false) :
+    mtPopW m c b dst len = none := by
+  unfold mtPopW
+  simp [h]
+
+theorem mtLeaveW_laenge_verweigert (m : HwMaschine) (c : Nat)
+    (len : Nat) (h : laengeOk len = false) :
+    mtLeaveW m c len = none := by
+  unfold mtLeaveW
+  simp [h]
+
+theorem mtAdapterReg_laenge_verweigert (m : HwMaschine) (c : Nat)
+    (f : MtForm) :
+    mtAdapterReg m c ⟨f, 0⟩ = none := by
+  unfold mtAdapterReg mtSchritt
+  rfl
+
 end Gabbro.Grammatik.X86
