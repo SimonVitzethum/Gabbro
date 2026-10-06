@@ -715,3 +715,4 @@ import Grammatik.X86.Befehle.Sse.SseThreeByte
 import Grammatik.X86.Hw.Kapstein.HwKapsteinDrei
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.X86.SseFourOne
+import Grammatik.X86.IntExtend

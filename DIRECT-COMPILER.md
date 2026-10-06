@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-06 04:00 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-06 04:09 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -732,8 +732,8 @@ Last ledger refresh: **2026-10-06 04:00 UTC**. This is an operational snapshot, 
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
 | 1349 | Integer ALU in every width and form | Agent working | 1350: scheduled | [task](lanes/1349.md) |
 | 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Agent working | 1352: scheduled | [task](lanes/1351.md) |
-| 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Committed candidate; review/integration pending | 1354: Committed candidate; review/integration pending | [task](lanes/1353.md) |
-| 1355 | SSE/SSE2 moves, loads, stores and unpack | Agent working | 1356: scheduled | [task](lanes/1355.md) |
+| 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Merged after review/checks | 1354: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1353.md) |
+| 1355 | SSE/SSE2 moves, loads, stores and unpack | Committed candidate; review/integration pending | 1356: scheduled | [task](lanes/1355.md) |
 | 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Agent working | 1358: Committed candidate; review/integration pending | [task](lanes/1357.md) |
 | 1359 | SSE/SSE2 scalar and packed floating point | Agent working | 1360: scheduled | [task](lanes/1359.md) |
 | 1361 | String instructions with REP prefixes and the direction flag | Committed candidate; review/integration pending | 1362: Committed candidate; review/integration pending | [task](lanes/1361.md) |
@@ -742,7 +742,7 @@ Last ledger refresh: **2026-10-06 04:00 UTC**. This is an operational snapshot, 
 | 1367 | Every LOCK-prefixed read-modify-write instruction | Merged after review/checks | 1368: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1367.md) |
 | 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Merged after review/checks | 1370: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1369.md) |
 | 1371 | SSE4.1 and SSE4.2 on the three-byte maps | Merged after review/checks | 1372: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1371.md) |
-| 1373 | AES-NI, PCLMULQDQ and MOVBE | Agent working | 1374: scheduled | [task](lanes/1373.md) |
+| 1373 | AES-NI, PCLMULQDQ and MOVBE | Incomplete; preserved | 1374: scheduled | [task](lanes/1373.md) |
 | 1375 | Evaluators for the system rows that `SystemDecode` could only refuse | Committed candidate; review/integration pending | 1376: Committed candidate; review/integration pending | [task](lanes/1375.md) |
 | 1377 | Memory operands, MMX and REX.W forms of the three-byte maps | Agent working | 1378: scheduled | [task](lanes/1377.md) |
 
@@ -1813,6 +1813,8 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-06: lane **1371**, SSE4.1 and SSE4.2 on the three-byte maps, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1371.md). <!-- x86-merged:1371 -->
 - 2026-10-06: lane **1372**, Independent exact review of 1371, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1372.md). <!-- x86-merged:1372 -->
 - 2026-10-06: publication batch checks passed for `78a14701`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
+- 2026-10-06: lane **1353**, Zero and sign extension, byte swap and the shift/rotate groups, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1353.md). <!-- x86-merged:1353 -->
+- 2026-10-06: checked master `aefb59e1` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:aefb59e1f9d3de819e69590ed88d34e6d34aad3f -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
