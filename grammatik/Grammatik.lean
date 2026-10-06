@@ -711,5 +711,5 @@ import Grammatik.X86.Opcode.OpcodeLedger0F00
 import Grammatik.X86.Opcode.OpcodeLedger1Byte80
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.X86.Befehle.System.SystemDecode
-import Grammatik.X86.LockedAllRmw
-import Grammatik.X86.SseThreeByte
+import Grammatik.X86.TSO.Verriegelt.LockedAllRmw
+import Grammatik.X86.Befehle.Sse.SseThreeByte
