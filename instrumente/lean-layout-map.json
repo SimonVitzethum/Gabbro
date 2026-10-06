@@ -347,6 +347,7 @@
  "Grammatik.X86.HwIsaFamilies": "Grammatik.X86.Hw.Familien.HwIsaFamilies",
  "Grammatik.X86.HwKapstein": "Grammatik.X86.Hw.Kapstein.HwKapstein",
  "Grammatik.X86.HwKapsteinDecoder": "Grammatik.X86.Hw.Kapstein.HwKapsteinDecoder",
+ "Grammatik.X86.HwKapsteinDrei": "Grammatik.X86.Hw.Kapstein.HwKapsteinDrei",
  "Grammatik.X86.HwKapsteinRun": "Grammatik.X86.Hw.Kapstein.HwKapsteinRun",
  "Grammatik.X86.HwKapsteinSteps": "Grammatik.X86.Hw.Kapstein.HwKapsteinSteps",
  "Grammatik.X86.HwKapsteinTso": "Grammatik.X86.Hw.Kapstein.HwKapsteinTso",
