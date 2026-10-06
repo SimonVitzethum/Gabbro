@@ -361,7 +361,6 @@ import Grammatik.CBackend.Semantik.ZeichenfolgeC
 import Grammatik.Zielsatz.Faeden.Verbund
 import Grammatik.Zielsatz.Faeden.VerbundZeuge
 import Grammatik.Speichermodell.Maschine.GXMaschine
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Logik.Fortschritt.Folge
 import Grammatik.Logik.Fortschritt.FolgeBeweis
 import Grammatik.Logik.Fortschritt.FolgeZeuge
@@ -713,7 +712,9 @@ import Grammatik.X86.Befehle.System.SystemDecode
 import Grammatik.X86.TSO.Verriegelt.LockedAllRmw
 import Grammatik.X86.Befehle.Sse.SseThreeByte
 import Grammatik.X86.Hw.Kapstein.HwKapsteinDrei
-import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.X86.SseFourOne
 import Grammatik.X86.IntExtend
 import Grammatik.X86.SystemEvaluators
+import Grammatik.X86.Befehle.Sse.SseMoves
+import Grammatik.Zielsatz.Atomar.BeweisAtomar
+import Grammatik.Zielsatz.Atomar.BeweisAtomar
