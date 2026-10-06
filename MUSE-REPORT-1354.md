@@ -1,9 +1,10 @@
 # MUSE-REPORT-1354: Exact review of candidate 1353 (IntExtend family)
 
-## VERDICT: ACCEPT
+CANDIDATE: 1353 09e6dab8b79bd44259df339f4e547b2a55523433
 
-CANDIDATE: 1353, pinned HEAD `09e6dab8b79bd44259df339f4e547b2a55523433`
-(base `b7b96da86bff9c5966bc0356ec07c6ed0ee21cba`), files:
+VERDICT: ACCEPT
+
+Pinned base `b7b96da86bff9c5966bc0356ec07c6ed0ee21cba`, files:
 `MUSE-REPORT-1353.md`, `grammatik/Grammatik.lean` (one added import line),
 `grammatik/Grammatik/X86/IntExtend.lean` (new, 2452 lines).
 
