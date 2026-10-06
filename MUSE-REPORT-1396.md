@@ -9,7 +9,12 @@ files `MUSE-REPORT-1395.md` + `messung/SPRACHLUECKEN-REPORT.md` (per
 `.tmp/review/author-1395/` without git on the pinned hash, per task.
 No Lean files in candidate → no `./lean-bau` owed (none expected, none run).
 
-## VERDICT: ACCEPT
+## Machine-readable verdict (FORMAT gate)
+
+CANDIDATE: 1395 deca04b87ee91bd985a4d83c3f928686e4b2c73e
+VERDICT: ACCEPT
+
+## Substantive verdict: ACCEPT (see findings below)
 
 ## What was checked
 
