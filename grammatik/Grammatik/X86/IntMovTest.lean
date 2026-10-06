@@ -1225,4 +1225,114 @@ theorem pin_kap_fremd_nimmt :
       true := by
   decide
 
+/-! ## 7. Register semantics on the accepted machine.
+
+  The step reuses the accepted evaluators unchanged: `mergeRegNarrow`
+  (architectural 8/16-merge, 32-zero-extend), `andW` (width-correct
+  TEST snapshot, AF free), `adrEff` (effective addresses, truncated
+  to 32 bits for bare LEA) and `schrittRegister`/`ripNach`. Memory
+  MOV/TEST, stack words and traps step in the adapter (§9) or refuse:
+  faults are outcomes, never successors. -/
+
+/-- Family step on the canonical state; `none` is an explicit refusal
+    (bad length, memory form, stack form, trap). -/
+def mtSchritt (d : MtDecodiert) (s : Zustand) : Option Zustand :=
+  match laengeOk d.laenge with
+  | false => none
+  | true =>
+    let nach := ripNach s.rip d.laenge
+    match d.befehl with
+    | .movRR b dst src =>
+      some (schrittRegister s nach s.flags dst
+        (mergeRegNarrow b (s.register dst) (s.register src)))
+    | .movRI8 r v =>
+      some (schrittRegister s nach s.flags r
+        (mergeRegNarrow .b8 (s.register r) (BitVec.ofNat 64 v.toNat)))
+    | .movRIB16 r v =>
+      some (schrittRegister s nach s.flags r
+        (mergeRegNarrow .b16 (s.register r) (BitVec.ofNat 64 v.toNat)))
+    | .movRImm8 r v =>
+      some (schrittRegister s nach s.flags r
+        (mergeRegNarrow .b8 (s.register r) (BitVec.ofNat 64 v.toNat)))
+    | .movRImm16 r v =>
+      some (schrittRegister s nach s.flags r
+        (mergeRegNarrow .b16 (s.register r) (BitVec.ofNat 64 v.toNat)))
+    | .movRImm32 r v =>
+      some (schrittRegister s nach s.flags r
+        (mergeRegNarrow .b32 (s.register r) (BitVec.ofNat 64 v.toNat)))
+    | .testRR b lhs rhs =>
+      let r := andW b (s.register lhs) (s.register rhs)
+      some ({ s with rip := nach, flags := r.2 })
+    | .testAI8 r v =>
+      let r := andW .b8 (s.register r) (BitVec.ofNat 64 v.toNat)
+      some ({ s with rip := nach, flags := r.2 })
+    | .testAI16 r v =>
+      let r := andW .b16 (s.register r) (BitVec.ofNat 64 v.toNat)
+      some ({ s with rip := nach, flags := r.2 })
+    | .testAI32 r v =>
+      let r := andW .b32 (s.register r) (BitVec.ofNat 64 v.toNat)
+      some ({ s with rip := nach, flags := r.2 })
+    | .testAI64 r v =>
+      let r :=
+        andW .b64 (s.register r) (sext .b32 (BitVec.ofNat 64 v.toNat))
+      some ({ s with rip := nach, flags := r.2 })
+    | .testRImm8 r v =>
+      let r := andW .b8 (s.register r) (BitVec.ofNat 64 v.toNat)
+      some ({ s with rip := nach, flags := r.2 })
+    | .testRImm16 r v =>
+      let r := andW .b16 (s.register r) (BitVec.ofNat 64 v.toNat)
+      some ({ s with rip := nach, flags := r.2 })
+    | .testRImm32 r v =>
+      let r := andW .b32 (s.register r) (BitVec.ofNat 64 v.toNat)
+      some ({ s with rip := nach, flags := r.2 })
+    | .testRImm64 r v =>
+      let r :=
+        andW .b64 (s.register r) (sext .b32 (BitVec.ofNat 64 v.toNat))
+      some ({ s with rip := nach, flags := r.2 })
+    | .leaBare dst f =>
+      some (schrittRegister s nach s.flags dst
+        (mergeRegNarrow .b32 (s.register dst) (trunc .b32 (adrEff s nach f))))
+    | .nopMem _ => some ({ s with rip := nach })
+    | .nopReg _ => some ({ s with rip := nach })
+    | .endbr64 => some ({ s with rip := nach })
+    | _ => none
+
+/-- A MOV step is the accepted narrow move with RIP advance. -/
+theorem mtSchritt_movRR_ist_moveNarrow (b : Breite) (dst src : Register)
+    (l : Nat) (s : Zustand) :
+    mtSchritt ⟨.movRR b dst src, l⟩ s =
+      match laengeOk l with
+      | true =>
+        some ({ moveNarrow s b dst src with rip := ripNach s.rip l })
+      | false => none := by
+  unfold mtSchritt moveNarrow schrittRegister
+  cases h : laengeOk l <;> rfl
+
+/-- A TEST step keeps the registers and installs the accepted AND
+    flag snapshot. -/
+theorem mtSchritt_testRR_flags (b : Breite) (lhs rhs : Register)
+    (l : Nat) (s : Zustand) :
+    mtSchritt ⟨.testRR b lhs rhs, l⟩ s =
+      if laengeOk l then
+        some ({ s with rip := ripNach s.rip l, flags := (andW b (s.register lhs) (s.register rhs)).2 })
+      else none := by
+  unfold mtSchritt
+  cases h : laengeOk l with
+  | false => rfl
+  | true => rfl
+
+/-- A MOV step preserves flags and memory and advances RIP. -/
+theorem mtSchritt_movRR_rahmen (b : Breite) (dst src : Register)
+    (l : Nat) (s s' : Zustand)
+    (h : mtSchritt ⟨.movRR b dst src, l⟩ s = some s') :
+    s'.flags = s.flags ∧ s'.speicher = s.speicher ∧
+      s'.rip = ripNach s.rip l := by
+  unfold mtSchritt schrittRegister at h
+  cases hlen : laengeOk l with
+  | false => simp [hlen] at h
+  | true =>
+    simp only [hlen] at h
+    cases h
+    exact ⟨rfl, rfl, rfl⟩
+
 end Gabbro.Grammatik.X86
