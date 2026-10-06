@@ -219,6 +219,262 @@ theorem strNichts_rep_cld : strDecode [natByte 243, natByte 252] = none :=
 theorem strNichts_66_byte : strDecode [natByte 102, natByte 164] = none :=
   rfl
 
+/-! ## 3. Semantics: one element is a TSO load/store sequence.
+    Widths reuse `Breite.bytes`; register merges reuse the accepted
+    `mergeRegNarrow` (8/16-bit merge, 32-bit zero-extends, 64-bit
+    whole); only ZF is modelled for the comparing ops (CF/SF/OF/PF/AF
+    stay FREE, see CUTS). -/
+
+/-- Little-endian assembly of a byte list into a word. -/
+def wortAusBytes : List Byte → Wort
+  | [] => BitVec.ofNat 64 0
+  | b :: rest => BitVec.ofNat 64 b.toNat + 256 * wortAusBytes rest
+
+/-- Little-endian split of the low `w` bytes of a word. -/
+def wortZuBytes : Wort → Nat → List Byte
+  | _, 0 => []
+  | v, n + 1 => BitVec.ofNat 8 v.toNat :: wortZuBytes (v >>> 8) n
+
+/-- Load `w` consecutive bytes ascending from `a` through TSO
+    (owner forwarding included, `none` = unreadable). -/
+def strLadeAux (s : TSOZustand) (c : Nat) (a : Adresse) (i w : Nat) :
+    Option (List Byte) :=
+  match w with
+  | 0 => some []
+  | n + 1 =>
+    match loadByte s c (addrOff a i) with
+    | none => none
+    | some b =>
+      match strLadeAux s c a (i + 1) n with
+      | none => none
+      | some rest => some (b :: rest)
+
+/-- Issue a byte list ascending at `a` through TSO (`none` = fault). -/
+def strGebeAux (s : TSOZustand) (c : Nat) (a : Adresse) : List Byte →
+    Nat → Option TSOZustand
+  | [], _ => some s
+  | b :: rest, i =>
+    match issueByte s c (addrOff a i) b with
+    | none => none
+    | some s1 => strGebeAux s1 c a rest (i + 1)
+
+/-- One string element: per element a load then a store through TSO.
+    Returns the new TSO state, the new RAX and a ZF update (`none` =
+    the op leaves ZF alone). `none` = the faulting access refused. -/
+def strElement (d : StrDecodiert) (rsi rdi : Adresse) (rax : Wort)
+    (s : TSOZustand) (c : Nat) :
+    Option (TSOZustand × Wort × Option Bool) :=
+  let w := d.breite.bytes
+  match d.op with
+  | .movs =>
+    match strLadeAux s c rsi 0 w with
+    | none => none
+    | some vs =>
+      match strGebeAux s c rdi vs 0 with
+      | none => none
+      | some s1 => some (s1, rax, none)
+  | .stos =>
+    match strGebeAux s c rdi (wortZuBytes rax w) 0 with
+    | none => none
+    | some s1 => some (s1, rax, none)
+  | .lods =>
+    match strLadeAux s c rsi 0 w with
+    | none => none
+    | some vs =>
+      some (s, mergeRegNarrow d.breite rax (wortAusBytes vs), none)
+  | .scas =>
+    match strLadeAux s c rdi 0 w with
+    | none => none
+    | some vs => some (s, rax, some (decide (vs = wortZuBytes rax w)))
+  | .cmps =>
+    match strLadeAux s c rsi 0 w with
+    | none => none
+    | some vs1 =>
+      match strLadeAux s c rdi 0 w with
+      | none => none
+      | some vs2 => some (s, rax, some (decide (vs1 = vs2)))
+
+/-- String registers threaded through a run. -/
+structure StrReg where
+  rsi : Adresse
+  rdi : Adresse
+  rcx : Wort
+  rax : Wort
+  deriving DecidableEq, Repr, Inhabited
+
+/-- Pointer step for one element: DF sets the sign, width the stride. -/
+def strSchrittZeiger (df : Bool) (p : Adresse) (w : Nat) : Adresse :=
+  if df then p - BitVec.ofNat 64 w else p + BitVec.ofNat 64 w
+
+/-- Forward step steps toward smaller addresses. -/
+theorem strSchrittZeiger_vor (p : Adresse) (w : Nat) :
+    strSchrittZeiger false p w = p + BitVec.ofNat 64 w := rfl
+
+/-- Backward step steps toward larger addresses. -/
+theorem strSchrittZeiger_zurueck (p : Adresse) (w : Nat) :
+    strSchrittZeiger true p w = p - BitVec.ofNat 64 w := rfl
+
+/-- Register update past one element: the used pointers step by the
+    width from DF, RCX counts only under REP, RAX carries loads. -/
+def strWeiter (d : StrDecodiert) (df : Bool) (raxNeu : Wort)
+    (r : StrReg) : StrReg :=
+  let w := d.breite.bytes
+  let rsiNeu :=
+    match d.op with
+    | .movs => strSchrittZeiger df r.rsi w
+    | .lods => strSchrittZeiger df r.rsi w
+    | .cmps => strSchrittZeiger df r.rsi w
+    | _ => r.rsi
+  let rdiNeu :=
+    match d.op with
+    | .movs => strSchrittZeiger df r.rdi w
+    | .stos => strSchrittZeiger df r.rdi w
+    | .scas => strSchrittZeiger df r.rdi w
+    | .cmps => strSchrittZeiger df r.rdi w
+    | _ => r.rdi
+  let rcxNeu :=
+    match d.rep with
+    | .kein => r.rcx
+    | _ => r.rcx - BitVec.ofNat 64 1
+  ⟨rsiNeu, rdiNeu, rcxNeu, raxNeu⟩
+
+/-- STOS steps RDI and leaves RSI alone. -/
+theorem strWeiter_stos_rdi (d : StrDecodiert) (df : Bool) (raxNeu : Wort)
+    (r : StrReg) (hop : d.op = .stos) :
+    (strWeiter d df raxNeu r).rdi =
+      strSchrittZeiger df r.rdi d.breite.bytes ∧
+    (strWeiter d df raxNeu r).rsi = r.rsi := by
+  unfold strWeiter
+  rw [hop]
+  exact ⟨rfl, rfl⟩
+
+/-- Without REP, RCX is untouched by the step. -/
+theorem strWeiter_kein_rcx (d : StrDecodiert) (df : Bool) (raxNeu : Wort)
+    (r : StrReg) (hrep : d.rep = .kein) :
+    (strWeiter d df raxNeu r).rcx = r.rcx := by
+  unfold strWeiter
+  rw [hrep]
+
+/-! ## 4. Repetition: RCX count, ZF early stop, precise faults.
+    F3 on SCAS/CMPS means REPE; other ops count only (named silicon
+    assumptions, see CUTS). A fault returns the element index with the
+    registers AT the faulting element. -/
+
+/-- Early stop before an element: REPE stops on clear ZF, REPNE on
+    set ZF, only for the comparing ops. -/
+def strStoppt (d : StrDecodiert) (zf : Bool) : Bool :=
+  match d.op with
+  | .scas | .cmps =>
+    match d.rep with
+    | .rep => !zf
+    | .repne => zf
+    | .kein => false
+  | _ => false
+
+/-- Element count: one step without REP, RCX steps with REP. -/
+def strAnzahl (d : StrDecodiert) (rcx : Wort) : Nat :=
+  match d.rep with
+  | .kein => 1
+  | _ => rcx.toNat
+
+/-- A REP-prefixed zero count runs zero elements. -/
+theorem strAnzahl_rep_null (d : StrDecodiert) (h : d.rep ≠ .kein) :
+    strAnzahl d (BitVec.ofNat 64 0) = 0 := by
+  unfold strAnzahl
+  cases e : d.rep with
+  | kein => exact absurd e h
+  | rep => rfl
+  | repne => rfl
+
+/-- Run result: final TSO state and registers with the threaded ZF,
+    plus the faulting element index (`none` = clean finish). -/
+structure StrLaufErg where
+  tso : TSOZustand
+  reg : StrReg
+  zf : Bool
+  fehler : Option Nat
+
+/-- Run at most `n` elements from element `k`: ZF stop first, then one
+    TSO element, then registers step past it. -/
+def strLauf (d : StrDecodiert) (df : Bool) (n k : Nat) (r : StrReg)
+    (zf0 : Bool) (s : TSOZustand) (c : Nat) : StrLaufErg :=
+  match n with
+  | 0 => ⟨s, r, zf0, none⟩
+  | m + 1 =>
+    if strStoppt d zf0 then ⟨s, r, zf0, none⟩
+    else
+      match strElement d r.rsi r.rdi r.rax s c with
+      | none => ⟨s, r, zf0, some k⟩
+      | some (s1, rax1, zfSet) =>
+        let zf1 :=
+          match zfSet with
+          | none => zf0
+          | some b => b
+        strLauf d df m (k + 1) (strWeiter d df rax1 r) zf1 s1 c
+
+/-- Zero elements change nothing and fault nothing. -/
+theorem strLauf_null (d : StrDecodiert) (df : Bool) (k : Nat)
+    (r : StrReg) (zf0 : Bool) (s : TSOZustand) (c : Nat) :
+    strLauf d df 0 k r zf0 s c = ⟨s, r, zf0, none⟩ := rfl
+
+/-- A REP-prefixed zero RCX does nothing: no access, no fault. -/
+theorem strLauf_rep_null (d : StrDecodiert) (df : Bool) (k : Nat)
+    (r : StrReg) (zf0 : Bool) (s : TSOZustand) (c : Nat)
+    (h : d.rep ≠ .kein) (hrcx : r.rcx = BitVec.ofNat 64 0) :
+    strLauf d df (strAnzahl d r.rcx) k r zf0 s c =
+      ⟨s, r, zf0, none⟩ := by
+  have h0 : strAnzahl d r.rcx = 0 := by
+    rw [hrcx]
+    unfold strAnzahl
+    cases e : d.rep with
+    | kein => exact absurd e h
+    | rep => rfl
+    | repne => rfl
+  rw [h0]
+  rfl
+
+/-- Precise faults: a fault index lies between the start element and
+    the start plus the element budget. Registers at the fault are the
+    loop's own registers (stepped once per finished element). -/
+theorem strLauf_fehler_grenzen (d : StrDecodiert) (df : Bool) (n k : Nat)
+    (r : StrReg) (zf0 : Bool) (s : TSOZustand) (c : Nat) (j : Nat)
+    (h : (strLauf d df n k r zf0 s c).fehler = some j) :
+    k ≤ j ∧ j ≤ k + n := by
+  induction n generalizing k r zf0 s with
+  | zero => simp [strLauf] at h
+  | succ n ih =>
+    simp only [strLauf] at h
+    split at h
+    · next hs =>
+      cases h
+    · next hs =>
+      cases he : strElement d r.rsi r.rdi r.rax s c with
+      | none =>
+        simp only [he] at h
+        have hjk := Option.some.inj h
+        subst hjk
+        omega
+      | some v =>
+        obtain ⟨s1, rax1, zfSet⟩ := v
+        simp only [he] at h
+        have hih := ih (k + 1) _ _ _ h
+        omega
+
+/-- CLD clears DF, STD sets it. -/
+def strDirSchritt : Bool → StrDirOp → Bool
+  | _, .cld => false
+  | _, .std => true
+
+/-- CLD clears any incoming DF. -/
+theorem strDirSchritt_cld (df : Bool) :
+    strDirSchritt df .cld = false := by
+  cases df <;> rfl
+
+/-- STD sets any incoming DF. -/
+theorem strDirSchritt_std (df : Bool) :
+    strDirSchritt df .std = true := by
+  cases df <;> rfl
+
 /- CUTS:
    Skeleton only: vocabulary above. Decoder, semantics, adapter and
    witness follow. NOT proved here: everything (see lane report).
