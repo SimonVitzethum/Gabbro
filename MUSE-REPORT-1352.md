@@ -1,110 +1,94 @@
 # MUSE-REPORT-1352: exact review of candidate 1351 (MOV/TEST/LEA/PUSH/POP/NOP/frame)
 
 Reviewer lane 1352, clone /home/simon/Dokumente/gabbro-muse/a1352, branch muse/1352
-(verified). Under review: author lane 1351 at pinned head
-c120e7310f15b54081b340c5a7ab3a989b71dd6b (machine-readable lines in the
+(verified). This is a re-review: the previous finding (ACCEPT at c120e731)
+is stale after the author repair commit. Under review now is the NEW pinned
+head 0a1906c59dfe527aee8d6214bbde2f248f81fe16 (machine-readable lines in the
 verdict section below).
-Delivered files reviewed: `.tmp/review/SNAPSHOT.json`,
-`.tmp/review/author-1351/PATCH.diff`,
+Delivered files reviewed: `.tmp/review/SNAPSHOT.json` (new head above, same
+base b7b96da86bff9c5966bc0356ec07c6ed0ee21cba, same 3 files, clean),
+`.tmp/review/author-1351/PATCH.diff` (2221 lines),
 `.tmp/review/author-1351/grammatik/Grammatik/X86/IntMovTest.lean` (1993 lines),
 `.tmp/review/author-1351/grammatik/Grammatik.lean` (712 lines),
-`.tmp/review/author-1351/OWNER-TASK.md`, `BUILD-EVIDENCE.json`,
-`MUSE-REPORT-1351.md`. No `git show/log/diff` on the pinned hash was used.
+`.tmp/review/author-1351/OWNER-TASK.md`, `BUILD-EVIDENCE.json` (332 lines),
+`MUSE-REPORT-1351.md` (207 lines). No `git show/log/diff` on any pinned hash
+was used.
 
-## Checks performed (all against the delivered files + own-clone tree)
+## What the repair changed (re-review delta)
 
-- Forbidden tokens: full-file grep for `sorry|native_decide|axiom|unsafe|admit`
-  finds only three English-prose "admit" (lines 1387, 1606, 1721, 1933:
-  "admit no event") and 42 `#print axioms` lines. No `sorry`/`sorryAx` token,
-  no `admit` tactic, no `axiom` declaration, no `native_decide`, no `unsafe`.
-- Axioms: author BUILD-EVIDENCE final `./lean-bau` lists every main theorem at
-  `[propext]` or `[propext, Quot.sound]` incl. `mt_zeuge`; no `sorryAx`,
-  no `Classical.choice`. (An intermediate `sorryAx` on `mt_zeuge` is explained
-  in the author report as error-recovery after a `-` + `/` block-comment parse
-  break, fixed by rewording; final list is clean.)
-- Existing-file diff: the delivered `Grammatik.lean` is base + exactly one
-  appended line 712 `import Grammatik.X86.IntMovTest`. Nothing else touched.
-- Evaluator reuse, not copies: the new file imports the accepted producers
-  (NarrowOps, ShiftLogic, AddressEncoding, HwAddressed, HwStackCalls,
-  Ausfuehrung, HardwareExecution, HwKapsteinDecoder) and calls `mergeRegNarrow`,
-  `moveNarrow`, `andW`, `adrEff`, `parseAdrTail`/`encodeAdr`, `hwAddrStore`/
-  `hwAddrLoad`, `concIssue`/`concLoad`, `schrittRegister`/`ripNach`/`laengeOk`/
-  `regSet`; it defines none of them (grep for redefinition: no hits).
-  `andW` is used for TEST with AF free as the accepted definition provides.
-- Ownership exclusions verified to exist in-tree: `decodeSx90/86/87`
-  (IntSignXchg.lean:581/604/615), `decodeCoreLea` (IntegerCore.lean:508,
-  REX.W-only mod-2-SIB slice), `decodeLea` (AddressEncoding.lean:782),
-  `decodeC`/`decodeCore`/`decodeNarrow` arms of `kapDecode`
-  (HwKapsteinDecoder.lean:45-70). The `intro c f _` shape of `mtWitM0_wf`
-  matches the accepted canonical pattern (HardwareExecution.lean:99,553).
-- Every premise used: all theorems read use every hypothesis (agreement,
-  wf-preservation, refusal and witness lemmas discharge each `h` by
-  rewrite/simp/case-split; no `intro _` / `have _ :=` discard found).
-- Planted refusals genuinely refuse: `mtPushW/popW/leaveW_laenge_verweigert`
-  (bad length), `mtAdapterReg_laenge_verweigert`, `adapterMt_verweigert`,
-  plus pinned `pin_mt_fremd_verweigert` incl. `decodeMovTest [0x90] = none`,
-  and the `pin_kap_*` refusal/acceptance matrix plus `probe_kap_*` boundary
-  probes, all `decide`-closed against the real `kapDecode`.
-- Extended chain is old-first by construction (`kapDecodeMitMt`, lines
-  1350-1357) with universal agreement `kapDecodeMitMt_kap` (ALL byte strings
-  the old chain decodes) and take-where-refused / joint-refusal theorems.
-  Shadowing is impossible by construction, not by witness.
-- Witness non-degenerate: two cores; core-0 push buffers 8 entries
-  (`mtWit_puffer8`), RSP drops to slot, RIP advances, shared slot still zero;
-  forwarded pop restores RSP and observes the word; eight-flush drain changes
-  shared memory byte 0 to `0x08` (`mtWit_spuelung`) observed by core 1
-  (`mtWit_fremd_neu`); owner-only forwarding exhibited both sides
-  (`mtWit_weiterleitung` vs `mtWit_fremd_alt`); MOV value, TEST ZF and the
-  adapter register lift are jointly closed in `mt_zeuge` beside the planted
-  refusal. Memory-changing reached run: yes.
-- Silicon spot-checks: ENDBR64 F3 0F 1E FA; INT3 CC; UD2 0F 0B; LEAVE C9;
-  RET-imm C2+imm16; PUSH/POP only b16/b64 (FF /6, 8F /0); TEST AI64/RImm64
-  sign-extend imm32 (`sext .b32`, lines 1275-1291); movMImm64 carries imm32;
-  forced-REX for byte codes 4-7; 8/16-merge and 32-zero-extend via accepted
-  `mergeRegNarrow`. No AMD provenance claimed; undefined behavior (AF) left
-  to the accepted definition. No error found.
-- CUTS honest (lines 1908-1948): claims canonical-subset self-consistency
-  only; disclaims silicon correspondence, general memory round trip,
-  target-to-W/GX simulation, LOCK/RMW, interrupts, source/ABI/loader/entry/
-  budget. No hardware-correspondence or W/GX claim anywhere (only disclaimer
-  mentions). Maintainer wiring point named (kapDecode last arm).
+- The repair commit (`0a1906c5`, "integration repair analysis, gate blocker
+  recorded", tree CLEAN per evidence) adds exactly one report section
+  ("Integration repair analysis", +58 PATCH lines, report 149 -> 207 lines).
+  No Lean file changed: `IntMovTest.lean` is still 1993 lines with identical
+  header/imports (16 `Grammatik.X86.*` imports, lines 13-28), identical CUTS
+  block (lines 1908-1948), identical 42 `#print axioms` lines (1950-1991),
+  and no forbidden token (full-file grep for `sorry|native_decide|unsafe`,
+  `^axiom `, `admit ` finds only the two long-standing English-prose "admit
+  no event" lines 1387/1933). PATCH still touches exactly the same 3 files.
+- Every previous finding was re-inspected against the new delivery and stands:
+  one appended import line in `Grammatik.lean`; accepted evaluators lifted,
+  never redefined; ownership exclusions map to real in-tree decoders
+  (`decodeSx90/86/87`, `decodeCoreLea`, `decodeLea`, `decodeC`/`decodeCore`/
+  `decodeNarrow` arms of `kapDecode`); universal old-first chain agreement;
+  `decide`-closed pins and planted refusals; non-degenerate joint `mt_zeuge`;
+  honest CUTS with no hardware-correspondence or W/GX claim.
 
-## Known residuals (disclosed, not repair-grade)
+## Assessment of the author repair analysis (gate failure)
 
-- 90H (XCHG 90+r, 1-byte NOP 90) and 86/87 decode nowhere in the extended
-  chain (the new decoder refuses with pin; `kapDecode` has no Sx/XCHG arm).
-  Refusal is the correct call: XCHG carries implicit-LOCK semantics and the
-  coherent machine under construction refuses LOCK/RMW; forcing it here would
-  duplicate `decodeSx` or drag LOCK scope into this lane. Follow-up belongs
-  to the locked-RMW connection, not this family.
-- General REX.W / 66H LEA likewise unconnected (the new decoder takes bare 8D
-  only; old chain takes only the mod-2-SIB REX.W slice via `decodeCoreLea`,
-  and accepted `leaGemeinsam_verweigert` shows `decodeExt` refusing one
-  REX.W form). Disclosed in CUTS; maintainer work at the named wiring point.
-- Layout conflict documented by the author: task mandates
-  `grammatik/Grammatik/X86/IntMovTest.lean`, rule 36 would place `Int*`
-  under `Befehle/Ganzzahl`; merge gate runs `--apply`. Not a defect.
-- My clone base is newer than the pinned base (own `Grammatik.lean` has
-  721 lines vs pinned-base 711); the one-line append will need its usual
-  trivial rebase at merge.
+- Lane-checkable parts are consistent: the new file's sole namespace is
+  `Gabbro.Grammatik.X86` (line 30) with zero occurrences of `GBits`,
+  `Gleitkomma`, or `instRepr`; all 16 imports are `Grammatik.X86.*`. Nothing
+  in the 3 owned files can define, import, or resurrect a
+  `Grammatik.Gleitkomma` module. In my own clone the `GBits` home is likewise
+  the Bausteine file (`Bausteine/Gleitkomma/Gleitkomma.lean:40`), matching the
+  quoted gate error naming that module as the duplicate home. So the claim
+  "no repair within the owned files addresses this" holds: the candidate
+  cannot be the source of the duplicate.
+- The remaining half of the diagnosis (stale `Gleitkomma.lean` file vs
+  poisoned `.lake` olean in the coordinator merge workspace) is outside this
+  lane's reach by HARD RULE 1 and is reported here as author-stated, not
+  independently verified. It is in no case a candidate defect, and it changes
+  nothing about the findings above; the coordinator-side checks the author
+  names (`git status`/`git ls-files`, cache replacement) are the right next
+  step, owned by the coordinator.
+- The author claims no source/binary-chain acceptance in the repair section;
+  the candidate still stands exactly as reviewed. No unproved claim is
+  approved here.
+
+## Carried-over checks and residuals
+
+- Axioms per evidence remain standard (`[propext]` / `[propext, Quot.sound]`,
+  incl. `mt_zeuge`, no `sorryAx`); every premise used; `intro c f _` matches
+  the accepted canonical pattern; silicon spot-checks unchanged (ENDBR64,
+  INT3, UD2, LEAVE, RET-imm, PUSH/POP widths, TEST sext, forced-REX, AF via
+  accepted `andW`).
+- Residuals unchanged and still not repair-grade: 90H/86/87 and general
+  REX.W/66H LEA unconnected (refusal is the correct call for implicit-LOCK
+  XCHG on a no-LOCK machine; disclosed in CUTS); layout rule-36 conflict
+  documented for the merge gate; my base newer than the pinned base, so the
+  one-line append needs its trivial rebase at merge.
 
 ## Build status (honest)
 
-- `./lean-probe` on the delivered file: exceeded 600 s, no result
-  (cold `.lake`, serial slot shared with other lanes).
-- `./lean-bau` in own clone: exceeded 3600 s with no result line (same cause).
-- Author BUILD-EVIDENCE final entries: `./lean-bau` exit 0, 0 error lines,
-  `Build completed successfully (709 jobs).`; `./lean-probe` 0 errors.
-  The finding below rests on the complete static verification above plus that
-  evidence; the merge gate rebuilds `grammatik/` locally before committing,
-  which covers the missed independent re-execution.
+- No new independent green run: `./lean-probe` (>600 s) and `./lean-bau`
+  (>3600 s) exceed their timeouts on the cold shared slot, as before. The
+  shared evidence now also records author-side timeouts of the same class
+  (3600 s bau, 1500 s probe entries), so this is environment-wide, not
+  candidate-specific.
+- Author evidence: final `./lean-bau` exit 0, 0 error lines,
+  `Build completed successfully (709 jobs).`; `./lean-probe` 0 errors; the
+  gate's own lean output quoted in the repair section is likewise exit 0
+  (718 jobs). The finding below rests on the complete static re-verification
+  above plus that evidence; the merge gate rebuilds `grammatik/` locally
+  before committing.
 
 ## Machine-readable verdict
 
-CANDIDATE: 1351 c120e7310f15b54081b340c5a7ab3a989b71dd6b
+CANDIDATE: 1351 0a1906c59dfe527aee8d6214bbde2f248f81fe16
 VERDICT: ACCEPT
 
 The accepted state carries no unsupported desired-correctness premise, no
-weakened guarantee, no fake closure. New definitions/theorems added by this
+weakened guarantee, no fake closure, and no stale snapshot is approved: this
+finding binds only the new head above. New definitions/theorems added by this
 reviewer: none (report-only review; no Lean changes made, working tree left
 clean except this report).
