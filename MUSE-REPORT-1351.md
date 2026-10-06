@@ -147,3 +147,61 @@ plus adapter with witness).
 4. Rule 13 inhabitation does not trigger mechanically (no
 premise quantifies over program syntax, no ZEUGE target), but
 MECHANISM (4) is delivered as the joint `mt_zeuge` witness.
+
+## Integration repair analysis (gate FAILED, nothing merged)
+
+Gate evidence (verbatim): `RuntimeError: goal axiom check
+failed`; integration lean output `== exit 0; 0 error line(s)`,
+`Build completed successfully (718 jobs)`, all lane axioms
+standard; integration axioms output `== 1 error(s)`: file
+`merge-1351-axioms.lean:1:0: error: import
+Grammatik.Bausteine.Gleitkomma.Gleitkomma failed, environment
+already contains 'Gabbro.Grammatik.Gleitkomma.instReprGBits'
+from Grammatik.Gleitkomma`.
+
+Diagnosis (all evidence gathered read-only inside this clone):
+the merged Lean code is green — the gate's own lean output
+proves it (exit 0, 718 jobs, every lane axiom standard). Only
+the gate's auxiliary axioms-check file fails, at import time,
+on a duplicate declaration whose home module is
+`Grammatik.Gleitkomma`. That module has NO source file anywhere
+in this clone's tracked tree (`git ls-files
+grammatik/Grammatik/Gleitkomma.lean` is empty; glob finds only
+`Bausteine/Gleitkomma/Gleitkomma.lean` and `GleitkommaBits.lean`).
+No file in this clone imports the stale module name. My file
+declares a single `namespace Gabbro.Grammatik.X86`, defines
+nothing named `GBits`/`instReprGBits`, and imports only sixteen
+`Grammatik.X86.*` modules — all long-accepted and already in
+the root closure. All four lane commits touch only the three
+owned files, so the branch cannot create, delete, or resurrect
+any `Gleitkomma.lean` path. The sole in-clone definer of
+`Gabbro.Grammatik.Gleitkomma.instReprGBits` is the Bausteine
+file itself (`structure GBits ... deriving Repr` under
+`namespace Gabbro.Grammatik.Gleitkomma`), which the root
+`Grammatik.lean` already imports at line 224 alongside my
+module at line 712 — a combination proven green twice
+(exit 0, 709 jobs here; exit 0, 718 jobs in the gate's own
+lean output).
+
+Conclusion: no repair within the owned files addresses this.
+Removing my import line would not dissolve a duplicate whose
+both sides live outside my files, and would break the
+task-mandated wiring. The defect lives in the coordinator
+workspace state, not the candidate: a stale
+`grammatik/Grammatik/Gleitkomma.lean` source file there, or —
+more likely given the documented poisoned-cache class
+(AGENTS.md section 9) — a stale `.lake` olean for the
+pre-layout module being loaded into the check environment.
+
+Concrete blocker for the coordinator (outside my directory,
+not touchable from this lane): in the merge workspace,
+confirm with `git status`/`git ls-files` whether a stale
+`grammatik/Grammatik/Gleitkomma.lean` exists and delete it if
+untracked; otherwise drop the poisoned `.lake` caches per the
+documented procedure (replace with the warm master cache,
+never resume them) and re-run the gate. Fresh independent
+review of the changed commit is still required.
+
+No acceptance of the full source/binary chain is claimed
+here; the candidate stands exactly as reviewed: green build,
+standard axioms, open items per CUTS above.
