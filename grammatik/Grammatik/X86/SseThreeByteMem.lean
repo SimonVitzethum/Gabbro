@@ -883,4 +883,212 @@ theorem sseMem_nichts_movbe :
     decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
       natByte 240, natByte 11] = none := rfl
 
+/-! ## 4. Alignment gates and MMX lane semantics.
+
+  A 128-bit XMM memory source must be 16-byte aligned, else #GP
+  (SDM PSHUFB 4-422, PALIGNR 4-216: "must be aligned on a 16-byte
+  boundary or a general-protection exception (#GP) will be
+  generated"). An m64 MMX source never faults on alignment (legacy
+  MMX exception class, SDM 25.25.3 note). XMM value semantics reuse
+  the accepted `vecPabs`/`vecPshufb`/`vecPalignr` unchanged; MMX
+  64-bit semantics are new but built from the same accepted
+  `laneNat`/`vecMk`/`pabsLane` vocabulary on the low lanes only
+  (PSHUFB indexes low 3 bits, PALIGNR zeroes past a count of 16). -/
+
+/-- Alignment need of one form: XMM memory sources only. -/
+def sseMemBrauchtAusrichtung : SseMemOp → Bool
+  | .pshufbRM _ _ _ => true | .pabsBRM _ _ _ => true
+  | .pabsWRM _ _ _ => true | .pabsDRM _ _ _ => true
+  | .palignrRM _ _ _ _ => true
+  | _ => false
+
+/-- #GP predicate of one form at one address: XMM memory sources
+    fault exactly on 16-byte-misaligned addresses. -/
+def sseMemGp (op : SseMemOp) (a : Adresse) : Bool :=
+  if sseMemBrauchtAusrichtung op then decide (a.toNat % 16 ≠ 0)
+  else false
+
+/-- An aligned XMM source never faults. -/
+theorem sseMemGp_ausgerichtet_ok (op : SseMemOp)
+    (h : sseMemBrauchtAusrichtung op = true) :
+    sseMemGp op (BitVec.ofNat 64 12288) = false := by
+  unfold sseMemGp
+  rw [h]
+  decide
+
+/-- A misaligned XMM source faults. -/
+theorem sseMemGp_fehltritt (op : SseMemOp)
+    (h : sseMemBrauchtAusrichtung op = true) :
+    sseMemGp op (BitVec.ofNat 64 12289) = true := by
+  unfold sseMemGp
+  rw [h]
+  decide
+
+/-- No MMX form ever faults on alignment, at any address. -/
+theorem sseMemGp_nie_mmx (dst : MmxReg) (f : AdrForm)
+    (a : Adresse) :
+    sseMemGp (.pshufbMN dst f) a = false ∧
+      sseMemGp (.pabsBMN dst f) a = false ∧
+      sseMemGp (.pabsWMN dst f) a = false ∧
+      sseMemGp (.pabsDMN dst f) a = false := by
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> unfold sseMemGp sseMemBrauchtAusrichtung <;> rfl
+
+/-- No REX.W register form touches memory, so none faults. -/
+theorem sseMemGp_nie_reg (dst src : XmmReg) (a : Adresse) :
+    sseMemGp (.pshufbRW dst src) a = false := by
+  unfold sseMemGp sseMemBrauchtAusrichtung
+  rfl
+
+/-- Forwarding-aware 128-bit source load: two ordered 8-byte
+    `concLoad` chunks through the shared TSO view, joined low-first
+    exactly like the accepted `vecRead` chunks. -/
+def sseMemLade (s : TSOZustand) (c : Nat) (a : Adresse) :
+    Option Vektor :=
+  match concLoad s c .b64 a, concLoad s c .b64 (vecHiAddr a) with
+  | some lo, some hi => some (vecJoin lo hi)
+  | _, _ => none
+
+/-- A refused low chunk refuses the whole source load. -/
+theorem sseMemLade_verweigert_lo (s : TSOZustand) (c : Nat)
+    (a : Adresse)
+    (h : concLoad s c .b64 a = none) :
+    sseMemLade s c a = none := by
+  unfold sseMemLade
+  rw [h]
+
+/-- A refused high chunk refuses the whole source load. -/
+theorem sseMemLade_verweigert_hi (s : TSOZustand) (c : Nat)
+    (a : Adresse) (lo : Wort)
+    (h1 : concLoad s c .b64 a = some lo)
+    (h2 : concLoad s c .b64 (vecHiAddr a) = none) :
+    sseMemLade s c a = none := by
+  unfold sseMemLade
+  rw [h1, h2]
+
+/-- A successful source load is the joined halves. -/
+theorem sseMemLade_ok (s : TSOZustand) (c : Nat) (a : Adresse)
+    (lo hi : Wort)
+    (h1 : concLoad s c .b64 a = some lo)
+    (h2 : concLoad s c .b64 (vecHiAddr a) = some hi) :
+    sseMemLade s c a = some (vecJoin lo hi) := by
+  unfold sseMemLade
+  rw [h1, h2]
+
+/-- MMX shuffle (PSHUFB mm): low-3-bit indices over the low eight
+    lanes, zero above (MMX values live in bits 63:0). -/
+def mmPshufb (dst src : Vektor) : Vektor :=
+  vecMk .b8 (fun i =>
+    if i < 8 then
+      let c := laneNat .b8 src i
+      if c / 128 = 1 then 0 else laneNat .b8 dst (c % 8)
+    else 0)
+
+/-- MMX absolute value (PABSB/W/D mm) at width `b`: low half only. -/
+def mmPabs (b : Breite) (x : Vektor) : Vektor :=
+  vecMk b (fun i =>
+    if i < laneCount b / 2 then pabsLane b (laneNat b x i) else 0)
+
+/-- MMX align right (PALIGNR mm): the 128-bit `DEST:SRC` composite
+    shifted right by `imm8*8`, low 64 bits; counts past 16 zero. -/
+def mmPalignr (dst src : Vektor) (imm : Byte) : Vektor :=
+  vecMk .b8 (fun i =>
+    if i < 8 then
+      let j := i + byteNat imm
+      if j < 8 then laneNat .b8 src j
+      else if j < 16 then laneNat .b8 dst (j - 8)
+      else 0
+    else 0)
+
+/-- Per-lane MMX shuffle is the 3-bit control function. -/
+theorem laneNat_mmPshufb (dst src : Vektor) (i : Nat)
+    (hi : i < laneCount .b8) (h8 : i < 8) :
+    laneNat .b8 (mmPshufb dst src) i =
+      ((let c := laneNat .b8 src i
+        if c / 128 = 1 then 0 else laneNat .b8 dst (c % 8)) %
+        2 ^ Breite.b8.bits) := by
+  unfold mmPshufb
+  rw [laneGet_mk .b8 _ i hi, if_pos h8]
+
+/-- High lanes of an MMX shuffle are zero. -/
+theorem laneNat_mmPshufb_hoch (dst src : Vektor) (i : Nat)
+    (hi : i < laneCount .b8) (h8 : 8 ≤ i) :
+    laneNat .b8 (mmPshufb dst src) i = 0 := by
+  unfold mmPshufb
+  rw [laneGet_mk .b8 _ i hi, if_neg (by omega), Nat.zero_mod]
+
+/-- Per-lane MMX absolute value is the lane function. -/
+theorem laneNat_mmPabs (b : Breite) (x : Vektor) (i : Nat)
+    (hi : i < laneCount b) (hh : i < laneCount b / 2) :
+    laneNat b (mmPabs b x) i =
+      pabsLane b (laneNat b x i) % 2 ^ b.bits := by
+  unfold mmPabs
+  rw [laneGet_mk b _ i hi, if_pos hh]
+
+/-- High lanes of an MMX absolute value are zero. -/
+theorem laneNat_mmPabs_hoch (b : Breite) (x : Vektor) (i : Nat)
+    (hi : i < laneCount b) (hh : laneCount b / 2 ≤ i) :
+    laneNat b (mmPabs b x) i = 0 := by
+  unfold mmPabs
+  rw [laneGet_mk b _ i hi, if_neg (by omega), Nat.zero_mod]
+
+/-- Per-lane MMX align is the composite byte. -/
+theorem laneNat_mmPalignr (dst src : Vektor) (imm : Byte) (i : Nat)
+    (hi : i < laneCount .b8) (h8 : i < 8) :
+    laneNat .b8 (mmPalignr dst src imm) i =
+      ((let j := i + byteNat imm
+        if j < 8 then laneNat .b8 src j
+        else if j < 16 then laneNat .b8 dst (j - 8)
+        else 0) % 2 ^ Breite.b8.bits) := by
+  unfold mmPalignr
+  rw [laneGet_mk .b8 _ i hi, if_pos h8]
+
+/-- High lanes of an MMX align are zero. -/
+theorem laneNat_mmPalignr_hoch (dst src : Vektor) (imm : Byte)
+    (i : Nat) (hi : i < laneCount .b8) (h8 : 8 ≤ i) :
+    laneNat .b8 (mmPalignr dst src imm) i = 0 := by
+  unfold mmPalignr
+  rw [laneGet_mk .b8 _ i hi, if_neg (by omega), Nat.zero_mod]
+
+/-- Silicon spot-check: a 3-bit index selects (control 9 reads lane
+    1, unlike the 4-bit XMM form), bit 7 zeroes. -/
+theorem mmPshufb_silicon :
+    laneNat .b8 (mmPshufb (vecMk .b8 (fun i => i))
+      (vecMk .b8 (fun _ => 9))) 0 = 1 ∧
+    laneNat .b8 (mmPshufb (vecMk .b8 (fun i => i))
+      (vecMk .b8 (fun _ => 128))) 0 = 0 := by
+  decide
+
+/-- Silicon spot-check: MMX absolute value at the low lanes, zero
+    above. -/
+theorem mmPabs_silicon :
+    laneNat .b8 (mmPabs .b8
+      (vecMk .b8 (fun i => if i = 0 then 255 else 5))) 0 = 1 ∧
+    laneNat .b8 (mmPabs .b8
+      (vecMk .b8 (fun i => if i = 0 then 255 else 5))) 1 = 5 ∧
+    laneNat .b8 (mmPabs .b8
+      (vecMk .b8 (fun i => if i = 0 then 255 else 5))) 8 = 0 := by
+  decide
+
+/-- Silicon spot-check: MMX align shifts the 16-byte composite and
+    zeroes past a count of 16. -/
+theorem mmPalignr_silicon :
+    laneNat .b8 (mmPalignr (vecMk .b8 (fun _ => 7))
+      (vecMk .b8 (fun _ => 3)) (natByte 1)) 0 = 3 ∧
+    laneNat .b8 (mmPalignr (vecMk .b8 (fun _ => 7))
+      (vecMk .b8 (fun _ => 3)) (natByte 8)) 0 = 7 ∧
+    laneNat .b8 (mmPalignr (vecMk .b8 (fun _ => 7))
+      (vecMk .b8 (fun _ => 3)) (natByte 16)) 0 = 0 := by
+  decide
+
+/-- The XMM destination register one form writes (`none` for the
+    MMX value-level forms, which have no machine step here). -/
+def sseMemDstX : SseMemOp → Option XmmReg
+  | .pshufbRM _ dst _ => some dst | .pabsBRM _ dst _ => some dst
+  | .pabsWRM _ dst _ => some dst | .pabsDRM _ dst _ => some dst
+  | .palignrRM _ dst _ _ => some dst
+  | .pshufbRW dst _ => some dst | .pabsBRW dst _ => some dst
+  | .pabsWRW dst _ => some dst | .pabsDRW dst _ => some dst
+  | .palignrRW dst _ _ => some dst
+  | _ => none
+
 end Gabbro.Grammatik.X86
