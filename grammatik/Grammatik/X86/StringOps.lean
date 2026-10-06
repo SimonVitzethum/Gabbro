@@ -475,6 +475,159 @@ theorem strDirSchritt_std (df : Bool) :
     strDirSchritt df .std = true := by
   cases df <;> rfl
 
+/-! ## 5. Extended decoder chain over `kapDecode`.
+    The new definition tries the old chain first: exact agreement on
+    every byte string the old chain decodes, string rows only where it
+    refuses. A maintainer extends `kapDecode` itself in
+    `HwKapsteinDecoder.lean`; the agreement theorems then move along. -/
+
+/-- Extended chain row: an old row or a string row. -/
+inductive KapStr where
+  | kap : KapDekodiert → KapStr
+  | str : StrInstr → KapStr
+  deriving DecidableEq, Repr
+
+/-- Extended chain: the old chain first, the string decoder only
+    where the old chain refuses. No old row is shadowed. -/
+def kapDecodeStr : List Byte → Option (KapStr × List Byte) :=
+  fun bs =>
+    match kapDecode bs with
+    | some (k, rest) => some (.kap k, rest)
+    | none =>
+      match strDecode bs with
+      | some (d, rest) => some (.str d, rest)
+      | none => none
+
+/-- Agreement: the extended chain takes every old row unchanged. -/
+theorem kapDecodeStr_kap (bs : List Byte) (k : KapDekodiert)
+    (rest : List Byte) (h : kapDecode bs = some (k, rest)) :
+    kapDecodeStr bs = some (.kap k, rest) := by
+  unfold kapDecodeStr
+  rw [h]
+
+/-- New rows take the string arm where the old chain refuses. -/
+theorem kapDecodeStr_str (bs : List Byte) (d : StrInstr)
+    (rest : List Byte) (h1 : kapDecode bs = none)
+    (h2 : strDecode bs = some (d, rest)) :
+    kapDecodeStr bs = some (.str d, rest) := by
+  unfold kapDecodeStr
+  rw [h1, h2]
+
+/-- Where both refuse, the extended chain refuses. -/
+theorem kapDecodeStr_nichts (bs : List Byte)
+    (h1 : kapDecode bs = none) (h2 : strDecode bs = none) :
+    kapDecodeStr bs = none := by
+  unfold kapDecodeStr
+  rw [h1, h2]
+
+/-- MOVSB takes the string arm (needs the old chain to refuse it). -/
+theorem kapKette_movsb (h : kapDecode [natByte 164] = none) :
+    kapDecodeStr [natByte 164] =
+      some (.str (.str ⟨.movs, .b8, .kein, 1⟩), []) :=
+  kapDecodeStr_str _ _ _ h rfl
+
+/-- STOSB takes the string arm (needs the old chain to refuse it). -/
+theorem kapKette_stosb (h : kapDecode [natByte 170] = none) :
+    kapDecodeStr [natByte 170] =
+      some (.str (.str ⟨.stos, .b8, .kein, 1⟩), []) :=
+  kapDecodeStr_str _ _ _ h rfl
+
+/-- CLD takes the string arm (needs the old chain to refuse it). -/
+theorem kapKette_cld (h : kapDecode [natByte 252] = none) :
+    kapDecodeStr [natByte 252] = some (.str (.dir .cld 1), []) :=
+  kapDecodeStr_str _ _ _ h rfl
+
+/-- LOCK on a string op stays refused through the extended chain. -/
+theorem kapKette_lock_bleibt
+    (h1 : kapDecode [natByte 240, natByte 164] = none) :
+    kapDecodeStr [natByte 240, natByte 164] = none :=
+  kapDecodeStr_nichts _ h1 strNichts_lock
+
+/-! ## 6. Machine adapter: the family on the coherent machine.
+    The event carries the incoming DF (canonical `Flags` has no DF).
+    Incoming ZF comes from the core flags. A faulting loop admits no
+    successor; stores stay buffered (see §7), so no SC word effect is
+    ever substituted. -/
+
+/-- String event: decoded instruction plus incoming direction flag. -/
+structure StrEvent where
+  instr : StrDecodiert
+  df : Bool
+  deriving DecidableEq, Repr, Inhabited
+
+/-- The loop the adapter runs: registers from the core projection,
+    ZF from the core flags, memory/buffers from the shared TSO view. -/
+def strAdapterLauf (m : HwMaschine) (c : Nat) (e : StrEvent) : StrLaufErg :=
+  let t := projZustand m c
+  strLauf e.instr e.df (strAnzahl e.instr (t.register .rcx)) 0
+    ⟨t.register .rsi, t.register .rdi, t.register .rcx, t.register .rax⟩
+    t.flags.zf (tsoAnsicht m) c
+
+/-- The re-embedded FP state after a clean loop: successor registers
+    over the shared TSO memory, ZF from the loop, RIP past the
+    instruction, XMM/FP context kept. -/
+def strKernNeu (m : HwMaschine) (c : Nat) (e : StrEvent)
+    (erg : StrLaufErg) : FpZustand :=
+  let t := projZustand m c
+  ⟨⟨fun q =>
+    if q = Register.rsi then erg.reg.rsi
+    else if q = Register.rdi then erg.reg.rdi
+    else if q = Register.rcx then erg.reg.rcx
+    else if q = Register.rax then erg.reg.rax
+    else t.register q,
+   { t.flags with zf := erg.zf },
+   t.rip + BitVec.ofNat 64 e.instr.laenge,
+   erg.tso.mem⟩,
+   (m.kerne c).xmm, (m.kerne c).fp⟩
+
+/-- One checked string step: the loop result re-embedded over the
+    shared TSO successor; a fault admits no successor state. -/
+def strAdapterSchritt (m : HwMaschine) (c : Nat)
+    (e : StrEvent) : Option HwMaschine :=
+  let erg := strAdapterLauf m c e
+  match erg.fehler with
+  | some _ => none
+  | none =>
+    some (setKernVonFp (setTso m erg.tso) c (strKernNeu m c e erg))
+
+/-- The string plug on the coherent machine. -/
+def adapterString : HwAdapter StrEvent := ⟨strAdapterSchritt⟩
+
+/-- Every adapter step preserves well-formedness: only core data and
+    memory/buffers move, profiles are untouched. -/
+theorem adapterString_wf (m : HwMaschine) (c : Nat) (e : StrEvent)
+    (m' : HwMaschine) (hwf : HwWf m)
+    (h : adapterString.schritt m c e = some m') : HwWf m' := by
+  unfold adapterString strAdapterSchritt at h
+  simp only at h
+  split at h
+  · next hs =>
+    cases h
+  · next hs =>
+    have e2 := Option.some.inj h
+    subst e2
+    exact setKernDaten_wf _ _ _ (setTso_wf _ _ hwf)
+
+/-- Agreement: a clean loop is exactly the adapter successor. -/
+theorem adapterString_fertig (m : HwMaschine) (c : Nat) (e : StrEvent)
+    (erg : StrLaufErg) (h : strAdapterLauf m c e = erg)
+    (hf : erg.fehler = none) :
+    adapterString.schritt m c e =
+      some (setKernVonFp (setTso m erg.tso) c
+        (strKernNeu m c e erg)) := by
+  unfold adapterString strAdapterSchritt
+  simp only
+  rw [h, hf]
+
+/-- A faulting loop admits no adapter successor. -/
+theorem adapterString_verweigert_bei_fehler (m : HwMaschine) (c : Nat)
+    (e : StrEvent) (j : Nat)
+    (h : (strAdapterLauf m c e).fehler = some j) :
+    adapterString.schritt m c e = none := by
+  unfold adapterString strAdapterSchritt
+  simp only
+  rw [h]
+
 /- CUTS:
    Skeleton only: vocabulary above. Decoder, semantics, adapter and
    witness follow. NOT proved here: everything (see lane report).
