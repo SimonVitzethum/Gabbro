@@ -712,9 +712,9 @@ import Grammatik.X86.Befehle.System.SystemDecode
 import Grammatik.X86.TSO.Verriegelt.LockedAllRmw
 import Grammatik.X86.Befehle.Sse.SseThreeByte
 import Grammatik.X86.Hw.Kapstein.HwKapsteinDrei
-import Grammatik.X86.SseFourOne
-import Grammatik.X86.IntExtend
-import Grammatik.X86.SystemEvaluators
+import Grammatik.X86.Befehle.Sse.SseFourOne
+import Grammatik.X86.Befehle.Ganzzahl.IntExtend
+import Grammatik.X86.Befehle.System.SystemEvaluators
 import Grammatik.X86.Befehle.Sse.SseMoves
 import Grammatik.X86.Befehle.Zeichenketten.StringOps
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
