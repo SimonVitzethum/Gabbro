@@ -1379,4 +1379,271 @@ theorem adapterSseMoves_verweigert_speicher (m : HwMaschine)
   · rw [if_pos hc, sseRegSchritt_verweigert_speicher d _ h]
   · rw [if_neg hc]
 
+/-! ## 7. Joint witness: two cores, family steps, buffered store.
+
+  Core 0 interleaves two packed words (UNPCKLPS over distinct
+  32-bit lanes), core 1 moves a low half high (MOVLHPS); afterwards
+  core 0 issues a buffered byte store that only the owner observes
+  by forwarding, and the drain changes actual shared memory from 0
+  to 42. A memory row and a bad length refuse beside the run. Every
+  machine claim projects to plain values before `decide`
+  (machines contain functions). -/
+
+/-- Witness vectors with distinct 32-bit lanes. -/
+def sseWitA : Vektor := BitVec.ofNat 128 0x00000004000000030000000200000001
+
+/-- Witness vectors with distinct 32-bit lanes. -/
+def sseWitB : Vektor := BitVec.ofNat 128 0x00000008000000070000000600000005
+
+/-- Witness XMM file. -/
+def sseWitXmm : XmmDatei :=
+  fun r =>
+    if r = .xmm0 then sseWitA
+    else if r = .xmm1 then sseWitB
+    else if r = .xmm2 then sseWitA
+    else if r = .xmm3 then sseWitB
+    else BitVec.ofNat 128 0
+
+/-- Witness registers. -/
+def sseWitReg : Register → Wort :=
+  fun q =>
+    if q = .rax then 17
+    else if q = .rsp then BitVec.ofNat 64 8192
+    else BitVec.ofNat 64 0
+
+/-- Witness cores over the register file: both cores run at 4096. -/
+def sseWitKern : Nat → HwKern
+  | 0 => ⟨sseWitReg, zeugeFlags, BitVec.ofNat 64 4096, sseWitXmm,
+      kontextReset⟩
+  | _ => ⟨sseWitReg, zeugeFlags, BitVec.ofNat 64 4096, sseWitXmm,
+      kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon. -/
+def sseWitStart : HwMaschine :=
+  ⟨zeugeSpeicher, sseWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem sseWitStart_wf : HwWf sseWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Core 0 interleaves through the machine adapter. -/
+def sseWitOutUnpck : Option HwMaschine :=
+  adapterSseMoves.schritt sseWitStart 0 ⟨.unpcklpsRR .xmm0 .xmm1, 4⟩
+
+/-- Core 1 moves a low half high through the machine adapter. -/
+def sseWitOutMovlh : Option HwMaschine :=
+  adapterSseMoves.schritt sseWitStart 1 ⟨.movlhpsRR .xmm2 .xmm3, 4⟩
+
+/-- Read an XMM register out of a machine outcome. -/
+def sseXmmOut (o : Option HwMaschine) (c : Nat) (q : XmmReg) :
+    Option Vektor :=
+  match o with
+  | some m => some ((m.kerne c).xmm q)
+  | none => none
+
+/-- Core 0 interleaves `[1, 5, 2, 6]` into `xmm0`. -/
+theorem sseWit_unpck :
+    sseXmmOut sseWitOutUnpck 0 .xmm0 =
+      some (sseUnpckLo32 sseWitA sseWitB) := by
+  decide
+
+/-- Core 1 moves low halves into `xmm2`. -/
+theorem sseWit_movlh :
+    sseXmmOut sseWitOutMovlh 1 .xmm2 =
+      some (vecJoin (vLo sseWitA) (vLo sseWitB)) := by
+  decide
+
+/-- Interleaved lane 0 is 1. -/
+theorem sseWit_unpck_lane0 :
+    laneNat .b32 (sseUnpckLo32 sseWitA sseWitB) 0 = 1 := by
+  decide
+
+/-- Interleaved lane 1 is 5. -/
+theorem sseWit_unpck_lane1 :
+    laneNat .b32 (sseUnpckLo32 sseWitA sseWitB) 1 = 5 := by
+  decide
+
+/-- Interleaved lane 2 is 2. -/
+theorem sseWit_unpck_lane2 :
+    laneNat .b32 (sseUnpckLo32 sseWitA sseWitB) 2 = 2 := by
+  decide
+
+/-- Interleaved lane 3 is 6. -/
+theorem sseWit_unpck_lane3 :
+    laneNat .b32 (sseUnpckLo32 sseWitA sseWitB) 3 = 6 := by
+  decide
+
+/-- The moved low half is the destination low half. -/
+theorem sseWit_movlh_lo :
+    vLo (vecJoin (vLo sseWitA) (vLo sseWitB)) = vLo sseWitA :=
+  vLo_vecJoin _ _
+
+/-- The moved high half is the source low half. -/
+theorem sseWit_movlh_hi :
+    vHi (vecJoin (vLo sseWitA) (vLo sseWitB)) = vLo sseWitB :=
+  vHi_vecJoin _ _
+
+/-- Witness data address. -/
+def sseWitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness TSO start: canonical memory, empty buffers. -/
+def sseWitTso0 : TSOZustand := ⟨zeugeSpeicher, fun _ => []⟩
+
+/-- Core 0 issues byte 42 at the data cell. -/
+def sseWitTso1 : Option TSOZustand :=
+  issueByte sseWitTso0 0 sseWitAdr (BitVec.ofNat 8 42)
+
+/-- Core 0 observes its own byte (forwarding). -/
+def sseWitEigen : Option (Option Byte) :=
+  match sseWitTso1 with
+  | some s => some (loadByte s 0 sseWitAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def sseWitFremd : Option (Option Byte) :=
+  match sseWitTso1 with
+  | some s => some (loadByte s 1 sseWitAdr)
+  | none => none
+
+/-- Core 0 drains its oldest entry. -/
+def sseWitTso2 : Option TSOZustand :=
+  match sseWitTso1 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def sseWitNachFlush : Option (Option Byte) :=
+  match sseWitTso2 with
+  | some s => some (some (s.mem.bytes sseWitAdr))
+  | none => none
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def sseWitFremdNach : Option (Option Byte) :=
+  match sseWitTso2 with
+  | some s => some (loadByte s 1 sseWitAdr)
+  | none => none
+
+/-- The data cell starts zeroed. -/
+theorem sseWit_anfang_null :
+    zeugeSpeicher.bytes sseWitAdr = BitVec.ofNat 8 0 := by
+  rfl
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem sseWit_weiterleitung :
+    sseWitEigen = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem sseWit_fremd_alt :
+    sseWitFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 42. -/
+theorem sseWit_spuelung_aendert_speicher :
+    sseWitNachFlush = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem sseWit_fremd_neu :
+    sseWitFremdNach = some (some (BitVec.ofNat 8 42)) := by
+  decide
+
+/-- A memory row refuses the machine step. -/
+theorem sseWit_speicher_verweigert :
+    adapterSseMoves.schritt sseWitStart 0
+      ⟨.movupsLd .xmm0 .rax (BitVec.ofNat 32 0), 8⟩ = none :=
+  adapterSseMoves_verweigert_speicher _ _ _ rfl
+
+/-- A bad decode length refuses the machine step. -/
+theorem sseWit_schlechte_laenge_verweigert :
+    adapterSseMoves.schritt sseWitStart 0
+      ⟨.unpcklpsRR .xmm0 .xmm1, 0⟩ = none :=
+  adapterSseMoves_verweigert_bei_laenge _ _ _ (by decide)
+
+/-- The joint witness: a reached two-core move run (interleave on
+    core 0, half move on core 1) beside a buffered store that only
+    the owner forwards and a drain that changes actual shared memory
+    from 0 to 42 -- with the memory-row and bad-length refusals
+    beside it. Non-degenerate: the drain changes actual shared
+    memory. -/
+theorem sseHw_zeuge :
+    sseXmmOut sseWitOutUnpck 0 .xmm0 =
+        some (sseUnpckLo32 sseWitA sseWitB) ∧
+      sseXmmOut sseWitOutMovlh 1 .xmm2 =
+        some (vecJoin (vLo sseWitA) (vLo sseWitB)) ∧
+      laneNat .b32 (sseUnpckLo32 sseWitA sseWitB) 0 = 1 ∧
+      laneNat .b32 (sseUnpckLo32 sseWitA sseWitB) 1 = 5 ∧
+      laneNat .b32 (sseUnpckLo32 sseWitA sseWitB) 2 = 2 ∧
+      laneNat .b32 (sseUnpckLo32 sseWitA sseWitB) 3 = 6 ∧
+      vLo (vecJoin (vLo sseWitA) (vLo sseWitB)) = vLo sseWitA ∧
+      vHi (vecJoin (vLo sseWitA) (vLo sseWitB)) = vLo sseWitB ∧
+      sseWitEigen = some (some (BitVec.ofNat 8 42)) ∧
+      sseWitFremd = some (some (BitVec.ofNat 8 0)) ∧
+      sseWitNachFlush = some (some (BitVec.ofNat 8 42)) ∧
+      sseWitFremdNach = some (some (BitVec.ofNat 8 42)) ∧
+      zeugeSpeicher.bytes sseWitAdr = BitVec.ofNat 8 0 ∧
+      HwWf sseWitStart ∧
+      adapterSseMoves.schritt sseWitStart 0
+        ⟨.movupsLd .xmm0 .rax (BitVec.ofNat 32 0), 8⟩ = none ∧
+      adapterSseMoves.schritt sseWitStart 0
+        ⟨.unpcklpsRR .xmm0 .xmm1, 0⟩ = none := by
+  refine ⟨sseWit_unpck, sseWit_movlh, sseWit_unpck_lane0,
+    sseWit_unpck_lane1, sseWit_unpck_lane2, sseWit_unpck_lane3,
+    sseWit_movlh_lo, sseWit_movlh_hi, sseWit_weiterleitung,
+    sseWit_fremd_alt, sseWit_spuelung_aendert_speicher,
+    sseWit_fremd_neu, sseWit_anfang_null, sseWitStart_wf,
+    sseWit_speicher_verweigert, sseWit_schlechte_laenge_verweigert⟩
+
+/- CUTS:
+   Proved here: the 27-row SSE/SSE2 move family (MOVUPS/MOVUPD/
+   MOVAPS/MOVAPD loads and stores, the MOVSD store, MOVLPS/MOVHPS
+   loads and stores, MOVLHPS/MOVHLPS, UNPCKL/UNPCKH PS/PD, the
+   non-temporal stores, MOVNTI, MOVD/MOVQ register forms) connected
+   to the coherent machine and the accepted capstone chain -- the
+   extended chain prefers the accepted chain (the overlapping MOVSS
+   store keeps its accepted `s32` arm, never re-decided here), one
+   unified register step selects the accepted XMM vocabulary
+   exactly, register success never touches memory, the
+   `HwAdapter SseDecodiert` plug preserves `HwWf` with exact
+   agreement and planted refusals, and a reached two-core run with
+   owner-only forwarding and a memory-changing drain stands beside
+   refusal evidence.
+   NOT proved here, and not claimed:
+   - No hardware correspondence: encodings are canonical subsets
+     with self-consistency only, not x86 truth. Silicon
+     assumptions named: REX.W=0 canonical prefix, 16-byte
+     alignment `#GP` for the aligned forms (checked as refusal:
+     the adapter admits no aligned-form memory step at all),
+     non-temporal stores modelled as refused at the register step
+     (their weaker ordering is NOT modelled -- treated as absent,
+     never as TSO), MOVLHPS/MOVHLPS/UNPCK lane orders per the SDM
+     (Vol. 2A/2B, edition 093 snapshot); nothing here re-checks
+     them against silicon. Flags are untouched by every row (no
+     flag claim at all).
+   - No memory-form machine connection: loads, stores, NT stores
+     and MOVNTI decode (round trip proved) but admit no adapter
+     step; their machine path must go through the §3/§6 TSO
+     events, which is OPEN.
+   - No aligned-vs-unaligned fault distinction beyond refusal; no
+     MXCSR/FP-control interaction; no VEX/EVEX forms; no MOVD/MOVQ
+     memory forms; no source/IR/ABI/loader/entry/budget link, no
+     per-access target-to-W/GX simulation, no whole-word
+     atomicity beyond byte drains, no timing/power behaviour.
+   - The MOVSS store row belongs to the accepted `s32` family
+     (`movssSpeichere`, with fetched execution there); this lane
+     covers no MOVSS row and re-decides nothing.
+-/
+
+#print axioms decodeSse
+#print axioms kapDecodeSse
+#print axioms kapDecodeSse_kanonisch
+#print axioms sseRegSchritt
+#print axioms adapterSseMoves
+#print axioms adapterSseMoves_wf
+#print axioms adapterSseMoves_ok
+#print axioms sseWitStart_wf
+#print axioms sseHw_zeuge
+
 end Gabbro.Grammatik.X86

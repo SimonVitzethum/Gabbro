@@ -521,6 +521,7 @@
  "Grammatik.X86.Speicher": "Grammatik.X86.Speicher.Speicher",
  "Grammatik.X86.SpeicherKommutation": "Grammatik.X86.Speicher.SpeicherKommutation",
  "Grammatik.X86.SpillPrivate": "Grammatik.X86.Opt.Register.SpillPrivate",
+ "Grammatik.X86.SseMoves": "Grammatik.X86.Befehle.Sse.SseMoves",
  "Grammatik.X86.StackExecution": "Grammatik.X86.Laden.StackExecution",
  "Grammatik.X86.StackUnwind": "Grammatik.X86.Laden.StackUnwind",
  "Grammatik.X86.StaerkeReduktion": "Grammatik.X86.Opt.Schleifen.StaerkeReduktion",
