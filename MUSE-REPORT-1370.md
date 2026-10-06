@@ -3,8 +3,8 @@
 ## Scope verified
 
 - Clone `/home/simon/Dokumente/gabbro-muse/a1370`, branch `muse/1370`, clean at review start.
-- Candidate: author lane 1369, pinned head `31b606f95100f917d1f8fd08e55ff9ce24da63cb`
-  (base `880e743912590626f26a6b17faa22b2a40071077`), from FILES only
+- Under review: author lane 1369 at the pinned head from
+  `.tmp/review/SNAPSHOT.json` (base `880e743912590626f26a6b17faa22b2a40071077`), from FILES only
   (`.tmp/review/SNAPSHOT.json`, `.tmp/review/author-1369/PATCH.diff`,
   copied sources, `OWNER-TASK.md`, `BUILD-EVIDENCE.json`). Never read the
   author clone; never ran git on the pinned hash.
@@ -99,6 +99,7 @@
   against this candidate would punish a harness failure; they belong to
   follow-up lanes, not to this verdict.
 
-## VERDICT: ACCEPT
+## Machine-readable verdict (substantive verdict unchanged: accept)
 
-CANDIDATE: 1369 `31b606f95100f917d1f8fd08e55ff9ce24da63cb` — VERDICT: ACCEPT.
+CANDIDATE: 1369 31b606f95100f917d1f8fd08e55ff9ce24da63cb
+VERDICT: ACCEPT
