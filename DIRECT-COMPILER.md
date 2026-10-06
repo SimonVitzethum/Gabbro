@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-06 04:41 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-06 17:14 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -517,7 +517,7 @@ Last ledger refresh: **2026-10-06 04:41 UTC**. This is an operational snapshot, 
 | 826 | Composition closing: relocation-to-redecode closing | Merged after review/checks | 976: Merged after review/checks | [report](messung/muse/MUSE-REPORT-826.md) |
 | 827 | Composition closing: entry-to-mapping closing | Merged after review/checks | 977: Merged after review/checks | [report](messung/muse/MUSE-REPORT-827.md) |
 | 828 | Composition closing: stack-to-ABI closing | Merged after review/checks | 978: Merged after review/checks | [report](messung/muse/MUSE-REPORT-828.md) |
-| 829 | Composition closing: call-lowering closing | Committed candidate; review/integration pending | 979: Incomplete; preserved | [task](lanes/829.md) |
+| 829 | Composition closing: call-lowering closing | Committed candidate; review/integration pending | 979: Committed candidate; review/integration pending | [task](lanes/829.md) |
 | 830 | Composition closing: spill-privacy closing | Merged after review/checks | 980: Merged after review/checks | [report](messung/muse/MUSE-REPORT-830.md) |
 | 831 | Composition closing: contract-at-call closing | Merged after review/checks | 981: Merged after review/checks | [report](messung/muse/MUSE-REPORT-831.md) |
 | 832 | Composition closing: contract-at-return closing | Merged after review/checks | 982: Merged after review/checks | [report](messung/muse/MUSE-REPORT-832.md) |
@@ -540,7 +540,7 @@ Last ledger refresh: **2026-10-06 04:41 UTC**. This is an operational snapshot, 
 | 849 | Composition closing: unwind-table closing | Merged after review/checks | 999: Merged after review/checks | [report](messung/muse/MUSE-REPORT-849.md) |
 | 850 | Composition closing: handler-table closing | Merged after review/checks | 1000: Merged after review/checks | [report](messung/muse/MUSE-REPORT-850.md) |
 | 851 | Composition closing: binding-surface closing | Merged after review/checks | 1001: Merged after review/checks | [report](messung/muse/MUSE-REPORT-851.md) |
-| 852 | Composition closing: runtime-bodies closing | Committed candidate; review/integration pending | 1002: Incomplete; preserved | [task](lanes/852.md) |
+| 852 | Composition closing: runtime-bodies closing | Committed candidate; review/integration pending | 1002: Committed candidate; review/integration pending | [task](lanes/852.md) |
 | 853 | Composition closing: entry-hook closing | Merged after review/checks | 1003: Merged after review/checks | [report](messung/muse/MUSE-REPORT-853.md) |
 | 854 | Composition closing: support-bytes closing | Merged after review/checks | 1004: Merged after review/checks | [report](messung/muse/MUSE-REPORT-854.md) |
 | 855 | Composition closing: loader-bias closing | Merged after review/checks | 1005: Merged after review/checks | [report](messung/muse/MUSE-REPORT-855.md) |
@@ -570,9 +570,9 @@ Last ledger refresh: **2026-10-06 04:41 UTC**. This is an operational snapshot, 
 | 879 | Optimiser rule: spill freshness rule | Merged after review/checks | 1029: Merged after review/checks | [report](messung/muse/MUSE-REPORT-879.md) |
 | 880 | Optimiser rule: copy coalescing rule | Merged after review/checks | 1030: Merged after review/checks | [report](messung/muse/MUSE-REPORT-880.md) |
 | 881 | Optimiser rule: rematerialisation rule | Merged after review/checks | 1031: Merged after review/checks | [report](messung/muse/MUSE-REPORT-881.md) |
-| 882 | Optimiser rule: chain scheduling rule | Committed candidate; review/integration pending | 1032: Incomplete; preserved | [task](lanes/882.md) |
+| 882 | Optimiser rule: chain scheduling rule | Committed candidate; review/integration pending | 1032: Committed candidate; review/integration pending | [task](lanes/882.md) |
 | 883 | Optimiser rule: loop alignment rule | Merged after review/checks | 1033: Merged after review/checks | [report](messung/muse/MUSE-REPORT-883.md) |
-| 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Incomplete; preserved | [task](lanes/884.md) |
+| 884 | Optimiser rule: branch bias rule | Committed candidate; review/integration pending | 1034: Agent working | [task](lanes/884.md) |
 | 885 | Optimiser rule: zero-idiom selection rule | Merged after review/checks | 1035: Merged after review/checks | [report](messung/muse/MUSE-REPORT-885.md) |
 | 886 | Optimiser rule: LEA selection rule | Merged after review/checks | 1036: Merged after review/checks | [report](messung/muse/MUSE-REPORT-886.md) |
 | 887 | Optimiser rule: shift selection rule | Merged after review/checks | 1037: Merged after review/checks | [report](messung/muse/MUSE-REPORT-887.md) |
@@ -604,7 +604,7 @@ Last ledger refresh: **2026-10-06 04:41 UTC**. This is an operational snapshot, 
 | 1071 | Task-brief audit batch B18 (lanes 1001-1015) | Scheduled | 1091: scheduled | [task](lanes/1071.md) |
 | 1072 | Task-brief audit batch B19 (lanes 1016-1030) | Scheduled | 1092: scheduled | [task](lanes/1072.md) |
 | 1073 | Task-brief audit batch B20 (lanes 1031-1045) | Merged after review/checks | 1093: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1073.md) |
-| 1094 | Idle pool cache cleanup with strict guards | Incomplete; preserved | 1095: scheduled | [task](lanes/1094.md) |
+| 1094 | Idle pool cache cleanup with strict guards | Committed candidate; review/integration pending | 1095: Unresolved after agent rounds; not accepted | [task](lanes/1094.md) |
 | 1096 | Hourly managed-agent census with coordinator warning | Committed candidate; review/integration pending | 1097: Unresolved after agent rounds; not accepted | [task](lanes/1096.md) |
 | 1098 | Standing dynamic work planner for compiler/hardware closure | Merged after review/checks | 1099: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1098.md) |
 | 1100 | Defined auxiliary-carry rows for admitted integer execution | Merged after review/checks | 1101: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1100.md) |
@@ -712,9 +712,9 @@ Last ledger refresh: **2026-10-06 04:41 UTC**. This is an operational snapshot, 
 | 1307 | FP store forms: drain equals the 32-bit write | Merged after review/checks | 1308: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1307.md) |
 | 1309 | Page-fault delivery: CR2, error code and the interrupt frame | Merged after review/checks | 1310: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1309.md) |
 | 1311 | Capstone, second step: add the families merged since the first union | Merged after review/checks | 1312: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1311.md) |
-| 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Incomplete; preserved | 1314: scheduled | [task](lanes/1313.md) |
+| 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Agent working | 1314: scheduled | [task](lanes/1313.md) |
 | 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Merged after review/checks | 1316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1315.md) |
-| 1317 | Memory-operand addressing forms for bit test and bit scan | Incomplete; preserved | 1318: scheduled | [task](lanes/1317.md) |
+| 1317 | Memory-operand addressing forms for bit test and bit scan | Scheduled | 1318: scheduled | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Merged after review/checks | 1320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
@@ -723,7 +723,7 @@ Last ledger refresh: **2026-10-06 04:41 UTC**. This is an operational snapshot, 
 | 1329 | TSO projection: device, FP, vector, fault, gate, interrupt and image tags | Merged after review/checks | 1330: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1329.md) |
 | 1331 | Per-row consumed length for the capstone decoder chain | Merged after review/checks | 1332: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1331.md) |
 | 1333 | Opcode ledger: one-byte opcodes 00-3F | Merged after review/checks | 1334: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1333.md) |
-| 1335 | Opcode ledger: one-byte opcodes 40-7F | Committed candidate; review/integration pending | 1336: Incomplete; preserved | [task](lanes/1335.md) |
+| 1335 | Opcode ledger: one-byte opcodes 40-7F | Committed candidate; review/integration pending | 1336: Committed candidate; review/integration pending | [task](lanes/1335.md) |
 | 1337 | Opcode ledger: one-byte opcodes 80-BF | Merged after review/checks | 1338: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1337.md) |
 | 1339 | Opcode ledger: one-byte opcodes C0-FF | Merged after review/checks | 1340: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1339.md) |
 | 1341 | Opcode ledger: two-byte opcodes 0F 00-3F | Merged after review/checks | 1342: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1341.md) |
@@ -731,23 +731,29 @@ Last ledger refresh: **2026-10-06 04:41 UTC**. This is an operational snapshot, 
 | 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
 | 1349 | Integer ALU in every width and form | Agent working | 1350: scheduled | [task](lanes/1349.md) |
-| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Incomplete; preserved | 1352: scheduled | [task](lanes/1351.md) |
+| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Agent working | 1352: scheduled | [task](lanes/1351.md) |
 | 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Merged after review/checks | 1354: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1353.md) |
 | 1355 | SSE/SSE2 moves, loads, stores and unpack | Committed candidate; review/integration pending | 1356: Committed candidate; review/integration pending | [task](lanes/1355.md) |
 | 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Agent working | 1358: Committed candidate; review/integration pending | [task](lanes/1357.md) |
-| 1359 | SSE/SSE2 scalar and packed floating point | Agent working | 1360: scheduled | [task](lanes/1359.md) |
+| 1359 | SSE/SSE2 scalar and packed floating point | Agent working | 1360: Committed candidate; review/integration pending | [task](lanes/1359.md) |
 | 1361 | String instructions with REP prefixes and the direction flag | Committed candidate; review/integration pending | 1362: Committed candidate; review/integration pending | [task](lanes/1361.md) |
 | 1363 | Wire the already-modelled families into the decoder chain | Committed candidate; review/integration pending | 1364: Committed candidate; review/integration pending | [task](lanes/1363.md) |
 | 1365 | Decoder rows for the system and privileged instructions | Merged after review/checks | 1366: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1365.md) |
 | 1367 | Every LOCK-prefixed read-modify-write instruction | Merged after review/checks | 1368: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1367.md) |
 | 1369 | The three-byte opcode maps 0F 38 and 0F 3A | Merged after review/checks | 1370: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1369.md) |
 | 1371 | SSE4.1 and SSE4.2 on the three-byte maps | Merged after review/checks | 1372: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1371.md) |
-| 1373 | AES-NI, PCLMULQDQ and MOVBE | Agent working | 1374: scheduled | [task](lanes/1373.md) |
+| 1373 | AES-NI, PCLMULQDQ and MOVBE | Scheduled | 1374: scheduled | [task](lanes/1373.md) |
 | 1375 | Evaluators for the system rows that `SystemDecode` could only refuse | Merged after review/checks | 1376: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1375.md) |
-| 1377 | Memory operands, MMX and REX.W forms of the three-byte maps | Agent working | 1378: scheduled | [task](lanes/1377.md) |
+| 1377 | Memory operands, MMX and REX.W forms of the three-byte maps | Scheduled | 1378: scheduled | [task](lanes/1377.md) |
 | 1379 | SSE4.2: string compares, PCMPGTQ and CRC32 | Scheduled | 1380: scheduled | [task](lanes/1379.md) |
 | 1381 | SSE4.1 rows that SseFourOne left open | Scheduled | 1382: scheduled | [task](lanes/1381.md) |
 | 1383 | Shift and rotate on memory operands and 8-bit high registers | Scheduled | 1384: scheduled | [task](lanes/1383.md) |
+| 1385 | GabbroV bridge: the shared-atomic rely | Scheduled | 1386: scheduled | [task](lanes/1385.md) |
+| 1387 | GabbroV bridge: StartPflicht without the Initially assumption | Scheduled | 1388: scheduled | [task](lanes/1387.md) |
+| 1389 | GabbroV bridge: widen the elaborated fragment | Scheduled | 1390: scheduled | [task](lanes/1389.md) |
+| 1391 | GabbroV: a traversal index is a member of its domain | Scheduled | 1392: scheduled | [task](lanes/1391.md) |
+| 1393 | GabbroV: does a tree declaration imply parent consistency? | Scheduled | 1394: scheduled | [task](lanes/1393.md) |
+| 1395 | Language gaps: what cannot be written today | Scheduled | 1396: scheduled | [task](lanes/1395.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
