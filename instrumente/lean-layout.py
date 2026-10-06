@@ -43,7 +43,8 @@ PROJECTS = ['grammatik', 'bruecke', 'passlogik', 'programmlogik']
 TEXT_TREES = ['crates', 'instrumente', 'dokumente', 'beispiele', 'bibliothek', 'laufzeit', 'bruecke',
               'passlogik', 'programmlogik', 'beweise', 'README.md', 'TODO.md', 'DIRECT-COMPILER-DESIGN.md',
               'AGENTS.md', 'DONE.md', 'grammatik']
-SKIP_PREFIX = ('messung/muse/', 'lanes/', '.claude/', '.town/', 'target/', '.lake')
+SKIP_PREFIX = ('messung/muse/', 'lanes/', '.claude/', '.town/', 'target/', '.lake',
+               'instrumente/lean-layout')   # the tool's own rules and map name paths on purpose (PINNED): never rewritten
 
 
 def git(*a):
