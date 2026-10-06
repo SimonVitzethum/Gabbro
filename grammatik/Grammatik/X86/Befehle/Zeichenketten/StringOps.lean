@@ -628,11 +628,260 @@ theorem adapterString_verweigert_bei_fehler (m : HwMaschine) (c : Nat)
   simp only
   rw [h]
 
+/-! ## 7. Joint witness: two cores, family steps, buffered store.
+    Core 0 runs REP STOSB x3 (bytes 65 at 8192-8194); core 1 runs one
+    STOSB (byte 7 at 8200). Both observe owner-only forwarding; the
+    drain changes actual shared memory from 0. Every claim projects to
+    plain values before `decide` (machines contain functions). -/
+
+/-- Witness data address of core 0. -/
+def strWitAdr0 : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness data address of core 1. -/
+def strWitAdr1 : Adresse := BitVec.ofNat 64 8200
+
+/-- Witness registers of core 0: RDI at the target, RCX = 3, AL = 65. -/
+def strWitReg0 : Register → Wort := fun q =>
+  if q = Register.rdi then BitVec.ofNat 64 8192
+  else if q = Register.rcx then BitVec.ofNat 64 3
+  else if q = Register.rax then BitVec.ofNat 64 65
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness registers of core 1: RDI at its target, AL = 7. -/
+def strWitReg1 : Register → Wort := fun q =>
+  if q = Register.rdi then BitVec.ofNat 64 8200
+  else if q = Register.rax then BitVec.ofNat 64 7
+  else if q = Register.rsp then BitVec.ofNat 64 8192
+  else BitVec.ofNat 64 0
+
+/-- Witness cores over shared zeroed memory. -/
+def strWitKern : Nat → HwKern
+  | 0 => ⟨strWitReg0, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨strWitReg1, zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: shared memory, two cores, empty buffers,
+    full silicon. -/
+def strWitStart : HwMaschine :=
+  ⟨zeugeSpeicher, strWitKern, fun _ => [], basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem strWitStart_wf : HwWf strWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Core-0 event: REP STOSB. -/
+def strWitEvent0 : StrEvent := ⟨⟨.stos, .b8, .rep, 2⟩, false⟩
+
+/-- Core-1 event: single STOSB. -/
+def strWitEvent1 : StrEvent := ⟨⟨.stos, .b8, .kein, 1⟩, false⟩
+
+/-- Core-0 outcome through the adapter. -/
+def strWitOut0 : Option HwMaschine :=
+  adapterString.schritt strWitStart 0 strWitEvent0
+
+/-- Core-1 outcome through the adapter. -/
+def strWitOut1 : Option HwMaschine :=
+  adapterString.schritt strWitStart 1 strWitEvent1
+
+/-- Read a core register out of an adapter outcome. -/
+def strWitRegOut (o : Option HwMaschine) (c : Nat)
+    (q : Register) : Option Wort :=
+  match o with
+  | some m => some ((m.kerne c).register q)
+  | none => none
+
+/-- Read a buffer length out of an adapter outcome. -/
+def strWitBufOut (o : Option HwMaschine) (c : Nat) : Option Nat :=
+  match o with
+  | some m => some (m.puffer c).length
+  | none => none
+
+/-- The TSO view after core 0 stores. -/
+def strWitTso0 : Option TSOZustand :=
+  match strWitOut0 with
+  | some m1 => some (tsoAnsicht m1)
+  | none => none
+
+/-- Core-0 register claims: RDI stepped past three bytes, RCX drained. -/
+theorem strWit_rdi0 :
+    strWitRegOut strWitOut0 0 .rdi = some (BitVec.ofNat 64 8195) := by
+  decide
+
+/-- Core-0 RCX reaches zero. -/
+theorem strWit_rcx0 :
+    strWitRegOut strWitOut0 0 .rcx = some (BitVec.ofNat 64 0) := by
+  decide
+
+/-- Core 0 buffered exactly three bytes. -/
+theorem strWit_buf0 : strWitBufOut strWitOut0 0 = some 3 := by
+  decide
+
+/-- Core-1 register claims: RDI stepped once, RCX untouched. -/
+theorem strWit_rdi1 :
+    strWitRegOut strWitOut1 1 .rdi = some (BitVec.ofNat 64 8201) := by
+  decide
+
+/-- Core 1 buffered exactly one byte. -/
+theorem strWit_buf1 : strWitBufOut strWitOut1 1 = some 1 := by
+  decide
+
+/-- Core-0 load observations after its stores. -/
+def strWitEigen0 : Option (Option Byte) :=
+  match strWitTso0 with
+  | some s => some (loadByte s 0 strWitAdr0)
+  | none => none
+
+/-- Core-1 view of core-0 bytes (no foreign forwarding). -/
+def strWitFremd0 : Option (Option Byte) :=
+  match strWitTso0 with
+  | some s => some (loadByte s 1 strWitAdr0)
+  | none => none
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem strWit_weiterleitung :
+    strWitEigen0 = some (some (BitVec.ofNat 8 65)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem strWit_fremd_alt :
+    strWitFremd0 = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- Three drains of core 0. -/
+def strWitTsoD1 : Option TSOZustand :=
+  match strWitTso0 with
+  | some s => flushKern s 0
+  | none => none
+
+def strWitTsoD2 : Option TSOZustand :=
+  match strWitTsoD1 with
+  | some s => flushKern s 0
+  | none => none
+
+def strWitTsoD3 : Option TSOZustand :=
+  match strWitTsoD2 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- Shared bytes after the drain. -/
+def strWitNachDrain (a : Adresse) : Option (Option Byte) :=
+  match strWitTsoD3 with
+  | some s => some (some (s.mem.bytes a))
+  | none => none
+
+/-- The cells start zeroed: the run really changes memory. -/
+theorem strWit_anfang0 :
+    zeugeSpeicher.bytes strWitAdr0 = BitVec.ofNat 8 0 := by
+  rfl
+
+/-- The drain changes the first cell: it reads 65. -/
+theorem strWit_drain0 :
+    strWitNachDrain strWitAdr0 = some (some (BitVec.ofNat 8 65)) := by
+  decide
+
+/-- The drain changes the second cell. -/
+theorem strWit_drain1 :
+    strWitNachDrain (addrOff strWitAdr0 1) =
+      some (some (BitVec.ofNat 8 65)) := by
+  decide
+
+/-- The drain changes the third cell. -/
+theorem strWit_drain2 :
+    strWitNachDrain (addrOff strWitAdr0 2) =
+      some (some (BitVec.ofNat 8 65)) := by
+  decide
+
+/-- Both loops finish clean: no fault index. -/
+theorem strWit_sauber :
+    (strAdapterLauf strWitStart 0 strWitEvent0).fehler = none ∧
+    (strAdapterLauf strWitStart 1 strWitEvent1).fehler = none := by
+  decide
+
+/-- The joint witness: a reached two-core string run (REP STOSB on
+    core 0, single STOSB on core 1) with stepped pointers, drained
+    RCX, owner-only forwarding and a memory-changing drain from 0 to
+    65 -- beside the clean-finish evidence. Non-degenerate: three
+    shared bytes change. -/
+theorem strWit_zeuge :
+    strWitRegOut strWitOut0 0 .rdi = some (BitVec.ofNat 64 8195) ∧
+      strWitRegOut strWitOut0 0 .rcx = some (BitVec.ofNat 64 0) ∧
+      strWitBufOut strWitOut0 0 = some 3 ∧
+      strWitRegOut strWitOut1 1 .rdi = some (BitVec.ofNat 64 8201) ∧
+      strWitBufOut strWitOut1 1 = some 1 ∧
+      strWitEigen0 = some (some (BitVec.ofNat 8 65)) ∧
+      strWitFremd0 = some (some (BitVec.ofNat 8 0)) ∧
+      zeugeSpeicher.bytes strWitAdr0 = BitVec.ofNat 8 0 ∧
+      strWitNachDrain strWitAdr0 = some (some (BitVec.ofNat 8 65)) ∧
+      strWitNachDrain (addrOff strWitAdr0 1) =
+        some (some (BitVec.ofNat 8 65)) ∧
+      strWitNachDrain (addrOff strWitAdr0 2) =
+        some (some (BitVec.ofNat 8 65)) ∧
+      HwWf strWitStart ∧
+      (strAdapterLauf strWitStart 0 strWitEvent0).fehler = none ∧
+      (strAdapterLauf strWitStart 1 strWitEvent1).fehler = none := by
+  refine ⟨strWit_rdi0, strWit_rcx0, strWit_buf0, strWit_rdi1,
+    strWit_buf1, strWit_weiterleitung, strWit_fremd_alt, strWit_anfang0,
+    strWit_drain0, strWit_drain1, strWit_drain2, strWitStart_wf, ?_, ?_⟩
+  · exact strWit_sauber.1
+  · exact strWit_sauber.2
+
 /- CUTS:
-   Skeleton only: vocabulary above. Decoder, semantics, adapter and
-   witness follow. NOT proved here: everything (see lane report).
+   Proved here, over the reused accepted vocabulary only (every TSO
+   operation, register merge and machine plug lifted, never
+   redefined):
+   - byte decoder `strDecode` for MOVS/STOS/LODS/SCAS/CMPS (A4-AF)
+     with F2/F3, 66H and REX prefixes plus CLD/STD (FC/FD), with the
+     canonical encoder and the full round trip `strRoundtrip` (all 60
+     op/width/prefix shapes), closed decode pins and planted
+     refusals (LOCK, lone/doubled REP, REP-prefixed CLD/STD, width
+     prefixes on byte opcodes);
+   - TSO-sequence element semantics `strElement` (per element a load
+     then a store; LODS merges via accepted `mergeRegNarrow`;
+     SCAS/CMPS model ZF only), DF-signed stepping, REP counting with
+     a proved zero-count no-op, the fuelled loop `strLauf` with a
+     precise fault index and its bound `strLauf_fehler_grenzen`;
+   - the extended chain `kapDecodeStr` over the old `kapDecode`
+     (exact agreement, string rows only where the old chain
+     refuses, LOCK still refused);
+   - the `HwAdapter StrEvent` plug with `HwWf` preservation,
+     clean-loop agreement and fault refusal;
+   - a reached two-core witness with stepped pointers, drained RCX,
+     owner-only forwarding and a memory-changing drain (0 to 65).
+   NOT proved here, and not claimed:
+   - no hardware correspondence: encodings are self-consistent
+     only, not x86 truth. Named silicon assumptions: REX.W
+     overrides 66H; other REX bits ignored (no register field);
+     F3 on CMPS/SCAS means REPE; REP on MOVS/STOS/LODS counts only;
+     no REP leaves RCX untouched; 66H/REX on byte opcodes refused
+     (silicon ignores them -- narrowing, not widening); doubled or
+     prefixed CLD/STD refused (narrowing); LOCK refused (#UD);
+   - only ZF is modelled for the comparing ops: CF/SF/OF/PF/AF stay
+     FREE (over-approximation, named); no segment overrides, no
+     address-size override (32-bit RSI/RDI), no I/O string ops, no
+     `rep ret` / PAUSE uses of F3;
+   - DF has no home in canonical `Flags`, so it rides in the event;
+     DF persistence across steps is caller-managed;
+   - a mid-sequence fault refuses the whole adapter step; the
+     precise RCX/RSI/RDI-at-fault state lives in `strLauf` (loop
+     level), not in the adapter successor;
+   - no source/IR/ABI/loader/entry/budget link, no per-access
+     target-to-W/GX simulation, no timing/power behaviour.
 -/
 
-#print axioms StrDecodiert
+#print axioms strRoundtrip
+#print axioms strDecode
+#print axioms strLauf_fehler_grenzen
+#print axioms strLauf_rep_null
+#print axioms kapDecodeStr
+#print axioms kapDecodeStr_kap
+#print axioms kapDecodeStr_str
+#print axioms adapterString
+#print axioms adapterString_wf
+#print axioms adapterString_fertig
+#print axioms adapterString_verweigert_bei_fehler
+#print axioms strWit_zeuge
 
 end Gabbro.Grammatik.X86
