@@ -524,6 +524,7 @@
  "Grammatik.X86.Speicher": "Grammatik.X86.Speicher.Speicher",
  "Grammatik.X86.SpeicherKommutation": "Grammatik.X86.Speicher.SpeicherKommutation",
  "Grammatik.X86.SpillPrivate": "Grammatik.X86.Opt.Register.SpillPrivate",
+ "Grammatik.X86.SseAesClmul": "Grammatik.X86.Befehle.Sse.SseAesClmul",
  "Grammatik.X86.SseFourOne": "Grammatik.X86.Befehle.Sse.SseFourOne",
  "Grammatik.X86.SseMoves": "Grammatik.X86.Befehle.Sse.SseMoves",
  "Grammatik.X86.SseThreeByte": "Grammatik.X86.Befehle.Sse.SseThreeByte",
