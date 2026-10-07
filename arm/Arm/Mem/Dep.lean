@@ -75,19 +75,24 @@ theorem pert_agree (sup : Nat → Nat) (i v' : Nat) :
   fun _j hj => if_neg hj
 
 /-- Compare one pair of same-position events from the base and the perturbed
-    run: changed address is an addr edge, changed written value a data edge,
-    changed kind (or, in `cmpLater`, changed length) a ctrl edge. A later
-    read whose value differs is ignored: read values are supply artifacts,
-    never influenced through the tree. -/
+    run. The pair is compared only when the ids agree (same position in two
+    runs from one `next` always has one id; a mismatch is a structural change
+    the generic lemmas stay silent about rather than misreading). Changed
+    address is an addr edge, changed written value a data edge, changed kind
+    (or, in `cmpLater`, changed length) a ctrl edge. A later read whose value
+    differs is ignored: read values are supply artifacts, never influenced
+    through the tree. -/
 def cmpEv (r : Nat) (e e' : Ev) : Rel × Rel × Rel :=
-  if e.kind = e'.kind then
-    if e.addr? = e'.addr? then
-      if e.isWrite = true ∧ e'.isWrite = true then
-        if e.val = e'.val then ([], [], [])
-        else ([], [(r, e.id)], [])
-      else ([], [], [])
-    else ([(r, e.id)], [], [])
-  else ([], [], [(r, e.id)])
+  if e.id = e'.id then
+    if e.kind = e'.kind then
+      if e.addr? = e'.addr? then
+        if e.isWrite = true ∧ e'.isWrite = true then
+          if e.val = e'.val then ([], [], [])
+          else ([], [(r, e.id)], [])
+        else ([], [], [])
+      else ([(r, e.id)], [], [])
+    else ([], [], [(r, e.id)])
+  else ([], [], [])
 
 /-- Compare two full runs position by position. -/
 def cmpLater (r : Nat) : List Ev → List Ev → Rel × Rel × Rel
@@ -157,131 +162,247 @@ def CtrlInfl (p : Eff Unit) (core next fuel i : Nat) : Prop :=
 
 theorem cmpEv_addr (r : Nat) (e e' : Ev) (t : Nat)
     (h : (r, t) ∈ (cmpEv r e e').1) :
-    t = e.id ∧ e.addr? ≠ e'.addr? := by
+    t = e.id ∧ e.id = e'.id ∧ e.addr? ≠ e'.addr? := by
   unfold cmpEv at h
-  cases hk : decide (e.kind = e'.kind) with
+  cases hi : decide (e.id = e'.id) with
   | true =>
-    have hkk : e.kind = e'.kind := of_decide_eq_true hk
-    rw [if_pos hkk] at h
-    cases ha : decide (e.addr? = e'.addr?) with
+    have hid : e.id = e'.id := of_decide_eq_true hi
+    rw [if_pos hid] at h
+    cases hk : decide (e.kind = e'.kind) with
     | true =>
-      have haa : e.addr? = e'.addr? := of_decide_eq_true ha
-      rw [if_pos haa] at h
-      cases hw : decide (e.isWrite = true ∧ e'.isWrite = true) with
+      have hkk : e.kind = e'.kind := of_decide_eq_true hk
+      rw [if_pos hkk] at h
+      cases ha : decide (e.addr? = e'.addr?) with
       | true =>
-        have hww : e.isWrite = true ∧ e'.isWrite = true :=
-          of_decide_eq_true hw
-        rw [if_pos hww] at h
-        cases hv : decide (e.val = e'.val) with
+        have haa : e.addr? = e'.addr? := of_decide_eq_true ha
+        rw [if_pos haa] at h
+        cases hw : decide (e.isWrite = true ∧ e'.isWrite = true) with
         | true =>
-          have hvv : e.val = e'.val := of_decide_eq_true hv
-          rw [if_pos hvv] at h
-          simp at h
+          have hww : e.isWrite = true ∧ e'.isWrite = true :=
+            of_decide_eq_true hw
+          rw [if_pos hww] at h
+          cases hv : decide (e.val = e'.val) with
+          | true =>
+            have hvv : e.val = e'.val := of_decide_eq_true hv
+            rw [if_pos hvv] at h
+            simp at h
+          | false =>
+            have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
+            rw [if_neg hvv] at h
+            simp at h
         | false =>
-          have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
-          rw [if_neg hvv] at h
+          have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
+            of_decide_eq_false hw
+          rw [if_neg hww] at h
           simp at h
       | false =>
-        have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
-          of_decide_eq_false hw
-        rw [if_neg hww] at h
-        simp at h
+        have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
+        rw [if_neg haa] at h
+        change (r, t) ∈ [(r, e.id)] at h
+        simp only [List.mem_singleton] at h
+        have hte : t = e.id := congrArg Prod.snd h
+        exact ⟨hte, hid, haa⟩
     | false =>
-      have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
-      rw [if_neg haa] at h
-      simp only [List.mem_singleton] at h
-      have hte : t = e.id := congrArg Prod.snd h
-      exact ⟨hte, haa⟩
+      have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
+      rw [if_neg hkk] at h
+      simp at h
   | false =>
-    have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
-    rw [if_neg hkk] at h
-    simp at h
+    have hnid : ¬ (e.id = e'.id) := of_decide_eq_false hi
+    rw [if_neg hnid] at h
+    change (r, t) ∈ ([] : Rel) at h
+    cases h
 
 theorem cmpEv_data (r : Nat) (e e' : Ev) (t : Nat)
     (h : (r, t) ∈ (cmpEv r e e').2.1) :
-    t = e.id ∧ evWriteVal (some e) ≠ evWriteVal (some e') := by
+    t = e.id ∧ e.id = e'.id
+      ∧ evWriteVal (some e) ≠ evWriteVal (some e') := by
   unfold cmpEv at h
-  cases hk : decide (e.kind = e'.kind) with
+  cases hi : decide (e.id = e'.id) with
   | true =>
-    have hkk : e.kind = e'.kind := of_decide_eq_true hk
-    rw [if_pos hkk] at h
-    cases ha : decide (e.addr? = e'.addr?) with
+    have hid : e.id = e'.id := of_decide_eq_true hi
+    rw [if_pos hid] at h
+    cases hk : decide (e.kind = e'.kind) with
     | true =>
-      have haa : e.addr? = e'.addr? := of_decide_eq_true ha
-      rw [if_pos haa] at h
-      cases hw : decide (e.isWrite = true ∧ e'.isWrite = true) with
+      have hkk : e.kind = e'.kind := of_decide_eq_true hk
+      rw [if_pos hkk] at h
+      cases ha : decide (e.addr? = e'.addr?) with
       | true =>
-        have hww : e.isWrite = true ∧ e'.isWrite = true :=
-          of_decide_eq_true hw
-        rw [if_pos hww] at h
-        cases hv : decide (e.val = e'.val) with
+        have haa : e.addr? = e'.addr? := of_decide_eq_true ha
+        rw [if_pos haa] at h
+        cases hw : decide (e.isWrite = true ∧ e'.isWrite = true) with
         | true =>
-          have hvv : e.val = e'.val := of_decide_eq_true hv
-          rw [if_pos hvv] at h
-          simp at h
+          have hww : e.isWrite = true ∧ e'.isWrite = true :=
+            of_decide_eq_true hw
+          rw [if_pos hww] at h
+          cases hv : decide (e.val = e'.val) with
+          | true =>
+            have hvv : e.val = e'.val := of_decide_eq_true hv
+            rw [if_pos hvv] at h
+            simp at h
+          | false =>
+            have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
+            rw [if_neg hvv] at h
+            change (r, t) ∈ [(r, e.id)] at h
+            simp only [List.mem_singleton] at h
+            have hte : t = e.id := congrArg Prod.snd h
+            have w1 : evWriteVal (some e) = some e.val := by
+              simp only [evWriteVal]
+              rw [if_pos hww.1]
+            have w2 : evWriteVal (some e') = some e'.val := by
+              simp only [evWriteVal]
+              rw [if_pos hww.2]
+            rw [w1, w2]
+            exact ⟨hte, hid, by simpa using hvv⟩
         | false =>
-          have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
-          rw [if_neg hvv] at h
-          simp only [List.mem_singleton] at h
-          have hte : t = e.id := congrArg Prod.snd h
-          have w1 : evWriteVal (some e) = some e.val := by
-            simp only [evWriteVal]
-            rw [if_pos hww.1]
-          have w2 : evWriteVal (some e') = some e'.val := by
-            simp only [evWriteVal]
-            rw [if_pos hww.2]
-          rw [w1, w2]
-          exact ⟨hte, by simpa using hvv⟩
+          have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
+            of_decide_eq_false hw
+          rw [if_neg hww] at h
+          simp at h
       | false =>
-        have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
-          of_decide_eq_false hw
-        rw [if_neg hww] at h
+        have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
+        rw [if_neg haa] at h
         simp at h
     | false =>
-      have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
-      rw [if_neg haa] at h
+      have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
+      rw [if_neg hkk] at h
       simp at h
   | false =>
-    have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
-    rw [if_neg hkk] at h
-    simp at h
+    have hnid : ¬ (e.id = e'.id) := of_decide_eq_false hi
+    rw [if_neg hnid] at h
+    change (r, t) ∈ ([] : Rel) at h
+    cases h
 
 theorem cmpEv_ctrl (r : Nat) (e e' : Ev) (t : Nat)
-    (h : (r, t) ∈ (cmpEv r e e').2.2) : e.kind ≠ e'.kind := by
+    (h : (r, t) ∈ (cmpEv r e e').2.2) : e.kind ≠ e'.kind ∧ t = e.id := by
   unfold cmpEv at h
-  cases hk : decide (e.kind = e'.kind) with
+  cases hi : decide (e.id = e'.id) with
   | true =>
-    have hkk : e.kind = e'.kind := of_decide_eq_true hk
-    rw [if_pos hkk] at h
-    cases ha : decide (e.addr? = e'.addr?) with
+    have hid : e.id = e'.id := of_decide_eq_true hi
+    rw [if_pos hid] at h
+    cases hk : decide (e.kind = e'.kind) with
     | true =>
-      have haa : e.addr? = e'.addr? := of_decide_eq_true ha
-      rw [if_pos haa] at h
-      cases hw : decide (e.isWrite = true ∧ e'.isWrite = true) with
+      have hkk : e.kind = e'.kind := of_decide_eq_true hk
+      rw [if_pos hkk] at h
+      cases ha : decide (e.addr? = e'.addr?) with
       | true =>
-        have hww : e.isWrite = true ∧ e'.isWrite = true :=
-          of_decide_eq_true hw
-        rw [if_pos hww] at h
-        cases hv : decide (e.val = e'.val) with
+        have haa : e.addr? = e'.addr? := of_decide_eq_true ha
+        rw [if_pos haa] at h
+        cases hw : decide (e.isWrite = true ∧ e'.isWrite = true) with
         | true =>
-          have hvv : e.val = e'.val := of_decide_eq_true hv
-          rw [if_pos hvv] at h
-          simp at h
+          have hww : e.isWrite = true ∧ e'.isWrite = true :=
+            of_decide_eq_true hw
+          rw [if_pos hww] at h
+          cases hv : decide (e.val = e'.val) with
+          | true =>
+            have hvv : e.val = e'.val := of_decide_eq_true hv
+            rw [if_pos hvv] at h
+            simp at h
+          | false =>
+            have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
+            rw [if_neg hvv] at h
+            simp at h
         | false =>
-          have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
-          rw [if_neg hvv] at h
+          have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
+            of_decide_eq_false hw
+          rw [if_neg hww] at h
           simp at h
       | false =>
-        have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
-          of_decide_eq_false hw
-        rw [if_neg hww] at h
+        have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
+        rw [if_neg haa] at h
         simp at h
     | false =>
-      have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
-      rw [if_neg haa] at h
-      simp at h
+      have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
+      rw [if_neg hkk] at h
+      change (r, t) ∈ [(r, e.id)] at h
+      simp only [List.mem_singleton] at h
+      have hte : t = e.id := congrArg Prod.snd h
+      exact ⟨hkk, hte⟩
   | false =>
-    exact of_decide_eq_false hk
+    have hnid : ¬ (e.id = e'.id) := of_decide_eq_false hi
+    rw [if_neg hnid] at h
+    change (r, t) ∈ ([] : Rel) at h
+    cases h
+
+theorem cmpLater_addr (r : Nat) (l : List Ev) : ∀ (l' : List Ev) (t : Nat),
+    (r, t) ∈ (cmpLater r l l').1 →
+    ∃ x₁ x₂, x₁ ∈ l ∧ x₂ ∈ l' ∧ x₁.id = t ∧ x₂.id = t
+      ∧ x₁.addr? ≠ x₂.addr? := by
+  induction l with
+  | nil =>
+    intro l' t h
+    cases l' with
+    | nil => change (r, t) ∈ ([] : Rel) at h; cases h
+    | cons _ _ => change (r, t) ∈ ([] : Rel) at h; cases h
+  | cons e es ih =>
+    intro l' t h
+    cases l' with
+    | nil => change (r, t) ∈ ([] : Rel) at h; cases h
+    | cons e' es' =>
+      simp only [cmpLater] at h
+      have hdis := List.mem_append.mp h
+      cases hdis with
+      | inl hleft =>
+        obtain ⟨hte, hid, hne⟩ := cmpEv_addr r e e' t hleft
+        exact ⟨e, e', List.mem_cons_self, List.mem_cons_self,
+          hte.symm, hid.symm.trans hte.symm, hne⟩
+      | inr hright =>
+        obtain ⟨x₁, x₂, m1, m2, i1, i2, ne⟩ := ih es' t hright
+        exact ⟨x₁, x₂, List.mem_cons.mpr (Or.inr m1),
+          List.mem_cons.mpr (Or.inr m2), i1, i2, ne⟩
+
+theorem cmpLater_data (r : Nat) (l : List Ev) : ∀ (l' : List Ev) (t : Nat),
+    (r, t) ∈ (cmpLater r l l').2.1 →
+    ∃ x₁ x₂, x₁ ∈ l ∧ x₂ ∈ l' ∧ x₁.id = t ∧ x₂.id = t
+      ∧ evWriteVal (some x₁) ≠ evWriteVal (some x₂) := by
+  induction l with
+  | nil =>
+    intro l' t h
+    cases l' with
+    | nil => change (r, t) ∈ ([] : Rel) at h; cases h
+    | cons _ _ => change (r, t) ∈ ([] : Rel) at h; cases h
+  | cons e es ih =>
+    intro l' t h
+    cases l' with
+    | nil => change (r, t) ∈ ([] : Rel) at h; cases h
+    | cons e' es' =>
+      simp only [cmpLater] at h
+      have hdis := List.mem_append.mp h
+      cases hdis with
+      | inl hleft =>
+        obtain ⟨hte, hid, hne⟩ := cmpEv_data r e e' t hleft
+        exact ⟨e, e', List.mem_cons_self, List.mem_cons_self,
+          hte.symm, hid.symm.trans hte.symm, hne⟩
+      | inr hright =>
+        obtain ⟨x₁, x₂, m1, m2, i1, i2, ne⟩ := ih es' t hright
+        exact ⟨x₁, x₂, List.mem_cons.mpr (Or.inr m1),
+          List.mem_cons.mpr (Or.inr m2), i1, i2, ne⟩
+
+/-- Whole-run ctrl soundness: the edge stays attached, so its target `t`
+    (unused by the divergence itself) keeps the statement honest. -/
+theorem cmpLater_ctrl (r : Nat) (l : List Ev) : ∀ (l' : List Ev) (t : Nat),
+    (r, t) ∈ (cmpLater r l l').2.2 →
+    kindsNe l l' ∧ (r, t) ∈ (cmpLater r l l').2.2 := by
+  induction l with
+  | nil =>
+    intro l' t h
+    cases l' with
+    | nil => change (r, t) ∈ ([] : Rel) at h; cases h
+    | cons _ _ => simp only [cmpLater, kindsNe] at h ⊢; exact ⟨True.intro, h⟩
+  | cons e es ih =>
+    intro l' t h
+    cases l' with
+    | nil => simp only [cmpLater, kindsNe] at h ⊢; exact ⟨True.intro, h⟩
+    | cons e' es' =>
+      have hmem := h
+      simp only [cmpLater] at h
+      have hdis := List.mem_append.mp h
+      cases hdis with
+      | inl hleft =>
+        have hkk := cmpEv_ctrl r e e' t hleft
+        exact ⟨Or.inl hkk.1, hmem⟩
+      | inr hright =>
+        have iht := ih es' t hright
+        exact ⟨Or.inr iht.1, hmem⟩
 
 end Arm
 
