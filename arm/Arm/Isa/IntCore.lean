@@ -11,19 +11,24 @@ import Arm.Isa.Monad
 namespace Arm.Int
 
 /-- Two to the power `w`: the modulus of a `w`-bit register field. -/
+-- Sail: builtins.sail `UInt` range (`2 ^ 'N` modulus of `bits('N)`).
 def pow2 (w : Nat) : Nat := 2 ^ w
 
 /-- All-ones mask of width `w`: `2 ^ w - 1`. -/
+-- Sail: prelude.sail:156 (`Ones(n)`).
 def mask (w : Nat) : Nat := pow2 w - 1
 
 /-- Truncate `v` into `w` bits (Sail slicing `result[w-1..0]`). -/
+-- Sail: builtins.sail `UInt` truncation of `bits('N)` to its range.
 def trunc (w v : Nat) : Nat := v % pow2 w
 
 /-- Read the low `w` bits of X register `n` (w = 32 or 64). -/
+-- Sail: instrs64.sail `X_read(n, datasize)` (register reads of every execute).
 def rdXn (n w : Nat) : Eff Nat :=
   Eff.rdX n fun v => Eff.ret ((v.toNat) % pow2 w)
 
 /-- Write `v` (already truncated) to X register `d`, zeroing the upper half. -/
+-- Sail: instrs64.sail `X_set(d, datasize)` (register writes of every execute).
 def wrXn (d w v : Nat) : Eff Unit :=
   Eff.wrX d (BitVec.ofNat 64 (v % pow2 w)) (Eff.ret ())
 
@@ -72,10 +77,12 @@ def nzcvOf (n z c v : Bool) : Nat :=
   (if n then 8 else 0) + (if z then 4 else 0) + (if c then 2 else 0) + (if v then 1 else 0)
 
 /-- Write packed NZCV flags. -/
+-- Sail: instrs64.sail `(PSTATE.N @ PSTATE.Z @ PSTATE.C @ PSTATE.V) = nzcv` writes.
 def wrNZCVn (nzcv : Nat) : Eff Unit :=
   Eff.wrNZCV (BitVec.ofNat 4 (nzcv % 16)) (Eff.ret ())
 
 /-- Read packed NZCV flags as four bools. -/
+-- Sail: v8_base.sail:8954 (`PSTATE.N/Z/C/V` reads of `ConditionHolds`).
 def rdNZCVn : Eff (Bool × (Bool × (Bool × Bool))) :=
   Eff.rdNZCV fun v =>
     let m := v.toNat % 16
@@ -375,7 +382,17 @@ theorem absW_wrong : absW 32 0xFFFFFFFF ≠ 0xFFFFFFFF := by decide
 
 end Arm.Int
 
+#print axioms Arm.Int.addWithCarry_ex1
+#print axioms Arm.Int.shiftReg_ror
+#print axioms Arm.Int.extendReg_sxtb
+#print axioms Arm.Int.condHolds_eq
+#print axioms Arm.Int.clzW_one
+#print axioms Arm.Int.rbitW_one
+#print axioms Arm.Int.revW_32
+
 /-
-CUTS: skeleton only. No helper proved yet; `addWithCarry`, shifts, extend,
-`DecodeBitMasks` and all instruction semantics are open.
+CUTS: shared helpers with `decide` examples (`AddWithCarry`, shifts, extend,
+`ConditionHolds`, CLZ/CLS/RBIT/REV/popcount/ABS). Instruction executes live in
+`Integer.lean`, `IntBit.lean`, `IntMul.lean`, `IntCond.lean`. The `Eff`
+register interface assumes `rdX 31 = 0` and `wrX 31` discarded (Sail XZR).
 -/

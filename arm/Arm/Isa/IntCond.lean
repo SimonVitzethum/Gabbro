@@ -100,6 +100,9 @@ def execCondCmpImm (n w imm cond dflt : Nat) (sub : Bool) : Eff Unit :=
 
 end Arm.Int
 
+#print axioms Arm.Int.condSelectPure_csneg
+#print axioms Arm.Int.condCmpPure_taken
+
 /-
 CUTS: conditional executes only. All families of the agent-11 task are now
 covered: arithmetic (Integer), bitfield/extract/counts (IntBit),

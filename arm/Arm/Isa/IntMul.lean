@@ -144,6 +144,11 @@ def execMulHi (d m n w : Nat) (isUnsigned : Bool) : Eff Unit := do
 
 end Arm.Int
 
+#print axioms Arm.Int.mulAddSubPure_msub
+#print axioms Arm.Int.wideMulPure_s
+#print axioms Arm.Int.divPure_s
+#print axioms Arm.Int.mulHiPure_sneg
+
 /-
 CUTS: multiply/divide executes only. The conditional family is open
 (`IntCond.lean`). Division by zero is defined (yields zero) per the source;

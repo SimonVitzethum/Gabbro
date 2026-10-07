@@ -137,6 +137,10 @@ def execAbs (d n w : Nat) : Eff Unit := do
 
 end Arm.Int
 
+#print axioms Arm.Int.bitfieldPure_ubfm
+#print axioms Arm.Int.extractPure_ror
+#print axioms Arm.Int.ctzPure_ex
+
 /-
 CUTS: bitfield/extract/count executes only. Multiply/divide and conditional
 families are open (`IntMul.lean`, `IntCond.lean`). The CSSC feature gate and

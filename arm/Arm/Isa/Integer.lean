@@ -270,6 +270,12 @@ def execAdr (d : Nat) (imm : Nat) (page : Bool) : Eff Unit := do
 
 end Arm.Int
 
+#print axioms Arm.Int.addSubFlags_add
+#print axioms Arm.Int.addSubFlags_adc
+#print axioms Arm.Int.logicPure_orn
+#print axioms Arm.Int.movWidePure_n
+#print axioms Arm.Int.adrPure_adrp
+
 /-
 CUTS: general-purpose execute (arithmetic, logical, variable shifts, movewide,
 ADR/ADRP). Bitfield/extract, counts, multiply/divide and conditional families

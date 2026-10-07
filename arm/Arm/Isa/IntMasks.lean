@@ -95,6 +95,11 @@ theorem decodeBitMasks_wrong : decodeBitMasks 1 0 0 true 64 ≠ some (2, 1) := b
 
 end Arm.Int
 
+#print axioms Arm.Int.decodeBitMasks_one
+#print axioms Arm.Int.decodeBitMasks_reserved
+#print axioms Arm.Int.decodeBitMasks_rot
+#print axioms Arm.Int.hbit_ex
+
 /-
 CUTS: `DecodeBitMasks` only. Logical-immediate and bitfield execute functions
 are open (in `Integer.lean`). `m < esize` refusal is unreachable from valid
