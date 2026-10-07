@@ -258,6 +258,121 @@ theorem extendReg_uxth_sh : extendReg 0x1FF .uxth 1 32 = 0x3FE := by decide
 /-- Planted wrong case: `SXTB` of `0xFF` is not `0xFF`. -/
 theorem extendReg_wrong : extendReg 0xFF .sxtb 0 32 ≠ 0xFF := by decide
 
+/-- Sail `CountLeadingZeroBits`: `w - (HighestSetBit + 1)`. -/
+-- Sail: builtins.sail:178 (`CountLeadingZeroBits`) via `HighestSetBit`.
+def clzW (w v : Nat) : Nat := go w
+where go : Nat → Nat
+  | 0 => w
+  | (k+1) => if (v / pow2 k) % 2 == 1 then w - (k+1) else go k
+
+/-- Sail `CountLeadingSignBits`: CLZ of `top XOR rest`. -/
+-- Sail: builtins.sail `CountLeadingSignBits` (`EOR(x[N-1..1], x[N-2..0])`).
+def clsW (w v : Nat) : Nat :=
+  if w = 0 then 0
+  else clzW (w - 1) ((v / 2).xor (v % pow2 (w - 1)))
+
+/-- 31 leading zeros above bit 0. -/
+-- Sail: builtins.sail:178.
+theorem clzW_one : clzW 32 1 = 31 := by decide
+
+/-- Zero has `w` leading zeros. -/
+-- Sail: builtins.sail:178.
+theorem clzW_zero : clzW 32 0 = 32 := by decide
+
+/-- Top bit set means no leading zero. -/
+-- Sail: builtins.sail:178.
+theorem clzW_top : clzW 32 0x80000000 = 0 := by decide
+
+/-- Planted wrong case: `CLZ(1)` is not 30. -/
+theorem clzW_wrong : clzW 32 1 ≠ 30 := by decide
+
+/-- `CLS(-1)` is 31 (Sail counts sign bits minus one). -/
+-- Sail: builtins.sail `CountLeadingSignBits`.
+theorem clsW_neg1 : clsW 32 0xFFFFFFFF = 31 := by decide
+
+/-- `CLS(0)` is 31. -/
+-- Sail: builtins.sail `CountLeadingSignBits`.
+theorem clsW_zero : clsW 32 0 = 31 := by decide
+
+/-- Planted wrong case: `CLS(-1)` is not 32. -/
+theorem clsW_wrong : clsW 32 0xFFFFFFFF ≠ 32 := by decide
+
+/-- Sail `BitReverse`: reverse the low `w` bits. -/
+-- Sail: v8_base.sail:12533 (`BitReverse`).
+def rbitW (w v : Nat) : Nat := go w v 0
+where go : Nat → Nat → Nat → Nat
+  | 0, _, acc => acc
+  | (k+1), x, acc => go k (x / 2) (acc * 2 + x % 2)
+
+/-- Reversing bit 0 of a word sets the top bit. -/
+-- Sail: v8_base.sail:12533.
+theorem rbitW_one : rbitW 32 1 = 0x80000000 := by decide
+
+/-- Byte-sized reversal check. -/
+-- Sail: v8_base.sail:12533.
+theorem rbitW_byte : rbitW 8 0x12 = 0x48 := by decide
+
+/-- Planted wrong case: reversal moves the bit. -/
+theorem rbitW_wrong : rbitW 32 1 ≠ 1 := by decide
+
+/-- Byte `i` of `v` (byte 0 is the least significant). -/
+def byteOf (v i : Nat) : Nat := (v / 256 ^ i) % 256
+
+/-- Sail `REV`: reverse byte order inside each `cont`-bit container of a
+    `w`-bit value (`cont` in {16, 32, 64}, `w` in {32, 64}). -/
+-- Sail: instrs64.sail:41052 (`execute ... rev`: per-container byte loop).
+def revGo (nb bpc v : Nat) : Nat → Nat → Nat
+  | 0, acc => acc
+  | (k+1), acc =>
+    let j := nb - (k+1)
+    let c := if bpc = 0 then 0 else j / bpc
+    let p := if bpc = 0 then 0 else j % bpc
+    revGo nb bpc v k (acc + byteOf v (c * bpc + (bpc - 1 - p)) * 256 ^ j)
+
+def revW (w cont v : Nat) : Nat := revGo (w / 8) (cont / 8) v (w / 8) 0
+
+/-- REV32 of `0x12345678` is `0x78563412`. -/
+-- Sail: instrs64.sail:41052.
+theorem revW_32 : revW 32 32 0x12345678 = 0x78563412 := by decide
+
+/-- REV16 swaps bytes inside each halfword. -/
+-- Sail: instrs64.sail:41052.
+theorem revW_16 : revW 32 16 0x12345678 = 0x34127856 := by decide
+
+/-- Planted wrong case: REV32 changes the value. -/
+theorem revW_wrong : revW 32 32 0x12345678 ≠ 0x12345678 := by decide
+
+/-- Sail `BitCount`: population count of the low `w` bits. -/
+-- Sail: builtins.sail `BitCount`.
+def popW (w v : Nat) : Nat := go w v
+where go : Nat → Nat → Nat
+  | 0, _ => 0
+  | (k+1), x => x % 2 + go k (x / 2)
+
+/-- Eight bits set in `0xF0F0`. -/
+-- Sail: builtins.sail `BitCount`.
+theorem popW_ex : popW 32 0xF0F0 = 8 := by decide
+
+/-- Planted wrong case: the count is not 7. -/
+theorem popW_wrong : popW 32 0xF0F0 ≠ 7 := by decide
+
+/-- Sail `Abs(SInt(v))` truncated to `w` bits (INT_MIN stays INT_MIN). -/
+-- Sail: instrs64.sail:41 (`execute ... unary_abs`).
+def absW (w v : Nat) : Nat :=
+  let x := v % pow2 w
+  if pow2 (w - 1) ≤ x then (pow2 w - x) % pow2 w else x
+
+/-- `ABS(-1)` is 1. -/
+-- Sail: instrs64.sail:41.
+theorem absW_neg1 : absW 32 0xFFFFFFFF = 1 := by decide
+
+/-- `ABS(INT_MIN)` stays INT_MIN after truncation. -/
+-- Sail: instrs64.sail:41.
+theorem absW_min : absW 32 0x80000000 = 0x80000000 := by decide
+
+/-- Planted wrong case: `ABS(-1)` is not `-1`. -/
+theorem absW_wrong : absW 32 0xFFFFFFFF ≠ 0xFFFFFFFF := by decide
+
 end Arm.Int
 
 /-
