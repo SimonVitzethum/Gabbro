@@ -116,10 +116,68 @@ def testS : LitTest :=
     allowedF := { regs := [(1, 0, 1), (2, 0, 1), (2, 1, 2)], mem := [] },
     note := "Write serialisation pinned by P1's read: P2 then respects coherence (herd S, from knowledge)." }
 
+/-- CoRR: one thread writes 1 then 2; a reader must not see `(2, 1)`. -/
+def testCoRR : LitTest :=
+  { name := "CoRR", herd := "CoRR", prog := { cores := [[.st 0 1 .plain, .st 0 2 .plain], [.ld 0 0 .plain, .ld 1 0 .plain]], init := [], final := [] },
+    forbidden := { regs := [(1, 0, 2), (1, 1, 1)], mem := [] },
+    allowedF := { regs := [(1, 0, 1), (1, 1, 2)], mem := [] },
+    note := "Read-read coherence: po-loc writes fix co, the second read cannot go back (herd CoRR, from knowledge)." }
+
+/-- CoWW: each thread writes then reads one location; crossed reads are out. -/
+def testCoWW : LitTest :=
+  { name := "CoWW", herd := "CoWW", prog := { cores := [[.st 0 1 .plain, .ld 0 0 .plain], [.st 0 2 .plain, .ld 0 0 .plain]], init := [], final := [] },
+    forbidden := { regs := [(0, 0, 2), (1, 0, 1)], mem := [] },
+    allowedF := { regs := [(0, 0, 2), (1, 0, 2)], mem := [] },
+    note := "Write-write coherence via from-reads plus po-loc: no co order admits crossed reads (herd CoWW, from knowledge)." }
+
+/-- CoRW: a read cannot see its own thread's later write. -/
+def testCoRW : LitTest :=
+  { name := "CoRW", herd := "CoRW", prog := { cores := [[.st 0 1 .plain], [.ld 0 0 .plain, .st 0 2 .plain]], init := [], final := [] },
+    forbidden := { regs := [(1, 0, 2)], mem := [] },
+    allowedF := { regs := [(1, 0, 1)], mem := [] },
+    note := "Read-write coherence: no time travel from a po-later same-thread write (herd CoRW, from knowledge)." }
+
+/-- CoWR: after your own write you cannot read the initial value. -/
+def testCoWR : LitTest :=
+  { name := "CoWR", herd := "CoWR", prog := { cores := [[.st 0 1 .plain, .ld 0 0 .plain], [.st 0 2 .plain]], init := [], final := [] },
+    forbidden := { regs := [(0, 0, 0)], mem := [] },
+    allowedF := { regs := [(0, 0, 1)], mem := [] },
+    note := "Write-read coherence: a read sees its own po-earlier write or a co-later one, never a co-earlier one (herd CoWR, from knowledge)." }
+
+/-- The whole suite in presentation order. -/
+def allTests : List LitTest :=
+  [testMP, testMPdmbSt, testMPdmbLd, testMPdmbFull, testMPrelAcq, testSB, testSBdmb, testLB, testLBdata, testIRIW, test2p2W, testR, testS, testCoRR, testCoWW, testCoRW, testCoWR]
+
+/-- A test is sane when its two outcomes differ. -/
+def testSane (t : LitTest) : Bool := !(t.forbidden == t.allowedF)
+
+/-- Run one test against a consistency predicate: both verdicts must match. -/
+def runTest (cons : Exec → Bool) (t : LitTest) : Bool × Bool :=
+  ((checkOutcome cons t.prog t.forbidden) == .forbidden, (checkOutcome cons t.prog t.allowedF) == .allowed)
+
+/-- Run the suite: one `(forbiddenOK, allowedOK)` pair per test. -/
+def runAll (cons : Exec → Bool) : List (Bool × Bool) :=
+  allTests.map fun t => runTest cons t
+
+-- Sanity: every test's forbidden and allowed outcomes differ.
+example : allTests.all testSane = true := rfl
+
+-- Enumeration sizes: MP has 4 candidates, SB and LB 4 each, CoRR 18.
+example : (candidates testMP.prog).length = 4 := rfl
+
+example : (candidates testSB.prog).length = 4 := rfl
+
+example : (candidates testLB.prog).length = 4 := rfl
+
+example : (candidates testCoRR.prog).length = 18 := rfl
+
+#print axioms testSane
+
 end Arm.Lit
 
 /-
-CUTS: only the MP family so far. SB, LB, IRIW, 2+2W, R, S and the coherence
-tests CoRR/CoWW/CoRW/CoWR, the suite list, the model-parameterised runner and
-the sanity/count examples are NOT yet written.
+CUTS: the suite is data plus a model-parameterised runner (`runAll`). No verdict
+against a real memory model is claimed: `Arm/Mem/Axiomatic.lean` does not exist
+in this clone yet, so `runTest`/`runAll` await agent 07's predicate. Proven:
+`testSane` is axiom-free; the suite sanity and candidate counts hold by `rfl`.
 -/
