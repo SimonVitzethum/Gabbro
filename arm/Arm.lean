@@ -3,3 +3,4 @@ import Arm.Mem.Event
 import Arm.Isa.Monad
 import Arm.Isa.IntCore
 import Arm.Isa.IntMasks
+import Arm.Isa.Integer
