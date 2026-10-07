@@ -95,9 +95,9 @@ def cmpLater (r : Nat) : List Ev → List Ev → Rel × Rel × Rel
   | [], e' :: _ => ([], [], [(r, e'.id)])
   | e :: _, [] => ([], [], [(r, e.id)])
   | e :: es, e' :: es' =>
-    let (a₁, d₁, c₁) := cmpEv r e e'
-    let (a₂, d₂, c₂) := cmpLater r es es'
-    (a₁ ++ a₂, d₁ ++ d₂, c₁ ++ c₂)
+    ((cmpEv r e e').1 ++ (cmpLater r es es').1,
+     (cmpEv r e e').2.1 ++ (cmpLater r es es').2.1,
+     (cmpEv r e e').2.2 ++ (cmpLater r es es').2.2)
 
 /-- Dependency detection by perturbation: run `p` under `sup`, re-run it with
     read `i` re-answered by `v'`, and compare the two event lists. Returns the
@@ -115,6 +115,173 @@ def detect (p : Eff Unit) (core next : Nat) (sup : Nat → Nat) (fuel : Nat)
       | some (o', _, _) =>
         let (a, d, c) := cmpLater r o.evs o'.evs
         some (r, a, d, c)
+
+/-- Written value of an event, if it is a write. -/
+def evWriteVal : Option Ev → Option Nat
+  | some e => if e.isWrite = true then some e.val else none
+  | none => none
+
+/-- Behavioural influence of read `i` on the address of event `e`: two runs
+    whose supplies agree except at `i` show different addresses at `e`. -/
+def AddrInfl (p : Eff Unit) (core next fuel i e : Nat) : Prop :=
+  ∃ s₁ s₂ evs₁ evs₂ x₁ x₂, AgreeExcept s₁ s₂ i
+    ∧ evsOf p core next fuel s₁ = some evs₁
+    ∧ evsOf p core next fuel s₂ = some evs₂
+    ∧ x₁ ∈ evs₁ ∧ x₂ ∈ evs₂ ∧ x₁.id = e ∧ x₂.id = e
+    ∧ x₁.addr? ≠ x₂.addr?
+
+/-- Behavioural influence of read `i` on the value written by event `e`. -/
+def DataInfl (p : Eff Unit) (core next fuel i e : Nat) : Prop :=
+  ∃ s₁ s₂ evs₁ evs₂ x₁ x₂, AgreeExcept s₁ s₂ i
+    ∧ evsOf p core next fuel s₁ = some evs₁
+    ∧ evsOf p core next fuel s₂ = some evs₂
+    ∧ x₁ ∈ evs₁ ∧ x₂ ∈ evs₂ ∧ x₁.id = e ∧ x₂.id = e
+    ∧ evWriteVal (some x₁) ≠ evWriteVal (some x₂)
+
+/-- The kind sequences of two runs differ here: different lengths, or a
+    position where the kinds differ. Mirrors `cmpLater`'s ctrl logic, so no
+    injectivity reasoning is needed below. -/
+def kindsNe : List Ev → List Ev → Prop
+  | [], [] => False
+  | [], _ :: _ => True
+  | _ :: _, [] => True
+  | e :: es, e' :: es' => e.kind ≠ e'.kind ∨ kindsNe es es'
+
+/-- Behavioural influence of read `i` on the later event structure: two runs
+    whose supplies agree except at `i` run different kind sequences. -/
+def CtrlInfl (p : Eff Unit) (core next fuel i : Nat) : Prop :=
+  ∃ s₁ s₂ evs₁ evs₂, AgreeExcept s₁ s₂ i
+    ∧ evsOf p core next fuel s₁ = some evs₁
+    ∧ evsOf p core next fuel s₂ = some evs₂
+    ∧ kindsNe evs₁ evs₂
+
+theorem cmpEv_addr (r : Nat) (e e' : Ev) (t : Nat)
+    (h : (r, t) ∈ (cmpEv r e e').1) :
+    t = e.id ∧ e.addr? ≠ e'.addr? := by
+  unfold cmpEv at h
+  cases hk : decide (e.kind = e'.kind) with
+  | true =>
+    have hkk : e.kind = e'.kind := of_decide_eq_true hk
+    rw [if_pos hkk] at h
+    cases ha : decide (e.addr? = e'.addr?) with
+    | true =>
+      have haa : e.addr? = e'.addr? := of_decide_eq_true ha
+      rw [if_pos haa] at h
+      cases hw : decide (e.isWrite = true ∧ e'.isWrite = true) with
+      | true =>
+        have hww : e.isWrite = true ∧ e'.isWrite = true :=
+          of_decide_eq_true hw
+        rw [if_pos hww] at h
+        cases hv : decide (e.val = e'.val) with
+        | true =>
+          have hvv : e.val = e'.val := of_decide_eq_true hv
+          rw [if_pos hvv] at h
+          simp at h
+        | false =>
+          have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
+          rw [if_neg hvv] at h
+          simp at h
+      | false =>
+        have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
+          of_decide_eq_false hw
+        rw [if_neg hww] at h
+        simp at h
+    | false =>
+      have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
+      rw [if_neg haa] at h
+      simp only [List.mem_singleton] at h
+      have hte : t = e.id := congrArg Prod.snd h
+      exact ⟨hte, haa⟩
+  | false =>
+    have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
+    rw [if_neg hkk] at h
+    simp at h
+
+theorem cmpEv_data (r : Nat) (e e' : Ev) (t : Nat)
+    (h : (r, t) ∈ (cmpEv r e e').2.1) :
+    t = e.id ∧ evWriteVal (some e) ≠ evWriteVal (some e') := by
+  unfold cmpEv at h
+  cases hk : decide (e.kind = e'.kind) with
+  | true =>
+    have hkk : e.kind = e'.kind := of_decide_eq_true hk
+    rw [if_pos hkk] at h
+    cases ha : decide (e.addr? = e'.addr?) with
+    | true =>
+      have haa : e.addr? = e'.addr? := of_decide_eq_true ha
+      rw [if_pos haa] at h
+      cases hw : decide (e.isWrite = true ∧ e'.isWrite = true) with
+      | true =>
+        have hww : e.isWrite = true ∧ e'.isWrite = true :=
+          of_decide_eq_true hw
+        rw [if_pos hww] at h
+        cases hv : decide (e.val = e'.val) with
+        | true =>
+          have hvv : e.val = e'.val := of_decide_eq_true hv
+          rw [if_pos hvv] at h
+          simp at h
+        | false =>
+          have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
+          rw [if_neg hvv] at h
+          simp only [List.mem_singleton] at h
+          have hte : t = e.id := congrArg Prod.snd h
+          have w1 : evWriteVal (some e) = some e.val := by
+            simp only [evWriteVal]
+            rw [if_pos hww.1]
+          have w2 : evWriteVal (some e') = some e'.val := by
+            simp only [evWriteVal]
+            rw [if_pos hww.2]
+          rw [w1, w2]
+          exact ⟨hte, by simpa using hvv⟩
+      | false =>
+        have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
+          of_decide_eq_false hw
+        rw [if_neg hww] at h
+        simp at h
+    | false =>
+      have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
+      rw [if_neg haa] at h
+      simp at h
+  | false =>
+    have hkk : ¬ (e.kind = e'.kind) := of_decide_eq_false hk
+    rw [if_neg hkk] at h
+    simp at h
+
+theorem cmpEv_ctrl (r : Nat) (e e' : Ev) (t : Nat)
+    (h : (r, t) ∈ (cmpEv r e e').2.2) : e.kind ≠ e'.kind := by
+  unfold cmpEv at h
+  cases hk : decide (e.kind = e'.kind) with
+  | true =>
+    have hkk : e.kind = e'.kind := of_decide_eq_true hk
+    rw [if_pos hkk] at h
+    cases ha : decide (e.addr? = e'.addr?) with
+    | true =>
+      have haa : e.addr? = e'.addr? := of_decide_eq_true ha
+      rw [if_pos haa] at h
+      cases hw : decide (e.isWrite = true ∧ e'.isWrite = true) with
+      | true =>
+        have hww : e.isWrite = true ∧ e'.isWrite = true :=
+          of_decide_eq_true hw
+        rw [if_pos hww] at h
+        cases hv : decide (e.val = e'.val) with
+        | true =>
+          have hvv : e.val = e'.val := of_decide_eq_true hv
+          rw [if_pos hvv] at h
+          simp at h
+        | false =>
+          have hvv : ¬ (e.val = e'.val) := of_decide_eq_false hv
+          rw [if_neg hvv] at h
+          simp at h
+      | false =>
+        have hww : ¬ (e.isWrite = true ∧ e'.isWrite = true) :=
+          of_decide_eq_false hw
+        rw [if_neg hww] at h
+        simp at h
+    | false =>
+      have haa : ¬ (e.addr? = e'.addr?) := of_decide_eq_false ha
+      rw [if_neg haa] at h
+      simp at h
+  | false =>
+    exact of_decide_eq_false hk
 
 end Arm
 
