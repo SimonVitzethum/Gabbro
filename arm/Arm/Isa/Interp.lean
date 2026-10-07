@@ -8,6 +8,10 @@
 -/
 import Arm.Isa.Monad
 import Arm.Isa.IntCore
+import Arm.Isa.Integer
+import Arm.Isa.IntBit
+import Arm.Isa.IntMul
+import Arm.Isa.IntCond
 
 namespace Arm
 
@@ -117,6 +121,62 @@ def runF : Nat → Eff α → Machine → Except Exc (α × Machine)
 
 /-- Run with fixed ample fuel (every ported instruction needs at most 8 steps). -/
 def run (e : Eff α) (m : Machine) : Except Exc (α × Machine) := runF 128 e m
+
+/-- One decoded integer instruction, as a vector runs it. Constructor fields
+    mirror the `exec*` signatures of the family files. -/
+inductive Op where
+  | addSubImm (d n w imm : Nat) (sub setflags : Bool)
+  | addSubShift (d n m w : Nat) (st : Int.ShiftTy) (amt : Nat) (sub setflags : Bool)
+  | addSubExt (d n m w : Nat) (e : Int.ExtTy) (sh : Nat) (sub setflags : Bool)
+  | adcSbc (d n m w : Nat) (sub setflags : Bool)
+  | logImm (d n w mask : Nat) (inv : Bool) (op : Int.LogicOp) (sf : Bool)
+  | logShift (d n m w : Nat) (inv : Bool) (op : Int.LogicOp) (sf : Bool)
+      (st : Int.ShiftTy) (amt : Nat)
+  | shiftVar (d n m w : Nat) (st : Int.ShiftTy)
+  | movWide (d w imm : Nat) (mk : Int.MovKind) (pos : Nat)
+  | adr (d imm : Nat) (page : Bool)
+  | bitfield (d n w r s wm tm : Nat) (ext inz : Bool)
+  | extr (d n m w lsb : Nat)
+  | clzCls (d n w : Nat) (isCls : Bool)
+  | rbit (d n w : Nat)
+  | rev (d n w cont : Nat)
+  | cntPop (d n w : Nat)
+  | ctz (d n w : Nat)
+  | abs (d n w : Nat)
+  | mulAddSub (a d m n w : Nat) (sub : Bool)
+  | wideMul (a d m n : Nat) (sub u : Bool)
+  | div (d m n w : Nat) (u : Bool)
+  | mulHi (d m n w : Nat) (u : Bool)
+  | condSel (d m n w cond : Nat) (ei ev : Bool)
+  | condCmpR (n m w cond dflt : Nat) (sub : Bool)
+  | condCmpI (n w imm cond dflt : Nat) (sub : Bool)
+
+/-- Dispatch a decoded op to its execute semantics. -/
+def execOp : Op → Eff Unit
+  | .addSubImm d n w imm sub sf => Int.execAddSubImm d n w imm sub sf
+  | .addSubShift d n m w st amt sub sf => Int.execAddSubShift d n m w st amt sub sf
+  | .addSubExt d n m w e sh sub sf => Int.execAddSubExt d n m w e sh sub sf
+  | .adcSbc d n m w sub sf => Int.execAdcSbc d n m w sub sf
+  | .logImm d n w mask inv op sf => Int.execLogicalImm d n w mask inv op sf
+  | .logShift d n m w inv op sf st amt => Int.execLogicalShift d n m w inv op sf st amt
+  | .shiftVar d n m w st => Int.execShiftVar d n m w st
+  | .movWide d w imm mk pos => Int.execMovWide d w imm mk pos
+  | .adr d imm page => Int.execAdr d imm page
+  | .bitfield d n w r s wm tm ext inz => Int.execBitfield d n w r s wm tm ext inz
+  | .extr d n m w lsb => Int.execExtract d n m w lsb
+  | .clzCls d n w isCls => Int.execClzCls d n w isCls
+  | .rbit d n w => Int.execRbit d n w
+  | .rev d n w cont => Int.execRev d n w cont
+  | .cntPop d n w => Int.execCntPop d n w
+  | .ctz d n w => Int.execCtz d n w
+  | .abs d n w => Int.execAbs d n w
+  | .mulAddSub a d m n w sub => Int.execMulAddSub a d m n w sub
+  | .wideMul a d m n sub u => Int.execWideMul a d m n sub u
+  | .div d m n w u => Int.execDiv d m n w u
+  | .mulHi d m n w u => Int.execMulHi d m n w u
+  | .condSel d m n w cond ei ev => Int.execCondSelect d m n w cond ei ev
+  | .condCmpR n m w cond dflt sub => Int.execCondCmpReg n m w cond dflt sub
+  | .condCmpI n w imm cond dflt sub => Int.execCondCmpImm n w imm cond dflt sub
 
 end Arm
 
