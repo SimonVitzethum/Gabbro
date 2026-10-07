@@ -4300,12 +4300,13 @@ pub const PHASEN: &[Satz] = &[
         aussage: "A `syscall` declaration holds its own shape: the in-registers are \
                   pairwise distinct (`N063`), no out register is clobbered (`N064`), \
                   every parameter is bound to exactly one register and every binding \
-                  names a parameter (`N065`), every named register is an x86_64 general \
-                  register (`N066`), the `errors` map answers every listed errno once \
+                  names a parameter (`N065`), every named register is a general \
+                  register of the declared machine, `x86_64` or `aarch64` (`N066`), \
+                  the `errors` map answers every listed errno once \
                   and every target is a case of the declared `or R` channel (`N067`), a \
                   `kernel` pairing is refused until the pairing check lands (`N068`), \
-                  and the declaration names no sealed architecture (`A006`, x86_64 \
-                  only). The `arch` against the declared arches (`A005`) and the named \
+                  and the declaration names no sealed architecture (`A006`: `x86_64` \
+                  and `aarch64` are open, every other machine is sealed). The `arch` against the declared arches (`A005`) and the named \
                   assumption (`N004`/`N005` shape) are sentences of their own, and the \
                   call site reuses the `extern` path -- the `Signatur` in the shared \
                   map, the call-graph node, and `H007` at the boundary.",
