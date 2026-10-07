@@ -140,8 +140,53 @@ def xDropIc : IFExec :=
 theorem drop_ic_allows_stale :
     fetchSeesWrite xDropIc 0 5 = false := by decide
 
+/-- Planted case: the DSB between IC and ISB is missing (invalidate not
+    ordered before context synchronisation). -/
+def xDropDsb2 : IFExec :=
+  { evs := [⟨0, 0, .writeCode, 0#64⟩, ⟨1, 0, .dcCvau, 0#64⟩,
+            ⟨2, 0, .dsb, 0#64⟩, ⟨3, 0, .icIvau, 0#64⟩,
+            ⟨4, 0, .isb, 0#64⟩, ⟨5, 0, .fetch, 0#64⟩]
+    po := [(0, 1), (0, 2), (0, 3), (0, 4), (0, 5),
+           (1, 2), (1, 3), (1, 4), (1, 5),
+           (2, 3), (2, 4), (2, 5), (3, 4), (3, 5), (4, 5)] }
+
+/-- Without the second DSB a stale fetch is allowed. -/
+theorem drop_dsb2_allows_stale :
+    fetchSeesWrite xDropDsb2 0 5 = false := by decide
+
+/-- Planted case: the ISB is missing (completed maintenance exists but no
+    context synchronisation makes it visible to the fetch). -/
+def xDropIsb : IFExec :=
+  { evs := [⟨0, 0, .writeCode, 0#64⟩, ⟨1, 0, .dcCvau, 0#64⟩,
+            ⟨2, 0, .dsb, 0#64⟩, ⟨3, 0, .icIvau, 0#64⟩,
+            ⟨4, 0, .dsb, 0#64⟩, ⟨5, 0, .fetch, 0#64⟩]
+    po := [(0, 1), (0, 2), (0, 3), (0, 4), (0, 5),
+           (1, 2), (1, 3), (1, 4), (1, 5),
+           (2, 3), (2, 4), (2, 5), (3, 4), (3, 5), (4, 5)] }
+
+/-- Without the ISB a stale fetch is allowed, even though the maintenance
+    itself completed: `maintDone` holds while `fetchSeesWrite` fails. -/
+theorem drop_isb_allows_stale :
+    fetchSeesWrite xDropIsb 0 5 = false := by decide
+
+/-- The ISB case isolates context synchronisation: maintenance completed. -/
+theorem drop_isb_maintenance_completed :
+    maintDone xDropIsb 1 3 = true := by decide
+
 end Arm
 
 /-
-CUTS: skeleton; recipe predicate and fixtures follow.
+CUTS: full recipe guarantees the new fetch; each single dropped step allows
+a stale fetch (`false` = allowed, never one observed value). NOT modelled:
+multicore visibility of maintenance (all fixtures single-core), PoU vs PoC
+distinction, shareability domains of the DSBs, instruction-cache line size
+and associativity effects, exceptions/interrupts between the steps.
 -/
+
+#print axioms Arm.recipe_complete_sees_new
+#print axioms Arm.drop_dc_allows_stale
+#print axioms Arm.drop_dsb1_allows_stale
+#print axioms Arm.drop_ic_allows_stale
+#print axioms Arm.drop_dsb2_allows_stale
+#print axioms Arm.drop_isb_allows_stale
+#print axioms Arm.drop_isb_maintenance_completed
