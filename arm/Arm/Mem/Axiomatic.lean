@@ -46,9 +46,43 @@ def sameLocPair (x : Exec) (p : Nat × Nat) : Bool :=
   | some { kind := .write a, .. }, some { kind := .write b, .. } => a.addr == b.addr
   | _, _ => false
 
+/-- Union of two finite relations. -/
+def Rel.union (r s : Rel) : Rel := (r ++ s).dedup
+
+/-- Intersection of two finite relations. -/
+def Rel.inter (r s : Rel) : Rel :=
+  r.filter fun p => s.any fun q => q.1 == p.1 && q.2 == p.2
+
+/-- `p.2` satisfies `f` (the `;[S]` set-restriction of `aarch64.cat`;
+    `false` if the event is missing). -/
+def targetIs (f : Ev → Bool) (x : Exec) (p : Nat × Nat) : Bool :=
+  match x.ev? p.2 with
+  | some e => f e
+  | none => false
+
+/-- From-reads: `rf^-1;co` (`aarch64.cat`, B2.3 coherence: a read is ordered
+    before every write coherence-after the write it read from). -/
+def fr (x : Exec) : Rel := x.rf.inv.comp x.co
+
+/-- Internal reads-from: same-core `rf` (`aarch64.cat` `rfi = rf & int`). -/
+def rfi (x : Exec) : Rel := x.rf.filter (sameCorePair x)
+
+/-- External reads-from: cross-core `rf` (`aarch64.cat` `rfe = rf & ext`,
+    B2.3 observed-before source). -/
+def rfe (x : Exec) : Rel := x.rf.filter fun p => !(sameCorePair x p)
+
+/-- External coherence order: cross-core `co` (`aarch64.cat` `coe = co & ext`,
+    B2.3 observed-before source). -/
+def coe (x : Exec) : Rel := x.co.filter fun p => !(sameCorePair x p)
+
+/-- Per-location program order: `po` restricted to same-address pairs
+    (`aarch64.cat` `po-loc`, B2.3 per-location coherence). -/
+def po_loc (x : Exec) : Rel := x.po.filter (sameLocPair x)
+
 end Arm
 
 /-
-CUTS: skeleton only; derived relations and axioms land in the next steps.
+CUTS: helpers plus the derived coherence relations; `dob`, `obs`, `ob`
+and the three axioms land in the next steps.
 No theorem yet, so no `#print axioms`.
 -/
