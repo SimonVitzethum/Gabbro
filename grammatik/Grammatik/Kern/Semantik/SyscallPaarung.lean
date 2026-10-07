@@ -21,9 +21,11 @@ namespace Gabbro.Grammatik
 /-- A kernel dispatch entry: the call number, the register map, and the
     proved contract (requires `Pk`, ensures `Qk` over the raw answer,
     effects `Ek`/`EkG`). -/
-structure KernelEintrag (D : Deklaration) (Params : Ctx) where
+structure KernelEintragG (A : Type) (D : Deklaration) (Params : Ctx) where
   nummer : Nat
-  abi : SysAbi
+  /-- The machine side of the gate: `SysAbi` (x86_64) or `SysAbiArm` (AArch64), see
+      `SyscallAllg.lean`. The pairing only COMPARES it and hands it to the implementation. -/
+  abi : A
   Pk : World D → Env D Params → Prop
   Qk : World D → World D → Int → Env D Params → Prop
   Ek : D.Tab → Bool
@@ -33,10 +35,10 @@ structure KernelEintrag (D : Deklaration) (Params : Ctx) where
     the errno table, the declared ok-range, and the declared contract
     (requires `Pu`, ensures `Qu` over the DECODED answer, effects
     `Eu`/`EuG`). -/
-structure UserSyscall (D : Deklaration) (Params : Ctx) (Grund : Type)
+structure UserSyscallG (A : Type) (D : Deklaration) (Params : Ctx) (Grund : Type)
     [DecidableEq Grund] where
   nummer : Nat
-  abi : SysAbi
+  abi : A
   tab : FehlerTabelle Grund
   lo : Int
   hi : Int
@@ -44,6 +46,12 @@ structure UserSyscall (D : Deklaration) (Params : Ctx) (Grund : Type)
   Qu : World D → World D → SysAntwort Int Grund → Env D Params → Prop
   Eu : D.Tab → Bool
   EuG : D.Glob → Bool
+
+/-- The x86_64 instances (the original names; every earlier statement and witness is about them). -/
+abbrev KernelEintrag (D : Deklaration) (Params : Ctx) : Type := KernelEintragG SysAbi D Params
+
+abbrev UserSyscall (D : Deklaration) (Params : Ctx) (Grund : Type) [DecidableEq Grund] : Type :=
+  UserSyscallG SysAbi D Params Grund
 
 /-- Forget the range proof of an `ok` payload: the user contract talks
     about plain integers, the decoder about range-checked ones. -/
@@ -58,8 +66,8 @@ def antwortInt {Grund : Type} {lo hi : Int} :
     and the conditional recording clause over `axiomSpur`), plus the decoded
     user contract whenever the user requires-clause holds at entry. -/
 def PaarGut (D : Deklaration) (a : D.Ax) (O : Orakel D)
-    {Grund : Type} [DecidableEq Grund]
-    (u : UserSyscall D (D.aparams a) Grund) : Prop :=
+    {A : Type} {Grund : Type} [DecidableEq Grund]
+    (u : UserSyscallG A D (D.aparams a) Grund) : Prop :=
   (∀ σ ρ, Rahmen (D.aschreibt a) (D.agschreibt a) σ (O.wirkt a σ ρ).1 ∧
     (O.wirkt a σ ρ).1.haelt = σ.haelt ∧
     ((∀ t, D.aschreibt a t = true → ∀ L, Sum.inl L ∈ D.braucht t → L ∈ σ.haelt) →
@@ -90,9 +98,9 @@ def PaarGut (D : Deklaration) (a : D.Ax) (O : Orakel D)
     and recording, `hKcon` the kernel postcondition, `hO` ties the oracle
     to `K`. -/
 theorem syscall_paarung (D : Deklaration) (a : D.Ax) (O : Orakel D)
-    {Grund : Type} [DecidableEq Grund]
-    (k : KernelEintrag D (D.aparams a)) (u : UserSyscall D (D.aparams a) Grund)
-    (K : Nat → SysAbi → World D → Env D (D.aparams a) → World D → Int → Prop)
+    {A : Type} {Grund : Type} [DecidableEq Grund]
+    (k : KernelEintragG A D (D.aparams a)) (u : UserSyscallG A D (D.aparams a) Grund)
+    (K : Nat → A → World D → Env D (D.aparams a) → World D → Int → Prop)
     (hnum : k.nummer = u.nummer)
     (habi : k.abi = u.abi)
     (hreq : ∀ σ ρ, u.Pu σ ρ → k.Pk σ ρ)
@@ -500,10 +508,10 @@ theorem syscall_paarung_abgelehnt :
     frame to its declared axiom frame, `hKeff` supplies frame, locks, and
     recording per axiom, `hO` ties the oracle to `K` per axiom. -/
 theorem paarung_gibt_gutO (D : Deklaration) (O : Orakel D)
-    {Grund : Type} [DecidableEq Grund]
-    (k : ∀ a : D.Ax, KernelEintrag D (D.aparams a))
-    (u : ∀ a : D.Ax, UserSyscall D (D.aparams a) Grund)
-    (K : ∀ a : D.Ax, Nat → SysAbi → World D → Env D (D.aparams a) →
+    {A : Type} {Grund : Type} [DecidableEq Grund]
+    (k : ∀ a : D.Ax, KernelEintragG A D (D.aparams a))
+    (u : ∀ a : D.Ax, UserSyscallG A D (D.aparams a) Grund)
+    (K : ∀ a : D.Ax, Nat → A → World D → Env D (D.aparams a) →
       World D → Int → Prop)
     (hnum : ∀ a, (k a).nummer = (u a).nummer)
     (habi : ∀ a, (k a).abi = (u a).abi)

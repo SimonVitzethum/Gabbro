@@ -85,5 +85,20 @@ echo "poison  : rss ${v3} -> ${d3} KiB, non-zero bytes ${z3}"
 [ "$z2" -eq 0 ] && [ $((v2 - d2)) -lt 256 ] || { echo "RED: unbound run neither zeroed nor stayed resident as designed"; fail=1; }
 # (3) the poison build must FAIL the criterion of (1)
 if [ "$z3" -eq 0 ] && [ $((v3 - d3)) -ge 768 ]; then echo "RED: the poison passed -- the test cannot see a missing give-back"; fail=1; fi
+# (4) a range INSIDE one page (template `region.leeren`, `leeren_in_einer_seite`): example 175 clears
+#     `RING[200 .. 300)` with the binding bound. The first helper formed `hi - a` in `uint64_t` before
+#     its test, wrapped, and wrote far past the buffer (exit 139, found 2026-10-07).
+"$G" emit "$W/beispiele/175-puffer-gibt-seiten-zurueck.gab" > "$T/b175.c" 2> "$T/emit3.err" || {
+    echo "RED: example 175 did not emit"; cat "$T/emit3.err"; exit 1; }
+python3 "$W/instrumente/vergifte-leeren.py" "$T/b175.c" "$T/b175_alt.c" || { echo "RED: could not build the poison twin"; exit 1; }
+for v in b175 b175_alt; do
+    printf '#include <stdio.h>\n#include "%s.c"\n#include "linux_bind.c"\nint main(void){ printf("%%u\\n", geben()); return 0; }\n' "$v" > "$T/d_$v.c"
+    cc -O1 -Wall -Wextra -I"$T" -o "$T/$v" "$T/d_$v.c" 2> "$T/$v.err" || { echo "RED: $v did not build"; cat "$T/$v.err"; exit 1; }
+done
+r_ok=$("$T/b175" 2>/dev/null); rc_ok=$?
+"$T/b175_alt" > /dev/null 2>&1; rc_alt=$?
+echo "one-page: corrected helper -> '${r_ok}' (exit ${rc_ok}); first-version helper -> exit ${rc_alt}"
+{ [ "$rc_ok" -eq 0 ] && [ "$r_ok" = "7" ]; } || { echo "RED: a range inside one page misbehaves with the corrected helper"; fail=1; }
+if [ "$rc_alt" -eq 0 ]; then echo "RED: the poison twin (first-version arithmetic) survived -- the test cannot see the wrap"; fail=1; fi
 [ "$fail" -eq 0 ] && echo "GREEN: pages given back by the binding, zeroes kept without it, the poison caught"
 exit $fail

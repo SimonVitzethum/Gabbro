@@ -15529,6 +15529,8 @@ static void gabbro_region_leeren(void *p, uint64_t bytes) {\n\
     uint64_t k = 0u;\n\
     uint64_t seite = 0u;\n\
     uint64_t a = 0u;\n\
+    uint64_t lo = 0u;\n\
+    uint64_t hi = 0u;\n\
     uint64_t von = 0u;\n\
     uint64_t bis = 0u;\n\
     if (bytes == 0u) {\n\
@@ -15539,9 +15541,13 @@ static void gabbro_region_leeren(void *p, uint64_t bytes) {\n\
         a = (uint64_t)(uintptr_t)p;\n\
         if (seite != 0u && seite <= 4294967296u && bytes <= UINT64_MAX - seite && a <= UINT64_MAX - seite - bytes) {\n\
             /* `leeren_teilung`: [0, von) and [bis, bytes) are the edges, [von, bis) whole pages. */\n\
-            von = (a + seite - 1u) / seite * seite - a;\n\
-            bis = (a + bytes) / seite * seite - a;\n\
-            if (von < bis) {\n\
+            /* The test is on the ABSOLUTE addresses (`leeren_in_einer_seite`): `hi - a` formed\n\
+             * before it wrapped for a range inside one page (`leeren_alt_bricht`). */\n\
+            lo = (a + seite - 1u) / seite * seite;\n\
+            hi = (a + bytes) / seite * seite;\n\
+            if (lo < hi) {\n\
+                von = lo - a;\n\
+                bis = hi - a;\n\
                 for (k = 0u; k < von; k++) {\n\
                     b[k] = 0u;\n\
                 }\n\

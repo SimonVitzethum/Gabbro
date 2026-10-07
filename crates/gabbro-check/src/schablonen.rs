@@ -381,7 +381,7 @@ pub const SCHABLONEN: &[Schablone] = &[
                   (`Grammatik/Bausteine/Schablonen/SchablonenArena.lean` §2, `leeren_teilung`): the three pieces \
                   cover the range exactly, the pages fit the rest of the range (`bis - von <= \
                   bytes - von`, the binding's `requires`), and they start and end on a page; \
-                  witness `leeren_zeuge`, boundary `leeren_ohne_seite`. **NOT proved:** that the \
+                  witness `leeren_zeuge`, boundary `leeren_ohne_seite`; the test `lo < hi` is on the ABSOLUTE page-rounded addresses, so a range inside one page forms no offset (`leeren_in_einer_seite`; the first version wrapped `uint64_t`, `leeren_alt_bricht`) and nothing wraps under the guard (`leeren_ohne_umlauf`). **NOT proved:** that the \
                   kernel's page return reads as zero (the gate's assumption, premise (c)); and \
                   the statement stays outside machine G (`LG005`, the Satz `region.leeren`).",
         stand: Stand::Bewiesen,
