@@ -85,3 +85,21 @@ No Rust changes (Lean-only lane); `cargo-pruef`/`emission-pruef` untouched.
 - Probe was repeatedly blocked by slot contention and one wiped `.lake`
   cache (rebuilt via incremental `./lean-bau` runs); no credentials,
   network, or foreign paths touched.
+
+## Review-readiness addendum (2026-10-07, after commit 18bbe7ad)
+
+- Nothing is unchecked: every queued check ran green AFTER the final
+  green edit (`./lean-bau` exit 0 with the module in the graph,
+  `./lean-probe` 0 errors, sorry gate 0 violations, layout placed).
+  No congested-skipped parts exist; no `sorry`/`admit`/`axiom`/
+  `native_decide`/`unsafe` anywhere in the new module (mechanically
+  clean, see gate output above).
+- Owned files and their state: `MUSE-REPORT-1373.md` (this file),
+  `grammatik/Grammatik.lean` (one appended import line), and the new
+  module now at `grammatik/Grammatik/X86/Befehle/Sse/SseAesClmul.lean`
+  (moved there from the task-named root path by the sanctioned
+  `lean-layout.py --apply`; there is no file left at the root path).
+  All three are committed; no `??` untracked Lean file exists.
+- `instrumente/lean-layout-map.json` (one line, `--apply`
+  bookkeeping, outside lane ownership) is committed alongside only to
+  leave a clean tree for the reviewer snapshot.
