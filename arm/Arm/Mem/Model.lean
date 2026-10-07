@@ -94,6 +94,30 @@ theorem lb_allowed : consistent noParts lbAllowed = true := by decide
 theorem lb_forbidden_allowed_without_dependencies :
     consistent noParts lbForbidden = true := by decide
 
+/-- Read-read coherence, in-order outcome: the reader sees the two writes
+    in `co` order. Consistent. -/
+def rAllowed : Exec :=
+  { evs := [⟨0, 0, .write (acc 0#64), 1⟩, ⟨1, 1, .write (acc 0#64), 2⟩,
+            ⟨2, 2, .read (acc 0#64), 1⟩, ⟨3, 2, .read (acc 0#64), 2⟩]
+    po := [(2, 3)], addr := [], data := [], ctrl := []
+    rf := [(0, 2), (1, 3)], co := [(0, 1)], rmw := [] }
+
+/-- Read-read coherence, out-of-order outcome: the reader sees write 2 and
+    then write 1 although `co` orders 1 before 2. Fails `internal` through
+    the `po-loc | rf | fr` cycle `1 -> 2 -> 3 -> 1`. NO plug-in of `aob` or
+    `bob` can repair an `internal` failure, so no barrier changes this. -/
+def rForbidden : Exec :=
+  { evs := [⟨0, 0, .write (acc 0#64), 1⟩, ⟨1, 1, .write (acc 0#64), 2⟩,
+            ⟨2, 2, .read (acc 0#64), 2⟩, ⟨3, 2, .read (acc 0#64), 1⟩]
+    po := [(2, 3)], addr := [], data := [], ctrl := []
+    rf := [(1, 2), (0, 3)], co := [(0, 1)], rmw := [] }
+
+/-- R in-order outcome is consistent. -/
+theorem r_allowed : consistent noParts rAllowed = true := by decide
+
+/-- R out-of-order outcome is inconsistent, barrier-independently. -/
+theorem r_forbidden : consistent noParts rForbidden = false := by decide
+
 end Arm
 
 /-
