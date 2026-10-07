@@ -2,6 +2,9 @@ import Arm.Basic
 import Arm.Mem.Event
 import Arm.Mem.Barriers
 import Arm.Isa.Monad
+import Arm.Isa.Addr
+import Arm.Isa.LoadStore
+import Arm.Isa.AtomicOps
 import Arm.Mem.Trace
 import Arm.Mem.Exec
 import Arm.Mem.Dep
