@@ -79,10 +79,57 @@ def coe (x : Exec) : Rel := x.co.filter fun p => !(sameCorePair x p)
     (`aarch64.cat` `po-loc`, B2.3 per-location coherence). -/
 def po_loc (x : Exec) : Rel := x.po.filter (sameLocPair x)
 
+/-- External from-reads: cross-core `fr` (`aarch64.cat` `fre = fr & ext`,
+    B2.3 observed-before source). -/
+def fre (x : Exec) : Rel := (fr x).filter fun p => !(sameCorePair x p)
+
+/-- Dependency-ordered-before (`aarch64.cat` `dob`, B2.3 dependency rules):
+    address and data dependencies; control dependency to a write; control or
+    address dependency followed by `po` to a write; address dependency followed
+    by `po` to a write (a subset of the previous clause, kept for readability);
+    address or data dependency feeding a write observed by an internal read. -/
+def dob (x : Exec) : Rel :=
+  let ctrlW : Rel := x.ctrl.filter (targetIs isWriteEv x)
+  let ctrlAddrPoW : Rel :=
+    ((x.ctrl.union x.addr).comp x.po).filter (targetIs isWriteEv x)
+  let addrPoW : Rel := (x.addr.comp x.po).filter (targetIs isWriteEv x)
+  let depRfi : Rel := (x.addr.union x.data).comp (rfi x)
+  ((x.addr.union x.data).union ctrlW).union (ctrlAddrPoW.union (addrPoW.union depRfi))
+
+/-- Observed-before: the cross-core communication orders (`aarch64.cat`
+    `obs = rfe | fre | coe`, B2.3 external visibility). -/
+def obs (x : Exec) : Rel := ((rfe x).union (fre x)).union (coe x)
+
+/-- Ordered-before: `obs | dob | aob | bob` (`aarch64.cat`, B2.3). `aob` and
+    `bob` are plugged in by agents 09 and 10. -/
+def ob (parts : OrderingParts) (x : Exec) : Rel :=
+  (((obs x).union (dob x)).union parts.aob).union parts.bob
+
+/-- Coherence axiom: per-location order is acyclic (`aarch64.cat`
+    `acyclic po-loc | ca | rf | fr as internal`, B2.3 coherence). -/
+def internal (x : Exec) : Bool :=
+  Rel.acyclic (Rel.union (Rel.union (Rel.union (po_loc x) x.co) x.rf) (fr x)) x.size
+
+/-- External axiom: ordered-before is acyclic (`aarch64.cat`
+    `acyclic ob as external`, B2.3 external visibility). -/
+def external (parts : OrderingParts) (x : Exec) : Bool :=
+  Rel.acyclic (ob parts x) x.size
+
+/-- Atomicity axiom: no exclusive/atomic pair is split by an intervening
+    external write (`aarch64.cat` `empty rmw & (fre;coe) as atomic`). -/
+def atomic (x : Exec) : Bool :=
+  (Rel.inter x.rmw ((fre x).comp (coe x))).isEmpty
+
+/-- A candidate execution is consistent if it satisfies all three axioms.
+    The conjunction is well-formedness-independent: `Exec` well-formedness
+    (unique ids, `rf`/`co` shape) is owned by agent 06. -/
+def consistent (parts : OrderingParts) (x : Exec) : Bool :=
+  internal x && external parts x && atomic x
+
 end Arm
 
 /-
-CUTS: helpers plus the derived coherence relations; `dob`, `obs`, `ob`
-and the three axioms land in the next steps.
+CUTS: model complete, witnesses pending. `dob` clause list follows the
+published `aarch64.cat` from knowledge (see report), not a measured copy.
 No theorem yet, so no `#print axioms`.
 -/
