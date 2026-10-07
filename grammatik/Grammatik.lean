@@ -722,3 +722,4 @@ import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.BeweisAtomar
 import Grammatik.X86.IntMovTest
 import Grammatik.X86.GvStartPflicht
+import Grammatik.X86.GvAtomRely
