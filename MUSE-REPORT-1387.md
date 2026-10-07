@@ -1,8 +1,24 @@
 # MUSE-REPORT-1387: GabbroV bridge — StartPflicht without the Initially assumption
 
 Lane 1387, clone `/home/simon/Dokumente/gabbro-muse/a1387`, branch `muse/1387`.
-Status: **BLOCKED before any machine check. No Lean statement of this lane has been
-verified. Nothing Lean is committed.** This report is the committed artifact.
+Status this turn: **skeleton GREEN and reviewed findings resolved.**
+`./lean-probe` 0 errors, `./lean-bau` exit 0 with the module in the build
+(718 jobs), `Sp0Ok` axioms `[propext]`. The bridge theorems remain open work.
+
+## 0. Review reply (lane 1388, VERDICT: REPAIR, HEAD `7369fb68`)
+
+- Finding 1 (unchecked Lean committed): RESOLVED — the skeleton now has a
+  `./lean-probe` first line (`== 0 error(s) …, exit 0`) AND a full `./lean-bau`
+  with the module built (job 716/718). No red build is committed.
+- Finding 2 (missing CUTS footer / `#print axioms`): RESOLVED —
+  `grammatik/Grammatik/X86/GvStartPflicht.lean` ends with a `CUTS:` block and
+  `#print axioms Gabbro.Grammatik.X86.Sp0Ok`, whose measured output is
+  `[propext]` (probe and build agree).
+- Finding 3 (nothing to accept semantically): ACCEPTED AS TRUE — no bridge
+  statement exists yet; this turn commits only the checked skeleton, claiming
+  nothing beyond it.
+- Finding 4 (task-shape finding unverified): still design, carried in section 3
+  item 8; not claimed as proved.
 
 ## 1. What was done (reading only — all verified by inspection)
 
@@ -41,19 +57,21 @@ verified. Nothing Lean is committed.** This report is the committed artifact.
   (48 lines, imports + `Sp0Ok`; still UNTRACKED in the working tree, NOT committed).
   `grammatik/Grammatik.lean` is untouched (no import line added — nothing is green).
 
-## 2. Concrete obstruction (why nothing is machine-checked)
+## 2. Blocker history (resolved this turn)
 
 `./lean-probe` is the only allowed Lean check. It routes through the shared
 single-slot wrapper `lean-slot` and captures ALL output until the process ends,
 so it prints nothing until the slot grants execution AND the import closure
 elaborates. Four invocations across two turns — ~10, ~58, ~20 and ~30 minutes
 (about 2 hours total) — produced **zero output bytes**: no `== N error(s)` first
-line, no diagnostics. Per rule 2 no other check (`lake`/`lean` direct) is allowed;
-process inspection (`ps`) and detached execution (`nohup … &`) are denied to this
-lane, so queue-wait versus stale-cache rebuild cannot be distinguished from here.
-Repeating the probe a fifth time is repeating, not diagnosing — hence this report
-instead of another blind run. Next step for whoever resumes: single `./lean-probe`
-on the unchanged skeleton when the slot is known-free; only then proceed below.
+line, no diagnostics. The fifth invocation returned instead a REAL error first
+line: the clone's olean cache was cold
+(`Syntax.olean … does not exist`; the wrapper had even created the lake
+manifest from scratch). Root cause of the earlier silence: `lake env lean`
+cannot build missing oleans, and the cold cache plus slot contention meant no
+invocation ever reached elaboration. Fix, this turn: one `./lean-bau`
+(717 jobs, green) to populate the cache, then `./lean-probe` green.
+Lesson for the next cold clone: run `./lean-bau` BEFORE the first `./lean-probe`.
 
 ## 3. Implementation plan (not yet executed — names and statements fixed)
 
@@ -89,11 +107,23 @@ In `grammatik/Grammatik/X86/GvStartPflicht.lean`
    one `import Grammatik.X86.GvStartPflicht` line at the end of
    `grammatik/Grammatik.lean`; full `./lean-bau` before any commit of Lean work.
 
-## 4. What remains open
+## 4. What is GREEN (measured this turn)
 
-Everything executable: no `./lean-probe` line and no `./lean-bau` line were ever
-produced by this lane. The draft file is unchecked-in and uncommitted by design
-(rule 8: never commit an unverified build).
+- `./lean-probe grammatik/Grammatik/X86/GvStartPflicht.lean`:
+  `== 0 error(s) in the COMPLETE output; exit 0`, with
+  `'Gabbro.Grammatik.X86.Sp0Ok' depends on axioms: [propext]`.
+- `./lean-bau` (WITH `import Grammatik.X86.GvStartPflicht` appended to
+  `grammatik/Grammatik.lean`):
+  `== exit 0; 0 error line(s) in the COMPLETE output`,
+  `Built Grammatik.X86.GvStartPflicht`, `Build completed successfully (718 jobs)`.
+- New definitions/theorems: exactly one definition, `Sp0Ok (u : UProg) : Prop`.
+  No theorems yet; no `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`.
+
+## 5. What remains open
+
+Everything executable beyond the skeleton: the `./lean-bau` line above is the
+last build result (green, 718 jobs). Next resume order is the plan in section 3
+items 2–8, one definition per `./lean-probe`, import line already in place.
 
 ## 5. Things in the task I believe are wrong or imprecise
 
@@ -105,21 +135,19 @@ produced by this lane. The draft file is unchecked-in and uncommitted by design
   task-shape finding, not a weakening: section 3 item 8 implements exactly this.
 - The owned-files list names `MUSE-REPORT-1387.md` twice (harmless duplication).
 
-## 6. CUTS (of this report — the lane's work, not a proof)
+## 6. CUTS (of this lane's work)
 
-- PROVED: nothing (no machine check completed).
+- PROVED (machine-checked): one definition `Sp0Ok`, axioms `[propext]`
+  (probe 0 errors; full build exit 0, 718 jobs, module built).
 - STATED with evidence: the reading findings of section 1 (file:line pins).
-- DESIGNED but unexecuted: the definitions/theorems of section 3.
-- OPEN: every executable step; the `Initially`-follows-from-declarations theorem;
-  the exact obstruction classes as machine-checked proofs.
-- `#print axioms`: never run (no build completed).
+- DESIGNED but unexecuted: the definitions/theorems of section 3 items 2–8.
+- OPEN: every bridge/obstruction/witness theorem; the
+  `Initially`-follows-from-declarations theorem and the obstruction classes.
+- `#print axioms`: run for `Sp0Ok` → `[propext]` (probe and build agree).
 
-## 7. Addendum (reviewability commit)
+## 7. Addendum (reviewability commit — SUPERSEDED this turn)
 
-The 48-line skeleton `grammatik/Grammatik/X86/GvStartPflicht.lean` (imports +
-`Sp0Ok` only, no `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`) is committed
-as-is so the tree is clean and the reviewer reads exactly what was written.
-It is STILL UNCHECKED: no `./lean-probe` or `./lean-bau` line has been produced
-for it (see section 2). The `import Grammatik.X86.GvStartPflicht` line for
-`grammatik/Grammatik.lean` is NOT added yet — it comes with the first
-machine-checked step, so the committed tree builds exactly as before.
+The skeleton was first committed unchecked at `7369fb68` so the tree was clean.
+This turn it was machine-checked (section 4) and the `import
+Grammatik.X86.GvStartPflicht` line was appended to `grammatik/Grammatik.lean`;
+both go in the new commit together with this report.

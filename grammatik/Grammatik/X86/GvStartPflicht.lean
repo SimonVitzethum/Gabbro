@@ -46,3 +46,15 @@ def Sp0Ok (u : UProg) : Prop :=
       ∃ w, fieldRangeO u t f = some w ∧ w.1 ≤ 0 ∧ 0 ≤ w.2
 
 end Gabbro.Grammatik.X86
+
+/- CUTS: this module currently contains one definition (`Sp0Ok`) and no
+    theorem. NOT proved: the `sp0OkB` decider and its soundness
+    (`sp0OkB_klingt`); the computed initial memory `sp0Of`; the bridge
+    theorem `gv_startPflicht` (`StartPflicht` from lowering plus `Sp0Ok`);
+    the static-initialiser model `gvInitWert` with its travel/refusal
+    lemmas; the obstruction theorems (`sp0_luecke`,
+    `gv_fragment_kein_static`); the non-degenerate `_zeuge` witness; the
+    `Initially`-follows-from-declarations statement. The `#print axioms`
+    line below reports `[propext]` for `Sp0Ok` (verified `./lean-probe`,
+    0 errors); every later theorem gets its own `#print axioms` line. -/
+#print axioms Gabbro.Grammatik.X86.Sp0Ok

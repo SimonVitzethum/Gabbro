@@ -719,3 +719,4 @@ import Grammatik.X86.Befehle.Sse.SseMoves
 import Grammatik.X86.Befehle.Zeichenketten.StringOps
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
+import Grammatik.X86.GvStartPflicht
