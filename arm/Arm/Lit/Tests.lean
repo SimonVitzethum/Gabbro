@@ -183,8 +183,9 @@ example : (candidates testCoRR.prog).length = 18 := rfl
 end Arm.Lit
 
 /-
-CUTS: the suite is data plus a model-parameterised runner (`runAll`). No verdict
-against a real memory model is claimed: `Arm/Mem/Axiomatic.lean` does not exist
-in this clone yet, so `runTest`/`runAll` await agent 07's predicate. Proven:
-`testSane` is axiom-free; the suite sanity and candidate counts hold by `rfl`.
+CUTS: the suite is data plus a model-parameterised runner (`runAll`).
+`consNoParts` runs it against agent 07 `consistent` with empty plug-ins;
+results and disagreements are recorded in REPORT-08.md (item 4, 2026-10-07).
+Proven: `testSane` is axiom-free; the suite sanity and candidate counts hold
+by `rfl`. No verdict against the full (aob/bob-plugged) model is claimed.
 -/

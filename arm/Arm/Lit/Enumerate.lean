@@ -333,9 +333,28 @@ def applyVals (evs : List Ev) (vals : List (Nat × Nat)) : List Ev :=
 def replayStores (p : LitProg) (e : Elab) (rv : List (Nat × Nat)) : List (Nat × Nat) :=
   (coreTriples p e).flatMap fun t => sndOf (corePair t rv)
 
+/-- One resolution round: the register replay over the current read values
+    gives `stReg` write values; reads then take their own write's value. -/
+def resolveRound (p : LitProg) (e : Elab) (rf : List (Nat × Nat))
+    (cur : List (Nat × Nat)) : List (Nat × Nat) :=
+  let sv := replayStores p e cur
+  let all := e.valOf ++ sv
+  rf.map fun q => match q with | (w, r) => (r, (lookup all w).getD 0)
+
+/-- Iterate resolution rounds (fuel-bounded, hence terminating; one round per
+    event suffices for loop-free litmus cores; the last round wins on a
+    value cycle, which no litmus test in the suite has). -/
+def resolveVals : Nat → LitProg → Elab → List (Nat × Nat) → List (Nat × Nat) → List (Nat × Nat)
+  | 0, _, _, _, cur => cur
+  | n + 1, p, e, rf, cur => resolveVals n p e rf (resolveRound p e rf cur)
+
+/-- Read values of one candidate, with `stReg`-sourced reads resolved. -/
+def readValsOf (p : LitProg) (e : Elab) (rf : List (Nat × Nat)) : List (Nat × Nat) :=
+  resolveVals (e.evs.length + 1) p e rf []
+
 /-- Build one candidate `Exec`: values filled in, `rmw` empty (no exclusives). -/
 def mkExec (p : LitProg) (e : Elab) (rf : List (Nat × Nat)) (co : Rel) : Exec :=
-  let rv := rf.map fun q => match q with | (w, r) => (r, (lookup e.valOf w).getD 0)
+  let rv := readValsOf p e rf
   let vals := rv ++ replayStores p e rv
   { evs := applyVals e.evs vals, po := e.po, addr := e.addr, data := e.data, ctrl := e.ctrl, rf := rf, co := co, rmw := [] }
 
