@@ -11,16 +11,9 @@
       (AS_rel_or_acq = LDAR/STLR, AS_acq_rcpc = LDAPR)
 -/
 import Arm.Mem.Event
+import Arm.Mem.Exec
 
 namespace Arm
-
-def Ev.isRead : Ev → Bool
-  | { kind := .read _, .. } => true
-  | _ => false
-
-def Ev.isWrite : Ev → Bool
-  | { kind := .write _, .. } => true
-  | _ => false
 
 def Ev.isAcquire : Ev → Bool
   | { kind := .read { ord := .acquire, .. }, .. } => true
