@@ -244,6 +244,166 @@ def elabProg (p : LitProg) : Elab :=
 def writesAtLoc (e : Elab) (l : Nat) : List Nat :=
   e.writes.filter fun wid => lookup e.locOf wid == some l
 
+/-- Set register `k` to `v` in a register file. -/
+def upd (m : List (Nat × Nat)) (k v : Nat) : List (Nat × Nat) :=
+  (k, v) :: (m.filter fun q => match q with | (a, _) => a != k)
+
+theorem upd_lookup (m : List (Nat × Nat)) (k v : Nat) :
+    lookup (upd m k v) k = some v := by simp [upd, lookup]
+
+-- Witness: `upd_lookup` is non-degenerate (overwrite and unrelated keys).
+example : lookup (upd [(1, 2)] 0 9) 0 = some 9 := rfl
+
+example : lookup (upd [(1, 2)] 1 9) 0 = none := rfl
+
+/-- The `n`-th element of a list. -/
+def nth : List α → Nat → Option α
+  | [], _ => none
+  | x :: _, 0 => some x
+  | _ :: xs, n + 1 => nth xs n
+
+/-- Replay one core: loads read candidate values, `stReg` and `dep` flow on.
+    Returns the final register file plus the `stReg` write values. -/
+def replayCore : List LitInstr → List (Option Nat) → List (Nat × Nat) → List (Nat × Nat) → List (Nat × Nat) → List (Nat × Nat) → (List (Nat × Nat) × List (Nat × Nat))
+  | [], _, regs, wr, _, _ => (regs, wr)
+  | _, [], regs, wr, _, _ => (regs, wr)
+  | i :: is, e :: es, regs, wr, rv, copies =>
+    match i with
+    | .ld dst _ _ => match e with
+      | some eid => replayCore is es (upd regs dst ((lookup rv eid).getD 0)) wr rv copies
+      | none => replayCore is es regs wr rv copies
+    | .stReg _ src _ =>
+      let v := (lookup regs src).getD 0
+      match e with
+      | some eid => replayCore is es regs (wr ++ [(eid, v)]) rv copies
+      | none => replayCore is es regs wr rv copies
+    | .dep _ _ _ => match copies with
+      | (src, dst) :: rest => replayCore is es (upd regs dst ((lookup regs src).getD 0)) wr rv rest
+      | [] => replayCore is es regs wr rv []
+    | _ => replayCore is es regs wr rv copies
+
+def fstOf : List (Nat × Nat) × List (Nat × Nat) → List (Nat × Nat)
+  | (x, _) => x
+
+def sndOf : List (Nat × Nat) × List (Nat × Nat) → List (Nat × Nat)
+  | (_, y) => y
+
+/-- Per-core elaboration data zipped together for the replay. -/
+def coreTriples (p : LitProg) (e : Elab) :
+    List ((List LitInstr × List (Option Nat)) × List (Nat × Nat)) :=
+  (p.cores.zip e.evOf).zip e.copies
+
+def corePair (t : (List LitInstr × List (Option Nat)) × List (Nat × Nat))
+    (rv : List (Nat × Nat)) : List (Nat × Nat) × List (Nat × Nat) :=
+  match t with
+  | ((is, ev), cp) => replayCore is ev [] [] rv cp
+
+/-- Candidate writes for read `r`: every write at the read's location. -/
+def rfCands (e : Elab) (r : Nat) : List Nat :=
+  match lookup e.locOf r with
+  | some l => writesAtLoc e l
+  | none => []
+
+/-- All `rf` assignments as `(write, read)` pairs, one write per read. -/
+def rfCombos (e : Elab) : List (List (Nat × Nat)) :=
+  (choices (e.reads.map fun r => rfCands e r)).map fun ws => ws.zip e.reads
+
+/-- An initial write of the elaboration (core `nCores` marks init events). -/
+def isInitWrite (e : Elab) (wid : Nat) : Bool :=
+  lookup e.coreOf wid == some e.nCores
+
+/-- Total `co` orders at one location: the initial write first, then any order. -/
+def coOrdersLoc (e : Elab) (l : Nat) : List (List Nat) :=
+  let ws := writesAtLoc e l
+  match ws.filter (isInitWrite e) with
+  | [iw] => (perms (ws.filter fun w => !(isInitWrite e w))).map fun p => iw :: p
+  | _ => perms ws
+
+/-- All `co` relations: one total order per location, concatenated. -/
+def coCombos (e : Elab) (locs : List Nat) : List Rel :=
+  (choices (locs.map fun l => coOrdersLoc e l)).map fun orders => orders.flatMap prefixPairs
+
+/-- Apply read values and `stReg` write values of one candidate to the events. -/
+def applyVals (evs : List Ev) (vals : List (Nat × Nat)) : List Ev :=
+  evs.map fun v => match lookup vals v.id with
+    | some x => { v with val := x }
+    | none => v
+
+/-- `stReg` write values of one candidate (register replay over `rv`). -/
+def replayStores (p : LitProg) (e : Elab) (rv : List (Nat × Nat)) : List (Nat × Nat) :=
+  (coreTriples p e).flatMap fun t => sndOf (corePair t rv)
+
+/-- Build one candidate `Exec`: values filled in, `rmw` empty (no exclusives). -/
+def mkExec (p : LitProg) (e : Elab) (rf : List (Nat × Nat)) (co : Rel) : Exec :=
+  let rv := rf.map fun q => match q with | (w, r) => (r, (lookup e.valOf w).getD 0)
+  let vals := rv ++ replayStores p e rv
+  { evs := applyVals e.evs vals, po := e.po, addr := e.addr, data := e.data, ctrl := e.ctrl, rf := rf, co := co, rmw := [] }
+
+/-- All candidate executions: every `rf` times every total `co` per location. -/
+def candidates (p : LitProg) : List Exec :=
+  let e := elabProg p
+  (rfCombos e).flatMap fun rf => (coCombos e (allLocs p)).map fun co => mkExec p e rf co
+
+/-- Final register files of one candidate execution. -/
+def execRegs (p : LitProg) (e : Elab) (x : Exec) : List (List (Nat × Nat)) :=
+  let rv := x.evs.map fun v => (v.id, v.val)
+  (coreTriples p e).map fun t => fstOf (corePair t rv)
+
+/-- Value of event `i` in `evs`. -/
+def evVal (evs : List Ev) (i : Nat) : Option Nat :=
+  (evs.find? fun v => v.id == i).map fun v => v.val
+
+/-- The `co`-last write at each location determines final memory. -/
+def coLast (co : Rel) (ws : List Nat) : Option Nat :=
+  ws.find? fun w => !(ws.any fun v => co.contains (w, v))
+
+def memVals (e : Elab) (co : Rel) (evs : List Ev) (locs : List Nat) : List (Nat × Nat) :=
+  locs.map fun l => match coLast co (writesAtLoc e l) with
+    | some w => (l, (evVal evs w).getD 0)
+    | none => (l, 0)
+
+/-- A final outcome: register and memory values. -/
+structure Outcome where
+  regs : List (Nat × Nat × Nat)
+  mem : List (Nat × Nat)
+  deriving DecidableEq, Repr
+
+def atomHoldReg (got : List (List (Nat × Nat))) : Nat × Nat × Nat → Bool
+  | (c, r, v) => match nth got c with
+    | some rf => lookup rf r == some v
+    | none => false
+
+def atomHoldMem (got : List (Nat × Nat)) : Nat × Nat → Bool
+  | (l, v) => lookup got l == some v
+
+/-- The outcome holds on the candidate execution. -/
+def outcomeHolds (p : LitProg) (e : Elab) (x : Exec) (o : Outcome) : Bool :=
+  ((o.regs.all fun t => atomHoldReg (execRegs p e x) t) && (o.mem.all fun q => atomHoldMem (memVals e x.co x.evs (allLocs p)) q))
+
+/-- The litmus verdict: `allowed` iff some `cons`-consistent candidate reaches it. -/
+inductive Verdict where
+  | allowed | forbidden
+  deriving DecidableEq, Repr
+
+def checkOutcome (cons : Exec → Bool) (p : LitProg) (o : Outcome) : Verdict :=
+  let e := elabProg p
+  if (candidates p).any fun x => cons x && outcomeHolds p e x o then .allowed else .forbidden
+
+-- The empty program has exactly one (empty) candidate.
+example : (candidates { cores := [], init := [], final := [] }).length = 1 := rfl
+
+-- A single store: no reads, one candidate, writes are init then the store.
+def singleStore : LitProg :=
+  { cores := [[.st 0 1 .plain]], init := [], final := [] }
+
+example : (elabProg singleStore).reads = [] := rfl
+
+example : (elabProg singleStore).writes = [0, 1] := rfl
+
+example : (candidates singleStore).length = 1 := rfl
+
+#print axioms upd_lookup
+
 end Arm.Lit
 
 /-
