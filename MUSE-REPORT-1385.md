@@ -1,9 +1,12 @@
 # MUSE-REPORT-1385: GabbroV bridge — the shared-atomic rely
 
 Lane 1385, clone `/home/simon/Dokumente/gabbro-muse/a1385`, branch `muse/1385`
-(verified: `.git/HEAD` = `ref: refs/heads/muse/1385`). Status: **UNMEASURED**
-(Lean verification blocked, see §5). No push (lane rule). No other agent/model
-calls.
+(verified: `.git/HEAD` = `ref: refs/heads/muse/1385`). Status: **GREEN**
+(`./lean-probe`: `== 0 error(s)`, exit 0; `./lean-bau`: `== exit 0;
+0 error line(s)`, `Build completed successfully (718 jobs)`; all theorems on
+exactly `propext, Classical.choice, Quot.sound`). No push (lane rule). No
+other agent/model calls. Independent review 1386 (REPAIR) findings below are
+all resolved in this turn.
 
 ## 1. Task
 
@@ -18,7 +21,7 @@ read whose result steers a branch.
 
 ## 2. What was done
 
-NEW FILE `grammatik/Grammatik/X86/GvAtomRely.lean` (148 lines) in namespace
+NEW FILE `grammatik/Grammatik/X86/GvAtomRely.lean` (~180 lines) in namespace
 `Gabbro.Grammatik.X86.GvAtomRely`, plus one import line
 `import Grammatik.X86.GvAtomRely` appended to `grammatik/Grammatik.lean`.
 No other existing file touched. No new interpreter: `execEndHA`/`HavocA` are
@@ -49,7 +52,18 @@ New theorems (all premises used by their proofs):
 - `gv_rely_braucht_atomfreiheit : ¬ ∀ ws f, KoerperGutS hP 0 … f →
   KoerperGutSA hP 0 … (GeteiltA hP ws) f` — the precise obstruction: without
   atomic-freedom the transfer FAILS. Proof: instantiate with `hws`,
-  `NFn.zaehlB`, `hP_seq 0`; `hP_rely_nicht` closes it.
+  `NFn.zaehlB`, `hP_seq 0`; `hP_rely_nicht` closes it. All `hP`-family names
+  are qualified as `AtomarXZeuge.*` and `nD`-family names as `NIZeuge.*`
+  (`nS` as `SchwachZeuge.nS`): bare `hP` resolves to `Gabbro.Grammatik.hP`
+  (`RufMaschineG.lean`, over `rufDF`), not the atomic fixture — that
+  shadowing caused 9 of the 12 first-measurement errors (found by measuring,
+  fixed by qualifying).
+
+Helper theorems (each proved, each with `#print axioms`):
+
+- `gv_104_ohne_atomar` — no atomic global on 104 (`fun g => nomatch g`).
+- `gv_104_einzahlen_schreibt` — `einzahlen` writes `Konto` (`by decide`
+  through `D.signatur`/`gSig_einzahlen`).
 
 Witnesses (joint premises + non-degeneracy, per rule 13):
 
@@ -86,30 +100,41 @@ Duty construction for atomic-bearing units from `Pflichten src` (stays with
 `bruecke/`, atomic-free only); per-access x86-TSO refinement into W/GX;
 payload hand-off. See file CUTS.
 
-## 5. Blocker (why UNMEASURED)
+## 5. Measurement and repair history (was: blocker)
 
-`./lean-probe grammatik/Grammatik/X86/GvAtomRely.lean` was run FOUR times via
-the queued wrapper (10 min, 60 min, 30 min, 20 min timeouts; ~120 min total):
-**zero output every time** — each run killed while waiting inside the shared
-`lean-slot`; no error line, no `== N error(s)` line, no olean produced
-(`grammatik/.lake/build/**/*GvAtomRely*` absent afterwards). Warm cache
-present (`grammatik/.lake/build/` exists). This is slot congestion (or a
-stuck holder) across the ~15 live lanes, not a build result. NOTHING in the
-new module is therefore claimed green: no `./lean-probe` first line and no
-`./lean-bau` result line exist for it. Every proof step above is documented
-against its accepted source so the exact-candidate reviewer can check it
-once the slot clears. The module plus the one `Grammatik.lean` import line
-were committed UNVERIFIED so that the reviewer reads exactly what was
-written (dispatcher requires a clean tree); no green is claimed for them.
+First measurement (this turn, after the slot drained): `./lean-probe`
+returned `== 12 error(s)`, all real, all in the candidate, all fixed:
+
+- **9 errors: `hP` shadowing.** Bare `hP` resolved to `Gabbro.Grammatik.hP`
+  (`RufMaschineG.lean:3692`, over `rufDF`), not `AtomarXZeuge.hP` (over
+  `nD`): enclosing-namespace resolution beats `open`. Fixed by qualifying
+  every fixture name (`AtomarXZeuge.*`, `NIZeuge.*`, `SchwachZeuge.nS`) and
+  dropping the three fixture namespaces from `open`. Review 1386 finding
+  3(a) (`(D := nD)` explicit) applied at the same time.
+- **3 errors: 104-witness tuple cascade.** The `by decide` inside the 4-tuple
+  poisoned the anonymous constructor (`And.intro … only 1 was provided` plus
+  kernel metavariables). Fixed by splitting the `nomatch` and `decide` parts
+  into standalone helper theorems (`gv_104_ohne_atomar`,
+  `gv_104_einzahlen_schreibt`), which also closes review 1386 finding 2
+  (explicit `TraegerSchreibt … = true` conjunct for 104, proved by `decide`
+  through `gSig_einzahlen.schreibt`, constantly `true`).
+
+After the fix: `./lean-probe …` → `== 0 error(s)`, exit 0, all seven
+theorems on exactly `propext, Classical.choice, Quot.sound` (the two
+`decide` helpers on just `propext`); `./lean-bau` → `== exit 0;
+0 error line(s)`, `Build completed successfully (718 jobs)`. No `sorry`/
+`admit`/`axiom`/`native_decide`/`unsafe` anywhere; `#print axioms` on all
+seven theorems. Earlier history: four `./lean-probe` attempts (~120 min)
+and one reviewer attempt (30 min) returned zero output in the congested
+shared `lean-slot` — apparatus congestion, not a build result.
 
 ## 6. Commit state
 
 - `MUSE-REPORT-1385.md`: this file (committed).
-- `grammatik/Grammatik/X86/GvAtomRely.lean` (148 lines, §2) plus the one
-  `import Grammatik.X86.GvAtomRely` line in `grammatik/Grammatik.lean`:
-  committed as the exact review candidate, UNMEASURED (see §5). No other
-  existing file touched. No `sorry`/`admit`/`axiom`/`native_decide` anywhere
-  in the candidate.
+- `grammatik/Grammatik/X86/GvAtomRely.lean` (now ~180 lines: §2 plus the two
+  helpers) plus the one `import Grammatik.X86.GvAtomRely` line in
+  `grammatik/Grammatik.lean`: committed GREEN (probe 0 errors, bau exit 0,
+  standard axioms). No other existing file touched.
 
 ## 7. Assessment of the task
 
