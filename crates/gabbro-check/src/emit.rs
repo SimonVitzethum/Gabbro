@@ -2640,6 +2640,17 @@ pub fn emittiere_mit(
                 TypExpr::Index { tabelle, optional: true, .. } => {
                     option_wert(&st.wert, &tabelle.text, &namen, absagen)
                 }
+                // **A `static mut anhalten : bool = false;`** (SPRACHE-EFFIZIENZ F-bool, 2026-10-07).
+                // The checker accepted it (`M135` takes `false`/`true` for `bool`) and the
+                // emitter answered *"`static` with a non-constant initialiser"* -- for a
+                // literal. The only workaround was a whole `u32` flag. `true` and `false`
+                // ARE C constants, and the cell is the `bool` the slot fields already use
+                // (`tyFits .bool`, `CSpeicher.lean`); no new form is invented.
+                TypExpr::Bool(_) => match &st.wert.art {
+                    ExprArt::Wahr => Some("true".to_string()),
+                    ExprArt::Falsch => Some("false".to_string()),
+                    _ => None,
+                },
                 _ => None,
             };
             let w = match anfang {
@@ -6828,6 +6839,21 @@ fn atom_refusal(a: &gabbro_syntax::ast::AtomicDecl, u: &Namen) -> &'static str {
 /// (`gabbro_widen_1_M`), and the length word governs every read, so the
 /// spare byte is never observed. A max of zero never arises from a
 /// declaration (`N486` refuses it).
+/// **The C word of a string's length word: the narrowest unsigned one that holds `max`**
+/// (SPRACHE-EFFIZIENZ R1, 2026-10-07). Until then every `gabbro_string_N` paid a
+/// `uint32_t len` plus alignment padding -- a 5-byte string cost 12 bytes. The Lean model
+/// (`ZeichenfolgeC.lean`, `CString`) keeps `len` as a `Nat` below `max` and states no width,
+/// so no statement moves; the width is the emitter's, and `lenof` widens back at the read.
+fn ketten_laengenwort(max: u128) -> &'static str {
+    if max <= u128::from(u8::MAX) {
+        "uint8_t"
+    } else if max <= u128::from(u16::MAX) {
+        "uint16_t"
+    } else {
+        "uint32_t"
+    }
+}
+
 fn ktyp(max: u128) -> String {
     format!("gabbro_string_{}", max.max(1))
 }
@@ -7071,7 +7097,8 @@ fn ketten_abschnitt(aus: &str, rumpf: &str) -> String {
     );
     for n in &typen {
         s.push_str(&format!(
-            "typedef struct {{ uint32_t len; uint8_t data[{n}]; }} gabbro_string_{n};\n",
+            "typedef struct {{ {} len; uint8_t data[{n}]; }} gabbro_string_{n};\n",
+            ketten_laengenwort(*n),
         ));
     }
     if alles.contains("gabbro_streq(") {
@@ -18227,7 +18254,10 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
                 // the checker proved every index against it (`N454`), and
                 // the word is what the layout carries.
                 if o.suffixe.is_empty() && ist_kettenname(&o.basis.text, u) {
-                    return format!("{}.len", o.basis.text);
+                    // The length word is stored at the narrowest unsigned width its max
+                    // needs (`ketten_laengenwort`); READING it widens back to `uint32_t`, so
+                    // every expression around `lenof` does the arithmetic it always did.
+                    return format!("((uint32_t){}.len)", o.basis.text);
                 }
                 match ort_typ(o, u).as_ref().and_then(|t| feldlaenge_von(t, u)) {
                     Some(n) => format!("{n}u"),

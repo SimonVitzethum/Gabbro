@@ -3016,7 +3016,7 @@ pub const M1: &[Satz] = &[
         vorbehalt: "The number 65535 is the lowering's decision, not the model's: \
                     the Lean `BString max` takes any `max`. What the checker \
                     guarantees is only that an accepted max allocates -- the C \
-                    layout (`gabbro_string_N`: `uint32_t len` plus `uint8_t \
+                    layout (`gabbro_string_N`: `len` (narrowest unsigned word) plus `uint8_t \
                     data[N]`, no NUL terminator) is booked beside the emitter.",
         stand: Satzstand::Gemessen,
         gemessen_an: "beispiele/gift, plain `-- erwartet:` form: `1211` (a max \
