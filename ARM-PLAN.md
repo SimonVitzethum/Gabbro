@@ -79,3 +79,13 @@ model, not only `arm/`; their tools: `./cargo-pruef-check` (checker crates only)
 checker (ranged integers, contracts, `requires`/`ensures`) are used to remove checks and enable
 optimisation, and every use is validated in the final-byte validator. Targets are open until
 measured; no all-programs claim. Measure per workload with matched ISA, semantics and settings.
+
+## Snapdragon and vendor neutrality (Simon, 2026-10-07)
+
+The hardware model must also hold on a Qualcomm Snapdragon CPU (Simon will have a device soon). Same
+rule as the x86 vendor neutrality: the model is the Arm architecture (Armv9-A), not one
+implementation. Whatever the Arm ARM calls IMPLEMENTATION DEFINED or UNPREDICTABLE stays FREE (all
+allowed results, never one observed value). Implemented extensions (`FEAT_*`) are a named PROFILE
+as data (a Snapdragon-X profile from the documented features, confidence-marked); Gabbro code may
+use only instructions inside the chosen profile. A differential test against the real device
+comes after the model is finished; until then `qemu-aarch64` covers instruction semantics only.
