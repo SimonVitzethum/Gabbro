@@ -141,6 +141,84 @@ theorem needsAlign_acquire : needsAlign .acquire false = true := by decide
 
 theorem needsAlign_excl : needsAlign .plain true = true := by decide
 
+/-- Tiny sequential fixture: GPRs (31 is SP), PC, V regs as 128-bit Nats,
+    NZCV, and byte memory as `Nat → Nat` keyed by the address value.
+    Memory values are masked to bytes on every access. -/
+structure Regs where
+  gpr : Nat → BitVec 64
+  pc : BitVec 64
+  vpr : Nat → Nat
+  nzcv : BitVec 4
+
+structure State where
+  regs : Regs
+  mem : Nat → Nat
+
+/-- Little-endian byte assembly: the value a `Mem_read` of `n` bytes at
+    `base` returns. Sail assembles bytes little-endian for the
+    non-big-endian case (`Mem_read__2`: `BigEndianReverse` only under
+    `BigEndian`; GPR accesses are little-endian).
+    -- Sail: v8_base.sail:28178 (`Mem_read__2`). -/
+def loadNat (mem : Nat → Nat) (base : Nat) : Nat → Nat
+  | 0 => 0
+  | n + 1 => mem (base % 2 ^ 64) % 256 + 256 * loadNat mem (base + 1) n
+
+/-- Point update of a `Nat`-indexed table. -/
+def upd {α : Type} (f : Nat → α) (k : Nat) (v : α) : Nat → α :=
+  fun i => if i == k then v else f i
+
+/-- Little-endian byte scatter: the memory a `Mem_set` of `n` bytes at
+    `base` leaves behind.
+    -- Sail: v8_base.sail:28260 (`Mem_set__2`). -/
+def storeNat (mem : Nat → Nat) (base : Nat) (val : Nat) (n : Nat) : Nat → Nat :=
+  match n with
+  | 0 => mem
+  | m + 1 =>
+    storeNat (upd mem (base % 2 ^ 64) (val % 256)) (base + 1) (val / 256) m
+
+/-- Run one `Eff` program on the fixture with bounded fuel. `rdMem`/`wrMem`
+    go through the little-endian byte memory; `raise` (data abort,
+    alignment, undefined) is `none`. Named system registers and barriers
+    are out of scope for the load/store lane: `rdSys`/`wrSys` refuse
+    (`none`), barriers step over. -/
+def runEff : Nat → Eff α → State → Option (α × State)
+  | 0, _, _ => none
+  | fuel + 1, .ret a, s => some (a, s)
+  | fuel + 1, .rdX n k, s => runEff fuel (k (s.regs.gpr n)) s
+  | fuel + 1, .wrX n v k, s =>
+    runEff fuel k { s with regs := { s.regs with gpr := upd s.regs.gpr n v } }
+  | fuel + 1, .rdV n k, s =>
+    runEff fuel (k (BitVec.ofNat 128 (s.regs.vpr n))) s
+  | fuel + 1, .wrV n v k, s =>
+    runEff fuel k { s with regs := { s.regs with vpr := upd s.regs.vpr n v.toNat } }
+  | fuel + 1, .rdPC k, s => runEff fuel (k s.regs.pc) s
+  | fuel + 1, .wrPC v k, s =>
+    runEff fuel k { s with regs := { s.regs with pc := v } }
+  | fuel + 1, .rdNZCV k, s => runEff fuel (k s.regs.nzcv) s
+  | fuel + 1, .wrNZCV v k, s =>
+    runEff fuel k { s with regs := { s.regs with nzcv := v } }
+  | fuel + 1, .rdMem a k, s =>
+    runEff fuel (k (loadNat s.mem a.addr.toNat a.size)) s
+  | fuel + 1, .wrMem a v k, s =>
+    runEff fuel k { s with mem := storeNat s.mem a.addr.toNat v a.size }
+  | fuel + 1, .bar _ k, s => runEff fuel k s
+  | _, _, _ => none
+
+/-- All-zero machine: every register and every byte reads 0. -/
+def s0 : State :=
+  { regs :=
+      { gpr := fun _ => BitVec.ofNat 64 0
+        pc := BitVec.ofNat 64 0
+        vpr := fun _ => 0
+        nzcv := BitVec.ofNat 4 0 }
+    mem := fun _ => 0 }
+
+/-- No translation fault anywhere. -/
+def cfgNoFault : MemCfg := ⟨fun _ _ => false⟩
+
+/-- Every access faults in translation. -/
+def cfgFault : MemCfg := ⟨fun _ _ => true⟩
+
 end Arm
 
 /-

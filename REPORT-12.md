@@ -29,6 +29,12 @@ Skeleton of `arm/Arm/Isa/Addr.lean` is green.
   `memReadEff`/`memWriteEff` (Sail `v8_base.sail:28178`/`28260`) with
   `decide` theorems `needsAlign_plain`, `needsAlign_acquire`,
   `needsAlign_excl`.
+- Extended `Addr.lean`: the tiny sequential fixture `Regs`/`State`,
+  little-endian `loadNat`/`storeNat` (Sail `v8_base.sail:28178`/`28260`),
+  the fuel-bounded interpreter `runEff` (`raise` is `none`,
+  `rdSys`/`wrSys` refuse, barriers step over), fixtures `s0`,
+  `cfgNoFault`, `cfgFault`, and the helper `upd` (`Function.update` does
+  not exist in this toolchain).
 - Warmed the build once with `./arm-bau` (needed so `./arm-probe` resolves
   the `Arm.*` imports of a not-yet-imported new file).
 
