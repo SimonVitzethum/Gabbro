@@ -101,6 +101,45 @@ def xFullRecipe : IFExec :=
 theorem recipe_complete_sees_new :
     fetchSeesWrite xFullRecipe 0 6 = true := by decide
 
+/-- Planted case: the DC CVAU is missing (clean never happens). -/
+def xDropDc : IFExec :=
+  { evs := [⟨0, 0, .writeCode, 0#64⟩, ⟨1, 0, .dsb, 0#64⟩,
+            ⟨2, 0, .icIvau, 0#64⟩, ⟨3, 0, .dsb, 0#64⟩,
+            ⟨4, 0, .isb, 0#64⟩, ⟨5, 0, .fetch, 0#64⟩]
+    po := [(0, 1), (0, 2), (0, 3), (0, 4), (0, 5),
+           (1, 2), (1, 3), (1, 4), (1, 5),
+           (2, 3), (2, 4), (2, 5), (3, 4), (3, 5), (4, 5)] }
+
+/-- Without the clean a stale fetch is allowed. -/
+theorem drop_dc_allows_stale :
+    fetchSeesWrite xDropDc 0 5 = false := by decide
+
+/-- Planted case: the DSB between DC and IC is missing (clean not ordered). -/
+def xDropDsb1 : IFExec :=
+  { evs := [⟨0, 0, .writeCode, 0#64⟩, ⟨1, 0, .dcCvau, 0#64⟩,
+            ⟨2, 0, .icIvau, 0#64⟩, ⟨3, 0, .dsb, 0#64⟩,
+            ⟨4, 0, .isb, 0#64⟩, ⟨5, 0, .fetch, 0#64⟩]
+    po := [(0, 1), (0, 2), (0, 3), (0, 4), (0, 5),
+           (1, 2), (1, 3), (1, 4), (1, 5),
+           (2, 3), (2, 4), (2, 5), (3, 4), (3, 5), (4, 5)] }
+
+/-- Without the first DSB a stale fetch is allowed. -/
+theorem drop_dsb1_allows_stale :
+    fetchSeesWrite xDropDsb1 0 5 = false := by decide
+
+/-- Planted case: the IC IVAU is missing (stale line never invalidated). -/
+def xDropIc : IFExec :=
+  { evs := [⟨0, 0, .writeCode, 0#64⟩, ⟨1, 0, .dcCvau, 0#64⟩,
+            ⟨2, 0, .dsb, 0#64⟩, ⟨3, 0, .dsb, 0#64⟩,
+            ⟨4, 0, .isb, 0#64⟩, ⟨5, 0, .fetch, 0#64⟩]
+    po := [(0, 1), (0, 2), (0, 3), (0, 4), (0, 5),
+           (1, 2), (1, 3), (1, 4), (1, 5),
+           (2, 3), (2, 4), (2, 5), (3, 4), (3, 5), (4, 5)] }
+
+/-- Without the invalidate a stale fetch is allowed. -/
+theorem drop_ic_allows_stale :
+    fetchSeesWrite xDropIc 0 5 = false := by decide
+
 end Arm
 
 /-
