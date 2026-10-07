@@ -268,6 +268,59 @@ def exStpPre : Eff (BitVec 64) := do
 theorem exStpPre_ok :
     (runEff 80 exStpPre sPair).map Prod.fst = some (BitVec.ofNat 64 144) := by decide
 
+/-- Ordered single-copy (`LDAR`/`STLR`, byte/half/word/doubleword): no
+    offset and no writeback; the load carries `AccOrd.acquire`, the store
+    `AccOrd.release`, and both fault when misaligned. Ordered loads always
+    zero-extend (Sail has no signed ordered single-copy form).
+    -- Sail: instrs64.sail:28426. -/
+def ldarStlr (cfg : MemCfg) (isLoad : Bool) (datasize regsize : Nat)
+    (n t : Nat) : Eff Unit := do
+  if n == 31 then checkSP else pure ()
+  let addr ← rdBase n
+  if isLoad then
+    let v ← memReadEff cfg addr (datasize / 8) .acquire false
+    wrBase t (extVal v datasize regsize false)
+  else
+    let rv ← rdBase t
+    memWriteEff cfg addr (datasize / 8) .release false (rv.toNat % 2 ^ datasize)
+
+/-- `LDAPR` (RCpc): like `LDAR` with `AccOrd.acquirePC`.
+    -- Sail: instrs64.sail:27312 (`execute_..._ordered_rcpc`). -/
+def ldapr (cfg : MemCfg) (datasize regsize : Nat) (n t : Nat) : Eff Unit := do
+  if n == 31 then checkSP else pure ()
+  let addr ← rdBase n
+  let v ← memReadEff cfg addr (datasize / 8) .acquirePC false
+  wrBase t (extVal v datasize regsize false)
+
+/-- `STLR W0, [X1]` then `LDAR W2, [X1]`: the word round-trips. -/
+def exLdar : Eff (BitVec 64) := do
+  ldarStlr cfgNoFault false 32 32 1 0
+  ldarStlr cfgNoFault true 32 32 1 2
+  rdBase 2
+
+theorem exLdar_ok :
+    (runEff 60 exLdar sLS).map Prod.fst
+      = some (BitVec.ofNat 64 2864434397) := by decide
+
+/-- `STLR X0, [X1]` then `LDAPR X3, [X1]`: the doubleword round-trips. -/
+def exLdapr : Eff (BitVec 64) := do
+  ldarStlr cfgNoFault false 64 64 1 0
+  ldapr cfgNoFault 64 64 1 3
+  rdBase 3
+
+theorem exLdapr_ok :
+    (runEff 60 exLdapr sLS).map Prod.fst
+      = some (BitVec.ofNat 64 2864434397) := by decide
+
+/-- Fixture: as `sLS` but the base X1 is 66 (misaligned for words). -/
+def gprOdd : Nat → BitVec 64 := upd gprLS 1 (BitVec.ofNat 64 66)
+
+def sOdd : State := { s0 with regs := { s0.regs with gpr := gprOdd } }
+
+/-- A misaligned `LDAR` raises instead of reading. -/
+theorem exLdarMisaligned_refuses :
+    (runEff 60 (ldarStlr cfgNoFault true 32 32 1 2) sOdd).isNone = true := by decide
+
 end Arm
 
 /-

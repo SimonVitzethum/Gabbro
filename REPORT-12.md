@@ -61,6 +61,10 @@ Skeleton of `arm/Arm/Isa/Addr.lean` is green.
   `:31505`) with fixture `gprPair`/`sPair` and `decide` theorems
   `exStpLdp_ok`, the planted order wrong case `exStpLdp_notSwapped`,
   `exStpPre_ok`.
+- Extended `LoadStore.lean`: `ldarStlr` (Sail `instrs64.sail:28426`)
+  and `ldapr` (Sail `instrs64.sail:27312`) with fixture `gprOdd`/`sOdd`
+  and `decide` theorems `exLdar_ok`, `exLdapr_ok`,
+  `exLdarMisaligned_refuses`.
 - Apparatus note: Lean ends an application at a newline when the
   continuation is not indented past the application start, so a field
   value split across lines (`gpr :=` newline `upd ...`) misparses;
