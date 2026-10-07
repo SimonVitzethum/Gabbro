@@ -1091,4 +1091,1008 @@ def sseMemDstX : SseMemOp → Option XmmReg
   | .palignrRW dst _ _ => some dst
   | _ => none
 
+/-! ## 5. Machine adapter: the XMM family on the coherent machine.
+
+  The producer plug instantiates `HwAdapter SseMemDec`. Memory
+  sources load through the accepted `sseMemLade` TSO events at the
+  `adrEff` address (with the #GP gate beside the load); REX.W
+  register forms reuse the accepted lane values on the pre-state
+  XMM file. MMX forms admit no step (`none`): the coherent
+  `HwKern` carries no MMX file, so there is no state to move
+  (see CUTS for the maintainer hook). -/
+
+/-- Advance RIP on an extended state (variable target, exactly like
+    the `stepSseThree` successor updates). -/
+def sseMemNachKern (t : FpZustand) (l : Nat) : Zustand :=
+  { t.kern with rip := ripNach t.kern.rip l }
+
+/-- Install a successor XMM value with advanced RIP. -/
+def sseMemNach (t : FpZustand) (l : Nat) (x : XmmDatei) : FpZustand :=
+  { t with kern := sseMemNachKern t l, xmm := x }
+
+/-- The new-forms plug: one checked family event step on the
+    coherent machine. `none` = refusal, never a silent successor. -/
+def adapterSseMem : HwAdapter SseMemDec :=
+  ⟨fun m c d =>
+    match laengeOk d.laenge with
+    | false => none
+    | true =>
+      match vecEintritt (m.bereit c) with
+      | false => none
+      | true =>
+        match d.op with
+        | .pshufbRM w dst f =>
+          match sseMemGp (.pshufbRM w dst f)
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f),
+            sseMemLade (tsoAnsicht m) c
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | false, some v =>
+            some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst
+                (vecPshufb ((projFp m c).xmm dst) v))))
+          | _, _ => none
+        | .pabsBRM w dst f =>
+          match sseMemGp (.pabsBRM w dst f)
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f),
+            sseMemLade (tsoAnsicht m) c
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | false, some v =>
+            some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst (vecPabs .b8 v))))
+          | _, _ => none
+        | .pabsWRM w dst f =>
+          match sseMemGp (.pabsWRM w dst f)
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f),
+            sseMemLade (tsoAnsicht m) c
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | false, some v =>
+            some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst (vecPabs .b16 v))))
+          | _, _ => none
+        | .pabsDRM w dst f =>
+          match sseMemGp (.pabsDRM w dst f)
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f),
+            sseMemLade (tsoAnsicht m) c
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | false, some v =>
+            some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst (vecPabs .b32 v))))
+          | _, _ => none
+        | .palignrRM w dst f imm =>
+          match sseMemGp (.palignrRM w dst f imm)
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f),
+            sseMemLade (tsoAnsicht m) c
+              (adrEff (projFp m c).kern
+                (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | false, some v =>
+            some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst
+                (vecPalignr ((projFp m c).xmm dst) v imm))))
+          | _, _ => none
+        | .pshufbRW dst src =>
+          some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst
+              (vecPshufb ((projFp m c).xmm dst) ((projFp m c).xmm src)))))
+        | .pabsBRW dst src =>
+          some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst
+              (vecPabs .b8 ((projFp m c).xmm src)))))
+        | .pabsWRW dst src =>
+          some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst
+              (vecPabs .b16 ((projFp m c).xmm src)))))
+        | .pabsDRW dst src =>
+          some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst
+              (vecPabs .b32 ((projFp m c).xmm src)))))
+        | .palignrRW dst src imm =>
+          some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge (xmmSet (projFp m c).xmm dst
+              (vecPalignr ((projFp m c).xmm dst)
+                ((projFp m c).xmm src) imm))))
+        | _ => none⟩
+
+/-- Re-embedding any successor core view preserves
+    well-formedness (profiles untouched). -/
+theorem setKernVonFp_wf (m : HwMaschine) (c : Nat) (t' : FpZustand)
+    (hwf : HwWf m) : HwWf (setKernVonFp m c t') := by
+  unfold setKernVonFp
+  exact setKernDaten_wf _ _ _ hwf
+
+/-- Every successful adapter step re-embeds one successor core
+    view: only core data moves. -/
+theorem adapterSseMem_form (m : HwMaschine) (c : Nat)
+    (d : SseMemDec) (m' : HwMaschine)
+    (h : (adapterSseMem).schritt m c d = some m') :
+    ∃ t' : FpZustand, m' = setKernVonFp m c t' := by
+  unfold adapterSseMem at h
+  simp only at h
+  cases hlen : laengeOk d.laenge with
+  | false => simp [hlen] at h
+  | true =>
+    simp only [hlen] at h
+    cases hfp : vecEintritt (m.bereit c) with
+    | false => simp [hfp] at h
+    | true =>
+      simp only [hfp] at h
+      cases hop : d.op with
+      | pshufbRM w dst f =>
+        simp [hop] at h
+        cases hg : sseMemGp (.pshufbRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | pabsBRM w dst f =>
+        simp [hop] at h
+        cases hg : sseMemGp (.pabsBRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | pabsWRM w dst f =>
+        simp [hop] at h
+        cases hg : sseMemGp (.pabsWRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | pabsDRM w dst f =>
+        simp [hop] at h
+        cases hg : sseMemGp (.pabsDRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | palignrRM w dst f imm =>
+        simp [hop] at h
+        cases hg : sseMemGp (.palignrRM w dst f imm)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | pshufbRW dst src =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | pabsBRW dst src =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | pabsWRW dst src =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | pabsDRW dst src =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | palignrRW dst src imm =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | pshufbMM dst src =>
+        simp [hop] at h
+      | pabsBMM dst src =>
+        simp [hop] at h
+      | pabsWMM dst src =>
+        simp [hop] at h
+      | pabsDMM dst src =>
+        simp [hop] at h
+      | palignrMM dst src imm =>
+        simp [hop] at h
+      | pshufbMN dst f =>
+        simp [hop] at h
+      | pabsBMN dst f =>
+        simp [hop] at h
+      | pabsWMN dst f =>
+        simp [hop] at h
+      | pabsDMN dst f =>
+        simp [hop] at h
+      | palignrMN dst f imm =>
+        simp [hop] at h
+
+/-- Every adapter step preserves well-formedness. -/
+theorem adapterSseMem_wf (m : HwMaschine) (c : Nat)
+    (d : SseMemDec) (m' : HwMaschine) (hwf : HwWf m)
+    (h : (adapterSseMem).schritt m c d = some m') :
+    HwWf m' := by
+  obtain ⟨t', rfl⟩ := adapterSseMem_form m c d m' h
+  exact setKernVonFp_wf m c t' hwf
+
+/-- The successor keeps the shared memory and every buffer. -/
+theorem adapterSseMem_mem (m : HwMaschine) (c : Nat)
+    (d : SseMemDec) (m' : HwMaschine)
+    (h : (adapterSseMem).schritt m c d = some m') :
+    m'.mem = m.mem ∧ ∀ e : Nat, m'.puffer e = m.puffer e := by
+  obtain ⟨t', rfl⟩ := adapterSseMem_form m c d m' h
+  exact ⟨setKernVonFp_speicher _ _ _,
+    fun e => setKernVonFp_puffer _ _ _ e⟩
+
+/-- A bad decode length admits no adapter step. -/
+theorem adapterSseMem_verweigert_bei_laenge (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (h : laengeOk d.laenge = false) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp only [h]
+
+/-- Refused OS vector state admits no adapter step. -/
+theorem adapterSseMem_verweigert_bei_profil (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (hok : laengeOk d.laenge = true)
+    (h : vecEintritt (m.bereit c) = false) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp only [hok, h]
+
+/-- MMX forms admit no adapter step: no MMX file on the machine. -/
+theorem adapterSseMem_verweigert_mmx (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (h : sseMemDstX d.op = none) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp only
+  cases hlen : laengeOk d.laenge with
+  | false => rfl
+  | true =>
+    simp only
+    cases hfp : vecEintritt (m.bereit c) with
+    | false => rfl
+    | true =>
+      simp only
+      cases hop : d.op with
+      | pshufbRM w dst f => simp [hop, sseMemDstX] at h
+      | pabsBRM w dst f => simp [hop, sseMemDstX] at h
+      | pabsWRM w dst f => simp [hop, sseMemDstX] at h
+      | pabsDRM w dst f => simp [hop, sseMemDstX] at h
+      | palignrRM w dst f imm => simp [hop, sseMemDstX] at h
+      | pshufbRW dst src => simp [hop, sseMemDstX] at h
+      | pabsBRW dst src => simp [hop, sseMemDstX] at h
+      | pabsWRW dst src => simp [hop, sseMemDstX] at h
+      | pabsDRW dst src => simp [hop, sseMemDstX] at h
+      | palignrRW dst src imm => simp [hop, sseMemDstX] at h
+      | pshufbMM dst src =>
+        simp only [hop]
+      | pabsBMM dst src =>
+        simp only [hop]
+      | pabsWMM dst src =>
+        simp only [hop]
+      | pabsDMM dst src =>
+        simp only [hop]
+      | palignrMM dst src imm =>
+        simp only [hop]
+      | pshufbMN dst f =>
+        simp only [hop]
+      | pabsBMN dst f =>
+        simp only [hop]
+      | pabsWMN dst f =>
+        simp only [hop]
+      | pabsDMN dst f =>
+        simp only [hop]
+      | palignrMN dst f imm =>
+        simp only [hop]
+
+/-! ## 5b. Successor shape with the written value.
+
+  Every successful step embeds `sseMemNach` with the decoded
+  length: RIP advances past it, flags and GPRs are kept, exactly
+  one XMM register is written. The shape theorem below carries the
+  written value, so the frame theorems never re-case the decoder. -/
+
+/-- The successor advances RIP past the decoded length. -/
+theorem sseMemNach_rip (t : FpZustand) (l : Nat) (x : XmmDatei) :
+    (sseMemNach t l x).kern.rip = ripNach t.kern.rip l := rfl
+
+/-- The successor keeps the flags. -/
+theorem sseMemNach_flags (t : FpZustand) (l : Nat) (x : XmmDatei) :
+    (sseMemNach t l x).kern.flags = t.kern.flags := rfl
+
+/-- The successor installs the given XMM file. -/
+theorem sseMemNach_xmm (t : FpZustand) (l : Nat) (x : XmmDatei) :
+    (sseMemNach t l x).xmm = x := rfl
+
+/-- The successor keeps every GPR. -/
+theorem sseMemNach_gpr (t : FpZustand) (l : Nat) (x : XmmDatei)
+    (q : Register) :
+    (sseMemNach t l x).kern.register q = t.kern.register q := rfl
+
+/-- Every successful adapter step embeds `sseMemNach` with the
+    decoded length and some written XMM value. -/
+theorem adapterSseMem_formNach (m : HwMaschine) (c : Nat)
+    (d : SseMemDec) (m' : HwMaschine)
+    (h : (adapterSseMem).schritt m c d = some m') :
+    ∃ x : XmmDatei,
+      m' = setKernVonFp m c (sseMemNach (projFp m c) d.laenge x) := by
+  unfold adapterSseMem at h
+  simp only at h
+  cases hlen : laengeOk d.laenge with
+  | false => simp [hlen] at h
+  | true =>
+    simp only [hlen] at h
+    cases hfp : vecEintritt (m.bereit c) with
+    | false => simp [hfp] at h
+    | true =>
+      simp only [hfp] at h
+      cases hop : d.op with
+      | pshufbRM w dst f =>
+        simp [hop] at h
+        cases hg : sseMemGp (.pshufbRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | pabsBRM w dst f =>
+        simp [hop] at h
+        cases hg : sseMemGp (.pabsBRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | pabsWRM w dst f =>
+        simp [hop] at h
+        cases hg : sseMemGp (.pabsWRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | pabsDRM w dst f =>
+        simp [hop] at h
+        cases hg : sseMemGp (.pabsDRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | palignrRM w dst f imm =>
+        simp [hop] at h
+        cases hg : sseMemGp (.palignrRM w dst f imm)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at h
+        | false =>
+          simp only [hg] at h
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at h
+          | some v =>
+            simp only [hld] at h
+            cases h
+            exact ⟨_, rfl⟩
+      | pshufbRW dst src =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | pabsBRW dst src =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | pabsWRW dst src =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | pabsDRW dst src =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | palignrRW dst src imm =>
+        simp [hop] at h
+        cases h
+        exact ⟨_, rfl⟩
+      | pshufbMM dst src => simp [hop] at h
+      | pabsBMM dst src => simp [hop] at h
+      | pabsWMM dst src => simp [hop] at h
+      | pabsDMM dst src => simp [hop] at h
+      | palignrMM dst src imm => simp [hop] at h
+      | pshufbMN dst f => simp [hop] at h
+      | pabsBMN dst f => simp [hop] at h
+      | pabsWMN dst f => simp [hop] at h
+      | pabsDMN dst f => simp [hop] at h
+      | palignrMN dst f imm => simp [hop] at h
+
+/-! ## 5c. Step frames: RIP, flags, GPRs, other XMM registers.
+
+  Every successful step advances RIP past the decoded length,
+  preserves flags and GPRs, and keeps every non-destination XMM
+  register whole -- via the `formNach` shape, without re-casing
+  the decoder (only `fremd` names destinations). -/
+
+/-- Every step advances RIP past the decoded length. -/
+theorem stepSseMem_rip (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (m' : HwMaschine)
+    (hstep : (adapterSseMem).schritt m c d = some m') :
+    (m'.kerne c).rip = ripNach (m.kerne c).rip d.laenge := by
+  obtain ⟨x, rfl⟩ := adapterSseMem_formNach m c d m' hstep
+  simp [setKernVonFp, setKernDaten, sseMemNach, sseMemNachKern,
+    projFp, projZustand, sseMemNach_rip]
+
+/-- Every step preserves the flags. -/
+theorem stepSseMem_flags (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (m' : HwMaschine)
+    (hstep : (adapterSseMem).schritt m c d = some m') :
+    (m'.kerne c).flags = (m.kerne c).flags := by
+  obtain ⟨x, rfl⟩ := adapterSseMem_formNach m c d m' hstep
+  simp [setKernVonFp, setKernDaten, sseMemNach, sseMemNachKern,
+    projFp, projZustand, sseMemNach_flags]
+
+/-- Every step keeps every GPR. -/
+theorem stepSseMem_gpr (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (m' : HwMaschine) (q : Register)
+    (hstep : (adapterSseMem).schritt m c d = some m') :
+    (m'.kerne c).register q = (m.kerne c).register q := by
+  obtain ⟨x, rfl⟩ := adapterSseMem_formNach m c d m' hstep
+  simp [setKernVonFp, setKernDaten, sseMemNach, sseMemNachKern,
+    projFp, projZustand, sseMemNach_gpr]
+
+/-- Every step keeps every non-destination XMM register whole. -/
+theorem stepSseMem_fremd (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (m' : HwMaschine) (q : XmmReg)
+    (hstep : (adapterSseMem).schritt m c d = some m')
+    (hq : ∀ r : XmmReg, sseMemDstX d.op = some r → q ≠ r) :
+    (m'.kerne c).xmm q = (m.kerne c).xmm q := by
+  unfold adapterSseMem at hstep
+  simp only at hstep
+  cases hlen : laengeOk d.laenge with
+  | false => simp [hlen] at hstep
+  | true =>
+    simp only [hlen] at hstep
+    cases hfp : vecEintritt (m.bereit c) with
+    | false => simp [hfp] at hstep
+    | true =>
+      simp only [hfp] at hstep
+      cases hop : d.op with
+      | pshufbRM w dst f =>
+        simp [hop] at hstep
+        cases hg : sseMemGp (.pshufbRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at hstep
+        | false =>
+          simp only [hg] at hstep
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at hstep
+          | some v =>
+            simp only [hld] at hstep
+            cases hstep
+            have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+            simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+              projZustand]
+            exact xmmSet_fremd _ _ _ _ hqd
+      | pabsBRM w dst f =>
+        simp [hop] at hstep
+        cases hg : sseMemGp (.pabsBRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at hstep
+        | false =>
+          simp only [hg] at hstep
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at hstep
+          | some v =>
+            simp only [hld] at hstep
+            cases hstep
+            have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+            simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+              projZustand]
+            exact xmmSet_fremd _ _ _ _ hqd
+      | pabsWRM w dst f =>
+        simp [hop] at hstep
+        cases hg : sseMemGp (.pabsWRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at hstep
+        | false =>
+          simp only [hg] at hstep
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at hstep
+          | some v =>
+            simp only [hld] at hstep
+            cases hstep
+            have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+            simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+              projZustand]
+            exact xmmSet_fremd _ _ _ _ hqd
+      | pabsDRM w dst f =>
+        simp [hop] at hstep
+        cases hg : sseMemGp (.pabsDRM w dst f)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at hstep
+        | false =>
+          simp only [hg] at hstep
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at hstep
+          | some v =>
+            simp only [hld] at hstep
+            cases hstep
+            have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+            simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+              projZustand]
+            exact xmmSet_fremd _ _ _ _ hqd
+      | palignrRM w dst f imm =>
+        simp [hop] at hstep
+        cases hg : sseMemGp (.palignrRM w dst f imm)
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+        | true => simp [hg] at hstep
+        | false =>
+          simp only [hg] at hstep
+          cases hld : sseMemLade (tsoAnsicht m) c
+            (adrEff (projFp m c).kern
+              (ripNach (projFp m c).kern.rip d.laenge) f) with
+          | none => simp [hld] at hstep
+          | some v =>
+            simp only [hld] at hstep
+            cases hstep
+            have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+            simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+              projZustand]
+            exact xmmSet_fremd _ _ _ _ hqd
+      | pshufbRW dst src =>
+        simp [hop] at hstep
+        cases hstep
+        have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+        simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+          projZustand]
+        exact xmmSet_fremd _ _ _ _ hqd
+      | pabsBRW dst src =>
+        simp [hop] at hstep
+        cases hstep
+        have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+        simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+          projZustand]
+        exact xmmSet_fremd _ _ _ _ hqd
+      | pabsWRW dst src =>
+        simp [hop] at hstep
+        cases hstep
+        have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+        simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+          projZustand]
+        exact xmmSet_fremd _ _ _ _ hqd
+      | pabsDRW dst src =>
+        simp [hop] at hstep
+        cases hstep
+        have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+        simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+          projZustand]
+        exact xmmSet_fremd _ _ _ _ hqd
+      | palignrRW dst src imm =>
+        simp [hop] at hstep
+        cases hstep
+        have hqd : q ≠ dst := hq dst (by simp [sseMemDstX, hop])
+        simp [setKernVonFp, setKernDaten, sseMemNach, projFp,
+          projZustand]
+        exact xmmSet_fremd _ _ _ _ hqd
+      | pshufbMM dst src =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+      | pabsBMM dst src =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+      | pabsWMM dst src =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+      | pabsDMM dst src =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+      | palignrMM dst src imm =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+      | pshufbMN dst f =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+      | pabsBMN dst f =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+      | pabsWMN dst f =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+      | pabsDMN dst f =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+      | palignrMN dst f imm =>
+        simp [adapterSseMem, hlen, hfp, hop] at hstep
+
+/-! ## 5d. Agreement: the adapter runs the accepted lane values.
+
+  Each equation states the successor XMM value exactly as the
+  accepted `vecPshufb`/`vecPabs`/`vecPalignr` applied to the
+  pre-state destination and the forwarded source (memory) or the
+  pre-state source register (REX.W); the #GP gate and the load
+  gate stand beside the run as planted refusals. -/
+
+/-- `pshufb` with a memory source shuffles by the loaded mask. -/
+theorem okSseMem_pshufbRM (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm) (v : Vektor)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pshufbRM w dst f)
+    (hgp : sseMemGp (.pshufbRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = some v) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst
+          (vecPshufb ((projFp m c).xmm dst) v)))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
+/-- `pabsb` with a memory source takes the loaded absolute value. -/
+theorem okSseMem_pabsBRM (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm) (v : Vektor)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsBRM w dst f)
+    (hgp : sseMemGp (.pabsBRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = some v) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst (vecPabs .b8 v)))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
+/-- `pabsw` with a memory source takes the loaded absolute value. -/
+theorem okSseMem_pabsWRM (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm) (v : Vektor)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsWRM w dst f)
+    (hgp : sseMemGp (.pabsWRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = some v) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst (vecPabs .b16 v)))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
+/-- `pabsd` with a memory source takes the loaded absolute value. -/
+theorem okSseMem_pabsDRM (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm) (v : Vektor)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsDRM w dst f)
+    (hgp : sseMemGp (.pabsDRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = some v) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst (vecPabs .b32 v)))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
+/-- `palignr` with a memory source aligns the loaded composite. -/
+theorem okSseMem_palignrRM (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm) (imm : Byte)
+    (v : Vektor)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .palignrRM w dst f imm)
+    (hgp : sseMemGp (.palignrRM w dst f imm)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = some v) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst
+          (vecPalignr ((projFp m c).xmm dst) v imm)))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
+/-- REX.W `pshufb` shuffles by the source register. -/
+theorem okSseMem_pshufbRW (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (dst src : XmmReg)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pshufbRW dst src) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst
+          (vecPshufb ((projFp m c).xmm dst)
+            ((projFp m c).xmm src))))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop]
+
+/-- REX.W `pabsb` takes the source absolute value. -/
+theorem okSseMem_pabsBRW (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (dst src : XmmReg)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsBRW dst src) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst
+          (vecPabs .b8 ((projFp m c).xmm src))))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop]
+
+/-- REX.W `pabsw` takes the source absolute value. -/
+theorem okSseMem_pabsWRW (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (dst src : XmmReg)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsWRW dst src) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst
+          (vecPabs .b16 ((projFp m c).xmm src))))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop]
+
+/-- REX.W `pabsd` takes the source absolute value. -/
+theorem okSseMem_pabsDRW (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (dst src : XmmReg)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsDRW dst src) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst
+          (vecPabs .b32 ((projFp m c).xmm src))))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop]
+
+/-- REX.W `palignr` aligns the register composite. -/
+theorem okSseMem_palignrRW (m : HwMaschine) (c : Nat) (d : SseMemDec)
+    (dst src : XmmReg) (imm : Byte)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .palignrRW dst src imm) :
+    (adapterSseMem).schritt m c d =
+      some (setKernVonFp m c (sseMemNach (projFp m c) d.laenge
+        (xmmSet (projFp m c).xmm dst
+          (vecPalignr ((projFp m c).xmm dst)
+            ((projFp m c).xmm src) imm)))) := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop]
+
+/-- A misaligned `pshufb` source admits no step (#GP). -/
+theorem adapterSseMem_verweigert_bei_gp_pshufbRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pshufbRM w dst f)
+    (hgp : sseMemGp (.pshufbRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = true) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp]
+
+/-- A misaligned `pabsb` source admits no step (#GP). -/
+theorem adapterSseMem_verweigert_bei_gp_pabsBRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsBRM w dst f)
+    (hgp : sseMemGp (.pabsBRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = true) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp]
+
+/-- A misaligned `pabsw` source admits no step (#GP). -/
+theorem adapterSseMem_verweigert_bei_gp_pabsWRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsWRM w dst f)
+    (hgp : sseMemGp (.pabsWRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = true) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp]
+
+/-- A misaligned `pabsd` source admits no step (#GP). -/
+theorem adapterSseMem_verweigert_bei_gp_pabsDRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsDRM w dst f)
+    (hgp : sseMemGp (.pabsDRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = true) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp]
+
+/-- A misaligned `palignr` source admits no step (#GP). -/
+theorem adapterSseMem_verweigert_bei_gp_palignrRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm) (imm : Byte)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .palignrRM w dst f imm)
+    (hgp : sseMemGp (.palignrRM w dst f imm)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = true) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp]
+
+/-- A refused source load admits no `pshufb` step. -/
+theorem adapterSseMem_verweigert_bei_lade_pshufbRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pshufbRM w dst f)
+    (hgp : sseMemGp (.pshufbRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = none) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
+/-- A refused source load admits no `pabsb` step. -/
+theorem adapterSseMem_verweigert_bei_lade_pabsBRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsBRM w dst f)
+    (hgp : sseMemGp (.pabsBRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = none) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
+/-- A refused source load admits no `pabsw` step. -/
+theorem adapterSseMem_verweigert_bei_lade_pabsWRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsWRM w dst f)
+    (hgp : sseMemGp (.pabsWRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = none) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
+/-- A refused source load admits no `pabsd` step. -/
+theorem adapterSseMem_verweigert_bei_lade_pabsDRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .pabsDRM w dst f)
+    (hgp : sseMemGp (.pabsDRM w dst f)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = none) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
+/-- A refused source load admits no `palignr` step. -/
+theorem adapterSseMem_verweigert_bei_lade_palignrRM (m : HwMaschine)
+    (c : Nat) (d : SseMemDec)
+    (w : Bool) (dst : XmmReg) (f : AdrForm) (imm : Byte)
+    (hok : laengeOk d.laenge = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (hop : d.op = .palignrRM w dst f imm)
+    (hgp : sseMemGp (.palignrRM w dst f imm)
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = false)
+    (hld : sseMemLade (tsoAnsicht m) c
+      (adrEff (projFp m c).kern
+        (ripNach (projFp m c).kern.rip d.laenge) f) = none) :
+    (adapterSseMem).schritt m c d = none := by
+  unfold adapterSseMem
+  simp [hok, hfp, hop, hgp, hld]
+
 end Gabbro.Grammatik.X86
