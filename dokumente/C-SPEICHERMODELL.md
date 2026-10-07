@@ -162,8 +162,10 @@ Lane 128's operator inventory (`ABinUB`, rows 1, 3 and 4) is unchanged. It is re
 (atomic, observation carrying the order); `devHandle` (integer → device pointer, only at the
 declared base); `portOf`, `portIn`, `portOut` (port I/O).
 
-**Layouts from the emitter.** `natLay count fields` is the x86-64 SysV rule: natural
-alignment and tail padding to the strictest field. `RecLay.wf` (fields fit, are aligned and
+**Layouts from the emitter.** `natLay count fields` is the natural-alignment LP64 rule (the
+x86-64 SysV rule; AAPCS64 states the same sizes and alignments for the integer and pointer types
+the emitter produces, which is a claim about the ABI texts and has not been measured here):
+natural alignment and tail padding to the strictest field. `RecLay.wf` (fields fit, are aligned and
 do not overlap) is a `Bool`, so a certificate's layout is checked by `decide` per program.
 From `wf` follow `RecLay.pos_inj` (a byte position is one record and one field) and
 `RecLay.cell_pos` (the emitted address of a field is a cell of the field's type). For

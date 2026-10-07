@@ -1,0 +1,31 @@
+-- erwartet: A005
+-- **Gift 1401 -- an `aarch64` syscall in a unit that declares only `x86_64`.**
+--
+-- The twin of gift 805 for the newly opened machine: the unit says `arch x86_64` at its
+-- foreign body and `arch aarch64` at the syscall, which can never be in force here. The
+-- register map is valid for `aarch64` (`N066` silent), `A006` is silent, `A005` speaks.
+
+module gift::syscall_aarch64_fremde_maschine {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+extern fn fremd() effects { pure } arch x86_64;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch aarch64 number 64
+    regs in { x0 = fd }
+    regs out { x0 }
+    clobbers { }
+    errors { EBADF => BadFd }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_write_contract falsifier sonde_write;
+
+}

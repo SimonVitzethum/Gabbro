@@ -4199,7 +4199,9 @@ MARKE_EMIT_L=1      # `laufzeit/` -- sperre.gab; `start.c` ist C und keine `.gab
 # of its own (`laufzeit/bindung.h` is the interface; `mmap`, `mprotect`, `sysconf`, `fprintf`
 # and `_exit` stand in `linux.c` and nowhere else). Re-measured in the same run:
 # `325 von 325`.
-MARKE_EMIT_BIB=2    # `bibliothek/` -- linux-kmod.gab + linux.gab; the `.c` and `.h` are not Gabbro
+# **2 -> 3 on 2026-10-07** (ARM agent C): `bibliothek/linux/linux-aarch64.gab`, the AArch64
+# twin of `linux.gab` (it emits; the freestanding link count moves with it).
+MARKE_EMIT_BIB=3    # `bibliothek/` -- linux-kmod.gab + linux.gab + linux-aarch64.gab; the `.c` and `.h` are not Gabbro
 # **0 -> 1 on 2026-09-01, and this one is not bookkeeping.** `halde.gab` -- the only file
 # in the tree at the target scale -- did NOT emit until tonight: it fell at an `L104` false
 # alarm, `g is consumed a second time`, because `m2` ran a `narrow … else` arm as

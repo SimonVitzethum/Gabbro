@@ -1,7 +1,7 @@
 -- erwartet: A006
 -- **Gift 810 -- a syscall for a sealed architecture.**
 --
--- `aarch64` stays sealed: the emitter cannot lower a stub for it, so a syscall
+-- `riscv64` stays sealed (`aarch64` was opened 2026-10-07): the emitter cannot lower a stub for it, so a syscall
 -- naming it promises what nobody writes. What falls here is the machine
 -- itself; the mismatch against the declared arches is `A005` (gift 805).
 
@@ -17,7 +17,7 @@ assume linux_write_contract
     falsifier sonde_write;
 
 syscall write(fd : u64) -> u64 or IoError
-    abi linux arch aarch64 number 1
+    abi linux arch riscv64 number 1
     regs in { rdi = fd }
     regs out { rax }
     clobbers { rcx }

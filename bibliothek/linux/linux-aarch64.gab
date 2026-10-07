@@ -1,0 +1,523 @@
+-- **`bibliothek/linux` -- the AArch64 variant of `linux.gab`** (agent C, 2026-10-07).
+--
+-- THE SAME BINDING, FOR `arch aarch64`. A program that targets AArch64 Linux lists THIS
+-- file in its manifest instead of `linux.gab` (never both: the function names are the
+-- same). Everything below the gates is `linux.gab` unchanged; what differs is exactly this,
+-- and `messung/arm-c/mk_linux_aarch64.py` is the record of it:
+--
+--   * `abi linux arch aarch64`: the call number in x8, arguments in x0-x5, the answer in x0
+--     (also the first argument register), `svc #0`, nothing destroyed but memory;
+--   * the numbers: read 63, write 64, openat 56, close 57, mmap 222, munmap 215, mprotect
+--     226, madvise 233, exit 93, exit_group 94, clone 220, futex 98, sched_yield 124,
+--     clock_gettime 113 (the gates below use the ones a hosted runtime calls);
+--   * the `clone` register map: AArch64's raw `clone(flags, stack, parent_tid, tls,
+--     child_tid)` takes the child's tid word in **x4**, not in the fourth argument register
+--     (x86_64: r10 -- the argument order of the two kernels differs); the stack is x1;
+--   * the page granularity is 64 KiB (see `gabbro_os_seitengroesse`);
+--   * each assumption names its own probe (`sonde_os_*_a64`): a probe that falsifies the
+--     x86_64 claim says nothing about this one, and NONE of them exists as a program yet.
+--
+-- The text below is `linux.gab`'s, with these lines changed.
+--
+-- **`bibliothek/linux` -- the operating-system calls a HOSTED Gabbro program
+-- binds, as ordinary Gabbro** (server lane 2026-09-28, TODO section 0e K8;
+-- written in Gabbro by the C-free lane, 2026-09-30).
+--
+-- WHAT THIS IS. Simon's rules: *"API calls are always user-made"*, and since
+-- 2026-09-30 *no handwritten C in a finished Gabbro binary*. A Gabbro program
+-- reaches Linux only through the `syscall` gates declared here -- raw system
+-- calls with their registers, their errno tables and the assumption each keeps --
+-- and every function the generated runtimes call is a Gabbro function over them,
+-- checked like any user code. There is no C file beside this one any more, and
+-- no C library: `linux.c`, `laufzeit/bindung.h` and `laufzeit/faden.c` are gone.
+--
+-- WHAT CALLS WHAT. The generated hosted driver writes the arena runtime
+-- (template `arena.dyn`), the lock (`sperre.ticket`) and the thread runtime
+-- (`faden.laufzeit`); the emitted helper of `reset X at i count n;` writes the
+-- page return (`region.leeren`). They call, by name:
+--
+--   the report channel and the stop   gabbro_os_melden, gabbro_os_ende
+--   the storage                       gabbro_os_reserve, gabbro_os_commit,
+--                                     gabbro_os_seitengroesse
+--   the page return                   gabbro_os_seiten_zurueck
+--   the lock's hand-over              gabbro_os_nachgeben
+--   the threads                       gabbro_os_klon_tor (a stack gate: its
+--                                     trampoline), gabbro_os_klon_flaggen,
+--                                     gabbro_os_faden_ende, gabbro_os_warte_wort
+--
+-- WHAT A PROGRAM DOES WITH IT. One line in the manifest of a unit that declares
+-- an `arena`, a `lock` or a `concurrent` set:
+--
+--     unit driver program
+--       my-program.gab
+--       bibliothek/linux/linux.gab
+--
+-- and `gabbro build` REFUSES a hosted unit that does not bind what its runtime
+-- calls (`crates/gabbro-cli/src/bau.rs`, `bindungsregel_gehostet`) -- never a
+-- silent default, and never a link error about a name the program never wrote.
+-- **A different operating system gets a different file here, not a different
+-- Gabbro**: nothing in the compiler, the checker or the templates knows Linux.
+--
+-- WHAT THE `costs` CLAUSES SAY, AND WHAT THEY DO NOT. Each is the primitive's
+-- own work once it runs. **Waiting is not in it**: a `futex` wait or a `mmap` of
+-- 32 GiB of `PROT_NONE` is kernel work the program cannot count, and waiting
+-- bounds are NOT CLAIMED (`grammatik/Grammatik/Zielsatz/Kern/Spec.lean`).
+module linux::hosted {
+
+-- **The reservation reads as zero, and that is its own assumption** -- because
+-- the bounded heap does NOT scrub. `laufzeit/arena_dyn.c` commits lazily and
+-- stores nothing into a newly committed slot; a program reads a fresh slot and
+-- expects zero. That holds for a private anonymous mapping and would not hold
+-- for a binding that handed back recycled storage, which is why it is named
+-- apart from the ABI: *a binding that reused a freed region would leave a
+-- program reading another run's bytes, with every other line of this file
+-- unchanged.*
+assume os_bindung_null
+    "The bytes `gabbro_os_reserve` answers, and every byte `gabbro_os_commit` makes writable, read as zero until the program writes them; a page range `gabbro_os_seiten_zurueck` answered 0 for stays mapped and writable and reads as zero until the program writes it again."
+    falsifier sonde_os_null_a64;
+
+-- -- the system calls this binding makes, as GABBRO gates (C-free lane, 2026-09-30) ----
+--
+-- Until 2026-09-30 the bodies below were C in `linux.c`, over glibc's `mmap`,
+-- `mprotect`, `sysconf`, `fprintf` and `_exit`. They are Gabbro now, checked
+-- like any user code, and what reaches the kernel is these four gates -- raw
+-- system calls under AArch64 Linux's convention (number in x8, arguments x0-x5, answer in x0, `svc #0`), each with the contract it keeps
+-- as a named assumption. Their names carry `linux_os_` because the binding is
+-- compiled into the PROGRAM's translation unit, and a program may declare a
+-- `write` of its own.
+pub reason LinuxSpeicherFehler {
+    Perm = 1 "the operation is not permitted"
+    Again = 11 "the memory is locked or the kernel is out of a resource"
+    Nomem = 12 "no memory, or the range is not mapped"
+    Acces = 13 "the protection is not allowed on this mapping"
+    Inval = 22 "an argument the kernel refuses"
+    Overflow = 75 "the range does not fit the address space"
+    exhaustive
+}
+
+pub reason LinuxSchreibFehler {
+    Perm = 1 "the write is not permitted"
+    Intr = 4 "interrupted before anything was written"
+    Io = 5 "an input/output error"
+    BadFd = 9 "the file descriptor is not open for writing"
+    Again = 11 "the descriptor is non-blocking and the write would block"
+    Fault = 14 "the buffer is outside the process"
+    Inval = 22 "the descriptor refuses writes"
+    Fbig = 27 "the file would grow past its limit"
+    NoSpc = 28 "no space left on the device"
+    Pipe = 32 "the reading end is closed"
+    exhaustive
+}
+
+assume linux_os_mmap_vertrag
+    "The Linux AArch64 `mmap` (number 222) with `fd` = -1 and flags MAP_PRIVATE | MAP_ANONYMOUS answers the base of at least `len` bytes of fresh address space, shared with no other mapping of the process, whose bytes read as zero once made readable; or -errno from the listed table; it destroys no register but x0."
+    falsifier sonde_os_mmap_a64;
+
+assume linux_os_mprotect_vertrag
+    "The Linux AArch64 `mprotect` (number 226) over a page-aligned range of a private anonymous mapping makes those bytes readable and writable when `prot` is 3 and answers 0, or -errno from the listed table; it changes no byte and destroys no register but x0."
+    falsifier sonde_os_mprotect_a64;
+
+assume linux_os_write_vertrag
+    "The Linux AArch64 `write` (number 64) reads at most `len` bytes from `buf`, answers the count written or -errno from the listed table, and destroys no register but x0."
+    falsifier sonde_os_write_a64;
+
+assume linux_os_exit_group_vertrag
+    "The Linux AArch64 `exit_group` (number 94) ends every thread of the process with status `code & 255` and never returns to its caller."
+    falsifier sonde_os_exit_group_a64;
+
+syscall linux_os_mmap(addr : u64, len : u64, prot : u64, flags : u64, fd : u64, off : u64) -> ptr<normal, rw> u8 or LinuxSpeicherFehler
+    abi linux arch aarch64 number 222
+    regs in { x0 = addr, x1 = len, x2 = prot, x3 = flags, x4 = fd, x5 = off }
+    regs out { x0 }
+    clobbers { }
+    errors { EPERM => Perm, EAGAIN => Again, ENOMEM => Nomem, EACCES => Acces, EINVAL => Inval, EOVERFLOW => Overflow }
+    ensures len <= lenof(result)
+    effects { pure }
+    costs <= 100000 ops
+    assume linux_os_mmap_vertrag falsifier sonde_os_mmap_a64;
+
+syscall linux_os_mprotect(addr : ptr<normal, rw> u8, len : u64, prot : u64) -> u64 or LinuxSpeicherFehler
+    abi linux arch aarch64 number 226
+    regs in { x0 = addr, x1 = len, x2 = prot }
+    regs out { x0 }
+    clobbers { }
+    errors { EPERM => Perm, EAGAIN => Again, ENOMEM => Nomem, EACCES => Acces, EINVAL => Inval, EOVERFLOW => Overflow }
+    requires len <= lenof(addr)
+    effects { pure }
+    costs <= 100000 ops
+    assume linux_os_mprotect_vertrag falsifier sonde_os_mprotect_a64;
+
+syscall linux_os_write(fd : u64, buf : ptr<normal, r> u8, len : u64) -> u64 or LinuxSchreibFehler
+    abi linux arch aarch64 number 64
+    regs in { x0 = fd, x1 = buf, x2 = len }
+    regs out { x0 }
+    clobbers { }
+    errors { EPERM => Perm, EINTR => Intr, EIO => Io, EBADF => BadFd, EAGAIN => Again, EFAULT => Fault, EINVAL => Inval, EFBIG => Fbig, ENOSPC => NoSpc, EPIPE => Pipe }
+    requires len <= lenof(buf)
+    effects { reads buf }
+    costs <= 64 ops
+    assume linux_os_write_vertrag falsifier sonde_os_write_a64;
+
+syscall linux_os_exit_group(code : u64) -> never
+    abi linux arch aarch64 number 94
+    regs in { x0 = code }
+    regs out { x0 }
+    clobbers { }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_os_exit_group_vertrag falsifier sonde_os_exit_group_a64;
+
+-- -- the report channel and the stop -----------------------------------------
+--
+-- The runtime has no words of its own, because printing is an OS call. A
+-- fail-stop travels as a CODE and two numbers (`laufzeit/bindung.h` lists the
+-- codes), and this binding writes one sentence per code to the error channel,
+-- then the two numbers in decimal -- one `write` per piece, over constant
+-- tables, so nothing here is shared writable state and no two threads that
+-- report at once can race on it.
+pub const LINUX_T_KOPF : [u8; 23] = [103, 97, 98, 98, 114, 111, 58, 32, 114, 117, 110, 116, 105, 109, 101, 32, 114, 101, 112, 111, 114, 116, 32];
+pub const LINUX_T_DESKRIPTOR : [u8; 46] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 101, 115, 101, 114, 118, 101, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 98, 97, 100, 32, 100, 101, 115, 99, 114, 105, 112, 116, 111, 114, 32];
+pub const LINUX_T_SPANNE : [u8; 50] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 101, 115, 101, 114, 118, 101, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 116, 104, 101, 32, 115, 112, 97, 110, 32, 111, 118, 101, 114, 102, 108, 111, 119, 115, 32];
+pub const LINUX_T_RESERVE : [u8; 46] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 101, 115, 101, 114, 118, 101, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 99, 97, 110, 110, 111, 116, 32, 114, 101, 115, 101, 114, 118, 101, 32];
+pub const LINUX_T_BODEN : [u8; 55] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 101, 115, 101, 114, 118, 101, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 99, 97, 110, 110, 111, 116, 32, 99, 111, 109, 109, 105, 116, 32, 116, 104, 101, 32, 102, 108, 111, 111, 114, 32];
+pub const LINUX_T_UEBER_MAX : [u8; 45] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 103, 114, 111, 119, 32, 114, 101, 102, 117, 115, 101, 100, 58, 32, 112, 97, 115, 116, 32, 116, 104, 101, 32, 99, 101, 105, 108, 105, 110, 103, 32];
+pub const LINUX_T_SEITE : [u8; 55] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 114, 101, 110, 97, 32, 114, 117, 110, 116, 105, 109, 101, 58, 32, 116, 104, 101, 32, 112, 97, 103, 101, 32, 115, 105, 122, 101, 32, 105, 115, 32, 110, 111, 116, 32, 97, 110, 115, 119, 101, 114, 97, 98, 108, 101, 32];
+pub const LINUX_T_START : [u8; 39] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 32, 100, 101, 99, 108, 97, 114, 101, 100, 32, 115, 116, 97, 114, 116, 32, 100, 105, 100, 32, 110, 111, 116, 32, 115, 116, 97, 114, 116, 32];
+pub const LINUX_T_WARTE : [u8; 38] = [103, 97, 98, 98, 114, 111, 58, 32, 97, 32, 115, 116, 97, 114, 116, 101, 100, 32, 114, 111, 111, 116, 32, 119, 97, 115, 32, 110, 111, 116, 32, 106, 111, 105, 110, 101, 100, 32];
+pub const LINUX_T_AUF : [u8; 1] = [40];
+pub const LINUX_T_KOMMA : [u8; 2] = [44, 32];
+pub const LINUX_T_ZU : [u8; 2] = [41, 10];
+pub const LINUX_Z0 : [u8; 1] = [48];
+pub const LINUX_Z1 : [u8; 1] = [49];
+pub const LINUX_Z2 : [u8; 1] = [50];
+pub const LINUX_Z3 : [u8; 1] = [51];
+pub const LINUX_Z4 : [u8; 1] = [52];
+pub const LINUX_Z5 : [u8; 1] = [53];
+pub const LINUX_Z6 : [u8; 1] = [54];
+pub const LINUX_Z7 : [u8; 1] = [55];
+pub const LINUX_Z8 : [u8; 1] = [56];
+pub const LINUX_Z9 : [u8; 1] = [57];
+
+fn linux_os_ziffer(fd : u64, d : u64 in 0 .. 9)
+    effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 200 ops
+{
+    if d == 0 {
+        let n = linux_os_write(fd, LINUX_Z0, 1) else (e) { return; }
+    } else if d == 1 {
+        let n = linux_os_write(fd, LINUX_Z1, 1) else (e) { return; }
+    } else if d == 2 {
+        let n = linux_os_write(fd, LINUX_Z2, 1) else (e) { return; }
+    } else if d == 3 {
+        let n = linux_os_write(fd, LINUX_Z3, 1) else (e) { return; }
+    } else if d == 4 {
+        let n = linux_os_write(fd, LINUX_Z4, 1) else (e) { return; }
+    } else if d == 5 {
+        let n = linux_os_write(fd, LINUX_Z5, 1) else (e) { return; }
+    } else if d == 6 {
+        let n = linux_os_write(fd, LINUX_Z6, 1) else (e) { return; }
+    } else if d == 7 {
+        let n = linux_os_write(fd, LINUX_Z7, 1) else (e) { return; }
+    } else if d == 8 {
+        let n = linux_os_write(fd, LINUX_Z8, 1) else (e) { return; }
+    } else if d == 9 {
+        let n = linux_os_write(fd, LINUX_Z9, 1) else (e) { return; }
+    }
+}
+
+-- The decimal digits of `v` to the error channel (the runtime's reports).
+fn linux_os_zahl(v : u64)
+    effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 8016 ops
+{
+    gabbro_os_schreibe_zahl(2, v);
+}
+
+-- **A program's own output, over the same gate** (C-free lane, 2026-09-30): the decimal
+-- digits of `v`, most significant first, no leading zeros, to the descriptor `fd`; and a
+-- run of bytes. What a program without a C library prints with -- the os-probe's report,
+-- which was `printf` in a C file of its own.
+pub fn gabbro_os_schreibe(fd : u64, text : ptr<normal, r> u8, n : u64)
+    requires n <= lenof(text)
+    effects { reads text }
+    costs <= 80 ops
+{
+    let r = linux_os_write(fd, text, n) else (e) { return; }
+}
+
+pub fn gabbro_os_schreibe_zahl(fd : u64, v : u64)
+    effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 8000 ops
+{
+    let mut stelle : u64 = 10000000000000000000;
+    let mut begonnen : bool = false;
+    retry stellen until stelle == 0
+        bounded 6000 ops
+        on_exceeded gabbro_os_haengt
+        effects { reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    {
+        narrow stelle to 1 .. 10000000000000000000 else { return; }
+        let d = (v / stelle) % 10;
+        if d != 0 || begonnen || stelle == 1 {
+            linux_os_ziffer(fd, d);
+            begonnen = true;
+        }
+        stelle = stelle / 10;
+    }
+}
+
+pub fn gabbro_os_melden(code : u32, a : u64, b : u64)
+    effects { reads LINUX_T_KOPF, reads LINUX_T_DESKRIPTOR, reads LINUX_T_SPANNE, reads LINUX_T_RESERVE, reads LINUX_T_BODEN, reads LINUX_T_UEBER_MAX, reads LINUX_T_SEITE, reads LINUX_T_START, reads LINUX_T_WARTE, reads LINUX_T_AUF, reads LINUX_T_KOMMA, reads LINUX_T_ZU, reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 20000 ops
+{
+    if code == 1 {
+        let n1 = linux_os_write(2, LINUX_T_DESKRIPTOR, 46) else (e) { return; }
+    } else if code == 2 {
+        let n2 = linux_os_write(2, LINUX_T_SPANNE, 50) else (e) { return; }
+    } else if code == 3 {
+        let n3 = linux_os_write(2, LINUX_T_RESERVE, 46) else (e) { return; }
+    } else if code == 4 {
+        let n4 = linux_os_write(2, LINUX_T_BODEN, 55) else (e) { return; }
+    } else if code == 5 {
+        let n5 = linux_os_write(2, LINUX_T_UEBER_MAX, 45) else (e) { return; }
+    } else if code == 6 {
+        let n6 = linux_os_write(2, LINUX_T_SEITE, 55) else (e) { return; }
+    } else if code == 7 {
+        let n7 = linux_os_write(2, LINUX_T_START, 39) else (e) { return; }
+    } else if code == 8 {
+        let n8 = linux_os_write(2, LINUX_T_WARTE, 38) else (e) { return; }
+    } else {
+        let n9 = linux_os_write(2, LINUX_T_KOPF, 23) else (e) { return; }
+    }
+    let n10 = linux_os_write(2, LINUX_T_AUF, 1) else (e) { return; }
+    linux_os_zahl(a);
+    let n11 = linux_os_write(2, LINUX_T_KOMMA, 2) else (e) { return; }
+    linux_os_zahl(b);
+    let n12 = linux_os_write(2, LINUX_T_ZU, 2) else (e) { return; }
+}
+
+-- `gabbro_os_ende` NEVER RETURNS, and since 2026-09-30 Gabbro says so: it is a
+-- `-> never` function over the `exit_group` gate.
+pub fn gabbro_os_ende(code : u32) -> never
+    effects { diverges }
+    costs <= 16 ops
+{
+    linux_os_exit_group(code);
+}
+
+-- The stop of a bounded loop that ran past its bound -- which the bound's own
+-- check says cannot happen; `abort()`'s status, without `abort()`.
+fn gabbro_os_haengt() -> never
+    effects { diverges }
+    costs <= 16 ops
+{
+    linux_os_exit_group(134);
+}
+
+-- -- the bounded heap's storage ----------------------------------------------
+--
+-- `reserve` answers a REGION of `bytes` of reserved-but-not-committed address
+-- space (`PROT_NONE`), and never 0: a refused reservation ends the process here,
+-- because at load no program runs that could take an `else`. `commit` makes the
+-- `bytes` from `stelle` on readable and writable and answers 0 on success.
+-- `seitengroesse` is the granularity the runtime rounds to. **64 KiB here, not 4 KiB**:
+-- AArch64 Linux runs with 4, 16 or 64 KiB base pages (a kernel build choice), and this
+-- binding cannot ask which without reading the auxiliary vector (`AT_PAGESZ`) at process
+-- start. A multiple of 64 KiB is page-aligned on all three, so `mprotect` and `madvise`
+-- never see a misaligned range; the price is up to 60 KiB of rounding per commit. The ceiling, the committed
+-- prefix and refuse-on-full are the runtime's arithmetic (the generated arena
+-- runtime, template `arena.dyn`), and the binding never decides where a page
+-- begins.
+pub fn gabbro_os_reserve(bytes : u64) -> ptr<normal, rw> u8
+    effects { diverges, reads LINUX_T_KOPF, reads LINUX_T_DESKRIPTOR, reads LINUX_T_SPANNE, reads LINUX_T_RESERVE, reads LINUX_T_BODEN, reads LINUX_T_UEBER_MAX, reads LINUX_T_SEITE, reads LINUX_T_START, reads LINUX_T_WARTE, reads LINUX_T_AUF, reads LINUX_T_KOMMA, reads LINUX_T_ZU, reads LINUX_Z0, reads LINUX_Z1, reads LINUX_Z2, reads LINUX_Z3, reads LINUX_Z4, reads LINUX_Z5, reads LINUX_Z6, reads LINUX_Z7, reads LINUX_Z8, reads LINUX_Z9 }
+    costs <= 200000 ops
+{
+    let r = linux_os_mmap(0, bytes, 0, 34, 18446744073709551615, 0) else (e) {
+        gabbro_os_melden(3, bytes, 0);
+        gabbro_os_ende(3);
+    }
+    return r;
+}
+
+pub fn gabbro_os_commit(stelle : ptr<normal, rw> u8, bytes : u64) -> u32
+    requires bytes <= lenof(stelle)
+    effects { pure }
+    costs <= 100016 ops
+{
+    let x = linux_os_mprotect(stelle, bytes, 3) else (e) { return 1; }
+    return 0;
+}
+
+pub fn gabbro_os_seitengroesse() -> u64
+    effects { pure }
+    costs <= 4 ops
+{
+    return 65536;
+}
+
+-- The page return (M-ALLTAG C; in Gabbro since 2026-09-30, C-free lane). The
+-- emitted helper of `reset X at i count n;` clears the edges of the range itself
+-- and hands over only the WHOLE PAGES inside it, as a region -- the helper, not
+-- this binding, decides where a page begins (template `region.leeren`). The
+-- pages read as zero afterwards (`MADV_DONTNEED` on private anonymous memory);
+-- an answer other than 0 makes the helper clear them by hand.
+assume linux_os_madvise_vertrag
+    "The Linux AArch64 `madvise` (number 233) with advice 4 (MADV_DONTNEED) over whole pages of private anonymous memory of the process releases them, keeps them mapped and writable, and they read as zero until written again; it answers 0 or -errno from the listed table and destroys no register but x0."
+    falsifier sonde_os_madvise_a64;
+
+syscall linux_os_madvise(addr : ptr<normal, rw> u8, len : u64, advice : u64) -> u64 or LinuxSpeicherFehler
+    abi linux arch aarch64 number 233
+    regs in { x0 = addr, x1 = len, x2 = advice }
+    regs out { x0 }
+    clobbers { }
+    errors { EPERM => Perm, EAGAIN => Again, ENOMEM => Nomem, EACCES => Acces, EINVAL => Inval, EOVERFLOW => Overflow }
+    requires len <= lenof(addr)
+    effects { writes addr }
+    costs <= 100000 ops
+    assume linux_os_madvise_vertrag falsifier sonde_os_madvise_a64;
+
+pub fn gabbro_os_seiten_zurueck(stelle : ptr<normal, rw> u8, bytes : u64) -> u32
+    requires bytes <= lenof(stelle)
+    effects { writes stelle }
+    costs <= 100016 ops
+{
+    let x = linux_os_madvise(stelle, bytes, 4) else (e) { return 1; }
+    return 0;
+}
+
+-- -- the generated driver's locks ---------------------------------------------
+--
+-- Since 2026-09-30 (C-free lane) a lock is the generated driver's ticket lock
+-- (template `sperre.ticket`, proved in `CTicket.lean`) and no call of this
+-- binding at all -- except the hand-over in its spin: a waiter gives its core
+-- away every 64 passes, because with more threads than cores the ticket served
+-- next may belong to a thread that is not running. The yield changes no word of
+-- the lock and no program memory.
+assume linux_os_sched_yield_vertrag
+    "The Linux AArch64 `sched_yield` (number 124) may give the calling thread's core to another runnable thread, changes no memory of the process, answers 0, and destroys no register but x0."
+    falsifier sonde_os_sched_yield_a64;
+
+syscall linux_os_sched_yield() -> u64
+    abi linux arch aarch64 number 124
+    regs in { }
+    regs out { x0 }
+    clobbers { }
+    errors { }
+    effects { pure }
+    costs <= 64 ops
+    assume linux_os_sched_yield_vertrag falsifier sonde_os_sched_yield_a64;
+
+pub fn gabbro_os_nachgeben()
+    effects { pure }
+    costs <= 80 ops
+{
+    let r = linux_os_sched_yield();
+}
+
+-- -- threads (in Gabbro since 2026-09-30, C-free lane) ------------------------
+--
+-- Every thread a hosted Gabbro program runs -- a declared root started by the
+-- generated driver, a root of a run-time `start { f };` -- is started by the
+-- generated thread runtime (template `faden.laufzeit`) through the TRAMPOLINE of
+-- the stack gate below (template `tor.trampolin`): the `clone` in the parent,
+-- and in the child the root on the handed stack and then `gabbro_os_faden_ende`.
+-- The root and the end are handed by NAME from generated C; no Gabbro code can
+-- call this gate outside the checked `child` triple (`N572`), so no Gabbro code
+-- starts a thread the concurrency rules do not see.
+--
+-- The join word is written by the KERNEL: its id before the child runs
+-- (CLONE_PARENT_SETTID, `eltern`), 0 and a futex wake when the thread has ended
+-- (CLONE_CHILD_CLEARTID, `kind`) -- the order is the whole of the join, and it
+-- is the gate's contract.
+pub reason LinuxKlonFehler {
+    Perm = 1 "the thread is not permitted"
+    Again = 11 "too many threads, or a resource limit"
+    Nomem = 12 "no memory for the thread"
+    Inval = 22 "an argument the kernel refuses"
+    exhaustive
+}
+
+assume linux_os_clone_vertrag
+    "The Linux AArch64 `clone` (number 220) with the flags `gabbro_os_klon_flaggen` answers starts ONE thread of the process whose sp is the address `spitze` and whose other registers are the caller's except x0, stores its id into the 4-byte word at `eltern` before that thread runs, answers the id (> 0) in the caller and 0 in the new thread, and stores 0 into the 4-byte word at `kind` and wakes its futex waiters once that thread has ended; or -errno from the listed table; it destroys no register but x0."
+    falsifier sonde_os_clone_a64;
+
+assume linux_os_exit_vertrag
+    "The Linux AArch64 `exit` (number 93) ends the calling THREAD, not the process, and never returns to it."
+    falsifier sonde_os_exit_a64;
+
+assume linux_os_futex_vertrag
+    "The Linux AArch64 `futex` (number 98) with op 0 (FUTEX_WAIT) and no timeout returns at once when the 4-byte word at `wort` differs from `erwartet`, else sleeps until a wake on that word or a signal; it changes no memory and destroys no register but x0."
+    falsifier sonde_os_futex_a64;
+
+syscall gabbro_os_klon_tor(flaggen : u64, spitze : u64, eltern : ptr<normal, rw> u8, kind : ptr<normal, rw> u8) -> u64 or LinuxKlonFehler
+    abi linux arch aarch64 number 220
+    regs in { x0 = flaggen, x1 = spitze, x2 = eltern, x4 = kind }
+    regs out { x0 }
+    stack x1
+    clobbers { }
+    errors { EPERM => Perm, EAGAIN => Again, ENOMEM => Nomem, EINVAL => Inval }
+    requires 4 <= lenof(eltern) && 4 <= lenof(kind)
+    effects { writes eltern, writes kind }
+    costs <= 100000 ops
+    assume linux_os_clone_vertrag falsifier sonde_os_clone_a64;
+
+syscall linux_os_exit(code : u64) -> never
+    abi linux arch aarch64 number 93
+    regs in { x0 = code }
+    regs out { x0 }
+    clobbers { }
+    errors { }
+    effects { diverges }
+    costs <= 8 ops
+    assume linux_os_exit_vertrag falsifier sonde_os_exit_a64;
+
+pub reason LinuxFutexFehler {
+    Intr = 4 "interrupted by a signal"
+    Again = 11 "the word no longer holds the expected value"
+    Fault = 14 "the word is outside the process"
+    Inval = 22 "an argument the kernel refuses"
+    Timedout = 110 "the wait timed out"
+    exhaustive
+}
+
+syscall linux_os_futex(wort : ptr<normal, rw> u8, op : u64, erwartet : u64, frist : u64) -> u64 or LinuxFutexFehler
+    abi linux arch aarch64 number 98
+    regs in { x0 = wort, x1 = op, x2 = erwartet, x3 = frist }
+    regs out { x0 }
+    clobbers { }
+    errors { EINTR => Intr, EAGAIN => Again, EFAULT => Fault, EINVAL => Inval, ETIMEDOUT => Timedout }
+    requires 4 <= lenof(wort)
+    effects { reads wort }
+    costs <= 100000 ops
+    assume linux_os_futex_vertrag falsifier sonde_os_futex_a64;
+
+-- CLONE_VM | FS | FILES | SIGHAND | THREAD | SYSVSEM | PARENT_SETTID | CHILD_CLEARTID:
+-- one thread of this process, sharing everything, with the join word written by
+-- the kernel at both ends.
+pub fn gabbro_os_klon_flaggen() -> u64
+    effects { pure }
+    costs <= 4 ops
+{
+    return 3477248;
+}
+
+-- The end of a thread whose root has returned: the thread, not the process.
+pub fn gabbro_os_faden_ende() -> never
+    effects { diverges }
+    costs <= 16 ops
+{
+    linux_os_exit(0);
+}
+
+-- One wait on the join word while it still holds `erwartet`; any answer is
+-- fine -- the runtime's loop re-reads the word and trusts only it.
+pub fn gabbro_os_warte_wort(wort : ptr<normal, rw> u8, erwartet : u32)
+    requires 4 <= lenof(wort)
+    effects { reads wort }
+    costs <= 100016 ops
+{
+    let r = linux_os_futex(wort, 0, erwartet, 0) else (e) { return; }
+}
+
+}

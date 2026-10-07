@@ -109,6 +109,16 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 
 ## 3. Simon's standing instructions
 
+- **Direction change: AArch64 instead of x86-64** (Simon, 2026-10-07). All work on the x86-64
+  hardware model has stopped (its files stay; add nothing there). The next target is AArch64
+  (Armv9-A) built on the Sail Arm model, with the missing multicore memory model added in Lean.
+  Plan: [`ARM-PLAN.md`](ARM-PLAN.md). Fifteen agents work directly, each in its own shell and
+  clone (`/home/simon/Dokumente/gabbro-arm/work/NN`, personal tasks `lanes/arm/NN.md`, common
+  rules `lanes/ARM-VORSPANN.md`): five on GabbroV, ten on the Sail Arm hardware model, then on the
+  compiler; at most two Sonnet 5.5 agents check that Gabbro itself is Arm-compatible. No Python
+  coordinator drives them. Where this file or older notes name x86 goals (below), this entry
+  wins. The findings of the language-gap reports come after GabbroV and the hardware model.
+
 - **Target portability** (Simon, 2026-10-01): the direct x86-64 compiler must
   support extensible profiles for arbitrary operating systems and freestanding
   environments. Keep source semantics, IR, optimisation and validation generic;
@@ -384,7 +394,7 @@ opus/…:opus/…` first.
 | Diagnostic codes | **N579** (highest issued: N578, C-free lane, 2026-10-05; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
 | Gift (poison-probe) numbers | **1400** (highest file: `beispiele/gift/1399`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
 | Example numbers | **185** (highest file: `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
-| Lane numbers | **1399** next free; allocate unique IDs from the actual live coordinator registry. |
+| Lane numbers | **1403** next free; allocate unique IDs from the actual live coordinator registry. |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
 crates/ | sort -u | tail`, `ls beispiele beispiele/gift`. **It was stale again**, and by more

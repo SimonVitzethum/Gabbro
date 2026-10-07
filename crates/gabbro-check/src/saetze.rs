@@ -4300,12 +4300,13 @@ pub const PHASEN: &[Satz] = &[
         aussage: "A `syscall` declaration holds its own shape: the in-registers are \
                   pairwise distinct (`N063`), no out register is clobbered (`N064`), \
                   every parameter is bound to exactly one register and every binding \
-                  names a parameter (`N065`), every named register is an x86_64 general \
-                  register (`N066`), the `errors` map answers every listed errno once \
+                  names a parameter (`N065`), every named register is a general \
+                  register of the declared machine, `x86_64` or `aarch64` (`N066`), \
+                  the `errors` map answers every listed errno once \
                   and every target is a case of the declared `or R` channel (`N067`), a \
                   `kernel` pairing is refused until the pairing check lands (`N068`), \
-                  and the declaration names no sealed architecture (`A006`, x86_64 \
-                  only). The `arch` against the declared arches (`A005`) and the named \
+                  and the declaration names no sealed architecture (`A006`: `x86_64` \
+                  and `aarch64` are open, every other machine is sealed). The `arch` against the declared arches (`A005`) and the named \
                   assumption (`N004`/`N005` shape) are sentences of their own, and the \
                   call site reuses the `extern` path -- the `Signatur` in the shared \
                   map, the call-graph node, and `H007` at the boundary.",
@@ -4379,8 +4380,16 @@ pub const PHASEN: &[Satz] = &[
                   word zero is the hardware outcome (the proved template `tor.region`). A gate \
                   that claims a stack also gets a C-only trampoline (template `tor.trampolin`), \
                   which needs two callee-saved registers the gate neither binds nor destroys \
-                  (`C187` when there are none).",
-        vorbehalt: "A template rule, and nothing else. It says nothing about whether the \
+                  (`C187` when there are none). For `abi linux arch aarch64` (2026-10-07) the \
+                  same stub is written in the AArch64 convention: the number in `x8`, the \
+                  arguments in `x0`-`x5`, `svc #0`, the answer in `x0` (also the first \
+                  argument register), nothing but memory destroyed.",
+        vorbehalt: "A template rule, and nothing else. The AArch64 stub, its inline \
+                    `child` trap and its trampoline (`cbnz`, `mov x9, sp`/`and sp, x9, #-16`, \
+                    `blr`) are MEASURED (compiled with `-Wall -Wextra -Werror`, run under \
+                    qemu-aarch64) and have NO Lean template yet: `tor.trampolin` and \
+                    `tor.kind` state the alignment as `rsp + 8` and prove the x86_64 text only. \
+                    It says nothing about whether the \
                     kernel keeps the contract it decodes against -- that is the named \
                     assumption behind the stub (`Erhaltung.lean`: `syscallStub`), handed \
                     to the C compiler where no value can be delivered. The errno NAME is \

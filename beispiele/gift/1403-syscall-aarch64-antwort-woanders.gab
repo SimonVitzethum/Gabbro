@@ -1,0 +1,29 @@
+-- erwartet: C181
+-- **Gift 1403 -- the AArch64 answer arrives in `x0` and nowhere else.**
+--
+-- The twin of gift 851 for `arch aarch64`: the Linux AArch64 kernel leaves the raw answer in
+-- `x0`; a gate that carries it out in `x1` would make the stub read the wrong register. The
+-- checker lets the map through (`x1` is a general register); the emitter refuses it, by name.
+
+module gift::syscall_aarch64_antwort_woanders {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch aarch64 number 64
+    regs in { x0 = fd }
+    regs out { x1 }
+    clobbers { }
+    errors { EBADF => BadFd }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_write_contract falsifier sonde_write;
+
+}
