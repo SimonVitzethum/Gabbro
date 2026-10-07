@@ -24,6 +24,14 @@ pairs, LSE atomics, prefetch). DONE is stale until the follow-up lands.
   ordering), `prfmImm` (Sail `instrs64.sail:39785`,
   `v8_base.sail:35873`; no SP check, no fault, no event) with `decide`
   theorems `prfmImm_ok`, `prfmImm_noSPcheck`, `atomicFun_add_bytes`.
+- Extended `AtomicOps.lean`: `rawRead`/`rawWrite`, `ldxp`/`stxp`
+  reusing agent 09's `exclReadAcc`/`exclWriteAcc` (Sail
+  `instrs64.sail:28942`; 2x64 and 2x32 forms; load needs half alignment
+  for 2x32 and full 16 for 2x64, stores need full size) with `decide`
+  theorems `exLdxpStxp_ok`, `exStxpFail_ok`, the planted wrong case
+  `exStxpFail_notPass`, `exLdxp32_ok`, `exLdxp4ok_ok` and
+  `exStxp4_refuses` (the asymmetric alignment rule pinned from both
+  sides).
 
 ## Earlier work (accepted by the coordinator, 8 jobs green)
 
