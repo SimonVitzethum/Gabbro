@@ -108,6 +108,65 @@ theorem exPostIdx_ok :
     (runEff 60 exPostIdx sLS).map Prod.fst
       = some (BitVec.ofNat 64 2864434397) := by decide
 
+/-- Register-offset form: `address = base + ExtendReg(m, ext, shift, 64)`,
+    no writeback. The option-bits-to-extend-type table is the decoder's
+    (`DecodeRegExtend`); this is the `execute` side.
+    -- Sail: instrs64.sail:35210. -/
+def ldStReg (cfg : MemCfg) (isLoad : Bool) (datasize regsize : Nat)
+    (n : Nat) (m : Nat) (k : ExtendKind) (shift : Nat)
+    (isSigned : Bool) (t : Nat) : Eff Unit := do
+  if n == 31 then checkSP else pure ()
+  let base ← rdBase n
+  let off ← rdBase m
+  let addr := addOff base (Int.ofNat (extendReg off k shift).toNat)
+  if isLoad then
+    let v ← memReadEff cfg addr (datasize / 8) .plain false
+    wrBase t (extVal v datasize regsize isSigned)
+  else
+    let rv ← rdBase t
+    memWriteEff cfg addr (datasize / 8) .plain false (rv.toNat % 2 ^ datasize)
+
+/-- Fixture: as `sLS`, plus X5 holds offset register value 16. -/
+def gprLSR : Nat → BitVec 64 := upd gprLS 5 (BitVec.ofNat 64 16)
+
+def sLSR : State := { s0 with regs := { s0.regs with gpr := gprLSR } }
+
+/-- `STR X0, [X1, X5, LSL #3]` then the matching load: 64 + 16*8 = 192. -/
+def exRegOff : Eff (BitVec 64) := do
+  ldStReg cfgNoFault false 64 64 1 5 .uxtx 3 false 0
+  ldStReg cfgNoFault true 64 64 1 5 .uxtx 3 false 2
+  rdBase 2
+
+theorem exRegOff_ok :
+    (runEff 60 exRegOff sLSR).map Prod.fst
+      = some (BitVec.ofNat 64 2864434397) := by decide
+
+/-- The shifted store leaves the unshifted address alone: loading from
+    `[X1]` after the `[X1, X5, LSL #3]` store reads zero. -/
+def exRegOff_miss : Eff (BitVec 64) := do
+  ldStReg cfgNoFault false 64 64 1 5 .uxtx 3 false 0
+  ldStSingle cfgNoFault true 64 64 1 0 false false false 2
+  rdBase 2
+
+theorem exRegOff_miss_ok :
+    (runEff 60 exRegOff_miss sLSR).map Prod.fst
+      = some (BitVec.ofNat 64 0) := by decide
+
+/-- Fixture: as `sLS`, plus X5 holds `0xFFFFFFFF`. -/
+def gprLSRs : Nat → BitVec 64 := upd gprLS 5 (BitVec.ofNat 64 4294967295)
+
+def sLSRs : State := { s0 with regs := { s0.regs with gpr := gprLSRs } }
+
+/-- `SXTW` sign-extends the offset: 64 + sext(`0xFFFFFFFF`) wraps to 63. -/
+def exRegSxtw : Eff (BitVec 64) := do
+  ldStReg cfgNoFault false 8 32 1 5 .sxtw 0 false 0
+  ldStReg cfgNoFault true 8 64 1 5 .sxtw 0 true 2
+  rdBase 2
+
+theorem exRegSxtw_ok :
+    (runEff 60 exRegSxtw sLSRs).map Prod.fst
+      = some (BitVec.ofNat 64 18446744073709551581) := by decide
+
 end Arm
 
 /-
