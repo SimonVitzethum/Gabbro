@@ -150,6 +150,60 @@ def bob (x : Exec) : Rel :=
   (x.evs.flatMap fun a => x.evs.map fun c => (a.id, c.id)).filter
     fun p => bobHolds x p.1 p.2
 
+/-- Message passing with NO barrier: core 0 writes x then y, core 1 reads
+    y then x. Nothing here is ordered by `bob`. -/
+def mpNone : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write ⟨0, 4, .plain, false⟩, val := 1 },
+            { id := 1, core := 0, kind := .write ⟨8, 4, .plain, false⟩, val := 1 },
+            { id := 2, core := 1, kind := .read ⟨8, 4, .plain, false⟩, val := 1 },
+            { id := 3, core := 1, kind := .read ⟨0, 4, .plain, false⟩, val := 0 }],
+    po := [(0, 1), (2, 3)], addr := [], data := [], ctrl := [],
+    rf := [(1, 2)], co := [], rmw := [] }
+
+/-- Message passing with a `DMB ST` (inner-shareable) between the writes. -/
+def mpDmbSt : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write ⟨0, 4, .plain, false⟩, val := 1 },
+            { id := 1, core := 0, kind := .barrier (.dmb .ish .st), val := 0 },
+            { id := 2, core := 0, kind := .write ⟨8, 4, .plain, false⟩, val := 1 },
+            { id := 3, core := 1, kind := .read ⟨8, 4, .plain, false⟩, val := 1 },
+            { id := 4, core := 1, kind := .read ⟨0, 4, .plain, false⟩, val := 0 }],
+    po := [(0, 1), (1, 2), (0, 2), (3, 4)], addr := [], data := [],
+    ctrl := [], rf := [(2, 3)], co := [], rmw := [] }
+
+/-- Message passing with a `DMB LD` (inner-shareable) between the reads. -/
+def mpDmbLd : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write ⟨0, 4, .plain, false⟩, val := 1 },
+            { id := 1, core := 0, kind := .write ⟨8, 4, .plain, false⟩, val := 1 },
+            { id := 2, core := 1, kind := .read ⟨8, 4, .plain, false⟩, val := 1 },
+            { id := 3, core := 1, kind := .barrier (.dmb .ish .ld), val := 0 },
+            { id := 4, core := 1, kind := .read ⟨0, 4, .plain, false⟩, val := 0 }],
+    po := [(0, 1), (2, 3), (3, 4), (2, 4)], addr := [], data := [],
+    ctrl := [], rf := [(1, 2)], co := [], rmw := [] }
+
+/-- Message passing with STLR/LDAR instead of barriers. -/
+def mpRelAcq : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write ⟨0, 4, .plain, false⟩, val := 1 },
+            { id := 1, core := 0, kind := .write ⟨8, 4, .release, false⟩, val := 1 },
+            { id := 2, core := 1, kind := .read ⟨8, 4, .acquire, false⟩, val := 1 },
+            { id := 3, core := 1, kind := .read ⟨0, 4, .plain, false⟩, val := 0 }],
+    po := [(0, 1), (2, 3)], addr := [], data := [], ctrl := [],
+    rf := [(1, 2)], co := [], rmw := [] }
+
+/-- Witness: the barrier-free shape is NOT ordered by `bob`. -/
+theorem mp_none_bob_empty : bob mpNone = [] := by decide
+
+/-- Witness: with `DMB ST` the two writes ARE ordered. -/
+theorem mp_dmb_st_orders : (0, 2) ∈ bob mpDmbSt := by decide
+
+/-- Witness: with `DMB LD` the two reads ARE ordered. -/
+theorem mp_dmb_ld_orders : (2, 4) ∈ bob mpDmbLd := by decide
+
+/-- Witness: the release write IS ordered after the earlier write. -/
+theorem mp_rel_orders : (0, 1) ∈ bob mpRelAcq := by decide
+
+/-- Witness: the later read IS ordered after the acquire. -/
+theorem mp_acq_orders : (2, 3) ∈ bob mpRelAcq := by decide
+
 /-
 CUTS: `bob` covers DMB and acquire/release; DSB, ISB and all theorems open.
 -/
