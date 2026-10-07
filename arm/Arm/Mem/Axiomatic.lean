@@ -126,6 +126,70 @@ def atomic (x : Exec) : Bool :=
 def consistent (parts : OrderingParts) (x : Exec) : Bool :=
   internal x && external parts x && atomic x
 
+/-- A plain 8-byte access at address `a`. -/
+def acc (a : Addr) : Access := { addr := a, size := 8, ord := .plain, excl := false }
+
+/-- Message passing with initial writes: allowed without barriers, so all
+    three axioms hold under the empty plug-in. -/
+def xCoherent : Exec :=
+  { evs := [⟨0, 0, .write (acc 0#64), 1⟩, ⟨1, 0, .write (acc 8#64), 1⟩,
+            ⟨2, 1, .read (acc 8#64), 1⟩, ⟨3, 1, .read (acc 0#64), 0⟩,
+            ⟨4, 0, .write (acc 0#64), 0⟩, ⟨5, 0, .write (acc 8#64), 0⟩]
+    po := [(0, 1), (2, 3)], addr := [], data := [], ctrl := []
+    rf := [(4, 3), (1, 2)], co := [(4, 0), (5, 1)], rmw := [] }
+
+/-- Coherence violation: two same-location writes with a cyclic `co`. -/
+def xCoherenceBad : Exec :=
+  { evs := [⟨0, 0, .write (acc 0#64), 1⟩, ⟨1, 0, .write (acc 0#64), 2⟩]
+    po := [], addr := [], data := [], ctrl := []
+    rf := [], co := [(0, 1), (1, 0)], rmw := [] }
+
+/-- Load buffering with address dependencies: the classic `external` (B2.3
+    `ob`) violation, coherent and atomic in isolation. -/
+def xLbAddr : Exec :=
+  { evs := [⟨0, 0, .read (acc 0#64), 1⟩, ⟨1, 0, .write (acc 8#64), 1⟩,
+            ⟨2, 1, .read (acc 8#64), 1⟩, ⟨3, 1, .write (acc 0#64), 1⟩]
+    po := [(0, 1), (2, 3)], addr := [(0, 1), (2, 3)], data := [], ctrl := []
+    rf := [(1, 2), (3, 0)], co := [], rmw := [] }
+
+/-- Split exclusive pair: an external write lands between the `rmw` read and
+    write (`fre;coe` meets `rmw`), coherent and externally ordered. -/
+def xRmwSplit : Exec :=
+  { evs := [⟨0, 0, .read (acc 0#64), 7⟩, ⟨1, 0, .write (acc 0#64), 8⟩,
+            ⟨2, 1, .write (acc 0#64), 9⟩, ⟨3, 0, .write (acc 0#64), 7⟩]
+    po := [], addr := [], data := [], ctrl := []
+    rf := [(3, 0)], co := [(3, 2), (2, 1)], rmw := [(0, 1)] }
+
+/-- The message-passing witness satisfies all three axioms. -/
+theorem wit_coherent_ok : consistent noParts xCoherent = true := by decide
+
+/-- The cyclic-`co` witness fails coherence, and nothing else. -/
+theorem wit_coherence_bad_internal : internal xCoherenceBad = false := by decide
+
+theorem wit_coherence_bad_external : external noParts xCoherenceBad = true := by decide
+
+theorem wit_coherence_bad_atomic : atomic xCoherenceBad = true := by decide
+
+theorem wit_coherence_bad : consistent noParts xCoherenceBad = false := by decide
+
+/-- The load-buffering witness fails the external axiom, and nothing else. -/
+theorem wit_lb_internal : internal xLbAddr = true := by decide
+
+theorem wit_lb_external : external noParts xLbAddr = false := by decide
+
+theorem wit_lb_atomic : atomic xLbAddr = true := by decide
+
+theorem wit_lb : consistent noParts xLbAddr = false := by decide
+
+/-- The split-pair witness fails atomicity, and nothing else. -/
+theorem wit_rmw_internal : internal xRmwSplit = true := by decide
+
+theorem wit_rmw_external : external noParts xRmwSplit = true := by decide
+
+theorem wit_rmw_atomic : atomic xRmwSplit = false := by decide
+
+theorem wit_rmw : consistent noParts xRmwSplit = false := by decide
+
 end Arm
 
 /-
