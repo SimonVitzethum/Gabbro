@@ -257,10 +257,10 @@ impl Shape {
                 guarantee: "exclusive access",
             },
             Shape::Cas => Ruling::Admit {
-                price: "the declared ordering itself, carried by a lock-prefixed instruction",
+                price: "the declared ordering itself, carried by a lock-prefixed instruction (x86_64) or an acquire/release compare-and-swap (aarch64: casal or an ldaxr/stlxr loop)",
             },
             Shape::RelAcq => Ruling::Admit {
-                price: "x86_64 total store order plus the compiler barrier inside the builtin; no fence",
+                price: "x86_64: total store order plus the compiler barrier inside the builtin, no fence; aarch64 (weakly ordered): the release store and acquire load ARE the ordering (stlr, ldar), emitted by the builtin, and nothing weaker than the declared ordering may be substituted",
             },
             Shape::MergeAdd => Ruling::Refuse {
                 guarantee: "single-writer-per-cell",
@@ -524,6 +524,16 @@ fn blank_comments_and_strings(emitted: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A price that rests on an instruction or on a memory model must name BOTH supported
+    /// architectures (AArch64 is weakly ordered; "no fence" is a statement about x86 only).
+    #[test]
+    fn die_ordnungspreise_nennen_beide_architekturen() {
+        for form in [Shape::Cas, Shape::RelAcq] {
+            let Ruling::Admit { price } = form.ruling() else { panic!("{form:?} is admitted") };
+            assert!(price.contains("x86_64") && price.contains("aarch64"), "{form:?}: {price}");
+        }
+    }
 
     /// The thirteen assembler lines of the lane-47 evidence block
     /// (`messung/TEARING-INVENTAR.md`), verbatim. They are the ground truth

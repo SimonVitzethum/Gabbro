@@ -39,6 +39,7 @@
   its own instead; §7 is how the goal reaches it. See the CUTS at the end.
 -/
 import Grammatik.Kern.Semantik.Syscall
+import Grammatik.Kern.Semantik.SyscallAllg
 import Grammatik.Logik.Ruf.RufMaschineG
 import Grammatik.Korrespondenz.Korpus.Korpus124
 
@@ -137,6 +138,82 @@ def cloneBadWitness : CloneAbi :=
 /-- The defect fails, by computation. -/
 theorem cloneBadWitness_fails : ¬ cloneBadWitness.good := by decide
 
+/-! ## 3b. Generalisation over the ABI record (Sonnet G, 2026-10-07)
+
+  `CloneAbi` is the x86 record plus the handed-stack register; `CloneAbiG A` (`SyscallAllg.lean`)
+  is the same shape over ANY `ArchAbi A`. Nothing downstream of §3 reads the record (the clone
+  machine, `ChildNoReturn`, `klon_ziel` work on threads), so the generalisation is exactly the
+  shape: the three consequences of `good` are proved ONCE over `A`, and the x86 statements are
+  recovered as the instance `A := SysAbi` through the embedding `CloneAbi.toG`, which is PROVED
+  (`cloneAbi_good_iff`): the generic notion is the x86 one plus "`rax`, the number register, is no
+  input register" -- which the x86 record leaves implicit because it fixes the number in `rax`. -/
+
+/-- The embedding of the x86 clone shape into the generic one. -/
+def CloneAbi.toG (a : CloneAbi) : CloneAbiG SysAbi := ⟨a.abi, a.stack⟩
+
+/-- **The embedding is exact:** generic goodness of the image is the old `good` plus `rax` unbound. -/
+theorem cloneAbi_good_iff (a : CloneAbi) :
+    a.toG.good ↔ a.good ∧ SysReg.rax ∉ a.abi.ein.map Prod.fst := by
+  constructor
+  · rintro ⟨hg, hb, ho, hc⟩
+    obtain ⟨hg', hr⟩ := (arch_gut_x86 a.abi).1 hg
+    exact ⟨⟨hg', hb, ho, hc⟩, hr⟩
+  · rintro ⟨⟨hg', hb, ho, hc⟩, hr⟩
+    exact ⟨(arch_gut_x86 a.abi).2 ⟨hg', hr⟩, hb, ho, hc⟩
+
+/-- The handed register is bound, over any architecture. -/
+theorem cloneG_bound {A : Type} [ArchAbi A] (c : CloneAbiG A) (h : c.good) :
+    c.stack ∈ (ArchAbi.ein c.abi).map Prod.fst := h.2.1
+
+/-- ... is not the answer register, over any architecture. -/
+theorem cloneG_notOut {A : Type} [ArchAbi A] (c : CloneAbiG A) (h : c.good) :
+    c.stack ≠ ArchAbi.aus c.abi := h.2.2.1
+
+/-- ... is not clobbered, over any architecture. -/
+theorem cloneG_notClobber {A : Type} [ArchAbi A] (c : CloneAbiG A) (h : c.good) :
+    c.stack ∉ ArchAbi.clobber c.abi := h.2.2.2
+
+/-- ... and is not the number register: the fourth demand the x86 record could not state. -/
+theorem cloneG_notNummer {A : Type} [ArchAbi A] (c : CloneAbiG A) (h : c.good) :
+    c.stack ≠ ArchAbi.nummerReg c.abi := by
+  intro e
+  exact h.1.2.2.1 (e ▸ h.2.1)
+
+/-- **The old x86 statements, recovered as instances.** For an x86 gate that does not bind `rax`
+    as an input (every Linux gate: `rax` carries the number), the three old consequences are the
+    generic ones at `A := SysAbi`. -/
+theorem cloneAbi_alt_aus_allgemein (a : CloneAbi) (hr : SysReg.rax ∉ a.abi.ein.map Prod.fst)
+    (h : a.good) :
+    a.stack ∈ a.abi.ein.map Prod.fst ∧ a.stack ≠ a.abi.aus ∧ a.stack ∉ a.abi.clobber :=
+  have hg : a.toG.good := (cloneAbi_good_iff a).2 ⟨h, hr⟩
+  ⟨cloneG_bound a.toG hg, cloneG_notOut a.toG hg, cloneG_notClobber a.toG hg⟩
+
+/-- The x86 witness is good in the generic sense (`rax` unbound), so the embedding is non-empty. -/
+theorem cloneWitness_toG_good : cloneWitness.toG.good :=
+  (cloneAbi_good_iff cloneWitness).2 ⟨cloneWitness_good, by decide⟩
+
+/-- Strictness: an x86 gate binding `rax` as an input is `good` in the old sense and refused by
+    the generic one -- the implicit x86 convention made explicit, not a loss. -/
+theorem cloneAbi_einbettung_streng :
+    ∃ a : CloneAbi, a.good ∧ ¬ a.toG.good := by
+  refine ⟨{ abi := { nummer := 1000, ein := [(.rax, 0), (.rsi, 1)], aus := .rdx, clobber := [] }
+            stack := .rsi }, by decide, ?_⟩
+  intro h
+  exact ((cloneAbi_good_iff _).1 h).2 (by decide)
+
+/-- Both architectures' clone shapes in one statement: the x86 witness through the embedding and
+    the AArch64 gate of `linux-aarch64.gab`. -/
+theorem klon_beide_architekturen :
+    cloneWitness.toG.good ∧ klonTorArm.good :=
+  ⟨cloneWitness_toG_good, klonTorArm_good⟩
+
+#print axioms Gabbro.Grammatik.cloneAbi_good_iff
+#print axioms Gabbro.Grammatik.cloneG_bound
+#print axioms Gabbro.Grammatik.cloneG_notNummer
+#print axioms Gabbro.Grammatik.cloneAbi_alt_aus_allgemein
+#print axioms Gabbro.Grammatik.cloneWitness_toG_good
+#print axioms Gabbro.Grammatik.cloneAbi_einbettung_streng
+#print axioms Gabbro.Grammatik.klon_beide_architekturen
 #print axioms Gabbro.Grammatik.cloneAbiGoodB_sound
 #print axioms Gabbro.Grammatik.cloneStack_bound
 #print axioms Gabbro.Grammatik.cloneStack_notOut

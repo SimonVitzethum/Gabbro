@@ -79,6 +79,7 @@ pub mod abgeleitet;
 /// the errno decoding and the machine/counterpart questions -- the call
 /// boundary reuses the `extern` path through `Umgebung`, the call graph and
 /// `H007`, so this module holds only the declaration itself.
+pub mod abi_tabelle;
 pub mod syscall;
 pub mod zielbindung;
 /// **Wave A, lane 273 -- the direct-x86 target vocabulary.** A safe,
