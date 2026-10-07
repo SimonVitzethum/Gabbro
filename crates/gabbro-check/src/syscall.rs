@@ -30,27 +30,14 @@ use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use std::collections::{HashMap, HashSet};
 
-/// The x86_64 general registers -- and only they. `aarch64` stays sealed, and
-/// a control, segment or floating-point register has no binding in the Linux
-/// syscall ABI this declaration mirrors. `rsp`/`rbp` are general registers by
-/// name; holding the stack against the declaration is the stub's business
-/// (lane S6), not this pass's.
-const REGISTER: &[&str] = &[
-    "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp", "r8", "r9", "r10", "r11",
-    "r12", "r13", "r14", "r15",
-];
-
-/// The AArch64 general registers `x0`-`x30` -- and only they (no `sp`, no `xzr`, no vector or
-/// system register has a binding in the Linux `svc #0` ABI). The AArch64 Linux convention the
-/// stub template (`syscall_befehl` in `emit.rs`) mirrors: the call number in `x8`, arguments in
-/// `x0`-`x5`, the answer in `x0` (the same register as the first argument). The table is a
-/// shape rule like the x86_64 one; holding the number register against the declaration is the
-/// stub's business (`C180`), as `rax` is on x86_64.
-const REGISTER_AARCH64: &[&str] = &[
-    "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13",
-    "x14", "x15", "x16", "x17", "x18", "x19", "x20", "x21", "x22", "x23", "x24", "x25", "x26",
-    "x27", "x28", "x29", "x30",
-];
+/// The register tables are GENERATED from the Lean ABI records (`abi_tabelle.rs`, written by
+/// `instrumente/erzeuge-abi-tabelle.py` from `SysReg` and `ArmReg`): x86_64 `rax`..`r15`, and
+/// AArch64 `x0`-`x30` (no `sp`, no `xzr`, no vector or system register has a binding in the Linux
+/// `svc #0` ABI). Neither a control, segment nor floating-point register has a binding in the Linux
+/// syscall ABI this declaration mirrors. Holding the number register against the declaration is
+/// the stub's business (`C180`), as `rax` is on x86_64; the AArch64 convention (number in `x8`,
+/// arguments in `x0`-`x5`, answer in `x0`) is `abi_tabelle::AARCH64_*`.
+use crate::abi_tabelle::{REGISTER_AARCH64, REGISTER_X86_64 as REGISTER};
 
 /// The architectures a `syscall` may name (rule `A006` refuses the rest).
 pub fn arch_bekannt(arch: &str) -> bool {

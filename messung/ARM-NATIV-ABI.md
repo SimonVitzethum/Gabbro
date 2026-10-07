@@ -49,9 +49,17 @@ one statement; `klonTorArm_good` is the AArch64 clone gate's handoff shape (`sta
    `PflichtSvc` states `sp` unchanged, so alignment at `svc` follows from alignment at block entry; the
    caller-side premise `sp % 16 = 0 at every call boundary` (AAPCS64) is a duty of the whole-function
    frame validator, not stated here.
-6. **Checker side:** `lean_g.rs` and the Rust register tables are still checked against `SyscallArm*.lean`
-   by a drift test (`tests/arm_abi.rs`), not generated from `ArchAbi`. `CloneHandoff.lean` stays on the
-   x86 record (it imports machine G); `CloneAbiG` carries only the `N446` shape.
+6. **Checker side (closed by Sonnet G, 2026-10-07):** the Rust register tables are GENERATED from the
+   Lean records (`instrumente/erzeuge-abi-tabelle.py` -> `crates/gabbro-check/src/abi_tabelle.rs`;
+   x86 rows from `SysReg`, AArch64 rows, number/answer/argument/clone-stack registers and the call
+   numbers from `ArmReg`, `nummerRegLinux`, `argRegs`, `ergebnisReg`, `klonStapelReg`, `def nr...`);
+   `--pruefe` fails on a stale file, `--selbsttest` shows it can. `lean_g.rs` names no register (the
+   exporter drops the ABI, header "NO FORM"), so there is nothing to generate there.
+   `CloneHandoff.lean` is generalised: `CloneAbi.toG : CloneAbi -> CloneAbiG SysAbi`, `cloneAbi_good_iff`
+   (exact up to "`rax` is no input", which the x86 record left implicit), the consequences once over
+   any `A` (`cloneG_bound/_notOut/_notClobber/_notNummer`), old statements recovered
+   (`cloneAbi_alt_aus_allgemein`), strictness (`cloneAbi_einbettung_streng`) and both architectures in
+   one theorem (`klon_beide_architekturen`).
 7. **Completeness of `Bef`.** Real blocks will use `movz/movk` sequences, `stp/ldp` for the callee-saved
    `x19..x24`, `adrp/add` for `main`'s address; the canonical blocks above are the SHAPE the validator
    accepts, and an equivalence lemma per variant is needed.
@@ -64,3 +72,33 @@ one statement; `klonTorArm_good` is the AArch64 clone gate's handoff shape (`sta
 | Thread start (clone child) | yes (`PflichtKind`, `PflichtTrampolin`) | yes | child-path selection (`cbnz`), memory frame, clone semantics as named assumption |
 | Entry (`_start`) | yes (`PflichtEintritt`) | yes | `argc/argv` loads need memory |
 | Stack alignment | inside the three above (16-aligned `sp` at every `bl`/`blr`) | yes | whole-function frame validator |
+
+
+## 3. Interface wanted from the decoder (item 3, Sonnet G, 2026-10-07)
+
+State of the Arm model on 2026-10-07 (read only, `/home/simon/Dokumente/gabbro-arm/work/15/arm/Arm/Isa/`
+and `arm/Arm/Isa/` in the main checkout): `Decode.lean` maps a 32-bit word to a LEDGER ROW
+(`decodeA64 : Nat -> Nat -> Option EncRow`, `EncRow` = name, group, mask, match value, status). That
+classifies an encoding; it does not yield operands. `Bef` therefore cannot yet be replaced by the
+decoded-instruction type, and nothing was copied. What the duty validator needs, exactly:
+
+1. **A decoded-instruction type with operands** `Arm.Instr` (or an equivalent view per ledger row),
+   and `decode : Nat -> Option Instr` (word to instruction, `none` for unallocated/refused), with a
+   lemma `decode_row : decode w = some i -> decodeA64 w see = some r` tying it to the ledger.
+2. **The forms the four duty blocks use**, with their operand fields: `MOVZ/MOVK/MOVN` (sf, hw, imm16, Rd),
+   `ORR Rd, XZR, Rm` (the `mov` alias) and `ADD Rd, Rn, #0` (`mov x9, sp`), `AND (immediate)` with
+   `Rd = SP` (`and sp, x9, #-16`: the decoded bitmask value, `0xFFFFFFFFFFFFFFF0`), `SVC imm16`,
+   `BRK imm16`, `BL imm26`, `BLR Rn`, `RET`, and for the later memory duties `LDR/STR (imm, unsigned
+   offset)`, `STP/LDP (pre/post-index)`, `CBNZ/CBZ`, `ADRP`, `ADD (imm)`. Encodings to be pinned by
+   examples: `svc #0 = d4000001`, `brk #0 = d4200000`.
+3. **A one-step semantic function or relation on a state that contains** `x0..x30` (Nat mod 2^64), `sp`,
+   `pc`, `NZCV`, and byte memory: `step : State -> Instr -> State` (or `Option State` for faults), with
+   `svc` modelled as an explicit exception-taken event carrying the register file (so
+   `PflichtSvc` can quantify over the kernel's answer: only `x0` changes, the agreed ABI), and `brk`
+   as a halt/exception event. `ArmZustand` of `SyscallArm.lean` embeds into that state (register
+   file + flags); the embedding is the lemma to prove.
+4. **Per duty, one transfer lemma:** for a block of decoded instructions whose every member is one of the
+   `Bef` forms, `lauf` (the mini run) equals the run of `step`. After that the `Pflicht*` statements
+   transfer unchanged and `Bef` is deleted.
+5. **Reads of unallocated/unwired groups must refuse** (as `decodeFor` already does), so a block with a
+   word the decoder does not wire cannot meet a duty by default.

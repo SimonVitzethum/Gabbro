@@ -15,17 +15,10 @@ fn lies(rel: &str) -> String {
     fs::read_to_string(wurzel().join(rel)).unwrap_or_else(|e| panic!("{rel}: {e}"))
 }
 
-/// `def nrWrite : Nat := 64` -> {"nrWrite": 64}
+/// The call numbers of the Lean model, as the GENERATED table carries them
+/// ({"nrWrite": 64}); `abi_tabelle_ist_frisch` holds that table against the Lean text.
 fn lean_nummern() -> HashMap<String, u64> {
-    let mut m = HashMap::new();
-    for z in lies("grammatik/Grammatik/Kern/Semantik/SyscallArm.lean").lines() {
-        if let Some(rest) = z.strip_prefix("def nr") {
-            if let Some((name, wert)) = rest.split_once(" : Nat := ") {
-                m.insert(format!("nr{name}"), wert.trim().parse().unwrap());
-            }
-        }
-    }
-    m
+    gabbro_check::abi_tabelle::AARCH64_NUMMERN.iter().map(|(n, v)| (format!("nr{n}"), *v)).collect()
 }
 
 /// (gate name, number, regs-in text, regs-out text, clobbers text) per `syscall` of the binding.
@@ -119,4 +112,30 @@ fn die_registertabelle_des_pruefers_ist_x0_bis_x30() {
     assert!(gabbro_check::syscall::register_fuer("x86_64").contains(&"rax"));
     assert!(gabbro_check::syscall::arch_bekannt("aarch64"));
     assert!(!gabbro_check::syscall::arch_bekannt("riscv64"));
+}
+
+#[test]
+fn abi_tabelle_ist_frisch() {
+    // The Rust tables are generated from the Lean records; a stale file is a red test, not a
+    // silently diverging row.
+    let st = std::process::Command::new("python3")
+        .arg(wurzel().join("instrumente/erzeuge-abi-tabelle.py"))
+        .arg("--pruefe")
+        .output()
+        .expect("python3");
+    assert!(st.status.success(), "{}", String::from_utf8_lossy(&st.stdout));
+}
+
+#[test]
+fn die_konventionen_der_erzeugten_tabelle_sind_die_des_pruefers() {
+    use gabbro_check::abi_tabelle as t;
+    assert_eq!(t::AARCH64_NUMMER_REG, "x8");
+    assert_eq!(t::AARCH64_ERGEBNIS_REG, "x0");
+    assert_eq!(t::AARCH64_ARG_REGS, ["x0", "x1", "x2", "x3", "x4", "x5"]);
+    assert_eq!(t::AARCH64_KLON_STAPEL_REG, "x1");
+    // number register and stack register are general registers the checker accepts
+    for r in [t::AARCH64_NUMMER_REG, t::AARCH64_ERGEBNIS_REG, t::AARCH64_KLON_STAPEL_REG] {
+        assert!(gabbro_check::syscall::register_fuer("aarch64").contains(&r));
+    }
+    assert_eq!(gabbro_check::syscall::register_fuer("x86_64").len(), 16);
 }
