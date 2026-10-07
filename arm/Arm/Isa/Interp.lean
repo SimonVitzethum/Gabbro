@@ -93,6 +93,31 @@ where go : Nat → Machine → Machine
   | (k+1), s =>
     go k (stByte s ((acc.addr.toNat + k) % Int.pow2 64) ((v / 256 ^ k) % 256))
 
+/-- Run an `Eff` tree with `fuel` steps. Barriers are ignored (sequential
+    model); `raise` returns the exception. Running out of fuel is a harness
+    error (code 999), NOT Sail behaviour: vectors below use ample fuel. -/
+-- Sail: interface.sail (the accessors `run` answers), mem.sail:85 (memory).
+def runF : Nat → Eff α → Machine → Except Exc (α × Machine)
+  | 0, _, _ => .error (.other 999)
+  | _ + 1, .ret a, m => .ok (a, m)
+  | f + 1, .rdX n k, m => runF f (k (getX m n)) m
+  | f + 1, .wrX n v k, m => runF f k (setX m n v)
+  | f + 1, .rdV n k, m => runF f (k (getV m n)) m
+  | f + 1, .wrV n v k, m => runF f k (setV m n v)
+  | f + 1, .rdPC k, m => runF f (k m.pc) m
+  | f + 1, .wrPC v k, m => runF f k { m with pc := v }
+  | f + 1, .rdNZCV k, m => runF f (k m.nzcv) m
+  | f + 1, .wrNZCV v k, m => runF f k { m with nzcv := v }
+  | f + 1, .rdSys s k, m => runF f (k (getSys m s)) m
+  | f + 1, .wrSys s v k, m => runF f k (setSys m s v)
+  | f + 1, .rdMem a k, m => runF f (k (loadLE m a)) m
+  | f + 1, .wrMem a v k, m => runF f k (storeLE m a v)
+  | f + 1, .bar _ k, m => runF f k m
+  | _ + 1, .raise e, _ => .error e
+
+/-- Run with fixed ample fuel (every ported instruction needs at most 8 steps). -/
+def run (e : Eff α) (m : Machine) : Except Exc (α × Machine) := runF 128 e m
+
 end Arm
 
 /-
