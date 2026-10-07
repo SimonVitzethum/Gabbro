@@ -200,6 +200,38 @@ theorem wit_rmw_atomic : atomic xRmwSplit = false := by decide
 
 theorem wit_rmw : consistent noParts xRmwSplit = false := by decide
 
+/-- Control plus ISB orders the later read: `R[x]; ISB; R[y]` with a
+    control dependency onto the ISB puts `(R[x], R[y])` into `dob`. -/
+def xIsbOrd : Exec :=
+  { evs := [⟨0, 0, .read (acc 0#64), 0⟩, ⟨1, 0, .barrier .isb, 0⟩,
+            ⟨2, 0, .read (acc 8#64), 0⟩,
+            ⟨3, 9, .write (acc 0#64), 0⟩, ⟨4, 9, .write (acc 8#64), 0⟩]
+    po := [(0, 1), (1, 2), (0, 2)], addr := [], data := [], ctrl := [(0, 1)]
+    rf := [(3, 0), (4, 2)], co := [], rmw := [] }
+
+/-- Planted twin without the ISB: the same two reads with direct `po` and no
+    control dependency are NOT ordered by `dob`. -/
+def xNoIsb : Exec :=
+  { evs := [⟨0, 0, .read (acc 0#64), 0⟩, ⟨2, 0, .read (acc 8#64), 0⟩,
+            ⟨3, 9, .write (acc 0#64), 0⟩, ⟨4, 9, .write (acc 8#64), 0⟩]
+    po := [(0, 2)], addr := [], data := [], ctrl := []
+    rf := [(3, 0), (4, 2)], co := [], rmw := [] }
+
+/-- The ISB clause fires: `(R[x], R[y])` is `dob`-ordered through the ISB. -/
+theorem isb_orders :
+    (dob xIsbOrd).any (fun p => p.1 == 0 && p.2 == 2) = true := by decide
+
+/-- Without the ISB there is no `dob` edge between the two reads. -/
+theorem noisb_no_order :
+    (dob xNoIsb).any (fun p => p.1 == 0 && p.2 == 2) = false := by decide
+
+/-- Both ISB executions are consistent: one cross-location read-read `dob`
+    edge cannot close an `ob` cycle by itself (the return path would need a
+    second cross-location hop, i.e. write-side ordering from `bob`). -/
+theorem isb_allowed : consistent noParts xIsbOrd = true := by decide
+
+theorem noisb_allowed : consistent noParts xNoIsb = true := by decide
+
 end Arm
 
 /-
