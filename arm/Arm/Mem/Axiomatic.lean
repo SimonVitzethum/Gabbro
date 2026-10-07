@@ -193,7 +193,16 @@ theorem wit_rmw : consistent noParts xRmwSplit = false := by decide
 end Arm
 
 /-
-CUTS: model complete, witnesses pending. `dob` clause list follows the
-published `aarch64.cat` from knowledge (see report), not a measured copy.
-No theorem yet, so no `#print axioms`.
+CUTS: `internal`, `external`, `atomic` and `consistent` are stated; each axiom
+has a passing and a failing witness decided by `decide`. NOT modelled:
+mixed-size accesses, address translation, instruction-side effects, and the
+`aob`/`bob` plug-ins (owned by agents 09/10; witnesses use `noParts`).
+The `dob` clause list follows the published `aarch64.cat` from knowledge
+(see REPORT-07.md), not a measured copy. `consistent` assumes nothing about
+`Exec` well-formedness (owned by agent 06).
 -/
+
+#print axioms Arm.wit_coherent_ok
+#print axioms Arm.wit_coherence_bad
+#print axioms Arm.wit_lb
+#print axioms Arm.wit_rmw
