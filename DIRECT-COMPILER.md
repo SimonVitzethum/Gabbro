@@ -749,7 +749,7 @@ Last ledger refresh: **2026-10-07 00:17 UTC**. This is an operational snapshot, 
 | 1381 | SSE4.1 rows that SseFourOne left open | Committed candidate; review/integration pending | 1382: Unresolved after agent rounds; not accepted | [task](lanes/1381.md) |
 | 1383 | Shift and rotate on memory operands and 8-bit high registers | Committed candidate; review/integration pending | 1384: scheduled | [task](lanes/1383.md) |
 | 1385 | GabbroV bridge: the shared-atomic rely | Committed candidate; review/integration pending | 1386: Agent working | [task](lanes/1385.md) |
-| 1387 | GabbroV bridge: StartPflicht without the Initially assumption | Merged after review/checks | 1388: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1387.md) |
+| 1387 | GabbroV bridge: StartPflicht without the Initially assumption | Merged after review/checks | 1388: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1387.md) |
 | 1389 | GabbroV bridge: widen the elaborated fragment | Incomplete; preserved | 1390: scheduled | [task](lanes/1389.md) |
 | 1391 | GabbroV: a traversal index is a member of its domain | Committed candidate; review/integration pending | 1392: scheduled | [task](lanes/1391.md) |
 | 1393 | GabbroV: does a tree declaration imply parent consistency? | Committed candidate; review/integration pending | 1394: scheduled | [task](lanes/1393.md) |
@@ -1840,6 +1840,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-07: publication batch checks passed for `bdf3c341`: complete local Lean, Rust and emission checks plus the standard goal axioms. Full source-to-binary validation remains OPEN.
 - 2026-10-07: lane **1387**, GabbroV bridge: StartPflicht without the Initially assumption, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1387.md). <!-- x86-merged:1387 -->
 - 2026-10-07: checked master `bc9df0e4` published to origin/master after local checks, outgoing secret-pattern inspection and remote ancestry verification. <!-- x86-published:bc9df0e41798049141f1f533b90afc443d38440c -->
+- 2026-10-07: lane **1388**, Independent exact review of 1387, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1388.md). <!-- x86-merged:1388 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
