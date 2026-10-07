@@ -1,0 +1,26 @@
+-- 186 -- a MUTABLE static array with an initialiser list.
+--
+-- Before SPRACHE-EFFIZIENZ #15 only `const` could carry `[1, 2, 3]`; a `static mut` table that
+-- starts non-zero (a gamma ramp, a start state) needed an init loop that ran N stores at
+-- boot. The list is held exactly like a const table: every element a translation-time
+-- value inside its element range (`N285`, `N286`, `K190`, `K194`), and the emitter writes
+-- one `static uint32_t` array with the folded values -- in `.data`, no code.
+module beispiel186 {
+
+static mut RAMPE : [u32 in 0 .. 255; 4] = [0, 85, 170, 255];
+
+impl fn stufe(i : u32 in 0 ..< 4) -> u32 in 0 .. 255
+    effects { reads RAMPE }
+    costs <= 3 ops
+{
+    return RAMPE[i];
+}
+
+impl fn setze(i : u32 in 0 ..< 4, v : u32 in 0 .. 255)
+    effects { writes RAMPE }
+    costs <= 3 ops
+{
+    RAMPE[i] = v;
+}
+
+}

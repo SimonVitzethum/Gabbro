@@ -9,6 +9,7 @@
 -/
 import Grammatik.Korrespondenz.Korpus.GenOblig104
 import Grammatik.Korrespondenz.Korpus.GenOblig108
+import Grammatik.Zertifikat.G187_bool_statisch
 import Grammatik.Zertifikat.Reihe00.G15_own_traegt_beide_rechte
 import Grammatik.Zertifikat.Reihe00.G16_by_ops_am_feld
 import Grammatik.Zertifikat.Reihe00.G34_markierter_wert

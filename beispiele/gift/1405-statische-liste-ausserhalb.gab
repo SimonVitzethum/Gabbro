@@ -1,0 +1,9 @@
+-- erwartet: K194
+-- **Initialiser list of a `static` array: an element outside the element range.** The list
+-- is held like a const table, so `300` in a `u32 in 0 .. 255` cell falls exactly as it
+-- does in a `const` (SPRACHE-EFFIZIENZ #15).
+module gift::statische_liste {
+
+static mut RAMPE : [u32 in 0 .. 255; 2] = [0, 300];
+
+}

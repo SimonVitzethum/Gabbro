@@ -1,0 +1,18 @@
+-- 187 -- a `bool` static with a literal initialiser.
+--
+-- `static mut ANHALTEN : bool = false;` checked (`M135` takes `false`/`true` for `bool`) but
+-- the emitter refused it as "non-constant" (`C001`, SPRACHE-EFFIZIENZ #14); the service-loop
+-- stop flag had to be a whole `u32`. LEGACY C fix: it now emits `static bool ANHALTEN = false;`.
+module beispiel187 {
+
+static mut ANHALTEN : bool = false;
+
+impl fn halte() effects { writes ANHALTEN } costs <= 2 ops {
+    ANHALTEN = true;
+}
+
+impl fn gehalten() -> bool effects { reads ANHALTEN } costs <= 2 ops {
+    return ANHALTEN;
+}
+
+}
