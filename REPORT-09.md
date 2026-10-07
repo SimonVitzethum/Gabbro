@@ -91,3 +91,40 @@ No `sorry`/`admit`/`axiom`/`native_decide`/`unsafe` anywhere.
 `9d89828e` skeleton; `62bc26e3` access/ALU; `b04172d7` monitor machine;
 `8777531a` aob/atomicity; `4af93702` theorems; `1eb348da` spin-lock verdicts;
 `1703833e` monitor witness + witnesses + import line. This report: next commit.
+
+## Follow-up: independent review of agent 07's model — REVIEW PLAN (BLOCKED)
+
+Status (2026-10-07): `arm/Arm/Mem/Axiomatic.lean` is NOT in this clone
+(`ls arm/Arm/Mem/` shows only `Atomics.lean`, `Event.lean`; tree clean).
+Per the follow-up instruction I STOP here: no `Review.lean`, no guessing of the
+file's content, no edits to it. The review itself is NOT done; `.agent/DONE`
+(for this follow-up) is NOT created.
+
+Blocker: the coordinator must merge agent 07's `Axiomatic.lean` into this clone
+(I may not fetch/pull/network; rule 1). I will resume on the next turn once the
+file is readable here.
+
+Plan (to execute when unblocked), in `arm/Arm/Mem/Review.lean` + one import line
+in `arm/Arm.lean`, reported here:
+
+1. Read `Axiomatic.lean` in full; record every relation/axiom name with its exact
+   Lean definition. Do not edit the file; the coordinator forwards findings.
+2. Write down the reference clauses from my own knowledge of published Arm ARM
+   B2.3 / `aarch64.cat`, then diff clause by clause against the file. Check
+   inventory: `obs` (`rfe | coe | fre`); `dob` (addr/data/ctrl clauses including
+   the `addr;po;[ISB];po;[R]` shape — the coordinator already found one missing
+   ISB clause in `dob`, so every ISB-adjacent clause gets its own fixture);
+   `aob` (`rmw` plus the acquire read forwarded from its write);
+   `bob` (DMB/DSB/ISB and release/acquire edges); the internal (coherence) axiom
+   (`po-loc | ca | rf | fr` acyclic); the atomic axiom (`rmw` vs `fre;coe`).
+   Every difference is a finding, marked high or low confidence. Reference shapes
+   above are check targets to be confirmed against the published text at review
+   time, not claims about the file.
+3. For each finding, build a small `Exec` over the frozen `Event.lean` vocabulary
+   on which the file and the reference give DIFFERENT verdicts, with a
+   `decide`-proved fact for each reading. A finding without such an `Exec` stays
+   a note, never a verdict.
+4. Check my own `aob` in `Atomics.lean` the same way (reference clauses versus my
+   `aob` def; a differing `Exec` or a clean bill, recorded either way).
+5. Full `./arm-bau` green, findings reported here for forwarding, `.agent/DONE`
+   only then.
