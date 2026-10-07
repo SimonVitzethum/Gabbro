@@ -109,6 +109,71 @@ def Exec.wf (x : Exec) : Bool :=
   (ids.length == ids.eraseDups.length)
     && x.rfOk && x.coOk && x.poOk && x.depOk && x.rmwOk
 
+/-- Fixture address cell used by the planted examples. -/
+def accX : Access := { addr := 0, size := 8, ord := .plain, excl := false }
+
+/-- Good example: one core writes 1 and reads 1 back. -/
+def exGood : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write accX, val := 1 },
+            { id := 1, core := 0, kind := .read accX, val := 1 }]
+    po := [(0, 1)], addr := [], data := [], ctrl := []
+    rf := [(0, 1)], co := [], rmw := [] }
+
+theorem exGood_wf : Exec.wf exGood = true := by decide
+
+/-- Bad: the read answers 2 but its write holds 1 (rf value mismatch). -/
+def exBadRf : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write accX, val := 1 },
+            { id := 1, core := 0, kind := .read accX, val := 2 }]
+    po := [(0, 1)], addr := [], data := [], ctrl := []
+    rf := [(0, 1)], co := [], rmw := [] }
+
+theorem exBadRf_wf : Exec.wf exBadRf = false := by decide
+
+/-- Bad: two same-address writes with no `co` edge (totality fails). -/
+def exBadCo : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write accX, val := 1 },
+            { id := 1, core := 0, kind := .write accX, val := 2 }]
+    po := [(0, 1)], addr := [], data := [], ctrl := []
+    rf := [], co := [], rmw := [] }
+
+theorem exBadCo_wf : Exec.wf exBadCo = false := by decide
+
+/-- Bad: a `po` edge across two cores. -/
+def exBadPo : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write accX, val := 1 },
+            { id := 1, core := 1, kind := .write accX, val := 1 }]
+    po := [(0, 1)], addr := [], data := [], ctrl := []
+    rf := [], co := [(0, 1)], rmw := [] }
+
+theorem exBadPo_wf : Exec.wf exBadPo = false := by decide
+
+/-- Bad: a data edge starting at a write instead of a read. -/
+def exBadDep : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write accX, val := 1 },
+            { id := 1, core := 0, kind := .read accX, val := 1 }]
+    po := [(0, 1)], addr := [], data := [(0, 1)], ctrl := []
+    rf := [(0, 1)], co := [], rmw := [] }
+
+theorem exBadDep_wf : Exec.wf exBadDep = false := by decide
+
+/-- Bad: an `rmw` pair across two cores. -/
+def exBadRmw : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .read accX, val := 1 },
+            { id := 1, core := 1, kind := .write accX, val := 1 },
+            { id := 2, core := 1, kind := .write accX, val := 0 }]
+    po := [(1, 2)], addr := [], data := [], ctrl := []
+    rf := [(2, 0)], co := [(2, 1)], rmw := [(0, 1)] }
+
+theorem exBadRmw_wf : Exec.wf exBadRmw = false := by decide
+
+#print axioms exGood_wf
+#print axioms exBadRf_wf
+#print axioms exBadCo_wf
+#print axioms exBadPo_wf
+#print axioms exBadDep_wf
+#print axioms exBadRmw_wf
+
 end Arm
 
 /-
