@@ -191,7 +191,7 @@ structure Vec where
   expNZCV : Option Nat
 
 /-- Run a vector: the op must complete and meet every stated expectation. -/
-def checkSP (m : Machine) (e : Option Nat) : Bool :=
+def interpCheckSP (m : Machine) (e : Option Nat) : Bool :=
   match e with
   | none => true
   | some x => m.sp.toNat == x % Int.pow2 64
@@ -206,7 +206,7 @@ def checkVec (v : Vec) : Bool :=
   | .error _ => false
   | .ok (_, m) =>
     v.expX.all (fun p => (getX m p.1).toNat == p.2 % Int.pow2 64)
-      && checkSP m v.expSP && checkNZCV m v.expNZCV
+      && interpCheckSP m v.expSP && checkNZCV m v.expNZCV
 
 /-- Blank machine: all registers zero, NZCV clear, empty memory. -/
 def blank : Machine :=
