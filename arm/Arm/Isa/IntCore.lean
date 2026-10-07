@@ -197,6 +197,67 @@ theorem shiftReg_ror : shiftReg 32 0x12345678 .ror 8 = 0x78123456 := by decide
 /-- Planted wrong case: `LSL #2` of 1 is not 8. -/
 theorem shiftReg_wrong : shiftReg 32 1 .lsl 2 ≠ 8 := by decide
 
+/-- Extension kinds (Sail `ExtendType`). -/
+-- Sail: v8_base.sail:35744 (`DecodeRegExtend`).
+inductive ExtTy where
+  | uxtb | uxth | uxtw | uxtx | sxtb | sxth | sxtw | sxtx
+  deriving DecidableEq, Repr
+
+/-- Decode the 3-bit extend field (Sail `DecodeRegExtend`, total on 3 bits). -/
+-- Sail: v8_base.sail:35744.
+def decodeExt (o : Nat) : ExtTy :=
+  match o % 8 with
+  | 0 => .uxtb
+  | 1 => .uxth
+  | 2 => .uxtw
+  | 3 => .uxtx
+  | 4 => .sxtb
+  | 5 => .sxth
+  | 6 => .sxtw
+  | _ => .sxtx
+
+/-- Bit-length selected by an extension kind. -/
+-- Sail: v8_base.sail:35780 (`ExtendReg` match arms).
+def extLen : ExtTy → Nat
+  | .uxtb | .sxtb => 8
+  | .uxth | .sxth => 16
+  | .uxtw | .sxtw => 32
+  | .uxtx | .sxtx => 64
+
+/-- Is the extension unsigned? -/
+-- Sail: v8_base.sail:35780 (`is_unsigned` arms).
+def extUnsigned : ExtTy → Bool
+  | .uxtb | .uxth | .uxtw | .uxtx => true
+  | _ => false
+
+/-- Sail `ExtendReg`: take `len` bits of `v`, shift left by `shift`,
+    then zero/sign-extend to `w` bits. `shift` must be at most 4. -/
+-- Sail: v8_base.sail:35780 (`ExtendReg (reg, exttype, shift, N)`).
+def extendReg (v : Nat) (e : ExtTy) (shift w : Nat) : Nat :=
+  let len0 := extLen e
+  let span := if shift < w then w - shift else 0
+  let len := if len0 < span then len0 else span
+  let t := (v % pow2 len) * pow2 shift
+  let top := len + shift
+  if extUnsigned e then t
+  else if top = 0 then 0
+  else if pow2 (top - 1) ≤ t then t + (pow2 w - pow2 top) else t
+
+/-- `UXTB` of `0x1FF` is `0xFF`. -/
+-- Sail: v8_base.sail:35780.
+theorem extendReg_uxtb : extendReg 0x1FF .uxtb 0 32 = 0xFF := by decide
+
+/-- `SXTB` of `0xFF` sign-extends to `0xFFFFFFFF`. -/
+-- Sail: v8_base.sail:35780.
+theorem extendReg_sxtb : extendReg 0xFF .sxtb 0 32 = 0xFFFFFFFF := by decide
+
+/-- `UXTH` with `LSL #1` of `0x1FF` is `0x3FE`. -/
+-- Sail: v8_base.sail:35780.
+theorem extendReg_uxth_sh : extendReg 0x1FF .uxth 1 32 = 0x3FE := by decide
+
+/-- Planted wrong case: `SXTB` of `0xFF` is not `0xFF`. -/
+theorem extendReg_wrong : extendReg 0xFF .sxtb 0 32 ≠ 0xFF := by decide
+
 end Arm.Int
 
 /-
