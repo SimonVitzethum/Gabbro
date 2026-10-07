@@ -619,7 +619,7 @@ def strWeite (fmt : Nat) : Breite :=
   if fmt % 2 = 0 then .b8 else .b16
 
 /-- Element count of a data format: 16 bytes or 8 words. -/
-def strAnzahl (fmt : Nat) : Nat :=
+def sseFourTwoStrAnzahl (fmt : Nat) : Nat :=
   if fmt % 2 = 0 then 16 else 8
 
 /-- Signedness of a data format (imm8 bit 1). -/
@@ -752,7 +752,7 @@ structure StrErg where
 def strAuswertung (art : StrArt) (modus : StrModus)
     (dstV srcV : Vektor) (dstR srcR : Wort) : StrErg :=
   let w := strWeite modus.format
-  let anzahl := strAnzahl modus.format
+  let anzahl := sseFourTwoStrAnzahl modus.format
   let signiert := strSigniert modus.format
   let elemD : Nat → Nat := fun i => laneNat w dstV i
   let elemS : Nat → Nat := fun j => laneNat w srcV j

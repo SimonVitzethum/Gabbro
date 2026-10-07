@@ -610,7 +610,7 @@ def decodeSseMemTail (np : Bool) (w r x b esc third : Nat) :
 
 /-- Decode after the class prefix: `0F`, the escape byte, the third
     byte, then the ModRM tail. -/
-def decodeSseMemNach (np : Bool) (w r x b : Nat) :
+def decodeSseMemNachDreiByte (np : Bool) (w r x b : Nat) :
     List Byte → Option (SseMemOp × List Byte)
   | [] => none
   | p1 :: rest =>
@@ -629,7 +629,7 @@ def decodeSseMemNach (np : Bool) (w r x b : Nat) :
 /-- Top-level decode: the REX prefix selects W/R/X/B; `66` behind it
     selects XMM, a bare `0F` the MMX class. The decoded length is the
     consumed byte count. -/
-def decodeSseMem : List Byte → Option (SseMemDec × List Byte)
+def decodeSseMemDreiByte : List Byte → Option (SseMemDec × List Byte)
   | [] => none
   | r :: tail =>
     if 64 ≤ byteNat r && byteNat r < 80 then
@@ -639,7 +639,7 @@ def decodeSseMem : List Byte → Option (SseMemDec × List Byte)
       let xx := vv / 2 % 2
       let bb := vv % 2
       let weiter (np : Bool) (bs : List Byte) :=
-        match decodeSseMemNach np w rr xx bb bs with
+        match decodeSseMemNachDreiByte np w rr xx bb bs with
         | some (op, rest) =>
           match encodeSseMem op with
           | some canon => some (⟨op, canon.length⟩, rest)
@@ -666,28 +666,28 @@ def decodeSseMem : List Byte → Option (SseMemDec × List Byte)
 /-- Round trip for REX.W PSHUFB, over any suffix. -/
 theorem roundtrip_pshufbRW (dst src : XmmReg) (suffix : List Byte) :
     ∃ bs, encodeSseMem (.pshufbRW dst src) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.pshufbRW dst src, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
 /-- Round trip for REX.W PABSB, over any suffix. -/
 theorem roundtrip_pabsBRW (dst src : XmmReg) (suffix : List Byte) :
     ∃ bs, encodeSseMem (.pabsBRW dst src) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.pabsBRW dst src, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
 /-- Round trip for REX.W PABSW, over any suffix. -/
 theorem roundtrip_pabsWRW (dst src : XmmReg) (suffix : List Byte) :
     ∃ bs, encodeSseMem (.pabsWRW dst src) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.pabsWRW dst src, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
 /-- Round trip for REX.W PABSD, over any suffix. -/
 theorem roundtrip_pabsDRW (dst src : XmmReg) (suffix : List Byte) :
     ∃ bs, encodeSseMem (.pabsDRW dst src) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.pabsDRW dst src, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
@@ -695,35 +695,35 @@ theorem roundtrip_pabsDRW (dst src : XmmReg) (suffix : List Byte) :
 theorem roundtrip_palignrRW (dst src : XmmReg) (imm : Byte)
     (suffix : List Byte) :
     ∃ bs, encodeSseMem (.palignrRW dst src imm) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.palignrRW dst src imm, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
 /-- Round trip for MMX PSHUFB, over any suffix. -/
 theorem roundtrip_pshufbMM (dst src : MmxReg) (suffix : List Byte) :
     ∃ bs, encodeSseMem (.pshufbMM dst src) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.pshufbMM dst src, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
 /-- Round trip for MMX PABSB, over any suffix. -/
 theorem roundtrip_pabsBMM (dst src : MmxReg) (suffix : List Byte) :
     ∃ bs, encodeSseMem (.pabsBMM dst src) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.pabsBMM dst src, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
 /-- Round trip for MMX PABSW, over any suffix. -/
 theorem roundtrip_pabsWMM (dst src : MmxReg) (suffix : List Byte) :
     ∃ bs, encodeSseMem (.pabsWMM dst src) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.pabsWMM dst src, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
 /-- Round trip for MMX PABSD, over any suffix. -/
 theorem roundtrip_pabsDMM (dst src : MmxReg) (suffix : List Byte) :
     ∃ bs, encodeSseMem (.pabsDMM dst src) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.pabsDMM dst src, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
@@ -731,7 +731,7 @@ theorem roundtrip_pabsDMM (dst src : MmxReg) (suffix : List Byte) :
 theorem roundtrip_palignrMM (dst src : MmxReg) (imm : Byte)
     (suffix : List Byte) :
     ∃ bs, encodeSseMem (.palignrMM dst src imm) = some bs ∧
-      decodeSseMem (bs ++ suffix) =
+      decodeSseMemDreiByte (bs ++ suffix) =
         some (⟨.palignrMM dst src imm, bs.length⟩, suffix) := by
   cases dst <;> cases src <;> exact ⟨_, rfl, rfl⟩
 
@@ -746,14 +746,14 @@ theorem roundtrip_palignrMM (dst src : MmxReg) (imm : Byte)
 
 /-- PSHUFB xmm1, [rbx]: base without displacement. -/
 theorem pin_pshufbRM :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 56,
       natByte 0, natByte 11] =
       some (⟨.pshufbRM false .xmm1 (basisKeinForm .rbx), 6⟩, []) := by
   decide
 
 /-- PABSB xmm2, [rbx + 5]: base plus disp8. -/
 theorem pin_pabsBRM :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 56,
       natByte 28, natByte 83, natByte 5] =
       some (⟨.pabsBRM false .xmm2
         (basisDisp8Form .rbx (natByte 5)), 7⟩, []) := by
@@ -762,7 +762,7 @@ theorem pin_pabsBRM :
 /-- PABSW xmm3, [rbx + rcx*8 + 16] with REX.W: scaled SIB plus
     disp32, W admitted. -/
 theorem pin_pabsWRM :
-    decodeSseMem [natByte 72, natByte 102, natByte 15, natByte 56,
+    decodeSseMemDreiByte [natByte 72, natByte 102, natByte 15, natByte 56,
       natByte 29, natByte 156, natByte 203, natByte 16, natByte 0,
       natByte 0, natByte 0] =
       some (⟨.pabsWRM true .xmm3
@@ -771,7 +771,7 @@ theorem pin_pabsWRM :
 
 /-- PABSD xmm4, [rip + 4096]: RIP-relative. -/
 theorem pin_pabsDRM :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 56,
       natByte 30, natByte 37, natByte 0, natByte 16, natByte 0,
       natByte 0] =
       some (⟨.pabsDRM false .xmm4 (ripForm (BitVec.ofNat 32 4096)),
@@ -780,7 +780,7 @@ theorem pin_pabsDRM :
 
 /-- PALIGNR xmm5, [rbx], 7: base without displacement plus imm8. -/
 theorem pin_palignrRM :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 58,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 58,
       natByte 15, natByte 43, natByte 7] =
       some (⟨.palignrRM false .xmm5 (basisKeinForm .rbx)
         (natByte 7), 7⟩, []) := by
@@ -788,28 +788,28 @@ theorem pin_palignrRM :
 
 /-- PSHUFB xmm9, [r8] with REX.W: high registers on both sides. -/
 theorem pin_pshufbRM_hoch :
-    decodeSseMem [natByte 77, natByte 102, natByte 15, natByte 56,
+    decodeSseMemDreiByte [natByte 77, natByte 102, natByte 15, natByte 56,
       natByte 0, natByte 8] =
       some (⟨.pshufbRM true .xmm9 (basisKeinForm .r8), 6⟩, []) := by
   decide
 
 /-- MMX PSHUFB mm1, [rbx]: no `66`, five bytes. -/
 theorem pin_pshufbMN :
-    decodeSseMem [natByte 64, natByte 15, natByte 56, natByte 0,
+    decodeSseMemDreiByte [natByte 64, natByte 15, natByte 56, natByte 0,
       natByte 11] =
       some (⟨.pshufbMN .mm1 (basisKeinForm .rbx), 5⟩, []) := by
   decide
 
 /-- MMX PABSB mm2, [rbx + 5]: base plus disp8. -/
 theorem pin_pabsBMN :
-    decodeSseMem [natByte 64, natByte 15, natByte 56, natByte 28,
+    decodeSseMemDreiByte [natByte 64, natByte 15, natByte 56, natByte 28,
       natByte 83, natByte 5] =
       some (⟨.pabsBMN .mm2 (basisDisp8Form .rbx (natByte 5)), 6⟩, []) := by
   decide
 
 /-- MMX PABSW mm3, [rbx + rcx*8 + 16]: scaled SIB plus disp32. -/
 theorem pin_pabsWMN :
-    decodeSseMem [natByte 64, natByte 15, natByte 56, natByte 29,
+    decodeSseMemDreiByte [natByte 64, natByte 15, natByte 56, natByte 29,
       natByte 156, natByte 203, natByte 16, natByte 0, natByte 0,
       natByte 0] =
       some (⟨.pabsWMN .mm3
@@ -818,14 +818,14 @@ theorem pin_pabsWMN :
 
 /-- MMX PABSD mm4, [rip + 4096]: RIP-relative. -/
 theorem pin_pabsDMN :
-    decodeSseMem [natByte 64, natByte 15, natByte 56, natByte 30,
+    decodeSseMemDreiByte [natByte 64, natByte 15, natByte 56, natByte 30,
       natByte 37, natByte 0, natByte 16, natByte 0, natByte 0] =
       some (⟨.pabsDMN .mm4 (ripForm (BitVec.ofNat 32 4096)), 9⟩, []) := by
   decide
 
 /-- MMX PALIGNR mm5, [rbx], 7: base plus imm8. -/
 theorem pin_palignrMN :
-    decodeSseMem [natByte 64, natByte 15, natByte 58, natByte 15,
+    decodeSseMemDreiByte [natByte 64, natByte 15, natByte 58, natByte 15,
       natByte 43, natByte 7] =
       some (⟨.palignrMN .mm5 (basisKeinForm .rbx) (natByte 7), 6⟩, []) := by
   decide
@@ -840,48 +840,48 @@ theorem pin_palignrMN :
 
 /-- A W=0 XMM register-direct row is refused (old lane owns it). -/
 theorem sseMem_nichts_w0reg :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 56,
       natByte 0, natByte 200] = none := rfl
 
 /-- A truncated prefix (REX + `66` only) is refused. -/
 theorem sseMem_nichts_kurz :
-    decodeSseMem [natByte 72, natByte 102] = none := rfl
+    decodeSseMemDreiByte [natByte 72, natByte 102] = none := rfl
 
 /-- A wrong escape (`0F 39`) is refused. -/
 theorem sseMem_nichts_escape :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 57,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 57,
       natByte 0, natByte 11] = none := rfl
 
 /-- The pilot-owned mod=2 non-SIB shape (base plus disp32) is
     refused. -/
 theorem sseMem_nichts_pilot :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 56,
       natByte 0, natByte 139, natByte 5, natByte 0, natByte 0,
       natByte 0] = none := rfl
 
 /-- PALIGNR without its imm8 is refused. -/
 theorem sseMem_nichts_ohne_imm :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 58,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 58,
       natByte 15, natByte 43] = none := rfl
 
 /-- A first byte without REX is refused. -/
 theorem sseMem_nichts_ohne_rex :
-    decodeSseMem [natByte 102, natByte 15, natByte 56, natByte 0,
+    decodeSseMemDreiByte [natByte 102, natByte 15, natByte 56, natByte 0,
       natByte 200] = none := rfl
 
 /-- A no-REX MMX row is refused (canonical REX always required). -/
 theorem sseMem_nichts_mmx_ohne_rex :
-    decodeSseMem [natByte 15, natByte 56, natByte 28,
+    decodeSseMemDreiByte [natByte 15, natByte 56, natByte 28,
       natByte 200] = none := rfl
 
 /-- MMX with a REX extension bit (R here) is refused. -/
 theorem sseMem_nichts_mmx_erweitert :
-    decodeSseMem [natByte 68, natByte 15, natByte 56, natByte 28,
+    decodeSseMemDreiByte [natByte 68, natByte 15, natByte 56, natByte 28,
       natByte 200] = none := rfl
 
 /-- MOVBE (`0F 38 F0`) is refused: a different family owns it. -/
 theorem sseMem_nichts_movbe :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 56,
       natByte 240, natByte 11] = none := rfl
 
 /-! ## 4. Alignment gates and MMX lane semantics.
@@ -2101,7 +2101,7 @@ theorem adapterSseMem_verweigert_bei_lade_palignrRM (m : HwMaschine)
   `kapDecodeSseMem` runs the accepted `kapDecodeSse` (base chain
   plus the lane-1369 rows) first and consults the new decoder only
   where it refuses, so dispatch is disjoint by construction. A
-  maintainer wires the family in by adding the `decodeSseMem` arm
+  maintainer wires the family in by adding the `decodeSseMemDreiByte` arm
   behind every earlier arm of `HwKapsteinDecoder.kapDecode` (same
   position as the `avx2` arm: last, tried only where all earlier
   arms refuse). -/
@@ -2120,7 +2120,7 @@ def kapDecodeSseMem : List Byte → Option (KapSseMem × List Byte) :=
     match kapDecodeSse bs with
     | some (k, rest) => some (.alt k, rest)
     | none =>
-      match decodeSseMem bs with
+      match decodeSseMemDreiByte bs with
       | some (d, rest) => some (.neu d, rest)
       | none => none
 
@@ -2135,14 +2135,14 @@ theorem kapDecodeSseMem_alt (bs : List Byte) (k : KapSse)
 /-- Where the old chain refuses, a covered new row is taken. -/
 theorem kapDecodeSseMem_neu (bs : List Byte) (d : SseMemDec)
     (rest : List Byte) (h1 : kapDecodeSse bs = none)
-    (h2 : decodeSseMem bs = some (d, rest)) :
+    (h2 : decodeSseMemDreiByte bs = some (d, rest)) :
     kapDecodeSseMem bs = some (.neu d, rest) := by
   unfold kapDecodeSseMem
   rw [h1, h2]
 
 /-- Where both chains refuse, the extended chain refuses. -/
 theorem kapDecodeSseMem_nichts (bs : List Byte)
-    (h1 : kapDecodeSse bs = none) (h2 : decodeSseMem bs = none) :
+    (h1 : kapDecodeSse bs = none) (h2 : decodeSseMemDreiByte bs = none) :
     kapDecodeSseMem bs = none := by
   unfold kapDecodeSseMem
   rw [h1, h2]
@@ -2259,12 +2259,12 @@ theorem kapSseMem_pin_palignrMN :
 
 /-- The new decoder refuses the register-direct MOVBE bytes. -/
 theorem sseMem_nichts_movbe_reg :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 56,
       natByte 240, natByte 200] = none := rfl
 
 /-- The new decoder refuses the register-direct BLENDVPS bytes. -/
 theorem sseMem_nichts_blendv :
-    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 58,
+    decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 58,
       natByte 20, natByte 200, natByte 0] = none := rfl
 
 /-- The extended chain refuses MOVBE: neither chain admits it. -/
@@ -2439,7 +2439,7 @@ theorem sseMemWit_zeuge :
       (adapterSseMem).schritt sseMemWitStart 0
         (⟨.pshufbRM false .xmm0 (basisKeinForm .rbx), 0⟩ :
           SseMemDec) = none ∧
-      decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+      decodeSseMemDreiByte [natByte 64, natByte 102, natByte 15, natByte 56,
         natByte 240, natByte 11] = none ∧
       kapDecodeSseMem [natByte 64, natByte 102, natByte 15,
         natByte 58, natByte 20, natByte 200, natByte 0] = none := by
@@ -2503,12 +2503,12 @@ theorem sseMemWit_zeuge :
       budget link, no per-access target-to-W/GX simulation, no
       timing/power behaviour.
     - A maintainer wires the family in by adding the
-      `decodeSseMem` arm behind every earlier arm of
+      `decodeSseMemDreiByte` arm behind every earlier arm of
       `HwKapsteinDecoder.kapDecode`.
  -/
 
 #print axioms encodeSseMem
-#print axioms decodeSseMem
+#print axioms decodeSseMemDreiByte
 #print axioms roundtrip_pshufbRW
 #print axioms roundtrip_pabsBMM
 #print axioms vecPabs
