@@ -4380,8 +4380,16 @@ pub const PHASEN: &[Satz] = &[
                   word zero is the hardware outcome (the proved template `tor.region`). A gate \
                   that claims a stack also gets a C-only trampoline (template `tor.trampolin`), \
                   which needs two callee-saved registers the gate neither binds nor destroys \
-                  (`C187` when there are none).",
-        vorbehalt: "A template rule, and nothing else. It says nothing about whether the \
+                  (`C187` when there are none). For `abi linux arch aarch64` (2026-10-07) the \
+                  same stub is written in the AArch64 convention: the number in `x8`, the \
+                  arguments in `x0`-`x5`, `svc #0`, the answer in `x0` (also the first \
+                  argument register), nothing but memory destroyed.",
+        vorbehalt: "A template rule, and nothing else. The AArch64 stub, its inline \
+                    `child` trap and its trampoline (`cbnz`, `mov x9, sp`/`and sp, x9, #-16`, \
+                    `blr`) are MEASURED (compiled with `-Wall -Wextra -Werror`, run under \
+                    qemu-aarch64) and have NO Lean template yet: `tor.trampolin` and \
+                    `tor.kind` state the alignment as `rsp + 8` and prove the x86_64 text only. \
+                    It says nothing about whether the \
                     kernel keeps the contract it decodes against -- that is the named \
                     assumption behind the stub (`Erhaltung.lean`: `syscallStub`), handed \
                     to the C compiler where no value can be delivered. The errno NAME is \

@@ -451,6 +451,9 @@ struct KindTor {
     annahme: String,
     /// The trap instruction of the gate's ABI (`syscall_befehl`, O31).
     befehl: String,
+    /// The gate's `arch` (`x86_64` or `aarch64`): which register file and which child path
+    /// the inline trap writes (`syscall_pins`, `kind_tor_falle`).
+    arch: String,
     /// **The handed stack, for the outlined region** (C-free lane, 2026-09-30, OFFEN O38): the
     /// register the gate names as `stack r` -- in the child it still holds the value the call
     /// handed, which is the child's own stack top -- and the name and C type the region's
@@ -2257,7 +2260,7 @@ pub fn emittiere_mit(
     // region behind the same call has no trap of its own to jump from.
     // Anything wider keeps `C185`, by name, never silently.
     {
-        let mut tore: HashMap<String, ((u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, (String, String)), usize, (String, usize, String))> =
+        let mut tore: HashMap<String, ((u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, (String, String, String)), usize, (String, usize, String))> =
             HashMap::new();
         crate::fuer_jedes_item(baum, &mut |item| {
             if let ItemArt::Syscall(s) = &item.art {
@@ -2343,6 +2346,7 @@ pub fn emittiere_mit(
                             ober: *ober,
                             annahme: annahme.0.clone(),
                             befehl: annahme.1.clone(),
+                            arch: annahme.2.clone(),
                             stapel_reg: stapel_reg.clone(),
                             uebergabe_name: uebergabe_name.clone(),
                             uebergabe_ctyp: stapel_ctyp.clone(),
@@ -8929,7 +8933,7 @@ fn tor_inline_daten(
     tabellen: &SyscallTabellen,
     baum: &Programm,
     u: &Namen,
-) -> Option<(u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, (String, String))> {
+) -> Option<(u64, Vec<(String, usize)>, Vec<String>, Vec<(i128, String)>, String, Option<i128>, Option<i128>, (String, String, String))> {
     let umg = crate::umgebung::Umgebung::sammle(baum);
     if s.ungebunden() {
         return None;
@@ -8937,18 +8941,19 @@ fn tor_inline_daten(
     let Some((befehl, fest_zerstoert)) = syscall_befehl(&s.abi.text, &s.arch.text) else {
         return None;
     };
+    let (nr_reg, ans_reg) = syscall_regs(&s.arch.text);
     for (reg, _param) in &s.regs_in {
-        if reg.text == "rax" {
+        if reg.text == nr_reg {
             return None;
         }
         if s.clobbers.iter().any(|c| c.text == reg.text) {
             return None;
         }
     }
-    if s.regs_out.len() != 1 || s.regs_out[0].text != "rax" {
+    if s.regs_out.len() != 1 || s.regs_out[0].text != ans_reg {
         return None;
     }
-    if s.clobbers.iter().any(|c| c.text == "rax") {
+    if s.clobbers.iter().any(|c| c.text == ans_reg) {
         return None;
     }
     let nummer: u64 = match umg.konst_wert(modul, &s.nummer) {
@@ -9074,7 +9079,7 @@ fn tor_inline_daten(
             zerstoert.push(fest.to_string());
         }
     }
-    Some((nummer, heber, zerstoert, arme, wert_ctyp, unter, ober, (annahme, befehl.to_string())))
+    Some((nummer, heber, zerstoert, arme, wert_ctyp, unter, ober, (annahme, befehl.to_string(), s.arch.text.clone())))
 }
 
 /// **Lane 260: `v == 0` or `0 == v`, the only guard the inline trap reads.**
@@ -9174,16 +9179,15 @@ fn kind_tor_falle(
     };
     aus.push_str(&format!("{e1}int64_t gabbro_roh_{lo};\n"));
     aus.push_str(&format!("{e1}bool gabbro_ok_{lo} = true;\n"));
-    for (reg, k) in &tor.heber {
-        aus.push_str(&format!(
-            "{e1}register uint64_t _sys_{reg} __asm__(\"{reg}\") = (uint64_t)({});\n",
-            args[*k]
-        ));
-    }
-    aus.push_str(&format!(
-        "{e1}register int64_t _sys_rax __asm__(\"rax\") = (int64_t){}u;\n",
-        tor.nummer
-    ));
+    let ein: Vec<(String, String)> = tor
+        .heber
+        .iter()
+        .map(|(reg, k)| (reg.clone(), format!("(uint64_t)({})", args[*k])))
+        .collect();
+    let (pins, ausgabe, eingaben) = syscall_pins(&tor.arch, tor.nummer, &ein, &e1);
+    aus.push_str(&pins);
+    let (_, ans_reg) = syscall_regs(&tor.arch);
+    let ans = format!("_sys_{ans_reg}");
     // **The child never runs C of the parent's frame** (C-free lane, 2026-09-30, OFFEN O38;
     // template `tor.kind`). Until then the trap was an `asm goto` that jumped, in the child, to a
     // label INSIDE this function -- the region's C then addressed the parent's locals through
@@ -9193,26 +9197,35 @@ fn kind_tor_falle(
     // handed value -- still in the stack register, which the kernel preserves -- as the one
     // argument, and calls it; the region ends in a `-> never` call (`N449`), so `ud2` is not
     // reached. The parent falls through and stores the answer.
-    let mut eingaben: Vec<String> = tor
-        .heber
-        .iter()
-        .map(|(r, _)| format!("\"r\" (_sys_{r})"))
-        .collect();
     let _ = &tor.label;
     aus.push_str(&format!("{e1}__asm__ __volatile__(\n"));
     aus.push_str(&format!("{e1}    \"{}\\n\\t\"\n", tor.befehl));
-    aus.push_str(&format!("{e1}    \"testq %%rax, %%rax\\n\\t\"\n"));
-    aus.push_str(&format!("{e1}    \"jnz 1f\\n\\t\"\n"));
-    aus.push_str(&format!("{e1}    \"movq %%{}, %%rdi\\n\\t\"\n", tor.stapel_reg));
-    aus.push_str(&format!("{e1}    \"andq $-16, %%rsp\\n\\t\"\n"));
-    aus.push_str(&format!("{e1}    \"call gabbro_kind_{lo}\\n\\t\"\n"));
-    aus.push_str(&format!("{e1}    \"ud2\\n\"\n"));
+    if tor.arch == "aarch64" {
+        // AArch64 child path (2026-10-07): the answer is `x0` (zero in the child), the handed
+        // stack is already `sp` (the kernel installs the `clone` stack argument), aligned to
+        // the 16 bytes AAPCS64 demands at every public interface; the handed value goes in
+        // `x0`, the one argument register (`and` cannot read `sp`, so x9 carries it); `bl` because the region never returns
+        // (`N449`), `brk` is the `ud2` of this machine.
+        aus.push_str(&format!("{e1}    \"cbnz x0, 1f\\n\\t\"\n"));
+        aus.push_str(&format!("{e1}    \"mov x0, {}\\n\\t\"\n", tor.stapel_reg));
+        aus.push_str(&format!("{e1}    \"mov x9, sp\\n\\t\"\n"));
+        aus.push_str(&format!("{e1}    \"and sp, x9, #-16\\n\\t\"\n"));
+        aus.push_str(&format!("{e1}    \"mov x29, xzr\\n\\t\"\n"));
+        aus.push_str(&format!("{e1}    \"bl gabbro_kind_{lo}\\n\\t\"\n"));
+        aus.push_str(&format!("{e1}    \"brk #0\\n\"\n"));
+    } else {
+        aus.push_str(&format!("{e1}    \"testq %%rax, %%rax\\n\\t\"\n"));
+        aus.push_str(&format!("{e1}    \"jnz 1f\\n\\t\"\n"));
+        aus.push_str(&format!("{e1}    \"movq %%{}, %%rdi\\n\\t\"\n", tor.stapel_reg));
+        aus.push_str(&format!("{e1}    \"andq $-16, %%rsp\\n\\t\"\n"));
+        aus.push_str(&format!("{e1}    \"call gabbro_kind_{lo}\\n\\t\"\n"));
+        aus.push_str(&format!("{e1}    \"ud2\\n\"\n"));
+    }
     aus.push_str(&format!("{e1}    \"1:\\n\\t\"\n"));
-    eingaben.retain(|x| !x.contains("_sys_rax"));
-    aus.push_str(&format!("{e1}    : \"+a\" (_sys_rax)\n"));
+    aus.push_str(&format!("{e1}    : {ausgabe}\n"));
     aus.push_str(&format!("{e1}    : {}\n", eingaben.join(", ")));
     aus.push_str(&format!("{e1}    : {});\n", tor.zerstoert.join(", ")));
-    aus.push_str(&format!("{e1}gabbro_roh_{lo} = _sys_rax;\n"));
+    aus.push_str(&format!("{e1}gabbro_roh_{lo} = {ans};\n"));
     // **The sign leg reads the pin; the value leg checks the declared
     // range.** The `ok` flag starts true: a listed errno stores false, an
     // unlisted one never returns, and the value leg stores true again.
@@ -9273,11 +9286,84 @@ fn kind_tor_falle(
 /// but memory is destroyed. Both answer `-errno` in `-4095..-1`, the rest a
 /// value (the metal kernel entry keeps Linux's convention by construction).
 /// Any other pair: no template (`C182`).
+///
+/// `abi linux arch aarch64` (2026-10-07): `svc #0`. The Linux AArch64 kernel preserves every
+/// register but the answer in `x0` (the number travels in `x8`, the arguments in `x0`-`x5`),
+/// so nothing but memory is destroyed; the answer in `x0` is declared as the asm output, not
+/// as a clobber. There is no `abi metal` for aarch64 -- bare metal stays x86_64 only.
 fn syscall_befehl(abi: &str, arch: &str) -> Option<(&'static str, &'static [&'static str])> {
     match (abi, arch) {
         ("linux", "x86_64") => Some(("syscall", &["\"rcx\"", "\"r11\"", "\"memory\""])),
         ("metal", "x86_64") => Some(("int $0x80", &["\"memory\""])),
+        ("linux", "aarch64") => Some(("svc #0", &["\"memory\""])),
         _ => None,
+    }
+}
+
+/// **The number register and the answer register of a trap ABI.** x86_64: both `rax` (one
+/// variable, `+a`). AArch64: the number in `x8`, the answer in `x0` -- which is also the first
+/// argument register, so a gate may bind a parameter to `x0` and read its answer from `x0`.
+/// (Only called after `syscall_befehl` accepted the pair.)
+fn syscall_regs(arch: &str) -> (&'static str, &'static str) {
+    if arch == "aarch64" {
+        ("x8", "x0")
+    } else {
+        ("rax", "rax")
+    }
+}
+
+/// **The register pins and operands of one trap**, shared by the stub, the inline trap and the
+/// trampoline. `ein` is `(register, value)` per `regs in` entry, the value already written as
+/// `(uint64_t)…`. Returns `(pin lines, asm output operand, asm input operands)`.
+///
+/// x86_64 (text unchanged since lane S6): one pin per argument, the `rax` pin carrying the
+/// number and returning the answer (`+a`). AArch64: one pin per argument but `x0`; `x0` is the
+/// answer variable (`_sys_x0`, `+r` when an argument also travels in it, `=r` when none does),
+/// `x8` an input pin with the number.
+fn syscall_pins(
+    arch: &str,
+    nummer: u64,
+    ein: &[(String, String)],
+    e1: &str,
+) -> (String, String, Vec<String>) {
+    let mut pins = String::new();
+    let mut eing: Vec<String> = Vec::new();
+    if arch == "aarch64" {
+        let mut x0: Option<&String> = None;
+        for (r, v) in ein {
+            if r == "x0" {
+                x0 = Some(v);
+                continue;
+            }
+            pins.push_str(&format!("{e1}register uint64_t _sys_{r} __asm__(\"{r}\") = {v};\n"));
+            eing.push(format!("\"r\" (_sys_{r})"));
+        }
+        let ausgabe = match x0 {
+            Some(v) => {
+                pins.push_str(&format!(
+                    "{e1}register int64_t _sys_x0 __asm__(\"x0\") = (int64_t){v};\n"
+                ));
+                "\"+r\" (_sys_x0)"
+            }
+            None => {
+                pins.push_str(&format!("{e1}register int64_t _sys_x0 __asm__(\"x0\");\n"));
+                "\"=r\" (_sys_x0)"
+            }
+        };
+        pins.push_str(&format!(
+            "{e1}register uint64_t _sys_x8 __asm__(\"x8\") = {nummer}u;\n"
+        ));
+        eing.push("\"r\" (_sys_x8)".to_string());
+        (pins, ausgabe.to_string(), eing)
+    } else {
+        for (r, v) in ein {
+            pins.push_str(&format!("{e1}register uint64_t _sys_{r} __asm__(\"{r}\") = {v};\n"));
+            eing.push(format!("\"r\" (_sys_{r})"));
+        }
+        pins.push_str(&format!(
+            "{e1}register int64_t _sys_rax __asm__(\"rax\") = (int64_t){nummer}u;\n"
+        ));
+        (pins, "\"+a\" (_sys_rax)".to_string(), eing)
     }
 }
 
@@ -9332,14 +9418,15 @@ fn syscall_stumpf(
     // declaration, so the kernel may destroy the parameter after reading it
     // while the C still names the stale pin. One code, like `N065`'s three
     // sub-cases under one code in `syscall.rs`.
+    let (nr_reg, ans_reg) = syscall_regs(&s.arch.text);
     for (reg, param) in &s.regs_in {
-        if reg.text == "rax" {
+        if reg.text == nr_reg {
             syscall_code(
                 absagen,
                 "C180",
                 reg.span,
                 &format!(
-                    "`syscall {n}` binds parameter `{}` to `rax` in `regs in` -- the stub \
+                    "`syscall {n}` binds parameter `{}` to `{nr_reg}` in `regs in` -- the stub \
                      loads the call number there, and the parameter value would never reach \
                      the kernel",
                     param.text
@@ -9367,28 +9454,29 @@ fn syscall_stumpf(
     // there and nowhere else. An empty `regs out`, another register, or two
     // registers (which the checker lets through -- see the `vorbehalt` of
     // `syscall.erklaerung`) would make it read the wrong place.
-    if s.regs_out.len() != 1 || s.regs_out[0].text != "rax" {
+    if s.regs_out.len() != 1 || s.regs_out[0].text != ans_reg {
         let hat: Vec<&str> = s.regs_out.iter().map(|r| r.text.as_str()).collect();
         syscall_code(
             absagen,
             "C181",
             s.name.span,
             &format!(
-                "`syscall {n}` names `regs out` {{{}}}, and the Linux x86_64 answer arrives \
-                 in `rax` -- the stub reads the raw answer there and nowhere else",
-                hat.join(", ")
+                "`syscall {n}` names `regs out` {{{}}}, and the Linux {} answer arrives \
+                 in `{ans_reg}` -- the stub reads the raw answer there and nowhere else",
+                hat.join(", "),
+                s.arch.text
             ),
         );
         return;
     }
-    if s.clobbers.iter().any(|c| c.text == "rax") {
+    if s.clobbers.iter().any(|c| c.text == ans_reg) {
         syscall_code(
             absagen,
             "C181",
             s.name.span,
             &format!(
-                "`syscall {n}` carries its answer out in `rax` and lists `rax` under \
-                 `clobbers` -- what is carried out is not destroyed"
+                "`syscall {n}` carries its answer out in `{ans_reg}` and lists `{ans_reg}` \
+                 under `clobbers` -- what is carried out is not destroyed"
             ),
         );
         return;
@@ -9783,7 +9871,7 @@ fn syscall_stumpf(
         .collect();
     b2.push_str(&format!(
         "\nstatic {rueck} {n}({liste}) {{\n\
-         \x20   /* syscall {n} -- number {nummer} in rax; {}.\n\
+         \x20   /* syscall {n} -- number {nummer} in {nr_reg}; {}.\n\
          \x20    * The kernel behind this stub is {}: that it answers inside its\n\
          \x20    * contract is assumed, and the decoding below is generated from the\n\
          \x20    * declared `errors` map, exhaustively. */\n",
@@ -9799,23 +9887,17 @@ fn syscall_stumpf(
     // and a half-width pin would ask GCC for a mode it does not promise);
     // the number is the `rax` pin's initial value, so the answer returns in
     // the same variable (`+a`, one name, no input/output aliasing question).
-    for (reg, param) in &s.regs_in {
-        // A binding without a parameter binds nothing -- the checker refuses
-        // it as `N065`, and on a blind tree the C names an undeclared
-        // identifier, which `cc` refuses loudly instead of the stub guessing.
-        b2.push_str(&format!(
-            "    register uint64_t _sys_{} __asm__(\"{}\") = (uint64_t){};\n",
-            reg.text, reg.text, param.text
-        ));
-    }
-    b2.push_str(&format!(
-        "    register int64_t _sys_rax __asm__(\"rax\") = (int64_t){nummer}u;\n"
-    ));
-    let eingaben: Vec<String> = s
+    // A binding without a parameter binds nothing -- the checker refuses
+    // it as `N065`, and on a blind tree the C names an undeclared
+    // identifier, which `cc` refuses loudly instead of the stub guessing.
+    let ein: Vec<(String, String)> = s
         .regs_in
         .iter()
-        .map(|(r, _)| format!("\"r\" (_sys_{})", r.text))
+        .map(|(r, p)| (r.text.clone(), format!("(uint64_t){}", p.text)))
         .collect();
+    let (pins, ausgabe, eingaben) = syscall_pins(&s.arch.text, nummer, &ein, "    ");
+    b2.push_str(&pins);
+    let ans = format!("_sys_{ans_reg}");
     let mut zerstoert: Vec<String> = s.clobbers.iter().map(|c| format!("\"{}\"", c.text)).collect();
     for fest in fest_zerstoert {
         if !zerstoert.iter().any(|c| c == fest) {
@@ -9823,7 +9905,7 @@ fn syscall_stumpf(
         }
     }
     b2.push_str(&format!("    __asm__ __volatile__(\n        \"{befehl}\\n\"\n"));
-    b2.push_str("        : \"+a\" (_sys_rax)\n");
+    b2.push_str(&format!("        : {ausgabe}\n"));
     if eingaben.is_empty() {
         b2.push_str("        : /* no argument registers */\n");
     } else {
@@ -9856,7 +9938,7 @@ fn syscall_stumpf(
     // no negation overflow by construction, not by luck.
     let liest_roh = !arme.is_empty() || grundtyp.is_some() || hat_wert;
     if !liest_roh {
-        b2.push_str("    (void)_sys_rax;\n");
+        b2.push_str(&format!("    (void){ans};\n"));
         if matches!(antwort, Antwort::Nie) {
             b2.push_str(
                 "    /* `-> never`: under the named assumption the kernel does not come back. */\n\
@@ -9864,12 +9946,12 @@ fn syscall_stumpf(
             );
         }
     } else {
-        b2.push_str("    if (_sys_rax < 0) {\n");
-        b2.push_str("        if (_sys_rax < -4095) {\n");
+        b2.push_str(&format!("    if ({ans} < 0) {{\n"));
+        b2.push_str(&format!("        if ({ans} < -4095) {{\n"));
         b2.push_str(&hardware("        "));
         b2.push_str("        }\n");
         if !arme.is_empty() {
-            b2.push_str("        int64_t _sys_errno = -_sys_rax;\n");
+            b2.push_str(&format!("        int64_t _sys_errno = -{ans};\n"));
             for (nummer, fall) in &arme {
                 b2.push_str(&format!(
                     "        if (_sys_errno == {nummer}) {{\n\
@@ -9896,32 +9978,32 @@ fn syscall_stumpf(
         b2.push_str("    }\n");
         if let Antwort::Ganz { ctyp, unter, ober } = &antwort {
             if let Some(lo) = unter {
-                b2.push_str(&format!("    if (_sys_rax < {lo}) {{\n"));
+                b2.push_str(&format!("    if ({ans} < {lo}) {{\n"));
                 b2.push_str(&hardware("    "));
                 b2.push_str("    }\n");
             }
             if let Some(hi) = ober {
-                b2.push_str(&format!("    if (_sys_rax > {hi}) {{\n"));
+                b2.push_str(&format!("    if ({ans} > {hi}) {{\n"));
                 b2.push_str(&hardware("    "));
                 b2.push_str("    }\n");
             }
             if hat_wert && grundtyp.is_some() {
-                b2.push_str(&format!("    *_wert = ({ctyp})_sys_rax;\n"));
+                b2.push_str(&format!("    *_wert = ({ctyp}){ans};\n"));
             }
         }
         if let Antwort::Region { ctyp } = &antwort {
             // **`tor.region`: the word zero is no region.** The sign leg above has sent every
             // negative word to its reason or the stop; what is left is a base address, and a
             // base at zero is outside every contract a region gate can state.
-            b2.push_str("    if (_sys_rax == 0) {\n");
+            b2.push_str(&format!("    if ({ans} == 0) {{\n"));
             b2.push_str(&hardware("    "));
             b2.push_str("    }\n");
-            b2.push_str(&format!("    *_wert = ({ctyp})(uintptr_t)_sys_rax;\n"));
+            b2.push_str(&format!("    *_wert = ({ctyp})(uintptr_t){ans};\n"));
         }
         if grundtyp.is_some() {
             b2.push_str("    return true;\n");
         } else if let Some(c) = &wert_ctyp {
-            b2.push_str(&format!("    return ({c})_sys_rax;\n"));
+            b2.push_str(&format!("    return ({c}){ans};\n"));
         }
     }
     b2.push_str("}\n");
@@ -9948,8 +10030,19 @@ fn syscall_stumpf(
         for f in fest_zerstoert {
             belegt.push(f.trim_matches('"').to_string());
         }
-        let frei: Vec<&str> = ["r12", "r13", "r14", "r15", "rbx"]
-            .into_iter()
+        let (_, ans_reg) = syscall_regs(&s.arch.text);
+        let aarch = s.arch.text == "aarch64";
+        // Callee-saved registers the child inherits across the trap: x86_64 `r12`-`r15`/`rbx`,
+        // AArch64 `x19`-`x28` (AAPCS64) -- the kernel preserves them, so the child still holds
+        // the two code addresses the parent set before the trap.
+        let kandidaten: &[&str] = if aarch {
+            &["x19", "x20", "x21", "x22", "x23", "x24"]
+        } else {
+            &["r12", "r13", "r14", "r15", "rbx"]
+        };
+        let frei: Vec<&str> = kandidaten
+            .iter()
+            .copied()
             .filter(|r| !belegt.iter().any(|b| b == r))
             .collect();
         if frei.len() < 2 {
@@ -9980,19 +10073,29 @@ fn syscall_stumpf(
              \x20* the raw answer. C only -- a Gabbro call of this gate is the checked triple. */\n\
              int64_t {n}_trampolin({tliste}) {{\n"
         );
-        for (reg, param) in &s.regs_in {
+        let ein_werte: Vec<(String, String)> = s
+            .regs_in
+            .iter()
+            .map(|(r, p)| (r.text.clone(), format!("(uint64_t){}", p.text)))
+            .collect();
+        let (pins, ausgabe, mut ein) = syscall_pins(&s.arch.text, nummer, &ein_werte, "    ");
+        // x86_64: pins of the arguments, then the code addresses, then `rax` (text unchanged);
+        // the AArch64 pins come as one block, the code addresses after them.
+        if aarch {
+            t.push_str(&pins);
             t.push_str(&format!(
-                "    register uint64_t _sys_{} __asm__(\"{}\") = (uint64_t){};\n",
-                reg.text, reg.text, param.text
+                "    register void (*_sys_kind)(void) __asm__(\"{rk}\") = _kind;\n\
+                 \x20   register void (*_sys_ende)(void) __asm__(\"{re}\") = _ende;\n"
+            ));
+        } else {
+            let (vor, rax_zeile) = pins.rsplit_once("    register int64_t _sys_rax").unwrap();
+            t.push_str(vor);
+            t.push_str(&format!(
+                "    register void (*_sys_kind)(void) __asm__(\"{rk}\") = _kind;\n\
+                 \x20   register void (*_sys_ende)(void) __asm__(\"{re}\") = _ende;\n\
+                 \x20   register int64_t _sys_rax{rax_zeile}"
             ));
         }
-        t.push_str(&format!(
-            "    register void (*_sys_kind)(void) __asm__(\"{rk}\") = _kind;\n\
-             \x20   register void (*_sys_ende)(void) __asm__(\"{re}\") = _ende;\n\
-             \x20   register int64_t _sys_rax __asm__(\"rax\") = (int64_t){nummer}u;\n"
-        ));
-        let mut ein: Vec<String> =
-            s.regs_in.iter().map(|(r, _)| format!("\"r\" (_sys_{})", r.text)).collect();
         ein.push("\"r\" (_sys_kind)".to_string());
         ein.push("\"r\" (_sys_ende)".to_string());
         let mut zerst: Vec<String> = s.clobbers.iter().map(|c| format!("\"{}\"", c.text)).collect();
@@ -10001,20 +10104,38 @@ fn syscall_stumpf(
                 zerst.push(fest.to_string());
             }
         }
+        let kind_pfad = if aarch {
+            // AArch64: `cbnz` on the answer (zero in the child), the handed stack is `sp`
+            // already, forced to the 16 bytes AAPCS64 demands before the first `blr`; the
+            // frame chain ends in the child (`x29 = 0`); `brk` where x86 has `ud2`.
+            format!(
+                "\x20       \"cbnz x0, 1f\\n\\t\"\n\
+                 \x20       \"mov x9, sp\\n\\t\"\n\
+                 \x20       \"and sp, x9, #-16\\n\\t\"\n\
+                 \x20       \"mov x29, xzr\\n\\t\"\n\
+                 \x20       \"blr {rk}\\n\\t\"\n\
+                 \x20       \"blr {re}\\n\\t\"\n\
+                 \x20       \"brk #0\\n\"\n"
+            )
+        } else {
+            format!(
+                "\x20       \"testq %%rax, %%rax\\n\\t\"\n\
+                 \x20       \"jnz 1f\\n\\t\"\n\
+                 \x20       \"andq $-16, %%rsp\\n\\t\"\n\
+                 \x20       \"call *%%{rk}\\n\\t\"\n\
+                 \x20       \"call *%%{re}\\n\\t\"\n\
+                 \x20       \"ud2\\n\"\n"
+            )
+        };
         t.push_str(&format!(
             "    __asm__ __volatile__(\n\
              \x20       \"{befehl}\\n\\t\"\n\
-             \x20       \"testq %%rax, %%rax\\n\\t\"\n\
-             \x20       \"jnz 1f\\n\\t\"\n\
-             \x20       \"andq $-16, %%rsp\\n\\t\"\n\
-             \x20       \"call *%%{rk}\\n\\t\"\n\
-             \x20       \"call *%%{re}\\n\\t\"\n\
-             \x20       \"ud2\\n\"\n\
+             {kind_pfad}\
              \x20       \"1:\\n\\t\"\n\
-             \x20       : \"+a\" (_sys_rax)\n\
+             \x20       : {ausgabe}\n\
              \x20       : {}\n\
              \x20       : {});\n\
-             \x20   return _sys_rax;\n}}\n",
+             \x20   return _sys_{ans_reg};\n}}\n",
             ein.join(", "),
             zerst.join(", ")
         ));

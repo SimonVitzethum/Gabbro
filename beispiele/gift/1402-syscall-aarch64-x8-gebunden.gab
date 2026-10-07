@@ -1,0 +1,31 @@
+-- erwartet: C180
+-- **Gift 1402 -- a parameter bound to the AArch64 number register has no reading.**
+--
+-- The twin of gift 850 for `arch aarch64`: the stub loads the call number into `x8` before
+-- the kernel reads anything, so a parameter bound to `x8` in `regs in` would never arrive.
+-- The checker lets the map through (`x8` is a general register, bound once, not clobbered);
+-- the emitter refuses it, by name. (`x0` is NOT refused: it is both the first argument and
+-- the answer on this machine.)
+
+module gift::syscall_aarch64_x8_gebunden {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch aarch64 number 64
+    regs in { x8 = fd }
+    regs out { x0 }
+    clobbers { }
+    errors { EBADF => BadFd }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_write_contract falsifier sonde_write;
+
+}
