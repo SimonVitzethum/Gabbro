@@ -52,8 +52,11 @@ Skeleton of `arm/Arm/Isa/Addr.lean` is green.
   `exLdrsb_notZero`, `exPreIdx_ok`, `exPostIdx_ok`.
 - Extended `LoadStore.lean`: `ldStReg` (Sail `instrs64.sail:35210`)
   with fixtures `gprLSR`/`sLSR`, `gprLSRs`/`sLSRs` and `decide` theorems
-  `exRegOff_ok`, `exRegOff_miss_ok` (the shifted store misses the
+  `exRegOff_ok`,   `exRegOff_miss_ok` (the shifted store misses the
   unshifted address), `exRegSxtw_ok` (SXTW offset wraps 64 to 63).
+- Extended `LoadStore.lean`: `ldrLiteral` (Sail `instrs64.sail:32630`)
+  with fixture `memLit`/`sLit` and `decide` theorems `exLit_ok`,
+  `exLitSw_ok`, the planted wrong case `exLitSw_notZero`.
 - Apparatus note: Lean ends an application at a newline when the
   continuation is not indented past the application start, so a field
   value split across lines (`gpr :=` newline `upd ...`) misparses;

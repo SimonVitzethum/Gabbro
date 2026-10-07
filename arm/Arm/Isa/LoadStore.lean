@@ -167,6 +167,47 @@ theorem exRegSxtw_ok :
     (runEff 60 exRegSxtw sLSRs).map Prod.fst
       = some (BitVec.ofNat 64 18446744073709551581) := by decide
 
+/-- PC-relative literal load (`LDR Wt/Xt, [PC, #off]`, `LDRSW`): address is
+    PC plus the already sign-extended `imm19 @ 00` offset; size 4 or 8
+    bytes; the 4-byte form sign-extends only for `LDRSW`. Prefetch (`PRFM`)
+    is a pure hint with no semantic effect and is not modelled (CUTS).
+    -- Sail: instrs64.sail:32630. -/
+def ldrLiteral (cfg : MemCfg) (sizeBytes regsize : Nat) (off : Int)
+    (isSigned : Bool) (t : Nat) : Eff Unit := do
+  let pc ← .rdPC .ret
+  let addr := addOff pc off
+  let v ← memReadEff cfg addr sizeBytes .plain false
+  wrBase t (extVal v (sizeBytes * 8) regsize isSigned)
+
+/-- Fixture: PC is 4096 and address 4104 holds `0xAABBCCDD`. -/
+def memLit : Nat → Nat := storeNat s0.mem 4104 2864434397 4
+
+def sLit : State :=
+  { regs := { s0.regs with pc := BitVec.ofNat 64 4096 }, mem := memLit }
+
+/-- `LDR W2, [PC, #8]`: the word at PC+8 loads zero-extended. -/
+def exLit : Eff (BitVec 64) := do
+  ldrLiteral cfgNoFault 4 32 8 false 2
+  rdBase 2
+
+theorem exLit_ok :
+    (runEff 60 exLit sLit).map Prod.fst
+      = some (BitVec.ofNat 64 2864434397) := by decide
+
+/-- `LDRSW X2, [PC, #8]`: `0xAABBCCDD` has its top bit set, so it
+    sign-extends; it is not the zero-extended word. -/
+def exLitSw : Eff (BitVec 64) := do
+  ldrLiteral cfgNoFault 4 64 8 true 2
+  rdBase 2
+
+theorem exLitSw_ok :
+    (runEff 60 exLitSw sLit).map Prod.fst
+      = some (BitVec.ofNat 64 18446744072279018717) := by decide
+
+theorem exLitSw_notZero :
+    (runEff 60 exLitSw sLit).map Prod.fst
+      ≠ some (BitVec.ofNat 64 2864434397) := by decide
+
 end Arm
 
 /-
