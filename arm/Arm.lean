@@ -12,3 +12,10 @@ import Arm.Mem.IFetch
 import Arm.Lit.Prog
 import Arm.Lit.Enumerate
 import Arm.Lit.Tests
+import Arm.Isa.IntCore
+import Arm.Isa.IntMasks
+import Arm.Isa.Integer
+import Arm.Isa.IntBit
+import Arm.Isa.IntMul
+import Arm.Isa.IntCond
+import Arm.Isa.Interp
