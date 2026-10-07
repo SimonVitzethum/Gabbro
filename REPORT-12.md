@@ -23,6 +23,12 @@ Skeleton of `arm/Arm/Isa/Addr.lean` is green.
   `decide` theorems `extendReg_uxtx_id`, `extendReg_sxtw_sign`,
   `extendReg_uxth_shift` and the planted wrong case
   `extendReg_sxtw_notZero`.
+- Extended `Addr.lean`: `rdBase`/`wrBase` (register 31 is SP),
+  `checkSP` (Sail `v8_base.sail:22782`), `needsAlign` (Sail
+  `v8_base.sail:22799`), the `MemCfg` translation-fault oracle,
+  `memReadEff`/`memWriteEff` (Sail `v8_base.sail:28178`/`28260`) with
+  `decide` theorems `needsAlign_plain`, `needsAlign_acquire`,
+  `needsAlign_excl`.
 - Warmed the build once with `./arm-bau` (needed so `./arm-probe` resolves
   the `Arm.*` imports of a not-yet-imported new file).
 

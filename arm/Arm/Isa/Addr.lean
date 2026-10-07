@@ -79,6 +79,68 @@ theorem extendReg_sxtw_notZero :
     extendReg (BitVec.ofNat 64 4294967295) .sxtw 0
       ≠ BitVec.ofNat 64 4294967295 := by decide
 
+/-- Register 31 is the stack pointer: `rdX 31`/`wrX 31` read and write SP.
+    This is the `if n == 31 then SP_read() else X_read(n, 64)` found in every
+    load/store execute clause.
+    -- Sail: instrs64.sail:39785 (and every other execute clause). -/
+def rdBase (n : Nat) : Eff Addr := .rdX n .ret
+
+/-- Writeback target: `if n == 31 then SP_set() else X_set(n, 64)`.
+    -- Sail: instrs64.sail:32821 (post-index writeback). -/
+def wrBase (n : Nat) (v : Addr) : Eff Unit := .wrX n v (.ret ())
+
+/-- `CheckSPAlignment()`: trap unless SP is 16-byte aligned. Sail gates this
+    on the SCTLR SA/SA0 bits; the sequential model always enforces it (the
+    SCTLR gating belongs to the system agent; see CUTS).
+    -- Sail: v8_base.sail:22782 (`CheckSPAlignment`). -/
+def checkSP : Eff Unit :=
+  .rdX 31 fun sp => if sp.toNat % 16 == 0 then .ret () else .raise (.alignment sp)
+
+/-- Whether an access faults when misaligned. Plain non-exclusive accesses
+    proceed bytewise (Sail `AArch64_UnalignedAccessFaults` answers false for
+    them); ordered (acquire/release) and exclusive accesses fault. The
+    SCTLR.A gating of the plain case and the LSE2 16-byte-quantity rule for
+    the ordered/exclusive case are system/hardware configuration owned by
+    the system agent (see CUTS).
+    -- Sail: v8_base.sail:22799 (`AArch64_UnalignedAccessFaults`). -/
+def needsAlign : AccOrd → Bool → Bool
+  | .plain, false => false
+  | _, _ => true
+
+/-- Translation-fault oracle: `fault addr nbytes` says whether the access
+    faults in translation. The page tables and the `AArch64_TranslateAddress`
+    walk belong to the system agent; the sequential instruction model
+    consumes only the verdict and raises the abort.
+    -- Sail: mem.sail/interface.sail (accessors reach the memory interface). -/
+structure MemCfg where
+  fault : Addr → Nat → Bool
+
+/-- One checked read: translation fault first, then the alignment fault,
+    then the plain little-endian `Mem_read` event the multicore model
+    consumes. Sizes 1, 2, 4, 8 (and 16 for pairs) come from the caller.
+    -- Sail: v8_base.sail:28178 (`Mem_read__2`: aligned test, then abort). -/
+def memReadEff (cfg : MemCfg) (addr : Addr) (nbytes : Nat)
+    (ord : AccOrd) (excl : Bool) : Eff Nat :=
+  if cfg.fault addr nbytes then .raise (.dataAbort addr)
+  else if needsAlign ord excl && !isAligned addr nbytes then
+    .raise (.alignment addr)
+  else .rdMem ⟨addr, nbytes, ord, excl⟩ .ret
+
+/-- One checked write: the mirror image with `Mem_set`.
+    -- Sail: v8_base.sail:28260 (`Mem_set__2`: aligned test, then abort). -/
+def memWriteEff (cfg : MemCfg) (addr : Addr) (nbytes : Nat)
+    (ord : AccOrd) (excl : Bool) (val : Nat) : Eff Unit :=
+  if cfg.fault addr nbytes then .raise (.dataAbort addr)
+  else if needsAlign ord excl && !isAligned addr nbytes then
+    .raise (.alignment addr)
+  else .wrMem ⟨addr, nbytes, ord, excl⟩ val (.ret ())
+
+theorem needsAlign_plain : needsAlign .plain false = false := by decide
+
+theorem needsAlign_acquire : needsAlign .acquire false = true := by decide
+
+theorem needsAlign_excl : needsAlign .plain true = true := by decide
+
 end Arm
 
 /-
