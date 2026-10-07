@@ -109,6 +109,16 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
 
 ## 3. Simon's standing instructions
 
+- **Direction change: AArch64 instead of x86-64** (Simon, 2026-10-07). All work on the x86-64
+  hardware model has stopped (its files stay; add nothing there). The next target is AArch64
+  (Armv9-A) built on the Sail Arm model, with the missing multicore memory model added in Lean.
+  Plan: [`ARM-PLAN.md`](ARM-PLAN.md). Fifteen agents work directly, each in its own shell and
+  clone (`/home/simon/Dokumente/gabbro-arm/work/NN`, personal tasks `lanes/arm/NN.md`, common
+  rules `lanes/ARM-VORSPANN.md`): five on GabbroV, ten on the Sail Arm hardware model, then on the
+  compiler; at most two Sonnet 5.5 agents check that Gabbro itself is Arm-compatible. No Python
+  coordinator drives them. Where this file or older notes name x86 goals (below), this entry
+  wins. The findings of the language-gap reports come after GabbroV and the hardware model.
+
 - **Target portability** (Simon, 2026-10-01): the direct x86-64 compiler must
   support extensible profiles for arbitrary operating systems and freestanding
   environments. Keep source semantics, IR, optimisation and validation generic;
