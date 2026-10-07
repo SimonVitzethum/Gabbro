@@ -6,3 +6,5 @@ import Arm.Mem.Exec
 import Arm.Mem.Dep
 import Arm.Mem.Axiomatic
 import Arm.Mem.Atomics
+import Arm.Mem.Model
+import Arm.Mem.IFetch
