@@ -364,6 +364,23 @@ theorem isbHolds_false_of_plain (x : Exec) (a c : Nat)
   rw [hcond] at hcon
   simp at hcon
 
+/-- One concrete plain event, shared by the splitter witness. -/
+def plainEv : Ev := ⟨0, 0, .write ⟨0, 4, .plain, false⟩, 1⟩
+
+/-- Witnesses: each clause lemma fires (as `false`) on the non-degenerate
+    barrier-free MP fixture — none of them is vacuous. -/
+theorem dmbHolds_false_of_plain_zeuge : dmbHolds mpNone 0 3 = false := by decide
+
+theorem dsbHolds_false_of_plain_zeuge : dsbHolds mpNone 0 3 = false := by decide
+
+theorem acqHolds_false_of_plain_zeuge : acqHolds mpNone 0 3 = false := by decide
+
+theorem relHolds_false_of_plain_zeuge : relHolds mpNone 0 3 = false := by decide
+
+theorem relAcqHolds_false_of_plain_zeuge : relAcqHolds mpNone 0 3 = false := by decide
+
+theorem isbHolds_false_of_plain_zeuge : isbHolds mpNone 0 3 = false := by decide
+
 /-- Split one whole-execution plainness fact into the six per-clause facts. -/
 theorem big_plain_split (e : Ev)
     (h : decide ((e.isDmbFull || e.isDmbLd || e.isDmbSt || e.isDsbFull || e.isDsbLd || e.isDsbSt || e.isAcquire || e.isAcquirePC || e.isRelease || e.isIsb) = false) = true) :
@@ -388,6 +405,16 @@ theorem big_plain_split (e : Ev)
   · simp only [Bool.or_eq_false_iff]
     exact ⟨⟨hrl, haq⟩, hqp⟩
   · exact his
+
+/-- Witness: the splitter fires on a concrete plain event. -/
+theorem big_plain_split_zeuge :
+    (plainEv.isDmbFull || plainEv.isDmbLd || plainEv.isDmbSt) = false ∧
+    (plainEv.isDsbFull || plainEv.isDsbLd || plainEv.isDsbSt) = false ∧
+    (plainEv.isAcquire || plainEv.isAcquirePC) = false ∧
+    plainEv.isRelease = false ∧
+    (plainEv.isRelease || plainEv.isAcquire || plainEv.isAcquirePC) = false ∧
+    plainEv.isIsb = false :=
+  big_plain_split _ (by decide)
 
 /-- A plain access is never ordered by `bob`: with no DMB, DSB, ISB,
     acquire or release event anywhere in the execution, every clause of
