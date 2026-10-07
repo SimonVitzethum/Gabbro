@@ -729,3 +729,4 @@ import Grammatik.X86.Befehle.System.SystemEvaluators
 import Grammatik.X86.Befehle.Sse.SseFourTwo
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
+import Grammatik.Kern.Semantik.SyscallArm
