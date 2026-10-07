@@ -323,9 +323,68 @@ theorem lockGood_holds : atomicityHolds lockGood = true := by decide
     this is mutual exclusion on the two-core fixture. -/
 theorem lockBad_refused : atomicityHolds lockBad = false := by decide
 
+/-- Monitor fixture: core 0 has just executed LDAXR on the lock word. -/
+def monLock : ExclState := ldxStep exclInit 0 lockAddr 8 true
+
+/-- Right after its own LDAXR, core 0's STLXR may succeed (spurious failure
+    stays allowed: both outcomes are legal). -/
+theorem monLock_may_succeed : stxOutcomes monLock 0 lockAddr 8 true = [0, 1] := by
+  decide
+
+/-- After core 1 stores to the lock word, core 0's reservation is gone and its
+    STLXR must fail. -/
+theorem monLock_cleared_by_other :
+    stxOutcomes (storeStep monLock 1 lockAddr 8) 0 lockAddr 8 true = [1] := by
+  decide
+
+/-- Core 0's own store does not clear its reservation (Sail clears only other
+    observers, v8_base.sail:28087). -/
+theorem monLock_kept_by_self :
+    stxOutcomes (storeStep monLock 0 lockAddr 8) 0 lockAddr 8 true = [0, 1] := by
+  decide
+
+/-- Witnesses: every universally quantified premise above, discharged on the
+    non-degenerate two-core fixtures (5 events, two contending cores, real
+    rf/co/rmw; a live reservation for the monitor theorems). -/
+theorem aob_of_rmw_zeuge : (0, 1) ∈ aob lockGood :=
+  aob_of_rmw lockGood 0 1 (by decide)
+
+theorem ldx_sets_zeuge :
+    monGet (ldxStep exclInit 0 lockAddr 8 true).perCore 0 = some (lockAddr, 8) :=
+  ldx_sets exclInit 0 lockAddr 8 true
+
+theorem stx_fails_unset_zeuge :
+    stxOutcomes exclInit 0 lockAddr 8 true = [1] :=
+  stx_fails_unset exclInit 0 lockAddr 8 true (by decide)
+
+theorem stx_clears_zeuge : monGet (stxStep monLock 0).perCore 0 = none :=
+  stx_clears monLock 0
+
+#print axioms aob_of_rmw
+#print axioms ldx_sets
+#print axioms stx_fails_unset
+#print axioms stx_clears
+#print axioms lockGood_holds
+#print axioms lockBad_refused
+
 end Arm
 
 /-
-CUTS: spin-lock atomicity verdicts done; monitor witness, per-theorem witnesses
-and axiom prints follow.
+CUTS:
+- Reservation granule: modelled as byte-range overlap (`overlap`), while the
+  Arm reservation granule is IMPLEMENTATION DEFINED and may be coarser than the
+  access. An execution that succeeds despite a same-granule-different-address
+  store by another observer is NOT covered; every modelled outcome is allowed
+  (a spurious STXR failure is always legal, `stxOutcomes`).
+- `aob` covers the `rmw` pair and the acquire read forwarded from its write.
+  LDAPR (`acquirePC`/RCpc) is deliberately excluded: RCpc ordering belongs to
+  agent 10's release/acquire (`lob`) part, not to `aob`.
+- A failed CAS writes nothing (Sail `cmpfail` skips the write,
+  v8_base.sail:28415), so it contributes a lone read event and no `rmw` pair.
+- Pair forms (LDXP/STXP) and 128-bit CASP have no separate constructors; sizes
+  are generic `Nat`, so single-copy atomics of any size are covered but the
+  pair shapes are not distinguished.
+- `Exec` well-formedness (po transitivity, co per-location, rf values) is
+  agent 06's; the fixtures above assume it. `OrderingParts.aob` (agent 07)
+  plugs in `Arm.aob`.
 -/
