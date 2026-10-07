@@ -351,6 +351,88 @@ theorem exCasp_ok :
     (runEffV 80 exCasp sCASP).map Prod.fst
       = some (BitVec.ofNat 64 2863311530, BitVec.ofNat 64 3149642683, 1) := by decide
 
+/-- Fixture: X0 holds operand 15, X1 holds base 64, address 64 holds byte
+    `0xFB` (251 unsigned, -5 signed). -/
+def gprB : Nat → BitVec 64 := upd (upd s0.regs.gpr 0 (BitVec.ofNat 64 15)) 1 (BitVec.ofNat 64 64)
+
+def memB : Nat → Nat := storeNat s0.mem 64 251 1
+
+def sB : State := { regs := { s0.regs with gpr := gprB }, mem := memB }
+
+/-- `LDCLR W2, W0, [X1]`: `0xFB & ~0x0F = 0xF0`, result is the old byte. -/
+def exLdclr : Eff (BitVec 64 × Nat) := do
+  ldAtom cfgNoFault .clr false false 1 1 0 2
+  let r ← rdBase 2
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 1 .plain false
+  pure (r, m)
+
+theorem exLdclr_ok :
+    (runEffV 80 exLdclr sB).map Prod.fst = some (BitVec.ofNat 64 251, 240) := by decide
+
+/-- `LDEORA W2, W0, [X1]`: `0xFB ^ 0x0F = 0xF4`. -/
+def exLdeor : Eff (BitVec 64 × Nat) := do
+  ldAtom cfgNoFault .eor true false 1 1 0 2
+  let r ← rdBase 2
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 1 .plain false
+  pure (r, m)
+
+theorem exLdeor_ok :
+    (runEffV 80 exLdeor sB).map Prod.fst = some (BitVec.ofNat 64 251, 244) := by decide
+
+/-- `LDSETL W2, W0, [X1]`: `0xFB | 0x0F = 0xFF`. -/
+def exLdset : Eff (BitVec 64 × Nat) := do
+  ldAtom cfgNoFault .set false true 1 1 0 2
+  let r ← rdBase 2
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 1 .plain false
+  pure (r, m)
+
+theorem exLdset_ok :
+    (runEffV 80 exLdset sB).map Prod.fst = some (BitVec.ofNat 64 251, 255) := by decide
+
+/-- `LDSMAXAL W2, W0, [X1]`: `max(-5, 15) = 15` (signed). -/
+def exLdsmax : Eff (BitVec 64 × Nat) := do
+  ldAtom cfgNoFault .smax true true 1 1 0 2
+  let r ← rdBase 2
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 1 .plain false
+  pure (r, m)
+
+theorem exLdsmax_ok :
+    (runEffV 80 exLdsmax sB).map Prod.fst = some (BitVec.ofNat 64 251, 15) := by decide
+
+/-- Planted wrong case: signed max is not unsigned max (251). -/
+theorem exLdsmax_notUmax :
+    (runEffV 80 exLdsmax sB).map Prod.fst ≠ some (BitVec.ofNat 64 251, 251) := by decide
+
+/-- `LDSMINA W2, W0, [X1]`: `min(-5, 15) = -5`, stored as `0xFB`. -/
+def exLdsmin : Eff (BitVec 64 × Nat) := do
+  ldAtom cfgNoFault .smin true false 1 1 0 2
+  let r ← rdBase 2
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 1 .plain false
+  pure (r, m)
+
+theorem exLdsmin_ok :
+    (runEffV 80 exLdsmin sB).map Prod.fst = some (BitVec.ofNat 64 251, 251) := by decide
+
+/-- `LDUMAXL W2, W0, [X1]`: `max(251, 15) = 251` (unsigned). -/
+def exLdumax : Eff (BitVec 64 × Nat) := do
+  ldAtom cfgNoFault .umax false true 1 1 0 2
+  let r ← rdBase 2
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 1 .plain false
+  pure (r, m)
+
+theorem exLdumax_ok :
+    (runEffV 80 exLdumax sB).map Prod.fst = some (BitVec.ofNat 64 251, 251) := by decide
+
+/-- `LDUMINAL W2, W0, [X1]`: `min(251, 15) = 15` (unsigned). -/
+def exLdumin : Eff (BitVec 64 × Nat) := do
+  ldAtom cfgNoFault .umin true true 1 1 0 2
+  let r ← rdBase 2
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 1 .plain false
+  pure (r, m)
+
+theorem exLdumin_ok :
+    (runEffV 80 exLdumin sB).map Prod.fst = some (BitVec.ofNat 64 251, 15) := by decide
+
 end Arm
 
 /-

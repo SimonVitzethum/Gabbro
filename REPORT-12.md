@@ -40,6 +40,10 @@ pairs, LSE atomics, prefetch). DONE is stale until the follow-up lands.
   `exCas_ok`, `exCasFail_ok`, `exCasp_ok` and planted wrong cases
   `exLdadd_notNew`, `exSwp_notSwapped`, `exCasFail_notSuccess`.
   (`decide` caught a missing memory preset in the `sCASf` fixture.)
+- Extended `AtomicOps.lean`: full LD-op coverage on the `sB` fixture
+  (`exLdclr_ok`, `exLdeor_ok`, `exLdset_ok`, `exLdsmax_ok`,
+  `exLdsmin_ok`, `exLdumax_ok`, `exLdumin_ok`) with the planted
+  signedness wrong case `exLdsmax_notUmax`.
 
 ## Earlier work (accepted by the coordinator, 8 jobs green)
 
