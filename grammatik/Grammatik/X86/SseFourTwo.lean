@@ -1010,4 +1010,492 @@ theorem stepSse42_stri_xmm (art : StrArt) (dst src : XmmReg)
   | inr h =>
     rw [h]; intro hstep; cases hstep; rfl
 
+/-! ## 9. Extended capstone chain.
+
+  `kapDecodeSse42` runs the accepted `kapDecode` first and consults
+  the SSE4.2 decoder only where the old chain refuses, so dispatch is
+  disjoint by construction. A maintainer wires the family in by adding
+  the `decodeSse42` arm behind every earlier arm of
+  `HwKapsteinDecoder.kapDecode` (same position as the other family
+  arms: last, tried only where all earlier arms refuse). -/
+
+/-- One row of the extended chain: the old chain first, the new
+    family only where it refuses. -/
+inductive KapSse42 where
+  | alt : KapDekodiert → KapSse42
+  | neu : Sse42Dec → KapSse42
+  deriving DecidableEq, Repr
+
+/-- Extended chain: `kapDecode` first, the SSE4.2 decoder only
+    where the old chain refuses. No old row is shadowed. -/
+def kapDecodeSse42 : List Byte → Option (KapSse42 × List Byte) :=
+  fun bs =>
+    match kapDecode bs with
+    | some (k, rest) => some (.alt k, rest)
+    | none =>
+      match decodeSse42 bs with
+      | some (d, rest) => some (.neu d, rest)
+      | none => none
+
+/-- The extended chain agrees with the old chain on every byte string
+    the old chain accepts: no existing form is shadowed. -/
+theorem kapDecodeSse42_alt (bs : List Byte) (k : KapDekodiert)
+    (rest : List Byte) (h : kapDecode bs = some (k, rest)) :
+    kapDecodeSse42 bs = some (.alt k, rest) := by
+  unfold kapDecodeSse42
+  rw [h]
+
+/-- Where the old chain refuses, a covered SSE4.2 row is taken. -/
+theorem kapDecodeSse42_neu (bs : List Byte) (d : Sse42Dec)
+    (rest : List Byte) (h1 : kapDecode bs = none)
+    (h2 : decodeSse42 bs = some (d, rest)) :
+    kapDecodeSse42 bs = some (.neu d, rest) := by
+  unfold kapDecodeSse42
+  rw [h1, h2]
+
+/-- Where both chains refuse, the extended chain refuses. -/
+theorem kapDecodeSse42_nichts (bs : List Byte)
+    (h1 : kapDecode bs = none) (h2 : decodeSse42 bs = none) :
+    kapDecodeSse42 bs = none := by
+  unfold kapDecodeSse42
+  rw [h1, h2]
+
+/-- Extended-chain pin: PCMPESTRI xmm1, xmm0, 0 takes the new arm. -/
+theorem kapSse42_pin_estri :
+    kapDecodeSse42 [natByte 64, natByte 102, natByte 15, natByte 58,
+      natByte 97, natByte 200, natByte 0] =
+      some (KapSse42.neu (⟨.strRR .estri .xmm1 .xmm0 0, 7⟩ :
+        Sse42Dec), []) := by
+  decide
+
+/-- Extended-chain pin: PCMPGTQ xmm1, xmm0 takes the new arm. -/
+theorem kapSse42_pin_pcmpgtq :
+    kapDecodeSse42 [natByte 64, natByte 102, natByte 15, natByte 56,
+      natByte 55, natByte 200] =
+      some (KapSse42.neu (⟨.pcmpgtqRR .xmm1 .xmm0, 6⟩ : Sse42Dec),
+        []) := by
+  decide
+
+/-- Extended-chain pin: CRC32 eax, eax takes the new arm. -/
+theorem kapSse42_pin_crc :
+    kapDecodeSse42 [natByte 242, natByte 64, natByte 15, natByte 56,
+      natByte 241, natByte 192] =
+      some (KapSse42.neu (⟨.crc32 false .b32 .rax .rax, 6⟩ :
+        Sse42Dec), []) := by
+  decide
+
+/-! ## 10. Machine adapter: the family on the coherent machine.
+
+  The producer plug instantiates `HwAdapter Sse42Dec`: a
+  successful family step re-embeds core data over the shared
+  memory; refusals admit no successor state. -/
+
+/-- The SSE4.2 plug: one checked family event step on the coherent
+    machine. `none` = refusal, never a silent successor. -/
+def adapterSse42 : HwAdapter Sse42Dec :=
+  ⟨fun m c d =>
+    match stepSse42 d (projFp m c) (m.bereit c) with
+    | some t' => some (setKernVonFp m c t')
+    | none => none⟩
+
+/-- Every adapter step preserves well-formedness: only core data
+    moves, profiles are untouched. -/
+theorem adapterSse42_wf (m : HwMaschine) (c : Nat)
+    (d : Sse42Dec) (m' : HwMaschine) (hwf : HwWf m)
+    (h : (adapterSse42).schritt m c d = some m') :
+    HwWf m' := by
+  unfold adapterSse42 at h
+  simp only at h
+  cases hsch : stepSse42 d (projFp m c) (m.bereit c) with
+  | some t' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    unfold setKernVonFp
+    exact setKernDaten_wf _ _ _ hwf
+  | none =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
+/-- Agreement: the adapter succeeds exactly where the family step
+    succeeds, with the successor core data re-embedded. -/
+theorem adapterSse42_ok (m : HwMaschine) (c : Nat)
+    (d : Sse42Dec) (t' : FpZustand)
+    (h : stepSse42 d (projFp m c) (m.bereit c) = some t') :
+    (adapterSse42).schritt m c d = some (setKernVonFp m c t') := by
+  unfold adapterSse42
+  simp only [h]
+
+/-- The successor keeps the shared memory and every buffer. -/
+theorem adapterSse42_mem (m : HwMaschine) (c : Nat)
+    (d : Sse42Dec) (m' : HwMaschine)
+    (h : (adapterSse42).schritt m c d = some m') :
+    m'.mem = m.mem ∧ ∀ e : Nat, m'.puffer e = m.puffer e := by
+  unfold adapterSse42 at h
+  simp only at h
+  cases hsch : stepSse42 d (projFp m c) (m.bereit c) with
+  | some t' =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+    exact ⟨setKernVonFp_speicher _ _ _,
+      fun e => setKernVonFp_puffer _ _ _ e⟩
+  | none =>
+    rw [hsch] at h
+    simp only at h
+    cases h
+
+/-- A bad decode length admits no adapter step. -/
+theorem adapterSse42_verweigert_bei_laenge (m : HwMaschine)
+    (c : Nat) (d : Sse42Dec)
+    (h : laengeOk d.laenge = false) :
+    (adapterSse42).schritt m c d = none := by
+  have hstep := stepSse42_laenge_verweigert d (projFp m c)
+    (m.bereit c) h
+  unfold adapterSse42
+  simp only [hstep]
+
+/-- Refused OS vector state admits no adapter step. -/
+theorem adapterSse42_verweigert_bei_profil (m : HwMaschine)
+    (c : Nat) (d : Sse42Dec)
+    (hok : laengeOk d.laenge = true)
+    (h : vecEintritt (m.bereit c) = false) :
+    (adapterSse42).schritt m c d = none := by
+  have hstep := stepSse42_profil_verweigert d (projFp m c)
+    (m.bereit c) hok h
+  unfold adapterSse42
+  simp only [hstep]
+
+/-- A refused CRC32 width row admits no adapter step. -/
+theorem adapterSse42_verweigert_bei_crc (m : HwMaschine)
+    (c : Nat) (w64 : Bool) (sw : CrcWeite)
+    (dst src : Register) (l : Nat)
+    (hok : laengeOk l = true)
+    (hfp : vecEintritt (m.bereit c) = true)
+    (h : crcZulaessig w64 sw = false) :
+    (adapterSse42).schritt m c
+      (⟨.crc32 w64 sw dst src, l⟩ : Sse42Dec) = none := by
+  have hstep := stepSse42_crc_verweigert w64 sw dst src l
+    (projFp m c) (m.bereit c) hok hfp h
+  unfold adapterSse42
+  simp only [hstep]
+
+/-! ## 11. Joint witness: two cores, family steps, buffered store.
+
+  Core 0 compares signed qwords (lane `[8,7]` against `[7,7]`,
+  so lane 0 becomes all-ones and lane 1 zero), core 1
+  accumulates one CRC32 source byte; beside the run core 0
+  issues a buffered byte store that only the owner observes by
+  forwarding, and the drain changes actual shared memory from
+  0 to 43. The family itself is register-only by silicon (no
+  admitted memory operand), so the memory half reuses the
+  accepted TSO equations, exactly like every other family
+  witness. Non-degenerate: XMM lanes change and shared memory
+  changes. -/
+
+/-- Witness XMM file of core 0: compare sources `[8,7]` in xmm2
+    against `[7,7]` in xmm3. -/
+def sse42WitXmm0 : XmmDatei := fun r =>
+  if r = XmmReg.xmm2 then vecMk .b64 (fun i => if i = 0 then 8 else 7)
+  else if r = XmmReg.xmm3 then vecMk .b64 (fun _ => 7)
+  else BitVec.ofNat 128 0
+
+/-- Witness cores: core 0 compares, core 1 accumulates; the GPR
+    file of core 1 holds CRC init 0 in eax and source 1 in ebx. -/
+def sse42WitKern : Nat → HwKern
+  | 0 => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 4096, sse42WitXmm0, kontextReset⟩
+  | 1 => ⟨fun q =>
+      if q = Register.rax then BitVec.ofNat 64 0
+      else if q = Register.rbx then BitVec.ofNat 64 1
+      else if q = Register.rsp then BitVec.ofNat 64 8192
+      else BitVec.ofNat 64 0,
+      zeugeFlags, BitVec.ofNat 64 4096,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+  | _ => ⟨fun _ => BitVec.ofNat 64 0, zeugeFlags,
+      BitVec.ofNat 64 8192, fun _ => BitVec.ofNat 128 0,
+      kontextReset⟩
+
+/-- Witness start machine: shared memory, two family cores, empty
+    buffers, full silicon. -/
+def sse42WitStart : HwMaschine :=
+  ⟨zeugeSpeicher, sse42WitKern, fun _ => [], basisHw,
+    fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed (admission carries its
+    silicon side, accepted profile lemma). -/
+theorem sse42WitStart_wf : HwWf sse42WitStart := by
+  intro c f h
+  exact (merkmalZugelassen_heisst_beide _ _ _ h).1
+
+/-- Core 0 signed-compare step through the adapter. -/
+def sse42WitOut0 : Option HwMaschine :=
+  (adapterSse42).schritt sse42WitStart 0
+    (⟨.pcmpgtqRR .xmm2 .xmm3, 6⟩ : Sse42Dec)
+
+/-- Core 1 CRC32 step through the adapter. -/
+def sse42WitOut1 : Option HwMaschine :=
+  (adapterSse42).schritt sse42WitStart 1
+    (⟨.crc32 false .b8 .rax .rbx, 6⟩ : Sse42Dec)
+
+/-- Read one 64-bit lane out of an adapter outcome. -/
+def sse42WitLane64 (o : Option HwMaschine) (c : Nat) (r : XmmReg)
+    (i : Nat) : Option Nat :=
+  match o with
+  | some m => some (laneNat .b64 ((m.kerne c).xmm r) i)
+  | none => none
+
+/-- Read one GPR value out of an adapter outcome. -/
+def sse42WitReg (o : Option HwMaschine) (c : Nat)
+    (q : Register) : Option Nat :=
+  match o with
+  | some m => some ((m.kerne c).register q).toNat
+  | none => none
+
+/-- Core 0 compare: `8 > 7` gives all-ones in lane 0. -/
+theorem sse42Wit_cmp_lane0 :
+    sse42WitLane64 sse42WitOut0 0 XmmReg.xmm2 0 =
+      some 18446744073709551615 := by
+  decide
+
+/-- Core 0 compare: `7 > 7` is false in lane 1. -/
+theorem sse42Wit_cmp_lane1 :
+    sse42WitLane64 sse42WitOut0 0 XmmReg.xmm2 1 = some 0 := by
+  decide
+
+/-- Core 1 CRC32: the destination holds exactly the specified
+    accumulation of one source byte. -/
+theorem sse42Wit_crc_wert :
+    sse42WitReg sse42WitOut1 1 Register.rax =
+      some (crcWert (BitVec.ofNat 64 0) (BitVec.ofNat 64 1)
+        .b8).toNat := by
+  decide
+
+set_option maxRecDepth 10000 in
+/-- Known-answer check: CRC32 over `123456789` (ASCII, in order)
+    from init `0xFFFFFFFF` with final xor equals `0xCBF43926`
+    (reflected algorithm, polynomial 11EDC6F41H). -/
+theorem crc32_check_wert :
+    Nat.xor (crcBytes 4294967295 0x393837363534333231 9)
+      4294967295 = 0xCBF43926 := by
+  decide
+
+/-- Witness string fragments: `[1,2,3]` against `[2,9]`. -/
+def sse42WitDstV : Vektor :=
+  vecMk .b8 (fun i =>
+    if i = 0 then 1 else if i = 1 then 2
+    else if i = 2 then 3 else 0)
+
+/-- Witness string fragments: `[2,9]`. -/
+def sse42WitSrcV : Vektor :=
+  vecMk .b8 (fun i => if i = 0 then 2 else if i = 1 then 9 else 0)
+
+/-- String spot-check: equal-any over `[1,2,3]`/`[2,9]` finds
+    only the `2` (mask 1, index 0, all short flags set). -/
+theorem sse42Wit_str :
+    (strAuswertung .estri (modusVonImm 0) sse42WitDstV sse42WitSrcV
+      (BitVec.ofNat 64 3) (BitVec.ofNat 64 2)).res2 = 1 ∧
+    (strAuswertung .estri (modusVonImm 0) sse42WitDstV sse42WitSrcV
+      (BitVec.ofNat 64 3) (BitVec.ofNat 64 2)).index = 0 ∧
+    (strAuswertung .estri (modusVonImm 0) sse42WitDstV sse42WitSrcV
+      (BitVec.ofNat 64 3) (BitVec.ofNat 64 2)).flags.cf = true ∧
+    (strAuswertung .estri (modusVonImm 0) sse42WitDstV sse42WitSrcV
+      (BitVec.ofNat 64 3) (BitVec.ofNat 64 2)).flags.zf = true ∧
+    (strAuswertung .estri (modusVonImm 0) sse42WitDstV sse42WitSrcV
+      (BitVec.ofNat 64 3) (BitVec.ofNat 64 2)).flags.sf = true ∧
+    (strAuswertung .estri (modusVonImm 0) sse42WitDstV sse42WitSrcV
+      (BitVec.ofNat 64 3) (BitVec.ofNat 64 2)).flags.of = true := by
+  decide
+
+/-- Witness range fragments: pairs `(1,5),(10,20)` in dst. -/
+def sse42WitRangeDstV : Vektor :=
+  vecMk .b8 (fun i =>
+    if i = 0 then 1 else if i = 1 then 5
+    else if i = 2 then 10 else if i = 3 then 20 else 0)
+
+/-- Witness range fragments: `[3,15,99]` in src. -/
+def sse42WitRangeSrcV : Vektor :=
+  vecMk .b8 (fun i =>
+    if i = 0 then 3 else if i = 1 then 15
+    else if i = 2 then 99 else 0)
+
+/-- String spot-check: ranges over `(1,5),(10,20)` against
+    `[3,15,99]` matches the first two positions (mask 3). -/
+theorem sse42Wit_ranges :
+    (strAuswertung .estri (modusVonImm 4) sse42WitRangeDstV
+      sse42WitRangeSrcV (BitVec.ofNat 64 4)
+      (BitVec.ofNat 64 3)).res2 = 3 := by
+  decide
+
+/-- Witness data address. -/
+def sse42WitAdr : Adresse := BitVec.ofNat 64 8192
+
+/-- Witness TSO start: canonical memory, empty buffers. -/
+def sse42WitTso0 : TSOZustand := ⟨zeugeSpeicher, fun _ => []⟩
+
+/-- Core 0 issues byte 43 at the data cell. -/
+def sse42WitTso1 : Option TSOZustand :=
+  issueByte sse42WitTso0 0 sse42WitAdr (BitVec.ofNat 8 43)
+
+/-- Core 0 observes its own byte (forwarding). -/
+def sse42WitEigen : Option (Option Byte) :=
+  match sse42WitTso1 with
+  | some s => some (loadByte s 0 sse42WitAdr)
+  | none => none
+
+/-- Core 1 observes the old byte (no foreign forwarding). -/
+def sse42WitFremd : Option (Option Byte) :=
+  match sse42WitTso1 with
+  | some s => some (loadByte s 1 sse42WitAdr)
+  | none => none
+
+/-- Core 0 drains its oldest entry. -/
+def sse42WitTso2 : Option TSOZustand :=
+  match sse42WitTso1 with
+  | some s => flushKern s 0
+  | none => none
+
+/-- The shared byte after the drain. -/
+def sse42WitNachFlush : Option (Option Byte) :=
+  match sse42WitTso2 with
+  | some s => some (some (s.mem.bytes sse42WitAdr))
+  | none => none
+
+/-- Core 1 reads the drained byte from shared memory. -/
+def sse42WitFremdNach : Option (Option Byte) :=
+  match sse42WitTso2 with
+  | some s => some (loadByte s 1 sse42WitAdr)
+  | none => none
+
+/-- The data cell starts zeroed. -/
+theorem sse42Wit_anfang_null :
+    zeugeSpeicher.bytes sse42WitAdr = BitVec.ofNat 8 0 := by
+  rfl
+
+/-- Forwarding: core 0 reads its own unflushed byte. -/
+theorem sse42Wit_weiterleitung :
+    sse42WitEigen = some (some (BitVec.ofNat 8 43)) := by
+  decide
+
+/-- No foreign forwarding: core 1 still reads zero. -/
+theorem sse42Wit_fremd_alt :
+    sse42WitFremd = some (some (BitVec.ofNat 8 0)) := by
+  decide
+
+/-- The drain changes shared memory: the cell reads 43. -/
+theorem sse42Wit_spuelung_aendert_speicher :
+    sse42WitNachFlush = some (some (BitVec.ofNat 8 43)) := by
+  decide
+
+/-- After the drain core 1 observes the new byte. -/
+theorem sse42Wit_fremd_neu :
+    sse42WitFremdNach = some (some (BitVec.ofNat 8 43)) := by
+  decide
+
+/-- A bad decode length refuses the adapter step beside the run. -/
+theorem sse42Wit_schlechte_laenge_verweigert :
+    (adapterSse42).schritt sse42WitStart 0
+      (⟨.pcmpgtqRR .xmm2 .xmm3, 0⟩ : Sse42Dec) = none :=
+  adapterSse42_verweigert_bei_laenge _ _ _ (by decide)
+
+/-- The old chain refuses the PMOVSXBW bytes beside the new
+    refusal (the SSE4.1 family owns that row). -/
+theorem kapAlt_weist_pmovsxbw42_zurueck :
+    kapDecode [natByte 64, natByte 102, natByte 15, natByte 56,
+      natByte 32, natByte 200] = none := by
+  decide
+
+/-- The joint witness: a reached two-core family run (signed
+    compare on core 0, CRC32 accumulation on core 1, string
+    aggregation beside it) with a buffered store that only the
+    owner forwards and a drain that changes actual shared memory
+    from 0 to 43 -- with the refusal and decode refusals beside
+    it. Non-degenerate: XMM lanes change and shared memory
+    changes. -/
+theorem sse42_zeuge :
+    sse42WitLane64 sse42WitOut0 0 XmmReg.xmm2 0 =
+        some 18446744073709551615 ∧
+      sse42WitLane64 sse42WitOut0 0 XmmReg.xmm2 1 = some 0 ∧
+      sse42WitReg sse42WitOut1 1 Register.rax =
+        some (crcWert (BitVec.ofNat 64 0) (BitVec.ofNat 64 1)
+          .b8).toNat ∧
+      sse42WitEigen = some (some (BitVec.ofNat 8 43)) ∧
+      sse42WitFremd = some (some (BitVec.ofNat 8 0)) ∧
+      sse42WitNachFlush = some (some (BitVec.ofNat 8 43)) ∧
+      sse42WitFremdNach = some (some (BitVec.ofNat 8 43)) ∧
+      zeugeSpeicher.bytes sse42WitAdr = BitVec.ofNat 8 0 ∧
+      HwWf sse42WitStart ∧
+      (adapterSse42).schritt sse42WitStart 0
+        (⟨.pcmpgtqRR .xmm2 .xmm3, 0⟩ : Sse42Dec) = none ∧
+      decodeSse42 [natByte 64, natByte 102, natByte 15, natByte 56,
+        natByte 32, natByte 200] = none ∧
+      kapDecodeSse42 [natByte 64, natByte 102, natByte 15, natByte 56,
+        natByte 32, natByte 200] = none := by
+  refine ⟨sse42Wit_cmp_lane0, sse42Wit_cmp_lane1, sse42Wit_crc_wert,
+    sse42Wit_weiterleitung, sse42Wit_fremd_alt,
+    sse42Wit_spuelung_aendert_speicher, sse42Wit_fremd_neu,
+    sse42Wit_anfang_null, sse42WitStart_wf,
+    sse42Wit_schlechte_laenge_verweigert, sse42_nichts_pmovsxbw,
+    kapDecodeSse42_nichts _ kapAlt_weist_pmovsxbw42_zurueck
+      sse42_nichts_pmovsxbw⟩
+
+/- CUTS:
+   Proved here: the admitted SSE4.2 register-direct rows
+   (PCMPESTRI/PCMPESTRM/PCMPISTRI/PCMPISTRM `66 0F 3A 60-63`,
+   PCMPGTQ `66 0F 38 37`, five CRC32 rows `F2 0F 38 F0/F1`)
+   with canonical encoding, a canonical decoder, per-row round
+   trips (imm8 up to byte normalisation, admitted width rows),
+   planted decoder refusals, decide-pins that the old capstone
+   chain refuses the new bytes, the full imm8 mode matrix with
+   per-mode equations and silicon spot-checks, CRC32 over the
+   reflected polynomial with a known-answer check, a family
+   step with frame theorems, the extended chain
+   `kapDecodeSse42` with exact agreement and extended-chain
+   pins, the `HwAdapter Sse42Dec` plug with well-formedness
+   preservation and planted refusals, and a reached two-core
+   run with owner-only forwarding and a memory-changing drain.
+   NOT proved here, and not claimed:
+   - No hardware correspondence: encodings are the canonical
+     subset with self-consistency only, not x86 truth. Silicon
+     assumptions named: the opcode rows and imm8 matrix (SDM
+     Vol. 2A 3-205, Vol. 2B 4.1/4-254ff, edition 093US),
+     PCMPGTQ signed comparison, CRC32 polynomial 11EDC6F41H in
+     reflected order with DEST[63:32] := 0, string length
+     saturation and null-scan rules, IntRes1/IntRes2/polarity
+     tables, ECX/XMM0 outputs, the overloaded flag meanings,
+     legacy-SSE whole-register XMM writes, no flag/memory/GPR
+     effect beyond the stated writes. The map transcription is
+     a NAMED assumption. The task text names the CRC32
+     polynomial "CRC-32C"; the SDM page gives 11EDC6F41H
+     (CRC-32/ISO-HDLC), which this file follows.
+   - No memory ModRM forms, no REX.W vector rows, no VEX/EVEX,
+     no SIB/addressed operands, no LOCK path, no fault model
+     beyond the carried divide halt, no source/IR/ABI/loader/
+     entry/budget link, no per-access target-to-W/GX
+     simulation, no timing/power behaviour.
+   - `encodeSse42` aliases the refused width rows onto admitted
+     rows (r64/dword shares the qword bytes, r32/qword shares
+     the dword bytes); round trip is stated on admitted rows
+     only (`crcZulaessig`, `sse42Norm`).
+   - A maintainer wires the family in by adding the
+     `decodeSse42` arm behind every earlier arm of
+     `HwKapsteinDecoder.kapDecode`.
+-/
+
+#print axioms modusVonImm
+#print axioms encodeSse42
+#print axioms decodeSse42
+#print axioms roundtripSse42
+#print axioms vecPcmpgtq
+#print axioms crcWert
+#print axioms crc32_check_wert
+#print axioms strAuswertung
+#print axioms stepSse42
+#print axioms kapDecodeSse42
+#print axioms adapterSse42
+#print axioms adapterSse42_wf
+#print axioms sse42WitStart_wf
+#print axioms sse42_zeuge
+
 end Gabbro.Grammatik.X86
