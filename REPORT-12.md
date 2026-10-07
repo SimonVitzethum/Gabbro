@@ -40,6 +40,15 @@ Skeleton of `arm/Arm/Isa/Addr.lean` is green.
   `exUnalignedPlain_ok` (misaligned plain reads proceed bytewise),
   `exUnalignedOrdered_refuses`, `exFault_refuses`, `exCheckSP_ok` and
   `exCheckSP_refuses` (fixture `sSP8`).
+- Created `arm/Arm/Isa/LoadStore.lean` (skeleton): `extVal`
+  (Sail `instrs64.sail:32821`) with `decide` theorems `extVal_sign8`,
+  `extVal_zero8`, `extVal_w32`; added the two `import` lines to
+  `arm/Arm.lean`; `./arm-bau` builds all 8 targets with 0 errors.
+
+## Last build result
+
+`./arm-bau` → `== exit 0; 0 error line(s) in the COMPLETE output`
+(8 jobs, all `Arm.*` modules green).
 - Warmed the build once with `./arm-bau` (needed so `./arm-probe` resolves
   the `Arm.*` imports of a not-yet-imported new file).
 
