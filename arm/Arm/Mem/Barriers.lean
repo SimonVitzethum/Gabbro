@@ -99,28 +99,25 @@ def dsbHolds (x : Exec) (a c : Nat) : Bool :=
      (b.isDsbSt && wrOf x a && wrOf x c))
 
 /-- Acquire clause (Arm ARM B2.3): LDAR orders po-later reads and writes;
-    LDAPR (RCpc) orders po-later reads only. -/
+    LDAPR (RCpc) orders po-later reads only. Stated with `any` so every
+    proof goes through `List.any_eq_false` uniformly. -/
 def acqHolds (x : Exec) (a c : Nat) : Bool :=
-  match x.ev? a with
-  | some e =>
-    poMem x a c &&
-    ((e.isAcquire && memOf x c) || (e.isAcquirePC && rdOf x c))
-  | none => false
+  poMem x a c &&
+    x.evs.any fun e =>
+      e.id == a && ((e.isAcquire && memOf x c) || (e.isAcquirePC && rdOf x c))
 
 /-- Release clause (Arm ARM B2.3): STLR is ordered after po-earlier reads
     and writes. -/
 def relHolds (x : Exec) (a c : Nat) : Bool :=
-  match x.ev? c with
-  | some e => poMem x a c && e.isRelease && memOf x a
-  | none => false
+  poMem x a c && memOf x a &&
+    x.evs.any fun e => e.id == c && e.isRelease
 
 /-- Release-acquire (Arm ARM B2.3): STLR ;po; LDAR, and STLR ;po; LDAPR
     (release sequence head of the RCpc extension), are ordered. -/
 def relAcqHolds (x : Exec) (a c : Nat) : Bool :=
-  match x.ev? a, x.ev? c with
-  | some e₁, some e₂ =>
-    poMem x a c && e₁.isRelease && (e₂.isAcquire || e₂.isAcquirePC)
-  | _, _ => false
+  poMem x a c &&
+    (x.evs.any fun e => e.id == a && e.isRelease) &&
+    (x.evs.any fun e => e.id == c && (e.isAcquire || e.isAcquirePC))
 
 /-- ISB (Sail: impdefs.sail:888-890, instrs64.sail:22746-22748): flushes the
     pipeline so later instructions are fetched afresh. At the data-memory
@@ -203,6 +200,118 @@ theorem mp_rel_orders : (0, 1) ∈ bob mpRelAcq := by decide
 
 /-- Witness: the later read IS ordered after the acquire. -/
 theorem mp_acq_orders : (2, 3) ∈ bob mpRelAcq := by decide
+
+/-- A plain execution (no barrier, acquire or release event anywhere) has no
+    DMB edge: every `any` witness would need one. -/
+theorem dmbHolds_false_of_plain (x : Exec) (a c : Nat)
+    (h : x.evs.all (fun e => decide ((e.isDmbFull || e.isDmbLd || e.isDmbSt) = false)) = true) :
+    dmbHolds x a c = false := by
+  unfold dmbHolds
+  rw [List.any_eq_false]
+  intro b hb hcon
+  have hpred := (List.all_eq_true.mp h) b hb
+  have hbig : (b.isDmbFull || b.isDmbLd || b.isDmbSt) = false :=
+    of_decide_eq_true hpred
+  simp only [Bool.or_eq_false_iff] at hbig
+  obtain ⟨⟨hf, hl⟩, hs⟩ := hbig
+  have hcond : (poMem x a b.id && poMem x b.id c &&
+      ((b.isDmbFull && memOf x a && memOf x c) ||
+       (b.isDmbLd && rdOf x a && memOf x c) ||
+       (b.isDmbSt && wrOf x a && wrOf x c))) = false := by
+    simp [hf, hl, hs]
+  rw [hcond] at hcon
+  simp at hcon
+
+/-- Same for DSB. -/
+theorem dsbHolds_false_of_plain (x : Exec) (a c : Nat)
+    (h : x.evs.all (fun e => decide ((e.isDsbFull || e.isDsbLd || e.isDsbSt) = false)) = true) :
+    dsbHolds x a c = false := by
+  unfold dsbHolds
+  rw [List.any_eq_false]
+  intro b hb hcon
+  have hpred := (List.all_eq_true.mp h) b hb
+  have hbig : (b.isDsbFull || b.isDsbLd || b.isDsbSt) = false :=
+    of_decide_eq_true hpred
+  simp only [Bool.or_eq_false_iff] at hbig
+  obtain ⟨⟨hf, hl⟩, hs⟩ := hbig
+  have hcond : (poMem x a b.id && poMem x b.id c &&
+      ((b.isDsbFull && memOf x a && memOf x c) ||
+       (b.isDsbLd && rdOf x a && memOf x c) ||
+       (b.isDsbSt && wrOf x a && wrOf x c))) = false := by
+    simp [hf, hl, hs]
+  rw [hcond] at hcon
+  simp at hcon
+
+/-- Same for the acquire leg. -/
+theorem acqHolds_false_of_plain (x : Exec) (a c : Nat)
+    (h : x.evs.all (fun e => decide ((e.isAcquire || e.isAcquirePC) = false)) = true) :
+    acqHolds x a c = false := by
+  unfold acqHolds
+  cases hP : poMem x a c with
+  | false => rfl
+  | true =>
+    show (x.evs.any fun e => e.id == a &&
+      ((e.isAcquire && memOf x c) || (e.isAcquirePC && rdOf x c))) = false
+    rw [List.any_eq_false]
+    intro e he hcon
+    have hpred := (List.all_eq_true.mp h) e he
+    have hbig : (e.isAcquire || e.isAcquirePC) = false :=
+      of_decide_eq_true hpred
+    simp only [Bool.or_eq_false_iff] at hbig
+    obtain ⟨ha, hq⟩ := hbig
+    rw [ha, hq] at hcon
+    simp at hcon
+
+/-- Same for the release leg. -/
+theorem relHolds_false_of_plain (x : Exec) (a c : Nat)
+    (h : x.evs.all (fun e => decide (e.isRelease = false)) = true) :
+    relHolds x a c = false := by
+  unfold relHolds
+  cases hP : (poMem x a c && memOf x a) with
+  | false => rfl
+  | true =>
+    show (x.evs.any fun e => e.id == c && e.isRelease) = false
+    rw [List.any_eq_false]
+    intro e he hcon
+    have hpred := (List.all_eq_true.mp h) e he
+    have hrel : e.isRelease = false := of_decide_eq_true hpred
+    rw [hrel] at hcon
+    simp at hcon
+
+/-- Same for the release-acquire leg. -/
+theorem relAcqHolds_false_of_plain (x : Exec) (a c : Nat)
+    (h : x.evs.all (fun e => decide ((e.isRelease || e.isAcquire || e.isAcquirePC) = false)) = true) :
+    relAcqHolds x a c = false := by
+  unfold relAcqHolds
+  cases hP : poMem x a c with
+  | false => rfl
+  | true =>
+    have h1 : (x.evs.any fun e => e.id == a && e.isRelease) = false := by
+      rw [List.any_eq_false]
+      intro e he hcon
+      have hpred := (List.all_eq_true.mp h) e he
+      have hbig : (e.isRelease || e.isAcquire || e.isAcquirePC) = false :=
+        of_decide_eq_true hpred
+      simp only [Bool.or_eq_false_iff] at hbig
+      obtain ⟨⟨hr, _⟩, _⟩ := hbig
+      rw [hr] at hcon
+      simp at hcon
+    simp [h1]
+
+/-- Same for the ISB leg. -/
+theorem isbHolds_false_of_plain (x : Exec) (a c : Nat)
+    (h : x.evs.all (fun e => decide (e.isIsb = false)) = true) :
+    isbHolds x a c = false := by
+  unfold isbHolds
+  rw [List.any_eq_false]
+  intro b hb hcon
+  have hpred := (List.all_eq_true.mp h) b hb
+  have hisb : b.isIsb = false := of_decide_eq_true hpred
+  have hcond : (ctrlMem x a b.id && poMem x b.id c && b.isIsb && rdOf x a &&
+      memOf x c) = false := by
+    simp [hisb]
+  rw [hcond] at hcon
+  simp at hcon
 
 /-
 CUTS: `bob` covers DMB and acquire/release; DSB, ISB and all theorems open.
