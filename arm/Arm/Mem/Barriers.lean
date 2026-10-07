@@ -55,6 +55,24 @@ def wrOf (x : Exec) (i : Nat) : Bool :=
 
 def memOf (x : Exec) (i : Nat) : Bool := rdOf x i || wrOf x i
 
+def Ev.isDmbLd : Ev → Bool
+  | { kind := .barrier (.dmb d .ld), .. } => d.v1Orders
+  | _ => false
+
+def Ev.isDmbSt : Ev → Bool
+  | { kind := .barrier (.dmb d .st), .. } => d.v1Orders
+  | _ => false
+
+/-- DMB clause of bob (Arm ARM B2.3.5): a ;po; barrier ;po; c with the
+    classes the barrier type orders: full [R|W]..[R|W], LD [R]..[R|W],
+    ST [W]..[W]. -/
+def dmbHolds (x : Exec) (a c : Nat) : Bool :=
+  x.evs.any fun b =>
+    poMem x a b.id && poMem x b.id c &&
+    ((b.isDmbFull && memOf x a && memOf x c) ||
+     (b.isDmbLd && rdOf x a && memOf x c) ||
+     (b.isDmbSt && wrOf x a && wrOf x c))
+
 /-
 CUTS: predicates only; `bob`, DMB LD/ST clauses, DSB, ISB and all theorems open.
 -/
