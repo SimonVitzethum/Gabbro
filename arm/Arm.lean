@@ -5,3 +5,4 @@ import Arm.Mem.Trace
 import Arm.Mem.Exec
 import Arm.Mem.Dep
 import Arm.Mem.Axiomatic
+import Arm.Mem.Atomics
