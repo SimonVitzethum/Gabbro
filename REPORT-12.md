@@ -44,6 +44,17 @@ Skeleton of `arm/Arm/Isa/Addr.lean` is green.
   (Sail `instrs64.sail:32821`) with `decide` theorems `extVal_sign8`,
   `extVal_zero8`, `extVal_w32`; added the two `import` lines to
   `arm/Arm.lean`; `./arm-bau` builds all 8 targets with 0 errors.
+- Extended `LoadStore.lean`: `ldStSingle` (Sail `instrs64.sail:39785`,
+  `:32821`, `:37495`) covering unsigned-offset, pre/post-index and
+  unscaled LDUR/STUR for 8/16/32/64-bit accesses with sign/zero
+  extension, with fixture `gprLS`/`sLS` and `decide` theorems
+  `exStrLdrW_ok`, `exLdrsb_ok`, the planted wrong case
+  `exLdrsb_notZero`, `exPreIdx_ok`, `exPostIdx_ok`.
+- Apparatus note: Lean ends an application at a newline when the
+  continuation is not indented past the application start, so a field
+  value split across lines (`gpr :=` newline `upd ...`) misparses;
+  hoist such tables into their own `def` (here `gprLS`). The misparse
+  also poisoned every later `decide` with stuck terms.
 
 ## Last build result
 
