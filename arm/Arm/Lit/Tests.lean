@@ -11,6 +11,7 @@ import Arm.Basic
 import Arm.Mem.Event
 import Arm.Lit.Prog
 import Arm.Lit.Enumerate
+import Arm.Mem.Axiomatic
 
 namespace Arm.Lit
 
@@ -158,6 +159,12 @@ def runTest (cons : Exec → Bool) (t : LitTest) : Bool × Bool :=
 /-- Run the suite: one `(forbiddenOK, allowedOK)` pair per test. -/
 def runAll (cons : Exec → Bool) : List (Bool × Bool) :=
   allTests.map fun t => runTest cons t
+
+/-- Consistency with the atomic/barrier plug-ins empty (agent 07 `consistent`,
+    agent 09/10 parts absent): internal coherence plus `obs | dob` external
+    visibility plus atomicity. Barrier/acquire-release tests cannot pass their
+    forbidden leg under this predicate; that is expected (see REPORT-08.md). -/
+def consNoParts (x : Exec) : Bool := consistent noParts x
 
 -- Sanity: every test's forbidden and allowed outcomes differ.
 example : allTests.all testSane = true := rfl
