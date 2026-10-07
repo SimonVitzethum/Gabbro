@@ -244,8 +244,38 @@ def isAcqReadId (x : Exec) (i : Nat) : Bool :=
 def aob (x : Exec) : Rel :=
   x.rmw ++ (x.rf.filter fun p => (rmwWrites x).any (· == p.1) && isAcqReadId x p.2)
 
+/-- Every `rmw` pair is ordered by `aob`: the read before its write. -/
+theorem aob_of_rmw (x : Exec) (r w : Nat) (h : (r, w) ∈ x.rmw) :
+    (r, w) ∈ aob x := by
+  unfold aob
+  exact List.mem_append.mpr (Or.inl h)
+
+/-- LDXR/LDAXR installs this core's reservation. -/
+theorem ldx_sets (s : ExclState) (c : CoreId) (a : Addr) (n : Nat) (sh : Bool) :
+    monGet (ldxStep s c a n sh).perCore c = some (a, n) := by
+  simp [ldxStep, monSet, monGet]
+
+/-- STXR/STLXR with no reservation fails: the only legal status is `1`. -/
+theorem stx_fails_unset (s : ExclState) (c : CoreId) (a : Addr) (n : Nat)
+    (sh : Bool) (h : monGet s.perCore c = none) :
+    stxOutcomes s c a n sh = [1] := by
+  simp [stxOutcomes, stxPass, h]
+
+/-- `find?` with a never-true predicate finds nothing. -/
+theorem find?_never (l : List (CoreId × Addr × Nat)) :
+    (l.find? fun _ => false) = none := by
+  induction l with
+  | nil => rfl
+  | cons _ _ ih => simp [List.find?, ih]
+
+/-- STXR/STLXR clears this core's local monitor, pass or fail. Sail:
+    `ClearExclusiveLocal` runs unconditionally (v8_base.sail:29091). -/
+theorem stx_clears (s : ExclState) (c : CoreId) :
+    monGet (stxStep s c).perCore c = none := by
+  simp [stxStep, monSet, monGet, find?_never]
+
 end Arm
 
 /-
-CUTS: aob and atomicity defined; theorems and spin-lock witness follow.
+CUTS: theorems stated; spin-lock fixtures and witnesses follow.
 -/
