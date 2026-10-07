@@ -29,9 +29,17 @@ pairs, LSE atomics, prefetch). DONE is stale until the follow-up lands.
   `instrs64.sail:28942`; 2x64 and 2x32 forms; load needs half alignment
   for 2x32 and full 16 for 2x64, stores need full size) with `decide`
   theorems `exLdxpStxp_ok`, `exStxpFail_ok`, the planted wrong case
-  `exStxpFail_notPass`, `exLdxp32_ok`, `exLdxp4ok_ok` and
+  `exStxpFail_notPass`,   `exLdxp32_ok`, `exLdxp4ok_ok` and
   `exStxp4_refuses` (the asymmetric alignment rule pinned from both
   sides).
+- Extended `AtomicOps.lean`: `ldAtom` (Sail `instrs64.sail:25698`,
+  `:51771`; SWP/LD*/ST* via `t = 31`), `cas` (Sail
+  `instrs64.sail:6382`) and `casp` (Sail `instrs64.sail:6494`), all on
+  agent 09's `atomicReadAcc`/`atomicWriteAcc`/`atomicFun`/`casCmp`,
+  with `decide` theorems `exLdadd_ok`, `exStadd_ok`, `exSwp_ok`,
+  `exCas_ok`, `exCasFail_ok`, `exCasp_ok` and planted wrong cases
+  `exLdadd_notNew`, `exSwp_notSwapped`, `exCasFail_notSuccess`.
+  (`decide` caught a missing memory preset in the `sCASf` fixture.)
 
 ## Earlier work (accepted by the coordinator, 8 jobs green)
 

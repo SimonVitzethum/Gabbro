@@ -168,6 +168,189 @@ theorem exStxp4_refuses :
     (runEffV 60 (stxp cfgNoFault false 64 2 0 1 5 true) sXP4).isNone
       = true := by decide
 
+/-- LSE read-modify-write (`LDADD`/`LDCLR`/`LDEOR`/`LDSET`/`LDSMAX`/
+    `LDSMIN`/`LDUMAX`/`LDUMIN`, `SWP`, and the `ST*` aliases with `t = 31`
+    discarding the result): read the old value, write `atomicFun op`
+    applied to old and register value, return old unless `t = 31`. `acq`
+    sets acquire on the read half, `rel` sets release on the write half
+    (agent 09's `atomicReadAcc`/`atomicWriteAcc`); `excl` is false for both
+    (atomicop, never exclusive). Sizes 1/2/4/8 bytes.
+    -- Sail: instrs64.sail:25698 (`execute_..._atomicops_ld`), :51771
+       (SWP); v8_base.sail:28334 (`MemAtomic`). -/
+def ldAtom (cfg : MemCfg) (op : AtomicOp) (acq rel : Bool)
+    (nbytes : Nat) (n s t : Nat) : Eff Unit := do
+  if n == 31 then checkSP else pure ()
+  let base ← rdBase n
+  atomCheck cfg base nbytes nbytes
+  let ann : AtomicAnn := { acq := acq, rel := rel }
+  let old ← rawRead (atomicReadAcc ann base nbytes)
+  let sv ← rdBase s
+  let new := atomicFun op nbytes old (sv.toNat % 2 ^ (8 * nbytes))
+  rawWrite (atomicWriteAcc ann base nbytes) new
+  if t == 31 then pure ()
+  else wrBase t (BitVec.ofNat 64 (mask nbytes old))
+
+/-- `CAS`/`CASA`/`CASL`/`CASAL` (byte/half/word/doubleword): compare memory
+    with `Xs`, on equality write `Xt`, and always update `Xs` with the old
+    value (zero-extended). On mismatch nothing is written (a lone read
+    event, no `rmw` pair on agent 09's side).
+    -- Sail: instrs64.sail:6382; v8_base.sail:28403 (`cmpfail`). -/
+def cas (cfg : MemCfg) (acq rel : Bool) (nbytes : Nat)
+    (n s t : Nat) : Eff Unit := do
+  if n == 31 then checkSP else pure ()
+  let base ← rdBase n
+  atomCheck cfg base nbytes nbytes
+  let ann : AtomicAnn := { acq := acq, rel := rel }
+  let csv ← rdBase s
+  let nsv ← rdBase t
+  let old ← rawRead (atomicReadAcc ann base nbytes)
+  if casCmp nbytes csv.toNat old then
+    rawWrite (atomicWriteAcc ann base nbytes) (mask nbytes nsv.toNat)
+  else pure ()
+  wrBase s (BitVec.ofNat 64 (mask nbytes old))
+
+/-- `CASP`/`CASPA`/`CASPL`/`CASPAL`: the pair form. `halfBits` is the HALF
+    width in bits (32 or 64); the compare value is `X[s+1] @ X[s]`
+    (little-endian) and the result writes back low half to `X[s]`, high
+    half to `X[s+1]`. Two half-size read events and, on match, two
+    half-size writes: value-identical to Sail's one joined `MemAtomic`.
+    -- Sail: instrs64.sail:6494. -/
+def casp (cfg : MemCfg) (acq rel : Bool) (halfBits : Nat)
+    (n s t : Nat) : Eff Unit := do
+  if n == 31 then checkSP else pure ()
+  let base ← rdBase n
+  let half := halfBits / 8
+  atomCheck cfg base (2 * half) (2 * half)
+  let ann : AtomicAnn := { acq := acq, rel := rel }
+  let s1 ← rdBase s
+  let s2 ← rdBase (s + 1)
+  let t1 ← rdBase t
+  let t2 ← rdBase (t + 1)
+  let o1 ← rawRead (atomicReadAcc ann base half)
+  let o2 ← rawRead (atomicReadAcc ann (addOff base (Int.ofNat half)) half)
+  let cmp := mask half s1.toNat + mask half s2.toNat * 2 ^ halfBits
+  let old := o1 + o2 * 2 ^ halfBits
+  if old == cmp then
+    rawWrite (atomicWriteAcc ann base half) (mask half t1.toNat)
+    rawWrite (atomicWriteAcc ann (addOff base (Int.ofNat half)) half)
+      (mask half t2.toNat)
+  else pure ()
+  wrBase s (BitVec.ofNat 64 o1)
+  wrBase (s + 1) (BitVec.ofNat 64 o2)
+
+/-- Fixture: X0 holds operand 7, X1 holds base 64, address 64 holds 10. -/
+def gprA : Nat → BitVec 64 := upd (upd s0.regs.gpr 0 (BitVec.ofNat 64 7)) 1 (BitVec.ofNat 64 64)
+
+def memA10 : Nat → Nat := storeNat s0.mem 64 10 4
+
+def sA : State := { regs := { s0.regs with gpr := gprA }, mem := memA10 }
+
+/-- `LDADDAL W2, W0, [X1]`: returns 10, memory becomes 17. -/
+def exLdadd : Eff (BitVec 64 × Nat) := do
+  ldAtom cfgNoFault .add true true 4 1 0 2
+  let r ← rdBase 2
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 4 .plain false
+  pure (r, m)
+
+theorem exLdadd_ok :
+    (runEffV 80 exLdadd sA).map Prod.fst
+      = some (BitVec.ofNat 64 10, 17) := by decide
+
+/-- Planted wrong case: the result register holds the OLD value, not NEW. -/
+theorem exLdadd_notNew :
+    (runEffV 80 exLdadd sA).map Prod.fst ≠ some (BitVec.ofNat 64 17, 17) := by decide
+
+/-- `STADDL W0, [X1]`: memory becomes 17, no result register. -/
+def exStadd : Eff Nat := do
+  ldAtom cfgNoFault .add false true 4 1 0 31
+  memReadEff cfgNoFault (BitVec.ofNat 64 64) 4 .plain false
+
+theorem exStadd_ok : (runEffV 80 exStadd sA).map Prod.fst = some 17 := by decide
+
+/-- Fixture: X1 holds base 64, X5 holds `0x11223344`, address 64 holds
+    `0xAABBCCDD`. -/
+def gprSWP : Nat → BitVec 64 := upd (upd (upd s0.regs.gpr 1 (BitVec.ofNat 64 64)) 5 (BitVec.ofNat 64 287454020)) 6 (BitVec.ofNat 64 0)
+
+def memSWP : Nat → Nat := storeNat s0.mem 64 2864434397 4
+
+def sSWP : State := { regs := { s0.regs with gpr := gprSWP }, mem := memSWP }
+
+/-- `SWPA W6, W5, [X1]`: returns old, memory takes the operand. -/
+def exSwp : Eff (BitVec 64 × Nat) := do
+  ldAtom cfgNoFault .swp true false 4 1 5 6
+  let r ← rdBase 6
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 4 .plain false
+  pure (r, m)
+
+theorem exSwp_ok :
+    (runEffV 80 exSwp sSWP).map Prod.fst
+      = some (BitVec.ofNat 64 2864434397, 287454020) := by decide
+
+/-- Planted wrong case: old and new are not swapped. -/
+theorem exSwp_notSwapped :
+    (runEffV 80 exSwp sSWP).map Prod.fst
+      ≠ some (BitVec.ofNat 64 287454020, 2864434397) := by decide
+
+/-- Fixture: as `sSWP` but X5 (comparand) holds `0xAABBCCDD` too. -/
+def gprCAS : Nat → BitVec 64 := upd (upd (upd s0.regs.gpr 1 (BitVec.ofNat 64 64)) 5 (BitVec.ofNat 64 2864434397)) 6 (BitVec.ofNat 64 287454020)
+
+def sCAS : State := { regs := { s0.regs with gpr := gprCAS }, mem := memSWP }
+
+/-- `CASL W5, W6, [X1]` with matching comparand: memory takes the new
+    value, `W5` keeps the old one. -/
+def exCas : Eff (BitVec 64 × Nat) := do
+  cas cfgNoFault false true 4 1 5 6
+  let r ← rdBase 5
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 4 .plain false
+  pure (r, m)
+
+theorem exCas_ok :
+    (runEffV 80 exCas sCAS).map Prod.fst
+      = some (BitVec.ofNat 64 2864434397, 287454020) := by decide
+
+/-- Fixture: as `sCAS` but the comparand X5 is 0 (mismatch). -/
+def gprCASf : Nat → BitVec 64 := upd gprCAS 5 (BitVec.ofNat 64 0)
+
+def sCASf : State := { regs := { s0.regs with gpr := gprCASf }, mem := memSWP }
+
+/-- Mismatch: `W5` is updated with the old value, memory is untouched. -/
+def exCasFail : Eff (BitVec 64 × Nat) := do
+  cas cfgNoFault false true 4 1 5 6
+  let r ← rdBase 5
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 4 .plain false
+  pure (r, m)
+
+theorem exCasFail_ok :
+    (runEffV 80 exCasFail sCASf).map Prod.fst
+      = some (BitVec.ofNat 64 2864434397, 2864434397) := by decide
+
+/-- Planted wrong case: failure is observably not success. -/
+theorem exCasFail_notSuccess :
+    (runEffV 80 exCasFail sCASf).map Prod.fst
+      ≠ some (BitVec.ofNat 64 2864434397, 287454020) := by decide
+
+/-- Fixture for `CASPAL`: base 64 in X1, comparands `0xAAAAAAAA` /
+    `0xBBBBBBBB` in X4/X5, new values 1/2 in X6/X7, memory preset to the
+    comparands. -/
+def gprCASP : Nat → BitVec 64 := upd (upd (upd (upd (upd s0.regs.gpr 1 (BitVec.ofNat 64 64)) 4 (BitVec.ofNat 64 2863311530)) 5 (BitVec.ofNat 64 3149642683)) 6 (BitVec.ofNat 64 1)) 7 (BitVec.ofNat 64 2)
+
+def memCASP : Nat → Nat := storeNat (storeNat s0.mem 64 2863311530 4) 68 3149642683 4
+
+def sCASP : State := { regs := { s0.regs with gpr := gprCASP }, mem := memCASP }
+
+/-- `CASPAL X4, X6, [X1]` with matching comparands: memory takes the new
+    pair, `X4`/`X5` keep the old halves. -/
+def exCasp : Eff (BitVec 64 × BitVec 64 × Nat) := do
+  casp cfgNoFault true true 32 1 4 6
+  let a ← rdBase 4
+  let b ← rdBase 5
+  let m ← memReadEff cfgNoFault (BitVec.ofNat 64 64) 4 .plain false
+  pure (a, b, m)
+
+theorem exCasp_ok :
+    (runEffV 80 exCasp sCASP).map Prod.fst
+      = some (BitVec.ofNat 64 2863311530, BitVec.ofNat 64 3149642683, 1) := by decide
+
 end Arm
 
 /-
