@@ -4,3 +4,4 @@ import Arm.Isa.Monad
 import Arm.Isa.IntCore
 import Arm.Isa.IntMasks
 import Arm.Isa.Integer
+import Arm.Isa.IntBit
