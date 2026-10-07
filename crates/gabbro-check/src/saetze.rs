@@ -2515,7 +2515,7 @@ pub const M1: &[Satz] = &[
                   expired by any write naming the carrier -- own writes, loops (all), \
                   calls (writes-hull), never device registers -- and refused at decision \
                   positions only (branch/match condition, call argument, return, `narrow` \
-                  subject, index), while storing or moving the name stays allowed.",
+                  subject, index), while storing or moving the name stays allowed. The carriers of an INDEX expression do not taint the value read through it (a write to the selector outdates no cell content), unless the index mentions an expired local.",
         vorbehalt: "**The literal `messung/netz/udp-echo.gab` still passes, BY DESIGN**: \
                     its bug is an omission no local holds, so no expiry can fire -- the \
                     rule catches the udp-echo shape (a named stale use), not the missing \

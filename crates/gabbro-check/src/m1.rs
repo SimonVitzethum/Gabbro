@@ -6506,7 +6506,20 @@ impl<'a> Pruefer<'a> {
                 }
                 for sx in &o.suffixe {
                     if let OrtSuffix::Index(x) = sx {
-                        veraltet |= self.traeger_im_ausdruck(x, lage, aus);
+                        // **Selector carriers do not taint the value (SPRACHE-EFFIZIENZ #17).**
+                        // `let b = RING[e]` holds the CONTENT of the cell `e` selected; a
+                        // later write to the carrier `e` came from changes which cell the
+                        // NEXT read would pick, not what `b` holds -- `b` is a snapshot of the
+                        // old cell, exactly as before the write. The content carrier (the
+                        // place's own basis, added above) still taints. When the selector
+                        // mentions an EXPIRED local the old behaviour stands in full: the
+                        // value was then read at a stale index and keeps those sources.
+                        let mut waehler = std::collections::HashSet::new();
+                        let alt = self.traeger_im_ausdruck(x, lage, &mut waehler);
+                        if alt {
+                            aus.extend(waehler);
+                        }
+                        veraltet |= alt;
                     }
                 }
             }

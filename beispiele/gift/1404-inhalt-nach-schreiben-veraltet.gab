@@ -1,0 +1,22 @@
+-- erwartet: M147
+-- **Selector refinement, MUST-FAIL half (SPRACHE-EFFIZIENZ #17).** `a` is read from `RING[e]`
+-- and the selector carrier `ENDE` is written afterwards: silent (the first decision, on `a`).
+-- `c` is read from `RING[e]` and `RING` ITSELF is written afterwards: the CONTENT carrier
+-- still taints, so the decision on `c` falls -- once.
+module gift::inhalt_nach_schreiben {
+
+static mut RING : [u8; 256] = 0;
+static mut ENDE : u32 in 0 ..< 256 = 0;
+
+impl fn f() -> u8 effects { reads ENDE, writes ENDE, reads RING, writes RING } costs <= 20 ops {
+    let e : u32 in 0 ..< 256 = ENDE;
+    let a : u8 = RING[e];
+    ENDE = (e + 1) % 256;
+    if a != 0 { return 1; }
+    let c : u8 = RING[e];
+    RING[e] = 0;
+    if c != 0 { return 2; }
+    return 0;
+}
+
+}
