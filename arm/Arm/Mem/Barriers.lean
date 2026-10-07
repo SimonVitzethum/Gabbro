@@ -122,11 +122,29 @@ def relAcqHolds (x : Exec) (a c : Nat) : Bool :=
     poMem x a c && e₁.isRelease && (e₂.isAcquire || e₂.isAcquirePC)
   | _, _ => false
 
+/-- ISB (Sail: impdefs.sail:888-890, instrs64.sail:22746-22748): flushes the
+    pipeline so later instructions are fetched afresh. At the data-memory
+    level v1 models the control-dependency leg: a read `a` with a ctrl edge
+    to an ISB `b` is ordered before every po-later data access `c`. The
+    fetch half (later fetches see the ISB) has no fetch event in this model
+    and stays CUTS. -/
+def Ev.isIsb : Ev → Bool
+  | { kind := .barrier .isb, .. } => true
+  | _ => false
+
+def ctrlMem (x : Exec) (a b : Nat) : Bool :=
+  x.ctrl.any fun p => p.1 == a && p.2 == b
+
+def isbHolds (x : Exec) (a c : Nat) : Bool :=
+  x.evs.any fun b =>
+    ctrlMem x a b.id && poMem x b.id c && b.isIsb && rdOf x a &&
+      memOf x c
+
 /-- Barrier-ordered-before: the function agent 07 plugs into
     `OrderingParts.bob`. -/
 def bobHolds (x : Exec) (a c : Nat) : Bool :=
   dmbHolds x a c || dsbHolds x a c || acqHolds x a c || relHolds x a c ||
-    relAcqHolds x a c
+    relAcqHolds x a c || isbHolds x a c
 
 def bob (x : Exec) : Rel :=
   (x.evs.flatMap fun a => x.evs.map fun c => (a.id, c.id)).filter
