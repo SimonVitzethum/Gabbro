@@ -56,6 +56,66 @@ def runDep : Nat → Eff Unit → CoreId → Nat → Nat → (Nat → Nat) → O
                 rids := o.rids }, nx, nrr)
     | .raise _ => some ({ evs := [], rids := [] }, next, nr)
 
+/-- Events of one run, forgetting ids and read counts. -/
+def evsOf (p : Eff Unit) (core next fuel : Nat) (s : Nat → Nat) : Option (List Ev) :=
+  match runDep fuel p core next 0 s with
+  | none => none
+  | some (o, _, _) => some o.evs
+
+/-- Two read supplies agree except possibly at read `i`. -/
+def AgreeExcept (s₁ s₂ : Nat → Nat) (i : Nat) : Prop :=
+  ∀ j, j ≠ i → s₁ j = s₂ j
+
+/-- The supply `sup` with read `i` re-answered by `v'`. -/
+def pert (sup : Nat → Nat) (i v' : Nat) : Nat → Nat :=
+  fun j => if j = i then v' else sup j
+
+theorem pert_agree (sup : Nat → Nat) (i v' : Nat) :
+    AgreeExcept (pert sup i v') sup i :=
+  fun _j hj => if_neg hj
+
+/-- Compare one pair of same-position events from the base and the perturbed
+    run: changed address is an addr edge, changed written value a data edge,
+    changed kind (or, in `cmpLater`, changed length) a ctrl edge. A later
+    read whose value differs is ignored: read values are supply artifacts,
+    never influenced through the tree. -/
+def cmpEv (r : Nat) (e e' : Ev) : Rel × Rel × Rel :=
+  if e.kind = e'.kind then
+    if e.addr? = e'.addr? then
+      if e.isWrite = true ∧ e'.isWrite = true then
+        if e.val = e'.val then ([], [], [])
+        else ([], [(r, e.id)], [])
+      else ([], [], [])
+    else ([(r, e.id)], [], [])
+  else ([], [], [(r, e.id)])
+
+/-- Compare two full runs position by position. -/
+def cmpLater (r : Nat) : List Ev → List Ev → Rel × Rel × Rel
+  | [], [] => ([], [], [])
+  | [], e' :: _ => ([], [], [(r, e'.id)])
+  | e :: _, [] => ([], [], [(r, e.id)])
+  | e :: es, e' :: es' =>
+    let (a₁, d₁, c₁) := cmpEv r e e'
+    let (a₂, d₂, c₂) := cmpLater r es es'
+    (a₁ ++ a₂, d₁ ++ d₂, c₁ ++ c₂)
+
+/-- Dependency detection by perturbation: run `p` under `sup`, re-run it with
+    read `i` re-answered by `v'`, and compare the two event lists. Returns the
+    perturbed read's event id with the addr, data and ctrl edges out of it. -/
+def detect (p : Eff Unit) (core next : Nat) (sup : Nat → Nat) (fuel : Nat)
+    (i v' : Nat) : Option (Nat × Rel × Rel × Rel) :=
+  match runDep fuel p core next 0 sup with
+  | none => none
+  | some (o, _, _) =>
+    match o.rids[i]? with
+    | none => none
+    | some r =>
+      match runDep fuel p core next 0 (pert sup i v') with
+      | none => none
+      | some (o', _, _) =>
+        let (a, d, c) := cmpLater r o.evs o'.evs
+        some (r, a, d, c)
+
 end Arm
 
 /-
