@@ -274,8 +274,58 @@ theorem stx_clears (s : ExclState) (c : CoreId) :
     monGet (stxStep s c).perCore c = none := by
   simp [stxStep, monSet, monGet, find?_never]
 
+/-- The lock word both cores contend on. -/
+def lockAddr : Addr := 0
+
+/-- Spin-lock acquire shape: LDAXR (acquire exclusive read) then STLXR
+    (release exclusive write) on the lock word. -/
+def lockReadAcc : Access :=
+  { addr := lockAddr, size := 8, ord := .acquire, excl := true }
+
+def lockWriteAcc : Access :=
+  { addr := lockAddr, size := 8, ord := .release, excl := true }
+
+/-- Good two-core spin-lock execution: core 0 reads `0` (unlocked) and locks
+    with `1`; core 1's LDAXR reads core 0's `1` (sees locked, does not
+    acquire). The initial `0` is written by core 7, foreign to both. -/
+def lockGood : Exec :=
+  { evs :=
+      [{ id := 0, core := 0, kind := .read lockReadAcc, val := 0 },
+       { id := 1, core := 0, kind := .write lockWriteAcc, val := 1 },
+       { id := 2, core := 1, kind := .read lockReadAcc, val := 1 },
+       { id := 3, core := 1, kind := .write lockWriteAcc, val := 1 },
+       { id := 4, core := 7, kind := .write lockWriteAcc, val := 0 }]
+    po := [(0, 1), (2, 3)]
+    addr := []
+    data := []
+    ctrl := []
+    rf := [(4, 0), (1, 2)]
+    co := [(4, 1), (1, 3)]
+    rmw := [(0, 1), (2, 3)] }
+
+/-- Planted violation: BOTH cores' LDAXR read `0`, i.e. both enter the critical
+    section. Core 0's write is coherence-between core 1's source and core 1's
+    write (and symmetrically), so atomicity must refuse this execution. -/
+def lockBad : Exec :=
+  { evs := lockGood.evs
+    po := [(0, 1), (2, 3)]
+    addr := []
+    data := []
+    ctrl := []
+    rf := [(4, 0), (4, 2)]
+    co := [(4, 1), (4, 3), (1, 3)]
+    rmw := [(0, 1), (2, 3)] }
+
+/-- The good spin-lock execution satisfies the atomicity axiom. -/
+theorem lockGood_holds : atomicityHolds lockGood = true := by decide
+
+/-- The planted both-acquired violation is refused by the atomicity axiom:
+    this is mutual exclusion on the two-core fixture. -/
+theorem lockBad_refused : atomicityHolds lockBad = false := by decide
+
 end Arm
 
 /-
-CUTS: theorems stated; spin-lock fixtures and witnesses follow.
+CUTS: spin-lock atomicity verdicts done; monitor witness, per-theorem witnesses
+and axiom prints follow.
 -/
