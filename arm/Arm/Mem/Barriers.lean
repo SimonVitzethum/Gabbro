@@ -495,6 +495,33 @@ theorem plain_never_bob (x : Exec)
     ordered, so `plain_never_bob` is not vacuous. -/
 theorem plain_never_bob_zeuge : bob mpDmbSt ≠ [] := by decide
 
+#print axioms plain_never_bob
+#print axioms dmbHolds_false_of_plain
+#print axioms dsbHolds_false_of_plain
+#print axioms acqHolds_false_of_plain
+#print axioms relHolds_false_of_plain
+#print axioms relAcqHolds_false_of_plain
+#print axioms isbHolds_false_of_plain
+#print axioms big_plain_split
+
 /-
-CUTS: `bob` covers DMB and acquire/release; DSB, ISB and all theorems open.
+CUTS:
+- Proved: the six `bob` clauses (DMB full/ld/st, DSB data classes, LDAR,
+  LDAPR/RCpc, STLR, STLR`;po;`LDAR/LDAPR, ISB-with-ctrl), `bob` itself, the
+  MP witness facts, and `plain_never_bob` with its splitter and witnesses.
+- Shareability v1: only `ish`/`sy` barriers order observers (`Domain.v1Orders`);
+  `nsh`/`osh` barriers order nothing. No per-observer domainFiltering yet.
+- DSB completion beyond data accesses has no event in this model (no
+  instruction-completion event): only the data classes are ordered here.
+- ISB fetch half has no event in this model (no fetch event): only the
+  read`;ctrl;`ISB`;po;`mem leg is ordered here.
+- `Exec` well-formedness (unique ids, po transitive/irreflexive, ctrl shape)
+  is agent 06's `Exec.lean`, not stated here; `bob` reads `po`/`ctrl` as given.
+- `bob` is one leg for agent 07's `OrderingParts.bob`; coherence, reads-from,
+  from-reads, dependencies `addr`/`data`, `rmw` and the outer Arm order are
+  not in this file.
+- `Barrier` (`Arm/Basic.lean`, frozen) has no SB/SSBB/PSSBB form, so those
+  barriers cannot be named here; proposed as vocabulary follow-up.
+- The `excl` (exclusive-pair) flag carries no extra `bob` edge: exclusives
+  order through their `ord` (plain/acquire/release) and barriers, as Arm lists.
 -/
