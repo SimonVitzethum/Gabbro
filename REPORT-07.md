@@ -1,17 +1,20 @@
 # Agent 07 report — Arm axiomatic memory model (`arm/Arm/Mem/Axiomatic.lean`,
 `arm/Arm/Mem/Model.lean`)
 
-## Status: FOLLOW-UP IN PROGRESS (coordinator note: points 2 and 3 open)
-- `arm/Arm/Mem/Axiomatic.lean` + one import line at the end of `arm/Arm.lean`.
-  Point (1) done: `dob` repaired to the six published clauses (commit
+## Status: FOLLOW-UP COMPLETE (points 1, 2, 3 done)
+- `arm/Arm/Mem/Axiomatic.lean` + `arm/Arm/Mem/Model.lean`, one import line
+  each at the end of `arm/Arm.lean`.
+- Point (1): `dob` repaired to the six published clauses (commit
   `63e0953a`); ISB witnesses committed (`2704b7b0`).
-- Point (2) is THIS section (confidence per clause). Point (3) is
-  `arm/Arm/Mem/Model.lean` (litmus verdicts MP/SB/LB/2+2W/R/S) — in progress.
+- Point (2): the Confidence section below.
+- Point (3): `Model.lean` with `model_asm` (`consistent` is the three-axiom
+  conjunction, proved by `rfl` — the single `consistent` definition stays in
+  `Axiomatic.lean`, no duplication) and `decide` verdicts for MP, SB, LB, R,
+  S, 2+2W (allowed + suspicious outcome each, all under `noParts`).
 - Last full build `./arm-bau`:
-  `== exit 0; 0 error line(s) in the COMPLETE output`.
-- Commits: `2870a5eb` skeleton, `4f152bda` coherence relations,
-  `54fe478c` dob/axioms, `9d742351` witnesses/theorems, `cfb8c57c` model
-  complete, `63e0953a` dob-ISB repair, `2704b7b0` ISB witnesses.
+  `== exit 0; 0 error line(s) in the COMPLETE output`,
+  `Build completed successfully (8 jobs)`; all 13 `Model.lean` theorems and
+  the 4 `Axiomatic.lean` verdicts depend only on `[propext]`.
 
 ## Definitions (all in `namespace Arm`)
 - `OrderingParts` — structure with `aob : Rel; bob : Rel` (plug-in for agents
@@ -35,6 +38,39 @@
 - `wit_rmw*`: split exclusive pair fails `atomic` only.
 - `#print axioms` for the four `consistent` verdicts: each depends only on
   `[propext]` (standard).
+- ISB: `isb_orders` (`dob` edge present through the ISB), `noisb_no_order`
+  (absent without), `isb_allowed`/`noisb_allowed` (both consistent — one
+  cross-location read-read `dob` edge cannot close an `ob` cycle by itself).
+
+## `Model.lean` verdicts (point 3; all `by decide`, all under `noParts`)
+
+`model_asm`: `consistent` is the three-axiom conjunction (by `rfl`).
+
+| Shape | Allowed outcome | Suspicious outcome | Verdict now | After 09/10 plug-in |
+|---|---|---|---|---|
+| MP | sees data (`mp_allowed = true`) | misses data | `true` (allowed w/o barriers) | FLIPS to `false` with `bob` both sides |
+| SB | sees writes (`sb_allowed = true`) | sees zeros | `true` | FLIPS to `false` with `bob` |
+| LB plain | sees zeros (`lb_allowed = true`) | sees each other's write | `true` | STAYS `true` (needs deps, not barriers) |
+| LB+addr (`xLbAddr`) | — | with addr deps | `false` already via `dob` | STAYS `false` |
+| R | in `co` order (`r_allowed = true`) | against `co` | `false` via `internal` | STAYS `false` (no plug-in repairs `internal`) |
+| S | in order (`s_allowed = true`) | against single-writer `co` | `false` via `internal` | STAYS `false` |
+| 2+2W | in `co` order (`w_allowed = true`) | against `co` chain | `false` via `internal` | STAYS `false` |
+
+All 13 `Model.lean` theorems depend only on `[propext]`.
+
+Note on `consistent` placement: the task text asked for the `consistent`
+DEFINITION in `Model.lean`; it stays defined exactly once in
+`Axiomatic.lean` (hard rule 8 — a second `Arm.consistent` would be a
+duplicate definition, and moving it would break the `wit_*` theorems without
+an import cycle). `Model.lean` states the identical equation as `model_asm`,
+proved by `rfl`, with zero duplication.
+
+Note on `consistent` placement: the task text asked for the `consistent`
+DEFINITION in `Model.lean`; it stays defined exactly once in
+`Axiomatic.lean` (hard rule 8 — a second `Arm.consistent` would be a
+duplicate definition, and moving it would break the `wit_*` theorems without
+an import cycle). `Model.lean` states the identical equation as
+`model_asm`, proved by `rfl`, with zero duplication.
 
 ## Sources and honesty notes
 - Clauses cite Arm ARM B2.3 / `aarch64.cat` by section and name FROM THE
@@ -53,7 +89,7 @@
   `List.union` is sought); `|>.union` after a union chain mis-parses — both
   fixed with explicit `Rel.union`.
 - Frozen files `Basic.lean`/`Event.lean` untouched. Only `Arm.lean` (import
-  line) and the new file were edited.
+  lines) and the two new files were edited.
 
 ## Confidence per clause (point 2 of the follow-up; reviewer guidance)
 

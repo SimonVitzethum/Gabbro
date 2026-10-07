@@ -142,8 +142,54 @@ theorem s_allowed : consistent noParts sAllowed = true := by decide
 /-- S out-of-order outcome is inconsistent, barrier-independently. -/
 theorem s_forbidden : consistent noParts sForbidden = false := by decide
 
+/-- 2+2W, in-order outcome: two cores each write twice in `po` to the same
+    location; the third core's reader sees two of them in `co` order.
+    Consistent. -/
+def wAllowed : Exec :=
+  { evs := [⟨0, 0, .write (acc 0#64), 1⟩, ⟨1, 0, .write (acc 0#64), 2⟩,
+            ⟨2, 1, .write (acc 0#64), 3⟩, ⟨3, 1, .write (acc 0#64), 4⟩,
+            ⟨4, 2, .read (acc 0#64), 2⟩, ⟨5, 2, .read (acc 0#64), 4⟩]
+    po := [(0, 1), (2, 3), (4, 5)], addr := [], data := [], ctrl := []
+    rf := [(1, 4), (3, 5)], co := [(0, 1), (1, 2), (2, 3)], rmw := [] }
+
+/-- 2+2W, out-of-order outcome: the reader sees write 4 and then write 1
+    although `co` chains 1 long before 4. Fails `internal` through
+    `3 -rf-> 4 -po-loc-> 5 -fr-> 3`; barrier-independent like R and S. -/
+def wForbidden : Exec :=
+  { evs := [⟨0, 0, .write (acc 0#64), 1⟩, ⟨1, 0, .write (acc 0#64), 2⟩,
+            ⟨2, 1, .write (acc 0#64), 3⟩, ⟨3, 1, .write (acc 0#64), 4⟩,
+            ⟨4, 2, .read (acc 0#64), 4⟩, ⟨5, 2, .read (acc 0#64), 2⟩]
+    po := [(0, 1), (2, 3), (4, 5)], addr := [], data := [], ctrl := []
+    rf := [(3, 4), (1, 5)], co := [(0, 1), (1, 2), (2, 3)], rmw := [] }
+
+/-- 2+2W in-order outcome is consistent. -/
+theorem w_allowed : consistent noParts wAllowed = true := by decide
+
+/-- 2+2W out-of-order outcome is inconsistent, barrier-independently. -/
+theorem w_forbidden : consistent noParts wForbidden = false := by decide
+
 end Arm
 
 /-
-CUTS: skeleton; verdict theorems and the SB/LB/2+2W/R/S shapes follow.
+CUTS: litmus verdicts MP/SB/LB/R/S/2+2W complete, each as allowed plus
+suspicious outcome under `noParts`. The suspicious outcomes of MP and SB
+flip to inconsistent once agent 10's `bob` is plugged in; LB-plain stays
+allowed (its forbidden twin needs `dob` dependencies, see `xLbAddr`); the
+R/S/2+2W suspicious outcomes fail `internal` and no plug-in repairs them.
+Historical litmus-name fidelity for R/S/2+2W is MEDIUM (see REPORT-07.md);
+every shape is explicit, so each verdict stands regardless of its name.
 -/
+
+#print axioms Arm.model_asm
+#print axioms Arm.mp_allowed
+#print axioms Arm.mp_forbidden_allowed_without_barriers
+#print axioms Arm.sb_allowed
+#print axioms Arm.sb_forbidden_allowed_without_barriers
+#print axioms Arm.lb_allowed
+#print axioms Arm.lb_forbidden_allowed_without_dependencies
+#print axioms Arm.r_allowed
+#print axioms Arm.r_forbidden
+#print axioms Arm.s_allowed
+#print axioms Arm.s_forbidden
+#print axioms Arm.w_allowed
+#print axioms Arm.w_forbidden
