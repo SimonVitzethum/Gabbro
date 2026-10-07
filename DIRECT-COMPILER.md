@@ -731,7 +731,7 @@ Last ledger refresh: **2026-10-07 00:09 UTC**. This is an operational snapshot, 
 | 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
 | 1349 | Integer ALU in every width and form | Committed candidate; review/integration pending | 1350: Unresolved after agent rounds; not accepted | [task](lanes/1349.md) |
-| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Merged after review/checks | 1352: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1351.md) |
+| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Merged after review/checks | 1352: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1351.md) |
 | 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Merged after review/checks | 1354: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1353.md) |
 | 1355 | SSE/SSE2 moves, loads, stores and unpack | Committed candidate; review/integration pending | 1356: Committed candidate; review/integration pending | [task](lanes/1355.md) |
 | 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Committed candidate; review/integration pending | 1358: Committed candidate; review/integration pending | [task](lanes/1357.md) |
@@ -1834,6 +1834,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-06: lane **1396**, Independent exact review of 1395, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1396.md). <!-- x86-merged:1396 -->
 - 2026-10-06: integration of candidate(s) [1351] failed the local proof/build gate after independent review 1352; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1352 -->
 - 2026-10-06: lane **1351**, MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1351.md). <!-- x86-merged:1351 -->
+- 2026-10-06: lane **1352**, Independent exact review of 1351, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1352.md). <!-- x86-merged:1352 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
