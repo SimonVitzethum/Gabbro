@@ -83,18 +83,28 @@ def po_loc (x : Exec) : Rel := x.po.filter (sameLocPair x)
     B2.3 observed-before source). -/
 def fre (x : Exec) : Rel := (fr x).filter fun p => !(sameCorePair x p)
 
+/-- An ISB barrier event (the `[ISB]` set of `aarch64.cat`). -/
+def isIsbEv : Ev → Bool
+  | { kind := .barrier .isb, .. } => true
+  | _ => false
+
 /-- Dependency-ordered-before (`aarch64.cat` `dob`, B2.3 dependency rules):
     address and data dependencies; control dependency to a write; control or
-    address dependency followed by `po` to a write; address dependency followed
-    by `po` to a write (a subset of the previous clause, kept for readability);
-    address or data dependency feeding a write observed by an internal read. -/
+    address-then-`po` dependency to an ISB, followed by `po` to a read;
+    address dependency followed by `po` to a write; address or data
+    dependency feeding a write observed by an internal read.
+    The earlier `(ctrl|addr);po;[W]` clause is REMOVED: `ctrl` already relates
+    a read to every `po`-later event, so composing it with `po` again is not
+    in the published model (it would order a read before a `po`-later write
+    merely because an unrelated branch sits between them). -/
 def dob (x : Exec) : Rel :=
   let ctrlW : Rel := x.ctrl.filter (targetIs isWriteEv x)
-  let ctrlAddrPoW : Rel :=
-    ((x.ctrl.union x.addr).comp x.po).filter (targetIs isWriteEv x)
+  let toIsb : Rel :=
+    (x.ctrl.union (x.addr.comp x.po)).filter (targetIs isIsbEv x)
+  let isbToR : Rel := (toIsb.comp x.po).filter (targetIs isReadEv x)
   let addrPoW : Rel := (x.addr.comp x.po).filter (targetIs isWriteEv x)
   let depRfi : Rel := (x.addr.union x.data).comp (rfi x)
-  ((x.addr.union x.data).union ctrlW).union (ctrlAddrPoW.union (addrPoW.union depRfi))
+  ((x.addr.union x.data).union ctrlW).union (isbToR.union (addrPoW.union depRfi))
 
 /-- Observed-before: the cross-core communication orders (`aarch64.cat`
     `obs = rfe | fre | coe`, B2.3 external visibility). -/
