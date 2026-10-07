@@ -713,4 +713,4 @@ import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.X86.Befehle.System.SystemDecode
 import Grammatik.X86.TSO.Verriegelt.LockedAllRmw
 import Grammatik.X86.Befehle.Sse.SseThreeByte
-import Grammatik.X86.SseThreeByteMem
+import Grammatik.X86.Befehle.Sse.SseThreeByteMem

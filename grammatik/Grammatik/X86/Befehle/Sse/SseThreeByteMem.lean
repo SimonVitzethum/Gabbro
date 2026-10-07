@@ -1585,7 +1585,7 @@ theorem stepSseMem_rip (m : HwMaschine) (c : Nat) (d : SseMemDec)
     (m'.kerne c).rip = ripNach (m.kerne c).rip d.laenge := by
   obtain ⟨x, rfl⟩ := adapterSseMem_formNach m c d m' hstep
   simp [setKernVonFp, setKernDaten, sseMemNach, sseMemNachKern,
-    projFp, projZustand, sseMemNach_rip]
+    projFp, projZustand]
 
 /-- Every step preserves the flags. -/
 theorem stepSseMem_flags (m : HwMaschine) (c : Nat) (d : SseMemDec)
@@ -1594,7 +1594,7 @@ theorem stepSseMem_flags (m : HwMaschine) (c : Nat) (d : SseMemDec)
     (m'.kerne c).flags = (m.kerne c).flags := by
   obtain ⟨x, rfl⟩ := adapterSseMem_formNach m c d m' hstep
   simp [setKernVonFp, setKernDaten, sseMemNach, sseMemNachKern,
-    projFp, projZustand, sseMemNach_flags]
+    projFp, projZustand]
 
 /-- Every step keeps every GPR. -/
 theorem stepSseMem_gpr (m : HwMaschine) (c : Nat) (d : SseMemDec)
@@ -1603,7 +1603,7 @@ theorem stepSseMem_gpr (m : HwMaschine) (c : Nat) (d : SseMemDec)
     (m'.kerne c).register q = (m.kerne c).register q := by
   obtain ⟨x, rfl⟩ := adapterSseMem_formNach m c d m' hstep
   simp [setKernVonFp, setKernDaten, sseMemNach, sseMemNachKern,
-    projFp, projZustand, sseMemNach_gpr]
+    projFp, projZustand]
 
 /-- Every step keeps every non-destination XMM register whole. -/
 theorem stepSseMem_fremd (m : HwMaschine) (c : Nat) (d : SseMemDec)
@@ -2282,5 +2282,248 @@ theorem kapSseMem_nichts_blendv :
   kapDecodeSseMem_nichts _
     (kapDecodeSse_nichts _ kap_weist_blendv_zurueck sseThree_nichts_blendv)
     sseMem_nichts_blendv
+
+/-! ## 7. Joint witness: two cores with memory sources, REX.W,
+  MMX values, forwarding and a memory-changing drain.
+
+  Core 0 shuffles by a zeroed 16-byte memory source (every lane
+  becomes destination lane 0), core 1 takes an absolute value over
+  the same zeroed source; a REX.W shuffle runs beside them on the
+  start machine. The TSO half (owner-only forwarding, foreign-old,
+  drain changing shared memory from 0 to 99) reuses the accepted
+  lane-1369 run unchanged -- the family steps themselves are
+  loads, so the drain is the memory-changing step. Non-degenerate:
+  XMM bytes change on both cores and shared memory changes. -/
+
+/-- Witness GPR file: the source base reads the aligned data cell. -/
+def sseMemWitReg : Register → Wort := fun q =>
+  if q = Register.rbx then BitVec.ofNat 64 12288
+  else BitVec.ofNat 64 0
+
+/-- Misaligned witness GPR file: one past the data cell (#GP). -/
+def sseMemWitRegSchief : Register → Wort := fun q =>
+  if q = Register.rbx then BitVec.ofNat 64 12289
+  else BitVec.ofNat 64 0
+
+/-- Witness XMM file of core 0: shuffle destination (identity
+    bytes) in xmm0, shuffle control (constant index 1) in xmm1. -/
+def sseMemWitXmm0 : XmmDatei := fun r =>
+  if r = XmmReg.xmm0 then vecMk .b8 (fun i => i)
+  else if r = XmmReg.xmm1 then vecMk .b8 (fun _ => 1)
+  else BitVec.ofNat 128 0
+
+/-- Witness XMM file of core 1: absolute-value destination (all
+    lanes 7) in xmm2. -/
+def sseMemWitXmm1 : XmmDatei := fun r =>
+  if r = XmmReg.xmm2 then vecMk .b8 (fun _ => 7)
+  else BitVec.ofNat 128 0
+
+/-- Witness cores over one GPR file: core 0 shuffles by memory,
+    core 1 takes an absolute value over memory. -/
+def sseMemWitKernMit (gpr : Register → Wort) : Nat → HwKern
+  | 0 => ⟨gpr, zeugeFlags, BitVec.ofNat 64 4096, sseMemWitXmm0,
+      kontextReset⟩
+  | 1 => ⟨gpr, zeugeFlags, BitVec.ofNat 64 4096, sseMemWitXmm1,
+      kontextReset⟩
+  | _ => ⟨gpr, zeugeFlags, BitVec.ofNat 64 8192,
+      fun _ => BitVec.ofNat 128 0, kontextReset⟩
+
+/-- Witness start machine: zeroed readable memory, two family
+    cores, empty buffers, full silicon. -/
+def sseMemWitStart : HwMaschine :=
+  ⟨zeugeSpeicher, sseMemWitKernMit sseMemWitReg, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- Misaligned witness machine: the source base is one past
+    alignment. -/
+def sseMemWitSchief : HwMaschine :=
+  ⟨zeugeSpeicher, sseMemWitKernMit sseMemWitRegSchief, fun _ => [],
+    basisHw, fun _ => basisBereit⟩
+
+/-- The witness machine is well-formed. -/
+theorem sseMemWitStart_wf : HwWf sseMemWitStart := by
+  intro c f _
+  cases f <;> rfl
+
+/-- Core 0 memory shuffle through the adapter. -/
+def sseMemWitOut0 : Option HwMaschine :=
+  (adapterSseMem).schritt sseMemWitStart 0
+    (⟨.pshufbRM false .xmm0 (basisKeinForm .rbx), 6⟩ : SseMemDec)
+
+/-- Core 1 memory absolute value through the adapter. -/
+def sseMemWitOut1 : Option HwMaschine :=
+  (adapterSseMem).schritt sseMemWitStart 1
+    (⟨.pabsBRM false .xmm2 (basisKeinForm .rbx), 6⟩ : SseMemDec)
+
+/-- REX.W shuffle through the adapter, beside the run. -/
+def sseMemWitOutW : Option HwMaschine :=
+  (adapterSseMem).schritt sseMemWitStart 0
+    (⟨.pshufbRW .xmm0 .xmm1, 6⟩ : SseMemDec)
+
+/-- Read one byte lane out of an adapter outcome. -/
+def sseMemWitLane (o : Option HwMaschine) (c : Nat) (r : XmmReg)
+    (i : Nat) : Option Nat :=
+  match o with
+  | some m => some (laneNat .b8 ((m.kerne c).xmm r) i)
+  | none => none
+
+/-- Core 0 shuffle: the zeroed memory mask selects destination
+    lane 0 everywhere. -/
+theorem sseMemWit_shufb_lane1 :
+    sseMemWitLane sseMemWitOut0 0 XmmReg.xmm0 1 = some 0 := by
+  decide
+
+/-- The shuffle destination held 1 at lane 1 before: XMM changes. -/
+theorem sseMemWit_shufb_vorher :
+    laneNat .b8 (sseMemWitXmm0 XmmReg.xmm0) 1 = 1 := by
+  decide
+
+/-- Core 1 absolute value: the zeroed source gives 0. -/
+theorem sseMemWit_pabs_lane0 :
+    sseMemWitLane sseMemWitOut1 1 XmmReg.xmm2 0 = some 0 := by
+  decide
+
+/-- The absolute-value destination held 7 before: XMM changes. -/
+theorem sseMemWit_pabs_vorher :
+    laneNat .b8 (sseMemWitXmm1 XmmReg.xmm2) 0 = 7 := by
+  decide
+
+/-- REX.W shuffle beside the run: every lane becomes the indexed
+    source lane 1. -/
+theorem sseMemWit_rw_lane0 :
+    sseMemWitLane sseMemWitOutW 0 XmmReg.xmm0 0 = some 1 := by
+  decide
+
+/-- The REX.W destination held 0 at lane 0 before: XMM changes. -/
+theorem sseMemWit_rw_vorher :
+    laneNat .b8 (sseMemWitXmm0 XmmReg.xmm0) 0 = 0 := by
+  decide
+
+/-- The misaligned source admits no adapter step (#GP). -/
+theorem sseMemWit_schief_verweigert :
+    (adapterSseMem).schritt sseMemWitSchief 0
+      (⟨.pshufbRM false .xmm0 (basisKeinForm .rbx), 6⟩ :
+        SseMemDec) = none := by
+  decide
+
+/-- A bad decode length refuses the adapter step beside the run. -/
+theorem sseMemWit_schlechte_laenge_verweigert :
+    (adapterSseMem).schritt sseMemWitStart 0
+      (⟨.pshufbRM false .xmm0 (basisKeinForm .rbx), 0⟩ :
+        SseMemDec) = none :=
+  adapterSseMem_verweigert_bei_laenge _ _ _ (by decide)
+
+/-- The joint witness: a reached two-core family run with memory
+    sources (shuffle on core 0, absolute value on core 1), a REX.W
+    shuffle beside it, the MMX value pins, a misaligned refusal
+    and a bad-length refusal beside it, and the accepted TSO run
+    (owner-only forwarding, memory-changing drain 0 to 99).
+    Non-degenerate: XMM bytes change on both cores and shared
+    memory changes. -/
+theorem sseMemWit_zeuge :
+    sseMemWitLane sseMemWitOut0 0 XmmReg.xmm0 1 = some 0 ∧
+      laneNat .b8 (sseMemWitXmm0 XmmReg.xmm0) 1 = 1 ∧
+      sseMemWitLane sseMemWitOut1 1 XmmReg.xmm2 0 = some 0 ∧
+      laneNat .b8 (sseMemWitXmm1 XmmReg.xmm2) 0 = 7 ∧
+      sseMemWitLane sseMemWitOutW 0 XmmReg.xmm0 0 = some 1 ∧
+      laneNat .b8 (sseMemWitXmm0 XmmReg.xmm0) 0 = 0 ∧
+      sseWitEigen = some (some (BitVec.ofNat 8 99)) ∧
+      sseWitFremd = some (some (BitVec.ofNat 8 0)) ∧
+      sseWitNachFlush = some (some (BitVec.ofNat 8 99)) ∧
+      sseWitFremdNach = some (some (BitVec.ofNat 8 99)) ∧
+      zeugeSpeicher.bytes sseWitAdr = BitVec.ofNat 8 0 ∧
+      HwWf sseMemWitStart ∧
+      (adapterSseMem).schritt sseMemWitSchief 0
+        (⟨.pshufbRM false .xmm0 (basisKeinForm .rbx), 6⟩ :
+          SseMemDec) = none ∧
+      (adapterSseMem).schritt sseMemWitStart 0
+        (⟨.pshufbRM false .xmm0 (basisKeinForm .rbx), 0⟩ :
+          SseMemDec) = none ∧
+      decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+        natByte 240, natByte 11] = none ∧
+      kapDecodeSseMem [natByte 64, natByte 102, natByte 15,
+        natByte 58, natByte 20, natByte 200, natByte 0] = none := by
+  refine ⟨sseMemWit_shufb_lane1, sseMemWit_shufb_vorher,
+    sseMemWit_pabs_lane0, sseMemWit_pabs_vorher,
+    sseMemWit_rw_lane0, sseMemWit_rw_vorher,
+    sseWit_weiterleitung, sseWit_fremd_alt,
+    sseWit_spuelung_aendert_speicher, sseWit_fremd_neu,
+    sseWit_anfang_null, sseMemWitStart_wf,
+    sseMemWit_schief_verweigert,
+    sseMemWit_schlechte_laenge_verweigert, sseMem_nichts_movbe,
+    kapSseMem_nichts_blendv⟩
+
+/- CUTS:
+    Proved here: twenty new SSSE3 forms (five rows times XMM
+    memory with admitted REX.W, XMM register-direct with REX.W,
+    MMX register-direct, MMX m64) with canonical encoding, a
+    canonical decoder, general register round trips, per-shape
+    memory pins in both directions, planted decoder refusals,
+    the 16-byte #GP gate for XMM memory sources, forwarding-aware
+    128-bit source loads, MMX 64-bit lane semantics with per-lane
+    equations and silicon spot-checks, the `HwAdapter SseMemDec`
+    plug over the XMM forms with well-formedness preservation,
+    exact agreement with the accepted lane values, planted
+    adapter refusals, RIP/flags/GPR/other-XMM frames, the
+    extended chain `kapDecodeSseMem` with exact agreement and
+    pins, and a reached two-core witness with owner-only
+    forwarding and a memory-changing drain.
+    NOT proved here, and not claimed:
+    - No hardware correspondence: encodings are the canonical
+      subset with self-consistency only, not x86 truth. Silicon
+      assumptions named: the five opcode rows in both prefix
+      classes (SDM Vol. 2B 4-176/4-216/4-422), REX.W ignored on
+      these rows, 128-bit memory sources 16-byte aligned (#GP),
+      m64 sources with no alignment fault, PSHUFB low-3-bit
+      indices in 64-bit operation, PABS UNSIGNED result with
+      INT_MIN wrap, PALIGNR counts past 16 (64-bit) zeroing the
+      result, legacy-SSE whole-register XMM writes (upper YMM
+      unmodified), no flag/GPR effect. The map transcription is
+      a NAMED assumption.
+    - No MMX machine step: `HwKern` carries no MMX file and no
+      existing file may be edited here, so the ten MMX forms
+      decode, encode, evaluate as pure values and ride the
+      chain, but admit no adapter step
+      (`adapterSseMem_verweigert_mmx`). Maintainer hook: add an
+      `mm : MmxReg -> BitVec 64` file to `HwKern`/`FpZustand`
+      and lift `mmPshufb`/`mmPabs`/`mmPalignr` through it.
+    - No general memory round trip over open `AdrForm`: the
+      accepted `AddressEncoding` never proved `parse o encode`
+      in general (its encoder is lossy on non-canonical disp
+      bytes), so memory rows round-trip per canonical
+      constructor only.
+    - No pilot-owned shapes: base-only disp32 and SIB-36 disp32
+      stay refused in both directions (the pilot owns them).
+    - MMX REX extension bits (R/X/B) refused (under-admission:
+      silicon has no mm8-mm15); MMX canonical REX is `0x40`
+      (W in {0,1} admitted on decode).
+    - PHADD/PHSUB saturation, PSIGN, PMULHRSW and the whole SSE4
+      remainder are not modelled.
+    - No VEX/EVEX, no LOCK path, no source/IR/ABI/loader/entry/
+      budget link, no per-access target-to-W/GX simulation, no
+      timing/power behaviour.
+    - A maintainer wires the family in by adding the
+      `decodeSseMem` arm behind every earlier arm of
+      `HwKapsteinDecoder.kapDecode`.
+ -/
+
+#print axioms encodeSseMem
+#print axioms decodeSseMem
+#print axioms roundtrip_pshufbRW
+#print axioms roundtrip_pabsBMM
+#print axioms vecPabs
+#print axioms vecPshufb
+#print axioms vecPalignr
+#print axioms mmPshufb
+#print axioms mmPabs
+#print axioms mmPalignr
+#print axioms sseMemLade
+#print axioms stepSseMem_rip
+#print axioms adapterSseMem
+#print axioms adapterSseMem_wf
+#print axioms adapterSseMem_formNach
+#print axioms kapDecodeSseMem
+#print axioms sseMemWitStart_wf
+#print axioms sseMemWit_zeuge
 
 end Gabbro.Grammatik.X86
