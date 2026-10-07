@@ -21,6 +21,7 @@ import Grammatik.X86.Kern.Typen
 import Grammatik.X86.Kern.Codec
 import Grammatik.X86.Kern.Ausfuehrung
 import Grammatik.X86.Kern.Vektor
+import Grammatik.X86.Kern.Gleitprofil
 import Grammatik.X86.Befehle.Vektor.VectorCodec
 import Grammatik.X86.Befehle.Gleitkomma.ScalarFloat
 import Grammatik.X86.Speicher.AddressEncoding
@@ -2094,5 +2095,192 @@ theorem adapterSseMem_verweigert_bei_lade_palignrRM (m : HwMaschine)
     (adapterSseMem).schritt m c d = none := by
   unfold adapterSseMem
   simp [hok, hfp, hop, hgp, hld]
+
+/-! ## 6. Extended capstone chain.
+
+  `kapDecodeSseMem` runs the accepted `kapDecodeSse` (base chain
+  plus the lane-1369 rows) first and consults the new decoder only
+  where it refuses, so dispatch is disjoint by construction. A
+  maintainer wires the family in by adding the `decodeSseMem` arm
+  behind every earlier arm of `HwKapsteinDecoder.kapDecode` (same
+  position as the `avx2` arm: last, tried only where all earlier
+  arms refuse). -/
+
+/-- One row of the extended chain: the old chain first, the new
+    family only where it refuses. -/
+inductive KapSseMem where
+  | alt : KapSse → KapSseMem
+  | neu : SseMemDec → KapSseMem
+  deriving DecidableEq, Repr
+
+/-- Extended chain: `kapDecodeSse` first, the new decoder only
+    where the old chain refuses. No old row is shadowed. -/
+def kapDecodeSseMem : List Byte → Option (KapSseMem × List Byte) :=
+  fun bs =>
+    match kapDecodeSse bs with
+    | some (k, rest) => some (.alt k, rest)
+    | none =>
+      match decodeSseMem bs with
+      | some (d, rest) => some (.neu d, rest)
+      | none => none
+
+/-- The extended chain agrees with the old chain on every byte
+    string the old chain accepts: no existing form is shadowed. -/
+theorem kapDecodeSseMem_alt (bs : List Byte) (k : KapSse)
+    (rest : List Byte) (h : kapDecodeSse bs = some (k, rest)) :
+    kapDecodeSseMem bs = some (.alt k, rest) := by
+  unfold kapDecodeSseMem
+  rw [h]
+
+/-- Where the old chain refuses, a covered new row is taken. -/
+theorem kapDecodeSseMem_neu (bs : List Byte) (d : SseMemDec)
+    (rest : List Byte) (h1 : kapDecodeSse bs = none)
+    (h2 : decodeSseMem bs = some (d, rest)) :
+    kapDecodeSseMem bs = some (.neu d, rest) := by
+  unfold kapDecodeSseMem
+  rw [h1, h2]
+
+/-- Where both chains refuse, the extended chain refuses. -/
+theorem kapDecodeSseMem_nichts (bs : List Byte)
+    (h1 : kapDecodeSse bs = none) (h2 : decodeSseMem bs = none) :
+    kapDecodeSseMem bs = none := by
+  unfold kapDecodeSseMem
+  rw [h1, h2]
+
+/-- A W=0 XMM register-direct row decodes through the OLD arm
+    (lane-1369 row, never shadowed). -/
+theorem kapSseMem_pin_alt_pshufb :
+    kapDecodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+      natByte 0, natByte 200] =
+      some (KapSseMem.alt
+        (KapSse.neu (⟨.pshufbRR .xmm1 .xmm0, 6⟩ : SseThreeDec)),
+        []) :=
+  kapDecodeSseMem_alt _ _ _ kapSse_pin_pshufb
+
+/-- The old chain refuses the new PSHUFB memory bytes. -/
+theorem kapSse_weist_pshufbRM_zurueck :
+    kapDecodeSse [natByte 64, natByte 102, natByte 15, natByte 56,
+      natByte 0, natByte 11] = none := by
+  decide
+
+/-- The old chain refuses the new REX.W register bytes. -/
+theorem kapSse_weist_pshufbRW_zurueck :
+    kapDecodeSse [natByte 72, natByte 102, natByte 15, natByte 56,
+      natByte 0, natByte 200] = none := by
+  decide
+
+/-- The old chain refuses the new MMX memory bytes. -/
+theorem kapSse_weist_pshufbMN_zurueck :
+    kapDecodeSse [natByte 64, natByte 15, natByte 56, natByte 0,
+      natByte 11] = none := by
+  decide
+
+/-- Extended-chain pin: PSHUFB xmm1, [rbx]. -/
+theorem kapSseMem_pin_pshufbRM :
+    kapDecodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+      natByte 0, natByte 11] =
+      some (KapSseMem.neu
+        (⟨.pshufbRM false .xmm1 (basisKeinForm .rbx), 6⟩ :
+          SseMemDec), []) := by
+  decide
+
+/-- Extended-chain pin: PABSB xmm2, [rbx + 5]. -/
+theorem kapSseMem_pin_pabsBRM :
+    kapDecodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+      natByte 28, natByte 83, natByte 5] =
+      some (KapSseMem.neu
+        (⟨.pabsBRM false .xmm2 (basisDisp8Form .rbx (natByte 5)),
+          7⟩ : SseMemDec), []) := by
+  decide
+
+/-- Extended-chain pin: REX.W PABSW xmm3, SIB. -/
+theorem kapSseMem_pin_pabsWRM :
+    kapDecodeSseMem [natByte 72, natByte 102, natByte 15, natByte 56,
+      natByte 29, natByte 156, natByte 203, natByte 16, natByte 0,
+      natByte 0, natByte 0] =
+      some (KapSseMem.neu
+        (⟨.pabsWRM true .xmm3
+          (skaliertForm .rbx .rcx 8 (BitVec.ofNat 32 16) .d32),
+          11⟩ : SseMemDec), []) := by
+  decide
+
+/-- Extended-chain pin: PABSD xmm4, [rip + 4096]. -/
+theorem kapSseMem_pin_pabsDRM :
+    kapDecodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+      natByte 30, natByte 37, natByte 0, natByte 16, natByte 0,
+      natByte 0] =
+      some (KapSseMem.neu
+        (⟨.pabsDRM false .xmm4 (ripForm (BitVec.ofNat 32 4096)),
+          10⟩ : SseMemDec), []) := by
+  decide
+
+/-- Extended-chain pin: PALIGNR xmm5, [rbx], 7. -/
+theorem kapSseMem_pin_palignrRM :
+    kapDecodeSseMem [natByte 64, natByte 102, natByte 15, natByte 58,
+      natByte 15, natByte 43, natByte 7] =
+      some (KapSseMem.neu
+        (⟨.palignrRM false .xmm5 (basisKeinForm .rbx) (natByte 7),
+          7⟩ : SseMemDec), []) := by
+  decide
+
+/-- Extended-chain pin: REX.W PSHUFB xmm1, xmm0. -/
+theorem kapSseMem_pin_pshufbRW :
+    kapDecodeSseMem [natByte 72, natByte 102, natByte 15, natByte 56,
+      natByte 0, natByte 200] =
+      some (KapSseMem.neu
+        (⟨.pshufbRW .xmm1 .xmm0, 6⟩ : SseMemDec), []) := by
+  decide
+
+/-- Extended-chain pin: MMX PABSB mm1, mm0. -/
+theorem kapSseMem_pin_pabsBMM :
+    kapDecodeSseMem [natByte 64, natByte 15, natByte 56, natByte 28,
+      natByte 200] =
+      some (KapSseMem.neu
+        (⟨.pabsBMM .mm1 .mm0, 5⟩ : SseMemDec), []) := by
+  decide
+
+/-- Extended-chain pin: MMX PSHUFB mm1, [rbx]. -/
+theorem kapSseMem_pin_pshufbMN :
+    kapDecodeSseMem [natByte 64, natByte 15, natByte 56, natByte 0,
+      natByte 11] =
+      some (KapSseMem.neu
+        (⟨.pshufbMN .mm1 (basisKeinForm .rbx), 5⟩ : SseMemDec),
+        []) := by
+  decide
+
+/-- Extended-chain pin: MMX PALIGNR mm5, [rbx], 7. -/
+theorem kapSseMem_pin_palignrMN :
+    kapDecodeSseMem [natByte 64, natByte 15, natByte 58, natByte 15,
+      natByte 43, natByte 7] =
+      some (KapSseMem.neu
+        (⟨.palignrMN .mm5 (basisKeinForm .rbx) (natByte 7), 6⟩ :
+          SseMemDec), []) := by
+  decide
+
+/-- The new decoder refuses the register-direct MOVBE bytes. -/
+theorem sseMem_nichts_movbe_reg :
+    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+      natByte 240, natByte 200] = none := rfl
+
+/-- The new decoder refuses the register-direct BLENDVPS bytes. -/
+theorem sseMem_nichts_blendv :
+    decodeSseMem [natByte 64, natByte 102, natByte 15, natByte 58,
+      natByte 20, natByte 200, natByte 0] = none := rfl
+
+/-- The extended chain refuses MOVBE: neither chain admits it. -/
+theorem kapSseMem_nichts_movbe :
+    kapDecodeSseMem [natByte 64, natByte 102, natByte 15, natByte 56,
+      natByte 240, natByte 200] = none :=
+  kapDecodeSseMem_nichts _
+    (kapDecodeSse_nichts _ kap_weist_movbe_zurueck sseThree_nichts_movbe)
+    sseMem_nichts_movbe_reg
+
+/-- The extended chain refuses BLENDVPS: neither chain admits it. -/
+theorem kapSseMem_nichts_blendv :
+    kapDecodeSseMem [natByte 64, natByte 102, natByte 15, natByte 58,
+      natByte 20, natByte 200, natByte 0] = none :=
+  kapDecodeSseMem_nichts _
+    (kapDecodeSse_nichts _ kap_weist_blendv_zurueck sseThree_nichts_blendv)
+    sseMem_nichts_blendv
 
 end Gabbro.Grammatik.X86
