@@ -72,7 +72,7 @@ def exStrLdrW : Eff (BitVec 64) := do
   rdBase 2
 
 theorem exStrLdrW_ok :
-    (runEff 60 exStrLdrW sLS).map Prod.fst
+    (runEffV 60 exStrLdrW sLS).map Prod.fst
       = some (BitVec.ofNat 64 2864434397) := by decide
 
 /-- `STR B0, [X1]` then `LDRSB X3, [X1]`: byte `0xDD` sign-extends. -/
@@ -82,12 +82,12 @@ def exLdrsb : Eff (BitVec 64) := do
   rdBase 3
 
 theorem exLdrsb_ok :
-    (runEff 60 exLdrsb sLS).map Prod.fst
+    (runEffV 60 exLdrsb sLS).map Prod.fst
       = some (BitVec.ofNat 64 18446744073709551581) := by decide
 
 /-- Planted wrong case: `LDRSB` does not zero-extend (`0xDD` is 221). -/
 theorem exLdrsb_notZero :
-    (runEff 60 exLdrsb sLS).map Prod.fst ≠ some (BitVec.ofNat 64 221) := by decide
+    (runEffV 60 exLdrsb sLS).map Prod.fst ≠ some (BitVec.ofNat 64 221) := by decide
 
 /-- `STR X0, [X1, #8]!`: pre-index writes the base back (64 becomes 72). -/
 def exPreIdx : Eff (BitVec 64) := do
@@ -95,7 +95,7 @@ def exPreIdx : Eff (BitVec 64) := do
   rdBase 1
 
 theorem exPreIdx_ok :
-    (runEff 60 exPreIdx sLS).map Prod.fst = some (BitVec.ofNat 64 72) := by decide
+    (runEffV 60 exPreIdx sLS).map Prod.fst = some (BitVec.ofNat 64 72) := by decide
 
 /-- `STR X0, [X1], #8` then `LDR X2, [X1, #-8]`: the store lands at the
     un-incremented base and the later load finds it there. -/
@@ -105,7 +105,7 @@ def exPostIdx : Eff (BitVec 64) := do
   rdBase 2
 
 theorem exPostIdx_ok :
-    (runEff 60 exPostIdx sLS).map Prod.fst
+    (runEffV 60 exPostIdx sLS).map Prod.fst
       = some (BitVec.ofNat 64 2864434397) := by decide
 
 /-- Register-offset form: `address = base + ExtendReg(m, ext, shift, 64)`,
@@ -138,7 +138,7 @@ def exRegOff : Eff (BitVec 64) := do
   rdBase 2
 
 theorem exRegOff_ok :
-    (runEff 60 exRegOff sLSR).map Prod.fst
+    (runEffV 60 exRegOff sLSR).map Prod.fst
       = some (BitVec.ofNat 64 2864434397) := by decide
 
 /-- The shifted store leaves the unshifted address alone: loading from
@@ -149,7 +149,7 @@ def exRegOff_miss : Eff (BitVec 64) := do
   rdBase 2
 
 theorem exRegOff_miss_ok :
-    (runEff 60 exRegOff_miss sLSR).map Prod.fst
+    (runEffV 60 exRegOff_miss sLSR).map Prod.fst
       = some (BitVec.ofNat 64 0) := by decide
 
 /-- Fixture: as `sLS`, plus X5 holds `0xFFFFFFFF`. -/
@@ -164,7 +164,7 @@ def exRegSxtw : Eff (BitVec 64) := do
   rdBase 2
 
 theorem exRegSxtw_ok :
-    (runEff 60 exRegSxtw sLSRs).map Prod.fst
+    (runEffV 60 exRegSxtw sLSRs).map Prod.fst
       = some (BitVec.ofNat 64 18446744073709551581) := by decide
 
 /-- PC-relative literal load (`LDR Wt/Xt, [PC, #off]`, `LDRSW`): address is
@@ -191,7 +191,7 @@ def exLit : Eff (BitVec 64) := do
   rdBase 2
 
 theorem exLit_ok :
-    (runEff 60 exLit sLit).map Prod.fst
+    (runEffV 60 exLit sLit).map Prod.fst
       = some (BitVec.ofNat 64 2864434397) := by decide
 
 /-- `LDRSW X2, [PC, #8]`: `0xAABBCCDD` has its top bit set, so it
@@ -201,11 +201,11 @@ def exLitSw : Eff (BitVec 64) := do
   rdBase 2
 
 theorem exLitSw_ok :
-    (runEff 60 exLitSw sLit).map Prod.fst
+    (runEffV 60 exLitSw sLit).map Prod.fst
       = some (BitVec.ofNat 64 18446744072279018717) := by decide
 
 theorem exLitSw_notZero :
-    (runEff 60 exLitSw sLit).map Prod.fst
+    (runEffV 60 exLitSw sLit).map Prod.fst
       ≠ some (BitVec.ofNat 64 2864434397) := by decide
 
 /-- General-register pair load/store (`LDP`/`STP`, `LDNP`/`STNP`) with a
@@ -252,12 +252,12 @@ def exStpLdp : Eff (BitVec 64 × BitVec 64) := do
   pure (a, b)
 
 theorem exStpLdp_ok :
-    (runEff 80 exStpLdp sPair).map Prod.fst
+    (runEffV 80 exStpLdp sPair).map Prod.fst
       = some (BitVec.ofNat 64 1229782938247303441, BitVec.ofNat 64 2459565876494606882) := by decide
 
 /-- Planted wrong case: the first register loads from the LOW address. -/
 theorem exStpLdp_notSwapped :
-    (runEff 80 exStpLdp sPair).map Prod.fst
+    (runEffV 80 exStpLdp sPair).map Prod.fst
       ≠ some (BitVec.ofNat 64 2459565876494606882, BitVec.ofNat 64 1229782938247303441) := by decide
 
 /-- `STP X0, X1, [X2, #16]!`: pre-index writes the base back. -/
@@ -266,7 +266,7 @@ def exStpPre : Eff (BitVec 64) := do
   rdBase 2
 
 theorem exStpPre_ok :
-    (runEff 80 exStpPre sPair).map Prod.fst = some (BitVec.ofNat 64 144) := by decide
+    (runEffV 80 exStpPre sPair).map Prod.fst = some (BitVec.ofNat 64 144) := by decide
 
 /-- Ordered single-copy (`LDAR`/`STLR`, byte/half/word/doubleword): no
     offset and no writeback; the load carries `AccOrd.acquire`, the store
@@ -299,7 +299,7 @@ def exLdar : Eff (BitVec 64) := do
   rdBase 2
 
 theorem exLdar_ok :
-    (runEff 60 exLdar sLS).map Prod.fst
+    (runEffV 60 exLdar sLS).map Prod.fst
       = some (BitVec.ofNat 64 2864434397) := by decide
 
 /-- `STLR X0, [X1]` then `LDAPR X3, [X1]`: the doubleword round-trips. -/
@@ -309,7 +309,7 @@ def exLdapr : Eff (BitVec 64) := do
   rdBase 3
 
 theorem exLdapr_ok :
-    (runEff 60 exLdapr sLS).map Prod.fst
+    (runEffV 60 exLdapr sLS).map Prod.fst
       = some (BitVec.ofNat 64 2864434397) := by decide
 
 /-- Fixture: as `sLS` but the base X1 is 66 (misaligned for words). -/
@@ -319,7 +319,7 @@ def sOdd : State := { s0 with regs := { s0.regs with gpr := gprOdd } }
 
 /-- A misaligned `LDAR` raises instead of reading. -/
 theorem exLdarMisaligned_refuses :
-    (runEff 60 (ldarStlr cfgNoFault true 32 32 1 2) sOdd).isNone = true := by decide
+    (runEffV 60 (ldarStlr cfgNoFault true 32 32 1 2) sOdd).isNone = true := by decide
 
 /-- Exclusive load, instruction side (`LDXR`, `LDAXR` when `acqrel`): an
     exclusive read with zero extension. Setting the monitor
@@ -361,7 +361,7 @@ def exExcl : Eff (BitVec 64 × BitVec 64) := do
   pure (a, b)
 
 theorem exExcl_ok :
-    (runEff 60 exExcl sLS).map Prod.fst
+    (runEffV 60 exExcl sLS).map Prod.fst
       = some (BitVec.ofNat 64 0, BitVec.ofNat 64 2864434397) := by decide
 
 /-- `STLXR`/`LDAXR` take the same value path with acquire/release orders. -/
@@ -373,7 +373,7 @@ def exLdaxr : Eff (BitVec 64 × BitVec 64) := do
   pure (a, b)
 
 theorem exLdaxr_ok :
-    (runEff 60 exLdaxr sLS).map Prod.fst
+    (runEffV 60 exLdaxr sLS).map Prod.fst
       = some (BitVec.ofNat 64 0, BitVec.ofNat 64 2864434397) := by decide
 
 /-- Monitor fails: nothing is stored (the later load reads zero) and the
@@ -386,12 +386,12 @@ def exExclFail : Eff (BitVec 64 × BitVec 64) := do
   pure (a, b)
 
 theorem exExclFail_ok :
-    (runEff 60 exExclFail sLS).map Prod.fst
+    (runEffV 60 exExclFail sLS).map Prod.fst
       = some (BitVec.ofNat 64 1, BitVec.ofNat 64 0) := by decide
 
 /-- Planted wrong case: the fail path is observably not the pass path. -/
 theorem exExclFail_notPass :
-    (runEff 60 exExclFail sLS).map Prod.fst
+    (runEffV 60 exExclFail sLS).map Prod.fst
       ≠ some (BitVec.ofNat 64 0, BitVec.ofNat 64 2864434397) := by decide
 
 end Arm

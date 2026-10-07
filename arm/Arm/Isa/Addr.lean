@@ -181,27 +181,27 @@ def storeNat (mem : Nat → Nat) (base : Nat) (val : Nat) (n : Nat) : Nat → Na
     alignment, undefined) is `none`. Named system registers and barriers
     are out of scope for the load/store lane: `rdSys`/`wrSys` refuse
     (`none`), barriers step over. -/
-def runEff : Nat → Eff α → State → Option (α × State)
+def runEffV : Nat → Eff α → State → Option (α × State)
   | 0, _, _ => none
   | _ + 1, .ret a, s => some (a, s)
-  | fuel + 1, .rdX n k, s => runEff fuel (k (s.regs.gpr n)) s
+  | fuel + 1, .rdX n k, s => runEffV fuel (k (s.regs.gpr n)) s
   | fuel + 1, .wrX n v k, s =>
-    runEff fuel k { s with regs := { s.regs with gpr := upd s.regs.gpr n v } }
+    runEffV fuel k { s with regs := { s.regs with gpr := upd s.regs.gpr n v } }
   | fuel + 1, .rdV n k, s =>
-    runEff fuel (k (BitVec.ofNat 128 (s.regs.vpr n))) s
+    runEffV fuel (k (BitVec.ofNat 128 (s.regs.vpr n))) s
   | fuel + 1, .wrV n v k, s =>
-    runEff fuel k { s with regs := { s.regs with vpr := upd s.regs.vpr n v.toNat } }
-  | fuel + 1, .rdPC k, s => runEff fuel (k s.regs.pc) s
+    runEffV fuel k { s with regs := { s.regs with vpr := upd s.regs.vpr n v.toNat } }
+  | fuel + 1, .rdPC k, s => runEffV fuel (k s.regs.pc) s
   | fuel + 1, .wrPC v k, s =>
-    runEff fuel k { s with regs := { s.regs with pc := v } }
-  | fuel + 1, .rdNZCV k, s => runEff fuel (k s.regs.nzcv) s
+    runEffV fuel k { s with regs := { s.regs with pc := v } }
+  | fuel + 1, .rdNZCV k, s => runEffV fuel (k s.regs.nzcv) s
   | fuel + 1, .wrNZCV v k, s =>
-    runEff fuel k { s with regs := { s.regs with nzcv := v } }
+    runEffV fuel k { s with regs := { s.regs with nzcv := v } }
   | fuel + 1, .rdMem a k, s =>
-    runEff fuel (k (loadNat s.mem a.addr.toNat a.size)) s
+    runEffV fuel (k (loadNat s.mem a.addr.toNat a.size)) s
   | fuel + 1, .wrMem a v k, s =>
-    runEff fuel k { s with mem := storeNat s.mem a.addr.toNat v a.size }
-  | fuel + 1, .bar _ k, s => runEff fuel k s
+    runEffV fuel k { s with mem := storeNat s.mem a.addr.toNat v a.size }
+  | fuel + 1, .bar _ k, s => runEffV fuel k s
   | _, _, _ => none
 
 /-- All-zero machine: every register and every byte reads 0. -/
@@ -225,36 +225,36 @@ def exRoundtrip : Eff Nat := do
   memReadEff cfgNoFault (BitVec.ofNat 64 16) 4 .plain false
 
 theorem exRoundtrip_ok :
-    (runEff 50 exRoundtrip s0).map Prod.fst = some 67305985 := by decide
+    (runEffV 50 exRoundtrip s0).map Prod.fst = some 67305985 := by decide
 
 /-- Planted wrong case: the bytes assemble little-endian, not big-endian
     (`0x01020304` would be the big-endian reading of bytes 01 02 03 04). -/
 theorem exRoundtrip_notBE :
-    (runEff 50 exRoundtrip s0).map Prod.fst ≠ some 16909060 := by decide
+    (runEffV 50 exRoundtrip s0).map Prod.fst ≠ some 16909060 := by decide
 
 /-- A misaligned plain read proceeds bytewise (all-zero memory here). -/
 theorem exUnalignedPlain_ok :
-    (runEff 50 (memReadEff cfgNoFault (BitVec.ofNat 64 18) 4 .plain false) s0).map
+    (runEffV 50 (memReadEff cfgNoFault (BitVec.ofNat 64 18) 4 .plain false) s0).map
         Prod.fst
       = some 0 := by decide
 
 /-- A misaligned acquire read raises instead. -/
 theorem exUnalignedOrdered_refuses :
-    (runEff 50 (memReadEff cfgNoFault (BitVec.ofNat 64 18) 4 .acquire false) s0).isNone
+    (runEffV 50 (memReadEff cfgNoFault (BitVec.ofNat 64 18) 4 .acquire false) s0).isNone
       = true := by decide
 
 /-- A translation fault raises even on an aligned plain read. -/
 theorem exFault_refuses :
-    (runEff 50 (memReadEff cfgFault (BitVec.ofNat 64 16) 4 .plain false) s0).isNone
+    (runEffV 50 (memReadEff cfgFault (BitVec.ofNat 64 16) 4 .plain false) s0).isNone
       = true := by decide
 
-theorem exCheckSP_ok : (runEff 10 checkSP s0).map Prod.fst = some () := by decide
+theorem exCheckSP_ok : (runEffV 10 checkSP s0).map Prod.fst = some () := by decide
 
 /-- Machine whose SP (register 31) is 8, hence not 16-byte aligned. -/
 def sSP8 : State :=
   { s0 with regs := { s0.regs with gpr := upd s0.regs.gpr 31 (BitVec.ofNat 64 8) } }
 
-theorem exCheckSP_refuses : (runEff 10 checkSP sSP8).isNone = true := by decide
+theorem exCheckSP_refuses : (runEffV 10 checkSP sSP8).isNone = true := by decide
 
 end Arm
 
@@ -270,7 +270,7 @@ NOT modelled or abstracted, each a named gap:
   plain is bytewise, ordered/exclusive fault when misaligned.
 - `MemCfg.fault` abstracts translation; the page-table walk
   (`AArch64_TranslateAddress`) belongs to the system agent.
-- `runEff`: `rdSys`/`wrSys` refuse (`none`); barriers step over without
+- `runEffV`: `rdSys`/`wrSys` refuse (`none`); barriers step over without
   effect; V/NZCV state is carried but unused by load/store semantics.
 - Big-endian reversal (`BigEndianReverse`) is absent: GPR accesses are
   little-endian, matching the non-big-endian Sail path.

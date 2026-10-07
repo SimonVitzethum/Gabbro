@@ -2,7 +2,30 @@
 
 ## Status
 
-ALL deliverables done, committed and green. Work stops here.
+Follow-up task in progress: `arm/Arm/Isa/AtomicOps.lean` (exclusive
+pairs, LSE atomics, prefetch). DONE is stale until the follow-up lands.
+
+## Follow-up progress
+
+- Coordinator merges landed in this clone: `Arm.Mem.Trace` (agent 11),
+  `Arm.Mem.Exec/Dep/Axiomatic`, and `Arm.Mem.Atomics` (agent 09). The
+  latter gives the shared vocabulary this lane reuses without
+  redefining: `AtomicOp`, `atomicFun`, `casCmp`, `mask`,
+  `AtomicAnn`, `atomicReadAcc`/`atomicWriteAcc`, `ExclKind`,
+  `exclReadAcc`/`exclWriteAcc`. Its `atomicReadAcc` (read carries
+  acquire iff A) and `atomicWriteAcc` (write carries release iff R) with
+  `excl := false` settle the ordering/flag mapping; AL variants split
+  across the two halves.
+- `Arm.Mem.Trace.runEff` collided with the lane-local value
+  interpreter, so `Arm.runEff` became `Arm.runEffV` (signature and
+  behaviour unchanged) in `Addr.lean` and `LoadStore.lean`.
+- Created `arm/Arm/Isa/AtomicOps.lean` (skeleton): `atomCheck` (Sail
+  `v8_base.sail:28334`, `:22799`; atomicops fault misaligned at any
+  ordering), `prfmImm` (Sail `instrs64.sail:39785`,
+  `v8_base.sail:35873`; no SP check, no fault, no event) with `decide`
+  theorems `prfmImm_ok`, `prfmImm_noSPcheck`, `atomicFun_add_bytes`.
+
+## Earlier work (accepted by the coordinator, 8 jobs green)
 
 ## What was done
 
