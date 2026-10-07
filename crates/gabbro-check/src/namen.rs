@@ -6118,7 +6118,7 @@ fn annahme_arch(baum: &Programm, absagen: &mut Absagen) {
     // mismatch but a machine the emitter cannot lower at all.
     crate::fuer_jedes_item(baum, &mut |item| {
         let ItemArt::Syscall(s) = &item.art else { return };
-        if s.arch.text != "x86_64" {
+        if !crate::syscall::arch_bekannt(&s.arch.text) {
             return;
         }
         if bekannt.contains(&s.arch.text) {

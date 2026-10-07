@@ -1,0 +1,30 @@
+-- erwartet: N066
+-- **Gift 1400 -- an `aarch64` syscall that names an x86_64 register.**
+--
+-- `aarch64` is an open architecture since 2026-10-07 (`A006` is silent here), and its
+-- register table is `x0`-`x30`. `rdi`, `rax` and `rcx` belong to the other machine: the
+-- register file is held against the ARCHITECTURE the declaration names, not against the
+-- one table the checker had before. The positive twin is `bibliothek/linux/linux-aarch64.gab`.
+
+module gift::syscall_aarch64_x86_register {
+
+reason IoError {
+    BadFd = 9 "the file descriptor is not open"
+    exhaustive
+}
+
+assume linux_write_contract
+    "Write keeps its contract on this machine."
+    falsifier sonde_write;
+
+syscall write(fd : u64) -> u64 or IoError
+    abi linux arch aarch64 number 64
+    regs in { rdi = fd }
+    regs out { rax }
+    clobbers { rcx }
+    errors { EBADF => BadFd }
+    effects { pure }
+    costs <= 8 ops
+    assume linux_write_contract falsifier sonde_write;
+
+}

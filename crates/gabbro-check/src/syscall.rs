@@ -13,12 +13,12 @@
 //! | `N063` | the in-registers are pairwise distinct | gift: duplicate in-register |
 //! | `N064` | an out register is never clobbered | gift: clobbered out-register |
 //! | `N065` | every parameter is bound exactly once | gift: unbound parameter |
-//! | `N066` | every named register is an x86_64 general register | gift: unknown register |
+//! | `N066` | every named register is a general register of the declared machine (`x86_64`, `aarch64`) | gift: unknown register |
 //! | `N067` | the `errors` map is total over the listed errnos and every target is a case of the `or R` channel | gift: errno mapped to an undeclared reason |
 //! | `N068` | a `kernel` pairing is refused until the pairing check lands | gift: kernel path |
 //! | `N322` | the `syscall` declares a countable `costs` promise (the lane-114 gap, closed) | gift 986: costless syscall |
 //! | `N464` | a buffer parameter (pointer at numbers) points at bytes and carries `requires x <= lenof(p)` (fix lane F5) | gift 1155: unbounded read buffer |
-//! | `A006` | the syscall names no sealed architecture -- x86_64 only | gift: arch mismatch |
+//! | `A006` | the syscall names no sealed architecture -- `x86_64` and `aarch64` are open | gift: arch mismatch |
 //!
 //! Three questions belong to existing rules and are NOT re-issued here: the
 //! `arch` against the declared arches (`A005`, `namen.rs`), the named
@@ -39,6 +39,34 @@ const REGISTER: &[&str] = &[
     "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp", "r8", "r9", "r10", "r11",
     "r12", "r13", "r14", "r15",
 ];
+
+/// The AArch64 general registers `x0`-`x30` -- and only they (no `sp`, no `xzr`, no vector or
+/// system register has a binding in the Linux `svc #0` ABI). The AArch64 Linux convention the
+/// stub template (`syscall_befehl` in `emit.rs`) mirrors: the call number in `x8`, arguments in
+/// `x0`-`x5`, the answer in `x0` (the same register as the first argument). The table is a
+/// shape rule like the x86_64 one; holding the number register against the declaration is the
+/// stub's business (`C180`), as `rax` is on x86_64.
+const REGISTER_AARCH64: &[&str] = &[
+    "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13",
+    "x14", "x15", "x16", "x17", "x18", "x19", "x20", "x21", "x22", "x23", "x24", "x25", "x26",
+    "x27", "x28", "x29", "x30",
+];
+
+/// The architectures a `syscall` may name (rule `A006` refuses the rest).
+pub fn arch_bekannt(arch: &str) -> bool {
+    matches!(arch, "x86_64" | "aarch64")
+}
+
+/// The general-register table of a machine. **An unknown architecture reads the x86_64 table**
+/// -- exactly what every declaration was held to before `aarch64` was admitted -- so that a
+/// gate `A006` refuses keeps the `N066` answers it always had.
+pub fn register_fuer(arch: &str) -> &'static [&'static str] {
+    if arch == "aarch64" {
+        REGISTER_AARCH64
+    } else {
+        REGISTER
+    }
+}
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     crate::fuer_jedes_item_im_modul(baum, &mut |item, modul| {
@@ -171,21 +199,28 @@ fn registerkarte(s: &SyscallDecl, absagen: &mut Absagen) {
         .chain(s.regs_out.iter().map(|r| (r, "regs out")))
         .chain(s.clobbers.iter().map(|r| (r, "clobbers")))
     {
-        if !REGISTER.contains(&reg.text.as_str()) {
+        if !register_fuer(&s.arch.text).contains(&reg.text.as_str()) {
+            let (maschine, liste) = if s.arch.text == "aarch64" {
+                ("aarch64", "`x0`-`x30`")
+            } else {
+                (
+                    "x86_64",
+                    "`rax` `rbx` `rcx` `rdx` `rsi` `rdi` `rbp` `rsp` `r8`-`r15`",
+                )
+            };
             absagen.schiebe(
                 Absage::fehler(
                     "N066",
                     reg.span,
                     format!(
-                        "`{}` names `{}` in `{}`, and that is no x86_64 general register",
+                        "`{}` names `{}` in `{}`, and that is no {maschine} general register",
                         s.name.text, reg.text, wo
                     ),
                 )
-                .mit_notiz(
-                    "the binding names one of `rax` `rbx` `rcx` `rdx` `rsi` `rdi` \
-                     `rbp` `rsp` `r8`-`r15` -- a control, segment or floating-point \
-                     register has no binding in this ABI",
-                ),
+                .mit_notiz(format!(
+                    "the binding names one of {liste} -- a control, segment or \
+                     floating-point register has no binding in this ABI"
+                )),
             );
         }
     }
@@ -392,23 +427,24 @@ fn fehlertabelle(baum: &Programm, modul: &str, s: &SyscallDecl, absagen: &mut Ab
 
 /// **`A006`/`N068` -- the machine and the counterpart.**
 ///
-/// `A006`: the syscall names no sealed architecture -- x86_64 only, as the
-/// whole emitter is. `N068`: a `kernel` pairing is refused until the pairing
+/// `A006`: the syscall names no sealed architecture -- `x86_64` and `aarch64` (since
+/// 2026-10-07) are open, every other machine stays sealed. `N068`: a `kernel` pairing is refused until the pairing
 /// check and the stub land (lane S6) -- with its own name, never silence.
 fn bauart(s: &SyscallDecl, absagen: &mut Absagen) {
-    if s.arch.text != "x86_64" {
+    if !arch_bekannt(&s.arch.text) {
         absagen.schiebe(
             Absage::fehler(
                 "A006",
                 s.arch.span,
                 format!(
-                    "`{}` declares `arch {}` after `abi {}`, and only `x86_64` is implemented",
+                    "`{}` declares `arch {}` after `abi {}`, and only `x86_64` and `aarch64` \
+                     are implemented",
                     s.name.text, s.arch.text, s.abi.text
                 ),
             )
             .mit_notiz(
-                "`aarch64` stays sealed -- a syscall for a machine the emitter \
-                 cannot lower would promise a stub nobody writes",
+                "every other architecture stays sealed -- a syscall for a machine the \
+                 emitter cannot lower would promise a stub nobody writes",
             ),
         );
     }

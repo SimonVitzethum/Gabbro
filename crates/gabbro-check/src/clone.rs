@@ -38,7 +38,7 @@
 //! falling past its end, a path with no gate behind it.
 //!
 //! BINDING CONSTRAINT (Simon): no OS data enters this file -- no clone
-//! number, no flag, no errno. The register FILE (`REGISTER` below) is the
+//! number, no flag, no errno. The register FILE (`syscall::register_fuer`) is the
 //! pre-existing machine vocabulary `syscall.rs` holds too (its twin, named
 //! here on purpose: the syntax crate takes no checker dependency question,
 //! and this pass reads no checker map but its own walk).
@@ -46,15 +46,6 @@
 use gabbro_syntax::ast::*;
 use gabbro_syntax::diag::{Absage, Absagen};
 use std::collections::{BTreeSet, HashMap, HashSet};
-
-/// The x86_64 general registers -- and only they. The twin of `REGISTER`
-/// in `syscall.rs`, named here on purpose (see the module head): this pass
-/// reads the declaration, not the other pass's table, so a drift between
-/// the two reads as two refusals, never as silence.
-const REGISTER: &[&str] = &[
-    "rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp", "r8", "r9", "r10", "r11",
-    "r12", "r13", "r14", "r15",
-];
 
 pub fn pass(baum: &Programm, absagen: &mut Absagen) {
     let divergent = nie_kehrende(baum);
@@ -233,12 +224,19 @@ fn stapelklausel(s: &SyscallDecl, absagen: &mut Absagen) {
         }
     }
     let Some(stapel) = s.stapel.first() else { return };
-    let detail = if !REGISTER.contains(&stapel.text.as_str()) {
-        Some(format!(
-            "`{}` is no x86_64 general register -- the binding names one of `rax` `rbx` \
-             `rcx` `rdx` `rsi` `rdi` `rbp` `rsp` `r8`-`r15`",
-            stapel.text
-        ))
+    let detail = if !crate::syscall::register_fuer(&s.arch.text).contains(&stapel.text.as_str()) {
+        Some(if s.arch.text == "aarch64" {
+            format!(
+                "`{}` is no aarch64 general register -- the binding names one of `x0`-`x30`",
+                stapel.text
+            )
+        } else {
+            format!(
+                "`{}` is no x86_64 general register -- the binding names one of `rax` `rbx` \
+                 `rcx` `rdx` `rsi` `rdi` `rbp` `rsp` `r8`-`r15`",
+                stapel.text
+            )
+        })
     } else if !s.regs_in.iter().any(|(r, _)| r.text == stapel.text) {
         Some(format!(
             "`{}` is bound in no `regs in` -- the handed stack arrives in a register the \
