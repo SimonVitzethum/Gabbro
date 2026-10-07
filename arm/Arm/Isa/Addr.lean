@@ -259,11 +259,37 @@ theorem exCheckSP_refuses : (runEff 10 checkSP sSP8).isNone = true := by decide
 end Arm
 
 /-
-CUTS: the alignment test, offset addition and register extension are
-present with ground examples. SP handling, the memory accessors with their
-fault behaviour and every instruction semantic are still missing (all listed
-in REPORT-12.md).
+CUTS: address computation and checked accessors with ground `decide`
+examples (every theorem below is a ground equality; there are no
+universally quantified premises, so no `_zeuge` witnesses are owed).
+NOT modelled or abstracted, each a named gap:
+- `checkSP` always enforces 16-byte SP alignment; Sail gates it on the
+  SCTLR SA/SA0 bits (system agent owns SCTLR).
+- `needsAlign`: the SCTLR.A gating of plain accesses and the LSE2
+  16-byte-quantity rule for ordered/exclusive accesses are not modelled;
+  plain is bytewise, ordered/exclusive fault when misaligned.
+- `MemCfg.fault` abstracts translation; the page-table walk
+  (`AArch64_TranslateAddress`) belongs to the system agent.
+- `runEff`: `rdSys`/`wrSys` refuse (`none`); barriers step over without
+  effect; V/NZCV state is carried but unused by load/store semantics.
+- Big-endian reversal (`BigEndianReverse`) is absent: GPR accesses are
+  little-endian, matching the non-big-endian Sail path.
 -/
 
 #print axioms Arm.addrEx1_aligned4
+#print axioms Arm.addrEx1_misaligned3
+#print axioms Arm.addrEx1_addOff
+#print axioms Arm.extendReg_uxtx_id
 #print axioms Arm.extendReg_sxtw_sign
+#print axioms Arm.extendReg_uxth_shift
+#print axioms Arm.extendReg_sxtw_notZero
+#print axioms Arm.needsAlign_plain
+#print axioms Arm.needsAlign_acquire
+#print axioms Arm.needsAlign_excl
+#print axioms Arm.exRoundtrip_ok
+#print axioms Arm.exRoundtrip_notBE
+#print axioms Arm.exUnalignedPlain_ok
+#print axioms Arm.exUnalignedOrdered_refuses
+#print axioms Arm.exFault_refuses
+#print axioms Arm.exCheckSP_ok
+#print axioms Arm.exCheckSP_refuses

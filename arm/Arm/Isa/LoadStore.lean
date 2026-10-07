@@ -321,12 +321,123 @@ def sOdd : State := { s0 with regs := { s0.regs with gpr := gprOdd } }
 theorem exLdarMisaligned_refuses :
     (runEff 60 (ldarStlr cfgNoFault true 32 32 1 2) sOdd).isNone = true := by decide
 
+/-- Exclusive load, instruction side (`LDXR`, `LDAXR` when `acqrel`): an
+    exclusive read with zero extension. Setting the monitor
+    (`AArch64_SetExclusiveMonitors`) IS the monitor's behaviour and belongs
+    to agent 09; this emits only the read event with `excl := true`.
+    -- Sail: instrs64.sail:29364 (`execute_..._exclusive_single`, load arm). -/
+def ldxr (cfg : MemCfg) (acqrel : Bool) (datasize regsize : Nat)
+    (n t : Nat) : Eff Unit := do
+  if n == 31 then checkSP else pure ()
+  let addr ← rdBase n
+  let ord := if acqrel then .acquire else .plain
+  let v ← memReadEff cfg addr (datasize / 8) ord true
+  wrBase t (extVal v datasize regsize false)
+
+/-- Exclusive store, instruction side (`STXR`, `STLXR` when `acqrel`): the
+    `passed` premise is the exclusive-monitor verdict owned by agent 09.
+    On pass the value is stored exclusively and status 0 is written to
+    `Ws`; on fail nothing is stored and status is 1 (Sail
+    `AArch64_ExclusiveMonitorsPass` / `ExclusiveMonitorsStatus`).
+    -- Sail: instrs64.sail:29364 (store arm), v8_base.sail:29075. -/
+def stxr (cfg : MemCfg) (acqrel : Bool) (datasize : Nat)
+    (n t s : Nat) (passed : Bool) : Eff Unit := do
+  if n == 31 then checkSP else pure ()
+  let addr ← rdBase n
+  let ord := if acqrel then .release else .plain
+  if passed then
+    let rv ← rdBase t
+    memWriteEff cfg addr (datasize / 8) ord true (rv.toNat % 2 ^ datasize)
+    wrBase s (BitVec.ofNat 64 0)
+  else
+    wrBase s (BitVec.ofNat 64 1)
+
+/-- `STXR W5, X0, [X1]` (monitor passes) then `LDXR X2, [X1]`. -/
+def exExcl : Eff (BitVec 64 × BitVec 64) := do
+  stxr cfgNoFault false 64 1 0 5 true
+  ldxr cfgNoFault false 64 64 1 2
+  let a ← rdBase 5
+  let b ← rdBase 2
+  pure (a, b)
+
+theorem exExcl_ok :
+    (runEff 60 exExcl sLS).map Prod.fst
+      = some (BitVec.ofNat 64 0, BitVec.ofNat 64 2864434397) := by decide
+
+/-- `STLXR`/`LDAXR` take the same value path with acquire/release orders. -/
+def exLdaxr : Eff (BitVec 64 × BitVec 64) := do
+  stxr cfgNoFault true 64 1 0 5 true
+  ldxr cfgNoFault true 64 64 1 2
+  let a ← rdBase 5
+  let b ← rdBase 2
+  pure (a, b)
+
+theorem exLdaxr_ok :
+    (runEff 60 exLdaxr sLS).map Prod.fst
+      = some (BitVec.ofNat 64 0, BitVec.ofNat 64 2864434397) := by decide
+
+/-- Monitor fails: nothing is stored (the later load reads zero) and the
+    status register holds 1. -/
+def exExclFail : Eff (BitVec 64 × BitVec 64) := do
+  stxr cfgNoFault false 64 1 0 5 false
+  ldxr cfgNoFault false 64 64 1 2
+  let a ← rdBase 5
+  let b ← rdBase 2
+  pure (a, b)
+
+theorem exExclFail_ok :
+    (runEff 60 exExclFail sLS).map Prod.fst
+      = some (BitVec.ofNat 64 1, BitVec.ofNat 64 0) := by decide
+
+/-- Planted wrong case: the fail path is observably not the pass path. -/
+theorem exExclFail_notPass :
+    (runEff 60 exExclFail sLS).map Prod.fst
+      ≠ some (BitVec.ofNat 64 0, BitVec.ofNat 64 2864434397) := by decide
+
 end Arm
 
 /-
-CUTS: only the value-extension helper is present. All instruction semantics
-(single, pair, ordered, exclusive, literal) are still missing; they are
-listed in REPORT-12.md.
+CUTS: execute-level semantics for every instruction family of the task
+(LDR/STR all immediate modes, LDUR/STUR, register offset, literal,
+LDRB/LDRH/LDRSB/LDRSH/LDRSW, LDP/STP all index modes, LDAR/STLR, LDAPR,
+LDXR/STXR/LDAXR/STLXR instruction side), each with ground `decide`
+examples and planted wrong cases (no universally quantified premises, so
+no `_zeuge` witnesses are owed). NOT covered, each a named gap:
+- `PRFM`/prefetch: pure hint, not modelled.
+- SIMD/FP loads/stores and pairs, and the nontemporal hint: not modelled.
+- Exclusive pairs (`LDXP`/`STXP`, Sail `exclusive_pair`): not covered.
+- Atomic read-modify-writes (CAS and friends): out of scope for this lane.
+- `ConstrainUnpredictable` overlap cases (writeback/data overlap): the
+  definite behaviour (writeback proceeds, overlapping reads see the
+  register value) is taken; the constraint choice stays free in Sail.
+- MTE tag checking, SPE trace sampling, syndrome registers and fault
+  status registers: no trace/system state in the sequential model.
+- LSE2 joined-pair accesses: value-identical, but this model emits two
+  single `rdMem`/`wrMem` events where Sail emits one joined access.
+- Decoder mapping (option bits, scale, immediate assembly): agent 15.
 -/
 
 #print axioms Arm.extVal_sign8
+#print axioms Arm.extVal_zero8
+#print axioms Arm.extVal_w32
+#print axioms Arm.exStrLdrW_ok
+#print axioms Arm.exLdrsb_ok
+#print axioms Arm.exLdrsb_notZero
+#print axioms Arm.exPreIdx_ok
+#print axioms Arm.exPostIdx_ok
+#print axioms Arm.exRegOff_ok
+#print axioms Arm.exRegOff_miss_ok
+#print axioms Arm.exRegSxtw_ok
+#print axioms Arm.exLit_ok
+#print axioms Arm.exLitSw_ok
+#print axioms Arm.exLitSw_notZero
+#print axioms Arm.exStpLdp_ok
+#print axioms Arm.exStpLdp_notSwapped
+#print axioms Arm.exStpPre_ok
+#print axioms Arm.exLdar_ok
+#print axioms Arm.exLdapr_ok
+#print axioms Arm.exLdarMisaligned_refuses
+#print axioms Arm.exExcl_ok
+#print axioms Arm.exLdaxr_ok
+#print axioms Arm.exExclFail_ok
+#print axioms Arm.exExclFail_notPass

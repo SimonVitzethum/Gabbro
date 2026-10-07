@@ -2,104 +2,75 @@
 
 ## Status
 
-Skeleton of `arm/Arm/Isa/Addr.lean` is green.
+ALL deliverables done, committed and green. Work stops here.
 
 ## What was done
 
-- Read the frozen vocabulary (`arm/Arm/Basic.lean`, `arm/Arm/Isa/Monad.lean`)
-  and the Sail sources for the memory accessors and the load/store `execute`
-  clauses (`v8_base.sail`: `CheckSPAlignment`, `AArch64_UnalignedAccessFaults`,
-  `Mem_read`/`Mem_set`; `instrs64.sail`: literal, post-index, ordered,
-  exclusive-single, pair, unsigned-immediate, register-offset and
-  signed-offset-normal execute functions).
-- Created `arm/Arm/Isa/Addr.lean` (skeleton, 40 lines): `isAligned`
-  (Sail `v8_base.sail:28178`), `addOff` (Sail `instrs64.sail:39785`),
-  fixture `addrEx1`, theorems `addrEx1_aligned4`, `addrEx1_misaligned3`,
-  `addrEx1_addOff`, all proved by `decide`. Ends with CUTS block and
-  `#print axioms Arm.addrEx1_aligned4` (no axioms).
-- Extended `Addr.lean`: `ExtendKind` (Sail `v8_base.sail:35744`),
-  `extendKindParams` and `extendReg` (Sail `v8_base.sail:35780`, including
-  the `Min(len, N - shift)` clamp and the signerc/zero extension), with
-  `decide` theorems `extendReg_uxtx_id`, `extendReg_sxtw_sign`,
-  `extendReg_uxth_shift` and the planted wrong case
-  `extendReg_sxtw_notZero`.
-- Extended `Addr.lean`: `rdBase`/`wrBase` (register 31 is SP),
-  `checkSP` (Sail `v8_base.sail:22782`), `needsAlign` (Sail
-  `v8_base.sail:22799`), the `MemCfg` translation-fault oracle,
-  `memReadEff`/`memWriteEff` (Sail `v8_base.sail:28178`/`28260`) with
-  `decide` theorems `needsAlign_plain`, `needsAlign_acquire`,
-  `needsAlign_excl`.
-- Extended `Addr.lean`: the tiny sequential fixture `Regs`/`State`,
-  little-endian `loadNat`/`storeNat` (Sail `v8_base.sail:28178`/`28260`),
-  the fuel-bounded interpreter `runEff` (`raise` is `none`,
-  `rdSys`/`wrSys` refuse, barriers step over), fixtures `s0`,
-  `cfgNoFault`, `cfgFault`, and the helper `upd` (`Function.update` does
-  not exist in this toolchain).
-- Extended `Addr.lean`: accessor-level `decide` examples `exRoundtrip_ok`,
-  the planted endianness wrong case `exRoundtrip_notBE`,
-  `exUnalignedPlain_ok` (misaligned plain reads proceed bytewise),
-  `exUnalignedOrdered_refuses`, `exFault_refuses`, `exCheckSP_ok` and
-  `exCheckSP_refuses` (fixture `sSP8`).
-- Created `arm/Arm/Isa/LoadStore.lean` (skeleton): `extVal`
-  (Sail `instrs64.sail:32821`) with `decide` theorems `extVal_sign8`,
-  `extVal_zero8`, `extVal_w32`; added the two `import` lines to
-  `arm/Arm.lean`; `./arm-bau` builds all 8 targets with 0 errors.
-- Extended `LoadStore.lean`: `ldStSingle` (Sail `instrs64.sail:39785`,
-  `:32821`, `:37495`) covering unsigned-offset, pre/post-index and
-  unscaled LDUR/STUR for 8/16/32/64-bit accesses with sign/zero
-  extension, with fixture `gprLS`/`sLS` and `decide` theorems
-  `exStrLdrW_ok`, `exLdrsb_ok`, the planted wrong case
-  `exLdrsb_notZero`, `exPreIdx_ok`, `exPostIdx_ok`.
-- Extended `LoadStore.lean`: `ldStReg` (Sail `instrs64.sail:35210`)
-  with fixtures `gprLSR`/`sLSR`, `gprLSRs`/`sLSRs` and `decide` theorems
-  `exRegOff_ok`,   `exRegOff_miss_ok` (the shifted store misses the
-  unshifted address), `exRegSxtw_ok` (SXTW offset wraps 64 to 63).
-- Extended `LoadStore.lean`: `ldrLiteral` (Sail `instrs64.sail:32630`)
-  with fixture `memLit`/`sLit` and `decide` theorems `exLit_ok`,
-  `exLitSw_ok`, the planted wrong case `exLitSw_notZero`.
-- Extended `LoadStore.lean`: `ldpStp` (Sail `instrs64.sail:30833`,
-  `:31505`) with fixture `gprPair`/`sPair` and `decide` theorems
-  `exStpLdp_ok`, the planted order wrong case `exStpLdp_notSwapped`,
-  `exStpPre_ok`.
-- Extended `LoadStore.lean`: `ldarStlr` (Sail `instrs64.sail:28426`)
-  and `ldapr` (Sail `instrs64.sail:27312`) with fixture `gprOdd`/`sOdd`
-  and `decide` theorems `exLdar_ok`, `exLdapr_ok`,
-  `exLdarMisaligned_refuses`.
-- Apparatus note: Lean ends an application at a newline when the
-  continuation is not indented past the application start, so a field
-  value split across lines (`gpr :=` newline `upd ...`) misparses;
-  hoist such tables into their own `def` (here `gprLS`). The misparse
-  also poisoned every later `decide` with stuck terms.
+New files (both imported at the end of `arm/Arm.lean`):
+
+`arm/Arm/Isa/Addr.lean` — address computation and checked accessors:
+- `isAligned` (Sail `v8_base.sail:28178`), `addOff` (Sail
+  `instrs64.sail:39785`), `ExtendKind`/`extendKindParams` (Sail
+  `v8_base.sail:35744`) and `extendReg` with the `Min(len, N - shift)`
+  clamp (Sail `v8_base.sail:35780`).
+- `rdBase`/`wrBase` (register 31 is SP), `checkSP` (Sail
+  `v8_base.sail:22782`), `needsAlign` (Sail `v8_base.sail:22799`),
+  `MemCfg` fault oracle, `memReadEff`/`memWriteEff` (Sail
+  `v8_base.sail:28178`/`28260`).
+- Fixture `Regs`/`State`, little-endian `loadNat`/`storeNat`,
+  fuel-bounded interpreter `runEff`, fixtures `s0`, `sSP8`,
+  `cfgNoFault`, `cfgFault`, helper `upd` (`Function.update` does not
+  exist in this toolchain).
+- `decide` theorems: `addrEx1_aligned4`, `addrEx1_misaligned3`,
+  `addrEx1_addOff`, `extendReg_uxtx_id`, `extendReg_sxtw_sign`,
+  `extendReg_uxth_shift`, `needsAlign_plain`, `needsAlign_acquire`,
+  `needsAlign_excl`, `exRoundtrip_ok`, `exUnalignedPlain_ok`,
+  `exUnalignedOrdered_refuses`, `exFault_refuses`, `exCheckSP_ok`,
+  `exCheckSP_refuses`; planted wrong cases `extendReg_sxtw_notZero`,
+  `exRoundtrip_notBE`.
+
+`arm/Arm/Isa/LoadStore.lean` — execute-level semantics
+(decoded fields to `Eff Unit`), each with `decide` examples and a
+planted wrong case:
+- `extVal` + `ldStSingle` (Sail `instrs64.sail:39785`, `:32821`,
+  `:37495`): unsigned-offset, pre/post-index, unscaled LDUR/STUR,
+  8/16/32/64-bit with sign/zero extension.
+- `ldStReg` (Sail `instrs64.sail:35210`): register offset with extend
+  and shift.
+- `ldrLiteral` (Sail `instrs64.sail:32630`): PC-relative LDR/LDRSW.
+- `ldpStp` (Sail `instrs64.sail:30833`, `:31505`): pairs, all modes.
+- `ldarStlr` (Sail `instrs64.sail:28426`), `ldapr` (Sail
+  `instrs64.sail:27312`).
+- `ldxr`/`stxr` (Sail `instrs64.sail:29364`, `v8_base.sail:29075`),
+  instruction side only: `stxr` takes the monitor verdict as a `passed`
+  premise (owned by agent 09); pass stores + status 0, fail skips the
+  store + status 1.
 
 ## Last build result
 
 `./arm-bau` → `== exit 0; 0 error line(s) in the COMPLETE output`
-(8 jobs, all `Arm.*` modules green).
-- Warmed the build once with `./arm-bau` (needed so `./arm-probe` resolves
-  the `Arm.*` imports of a not-yet-imported new file).
+(8 jobs). `#print axioms` for every theorem: no axioms or `[propext]`
+only (standard). No `sorry`/`admit`/`axiom`/`native_decide`/`unsafe`
+anywhere. All theorems are ground equalities proved by `decide` (no
+universally quantified premises, so no `_zeuge` witnesses are owed).
 
-## Last build result
+## Open (nothing owned by this lane)
 
-`./arm-probe arm/Arm/Isa/Addr.lean` → `== 0 error(s) in the COMPLETE output;
-exit 0`; `'Arm.addrEx1_aligned4' does not depend on any axioms`.
-
-## Open
-
-- `Addr.lean`: register extension (`ExtendReg`), SP/base helpers with
-  `CheckSPAlignment`, `MemCfg` fault oracle, `memReadEff`/`memWriteEff`
-  accessors with alignment and fault exceptions, the `Eff` interpreter
-  fixture with `decide` examples and planted wrong cases.
-- `LoadStore.lean`: all instruction semantics (loads, stores, pairs,
-  ordered, exclusives) with per-family examples and wrong cases.
-- `arm/Arm.lean`: the two `import` lines.
-- Apparatus note: `./arm-probe` on a new file fails with
-  `unknown module prefix 'Arm'` until `./arm-bau` has built the imported
-  modules once; also `#print axioms` needs the fully qualified theorem name.
+- Decoder mapping (agent 15), monitor behaviour (agent 09), SCTLR-gated
+  and LSE2-quantified alignment rules plus translation (system agent).
 
 ## CUTS (honest)
 
-- Only the alignment test and offset addition exist; no instruction semantics
-  yet, no register extension, no SP check, no memory accessor, no fault path.
-- `isAligned`/`addOff` are pure functions; their agreement with Sail is by
-  citation and ground examples, not by a simulation theorem (that theorem
-  belongs to a later integration step, not to this lane).
+- `checkSP` always enforced (SCTLR gating not modelled); `needsAlign`
+  without SCTLR.A/LSE2 gating; `MemCfg.fault` abstracts translation.
+- Prefetch, SIMD/FP (single and pair), nontemporal hint: not modelled.
+- Exclusive pairs LDXP/STXP, atomics (CAS et al.): not covered.
+- `ConstrainUnpredictable` overlaps take the definite behaviour.
+- No MTE/SPE/syndrome state; LSE2 joined pairs are value-identical but
+  emit two single events instead of one joined event.
+- Value agreement with Sail is by citation plus ground examples, not by
+  a simulation theorem (integration step, not this lane).
+- Apparatus: `./arm-probe` on a new file needs one `./arm-bau` first to
+  resolve `Arm.*` imports; `#print axioms` needs qualified names; a
+  newline ends an application unless the continuation is indented past
+  the application start (hoist split field values into their own `def`).
