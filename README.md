@@ -20,11 +20,12 @@ they disagree, the header wins. The honest sentence is **"the goal theorem is
 proved over the model, with a witness and non-degeneracy"** — not "Gabbro is
 verified" ([details](#5-proved-and-not-proved)).
 
-The working backend emits C11 plus inline assembly. The selected target is a
-direct x86-64 backend with Lean final-byte validation — `-O3`-like from
-invariants, fast including validation, for arbitrary OS and freestanding
-profiles. Lean X86 helpers exist but are not the complete hardware model;
-backend and validation are not implemented ([record](DIRECT-COMPILER.md)).
+The working backend emits C11 plus inline assembly. The selected next target is
+**AArch64 (Armv9-A)**, built on the Sail Arm specification
+([sail-arm](https://github.com/rems-project/sail-arm)): Sail supplies the
+sequential instruction semantics, the multicore memory model is being added in
+Lean on top of it, and a direct compiler with Lean validation of the final
+binary follows. None of this is implemented yet ([plan](ARM-PLAN.md)).
 
 ## 1. Quick start
 
@@ -87,12 +88,13 @@ and shows its work — **every accepted program gets a Lean-checked certificate:
 
 The five pieces ([plan](dokumente/PLAN-UEBERSETZUNGSVALIDIERUNG.md) §§0–5):
 **T3** Lean parser (source → `P`; items in, generics and round-trip in flight);
-**T1** model certificates per constructor; **T4** x86 semantics and image
-decoding (planned — C semantics stay as backend evidence); **T2** final-byte
-correspondence validator (planned — `korrOk` is C-only); **T5** proof templates
-for runtime, entries, locks, recurring duties (register below). Concurrency
-reuses W / GX; the per-access x86-TSO bridge is open — a proved validator
-refuses bad output, still requiring the new validator and its proof.
+**T1** model certificates per constructor; **T4** AArch64 semantics (derived
+from the Sail Arm model) and image decoding (planned — C semantics stay as
+backend evidence); **T2** final-byte correspondence validator (planned —
+`korrOk` is C-only); **T5** proof templates for runtime, entries, locks,
+recurring duties (register below). Concurrency reuses W / GX; the per-access
+bridge to the Arm memory model is open — a proved validator refuses bad output,
+still requiring the new validator and its proof.
 
 ## 4. Status
 
@@ -122,19 +124,19 @@ hold 3512 lines of Isar; new proofs go to Lean only.
   gaps — no unnamed gap found"*. The checker inside is the **Lean** checker.
 - The C-model chain is closed for five programs by one generic theorem
   (concurrently one, under named premises); GabbroV derives premise (b) in Lean
-  from the source for five programs. These do not certify x86 binaries.
+  from the source for five programs. These do not certify binaries.
 
 Not proved, still open: no pass proved individually (sentences measured on
 checked cases, never the rule); complete Rust backend validation, final-byte
-validation and hardware/concurrency correspondence **OPEN**; the direct x86
-backend is not implemented — never call the compiler or a binary verified.
+validation and hardware/concurrency correspondence **OPEN**; the direct
+AArch64 backend is not implemented — never call the compiler or a binary verified.
 Most accepted programs are not judged in Lean at all; the rest are refused by
 the exporter and listed by name as not claimed in
 [`REGISTER.txt`](grammatik/Grammatik/Zertifikat/REGISTER.txt).
 
 ## 6. Documents
 
-- [DIRECT-COMPILER.md](DIRECT-COMPILER.md) — direct x86-64 compiler record ([design](DIRECT-COMPILER-DESIGN.md), [optimiser](grammatik/OPTIMIZER.md), [portability](dokumente/x86/TARGET-PORTABILITY.md))
+- [ARM-PLAN.md](ARM-PLAN.md) — the AArch64 direction: Sail Arm model, multicore memory model, compiler
 - [Tutorial](dokumente/TUTORIAL.md), [open items](TODO.md), [goal statement](grammatik/Grammatik/Zielsatz/Kern/Spec.lean), [provenance](dokumente/PROJECT-STATUS.md)
 
 > **How this repository is written — AI agents, and where the human stands.**

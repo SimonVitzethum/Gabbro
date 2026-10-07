@@ -1,0 +1,8 @@
+name = "arm"
+version = "0.1.0"
+defaultTargets = ["Arm"]
+# Bound native compiler workers and heap; no mathlib, no dependency at all.
+weakLeanArgs = ["-j1", "-M3072"]
+
+[[lean_lib]]
+name = "Arm"

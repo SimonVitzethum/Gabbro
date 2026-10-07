@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Queued check of ONE Lean file of arm/ (same slots as arm-bau).
+F="$(realpath "$1")"; cd "$(dirname "$(realpath "$0")")/arm" || exit 2
+OUT=$(/home/simon/Dokumente/gabbro-arm/bin/arm-slot bash -c "env -u ELAN_TOOLCHAIN ~/.elan/bin/lake env lean -j1 -M3072 \"$F\" 2>&1"); RC=$?
+ERROR_COUNT=$(echo "$OUT" | grep -cE "^[^ ].*: error")
+if [ "$RC" -ne 0 ] && [ "$ERROR_COUNT" -eq 0 ]; then ERROR_COUNT=1; fi
+echo "== $ERROR_COUNT error(s) in the COMPLETE output; exit $RC; locations:"
+echo "$OUT" | grep -E "^[^ ].*: error" | cut -c1-160
+echo "== output (first 400 lines):"; echo "$OUT" | head -400
+exit "$RC"
