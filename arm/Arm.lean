@@ -5,3 +5,4 @@ import Arm.Isa.IntCore
 import Arm.Isa.IntMasks
 import Arm.Isa.Integer
 import Arm.Isa.IntBit
+import Arm.Isa.IntMul
