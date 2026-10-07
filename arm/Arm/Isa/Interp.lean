@@ -178,6 +178,139 @@ def execOp : Op → Eff Unit
   | .condCmpR n m w cond dflt sub => Int.execCondCmpReg n m w cond dflt sub
   | .condCmpI n w imm cond dflt sub => Int.execCondCmpImm n w imm cond dflt sub
 
+/-- One test vector: name, decoded op, initial machine, expected GPRs
+    (regs 0-30, values mod 2^64), optional SP and NZCV expectations.
+    Vectors live in plain `List Vec` values below: append machine-generated
+    (qemu) vectors in the same record shape. -/
+structure Vec where
+  name : String
+  op : Op
+  init : Machine
+  expX : List (Nat × Nat)
+  expSP : Option Nat
+  expNZCV : Option Nat
+
+/-- Run a vector: the op must complete and meet every stated expectation. -/
+def checkSP (m : Machine) (e : Option Nat) : Bool :=
+  match e with
+  | none => true
+  | some x => m.sp.toNat == x % Int.pow2 64
+
+def checkNZCV (m : Machine) (e : Option Nat) : Bool :=
+  match e with
+  | none => true
+  | some x => m.nzcv.toNat % 16 == x % 16
+
+def checkVec (v : Vec) : Bool :=
+  match run (execOp v.op) v.init with
+  | .error _ => false
+  | .ok (_, m) =>
+    v.expX.all (fun p => (getX m p.1).toNat == p.2 % Int.pow2 64)
+      && checkSP m v.expSP && checkNZCV m v.expNZCV
+
+/-- Blank machine: all registers zero, NZCV clear, empty memory. -/
+def blank : Machine :=
+  { x := List.replicate 31 (BitVec.ofNat 64 0)
+    sp := BitVec.ofNat 64 0
+    pc := BitVec.ofNat 64 0
+    nzcv := BitVec.ofNat 4 0
+    v := List.replicate 32 (BitVec.ofNat 128 0)
+    sys := []
+    mem := [] }
+
+/-- `blank` with X `n` set to `v` (mod 2^64). -/
+def withX (m : Machine) (n v : Nat) : Machine :=
+  setX m n (BitVec.ofNat 64 (v % Int.pow2 64))
+
+/-- `blank` with packed NZCV flags. -/
+def withNZCV (m : Machine) (f : Nat) : Machine :=
+  { m with nzcv := BitVec.ofNat 4 (f % 16) }
+
+/-- `blank` with PC. -/
+def withPC (m : Machine) (p : Nat) : Machine :=
+  { m with pc := BitVec.ofNat 64 (p % Int.pow2 64) }
+
+/-- `blank` with SP. -/
+def withSP (m : Machine) (s : Nat) : Machine :=
+  { m with sp := BitVec.ofNat 64 (s % Int.pow2 64) }
+
+/-- Vectors A: add/sub with flags.
+    `ADD X0, X1, #5` with X1 = 10 writes 15, flags untouched. -/
+-- Sail: instrs64.sail:589.
+def vAddImm : Vec :=
+  { name := "ADD X0, X1, #5", op := .addSubImm 0 1 64 5 false false,
+    init := withX blank 1 10, expX := [(0, 15)], expSP := none, expNZCV := some 0 }
+
+theorem vAddImm_ok : checkVec vAddImm = true := by decide
+
+theorem vAddImm_bad : checkVec { vAddImm with expX := [(0, 14)] } = false := by
+  decide
+
+/-- `ADDS X0, X1, #1` overflows the signed range: N and V set (packed 9). -/
+-- Sail: instrs64.sail:589.
+def vAddsOvf : Vec :=
+  { name := "ADDS X0, X1=0x7FFF.., #1", op := .addSubImm 0 1 64 1 false true,
+    init := withX blank 1 0x7FFFFFFFFFFFFFFF, expX := [(0, 0x8000000000000000)],
+    expSP := none, expNZCV := some 9 }
+
+theorem vAddsOvf_ok : checkVec vAddsOvf = true := by decide
+
+theorem vAddsOvf_bad : checkVec { vAddsOvf with expNZCV := some 8 } = false := by
+  decide
+
+/-- `SUBS X0, X1, X2` with equal operands: zero result, Z and C set (6). -/
+-- Sail: instrs64.sail:434.
+def vSubsZero : Vec :=
+  { name := "SUBS X0, X1=5, X2=5", op := .addSubShift 0 1 2 32 .lsl 0 true true,
+    init := withX (withX blank 1 5) 2 5, expX := [(0, 0)],
+    expSP := none, expNZCV := some 6 }
+
+theorem vSubsZero_ok : checkVec vSubsZero = true := by decide
+
+theorem vSubsZero_bad : checkVec { vSubsZero with expX := [(0, 1)] } = false := by
+  decide
+
+/-- `ADC X0, X1, X2` with C set wraps `0xFFFF..F + 0 + 1` to zero (Z, C). -/
+-- Sail: instrs64.sail:194.
+def vAdcWrap : Vec :=
+  { name := "ADC X0, X1=0xFFFF.., X2=0, C=1", op := .adcSbc 0 1 2 64 false false,
+    init := withNZCV (withX (withX blank 1 0xFFFFFFFFFFFFFFFF) 2 0) 2,
+    expX := [(0, 0)], expSP := none, expNZCV := some 2 }
+
+theorem vAdcWrap_ok : checkVec vAdcWrap = true := by decide
+
+theorem vAdcWrap_bad : checkVec { vAdcWrap with expNZCV := some 6 } = false := by
+  decide
+
+/-- 32-bit `ADD W0, W1, #1` zeroes the upper half; flags untouched (kept F). -/
+-- Sail: instrs64.sail:589 (`X_set(d, datasize)` zero-extends).
+def vAdd32Zero : Vec :=
+  { name := "ADD W0, W1=0xFFFF.., #1", op := .addSubImm 0 1 32 1 false false,
+    init := withNZCV (withX blank 1 0xFFFFFFFF) 15, expX := [(0, 0)],
+    expSP := none, expNZCV := some 15 }
+
+theorem vAdd32Zero_ok : checkVec vAdd32Zero = true := by decide
+
+theorem vAdd32Zero_bad : checkVec { vAdd32Zero with expX := [(0, 0x100000000)] } = false := by
+  decide
+
+/-- `ADD SP, SP, #16` moves the stack pointer itself. -/
+-- Sail: instrs64.sail:589 (`SP_set` when `d = 31` without flags).
+def vAddSP : Vec :=
+  { name := "ADD SP, SP, #16", op := .addSubImm 31 31 64 16 false false,
+    init := withSP blank 0x1000, expX := [], expSP := some 0x1010,
+    expNZCV := some 0 }
+
+theorem vAddSP_ok : checkVec vAddSP = true := by decide
+
+theorem vAddSP_bad : checkVec { vAddSP with expSP := some 0x1011 } = false := by
+  decide
+
+/-- Family list A (append qemu vectors here). -/
+def vecsA : List Vec := [vAddImm, vAddsOvf, vSubsZero, vAdcWrap, vAdd32Zero, vAddSP]
+
+theorem vecsA_ok : vecsA.all checkVec = true := by decide
+
 end Arm
 
 /-
