@@ -754,7 +754,7 @@ Last ledger refresh: **2026-10-07 00:10 UTC**. This is an operational snapshot, 
 | 1391 | GabbroV: a traversal index is a member of its domain | Committed candidate; review/integration pending | 1392: scheduled | [task](lanes/1391.md) |
 | 1393 | GabbroV: does a tree declaration imply parent consistency? | Committed candidate; review/integration pending | 1394: scheduled | [task](lanes/1393.md) |
 | 1395 | Language gaps: what cannot be written today | Merged after review/checks | 1396: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1395.md) |
-| 1397 | Language gaps against the Lean model (second run) | Merged after review/checks | 1398: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1397.md) |
+| 1397 | Language gaps against the Lean model (second run) | Merged after review/checks | 1398: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1397.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1836,6 +1836,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-06: lane **1351**, MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1351.md). <!-- x86-merged:1351 -->
 - 2026-10-06: lane **1352**, Independent exact review of 1351, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1352.md). <!-- x86-merged:1352 -->
 - 2026-10-06: lane **1397**, Language gaps against the Lean model (second run), integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1397.md). <!-- x86-merged:1397 -->
+- 2026-10-06: lane **1398**, Independent exact review of 1397, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1398.md). <!-- x86-merged:1398 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
