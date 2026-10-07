@@ -64,3 +64,18 @@ with **translation validation** (source -> model -> final AArch64 bytes, checked
 work goes into the C backend (no new C templates, no C-side audits); known C-backend defects are
 recorded as legacy (for example the page-return helper wrap, `messung/ARM-KOMPATIBILITAET-C.md`
 F2). The C emitter archive above is the reference for its last state.
+
+## Compiler stage and performance goal (Simon, 2026-10-07)
+
+As soon as the AArch64 hardware model is finished -- the Sail single-core semantics plus the Lean
+multicore memory model -- the Muse agents continue with the REST OF THE NATIVE COMPILER (lowering
+from the typed source to AArch64, register allocation, encoder, image, translation validation of
+the final bytes, optimisation). The Muse agents may now change the checker (`crates/`) and the Lean
+model, not only `arm/`; their tools: `./cargo-pruef-check` (checker crates only), `./arm-bau`,
+`./lean-bau`.
+
+**Performance target against equivalent C built with GCC `-O3`:** minimum **80 %**, target **110 %**.
+**Invariant analysis is mandatory** (not optional): loop invariants, range and bound facts from the
+checker (ranged integers, contracts, `requires`/`ensures`) are used to remove checks and enable
+optimisation, and every use is validated in the final-byte validator. Targets are open until
+measured; no all-programs claim. Measure per workload with matched ISA, semantics and settings.

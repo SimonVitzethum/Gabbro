@@ -118,6 +118,11 @@ The [proof-status section](README.md#5-proved-and-not-proved) says exactly this;
   compiler; at most two Sonnet 5.5 agents check that Gabbro itself is Arm-compatible. No Python
   coordinator drives them. Where this file or older notes name x86 goals (below), this entry
   wins. The findings of the language-gap reports come after GabbroV and the hardware model.
+  Update 2026-10-07 (Simon): the emitted C backend is DEPRECATED (native AArch64 compiler with
+  translation validation is the path); Muse agents may change the checker (`crates/`, via
+  `./cargo-pruef-check`) and the Lean model; after the hardware model they build the rest of the
+  compiler; performance goal min. 80 %, target 110 % of GCC `-O3`, invariant analysis mandatory
+  (`ARM-PLAN.md`).
 
 - **Target portability** (Simon, 2026-10-01): the direct x86-64 compiler must
   support extensible profiles for arbitrary operating systems and freestanding

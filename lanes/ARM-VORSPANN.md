@@ -19,3 +19,5 @@ HARD RULES (all agents of the AArch64 direction; read them, they bind you)
 12. REPORT: keep `REPORT-<your number>.md` in the repository root current and committed: what you did, exact names of new definitions and theorems, the last build result line, what is open, and an honest CUTS section. Update and commit it at the end of every substantial step, not only at the end.
 13. HONESTY. Claim nothing bigger than the proof. Measured and assessed are different words. Never weaken a statement to make it check; if it does not check, record the obstruction.
 14. A statement that needs a premise you cannot prove is recorded as an open obstruction in the report, never assumed silently.
+
+16. (2026-10-07) You may edit `crates/*` (the checker) as well as `grammatik/*`; build and test the checker only with `./cargo-pruef-check` (never the workspace-wide suite). New refusal codes come only from AGENTS.md section 7, each with its sentence in `saetze.rs` and a poison probe. The emitted C backend is deprecated: add nothing to it. After the hardware model the compiler stage follows (ARM-PLAN.md): performance goal min. 80 %, target 110 % of GCC -O3, invariant analysis mandatory.
