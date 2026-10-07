@@ -84,6 +84,23 @@ def fetchSeesWrite (x : IFExec) (w f : Nat) : Bool :=
         hasKind x .dsb d2.id && hasKind x .isb ib.id &&
         poHas x d2.id ib.id && poHas x ib.id f
 
+/-- The full architectural recipe on one core at address `A`: write the
+    code, clean it (DC CVAU), order (DSB), invalidate the instruction cache
+    (IC IVAU), order (DSB), synchronise context (ISB), then fetch. -/
+def xFullRecipe : IFExec :=
+  { evs := [⟨0, 0, .writeCode, 0#64⟩, ⟨1, 0, .dcCvau, 0#64⟩,
+            ⟨2, 0, .dsb, 0#64⟩, ⟨3, 0, .icIvau, 0#64⟩,
+            ⟨4, 0, .dsb, 0#64⟩, ⟨5, 0, .isb, 0#64⟩,
+            ⟨6, 0, .fetch, 0#64⟩]
+    po := [(0, 1), (0, 2), (0, 3), (0, 4), (0, 5), (0, 6),
+           (1, 2), (1, 3), (1, 4), (1, 5), (1, 6),
+           (2, 3), (2, 4), (2, 5), (2, 6),
+           (3, 4), (3, 5), (3, 6), (4, 5), (4, 6), (5, 6)] }
+
+/-- With the full recipe the fetch is guaranteed to see the new code. -/
+theorem recipe_complete_sees_new :
+    fetchSeesWrite xFullRecipe 0 6 = true := by decide
+
 end Arm
 
 /-
