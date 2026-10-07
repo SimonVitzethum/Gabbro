@@ -7,3 +7,4 @@ import Arm.Isa.Integer
 import Arm.Isa.IntBit
 import Arm.Isa.IntMul
 import Arm.Isa.IntCond
+import Arm.Isa.Interp
