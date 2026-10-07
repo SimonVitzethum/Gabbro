@@ -201,6 +201,57 @@ theorem mp_rel_orders : (0, 1) ∈ bob mpRelAcq := by decide
 /-- Witness: the later read IS ordered after the acquire. -/
 theorem mp_acq_orders : (2, 3) ∈ bob mpRelAcq := by decide
 
+/-- LDAPR (acquirePC, RCpc) orders a po-later read, but not a po-later write. -/
+def mpAcqPC : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .read ⟨8, 4, .acquirePC, false⟩, val := 1 },
+            { id := 1, core := 0, kind := .read ⟨0, 4, .plain, false⟩, val := 0 },
+            { id := 2, core := 0, kind := .write ⟨8, 4, .plain, false⟩, val := 1 }],
+    po := [(0, 1), (0, 2)], addr := [], data := [], ctrl := [],
+    rf := [], co := [], rmw := [] }
+
+/-- Same-core STLR followed by LDAR: the `[L];po;[A]` leg fires. -/
+def mpRelAcqSA : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write ⟨8, 4, .release, false⟩, val := 1 },
+            { id := 1, core := 0, kind := .read ⟨8, 4, .acquire, false⟩, val := 1 }],
+    po := [(0, 1)], addr := [], data := [], ctrl := [],
+    rf := [], co := [], rmw := [] }
+
+/-- A read with a control dependency to an ISB orders po-later accesses. -/
+def mpIsb : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .read ⟨0, 4, .plain, false⟩, val := 0 },
+            { id := 1, core := 0, kind := .barrier .isb, val := 0 },
+            { id := 2, core := 0, kind := .write ⟨8, 4, .plain, false⟩, val := 1 }],
+    po := [(0, 1), (1, 2), (0, 2)], addr := [], data := [],
+    ctrl := [(0, 1)], rf := [], co := [], rmw := [] }
+
+/-- Message passing with a `DSB ST` between the writes. -/
+def mpDsbSt : Exec :=
+  { evs := [{ id := 0, core := 0, kind := .write ⟨0, 4, .plain, false⟩, val := 1 },
+            { id := 1, core := 0, kind := .barrier (.dsb .ish .st), val := 0 },
+            { id := 2, core := 0, kind := .write ⟨8, 4, .plain, false⟩, val := 1 },
+            { id := 3, core := 1, kind := .read ⟨8, 4, .plain, false⟩, val := 1 },
+            { id := 4, core := 1, kind := .read ⟨0, 4, .plain, false⟩, val := 0 }],
+    po := [(0, 1), (1, 2), (0, 2), (3, 4)], addr := [], data := [],
+    ctrl := [], rf := [(2, 3)], co := [], rmw := [] }
+
+/-- Witness: LDAPR orders the po-later read. -/
+theorem mp_acqpc_orders_read : (0, 1) ∈ bob mpAcqPC := by decide
+
+/-- Witness: LDAPR does NOT order the po-later write (RCpc weakness). -/
+theorem mp_acqpc_write_unordered : bob mpAcqPC = [(0, 1)] := by decide
+
+/-- Witness: same-core STLR `;po;` LDAR is ordered. -/
+theorem mp_relacq_sa_orders : (0, 1) ∈ bob mpRelAcqSA := by decide
+
+/-- Witness: it is ordered by exactly the release-acquire leg. -/
+theorem mp_relacq_sa_leg : relAcqHolds mpRelAcqSA 0 1 = true := by decide
+
+/-- Witness: ISB with a control dependency orders the later access. -/
+theorem mp_isb_orders : (0, 2) ∈ bob mpIsb := by decide
+
+/-- Witness: with `DSB ST` the two writes ARE ordered. -/
+theorem mp_dsb_st_orders : (0, 2) ∈ bob mpDsbSt := by decide
+
 /-- A plain execution (no barrier, acquire or release event anywhere) has no
     DMB edge: every `any` witness would need one. -/
 theorem dmbHolds_false_of_plain (x : Exec) (a c : Nat)
