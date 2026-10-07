@@ -720,3 +720,4 @@ import Grammatik.X86.Befehle.Zeichenketten.StringOps
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.BeweisAtomar
+import Grammatik.X86.IntMovTest

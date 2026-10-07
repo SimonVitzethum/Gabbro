@@ -239,7 +239,7 @@ review evidence and tasks remain in Git.
 ## Current work ledger
 
 <!-- X86-PROGRESS:BEGIN -->
-Last ledger refresh: **2026-10-06 22:11 UTC**. This is an operational snapshot, not a proof of the full chain.
+Last ledger refresh: **2026-10-07 00:09 UTC**. This is an operational snapshot, not a proof of the full chain.
 
 | Owner | Work | State | Independent reviewer | Evidence |
 |---|---|---|---|---|
@@ -714,7 +714,7 @@ Last ledger refresh: **2026-10-06 22:11 UTC**. This is an operational snapshot, 
 | 1311 | Capstone, second step: add the families merged since the first union | Merged after review/checks | 1312: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1311.md) |
 | 1313 | Capstone: ONE fetched dispatcher through the decoder chain | Committed candidate; review/integration pending | 1314: Unresolved after agent rounds; not accepted | [task](lanes/1313.md) |
 | 1315 | Memory-operand addressing forms for rotates, carry forms and sign/xchg | Merged after review/checks | 1316: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1315.md) |
-| 1317 | Memory-operand addressing forms for bit test and bit scan | Committed candidate; review/integration pending | 1318: scheduled | [task](lanes/1317.md) |
+| 1317 | Memory-operand addressing forms for bit test and bit scan | Agent working | 1318: Committed candidate; review/integration pending | [task](lanes/1317.md) |
 | 1319 | 8-bit operand forms across the new integer families | Merged after review/checks | 1320: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1319.md) |
 | 1321 | Translation: large pages, SMEP/SMAP per access, permission caching | Merged after review/checks | 1322: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1321.md) |
 | 1323 | valX86 decode coverage over the capstone decoder chain | Merged after review/checks | 1324: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1323.md) |
@@ -730,8 +730,8 @@ Last ledger refresh: **2026-10-06 22:11 UTC**. This is an operational snapshot, 
 | 1343 | Opcode ledger: two-byte opcodes 0F 40-7F | Merged after review/checks | 1344: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1343.md) |
 | 1345 | Opcode ledger: two-byte opcodes 0F 80-BF | Merged after review/checks | 1346: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1345.md) |
 | 1347 | Opcode ledger: two-byte opcodes 0F C0-FF, plus 0F 38 / 0F 3A | Merged after review/checks | 1348: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1347.md) |
-| 1349 | Integer ALU in every width and form | Committed candidate; review/integration pending | 1350: scheduled | [task](lanes/1349.md) |
-| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Agent working | 1352: Committed candidate; review/integration pending; integration gate rejected; repair/re-review required | [task](lanes/1351.md) |
+| 1349 | Integer ALU in every width and form | Committed candidate; review/integration pending | 1350: Unresolved after agent rounds; not accepted | [task](lanes/1349.md) |
+| 1351 | MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions | Merged after review/checks | 1352: Committed candidate; review/integration pending | [report](messung/muse/MUSE-REPORT-1351.md) |
 | 1353 | Zero and sign extension, byte swap and the shift/rotate groups | Merged after review/checks | 1354: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1353.md) |
 | 1355 | SSE/SSE2 moves, loads, stores and unpack | Committed candidate; review/integration pending | 1356: Committed candidate; review/integration pending | [task](lanes/1355.md) |
 | 1357 | SSE2 packed integer arithmetic, logic, compare, shuffle and shifts | Committed candidate; review/integration pending | 1358: Committed candidate; review/integration pending | [task](lanes/1357.md) |
@@ -748,13 +748,13 @@ Last ledger refresh: **2026-10-06 22:11 UTC**. This is an operational snapshot, 
 | 1379 | SSE4.2: string compares, PCMPGTQ and CRC32 | Agent working | 1380: scheduled | [task](lanes/1379.md) |
 | 1381 | SSE4.1 rows that SseFourOne left open | Committed candidate; review/integration pending | 1382: Unresolved after agent rounds; not accepted | [task](lanes/1381.md) |
 | 1383 | Shift and rotate on memory operands and 8-bit high registers | Committed candidate; review/integration pending | 1384: scheduled | [task](lanes/1383.md) |
-| 1385 | GabbroV bridge: the shared-atomic rely | Committed candidate; review/integration pending | 1386: scheduled | [task](lanes/1385.md) |
-| 1387 | GabbroV bridge: StartPflicht without the Initially assumption | Committed candidate; review/integration pending | 1388: scheduled | [task](lanes/1387.md) |
+| 1385 | GabbroV bridge: the shared-atomic rely | Agent working | 1386: Committed candidate; review/integration pending | [task](lanes/1385.md) |
+| 1387 | GabbroV bridge: StartPflicht without the Initially assumption | Agent working | 1388: Committed candidate; review/integration pending | [task](lanes/1387.md) |
 | 1389 | GabbroV bridge: widen the elaborated fragment | Incomplete; preserved | 1390: scheduled | [task](lanes/1389.md) |
 | 1391 | GabbroV: a traversal index is a member of its domain | Committed candidate; review/integration pending | 1392: scheduled | [task](lanes/1391.md) |
 | 1393 | GabbroV: does a tree declaration imply parent consistency? | Committed candidate; review/integration pending | 1394: scheduled | [task](lanes/1393.md) |
 | 1395 | Language gaps: what cannot be written today | Merged after review/checks | 1396: Merged after review/checks | [report](messung/muse/MUSE-REPORT-1395.md) |
-| 1397 | Language gaps against the Lean model (second run) | Agent working | 1398: scheduled | [task](lanes/1397.md) |
+| 1397 | Language gaps against the Lean model (second run) | Committed candidate; review/integration pending | 1398: Committed candidate; review/integration pending | [task](lanes/1397.md) |
 
 Every merged helper retains its own `CUTS` and report. An ACCEPT verdict covers the
 exact delivered claim; it never certifies the unfinished compiler or whole binary.
@@ -1833,6 +1833,7 @@ exact delivered claim; it never certifies the unfinished compiler or whole binar
 - 2026-10-06: lane **1395**, Language gaps: what cannot be written today, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1395.md). <!-- x86-merged:1395 -->
 - 2026-10-06: lane **1396**, Independent exact review of 1395, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1396.md). <!-- x86-merged:1396 -->
 - 2026-10-06: integration of candidate(s) [1351] failed the local proof/build gate after independent review 1352; no failing candidate was merged. Author repair and a fresh exact-commit review are required. <!-- x86-gate-rejection:1352 -->
+- 2026-10-06: lane **1351**, MOV, TEST, LEA, PUSH/POP, NOP and the frame instructions, integrated after its applicable review and checks. Recorded with the integration commit containing this entry. [Evidence](messung/muse/MUSE-REPORT-1351.md). <!-- x86-merged:1351 -->
 <!-- X86-HISTORY -->
 
 ## Detailed references
