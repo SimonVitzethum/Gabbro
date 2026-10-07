@@ -8,3 +8,6 @@ import Arm.Mem.Axiomatic
 import Arm.Mem.Atomics
 import Arm.Mem.Model
 import Arm.Mem.IFetch
+import Arm.Lit.Prog
+import Arm.Lit.Enumerate
+import Arm.Lit.Tests
