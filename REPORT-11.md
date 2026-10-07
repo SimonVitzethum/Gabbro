@@ -85,6 +85,33 @@ Sail code — bit 0 of `0b1110` is clear, so no inversion),
 
 `./arm-bau`: `Build completed successfully (12 jobs)`, exit 0, 0 error lines.
 
+## Follow-up task 1 — concrete interpreter + test vectors (in progress)
+
+`arm/Arm/Isa/Interp.lean` (wired into `arm/Arm.lean`): a `Machine` record
+(X0-X30 + SP as `BitVec 64`, PC, NZCV, V0-V31 as `BitVec 128`, byte memory as
+an association list with little-endian 1/2/4/8/16-byte `loadLE`/`storeLE`) and
+`run : Eff α → Machine → Except Exc (α × Machine)` (barriers ignored, `raise`
+returns the exception; fuel-based, out-of-fuel is harness error 999).
+New names: `Machine setNth getX setX getV setV getSys setSys ldByte stByte
+loadLE storeLE runF run Op execOp Vec checkSP checkNZCV checkVec blank withX
+withNZCV withPC withSP vecsA` plus vectors `vAddImm vAddsOvf vSubsZero vAdcWrap
+vAdd32Zero vAddSP` (each `_ok` by `decide` plus a planted-wrong `= false`).
+Finding: an `&& match` chain in `checkVec` parsed so the NZCV check was
+vacuous (planted-wrong vectors passed); restructured into `checkSP`/`checkNZCV`
+helpers, now genuinely failing. Still open: vectors for logical, movewide,
+shifts, bitfield, extr, counts, mul/div, cond, mem/barrier/raise; `#print
+axioms` + CUTS refresh for `Interp.lean`.
+
+## Follow-up task 2 — decode coverage + remainder port (open)
+
+(1) List in this report every A64 data-processing encoding class of the Sail
+decode (`__DecodeA64_DataProcImm` / `__DecodeA64_DataProcReg` in
+`instrs64.sail`) not ported, with file:line, classified ported / not ported /
+refused-by-design (PAC/MTE out of scope + why). (2) Port the non-PAC/MTE
+remainder (CFINV, RMIF, SETF8/16, CRC32/CRC32C, verify CCMP-imm/SDIV/UDIV/
+ADR/ADRP/CLZ/CLS/RBIT/REV already covered), same standard (`-- Sail:
+file:line`, vectors + planted-wrong, commit per green step).
+
 ## Open / CUTS
 
 - The 24 `Eff` wrappers are unproved plumbing over `decide`-checked cores; no
