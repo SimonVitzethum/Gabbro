@@ -56,3 +56,11 @@ archived as legacy evidence: git tag `archiv/c-emitter-2026-10-07` and a tarball
 examples and the AArch64 compatibility work (Sonnet C) still build on it; the direct AArch64
 compiler replaces it as the target, and nothing new is added to the C backend beyond ARM
 compatibility fixes.
+
+## Direction fixed (Simon, 2026-10-07): C backend deprecated
+
+The emitted C11 backend is DEPRECATED. The planned path is the AArch64 Gabbro **native compiler**
+with **translation validation** (source -> model -> final AArch64 bytes, checked in Lean). No new
+work goes into the C backend (no new C templates, no C-side audits); known C-backend defects are
+recorded as legacy (for example the page-return helper wrap, `messung/ARM-KOMPATIBILITAET-C.md`
+F2). The C emitter archive above is the reference for its last state.
