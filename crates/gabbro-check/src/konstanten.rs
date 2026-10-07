@@ -606,6 +606,18 @@ pub fn pass(tree: &Programm, absagen: &mut Absagen) {
                 check_const(&env, &index, &rein, module, k, absagen);
             }
         }
+        // A `static` array with an initialiser list is held like a const table.
+        if let ItemArt::Statisch(st) = &item.art {
+            if matches!(&st.wert.art, ExprArt::ArrayLit(_)) {
+                let k = KonstDecl {
+                    oeffentlich: st.oeffentlich,
+                    name: st.name.clone(),
+                    typ: st.typ.clone(),
+                    wert: st.wert.clone(),
+                };
+                check_const(&env, &index, &rein, module, &k, absagen);
+            }
+        }
     });
 }
 

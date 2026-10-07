@@ -1,0 +1,7 @@
+-- erwartet: K191
+-- **Initialiser list of a `static` array: the wrong length.** Three elements for a `[u32; 4]`.
+module gift::statische_liste_laenge {
+
+static mut T : [u32; 4] = [1, 2, 3];
+
+}

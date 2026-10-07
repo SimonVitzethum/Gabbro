@@ -1,0 +1,14 @@
+-- erwartet: N579
+-- **A whole-array copy keeps every element**: the source element range `0 .. 1000` does not
+-- lie inside the target's `0 .. 255`, so the copy could store 1000 into a cell that
+-- promises 255 at most (SPRACHE-EFFIZIENZ #16).
+module gift::feldkopie_bereich {
+
+static mut ENG : [u32 in 0 .. 255; 4] = 0;
+static mut WEIT : [u32 in 0 .. 1000; 4] = 0;
+
+impl fn kopiere() effects { reads WEIT, writes ENG } costs <= 8 ops {
+    ENG = WEIT;
+}
+
+}

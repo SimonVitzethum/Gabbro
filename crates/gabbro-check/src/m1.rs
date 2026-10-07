@@ -1999,7 +1999,49 @@ impl<'a> Pruefer<'a> {
                 // It reports and does not return (the `N270` shape): the overlap
                 // still gets its range comparison, so a second fault there
                 // keeps its own refusal.
-                if matches!(ziel.durchgreifen(), Typ::Feld { .. }) {
+                let feld_kopie = if matches!(ziel.durchgreifen(), Typ::Feld { .. })
+                    && z.op == ZuwOp::Setzt
+                    && matches!(&z.wert.art, ExprArt::Ort(_))
+                {
+                    // **A whole-array COPY (SPRACHE-EFFIZIENZ #16).** Admitted when the source
+                    // is an array place of the SAME shape (length at every depth) and every
+                    // source element range lies inside the target's; the emitter writes one
+                    // overlap-safe `memmove`. Anything else keeps `N287`; a wider source
+                    // element range is `N579`.
+                    let q = self.u.typ_von_ort(
+                        &self.modul,
+                        match &z.wert.art {
+                            ExprArt::Ort(o) => o,
+                            _ => unreachable!(),
+                        },
+                        &lage.lokal,
+                    );
+                    feld_kopie_urteil(&q, &ziel)
+                } else {
+                    FeldKopie::Nein
+                };
+                if let FeldKopie::BereichZuWeit = feld_kopie {
+                    self.absagen.schiebe(
+                        Absage::fehler(
+                            "N579",
+                            z.wert.span,
+                            format!(
+                                "`{}` is copied into `{}` but holds elements outside the \
+                                 target's element range",
+                                match &z.wert.art { ExprArt::Ort(o) => o.text(), _ => String::new() },
+                                z.ziel.text()
+                            ),
+                        )
+                        .mit_notiz(
+                            "a whole-array copy keeps every element, so the source element \
+                             range must lie inside the target's; copy element by element \
+                             with a `narrow` where the range is wider",
+                        ),
+                    );
+                }
+                if matches!(ziel.durchgreifen(), Typ::Feld { .. })
+                    && !matches!(feld_kopie, FeldKopie::Ja | FeldKopie::BereichZuWeit)
+                {
                     self.absagen.schiebe(
                         Absage::fehler(
                             "N287",
@@ -6506,7 +6548,20 @@ impl<'a> Pruefer<'a> {
                 }
                 for sx in &o.suffixe {
                     if let OrtSuffix::Index(x) = sx {
-                        veraltet |= self.traeger_im_ausdruck(x, lage, aus);
+                        // **Selector carriers do not taint the value (SPRACHE-EFFIZIENZ #17).**
+                        // `let b = RING[e]` holds the CONTENT of the cell `e` selected; a
+                        // later write to the carrier `e` came from changes which cell the
+                        // NEXT read would pick, not what `b` holds -- `b` is a snapshot of the
+                        // old cell, exactly as before the write. The content carrier (the
+                        // place's own basis, added above) still taints. When the selector
+                        // mentions an EXPIRED local the old behaviour stands in full: the
+                        // value was then read at a stale index and keeps those sources.
+                        let mut waehler = std::collections::HashSet::new();
+                        let alt = self.traeger_im_ausdruck(x, lage, &mut waehler);
+                        if alt {
+                            aus.extend(waehler);
+                        }
+                        veraltet |= alt;
                     }
                 }
             }
@@ -9199,6 +9254,48 @@ fn gestalt_grund(quelle: &Typ, ziel: &Typ) -> Option<String> {
 ///
 /// **`None` stays the honest exit.** `Unbekannt` and `never` have no shape, and neither has
 /// a range -- so both loops below simply do not run. *W10: not refused is not confirmed.*
+/// What a whole-array assignment `ziel = quelle` is (SPRACHE-EFFIZIENZ #16).
+enum FeldKopie {
+    /// Not a copy of two same-shape arrays: `N287` as before.
+    Nein,
+    /// Same shape, every source element range inside the target's.
+    Ja,
+    /// Same shape, but some source element range reaches outside the target's: `N579`.
+    BereichZuWeit,
+}
+
+/// Same-shape comparison of two array types: length at every depth, the same machine word
+/// (width and signedness) or `bool` at the leaf, and the source range inside the target's.
+fn feld_kopie_urteil(quelle: &Typ, ziel: &Typ) -> FeldKopie {
+    match (ohne_namen(quelle), ohne_namen(ziel)) {
+        (Typ::Feld { element: a, laenge: la }, Typ::Feld { element: b, laenge: lb }) => {
+            if la.is_none() || la != lb {
+                return FeldKopie::Nein;
+            }
+            match (ohne_namen(a), ohne_namen(b)) {
+                (Typ::Feld { .. }, Typ::Feld { .. }) => feld_kopie_urteil(a, b),
+                (Typ::Wahrheit, Typ::Wahrheit) => FeldKopie::Ja,
+                (qa, zb) => match (qa.bereich(), zb.bereich()) {
+                    (Some(x), Some(y))
+                        if x.breite == y.breite
+                            && x.vorzeichen == y.vorzeichen
+                            && matches!(qa, Typ::Ganzzahl(_))
+                            && matches!(zb, Typ::Ganzzahl(_)) =>
+                    {
+                        if x.min >= y.min && x.max <= y.max {
+                            FeldKopie::Ja
+                        } else {
+                            FeldKopie::BereichZuWeit
+                        }
+                    }
+                    _ => FeldKopie::Nein,
+                },
+            }
+        }
+        _ => FeldKopie::Nein,
+    }
+}
+
 fn darstellung_grund(quelle: &Typ, ziel: &Typ) -> Option<String> {
     if let Some(g) = gestalt_grund(quelle, ziel) {
         return Some(g);

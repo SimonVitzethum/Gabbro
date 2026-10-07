@@ -1,0 +1,20 @@
+-- 185 -- a ring buffer: popping reads a cell, then advances the read position.
+--
+-- `hole` binds the cell's content (`b`) and THEN writes `ENDE`, the carrier that selected
+-- the cell. Before the M147 selector refinement (SPRACHE-EFFIZIENZ #17) this fell as
+-- "`b` may be stale": the selector's carrier was counted as a source of `b`. `b` is a
+-- snapshot of the cell that was selected; only a write to `RING` itself can outdate it
+-- (`beispiele/gift/1404`).
+module beispiel185 {
+
+static mut RING : [u8; 256] = 0;
+static mut ENDE : u32 in 0 ..< 256 = 0;
+
+impl fn hole() -> u8 effects { reads ENDE, writes ENDE, reads RING } costs <= 10 ops {
+    let e : u32 in 0 ..< 256 = ENDE;
+    let b : u8 = RING[e];
+    ENDE = (e + 1) % 256;
+    return b;
+}
+
+}

@@ -1,0 +1,12 @@
+-- erwartet: N287
+-- **A whole-array copy between arrays of different length stays refused** (`N287`).
+module gift::feldkopie_laenge {
+
+static mut KURZ : [u32; 3] = 0;
+static mut LANG : [u32; 4] = 0;
+
+impl fn kopiere() effects { reads KURZ, writes LANG } costs <= 8 ops {
+    LANG = KURZ;
+}
+
+}

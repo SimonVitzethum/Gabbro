@@ -1041,7 +1041,15 @@ impl<'a> Parser<'a> {
         self.erwarte_z(Z::Kolon)?;
         let typ = self.typeexpr()?;
         self.erwarte_z(Z::Gleich)?;
-        let wert = self.expr()?;
+        // **An initialiser list for a `static` array (SPRACHE-EFFIZIENZ #15).** Before, only
+        // `const` read `[`; a mutable table with a non-zero start needed an init loop.
+        // The elements are held by the same `konstanten.rs` pass as a const table (every
+        // element a translation-time value inside its range, `N285`/`N286`/`K190`/`K194`).
+        let wert = if self.ist_z(Z::EckAuf) {
+            self.arraylit()?
+        } else {
+            self.expr()?
+        };
         let ausrichtung = if self.friss_kw(Kw::Aligned) {
             Some(self.expr()?)
         } else {

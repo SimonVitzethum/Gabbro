@@ -162,10 +162,11 @@ fn m103_fires_on_the_outer_dimension() {
 fn n287_nested_row_store_falls_alone() {
     let src = unit(
         "static mut M : [[u32; 4]; 3] = 0;\n\
+         static mut K : [[u32; 3]; 3] = 0;\n\
          impl fn tausche(i : u32 in 0 ..< 3, j : u32 in 0 ..< 3) \
-             effects { reads M, writes M } costs <= 8 ops { M[i] = M[j]; }\n",
+             effects { reads M, writes K } costs <= 8 ops { K[i] = M[j]; }\n",
     );
-    assert_eq!(errors(&src), vec!["N287"], "a row is an array, not a value");
+    assert_eq!(errors(&src), vec!["N287"], "rows of different length stay refused");
 }
 
 #[test]
@@ -183,11 +184,11 @@ fn n287_flat_whole_array_store_falls_alone() {
     // The one-dimensional twin: the same silence, one lane older (`B = A`
     // over two `[u32; 4]` checked clean beside the nested row above).
     let src = unit(
-        "static mut A : [u32; 4] = 0;\n\
+        "static mut A : [u32; 3] = 0;\n\
          static mut B : [u32; 4] = 0;\n\
          impl fn kopiere() effects { reads A, writes B } costs <= 4 ops { B = A; }\n",
     );
-    assert_eq!(errors(&src), vec!["N287"], "C has none at any depth");
+    assert_eq!(errors(&src), vec!["N287"], "different lengths stay refused");
 }
 
 #[test]

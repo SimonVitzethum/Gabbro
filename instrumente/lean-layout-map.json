@@ -595,6 +595,7 @@
  "Grammatik.Zertifikat.G174_tor_im_modell": "Grammatik.Zertifikat.Reihe01.G174_tor_im_modell",
  "Grammatik.Zertifikat.G181_gate_at_top_level": "Grammatik.Zertifikat.Reihe01.G181_gate_at_top_level",
  "Grammatik.Zertifikat.G182_fallible_gate": "Grammatik.Zertifikat.Reihe01.G182_fallible_gate",
+ "Grammatik.Zertifikat.G187_bool_statisch": "Grammatik.Zertifikat.Reihe01.G187_bool_statisch",
  "Grammatik.Zertifikat.G219_unaeres_minus": "Grammatik.Zertifikat.Reihe02.G219_unaeres_minus",
  "Grammatik.Zertifikat.G34_markierter_wert": "Grammatik.Zertifikat.Reihe00.G34_markierter_wert",
  "Grammatik.Zertifikat.G414_tabellenspeicher_heisst_so": "Grammatik.Zertifikat.Reihe04.G414_tabellenspeicher_heisst_so",
