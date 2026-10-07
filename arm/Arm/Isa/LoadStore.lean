@@ -208,6 +208,66 @@ theorem exLitSw_notZero :
     (runEff 60 exLitSw sLit).map Prod.fst
       ≠ some (BitVec.ofNat 64 2864434397) := by decide
 
+/-- General-register pair load/store (`LDP`/`STP`, `LDNP`/`STNP`) with a
+    scaled signed immediate, in offset, pre-index and post-index mode via
+    `postindex`/`wback` exactly as for `ldStSingle`. `datasize` is 32 or
+    64 (SIMD/FP pairs are out of scope, CUTS). Values are two consecutive
+    little-endian single copies, which is what Sail does without the LSE2
+    joined-pair path; with LSE2 Sail emits one joined access where this
+    model emits two single events of identical value (CUTS: event
+    granularity for the multicore consumer).
+    -- Sail: instrs64.sail:30833 (offset form), :31505 (post-index form). -/
+def ldpStp (cfg : MemCfg) (isLoad : Bool) (datasize : Nat)
+    (n : Nat) (off : Int) (postindex wback : Bool)
+    (t t2 : Nat) : Eff Unit := do
+  if n == 31 then checkSP else pure ()
+  let base ← rdBase n
+  let addr := if postindex then base else addOff base off
+  let hi := addOff addr (Int.ofNat (datasize / 8))
+  if isLoad then
+    let v1 ← memReadEff cfg addr (datasize / 8) .plain false
+    let v2 ← memReadEff cfg hi (datasize / 8) .plain false
+    wrBase t (BitVec.ofNat 64 (v1 % 2 ^ datasize))
+    wrBase t2 (BitVec.ofNat 64 (v2 % 2 ^ datasize))
+  else
+    let r1 ← rdBase t
+    let r2 ← rdBase t2
+    memWriteEff cfg addr (datasize / 8) .plain false (r1.toNat % 2 ^ datasize)
+    memWriteEff cfg hi (datasize / 8) .plain false (r2.toNat % 2 ^ datasize)
+  if wback then
+    wrBase n (if postindex then addOff base off else addr)
+  else pure ()
+
+/-- Fixture: X0/X1 hold two distinct words, X2 holds base 128. -/
+def gprPair : Nat → BitVec 64 := upd (upd (upd s0.regs.gpr 0 (BitVec.ofNat 64 1229782938247303441)) 1 (BitVec.ofNat 64 2459565876494606882)) 2 (BitVec.ofNat 64 128)
+
+def sPair : State := { s0 with regs := { s0.regs with gpr := gprPair } }
+
+/-- `STP X0, X1, [X2]` then `LDP X3, X4, [X2]`: both words round-trip. -/
+def exStpLdp : Eff (BitVec 64 × BitVec 64) := do
+  ldpStp cfgNoFault false 64 2 0 false false 0 1
+  ldpStp cfgNoFault true 64 2 0 false false 3 4
+  let a ← rdBase 3
+  let b ← rdBase 4
+  pure (a, b)
+
+theorem exStpLdp_ok :
+    (runEff 80 exStpLdp sPair).map Prod.fst
+      = some (BitVec.ofNat 64 1229782938247303441, BitVec.ofNat 64 2459565876494606882) := by decide
+
+/-- Planted wrong case: the first register loads from the LOW address. -/
+theorem exStpLdp_notSwapped :
+    (runEff 80 exStpLdp sPair).map Prod.fst
+      ≠ some (BitVec.ofNat 64 2459565876494606882, BitVec.ofNat 64 1229782938247303441) := by decide
+
+/-- `STP X0, X1, [X2, #16]!`: pre-index writes the base back. -/
+def exStpPre : Eff (BitVec 64) := do
+  ldpStp cfgNoFault false 64 2 16 false true 0 1
+  rdBase 2
+
+theorem exStpPre_ok :
+    (runEff 80 exStpPre sPair).map Prod.fst = some (BitVec.ofNat 64 144) := by decide
+
 end Arm
 
 /-
