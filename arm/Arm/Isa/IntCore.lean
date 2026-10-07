@@ -120,6 +120,83 @@ theorem condHolds_al : condHolds 0 15 = true := by decide
 /-- Planted wrong case: EQ with Z clear is not true. -/
 theorem condHolds_wrong : condHolds 0 0 ≠ true := by decide
 
+/-- Shift kinds (Sail `ShiftType`). -/
+-- Sail: v8_base.sail `DecodeShift` (00 LSL, 01 LSR, 10 ASR, 11 ROR).
+inductive ShiftTy where
+  | lsl | lsr | asr | ror
+  deriving DecidableEq, Repr
+
+/-- Decode the 2-bit shift field; `0b11` (ROR) is refused here. -/
+-- Sail: instrs64.sail `decode_add_addsub_shift` (`if shift == 0b11 then Undefined`)
+-- and v8_base.sail `DecodeShift`. The ROR-typed shifts keep their own decoder.
+def decodeShiftNoRor (s : Nat) : Option ShiftTy :=
+  match s with
+  | 0 => some .lsl
+  | 1 => some .lsr
+  | 2 => some .asr
+  | _ => none
+
+/-- Decode any 2-bit shift field (Sail `DecodeShift`, total). -/
+-- Sail: v8_base.sail `DecodeShift`.
+def decodeShift (s : Nat) : ShiftTy :=
+  match s % 4 with
+  | 0 => .lsl
+  | 1 => .lsr
+  | 2 => .asr
+  | _ => .ror
+
+/-- Logical shift left, truncated to `w` bits (Sail `LSL`). -/
+-- Sail: builtins.sail `LSL_C`/`sail_shiftleft`.
+def shlW (w v a : Nat) : Nat := (v * pow2 a) % pow2 w
+
+/-- Logical shift right (Sail `LSR`). -/
+-- Sail: builtins.sail `LSR_C`/`sail_shiftright`.
+def shrW (v a : Nat) : Nat := v / pow2 a
+
+/-- Arithmetic shift right with sign fill (Sail `ASR`). -/
+-- Sail: builtins.sail `ASR_C`/`sail_arith_shiftright`.
+def asrW (w v a : Nat) : Nat :=
+  let k := if a < w then a else w
+  let low := v / pow2 a
+  let fill := if pow2 (w - 1) ≤ v % pow2 w then pow2 w - pow2 (w - k) else 0
+  low + fill
+
+/-- Rotate right (Sail `ROR`: no-op for shift 0, else `LSR | LSL`). -/
+-- Sail: builtins.sail `ROR`.
+def rorW (w v a : Nat) : Nat :=
+  if w = 0 then 0
+  else
+    let m := a % w
+    (v / pow2 m + v * pow2 (w - m)) % pow2 w
+
+/-- Sail `ShiftReg`: shift `v` (already `w` bits) by `a` with kind `st`. -/
+-- Sail: v8_base.sail:35851 (`ShiftReg (reg, shiftype, amount, N)`).
+def shiftReg (w v : Nat) (st : ShiftTy) (a : Nat) : Nat :=
+  match st with
+  | .lsl => shlW w v a
+  | .lsr => shrW v a
+  | .asr => asrW w v a
+  | .ror => rorW w v a
+
+/-- `LSL #2` of 1 in 32 bits is 4. -/
+-- Sail: builtins.sail `sail_shiftleft`.
+theorem shiftReg_lsl : shiftReg 32 1 .lsl 2 = 4 := by decide
+
+/-- `LSR #1` of 3 is 1. -/
+-- Sail: builtins.sail `sail_shiftright`.
+theorem shiftReg_lsr : shiftReg 32 3 .lsr 1 = 1 := by decide
+
+/-- `ASR #1` of `0x80000000` keeps the sign: `0xC0000000`. -/
+-- Sail: builtins.sail `sail_arith_shiftright`.
+theorem shiftReg_asr : shiftReg 32 0x80000000 .asr 1 = 0xC0000000 := by decide
+
+/-- `ROR #8` of `0x12345678` is `0x78123456`. -/
+-- Sail: builtins.sail `ROR`.
+theorem shiftReg_ror : shiftReg 32 0x12345678 .ror 8 = 0x78123456 := by decide
+
+/-- Planted wrong case: `LSL #2` of 1 is not 8. -/
+theorem shiftReg_wrong : shiftReg 32 1 .lsl 2 ≠ 8 := by decide
+
 end Arm.Int
 
 /-
