@@ -32,10 +32,64 @@ def Trace.po (t : Trace) : Rel :=
     (List.range ids.length).filterMap fun j =>
       if i < j then some (ids[i]!, ids[j]!) else none
 
+/-- Run one sequential `Eff` tree on `core`, replaying its Sail memory
+    effects as events: `rdMem` becomes a read of the supplied value
+    (`sup` answers the n-th read), `wrMem` a write, `bar` a barrier.
+    Register/system reads answer zero (no event); `raise` ends the run.
+    Fuel bounds the run; `next` is the first fresh event id, `nr` counts
+    consumed reads. -/
+def runEff : Nat → Eff Unit → CoreId → Nat → Nat → (Nat → Nat) → Option (List Ev × Nat × Nat)
+  | 0, _, _, _, _, _ => none
+  | f + 1, e, core, next, nr, sup =>
+    match e with
+    | .ret _ => some ([], next, nr)
+    | .rdX _ k => runEff f (k 0) core next nr sup
+    | .wrX _ _ k => runEff f k core next nr sup
+    | .rdV _ k => runEff f (k 0) core next nr sup
+    | .wrV _ _ k => runEff f k core next nr sup
+    | .rdPC k => runEff f (k 0) core next nr sup
+    | .wrPC _ k => runEff f k core next nr sup
+    | .rdNZCV k => runEff f (k 0) core next nr sup
+    | .wrNZCV _ k => runEff f k core next nr sup
+    | .rdSys _ k => runEff f (k 0) core next nr sup
+    | .wrSys _ _ k => runEff f k core next nr sup
+    | .rdMem a k =>
+      let v := sup nr
+      match runEff f (k v) core (next + 1) (nr + 1) sup with
+      | none => none
+      | some (evs, nx, nrr) =>
+        some ({ id := next, core, kind := .read a, val := v } :: evs, nx, nrr)
+    | .wrMem a v k =>
+      match runEff f k core (next + 1) nr sup with
+      | none => none
+      | some (evs, nx, nrr) =>
+        some ({ id := next, core, kind := .write a, val := v } :: evs, nx, nrr)
+    | .bar b k =>
+      match runEff f k core (next + 1) nr sup with
+      | none => none
+      | some (evs, nx, nrr) =>
+        some ({ id := next, core, kind := .barrier b, val := 0 } :: evs, nx, nrr)
+    | .raise _ => some ([], next, nr)
+
+/-- Build one core's run from an `Eff` tree: `fuel` bounds the run, `next`
+    is the first fresh event id, `sup` answers the n-th read.
+    Dependency edges start empty; attach them with `Trace.withDeps`. -/
+def Trace.ofEff (p : Eff Unit) (core next : Nat) (sup : Nat → Nat) (fuel : Nat) : Option Trace :=
+  match runEff fuel p core next 0 sup with
+  | none => none
+  | some (evs, _, _) => some { core, evs, addr := [], data := [], ctrl := [] }
+
+/-- Attach caller-reported dependency edges to a run. The edges are checked
+    by `Exec.wf`, not here: each must start at a read and end po-later. -/
+def Trace.withDeps (t : Trace) (a d c : Rel) : Trace :=
+  { t with addr := a, data := d, ctrl := c }
+
 end Arm
 
 /-
-CUTS: skeleton only. `runEff` (Eff tree against read supply), `Trace.ofEff`
-and dependency smart constructors are NOT yet defined; `Exec.ofTraces` lives
-in `Arm/Mem/Exec.lean` (agent 06 owns both files).
+CUTS: `runEff` replays memory effects as events; register/system reads answer
+zero without an event (their values are core-local, invisible to the memory
+model). Intra-instruction dependency synthesis (which read feeds which later
+access) is NOT done here: `ofEff` leaves edges empty and `withDeps` attaches
+caller-reported ones. `Exec.ofTraces` lives in `Arm/Mem/Exec.lean`.
 -/
