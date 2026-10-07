@@ -68,6 +68,32 @@ theorem sb_allowed : consistent noParts sbAllowed = true := by decide
 theorem sb_forbidden_allowed_without_barriers :
     consistent noParts sbForbidden = true := by decide
 
+/-- Load buffering, classic outcome: both reads see the initial zeros. -/
+def lbAllowed : Exec :=
+  { evs := [⟨0, 0, .read (acc 0#64), 0⟩, ⟨1, 0, .write (acc 8#64), 1⟩,
+            ⟨2, 1, .read (acc 8#64), 0⟩, ⟨3, 1, .write (acc 0#64), 1⟩,
+            ⟨4, 9, .write (acc 0#64), 0⟩, ⟨5, 9, .write (acc 8#64), 0⟩]
+    po := [(0, 1), (2, 3)], addr := [], data := [], ctrl := []
+    rf := [(4, 0), (5, 2)], co := [(4, 3), (5, 1)], rmw := [] }
+
+/-- Load buffering, suspicious outcome: each read sees the other core's
+    write. Allowed for PLAIN accesses (no dependency); the same outcome with
+    address dependencies is `xLbAddr` in `Axiomatic.lean` and is inconsistent
+    via `dob` alone — no barrier needed, none can repair it. -/
+def lbForbidden : Exec :=
+  { evs := [⟨0, 0, .read (acc 0#64), 1⟩, ⟨1, 0, .write (acc 8#64), 1⟩,
+            ⟨2, 1, .read (acc 8#64), 1⟩, ⟨3, 1, .write (acc 0#64), 1⟩,
+            ⟨4, 9, .write (acc 0#64), 0⟩, ⟨5, 9, .write (acc 8#64), 0⟩]
+    po := [(0, 1), (2, 3)], addr := [], data := [], ctrl := []
+    rf := [(3, 0), (1, 2)], co := [(4, 3), (5, 1)], rmw := [] }
+
+/-- LB classic outcome is consistent. -/
+theorem lb_allowed : consistent noParts lbAllowed = true := by decide
+
+/-- LB suspicious outcome is consistent for PLAIN accesses. -/
+theorem lb_forbidden_allowed_without_dependencies :
+    consistent noParts lbForbidden = true := by decide
+
 end Arm
 
 /-
