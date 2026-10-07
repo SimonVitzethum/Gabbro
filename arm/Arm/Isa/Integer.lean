@@ -187,10 +187,94 @@ def execLogicalShift (d n m w : Nat) (invert : Bool) (op : LogicOp) (setflags : 
     wrXn d w r
   else wrXn d w r
 
+/-- LSLV/LSRV/ASRV/RORV: shift `Xn` by `Xm mod w`. -/
+-- Sail: instrs64.sail:2194 (`execute ... shift_variable`).
+def execShiftVar (d n m w : Nat) (st : ShiftTy) : Eff Unit := do
+  let v ← rdXn n w
+  let s ← rdXn m w
+  wrXn d w (shiftReg w v st (s % w))
+
+/-- LSLV shape: `1 LSL (65 mod 64 = 1)` is 2. -/
+-- Sail: instrs64.sail:2194.
+theorem shiftVar_lslv : shiftReg 64 1 .lsl (65 % 64) = 2 := by decide
+
+/-- RORV shape: `ROR #8` of `0x12345678`. -/
+-- Sail: instrs64.sail:2194.
+theorem shiftVar_rorv : shiftReg 32 0x12345678 .ror (8 % 32) = 0x78123456 := by
+  decide
+
+/-- Planted wrong case: the masked amount matters, `65 mod 64` is not 65. -/
+theorem shiftVar_wrong : shiftReg 64 1 .lsl (65 % 64) ≠ 1 := by decide
+
+/-- Movewide ops (Sail `MoveWideOp`): N = NOT, Z = zero, K = keep. -/
+-- Sail: instrs64.sail:38723 (`MoveWideOp_N/Z/K`; opc `01` is UNDEFINED at decode).
+inductive MovKind where
+  | n | z | k
+  deriving DecidableEq, Repr
+
+/-- Shared core of MOVZ/MOVN/MOVK: place `imm` at `pos`, keep or clear the rest. -/
+-- Sail: instrs64.sail:38723 (`execute ... insert_movewide`).
+def movWidePure (w old imm : Nat) (mk : MovKind) (pos : Nat) : Nat :=
+  let base := match mk with | .k => old % pow2 w | _ => 0
+  let cleared := base - base / pow2 pos % pow2 16 * pow2 pos
+  let r := cleared + (imm % pow2 16) * pow2 pos
+  match mk with | .n => pow2 w - 1 - r | _ => r
+
+/-- `MOVZ W0, #0x1234, LSL #16` writes `0x12340000`. -/
+-- Sail: instrs64.sail:38723.
+theorem movWidePure_z : movWidePure 32 0 0x1234 .z 16 = 0x12340000 := by decide
+
+/-- `MOVN X0, #0xFFFF` writes `0xFFFFFFFFFFFF0000`. -/
+-- Sail: instrs64.sail:38723.
+theorem movWidePure_n : movWidePure 64 0 0xFFFF .n 0 = 0xFFFFFFFFFFFF0000 := by
+  decide
+
+/-- `MOVK` keeps the other three halfwords. -/
+-- Sail: instrs64.sail:38723.
+theorem movWidePure_k : movWidePure 32 0xAAAABBBB 0x1234 .k 0 = 0xAAAABBBB - 0xBBBB + 0x1234 := by
+  decide
+
+/-- Planted wrong case: MOVZ clears the upper halfword. -/
+theorem movWidePure_wrong : movWidePure 32 0xFFFFFFFF 0x1234 .z 0 ≠ 0xFFFFFFFF := by
+  decide
+
+/-- MOVZ/MOVN/MOVK: `pos` is the decode-built `hw * 16`, `imm` the 16-bit field. -/
+-- Sail: instrs64.sail:38723. Always writes X (even `d = 31`).
+def execMovWide (d w imm : Nat) (mk : MovKind) (pos : Nat) : Eff Unit := do
+  let old ← rdXn d w
+  wrXn d w (movWidePure w old imm mk pos)
+
+/-- ADR/ADRP core: `base` is PC (page-aligned for ADRP) plus the signed,
+    decode-extended offset `imm` (already `mod 2 ^ 64`), wrapped to 64 bits. -/
+-- Sail: instrs64.sail:1220 (`execute ... address_pc_rel`).
+def adrPure (pc imm : Nat) (page : Bool) : Nat :=
+  let base := if page then pc % pow2 64 - pc % pow2 64 % pow2 12 else pc % pow2 64
+  (base + imm % pow2 64) % pow2 64
+
+/-- `ADR X0, #8` at `0x1000` gives `0x1008`. -/
+-- Sail: instrs64.sail:1220.
+theorem adrPure_adr : adrPure 0x1000 8 false = 0x1008 := by decide
+
+/-- `ADRP X0, #0x1000` at `0x1234` clears the page then adds. -/
+-- Sail: instrs64.sail:1220.
+theorem adrPure_adrp : adrPure 0x1234 0x1000 true = 0x2000 := by decide
+
+/-- Planted wrong case: ADRP aligns the base first. -/
+theorem adrPure_wrong : adrPure 0x1234 0x1000 true ≠ 0x2234 := by decide
+
+/-- ADR/ADRP: `imm` is the decode-built (sign-extended, shifted) offset. -/
+-- Sail: instrs64.sail:1220.
+def execAdr (d : Nat) (imm : Nat) (page : Bool) : Eff Unit := do
+  let pc ← Eff.rdPC fun v => Eff.ret v.toNat
+  wrXn d 64 (adrPure pc imm page)
+
 end Arm.Int
 
 /-
-CUTS: arithmetic and logical execute only. Movewide, ADR/ADRP and all later
-families are open. The `Eff` wrappers are unproved plumbing over
-`decide`-checked cores.
+CUTS: general-purpose execute (arithmetic, logical, variable shifts, movewide,
+ADR/ADRP). Bitfield/extract, counts, multiply/divide and conditional families
+live in `IntBit.lean`, `IntMul.lean`, `IntCond.lean` (open). The `Eff` wrappers
+are unproved plumbing over `decide`-checked cores. SP is named `"SP"` in
+`rdSys`/`wrSys`; `wrX 31` is the XZR discard and `rdX 31` reads zero.
 -/
+
