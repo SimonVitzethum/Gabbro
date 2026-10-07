@@ -174,10 +174,47 @@ theorem exBadRmw_wf : Exec.wf exBadRmw = false := by decide
 #print axioms exBadDep_wf
 #print axioms exBadRmw_wf
 
+/-- Message-passing cells: `x` the message, `y` the flag. -/
+def accMPx : Access := { addr := 0, size := 8, ord := .plain, excl := false }
+
+def accMPy : Access := { addr := 8, size := 8, ord := .plain, excl := false }
+
+/-- Core 0 of message passing: write `x = 1`, then `y = 1`. -/
+def mpW : Eff Unit := .wrMem accMPx 1 (.wrMem accMPy 1 (.ret ()))
+
+/-- Core 1 of message passing: read `y`, then `x`. -/
+def mpR : Eff Unit := .rdMem accMPy fun _ => .rdMem accMPx fun _ => .ret ()
+
+/-- Initial writes, run as their own trace on core 2. -/
+def mpInitW : Eff Unit := .wrMem accMPx 0 (.wrMem accMPy 0 (.ret ()))
+
+def tEmpty : Trace := { core := 0, evs := [], addr := [], data := [], ctrl := [] }
+
+def mpTInit : Trace := (Trace.ofEff mpInitW 2 0 (fun _ => 0) 10).getD tEmpty
+
+def mpT0 : Trace := (Trace.ofEff mpW 0 2 (fun _ => 0) 10).getD tEmpty
+
+def mpT1 : Trace := (Trace.ofEff mpR 1 4 (fun _ => 1) 10).getD tEmpty
+
+/-- Message passing assembled from `Eff` trees: both reads see 1.
+    Event ids: 0 `Wx0`, 1 `Wy0` (init); 2 `Wx1`, 3 `Wy1` (core 0);
+    4 `Ry1`, 5 `Rx1` (core 1). -/
+def mpExec : Exec :=
+  Exec.ofTraces [mpTInit, mpT0, mpT1] [(3, 4), (2, 5)] [(0, 2), (1, 3)]
+
+/-- The assembled message-passing execution is well-formed. Non-degenerate
+    witness: two cores plus init, cross-core reads-from on both cells. -/
+theorem mp_wf : Exec.wf mpExec = true := by decide
+
+#print axioms mp_wf
+
 end Arm
 
 /-
-CUTS: `Exec.ofTraces` and `Exec.wf` with all clauses are written. Good and
-bad examples (planted refusals) and the two-core message-passing witness
-assembled from `Eff` trees are NOT yet written.
+CUTS: all agent-06 deliverables are written: `Exec.wf` with good and bad
+examples, `runEff`/`Trace.ofEff`, `Exec.ofTraces`, and the message-passing
+witness `mp_wf` assembled from `Eff` trees.
+NOT covered: intra-instruction dependency synthesis (`ofEff` leaves edges
+empty; `withDeps` attaches caller-reported ones); consistency itself
+(agent 07). Theorems use only closed `decide` proofs: `propext` throughout.
 -/
