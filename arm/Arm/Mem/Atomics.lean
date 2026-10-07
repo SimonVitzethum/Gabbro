@@ -185,8 +185,67 @@ def stxOutcomes (s : ExclState) (c : CoreId) (a : Addr) (n : Nat)
 def stxStep (s : ExclState) (c : CoreId) : ExclState :=
   { perCore := monSet s.perCore c none, shared := s.shared }
 
+/-- A read event carrying acquire ordering (LDAXR, an LSE atomic with the A
+    bit). `Access.ord` is the frozen vocabulary; acquire maps from Sail's
+    `acqsc` via `AccessDescriptor_to_Access_kind` (interface.sail:85-86). -/
+def isAcqRead (e : Ev) : Bool :=
+  match e.kind with
+  | .read a => decide (a.ord = .acquire)
+  | _ => false
+
+/-- The core of event `i`, if present. -/
+def coreOf? (x : Exec) (i : Nat) : Option CoreId :=
+  match x.ev? i with
+  | none => none
+  | some e => some e.core
+
+/-- Two event ids are on the same core; a missing event counts as same-core so
+    that malformed executions never produce a spurious external edge. -/
+def sameCore (x : Exec) (i j : Nat) : Bool :=
+  match x.ev? i, x.ev? j with
+  | some e, some f => e.core == f.core
+  | _, _ => true
+
+/-- Reads-from inverted then coherence: `(r, w')` with `r` reading from a write
+    coherence-before `w'`. Built from the frozen `Rel.comp`. -/
+def frOf (x : Exec) : Rel := x.rf.inv.comp x.co
+
+/-- External from-reads: the read and the later write are on different cores. -/
+def freOf (x : Exec) : Rel :=
+  (frOf x).filter fun p => !sameCore x p.1 p.2
+
+/-- External coherence: coherence edges across cores. -/
+def coeOf (x : Exec) : Rel :=
+  x.co.filter fun p => !sameCore x p.1 p.2
+
+/-- The atomicity violations: `rmw` pairs `(r, w)` with a foreign write `w'`
+    in between, i.e. `(r, w)` in `fre;coe`. An `rmw` pair and an intervening
+    foreign write are incompatible. -/
+def atomicViolations (x : Exec) : Rel :=
+  ((freOf x).comp (coeOf x)).filter fun p => x.rmw.any (· == p)
+
+/-- The atomicity axiom statement, as a Bool over a candidate execution:
+    no `rmw` pair admits an intervening foreign write. -/
+def atomicityHolds (x : Exec) : Bool :=
+  atomicViolations x == []
+
+/-- The writes that are the store half of an `rmw` pair. -/
+def rmwWrites (x : Exec) : List Nat := x.rmw.map (·.2)
+
+/-- Whether event `i` is an acquire read. -/
+def isAcqReadId (x : Exec) (i : Nat) : Bool :=
+  match x.ev? i with
+  | none => false
+  | some e => isAcqRead e
+
+/-- `aob`, atomic-ordered-before (Arm ARM B2.3), as `Exec -> Rel` for agent 07's
+    `OrderingParts.aob`: every `rmw` pair, plus the acquire read forwarded from
+    the write of an `rmw` pair (`[range(rmw)];rfi`-style edge into an acquire). -/
+def aob (x : Exec) : Rel :=
+  x.rmw ++ (x.rf.filter fun p => (rmwWrites x).any (· == p.1) && isAcqReadId x p.2)
+
 end Arm
 
 /-
-CUTS: monitor machine done; aob, atomicity and witnesses follow.
+CUTS: aob and atomicity defined; theorems and spin-lock witness follow.
 -/
