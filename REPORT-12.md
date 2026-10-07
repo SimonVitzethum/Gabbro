@@ -17,6 +17,12 @@ Skeleton of `arm/Arm/Isa/Addr.lean` is green.
   fixture `addrEx1`, theorems `addrEx1_aligned4`, `addrEx1_misaligned3`,
   `addrEx1_addOff`, all proved by `decide`. Ends with CUTS block and
   `#print axioms Arm.addrEx1_aligned4` (no axioms).
+- Extended `Addr.lean`: `ExtendKind` (Sail `v8_base.sail:35744`),
+  `extendKindParams` and `extendReg` (Sail `v8_base.sail:35780`, including
+  the `Min(len, N - shift)` clamp and the signerc/zero extension), with
+  `decide` theorems `extendReg_uxtx_id`, `extendReg_sxtw_sign`,
+  `extendReg_uxth_shift` and the planted wrong case
+  `extendReg_sxtw_notZero`.
 - Warmed the build once with `./arm-bau` (needed so `./arm-probe` resolves
   the `Arm.*` imports of a not-yet-imported new file).
 
