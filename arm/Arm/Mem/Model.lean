@@ -118,6 +118,30 @@ theorem r_allowed : consistent noParts rAllowed = true := by decide
 /-- R out-of-order outcome is inconsistent, barrier-independently. -/
 theorem r_forbidden : consistent noParts rForbidden = false := by decide
 
+/-- Single-writer coherence, in-order outcome: one core writes twice in
+    `po`, the other core's reader sees both in order. Consistent. -/
+def sAllowed : Exec :=
+  { evs := [⟨0, 0, .write (acc 0#64), 1⟩, ⟨1, 0, .write (acc 0#64), 2⟩,
+            ⟨2, 1, .read (acc 0#64), 1⟩, ⟨3, 1, .read (acc 0#64), 2⟩]
+    po := [(0, 1), (2, 3)], addr := [], data := [], ctrl := []
+    rf := [(0, 2), (1, 3)], co := [(0, 1)], rmw := [] }
+
+/-- Single-writer coherence, out-of-order outcome: the reader sees write 2
+    and then write 1 although the writer's `po` (hence `co`) orders 1
+    before 2. Fails `internal` (`1 -rf-> 2 -po-loc-> 3 -fr-> 1`); no
+    `aob`/`bob` plug-in can repair it and no barrier changes this verdict. -/
+def sForbidden : Exec :=
+  { evs := [⟨0, 0, .write (acc 0#64), 1⟩, ⟨1, 0, .write (acc 0#64), 2⟩,
+            ⟨2, 1, .read (acc 0#64), 2⟩, ⟨3, 1, .read (acc 0#64), 1⟩]
+    po := [(0, 1), (2, 3)], addr := [], data := [], ctrl := []
+    rf := [(1, 2), (0, 3)], co := [(0, 1)], rmw := [] }
+
+/-- S in-order outcome is consistent. -/
+theorem s_allowed : consistent noParts sAllowed = true := by decide
+
+/-- S out-of-order outcome is inconsistent, barrier-independently. -/
+theorem s_forbidden : consistent noParts sForbidden = false := by decide
+
 end Arm
 
 /-
