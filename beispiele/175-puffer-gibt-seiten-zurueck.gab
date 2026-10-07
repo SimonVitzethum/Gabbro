@@ -12,18 +12,28 @@
 -- The buffer is `aligned 4096`: a range whose ends sit on page boundaries can be returned whole,
 -- where an unaligned neighbour would share its first and last page and keep them resident.
 --
+-- A range INSIDE one page (`reset RING at 200 count 100;`) holds no whole page: the helper clears it
+-- byte by byte and hands nothing over. (The first version of the helper wrapped `uint64_t` there and
+-- zeroed far past the buffer, found 2026-10-07; template `region.leeren`, `leeren_in_einer_seite`.)
+--
 -- Here: two bytes are stored, the upper half of the buffer is given back, the
 -- byte below survives and the byte inside reads zero. Executed result: 7
 -- (the driver `beispiel175` in `instrumente/pruefe-emission.sh`).
 module beispiel::puffer_zurueck {
 static mut RING : [u8; 8192] = 0 aligned 4096;
 
-impl fn geben() -> u32 effects { writes RING, reads RING } costs <= 4400 ops {
+impl fn geben() -> u32 effects { writes RING, reads RING } costs <= 4800 ops {
     RING[100] = 7;
     RING[5000] = 9;
     reset RING at 4096 count 4096;
+    RING[200] = 3;
+    RING[299] = 4;
+    reset RING at 200 count 100;
+    let i1 : u32 = RING[200];
+    let i2 : u32 = RING[299];
+    let innen : u32 = i1 + i2;
     let unten : u32 = RING[100];
     let oben : u32 = RING[5000];
-    return unten + oben;
+    return unten + oben + innen;
 }
 }

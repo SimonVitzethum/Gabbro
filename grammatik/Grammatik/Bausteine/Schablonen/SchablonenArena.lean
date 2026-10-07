@@ -166,9 +166,13 @@ theorem arena_zeuge :
   The emitted helper (`emit.rs`, `REGION_LEEREN`) clears a range of `bytes` at address `a`: the
   whole pages inside it go to the program's binding (`gabbro_os_seiten_zurueck(stelle, n)`, a
   Gabbro function under `requires n <= lenof(stelle)`), the edges it clears itself, and a
-  refused page return is cleared by hand. The helper computes, over offsets from `a`,
-  `von = aufrunden a s - a` and `bis = abrunden (a + bytes) s - a`, and hands over `[von, bis)`
-  only when `von < bis`. `leeren_teilung` is what that needs: the three pieces cover the range
+  refused page return is cleared by hand. The helper first rounds the ABSOLUTE addresses,
+  `lo = aufrunden a s` and `hi = abrunden (a + bytes) s`, and only when `lo < hi` forms the
+  offsets `von = lo - a` and `bis = hi - a` and hands over `[von, bis)`. *The test is on the
+  absolute addresses on purpose:* the first version formed `bis = hi - a` in `uint64_t` BEFORE
+  testing, and for a range inside one page `hi < a`, so `bis` wrapped to about 2^64, passed
+  `von < bis` and zeroed far past the buffer (found 2026-10-07 by agent C, example 175 with
+  `reset RING at 10 count 100;` exited 139; `leeren_alt_bricht` states it). `leeren_teilung` is what that needs: the three pieces cover the range
   exactly, the handed pages lie inside it -- so `bis - von <= bytes - von`, the binding's
   `requires` for `stelle = p + von`, whose extent is the rest of the range -- and they start and
   end on a page. -/
@@ -178,11 +182,12 @@ def leerenVon (a s : Nat) : Nat := aufrunden a s - a
 def leerenBis (a bytes s : Nat) : Nat := abrunden (a + bytes) s - a
 
 /-- **Soundness of `region.leeren`'s arithmetic.** For a page `s > 0` and a range whose whole
-    pages are non-empty (`von < bis`, the helper's own test): `von <= bis <= bytes` (the edges
+    pages are non-empty (`lo < hi`, the helper's own test): `von <= bis <= bytes` (the edges
     and the pages cover `[0, bytes)` in three consecutive pieces), the handed pages fit the rest
-    of the range (`bis - von <= bytes - von`), and `a + von`, `a + bis` are page boundaries. -/
+    of the range (`bis - von <= bytes - von`), and `a + von`, `a + bis` are page boundaries.
+    The hypothesis is the helper's own test, on ABSOLUTE addresses (`lo < hi`). -/
 theorem leeren_teilung (a bytes s : Nat) (hs : 0 < s)
-    (hlt : leerenVon a s < leerenBis a bytes s) :
+    (hlt : aufrunden a s < abrunden (a + bytes) s) :
     leerenVon a s ≤ leerenBis a bytes s ∧ leerenBis a bytes s ≤ bytes ∧
     leerenBis a bytes s - leerenVon a s ≤ bytes - leerenVon a s ∧
     (a + leerenVon a s) % s = 0 ∧ (a + leerenBis a bytes s) % s = 0 := by
@@ -208,8 +213,41 @@ theorem leeren_zeuge :
   ⟨by decide, by decide, leeren_teilung 5000 10000 4096 (by decide) (by decide)⟩
 
 /-- The helper's test is not decoration: a range inside one page has no whole page
-    (`von >= bis`), and handing `[von, bis)` over there would be a negative length. -/
-theorem leeren_ohne_seite : ¬ leerenVon 5000 4096 < leerenBis 5000 100 4096 := by decide
+    (`lo >= hi`), and the helper then clears the range byte by byte. -/
+theorem leeren_ohne_seite : ¬ aufrunden 5000 4096 < abrunden (5000 + 100) 4096 := by decide
+
+/-- **The in-one-page case, for every page and range:** a range that ends before the first page
+    boundary at or above `a` holds no whole page, so the test fails and `bis` is never formed. -/
+theorem leeren_in_einer_seite (a bytes s : Nat)
+    (h : a + bytes < aufrunden a s) : ¬ aufrunden a s < abrunden (a + bytes) s := by
+  have h2 := abrunden_le (a + bytes) s
+  omega
+
+/-- `uint64_t` subtraction `hi - a`, the way the FIRST version of the helper formed `bis`
+    before testing it. -/
+def leerenBis64 (a bytes s : Nat) : Nat := (abrunden (a + bytes) s + 2 ^ 64 - a) % 2 ^ 64
+
+/-- **The defect that was, as a theorem.** For 100 bytes at address 5000 on 4096-byte pages the
+    old `bis` was about 2^64: it passed `von < bis` and exceeded `bytes` -- the helper would have
+    cleared `bis - von` bytes past the buffer (the exit 139 of example 175). The corrected
+    helper never forms it (`leeren_ohne_seite`). -/
+theorem leeren_alt_bricht :
+    leerenVon 5000 4096 < leerenBis64 5000 100 4096 ∧ 100 < leerenBis64 5000 100 4096 := by
+  decide
+
+/-- No wrap in the guarded case: the helper tests `bytes <= 2^64-1 - s` and
+    `a <= 2^64-1 - s - bytes`, i.e. `a + s + bytes < 2^64`; then both rounded addresses are below
+    `2^64`, so `lo` and `hi` are computed exactly. -/
+theorem leeren_ohne_umlauf (a bytes s : Nat) (hs : 0 < s) (hg : a + s + bytes < 2 ^ 64) :
+    aufrunden a s < 2 ^ 64 ∧ abrunden (a + bytes) s < 2 ^ 64 := by
+  have h1 : aufrunden a s ≤ a + s - 1 := by
+    unfold aufrunden
+    have h := Nat.div_add_mod (a + s - 1) s
+    have hm : (a + s - 1) % s < s := Nat.mod_lt _ hs
+    have e : s * ((a + s - 1) / s) = (a + s - 1) / s * s := Nat.mul_comm _ _
+    omega
+  have h2 := abrunden_le (a + bytes) s
+  omega
 
 end ArenaLaufzeit
 
@@ -221,3 +259,6 @@ end Gabbro.Grammatik
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.arena_zeuge
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_teilung
 #print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_zeuge
+#print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_in_einer_seite
+#print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_alt_bricht
+#print axioms Gabbro.Grammatik.ArenaLaufzeit.leeren_ohne_umlauf
