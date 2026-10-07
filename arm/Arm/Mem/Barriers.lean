@@ -73,6 +73,39 @@ def dmbHolds (x : Exec) (a c : Nat) : Bool :=
      (b.isDmbLd && rdOf x a && memOf x c) ||
      (b.isDmbSt && wrOf x a && wrOf x c))
 
+/-- Acquire clause (Arm ARM B2.3): LDAR orders po-later reads and writes;
+    LDAPR (RCpc) orders po-later reads only. -/
+def acqHolds (x : Exec) (a c : Nat) : Bool :=
+  match x.ev? a with
+  | some e =>
+    poMem x a c &&
+    ((e.isAcquire && memOf x c) || (e.isAcquirePC && rdOf x c))
+  | none => false
+
+/-- Release clause (Arm ARM B2.3): STLR is ordered after po-earlier reads
+    and writes. -/
+def relHolds (x : Exec) (a c : Nat) : Bool :=
+  match x.ev? c with
+  | some e => poMem x a c && e.isRelease && memOf x a
+  | none => false
+
+/-- Release-acquire (Arm ARM B2.3): STLR ;po; LDAR, and STLR ;po; LDAPR
+    (release sequence head of the RCpc extension), are ordered. -/
+def relAcqHolds (x : Exec) (a c : Nat) : Bool :=
+  match x.ev? a, x.ev? c with
+  | some e₁, some e₂ =>
+    poMem x a c && e₁.isRelease && (e₂.isAcquire || e₂.isAcquirePC)
+  | _, _ => false
+
+/-- Barrier-ordered-before: the function agent 07 plugs into
+    `OrderingParts.bob`. -/
+def bobHolds (x : Exec) (a c : Nat) : Bool :=
+  dmbHolds x a c || acqHolds x a c || relHolds x a c || relAcqHolds x a c
+
+def bob (x : Exec) : Rel :=
+  (x.evs.flatMap fun a => x.evs.map fun c => (a.id, c.id)).filter
+    fun p => bobHolds x p.1 p.2
+
 /-
-CUTS: predicates only; `bob`, DMB LD/ST clauses, DSB, ISB and all theorems open.
+CUTS: `bob` covers DMB and acquire/release; DSB, ISB and all theorems open.
 -/
