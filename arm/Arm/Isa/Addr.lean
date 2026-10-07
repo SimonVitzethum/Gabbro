@@ -183,7 +183,7 @@ def storeNat (mem : Nat → Nat) (base : Nat) (val : Nat) (n : Nat) : Nat → Na
     (`none`), barriers step over. -/
 def runEff : Nat → Eff α → State → Option (α × State)
   | 0, _, _ => none
-  | fuel + 1, .ret a, s => some (a, s)
+  | _ + 1, .ret a, s => some (a, s)
   | fuel + 1, .rdX n k, s => runEff fuel (k (s.regs.gpr n)) s
   | fuel + 1, .wrX n v k, s =>
     runEff fuel k { s with regs := { s.regs with gpr := upd s.regs.gpr n v } }
@@ -218,6 +218,43 @@ def cfgNoFault : MemCfg := ⟨fun _ _ => false⟩
 
 /-- Every access faults in translation. -/
 def cfgFault : MemCfg := ⟨fun _ _ => true⟩
+
+/-- Write `0x04030201` as 4 bytes at address 16, read them back. -/
+def exRoundtrip : Eff Nat := do
+  memWriteEff cfgNoFault (BitVec.ofNat 64 16) 4 .plain false 67305985
+  memReadEff cfgNoFault (BitVec.ofNat 64 16) 4 .plain false
+
+theorem exRoundtrip_ok :
+    (runEff 50 exRoundtrip s0).map Prod.fst = some 67305985 := by decide
+
+/-- Planted wrong case: the bytes assemble little-endian, not big-endian
+    (`0x01020304` would be the big-endian reading of bytes 01 02 03 04). -/
+theorem exRoundtrip_notBE :
+    (runEff 50 exRoundtrip s0).map Prod.fst ≠ some 16909060 := by decide
+
+/-- A misaligned plain read proceeds bytewise (all-zero memory here). -/
+theorem exUnalignedPlain_ok :
+    (runEff 50 (memReadEff cfgNoFault (BitVec.ofNat 64 18) 4 .plain false) s0).map
+        Prod.fst
+      = some 0 := by decide
+
+/-- A misaligned acquire read raises instead. -/
+theorem exUnalignedOrdered_refuses :
+    (runEff 50 (memReadEff cfgNoFault (BitVec.ofNat 64 18) 4 .acquire false) s0).isNone
+      = true := by decide
+
+/-- A translation fault raises even on an aligned plain read. -/
+theorem exFault_refuses :
+    (runEff 50 (memReadEff cfgFault (BitVec.ofNat 64 16) 4 .plain false) s0).isNone
+      = true := by decide
+
+theorem exCheckSP_ok : (runEff 10 checkSP s0).map Prod.fst = some () := by decide
+
+/-- Machine whose SP (register 31) is 8, hence not 16-byte aligned. -/
+def sSP8 : State :=
+  { s0 with regs := { s0.regs with gpr := upd s0.regs.gpr 31 (BitVec.ofNat 64 8) } }
+
+theorem exCheckSP_refuses : (runEff 10 checkSP sSP8).isNone = true := by decide
 
 end Arm
 

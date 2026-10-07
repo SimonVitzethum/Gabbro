@@ -35,6 +35,11 @@ Skeleton of `arm/Arm/Isa/Addr.lean` is green.
   `rdSys`/`wrSys` refuse, barriers step over), fixtures `s0`,
   `cfgNoFault`, `cfgFault`, and the helper `upd` (`Function.update` does
   not exist in this toolchain).
+- Extended `Addr.lean`: accessor-level `decide` examples `exRoundtrip_ok`,
+  the planted endianness wrong case `exRoundtrip_notBE`,
+  `exUnalignedPlain_ok` (misaligned plain reads proceed bytewise),
+  `exUnalignedOrdered_refuses`, `exFault_refuses`, `exCheckSP_ok` and
+  `exCheckSP_refuses` (fixture `sSP8`).
 - Warmed the build once with `./arm-bau` (needed so `./arm-probe` resolves
   the `Arm.*` imports of a not-yet-imported new file).
 
