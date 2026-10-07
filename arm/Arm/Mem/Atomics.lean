@@ -33,8 +33,79 @@ inductive AtomicOp where
   | cas | swp | add | clr | eor | set | smax | smin | umax | umin
   deriving DecidableEq, Repr
 
+/-- Ordering of the load half of an exclusive: LDAXR acquires.
+    Sail: `CreateAccDescExLDST` (v8_base.sail:11917): acqsc on loads iff acqrel. -/
+def exclReadOrd : ExclKind → AccOrd
+  | .ldxr => .plain
+  | .ldaxr => .acquire
+  | .stxr => .plain
+  | .stlxr => .plain
+
+/-- Ordering of the store half of an exclusive: STLXR releases.
+    Sail: `CreateAccDescExLDST` (v8_base.sail:11917): relsc on stores iff acqrel. -/
+def exclWriteOrd : ExclKind → AccOrd
+  | .ldxr => .plain
+  | .ldaxr => .plain
+  | .stxr => .plain
+  | .stlxr => .release
+
+/-- The load access of an exclusive (LDXR/LDAXR). `excl` is true: Sail marks
+    `accdesc.exclusive`, which `AccessDescriptor_to_Access_kind`
+    (interface.sail:80) maps to `AV_exclusive`. -/
+def exclReadAcc (k : ExclKind) (addr : Addr) (size : Nat) : Access :=
+  { addr := addr, size := size, ord := exclReadOrd k, excl := true }
+
+/-- The store access of an exclusive (STXR/STLXR). -/
+def exclWriteAcc (k : ExclKind) (addr : Addr) (size : Nat) : Access :=
+  { addr := addr, size := size, ord := exclWriteOrd k, excl := true }
+
+/-- The read half of an LSE atomic carries acquire iff the A bit is set;
+    the write half carries release iff the R bit is set. Sail:
+    `CreateAccDescRCW` (v8_base.sail:11993) copies A to acqsc and R to relsc,
+    and `AccessDescriptor_to_Access_kind` (interface.sail:85-86) maps either
+    to `AS_rel_or_acq`. -/
+def atomicReadAcc (ann : AtomicAnn) (addr : Addr) (size : Nat) : Access :=
+  { addr := addr, size := size, ord := if ann.acq then .acquire else .plain,
+    excl := false }
+
+/-- The write half of an LSE atomic. `excl` stays false: Sail sets `atomicop`,
+    not `exclusive`, so the kind is `AV_atomic_rmw` (interface.sail:81). -/
+def atomicWriteAcc (ann : AtomicAnn) (addr : Addr) (size : Nat) : Access :=
+  { addr := addr, size := size, ord := if ann.rel then .release else .plain,
+    excl := false }
+
+/-- Mask a Nat value to `size` bytes, as the register-memory transfer does. -/
+def mask (size v : Nat) : Nat := v % 2 ^ (8 * size)
+
+/-- Signed reading of a `size`-byte value, for SMAX/SMIN. -/
+def toSigned (size v : Nat) : Int :=
+  let m := mask size v
+  if m < 2 ^ (8 * size - 1) then Int.ofNat m else Int.ofNat m - Int.ofNat (2 ^ (8 * size))
+
+/-- The new value an LSE atomic writes: old memory value and register operand
+    in, new value out. Sail: the `MemAtomicOp_*` match in `MemAtomic`
+    (v8_base.sail:28374-28406). CAS is decided by `casCmp` below: on mismatch
+    Sail sets `cmpfail` and skips the write (v8_base.sail:28415). -/
+def atomicFun (op : AtomicOp) (size old operand : Nat) : Nat :=
+  match op with
+  | .cas => mask size operand
+  | .swp => mask size operand
+  | .add => mask size (old + operand)
+  | .clr => mask size (Nat.xor old (Nat.land old operand))
+  | .eor => mask size (Nat.xor old operand)
+  | .set => mask size (Nat.lor old operand)
+  | .smax => if toSigned size old >= toSigned size operand then mask size old else mask size operand
+  | .smin => if toSigned size old <= toSigned size operand then mask size old else mask size operand
+  | .umax => if mask size old >= mask size operand then mask size old else mask size operand
+  | .umin => if mask size old <= mask size operand then mask size old else mask size operand
+
+/-- CAS compares the masked expected value against the masked old value.
+    Sail: `cmpfail = cmpoperand != oldvalue` (v8_base.sail:28403). -/
+def casCmp (size expected old : Nat) : Bool :=
+  mask size expected == mask size old
+
 end Arm
 
 /-
-CUTS: skeleton only; monitor machine, aob and witnesses follow.
+CUTS: access constructors and ALU done; monitor machine, aob and witnesses follow.
 -/
