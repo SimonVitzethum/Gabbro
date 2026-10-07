@@ -2615,6 +2615,26 @@ pub const M1: &[Satz] = &[
                      crates/gabbro-check/tests/bare_atomic.rs",
     },
     Satz {
+        name: "m1.feldkopie_bereich",
+        kennungen: &["N579"],
+        aussage: "A whole-array copy `B = A;` / `M[i] = M[j];` (SPRACHE-EFFIZIENZ #16) is \
+                  admitted only between arrays of the same length at every depth whose \
+                  leaf is the same machine word (or `bool`); it keeps every element, so \
+                  the source element range must lie inside the target's. A wider source \
+                  range falls as `N579` -- the copy could store a value the target cell \
+                  promises never to hold. Other whole-array stores stay `N287`.",
+        vorbehalt: "Only a plain `=` from an array PLACE is a copy; a compound operator, a \
+                    call result or an atomic array keeps `N287`. The emitter writes one \
+                    overlap-safe `memmove` (legacy C). Arrays have no `Glob` form in the \
+                    exporter (`LG002`), so no Lean statement moves and the program stays \
+                    UNCERTIFIED, exactly as with element stores.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1407 (range too wide, falls with N579 alone); the clean \
+                      side is beispiele/188; the length mismatch stays N287 \
+                      (beispiele/gift/1408, 951).",
+        fundstelle: "crates/gabbro-check/src/m1.rs (feld_kopie_urteil, assignment arm)",
+    },
+    Satz {
         name: "m1.whole_array_store",
         kennungen: &["N287"],
         aussage: "A whole array is never a store target (`N287`): C has no assignment \

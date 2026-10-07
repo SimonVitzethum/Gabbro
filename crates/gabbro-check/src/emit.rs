@@ -10829,6 +10829,21 @@ fn anweisung(
                     return;
                 }
             }
+            // **A whole-array copy `B = A;` / `M[i] = M[j];`** (SPRACHE-EFFIZIENZ #16). The
+            // checker admits it only when both sides are arrays of one length whose source
+            // element range lies inside the target's (`N287`/`N579`); C has no array
+            // assignment, so it is one `memmove` of the target's size (overlap-safe).
+            if z.op == ZuwOp::Setzt
+                && matches!(ort_typ_zeile(&z.ziel, u), Some(TypExpr::Feld(_)))
+                && matches!(&ohne_klammern(&z.wert).art, ExprArt::Ort(_))
+            {
+                let ziel_text = ort(&z.ziel, u, absagen);
+                let quelle_text = ausdruck(&z.wert, u, absagen);
+                aus.push_str(&format!(
+                    "{e}__builtin_memmove({ziel_text}, {quelle_text}, sizeof({ziel_text}));\n"
+                ));
+                return;
+            }
             // **Ein Schreiben auf ein `accumulates` MELDET, es setzt nicht.** Der Kern
             // faltet in seine eigene Zelle -- deshalb braucht es kein CAS: **niemand sonst
             // schreibt sie.** *Die Absenkung waere sonst genau die unbeschraenkte Schleife,
@@ -14780,6 +14795,22 @@ fn feldlaenge_von(t: &TypExpr, u: &Namen) -> Option<u128> {
     // same way: `umgebung.rs` has already folded the constant, and this reads its answer
     // instead of computing a second one* (W7).
     konst_oder_name(&a.laenge, u).and_then(|n| u128::try_from(n).ok())
+}
+
+/// The type of a place that may be a ROW of a nested static array (`M[i]` over `[[u32; 4]; 3]`):
+/// the static's type with one array dimension peeled per index suffix. `ort_typ` answers the
+/// bare name and the slot field; a row is neither.
+fn ort_typ_zeile(o: &Ort, u: &Namen) -> Option<TypExpr> {
+    if o.suffixe.is_empty() {
+        return ort_typ(o, u);
+    }
+    let mut t = u.statiken.get(&o.basis.text)?.clone();
+    for sx in &o.suffixe {
+        let OrtSuffix::Index(_) = sx else { return None };
+        let TypExpr::Feld(a) = t else { return None };
+        t = a.element.clone();
+    }
+    Some(t)
 }
 
 fn ort_typ(o: &Ort, u: &Namen) -> Option<TypExpr> {

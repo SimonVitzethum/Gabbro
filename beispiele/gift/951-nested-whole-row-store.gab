@@ -1,5 +1,6 @@
 -- erwartet: N287
--- **Gift 951 -- storing a whole row of a nested array.**
+-- **Gift 951 -- storing a whole row of a DIFFERENT length (a same-length row copy is
+-- admitted since SPRACHE-EFFIZIENZ #16, `beispiele/188`).**
 --
 -- `M[i] = M[j]` over `static mut M : [[u32; 4]; 3]`: both sides are
 -- `[u32; 4]`, so the shape comparison agrees and no range rule speaks --
@@ -10,12 +11,13 @@
 module gift::nested_whole_row_store {
 
 static mut M : [[u32; 4]; 3] = 0;
+static mut K : [[u32; 3]; 3] = 0;
 
 impl fn tausche(i : u32 in 0 ..< 3, j : u32 in 0 ..< 3)
-    effects { reads M, writes M }
+    effects { reads M, writes K }
     costs <= 8 ops
 {
-    M[i] = M[j];
+    K[i] = M[j];
 }
 
 }

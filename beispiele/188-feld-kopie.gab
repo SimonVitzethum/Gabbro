@@ -1,0 +1,22 @@
+-- 188 -- a whole-array copy: `B = A;` and a row copy `M[i] = M[j];`.
+--
+-- C has no array assignment, and until SPRACHE-EFFIZIENZ #16 the checker refused the
+-- form (`N287`) so a state snapshot was an element-by-element loop. The copy is admitted
+-- when both sides are arrays of the SAME length at every depth and every source element
+-- range lies inside the target's (`N579` otherwise); it cannot fail, so it needs no
+-- reason channel. The emitter writes one overlap-safe `memmove`.
+module beispiel188 {
+
+static mut ALT : [u32 in 0 .. 255; 4] = 0;
+static mut NEU : [u32 in 0 .. 255; 4] = 0;
+static mut M : [[u32; 4]; 3] = 0;
+
+impl fn sichern() effects { reads NEU, writes ALT } costs <= 8 ops {
+    ALT = NEU;
+}
+
+impl fn zeile(i : u32 in 0 ..< 3, j : u32 in 0 ..< 3) effects { reads M, writes M } costs <= 8 ops {
+    M[i] = M[j];
+}
+
+}
