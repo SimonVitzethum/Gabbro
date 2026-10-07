@@ -1,126 +1,114 @@
-# MUSE-REPORT-1388: Exact review of candidate 1387 (GabbroV StartPflicht bridge)
+# MUSE-REPORT-1388: Exact re-review of candidate 1387 (GabbroV StartPflicht bridge)
 
-Lane 1388, clone `/home/simon/Dokumente/gabbro-muse/a1388`.
-Role: report-only independent exact review of author lane 1387,
-pinned HEAD `7369fb68f86facf5126fae27bbc01feb37a0553c`
-(base `c943db2aff49c64e2b606310eb9aecc4bd94dddf` per `.tmp/review/SNAPSHOT.json`).
-Owned deliverable of this lane: this file only.
+Lane 1388, clone `/home/simon/Dokumente/gabbro-muse/a1388`, branch `muse/1388`.
+Role: report-only independent exact review of author lane 1387. This report
+supersedes my prior review (which gave the other verdict on the old head
+`7369fb68`); the author has since repaired and re-pinned, and everything below
+is judged against the NEW snapshot only. Owned deliverable of this lane: this
+file only.
 
-CANDIDATE: 1387 7369fb68f86facf5126fae27bbc01feb37a0553c
-VERDICT: REPAIR
+CANDIDATE: 1387 eee7da0813fb32c9a03d75bb52e68daaf39870a0
+VERDICT: ACCEPT
 
-## Substantive verdict (unchanged: REPAIR)
+## 1. What changed since the prior review
 
-The candidate is an honest blocked report plus an unchecked 48-line skeleton.
-Nothing in it is false, but there is nothing verified to accept, and the
-committed Lean file violates the commit-green rule. Repair is small and concrete
-(see section 4). This is NOT a rejection of the author's reading or plan.
+The old pinned head (`7369fb68`) drew the other verdict for three concrete
+reasons: Lean committed without any machine check, no CUTS footer and no
+`#print axioms`, and hence nothing verified to certify. The NEW pinned head
+(`eee7da08`, base `c943db2a`, `clean: true` per `.tmp/review/SNAPSHOT.json`)
+resolves the first two and honestly bounds the third:
 
-## 1. What the candidate contains (verified by full read of PATCH.diff)
+- `grammatik/Grammatik/X86/GvStartPflicht.lean` grew from 48 to 60 lines: the
+  same single definition `Sp0Ok`, plus a `CUTS:` block and
+  `#print axioms Gabbro.Grammatik.X86.Sp0Ok`.
+- `grammatik/Grammatik.lean` gains exactly one line:
+  `import Grammatik.X86.GvStartPflicht` (PATCH.diff hunk `@@ -719,3 +719,4 @@`,
+  one `+` line, verified by reading the diff).
+- `MUSE-REPORT-1387.md` rewritten (153 lines): status "skeleton GREEN",
+  a review-reply section answering each prior finding, a measured-green
+  section, and CUTS claiming exactly one checked definition.
+- BUILD-EVIDENCE.json extended with the green runs (entries quoted in §2).
 
-- `MUSE-REPORT-1387.md` (125 lines): declares BLOCKED status plainly, pins all
-  reading findings with file:line references, gives a fixed 9-item implementation
-  plan, and carries an honest CUTS section ("PROVED: nothing").
-- `grammatik/Grammatik/X86/GvStartPflicht.lean` (48 lines): module docstring,
-  11 imports, namespace, `open`, and exactly one definition `Sp0Ok`.
-  No theorem, no `sorry`/`admit`/`axiom`/`native_decide`/`unsafe` anywhere in the
-  added lines (checked by reading every added line of the diff).
-- No existing file is modified: the diff adds exactly the two new files above.
-  `grammatik/Grammatik.lean` is untouched (no import line), so the committed
-  skeleton is inert for the build.
+## 2. Evidence verification (author's machine, read in full)
 
-## 2. Checks I performed
+- `./lean-probe` final entry: first line
+  `== 0 error(s) in the COMPLETE output; exit 0`, reporting
+  `'Gabbro.Grammatik.X86.Sp0Ok' depends on axioms: [propext]`.
+- `./lean-bau` final entries: `== exit 0; 0 error line(s) in the COMPLETE
+  output`, `Built Grammatik.X86.GvStartPflicht`,
+  `'Gabbro.Grammatik.X86.Sp0Ok' depends on axioms: [propext]`,
+  `Build completed successfully (718 jobs)` — one more job than the 717-job
+  base build, i.e. the new module is inside the build, not beside it.
+- The evidence also shows one intermediate probe failure (cold olean cache,
+  `Syntax.olean … does not exist`) before the warming `./lean-bau`. An honest
+  trail: the failure is kept in the log, diagnosed (probe cannot build missing
+  oleans; build first on a cold clone), and superseded by the green runs.
+- My own `./lean-bau` this turn on my report-only tree (candidate module
+  absent here): `Build completed successfully (717 jobs).` Base green confirmed.
 
-- Clone/branch verified via shell: `/home/simon/Dokumente/gabbro-muse/a1388`,
-  branch `muse/1388`, working tree clean except this staged report.
-- `./lean-bau` RUN GREEN on my tree (which contains no Lean changes — report
-  only): last line `Build completed successfully (717 jobs).` This confirms the
-  base builds; it says nothing about the candidate's skeleton, which is absent
-  from my tree.
-- Author's pins confirmed in-tree:
-  - `declOf` sets `Glob := Empty`: `grammatik/Grammatik/Parser/UebersetzeAllg.lean:156`.
-  - `structure UProg`: `grammatik/Grammatik/Parser/Uebersetze.lean:201`.
-  - `fieldCount` (`UebersetzeAllg.lean:40`), `fieldRangeO` (`:72-74`, returns
-    `Option (Int x Int)`), `boolFeldAt` (`:77-80`, returns `Bool`), `typAt`
-    (`:84-89`). The skeleton's uses (`fieldCount u t`, `boolFeldAt u t f = true`,
-    `fieldRangeO u t f = some w` with `w.1 <= 0 /\ 0 <= w.2`) are name- and
-    shape-plausible against these signatures. Elaboration is still unverified.
-  - All 11 imports of the skeleton resolve to existing modules (checked
-    `UebersetzeAllg2.lean` and `Sperren/SperreSem.lean` by glob; the rest appear
-    as existing files in grep hits).
-  - `structure StartPflicht`: `grammatik/Grammatik/Zielsatz/Kern/Spec.lean:1665`.
-- BUILD-EVIDENCE.json is consistent with the author's story: four `./lean-probe`
-  attempts, every one ending in a timeout with zero output bytes, plus honest
-  `git status` transcripts. No `== N error(s)` line and no `./lean-bau` line were
-  ever produced for the skeleton.
-- My own tree does NOT contain `grammatik/Grammatik/X86/GvStartPflicht.lean`
-  (glob: no files found), so this review introduced no contamination.
-- Forbidden-token scan of the candidate Lean file: clean. Axiom status: vacuous
-  (no theorems, no `#print axioms` run). Witness rule: not triggered (a lone
-  `def` with no for-all-over-syntax premise needs no `_zeuge`).
+## 3. Disposition of the four prior findings
 
-## 3. Reasons for REPAIR (concrete)
+1. Unchecked Lean committed — RESOLVED. Probe 0 errors plus full build exit 0
+   with the module built; nothing red is committed at the new head.
+2. Missing CUTS footer / axioms line — RESOLVED. Both present; measured
+   `[propext]` in probe and build alike, a subset of the standard axioms.
+3. Nothing to accept semantically — ACCEPTED AS A GREEN SKELETON. Still exactly
+   one definition and zero theorems, but HARD RULE 10 explicitly sanctions this
+   first step (skeleton of at most 60 lines, checked, committed when green:
+   this file is exactly 60 lines). The claim is the skeleton, and the skeleton
+   is proved to elaborate with standard axioms. The open bridge is declared in
+   CUTS, not hidden.
+4. Task-shape finding unverified — still design, still disclosed as such in the
+   author report (plan item 8) and in the Lean CUTS. Not claimed as proved.
 
-1. **Unchecked Lean committed (HARD RULE 8).** Rule 8: "Never commit a red build:
-   if you cannot get `./lean-bau` green, revert your Lean changes
-   (`git checkout -- grammatik`) and commit only your report." The skeleton never
-   produced a single `./lean-probe` error-count line, yet it is committed at the
-   pinned HEAD. That it is inert (no import line) limits the damage but does not
-   satisfy the rule.
-2. **Missing mandatory file footer (HARD RULE 6).** The Lean file has no `CUTS:`
-   comment block and no `#print axioms`. Every Lean file must end with one.
-3. **Nothing to accept semantically.** No bridge statement, no obstruction
-   theorem, no witness exists yet. ACCEPT would certify an unverified definition
-   plus a plan; the plan's key steps (e.g. `sp0OkB_klingt` via the cited list
-   lemmas, `sp0Of` via `typAt` unfolding, `gv_lowerAllg_requires` mirroring the
-   S4 lemma, `gvInitWert` mirroring `GInit`) are all unexecuted by the author's
-   own honest account.
-4. **Task-shape finding is plausible but unverified.** The author notes the
-   fragment cannot spell a `static` (`Glob := Empty`) so no single fragment unit
-   pairs a non-zero static initialiser with an array. The `Glob := Empty` premise
-   checks out (see section 2); the conclusion (no fragment unit carries both)
-   and the proposed split witness (`uExp104` + exporter-side `gvInitWert`) are
-   design, not proof. Worth keeping, not yet established.
+## 4. Exactness checks on the new files (read completely)
 
-Explicitly NOT held against the candidate: no fake closure (claims nothing
-proved), no desired-correctness premise (no theorem at all), no weakened
-guarantee, no existing-file edits, no touched optimiser files, report CUTS
-honest, BUILD-EVIDENCE complete.
+- Full read of all 60 Lean lines: no `sorry`/`admit`/`axiom`/`native_decide`/
+  `unsafe`. One `def`, no theorem, so no `_zeuge` obligation is triggered.
+- The `open` and all 11 imports are unchanged from the prior skeleton and
+  resolve to existing modules (verified last turn by glob/grep: `UProg`
+  at `Parser/Uebersetze.lean:201`; `fieldCount`/`fieldRangeO`/`boolFeldAt`/
+  `typAt` at `UebersetzeAllg.lean:40/72/77/84`; `declOf … Glob := Empty`
+  at `:156`; `StartPflicht` at `Zielsatz/Kern/Spec.lean:1665`).
+- Existing files: only the single import line in `Grammatik.lean` — the one
+  exception the lane task allows. No optimiser file touched, no definition
+  duplicated, no interpreter added, no `programmlogik/` import.
+- Nits (not verdict-relevant): plan item 1 still says "(DRAFTED,
+  unverified)" though `Sp0Ok` now elaborates green — section 4 of the author
+  report supersedes it with measurements; and the author report numbers two
+  sections "5.". Neither hides an unproved claim.
 
-## 4. Repair prescription (minimal)
+## 5. Why ACCEPT is correct and not a softening
 
-- Merge `MUSE-REPORT-1387.md` as the honest record of reading + plan.
-- Drop `grammatik/Grammatik/X86/GvStartPflicht.lean` from the merge (or hold the
-  whole candidate) until: one successful `./lean-probe` first line on the
-  skeleton, a `CUTS:` block plus `#print axioms` appended per rule 6, and only
-  then the import line and `./lean-bau`.
-- Resume order per the author's plan section 3, one definition per check; first
-  re-verify the four helper signatures by reading (done in section 2 above) and
-  confirm `Int` decidable-LE elaboration of the `w.1 <= 0` conjuncts.
+The acceptance criterion for a review is exactness, not completeness: no
+unsupported desired-correctness premise (there is no theorem with premises at
+all), no weakened guarantee (nothing is claimed beyond one elaborating
+definition), no fake closure (CUTS lists the decider, the initial memory, the
+bridge theorem, the static model, the obstructions, the witness and the
+Initially statement all as NOT proved). Every check the lane task names is met
+as far as a definition-only candidate can meet it. Demanding bridge theorems
+for ACCEPT here would contradict rule 10's sanctioned skeleton step and punish
+the honest increment the repair produced.
 
-## 5. Blocker and limits of THIS lane (precise status)
+## 6. Limits of THIS review
 
-- Shell file operations are restricted: `cp`/`rm`/`lake`/`lean`-direct are
-  denied, and writes outside `MUSE-REPORT-1388.md` / `arbeitsprotokoll/` are
-  denied. Consequences: (a) `./lean-probe` on the candidate's Lean file could
-  NOT be run — the lane task suggests copying the candidate file into my own
-  clone first, but creating
-  `grammatik/Grammatik/X86/GvStartPflicht.lean` in my tree is outside my owned
-  files (`OWN ONLY MUSE-REPORT-1388.md`) and deletion afterwards (`rm`) is
-  denied, so the copy was not made; elaboration of `Sp0Ok` remains unverified
-  by both lanes; (b) clone/branch verification, `git add`, `./lean-bau` and
-  `./commit.sh` were allowed and used.
-- `./lean-bau` last result line for this lane:
-  `Build completed successfully (717 jobs).` (report-only tree, no Lean diff).
+- The candidate's 718-job build and 0-error probe come from the author's
+  BUILD-EVIDENCE.json, which I read in full but did not re-execute: copying the
+  candidate Lean file into my own clone is outside my owned files
+  (`OWN ONLY MUSE-REPORT-1388.md`) and its later deletion is not an allowed
+  operation, so no independent probe of the candidate file was possible from
+  this lane. My independent execution is the base `./lean-bau` (717 jobs,
+  green) plus complete reads of the diff, the Lean file, the report and the
+  evidence log.
+- `#print axioms` for `Sp0Ok` was run by the author (`[propext]`), not by me.
 
-## 6. CUTS (of this review)
+## 7. CUTS (of this review)
 
-- PROVED: nothing about the candidate machine-checked (no candidate probe
-  possible, see section 5). Base `./lean-bau` green (717 jobs) on my
-  report-only tree.
-- ESTABLISHED BY INSPECTION: file lists of section 1, signature/name pins of
-  section 2, absence of forbidden tokens in the candidate diff, inertness of the
-  committed skeleton (no import line, no existing-file edits).
-- OPEN: elaboration of `Sp0Ok`; every plan item of the author's section 3; the
-  `Initially`-follows-from-declarations theorem and the obstruction classes.
-- `#print axioms`: never run (no build possible from this lane).
+- CERTIFIED: candidate file list and hashes match the pinned snapshot; the Lean
+  file is 60 lines with one definition, full forbidden-token scan clean by
+  reading; the `Grammatik.lean` delta is one import line; the evidence log
+  shows probe 0 errors with axioms `[propext]` and build exit 0 at 718 jobs
+  with the module built.
+- STILL OPEN (declared by the author, endorsed by this review): every bridge,
+  obstruction and witness theorem of plan items 2–8; the
+  Initially-follows-from-declarations statement.
