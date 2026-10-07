@@ -1,17 +1,21 @@
 # Agent 07 report — Arm axiomatic memory model (`arm/Arm/Mem/Axiomatic.lean`,
 `arm/Arm/Mem/Model.lean`)
 
-## Status: FOLLOW-UP IN PROGRESS (coordinator note: points 2 and 3 open)
-- `arm/Arm/Mem/Axiomatic.lean` + one import line at the end of `arm/Arm.lean`.
-  Point (1) done: `dob` repaired to the six published clauses (commit
+## Status: IFETCH FOLLOW-UP COMPLETE (points 1, 2, 3 + IFetch done)
+- `arm/Arm/Mem/Axiomatic.lean` + `arm/Arm/Mem/Model.lean`, one import line
+  each at the end of `arm/Arm.lean`.
+- Point (1): `dob` repaired to the six published clauses (commit
   `63e0953a`); ISB witnesses committed (`2704b7b0`).
-- Point (2) is THIS section (confidence per clause). Point (3) is
-  `arm/Arm/Mem/Model.lean` (litmus verdicts MP/SB/LB/2+2W/R/S) — in progress.
+- Point (2): the Confidence section below.
+- Point (3): `Model.lean` with `model_asm` (`consistent` is the three-axiom
+  conjunction, proved by `rfl` — the single `consistent` definition stays in
+  `Axiomatic.lean`, no duplication) and `decide` verdicts for MP, SB, LB, R,
+  S, 2+2W (allowed + suspicious outcome each, all under `noParts`).
 - Last full build `./arm-bau`:
-  `== exit 0; 0 error line(s) in the COMPLETE output`.
-- Commits: `2870a5eb` skeleton, `4f152bda` coherence relations,
-  `54fe478c` dob/axioms, `9d742351` witnesses/theorems, `cfb8c57c` model
-  complete, `63e0953a` dob-ISB repair, `2704b7b0` ISB witnesses.
+  `== exit 0; 0 error line(s) in the COMPLETE output`,
+  `Build completed successfully (9 jobs)`; all 13 `Model.lean` theorems, all 7
+  `IFetch.lean` theorems and the 4 `Axiomatic.lean` verdicts depend only on
+  `[propext]`.
 
 ## Definitions (all in `namespace Arm`)
 - `OrderingParts` — structure with `aob : Rel; bob : Rel` (plug-in for agents
@@ -35,6 +39,39 @@
 - `wit_rmw*`: split exclusive pair fails `atomic` only.
 - `#print axioms` for the four `consistent` verdicts: each depends only on
   `[propext]` (standard).
+- ISB: `isb_orders` (`dob` edge present through the ISB), `noisb_no_order`
+  (absent without), `isb_allowed`/`noisb_allowed` (both consistent — one
+  cross-location read-read `dob` edge cannot close an `ob` cycle by itself).
+
+## `Model.lean` verdicts (point 3; all `by decide`, all under `noParts`)
+
+`model_asm`: `consistent` is the three-axiom conjunction (by `rfl`).
+
+| Shape | Allowed outcome | Suspicious outcome | Verdict now | After 09/10 plug-in |
+|---|---|---|---|---|
+| MP | sees data (`mp_allowed = true`) | misses data | `true` (allowed w/o barriers) | FLIPS to `false` with `bob` both sides |
+| SB | sees writes (`sb_allowed = true`) | sees zeros | `true` | FLIPS to `false` with `bob` |
+| LB plain | sees zeros (`lb_allowed = true`) | sees each other's write | `true` | STAYS `true` (needs deps, not barriers) |
+| LB+addr (`xLbAddr`) | — | with addr deps | `false` already via `dob` | STAYS `false` |
+| R | in `co` order (`r_allowed = true`) | against `co` | `false` via `internal` | STAYS `false` (no plug-in repairs `internal`) |
+| S | in order (`s_allowed = true`) | against single-writer `co` | `false` via `internal` | STAYS `false` |
+| 2+2W | in `co` order (`w_allowed = true`) | against `co` chain | `false` via `internal` | STAYS `false` |
+
+All 13 `Model.lean` theorems depend only on `[propext]`.
+
+Note on `consistent` placement: the task text asked for the `consistent`
+DEFINITION in `Model.lean`; it stays defined exactly once in
+`Axiomatic.lean` (hard rule 8 — a second `Arm.consistent` would be a
+duplicate definition, and moving it would break the `wit_*` theorems without
+an import cycle). `Model.lean` states the identical equation as `model_asm`,
+proved by `rfl`, with zero duplication.
+
+Note on `consistent` placement: the task text asked for the `consistent`
+DEFINITION in `Model.lean`; it stays defined exactly once in
+`Axiomatic.lean` (hard rule 8 — a second `Arm.consistent` would be a
+duplicate definition, and moving it would break the `wit_*` theorems without
+an import cycle). `Model.lean` states the identical equation as
+`model_asm`, proved by `rfl`, with zero duplication.
 
 ## Sources and honesty notes
 - Clauses cite Arm ARM B2.3 / `aarch64.cat` by section and name FROM THE
@@ -53,9 +90,39 @@
   `List.union` is sought); `|>.union` after a union chain mis-parses — both
   fixed with explicit `Rel.union`.
 - Frozen files `Basic.lean`/`Event.lean` untouched. Only `Arm.lean` (import
-  line) and the new file were edited.
+  lines) and the two new files were edited.
 
-## Confidence per clause (point 2 of the follow-up; reviewer guidance)
+## `IFetch.lean`: instruction-fetch ordering (load-time patching story)
+
+NEW `arm/Arm/Mem/IFetch.lean` + import line in `arm/Arm.lean`. Own wrapper
+(`IMntKind`: `writeCode`/`dcCvau`/`dsb`/`icIvau`/`isb`/`fetch`; `IFEv`;
+`IFExec` with `po` over the shared `Rel`) — the frozen `Event.lean` is NOT
+edited (its `Barrier` has no IC/DC operations, so the maintenance steps
+cannot be encoded there). Predicates: `maintDone` (DC;DSB;IC chain at one
+address = completed maintenance) and `fetchSeesWrite` (full recipe
+write→DC→DSB→IC→DSB→ISB→fetch; `false` means stale fetch ALLOWED, never one
+observed value).
+Verdicts (all `by decide`, all `[propext]` only): `recipe_complete_sees_new`
+(`= true`); five planted drops (`drop_dc/dsb1/ic/dsb2/isb_allows_stale`,
+each `= false`); `drop_isb_maintenance_completed` (`maintDone = true` while
+the fetch is unordered — isolates ISB context synchronisation exactly).
+Full build: exit 0, 9 jobs.
+
+### IFetch confidence (HIGH vs LOW, reviewer guidance)
+
+HIGH (canonical, stable across architecture revisions):
+- The recipe sequence itself: write; DC CVAU; DSB; IC IVAU; DSB; ISB.
+- ISB as context synchronisation after completed maintenance (the
+  `drop_isb_maintenance_completed` split is the direct formal counterpart).
+- `false` = stale allowed, not stale guaranteed (UNPREDICTABLE-style freedom).
+
+LOW (my formalisation choices, reviewer: check here first):
+- `po`-edge chains as the ordering carrier (no `ob`-style derived relations;
+  single-core fixtures only, so no cross-core maintenance visibility).
+- DSBs modelled without shareability domain (no ISH/OSY distinction).
+- No PoU/PoC distinction, no line-size/associativity, no faults between steps.
+- Exact Barrier/maintenance operation set (`EvKind.barrier` not reused since
+  IC/DC have no form there — a deliberate non-duplication, see CUTS).
 
 Reproduced from memory of the published `aarch64.cat` / Arm ARM B2.3 — NOT a
 measured copy (no Arm ARM text, no `.cat` file on this machine). Where to look:
