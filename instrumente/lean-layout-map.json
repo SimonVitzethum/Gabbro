@@ -528,6 +528,7 @@
  "Grammatik.X86.SseFourOne": "Grammatik.X86.Befehle.Sse.SseFourOne",
  "Grammatik.X86.SseMoves": "Grammatik.X86.Befehle.Sse.SseMoves",
  "Grammatik.X86.SseThreeByte": "Grammatik.X86.Befehle.Sse.SseThreeByte",
+ "Grammatik.X86.SseThreeByteMem": "Grammatik.X86.Befehle.Sse.SseThreeByteMem",
  "Grammatik.X86.StackExecution": "Grammatik.X86.Laden.StackExecution",
  "Grammatik.X86.StackUnwind": "Grammatik.X86.Laden.StackUnwind",
  "Grammatik.X86.StaerkeReduktion": "Grammatik.X86.Opt.Schleifen.StaerkeReduktion",

@@ -722,5 +722,6 @@ import Grammatik.X86.IntMovTest
 import Grammatik.X86.GvStartPflicht
 import Grammatik.X86.GvAtomRely
 import Grammatik.X86.Befehle.Sse.SseAesClmul
+import Grammatik.X86.Befehle.Sse.SseThreeByteMem
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
 import Grammatik.Zielsatz.Atomar.BeweisAtomar
