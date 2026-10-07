@@ -116,10 +116,81 @@ def execAdcSbc (d n m w : Nat) (sub setflags : Bool) : Eff Unit := do
     wrXn d w r
   else wrXn d w r
 
+/-- Logical ops (Sail `LogicalOp`); `invert` selects the BIC/ORN/BICS shape. -/
+-- Sail: instrs64.sail:1391,1757 (`LogicalOp_AND/ORR/EOR`, `invert` from N).
+inductive LogicOp where
+  | and | orr | eor
+  deriving DecidableEq, Repr
+
+/-- Shared core of every logical execute. -/
+-- Sail: instrs64.sail:1391 (`execute ... logical_immediate`) and
+-- instrs64.sail:1757 (`execute ... logical_shiftedreg`).
+def logicPure (w a b : Nat) (invert : Bool) (op : LogicOp) : Nat :=
+  let x := a % pow2 w
+  let y := if invert then pow2 w - 1 - b % pow2 w else b % pow2 w
+  match op with
+  | .and => x.land y
+  | .orr => x.lor y
+  | .eor => x.xor y
+
+/-- NZCV of a logical result: N from the top bit, Z from zero, C and V clear. -/
+-- Sail: instrs64.sail:1391 (`(... @ IsZeroBit(result)) @ 0b00`).
+def logicNZCV (w r : Nat) : Bool × Bool × Bool × Bool :=
+  (decide (pow2 (w - 1) ≤ r % pow2 w), decide (r % pow2 w = 0), false, false)
+
+/-- AND of `0xFF` with mask `0xF` is `0xF`. -/
+-- Sail: instrs64.sail:1391.
+theorem logicPure_and : logicPure 64 0xFF 0xF false .and = 0xF := by decide
+
+/-- ORN shape (`invert`): `0 | ~0xFF` in 32 bits. -/
+-- Sail: instrs64.sail:1757.
+theorem logicPure_orn : logicPure 32 0 0xFF true .orr = 0xFFFFFF00 := by decide
+
+/-- EOR of a value with itself is zero. -/
+-- Sail: instrs64.sail:1391.
+theorem logicPure_eor : logicPure 32 0x12345678 0x12345678 false .eor = 0 := by decide
+
+/-- ANDS writing zero sets Z only. -/
+-- Sail: instrs64.sail:1391.
+theorem logicNZCV_zero : logicNZCV 32 0 = (false, true, false, false) := by decide
+
+/-- ANDS writing a negative value sets N only. -/
+-- Sail: instrs64.sail:1391.
+theorem logicNZCV_neg : logicNZCV 32 0x80000000 = (true, false, false, false) := by
+  decide
+
+/-- Planted wrong case: `0xFF AND 0xF` is not `0xFF`. -/
+theorem logicPure_wrong : logicPure 64 0xFF 0xF false .and ≠ 0xFF := by decide
+
+/-- AND/ORR/EOR/ANDS (immediate): `mask` is the decode-built bitmask. -/
+-- Sail: instrs64.sail:1391. Reads X (even `n = 31`); writes SP-or-X.
+def execLogicalImm (d n w mask : Nat) (invert : Bool) (op : LogicOp) (setflags : Bool) :
+    Eff Unit := do
+  let o1 ← rdXn n w
+  let r := logicPure w o1 mask invert op
+  if setflags then do
+    let (nn, z, _, _) := logicNZCV w r
+    let _ ← wrNZCVn (nzcvOf nn z false false)
+    wrSPorX d w r true
+  else wrSPorX d w r false
+
+/-- AND/ORR/EOR/ANDS (shifted register, with BIC/ORN/BICS via `invert`). -/
+-- Sail: instrs64.sail:1757. Reads and writes X throughout.
+def execLogicalShift (d n m w : Nat) (invert : Bool) (op : LogicOp) (setflags : Bool)
+    (st : ShiftTy) (amt : Nat) : Eff Unit := do
+  let o1 ← rdXn n w
+  let mraw ← rdXn m w
+  let r := logicPure w o1 (shiftReg w mraw st amt) invert op
+  if setflags then do
+    let (nn, z, _, _) := logicNZCV w r
+    let _ ← wrNZCVn (nzcvOf nn z false false)
+    wrXn d w r
+  else wrXn d w r
+
 end Arm.Int
 
 /-
-CUTS: arithmetic execute only (immediate, shifted, extended, carry).
-Logical, movewide, ADR/ADRP and all later families are open.
-The `Eff` wrappers are unproved plumbing over `decide`-checked cores.
+CUTS: arithmetic and logical execute only. Movewide, ADR/ADRP and all later
+families are open. The `Eff` wrappers are unproved plumbing over
+`decide`-checked cores.
 -/
