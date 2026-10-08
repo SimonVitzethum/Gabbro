@@ -336,6 +336,7 @@ import Grammatik.Zielsatz.Eigenschaften.Schwach
 import Grammatik.Speichermodell.Maschine.Zeuge
 import Grammatik.Speichermodell.Darstellung
 import Grammatik.CBackend.Semantik.ZeichenfolgeZelle
+import Grammatik.Speichermodell.DarstellungTy
 import Grammatik.Korrespondenz.Zeugnis.Zertifikate
 import Grammatik.Speichermodell.Atomar.Atomar
 import Grammatik.Speichermodell.Atomar.AtomarZeuge
