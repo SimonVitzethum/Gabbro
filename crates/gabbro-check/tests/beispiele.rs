@@ -111,6 +111,16 @@ const ABGELEITET_STATT_E001: &[&str] = &[
     "701-rein-ohne-klausel.gab",
 ];
 
+/// **Breiter Kontext (SPRACHE-EFFIZIENZ #18): the B3 paper cut, closed.**
+/// `583-summe-verlaesst-die-breite.gab` pins `M104` for `u32 + u32` with a
+/// `u64` return type in its frozen first line: the verdict before this
+/// lane. Under the breiter-Kontext rule that shape computes in `u64` and
+/// stays silent; the refusal it pinned now fires only where the target is
+/// not wider (`gift/1409`, same operands, same hint). Like lane 191's E001
+/// flips above, the file stays in place and asserts the other side: no
+/// error at all.
+const BREITER_KONTEXT_STATT_M104: &[&str] = &["583-summe-verlaesst-die-breite.gab"];
+
 #[test]
 fn jedes_gift_faellt_mit_seinem_code() {
     for pfad in dateien(Some("gift")) {
@@ -130,6 +140,20 @@ fn jedes_gift_faellt_mit_seinem_code() {
             assert!(
                 fehler.is_empty(),
                 "{name} derives its omitted clause since lane 191 and must stay silent,                  fällt aber mit {fehler:?}:\n{bericht}"
+            );
+            continue;
+        }
+        if BREITER_KONTEXT_STATT_M104.contains(&dateiname) {
+            let (codes, bericht, name) = absagen_von(&pfad);
+            let fehler: Vec<&str> = codes
+                .iter()
+                .filter(|(_, s)| *s == Stufe::Fehler)
+                .map(|(c, _)| *c)
+                .collect();
+            assert!(
+                fehler.is_empty(),
+                "{name} computes in the wider context since the breiter-Kontext rule \
+                 and must stay silent, fällt aber mit {fehler:?}:\n{bericht}"
             );
             continue;
         }

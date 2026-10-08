@@ -1561,9 +1561,12 @@ impl<'a> Pruefer<'a> {
         self.frische_gebrauch(s, lage);
         match &s.art {
             StmtArt::Let(l) => {
-                let wert = self.ausdruck(&l.wert, lage);
-                self.rufe_im_ausdruck(&l.wert, lage);
                 let ziel = l.typ.as_ref().map(|t| self.u.typ_von_ausdruck_decl(&self.modul, t));
+                // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** `let x : T = e;`
+                // rechnet ein schlichtes `+ - *` als ganzen Wert in `T`s
+                // Breite; ohne Annotation (`None`) aendert sich nichts.
+                let wert = self.ausdruck_mit_kontext(&l.wert, lage, ziel.as_ref());
+                self.rufe_im_ausdruck(&l.wert, lage);
                 if let Some(z) = &ziel {
                     self.passt(&wert, z, l.wert.span, "binding");
                 }
@@ -2059,7 +2062,15 @@ impl<'a> Pruefer<'a> {
                         ),
                     );
                 }
-                let quelle = self.ausdruck(&z.wert, lage);
+                // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** `p = e;`
+                // rechnet ein schlichtes `+ - *` als ganzen Wert in der
+                // Breite des Zielorts; zusammengesetzte Zuweisung (`+=` …)
+                // laeuft weiter ueber `rechnung_zuweisung` wie bisher.
+                let quelle = if z.op == ZuwOp::Setzt {
+                    self.ausdruck_mit_kontext(&z.wert, lage, Some(&ziel))
+                } else {
+                    self.ausdruck(&z.wert, lage)
+                };
                 self.rufe_im_ausdruck(&z.wert, lage);
                 let ergebnis_typ = match z.op {
                     ZuwOp::Setzt => quelle,
@@ -2499,7 +2510,9 @@ impl<'a> Pruefer<'a> {
                 self.geschriebenes_toeten(rumpf, lage);
             }
             StmtArt::Return(Some(e)) => {
-                let t = self.ausdruck(e, lage);
+                // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** `return e;`
+                // rechnet in der Breite des deklarierten Ergebnisses.
+                let t = self.ausdruck_mit_kontext(e, lage, ergebnis);
                 self.rufe_im_ausdruck(e, lage);
                 // **Ein `return` eines GRUNDES ist die Fehlerrueckgabe** (Stufe 7,
                 // 2026-08-21) -- und sie geht gegen das `or R` der Signatur, nicht gegen
@@ -2603,6 +2616,10 @@ impl<'a> Pruefer<'a> {
             // facts like one. Unresolved it stays what E1 made it: typed
             // arguments, no callee, `N057` from the name pass.
             StmtArt::LibraryCall(r) => {
+                // **Kein breiter Kontext hier (SPRACHE-EFFIZIENZ #18):** wie bei
+                // indirekten Rufen kennt der Erzeuger keine Parametertypen
+                // (`bibliothek_ruf` faechert ohne auf), also bleibt hier alles
+                // schmal wie bisher -- keine Divergenz je.
                 let mut argtypen = Vec::new();
                 for a in &r.args {
                     argtypen.push((self.ausdruck(a, lage), a.span));
@@ -2781,6 +2798,26 @@ impl<'a> Pruefer<'a> {
         let t = self.ausdruck_roh(e, lage);
         self.buche(&t);
         t
+    }
+
+    /// An expression typed against a declared integer context (SPRACHE-EFFIZIENZ
+    /// #18, breiter Kontext): `+ - *` standing as the WHOLE value compute in
+    /// the context's width (see `binaer`); every other form is typed exactly
+    /// as by `ausdruck`, so comparisons, shifts, division, calls and
+    /// everything else keep today's behaviour bit for bit. `None` is plain
+    /// `ausdruck` through the same door, so the context-free paths cannot
+    /// drift from it.
+    fn ausdruck_mit_kontext(&mut self, e: &Expr, lage: &Lage, ktx: Option<&Typ>) -> Typ {
+        match &e.art {
+            ExprArt::Binaer(op @ (BinOp::Plus | BinOp::Minus | BinOp::Mal), a, b)
+                if ktx.is_some() =>
+            {
+                let t = self.binaer(*op, a, b, e.span, lage, ktx);
+                self.buche(&t);
+                t
+            }
+            _ => self.ausdruck(e, lage),
+        }
     }
 
     fn ausdruck_roh(&mut self, e: &Expr, lage: &Lage) -> Typ {
@@ -3508,7 +3545,7 @@ impl<'a> Pruefer<'a> {
                 let (_, hi) = typen::grenzen(b.breite, false);
                 Typ::Ganzzahl(IntBereich::genau(b.breite, false, hi - b.max, hi - b.min))
             }
-            ExprArt::Binaer(op, a, b) => self.binaer(*op, a, b, e.span, lage),
+            ExprArt::Binaer(op, a, b) => self.binaer(*op, a, b, e.span, lage, None),
             // **Lane 111:** a const-table literal is not typed here.
             // `konstanten.rs` holds it element-wise (`K190`-`K194`), and a
             // second typing here would be the second register over the same
@@ -3636,10 +3673,56 @@ impl<'a> Pruefer<'a> {
         }
     }
 
-    fn binaer(&mut self, op: BinOp, a: &Expr, b: &Expr, span: Span, lage: &Lage) -> Typ {
+    /// **Breiter Kontext (SPRACHE-EFFIZIENZ #18): wann `+ - *` in der Breite
+    /// des Kontexts rechnen.** Gibt den deklarierten Bereich von `T` zurueck,
+    /// wenn alle drei Bedingungen stehen: `T` selbst laeuft nicht um und hat
+    /// einen Ganzzahlbereich; kein Operand laeuft um; jeder nicht-literale
+    /// Operand ist hoechstens so breit wie `T` und aus derselben
+    /// Vorzeichenklasse (Literale nehmen jede Breite an -- ihr Wert ist
+    /// exakt, und `M101` haelt danach den Sitz in `T`). Sonst `None`, und der
+    /// Aufrufer faehrt den schmalen Pfad wie bisher.
+    ///
+    /// `hoechstens` statt strikt groesser, mit Begruendung: ein Operand, der
+    /// BEREITS `T`-Breite traegt (etwa das Ergebnis einer inneren
+    /// Erweiterung wie in `a * b + c`), faellt unter dem strikten Vergleich
+    /// heraus, und der schmale Pfad antwortet bei gemischten Breiten mit
+    /// `Unbekannt` -- einer Stille, waehrend die Rechnung in `T` exakt und
+    /// bekannt waere ( dieselbe Klasse wie «B8»). Wo alle Breiten gleich
+    /// sind, rechnet die Erweiterung bitidentisch zum schmalen Pfad, also
+    /// aendert `<=` dort nichts -- namentlich bleibt `u32 + u32` in `u32`
+    /// bei `M104` (`gift/1409`).
+    fn breiter_kontext(
+        ta: &Typ,
+        tb: &Typ,
+        ba: &IntBereich,
+        bb: &IntBereich,
+        ktx: Option<&Typ>,
+    ) -> Option<IntBereich> {
+        let t = ktx?;
+        if t.laeuft_um() || ta.laeuft_um() || tb.laeuft_um() {
+            return None;
+        }
+        let tz = t.bereich()?;
+        for o in [ba, bb] {
+            if !o.literal && (o.breite > tz.breite || o.vorzeichen != tz.vorzeichen) {
+                return None;
+            }
+        }
+        Some(tz)
+    }
+
+    fn binaer(
+        &mut self,
+        op: BinOp,
+        a: &Expr,
+        b: &Expr,
+        span: Span,
+        lage: &Lage,
+        ktx: Option<&Typ>,
+    ) -> Typ {
         self.vorrangfalle(op, a, b);
-        let ta = self.ausdruck(a, lage);
-        let tb = self.ausdruck(b, lage);
+        let ta = self.ausdruck_mit_kontext(a, lage, ktx);
+        let tb = self.ausdruck_mit_kontext(b, lage, ktx);
         if op == BinOp::Und || op == BinOp::Oder {
             return Typ::Wahrheit;
         }
@@ -3843,6 +3926,49 @@ impl<'a> Pruefer<'a> {
             return self.wrapping_or_saturating(op, &ba, &bb, span);
         }
 
+        // **Breiter Kontext (SPRACHE-EFFIZIENZ #18): `+ - *` als ganzer Wert
+        // in einem deklarierten breiteren Ziel.** Beide Operandenbereiche
+        // werden auf `T`s Breite und Vorzeichen gehoben (gleiche Schranken --
+        // nur die Maschine darunter wird breiter, genau die ausgeschriebene
+        // Umwandlung, die der Nutzer heute von Hand schreibt) und mit
+        // denselben drei Funktionen gerechnet: `gemeinsame_form` antwortet
+        // dann `T`s Form, und `laeuft_ueber` misst gegen `T`s Breite. `M104`
+        // faellt nur noch, wo das Ergebnis auch `T` verlaesst (derselbe Satz,
+        // derselbe Wortlaut wie auf dem schmalen Pfad); ob es in `T`s
+        // DEKLARIERTEN Bereich passt, haelt danach `passt`/`M101` an der
+        // Zuweisung, wie bisher. V2/`abrunden`/wrapping-Pfade oben behalten
+        // Vorrang -- was dort schon entschieden ist, wird hier nicht neu
+        // entschieden.
+        if matches!(op, BinOp::Plus | BinOp::Minus | BinOp::Mal) {
+            if let Some(tz) = Self::breiter_kontext(&ta, &tb, &ba, &bb, ktx) {
+                let wa = IntBereich {
+                    breite: tz.breite,
+                    vorzeichen: tz.vorzeichen,
+                    min: ba.min,
+                    max: ba.max,
+                    literal: false,
+                };
+                let wb = IntBereich {
+                    breite: tz.breite,
+                    vorzeichen: tz.vorzeichen,
+                    min: bb.min,
+                    max: bb.max,
+                    literal: false,
+                };
+                let r = match op {
+                    BinOp::Plus => typen::addiere(&wa, &wb),
+                    BinOp::Minus => typen::subtrahiere(&wa, &wb),
+                    _ => typen::multipliziere(&wa, &wb),
+                };
+                if r.laeuft_ueber {
+                    self.ueberlauf_ausdruck(span, &ba, &bb, op_zeichen(op));
+                }
+                return match r.bereich {
+                    Some(x) => Typ::Ganzzahl(x),
+                    None => Typ::Unbekannt,
+                };
+            }
+        }
         let r = match op {
             BinOp::Plus => typen::addiere(&ba, &bb),
             BinOp::Minus => typen::subtrahiere(&ba, &bb),
@@ -4010,6 +4136,10 @@ impl<'a> Pruefer<'a> {
         // `Unbekannt`:** `Unbekannt` is precisely what made the old hole invisible, and the
         // run only counted it (`M1 saw 4 expressions, 3 of them without a type`).
         if let Some(o) = r.place() {
+            // **Kein breiter Kontext hier (SPRACHE-EFFIZIENZ #18):** der Erzeuger
+            // faechert indirekte Rufe ohne Parametertypen auf (`ruf` kennt nur
+            // den Ort), also rechnet hier alles schmal wie bisher -- keine
+            // Divergenz je zwischen geprüft und gesenkt.
             let mut argtypen = Vec::new();
             for a in &r.argumente {
                 argtypen.push((self.ausdruck(a, lage), a.span));
@@ -4107,8 +4237,16 @@ impl<'a> Pruefer<'a> {
         // **Aufgeloest wird im Modul des Aufrufs**, nicht ueber den blanken Namen.
         let signatur = r.path().and_then(|p| self.u.funktion(&self.modul, p)).cloned();
         let mut argtypen = Vec::new();
-        for a in &r.argumente {
-            argtypen.push((self.ausdruck(a, lage), a.span));
+        for (i, a) in r.argumente.iter().enumerate() {
+            // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** der Parametertyp
+            // des Rangs traegt ein schlichtes `+ - *` als ganzen Wert; ohne
+            // Signatur oder Rang (`uebergang` hat keine Parameter) aendert
+            // sich nichts. `M143` weiter unten bleibt wo es ist.
+            let ktx = signatur
+                .as_ref()
+                .and_then(|s| s.parameter.get(i))
+                .map(|(_, t)| t);
+            argtypen.push((self.ausdruck_mit_kontext(a, lage, ktx), a.span));
         }
         // **Lane 167: `Variant(payload)` -- a `tagged` case construction, not a call.**
         //

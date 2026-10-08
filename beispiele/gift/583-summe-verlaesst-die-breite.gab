@@ -1,10 +1,17 @@
 -- erwartet: M104
--- **«B3», paper cut 4 of five.** `u32 + u32` with a `u64` return type.
+-- **«B3», paper cut 4 of five -- CLOSED by the breiter-Kontext rule
+-- (SPRACHE-EFFIZIENZ #18).** `u32 + u32` with a `u64` return type.
 --
 -- The reader read *"`u32 + u32` leaves the width of the result type"*, concluded that the
 -- RESULT TYPE was too small, widened it to `u64` -- **and got the identical refusal back.**
--- The width that is left is the width of the OPERANDS, and a wider return type does not
--- widen them.
+-- That was the finding-18 shape, and the refusal was correct then: the checker
+-- added in the operands' width, so only the handwritten widening helped.
+--
+-- Since the breiter-Kontext rule the same shape computes in the declared `u64`
+-- and stays silent; the `M104` this file pinned now fires only where the target
+-- is not wider (same operands, same hint: `gift/1409`). The first line stays
+-- frozen as the verdict before the rule; the `jedes_gift`-harness asserts the
+-- other side for this file (no error at all), exactly like lane 191's E001 flips.
 --
 -- *A message that names the fault without naming the line it lives on sends the reader to
 -- the wrong line*, and here it cost a whole attempt. The three shapes that DO work are in

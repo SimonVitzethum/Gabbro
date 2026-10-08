@@ -48,11 +48,15 @@ const HINWEISE: &[(&str, &str)] = &[
 /// omission needs no hint at all. The `E001` shape note still fires where
 /// the omission stays an error (a declaration without a body), so the site
 /// moves to `740`, whose `extern` edge falls with `E001` by design.
+///
+/// **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** `583` computes in `u64` and
+/// went green — the `M104` note speaks where the target is not wider, so the
+/// site moves to `1409` (same operands, same hint, still refused).
 const STELLEN: &[(&str, &str)] = &[
     ("E001", "740-stumm-edge-pinned.gab"),
     ("P014", "581-wirkungsliste-leer.gab"),
     ("P001-brace", "582-wirkung-ohne-klammern.gab"),
-    ("M104", "583-summe-verlaesst-die-breite.gab"),
+    ("M104", "1409-gleiche-breite-bleibt-m104.gab"),
     ("P001-semi", "584-strichpunkt-fehlt-im-block.gab"),
 ];
 
@@ -147,13 +151,17 @@ fn der_sechste_papierschnitt_war_schon_gedeckt() {
 
 /// **The `M104` hint adapts to the operand type, and it never offers a way out that does not
 /// exist.** At 64 bits there is no wider type to bind into.
+///
+/// **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** the wider-return probes went
+/// green (a wider declared target widens the computation now), so the two
+/// probes that need the refusal stand on same-width targets.
 #[test]
 fn der_breitenhinweis_verspricht_keine_breite_die_es_nicht_gibt() {
-    let vier = "module w { pub fn f(a : u32, b : u32) -> u64 effects { pure } \
+    let vier = "module w { pub fn f(a : u32, b : u32) -> u32 effects { pure } \
                 costs <= 4 ops { return a + b; } }";
     let acht = "module w { pub fn f(a : u64, b : u64) -> u64 effects { pure } \
                 costs <= 4 ops { return a + b; } }";
-    let vorzeichen = "module w { pub fn f(a : i32, b : i32) -> i64 effects { pure } \
+    let vorzeichen = "module w { pub fn f(a : i32, b : i32) -> i32 effects { pure } \
                       costs <= 4 ops { return a + b; } }";
 
     for (quelle, muss, darf_nicht) in [

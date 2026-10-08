@@ -10726,11 +10726,15 @@ fn anweisung(
                     let t = if let Some(m) = austritt.rueck_kette {
                         kette_zu(x, m, u, absagen)
                     } else {
+                        // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** der Rückgabewert
+                        // rechnet in der Breite des deklarierten Ergebnistyps --
+                        // gespiegelt zum Prüfer (das `Return` trägt `ergebnis` ein).
+                        let breit = austritt.rueck_ctyp.as_deref().and_then(c_breite);
                         austritt
                             .rueck_option
                             .as_deref()
                             .and_then(|tab| option_wert(x, tab, u, absagen))
-                            .unwrap_or_else(|| ausdruck(x, u, absagen))
+                            .unwrap_or_else(|| ausdruck_breit(x, u, absagen, false, breit))
                     };
                     // **`-> T or R`: der Rueckgabewert ist der ERFOLG, das Ergebnis geht
                     // durch `*_wert`** (2026-08-20, Stufe 4).
@@ -10886,9 +10890,18 @@ fn anweisung(
                     // `double` and narrows late. Integer places read
                     // `schmal == false`, which is `ausdruck` itself, so their
                     // text is unchanged; mixed variables refuse above.
+                    // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** ein arithmetischer
+                    // Wert in der Breite des Platzes -- gespiegelt zum Prüfer
+                    // (`rechnung_zuweisung` trägt das Ziel ein, und nur für
+                    // `=`; zusammengesetzte Zuweisung rechnet dort wie hier
+                    // schmal). Wo der Platz kein Ganzzahlwort nennt, bleibt
+                    // alles wie bisher (`None`).
                     let schmal = ziel.as_deref() == Some("float");
+                    let breit = matches!(z.op, ZuwOp::Setzt)
+                        .then(|| ziel.as_deref().and_then(c_breite))
+                        .flatten();
                     verenge(
-                        ausdruck_breit(&z.wert, u, absagen, schmal),
+                        ausdruck_breit(&z.wert, u, absagen, schmal, breit),
                         &z.wert,
                         ziel.as_deref(),
                         u,
@@ -11341,7 +11354,23 @@ fn anweisung(
                     // narrower than the right-hand side's -- and until now this site called
                     // no `verenge` at all, so it wrote the bare, uncast narrowing straight
                     // into the declaration.
-                    let wert = verenge(ausdruck(&l.wert, u, absagen), &l.wert, Some(c.as_str()), u);
+                    // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** der Initialisierer
+                    // rechnet in der Breite des deklarierten Typs -- gespiegelt zum
+                    // Prüfer (das `Let` trägt NUR die Annotation ein, ohne bleibt
+                    // es beim schmalen Pfad). Unannotierte `let` lesen `None`: was
+                    // keinen deklarierten Typ hat, hat keinen Kontext.
+                    let breit = l
+                        .typ
+                        .as_ref()
+                        .and_then(|t| ctyp(t, u))
+                        .as_deref()
+                        .and_then(c_breite);
+                    let wert = verenge(
+                        ausdruck_breit(&l.wert, u, absagen, false, breit),
+                        &l.wert,
+                        Some(c.as_str()),
+                        u,
+                    );
                     aus.push_str(&format!("{e}{c} {} = {};\n", l.name.text, wert));
                     // **`(void)r2;` for a binding this body never reads back** -- the same
                     // answer the unread parameter gets, from the same walker. See
@@ -16887,6 +16916,14 @@ fn ruf(r: &Ruf, u: &Namen, absagen: &mut Absagen) -> String {
                     String::new()
                 }
             },
+            // **Breiter Kontext (SPRACHE-EFFIZIENZ #18):** ein arithmetisches Argument
+            // rechnet in der Breite des deklarierten Parametertyps -- gespiegelt zum
+            // Prüfer (der Direktruf trägt die Signatur ein). Was kein Ganzzahlwort
+            // nennt, liest `None` und senkt wie bisher.
+            Some(t) => {
+                let breit = ctyp(t, u).as_deref().and_then(c_breite);
+                ausdruck_breit(a, u, absagen, false, breit)
+            }
             _ => ausdruck(a, u, absagen),
         })
         .collect();
@@ -17603,7 +17640,7 @@ fn ist_float(e: &Expr, u: &Namen) -> bool {
 }
 
 fn ausdruck(e: &Expr, u: &Namen, absagen: &mut Absagen) -> String {
-    ausdruck_breit(e, u, absagen, false)
+    ausdruck_breit(e, u, absagen, false, None)
 }
 
 /// Every counter of one function, defined («SG-24»).
@@ -18040,7 +18077,116 @@ fn zaehlstellen_expr(
 /// gets its `f`. **Only three forms pass it on** -- the parenthesis, the binary node and the
 /// literal itself. Everything else starts at `false`: a call, a place, an index carry their
 /// own type, and a literal inside one has a different neighbour.
-fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> String {
+/// `breit` means: this `+ - *` node stands as the WHOLE value in a declared wider integer
+/// target (SPRACHE-EFFIZIENZ #18) and computes in its width; the leaves are cast up.
+/// Klammern tragen `schmal`, aber NIE `breit` (der Prüfer wirft den Kontext dort ab).
+/// Only `+ - *` inherit it into nested same-kind nodes; everything else reads `None`.
+/// Die Maschinenbreite hinter einem C-Ganzzahlwort (`"uint64_t"` -> `(64, false)`),
+/// oder `None` wo kein Wort steht (`bool`, Gleitkomma, Zeiger, Verbunde).
+fn c_breite(c: &str) -> Option<(u8, bool)> {
+    let (wort, vorzeichen) = match c.strip_prefix('u') {
+        Some(rest) => (rest, false),
+        None => (c, true),
+    };
+    let ziffern = wort.strip_prefix("int")?.strip_suffix("_t")?;
+    let breite: u8 = ziffern.parse().ok()?;
+    match breite {
+        8 | 16 | 32 | 64 => Some((breite, vorzeichen)),
+        _ => None,
+    }
+}
+
+/// Das C-Wort zu einer Maschinenbreite (`(64, false)` -> `"uint64_t"`).
+fn breiten_wort(bw: u8, bvz: bool) -> &'static str {
+    match (bw, bvz) {
+        (8, false) => "uint8_t",
+        (16, false) => "uint16_t",
+        (32, false) => "uint32_t",
+        (64, false) => "uint64_t",
+        (8, true) => "int8_t",
+        (16, true) => "int16_t",
+        (32, true) => "int32_t",
+        _ => "int64_t",
+    }
+}
+
+/// Ein Blatt in die Zielbreite heben (`(uint64_t)(a)`), oder `None` wo kein Cast
+/// geschrieben werden darf: unbekannte Operandenbreite, fremdes Vorzeichen, ein
+/// Blatt jenseits der Zielbreite. Der Aufrufer fällt dann auf die schmale Senkung
+/// zurück -- der Prüfer hat dort ebenfalls nicht erweitert (gleiche Strukturfakten,
+/// gespiegelt: `breiter_kontext` lehnt dieselben Formen ab).
+/// Literale brauchen keinen Cast: C hebt sie von selbst in die Zielbreite (sie
+/// passen laut `M101` hinein, sonst wäre der Baum nie hier angekommen). Schon
+/// breite Blätter brauchen ebenfalls keinen: die schmale Senkung rechnet dort
+/// ohnehin in dieser Breite. Der Rückgabewert sagt, ob ein Cast geschrieben
+/// wurde -- ohne einen einzigen bleibt der Knoten, was er war.
+fn breiten_blatt(
+    x: &Expr,
+    u: &Namen,
+    absagen: &mut Absagen,
+    wort: &str,
+    bw: u8,
+    bvz: bool,
+) -> Option<(String, bool)> {
+    if matches!(x.art, ExprArt::Zahl(_)) {
+        return Some((ausdruck(x, u, absagen), false));
+    }
+    // Verschachtelte `+ - *` rechnen selbst breit (der Aufrufer reicht `breit`
+    // an sie weiter -- gespiegelt zum Prüfer, der `ktx` in die Operanden
+    // hineinträgt); hier zählt nur ihr Text, kein Cast. Dass sie ankommen,
+    // steht über dem Knoten: C hebt schmal nach breit von selbst.
+    if matches!(
+        x.art,
+        ExprArt::Binaer(BinOp::Plus | BinOp::Minus | BinOp::Mal, _, _)
+    ) {
+        return Some((ausdruck_breit(x, u, absagen, false, Some((bw, bvz))), true));
+    }
+    let c = wert_ctyp(x, u)?;
+    let (xw, xvz) = c_breite(&c)?;
+    if xvz != bvz || xw > bw {
+        return None;
+    }
+    let text = ausdruck(x, u, absagen);
+    if xw == bw {
+        return Some((text, false));
+    }
+    Some((format!("({wort})({text})"), true))
+}
+
+/// `a + b` in der Zielbreite: beide Blätter heben, den Operator dazwischen.
+/// `None` = keine Weitung -- der Aufrufer senkt schmal, wie der Prüfer dort.
+/// Was umläuft, bleibt davor (der `umlaeufer`-Arm oben, gespiegelt zu
+/// `laeuft_um` im Prüfer): Modulo rechnet nicht breit.
+fn breite_rechnung(
+    op: BinOp,
+    a: &Expr,
+    b: &Expr,
+    bw: u8,
+    bvz: bool,
+    u: &Namen,
+    absagen: &mut Absagen,
+) -> Option<String> {
+    if umlaeufer_typ(a, u).is_some() || umlaeufer_typ(b, u).is_some() {
+        return None;
+    }
+    let wort = breiten_wort(bw, bvz);
+    let (l, _) = breiten_blatt(a, u, absagen, wort, bw, bvz)?;
+    let (r, _) = breiten_blatt(b, u, absagen, wort, bw, bvz)?;
+    Some(format!(
+        "{} {} {}",
+        geklammert(&op, a, l),
+        op_text(&op),
+        geklammert(&op, b, r)
+    ))
+}
+
+fn ausdruck_breit(
+    e: &Expr,
+    u: &Namen,
+    absagen: &mut Absagen,
+    schmal: bool,
+    breit: Option<(u8, bool)>,
+) -> String {
     match &e.art {
         // **The one door nine slots share** -- `return`, `if`, `let`, `static … =`, an
         // assignment. `czahl_oder_absage` writes the `u` C needs and refuses what C cannot
@@ -18096,7 +18242,11 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
         // muessen dieselbe Regel benutzen, sonst erzeugt der Uebersetzer einen Namen, den
         // er selbst nicht deklariert hat* -- `cc` faengt das, aber erst am Ende.
         ExprArt::Grund { grund, fall } => format!("{}_{}", grund.text, fall.text),
-        ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal)),
+        // **Klammern tragen `schmal` (Float-Nachbar), aber NIE `breit`:** der Prüfer
+        // wirft den breiten Kontext an Klammern ab (`ausdruck_mit_kontext` fällt für
+        // alles außer `+ - *` auf `ausdruck` zurück), und die Absenkung spiegelt das --
+        // `(a + b)` in `u64`-Stellung rechnet schmal wie geprüft, kein Cast.
+        ExprArt::Klammer(x) => format!("({})", ausdruck_breit(x, u, absagen, schmal, None)),
         ExprArt::Binaer(op, a, b) => {
             // **Lane 261: strings share only `+` and comparisons.** A `+`
             // of two strings is the concat helper at the summed max (which
@@ -18298,11 +18448,32 @@ fn ausdruck_breit(e: &Expr, u: &Namen, absagen: &mut Absagen, schmal: bool) -> S
             // `x * (0.5 + 0.25)` the inner node knows no `float` neighbour; without passing
             // it down the parenthesis would stay a `double` and take the expression with it.
             let schmal = schmal || ist_float(a, u) || ist_float(b, u);
+            // **Breiter Kontext (SPRACHE-EFFIZIENZ #18): in `T`s Breite rechnen.**
+            // `breit` trägt die Maschinenbreite des Ziels; `+ - *` heben ihre
+            // Blätter per Cast und rechnen darin -- genau die Umwandlung, die der
+            // Nutzer heute von Hand schreibt und der Prüfer jetzt faltet. Alle
+            // anderen Operatoren lesen `None`: Vergleiche, Schieber, Division,
+            // Logik und alles andere rechnen wie bisher, Bit für Bit.
+            // Lehnt ein Blatt den Cast ab (unbekannte Breite, fremdes Zeichen,
+            // jenseits des Ziels), fällt der Knoten auf die schmale Senkung
+            // zurück -- der Prüfer hat dort ebenfalls nicht erweitert. Die
+            // Vererbung darunter (`kind_breit`) gilt trotzdem: verschachtelte
+            // `+ - *` tragen `ktx` im Prüfer ein, und hier `breit`.
+            let kind_breit = match (op, breit) {
+                (BinOp::Plus | BinOp::Minus | BinOp::Mal, Some(_)) => breit,
+                _ => None,
+            };
+            if let (BinOp::Plus | BinOp::Minus | BinOp::Mal, Some((bw, bvz))) = (op, breit)
+            {
+                if let Some(text) = breite_rechnung(*op, a, b, bw, bvz, u, absagen) {
+                    return text;
+                }
+            }
             format!(
                 "{} {} {}",
-                geklammert(op, a, ausdruck_breit(a, u, absagen, schmal)),
+                geklammert(op, a, ausdruck_breit(a, u, absagen, schmal, kind_breit)),
                 op_text(op),
-                geklammert(op, b, ausdruck_breit(b, u, absagen, schmal))
+                geklammert(op, b, ausdruck_breit(b, u, absagen, schmal, kind_breit))
             )
         }
         ExprArt::Ruf(r) => ruf(r, u, absagen),

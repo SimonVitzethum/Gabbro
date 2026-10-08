@@ -2659,6 +2659,45 @@ pub const M1: &[Satz] = &[
                      crates/gabbro-check/src/lean_g.rs (Leave/Next arm)",
     },
     Satz {
+        name: "m1.breiter_kontext",
+        kennungen: &["M104", "M101"],
+        aussage: "An integer `+ - *` (and nested uses of these) standing as the \
+                  WHOLE value in a declared non-wrapping integer context `T` of \
+                  greater-or-equal machine width and same signedness class \
+                  computes in `T`s width: every operand converts implicitly \
+                  (exactly the rewrite the user wrote by hand), so `M104` stays \
+                  silent where the result fits `T`, and `M101` holds the fit \
+                  against `T`s declared range as before. Contexts are `let x : \
+                  T = e`, `return e` at declared result `T`, assignment `p = e` \
+                  at place type `T`, and call arguments at parameter type `T`. \
+                  Operands already at `T` width keep the computation identical \
+                  to the narrow path, so `u32 + u32` into `u32` still falls at \
+                  `M104` (`gift/1409`).",
+        vorbehalt: "Only whole values widen: sub-expressions of comparisons, \
+                    shift counts, division and remainder, mixed signedness, \
+                    wrapping operands or targets, and compound assignment keep \
+                    today's behaviour bit for bit (`gift/1410`, `gift/1412`). \
+                    Narrowing refinements (`V2`, `abrunden`) keep priority over \
+                    the widened computation. The legacy C backend computes in \
+                    the operands' width, so a widened program needs operand \
+                    casts there (emitter) or stays refused. No new diagnostic \
+                    code was minted for this rule.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/189 (four contexts plus nested `a * b + c`, \
+                      clean); beispiele/gift/1409 (same width, `M104` stays), \
+                      /1410 (no context, `M104` stays), /1411 (`M101` alone, \
+                      no `M104`), /1412 (mixed signs, `M104` stays); \
+                      `583-summe-verlaesst-die-breite.gab` goes silent (B3 \
+                      paper cut closed, whitelisted as in lane 191); exact \
+                      code sets in `rechenwerk.rs` (`breiter_kontext_*`, nine \
+                      tests). Old-vs-new sweep over the corpus: zero diffs \
+                      outside the intended flips.",
+        fundstelle: "crates/gabbro-check/src/m1.rs (`ausdruck_mit_kontext`, \
+                     `breiter_kontext`, `binaer` context parameter; let, \
+                     return, assignment and call-argument sites); \
+                     crates/gabbro-check/tests/rechenwerk.rs",
+    },
+    Satz {
         name: "m1.whole_array_store",
         kennungen: &["N287"],
         aussage: "A whole array is never a store target (`N287`): C has no assignment \

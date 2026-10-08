@@ -1,0 +1,14 @@
+-- erwartet: M101
+-- **M101 as before.** The widened computation fits `u64` (no `M104`), but
+-- the result range `0 .. 2000` does not fit the DECLARED `0 .. 100`.
+module gift::bereich_passt_nicht {
+
+pub fn f(a : u32 in 0 .. 1000, b : u32 in 0 .. 1000) -> u64
+    effects { pure }
+    costs <= 8 ops
+{
+    let w : u64 in 0 .. 100 = a + b;
+    return w;
+}
+
+}
