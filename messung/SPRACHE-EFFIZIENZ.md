@@ -191,7 +191,7 @@ no label for a `traverse` and refuses the exit by name (`C001`); nothing new the
 | 15 | static array initialiser list | DONE (parser + `konstanten.rs`, example 186, gifts 1405/1406) |
 | 16 | whole-array copy | DONE (`N579`, example 188, gifts 1407/1408) |
 | 17 | M147 selector taint | DONE (example 185, gift 1404) |
-| 18 | `u32 + u32` in the context width | IN PROGRESS (agent 05: example 189, gifts 1409-1412) |
+| 18 | `u32 + u32` in the context width | DONE (2026-10-08, agent 05, reviewed and integrated): `+ - *` as the whole value of a `let x : T`, `return`, plain `=` or direct call argument computes in `T`'s width when `T` is non-wrapping, no operand is wider than `T` or of another signedness class (literals fit any width); `u32 + u32` into `u32` stays `M104` (gift 1409), no context stays `M104` (1410), a range that does not fit `T` is `M101` (1411), mixed signedness unchanged (1412); example 189 (UNCERTIFIED `LG003`: the assignment target has no G form), gift 583 flipped to silent like the lane-191 flips, sentence `m1.breiter_kontext`, nine `rechenwerk` tests, legacy C emitter mirrors it. Lean: the model's `Zahl lo hi` arithmetic is exact, so no model change |
 | 19 | find-first exit | DONE (above) |
 | 20 | runtime bound check on `u8` reads | NOT A COST (cc removes it; measured noise) |
 
