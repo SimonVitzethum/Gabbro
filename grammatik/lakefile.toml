@@ -5,9 +5,16 @@ defaultTargets = ["Grammatik"]
 # Weak arguments preserve build traces; they change resource use, not proofs.
 weakLeanArgs = ["-j2", "-M4096"]
 
-# NO mathlib, and NO import of `programmlogik` or `passlogik`: this project is about the
-# GRAMMAR alone -- what the syntax admits and what a sentence of it means. Nothing here
-# reads the checker, the emitter, or `Body.lean`.
+# Mathlib ALLOWED EVERYWHERE since 2026-10-08 (Simon: "mathlib darf ueberall genutzt werden").
+# Pinned to the tag whose toolchain equals this project's (v4.33.1); precompiled oleans via
+# `lake exe cache get` -- a source build is not part of any lane. NO import of `programmlogik`
+# or `passlogik`: this project is about the GRAMMAR alone. Nothing here reads the checker,
+# the emitter, or `Body.lean`.
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "0df444a360eaa60ab8c11dca51a86af692955474"
 
 [[lean_lib]]
 name = "Grammatik"
