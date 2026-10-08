@@ -908,6 +908,11 @@ fn anweisung(s: &Stmt, z: &mut Zustand, lage: &Lage, absagen: &mut gabbro_syntax
                 }
                 LetQuelle::Ort(o) => {
                     ort_ausdruecke(o, z, lage, absagen);
+                    // A cell is read WHOLE by `let x : string max M = cell;` only; a
+                    // `let … else` over it would bind it past the copy rule (attack 5c, R4).
+                    if zelle_anfang(o, lage).is_some() {
+                        zellen_ablehnung(o.span, absagen);
+                    }
                     if o.suffixe.is_empty() && z.kette(&o.basis.text).is_some() {
                         sort_ablehnung(
                             o.span,

@@ -3081,7 +3081,7 @@ pub const M1: &[Satz] = &[
                   `T.slots[i].f = s;` / `NAMEN[i] = s;` (the value must fit the cell max, \
                   `N453`/`N455`). Every other mention of the cell -- an operand, a \
                   condition, an argument, a `return`, `lenof(cell)`, an index into it, a \
-                  compound assignment, a self-copy -- falls as `N581`, because a length \
+                  compound assignment, a self-copy, a `let … else` source -- falls as `N581`, because a length \
                   fact about memory another write can change between the check and the use \
                   would be unsound; the facts (`lenof`, an index below the length) hold for \
                   the LOCAL.",

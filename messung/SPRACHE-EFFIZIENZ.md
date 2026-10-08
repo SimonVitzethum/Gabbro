@@ -217,3 +217,17 @@ no label for a `traverse` and refuses the exit by name (`C001`); nothing new the
 
 Decisions needed from Simon: strings in aggregates; generics; records as values; making derivable
 ceremony optional; `option` over ordinary types.
+
+## 2026-10-08 -- adversarial review of four new rules (agent 05, task 5c)
+
+`crates/gabbro-check/tests/attack_5c.rs`: 63 attacks (M147 selector refinement 15, static
+initialiser lists 15, whole-array copy 16, string cells 17), each asserting the current behaviour
+with a `// FINDING:` line. Result: 58 sound, 5 ACCEPTS-UNSOUND, 0 REFUSES-SOUND. Dispositions:
+
+| Finding | Disposition |
+|---|---|
+| R2 float element in an integer-range `static` list (`[0.5, 1, 2, 3]` into `u32 in 0 .. 255`) | FIXED: `K190` (`konstanten.rs`, gift 1422) |
+| R4 string cell as the source of a `let … else` (2 attacks) | FIXED: `N581` (`zeichenfolge.rs`, gift 1423; sentence extended) |
+| R2 `~` element (`[~1, 1, 2, 3]`) accepted by the checker | OPEN, contained: the folder cannot fold `~`, the C emitter refuses it by name (`C001`); a checker refusal needs the folder to learn complement per width |
+| R1 aliased handles: `let v = t.slots[i].x; u.slots[i].x = 1; if v == 0 …` with two `rw` handles to one table is silent | OPEN, PRE-EXISTING (the old rule had the same granularity: expiry by handle name, "syntax only", `m1.rs`); not introduced by the selector refinement. Closing it needs alias knowledge (resolve by table, not by handle) |
+| R3 whole-array copy: none | a widening copy (u16 into u32 cells) would be sound but is not promised; refused as `N287`, spec-conform |

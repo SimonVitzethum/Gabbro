@@ -562,6 +562,13 @@ fn check_eintrag(
         );
         return;
     }
+    // **A float element in an INTEGER-range table is no integer constant** (attack 5c, R2): the
+    // silent return below is for float tables and for the `~` the folder cannot fold; an integer
+    // element range with a float element would initialise an integer cell with a non-integer.
+    if range.is_some() && has_float(e) {
+        absagen.schiebe(k190(e.span, name));
+        return;
+    }
     if has_float(e) || has_bitneg(e) {
         return;
     }
