@@ -21,3 +21,5 @@ HARD RULES (all agents of the AArch64 direction; read them, they bind you)
 14. A statement that needs a premise you cannot prove is recorded as an open obstruction in the report, never assumed silently.
 
 16. (2026-10-07) You may edit `crates/*` (the checker) as well as `grammatik/*`; build and test the checker only with `./cargo-pruef-check` (never the workspace-wide suite). New refusal codes come only from AGENTS.md section 7, each with its sentence in `saetze.rs` and a poison probe. The emitted C backend is deprecated: add nothing to it. After the hardware model the compiler stage follows (ARM-PLAN.md): performance goal min. 80 %, target 110 % of GCC -O3, invariant analysis mandatory.
+
+17. (2026-10-08) Mathlib is allowed everywhere, including `grammatik/` (pinned to v4.33.1; `import Mathlib.Tactic.Ring`, `Mathlib.Tactic.NormNum`, `Mathlib.Order...` work; `ring`, `norm_num`, `positivity`, `linarith` are available in modules that import them). Do not add the dependency to a lakefile yourself; `gabbro_ziel` axioms must stay exactly propext, Classical.choice, Quot.sound.

@@ -893,10 +893,14 @@ section is the coordinator-side record.*
 
 - **Toolchain truth, not training memory.** `grammatik/` pins Lean v4.33.1 with
   NO mathlib: `split` (never `split_ifs`), `omega`/`decide`/`simp` available,
-  `norm_num`/`ring_nf` absent. Mathlib stays allowed where it already belongs
-  (`programmlogik/`-side work); it is not a fix for tactic-name errors and is
-  never vendored into `grammatik/` without Simon's explicit project-wide
-  decision (README two-command check, lane network ban, build times).
+  `norm_num`/`ring_nf` absent. **Mathlib is allowed EVERYWHERE since 2026-10-08** (Simon: "mathlib darf
+  ueberall genutzt werden"); `grammatik/` requires it pinned to the tag with the
+  same toolchain (v4.33.1, `grammatik/lakefile.toml`; precompiled via `lake exe
+  cache get`, ~7.5 GB under `.lake/packages`, fetched by the coordinator because
+  lanes have no network). It is still not a fix for tactic-name errors: read the
+  names, do not guess. `gabbro_ziel` must stay on exactly `propext`,
+  `Classical.choice`, `Quot.sound` (Mathlib adds no axiom). Modules that do not
+  import Mathlib do not pay for it.
 - **Names are read, not guessed.** Every `BitVec.*`/helper lemma name is
   grepped from the tree before use; `unknown identifier` = wrong name.
   Canonical definitions are reused (`Stapel.lean` push), never duplicated.
