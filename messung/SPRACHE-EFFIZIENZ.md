@@ -210,7 +210,7 @@ no label for a `traverse` and refuses the exit by name (`C001`); nothing new the
 | G9 | `Endblock` binders (`let x = f()`, return under `locks`) | OPEN: named model decisions (O14/O15/O27) |
 | G10 | `bool` static | DONE (#14) |
 | G11 | payload hand-off after `awaits` (O25c) | OPEN: proof work, no weakening |
-| G12 | dense 256-way dispatch | Lean soundness of the jump table (`Sprungtafel.lean`) IN PROGRESS (agent 03); the lowering itself belongs to the native compiler |
+| G12 | dense 256-way dispatch | Lean soundness of the jump table DONE (`Sprungtafel.lean`, agent 03, reviewed and built: `suche_gleich_kette` -- the table replaces the comparison chain exactly when every arm value lies in the window --, `suche_im_fenster`, `suche_ausserhalb`, `fenster_deckt`; standard axioms); the lowering itself belongs to the native compiler |
 | R/C/P/U rows | RAM / compute / proof-time / ugly rows of the Lean report | covered above where they overlap (strings, bool static, traverse exit); rest OPEN |
 | E1, E2 | ceremony | `gabbro zeremonie --table`: A1-A4 (annotation equal to what the signature or declaration says; an effect entry a callee already declares) and R1-R4 (duplicates) MAY FALL; T1-T10 (effects, costs, requires/ensures, maintains, invariants, loop bounds, touches, reserved, register class) MAY NOT. Making derivable clauses optional is a language decision (PLAN-EINFACHHEIT); no clause was made optional this round. OPEN, needs Simon |
 | U1 | `type Q(T) = ...` parses and means a ghost parameter | DONE (2026-10-08): `N582` (gift 1417, sentence `namen.typ_parameterliste`); `linear` witnesses keep their list |
