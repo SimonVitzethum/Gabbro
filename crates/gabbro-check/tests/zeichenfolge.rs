@@ -183,3 +183,63 @@ fn ein_verbundfeld_bleibt_verweigert() {
     let f = fehler("module z { type R = { n : string max 8, }; }");
     assert!(f.iter().any(|c| c == "N465"), "{f:?}");
 }
+
+// -- String cells as static array elements (Task 5b) --------------------------
+
+fn feldeinheit(rumpf: &str) -> String {
+    format!(
+        "module z {{
+static mut NAMEN : [string max 8; 4] = 0;
+impl fn f(i : u32 in 0 ..< 4, s : string max 8, k : string max 16) -> u32
+    effects {{ reads NAMEN, writes NAMEN }}
+    costs <= 64 ops
+{{
+{rumpf}
+    return 0;
+}}
+}}"
+    )
+}
+
+fn feld_sauber(rumpf: &str) {
+    let f = fehler(&feldeinheit(rumpf));
+    assert!(f.is_empty(), "expected no error, got {f:?} for:\n{rumpf}");
+}
+
+fn feld_faellt(rumpf: &str, code: &str) {
+    let f = fehler(&feldeinheit(rumpf));
+    assert!(f.iter().any(|c| c == code), "expected {code}, got {f:?} for:\n{rumpf}");
+}
+
+#[test]
+fn eine_feldzelle_wird_ganz_gelesen_und_ganz_geschrieben() {
+    feld_sauber("    let a : string max 8 = NAMEN[i];");
+    feld_sauber("    let a : string max 16 = NAMEN[i];");
+    feld_sauber("    let a = NAMEN[i];\n    let m = lenof(a);");
+    feld_sauber("    NAMEN[i] = s;");
+    feld_sauber("    NAMEN[i] = \"hi\";");
+    // The facts speak about the LOCAL.
+    feld_sauber("    let a : string max 8 = NAMEN[i];\n    if lenof(a) > 3 { let c = a[3]; }");
+}
+
+#[test]
+fn eine_feldzelle_an_ort_und_stelle_faellt() {
+    feld_faellt("    let m = lenof(NAMEN[i]);", "N581");
+    feld_faellt("    let c = NAMEN[i][0];", "N581");
+    feld_faellt("    let m = NAMEN[i] + s;", "N581");
+    feld_faellt("    if NAMEN[i] == s { return 1; }", "N581");
+    feld_faellt("    NAMEN[i] += s;", "N581");
+    feld_faellt("    NAMEN[i] = NAMEN[i];", "N581");
+}
+
+#[test]
+fn die_kopierregel_gilt_an_der_feldzelle() {
+    feld_faellt("    let a : string max 4 = NAMEN[i];", "N455");
+    feld_faellt("    NAMEN[i] = k;", "N455");
+}
+
+#[test]
+fn ein_verschachteltes_feld_bleibt_verweigert() {
+    let f = fehler("module z { static mut MATR : [[string max 4; 2]; 2] = 0; }");
+    assert!(f.iter().any(|c| c == "N465"), "{f:?}");
+}

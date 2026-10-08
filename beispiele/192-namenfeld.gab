@@ -1,0 +1,31 @@
+-- 192 -- strings as array elements of a static.
+--
+-- `string max N` as the DIRECT element of a one-dimensional static array
+-- (`static mut NAMEN : [string max 8; 4]`) is a row of string CELLs, under
+-- exactly the slot-cell discipline (SPRACHE-EFFIZIENZ #13, `N581`): a cell
+-- is read WHOLE into a local (`let a : string max 8 = NAMEN[i];`) and
+-- written WHOLE (`NAMEN[i] = s;`); the length facts are facts about the
+-- local. Anything else -- nested arrays, consts, record fields, pointer
+-- targets, parameter arrays -- stays refused (`N465`). The program stays
+-- UNCERTIFIED (`LG002`), like every string program.
+module beispiel192 {
+
+static mut NAMEN : [string max 8; 4] = 0;
+
+impl fn lege(i : u32 in 0 ..< 4, s : string max 8)
+    effects { writes NAMEN }
+    costs <= 16 ops
+{
+    NAMEN[i] = s;
+    NAMEN[i] = "hi";
+}
+
+impl fn hole(i : u32 in 0 ..< 4) -> u32
+    effects { reads NAMEN }
+    costs <= 16 ops
+{
+    let a : string max 8 = NAMEN[i];
+    return lenof(a);
+}
+
+}

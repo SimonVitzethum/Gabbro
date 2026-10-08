@@ -1,0 +1,16 @@
+-- erwartet: N455
+-- **Copy-out of a longer string into a static array cell (Task 5b).** A string
+-- of max 16 does not fit a cell of max 8: the copy rule `N455`, exactly as
+-- at a slot cell.
+module gift::namenfeld_zu_lang_schreiben {
+
+static mut NAMEN : [string max 8; 4] = 0;
+
+impl fn lege(i : u32 in 0 ..< 4, s : string max 16)
+    effects { writes NAMEN }
+    costs <= 16 ops
+{
+    NAMEN[i] = s;
+}
+
+}

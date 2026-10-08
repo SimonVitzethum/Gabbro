@@ -3073,32 +3073,40 @@ pub const M1: &[Satz] = &[
     Satz {
         name: "zeichenfolge.zelle",
         kennungen: &["N581"],
-        aussage: "A table slot field may be a bounded string CELL (SPRACHE-EFFIZIENZ #13), \
-                  under one discipline: it is read WHOLE into a local (`let s : string max \
-                  M = T.slots[i].f;`, held by the copy rule `N455`: the cell max must fit \
-                  `M`) and written WHOLE from a string value (`T.slots[i].f = s;`, the value \
-                  must fit the cell max, `N453`/`N455`). Every other mention of the cell -- \
-                  an operand, a condition, an argument, a `return`, `lenof(cell)`, an \
-                  index into it, a compound assignment -- falls as `N581`, because a length \
+        aussage: "A bounded string CELL is read WHOLE into a local and written WHOLE from a \
+                  string value (SPRACHE-EFFIZIENZ #13): a table slot field `string max N`, \
+                  and the direct element of a static one-dimensional string array \
+                  `[string max N; K]`. Read: `let s : string max M = T.slots[i].f;` / \
+                  `= NAMEN[i];` (the cell max must fit `M`, copy rule `N455`); written: \
+                  `T.slots[i].f = s;` / `NAMEN[i] = s;` (the value must fit the cell max, \
+                  `N453`/`N455`). Every other mention of the cell -- an operand, a \
+                  condition, an argument, a `return`, `lenof(cell)`, an index into it, a \
+                  compound assignment, a self-copy -- falls as `N581`, because a length \
                   fact about memory another write can change between the check and the use \
                   would be unsound; the facts (`lenof`, an index below the length) hold for \
                   the LOCAL.",
-        vorbehalt: "Only table slot fields are cells; a string in a record field, an array \
-                    element, a `static` or a `const` stays `N465`. A place is a cell when \
-                    its basis is a table or a parameter of table type and it ends in \
-                    `.slots[i].f` with `f` declared `string max N`; names are unqualified \
-                    per unit. Concurrent writers are the weak-memory model's business (a \
-                    whole-cell copy is not atomic), so a shared cell needs the lock \
-                    discipline of any carrier. The exporter has no string form (`LG002`), \
-                    so such a program stays UNCERTIFIED; `ZeichenfolgeZelle.lean` proves \
-                    the copy discipline, it does not put strings into the goal theorem.",
+        vorbehalt: "Only table slot fields and the direct element of a static \
+                    one-dimensional string array are cells; a string in a record field, a \
+                    nested array, a `const`, a pointer target or a parameter array stays \
+                    `N465`. A slot cell is a place `X.slots[i].f` whose basis is a table or \
+                    a parameter of table type; names are unqualified per unit. The only \
+                    static string initialiser is `= 0` (every cell empty). Concurrent \
+                    writers are the weak-memory model's business (a whole-cell copy is not \
+                    atomic), so a shared cell needs the lock discipline of any carrier. The \
+                    exporter has no string form (`LG002`), so such a program stays \
+                    UNCERTIFIED; `ZeichenfolgeZelle.lean` (generic over any cell count) \
+                    proves the copy discipline, it does not put strings into the goal \
+                    theorem.",
         stand: Satzstand::Gemessen,
-        gemessen_an: "beispiele/gift/1414 (`lenof` of a cell falls with N581 alone), 1415 \
+        gemessen_an: "beispiele/gift/1414 (`lenof` of a slot cell, N581 alone), 1415 \
                       (copy-in into a smaller local, N455), 1416 (copy-out of a longer \
-                      string, N455); the clean side is beispiele/191-name-im-slot.gab. \
-                      Lean: grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeZelle.lean \
+                      string, N455); for the array form 1418 (N581), 1419 (N455), 1420 \
+                      (N455), 1421 (a nested array stays N465); the clean sides are \
+                      beispiele/191-name-im-slot.gab and beispiele/192-namenfeld.gab. Lean: \
+                      grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeZelle.lean \
                       (laden_speichern, laden_speichern_ne, laden_len, zelleBytes_le_C).",
-        fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (zelle, zellen_ablehnung); \
+        fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (zelle, zelle_anfang, \
+                     zellen_ablehnung); \
                      grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeZelle.lean",
     },
     Satz {

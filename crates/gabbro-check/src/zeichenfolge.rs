@@ -36,6 +36,9 @@
 //!   pass binds, a resolved call with a string result, or a `+` of two:
 //!   the pass's knowledge is complete, and "not known as a string" means
 //!   "not a string".
+//!   (`N581` cells excepted: a table slot field, and since Task 5b the
+//!   direct element of a static one-dimensional string array -- both are
+//!   read whole into a local and written whole, never used in place.)
 //! - **Values (`N455`).** A string value flows only into a known string
 //!   slot that fits it: an annotated `let`, an assignment to a string name,
 //!   a `return` at a string result, a string parameter (also inside
@@ -188,6 +191,10 @@ struct Lage<'a> {
     /// **String cells (`N581`, SPRACHE-EFFIZIENZ #13):** `(table, field) -> max` for every table
     /// slot field declared `string max N`. Names are unqualified, per unit.
     zellen: &'a HashMap<(String, String), u128>,
+    /// **String cells in static arrays (Task 5b):** static name -> max for every
+    /// `static [mut] NAME : [string max N; K]` (one dimension, direct element only).
+    /// Same whole-in/whole-out discipline as the slot cells; names unqualified, per unit.
+    statzellen: &'a HashMap<String, u128>,
     /// Every table name of the unit.
     tabellen: &'a HashSet<String>,
     /// The function's parameters that name a table (directly or behind a pointer):
@@ -293,6 +300,7 @@ pub fn pass(baum: &Programm, absagen: &mut gabbro_syntax::diag::Absagen) {
     });
     let mut zellen: HashMap<(String, String), u128> = HashMap::new();
     let mut tabellen: HashSet<String> = HashSet::new();
+    let mut statzellen: HashMap<String, u128> = HashMap::new();
     crate::fuer_jedes_item_im_modul(baum, &mut |item, _modul| {
         if let ItemArt::Tabelle(t) = &item.art {
             tabellen.insert(t.name.text.clone());
@@ -301,6 +309,17 @@ pub fn pass(baum: &Programm, absagen: &mut gabbro_syntax::diag::Absagen) {
                     if let SlotTyp::Typ(TypExpr::Zeichenkette { max, .. }) = &f.typ {
                         zellen.insert((t.name.text.clone(), f.name.text.clone()), *max);
                     }
+                }
+            }
+        }
+        // **Static array cells (Task 5b):** a `static` whose DIRECT type is a one-dimensional
+        // array over `string max N` is a row of cells. Nested arrays (`[[string …; _]; _]`),
+        // consts, record fields, pointer targets and parameter arrays never land here: only
+        // the direct element of a static's own type is collected, mirroring `deklarationen`.
+        if let ItemArt::Statisch(s) = &item.art {
+            if let TypExpr::Feld(a) = &s.typ {
+                if let TypExpr::Zeichenkette { max, .. } = &a.element {
+                    statzellen.insert(s.name.text.clone(), *max);
                 }
             }
         }
@@ -313,6 +332,7 @@ pub fn pass(baum: &Programm, absagen: &mut gabbro_syntax::diag::Absagen) {
             ergebnis: None,
             zellen: &zellen,
             tabellen: &tabellen,
+            statzellen: &statzellen,
             tparam: HashMap::new(),
         };
         match &item.art {
@@ -337,6 +357,7 @@ pub fn pass(baum: &Programm, absagen: &mut gabbro_syntax::diag::Absagen) {
                     ergebnis: f.ergebnis.as_ref().map(schlitz_von),
                     zellen: &zellen,
                     tabellen: &tabellen,
+                    statzellen: &statzellen,
                     tparam,
                 };
                 let mut z = Zustand::neu();
@@ -455,6 +476,18 @@ fn deklarationen(item: &Item, absagen: &mut gabbro_syntax::diag::Absagen) {
                 if let SlotTyp::Typ(TypExpr::Zeichenkette { span, .. }) = &f.typ {
                     erlaubt.push(*span);
                 }
+            }
+        }
+    }
+    // **A static one-dimensional string array is a row of cells** (Task 5b): the DIRECT
+    // element span of `[string max N; K]` is allowed, under exactly the slot-cell discipline
+    // (whole-in / whole-out, `N581`, copy rule `N455`). Nested arrays, `const`s, record
+    // fields, pointer targets and parameter arrays never land here -- their spans stay
+    // `N465`, mirroring the collection in `pass()`.
+    if let ItemArt::Statisch(s) = &item.art {
+        if let TypExpr::Feld(a) = &s.typ {
+            if let TypExpr::Zeichenkette { span, .. } = &a.element {
+                erlaubt.push(*span);
             }
         }
     }
@@ -609,17 +642,34 @@ fn finde_fn(fns: &HashMap<String, RumpfSignatur>, modul: &str, p: &Pfad) -> Aufl
 /// literal of length `L` fits exactly the slots a `string max L` fits, so
 /// every fit check below answers for it with no further rule.
 /// The max of the string cell this place names -- `T.slots[i].f` or `p.slots[i].f` with `f` a
-/// `string max N` slot field of the table -- or `None`.
+/// `string max N` slot field of the table, or `NAMEN[i]` with `NAMEN` a static one-dimensional
+/// string array (Task 5b) -- or `None`.
 fn zelle(o: &Ort, lage: &Lage) -> Option<u128> {
+    // **Static array cells (Task 5b):** `NAMEN[i]` -- one index suffix, basis a static string
+    // array. Whole-in / whole-out exactly like the slot cells; the slot path below is untouched.
+    if let [OrtSuffix::Index(_)] = o.suffixe.as_slice() {
+        if let Some(max) = lage.statzellen.get(&o.basis.text) {
+            return Some(*max);
+        }
+    }
     if o.suffixe.len() != 3 {
         return None;
     }
     zelle_anfang(o, lage)
 }
 
-/// The same, for a place that STARTS with a cell (`T.slots[i].f[k]`: the cell is indexed in
-/// place -- never allowed).
+/// The same, for a place that STARTS with a cell (`T.slots[i].f[k]` or `NAMEN[i][k]`: the cell
+/// is used in place -- never allowed).
 fn zelle_anfang(o: &Ort, lage: &Lage) -> Option<u128> {
+    // **Static array cells (Task 5b):** any place at `NAMEN[i]` -- the whole cell (exactly what
+    // `zelle` answers, so every expression occurrence draws `N581`; only the two whole-use
+    // sites bypass it, and they never walk the cell as an expression) or deeper (`NAMEN[i][k]`,
+    // an index into the cell).
+    if let [OrtSuffix::Index(_), ..] = o.suffixe.as_slice() {
+        if let Some(max) = lage.statzellen.get(&o.basis.text) {
+            return Some(*max);
+        }
+    }
     let [OrtSuffix::Feld(slots), OrtSuffix::Index(_), OrtSuffix::Feld(f), ..] = o.suffixe.as_slice()
     else {
         return None;
