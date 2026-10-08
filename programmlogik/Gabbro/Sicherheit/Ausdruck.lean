@@ -70,7 +70,11 @@ import Gabbro.Body
 -- bitwise and `norm_cast` lemmas spread over a dozen Mathlib modules, and a wrong
 -- guess at the module split costs a build cycle each. Oleans are cache-fetched,
 -- so this costs load time, not build time. Narrowed later if measured slow.
-import Mathlib
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.Positivity
+import Mathlib.Order.Lattice
 
 namespace Gabbro.Sicherheit
 
