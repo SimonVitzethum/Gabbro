@@ -54,6 +54,21 @@ theorem rufKette_invariant {S : Type} (c : RufKette S) (inv : S → Bool)
       have hfu : i + 1 + fuel ≤ c.n := by omega
       exact ih (i + 1) (c.nach i s) hfu hstep.2
 
+/-- Last step first: running `i + 1` calls from `j` is the first `i`
+    calls followed by call `j + i`. Fuel arithmetic by `omega`. -/
+theorem rufLauf_letzter {S : Type} (c : RufKette S) (i j : Nat) (s : S) :
+    rufLauf c (i + 1) j s = c.nach (j + i) (rufLauf c i j s) := by
+  induction i generalizing j s with
+  | zero =>
+      simp [rufLauf]
+  | succ i ih =>
+      have hstep : rufLauf c (i + 1 + 1) j s
+          = rufLauf c (i + 1) (j + 1) (c.nach j s) := rfl
+      rw [hstep, ih (j + 1) (c.nach j s)]
+      have hX : rufLauf c (i + 1) j s = rufLauf c i (j + 1) (c.nach j s) := rfl
+      have hix : j + 1 + i = j + (i + 1) := by omega
+      rw [hix, hX]
+
 /-! ## The tick-round shape: 64 uniform round ticks -/
 
 /-- Precondition map of the round fixture: every round may run below 16. -/
@@ -135,6 +150,7 @@ theorem disjunkt_vergleich : True :=
 -/
 
 #print axioms rufKette_invariant
+#print axioms rufLauf_letzter
 #print axioms disjunkt_einmal
 #print axioms tick_runde_zeuge
 

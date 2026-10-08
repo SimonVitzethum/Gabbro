@@ -47,3 +47,14 @@ Finding: no single remaining elaboration case flips any corpus unit.
 Assigned next: 02 V-02b parse-level acceptance of the nine ranked syntax forms (elab keeps
 refusing by name) then re-census; 04 V-04b `GvLauf` (world-run induction, closing the conditional
 discharges of 01/F01/kapraum/147/148 given per-call contracts).
+
+## 2026-10-08 (evening) -- GvLauf integrated
+
+04 `GvLauf`: `weltLauf_uebereinstimmung` and `weltLauf_invariant` (a run of N contract-respecting
+world steps agrees with the abstract `rufLauf`; invariant on the final World), witness
+`kettenLauf_invariant_zeuge` (2 real writes) and planted failure `weltLauf_ohne_vertrag_bricht`.
+Effect: the counter halves of 147/148/01/F01/kapraum are theorems given per-call contracts and the
+initial-state premise. Build 742 jobs green, standard axioms, no sorryAx. Review lesson: copying
+files piecemeal from an agent's clone produced sorryAx/errors when companion files (GvKetten,
+GvStore) had moved; always copy the whole agent GabbroV set and check for `sorryAx` in the output.
+Next: 04 V-04c TreeState projection (kapraum `blatt_loeschen`), 02 V-02b parse-level acceptance.

@@ -733,6 +733,7 @@ import Grammatik.GabbroV.GvVerkettung
 import Grammatik.GabbroV.GvKetten
 import Grammatik.GabbroV.GvBruecke
 import Grammatik.GabbroV.GvStore
+import Grammatik.GabbroV.GvLauf
 import Grammatik.GabbroV.GvZensus
 import Grammatik.GabbroV.GvAtomKoerper
 import Grammatik.X86.Befehle.Sse.SseAesClmul

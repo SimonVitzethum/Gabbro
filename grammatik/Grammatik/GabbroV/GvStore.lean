@@ -79,11 +79,11 @@ theorem kantenBild_slotfeld_anders (σ : World D) (t : D.Tab) (f' : D.Feld t)
 
 /-! ## The counter cell: `World` reads as `Zahl` states -/
 
-/-- Read an `.int 0 255` cell as its number. The cast is the same `▸`
+/-- Read an `.int 0 255` cell as its value. The cast is the same `▸`
     idiom `eval` uses; no value is invented. -/
-def zellenStand (t_c : D.Tab) (kc : Int) (f_c : D.Feld t_c)
-    (hf : D.typ t_c f_c = .int 0 255) (σ : World D) : Int :=
-  (hf ▸ σ.slots t_c kc f_c : Wert D (.int 0 255)).n
+def zellenLesen (t_c : D.Tab) (kc : Int) (f_c : D.Feld t_c)
+    (hf : D.typ t_c f_c = .int 0 255) (σ : World D) : Zahl 0 255 :=
+  (hf ▸ σ.slots t_c kc f_c : Wert D (.int 0 255))
 
 /-- Precondition map over the cell: call `k` may run while `k < 64`
     and the counter is below 16 (the unrolled tick indices). -/
