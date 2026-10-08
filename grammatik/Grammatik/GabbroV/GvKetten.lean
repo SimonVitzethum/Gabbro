@@ -12,9 +12,9 @@
    five `ordne` calls branching on the comparator answer).
 
    Model: calls as data (`RufKette`: length, precondition map, step
-   map); states abstracted to `Nat` (documented projection -- the lemma
-   is about the contract shape, not about `World`; bridging a concrete
-   unit's stores to `vor`/`nach` is open, see CUTS). Agent 05's
+   map) over an abstract state type `S` (`Nat` counters here, `Zahl`
+   cell values and worlds in `GvStore`); bridging a concrete unit's
+   stores to `vor`/`nach` is open, see CUTS). Agent 05's
    `GvSplits.lean` analysis is not in this clone (unmerged upstream,
    fetch forbidden), so (b) is built from the task text and `126` alone.
 -/
@@ -22,14 +22,15 @@
 namespace Gabbro.Grammatik.GabbroV
 
 /-- A call chain as data: length, per-call precondition map, per-call
-    step map. `tick_runde` is `n = 64` with one uniform contract. -/
-structure RufKette where
+    step map over abstract states. `tick_runde` is `n = 64` with one
+    uniform contract; V-04 instantiates `S` with cell values. -/
+structure RufKette (S : Type) where
   n : Nat
-  vor : Nat → Nat → Bool
-  nach : Nat → Nat → Nat
+  vor : Nat → S → Bool
+  nach : Nat → S → S
 
 /-- Run `fuel` calls from index `i` and state `s`. -/
-def rufLauf (c : RufKette) : Nat → Nat → Nat → Nat
+def rufLauf {S : Type} (c : RufKette S) : Nat → Nat → S → S
   | 0, _, s => s
   | fuel + 1, i, s => rufLauf c fuel (i + 1) (c.nach i s)
 
@@ -37,11 +38,12 @@ def rufLauf (c : RufKette) : Nat → Nat → Nat → Nat
     from every invariant state each call may run and keeps the
     invariant -- carries the invariant across `fuel` calls by induction
     on the chain, not by unrolling. One application replaces `fuel`
-    `gabbro_calls` rounds. -/
-theorem rufKette_invariant (c : RufKette) (inv : Nat → Bool)
+    `gabbro_calls` rounds. Polymorphic in the state type: `Nat`
+    counters below, `World` cells and `Zahl` values in `GvStore`. -/
+theorem rufKette_invariant {S : Type} (c : RufKette S) (inv : S → Bool)
     (herh : ∀ k s, k < c.n → inv s = true →
       c.vor k s = true ∧ inv (c.nach k s) = true)
-    (fuel i s : Nat) (hi : i + fuel ≤ c.n) (hs : inv s = true) :
+    (fuel i : Nat) (s : S) (hi : i + fuel ≤ c.n) (hs : inv s = true) :
     inv (rufLauf c fuel i s) = true := by
   induction fuel generalizing i s with
   | zero =>

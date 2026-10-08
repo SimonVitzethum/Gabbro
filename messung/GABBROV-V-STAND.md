@@ -29,3 +29,21 @@ exists only for the `UStmt` fragment (writes + calls); the 8 further OK units ar
 
 Open (assigned): V-02 all-refusals census + `elabU08`; V-04 store-level bridges (`World` ->
 `RufKette`/edge map), the gap behind every conditional discharge of 01/55/F01/kapraum/147/148.
+
+## 2026-10-08 (later) -- second integration
+
+Integrated: 04 `GvStore` (store frames, `kantenBild` commutation, `zahl_tick_vertrag`, witnesses),
+`GvBruecke` (`kette_gleicht`), updated `GvKetten` (RufKette over abstract states); 02 `GvZensus`
+(continue-on-refusal census, `zensus104_leer`, `zensusMulti_exakt`). `./lean-bau` 742 jobs green,
+no `sorryAx` in the output. Review note: the first build failed because `GvKetten` was copied
+before 04's generalisation; fixed by copying the matching version (the agent's clone was fine).
+
+Census (02, 157 files): parse-refused 48; presence markers return 124, let 80, if 53, bool 56,
+locks 39, static 38, reason 28. Ranked flip constructs: bare syscalls 11, quantifiers 11, syscall
+clauses 6, bounded strings 5, lock invariants 4 (all parser-level or model-level; the verified
+singletons 63/64, 27/38, 72, 03, 131 need extern/static/format models or are unsound to accept).
+Finding: no single remaining elaboration case flips any corpus unit.
+
+Assigned next: 02 V-02b parse-level acceptance of the nine ranked syntax forms (elab keeps
+refusing by name) then re-census; 04 V-04b `GvLauf` (world-run induction, closing the conditional
+discharges of 01/F01/kapraum/147/148 given per-call contracts).
