@@ -1,0 +1,43 @@
+-- 191 -- a bounded string as a table slot field.
+--
+-- `string max N` stood only in parameters, results and locals (`N465`), so a table could not carry
+-- a name (SPRACHE-EFFIZIENZ #13). A slot field may now be a string CELL, under one discipline: it
+-- is read WHOLE into a local (`let n : string max 8 = T.slots[i].name;`) and written WHOLE from a
+-- string value (`T.slots[i].name = n;`). The length facts (`lenof`, an index below the length) are
+-- facts about the LOCAL, which the existing pass follows; the cell itself is never indexed,
+-- measured or compared in place (`N581`), because another write could change it between the
+-- check and the use. Lean: `ZeichenfolgeZelle.lean` (copy-out then copy-in round trip, other cells
+-- untouched, a loaded string fits its max). The exporter has no string form, so the program stays
+-- UNCERTIFIED (`LG002`), like every string program.
+module beispiel191 {
+
+const N : u32 = 4;
+
+table Namen count N {
+    slot {
+        name : string max 8,
+        belegt : bool,
+    }
+}
+
+lock K protects { Namen } rank 0 held <= 100 ops;
+
+impl fn setze(t : ptr<normal, rw> Namen, i : index into Namen, n : string max 8)
+    requires Held(K)
+    effects  { writes t.slots, locks K }
+    costs    <= 64 ops
+{
+    t.slots[i].name = n;
+    t.slots[i].belegt = true;
+}
+
+impl fn laenge(t : ptr<normal, rw> Namen, i : index into Namen) -> u32
+    requires Held(K)
+    effects  { reads t.slots, locks K }
+    costs    <= 64 ops
+{
+    let n : string max 8 = t.slots[i].name;
+    return lenof(n);
+}
+
+}

@@ -164,3 +164,56 @@ The existing `tyFits` (`CSpeicher.lean`) is the same statement for the C cell; t
 `tyFits'` is `bits lo hi <= 8 * cellbytes`, proved from `zellBytes_fits`. A bridging file
 `DarstellungTy.lean` over `Ty`/`encW` is the next step; it was not written because it imports
 `CSpeicher` and no Lean build was possible in this round.
+
+---
+
+# Tracking (dated; status per finding)
+
+## 2026-10-08 -- #19 find-first exit from `traverse`: DONE
+
+`leave i;` / `next i;` over a `traverse` binder (`by unvisited`): `schleifen.rs` pushes the binder
+as a label; `by consuming` falls as `N580` (gift `1413`, sentence `schleifen.traverse_ausgang`).
+The Lean model already had `Stmt.leave`/`Stmt.next` and `traverseLauf` (invariant checked at the
+exit); the exporter (`lean_g.rs`) now writes them for the INNERMOST binder at the end of a block
+(`LG004` otherwise). Example `190-erster-treffer` is CERTIFIED: `./lean-bau` 734 jobs, 0 errors,
+module `G190_erster_treffer` built. `cargo test -p gabbro-syntax -p gabbro-check`: 67 collections,
+0 failures (three tests that pinned `S001` for the binder were rewritten). The C emitter registers
+no label for a `traverse` and refuses the exit by name (`C001`); nothing new there.
+
+## Status of every finding (rows 1-20 of this report)
+
+| # | Finding | Status |
+|---|---|---|
+| 1-9, 12 | minimal-width / packed layout of ranged ints, bools, index cells, tags, records | Lean model DONE (`Speichermodell/Darstellung.lean`, merged); `DarstellungTy.lean` over `Ty`/`encW` IN PROGRESS (agent 03); native lowering OPEN (compiler work) |
+| 10, 11 | string length word | C change not taken (C deprecated); native size theorem is part of the string design |
+| 13 | strings in tables / arrays / records | **BLOCKED, awaiting Simon** (design in Round 2: copy-in/copy-out cells, `ZeichenfolgeZelle.lean`, checker rule `N581`) |
+| 14 | `static mut X : bool = false` | DONE (legacy C emit, example 187) |
+| 15 | static array initialiser list | DONE (parser + `konstanten.rs`, example 186, gifts 1405/1406) |
+| 16 | whole-array copy | DONE (`N579`, example 188, gifts 1407/1408) |
+| 17 | M147 selector taint | DONE (example 185, gift 1404) |
+| 18 | `u32 + u32` in the context width | IN PROGRESS (agent 05: example 189, gifts 1409-1412) |
+| 19 | find-first exit | DONE (above) |
+| 20 | runtime bound check on `u8` reads | NOT A COST (cc removes it; measured noise) |
+
+## The two earlier gap reports and `gabbro zeremonie` (rows, 2026-10-08)
+
+| Row | Finding | Status |
+|---|---|---|
+| G1 | no type parameters / generics | BLOCKED: language decision (`Ty` is deliberately non-recursive, OFFEN O15); needs Simon |
+| G2 | record as a value has no `Ty` (`LG002`) | BLOCKED: priced and refused 2026-09-15 (0 of 113 corpus programs gain); needs a `Ty.prod` decision |
+| G3 | `traverse` early exit | DONE (#19) |
+| G4 | windowed `traverse from s count n` | OPEN: `P001`; parser, bounds, effects and Lean window arms |
+| G5 | `option` over ordinary types | OPEN: language design (index-only today) |
+| G6 | `count` as a predicate | OPEN: invariant language (`D021`) |
+| G7 | strings in aggregates | BLOCKED, awaiting Simon (#13) |
+| G8 | byte pointers have no G form (O37) | OPEN |
+| G9 | `Endblock` binders (`let x = f()`, return under `locks`) | OPEN: named model decisions (O14/O15/O27) |
+| G10 | `bool` static | DONE (#14) |
+| G11 | payload hand-off after `awaits` (O25c) | OPEN: proof work, no weakening |
+| G12 | dense 256-way dispatch | OPEN: jump-table lowering belongs to the native compiler |
+| R/C/P/U rows | RAM / compute / proof-time / ugly rows of the Lean report | covered above where they overlap (strings, bool static, traverse exit); rest OPEN |
+| E1, E2 | ceremony | `gabbro zeremonie --table`: A1-A4 (annotation equal to what the signature or declaration says; an effect entry a callee already declares) and R1-R4 (duplicates) MAY FALL; T1-T10 (effects, costs, requires/ensures, maintains, invariants, loop bounds, touches, reserved, register class) MAY NOT. Making derivable clauses optional is a language decision (PLAN-EINFACHHEIT); no clause was made optional this round. OPEN, needs Simon |
+| U1 | `type Q(T) = ...` parses and means a ghost parameter | OPEN: refusing `(T)` on a non-ghost type is a small checker rule, not done |
+
+Decisions needed from Simon: strings in aggregates; generics; records as values; making derivable
+ceremony optional; `option` over ordinary types.

@@ -3015,12 +3015,43 @@ pub const M1: &[Satz] = &[
                      `sammle_inv_traeger`); grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean",
     },
     Satz {
+        name: "zeichenfolge.zelle",
+        kennungen: &["N581"],
+        aussage: "A table slot field may be a bounded string CELL (SPRACHE-EFFIZIENZ #13), \
+                  under one discipline: it is read WHOLE into a local (`let s : string max \
+                  M = T.slots[i].f;`, held by the copy rule `N455`: the cell max must fit \
+                  `M`) and written WHOLE from a string value (`T.slots[i].f = s;`, the value \
+                  must fit the cell max, `N453`/`N455`). Every other mention of the cell -- \
+                  an operand, a condition, an argument, a `return`, `lenof(cell)`, an \
+                  index into it, a compound assignment -- falls as `N581`, because a length \
+                  fact about memory another write can change between the check and the use \
+                  would be unsound; the facts (`lenof`, an index below the length) hold for \
+                  the LOCAL.",
+        vorbehalt: "Only table slot fields are cells; a string in a record field, an array \
+                    element, a `static` or a `const` stays `N465`. A place is a cell when \
+                    its basis is a table or a parameter of table type and it ends in \
+                    `.slots[i].f` with `f` declared `string max N`; names are unqualified \
+                    per unit. Concurrent writers are the weak-memory model's business (a \
+                    whole-cell copy is not atomic), so a shared cell needs the lock \
+                    discipline of any carrier. The exporter has no string form (`LG002`), \
+                    so such a program stays UNCERTIFIED; `ZeichenfolgeZelle.lean` proves \
+                    the copy discipline, it does not put strings into the goal theorem.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1414 (`lenof` of a cell falls with N581 alone), 1415 \
+                      (copy-in into a smaller local, N455), 1416 (copy-out of a longer \
+                      string, N455); the clean side is beispiele/191-name-im-slot.gab. \
+                      Lean: grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeZelle.lean \
+                      (laden_speichern, laden_speichern_ne, laden_len, zelleBytes_le_C).",
+        fundstelle: "crates/gabbro-check/src/zeichenfolge.rs (zelle, zellen_ablehnung); \
+                     grammatik/Grammatik/CBackend/Semantik/ZeichenfolgeZelle.lean",
+    },
+    Satz {
         name: "zeichenfolge.orte",
         kennungen: &["N465"],
         aussage: "A bounded string lives where its length is followed: as the \
                   whole type of a function parameter, a function result or a \
                   `let` annotation. Anywhere else a `string max N` is refused \
-                  (`N465`) -- a struct or table field, a `const`/`static`/atomic \
+                  (`N465`) -- a struct (record) field, a `const`/`static`/atomic \
                   type, an arena element, a type alias, an array element, a \
                   variant payload, a pointer target, a function-pointer \
                   parameter, a `syscall` head, a nested `let` type, an `alloc` \

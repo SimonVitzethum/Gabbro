@@ -121,3 +121,65 @@ fn geschwisterbloecke_sind_eigene_bindungen() {
     // Inner bindings end with their block: the outer `s` is still the string.
     faellt("", "    if b { let s2 = 5; }\n    let c = s + 1;", "N455");
 }
+
+// -- String cells in table slots (`N581`, SPRACHE-EFFIZIENZ #13) ---------------------------
+
+fn zellen_einheit(rumpf: &str) -> String {
+    format!(
+        "module z {{
+table Namen count 4 {{ slot {{ n : string max 8, }} }}
+lock K protects {{ Namen }} rank 0 held <= 100 ops;
+impl fn f(t : ptr<normal, rw> Namen, i : index into Namen, s : string max 8, k : string max 16) -> u32
+    requires Held(K)
+    effects {{ reads t.slots, writes t.slots, locks K }}
+    costs <= 64 ops
+{{
+{rumpf}
+    return 0;
+}}
+}}"
+    )
+}
+
+fn zelle_sauber(rumpf: &str) {
+    let f = fehler(&zellen_einheit(rumpf));
+    assert!(f.is_empty(), "expected no error, got {f:?} for:\n{rumpf}");
+}
+
+fn zelle_faellt(rumpf: &str, code: &str) {
+    let f = fehler(&zellen_einheit(rumpf));
+    assert!(f.iter().any(|c| c == code), "expected {code}, got {f:?} for:\n{rumpf}");
+}
+
+#[test]
+fn eine_zelle_wird_ganz_gelesen_und_ganz_geschrieben() {
+    zelle_sauber("    let a : string max 8 = t.slots[i].n;");
+    zelle_sauber("    let a : string max 16 = t.slots[i].n;");
+    zelle_sauber("    let a = t.slots[i].n;\n    let m = lenof(a);");
+    zelle_sauber("    t.slots[i].n = s;");
+    zelle_sauber("    t.slots[i].n = \"hi\";");
+    // The facts speak about the LOCAL.
+    zelle_sauber("    let a : string max 8 = t.slots[i].n;\n    if lenof(a) > 3 { let c = a[3]; }");
+}
+
+#[test]
+fn eine_zelle_an_ort_und_stelle_faellt() {
+    zelle_faellt("    let m = lenof(t.slots[i].n);", "N581");
+    zelle_faellt("    let c = t.slots[i].n[0];", "N581");
+    zelle_faellt("    let m = t.slots[i].n + s;", "N581");
+    zelle_faellt("    if t.slots[i].n == s { return 1; }", "N581");
+    zelle_faellt("    t.slots[i].n += s;", "N581");
+    zelle_faellt("    t.slots[i].n = t.slots[i].n;", "N581");
+}
+
+#[test]
+fn die_kopierregel_gilt_an_der_zelle() {
+    zelle_faellt("    let a : string max 4 = t.slots[i].n;", "N455");
+    zelle_faellt("    t.slots[i].n = k;", "N455");
+}
+
+#[test]
+fn ein_verbundfeld_bleibt_verweigert() {
+    let f = fehler("module z { type R = { n : string max 8, }; }");
+    assert!(f.iter().any(|c| c == "N465"), "{f:?}");
+}
