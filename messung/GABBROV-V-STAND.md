@@ -58,3 +58,14 @@ initial-state premise. Build 742 jobs green, standard axioms, no sorryAx. Review
 files piecemeal from an agent's clone produced sorryAx/errors when companion files (GvKetten,
 GvStore) had moved; always copy the whole agent GabbroV set and check for `sorryAx` in the output.
 Next: 04 V-04c TreeState projection (kapraum `blatt_loeschen`), 02 V-02b parse-level acceptance.
+
+## 2026-10-08 (night) -- GvBaum integrated
+
+04 `GvBaum`: `TreeState` projection (`baumBild`, `belegtBild`), `frame_ausser_opfer`,
+`weltEigenschaft_bleibt`, `elternKonsistent_bleibt`, `lokalBenutzt_bleibt`,
+`blatt_rufsicher_bedingt` (kapraum `blatt_loeschen` obligation from per-call reachability
+contracts + victim freshness + victim-scoped initial occupancy), witness `baumBlatt_zeuge`
+(leaf-first deletion, 3 nodes) and planted failures (`baumWurzel_hat_kind`,
+`baumSchnitt_widerlegt`). Build green, standard axioms, no sorryAx. Still conditional: the
+per-call contracts are World-step hypotheses; assigned V-04d (`GvKoerper`) to derive them from
+the callee's Block-level KoerperGutR, i.e. toward premise (b). 02 V-02b (parse acceptance) running.
