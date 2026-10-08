@@ -6385,7 +6385,12 @@ impl<'a> Pruefer<'a> {
         // §2a -- no path overlap, syntax only; own writes kill, §2b). A bare write
         // rebinds its own name instead: the old value is gone, taint and expiry
         // with it. Reached through `geschriebenes_toeten` for sub-blocks too.
-        frische_toeten_schreiben(&ziel.basis.text, ziel.suffixe.is_empty(), lage);
+        // **Task 5d:** the rebind stays on the written NAME (today's behaviour
+        // for the name itself, bit for bit); only the carrier kill reads the
+        // table key, so a write through any handle expires every taint of
+        // that table.
+        let schluessel = self.traeger_schluessel(&ziel.basis.text, lage);
+        frische_toeten_schreiben(&ziel.basis.text, &schluessel, ziel.suffixe.is_empty(), lage);
     }
 
     /// Ein Aufruf toetet die Fakten ueber alles **Nichtlokale**. Lokale Groessen kann er
@@ -6472,7 +6477,14 @@ impl<'a> Pruefer<'a> {
                 Some(geschrieben) => {
                     for w in &geschrieben {
                         let traeger = w.split(['.', '[']).next().unwrap_or(w);
-                        frische_toeten_traeger(lage, traeger);
+                        // **Task 5d:** the hull names world names; key them the
+                        // same way creation does (a table spelled qualified
+                        // kills the short key too). Callee-parameter writes
+                        // never reach here (coarse path above).
+                        frische_toeten_traeger(
+                            lage,
+                            &self.traeger_schluessel(traeger, lage),
+                        );
                     }
                 }
                 None => frische_alle_toeten(lage),
@@ -6603,6 +6615,40 @@ impl<'a> Pruefer<'a> {
         self.u.suche_global(&self.modul, schluessel).is_none()
     }
 
+    /// **V4 -- the carrier KEY of a place basis** (task 5d: the aliased-handle
+    /// gap of attack `r1_zwei_griffe_gleiche_tabelle`). Taints are compared by
+    /// string equality at every site, so creation and expiry must resolve two
+    /// handles of one table to one key: a function parameter (or local) whose
+    /// declared type is a pointer to a table `T` keys by the table's short
+    /// name; a basis naming a table keys by its short name; everything else
+    /// (statics, device handles, plain locals, pure values) keeps its own
+    /// name. ONE function for all sites, so creation and expiry can never
+    /// drift: `traeger_von_ort` (taint birth), the write kill
+    /// (`frische_toeten_schreiben`), the call-hull kill, the return-hull
+    /// mapping (`rueckgabe_traeger`) and the index `schutz` bases
+    /// (`frische_sammle`) all read it. A local shadowing a table name keeps
+    /// its own name (the guard below): only true globals resolve to tables.
+    fn traeger_schluessel(&self, basis: &str, lage: &Lage) -> String {
+        if let Some(t) = lage.lokal.get(basis) {
+            let mut inner = t;
+            loop {
+                match inner {
+                    Typ::Benannt { unter, .. } => inner = unter,
+                    Typ::Zeiger(z) => inner = z,
+                    Typ::Tabelle(k) => return crate::umgebung::kurzname(k).to_string(),
+                    _ => break,
+                }
+            }
+            return basis.to_string();
+        }
+        if let Some(k) = self.u.tabellen.keys().find(|k| {
+            *k == basis || k.rsplit("::").next() == Some(basis)
+        }) {
+            return crate::umgebung::kurzname(k).to_string();
+        }
+        basis.to_string()
+    }
+
     /// **V4 -- the carrier this place reads, if any** (spec §1-2).
     ///
     /// A device register read never taints (§2e -- asked of `m3`'s table, never a
@@ -6627,7 +6673,9 @@ impl<'a> Pruefer<'a> {
             {
                 return None;
             }
-            return Some(o.basis.text.clone());
+            // **Task 5d:** the key, not the handle -- two handles of one table
+            // share the table's name from here on.
+            return Some(self.traeger_schluessel(&o.basis.text, lage));
         }
         // A suffixed read through a `ptr` reaches the world; through a plain local
         // value (record, array) it reads the local itself. NOTE: `durchgreifen`
@@ -6638,7 +6686,8 @@ impl<'a> Pruefer<'a> {
                 return None;
             }
         }
-        Some(o.basis.text.clone())
+        // **Task 5d:** the key, not the handle (same function as above).
+        Some(self.traeger_schluessel(&o.basis.text, lage))
     }
 
     /// Carriers read DIRECTLY by this expression. Call arguments are NOT descended
@@ -6741,7 +6790,10 @@ impl<'a> Pruefer<'a> {
                     aus.extend(tiefe);
                 }
             } else {
-                aus.insert(basis.to_string());
+                // **Task 5d:** world names keyed like everywhere else (a table
+                // spelled qualified taints the short key too). Parameters map
+                // through the argument above, which keys at its own place.
+                aus.insert(self.traeger_schluessel(basis, lage));
             }
         }
         aus
@@ -6842,7 +6894,9 @@ impl<'a> Pruefer<'a> {
             _ => vec![],
         };
         for o in ziele {
-            let schutz = vec![o.basis.text.clone()];
+            // **Task 5d:** the schutz bases are carrier keys, compared against
+            // recorded source sets (which are keyed since creation).
+            let schutz = vec![self.traeger_schluessel(&o.basis.text, lage)];
             for sx in &o.suffixe {
                 if let OrtSuffix::Index(x) = sx {
                     self.frische_verweigere_mit_schutz(x, lage, &schutz);
@@ -6911,7 +6965,8 @@ impl<'a> Pruefer<'a> {
                     }
                 }
                 let mut tiefer = schutz.to_vec();
-                tiefer.push(o.basis.text.clone());
+                // **Task 5d:** deeper levels key like the top (same comparison).
+                tiefer.push(self.traeger_schluessel(&o.basis.text, lage));
                 for sx in &o.suffixe {
                     if let OrtSuffix::Index(x) = sx {
                         self.frische_sammle(x, lage, &tiefer, aus);
@@ -9151,17 +9206,19 @@ fn ist_zeiger(t: &Typ) -> bool {
 /// **V4 -- a write naming this carrier expires every local tainted with it**
 /// (spec §1, carrier granularity §2a -- no path overlap, syntax only; own writes
 /// kill, §2b). The written name itself is rebound when bare (fresh again) and
-/// stale when only a part of it was written.
-fn frische_toeten_schreiben(traeger: &str, nackt: bool, lage: &mut Lage) {
-    if let Some(s) = lage.frisch.remove(traeger) {
+/// stale when only a part of it was written. **Task 5d:** `name` is the
+/// written name (rebind, unchanged behaviour); `schluessel` is the carrier
+/// key the kill compares (the table name for any handle of it).
+fn frische_toeten_schreiben(name: &str, schluessel: &str, nackt: bool, lage: &mut Lage) {
+    if let Some(s) = lage.frisch.remove(name) {
         if !nackt {
-            lage.veraltet.insert(traeger.to_string(), s);
+            lage.veraltet.insert(name.to_string(), s);
         }
     }
     if nackt {
-        lage.veraltet.remove(traeger);
+        lage.veraltet.remove(name);
     }
-    frische_toeten_traeger(lage, traeger);
+    frische_toeten_traeger(lage, schluessel);
 }
 
 /// **V4 -- expire every tainted local of this carrier, keep the rest.** Each

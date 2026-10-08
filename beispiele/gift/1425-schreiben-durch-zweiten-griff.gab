@@ -1,0 +1,31 @@
+-- erwartet: M147
+-- **Aliased write through a callee (Task 5d).** `schreibe` writes through
+-- its own handle; the coarse call rule kills every taint, so the decision
+-- on `v` (read through `t`, same table) falls -- before and after the
+-- table-key change (regression pin for the coarse path).
+module gift::schreiben_durch_zweiten_griff {
+
+table T count 4 {
+    slot {
+        x : u32,
+    }
+}
+
+impl fn schreibe(u : ptr<normal, rw> T, i : index into T)
+    effects { writes u.slots }
+    costs <= 16 ops
+{
+    u.slots[i].x = 1;
+}
+
+impl fn f(t : ptr<normal, rw> T, u : ptr<normal, rw> T, i : index into T) -> u32
+    effects { reads t.slots, writes u.slots }
+    costs <= 64 ops
+{
+    let v : u32 = t.slots[i].x;
+    schreibe(u, i);
+    if v == 0 { return 1; }
+    return 0;
+}
+
+}

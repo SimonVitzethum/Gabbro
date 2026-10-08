@@ -2515,8 +2515,8 @@ pub const M1: &[Satz] = &[
                   expired by any write naming the carrier -- own writes, loops (all), \
                   calls (writes-hull), never device registers -- and refused at decision \
                   positions only (branch/match condition, call argument, return, `narrow` \
-                  subject, index), while storing or moving the name stays allowed. The carriers of an INDEX expression do not taint the value read through it (a write to the selector outdates no cell content), unless the index mentions an expired local.",
-        vorbehalt: "**The literal `messung/netz/udp-echo.gab` still passes, BY DESIGN**: \
+                  subject, index), while storing or moving the name stays allowed. The carriers of an INDEX expression do not taint the value read through it (a write to the selector outdates no cell content), unless the index mentions an expired local. A carrier is keyed by TABLE, not by handle: two parameters (or locals) of pointer-to-table type over one table share one carrier, so a write through any handle expires every taint of that table; statics, registers and plain values keep their own names.",
+        vorbehalt: "Table-keyed, still syntactic: two handles are assumed to alias when their declared table types match, even where they never do at run time (conservative); handles of different tables stay disjoint. **The literal `messung/netz/udp-echo.gab` still passes, BY DESIGN**: \
                     its bug is an omission no local holds, so no expiry can fire -- the \
                     rule catches the udp-echo shape (a named stale use), not the missing \
                     recompute. Growth is `let`-shaped only: a carrier read moved through \

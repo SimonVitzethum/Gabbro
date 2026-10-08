@@ -78,15 +78,10 @@ fn r1_schattenblock_toetet_staint() {
 
 #[test]
 fn r1_zwei_griffe_gleiche_tabelle() {
-    // FINDING: ACCEPTS-UNSOUND (aliased handles; measured silent, no error at
-    // all). Write through `u` expires carrier "u"; the read through `t` is
-    // tainted "t" and survives; the decision on `v` stays silent although
-    // both handles may name the same table at runtime (the checker admits
-    // two `rw` handles side by side). Sentence `m1.frische` promises expiry
-    // "by any write naming the carrier" -- the write names `u.slots`, the
-    // read `t.slots`. Design doc granularity is "syntax only" (m1.rs:9152),
-    // so the lead may scope aliasing out; reported for the decision.
-    sauber(
+    // FINDING: FIXED by agent 05 (was ACCEPTS-UNSOUND): carriers key by table
+    // since task 5d, so the write through `u` expires the `t` read and the
+    // decision falls as M147.
+    faellt(
         "module r1a {
 table T count 4 { slot { x : u32, } }
 impl fn f(t : ptr<normal, rw> T, u : ptr<normal, rw> T, i : index into T) -> u32
@@ -98,6 +93,7 @@ impl fn f(t : ptr<normal, rw> T, u : ptr<normal, rw> T, i : index into T) -> u32
     return 0;
 }
 }",
+        "M147",
     );
 }
 

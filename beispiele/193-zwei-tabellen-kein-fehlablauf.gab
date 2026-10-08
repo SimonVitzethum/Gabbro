@@ -1,0 +1,43 @@
+-- 193 -- two handles, two tables: no false expiry (Task 5d).
+--
+-- Carriers key by table since task 5d: a write through a handle of B
+-- expires nothing read through a handle of A. A same-handle write still
+-- expires (re-read idiom below), and the aliased same-table write falls
+-- (`gift/1424`). The program stays UNCERTIFIED (`LG002`), like the table
+-- programs before it.
+module beispiel193 {
+
+table A count 4 {
+    slot {
+        x : u32,
+    }
+}
+
+table B count 4 {
+    slot {
+        x : u32,
+    }
+}
+
+impl fn getrennt(t : ptr<normal, rw> A, u : ptr<normal, rw> B, i : index into A, j : index into B) -> u32
+    effects { reads t.slots, writes u.slots }
+    costs <= 64 ops
+{
+    let v : u32 = t.slots[i].x;
+    u.slots[j].x = 1;
+    if v == 0 { return 1; }
+    return 0;
+}
+
+impl fn erneut(t : ptr<normal, rw> A, i : index into A) -> u32
+    effects { reads t.slots, writes t.slots }
+    costs <= 64 ops
+{
+    let v : u32 = t.slots[i].x;
+    t.slots[i].x = v;
+    let w : u32 = t.slots[i].x;
+    if w == 0 { return 1; }
+    return w;
+}
+
+}
