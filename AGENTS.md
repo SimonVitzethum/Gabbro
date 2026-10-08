@@ -396,9 +396,9 @@ opus/…:opus/…` first.
 
 | Kind | Next free |
 |---|---|
-| Diagnostic codes | **N579** (highest issued: N578, C-free lane, 2026-10-05; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
-| Gift (poison-probe) numbers | **1400** (highest file: `beispiele/gift/1399`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
-| Example numbers | **185** (highest file: `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
+| Diagnostic codes | **N583** (highest issued: N582, Sonnet U, 2026-10-08: N579 array copy range, N580 traverse exit on a consuming walk, N581 string cell use, N582 parameter list on a non-linear type; before that N578, C-free lane, 2026-10-05; **N569/N570 are taken by the network lane** (`region.leeren`, `static.ausrichtung`; committed 2026-09-30)) |
+| Gift (poison-probe) numbers | **1427** (highest file: `beispiele/gift/1425`, Sonnet U, 2026-10-08, 1426 skipped; Sonnet C took 1400-1403; before that `beispiele/gift/1399`, C-free lane; **1371-1374 are taken by the network lane** (committed 2026-09-30), 1375-1379 left free for it) |
+| Example numbers | **194** (highest file: `beispiele/193`, Sonnet U, 2026-10-08; 185-188 Sonnet E round 2, 189 u32+u32 context, 190 traverse exit, 191/192 string cells, 193 aliased handles; before that `beispiele/184`, C-free lane; **175 is taken by the network lane** (`175-puffer-gibt-seiten-zurueck`, committed 2026-09-30), 176-179 left free for it) |
 | Lane numbers | **1403** next free; allocate unique IDs from the actual live coordinator registry. |
 
 *Ledger re-measured **2026-09-28** (server lane) the same way — `grep -rho '\bN[0-9]\{3\}\b'
