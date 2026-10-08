@@ -3015,6 +3015,23 @@ pub const M1: &[Satz] = &[
                      `sammle_inv_traeger`); grammatik/Grammatik/Zielsatz/Eigenschaften/Invarianten.lean",
     },
     Satz {
+        name: "namen.typ_parameterliste",
+        kennungen: &["N582"],
+        aussage: "A parameter list on a type (`type Queue(T) = ...`) stands only on a `linear` \
+                  witness (`linear ghost type Held(Lock)`). On any other type it falls as \
+                  `N582`: Gabbro has no type parameters, and the list used to parse, emit \
+                  byte-identically to the unparameterised type and die at the emitter on the \
+                  first use of `T` (`messung/schreibprobe/S20`).",
+        vorbehalt: "It says nothing about generics as a language feature -- that is a decision \
+                    (`Ty` is deliberately non-recursive, OFFEN O15) and stays open. It reads \
+                    the declaration only: a `linear` type with a list is left to the \
+                    linearity passes.",
+        stand: Satzstand::Gemessen,
+        gemessen_an: "beispiele/gift/1417 (a record with `(T)` falls with N582 alone); the \
+                      clean side is every `linear ghost type X(Y)` of the corpus.",
+        fundstelle: "crates/gabbro-check/src/namen.rs (typdecl)",
+    },
+    Satz {
         name: "zeichenfolge.zelle",
         kennungen: &["N581"],
         aussage: "A table slot field may be a bounded string CELL (SPRACHE-EFFIZIENZ #13), \
